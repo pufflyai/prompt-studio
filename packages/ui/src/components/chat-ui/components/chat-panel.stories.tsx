@@ -96,6 +96,80 @@ const updateAssistantTextPart = (
   });
 };
 
+type TextPartEntry = { part: { type: "text"; text: string }; idx: number };
+
+const getTextPartEntries = (message: SessionMessage) => {
+  return message.parts
+    .map((part, idx) => ({ part, idx }))
+    .filter(({ part }) => isTextPart(part) && part.text.trim().length > 0) as TextPartEntry[];
+};
+
+const seedTextParts = (message: SessionMessage, textPartEntries: TextPartEntry[]) => {
+  const textPartIndexes = new Set(textPartEntries.map(({ idx }) => idx));
+  return {
+    ...message,
+    parts: message.parts.map((part, idx) =>
+      textPartIndexes.has(idx) && isTextPart(part) ? { ...part, text: "" } : part,
+    ),
+  } satisfies SessionMessage;
+};
+
+const streamTextParts = async (options: {
+  message: SessionMessage;
+  textPartEntries: TextPartEntry[];
+  isCancelled: () => boolean;
+  onChunk: (messageId: string, partIndex: number, text: string) => void;
+}) => {
+  const { message, textPartEntries, isCancelled, onChunk } = options;
+
+  for (const { part, idx } of textPartEntries) {
+    if (isCancelled()) return;
+
+    const chunks = splitTextIntoChunks(part.text);
+    let streamed = "";
+
+    for (const chunk of chunks) {
+      if (isCancelled()) return;
+      streamed += chunk;
+      onChunk(message.id, idx, streamed);
+      await delay(STREAM_INTERVAL_MS);
+    }
+  }
+};
+
+const streamConversationMessages = async (options: {
+  messages: SessionMessage[];
+  isCancelled: () => boolean;
+  onStart: () => void;
+  onMessage: (message: SessionMessage) => void;
+  onChunk: (messageId: string, partIndex: number, text: string) => void;
+  onComplete: () => void;
+}) => {
+  const { messages, isCancelled, onStart, onMessage, onChunk, onComplete } = options;
+
+  onStart();
+
+  for (const message of messages) {
+    if (isCancelled()) return;
+
+    const textPartEntries = getTextPartEntries(message);
+    if (textPartEntries.length === 0) {
+      onMessage(message);
+
+      const pauseMs =
+        message.role === "user" ? CONVERSATION_STREAM_MESSAGE_DELAY_MS : CONVERSATION_STREAM_STEP_DELAY_MS;
+      await delay(pauseMs);
+      continue;
+    }
+
+    onMessage(seedTextParts(message, textPartEntries));
+    await streamTextParts({ message, textPartEntries, isCancelled, onChunk });
+    await delay(CONVERSATION_STREAM_MESSAGE_DELAY_MS);
+  }
+
+  if (!isCancelled()) onComplete();
+};
+
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const CONVERSATION_STREAM_MESSAGE_DELAY_MS = 200;
@@ -270,57 +344,23 @@ function StreamingConversationRenderer(props: ChatPanelProps) {
     let cancelled = false;
 
     const run = async () => {
-      setVisibleMessages([]);
-      setStreaming(true);
-
-      for (const message of allMessages) {
-        if (cancelled) return;
-
-        const textPartEntries = message.parts
-          .map((part, idx) => ({ part, idx }))
-          .filter(({ part }) => isTextPart(part) && part.text.trim().length > 0);
-
-        if (textPartEntries.length === 0) {
+      await streamConversationMessages({
+        messages: allMessages,
+        isCancelled: () => cancelled,
+        onStart: () => {
+          setVisibleMessages([]);
+          setStreaming(true);
+        },
+        onMessage: (message) => {
           setVisibleMessages((prev) => [...prev, message]);
-
-          const pauseMs =
-            message.role === "user" ? CONVERSATION_STREAM_MESSAGE_DELAY_MS : CONVERSATION_STREAM_STEP_DELAY_MS;
-
-          await delay(pauseMs);
-          continue;
-        }
-
-        const seeded: SessionMessage = {
-          ...message,
-          parts: message.parts.map((part, idx) =>
-            textPartEntries.some((e) => e.idx === idx) && isTextPart(part) ? { ...part, text: "" } : part,
-          ),
-        };
-
-        setVisibleMessages((prev) => [...prev, seeded]);
-
-        for (const { part, idx } of textPartEntries) {
-          if (cancelled) return;
-          if (!isTextPart(part)) continue;
-
-          const chunks = splitTextIntoChunks(part.text);
-          let streamed = "";
-
-          for (const chunk of chunks) {
-            if (cancelled) return;
-
-            streamed += chunk;
-            const text = streamed;
-
-            setVisibleMessages((prev) => updateAssistantTextPart(prev, message.id, idx, text));
-            await delay(STREAM_INTERVAL_MS);
-          }
-        }
-
-        await delay(CONVERSATION_STREAM_MESSAGE_DELAY_MS);
-      }
-
-      if (!cancelled) setStreaming(false);
+        },
+        onChunk: (messageId, partIndex, text) => {
+          setVisibleMessages((prev) => updateAssistantTextPart(prev, messageId, partIndex, text));
+        },
+        onComplete: () => {
+          setStreaming(false);
+        },
+      });
     };
 
     run();

@@ -1,6 +1,6 @@
 import { Avatar, Box, Button, Card, Timeline as ChakraTimeline, Link, Span, Stack, Text } from "@chakra-ui/react";
 import { ChevronUpIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { useState } from "react";
 import { DiffBubble } from "@/components/diff-bubble";
 import { DiffEditor } from "@/components/diff-editor";
@@ -51,93 +51,114 @@ export type Block =
   | { type: "references"; references: string[] }
   | { type: "component"; render: (ctx: { onOpenFile?: (filePath: string) => void }) => ReactNode };
 
-function TitleInline({
+const handleTitleLinkClick = (
+  event: MouseEvent<HTMLAnchorElement>,
+  seg: Extract<TitleSegment, { kind: "link" }>,
+  onOpenFile?: (filePath: string) => void,
+  stopPropagation = false,
+) => {
+  if (stopPropagation) {
+    event.stopPropagation();
+  }
+
+  if (!seg.href) {
+    event.preventDefault();
+  }
+  if (seg.filePath) {
+    onOpenFile?.(seg.filePath);
+  }
+};
+
+function AvatarTitleSegment({ seg }: { seg: Extract<TitleSegment, { kind: "avatar" }> }) {
+  return (
+    <Avatar.Root width="1.5rem" height="1.5rem">
+      <Avatar.Image src={seg.src} alt={seg.alt} />
+      <Avatar.Fallback />
+    </Avatar.Root>
+  );
+}
+
+function DiffTitleSegment({
   seg,
-  isClickable,
   onOpenFile,
 }: {
-  seg: TitleSegment;
-  isClickable?: boolean;
+  seg: Extract<TitleSegment, { kind: "diff" }>;
   onOpenFile?: (filePath: string) => void;
 }) {
-  if (seg.kind === "avatar") {
-    return (
-      <Avatar.Root width="1.5rem" height="1.5rem">
-        <Avatar.Image src={seg.src} alt={seg.alt} />
-        <Avatar.Fallback />
-      </Avatar.Root>
-    );
-  }
+  return (
+    <DiffBubble
+      fileName={seg.fileName}
+      additions={seg.additions ?? 0}
+      deletions={seg.deletions ?? 0}
+      onClickFileLink={() => {
+        const path = seg.filePath ?? seg.fileName;
+        onOpenFile?.(path);
+      }}
+    />
+  );
+}
 
-  if (seg.kind === "diff") {
-    return (
-      <DiffBubble
-        fileName={seg.fileName}
-        additions={seg.additions ?? 0}
-        deletions={seg.deletions ?? 0}
-        onClickFileLink={() => {
-          const path = seg.filePath ?? seg.fileName;
-          onOpenFile?.(path);
-        }}
-      />
-    );
-  }
+function BubbleLinkTitleSegment({
+  seg,
+  onOpenFile,
+}: {
+  seg: Extract<TitleSegment, { kind: "link" }>;
+  onOpenFile?: (filePath: string) => void;
+}) {
+  const fontWeight = seg.bold ? "medium" : undefined;
+  const isInteractive = Boolean(seg.href || seg.filePath);
 
-  if (seg.kind === "link") {
-    const fontWeight = seg.bold ? "medium" : undefined;
+  return (
+    <Link
+      href={seg.href ?? "#"}
+      fontWeight={fontWeight}
+      color={seg.muted ? "fg.muted" : "fg.muted"}
+      textDecoration="none"
+      cursor={isInteractive ? "pointer" : "default"}
+      onClick={(event) => handleTitleLinkClick(event, seg, onOpenFile, true)}
+      _hover={{
+        textDecoration: "underline",
+        color: seg.muted ? "fg.muted" : "fg.blue-dark",
+      }}
+    >
+      {seg.text}
+    </Link>
+  );
+}
 
-    if (seg.variant === "bubble") {
-      const isInteractive = Boolean(seg.href || seg.filePath);
-      return (
-        <Link
-          href={seg.href ?? "#"}
-          fontWeight={fontWeight}
-          color={seg.muted ? "fg.muted" : "fg.muted"}
-          textDecoration="none"
-          cursor={isInteractive ? "pointer" : "default"}
-          onClick={(event) => {
-            event.stopPropagation();
-            if (!seg.href) {
-              event.preventDefault();
-            }
-            if (seg.filePath) {
-              onOpenFile?.(seg.filePath);
-            }
-          }}
-          _hover={{
-            textDecoration: "underline",
-            color: seg.muted ? "fg.muted" : "fg.blue-dark",
-          }}
-        >
-          {seg.text}
-        </Link>
-      );
-    }
+function DefaultLinkTitleSegment({
+  seg,
+  onOpenFile,
+}: {
+  seg: Extract<TitleSegment, { kind: "link" }>;
+  onOpenFile?: (filePath: string) => void;
+}) {
+  const fontWeight = seg.bold ? "medium" : undefined;
 
-    return (
-      <Link
-        href={seg.href ?? "#"}
-        fontWeight={fontWeight}
-        color={seg.muted ? "fg.muted" : "accent.primary"}
-        textDecoration="underline"
-        onClick={(event) => {
-          if (!seg.href) {
-            event.preventDefault();
-          }
-          if (seg.filePath) {
-            onOpenFile?.(seg.filePath);
-          }
-        }}
-        _hover={{
-          color: seg.muted ? "fg.muted" : "accent.primary",
-          textDecoration: "underline",
-        }}
-      >
-        {seg.text}
-      </Link>
-    );
-  }
+  return (
+    <Link
+      href={seg.href ?? "#"}
+      fontWeight={fontWeight}
+      color={seg.muted ? "fg.muted" : "accent.primary"}
+      textDecoration="underline"
+      onClick={(event) => handleTitleLinkClick(event, seg, onOpenFile)}
+      _hover={{
+        color: seg.muted ? "fg.muted" : "accent.primary",
+        textDecoration: "underline",
+      }}
+    >
+      {seg.text}
+    </Link>
+  );
+}
 
+function TextTitleSegment({
+  seg,
+  isClickable,
+}: {
+  seg: Extract<TitleSegment, { kind: "text" }>;
+  isClickable?: boolean;
+}) {
   return (
     <Span
       fontWeight={seg.bold ? "medium" : undefined}
@@ -149,6 +170,33 @@ function TitleInline({
       {seg.text}
     </Span>
   );
+}
+
+function TitleInline({
+  seg,
+  isClickable,
+  onOpenFile,
+}: {
+  seg: TitleSegment;
+  isClickable?: boolean;
+  onOpenFile?: (filePath: string) => void;
+}) {
+  switch (seg.kind) {
+    case "avatar":
+      return <AvatarTitleSegment seg={seg} />;
+    case "diff":
+      return <DiffTitleSegment seg={seg} onOpenFile={onOpenFile} />;
+    case "link":
+      return seg.variant === "bubble" ? (
+        <BubbleLinkTitleSegment seg={seg} onOpenFile={onOpenFile} />
+      ) : (
+        <DefaultLinkTitleSegment seg={seg} onOpenFile={onOpenFile} />
+      );
+    case "text":
+      return <TextTitleSegment seg={seg} isClickable={isClickable} />;
+    default:
+      return null;
+  }
 }
 
 function IndicatorView({ ind }: { ind?: Indicator }) {
@@ -253,6 +301,84 @@ function BlockView({ b, onOpenFile }: { b: Block; onOpenFile?: (filePath: string
   }
 }
 
+function TimelineItemRow({
+  item,
+  itemKey,
+  isOpen,
+  canExpand,
+  hasBlocks,
+  onToggle,
+  onOpenFile,
+}: {
+  item: Item;
+  itemKey: string;
+  isOpen: boolean;
+  canExpand: boolean;
+  hasBlocks: boolean;
+  onToggle: (key: string) => void;
+  onOpenFile?: (filePath: string) => void;
+}) {
+  return (
+    <Timeline.Item gap="xs" key={itemKey}>
+      <Timeline.Connector>
+        <Timeline.Separator />
+        <IndicatorView ind={item.indicator} />
+      </Timeline.Connector>
+      <Timeline.Content pb="xs">
+        {item.title.length > 0 && (
+          <Timeline.Title
+            className="group"
+            fontWeight="normal"
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            cursor={canExpand ? "pointer" : "default"}
+            onClick={canExpand ? () => onToggle(itemKey) : undefined}
+          >
+            <Span display="inline-flex" alignItems="center" gap="sm" flexWrap="wrap">
+              <Span display="inline-flex" alignItems="center" gap="xs" flexWrap="wrap">
+                {item.title.map((seg, i) => (
+                  <TitleInline key={i} seg={seg} isClickable={canExpand} onOpenFile={onOpenFile} />
+                ))}
+              </Span>
+              {canExpand ? (
+                <Span
+                  display="inline-flex"
+                  alignItems="center"
+                  transition="transform 200ms ease, color 200ms ease"
+                  transform={isOpen ? "rotate(0deg)" : "rotate(-180deg)"}
+                  color="transparent"
+                  _groupHover={{ color: "fg" }}
+                >
+                  <ChevronUpIcon size={12} />
+                </Span>
+              ) : null}
+            </Span>
+          </Timeline.Title>
+        )}
+        {hasBlocks ? (
+          <Box display="grid" gridTemplateRows={isOpen ? "1fr" : "0fr"} transition="grid-template-rows 220ms ease">
+            {isOpen ? (
+              <Box
+                overflow="hidden"
+                opacity={1}
+                transform="translateY(0)"
+                transition="opacity 200ms ease, transform 200ms ease"
+              >
+                {item.blocks!.map((block, i) => (
+                  <Box key={i}>
+                    <BlockView b={block} onOpenFile={onOpenFile} />
+                  </Box>
+                ))}
+              </Box>
+            ) : null}
+          </Box>
+        ) : null}
+      </Timeline.Content>
+    </Timeline.Item>
+  );
+}
+
 export function TimelineFromJSON({ data, onOpenFile }: { data: TimelineDoc; onOpenFile?: (filePath: string) => void }) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
@@ -264,74 +390,23 @@ export function TimelineFromJSON({ data, onOpenFile }: { data: TimelineDoc; onOp
 
   return (
     <Timeline.Root>
-      {data.items.map((it, idx) => {
-        const key = getKey(it, idx);
-        const hasBlocks = (it.blocks?.length ?? 0) > 0;
-        const canExpand = (it.expandable ?? true) && hasBlocks;
+      {data.items.map((item, idx) => {
+        const key = getKey(item, idx);
+        const hasBlocks = (item.blocks?.length ?? 0) > 0;
+        const canExpand = (item.expandable ?? true) && hasBlocks;
         const isOpen = canExpand ? (expanded[key] ?? false) : hasBlocks;
 
         return (
-          <Timeline.Item gap="xs" key={key}>
-            <Timeline.Connector>
-              <Timeline.Separator />
-              <IndicatorView ind={it.indicator} />
-            </Timeline.Connector>
-            <Timeline.Content pb="xs">
-              {it.title.length > 0 && (
-                <Timeline.Title
-                  className="group"
-                  fontWeight="normal"
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  cursor={canExpand ? "pointer" : "default"}
-                  onClick={canExpand ? () => toggle(key) : undefined}
-                >
-                  <Span display="inline-flex" alignItems="center" gap="sm" flexWrap="wrap">
-                    <Span display="inline-flex" alignItems="center" gap="xs" flexWrap="wrap">
-                      {it.title.map((seg, i) => (
-                        <TitleInline key={i} seg={seg} isClickable={canExpand} onOpenFile={onOpenFile} />
-                      ))}
-                    </Span>
-                    {canExpand ? (
-                      <Span
-                        display="inline-flex"
-                        alignItems="center"
-                        transition="transform 200ms ease, color 200ms ease"
-                        transform={isOpen ? "rotate(0deg)" : "rotate(-180deg)"}
-                        color="transparent"
-                        _groupHover={{ color: "fg" }}
-                      >
-                        <ChevronUpIcon size={12} />
-                      </Span>
-                    ) : null}
-                  </Span>
-                </Timeline.Title>
-              )}
-              {hasBlocks ? (
-                <Box
-                  display="grid"
-                  gridTemplateRows={isOpen ? "1fr" : "0fr"}
-                  transition="grid-template-rows 220ms ease"
-                >
-                  {isOpen ? (
-                    <Box
-                      overflow="hidden"
-                      opacity={1}
-                      transform="translateY(0)"
-                      transition="opacity 200ms ease, transform 200ms ease"
-                    >
-                      {it.blocks!.map((b, i) => (
-                        <Box key={i}>
-                          <BlockView b={b} onOpenFile={onOpenFile} />
-                        </Box>
-                      ))}
-                    </Box>
-                  ) : null}
-                </Box>
-              ) : null}
-            </Timeline.Content>
-          </Timeline.Item>
+          <TimelineItemRow
+            key={key}
+            item={item}
+            itemKey={key}
+            isOpen={isOpen}
+            canExpand={canExpand}
+            hasBlocks={hasBlocks}
+            onToggle={toggle}
+            onOpenFile={onOpenFile}
+          />
         );
       })}
     </Timeline.Root>

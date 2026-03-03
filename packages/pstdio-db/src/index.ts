@@ -6,4 +6,6 @@ export { resolveDbPath } from "./db/paths";
 export * from "./db/schemas.pg";
 export * from "./db/schemas.zod";
 
+export { createAgentConfigsService } from "./services/agent-configs/agent-configs";
 export { createProjectsService } from "./services/projects/projects";
+export { createReposService } from "./services/repos/repos";

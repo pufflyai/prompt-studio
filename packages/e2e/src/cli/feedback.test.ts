@@ -1,0 +1,62 @@
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
+import { PSTDIO_CLI, runPstdioSafe } from "./helpers";
+import { type ApiInstance, startApi } from "./start-api";
+
+let api: ApiInstance;
+
+beforeAll(async () => {
+  api = await startApi();
+}, 20_000);
+
+afterAll(() => {
+  api?.stop();
+});
+
+const runPstdioCaptured = (args: string, env: Record<string, string>) => {
+  const result = spawnSync("bun", ["run", PSTDIO_CLI, ...args.split(" ")], {
+    cwd: process.cwd(),
+    env: { ...process.env, ...env },
+    encoding: "utf8",
+    timeout: 15_000,
+  });
+
+  return {
+    exitCode: result.status ?? 1,
+    output: `${result.stdout ?? ""}${result.stderr ?? ""}`,
+  };
+};
+
+describe("cli help and feedback", () => {
+  test("shows agents help when subcommand is missing", () => {
+    const result = runPstdioCaptured("agents", { PSTDIO_API_URL: api.url });
+    const { output } = result;
+
+    expect(result.exitCode).toBe(0);
+    expect(output).toContain("pstdio agents [command]");
+    expect(output).toContain("Manage coding agents");
+    expect(output).toContain("pstdio agents list");
+  });
+
+  test("shows projects help when subcommand is missing", () => {
+    const result = runPstdioCaptured("projects", { PSTDIO_API_URL: api.url });
+    const { output } = result;
+
+    expect(result.exitCode).toBe(0);
+    expect(output).toContain("pstdio projects [command]");
+    expect(output).toContain("Manage projects");
+    expect(output).toContain("pstdio projects list");
+  });
+
+  test("prints error and root help for unknown command", () => {
+    const result = runPstdioSafe("foo", process.cwd(), {
+      PSTDIO_DISABLE_API_AUTO_START: "1",
+    });
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr).toContain("Unknown argument: foo");
+    expect(result.stderr).toContain("pstdio");
+    expect(result.stderr).toContain("pstdio agents [command]");
+    expect(result.stderr).toContain("pstdio projects [command]");
+  });
+});

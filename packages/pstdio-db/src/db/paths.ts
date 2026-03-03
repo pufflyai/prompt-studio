@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const defaultDbPath = path.join(os.homedir(), ".pstdio");
+const defaultDbPath = path.join(os.homedir(), ".pstdio", "pstdio.db");
 
 const expandHomeDirectory = (value: string) => {
   if (value === "~") {

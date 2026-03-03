@@ -95,6 +95,22 @@ function applyColumnWidth(editor: LexicalEditor, activeCell: TableDOMCell, newWi
   });
 }
 
+const getNextRowHeight = (activeCell: TableDOMCell, startY: number, clientY: number) => {
+  const height = activeCell.elem.getBoundingClientRect().height;
+  const heightChange = Math.abs(clientY - startY);
+  const isShrinking = startY > clientY;
+  return Math.max(isShrinking ? height - heightChange : height + heightChange, MIN_ROW_HEIGHT);
+};
+
+const getNextColumnWidth = (activeCell: TableDOMCell, startX: number, clientX: number) => {
+  const computedStyle = getComputedStyle(activeCell.elem);
+  let width = activeCell.elem.clientWidth;
+  width -= parseFloat(computedStyle.paddingLeft) + parseFloat(computedStyle.paddingRight);
+  const widthChange = Math.abs(clientX - startX);
+  const isShrinking = startX > clientX;
+  return Math.max(isShrinking ? width - widthChange : width + widthChange, MIN_COLUMN_WIDTH);
+};
+
 function TableCellResizer({ editor }: { editor: LexicalEditor }): ReactNode {
   const targetRef = useRef<HTMLElement | null>(null);
   const resizerRef = useRef<HTMLDivElement | null>(null);
@@ -136,45 +152,50 @@ function TableCellResizer({ editor }: { editor: LexicalEditor }): ReactNode {
   const clearResizeStateRef = useRef(clearResizeState);
   clearResizeStateRef.current = clearResizeState;
 
+  const syncActiveCellFromTargetRef = useRef<(target: EventTarget | null) => void>(() => {});
+  syncActiveCellFromTargetRef.current = (target: EventTarget | null) => {
+    if (targetRef.current === target) return;
+
+    targetRef.current = target as HTMLElement;
+    const cell = getDOMCellFromTarget(target as HTMLElement);
+    if (!cell) {
+      clearResizeStateRef.current();
+      return;
+    }
+
+    if (activeCell === cell) return;
+
+    editor.update(() => {
+      const tableCellNode = $getNearestNodeFromDOMNode(cell.elem);
+      if (!tableCellNode) throw new Error("TableCellResizer: Table cell node not found.");
+
+      const tableNode = $getTableNodeFromLexicalNodeOrThrow(tableCellNode);
+      const tableElement = editor.getElementByKey(tableNode.getKey());
+      if (!tableElement) throw new Error("TableCellResizer: Table element not found.");
+
+      targetRef.current = target as HTMLElement;
+      tableRectRef.current = tableElement.getBoundingClientRect();
+      updateActiveCell(cell);
+    });
+  };
+
   useEffect(() => {
     const onMouseMove = (event: MouseEvent) => {
       setTimeout(() => {
-        const target = event.target;
-
         if (draggingDirection) {
           updateMouseCurrentPos({ x: event.clientX, y: event.clientY });
           return;
         }
 
+        const target = event.target;
         if (resizerRef.current?.contains(target as Node)) return;
-
-        if (targetRef.current !== target) {
-          targetRef.current = target as HTMLElement;
-          const cell = getDOMCellFromTarget(target as HTMLElement);
-
-          if (cell && activeCell !== cell) {
-            editor.update(() => {
-              const tableCellNode = $getNearestNodeFromDOMNode(cell.elem);
-              if (!tableCellNode) throw new Error("TableCellResizer: Table cell node not found.");
-
-              const tableNode = $getTableNodeFromLexicalNodeOrThrow(tableCellNode);
-              const tableElement = editor.getElementByKey(tableNode.getKey());
-              if (!tableElement) throw new Error("TableCellResizer: Table element not found.");
-
-              targetRef.current = target as HTMLElement;
-              tableRectRef.current = tableElement.getBoundingClientRect();
-              updateActiveCell(cell);
-            });
-          } else if (cell == null) {
-            clearResizeStateRef.current();
-          }
-        }
+        syncActiveCellFromTargetRef.current(target);
       }, 0);
     };
 
     document.addEventListener("mousemove", onMouseMove);
     return () => document.removeEventListener("mousemove", onMouseMove);
-  }, [activeCell, draggingDirection, editor]);
+  }, [draggingDirection]);
 
   const mouseUpHandler = (direction: MouseDraggingDirection) => {
     const handler = (event: MouseEvent) => {
@@ -185,28 +206,11 @@ function TableCellResizer({ editor }: { editor: LexicalEditor }): ReactNode {
 
       if (mouseStartPosRef.current) {
         const { x, y } = mouseStartPosRef.current;
-        if (activeCell === null) return;
 
         if (isHeightChanging(direction)) {
-          const height = activeCell.elem.getBoundingClientRect().height;
-          const heightChange = Math.abs(event.clientY - y);
-          const isShrinking = direction === "bottom" && y > event.clientY;
-          applyRowHeight(
-            editor,
-            activeCell,
-            Math.max(isShrinking ? height - heightChange : heightChange + height, MIN_ROW_HEIGHT),
-          );
+          applyRowHeight(editor, activeCell, getNextRowHeight(activeCell, y, event.clientY));
         } else {
-          const computedStyle = getComputedStyle(activeCell.elem);
-          let width = activeCell.elem.clientWidth;
-          width -= parseFloat(computedStyle.paddingLeft) + parseFloat(computedStyle.paddingRight);
-          const widthChange = Math.abs(event.clientX - x);
-          const isShrinking = direction === "right" && x > event.clientX;
-          applyColumnWidth(
-            editor,
-            activeCell,
-            Math.max(isShrinking ? width - widthChange : widthChange + width, MIN_COLUMN_WIDTH),
-          );
+          applyColumnWidth(editor, activeCell, getNextColumnWidth(activeCell, x, event.clientX));
         }
 
         clearResizeState();

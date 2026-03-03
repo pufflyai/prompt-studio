@@ -43,47 +43,52 @@ type SerializedRoot = {
   root?: SerializedNode;
 };
 
+const getReferenceMarker = (node: SerializedNode) => {
+  if (node.type !== "reference") return null;
+  return `#${node.name ?? node.referenceId ?? ""}`;
+};
+
+const shouldAppendParagraphBreak = (node: SerializedNode) => {
+  return node.type === "paragraph" && Boolean(node.children?.length);
+};
+
+const traverseSerializedNode = (node: SerializedNode): string => {
+  if (node.type === "comment") {
+    return "";
+  }
+
+  const referenceMarker = getReferenceMarker(node);
+  if (referenceMarker !== null) {
+    return referenceMarker;
+  }
+
+  let text = typeof node.text === "string" ? node.text : "";
+  const children = node.children;
+  if (!Array.isArray(children)) return text;
+
+  const childrenLength = children.length;
+  for (let i = 0; i < childrenLength; i += 1) {
+    const child = children[i];
+    if (child.type === "comment") {
+      if (i !== childrenLength - 1) {
+        text += "\n";
+      }
+      continue;
+    }
+
+    text += traverseSerializedNode(child);
+    if (shouldAppendParagraphBreak(child)) {
+      text += "\n";
+    }
+  }
+
+  return text;
+};
+
 export const getTextFromSerializedEditorState = (state: string): string => {
   try {
     const parsed = JSON.parse(state) as SerializedRoot;
-    const traverse = (node: SerializedNode): string => {
-      let text = "";
-
-      if (node.type === "comment") {
-        return text; // ignore text inside comments
-      }
-
-      if (node.type === "reference") {
-        // persist a small textual marker for references
-        return `#${node.name ?? node.referenceId ?? ""}`;
-      }
-
-      if (typeof node.text === "string") {
-        text += node.text;
-      }
-
-      if (Array.isArray(node.children)) {
-        const children = node.children;
-        const childrenLength = children.length;
-        for (let i = 0; i < childrenLength; i++) {
-          const child = children[i];
-          if (child.type === "comment") {
-            if (i !== childrenLength - 1) {
-              text += "\n";
-            }
-            continue;
-          }
-          text += traverse(child);
-          if (child.type === "paragraph" && child.children?.length) {
-            text += "\n";
-          }
-        }
-      }
-
-      return text;
-    };
-
-    return traverse(parsed.root ?? {});
+    return traverseSerializedNode(parsed.root ?? {});
   } catch {
     return "";
   }

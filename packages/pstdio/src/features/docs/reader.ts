@@ -3,7 +3,7 @@ import { join } from "node:path";
 import type { DocRow, DocsConfig, SidebarItem } from "./types";
 
 export const loadDocsConfig = (docsDir: string) => {
-  const configPath = join(docsDir, "docs.json");
+  const configPath = join(docsDir, "navigation.json");
 
   if (!existsSync(configPath)) {
     return null;

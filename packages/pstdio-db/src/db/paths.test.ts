@@ -17,10 +17,10 @@ afterEach(() => {
 });
 
 describe("resolveDbPath", () => {
-  it("uses ~/.pstdio by default", () => {
+  it("uses ~/.pstdio/pstdio.db by default", () => {
     delete process.env.PSTDIO_DB_PATH;
 
-    expect(resolveDbPath()).toBe(path.join(os.homedir(), ".pstdio"));
+    expect(resolveDbPath()).toBe(path.join(os.homedir(), ".pstdio", "pstdio.db"));
   });
 
   it("expands the home directory from PSTDIO_DB_PATH", () => {

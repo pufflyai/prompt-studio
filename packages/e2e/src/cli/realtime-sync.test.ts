@@ -1,0 +1,122 @@
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import type { ReadableStreamDefaultReader } from "node:stream/web";
+import { cleanupDirs, createGitRepo, runPstdio } from "./helpers";
+import { type ApiInstance, startApi } from "./start-api";
+
+type SseEvent = {
+  event: string;
+  data: unknown;
+};
+
+const parseSseBlock = (block: string): SseEvent | null => {
+  if (!block.trim()) return null;
+
+  let event = "message";
+  let data = "";
+
+  for (const line of block.split("\n")) {
+    if (line.startsWith("event:")) event = line.slice(6).trim();
+    if (line.startsWith("data:")) data = line.slice(5).trim();
+  }
+
+  if (!data) return null;
+  return { event, data: JSON.parse(data) };
+};
+
+const createSseReader = (response: Response) => {
+  const reader = response.body!.getReader() as ReadableStreamDefaultReader<Uint8Array>;
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  const readEvent = async (timeoutMs = 5_000) => {
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+      const { done, value } = await reader.read();
+      if (done) return null;
+
+      buffer += decoder.decode(value, { stream: true });
+      const blocks = buffer.split("\n\n");
+      buffer = blocks.pop() ?? "";
+
+      for (const block of blocks) {
+        const parsed = parseSseBlock(block);
+        if (parsed) return parsed;
+      }
+    }
+
+    return null;
+  };
+
+  const close = async () => {
+    await reader.cancel();
+  };
+
+  return { readEvent, close };
+};
+
+let api: ApiInstance;
+const dirs: string[] = [];
+
+beforeAll(async () => {
+  api = await startApi();
+}, 20_000);
+
+afterAll(() => {
+  api?.stop();
+});
+
+afterEach(() => {
+  cleanupDirs(dirs);
+});
+
+describe("realtime sync stream", () => {
+  test("sends init payload without yjs tables", async () => {
+    const response = await fetch(`${api.url}/v1/sync/stream`);
+    expect(response.ok).toBe(true);
+
+    const sse = createSseReader(response);
+    const event = await sse.readEvent();
+    await sse.close();
+
+    expect(event).toBeTruthy();
+    expect(event?.event).toBe("init");
+
+    const payload = event?.data as { tables: Record<string, unknown[]> };
+    expect(payload.tables).toHaveProperty("projects");
+    expect(payload.tables).not.toHaveProperty("ydoc_updates");
+    expect(payload.tables).not.toHaveProperty("ydoc_awareness");
+    expect(payload.tables).not.toHaveProperty("ydoc_resume_state");
+  });
+
+  test("streams project create changes to connected clients", async () => {
+    const response = await fetch(`${api.url}/v1/sync/stream`);
+    expect(response.ok).toBe(true);
+
+    const sse = createSseReader(response);
+    const initEvent = await sse.readEvent();
+    expect(initEvent?.event).toBe("init");
+
+    const repo = createGitRepo();
+    dirs.push(repo);
+
+    runPstdio("projects create realtime-e2e-project", repo, { PSTDIO_API_URL: api.url });
+
+    let projectEvent: SseEvent | null = null;
+    for (let i = 0; i < 20; i += 1) {
+      const event = await sse.readEvent();
+      if (!event) break;
+      if (event.event !== "sync:set") continue;
+
+      const data = event.data as { table: string; data: { name?: string } };
+      if (data.table === "projects" && data.data.name === "realtime-e2e-project") {
+        projectEvent = event;
+        break;
+      }
+    }
+
+    await sse.close();
+
+    expect(projectEvent).toBeTruthy();
+  }, 20_000);
+});

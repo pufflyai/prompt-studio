@@ -1,4 +1,4 @@
-import { boolean, customType, integer, jsonb, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, customType, integer, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
 
 const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
   dataType() {
@@ -32,6 +32,19 @@ export const project_repos = pgTable("project_repos", {
     .references(() => repos.id, { onDelete: "cascade" }),
   created_at: text("created_at").notNull(),
 });
+
+export const agent_configs = pgTable(
+  "agent_configs",
+  {
+    id: text("id").primaryKey(),
+    agent_id: text("agent_id").notNull(),
+    is_default: boolean("is_default").notNull().default(false),
+    config: text("config").notNull().default("{}"),
+    created_at: text("created_at").notNull(),
+    updated_at: text("updated_at").notNull(),
+  },
+  (table) => [uniqueIndex("agent_configs_agent_id_idx").on(table.agent_id)],
+);
 
 export const ticket_statuses = pgTable("ticket_statuses", {
   id: text("id").primaryKey(),
@@ -122,7 +135,7 @@ export const sessions = pgTable("sessions", {
   last_request_ended: text("last_request_ended"),
   agent: text("agent"),
   agent_session_id: text("agent_session_id"),
-  content: jsonb("content").$type<unknown>(),
+  session_file_id: text("session_file_id").references(() => files.id),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
 });
@@ -185,35 +198,6 @@ export const files = pgTable("files", {
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
 });
-
-export const project_docs = pgTable(
-  "project_docs",
-  {
-    id: text("id").primaryKey(),
-    project_id: text("project_id")
-      .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
-    last_synced_at: text("last_synced_at"),
-    created_at: text("created_at").notNull(),
-    updated_at: text("updated_at").notNull(),
-  },
-  (table) => [uniqueIndex("project_docs_project_id_idx").on(table.project_id)],
-);
-
-export const project_doc_files = pgTable(
-  "project_doc_files",
-  {
-    id: text("id").primaryKey(),
-    project_doc_id: text("project_doc_id")
-      .notNull()
-      .references(() => project_docs.id, { onDelete: "cascade" }),
-    file_id: text("file_id")
-      .notNull()
-      .references(() => files.id, { onDelete: "cascade" }),
-    created_at: text("created_at").notNull(),
-  },
-  (table) => [uniqueIndex("project_doc_files_project_doc_file_idx").on(table.project_doc_id, table.file_id)],
-);
 
 export const ticket_files = pgTable("ticket_files", {
   id: text("id").primaryKey(),

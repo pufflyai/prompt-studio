@@ -117,6 +117,126 @@ const isSamePath = (nextPath: string[], currentPath: string[]) => {
   return nextPath.every((value, index) => value === currentPath[index]);
 };
 
+interface ColumnItemRowProps<T extends ColumnFileItem> {
+  item: T;
+  columnIndex: number;
+  breadcrumb: T[];
+  selectedFolderId?: string;
+  activeFileId: string | null;
+  allowContextMenu: boolean;
+  canDeleteItem?: (item: T, path: T[]) => boolean;
+  onFolderOpen?: (folder: T, path: T[]) => void;
+  onFileOpen?: (file: T, path: T[]) => void;
+  onDeleteItem?: (item: T, path: T[]) => void;
+  onDownloadFile?: (file: T, path: T[]) => void;
+  onDragOver: (event: DragEvent) => void;
+  onDropToFolder: (event: DragEvent, folder: T | null, path: T[]) => void;
+  onUpdateSelectedPath: (nextPath: string[]) => void;
+  onUpdateActiveFileId: (nextActiveFileId: string | null) => void;
+}
+
+const ColumnItemRow = <T extends ColumnFileItem>(props: ColumnItemRowProps<T>) => {
+  const {
+    item,
+    columnIndex,
+    breadcrumb,
+    selectedFolderId,
+    activeFileId,
+    allowContextMenu,
+    canDeleteItem,
+    onFolderOpen,
+    onFileOpen,
+    onDeleteItem,
+    onDownloadFile,
+    onDragOver,
+    onDropToFolder,
+    onUpdateSelectedPath,
+    onUpdateActiveFileId,
+  } = props;
+
+  const isFolder = item.type === "folder";
+  const itemPath = [...breadcrumb, item];
+  const canDownloadFile = Boolean(onDownloadFile) && !isFolder;
+  const allowDelete = Boolean(onDeleteItem) && (canDeleteItem ? canDeleteItem(item, itemPath) : true);
+  const hasContextActions = allowContextMenu && (canDownloadFile || allowDelete);
+  const isSelectedFolder = selectedFolderId === item.id;
+  const isActiveFile = !isFolder && activeFileId === item.id;
+
+  const handleItemClick = () => {
+    const basePathIds = breadcrumb.slice(0, columnIndex).map((entry) => entry.id);
+
+    if (isFolder) {
+      const nextPath = [...basePathIds, item.id];
+      onUpdateSelectedPath(nextPath);
+      onUpdateActiveFileId(null);
+      onFolderOpen?.(item, itemPath);
+      return;
+    }
+
+    onUpdateSelectedPath(basePathIds);
+    onUpdateActiveFileId(item.id);
+    onFileOpen?.(item, itemPath);
+  };
+
+  const handleDeleteClick = () => {
+    if (!allowDelete) return;
+    onDeleteItem?.(item, itemPath);
+  };
+
+  const handleDownloadClick = () => {
+    if (!canDownloadFile) return;
+    onDownloadFile?.(item, itemPath);
+  };
+
+  const content = (
+    <MenuItem
+      id={item.id}
+      primaryLabel={item.name}
+      secondaryLabel={item.meta}
+      leftIcon={isFolder ? Folder : FileText}
+      rightIcon={isFolder ? ChevronRight : null}
+      isSelected={isSelectedFolder || isActiveFile}
+      onClick={handleItemClick}
+    />
+  );
+
+  const itemSurface = (
+    <Box
+      width="100%"
+      onDragOver={isFolder ? onDragOver : undefined}
+      onDrop={(event) => onDropToFolder(event, item, itemPath)}
+    >
+      {content}
+    </Box>
+  );
+
+  if (!hasContextActions) {
+    return <Menu.Root>{itemSurface}</Menu.Root>;
+  }
+
+  return (
+    <Menu.Root>
+      <Menu.ContextTrigger asChild>{itemSurface}</Menu.ContextTrigger>
+      <Portal>
+        <Menu.Positioner>
+          <Menu.Content minW="180px" bg="bg" zIndex="popover">
+            {canDownloadFile ? (
+              <Menu.Item value="download" onClick={handleDownloadClick}>
+                Download
+              </Menu.Item>
+            ) : null}
+            {allowDelete ? (
+              <Menu.Item value="delete" color="fg.error" onClick={handleDeleteClick}>
+                Delete
+              </Menu.Item>
+            ) : null}
+          </Menu.Content>
+        </Menu.Positioner>
+      </Portal>
+    </Menu.Root>
+  );
+};
+
 export const ColumnFileBrowser = <T extends ColumnFileItem>(props: ColumnFileBrowserProps<T>) => {
   const {
     items,
@@ -152,26 +272,6 @@ export const ColumnFileBrowser = <T extends ColumnFileItem>(props: ColumnFileBro
     if (files.length === 0) return;
 
     onDropFiles?.(files, folder, path);
-  };
-
-  const handleFolderClick = (folder: T, columnIndex: number, breadcrumb: T[]) => {
-    const nextPath = selectedPath.slice(0, columnIndex);
-
-    nextPath.push(folder.id);
-
-    setSelectedPath(nextPath);
-    setActiveFileId(null);
-
-    onFolderOpen?.(folder, [...breadcrumb, folder]);
-  };
-
-  const handleFileClick = (file: T, columnIndex: number, breadcrumb: T[]) => {
-    const trimmedPath = selectedPath.slice(0, columnIndex);
-
-    setSelectedPath(trimmedPath);
-    setActiveFileId(file.id);
-
-    onFileOpen?.(file, [...breadcrumb, file]);
   };
 
   useEffect(() => {
@@ -239,88 +339,26 @@ export const ColumnFileBrowser = <T extends ColumnFileItem>(props: ColumnFileBro
               onDragOver={handleDragOver}
               onDrop={(event) => handleDrop(event, parentFolder, column.breadcrumb)}
             >
-              {column.items.map((item) => {
-                const isFolder = item.type === "folder";
-                const isSelectedFolder = column.selectedFolderId === item.id;
-                const isActiveFile = !isFolder && activeFileId === item.id;
-                const itemPath = [...column.breadcrumb, item];
-                const canDownloadFile = Boolean(onDownloadFile) && !isFolder;
-                const allowDelete = Boolean(onDeleteItem) && (canDeleteItem ? canDeleteItem(item, itemPath) : true);
-                const hasContextActions = allowContextMenu && (canDownloadFile || allowDelete);
-
-                const handleItemClick = () =>
-                  isFolder
-                    ? handleFolderClick(item, columnIndex, column.breadcrumb)
-                    : handleFileClick(item, columnIndex, column.breadcrumb);
-
-                const handleDeleteClick = () => {
-                  if (!allowDelete) return;
-
-                  onDeleteItem?.(item, itemPath);
-                };
-                const handleDownloadClick = () => {
-                  if (!canDownloadFile) return;
-
-                  onDownloadFile?.(item, itemPath);
-                };
-                const handleItemDrop = (event: DragEvent) => handleDrop(event, item, itemPath);
-
-                const content = (
-                  <MenuItem
-                    id={item.id}
-                    primaryLabel={item.name}
-                    secondaryLabel={item.meta}
-                    leftIcon={isFolder ? Folder : FileText}
-                    rightIcon={isFolder ? ChevronRight : null}
-                    isSelected={isSelectedFolder || isActiveFile}
-                    onClick={handleItemClick}
-                  />
-                );
-
-                if (!hasContextActions) {
-                  return (
-                    <Menu.Root key={item.id}>
-                      <Box
-                        width="100%"
-                        onDragOver={isFolder ? handleDragOver : undefined}
-                        onDrop={isFolder ? handleItemDrop : undefined}
-                      >
-                        {content}
-                      </Box>
-                    </Menu.Root>
-                  );
-                }
-
-                return (
-                  <Menu.Root key={item.id}>
-                    <Menu.ContextTrigger asChild>
-                      <Box
-                        width="100%"
-                        onDragOver={isFolder ? handleDragOver : undefined}
-                        onDrop={isFolder ? handleItemDrop : undefined}
-                      >
-                        {content}
-                      </Box>
-                    </Menu.ContextTrigger>
-                    <Portal>
-                      <Menu.Positioner>
-                        <Menu.Content minW="180px" bg="bg" zIndex="popover">
-                          {canDownloadFile ? (
-                            <Menu.Item value="download" onClick={handleDownloadClick}>
-                              Download
-                            </Menu.Item>
-                          ) : null}
-                          {allowDelete ? (
-                            <Menu.Item value="delete" color="fg.error" onClick={handleDeleteClick}>
-                              Delete
-                            </Menu.Item>
-                          ) : null}
-                        </Menu.Content>
-                      </Menu.Positioner>
-                    </Portal>
-                  </Menu.Root>
-                );
-              })}
+              {column.items.map((item) => (
+                <ColumnItemRow
+                  key={item.id}
+                  item={item}
+                  columnIndex={columnIndex}
+                  breadcrumb={column.breadcrumb}
+                  selectedFolderId={column.selectedFolderId}
+                  activeFileId={activeFileId}
+                  allowContextMenu={allowContextMenu}
+                  canDeleteItem={canDeleteItem}
+                  onFolderOpen={onFolderOpen}
+                  onFileOpen={onFileOpen}
+                  onDeleteItem={onDeleteItem}
+                  onDownloadFile={onDownloadFile}
+                  onDragOver={handleDragOver}
+                  onDropToFolder={handleDrop}
+                  onUpdateSelectedPath={setSelectedPath}
+                  onUpdateActiveFileId={setActiveFileId}
+                />
+              ))}
 
               {column.items.length === 0 ? (
                 <Box borderWidth="1px" borderColor="border.muted" p="md" height="100%">

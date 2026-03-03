@@ -20,10 +20,10 @@ afterEach(() => {
 });
 
 describe("loadDocsConfig", () => {
-  test("parses docs.json sidebar", () => {
+  test("parses navigation.json sidebar", () => {
     const docsDir = setup("load-config");
     writeFileSync(
-      join(docsDir, "docs.json"),
+      join(docsDir, "navigation.json"),
       JSON.stringify({
         sidebar: [
           { text: "Intro", link: "/intro" },
@@ -39,7 +39,7 @@ describe("loadDocsConfig", () => {
     expect(config.sidebar[1].items).toHaveLength(1);
   });
 
-  test("returns null when docs.json missing", () => {
+  test("returns null when navigation.json missing", () => {
     const docsDir = setup("no-config");
 
     const config = loadDocsConfig(docsDir);

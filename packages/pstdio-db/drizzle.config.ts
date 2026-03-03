@@ -1,10 +1,15 @@
 import { defineConfig } from "drizzle-kit";
+import { resolveDbPath } from "./src/db/paths";
 
-export default defineConfig({
-  dialect: "postgresql",
-  schema: "./src/db/schemas.pg.ts",
-  out: "./drizzle",
-  dbCredentials: {
-    url: process.env.DATABASE_URL ?? "postgresql://postgres:password@localhost:54321/electric",
-  },
-});
+export const createDrizzleConfig = (dbPath?: string) =>
+  defineConfig({
+    dialect: "postgresql",
+    driver: "pglite",
+    schema: "./src/db/schemas.pg.ts",
+    out: "./drizzle",
+    dbCredentials: {
+      url: resolveDbPath(dbPath),
+    },
+  });
+
+export default createDrizzleConfig();

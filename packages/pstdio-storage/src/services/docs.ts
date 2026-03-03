@@ -1,19 +1,8 @@
-import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
-import { and, eq } from "drizzle-orm";
-import type { DbClient } from "pstdio-db";
-import { project_docs } from "pstdio-db";
-import type { createFilesService } from "./files";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { extname, isAbsolute, join, relative, resolve } from "node:path";
+import type { createReposService } from "pstdio-db";
 
 type DocsErrorCode = "DOCS_CONFIG_NOT_FOUND" | "DOCS_CONFIG_INVALID" | "DOCS_LINK_INVALID" | "DOCS_DOCUMENT_NOT_FOUND";
-
-type PersistedFile = {
-  id: string;
-  file_name: string;
-  storage_path: string;
-  hash: string | null;
-};
 
 type DocsSidebarItem = {
   text: string;
@@ -21,10 +10,8 @@ type DocsSidebarItem = {
   items?: DocsSidebarItem[];
 };
 
-const DOCS_CONFIG_NAME = "docs.json";
-const DOCS_STORAGE_PREFIX = "docs/";
-
-const nowTimestamp = () => new Date().toISOString();
+const DOCS_CONFIG_NAME = "navigation.json";
+const DOCS_DIR = join(".pstdio", "docs");
 
 const createDocsError = (code: DocsErrorCode, message: string) => Object.assign(new Error(message), { code });
 
@@ -91,11 +78,11 @@ const parseSidebarItem = (value: unknown, location: string): DocsSidebarItem => 
 
 const parseSidebar = (parsed: unknown) => {
   if (!isRecord(parsed)) {
-    throw createDocsError("DOCS_CONFIG_INVALID", "docs.json must contain an object.");
+    throw createDocsError("DOCS_CONFIG_INVALID", "navigation.json must contain an object.");
   }
 
   if (!Array.isArray(parsed.sidebar)) {
-    throw createDocsError("DOCS_CONFIG_INVALID", "docs.json must include a sidebar array.");
+    throw createDocsError("DOCS_CONFIG_INVALID", "navigation.json must include a sidebar array.");
   }
 
   return parsed.sidebar.map((item, index) => parseSidebarItem(item, `sidebar[${index}]`));
@@ -143,37 +130,12 @@ const listRelativeFiles = (rootDir: string, currentDir = rootDir): string[] => {
   return files.sort((left, right) => left.localeCompare(right));
 };
 
-const docsStorageName = (relativePath: string) => `${DOCS_STORAGE_PREFIX}${relativePath}`;
-
-const detectMimeType = (relativePath: string) => {
-  const lower = relativePath.toLowerCase();
-  if (lower === DOCS_CONFIG_NAME) return "application/json";
-  if (lower.endsWith(".md")) return "text/markdown";
-  if (lower.endsWith(".png")) return "image/png";
-  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
-  if (lower.endsWith(".gif")) return "image/gif";
-  if (lower.endsWith(".webp")) return "image/webp";
-  if (lower.endsWith(".svg")) return "image/svg+xml";
-  if (lower.endsWith(".txt")) return "text/plain";
-  if (lower.endsWith(".json")) return "application/json";
-  return "application/octet-stream";
-};
-
-const stripStoragePrefix = (docsRoot: string, fileName: string) => {
-  if (!fileName.startsWith(DOCS_STORAGE_PREFIX)) {
-    return null;
-  }
-
-  const relativePath = fileName.slice(DOCS_STORAGE_PREFIX.length);
-  return assertDocsRelativePath(docsRoot, relativePath, "persisted docs");
-};
-
 const parseConfigAndValidateLinks = (docsRoot: string, configText: string, availableFiles: Set<string>) => {
   let parsed: unknown;
   try {
     parsed = JSON.parse(configText);
   } catch {
-    throw createDocsError("DOCS_CONFIG_INVALID", "Unable to parse .pstdio/docs/docs.json");
+    throw createDocsError("DOCS_CONFIG_INVALID", "Unable to parse .pstdio/docs/navigation.json");
   }
 
   const sidebar = parseSidebar(parsed);
@@ -191,232 +153,43 @@ const parseConfigAndValidateLinks = (docsRoot: string, configText: string, avail
 export const isDocsServiceError = (value: unknown): value is Error & { code: DocsErrorCode } =>
   value instanceof Error && "code" in value && typeof value.code === "string";
 
-export const createDocsService = (db: DbClient, files: ReturnType<typeof createFilesService>) => {
-  const getProjectDocsRow = async (projectId: string) => {
-    const [row] = await db.select().from(project_docs).where(eq(project_docs.project_id, projectId));
-    return row ?? null;
-  };
-
-  const getOrCreateProjectDocs = async (projectId: string) => {
-    const existing = await getProjectDocsRow(projectId);
-    if (existing) {
-      return existing;
+export const createDocsService = (reposService: ReturnType<typeof createReposService>) => {
+  const resolveDocsDir = async (projectId: string) => {
+    const repos = await reposService.listByProject(projectId);
+    if (repos.length === 0) {
+      throw createDocsError("DOCS_CONFIG_NOT_FOUND", `No repo linked to project ${projectId}.`);
     }
-
-    const timestamp = nowTimestamp();
-    const created = {
-      id: crypto.randomUUID(),
-      project_id: projectId,
-      last_synced_at: null,
-      created_at: timestamp,
-      updated_at: timestamp,
-    };
-
-    await db.insert(project_docs).values(created);
-    return created;
-  };
-
-  const listSnapshotFiles = async (projectId: string, docsRoot = ".pstdio/docs") => {
-    const row = await getProjectDocsRow(projectId);
-    if (!row) {
-      return { row: null, filesByRelativePath: new Map<string, PersistedFile>() };
-    }
-
-    const attached = (await files.listForProjectDocs(row.id)) as PersistedFile[];
-    const filesByRelativePath = new Map<string, PersistedFile>();
-
-    for (const file of attached) {
-      const relativePath = stripStoragePrefix(docsRoot, file.file_name);
-      if (!relativePath) {
-        continue;
-      }
-      filesByRelativePath.set(relativePath, file);
-    }
-
-    return { row, filesByRelativePath };
-  };
-
-  const save = async (projectId: string, sourceDir: string) => {
-    if (!existsSync(sourceDir)) {
-      throw createDocsError("DOCS_CONFIG_NOT_FOUND", `Docs directory not found: ${sourceDir}`);
-    }
-
-    const localFiles = listRelativeFiles(sourceDir).map((filePath) =>
-      assertDocsRelativePath(sourceDir, filePath, "local docs"),
-    );
-    if (!localFiles.includes(DOCS_CONFIG_NAME)) {
-      throw createDocsError("DOCS_CONFIG_NOT_FOUND", "Docs config not found at .pstdio/docs/docs.json");
-    }
-
-    const localSet = new Set(localFiles);
-    const docsConfigText = readFileSync(join(sourceDir, DOCS_CONFIG_NAME), "utf8");
-    parseConfigAndValidateLinks(sourceDir, docsConfigText, localSet);
-
-    const row = await getOrCreateProjectDocs(projectId);
-    const persisted = (await listSnapshotFiles(projectId, sourceDir)).filesByRelativePath;
-    let updatedCount = 0;
-
-    for (const relativePath of localFiles) {
-      const filePath = join(sourceDir, relativePath);
-      const data = readFileSync(filePath);
-      const hash = createHash("sha256").update(data).digest("hex");
-      const existing = persisted.get(relativePath);
-
-      if (existing?.hash === hash) {
-        persisted.delete(relativePath);
-        continue;
-      }
-
-      if (existing) {
-        await files.detachFromProjectDocs(row.id, existing.id);
-        await files.remove(existing.id);
-        persisted.delete(relativePath);
-      }
-
-      const uploaded = await files.upload({
-        project_id: projectId,
-        file_name: docsStorageName(relativePath),
-        file_kind: "docs",
-        data,
-        mime_type: detectMimeType(relativePath),
-      });
-
-      await files.attachToProjectDocs(row.id, uploaded.id);
-      updatedCount += 1;
-    }
-
-    const stale = Array.from(persisted.values());
-    for (const file of stale) {
-      await files.detachFromProjectDocs(row.id, file.id);
-      await files.remove(file.id);
-    }
-
-    const attachedFiles = (await files.listForProjectDocs(row.id)) as PersistedFile[];
-    const attachedIds = new Set(attachedFiles.map((file) => file.id));
-
-    const allProjectFiles = (await files.listByProject(projectId)) as PersistedFile[];
-    const orphanDocsFiles = allProjectFiles.filter((file) => {
-      if (!file.file_name.startsWith(DOCS_STORAGE_PREFIX)) {
-        return false;
-      }
-
-      return !attachedIds.has(file.id);
-    });
-
-    for (const file of orphanDocsFiles) {
-      await files.remove(file.id);
-    }
-
-    const timestamp = nowTimestamp();
-    await db
-      .update(project_docs)
-      .set({
-        last_synced_at: timestamp,
-        updated_at: timestamp,
-      })
-      .where(and(eq(project_docs.id, row.id), eq(project_docs.project_id, projectId)));
-
-    return {
-      updatedCount,
-      removedCount: stale.length + orphanDocsFiles.length,
-    };
-  };
-
-  const pull = async (projectId: string, targetDir: string) => {
-    const { row, filesByRelativePath } = await listSnapshotFiles(projectId, targetDir);
-    if (!row || filesByRelativePath.size === 0) {
-      throw createDocsError("DOCS_CONFIG_NOT_FOUND", "Project docs snapshot not found. Run `pstdio docs save` first.");
-    }
-
-    const docsConfig = filesByRelativePath.get(DOCS_CONFIG_NAME);
-    if (!docsConfig) {
-      throw createDocsError("DOCS_CONFIG_NOT_FOUND", "Persisted docs config not found: docs/docs.json");
-    }
-
-    const persistedSet = new Set(filesByRelativePath.keys());
-    const configText = readFileSync(docsConfig.storage_path, "utf8");
-    parseConfigAndValidateLinks(targetDir, configText, persistedSet);
-
-    mkdirSync(targetDir, { recursive: true });
-    const persistedPaths = Array.from(filesByRelativePath.keys()).sort((left, right) => left.localeCompare(right));
-
-    for (const relativePath of persistedPaths) {
-      const persistedFile = filesByRelativePath.get(relativePath);
-      if (!persistedFile) {
-        continue;
-      }
-
-      const outputPath = join(targetDir, relativePath);
-      mkdirSync(dirname(outputPath), { recursive: true });
-      writeFileSync(outputPath, readFileSync(persistedFile.storage_path));
-    }
-
-    const localFiles = existsSync(targetDir) ? listRelativeFiles(targetDir) : [];
-    const staleLocal = localFiles.filter((relativePath) => !persistedSet.has(relativePath));
-
-    for (const relativePath of staleLocal) {
-      rmSync(join(targetDir, relativePath), { force: true });
-    }
-
-    return {
-      updatedCount: persistedPaths.length,
-      removedCount: staleLocal.length,
-    };
-  };
-
-  const get = async (projectId: string) => {
-    const { row, filesByRelativePath } = await listSnapshotFiles(projectId);
-    if (!row) {
-      return null;
-    }
-
-    return {
-      ...row,
-      files: Array.from(filesByRelativePath.entries()).map(([path, file]) => ({ path, ...file })),
-    };
+    return join(repos[0].path, DOCS_DIR);
   };
 
   const getIndex = async (projectId: string) => {
-    const { filesByRelativePath } = await listSnapshotFiles(projectId);
-    const docsConfig = filesByRelativePath.get(DOCS_CONFIG_NAME);
-    if (!docsConfig) {
-      throw createDocsError("DOCS_CONFIG_NOT_FOUND", "Project docs snapshot not found. Run `pstdio docs save` first.");
+    const docsDir = await resolveDocsDir(projectId);
+    const configPath = join(docsDir, DOCS_CONFIG_NAME);
+
+    if (!existsSync(configPath)) {
+      throw createDocsError("DOCS_CONFIG_NOT_FOUND", "Docs config not found at .pstdio/docs/navigation.json");
     }
 
-    const availableFiles = new Set(filesByRelativePath.keys());
-    const configText = readFileSync(docsConfig.storage_path, "utf8");
-    return parseConfigAndValidateLinks(".pstdio/docs", configText, availableFiles);
+    const configText = readFileSync(configPath, "utf8");
+    const availableFiles = new Set(listRelativeFiles(docsDir));
+    return parseConfigAndValidateLinks(docsDir, configText, availableFiles);
   };
 
   const getDocument = async (projectId: string, link: string) => {
-    const { filesByRelativePath } = await listSnapshotFiles(projectId);
-    if (!filesByRelativePath.has(DOCS_CONFIG_NAME)) {
-      throw createDocsError("DOCS_CONFIG_NOT_FOUND", "Project docs snapshot not found. Run `pstdio docs save` first.");
-    }
+    const docsDir = await resolveDocsDir(projectId);
+    const relativePath = normalizeSidebarLinkPath(docsDir, link);
+    const filePath = join(docsDir, relativePath);
 
-    const relativePath = normalizeSidebarLinkPath(".pstdio/docs", link);
-    const file = filesByRelativePath.get(relativePath);
-
-    if (!file) {
-      throw createDocsError("DOCS_DOCUMENT_NOT_FOUND", `Docs markdown file not found: ${relativePath}`);
-    }
-
-    if (extname(relativePath).toLowerCase() !== ".md") {
+    if (!existsSync(filePath) || extname(relativePath).toLowerCase() !== ".md") {
       throw createDocsError("DOCS_DOCUMENT_NOT_FOUND", `Docs markdown file not found: ${relativePath}`);
     }
 
     return {
       link,
       path: relativePath,
-      content: readFileSync(file.storage_path, "utf8"),
+      content: readFileSync(filePath, "utf8"),
     };
   };
 
-  return {
-    get,
-    save,
-    pull,
-    getIndex,
-    getDocument,
-  };
+  return { getIndex, getDocument };
 };

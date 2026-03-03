@@ -1,14 +1,22 @@
 import type { Argv } from "yargs";
+import { API_URL } from "@/features/api-url";
+import { ensureApi } from "@/features/ensure-api";
 import * as createCommand from "./create";
 import * as linkCommand from "./link";
+import * as listCommand from "./list";
 
-export const command = "projects <command>";
+export const command = "projects [command]";
 export const describe = "Manage projects";
 
-export const builder = (yargs: Argv) =>
-  yargs
-    .command(createCommand)
-    .command(linkCommand)
-    .demandCommand(1, "Please specify a projects command: create or link.");
+let _yargs: Argv;
 
-export const handler = () => {};
+export const builder = (yargs: Argv) => {
+  _yargs = yargs;
+  return yargs.command(createCommand).command(linkCommand).command(listCommand);
+};
+
+export const middlewares = [() => ensureApi(API_URL)];
+
+export const handler = () => {
+  _yargs.showHelp();
+};

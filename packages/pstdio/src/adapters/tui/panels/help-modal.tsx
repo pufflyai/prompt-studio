@@ -21,6 +21,8 @@ const NAVIGATION: Shortcut[] = [
 const ACTIONS: Shortcut[] = [
   { key: "enter", label: "Open / expand" },
   { key: "v", label: "View document" },
+  { key: "a", label: "Manage agents" },
+  { key: "p", label: "Switch project" },
 ];
 
 const OTHER: Shortcut[] = [

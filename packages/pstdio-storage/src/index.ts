@@ -10,4 +10,5 @@ export type {
   PstdioSettings,
 } from "./services/settings";
 export { createSettingsService } from "./services/settings";
+export { createSkillsService } from "./services/skills";
 export { ensureStorageRoot, resolveStorageRoot } from "./storage/paths";

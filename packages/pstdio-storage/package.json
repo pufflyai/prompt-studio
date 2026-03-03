@@ -7,15 +7,17 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "bunx tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && bunx biome check .",
     "format": "bunx biome check --write .",
     "test": "bun test"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "typescript": "~5.9.3"
   },
   "dependencies": {
+    "pstdio-agents": "workspace:*",
     "pstdio-db": "workspace:*",
     "drizzle-orm": "^0.45.1"
   }

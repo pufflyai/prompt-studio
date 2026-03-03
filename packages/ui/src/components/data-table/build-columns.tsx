@@ -4,6 +4,22 @@ import { isValidElement, type ReactNode } from "react";
 import { columnHelper, formatDisplayValue, getIcon, isDisplayValue } from "./helpers";
 import type { RowData } from "./types";
 
+const getSortValue = (value: unknown) => {
+  return isDisplayValue(value) ? value.sortValue : value;
+};
+
+const compareValues = (valueA: unknown, valueB: unknown) => {
+  if (valueA === valueB) return 0;
+  if (valueA === null || valueA === undefined) return 1;
+  if (valueB === null || valueB === undefined) return -1;
+
+  if (typeof valueA === "number" && typeof valueB === "number") {
+    return valueA - valueB;
+  }
+
+  return String(valueA).localeCompare(String(valueB));
+};
+
 export function buildColumns(data: RowData[], columnKeys: string[], columnIcons?: Partial<Record<string, ReactNode>>) {
   const rowIndexColumn = columnHelper.accessor((_row, rowIndex) => rowIndex + 1, {
     header: "",
@@ -51,22 +67,9 @@ export function buildColumns(data: RowData[], columnKeys: string[], columnIcons?
         );
       },
       sortingFn: (rowA, rowB) => {
-        const valueA = isDisplayValue(rowA.original[fallBackKey])
-          ? rowA.original[fallBackKey].sortValue
-          : rowA.original[fallBackKey];
-        const valueB = isDisplayValue(rowB.original[fallBackKey])
-          ? rowB.original[fallBackKey].sortValue
-          : rowB.original[fallBackKey];
-
-        if (valueA === valueB) return 0;
-        if (valueA === null || valueA === undefined) return 1;
-        if (valueB === null || valueB === undefined) return -1;
-
-        if (typeof valueA === "number" && typeof valueB === "number") {
-          return valueA - valueB;
-        }
-
-        return String(valueA).localeCompare(String(valueB));
+        const valueA = getSortValue(rowA.original[fallBackKey]);
+        const valueB = getSortValue(rowB.original[fallBackKey]);
+        return compareValues(valueA, valueB);
       },
     });
   });

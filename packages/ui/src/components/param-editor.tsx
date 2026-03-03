@@ -17,105 +17,102 @@ export interface ParamEditorProps {
   fullWidth?: boolean;
 }
 
+const resolveDefaultValue = <T,>(defaultValues: ParamValueMap, paramId: string, fallback: T) => {
+  return defaultValues[paramId] === undefined ? fallback : (defaultValues[paramId] as T);
+};
+
 export const ParamEditor = (props: ParamEditorProps) => {
   const { params = [], groups = [], defaultValues, onChange, readOnly, fullWidth = false } = props;
 
+  const renderNumberParam = (param: Extract<Param, { type: "number" }>) => (
+    <NumberInput
+      readOnly={readOnly}
+      id={param.id}
+      key={param.id}
+      name={param.name}
+      description={param.description || ""}
+      defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue ?? param.min)}
+      min={param.min}
+      max={param.max}
+      step={param.step}
+      onChange={onChange}
+      fullWidth={fullWidth}
+    />
+  );
+
+  const renderTextParam = (param: Extract<Param, { type: "text" }>) => (
+    <TextInput
+      readOnly={readOnly}
+      id={param.id}
+      key={param.id}
+      name={param.name}
+      description={param.description || ""}
+      defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
+      singleLine={param.singleLine}
+      onChange={onChange}
+      fullWidth={fullWidth}
+    />
+  );
+
+  const renderSelectionParam = (param: Extract<Param, { type: "selection" }>) => (
+    <SelectionInput
+      readOnly={readOnly}
+      id={param.id}
+      key={param.id}
+      name={param.name}
+      description={param.description || ""}
+      defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
+      options={param.options}
+      onChange={onChange}
+      multiSelect={param.multiSelect}
+      placeholder={param.placeholder}
+      fullWidth={fullWidth}
+    />
+  );
+
+  const renderDateParam = (param: Extract<Param, { type: "date" }>) => (
+    <DateInput
+      readOnly={readOnly}
+      id={param.id}
+      key={param.id}
+      name={param.name}
+      description={param.description || ""}
+      defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue ?? param.min)}
+      min={param.min}
+      max={param.max}
+      onChange={onChange}
+      fullWidth={fullWidth}
+    />
+  );
+
+  const renderColorParam = (param: Extract<Param, { type: "color" }>) => (
+    <ColorInput
+      readOnly={readOnly}
+      id={param.id}
+      key={param.id}
+      name={param.name}
+      description={param.description || ""}
+      defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
+      onChange={onChange}
+      fullWidth={fullWidth}
+    />
+  );
+
   const renderParam = (param: Param) => {
-    if (param.type === "number") {
-      const defaultValue =
-        defaultValues[param.id] === undefined ? (param.defaultValue ?? param.min) : (defaultValues[param.id] as number);
-      return (
-        <NumberInput
-          readOnly={readOnly}
-          id={param.id}
-          key={param.id}
-          name={param.name}
-          description={param.description || ""}
-          defaultValue={defaultValue}
-          min={param.min}
-          max={param.max}
-          step={param.step}
-          onChange={onChange}
-          fullWidth={fullWidth}
-        />
-      );
+    switch (param.type) {
+      case "number":
+        return renderNumberParam(param);
+      case "text":
+        return renderTextParam(param);
+      case "selection":
+        return renderSelectionParam(param);
+      case "date":
+        return renderDateParam(param);
+      case "color":
+        return renderColorParam(param);
+      default:
+        return null;
     }
-
-    if (param.type === "text") {
-      const defaultValue =
-        defaultValues[param.id] === undefined ? param.defaultValue : (defaultValues[param.id] as string);
-      return (
-        <TextInput
-          readOnly={readOnly}
-          id={param.id}
-          key={param.id}
-          name={param.name}
-          description={param.description || ""}
-          defaultValue={defaultValue}
-          singleLine={param.singleLine}
-          onChange={onChange}
-          fullWidth={fullWidth}
-        />
-      );
-    }
-
-    if (param.type === "selection") {
-      const defaultValue =
-        defaultValues[param.id] === undefined ? param.defaultValue : (defaultValues[param.id] as string | string[]);
-      return (
-        <SelectionInput
-          readOnly={readOnly}
-          id={param.id}
-          key={param.id}
-          name={param.name}
-          description={param.description || ""}
-          defaultValue={defaultValue}
-          options={param.options}
-          onChange={onChange}
-          multiSelect={param.multiSelect}
-          placeholder={param.placeholder}
-          fullWidth={fullWidth}
-        />
-      );
-    }
-
-    if (param.type === "date") {
-      const defaultValue =
-        defaultValues[param.id] === undefined ? (param.defaultValue ?? param.min) : (defaultValues[param.id] as string);
-      return (
-        <DateInput
-          readOnly={readOnly}
-          id={param.id}
-          key={param.id}
-          name={param.name}
-          description={param.description || ""}
-          defaultValue={defaultValue}
-          min={param.min}
-          max={param.max}
-          onChange={onChange}
-          fullWidth={fullWidth}
-        />
-      );
-    }
-
-    if (param.type === "color") {
-      const defaultValue =
-        defaultValues[param.id] === undefined ? param.defaultValue : (defaultValues[param.id] as string);
-      return (
-        <ColorInput
-          readOnly={readOnly}
-          id={param.id}
-          key={param.id}
-          name={param.name}
-          description={param.description || ""}
-          defaultValue={defaultValue}
-          onChange={onChange}
-          fullWidth={fullWidth}
-        />
-      );
-    }
-
-    return null;
   };
 
   return (

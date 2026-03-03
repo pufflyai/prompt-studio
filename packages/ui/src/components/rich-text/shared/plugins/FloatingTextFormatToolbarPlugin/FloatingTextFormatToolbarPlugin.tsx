@@ -21,6 +21,7 @@ import {
   COMMAND_PRIORITY_HIGH,
   FORMAT_TEXT_COMMAND,
   type LexicalEditor,
+  type LexicalNode,
   SELECTION_CHANGE_COMMAND,
 } from "lexical";
 import type React from "react";
@@ -45,6 +46,38 @@ const blockTypeToBlockName = {
   number: "Numbered List",
   paragraph: "Normal",
   quote: "Quote",
+};
+
+const toKnownBlockType = (type: string) => {
+  return type in blockTypeToBlockName ? (type as keyof typeof blockTypeToBlockName) : null;
+};
+
+const findSelectionElement = (anchorNode: LexicalNode) => {
+  const rootMatch =
+    anchorNode.getKey() === "root"
+      ? anchorNode
+      : $findMatchingParent(anchorNode, (node) => {
+          const parent = node.getParent();
+          return parent !== null && $isRootOrShadowRoot(parent);
+        });
+
+  return rootMatch ?? anchorNode.getTopLevelElementOrThrow();
+};
+
+const resolveBlockTypeFromAnchor = (anchorNode: LexicalNode) => {
+  const element = findSelectionElement(anchorNode);
+
+  if ($isListNode(element)) {
+    return element.getListType() as keyof typeof blockTypeToBlockName;
+  }
+
+  const parentList = $findMatchingParent(anchorNode, (node) => $isListNode(node));
+  if (parentList !== null && $isListNode(parentList)) {
+    return parentList.getListType() as keyof typeof blockTypeToBlockName;
+  }
+
+  const type = $isHeadingNode(element) ? element.getTag() : element.getType();
+  return toKnownBlockType(type);
 };
 
 function FloatingTextToolbar({
@@ -99,39 +132,15 @@ function FloatingTextToolbar({
 
   const $updateToolbar = useCallback(() => {
     const selection = $getSelection();
-    if ($isRangeSelection(selection)) {
-      setIsBold(selection.hasFormat("bold"));
-      setIsItalic(selection.hasFormat("italic"));
-      setIsUnderline(selection.hasFormat("underline"));
+    if (!$isRangeSelection(selection)) return;
 
-      const anchorNode = selection.anchor.getNode();
-      let element =
-        anchorNode.getKey() === "root"
-          ? anchorNode
-          : $findMatchingParent(anchorNode, (e) => {
-              const parent = e.getParent();
-              return parent !== null && $isRootOrShadowRoot(parent);
-            });
+    setIsBold(selection.hasFormat("bold"));
+    setIsItalic(selection.hasFormat("italic"));
+    setIsUnderline(selection.hasFormat("underline"));
 
-      if (element === null) {
-        element = anchorNode.getTopLevelElementOrThrow();
-      }
-
-      if ($isListNode(element)) {
-        setBlockType(element.getListType() as keyof typeof blockTypeToBlockName);
-        return;
-      }
-
-      const parentList = $findMatchingParent(anchorNode, (parentNode) => $isListNode(parentNode));
-      if (parentList !== null && $isListNode(parentList)) {
-        setBlockType(parentList.getListType() as keyof typeof blockTypeToBlockName);
-        return;
-      }
-
-      const type = $isHeadingNode(element) ? element.getTag() : element.getType();
-      if (type in blockTypeToBlockName) {
-        setBlockType(type as keyof typeof blockTypeToBlockName);
-      }
+    const nextBlockType = resolveBlockTypeFromAnchor(selection.anchor.getNode());
+    if (nextBlockType) {
+      setBlockType(nextBlockType);
     }
   }, []);
 

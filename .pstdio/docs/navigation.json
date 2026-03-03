@@ -1,104 +1,66 @@
 {
   "sidebar": [
     {
-      "text": "Introduction",
-      "link": "/introduction"
-    },
-    {
-      "text": "Quick Start",
-      "link": "/quick-start"
+      "text": "Specs",
+      "items": [
+        {
+          "text": "CLI Setup",
+          "link": "/specs/cli-setup"
+        },
+        {
+          "text": "CLI Projects",
+          "link": "/specs/cli-projects"
+        },
+        {
+          "text": "CLI Agents",
+          "link": "/specs/cli-agents"
+        },
+        {
+          "text": "CLI Feedback",
+          "link": "/specs/cli-feedback"
+        },
+        {
+          "text": "Real-time Updates",
+          "link": "/specs/realtime-updates"
+        }
+      ]
     },
     {
       "text": "Architecture",
       "items": [
         {
-          "text": "Agents Integration",
-          "link": "/agents-integration"
+          "text": "API",
+          "link": "/architecture/api"
+        },
+        {
+          "text": "Documentation",
+          "link": "/architecture/documentation"
+        },
+        {
+          "text": "Streaming",
+          "link": "/architecture/stream"
         }
       ]
     },
     {
-      "text": "Skills",
+      "text": "Known Issues",
       "items": [
         {
-          "text": "update-documentation",
-          "link": "/skills/update-documentation"
+          "text": "Duplicate Path Logic",
+          "link": "/known-issues/dupplicate_path_logic"
         },
         {
-          "text": "implement-ticket",
-          "link": "/skills/implement-ticket"
-        },
-        {
-          "text": "create-sub-tickets",
-          "link": "/skills/create-sub-tickets"
-        },
-        {
-          "text": "create-ticket",
-          "link": "/skills/create-ticket"
-        },
-        {
-          "text": "create-proposal",
-          "link": "/skills/create-proposal"
-        },
-        {
-          "text": "refine-ticket",
-          "link": "/skills/refine-ticket"
+          "text": "No Bun EventSource",
+          "link": "/known-issues/no_bun_eventsource"
         }
       ]
     },
     {
-      "text": "Templates",
+      "text": "Contributing",
       "items": [
         {
-          "text": "adr-template",
-          "link": "/templates/adr-template"
-        },
-        {
-          "text": "cookbook-template",
-          "link": "/templates/cookbook-template"
-        },
-        {
-          "text": "proposal-template",
-          "link": "/templates/proposal-template"
-        },
-        {
-          "text": "q&a-template",
-          "link": "/templates/q-and-a-template"
-        },
-        {
-          "text": "review-me-template",
-          "link": "/templates/review-me-template"
-        },
-        {
-          "text": "ticket-template",
-          "link": "/templates/ticket-template"
-        }
-      ]
-    },
-    {
-      "text": "References",
-      "items": [
-        {
-          "text": "CLI",
-          "link": "/references/CLI"
-        }
-      ]
-    },
-    {
-      "text": "Flows",
-      "items": [
-        {
-          "text": "flow-1",
-          "link": "/flows/flow-1"
-        }
-      ]
-    },
-    {
-      "text": "Contributors",
-      "items": [
-        {
-          "text": "xxx",
-          "link": "/contributors/xxx"
+          "text": "Overview",
+          "link": "/contributing/overview"
         }
       ]
     }

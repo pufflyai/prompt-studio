@@ -1,9 +1,13 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { createDb, createProjectsService } from "pstdio-db";
-import { createDocsService, createFilesService, ensureStorageRoot, resolveStorageRoot } from "pstdio-storage";
-import { createDocsRoutes } from "./features/docs/routes";
+import { createAgentRegistry, createClaudeCodeAgent, createOpencodeAgent } from "pstdio-agents";
+import { createAgentConfigsService, createDb, createProjectsService, createReposService } from "pstdio-db";
+import { createFilesService, createSkillsService, ensureStorageRoot, resolveStorageRoot } from "pstdio-storage";
+import { createAgentRoutes } from "./features/agents/routes";
 import { createHealthRoutes } from "./features/health/routes";
 import { createProjectRoutes } from "./features/projects/routes";
+import { createSkillRoutes } from "./features/skills/routes";
+import { EventBus } from "./features/sync/event-bus";
+import { createSyncRoutes } from "./features/sync/routes";
 import { swagger } from "./swagger";
 import type { AppBindings } from "./types";
 
@@ -19,20 +23,34 @@ export const createApp = async (options?: AppOptions) => {
   ensureStorageRoot(storageRoot);
 
   const projectsService = createProjectsService(db);
+  const reposService = createReposService(db);
   const filesService = createFilesService(db, storageRoot);
-  const docsService = createDocsService(db, filesService);
+  const skillsService = createSkillsService(reposService);
+
+  const agentRegistry = createAgentRegistry([createClaudeCodeAgent(), createOpencodeAgent()]);
+
+  const agentConfigsService = createAgentConfigsService(db);
+  const eventBus = new EventBus();
 
   const deps = {
     readiness: { database: true, storage: true },
+    db,
+    eventBus,
     projectsService,
-    docsService,
+    reposService,
+    agentConfigsService,
+    filesService,
+    skillsService,
+    agentRegistry,
   };
 
   const app = new OpenAPIHono<AppBindings>();
 
   app.route("/", createHealthRoutes(deps));
   app.route("/v1", createProjectRoutes(deps));
-  app.route("/v1", createDocsRoutes(deps));
+  app.route("/v1", createAgentRoutes(deps));
+  app.route("/v1", createSkillRoutes(deps));
+  app.route("/v1", createSyncRoutes(deps));
 
   swagger(app);
 

@@ -22,7 +22,7 @@ export function useDocs() {
 
     const loaded = loadDocsConfig(dir);
     if (!loaded) {
-      setError("No docs.json found. Run pstdio init first.");
+      setError("No navigation.json found. Run pstdio init first.");
       return;
     }
 

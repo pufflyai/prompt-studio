@@ -106,7 +106,7 @@ describe("schemas.zod", () => {
       agent_session_status: "not_connected",
       archived: false,
       branch: null,
-      content: null,
+      session_file_id: null,
       created: null,
       created_at: "2026-01-01T00:00:00.000Z",
       id: "session-1",

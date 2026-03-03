@@ -26,7 +26,7 @@
     "dev:desktop": "bun run --cwd clients/desktop dev"
   },
   "engines": {
-    "bun": ">=1.1.0"
+    "bun": ">=1.3.10"
   },
   "workspaces": [
     "clients/*",
@@ -40,5 +40,5 @@
     "knip": "^5.66.1",
     "lerna": "^9.0.1"
   },
-  "packageManager": "bun@1.3.3"
+  "packageManager": "bun@1.3.10"
 }

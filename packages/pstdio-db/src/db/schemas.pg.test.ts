@@ -20,8 +20,8 @@ describe("schemas.pg", () => {
     expect(tickets.archived.constructor.name).toBe("PgBoolean");
   });
 
-  it("uses postgres jsonb for JSON content", () => {
-    expect(sessions.content.constructor.name).toBe("PgJsonb");
+  it("uses text FK for session file reference", () => {
+    expect(sessions.session_file_id.constructor.name).toBe("PgText");
   });
 
   it("uses postgres bytea for ydoc operations", () => {

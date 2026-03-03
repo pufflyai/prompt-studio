@@ -119,6 +119,23 @@ const getApplyPatchMetadataObjects = (invocation: ToolPart) => {
   >;
 };
 
+const parseApplyPatchMetadataFile = (entry: unknown) => {
+  const record = getObjectValue(entry);
+  if (!record) return null;
+
+  const rawPath = getStringValue(record.filePath) ?? getStringValue(record.relativePath) ?? getStringValue(record.path);
+  if (!rawPath) return null;
+
+  return {
+    filePath: normalizeFilePath(rawPath),
+    additions: typeof record.additions === "number" ? record.additions : 0,
+    deletions: typeof record.deletions === "number" ? record.deletions : 0,
+    diff: getStringValue(record.diff) ?? undefined,
+    before: getStringValue(record.before) ?? undefined,
+    after: getStringValue(record.after) ?? undefined,
+  } satisfies ApplyPatchMetadataFile;
+};
+
 const getApplyPatchMetadataFiles = (invocation: ToolPart) => {
   const files: ApplyPatchMetadataFile[] = [];
 
@@ -126,21 +143,9 @@ const getApplyPatchMetadataFiles = (invocation: ToolPart) => {
     const entries = Array.isArray(metadata.files) ? metadata.files : [];
 
     for (const entry of entries) {
-      const record = getObjectValue(entry);
-      if (!record) continue;
-
-      const rawPath =
-        getStringValue(record.filePath) ?? getStringValue(record.relativePath) ?? getStringValue(record.path);
-      if (!rawPath) continue;
-
-      files.push({
-        filePath: normalizeFilePath(rawPath),
-        additions: typeof record.additions === "number" ? record.additions : 0,
-        deletions: typeof record.deletions === "number" ? record.deletions : 0,
-        diff: getStringValue(record.diff) ?? undefined,
-        before: getStringValue(record.before) ?? undefined,
-        after: getStringValue(record.after) ?? undefined,
-      });
+      const parsedFile = parseApplyPatchMetadataFile(entry);
+      if (!parsedFile) continue;
+      files.push(parsedFile);
     }
   }
 

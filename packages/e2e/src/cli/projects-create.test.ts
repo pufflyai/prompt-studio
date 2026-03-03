@@ -1,0 +1,84 @@
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { execSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { basename, join } from "node:path";
+import { cleanupDirs, createGitRepo, createTempDir, runPstdio, runPstdioSafe } from "./helpers";
+import { type ApiInstance, startApi } from "./start-api";
+
+let api: ApiInstance;
+
+beforeAll(async () => {
+  api = await startApi();
+}, 20_000);
+
+afterAll(() => {
+  api?.stop();
+});
+
+const dirs: string[] = [];
+
+afterEach(() => {
+  cleanupDirs(dirs);
+});
+
+const run = (args: string, cwd: string) => runPstdio(args, cwd, { PSTDIO_API_URL: api.url });
+
+const runSafe = (args: string, cwd: string) => runPstdioSafe(args, cwd, { PSTDIO_API_URL: api.url });
+
+describe("pstdio projects create", () => {
+  test("creates project, writes config, scaffolds docs, installs skills", () => {
+    const repo = createGitRepo();
+    dirs.push(repo);
+
+    // Configure an agent so skills get installed
+    run("agents setup claude-code", repo);
+
+    const output = run("projects create my-project", repo);
+
+    expect(output).toContain("Created project");
+    expect(output).toContain("my-project");
+
+    const config = JSON.parse(readFileSync(join(repo, ".pstdio", "config.json"), "utf8"));
+    expect(config.project_id).toBeTruthy();
+
+    expect(existsSync(join(repo, ".pstdio", "docs", "navigation.json"))).toBe(true);
+    expect(existsSync(join(repo, ".pstdio", "docs", "index.md"))).toBe(true);
+
+    expect(existsSync(join(repo, ".claude", "skills", "create-ticket", "SKILL.md"))).toBe(true);
+    expect(existsSync(join(repo, ".claude", "skills", "implement-ticket", "SKILL.md"))).toBe(true);
+    expect(existsSync(join(repo, ".claude", "skills", "create-proposal", "SKILL.md"))).toBe(true);
+
+    const res = execSync(`curl -s ${api.url}/v1/projects/${config.project_id}`, { encoding: "utf8" });
+    const project = JSON.parse(res);
+    expect(project.name).toBe("my-project");
+  });
+
+  test("defaults name to git root folder name", () => {
+    const repo = createGitRepo();
+    dirs.push(repo);
+
+    const output = run("projects create", repo);
+    const expectedName = basename(repo);
+
+    expect(output).toContain("Created project");
+    expect(output).toContain(expectedName);
+  });
+
+  test("fails outside a git repo", () => {
+    const dir = createTempDir();
+    dirs.push(dir);
+
+    expect(() => run("projects create my-project", dir)).toThrow();
+  });
+
+  test("fails when already initialized", () => {
+    const repo = createGitRepo();
+    dirs.push(repo);
+
+    run("projects create first-project", repo);
+
+    const result = runSafe("projects create second-project", repo);
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr).toContain("already initialized");
+  });
+});

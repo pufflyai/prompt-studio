@@ -52,6 +52,15 @@ describe("GET /ping", () => {
   });
 });
 
+describe("POST /shutdown", () => {
+  test("returns ok", async () => {
+    const res = await app.request("/shutdown", { method: "POST" });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+  });
+});
+
 describe("GET /openapi.json", () => {
   test("returns spec", async () => {
     const res = await app.request("/openapi.json");

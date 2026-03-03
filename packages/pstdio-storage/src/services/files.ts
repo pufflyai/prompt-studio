@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { and, eq } from "drizzle-orm";
 import type { DbClient } from "pstdio-db";
-import { files, project_doc_files, ticket_files } from "pstdio-db";
+import { files, ticket_files } from "pstdio-db";
 import { ensureProjectStorageRoot, resolveFileStoragePath } from "../storage/paths";
 
 const nowTimestamp = () => new Date().toISOString();
@@ -92,55 +92,6 @@ export const createFilesService = (db: DbClient, storageRoot: string) => {
     return updated;
   };
 
-  const listForProjectDocs = async (projectDocId: string) => {
-    const rows = await db
-      .select({ file: files })
-      .from(project_doc_files)
-      .innerJoin(files, eq(project_doc_files.file_id, files.id))
-      .where(eq(project_doc_files.project_doc_id, projectDocId))
-      .orderBy(project_doc_files.created_at);
-
-    return rows.map((row) => row.file);
-  };
-
-  const attachToProjectDocs = async (projectDocId: string, fileId: string) => {
-    const existing = await get(fileId);
-
-    if (!existing) return null;
-
-    const [existingLink] = await db
-      .select()
-      .from(project_doc_files)
-      .where(and(eq(project_doc_files.project_doc_id, projectDocId), eq(project_doc_files.file_id, fileId)));
-
-    if (!existingLink) {
-      const link = {
-        id: crypto.randomUUID(),
-        project_doc_id: projectDocId,
-        file_id: fileId,
-        created_at: nowTimestamp(),
-      };
-      await db.insert(project_doc_files).values(link);
-    }
-
-    return existing;
-  };
-
-  const detachFromProjectDocs = async (projectDocId: string, fileId: string) => {
-    const [existing] = await db
-      .select()
-      .from(project_doc_files)
-      .where(and(eq(project_doc_files.project_doc_id, projectDocId), eq(project_doc_files.file_id, fileId)));
-
-    if (!existing) return false;
-
-    await db
-      .delete(project_doc_files)
-      .where(and(eq(project_doc_files.project_doc_id, projectDocId), eq(project_doc_files.file_id, fileId)));
-
-    return true;
-  };
-
   const listForTicket = async (ticketId: string) => {
     const rows = await db
       .select({ file: files })
@@ -188,9 +139,6 @@ export const createFilesService = (db: DbClient, storageRoot: string) => {
     update,
     remove,
     listByProject,
-    listForProjectDocs,
-    attachToProjectDocs,
-    detachFromProjectDocs,
     listForTicket,
     attachToTicket,
     detachFromTicket,
