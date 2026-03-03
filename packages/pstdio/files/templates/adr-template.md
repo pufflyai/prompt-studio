@@ -1,7 +1,7 @@
 ---
+user_prompt: "{{USER_PROMPT}}"
 status: "[Proposed | Accepted | Deprecated | Superseded]"
-date: "{{DATE}}"
-related: "{{TICKET_ID}}"
+created: "{{CREATED_AT}}"
 ---
 
 # ADR: {{TITLE}}

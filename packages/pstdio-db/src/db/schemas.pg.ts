@@ -9,8 +9,10 @@ const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
 export const projects = pgTable("projects", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  shorthand: text("shorthand").notNull(),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
+  deleted_at: text("deleted_at"),
 });
 
 export const repos = pgTable("repos", {
@@ -126,7 +128,7 @@ export const ticket_tag_assignments = pgTable(
 export const sessions = pgTable("sessions", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),
-  status: text("status", { enum: ["in_progress", "completed", "failed"] })
+  status: text("status", { enum: ["in_progress", "awaiting_input", "completed", "failed"] })
     .notNull()
     .default("in_progress"),
   archived: boolean("archived").notNull().default(false),

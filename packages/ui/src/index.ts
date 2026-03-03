@@ -6,6 +6,7 @@ export { DeleteConfirmationModal } from "./components/delete-confirmation-modal"
 export type { EmptyStateProps } from "./components/empty-state";
 export { EmptyState } from "./components/empty-state";
 export { ErrorBoundary } from "./components/error-boundary";
+export { MenuItem } from "./components/menu-item";
 export type { OpenSourceNotice, OpenSourceNoticesScreenProps } from "./components/open-source-notices-screen";
 export { OpenSourceNoticesScreen } from "./components/open-source-notices-screen";
 export { Toaster, toaster } from "./components/toaster";

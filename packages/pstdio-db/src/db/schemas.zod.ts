@@ -7,7 +7,7 @@ export const ticketSelectSchema = createSelectSchema(tickets, {
 });
 
 export const sessionSelectSchema = createSelectSchema(sessions, {
-  status: z.enum(["in_progress", "completed", "failed"]),
+  status: z.enum(["in_progress", "awaiting_input", "completed", "failed"]),
 });
 
 export const ticketTagSelectSchema = createSelectSchema(ticket_tags);

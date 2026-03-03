@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "bun build ./src/index.ts --outdir ./dist --target bun",
+    "analyze-bundle": "bun build ./src/index.ts --outdir ./dist --target bun --metafile=./dist/bundle-meta.json --metafile-md=./dist/bundle-meta.md",
     "db:generate": "bunx drizzle-kit generate --config ./drizzle.config.ts",
     "db:migrate": "bunx drizzle-kit migrate --config ./drizzle.config.ts",
     "typecheck": "tsc --noEmit --project ./tsconfig.json",

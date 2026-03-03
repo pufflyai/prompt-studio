@@ -42,3 +42,9 @@ config.json
 - `pstdio tickets update --status <status-value> --tag <tag> ...` - update ticket properties, except content
 
 - `pstdio tickets implement --id <ticket-shorthand>` - Move a ticket to status `wip` and launch agent.
+
+## Templates
+
+- `pstdio templates write --name <template-name> --target docs or <ticket-shorthand>`
+
+similar to tickets write

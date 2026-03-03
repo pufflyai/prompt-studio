@@ -1,6 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { projects, ticket_statuses, ticket_tags } from "../../db/schemas.pg";
+import { deriveShorthand } from "./derive-shorthand";
 
 type ProjectRecord = typeof projects.$inferSelect;
 
@@ -94,10 +95,13 @@ const DEFAULT_TICKET_TAGS = [
 const nowTimestamp = () => new Date().toISOString();
 
 export const createProjectsService = (db: DbClient) => {
-  const list = async () => db.select().from(projects).orderBy(projects.created_at);
+  const list = async () => db.select().from(projects).where(isNull(projects.deleted_at)).orderBy(projects.created_at);
 
   const get = async (id: string) => {
-    const [project] = await db.select().from(projects).where(eq(projects.id, id));
+    const [project] = await db
+      .select()
+      .from(projects)
+      .where(and(eq(projects.id, id), isNull(projects.deleted_at)));
     return project ?? null;
   };
 
@@ -106,8 +110,10 @@ export const createProjectsService = (db: DbClient) => {
     const project: ProjectRecord = {
       id: crypto.randomUUID(),
       name: input.name,
+      shorthand: deriveShorthand(input.name),
       created_at: timestamp,
       updated_at: timestamp,
+      deleted_at: null,
     };
 
     await db.insert(projects).values(project);
@@ -166,7 +172,7 @@ export const createProjectsService = (db: DbClient) => {
 
     if (!existing) return false;
 
-    await db.delete(projects).where(eq(projects.id, id));
+    await db.update(projects).set({ deleted_at: nowTimestamp() }).where(eq(projects.id, id));
 
     return true;
   };

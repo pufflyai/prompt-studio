@@ -1,0 +1,1 @@
+ALTER TABLE "projects" ADD COLUMN "shorthand" text NOT NULL;

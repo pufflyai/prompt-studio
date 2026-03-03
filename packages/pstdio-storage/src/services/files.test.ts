@@ -25,7 +25,9 @@ test("files service supports upload and ticket attachments", async () => {
 
   const timestamp = nowTimestamp();
   const projectId = crypto.randomUUID();
-  await db.insert(projects).values({ id: projectId, name: "Alpha", created_at: timestamp, updated_at: timestamp });
+  await db
+    .insert(projects)
+    .values({ id: projectId, name: "Alpha", shorthand: "A", created_at: timestamp, updated_at: timestamp });
 
   const ticketId = crypto.randomUUID();
   await db.insert(tickets).values({

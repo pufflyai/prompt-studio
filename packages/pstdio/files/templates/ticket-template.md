@@ -1,6 +1,7 @@
 ---
 ticket_id: "{{TICKET_ID}}"
-created: "{{DATE}}"
+user_prompt: "{{USER_PROMPT}}"
+created: "{{CREATED_AT}}"
 status: "{{STATUS}}"
 input: "{{INPUT}}"
 parent_id: "{{PARENT_ID}}"

@@ -1,5 +1,7 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { runPstdio, runPstdioSafe } from "./helpers";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { cleanupDirs, createGitRepo, createTempDir, runPstdio, runPstdioSafe } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 
 let api: ApiInstance;
@@ -12,20 +14,18 @@ afterAll(() => {
   api?.stop();
 });
 
-const run = (args: string) => runPstdio(args, process.cwd(), { PSTDIO_API_URL: api.url });
+const run = (args: string, cwd = process.cwd()) => runPstdio(args, cwd, { PSTDIO_API_URL: api.url });
 
-const runSafe = (args: string) => runPstdioSafe(args, process.cwd(), { PSTDIO_API_URL: api.url });
+const runSafe = (args: string, cwd = process.cwd()) => runPstdioSafe(args, cwd, { PSTDIO_API_URL: api.url });
 
-describe("pstdio agents list", () => {
+describe("pstdio agents (API state)", () => {
   test("lists known agents with none configured", () => {
     const output = run("agents list");
 
     expect(output).toContain("Claude Code");
     expect(output).toContain("OpenCode");
   });
-});
 
-describe("pstdio agents setup", () => {
   test("configures a known agent as default", () => {
     const output = run("agents setup opencode");
 
@@ -40,18 +40,77 @@ describe("pstdio agents setup", () => {
     expect(output).not.toContain("(default)");
   });
 
-  test("rejects unknown agent", () => {
+  test("lists agents with configured and default markers", () => {
+    const output = run("agents list");
+
+    expect(output).toContain("yes");
+    expect(output).toContain("Default");
+  });
+
+  test("rejects unknown agent for setup", () => {
     const result = runSafe("agents setup unknown-agent");
 
     expect(result.exitCode).not.toBe(0);
     expect(result.stderr).toContain("Unknown agent: unknown-agent");
   });
-});
 
-describe("pstdio agents remove", () => {
   test("removes a configured agent", () => {
     const output = run("agents remove opencode");
 
     expect(output).toContain('Agent "opencode" removed.');
+  });
+
+  test("rejects unknown agent for remove", () => {
+    const result = runSafe("agents remove unknown-agent");
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr).toContain("Unknown agent: unknown-agent");
+  });
+
+  test("fails to remove unconfigured agent", () => {
+    const result = runSafe("agents remove opencode");
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr).toContain("Agent not found: opencode");
+  });
+});
+
+describe("pstdio agents (filesystem)", () => {
+  const dirs: string[] = [];
+
+  afterEach(() => {
+    cleanupDirs(dirs);
+  });
+
+  test("installs bundled skills in a git repo", () => {
+    const repo = createGitRepo();
+    dirs.push(repo);
+
+    const output = run("agents setup claude-code", repo);
+
+    expect(output).toContain("Installed");
+    expect(existsSync(join(repo, ".claude", "skills", "create-ticket", "SKILL.md"))).toBe(true);
+  });
+
+  test("skips skill installation outside a git repo", () => {
+    const dir = createTempDir();
+    dirs.push(dir);
+
+    const output = run("agents setup claude-code", dir);
+
+    expect(output).toContain("Not inside a git repository");
+  });
+
+  test("removes skills with --delete-skills", () => {
+    const repo = createGitRepo();
+    dirs.push(repo);
+
+    run("agents setup claude-code", repo);
+    expect(existsSync(join(repo, ".claude", "skills", "create-ticket", "SKILL.md"))).toBe(true);
+
+    const output = run("agents remove claude-code --delete-skills", repo);
+
+    expect(output).toContain("Deleted");
+    expect(existsSync(join(repo, ".claude", "skills", "create-ticket"))).toBe(false);
   });
 });

@@ -16,6 +16,10 @@ export const InProgress: Story = {
   args: { status: "in_progress" },
 };
 
+export const AwaitingInput: Story = {
+  args: { status: "awaiting_input" },
+};
+
 export const Completed: Story = {
   args: { status: "completed" },
 };
@@ -31,7 +35,7 @@ export const Undefined: Story = {
 export const AllStatuses: Story = {
   render: () => (
     <HStack gap="md">
-      {(["in_progress", "completed", "failed", undefined] as const).map((status) => (
+      {(["in_progress", "awaiting_input", "completed", "failed", undefined] as const).map((status) => (
         <HStack key={status ?? "undefined"} gap="xs">
           <SessionIndicator status={status} />
           <Text textStyle="label/S/regular">{status ?? "undefined"}</Text>

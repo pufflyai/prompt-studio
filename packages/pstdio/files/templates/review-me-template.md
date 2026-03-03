@@ -1,6 +1,5 @@
 ---
-ticket_id: "{{TICKET_ID}}"
-created: "{{DATE}}"
+created: "{{CREATED_AT}}"
 ---
 
 # REVIEW_ME: {{TICKET_TITLE}}

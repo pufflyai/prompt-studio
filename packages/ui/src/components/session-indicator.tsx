@@ -2,7 +2,7 @@ import { Icon } from "@chakra-ui/react";
 import { CircleAlert, CircleCheck, CircleDashed } from "lucide-react";
 import type { ComponentProps } from "react";
 
-export type SessionCompletionStatus = "in_progress" | "completed" | "failed";
+export type SessionCompletionStatus = "in_progress" | "awaiting_input" | "completed" | "failed";
 
 export const resolveSessionIndicatorIcon = (status: SessionCompletionStatus | undefined) => {
   if (status === "completed") return CircleCheck;

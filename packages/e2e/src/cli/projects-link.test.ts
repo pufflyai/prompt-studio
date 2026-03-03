@@ -52,6 +52,19 @@ describe("pstdio projects link", () => {
     expect(result.stderr).toContain("Project not found");
   });
 
+  test("installs skills for configured agents", async () => {
+    const repo = createGitRepo();
+    dirs.push(repo);
+
+    run("agents setup claude-code", repo);
+
+    const project = await createProjectViaApi(api.url, "link-skills-test");
+    const output = run(`projects link --project-id ${project.id}`, repo);
+
+    expect(output).toContain("Linked project");
+    expect(existsSync(join(repo, ".claude", "skills", "create-ticket", "SKILL.md"))).toBe(true);
+  });
+
   test("fails outside a git repo", async () => {
     const project = await createProjectViaApi(api.url, "no-git-link");
     const dir = createTempDir();

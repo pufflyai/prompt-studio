@@ -22,6 +22,7 @@ test("projects service supports basic CRUD", async () => {
 
   expect(typeof created.id).toBe("string");
   expect(created.name).toBe("Alpha");
+  expect(created.shorthand).toBe("A");
   expect(created.created_at).toBeTruthy();
   expect(created.updated_at).toBeTruthy();
 
@@ -33,6 +34,7 @@ test("projects service supports basic CRUD", async () => {
 
   const updated = await projects.update(created.id, { name: "Beta" });
   expect(updated?.name).toBe("Beta");
+  expect(updated?.shorthand).toBe("A");
 
   const removed = await projects.remove(created.id);
   expect(removed).toBe(true);

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { findGitRoot, readConfig, writeConfig } from "./config";
+import { findGitRoot, readConfig, removeConfig, writeConfig } from "./config";
 
 const tmpBase = join(import.meta.dirname, "__test-tmp__");
 
@@ -72,5 +72,21 @@ describe("writeConfig", () => {
     writeConfig(root, { project_id: "new" });
 
     expect(existsSync(join(root, ".pstdio", "config.json"))).toBe(true);
+  });
+});
+
+describe("removeConfig", () => {
+  test("removes config.json and returns true", () => {
+    const root = setup("remove-config");
+    writeConfig(root, { project_id: "abc" });
+
+    expect(removeConfig(root)).toBe(true);
+    expect(existsSync(join(root, ".pstdio", "config.json"))).toBe(false);
+  });
+
+  test("returns false when config does not exist", () => {
+    const root = setup("remove-config-missing");
+
+    expect(removeConfig(root)).toBe(false);
   });
 });

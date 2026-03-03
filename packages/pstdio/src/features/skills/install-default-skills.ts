@@ -1,4 +1,4 @@
-import { cpSync, existsSync, readdirSync } from "node:fs";
+import { cpSync, existsSync, readdirSync, rmSync } from "node:fs";
 import { homedir as defaultHomedir } from "node:os";
 import { join } from "node:path";
 import { findAgent } from "pstdio-agents";
@@ -7,7 +7,7 @@ import { API_URL } from "@/features/api-url";
 
 const SKILLS_SOURCE = join(import.meta.dirname, "../../../files/skills");
 
-const getBundledSkillNames = () =>
+export const getBundledSkillNames = () =>
   readdirSync(SKILLS_SOURCE, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name);
@@ -38,6 +38,25 @@ export const installSkillsForAgent = (options: InstallSkillsOptions) => {
   }
 
   return installed;
+};
+
+export const removeBundledSkillsForAgent = (root: string, agentId: string) => {
+  const agent = findAgent(agentId);
+  if (!agent) return [];
+
+  const skillsDir = join(root, agent.skillsDir);
+  const skillNames = getBundledSkillNames();
+  const removed: string[] = [];
+
+  for (const name of skillNames) {
+    const dest = join(skillsDir, name);
+    if (!existsSync(dest)) continue;
+
+    rmSync(dest, { recursive: true, force: true });
+    removed.push(name);
+  }
+
+  return removed;
 };
 
 export const installDefaultSkills = async (root: string, baseUrl = API_URL, homedir = defaultHomedir()) => {

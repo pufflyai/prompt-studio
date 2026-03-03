@@ -5,19 +5,27 @@
       "items": [
         {
           "text": "CLI Setup",
-          "link": "/specs/cli-setup"
+          "link": "/specs/cli/setup"
         },
         {
           "text": "CLI Projects",
-          "link": "/specs/cli-projects"
+          "link": "/specs/cli/projects"
         },
         {
           "text": "CLI Agents",
-          "link": "/specs/cli-agents"
+          "link": "/specs/cli/agents"
         },
         {
           "text": "CLI Feedback",
-          "link": "/specs/cli-feedback"
+          "link": "/specs/cli/feedback"
+        },
+        {
+          "text": "CLI Tickets",
+          "link": "/specs/cli/tickets"
+        },
+        {
+          "text": "CLI Templates",
+          "link": "/specs/cli/templates"
         },
         {
           "text": "Real-time Updates",
@@ -35,6 +43,10 @@
         {
           "text": "Documentation",
           "link": "/architecture/documentation"
+        },
+        {
+          "text": "Agents",
+          "link": "/architecture/agents"
         },
         {
           "text": "Streaming",

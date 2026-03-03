@@ -24,6 +24,10 @@ describe("schemas.pg", () => {
     expect(sessions.session_file_id.constructor.name).toBe("PgText");
   });
 
+  it("includes awaiting_input in session status enum", () => {
+    expect(sessions.status.enumValues).toContain("awaiting_input");
+  });
+
   it("uses postgres bytea for ydoc operations", () => {
     expect(ydocUpdates.op.constructor.name).toBe("PgCustomColumn");
     expect(ydocAwareness.op.constructor.name).toBe("PgCustomColumn");

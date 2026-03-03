@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { installDefaultSkills, installSkillsForAgent } from "./install-default-skills";
+import { installDefaultSkills, installSkillsForAgent, removeBundledSkillsForAgent } from "./install-default-skills";
 
 const tmpBase = join(import.meta.dirname, "__test-tmp__");
 
@@ -181,5 +181,43 @@ describe("installSkillsForAgent", () => {
     const root = setup("unknown-agent");
     const installed = installSkillsForAgent({ root, agentId: "unknown" });
     expect(installed).toEqual([]);
+  });
+});
+
+describe("removeBundledSkillsForAgent", () => {
+  test("removes only bundled skills and preserves user skills", () => {
+    const root = setup("remove-bundled");
+
+    // Install bundled skills first
+    installSkillsForAgent({ root, agentId: "claude-code" });
+
+    // Add a user-created skill
+    const userSkillDir = join(root, ".claude", "skills", "my-custom-skill");
+    mkdirSync(userSkillDir, { recursive: true });
+    writeFileSync(join(userSkillDir, "SKILL.md"), "user skill");
+
+    const removed = removeBundledSkillsForAgent(root, "claude-code");
+
+    expect(removed.sort()).toEqual(EXPECTED_SKILLS.sort());
+    for (const skill of EXPECTED_SKILLS) {
+      expect(existsSync(join(root, ".claude", "skills", skill))).toBe(false);
+    }
+    // User skill is preserved
+    expect(existsSync(join(userSkillDir, "SKILL.md"))).toBe(true);
+  });
+
+  test("returns empty array when no bundled skills are installed", () => {
+    const root = setup("remove-none");
+    mkdirSync(join(root, ".claude", "skills"), { recursive: true });
+
+    const removed = removeBundledSkillsForAgent(root, "claude-code");
+
+    expect(removed).toEqual([]);
+  });
+
+  test("returns empty array for unknown agent", () => {
+    const root = setup("remove-unknown");
+    const removed = removeBundledSkillsForAgent(root, "unknown");
+    expect(removed).toEqual([]);
   });
 });

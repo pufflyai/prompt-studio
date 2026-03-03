@@ -54,7 +54,5 @@ export const createReposService = (db: DbClient) => {
     return rows.map((r) => r.repo);
   };
 
-  const listAll = async () => db.select().from(repos).orderBy(repos.created_at);
-
-  return { registerForProject, listByProject, listAll };
+  return { registerForProject, listByProject };
 };

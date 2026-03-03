@@ -124,6 +124,30 @@ describe("schemas.zod", () => {
     expect(sessionResult.success).toBe(true);
   });
 
+  it("accepts awaiting_input as a valid session status", () => {
+    const result = sessionApiSchema.safeParse({
+      agent: null,
+      agent_session_id: null,
+      agent_session_status: "not_connected",
+      archived: false,
+      branch: null,
+      session_file_id: null,
+      created: null,
+      created_at: "2026-01-01T00:00:00.000Z",
+      id: "session-awaiting-input",
+      last_request_ended: null,
+      last_request_started: null,
+      repo_id: null,
+      status: "awaiting_input",
+      title: "Awaiting Input Session",
+      updated_at: "2026-01-01T00:00:00.000Z",
+      workspace_id: null,
+      worktree_path: null,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it("validates ydoc update payloads", () => {
     const result = ydocUpdatesSelectSchema.safeParse({
       id: "update-1",

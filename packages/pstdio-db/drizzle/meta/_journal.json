@@ -8,6 +8,20 @@
       "when": 1772556853601,
       "tag": "0000_marvelous_darkstar",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1772569613176,
+      "tag": "0001_mean_karma",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772570421182,
+      "tag": "0002_naive_jetstream",
+      "breakpoints": true
     }
   ]
 }

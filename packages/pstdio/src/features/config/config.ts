@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const CONFIG_DIR = ".pstdio";
@@ -43,4 +43,15 @@ export const writeConfig = (root: string, config: PstdioConfig) => {
 
   const configPath = join(configDir, CONFIG_FILE);
   writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+};
+
+export const removeConfig = (root: string) => {
+  const configPath = join(root, CONFIG_DIR, CONFIG_FILE);
+
+  if (!existsSync(configPath)) {
+    return false;
+  }
+
+  rmSync(configPath);
+  return true;
 };
