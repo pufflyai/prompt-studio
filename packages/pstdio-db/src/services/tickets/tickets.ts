@@ -156,5 +156,15 @@ export const createTicketsService = (db: DbClient) => {
     return rows.map((r) => r.tag);
   };
 
-  return { create, get, getByShorthand, list, update, assignTags, getTagAssignments };
+  const softDelete = async (id: string) => {
+    const existing = await get(id);
+    if (!existing) return null;
+
+    const updated = { deleted_at: nowTimestamp(), updated_at: nowTimestamp() };
+    await db.update(tickets).set(updated).where(eq(tickets.id, id));
+
+    return { ...existing, ...updated };
+  };
+
+  return { create, get, getByShorthand, list, update, softDelete, assignTags, getTagAssignments };
 };

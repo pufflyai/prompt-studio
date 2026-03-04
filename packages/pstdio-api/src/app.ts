@@ -17,6 +17,7 @@ import { EventBus } from "./features/sync/event-bus";
 import { createSyncRoutes } from "./features/sync/routes";
 import { createTemplateRoutes } from "./features/templates/routes";
 import { createTicketRoutes } from "./features/tickets/routes";
+import { logError, persistErrorLog } from "./lib/error-log";
 import { swagger } from "./swagger";
 import type { AppBindings } from "./types";
 
@@ -67,6 +68,23 @@ export const createApp = async (options?: AppOptions) => {
   app.route("/v1", createTemplateRoutes(deps));
   app.route("/v1", createTicketRoutes(deps));
   app.route("/v1", createSyncRoutes(deps));
+
+  app.onError((err, c) => {
+    const entry = {
+      level: "error" as const,
+      timestamp: new Date().toISOString(),
+      method: c.req.method,
+      path: c.req.path,
+      status: 500,
+      message: err.message,
+      stack: err.stack,
+    };
+
+    logError(entry);
+    persistErrorLog(entry);
+
+    return c.json({ error: "Internal server error" }, 500);
+  });
 
   swagger(app);
 

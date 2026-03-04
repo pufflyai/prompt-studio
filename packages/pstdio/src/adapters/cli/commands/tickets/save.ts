@@ -4,10 +4,11 @@ import { findGitRoot, readConfig } from "@/features/config/config";
 import { listTicketTags as defaultListTicketTags } from "@/features/tickets/api/list-ticket-tags";
 import { listTickets as defaultListTickets } from "@/features/tickets/api/list-tickets";
 import { updateTicket as defaultUpdateTicket } from "@/features/tickets/api/update-ticket";
-import { readTicketFile } from "@/features/tickets/local-ticket";
+import { uploadTicketFile as defaultUploadTicketFile } from "@/features/tickets/api/upload-ticket-file";
+import { listTicketFiles, readTicketAttachment, readTicketFile } from "@/features/tickets/local-ticket";
 
 export const command = "save";
-export const describe = "Push local ticket file to the database";
+export const describe = "Save local ticket content and files to the database";
 
 export const builder = (yargs: Argv) =>
   yargs
@@ -25,6 +26,7 @@ type Deps = {
   readConfig: typeof readConfig;
   listTickets: typeof defaultListTickets;
   updateTicket: typeof defaultUpdateTicket;
+  uploadTicketFile: typeof defaultUploadTicketFile;
   listTicketTags: typeof defaultListTicketTags;
   log: (msg: string) => void;
 };
@@ -35,8 +37,53 @@ const defaultDeps: Deps = {
   readConfig,
   listTickets: defaultListTickets,
   updateTicket: defaultUpdateTicket,
+  uploadTicketFile: defaultUploadTicketFile,
   listTicketTags: defaultListTicketTags,
   log: console.log,
+};
+
+const resolveTicketByShorthand = async (deps: Deps, projectId: string, shorthand: string) => {
+  const publishedTickets = await deps.listTickets(API_URL, {
+    project_id: projectId,
+    shorthand,
+  });
+  if (publishedTickets.length > 0) return publishedTickets[0];
+
+  const draftTickets = await deps.listTickets(API_URL, {
+    project_id: projectId,
+    shorthand,
+    draft: true,
+  });
+  return draftTickets[0] ?? null;
+};
+
+const resolveTagIds = async (deps: Deps, projectId: string, tags: string[] | undefined) => {
+  if (!tags || tags.length === 0) return undefined;
+
+  const allTags = await deps.listTicketTags(API_URL, projectId);
+  const tagIds: string[] = [];
+
+  for (const name of tags) {
+    const found = allTags.find((tag) => tag.name === name);
+    if (!found) throw new Error(`Tag not found: ${name}`);
+    tagIds.push(found.id);
+  }
+
+  return tagIds;
+};
+
+const uploadLocalTicketFiles = async (deps: Deps, root: string, shorthand: string, ticketId: string) => {
+  const localFiles = listTicketFiles(root, shorthand);
+
+  for (const fileName of localFiles) {
+    const data = readTicketAttachment(root, shorthand, fileName);
+    await deps.uploadTicketFile(API_URL, ticketId, {
+      file_name: fileName,
+      content_base64: data.toString("base64"),
+    });
+  }
+
+  return localFiles.length;
 };
 
 export const createHandler =
@@ -55,27 +102,10 @@ export const createHandler =
       throw new Error(`Local ticket not found: .pstdio/tickets/${argv.id}/ticket.md`);
     }
 
-    const tickets = await deps.listTickets(API_URL, {
-      project_id: projectId,
-      shorthand: argv.id,
-      draft: true,
-    });
-    if (tickets.length === 0) {
-      throw new Error(`Ticket not found: ${argv.id}`);
-    }
+    const ticket = await resolveTicketByShorthand(deps, projectId, argv.id);
+    if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
-    const ticket = tickets[0];
-
-    let tagIds: string[] | undefined;
-    if (argv.tag && argv.tag.length > 0) {
-      const allTags = await deps.listTicketTags(API_URL, projectId);
-      tagIds = [];
-      for (const name of argv.tag) {
-        const found = allTags.find((t) => t.name === name);
-        if (!found) throw new Error(`Tag not found: ${name}`);
-        tagIds.push(found.id);
-      }
-    }
+    const tagIds = await resolveTagIds(deps, projectId, argv.tag);
 
     await deps.updateTicket(API_URL, ticket.id, {
       input: content,
@@ -83,7 +113,10 @@ export const createHandler =
       tag_ids: tagIds,
     });
 
-    deps.log(`Pushed ticket ${argv.id}`);
+    const uploadedCount = await uploadLocalTicketFiles(deps, root, argv.id, ticket.id);
+
+    deps.log(`Saved ticket ${argv.id}`);
+    if (uploadedCount > 0) deps.log(`Uploaded ${uploadedCount} ticket files`);
   };
 
 export const handler = createHandler();

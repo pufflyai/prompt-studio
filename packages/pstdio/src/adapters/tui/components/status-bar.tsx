@@ -4,7 +4,6 @@ import type { Mode } from "../app";
 
 interface StatusBarProps {
   mode: Mode;
-  docCount: number;
   error: string;
   width: number;
   connected: boolean;
@@ -15,20 +14,11 @@ interface KeyHint {
   label: string;
 }
 
-const NORMAL_KEYS: KeyHint[] = [
-  { key: "a", label: "agents" },
-  { key: "p", label: "projects" },
-  { key: "?", label: "help" },
-];
+const OVERLAY_KEYS: KeyHint[] = [{ key: "esc", label: "close" }];
 
 const INPUT_KEYS: KeyHint[] = [
   { key: "enter", label: "confirm" },
   { key: "esc", label: "cancel" },
-];
-
-const VIEW_KEYS: KeyHint[] = [
-  { key: "esc", label: "close" },
-  { key: "v", label: "close" },
 ];
 
 const PICKER_KEYS: KeyHint[] = [
@@ -43,17 +33,47 @@ const AGENT_KEYS: KeyHint[] = [
   { key: "esc", label: "cancel" },
 ];
 
-const HINTS_BY_MODE: Record<Mode, KeyHint[]> = {
-  normal: NORMAL_KEYS,
-  help: NORMAL_KEYS,
-  search: INPUT_KEYS,
-  view: VIEW_KEYS,
-  projects: PICKER_KEYS,
-  agents: AGENT_KEYS,
+const TICKETS_KEYS: KeyHint[] = [
+  { key: "j/k", label: "nav" },
+  { key: "s", label: "status" },
+  { key: "n", label: "new" },
+  { key: "e", label: "edit" },
+  { key: "i", label: "impl" },
+  { key: "x", label: "arch" },
+  { key: "?", label: "?" },
+];
+
+const DOCS_KEYS: KeyHint[] = [
+  { key: "j/k", label: "nav" },
+  { key: "enter", label: "open" },
+  { key: "/", label: "search" },
+  { key: "?", label: "help" },
+];
+
+const TEMPLATES_KEYS: KeyHint[] = [
+  { key: "j/k", label: "nav" },
+  { key: "d", label: "default" },
+  { key: "enter", label: "view" },
+  { key: "?", label: "help" },
+];
+
+const TAB_HINTS: Record<string, KeyHint[]> = {
+  tickets: TICKETS_KEYS,
+  docs: DOCS_KEYS,
+  templates: TEMPLATES_KEYS,
 };
 
-export function StatusBar({ mode, docCount, error, width, connected }: StatusBarProps) {
-  const hints = HINTS_BY_MODE[mode];
+const getHints = (mode: Mode): KeyHint[] => {
+  if (mode.search) return INPUT_KEYS;
+  if (mode.overlay === "help" || mode.overlay === "view") return OVERLAY_KEYS;
+  if (mode.overlay === "projects" || mode.overlay === "status-picker") return PICKER_KEYS;
+  if (mode.overlay === "agents") return AGENT_KEYS;
+  if (mode.overlay === "ticket-create") return INPUT_KEYS;
+  return TAB_HINTS[mode.tab] ?? DOCS_KEYS;
+};
+
+export function StatusBar({ mode, error, width, connected }: StatusBarProps) {
+  const hints = getHints(mode);
 
   return (
     <Box flexDirection="column">
@@ -64,13 +84,6 @@ export function StatusBar({ mode, docCount, error, width, connected }: StatusBar
       )}
 
       <Box>
-        <Text backgroundColor="gray" color="white">
-          {" "}
-          {docCount} doc(s){" "}
-        </Text>
-
-        <Text> </Text>
-
         <Text color={connected ? "green" : "red"}>{connected ? "synced" : "disconnected"}</Text>
 
         <Text> </Text>
@@ -81,7 +94,7 @@ export function StatusBar({ mode, docCount, error, width, connected }: StatusBar
             <Text bold color="cyan">
               {hint.key}
             </Text>
-            <Text dimColor> {hint.label}</Text>
+            <Text dimColor>:{hint.label}</Text>
           </Text>
         ))}
 

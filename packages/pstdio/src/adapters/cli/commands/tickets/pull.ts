@@ -1,0 +1,94 @@
+import { existsSync } from "node:fs";
+import type { Arguments, Argv } from "yargs";
+import { API_URL } from "@/features/api-url";
+import { findGitRoot, readConfig } from "@/features/config/config";
+import { getTicket as defaultGetTicket } from "@/features/tickets/api/get-ticket";
+import { getTicketFileContent as defaultGetTicketFileContent } from "@/features/tickets/api/get-ticket-file-content";
+import { listTicketFiles as defaultListTicketFiles } from "@/features/tickets/api/list-ticket-files";
+import { listTickets as defaultListTickets } from "@/features/tickets/api/list-tickets";
+import { ticketFilePath, writeTicketAttachment, writeTicketFile } from "@/features/tickets/local-ticket";
+
+export const command = "pull";
+export const describe = "Pull ticket content and files from the database";
+
+export const builder = (yargs: Argv) =>
+  yargs
+    .option("id", { type: "string", demandOption: true, describe: "Ticket shorthand (e.g. PS-12)" })
+    .option("force", { type: "boolean", default: false, describe: "Overwrite existing local files" });
+
+type PullArgs = {
+  id: string;
+  force: boolean;
+};
+
+type Deps = {
+  cwd: () => string;
+  findGitRoot: typeof findGitRoot;
+  readConfig: typeof readConfig;
+  listTickets: typeof defaultListTickets;
+  getTicket: typeof defaultGetTicket;
+  listTicketFiles: typeof defaultListTicketFiles;
+  getTicketFileContent: typeof defaultGetTicketFileContent;
+  log: (msg: string) => void;
+};
+
+const defaultDeps: Deps = {
+  cwd: () => process.cwd(),
+  findGitRoot,
+  readConfig,
+  listTickets: defaultListTickets,
+  getTicket: defaultGetTicket,
+  listTicketFiles: defaultListTicketFiles,
+  getTicketFileContent: defaultGetTicketFileContent,
+  log: console.log,
+};
+
+const resolveTicketByShorthand = async (deps: Deps, projectId: string, shorthand: string) => {
+  const publishedTickets = await deps.listTickets(API_URL, {
+    project_id: projectId,
+    shorthand,
+  });
+  if (publishedTickets.length > 0) return publishedTickets[0];
+
+  const draftTickets = await deps.listTickets(API_URL, {
+    project_id: projectId,
+    shorthand,
+    draft: true,
+  });
+  return draftTickets[0] ?? null;
+};
+
+export const createHandler =
+  (deps: Deps = defaultDeps) =>
+  async (argv: Arguments<PullArgs>) => {
+    const root = deps.findGitRoot(deps.cwd());
+    if (!root) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
+
+    const config = deps.readConfig(root);
+    if (!config) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
+
+    const ticketListItem = await resolveTicketByShorthand(deps, config.project_id, argv.id);
+    if (!ticketListItem) throw new Error(`Ticket not found: ${argv.id}`);
+
+    const ticket = await deps.getTicket(API_URL, ticketListItem.id);
+    if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
+
+    const localTicketFilePath = ticketFilePath(root, argv.id);
+    if (!argv.force && existsSync(localTicketFilePath)) {
+      throw new Error(`Local file already exists: .pstdio/tickets/${argv.id}/ticket.md. Use --force to overwrite.`);
+    }
+
+    writeTicketFile(root, argv.id, ticket.input ?? "");
+
+    const files = await deps.listTicketFiles(API_URL, ticket.id);
+
+    for (const file of files) {
+      const content = await deps.getTicketFileContent(API_URL, ticket.id, file.id);
+      writeTicketAttachment(root, argv.id, file.file_name, content, argv.force);
+    }
+
+    deps.log(`Pulled ticket ${argv.id} to .pstdio/tickets/${argv.id}`);
+    if (files.length > 0) deps.log(`Downloaded ${files.length} ticket files`);
+  };
+
+export const handler = createHandler();

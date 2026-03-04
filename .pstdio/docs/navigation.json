@@ -28,6 +28,10 @@
           "link": "/specs/cli/templates"
         },
         {
+          "text": "CLI Workspaces",
+          "link": "/specs/cli/workspaces"
+        },
+        {
           "text": "Real-time Updates",
           "link": "/specs/realtime-updates"
         }

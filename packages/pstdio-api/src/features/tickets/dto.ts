@@ -43,9 +43,29 @@ export const updateTicketBodySchema = z.object({
   priority: z.string().optional(),
   complexity: z.enum(["low", "medium", "high"]).optional(),
   draft: z.boolean().optional(),
+  archived: z.boolean().optional(),
   tag_ids: z.array(z.string()).optional(),
 });
 
 export const notFoundResponseSchema = z.object({
   error: z.string(),
+});
+
+export const ticketFileResponseSchema = z.object({
+  id: z.string(),
+  project_id: z.string(),
+  file_name: z.string(),
+  file_kind: z.string(),
+  storage_path: z.string(),
+  mime_type: z.string().nullable(),
+  size_bytes: z.number(),
+  hash: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const uploadTicketFileBodySchema = z.object({
+  file_name: z.string().min(1),
+  content_base64: z.string(),
+  mime_type: z.string().optional(),
 });

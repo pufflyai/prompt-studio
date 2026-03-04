@@ -1,12 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { OpenAPIHono } from "@hono/zod-openapi";
+import type { AppBindings } from "../../../types";
 import { postShutdownHandler, postShutdownRoute } from "./post-shutdown";
 
 describe("POST /shutdown", () => {
   test("returns ok and calls closeDb then exit", async () => {
     const calls: string[] = [];
 
-    const app = new OpenAPIHono();
+    const app = new OpenAPIHono<AppBindings>();
     app.openapi(
       postShutdownRoute,
       postShutdownHandler({

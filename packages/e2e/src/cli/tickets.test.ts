@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanupDirs, createGitRepo, runPstdio, runPstdioSafe } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
@@ -144,7 +144,7 @@ describe("pstdio tickets save", () => {
 
     // Save it
     const saveOutput = run(`tickets save --id ${shorthand}`, repo);
-    expect(saveOutput).toContain(`Pushed ticket ${shorthand}`);
+    expect(saveOutput).toContain(`Saved ticket ${shorthand}`);
 
     // Verify it appears in non-draft list
     const listOutput = run("tickets list", repo);
@@ -160,6 +160,74 @@ describe("pstdio tickets save", () => {
 
     const result = runSafe("tickets save --id MISSING-99", repo);
     expect(result.exitCode).not.toBe(0);
+  });
+});
+
+describe("pstdio tickets files", () => {
+  test("shows local and db status for ticket files", () => {
+    const repo = createInitializedRepo("tk-files");
+    const writeOutput = run('tickets write --title "File statuses"', repo);
+    const shorthand = writeOutput.match(/Created ticket (\S+)/)![1];
+
+    const attachmentDir = join(repo, ".pstdio", "tickets", shorthand, "files");
+    const attachmentPath = join(attachmentDir, "notes.txt");
+    mkdirSync(attachmentDir, { recursive: true });
+    writeFileSync(attachmentPath, "hello attachment");
+
+    const saveOutput = run(`tickets save --id ${shorthand}`, repo);
+    expect(saveOutput).toContain(`Saved ticket ${shorthand}`);
+    expect(saveOutput).toContain("Uploaded 1 ticket files");
+
+    const outputBoth = run(`tickets files --id ${shorthand}`, repo);
+    expect(outputBoth).toContain("File Name");
+    expect(outputBoth).toContain("notes.txt");
+    expect(outputBoth).toMatch(/notes\.txt\s+yes\s+yes/);
+
+    rmSync(attachmentPath);
+
+    const outputDbOnly = run(`tickets files --id ${shorthand}`, repo);
+    expect(outputDbOnly).toContain("notes.txt");
+    expect(outputDbOnly).toMatch(/notes\.txt\s+yes\s+no/);
+  });
+});
+
+describe("pstdio tickets pull", () => {
+  test("pulls ticket markdown and attachments from db when local files are missing", () => {
+    const repo = createInitializedRepo("tk-pull");
+    const writeOutput = run('tickets write --title "Pull ticket"', repo);
+    const shorthand = writeOutput.match(/Created ticket (\S+)/)![1];
+
+    const attachmentDir = join(repo, ".pstdio", "tickets", shorthand, "files");
+    const attachmentPath = join(attachmentDir, "notes.txt");
+    mkdirSync(attachmentDir, { recursive: true });
+    writeFileSync(attachmentPath, "sync me");
+
+    run(`tickets save --id ${shorthand}`, repo);
+    rmSync(join(repo, ".pstdio", "tickets", shorthand), { recursive: true, force: true });
+
+    const pullOutput = run(`tickets pull --id ${shorthand}`, repo);
+    expect(pullOutput).toContain(`Pulled ticket ${shorthand}`);
+    expect(pullOutput).toContain("Downloaded 1 ticket files");
+    expect(readFileSync(join(repo, ".pstdio", "tickets", shorthand, "ticket.md"), "utf8")).toContain("# Pull ticket");
+    expect(readFileSync(join(repo, ".pstdio", "tickets", shorthand, "files", "notes.txt"), "utf8")).toBe("sync me");
+  });
+
+  test("requires --force to overwrite local ticket files", () => {
+    const repo = createInitializedRepo("tk-pull-force");
+    const writeOutput = run('tickets write --title "Pull force ticket"', repo);
+    const shorthand = writeOutput.match(/Created ticket (\S+)/)![1];
+    const ticketPath = join(repo, ".pstdio", "tickets", shorthand, "ticket.md");
+
+    run(`tickets save --id ${shorthand}`, repo);
+    writeFileSync(ticketPath, "local changes");
+
+    const withoutForce = runSafe(`tickets pull --id ${shorthand}`, repo);
+    expect(withoutForce.exitCode).not.toBe(0);
+    expect(withoutForce.stderr).toContain("Use --force to overwrite");
+
+    const withForce = run(`tickets pull --id ${shorthand} --force`, repo);
+    expect(withForce).toContain(`Pulled ticket ${shorthand}`);
+    expect(readFileSync(ticketPath, "utf8")).toContain("# Pull force ticket");
   });
 });
 

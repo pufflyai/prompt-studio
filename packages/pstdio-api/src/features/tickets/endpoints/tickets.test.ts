@@ -134,6 +134,76 @@ describe("PATCH /v1/tickets/:id", () => {
   });
 });
 
+describe("ticket files", () => {
+  test("uploads, lists, and downloads a ticket file", async () => {
+    const listRes = await app.request(`/v1/tickets?project_id=${projectId}`);
+    const tickets = await listRes.json();
+    const ticketId = tickets[0].id as string;
+
+    const uploadRes = await app.request(`/v1/tickets/${ticketId}/files`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        file_name: "notes.txt",
+        content_base64: Buffer.from("hello from file", "utf8").toString("base64"),
+        mime_type: "text/plain",
+      }),
+    });
+
+    expect(uploadRes.status).toBe(201);
+    const uploaded = await uploadRes.json();
+    expect(uploaded.file_name).toBe("notes.txt");
+
+    const filesRes = await app.request(`/v1/tickets/${ticketId}/files`);
+    expect(filesRes.status).toBe(200);
+    const files = await filesRes.json();
+    expect(files.length).toBe(1);
+    expect(files[0].id).toBe(uploaded.id);
+
+    const contentRes = await app.request(`/v1/tickets/${ticketId}/files/${uploaded.id}/content`);
+    expect(contentRes.status).toBe(200);
+    expect(await contentRes.text()).toBe("hello from file");
+  });
+
+  test("updates file content when uploading same file_name", async () => {
+    const listRes = await app.request(`/v1/tickets?project_id=${projectId}`);
+    const tickets = await listRes.json();
+    const ticketId = tickets[0].id as string;
+
+    const firstUploadRes = await app.request(`/v1/tickets/${ticketId}/files`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        file_name: "same-name.txt",
+        content_base64: Buffer.from("first", "utf8").toString("base64"),
+      }),
+    });
+    expect(firstUploadRes.status).toBe(201);
+    const firstFile = await firstUploadRes.json();
+
+    const secondUploadRes = await app.request(`/v1/tickets/${ticketId}/files`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        file_name: "same-name.txt",
+        content_base64: Buffer.from("second", "utf8").toString("base64"),
+      }),
+    });
+    expect(secondUploadRes.status).toBe(200);
+    const secondFile = await secondUploadRes.json();
+    expect(secondFile.id).toBe(firstFile.id);
+
+    const filesRes = await app.request(`/v1/tickets/${ticketId}/files`);
+    expect(filesRes.status).toBe(200);
+    const files = await filesRes.json();
+    expect(files.filter((file: { file_name: string }) => file.file_name === "same-name.txt").length).toBe(1);
+
+    const contentRes = await app.request(`/v1/tickets/${ticketId}/files/${firstFile.id}/content`);
+    expect(contentRes.status).toBe(200);
+    expect(await contentRes.text()).toBe("second");
+  });
+});
+
 describe("GET /v1/projects/:projectId/ticket-tags", () => {
   test("returns tags for project", async () => {
     const res = await app.request(`/v1/projects/${projectId}/ticket-tags`);

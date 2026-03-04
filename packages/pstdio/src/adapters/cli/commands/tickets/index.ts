@@ -1,7 +1,9 @@
 import type { Argv } from "yargs";
 import * as createCommand from "./create";
+import * as filesCommand from "./files";
 import * as implementCommand from "./implement";
 import * as listCommand from "./list";
+import * as pullCommand from "./pull";
 import * as saveCommand from "./save";
 import * as updateCommand from "./update";
 import * as writeCommand from "./write";
@@ -19,7 +21,9 @@ export const builder = (yargs: Argv) => {
     .command(saveCommand)
     .command(listCommand)
     .command(updateCommand)
-    .command(implementCommand);
+    .command(implementCommand)
+    .command(pullCommand)
+    .command(filesCommand);
 };
 
 export const handler = () => {

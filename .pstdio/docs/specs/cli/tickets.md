@@ -31,9 +31,15 @@ Each ticket lives in its own directory under `.pstdio/tickets/`:
 .pstdio/tickets/
   PS-12/
     ticket.md
+    files/
+      architecture.md
+      screenshot.png
   PS-13/
     ticket.md
 ```
+
+- `ticket.md` is the canonical local ticket body.
+- `files/` contains additional local files associated with the ticket.
 
 ---
 
@@ -99,19 +105,20 @@ Created ticket PS-12 (draft) at .pstdio/tickets/PS-12/ticket.md
 ### Usage
 
 ```sh
-pstdio tickets create --content <content> --tag <tag>...
+pstdio tickets create --content <content> [--project-id <project-id>] [--tag <tag>...]
 ```
 
 ### Flags
 
-| Flag        | Type       | Required | Description                             |
-| ----------- | ---------- | -------- | --------------------------------------- |
-| `--content` | `string`   | yes      | The ticket content (title or body).     |
-| `--tag`     | `string[]` | no       | One or more tags to assign. Repeatable. |
+| Flag           | Type       | Required | Description                                                           |
+| -------------- | ---------- | -------- | --------------------------------------------------------------------- |
+| `--content`    | `string`   | yes      | The ticket content (title or body).                                   |
+| `--project-id` | `string`   | no       | Target project. Defaults to the current project from `.pstdio/config.json`. |
+| `--tag`        | `string[]` | no       | One or more tags to assign. Repeatable.                               |
 
 ### Behavior
 
-1. Must be run inside a linked project.
+1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
 2. Create a ticket directly in the database. Does not write a local file.
 3. If `--tag` values are provided, assign matching tags to the ticket.
 
@@ -123,7 +130,8 @@ Created ticket PS-13
 
 ### Errors
 
-- `"Not inside a pstdio project. Run 'pstdio projects create' first."`: no `.pstdio/config.json` found.
+- `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
+- `"Project not found: <project-id>"`: the given project ID does not exist.
 - `"Tag not found: <tag>"`: the given tag does not exist in the project.
 
 ---
@@ -149,13 +157,17 @@ pstdio tickets save --id <ticket-shorthand> --tag <tag>...
 2. Read the local ticket file at `.pstdio/tickets/<ticket-shorthand>/ticket.md`.
 3. Update the ticket in the database with the local file content.
 4. Set `draft=false` to publish the ticket.
-5. If `--tag` values are provided, update the tag assignments.
+5. If `.pstdio/tickets/<ticket-shorthand>/files/` exists, upload every file under it and associate it with the ticket.
+6. If `--tag` values are provided, update the tag assignments.
 
 ### Output
 
 ```text
-Pushed ticket PS-12
+Saved ticket PS-12
+Uploaded 2 ticket files
 ```
+
+If no files were uploaded, omit the second line.
 
 ### Errors
 
@@ -163,6 +175,93 @@ Pushed ticket PS-12
 - `"Local ticket not found: .pstdio/tickets/<ticket-shorthand>/ticket.md"`: no local file for the given shorthand.
 - `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
 - `"Tag not found: <tag>"`: the given tag does not exist in the project.
+
+---
+
+## `pstdio tickets pull`
+
+### Usage
+
+```sh
+pstdio tickets pull --id <ticket-shorthand> [--force]
+```
+
+### Flags
+
+| Flag      | Type      | Required | Description                                                                 |
+| --------- | --------- | -------- | --------------------------------------------------------------------------- |
+| `--id`    | `string`  | yes      | The ticket shorthand (e.g. `PS-12`).                                      |
+| `--force` | `boolean` | no       | Overwrite local files if they already exist at the destination path.        |
+
+### Behavior
+
+1. Must be run inside a linked project.
+2. Fetch the ticket from the database by shorthand.
+3. Create the local ticket directory at `.pstdio/tickets/<ticket-shorthand>/` when missing.
+4. Write the ticket content to `.pstdio/tickets/<ticket-shorthand>/ticket.md`.
+5. Fetch all files linked to the ticket in the database and write them to `.pstdio/tickets/<ticket-shorthand>/files/`.
+6. If a target file path already exists and `--force` is not set, fail without overwriting that file.
+
+### Output
+
+```text
+Pulled ticket PS-12 to .pstdio/tickets/PS-12
+Downloaded 2 ticket files
+```
+
+If no files are linked to the ticket, omit the second line.
+
+### Errors
+
+- `"Not inside a pstdio project. Run 'pstdio projects create' first."`: no `.pstdio/config.json` found.
+- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
+- `"Local file already exists: <path>. Use --force to overwrite."`: local file conflict during pull.
+
+---
+
+## `pstdio tickets files`
+
+### Usage
+
+```sh
+pstdio tickets files --id <ticket-shorthand> [--project-id <project-id>]
+```
+
+### Flags
+
+| Flag           | Type     | Required | Description                                                                 |
+| -------------- | -------- | -------- | --------------------------------------------------------------------------- |
+| `--id`         | `string` | yes      | The ticket shorthand (e.g. `PS-12`).                                      |
+| `--project-id` | `string` | no       | Target project. Defaults to the current project from `.pstdio/config.json`. |
+
+### Behavior
+
+1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
+2. Resolve the ticket by shorthand from the database.
+3. List files linked to the ticket in the database.
+4. If running inside a linked project, list local files under `.pstdio/tickets/<ticket-shorthand>/files/`.
+5. Output a merged view showing whether each file exists in DB, locally, or both. When running outside a linked project, the Local column is always `–` .
+
+### Output
+
+```text
+File Name          DB    Local   Local Path
+architecture.md    yes   yes     .pstdio/tickets/PS-12/files/architecture.md
+screenshot.png     yes   no      -
+scratch-notes.txt  no    yes     .pstdio/tickets/PS-12/files/scratch-notes.txt
+```
+
+If no file exists in either place:
+
+```text
+No ticket files found.
+```
+
+### Errors
+
+- `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
+- `"Project not found: <project-id>"`: the given project ID does not exist.
+- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
 
 ---
 
@@ -220,21 +319,22 @@ No tickets found.
 ### Usage
 
 ```sh
-pstdio tickets update --id <ticket-shorthand> [--status <status>] [--tag <tag>...]
+pstdio tickets update --id <ticket-shorthand> [--project-id <project-id>] [--status <status>] [--tag <tag>...]
 ```
 
 ### Flags
 
-| Flag       | Type       | Required | Description                                                                   |
-| ---------- | ---------- | -------- | ----------------------------------------------------------------------------- |
-| `--id`     | `string`   | yes      | The ticket shorthand (e.g. `PS-12`).                                        |
-| `--status` | `string`   | no       | New status name for the ticket. Must match an existing status in the project. |
-| `--tag`    | `string[]` | no       | Replace current tags with the given set. Repeatable.                          |
+| Flag           | Type       | Required | Description                                                                   |
+| -------------- | ---------- | -------- | ----------------------------------------------------------------------------- |
+| `--id`         | `string`   | yes      | The ticket shorthand (e.g. `PS-12`).                                        |
+| `--project-id` | `string`   | no       | Target project. Defaults to the current project from `.pstdio/config.json`.   |
+| `--status`     | `string`   | no       | New status name for the ticket. Must match an existing status in the project. |
+| `--tag`        | `string[]` | no       | Replace current tags with the given set. Repeatable.                          |
 
 ### Behavior
 
-1. Must be run inside a linked project.
-2. Update ticket properties in the database. Only `--status` and `--tag` are supported — content is updated via `tickets push`.
+1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
+2. Update ticket properties in the database. Only `--status` and `--tag` are supported — content and files are updated via `tickets save`.
 3. If `--status` is provided, look up the status by name and assign its ID.
 4. If `--tag` is provided, replace the current tag assignments with the new set.
 
@@ -246,7 +346,8 @@ Updated ticket PS-12
 
 ### Errors
 
-- `"Not inside a pstdio project. Run 'pstdio projects create' first."`: no `.pstdio/config.json` found.
+- `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
+- `"Project not found: <project-id>"`: the given project ID does not exist.
 - `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
 - `"Status not found: <status>"`: the given status name does not exist in the project.
 - `"Tag not found: <tag>"`: the given tag does not exist in the project.
@@ -258,18 +359,19 @@ Updated ticket PS-12
 ### Usage
 
 ```sh
-pstdio tickets implement --id <ticket-shorthand>
+pstdio tickets implement --id <ticket-shorthand> [--project-id <project-id>]
 ```
 
 ### Flags
 
-| Flag   | Type     | Required | Description                            |
-| ------ | -------- | -------- | -------------------------------------- |
-| `--id` | `string` | yes      | The ticket shorthand (e.g. `PS-12`). |
+| Flag           | Type     | Required | Description                                                                 |
+| -------------- | -------- | -------- | --------------------------------------------------------------------------- |
+| `--id`         | `string` | yes      | The ticket shorthand (e.g. `PS-12`).                                      |
+| `--project-id` | `string` | no       | Target project. Defaults to the current project from `.pstdio/config.json`. |
 
 ### Behavior
 
-1. Must be run inside a linked project.
+1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
 2. Move the ticket status to `wip`.
 3. Launch the default configured agent to work on the ticket.
 
@@ -282,14 +384,90 @@ Launching agent...
 
 ### Errors
 
-- `"Not inside a pstdio project. Run 'pstdio projects create' first."`: no `.pstdio/config.json` found.
+- `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
+- `"Project not found: <project-id>"`: the given project ID does not exist.
 - `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
 - `"No agent configured. Run 'pstdio agents setup' first."`: no default agent is set up.
 
 ---
 
+## `pstdio tickets delete`
+
+### Usage
+
+```sh
+pstdio tickets delete --id <ticket-shorthand> [--project-id <project-id>]
+```
+
+### Flags
+
+| Flag           | Type     | Required | Description                                                                 |
+| -------------- | -------- | -------- | --------------------------------------------------------------------------- |
+| `--id`         | `string` | yes      | The ticket shorthand (e.g. `PS-12`).                                      |
+| `--project-id` | `string` | no       | Target project. Defaults to the current project from `.pstdio/config.json`. |
+
+### Behavior
+
+1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
+2. Resolve the ticket by shorthand from the database.
+3. Soft-delete the ticket in the database (set `deleted_at` timestamp).
+4. If running inside a linked project, remove the local ticket directory at `.pstdio/tickets/<ticket-shorthand>/` if it exists.
+
+### Output
+
+```text
+Deleted ticket PS-12
+```
+
+### Errors
+
+- `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
+- `"Project not found: <project-id>"`: the given project ID does not exist.
+- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
+
+---
+
+## `pstdio tickets archive`
+
+### Usage
+
+```sh
+pstdio tickets archive --id <ticket-shorthand> [--project-id <project-id>]
+```
+
+### Flags
+
+| Flag           | Type     | Required | Description                                                                 |
+| -------------- | -------- | -------- | --------------------------------------------------------------------------- |
+| `--id`         | `string` | yes      | The ticket shorthand (e.g. `PS-12`).                                      |
+| `--project-id` | `string` | no       | Target project. Defaults to the current project from `.pstdio/config.json`. |
+
+### Behavior
+
+1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
+2. Resolve the ticket by shorthand from the database.
+3. Set `archived=true` on the ticket in the database.
+4. Archived tickets are excluded from `tickets list` by default (use `--archived` to include them).
+
+### Output
+
+```text
+Archived ticket PS-12
+```
+
+### Errors
+
+- `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
+- `"Project not found: <project-id>"`: the given project ID does not exist.
+- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
+- `"Ticket already archived: <ticket-shorthand>"`: the ticket is already archived.
+
+---
+
 ## Local Side Effects
 
-| Path                                    | Description                                           |
-| --------------------------------------- | ----------------------------------------------------- |
-| `.pstdio/tickets/<shorthand>/ticket.md` | Local ticket file created by `write`, read by `push`. |
+| Path                                           | Description                                                                            |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `.pstdio/tickets/<shorthand>/ticket.md`        | Local ticket file created by `write`/`pull`, read by `save`.                          |
+| `.pstdio/tickets/<shorthand>/files/`           | Local directory for ticket-associated files written by `pull`, read by `save`/`files`. |
+| `.pstdio/tickets/<shorthand>/files/<filename>` | Individual ticket-associated files synced between local project and DB.                |
