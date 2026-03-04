@@ -111,6 +111,7 @@ export const createProjectsService = (db: DbClient) => {
       id: crypto.randomUUID(),
       name: input.name,
       shorthand: deriveShorthand(input.name),
+      startup_script: null,
       created_at: timestamp,
       updated_at: timestamp,
       deleted_at: null,
@@ -177,5 +178,29 @@ export const createProjectsService = (db: DbClient) => {
     return true;
   };
 
-  return { list, get, create, update, remove };
+  const getStartupScript = async (id: string) => {
+    const project = await get(id);
+    if (!project) return null;
+    return project.startup_script;
+  };
+
+  const setStartupScript = async (id: string, script: string) => {
+    const existing = await get(id);
+    if (!existing) return null;
+
+    await db.update(projects).set({ startup_script: script, updated_at: nowTimestamp() }).where(eq(projects.id, id));
+
+    return true;
+  };
+
+  const clearStartupScript = async (id: string) => {
+    const existing = await get(id);
+    if (!existing) return null;
+
+    await db.update(projects).set({ startup_script: null, updated_at: nowTimestamp() }).where(eq(projects.id, id));
+
+    return true;
+  };
+
+  return { list, get, create, update, remove, getStartupScript, setStartupScript, clearStartupScript };
 };

@@ -5,6 +5,7 @@ type UpdateTicketInput = {
   priority?: string;
   complexity?: string;
   draft?: boolean;
+  archived?: boolean;
   tag_ids?: string[];
 };
 

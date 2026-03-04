@@ -1,5 +1,5 @@
 {
-  "id": "33da32ef-d700-4d6a-9649-0d6390c3d50b",
+  "id": "824324ab-52c9-4640-9bb6-df14ffec4066",
   "prevId": "33da32ef-d700-4d6a-9649-0d6390c3d50b",
   "version": "7",
   "dialect": "postgresql",
@@ -231,6 +231,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "startup_script": {
+          "name": "startup_script",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",

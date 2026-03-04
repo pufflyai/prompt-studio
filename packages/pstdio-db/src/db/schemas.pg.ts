@@ -10,6 +10,7 @@ export const projects = pgTable("projects", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   shorthand: text("shorthand").notNull(),
+  startup_script: text("startup_script"),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
   deleted_at: text("deleted_at"),

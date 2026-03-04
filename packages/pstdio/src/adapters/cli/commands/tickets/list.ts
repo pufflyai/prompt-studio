@@ -81,9 +81,9 @@ export const createHandler =
 
     if (!projectId) {
       const root = deps.findGitRoot(deps.cwd());
-      if (!root) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
+      if (!root) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
       const config = deps.readConfig(root);
-      if (!config) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
+      if (!config) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
       projectId = config.project_id;
     }
 

@@ -9,10 +9,13 @@ export const command = "files";
 export const describe = "List ticket files from database and local project";
 
 export const builder = (yargs: Argv) =>
-  yargs.option("id", { type: "string", demandOption: true, describe: "Ticket shorthand (e.g. PS-12)" });
+  yargs
+    .option("id", { type: "string", demandOption: true, describe: "Ticket shorthand (e.g. PS-12)" })
+    .option("project-id", { type: "string", describe: "Project ID" });
 
 type FilesArgs = {
   id: string;
+  "project-id"?: string;
 };
 
 type Deps = {
@@ -80,17 +83,28 @@ const formatTable = (rows: FileRow[]) => {
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<FilesArgs>) => {
-    const root = deps.findGitRoot(deps.cwd());
-    if (!root) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
+    let projectId = argv["project-id"];
+    let root: string | null = null;
 
-    const config = deps.readConfig(root);
-    if (!config) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
+    if (!projectId) {
+      root = deps.findGitRoot(deps.cwd());
+      if (!root) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
+      const config = deps.readConfig(root);
+      if (!config) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
+      projectId = config.project_id;
+    } else {
+      root = deps.findGitRoot(deps.cwd());
+      if (root) {
+        const config = deps.readConfig(root);
+        if (!config) root = null;
+      }
+    }
 
-    const ticket = await resolveTicketByShorthand(deps, config.project_id, argv.id);
+    const ticket = await resolveTicketByShorthand(deps, projectId, argv.id);
     if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
     const dbFiles = await deps.listTicketFiles(API_URL, ticket.id);
-    const localFiles = listLocalTicketFiles(root, argv.id);
+    const localFiles = root ? listLocalTicketFiles(root, argv.id) : [];
     const dbFileNames = new Set(dbFiles.map((file) => file.file_name));
     const localFileNames = new Set(localFiles);
     const allFiles = Array.from(new Set([...dbFileNames, ...localFileNames])).sort();

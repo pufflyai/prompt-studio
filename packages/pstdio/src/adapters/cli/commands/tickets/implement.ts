@@ -10,10 +10,13 @@ export const command = "implement";
 export const describe = "Move ticket to wip and launch agent";
 
 export const builder = (yargs: Argv) =>
-  yargs.option("id", { type: "string", demandOption: true, describe: "Ticket shorthand" });
+  yargs
+    .option("id", { type: "string", demandOption: true, describe: "Ticket shorthand" })
+    .option("project-id", { type: "string", describe: "Project ID" });
 
 type ImplementArgs = {
   id: string;
+  "project-id"?: string;
 };
 
 type Deps = {
@@ -53,13 +56,15 @@ const defaultDeps: Deps = {
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<ImplementArgs>) => {
+    let projectId = argv["project-id"];
     const root = deps.findGitRoot(deps.cwd());
-    if (!root) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
 
-    const config = deps.readConfig(root);
-    if (!config) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
-
-    const projectId = config.project_id;
+    if (!projectId) {
+      if (!root) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
+      const config = deps.readConfig(root);
+      if (!config) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
+      projectId = config.project_id;
+    }
 
     const tickets = await deps.listTickets(API_URL, {
       project_id: projectId,
@@ -79,12 +84,13 @@ export const createHandler =
 
     deps.log(`Ticket ${argv.id} moved to wip`);
 
-    const ticketContent = readTicketFile(root, argv.id);
+    const launchRoot = root ?? deps.cwd();
+    const ticketContent = readTicketFile(launchRoot, argv.id);
     const prompt = ticketContent ?? `Implement ticket ${argv.id}`;
 
     deps.log("Launching agent...");
 
-    await deps.launchAgent(argv.id, root, ticket.title, prompt);
+    await deps.launchAgent(argv.id, launchRoot, ticket.title, prompt);
   };
 
 export const handler = createHandler();

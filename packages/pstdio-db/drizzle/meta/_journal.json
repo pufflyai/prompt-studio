@@ -36,6 +36,13 @@
       "when": 1772605387318,
       "tag": "0004_replace_staged_with_draft",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1772660320926,
+      "tag": "0005_add_startup_script",
+      "breakpoints": true
     }
   ]
 }

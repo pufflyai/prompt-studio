@@ -9,6 +9,8 @@ Manage ticket-scoped workspaces backed by git worktrees. Workspace metadata is D
 ## Terminology
 
 - **Workspace**: a DB record (`workspaces` + `ticket_workspaces`) plus its code environment.
+- **Workspace Shorthand**: `<ticket-shorthand>/<workspace-shorthand>` (for example `PS-1/A1`) that uniquely identifies a workspace.
+- **Workspace Attempt Shorthand**: per-ticket attempt token (`A1`, `A2`, ...). The full workspace shorthand is globally unique because it includes the ticket shorthand prefix.
 - **Git Worktree**: the local git working tree used as the code environment for a workspace.
 - **Swap State**: temporary local state used by `workspace swap` to preview a workspace in the main checkout.
 
@@ -36,11 +38,11 @@ pstdio workspace create --id <ticket-id> [--base <ref>] [--target <target>]
 
 ### Flags
 
-| Flag     | Type     | Required | Description                                                               |
-| -------- | -------- | -------- | ------------------------------------------------------------------------- |
-| `--id`   | `string` | yes      | Ticket shorthand (for example `PS-12`).                                   |
-| `--base` | `string` | no       | Base branch/ref for the new workspace branch. Defaults to current `HEAD`. |
-| `--target` | `string` | no     | Workspace execution target. Defaults to `worktree`. Currently only `worktree` is supported. |
+| Flag       | Type     | Required | Description                                                                                 |
+| ---------- | -------- | -------- | ------------------------------------------------------------------------------------------- |
+| `--id`     | `string` | yes      | Ticket shorthand (for example `PS-12`).                                                     |
+| `--base`   | `string` | no       | Base branch/ref for the new workspace branch. Defaults to current `HEAD`.                  |
+| `--target` | `string` | no       | Workspace execution target. Defaults to `worktree`. Currently only `worktree` is supported. |
 
 ### Behavior
 
@@ -48,16 +50,16 @@ pstdio workspace create --id <ticket-id> [--base <ref>] [--target <target>]
 2. Resolves the ticket by shorthand in the current project.
 3. Resolves target from `--target` (default: `worktree`).
 4. Resolves the base ref (`--base` or current `HEAD`).
-5. For `--target worktree`, creates a workspace branch (`workspace/<ticket-id>`) and git worktree rooted under `.pstdio/workspaces/<ticket-id>/`.
-6. Persists workspace metadata in the database:
-   - create row in `workspaces` (`status=active`, `branch`, `worktree_path`).
+5. Allocates a new workspace shorthand for the ticket in the form `<ticket-shorthand>/A<n>` (for example `PS-12/A1`), even when other workspaces already exist for the same ticket.
+6. For `--target worktree`, creates a workspace branch (`workspace/<workspace-shorthand>`) and git worktree rooted under `.pstdio/workspaces/<workspace-shorthand>/`.
+7. Persists workspace metadata in the database:
+   - create row in `workspaces` (`workspace_shorthand`, nullable `session_id`, `status=active`, `branch`, `worktree_path`).
    - create row in `ticket_workspaces` linking the ticket to the workspace.
-7. Fails if an active workspace already exists for the ticket.
 
 ### Output
 
 ```text
-Created workspace for PS-12 at .pstdio/workspaces/PS-12
+Created workspace PS-12/A1 for PS-12 at .pstdio/workspaces/PS-12/A1
 ```
 
 ### Errors
@@ -65,7 +67,6 @@ Created workspace for PS-12 at .pstdio/workspaces/PS-12
 - `"Not inside a git repository."`: no git root found.
 - `"Not inside a pstdio project. Run 'pstdio projects create' first."`: no `.pstdio/config.json`.
 - `"Ticket not found: <ticket-id>"`: ticket shorthand is unknown in the current project.
-- `"Workspace already exists for ticket: <ticket-id>"`: active workspace already exists.
 - `"Base ref not found: <ref>"`: invalid `--base` value.
 - `"Invalid target: <target>. Must be 'worktree'."`: unsupported workspace target.
 
@@ -87,14 +88,14 @@ None.
 
 1. Must run inside a linked project.
 2. Reads active workspace metadata from the database.
-3. Shows each workspace with ticket ID, branch, and absolute path.
+3. Shows each workspace with workspace shorthand, ticket ID, branch, and absolute path.
 
 ### Output
 
 ```text
-Ticket   Branch              Path
-PS-12    workspace/PS-12     /repo/.pstdio/workspaces/PS-12
-PS-13    workspace/PS-13     /repo/.pstdio/workspaces/PS-13
+Workspace   Ticket   Branch               Path
+PS-12/A1    PS-12    workspace/PS-12/A1   /repo/.pstdio/workspaces/PS-12/A1
+PS-12/A2    PS-12    workspace/PS-12/A2   /repo/.pstdio/workspaces/PS-12/A2
 ```
 
 If no workspaces exist:
@@ -114,18 +115,18 @@ No active workspaces.
 ### Usage
 
 ```sh
-pstdio workspace swap --id <ticket-id>
+pstdio workspace swap --id <workspace-shorthand>
 pstdio workspace swap --status
 pstdio workspace swap --back
 ```
 
 ### Flags
 
-| Flag       | Type      | Required | Description                                                                                  |
-| ---------- | --------- | -------- | -------------------------------------------------------------------------------------------- |
-| `--id`     | `string`  | no       | Ticket shorthand for the workspace to preview. Required unless using `--status` or `--back`. |
-| `--status` | `boolean` | no       | Print active swap state. Informational only.                                                 |
-| `--back`   | `boolean` | no       | Restore original checkout and clear swap state.                                              |
+| Flag       | Type      | Required | Description                                                                                              |
+| ---------- | --------- | -------- | -------------------------------------------------------------------------------------------------------- |
+| `--id`     | `string`  | no       | Workspace shorthand to preview (for example `PS-1/A1`). Required unless using `--status` or `--back`. |
+| `--status` | `boolean` | no       | Print active swap state. Informational only.                                                             |
+| `--back`   | `boolean` | no       | Restore original checkout and clear swap state.                                                          |
 
 ### Behavior
 
@@ -137,13 +138,13 @@ pstdio workspace swap --back
 2. Requires a clean working tree in the current checkout.
 3. Resolves the target workspace from DB metadata.
 4. Captures the current branch/commit and writes swap metadata to `.pstdio/swap.json`.
-5. Checks out a temporary preview branch (`preview/<ticket-id>`) at the workspace commit.
+5. Checks out a temporary preview branch (`preview/<workspace-shorthand>`) at the workspace commit.
 6. If dependency manifests changed (for example `package.json`, `bun.lockb`), prints a reminder to run `bun install`.
 
 `swap --status`:
 
 1. Reads `.pstdio/swap.json`.
-2. If swap is active, prints the active ticket and preview branch.
+2. If swap is active, prints the active workspace and preview branch.
 3. If no swap is active, prints `No active swap.` and exits with code `0`.
 
 `swap --back`:
@@ -157,11 +158,11 @@ pstdio workspace swap --back
 ### Output
 
 ```text
-Swapped to workspace PS-12
+Swapped to workspace PS-12/A1
 ```
 
 ```text
-Swap active: ticket PS-12 on branch preview/PS-12
+Swap active: workspace PS-12/A1 on branch preview/PS-12/A1
 ```
 
 When no swap is active:
@@ -180,7 +181,7 @@ Restored original branch and cleared swap state.
 - `"Already swapped - run 'workspace swap --back' first"`: cannot run `swap --id` while swap is active.
 - `"No active swap"`: attempting `swap --back` with no state file.
 - `"Branch has uncommitted changes"`: checkout must be clean before `swap --id` or `swap --back`.
-- `"Workspace not found: <ticket-id>"`: unknown workspace.
+- `"Workspace not found: <workspace-shorthand>"`: unknown workspace.
 
 ---
 
@@ -189,15 +190,15 @@ Restored original branch and cleared swap state.
 ### Usage
 
 ```sh
-pstdio workspace merge --id <ticket-id> [--delete-workspace]
+pstdio workspace merge --id <workspace-shorthand> [--delete-workspace]
 ```
 
 ### Flags
 
-| Flag                 | Type      | Required | Description                                  |
-| -------------------- | --------- | -------- | -------------------------------------------- |
-| `--id`               | `string`  | yes      | Ticket shorthand to merge.                   |
-| `--delete-workspace` | `boolean` | no       | Delete the workspace after successful merge. |
+| Flag                 | Type      | Required | Description                                                           |
+| -------------------- | --------- | -------- | --------------------------------------------------------------------- |
+| `--id`               | `string`  | yes      | Workspace shorthand to merge (for example `PS-1/A1`).                |
+| `--delete-workspace` | `boolean` | no       | Delete the workspace after successful merge.                          |
 
 ### Behavior
 
@@ -205,26 +206,26 @@ pstdio workspace merge --id <ticket-id> [--delete-workspace]
 2. Resolves the target workspace from DB metadata.
 3. Resolves the workspace tip commit from the workspace branch.
 4. Performs a squash merge into the current branch.
-5. Creates one commit with message `workspace(<ticket-id>): squash merge`.
+5. Creates one commit with message `workspace(<workspace-shorthand>): squash merge`.
 6. If conflicts occur, aborts merge with `git reset --merge` and reports conflicting files.
 7. If `--delete-workspace` is set and merge succeeds, runs the same force-remove flow as `workspace delete`.
 
 ### Output
 
 ```text
-Merged workspace PS-12 as a squash commit.
+Merged workspace PS-12/A1 as a squash commit.
 ```
 
 When `--delete-workspace` is set:
 
 ```text
-Merged workspace PS-12 and deleted workspace.
+Merged workspace PS-12/A1 and deleted workspace.
 ```
 
 ### Errors
 
 - `"Branch has uncommitted changes"`: current checkout must be clean before merge.
-- `"Workspace not found: <ticket-id>"`: unknown workspace.
+- `"Workspace not found: <workspace-shorthand>"`: unknown workspace.
 - `"Merge conflict"`: conflict occurred; command exits with code `1` after abort.
 
 ---
@@ -234,14 +235,14 @@ Merged workspace PS-12 and deleted workspace.
 ### Usage
 
 ```sh
-pstdio workspace delete --id <ticket-id>
+pstdio workspace delete --id <workspace-shorthand>
 ```
 
 ### Flags
 
-| Flag   | Type     | Required | Description                           |
-| ------ | -------- | -------- | ------------------------------------- |
-| `--id` | `string` | yes      | Ticket shorthand workspace to delete. |
+| Flag   | Type     | Required | Description                                                    |
+| ------ | -------- | -------- | -------------------------------------------------------------- |
+| `--id` | `string` | yes      | Workspace shorthand to delete (for example `PS-1/A1`).        |
 
 ### Behavior
 
@@ -255,28 +256,28 @@ pstdio workspace delete --id <ticket-id>
 ### Output
 
 ```text
-Deleted workspace PS-12
+Deleted workspace PS-12/A1
 ```
 
 ### Errors
 
-- `"Workspace not found: <ticket-id>"`: unknown workspace.
+- `"Workspace not found: <workspace-shorthand>"`: unknown workspace.
 
 ---
 
 ## Local Side Effects
 
-| Path                              | Description                                                             |
-| --------------------------------- | ----------------------------------------------------------------------- |
-| `.pstdio/workspaces/<ticket-id>/` | Physical git worktree directory for the workspace.                      |
-| `.pstdio/swap.json`               | Temporary swap state used by `swap --status` and `swap --back`.        |
+| Path                                      | Description                                                     |
+| ----------------------------------------- | --------------------------------------------------------------- |
+| `.pstdio/workspaces/<workspace-shorthand>/` | Physical git worktree directory for the workspace.            |
+| `.pstdio/swap.json`                       | Temporary swap state used by `swap --status` and `swap --back`. |
 
 ## Database Side Effects
 
-| Table               | Description                                                             |
-| ------------------- | ----------------------------------------------------------------------- |
-| `workspaces`        | Workspace lifecycle metadata (`status`, `branch`, `worktree_path`).    |
-| `ticket_workspaces` | Ticket to workspace association used for ticket shorthand resolution.   |
+| Table               | Description                                                                       |
+| ------------------- | --------------------------------------------------------------------------------- |
+| `workspaces`        | Workspace lifecycle metadata (`workspace_shorthand`, nullable `session_id`, `status`, `branch`, `worktree_path`). |
+| `ticket_workspaces` | Ticket to workspace association used for ticket shorthand resolution.             |
 
 ---
 

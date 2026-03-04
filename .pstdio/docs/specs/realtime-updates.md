@@ -16,23 +16,23 @@ All database changes propagate to connected clients in real time. The dashboard 
 
 15 tables are included in the sync stream:
 
-| Table | Description |
-| --- | --- |
-| `projects` | Top-level projects |
-| `repos` | Git repositories |
-| `project_repos` | Project ↔ repo associations |
-| `agent_configs` | Configured coding agents |
-| `ticket_statuses` | Status definitions per project |
-| `tickets` | Work items |
-| `ticket_tags` | Tag definitions per project |
-| `ticket_tag_assignments` | Tag ↔ ticket associations |
-| `sessions` | Coding sessions (content stored as file reference) |
-| `workspaces` | Workspace definitions |
-| `ticket_workspaces` | Ticket ↔ workspace associations |
-| `files` | File metadata (content on disk) |
-| `ticket_files` | Ticket ↔ file associations |
-| `workspace_artifacts` | Artifacts produced in workspaces |
-| `templates` | Project templates |
+| Table                    | Description                                        |
+| ------------------------ | -------------------------------------------------- |
+| `projects`               | Top-level projects                                 |
+| `repos`                  | Git repositories                                   |
+| `project_repos`          | Project ↔ repo associations                        |
+| `agent_configs`          | Configured coding agents                           |
+| `ticket_statuses`        | Status definitions per project                     |
+| `tickets`                | Work items                                         |
+| `ticket_tags`            | Tag definitions per project                        |
+| `ticket_tag_assignments` | Tag ↔ ticket associations                          |
+| `sessions`               | Coding sessions (content stored as file reference) |
+| `workspaces`             | Workspace definitions                              |
+| `ticket_workspaces`      | Ticket ↔ workspace associations                    |
+| `files`                  | File metadata (content on disk)                    |
+| `ticket_files`           | Ticket ↔ file associations                         |
+| `workspace_artifacts`    | Artifacts produced in workspaces                   |
+| `templates`              | Project templates                                  |
 
 ### Excluded
 
