@@ -174,3 +174,4 @@ packages/e2e/screenshots
 webapps/documentation/build
 
 .pstdio/tickets
+.pstdio/config.json

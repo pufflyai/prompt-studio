@@ -25,7 +25,7 @@ const ticketBase = {
   priority: "high",
   project_id: "project-1",
   shorthand: "TK0001",
-  staged: false,
+  draft: false,
   status_id: null,
   title: "Initial ticket",
   updated_at: "2026-01-01T00:00:00.000Z",

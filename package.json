@@ -24,7 +24,8 @@
     "dev:landing-page": "bun run --cwd clients/landing-page develop",
     "storybook:ui": "bun run --cwd packages/ui storybook",
     "studio:db": "bun run --cwd packages/db studio",
-    "dev:desktop": "bun run --cwd clients/desktop dev"
+    "dev:desktop": "bun run --cwd clients/desktop dev",
+    "report:e2e": "bun run --cwd packages/e2e report"
   },
   "engines": {
     "bun": ">=1.3.10"

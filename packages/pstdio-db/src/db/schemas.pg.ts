@@ -87,7 +87,7 @@ export const tickets = pgTable(
     blocked_reason: text("blocked_reason"),
     depends_on: text("depends_on"),
     archived: boolean("archived").notNull().default(false),
-    staged: boolean("staged").notNull().default(false),
+    draft: boolean("draft").notNull().default(false),
     deleted_at: text("deleted_at"),
     created_at: text("created_at").notNull(),
     updated_at: text("updated_at").notNull(),
@@ -241,6 +241,7 @@ export const templates = pgTable("templates", {
   is_default: boolean("is_default").notNull().default(false),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
+  deleted_at: text("deleted_at"),
 });
 
 export const ydocUpdates = pgTable("ydoc_updates", {

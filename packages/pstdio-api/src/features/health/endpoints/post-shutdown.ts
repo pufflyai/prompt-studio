@@ -20,16 +20,19 @@ export const postShutdownRoute = createRoute({
 });
 
 type ShutdownDeps = {
-  exit: () => void;
+  closeDb: () => Promise<void>;
+  exit?: () => void;
 };
 
-const defaultDeps: ShutdownDeps = {
-  exit: () => process.exit(0),
-};
+export const postShutdownHandler = (deps: ShutdownDeps): AppRouteHandler<typeof postShutdownRoute> => {
+  const exit = deps.exit ?? (() => process.exit(0));
 
-export const postShutdownHandler = (deps: ShutdownDeps = defaultDeps): AppRouteHandler<typeof postShutdownRoute> => {
   return async (c) => {
-    setTimeout(deps.exit, 50);
+    const timer = setTimeout(async () => {
+      await deps.closeDb();
+      exit();
+    }, 50);
+    timer.unref();
     return c.json({ ok: true }, 200);
   };
 };

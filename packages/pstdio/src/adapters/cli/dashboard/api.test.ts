@@ -55,7 +55,7 @@ test("resolveApiRoot finds pstdio-api workspace above start directory", () => {
   expect(resolveApiRoot(nested)).toBe(apiRoot);
 });
 
-test("runApi spawns bun dev in the api workspace", () => {
+test("runApi spawns bun start in the api workspace", () => {
   const base = mkdtempSync(join(tmpdir(), "pstdio-api-run-"));
   const apiRoot = writeApiPackage(base);
   const nested = join(base, "packages", "pstdio", "src");
@@ -69,7 +69,7 @@ test("runApi spawns bun dev in the api workspace", () => {
   expect(calls).toEqual([
     {
       command: "bun",
-      args: ["run", "dev"],
+      args: ["run", "start"],
       options: { cwd: apiRoot, stdio: "ignore", detached: true, env: withDefaultDataPaths(env) },
     },
   ]);
@@ -90,7 +90,7 @@ test("runApi keeps child attached when detached is false", () => {
   expect(calls).toEqual([
     {
       command: "bun",
-      args: ["run", "dev"],
+      args: ["run", "start"],
       options: { cwd: apiRoot, stdio: "inherit", detached: false, env: withDefaultDataPaths(env) },
     },
   ]);
@@ -111,7 +111,7 @@ test("runApi uses stdio override when provided", () => {
   expect(calls).toEqual([
     {
       command: "bun",
-      args: ["run", "dev"],
+      args: ["run", "start"],
       options: { cwd: apiRoot, stdio: "inherit", detached: true, env: withDefaultDataPaths(env) },
     },
   ]);
@@ -131,7 +131,7 @@ test("runApi forwards PSTDIO_API_PORT as PORT", () => {
   expect(calls).toEqual([
     {
       command: "bun",
-      args: ["run", "dev"],
+      args: ["run", "start"],
       options: {
         cwd: apiRoot,
         stdio: "ignore",

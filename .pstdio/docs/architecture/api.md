@@ -37,6 +37,21 @@ The pstdio API (`pstdio-api`) is the single gateway between all clients and the 
 | GET    | /readyz  | Readiness (DB + storage) |
 | GET    | /ping    | Simple ping              |
 
+## Lifecycle
+
+### Starting the API
+
+The CLI auto-starts the API as a detached background process when a command needs it. There are two launch paths:
+
+- **Workspace mode** (monorepo detected): runs `bun run start` in the `pstdio-api` package.
+- **Bundled mode** (distributed CLI): runs the bundled `server.js` directly with `node`.
+
+The `dev` script (`bun run --hot`) is reserved for interactive development only. It must never be used for background processes because `--hot` restarts the process on exit, which prevents graceful shutdown via the `/shutdown` endpoint.
+
+### Stopping the API
+
+`pstdio close` sends a `POST /shutdown` request. The endpoint responds with 200 and calls `process.exit(0)` after a short delay. If the API is not running, the CLI prints "API is not running." and exits normally.
+
 ## Rules
 
 1. **All client requests go through the API.** The CLI and TUI must never read from or write to the database directly. File-system access for local config (`.pstdio/config.json`, `.pstdio/docs/`) is fine — persistent data is the API's job.

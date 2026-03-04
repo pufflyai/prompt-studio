@@ -7,11 +7,15 @@ const tmpBase = join(import.meta.dirname, "__test-tmp__");
 
 const originalFetch = globalThis.fetch;
 
+const templateResponse = { status: 201, body: { id: "tpl", name: "t", template_type: "docs", is_default: false } };
+const seedTemplateResponses = Array.from({ length: 6 }, () => templateResponse);
+
 const mockFetchSequence = (responses: { status: number; body: unknown }[]) => {
   let callIndex = 0;
   globalThis.fetch = mock(() => {
-    const { status, body } = responses[callIndex++];
-    return Promise.resolve(new Response(JSON.stringify(body), { status }));
+    const resp = responses[callIndex++];
+    if (!resp) return Promise.resolve(new Response(JSON.stringify({}), { status: 200 }));
+    return Promise.resolve(new Response(JSON.stringify(resp.body), { status: resp.status }));
   }) as unknown as typeof fetch;
 };
 
@@ -35,6 +39,7 @@ describe("createAndInitProject", () => {
     mockFetchSequence([
       { status: 201, body: { id: "proj-1", name: "Test" } },
       { status: 201, body: { id: "repo-1", name: "create-init", path: "/tmp/create-init" } },
+      ...seedTemplateResponses,
       { status: 200, body: [{ agent_id: "opencode", is_default: true }] },
     ]);
     const root = setup("create-init");
@@ -43,7 +48,7 @@ describe("createAndInitProject", () => {
     const project = await createAndInitProject(root, "Test", { homedir: fakeHome });
 
     expect(project).toEqual({ id: "proj-1", name: "Test" });
-    expect(globalThis.fetch).toHaveBeenCalledTimes(3);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(9);
 
     const config = JSON.parse(readFileSync(join(root, ".pstdio", "config.json"), "utf8"));
     expect(config.project_id).toBe("proj-1");
@@ -70,6 +75,7 @@ describe("createAndInitProject", () => {
     mockFetchSequence([
       { status: 201, body: { id: "proj-3", name: "HasDocs" } },
       { status: 201, body: { id: "repo-3", name: "has-docs", path: "/tmp/has-docs" } },
+      ...seedTemplateResponses,
       { status: 200, body: [] },
     ]);
     const root = setup("has-docs");

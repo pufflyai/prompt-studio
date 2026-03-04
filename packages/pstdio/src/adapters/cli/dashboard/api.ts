@@ -77,7 +77,7 @@ const resolveCliEntryPath = () => {
 
 export const buildApiStartCommand = (apiRoot: string, stdio: ApiSpawnOptions["stdio"] = "ignore", detached = true) => ({
   command: "bun",
-  args: ["run", "dev"],
+  args: ["run", "start"],
   options: { cwd: apiRoot, stdio, detached },
 });
 
