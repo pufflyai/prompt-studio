@@ -17,7 +17,7 @@ const baseDeps = {
   log: mock(),
 };
 
-describe("workspace swap", () => {
+describe("workspaces swap", () => {
   test("swap --id checks out preview branch", async () => {
     const log = mock();
     const writeSwapState = mock(() => {});
@@ -31,7 +31,7 @@ describe("workspace swap", () => {
         name: "PS-1/A1",
         workspace_shorthand: "PS-1/A1",
         branch: "workspace/PS-1/A1",
-        worktree_path: "/repo/.pstdio/workspaces/PS-1/A1",
+        worktree_path: "~/.pstdio/workspaces/PS-1/A1",
         status: "active",
         created_at: "",
         updated_at: "",
@@ -141,7 +141,7 @@ describe("workspace swap", () => {
     });
 
     await expect(handler({ id: "PS-1/A2", _: [], $0: "" } as never)).rejects.toThrow(
-      "Already swapped - run 'workspace swap --back' first",
+      "Already swapped - run 'workspaces swap --back' first",
     );
   });
 });

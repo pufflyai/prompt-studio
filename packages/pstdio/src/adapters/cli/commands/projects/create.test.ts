@@ -114,6 +114,29 @@ describe("createHandler", () => {
     });
   });
 
+  test("uses git root as init directory when cwd is a subdirectory", async () => {
+    const createAndInitProject = mock(async (_root: string, _name: string, _opts?: unknown) => ({
+      id: "proj-4",
+      name: "prompt-studio",
+    }));
+    const handler = createHandler({
+      cwd: () => "/work/prompt-studio/packages/cli",
+      findGitRoot: () => "/work/prompt-studio",
+      createAndInitProject,
+    });
+    const log = mock(() => {});
+    console.log = log as typeof console.log;
+
+    await handler({} as never);
+
+    expect(createAndInitProject).toHaveBeenCalledWith("/work/prompt-studio", "prompt-studio", {
+      repoPaths: ["/work/prompt-studio"],
+    });
+    expect(log).toHaveBeenCalledWith(
+      'Created project "prompt-studio" (proj-4) and initialized .pstdio at /work/prompt-studio',
+    );
+  });
+
   test("throws when a --repo path is not a git repository", async () => {
     const handler = createHandler({
       cwd: () => "/work/project",

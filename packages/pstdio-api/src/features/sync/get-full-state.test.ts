@@ -50,9 +50,9 @@ describe("getFullState", () => {
     expect(state.projects).toHaveLength(1);
     expect((state.projects[0] as Record<string, unknown>).name).toBe("test-project");
 
-    // project creation auto-creates 7 statuses + 4 tags
-    expect(state.ticket_statuses).toHaveLength(7);
-    expect(state.ticket_tags).toHaveLength(4);
+    // project creation auto-creates 6 statuses + 3 tags
+    expect(state.ticket_statuses).toHaveLength(6);
+    expect(state.ticket_tags).toHaveLength(3);
 
     expect(state.agent_configs).toHaveLength(1);
     expect((state.agent_configs[0] as Record<string, unknown>).agent_id).toBe("claude-code");

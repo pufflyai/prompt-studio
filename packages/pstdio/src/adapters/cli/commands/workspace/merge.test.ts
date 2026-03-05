@@ -7,13 +7,13 @@ const makeWorkspace = (shorthand: string) => ({
   name: shorthand,
   workspace_shorthand: shorthand,
   branch: `workspace/${shorthand}`,
-  worktree_path: `/repo/.pstdio/workspaces/${shorthand}`,
+  worktree_path: `~/.pstdio/workspaces/${shorthand}`,
   status: "active" as const,
   created_at: "",
   updated_at: "",
 });
 
-describe("workspace merge", () => {
+describe("workspaces merge", () => {
   test("squash-merges workspace into current branch", async () => {
     const log = mock();
     const squashMerge = mock(async () => {});

@@ -5,10 +5,11 @@ import { InputBar } from "./components/input-bar";
 import { StatusBar } from "./components/status-bar";
 import { TabBar } from "./components/tab-bar";
 import { useAgents } from "./hooks/use-agents";
+import { useAppKeyboard } from "./hooks/use-app-keyboard";
 import { useDocs } from "./hooks/use-docs";
-import { useKeyboard } from "./hooks/use-keyboard";
 import { useProject } from "./hooks/use-project";
 import { useSelection } from "./hooks/use-selection";
+import { useSettings } from "./hooks/use-settings";
 import { useSync } from "./hooks/use-sync";
 import { useTemplates } from "./hooks/use-templates";
 import { useTerminalSize } from "./hooks/use-terminal-size";
@@ -21,7 +22,15 @@ import { TicketContent } from "./panels/ticket-content";
 import { TicketList } from "./panels/ticket-list";
 
 export type Tab = "tickets" | "docs" | "templates";
-export type Overlay = "help" | "view" | "projects" | "agents" | "status-picker" | "ticket-create" | "confirm-archive";
+export type Overlay =
+  | "help"
+  | "view"
+  | "projects"
+  | "agents"
+  | "status-picker"
+  | "ticket-create"
+  | "confirm-archive"
+  | "settings";
 export type Mode = { tab: Tab; overlay?: Overlay; search?: boolean };
 
 const TABS: Tab[] = ["tickets", "docs", "templates"];
@@ -40,15 +49,13 @@ export function App() {
   const agentState = useAgents();
   const ticketState = useTickets(projectState.project?.id ?? null);
   const templateState = useTemplates(projectState.project?.id ?? null);
+  const settingsState = useSettings(projectState.project?.id ?? null);
 
   const [mode, setMode] = useState<Mode>({ tab: "tickets" });
   const [inputValue, setInputValue] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [viewContent, setViewContent] = useState({ title: "", content: "" });
-  const [pickerIndex, setPickerIndex] = useState(0);
-  const [agentIndex, setAgentIndex] = useState(0);
-  const [archiveTarget, setArchiveTarget] = useState<{ id: string; title: string | null } | null>(null);
 
   const inputActive = mode.search === true;
   const chrome = HEADER_LINES + FOOTER_LINES + (inputActive ? INPUT_LINES : 0);
@@ -68,33 +75,48 @@ export function App() {
   // Templates
   const templateSelection = useSelection(templateState.items.length, viewportHeight);
 
-  const toggleExpand = () => {
-    if (!selectedRow) return;
-
-    if (selectedRow.hasChildren) {
-      setExpanded((prev) => {
-        const next = new Set(prev);
-        if (next.has(selectedRow.item.text)) {
-          next.delete(selectedRow.item.text);
-        } else {
-          next.add(selectedRow.item.text);
-        }
-        return next;
-      });
-      return;
-    }
-
-    if (selectedRow.item.link) {
-      const content = docs.getDocument(selectedRow.item.link);
-      setViewContent({ title: selectedRow.item.text, content: content ?? "" });
-      setMode((m) => ({ ...m, overlay: "view" }));
-    }
-  };
+  const {
+    pickerIndex,
+    agentIndex,
+    archiveTarget,
+    settingsIndex,
+    settingsColorIndex,
+    settingsColorPicker,
+    settingsCreateStep,
+    settingsNameSubmit,
+  } = useAppKeyboard({
+    mode,
+    setMode,
+    exit,
+    docs,
+    docsSelection,
+    docsRows,
+    selectedRow,
+    ticketState,
+    ticketSelection,
+    templateState,
+    templateSelection,
+    projectState,
+    agentState,
+    settingsState,
+    setInputValue,
+    setSearchQuery,
+    setViewContent,
+    expanded,
+    setExpanded,
+  });
 
   const handleSearchSubmit = (value: string) => {
     if (mode.overlay === "ticket-create") {
       if (value.trim()) ticketState.createTicket(value.trim());
       setMode((m) => ({ ...m, overlay: undefined, search: undefined }));
+      setInputValue("");
+      return;
+    }
+
+    if (mode.overlay === "settings" && settingsCreateStep === "name") {
+      settingsNameSubmit(value);
+      setMode((m) => ({ ...m, search: undefined }));
       setInputValue("");
       return;
     }
@@ -109,76 +131,6 @@ export function App() {
     setMode((m) => ({ ...m, search: undefined }));
     setInputValue("");
   };
-
-  useKeyboard({
-    mode,
-    setMode,
-    exit,
-    // docs
-    docsSelectedIndex: docsSelection.selectedIndex,
-    docsRowCount: docsRows.length,
-    docsMoveTo: docsSelection.moveTo,
-    docsResetSelection: docsSelection.resetSelection,
-    toggleExpand,
-    openDocument: () => {
-      if (!selectedRow?.item.link) return;
-      const content = docs.getDocument(selectedRow.item.link);
-      setViewContent({ title: selectedRow.item.text, content: content ?? "" });
-      setMode((m) => ({ ...m, overlay: "view" }));
-    },
-    setInputValue,
-    setSearchQuery,
-    // tickets
-    ticketSelectedIndex: ticketSelection.selectedIndex,
-    ticketRowCount: ticketState.flatRows.length,
-    ticketMoveTo: ticketSelection.moveTo,
-    ticketResetSelection: ticketSelection.resetSelection,
-    ticketState,
-    // templates
-    templateSelectedIndex: templateSelection.selectedIndex,
-    templateRowCount: templateState.items.length,
-    templateMoveTo: templateSelection.moveTo,
-    templateState,
-    // project picker
-    pickerCount: projectState.projects.length,
-    setPickerIndex,
-    onPickerSelect: () => {
-      const selected = projectState.projects[pickerIndex];
-      if (selected) projectState.switchProject(selected.id);
-    },
-    onPickerOpen: () => {
-      setPickerIndex(0);
-      projectState.loadProjects();
-    },
-    // agent manager
-    agentCount: agentState.agents.length,
-    setAgentIndex,
-    onAgentOpen: () => {
-      setAgentIndex(0);
-      agentState.loadAgents();
-    },
-    onAgentSetup: () => {
-      const selected = agentState.agents[agentIndex];
-      if (selected?.configured === false) agentState.setup(selected.agentId);
-    },
-    onAgentRemove: () => {
-      const selected = agentState.agents[agentIndex];
-      if (selected?.configured) agentState.remove(selected.agentId);
-    },
-    onAgentSetDefault: () => {
-      const selected = agentState.agents[agentIndex];
-      if (selected?.configured) agentState.setDefault(selected.agentId);
-    },
-    // status picker
-    statusPickerCount: ticketState.statuses.length,
-    statusPickerIndex: pickerIndex,
-    setStatusPickerIndex: setPickerIndex,
-    onArchiveRequest: setArchiveTarget,
-    onArchiveConfirm: () => {
-      if (archiveTarget) ticketState.toggleArchive(archiveTarget as Parameters<typeof ticketState.toggleArchive>[0]);
-      setArchiveTarget(null);
-    },
-  });
 
   const separator = "─".repeat(columns);
   const activeTabIndex = TABS.indexOf(mode.tab);
@@ -249,6 +201,13 @@ export function App() {
     agentIndex,
     statuses: ticketState.statuses,
     archiveTarget,
+    settingsSection: settingsState.section,
+    settingsStatuses: settingsState.statuses,
+    settingsTags: settingsState.tags,
+    settingsIndex,
+    settingsColorPicker,
+    settingsColorIndex,
+    settingsCreateStep,
   });
 
   return (
@@ -269,7 +228,7 @@ export function App() {
 
       {inputActive && (
         <InputBar
-          label={mode.overlay === "ticket-create" ? "New Ticket" : "Search"}
+          label={mode.overlay === "ticket-create" ? "New Ticket" : mode.overlay === "settings" ? "Name" : "Search"}
           value={inputValue}
           onChange={setInputValue}
           onSubmit={handleSearchSubmit}
@@ -278,7 +237,14 @@ export function App() {
 
       <StatusBar
         mode={mode}
-        error={docs.error || projectState.error || agentState.error || ticketState.error || templateState.error}
+        error={
+          docs.error ||
+          projectState.error ||
+          agentState.error ||
+          ticketState.error ||
+          templateState.error ||
+          settingsState.error
+        }
         width={columns}
         connected={sync.connected}
       />

@@ -152,6 +152,7 @@ Split content that will grow in separate files, e.g. Instead of placing all endp
 
 ### Testing Rules
 
+- When adding new features, an E2E test must be added as well covering all new flows. Update existing flows that are affected by the change.
 - Tests must be **located next to the file they test**
 - Avoid mocks, test the real thing when possible
 - Control time where needed

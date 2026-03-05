@@ -277,9 +277,9 @@ Startup script cleared for project "my-app".
 
 ---
 
-### Integration with `workspace create`
+### Integration with `pstdio workspaces create`
 
-After `pstdio workspace create` completes its existing steps (worktree checkout, DB metadata), it adds:
+After `pstdio workspaces create` completes its existing steps (worktree checkout, DB metadata), it adds:
 
 8. Reads the project's `startup_script` from the database.
 9. If non-null, executes the script inside the workspace worktree directory using the user's default shell.
@@ -289,7 +289,7 @@ After `pstdio workspace create` completes its existing steps (worktree checkout,
 When a startup script runs successfully:
 
 ```text
-Created workspace PS-12/A1 for PS-12 at .pstdio/workspaces/PS-12/A1
+Created workspace PS-12/A1 for PS-12 at ~/.pstdio/workspaces/PS-12/A1
 Running startup script...
 <script output>
 Startup script completed.
@@ -298,13 +298,56 @@ Startup script completed.
 When the script fails:
 
 ```text
-Created workspace PS-12/A1 for PS-12 at .pstdio/workspaces/PS-12/A1
+Created workspace PS-12/A1 for PS-12 at ~/.pstdio/workspaces/PS-12/A1
 Running startup script...
 <script output>
 Warning: startup script exited with code 1.
 ```
 
 When no startup script is configured, output is unchanged.
+
+---
+
+## `pstdio projects repos`
+
+### Usage
+
+```sh
+pstdio projects repos [--project-id <project-id>]
+```
+
+### Flags
+
+| Flag           | Type     | Required | Description                                                                 |
+| -------------- | -------- | -------- | --------------------------------------------------------------------------- |
+| `--project-id` | `string` | no       | Target project. Defaults to the current project from `.pstdio/config.json`. |
+
+### Behavior
+
+1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
+2. Fetch all repos linked to the project via `project_repos` from the database.
+3. For each repo, check whether the path exists locally on disk.
+4. Output a table showing each repo's name, path, and local availability.
+
+### Output
+
+```text
+Name              Path                                  Local
+prompt-studio     /Users/me/Projects/prompt-studio       yes
+backend-api       /Users/me/Projects/backend-api         yes
+infra             /Users/me/Projects/infra               no
+```
+
+If no repos are linked:
+
+```text
+No repos found for this project. Use `pstdio projects create --repo <path>` or `pstdio projects link` to connect repos.
+```
+
+### Errors
+
+- `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
+- `"Project not found: <project-id>"`: the given project ID does not exist.
 
 ---
 

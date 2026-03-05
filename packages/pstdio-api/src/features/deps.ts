@@ -3,6 +3,8 @@ import type {
   createAgentConfigsService,
   createProjectsService,
   createReposService,
+  createStatusesService,
+  createTagsService,
   createTemplatesService,
   createTicketsService,
   createWorkspacesService,
@@ -30,5 +32,7 @@ export interface RouteDeps {
   templatesService: ReturnType<typeof createTemplatesService>;
   ticketsService: ReturnType<typeof createTicketsService>;
   workspacesService: ReturnType<typeof createWorkspacesService>;
+  statusesService: ReturnType<typeof createStatusesService>;
+  tagsService: ReturnType<typeof createTagsService>;
   agentRegistry: AgentRegistry;
 }

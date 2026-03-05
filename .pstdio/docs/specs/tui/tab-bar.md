@@ -19,27 +19,27 @@ The `▸` marker indicates the active tab.
 
 ## Tabs
 
-| Position | Label       | Default | Spec                          |
-| -------- | ----------- | ------- | ----------------------------- |
-| 1        | Tickets     | yes     | [tickets](./tickets.md)       |
-| 2        | Docs        |         | [docs](./docs.md)             |
-| 3        | Templates   |         | [templates](./templates.md)   |
+| Position | Label     | Default | Spec                        |
+| -------- | --------- | ------- | --------------------------- |
+| 1        | Tickets   | yes     | [tickets](./tickets.md)     |
+| 2        | Docs      |         | [docs](./docs.md)           |
+| 3        | Templates |         | [templates](./templates.md) |
 
 ## Switching
 
-| Key         | Action                          |
-| ----------- | ------------------------------- |
-| `Tab`       | Next tab (wraps around)         |
-| `Shift+Tab` | Previous tab (wraps around)     |
-| `1`         | Jump to Tickets                 |
-| `2`         | Jump to Docs                    |
-| `3`         | Jump to Templates               |
+| Key         | Action                      |
+| ----------- | --------------------------- |
+| `Tab`       | Next tab (wraps around)     |
+| `Shift+Tab` | Previous tab (wraps around) |
+| `1`         | Jump to Tickets             |
+| `2`         | Jump to Docs                |
+| `3`         | Jump to Templates           |
 
 Tab switching preserves each tab's scroll position and selection state.
 
 ## Overlays
 
-Project picker (`p`), agent manager (`a`), and help (`?`) remain full-screen overlays rendered above the active tab. They are accessible from any tab.
+Project picker (`p`), agent manager (`a`), settings (`S`), and help (`?`) remain full-screen overlays rendered above the active tab. They are accessible from any tab.
 
 ## Mode Changes
 
@@ -53,7 +53,7 @@ to:
 
 ```ts
 type Tab = "tickets" | "docs" | "templates";
-type Overlay = "help" | "view" | "projects" | "agents";
+type Overlay = "help" | "view" | "projects" | "agents" | "settings";
 type Mode = { tab: Tab; overlay?: Overlay; search?: boolean };
 ```
 
@@ -61,9 +61,9 @@ This separates tab navigation from overlays and search state. The active tab per
 
 ## Component
 
-| File                       | Description                              |
-| -------------------------- | ---------------------------------------- |
-| `components/tab-bar.tsx`   | Renders tab labels with active indicator |
+| File                     | Description                              |
+| ------------------------ | ---------------------------------------- |
+| `components/tab-bar.tsx` | Renders tab labels with active indicator |
 
 Props: `tabs: string[]`, `activeIndex: number`, `width: number`.
 

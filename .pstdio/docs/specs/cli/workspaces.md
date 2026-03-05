@@ -1,4 +1,4 @@
-# CLI Spec: `pstdio workspace`
+# CLI Spec: `pstdio workspaces`
 
 ## Purpose
 
@@ -12,7 +12,7 @@ Manage ticket-scoped workspaces backed by git worktrees. Workspace metadata is D
 - **Workspace Shorthand**: `<ticket-shorthand>/<workspace-shorthand>` (for example `PS-1/A1`) that uniquely identifies a workspace.
 - **Workspace Attempt Shorthand**: per-ticket attempt token (`A1`, `A2`, ...). The full workspace shorthand is globally unique because it includes the ticket shorthand prefix.
 - **Git Worktree**: the local git working tree used as the code environment for a workspace.
-- **Swap State**: temporary local state used by `workspace swap` to preview a workspace in the main checkout.
+- **Swap State**: temporary local state used by `pstdio workspaces swap` to preview a workspace in the main checkout.
 
 ---
 
@@ -20,20 +20,20 @@ Manage ticket-scoped workspaces backed by git worktrees. Workspace metadata is D
 
 | Command                   | Purpose                                                     |
 | ------------------------- | ----------------------------------------------------------- |
-| `pstdio workspace create` | Create a workspace for a ticket.                            |
-| `pstdio workspace list`   | List active workspaces.                                     |
-| `pstdio workspace swap`   | Temporarily preview workspace changes in the main checkout. |
-| `pstdio workspace merge`  | Squash-merge workspace changes into the current branch.     |
-| `pstdio workspace delete` | Force-remove a workspace from DB metadata and local git.    |
+| `pstdio workspaces create` | Create a workspace for a ticket.                            |
+| `pstdio workspaces list`   | List active workspaces.                                     |
+| `pstdio workspaces swap`   | Temporarily preview workspace changes in the main checkout. |
+| `pstdio workspaces merge`  | Squash-merge workspace changes into the current branch.     |
+| `pstdio workspaces delete` | Force-remove a workspace from DB metadata and local git.    |
 
 ---
 
-## `pstdio workspace create`
+## `pstdio workspaces create`
 
 ### Usage
 
 ```sh
-pstdio workspace create --id <ticket-id> [--base <ref>] [--target <target>]
+pstdio workspaces create --id <ticket-id> [--base <ref>] [--target <target>]
 ```
 
 ### Flags
@@ -51,7 +51,7 @@ pstdio workspace create --id <ticket-id> [--base <ref>] [--target <target>]
 3. Resolves target from `--target` (default: `worktree`).
 4. Resolves the base ref (`--base` or current `HEAD`).
 5. Allocates a new workspace shorthand for the ticket in the form `<ticket-shorthand>/A<n>` (for example `PS-12/A1`). The sequence counter `n` is based on the **total number of workspaces ever created** for the ticket, including deleted and archived ones, to avoid shorthand reuse.
-6. For `--target worktree`, creates a workspace branch (`workspace/<workspace-shorthand>`) and git worktree rooted under `.pstdio/workspaces/<workspace-shorthand>/`.
+6. For `--target worktree`, creates a workspace branch (`workspace/<workspace-shorthand>`) and git worktree rooted under `~/.pstdio/workspaces/<workspace-shorthand>/`.
 7. Persists workspace metadata in the database:
    - create row in `workspaces` with `workspace_shorthand` (not null), `name` (defaults to the workspace shorthand), nullable `session_id`, `status=active`, `branch`, `worktree_path`.
    - create row in `ticket_workspaces` linking the ticket to the workspace.
@@ -65,13 +65,13 @@ pstdio workspace create --id <ticket-id> [--base <ref>] [--target <target>]
 When no startup script is configured:
 
 ```text
-Created workspace PS-12/A1 for PS-12 at .pstdio/workspaces/PS-12/A1
+Created workspace PS-12/A1 for PS-12 at ~/.pstdio/workspaces/PS-12/A1
 ```
 
 When a startup script runs successfully:
 
 ```text
-Created workspace PS-12/A1 for PS-12 at .pstdio/workspaces/PS-12/A1
+Created workspace PS-12/A1 for PS-12 at ~/.pstdio/workspaces/PS-12/A1
 Running startup script...
 <script output>
 Startup script completed.
@@ -80,7 +80,7 @@ Startup script completed.
 When the startup script fails:
 
 ```text
-Created workspace PS-12/A1 for PS-12 at .pstdio/workspaces/PS-12/A1
+Created workspace PS-12/A1 for PS-12 at ~/.pstdio/workspaces/PS-12/A1
 Running startup script...
 <script output>
 Warning: startup script exited with code 1.
@@ -96,12 +96,12 @@ Warning: startup script exited with code 1.
 
 ---
 
-## `pstdio workspace list`
+## `pstdio workspaces list`
 
 ### Usage
 
 ```sh
-pstdio workspace list
+pstdio workspaces list
 ```
 
 ### Flags
@@ -118,8 +118,8 @@ None.
 
 ```text
 Workspace   Ticket   Branch               Path
-PS-12/A1    PS-12    workspace/PS-12/A1   /repo/.pstdio/workspaces/PS-12/A1
-PS-12/A2    PS-12    workspace/PS-12/A2   /repo/.pstdio/workspaces/PS-12/A2
+PS-12/A1    PS-12    workspace/PS-12/A1   /repo/~/.pstdio/workspaces/PS-12/A1
+PS-12/A2    PS-12    workspace/PS-12/A2   ~/.pstdio/workspaces/PS-12/A2
 ```
 
 If no workspaces exist:
@@ -134,14 +134,14 @@ No active workspaces.
 
 ---
 
-## `pstdio workspace swap`
+## `pstdio workspaces swap`
 
 ### Usage
 
 ```sh
-pstdio workspace swap --id <workspace-shorthand>
-pstdio workspace swap --status
-pstdio workspace swap --back
+pstdio workspaces swap --id <workspace-shorthand>
+pstdio workspaces swap --status
+pstdio workspaces swap --back
 ```
 
 ### Flags
@@ -202,19 +202,19 @@ Restored original branch and cleared swap state.
 ### Errors
 
 - `"Exactly one of --id, --status, --back is required"`: invalid flag combination.
-- `"Already swapped - run 'workspace swap --back' first"`: cannot run `swap --id` while swap is active.
+- `"Already swapped - run 'workspaces swap --back' first"`: cannot run `swap --id` while swap is active.
 - `"No active swap"`: attempting `swap --back` with no state file.
 - `"Branch has uncommitted changes"`: checkout must be clean before `swap --id` or `swap --back`.
 - `"Workspace not found: <workspace-shorthand>"`: unknown workspace.
 
 ---
 
-## `pstdio workspace merge`
+## `pstdio workspaces merge`
 
 ### Usage
 
 ```sh
-pstdio workspace merge --id <workspace-shorthand> [--delete-workspace]
+pstdio workspaces merge --id <workspace-shorthand> [--delete-workspace]
 ```
 
 ### Flags
@@ -232,7 +232,7 @@ pstdio workspace merge --id <workspace-shorthand> [--delete-workspace]
 4. Performs a squash merge of the full workspace branch into the current branch (`git merge --squash workspace/<workspace-shorthand>`). This collapses all commits on the workspace branch into a single set of staged changes.
 5. Creates one commit with message `workspace(<workspace-shorthand>): squash merge`.
 6. If conflicts occur, aborts merge with `git reset --merge` and reports conflicting files.
-7. If `--delete-workspace` is set and merge succeeds, runs the same force-remove flow as `workspace delete`.
+7. If `--delete-workspace` is set and merge succeeds, runs the same force-remove flow as `pstdio workspaces delete`.
 
 ### Output
 
@@ -254,12 +254,12 @@ Merged workspace PS-12/A1 and deleted workspace.
 
 ---
 
-## `pstdio workspace delete`
+## `pstdio workspaces delete`
 
 ### Usage
 
 ```sh
-pstdio workspace delete --id <workspace-shorthand>
+pstdio workspaces delete --id <workspace-shorthand>
 ```
 
 ### Flags
@@ -293,7 +293,7 @@ Deleted workspace PS-12/A1
 
 | Path                                        | Description                                                     |
 | ------------------------------------------- | --------------------------------------------------------------- |
-| `.pstdio/workspaces/<workspace-shorthand>/` | Physical git worktree directory for the workspace.              |
+| `~/.pstdio/workspaces/<workspace-shorthand>/` | Physical git worktree directory for the workspace.              |
 | `.pstdio/swap.json`                         | Temporary swap state used by `swap --status` and `swap --back`. |
 
 ### `.pstdio/swap.json` Schema

@@ -59,6 +59,7 @@
         "ink-markdown": "^1.0.4",
         "ink-text-input": "^6.0.0",
         "pstdio-agents": "workspace:*",
+        "pstdio-db": "workspace:*",
         "react": "^19.2.4",
         "yargs": "^18.0.0",
       },

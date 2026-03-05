@@ -21,7 +21,7 @@ Two panels, one visible at a time:
 │  ▸ Architecture                                        │
 │                                                        │
 │────────────────────────────────────────────────────────│
-│ j/k:nav  Enter:open  /:search  ?:help                  │
+│ Enter:open  /:search  ?:help                           │
 └────────────────────────────────────────────────────────┘
 
 ┌─ Content panel (Enter on "Overview") ──────────────────┐
@@ -47,8 +47,6 @@ Hierarchical tree built from `navigation.json`. Sections expand/collapse with `E
 
 | Key         | Action                         |
 | ----------- | ------------------------------ |
-| `j` / `↓`   | Move selection down            |
-| `k` / `↑`   | Move selection up              |
 | `g`         | Jump to first item             |
 | `G`         | Jump to last item              |
 | `Enter`     | Expand section / open document |
@@ -67,13 +65,11 @@ Full-screen markdown rendering of a single document. Opened with `Enter` from th
 
 ### Navigation
 
-| Key       | Action             |
-| --------- | ------------------ |
-| `j` / `↓` | Scroll down        |
-| `k` / `↑` | Scroll up          |
-| `g`       | Scroll to top      |
-| `G`       | Scroll to bottom   |
-| `Esc`     | Back to list panel |
+| Key   | Action             |
+| ----- | ------------------ |
+| `g`   | Scroll to top      |
+| `G`   | Scroll to bottom   |
+| `Esc` | Back to list panel |
 
 ---
 

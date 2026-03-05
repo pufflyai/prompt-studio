@@ -43,6 +43,21 @@ Project _selection_ is intentionally local. Two terminals can view different pro
 - Terminal A removes an agent → Terminal B sees it disappear.
 - Terminal A sets a default agent → Terminal B sees the default marker update.
 
+## Statuses
+
+- CLI creates a status → all TUI instances see it appear in the settings overlay and status pickers.
+- CLI changes a status color → all TUI instances see the updated color.
+- CLI sets a new default status → all TUI instances see the `*` marker move.
+- CLI deletes a status → all TUI instances see it disappear from lists and pickers.
+- Status group headers in the tickets tab update when statuses are added, renamed, or deleted.
+
+## Tags
+
+- CLI creates a tag → all TUI instances see it in the settings overlay and tag pickers.
+- CLI changes a tag color → all TUI instances see the updated color.
+- CLI deletes a tag → all TUI instances see it disappear from lists and pickers.
+- Tag badges on tickets update when a tag's color changes.
+
 ## Docs
 
 Not synced. Docs are loaded from local filesystem. This is intentional — docs are part of the repo, not the database.

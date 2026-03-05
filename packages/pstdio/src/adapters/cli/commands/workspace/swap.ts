@@ -62,6 +62,59 @@ const defaultDeps: Deps = {
   log: console.log,
 };
 
+const handleStatus = (deps: Deps, root: string) => {
+  const swap = deps.readSwapState(root);
+  if (!swap) {
+    deps.log("No active swap.");
+    return;
+  }
+  deps.log(`Swap active: workspace ${swap.workspace_shorthand} on branch ${swap.preview_branch}`);
+};
+
+const handleBack = async (deps: Deps, root: string) => {
+  const swap = deps.readSwapState(root);
+  if (!swap) throw new Error("No active swap");
+
+  const clean = await deps.isCleanWorkingTree(root);
+  if (!clean) throw new Error("Branch has uncommitted changes");
+
+  await deps.checkoutBranch(root, swap.original_branch);
+  try {
+    await deps.deleteBranch(root, swap.preview_branch);
+  } catch {
+    // Preview branch may not exist
+  }
+  deps.removeSwapState(root);
+  deps.log("Restored original branch and cleared swap state.");
+};
+
+const handleSwapTo = async (deps: Deps, root: string, projectId: string, id: string) => {
+  const swap = deps.readSwapState(root);
+  if (swap) throw new Error("Already swapped - run 'workspaces swap --back' first");
+
+  const clean = await deps.isCleanWorkingTree(root);
+  if (!clean) throw new Error("Branch has uncommitted changes");
+
+  const workspace = await deps.getWorkspace(API_URL, projectId, id);
+  if (!workspace) throw new Error(`Workspace not found: ${id}`);
+
+  const currentBranch = await deps.getCurrentBranchOrCommit(root);
+  const currentCommit = await deps.getCommitHash(root, "HEAD");
+  const previewBranch = `preview/${workspace.workspace_shorthand}`;
+  const workspaceBranch = workspace.branch ?? `workspace/${workspace.workspace_shorthand}`;
+  const wsCommit = await deps.getCommitHash(root, workspaceBranch);
+
+  deps.writeSwapState(root, {
+    workspace_shorthand: workspace.workspace_shorthand,
+    original_branch: currentBranch,
+    original_commit: currentCommit,
+    preview_branch: previewBranch,
+  });
+
+  await deps.checkoutBranch(root, previewBranch, wsCommit);
+  deps.log(`Swapped to workspace ${workspace.workspace_shorthand}`);
+};
+
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<SwapArgs>) => {
@@ -74,61 +127,9 @@ export const createHandler =
     const config = deps.readConfig(root);
     if (!config) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
 
-    if (argv.status) {
-      const swap = deps.readSwapState(root);
-      if (!swap) {
-        deps.log("No active swap.");
-        return;
-      }
-      deps.log(`Swap active: workspace ${swap.workspace_shorthand} on branch ${swap.preview_branch}`);
-      return;
-    }
-
-    if (argv.back) {
-      const swap = deps.readSwapState(root);
-      if (!swap) throw new Error("No active swap");
-
-      const clean = await deps.isCleanWorkingTree(root);
-      if (!clean) throw new Error("Branch has uncommitted changes");
-
-      await deps.checkoutBranch(root, swap.original_branch);
-      try {
-        await deps.deleteBranch(root, swap.preview_branch);
-      } catch {
-        // Preview branch may not exist
-      }
-      deps.removeSwapState(root);
-      deps.log("Restored original branch and cleared swap state.");
-      return;
-    }
-
-    // swap --id
-    const swap = deps.readSwapState(root);
-    if (swap) throw new Error("Already swapped - run 'workspace swap --back' first");
-
-    const clean = await deps.isCleanWorkingTree(root);
-    if (!clean) throw new Error("Branch has uncommitted changes");
-
-    const workspace = await deps.getWorkspace(API_URL, config.project_id, argv.id!);
-    if (!workspace) throw new Error(`Workspace not found: ${argv.id}`);
-
-    const currentBranch = await deps.getCurrentBranchOrCommit(root);
-    const currentCommit = await deps.getCommitHash(root, "HEAD");
-    const previewBranch = `preview/${workspace.workspace_shorthand}`;
-    const workspaceBranch = workspace.branch ?? `workspace/${workspace.workspace_shorthand}`;
-
-    // Get the tip of the workspace branch
-    const wsCommit = await deps.getCommitHash(root, workspaceBranch);
-
-    deps.writeSwapState(root, {
-      workspace_shorthand: workspace.workspace_shorthand,
-      original_branch: currentBranch,
-      original_commit: currentCommit,
-      preview_branch: previewBranch,
-    });
-
-    await deps.checkoutBranch(root, previewBranch, wsCommit);
-    deps.log(`Swapped to workspace ${workspace.workspace_shorthand}`);
+    if (argv.status) return handleStatus(deps, root);
+    if (argv.back) return handleBack(deps, root);
+    return handleSwapTo(deps, root, config.project_id, argv.id!);
   };
 
 export const handler = createHandler();

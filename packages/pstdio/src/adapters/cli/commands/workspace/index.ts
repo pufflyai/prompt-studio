@@ -5,7 +5,7 @@ import * as listCommand from "./list";
 import * as mergeCommand from "./merge";
 import * as swapCommand from "./swap";
 
-export const command = "workspace [command]";
+export const command = "workspaces [command]";
 export const describe = "Manage workspaces";
 
 let _yargs: Argv;

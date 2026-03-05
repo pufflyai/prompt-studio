@@ -66,6 +66,7 @@ export const ticket_statuses = pgTable("ticket_statuses", {
   column_actions: text("column_actions").notNull().default("[]"),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
+  deleted_at: text("deleted_at"),
 });
 
 export const tickets = pgTable(
@@ -107,6 +108,7 @@ export const ticket_tags = pgTable(
     color: text("color").notNull(),
     created_at: text("created_at").notNull(),
     updated_at: text("updated_at").notNull(),
+    deleted_at: text("deleted_at"),
   },
   (table) => [uniqueIndex("ticket_tags_project_name_idx").on(table.project_id, table.name)],
 );

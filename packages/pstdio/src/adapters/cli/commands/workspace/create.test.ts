@@ -1,7 +1,9 @@
 import { describe, expect, mock, test } from "bun:test";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { createHandler } from "./create";
 
-describe("workspace create", () => {
+describe("workspaces create", () => {
   test("creates workspace with worktree", async () => {
     const log = mock();
     const createWorktree = mock(async () => {});
@@ -11,7 +13,7 @@ describe("workspace create", () => {
       name: "PS-1/A1",
       workspace_shorthand: "PS-1/A1",
       branch: "workspace/PS-1/A1",
-      worktree_path: "/repo/.pstdio/workspaces/PS-1/A1",
+      worktree_path: join(homedir(), ".pstdio", "workspaces", "PS-1/A1"),
       status: "active",
       created_at: "2026-03-05T00:00:00.000Z",
       updated_at: "2026-03-05T00:00:00.000Z",
@@ -48,7 +50,9 @@ describe("workspace create", () => {
 
     expect(createWorkspace).toHaveBeenCalledTimes(1);
     expect(createWorktree).toHaveBeenCalledTimes(1);
-    expect(log).toHaveBeenCalledWith("Created workspace PS-1/A1 for PS-1 at .pstdio/workspaces/PS-1/A1");
+    expect(log).toHaveBeenCalledWith(
+      `Created workspace PS-1/A1 for PS-1 at ${join(homedir(), ".pstdio", "workspaces", "PS-1/A1")}`,
+    );
   });
 
   test("throws on invalid target", async () => {

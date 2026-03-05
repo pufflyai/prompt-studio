@@ -19,7 +19,7 @@ const DEFAULT_TICKET_STATUSES = [
   },
   {
     name: "ready",
-    color: "blue",
+    color: "teal",
     is_default: false,
     is_open: true,
     can_drag_out: true,
@@ -30,7 +30,7 @@ const DEFAULT_TICKET_STATUSES = [
   },
   {
     name: "wip",
-    color: "orange",
+    color: "blue",
     is_default: false,
     is_open: true,
     can_drag_out: false,
@@ -51,8 +51,8 @@ const DEFAULT_TICKET_STATUSES = [
     column_actions: [],
   },
   {
-    name: "in_review",
-    color: "purple",
+    name: "review",
+    color: "amber",
     is_default: false,
     is_open: true,
     can_drag_out: true,
@@ -72,24 +72,12 @@ const DEFAULT_TICKET_STATUSES = [
     can_attempt_on_drop: false,
     column_actions: ["archive_all"],
   },
-  {
-    name: "archived",
-    color: "gray",
-    is_default: false,
-    is_open: false,
-    can_drag_out: false,
-    can_drag_in: false,
-    can_create: false,
-    can_attempt_on_drop: false,
-    column_actions: [],
-  },
 ] as const;
 
 const DEFAULT_TICKET_TAGS = [
   { name: "bug", color: "red" },
   { name: "feature", color: "blue" },
-  { name: "chore", color: "gray" },
-  { name: "proposal", color: "purple" },
+  { name: "documentation", color: "purple" },
 ] as const;
 
 const nowTimestamp = () => new Date().toISOString();

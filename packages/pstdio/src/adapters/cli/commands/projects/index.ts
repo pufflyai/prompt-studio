@@ -5,6 +5,7 @@ import * as createCommand from "./create";
 import * as deleteCommand from "./delete";
 import * as linkCommand from "./link";
 import * as listCommand from "./list";
+import * as reposCommand from "./repos";
 import * as startupScriptCommand from "./startup-script";
 import * as unlinkCommand from "./unlink";
 
@@ -20,6 +21,7 @@ export const builder = (yargs: Argv) => {
     .command(deleteCommand)
     .command(linkCommand)
     .command(listCommand)
+    .command(reposCommand)
     .command(startupScriptCommand)
     .command(unlinkCommand);
 };

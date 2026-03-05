@@ -52,6 +52,28 @@ const defaultDeps: Deps = {
   log: console.log,
 };
 
+const cleanupWorkspace = async (
+  deps: Deps,
+  root: string,
+  workspaceId: string,
+  worktreePath: string | null,
+  branch: string,
+) => {
+  await deps.deleteWorkspace(API_URL, workspaceId);
+  if (worktreePath) {
+    try {
+      await deps.removeWorktree(root, worktreePath);
+    } catch {
+      // Already removed
+    }
+  }
+  try {
+    await deps.deleteBranch(root, branch);
+  } catch {
+    // Already deleted
+  }
+};
+
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<MergeArgs>) => {
@@ -78,19 +100,7 @@ export const createHandler =
     }
 
     if (argv["delete-workspace"]) {
-      await deps.deleteWorkspace(API_URL, workspace.id);
-      if (workspace.worktree_path) {
-        try {
-          await deps.removeWorktree(root, workspace.worktree_path);
-        } catch {
-          // Already removed
-        }
-      }
-      try {
-        await deps.deleteBranch(root, branch);
-      } catch {
-        // Already deleted
-      }
+      await cleanupWorkspace(deps, root, workspace.id, workspace.worktree_path, branch);
       deps.log(`Merged workspace ${argv.id} and deleted workspace.`);
     } else {
       deps.log(`Merged workspace ${argv.id} as a squash commit.`);

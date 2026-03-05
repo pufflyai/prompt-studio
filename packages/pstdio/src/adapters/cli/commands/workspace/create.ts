@@ -1,4 +1,5 @@
 import { exec as defaultExec } from "node:child_process";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import type { Arguments, Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
@@ -75,23 +76,25 @@ export const createHandler =
 
     const baseRef = argv.base ?? "HEAD";
 
+    const globalDir = join(homedir(), ".pstdio", "workspaces");
+
     // Create workspace via API (allocates shorthand)
     const workspace = await deps.createWorkspace(API_URL, {
       project_id: projectId,
       ticket_id: ticket.id,
       ticket_shorthand: ticket.shorthand,
       branch: `workspace/${ticket.shorthand}`,
-      worktree_path: join(root, ".pstdio", "workspaces", ticket.shorthand),
+      worktree_path: join(globalDir, ticket.shorthand),
     });
 
     const shorthand = workspace.workspace_shorthand;
     const branch = `workspace/${shorthand}`;
-    const wtPath = join(root, ".pstdio", "workspaces", shorthand);
+    const wtPath = join(globalDir, shorthand);
 
     // Create git worktree
     await deps.createWorktree(root, wtPath, branch, baseRef);
 
-    deps.log(`Created workspace ${shorthand} for ${argv.id} at .pstdio/workspaces/${shorthand}`);
+    deps.log(`Created workspace ${shorthand} for ${argv.id} at ${wtPath}`);
 
     // Run startup script if configured
     const script = await deps.getStartupScript(API_URL, projectId);

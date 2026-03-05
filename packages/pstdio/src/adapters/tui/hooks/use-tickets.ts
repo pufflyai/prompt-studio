@@ -182,7 +182,7 @@ export function useTickets(projectId: string | null) {
 
   const toggleArchive = async (ticket: TicketListItem) => {
     try {
-      await apiUpdateTicket(API_URL, ticket.id, { draft: !ticket.archived });
+      await apiUpdateTicket(API_URL, ticket.id, { archived: !ticket.archived });
     } catch {
       setError("Failed to archive ticket");
     }

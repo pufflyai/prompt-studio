@@ -38,6 +38,14 @@ const CONFIRM_KEYS: KeyHint[] = [
   { key: "esc", label: "cancel" },
 ];
 
+const SETTINGS_KEYS: KeyHint[] = [
+  { key: "n", label: "new" },
+  { key: "c", label: "color" },
+  { key: "d", label: "default" },
+  { key: "x", label: "delete" },
+  { key: "esc", label: "back" },
+];
+
 const TICKETS_KEYS: KeyHint[] = [
   { key: "n", label: "new" },
   { key: "e", label: "edit" },
@@ -70,6 +78,7 @@ const getHints = (mode: Mode): KeyHint[] => {
   if (mode.overlay === "projects" || mode.overlay === "status-picker") return PICKER_KEYS;
   if (mode.overlay === "agents") return AGENT_KEYS;
   if (mode.overlay === "ticket-create") return INPUT_KEYS;
+  if (mode.overlay === "settings") return SETTINGS_KEYS;
   return TAB_HINTS[mode.tab] ?? DOCS_KEYS;
 };
 

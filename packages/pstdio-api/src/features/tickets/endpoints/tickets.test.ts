@@ -210,7 +210,7 @@ describe("GET /v1/projects/:projectId/ticket-tags", () => {
 
     expect(res.status).toBe(200);
     const tags = await res.json();
-    expect(tags.length).toBeGreaterThanOrEqual(4);
+    expect(tags.length).toBeGreaterThanOrEqual(3);
     expect(tags.map((t: { name: string }) => t.name)).toContain("bug");
   });
 });
@@ -221,7 +221,7 @@ describe("GET /v1/projects/:projectId/ticket-statuses", () => {
 
     expect(res.status).toBe(200);
     const statuses = await res.json();
-    expect(statuses.length).toBeGreaterThanOrEqual(7);
+    expect(statuses.length).toBeGreaterThanOrEqual(6);
     expect(statuses.map((s: { name: string }) => s.name)).toContain("backlog");
     expect(statuses.map((s: { name: string }) => s.name)).toContain("wip");
   });

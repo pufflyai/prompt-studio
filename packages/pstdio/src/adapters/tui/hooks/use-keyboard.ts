@@ -1,107 +1,16 @@
 import { useInput } from "ink";
 
-import type { Mode, Tab } from "../app";
-import type { useTemplates } from "./use-templates";
-import type { useTickets } from "./use-tickets";
+import { handleDocsInput } from "./handlers/docs-keys";
+import { handleOverlayInput } from "./handlers/overlay-keys";
+import { handleTemplatesInput } from "./handlers/template-keys";
+import { handleTicketsInput } from "./handlers/ticket-keys";
+import type { InputKey, KeyboardDeps } from "./handlers/types";
+import { TABS } from "./handlers/types";
 
-const TABS: Tab[] = ["tickets", "docs", "templates"];
-
-export interface KeyboardDeps {
-  mode: Mode;
-  setMode: (mode: Mode | ((m: Mode) => Mode)) => void;
-  exit: () => void;
-  // docs
-  docsSelectedIndex: number;
-  docsRowCount: number;
-  docsMoveTo: (index: number) => void;
-  docsResetSelection: () => void;
-  toggleExpand: () => void;
-  openDocument: () => void;
-  setInputValue: (value: string) => void;
-  setSearchQuery: (query: string) => void;
-  // tickets
-  ticketSelectedIndex: number;
-  ticketRowCount: number;
-  ticketMoveTo: (index: number) => void;
-  ticketResetSelection: () => void;
-  ticketState: ReturnType<typeof useTickets>;
-  // templates
-  templateSelectedIndex: number;
-  templateRowCount: number;
-  templateMoveTo: (index: number) => void;
-  templateState: ReturnType<typeof useTemplates>;
-  // project picker
-  pickerCount: number;
-  setPickerIndex: (fn: (i: number) => number) => void;
-  onPickerSelect: () => void;
-  onPickerOpen: () => void;
-  // agent manager
-  agentCount: number;
-  setAgentIndex: (fn: (i: number) => number) => void;
-  onAgentOpen: () => void;
-  onAgentSetup: () => void;
-  onAgentRemove: () => void;
-  onAgentSetDefault: () => void;
-  // status picker
-  statusPickerCount: number;
-  statusPickerIndex: number;
-  setStatusPickerIndex: (fn: (i: number) => number) => void;
-  // archive confirmation
-  onArchiveRequest: (ticket: { id: string; title: string | null }) => void;
-  onArchiveConfirm: () => void;
-}
-
-type InputKey = {
-  escape: boolean;
-  downArrow: boolean;
-  upArrow: boolean;
-  return: boolean;
-  tab: boolean;
-  shift: boolean;
-};
-
-const closeOverlay = (deps: KeyboardDeps) => deps.setMode((m) => ({ ...m, overlay: undefined }));
-
-function handleOverlayInput(input: string, key: InputKey, deps: KeyboardDeps) {
-  const { overlay } = deps.mode;
-  if (overlay === "help") {
-    if (input === "?" || key.escape) closeOverlay(deps);
-    return true;
-  }
-  if (overlay === "view") {
-    if (key.escape) closeOverlay(deps);
-    return true;
-  }
-  if (overlay === "projects") {
-    handlePickerInput(input, key, deps);
-    return true;
-  }
-  if (overlay === "agents") {
-    handleAgentsInput(input, key, deps);
-    return true;
-  }
-  if (overlay === "status-picker") {
-    handleStatusPickerInput(input, key, deps);
-    return true;
-  }
-  if (overlay === "confirm-archive") {
-    if (key.return) {
-      deps.onArchiveConfirm();
-      closeOverlay(deps);
-    } else if (key.escape) {
-      closeOverlay(deps);
-    }
-    return true;
-  }
-  if (overlay === "ticket-create") {
-    if (key.escape) closeOverlay(deps);
-    return true;
-  }
-  return false;
-}
+export type { KeyboardDeps } from "./handlers/types";
 
 function handleSearchInput(key: InputKey, deps: KeyboardDeps) {
-  if (!key.escape) return;
+  if (!key.escape) return false;
   if (deps.mode.tab === "tickets") {
     deps.ticketState.setSearchQuery("");
     deps.ticketResetSelection();
@@ -111,6 +20,7 @@ function handleSearchInput(key: InputKey, deps: KeyboardDeps) {
   }
   deps.setMode((m) => ({ ...m, search: undefined }));
   deps.setInputValue("");
+  return true;
 }
 
 function handleTabSwitch(input: string, key: InputKey, deps: KeyboardDeps) {
@@ -139,7 +49,7 @@ function handleTabSwitch(input: string, key: InputKey, deps: KeyboardDeps) {
   return false;
 }
 
-function handleCommonKeys(input: string, deps: KeyboardDeps) {
+function handleCommonKeys(input: string, key: InputKey, deps: KeyboardDeps) {
   if (input === "q") {
     deps.exit();
     return true;
@@ -158,6 +68,11 @@ function handleCommonKeys(input: string, deps: KeyboardDeps) {
     deps.setMode((m) => ({ ...m, overlay: "agents" }));
     return true;
   }
+  if (input === "S" || (input === "s" && key.shift)) {
+    deps.onSettingsOpen();
+    deps.setMode((m) => ({ ...m, overlay: "settings" }));
+    return true;
+  }
   return false;
 }
 
@@ -165,278 +80,13 @@ export function useKeyboard(deps: KeyboardDeps) {
   useInput((input, key) => {
     if (deps.mode.overlay && handleOverlayInput(input, key, deps)) return;
     if (deps.mode.search) {
-      handleSearchInput(key, deps);
-      return;
+      if (handleSearchInput(key, deps)) return;
     }
     if (handleTabSwitch(input, key, deps)) return;
-    if (handleCommonKeys(input, deps)) return;
+    if (handleCommonKeys(input, key, deps)) return;
 
     if (deps.mode.tab === "docs") handleDocsInput(input, key, deps);
     else if (deps.mode.tab === "tickets") handleTicketsInput(input, key, deps);
     else if (deps.mode.tab === "templates") handleTemplatesInput(input, key, deps);
   });
-}
-
-function handleDocsInput(
-  input: string,
-  key: { escape: boolean; downArrow: boolean; upArrow: boolean; return: boolean },
-  deps: KeyboardDeps,
-) {
-  if (key.downArrow) {
-    deps.docsMoveTo(deps.docsSelectedIndex + 1);
-    return;
-  }
-  if (key.upArrow) {
-    deps.docsMoveTo(deps.docsSelectedIndex - 1);
-    return;
-  }
-  if (input === "g") {
-    deps.docsMoveTo(0);
-    return;
-  }
-  if (input === "G") {
-    deps.docsMoveTo(deps.docsRowCount - 1);
-    return;
-  }
-  if (key.return) {
-    deps.toggleExpand();
-    return;
-  }
-  if (input === "/") {
-    deps.setMode((m) => ({ ...m, search: true }));
-    deps.setInputValue("");
-    return;
-  }
-}
-
-function handleTicketsInput(
-  input: string,
-  key: { escape: boolean; downArrow: boolean; upArrow: boolean; return: boolean },
-  deps: KeyboardDeps,
-) {
-  if (deps.ticketState.viewingTicket) {
-    handleTicketContentInput(input, key, deps);
-  } else {
-    handleTicketListInput(input, key, deps);
-  }
-}
-
-function handleTicketContentInput(input: string, key: { escape: boolean }, deps: KeyboardDeps) {
-  const { ticketState } = deps;
-  if (key.escape) {
-    ticketState.setViewingTicket(null);
-    return;
-  }
-  if (input === "e") {
-    deps.setStatusPickerIndex(() => 0);
-    deps.setMode((m) => ({ ...m, overlay: "status-picker" }));
-    return;
-  }
-  if (input === "x" && ticketState.viewingTicket) {
-    deps.onArchiveRequest(ticketState.viewingTicket);
-    deps.setMode((m) => ({ ...m, overlay: "confirm-archive" }));
-  }
-}
-
-function handleTicketListNav(
-  input: string,
-  key: { downArrow: boolean; upArrow: boolean; return: boolean },
-  deps: KeyboardDeps,
-) {
-  if (key.downArrow) {
-    deps.ticketMoveTo(deps.ticketSelectedIndex + 1);
-    return true;
-  }
-  if (key.upArrow) {
-    deps.ticketMoveTo(deps.ticketSelectedIndex - 1);
-    return true;
-  }
-  if (input === "g") {
-    deps.ticketMoveTo(0);
-    return true;
-  }
-  if (input === "G") {
-    deps.ticketMoveTo(deps.ticketRowCount - 1);
-    return true;
-  }
-  if (key.return) {
-    const row = deps.ticketState.flatRows[deps.ticketSelectedIndex];
-    if (!row || row.type === "header") return true;
-    if (row.hasChildren && !deps.ticketState.expanded.has(row.ticket.id)) {
-      deps.ticketState.toggleExpand(row.ticket.id);
-    } else {
-      deps.ticketState.setViewingTicket(row.ticket);
-    }
-    return true;
-  }
-  return false;
-}
-
-function handleTicketListInput(
-  input: string,
-  key: { escape: boolean; downArrow: boolean; upArrow: boolean; return: boolean },
-  deps: KeyboardDeps,
-) {
-  const { ticketState } = deps;
-  if (handleTicketListNav(input, key, deps)) return;
-
-  if (input === "/") {
-    deps.setMode((m) => ({ ...m, search: true }));
-    deps.setInputValue("");
-    return;
-  }
-  if (input === "n") {
-    deps.setMode((m) => ({ ...m, overlay: "ticket-create", search: true }));
-    deps.setInputValue("");
-    return;
-  }
-
-  if (input === "e") {
-    const row = ticketState.flatRows[deps.ticketSelectedIndex];
-    if (row?.type === "ticket") {
-      deps.setStatusPickerIndex(() => 0);
-      deps.setMode((m) => ({ ...m, overlay: "status-picker" }));
-    }
-    return;
-  }
-
-  if (input === "x") {
-    const row = ticketState.flatRows[deps.ticketSelectedIndex];
-    if (row?.type === "ticket") {
-      deps.onArchiveRequest(row.ticket);
-      deps.setMode((m) => ({ ...m, overlay: "confirm-archive" }));
-    }
-  }
-}
-
-function handleTemplatesInput(
-  input: string,
-  key: { escape: boolean; downArrow: boolean; upArrow: boolean; return: boolean },
-  deps: KeyboardDeps,
-) {
-  const { templateState } = deps;
-
-  // Content panel
-  if (templateState.viewingTemplate) {
-    if (key.escape) {
-      templateState.closeTemplate();
-      return;
-    }
-    if (input === "d") {
-      templateState.setDefault(templateState.viewingTemplate.name);
-      return;
-    }
-    return;
-  }
-
-  // List panel
-  if (key.downArrow) {
-    deps.templateMoveTo(deps.templateSelectedIndex + 1);
-    return;
-  }
-  if (key.upArrow) {
-    deps.templateMoveTo(deps.templateSelectedIndex - 1);
-    return;
-  }
-  if (input === "g") {
-    deps.templateMoveTo(0);
-    return;
-  }
-  if (input === "G") {
-    deps.templateMoveTo(deps.templateRowCount - 1);
-    return;
-  }
-
-  if (key.return) {
-    const item = templateState.items[deps.templateSelectedIndex];
-    if (item) templateState.viewTemplate(item.name);
-    return;
-  }
-
-  if (input === "d") {
-    const item = templateState.items[deps.templateSelectedIndex];
-    if (item) templateState.setDefault(item.name);
-    return;
-  }
-}
-
-function handlePickerInput(
-  _input: string,
-  key: { escape: boolean; downArrow: boolean; upArrow: boolean; return: boolean },
-  deps: KeyboardDeps,
-) {
-  if (key.escape) {
-    closeOverlay(deps);
-    return;
-  }
-  if (key.downArrow) {
-    deps.setPickerIndex((i) => Math.min(i + 1, deps.pickerCount - 1));
-    return;
-  }
-  if (key.upArrow) {
-    deps.setPickerIndex((i) => Math.max(i - 1, 0));
-    return;
-  }
-  if (key.return && deps.pickerCount > 0) {
-    deps.onPickerSelect();
-    closeOverlay(deps);
-  }
-}
-
-function handleAgentsInput(
-  input: string,
-  key: { escape: boolean; downArrow: boolean; upArrow: boolean; return: boolean },
-  deps: KeyboardDeps,
-) {
-  if (key.escape) {
-    closeOverlay(deps);
-    return;
-  }
-  if (key.downArrow) {
-    deps.setAgentIndex((i) => Math.min(i + 1, deps.agentCount - 1));
-    return;
-  }
-  if (key.upArrow) {
-    deps.setAgentIndex((i) => Math.max(i - 1, 0));
-    return;
-  }
-  if (input === "s") {
-    deps.onAgentSetup();
-    return;
-  }
-  if (input === "d") {
-    deps.onAgentRemove();
-    return;
-  }
-  if (key.return && deps.agentCount > 0) deps.onAgentSetDefault();
-}
-
-function handleStatusPickerInput(
-  _input: string,
-  key: { escape: boolean; downArrow: boolean; upArrow: boolean; return: boolean },
-  deps: KeyboardDeps,
-) {
-  if (key.escape) {
-    closeOverlay(deps);
-    return;
-  }
-  if (key.downArrow) {
-    deps.setStatusPickerIndex((i) => Math.min(i + 1, deps.statusPickerCount - 1));
-    return;
-  }
-  if (key.upArrow) {
-    deps.setStatusPickerIndex((i) => Math.max(i - 1, 0));
-    return;
-  }
-
-  if (key.return && deps.statusPickerCount > 0) {
-    const { ticketState } = deps;
-    const status = ticketState.statuses[deps.statusPickerIndex];
-    const viewingTicket = ticketState.viewingTicket;
-    const row = ticketState.flatRows[deps.ticketSelectedIndex];
-    const ticketId = viewingTicket?.id ?? (row?.type === "ticket" ? row.ticket.id : null);
-
-    if (status && ticketId) ticketState.updateTicketStatus(ticketId, status.id);
-    closeOverlay(deps);
-  }
 }

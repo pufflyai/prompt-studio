@@ -269,6 +269,50 @@ No ticket files found.
 
 ---
 
+## `pstdio tickets workspaces`
+
+### Usage
+
+```sh
+pstdio tickets workspaces --id <ticket-shorthand> [--project-id <project-id>]
+```
+
+### Flags
+
+| Flag           | Type     | Required | Description                                                                 |
+| -------------- | -------- | -------- | --------------------------------------------------------------------------- |
+| `--id`         | `string` | yes      | The ticket shorthand (e.g. `PS-12`).                                        |
+| `--project-id` | `string` | no       | Target project. Defaults to the current project from `.pstdio/config.json`. |
+
+### Behavior
+
+1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
+2. Resolve the ticket by shorthand from the database.
+3. List active workspaces linked to the ticket in the database.
+4. Show workspace shorthand, status, branch, and worktree path for each associated workspace.
+
+### Output
+
+```text
+Workspace   Status   Branch               Path
+PS-12/A1    active   workspace/PS-12/A1   /repo/.pstdio/workspaces/PS-12/A1
+PS-12/A2    active   workspace/PS-12/A2   /repo/.pstdio/workspaces/PS-12/A2
+```
+
+If the ticket has no active workspaces:
+
+```text
+No ticket workspaces found.
+```
+
+### Errors
+
+- `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
+- `"Project not found: <project-id>"`: the given project ID does not exist.
+- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
+
+---
+
 ## `pstdio tickets list`
 
 ### Usage
@@ -475,3 +519,4 @@ Archived ticket PS-12
 | `.pstdio/tickets/<shorthand>/ticket.md`        | Local ticket file created by `write`/`pull`, read by `save`.                           |
 | `.pstdio/tickets/<shorthand>/files/`           | Local directory for ticket-associated files written by `pull`, read by `save`/`files`. |
 | `.pstdio/tickets/<shorthand>/files/<filename>` | Individual ticket-associated files synced between local project and DB.                |
+| `.pstdio/workspaces/<workspace-shorthand>/`    | Git worktree path referenced by `pstdio tickets workspaces` for ticket-associated workspaces. |

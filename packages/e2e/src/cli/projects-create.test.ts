@@ -77,6 +77,23 @@ describe("pstdio projects create", () => {
     expect(config.project_id).toBeTruthy();
   });
 
+  test("writes config at git root when run from a subdirectory", () => {
+    const repo = createGitRepo();
+    dirs.push(repo);
+
+    const subdir = join(repo, "packages", "cli");
+    execSync(`mkdir -p ${subdir}`);
+
+    const output = run("projects create sub-project", subdir);
+
+    expect(output).toContain("Created project");
+    expect(output).toContain(repo);
+
+    // Config must be at the git root, not the subdirectory
+    expect(existsSync(join(repo, ".pstdio", "config.json"))).toBe(true);
+    expect(existsSync(join(subdir, ".pstdio", "config.json"))).toBe(false);
+  });
+
   test("fails when already initialized", () => {
     const repo = createGitRepo();
     dirs.push(repo);

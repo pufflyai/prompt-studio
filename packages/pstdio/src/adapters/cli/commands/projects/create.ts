@@ -51,12 +51,13 @@ export const createHandler =
   (deps = defaultDeps) =>
   async (argv: Arguments<{ name?: string; repo?: string[] }>) => {
     const cwd = deps.cwd();
+    const root = deps.findGitRoot(cwd) ?? cwd;
     const repoPaths = resolveRepoPaths(argv.repo, cwd, deps.findGitRoot);
     validateRepoPaths(repoPaths, deps.findGitRoot);
 
-    const name = resolveProjectName(cwd, argv.name);
-    const project = await deps.createAndInitProject(cwd, name, { repoPaths });
-    console.log(`Created project "${project.name}" (${project.id}) and initialized .pstdio at ${cwd}`);
+    const name = resolveProjectName(root, argv.name);
+    const project = await deps.createAndInitProject(root, name, { repoPaths });
+    console.log(`Created project "${project.name}" (${project.id}) and initialized .pstdio at ${root}`);
   };
 
 export const handler = createHandler();

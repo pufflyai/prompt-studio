@@ -43,6 +43,13 @@
       "when": 1772660320926,
       "tag": "0005_add_startup_script",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1772870000000,
+      "tag": "0006_add_deleted_at_to_statuses_and_tags",
+      "breakpoints": true
     }
   ]
 }

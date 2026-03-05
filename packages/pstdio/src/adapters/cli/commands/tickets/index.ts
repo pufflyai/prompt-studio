@@ -8,6 +8,7 @@ import * as listCommand from "./list";
 import * as pullCommand from "./pull";
 import * as saveCommand from "./save";
 import * as updateCommand from "./update";
+import * as workspacesCommand from "./workspaces";
 import * as writeCommand from "./write";
 
 export const command = "tickets [command]";
@@ -26,6 +27,7 @@ export const builder = (yargs: Argv) => {
     .command(implementCommand)
     .command(pullCommand)
     .command(filesCommand)
+    .command(workspacesCommand)
     .command(deleteCommand)
     .command(archiveCommand);
 };

@@ -22,7 +22,7 @@ Two panels, one visible at a time:
 │  review-me     docs                                    │
 │                                                        │
 │────────────────────────────────────────────────────────│
-│ j/k:nav  d:default  Enter:view  ?:help                 │
+│ d:default  Enter:view  ?:help                          │
 └────────────────────────────────────────────────────────┘
 
 ┌─ Content panel (Enter on "ticket") ────────────────────┐
@@ -63,8 +63,6 @@ Sorted by type (ticket first, then docs), then alphabetically by name.
 
 | Key         | Action                          |
 | ----------- | ------------------------------- |
-| `j` / `↓`   | Move selection down             |
-| `k` / `↑`   | Move selection up               |
 | `g`         | Jump to first template          |
 | `G`         | Jump to last template           |
 | `Enter`     | Open content panel for selection|
@@ -92,13 +90,11 @@ Full-screen view of a single template's raw content. Placeholders shown as-is (`
 
 ### Navigation
 
-| Key       | Action              |
-| --------- | ------------------- |
-| `j` / `↓` | Scroll down         |
-| `k` / `↑` | Scroll up           |
-| `g`       | Scroll to top       |
-| `G`       | Scroll to bottom    |
-| `Esc`     | Back to list panel  |
+| Key       | Action             |
+| --------- | ------------------ |
+| `g`       | Scroll to top      |
+| `G`       | Scroll to bottom   |
+| `Esc`     | Back to list panel |
 
 ### Actions (Content)
 

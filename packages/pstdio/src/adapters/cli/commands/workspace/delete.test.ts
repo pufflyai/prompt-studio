@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { homedir } from "node:os";
 import { createHandler } from "./delete";
 
 const makeWorkspace = (shorthand: string) => ({
@@ -7,13 +8,13 @@ const makeWorkspace = (shorthand: string) => ({
   name: shorthand,
   workspace_shorthand: shorthand,
   branch: `workspace/${shorthand}`,
-  worktree_path: `/repo/.pstdio/workspaces/${shorthand}`,
+  worktree_path: `${homedir()}/.pstdio/workspaces/${shorthand}`,
   status: "active" as const,
   created_at: "2026-03-05T00:00:00.000Z",
   updated_at: "2026-03-05T00:00:00.000Z",
 });
 
-describe("workspace delete", () => {
+describe("workspaces delete", () => {
   test("deletes workspace, worktree, and branch", async () => {
     const log = mock();
     const deleteWorkspace = mock(async () => {});

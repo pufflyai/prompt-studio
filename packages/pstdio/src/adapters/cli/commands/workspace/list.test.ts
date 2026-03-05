@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createHandler } from "./list";
 
-describe("workspace list", () => {
+describe("workspaces list", () => {
   test("lists active workspaces", async () => {
     const log = mock();
 
@@ -15,7 +15,7 @@ describe("workspace list", () => {
           workspace_shorthand: "PS-1/A1",
           ticket_shorthand: "PS-1",
           branch: "workspace/PS-1/A1",
-          worktree_path: "/repo/.pstdio/workspaces/PS-1/A1",
+          worktree_path: "~/.pstdio/workspaces/PS-1/A1",
           status: "active",
         },
       ],
