@@ -23,7 +23,16 @@ afterEach(() => {
 describe("linkProject", () => {
   test("scaffolds docs when not present locally", async () => {
     mockFetchSequence([
-      { status: 200, body: { id: "abc", name: "Existing" } },
+      {
+        status: 200,
+        body: {
+          id: "abc",
+          name: "Existing",
+          shorthand: "E",
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+        },
+      },
       { status: 201, body: { id: "repo-1", name: "link-scaffold", path: "/tmp/link-scaffold" } },
       { status: 200, body: [{ agent_id: "opencode", is_default: true }] },
     ]);
@@ -32,7 +41,13 @@ describe("linkProject", () => {
     const fakeHome = join(tmpBase, "__fake-home__");
     const project = await linkProject(root, "abc", { homedir: fakeHome });
 
-    expect(project).toEqual({ id: "abc", name: "Existing" });
+    expect(project).toEqual({
+      id: "abc",
+      name: "Existing",
+      shorthand: "E",
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+    });
     expect(globalThis.fetch).toHaveBeenCalledTimes(3);
 
     const config = JSON.parse(readFileSync(join(root, ".pstdio", "config.json"), "utf8"));
@@ -46,7 +61,16 @@ describe("linkProject", () => {
 
   test("skips scaffold when docs already exist locally", async () => {
     mockFetchSequence([
-      { status: 200, body: { id: "abc", name: "Existing" } },
+      {
+        status: 200,
+        body: {
+          id: "abc",
+          name: "Existing",
+          shorthand: "E",
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+        },
+      },
       { status: 201, body: { id: "repo-1", name: "link-existing-docs", path: "/tmp/link-existing-docs" } },
       { status: 200, body: [] },
     ]);

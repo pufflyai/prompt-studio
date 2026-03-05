@@ -1,0 +1,130 @@
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { createDb, type DbClient } from "../../db/connection.pglite";
+import { createProjectsService } from "../projects/projects";
+import { createSessionsService } from "./sessions";
+
+let db: DbClient;
+let close: () => Promise<void>;
+let sessionsService: ReturnType<typeof createSessionsService>;
+let projectsService: ReturnType<typeof createProjectsService>;
+let projectId: string;
+
+beforeEach(async () => {
+  const conn = await createDb();
+  db = conn.db;
+  close = conn.close;
+  sessionsService = createSessionsService(db);
+  projectsService = createProjectsService(db);
+
+  const project = await projectsService.create({ name: "test-project" });
+  projectId = project.id;
+});
+
+afterEach(async () => {
+  await close();
+});
+
+describe("sessions service", () => {
+  test("creates a session", async () => {
+    const session = await sessionsService.create({
+      project_id: projectId,
+      title: "Test session",
+      agent: "claude-code",
+    });
+
+    expect(session.id).toBeDefined();
+    expect(session.title).toBe("Test session");
+    expect(session.status).toBe("in_progress");
+    expect(session.agent).toBe("claude-code");
+    expect(session.project_id).toBe(projectId);
+    expect(session.archived).toBe(false);
+  });
+
+  test("gets a session by id", async () => {
+    const created = await sessionsService.create({
+      project_id: projectId,
+      title: "Get me",
+      agent: "claude-code",
+    });
+
+    const fetched = await sessionsService.get(created.id);
+    expect(fetched).not.toBeNull();
+    expect(fetched!.id).toBe(created.id);
+    expect(fetched!.title).toBe("Get me");
+  });
+
+  test("returns null for unknown id", async () => {
+    const fetched = await sessionsService.get("nonexistent");
+    expect(fetched).toBeNull();
+  });
+
+  test("lists sessions for a project", async () => {
+    await sessionsService.create({ project_id: projectId, title: "S1", agent: "claude-code" });
+    await sessionsService.create({ project_id: projectId, title: "S2", agent: "opencode" });
+
+    const list = await sessionsService.list(projectId);
+    expect(list).toHaveLength(2);
+  });
+
+  test("list excludes archived sessions by default", async () => {
+    const session = await sessionsService.create({ project_id: projectId, title: "S1", agent: "claude-code" });
+    await sessionsService.archive(session.id);
+
+    const list = await sessionsService.list(projectId);
+    expect(list).toHaveLength(0);
+  });
+
+  test("list includes archived sessions when requested", async () => {
+    const session = await sessionsService.create({ project_id: projectId, title: "S1", agent: "claude-code" });
+    await sessionsService.archive(session.id);
+
+    const list = await sessionsService.list(projectId, { includeArchived: true });
+    expect(list).toHaveLength(1);
+  });
+
+  test("list filters by status", async () => {
+    await sessionsService.create({ project_id: projectId, title: "S1", agent: "claude-code" });
+    const s2 = await sessionsService.create({ project_id: projectId, title: "S2", agent: "claude-code" });
+    await sessionsService.updateStatus(s2.id, "completed");
+
+    const list = await sessionsService.list(projectId, { status: "completed" });
+    expect(list).toHaveLength(1);
+    expect(list[0].title).toBe("S2");
+  });
+
+  test("list filters by agent", async () => {
+    await sessionsService.create({ project_id: projectId, title: "S1", agent: "claude-code" });
+    await sessionsService.create({ project_id: projectId, title: "S2", agent: "opencode" });
+
+    const list = await sessionsService.list(projectId, { agent: "opencode" });
+    expect(list).toHaveLength(1);
+    expect(list[0].title).toBe("S2");
+  });
+
+  test("updates session status", async () => {
+    const session = await sessionsService.create({ project_id: projectId, title: "S1", agent: "claude-code" });
+    const updated = await sessionsService.updateStatus(session.id, "completed");
+
+    expect(updated).not.toBeNull();
+    expect(updated!.status).toBe("completed");
+  });
+
+  test("archives a session", async () => {
+    const session = await sessionsService.create({ project_id: projectId, title: "S1", agent: "claude-code" });
+    await sessionsService.archive(session.id);
+
+    const fetched = await sessionsService.get(session.id);
+    expect(fetched!.archived).toBe(true);
+  });
+
+  test("update sets fields", async () => {
+    const session = await sessionsService.create({ project_id: projectId, title: "S1", agent: "claude-code" });
+    const updated = await sessionsService.update(session.id, {
+      agent_session_id: "ext-123",
+      last_request_started: new Date().toISOString(),
+    });
+
+    expect(updated).not.toBeNull();
+    expect(updated!.agent_session_id).toBe("ext-123");
+  });
+});

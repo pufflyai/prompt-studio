@@ -1,10 +1,12 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { cors } from "hono/cors";
 import { createAgentRegistry, createClaudeCodeAgent, createOpencodeAgent } from "pstdio-agents";
 import {
   createAgentConfigsService,
   createDb,
   createProjectsService,
   createReposService,
+  createSessionsService,
   createStatusesService,
   createTagsService,
   createTemplatesService,
@@ -15,6 +17,8 @@ import { createFilesService, createSkillsService, ensureStorageRoot, resolveStor
 import { createAgentRoutes } from "./features/agents/routes";
 import { createHealthRoutes } from "./features/health/routes";
 import { createProjectRoutes } from "./features/projects/routes";
+import { createSessionRoutes } from "./features/sessions/routes";
+import { createSessionStore } from "./features/sessions/session-store";
 import { createSkillRoutes } from "./features/skills/routes";
 import { createStatusRoutes } from "./features/statuses/routes";
 import { EventBus } from "./features/sync/event-bus";
@@ -47,11 +51,13 @@ export const createApp = async (options?: AppOptions) => {
 
   const agentConfigsService = createAgentConfigsService(db);
   const templatesService = createTemplatesService(db);
+  const sessionsService = createSessionsService(db);
   const ticketsService = createTicketsService(db);
   const workspacesService = createWorkspacesService(db);
   const statusesService = createStatusesService(db);
   const tagsService = createTagsService(db);
   const eventBus = new EventBus();
+  const sessionStore = createSessionStore();
 
   const deps = {
     readiness: { database: true, storage: true },
@@ -62,6 +68,7 @@ export const createApp = async (options?: AppOptions) => {
     reposService,
     agentConfigsService,
     filesService,
+    sessionsService,
     skillsService,
     templatesService,
     ticketsService,
@@ -69,9 +76,12 @@ export const createApp = async (options?: AppOptions) => {
     statusesService,
     tagsService,
     agentRegistry,
+    sessionStore,
   };
 
   const app = new OpenAPIHono<AppBindings>();
+
+  app.use("*", cors());
 
   app.route("/", createHealthRoutes(deps));
   app.route("/v1", createProjectRoutes(deps));
@@ -80,6 +90,7 @@ export const createApp = async (options?: AppOptions) => {
   app.route("/v1", createTemplateRoutes(deps));
   app.route("/v1", createTicketRoutes(deps));
   app.route("/v1", createStatusRoutes(deps));
+  app.route("/v1", createSessionRoutes(deps));
   app.route("/v1", createWorkspaceRoutes(deps));
   app.route("/v1", createTagRoutes(deps));
   app.route("/v1", createSyncRoutes(deps));

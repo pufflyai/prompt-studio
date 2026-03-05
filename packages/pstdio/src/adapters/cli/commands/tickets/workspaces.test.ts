@@ -27,18 +27,18 @@ describe("tickets workspaces", () => {
       listWorkspaces: async () => [
         {
           id: "ws-1",
-          workspace_shorthand: "PS-1/A1",
+          workspace_shorthand: "PS-1_A1",
           ticket_shorthand: "PS-1",
-          branch: "workspace/PS-1/A1",
-          worktree_path: "/repo/.pstdio/workspaces/PS-1/A1",
+          branch: "workspace/PS-1_A1",
+          worktree_path: "/repo/.pstdio/workspaces/PS-1_A1",
           status: "active",
         },
         {
           id: "ws-2",
-          workspace_shorthand: "PS-2/A1",
+          workspace_shorthand: "PS-2_A1",
           ticket_shorthand: "PS-2",
-          branch: "workspace/PS-2/A1",
-          worktree_path: "/repo/.pstdio/workspaces/PS-2/A1",
+          branch: "workspace/PS-2_A1",
+          worktree_path: "/repo/.pstdio/workspaces/PS-2_A1",
           status: "active",
         },
       ],
@@ -49,8 +49,8 @@ describe("tickets workspaces", () => {
 
     const table = log.mock.calls[0]?.[0] as string;
     expect(table).toContain("Workspace");
-    expect(table).toContain("PS-1/A1");
-    expect(table).not.toContain("PS-2/A1");
+    expect(table).toContain("PS-1_A1");
+    expect(table).not.toContain("PS-2_A1");
   });
 
   test("prints empty state when ticket has no active workspaces", async () => {
@@ -78,10 +78,10 @@ describe("tickets workspaces", () => {
       listWorkspaces: async () => [
         {
           id: "ws-2",
-          workspace_shorthand: "PS-2/A1",
+          workspace_shorthand: "PS-2_A1",
           ticket_shorthand: "PS-2",
-          branch: "workspace/PS-2/A1",
-          worktree_path: "/repo/.pstdio/workspaces/PS-2/A1",
+          branch: "workspace/PS-2_A1",
+          worktree_path: "/repo/.pstdio/workspaces/PS-2_A1",
           status: "active",
         },
       ],

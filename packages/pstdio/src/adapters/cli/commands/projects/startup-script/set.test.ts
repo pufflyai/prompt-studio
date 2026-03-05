@@ -17,7 +17,7 @@ describe("startup-script set", () => {
       cwd: () => "/repo",
       findGitRoot: () => "/repo",
       readConfig: () => ({ project_id: "proj-1" }),
-      getProject: mock(async () => ({ id: "proj-1", name: "my-app" })),
+      getProject: mock(async () => ({ id: "proj-1", name: "my-app", shorthand: "MA", created_at: "", updated_at: "" })),
       setStartupScript,
       readFile: () => "bun install",
       readStdin: async () => "",

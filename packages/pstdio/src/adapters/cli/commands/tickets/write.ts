@@ -5,6 +5,7 @@ import { getTemplate } from "@/features/templates/api/get-template";
 import { replacePlaceholders } from "@/features/templates/replace-placeholders";
 import { createTicket as defaultCreateTicket } from "@/features/tickets/api/create-ticket";
 import { writeTicketFile } from "@/features/tickets/local-ticket";
+import { resolveStatusId as defaultResolveStatusId } from "@/features/tickets/resolve-status-id";
 import { resolveTagIds as defaultResolveTagIds } from "@/features/tickets/resolve-tag-ids";
 
 export const command = "write";
@@ -15,6 +16,7 @@ export const builder = (yargs: Argv) =>
     .option("title", { type: "string", demandOption: true, describe: "Ticket title" })
     .option("template", { type: "string", describe: "Template name" })
     .option("tag", { type: "array", string: true, describe: "Tags to assign" })
+    .option("status", { type: "string", describe: "Status name to assign" })
     .option("input", { type: "string", describe: "User input or description" })
     .option("parent-id", { type: "string", describe: "Parent ticket shorthand" });
 
@@ -22,6 +24,7 @@ type WriteArgs = {
   title: string;
   template?: string;
   tag?: string[];
+  status?: string;
   input?: string;
   "parent-id"?: string;
 };
@@ -32,6 +35,7 @@ type Deps = {
   readConfig: typeof readConfig;
   getTemplate: typeof getTemplate;
   createTicket: typeof defaultCreateTicket;
+  resolveStatusId: typeof defaultResolveStatusId;
   resolveTagIds: typeof defaultResolveTagIds;
   log: (msg: string) => void;
 };
@@ -42,6 +46,7 @@ const defaultDeps: Deps = {
   readConfig,
   getTemplate,
   createTicket: defaultCreateTicket,
+  resolveStatusId: defaultResolveStatusId,
   resolveTagIds: defaultResolveTagIds,
   log: console.log,
 };
@@ -54,7 +59,7 @@ const renderTemplate = (templateContent: string, shorthand: string, argv: Argume
     INPUT: argv.input ?? "",
     PARENT_ID: argv["parent-id"] ?? "",
     USER_PROMPT: argv.input ?? "",
-    STATUS: "backlog",
+    STATUS: argv.status ?? "backlog",
   });
 
 export const createHandler =
@@ -68,6 +73,7 @@ export const createHandler =
 
     const projectId = config.project_id;
     const tagIds = argv.tag?.length ? await deps.resolveTagIds(API_URL, projectId, argv.tag) : undefined;
+    const statusId = argv.status ? await deps.resolveStatusId(API_URL, projectId, argv.status) : undefined;
 
     const ticket = await deps.createTicket(API_URL, {
       project_id: projectId,
@@ -76,6 +82,7 @@ export const createHandler =
       parent_id: argv["parent-id"],
       draft: true,
       tag_ids: tagIds,
+      status_id: statusId,
     });
 
     let content = `# ${argv.title}\n`;

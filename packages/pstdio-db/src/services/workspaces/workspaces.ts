@@ -36,6 +36,7 @@ export const createWorkspacesService = (db: DbClient) => {
       status: "active",
       archived: false,
       workspace_shorthand: shorthand,
+      startup_log_file_id: null,
       created_at: timestamp,
       updated_at: timestamp,
       deleted_at: null,
@@ -70,6 +71,16 @@ export const createWorkspacesService = (db: DbClient) => {
     return rows.map((r) => ({ ...r.workspace, ticket_shorthand: r.ticket_shorthand }));
   };
 
+  const get = async (id: string) => {
+    const [row] = await db.select().from(workspaces).where(eq(workspaces.id, id));
+    return row ?? null;
+  };
+
+  const getBySessionId = async (sessionId: string) => {
+    const [row] = await db.select().from(workspaces).where(eq(workspaces.session_id, sessionId));
+    return row ?? null;
+  };
+
   const getByShorthand = async (projectId: string, shorthand: string) => {
     const [row] = await db
       .select()
@@ -96,5 +107,12 @@ export const createWorkspacesService = (db: DbClient) => {
     await db.update(workspaces).set({ status, updated_at: nowTimestamp() }).where(eq(workspaces.id, id));
   };
 
-  return { create, list, getByShorthand, softDelete, updateStatus };
+  const setStartupLogFileId = async (id: string, fileId: string) => {
+    await db
+      .update(workspaces)
+      .set({ startup_log_file_id: fileId, updated_at: nowTimestamp() })
+      .where(eq(workspaces.id, id));
+  };
+
+  return { create, get, getBySessionId, list, getByShorthand, softDelete, updateStatus, setStartupLogFileId };
 };

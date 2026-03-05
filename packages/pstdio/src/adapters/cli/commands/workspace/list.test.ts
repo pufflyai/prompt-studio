@@ -12,10 +12,10 @@ describe("workspaces list", () => {
       listWorkspaces: async () => [
         {
           id: "ws-1",
-          workspace_shorthand: "PS-1/A1",
+          workspace_shorthand: "PS-1_A1",
           ticket_shorthand: "PS-1",
-          branch: "workspace/PS-1/A1",
-          worktree_path: "~/.pstdio/workspaces/PS-1/A1",
+          branch: "workspace/PS-1_A1",
+          worktree_path: "~/.pstdio/workspaces/PS-1_A1",
           status: "active",
         },
       ],
@@ -26,7 +26,7 @@ describe("workspaces list", () => {
 
     expect(log).toHaveBeenCalledTimes(2);
     expect(log.mock.calls[0][0]).toContain("Workspace");
-    expect(log.mock.calls[1][0]).toContain("PS-1/A1");
+    expect(log.mock.calls[1][0]).toContain("PS-1_A1");
   });
 
   test("shows message when no workspaces", async () => {

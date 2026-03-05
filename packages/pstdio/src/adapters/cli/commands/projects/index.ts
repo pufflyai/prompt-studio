@@ -8,6 +8,7 @@ import * as listCommand from "./list";
 import * as reposCommand from "./repos";
 import * as startupScriptCommand from "./startup-script";
 import * as unlinkCommand from "./unlink";
+import * as viewCommand from "./view";
 
 export const command = "projects [command]";
 export const describe = "Manage projects";
@@ -23,7 +24,8 @@ export const builder = (yargs: Argv) => {
     .command(listCommand)
     .command(reposCommand)
     .command(startupScriptCommand)
-    .command(unlinkCommand);
+    .command(unlinkCommand)
+    .command(viewCommand);
 };
 
 export const middlewares = [() => ensureApi(API_URL)];

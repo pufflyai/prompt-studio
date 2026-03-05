@@ -50,6 +50,20 @@
       "when": 1772870000000,
       "tag": "0006_add_deleted_at_to_statuses_and_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1772960000000,
+      "tag": "0007_add_startup_log_file_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1773050000000,
+      "tag": "0008_add_sessions_project_id",
+      "breakpoints": true
     }
   ]
 }

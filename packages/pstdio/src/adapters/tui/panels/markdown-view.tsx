@@ -18,9 +18,9 @@ export function MarkdownView({ title, content, width, viewportHeight }: Markdown
   const maxScroll = Math.max(0, content.split("\n").length - contentHeight);
 
   useInput((input, key) => {
-    if (key.downArrow || input === "j") {
+    if (key.downArrow) {
       setScrollOffset((o) => Math.min(o + 1, maxScroll));
-    } else if (key.upArrow || input === "k") {
+    } else if (key.upArrow) {
       setScrollOffset((o) => Math.max(0, o - 1));
     } else if (input === "g") {
       setScrollOffset(0);

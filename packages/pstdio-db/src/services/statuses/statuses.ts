@@ -70,6 +70,20 @@ export const createStatusesService = (db: DbClient) => {
     return record;
   };
 
+  const getDefault = async (projectId: string) => {
+    const [row] = await db
+      .select()
+      .from(ticket_statuses)
+      .where(
+        and(
+          eq(ticket_statuses.project_id, projectId),
+          eq(ticket_statuses.is_default, true),
+          isNull(ticket_statuses.deleted_at),
+        ),
+      );
+    return row ?? null;
+  };
+
   const setDefault = async (projectId: string, statusId: string) => {
     const timestamp = nowTimestamp();
 
@@ -92,5 +106,5 @@ export const createStatusesService = (db: DbClient) => {
     await db.update(ticket_statuses).set({ deleted_at: nowTimestamp() }).where(eq(ticket_statuses.id, id));
   };
 
-  return { list, getByName, create, setDefault, updateColor, softDelete };
+  return { list, getByName, getDefault, create, setDefault, updateColor, softDelete };
 };

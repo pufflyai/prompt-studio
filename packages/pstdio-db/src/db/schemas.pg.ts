@@ -131,9 +131,10 @@ export const ticket_tag_assignments = pgTable(
 export const sessions = pgTable("sessions", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),
-  status: text("status", { enum: ["in_progress", "awaiting_input", "completed", "failed"] })
+  status: text("status", { enum: ["in_progress", "awaiting_input", "completed", "failed", "cancelled"] })
     .notNull()
     .default("in_progress"),
+  project_id: text("project_id").references(() => projects.id, { onDelete: "cascade" }),
   archived: boolean("archived").notNull().default(false),
   created: text("created"),
   last_request_started: text("last_request_started"),
@@ -161,6 +162,7 @@ export const workspaces = pgTable(
       .default("active"),
     archived: boolean("archived").notNull().default(false),
     workspace_shorthand: text("workspace_shorthand").notNull(),
+    startup_log_file_id: text("startup_log_file_id").references(() => files.id, { onDelete: "set null" }),
     created_at: text("created_at").notNull(),
     updated_at: text("updated_at").notNull(),
     deleted_at: text("deleted_at"),

@@ -25,7 +25,9 @@
     "storybook:ui": "bun run --cwd packages/ui storybook",
     "studio:db": "bun run --cwd packages/db studio",
     "dev:desktop": "bun run --cwd clients/desktop dev",
-    "report:e2e": "bun run --cwd packages/e2e report"
+    "report:e2e": "bun run --cwd packages/e2e report",
+    "storybook:dashboard": "bun run --cwd packages/pstdio-dashboard storybook",
+    "build-storybook:dashboard": "bun run --cwd packages/pstdio-dashboard build-storybook"
   },
   "engines": {
     "bun": ">=1.3.10"

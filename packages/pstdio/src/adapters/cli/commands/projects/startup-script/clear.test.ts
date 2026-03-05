@@ -18,7 +18,7 @@ describe("startup-script clear", () => {
       findGitRoot: () => "/repo",
       readConfig: () => ({ project_id: "proj-1" }),
       clearStartupScript,
-      getProject: mock(async () => ({ id: "proj-1", name: "my-app" })),
+      getProject: mock(async () => ({ id: "proj-1", name: "my-app", shorthand: "MA", created_at: "", updated_at: "" })),
     });
 
     await handler();

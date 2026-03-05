@@ -1,6 +1,7 @@
 import type { Arguments, Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
+import { listTicketStatuses as defaultListTicketStatuses } from "@/features/tickets/api/list-ticket-statuses";
 import { listTicketTags as defaultListTicketTags } from "@/features/tickets/api/list-ticket-tags";
 import { listTickets as defaultListTickets } from "@/features/tickets/api/list-tickets";
 import { updateTicket as defaultUpdateTicket } from "@/features/tickets/api/update-ticket";
@@ -13,10 +14,12 @@ export const describe = "Save local ticket content and files to the database";
 export const builder = (yargs: Argv) =>
   yargs
     .option("id", { type: "string", demandOption: true, describe: "Ticket shorthand (e.g. PS-12)" })
+    .option("status", { type: "string", describe: "Status name to assign" })
     .option("tag", { type: "array", string: true, describe: "Tags to assign" });
 
 type SaveArgs = {
   id: string;
+  status?: string;
   tag?: string[];
 };
 
@@ -27,6 +30,7 @@ type Deps = {
   listTickets: typeof defaultListTickets;
   updateTicket: typeof defaultUpdateTicket;
   uploadTicketFile: typeof defaultUploadTicketFile;
+  listTicketStatuses: typeof defaultListTicketStatuses;
   listTicketTags: typeof defaultListTicketTags;
   log: (msg: string) => void;
 };
@@ -38,6 +42,7 @@ const defaultDeps: Deps = {
   listTickets: defaultListTickets,
   updateTicket: defaultUpdateTicket,
   uploadTicketFile: defaultUploadTicketFile,
+  listTicketStatuses: defaultListTicketStatuses,
   listTicketTags: defaultListTicketTags,
   log: console.log,
 };
@@ -57,19 +62,22 @@ const resolveTicketByShorthand = async (deps: Deps, projectId: string, shorthand
   return draftTickets[0] ?? null;
 };
 
+const resolveStatusId = async (deps: Deps, projectId: string, statusName: string) => {
+  const statuses = await deps.listTicketStatuses(API_URL, projectId);
+  const found = statuses.find((s) => s.name === statusName);
+  if (!found) throw new Error(`Status not found: ${statusName}`);
+  return found.id;
+};
+
 const resolveTagIds = async (deps: Deps, projectId: string, tags: string[] | undefined) => {
   if (!tags || tags.length === 0) return undefined;
 
   const allTags = await deps.listTicketTags(API_URL, projectId);
-  const tagIds: string[] = [];
-
-  for (const name of tags) {
+  return tags.map((name) => {
     const found = allTags.find((tag) => tag.name === name);
     if (!found) throw new Error(`Tag not found: ${name}`);
-    tagIds.push(found.id);
-  }
-
-  return tagIds;
+    return found.id;
+  });
 };
 
 const uploadLocalTicketFiles = async (deps: Deps, root: string, shorthand: string, ticketId: string) => {
@@ -106,11 +114,13 @@ export const createHandler =
     if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
     const tagIds = await resolveTagIds(deps, projectId, argv.tag);
+    const statusId = argv.status ? await resolveStatusId(deps, projectId, argv.status) : undefined;
 
     await deps.updateTicket(API_URL, ticket.id, {
       input: content,
       draft: false,
       tag_ids: tagIds,
+      status_id: statusId,
     });
 
     const uploadedCount = await uploadLocalTicketFiles(deps, root, argv.id, ticket.id);

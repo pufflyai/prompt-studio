@@ -14,8 +14,8 @@ interface Shortcut {
 }
 
 const NAVIGATION: Shortcut[] = [
-  { key: "j / ↓", label: "Move down" },
-  { key: "k / ↑", label: "Move up" },
+  { key: "↓", label: "Move down" },
+  { key: "↑", label: "Move up" },
   { key: "g", label: "Go to first" },
   { key: "G", label: "Go to last" },
   { key: "enter", label: "Open / expand" },
@@ -47,6 +47,7 @@ const TEMPLATES_ACTIONS: Shortcut[] = [
 ];
 
 const GLOBAL: Shortcut[] = [
+  { key: "S", label: "Settings (statuses & tags)" },
   { key: "a", label: "Manage agents" },
   { key: "p", label: "Switch project" },
   { key: "?", label: "Toggle help" },

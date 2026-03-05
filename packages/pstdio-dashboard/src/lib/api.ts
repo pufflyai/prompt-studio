@@ -1,16 +1,3 @@
-type ApiError = {
-  success: false;
-  message: string;
-  error_data?: unknown;
-};
-
-type ApiSuccess<T> = {
-  success: true;
-  data: T;
-};
-
-type ApiEnvelope<T> = ApiSuccess<T> | ApiError;
-
 type ApiRequestOptions = Omit<RequestInit, "body"> & {
   body?: unknown;
   allowNotFound?: boolean;
@@ -72,12 +59,12 @@ export const apiRequest = async <T>(path: string, options: ApiRequestOptions = {
     return null as T;
   }
 
-  const payload = (await response.json()) as ApiEnvelope<T>;
-
-  if (!response.ok || !payload.success) {
-    const message = payload.success ? "Request failed" : payload.message;
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => null);
+    const message =
+      errorBody && typeof errorBody === "object" && "error" in errorBody ? String(errorBody.error) : "Request failed";
     throw new Error(message);
   }
 
-  return payload.data;
+  return (await response.json()) as T;
 };

@@ -1,8 +1,16 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanupDirs, createGitRepo, runPstdio, runPstdioSafe } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
+
+const findTicketDir = (repo: string, shorthand: string) => {
+  const ticketsBase = join(repo, ".pstdio", "tickets");
+  const prefix = `${shorthand}_`;
+  const match = readdirSync(ticketsBase).find((name) => name.startsWith(prefix));
+  if (!match) throw new Error(`Ticket dir not found for ${shorthand}`);
+  return join(ticketsBase, match);
+};
 
 let api: ApiInstance;
 
@@ -169,7 +177,8 @@ describe("pstdio tickets files", () => {
     const writeOutput = run('tickets write --title "File statuses"', repo);
     const shorthand = writeOutput.match(/Created ticket (\S+)/)![1];
 
-    const attachmentDir = join(repo, ".pstdio", "tickets", shorthand, "files");
+    const ticketDir = findTicketDir(repo, shorthand);
+    const attachmentDir = join(ticketDir, "files");
     const attachmentPath = join(attachmentDir, "notes.txt");
     mkdirSync(attachmentDir, { recursive: true });
     writeFileSync(attachmentPath, "hello attachment");
@@ -197,26 +206,30 @@ describe("pstdio tickets pull", () => {
     const writeOutput = run('tickets write --title "Pull ticket"', repo);
     const shorthand = writeOutput.match(/Created ticket (\S+)/)![1];
 
-    const attachmentDir = join(repo, ".pstdio", "tickets", shorthand, "files");
+    const ticketDir = findTicketDir(repo, shorthand);
+    const attachmentDir = join(ticketDir, "files");
     const attachmentPath = join(attachmentDir, "notes.txt");
     mkdirSync(attachmentDir, { recursive: true });
     writeFileSync(attachmentPath, "sync me");
 
     run(`tickets save --id ${shorthand}`, repo);
-    rmSync(join(repo, ".pstdio", "tickets", shorthand), { recursive: true, force: true });
+    rmSync(ticketDir, { recursive: true, force: true });
 
     const pullOutput = run(`tickets pull --id ${shorthand}`, repo);
     expect(pullOutput).toContain(`Pulled ticket ${shorthand}`);
     expect(pullOutput).toContain("Downloaded 1 ticket files");
-    expect(readFileSync(join(repo, ".pstdio", "tickets", shorthand, "ticket.md"), "utf8")).toContain("# Pull ticket");
-    expect(readFileSync(join(repo, ".pstdio", "tickets", shorthand, "files", "notes.txt"), "utf8")).toBe("sync me");
+
+    const pulledDir = findTicketDir(repo, shorthand);
+    expect(readFileSync(join(pulledDir, "ticket.md"), "utf8")).toContain("# Pull ticket");
+    expect(readFileSync(join(pulledDir, "files", "notes.txt"), "utf8")).toBe("sync me");
   });
 
   test("requires --force to overwrite local ticket files", () => {
     const repo = createInitializedRepo("tk-pull-force");
     const writeOutput = run('tickets write --title "Pull force ticket"', repo);
     const shorthand = writeOutput.match(/Created ticket (\S+)/)![1];
-    const ticketPath = join(repo, ".pstdio", "tickets", shorthand, "ticket.md");
+    const ticketDir = findTicketDir(repo, shorthand);
+    const ticketPath = join(ticketDir, "ticket.md");
 
     run(`tickets save --id ${shorthand}`, repo);
     writeFileSync(ticketPath, "local changes");

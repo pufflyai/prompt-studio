@@ -7,6 +7,7 @@ type CreateTicketInput = {
   parent_id?: string;
   draft?: boolean;
   tag_ids?: string[];
+  status_id?: string;
 };
 
 type Ticket = {

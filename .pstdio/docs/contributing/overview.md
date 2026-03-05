@@ -13,7 +13,7 @@ bun install
 
 ## Run Locally
 
-By default everything runs against a local SQLite database at `.db/todos.db`.
+By default everything runs against a local PGlite database.
 
 ```bash
 bun run dev:dashboard
@@ -32,7 +32,7 @@ bun run dev:desktop
 
 Inspect and edit data visually with Drizzle Studio.
 
-**Local SQLite database:**
+**Local PGlite database:**
 
 ```bash
 bun run --cwd packages/db studio

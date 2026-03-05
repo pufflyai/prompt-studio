@@ -1,0 +1,133 @@
+import type { Project, ProjectRepository, ProjectTemplateAsset, RepoBranch } from "@/features/project/types";
+import type { ApiTicketStatus, ApiTicketTag } from "@/features/ticket-list/data/api";
+import { buildTicketStatusCatalog, toTicketTag } from "@/features/ticket-list/data/api";
+import { apiRequest } from "@/lib/api";
+
+// --- API types ---
+
+export type ApiProject = {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ApiSystemInfo = {
+  version: string;
+};
+
+export type ApiRepo = {
+  id: string;
+  name: string;
+  display_name: string | null;
+  path: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreateProjectRepositoryInput = {
+  path: string;
+  displayName: string | null;
+};
+
+// --- Mappers ---
+
+export const DEFAULT_OWNER = "Unassigned";
+export const DEFAULT_PROJECT_STATUS = "active";
+
+export const toProjectRepository = (repo: ApiRepo): ProjectRepository => ({
+  id: repo.id,
+  name: repo.name,
+  displayName: repo.display_name,
+  path: repo.path,
+  createdAt: repo.created_at,
+  updatedAt: repo.updated_at,
+});
+
+// --- API functions ---
+
+export const getProject = async (projectId: string) => {
+  const project = await apiRequest<ApiProject | null>(`/v1/projects/${projectId}`, {
+    allowNotFound: true,
+  });
+
+  if (!project) {
+    return null;
+  }
+
+  const fetchTicketStatuses = async (projectId: string) => {
+    const statuses = await apiRequest<ApiTicketStatus[]>(`/v1/projects/${projectId}/ticket-statuses`);
+    return buildTicketStatusCatalog(statuses);
+  };
+
+  const [statusCatalog, repositories, ticketTags] = await Promise.all([
+    fetchTicketStatuses(projectId),
+    apiRequest<ApiRepo[]>(`/v1/projects/${projectId}/repos`),
+    apiRequest<ApiTicketTag[]>(`/v1/projects/${projectId}/ticket-tags`),
+  ]);
+
+  return {
+    id: project.id,
+    name: project.name,
+    status: DEFAULT_PROJECT_STATUS,
+    owner: DEFAULT_OWNER,
+    updatedAt: project.updated_at,
+    ticketStatuses: statusCatalog.names,
+    ticketStatusOptions: statusCatalog.options,
+    repositories: repositories.map(toProjectRepository),
+    ticketTags: ticketTags.map(toTicketTag),
+  } satisfies Project;
+};
+
+export const getSystemInfo = async () => {
+  return {
+    version: import.meta.env.VITE_APP_VERSION ?? "dev",
+  };
+};
+
+export const getProjectRepositories = async (projectId: string) => {
+  const repositories = await apiRequest<ApiRepo[]>(`/v1/projects/${projectId}/repos`);
+  return repositories.map(toProjectRepository);
+};
+
+const resolveRepoName = (path: string, displayName?: string | null) => {
+  const trimmedDisplayName = displayName?.trim();
+  if (trimmedDisplayName) {
+    return trimmedDisplayName;
+  }
+
+  const normalizedPath = path.replaceAll("\\", "/").replace(/\/+$/g, "");
+  const segments = normalizedPath.split("/").filter(Boolean);
+  return segments.at(-1) ?? "repo";
+};
+
+export const addProjectRepository = async (projectId: string, input: { path: string; displayName?: string | null }) => {
+  const repo = await apiRequest<ApiRepo>(`/v1/projects/${projectId}/repos`, {
+    method: "POST",
+    body: {
+      name: resolveRepoName(input.path, input.displayName),
+      path: input.path,
+    },
+  });
+
+  return toProjectRepository(repo);
+};
+
+export const removeProjectRepository = async (projectId: string, repoId: string) => {
+  throw new Error(`Removing repositories is not supported yet. projectId=${projectId}, repoId=${repoId}`);
+};
+
+export const getRepoBranches = async (repoId: string) => {
+  void repoId;
+  return [] satisfies RepoBranch[];
+};
+
+export const getProjectTemplateAssets = async (projectId: string) => {
+  void projectId;
+  return [] satisfies ProjectTemplateAsset[];
+};
+
+export const updateProjectTemplateAsset = async (projectId: string, assetId: string, content: string) => {
+  void content;
+  throw new Error(`Updating template assets is not supported yet. projectId=${projectId}, assetId=${assetId}`);
+};

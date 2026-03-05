@@ -10,6 +10,7 @@ export const workspaceResponseSchema = z.object({
   status: z.string(),
   archived: z.boolean(),
   workspace_shorthand: z.string(),
+  startup_log_file_id: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
   deleted_at: z.string().nullable(),
@@ -25,6 +26,10 @@ export const createWorkspaceBodySchema = z.object({
   ticket_shorthand: z.string().min(1),
   branch: z.string().optional(),
   worktree_path: z.string().optional(),
+});
+
+export const uploadStartupLogBodySchema = z.object({
+  content_base64: z.string(),
 });
 
 export const notFoundResponseSchema = z.object({

@@ -38,12 +38,12 @@ describe("createWorkspacesService", () => {
       project_id: projectId,
       ticket_id: ticketId,
       ticket_shorthand: ticketShorthand,
-      branch: "workspace/PS-1/A1",
-      worktree_path: "/repo/.pstdio/workspaces/PS-1/A1",
+      branch: "workspace/PS-1_A1",
+      worktree_path: "/repo/.pstdio/workspaces/PS-1_A1",
     });
 
-    expect(ws.workspace_shorthand).toBe("PS-1/A1");
-    expect(ws.name).toBe("PS-1/A1");
+    expect(ws.workspace_shorthand).toBe("PS-1_A1");
+    expect(ws.name).toBe("PS-1_A1");
     expect(ws.status).toBe("active");
     expect(ws.archived).toBe(false);
   });
@@ -62,8 +62,8 @@ describe("createWorkspacesService", () => {
       ticket_shorthand: ticketShorthand,
     });
 
-    expect(ws1.workspace_shorthand).toBe("PS-1/A1");
-    expect(ws2.workspace_shorthand).toBe("PS-1/A2");
+    expect(ws1.workspace_shorthand).toBe("PS-1_A1");
+    expect(ws2.workspace_shorthand).toBe("PS-1_A2");
   });
 
   test("lists active workspaces with ticket shorthand", async () => {
@@ -78,7 +78,7 @@ describe("createWorkspacesService", () => {
     const list = await workspacesService.list(projectId);
 
     expect(list.length).toBe(1);
-    expect(list[0].workspace_shorthand).toBe("PS-1/A1");
+    expect(list[0].workspace_shorthand).toBe("PS-1_A1");
     expect(list[0].ticket_shorthand).toBe("PS-1");
   });
 
@@ -91,11 +91,11 @@ describe("createWorkspacesService", () => {
       ticket_shorthand: ticketShorthand,
     });
 
-    const found = await workspacesService.getByShorthand(projectId, "PS-1/A1");
+    const found = await workspacesService.getByShorthand(projectId, "PS-1_A1");
     expect(found).not.toBeNull();
-    expect(found!.workspace_shorthand).toBe("PS-1/A1");
+    expect(found!.workspace_shorthand).toBe("PS-1_A1");
 
-    const notFound = await workspacesService.getByShorthand(projectId, "PS-1/A99");
+    const notFound = await workspacesService.getByShorthand(projectId, "PS-1_A99");
     expect(notFound).toBeNull();
   });
 
@@ -133,7 +133,7 @@ describe("createWorkspacesService", () => {
       ticket_shorthand: ticketShorthand,
     });
 
-    expect(ws2.workspace_shorthand).toBe("PS-1/A2");
+    expect(ws2.workspace_shorthand).toBe("PS-1_A2");
   });
 
   test("updateStatus changes workspace status", async () => {

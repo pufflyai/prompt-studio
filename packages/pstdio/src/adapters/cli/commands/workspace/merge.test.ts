@@ -1,109 +1,51 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createHandler } from "./merge";
 
-const makeWorkspace = (shorthand: string) => ({
-  id: "ws-1",
-  project_id: "proj-1",
-  name: shorthand,
-  workspace_shorthand: shorthand,
-  branch: `workspace/${shorthand}`,
-  worktree_path: `~/.pstdio/workspaces/${shorthand}`,
-  status: "active" as const,
-  created_at: "",
-  updated_at: "",
-});
+const baseDeps = {
+  cwd: () => "/repo",
+  findGitRoot: () => "/repo" as string | null,
+  readConfig: () => ({ project_id: "proj-1" }) as { project_id: string } | null,
+  mergeWorkspace: mock(async () => {}),
+};
 
 describe("workspaces merge", () => {
-  test("squash-merges workspace into current branch", async () => {
-    const log = mock();
-    const squashMerge = mock(async () => {});
+  test("delegates to mergeWorkspace", async () => {
+    const mergeWorkspace = mock(async () => {});
 
-    const handler = createHandler({
-      cwd: () => "/repo",
-      findGitRoot: () => "/repo",
-      readConfig: () => ({ project_id: "proj-1" }),
-      getWorkspace: async () => makeWorkspace("PS-1/A1"),
-      deleteWorkspace: async () => {},
-      isCleanWorkingTree: async () => true,
-      squashMerge,
-      abortMerge: async () => {},
-      removeWorktree: async () => {},
-      deleteBranch: async () => {},
-      log,
+    const handler = createHandler({ ...baseDeps, mergeWorkspace });
+    await handler({ id: "PS-1_A1", _: [], $0: "" } as never);
+
+    expect(mergeWorkspace).toHaveBeenCalledWith({
+      repoRoot: "/repo",
+      projectId: "proj-1",
+      workspaceShorthand: "PS-1_A1",
+      deleteAfter: undefined,
     });
-
-    await handler({ id: "PS-1/A1", _: [], $0: "" } as never);
-
-    expect(squashMerge).toHaveBeenCalledWith("/repo", "workspace/PS-1/A1", "workspace(PS-1/A1): squash merge");
-    expect(log).toHaveBeenCalledWith("Merged workspace PS-1/A1 as a squash commit.");
   });
 
-  test("deletes workspace when --delete-workspace is set", async () => {
-    const log = mock();
-    const deleteWorkspace = mock(async () => {});
-    const removeWorktree = mock(async () => {});
-    const deleteBranch = mock(async () => {});
+  test("passes deleteAfter flag", async () => {
+    const mergeWorkspace = mock(async () => {});
 
-    const handler = createHandler({
-      cwd: () => "/repo",
-      findGitRoot: () => "/repo",
-      readConfig: () => ({ project_id: "proj-1" }),
-      getWorkspace: async () => makeWorkspace("PS-1/A1"),
-      deleteWorkspace,
-      isCleanWorkingTree: async () => true,
-      squashMerge: async () => {},
-      abortMerge: async () => {},
-      removeWorktree,
-      deleteBranch,
-      log,
+    const handler = createHandler({ ...baseDeps, mergeWorkspace });
+    await handler({ id: "PS-1_A1", "delete-workspace": true, _: [], $0: "" } as never);
+
+    expect(mergeWorkspace).toHaveBeenCalledWith({
+      repoRoot: "/repo",
+      projectId: "proj-1",
+      workspaceShorthand: "PS-1_A1",
+      deleteAfter: true,
     });
-
-    await handler({ id: "PS-1/A1", "delete-workspace": true, _: [], $0: "" } as never);
-
-    expect(deleteWorkspace).toHaveBeenCalledTimes(1);
-    expect(removeWorktree).toHaveBeenCalledTimes(1);
-    expect(deleteBranch).toHaveBeenCalledTimes(1);
-    expect(log).toHaveBeenCalledWith("Merged workspace PS-1/A1 and deleted workspace.");
   });
 
-  test("aborts and throws on merge conflict", async () => {
-    const abortMerge = mock(async () => {});
-
-    const handler = createHandler({
-      cwd: () => "/repo",
-      findGitRoot: () => "/repo",
-      readConfig: () => ({ project_id: "proj-1" }),
-      getWorkspace: async () => makeWorkspace("PS-1/A1"),
-      deleteWorkspace: async () => {},
-      isCleanWorkingTree: async () => true,
-      squashMerge: async () => {
-        throw new Error("conflict");
-      },
-      abortMerge,
-      removeWorktree: async () => {},
-      deleteBranch: async () => {},
-      log: () => {},
-    });
-
-    await expect(handler({ id: "PS-1/A1", _: [], $0: "" } as never)).rejects.toThrow("Merge conflict");
-    expect(abortMerge).toHaveBeenCalledTimes(1);
+  test("throws when not in git repo", async () => {
+    const handler = createHandler({ ...baseDeps, findGitRoot: () => null });
+    await expect(handler({ id: "PS-1_A1", _: [], $0: "" } as never)).rejects.toThrow("Not inside a git repository.");
   });
 
-  test("throws on dirty working tree", async () => {
-    const handler = createHandler({
-      cwd: () => "/repo",
-      findGitRoot: () => "/repo",
-      readConfig: () => ({ project_id: "proj-1" }),
-      getWorkspace: async () => makeWorkspace("PS-1/A1"),
-      deleteWorkspace: async () => {},
-      isCleanWorkingTree: async () => false,
-      squashMerge: async () => {},
-      abortMerge: async () => {},
-      removeWorktree: async () => {},
-      deleteBranch: async () => {},
-      log: () => {},
-    });
-
-    await expect(handler({ id: "PS-1/A1", _: [], $0: "" } as never)).rejects.toThrow("Branch has uncommitted changes");
+  test("throws when not in pstdio project", async () => {
+    const handler = createHandler({ ...baseDeps, readConfig: () => null });
+    await expect(handler({ id: "PS-1_A1", _: [], $0: "" } as never)).rejects.toThrow(
+      "Not inside a pstdio project. Run 'pstdio projects create' first.",
+    );
   });
 });

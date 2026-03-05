@@ -45,14 +45,14 @@ describe("createGitWorktreeService", () => {
   });
 
   test("createWorktree and removeWorktree", async () => {
-    const wtPath = join(repoRoot, ".pstdio/workspaces/PS-1/A1");
-    await service.createWorktree(repoRoot, wtPath, "workspace/PS-1/A1", "HEAD");
+    const wtPath = join(repoRoot, ".pstdio/workspaces/PS-1_A1");
+    await service.createWorktree(repoRoot, wtPath, "workspace/PS-1_A1", "HEAD");
 
     const branch = await git(wtPath, "symbolic-ref --short HEAD");
-    expect(branch).toBe("workspace/PS-1/A1");
+    expect(branch).toBe("workspace/PS-1_A1");
 
     await service.removeWorktree(repoRoot, wtPath);
-    await service.deleteBranch(repoRoot, "workspace/PS-1/A1");
+    await service.deleteBranch(repoRoot, "workspace/PS-1_A1");
   });
 
   test("squashMerge merges branch into current", async () => {
@@ -65,10 +65,10 @@ describe("createGitWorktreeService", () => {
     // Go back to main and squash merge
     const mainBranch = (await service.refExists(repoRoot, "main")) ? "main" : "master";
     await git(repoRoot, `checkout ${mainBranch}`);
-    await service.squashMerge(repoRoot, "test-feature", "workspace(PS-1/A1): squash merge");
+    await service.squashMerge(repoRoot, "test-feature", "workspace(PS-1_A1): squash merge");
 
     const log = await git(repoRoot, "log --oneline -1");
-    expect(log).toContain("workspace(PS-1/A1): squash merge");
+    expect(log).toContain("workspace(PS-1_A1): squash merge");
 
     await service.deleteBranch(repoRoot, "test-feature");
   });

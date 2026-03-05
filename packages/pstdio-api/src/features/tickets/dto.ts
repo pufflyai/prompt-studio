@@ -34,6 +34,7 @@ export const createTicketBodySchema = z.object({
   parent_id: z.string().optional(),
   draft: z.boolean().optional(),
   tag_ids: z.array(z.string()).optional(),
+  status_id: z.string().optional(),
 });
 
 export const updateTicketBodySchema = z.object({

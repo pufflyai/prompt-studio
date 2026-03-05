@@ -73,12 +73,13 @@ export const createHandler =
     const ticket = await deps.getTicket(API_URL, ticketListItem.id);
     if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
-    const localTicketFilePath = ticketFilePath(root, argv.id);
-    if (!argv.force && existsSync(localTicketFilePath)) {
-      throw new Error(`Local file already exists: .pstdio/tickets/${argv.id}/ticket.md. Use --force to overwrite.`);
+    const localTicketFile = ticketFilePath(root, argv.id);
+    if (!argv.force && localTicketFile && existsSync(localTicketFile)) {
+      throw new Error(`Local ticket already exists: ${argv.id}. Use --force to overwrite.`);
     }
 
-    writeTicketFile(root, argv.id, ticket.input ?? "");
+    const filePath = writeTicketFile(root, argv.id, ticket.input ?? "");
+    const ticketDir = filePath.replace(/\/ticket\.md$/, "").replace(`${root}/`, "");
 
     const files = await deps.listTicketFiles(API_URL, ticket.id);
 
@@ -87,7 +88,7 @@ export const createHandler =
       writeTicketAttachment(root, argv.id, file.file_name, content, argv.force);
     }
 
-    deps.log(`Pulled ticket ${argv.id} to .pstdio/tickets/${argv.id}`);
+    deps.log(`Pulled ticket ${argv.id} to ${ticketDir}`);
     if (files.length > 0) deps.log(`Downloaded ${files.length} ticket files`);
   };
 

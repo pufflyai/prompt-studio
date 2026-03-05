@@ -78,21 +78,22 @@ describe("tickets pull", () => {
 
     await handler({ id: "PS-1", force: false, _: [], $0: "" } as never);
 
-    const ticketPath = join(tmpBase, ".pstdio", "tickets", "PS-1", "ticket.md");
-    const localFilePath = join(tmpBase, ".pstdio", "tickets", "PS-1", "files", "notes.txt");
+    const ticketPath = join(tmpBase, ".pstdio", "tickets", "PS-1_ticket-from-db", "ticket.md");
+    const localFilePath = join(tmpBase, ".pstdio", "tickets", "PS-1_ticket-from-db", "files", "notes.txt");
     expect(existsSync(ticketPath)).toBe(true);
     expect(existsSync(localFilePath)).toBe(true);
     expect(readFileSync(ticketPath, "utf8")).toBe("# Ticket from DB");
     expect(readFileSync(localFilePath, "utf8")).toBe("hello from db");
     expect(getTicketFileContent).toHaveBeenCalledWith(expect.any(String), "ticket-1", "file-1");
-    expect(log).toHaveBeenCalledWith("Pulled ticket PS-1 to .pstdio/tickets/PS-1");
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("Pulled ticket PS-1"));
     expect(log).toHaveBeenCalledWith("Downloaded 1 ticket files");
   });
 
   test("throws when local file exists and --force is not set", async () => {
-    const localFilePath = join(tmpBase, ".pstdio", "tickets", "PS-1", "files", "notes.txt");
-    mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-1", "files"), { recursive: true });
-    writeFileSync(localFilePath, "existing");
+    const ticketDir = join(tmpBase, ".pstdio", "tickets", "PS-1_pulled-ticket");
+    mkdirSync(join(ticketDir, "files"), { recursive: true });
+    writeFileSync(join(ticketDir, "ticket.md"), "# Pulled ticket");
+    writeFileSync(join(ticketDir, "files", "notes.txt"), "existing");
 
     const handler = createHandler({
       cwd: () => tmpBase,
@@ -152,7 +153,7 @@ describe("tickets pull", () => {
     });
 
     await expect(handler({ id: "PS-1", force: false, _: [], $0: "" } as never)).rejects.toThrow(
-      "Local file already exists",
+      "Local ticket already exists: PS-1",
     );
   });
 });

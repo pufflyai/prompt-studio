@@ -3,7 +3,7 @@ import * as createCommand from "./create";
 import * as deleteCommand from "./delete";
 import * as listCommand from "./list";
 import * as mergeCommand from "./merge";
-import * as swapCommand from "./swap";
+import * as startupLogCommand from "./startup-log";
 
 export const command = "workspaces [command]";
 export const describe = "Manage workspaces";
@@ -16,8 +16,8 @@ export const builder = (yargs: Argv) => {
     .command(createCommand)
     .command(listCommand)
     .command(deleteCommand)
-    .command(swapCommand)
-    .command(mergeCommand);
+    .command(mergeCommand)
+    .command(startupLogCommand);
 };
 
 export const handler = () => {

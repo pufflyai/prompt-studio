@@ -25,6 +25,11 @@ export const createTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof cre
   return async (c) => {
     const { tag_ids, ...input } = c.req.valid("json");
 
+    if (!input.status_id) {
+      const defaultStatus = await deps.statusesService.getDefault(input.project_id);
+      if (defaultStatus) input.status_id = defaultStatus.id;
+    }
+
     const ticket = await deps.ticketsService.create(input);
 
     if (tag_ids && tag_ids.length > 0) {

@@ -33,10 +33,11 @@ pstdio projects create [name]
    - If `--repo` is provided, connects each specified repo path.
    - If `--repo` is omitted and the current directory is inside a git repo, connects the current repo.
    - If `--repo` is omitted and not inside a git repo, creates the project with no repos.
-3. For each repo, reuses the existing `repos` row if one matches, otherwise inserts a new one, then links it via `project_repos`.
-4. Writes `.pstdio/config.json` with the project ID.
-5. Scaffolds starter docs at `.pstdio/docs/`.
-6. Installs default skills for each configured agent.
+3. For each repo, resolves the `remote` URL from the git origin (`git remote get-url origin`). The `remote` is the canonical repo identifier. The local `path` is stored alongside it for local operations (worktree creation, etc.). If the repo has no remote, only `path` is stored.
+4. Reuses the existing `repos` row if one matches by `remote` (preferred) or `path`, otherwise inserts a new one, then links it via `project_repos`.
+5. Writes `.pstdio/config.json` with the project ID.
+6. Scaffolds starter docs at `.pstdio/docs/`.
+7. Installs default skills for each configured agent.
 
 ### Output
 
@@ -69,7 +70,7 @@ pstdio projects link --project-id <project-id>
 
 1. Must be run inside a git repository.
 2. Fails if the project ID does not exist.
-3. Registers the current repo and writes `.pstdio/config.json`.
+3. Registers the current repo (resolving `remote` from git origin) and writes `.pstdio/config.json`.
 4. If `.pstdio/docs/` does not exist locally, pull persisted docs. If no remote docs exist, scaffold starter docs instead.
 5. Install default skills for each configured agent.
 
@@ -142,6 +143,60 @@ Unlinked project at /path/to/repo
 
 - `"Not inside a git repository."`: no git root found.
 - `"No project linked. Nothing to unlink."`: `.pstdio/config.json` does not exist.
+
+---
+
+## `pstdio projects view`
+
+### Usage
+
+```sh
+pstdio projects view [--project-id <project-id>]
+```
+
+### Flags
+
+| Flag           | Type     | Required | Description                                                                 |
+| -------------- | -------- | -------- | --------------------------------------------------------------------------- |
+| `--project-id` | `string` | no       | Target project. Defaults to the current project from `.pstdio/config.json`. |
+
+### Behavior
+
+1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
+2. Fetch the project details from the database.
+3. Fetch linked repos for the project.
+4. Fetch the startup script status (set or not).
+5. Print all project details in a key-value format.
+
+### Output
+
+```text
+Name:             my-app
+ID:               118795c0-4abd-46bc-8888-0e59589c4e1f
+Shorthand:        MA
+Created:          2026-01-15
+Updated:          2026-01-20
+
+Startup script:   configured
+Repos:            2 linked
+```
+
+When the startup script is not set:
+
+```text
+Startup script:   none
+```
+
+When no repos are linked:
+
+```text
+Repos:            none
+```
+
+### Errors
+
+- `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
+- `"Project not found: <project-id>"`: the given project ID does not exist.
 
 ---
 
@@ -332,10 +387,17 @@ pstdio projects repos [--project-id <project-id>]
 ### Output
 
 ```text
-Name              Path                                  Local
-prompt-studio     /Users/me/Projects/prompt-studio       yes
-backend-api       /Users/me/Projects/backend-api         yes
-infra             /Users/me/Projects/infra               no
+Name              Remote                                Path                                  Local
+prompt-studio     git@github.com:org/prompt-studio.git  /Users/me/Projects/prompt-studio       yes
+backend-api       git@github.com:org/backend-api.git    /Users/me/Projects/backend-api         yes
+infra             git@github.com:org/infra.git          /Users/me/Projects/infra               no
+```
+
+When a repo has no remote:
+
+```text
+Name              Remote   Path                                  Local
+local-tools       -        /Users/me/Projects/local-tools         yes
 ```
 
 If no repos are linked:

@@ -3,7 +3,7 @@ import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { listTicketFiles as defaultListTicketFiles } from "@/features/tickets/api/list-ticket-files";
 import { listTickets as defaultListTickets } from "@/features/tickets/api/list-tickets";
-import { listTicketFiles as listLocalTicketFiles } from "@/features/tickets/local-ticket";
+import { listTicketFiles as listLocalTicketFiles, resolveTicketDir } from "@/features/tickets/local-ticket";
 
 export const command = "files";
 export const describe = "List ticket files from database and local project";
@@ -80,50 +80,50 @@ const formatTable = (rows: FileRow[]) => {
   return [line(header), ...rows.map(line)].join("\n");
 };
 
+const resolveProject = (deps: Deps, explicitId?: string) => {
+  if (explicitId) {
+    const root = deps.findGitRoot(deps.cwd());
+    const hasConfig = root && deps.readConfig(root);
+    return { projectId: explicitId, root: hasConfig ? root : null };
+  }
+
+  const root = deps.findGitRoot(deps.cwd());
+  if (!root) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
+  const config = deps.readConfig(root);
+  if (!config) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
+  return { projectId: config.project_id, root };
+};
+
+const buildFileRows = (dbFileNames: Set<string>, localFileNames: Set<string>, ticketDirRelative: string | null) => {
+  const allFiles = Array.from(new Set([...dbFileNames, ...localFileNames])).sort();
+
+  return allFiles.map((fileName) => ({
+    fileName,
+    db: dbFileNames.has(fileName) ? "yes" : "no",
+    local: localFileNames.has(fileName) ? "yes" : "no",
+    localPath: localFileNames.has(fileName) && ticketDirRelative ? `${ticketDirRelative}/files/${fileName}` : "-",
+  }));
+};
+
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<FilesArgs>) => {
-    let projectId = argv["project-id"];
-    let root: string | null = null;
-
-    if (!projectId) {
-      root = deps.findGitRoot(deps.cwd());
-      if (!root) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
-      const config = deps.readConfig(root);
-      if (!config) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
-      projectId = config.project_id;
-    } else {
-      root = deps.findGitRoot(deps.cwd());
-      if (root) {
-        const config = deps.readConfig(root);
-        if (!config) root = null;
-      }
-    }
+    const { projectId, root } = resolveProject(deps, argv["project-id"]);
 
     const ticket = await resolveTicketByShorthand(deps, projectId, argv.id);
     if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
     const dbFiles = await deps.listTicketFiles(API_URL, ticket.id);
     const localFiles = root ? listLocalTicketFiles(root, argv.id) : [];
-    const dbFileNames = new Set(dbFiles.map((file) => file.file_name));
-    const localFileNames = new Set(localFiles);
-    const allFiles = Array.from(new Set([...dbFileNames, ...localFileNames])).sort();
+    const ticketDir = root ? resolveTicketDir(root, argv.id) : null;
+    const ticketDirRelative = ticketDir && root ? ticketDir.replace(`${root}/`, "") : null;
 
-    if (allFiles.length === 0) {
+    const rows = buildFileRows(new Set(dbFiles.map((file) => file.file_name)), new Set(localFiles), ticketDirRelative);
+
+    if (rows.length === 0) {
       deps.log("No ticket files found.");
       return;
     }
-
-    const rows = allFiles.map((fileName) => {
-      const hasDb = dbFileNames.has(fileName);
-      const hasLocal = localFileNames.has(fileName);
-      return {
-        fileName,
-        db: hasDb ? "yes" : "no",
-        local: hasLocal ? "yes" : "no",
-        localPath: hasLocal ? `.pstdio/tickets/${argv.id}/files/${fileName}` : "-",
-      };
-    });
 
     deps.log(formatTable(rows));
   };

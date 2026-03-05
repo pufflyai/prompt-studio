@@ -5,8 +5,13 @@ import { closeOverlay } from "./types";
 export function handleOverlayInput(input: string, key: InputKey, deps: KeyboardDeps) {
   const { overlay } = deps.mode;
   if (overlay === "help") {
-    if (input === "?" || key.escape) closeOverlay(deps);
-    return true;
+    if (input === "?" || key.escape) {
+      closeOverlay(deps);
+      return true;
+    }
+    // Close help and let global shortcuts pass through
+    closeOverlay(deps);
+    return false;
   }
   if (overlay === "view") {
     if (key.escape) closeOverlay(deps);

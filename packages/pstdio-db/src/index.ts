@@ -11,6 +11,7 @@ export type { ValidColor } from "./services/colors";
 export { isValidColor, VALID_COLORS } from "./services/colors";
 export { createProjectsService } from "./services/projects/projects";
 export { createReposService } from "./services/repos/repos";
+export { createSessionsService } from "./services/sessions/sessions";
 export { createStatusesService } from "./services/statuses/statuses";
 export { createTagsService } from "./services/tags/tags";
 export { createTemplatesService } from "./services/templates/templates";

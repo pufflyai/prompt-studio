@@ -1,5 +1,14 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
+
+const findTicketDir = (repo: string, shorthand: string) => {
+  const ticketsBase = join(repo, ".pstdio", "tickets");
+  const prefix = `${shorthand}_`;
+  const match = readdirSync(ticketsBase).find((name) => name.startsWith(prefix));
+  if (!match) return null;
+  return join(ticketsBase, match);
+};
+
 import { join } from "node:path";
 import { cleanupDirs, createGitRepo, runPstdio, runPstdioSafe } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
@@ -63,12 +72,13 @@ describe("pstdio tickets delete", () => {
 
     run(`tickets save --id ${shorthand}`, repo);
 
-    const ticketDir = join(repo, ".pstdio", "tickets", shorthand);
-    expect(existsSync(ticketDir)).toBe(true);
+    const ticketDir = findTicketDir(repo, shorthand);
+    expect(ticketDir).not.toBeNull();
+    expect(existsSync(ticketDir!)).toBe(true);
 
     run(`tickets delete --id ${shorthand}`, repo);
 
-    expect(existsSync(ticketDir)).toBe(false);
+    expect(findTicketDir(repo, shorthand)).toBeNull();
   });
 
   test("fails for nonexistent ticket", () => {

@@ -23,18 +23,54 @@ The shorthand is auto-generated when a ticket is created and used as the primary
 
 ---
 
+## Display Title
+
+Each ticket directory includes a **display title** suffix derived from the ticket's markdown content. The directory name follows the format `<shorthand>_<display_title>`.
+
+### Extracting the display title
+
+The display title is extracted from the markdown content written to `ticket.md`:
+
+1. **Skip YAML frontmatter** — if the content starts with `---`, skip everything up to and including the closing `---`.
+2. **Find the first `# heading`** — scan remaining lines for the first line starting with `# ` (ATX heading level 1).
+3. **Strip markdown formatting** — remove `**`, `*`, `` ` ``, and convert `[text](url)` to `text`.
+4. **Slugify** the extracted text:
+   a. Lowercase.
+   b. Replace any run of non-alphanumeric characters with a single hyphen.
+   c. Strip leading and trailing hyphens.
+   d. Truncate to 50 characters.
+   e. Strip any trailing hyphens left after truncation.
+5. **Fallback** — if no `# heading` is found, use the first non-empty, non-frontmatter line instead and apply steps 3–4.
+
+The maximum length of the full directory name (`<shorthand>_<display_title>`) is **80 characters**. The display title is truncated as needed to stay within this limit.
+
+### Examples
+
+| Markdown content (first heading)  | Display Title      | Directory Name            |
+| --------------------------------- | ------------------ | ------------------------- |
+| `# Fix login bug`                 | `fix-login-bug`    | `PS-12_fix-login-bug`     |
+| `# Add dark mode`                 | `add-dark-mode`    | `PS-13_add-dark-mode`     |
+| `# Update **all** docs`           | `update-all-docs`  | `PS-14_update-all-docs`   |
+| `# [Link](http://x.com) cleanup` | `link-cleanup`     | `PS-15_link-cleanup`      |
+
+### Lookup
+
+When looking up a ticket directory by shorthand, the CLI searches for a directory whose name starts with `<shorthand>_`. The display title is set at creation time and is not updated when the ticket content changes.
+
+---
+
 ## Ticket File Layout
 
 Each ticket lives in its own directory under `.pstdio/tickets/`:
 
 ```text
 .pstdio/tickets/
-  PS-12/
+  PS-12_fix-login-bug/
     ticket.md
     files/
       architecture.md
       screenshot.png
-  PS-13/
+  PS-13_add-dark-mode/
     ticket.md
 ```
 
@@ -82,7 +118,7 @@ pstdio tickets write --title <title> --template <template-name> --tag <tag>... [
 
 1. Must be run inside a linked project (`.pstdio/config.json` must exist).
 2. Create a ticket in the database with `draft=true`. Assign the status from `--status` if provided, otherwise assign the project's default status.
-3. Create the ticket directory at `.pstdio/tickets/<shorthand>/`.
+3. Create the ticket directory at `.pstdio/tickets/<shorthand>_<display_title>/` (see [Display Title](#display-title)).
 4. If `--template` is provided, populate `ticket.md` with the template content after replacing all placeholders (`{{TICKET_ID}}`, `{{TICKET_TITLE}}`, `{{CREATED_AT}}`, `{{INPUT}}`, `{{PARENT_ID}}`).
 5. If no `--template`, write a minimal `ticket.md` with the title.
 6. If `--tag` values are provided, assign matching tags to the ticket. Tags must already exist in the project.
@@ -90,7 +126,7 @@ pstdio tickets write --title <title> --template <template-name> --tag <tag>... [
 ### Output
 
 ```text
-Created ticket PS-12 (draft) at .pstdio/tickets/PS-12/ticket.md
+Created ticket PS-12 (draft) at .pstdio/tickets/PS-12_fix-login-bug/ticket.md
 ```
 
 ### Errors
@@ -140,29 +176,78 @@ Created ticket PS-13
 
 ---
 
+## `pstdio tickets view`
+
+### Usage
+
+```sh
+pstdio tickets view --id <ticket-shorthand> [--project-id <project-id>]
+```
+
+### Flags
+
+| Flag           | Type     | Required | Description                                                                 |
+| -------------- | -------- | -------- | --------------------------------------------------------------------------- |
+| `--id`         | `string` | yes      | The ticket shorthand or ID (e.g. `PS-12`).                                  |
+| `--project-id` | `string` | no       | Target project. Defaults to the current project from `.pstdio/config.json`. |
+
+### Behavior
+
+1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
+2. Fetch the ticket from the database by shorthand or ID.
+3. Resolve ticket status name and tags.
+4. Display a summary of the ticket.
+
+### Output
+
+```text
+Shorthand:   PS-12
+Title:       Fix login bug
+Status:      backlog
+Tags:        bug
+Priority:    P1
+Complexity:  medium
+Created:     2026-01-15T10:00:00Z
+Updated:     2026-01-20T14:30:00Z
+```
+
+When a ticket has no tags, the `Tags` line shows `-`.
+
+When priority or complexity is not set, those lines show `-`.
+
+### Errors
+
+- `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
+- `"Project not found: <project-id>"`: the given project ID does not exist.
+- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
+
+---
+
 ## `pstdio tickets save`
 
 ### Usage
 
 ```sh
-pstdio tickets save --id <ticket-shorthand> --tag <tag>...
+pstdio tickets save --id <ticket-shorthand> [--status <status>] [--tag <tag>...]
 ```
 
 ### Flags
 
-| Flag    | Type       | Required | Description                                       |
-| ------- | ---------- | -------- | ------------------------------------------------- |
-| `--id`  | `string`   | yes      | The ticket shorthand (e.g. `PS-12`).              |
-| `--tag` | `string[]` | no       | One or more tags to assign or update. Repeatable. |
+| Flag       | Type       | Required | Description                                                          |
+| ---------- | ---------- | -------- | -------------------------------------------------------------------- |
+| `--id`     | `string`   | yes      | The ticket shorthand (e.g. `PS-12`).                                 |
+| `--status` | `string`   | no       | Status name to assign. Must match an existing status in the project. |
+| `--tag`    | `string[]` | no       | One or more tags to assign or update. Repeatable.                    |
 
 ### Behavior
 
 1. Must be run inside a linked project.
-2. Read the local ticket file at `.pstdio/tickets/<ticket-shorthand>/ticket.md`.
+2. Find the local ticket directory matching `<ticket-shorthand>_*` and read `ticket.md` from it.
 3. Update the ticket in the database with the local file content.
 4. Set `draft=false` to publish the ticket.
-5. If `.pstdio/tickets/<ticket-shorthand>/files/` exists, upload every file under it and associate it with the ticket.
-6. If `--tag` values are provided, update the tag assignments.
+5. If `--status` is provided, look up the status by name and assign its ID.
+6. If `.pstdio/tickets/<ticket-shorthand>/files/` exists, upload every file under it and associate it with the ticket.
+7. If `--tag` values are provided, update the tag assignments.
 
 ### Output
 
@@ -178,6 +263,7 @@ If no files were uploaded, omit the second line.
 - `"Not inside a pstdio project. Run 'pstdio projects create' first."`: no `.pstdio/config.json` found.
 - `"Local ticket not found: .pstdio/tickets/<ticket-shorthand>/ticket.md"`: no local file for the given shorthand.
 - `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
+- `"Status not found: <status>"`: the given status name does not exist in the project.
 - `"Tag not found: <tag>"`: the given tag does not exist in the project.
 
 ---
@@ -514,9 +600,9 @@ Archived ticket PS-12
 
 ## Local Side Effects
 
-| Path                                           | Description                                                                            |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `.pstdio/tickets/<shorthand>/ticket.md`        | Local ticket file created by `write`/`pull`, read by `save`.                           |
-| `.pstdio/tickets/<shorthand>/files/`           | Local directory for ticket-associated files written by `pull`, read by `save`/`files`. |
-| `.pstdio/tickets/<shorthand>/files/<filename>` | Individual ticket-associated files synced between local project and DB.                |
-| `.pstdio/workspaces/<workspace-shorthand>/`    | Git worktree path referenced by `pstdio tickets workspaces` for ticket-associated workspaces. |
+| Path                                                            | Description                                                                                   |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `.pstdio/tickets/<shorthand>_<display_title>/ticket.md`         | Local ticket file created by `write`/`pull`, read by `save`.                                  |
+| `.pstdio/tickets/<shorthand>_<display_title>/files/`            | Local directory for ticket-associated files written by `pull`, read by `save`/`files`.        |
+| `.pstdio/tickets/<shorthand>_<display_title>/files/<filename>`  | Individual ticket-associated files synced between local project and DB.                       |
+| `.pstdio/workspaces/<workspace-shorthand>/`                     | Git worktree path referenced by `pstdio tickets workspaces` for ticket-associated workspaces. |

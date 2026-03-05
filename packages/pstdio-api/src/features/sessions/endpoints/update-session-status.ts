@@ -1,0 +1,49 @@
+import { createRoute, z } from "@hono/zod-openapi";
+import type { RouteDeps } from "../../deps";
+import { notFoundResponseSchema, sessionResponseSchema } from "../dto";
+
+export const updateSessionStatusRoute = createRoute({
+  method: "patch",
+  path: "/sessions/{id}/status",
+  description: "Update session status.",
+  tags: ["Sessions"],
+  request: {
+    params: z.object({
+      id: z.string().openapi({ description: "Session ID" }),
+    }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            status: z.enum(["in_progress", "awaiting_input", "completed", "failed", "cancelled"]),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Session status updated.",
+      content: { "application/json": { schema: sessionResponseSchema } },
+    },
+    404: {
+      description: "Session not found.",
+      content: { "application/json": { schema: notFoundResponseSchema } },
+    },
+  },
+});
+
+export const updateSessionStatusHandler = (deps: RouteDeps) => {
+  return async (c: any) => {
+    const { id } = c.req.valid("param");
+    const { status } = c.req.valid("json");
+
+    const updated = await deps.sessionsService.updateStatus(id, status);
+    if (!updated) {
+      return c.json({ error: `Session not found: ${id}` }, 404);
+    }
+
+    deps.eventBus.emit("sessions", "set", updated);
+    return c.json(updated, 200);
+  };
+};

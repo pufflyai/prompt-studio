@@ -24,7 +24,7 @@ A project is the top-level container in pstdio. It groups repos, tickets, docs, 
 | Table             | Purpose                                         |
 | ----------------- | ----------------------------------------------- |
 | `projects`        | Core project record (name, shorthand, dates).   |
-| `repos`           | Git repositories (name, path).                  |
+| `repos`           | Git repositories (name, path, remote).          |
 | `project_repos`   | Junction table linking projects to repos.       |
 
 A project can have zero or more repos. The `project_repos` junction table uses cascade deletes on both sides — deleting a project removes all links, deleting a repo unlinks it from all projects.
@@ -57,7 +57,7 @@ CLI                              API                         DB
 ```
 
 1. **Create the project** — `POST /projects` inserts the project row and auto-creates default ticket statuses, ticket tags, and templates.
-2. **Register repos** (optional) — for each repo (`--repo` flag, or auto-detected from cwd), `POST /projects/{id}/repos` reuses the existing `repos` row if one matches, otherwise inserts a new one, then links it via `project_repos`. If no repos are specified and the command is not run inside a git repo, this step is skipped.
+2. **Register repos** (optional) — for each repo (`--repo` flag, or auto-detected from cwd), resolves the `remote` URL from `git remote get-url origin` (canonical identifier) and the local `path`. `POST /projects/{id}/repos` reuses the existing `repos` row if one matches by `remote` (preferred) or `path`, otherwise inserts a new one, then links it via `project_repos`. If no repos are specified and the command is not run inside a git repo, this step is skipped.
 3. **Write local config** — `.pstdio/config.json` is written with the `project_id`.
 4. **Scaffold docs** — starter docs are created at `.pstdio/docs/`.
 5. **Seed templates** — bundled templates are uploaded to the project.

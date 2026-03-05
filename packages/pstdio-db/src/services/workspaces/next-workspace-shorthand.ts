@@ -1,2 +1,2 @@
 export const nextWorkspaceShorthand = (ticketShorthand: string, existingCount: number) =>
-  `${ticketShorthand}/A${existingCount + 1}`;
+  `${ticketShorthand}_A${existingCount + 1}`;
