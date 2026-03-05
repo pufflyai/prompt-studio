@@ -1,23 +1,13 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { mockFetchSequence } from "@/test-utils/mock-fetch";
 import { createAndInitProject } from "./create-and-init";
 
 const tmpBase = join(import.meta.dirname, "__test-tmp__");
 
-const originalFetch = globalThis.fetch;
-
 const templateResponse = { status: 201, body: { id: "tpl", name: "t", template_type: "docs", is_default: false } };
 const seedTemplateResponses = Array.from({ length: 6 }, () => templateResponse);
-
-const mockFetchSequence = (responses: { status: number; body: unknown }[]) => {
-  let callIndex = 0;
-  globalThis.fetch = mock(() => {
-    const resp = responses[callIndex++];
-    if (!resp) return Promise.resolve(new Response(JSON.stringify({}), { status: 200 }));
-    return Promise.resolve(new Response(JSON.stringify(resp.body), { status: resp.status }));
-  }) as unknown as typeof fetch;
-};
 
 const setup = (name: string) => {
   const dir = join(tmpBase, name);
@@ -30,7 +20,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  globalThis.fetch = originalFetch;
   rmSync(tmpBase, { recursive: true, force: true });
 });
 
@@ -45,7 +34,7 @@ describe("createAndInitProject", () => {
     const root = setup("create-init");
 
     const fakeHome = join(tmpBase, "__fake-home__");
-    const project = await createAndInitProject(root, "Test", { homedir: fakeHome });
+    const project = await createAndInitProject(root, "Test", { homedir: fakeHome, repoPaths: [root] });
 
     expect(project).toEqual({ id: "proj-1", name: "Test" });
     expect(globalThis.fetch).toHaveBeenCalledTimes(9);
@@ -58,6 +47,27 @@ describe("createAndInitProject", () => {
 
     expect(existsSync(join(root, ".opencode", "skills", "create-ticket", "SKILL.md"))).toBe(true);
     expect(existsSync(join(root, ".opencode", "skills", "implement-ticket", "SKILL.md"))).toBe(true);
+  });
+
+  test("creates project with no repos when repoPaths is empty", async () => {
+    mockFetchSequence([
+      { status: 201, body: { id: "proj-no-repo", name: "NoRepo" } },
+      ...seedTemplateResponses,
+      { status: 200, body: [] },
+    ]);
+    const root = setup("no-repo");
+
+    const project = await createAndInitProject(root, "NoRepo", {
+      homedir: join(tmpBase, "__fake-home__"),
+      repoPaths: [],
+    });
+
+    expect(project).toEqual({ id: "proj-no-repo", name: "NoRepo" });
+    // 1 create + 0 registerRepo + 6 templates + 1 skills = 8
+    expect(globalThis.fetch).toHaveBeenCalledTimes(8);
+
+    const config = JSON.parse(readFileSync(join(root, ".pstdio", "config.json"), "utf8"));
+    expect(config.project_id).toBe("proj-no-repo");
   });
 
   test("throws when .pstdio/config.json already exists", async () => {
@@ -84,7 +94,10 @@ describe("createAndInitProject", () => {
     mkdirSync(docsDir, { recursive: true });
     writeFileSync(join(docsDir, "my-doc.md"), "existing doc");
 
-    const project = await createAndInitProject(root, "HasDocs", { homedir: join(tmpBase, "__fake-home__") });
+    const project = await createAndInitProject(root, "HasDocs", {
+      homedir: join(tmpBase, "__fake-home__"),
+      repoPaths: [root],
+    });
     expect(project).toEqual({ id: "proj-3", name: "HasDocs" });
 
     // Should NOT have added starter files

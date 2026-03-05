@@ -5,6 +5,7 @@ import type {
   createReposService,
   createTemplatesService,
   createTicketsService,
+  createWorkspacesService,
   DbClient,
 } from "pstdio-db";
 import type { createFilesService, createSkillsService } from "pstdio-storage";
@@ -28,5 +29,6 @@ export interface RouteDeps {
   skillsService: ReturnType<typeof createSkillsService>;
   templatesService: ReturnType<typeof createTemplatesService>;
   ticketsService: ReturnType<typeof createTicketsService>;
+  workspacesService: ReturnType<typeof createWorkspacesService>;
   agentRegistry: AgentRegistry;
 }

@@ -1,16 +1,13 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { mockFetch } from "@/test-utils/mock-fetch";
 import { installDefaultSkills, installSkillsForAgent, removeBundledSkillsForAgent } from "./install-default-skills";
 
 const tmpBase = join(import.meta.dirname, "__test-tmp__");
 
-const originalFetch = globalThis.fetch;
-
 const mockAgents = (agents: { agent_id: string; is_default: boolean }[]) => {
-  globalThis.fetch = mock(() =>
-    Promise.resolve(new Response(JSON.stringify(agents), { status: 200 })),
-  ) as unknown as typeof fetch;
+  mockFetch(200, agents);
 };
 
 const setup = (name: string) => {
@@ -27,7 +24,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  globalThis.fetch = originalFetch;
   rmSync(tmpBase, { recursive: true, force: true });
 });
 

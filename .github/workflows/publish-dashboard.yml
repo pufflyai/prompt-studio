@@ -1,14 +1,13 @@
-name: Publish Dashboard Image
+name: Publish Landing Page Image
 
 on:
   push:
     branches:
       - main
     paths:
-      - webapps/dashboard/**
+      - clients/landing-page/**
       - packages/ui/**
-      - deployment/nginx/dashboard.conf
-      - webapps/dashboard/Dockerfile
+      - clients/landing-page/Dockerfile
       - package.json
       - bun.lock
       - .github/workflows/publish-dashboard.yml
@@ -19,7 +18,7 @@ permissions:
   packages: write
 
 jobs:
-  publish_dashboard:
+  publish_landing_page:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,16 +34,16 @@ jobs:
         id: metadata
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/dashboard
+          images: ghcr.io/${{ github.repository }}/landing-page
           tags: |
             type=sha,format=short
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push dashboard image
+      - name: Build and push landing-page image
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: webapps/dashboard/Dockerfile
+          file: clients/landing-page/Dockerfile
           push: true
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}

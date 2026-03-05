@@ -18,30 +18,36 @@ pstdio projects create [name]
 
 | Name   | Type     | Required | Description                                            |
 | ------ | -------- | -------- | ------------------------------------------------------ |
-| `name` | `string` | no       | The project name. Defaults to the current repo folder. |
+| `name` | `string` | no       | The project name. Defaults to the current folder name. |
 
 ### Flags
 
-None.
+| Flag     | Type       | Required | Description                                                                                     |
+| -------- | ---------- | -------- | ----------------------------------------------------------------------------------------------- |
+| `--repo` | `string[]` | no       | Path(s) to git repositories to connect. Repeatable. Defaults to the current repo if inside one. |
 
 ### Behavior
 
-1. Must be run inside a git repository.
-2. Fails if `.pstdio/config.json` already exists (project already initialized).
-3. Creates the project, registers the current repo, and writes `.pstdio/config.json`.
-4. Scaffolds starter docs at `.pstdio/docs/`.
-5. Installs default skills for each configured agent.
+1. Fails if `.pstdio/config.json` already exists (project already initialized).
+2. Creates the project and connects repos:
+   - If `--repo` is provided, connects each specified repo path.
+   - If `--repo` is omitted and the current directory is inside a git repo, connects the current repo.
+   - If `--repo` is omitted and not inside a git repo, creates the project with no repos.
+3. For each repo, reuses the existing `repos` row if one matches, otherwise inserts a new one, then links it via `project_repos`.
+4. Writes `.pstdio/config.json` with the project ID.
+5. Scaffolds starter docs at `.pstdio/docs/`.
+6. Installs default skills for each configured agent.
 
 ### Output
 
 ```text
-Created project "my-app" (118795c0-4abd-46bc-8888-0e59589c4e1f) and initialized .pstdio at /path/to/repo
+Created project "my-app" (118795c0-4abd-46bc-8888-0e59589c4e1f) and initialized .pstdio at /path/to/cwd
 ```
 
 ### Errors
 
-- `"Not inside a git repository. Run 'git init' first."`: no git root found.
 - `"Project already initialized. Use 'pstdio projects link' to switch projects."`: `.pstdio/config.json` already exists.
+- `"Not a git repository: <path>"`: a `--repo` path is not a valid git repository.
 
 ---
 
@@ -187,11 +193,11 @@ A project can define a startup script that runs automatically when a new workspa
 
 ### Command Summary
 
-| Command                                 | Purpose                        |
-| --------------------------------------- | ------------------------------ |
-| `pstdio projects startup-script set`    | Set the startup script.        |
-| `pstdio projects startup-script get`    | Print the startup script.      |
-| `pstdio projects startup-script clear`  | Remove the startup script.     |
+| Command                                | Purpose                    |
+| -------------------------------------- | -------------------------- |
+| `pstdio projects startup-script set`   | Set the startup script.    |
+| `pstdio projects startup-script get`   | Print the startup script.  |
+| `pstdio projects startup-script clear` | Remove the startup script. |
 
 All subcommands require a linked project (`.pstdio/config.json` exists). If missing, they fail with `"Not inside a pstdio project. Run 'pstdio projects create' first."`.
 

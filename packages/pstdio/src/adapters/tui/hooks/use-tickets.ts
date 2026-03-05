@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useLiveQuery } from "@tanstack/react-db";
+import { useState } from "react";
 
 import { API_URL } from "@/features/api-url";
+import { getCollection, type SyncedRow } from "@/features/sync/collections";
 import { createTicket as apiCreateTicket } from "@/features/tickets/api/create-ticket";
-import { listTicketStatuses } from "@/features/tickets/api/list-ticket-statuses";
-import { listTickets } from "@/features/tickets/api/list-tickets";
 import { updateTicket as apiUpdateTicket } from "@/features/tickets/api/update-ticket";
 
 type TicketListItem = {
@@ -34,20 +34,8 @@ export type TicketFlatRow =
   | { type: "header"; statusName: string; statusColor: string }
   | { type: "ticket"; ticket: TicketListItem; depth: number; hasChildren: boolean };
 
-const STATUS_FILTER_CYCLE = ["all", "backlog", "wip", "in_review", "done", "archived"] as const;
-
-const filterTickets = (tickets: TicketListItem[], statusFilter: string | null, searchQuery: string) => {
-  let filtered = tickets;
-
-  if (statusFilter === "archived") {
-    filtered = filtered.filter((t) => t.archived);
-  } else {
-    filtered = filtered.filter((t) => !t.archived && !t.draft);
-  }
-
-  if (statusFilter && statusFilter !== "all" && statusFilter !== "archived") {
-    filtered = filtered.filter((t) => t.status_name === statusFilter);
-  }
+const filterTickets = (tickets: TicketListItem[], searchQuery: string) => {
+  let filtered = tickets.filter((t) => !t.archived && !t.draft);
 
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
@@ -66,10 +54,9 @@ const buildFlatRows = (
   tickets: TicketListItem[],
   statuses: TicketStatus[],
   expanded: Set<string>,
-  statusFilter: string | null,
   searchQuery: string,
 ): TicketFlatRow[] => {
-  const filtered = filterTickets(tickets, statusFilter, searchQuery);
+  const filtered = filterTickets(tickets, searchQuery);
   const rootTickets = filtered.filter((t) => !t.parent_id);
   const getChildren = (parentId: string) => tickets.filter((t) => t.parent_id === parentId);
 
@@ -109,41 +96,63 @@ const buildFlatRows = (
   return rows;
 };
 
+const toTicketListItem = (
+  row: SyncedRow,
+  statusMap: Map<string, SyncedRow>,
+  tagAssignments: SyncedRow[],
+  tagMap: Map<string, SyncedRow>,
+): TicketListItem => {
+  const status = row.status_id ? statusMap.get(row.status_id as string) : undefined;
+  const assignedTagIds = tagAssignments.filter((a) => a.ticket_id === row.id).map((a) => a.ticket_tag_id as string);
+  const tagNames = assignedTagIds.map((tid) => tagMap.get(tid)?.name as string).filter(Boolean);
+
+  return {
+    id: row.id,
+    shorthand: row.shorthand as string,
+    project_id: row.project_id as string,
+    status_id: (row.status_id as string) ?? null,
+    title: (row.title as string) ?? null,
+    priority: (row.priority as string) ?? null,
+    complexity: (row.complexity as string) ?? null,
+    draft: row.draft as boolean,
+    archived: row.archived as boolean,
+    status_name: (status?.name as string) ?? null,
+    tag_names: tagNames,
+    created_at: row.created_at as string,
+    parent_id: (row.parent_id as string) ?? null,
+  };
+};
+
 export function useTickets(projectId: string | null) {
-  const [tickets, setTickets] = useState<TicketListItem[]>([]);
-  const [statuses, setStatuses] = useState<TicketStatus[]>([]);
   const [error, setError] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewingTicket, setViewingTicket] = useState<TicketListItem | null>(null);
 
-  const loadTickets = useCallback(async (pid: string) => {
-    try {
-      const items = await listTickets(API_URL, { project_id: pid });
-      setTickets(items as TicketListItem[]);
-      setError("");
-    } catch {
-      setError("Failed to load tickets");
-    }
-  }, []);
+  const { data: rawTickets } = useLiveQuery(() => getCollection("tickets"));
+  const { data: rawStatuses } = useLiveQuery(() => getCollection("ticket_statuses"));
+  const { data: rawTags } = useLiveQuery(() => getCollection("ticket_tags"));
+  const { data: rawTagAssignments } = useLiveQuery(() => getCollection("ticket_tag_assignments"));
 
-  const loadStatuses = useCallback(async (pid: string) => {
-    try {
-      const items = await listTicketStatuses(API_URL, pid);
-      setStatuses(items);
-    } catch {
-      setError("Failed to load statuses");
-    }
-  }, []);
+  const statusMap = new Map((rawStatuses ?? []).map((s) => [s.id, s]));
+  const tagMap = new Map((rawTags ?? []).map((t) => [t.id, t]));
+  const tagAssignments = rawTagAssignments ?? [];
 
-  useEffect(() => {
-    if (!projectId) return;
-    loadTickets(projectId);
-    loadStatuses(projectId);
-  }, [projectId, loadTickets, loadStatuses]);
+  const projectTickets = (rawTickets ?? []).filter((t) => t.project_id === projectId && !t.deleted_at);
 
-  const flatRows = buildFlatRows(tickets, statuses, expanded, statusFilter, searchQuery);
+  const tickets = projectTickets.map((t) => toTicketListItem(t, statusMap, tagAssignments, tagMap));
+
+  const statuses: TicketStatus[] = (rawStatuses ?? [])
+    .filter((s) => s.project_id === projectId)
+    .map((s) => ({
+      id: s.id,
+      name: s.name as string,
+      color: s.color as string,
+      sort_order: s.sort_order as number,
+      is_default: s.is_default as boolean,
+    }));
+
+  const flatRows = buildFlatRows(tickets, statuses, expanded, searchQuery);
 
   const toggleExpand = (ticketId: string) => {
     setExpanded((prev) => {
@@ -154,18 +163,10 @@ export function useTickets(projectId: string | null) {
     });
   };
 
-  const cycleStatusFilter = () => {
-    const currentIdx = STATUS_FILTER_CYCLE.indexOf((statusFilter ?? "all") as (typeof STATUS_FILTER_CYCLE)[number]);
-    const nextIdx = (currentIdx + 1) % STATUS_FILTER_CYCLE.length;
-    const next = STATUS_FILTER_CYCLE[nextIdx];
-    setStatusFilter(next === "all" ? null : next!);
-  };
-
   const createTicket = async (title: string, parentId?: string) => {
     if (!projectId) return;
     try {
       await apiCreateTicket(API_URL, { project_id: projectId, title, parent_id: parentId });
-      await loadTickets(projectId);
     } catch {
       setError("Failed to create ticket");
     }
@@ -174,7 +175,6 @@ export function useTickets(projectId: string | null) {
   const updateTicketStatus = async (ticketId: string, statusId: string) => {
     try {
       await apiUpdateTicket(API_URL, ticketId, { status_id: statusId });
-      if (projectId) await loadTickets(projectId);
     } catch {
       setError("Failed to update ticket");
     }
@@ -182,9 +182,7 @@ export function useTickets(projectId: string | null) {
 
   const toggleArchive = async (ticket: TicketListItem) => {
     try {
-      // archived field is toggled via the API's draft field
       await apiUpdateTicket(API_URL, ticket.id, { draft: !ticket.archived });
-      if (projectId) await loadTickets(projectId);
     } catch {
       setError("Failed to archive ticket");
     }
@@ -195,13 +193,11 @@ export function useTickets(projectId: string | null) {
     statuses,
     expanded,
     error,
-    statusFilter,
     searchQuery,
     viewingTicket,
     setSearchQuery,
     setViewingTicket,
     toggleExpand,
-    cycleStatusFilter,
     createTicket,
     updateTicketStatus,
     toggleArchive,

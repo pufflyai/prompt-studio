@@ -1,13 +1,18 @@
 import type { ApprovalRequest, ApprovalResponse, ApprovalService } from "../types";
 
-const TIMEOUT_MS = 5 * 60 * 1000;
+const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 
 type PendingEntry = {
   resolve: (response: ApprovalResponse) => void;
   timer: ReturnType<typeof setTimeout>;
 };
 
-export const createApprovalService = (send: (request: ApprovalRequest) => void): ApprovalService => {
+type Options = {
+  timeoutMs?: number;
+};
+
+export const createApprovalService = (send: (request: ApprovalRequest) => void, options?: Options): ApprovalService => {
+  const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const pending = new Map<string, PendingEntry>();
 
   const requestApproval = (request: ApprovalRequest) =>
@@ -15,7 +20,7 @@ export const createApprovalService = (send: (request: ApprovalRequest) => void):
       const timer = setTimeout(() => {
         pending.delete(request.id);
         resolve({ id: request.id, decision: "timeout" });
-      }, TIMEOUT_MS);
+      }, timeoutMs);
 
       pending.set(request.id, { resolve, timer });
       send(request);

@@ -11,3 +11,4 @@ export { createProjectsService } from "./services/projects/projects";
 export { createReposService } from "./services/repos/repos";
 export { createTemplatesService } from "./services/templates/templates";
 export { createTicketsService } from "./services/tickets/tickets";
+export { createWorkspacesService } from "./services/workspaces/workspaces";

@@ -14,11 +14,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build dashboard image
-        run: docker build -t monorepo-template/dashboard:${IMAGE_TAG} -f webapps/dashboard/Dockerfile .
-
       - name: Build landing-page image
-        run: docker build -t monorepo-template/landing-page:${IMAGE_TAG} -f webapps/landing-page/Dockerfile .
+        run: docker build -t monorepo-template/landing-page:${IMAGE_TAG} -f clients/landing-page/Dockerfile .
 
       - name: Build api image
-        run: docker build -t monorepo-template/api:${IMAGE_TAG} -f packages/api/Dockerfile .
+        run: docker build -t monorepo-template/api:${IMAGE_TAG} -f packages/pstdio-api/Dockerfile .

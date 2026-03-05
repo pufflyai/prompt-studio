@@ -1,17 +1,6 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
+import { mockFetch } from "@/test-utils/mock-fetch";
 import { getStartupScript } from "./get-startup-script";
-
-const originalFetch = globalThis.fetch;
-
-const mockFetch = (status: number, body: unknown) => {
-  globalThis.fetch = mock(() =>
-    Promise.resolve(new Response(JSON.stringify(body), { status })),
-  ) as unknown as typeof fetch;
-};
-
-afterEach(() => {
-  globalThis.fetch = originalFetch;
-});
 
 describe("getStartupScript", () => {
   test("returns script content on 200", async () => {

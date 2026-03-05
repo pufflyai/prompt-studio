@@ -34,7 +34,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Package CLI workspace
-        working-directory: packages/cli
+        working-directory: packages/pstdio
         run: |
           mkdir -p "${GITHUB_WORKSPACE}/release-assets"
           bun pm pack --destination "${GITHUB_WORKSPACE}/release-assets"
@@ -52,14 +52,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - image: dashboard
-            dockerfile: webapps/dashboard/Dockerfile
           - image: landing-page
-            dockerfile: webapps/landing-page/Dockerfile
-          - image: documentation
-            dockerfile: webapps/documentation/Dockerfile
+            dockerfile: clients/landing-page/Dockerfile
           - image: api
-            dockerfile: packages/api/Dockerfile
+            dockerfile: packages/pstdio-api/Dockerfile
     steps:
       - uses: actions/checkout@v4
 
@@ -109,7 +105,5 @@ jobs:
           files: release-assets/*.tgz
           body: |
             ## Container Images
-            - `ghcr.io/${{ github.repository }}/dashboard:${{ env.RELEASE_TAG }}`
             - `ghcr.io/${{ github.repository }}/landing-page:${{ env.RELEASE_TAG }}`
-            - `ghcr.io/${{ github.repository }}/documentation:${{ env.RELEASE_TAG }}`
             - `ghcr.io/${{ github.repository }}/api:${{ env.RELEASE_TAG }}`

@@ -1,19 +1,10 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { mockFetchSequence } from "@/test-utils/mock-fetch";
 import { linkProject } from "./link-project";
 
 const tmpBase = join(import.meta.dirname, "__test-tmp__");
-
-const originalFetch = globalThis.fetch;
-
-const mockFetchSequence = (responses: { status: number; body: unknown }[]) => {
-  let callIndex = 0;
-  globalThis.fetch = mock(() => {
-    const { status, body } = responses[callIndex++];
-    return Promise.resolve(new Response(JSON.stringify(body), { status }));
-  }) as unknown as typeof fetch;
-};
 
 const setup = (name: string) => {
   const dir = join(tmpBase, name);
@@ -26,7 +17,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  globalThis.fetch = originalFetch;
   rmSync(tmpBase, { recursive: true, force: true });
 });
 

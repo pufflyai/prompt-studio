@@ -29,7 +29,7 @@ describe("buildAgentRows", () => {
   });
 
   it("marks a matching agent as configured", () => {
-    const configured = [{ agent_id: "claude-code", is_default: false }];
+    const configured = [{ id: "1", agent_id: "claude-code", is_default: false }];
     const rows = buildAgentRows(AGENTS, configured, () => false);
 
     expect(rows[0].configured).toBe(true);
@@ -38,8 +38,8 @@ describe("buildAgentRows", () => {
 
   it("marks the default agent correctly", () => {
     const configured = [
-      { agent_id: "claude-code", is_default: true },
-      { agent_id: "opencode", is_default: false },
+      { id: "1", agent_id: "claude-code", is_default: true },
+      { id: "2", agent_id: "opencode", is_default: false },
     ];
     const rows = buildAgentRows(AGENTS, configured, () => false);
 
@@ -56,7 +56,7 @@ describe("buildAgentRows", () => {
   });
 
   it("handles mixed states across agents", () => {
-    const configured = [{ agent_id: "opencode", is_default: true }];
+    const configured = [{ id: "1", agent_id: "opencode", is_default: true }];
     const checkInstalled = (binary: string) => binary === "claude";
     const rows = buildAgentRows(AGENTS, configured, checkInstalled);
 

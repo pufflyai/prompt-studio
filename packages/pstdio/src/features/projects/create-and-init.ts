@@ -9,6 +9,7 @@ import { registerRepo } from "./api/register-repo";
 
 type InitOptions = {
   homedir?: string;
+  repoPaths?: string[];
 };
 
 export const createAndInitProject = async (root: string, name: string, options?: InitOptions) => {
@@ -17,7 +18,11 @@ export const createAndInitProject = async (root: string, name: string, options?:
   }
 
   const project = await createProject(API_URL, name);
-  await registerRepo(API_URL, project.id, { name: basename(root), path: root });
+
+  for (const repoPath of options?.repoPaths ?? []) {
+    await registerRepo(API_URL, project.id, { name: basename(repoPath), path: repoPath });
+  }
+
   writeConfig(root, { project_id: project.id });
   scaffoldDocs(root);
   await seedBundledTemplates(API_URL, project.id);

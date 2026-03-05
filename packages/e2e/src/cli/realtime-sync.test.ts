@@ -119,4 +119,82 @@ describe("realtime sync stream", () => {
 
     expect(projectEvent).toBeTruthy();
   }, 20_000);
+
+  test("streams ticket creation to connected clients", async () => {
+    const repo = createGitRepo();
+    dirs.push(repo);
+
+    runPstdio("projects create realtime-ticket-project", repo, { PSTDIO_API_URL: api.url });
+
+    const response = await fetch(`${api.url}/v1/sync/stream`);
+    expect(response.ok).toBe(true);
+
+    const sse = createSseReader(response);
+    const initEvent = await sse.readEvent();
+    expect(initEvent?.event).toBe("init");
+
+    runPstdio('tickets create --content "Realtime ticket test"', repo, { PSTDIO_API_URL: api.url });
+
+    let ticketEvent: SseEvent | null = null;
+    for (let i = 0; i < 20; i += 1) {
+      const event = await sse.readEvent();
+      if (!event) break;
+      if (event.event !== "sync:set") continue;
+
+      const data = event.data as { table: string; data: { title?: string } };
+      if (data.table === "tickets" && data.data.title === "Realtime ticket test") {
+        ticketEvent = event;
+        break;
+      }
+    }
+
+    await sse.close();
+
+    expect(ticketEvent).toBeTruthy();
+  }, 20_000);
+
+  test("ticket update in one client is reflected in another", async () => {
+    const repo = createGitRepo();
+    dirs.push(repo);
+
+    runPstdio("projects create cross-tui-project", repo, { PSTDIO_API_URL: api.url });
+
+    // Open two SSE connections (simulating two TUI instances)
+    const [responseA, responseB] = await Promise.all([
+      fetch(`${api.url}/v1/sync/stream`),
+      fetch(`${api.url}/v1/sync/stream`),
+    ]);
+
+    const sseA = createSseReader(responseA);
+    const sseB = createSseReader(responseB);
+
+    // Consume init events
+    await sseA.readEvent();
+    await sseB.readEvent();
+
+    // Create a ticket (both clients should see it)
+    runPstdio('tickets create --content "Cross TUI ticket"', repo, { PSTDIO_API_URL: api.url });
+
+    const findTicketEvent = async (sse: ReturnType<typeof createSseReader>) => {
+      for (let i = 0; i < 20; i += 1) {
+        const event = await sse.readEvent();
+        if (!event) break;
+        if (event.event !== "sync:set") continue;
+
+        const data = event.data as { table: string; data: { title?: string } };
+        if (data.table === "tickets" && data.data.title === "Cross TUI ticket") {
+          return event;
+        }
+      }
+      return null;
+    };
+
+    const [ticketA, ticketB] = await Promise.all([findTicketEvent(sseA), findTicketEvent(sseB)]);
+
+    await sseA.close();
+    await sseB.close();
+
+    expect(ticketA).toBeTruthy();
+    expect(ticketB).toBeTruthy();
+  }, 20_000);
 });

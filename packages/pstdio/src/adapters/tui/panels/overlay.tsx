@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { Mode } from "../app";
 import type { AgentRow } from "../hooks/use-agents";
 import { AgentManager } from "./agent-manager";
+import { ConfirmDialog } from "./confirm-dialog";
 import { HelpModal } from "./help-modal";
 import { MarkdownView } from "./markdown-view";
 import { ProjectPicker } from "./project-picker";
@@ -20,6 +21,7 @@ interface OverlayProps {
   agents: AgentRow[];
   agentIndex: number;
   statuses: { id: string; name: string; color: string; sort_order: number }[];
+  archiveTarget: { id: string; title: string | null } | null;
 }
 
 export function renderOverlay({
@@ -33,6 +35,7 @@ export function renderOverlay({
   agents,
   agentIndex,
   statuses,
+  archiveTarget,
 }: OverlayProps): ReactNode | null {
   if (mode.overlay === "help") {
     return <HelpModal tab={mode.tab} width={columns} viewportHeight={viewportHeight} />;
@@ -68,6 +71,10 @@ export function renderOverlay({
   }
   if (mode.overlay === "ticket-create") {
     return <TicketCreate width={columns} viewportHeight={viewportHeight} />;
+  }
+  if (mode.overlay === "confirm-archive") {
+    const title = archiveTarget?.title ?? "this ticket";
+    return <ConfirmDialog message={`Archive "${title}"?`} width={columns} viewportHeight={viewportHeight} />;
   }
   return null;
 }

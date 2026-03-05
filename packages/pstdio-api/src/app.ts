@@ -7,6 +7,7 @@ import {
   createReposService,
   createTemplatesService,
   createTicketsService,
+  createWorkspacesService,
 } from "pstdio-db";
 import { createFilesService, createSkillsService, ensureStorageRoot, resolveStorageRoot } from "pstdio-storage";
 import { createAgentRoutes } from "./features/agents/routes";
@@ -17,6 +18,7 @@ import { EventBus } from "./features/sync/event-bus";
 import { createSyncRoutes } from "./features/sync/routes";
 import { createTemplateRoutes } from "./features/templates/routes";
 import { createTicketRoutes } from "./features/tickets/routes";
+import { createWorkspaceRoutes } from "./features/workspaces/routes";
 import { logError, persistErrorLog } from "./lib/error-log";
 import { swagger } from "./swagger";
 import type { AppBindings } from "./types";
@@ -42,6 +44,7 @@ export const createApp = async (options?: AppOptions) => {
   const agentConfigsService = createAgentConfigsService(db);
   const templatesService = createTemplatesService(db);
   const ticketsService = createTicketsService(db);
+  const workspacesService = createWorkspacesService(db);
   const eventBus = new EventBus();
 
   const deps = {
@@ -56,6 +59,7 @@ export const createApp = async (options?: AppOptions) => {
     skillsService,
     templatesService,
     ticketsService,
+    workspacesService,
     agentRegistry,
   };
 
@@ -67,6 +71,7 @@ export const createApp = async (options?: AppOptions) => {
   app.route("/v1", createSkillRoutes(deps));
   app.route("/v1", createTemplateRoutes(deps));
   app.route("/v1", createTicketRoutes(deps));
+  app.route("/v1", createWorkspaceRoutes(deps));
   app.route("/v1", createSyncRoutes(deps));
 
   app.onError((err, c) => {

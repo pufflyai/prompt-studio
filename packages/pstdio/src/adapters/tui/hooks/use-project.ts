@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import { API_URL } from "@/features/api-url";
+import { useLiveQuery } from "@tanstack/react-db";
+import { useState } from "react";
+
 import { findGitRoot, readConfig, writeConfig } from "@/features/config/config";
-import { getProject } from "@/features/projects/api/get-project";
-import { listProjects } from "@/features/projects/api/list-projects";
+import { getCollection } from "@/features/sync/collections";
 
 type Project = {
   id: string;
@@ -10,43 +10,22 @@ type Project = {
 };
 
 export function useProject() {
-  const [project, setProject] = useState<Project | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [error, setError] = useState("");
+  const root = findGitRoot(process.cwd());
+  const config = root ? readConfig(root) : null;
+  const [selectedId, setSelectedId] = useState<string | null>(config?.project_id ?? null);
 
-  useEffect(() => {
-    const root = findGitRoot(process.cwd());
-    if (!root) return;
+  const { data: rawProjects } = useLiveQuery(() => getCollection("projects"));
 
-    const config = readConfig(root);
-    if (!config) return;
+  const projects: Project[] = (rawProjects ?? [])
+    .filter((p) => !p.deleted_at)
+    .map((p) => ({ id: p.id, name: p.name as string }));
 
-    getProject(API_URL, config.project_id)
-      .then((p) => {
-        if (p) setProject(p);
-      })
-      .catch(() => setError("Failed to load project"));
-  }, []);
-
-  const loadProjects = async () => {
-    try {
-      const all = await listProjects(API_URL);
-      setProjects(all);
-      setError("");
-    } catch {
-      setError("Failed to load projects");
-    }
-  };
+  const project = projects.find((p) => p.id === selectedId) ?? null;
 
   const switchProject = (id: string) => {
-    const root = findGitRoot(process.cwd());
-    if (!root) return;
-
-    writeConfig(root, { project_id: id });
-
-    const selected = projects.find((p) => p.id === id);
-    if (selected) setProject(selected);
+    if (root) writeConfig(root, { project_id: id });
+    setSelectedId(id);
   };
 
-  return { project, projects, error, loadProjects, switchProject };
+  return { project, projects, error: "", loadProjects: () => {}, switchProject };
 }

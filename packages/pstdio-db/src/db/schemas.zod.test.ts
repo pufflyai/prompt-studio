@@ -91,7 +91,6 @@ describe("schemas.zod", () => {
       id: "workspace-1",
       name: "Main",
       project_id: "project-1",
-      repo_id: null,
       session_id: null,
       status: "active",
       ticket_id: null,

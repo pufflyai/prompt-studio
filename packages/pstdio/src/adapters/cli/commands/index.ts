@@ -4,6 +4,7 @@ import * as projectsCommand from "./projects";
 import * as templatesCommand from "./templates";
 import * as ticketsCommand from "./tickets";
 import * as tuiCommand from "./tui";
+import * as workspaceCommand from "./workspace";
 
 export const topLevelCommandModules = [
   agentsCommand,
@@ -12,4 +13,5 @@ export const topLevelCommandModules = [
   templatesCommand,
   ticketsCommand,
   tuiCommand,
+  workspaceCommand,
 ];

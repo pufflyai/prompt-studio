@@ -49,7 +49,7 @@ Templates contain placeholder tokens that are automatically replaced when a tick
 
 | Placeholder        | Replaced With                                       | Source             |
 | ------------------ | --------------------------------------------------- | ------------------ |
-| `{{TICKET_ID}}`    | The generated ticket shorthand (e.g. `PS-12`).    | Auto-generated     |
+| `{{TICKET_ID}}`    | The generated ticket shorthand (e.g. `PS-12`).      | Auto-generated     |
 | `{{TICKET_TITLE}}` | Value of `--title`.                                 | `--title` flag     |
 | `{{CREATED_AT}}`   | ISO 8601 timestamp at creation time.                | Auto-generated     |
 | `{{INPUT}}`        | Value of `--input`, or empty string if omitted.     | `--input` flag     |
@@ -64,7 +64,7 @@ Additional template variables can be passed as flags and are matched by name (e.
 ### Usage
 
 ```sh
-pstdio tickets write --title <title> --template <template-name> --tag <tag>... [--input <input>] [--parent-id <parent-id>]
+pstdio tickets write --title <title> --template <template-name> --tag <tag>... [--status <status>] [--input <input>] [--parent-id <parent-id>]
 ```
 
 ### Flags
@@ -74,13 +74,14 @@ pstdio tickets write --title <title> --template <template-name> --tag <tag>... [
 | `--title`     | `string`   | yes      | The ticket title. Replaces `{{TICKET_TITLE}}` in the template.     |
 | `--template`  | `string`   | no       | Name of a template to use for the ticket body.                     |
 | `--tag`       | `string[]` | no       | One or more tags to assign. Repeatable.                            |
+| `--status`    | `string`   | no       | Status name to assign. Defaults to the project's default status.   |
 | `--input`     | `string`   | no       | User input or description. Replaces `{{INPUT}}` in the template.   |
 | `--parent-id` | `string`   | no       | Parent ticket shorthand. Replaces `{{PARENT_ID}}` in the template. |
 
 ### Behavior
 
 1. Must be run inside a linked project (`.pstdio/config.json` must exist).
-2. Create a ticket in the database with `draft=true`.
+2. Create a ticket in the database with `draft=true`. Assign the status from `--status` if provided, otherwise assign the project's default status.
 3. Create the ticket directory at `.pstdio/tickets/<shorthand>/`.
 4. If `--template` is provided, populate `ticket.md` with the template content after replacing all placeholders (`{{TICKET_ID}}`, `{{TICKET_TITLE}}`, `{{CREATED_AT}}`, `{{INPUT}}`, `{{PARENT_ID}}`).
 5. If no `--template`, write a minimal `ticket.md` with the title.
@@ -96,6 +97,7 @@ Created ticket PS-12 (draft) at .pstdio/tickets/PS-12/ticket.md
 
 - `"Not inside a pstdio project. Run 'pstdio projects create' first."`: no `.pstdio/config.json` found.
 - `"Template not found: <template-name>"`: the given template does not exist.
+- `"Status not found: <status>"`: the given status name does not exist in the project.
 - `"Tag not found: <tag>"`: the given tag does not exist in the project.
 
 ---
@@ -105,21 +107,22 @@ Created ticket PS-12 (draft) at .pstdio/tickets/PS-12/ticket.md
 ### Usage
 
 ```sh
-pstdio tickets create --content <content> [--project-id <project-id>] [--tag <tag>...]
+pstdio tickets create --content <content> [--project-id <project-id>] [--status <status>] [--tag <tag>...]
 ```
 
 ### Flags
 
-| Flag           | Type       | Required | Description                                                           |
-| -------------- | ---------- | -------- | --------------------------------------------------------------------- |
-| `--content`    | `string`   | yes      | The ticket content (title or body).                                   |
+| Flag           | Type       | Required | Description                                                                 |
+| -------------- | ---------- | -------- | --------------------------------------------------------------------------- |
+| `--content`    | `string`   | yes      | The ticket content (title or body).                                         |
 | `--project-id` | `string`   | no       | Target project. Defaults to the current project from `.pstdio/config.json`. |
-| `--tag`        | `string[]` | no       | One or more tags to assign. Repeatable.                               |
+| `--status`     | `string`   | no       | Status name to assign. Defaults to the project's default status.            |
+| `--tag`        | `string[]` | no       | One or more tags to assign. Repeatable.                                     |
 
 ### Behavior
 
 1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
-2. Create a ticket directly in the database. Does not write a local file.
+2. Create a ticket directly in the database. Assign the status from `--status` if provided, otherwise assign the project's default status. Does not write a local file.
 3. If `--tag` values are provided, assign matching tags to the ticket.
 
 ### Output
@@ -132,6 +135,7 @@ Created ticket PS-13
 
 - `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
 - `"Project not found: <project-id>"`: the given project ID does not exist.
+- `"Status not found: <status>"`: the given status name does not exist in the project.
 - `"Tag not found: <tag>"`: the given tag does not exist in the project.
 
 ---
@@ -148,7 +152,7 @@ pstdio tickets save --id <ticket-shorthand> --tag <tag>...
 
 | Flag    | Type       | Required | Description                                       |
 | ------- | ---------- | -------- | ------------------------------------------------- |
-| `--id`  | `string`   | yes      | The ticket shorthand (e.g. `PS-12`).            |
+| `--id`  | `string`   | yes      | The ticket shorthand (e.g. `PS-12`).              |
 | `--tag` | `string[]` | no       | One or more tags to assign or update. Repeatable. |
 
 ### Behavior
@@ -188,10 +192,10 @@ pstdio tickets pull --id <ticket-shorthand> [--force]
 
 ### Flags
 
-| Flag      | Type      | Required | Description                                                                 |
-| --------- | --------- | -------- | --------------------------------------------------------------------------- |
-| `--id`    | `string`  | yes      | The ticket shorthand (e.g. `PS-12`).                                      |
-| `--force` | `boolean` | no       | Overwrite local files if they already exist at the destination path.        |
+| Flag      | Type      | Required | Description                                                          |
+| --------- | --------- | -------- | -------------------------------------------------------------------- |
+| `--id`    | `string`  | yes      | The ticket shorthand (e.g. `PS-12`).                                 |
+| `--force` | `boolean` | no       | Overwrite local files if they already exist at the destination path. |
 
 ### Behavior
 
@@ -231,7 +235,7 @@ pstdio tickets files --id <ticket-shorthand> [--project-id <project-id>]
 
 | Flag           | Type     | Required | Description                                                                 |
 | -------------- | -------- | -------- | --------------------------------------------------------------------------- |
-| `--id`         | `string` | yes      | The ticket shorthand (e.g. `PS-12`).                                      |
+| `--id`         | `string` | yes      | The ticket shorthand (e.g. `PS-12`).                                        |
 | `--project-id` | `string` | no       | Target project. Defaults to the current project from `.pstdio/config.json`. |
 
 ### Behavior
@@ -275,16 +279,16 @@ pstdio tickets list [--project-id <project-id>] [--status <status>] [--tag <tag>
 
 ### Flags
 
-| Flag           | Type       | Required | Description                                                           |
-| -------------- | ---------- | -------- | --------------------------------------------------------------------- |
-| `--project-id` | `string`   | no       | List tickets for a specific project. Defaults to the current project. |
-| `--status`     | `string`   | no       | Filter by status name.                                                |
+| Flag           | Type       | Required | Description                                                                 |
+| -------------- | ---------- | -------- | --------------------------------------------------------------------------- |
+| `--project-id` | `string`   | no       | List tickets for a specific project. Defaults to the current project.       |
+| `--status`     | `string`   | no       | Filter by status name.                                                      |
 | `--tag`        | `string[]` | no       | Filter by tag. Repeatable. Tickets matching **any** given tag are returned. |
-| `--priority`   | `string`   | no       | Filter by priority (e.g. `P1`, `P2`, `P3`).                          |
-| `--complexity` | `string`   | no       | Filter by complexity (`low`, `medium`, `high`).                       |
-| `--archived`   | `boolean`  | no       | Include archived tickets. Excluded by default.                        |
-| `--draft`      | `boolean`  | no       | Include draft tickets. Excluded by default.                           |
-| `--parent-id`  | `string`   | no       | Filter by parent ticket shorthand. Returns only sub-tickets.          |
+| `--priority`   | `string`   | no       | Filter by priority (e.g. `P1`, `P2`, `P3`).                                 |
+| `--complexity` | `string`   | no       | Filter by complexity (`low`, `medium`, `high`).                             |
+| `--archived`   | `boolean`  | no       | Include archived tickets. Excluded by default.                              |
+| `--draft`      | `boolean`  | no       | Include draft tickets. Excluded by default.                                 |
+| `--parent-id`  | `string`   | no       | Filter by parent ticket shorthand. Returns only sub-tickets.                |
 
 ### Behavior
 
@@ -326,7 +330,7 @@ pstdio tickets update --id <ticket-shorthand> [--project-id <project-id>] [--sta
 
 | Flag           | Type       | Required | Description                                                                   |
 | -------------- | ---------- | -------- | ----------------------------------------------------------------------------- |
-| `--id`         | `string`   | yes      | The ticket shorthand (e.g. `PS-12`).                                        |
+| `--id`         | `string`   | yes      | The ticket shorthand (e.g. `PS-12`).                                          |
 | `--project-id` | `string`   | no       | Target project. Defaults to the current project from `.pstdio/config.json`.   |
 | `--status`     | `string`   | no       | New status name for the ticket. Must match an existing status in the project. |
 | `--tag`        | `string[]` | no       | Replace current tags with the given set. Repeatable.                          |
@@ -366,7 +370,7 @@ pstdio tickets implement --id <ticket-shorthand> [--project-id <project-id>]
 
 | Flag           | Type     | Required | Description                                                                 |
 | -------------- | -------- | -------- | --------------------------------------------------------------------------- |
-| `--id`         | `string` | yes      | The ticket shorthand (e.g. `PS-12`).                                      |
+| `--id`         | `string` | yes      | The ticket shorthand (e.g. `PS-12`).                                        |
 | `--project-id` | `string` | no       | Target project. Defaults to the current project from `.pstdio/config.json`. |
 
 ### Behavior
@@ -403,7 +407,7 @@ pstdio tickets delete --id <ticket-shorthand> [--project-id <project-id>]
 
 | Flag           | Type     | Required | Description                                                                 |
 | -------------- | -------- | -------- | --------------------------------------------------------------------------- |
-| `--id`         | `string` | yes      | The ticket shorthand (e.g. `PS-12`).                                      |
+| `--id`         | `string` | yes      | The ticket shorthand (e.g. `PS-12`).                                        |
 | `--project-id` | `string` | no       | Target project. Defaults to the current project from `.pstdio/config.json`. |
 
 ### Behavior
@@ -439,7 +443,7 @@ pstdio tickets archive --id <ticket-shorthand> [--project-id <project-id>]
 
 | Flag           | Type     | Required | Description                                                                 |
 | -------------- | -------- | -------- | --------------------------------------------------------------------------- |
-| `--id`         | `string` | yes      | The ticket shorthand (e.g. `PS-12`).                                      |
+| `--id`         | `string` | yes      | The ticket shorthand (e.g. `PS-12`).                                        |
 | `--project-id` | `string` | no       | Target project. Defaults to the current project from `.pstdio/config.json`. |
 
 ### Behavior
@@ -468,6 +472,6 @@ Archived ticket PS-12
 
 | Path                                           | Description                                                                            |
 | ---------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `.pstdio/tickets/<shorthand>/ticket.md`        | Local ticket file created by `write`/`pull`, read by `save`.                          |
+| `.pstdio/tickets/<shorthand>/ticket.md`        | Local ticket file created by `write`/`pull`, read by `save`.                           |
 | `.pstdio/tickets/<shorthand>/files/`           | Local directory for ticket-associated files written by `pull`, read by `save`/`files`. |
 | `.pstdio/tickets/<shorthand>/files/<filename>` | Individual ticket-associated files synced between local project and DB.                |

@@ -153,13 +153,12 @@ export const workspaces = pgTable(
     name: text("name").notNull(),
     session_id: text("session_id").references(() => sessions.id, { onDelete: "set null" }),
     branch: text("branch"),
-    repo_id: text("repo_id"),
     worktree_path: text("worktree_path"),
     status: text("status", { enum: ["active", "merged", "rejected"] })
       .notNull()
       .default("active"),
     archived: boolean("archived").notNull().default(false),
-    workspace_shorthand: text("workspace_shorthand"),
+    workspace_shorthand: text("workspace_shorthand").notNull(),
     created_at: text("created_at").notNull(),
     updated_at: text("updated_at").notNull(),
     deleted_at: text("deleted_at"),

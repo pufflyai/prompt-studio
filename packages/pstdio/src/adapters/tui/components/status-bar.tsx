@@ -33,25 +33,25 @@ const AGENT_KEYS: KeyHint[] = [
   { key: "esc", label: "cancel" },
 ];
 
+const CONFIRM_KEYS: KeyHint[] = [
+  { key: "enter", label: "confirm" },
+  { key: "esc", label: "cancel" },
+];
+
 const TICKETS_KEYS: KeyHint[] = [
-  { key: "j/k", label: "nav" },
-  { key: "s", label: "status" },
   { key: "n", label: "new" },
   { key: "e", label: "edit" },
-  { key: "i", label: "impl" },
   { key: "x", label: "arch" },
   { key: "?", label: "?" },
 ];
 
 const DOCS_KEYS: KeyHint[] = [
-  { key: "j/k", label: "nav" },
   { key: "enter", label: "open" },
   { key: "/", label: "search" },
   { key: "?", label: "help" },
 ];
 
 const TEMPLATES_KEYS: KeyHint[] = [
-  { key: "j/k", label: "nav" },
   { key: "d", label: "default" },
   { key: "enter", label: "view" },
   { key: "?", label: "help" },
@@ -65,6 +65,7 @@ const TAB_HINTS: Record<string, KeyHint[]> = {
 
 const getHints = (mode: Mode): KeyHint[] => {
   if (mode.search) return INPUT_KEYS;
+  if (mode.overlay === "confirm-archive") return CONFIRM_KEYS;
   if (mode.overlay === "help" || mode.overlay === "view") return OVERLAY_KEYS;
   if (mode.overlay === "projects" || mode.overlay === "status-picker") return PICKER_KEYS;
   if (mode.overlay === "agents") return AGENT_KEYS;

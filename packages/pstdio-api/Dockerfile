@@ -4,34 +4,29 @@ WORKDIR /app
 
 # Copy dependency manifests first for a cacheable, reproducible install layer.
 COPY package.json bun.lock ./
-COPY packages/api/package.json packages/api/package.json
-COPY packages/cli/package.json packages/cli/package.json
-COPY packages/db/package.json packages/db/package.json
-COPY packages/e2e/package.json packages/e2e/package.json
-COPY packages/sync/package.json packages/sync/package.json
-COPY packages/ui/package.json packages/ui/package.json
-COPY webapps/dashboard/package.json webapps/dashboard/package.json
-COPY webapps/desktop/package.json webapps/desktop/package.json
-COPY webapps/documentation/package.json webapps/documentation/package.json
-COPY webapps/landing-page/package.json webapps/landing-page/package.json
+COPY packages/pstdio-api/package.json packages/pstdio-api/package.json
+COPY packages/pstdio-agents/package.json packages/pstdio-agents/package.json
+COPY packages/pstdio-db/package.json packages/pstdio-db/package.json
+COPY packages/pstdio-storage/package.json packages/pstdio-storage/package.json
 
 RUN bun install --frozen-lockfile --ignore-scripts \
-  --filter './' \
-  --filter './packages/api' \
-  --filter './packages/db' \
-  --filter './packages/sync'
+  --filter './packages/pstdio-api' \
+  --filter './packages/pstdio-agents' \
+  --filter './packages/pstdio-db' \
+  --filter './packages/pstdio-storage'
 
 # Copy source after install so code changes do not bust the dependency cache.
 COPY tsconfig.base.json ./
-COPY packages/api packages/api
-COPY packages/db packages/db
-COPY packages/sync packages/sync
+COPY packages/pstdio-api packages/pstdio-api
+COPY packages/pstdio-agents packages/pstdio-agents
+COPY packages/pstdio-db packages/pstdio-db
+COPY packages/pstdio-storage packages/pstdio-storage
 
-WORKDIR /app/packages/api
+WORKDIR /app/packages/pstdio-api
 
 ENV NODE_ENV=production
 ENV PORT=3000
 
 EXPOSE 3000
 
-CMD ["bun", "run", "src/index.ts"]
+CMD ["bun", "run", "src/server.ts"]

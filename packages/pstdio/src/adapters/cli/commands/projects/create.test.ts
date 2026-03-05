@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
-import { createHandler, resolveProjectName } from "./create";
+import { createHandler, resolveProjectName, resolveRepoPaths, validateRepoPaths } from "./create";
 
 const originalConsoleLog = console.log;
 
@@ -12,18 +12,52 @@ describe("resolveProjectName", () => {
     expect(resolveProjectName("/work/prompt-studio", "my-project")).toBe("my-project");
   });
 
-  test("uses git root folder name when missing", () => {
+  test("uses folder name when missing", () => {
     expect(resolveProjectName("/work/prompt-studio")).toBe("prompt-studio");
   });
 
-  test("uses git root folder name when name is blank", () => {
+  test("uses folder name when name is blank", () => {
     expect(resolveProjectName("/work/prompt-studio", "   ")).toBe("prompt-studio");
   });
 });
 
+describe("resolveRepoPaths", () => {
+  test("returns explicit repo paths when --repo is given", () => {
+    const result = resolveRepoPaths(["/a", "/b"], "/work", () => "/work");
+    expect(result).toEqual(["/a", "/b"]);
+  });
+
+  test("returns [gitRoot] when --repo omitted and inside a git repo", () => {
+    const result = resolveRepoPaths(undefined, "/work/my-repo", () => "/work/my-repo");
+    expect(result).toEqual(["/work/my-repo"]);
+  });
+
+  test("returns [] when --repo omitted and not inside a git repo", () => {
+    const result = resolveRepoPaths(undefined, "/work/no-repo", () => null);
+    expect(result).toEqual([]);
+  });
+});
+
+describe("validateRepoPaths", () => {
+  test("throws when a repo path is not a git repo", () => {
+    expect(() => validateRepoPaths(["/not-a-repo"], () => null)).toThrow("Not a git repository: /not-a-repo");
+  });
+
+  test("does not throw for valid paths", () => {
+    expect(() => validateRepoPaths(["/valid-repo"], () => "/valid-repo")).not.toThrow();
+  });
+
+  test("does not throw for empty array", () => {
+    expect(() => validateRepoPaths([], () => null)).not.toThrow();
+  });
+});
+
 describe("createHandler", () => {
-  test("creates project with derived name when omitted", async () => {
-    const createAndInitProject = mock(async (_root: string, name: string) => ({ id: "proj-1", name }));
+  test("creates project with auto-detected repo when inside git repo", async () => {
+    const createAndInitProject = mock(async (_root: string, _name: string, _opts?: unknown) => ({
+      id: "proj-1",
+      name: "prompt-studio",
+    }));
     const handler = createHandler({
       cwd: () => "/work/prompt-studio",
       findGitRoot: () => "/work/prompt-studio",
@@ -34,19 +68,59 @@ describe("createHandler", () => {
 
     await handler({} as never);
 
-    expect(createAndInitProject).toHaveBeenCalledWith("/work/prompt-studio", "prompt-studio");
+    expect(createAndInitProject).toHaveBeenCalledWith("/work/prompt-studio", "prompt-studio", {
+      repoPaths: ["/work/prompt-studio"],
+    });
     expect(log).toHaveBeenCalledWith(
       'Created project "prompt-studio" (proj-1) and initialized .pstdio at /work/prompt-studio',
     );
   });
 
-  test("throws when not inside a git repository", async () => {
+  test("creates project with no repos when not in git repo and no --repo given", async () => {
+    const createAndInitProject = mock(async (_root: string, _name: string, _opts?: unknown) => ({
+      id: "proj-2",
+      name: "my-project",
+    }));
     const handler = createHandler({
-      cwd: () => "/work/not-a-repo",
+      cwd: () => "/work/my-project",
+      findGitRoot: () => null,
+      createAndInitProject,
+    });
+    const log = mock(() => {});
+    console.log = log as typeof console.log;
+
+    await handler({} as never);
+
+    expect(createAndInitProject).toHaveBeenCalledWith("/work/my-project", "my-project", { repoPaths: [] });
+  });
+
+  test("creates project with specified --repo paths", async () => {
+    const createAndInitProject = mock(async (_root: string, _name: string, _opts?: unknown) => ({
+      id: "proj-3",
+      name: "multi",
+    }));
+    const handler = createHandler({
+      cwd: () => "/work/multi",
+      findGitRoot: (dir: string) => dir,
+      createAndInitProject,
+    });
+    const log = mock(() => {});
+    console.log = log as typeof console.log;
+
+    await handler({ repo: ["/repo-a", "/repo-b"] } as never);
+
+    expect(createAndInitProject).toHaveBeenCalledWith("/work/multi", "multi", {
+      repoPaths: ["/repo-a", "/repo-b"],
+    });
+  });
+
+  test("throws when a --repo path is not a git repository", async () => {
+    const handler = createHandler({
+      cwd: () => "/work/project",
       findGitRoot: () => null,
       createAndInitProject: async () => ({ id: "proj-1", name: "ignored" }),
     });
 
-    await expect(handler({} as never)).rejects.toThrow("Not inside a git repository. Run `git init` first.");
+    await expect(handler({ repo: ["/not-a-repo"] } as never)).rejects.toThrow("Not a git repository: /not-a-repo");
   });
 });

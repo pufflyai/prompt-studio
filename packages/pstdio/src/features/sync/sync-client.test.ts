@@ -1,51 +1,23 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
+import { mockFetchSSE } from "@/test-utils/mock-fetch";
 import { getCollection } from "./collections";
 import { startSync } from "./sync-client";
 
-const sseMessage = (event: string, data: unknown) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-
-const createSSEStream = () => {
-  let controller!: ReadableStreamDefaultController<Uint8Array>;
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream<Uint8Array>({
-    start(c) {
-      controller = c;
-    },
-  });
-
-  return {
-    stream,
-    send: (event: string, data: unknown) => controller.enqueue(encoder.encode(sseMessage(event, data))),
-    close: () => controller.close(),
-  };
-};
-
-let activeStream: ReturnType<typeof createSSEStream> | null = null;
-const originalFetch = globalThis.fetch;
+let activeStream: ReturnType<typeof mockFetchSSE> | null = null;
 
 afterEach(() => {
   activeStream?.close();
   activeStream = null;
-  globalThis.fetch = originalFetch;
 });
 
-const mockFetch = () => {
-  activeStream = createSSEStream();
-  const stream = activeStream;
-  const fetchMock = mock(() =>
-    Promise.resolve(new Response(stream.stream, { headers: { "content-type": "text/event-stream" } })),
-  );
-  const typedFetchMock = Object.assign(fetchMock, {
-    preconnect: originalFetch.preconnect,
-  }) as typeof fetch;
-
-  globalThis.fetch = typedFetchMock;
-  return stream;
+const setupSSE = () => {
+  activeStream = mockFetchSSE();
+  return activeStream;
 };
 
 describe("startSync", () => {
   test("connects to the SSE stream", async () => {
-    mockFetch();
+    setupSSE();
     const client = startSync("http://localhost:3000");
 
     expect(globalThis.fetch).toHaveBeenCalledWith("http://localhost:3000/v1/sync/stream", expect.any(Object));
@@ -54,7 +26,7 @@ describe("startSync", () => {
   });
 
   test("populates collections on init event", async () => {
-    const stream = mockFetch();
+    const stream = setupSSE();
     const client = startSync("http://localhost:3000");
 
     stream.send("init", {
@@ -83,7 +55,7 @@ describe("startSync", () => {
   });
 
   test("handles sync:set events for new items", async () => {
-    const stream = mockFetch();
+    const stream = setupSSE();
     const client = startSync("http://localhost:3000");
 
     stream.send("init", { tables: { projects: [] }, seq: 0 });
@@ -98,7 +70,7 @@ describe("startSync", () => {
   });
 
   test("handles sync:delete events", async () => {
-    const stream = mockFetch();
+    const stream = setupSSE();
     const client = startSync("http://localhost:3000");
 
     stream.send("init", { tables: { projects: [{ id: "p1", name: "To Delete" }] }, seq: 0 });
@@ -112,7 +84,7 @@ describe("startSync", () => {
   });
 
   test("disconnects on close()", () => {
-    mockFetch();
+    setupSSE();
     const client = startSync("http://localhost:3000");
 
     client.close();

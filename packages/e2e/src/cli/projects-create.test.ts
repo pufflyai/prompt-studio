@@ -64,11 +64,17 @@ describe("pstdio projects create", () => {
     expect(output).toContain(expectedName);
   });
 
-  test("fails outside a git repo", () => {
+  test("works outside a git repo", () => {
     const dir = createTempDir();
     dirs.push(dir);
 
-    expect(() => run("projects create my-project", dir)).toThrow();
+    const output = run("projects create my-project", dir);
+
+    expect(output).toContain("Created project");
+    expect(output).toContain("my-project");
+
+    const config = JSON.parse(readFileSync(join(dir, ".pstdio", "config.json"), "utf8"));
+    expect(config.project_id).toBeTruthy();
   });
 
   test("fails when already initialized", () => {

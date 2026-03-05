@@ -21,7 +21,7 @@ import { TicketContent } from "./panels/ticket-content";
 import { TicketList } from "./panels/ticket-list";
 
 export type Tab = "tickets" | "docs" | "templates";
-export type Overlay = "help" | "view" | "projects" | "agents" | "status-picker" | "ticket-create";
+export type Overlay = "help" | "view" | "projects" | "agents" | "status-picker" | "ticket-create" | "confirm-archive";
 export type Mode = { tab: Tab; overlay?: Overlay; search?: boolean };
 
 const TABS: Tab[] = ["tickets", "docs", "templates"];
@@ -48,6 +48,7 @@ export function App() {
   const [viewContent, setViewContent] = useState({ title: "", content: "" });
   const [pickerIndex, setPickerIndex] = useState(0);
   const [agentIndex, setAgentIndex] = useState(0);
+  const [archiveTarget, setArchiveTarget] = useState<{ id: string; title: string | null } | null>(null);
 
   const inputActive = mode.search === true;
   const chrome = HEADER_LINES + FOOTER_LINES + (inputActive ? INPUT_LINES : 0);
@@ -91,6 +92,13 @@ export function App() {
   };
 
   const handleSearchSubmit = (value: string) => {
+    if (mode.overlay === "ticket-create") {
+      if (value.trim()) ticketState.createTicket(value.trim());
+      setMode((m) => ({ ...m, overlay: undefined, search: undefined }));
+      setInputValue("");
+      return;
+    }
+
     if (mode.tab === "tickets") {
       ticketState.setSearchQuery(value);
       ticketSelection.resetSelection();
@@ -165,6 +173,11 @@ export function App() {
     statusPickerCount: ticketState.statuses.length,
     statusPickerIndex: pickerIndex,
     setStatusPickerIndex: setPickerIndex,
+    onArchiveRequest: setArchiveTarget,
+    onArchiveConfirm: () => {
+      if (archiveTarget) ticketState.toggleArchive(archiveTarget as Parameters<typeof ticketState.toggleArchive>[0]);
+      setArchiveTarget(null);
+    },
   });
 
   const separator = "─".repeat(columns);
@@ -235,6 +248,7 @@ export function App() {
     agents: agentState.agents,
     agentIndex,
     statuses: ticketState.statuses,
+    archiveTarget,
   });
 
   return (
@@ -254,7 +268,12 @@ export function App() {
       {overlay ?? renderTabContent()}
 
       {inputActive && (
-        <InputBar label="Search" value={inputValue} onChange={setInputValue} onSubmit={handleSearchSubmit} />
+        <InputBar
+          label={mode.overlay === "ticket-create" ? "New Ticket" : "Search"}
+          value={inputValue}
+          onChange={setInputValue}
+          onSubmit={handleSearchSubmit}
+        />
       )}
 
       <StatusBar

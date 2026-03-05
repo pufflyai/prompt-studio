@@ -46,6 +46,9 @@ export interface KeyboardDeps {
   statusPickerCount: number;
   statusPickerIndex: number;
   setStatusPickerIndex: (fn: (i: number) => number) => void;
+  // archive confirmation
+  onArchiveRequest: (ticket: { id: string; title: string | null }) => void;
+  onArchiveConfirm: () => void;
 }
 
 type InputKey = {
@@ -79,6 +82,15 @@ function handleOverlayInput(input: string, key: InputKey, deps: KeyboardDeps) {
   }
   if (overlay === "status-picker") {
     handleStatusPickerInput(input, key, deps);
+    return true;
+  }
+  if (overlay === "confirm-archive") {
+    if (key.return) {
+      deps.onArchiveConfirm();
+      closeOverlay(deps);
+    } else if (key.escape) {
+      closeOverlay(deps);
+    }
     return true;
   }
   if (overlay === "ticket-create") {
@@ -170,11 +182,11 @@ function handleDocsInput(
   key: { escape: boolean; downArrow: boolean; upArrow: boolean; return: boolean },
   deps: KeyboardDeps,
 ) {
-  if (input === "j" || key.downArrow) {
+  if (key.downArrow) {
     deps.docsMoveTo(deps.docsSelectedIndex + 1);
     return;
   }
-  if (input === "k" || key.upArrow) {
+  if (key.upArrow) {
     deps.docsMoveTo(deps.docsSelectedIndex - 1);
     return;
   }
@@ -220,7 +232,10 @@ function handleTicketContentInput(input: string, key: { escape: boolean }, deps:
     deps.setMode((m) => ({ ...m, overlay: "status-picker" }));
     return;
   }
-  if (input === "x" && ticketState.viewingTicket) ticketState.toggleArchive(ticketState.viewingTicket);
+  if (input === "x" && ticketState.viewingTicket) {
+    deps.onArchiveRequest(ticketState.viewingTicket);
+    deps.setMode((m) => ({ ...m, overlay: "confirm-archive" }));
+  }
 }
 
 function handleTicketListNav(
@@ -228,11 +243,11 @@ function handleTicketListNav(
   key: { downArrow: boolean; upArrow: boolean; return: boolean },
   deps: KeyboardDeps,
 ) {
-  if (input === "j" || key.downArrow) {
+  if (key.downArrow) {
     deps.ticketMoveTo(deps.ticketSelectedIndex + 1);
     return true;
   }
-  if (input === "k" || key.upArrow) {
+  if (key.upArrow) {
     deps.ticketMoveTo(deps.ticketSelectedIndex - 1);
     return true;
   }
@@ -270,11 +285,6 @@ function handleTicketListInput(
     deps.setInputValue("");
     return;
   }
-  if (input === "s") {
-    ticketState.cycleStatusFilter();
-    deps.ticketResetSelection();
-    return;
-  }
   if (input === "n") {
     deps.setMode((m) => ({ ...m, overlay: "ticket-create", search: true }));
     deps.setInputValue("");
@@ -292,7 +302,10 @@ function handleTicketListInput(
 
   if (input === "x") {
     const row = ticketState.flatRows[deps.ticketSelectedIndex];
-    if (row?.type === "ticket") ticketState.toggleArchive(row.ticket);
+    if (row?.type === "ticket") {
+      deps.onArchiveRequest(row.ticket);
+      deps.setMode((m) => ({ ...m, overlay: "confirm-archive" }));
+    }
   }
 }
 
@@ -317,11 +330,11 @@ function handleTemplatesInput(
   }
 
   // List panel
-  if (input === "j" || key.downArrow) {
+  if (key.downArrow) {
     deps.templateMoveTo(deps.templateSelectedIndex + 1);
     return;
   }
-  if (input === "k" || key.upArrow) {
+  if (key.upArrow) {
     deps.templateMoveTo(deps.templateSelectedIndex - 1);
     return;
   }
@@ -348,7 +361,7 @@ function handleTemplatesInput(
 }
 
 function handlePickerInput(
-  input: string,
+  _input: string,
   key: { escape: boolean; downArrow: boolean; upArrow: boolean; return: boolean },
   deps: KeyboardDeps,
 ) {
@@ -356,11 +369,11 @@ function handlePickerInput(
     closeOverlay(deps);
     return;
   }
-  if (input === "j" || key.downArrow) {
+  if (key.downArrow) {
     deps.setPickerIndex((i) => Math.min(i + 1, deps.pickerCount - 1));
     return;
   }
-  if (input === "k" || key.upArrow) {
+  if (key.upArrow) {
     deps.setPickerIndex((i) => Math.max(i - 1, 0));
     return;
   }
@@ -379,11 +392,11 @@ function handleAgentsInput(
     closeOverlay(deps);
     return;
   }
-  if (input === "j" || key.downArrow) {
+  if (key.downArrow) {
     deps.setAgentIndex((i) => Math.min(i + 1, deps.agentCount - 1));
     return;
   }
-  if (input === "k" || key.upArrow) {
+  if (key.upArrow) {
     deps.setAgentIndex((i) => Math.max(i - 1, 0));
     return;
   }
@@ -399,7 +412,7 @@ function handleAgentsInput(
 }
 
 function handleStatusPickerInput(
-  input: string,
+  _input: string,
   key: { escape: boolean; downArrow: boolean; upArrow: boolean; return: boolean },
   deps: KeyboardDeps,
 ) {
@@ -407,11 +420,11 @@ function handleStatusPickerInput(
     closeOverlay(deps);
     return;
   }
-  if (input === "j" || key.downArrow) {
+  if (key.downArrow) {
     deps.setStatusPickerIndex((i) => Math.min(i + 1, deps.statusPickerCount - 1));
     return;
   }
-  if (input === "k" || key.upArrow) {
+  if (key.upArrow) {
     deps.setStatusPickerIndex((i) => Math.max(i - 1, 0));
     return;
   }

@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useLiveQuery } from "@tanstack/react-db";
+import { useState } from "react";
 
 import { API_URL } from "@/features/api-url";
+import { getCollection, type SyncedRow } from "@/features/sync/collections";
 import { getTemplate } from "@/features/templates/api/get-template";
-import { listTemplates } from "@/features/templates/api/list-templates";
 import { updateTemplate } from "@/features/templates/api/update-template";
 
 export type TemplateItem = {
@@ -14,9 +15,15 @@ export type TemplateItem = {
 
 export type TemplateWithContent = TemplateItem & { content: string };
 
+const toTemplateItem = (row: SyncedRow): TemplateItem => ({
+  id: row.id,
+  name: row.name as string,
+  template_type: row.template_type as string,
+  is_default: row.is_default as boolean,
+});
+
 const sortTemplates = (items: TemplateItem[]) =>
   [...items].sort((a, b) => {
-    // ticket type first
     if (a.template_type !== b.template_type) {
       return a.template_type === "ticket" ? -1 : 1;
     }
@@ -24,24 +31,14 @@ const sortTemplates = (items: TemplateItem[]) =>
   });
 
 export function useTemplates(projectId: string | null) {
-  const [items, setItems] = useState<TemplateItem[]>([]);
   const [error, setError] = useState("");
   const [viewingTemplate, setViewingTemplate] = useState<TemplateWithContent | null>(null);
 
-  const loadTemplates = useCallback(async (pid: string) => {
-    try {
-      const result = await listTemplates(API_URL, pid);
-      setItems(sortTemplates(result));
-      setError("");
-    } catch {
-      setError("Failed to load templates");
-    }
-  }, []);
+  const { data: rawTemplates } = useLiveQuery(() => getCollection("templates"));
 
-  useEffect(() => {
-    if (!projectId) return;
-    loadTemplates(projectId);
-  }, [projectId, loadTemplates]);
+  const items = sortTemplates(
+    (rawTemplates ?? []).filter((t) => t.project_id === projectId && !t.deleted_at).map(toTemplateItem),
+  );
 
   const viewTemplate = async (name: string) => {
     if (!projectId) return;
@@ -59,7 +56,6 @@ export function useTemplates(projectId: string | null) {
     if (!projectId) return;
     try {
       await updateTemplate(API_URL, projectId, name, { is_default: true });
-      await loadTemplates(projectId);
     } catch {
       setError("Failed to set default template");
     }

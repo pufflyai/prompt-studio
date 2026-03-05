@@ -89,26 +89,6 @@ bun run --cwd packages/cli mono todos rm <id>
 
 `<id>` is a prefix of the todo's UUID (the first 8 characters shown by `list`).
 
-### Interactive TUI
-
-Launch a full interactive terminal UI (Ink.js) with vim-style keybindings:
-
-```bash
-bun run --cwd packages/cli mono tui
-```
-
-| Key       | Action                        |
-| --------- | ----------------------------- |
-| `j` / `k` | Navigate up / down            |
-| `space`   | Toggle completed              |
-| `enter`   | Expand / collapse children    |
-| `a`       | Add todo                      |
-| `A`       | Add sub-todo                  |
-| `e`       | Edit title                    |
-| `d`       | Delete (cascades to children) |
-| `/`       | Search / filter               |
-| `q`       | Quit                          |
-
 ## Storybook
 
 Run the UI Storybook locally:

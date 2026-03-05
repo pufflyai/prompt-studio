@@ -1,17 +1,6 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
+import { mockFetch } from "@/test-utils/mock-fetch";
 import { createProject } from "./create-project";
-
-const originalFetch = globalThis.fetch;
-
-const mockFetch = (status: number, body: unknown) => {
-  globalThis.fetch = mock(() =>
-    Promise.resolve(new Response(JSON.stringify(body), { status })),
-  ) as unknown as typeof fetch;
-};
-
-afterEach(() => {
-  globalThis.fetch = originalFetch;
-});
 
 describe("createProject", () => {
   test("returns created project on 201", async () => {
