@@ -1,10 +1,9 @@
 import { Avatar, Box, IconButton, Menu } from "@chakra-ui/react";
 import { MenuItem, Tooltip, toaster, useThemePreference } from "@pstdio/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { BookOpen, FolderIcon, Moon, Sun } from "lucide-react";
+import { FolderIcon, Moon, Sun } from "lucide-react";
 import { useProject, useSystemInfo } from "@/features/project/hooks/use-project";
 
-const DOCUMENTATION_URL = "/docs";
 const PROJECTS_URL = "/projects";
 
 const copyVersionToClipboard = async (versionLabel: string) => {
@@ -26,10 +25,6 @@ export const ProjectMenu = () => {
   const modeLabel = isDarkMode ? "Switch to light mode" : "Switch to dark mode";
   const projectName = project?.name ?? "Project";
   const versionLabel = systemInfo ? `v${systemInfo.version}` : "Loading version...";
-
-  const handleOpenDocumentation = () => {
-    navigate({ to: DOCUMENTATION_URL });
-  };
 
   const handleOpenProjects = () => {
     navigate({ to: PROJECTS_URL });
@@ -58,7 +53,6 @@ export const ProjectMenu = () => {
       </Menu.Trigger>
       <Menu.Positioner>
         <Menu.Content minW="240px" bg="background.primary">
-          <MenuItem onClick={handleOpenDocumentation} primaryLabel="Release Notes" leftIcon={BookOpen} />
           <MenuItem onClick={handleOpenProjects} primaryLabel="Projects" leftIcon={FolderIcon} />
           <Menu.Separator />
           <MenuItem onClick={toggleThemePreference} primaryLabel={modeLabel} leftIcon={isDarkMode ? Sun : Moon} />

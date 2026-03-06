@@ -60,7 +60,7 @@ export const ProjectSidebar = () => {
   };
 
   return (
-    <Flex as="nav" borderRightWidth="1px" hideBelow="md" direction="column">
+    <Flex as="nav" borderRightWidth="1px" borderColor="border.subtle" hideBelow="md" direction="column">
       <Stack justify="space-between" flex="1" gap="lg" p="xs" align="center">
         <Stack gap="lg" align="center">
           <ProjectMenu />

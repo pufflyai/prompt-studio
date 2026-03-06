@@ -1,7 +1,7 @@
 import type { Project, ProjectRepository, ProjectTemplateAsset, RepoBranch } from "@/features/project/types";
 import type { ApiTicketStatus, ApiTicketTag } from "@/features/ticket-list/data/api";
 import { buildTicketStatusCatalog, toTicketTag } from "@/features/ticket-list/data/api";
-import { apiRequest } from "@/lib/api";
+import { apiRequest, readRuntimeConfig } from "@/lib/api";
 
 // --- API types ---
 
@@ -80,8 +80,16 @@ export const getProject = async (projectId: string) => {
 };
 
 export const getSystemInfo = async () => {
+  const runtimeVersion = readRuntimeConfig()?.version?.trim();
+  if (runtimeVersion) {
+    return {
+      version: runtimeVersion,
+    };
+  }
+
+  const buildVersion = import.meta.env.VITE_APP_VERSION?.trim();
   return {
-    version: import.meta.env.VITE_APP_VERSION ?? "dev",
+    version: buildVersion && buildVersion.length > 0 ? buildVersion : "dev",
   };
 };
 

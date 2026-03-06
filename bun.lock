@@ -51,7 +51,7 @@
       "name": "pstdio",
       "version": "0.0.1",
       "bin": {
-        "pstdio": "./dist/index.js",
+        "pstdio": "./bin/pstdio.js",
       },
       "dependencies": {
         "@tanstack/react-db": "^0.1.74",
@@ -59,6 +59,7 @@
         "ink-markdown": "^1.0.4",
         "ink-text-input": "^6.0.0",
         "pstdio-agents": "workspace:*",
+        "pstdio-api": "workspace:*",
         "pstdio-db": "workspace:*",
         "pstdio-wt": "workspace:*",
         "react": "^19.2.4",
@@ -70,6 +71,16 @@
         "@types/react": "^19.2.14",
         "@types/yargs": "^17.0.35",
         "typescript": "~5.9.3",
+      },
+      "optionalDependencies": {
+        "@pstdio/cli-darwin-arm64": "0.0.1",
+        "@pstdio/cli-darwin-x64": "0.0.1",
+        "@pstdio/cli-linux-arm64": "0.0.1",
+        "@pstdio/cli-linux-arm64-musl": "0.0.1",
+        "@pstdio/cli-linux-x64": "0.0.1",
+        "@pstdio/cli-linux-x64-musl": "0.0.1",
+        "@pstdio/cli-win-arm64": "0.0.1",
+        "@pstdio/cli-win-x64": "0.0.1",
       },
     },
     "packages/pstdio-agents": {

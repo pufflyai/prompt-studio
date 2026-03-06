@@ -3,9 +3,12 @@ type ApiRequestOptions = Omit<RequestInit, "body"> & {
   allowNotFound?: boolean;
 };
 
-type PstdioConfig = { apiBaseUrl?: string };
+export type PstdioConfig = {
+  apiBaseUrl?: string;
+  version?: string;
+};
 
-const readRuntimeConfig = (): PstdioConfig | null => {
+export const readRuntimeConfig = (): PstdioConfig | null => {
   const w = globalThis as unknown as { __PSTDIO_CONFIG__?: PstdioConfig };
   return w.__PSTDIO_CONFIG__ ?? null;
 };

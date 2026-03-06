@@ -10,6 +10,10 @@ import { ensureApi } from "./features/ensure-api";
 
 const packageData = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
 
+if (!process.env.PSTDIO_VERSION && typeof packageData.version === "string" && packageData.version.length > 0) {
+  process.env.PSTDIO_VERSION = packageData.version;
+}
+
 const resolveApiUrl = (argv: Record<string, unknown>) => {
   if (process.env.PSTDIO_API_URL) return process.env.PSTDIO_API_URL;
 
@@ -44,7 +48,7 @@ const cli = yargs(hideBin(process.argv))
   })
   .middleware(async (argv) => {
     const topLevelCommand = argv._[0];
-    if (topLevelCommand === "close" || topLevelCommand === "tui") return;
+    if (topLevelCommand === "close" || topLevelCommand === "tui" || topLevelCommand === "serve") return;
 
     applyApiPortFromArgs(argv);
     await ensureApi(resolveApiUrl(argv));
@@ -52,7 +56,8 @@ const cli = yargs(hideBin(process.argv))
   .command(dashboardCommand);
 
 for (const mod of topLevelCommandModules) {
-  cli.command(mod);
+  // biome-ignore lint/suspicious/noExplicitAny: yargs CommandModule union requires cast
+  cli.command(mod as any);
 }
 
 cli.parseAsync().catch((error: unknown) => {

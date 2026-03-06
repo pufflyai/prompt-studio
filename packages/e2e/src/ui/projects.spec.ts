@@ -18,30 +18,38 @@ const createProjectViaApi = async (request: import("@playwright/test").APIReques
   return (await res.json()) as { id: string; name: string };
 };
 
+const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
+  const res = await request.get(`${apiBase}/v1/projects`);
+  const projects = (await res.json()) as { id: string }[];
+  for (const p of projects) {
+    await request.delete(`${apiBase}/v1/projects/${p.id}`);
+  }
+};
+
 test.describe("Project list", () => {
+  test.afterEach(async ({ request }) => {
+    await deleteAllProjects(request);
+  });
+
   test("shows empty state when no projects exist", async ({ page }) => {
     await bypassOnboarding(page);
     await page.goto("/projects");
 
     await expect(page.getByText("No projects yet")).toBeVisible();
-    await expect(page.getByText("Create your first project")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Create your first project" })).toBeVisible();
   });
 
   test("lists projects seeded via API", async ({ page, request }) => {
     await bypassOnboarding(page);
 
-    const projectA = await createProjectViaApi(request, "Alpha Project");
-    const projectB = await createProjectViaApi(request, "Beta Project");
+    await createProjectViaApi(request, "Alpha Project");
+    await createProjectViaApi(request, "Beta Project");
 
     await page.goto("/projects");
 
-    await expect(page.getByText("Alpha Project")).toBeVisible();
-    await expect(page.getByText("Beta Project")).toBeVisible();
+    await expect(page.getByText("Alpha Project", { exact: true })).toBeVisible();
+    await expect(page.getByText("Beta Project", { exact: true })).toBeVisible();
     await expect(page.getByText(/You have \d+ projects?/)).toBeVisible();
-
-    // cleanup
-    await request.delete(`${apiBase}/v1/projects/${projectA.id}`);
-    await request.delete(`${apiBase}/v1/projects/${projectB.id}`);
   });
 
   test("navigates to project tickets on click", async ({ page, request }) => {
@@ -50,24 +58,25 @@ test.describe("Project list", () => {
     const project = await createProjectViaApi(request, "Nav Test Project");
 
     await page.goto("/projects");
-    await page.getByText("Nav Test Project").click();
+    await page.getByText("Nav Test Project", { exact: true }).click();
 
     await page.waitForURL(`**/projects/${project.id}/tickets`);
     expect(page.url()).toContain(`/projects/${project.id}/tickets`);
-
-    // cleanup
-    await request.delete(`${apiBase}/v1/projects/${project.id}`);
   });
 });
 
 test.describe("Project creation", () => {
-  test("creates a project via the dialog", async ({ page, request }) => {
+  test.afterEach(async ({ request }) => {
+    await deleteAllProjects(request);
+  });
+
+  test("creates a project via the dialog", async ({ page }) => {
     await bypassOnboarding(page);
     await page.goto("/projects");
 
-    // open dialog
-    await page.getByRole("button", { name: "Create project" }).click();
-    await expect(page.getByText("Project name")).toBeVisible();
+    // open dialog via header button
+    await page.getByRole("button", { name: "Create project" }).first().click();
+    await expect(page.getByPlaceholder("Project name")).toBeVisible();
 
     // fill project name
     await page.getByPlaceholder("Project name").fill("My New Project");
@@ -78,38 +87,30 @@ test.describe("Project creation", () => {
     await page.getByRole("button", { name: "Select Path" }).click();
 
     // verify repo appears in the dialog
-    await expect(page.getByText("my-repo")).toBeVisible();
+    await expect(page.getByText("my-repo", { exact: true })).toBeVisible();
 
-    // submit
+    // submit via the dialog footer button
     await page.getByRole("button", { name: "Create project", exact: true }).last().click();
 
-    // verify project appears in the list
-    await expect(page.getByText("My New Project")).toBeVisible();
-
-    // cleanup via API
-    const res = await request.get(`${apiBase}/v1/projects`);
-    const projects = (await res.json()) as { id: string; name: string }[];
-    const created = projects.find((p) => p.name === "My New Project");
-    if (created) {
-      await request.delete(`${apiBase}/v1/projects/${created.id}`);
-    }
+    // verify project appears in the list (scoped to avoid matching toast)
+    const main = page.locator("#root > *").first();
+    await expect(main.getByText("My New Project", { exact: true })).toBeVisible();
   });
 
   test("shows validation errors when submitting empty form", async ({ page }) => {
     await bypassOnboarding(page);
     await page.goto("/projects");
 
-    await page.getByRole("button", { name: "Create project" }).click();
+    await page.getByRole("button", { name: "Create project" }).first().click();
 
     // click create without filling anything
-    const createButtons = page.getByRole("button", { name: "Create project" });
-    await createButtons.last().click();
+    await page.getByRole("button", { name: "Create project", exact: true }).last().click();
 
     await expect(page.getByText("Project name is required.")).toBeVisible();
     await expect(page.getByText("Select at least one repository.")).toBeVisible();
   });
 
-  test("can create project from empty state CTA", async ({ page, request }) => {
+  test("can create project from empty state CTA", async ({ page }) => {
     await bypassOnboarding(page);
     await page.goto("/projects");
 
@@ -120,20 +121,13 @@ test.describe("Project creation", () => {
     await expect(page.getByPlaceholder("Project name")).toBeVisible();
 
     // fill and submit
-    await page.getByPlaceholder("Project name").fill("First Project");
+    await page.getByPlaceholder("Project name").fill("CTA Project");
     await page.getByRole("button", { name: "Browse for repository" }).click();
-    await page.getByPlaceholder("~/path/to/repository").fill("/tmp/first-repo");
+    await page.getByPlaceholder("~/path/to/repository").fill("/tmp/cta-repo");
     await page.getByRole("button", { name: "Select Path" }).click();
     await page.getByRole("button", { name: "Create project", exact: true }).last().click();
 
-    await expect(page.getByText("First Project")).toBeVisible();
-
-    // cleanup
-    const res = await request.get(`${apiBase}/v1/projects`);
-    const projects = (await res.json()) as { id: string; name: string }[];
-    const created = projects.find((p) => p.name === "First Project");
-    if (created) {
-      await request.delete(`${apiBase}/v1/projects/${created.id}`);
-    }
+    const main = page.locator("#root > *").first();
+    await expect(main.getByText("CTA Project", { exact: true })).toBeVisible();
   });
 });

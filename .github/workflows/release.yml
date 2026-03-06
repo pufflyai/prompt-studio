@@ -19,8 +19,8 @@ env:
   RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
 jobs:
-  package_cli:
-    name: Package CLI
+  build_binaries:
+    name: Build Platform Binaries
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,17 +33,37 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Package CLI workspace
-        working-directory: packages/pstdio
-        run: |
-          mkdir -p "${GITHUB_WORKSPACE}/release-assets"
-          bun pm pack --destination "${GITHUB_WORKSPACE}/release-assets"
+      - name: Run tests
+        run: bun run test
 
-      - name: Upload CLI package artifact
+      - name: Build all platform binaries
+        run: bun run scripts/build-all.ts
+
+      - name: Verify binaries
+        run: bun run scripts/verify-packages.ts
+
+      - name: Generate checksums
+        run: bun run scripts/generate-checksums.ts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+          cp dist/platforms/cli-darwin-arm64/bin/pstdio release-assets/pstdio-darwin-arm64
+          cp dist/platforms/cli-darwin-x64/bin/pstdio release-assets/pstdio-darwin-x64
+          cp dist/platforms/cli-linux-x64/bin/pstdio release-assets/pstdio-linux-x64
+          cp dist/platforms/cli-linux-arm64/bin/pstdio release-assets/pstdio-linux-arm64
+          cp dist/platforms/cli-linux-x64-musl/bin/pstdio release-assets/pstdio-linux-x64-musl
+          cp dist/platforms/cli-linux-arm64-musl/bin/pstdio release-assets/pstdio-linux-arm64-musl
+          cp dist/platforms/cli-win-x64/bin/pstdio.exe release-assets/pstdio-win-x64.exe
+          cp dist/platforms/cli-win-arm64/bin/pstdio.exe release-assets/pstdio-win-arm64.exe
+          cp dist/platforms/checksums.sha256 release-assets/checksums.sha256
+          cp scripts/install.sh release-assets/install.sh
+
+      - name: Upload binary artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: cli-package
-          path: release-assets/*.tgz
+          name: platform-binaries
+          path: release-assets/
 
   publish_images:
     name: Publish Docker Images
@@ -84,17 +104,69 @@ jobs:
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
 
+  publish_npm:
+    name: Publish npm Packages
+    runs-on: ubuntu-latest
+    needs: build_binaries
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Download binary artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: platform-binaries
+          path: release-assets
+
+      - name: Place binaries in platform packages
+        run: |
+          mkdir -p dist/platforms/cli-darwin-arm64/bin
+          mkdir -p dist/platforms/cli-darwin-x64/bin
+          mkdir -p dist/platforms/cli-linux-x64/bin
+          mkdir -p dist/platforms/cli-linux-arm64/bin
+          mkdir -p dist/platforms/cli-linux-x64-musl/bin
+          mkdir -p dist/platforms/cli-linux-arm64-musl/bin
+          mkdir -p dist/platforms/cli-win-x64/bin
+          mkdir -p dist/platforms/cli-win-arm64/bin
+          cp release-assets/pstdio-darwin-arm64 dist/platforms/cli-darwin-arm64/bin/pstdio
+          cp release-assets/pstdio-darwin-x64 dist/platforms/cli-darwin-x64/bin/pstdio
+          cp release-assets/pstdio-linux-x64 dist/platforms/cli-linux-x64/bin/pstdio
+          cp release-assets/pstdio-linux-arm64 dist/platforms/cli-linux-arm64/bin/pstdio
+          cp release-assets/pstdio-linux-x64-musl dist/platforms/cli-linux-x64-musl/bin/pstdio
+          cp release-assets/pstdio-linux-arm64-musl dist/platforms/cli-linux-arm64-musl/bin/pstdio
+          cp release-assets/pstdio-win-x64.exe dist/platforms/cli-win-x64/bin/pstdio.exe
+          cp release-assets/pstdio-win-arm64.exe dist/platforms/cli-win-arm64/bin/pstdio.exe
+
+      - name: Publish platform packages
+        run: |
+          for pkg in cli-darwin-arm64 cli-darwin-x64 cli-linux-x64 cli-linux-arm64 cli-linux-x64-musl cli-linux-arm64-musl cli-win-x64 cli-win-arm64; do
+            cd dist/platforms/$pkg && npm publish --access public || true
+            cd "$GITHUB_WORKSPACE"
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish wrapper package
+        run: cd packages/pstdio && npm publish --access public || true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
   release:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
     needs:
-      - package_cli
+      - build_binaries
       - publish_images
     steps:
-      - name: Download CLI package artifact
+      - name: Download binary artifacts
         uses: actions/download-artifact@v4
         with:
-          name: cli-package
+          name: platform-binaries
           path: release-assets
 
       - name: Create release with notes and assets
@@ -102,8 +174,29 @@ jobs:
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           generate_release_notes: true
-          files: release-assets/*.tgz
+          files: |
+            release-assets/pstdio-darwin-arm64
+            release-assets/pstdio-darwin-x64
+            release-assets/pstdio-linux-x64
+            release-assets/pstdio-linux-arm64
+            release-assets/pstdio-linux-x64-musl
+            release-assets/pstdio-linux-arm64-musl
+            release-assets/pstdio-win-x64.exe
+            release-assets/pstdio-win-arm64.exe
+            release-assets/checksums.sha256
+            release-assets/install.sh
           body: |
+            ## Install
+
+            ```bash
+            curl -fsSL https://github.com/pufflyai/prompt-studio/releases/latest/download/install.sh | sh
+            ```
+
+            Or via npm:
+            ```bash
+            npx pstdio
+            ```
+
             ## Container Images
             - `ghcr.io/${{ github.repository }}/landing-page:${{ env.RELEASE_TAG }}`
             - `ghcr.io/${{ github.repository }}/api:${{ env.RELEASE_TAG }}`

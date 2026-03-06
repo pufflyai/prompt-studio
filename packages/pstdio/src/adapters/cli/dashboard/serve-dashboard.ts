@@ -4,6 +4,7 @@ import { extname, join, normalize } from "node:path";
 
 type DashboardConfig = {
   apiBaseUrl: string;
+  version?: string;
 };
 
 const MIME_TYPES: Record<string, string> = {

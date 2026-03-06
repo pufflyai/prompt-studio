@@ -4,6 +4,12 @@ import { defineConfig } from "vite";
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    proxy: {
+      "/v1": "http://localhost:3000",
+      "/healthz": "http://localhost:3000",
+    },
+  },
   resolve: {
     dedupe: [
       "react",

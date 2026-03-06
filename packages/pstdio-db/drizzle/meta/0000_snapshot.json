@@ -1,5 +1,5 @@
 {
-  "id": "77995989-6e52-4c91-80cf-3eb1cf344324",
+  "id": "90b62d45-f594-4bd9-8184-36090b72bbfa",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -226,6 +226,18 @@
           "primaryKey": false,
           "notNull": true
         },
+        "shorthand": {
+          "name": "shorthand",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "startup_script": {
+          "name": "startup_script",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "text",
@@ -237,6 +249,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -319,6 +337,12 @@
           "notNull": true,
           "default": "'in_progress'"
         },
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "archived": {
           "name": "archived",
           "type": "boolean",
@@ -377,6 +401,15 @@
       },
       "indexes": {},
       "foreignKeys": {
+        "sessions_project_id_projects_id_fk": {
+          "name": "sessions_project_id_projects_id_fk",
+          "tableFrom": "sessions",
+          "tableTo": "projects",
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
         "sessions_session_file_id_files_id_fk": {
           "name": "sessions_session_file_id_files_id_fk",
           "tableFrom": "sessions",
@@ -445,6 +478,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -619,6 +658,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -756,6 +801,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -974,8 +1025,8 @@
           "notNull": true,
           "default": false
         },
-        "staged": {
-          "name": "staged",
+        "draft": {
+          "name": "draft",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
@@ -1167,12 +1218,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "repo_id": {
-          "name": "repo_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "worktree_path": {
           "name": "worktree_path",
           "type": "text",
@@ -1195,6 +1240,12 @@
         },
         "workspace_shorthand": {
           "name": "workspace_shorthand",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "startup_log_file_id": {
+          "name": "startup_log_file_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -1256,6 +1307,15 @@
           "tableFrom": "workspaces",
           "tableTo": "sessions",
           "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "workspaces_startup_log_file_id_files_id_fk": {
+          "name": "workspaces_startup_log_file_id_files_id_fk",
+          "tableFrom": "workspaces",
+          "tableTo": "files",
+          "columnsFrom": ["startup_log_file_id"],
           "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"

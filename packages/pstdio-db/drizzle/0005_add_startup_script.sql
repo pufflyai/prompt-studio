@@ -1,1 +1,0 @@
-ALTER TABLE "projects" ADD COLUMN "startup_script" text;

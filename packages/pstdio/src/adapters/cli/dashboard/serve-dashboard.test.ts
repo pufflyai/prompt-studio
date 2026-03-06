@@ -24,6 +24,12 @@ describe("injectConfig", () => {
     expect(result).toContain("</head>");
   });
 
+  test("injects version when present in runtime config", () => {
+    const html = "<html><head></head><body></body></html>";
+    const result = injectConfig(html, { apiBaseUrl: "http://localhost:3000", version: "1.2.3" });
+    expect(result).toContain('window.__PSTDIO_CONFIG__={"apiBaseUrl":"http://localhost:3000","version":"1.2.3"}');
+  });
+
   test("returns html unchanged when no </head>", () => {
     const html = "<html><body></body></html>";
     const result = injectConfig(html, { apiBaseUrl: "http://localhost:3000" });

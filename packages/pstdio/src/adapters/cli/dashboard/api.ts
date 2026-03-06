@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isCompiledBinary } from "../commands/serve/embedded-assets";
 import { resolveDefaultDbPath, resolveDefaultStoragePath } from "./state-paths";
 
 type ApiSpawnOptions = {
@@ -75,6 +76,12 @@ const resolveCliEntryPath = () => {
   }
 };
 
+const buildCompiledApiCommand = (stdio: ApiSpawnOptions["stdio"] = "ignore", detached = true) => ({
+  command: process.execPath,
+  args: ["serve"],
+  options: { cwd: undefined as string | undefined, stdio, detached },
+});
+
 export const buildApiStartCommand = (apiRoot: string, stdio: ApiSpawnOptions["stdio"] = "ignore", detached = true) => ({
   command: "bun",
   args: ["run", "start"],
@@ -122,6 +129,20 @@ export const runApi = (startDir: string, options: ApiLaunchOptions = {}) => {
     return null;
   }
 
+  // Path 1: compiled binary — self-spawn with `serve` subcommand
+  if (isCompiledBinary()) {
+    const compiledEnv = resolveApiRuntimeEnv(env);
+    const { command, args, options: spawnOptions } = buildCompiledApiCommand(stdio, detached);
+    const child = spawner(command, args, { ...spawnOptions, env: compiledEnv });
+
+    if (detached) {
+      child.unref?.();
+    }
+
+    return { apiRoot: null, child };
+  }
+
+  // Path 2: workspace mode — spawn `bun run start` in pstdio-api
   const apiRoot = resolveApiRoot(startDir);
 
   if (apiRoot) {
@@ -135,6 +156,7 @@ export const runApi = (startDir: string, options: ApiLaunchOptions = {}) => {
     return { apiRoot, child };
   }
 
+  // Path 3: bundled mode — spawn `node dist/api/server.js`
   const cliPath = bundledCliPath ?? resolveCliEntryPath();
   const bundledEntry = cliPath ? resolveBundledApiEntry(cliPath) : null;
 

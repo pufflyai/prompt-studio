@@ -1,6 +1,10 @@
 {
   "name": "pstdio-api",
   "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./app": "./src/app.ts"
+  },
   "scripts": {
     "start": "bun run src/index.ts",
     "dev": "bun run --hot src/index.ts",

@@ -3,6 +3,7 @@ import type { Argv } from "yargs";
 import { openBrowser as defaultOpenBrowser } from "../../dashboard/open-browser";
 import { resolveDashboardRoot as defaultResolveDashboardRoot } from "../../dashboard/resolve-dashboard-root";
 import { serveDashboard as defaultServeDashboard } from "../../dashboard/serve-dashboard";
+import { isCompiledBinary } from "../serve/embedded-assets";
 
 type LaunchDeps = {
   serveDashboard: typeof defaultServeDashboard;
@@ -22,16 +23,39 @@ type LaunchOptions = {
   openBrowser: boolean;
 };
 
+const launchCompiled = (options: LaunchOptions, deps: Pick<LaunchDeps, "openBrowser">) => {
+  // In compiled mode, `ensureApi` already spawned `pstdio serve` on apiPort.
+  // That process serves both API and dashboard. Just open the browser.
+  const url = `http://localhost:${options.apiPort}`;
+
+  if (options.openBrowser) {
+    deps.openBrowser(url);
+  }
+
+  process.stdout.write(`Dashboard: ${url}\n`);
+  process.stdout.write(`API:       ${url}/v1\n`);
+
+  const shutdown = () => process.exit(0);
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
+};
+
 export const launch = async (options: LaunchOptions, deps: LaunchDeps = defaultDeps) => {
+  if (isCompiledBinary()) {
+    launchCompiled(options, deps);
+    return;
+  }
+
   const { apiPort, dashboardPort, openBrowser } = options;
   const apiUrl = `http://localhost:${apiPort}`;
   const dashboardUrl = `http://localhost:${dashboardPort}`;
+  const appVersion = process.env.PSTDIO_VERSION ?? "dev";
 
   const dashboardRoot = deps.resolveDashboardRoot(process.cwd());
   const server = deps.serveDashboard({
     root: dashboardRoot,
     port: dashboardPort,
-    config: { apiBaseUrl: apiUrl },
+    config: { apiBaseUrl: apiUrl, version: appVersion },
   });
 
   if (openBrowser) {

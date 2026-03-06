@@ -30,8 +30,11 @@ CREATE TABLE "project_repos" (
 CREATE TABLE "projects" (
 	"id" text PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
+	"shorthand" text NOT NULL,
+	"startup_script" text,
 	"created_at" text NOT NULL,
-	"updated_at" text NOT NULL
+	"updated_at" text NOT NULL,
+	"deleted_at" text
 );
 --> statement-breakpoint
 CREATE TABLE "repos" (
@@ -47,6 +50,7 @@ CREATE TABLE "sessions" (
 	"id" text PRIMARY KEY NOT NULL,
 	"title" text NOT NULL,
 	"status" text DEFAULT 'in_progress' NOT NULL,
+	"project_id" text,
 	"archived" boolean DEFAULT false NOT NULL,
 	"created" text,
 	"last_request_started" text,
@@ -66,7 +70,8 @@ CREATE TABLE "templates" (
 	"file_id" text NOT NULL,
 	"is_default" boolean DEFAULT false NOT NULL,
 	"created_at" text NOT NULL,
-	"updated_at" text NOT NULL
+	"updated_at" text NOT NULL,
+	"deleted_at" text
 );
 --> statement-breakpoint
 CREATE TABLE "ticket_files" (
@@ -90,7 +95,8 @@ CREATE TABLE "ticket_statuses" (
 	"can_attempt_on_drop" boolean NOT NULL,
 	"column_actions" text DEFAULT '[]' NOT NULL,
 	"created_at" text NOT NULL,
-	"updated_at" text NOT NULL
+	"updated_at" text NOT NULL,
+	"deleted_at" text
 );
 --> statement-breakpoint
 CREATE TABLE "ticket_tag_assignments" (
@@ -106,7 +112,8 @@ CREATE TABLE "ticket_tags" (
 	"name" text NOT NULL,
 	"color" text NOT NULL,
 	"created_at" text NOT NULL,
-	"updated_at" text NOT NULL
+	"updated_at" text NOT NULL,
+	"deleted_at" text
 );
 --> statement-breakpoint
 CREATE TABLE "ticket_workspaces" (
@@ -130,7 +137,7 @@ CREATE TABLE "tickets" (
 	"blocked_reason" text,
 	"depends_on" text,
 	"archived" boolean DEFAULT false NOT NULL,
-	"staged" boolean DEFAULT false NOT NULL,
+	"draft" boolean DEFAULT false NOT NULL,
 	"deleted_at" text,
 	"created_at" text NOT NULL,
 	"updated_at" text NOT NULL
@@ -150,11 +157,11 @@ CREATE TABLE "workspaces" (
 	"name" text NOT NULL,
 	"session_id" text,
 	"branch" text,
-	"repo_id" text,
 	"worktree_path" text,
 	"status" text DEFAULT 'active' NOT NULL,
 	"archived" boolean DEFAULT false NOT NULL,
-	"workspace_shorthand" text,
+	"workspace_shorthand" text NOT NULL,
+	"startup_log_file_id" text,
 	"created_at" text NOT NULL,
 	"updated_at" text NOT NULL,
 	"deleted_at" text
@@ -187,6 +194,7 @@ CREATE TABLE "ydoc_updates" (
 ALTER TABLE "files" ADD CONSTRAINT "files_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project_repos" ADD CONSTRAINT "project_repos_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project_repos" ADD CONSTRAINT "project_repos_repo_id_repos_id_fk" FOREIGN KEY ("repo_id") REFERENCES "public"."repos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sessions" ADD CONSTRAINT "sessions_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_session_file_id_files_id_fk" FOREIGN KEY ("session_file_id") REFERENCES "public"."files"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "templates" ADD CONSTRAINT "templates_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "templates" ADD CONSTRAINT "templates_file_id_files_id_fk" FOREIGN KEY ("file_id") REFERENCES "public"."files"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -204,6 +212,7 @@ ALTER TABLE "workspace_artifacts" ADD CONSTRAINT "workspace_artifacts_ticket_id_
 ALTER TABLE "workspace_artifacts" ADD CONSTRAINT "workspace_artifacts_file_id_files_id_fk" FOREIGN KEY ("file_id") REFERENCES "public"."files"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "workspaces" ADD CONSTRAINT "workspaces_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "workspaces" ADD CONSTRAINT "workspaces_session_id_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."sessions"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "workspaces" ADD CONSTRAINT "workspaces_startup_log_file_id_files_id_fk" FOREIGN KEY ("startup_log_file_id") REFERENCES "public"."files"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "ydoc_awareness" ADD CONSTRAINT "ydoc_awareness_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "ydoc_resume_state" ADD CONSTRAINT "ydoc_resume_state_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "ydoc_updates" ADD CONSTRAINT "ydoc_updates_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

@@ -45,8 +45,33 @@ afterEach(() => {
 });
 
 describe("launch", () => {
+  test("injects app version into dashboard runtime config", async () => {
+    const { calls, deps } = createStubDeps({ dashboardRoot: "/my/dashboard" });
+    const previousVersion = process.env.PSTDIO_VERSION;
+    process.env.PSTDIO_VERSION = "9.8.7";
+
+    try {
+      await launch({ apiPort: 3000, dashboardPort: 5555, openBrowser: false }, deps);
+    } finally {
+      if (previousVersion === undefined) {
+        delete process.env.PSTDIO_VERSION;
+      } else {
+        process.env.PSTDIO_VERSION = previousVersion;
+      }
+    }
+
+    expect(calls.serveDashboard).toEqual([
+      {
+        root: "/my/dashboard",
+        port: 5555,
+        config: { apiBaseUrl: "http://localhost:3000", version: "9.8.7" },
+      },
+    ]);
+  });
+
   test("starts dashboard server with correct options", async () => {
     const { calls, deps } = createStubDeps({ dashboardRoot: "/my/dashboard" });
+    const expectedVersion = process.env.PSTDIO_VERSION ?? "dev";
 
     await launch({ apiPort: 3000, dashboardPort: 5555, openBrowser: true }, deps);
 
@@ -54,7 +79,7 @@ describe("launch", () => {
       {
         root: "/my/dashboard",
         port: 5555,
-        config: { apiBaseUrl: "http://localhost:3000" },
+        config: { apiBaseUrl: "http://localhost:3000", version: expectedVersion },
       },
     ]);
   });

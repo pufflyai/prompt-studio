@@ -4,7 +4,7 @@ import { EmptyState } from "@pstdio/ui";
 export const EmptyDocs = () => {
   return (
     <Center width="100%" minH="240px" height="100%">
-      <EmptyState title="No docs found" description="Add .schub/docs/docs.json and markdown files to get started." />
+      <EmptyState title="No docs found" description="" />
     </Center>
   );
 };
