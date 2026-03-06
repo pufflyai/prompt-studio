@@ -1,20 +1,27 @@
 {
   "name": "@pstdio/ui",
-  "private": true,
-  "version": "0.0.0",
+  "version": "0.0.3",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": ["dist"],
   "type": "module",
   "exports": {
     ".": {
-      "import": "./src/index.ts",
-      "types": "./src/index.ts"
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
     },
     "./rich-text": {
-      "import": "./src/components/rich-text/index.ts",
-      "types": "./src/components/rich-text/index.ts"
+      "import": "./dist/rich-text.js",
+      "types": "./dist/components/rich-text/index.d.ts"
     },
     "./theme": {
-      "import": "./src/theme/index.ts",
-      "types": "./src/theme/index.ts"
+      "import": "./dist/theme.js",
+      "types": "./dist/theme/index.d.ts"
+    },
+    "./chat-ui": {
+      "import": "./dist/chat-ui.js",
+      "types": "./dist/components/chat-ui/index.d.ts"
     }
   },
   "scripts": {
@@ -25,7 +32,8 @@
     "test": "echo 'no tests — use storybook for UI'",
     "test-storybook": "vitest --project=storybook",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
     "@chakra-ui/react": "^3.0.0",

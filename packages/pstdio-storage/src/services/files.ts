@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
+import path from "node:path";
 import { and, eq } from "drizzle-orm";
 import type { DbClient } from "pstdio-db";
 import { files, ticket_files } from "pstdio-db";
@@ -133,11 +134,19 @@ export const createFilesService = (db: DbClient, storageRoot: string) => {
     return true;
   };
 
+  const removeProjectStorage = (projectId: string) => {
+    const projectDir = path.join(storageRoot, projectId);
+    if (fs.existsSync(projectDir)) {
+      fs.rmSync(projectDir, { recursive: true, force: true });
+    }
+  };
+
   return {
     upload,
     get,
     update,
     remove,
+    removeProjectStorage,
     listByProject,
     listForTicket,
     attachToTicket,

@@ -10,7 +10,7 @@ let projectsService: ReturnType<typeof createProjectsService>;
 let projectId: string;
 
 beforeEach(async () => {
-  const conn = await createDb();
+  const conn = await createDb({ path: ":memory:" });
   db = conn.db;
   close = conn.close;
   sessionsService = createSessionsService(db);

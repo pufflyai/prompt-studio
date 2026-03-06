@@ -235,7 +235,7 @@ export const workspace_artifacts = pgTable(
 export const templates = pgTable("templates", {
   id: text("id").primaryKey(),
   project_id: text("project_id").references(() => projects.id, {
-    onDelete: "set null",
+    onDelete: "cascade",
   }),
   name: text("name").notNull(),
   template_type: text("template_type").notNull(),

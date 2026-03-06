@@ -13,8 +13,15 @@ import {
   createTicketsService,
   createWorkspacesService,
 } from "pstdio-db";
-import { createFilesService, createSkillsService, ensureStorageRoot, resolveStorageRoot } from "pstdio-storage";
+import {
+  createDocsService,
+  createFilesService,
+  createSkillsService,
+  ensureStorageRoot,
+  resolveStorageRoot,
+} from "pstdio-storage";
 import { createAgentRoutes } from "./features/agents/routes";
+import { createDocsRoutes } from "./features/docs/routes";
 import { createHealthRoutes } from "./features/health/routes";
 import { createProjectRoutes } from "./features/projects/routes";
 import { createSessionRoutes } from "./features/sessions/routes";
@@ -47,6 +54,7 @@ export const createApp = async (options?: AppOptions) => {
   const filesService = createFilesService(db, storageRoot);
   const skillsService = createSkillsService(reposService);
 
+  const docsService = createDocsService(reposService);
   const agentRegistry = createAgentRegistry([createClaudeCodeAgent(), createOpencodeAgent()]);
 
   const agentConfigsService = createAgentConfigsService(db);
@@ -66,6 +74,7 @@ export const createApp = async (options?: AppOptions) => {
     eventBus,
     projectsService,
     reposService,
+    docsService,
     agentConfigsService,
     filesService,
     sessionsService,
@@ -85,6 +94,7 @@ export const createApp = async (options?: AppOptions) => {
 
   app.route("/", createHealthRoutes(deps));
   app.route("/v1", createProjectRoutes(deps));
+  app.route("/v1", createDocsRoutes(deps));
   app.route("/v1", createAgentRoutes(deps));
   app.route("/v1", createSkillRoutes(deps));
   app.route("/v1", createTemplateRoutes(deps));

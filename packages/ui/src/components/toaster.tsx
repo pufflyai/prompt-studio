@@ -1,6 +1,6 @@
 import { Toaster as ChakraToaster, createToaster, Portal, Spinner, Stack, Toast } from "@chakra-ui/react";
 
-export const toaster = createToaster({
+export const toaster: ReturnType<typeof createToaster> = createToaster({
   placement: "bottom-end",
   pauseOnPageIdle: true,
 });

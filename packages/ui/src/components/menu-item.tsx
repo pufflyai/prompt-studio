@@ -31,7 +31,7 @@ const menuItemVariantStyles = {
   },
 } as const;
 
-interface MenuItemProps {
+export interface MenuItemProps {
   id?: string;
   children?: ReactNode;
   isDisabled?: boolean;

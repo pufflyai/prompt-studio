@@ -43,7 +43,13 @@ export const ProjectMenu = () => {
       <Menu.Trigger asChild>
         <Box>
           <Tooltip positioning={{ placement: "bottom-end" }} content="Main menu">
-            <IconButton aria-label="Open settings menu" variant="ghost" size="sm">
+            <IconButton
+              aria-label="Open settings menu"
+              variant="ghost"
+              size="sm"
+              _hover={{ bg: "transparent", boxShadow: "none" }}
+              _active={{ bg: "transparent", boxShadow: "none" }}
+            >
               <Avatar.Root size="xs" borderRadius="0">
                 <Avatar.Fallback name={projectName} />
               </Avatar.Root>

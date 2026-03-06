@@ -166,6 +166,16 @@ export const createProjectsService = (db: DbClient) => {
     return true;
   };
 
+  const hardDelete = async (id: string) => {
+    const [existing] = await db.select().from(projects).where(eq(projects.id, id));
+
+    if (!existing) return false;
+
+    await db.delete(projects).where(eq(projects.id, id));
+
+    return true;
+  };
+
   const getStartupScript = async (id: string) => {
     const project = await get(id);
     if (!project) return null;
@@ -190,5 +200,5 @@ export const createProjectsService = (db: DbClient) => {
     return true;
   };
 
-  return { list, get, create, update, remove, getStartupScript, setStartupScript, clearStartupScript };
+  return { list, get, create, update, remove, hardDelete, getStartupScript, setStartupScript, clearStartupScript };
 };

@@ -17,16 +17,21 @@ export type DocsContent = {
 };
 
 export const getDocsIndex = async (projectId?: string) => {
-  const index = await apiRequest<DocsIndex | null>(projectId ? `/api/projects/${projectId}/docs` : "/api/docs", {
+  if (!projectId) {
+    return { sidebar: [] };
+  }
+
+  const index = await apiRequest<DocsIndex | null>(`/v1/projects/${projectId}/docs`, {
     allowNotFound: true,
   });
 
   return index ?? { sidebar: [] };
 };
 
-export const getDocsContent = (link: string, projectId?: string) =>
-  apiRequest<DocsContent>(
-    projectId
-      ? `/api/projects/${projectId}/docs/content?link=${encodeURIComponent(link)}`
-      : `/api/docs/content?link=${encodeURIComponent(link)}`,
-  );
+export const getDocsContent = (link: string, projectId?: string) => {
+  if (!projectId) {
+    throw new Error("projectId is required to fetch docs content");
+  }
+
+  return apiRequest<DocsContent>(`/v1/projects/${projectId}/docs/content?link=${encodeURIComponent(link)}`);
+};

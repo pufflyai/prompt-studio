@@ -1,7 +1,7 @@
 import { HStack, Stack, Text } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 
-interface InfoCardProps {
+export interface InfoCardProps {
   title: string;
   description: string;
   infoItems?: Array<{ label: string; value: ReactNode }>;

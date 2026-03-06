@@ -8,6 +8,13 @@
       "when": 1772754740654,
       "tag": "0000_great_stryfe",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1772788523834,
+      "tag": "0001_striped_centennial",
+      "breakpoints": true
     }
   ]
 }

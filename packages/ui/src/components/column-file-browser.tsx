@@ -19,7 +19,7 @@ interface ColumnData<T extends ColumnFileItem> {
   breadcrumb: T[];
 }
 
-interface ColumnFileBrowserProps<T extends ColumnFileItem> {
+export interface ColumnFileBrowserProps<T extends ColumnFileItem> {
   items: T[];
   activePath?: T[];
   onFolderOpen?: (folder: T, path: T[]) => void;

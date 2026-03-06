@@ -1,6 +1,6 @@
 import { Box, Flex, HStack, Spacer, Text } from "@chakra-ui/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { getTextFromSerializedEditorState, PromptEditor } from "@/components/rich-text";
+import { getTextFromSerializedEditorState, PromptEditor } from "../../rich-text";
 import { SendButton } from "./send-button";
 
 interface ChatInputProps {

@@ -21,9 +21,12 @@ export default defineConfig({
   },
   build: {
     lib: {
-      entry: path.resolve(__dirname, "src/index.ts"),
-      name: "ui",
-      fileName: () => `index.js`,
+      entry: {
+        index: path.resolve(__dirname, "src/index.ts"),
+        "rich-text": path.resolve(__dirname, "src/components/rich-text/index.ts"),
+        theme: path.resolve(__dirname, "src/theme/index.ts"),
+        "chat-ui": path.resolve(__dirname, "src/components/chat-ui/index.ts"),
+      },
       formats: ["es"],
       cssFileName: "style",
     },

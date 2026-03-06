@@ -64,7 +64,7 @@ const projectDependents = async (db: DbClient, projectId: string, bus: EventBus)
   const projectFiles = await db.select().from(files).where(eq(files.project_id, projectId));
   for (const row of projectFiles) bus.emit("files", "delete", { id: row.id });
 
-  // Templates (SET NULL on project delete, but emit for awareness)
+  // Templates (cascade-delete via project_id)
   const tmpl = await db.select().from(templates).where(eq(templates.project_id, projectId));
   for (const row of tmpl) bus.emit("templates", "delete", { id: row.id });
 };

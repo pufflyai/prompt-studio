@@ -14,7 +14,7 @@ import { FileText, Folder } from "lucide-react";
 import type { FileTreeItem } from "@/components/file-tree-helpers";
 import { EmptyState } from "./empty-state";
 
-interface FileSelectorProps {
+export interface FileSelectorProps {
   files: FileTreeItem[];
   checkedFileIds?: string[];
   defaultCheckedFileIds?: string[];
