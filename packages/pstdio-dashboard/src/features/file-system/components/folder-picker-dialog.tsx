@@ -1,6 +1,7 @@
 import { FolderPickerDialog as FolderPickerDialogUI } from "@pstdio/ui";
 import { useCallback, useEffect, useState } from "react";
 import { type DirectoryEntry, listDirectory } from "@/features/file-system/data/api";
+import { resolveFolderPickerDefaultPath, resolveParentPath } from "./folder-picker-default-path";
 
 interface FolderPickerDialogProps {
   open: boolean;
@@ -12,16 +13,7 @@ interface FolderPickerDialogProps {
   onSelect: (path: string | null) => void;
 }
 
-const resolveParentPath = (value: string) => {
-  const trimmed = value.replace(/\\/g, "/").replace(/\/+$/g, "");
-  if (!trimmed) return "/";
-  const parts = trimmed.split("/").filter(Boolean);
-  if (parts.length <= 1) return "/";
-  return `/${parts.slice(0, -1).join("/")}`;
-};
-
-const isGitRepoFolder = (entries: DirectoryEntry[]) =>
-  entries.some((entry) => entry.name === ".git" && entry.isDirectory);
+const isGitRepoFolder = (entries: DirectoryEntry[]) => entries.some((entry) => entry.name === ".git");
 
 const isHiddenFolder = (entry: DirectoryEntry) => entry.name.startsWith(".");
 
@@ -64,7 +56,28 @@ export const FolderPickerDialog = (props: FolderPickerDialogProps) => {
 
   useEffect(() => {
     if (!open) return;
-    loadDirectory(value);
+
+    let isCancelled = false;
+
+    const loadInitialDirectory = async () => {
+      if (value) {
+        loadDirectory(value);
+        return;
+      }
+
+      const defaultPath = await resolveFolderPickerDefaultPath(listDirectory);
+      if (isCancelled) return;
+      loadDirectory(defaultPath);
+    };
+
+    loadInitialDirectory().catch(() => {
+      if (isCancelled) return;
+      loadDirectory("~");
+    });
+
+    return () => {
+      isCancelled = true;
+    };
   }, [open, value, loadDirectory]);
 
   const handleEntryClick = (entry: DirectoryEntry) => {

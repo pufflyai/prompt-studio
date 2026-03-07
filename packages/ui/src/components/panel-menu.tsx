@@ -14,9 +14,9 @@ const panelMenuVariantStyles = {
   },
   compact: {
     width: "64" as const,
-    headerHeight: "40px",
+    headerHeight: "49px",
     headerPadding: "xs" as const,
-    headerTextStyle: "label/M/medium",
+    headerTextStyle: "label/L/medium",
     contentPadding: "2xs" as const,
     contentGap: "2xs" as const,
   },

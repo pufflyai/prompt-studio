@@ -6,8 +6,8 @@ import { defineConfig } from "vite";
 export default defineConfig({
   server: {
     proxy: {
-      "/v1": "http://localhost:3000",
-      "/healthz": "http://localhost:3000",
+      "/v1": "http://localhost:19840",
+      "/healthz": "http://localhost:19840",
     },
   },
   resolve: {

@@ -4,32 +4,87 @@
       "text": "Specs",
       "items": [
         {
-          "text": "CLI Setup",
-          "link": "/specs/cli/setup"
+          "text": "CLI",
+          "items": [
+            {
+              "text": "Setup",
+              "link": "/specs/cli/setup"
+            },
+            {
+              "text": "Projects",
+              "link": "/specs/cli/projects"
+            },
+            {
+              "text": "Agents",
+              "link": "/specs/cli/agents"
+            },
+            {
+              "text": "Feedback",
+              "link": "/specs/cli/feedback"
+            },
+            {
+              "text": "Sessions",
+              "link": "/specs/cli/sessions"
+            },
+            {
+              "text": "Statuses",
+              "link": "/specs/cli/statuses"
+            },
+            {
+              "text": "Tags",
+              "link": "/specs/cli/tags"
+            },
+            {
+              "text": "Templates",
+              "link": "/specs/cli/templates"
+            },
+            {
+              "text": "Tickets",
+              "link": "/specs/cli/tickets"
+            },
+            {
+              "text": "Workspaces",
+              "link": "/specs/cli/workspaces"
+            }
+          ]
         },
         {
-          "text": "CLI Projects",
-          "link": "/specs/cli/projects"
+          "text": "TUI",
+          "items": [
+            {
+              "text": "Docs",
+              "link": "/specs/tui/docs"
+            },
+            {
+              "text": "Realtime Sync",
+              "link": "/specs/tui/realtime-sync"
+            },
+            {
+              "text": "Settings",
+              "link": "/specs/tui/settings"
+            },
+            {
+              "text": "Tab Bar",
+              "link": "/specs/tui/tab-bar"
+            },
+            {
+              "text": "Templates",
+              "link": "/specs/tui/templates"
+            },
+            {
+              "text": "Tickets",
+              "link": "/specs/tui/tickets"
+            }
+          ]
         },
         {
-          "text": "CLI Agents",
-          "link": "/specs/cli/agents"
-        },
-        {
-          "text": "CLI Feedback",
-          "link": "/specs/cli/feedback"
-        },
-        {
-          "text": "CLI Tickets",
-          "link": "/specs/cli/tickets"
-        },
-        {
-          "text": "CLI Templates",
-          "link": "/specs/cli/templates"
-        },
-        {
-          "text": "CLI Workspaces",
-          "link": "/specs/cli/workspaces"
+          "text": "API",
+          "items": [
+            {
+              "text": "Error Logs",
+              "link": "/specs/api/error-logs"
+            }
+          ]
         },
         {
           "text": "Real-time Updates",
@@ -45,16 +100,40 @@
           "link": "/architecture/api"
         },
         {
-          "text": "Documentation",
-          "link": "/architecture/documentation"
-        },
-        {
           "text": "Agents",
           "link": "/architecture/agents"
         },
         {
+          "text": "Bun Compiled Distribution",
+          "link": "/architecture/bun-compiled-distribution"
+        },
+        {
+          "text": "Documentation",
+          "link": "/architecture/documentation"
+        },
+        {
+          "text": "Local and Remote",
+          "link": "/architecture/local-and-remote"
+        },
+        {
+          "text": "Projects",
+          "link": "/architecture/projects"
+        },
+        {
+          "text": "Sessions",
+          "link": "/architecture/sessions"
+        },
+        {
           "text": "Streaming",
           "link": "/architecture/stream"
+        },
+        {
+          "text": "Workspace Diff Presentation",
+          "link": "/architecture/workspace-diff-presentation"
+        },
+        {
+          "text": "Worktrees",
+          "link": "/architecture/worktrees"
         }
       ]
     },

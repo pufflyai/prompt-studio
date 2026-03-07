@@ -79,7 +79,7 @@ export const describe = "Start API and dashboard, then open in browser";
 
 export const builder = (yargs: Argv) =>
   yargs
-    .option("api-port", { type: "number", default: 3000, describe: "API server port" })
+    .option("api-port", { type: "number", default: 19840, describe: "API server port" })
     .option("dashboard-port", { type: "number", default: 5555, describe: "Dashboard server port" })
     .option("open-browser", { type: "boolean", default: true, describe: "Open dashboard in browser" });
 

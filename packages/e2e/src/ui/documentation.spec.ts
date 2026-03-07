@@ -77,7 +77,7 @@ test.describe("Documentation", () => {
     const project = await createProjectWithDocs(request, emptyRepoDir);
 
     await page.goto(`/projects/${project.id}/docs`);
-    await expect(page.getByText("Unable to load docs")).toBeVisible();
+    await expect(page.getByText("No docs found")).toBeVisible();
 
     rmSync(emptyRepoDir, { recursive: true, force: true });
   });

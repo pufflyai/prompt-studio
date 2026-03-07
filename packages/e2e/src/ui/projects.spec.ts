@@ -28,8 +28,53 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
   }
 };
 
-const createTempGitRepo = () => {
-  const repoPath = mkdtempSync(join(process.cwd(), "pstdio-e2e-picker-"));
+interface DirectorySnapshot {
+  currentPath: string;
+  entries: Array<{ name: string }>;
+}
+
+const resolveParentPath = (value: string) => {
+  const trimmed = value.replace(/\\/g, "/").replace(/\/+$/g, "");
+  if (!trimmed) return "/";
+  const parts = trimmed.split("/").filter(Boolean);
+  if (parts.length <= 1) return "/";
+  return `/${parts.slice(0, -1).join("/")}`;
+};
+
+const listDirectory = async (request: import("@playwright/test").APIRequestContext, path?: string) => {
+  const query = path ? `?path=${encodeURIComponent(path)}` : "";
+  const res = await request.get(`${apiBase}/v1/filesystem/list${query}`);
+  expect(res.ok()).toBe(true);
+  return (await res.json()) as DirectorySnapshot;
+};
+
+const isGitRootFolder = (snapshot: DirectorySnapshot) => snapshot.entries.some((entry) => entry.name === ".git");
+
+const resolveFolderPickerDefaultDirectory = async (request: import("@playwright/test").APIRequestContext) => {
+  let snapshot = await listDirectory(request);
+
+  while (true) {
+    if (isGitRootFolder(snapshot)) {
+      const parentPath = resolveParentPath(snapshot.currentPath);
+      if (parentPath === snapshot.currentPath) {
+        const home = await listDirectory(request, "~");
+        return home.currentPath;
+      }
+      return parentPath;
+    }
+
+    const parentPath = resolveParentPath(snapshot.currentPath);
+    if (parentPath === snapshot.currentPath) {
+      const home = await listDirectory(request, "~");
+      return home.currentPath;
+    }
+
+    snapshot = await listDirectory(request, parentPath);
+  }
+};
+
+const createTempGitRepo = (parentDir: string) => {
+  const repoPath = mkdtempSync(join(parentDir, "pstdio-e2e-picker-"));
   mkdirSync(join(repoPath, ".git"), { recursive: true });
   return repoPath;
 };
@@ -90,8 +135,9 @@ test.describe("Project creation", () => {
     await deleteAllProjects(request);
   });
 
-  test("folder picker shows directory entries", async ({ page }) => {
-    const repoPath = createTempGitRepo();
+  test("folder picker shows directory entries", async ({ page, request }) => {
+    const defaultDirectory = await resolveFolderPickerDefaultDirectory(request);
+    const repoPath = createTempGitRepo(defaultDirectory);
     const repoName = basename(repoPath);
     const dialog = page.getByRole("dialog").last();
     const repoOption = dialog.getByRole("option").filter({ hasText: repoName }).first();
@@ -110,8 +156,9 @@ test.describe("Project creation", () => {
     }
   });
 
-  test("creates a project via the dialog", async ({ page }) => {
-    const repoPath = createTempGitRepo();
+  test("creates a project via the dialog", async ({ page, request }) => {
+    const defaultDirectory = await resolveFolderPickerDefaultDirectory(request);
+    const repoPath = createTempGitRepo(defaultDirectory);
     const repoName = basename(repoPath);
 
     try {
@@ -156,8 +203,9 @@ test.describe("Project creation", () => {
     await expect(page.getByText("Select at least one repository.")).toBeVisible();
   });
 
-  test("can create project from empty state CTA", async ({ page }) => {
-    const repoPath = createTempGitRepo();
+  test("can create project from empty state CTA", async ({ page, request }) => {
+    const defaultDirectory = await resolveFolderPickerDefaultDirectory(request);
+    const repoPath = createTempGitRepo(defaultDirectory);
 
     try {
       await bypassOnboarding(page);
