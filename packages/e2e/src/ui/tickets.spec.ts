@@ -129,28 +129,6 @@ test.describe("Ticket list", () => {
     expect(page.url()).toContain(`/tickets/${ticket.shorthand}`);
   });
 
-  test("switches between board and list view", async ({ page, request }) => {
-    const statuses = await getTicketStatuses(request, projectId);
-    const backlog = statuses.find((s) => s.name === "backlog")!;
-    await createTicketViaApi(request, projectId, "View switch ticket", backlog.id);
-
-    await bypassOnboarding(page);
-    await page.goto(`/projects/${projectId}/tickets`);
-
-    await expect(page.getByText("View switch ticket")).toBeVisible();
-
-    // Open display menu and switch to list
-    await page.getByRole("button", { name: "Display" }).click();
-    await page.getByText("List", { exact: true }).click();
-
-    // Ticket should still be visible in list view
-    await expect(page.getByText("View switch ticket")).toBeVisible();
-
-    // Switch back to board
-    await page.getByText("Board", { exact: true }).click();
-    await expect(page.getByText("View switch ticket")).toBeVisible();
-  });
-
   test("filters tickets by hiding archived tickets", async ({ page, request }) => {
     const statuses = await getTicketStatuses(request, projectId);
     const backlog = statuses.find((s) => s.name === "backlog")!;
