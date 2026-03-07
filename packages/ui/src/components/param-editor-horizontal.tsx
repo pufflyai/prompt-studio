@@ -126,7 +126,7 @@ export const ParamEditorHorizontal = (props: ParamEditorHorizontalProps) => {
       {/* Render grouped params */}
       {groups.map((group) => (
         <VStack key={group.id} gap="xs" align="start">
-          <Text fontSize="sm" fontWeight="medium" color="foreground.secondary">
+          <Text fontSize="sm" fontWeight="medium" color="fg.muted">
             {group.title}
           </Text>
           <HStack gap="xs">{group.params.map(renderParam)}</HStack>

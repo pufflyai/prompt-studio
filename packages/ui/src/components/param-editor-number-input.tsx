@@ -57,7 +57,7 @@ export const NumberInput = (props: NumberInputProps) => {
         {useFullWidthLayout ? (
           <Box mb="sm">
             {!hideLabel && (
-              <Text textStyle="label/S/medium" color="foreground.secondary" mb="xs">
+              <Text textStyle="label/S/medium" color="fg.muted" mb="xs">
                 {name}
               </Text>
             )}
@@ -91,7 +91,7 @@ export const NumberInput = (props: NumberInputProps) => {
         ) : (
           <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" mb="sm">
             {!hideLabel && (
-              <Text textStyle="label/S/medium" color="foreground.secondary">
+              <Text textStyle="label/S/medium" color="fg.muted">
                 {name}
               </Text>
             )}

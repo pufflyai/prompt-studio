@@ -71,8 +71,8 @@ export const MenuItem = (props: MenuItemProps) => {
     leftIcon = null,
     leftSlot,
     rightIcon,
-    leftIconColor = "fg",
-    rightIconColor = "fg",
+    leftIconColor = "fg.menu-item.default",
+    rightIconColor = "fg.menu-item.default",
     leftIconSize,
     rightIconSize,
     rightIconAriaLabel,
@@ -91,7 +91,7 @@ export const MenuItem = (props: MenuItemProps) => {
   } = props;
   const { onClick, onMouseDown, onMouseEnter } = props;
   const variantStyles = menuItemVariantStyles[variant];
-  const backgroundColor = isSelected ? "bg.emphasized" : undefined;
+  const backgroundColor = isSelected ? "bg.menu-item.selected" : "bg.menu-item.default";
   const resolvedLeftIconSize = leftIconSize ?? variantStyles.iconSize;
   const resolvedRightIconSize = rightIconSize ?? variantStyles.iconSize;
   const isRightIconInteractive = Boolean(onRightIconClick && rightIcon);
@@ -137,8 +137,8 @@ export const MenuItem = (props: MenuItemProps) => {
       cursor={isDisabled ? "default" : "pointer"}
       value={id ?? primaryLabel}
       bg={backgroundColor}
-      _hover={{ bg: "bg.muted" }}
-      _focus={{ bg: "bg.muted" }}
+      _hover={{ bg: "bg.menu-item.hover" }}
+      _focus={{ bg: "bg.menu-item.focus" }}
     >
       <Flex justifyContent="space-between" alignItems="center" gap="xs" flex="1">
         <Tooltip positioning={{ placement: "right" }} content={tooltipLabel} disabled={!tooltipLabel}>
@@ -159,14 +159,14 @@ export const MenuItem = (props: MenuItemProps) => {
                 lineClamp={1}
                 textOverflow="ellipsis"
                 textStyle={variantStyles.secondaryTextStyle}
-                color="fg.muted"
+                color="fg.menu-item.secondary"
               >
                 {secondaryLabel}
               </Text>
             )}
           </Stack>
         </Tooltip>
-        <Flex justifyContent="flex-end" color="fg">
+        <Flex justifyContent="flex-end" color="fg.menu-item.default">
           {rightIcon ? (
             <Tooltip positioning={{ placement: "right" }} content={rightTooltipLabel} disabled={!rightTooltipLabel}>
               <Flex

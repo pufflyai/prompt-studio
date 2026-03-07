@@ -11,9 +11,9 @@ export const resolveSessionIndicatorIcon = (status: SessionCompletionStatus | un
 };
 
 export const resolveSessionIndicatorColor = (status: SessionCompletionStatus | undefined) => {
-  if (status === "completed") return "foreground.feedback.success";
-  if (status === "failed") return "foreground.feedback.alert";
-  return "foreground.secondary";
+  if (status === "completed") return "fg.success";
+  if (status === "failed") return "fg.error";
+  return "fg.muted";
 };
 
 interface SessionIndicatorProps {

@@ -58,6 +58,10 @@
             {
               "text": "Documentation",
               "link": "/specs/dashboard/documentation"
+            },
+            {
+              "text": "Tickets",
+              "link": "/specs/dashboard/tickets"
             }
           ]
         },

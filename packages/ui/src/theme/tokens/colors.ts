@@ -70,6 +70,29 @@ export const fg = {
       _dark: "{colors.sapphire.800}",
     },
   },
+
+  button: {
+    primary: {
+      default: {
+        value: {
+          base: "{colors.blacks.200}",
+          _dark: "{colors.blacks.200}",
+        },
+      },
+      disabled: {
+        value: "{colors.fg.subtle}",
+      },
+    },
+  },
+
+  "menu-item": {
+    default: {
+      value: "{colors.fg}",
+    },
+    secondary: {
+      value: "{colors.fg.muted}",
+    },
+  },
 };
 
 export const bg = {
@@ -89,8 +112,8 @@ export const bg = {
 
   subtle: {
     value: {
-      base: "{colors.blacks.50}",
-      _dark: "{colors.blacks.600}",
+      base: "{colors.blacks.75}",
+      _dark: "{colors.blacks.850}",
     },
   },
 
@@ -136,6 +159,38 @@ export const bg = {
     },
   },
 
+  button: {
+    primary: {
+      default: {
+        value: "{colors.bg.accent-primary.default}",
+      },
+      hover: {
+        value: "{colors.bg.accent-primary.hover}",
+      },
+      pressed: {
+        value: "{colors.bg.accent-primary.pressed}",
+      },
+      disabled: {
+        value: "{colors.bg.muted}",
+      },
+    },
+  },
+
+  "menu-item": {
+    default: {
+      value: "{colors.bg}",
+    },
+    hover: {
+      value: "{colors.bg.muted}",
+    },
+    focus: {
+      value: "{colors.bg.muted}",
+    },
+    selected: {
+      value: "{colors.bg.muted}",
+    },
+  },
+
   display: {
     "very-light": {
       value: {
@@ -146,28 +201,46 @@ export const bg = {
   },
 
   "accent-primary": {
+    default: {
+      value: {
+        base: "{colors.orange.100}",
+        _dark: "{colors.orange.300}",
+      },
+    },
+    hover: {
+      value: {
+        base: "{colors.orange.200}",
+        _dark: "{colors.orange.200}",
+      },
+    },
+    pressed: {
+      value: {
+        base: "{colors.orange.300}",
+        _dark: "{colors.orange.100}",
+      },
+    },
     "very-light": {
       value: {
-        base: "{colors.accentPrimary.light}",
+        base: "{colors.orange.100}",
         _dark: "{colors.blacks.1000}",
       },
     },
     light: {
       value: {
-        base: "{colors.accentPrimary.light}",
-        _dark: "{colors.accentPrimary.light}",
+        base: "{colors.orange.100}",
+        _dark: "{colors.orange.300}",
       },
     },
     medium: {
       value: {
-        base: "{colors.accentPrimary.medium}",
-        _dark: "{colors.accentPrimary.medium}",
+        base: "{colors.orange.200}",
+        _dark: "{colors.orange.200}",
       },
     },
     dark: {
       value: {
-        base: "{colors.accentPrimary.dark}",
-        _dark: "{colors.accentPrimary.dark}",
+        base: "{colors.orange.300}",
+        _dark: "{colors.orange.100}",
       },
     },
   },
@@ -299,6 +372,19 @@ export const border = {
     value: {
       base: "{colors.blue.200}",
       _dark: "{colors.blue.900}",
+    },
+  },
+
+  accent: {
+    value: {
+      base: "{colors.blue.700}",
+      _dark: "{colors.blue.200}",
+    },
+  },
+
+  button: {
+    primary: {
+      value: "{colors.border.muted}",
     },
   },
 };

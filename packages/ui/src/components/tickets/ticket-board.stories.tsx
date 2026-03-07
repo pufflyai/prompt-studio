@@ -82,10 +82,46 @@ const mockColumns: TicketBoardColumn[] = [
   },
 ];
 
+const moveItemToColumn = (columns: TicketBoardColumn[], itemId: string, targetColumnId: string) => {
+  let movedItem: TicketBoardColumn["items"][number] | undefined;
+  let sourceColumnId: string | null = null;
+
+  const nextColumns = columns.map((column) => {
+    const itemIndex = column.items.findIndex((item) => item.id === itemId);
+    if (itemIndex < 0) return column;
+
+    sourceColumnId = column.id;
+    const nextItems = [...column.items];
+    const [item] = nextItems.splice(itemIndex, 1);
+    movedItem = item;
+
+    return {
+      ...column,
+      items: nextItems,
+    };
+  });
+
+  if (!movedItem || !sourceColumnId || sourceColumnId === targetColumnId) {
+    return columns;
+  }
+
+  const itemToMove = movedItem;
+
+  return nextColumns.map((column) => {
+    if (column.id !== targetColumnId) return column;
+
+    return {
+      ...column,
+      items: [...column.items, itemToMove],
+    };
+  });
+};
+
 const Wrapper = () => {
+  const [columns, setColumns] = useState(mockColumns);
   const [selected, setSelected] = useState<string | null>(null);
 
-  const columns = mockColumns.map((col) => ({
+  const selectableColumns = columns.map((col) => ({
     ...col,
     items: col.items.map((item) => ({
       ...item,
@@ -95,9 +131,11 @@ const Wrapper = () => {
 
   return (
     <TicketBoard
-      columns={columns}
+      columns={selectableColumns}
       selectedItemId={selected}
-      onMoveItem={(itemId, columnId) => console.log("move", itemId, "to", columnId)}
+      onMoveItem={(itemId, columnId) =>
+        setColumns((previousColumns) => moveItemToColumn(previousColumns, itemId, columnId))
+      }
       onCreateStart={(columnId) => console.log("create in", columnId)}
       onColumnAction={(columnId, actionId) => console.log("action", actionId, "on", columnId)}
     />

@@ -1,6 +1,7 @@
 export const blacks = {
   DEFAULT: { value: "#0A0D15" },
   50: { value: "#FFFFFF" },
+  75: { value: "#FCFCFC" },
   100: { value: "#F9F9F9" },
   200: { value: "#F5F5F5" },
   300: { value: "#EAEAEA" },
@@ -8,6 +9,7 @@ export const blacks = {
   500: { value: "#797D83" },
   600: { value: "#5A5F67" },
   700: { value: "#444750" },
+  750: { value: "#33363E" },
   800: { value: "#22252C" },
   850: { value: "#1A1C21" },
   900: { value: "#0A0D15" },
@@ -98,13 +100,6 @@ export const orange = {
   700: { value: "#92611A" },
   800: { value: "#714B14" },
   900: { value: "#52370F" },
-};
-
-export const accentPrimary = {
-  DEFAULT: { value: "#FFE2BC" },
-  light: { value: "#FFF1DE" },
-  medium: { value: "#FFE2BC" },
-  dark: { value: "#FFD6A8" },
 };
 
 export const yellow = {
@@ -199,7 +194,6 @@ export const colors = {
   pink,
   peach,
   red,
-  accentPrimary,
   orange,
   yellow,
   green,

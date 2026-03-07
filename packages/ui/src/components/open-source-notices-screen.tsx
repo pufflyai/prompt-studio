@@ -76,7 +76,7 @@ export const OpenSourceNoticesScreen = (props: OpenSourceNoticesScreenProps) => 
         </HStack>
       </Stack>
 
-      <Separator borderColor="border.secondary" />
+      <Separator borderColor="border.muted" />
 
       {notices.length === 0 ? (
         <Stack borderWidth="1px" borderColor="border.muted" borderRadius="md" padding="lg" gap="xs">

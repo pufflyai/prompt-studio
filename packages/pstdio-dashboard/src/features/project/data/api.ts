@@ -130,9 +130,9 @@ export const getRepoBranches = async (repoId: string) => {
   return [] satisfies RepoBranch[];
 };
 
-export const getProjectTemplateAssets = async (projectId: string) => {
+export const getProjectTemplateAssets = async (projectId: string): Promise<ProjectTemplateAsset[]> => {
   void projectId;
-  return [] satisfies ProjectTemplateAsset[];
+  return [];
 };
 
 export const updateProjectTemplateAsset = async (projectId: string, assetId: string, content: string) => {

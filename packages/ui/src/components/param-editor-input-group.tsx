@@ -130,7 +130,7 @@ export const InputGroupComponent = (props: InputGroupComponentProps) => {
       )}
 
       {group.description && (
-        <Text textStyle="label/S/regular" color="foreground.secondary" mb="sm">
+        <Text textStyle="label/S/regular" color="fg.muted" mb="sm">
           {group.description}
         </Text>
       )}

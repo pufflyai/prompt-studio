@@ -48,7 +48,7 @@ export const TextInput = (props: TextInputProps) => {
         {singleLine && !fullWidth ? (
           <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" mb="sm">
             {!hideLabel && (
-              <Text mr="xs" textStyle="label/S/medium" color="foreground.secondary">
+              <Text mr="xs" textStyle="label/S/medium" color="fg.muted">
                 {name}
               </Text>
             )}
@@ -72,7 +72,7 @@ export const TextInput = (props: TextInputProps) => {
         ) : (
           <Box>
             {!hideLabel && (
-              <Text textStyle="label/S/medium" color="foreground.secondary" mb="xs">
+              <Text textStyle="label/S/medium" color="fg.muted" mb="xs">
                 {name}
               </Text>
             )}

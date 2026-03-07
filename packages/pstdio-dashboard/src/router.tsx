@@ -20,8 +20,8 @@ import { SessionsPanel } from "@/features/sessions/pages/sessions-panel";
 import { Settings } from "@/features/settings/pages/settings-index";
 import { TicketDetailsPanel } from "@/features/ticket/pages/ticket-details-panel";
 import { TicketsPanel } from "@/features/ticket-list/pages/tickets-panel";
+import { WorkspacePage } from "@/features/workspaces/pages/workspace-page";
 import { WorkspaceProvider } from "@/features/workspaces/state";
-import { WorkspacePage } from "@/features/workspaces-new/pages/workspace-page";
 
 const validateDocsSearch = (search: Record<string, unknown>) => ({
   doc: typeof search.doc === "string" ? search.doc : undefined,
@@ -38,7 +38,7 @@ export const resolveProjectDefaultPath = (projectId?: string) => {
     return "/projects";
   }
 
-  return `/projects/${projectId}/tickets`;
+  return `/projects/${projectId}/docs`;
 };
 
 export const AppLayout = () => {
@@ -57,7 +57,7 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   beforeLoad: () => {
-    throw redirect({ to: "/projects" });
+    throw redirect({ to: "/docs" });
   },
   component: Outlet,
 });
@@ -94,7 +94,7 @@ const onboardingRoute = createRoute({
   path: "onboarding",
   beforeLoad: () => {
     if (isOnboardingComplete()) {
-      throw redirect({ to: "/projects" });
+      throw redirect({ to: "/docs" });
     }
   },
   component: Onboarding,
@@ -174,7 +174,7 @@ const notFoundRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "*",
   beforeLoad: () => {
-    throw redirect({ to: "/projects" });
+    throw redirect({ to: "/docs" });
   },
   component: Outlet,
 });

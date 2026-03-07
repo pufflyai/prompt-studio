@@ -82,13 +82,13 @@ export const Onboarding = () => {
             onClick={() => setSelectedAgent("opencode")}
             borderWidth="1px"
             borderRadius="lg"
-            borderColor={isOpencodeSelected ? "border.accent" : "border.secondary"}
+            borderColor={isOpencodeSelected ? "border.accent" : "border.muted"}
             bg={isOpencodeSelected ? "bg.emphasized" : "bg"}
             px="lg"
             py="md"
             textAlign="left"
             transition="border-color 0.2s ease"
-            _hover={{ borderColor: "border.primary" }}
+            _hover={{ borderColor: "border" }}
           >
             <Flex alignItems="flex-start" justifyContent="space-between" gap="md">
               <Stack gap="xs" flex="1">

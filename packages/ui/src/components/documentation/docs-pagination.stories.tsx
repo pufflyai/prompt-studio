@@ -7,7 +7,7 @@ const meta = {
   component: DocsPagination,
   decorators: [
     (Story) => (
-      <Box bg="bg" borderWidth="1px" borderColor="border.secondary" p="6">
+      <Box bg="bg" borderWidth="1px" borderColor="border.muted" p="6">
         <Story />
       </Box>
     ),

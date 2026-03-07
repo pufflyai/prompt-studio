@@ -121,7 +121,7 @@ export const ParamEditor = (props: ParamEditorProps) => {
       {params.map(renderParam)}
 
       {/* Add separator between standalone params and groups if both exist */}
-      {params.length > 0 && groups.length > 0 && <Separator borderColor="border.secondary" />}
+      {params.length > 0 && groups.length > 0 && <Separator borderColor="border.muted" />}
 
       {/* Render groups with separators */}
       {groups.map((group, index) => (
@@ -134,7 +134,7 @@ export const ParamEditor = (props: ParamEditorProps) => {
             fullWidth={fullWidth}
           />
           {/* Add divider after each group except the last one */}
-          {index < groups.length - 1 && <Separator borderColor="border.secondary" />}
+          {index < groups.length - 1 && <Separator borderColor="border.muted" />}
         </Fragment>
       ))}
     </Stack>

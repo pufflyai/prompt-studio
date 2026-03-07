@@ -12,6 +12,7 @@ export interface TicketCardBadge {
 
 interface TicketCardProps {
   ticketId: string;
+  parentPath?: string[];
   sessionIndicatorLabel?: string;
   sessionIndicatorStatus?: SessionCompletionStatus;
   title: string;
@@ -30,6 +31,7 @@ interface TicketCardProps {
 export const TicketCard = (props: TicketCardProps) => {
   const {
     ticketId,
+    parentPath = [],
     sessionIndicatorLabel,
     sessionIndicatorStatus,
     title,
@@ -61,12 +63,12 @@ export const TicketCard = (props: TicketCardProps) => {
       padding="sm"
       borderRadius="sm"
       borderWidth="1px"
-      borderColor={isSelected ? "border.accent" : "border.secondary"}
-      background="background.primary"
-      boxShadow={isSelected ? "mid" : "none"}
+      width="calc(100% - 8px)"
+      alignSelf="center"
+      background="bg"
       transition="box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out"
       _hover={{
-        borderColor: isSelected ? "border.accent" : "border.primary",
+        borderColor: "border.blue",
         boxShadow: "mid",
       }}
       cursor={draggable ? "grab" : onClick ? "pointer" : "default"}
@@ -79,6 +81,11 @@ export const TicketCard = (props: TicketCardProps) => {
       <HStack justifyContent={"space-between"} gap="2xs" flexWrap="wrap">
         <HStack gap="2xs" flexShrink={0}>
           <Text textStyle="label/S/regular" flexShrink={0}>
+            {parentPath.length > 0 && (
+              <Text as="span" color="subtle">
+                {parentPath.join(" / ")} /{" "}
+              </Text>
+            )}
             {ticketId}
           </Text>
           {sessionIndicatorLabel ? (

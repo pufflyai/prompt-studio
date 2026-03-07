@@ -59,6 +59,11 @@ export const TicketBoard = (props: TicketBoardProps) => {
     setActiveColumn(columnId);
   };
 
+  const handleDragLeave = (event: DragEvent<HTMLDivElement>) => {
+    if (event.currentTarget.contains(event.relatedTarget as Node)) return;
+    setActiveColumn(null);
+  };
+
   const handleDrop = (columnId: string) => (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setActiveColumn(null);
@@ -73,7 +78,7 @@ export const TicketBoard = (props: TicketBoardProps) => {
     <Stack
       height="100%"
       direction="row"
-      gap="2xs"
+      gap="0"
       align="stretch"
       overflowX="auto"
       overflowY="hidden"
@@ -83,15 +88,16 @@ export const TicketBoard = (props: TicketBoardProps) => {
         <Stack
           key={column.id}
           gap="xs"
-          padding="xs"
           _notFirst={{ borderLeft: "1px solid", borderColor: "border" }}
-          background={activeColumn === column.id ? "background.secondary" : "background.primary"}
+          background={activeColumn === column.id ? "bg.subtle" : "bg"}
+          transition="background 150ms ease"
           height="100%"
           minH="240px"
           overflow="hidden"
           minW="260px"
           flex="1 0 260px"
           onDragOver={column.canDragIn ? handleDragOver(column.id) : undefined}
+          onDragLeave={column.canDragIn ? handleDragLeave : undefined}
           onDrop={column.canDragIn ? handleDrop(column.id) : undefined}
         >
           <ColumnHeader column={column} onCreateStart={onCreateStart} onColumnAction={onColumnAction} />
@@ -124,7 +130,7 @@ const ColumnHeader = (props: ColumnHeaderProps) => {
   const { column, onCreateStart, onColumnAction } = props;
 
   return (
-    <HStack gap="xs" alignItems="center">
+    <HStack padding="xs" gap="xs" alignItems="center">
       <Text textStyle="label/L/medium">{column.label}</Text>
 
       <Badge variant="subtle" colorPalette={column.color ?? "gray"}>
@@ -149,7 +155,7 @@ const ColumnHeader = (props: ColumnHeaderProps) => {
             </IconButton>
           </Menu.Trigger>
           <Menu.Positioner>
-            <Menu.Content minW="180px" bg="background.primary">
+            <Menu.Content minW="180px" bg="bg">
               {column.actions.map((action) => (
                 <MenuItem
                   key={action.id}

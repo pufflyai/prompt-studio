@@ -167,6 +167,7 @@ packages/pstdio/bin
 packages/e2e/playwright-report
 packages/e2e/test-results
 packages/e2e/screenshots
+__test-tmp__
 
 */**/storybook-static
 

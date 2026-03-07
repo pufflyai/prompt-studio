@@ -12,14 +12,14 @@ export const menuSlotRecipe = defineSlotRecipe({
     },
 
     item: {
-      bg: "bg",
-      color: "fg",
+      bg: "bg.menu-item.default",
+      color: "fg.menu-item.default",
       textStyle: "label/M/regular",
       px: "0.5rem",
       h: "2.25rem",
-      _hover: { bg: "bg.muted" },
-      _focus: { bg: "bg.muted" },
-      _active: { bg: "bg.emphasized" },
+      _hover: { bg: "bg.menu-item.hover" },
+      _focus: { bg: "bg.menu-item.focus" },
+      _active: { bg: "bg.menu-item.selected" },
     },
 
     content: {

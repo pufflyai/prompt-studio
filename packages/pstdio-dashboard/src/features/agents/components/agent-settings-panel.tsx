@@ -75,15 +75,7 @@ export const AgentSettingsSection = (props: AgentSettingsSectionProps) => {
 
       <Stack gap="md">
         {installedAgents.map((agent) => (
-          <Stack
-            key={agent.id}
-            gap="sm"
-            px="md"
-            py="sm"
-            borderWidth="1px"
-            borderColor="border.secondary"
-            borderRadius="md"
-          >
+          <Stack key={agent.id} gap="sm" px="md" py="sm" borderWidth="1px" borderColor="border.muted" borderRadius="md">
             <Text textStyle="label/S/medium">{agent.name}</Text>
             <AgentSettingsPanel agent={agent} />
           </Stack>

@@ -60,6 +60,9 @@ export const WithMultipleBadges: Story = {
 export const WithParentAndStatus: Story = {
   args: {
     ticketId: "TK0005",
+    parentPath: ["PROJ", "Sprint 3"],
+    sessionIndicatorLabel: "A0012",
+    sessionIndicatorStatus: "completed",
     title: "Create API endpoint for user preferences",
     badges: [
       { label: "backend", color: "blue" },

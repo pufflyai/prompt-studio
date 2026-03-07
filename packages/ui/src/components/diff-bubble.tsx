@@ -35,12 +35,15 @@ export const DiffBubble = (props: DiffBubbleProps) => {
       border={variant === "outline" ? "1px solid" : "none"}
       borderColor="border.muted"
       color="fg.muted"
-      paddingX={variant === "outline" ? (isSmall ? "3xs" : "2xs") : "0"}
+      paddingX={variant === "outline" ? (isSmall ? "3xs" : "2xs") : "2px"}
       paddingY="1px"
       borderRadius="xs"
       textStyle={isSmall ? "label/S/regular" : undefined}
       cursor={onClick ? "pointer" : "default"}
       onClick={onClick}
+      _hover={{
+        background: "bg.muted",
+      }}
     >
       {label}
       {fileName && (

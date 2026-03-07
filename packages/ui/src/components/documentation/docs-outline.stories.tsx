@@ -37,7 +37,7 @@ const meta = {
   component: DocsOutline,
   decorators: [
     (Story) => (
-      <Box height="520px" bg="bg" borderWidth="1px" borderColor="border.secondary">
+      <Box height="520px" bg="bg" borderWidth="1px" borderColor="border.muted">
         <Story />
       </Box>
     ),
@@ -54,7 +54,7 @@ export const Desktop: Story = {
 export const Mobile: Story = {
   decorators: [
     (Story) => (
-      <Box width="360px" maxWidth="100%" bg="bg" borderWidth="1px" borderColor="border.secondary">
+      <Box width="360px" maxWidth="100%" bg="bg" borderWidth="1px" borderColor="border.muted">
         <Story />
       </Box>
     ),

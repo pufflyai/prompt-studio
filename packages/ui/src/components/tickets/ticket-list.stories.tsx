@@ -10,7 +10,7 @@ const AssigneeAvatar = ({ name }: { name: string }) => (
     width="20px"
     height="20px"
     borderRadius="full"
-    background="background.muted"
+    background="bg.muted"
     display="flex"
     alignItems="center"
     justifyContent="center"
@@ -36,7 +36,7 @@ const mockItems: TicketListItem[] = [
     ticketId: "WOOP-1",
     title: "Get familiar with Linear",
     statusIcon: Signal,
-    statusColor: "foreground.secondary",
+    statusColor: "fg.muted",
     date: "Jan 21",
     assigneeIcon: <AssigneeAvatar name="Alex" />,
   },
@@ -53,7 +53,7 @@ const mockItems: TicketListItem[] = [
     ticketId: "WOOP-8",
     title: "I am parent!",
     statusIcon: CircleX,
-    statusColor: "foreground.error",
+    statusColor: "fg.error",
     date: "Feb 17",
     assigneeIcon: <AssigneeAvatar name="Carol" />,
     children: [
@@ -104,7 +104,7 @@ const mockItems: TicketListItem[] = [
     ticketId: "WOOP-2",
     title: "Set up your teams",
     statusIcon: CircleCheck,
-    statusColor: "foreground.feedback.success",
+    statusColor: "fg.success",
     date: "Jan 21",
     assigneeIcon: <AssigneeAvatar name="Ivy" />,
   },
@@ -113,7 +113,7 @@ const mockItems: TicketListItem[] = [
     ticketId: "WOOP-5",
     title: "rwar",
     statusIcon: CircleCheck,
-    statusColor: "foreground.feedback.success",
+    statusColor: "fg.success",
     badges: [{ label: "test", color: "purple" }],
     date: "Feb 6",
     assigneeIcon: <AssigneeAvatar name="Jack" />,
@@ -144,7 +144,7 @@ export const WithBadges: Story = {
         ticketId: "PRJ-1",
         title: "Implement authentication flow",
         statusIcon: CircleDot,
-        statusColor: "foreground.feedback.success",
+        statusColor: "fg.success",
         badges: [
           { label: "high", color: "red" },
           { label: "backend", color: "blue" },
@@ -156,7 +156,7 @@ export const WithBadges: Story = {
         ticketId: "PRJ-2",
         title: "Fix login redirect loop",
         statusIcon: CircleAlert,
-        statusColor: "foreground.error",
+        statusColor: "fg.error",
         badges: [{ label: "bug", color: "red" }],
         date: "Mar 3",
       },
@@ -192,7 +192,7 @@ export const DeepNesting: Story = {
                 ticketId: "NEST-3",
                 title: "Grandchild task",
                 statusIcon: CircleCheck,
-                statusColor: "foreground.feedback.success",
+                statusColor: "fg.success",
                 date: "Mar 3",
               },
             ],

@@ -59,7 +59,7 @@ export const FolderPickerDialog = (props: FolderPickerDialogProps) => {
             <Stack gap="xs">
               <Text textStyle="heading/M">{title}</Text>
               {description ? (
-                <Text textStyle="paragraph/S/regular" color="foreground.secondary">
+                <Text textStyle="paragraph/S/regular" color="fg.muted">
                   {description}
                 </Text>
               ) : null}
@@ -80,7 +80,7 @@ export const FolderPickerDialog = (props: FolderPickerDialogProps) => {
                 >
                   <ChevronUp size={16} />
                 </Button>
-                <Text textStyle="paragraph/S/regular" color="foreground.secondary" flex="1" lineClamp={1}>
+                <Text textStyle="paragraph/S/regular" color="fg.muted" flex="1" lineClamp={1}>
                   {currentPath || "Home"}
                 </Text>
               </Stack>
@@ -89,13 +89,13 @@ export const FolderPickerDialog = (props: FolderPickerDialogProps) => {
                 gap="xs"
                 borderWidth="1px"
                 borderRadius="md"
-                borderColor="border.secondary"
+                borderColor="border.muted"
                 padding="sm"
                 maxHeight="320px"
                 overflowY="auto"
               >
                 {isLoading ? (
-                  <Text textStyle="paragraph/S/regular" color="foreground.secondary">
+                  <Text textStyle="paragraph/S/regular" color="fg.muted">
                     Loading...
                   </Text>
                 ) : error ? (
@@ -103,7 +103,7 @@ export const FolderPickerDialog = (props: FolderPickerDialogProps) => {
                     {error}
                   </Text>
                 ) : entries.length === 0 ? (
-                  <Text textStyle="paragraph/S/regular" color="foreground.secondary">
+                  <Text textStyle="paragraph/S/regular" color="fg.muted">
                     No entries found.
                   </Text>
                 ) : (

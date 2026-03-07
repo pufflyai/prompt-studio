@@ -47,7 +47,7 @@ const meta: Meta<typeof DocsSidebar> = {
   component: DocsSidebar,
   decorators: [
     (Story) => (
-      <Box height="520px" bg="bg" borderWidth="1px" borderColor="border.secondary">
+      <Box height="520px" bg="bg" borderWidth="1px" borderColor="border.muted">
         <Story />
       </Box>
     ),

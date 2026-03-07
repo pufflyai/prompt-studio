@@ -6,6 +6,11 @@ import { externalizeDeps } from "vite-plugin-externalize-deps";
 import svgr from "vite-plugin-svgr";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@": path.resolve(import.meta.dirname, "src"),
+    },
+  },
   build: {
     lib: {
       entry: {

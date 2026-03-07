@@ -20,7 +20,7 @@ const projectSections = [
 
 const projectChangelogSection = {
   id: "changelog",
-  label: "Changelog",
+  label: "Project changelog",
   icon: Newspaper,
   path: "changelog",
 } as const;

@@ -68,8 +68,8 @@ export const TicketList = (props: TicketListProps) => {
             cursor="pointer"
             borderBottomWidth="1px"
             borderColor="border.muted"
-            background={isSelected ? "background.secondary" : "transparent"}
-            _hover={{ background: "background.secondary" }}
+            background={isSelected ? "bg.muted" : "transparent"}
+            _hover={{ background: "bg.muted" }}
             onClick={() => {
               item.onClick?.();
               onItemClick?.(item);
@@ -98,10 +98,10 @@ const TicketCell = (props: TicketCellProps) => {
       {row.getCanExpand() ? <ExpandToggle row={row} /> : depth > 0 ? <TreeConnector /> : null}
 
       {item.statusIcon && (
-        <Icon as={item.statusIcon} boxSize="16px" color={item.statusColor ?? "foreground.secondary"} flexShrink={0} />
+        <Icon as={item.statusIcon} boxSize="16px" color={item.statusColor ?? "fg.muted"} flexShrink={0} />
       )}
 
-      <Text textStyle="label/S/regular" color="foreground.secondary" flexShrink={0} minW="70px">
+      <Text textStyle="label/S/regular" color="fg.muted" flexShrink={0} minW="70px">
         {item.ticketId}
       </Text>
 
@@ -122,7 +122,7 @@ const TicketCell = (props: TicketCellProps) => {
       {item.assigneeIcon && <Box flexShrink={0}>{item.assigneeIcon}</Box>}
 
       {item.date && (
-        <Text textStyle="label/XS/regular" color="foreground.secondary" flexShrink={0}>
+        <Text textStyle="label/XS/regular" color="fg.muted" flexShrink={0}>
           {item.date}
         </Text>
       )}
@@ -155,7 +155,7 @@ const ExpandToggle = (props: ExpandToggleProps) => {
       <Icon
         as={ChevronRight}
         boxSize="14px"
-        color="foreground.secondary"
+        color="fg.muted"
         transform={row.getIsExpanded() ? "rotate(90deg)" : "rotate(0deg)"}
         transition="transform 0.15s ease"
       />
