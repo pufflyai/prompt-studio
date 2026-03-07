@@ -7,8 +7,9 @@ type TicketRecord = typeof tickets.$inferSelect;
 
 type CreateInput = {
   project_id: string;
-  title?: string;
-  input?: string;
+  display_title?: string;
+  user_prompt?: string;
+  file_id?: string;
   priority?: string;
   complexity?: string;
   parent_id?: string;
@@ -29,8 +30,9 @@ type ListFilters = {
 type UpdateInput = Partial<
   Pick<
     TicketRecord,
-    | "title"
-    | "input"
+    | "display_title"
+    | "user_prompt"
+    | "file_id"
     | "status_id"
     | "priority"
     | "complexity"
@@ -66,8 +68,9 @@ export const createTicketsService = (db: DbClient) => {
       shorthand,
       project_id: input.project_id,
       status_id: input.status_id ?? null,
-      title: input.title ?? null,
-      input: input.input ?? null,
+      display_title: input.display_title ?? null,
+      user_prompt: input.user_prompt ?? null,
+      file_id: input.file_id ?? null,
       priority: input.priority ?? null,
       parallelizable: null,
       complexity: input.complexity ?? null,

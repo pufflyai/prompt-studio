@@ -52,7 +52,7 @@ export const ProjectList = () => {
   };
 
   const handleProjectSelect = (projectId: string) => {
-    navigate({ to: "/projects/$projectId/tickets", params: { projectId } });
+    navigate({ to: "/projects/$projectId/docs", params: { projectId } });
   };
 
   const description = isLoading ? "" : `You have ${projects.length} project${projects.length === 1 ? "" : "s"}.`;

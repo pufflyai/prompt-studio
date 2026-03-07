@@ -156,7 +156,7 @@ describe("pstdio tickets save", () => {
 
     // Verify it appears in non-draft list
     const listOutput = run("tickets list", repo);
-    expect(listOutput).toContain("Save me");
+    expect(listOutput).toContain("save-me");
 
     // Verify it no longer appears in draft list
     const draftOutput = run("tickets list --draft", repo);
@@ -272,7 +272,7 @@ describe("pstdio tickets full flow", () => {
 
     // 4. Now appears in list
     const listOutput = run("tickets list", repo);
-    expect(listOutput).toContain("Lifecycle ticket");
+    expect(listOutput).toContain("lifecycle-ticket");
     expect(listOutput).toContain(shorthand);
   });
 });

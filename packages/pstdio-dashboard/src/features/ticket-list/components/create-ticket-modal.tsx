@@ -1,5 +1,6 @@
-import { Button, CloseButton, Dialog, Input, NativeSelect, Stack, Text } from "@chakra-ui/react";
-import { type KeyboardEvent, useState } from "react";
+import { Box, Button, CloseButton, Dialog, NativeSelect, Stack, Text } from "@chakra-ui/react";
+import { MarkdownEditor } from "@pstdio/ui/rich-text";
+import { useState } from "react";
 
 import type { TicketStatus } from "@/features/ticket-list/types";
 
@@ -21,7 +22,6 @@ interface CreateTicketModalProps {
 }
 
 export interface CreateTicketModalPayload {
-  title: string;
   content: string;
   complexity: "low" | "medium" | "high";
   templateName: string | null;
@@ -44,16 +44,18 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
     submitLabel: submitButtonLabel = "Create",
   } = props;
 
-  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
   const [complexity, setComplexity] = useState<"low" | "medium" | "high">("medium");
   const [templateName, setTemplateName] = useState("");
+  const [editorKey, setEditorKey] = useState(0);
 
-  const canSubmit = title.trim().length > 0 && !isSubmitting;
+  const canSubmit = content.trim().length > 0 && !isSubmitting;
 
   const resetForm = () => {
-    setTitle("");
+    setContent("");
     setComplexity("medium");
     setTemplateName("");
+    setEditorKey((k) => k + 1);
   };
 
   const handleClose = () => {
@@ -65,8 +67,7 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
     if (!canSubmit) return;
 
     await onSubmit({
-      title: title.trim(),
-      content: title.trim(),
+      content: content.trim(),
       complexity,
       templateName: templateName || null,
       status: targetStatus,
@@ -74,13 +75,6 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
     });
 
     resetForm();
-  };
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter" && canSubmit) {
-      event.preventDefault();
-      handleSubmit();
-    }
   };
 
   return (
@@ -98,16 +92,16 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
           <Dialog.Body>
             <Stack gap="sm">
               <Stack gap="2xs">
-                <Text textStyle="label/S/medium">Title</Text>
-                <Input
-                  size="sm"
-                  placeholder="What needs to be done?"
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                  onKeyDown={handleKeyDown}
-                  disabled={isSubmitting}
-                  autoFocus
-                />
+                <Box minHeight="180px" borderWidth="1px" padding="xs" borderRadius="sm">
+                  <MarkdownEditor
+                    key={editorKey}
+                    defaultState={content}
+                    isEditable={!isSubmitting}
+                    onChange={setContent}
+                    placeholder="Describe the ticket..."
+                    autoFocus
+                  />
+                </Box>
               </Stack>
 
               <Stack gap="2xs">

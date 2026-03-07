@@ -1,11 +1,11 @@
 import type { Arguments, Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
-import { findGitRoot, readConfig } from "@/features/config/config";
+import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 import { renderPrompt } from "@/features/prompts/render-prompt";
 import { listTicketStatuses as defaultListTicketStatuses } from "@/features/tickets/api/list-ticket-statuses";
-import { listTickets as defaultListTickets } from "@/features/tickets/api/list-tickets";
 import { updateTicket as defaultUpdateTicket } from "@/features/tickets/api/update-ticket";
 import { readTicketFile } from "@/features/tickets/local-ticket";
+import { resolveTicketByShorthand as defaultResolveTicketByShorthand } from "@/features/tickets/resolve-ticket-by-shorthand";
 
 export const command = "implement";
 export const describe = "Move ticket to wip and launch agent";
@@ -22,9 +22,8 @@ type ImplementArgs = {
 
 type Deps = {
   cwd: () => string;
-  findGitRoot: typeof findGitRoot;
-  readConfig: typeof readConfig;
-  listTickets: typeof defaultListTickets;
+  resolveProjectId: typeof defaultResolveProjectId;
+  resolveTicketByShorthand: typeof defaultResolveTicketByShorthand;
   updateTicket: typeof defaultUpdateTicket;
   listTicketStatuses: typeof defaultListTicketStatuses;
   launchAgent: (ticketId: string, root: string, title: string | null, prompt: string) => Promise<void>;
@@ -45,9 +44,8 @@ const defaultLaunchAgent = async (ticketId: string, root: string, title: string 
 
 const defaultDeps: Deps = {
   cwd: () => process.cwd(),
-  findGitRoot,
-  readConfig,
-  listTickets: defaultListTickets,
+  resolveProjectId: defaultResolveProjectId,
+  resolveTicketByShorthand: defaultResolveTicketByShorthand,
   updateTicket: defaultUpdateTicket,
   listTicketStatuses: defaultListTicketStatuses,
   launchAgent: defaultLaunchAgent,
@@ -57,25 +55,10 @@ const defaultDeps: Deps = {
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<ImplementArgs>) => {
-    let projectId = argv["project-id"];
-    const root = deps.findGitRoot(deps.cwd());
+    const { projectId, root } = deps.resolveProjectId(deps.cwd(), argv["project-id"]);
 
-    if (!projectId) {
-      if (!root) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
-      const config = deps.readConfig(root);
-      if (!config) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
-      projectId = config.project_id;
-    }
-
-    const tickets = await deps.listTickets(API_URL, {
-      project_id: projectId,
-      shorthand: argv.id,
-    });
-    if (tickets.length === 0) {
-      throw new Error(`Ticket not found: ${argv.id}`);
-    }
-
-    const ticket = tickets[0];
+    const ticket = await deps.resolveTicketByShorthand(API_URL, projectId, argv.id);
+    if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
     const statuses = await deps.listTicketStatuses(API_URL, projectId);
     const wipStatus = statuses.find((s) => s.name === "wip");
@@ -91,7 +74,7 @@ export const createHandler =
 
     deps.log("Launching agent...");
 
-    await deps.launchAgent(argv.id, launchRoot, ticket.title, prompt);
+    await deps.launchAgent(argv.id, launchRoot, ticket.display_title, prompt);
   };
 
 export const handler = createHandler();

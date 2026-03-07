@@ -35,13 +35,13 @@ describe("POST /v1/tickets", () => {
     const res = await app.request("/v1/tickets", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: projectId, title: "First ticket" }),
+      body: JSON.stringify({ project_id: projectId, display_title: "First ticket" }),
     });
 
     expect(res.status).toBe(201);
     const ticket = await res.json();
     expect(ticket.shorthand).toBe("TP-1");
-    expect(ticket.title).toBe("First ticket");
+    expect(ticket.display_title).toBe("First ticket");
     expect(ticket.draft).toBe(false);
   });
 
@@ -49,12 +49,40 @@ describe("POST /v1/tickets", () => {
     const res = await app.request("/v1/tickets", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: projectId, title: "Draft ticket", draft: true }),
+      body: JSON.stringify({ project_id: projectId, display_title: "Draft ticket", draft: true }),
     });
 
     expect(res.status).toBe(201);
     const ticket = await res.json();
     expect(ticket.draft).toBe(true);
+  });
+
+  test("stores user_prompt when provided", async () => {
+    const res = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        project_id: projectId,
+        display_title: "Prompted ticket",
+        user_prompt: "Fix the login bug",
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const ticket = await res.json();
+    expect(ticket.user_prompt).toBe("Fix the login bug");
+  });
+
+  test("user_prompt is null when not provided", async () => {
+    const res = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId, display_title: "No prompt" }),
+    });
+
+    expect(res.status).toBe(201);
+    const ticket = await res.json();
+    expect(ticket.user_prompt).toBeNull();
   });
 });
 
@@ -108,7 +136,7 @@ describe("GET /v1/tickets/:id", () => {
 });
 
 describe("PATCH /v1/tickets/:id", () => {
-  test("updates ticket title", async () => {
+  test("updates ticket display_title", async () => {
     const listRes = await app.request(`/v1/tickets?project_id=${projectId}`);
     const tickets = await listRes.json();
     const ticketId = tickets[0].id;
@@ -116,19 +144,19 @@ describe("PATCH /v1/tickets/:id", () => {
     const res = await app.request(`/v1/tickets/${ticketId}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ title: "Updated title" }),
+      body: JSON.stringify({ display_title: "Updated title" }),
     });
 
     expect(res.status).toBe(200);
     const ticket = await res.json();
-    expect(ticket.title).toBe("Updated title");
+    expect(ticket.display_title).toBe("Updated title");
   });
 
   test("returns 404 for non-existent ticket", async () => {
     const res = await app.request("/v1/tickets/non-existent", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ title: "Nope" }),
+      body: JSON.stringify({ display_title: "Nope" }),
     });
     expect(res.status).toBe(404);
   });

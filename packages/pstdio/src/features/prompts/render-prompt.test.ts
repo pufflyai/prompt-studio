@@ -22,12 +22,6 @@ describe("renderPrompt", () => {
     expect(result).toContain("+changed");
   });
 
-  test("renders review-proposal template", () => {
-    const result = renderPrompt("review-proposal", { ticket_id: "PR-42" });
-
-    expect(result).toBe("Review proposal: PR-42");
-  });
-
   test("renders implement-ticket template", () => {
     const result = renderPrompt("implement-ticket", { ticket_id: "PS-7" });
 

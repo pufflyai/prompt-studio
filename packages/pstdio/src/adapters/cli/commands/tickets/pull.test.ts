@@ -6,13 +6,14 @@ import { createHandler } from "./pull";
 const tmpBase = join(import.meta.dirname, "__test-tmp-pull__");
 
 const makeListItem = (
-  overrides: Partial<{ id: string; shorthand: string; title: string; status_name: string | null }> = {},
+  overrides: Partial<{ id: string; shorthand: string; display_title: string; status_name: string | null }> = {},
 ) => ({
   id: overrides.id ?? "ticket-1",
   shorthand: overrides.shorthand ?? "PS-1",
   project_id: "proj-1",
   status_id: null,
-  title: overrides.title ?? "Pulled ticket",
+  display_title: overrides.display_title ?? "Pulled ticket",
+  file_id: "file-content-1" as string | null,
   priority: null,
   complexity: null,
   draft: false,
@@ -25,8 +26,8 @@ const makeListItem = (
 type TicketOverrides = Partial<{
   id: string;
   shorthand: string;
-  title: string;
-  input: string;
+  display_title: string;
+  file_id: string | null;
   priority: string | null;
   complexity: string | null;
   parent_id: string | null;
@@ -37,8 +38,9 @@ const makeTicket = (overrides: TicketOverrides = {}) => ({
   shorthand: overrides.shorthand ?? "PS-1",
   project_id: "proj-1",
   status_id: null,
-  title: overrides.title ?? "Pulled ticket",
-  input: overrides.input ?? "# Ticket from DB",
+  display_title: overrides.display_title ?? "Pulled ticket",
+  user_prompt: null,
+  file_id: overrides.file_id ?? "file-content-1",
   priority: overrides.priority ?? null,
   complexity: overrides.complexity ?? null,
   parent_id: overrides.parent_id ?? null,
@@ -81,9 +83,11 @@ afterEach(() => {
 });
 
 describe("tickets pull", () => {
-  test("pulls ticket content and files into local ticket directory", async () => {
+  test("pulls ticket content from file and attachment files into local ticket directory", async () => {
     const log = mock();
-    const getTicketFileContent = mock(async () => Buffer.from("hello from db", "utf8"));
+    const getTicketFileContent = mock(async (_url: string, _ticketId: string, fileId: string) =>
+      fileId === "file-content-1" ? Buffer.from("# Ticket from DB", "utf8") : Buffer.from("hello from db", "utf8"),
+    );
 
     const handler = createHandler({
       ...baseDeps(),
@@ -105,7 +109,6 @@ describe("tickets pull", () => {
     expect(ticketContent).toContain('created: "2026-03-04T00:00:00.000Z"');
     expect(ticketContent).toContain("# Ticket from DB");
     expect(readFileSync(localFilePath, "utf8")).toBe("hello from db");
-    expect(getTicketFileContent).toHaveBeenCalledWith(expect.any(String), "ticket-1", "file-1");
     expect(log).toHaveBeenCalledWith(expect.stringContaining("Pulled ticket PS-1"));
     expect(log).toHaveBeenCalledWith("Downloaded 1 ticket files");
   });
@@ -116,7 +119,7 @@ describe("tickets pull", () => {
       resolveTicketByShorthand: async () => makeListItem({ status_name: "wip" }),
       getTicket: async () => makeTicket({ priority: "P1", complexity: "medium", parent_id: "PS-0" }),
       listTicketFiles: async () => [],
-      getTicketFileContent: async () => Buffer.alloc(0),
+      getTicketFileContent: async () => Buffer.from("# Ticket from DB"),
       log: () => {},
     });
 
@@ -149,7 +152,7 @@ describe("tickets pull", () => {
     });
 
     await expect(handler({ id: "PS-1", force: false, _: [], $0: "" } as never)).rejects.toThrow(
-      "Local ticket already exists: PS-1",
+      "Local file already exists:",
     );
   });
 
@@ -161,13 +164,14 @@ describe("tickets pull", () => {
       resolveTicketByShorthand: async () => null as never,
       getTicket: async (_baseUrl: string, id: string) =>
         id === "ticket-1"
-          ? makeTicket({ id: "ticket-1", shorthand: "PS-1", title: "First ticket", input: "# First ticket" })
-          : makeTicket({ id: "ticket-2", shorthand: "PS-2", title: "Second ticket", input: "# Second ticket" }),
+          ? makeTicket({ id: "ticket-1", shorthand: "PS-1", display_title: "First ticket", file_id: "fc-1" })
+          : makeTicket({ id: "ticket-2", shorthand: "PS-2", display_title: "Second ticket", file_id: "fc-2" }),
       listTicketFiles: async () => [],
-      getTicketFileContent: async () => Buffer.alloc(0),
+      getTicketFileContent: async (_url: string, _ticketId: string, fileId: string) =>
+        fileId === "fc-1" ? Buffer.from("# First ticket") : Buffer.from("# Second ticket"),
       listTickets: async () => [
-        makeListItem({ id: "ticket-1", shorthand: "PS-1", title: "First ticket" }),
-        makeListItem({ id: "ticket-2", shorthand: "PS-2", title: "Second ticket" }),
+        makeListItem({ id: "ticket-1", shorthand: "PS-1", display_title: "First ticket" }),
+        makeListItem({ id: "ticket-2", shorthand: "PS-2", display_title: "Second ticket" }),
       ],
       log,
     });

@@ -17,7 +17,7 @@ export const builder = (yargs: Argv) =>
     .option("template", { type: "string", describe: "Template name" })
     .option("tag", { type: "array", string: true, describe: "Tags to assign" })
     .option("status", { type: "string", describe: "Status name to assign" })
-    .option("input", { type: "string", describe: "User input or description" })
+    .option("user-prompt", { type: "string", describe: "User prompt for the ticket" })
     .option("parent-id", { type: "string", describe: "Parent ticket shorthand" });
 
 type WriteArgs = {
@@ -25,7 +25,7 @@ type WriteArgs = {
   template?: string;
   tag?: string[];
   status?: string;
-  input?: string;
+  "user-prompt"?: string;
   "parent-id"?: string;
 };
 
@@ -54,9 +54,9 @@ const renderTemplate = (templateContent: string, shorthand: string, argv: Argume
     TICKET_ID: shorthand,
     TICKET_TITLE: argv.title,
     CREATED_AT: createdAt,
-    INPUT: argv.input ?? "",
+    INPUT: argv["user-prompt"] ?? "",
     PARENT_ID: argv["parent-id"] ?? "",
-    USER_PROMPT: argv.input ?? "",
+    USER_PROMPT: argv["user-prompt"] ?? "",
     STATUS: argv.status ?? "backlog",
   });
 
@@ -70,8 +70,8 @@ export const createHandler =
 
     const ticket = await deps.createTicket(API_URL, {
       project_id: projectId,
-      title: argv.title,
-      input: argv.input,
+      display_title: argv.title,
+      user_prompt: argv["user-prompt"],
       parent_id: argv["parent-id"],
       draft: true,
       tag_ids: tagIds,

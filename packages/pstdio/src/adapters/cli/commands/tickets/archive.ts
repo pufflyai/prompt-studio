@@ -1,8 +1,8 @@
 import type { Arguments, Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
-import { findGitRoot, readConfig } from "@/features/config/config";
-import { listTickets as defaultListTickets } from "@/features/tickets/api/list-tickets";
+import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 import { updateTicket as defaultUpdateTicket } from "@/features/tickets/api/update-ticket";
+import { resolveTicketByShorthand as defaultResolveTicketByShorthand } from "@/features/tickets/resolve-ticket-by-shorthand";
 
 export const command = "archive";
 export const describe = "Archive a ticket";
@@ -19,18 +19,16 @@ type ArchiveArgs = {
 
 type Deps = {
   cwd: () => string;
-  findGitRoot: typeof findGitRoot;
-  readConfig: typeof readConfig;
-  listTickets: typeof defaultListTickets;
+  resolveProjectId: typeof defaultResolveProjectId;
+  resolveTicketByShorthand: typeof defaultResolveTicketByShorthand;
   updateTicket: typeof defaultUpdateTicket;
   log: (msg: string) => void;
 };
 
 const defaultDeps: Deps = {
   cwd: () => process.cwd(),
-  findGitRoot,
-  readConfig,
-  listTickets: defaultListTickets,
+  resolveProjectId: defaultResolveProjectId,
+  resolveTicketByShorthand: defaultResolveTicketByShorthand,
   updateTicket: defaultUpdateTicket,
   log: console.log,
 };
@@ -38,25 +36,11 @@ const defaultDeps: Deps = {
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<ArchiveArgs>) => {
-    let projectId = argv["project-id"];
+    const { projectId } = deps.resolveProjectId(deps.cwd(), argv["project-id"]);
 
-    if (!projectId) {
-      const root = deps.findGitRoot(deps.cwd());
-      if (!root) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
-      const config = deps.readConfig(root);
-      if (!config) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
-      projectId = config.project_id;
-    }
+    const ticket = await deps.resolveTicketByShorthand(API_URL, projectId, argv.id);
+    if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
-    const tickets = await deps.listTickets(API_URL, {
-      project_id: projectId,
-      shorthand: argv.id,
-    });
-    if (tickets.length === 0) {
-      throw new Error(`Ticket not found: ${argv.id}`);
-    }
-
-    const ticket = tickets[0];
     if (ticket.archived) {
       throw new Error(`Ticket already archived: ${argv.id}`);
     }

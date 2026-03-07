@@ -25,7 +25,7 @@ export const ticketSubTicketSchema = z.object({
   id: z.string(),
   shorthand: z.string(),
   status_id: z.string().nullable(),
-  title: z.string().nullable(),
+  display_title: z.string().nullable(),
 });
 
 export const ticketApiSchema = ticketSelectSchema.extend({

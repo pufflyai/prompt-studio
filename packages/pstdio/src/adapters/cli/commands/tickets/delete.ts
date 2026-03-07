@@ -1,9 +1,9 @@
 import type { Arguments, Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
-import { findGitRoot, readConfig } from "@/features/config/config";
+import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 import { deleteTicket as defaultDeleteTicket } from "@/features/tickets/api/delete-ticket";
-import { listTickets as defaultListTickets } from "@/features/tickets/api/list-tickets";
 import { removeTicketDir as defaultRemoveTicketDir } from "@/features/tickets/local-ticket";
+import { resolveTicketByShorthand as defaultResolveTicketByShorthand } from "@/features/tickets/resolve-ticket-by-shorthand";
 
 export const command = "delete";
 export const describe = "Delete a ticket";
@@ -20,9 +20,8 @@ type DeleteArgs = {
 
 type Deps = {
   cwd: () => string;
-  findGitRoot: typeof findGitRoot;
-  readConfig: typeof readConfig;
-  listTickets: typeof defaultListTickets;
+  resolveProjectId: typeof defaultResolveProjectId;
+  resolveTicketByShorthand: typeof defaultResolveTicketByShorthand;
   deleteTicket: typeof defaultDeleteTicket;
   removeTicketDir: typeof defaultRemoveTicketDir;
   log: (msg: string) => void;
@@ -30,9 +29,8 @@ type Deps = {
 
 const defaultDeps: Deps = {
   cwd: () => process.cwd(),
-  findGitRoot,
-  readConfig,
-  listTickets: defaultListTickets,
+  resolveProjectId: defaultResolveProjectId,
+  resolveTicketByShorthand: defaultResolveTicketByShorthand,
   deleteTicket: defaultDeleteTicket,
   removeTicketDir: defaultRemoveTicketDir,
   log: console.log,
@@ -41,26 +39,12 @@ const defaultDeps: Deps = {
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<DeleteArgs>) => {
-    let projectId = argv["project-id"];
-    let root: string | null = null;
+    const { projectId, root } = deps.resolveProjectId(deps.cwd(), argv["project-id"]);
 
-    if (!projectId) {
-      root = deps.findGitRoot(deps.cwd());
-      if (!root) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
-      const config = deps.readConfig(root);
-      if (!config) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
-      projectId = config.project_id;
-    }
+    const ticket = await deps.resolveTicketByShorthand(API_URL, projectId, argv.id);
+    if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
-    const tickets = await deps.listTickets(API_URL, {
-      project_id: projectId,
-      shorthand: argv.id,
-    });
-    if (tickets.length === 0) {
-      throw new Error(`Ticket not found: ${argv.id}`);
-    }
-
-    await deps.deleteTicket(API_URL, tickets[0].id);
+    await deps.deleteTicket(API_URL, ticket.id);
 
     if (root) {
       deps.removeTicketDir(root, argv.id);

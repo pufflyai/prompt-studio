@@ -4,6 +4,7 @@ import { Box, Flex } from "@chakra-ui/react";
 import { $convertFromMarkdownString, $convertToMarkdownString } from "@lexical/markdown";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
+import { AutoFocusPlugin } from "@lexical/react/LexicalAutoFocusPlugin";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { HorizontalRulePlugin } from "@lexical/react/LexicalHorizontalRulePlugin";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
@@ -22,6 +23,7 @@ import { TreeViewPlugin } from "../shared/plugins/TreeViewPlugin/TreeViewPlugin"
 import { splitFrontmatter } from "../utils/markdown";
 
 export interface MarkdownEditorProps {
+  autoFocus?: boolean;
   debug?: boolean;
   defaultState: string;
   isEditable?: boolean;
@@ -30,7 +32,7 @@ export interface MarkdownEditorProps {
 }
 
 export function MarkdownEditor(props: MarkdownEditorProps) {
-  const { debug = false, defaultState = "", isEditable = false, placeholder, onChange } = props;
+  const { autoFocus = false, debug = false, defaultState = "", isEditable = false, placeholder, onChange } = props;
   const { frontmatter, body } = splitFrontmatter(defaultState);
   const shouldTrackChanges = isEditable && Boolean(onChange);
   const editorContainerRef = useRef<HTMLDivElement>(null);
@@ -64,6 +66,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
       overflow="hidden"
     >
       <LexicalComposer initialConfig={initialConfig}>
+        {autoFocus ? <AutoFocusPlugin /> : null}
         <HistoryPlugin />
         <LinkPlugin />
         <ListPlugin />

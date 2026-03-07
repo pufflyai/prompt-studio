@@ -102,7 +102,7 @@ export const TicketsPanel = () => {
 
     try {
       await createTicket.mutateAsync({
-        title: payload.title,
+        title: payload.content,
         content: payload.content,
         complexity: payload.complexity,
         status: payload.status,

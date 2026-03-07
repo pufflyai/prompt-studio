@@ -15,7 +15,8 @@ type TicketListItem = {
   shorthand: string;
   project_id: string;
   status_id: string | null;
-  title: string | null;
+  display_title: string | null;
+  file_id: string | null;
   priority: string | null;
   complexity: string | null;
   draft: boolean;

@@ -83,13 +83,14 @@ Each ticket lives in its own directory under `.pstdio/tickets/`:
 
 Templates contain placeholder tokens that are automatically replaced when a ticket is written locally. The CLI replaces all occurrences before writing the file — the caller does not need to handle substitution.
 
-| Placeholder        | Replaced With                                       | Source             |
-| ------------------ | --------------------------------------------------- | ------------------ |
-| `{{TICKET_ID}}`    | The generated ticket shorthand (e.g. `PS-12`).      | Auto-generated     |
-| `{{TICKET_TITLE}}` | Value of `--title`.                                 | `--title` flag     |
-| `{{CREATED_AT}}`   | ISO 8601 timestamp at creation time.                | Auto-generated     |
-| `{{INPUT}}`        | Value of `--input`, or empty string if omitted.     | `--input` flag     |
-| `{{PARENT_ID}}`    | Value of `--parent-id`, or empty string if omitted. | `--parent-id` flag |
+| Placeholder        | Replaced With                                         | Source               |
+| ------------------ | ----------------------------------------------------- | -------------------- |
+| `{{TICKET_ID}}`    | The generated ticket shorthand (e.g. `PS-12`).        | Auto-generated       |
+| `{{TICKET_TITLE}}` | Value of `--title`.                                   | `--title` flag       |
+| `{{CREATED_AT}}`   | ISO 8601 timestamp at creation time.                  | Auto-generated       |
+| `{{USER_PROMPT}}`  | Value of `--user-prompt`, or empty string if omitted. | `--user-prompt` flag |
+| `{{PARENT_ID}}`    | Value of `--parent-id`, or empty string if omitted.   | `--parent-id` flag   |
+| `{{STATUS}}`       | Value of `--status`, or `"backlog"` if omitted.       | `--status` flag      |
 
 Additional template variables can be passed as flags and are matched by name (e.g. `--priority P1` replaces `{{PRIORITY}}`).
 
@@ -100,26 +101,26 @@ Additional template variables can be passed as flags and are matched by name (e.
 ### Usage
 
 ```sh
-pstdio tickets write --title <title> --template <template-name> --tag <tag>... [--status <status>] [--input <input>] [--parent-id <parent-id>]
+pstdio tickets write --title <title> --template <template-name> --tag <tag>... [--status <status>] [--user-prompt <user-prompt>] [--parent-id <parent-id>]
 ```
 
 ### Flags
 
-| Flag          | Type       | Required | Description                                                        |
-| ------------- | ---------- | -------- | ------------------------------------------------------------------ |
-| `--title`     | `string`   | yes      | The ticket title. Replaces `{{TICKET_TITLE}}` in the template.     |
-| `--template`  | `string`   | no       | Name of a template to use for the ticket body.                     |
-| `--tag`       | `string[]` | no       | One or more tags to assign. Repeatable.                            |
-| `--status`    | `string`   | no       | Status name to assign. Defaults to the project's default status.   |
-| `--input`     | `string`   | no       | User input or description. Replaces `{{INPUT}}` in the template.   |
-| `--parent-id` | `string`   | no       | Parent ticket shorthand. Replaces `{{PARENT_ID}}` in the template. |
+| Flag            | Type       | Required | Description                                                             |
+| --------------- | ---------- | -------- | ----------------------------------------------------------------------- |
+| `--title`       | `string`   | yes      | The ticket title. Replaces `{{TICKET_TITLE}}` in the template.          |
+| `--template`    | `string`   | no       | Name of a template to use for the ticket body.                          |
+| `--tag`         | `string[]` | no       | One or more tags to assign. Repeatable.                                 |
+| `--status`      | `string`   | no       | Status name to assign. Defaults to the project's default status.        |
+| `--user-prompt` | `string`   | no       | User prompt or description. Replaces `{{USER_PROMPT}}` in the template. |
+| `--parent-id`   | `string`   | no       | Parent ticket shorthand. Replaces `{{PARENT_ID}}` in the template.      |
 
 ### Behavior
 
 1. Must be run inside a linked project (`.pstdio/config.json` must exist).
 2. Create a ticket in the database with `draft=true`. Assign the status from `--status` if provided, otherwise assign the project's default status.
 3. Create the ticket directory at `.pstdio/tickets/<shorthand>_<display_title>/` (see [Display Title](#display-title)).
-4. If `--template` is provided, populate `ticket.md` with the template content after replacing all placeholders (`{{TICKET_ID}}`, `{{TICKET_TITLE}}`, `{{CREATED_AT}}`, `{{INPUT}}`, `{{PARENT_ID}}`).
+4. If `--template` is provided, fetch the template from the API and populate `ticket.md` with the template content after replacing all placeholders (`{{TICKET_ID}}`, `{{TICKET_TITLE}}`, `{{CREATED_AT}}`, `{{USER_PROMPT}}`, `{{PARENT_ID}}`, `{{STATUS}}`).
 5. If no `--template`, write a minimal `ticket.md` with the title.
 6. If `--tag` values are provided, assign matching tags to the ticket. Tags must already exist in the project.
 
@@ -158,9 +159,10 @@ pstdio tickets create --content <content> [--project-id <project-id>] [--status 
 ### Behavior
 
 1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
-2. Create a ticket directly in the database. Assign the status from `--status` if provided, otherwise assign the project's default status.
-3. If `--tag` values are provided, assign matching tags to the ticket.
-4. If running inside a linked project (`.pstdio/config.json` exists), write a local `ticket.md` with YAML frontmatter and the ticket title. See [Frontmatter Fields](#frontmatter-fields) for the frontmatter format. If not inside a linked project, no local file is written.
+2. Create a ticket in the database with `draft=false`. Assign the status from `--status` if provided, otherwise assign the project's default status.
+3. Upload the ticket content as a file to the database and link it to the ticket.
+4. If `--tag` values are provided, assign matching tags to the ticket.
+5. If running inside a linked project (`.pstdio/config.json` exists), write a local `ticket.md` with YAML frontmatter and the ticket title. See [Frontmatter Fields](#frontmatter-fields) for the frontmatter format. If not inside a linked project, no local file is written.
 
 ### Output
 
@@ -493,7 +495,7 @@ No tickets found.
 
 ### Errors
 
-- `"Not inside a pstdio project. Run 'pstdio projects create' first."`: no `--project-id` flag and no `.pstdio/config.json` found.
+- `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
 - `"Project not found: <project-id>"`: the given project ID does not exist.
 
 ---

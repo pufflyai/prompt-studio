@@ -21,7 +21,8 @@ const ticketFixture = {
   shorthand: "PS-1",
   project_id: "proj-1",
   status_id: null,
-  title: "Draft",
+  display_title: "Draft",
+  file_id: null as string | null,
   priority: null,
   complexity: null,
   draft: true,
@@ -30,6 +31,19 @@ const ticketFixture = {
   tag_names: [] as string[],
   created_at: "2026-03-04T00:00:00.000Z",
 };
+
+const makeUploadResponse = () => ({
+  id: "file-1",
+  project_id: "proj-1",
+  file_name: "ticket.md",
+  file_kind: "ticket_file",
+  storage_path: "/tmp/file",
+  mime_type: "text/markdown",
+  size_bytes: 0,
+  hash: null,
+  created_at: "2026-03-04T00:00:00.000Z",
+  updated_at: "2026-03-04T00:00:00.000Z",
+});
 
 const baseDeps = {
   cwd: () => tmpBase,
@@ -40,12 +54,13 @@ const baseDeps = {
     shorthand: "PS-1",
     project_id: "proj-1",
     status_id: null,
-    title: "Saved",
+    display_title: "updated-content",
+    file_id: "file-1",
     draft: false,
     created_at: "2026-03-04T00:00:00.000Z",
     updated_at: "2026-03-04T00:00:00.000Z",
   })),
-  uploadTicketFile: async () => ({}) as never,
+  uploadTicketFile: mock(async () => makeUploadResponse()),
   resolveStatusId: async (_url: string, _pid: string, name: string) => {
     const statuses: Record<string, string> = { backlog: "s-backlog", wip: "s-wip" };
     const id = statuses[name];
@@ -57,25 +72,33 @@ const baseDeps = {
 };
 
 describe("tickets save", () => {
-  test("pushes local file content to database", async () => {
+  test("uploads content as file and updates ticket", async () => {
     const log = mock();
+    const uploadTicketFile = mock(async () => makeUploadResponse());
     const updateTicket = mock(async () => ({
       id: "t-1",
       shorthand: "PS-1",
       project_id: "proj-1",
       status_id: null,
-      title: "Saved",
+      display_title: "updated-content",
+      file_id: "file-1",
       draft: false,
       created_at: "2026-03-04T00:00:00.000Z",
       updated_at: "2026-03-04T00:00:00.000Z",
     }));
 
-    const handler = createHandler({ ...baseDeps, updateTicket, log });
+    const handler = createHandler({ ...baseDeps, uploadTicketFile, updateTicket, log });
 
     await handler({ id: "PS-1", _: [], $0: "" } as never);
 
+    expect(uploadTicketFile).toHaveBeenCalledWith(expect.any(String), "t-1", {
+      file_name: "ticket.md",
+      content_base64: Buffer.from("# Updated content").toString("base64"),
+      mime_type: "text/markdown",
+    });
     expect(updateTicket).toHaveBeenCalledWith(expect.any(String), "t-1", {
-      input: "# Updated content",
+      file_id: "file-1",
+      display_title: "updated-content",
       draft: false,
       tag_ids: undefined,
       status_id: undefined,
@@ -89,7 +112,8 @@ describe("tickets save", () => {
       shorthand: "PS-1",
       project_id: "proj-1",
       status_id: "s-wip",
-      title: "Saved",
+      display_title: "updated-content",
+      file_id: "file-1",
       draft: false,
       created_at: "2026-03-04T00:00:00.000Z",
       updated_at: "2026-03-04T00:00:00.000Z",
@@ -131,7 +155,8 @@ describe("tickets save", () => {
       shorthand: "PS-1",
       project_id: "proj-1",
       status_id: "s-wip",
-      title: "Saved",
+      display_title: "updated-content",
+      file_id: "file-1",
       draft: false,
       created_at: "2026-03-04T00:00:00.000Z",
       updated_at: "2026-03-04T00:00:00.000Z",
@@ -145,7 +170,7 @@ describe("tickets save", () => {
       expect.any(String),
       "t-1",
       expect.objectContaining({
-        input: "# Updated content",
+        display_title: "updated-content",
         status_id: "s-wip",
         priority: "P1",
         complexity: "medium",
@@ -164,7 +189,8 @@ describe("tickets save", () => {
       shorthand: "PS-1",
       project_id: "proj-1",
       status_id: "s-backlog",
-      title: "Saved",
+      display_title: "updated-content",
+      file_id: "file-1",
       draft: false,
       created_at: "2026-03-04T00:00:00.000Z",
       updated_at: "2026-03-04T00:00:00.000Z",
@@ -203,11 +229,6 @@ describe("tickets save", () => {
 
     await handler({ id: "PS-1", _: [], $0: "" } as never);
 
-    expect(uploadTicketFile).toHaveBeenCalledWith(expect.any(String), "t-1", {
-      file_name: "notes.txt",
-      content_base64: Buffer.from("file body").toString("base64"),
-      mime_type: undefined,
-    });
     expect(log).toHaveBeenCalledWith("Saved ticket PS-1");
     expect(log).toHaveBeenCalledWith("Uploaded 1 ticket files");
   });

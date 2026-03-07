@@ -1,20 +1,40 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createHandler } from "./create";
 
+const makeTicketResponse = (
+  overrides: Partial<{ id: string; shorthand: string; display_title: string; status_id: string | null }> = {},
+) => ({
+  id: overrides.id ?? "t-1",
+  shorthand: overrides.shorthand ?? "PS-1",
+  project_id: "proj-1",
+  status_id: overrides.status_id ?? null,
+  display_title: overrides.display_title ?? "New ticket",
+  file_id: null as string | null,
+  draft: false,
+  created_at: "2026-03-04T00:00:00.000Z",
+  updated_at: "2026-03-04T00:00:00.000Z",
+});
+
+const makeUploadResponse = () => ({
+  id: "file-1",
+  project_id: "proj-1",
+  file_name: "ticket.md",
+  file_kind: "ticket_file",
+  storage_path: "/tmp/file",
+  mime_type: "text/markdown",
+  size_bytes: 0,
+  hash: null,
+  created_at: "2026-03-04T00:00:00.000Z",
+  updated_at: "2026-03-04T00:00:00.000Z",
+});
+
 const baseDeps = {
   cwd: () => "/work/repo",
   resolveProjectId: () => ({ projectId: "proj-1", root: "/work/repo" }),
   readConfig: (_root: string) => ({ project_id: "proj-1" }) as { project_id: string } | null,
-  createTicket: mock(async () => ({
-    id: "t-1",
-    shorthand: "PS-1",
-    project_id: "proj-1",
-    status_id: null,
-    title: "New ticket",
-    draft: false,
-    created_at: "2026-03-04T00:00:00.000Z",
-    updated_at: "2026-03-04T00:00:00.000Z",
-  })),
+  createTicket: mock(async () => makeTicketResponse()),
+  updateTicket: mock(async () => makeTicketResponse()),
+  uploadTicketFile: mock(async () => makeUploadResponse()),
   resolveStatusId: async (_url: string, _pid: string, name: string) => {
     const statuses: Record<string, string> = { backlog: "s-backlog", wip: "s-wip" };
     const id = statuses[name];
@@ -28,16 +48,7 @@ const baseDeps = {
 
 describe("tickets create", () => {
   test("creates ticket with draft=false", async () => {
-    const createTicket = mock(async () => ({
-      id: "t-1",
-      shorthand: "PS-1",
-      project_id: "proj-1",
-      status_id: null,
-      title: "New ticket",
-      draft: false,
-      created_at: "2026-03-04T00:00:00.000Z",
-      updated_at: "2026-03-04T00:00:00.000Z",
-    }));
+    const createTicket = mock(async () => makeTicketResponse());
 
     const handler = createHandler({
       ...baseDeps,
@@ -48,6 +59,27 @@ describe("tickets create", () => {
     await handler({ content: "New ticket", _: [], $0: "" } as never);
 
     expect(createTicket).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ draft: false }));
+  });
+
+  test("uploads content as file and updates ticket with file_id", async () => {
+    const uploadTicketFile = mock(async () => makeUploadResponse());
+    const updateTicket = mock(async () => makeTicketResponse());
+
+    const handler = createHandler({
+      ...baseDeps,
+      uploadTicketFile,
+      updateTicket,
+      log: mock(),
+    });
+
+    await handler({ content: "New ticket", _: [], $0: "" } as never);
+
+    expect(uploadTicketFile).toHaveBeenCalledWith(expect.any(String), "t-1", {
+      file_name: "ticket.md",
+      content_base64: Buffer.from("# New ticket\n").toString("base64"),
+      mime_type: "text/markdown",
+    });
+    expect(updateTicket).toHaveBeenCalledWith(expect.any(String), "t-1", { file_id: "file-1" });
   });
 
   test("writes local file with frontmatter when in a pstdio project", async () => {
@@ -107,16 +139,9 @@ describe("tickets create", () => {
   });
 
   test("passes status_id when --status is provided", async () => {
-    const createTicket = mock(async () => ({
-      id: "t-2",
-      shorthand: "PS-2",
-      project_id: "proj-1",
-      status_id: "s-wip",
-      title: "Status ticket",
-      draft: false,
-      created_at: "2026-03-04T00:00:00.000Z",
-      updated_at: "2026-03-04T00:00:00.000Z",
-    }));
+    const createTicket = mock(async () =>
+      makeTicketResponse({ id: "t-2", shorthand: "PS-2", status_id: "s-wip", display_title: "Status ticket" }),
+    );
 
     const handler = createHandler({
       ...baseDeps,
@@ -135,16 +160,9 @@ describe("tickets create", () => {
 
     const handler = createHandler({
       ...baseDeps,
-      createTicket: mock(async () => ({
-        id: "t-2",
-        shorthand: "PS-2",
-        project_id: "proj-1",
-        status_id: "s-wip",
-        title: "Status ticket",
-        draft: false,
-        created_at: "2026-03-04T00:00:00.000Z",
-        updated_at: "2026-03-04T00:00:00.000Z",
-      })),
+      createTicket: mock(async () =>
+        makeTicketResponse({ id: "t-2", shorthand: "PS-2", status_id: "s-wip", display_title: "Status ticket" }),
+      ),
       writeTicketFile,
       log: mock(),
     });

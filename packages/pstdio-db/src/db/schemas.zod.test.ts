@@ -18,17 +18,18 @@ const ticketBase = {
   created_at: "2026-01-01T00:00:00.000Z",
   deleted_at: null,
   depends_on: null,
+  display_title: "Initial ticket",
+  draft: false,
+  file_id: null,
   id: "ticket-1",
-  input: "Build the thing",
   parallelizable: "yes",
   parent_id: null,
   priority: "high",
   project_id: "project-1",
   shorthand: "TK0001",
-  draft: false,
   status_id: null,
-  title: "Initial ticket",
   updated_at: "2026-01-01T00:00:00.000Z",
+  user_prompt: "Build the thing",
 };
 
 describe("schemas.zod", () => {
@@ -49,7 +50,7 @@ describe("schemas.zod", () => {
           id: "ticket-2",
           shorthand: "TK0002",
           status_id: null,
-          title: "Sub ticket",
+          display_title: "Sub ticket",
         },
       ],
       tag_ids: ["tag-1"],
@@ -60,14 +61,14 @@ describe("schemas.zod", () => {
 
   it("requires project_id in create ticket payloads", () => {
     const invalidResult = createTicketBodySchema.safeParse({
-      title: "Missing project",
+      display_title: "Missing project",
     });
 
     expect(invalidResult.success).toBe(false);
 
     const validResult = createTicketBodySchema.safeParse({
       project_id: "project-1",
-      title: "Valid",
+      display_title: "Valid",
     });
 
     expect(validResult.success).toBe(true);
@@ -76,7 +77,7 @@ describe("schemas.zod", () => {
   it("does not allow project_id in update ticket payloads", () => {
     const result = updateTicketBodySchema.safeParse({
       project_id: "project-1",
-      title: "Invalid",
+      display_title: "Invalid",
     });
 
     expect(result.success).toBe(false);

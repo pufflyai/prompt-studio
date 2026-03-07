@@ -1,7 +1,8 @@
 type CreateTicketInput = {
   project_id: string;
-  title?: string;
-  input?: string;
+  display_title?: string;
+  user_prompt?: string;
+  file_id?: string;
   priority?: string;
   complexity?: string;
   parent_id?: string;
@@ -15,7 +16,8 @@ type Ticket = {
   shorthand: string;
   project_id: string;
   status_id: string | null;
-  title: string | null;
+  display_title: string | null;
+  file_id: string | null;
   draft: boolean;
   created_at: string;
   updated_at: string;

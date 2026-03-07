@@ -1,10 +1,10 @@
 import type { Arguments, Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
 import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
-import { listTickets as defaultListTickets } from "@/features/tickets/api/list-tickets";
 import { updateTicket as defaultUpdateTicket } from "@/features/tickets/api/update-ticket";
 import { resolveStatusId as defaultResolveStatusId } from "@/features/tickets/resolve-status-id";
 import { resolveTagIds as defaultResolveTagIds } from "@/features/tickets/resolve-tag-ids";
+import { resolveTicketByShorthand as defaultResolveTicketByShorthand } from "@/features/tickets/resolve-ticket-by-shorthand";
 
 export const command = "update";
 export const describe = "Update ticket status or tags";
@@ -26,7 +26,7 @@ type UpdateArgs = {
 type Deps = {
   cwd: () => string;
   resolveProjectId: typeof defaultResolveProjectId;
-  listTickets: typeof defaultListTickets;
+  resolveTicketByShorthand: typeof defaultResolveTicketByShorthand;
   updateTicket: typeof defaultUpdateTicket;
   resolveStatusId: typeof defaultResolveStatusId;
   resolveTagIds: typeof defaultResolveTagIds;
@@ -36,7 +36,7 @@ type Deps = {
 const defaultDeps: Deps = {
   cwd: () => process.cwd(),
   resolveProjectId: defaultResolveProjectId,
-  listTickets: defaultListTickets,
+  resolveTicketByShorthand: defaultResolveTicketByShorthand,
   updateTicket: defaultUpdateTicket,
   resolveStatusId: defaultResolveStatusId,
   resolveTagIds: defaultResolveTagIds,
@@ -48,15 +48,9 @@ export const createHandler =
   async (argv: Arguments<UpdateArgs>) => {
     const { projectId } = deps.resolveProjectId(deps.cwd(), argv["project-id"]);
 
-    const tickets = await deps.listTickets(API_URL, {
-      project_id: projectId,
-      shorthand: argv.id,
-    });
-    if (tickets.length === 0) {
-      throw new Error(`Ticket not found: ${argv.id}`);
-    }
+    const ticket = await deps.resolveTicketByShorthand(API_URL, projectId, argv.id);
+    if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
-    const ticket = tickets[0];
     const updates: Record<string, unknown> = {};
 
     if (argv.status) {

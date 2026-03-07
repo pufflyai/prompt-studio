@@ -30,7 +30,7 @@ type ListArgs = {
 
 type TicketListItem = {
   shorthand: string;
-  title: string | null;
+  display_title: string | null;
   status_name: string | null;
   tag_names: string[];
 };
@@ -55,7 +55,7 @@ const formatTable = (tickets: TicketListItem[]) => {
   const header = { shorthand: "Shorthand", title: "Title", status: "Status", tags: "Tags" };
   const rows = tickets.map((t) => ({
     shorthand: t.shorthand,
-    title: t.title ?? "",
+    title: t.display_title ?? "",
     status: t.status_name ?? "",
     tags: t.tag_names.join(", "),
   }));

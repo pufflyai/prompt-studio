@@ -8,6 +8,7 @@ import * as listCommand from "./list";
 import * as pullCommand from "./pull";
 import * as saveCommand from "./save";
 import * as updateCommand from "./update";
+import * as viewCommand from "./view";
 import * as workspacesCommand from "./workspaces";
 import * as writeCommand from "./write";
 
@@ -24,6 +25,7 @@ export const builder = (yargs: Argv) => {
     .command(saveCommand)
     .command(listCommand)
     .command(updateCommand)
+    .command(viewCommand)
     .command(implementCommand)
     .command(pullCommand)
     .command(filesCommand)

@@ -1,39 +1,32 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createHandler } from "./update";
 
+const makeTicket = (overrides: Record<string, unknown> = {}) => ({
+  id: "t-1",
+  shorthand: "PS-1",
+  project_id: "proj-1",
+  status_id: "s-1",
+  display_title: "Ticket",
+  file_id: null,
+  priority: null,
+  complexity: null,
+  draft: false,
+  archived: false,
+  status_name: "backlog",
+  tag_names: [],
+  created_at: "2026-03-04T00:00:00.000Z",
+  ...overrides,
+});
+
 describe("tickets update", () => {
   test("updates ticket status", async () => {
     const log = mock();
-    const updateTicket = mock(async () => ({
-      id: "t-1",
-      shorthand: "PS-1",
-      project_id: "proj-1",
-      status_id: "s-wip",
-      title: "Ticket",
-      draft: false,
-      created_at: "2026-03-04T00:00:00.000Z",
-      updated_at: "2026-03-04T00:00:00.000Z",
-    }));
+    const updateTicket = mock(async () => ({}) as never);
 
     const handler = createHandler({
       cwd: () => "/work/repo",
       resolveProjectId: () => ({ projectId: "proj-1", root: "/work/repo" }),
-      listTickets: async () => [
-        {
-          id: "t-1",
-          shorthand: "PS-1",
-          project_id: "proj-1",
-          status_id: "s-1",
-          title: "Ticket",
-          priority: null,
-          complexity: null,
-          draft: false,
-          archived: false,
-          status_name: "backlog",
-          tag_names: [],
-          created_at: "2026-03-04T00:00:00.000Z",
-        },
-      ],
+      resolveTicketByShorthand: async () => makeTicket(),
       updateTicket,
       resolveStatusId: async () => "s-wip",
       resolveTagIds: async () => [],
@@ -50,7 +43,7 @@ describe("tickets update", () => {
     const handler = createHandler({
       cwd: () => "/work/repo",
       resolveProjectId: () => ({ projectId: "proj-1", root: "/work/repo" }),
-      listTickets: async () => [],
+      resolveTicketByShorthand: async () => null as never,
       updateTicket: async () => ({}) as never,
       resolveStatusId: async () => "",
       resolveTagIds: async () => [],
@@ -64,22 +57,7 @@ describe("tickets update", () => {
     const handler = createHandler({
       cwd: () => "/work/repo",
       resolveProjectId: () => ({ projectId: "proj-1", root: "/work/repo" }),
-      listTickets: async () => [
-        {
-          id: "t-1",
-          shorthand: "PS-1",
-          project_id: "proj-1",
-          status_id: null,
-          title: "T",
-          priority: null,
-          complexity: null,
-          draft: false,
-          archived: false,
-          status_name: null,
-          tag_names: [],
-          created_at: "2026-03-04T00:00:00.000Z",
-        },
-      ],
+      resolveTicketByShorthand: async () => makeTicket(),
       updateTicket: async () => ({}) as never,
       resolveStatusId: async () => {
         throw new Error("Status not found: nonexistent");

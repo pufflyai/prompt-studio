@@ -34,7 +34,7 @@ test("files service supports upload and ticket attachments", async () => {
     id: ticketId,
     shorthand: "T-1",
     project_id: projectId,
-    title: "Ticket One",
+    display_title: "Ticket One",
     created_at: timestamp,
     updated_at: timestamp,
   });

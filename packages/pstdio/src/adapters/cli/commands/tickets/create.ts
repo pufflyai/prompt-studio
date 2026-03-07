@@ -3,6 +3,8 @@ import { API_URL } from "@/features/api-url";
 import { readConfig } from "@/features/config/config";
 import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 import { createTicket as defaultCreateTicket } from "@/features/tickets/api/create-ticket";
+import { updateTicket as defaultUpdateTicket } from "@/features/tickets/api/update-ticket";
+import { uploadTicketFile as defaultUploadTicketFile } from "@/features/tickets/api/upload-ticket-file";
 import { writeTicketFile as defaultWriteTicketFile } from "@/features/tickets/local-ticket";
 import { resolveStatusId as defaultResolveStatusId } from "@/features/tickets/resolve-status-id";
 import { resolveTagIds as defaultResolveTagIds } from "@/features/tickets/resolve-tag-ids";
@@ -30,6 +32,8 @@ type Deps = {
   resolveProjectId: typeof defaultResolveProjectId;
   readConfig: typeof readConfig;
   createTicket: typeof defaultCreateTicket;
+  updateTicket: typeof defaultUpdateTicket;
+  uploadTicketFile: typeof defaultUploadTicketFile;
   resolveStatusId: typeof defaultResolveStatusId;
   resolveTagIds: typeof defaultResolveTagIds;
   writeTicketFile: typeof defaultWriteTicketFile;
@@ -41,6 +45,8 @@ const defaultDeps: Deps = {
   resolveProjectId: defaultResolveProjectId,
   readConfig,
   createTicket: defaultCreateTicket,
+  updateTicket: defaultUpdateTicket,
+  uploadTicketFile: defaultUploadTicketFile,
   resolveStatusId: defaultResolveStatusId,
   resolveTagIds: defaultResolveTagIds,
   writeTicketFile: defaultWriteTicketFile,
@@ -56,11 +62,20 @@ export const createHandler =
 
     const ticket = await deps.createTicket(API_URL, {
       project_id: projectId,
-      title: argv.content,
+      display_title: argv.content,
       draft: false,
       tag_ids: tagIds,
       status_id: statusId,
     });
+
+    const ticketContent = `# ${argv.content}\n`;
+    const contentBase64 = Buffer.from(ticketContent).toString("base64");
+    const uploaded = await deps.uploadTicketFile(API_URL, ticket.id, {
+      file_name: "ticket.md",
+      content_base64: contentBase64,
+      mime_type: "text/markdown",
+    });
+    await deps.updateTicket(API_URL, ticket.id, { file_id: uploaded.id });
 
     const isLocalProject = root && deps.readConfig(root);
     if (isLocalProject) {
@@ -75,7 +90,7 @@ export const createHandler =
         parallelizable: null,
         blocked_reason: null,
       });
-      const content = `${frontmatter}\n\n# ${argv.content}\n`;
+      const content = `${frontmatter}\n\n${ticketContent}`;
       deps.writeTicketFile(root, ticket.shorthand, content);
     }
 

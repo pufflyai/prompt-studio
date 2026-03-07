@@ -5,8 +5,9 @@ export const ticketResponseSchema = z.object({
   shorthand: z.string(),
   project_id: z.string(),
   status_id: z.string().nullable(),
-  title: z.string().nullable(),
-  input: z.string().nullable(),
+  display_title: z.string().nullable(),
+  user_prompt: z.string().nullable(),
+  file_id: z.string().nullable(),
   priority: z.string().nullable(),
   complexity: z.string().nullable(),
   parent_id: z.string().nullable(),
@@ -27,8 +28,9 @@ export const ticketListItemSchema = ticketResponseSchema.extend({
 
 export const createTicketBodySchema = z.object({
   project_id: z.string().min(1),
-  title: z.string().optional(),
-  input: z.string().optional(),
+  display_title: z.string().optional(),
+  user_prompt: z.string().optional(),
+  file_id: z.string().optional(),
   priority: z.string().optional(),
   complexity: z.enum(["low", "medium", "high"]).optional(),
   parent_id: z.string().optional(),
@@ -38,8 +40,9 @@ export const createTicketBodySchema = z.object({
 });
 
 export const updateTicketBodySchema = z.object({
-  title: z.string().optional(),
-  input: z.string().optional(),
+  display_title: z.string().optional(),
+  user_prompt: z.string().optional(),
+  file_id: z.string().optional(),
   status_id: z.string().optional(),
   priority: z.string().optional(),
   complexity: z.enum(["low", "medium", "high"]).optional(),

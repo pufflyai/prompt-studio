@@ -39,11 +39,16 @@ const resolveTicketAttachmentPath = (root: string, shorthand: string, fileName: 
   return targetPath;
 };
 
-export const writeTicketFile = (root: string, shorthand: string, content: string) => {
+export const writeTicketFile = (root: string, shorthand: string, content: string, overwrite = true) => {
   const dirName = ticketDirName(shorthand, content);
   const dir = join(root, TICKETS_DIR, dirName);
-  mkdirSync(dir, { recursive: true });
   const filePath = join(dir, "ticket.md");
+
+  if (!overwrite && existsSync(filePath)) {
+    throw new Error(`Local file already exists: ${toRelativeFilePath(root, filePath)}. Use --force to overwrite.`);
+  }
+
+  mkdirSync(dir, { recursive: true });
   writeFileSync(filePath, content);
   return filePath;
 };

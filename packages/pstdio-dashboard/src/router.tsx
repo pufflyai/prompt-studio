@@ -57,7 +57,7 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   beforeLoad: () => {
-    throw redirect({ to: "/docs" });
+    throw redirect({ to: "/projects" });
   },
   component: Outlet,
 });
@@ -94,7 +94,7 @@ const onboardingRoute = createRoute({
   path: "onboarding",
   beforeLoad: () => {
     if (isOnboardingComplete()) {
-      throw redirect({ to: "/docs" });
+      throw redirect({ to: "/projects" });
     }
   },
   component: Onboarding,
@@ -174,7 +174,7 @@ const notFoundRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "*",
   beforeLoad: () => {
-    throw redirect({ to: "/docs" });
+    throw redirect({ to: "/projects" });
   },
   component: Outlet,
 });

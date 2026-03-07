@@ -1,4 +1,3 @@
-import { existsSync } from "node:fs";
 import type { Arguments, Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
 import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
@@ -6,7 +5,7 @@ import { getTicket as defaultGetTicket } from "@/features/tickets/api/get-ticket
 import { getTicketFileContent as defaultGetTicketFileContent } from "@/features/tickets/api/get-ticket-file-content";
 import { listTicketFiles as defaultListTicketFiles } from "@/features/tickets/api/list-ticket-files";
 import { listTickets as defaultListTickets } from "@/features/tickets/api/list-tickets";
-import { ticketFilePath, writeTicketAttachment, writeTicketFile } from "@/features/tickets/local-ticket";
+import { writeTicketAttachment, writeTicketFile } from "@/features/tickets/local-ticket";
 import { resolveTicketByShorthand as defaultResolveTicketByShorthand } from "@/features/tickets/resolve-ticket-by-shorthand";
 import { applyFrontmatter, buildTicketFrontmatter } from "@/features/tickets/ticket-frontmatter";
 
@@ -58,11 +57,6 @@ const pullSingleTicket = async ({ deps, root, ticketId, shorthand, statusName, f
   const ticket = await deps.getTicket(API_URL, ticketId);
   if (!ticket) throw new Error(`Ticket not found: ${shorthand}`);
 
-  const localTicketFile = ticketFilePath(root, shorthand);
-  if (!force && localTicketFile && existsSync(localTicketFile)) {
-    throw new Error(`Local ticket already exists: ${shorthand}. Use --force to overwrite.`);
-  }
-
   const frontmatter = buildTicketFrontmatter({
     shorthand,
     created_at: ticket.created_at,
@@ -75,19 +69,26 @@ const pullSingleTicket = async ({ deps, root, ticketId, shorthand, statusName, f
     blocked_reason: ticket.blocked_reason,
   });
 
-  const content = applyFrontmatter(frontmatter, ticket.input ?? "");
-  const filePath = writeTicketFile(root, shorthand, content);
+  let bodyContent = "";
+  if (ticket.file_id) {
+    const fileBuffer = await deps.getTicketFileContent(API_URL, ticket.id, ticket.file_id);
+    bodyContent = fileBuffer.toString("utf-8");
+  }
+
+  const content = applyFrontmatter(frontmatter, bodyContent);
+  const filePath = writeTicketFile(root, shorthand, content, force);
   const ticketDir = filePath.replace(/\/ticket\.md$/, "").replace(`${root}/`, "");
 
   const files = await deps.listTicketFiles(API_URL, ticket.id);
+  const attachments = files.filter((f) => f.id !== ticket.file_id);
 
-  for (const file of files) {
+  for (const file of attachments) {
     const fileContent = await deps.getTicketFileContent(API_URL, ticket.id, file.id);
     writeTicketAttachment(root, shorthand, file.file_name, fileContent, force);
   }
 
   deps.log(`Pulled ticket ${shorthand} to ${ticketDir}`);
-  if (files.length > 0) deps.log(`Downloaded ${files.length} ticket files`);
+  if (attachments.length > 0) deps.log(`Downloaded ${attachments.length} ticket files`);
 };
 
 export const createHandler =

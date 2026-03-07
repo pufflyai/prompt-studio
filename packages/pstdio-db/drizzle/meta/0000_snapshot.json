@@ -1,5 +1,5 @@
 {
-  "id": "90b62d45-f594-4bd9-8184-36090b72bbfa",
+  "id": "ead51e11-ba29-404e-88b0-6ea0ee19aab5",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -494,7 +494,7 @@
           "tableTo": "projects",
           "columnsFrom": ["project_id"],
           "columnsTo": ["id"],
-          "onDelete": "set null",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "templates_file_id_files_id_fk": {
@@ -970,14 +970,20 @@
           "primaryKey": false,
           "notNull": false
         },
-        "title": {
-          "name": "title",
+        "display_title": {
+          "name": "display_title",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "input": {
-          "name": "input",
+        "user_prompt": {
+          "name": "user_prompt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "file_id": {
+          "name": "file_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -1089,6 +1095,15 @@
           "tableFrom": "tickets",
           "tableTo": "ticket_statuses",
           "columnsFrom": ["status_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "tickets_file_id_files_id_fk": {
+          "name": "tickets_file_id_files_id_fk",
+          "tableFrom": "tickets",
+          "tableTo": "files",
+          "columnsFrom": ["file_id"],
           "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"

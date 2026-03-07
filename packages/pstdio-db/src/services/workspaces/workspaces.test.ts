@@ -19,7 +19,7 @@ const setup = async () => {
   projectId = project.id;
 
   const ticketsService = createTicketsService(result.db);
-  const ticket = await ticketsService.create({ project_id: projectId, title: "Test ticket" });
+  const ticket = await ticketsService.create({ project_id: projectId, display_title: "Test ticket" });
   ticketId = ticket.id;
   ticketShorthand = ticket.shorthand;
 
