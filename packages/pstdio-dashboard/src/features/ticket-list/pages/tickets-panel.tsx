@@ -31,7 +31,7 @@ export const TicketsPanel = () => {
   const { data: templateAssets } = useProjectTemplateAssets(projectId);
   const navigate = useNavigate();
 
-  const [settings, setSettings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
+  const [settings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createModalStatus, setCreateModalStatus] = useState<TicketStatus | null>(null);
 
