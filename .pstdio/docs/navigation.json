@@ -1,6 +1,10 @@
 {
   "sidebar": [
     {
+      "text": "Overview",
+      "link": "/index"
+    },
+    {
       "text": "Specs",
       "items": [
         {
@@ -78,6 +82,15 @@
           ]
         },
         {
+          "text": "Dashboard",
+          "items": [
+            {
+              "text": "Documentation",
+              "link": "/specs/dashboard/documentation"
+            }
+          ]
+        },
+        {
           "text": "API",
           "items": [
             {
@@ -95,6 +108,10 @@
     {
       "text": "Architecture",
       "items": [
+        {
+          "text": "Adapters and Features",
+          "link": "/architecture/adapters-and-features"
+        },
         {
           "text": "API",
           "link": "/architecture/api"
@@ -134,6 +151,10 @@
         {
           "text": "Worktrees",
           "link": "/architecture/worktrees"
+        },
+        {
+          "text": "Unified Bun Test",
+          "link": "/adrs/unified-bun-test"
         }
       ]
     },
@@ -147,6 +168,10 @@
         {
           "text": "No Bun EventSource",
           "link": "/known-issues/no_bun_eventsource"
+        },
+        {
+          "text": "Missing Storybook Play Tests",
+          "link": "/known-issues/missing_storybook_play_tests"
         }
       ]
     },

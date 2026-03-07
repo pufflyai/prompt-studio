@@ -143,6 +143,7 @@ describe("createTicketsService", () => {
     await setup();
 
     const created = await ticketsService.create({ project_id: projectId, title: "Before" });
+    await Bun.sleep(5);
     const updated = await ticketsService.update(created.id, { title: "After" });
 
     expect(updated).not.toBeNull();

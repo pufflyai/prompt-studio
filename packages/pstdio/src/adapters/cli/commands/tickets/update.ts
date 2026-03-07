@@ -1,10 +1,10 @@
 import type { Arguments, Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
-import { findGitRoot, readConfig } from "@/features/config/config";
-import { listTicketStatuses as defaultListTicketStatuses } from "@/features/tickets/api/list-ticket-statuses";
-import { listTicketTags as defaultListTicketTags } from "@/features/tickets/api/list-ticket-tags";
+import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 import { listTickets as defaultListTickets } from "@/features/tickets/api/list-tickets";
 import { updateTicket as defaultUpdateTicket } from "@/features/tickets/api/update-ticket";
+import { resolveStatusId as defaultResolveStatusId } from "@/features/tickets/resolve-status-id";
+import { resolveTagIds as defaultResolveTagIds } from "@/features/tickets/resolve-tag-ids";
 
 export const command = "update";
 export const describe = "Update ticket status or tags";
@@ -25,56 +25,28 @@ type UpdateArgs = {
 
 type Deps = {
   cwd: () => string;
-  findGitRoot: typeof findGitRoot;
-  readConfig: typeof readConfig;
+  resolveProjectId: typeof defaultResolveProjectId;
   listTickets: typeof defaultListTickets;
   updateTicket: typeof defaultUpdateTicket;
-  listTicketStatuses: typeof defaultListTicketStatuses;
-  listTicketTags: typeof defaultListTicketTags;
+  resolveStatusId: typeof defaultResolveStatusId;
+  resolveTagIds: typeof defaultResolveTagIds;
   log: (msg: string) => void;
 };
 
 const defaultDeps: Deps = {
   cwd: () => process.cwd(),
-  findGitRoot,
-  readConfig,
+  resolveProjectId: defaultResolveProjectId,
   listTickets: defaultListTickets,
   updateTicket: defaultUpdateTicket,
-  listTicketStatuses: defaultListTicketStatuses,
-  listTicketTags: defaultListTicketTags,
+  resolveStatusId: defaultResolveStatusId,
+  resolveTagIds: defaultResolveTagIds,
   log: console.log,
-};
-
-const resolveProjectId = (deps: Deps, explicitId?: string) => {
-  if (explicitId) return explicitId;
-
-  const root = deps.findGitRoot(deps.cwd());
-  if (!root) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
-  const config = deps.readConfig(root);
-  if (!config) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
-  return config.project_id;
-};
-
-const resolveStatusId = async (deps: Deps, projectId: string, statusName: string) => {
-  const statuses = await deps.listTicketStatuses(API_URL, projectId);
-  const found = statuses.find((s) => s.name === statusName);
-  if (!found) throw new Error(`Status not found: ${statusName}`);
-  return found.id;
-};
-
-const resolveTagIds = async (deps: Deps, projectId: string, tagNames: string[]) => {
-  const allTags = await deps.listTicketTags(API_URL, projectId);
-  return tagNames.map((name) => {
-    const found = allTags.find((t) => t.name === name);
-    if (!found) throw new Error(`Tag not found: ${name}`);
-    return found.id;
-  });
 };
 
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<UpdateArgs>) => {
-    const projectId = resolveProjectId(deps, argv["project-id"]);
+    const { projectId } = deps.resolveProjectId(deps.cwd(), argv["project-id"]);
 
     const tickets = await deps.listTickets(API_URL, {
       project_id: projectId,
@@ -88,11 +60,11 @@ export const createHandler =
     const updates: Record<string, unknown> = {};
 
     if (argv.status) {
-      updates.status_id = await resolveStatusId(deps, projectId, argv.status);
+      updates.status_id = await deps.resolveStatusId(API_URL, projectId, argv.status);
     }
 
     if (argv.tag) {
-      updates.tag_ids = await resolveTagIds(deps, projectId, argv.tag);
+      updates.tag_ids = await deps.resolveTagIds(API_URL, projectId, argv.tag);
     }
 
     await deps.updateTicket(API_URL, ticket.id, updates);

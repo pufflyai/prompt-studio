@@ -1,7 +1,7 @@
 import { Box, Flex } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { MarkdownEditor } from "../rich-text/markdown-editor/markdown-editor";
 import { DocsOutline } from "./docs-outline";
-import { MarkdownEditor } from "./rich-text/markdown-editor/markdown-editor";
 
 const demoMarkdown = `# Getting Started
 
@@ -32,7 +32,7 @@ Detailed benchmark results go here.
 A comparison with VuePress and similar tools.
 `;
 
-const meta: Meta<typeof DocsOutline> = {
+const meta = {
   title: "Documentation/DocsOutline",
   component: DocsOutline,
   decorators: [
@@ -42,13 +42,23 @@ const meta: Meta<typeof DocsOutline> = {
       </Box>
     ),
   ],
-};
+} satisfies Meta<typeof DocsOutline>;
 
 export default meta;
+type Story = StoryObj<typeof meta>;
 
-type Story = StoryObj<typeof DocsOutline>;
+export const Desktop: Story = {
+  args: { markdown: demoMarkdown },
+};
 
-export const Default: Story = {
+export const Mobile: Story = {
+  decorators: [
+    (Story) => (
+      <Box width="360px" maxWidth="100%" bg="bg" borderWidth="1px" borderColor="border.secondary">
+        <Story />
+      </Box>
+    ),
+  ],
   args: { markdown: demoMarkdown },
 };
 
@@ -57,6 +67,9 @@ export const Empty: Story = {
 };
 
 export const WithContent: Story = {
+  args: {
+    markdown: demoMarkdown,
+  },
   render: () => (
     <Flex height="100%">
       <Box flex="1" overflowY="auto">

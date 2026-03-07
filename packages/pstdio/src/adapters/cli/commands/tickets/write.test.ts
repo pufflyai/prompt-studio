@@ -23,8 +23,7 @@ const makeConfig = () => {
 
 const baseDeps = {
   cwd: () => tmpBase,
-  findGitRoot: () => tmpBase,
-  readConfig: () => ({ project_id: "proj-1" }),
+  resolveProjectId: () => ({ projectId: "proj-1", root: tmpBase }),
   getTemplate: async () => null as never,
   createTicket: async (_url: string, input: { project_id: string; title?: string }) => ({
     id: "t-1",

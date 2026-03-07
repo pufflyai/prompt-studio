@@ -1,29 +1,28 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createHandler } from "./workspaces";
 
+const ticketFixture = {
+  id: "ticket-1",
+  shorthand: "PS-1",
+  project_id: "proj-1",
+  status_id: null,
+  title: "Ticket",
+  priority: null,
+  complexity: null,
+  draft: false,
+  archived: false,
+  status_name: null,
+  tag_names: [] as string[],
+  created_at: "2026-03-05T00:00:00.000Z",
+};
+
 describe("tickets workspaces", () => {
   test("lists active workspaces linked to a ticket", async () => {
     const log = mock();
     const handler = createHandler({
       cwd: () => "/repo",
-      findGitRoot: () => "/repo",
-      readConfig: () => ({ project_id: "proj-1" }),
-      listTickets: async () => [
-        {
-          id: "ticket-1",
-          shorthand: "PS-1",
-          project_id: "proj-1",
-          status_id: null,
-          title: "Ticket",
-          priority: null,
-          complexity: null,
-          draft: false,
-          archived: false,
-          status_name: null,
-          tag_names: [],
-          created_at: "2026-03-05T00:00:00.000Z",
-        },
-      ],
+      resolveProjectId: () => ({ projectId: "proj-1", root: "/repo" }),
+      resolveTicketByShorthand: async () => ticketFixture,
       listWorkspaces: async () => [
         {
           id: "ws-1",
@@ -57,24 +56,8 @@ describe("tickets workspaces", () => {
     const log = mock();
     const handler = createHandler({
       cwd: () => "/repo",
-      findGitRoot: () => "/repo",
-      readConfig: () => ({ project_id: "proj-1" }),
-      listTickets: async () => [
-        {
-          id: "ticket-1",
-          shorthand: "PS-1",
-          project_id: "proj-1",
-          status_id: null,
-          title: "Ticket",
-          priority: null,
-          complexity: null,
-          draft: false,
-          archived: false,
-          status_name: null,
-          tag_names: [],
-          created_at: "2026-03-05T00:00:00.000Z",
-        },
-      ],
+      resolveProjectId: () => ({ projectId: "proj-1", root: "/repo" }),
+      resolveTicketByShorthand: async () => ticketFixture,
       listWorkspaces: async () => [
         {
           id: "ws-2",

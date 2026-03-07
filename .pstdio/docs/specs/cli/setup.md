@@ -1,4 +1,4 @@
-# CLI Spec: Runtime and API Setup
+# Runtime and API Setup
 
 ## Purpose
 

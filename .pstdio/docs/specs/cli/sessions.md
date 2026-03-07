@@ -1,4 +1,4 @@
-# CLI Spec: `pstdio sessions`
+# `pstdio sessions`
 
 ## Purpose
 

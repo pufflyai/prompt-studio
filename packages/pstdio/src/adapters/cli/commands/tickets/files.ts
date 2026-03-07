@@ -1,9 +1,9 @@
 import type { Arguments, Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
-import { findGitRoot, readConfig } from "@/features/config/config";
+import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 import { listTicketFiles as defaultListTicketFiles } from "@/features/tickets/api/list-ticket-files";
-import { listTickets as defaultListTickets } from "@/features/tickets/api/list-tickets";
 import { listTicketFiles as listLocalTicketFiles, resolveTicketDir } from "@/features/tickets/local-ticket";
+import { resolveTicketByShorthand as defaultResolveTicketByShorthand } from "@/features/tickets/resolve-ticket-by-shorthand";
 
 export const command = "files";
 export const describe = "List ticket files from database and local project";
@@ -20,35 +20,18 @@ type FilesArgs = {
 
 type Deps = {
   cwd: () => string;
-  findGitRoot: typeof findGitRoot;
-  readConfig: typeof readConfig;
-  listTickets: typeof defaultListTickets;
+  resolveProjectId: typeof defaultResolveProjectId;
+  resolveTicketByShorthand: typeof defaultResolveTicketByShorthand;
   listTicketFiles: typeof defaultListTicketFiles;
   log: (msg: string) => void;
 };
 
 const defaultDeps: Deps = {
   cwd: () => process.cwd(),
-  findGitRoot,
-  readConfig,
-  listTickets: defaultListTickets,
+  resolveProjectId: defaultResolveProjectId,
+  resolveTicketByShorthand: defaultResolveTicketByShorthand,
   listTicketFiles: defaultListTicketFiles,
   log: console.log,
-};
-
-const resolveTicketByShorthand = async (deps: Deps, projectId: string, shorthand: string) => {
-  const publishedTickets = await deps.listTickets(API_URL, {
-    project_id: projectId,
-    shorthand,
-  });
-  if (publishedTickets.length > 0) return publishedTickets[0];
-
-  const draftTickets = await deps.listTickets(API_URL, {
-    project_id: projectId,
-    shorthand,
-    draft: true,
-  });
-  return draftTickets[0] ?? null;
 };
 
 type FileRow = {
@@ -80,20 +63,6 @@ const formatTable = (rows: FileRow[]) => {
   return [line(header), ...rows.map(line)].join("\n");
 };
 
-const resolveProject = (deps: Deps, explicitId?: string) => {
-  if (explicitId) {
-    const root = deps.findGitRoot(deps.cwd());
-    const hasConfig = root && deps.readConfig(root);
-    return { projectId: explicitId, root: hasConfig ? root : null };
-  }
-
-  const root = deps.findGitRoot(deps.cwd());
-  if (!root) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
-  const config = deps.readConfig(root);
-  if (!config) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
-  return { projectId: config.project_id, root };
-};
-
 const buildFileRows = (dbFileNames: Set<string>, localFileNames: Set<string>, ticketDirRelative: string | null) => {
   const allFiles = Array.from(new Set([...dbFileNames, ...localFileNames])).sort();
 
@@ -108,9 +77,9 @@ const buildFileRows = (dbFileNames: Set<string>, localFileNames: Set<string>, ti
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<FilesArgs>) => {
-    const { projectId, root } = resolveProject(deps, argv["project-id"]);
+    const { projectId, root } = deps.resolveProjectId(deps.cwd(), argv["project-id"]);
 
-    const ticket = await resolveTicketByShorthand(deps, projectId, argv.id);
+    const ticket = await deps.resolveTicketByShorthand(API_URL, projectId, argv.id);
     if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
     const dbFiles = await deps.listTicketFiles(API_URL, ticket.id);

@@ -4,7 +4,7 @@ import { createHandler } from "./create";
 const baseDeps = {
   cwd: () => "/work/repo",
   findGitRoot: () => "/work/repo",
-  readConfig: () => ({ project_id: "proj-1" }),
+  resolveProjectId: () => ({ projectId: "proj-1", root: "/work/repo" }),
   createTicket: mock(async () => ({
     id: "t-1",
     shorthand: "PS-1",
@@ -15,11 +15,13 @@ const baseDeps = {
     created_at: "2026-03-04T00:00:00.000Z",
     updated_at: "2026-03-04T00:00:00.000Z",
   })),
-  listTicketStatuses: async () => [
-    { id: "s-backlog", name: "backlog", color: "gray", sort_order: 1, is_default: true },
-    { id: "s-wip", name: "wip", color: "orange", sort_order: 3, is_default: false },
-  ],
-  listTicketTags: async () => [] as { id: string; name: string; color: string }[],
+  resolveStatusId: async (_url: string, _pid: string, name: string) => {
+    const statuses: Record<string, string> = { backlog: "s-backlog", wip: "s-wip" };
+    const id = statuses[name];
+    if (!id) throw new Error(`Status not found: ${name}`);
+    return id;
+  },
+  resolveTagIds: async () => [] as string[],
   writeTicketFile: mock(() => "/work/repo/.pstdio/tickets/PS-1/ticket.md"),
   log: mock(),
 };
@@ -91,9 +93,9 @@ describe("tickets create", () => {
   test("throws when not in a project", async () => {
     const handler = createHandler({
       ...baseDeps,
-      cwd: () => "/nowhere",
-      findGitRoot: () => null,
-      readConfig: () => null,
+      resolveProjectId: () => {
+        throw new Error("No project specified. Provide --project-id or run inside a linked project.");
+      },
       log: () => {},
     });
 

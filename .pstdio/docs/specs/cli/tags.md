@@ -1,4 +1,4 @@
-# CLI Spec: `pstdio tags`
+# `pstdio tags`
 
 ## Purpose
 

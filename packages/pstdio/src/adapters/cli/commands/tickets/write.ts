@@ -1,6 +1,6 @@
 import type { Arguments, Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
-import { findGitRoot, readConfig } from "@/features/config/config";
+import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 import { getTemplate } from "@/features/templates/api/get-template";
 import { replacePlaceholders } from "@/features/templates/replace-placeholders";
 import { createTicket as defaultCreateTicket } from "@/features/tickets/api/create-ticket";
@@ -31,8 +31,7 @@ type WriteArgs = {
 
 type Deps = {
   cwd: () => string;
-  findGitRoot: typeof findGitRoot;
-  readConfig: typeof readConfig;
+  resolveProjectId: typeof defaultResolveProjectId;
   getTemplate: typeof getTemplate;
   createTicket: typeof defaultCreateTicket;
   resolveStatusId: typeof defaultResolveStatusId;
@@ -42,8 +41,7 @@ type Deps = {
 
 const defaultDeps: Deps = {
   cwd: () => process.cwd(),
-  findGitRoot,
-  readConfig,
+  resolveProjectId: defaultResolveProjectId,
   getTemplate,
   createTicket: defaultCreateTicket,
   resolveStatusId: defaultResolveStatusId,
@@ -65,13 +63,8 @@ const renderTemplate = (templateContent: string, shorthand: string, argv: Argume
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<WriteArgs>) => {
-    const root = deps.findGitRoot(deps.cwd());
+    const { root, projectId } = deps.resolveProjectId(deps.cwd());
     if (!root) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
-
-    const config = deps.readConfig(root);
-    if (!config) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
-
-    const projectId = config.project_id;
     const tagIds = argv.tag?.length ? await deps.resolveTagIds(API_URL, projectId, argv.tag) : undefined;
     const statusId = argv.status ? await deps.resolveStatusId(API_URL, projectId, argv.status) : undefined;
 

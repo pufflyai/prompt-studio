@@ -9,7 +9,7 @@
     "prebuild": "bun run typegen:tokens",
     "typecheck": "bun run typegen:tokens && bunx tsc -b",
     "lint": "bun run typecheck && bunx biome check .",
-    "test": "echo 'no tests — use storybook for UI'",
+    "test": "bun test",
     "preview": "vite preview",
     "typegen:tokens": "chakra typegen ../ui/src/theme/theme.ts",
     "visualize-bundle": "bunx vite-bundle-visualizer",
@@ -69,10 +69,8 @@
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "babel-plugin-react-compiler": "^1.0.0",
-    "jsdom": "^28.0.0",
     "storybook": "^10.1.9",
     "typescript": "~5.9.3",
-    "vite": "^7.2.4",
-    "vitest": "^4.0.15"
+    "vite": "^7.2.4"
   }
 }

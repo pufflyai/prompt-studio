@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { resolveProjectId } from "./resolve-project";
+import { resolveProjectId } from "./resolve-project-id";
 
-const tmpBase = join(import.meta.dirname, "__test-tmp-resolve__");
+const tmpBase = join(import.meta.dirname, "__test-tmp-resolve-project-id__");
 
 beforeEach(() => {
   mkdirSync(tmpBase, { recursive: true });
@@ -14,7 +14,13 @@ afterEach(() => {
 });
 
 describe("resolveProjectId", () => {
-  test("returns root and projectId when config exists", () => {
+  test("returns explicit ID when provided", () => {
+    const result = resolveProjectId("/any-dir", "explicit-id");
+
+    expect(result.projectId).toBe("explicit-id");
+  });
+
+  test("returns root and projectId from config when no explicit ID", () => {
     const root = join(tmpBase, "repo");
     mkdirSync(join(root, ".git"), { recursive: true });
     mkdirSync(join(root, ".pstdio"), { recursive: true });
@@ -26,14 +32,14 @@ describe("resolveProjectId", () => {
     expect(result.projectId).toBe("proj-1");
   });
 
-  test("throws when no git root", () => {
-    expect(() => resolveProjectId("/nonexistent-path-that-wont-match")).toThrow("Not inside a pstdio project");
+  test("throws when no explicit ID and no git root", () => {
+    expect(() => resolveProjectId("/nonexistent-path-that-wont-match")).toThrow("No project specified");
   });
 
-  test("throws when no config.json", () => {
+  test("throws when no explicit ID and no config", () => {
     const root = join(tmpBase, "no-config");
     mkdirSync(join(root, ".git"), { recursive: true });
 
-    expect(() => resolveProjectId(root)).toThrow("Not inside a pstdio project");
+    expect(() => resolveProjectId(root)).toThrow("No project specified");
   });
 });

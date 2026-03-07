@@ -1,4 +1,4 @@
-# CLI Spec: Feedback and Help
+# Feedback and Help
 
 ## Purpose
 

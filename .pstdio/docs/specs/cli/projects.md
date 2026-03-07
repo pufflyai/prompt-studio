@@ -1,4 +1,4 @@
-# CLI Spec: `pstdio projects`
+# `pstdio projects`
 
 ## Purpose
 

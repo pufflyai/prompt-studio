@@ -4,17 +4,17 @@ import { Link, useParams, useRouterState } from "@tanstack/react-router";
 import {
   ArrowUpRight,
   BookOpen,
-  BookOpenText,
   CircleHelp,
   KanbanSquare,
+  ListTreeIcon,
   MessageCircle,
   SettingsIcon,
 } from "lucide-react";
 import { ProjectMenu } from "./project-menu";
 
 const projectSections = [
+  { id: "docs", label: "Documentation", icon: ListTreeIcon, path: "docs" },
   { id: "tickets", label: "Tickets", icon: KanbanSquare, path: "tickets" },
-  { id: "docs", label: "Documentation", icon: BookOpenText, path: "docs" },
 ] as const;
 
 const projectSettingsSection = {
@@ -34,6 +34,7 @@ const openExternalLink = (url: string) => {
 export const ProjectSidebar = () => {
   const { location } = useRouterState();
   const { projectId } = useParams({ strict: false });
+
   const projectNavItems = projectId
     ? projectSections.map((item) => ({
         id: item.id,
@@ -42,6 +43,7 @@ export const ProjectSidebar = () => {
         to: `/projects/${projectId}/${item.path}`,
       }))
     : [];
+
   const projectSettingsItem = projectId
     ? {
         id: projectSettingsSection.id,

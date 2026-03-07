@@ -1,4 +1,4 @@
-# CLI Spec: `pstdio statuses`
+# `pstdio statuses`
 
 ## Purpose
 

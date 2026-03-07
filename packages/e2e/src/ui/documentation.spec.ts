@@ -89,8 +89,8 @@ test.describe("Documentation", () => {
 
     await page.goto(`/projects/${project.id}/docs`);
 
-    await expect(page.getByText("Welcome")).toBeVisible();
-    await expect(page.getByText("Getting Started")).toBeVisible();
+    await expect(page.getByRole("option", { name: "Welcome" })).toBeVisible();
+    await expect(page.getByRole("option", { name: "Getting Started" })).toBeVisible();
   });
 
   test("displays doc content when a sidebar item is active", async ({ page, request }) => {
@@ -132,7 +132,7 @@ test.describe("Documentation", () => {
     await page.getByLabel("Documentation").click();
 
     await page.waitForURL(`**/projects/${project.id}/docs**`);
-    await expect(page.getByText("Welcome")).toBeVisible();
+    await expect(page.getByRole("option", { name: "Welcome" })).toBeVisible();
   });
 
   test("docs API returns correct index", async ({ request }) => {

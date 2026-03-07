@@ -17,8 +17,7 @@ describe("tickets update", () => {
 
     const handler = createHandler({
       cwd: () => "/work/repo",
-      findGitRoot: () => "/work/repo",
-      readConfig: () => ({ project_id: "proj-1" }),
+      resolveProjectId: () => ({ projectId: "proj-1", root: "/work/repo" }),
       listTickets: async () => [
         {
           id: "t-1",
@@ -36,8 +35,8 @@ describe("tickets update", () => {
         },
       ],
       updateTicket,
-      listTicketStatuses: async () => [{ id: "s-wip", name: "wip", color: "orange", sort_order: 3, is_default: false }],
-      listTicketTags: async () => [],
+      resolveStatusId: async () => "s-wip",
+      resolveTagIds: async () => [],
       log,
     });
 
@@ -50,12 +49,11 @@ describe("tickets update", () => {
   test("throws when ticket not found", async () => {
     const handler = createHandler({
       cwd: () => "/work/repo",
-      findGitRoot: () => "/work/repo",
-      readConfig: () => ({ project_id: "proj-1" }),
+      resolveProjectId: () => ({ projectId: "proj-1", root: "/work/repo" }),
       listTickets: async () => [],
       updateTicket: async () => ({}) as never,
-      listTicketStatuses: async () => [],
-      listTicketTags: async () => [],
+      resolveStatusId: async () => "",
+      resolveTagIds: async () => [],
       log: () => {},
     });
 
@@ -65,8 +63,7 @@ describe("tickets update", () => {
   test("throws when status not found", async () => {
     const handler = createHandler({
       cwd: () => "/work/repo",
-      findGitRoot: () => "/work/repo",
-      readConfig: () => ({ project_id: "proj-1" }),
+      resolveProjectId: () => ({ projectId: "proj-1", root: "/work/repo" }),
       listTickets: async () => [
         {
           id: "t-1",
@@ -84,8 +81,10 @@ describe("tickets update", () => {
         },
       ],
       updateTicket: async () => ({}) as never,
-      listTicketStatuses: async () => [],
-      listTicketTags: async () => [],
+      resolveStatusId: async () => {
+        throw new Error("Status not found: nonexistent");
+      },
+      resolveTagIds: async () => [],
       log: () => {},
     });
 

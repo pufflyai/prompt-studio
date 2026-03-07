@@ -1,4 +1,4 @@
-# CLI Spec: `pstdio tickets`
+# `pstdio tickets`
 
 ## Purpose
 

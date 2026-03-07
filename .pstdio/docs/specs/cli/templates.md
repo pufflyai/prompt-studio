@@ -1,4 +1,4 @@
-# CLI Spec: `pstdio templates`
+# `pstdio templates`
 
 ## Purpose
 

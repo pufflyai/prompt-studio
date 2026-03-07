@@ -1,7 +1,7 @@
 import type { Arguments, Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
-import { findGitRoot, readConfig } from "@/features/config/config";
-import { listTickets as defaultListTickets } from "@/features/tickets/api/list-tickets";
+import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
+import { resolveTicketByShorthand as defaultResolveTicketByShorthand } from "@/features/tickets/resolve-ticket-by-shorthand";
 import { listWorkspaces as defaultListWorkspaces } from "@/features/workspaces/api/list-workspaces";
 
 export const command = "workspaces";
@@ -19,35 +19,18 @@ type WorkspacesArgs = {
 
 type Deps = {
   cwd: () => string;
-  findGitRoot: typeof findGitRoot;
-  readConfig: typeof readConfig;
-  listTickets: typeof defaultListTickets;
+  resolveProjectId: typeof defaultResolveProjectId;
+  resolveTicketByShorthand: typeof defaultResolveTicketByShorthand;
   listWorkspaces: typeof defaultListWorkspaces;
   log: (msg: string) => void;
 };
 
 const defaultDeps: Deps = {
   cwd: () => process.cwd(),
-  findGitRoot,
-  readConfig,
-  listTickets: defaultListTickets,
+  resolveProjectId: defaultResolveProjectId,
+  resolveTicketByShorthand: defaultResolveTicketByShorthand,
   listWorkspaces: defaultListWorkspaces,
   log: console.log,
-};
-
-const resolveTicketByShorthand = async (deps: Deps, projectId: string, shorthand: string) => {
-  const publishedTickets = await deps.listTickets(API_URL, {
-    project_id: projectId,
-    shorthand,
-  });
-  if (publishedTickets.length > 0) return publishedTickets[0];
-
-  const draftTickets = await deps.listTickets(API_URL, {
-    project_id: projectId,
-    shorthand,
-    draft: true,
-  });
-  return draftTickets[0] ?? null;
 };
 
 type WorkspaceRow = {
@@ -82,17 +65,9 @@ const formatTable = (rows: WorkspaceRow[]) => {
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<WorkspacesArgs>) => {
-    let projectId = argv["project-id"];
+    const { projectId } = deps.resolveProjectId(deps.cwd(), argv["project-id"]);
 
-    if (!projectId) {
-      const root = deps.findGitRoot(deps.cwd());
-      if (!root) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
-      const config = deps.readConfig(root);
-      if (!config) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
-      projectId = config.project_id;
-    }
-
-    const ticket = await resolveTicketByShorthand(deps, projectId, argv.id);
+    const ticket = await deps.resolveTicketByShorthand(API_URL, projectId, argv.id);
     if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
     const workspaces = await deps.listWorkspaces(API_URL, projectId);

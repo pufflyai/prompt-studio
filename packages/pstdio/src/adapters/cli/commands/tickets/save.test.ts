@@ -33,9 +33,8 @@ const ticketFixture = {
 
 const baseDeps = {
   cwd: () => tmpBase,
-  findGitRoot: () => tmpBase,
-  readConfig: () => ({ project_id: "proj-1" }),
-  listTickets: async () => [ticketFixture],
+  resolveProjectId: () => ({ projectId: "proj-1", root: tmpBase }),
+  resolveTicketByShorthand: async () => ticketFixture,
   updateTicket: mock(async () => ({
     id: "t-1",
     shorthand: "PS-1",
@@ -47,11 +46,13 @@ const baseDeps = {
     updated_at: "2026-03-04T00:00:00.000Z",
   })),
   uploadTicketFile: async () => ({}) as never,
-  listTicketStatuses: async () => [
-    { id: "s-backlog", name: "backlog", color: "gray", sort_order: 1, is_default: true },
-    { id: "s-wip", name: "wip", color: "orange", sort_order: 3, is_default: false },
-  ],
-  listTicketTags: async () => [] as { id: string; name: string; color: string }[],
+  resolveStatusId: async (_url: string, _pid: string, name: string) => {
+    const statuses: Record<string, string> = { backlog: "s-backlog", wip: "s-wip" };
+    const id = statuses[name];
+    if (!id) throw new Error(`Status not found: ${name}`);
+    return id;
+  },
+  resolveTagIds: async () => [] as string[],
   log: mock(),
 };
 

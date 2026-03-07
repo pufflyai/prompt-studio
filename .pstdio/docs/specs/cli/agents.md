@@ -1,4 +1,4 @@
-# CLI Spec: `pstdio agents`
+# `pstdio agents`
 
 ## Purpose
 

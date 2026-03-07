@@ -33,7 +33,7 @@
     "lint": "bunx biome check .",
     "typegen:tokens": "chakra typegen ./src/theme/theme.ts",
     "test": "echo 'no tests — use storybook for UI'",
-    "test-storybook": "vitest --project=storybook",
+    "test-storybook": "test-storybook",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "prepublishOnly": "bun run build"
@@ -79,7 +79,6 @@
   },
   "devDependencies": {
     "@storybook/addon-themes": "^10.1.10",
-    "@storybook/addon-vitest": "^10.2.12",
     "@storybook/react": "^10.1.9",
     "@storybook/react-vite": "^10.1.9",
     "@types/react": "^19.2.0",
@@ -92,9 +91,6 @@
     "vite-plugin-dts": "^4.5.4",
     "vite-plugin-externalize-deps": "^0.8.0",
     "vite-plugin-svgr": "^4.3.0",
-    "vitest": "^4.0.18",
-    "playwright": "^1.58.2",
-    "@vitest/browser-playwright": "^4.0.18",
-    "@vitest/coverage-v8": "^4.0.18"
+    "@storybook/test-runner": "^0.22.0"
   }
 }

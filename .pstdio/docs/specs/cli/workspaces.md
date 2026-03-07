@@ -1,4 +1,4 @@
-# CLI Spec: `pstdio workspaces`
+# `pstdio workspaces`
 
 ## Purpose
 
