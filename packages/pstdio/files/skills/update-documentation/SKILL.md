@@ -11,8 +11,8 @@ $ARGUMENTS
 
 ## Workflow
 
-1. Run `npx pstdio@latest docs pull` to pull the latest persisted documentation snapshot to `.pstdio/docs`:
-   - If the pull fails because docs have not been initialized, run `npx pstdio@latest docs init` first, then retry.
+1. Run `pstdio docs pull` to pull the latest persisted documentation snapshot to `.pstdio/docs`:
+   - If the pull fails because docs have not been initialized, run `pstdio docs init` first, then retry.
 2. Read `.pstdio/docs/navigation.json` to understand the current sidebar structure and available pages.
 3. Apply the requested documentation changes:
    - **Adding a new page**: create the markdown file under `.pstdio/docs/`, then add a sidebar entry in `navigation.json` with `{ "text": "<title>", "link": "<relative-path>" }`.
@@ -20,7 +20,7 @@ $ARGUMENTS
    - **Removing a page**: delete the markdown file and remove its sidebar entry from `navigation.json`.
    - **Reorganizing**: update `navigation.json` sidebar order or grouping. Groups use `{ "text": "<group>", "items": [...] }`.
 4. Save the updated documentation:
-   - Run `npx pstdio@latest docs save`.
+   - Run `pstdio docs save`.
    - Verify the command reports the expected number of updated/removed files.
 5. Summarize the changes made: list added, updated, and removed pages.
 

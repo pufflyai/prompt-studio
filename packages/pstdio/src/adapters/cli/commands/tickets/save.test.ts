@@ -120,6 +120,67 @@ describe("tickets save", () => {
     await expect(handler({ id: "PS-999", _: [], $0: "" } as never)).rejects.toThrow("Local ticket not found");
   });
 
+  test("reads status from frontmatter when --status is not provided", async () => {
+    writeFileSync(
+      join(tmpBase, ".pstdio", "tickets", "PS-1_updated-content", "ticket.md"),
+      '---\nstatus: "wip"\npriority: "P1"\ncomplexity: "medium"\n---\n\n# Updated content',
+    );
+
+    const updateTicket = mock(async () => ({
+      id: "t-1",
+      shorthand: "PS-1",
+      project_id: "proj-1",
+      status_id: "s-wip",
+      title: "Saved",
+      draft: false,
+      created_at: "2026-03-04T00:00:00.000Z",
+      updated_at: "2026-03-04T00:00:00.000Z",
+    }));
+
+    const handler = createHandler({ ...baseDeps, updateTicket, log: mock() });
+
+    await handler({ id: "PS-1", _: [], $0: "" } as never);
+
+    expect(updateTicket).toHaveBeenCalledWith(
+      expect.any(String),
+      "t-1",
+      expect.objectContaining({
+        input: "# Updated content",
+        status_id: "s-wip",
+        priority: "P1",
+        complexity: "medium",
+      }),
+    );
+  });
+
+  test("CLI --status flag overrides frontmatter status", async () => {
+    writeFileSync(
+      join(tmpBase, ".pstdio", "tickets", "PS-1_updated-content", "ticket.md"),
+      '---\nstatus: "wip"\n---\n\n# Updated content',
+    );
+
+    const updateTicket = mock(async () => ({
+      id: "t-1",
+      shorthand: "PS-1",
+      project_id: "proj-1",
+      status_id: "s-backlog",
+      title: "Saved",
+      draft: false,
+      created_at: "2026-03-04T00:00:00.000Z",
+      updated_at: "2026-03-04T00:00:00.000Z",
+    }));
+
+    const handler = createHandler({ ...baseDeps, updateTicket, log: mock() });
+
+    await handler({ id: "PS-1", status: "backlog", _: [], $0: "" } as never);
+
+    expect(updateTicket).toHaveBeenCalledWith(
+      expect.any(String),
+      "t-1",
+      expect.objectContaining({ status_id: "s-backlog" }),
+    );
+  });
+
   test("uploads local ticket files and logs upload count", async () => {
     mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-1_updated-content", "files"), { recursive: true });
     writeFileSync(join(tmpBase, ".pstdio", "tickets", "PS-1_updated-content", "files", "notes.txt"), "file body");

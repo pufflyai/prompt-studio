@@ -1,6 +1,6 @@
 ---
 name: implement-ticket
-description: "Implement a single ticket end-to-end: locate the ticket file by id, then update its status (`in_review`, `wip`, `blocked`) via CLI. Use when asked to implement or complete a ticket."
+description: "Implement a single ticket end-to-end: locate the ticket file by id, then update its status (`review`, `wip`, `blocked`) via CLI. Use when asked to implement or complete a ticket."
 ---
 
 ## User Input
@@ -14,13 +14,13 @@ $ARGUMENTS
 ## Workflow
 
 1. (Optional) If no ticket description is provided:
-   - If `next` / `continue`: run `npx pstdio tickets list --status ready --json`, then pull the first ticket by id.
-   - If valid id: run `npx pstdio tickets pull --id <shorthand>`.
+   - If `next` / `continue`: run `pstdio tickets list --status ready`, then pull the first ticket by id.
+   - If valid id: run `pstdio tickets pull --id <shorthand>`.
    - If the ticket is missing, ask the user to confirm the ticket id or `next`.
 2. Update the ticket status
-   - When starting work, run: `npx pstdio tickets update --id "<ticket-id>" --status wip`.
-   - If blocked: run `npx pstdio tickets update --id "<ticket-id>" --status blocked --blocked-reason <reason>` and stop the workflow.
-   - If complete: after confirming all checklists are checked, run `npx pstdio tickets update --id "<ticket-id>" --status in_review`.
+   - When starting work, run: `pstdio tickets update --id "<ticket-id>" --status wip`.
+   - If blocked: run `pstdio tickets update --id "<ticket-id>" --status blocked` and document the reason in the ticket's `blocked_reason` frontmatter field, then stop the workflow.
+   - If complete: after confirming all checklists are checked, run `pstdio tickets update --id "<ticket-id>" --status review`.
 3. Update ticket checklists as you go
    - Check off `## Steps` only when:
      - A test exists that covers it, and
@@ -30,13 +30,13 @@ $ARGUMENTS
      - There’s test coverage for it, and
      - The full test suite is green.
 4. Evidence
-   - Store artifacts under `.pstdio/tickets/<ticket-id>_<slug>/artifacts/`
+   - Store artifacts under `.pstdio/tickets/<ticket-id>_<slug>/files/`
    - Update the ticket file `## Evidence` section to reference generated artifacts.
    - If tests/commands can’t be run, record why in `## Evidence`.
 5. Finish
    - Confirm everything in `## Steps` and `## Acceptance` is checked.
-   - If the ticket is not completed due to errors, run `npx pstdio tickets update --id "<ticket-id>" --status blocked --blocked-reason <reason>`, then run `npx pstdio tickets save --id "<ticket-id>"`.
-   - If the ticket is completed, run `npx pstdio tickets update --id "<ticket-id>" --status in_review`.
+   - If the ticket is not completed due to errors, run `pstdio tickets update --id "<ticket-id>" --status blocked`, document the reason in the ticket's `blocked_reason` frontmatter field, then run `pstdio tickets save --id "<ticket-id>"`.
+   - If the ticket is completed, run `pstdio tickets update --id "<ticket-id>" --status review`.
    - Commit the implementation changes before handing off, including ticket updates and evidence references.
    - Report completed files and artifacts.
 
@@ -62,4 +62,4 @@ Artifacts **must** be:
 ## Output Locations
 
 - Tickets: `.pstdio/tickets/<ticket-id>_<slug>/ticket.md`
-- Validation Artifacts: `.pstdio/tickets/<ticket-id>_<slug>/artifacts/`
+- Validation Artifacts: `.pstdio/tickets/<ticket-id>_<slug>/files/`

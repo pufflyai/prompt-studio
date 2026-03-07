@@ -2,7 +2,12 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { mockFetch } from "@/test-utils/mock-fetch";
-import { installDefaultSkills, installSkillsForAgent, removeBundledSkillsForAgent } from "./install-default-skills";
+import {
+  getBundledSkillNames,
+  installDefaultSkills,
+  installSkillsForAgent,
+  removeBundledSkillsForAgent,
+} from "./install-default-skills";
 
 const tmpBase = join(import.meta.dirname, "__test-tmp__");
 
@@ -27,15 +32,7 @@ afterEach(() => {
   rmSync(tmpBase, { recursive: true, force: true });
 });
 
-const EXPECTED_SKILLS = [
-  "create-proposal",
-  "create-sub-tickets",
-  "create-ticket",
-  "implement-ticket",
-  "refine-ticket",
-  "review-ticket",
-  "update-documentation",
-];
+const BUNDLED_SKILLS = getBundledSkillNames();
 
 describe("installDefaultSkills", () => {
   test("installs skills to claude-code dir when claude-code is configured", async () => {
@@ -44,7 +41,7 @@ describe("installDefaultSkills", () => {
 
     await installDefaultSkills(root, "http://test:3000", FAKE_HOME);
 
-    for (const skill of EXPECTED_SKILLS) {
+    for (const skill of BUNDLED_SKILLS) {
       expect(existsSync(join(root, ".claude", "skills", skill, "SKILL.md"))).toBe(true);
     }
     expect(existsSync(join(root, ".opencode", "skills"))).toBe(false);
@@ -56,7 +53,7 @@ describe("installDefaultSkills", () => {
 
     await installDefaultSkills(root, "http://test:3000", FAKE_HOME);
 
-    for (const skill of EXPECTED_SKILLS) {
+    for (const skill of BUNDLED_SKILLS) {
       expect(existsSync(join(root, ".opencode", "skills", skill, "SKILL.md"))).toBe(true);
     }
     expect(existsSync(join(root, ".claude", "skills"))).toBe(false);
@@ -71,7 +68,7 @@ describe("installDefaultSkills", () => {
 
     await installDefaultSkills(root, "http://test:3000", FAKE_HOME);
 
-    for (const skill of EXPECTED_SKILLS) {
+    for (const skill of BUNDLED_SKILLS) {
       expect(existsSync(join(root, ".claude", "skills", skill, "SKILL.md"))).toBe(true);
       expect(existsSync(join(root, ".opencode", "skills", skill, "SKILL.md"))).toBe(true);
     }
@@ -128,7 +125,8 @@ describe("installDefaultSkills", () => {
     expect(existsSync(join(root, ".claude", "skills", "create-ticket"))).toBe(false);
 
     // Other skills should still be installed locally
-    expect(existsSync(join(root, ".claude", "skills", "review-ticket", "SKILL.md"))).toBe(true);
+    const otherSkill = BUNDLED_SKILLS.find((s) => s !== "create-ticket")!;
+    expect(existsSync(join(root, ".claude", "skills", otherSkill, "SKILL.md"))).toBe(true);
   });
 });
 
@@ -138,8 +136,8 @@ describe("installSkillsForAgent", () => {
 
     const installed = installSkillsForAgent({ root, agentId: "claude-code" });
 
-    expect(installed.length).toBe(EXPECTED_SKILLS.length);
-    for (const skill of EXPECTED_SKILLS) {
+    expect(installed.length).toBe(BUNDLED_SKILLS.length);
+    for (const skill of BUNDLED_SKILLS) {
       expect(existsSync(join(root, ".claude", "skills", skill, "SKILL.md"))).toBe(true);
     }
   });
@@ -154,8 +152,8 @@ describe("installSkillsForAgent", () => {
       homedir: fakeHome,
     });
 
-    expect(installed.length).toBe(EXPECTED_SKILLS.length);
-    for (const skill of EXPECTED_SKILLS) {
+    expect(installed.length).toBe(BUNDLED_SKILLS.length);
+    for (const skill of BUNDLED_SKILLS) {
       expect(existsSync(join(fakeHome, ".claude", "skills", skill, "SKILL.md"))).toBe(true);
     }
   });
@@ -170,7 +168,7 @@ describe("installSkillsForAgent", () => {
     const installed = installSkillsForAgent({ root, agentId: "claude-code" });
 
     expect(installed).not.toContain("create-ticket");
-    expect(installed.length).toBe(EXPECTED_SKILLS.length - 1);
+    expect(installed.length).toBe(BUNDLED_SKILLS.length - 1);
   });
 
   test("returns empty array for unknown agent", () => {
@@ -194,8 +192,8 @@ describe("removeBundledSkillsForAgent", () => {
 
     const removed = removeBundledSkillsForAgent(root, "claude-code");
 
-    expect(removed.sort()).toEqual(EXPECTED_SKILLS.sort());
-    for (const skill of EXPECTED_SKILLS) {
+    expect(removed.sort()).toEqual(BUNDLED_SKILLS.sort());
+    for (const skill of BUNDLED_SKILLS) {
       expect(existsSync(join(root, ".claude", "skills", skill))).toBe(false);
     }
     // User skill is preserved

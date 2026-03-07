@@ -5,7 +5,15 @@ type Ticket = {
   status_id: string | null;
   title: string | null;
   input: string | null;
+  priority: string | null;
+  complexity: string | null;
+  parent_id: string | null;
+  parallelizable: string | null;
+  blocked_reason: string | null;
+  depends_on: string | null;
   draft: boolean;
+  archived: boolean;
+  deleted_at: string | null;
   created_at: string;
   updated_at: string;
 };

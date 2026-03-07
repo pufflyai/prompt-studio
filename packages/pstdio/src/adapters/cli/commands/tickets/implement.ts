@@ -1,6 +1,7 @@
 import type { Arguments, Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
+import { renderPrompt } from "@/features/prompts/render-prompt";
 import { listTicketStatuses as defaultListTicketStatuses } from "@/features/tickets/api/list-ticket-statuses";
 import { listTickets as defaultListTickets } from "@/features/tickets/api/list-tickets";
 import { updateTicket as defaultUpdateTicket } from "@/features/tickets/api/update-ticket";
@@ -86,7 +87,7 @@ export const createHandler =
 
     const launchRoot = root ?? deps.cwd();
     const ticketContent = readTicketFile(launchRoot, argv.id);
-    const prompt = ticketContent ?? `Implement ticket ${argv.id}`;
+    const prompt = ticketContent ?? renderPrompt("implement-ticket", { ticket_id: argv.id });
 
     deps.log("Launching agent...");
 

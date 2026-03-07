@@ -5,7 +5,7 @@
 Produce standalone `pstdio` executables for each supported platform using `bun build --compile`. Distribute through two channels:
 
 - `curl -fsSL https://pstdio.dev/install.sh | sh` — direct binary download
-- `npx pstdio` — npm wrapper + platform packages
+- `npm i -g pstdio` — npm global install + platform packages
 
 End users MUST NOT need Bun or Node.js installed.
 
@@ -13,13 +13,13 @@ End users MUST NOT need Bun or Node.js installed.
 
 ## 2) What changes from today
 
-| Aspect | Today | After |
-|---|---|---|
-| Runtime | Node.js (built with `--target node`) | None (standalone binary) |
-| Externals | `ink`, `react`, `ink-text-input` externalized | Everything bundled into binary |
-| API server | Separate `server.js` spawned via `node` | Embedded in same binary, started via subcommand |
-| Distribution | Single npm package `pstdio` | Two channels: `curl \| sh` + npm wrapper |
-| Install size | ~4MB JS + node_modules | ~60-90MB single binary |
+| Aspect       | Today                                         | After                                           |
+| ------------ | --------------------------------------------- | ----------------------------------------------- |
+| Runtime      | Node.js (built with `--target node`)          | None (standalone binary)                        |
+| Externals    | `ink`, `react`, `ink-text-input` externalized | Everything bundled into binary                  |
+| API server   | Separate `server.js` spawned via `node`       | Embedded in same binary, started via subcommand |
+| Distribution | Single npm package `pstdio`                   | Two channels: `curl \| sh` + npm wrapper        |
+| Install size | ~4MB JS + node_modules                        | ~60-90MB single binary                          |
 
 ---
 
@@ -49,8 +49,8 @@ A compiled single binary MUST NOT depend on sibling files on disk. Hono's `serve
 
 ```ts
 // src/cli.ts — compiled entry point
-import { createApp } from "pstdio-api/app";  // Hono app (API routes only)
-import { cli } from "./cli-setup";            // current yargs setup
+import { createApp } from "pstdio-api/app"; // Hono app (API routes only)
+import { cli } from "./cli-setup"; // current yargs setup
 
 // "serve" subcommand starts Bun.serve() with:
 //   - embedded dashboard assets served by Bun directly
@@ -69,15 +69,15 @@ The API's `createApp()` is imported directly — no subprocess needed when runni
 
 All of these work in `bun build --compile`:
 
-| API | Where | Status |
-|---|---|---|
-| `Bun.serve()` | HTTP server (dashboard + API) | Works in compiled binaries |
-| `Bun.embeddedFiles()` | Serving dashboard assets from inside the binary | Available since Bun v1.2.17 |
-| `Bun.file()` | Reading embedded files at runtime | Works with embedded files |
-| `Bun.spawn()` | `pstdio-wt` git operations | Works in compiled binaries |
-| `Bun.write()` | File operations in tests | Test-only, not in binary |
-| `process.execPath` | Self-spawning for `ensureApi` | Points to the compiled binary itself |
-| Drizzle ORM + `bun:sqlite` | `pstdio-db` | Works — Bun embeds SQLite in compiled binaries |
+| API                        | Where                                           | Status                                         |
+| -------------------------- | ----------------------------------------------- | ---------------------------------------------- |
+| `Bun.serve()`              | HTTP server (dashboard + API)                   | Works in compiled binaries                     |
+| `Bun.embeddedFiles()`      | Serving dashboard assets from inside the binary | Available since Bun v1.2.17                    |
+| `Bun.file()`               | Reading embedded files at runtime               | Works with embedded files                      |
+| `Bun.spawn()`              | `pstdio-wt` git operations                      | Works in compiled binaries                     |
+| `Bun.write()`              | File operations in tests                        | Test-only, not in binary                       |
+| `process.execPath`         | Self-spawning for `ensureApi`                   | Points to the compiled binary itself           |
+| Drizzle ORM + `bun:sqlite` | `pstdio-db`                                     | Works — Bun embeds SQLite in compiled binaries |
 
 ### Not used
 
@@ -91,13 +91,13 @@ All of these work in `bun build --compile`:
 
 ### Minimum (ship first)
 
-| Target | Package name | Binary |
-|---|---|---|
-| `bun-darwin-arm64` | `@pstdio/cli-darwin-arm64` | `pstdio` |
-| `bun-darwin-x64` | `@pstdio/cli-darwin-x64` | `pstdio` |
-| `bun-linux-x64` | `@pstdio/cli-linux-x64` | `pstdio` |
-| `bun-linux-arm64` | `@pstdio/cli-linux-arm64` | `pstdio` |
-| `bun-windows-x64` | `@pstdio/cli-win-x64` | `pstdio.exe` |
+| Target             | Package name               | Binary       |
+| ------------------ | -------------------------- | ------------ |
+| `bun-darwin-arm64` | `@pstdio/cli-darwin-arm64` | `pstdio`     |
+| `bun-darwin-x64`   | `@pstdio/cli-darwin-x64`   | `pstdio`     |
+| `bun-linux-x64`    | `@pstdio/cli-linux-x64`    | `pstdio`     |
+| `bun-linux-arm64`  | `@pstdio/cli-linux-arm64`  | `pstdio`     |
+| `bun-windows-x64`  | `@pstdio/cli-win-x64`      | `pstdio.exe` |
 
 ### Later
 
@@ -138,7 +138,7 @@ install.sh
 
 ---
 
-## 7) Distribution channel 2: `npx pstdio`
+## 7) Distribution channel 2: `npm i -g pstdio`
 
 Uses the wrapper + platform packages model.
 
@@ -175,14 +175,14 @@ function getPackageName() {
   const a = process.arch;
 
   if (p === "darwin" && a === "arm64") return "@pstdio/cli-darwin-arm64";
-  if (p === "darwin" && a === "x64")   return "@pstdio/cli-darwin-x64";
-  if (p === "linux"  && a === "x64")   return "@pstdio/cli-linux-x64";
-  if (p === "linux"  && a === "arm64") return "@pstdio/cli-linux-arm64";
-  if (p === "win32"  && a === "x64")   return "@pstdio/cli-win-x64";
+  if (p === "darwin" && a === "x64") return "@pstdio/cli-darwin-x64";
+  if (p === "linux" && a === "x64") return "@pstdio/cli-linux-x64";
+  if (p === "linux" && a === "arm64") return "@pstdio/cli-linux-arm64";
+  if (p === "win32" && a === "x64") return "@pstdio/cli-win-x64";
 
   throw new Error(
     `pstdio does not support ${p} ${a}. ` +
-    `Supported: darwin-arm64, darwin-x64, linux-x64, linux-arm64, win-x64`
+      `Supported: darwin-arm64, darwin-x64, linux-x64, linux-arm64, win-x64`,
   );
 }
 
@@ -204,12 +204,14 @@ Each contains:
 ```
 
 `index.cjs`:
+
 ```js
 const path = require("node:path");
 module.exports = path.join(__dirname, "bin", "pstdio");
 ```
 
 `package.json`:
+
 ```json
 {
   "name": "@pstdio/cli-linux-x64",
@@ -244,11 +246,11 @@ const embedArgs = distFiles
 
 // 3. Compile for each target with embedded assets
 const TARGETS = [
-  { target: "bun-darwin-arm64",  pkg: "cli-darwin-arm64", bin: "pstdio" },
-  { target: "bun-darwin-x64",   pkg: "cli-darwin-x64",   bin: "pstdio" },
-  { target: "bun-linux-x64",    pkg: "cli-linux-x64",    bin: "pstdio" },
-  { target: "bun-linux-arm64",  pkg: "cli-linux-arm64",  bin: "pstdio" },
-  { target: "bun-windows-x64",  pkg: "cli-win-x64",      bin: "pstdio.exe" },
+  { target: "bun-darwin-arm64", pkg: "cli-darwin-arm64", bin: "pstdio" },
+  { target: "bun-darwin-x64", pkg: "cli-darwin-x64", bin: "pstdio" },
+  { target: "bun-linux-x64", pkg: "cli-linux-x64", bin: "pstdio" },
+  { target: "bun-linux-arm64", pkg: "cli-linux-arm64", bin: "pstdio" },
+  { target: "bun-windows-x64", pkg: "cli-win-x64", bin: "pstdio.exe" },
 ];
 
 for (const { target, pkg, bin } of TARGETS) {
@@ -291,7 +293,8 @@ Bun.serve({
     }
 
     // Dashboard assets → embedded files
-    const assetPath = url.pathname === "/" ? "index.html" : url.pathname.slice(1);
+    const assetPath =
+      url.pathname === "/" ? "index.html" : url.pathname.slice(1);
     const asset = embeddedAssets.get(assetPath);
     if (asset) {
       return new Response(asset, {
@@ -301,7 +304,8 @@ Bun.serve({
 
     // SPA fallback → serve index.html for client-side routing
     const index = embeddedAssets.get("index.html");
-    if (index) return new Response(index, { headers: { "Content-Type": "text/html" } });
+    if (index)
+      return new Response(index, { headers: { "Content-Type": "text/html" } });
 
     return new Response("Not Found", { status: 404 });
   },
@@ -388,7 +392,7 @@ steps:
   - npm publish @pstdio/cli-linux-x64
   - npm publish @pstdio/cli-linux-arm64
   - npm publish @pstdio/cli-win-x64
-  - npm publish pstdio  # wrapper last
+  - npm publish pstdio # wrapper last
 ```
 
 All packages share the same version. Platform packages publish before the wrapper.
@@ -412,7 +416,7 @@ All packages share the same version. Platform packages publish before the wrappe
 - Create platform package scaffolding (package.json, index.cjs)
 - Create wrapper launcher (`bin/pstdio.js`)
 - Create `scripts/build-all.ts`
-- Test `npx pstdio` locally
+- Test `pstdio` locally after global install
 
 ### Phase 3: curl install
 
@@ -442,10 +446,6 @@ This avoids the main risk: a compiled single binary depending on sibling `dist/`
 
 ## 14) Open questions
 
-1. **Binary size** — Bun compiled binaries start at ~50MB. With all dependencies bundled (React, Ink, Hono, Drizzle) plus embedded dashboard assets, expect 60-90MB per platform. This is acceptable for a dev tool (comparable to Ollama at ~100MB).
-
 2. **Self-update** — Consider adding `pstdio update` that re-runs the install script or checks GitHub Releases for a newer version.
 
 3. **Signing** — macOS binaries should be code-signed to avoid Gatekeeper warnings. This requires an Apple Developer certificate in CI.
-
-4. **Content-Type mapping** — `Bun.embeddedFiles()` returns `Blob` objects whose `.type` may need explicit MIME-type mapping for assets like `.js`, `.css`, `.svg`. Verify that Bun infers correct MIME types from embedded file extensions, or add a lookup table in the serve handler.

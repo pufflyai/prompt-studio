@@ -7,6 +7,7 @@ import { listTicketFiles, readTicketAttachment, readTicketFile } from "@/feature
 import { resolveStatusId as defaultResolveStatusId } from "@/features/tickets/resolve-status-id";
 import { resolveTagIds as defaultResolveTagIds } from "@/features/tickets/resolve-tag-ids";
 import { resolveTicketByShorthand as defaultResolveTicketByShorthand } from "@/features/tickets/resolve-ticket-by-shorthand";
+import { parseFrontmatter, stripFrontmatter } from "@/features/tickets/ticket-frontmatter";
 
 export const command = "save";
 export const describe = "Save local ticket content and files to the database";
@@ -73,14 +74,19 @@ export const createHandler =
     const ticket = await deps.resolveTicketByShorthand(API_URL, projectId, argv.id);
     if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
+    const frontmatter = parseFrontmatter(content);
+
+    const statusName = argv.status ?? frontmatter.status;
     const tagIds = argv.tag?.length ? await deps.resolveTagIds(API_URL, projectId, argv.tag) : undefined;
-    const statusId = argv.status ? await deps.resolveStatusId(API_URL, projectId, argv.status) : undefined;
+    const statusId = statusName ? await deps.resolveStatusId(API_URL, projectId, statusName) : undefined;
 
     await deps.updateTicket(API_URL, ticket.id, {
-      input: content,
+      input: stripFrontmatter(content).replace(/^\n+/, ""),
       draft: false,
       tag_ids: tagIds,
       status_id: statusId,
+      priority: frontmatter.priority,
+      complexity: frontmatter.complexity,
     });
 
     const uploadedCount = await uploadLocalTicketFiles(deps, root, argv.id, ticket.id);

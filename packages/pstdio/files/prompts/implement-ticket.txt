@@ -1,0 +1,1 @@
+Implement ticket: {{ticket_id}}

@@ -1,0 +1,119 @@
+import { describe, expect, test } from "bun:test";
+import { applyFrontmatter, buildTicketFrontmatter, parseFrontmatter } from "./ticket-frontmatter";
+
+describe("buildTicketFrontmatter", () => {
+  test("builds frontmatter from ticket fields", () => {
+    const result = buildTicketFrontmatter({
+      shorthand: "PS-12",
+      created_at: "2026-03-04T00:00:00.000Z",
+      status_name: "backlog",
+      parent_id: "PS-5",
+      priority: "P1",
+      complexity: "medium",
+      depends_on: "PS-3,PS-4",
+      parallelizable: "yes",
+      blocked_reason: "waiting on API",
+    });
+
+    expect(result).toBe(
+      [
+        "---",
+        'ticket_id: "PS-12"',
+        'created: "2026-03-04T00:00:00.000Z"',
+        'status: "backlog"',
+        'parent_id: "PS-5"',
+        'priority: "P1"',
+        'complexity: "medium"',
+        'depends_on: "PS-3,PS-4"',
+        'parallelizable: "yes"',
+        'blocked_reason: "waiting on API"',
+        "---",
+      ].join("\n"),
+    );
+  });
+
+  test("omits null/empty fields", () => {
+    const result = buildTicketFrontmatter({
+      shorthand: "PS-1",
+      created_at: "2026-03-04T00:00:00.000Z",
+      status_name: null,
+      parent_id: null,
+      priority: null,
+      complexity: null,
+      depends_on: null,
+      parallelizable: null,
+      blocked_reason: null,
+    });
+
+    expect(result).toBe(["---", 'ticket_id: "PS-1"', 'created: "2026-03-04T00:00:00.000Z"', "---"].join("\n"));
+  });
+});
+
+describe("applyFrontmatter", () => {
+  test("prepends frontmatter to body without existing frontmatter", () => {
+    const result = applyFrontmatter('---\nticket_id: "PS-1"\n---', "# My Ticket\n\nBody text");
+    expect(result).toBe('---\nticket_id: "PS-1"\n---\n\n# My Ticket\n\nBody text');
+  });
+
+  test("replaces existing frontmatter", () => {
+    const content = '---\nticket_id: "PS-1"\nstatus: "old"\n---\n\n# My Ticket\n\nBody text';
+    const result = applyFrontmatter('---\nticket_id: "PS-1"\nstatus: "new"\n---', content);
+    expect(result).toBe('---\nticket_id: "PS-1"\nstatus: "new"\n---\n\n# My Ticket\n\nBody text');
+  });
+
+  test("handles content that is only frontmatter", () => {
+    const content = '---\nticket_id: "PS-1"\n---';
+    const result = applyFrontmatter('---\nticket_id: "PS-1"\nstatus: "wip"\n---', content);
+    expect(result).toBe('---\nticket_id: "PS-1"\nstatus: "wip"\n---');
+  });
+
+  test("handles empty content", () => {
+    const result = applyFrontmatter('---\nticket_id: "PS-1"\n---', "");
+    expect(result).toBe('---\nticket_id: "PS-1"\n---');
+  });
+});
+
+describe("parseFrontmatter", () => {
+  test("extracts all known fields from frontmatter", () => {
+    const content = [
+      "---",
+      'ticket_id: "PS-12"',
+      'status: "wip"',
+      'priority: "P1"',
+      'complexity: "medium"',
+      'parent_id: "PS-5"',
+      'depends_on: "PS-3,PS-4"',
+      'parallelizable: "yes"',
+      'blocked_reason: "waiting on API"',
+      "---",
+      "",
+      "# My Ticket",
+    ].join("\n");
+
+    const result = parseFrontmatter(content);
+    expect(result).toEqual({
+      status: "wip",
+      priority: "P1",
+      complexity: "medium",
+    });
+  });
+
+  test("returns empty object when no frontmatter", () => {
+    expect(parseFrontmatter("# Just a heading")).toEqual({});
+  });
+
+  test("returns empty object when frontmatter has no actionable fields", () => {
+    const content = '---\nticket_id: "PS-1"\ncreated: "2026-01-01"\n---\n\n# Ticket';
+    expect(parseFrontmatter(content)).toEqual({});
+  });
+
+  test("ignores fields with empty values", () => {
+    const content = '---\nstatus: ""\npriority: "P2"\n---\n\n# Ticket';
+    expect(parseFrontmatter(content)).toEqual({ priority: "P2" });
+  });
+
+  test("strips quotes from values", () => {
+    const content = "---\nstatus: backlog\npriority: 'P1'\n---\n\n# Ticket";
+    expect(parseFrontmatter(content)).toEqual({ status: "backlog", priority: "P1" });
+  });
+});

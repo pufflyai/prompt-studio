@@ -80,8 +80,9 @@ export const tickets = pgTable(
     status_id: text("status_id").references(() => ticket_statuses.id, {
       onDelete: "set null",
     }),
-    title: text("title"),
-    input: text("input"),
+    display_title: text("display_title"),
+    user_prompt: text("user_prompt"),
+    file_id: text("file_id").references(() => files.id, { onDelete: "set null" }),
     priority: text("priority"),
     parallelizable: text("parallelizable"),
     complexity: text("complexity"),

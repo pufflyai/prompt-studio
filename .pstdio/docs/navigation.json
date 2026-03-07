@@ -47,6 +47,10 @@
               "link": "/specs/cli/tickets"
             },
             {
+              "text": "Update",
+              "link": "/specs/cli/update"
+            },
+            {
               "text": "Workspaces",
               "link": "/specs/cli/workspaces"
             }
@@ -73,6 +77,10 @@
               "link": "/specs/api/error-logs"
             }
           ]
+        },
+        {
+          "text": "Customizable Templates",
+          "link": "/specs/customizable-templates"
         },
         {
           "text": "Real-time Updates",

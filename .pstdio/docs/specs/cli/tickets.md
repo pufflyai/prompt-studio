@@ -46,12 +46,12 @@ The maximum length of the full directory name (`<shorthand>_<display_title>`) is
 
 ### Examples
 
-| Markdown content (first heading)  | Display Title      | Directory Name            |
-| --------------------------------- | ------------------ | ------------------------- |
-| `# Fix login bug`                 | `fix-login-bug`    | `PS-12_fix-login-bug`     |
-| `# Add dark mode`                 | `add-dark-mode`    | `PS-13_add-dark-mode`     |
-| `# Update **all** docs`           | `update-all-docs`  | `PS-14_update-all-docs`   |
-| `# [Link](http://x.com) cleanup` | `link-cleanup`     | `PS-15_link-cleanup`      |
+| Markdown content (first heading) | Display Title     | Directory Name          |
+| -------------------------------- | ----------------- | ----------------------- |
+| `# Fix login bug`                | `fix-login-bug`   | `PS-12_fix-login-bug`   |
+| `# Add dark mode`                | `add-dark-mode`   | `PS-13_add-dark-mode`   |
+| `# Update **all** docs`          | `update-all-docs` | `PS-14_update-all-docs` |
+| `# [Link](http://x.com) cleanup` | `link-cleanup`    | `PS-15_link-cleanup`    |
 
 ### Lookup
 
@@ -158,8 +158,9 @@ pstdio tickets create --content <content> [--project-id <project-id>] [--status 
 ### Behavior
 
 1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
-2. Create a ticket directly in the database. Assign the status from `--status` if provided, otherwise assign the project's default status. Does not write a local file.
+2. Create a ticket directly in the database. Assign the status from `--status` if provided, otherwise assign the project's default status.
 3. If `--tag` values are provided, assign matching tags to the ticket.
+4. If running inside a linked project (`.pstdio/config.json` exists), write a local `ticket.md` with YAML frontmatter and the ticket title. See [Frontmatter Fields](#frontmatter-fields) for the frontmatter format. If not inside a linked project, no local file is written.
 
 ### Output
 
@@ -243,11 +244,15 @@ pstdio tickets save --id <ticket-shorthand> [--status <status>] [--tag <tag>...]
 
 1. Must be run inside a linked project.
 2. Find the local ticket directory matching `<ticket-shorthand>_*` and read `ticket.md` from it.
-3. Update the ticket in the database with the local file content.
-4. Set `draft=false` to publish the ticket.
-5. If `--status` is provided, look up the status by name and assign its ID.
-6. If `.pstdio/tickets/<ticket-shorthand>/files/` exists, upload every file under it and associate it with the ticket.
-7. If `--tag` values are provided, update the tag assignments.
+3. Parse YAML frontmatter from `ticket.md` and extract actionable fields (`status`, `priority`, `complexity`).
+4. Update the ticket in the database with the local file content, applying frontmatter fields as ticket properties.
+5. Set `draft=false` to publish the ticket.
+6. Resolve the ticket status: use `--status` flag if provided, otherwise use `status` from frontmatter. Look up the status by name and assign its ID.
+7. Set `priority` and `complexity` from frontmatter values when present.
+8. If `.pstdio/tickets/<ticket-shorthand>/files/` exists, upload every file under it and associate it with the ticket.
+9. If `--tag` values are provided, update the tag assignments.
+
+CLI flags always override frontmatter values. When neither a flag nor a frontmatter value is present, the field is left unchanged in the database.
 
 ### Output
 
@@ -273,26 +278,59 @@ If no files were uploaded, omit the second line.
 ### Usage
 
 ```sh
-pstdio tickets pull --id <ticket-shorthand> [--force]
+pstdio tickets pull [--id <ticket-shorthand>] [--force]
 ```
 
 ### Flags
 
-| Flag      | Type      | Required | Description                                                          |
-| --------- | --------- | -------- | -------------------------------------------------------------------- |
-| `--id`    | `string`  | yes      | The ticket shorthand (e.g. `PS-12`).                                 |
-| `--force` | `boolean` | no       | Overwrite local files if they already exist at the destination path. |
+| Flag      | Type      | Required | Description                                                                        |
+| --------- | --------- | -------- | ---------------------------------------------------------------------------------- |
+| `--id`    | `string`  | no       | The ticket shorthand (e.g. `PS-12`). When omitted, pulls all non-archived tickets. |
+| `--force` | `boolean` | no       | Overwrite local files if they already exist at the destination path.               |
 
 ### Behavior
+
+#### With `--id`
 
 1. Must be run inside a linked project.
 2. Fetch the ticket from the database by shorthand.
 3. Create the local ticket directory at `.pstdio/tickets/<ticket-shorthand>/` when missing.
-4. Write the ticket content to `.pstdio/tickets/<ticket-shorthand>/ticket.md`.
-5. Fetch all files linked to the ticket in the database and write them to `.pstdio/tickets/<ticket-shorthand>/files/`.
-6. If a target file path already exists and `--force` is not set, fail without overwriting that file.
+4. Build YAML frontmatter from the ticket's database fields and prepend it to the ticket body content (replacing any existing frontmatter). See [Frontmatter Fields](#frontmatter-fields).
+5. Write the result to `.pstdio/tickets/<ticket-shorthand>/ticket.md`.
+6. Fetch all files linked to the ticket in the database and write them to `.pstdio/tickets/<ticket-shorthand>/files/`.
+7. If a target file path already exists and `--force` is not set, fail without overwriting that file.
+
+#### Without `--id`
+
+1. Must be run inside a linked project.
+2. Fetch all non-archived tickets for the project from the database.
+3. For each ticket, perform the same steps as the single-ticket pull (steps 3–7 above).
+4. Log a summary of how many tickets were pulled.
+
+#### Frontmatter Fields
+
+The following fields are always written:
+
+| Field       | Source               |
+| ----------- | -------------------- |
+| `ticket_id` | Ticket shorthand     |
+| `created`   | `created_at` from DB |
+
+The following fields are included only when non-null:
+
+| Field            | Source                         |
+| ---------------- | ------------------------------ |
+| `status`         | Status name (resolved from ID) |
+| `parent_id`      | `parent_id` from DB            |
+| `priority`       | `priority` from DB             |
+| `complexity`     | `complexity` from DB           |
+| `depends_on`     | `depends_on` from DB           |
+| `parallelizable` | `parallelizable` from DB       |
+| `blocked_reason` | `blocked_reason` from DB       |
 
 ### Output
+
+Single ticket:
 
 ```text
 Pulled ticket PS-12 to .pstdio/tickets/PS-12
@@ -301,10 +339,22 @@ Downloaded 2 ticket files
 
 If no files are linked to the ticket, omit the second line.
 
+All tickets:
+
+```text
+Pulled 5 tickets
+```
+
+If no non-archived tickets exist:
+
+```text
+No tickets to pull.
+```
+
 ### Errors
 
 - `"Not inside a pstdio project. Run 'pstdio projects create' first."`: no `.pstdio/config.json` found.
-- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
+- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database (single-ticket mode).
 - `"Local file already exists: <path>. Use --force to overwrite."`: local file conflict during pull.
 
 ---
@@ -600,9 +650,9 @@ Archived ticket PS-12
 
 ## Local Side Effects
 
-| Path                                                            | Description                                                                                   |
-| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `.pstdio/tickets/<shorthand>_<display_title>/ticket.md`         | Local ticket file created by `write`/`pull`, read by `save`.                                  |
-| `.pstdio/tickets/<shorthand>_<display_title>/files/`            | Local directory for ticket-associated files written by `pull`, read by `save`/`files`.        |
-| `.pstdio/tickets/<shorthand>_<display_title>/files/<filename>`  | Individual ticket-associated files synced between local project and DB.                       |
-| `.pstdio/workspaces/<workspace-shorthand>/`                     | Git worktree path referenced by `pstdio tickets workspaces` for ticket-associated workspaces. |
+| Path                                                           | Description                                                                                   |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `.pstdio/tickets/<shorthand>_<display_title>/ticket.md`        | Local ticket file created by `write`/`pull`, read by `save`.                                  |
+| `.pstdio/tickets/<shorthand>_<display_title>/files/`           | Local directory for ticket-associated files written by `pull`, read by `save`/`files`.        |
+| `.pstdio/tickets/<shorthand>_<display_title>/files/<filename>` | Individual ticket-associated files synced between local project and DB.                       |
+| `.pstdio/workspaces/<workspace-shorthand>/`                    | Git worktree path referenced by `pstdio tickets workspaces` for ticket-associated workspaces. |

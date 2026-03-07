@@ -5,6 +5,72 @@ import { createHandler } from "./pull";
 
 const tmpBase = join(import.meta.dirname, "__test-tmp-pull__");
 
+const makeListItem = (
+  overrides: Partial<{ id: string; shorthand: string; title: string; status_name: string | null }> = {},
+) => ({
+  id: overrides.id ?? "ticket-1",
+  shorthand: overrides.shorthand ?? "PS-1",
+  project_id: "proj-1",
+  status_id: null,
+  title: overrides.title ?? "Pulled ticket",
+  priority: null,
+  complexity: null,
+  draft: false,
+  archived: false,
+  status_name: overrides.status_name ?? null,
+  tag_names: [] as string[],
+  created_at: "2026-03-04T00:00:00.000Z",
+});
+
+type TicketOverrides = Partial<{
+  id: string;
+  shorthand: string;
+  title: string;
+  input: string;
+  priority: string | null;
+  complexity: string | null;
+  parent_id: string | null;
+}>;
+
+const makeTicket = (overrides: TicketOverrides = {}) => ({
+  id: overrides.id ?? "ticket-1",
+  shorthand: overrides.shorthand ?? "PS-1",
+  project_id: "proj-1",
+  status_id: null,
+  title: overrides.title ?? "Pulled ticket",
+  input: overrides.input ?? "# Ticket from DB",
+  priority: overrides.priority ?? null,
+  complexity: overrides.complexity ?? null,
+  parent_id: overrides.parent_id ?? null,
+  parallelizable: null,
+  blocked_reason: null,
+  depends_on: null,
+  draft: false,
+  archived: false,
+  deleted_at: null,
+  created_at: "2026-03-04T00:00:00.000Z",
+  updated_at: "2026-03-04T00:00:00.000Z",
+});
+
+const makeFile = (overrides: Partial<{ id: string; file_name: string; size_bytes: number }> = {}) => ({
+  id: overrides.id ?? "file-1",
+  project_id: "proj-1",
+  file_name: overrides.file_name ?? "notes.txt",
+  file_kind: "ticket_file",
+  storage_path: "/tmp/ignored",
+  mime_type: "text/plain",
+  size_bytes: overrides.size_bytes ?? 13,
+  hash: null,
+  created_at: "2026-03-04T00:00:00.000Z",
+  updated_at: "2026-03-04T00:00:00.000Z",
+});
+
+const baseDeps = () => ({
+  cwd: () => tmpBase,
+  resolveProjectId: () => ({ projectId: "proj-1", root: tmpBase }),
+  listTickets: async () => [],
+});
+
 beforeEach(() => {
   mkdirSync(tmpBase, { recursive: true });
   mkdirSync(join(tmpBase, ".git"), { recursive: true });
@@ -20,55 +86,10 @@ describe("tickets pull", () => {
     const getTicketFileContent = mock(async () => Buffer.from("hello from db", "utf8"));
 
     const handler = createHandler({
-      cwd: () => tmpBase,
-      resolveProjectId: () => ({ projectId: "proj-1", root: tmpBase }),
-      resolveTicketByShorthand: async () => ({
-        id: "ticket-1",
-        shorthand: "PS-1",
-        project_id: "proj-1",
-        status_id: null,
-        title: "Pulled ticket",
-        priority: null,
-        complexity: null,
-        draft: false,
-        archived: false,
-        status_name: null,
-        tag_names: [],
-        created_at: "2026-03-04T00:00:00.000Z",
-      }),
-      getTicket: async () => ({
-        id: "ticket-1",
-        shorthand: "PS-1",
-        project_id: "proj-1",
-        status_id: null,
-        title: "Pulled ticket",
-        input: "# Ticket from DB",
-        priority: null,
-        complexity: null,
-        parent_id: null,
-        parallelizable: null,
-        blocked_reason: null,
-        depends_on: null,
-        draft: false,
-        archived: false,
-        deleted_at: null,
-        created_at: "2026-03-04T00:00:00.000Z",
-        updated_at: "2026-03-04T00:00:00.000Z",
-      }),
-      listTicketFiles: async () => [
-        {
-          id: "file-1",
-          project_id: "proj-1",
-          file_name: "notes.txt",
-          file_kind: "ticket_file",
-          storage_path: "/tmp/ignored",
-          mime_type: "text/plain",
-          size_bytes: 13,
-          hash: null,
-          created_at: "2026-03-04T00:00:00.000Z",
-          updated_at: "2026-03-04T00:00:00.000Z",
-        },
-      ],
+      ...baseDeps(),
+      resolveTicketByShorthand: async () => makeListItem(),
+      getTicket: async () => makeTicket(),
+      listTicketFiles: async () => [makeFile()],
       getTicketFileContent,
       log,
     });
@@ -79,11 +100,37 @@ describe("tickets pull", () => {
     const localFilePath = join(tmpBase, ".pstdio", "tickets", "PS-1_ticket-from-db", "files", "notes.txt");
     expect(existsSync(ticketPath)).toBe(true);
     expect(existsSync(localFilePath)).toBe(true);
-    expect(readFileSync(ticketPath, "utf8")).toBe("# Ticket from DB");
+    const ticketContent = readFileSync(ticketPath, "utf8");
+    expect(ticketContent).toContain('ticket_id: "PS-1"');
+    expect(ticketContent).toContain('created: "2026-03-04T00:00:00.000Z"');
+    expect(ticketContent).toContain("# Ticket from DB");
     expect(readFileSync(localFilePath, "utf8")).toBe("hello from db");
     expect(getTicketFileContent).toHaveBeenCalledWith(expect.any(String), "ticket-1", "file-1");
     expect(log).toHaveBeenCalledWith(expect.stringContaining("Pulled ticket PS-1"));
     expect(log).toHaveBeenCalledWith("Downloaded 1 ticket files");
+  });
+
+  test("populates frontmatter with ticket metadata from DB", async () => {
+    const handler = createHandler({
+      ...baseDeps(),
+      resolveTicketByShorthand: async () => makeListItem({ status_name: "wip" }),
+      getTicket: async () => makeTicket({ priority: "P1", complexity: "medium", parent_id: "PS-0" }),
+      listTicketFiles: async () => [],
+      getTicketFileContent: async () => Buffer.alloc(0),
+      log: () => {},
+    });
+
+    await handler({ id: "PS-1", force: false, _: [], $0: "" } as never);
+
+    const ticketPath = join(tmpBase, ".pstdio", "tickets", "PS-1_ticket-from-db", "ticket.md");
+    const content = readFileSync(ticketPath, "utf8");
+    expect(content).toStartWith("---\n");
+    expect(content).toContain('ticket_id: "PS-1"');
+    expect(content).toContain('status: "wip"');
+    expect(content).toContain('priority: "P1"');
+    expect(content).toContain('complexity: "medium"');
+    expect(content).toContain('parent_id: "PS-0"');
+    expect(content).toContain("# Ticket from DB");
   });
 
   test("throws when local file exists and --force is not set", async () => {
@@ -93,55 +140,10 @@ describe("tickets pull", () => {
     writeFileSync(join(ticketDir, "files", "notes.txt"), "existing");
 
     const handler = createHandler({
-      cwd: () => tmpBase,
-      resolveProjectId: () => ({ projectId: "proj-1", root: tmpBase }),
-      resolveTicketByShorthand: async () => ({
-        id: "ticket-1",
-        shorthand: "PS-1",
-        project_id: "proj-1",
-        status_id: null,
-        title: "Pulled ticket",
-        priority: null,
-        complexity: null,
-        draft: false,
-        archived: false,
-        status_name: null,
-        tag_names: [],
-        created_at: "2026-03-04T00:00:00.000Z",
-      }),
-      getTicket: async () => ({
-        id: "ticket-1",
-        shorthand: "PS-1",
-        project_id: "proj-1",
-        status_id: null,
-        title: "Pulled ticket",
-        input: "# Ticket from DB",
-        priority: null,
-        complexity: null,
-        parent_id: null,
-        parallelizable: null,
-        blocked_reason: null,
-        depends_on: null,
-        draft: false,
-        archived: false,
-        deleted_at: null,
-        created_at: "2026-03-04T00:00:00.000Z",
-        updated_at: "2026-03-04T00:00:00.000Z",
-      }),
-      listTicketFiles: async () => [
-        {
-          id: "file-1",
-          project_id: "proj-1",
-          file_name: "notes.txt",
-          file_kind: "ticket_file",
-          storage_path: "/tmp/ignored",
-          mime_type: "text/plain",
-          size_bytes: 8,
-          hash: null,
-          created_at: "2026-03-04T00:00:00.000Z",
-          updated_at: "2026-03-04T00:00:00.000Z",
-        },
-      ],
+      ...baseDeps(),
+      resolveTicketByShorthand: async () => makeListItem(),
+      getTicket: async () => makeTicket(),
+      listTicketFiles: async () => [makeFile({ size_bytes: 8 })],
       getTicketFileContent: async () => Buffer.from("new content"),
       log: () => {},
     });
@@ -149,5 +151,53 @@ describe("tickets pull", () => {
     await expect(handler({ id: "PS-1", force: false, _: [], $0: "" } as never)).rejects.toThrow(
       "Local ticket already exists: PS-1",
     );
+  });
+
+  test("pulls all non-archived tickets when --id is omitted", async () => {
+    const log = mock();
+
+    const handler = createHandler({
+      ...baseDeps(),
+      resolveTicketByShorthand: async () => null as never,
+      getTicket: async (_baseUrl: string, id: string) =>
+        id === "ticket-1"
+          ? makeTicket({ id: "ticket-1", shorthand: "PS-1", title: "First ticket", input: "# First ticket" })
+          : makeTicket({ id: "ticket-2", shorthand: "PS-2", title: "Second ticket", input: "# Second ticket" }),
+      listTicketFiles: async () => [],
+      getTicketFileContent: async () => Buffer.alloc(0),
+      listTickets: async () => [
+        makeListItem({ id: "ticket-1", shorthand: "PS-1", title: "First ticket" }),
+        makeListItem({ id: "ticket-2", shorthand: "PS-2", title: "Second ticket" }),
+      ],
+      log,
+    });
+
+    await handler({ force: false, _: [], $0: "" } as never);
+
+    const ticket1Path = join(tmpBase, ".pstdio", "tickets", "PS-1_first-ticket", "ticket.md");
+    const ticket2Path = join(tmpBase, ".pstdio", "tickets", "PS-2_second-ticket", "ticket.md");
+    expect(existsSync(ticket1Path)).toBe(true);
+    expect(existsSync(ticket2Path)).toBe(true);
+    expect(readFileSync(ticket1Path, "utf8")).toContain("# First ticket");
+    expect(readFileSync(ticket2Path, "utf8")).toContain("# Second ticket");
+    expect(log).toHaveBeenCalledWith("Pulled 2 tickets");
+  });
+
+  test("logs message when no non-archived tickets exist", async () => {
+    const log = mock();
+
+    const handler = createHandler({
+      ...baseDeps(),
+      resolveTicketByShorthand: async () => null as never,
+      getTicket: async () => null as never,
+      listTicketFiles: async () => [],
+      getTicketFileContent: async () => Buffer.alloc(0),
+      listTickets: async () => [],
+      log,
+    });
+
+    await handler({ force: false, _: [], $0: "" } as never);
+
+    expect(log).toHaveBeenCalledWith("No tickets to pull.");
   });
 });

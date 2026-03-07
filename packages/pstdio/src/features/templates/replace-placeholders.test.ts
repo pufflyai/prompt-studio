@@ -19,10 +19,10 @@ describe("replacePlaceholders", () => {
     expect(result).toBe("PS-5 - see PS-5");
   });
 
-  test("leaves unmatched placeholders intact", () => {
+  test("clears unmatched placeholders", () => {
     const content = "# {{TICKET_TITLE}} - {{UNKNOWN}}";
     const result = replacePlaceholders(content, { TICKET_TITLE: "Hello" });
-    expect(result).toBe("# Hello - {{UNKNOWN}}");
+    expect(result).toBe("# Hello - ");
   });
 
   test("handles empty values", () => {

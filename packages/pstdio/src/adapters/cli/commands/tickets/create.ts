@@ -1,11 +1,12 @@
 import type { Arguments, Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
-import { findGitRoot } from "@/features/config/config";
+import { readConfig } from "@/features/config/config";
 import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 import { createTicket as defaultCreateTicket } from "@/features/tickets/api/create-ticket";
 import { writeTicketFile as defaultWriteTicketFile } from "@/features/tickets/local-ticket";
 import { resolveStatusId as defaultResolveStatusId } from "@/features/tickets/resolve-status-id";
 import { resolveTagIds as defaultResolveTagIds } from "@/features/tickets/resolve-tag-ids";
+import { buildTicketFrontmatter } from "@/features/tickets/ticket-frontmatter";
 
 export const command = "create";
 export const describe = "Create a ticket directly in the database";
@@ -26,8 +27,8 @@ type CreateArgs = {
 
 type Deps = {
   cwd: () => string;
-  findGitRoot: typeof findGitRoot;
   resolveProjectId: typeof defaultResolveProjectId;
+  readConfig: typeof readConfig;
   createTicket: typeof defaultCreateTicket;
   resolveStatusId: typeof defaultResolveStatusId;
   resolveTagIds: typeof defaultResolveTagIds;
@@ -37,8 +38,8 @@ type Deps = {
 
 const defaultDeps: Deps = {
   cwd: () => process.cwd(),
-  findGitRoot,
   resolveProjectId: defaultResolveProjectId,
+  readConfig,
   createTicket: defaultCreateTicket,
   resolveStatusId: defaultResolveStatusId,
   resolveTagIds: defaultResolveTagIds,
@@ -49,20 +50,33 @@ const defaultDeps: Deps = {
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<CreateArgs>) => {
-    const { projectId } = deps.resolveProjectId(deps.cwd(), argv["project-id"]);
+    const { root, projectId } = deps.resolveProjectId(deps.cwd(), argv["project-id"]);
     const tagIds = argv.tag?.length ? await deps.resolveTagIds(API_URL, projectId, argv.tag) : undefined;
     const statusId = argv.status ? await deps.resolveStatusId(API_URL, projectId, argv.status) : undefined;
 
     const ticket = await deps.createTicket(API_URL, {
       project_id: projectId,
       title: argv.content,
+      draft: false,
       tag_ids: tagIds,
       status_id: statusId,
     });
 
-    const root = deps.findGitRoot(deps.cwd());
-    if (root) {
-      deps.writeTicketFile(root, ticket.shorthand, `# ${argv.content}\n`);
+    const isLocalProject = root && deps.readConfig(root);
+    if (isLocalProject) {
+      const frontmatter = buildTicketFrontmatter({
+        shorthand: ticket.shorthand,
+        created_at: ticket.created_at,
+        status_name: argv.status ?? null,
+        parent_id: null,
+        priority: null,
+        complexity: null,
+        depends_on: null,
+        parallelizable: null,
+        blocked_reason: null,
+      });
+      const content = `${frontmatter}\n\n# ${argv.content}\n`;
+      deps.writeTicketFile(root, ticket.shorthand, content);
     }
 
     deps.log(`Created ticket ${ticket.shorthand}`);
