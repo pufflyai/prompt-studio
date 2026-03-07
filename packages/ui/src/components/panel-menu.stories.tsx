@@ -42,3 +42,21 @@ export const WithSections: Story = {
     ),
   },
 };
+
+export const Compact: Story = {
+  args: {
+    title: "Project",
+    variant: "compact",
+    children: (
+      <Stack gap="2xs">
+        <ItemSection title="Workspace">
+          <MenuItem primaryLabel="Overview" leftIcon={FileText} variant="compact" />
+          <MenuItem primaryLabel="Files" leftIcon={Folder} variant="compact" />
+        </ItemSection>
+        <ItemSection title="Settings">
+          <MenuItem primaryLabel="Preferences" leftIcon={Settings} variant="compact" />
+        </ItemSection>
+      </Stack>
+    ),
+  },
+};

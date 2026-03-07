@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { getDocsContent, getDocsIndex } from "../data/api";
 
 const docsKeys = {
@@ -17,4 +17,5 @@ export const useDocsContent = (link: string | null, projectId?: string) =>
     queryKey: docsKeys.content(link, projectId),
     queryFn: () => getDocsContent(link ?? "", projectId),
     enabled: Boolean(link),
+    placeholderData: keepPreviousData,
   });

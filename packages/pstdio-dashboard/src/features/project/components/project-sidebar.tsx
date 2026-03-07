@@ -1,6 +1,6 @@
 import { Box, Icon as ChakraIcon, Flex, IconButton, Menu, Stack } from "@chakra-ui/react";
 import { MenuItem, Tooltip } from "@pstdio/ui";
-import { Link, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
+import { Link, useParams, useRouterState } from "@tanstack/react-router";
 import {
   ArrowUpRight,
   BookOpen,
@@ -24,12 +24,16 @@ const projectSettingsSection = {
   path: "settings",
 } as const;
 
-const documentationPath = "/docs";
+const documentationUrl = "https://prompt.studio/docs";
+const discordUrl = "https://discord.gg/qH5dAqbNad";
+
+const openExternalLink = (url: string) => {
+  window.open(url, "_blank", "noopener,noreferrer");
+};
 
 export const ProjectSidebar = () => {
   const { location } = useRouterState();
   const { projectId } = useParams({ strict: false });
-  const navigate = useNavigate();
   const projectNavItems = projectId
     ? projectSections.map((item) => ({
         id: item.id,
@@ -52,15 +56,15 @@ export const ProjectSidebar = () => {
   };
 
   const handleOpenDocumentation = () => {
-    navigate({ to: documentationPath });
+    openExternalLink(documentationUrl);
   };
 
   const handleOpenDiscord = () => {
-    navigate({ to: documentationPath });
+    openExternalLink(discordUrl);
   };
 
   return (
-    <Flex as="nav" borderRightWidth="1px" borderColor="border.subtle" hideBelow="md" direction="column">
+    <Flex as="nav" borderRightWidth="1px" hideBelow="md" direction="column">
       <Stack justify="space-between" flex="1" gap="lg" p="xs" align="center">
         <Stack gap="lg" align="center">
           <ProjectMenu />
@@ -78,7 +82,7 @@ export const ProjectSidebar = () => {
                         aria-label={item.label}
                         aria-current={isActive ? "page" : undefined}
                         variant="ghost"
-                        bg={isActive ? "background.secondary" : undefined}
+                        bg={isActive ? "bg.muted" : undefined}
                         size="sm"
                       >
                         <ChakraIcon as={Icon} boxSize="18px" />
@@ -103,7 +107,7 @@ export const ProjectSidebar = () => {
               </Box>
             </Menu.Trigger>
             <Menu.Positioner>
-              <Menu.Content minW="220px" bg="background.primary">
+              <Menu.Content minW="220px" bg="bg">
                 <MenuItem
                   onClick={handleOpenDocumentation}
                   primaryLabel="Documentation"
@@ -128,7 +132,7 @@ export const ProjectSidebar = () => {
                     aria-label={projectSettingsItem.label}
                     aria-current={isPathActive(projectSettingsItem.to) ? "page" : undefined}
                     variant="ghost"
-                    bg={isPathActive(projectSettingsItem.to) ? "background.secondary" : undefined}
+                    bg={isPathActive(projectSettingsItem.to) ? "bg.muted" : undefined}
                     size="sm"
                   >
                     <ChakraIcon as={projectSettingsItem.icon} boxSize="18px" />

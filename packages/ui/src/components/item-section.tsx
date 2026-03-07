@@ -26,9 +26,11 @@ export const ItemSection = (props: ItemSectionProps) => {
           padding="sm"
           height="2rem"
           display="flex"
+          width="full"
           gap="2"
           alignItems="center"
           cursor="pointer"
+          justifyContent="space-between"
         >
           {title && (
             <Text fontWeight="600" textStyle="label/S/medium">

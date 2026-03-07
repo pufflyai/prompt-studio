@@ -9,12 +9,12 @@ export const ProjectShell = () => {
   const { data: project, isLoading } = useProject(projectId);
 
   return (
-    <Flex height="100%" minH="0">
+    <Flex height="100%" width="100%" minH="0">
       {projectId ? <ProjectSidebar /> : null}
       <Stack flex="1" minH="0" gap="0" overflow="hidden">
         <Box flex="1" overflowY="auto">
           {isLoading ? (
-            <Text textStyle="paragraph/S/regular" color="foreground.secondary" p="md">
+            <Text textStyle="paragraph/S/regular" color="fg.muted" p="md">
               Loading project...
             </Text>
           ) : !project ? (

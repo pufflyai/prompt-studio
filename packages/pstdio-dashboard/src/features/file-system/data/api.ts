@@ -1,3 +1,5 @@
+import { apiRequest } from "@/lib/api";
+
 export type DirectoryEntry = {
   name: string;
   path: string;
@@ -11,10 +13,8 @@ export type DirectoryListResponse = {
 };
 
 export const listDirectory = async (path?: string) => {
-  const currentPath = path?.trim() || "~";
+  const trimmedPath = path?.trim();
+  const query = trimmedPath ? `?path=${encodeURIComponent(trimmedPath)}` : "";
 
-  return {
-    currentPath,
-    entries: [],
-  } satisfies DirectoryListResponse;
+  return apiRequest<DirectoryListResponse>(`/v1/filesystem/list${query}`);
 };

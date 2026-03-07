@@ -79,7 +79,7 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
               disabled={isMenuDisabled}
               onClick={() => setMenuContent(defaultMenuContent)}
             >
-              <Text textStyle="label/XS/medium" color="foreground.primary">
+              <Text textStyle="label/XS/medium" color="fg">
                 {selectedModelLabel}
               </Text>
               <ChevronDown size={14} />
@@ -88,9 +88,9 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
         </Box>
       </Menu.Trigger>
       <Menu.Positioner>
-        <Menu.Content minW="260px" bg="background.primary" p="0">
+        <Menu.Content minW="260px" bg="bg" p="0">
           <HStack justify="space-between" alignItems="center" px="sm" py="xs" gap="xs">
-            <HStack gap="xs" minW="0" color="foreground.secondary">
+            <HStack gap="xs" minW="0" color="fg.muted">
               <TerminalIcon size={16} />
               <Text textStyle="label/XS/medium" lineClamp={1}>
                 {selectedAgentLabel}

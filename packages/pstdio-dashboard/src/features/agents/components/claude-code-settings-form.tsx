@@ -22,7 +22,7 @@ export const ClaudeCodeSettingsForm = (props: ClaudeCodeSettingsFormProps) => {
       <HStack justify="space-between" alignItems="center">
         <Stack gap="0">
           <Text textStyle="label/XS/medium">Model</Text>
-          <Text textStyle="paragraph/XS/regular" color="foreground.secondary">
+          <Text textStyle="paragraph/XS/regular" color="fg.muted">
             Default model for new sessions
           </Text>
         </Stack>
@@ -50,7 +50,7 @@ export const ClaudeCodeSettingsForm = (props: ClaudeCodeSettingsFormProps) => {
       <HStack justify="space-between" alignItems="center">
         <Stack gap="0">
           <Text textStyle="label/XS/medium">Plan mode</Text>
-          <Text textStyle="paragraph/XS/regular" color="foreground.secondary">
+          <Text textStyle="paragraph/XS/regular" color="fg.muted">
             Start sessions in plan mode
           </Text>
         </Stack>
@@ -70,7 +70,7 @@ export const ClaudeCodeSettingsForm = (props: ClaudeCodeSettingsFormProps) => {
       <HStack justify="space-between" alignItems="center">
         <Stack gap="0">
           <Text textStyle="label/XS/medium">Approval mode</Text>
-          <Text textStyle="paragraph/XS/regular" color="foreground.secondary">
+          <Text textStyle="paragraph/XS/regular" color="fg.muted">
             How tool use requests are handled
           </Text>
         </Stack>

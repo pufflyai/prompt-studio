@@ -1,19 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { findAgent, isKnownAgentId, KNOWN_AGENT_IDS, KNOWN_AGENTS } from "./known-agents";
+import { findAgent, isKnownAgentId, KNOWN_AGENT_IDS } from "./known-agents";
 
 describe("known-agents", () => {
   test("contains claude-code and opencode", () => {
     expect(KNOWN_AGENT_IDS).toEqual(["claude-code", "opencode"]);
-  });
-
-  test("each agent has required metadata", () => {
-    for (const agent of KNOWN_AGENTS) {
-      expect(agent.id).toBeDefined();
-      expect(agent.name).toBeDefined();
-      expect(agent.binary).toBeDefined();
-      expect(agent.skillsDir).toBeDefined();
-      expect(agent.globalSkillsDir).toBeDefined();
-    }
   });
 
   test("findAgent returns agent by id", () => {

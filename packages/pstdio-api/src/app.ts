@@ -22,6 +22,7 @@ import {
 } from "pstdio-storage";
 import { createAgentRoutes } from "./features/agents/routes";
 import { createDocsRoutes } from "./features/docs/routes";
+import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
 import { createProjectRoutes } from "./features/projects/routes";
 import { createSessionRoutes } from "./features/sessions/routes";
@@ -94,6 +95,7 @@ export const createApp = async (options?: AppOptions) => {
 
   app.route("/", createHealthRoutes(deps));
   app.route("/v1", createProjectRoutes(deps));
+  app.route("/v1", createFilesystemRoutes(deps));
   app.route("/v1", createDocsRoutes(deps));
   app.route("/v1", createAgentRoutes(deps));
   app.route("/v1", createSkillRoutes(deps));

@@ -3,7 +3,7 @@ import { GitBranchIcon } from "lucide-react";
 import type { DragEventHandler, MouseEvent } from "react";
 import { DiffBubble } from "@/components/diff-bubble";
 import { Tooltip } from "@/components/tooltip";
-import { type SessionCompletionStatus, SessionIndicator } from "./session-indicator";
+import { type SessionCompletionStatus, SessionIndicator } from "../session-indicator";
 
 export interface TicketCardBadge {
   label: string;

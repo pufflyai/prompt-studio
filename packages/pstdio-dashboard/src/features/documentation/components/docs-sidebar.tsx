@@ -1,5 +1,5 @@
-import { Box, Collapsible, Menu, Stack, Text } from "@chakra-ui/react";
-import { MenuItem } from "@pstdio/ui";
+import { Collapsible, Menu, Stack, Text } from "@chakra-ui/react";
+import { MenuItem, PanelMenu } from "@pstdio/ui";
 import { ChevronRight } from "lucide-react";
 import type { DocsSidebarItem } from "../data/api";
 import { sidebarItemContainsLink } from "../utils";
@@ -46,14 +46,14 @@ export const DocsSidebarEntry = (props: DocsSidebarEntryProps) => {
         py="2px"
         borderRadius="sm"
         textAlign="left"
-        _hover={{ bg: "background.hover" }}
+        _hover={{ bg: "bg.muted" }}
         onClick={() => {
           if (item.link) {
             onSelectLink(item.link);
           }
         }}
       >
-        <Text color="foreground.primary" textStyle={depth === 0 ? "paragraph/S/medium" : "paragraph/S/regular"}>
+        <Text color="fg" textStyle={depth === 0 ? "paragraph/S/medium" : "paragraph/S/regular"}>
           {item.text}
         </Text>
         <Collapsible.Indicator transition="transform 0.2s" _open={{ transform: "rotate(90deg)" }}>
@@ -81,27 +81,26 @@ export const DocsSidebar = (props: DocsSidebarProps) => {
   const { menuItems, activeLink, onSelectLink } = props;
 
   return (
-    <Box minH="0" overflowY="auto">
+    <PanelMenu title="Docs" variant="compact">
       {menuItems.length === 0 ? (
-        <Text textStyle="paragraph/S/regular" color="foreground.secondary" p="xs">
+        <Text textStyle="paragraph/S/regular" color="fg.muted" p="xs">
           No files
         </Text>
       ) : (
         <Menu.Root>
           <Stack gap="sm" aria-label="Docs file navigation">
             {menuItems.map((item, index) => (
-              <Box
+              <DocsSidebarEntry
                 key={`${item.text}-${item.link ?? index}`}
-                pt={index === 0 ? "0" : "sm"}
-                borderTopWidth={index === 0 ? undefined : "1px"}
-                borderTopColor="border.secondary"
-              >
-                <DocsSidebarEntry item={item} activeLink={activeLink} depth={0} onSelectLink={onSelectLink} />
-              </Box>
+                item={item}
+                activeLink={activeLink}
+                depth={0}
+                onSelectLink={onSelectLink}
+              />
             ))}
           </Stack>
         </Menu.Root>
       )}
-    </Box>
+    </PanelMenu>
   );
 };

@@ -3,13 +3,15 @@ import { isDocsServiceError } from "pstdio-storage";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 
-const docsSidebarItemSchema: z.ZodType = z.lazy(() =>
-  z.object({
-    text: z.string(),
-    link: z.string().optional(),
-    items: z.array(docsSidebarItemSchema).optional(),
-  }),
-);
+const docsSidebarItemSchema: z.ZodType = z
+  .lazy(() =>
+    z.object({
+      text: z.string(),
+      link: z.string().optional(),
+      items: z.array(docsSidebarItemSchema).optional(),
+    }),
+  )
+  .openapi("DocsSidebarItem");
 
 const docsIndexSchema = z.object({
   sidebar: z.array(docsSidebarItemSchema),

@@ -13,7 +13,7 @@ import { MenuItem } from "@pstdio/ui";
 import { FolderOpen, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FolderPickerDialog } from "@/features/project-settings/components/folder-picker-dialog";
+import { FolderPickerDialog } from "@/features/file-system/components/folder-picker-dialog";
 import type { CreateProjectInput } from "../data/api";
 
 interface CreateProjectDialogProps {
@@ -116,14 +116,14 @@ export const CreateProjectDialog = (props: CreateProjectDialogProps) => {
           <Dialog.Content>
             <Dialog.Header>
               <Text textStyle="heading/M">{t("createProjectDialog.title")}</Text>
-              <Dialog.CloseTrigger asChild>
+              <Dialog.CloseTrigger>
                 <CloseButton size="sm" />
               </Dialog.CloseTrigger>
             </Dialog.Header>
             <Dialog.Body>
               <Stack gap="md">
                 <Stack gap="xs">
-                  <Text textStyle="label/XS/regular" color="foreground.secondary">
+                  <Text textStyle="label/XS/regular" color="fg.muted">
                     {t("createProjectDialog.projectName.label")}
                   </Text>
                   <Input
@@ -140,11 +140,11 @@ export const CreateProjectDialog = (props: CreateProjectDialogProps) => {
                 </Stack>
 
                 <Stack gap="xs">
-                  <Text textStyle="label/XS/regular" color="foreground.secondary">
+                  <Text textStyle="label/XS/regular" color="fg.muted">
                     {t("createProjectDialog.repositories.label")}
                   </Text>
                   {repositories.length === 0 ? (
-                    <Text textStyle="paragraph/S/regular" color="foreground.secondary">
+                    <Text textStyle="paragraph/S/regular" color="fg.muted">
                       {t("createProjectDialog.repositories.empty")}
                     </Text>
                   ) : (

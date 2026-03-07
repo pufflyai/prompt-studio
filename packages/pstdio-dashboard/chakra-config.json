@@ -3843,6 +3843,16 @@
               }
             }
           }
+        },
+        "text": {
+          "selectable": {
+            "primary": {
+              "value": {
+                "base": "{colors.blacks.800}",
+                "_dark": "{colors.blacks.800}"
+              }
+            }
+          }
         }
       },
       "shadows": {

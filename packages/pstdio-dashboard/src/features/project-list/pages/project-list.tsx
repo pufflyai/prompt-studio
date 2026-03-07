@@ -72,13 +72,13 @@ export const ProjectList = () => {
               </Button>
             </Stack>
           </Stack>
-          <Text textStyle="paragraph/S/regular" color="foreground.secondary">
+          <Text textStyle="paragraph/S/regular" color="fg.muted">
             {description}
           </Text>
         </Stack>
 
         {isLoading ? (
-          <Text textStyle="paragraph/S/regular" color="foreground.secondary">
+          <Text textStyle="paragraph/S/regular" color="fg.muted">
             Loading projects...
           </Text>
         ) : isError ? (

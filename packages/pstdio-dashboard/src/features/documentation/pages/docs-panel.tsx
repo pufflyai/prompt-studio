@@ -94,15 +94,11 @@ export const DocsPanel = () => {
     return <EmptyDocs />;
   }
 
-  if (isContentLoading) {
-    return <LoadingDocs />;
-  }
-
-  if (!content && !contentError) {
-    return <EmptyDocs />;
-  }
-
-  const pageContent = contentError ? (
+  const pageContent = isContentLoading ? (
+    <LoadingDocs />
+  ) : !content && !contentError ? (
+    <EmptyDocs />
+  ) : contentError ? (
     <EmptyState
       title="Unable to load document"
       description={contentError instanceof Error ? contentError.message : "Try selecting another doc."}
@@ -120,10 +116,8 @@ export const DocsPanel = () => {
 
   return (
     <Flex height="100%" width="100%" minH="0">
-      <Box width="320px" minW="280px" maxW="360px" borderRightWidth="1px" borderColor="border.secondary" p="sm">
-        <DocsSidebar menuItems={sidebarItems} activeLink={activeLink} onSelectLink={handleSelectLink} />
-      </Box>
-      <Stack height="100%" flex="1" minH="0" p="sm">
+      <DocsSidebar menuItems={sidebarItems} activeLink={activeLink} onSelectLink={handleSelectLink} />
+      <Stack height="100%" flex="1" minH="0">
         {pageContent}
       </Stack>
     </Flex>

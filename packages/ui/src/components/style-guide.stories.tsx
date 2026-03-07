@@ -181,17 +181,31 @@ export const AccentPrimaryShades = {
           <Box data-testid="accent-primary-dark" borderRadius="sm" height="56px" background="bg.accent-primary.dark" />
         </Stack>
       </SimpleGrid>
+      <Box
+        data-testid="accent-primary-contrast-surface"
+        borderRadius="sm"
+        padding="sm"
+        background="bg.accent-primary.medium"
+        color="red.500"
+      >
+        <Text data-testid="accent-primary-contrast-text" textStyle="label/XS" color="text.selectable.primary">
+          text.selectable.primary
+        </Text>
+      </Box>
     </Stack>
   ),
   play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
     const canvas = within(canvasElement);
     const medium = canvas.getByTestId("accent-primary-medium");
     const dark = canvas.getByTestId("accent-primary-dark");
+    const contrastText = canvas.getByTestId("accent-primary-contrast-text");
 
     const mediumBackgroundColor = getComputedStyle(medium).backgroundColor;
     const darkBackgroundColor = getComputedStyle(dark).backgroundColor;
+    const contrastTextColor = getComputedStyle(contrastText).color;
 
     await expect(darkBackgroundColor).not.toBe(mediumBackgroundColor);
+    await expect(contrastTextColor).toBe("rgb(34, 37, 44)");
   },
 };
 

@@ -17,7 +17,7 @@ export const OpencodeSettingsForm = (props: OpencodeSettingsFormProps) => {
       <HStack justify="space-between" alignItems="center">
         <Stack gap="0">
           <Text textStyle="label/XS/medium">Model</Text>
-          <Text textStyle="paragraph/XS/regular" color="foreground.secondary">
+          <Text textStyle="paragraph/XS/regular" color="fg.muted">
             Default model for new sessions
           </Text>
         </Stack>
@@ -45,7 +45,7 @@ export const OpencodeSettingsForm = (props: OpencodeSettingsFormProps) => {
       <HStack justify="space-between" alignItems="center">
         <Stack gap="0">
           <Text textStyle="label/XS/medium">Auto-approve</Text>
-          <Text textStyle="paragraph/XS/regular" color="foreground.secondary">
+          <Text textStyle="paragraph/XS/regular" color="fg.muted">
             Automatically approve tool use requests
           </Text>
         </Stack>

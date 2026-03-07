@@ -6,9 +6,12 @@ export { DeleteConfirmationModal } from "./components/delete-confirmation-modal"
 export type { EmptyStateProps } from "./components/empty-state";
 export { EmptyState } from "./components/empty-state";
 export { ErrorBoundary } from "./components/error-boundary";
+export type { FolderPickerDialogEntry, FolderPickerDialogProps } from "./components/folder-picker-dialog";
+export { FolderPickerDialog } from "./components/folder-picker-dialog";
 export { MenuItem } from "./components/menu-item";
 export type { OpenSourceNotice, OpenSourceNoticesScreenProps } from "./components/open-source-notices-screen";
 export { OpenSourceNoticesScreen } from "./components/open-source-notices-screen";
+export { PanelMenu } from "./components/panel-menu";
 export { Toaster, toaster } from "./components/toaster";
 export { Tooltip } from "./components/tooltip";
 export { psTheme } from "./theme";

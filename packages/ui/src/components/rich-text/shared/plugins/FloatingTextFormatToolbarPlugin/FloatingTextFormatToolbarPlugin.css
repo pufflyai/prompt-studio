@@ -7,7 +7,7 @@
   opacity: 0;
   background-color: var(--chakra-colors-bg);
   border-radius: 8px;
-  border: 1px solid var(--chakra-colors-border-secondary);
+  border: 1px solid var(--chakra-colors-border-muted);
   box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
   transition: opacity 0.2s;
   will-change: transform;
@@ -21,6 +21,6 @@
 
 /* Style for active buttons in the floating toolbar */
 .floating-text-format-toolbar button[data-active] {
-  background-color: var(--chakra-colors-background-accent-primary-light);
+  background-color: var(--chakra-colors-bg-accent-primary-medium);
   color: var(--chakra-colors-text-selectable-primary);
 }

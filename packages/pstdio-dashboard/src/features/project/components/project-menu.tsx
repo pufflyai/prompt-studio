@@ -58,7 +58,7 @@ export const ProjectMenu = () => {
         </Box>
       </Menu.Trigger>
       <Menu.Positioner>
-        <Menu.Content minW="240px" bg="background.primary">
+        <Menu.Content minW="240px" bg="bg">
           <MenuItem onClick={handleOpenProjects} primaryLabel="Projects" leftIcon={FolderIcon} />
           <Menu.Separator />
           <MenuItem onClick={toggleThemePreference} primaryLabel={modeLabel} leftIcon={isDarkMode ? Sun : Moon} />

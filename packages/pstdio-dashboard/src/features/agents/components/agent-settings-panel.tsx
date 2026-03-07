@@ -46,7 +46,7 @@ export const AgentSettingsPanel = (props: AgentSettingsPanelProps) => {
   }
 
   return (
-    <Text textStyle="paragraph/XS/regular" color="foreground.secondary">
+    <Text textStyle="paragraph/XS/regular" color="fg.muted">
       No settings available for this agent.
     </Text>
   );
@@ -68,7 +68,7 @@ export const AgentSettingsSection = (props: AgentSettingsSectionProps) => {
     <Stack gap="sm">
       <Stack gap="2xs">
         <Text textStyle="heading/S">Agent Settings</Text>
-        <Text textStyle="paragraph/S/regular" color="foreground.secondary">
+        <Text textStyle="paragraph/S/regular" color="fg.muted">
           Configure per-agent options like model, approval mode, and behavior.
         </Text>
       </Stack>

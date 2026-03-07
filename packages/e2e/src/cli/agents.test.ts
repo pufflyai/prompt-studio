@@ -14,11 +14,23 @@ afterAll(() => {
   api?.stop();
 });
 
-const run = (args: string, cwd = process.cwd()) => runPstdio(args, cwd, { PSTDIO_API_URL: api.url });
-
-const runSafe = (args: string, cwd = process.cwd()) => runPstdioSafe(args, cwd, { PSTDIO_API_URL: api.url });
-
 describe("pstdio agents (API state)", () => {
+  // Run in a temp git repo so `agents setup` doesn't install skills into the real project
+  let repo: string;
+  const apiDirs: string[] = [];
+
+  beforeAll(() => {
+    repo = createGitRepo();
+    apiDirs.push(repo);
+  });
+
+  afterAll(() => {
+    cleanupDirs(apiDirs);
+  });
+
+  const run = (args: string) => runPstdio(args, repo, { PSTDIO_API_URL: api.url });
+  const runSafe = (args: string) => runPstdioSafe(args, repo, { PSTDIO_API_URL: api.url });
+
   test("lists known agents with none configured", () => {
     const output = run("agents list");
 
@@ -77,6 +89,7 @@ describe("pstdio agents (API state)", () => {
 
 describe("pstdio agents (filesystem)", () => {
   const dirs: string[] = [];
+  const run = (args: string, cwd: string) => runPstdio(args, cwd, { PSTDIO_API_URL: api.url });
 
   afterEach(() => {
     cleanupDirs(dirs);

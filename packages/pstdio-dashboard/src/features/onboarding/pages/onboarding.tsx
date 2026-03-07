@@ -64,7 +64,7 @@ export const Onboarding = () => {
       <Stack gap="lg" padding="lg">
         <Stack gap="2xs">
           <Text textStyle="heading/M">Welcome to Prompt Studio</Text>
-          <Text textStyle="paragraph/S/regular" color="foreground.secondary">
+          <Text textStyle="paragraph/S/regular" color="fg.muted">
             Pick a coding agent to power new ticket attempts.
           </Text>
         </Stack>
@@ -72,7 +72,7 @@ export const Onboarding = () => {
         <Stack gap="sm">
           <Stack gap="2xs">
             <Text textStyle="label/L/medium">Choose a coding agent</Text>
-            <Text textStyle="paragraph/S/regular" color="foreground.secondary">
+            <Text textStyle="paragraph/S/regular" color="fg.muted">
               You can update this choice later.
             </Text>
           </Stack>
@@ -83,7 +83,7 @@ export const Onboarding = () => {
             borderWidth="1px"
             borderRadius="lg"
             borderColor={isOpencodeSelected ? "border.accent" : "border.secondary"}
-            bg={isOpencodeSelected ? "background.active" : "background.primary"}
+            bg={isOpencodeSelected ? "bg.emphasized" : "bg"}
             px="lg"
             py="md"
             textAlign="left"
@@ -93,7 +93,7 @@ export const Onboarding = () => {
             <Flex alignItems="flex-start" justifyContent="space-between" gap="md">
               <Stack gap="xs" flex="1">
                 <Text textStyle="label/L/medium">Opencode</Text>
-                <Text textStyle="paragraph/S/regular" color="foreground.secondary">
+                <Text textStyle="paragraph/S/regular" color="fg.muted">
                   Open-source, local-first coding agent for fast iteration.
                 </Text>
               </Stack>

@@ -479,10 +479,22 @@ export const vis = {
   },
 };
 
+export const text = {
+  selectable: {
+    primary: {
+      value: {
+        base: "{colors.blacks.800}",
+        _dark: "{colors.blacks.800}",
+      },
+    },
+  },
+};
+
 export const semanticColors = {
   fg,
   bg,
   border,
   blue,
   vis,
+  text,
 };

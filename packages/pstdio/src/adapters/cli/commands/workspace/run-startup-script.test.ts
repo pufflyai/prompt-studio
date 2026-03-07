@@ -1,6 +1,19 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { exec } from "node:child_process";
 import { runStartupScript } from "./run-startup-script";
+
+const originalStdoutWrite = process.stdout.write.bind(process.stdout);
+const originalStderrWrite = process.stderr.write.bind(process.stderr);
+
+beforeEach(() => {
+  process.stdout.write = mock(() => true) as typeof process.stdout.write;
+  process.stderr.write = mock(() => true) as typeof process.stderr.write;
+});
+
+afterEach(() => {
+  process.stdout.write = originalStdoutWrite;
+  process.stderr.write = originalStderrWrite;
+});
 
 describe("runStartupScript", () => {
   test("captures output and uploads log on success", async () => {

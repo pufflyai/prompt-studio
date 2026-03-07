@@ -1,6 +1,18 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { Server } from "node:http";
 import { launch } from ".";
+
+let stdoutWriteSpy: ReturnType<typeof mock>;
+const originalStdoutWrite = process.stdout.write.bind(process.stdout);
+
+beforeEach(() => {
+  stdoutWriteSpy = mock((_chunk: unknown) => true);
+  process.stdout.write = stdoutWriteSpy as typeof process.stdout.write;
+});
+
+afterEach(() => {
+  process.stdout.write = originalStdoutWrite;
+});
 
 type StubDeps = {
   dashboardRoot?: string;
