@@ -48,7 +48,7 @@ const cli = yargs(hideBin(process.argv))
   })
   .middleware(async (argv) => {
     const topLevelCommand = argv._[0];
-    if (topLevelCommand === "close" || topLevelCommand === "tui" || topLevelCommand === "serve") return;
+    if (topLevelCommand === "close" || topLevelCommand === "serve") return;
 
     applyApiPortFromArgs(argv);
     await ensureApi(resolveApiUrl(argv));

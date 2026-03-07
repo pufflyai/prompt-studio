@@ -12,8 +12,8 @@
   "scripts": {
     "pstdio": "bun ./src/index.ts",
     "dev": "bun --watch ./src/index.ts -- serve & VITE_API_BASE_URL= bun run --cwd ../pstdio-dashboard dev & wait",
-    "build": "bun build ./src/index.ts --outfile dist/index.js --target node --banner \"#!/usr/bin/env node\" --external ink --external react --external ink-text-input",
-    "analyze-bundle": "bun build ./src/index.ts --outfile dist/index.js --target node --banner \"#!/usr/bin/env node\" --external ink --external react --external ink-text-input --metafile=./dist/bundle-meta.json --metafile-md=./dist/bundle-meta.md",
+    "build": "bun build ./src/index.ts --outfile dist/index.js --target node --banner \"#!/usr/bin/env node\" --external react",
+    "analyze-bundle": "bun build ./src/index.ts --outfile dist/index.js --target node --banner \"#!/usr/bin/env node\" --external react --metafile=./dist/bundle-meta.json --metafile-md=./dist/bundle-meta.md",
     "build:bundle": "bun run build && mkdir -p dist/api && cp -r ../pstdio-dashboard/dist ./dist/dashboard && cp ../pstdio-api/dist/index.js ./dist/api/server.js",
     "build:compile": "bun run ../../scripts/build-compile.ts",
     "typecheck": "tsc --noEmit",
@@ -23,9 +23,6 @@
   },
   "dependencies": {
     "@tanstack/react-db": "^0.1.74",
-    "ink": "^6.8.0",
-    "ink-markdown": "^1.0.4",
-    "ink-text-input": "^6.0.0",
     "pstdio-agents": "workspace:*",
     "pstdio-api": "workspace:*",
     "pstdio-db": "workspace:*",

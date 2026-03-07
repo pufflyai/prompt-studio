@@ -20,12 +20,12 @@ Docs are plain markdown files committed to the repo under `.pstdio/docs/`. All c
 ## Architecture
 
 ```
-┌───────────┐   ┌───────────┐   ┌───────────────┐
-│    CLI    │   │    TUI    │   │   Dashboard   │
-└─────┬─────┘   └─────┬─────┘   └───────┬───────┘
-      │               │                 │
-      └───────────────┼─────────────────┘
-                      │  HTTP
+┌───────────┐   ┌───────────────┐
+│    CLI    │   │   Dashboard   │
+└─────┬─────┘   └───────┬───────┘
+      │                 │
+      └─────────────────┘
+              │  HTTP
                       ▼
               ┌───────────────┐
               │   pstdio-api  │
@@ -39,7 +39,7 @@ Docs are plain markdown files committed to the repo under `.pstdio/docs/`. All c
               └──────────────┘
 ```
 
-All three surfaces call the same API endpoints. The API delegates to `createDocsService` in `pstdio-storage`, which handles:
+Both surfaces call the same API endpoints. The API delegates to `createDocsService` in `pstdio-storage`, which handles:
 
 - Parsing and validating `navigation.json`
 - Resolving links to markdown files

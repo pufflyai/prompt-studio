@@ -14,6 +14,7 @@ import {
   createWorkspacesService,
 } from "pstdio-db";
 import {
+  createChangelogService,
   createDocsService,
   createFilesService,
   createSkillsService,
@@ -21,6 +22,7 @@ import {
   resolveStorageRoot,
 } from "pstdio-storage";
 import { createAgentRoutes } from "./features/agents/routes";
+import { createChangelogRoutes } from "./features/changelog/routes";
 import { createDocsRoutes } from "./features/docs/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
@@ -56,6 +58,7 @@ export const createApp = async (options?: AppOptions) => {
   const skillsService = createSkillsService(reposService);
 
   const docsService = createDocsService(reposService);
+  const changelogService = createChangelogService(reposService);
   const agentRegistry = createAgentRegistry([createClaudeCodeAgent(), createOpencodeAgent()]);
 
   const agentConfigsService = createAgentConfigsService(db);
@@ -76,6 +79,7 @@ export const createApp = async (options?: AppOptions) => {
     projectsService,
     reposService,
     docsService,
+    changelogService,
     agentConfigsService,
     filesService,
     sessionsService,
@@ -97,6 +101,7 @@ export const createApp = async (options?: AppOptions) => {
   app.route("/v1", createProjectRoutes(deps));
   app.route("/v1", createFilesystemRoutes(deps));
   app.route("/v1", createDocsRoutes(deps));
+  app.route("/v1", createChangelogRoutes(deps));
   app.route("/v1", createAgentRoutes(deps));
   app.route("/v1", createSkillRoutes(deps));
   app.route("/v1", createTemplateRoutes(deps));

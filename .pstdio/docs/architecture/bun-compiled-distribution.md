@@ -30,7 +30,7 @@ The compiled binary handles both CLI and API server via a subcommand:
 ```
 pstdio --help          # normal CLI
 pstdio serve           # starts API server (replaces current `bun run start` in pstdio-api)
-pstdio dashboard       # starts API + opens TUI
+pstdio dashboard       # starts API + opens dashboard
 ```
 
 ### Why single binary

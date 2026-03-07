@@ -8,6 +8,7 @@ import {
   KanbanSquare,
   ListTreeIcon,
   MessageCircle,
+  Newspaper,
   SettingsIcon,
 } from "lucide-react";
 import { ProjectMenu } from "./project-menu";
@@ -16,6 +17,13 @@ const projectSections = [
   { id: "docs", label: "Documentation", icon: ListTreeIcon, path: "docs" },
   { id: "tickets", label: "Tickets", icon: KanbanSquare, path: "tickets" },
 ] as const;
+
+const projectChangelogSection = {
+  id: "changelog",
+  label: "Changelog",
+  icon: Newspaper,
+  path: "changelog",
+} as const;
 
 const projectSettingsSection = {
   id: "settings",
@@ -43,6 +51,15 @@ export const ProjectSidebar = () => {
         to: `/projects/${projectId}/${item.path}`,
       }))
     : [];
+
+  const projectChangelogItem = projectId
+    ? {
+        id: projectChangelogSection.id,
+        label: projectChangelogSection.label,
+        icon: projectChangelogSection.icon,
+        to: `/projects/${projectId}/${projectChangelogSection.path}`,
+      }
+    : null;
 
   const projectSettingsItem = projectId
     ? {
@@ -98,6 +115,24 @@ export const ProjectSidebar = () => {
         </Stack>
 
         <Stack gap="xs" align="center">
+          {projectChangelogItem ? (
+            <Tooltip positioning={{ placement: "right" }} content={projectChangelogItem.label}>
+              <Flex as="li">
+                <Link to={projectChangelogItem.to} preload="intent" style={{ textDecoration: "none" }}>
+                  <IconButton
+                    aria-label={projectChangelogItem.label}
+                    aria-current={isPathActive(projectChangelogItem.to) ? "page" : undefined}
+                    variant="ghost"
+                    bg={isPathActive(projectChangelogItem.to) ? "bg.muted" : undefined}
+                    size="sm"
+                  >
+                    <ChakraIcon as={projectChangelogItem.icon} boxSize="18px" />
+                  </IconButton>
+                </Link>
+              </Flex>
+            </Tooltip>
+          ) : null}
+
           <Menu.Root>
             <Menu.Trigger asChild>
               <Box>

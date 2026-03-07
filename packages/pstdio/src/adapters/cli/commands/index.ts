@@ -7,7 +7,6 @@ import * as statusesCommand from "./statuses";
 import * as tagsCommand from "./tags";
 import * as templatesCommand from "./templates";
 import * as ticketsCommand from "./tickets";
-import * as tuiCommand from "./tui";
 import * as workspaceCommand from "./workspace";
 
 export const topLevelCommandModules = [
@@ -20,6 +19,5 @@ export const topLevelCommandModules = [
   tagsCommand,
   templatesCommand,
   ticketsCommand,
-  tuiCommand,
   workspaceCommand,
 ];

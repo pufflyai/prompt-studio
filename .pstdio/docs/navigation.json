@@ -53,35 +53,6 @@
           ]
         },
         {
-          "text": "TUI",
-          "items": [
-            {
-              "text": "Docs",
-              "link": "/specs/tui/docs"
-            },
-            {
-              "text": "Realtime Sync",
-              "link": "/specs/tui/realtime-sync"
-            },
-            {
-              "text": "Settings",
-              "link": "/specs/tui/settings"
-            },
-            {
-              "text": "Tab Bar",
-              "link": "/specs/tui/tab-bar"
-            },
-            {
-              "text": "Templates",
-              "link": "/specs/tui/templates"
-            },
-            {
-              "text": "Tickets",
-              "link": "/specs/tui/tickets"
-            }
-          ]
-        },
-        {
           "text": "Dashboard",
           "items": [
             {

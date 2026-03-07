@@ -53,7 +53,6 @@ Current adapter types:
 | Adapter | Delivery mechanism                 |
 | ------- | ---------------------------------- |
 | `cli`   | Yargs commands (terminal)          |
-| `tui`   | Ink/React components (terminal UI) |
 
 ```
 adapters/
@@ -63,10 +62,6 @@ adapters/
         create.ts     # Yargs command — parses args, calls features, prints output
         list.ts
     dashboard/        # Dashboard launch helpers
-  tui/
-    components/
-    hooks/
-    panels/
 ```
 
 An adapter file:

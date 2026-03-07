@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { Layout } from "@/components/layout";
 import { isOnboardingComplete } from "@/features/agents/agent-storage";
+import { ChangelogPanel } from "@/features/changelog/pages/changelog-panel";
 import { DocsPanel } from "@/features/documentation/pages/docs-panel";
 import { Onboarding } from "@/features/onboarding/pages/onboarding";
 import { ProjectShell } from "@/features/project/pages/project-shell";
@@ -139,6 +140,12 @@ const projectTicketRoute = createRoute({
   component: TicketDetailsPanel,
 });
 
+const projectChangelogRoute = createRoute({
+  getParentRoute: () => projectRoute,
+  path: "changelog",
+  component: ChangelogPanel,
+});
+
 const projectSettingsRoute = createRoute({
   getParentRoute: () => projectRoute,
   path: "settings",
@@ -185,6 +192,7 @@ const routeTree = rootRoute.addChildren([
       projectTicketRoute,
       projectTicketWorkspaceRoute,
       projectDocsRoute,
+      projectChangelogRoute,
       projectSettingsRoute,
       projectSessionsRoute,
       projectSessionRoute,

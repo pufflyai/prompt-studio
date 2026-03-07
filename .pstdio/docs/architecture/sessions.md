@@ -6,11 +6,11 @@ pstdio tracks conversations between users and coding agents as sessions. A sessi
 
 ```
 ┌───────────┐   ┌───────────┐   ┌───────────────┐
-│    CLI    │   │    TUI    │   │   Dashboard   │
-└─────┬─────┘   └─────┬─────┘   └───────┬───────┘
-      │               │                 │
-      └───────────────┼─────────────────┘
-                      │  HTTP / SSE
+│    CLI    │   │   Dashboard   │
+└─────┬─────┘   └───────┬───────┘
+      │                 │
+      └─────────────────┘
+              │  HTTP / SSE
                       ▼
               ┌───────────────┐
               │   pstdio-api  │
@@ -279,7 +279,7 @@ Clients that have a session can resolve the workspace via `workspace.session_id`
 
 ### Table sync
 
-Clients (TUI, CLI, dashboard) use TanStack React-DB with SSE sync:
+Clients (CLI, dashboard) use TanStack React-DB with SSE sync:
 
 - Connect to `GET /v1/sync/stream`
 - Populate local collections on `init`, apply deltas on `sync:set`/`sync:delete`

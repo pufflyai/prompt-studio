@@ -26,7 +26,6 @@ Commands that auto-start the API:
 
 Commands that do not auto-start:
 
-- `tui`
 - `close`
 
 ---

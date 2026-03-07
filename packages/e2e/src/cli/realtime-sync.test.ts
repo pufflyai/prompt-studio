@@ -157,9 +157,9 @@ describe("realtime sync stream", () => {
     const repo = createGitRepo();
     dirs.push(repo);
 
-    runPstdio("projects create cross-tui-project", repo, { PSTDIO_API_URL: api.url });
+    runPstdio("projects create cross-client-project", repo, { PSTDIO_API_URL: api.url });
 
-    // Open two SSE connections (simulating two TUI instances)
+    // Open two SSE connections (simulating two client instances)
     const [responseA, responseB] = await Promise.all([
       fetch(`${api.url}/v1/sync/stream`),
       fetch(`${api.url}/v1/sync/stream`),
@@ -173,7 +173,7 @@ describe("realtime sync stream", () => {
     await sseB.readEvent();
 
     // Create a ticket (both clients should see it)
-    runPstdio('tickets create --content "Cross TUI ticket"', repo, { PSTDIO_API_URL: api.url });
+    runPstdio('tickets create --content "Cross client ticket"', repo, { PSTDIO_API_URL: api.url });
 
     const findTicketEvent = async (sse: ReturnType<typeof createSseReader>) => {
       for (let i = 0; i < 20; i += 1) {
@@ -182,7 +182,7 @@ describe("realtime sync stream", () => {
         if (event.event !== "sync:set") continue;
 
         const data = event.data as { table: string; data: { title?: string } };
-        if (data.table === "tickets" && data.data.title === "Cross TUI ticket") {
+        if (data.table === "tickets" && data.data.title === "Cross client ticket") {
           return event;
         }
       }

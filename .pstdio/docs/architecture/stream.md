@@ -5,12 +5,12 @@ The API streams database changes to connected clients in real time using Server-
 ## Architecture
 
 ```
-┌───────────┐   ┌───────────┐   ┌───────────────┐
-│    CLI    │   │    TUI    │   │   Dashboard   │
-└─────┬─────┘   └─────┬─────┘   └───────┬───────┘
-      │               │                 │
-      │          EventSource             │
-      │         ◄────────────────────────┘
+┌───────────┐   ┌───────────────┐
+│    CLI    │   │   Dashboard   │
+└─────┬─────┘   └───────┬───────┘
+      │                 │
+      │          EventSource
+      │         ◄───────┘
       │
       └──── REST ────►┐
                       │
@@ -25,7 +25,7 @@ The API streams database changes to connected clients in real time using Server-
          ┌────────────┼────────────┐
          ▼            ▼            ▼
    ┌──────────┐ ┌──────────┐ ┌──────────┐
-   │   TUI    │ │Dashboard │ │  other   │
+   │Dashboard │ │  other   │ │  ...     │
    └──────────┘ └──────────┘ └──────────┘
 ```
 

@@ -5,12 +5,12 @@ pstdio delegates coding work to external agent processes (Claude Code, OpenCode)
 ## Architecture
 
 ```
-┌───────────┐   ┌───────────┐   ┌───────────────┐
-│    CLI    │   │    TUI    │   │   Dashboard   │
-└─────┬─────┘   └─────┬─────┘   └───────┬───────┘
-      │               │                 │
-      └───────────────┼─────────────────┘
-                      │  HTTP
+┌───────────┐   ┌───────────────┐
+│    CLI    │   │   Dashboard   │
+└─────┬─────┘   └───────┬───────┘
+      │                 │
+      └─────────────────┘
+              │  HTTP
                       ▼
               ┌───────────────┐
               │   pstdio-api  │

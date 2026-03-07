@@ -1,12 +1,12 @@
 # Real-time Updates
 
-All database changes propagate to connected clients in real time. The dashboard and TUI always show current state without polling or manual refresh.
+All database changes propagate to connected clients in real time. The dashboard always shows current state without polling or manual refresh.
 
 ---
 
 ## Why
 
-- **Multiple clients edit concurrently.** The CLI, TUI, and dashboard can all modify data. Without real-time sync, clients show stale state.
+- **Multiple clients edit concurrently.** The CLI and dashboard can both modify data. Without real-time sync, clients show stale state.
 - **No polling overhead.** SSE pushes changes the moment they happen. Clients don't waste requests checking for updates.
 - **Consistent mental model.** Users see the same data everywhere, instantly.
 

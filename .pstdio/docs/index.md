@@ -1,6 +1,6 @@
 # Prompt Studio
 
-Prompt Studio is a local-first project management tool for AI-driven development. It runs as a CLI, TUI, and web dashboard.
+Prompt Studio is a local-first project management tool for AI-driven development. It runs as a CLI and web dashboard.
 
 ## What it does
 
@@ -8,7 +8,7 @@ Prompt Studio is a local-first project management tool for AI-driven development
 - **Agents** — define and manage AI coding agents that operate on your codebase.
 - **Tickets** — track tasks with statuses, tags, and templates, all stored as local files.
 - **Sessions** — capture agent work sessions with full history.
-- **Documentation** — write and browse project docs from the CLI, TUI, or dashboard.
+- **Documentation** — write and browse project docs from the CLI or dashboard.
 
 ## Quick start
 
@@ -38,10 +38,9 @@ Prompt Studio follows a local-first architecture. All data lives in your repo un
 └── templates/         # ticket templates
 ```
 
-Three surfaces consume the same API:
+Two surfaces consume the same API:
 
 - **CLI** (`pstdio`) — terminal commands
-- **TUI** — interactive terminal UI
 - **Dashboard** — web-based UI
 
 See the [Architecture](/architecture/api) and [Contributing](/contributing/overview) sections for more details.
