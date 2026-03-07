@@ -2,12 +2,18 @@ name: Test and Build
 
 on:
   push:
+  pull_request:
     branches:
       - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test_and_build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -33,3 +39,20 @@ jobs:
 
       - name: Test monorepo
         run: bun run test
+
+  build_docker:
+    needs: test_and_build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        include:
+          - image: pstdio/landing-page
+            dockerfile: clients/landing-page/Dockerfile
+          - image: pstdio/api
+            dockerfile: packages/pstdio-api/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build ${{ matrix.image }} image
+        run: docker build -t ${{ matrix.image }}:${{ github.sha }} -f ${{ matrix.dockerfile }} .

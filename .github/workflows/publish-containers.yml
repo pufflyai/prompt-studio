@@ -1,4 +1,4 @@
-name: Publish Landing Page Image
+name: Publish Containers
 
 on:
   push:
