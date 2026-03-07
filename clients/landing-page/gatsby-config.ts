@@ -18,7 +18,7 @@ const config: GatsbyConfig = {
         lang: `en`,
         name: `Prompt Studio`,
         short_name: `Prompt Studio`,
-        description: "Delete tasks to coding agents without losing control.",
+        description: "Plan, delegate, and manage tasks for your AI coding agents.",
         icon: "./static/images/favicon.svg",
         icon_options: {
           purpose: `any maskable`,

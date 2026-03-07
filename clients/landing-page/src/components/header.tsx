@@ -37,7 +37,6 @@ export const Header = (props: HeaderProps) => {
       py={["1rem", "1rem", "1rem", "2.5rem"]}
       alignItems="center"
       width="100%"
-      background="background.white"
     >
       <Link to="/">
         <TextLogo />

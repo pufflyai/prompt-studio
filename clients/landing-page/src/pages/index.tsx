@@ -7,7 +7,7 @@ import { SEO } from "@/components/seo";
 import { CopyCommandIcon } from "../components/copy-command-icon";
 import { createCopyFeedbackController } from "../utils/copy-feedback";
 
-const command = "npx pstdio";
+const command = "npx pstdio@latest";
 const githubUrl = "https://github.com/pufflyai/prompt-studio";
 
 const IndexPage = () => {
@@ -38,7 +38,7 @@ const IndexPage = () => {
         <Container maxW="4xl" py={{ base: "20", md: "28" }} flex="1" display="flex">
           <Stack gap="10" align="center" justify="center" textAlign="center" width="100%">
             <Heading as="h1" textStyle="heading/XL" maxW="4xl">
-              A task manager for your coding agents.
+              Plan, delegate, and manage tasks for your AI coding agents.
             </Heading>
             <HStack px="lg" py="xs" rounded="sm" borderWidth="1px" borderColor="border" bg="bg.subtle">
               <Text as="code" fontFamily="mono">
@@ -54,8 +54,18 @@ const IndexPage = () => {
       <Footer
         links={[
           {
-            title: "",
-            list: [{ item: "GitHub", url: githubUrl }],
+            list: [
+              { item: "GitHub", url: githubUrl },
+              { item: "Discord", url: "https://discord.gg/PYjnYVgR" },
+            ],
+            variant: "inline",
+          },
+          {
+            list: [
+              { item: "Privacy Policy", url: "/privacy-policy/" },
+              { item: "Terms", url: "/terms/" },
+            ],
+            variant: "inline",
           },
         ]}
       />

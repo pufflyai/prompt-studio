@@ -8,5 +8,13 @@ export const onCreateWebpackConfig: GatsbyNode["onCreateWebpackConfig"] = ({ act
         "@": path.resolve(__dirname, "src"),
       },
     },
+    module: {
+      rules: [
+        {
+          test: /\.md$/,
+          type: "asset/source",
+        },
+      ],
+    },
   });
 };

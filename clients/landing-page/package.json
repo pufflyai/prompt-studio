@@ -19,6 +19,7 @@
   "dependencies": {
     "@chakra-ui/react": "3.32.0",
     "@emotion/react": "11.14.0",
+    "@pstdio/ui": "workspace:*",
     "gatsby": "^5.16.1",
     "gatsby-plugin-image": "^3.16.0",
     "gatsby-plugin-manifest": "^5.16.0",
@@ -28,7 +29,7 @@
     "lucide-react": "^0.556.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "@pstdio/ui": "workspace:*"
+    "react-markdown": "^10.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.19",

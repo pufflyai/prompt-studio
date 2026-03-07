@@ -4,8 +4,8 @@ import { LinkGroup } from "./link-group";
 import { StockholmIcon } from "./stockholm-icon";
 
 interface FooterLinkGroup {
-  title: string;
   list: { item: string; url: string }[];
+  variant?: "stack" | "inline";
 }
 
 interface FooterAction {
@@ -27,7 +27,7 @@ export const Footer = (props: FooterProps) => {
   return (
     <Flex as="footer" id="footer" justifyContent="center" position="relative" direction="column" zIndex="1">
       {showTopSection ? (
-        <Flex bg="white" py="4.5rem" px={horizontalPadding} direction="column" width="100%" gap="2.5rem">
+        <Flex bg="white" py="2rem" px={horizontalPadding} direction="column" width="100%" gap="2.5rem">
           {title ? (
             <Text width="100%" maxWidth="28.125rem" textStyle="heading/L">
               {title}
@@ -45,11 +45,13 @@ export const Footer = (props: FooterProps) => {
         </Flex>
       ) : null}
 
-      <Flex bg="white" pb="4.5rem" px={horizontalPadding}>
+      <Flex bg="white" pb="2rem" px={horizontalPadding}>
         <Stack gap="2.5rem" direction={["column", "row"]} justifyContent="space-between" width="100%" flexWrap="wrap">
-          {links.map((link) => (
-            <LinkGroup key={link.title} title={link.title} items={link.list} />
-          ))}
+          <Stack gap="2.5rem" direction={["column", "row"]} flexWrap="wrap" alignItems={["flex-start", "center"]}>
+            {links.map((link, index) => (
+              <LinkGroup key={index} items={link.list} variant={link.variant} />
+            ))}
+          </Stack>
           <Flex mt={["2.5rem", "2.5rem", "0"]} gap="2rem" alignSelf="flex-end" flexWrap="wrap">
             <Flex width="3rem">
               <StockholmIcon />

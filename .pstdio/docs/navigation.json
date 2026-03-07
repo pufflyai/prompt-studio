@@ -73,6 +73,10 @@
         {
           "text": "Real-time Updates",
           "link": "/specs/realtime-updates"
+        },
+        {
+          "text": "Versioning and Releases",
+          "link": "/specs/versioning-and-releases"
         }
       ]
     },

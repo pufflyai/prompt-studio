@@ -22,6 +22,7 @@ export const createSeoMetadata = (overrides: SeoMetadataOverrides = {}) => {
   return {
     title: title ?? siteMetadata.title,
     description: description ?? siteMetadata.description,
+    keywords: siteMetadata.keywords.join(", "),
     url: `${siteMetadata.siteUrl}${safePathname}`,
     twitterUsername: siteMetadata.twitterUsername,
     banner: buildAbsoluteUrl(banner ?? siteMetadata.bannerPath),

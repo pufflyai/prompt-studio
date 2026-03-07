@@ -2,20 +2,21 @@ import { Link as ChakraLink, Stack, Text } from "@chakra-ui/react";
 import { Link } from "gatsby";
 
 interface LinkGroupProps {
-  title: string;
   items: { item: string; url: string }[];
+  variant?: "stack" | "inline";
 }
 
 export const LinkGroup = (props: LinkGroupProps) => {
-  const { title, items } = props;
+  const { items, variant = "stack" } = props;
 
   const isExternalUrl = (url: string) => url.startsWith("http://") || url.startsWith("https://");
 
   return (
-    <Stack gap="1rem">
-      <Text textStyle="paragraph/L/regular" color="foreground.secondary">
-        {title}
-      </Text>
+    <Stack
+      gap="1rem"
+      direction={variant === "inline" ? "row" : "column"}
+      alignItems={variant === "inline" ? "center" : undefined}
+    >
       {items.map((item) =>
         isExternalUrl(item.url) ? (
           <ChakraLink
@@ -24,6 +25,8 @@ export const LinkGroup = (props: LinkGroupProps) => {
             target="_blank"
             rel="noreferrer"
             textStyle="paragraph/L/regular"
+            textDecoration="none"
+            color="inherit"
             _hover={{ textDecoration: "underline" }}
           >
             {item.item}

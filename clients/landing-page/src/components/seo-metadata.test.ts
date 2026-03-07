@@ -5,7 +5,7 @@ describe("createSeoMetadata", () => {
   test("uses defaults when no overrides are provided", () => {
     const seo = createSeoMetadata();
 
-    expect(seo.title).toBe("Prompt Studio");
+    expect(seo.title).toBe("Prompt Studio — Task Manager for AI Coding Agents");
     expect(seo.url).toBe("https://prompt.studio");
     expect(seo.banner).toBe("https://prompt.studio/images/banner.png");
   });

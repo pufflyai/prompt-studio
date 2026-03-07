@@ -159,6 +159,20 @@ Split content that will grow in separate files, e.g. Instead of placing all endp
 - Bug fixes must add a regression test first
 - Visual-only UI/component changes must use Storybook stories instead of adding test files, add automated tests only when UI changes include non-visual behavior or logic changes
 
+### Changesets
+
+When a PR changes one or more publishable workspace packages, include a changeset:
+
+```sh
+bun changeset
+```
+
+Select the affected packages, choose the semver bump (`patch`, `minor`, `major`), and write a one-line changelog summary. Commit the generated `.changeset/*.md` file with the PR.
+
+- **Do not** add a changeset for changes to private packages (e.g. `e2e`, the root).
+- **Do not** manually edit `package.json` versions — Changesets handles that.
+- One changeset per PR is usually enough. Use multiple only if unrelated packages need different bump types.
+
 ### API Changes
 
 When changing APIs:
