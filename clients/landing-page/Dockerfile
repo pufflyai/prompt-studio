@@ -27,6 +27,8 @@ COPY tsconfig.base.json ./
 COPY clients/landing-page clients/landing-page
 COPY packages/ui packages/ui
 
+RUN cd packages/ui && bun run build
+
 RUN cd clients/landing-page && /usr/bin/node node_modules/gatsby/dist/bin/gatsby.js build
 
 FROM nginx:1.27-alpine AS runner
