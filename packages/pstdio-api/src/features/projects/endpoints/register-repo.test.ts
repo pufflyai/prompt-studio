@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -171,6 +171,36 @@ describe("POST /v1/projects/:id/repos", () => {
 
     const body = await second.json();
     expect(body.error).toContain("already linked");
+  });
+
+  test("overrides stale config when the linked project no longer exists and clears local tickets", async () => {
+    const createRes = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Relink Target" }),
+    });
+    const project = await createRes.json();
+
+    const repoPath = join(tempRoot, "stale-config-repo");
+    const stalePstdioDir = join(repoPath, ".pstdio");
+    const staleTicketsDir = join(stalePstdioDir, "tickets", "PS-1_stale-ticket");
+    const staleConfigPath = join(stalePstdioDir, "config.json");
+
+    mkdirSync(staleTicketsDir, { recursive: true });
+    writeFileSync(staleConfigPath, `${JSON.stringify({ project_id: "missing-project-id" }, null, 2)}\n`);
+    writeFileSync(join(staleTicketsDir, "ticket.md"), "# stale ticket\n");
+
+    const res = await app.request(`/v1/projects/${project.id}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "stale-config-repo", path: repoPath }),
+    });
+
+    expect(res.status).toBe(201);
+    expect(existsSync(join(repoPath, ".pstdio", "tickets"))).toBe(false);
+
+    const config = JSON.parse(readFileSync(staleConfigPath, "utf8"));
+    expect(config.project_id).toBe(project.id);
   });
 
   test("is idempotent for same repo path", async () => {

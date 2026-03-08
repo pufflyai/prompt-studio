@@ -111,4 +111,33 @@ describe("linkProject", () => {
 
     expect(linkProject(root, "missing")).rejects.toThrow("Project not found: missing");
   });
+
+  test("removes local tickets when re-linking to a different project", async () => {
+    mockFetchSequence([
+      {
+        status: 200,
+        body: {
+          id: "new-project",
+          name: "New Project",
+          shorthand: "NP",
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+        },
+      },
+      { status: 201, body: { id: "repo-1", name: "link-relink", path: "/tmp/link-relink" } },
+      { status: 200, body: [] },
+    ]);
+
+    const root = setup("link-relink");
+    const ticketsDir = join(root, ".pstdio", "tickets", "PS-1_old-ticket");
+    mkdirSync(ticketsDir, { recursive: true });
+    writeFileSync(join(root, ".pstdio", "config.json"), `${JSON.stringify({ project_id: "old-project" }, null, 2)}\n`);
+    writeFileSync(join(ticketsDir, "ticket.md"), "# old ticket\n");
+
+    await linkProject(root, "new-project", { homedir: join(tmpBase, "__fake-home__") });
+
+    expect(existsSync(join(root, ".pstdio", "tickets"))).toBe(false);
+    const config = JSON.parse(readFileSync(join(root, ".pstdio", "config.json"), "utf8"));
+    expect(config.project_id).toBe("new-project");
+  });
 });

@@ -70,9 +70,11 @@ pstdio projects link --project-id <project-id>
 
 1. Must be run inside a git repository.
 2. Fails if the project ID does not exist.
-3. Registers the current repo (resolving `remote` from git origin) and writes `.pstdio/config.json`.
-4. If `.pstdio/docs/` does not exist locally, pull persisted docs. If no remote docs exist, scaffold starter docs instead.
-5. Install default skills for each configured agent.
+3. Registers the current repo (resolving `remote` from git origin).
+4. When re-linking from one project ID to another, removes local `.pstdio/tickets/`.
+5. Writes `.pstdio/config.json`.
+6. If `.pstdio/docs/` does not exist locally, pull persisted docs. If no remote docs exist, scaffold starter docs instead.
+7. Install default skills for each configured agent.
 
 ### Output
 
@@ -423,3 +425,5 @@ Both `create` and `link` write the following local files and directories:
 | `.pstdio/docs/navigation.json` | Documentation navigation tree.              |
 | `.pstdio/docs/index.md`        | Starter documentation page.                 |
 | `.<agent>/skills/`             | Bundled pstdio skills per configured agent. |
+
+During `link`, when the existing `.pstdio/config.json` points to a different project ID, the local `.pstdio/tickets/` directory is removed before the new config is written.

@@ -68,6 +68,10 @@
               "link": "/specs/dashboard/tickets"
             },
             {
+              "text": "Sessions",
+              "link": "/specs/dashboard/sessions"
+            },
+            {
               "text": "Ticket Detail",
               "link": "/specs/dashboard/ticket-detail"
             }

@@ -1,0 +1,30 @@
+import type { Session } from "../types";
+
+const normalizeForFileName = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
+export const buildSessionDownload = (session: Session) => {
+  const normalizedTitle = normalizeForFileName(session.title);
+  const fileNamePrefix = normalizedTitle.length > 0 ? normalizedTitle : "session";
+
+  return {
+    fileName: `${fileNamePrefix}-${session.id}.json`,
+    content: JSON.stringify(session, null, 2),
+  };
+};
+
+export const downloadSessionJson = (session: Session) => {
+  const download = buildSessionDownload(session);
+  const blob = new Blob([download.content], { type: "application/json" });
+  const href = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+
+  anchor.href = href;
+  anchor.download = download.fileName;
+  anchor.click();
+  URL.revokeObjectURL(href);
+};

@@ -1,0 +1,12 @@
+export type SessionStatus = "in_progress" | "awaiting_input" | "completed" | "failed" | "cancelled";
+
+export interface Session {
+  id: string;
+  projectId: string | null;
+  title: string;
+  status: SessionStatus;
+  archived: boolean;
+  agent: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

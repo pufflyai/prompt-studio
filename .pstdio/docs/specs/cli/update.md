@@ -4,9 +4,13 @@ status: draft
 
 # `pstdio update`
 
+Status: **DRAFT** (not implemented)
+
+This command is not currently registered in the pstdio CLI command tree. This spec describes proposed future behavior.
+
 ## Purpose
 
-Update the pstdio CLI to a newer version. The updater is source-aware: it detects how pstdio was installed and delegates to the appropriate update mechanism.
+Define the proposed behavior for updating the pstdio CLI to a newer version. The updater is source-aware: it detects how pstdio was installed and delegates to the appropriate update mechanism.
 
 ---
 
