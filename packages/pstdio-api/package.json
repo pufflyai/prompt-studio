@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && bunx biome check .",
     "format": "bunx biome check --write .",
-    "test": "bun test --silent"
+    "test": "bun test --silent",
+    "test:coverage": "bun test --coverage"
   },
   "dependencies": {
     "@hono/swagger-ui": "^0.5.2",

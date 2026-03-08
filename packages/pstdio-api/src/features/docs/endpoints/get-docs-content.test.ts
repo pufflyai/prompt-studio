@@ -10,7 +10,7 @@ let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
 
 const setupProjectWithDocs = async () => {
-  const repoDir = join(tempRoot, "repo");
+  const repoDir = mkdtempSync(join(tempRoot, "repo-"));
   const docsDir = join(repoDir, ".pstdio", "docs");
   mkdirSync(docsDir, { recursive: true });
   writeFileSync(join(docsDir, "index.md"), "# Welcome\nHello world");
@@ -32,11 +32,12 @@ const setupProjectWithDocs = async () => {
   });
   const project = (await createRes.json()) as { id: string };
 
-  await app.request(`/v1/projects/${project.id}/repos`, {
+  const registerRepoRes = await app.request(`/v1/projects/${project.id}/repos`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ name: "test-repo", path: repoDir }),
   });
+  expect(registerRepoRes.status).toBe(201);
 
   return project.id;
 };

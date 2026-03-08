@@ -19,7 +19,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && bunx @biomejs/biome lint .",
     "format": "bunx @biomejs/biome format --write .",
-    "test": "bun test --silent"
+    "test": "bun test --silent",
+    "test:coverage": "bun test --coverage"
   },
   "dependencies": {
     "@tanstack/react-db": "^0.1.74",
