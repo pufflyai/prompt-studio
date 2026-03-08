@@ -1,6 +1,5 @@
 export { commitChanges } from "./commit";
 export { copyIgnored } from "./copy-ignored";
-export { getDefaultBranch } from "./default-branch";
 export { GitError, git } from "./git";
 export { mergeWorktree } from "./merge";
 export { rebaseOntoTarget } from "./rebase";
