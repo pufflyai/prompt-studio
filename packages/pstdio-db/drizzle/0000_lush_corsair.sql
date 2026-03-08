@@ -1,3 +1,6 @@
+CREATE TYPE "public"."session_status" AS ENUM('in_progress', 'awaiting_input', 'completed', 'failed', 'cancelled');--> statement-breakpoint
+CREATE TYPE "public"."ticket_complexity" AS ENUM('low', 'medium', 'high');--> statement-breakpoint
+CREATE TYPE "public"."workspace_status" AS ENUM('active', 'merged', 'rejected');--> statement-breakpoint
 CREATE TABLE "agent_configs" (
 	"id" text PRIMARY KEY NOT NULL,
 	"agent_id" text NOT NULL,
@@ -49,7 +52,7 @@ CREATE TABLE "repos" (
 CREATE TABLE "sessions" (
 	"id" text PRIMARY KEY NOT NULL,
 	"title" text NOT NULL,
-	"status" text DEFAULT 'in_progress' NOT NULL,
+	"status" "session_status" DEFAULT 'in_progress' NOT NULL,
 	"project_id" text,
 	"archived" boolean DEFAULT false NOT NULL,
 	"created" text,
@@ -60,6 +63,17 @@ CREATE TABLE "sessions" (
 	"session_file_id" text,
 	"created_at" text NOT NULL,
 	"updated_at" text NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "skills" (
+	"id" text PRIMARY KEY NOT NULL,
+	"project_id" text NOT NULL,
+	"name" text NOT NULL,
+	"description" text DEFAULT '' NOT NULL,
+	"file_id" text NOT NULL,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
+	"deleted_at" text
 );
 --> statement-breakpoint
 CREATE TABLE "templates" (
@@ -133,7 +147,7 @@ CREATE TABLE "tickets" (
 	"file_id" text,
 	"priority" text,
 	"parallelizable" text,
-	"complexity" text,
+	"complexity" "ticket_complexity",
 	"parent_id" text,
 	"blocked_reason" text,
 	"depends_on" text,
@@ -159,7 +173,7 @@ CREATE TABLE "workspaces" (
 	"session_id" text,
 	"branch" text,
 	"worktree_path" text,
-	"status" text DEFAULT 'active' NOT NULL,
+	"status" "workspace_status" DEFAULT 'active' NOT NULL,
 	"archived" boolean DEFAULT false NOT NULL,
 	"workspace_shorthand" text NOT NULL,
 	"startup_log_file_id" text,
@@ -197,6 +211,8 @@ ALTER TABLE "project_repos" ADD CONSTRAINT "project_repos_project_id_projects_id
 ALTER TABLE "project_repos" ADD CONSTRAINT "project_repos_repo_id_repos_id_fk" FOREIGN KEY ("repo_id") REFERENCES "public"."repos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_session_file_id_files_id_fk" FOREIGN KEY ("session_file_id") REFERENCES "public"."files"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "skills" ADD CONSTRAINT "skills_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "skills" ADD CONSTRAINT "skills_file_id_files_id_fk" FOREIGN KEY ("file_id") REFERENCES "public"."files"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "templates" ADD CONSTRAINT "templates_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "templates" ADD CONSTRAINT "templates_file_id_files_id_fk" FOREIGN KEY ("file_id") REFERENCES "public"."files"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "ticket_files" ADD CONSTRAINT "ticket_files_ticket_id_tickets_id_fk" FOREIGN KEY ("ticket_id") REFERENCES "public"."tickets"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

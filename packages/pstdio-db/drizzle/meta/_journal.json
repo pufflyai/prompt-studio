@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1772918987409,
-      "tag": "0000_groovy_drax",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1772924192391,
-      "tag": "0001_uneven_klaw",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1772957841000,
-      "tag": "0002_freezing_status",
+      "when": 1772963001191,
+      "tag": "0000_lush_corsair",
       "breakpoints": true
     }
   ]
