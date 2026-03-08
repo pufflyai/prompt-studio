@@ -1,6 +1,6 @@
 # Privacy Policy
 
-*Current as of March 21, 2025*
+_Current as of March 21, 2025_
 
 Your privacy is important to us. We respect your privacy regarding any information we may collect from you across our website.
 

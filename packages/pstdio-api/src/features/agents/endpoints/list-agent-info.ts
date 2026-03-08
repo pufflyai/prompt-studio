@@ -17,6 +17,10 @@ export const listAgentInfoRoute = createRoute({
   path: "/agents/info",
   description: "List all known agents with availability status.",
   tags: ["Agents"],
+
+  request: {
+    query: z.object({}).strict(),
+  },
   responses: {
     200: {
       description: "List of known agents with availability.",

@@ -23,9 +23,12 @@ export const getDocsIndexRoute = createRoute({
   description: "Get the docs navigation index for a project.",
   tags: ["Docs"],
   request: {
-    params: z.object({
-      projectId: z.string().openapi({ description: "Project ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        projectId: z.string().openapi({ description: "Project ID" }),
+      })
+      .strict(),
   },
   responses: {
     200: {

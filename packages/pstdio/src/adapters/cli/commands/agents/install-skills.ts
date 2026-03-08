@@ -1,10 +1,11 @@
 import { isKnownAgentId, KNOWN_AGENT_IDS } from "pstdio-agents";
 import type { Arguments, Argv } from "yargs";
-import { findGitRoot } from "@/features/config/config";
+import { API_URL } from "@/features/api-url";
+import { findGitRoot, readConfig } from "@/features/config/config";
 import { installSkillsForAgent } from "@/features/skills/install-default-skills";
 
 export const command = "install-skills <agent-id>";
-export const describe = "Install bundled skills for an agent";
+export const describe = "Install skills for an agent";
 
 export const builder = (yargs: Argv) =>
   yargs
@@ -32,9 +33,16 @@ export const handler = async (argv: Arguments<{ "agent-id": string; "global-skil
     throw new Error("Not inside a git repository. Use --global-skills or run from a git repo.");
   }
 
-  const installed = installSkillsForAgent({
+  const projectConfig = root ? readConfig(root) : null;
+  if (!projectConfig) {
+    throw new Error("No project configured. Run `pstdio projects init` first.");
+  }
+
+  const installed = await installSkillsForAgent({
     root: root ?? process.cwd(),
     agentId,
+    baseUrl: API_URL,
+    projectId: projectConfig.project_id,
     global: argv["global-skills"],
   });
 

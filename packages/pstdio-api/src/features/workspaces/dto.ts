@@ -20,17 +20,21 @@ export const workspaceListItemSchema = workspaceResponseSchema.extend({
   ticket_shorthand: z.string(),
 });
 
-export const createWorkspaceBodySchema = z.object({
-  project_id: z.string().min(1),
-  ticket_id: z.string().min(1),
-  ticket_shorthand: z.string().min(1),
-  branch: z.string().optional(),
-  worktree_path: z.string().optional(),
-});
+export const createWorkspaceBodySchema = z
+  .object({
+    project_id: z.string().min(1),
+    ticket_id: z.string().min(1),
+    ticket_shorthand: z.string().min(1),
+    branch: z.string().optional(),
+    worktree_path: z.string().optional(),
+  })
+  .strict();
 
-export const uploadStartupLogBodySchema = z.object({
-  content_base64: z.string(),
-});
+export const uploadStartupLogBodySchema = z
+  .object({
+    content_base64: z.string(),
+  })
+  .strict();
 
 export const notFoundResponseSchema = z.object({
   error: z.string(),

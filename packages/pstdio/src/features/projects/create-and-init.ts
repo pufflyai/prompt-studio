@@ -26,6 +26,6 @@ export const createAndInitProject = async (root: string, name: string, options?:
   writeConfig(root, { project_id: project.id });
   scaffoldDocs(root);
   await seedBundledTemplates(API_URL, project.id);
-  await installDefaultSkills(root, API_URL, options?.homedir);
+  await installDefaultSkills(root, project.id, API_URL, options?.homedir);
   return project;
 };

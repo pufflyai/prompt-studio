@@ -2,7 +2,7 @@ import { isKnownAgentId, KNOWN_AGENT_IDS } from "pstdio-agents";
 import type { Arguments, Argv } from "yargs";
 import { setupAgent } from "@/features/agents/api/setup-agent";
 import { API_URL } from "@/features/api-url";
-import { findGitRoot } from "@/features/config/config";
+import { findGitRoot, readConfig } from "@/features/config/config";
 import { installSkillsForAgent } from "@/features/skills/install-default-skills";
 
 export const command = "setup <agent-id>";
@@ -37,9 +37,17 @@ export const handler = async (argv: Arguments<{ "agent-id": string; "global-skil
     return;
   }
 
-  const installed = installSkillsForAgent({
+  const projectConfig = root ? readConfig(root) : null;
+  if (!projectConfig) {
+    console.log("No project configured — skipping skill installation.");
+    return;
+  }
+
+  const installed = await installSkillsForAgent({
     root: root ?? process.cwd(),
     agentId,
+    baseUrl: API_URL,
+    projectId: projectConfig.project_id,
     global: argv["global-skills"],
   });
 

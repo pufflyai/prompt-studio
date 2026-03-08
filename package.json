@@ -12,7 +12,7 @@
   "scripts": {
     "build": "bunx cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" lerna run build",
     "analyze-bundle": "bunx lerna run analyze-bundle --stream",
-    "test": "bunx lerna run test --stream --no-prefix --ignore e2e -- --reporter dot --silent; lerna_exit=$?; bun run test:e2e; exit $((lerna_exit + $?))",
+    "test": "bunx lerna run test",
     "test:e2e": "bun run --cwd packages/e2e test",
     "lint": "bunx lerna run lint",
     "format": "bunx biome check --write .",

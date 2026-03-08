@@ -9,14 +9,17 @@ export const updateTagColorRoute = createRoute({
   description: "Update a tag color.",
   tags: ["Tags"],
   request: {
-    params: z.object({
-      projectId: z.string().openapi({ description: "Project ID" }),
-      id: z.string().openapi({ description: "Tag ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        projectId: z.string().openapi({ description: "Project ID" }),
+        id: z.string().openapi({ description: "Tag ID" }),
+      })
+      .strict(),
     body: {
       content: {
         "application/json": {
-          schema: z.object({ color: z.string() }),
+          schema: z.object({ color: z.string() }).strict(),
         },
       },
     },

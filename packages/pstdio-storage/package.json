@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && bunx biome check .",
     "format": "bunx biome check --write .",
-    "test": "bun test"
+    "test": "bun test --silent"
   },
   "devDependencies": {
     "@types/bun": "latest",

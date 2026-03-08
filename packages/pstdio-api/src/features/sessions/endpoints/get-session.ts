@@ -8,9 +8,12 @@ export const getSessionRoute = createRoute({
   description: "Get a session by ID.",
   tags: ["Sessions"],
   request: {
-    params: z.object({
-      id: z.string().openapi({ description: "Session ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        id: z.string().openapi({ description: "Session ID" }),
+      })
+      .strict(),
   },
   responses: {
     200: {

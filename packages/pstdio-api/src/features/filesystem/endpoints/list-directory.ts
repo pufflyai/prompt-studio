@@ -5,9 +5,11 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 
-const listDirectoryQuerySchema = z.object({
-  path: z.string().optional(),
-});
+const listDirectoryQuerySchema = z
+  .object({
+    path: z.string().optional(),
+  })
+  .strict();
 
 const directoryEntrySchema = z.object({
   name: z.string(),

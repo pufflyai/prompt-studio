@@ -8,8 +8,10 @@ export const statusResponseSchema = z.object({
   is_default: z.boolean(),
 });
 
-export const createStatusBodySchema = z.object({
-  name: z.string(),
-  color: z.string(),
-  is_default: z.boolean().optional(),
-});
+export const createStatusBodySchema = z
+  .object({
+    name: z.string(),
+    color: z.string(),
+    is_default: z.boolean().optional(),
+  })
+  .strict();

@@ -8,10 +8,13 @@ export const deleteTagRoute = createRoute({
   description: "Soft-delete a tag.",
   tags: ["Tags"],
   request: {
-    params: z.object({
-      projectId: z.string().openapi({ description: "Project ID" }),
-      id: z.string().openapi({ description: "Tag ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        projectId: z.string().openapi({ description: "Project ID" }),
+        id: z.string().openapi({ description: "Tag ID" }),
+      })
+      .strict(),
   },
   responses: {
     200: {

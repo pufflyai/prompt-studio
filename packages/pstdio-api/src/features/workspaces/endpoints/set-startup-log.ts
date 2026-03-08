@@ -9,9 +9,12 @@ export const setStartupLogRoute = createRoute({
   description: "Upload and attach a startup log to a workspace.",
   tags: ["Workspaces"],
   request: {
-    params: z.object({
-      id: z.string().openapi({ description: "Workspace ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        id: z.string().openapi({ description: "Workspace ID" }),
+      })
+      .strict(),
     body: {
       content: { "application/json": { schema: uploadStartupLogBodySchema } },
     },

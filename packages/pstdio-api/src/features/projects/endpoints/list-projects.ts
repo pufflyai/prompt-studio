@@ -8,6 +8,10 @@ export const listProjectsRoute = createRoute({
   path: "/projects",
   description: "List all projects.",
   tags: ["Projects"],
+
+  request: {
+    query: z.object({}).strict(),
+  },
   responses: {
     200: {
       description: "List of projects.",

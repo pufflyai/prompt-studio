@@ -9,9 +9,12 @@ export const listTemplatesRoute = createRoute({
   description: "List all templates for a project.",
   tags: ["Templates"],
   request: {
-    params: z.object({
-      projectId: z.string().openapi({ description: "Project ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        projectId: z.string().openapi({ description: "Project ID" }),
+      })
+      .strict(),
   },
   responses: {
     200: {

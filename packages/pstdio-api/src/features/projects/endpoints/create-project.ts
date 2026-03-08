@@ -1,4 +1,4 @@
-import { createRoute } from "@hono/zod-openapi";
+import { createRoute, z } from "@hono/zod-openapi";
 import { eq, ticket_statuses, ticket_tags } from "pstdio-db";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
@@ -11,6 +11,7 @@ export const createProjectRoute = createRoute({
   description: "Create a new project.",
   tags: ["Projects"],
   request: {
+    query: z.object({}).strict(),
     body: {
       content: { "application/json": { schema: createProjectBodySchema } },
     },

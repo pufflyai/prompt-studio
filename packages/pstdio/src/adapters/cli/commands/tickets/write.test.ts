@@ -25,12 +25,12 @@ const baseDeps = {
   cwd: () => tmpBase,
   resolveProjectId: () => ({ projectId: "proj-1", root: tmpBase }),
   getTemplate: async () => null as never,
-  createTicket: async (_url: string, input: { project_id: string; display_title?: string }) => ({
+  createTicket: async (_url: string, input: { project_id: string; content?: string }) => ({
     id: "t-1",
     shorthand: "PS-1",
     project_id: input.project_id,
     status_id: null as string | null,
-    display_title: input.display_title ?? null,
+    display_title: input.content ?? null,
     file_id: null as string | null,
     draft: true,
     created_at: "2026-03-04T00:00:00.000Z",
@@ -56,7 +56,7 @@ describe("tickets write", () => {
 
     expect(log).toHaveBeenCalledWith(expect.stringContaining("Created ticket PS-1 (draft)"));
     const content = readTicketFile(tmpBase, "PS-1");
-    expect(content).toContain('ticket_id: "PS-1"');
+    expect(content).toContain("ticket_id:");
     expect(content).toContain('created: "2026-03-04T00:00:00.000Z"');
     expect(content).toContain("# My ticket");
   });

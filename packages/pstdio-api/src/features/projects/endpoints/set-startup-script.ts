@@ -3,9 +3,11 @@ import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { notFoundResponseSchema } from "../dto";
 
-const setStartupScriptBodySchema = z.object({
-  startup_script: z.string().min(1),
-});
+const setStartupScriptBodySchema = z
+  .object({
+    startup_script: z.string().min(1),
+  })
+  .strict();
 
 export const setStartupScriptRoute = createRoute({
   method: "put",
@@ -13,9 +15,12 @@ export const setStartupScriptRoute = createRoute({
   description: "Set the startup script for a project.",
   tags: ["Projects"],
   request: {
-    params: z.object({
-      id: z.string().openapi({ description: "Project ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        id: z.string().openapi({ description: "Project ID" }),
+      })
+      .strict(),
     body: {
       content: { "application/json": { schema: setStartupScriptBodySchema } },
     },

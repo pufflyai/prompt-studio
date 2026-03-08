@@ -9,9 +9,12 @@ export const createStatusRoute = createRoute({
   description: "Create a new ticket status.",
   tags: ["Statuses"],
   request: {
-    params: z.object({
-      projectId: z.string().openapi({ description: "Project ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        projectId: z.string().openapi({ description: "Project ID" }),
+      })
+      .strict(),
     body: {
       content: { "application/json": { schema: createStatusBodySchema } },
     },

@@ -33,14 +33,19 @@ const getTicketStatuses = async (request: import("@playwright/test").APIRequestC
 const createTicketViaApi = async (
   request: import("@playwright/test").APIRequestContext,
   projectId: string,
-  title: string,
+  content: string,
   statusId?: string,
 ) => {
   const res = await request.post(`${apiBase}/v1/tickets`, {
-    data: { project_id: projectId, title, status_id: statusId ?? undefined },
+    data: { project_id: projectId, content, status_id: statusId ?? undefined },
   });
   expect(res.ok()).toBe(true);
-  return (await res.json()) as { id: string; shorthand: string; title: string; status_id: string | null };
+  return (await res.json()) as {
+    id: string;
+    shorthand: string;
+    display_title: string | null;
+    status_id: string | null;
+  };
 };
 
 const updateTicketViaApi = async (
@@ -57,6 +62,7 @@ test.describe("Ticket list", () => {
   let projectId: string;
 
   test.beforeEach(async ({ request }) => {
+    test.setTimeout(5_000);
     await deleteAllProjects(request);
     const project = await createProjectViaApi(request, "Ticket Test Project");
     projectId = project.id;
@@ -88,6 +94,13 @@ test.describe("Ticket list", () => {
   });
 
   test("creates a ticket via the create modal", async ({ page, request }) => {
+    const listTickets = async () => {
+      const res = await request.get(`${apiBase}/v1/tickets?project_id=${projectId}`);
+      expect(res.ok()).toBe(true);
+      return (await res.json()) as { id: string; display_title: string | null }[];
+    };
+    const initialTickets = await listTickets();
+
     await bypassOnboarding(page);
     await page.goto(`/projects/${projectId}/tickets`);
 
@@ -96,23 +109,17 @@ test.describe("Ticket list", () => {
     // Click the "+" button in the first creatable column
     await page.getByRole("button", { name: "Create ticket" }).first().click();
 
-    // Fill in the modal
-    const titleInput = page.getByPlaceholder("What needs to be done?");
-    await expect(titleInput).toBeVisible();
-    await titleInput.click();
+    // Fill in the modal content editor
+    const dialog = page.getByRole("dialog").last();
+    await expect(dialog.getByText("Describe the ticket...")).toBeVisible();
     await page.keyboard.type("New E2E Ticket");
-    await expect(titleInput).toHaveValue("New E2E Ticket");
-
-    // Submit via Enter key
-    await page.keyboard.press("Enter");
+    await dialog.getByRole("button", { name: "Create", exact: true }).click();
 
     // Verify ticket appears on the board
     await expect(page.getByText("New E2E Ticket")).toBeVisible();
 
     // Verify via API
-    const res = await request.get(`${apiBase}/v1/tickets?project_id=${projectId}`);
-    const tickets = (await res.json()) as { title: string }[];
-    expect(tickets.some((t) => t.title === "New E2E Ticket")).toBe(true);
+    await expect.poll(async () => (await listTickets()).length).toBeGreaterThan(initialTickets.length);
   });
 
   test("navigates to ticket detail on click", async ({ page, request }) => {

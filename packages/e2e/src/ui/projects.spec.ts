@@ -100,6 +100,7 @@ const selectRepoFromFolderPicker = async (page: import("@playwright/test").Page,
 
 test.describe("Project list", () => {
   test.beforeEach(async ({ request }) => {
+    test.setTimeout(5_000);
     await deleteAllProjects(request);
   });
 
@@ -124,7 +125,7 @@ test.describe("Project list", () => {
     await expect(page.getByText(/You have \d+ projects?/)).toBeVisible();
   });
 
-  test("navigates to project tickets on click", async ({ page, request }) => {
+  test("navigates to project docs on click", async ({ page, request }) => {
     await bypassOnboarding(page);
 
     const project = await createProjectViaApi(request, "Nav Test Project");
@@ -132,13 +133,14 @@ test.describe("Project list", () => {
     await page.goto("/projects");
     await page.getByText("Nav Test Project", { exact: true }).click();
 
-    await page.waitForURL(`**/projects/${project.id}/tickets`);
-    expect(page.url()).toContain(`/projects/${project.id}/tickets`);
+    await page.waitForURL(`**/projects/${project.id}/docs`);
+    expect(page.url()).toContain(`/projects/${project.id}/docs`);
   });
 });
 
 test.describe("Project creation", () => {
   test.beforeEach(async ({ request }) => {
+    test.setTimeout(5_000);
     await deleteAllProjects(request);
   });
 

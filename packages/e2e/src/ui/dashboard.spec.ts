@@ -4,6 +4,7 @@ const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 
 test("API health check responds ok", async ({ request }) => {
+  test.setTimeout(5_000);
   const response = await request.get(`${apiBase}/healthz`);
 
   expect(response.ok()).toBe(true);
@@ -12,6 +13,7 @@ test("API health check responds ok", async ({ request }) => {
 });
 
 test("dashboard loads successfully", async ({ page }) => {
+  test.setTimeout(5_000);
   await page.goto("/");
 
   await expect(page.locator("body")).toBeVisible();

@@ -2,7 +2,7 @@ import { isKnownAgentId, KNOWN_AGENT_IDS } from "pstdio-agents";
 import type { Arguments, Argv } from "yargs";
 import { removeAgent } from "@/features/agents/api/remove-agent";
 import { API_URL } from "@/features/api-url";
-import { findGitRoot } from "@/features/config/config";
+import { findGitRoot, readConfig } from "@/features/config/config";
 import { removeBundledSkillsForAgent } from "@/features/skills/install-default-skills";
 
 export const command = "remove <agent-id>";
@@ -18,7 +18,7 @@ export const builder = (yargs: Argv) =>
     .option("delete-skills", {
       type: "boolean",
       default: false,
-      describe: "Also delete the bundled skills installed for this agent",
+      describe: "Also delete the skills installed for this agent",
     });
 
 export const handler = async (argv: Arguments<{ "agent-id": string; "delete-skills": boolean }>) => {
@@ -33,8 +33,10 @@ export const handler = async (argv: Arguments<{ "agent-id": string; "delete-skil
 
   if (deleteSkills) {
     const root = findGitRoot(process.cwd());
-    if (root) {
-      const removed = removeBundledSkillsForAgent(root, agentId);
+    const projectConfig = root ? readConfig(root) : null;
+
+    if (root && projectConfig) {
+      const removed = await removeBundledSkillsForAgent(root, agentId, API_URL, projectConfig.project_id);
       if (removed.length > 0) {
         console.log(`Deleted ${removed.length} skill(s): ${removed.join(", ")}`);
       }

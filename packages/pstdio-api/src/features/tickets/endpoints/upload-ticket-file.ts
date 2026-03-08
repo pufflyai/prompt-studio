@@ -9,9 +9,12 @@ export const uploadTicketFileRoute = createRoute({
   description: "Upload and attach a file to a ticket.",
   tags: ["Tickets"],
   request: {
-    params: z.object({
-      id: z.string().openapi({ description: "Ticket ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        id: z.string().openapi({ description: "Ticket ID" }),
+      })
+      .strict(),
     body: {
       content: { "application/json": { schema: uploadTicketFileBodySchema } },
     },

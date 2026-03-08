@@ -58,6 +58,26 @@ describe("POST /v1/projects/:id/repos", () => {
     expect(res.status).toBe(404);
   });
 
+  test("returns 400 when body contains unknown keys", async () => {
+    const createRes = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Strict Repo Project" }),
+    });
+    const project = await createRes.json();
+
+    const repoPath = join(tempRoot, "strict-repo");
+    mkdirSync(repoPath, { recursive: true });
+
+    const res = await app.request(`/v1/projects/${project.id}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "strict-repo", path: repoPath, unknown_key: "value" }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
   test("installs bundled skills to repo for configured agents", async () => {
     const createRes = await app.request("/v1/projects", {
       method: "POST",

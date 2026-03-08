@@ -9,9 +9,12 @@ export const createTemplateRoute = createRoute({
   description: "Create a new template for a project.",
   tags: ["Templates"],
   request: {
-    params: z.object({
-      projectId: z.string().openapi({ description: "Project ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        projectId: z.string().openapi({ description: "Project ID" }),
+      })
+      .strict(),
     body: {
       content: { "application/json": { schema: createTemplateBodySchema } },
     },

@@ -7,10 +7,12 @@ import type { RouteDeps } from "../../deps";
 import { installSkillToRepo } from "../../skills/install-skill-to-repo";
 import { notFoundResponseSchema } from "../dto";
 
-const registerRepoBodySchema = z.object({
-  name: z.string().min(1),
-  path: z.string().min(1),
-});
+const registerRepoBodySchema = z
+  .object({
+    name: z.string().min(1),
+    path: z.string().min(1),
+  })
+  .strict();
 
 const repoResponseSchema = z.object({
   id: z.string(),
@@ -27,9 +29,12 @@ export const registerRepoRoute = createRoute({
   description: "Register a repo and link it to a project.",
   tags: ["Projects"],
   request: {
-    params: z.object({
-      id: z.string().openapi({ description: "Project ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        id: z.string().openapi({ description: "Project ID" }),
+      })
+      .strict(),
     body: {
       content: { "application/json": { schema: registerRepoBodySchema } },
     },

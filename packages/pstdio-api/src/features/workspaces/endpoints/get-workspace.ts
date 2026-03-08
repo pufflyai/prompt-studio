@@ -3,10 +3,12 @@ import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { notFoundResponseSchema, workspaceResponseSchema } from "../dto";
 
-const getWorkspaceQuerySchema = z.object({
-  project_id: z.string(),
-  shorthand: z.string(),
-});
+const getWorkspaceQuerySchema = z
+  .object({
+    project_id: z.string(),
+    shorthand: z.string(),
+  })
+  .strict();
 
 export const getWorkspaceRoute = createRoute({
   method: "get",

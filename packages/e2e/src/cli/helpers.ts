@@ -2,6 +2,7 @@ import { execSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
+import { TEST_TIMEOUT } from "./timeouts";
 
 export const PSTDIO_CLI = join(import.meta.dirname, "../../../pstdio/src/index.ts");
 
@@ -20,7 +21,7 @@ export const runPstdio = (args: string, cwd: string, env: Record<string, string>
     cwd,
     env: { ...process.env, ...env },
     encoding: "utf8",
-    timeout: 15_000,
+    timeout: TEST_TIMEOUT,
   });
 
 export const runPstdioSafe = (args: string, cwd: string, env: Record<string, string>) => {
@@ -29,7 +30,7 @@ export const runPstdioSafe = (args: string, cwd: string, env: Record<string, str
       cwd,
       env: { ...process.env, ...env },
       encoding: "utf8",
-      timeout: 15_000,
+      timeout: TEST_TIMEOUT,
     });
     return { stdout, stderr: "", exitCode: 0 };
   } catch (error: unknown) {

@@ -10,7 +10,8 @@ export const followUpSessionRoute = createRoute({
   description: "Send a follow-up prompt to an existing session.",
   tags: ["Sessions"],
   request: {
-    params: z.object({ id: z.string() }),
+    query: z.object({}).strict(),
+    params: z.object({ id: z.string() }).strict(),
     body: {
       content: { "application/json": { schema: followUpBodySchema } },
     },

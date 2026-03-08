@@ -9,9 +9,12 @@ export const listSkillsRoute = createRoute({
   description: "List all skills for a project.",
   tags: ["Skills"],
   request: {
-    params: z.object({
-      projectId: z.string().openapi({ description: "Project ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        projectId: z.string().openapi({ description: "Project ID" }),
+      })
+      .strict(),
   },
   responses: {
     200: {

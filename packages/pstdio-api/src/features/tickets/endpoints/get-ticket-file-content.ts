@@ -10,10 +10,13 @@ export const getTicketFileContentRoute = createRoute({
   description: "Download the content of a ticket file.",
   tags: ["Tickets"],
   request: {
-    params: z.object({
-      id: z.string().openapi({ description: "Ticket ID" }),
-      fileId: z.string().openapi({ description: "File ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        id: z.string().openapi({ description: "Ticket ID" }),
+        fileId: z.string().openapi({ description: "File ID" }),
+      })
+      .strict(),
   },
   responses: {
     200: {

@@ -144,12 +144,13 @@ describe("tickets save", () => {
     await expect(handler({ id: "PS-999", _: [], $0: "" } as never)).rejects.toThrow("Local ticket not found");
   });
 
-  test("reads status from frontmatter when --status is not provided", async () => {
+  test("strips frontmatter before uploading and extracts metadata", async () => {
     writeFileSync(
       join(tmpBase, ".pstdio", "tickets", "PS-1_updated-content", "ticket.md"),
       '---\nstatus: "wip"\npriority: "P1"\ncomplexity: "medium"\n---\n\n# Updated content',
     );
 
+    const uploadTicketFile = mock(async () => makeUploadResponse());
     const updateTicket = mock(async () => ({
       id: "t-1",
       shorthand: "PS-1",
@@ -162,10 +163,15 @@ describe("tickets save", () => {
       updated_at: "2026-03-04T00:00:00.000Z",
     }));
 
-    const handler = createHandler({ ...baseDeps, updateTicket, log: mock() });
+    const handler = createHandler({ ...baseDeps, uploadTicketFile, updateTicket, log: mock() });
 
     await handler({ id: "PS-1", _: [], $0: "" } as never);
 
+    expect(uploadTicketFile).toHaveBeenCalledWith(expect.any(String), "t-1", {
+      file_name: "ticket.md",
+      content_base64: Buffer.from("# Updated content").toString("base64"),
+      mime_type: "text/markdown",
+    });
     expect(updateTicket).toHaveBeenCalledWith(
       expect.any(String),
       "t-1",
@@ -178,12 +184,13 @@ describe("tickets save", () => {
     );
   });
 
-  test("CLI --status flag overrides frontmatter status", async () => {
+  test("CLI --status flag overrides frontmatter status and strips frontmatter from upload", async () => {
     writeFileSync(
       join(tmpBase, ".pstdio", "tickets", "PS-1_updated-content", "ticket.md"),
       '---\nstatus: "wip"\n---\n\n# Updated content',
     );
 
+    const uploadTicketFile = mock(async () => makeUploadResponse());
     const updateTicket = mock(async () => ({
       id: "t-1",
       shorthand: "PS-1",
@@ -196,10 +203,15 @@ describe("tickets save", () => {
       updated_at: "2026-03-04T00:00:00.000Z",
     }));
 
-    const handler = createHandler({ ...baseDeps, updateTicket, log: mock() });
+    const handler = createHandler({ ...baseDeps, uploadTicketFile, updateTicket, log: mock() });
 
     await handler({ id: "PS-1", status: "backlog", _: [], $0: "" } as never);
 
+    expect(uploadTicketFile).toHaveBeenCalledWith(expect.any(String), "t-1", {
+      file_name: "ticket.md",
+      content_base64: Buffer.from("# Updated content").toString("base64"),
+      mime_type: "text/markdown",
+    });
     expect(updateTicket).toHaveBeenCalledWith(
       expect.any(String),
       "t-1",

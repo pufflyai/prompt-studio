@@ -9,10 +9,13 @@ export const updateTemplateRoute = createRoute({
   description: "Update a template's content or default status.",
   tags: ["Templates"],
   request: {
-    params: z.object({
-      projectId: z.string().openapi({ description: "Project ID" }),
-      name: z.string().openapi({ description: "Template name" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        projectId: z.string().openapi({ description: "Project ID" }),
+        name: z.string().openapi({ description: "Template name" }),
+      })
+      .strict(),
     body: {
       content: { "application/json": { schema: updateTemplateBodySchema } },
     },

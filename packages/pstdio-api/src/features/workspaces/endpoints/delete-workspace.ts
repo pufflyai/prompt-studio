@@ -8,9 +8,12 @@ export const deleteWorkspaceRoute = createRoute({
   description: "Soft-delete a workspace.",
   tags: ["Workspaces"],
   request: {
-    params: z.object({
-      id: z.string().openapi({ description: "Workspace ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        id: z.string().openapi({ description: "Workspace ID" }),
+      })
+      .strict(),
   },
   responses: {
     200: {

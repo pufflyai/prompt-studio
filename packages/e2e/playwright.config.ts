@@ -10,11 +10,10 @@ const storagePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-storage-"));
 export default defineConfig({
   testDir: "./src/ui",
   testMatch: "**/*.spec.ts",
-  timeout: 60_000,
-  expect: { timeout: 10_000 },
+  expect: { timeout: 5_000 },
   fullyParallel: false,
   workers: 1,
-  retries: 1,
+  retries: 0,
   reporter: [["html", { open: "never" }], ["list"]],
   use: {
     baseURL: `http://localhost:${dashboardPort}`,

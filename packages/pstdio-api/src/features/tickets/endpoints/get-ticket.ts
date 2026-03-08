@@ -9,9 +9,12 @@ export const getTicketRoute = createRoute({
   description: "Get a ticket by ID.",
   tags: ["Tickets"],
   request: {
-    params: z.object({
-      id: z.string().openapi({ description: "Ticket ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        id: z.string().openapi({ description: "Ticket ID" }),
+      })
+      .strict(),
   },
   responses: {
     200: {

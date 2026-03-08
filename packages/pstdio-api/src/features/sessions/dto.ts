@@ -16,25 +16,31 @@ export const sessionResponseSchema = z.object({
   updated_at: z.string(),
 });
 
-export const createSessionBodySchema = z.object({
-  project_id: z.string().min(1),
-  title: z.string().min(1),
-  prompt: z.string().min(1),
-  agent: z.string().min(1),
-  workspace_id: z.string().optional(),
-  model: z.string().optional(),
-});
+export const createSessionBodySchema = z
+  .object({
+    project_id: z.string().min(1),
+    title: z.string().min(1),
+    prompt: z.string().min(1),
+    agent: z.string().min(1),
+    workspace_id: z.string().optional(),
+    model: z.string().optional(),
+  })
+  .strict();
 
-export const followUpBodySchema = z.object({
-  prompt: z.string().min(1),
-  agent: z.string().optional(),
-  model: z.string().optional(),
-});
+export const followUpBodySchema = z
+  .object({
+    prompt: z.string().min(1),
+    agent: z.string().optional(),
+    model: z.string().optional(),
+  })
+  .strict();
 
-export const approveBodySchema = z.object({
-  id: z.string().min(1).describe("The approval request ID"),
-  decision: z.enum(["approve", "deny"]),
-});
+export const approveBodySchema = z
+  .object({
+    id: z.string().min(1).describe("The approval request ID"),
+    decision: z.enum(["approve", "deny"]),
+  })
+  .strict();
 
 export const notFoundResponseSchema = z.object({
   error: z.string(),

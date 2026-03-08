@@ -9,6 +9,7 @@ export const createTicketRoute = createRoute({
   description: "Create a new ticket.",
   tags: ["Tickets"],
   request: {
+    query: z.object({}).strict(),
     body: {
       content: { "application/json": { schema: createTicketBodySchema } },
     },
@@ -39,11 +40,12 @@ export const createTicketHandler = (deps: RouteDeps) => {
       if (defaultStatus) input.status_id = defaultStatus.id;
     }
 
-    if (content && !input.display_title) {
-      input.display_title = extractTitleFromContent(content);
-    }
+    const displayTitle = content ? extractTitleFromContent(content) : undefined;
 
-    let ticket = await deps.ticketsService.create(input);
+    let ticket = await deps.ticketsService.create({
+      ...input,
+      display_title: displayTitle,
+    });
 
     if (content) {
       const data = Buffer.from(content);

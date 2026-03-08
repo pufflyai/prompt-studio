@@ -1,6 +1,6 @@
 # Terms of Service
 
-*Current as of March 21, 2025*
+_Current as of March 21, 2025_
 
 By accessing our website, you are agreeing to be bound by these terms of service, and agree that you are responsible for compliance with any applicable local laws.
 

@@ -35,7 +35,7 @@ describe("POST /v1/tickets", () => {
     const res = await app.request("/v1/tickets", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: "non-existent", display_title: "Orphan ticket" }),
+      body: JSON.stringify({ project_id: "non-existent", content: "Orphan ticket" }),
     });
 
     expect(res.status).toBe(404);
@@ -47,7 +47,7 @@ describe("POST /v1/tickets", () => {
     const res = await app.request("/v1/tickets", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: projectId, display_title: "First ticket" }),
+      body: JSON.stringify({ project_id: projectId, content: "First ticket" }),
     });
 
     expect(res.status).toBe(201);
@@ -61,7 +61,7 @@ describe("POST /v1/tickets", () => {
     const res = await app.request("/v1/tickets", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: projectId, display_title: "Draft ticket", draft: true }),
+      body: JSON.stringify({ project_id: projectId, content: "Draft ticket", draft: true }),
     });
 
     expect(res.status).toBe(201);
@@ -75,7 +75,7 @@ describe("POST /v1/tickets", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         project_id: projectId,
-        display_title: "Prompted ticket",
+        content: "Prompted ticket",
         user_prompt: "Fix the login bug",
       }),
     });
@@ -89,12 +89,32 @@ describe("POST /v1/tickets", () => {
     const res = await app.request("/v1/tickets", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: projectId, display_title: "No prompt" }),
+      body: JSON.stringify({ project_id: projectId, content: "No prompt" }),
     });
 
     expect(res.status).toBe(201);
     const ticket = await res.json();
     expect(ticket.user_prompt).toBeNull();
+  });
+
+  test("rejects legacy title field", async () => {
+    const res = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId, title: "Legacy title field" }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  test("rejects display_title field", async () => {
+    const res = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId, display_title: "Explicit title" }),
+    });
+
+    expect(res.status).toBe(400);
   });
 });
 
@@ -140,7 +160,7 @@ describe("POST /v1/tickets with content", () => {
     expect(await fileRes.text()).toBe(content);
   });
 
-  test("explicit display_title takes precedence over content", async () => {
+  test("rejects display_title even when content is provided", async () => {
     const res = await app.request("/v1/tickets", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -151,10 +171,7 @@ describe("POST /v1/tickets with content", () => {
       }),
     });
 
-    expect(res.status).toBe(201);
-    const ticket = await res.json();
-    expect(ticket.display_title).toBe("Explicit title");
-    expect(ticket.file_id).not.toBeNull();
+    expect(res.status).toBe(400);
   });
 });
 
@@ -186,6 +203,12 @@ describe("GET /v1/tickets", () => {
     const tickets = await res.json();
     expect(tickets.length).toBe(1);
     expect(tickets[0].shorthand).toBe("TP-1");
+  });
+
+  test("returns 400 when unknown query params are provided", async () => {
+    const res = await app.request(`/v1/tickets?project_id=${projectId}&x=1`);
+
+    expect(res.status).toBe(400);
   });
 });
 
@@ -236,9 +259,14 @@ describe("PATCH /v1/tickets/:id", () => {
 
 describe("ticket files", () => {
   test("uploads, lists, and downloads a ticket file", async () => {
-    const listRes = await app.request(`/v1/tickets?project_id=${projectId}`);
-    const tickets = await listRes.json();
-    const ticketId = tickets[0].id as string;
+    const ticketRes = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId }),
+    });
+    expect(ticketRes.status).toBe(201);
+    const ticket = await ticketRes.json();
+    const ticketId = ticket.id as string;
 
     const uploadRes = await app.request(`/v1/tickets/${ticketId}/files`, {
       method: "POST",
@@ -266,9 +294,14 @@ describe("ticket files", () => {
   });
 
   test("updates file content when uploading same file_name", async () => {
-    const listRes = await app.request(`/v1/tickets?project_id=${projectId}`);
-    const tickets = await listRes.json();
-    const ticketId = tickets[0].id as string;
+    const ticketRes = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId }),
+    });
+    expect(ticketRes.status).toBe(201);
+    const ticket = await ticketRes.json();
+    const ticketId = ticket.id as string;
 
     const firstUploadRes = await app.request(`/v1/tickets/${ticketId}/files`, {
       method: "POST",

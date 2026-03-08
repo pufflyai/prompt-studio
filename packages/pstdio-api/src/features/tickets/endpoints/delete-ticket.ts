@@ -9,9 +9,12 @@ export const deleteTicketRoute = createRoute({
   description: "Soft-delete a ticket.",
   tags: ["Tickets"],
   request: {
-    params: z.object({
-      id: z.string().openapi({ description: "Ticket ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        id: z.string().openapi({ description: "Ticket ID" }),
+      })
+      .strict(),
   },
   responses: {
     200: {

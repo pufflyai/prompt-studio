@@ -1,4 +1,4 @@
-import { createRoute } from "@hono/zod-openapi";
+import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { agentConfigResponseSchema, setupAgentBodySchema } from "../dto";
@@ -9,6 +9,7 @@ export const setupAgentRoute = createRoute({
   description: "Add or configure an agent.",
   tags: ["Agents"],
   request: {
+    query: z.object({}).strict(),
     body: {
       content: { "application/json": { schema: setupAgentBodySchema } },
     },

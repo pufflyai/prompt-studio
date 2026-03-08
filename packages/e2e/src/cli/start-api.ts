@@ -20,7 +20,7 @@ export const getFreePort = () =>
     });
   });
 
-export const waitForReady = async (url: string, timeoutMs = 15_000) => {
+export const waitForReady = async (url: string, timeoutMs = 5_000) => {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {

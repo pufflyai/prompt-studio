@@ -9,7 +9,7 @@
     "prebuild": "bun run typegen:tokens",
     "typecheck": "bun run typegen:tokens && bunx tsc -b",
     "lint": "bun run typecheck && bunx biome check .",
-    "test": "bun test",
+    "test": "bun test --silent",
     "preview": "vite preview",
     "typegen:tokens": "chakra typegen ../ui/src/theme/theme.ts",
     "visualize-bundle": "bunx vite-bundle-visualizer",

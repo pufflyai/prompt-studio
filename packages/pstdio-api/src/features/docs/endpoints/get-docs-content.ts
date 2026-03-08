@@ -15,12 +15,16 @@ export const getDocsContentRoute = createRoute({
   description: "Get the content of a specific documentation page.",
   tags: ["Docs"],
   request: {
-    params: z.object({
-      projectId: z.string().openapi({ description: "Project ID" }),
-    }),
-    query: z.object({
-      link: z.string().openapi({ description: "Documentation link path" }),
-    }),
+    params: z
+      .object({
+        projectId: z.string().openapi({ description: "Project ID" }),
+      })
+      .strict(),
+    query: z
+      .object({
+        link: z.string().openapi({ description: "Documentation link path" }),
+      })
+      .strict(),
   },
   responses: {
     200: {

@@ -9,9 +9,12 @@ export const updateAgentRoute = createRoute({
   description: "Update an agent configuration.",
   tags: ["Agents"],
   request: {
-    params: z.object({
-      agentId: z.string().openapi({ description: "Agent identifier" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        agentId: z.string().openapi({ description: "Agent identifier" }),
+      })
+      .strict(),
     body: {
       content: { "application/json": { schema: updateAgentBodySchema } },
     },

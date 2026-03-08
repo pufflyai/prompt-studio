@@ -62,7 +62,7 @@ export const createHandler =
 
     const ticket = await deps.createTicket(API_URL, {
       project_id: projectId,
-      display_title: argv.content,
+      content: argv.content,
       draft: false,
       tag_ids: tagIds,
       status_id: statusId,

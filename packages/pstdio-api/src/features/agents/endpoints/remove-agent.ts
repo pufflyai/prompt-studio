@@ -9,9 +9,12 @@ export const removeAgentRoute = createRoute({
   description: "Remove a configured agent.",
   tags: ["Agents"],
   request: {
-    params: z.object({
-      agentId: z.string().openapi({ description: "Agent identifier" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        agentId: z.string().openapi({ description: "Agent identifier" }),
+      })
+      .strict(),
   },
   responses: {
     204: {

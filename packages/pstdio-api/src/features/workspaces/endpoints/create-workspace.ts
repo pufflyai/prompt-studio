@@ -1,4 +1,4 @@
-import { createRoute } from "@hono/zod-openapi";
+import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { createWorkspaceBodySchema, workspaceResponseSchema } from "../dto";
@@ -9,6 +9,7 @@ export const createWorkspaceRoute = createRoute({
   description: "Create a new workspace for a ticket.",
   tags: ["Workspaces"],
   request: {
+    query: z.object({}).strict(),
     body: {
       content: { "application/json": { schema: createWorkspaceBodySchema } },
     },

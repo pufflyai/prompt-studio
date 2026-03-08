@@ -1,4 +1,4 @@
-import { createRoute } from "@hono/zod-openapi";
+import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { readyResponseSchema } from "../dto";
@@ -8,6 +8,10 @@ export const getReadyzRoute = createRoute({
   path: "/readyz",
   description: "Readiness probe.",
   tags: ["Health"],
+
+  request: {
+    query: z.object({}).strict(),
+  },
   responses: {
     200: {
       description: "Service is ready.",

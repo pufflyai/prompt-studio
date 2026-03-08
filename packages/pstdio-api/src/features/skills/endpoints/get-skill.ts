@@ -10,10 +10,13 @@ export const getSkillRoute = createRoute({
   description: "Get a skill by name, including its content.",
   tags: ["Skills"],
   request: {
-    params: z.object({
-      projectId: z.string().openapi({ description: "Project ID" }),
-      name: z.string().openapi({ description: "Skill name" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        projectId: z.string().openapi({ description: "Project ID" }),
+        name: z.string().openapi({ description: "Skill name" }),
+      })
+      .strict(),
   },
   responses: {
     200: {

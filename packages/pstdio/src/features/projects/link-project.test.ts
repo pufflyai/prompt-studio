@@ -6,6 +6,21 @@ import { linkProject } from "./link-project";
 
 const tmpBase = join(import.meta.dirname, "__test-tmp__");
 
+const skillFixture = (name: string) => ({
+  id: `id-${name}`,
+  project_id: "abc",
+  name,
+  description: `${name} desc`,
+  file_id: `file-${name}`,
+  content: `---\nname: ${name}\n---\n${name} content`,
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+});
+
+const SKILL_NAMES = ["create-ticket"];
+const skillListResponse = { status: 200, body: SKILL_NAMES.map(skillFixture) };
+const skillGetResponses = SKILL_NAMES.map((name) => ({ status: 200, body: skillFixture(name) }));
+
 const setup = (name: string) => {
   const dir = join(tmpBase, name);
   mkdirSync(dir, { recursive: true });
@@ -35,6 +50,8 @@ describe("linkProject", () => {
       },
       { status: 201, body: { id: "repo-1", name: "link-scaffold", path: "/tmp/link-scaffold" } },
       { status: 200, body: [{ agent_id: "opencode", is_default: true }] },
+      skillListResponse,
+      ...skillGetResponses,
     ]);
     const root = setup("link-scaffold");
 
@@ -48,7 +65,8 @@ describe("linkProject", () => {
       created_at: "2026-01-01T00:00:00Z",
       updated_at: "2026-01-01T00:00:00Z",
     });
-    expect(globalThis.fetch).toHaveBeenCalledTimes(3);
+    // 1 get project + 1 register repo + 1 agents + 1 skill list + 1 skill get = 5
+    expect(globalThis.fetch).toHaveBeenCalledTimes(5);
 
     const config = JSON.parse(readFileSync(join(root, ".pstdio", "config.json"), "utf8"));
     expect(config.project_id).toBe("abc");
@@ -72,7 +90,7 @@ describe("linkProject", () => {
         },
       },
       { status: 201, body: { id: "repo-1", name: "link-existing-docs", path: "/tmp/link-existing-docs" } },
-      { status: 200, body: [] },
+      { status: 200, body: [] }, // no agents → early return from installDefaultSkills
     ]);
     const root = setup("link-existing-docs");
 
@@ -83,6 +101,7 @@ describe("linkProject", () => {
     await linkProject(root, "abc", { homedir: join(tmpBase, "__fake-home__") });
 
     expect(readFileSync(join(docsDir, "local.md"), "utf8")).toBe("local content");
+    // 1 get project + 1 register repo + 1 agents (empty) = 3
     expect(globalThis.fetch).toHaveBeenCalledTimes(3);
   });
 

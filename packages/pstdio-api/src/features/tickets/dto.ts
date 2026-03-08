@@ -26,31 +26,34 @@ export const ticketListItemSchema = ticketResponseSchema.extend({
   tag_names: z.array(z.string()),
 });
 
-export const createTicketBodySchema = z.object({
-  project_id: z.string().min(1),
-  content: z.string().optional(),
-  display_title: z.string().optional(),
-  user_prompt: z.string().optional(),
-  file_id: z.string().optional(),
-  priority: z.string().optional(),
-  complexity: z.enum(["low", "medium", "high"]).optional(),
-  parent_id: z.string().optional(),
-  draft: z.boolean().optional(),
-  tag_ids: z.array(z.string()).optional(),
-  status_id: z.string().optional(),
-});
+export const createTicketBodySchema = z
+  .object({
+    project_id: z.string().min(1),
+    content: z.string().optional(),
+    user_prompt: z.string().optional(),
+    file_id: z.string().optional(),
+    priority: z.string().optional(),
+    complexity: z.enum(["low", "medium", "high"]).optional(),
+    parent_id: z.string().optional(),
+    draft: z.boolean().optional(),
+    tag_ids: z.array(z.string()).optional(),
+    status_id: z.string().optional(),
+  })
+  .strict();
 
-export const updateTicketBodySchema = z.object({
-  display_title: z.string().optional(),
-  user_prompt: z.string().optional(),
-  file_id: z.string().optional(),
-  status_id: z.string().optional(),
-  priority: z.string().optional(),
-  complexity: z.enum(["low", "medium", "high"]).optional(),
-  draft: z.boolean().optional(),
-  archived: z.boolean().optional(),
-  tag_ids: z.array(z.string()).optional(),
-});
+export const updateTicketBodySchema = z
+  .object({
+    display_title: z.string().optional(),
+    user_prompt: z.string().optional(),
+    file_id: z.string().optional(),
+    status_id: z.string().optional(),
+    priority: z.string().optional(),
+    complexity: z.enum(["low", "medium", "high"]).optional(),
+    draft: z.boolean().optional(),
+    archived: z.boolean().optional(),
+    tag_ids: z.array(z.string()).optional(),
+  })
+  .strict();
 
 export const notFoundResponseSchema = z.object({
   error: z.string(),
@@ -69,8 +72,10 @@ export const ticketFileResponseSchema = z.object({
   updated_at: z.string(),
 });
 
-export const uploadTicketFileBodySchema = z.object({
-  file_name: z.string().min(1),
-  content_base64: z.string(),
-  mime_type: z.string().optional(),
-});
+export const uploadTicketFileBodySchema = z
+  .object({
+    file_name: z.string().min(1),
+    content_base64: z.string(),
+    mime_type: z.string().optional(),
+  })
+  .strict();

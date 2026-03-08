@@ -3,9 +3,11 @@ import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { workspaceListItemSchema } from "../dto";
 
-const listWorkspacesQuerySchema = z.object({
-  project_id: z.string(),
-});
+const listWorkspacesQuerySchema = z
+  .object({
+    project_id: z.string(),
+  })
+  .strict();
 
 export const listWorkspacesRoute = createRoute({
   method: "get",

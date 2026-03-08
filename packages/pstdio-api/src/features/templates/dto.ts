@@ -15,17 +15,21 @@ export const templateWithContentResponseSchema = templateResponseSchema.extend({
   content: z.string(),
 });
 
-export const createTemplateBodySchema = z.object({
-  name: z.string().min(1),
-  template_type: z.enum(["prompt", "ticket", "document"]),
-  content: z.string().min(1),
-  is_default: z.boolean().optional(),
-});
+export const createTemplateBodySchema = z
+  .object({
+    name: z.string().min(1),
+    template_type: z.enum(["prompt", "ticket", "document"]),
+    content: z.string().min(1),
+    is_default: z.boolean().optional(),
+  })
+  .strict();
 
-export const updateTemplateBodySchema = z.object({
-  content: z.string().min(1).optional(),
-  is_default: z.boolean().optional(),
-});
+export const updateTemplateBodySchema = z
+  .object({
+    content: z.string().min(1).optional(),
+    is_default: z.boolean().optional(),
+  })
+  .strict();
 
 export const notFoundResponseSchema = z.object({
   error: z.string(),

@@ -26,6 +26,6 @@ export const linkProject = async (root: string, projectId: string, options?: Lin
     scaffoldDocs(root);
   }
 
-  await installDefaultSkills(root, API_URL, options?.homedir);
+  await installDefaultSkills(root, projectId, API_URL, options?.homedir);
   return project;
 };

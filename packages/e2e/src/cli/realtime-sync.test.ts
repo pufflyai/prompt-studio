@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test
 import type { ReadableStreamDefaultReader } from "node:stream/web";
 import { cleanupDirs, createGitRepo, runPstdio } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
+import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 
 type SseEvent = {
   event: string;
@@ -28,7 +29,7 @@ const createSseReader = (response: Response) => {
   const decoder = new TextDecoder();
   let buffer = "";
 
-  const readEvent = async (timeoutMs = 5_000) => {
+  const readEvent = async (timeoutMs = 3_000) => {
     const deadline = Date.now() + timeoutMs;
 
     while (Date.now() < deadline) {
@@ -60,7 +61,7 @@ const dirs: string[] = [];
 
 beforeAll(async () => {
   api = await startApi();
-}, 20_000);
+}, SETUP_TIMEOUT);
 
 afterAll(() => {
   api?.stop();
@@ -71,130 +72,146 @@ afterEach(() => {
 });
 
 describe("realtime sync stream", () => {
-  test("sends init payload without yjs tables", async () => {
-    const response = await fetch(`${api.url}/v1/sync/stream`);
-    expect(response.ok).toBe(true);
+  test(
+    "sends init payload without yjs tables",
+    async () => {
+      const response = await fetch(`${api.url}/v1/sync/stream`);
+      expect(response.ok).toBe(true);
 
-    const sse = createSseReader(response);
-    const event = await sse.readEvent();
-    await sse.close();
-
-    expect(event).toBeTruthy();
-    expect(event?.event).toBe("init");
-
-    const payload = event?.data as { tables: Record<string, unknown[]> };
-    expect(payload.tables).toHaveProperty("projects");
-    expect(payload.tables).not.toHaveProperty("ydoc_updates");
-    expect(payload.tables).not.toHaveProperty("ydoc_awareness");
-    expect(payload.tables).not.toHaveProperty("ydoc_resume_state");
-  });
-
-  test("streams project create changes to connected clients", async () => {
-    const response = await fetch(`${api.url}/v1/sync/stream`);
-    expect(response.ok).toBe(true);
-
-    const sse = createSseReader(response);
-    const initEvent = await sse.readEvent();
-    expect(initEvent?.event).toBe("init");
-
-    const repo = createGitRepo();
-    dirs.push(repo);
-
-    runPstdio("projects create realtime-e2e-project", repo, { PSTDIO_API_URL: api.url });
-
-    let projectEvent: SseEvent | null = null;
-    for (let i = 0; i < 20; i += 1) {
+      const sse = createSseReader(response);
       const event = await sse.readEvent();
-      if (!event) break;
-      if (event.event !== "sync:set") continue;
+      await sse.close();
 
-      const data = event.data as { table: string; data: { name?: string } };
-      if (data.table === "projects" && data.data.name === "realtime-e2e-project") {
-        projectEvent = event;
-        break;
+      expect(event).toBeTruthy();
+      expect(event?.event).toBe("init");
+
+      const payload = event?.data as { tables: Record<string, unknown[]> };
+      expect(payload.tables).toHaveProperty("projects");
+      expect(payload.tables).not.toHaveProperty("ydoc_updates");
+      expect(payload.tables).not.toHaveProperty("ydoc_awareness");
+      expect(payload.tables).not.toHaveProperty("ydoc_resume_state");
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
+    "streams project create changes to connected clients",
+    async () => {
+      const response = await fetch(`${api.url}/v1/sync/stream`);
+      expect(response.ok).toBe(true);
+
+      const sse = createSseReader(response);
+      const initEvent = await sse.readEvent();
+      expect(initEvent?.event).toBe("init");
+
+      const repo = createGitRepo();
+      dirs.push(repo);
+
+      runPstdio("projects create realtime-e2e-project", repo, { PSTDIO_API_URL: api.url });
+
+      let projectEvent: SseEvent | null = null;
+      for (let i = 0; i < 20; i += 1) {
+        const event = await sse.readEvent();
+        if (!event) break;
+        if (event.event !== "sync:set") continue;
+
+        const data = event.data as { table: string; data: { name?: string } };
+        if (data.table === "projects" && data.data.name === "realtime-e2e-project") {
+          projectEvent = event;
+          break;
+        }
       }
-    }
 
-    await sse.close();
+      await sse.close();
 
-    expect(projectEvent).toBeTruthy();
-  }, 20_000);
+      expect(projectEvent).toBeTruthy();
+    },
+    TEST_TIMEOUT,
+  );
 
-  test("streams ticket creation to connected clients", async () => {
-    const repo = createGitRepo();
-    dirs.push(repo);
+  test(
+    "streams ticket creation to connected clients",
+    async () => {
+      const repo = createGitRepo();
+      dirs.push(repo);
 
-    runPstdio("projects create realtime-ticket-project", repo, { PSTDIO_API_URL: api.url });
+      runPstdio("projects create realtime-ticket-project", repo, { PSTDIO_API_URL: api.url });
 
-    const response = await fetch(`${api.url}/v1/sync/stream`);
-    expect(response.ok).toBe(true);
+      const response = await fetch(`${api.url}/v1/sync/stream`);
+      expect(response.ok).toBe(true);
 
-    const sse = createSseReader(response);
-    const initEvent = await sse.readEvent();
-    expect(initEvent?.event).toBe("init");
+      const sse = createSseReader(response);
+      const initEvent = await sse.readEvent();
+      expect(initEvent?.event).toBe("init");
 
-    runPstdio('tickets create --content "Realtime ticket test"', repo, { PSTDIO_API_URL: api.url });
+      runPstdio('tickets create --content "Realtime ticket test"', repo, { PSTDIO_API_URL: api.url });
 
-    let ticketEvent: SseEvent | null = null;
-    for (let i = 0; i < 20; i += 1) {
-      const event = await sse.readEvent();
-      if (!event) break;
-      if (event.event !== "sync:set") continue;
-
-      const data = event.data as { table: string; data: { display_title?: string } };
-      if (data.table === "tickets" && data.data.display_title === "Realtime ticket test") {
-        ticketEvent = event;
-        break;
-      }
-    }
-
-    await sse.close();
-
-    expect(ticketEvent).toBeTruthy();
-  }, 20_000);
-
-  test("ticket update in one client is reflected in another", async () => {
-    const repo = createGitRepo();
-    dirs.push(repo);
-
-    runPstdio("projects create cross-client-project", repo, { PSTDIO_API_URL: api.url });
-
-    // Open two SSE connections (simulating two client instances)
-    const [responseA, responseB] = await Promise.all([
-      fetch(`${api.url}/v1/sync/stream`),
-      fetch(`${api.url}/v1/sync/stream`),
-    ]);
-
-    const sseA = createSseReader(responseA);
-    const sseB = createSseReader(responseB);
-
-    // Consume init events
-    await sseA.readEvent();
-    await sseB.readEvent();
-
-    // Create a ticket (both clients should see it)
-    runPstdio('tickets create --content "Cross client ticket"', repo, { PSTDIO_API_URL: api.url });
-
-    const findTicketEvent = async (sse: ReturnType<typeof createSseReader>) => {
+      let ticketEvent: SseEvent | null = null;
       for (let i = 0; i < 20; i += 1) {
         const event = await sse.readEvent();
         if (!event) break;
         if (event.event !== "sync:set") continue;
 
         const data = event.data as { table: string; data: { display_title?: string } };
-        if (data.table === "tickets" && data.data.display_title === "Cross client ticket") {
-          return event;
+        if (data.table === "tickets" && data.data.display_title === "Realtime ticket test") {
+          ticketEvent = event;
+          break;
         }
       }
-      return null;
-    };
 
-    const [ticketA, ticketB] = await Promise.all([findTicketEvent(sseA), findTicketEvent(sseB)]);
+      await sse.close();
 
-    await sseA.close();
-    await sseB.close();
+      expect(ticketEvent).toBeTruthy();
+    },
+    TEST_TIMEOUT,
+  );
 
-    expect(ticketA).toBeTruthy();
-    expect(ticketB).toBeTruthy();
-  }, 20_000);
+  test(
+    "ticket update in one client is reflected in another",
+    async () => {
+      const repo = createGitRepo();
+      dirs.push(repo);
+
+      runPstdio("projects create cross-client-project", repo, { PSTDIO_API_URL: api.url });
+
+      // Open two SSE connections (simulating two client instances)
+      const [responseA, responseB] = await Promise.all([
+        fetch(`${api.url}/v1/sync/stream`),
+        fetch(`${api.url}/v1/sync/stream`),
+      ]);
+
+      const sseA = createSseReader(responseA);
+      const sseB = createSseReader(responseB);
+
+      // Consume init events
+      await sseA.readEvent();
+      await sseB.readEvent();
+
+      // Create a ticket (both clients should see it)
+      runPstdio('tickets create --content "Cross client ticket"', repo, { PSTDIO_API_URL: api.url });
+
+      const findTicketEvent = async (sse: ReturnType<typeof createSseReader>) => {
+        for (let i = 0; i < 20; i += 1) {
+          const event = await sse.readEvent();
+          if (!event) break;
+          if (event.event !== "sync:set") continue;
+
+          const data = event.data as { table: string; data: { display_title?: string } };
+          if (data.table === "tickets" && data.data.display_title === "Cross client ticket") {
+            return event;
+          }
+        }
+        return null;
+      };
+
+      const [ticketA, ticketB] = await Promise.all([findTicketEvent(sseA), findTicketEvent(sseB)]);
+
+      await sseA.close();
+      await sseB.close();
+
+      expect(ticketA).toBeTruthy();
+      expect(ticketB).toBeTruthy();
+    },
+    TEST_TIMEOUT,
+  );
 });

@@ -37,7 +37,7 @@ const createTicket = async (projectId: string) => {
   const res = await app.request("/v1/tickets", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, title: "test ticket" }),
+    body: JSON.stringify({ project_id: projectId, content: "test ticket" }),
   });
   return res.json() as Promise<{ id: string; shorthand: string }>;
 };

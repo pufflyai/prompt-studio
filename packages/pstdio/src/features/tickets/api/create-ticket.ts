@@ -1,6 +1,6 @@
 type CreateTicketInput = {
   project_id: string;
-  display_title?: string;
+  content?: string;
   user_prompt?: string;
   file_id?: string;
   priority?: string;

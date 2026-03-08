@@ -8,12 +8,14 @@ export const listSessionsRoute = createRoute({
   description: "List sessions for a project.",
   tags: ["Sessions"],
   request: {
-    query: z.object({
-      project_id: z.string().openapi({ description: "Project ID" }),
-      status: z.string().optional().openapi({ description: "Filter by status" }),
-      agent: z.string().optional().openapi({ description: "Filter by agent" }),
-      archived: z.string().optional().openapi({ description: "Include archived" }),
-    }),
+    query: z
+      .object({
+        project_id: z.string().openapi({ description: "Project ID" }),
+        status: z.string().optional().openapi({ description: "Filter by status" }),
+        agent: z.string().optional().openapi({ description: "Filter by agent" }),
+        archived: z.string().optional().openapi({ description: "Include archived" }),
+      })
+      .strict(),
   },
   responses: {
     200: {

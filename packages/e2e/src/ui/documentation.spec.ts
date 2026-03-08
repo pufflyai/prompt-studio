@@ -60,6 +60,7 @@ test.describe("Documentation", () => {
   let repoDir: string;
 
   test.beforeEach(() => {
+    test.setTimeout(5_000);
     repoDir = setupDocsRepo();
   });
 

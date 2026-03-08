@@ -10,6 +10,7 @@ export const createSessionRoute = createRoute({
   description: "Create a new session and start the agent.",
   tags: ["Sessions"],
   request: {
+    query: z.object({}).strict(),
     body: {
       content: { "application/json": { schema: createSessionBodySchema } },
     },

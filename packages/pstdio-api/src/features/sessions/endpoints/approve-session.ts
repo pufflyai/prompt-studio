@@ -8,7 +8,8 @@ export const approveSessionRoute = createRoute({
   description: "Respond to a tool approval request.",
   tags: ["Sessions"],
   request: {
-    params: z.object({ id: z.string() }),
+    query: z.object({}).strict(),
+    params: z.object({ id: z.string() }).strict(),
     body: {
       content: { "application/json": { schema: approveBodySchema } },
     },

@@ -53,4 +53,9 @@ describe("GET /v1/projects", () => {
     expect(body[0].name).toBe("Project A");
     expect(body[1].name).toBe("Project B");
   });
+
+  test("returns 400 when unknown query params are provided", async () => {
+    const res = await app.request("/v1/projects?x=1");
+    expect(res.status).toBe(400);
+  });
 });

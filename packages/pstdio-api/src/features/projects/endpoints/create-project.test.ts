@@ -35,4 +35,14 @@ describe("POST /v1/projects", () => {
     expect(body.name).toBe("Test Project");
     expect(body.id).toBeDefined();
   });
+
+  test("returns 400 when request body contains unknown keys", async () => {
+    const res = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Strict Project", unknown_key: "value" }),
+    });
+
+    expect(res.status).toBe(400);
+  });
 });

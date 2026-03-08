@@ -9,6 +9,21 @@ const tmpBase = join(import.meta.dirname, "__test-tmp__");
 const templateResponse = { status: 201, body: { id: "tpl", name: "t", template_type: "document", is_default: false } };
 const seedTemplateResponses = Array.from({ length: 6 }, () => templateResponse);
 
+const skillFixture = (name: string) => ({
+  id: `id-${name}`,
+  project_id: "proj-1",
+  name,
+  description: `${name} desc`,
+  file_id: `file-${name}`,
+  content: `---\nname: ${name}\n---\n${name} content`,
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+});
+
+const SKILL_NAMES = ["create-ticket", "implement-ticket"];
+const skillListResponse = { status: 200, body: SKILL_NAMES.map(skillFixture) };
+const skillGetResponses = SKILL_NAMES.map((name) => ({ status: 200, body: skillFixture(name) }));
+
 const setup = (name: string) => {
   const dir = join(tmpBase, name);
   mkdirSync(dir, { recursive: true });
@@ -30,6 +45,8 @@ describe("createAndInitProject", () => {
       { status: 201, body: { id: "repo-1", name: "create-init", path: "/tmp/create-init" } },
       ...seedTemplateResponses,
       { status: 200, body: [{ agent_id: "opencode", is_default: true }] },
+      skillListResponse,
+      ...skillGetResponses,
     ]);
     const root = setup("create-init");
 
@@ -37,7 +54,8 @@ describe("createAndInitProject", () => {
     const project = await createAndInitProject(root, "Test", { homedir: fakeHome, repoPaths: [root] });
 
     expect(project).toEqual({ id: "proj-1", name: "Test" });
-    expect(globalThis.fetch).toHaveBeenCalledTimes(9);
+    // 1 create + 1 register + 6 templates + 1 agents + 1 skill list + 2 skill gets = 12
+    expect(globalThis.fetch).toHaveBeenCalledTimes(12);
 
     const config = JSON.parse(readFileSync(join(root, ".pstdio", "config.json"), "utf8"));
     expect(config.project_id).toBe("proj-1");
@@ -53,7 +71,7 @@ describe("createAndInitProject", () => {
     mockFetchSequence([
       { status: 201, body: { id: "proj-no-repo", name: "NoRepo" } },
       ...seedTemplateResponses,
-      { status: 200, body: [] },
+      { status: 200, body: [] }, // no agents configured
     ]);
     const root = setup("no-repo");
 
@@ -63,7 +81,7 @@ describe("createAndInitProject", () => {
     });
 
     expect(project).toEqual({ id: "proj-no-repo", name: "NoRepo" });
-    // 1 create + 0 registerRepo + 6 templates + 1 skills = 8
+    // 1 create + 0 registerRepo + 6 templates + 1 agents (empty → early return) = 8
     expect(globalThis.fetch).toHaveBeenCalledTimes(8);
 
     const config = JSON.parse(readFileSync(join(root, ".pstdio", "config.json"), "utf8"));

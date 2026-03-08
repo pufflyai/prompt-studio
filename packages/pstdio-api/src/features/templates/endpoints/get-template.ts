@@ -10,10 +10,13 @@ export const getTemplateRoute = createRoute({
   description: "Get a template by name, including its content.",
   tags: ["Templates"],
   request: {
-    params: z.object({
-      projectId: z.string().openapi({ description: "Project ID" }),
-      name: z.string().openapi({ description: "Template name" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        projectId: z.string().openapi({ description: "Project ID" }),
+        name: z.string().openapi({ description: "Template name" }),
+      })
+      .strict(),
   },
   responses: {
     200: {

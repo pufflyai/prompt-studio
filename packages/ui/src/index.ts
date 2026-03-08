@@ -22,6 +22,8 @@ export { OpenSourceNoticesScreen } from "./components/open-source-notices-screen
 export { PanelMenu } from "./components/panel-menu";
 export type { SessionCompletionStatus } from "./components/session-indicator";
 export { SessionIndicator } from "./components/session-indicator";
+export type { SwitchProps } from "./components/switch";
+export { Switch } from "./components/switch";
 export type { TicketBoardColumn, TicketBoardColumnAction, TicketBoardItem } from "./components/tickets/ticket-board";
 export { TicketBoard } from "./components/tickets/ticket-board";
 export type { TicketCardBadge } from "./components/tickets/ticket-card";

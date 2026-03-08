@@ -15,7 +15,7 @@
     "studio": "bunx drizzle-kit studio --config ./drizzle.config.ts",
     "lint": "bun run typecheck && bunx biome check .",
     "format": "bunx biome check --write .",
-    "test": "bun test"
+    "test": "bun test --silent"
   },
   "devDependencies": {
     "@types/bun": "latest",

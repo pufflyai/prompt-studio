@@ -31,9 +31,12 @@ export const getChangelogRoute = createRoute({
   description: "Get the changelog for a project.",
   tags: ["Changelog"],
   request: {
-    params: z.object({
-      projectId: z.string().openapi({ description: "Project ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        projectId: z.string().openapi({ description: "Project ID" }),
+      })
+      .strict(),
   },
   responses: {
     200: {

@@ -13,9 +13,12 @@ export const getStartupScriptRoute = createRoute({
   description: "Get the startup script for a project.",
   tags: ["Projects"],
   request: {
-    params: z.object({
-      id: z.string().openapi({ description: "Project ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        id: z.string().openapi({ description: "Project ID" }),
+      })
+      .strict(),
   },
   responses: {
     200: {

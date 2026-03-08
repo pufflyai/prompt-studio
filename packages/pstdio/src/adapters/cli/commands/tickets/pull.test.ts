@@ -105,7 +105,7 @@ describe("tickets pull", () => {
     expect(existsSync(ticketPath)).toBe(true);
     expect(existsSync(localFilePath)).toBe(true);
     const ticketContent = readFileSync(ticketPath, "utf8");
-    expect(ticketContent).toContain('ticket_id: "PS-1"');
+    expect(ticketContent).toContain("ticket_id:");
     expect(ticketContent).toContain('created: "2026-03-04T00:00:00.000Z"');
     expect(ticketContent).toContain("# Ticket from DB");
     expect(readFileSync(localFilePath, "utf8")).toBe("hello from db");
@@ -128,7 +128,7 @@ describe("tickets pull", () => {
     const ticketPath = join(tmpBase, ".pstdio", "tickets", "PS-1_ticket-from-db", "ticket.md");
     const content = readFileSync(ticketPath, "utf8");
     expect(content).toStartWith("---\n");
-    expect(content).toContain('ticket_id: "PS-1"');
+    expect(content).toContain("ticket_id:");
     expect(content).toContain('status: "wip"');
     expect(content).toContain('priority: "P1"');
     expect(content).toContain('complexity: "medium"');

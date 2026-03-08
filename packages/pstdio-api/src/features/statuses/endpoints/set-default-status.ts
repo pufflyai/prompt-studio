@@ -8,10 +8,13 @@ export const setDefaultStatusRoute = createRoute({
   description: "Set a status as the default.",
   tags: ["Statuses"],
   request: {
-    params: z.object({
-      projectId: z.string().openapi({ description: "Project ID" }),
-      id: z.string().openapi({ description: "Status ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        projectId: z.string().openapi({ description: "Project ID" }),
+        id: z.string().openapi({ description: "Status ID" }),
+      })
+      .strict(),
   },
   responses: {
     200: {

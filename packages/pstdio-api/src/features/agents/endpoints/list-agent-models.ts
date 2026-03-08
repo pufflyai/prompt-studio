@@ -9,9 +9,11 @@ const agentModelSchema = z.object({
 
 const agentModelsListSchema = z.array(agentModelSchema);
 
-const agentIdParamSchema = z.object({
-  agentId: z.string().min(1).openapi({ description: "Agent identifier (e.g. claude-code, opencode)" }),
-});
+const agentIdParamSchema = z
+  .object({
+    agentId: z.string().min(1).openapi({ description: "Agent identifier (e.g. claude-code, opencode)" }),
+  })
+  .strict();
 
 export const listAgentModelsRoute = createRoute({
   method: "get",
@@ -19,6 +21,7 @@ export const listAgentModelsRoute = createRoute({
   description: "List available models for a specific agent.",
   tags: ["Agents"],
   request: {
+    query: z.object({}).strict(),
     params: agentIdParamSchema,
   },
   responses: {

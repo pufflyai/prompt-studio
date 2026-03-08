@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runPstdio, runPstdioSafe, shutdownApiViaHttp } from "./helpers";
 import { getFreePort } from "./start-api";
+import { TEST_TIMEOUT } from "./timeouts";
 
 // Create git repos inside the monorepo tree so resolveApiRoot can walk up
 // and find packages/pstdio-api for auto-start.
@@ -44,46 +45,54 @@ describe("ensureApi auto-start", () => {
     }
   });
 
-  test("auto-starts API and runs projects create", async () => {
-    const port = await getFreePort();
-    const url = `http://localhost:${port}`;
-    portToCleanup = port;
+  test(
+    "auto-starts API and runs projects create",
+    async () => {
+      const port = await getFreePort();
+      const url = `http://localhost:${port}`;
+      portToCleanup = port;
 
-    expect(await isReachable(url)).toBe(false);
+      expect(await isReachable(url)).toBe(false);
 
-    const repo = createLocalGitRepo();
-    dirs.push(repo);
+      const repo = createLocalGitRepo();
+      dirs.push(repo);
 
-    const storagePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-autostart-storage-"));
-    dirs.push(storagePath);
+      const storagePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-autostart-storage-"));
+      dirs.push(storagePath);
 
-    const output = runPstdio("projects create auto-test", repo, {
-      PSTDIO_API_URL: url,
-      PSTDIO_API_PORT: String(port),
-      PSTDIO_DB_PATH: ":memory:",
-      PSTDIO_STORAGE_PATH: storagePath,
-    });
+      const output = runPstdio("projects create auto-test", repo, {
+        PSTDIO_API_URL: url,
+        PSTDIO_API_PORT: String(port),
+        PSTDIO_DB_PATH: ":memory:",
+        PSTDIO_STORAGE_PATH: storagePath,
+      });
 
-    expect(output).toContain("Created project");
-    expect(output).toContain("auto-test");
+      expect(output).toContain("Created project");
+      expect(output).toContain("auto-test");
 
-    expect(await isReachable(url)).toBe(true);
-  }, 30_000);
+      expect(await isReachable(url)).toBe(true);
+    },
+    TEST_TIMEOUT,
+  );
 
-  test("fails when auto-start is disabled", async () => {
-    const port = await getFreePort();
-    const url = `http://localhost:${port}`;
+  test(
+    "fails when auto-start is disabled",
+    async () => {
+      const port = await getFreePort();
+      const url = `http://localhost:${port}`;
 
-    const repo = createLocalGitRepo();
-    dirs.push(repo);
+      const repo = createLocalGitRepo();
+      dirs.push(repo);
 
-    const result = runPstdioSafe("projects create no-start", repo, {
-      PSTDIO_API_URL: url,
-      PSTDIO_API_PORT: String(port),
-      PSTDIO_DISABLE_API_AUTO_START: "1",
-    });
+      const result = runPstdioSafe("projects create no-start", repo, {
+        PSTDIO_API_URL: url,
+        PSTDIO_API_PORT: String(port),
+        PSTDIO_DISABLE_API_AUTO_START: "1",
+      });
 
-    expect(result.exitCode).not.toBe(0);
-    expect(result.stderr).toContain("Could not start");
-  }, 30_000);
+      expect(result.exitCode).not.toBe(0);
+      expect(result.stderr).toContain("Could not start");
+    },
+    TEST_TIMEOUT,
+  );
 });

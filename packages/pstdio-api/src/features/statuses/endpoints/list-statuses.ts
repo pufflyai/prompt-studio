@@ -9,9 +9,12 @@ export const listStatusesRoute = createRoute({
   description: "List ticket statuses for a project.",
   tags: ["Statuses"],
   request: {
-    params: z.object({
-      projectId: z.string().openapi({ description: "Project ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        projectId: z.string().openapi({ description: "Project ID" }),
+      })
+      .strict(),
   },
   responses: {
     200: {

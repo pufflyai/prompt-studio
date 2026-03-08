@@ -9,9 +9,12 @@ export const createTagRoute = createRoute({
   description: "Create a new tag for a project.",
   tags: ["Tags"],
   request: {
-    params: z.object({
-      projectId: z.string().openapi({ description: "Project ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        projectId: z.string().openapi({ description: "Project ID" }),
+      })
+      .strict(),
     body: {
       content: { "application/json": { schema: createTagBodySchema } },
     },

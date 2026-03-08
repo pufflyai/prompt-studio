@@ -6,7 +6,9 @@ export const tagResponseSchema = z.object({
   color: z.string(),
 });
 
-export const createTagBodySchema = z.object({
-  name: z.string(),
-  color: z.string(),
-});
+export const createTagBodySchema = z
+  .object({
+    name: z.string(),
+    color: z.string(),
+  })
+  .strict();

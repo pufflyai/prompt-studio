@@ -11,9 +11,12 @@ export const removeProjectRoute = createRoute({
   description: "Hard-delete a project by ID. Removes all associated data, files on disk, and worktrees.",
   tags: ["Projects"],
   request: {
-    params: z.object({
-      id: z.string().openapi({ description: "Project ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        id: z.string().openapi({ description: "Project ID" }),
+      })
+      .strict(),
   },
   responses: {
     204: {

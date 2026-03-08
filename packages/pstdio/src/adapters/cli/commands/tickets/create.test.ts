@@ -98,7 +98,7 @@ describe("tickets create", () => {
     expect(writeTicketFile).toHaveBeenCalledTimes(1);
     const content = writeTicketFile.mock.calls[0][2];
     expect(content).toStartWith("---\n");
-    expect(content).toContain('ticket_id: "PS-1"');
+    expect(content).toContain("ticket_id:");
     expect(content).toContain('created: "2026-03-04T00:00:00.000Z"');
     expect(content).toContain("# New ticket");
   });

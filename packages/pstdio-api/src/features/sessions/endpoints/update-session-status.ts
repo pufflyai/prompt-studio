@@ -8,15 +8,20 @@ export const updateSessionStatusRoute = createRoute({
   description: "Update session status.",
   tags: ["Sessions"],
   request: {
-    params: z.object({
-      id: z.string().openapi({ description: "Session ID" }),
-    }),
+    query: z.object({}).strict(),
+    params: z
+      .object({
+        id: z.string().openapi({ description: "Session ID" }),
+      })
+      .strict(),
     body: {
       content: {
         "application/json": {
-          schema: z.object({
-            status: z.enum(["in_progress", "awaiting_input", "completed", "failed", "cancelled"]),
-          }),
+          schema: z
+            .object({
+              status: z.enum(["in_progress", "awaiting_input", "completed", "failed", "cancelled"]),
+            })
+            .strict(),
         },
       },
     },

@@ -74,8 +74,16 @@ Each ticket lives in its own directory under `.pstdio/tickets/`:
     ticket.md
 ```
 
-- `ticket.md` is the canonical local ticket body.
+- `ticket.md` is the canonical local ticket body. Locally it includes YAML frontmatter; the stored version on the server never contains frontmatter.
 - `files/` contains additional local files associated with the ticket.
+
+### Frontmatter is Local-Only
+
+YAML frontmatter in `ticket.md` is a local convention only. The server stores the ticket body without frontmatter.
+
+- **On save**: strip frontmatter from `ticket.md` before uploading. Actionable fields (`status`, `priority`, `complexity`) are extracted and sent as ticket properties.
+- **On pull**: build frontmatter from the ticket's database fields and prepend it to the downloaded body content.
+- **On write/create**: write frontmatter to the local file. Upload the body content without frontmatter.
 
 ---
 
@@ -160,7 +168,7 @@ pstdio tickets create --content <content> [--project-id <project-id>] [--status 
 
 1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
 2. Create a ticket in the database with `draft=false`. Assign the status from `--status` if provided, otherwise assign the project's default status.
-3. Upload the ticket content as a file to the database and link it to the ticket.
+3. Upload the ticket content (without frontmatter) as a file to the database and link it to the ticket.
 4. If `--tag` values are provided, assign matching tags to the ticket.
 5. If running inside a linked project (`.pstdio/config.json` exists), write a local `ticket.md` with YAML frontmatter and the ticket title. See [Frontmatter Fields](#frontmatter-fields) for the frontmatter format. If not inside a linked project, no local file is written.
 
@@ -247,7 +255,7 @@ pstdio tickets save --id <ticket-shorthand> [--status <status>] [--tag <tag>...]
 1. Must be run inside a linked project.
 2. Find the local ticket directory matching `<ticket-shorthand>_*` and read `ticket.md` from it.
 3. Parse YAML frontmatter from `ticket.md` and extract actionable fields (`status`, `priority`, `complexity`).
-4. Update the ticket in the database with the local file content, applying frontmatter fields as ticket properties.
+4. Strip frontmatter from `ticket.md` and upload the body content (without frontmatter) as the ticket file. Apply extracted frontmatter fields as ticket properties.
 5. Set `draft=false` to publish the ticket.
 6. Resolve the ticket status: use `--status` flag if provided, otherwise use `status` from frontmatter. Look up the status by name and assign its ID.
 7. Set `priority` and `complexity` from frontmatter values when present.
@@ -313,10 +321,9 @@ pstdio tickets pull [--id <ticket-shorthand>] [--force]
 
 The following fields are always written:
 
-| Field       | Source               |
-| ----------- | -------------------- |
-| `ticket_id` | Ticket shorthand     |
-| `created`   | `created_at` from DB |
+| Field     | Source               |
+| --------- | -------------------- |
+| `created` | `created_at` from DB |
 
 The following fields are included only when non-null:
 
