@@ -8,6 +8,7 @@ describe("buildTicketFrontmatter", () => {
       created_at: "2026-03-04T00:00:00.000Z",
       status_name: "backlog",
       parent_id: "PS-5",
+      user_prompt: "Build the feature",
       priority: "P1",
       complexity: "medium",
       depends_on: "PS-3,PS-4",
@@ -19,6 +20,7 @@ describe("buildTicketFrontmatter", () => {
       [
         "---",
         'ticket_id: "PS-12"',
+        'user_prompt: "Build the feature"',
         'created: "2026-03-04T00:00:00.000Z"',
         'status: "backlog"',
         'parent_id: "PS-5"',
@@ -38,6 +40,7 @@ describe("buildTicketFrontmatter", () => {
       created_at: "2026-03-04T00:00:00.000Z",
       status_name: null,
       parent_id: null,
+      user_prompt: null,
       priority: null,
       complexity: null,
       depends_on: null,

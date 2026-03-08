@@ -37,8 +37,8 @@ export const handler = async (argv: Arguments<{ "agent-id": string; "global-skil
     return;
   }
 
-  const projectConfig = root ? readConfig(root) : null;
-  if (!projectConfig) {
+  const projectConfig = readConfig(root ?? process.cwd());
+  if (!projectConfig && !argv["global-skills"]) {
     console.log("No project configured — skipping skill installation.");
     return;
   }
@@ -47,7 +47,7 @@ export const handler = async (argv: Arguments<{ "agent-id": string; "global-skil
     root: root ?? process.cwd(),
     agentId,
     baseUrl: API_URL,
-    projectId: projectConfig.project_id,
+    projectId: projectConfig?.project_id,
     global: argv["global-skills"],
   });
 

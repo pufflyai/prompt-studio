@@ -3,6 +3,7 @@ type FrontmatterFields = {
   created_at: string;
   status_name: string | null;
   parent_id: string | null;
+  user_prompt: string | null;
   priority: string | null;
   complexity: string | null;
   depends_on: string | null;
@@ -14,6 +15,7 @@ export const buildTicketFrontmatter = (fields: FrontmatterFields) => {
   const lines: string[] = ["---"];
 
   lines.push(`ticket_id: "${fields.shorthand}"`);
+  if (fields.user_prompt) lines.push(`user_prompt: "${fields.user_prompt}"`);
   lines.push(`created: "${fields.created_at}"`);
 
   if (fields.status_name) lines.push(`status: "${fields.status_name}"`);

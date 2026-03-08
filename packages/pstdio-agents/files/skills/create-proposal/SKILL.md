@@ -12,7 +12,7 @@ $ARGUMENTS
 ## Workflow
 
 1. Derive a concise, verb-led `title` from the request (kebab-case: `add-`, `update-`, `remove-`, `refactor-`, `fix-`).
-2. Run `pstdio tickets write --title "<title>" --input "<user prompt verbatim>" --status "backlog" --template "proposal"` to create a proposal.
+2. Run `pstdio tickets write --title "<title>" --user-prompt "<user prompt verbatim>" --status "backlog" --template "proposal"` to create a proposal.
 3. Update the proposal with concrete, testable statements.
 4. Identify touch points throughout the project and track them in the proposal sections.
 5. Track missing information with [MISSING INFORMATION] tags in the ticket.

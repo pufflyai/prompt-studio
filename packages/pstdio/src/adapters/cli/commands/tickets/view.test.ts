@@ -82,6 +82,21 @@ describe("tickets view", () => {
     expect(complexityLine).toContain("-");
   });
 
+  test("passes --project-id override to resolveProjectId", async () => {
+    const resolveProjectId = mock(() => ({ projectId: "custom-proj", root: "/work/repo" }));
+    const handler = createHandler({
+      cwd: () => "/work/repo",
+      resolveProjectId,
+      resolveTicketByShorthand: async () => makeListItem(),
+      getTicket: async () => makeTicket(),
+      log: mock(),
+    });
+
+    await handler({ id: "PS-1", "project-id": "custom-proj", _: [], $0: "" } as never);
+
+    expect(resolveProjectId).toHaveBeenCalledWith("/work/repo", "custom-proj");
+  });
+
   test("throws when ticket not found", async () => {
     const handler = createHandler({
       cwd: () => "/work/repo",

@@ -15,7 +15,7 @@ $ARGUMENTS
    - If the user explicitly asked to create a ticket, set status to `backlog`.
    - Otherwise set status to `wip`.
 2. Derive a concise, verb-led ticket title from the user request and immediately run the pstdio CLI to create the ticket.
-   - Run `pstdio tickets write --title "<ticket title>" --input "<user prompt verbatim>" --status "<status>"`.
+   - Run `pstdio tickets write --title "<ticket title>" --user-prompt "<user prompt verbatim>" --status "<status>"`.
 3. Fill the ticket template with concrete details:
    - Priority (P1/P2/P3)
    - Parallelizable (yes/no)

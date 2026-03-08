@@ -21,21 +21,25 @@ const makeConfig = () => {
   writeFileSync(join(tmpBase, ".pstdio", "config.json"), '{"project_id":"proj-1"}');
 };
 
-const baseDeps = {
-  cwd: () => tmpBase,
-  resolveProjectId: () => ({ projectId: "proj-1", root: tmpBase }),
-  getTemplate: async () => null as never,
-  createTicket: async (_url: string, input: { project_id: string; content?: string }) => ({
+const fakeTicket =
+  (overrides: Partial<{ shorthand: string; status_id: string | null; display_title: string }> = {}) =>
+  async () => ({
     id: "t-1",
-    shorthand: "PS-1",
-    project_id: input.project_id,
-    status_id: null as string | null,
-    display_title: input.content ?? null,
+    shorthand: overrides.shorthand ?? "PS-1",
+    project_id: "proj-1",
+    status_id: overrides.status_id ?? (null as string | null),
+    display_title: overrides.display_title ?? "Ticket",
     file_id: null as string | null,
     draft: true,
     created_at: "2026-03-04T00:00:00.000Z",
     updated_at: "2026-03-04T00:00:00.000Z",
-  }),
+  });
+
+const baseDeps = {
+  cwd: () => tmpBase,
+  resolveProjectId: () => ({ projectId: "proj-1", root: tmpBase }),
+  getTemplate: async () => null as never,
+  createTicket: fakeTicket(),
   resolveStatusId: async (_url: string, _pid: string, name: string) => {
     const statuses: Record<string, string> = { backlog: "s-backlog", wip: "s-wip" };
     const id = statuses[name];
@@ -65,17 +69,7 @@ describe("tickets write", () => {
     makeConfig();
     const handler = createHandler({
       ...baseDeps,
-      createTicket: async () => ({
-        id: "t-4",
-        shorthand: "PS-4",
-        project_id: "proj-1",
-        status_id: "s-wip",
-        display_title: "With meta",
-        file_id: null,
-        draft: true,
-        created_at: "2026-03-04T00:00:00.000Z",
-        updated_at: "2026-03-04T00:00:00.000Z",
-      }),
+      createTicket: fakeTicket({ shorthand: "PS-4", status_id: "s-wip" }),
       log: mock(),
     });
 
@@ -88,18 +82,7 @@ describe("tickets write", () => {
 
   test("passes status_id when --status is provided", async () => {
     makeConfig();
-    const createTicket = mock(async () => ({
-      id: "t-2",
-      shorthand: "PS-2",
-      project_id: "proj-1",
-      status_id: "s-wip",
-      display_title: "With status",
-      file_id: null as string | null,
-      draft: true,
-      created_at: "2026-03-04T00:00:00.000Z",
-      updated_at: "2026-03-04T00:00:00.000Z",
-    }));
-
+    const createTicket = mock(fakeTicket({ shorthand: "PS-2", status_id: "s-wip" }));
     const handler = createHandler({ ...baseDeps, createTicket, log: mock() });
 
     await handler({ title: "With status", status: "wip", _: [], $0: "" } as never);
@@ -109,18 +92,7 @@ describe("tickets write", () => {
 
   test("does not pass status_id when --status is omitted", async () => {
     makeConfig();
-    const createTicket = mock(async () => ({
-      id: "t-3",
-      shorthand: "PS-3",
-      project_id: "proj-1",
-      status_id: null,
-      display_title: "No status",
-      file_id: null as string | null,
-      draft: true,
-      created_at: "2026-03-04T00:00:00.000Z",
-      updated_at: "2026-03-04T00:00:00.000Z",
-    }));
-
+    const createTicket = mock(fakeTicket({ shorthand: "PS-3" }));
     const handler = createHandler({ ...baseDeps, createTicket, log: mock() });
 
     await handler({ title: "No status", _: [], $0: "" } as never);
@@ -131,7 +103,6 @@ describe("tickets write", () => {
   test("throws when status not found", async () => {
     makeConfig();
     const handler = createHandler({ ...baseDeps, log: mock() });
-
     await expect(handler({ title: "Fail", status: "nonexistent", _: [], $0: "" } as never)).rejects.toThrow(
       "Status not found: nonexistent",
     );
@@ -149,17 +120,7 @@ describe("tickets write", () => {
         is_default: true,
         content: "# {{TICKET_TITLE}}\n\nTicket: {{TICKET_ID}}\nInput: {{INPUT}}",
       }),
-      createTicket: async () => ({
-        id: "t-2",
-        shorthand: "PS-2",
-        project_id: "proj-1",
-        status_id: null,
-        display_title: "Templated",
-        file_id: null,
-        draft: true,
-        created_at: "2026-03-04T00:00:00.000Z",
-        updated_at: "2026-03-04T00:00:00.000Z",
-      }),
+      createTicket: fakeTicket({ shorthand: "PS-2" }),
       log,
     });
 
@@ -177,24 +138,75 @@ describe("tickets write", () => {
     expect(content).toContain("Input: Some description");
   });
 
-  test("throws when template not found", async () => {
+  test("preserves template frontmatter including user_prompt", async () => {
     makeConfig();
+    const templateContent = [
+      "---",
+      'ticket_id: "{{TICKET_ID}}"',
+      'user_prompt: "{{USER_PROMPT}}"',
+      'created: "{{CREATED_AT}}"',
+      'status: "{{STATUS}}"',
+      'priority: "[P1|P2|P3]"',
+      "---",
+      "",
+      "# {{TICKET_TITLE}}",
+    ].join("\n");
     const handler = createHandler({
       ...baseDeps,
-      createTicket: async () => ({
-        id: "t-3",
-        shorthand: "PS-3",
-        project_id: "proj-1",
-        status_id: null,
-        display_title: "Fail",
-        file_id: null,
-        draft: true,
-        created_at: "2026-03-04T00:00:00.000Z",
-        updated_at: "2026-03-04T00:00:00.000Z",
+      getTemplate: async () => ({
+        id: "tpl-1",
+        name: "ticket",
+        template_type: "ticket",
+        is_default: true,
+        content: templateContent,
       }),
-      log: () => {},
+      createTicket: fakeTicket({ shorthand: "PS-5" }),
+      log: mock(),
     });
 
+    await handler({
+      title: "With template FM",
+      template: "ticket",
+      "user-prompt": "Build the thing",
+      status: "wip",
+      _: [],
+      $0: "",
+    } as never);
+
+    const content = readTicketFile(tmpBase, "PS-5");
+    expect(content).toContain('user_prompt: "Build the thing"');
+    expect(content).toContain('status: "wip"');
+    expect(content).toContain('priority: "[P1|P2|P3]"');
+    expect(content).toContain("# With template FM");
+  });
+
+  test("includes user_prompt in frontmatter for non-template tickets", async () => {
+    makeConfig();
+    const handler = createHandler({ ...baseDeps, createTicket: fakeTicket({ shorthand: "PS-6" }), log: mock() });
+
+    await handler({ title: "With prompt", "user-prompt": "Fix the login flow", _: [], $0: "" } as never);
+
+    const content = readTicketFile(tmpBase, "PS-6");
+    expect(content).toContain('user_prompt: "Fix the login flow"');
+    expect(content).toContain("# With prompt");
+  });
+
+  test("sends markdown heading as API content", async () => {
+    makeConfig();
+    const createTicket = mock(fakeTicket({ shorthand: "PS-7" }));
+    const handler = createHandler({ ...baseDeps, createTicket, log: mock() });
+
+    await handler({ title: "API content", _: [], $0: "" } as never);
+
+    expect(createTicket).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ content: "# API content\n" }),
+    );
+  });
+
+  test("throws when template not found", async () => {
+    makeConfig();
+    const handler = createHandler({ ...baseDeps, createTicket: fakeTicket({ shorthand: "PS-3" }), log: () => {} });
     await expect(handler({ title: "Fail", template: "nonexistent", _: [], $0: "" } as never)).rejects.toThrow(
       "Template not found: nonexistent",
     );
@@ -204,12 +216,11 @@ describe("tickets write", () => {
     makeConfig();
     const handler = createHandler({
       ...baseDeps,
-      resolveTagIds: async (_url, _pid, names) => {
+      resolveTagIds: async (_url: string, _pid: string, names: string[]) => {
         throw new Error(`Tag not found: ${names[0]}`);
       },
       log: () => {},
     });
-
     await expect(handler({ title: "Tagged", tag: ["nonexistent"], _: [], $0: "" } as never)).rejects.toThrow(
       "Tag not found: nonexistent",
     );

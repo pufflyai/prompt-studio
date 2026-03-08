@@ -71,7 +71,7 @@ export const createHandler =
 
     const ticket = await deps.createTicket(API_URL, {
       project_id: projectId,
-      content: argv.title,
+      content: `# ${argv.title}\n`,
       user_prompt: argv["user-prompt"],
       parent_id: argv["parent-id"],
       draft: true,
@@ -79,25 +79,27 @@ export const createHandler =
       status_id: statusId,
     });
 
-    let body = `# ${argv.title}\n`;
+    let content: string;
     if (argv.template) {
       const template = await deps.getTemplate(API_URL, projectId, argv.template);
       if (!template) throw new Error(`Template not found: ${argv.template}`);
-      body = renderTemplate(template.content, ticket.shorthand, argv, ticket.created_at);
+      content = renderTemplate(template.content, ticket.shorthand, argv, ticket.created_at);
+    } else {
+      const body = `# ${argv.title}\n`;
+      const frontmatter = buildTicketFrontmatter({
+        shorthand: ticket.shorthand,
+        created_at: ticket.created_at,
+        status_name: argv.status ?? null,
+        parent_id: argv["parent-id"] ?? null,
+        user_prompt: argv["user-prompt"] ?? null,
+        priority: null,
+        complexity: null,
+        depends_on: null,
+        parallelizable: null,
+        blocked_reason: null,
+      });
+      content = applyFrontmatter(frontmatter, body);
     }
-
-    const frontmatter = buildTicketFrontmatter({
-      shorthand: ticket.shorthand,
-      created_at: ticket.created_at,
-      status_name: argv.status ?? null,
-      parent_id: argv["parent-id"] ?? null,
-      priority: null,
-      complexity: null,
-      depends_on: null,
-      parallelizable: null,
-      blocked_reason: null,
-    });
-    const content = applyFrontmatter(frontmatter, body);
 
     const filePath = writeTicketFile(root, ticket.shorthand, content);
     const relativePath = filePath.replace(`${root}/`, "");

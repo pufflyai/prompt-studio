@@ -10,7 +10,7 @@ type InstallSkillsOptions = {
   root: string;
   agentId: string;
   baseUrl: string;
-  projectId: string;
+  projectId?: string;
   global?: boolean;
   homedir?: string;
 };
@@ -19,6 +19,7 @@ export const installSkillsForAgent = async (options: InstallSkillsOptions) => {
   const { root, agentId, baseUrl, projectId, global: isGlobal = false, homedir = defaultHomedir() } = options;
   const agent = findAgent(agentId);
   if (!agent) return [];
+  if (!projectId) return [];
 
   const targetDir = isGlobal ? join(homedir, agent.globalSkillsDir) : join(root, agent.skillsDir);
 

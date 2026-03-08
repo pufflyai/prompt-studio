@@ -62,6 +62,7 @@ const pullSingleTicket = async ({ deps, root, ticketId, shorthand, statusName, f
     created_at: ticket.created_at,
     status_name: statusName,
     parent_id: ticket.parent_id,
+    user_prompt: ticket.user_prompt ?? null,
     priority: ticket.priority,
     complexity: ticket.complexity,
     depends_on: ticket.depends_on,

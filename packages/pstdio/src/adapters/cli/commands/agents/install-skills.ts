@@ -33,8 +33,8 @@ export const handler = async (argv: Arguments<{ "agent-id": string; "global-skil
     throw new Error("Not inside a git repository. Use --global-skills or run from a git repo.");
   }
 
-  const projectConfig = root ? readConfig(root) : null;
-  if (!projectConfig) {
+  const projectConfig = readConfig(root ?? process.cwd());
+  if (!projectConfig && !argv["global-skills"]) {
     throw new Error("No project configured. Run `pstdio projects init` first.");
   }
 
@@ -42,7 +42,7 @@ export const handler = async (argv: Arguments<{ "agent-id": string; "global-skil
     root: root ?? process.cwd(),
     agentId,
     baseUrl: API_URL,
-    projectId: projectConfig.project_id,
+    projectId: projectConfig?.project_id,
     global: argv["global-skills"],
   });
 

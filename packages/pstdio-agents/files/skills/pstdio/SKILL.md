@@ -165,7 +165,7 @@ pstdio agents install-skills <agent-id> [--global-skills]  # Reinstall missing s
 ### Tickets
 
 ```bash
-pstdio tickets write --title "<title>" [--input "<desc>"] [--template <name>] [--status <s>] [--tag <t>] [--parent-id <id>]
+pstdio tickets write --title "<title>" [--user-prompt "<desc>"] [--template <name>] [--status <s>] [--tag <t>] [--parent-id <id>]
 pstdio tickets create --content "<title>" [--status <s>] [--tag <t>]
 pstdio tickets list [--status <s>] [--tag <t>] [--priority <p>] [--complexity <c>] [--parent-id <id>] [--archived] [--draft]
 pstdio tickets pull [--id <id>] [--force]            # Pull one or all non-archived tickets

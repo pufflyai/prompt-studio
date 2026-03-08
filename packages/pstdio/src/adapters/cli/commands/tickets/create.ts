@@ -84,6 +84,7 @@ export const createHandler =
         created_at: ticket.created_at,
         status_name: argv.status ?? null,
         parent_id: null,
+        user_prompt: null,
         priority: null,
         complexity: null,
         depends_on: null,
