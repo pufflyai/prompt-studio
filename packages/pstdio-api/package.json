@@ -3,7 +3,8 @@
   "private": true,
   "exports": {
     ".": "./src/index.ts",
-    "./app": "./src/app.ts"
+    "./app": "./src/app.ts",
+    "./dto": "./src/dto.ts"
   },
   "scripts": {
     "start": "bun run src/index.ts",

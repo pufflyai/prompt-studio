@@ -1,6 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { eq } from "drizzle-orm";
-import { ticket_tags } from "pstdio-db";
+import { eq, ticket_tags } from "pstdio-db";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 

@@ -1,0 +1,35 @@
+---
+name: refine-ticket
+description: "Refine an existing ticket into the a ticket template. Use when asked to refine, improve, expand, or structure an existing ticket."
+---
+
+## User Input
+
+```text
+$ARGUMENTS
+```
+
+## Workflow
+
+1. Identify the target ticket shorthand from the user request (e.g. `PS-12`).
+   - If the request includes a template name (e.g. `refine ticket: PS-12 with template proposal`), extract the template slug. Default template is `ticket`.
+2. Pull the ticket locally if not already present:
+   - Run `pstdio tickets pull --id "<ticket-shorthand>"`.
+3. Read the current `ticket.md` content and save a backup as `ticket.original.md` in the ticket folder.
+4. Scaffold the template into the ticket:
+   - Run `pstdio templates write --name "<template>" --target "<ticket-shorthand>"` to overwrite `ticket.md` with the template structure.
+   - The `--name` value is a lowercase slug matching the template name (e.g. `ticket`, `proposal`).
+5. Refine `ticket.md` by incorporating information from `ticket.original.md` into the template sections.
+6. Add missing detail using repo/docs research so the ticket is implementation-ready:
+   - Priority, complexity, parallelizable
+   - Goal, references, scope, implementation notes
+   - Steps aligned to Red/Green/Refactor
+   - Acceptance criteria with explicit pass/fail conditions
+   - Evidence expectations and exact validation commands
+7. Save to DB with `pstdio tickets save --id "<ticket-shorthand>"`.
+8. Stop after refinement and save. Do not implement code changes unless explicitly asked.
+
+## Output Locations
+
+- Ticket: `.pstdio/tickets/<ticket-id>_<slug>/ticket.md`
+- Original backup: `.pstdio/tickets/<ticket-id>_<slug>/ticket.original.md`

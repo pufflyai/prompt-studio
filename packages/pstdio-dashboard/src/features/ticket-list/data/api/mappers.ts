@@ -1,3 +1,4 @@
+import type { StatusResponse, TagResponse } from "pstdio-api/dto";
 import type {
   Ticket,
   TicketAttempt,
@@ -6,7 +7,7 @@ import type {
   TicketStatusOption,
   TicketTag,
 } from "@/features/ticket-list/types";
-import type { ApiTicket, ApiTicketAttempt, ApiTicketStatus, ApiTicketTag } from "./types";
+import type { ApiTicket, ApiTicketAttempt } from "./types";
 
 const DEFAULT_STATUS_COLOR: TicketStatusColor = "gray";
 const DEFAULT_STATUS_NAME = "Unassigned";
@@ -21,7 +22,7 @@ const isClosedLike = (name: string) => {
   return normalized === "done" || normalized === "closed" || normalized === "archived";
 };
 
-export const toTicketStatusOption = (status: ApiTicketStatus): TicketStatusOption => {
+export const toTicketStatusOption = (status: StatusResponse): TicketStatusOption => {
   const columnActions: TicketColumnAction[] = isClosedLike(status.name) ? ["archive_all"] : [];
 
   return {
@@ -38,7 +39,7 @@ export const toTicketStatusOption = (status: ApiTicketStatus): TicketStatusOptio
   };
 };
 
-export const buildTicketStatusCatalog = (statuses: ApiTicketStatus[]) => {
+export const buildTicketStatusCatalog = (statuses: StatusResponse[]) => {
   const sorted = [...statuses].sort((a, b) => a.sort_order - b.sort_order);
   const options = sorted.map(toTicketStatusOption);
   const defaultStatus = options.find((status) => status.isDefault) ?? options[0];
@@ -75,8 +76,8 @@ export const toTicket = (
 ): Ticket => ({
   id: ticket.id,
   shorthand: ticket.shorthand,
-  title: ticket.title ?? "",
-  content: ticket.input ?? "",
+  title: ticket.display_title ?? "",
+  content: ticket.user_prompt ?? "",
   tagIds: Array.isArray(ticket.tag_ids) ? ticket.tag_ids : [],
   status: ticket.status_name ?? statusById.get(ticket.status_id ?? "") ?? fallbackStatusName,
   statusColor: colorById.get(ticket.status_id ?? "") ?? fallbackColor,
@@ -98,10 +99,8 @@ export const toTicket = (
     : [],
 });
 
-export const toTicketTag = (tag: ApiTicketTag): TicketTag => ({
+export const toTicketTag = (tag: TagResponse): TicketTag => ({
   id: tag.id,
   name: tag.name,
   color: (tag.color || DEFAULT_STATUS_COLOR) as TicketStatusColor,
-  createdAt: tag.created_at,
-  updatedAt: tag.updated_at,
 });

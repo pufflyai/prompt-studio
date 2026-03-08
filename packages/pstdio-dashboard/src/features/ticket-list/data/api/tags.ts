@@ -1,14 +1,15 @@
+import type { TagResponse } from "pstdio-api/dto";
 import { apiRequest } from "@/lib/api";
 import { toTicketTag } from "./mappers";
-import type { ApiTicketTag, CreateProjectTicketTagInput } from "./types";
+import type { CreateProjectTicketTagInput } from "./types";
 
 export const getProjectTicketTags = async (projectId: string) => {
-  const tags = await apiRequest<ApiTicketTag[]>(`/v1/projects/${projectId}/ticket-tags`);
+  const tags = await apiRequest<TagResponse[]>(`/v1/projects/${projectId}/ticket-tags`);
   return tags.map(toTicketTag);
 };
 
 export const createProjectTicketTag = async (projectId: string, input: CreateProjectTicketTagInput) => {
-  const created = await apiRequest<ApiTicketTag>(`/v1/projects/${projectId}/ticket-tags`, {
+  const created = await apiRequest<TagResponse>(`/v1/projects/${projectId}/ticket-tags`, {
     method: "POST",
     body: { name: input.name, color: input.color },
   });
@@ -21,7 +22,7 @@ export const updateProjectTicketTagDefinition = async (
   tagId: string,
   input: CreateProjectTicketTagInput,
 ) => {
-  const updated = await apiRequest<ApiTicketTag>(`/v1/projects/${projectId}/ticket-tags/${tagId}`, {
+  const updated = await apiRequest<TagResponse>(`/v1/projects/${projectId}/ticket-tags/${tagId}`, {
     method: "PUT",
     body: { name: input.name, color: input.color },
   });

@@ -1,8 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
+import { getBundledSkills } from "pstdio-agents";
 import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
 
@@ -30,10 +31,13 @@ describe("POST /v1/projects/:id/repos", () => {
     });
     const project = await createRes.json();
 
+    const repoPath = join(tempRoot, "my-repo");
+    mkdirSync(repoPath, { recursive: true });
+
     const res = await app.request(`/v1/projects/${project.id}/repos`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "my-repo", path: "/home/user/my-repo" }),
+      body: JSON.stringify({ name: "my-repo", path: repoPath }),
     });
 
     expect(res.status).toBe(201);
@@ -41,7 +45,7 @@ describe("POST /v1/projects/:id/repos", () => {
     const body = await res.json();
     expect(body.id).toBeDefined();
     expect(body.name).toBe("my-repo");
-    expect(body.path).toBe("/home/user/my-repo");
+    expect(body.path).toBe(repoPath);
   });
 
   test("returns 404 for non-existent project", async () => {
@@ -54,6 +58,65 @@ describe("POST /v1/projects/:id/repos", () => {
     expect(res.status).toBe(404);
   });
 
+  test("installs bundled skills to repo for configured agents", async () => {
+    const createRes = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Skill Install Project" }),
+    });
+    const project = await createRes.json();
+
+    await app.request("/v1/agents", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ agent_id: "claude-code" }),
+    });
+
+    const repoPath = join(tempRoot, "skill-repo");
+    mkdirSync(repoPath, { recursive: true });
+
+    const res = await app.request(`/v1/projects/${project.id}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "skill-repo", path: repoPath }),
+    });
+
+    expect(res.status).toBe(201);
+
+    const bundled = getBundledSkills();
+    for (const skill of bundled) {
+      const skillPath = join(repoPath, ".claude", "skills", skill.name, "SKILL.md");
+      expect(existsSync(skillPath)).toBe(true);
+      expect(readFileSync(skillPath, "utf8")).toBe(skill.content);
+    }
+  });
+
+  test("writes .pstdio/config.json with project_id", async () => {
+    const createRes = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Config Project" }),
+    });
+    const project = await createRes.json();
+
+    const repoPath = join(tempRoot, "config-repo");
+    mkdirSync(repoPath, { recursive: true });
+
+    const res = await app.request(`/v1/projects/${project.id}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "config-repo", path: repoPath }),
+    });
+
+    expect(res.status).toBe(201);
+
+    const configPath = join(repoPath, ".pstdio", "config.json");
+    expect(existsSync(configPath)).toBe(true);
+
+    const config = JSON.parse(readFileSync(configPath, "utf8"));
+    expect(config.project_id).toBe(project.id);
+  });
+
   test("is idempotent for same repo path", async () => {
     const createRes = await app.request("/v1/projects", {
       method: "POST",
@@ -62,17 +125,20 @@ describe("POST /v1/projects/:id/repos", () => {
     });
     const project = await createRes.json();
 
+    const repoPath = join(tempRoot, "same-repo");
+    mkdirSync(repoPath, { recursive: true });
+
     const first = await app.request(`/v1/projects/${project.id}/repos`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "my-repo", path: "/home/user/same-repo" }),
+      body: JSON.stringify({ name: "my-repo", path: repoPath }),
     });
     const firstBody = await first.json();
 
     const second = await app.request(`/v1/projects/${project.id}/repos`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "my-repo", path: "/home/user/same-repo" }),
+      body: JSON.stringify({ name: "my-repo", path: repoPath }),
     });
     const secondBody = await second.json();
 

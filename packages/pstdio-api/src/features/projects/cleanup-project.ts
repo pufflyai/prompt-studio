@@ -1,7 +1,5 @@
 import fs from "node:fs";
-import { eq } from "drizzle-orm";
-import type { DbClient } from "pstdio-db";
-import { workspaces } from "pstdio-db";
+import { type DbClient, eq, workspaces } from "pstdio-db";
 
 export const cleanupProjectArtifacts = async (
   db: DbClient,

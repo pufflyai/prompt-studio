@@ -17,7 +17,7 @@ export const builder = (yargs: Argv) =>
     .option("type", {
       type: "string",
       demandOption: true,
-      describe: "Template type: ticket or docs",
+      describe: "Template type: prompt, ticket, or document",
     })
     .option("file", {
       type: "string",
@@ -62,9 +62,9 @@ const defaultDeps: Deps = {
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<CreateArgs>) => {
-    const validTypes = ["ticket", "docs"];
+    const validTypes = ["prompt", "ticket", "document"];
     if (!validTypes.includes(argv.type)) {
-      throw new Error(`Invalid type: ${argv.type}. Must be 'ticket' or 'docs'.`);
+      throw new Error(`Invalid type: ${argv.type}. Must be 'prompt', 'ticket', or 'document'.`);
     }
 
     const root = deps.findGitRoot(deps.cwd());

@@ -1,8 +1,8 @@
 import { createRoute } from "@hono/zod-openapi";
-import { eq } from "drizzle-orm";
-import { ticket_statuses, ticket_tags } from "pstdio-db";
+import { eq, ticket_statuses, ticket_tags } from "pstdio-db";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
+import { seedDefaultSkills } from "../../skills/seed-default-skills";
 import { createProjectBodySchema, projectResponseSchema } from "../dto";
 
 export const createProjectRoute = createRoute({
@@ -35,6 +35,8 @@ export const createProjectHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
 
     const tags = await deps.db.select().from(ticket_tags).where(eq(ticket_tags.project_id, project.id));
     for (const tag of tags) deps.eventBus.emit("ticket_tags", "set", tag);
+
+    await seedDefaultSkills(deps, project.id);
 
     return c.json(project, 201);
   };

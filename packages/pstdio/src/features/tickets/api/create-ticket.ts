@@ -30,7 +30,11 @@ export const createTicket = async (baseUrl: string, input: CreateTicketInput) =>
     body: JSON.stringify(input),
   });
 
-  if (!res.ok) throw new Error(`Failed to create ticket: ${res.status}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    const message = body?.error ?? `HTTP ${res.status}`;
+    throw new Error(`Failed to create ticket: ${message}`);
+  }
 
   return (await res.json()) as Ticket;
 };

@@ -1,9 +1,7 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { and, eq } from "drizzle-orm";
-import type { DbClient } from "pstdio-db";
-import { files, ticket_files } from "pstdio-db";
+import { and, type DbClient, eq, files, ticket_files } from "pstdio-db";
 import { ensureProjectStorageRoot, resolveFileStoragePath } from "../storage/paths";
 
 const nowTimestamp = () => new Date().toISOString();

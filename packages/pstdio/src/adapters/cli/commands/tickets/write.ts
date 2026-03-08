@@ -7,6 +7,7 @@ import { createTicket as defaultCreateTicket } from "@/features/tickets/api/crea
 import { writeTicketFile } from "@/features/tickets/local-ticket";
 import { resolveStatusId as defaultResolveStatusId } from "@/features/tickets/resolve-status-id";
 import { resolveTagIds as defaultResolveTagIds } from "@/features/tickets/resolve-tag-ids";
+import { applyFrontmatter, buildTicketFrontmatter } from "@/features/tickets/ticket-frontmatter";
 
 export const command = "write";
 export const describe = "Create a draft ticket with a local file";
@@ -78,12 +79,25 @@ export const createHandler =
       status_id: statusId,
     });
 
-    let content = `# ${argv.title}\n`;
+    let body = `# ${argv.title}\n`;
     if (argv.template) {
       const template = await deps.getTemplate(API_URL, projectId, argv.template);
       if (!template) throw new Error(`Template not found: ${argv.template}`);
-      content = renderTemplate(template.content, ticket.shorthand, argv, ticket.created_at);
+      body = renderTemplate(template.content, ticket.shorthand, argv, ticket.created_at);
     }
+
+    const frontmatter = buildTicketFrontmatter({
+      shorthand: ticket.shorthand,
+      created_at: ticket.created_at,
+      status_name: argv.status ?? null,
+      parent_id: argv["parent-id"] ?? null,
+      priority: null,
+      complexity: null,
+      depends_on: null,
+      parallelizable: null,
+      blocked_reason: null,
+    });
+    const content = applyFrontmatter(frontmatter, body);
 
     const filePath = writeTicketFile(root, ticket.shorthand, content);
     const relativePath = filePath.replace(`${root}/`, "");

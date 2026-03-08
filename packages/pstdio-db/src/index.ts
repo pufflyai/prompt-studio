@@ -1,6 +1,6 @@
+export { and, eq, sql } from "drizzle-orm";
 export type { DbClient } from "./db/connection.pglite";
 export { createDb } from "./db/connection.pglite";
-
 export { resolveDbPath } from "./db/paths";
 
 export * from "./db/schemas.pg";
@@ -12,6 +12,7 @@ export { isValidColor, VALID_COLORS } from "./services/colors";
 export { createProjectsService } from "./services/projects/projects";
 export { createReposService } from "./services/repos/repos";
 export { createSessionsService } from "./services/sessions/sessions";
+export { createSkillsDbService } from "./services/skills/skills";
 export { createStatusesService } from "./services/statuses/statuses";
 export { createTagsService } from "./services/tags/tags";
 export { createTemplatesService } from "./services/templates/templates";

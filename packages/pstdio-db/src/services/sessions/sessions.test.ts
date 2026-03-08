@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { sql } from "drizzle-orm";
 import { createDb, type DbClient } from "../../db/connection.pglite";
 import { createProjectsService } from "../projects/projects";
 import { createSessionsService } from "./sessions";
@@ -126,5 +127,13 @@ describe("sessions service", () => {
 
     expect(updated).not.toBeNull();
     expect(updated!.agent_session_id).toBe("ext-123");
+  });
+
+  test("rejects invalid status values at DB layer", async () => {
+    const session = await sessionsService.create({ project_id: projectId, title: "S1", agent: "claude-code" });
+
+    await expect(
+      db.execute(sql`update sessions set status = ${"paused"} where id = ${session.id}`).execute(),
+    ).rejects.toThrow();
   });
 });

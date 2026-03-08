@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { basename, join } from "node:path";
 import { expect, test } from "@playwright/test";
 
@@ -26,6 +26,13 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
   for (const p of projects) {
     await request.delete(`${apiBase}/v1/projects/${p.id}`);
   }
+};
+
+const configureAgent = async (request: import("@playwright/test").APIRequestContext, agentId: string) => {
+  const res = await request.post(`${apiBase}/v1/agents`, {
+    data: { agent_id: agentId },
+  });
+  expect(res.ok()).toBe(true);
 };
 
 interface DirectorySnapshot {
@@ -224,6 +231,34 @@ test.describe("Project creation", () => {
 
       const main = page.locator("#root > *").first();
       await expect(main.getByText("CTA Project", { exact: true })).toBeVisible();
+    } finally {
+      rmSync(repoPath, { recursive: true, force: true });
+    }
+  });
+
+  test("installs skills in the repo when creating a project with a configured agent", async ({ page, request }) => {
+    const defaultDirectory = await resolveFolderPickerDefaultDirectory(request);
+    const repoPath = createTempGitRepo(defaultDirectory);
+
+    try {
+      // configure an agent via the API before creating the project
+      await configureAgent(request, "opencode");
+
+      await bypassOnboarding(page);
+      await page.goto("/projects");
+
+      await page.getByRole("button", { name: "Create project" }).first().click();
+      await page.getByPlaceholder("Project name").fill("Skills Project");
+      await selectRepoFromFolderPicker(page, repoPath);
+      await page.getByRole("button", { name: "Create project", exact: true }).last().click();
+
+      const main = page.locator("#root > *").first();
+      await expect(main.getByText("Skills Project", { exact: true })).toBeVisible();
+
+      // verify skills were installed in the repo
+      expect(existsSync(join(repoPath, ".opencode", "skills", "create-ticket", "SKILL.md"))).toBe(true);
+      expect(existsSync(join(repoPath, ".opencode", "skills", "implement-ticket", "SKILL.md"))).toBe(true);
+      expect(existsSync(join(repoPath, ".opencode", "skills", "create-proposal", "SKILL.md"))).toBe(true);
     } finally {
       rmSync(repoPath, { recursive: true, force: true });
     }

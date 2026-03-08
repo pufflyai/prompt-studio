@@ -31,6 +31,18 @@ afterAll(() => {
 });
 
 describe("POST /v1/tickets", () => {
+  test("returns 404 when project does not exist", async () => {
+    const res = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: "non-existent", display_title: "Orphan ticket" }),
+    });
+
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toContain("Project not found");
+  });
+
   test("creates a ticket", async () => {
     const res = await app.request("/v1/tickets", {
       method: "POST",
@@ -83,6 +95,66 @@ describe("POST /v1/tickets", () => {
     expect(res.status).toBe(201);
     const ticket = await res.json();
     expect(ticket.user_prompt).toBeNull();
+  });
+});
+
+describe("POST /v1/tickets with content", () => {
+  test("derives display_title from content heading", async () => {
+    const res = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId, content: "# My dashboard ticket\n\nSome details here." }),
+    });
+
+    expect(res.status).toBe(201);
+    const ticket = await res.json();
+    expect(ticket.display_title).toBe("My dashboard ticket");
+  });
+
+  test("derives display_title from first non-empty line when no heading", async () => {
+    const res = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId, content: "Fix the login bug" }),
+    });
+
+    expect(res.status).toBe(201);
+    const ticket = await res.json();
+    expect(ticket.display_title).toBe("Fix the login bug");
+  });
+
+  test("creates a ticket file from content and links it", async () => {
+    const content = "# File creation test\n\nBody content.";
+    const res = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId, content }),
+    });
+
+    expect(res.status).toBe(201);
+    const ticket = await res.json();
+    expect(ticket.file_id).not.toBeNull();
+
+    const fileRes = await app.request(`/v1/tickets/${ticket.id}/files/${ticket.file_id}/content`);
+    expect(fileRes.status).toBe(200);
+    expect(await fileRes.text()).toBe(content);
+  });
+
+  test("explicit display_title takes precedence over content", async () => {
+    const res = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        project_id: projectId,
+        content: "# Heading from content",
+        display_title: "Explicit title",
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const ticket = await res.json();
+    expect(ticket.display_title).toBe("Explicit title");
+    expect(ticket.file_id).not.toBeNull();
   });
 });
 

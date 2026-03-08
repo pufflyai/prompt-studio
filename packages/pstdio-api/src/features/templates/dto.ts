@@ -17,7 +17,7 @@ export const templateWithContentResponseSchema = templateResponseSchema.extend({
 
 export const createTemplateBodySchema = z.object({
   name: z.string().min(1),
-  template_type: z.enum(["ticket", "docs"]),
+  template_type: z.enum(["prompt", "ticket", "document"]),
   content: z.string().min(1),
   is_default: z.boolean().optional(),
 });

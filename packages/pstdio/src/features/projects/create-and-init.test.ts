@@ -6,7 +6,7 @@ import { createAndInitProject } from "./create-and-init";
 
 const tmpBase = join(import.meta.dirname, "__test-tmp__");
 
-const templateResponse = { status: 201, body: { id: "tpl", name: "t", template_type: "docs", is_default: false } };
+const templateResponse = { status: 201, body: { id: "tpl", name: "t", template_type: "document", is_default: false } };
 const seedTemplateResponses = Array.from({ length: 6 }, () => templateResponse);
 
 const setup = (name: string) => {

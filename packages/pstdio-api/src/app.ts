@@ -7,6 +7,7 @@ import {
   createProjectsService,
   createReposService,
   createSessionsService,
+  createSkillsDbService,
   createStatusesService,
   createTagsService,
   createTemplatesService,
@@ -62,6 +63,7 @@ export const createApp = async (options?: AppOptions) => {
   const agentRegistry = createAgentRegistry([createClaudeCodeAgent(), createOpencodeAgent()]);
 
   const agentConfigsService = createAgentConfigsService(db);
+  const skillsDbService = createSkillsDbService(db);
   const templatesService = createTemplatesService(db);
   const sessionsService = createSessionsService(db);
   const ticketsService = createTicketsService(db);
@@ -84,6 +86,7 @@ export const createApp = async (options?: AppOptions) => {
     filesService,
     sessionsService,
     skillsService,
+    skillsDbService,
     templatesService,
     ticketsService,
     workspacesService,

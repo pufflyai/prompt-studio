@@ -1,13 +1,17 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
+import { getBundledSkills } from "pstdio-agents";
 import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
+let projectId: string;
+
+const bundledSkills = getBundledSkills();
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-skills-test-"));
@@ -15,50 +19,62 @@ beforeAll(async () => {
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
   });
+
+  const res = await app.request("/v1/projects", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name: "Test Project" }),
+  });
+  const project = await res.json();
+  projectId = project.id;
 });
 
 afterAll(() => {
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
-describe("GET /v1/skills", () => {
-  test("returns 200 with empty array for global scope when no skills installed", async () => {
-    const res = await app.request("/v1/skills?agent_id=claude-code&scope=global");
+describe("GET /v1/projects/:id/skills", () => {
+  test("lists all bundled skills seeded on project creation", async () => {
+    const res = await app.request(`/v1/projects/${projectId}/skills`);
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(Array.isArray(body)).toBe(true);
+    expect(body).toHaveLength(bundledSkills.length);
+
+    const names = body.map((s: { name: string }) => s.name).sort();
+    const expectedNames = bundledSkills.map((s) => s.name).sort();
+    expect(names).toEqual(expectedNames);
   });
+});
 
-  test("returns 200 with skills for project scope", async () => {
-    // Create a project and repo first
-    const projectRes = await app.request("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "test-project" }),
-    });
-    const project = (await projectRes.json()) as { id: string };
-
-    const repoPath = join(tempRoot, "repo");
-    mkdirSync(repoPath, { recursive: true });
-
-    await app.request(`/v1/projects/${project.id}/repos`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "test-repo", path: repoPath }),
-    });
-
-    // Install a skill in the repo
-    const skillDir = join(repoPath, ".claude", "skills", "create-ticket");
-    mkdirSync(skillDir, { recursive: true });
-    writeFileSync(join(skillDir, "SKILL.md"), '---\nname: create-ticket\ndescription: "Create a ticket"\n---\n');
-
-    const res = await app.request(`/v1/skills?agent_id=claude-code&scope=project&project_id=${project.id}`);
+describe("GET /v1/projects/:id/skills/:name", () => {
+  test("returns skill with content", async () => {
+    const skill = bundledSkills[0];
+    const res = await app.request(`/v1/projects/${projectId}/skills/${skill.name}`);
     expect(res.status).toBe(200);
 
-    const body = (await res.json()) as { name: string; description: string }[];
-    expect(body).toHaveLength(1);
-    expect(body[0].name).toBe("create-ticket");
-    expect(body[0].description).toBe("Create a ticket");
+    const body = await res.json();
+    expect(body.name).toBe(skill.name);
+    expect(body.content).toBe(skill.content);
+  });
+
+  test("returns 404 for missing skill", async () => {
+    const res = await app.request(`/v1/projects/${projectId}/skills/nonexistent`);
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("skill seeding idempotency", () => {
+  test("creating a second project also seeds skills", async () => {
+    const res = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Second Project" }),
+    });
+    const project = await res.json();
+
+    const listRes = await app.request(`/v1/projects/${project.id}/skills`);
+    const skills = await listRes.json();
+    expect(skills).toHaveLength(bundledSkills.length);
   });
 });

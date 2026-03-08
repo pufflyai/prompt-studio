@@ -7,10 +7,10 @@ const TEMPLATES_DIR = join(import.meta.dirname, "../../../files/templates");
 const BUNDLED_TEMPLATES = [
   { name: "ticket", type: "ticket", file: "ticket-template.md", is_default: true },
   { name: "proposal", type: "ticket", file: "proposal-template.md", is_default: false },
-  { name: "spec", type: "docs", file: "spec-template.md", is_default: true },
-  { name: "adr", type: "docs", file: "adr-template.md", is_default: false },
-  { name: "cookbook", type: "docs", file: "cookbook-template.md", is_default: false },
-  { name: "review-me", type: "docs", file: "review-me-template.md", is_default: false },
+  { name: "spec", type: "document", file: "spec-template.md", is_default: true },
+  { name: "adr", type: "document", file: "adr-template.md", is_default: false },
+  { name: "cookbook", type: "document", file: "cookbook-template.md", is_default: false },
+  { name: "review-me", type: "document", file: "review-me-template.md", is_default: false },
 ];
 
 export const seedBundledTemplates = async (baseUrl: string, projectId: string) => {

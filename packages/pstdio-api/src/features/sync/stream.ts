@@ -61,7 +61,7 @@ export const streamHandler = (deps: StreamDeps) => {
       });
 
       while (true) {
-        await stream.sleep(30_000);
+        await stream.sleep(8_000);
         const seq = deps.eventBus.seq;
         await stream.writeSSE({ data: JSON.stringify({ seq }), event: "heartbeat" });
       }

@@ -4,6 +4,7 @@ import { projects, ticket_tag_assignments, ticket_tags, tickets } from "../../db
 import { nextTicketShorthand } from "./next-shorthand";
 
 type TicketRecord = typeof tickets.$inferSelect;
+type TicketComplexity = NonNullable<TicketRecord["complexity"]>;
 
 type CreateInput = {
   project_id: string;
@@ -11,7 +12,7 @@ type CreateInput = {
   user_prompt?: string;
   file_id?: string;
   priority?: string;
-  complexity?: string;
+  complexity?: TicketComplexity;
   parent_id?: string;
   draft?: boolean;
   status_id?: string;
@@ -20,29 +21,26 @@ type CreateInput = {
 type ListFilters = {
   status_id?: string;
   priority?: string;
-  complexity?: string;
+  complexity?: TicketComplexity;
   archived?: boolean;
   draft?: boolean;
   parent_id?: string;
   shorthand?: string;
 };
 
-type UpdateInput = Partial<
-  Pick<
-    TicketRecord,
-    | "display_title"
-    | "user_prompt"
-    | "file_id"
-    | "status_id"
-    | "priority"
-    | "complexity"
-    | "parent_id"
-    | "blocked_reason"
-    | "depends_on"
-    | "archived"
-    | "draft"
-  >
->;
+type UpdateInput = {
+  display_title?: string | null;
+  user_prompt?: string | null;
+  file_id?: string | null;
+  status_id?: string | null;
+  priority?: string | null;
+  complexity?: TicketComplexity | null;
+  parent_id?: string | null;
+  blocked_reason?: string | null;
+  depends_on?: string | null;
+  archived?: boolean;
+  draft?: boolean;
+};
 
 const nowTimestamp = () => new Date().toISOString();
 
@@ -116,21 +114,22 @@ export const createTicketsService = (db: DbClient) => {
     conditions.push(eq(tickets.archived, filters.archived ?? false));
     conditions.push(eq(tickets.draft, filters.draft ?? false));
 
-    return db
+    const rows = await db
       .select()
       .from(tickets)
       .where(and(...conditions))
       .orderBy(tickets.created_at);
+
+    return rows;
   };
 
   const update = async (id: string, input: UpdateInput) => {
-    const existing = await get(id);
-    if (!existing) return null;
-
-    const updated = { ...input, updated_at: nowTimestamp() };
-    await db.update(tickets).set(updated).where(eq(tickets.id, id));
-
-    return { ...existing, ...updated };
+    const [updated] = await db
+      .update(tickets)
+      .set({ ...input, updated_at: nowTimestamp() })
+      .where(and(eq(tickets.id, id), isNull(tickets.deleted_at)))
+      .returning();
+    return updated ?? null;
   };
 
   const assignTags = async (ticketId: string, tagIds: string[]) => {
@@ -160,13 +159,13 @@ export const createTicketsService = (db: DbClient) => {
   };
 
   const softDelete = async (id: string) => {
-    const existing = await get(id);
-    if (!existing) return null;
-
-    const updated = { deleted_at: nowTimestamp(), updated_at: nowTimestamp() };
-    await db.update(tickets).set(updated).where(eq(tickets.id, id));
-
-    return { ...existing, ...updated };
+    const timestamp = nowTimestamp();
+    const [updated] = await db
+      .update(tickets)
+      .set({ deleted_at: timestamp, updated_at: timestamp })
+      .where(and(eq(tickets.id, id), isNull(tickets.deleted_at)))
+      .returning();
+    return updated ?? null;
   };
 
   return { create, get, getByShorthand, list, update, softDelete, assignTags, getTagAssignments };

@@ -83,6 +83,10 @@
           "link": "/specs/customizable-templates"
         },
         {
+          "text": "Skill Installation",
+          "link": "/specs/skill-installation"
+        },
+        {
           "text": "Real-time Updates",
           "link": "/specs/realtime-updates"
         },

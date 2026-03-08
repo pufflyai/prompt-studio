@@ -1,6 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { eq } from "drizzle-orm";
-import { ticket_statuses } from "pstdio-db";
+import { eq, ticket_statuses } from "pstdio-db";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { ticketListItemSchema } from "../dto";
@@ -10,7 +9,7 @@ const listTicketsQuerySchema = z.object({
   status: z.string().optional(),
   tag: z.union([z.string(), z.array(z.string())]).optional(),
   priority: z.string().optional(),
-  complexity: z.string().optional(),
+  complexity: z.enum(["low", "medium", "high"]).optional(),
   archived: z
     .string()
     .transform((v) => v === "true")

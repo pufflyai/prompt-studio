@@ -74,8 +74,8 @@ describe("pstdio templates create", () => {
     const tplFile = join(repo, "my-template.md");
     writeFileSync(tplFile, "# {{TICKET_TITLE}}\n\nCustom template content");
 
-    const output = run(`templates create --name custom --type docs --file ${tplFile}`, repo);
-    expect(output).toContain('Created template "custom" (docs)');
+    const output = run(`templates create --name custom --type document --file ${tplFile}`, repo);
+    expect(output).toContain('Created template "custom" (document)');
 
     const listOutput = run("templates list", repo);
     expect(listOutput).toContain("custom");

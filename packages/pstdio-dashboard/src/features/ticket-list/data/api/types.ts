@@ -1,12 +1,5 @@
+import type { TicketListItem } from "pstdio-api/dto";
 import type { TicketStatus, TicketStatusColor } from "@/features/ticket-list/types";
-
-export type ApiTicketStatus = {
-  id: string;
-  name: string;
-  color: string;
-  sort_order: number;
-  is_default: boolean;
-};
 
 export type ApiTicketSubTicket = {
   id: string;
@@ -15,35 +8,10 @@ export type ApiTicketSubTicket = {
   status_id: string | null;
 };
 
-export type ApiTicket = {
-  id: string;
-  shorthand: string;
-  project_id: string;
-  status_id: string | null;
-  parent_id?: string | null;
-  blocked_reason?: string | null;
-  depends_on?: string | null;
-  title: string | null;
-  input: string | null;
-  complexity: "low" | "medium" | "high" | null;
-  archived: boolean;
-  draft: boolean;
-  created_at: string;
-  updated_at: string;
-  status_name?: string | null;
-  tag_names?: string[];
+export type ApiTicket = TicketListItem & {
   tag_ids?: string[] | null;
   attempts?: ApiTicketAttempt[] | null;
   sub_tickets?: ApiTicketSubTicket[] | null;
-};
-
-export type ApiTicketTag = {
-  id: string;
-  project_id: string;
-  name: string;
-  color: string;
-  created_at: string;
-  updated_at: string;
 };
 
 export type ApiTicketAttempt = {

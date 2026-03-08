@@ -1,10 +1,13 @@
 import { afterAll, describe, expect, test } from "bun:test";
+import { sql } from "drizzle-orm";
+import type { DbClient } from "../../db/connection.pglite";
 import { createDb } from "../../db/connection.pglite";
 import { createProjectsService } from "../projects/projects";
 import { createTicketsService } from "../tickets/tickets";
 import { createWorkspacesService } from "./workspaces";
 
 let close: () => Promise<void>;
+let db: DbClient;
 let workspacesService: ReturnType<typeof createWorkspacesService>;
 let projectId: string;
 let ticketId: string;
@@ -13,6 +16,7 @@ let ticketShorthand: string;
 const setup = async () => {
   const result = await createDb({ path: ":memory:" });
   close = result.close;
+  db = result.db;
 
   const projectsService = createProjectsService(result.db);
   const project = await projectsService.create({ name: "prompt-studio" });
@@ -149,5 +153,19 @@ describe("createWorkspacesService", () => {
 
     const found = await workspacesService.getByShorthand(projectId, ws.workspace_shorthand);
     expect(found!.status).toBe("merged");
+  });
+
+  test("rejects invalid status values at DB layer", async () => {
+    await setup();
+
+    const ws = await workspacesService.create({
+      project_id: projectId,
+      ticket_id: ticketId,
+      ticket_shorthand: ticketShorthand,
+    });
+
+    await expect(
+      db.execute(sql`update workspaces set status = ${"paused"} where id = ${ws.id}`).execute(),
+    ).rejects.toThrow();
   });
 });

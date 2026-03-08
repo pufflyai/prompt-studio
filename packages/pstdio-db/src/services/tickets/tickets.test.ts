@@ -1,11 +1,12 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { eq } from "drizzle-orm";
-import { createDb } from "../../db/connection.pglite";
+import { eq, sql } from "drizzle-orm";
+import { createDb, type DbClient } from "../../db/connection.pglite";
 import { ticket_tags } from "../../db/schemas.pg";
 import { createProjectsService } from "../projects/projects";
 import { createTicketsService } from "./tickets";
 
 let close: () => Promise<void>;
+let db: DbClient;
 let ticketsService: ReturnType<typeof createTicketsService>;
 let projectId: string;
 let bugTagId: string;
@@ -14,6 +15,7 @@ let featureTagId: string;
 const setup = async () => {
   const result = await createDb({ path: ":memory:" });
   close = result.close;
+  db = result.db;
 
   const projectsService = createProjectsService(result.db);
   const project = await projectsService.create({ name: "prompt-studio" });
@@ -198,5 +200,19 @@ describe("createTicketsService", () => {
 
     expect(tags.length).toBe(1);
     expect(tags[0].name).toBe("bug");
+  });
+
+  test("rejects invalid complexity values at DB layer", async () => {
+    await setup();
+
+    const ticket = await ticketsService.create({
+      project_id: projectId,
+      display_title: "Complexity guard",
+      complexity: "low",
+    });
+
+    await expect(
+      db.execute(sql`update tickets set complexity = ${"not_a_real_complexity"} where id = ${ticket.id}`).execute(),
+    ).rejects.toThrow();
   });
 });

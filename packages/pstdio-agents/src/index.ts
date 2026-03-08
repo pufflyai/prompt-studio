@@ -1,3 +1,5 @@
+export type { BundledSkill } from "./bundled-skills";
+export { getBundledSkills } from "./bundled-skills";
 export { implement, review } from "./commands";
 export type { KnownAgent } from "./known-agents";
 export { findAgent, isKnownAgentId, KNOWN_AGENT_IDS, KNOWN_AGENTS } from "./known-agents";

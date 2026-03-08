@@ -1,10 +1,20 @@
-import { boolean, customType, integer, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, customType, integer, pgEnum, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
 
 const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
   dataType() {
     return "bytea";
   },
 });
+
+export const ticketComplexityEnum = pgEnum("ticket_complexity", ["low", "medium", "high"]);
+export const sessionStatusEnum = pgEnum("session_status", [
+  "in_progress",
+  "awaiting_input",
+  "completed",
+  "failed",
+  "cancelled",
+]);
+export const workspaceStatusEnum = pgEnum("workspace_status", ["active", "merged", "rejected"]);
 
 export const projects = pgTable("projects", {
   id: text("id").primaryKey(),
@@ -85,7 +95,7 @@ export const tickets = pgTable(
     file_id: text("file_id").references(() => files.id, { onDelete: "set null" }),
     priority: text("priority"),
     parallelizable: text("parallelizable"),
-    complexity: text("complexity"),
+    complexity: ticketComplexityEnum("complexity"),
     parent_id: text("parent_id"),
     blocked_reason: text("blocked_reason"),
     depends_on: text("depends_on"),
@@ -132,9 +142,7 @@ export const ticket_tag_assignments = pgTable(
 export const sessions = pgTable("sessions", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),
-  status: text("status", { enum: ["in_progress", "awaiting_input", "completed", "failed", "cancelled"] })
-    .notNull()
-    .default("in_progress"),
+  status: sessionStatusEnum("status").notNull().default("in_progress"),
   project_id: text("project_id").references(() => projects.id, { onDelete: "cascade" }),
   archived: boolean("archived").notNull().default(false),
   created: text("created"),
@@ -158,9 +166,7 @@ export const workspaces = pgTable(
     session_id: text("session_id").references(() => sessions.id, { onDelete: "set null" }),
     branch: text("branch"),
     worktree_path: text("worktree_path"),
-    status: text("status", { enum: ["active", "merged", "rejected"] })
-      .notNull()
-      .default("active"),
+    status: workspaceStatusEnum("status").notNull().default("active"),
     archived: boolean("archived").notNull().default(false),
     workspace_shorthand: text("workspace_shorthand").notNull(),
     startup_log_file_id: text("startup_log_file_id").references(() => files.id, { onDelete: "set null" }),
@@ -244,6 +250,21 @@ export const templates = pgTable("templates", {
     .notNull()
     .references(() => files.id),
   is_default: boolean("is_default").notNull().default(false),
+  created_at: text("created_at").notNull(),
+  updated_at: text("updated_at").notNull(),
+  deleted_at: text("deleted_at"),
+});
+
+export const skills = pgTable("skills", {
+  id: text("id").primaryKey(),
+  project_id: text("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  file_id: text("file_id")
+    .notNull()
+    .references(() => files.id),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
   deleted_at: text("deleted_at"),

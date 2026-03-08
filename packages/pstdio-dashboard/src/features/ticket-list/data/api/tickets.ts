@@ -1,17 +1,17 @@
+import type { StatusResponse } from "pstdio-api/dto";
 import type { Ticket, TicketStatus } from "@/features/ticket-list/types";
 import { apiRequest } from "@/lib/api";
 import { buildTicketStatusCatalog, toTicket } from "./mappers";
 import type {
   ApiCreateTicketAndStartResponse,
   ApiTicket,
-  ApiTicketStatus,
   CreateProjectTicketInput,
   CreateTicketAndStartInput,
   CreateTicketAndStartResult,
 } from "./types";
 
 const fetchTicketStatuses = async (projectId: string) => {
-  const statuses = await apiRequest<ApiTicketStatus[]>(`/v1/projects/${projectId}/ticket-statuses`);
+  const statuses = await apiRequest<StatusResponse[]>(`/v1/projects/${projectId}/ticket-statuses`);
   return buildTicketStatusCatalog(statuses);
 };
 
@@ -43,7 +43,8 @@ export const updateProjectTicketStatus = async (projectId: string, ticket: Ticke
   const updated = await apiRequest<ApiTicket>(`/v1/tickets/${ticket.id}`, {
     method: "PATCH",
     body: {
-      input: ticket.content,
+      display_title: ticket.title || undefined,
+      user_prompt: ticket.content || undefined,
       status_id: statusId,
       tag_ids: ticket.tagIds,
       archived: Boolean(ticket.archived),
@@ -92,7 +93,7 @@ export const createProjectTicket = async (input: CreateProjectTicketInput) => {
     method: "POST",
     body: {
       project_id: input.projectId,
-      ...(input.content != null && { title: input.content, input: input.content }),
+      ...(input.content != null && { content: input.content }),
       ...(input.complexity != null && { complexity: input.complexity }),
       ...(statusId != null && { status_id: statusId }),
       ...(input.parentId != null && { parent_id: input.parentId }),

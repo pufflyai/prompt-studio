@@ -1,16 +1,7 @@
+import type { ProjectResponse, StatusResponse, TagResponse } from "pstdio-api/dto";
 import type { Project, ProjectRepository, ProjectTemplateAsset, RepoBranch } from "@/features/project/types";
-import type { ApiTicketStatus, ApiTicketTag } from "@/features/ticket-list/data/api";
 import { buildTicketStatusCatalog, toTicketTag } from "@/features/ticket-list/data/api";
 import { apiRequest, readRuntimeConfig } from "@/lib/api";
-
-// --- API types ---
-
-export type ApiProject = {
-  id: string;
-  name: string;
-  created_at: string;
-  updated_at: string;
-};
 
 export type ApiSystemInfo = {
   version: string;
@@ -47,7 +38,7 @@ export const toProjectRepository = (repo: ApiRepo): ProjectRepository => ({
 // --- API functions ---
 
 export const getProject = async (projectId: string) => {
-  const project = await apiRequest<ApiProject | null>(`/v1/projects/${projectId}`, {
+  const project = await apiRequest<ProjectResponse | null>(`/v1/projects/${projectId}`, {
     allowNotFound: true,
   });
 
@@ -56,14 +47,14 @@ export const getProject = async (projectId: string) => {
   }
 
   const fetchTicketStatuses = async (projectId: string) => {
-    const statuses = await apiRequest<ApiTicketStatus[]>(`/v1/projects/${projectId}/ticket-statuses`);
+    const statuses = await apiRequest<StatusResponse[]>(`/v1/projects/${projectId}/ticket-statuses`);
     return buildTicketStatusCatalog(statuses);
   };
 
   const [statusCatalog, repositories, ticketTags] = await Promise.all([
     fetchTicketStatuses(projectId),
     apiRequest<ApiRepo[]>(`/v1/projects/${projectId}/repos`),
-    apiRequest<ApiTicketTag[]>(`/v1/projects/${projectId}/ticket-tags`),
+    apiRequest<TagResponse[]>(`/v1/projects/${projectId}/ticket-tags`),
   ]);
 
   return {

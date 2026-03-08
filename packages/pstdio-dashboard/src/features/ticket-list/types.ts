@@ -67,8 +67,6 @@ export interface TicketTag {
   id: string;
   name: string;
   color: TicketStatusColor;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface TicketFilePreview {

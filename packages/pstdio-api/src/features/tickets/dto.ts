@@ -9,7 +9,7 @@ export const ticketResponseSchema = z.object({
   user_prompt: z.string().nullable(),
   file_id: z.string().nullable(),
   priority: z.string().nullable(),
-  complexity: z.string().nullable(),
+  complexity: z.enum(["low", "medium", "high"]).nullable(),
   parent_id: z.string().nullable(),
   parallelizable: z.string().nullable(),
   blocked_reason: z.string().nullable(),
@@ -28,6 +28,7 @@ export const ticketListItemSchema = ticketResponseSchema.extend({
 
 export const createTicketBodySchema = z.object({
   project_id: z.string().min(1),
+  content: z.string().optional(),
   display_title: z.string().optional(),
   user_prompt: z.string().optional(),
   file_id: z.string().optional(),

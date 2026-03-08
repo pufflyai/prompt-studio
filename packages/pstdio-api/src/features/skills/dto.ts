@@ -1,15 +1,19 @@
 import { z } from "@hono/zod-openapi";
 
 export const skillResponseSchema = z.object({
+  id: z.string(),
+  project_id: z.string(),
   name: z.string(),
   description: z.string(),
-  path: z.string(),
+  file_id: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
 });
 
-export const skillListResponseSchema = z.array(skillResponseSchema);
+export const skillWithContentResponseSchema = skillResponseSchema.extend({
+  content: z.string(),
+});
 
-export const listSkillsQuerySchema = z.object({
-  agent_id: z.string().min(1).openapi({ description: "Agent identifier (e.g. claude-code, opencode)" }),
-  scope: z.enum(["project", "global"]).openapi({ description: "Whether to list project-local or global skills" }),
-  project_id: z.string().optional().openapi({ description: "Project ID (required when scope=project)" }),
+export const notFoundResponseSchema = z.object({
+  error: z.string(),
 });

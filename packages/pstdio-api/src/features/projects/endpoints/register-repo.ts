@@ -1,8 +1,10 @@
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
-import { and, eq } from "drizzle-orm";
-import { project_repos } from "pstdio-db";
+import { and, eq, project_repos } from "pstdio-db";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
+import { installSkillToRepo } from "../../skills/install-skill-to-repo";
 import { notFoundResponseSchema } from "../dto";
 
 const registerRepoBodySchema = z.object({
@@ -56,6 +58,10 @@ export const registerRepoHandler = (deps: RouteDeps): AppRouteHandler<typeof reg
 
     const repo = await deps.reposService.registerForProject(id, { name, path });
 
+    const configDir = join(path, ".pstdio");
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(join(configDir, "config.json"), `${JSON.stringify({ project_id: id }, null, 2)}\n`);
+
     deps.eventBus.emit("repos", "set", repo);
 
     const [link] = await deps.db
@@ -63,6 +69,19 @@ export const registerRepoHandler = (deps: RouteDeps): AppRouteHandler<typeof reg
       .from(project_repos)
       .where(and(eq(project_repos.project_id, id), eq(project_repos.repo_id, repo.id)));
     if (link) deps.eventBus.emit("project_repos", "set", link);
+
+    const [skills, agents] = await Promise.all([deps.skillsDbService.list(id), deps.agentConfigsService.list()]);
+
+    for (const skill of skills) {
+      const file = await deps.filesService.get(skill.file_id);
+      if (!file) continue;
+
+      const content = readFileSync(file.storage_path, "utf8");
+
+      for (const agent of agents) {
+        installSkillToRepo(repo.path, agent.agent_id, skill.name, content);
+      }
+    }
 
     return c.json(repo, 201);
   };

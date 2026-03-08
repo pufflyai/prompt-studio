@@ -1,9 +1,9 @@
+import type { StatusResponse } from "pstdio-api/dto";
 import { apiRequest } from "@/lib/api";
 import { toTicketStatusOption } from "./mappers";
-import type { ApiTicketStatus } from "./types";
 
 export const getProjectTicketStatuses = async (projectId: string) => {
-  const statuses = await apiRequest<ApiTicketStatus[]>(`/v1/projects/${projectId}/ticket-statuses`);
+  const statuses = await apiRequest<StatusResponse[]>(`/v1/projects/${projectId}/ticket-statuses`);
   return statuses.map(toTicketStatusOption).sort((left, right) => left.sortOrder - right.sortOrder);
 };
 

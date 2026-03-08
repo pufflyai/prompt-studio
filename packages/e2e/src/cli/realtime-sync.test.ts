@@ -141,8 +141,8 @@ describe("realtime sync stream", () => {
       if (!event) break;
       if (event.event !== "sync:set") continue;
 
-      const data = event.data as { table: string; data: { title?: string } };
-      if (data.table === "tickets" && data.data.title === "Realtime ticket test") {
+      const data = event.data as { table: string; data: { display_title?: string } };
+      if (data.table === "tickets" && data.data.display_title === "Realtime ticket test") {
         ticketEvent = event;
         break;
       }
@@ -181,8 +181,8 @@ describe("realtime sync stream", () => {
         if (!event) break;
         if (event.event !== "sync:set") continue;
 
-        const data = event.data as { table: string; data: { title?: string } };
-        if (data.table === "tickets" && data.data.title === "Cross client ticket") {
+        const data = event.data as { table: string; data: { display_title?: string } };
+        if (data.table === "tickets" && data.data.display_title === "Cross client ticket") {
           return event;
         }
       }

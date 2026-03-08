@@ -56,7 +56,34 @@ describe("tickets write", () => {
 
     expect(log).toHaveBeenCalledWith(expect.stringContaining("Created ticket PS-1 (draft)"));
     const content = readTicketFile(tmpBase, "PS-1");
-    expect(content).toBe("# My ticket\n");
+    expect(content).toContain('ticket_id: "PS-1"');
+    expect(content).toContain('created: "2026-03-04T00:00:00.000Z"');
+    expect(content).toContain("# My ticket");
+  });
+
+  test("includes status and parent_id in frontmatter when provided", async () => {
+    makeConfig();
+    const handler = createHandler({
+      ...baseDeps,
+      createTicket: async () => ({
+        id: "t-4",
+        shorthand: "PS-4",
+        project_id: "proj-1",
+        status_id: "s-wip",
+        display_title: "With meta",
+        file_id: null,
+        draft: true,
+        created_at: "2026-03-04T00:00:00.000Z",
+        updated_at: "2026-03-04T00:00:00.000Z",
+      }),
+      log: mock(),
+    });
+
+    await handler({ title: "With meta", status: "wip", "parent-id": "PS-1", _: [], $0: "" } as never);
+
+    const content = readTicketFile(tmpBase, "PS-4");
+    expect(content).toContain('status: "wip"');
+    expect(content).toContain('parent_id: "PS-1"');
   });
 
   test("passes status_id when --status is provided", async () => {
