@@ -3,6 +3,14 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../../types";
 import { postShutdownHandler, postShutdownRoute } from "./post-shutdown";
 
+const waitFor = async (condition: () => boolean, timeout = 1000) => {
+  const start = Date.now();
+  while (!condition()) {
+    if (Date.now() - start > timeout) throw new Error("waitFor timed out");
+    await new Promise((r) => setTimeout(r, 1));
+  }
+};
+
 describe("POST /shutdown", () => {
   test("returns ok and calls closeDb then exit", async () => {
     const calls: string[] = [];
@@ -25,7 +33,7 @@ describe("POST /shutdown", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
 
-    await new Promise((r) => setTimeout(r, 100));
+    await waitFor(() => calls.length === 2);
 
     expect(calls).toEqual(["closeDb", "exit"]);
   });

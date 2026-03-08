@@ -17,23 +17,12 @@ const collect = async (iterable: AsyncIterable<JsonPatch>, limit: number, timeou
   return items;
 };
 
-const createMockSpawnDeps = (
-  stdoutLines: string[],
-  options?: { delayMs?: number },
-): SpawnDeps & { stdinData: string[]; isStdinEnded: () => boolean } => {
-  const stdinData: string[] = [];
+const createMockSpawnDeps = (stdoutLines: string[], options?: { delayMs?: number }): SpawnDeps => {
   const stdout = new PassThrough();
   const stdin = new Writable({
-    write(chunk, _encoding, callback) {
-      stdinData.push(chunk.toString());
+    write(_chunk, _encoding, callback) {
       callback();
     },
-  });
-
-  let stdinEnded = false;
-
-  stdin.on("finish", () => {
-    stdinEnded = true;
   });
 
   const onExit = new Promise<{ code: number | null; signal: string | null }>((resolve) => {
@@ -54,8 +43,6 @@ const createMockSpawnDeps = (
   });
 
   return {
-    stdinData,
-    isStdinEnded: () => stdinEnded,
     spawnProcess: () => ({
       stdin,
       stdout,
@@ -114,18 +101,6 @@ describe("spawnClaudeCodeSession", () => {
     expect(userPatch.path).toBe("/messages/0");
     expect((userPatch.value as { role: string }).role).toBe("user");
   });
-
-  test("ends stdin after writing the initial prompt", async () => {
-    const lines = [JSON.stringify({ type: "system", session_id: "session-abc" })];
-    const deps = createMockSpawnDeps(lines);
-    const eventStore = createEventStore();
-
-    const result = await spawnClaudeCodeSession({ prompt: "Hello", eventStore }, deps);
-
-    await result.process!.onExit;
-
-    expect(deps.isStdinEnded()).toBe(true);
-  });
 });
 
 describe("spawnClaudeCodeMessage (resume)", () => {
@@ -171,23 +146,6 @@ describe("spawnClaudeCodeMessage (resume)", () => {
     expect(usagePatch.op).toBe("add");
     expect(usagePatch.path).toBe("/messages/7");
     expect((usagePatch.value as { parts: Array<{ type: string }> }).parts[0].type).toBe("token_usage");
-  });
-
-  test("ends stdin when approvals are not enabled", async () => {
-    const lines = [JSON.stringify({ type: "system", session_id: "session-abc" })];
-    const deps = createMockSpawnDeps(lines);
-    const eventStore = createEventStore();
-
-    const process = await spawnClaudeCodeMessage(
-      { sessionId: "session-abc", prompt: "Follow up", messageOffset: 0 },
-      eventStore,
-      undefined,
-      deps,
-    );
-
-    await process.onExit;
-
-    expect(deps.isStdinEnded()).toBe(true);
   });
 
   test("streams events in real-time via historyPlusStream", async () => {

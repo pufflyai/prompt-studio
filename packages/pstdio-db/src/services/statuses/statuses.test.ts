@@ -71,9 +71,11 @@ test("setDefault changes the default status", async () => {
 });
 
 test("getDefault returns the default status", async () => {
+  const wip = await service.getByName(projectId, "wip");
+  await service.setDefault(projectId, wip!.id);
+
   const defaultStatus = await service.getDefault(projectId);
   expect(defaultStatus).not.toBeNull();
-  // wip is the current default from the setDefault test above
   expect(defaultStatus!.name).toBe("wip");
 });
 

@@ -2,14 +2,17 @@ import { describe, expect, test } from "bun:test";
 import type { ApprovalRequest } from "../types";
 import { createApprovalService } from "./approval-service";
 
-const SHORT_TIMEOUT = 20;
+// Short timeout for tests that verify timeout behavior fires quickly
+const TIMEOUT_FAST = 50;
+// Long timeout for tests where we resolve manually — must not expire during the test
+const TIMEOUT_SAFE = 5_000;
 
 const noop = () => {};
 
 describe("createApprovalService", () => {
   test("requestApproval calls send with the request", async () => {
     const sent: ApprovalRequest[] = [];
-    const service = createApprovalService((req) => sent.push(req), { timeoutMs: SHORT_TIMEOUT });
+    const service = createApprovalService((req) => sent.push(req), { timeoutMs: TIMEOUT_SAFE });
 
     const request: ApprovalRequest = {
       id: "req-1",
@@ -29,7 +32,7 @@ describe("createApprovalService", () => {
   });
 
   test("handleResponse resolves the pending promise", async () => {
-    const service = createApprovalService(noop, { timeoutMs: SHORT_TIMEOUT });
+    const service = createApprovalService(noop, { timeoutMs: TIMEOUT_SAFE });
 
     const promise = service.requestApproval({
       id: "req-2",
@@ -45,7 +48,7 @@ describe("createApprovalService", () => {
   });
 
   test("timeout resolves with timeout decision", async () => {
-    const service = createApprovalService(noop, { timeoutMs: SHORT_TIMEOUT });
+    const service = createApprovalService(noop, { timeoutMs: TIMEOUT_FAST });
 
     const result = await service.requestApproval({
       id: "req-3",
@@ -58,7 +61,7 @@ describe("createApprovalService", () => {
   });
 
   test("handleResponse before timeout prevents timeout", async () => {
-    const service = createApprovalService(noop, { timeoutMs: SHORT_TIMEOUT });
+    const service = createApprovalService(noop, { timeoutMs: TIMEOUT_SAFE });
 
     const promise = service.requestApproval({
       id: "req-4",
@@ -74,13 +77,13 @@ describe("createApprovalService", () => {
   });
 
   test("unknown response ID is ignored", () => {
-    const service = createApprovalService(noop, { timeoutMs: SHORT_TIMEOUT });
+    const service = createApprovalService(noop, { timeoutMs: TIMEOUT_SAFE });
 
     service.handleResponse({ id: "unknown-id", decision: "approve" });
   });
 
   test("multiple concurrent requests are tracked independently", async () => {
-    const service = createApprovalService(noop, { timeoutMs: SHORT_TIMEOUT });
+    const service = createApprovalService(noop, { timeoutMs: TIMEOUT_SAFE });
 
     const p1 = service.requestApproval({ id: "a", toolName: "Read", toolInput: {}, toolUseId: "t1" });
     const p2 = service.requestApproval({ id: "b", toolName: "Write", toolInput: {}, toolUseId: "t2" });
@@ -94,7 +97,7 @@ describe("createApprovalService", () => {
   });
 
   test("responding to same ID twice is a no-op", async () => {
-    const service = createApprovalService(noop, { timeoutMs: SHORT_TIMEOUT });
+    const service = createApprovalService(noop, { timeoutMs: TIMEOUT_SAFE });
 
     const promise = service.requestApproval({ id: "dup", toolName: "Bash", toolInput: {}, toolUseId: "t" });
 
@@ -106,7 +109,7 @@ describe("createApprovalService", () => {
   });
 
   test("dispose clears all pending requests with timeout", async () => {
-    const service = createApprovalService(noop, { timeoutMs: SHORT_TIMEOUT });
+    const service = createApprovalService(noop, { timeoutMs: TIMEOUT_FAST });
 
     const p1 = service.requestApproval({ id: "x", toolName: "Bash", toolInput: {}, toolUseId: "t1" });
     const p2 = service.requestApproval({ id: "y", toolName: "Read", toolInput: {}, toolUseId: "t2" });

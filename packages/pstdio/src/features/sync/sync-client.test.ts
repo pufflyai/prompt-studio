@@ -3,6 +3,14 @@ import { mockFetchSSE } from "@/test-utils/mock-fetch";
 import { getCollection } from "./collections";
 import { startSync } from "./sync-client";
 
+const waitFor = async (condition: () => boolean, timeout = 1000) => {
+  const start = Date.now();
+  while (!condition()) {
+    if (Date.now() - start > timeout) throw new Error("waitFor timed out");
+    await new Promise((r) => setTimeout(r, 1));
+  }
+};
+
 let activeStream: ReturnType<typeof mockFetchSSE> | null = null;
 
 afterEach(() => {
@@ -40,8 +48,7 @@ describe("startSync", () => {
       seq: 5,
     });
 
-    // Let the stream reader process
-    await new Promise((r) => setTimeout(r, 10));
+    await waitFor(() => getCollection("projects").state.size === 2);
 
     const projectsCol = getCollection("projects");
     expect(projectsCol.state.size).toBe(2);
@@ -61,7 +68,7 @@ describe("startSync", () => {
     stream.send("init", { tables: { projects: [] }, seq: 0 });
     stream.send("sync:set", { table: "projects", data: { id: "p1", name: "New Project" }, seq: 1 });
 
-    await new Promise((r) => setTimeout(r, 10));
+    await waitFor(() => getCollection("projects").state.size === 1);
 
     const col = getCollection("projects");
     expect(col.state.size).toBe(1);
@@ -76,7 +83,7 @@ describe("startSync", () => {
     stream.send("init", { tables: { projects: [{ id: "p1", name: "To Delete" }] }, seq: 0 });
     stream.send("sync:delete", { table: "projects", id: "p1", seq: 1 });
 
-    await new Promise((r) => setTimeout(r, 10));
+    await waitFor(() => getCollection("projects").state.size === 0);
 
     const col = getCollection("projects");
     expect(col.state.size).toBe(0);

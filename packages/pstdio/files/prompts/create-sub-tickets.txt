@@ -1,0 +1,2 @@
+Breakdown ticket: {{shorthand}} into sub-tickets
+{{#templateName}}Use template: {{templateName}}{{/templateName}}

@@ -22,9 +22,11 @@ const createProjectViaApi = async (request: import("@playwright/test").APIReques
 
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
   const res = await request.get(`${apiBase}/v1/projects`);
+  expect(res.ok()).toBe(true);
   const projects = (await res.json()) as { id: string }[];
   for (const p of projects) {
-    await request.delete(`${apiBase}/v1/projects/${p.id}`);
+    const del = await request.delete(`${apiBase}/v1/projects/${p.id}`);
+    expect(del.ok()).toBe(true);
   }
 };
 
