@@ -137,6 +137,42 @@ describe("POST /v1/projects/:id/repos", () => {
     expect(config.project_id).toBe(project.id);
   });
 
+  test("returns 409 when repo is already linked to a different project", async () => {
+    const resA = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Project A" }),
+    });
+    const projectA = await resA.json();
+
+    const resB = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Project B" }),
+    });
+    const projectB = await resB.json();
+
+    const repoPath = join(tempRoot, "conflict-repo");
+    mkdirSync(repoPath, { recursive: true });
+
+    const first = await app.request(`/v1/projects/${projectA.id}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "conflict-repo", path: repoPath }),
+    });
+    expect(first.status).toBe(201);
+
+    const second = await app.request(`/v1/projects/${projectB.id}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "conflict-repo", path: repoPath }),
+    });
+    expect(second.status).toBe(409);
+
+    const body = await second.json();
+    expect(body.error).toContain("already linked");
+  });
+
   test("is idempotent for same repo path", async () => {
     const createRes = await app.request("/v1/projects", {
       method: "POST",

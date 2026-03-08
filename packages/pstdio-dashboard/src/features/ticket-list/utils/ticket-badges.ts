@@ -20,10 +20,8 @@ const builders: Record<DisplayProperty, BadgeBuilder> = {
   assignee: (ticket) => (ticket.assignee ? [{ label: ticket.assignee }] : []),
 
   tags: (ticket, context) => {
-    const tagMap = new Map(context.tags.map((t) => [t.id, t]));
-
     return ticket.tagIds
-      .map((id) => tagMap.get(id))
+      .map((id) => context.tagMap.get(id))
       .filter((tag): tag is NonNullable<typeof tag> => Boolean(tag))
       .map((tag) => ({ label: tag.name, color: tag.color }));
   },

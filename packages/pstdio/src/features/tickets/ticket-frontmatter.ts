@@ -11,20 +11,23 @@ type FrontmatterFields = {
   blocked_reason: string | null;
 };
 
+const escapeYamlScalar = (value: string) => value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
+
 export const buildTicketFrontmatter = (fields: FrontmatterFields) => {
   const lines: string[] = ["---"];
+  const q = (v: string) => `"${escapeYamlScalar(v)}"`;
 
-  lines.push(`ticket_id: "${fields.shorthand}"`);
-  if (fields.user_prompt) lines.push(`user_prompt: "${fields.user_prompt}"`);
-  lines.push(`created: "${fields.created_at}"`);
+  lines.push(`ticket_id: ${q(fields.shorthand)}`);
+  if (fields.user_prompt) lines.push(`user_prompt: ${q(fields.user_prompt)}`);
+  lines.push(`created: ${q(fields.created_at)}`);
 
-  if (fields.status_name) lines.push(`status: "${fields.status_name}"`);
-  if (fields.parent_id) lines.push(`parent_id: "${fields.parent_id}"`);
-  if (fields.priority) lines.push(`priority: "${fields.priority}"`);
-  if (fields.complexity) lines.push(`complexity: "${fields.complexity}"`);
-  if (fields.depends_on) lines.push(`depends_on: "${fields.depends_on}"`);
-  if (fields.parallelizable) lines.push(`parallelizable: "${fields.parallelizable}"`);
-  if (fields.blocked_reason) lines.push(`blocked_reason: "${fields.blocked_reason}"`);
+  if (fields.status_name) lines.push(`status: ${q(fields.status_name)}`);
+  if (fields.parent_id) lines.push(`parent_id: ${q(fields.parent_id)}`);
+  if (fields.priority) lines.push(`priority: ${q(fields.priority)}`);
+  if (fields.complexity) lines.push(`complexity: ${q(fields.complexity)}`);
+  if (fields.depends_on) lines.push(`depends_on: ${q(fields.depends_on)}`);
+  if (fields.parallelizable) lines.push(`parallelizable: ${q(fields.parallelizable)}`);
+  if (fields.blocked_reason) lines.push(`blocked_reason: ${q(fields.blocked_reason)}`);
 
   lines.push("---");
   return lines.join("\n");

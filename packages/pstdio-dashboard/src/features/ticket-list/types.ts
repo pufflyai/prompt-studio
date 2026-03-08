@@ -111,8 +111,11 @@ export interface TicketGroup {
   columnActions: TicketColumnAction[];
 }
 
+export type TagEntry = { id: string; name: string; color: TicketStatusColor };
+
 export interface BadgeContext {
   statusOptions: { name: string; color: TicketStatusColor }[];
-  tags: { id: string; name: string; color: TicketStatusColor }[];
+  tags: TagEntry[];
+  tagMap: Map<string, TagEntry>;
   ticketShorthandById?: Record<string, string>;
 }

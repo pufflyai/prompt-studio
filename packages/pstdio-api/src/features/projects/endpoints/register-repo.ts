@@ -1,4 +1,5 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync } from "node:fs";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
 import { and, eq, project_repos } from "pstdio-db";
@@ -48,6 +49,10 @@ export const registerRepoRoute = createRoute({
       description: "Project not found.",
       content: { "application/json": { schema: notFoundResponseSchema } },
     },
+    409: {
+      description: "Repo already linked to a different project.",
+      content: { "application/json": { schema: notFoundResponseSchema } },
+    },
   },
 });
 
@@ -61,11 +66,18 @@ export const registerRepoHandler = (deps: RouteDeps): AppRouteHandler<typeof reg
       return c.json({ error: "Project not found" }, 404);
     }
 
+    const configPath = join(path, ".pstdio", "config.json");
+    if (existsSync(configPath)) {
+      const existing = JSON.parse(await readFile(configPath, "utf8"));
+      if (existing.project_id && existing.project_id !== id) {
+        return c.json({ error: `Repo is already linked to project ${existing.project_id}` }, 409);
+      }
+    }
+
     const repo = await deps.reposService.registerForProject(id, { name, path });
 
-    const configDir = join(path, ".pstdio");
-    mkdirSync(configDir, { recursive: true });
-    writeFileSync(join(configDir, "config.json"), `${JSON.stringify({ project_id: id }, null, 2)}\n`);
+    await mkdir(join(path, ".pstdio"), { recursive: true });
+    await writeFile(configPath, `${JSON.stringify({ project_id: id }, null, 2)}\n`);
 
     deps.eventBus.emit("repos", "set", repo);
 
@@ -81,7 +93,7 @@ export const registerRepoHandler = (deps: RouteDeps): AppRouteHandler<typeof reg
       const file = await deps.filesService.get(skill.file_id);
       if (!file) continue;
 
-      const content = readFileSync(file.storage_path, "utf8");
+      const content = await readFile(file.storage_path, "utf8");
 
       for (const agent of agents) {
         installSkillToRepo(repo.path, agent.agent_id, skill.name, content);

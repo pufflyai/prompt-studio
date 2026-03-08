@@ -44,9 +44,11 @@ export const TicketsPanel = () => {
     tickets: orderTickets(group.tickets, settings.ordering),
   }));
 
+  const tags = project?.ticketTags ?? [];
   const badgeContext: BadgeContext = {
     statusOptions: statusOptions.map((s) => ({ name: s.name, color: s.color })),
-    tags: project?.ticketTags ?? [],
+    tags,
+    tagMap: new Map(tags.map((t) => [t.id, t])),
     ticketShorthandById: Object.fromEntries(allTickets.map((ticket) => [ticket.id, ticket.shorthand])),
   };
 

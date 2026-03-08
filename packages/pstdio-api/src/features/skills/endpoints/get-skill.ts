@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
@@ -40,7 +40,7 @@ export const getSkillHandler = (deps: RouteDeps): AppRouteHandler<typeof getSkil
     }
 
     const file = await deps.filesService.get(skill.file_id);
-    const content = file ? readFileSync(file.storage_path, "utf8") : "";
+    const content = file ? await readFile(file.storage_path, "utf8") : "";
 
     return c.json({ ...skill, content }, 200);
   };

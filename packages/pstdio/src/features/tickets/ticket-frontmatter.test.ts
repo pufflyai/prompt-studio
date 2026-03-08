@@ -34,6 +34,57 @@ describe("buildTicketFrontmatter", () => {
     );
   });
 
+  test("escapes double quotes in values", () => {
+    const result = buildTicketFrontmatter({
+      shorthand: "PS-1",
+      created_at: "2026-03-04T00:00:00.000Z",
+      status_name: null,
+      parent_id: null,
+      user_prompt: 'She said "hello"',
+      priority: null,
+      complexity: null,
+      depends_on: null,
+      parallelizable: null,
+      blocked_reason: null,
+    });
+
+    expect(result).toContain('user_prompt: "She said \\"hello\\""');
+  });
+
+  test("escapes newlines in values", () => {
+    const result = buildTicketFrontmatter({
+      shorthand: "PS-1",
+      created_at: "2026-03-04T00:00:00.000Z",
+      status_name: null,
+      parent_id: null,
+      user_prompt: "line one\nline two",
+      priority: null,
+      complexity: null,
+      depends_on: null,
+      parallelizable: null,
+      blocked_reason: null,
+    });
+
+    expect(result).toContain('user_prompt: "line one\\nline two"');
+  });
+
+  test("escapes backslashes in values", () => {
+    const result = buildTicketFrontmatter({
+      shorthand: "PS-1",
+      created_at: "2026-03-04T00:00:00.000Z",
+      status_name: null,
+      parent_id: null,
+      user_prompt: "path\\to\\file",
+      priority: null,
+      complexity: null,
+      depends_on: null,
+      parallelizable: null,
+      blocked_reason: null,
+    });
+
+    expect(result).toContain('user_prompt: "path\\\\to\\\\file"');
+  });
+
   test("omits null/empty fields", () => {
     const result = buildTicketFrontmatter({
       shorthand: "PS-1",
