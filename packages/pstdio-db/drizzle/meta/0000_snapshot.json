@@ -142,12 +142,8 @@
           "name": "files_project_id_projects_id_fk",
           "tableFrom": "files",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -193,12 +189,8 @@
           "name": "project_repos_project_id_projects_id_fk",
           "tableFrom": "project_repos",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -206,12 +198,8 @@
           "name": "project_repos_repo_id_repos_id_fk",
           "tableFrom": "project_repos",
           "tableTo": "repos",
-          "columnsFrom": [
-            "repo_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["repo_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -418,12 +406,8 @@
           "name": "sessions_project_id_projects_id_fk",
           "tableFrom": "sessions",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -431,12 +415,8 @@
           "name": "sessions_session_file_id_files_id_fk",
           "tableFrom": "sessions",
           "tableTo": "files",
-          "columnsFrom": [
-            "session_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["session_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -507,12 +487,8 @@
           "name": "skills_project_id_projects_id_fk",
           "tableFrom": "skills",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -520,12 +496,8 @@
           "name": "skills_file_id_files_id_fk",
           "tableFrom": "skills",
           "tableTo": "files",
-          "columnsFrom": [
-            "file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["file_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -602,12 +574,8 @@
           "name": "templates_project_id_projects_id_fk",
           "tableFrom": "templates",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -615,12 +583,8 @@
           "name": "templates_file_id_files_id_fk",
           "tableFrom": "templates",
           "tableTo": "files",
-          "columnsFrom": [
-            "file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["file_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -666,12 +630,8 @@
           "name": "ticket_files_ticket_id_tickets_id_fk",
           "tableFrom": "ticket_files",
           "tableTo": "tickets",
-          "columnsFrom": [
-            "ticket_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["ticket_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -679,12 +639,8 @@
           "name": "ticket_files_file_id_files_id_fk",
           "tableFrom": "ticket_files",
           "tableTo": "files",
-          "columnsFrom": [
-            "file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["file_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -798,12 +754,8 @@
           "name": "ticket_statuses_project_id_projects_id_fk",
           "tableFrom": "ticket_statuses",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -871,12 +823,8 @@
           "name": "ticket_tag_assignments_ticket_id_tickets_id_fk",
           "tableFrom": "ticket_tag_assignments",
           "tableTo": "tickets",
-          "columnsFrom": [
-            "ticket_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["ticket_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -884,12 +832,8 @@
           "name": "ticket_tag_assignments_ticket_tag_id_ticket_tags_id_fk",
           "tableFrom": "ticket_tag_assignments",
           "tableTo": "ticket_tags",
-          "columnsFrom": [
-            "ticket_tag_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["ticket_tag_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -975,12 +919,8 @@
           "name": "ticket_tags_project_id_projects_id_fk",
           "tableFrom": "ticket_tags",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1063,12 +1003,8 @@
           "name": "ticket_workspaces_ticket_id_tickets_id_fk",
           "tableFrom": "ticket_workspaces",
           "tableTo": "tickets",
-          "columnsFrom": [
-            "ticket_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["ticket_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1076,12 +1012,8 @@
           "name": "ticket_workspaces_workspace_id_workspaces_id_fk",
           "tableFrom": "ticket_workspaces",
           "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1236,12 +1168,8 @@
           "name": "tickets_project_id_projects_id_fk",
           "tableFrom": "tickets",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1249,12 +1177,8 @@
           "name": "tickets_status_id_ticket_statuses_id_fk",
           "tableFrom": "tickets",
           "tableTo": "ticket_statuses",
-          "columnsFrom": [
-            "status_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["status_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1262,12 +1186,8 @@
           "name": "tickets_file_id_files_id_fk",
           "tableFrom": "tickets",
           "tableTo": "files",
-          "columnsFrom": [
-            "file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["file_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1341,12 +1261,8 @@
           "name": "workspace_artifacts_ticket_id_tickets_id_fk",
           "tableFrom": "workspace_artifacts",
           "tableTo": "tickets",
-          "columnsFrom": [
-            "ticket_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["ticket_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1354,12 +1270,8 @@
           "name": "workspace_artifacts_file_id_files_id_fk",
           "tableFrom": "workspace_artifacts",
           "tableTo": "files",
-          "columnsFrom": [
-            "file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["file_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1484,12 +1396,8 @@
           "name": "workspaces_project_id_projects_id_fk",
           "tableFrom": "workspaces",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1497,12 +1405,8 @@
           "name": "workspaces_session_id_sessions_id_fk",
           "tableFrom": "workspaces",
           "tableTo": "sessions",
-          "columnsFrom": [
-            "session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1510,12 +1414,8 @@
           "name": "workspaces_startup_log_file_id_files_id_fk",
           "tableFrom": "workspaces",
           "tableTo": "files",
-          "columnsFrom": [
-            "startup_log_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["startup_log_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1567,12 +1467,8 @@
           "name": "ydoc_awareness_project_id_projects_id_fk",
           "tableFrom": "ydoc_awareness",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1580,11 +1476,7 @@
       "compositePrimaryKeys": {
         "ydoc_awareness_client_id_room_project_id_pk": {
           "name": "ydoc_awareness_client_id_room_project_id_pk",
-          "columns": [
-            "client_id",
-            "room",
-            "project_id"
-          ]
+          "columns": ["client_id", "room", "project_id"]
         }
       },
       "uniqueConstraints": {},
@@ -1627,12 +1519,8 @@
           "name": "ydoc_resume_state_project_id_projects_id_fk",
           "tableFrom": "ydoc_resume_state",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1640,10 +1528,7 @@
       "compositePrimaryKeys": {
         "ydoc_resume_state_project_id_room_pk": {
           "name": "ydoc_resume_state_project_id_room_pk",
-          "columns": [
-            "project_id",
-            "room"
-          ]
+          "columns": ["project_id", "room"]
         }
       },
       "uniqueConstraints": {},
@@ -1686,12 +1571,8 @@
           "name": "ydoc_updates_project_id_projects_id_fk",
           "tableFrom": "ydoc_updates",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1707,31 +1588,17 @@
     "public.session_status": {
       "name": "session_status",
       "schema": "public",
-      "values": [
-        "in_progress",
-        "awaiting_input",
-        "completed",
-        "failed",
-        "cancelled"
-      ]
+      "values": ["in_progress", "awaiting_input", "completed", "failed", "cancelled"]
     },
     "public.ticket_complexity": {
       "name": "ticket_complexity",
       "schema": "public",
-      "values": [
-        "low",
-        "medium",
-        "high"
-      ]
+      "values": ["low", "medium", "high"]
     },
     "public.workspace_status": {
       "name": "workspace_status",
       "schema": "public",
-      "values": [
-        "active",
-        "merged",
-        "rejected"
-      ]
+      "values": ["active", "merged", "rejected"]
     }
   },
   "schemas": {},
