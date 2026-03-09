@@ -78,6 +78,7 @@ export const listTicketsHandler = (deps: RouteDeps): AppRouteHandler<typeof list
         return {
           ...t,
           status_name: t.status_id ? (statusMap.get(t.status_id) ?? null) : null,
+          tag_ids: tags.map((tag) => tag.id),
           tag_names: tags.map((tag) => tag.name),
         };
       }),

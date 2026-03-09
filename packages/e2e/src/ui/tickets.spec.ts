@@ -284,4 +284,47 @@ test.describe("Ticket list", () => {
     const loadingOrBoard = page.getByText("Loading tickets...").or(page.getByText("backlog", { exact: true }).first());
     await expect(loadingOrBoard).toBeVisible();
   });
+
+  test("toggles a tag on a ticket from the detail sidebar", async ({ page, request }) => {
+    test.setTimeout(10_000);
+
+    const statuses = await getTicketStatuses(request, projectId);
+    const backlog = statuses.find((s) => s.name === "backlog")!;
+
+    // Create a tag for the project
+    const tagRes = await request.post(`${apiBase}/v1/projects/${projectId}/tags`, {
+      data: { name: "Bug", color: "red" },
+    });
+    expect(tagRes.ok()).toBe(true);
+
+    // Create a ticket
+    const ticket = await createTicketViaApi(request, projectId, "Tag test ticket", backlog.id);
+
+    await bypassOnboarding(page);
+    await page.goto(`/projects/${projectId}/tickets/${ticket.shorthand}`);
+
+    // The tag selector should show "No tags selected"
+    await expect(page.getByText("No tags selected")).toBeVisible();
+
+    // Open the tag dropdown and select "Bug"
+    await page.getByText("No tags selected").click();
+
+    const tagPatchResponse = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        response.url().includes(`/v1/tickets/${ticket.id}`) &&
+        response.status() === 200,
+    );
+    await page.getByText("Bug", { exact: true }).click();
+    await tagPatchResponse;
+
+    // The trigger should now show "Bug" instead of "No tags selected"
+    await expect(page.getByText("No tags selected")).not.toBeVisible();
+
+    // Verify via API that the tag was assigned
+    const listRes = await request.get(`${apiBase}/v1/tickets?project_id=${projectId}`);
+    const allTickets = (await listRes.json()) as { id: string; tag_ids: string[] }[];
+    const updatedTicket = allTickets.find((t) => t.id === ticket.id);
+    expect(updatedTicket?.tag_ids).toHaveLength(1);
+  });
 });

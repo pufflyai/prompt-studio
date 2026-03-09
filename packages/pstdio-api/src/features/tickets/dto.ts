@@ -27,6 +27,7 @@ export const ticketDetailResponseSchema = ticketResponseSchema.extend({
 
 export const ticketListItemSchema = ticketResponseSchema.extend({
   status_name: z.string().nullable(),
+  tag_ids: z.array(z.string()),
   tag_names: z.array(z.string()),
 });
 

@@ -99,15 +99,12 @@ export const updateProjectTicket = async (projectId: string, ticketId: string, i
 };
 
 export const updateProjectTicketTags = async (ticketId: string, tagIds: string[]) => {
-  const response = await apiRequest<{ ticket_id: string; tag_ids: string[] }>(`/v1/tickets/${ticketId}/tags`, {
-    method: "PUT",
+  await apiRequest(`/v1/tickets/${ticketId}`, {
+    method: "PATCH",
     body: { tag_ids: tagIds },
   });
 
-  return {
-    ticketId: response.ticket_id,
-    tagIds: response.tag_ids,
-  };
+  return { ticketId, tagIds };
 };
 
 export const deleteProjectTicket = async (_projectId: string, ticketId: string) => {
