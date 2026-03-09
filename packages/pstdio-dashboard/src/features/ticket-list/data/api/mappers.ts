@@ -77,7 +77,7 @@ export const toTicket = (
   id: ticket.id,
   shorthand: ticket.shorthand,
   title: ticket.display_title ?? "",
-  content: ticket.user_prompt ?? "",
+  content: "",
   tagIds: Array.isArray(ticket.tag_ids) ? ticket.tag_ids : [],
   status: ticket.status_name ?? statusById.get(ticket.status_id ?? "") ?? fallbackStatusName,
   statusColor: colorById.get(ticket.status_id ?? "") ?? fallbackColor,

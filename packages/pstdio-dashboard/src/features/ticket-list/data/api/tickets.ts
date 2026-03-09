@@ -32,6 +32,14 @@ export const getProjectTickets = async (projectId: string) => {
   );
 };
 
+export const getProjectTicketContent = async (ticketId: string, signal?: AbortSignal) => {
+  const ticket = await apiRequest<{ content?: string | null }>(`/v1/tickets/${ticketId}`, {
+    cache: "no-store",
+    signal,
+  });
+  return ticket.content ?? "";
+};
+
 export const updateProjectTicketStatus = async (projectId: string, ticket: Ticket, status: TicketStatus) => {
   const statusCatalog = await fetchTicketStatuses(projectId);
   const statusId = statusCatalog.idByName.get(status);
@@ -43,12 +51,7 @@ export const updateProjectTicketStatus = async (projectId: string, ticket: Ticke
   const updated = await apiRequest<ApiTicket>(`/v1/tickets/${ticket.id}`, {
     method: "PATCH",
     body: {
-      display_title: ticket.title || undefined,
-      user_prompt: ticket.content || undefined,
       status_id: statusId,
-      tag_ids: ticket.tagIds,
-      archived: Boolean(ticket.archived),
-      ...(ticket.complexity != null && { complexity: ticket.complexity }),
     },
   });
 
@@ -61,8 +64,38 @@ export const updateProjectTicketStatus = async (projectId: string, ticket: Ticke
   );
 };
 
-export const updateProjectTicket = async (projectId: string, ticket: Ticket) => {
-  return updateProjectTicketStatus(projectId, ticket, ticket.status);
+type UpdateProjectTicketInput = {
+  title?: string;
+  content?: string;
+  complexity?: "low" | "medium" | "high" | null;
+  archived?: boolean;
+};
+
+export const updateProjectTicket = async (projectId: string, ticketId: string, input: UpdateProjectTicketInput) => {
+  const statusCatalog = await fetchTicketStatuses(projectId);
+  const body: Record<string, unknown> = {};
+
+  if (input.title !== undefined) body.display_title = input.title;
+  if (input.content !== undefined) body.content = input.content;
+  if (input.complexity !== undefined) body.complexity = input.complexity;
+  if (input.archived !== undefined) body.archived = input.archived;
+
+  if (Object.keys(body).length === 0) {
+    throw new Error("No ticket fields to update.");
+  }
+
+  const updated = await apiRequest<ApiTicket>(`/v1/tickets/${ticketId}`, {
+    method: "PATCH",
+    body,
+  });
+
+  return toTicket(
+    updated,
+    statusCatalog.statusById,
+    statusCatalog.colorById,
+    statusCatalog.fallbackName,
+    statusCatalog.fallbackColor,
+  );
 };
 
 export const updateProjectTicketTags = async (ticketId: string, tagIds: string[]) => {

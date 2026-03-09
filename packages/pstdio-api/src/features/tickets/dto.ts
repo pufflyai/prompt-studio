@@ -21,6 +21,10 @@ export const ticketResponseSchema = z.object({
   updated_at: z.string(),
 });
 
+export const ticketDetailResponseSchema = ticketResponseSchema.extend({
+  content: z.string(),
+});
+
 export const ticketListItemSchema = ticketResponseSchema.extend({
   status_name: z.string().nullable(),
   tag_names: z.array(z.string()),
@@ -43,6 +47,7 @@ export const createTicketBodySchema = z
 
 export const updateTicketBodySchema = z
   .object({
+    content: z.string().optional(),
     display_title: z.string().optional(),
     user_prompt: z.string().optional(),
     file_id: z.string().optional(),

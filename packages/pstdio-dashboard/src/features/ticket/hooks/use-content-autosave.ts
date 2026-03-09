@@ -5,58 +5,95 @@ const CONTENT_SAVE_DELAY_MS = 400;
 interface UseContentAutosaveInput {
   ticketId: string;
   content: string;
-  onSave: (ticketId: string, content: string) => void;
+  onSave: (ticketId: string, content: string) => void | Promise<void>;
 }
 
 export const useContentAutosave = (input: UseContentAutosaveInput) => {
   const { ticketId, content, onSave } = input;
 
-  const editorKey = ticketId ? `ticket:${ticketId}` : "ticket:none";
+  const scopeKey = ticketId ? `ticket:${ticketId}` : "ticket:none";
+  const [editorRevision, setEditorRevision] = useState(0);
   const [initialContent, setInitialContent] = useState(content);
   const draftContentRef = useRef(content);
   const savedContentRef = useRef(content);
   const pendingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeIdRef = useRef<string | null>(ticketId || null);
-  const lastKeyRef = useRef(editorKey);
+  const lastKeyRef = useRef(scopeKey);
+  const hasLocalEditsRef = useRef(false);
+  const onSaveRef = useRef(onSave);
 
-  const flush = () => {
+  useEffect(() => {
+    onSaveRef.current = onSave;
+  }, [onSave]);
+
+  const flush = async () => {
     if (!activeIdRef.current) return;
     const next = draftContentRef.current;
     if (savedContentRef.current === next) return;
     savedContentRef.current = next;
-    onSave(activeIdRef.current, next);
+    await onSaveRef.current(activeIdRef.current, next);
+    setInitialContent((current) => (current === next ? current : next));
   };
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    return () => {
       if (pendingRef.current) clearTimeout(pendingRef.current);
       const id = activeIdRef.current;
       if (!id) return;
       const next = draftContentRef.current;
       if (savedContentRef.current === next) return;
       savedContentRef.current = next;
-      onSave(id, next);
-    },
-    [onSave],
-  );
+      void onSaveRef.current(id, next);
+    };
+  }, []);
 
   useEffect(() => {
-    if (lastKeyRef.current === editorKey) return;
-    lastKeyRef.current = editorKey;
+    if (lastKeyRef.current === scopeKey) return;
+
+    if (pendingRef.current) {
+      clearTimeout(pendingRef.current);
+      pendingRef.current = null;
+    }
+
+    lastKeyRef.current = scopeKey;
     activeIdRef.current = ticketId || null;
     draftContentRef.current = content;
     savedContentRef.current = content;
+    hasLocalEditsRef.current = false;
     setInitialContent(content);
-  }, [content, editorKey, ticketId]);
+    setEditorRevision((revision) => revision + 1);
+  }, [content, scopeKey, ticketId]);
+
+  useEffect(() => {
+    if (lastKeyRef.current !== scopeKey) return;
+    if (pendingRef.current) return;
+    if (draftContentRef.current !== savedContentRef.current) return;
+    if (hasLocalEditsRef.current) return;
+    if (savedContentRef.current === content) return;
+
+    draftContentRef.current = content;
+    savedContentRef.current = content;
+    setInitialContent(content);
+    setEditorRevision((revision) => revision + 1);
+  }, [content, scopeKey]);
 
   const handleChange = (value: string) => {
+    hasLocalEditsRef.current = true;
     draftContentRef.current = value;
     if (pendingRef.current) clearTimeout(pendingRef.current);
     pendingRef.current = setTimeout(() => {
       pendingRef.current = null;
-      flush();
+      void flush();
     }, CONTENT_SAVE_DELAY_MS);
   };
 
-  return { editorKey, initialContent, handleChange };
+  const flushPending = async () => {
+    if (pendingRef.current) {
+      clearTimeout(pendingRef.current);
+      pendingRef.current = null;
+    }
+    await flush();
+  };
+
+  return { editorKey: `${scopeKey}:${editorRevision}`, initialContent, handleChange, flushPending };
 };

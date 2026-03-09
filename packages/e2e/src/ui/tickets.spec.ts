@@ -136,6 +136,104 @@ test.describe("Ticket list", () => {
     expect(page.url()).toContain(`/tickets/${ticket.shorthand}`);
   });
 
+  test("updates ticket display title after editing content and returning to list", async ({ page, request }) => {
+    await bypassOnboarding(page);
+    await page.goto(`/projects/${projectId}/tickets`);
+
+    await expect(page.getByText("backlog", { exact: true }).first()).toBeVisible();
+
+    await page.getByRole("button", { name: "Create ticket" }).first().click();
+    const dialog = page.getByRole("dialog").last();
+    await expect(dialog.getByText("Describe the ticket...")).toBeVisible();
+    await page.keyboard.type("Original display title");
+    await dialog.getByRole("button", { name: "Create", exact: true }).click();
+
+    await expect(page.getByText("Original display title")).toBeVisible();
+
+    const listTickets = async () => {
+      const res = await request.get(`${apiBase}/v1/tickets?project_id=${projectId}`);
+      expect(res.ok()).toBe(true);
+      return (await res.json()) as { id: string; shorthand: string; display_title: string | null }[];
+    };
+
+    await expect.poll(async () => (await listTickets()).length).toBe(1);
+    const [createdTicket] = await listTickets();
+    expect(createdTicket).toBeTruthy();
+    expect(createdTicket.display_title).toBe("Original display title");
+
+    await page.getByText("Original display title").first().click();
+    await page.waitForURL(`**/projects/${projectId}/tickets/${createdTicket!.shorthand}`);
+
+    const saveResponse = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        response.url().includes(`/v1/tickets/${createdTicket!.id}`) &&
+        response.status() === 200,
+    );
+
+    const editor = page.locator('[contenteditable="true"]:visible').last();
+    await editor.click();
+    await page.keyboard.press("ControlOrMeta+A");
+    await page.keyboard.type("Updated display title");
+    await saveResponse;
+
+    await page.getByRole("button", { name: "Back to tickets" }).click();
+    await page.waitForURL(`**/projects/${projectId}/tickets`);
+
+    await expect(page.getByText("Updated display title")).toBeVisible();
+    await expect(page.getByText("Original display title")).not.toBeVisible();
+  });
+
+  test("preserves edited ticket content after leaving and reopening ticket details", async ({ page, request }) => {
+    test.setTimeout(20_000);
+    await bypassOnboarding(page);
+    await page.goto(`/projects/${projectId}/tickets`);
+
+    await expect(page.getByText("backlog", { exact: true }).first()).toBeVisible();
+
+    await page.getByRole("button", { name: "Create ticket" }).first().click();
+    const dialog = page.getByRole("dialog").last();
+    await expect(dialog.getByText("Describe the ticket...")).toBeVisible();
+    await page.keyboard.type("Original content title");
+    await dialog.getByRole("button", { name: "Create", exact: true }).click();
+
+    const listTickets = async () => {
+      const res = await request.get(`${apiBase}/v1/tickets?project_id=${projectId}`);
+      expect(res.ok()).toBe(true);
+      return (await res.json()) as { id: string; shorthand: string; display_title: string | null }[];
+    };
+
+    await expect.poll(async () => (await listTickets()).length).toBe(1);
+    const [createdTicket] = await listTickets();
+    expect(createdTicket).toBeTruthy();
+
+    await page.getByText("Original content title").first().click();
+    await page.waitForURL(`**/projects/${projectId}/tickets/${createdTicket!.shorthand}`);
+
+    const updatedContent = "Persisted content title\n\npersisted-body-marker";
+    const saveResponse = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        response.url().includes(`/v1/tickets/${createdTicket!.id}`) &&
+        response.status() === 200,
+    );
+    const editor = page.locator('[contenteditable="true"]:visible').last();
+    await editor.click();
+    await page.keyboard.press("ControlOrMeta+A");
+    await page.keyboard.type(updatedContent);
+    await saveResponse;
+    await expect(editor).toContainText("persisted-body-marker");
+
+    await page.getByRole("button", { name: "Back to tickets" }).click();
+    await page.waitForURL(`**/projects/${projectId}/tickets`);
+    await expect(page.getByText("Persisted content title")).toBeVisible();
+    await page.getByText("Persisted content title").first().click();
+    await page.waitForURL(`**/projects/${projectId}/tickets/${createdTicket!.shorthand}`);
+
+    const reopenedEditor = page.locator('[contenteditable="true"]:visible').last();
+    await expect(reopenedEditor).toContainText("persisted-body-marker", { timeout: 12_000 });
+  });
+
   test("filters tickets by hiding archived tickets", async ({ page, request }) => {
     const statuses = await getTicketStatuses(request, projectId);
     const backlog = statuses.find((s) => s.name === "backlog")!;

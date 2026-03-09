@@ -6,6 +6,24 @@ Manage tickets within a pstdio project. Tickets track work items (bugs, features
 
 ---
 
+## Ticket Content Model
+
+Ticket payload fields have distinct meanings and must not be treated as interchangeable:
+
+| Field         | Meaning                                                                                                |
+| ------------- | ------------------------------------------------------------------------------------------------------ |
+| `user_prompt` | The user's prompt text for tasking an agent. It is instruction context, not the canonical ticket body. |
+| `file_id`     | Reference to the canonical ticket content file stored in the `files` table.                            |
+| `content`     | The actual ticket body text stored in the file referenced by `file_id`.                                |
+
+Rules:
+
+1. `user_prompt` is only for agent tasking context (for example, `tickets write --user-prompt ...` or API `user_prompt`).
+2. Ticket body content is read from and written to the file referenced by `file_id`.
+3. Anywhere this spec says "ticket content", it means the body stored in `file_id`.
+
+---
+
 ## Ticket Shorthand
 
 Every ticket has a unique shorthand of the form `<PROJECT_SHORTHAND>-<N>`, where:
@@ -114,14 +132,14 @@ pstdio tickets write --title <title> --template <template-name> --tag <tag>... [
 
 ### Flags
 
-| Flag            | Type       | Required | Description                                                             |
-| --------------- | ---------- | -------- | ----------------------------------------------------------------------- |
-| `--title`       | `string`   | yes      | The ticket title. Replaces `{{TICKET_TITLE}}` in the template.          |
-| `--template`    | `string`   | no       | Name of a template to use for the ticket body.                          |
-| `--tag`         | `string[]` | no       | One or more tags to assign. Repeatable.                                 |
-| `--status`      | `string`   | no       | Status name to assign. Defaults to the project's default status.        |
-| `--user-prompt` | `string`   | no       | User prompt or description. Replaces `{{USER_PROMPT}}` in the template. |
-| `--parent-id`   | `string`   | no       | Parent ticket shorthand. Replaces `{{PARENT_ID}}` in the template.      |
+| Flag            | Type       | Required | Description                                                                     |
+| --------------- | ---------- | -------- | ------------------------------------------------------------------------------- |
+| `--title`       | `string`   | yes      | The ticket title. Replaces `{{TICKET_TITLE}}` in the template.                  |
+| `--template`    | `string`   | no       | Name of a template to use for the ticket body.                                  |
+| `--tag`         | `string[]` | no       | One or more tags to assign. Repeatable.                                         |
+| `--status`      | `string`   | no       | Status name to assign. Defaults to the project's default status.                |
+| `--user-prompt` | `string`   | no       | Agent-tasking prompt from the user. Replaces `{{USER_PROMPT}}` in the template. |
+| `--parent-id`   | `string`   | no       | Parent ticket shorthand. Replaces `{{PARENT_ID}}` in the template.              |
 
 ### Behavior
 
@@ -157,18 +175,18 @@ pstdio tickets create --content <content> [--project-id <project-id>] [--status 
 
 ### Flags
 
-| Flag           | Type       | Required | Description                                                                 |
-| -------------- | ---------- | -------- | --------------------------------------------------------------------------- |
-| `--content`    | `string`   | yes      | The ticket content (title or body).                                         |
-| `--project-id` | `string`   | no       | Target project. Defaults to the current project from `.pstdio/config.json`. |
-| `--status`     | `string`   | no       | Status name to assign. Defaults to the project's default status.            |
-| `--tag`        | `string[]` | no       | One or more tags to assign. Repeatable.                                     |
+| Flag           | Type       | Required | Description                                                                       |
+| -------------- | ---------- | -------- | --------------------------------------------------------------------------------- |
+| `--content`    | `string`   | yes      | Canonical ticket body content. Stored in the ticket file referenced by `file_id`. |
+| `--project-id` | `string`   | no       | Target project. Defaults to the current project from `.pstdio/config.json`.       |
+| `--status`     | `string`   | no       | Status name to assign. Defaults to the project's default status.                  |
+| `--tag`        | `string[]` | no       | One or more tags to assign. Repeatable.                                           |
 
 ### Behavior
 
 1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
 2. Create a ticket in the database with `draft=false`. Assign the status from `--status` if provided, otherwise assign the project's default status.
-3. Upload the ticket content (without frontmatter) as a file to the database and link it to the ticket.
+3. Upload the ticket content (without frontmatter) as a file to the database, set `ticket.file_id` to that file, and treat that file body as the ticket's canonical content.
 4. If `--tag` values are provided, assign matching tags to the ticket.
 5. If running inside a linked project (`.pstdio/config.json` exists), write a local `ticket.md` with YAML frontmatter and the ticket title. See [Frontmatter Fields](#frontmatter-fields) for the frontmatter format. If not inside a linked project, no local file is written.
 

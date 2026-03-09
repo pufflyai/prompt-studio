@@ -53,6 +53,22 @@ const applyTicketUpdate = (ticket: Ticket, input: UpdateProjectTicketInput) => (
   archived: input.archived === undefined ? ticket.archived : input.archived,
 });
 
+const toUpdatePayload = (ticket: Ticket, input: UpdateProjectTicketInput) => {
+  const payload: {
+    title?: string;
+    content?: string;
+    complexity?: "low" | "medium" | "high" | null;
+    archived?: boolean;
+  } = {};
+
+  if (input.title !== undefined) payload.title = ticket.title;
+  if (input.content !== undefined) payload.content = ticket.content;
+  if (input.complexity !== undefined) payload.complexity = ticket.complexity;
+  if (input.archived !== undefined) payload.archived = Boolean(ticket.archived);
+
+  return payload;
+};
+
 export const useUpdateProjectTicket = (projectId: string | undefined) => {
   const queryClient = useQueryClient();
 
@@ -68,7 +84,8 @@ export const useUpdateProjectTicket = (projectId: string | undefined) => {
         throw new Error("Ticket not found.");
       }
 
-      return updateProjectTicket(projectId, applyTicketUpdate(ticket, input));
+      const nextTicket = applyTicketUpdate(ticket, input);
+      return updateProjectTicket(projectId, input.ticketId, toUpdatePayload(nextTicket, input));
     },
     onMutate: async (input) => {
       if (!projectId) {

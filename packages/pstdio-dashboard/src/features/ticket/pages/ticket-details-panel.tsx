@@ -17,11 +17,12 @@ import { TicketHeader } from "../components/ticket-header";
 import { useContentAutosave } from "../hooks/use-content-autosave";
 import { useSubTicketCreation } from "../hooks/use-sub-ticket-creation";
 import { useTicketAttemptDiff } from "../hooks/use-ticket-attempt-diff";
+import { useTicketContent } from "../hooks/use-ticket-content";
 import { useTicketSessions } from "../hooks/use-ticket-sessions";
 import { buildCreateSubTicketsPrompt, buildRefineTicketPrompt } from "../utils/build-prompts";
 
 export const TicketDetailsPanel = () => {
-  const { projectId, ticketShorthand } = useParams({ strict: false });
+  const { projectId, ticketShorthand } = useParams({ from: "/projects/$projectId/tickets/$ticketShorthand" });
   const navigate = useNavigate();
 
   const { data: project } = useProject(projectId);
@@ -34,7 +35,9 @@ export const TicketDetailsPanel = () => {
   const ticket = allTickets.find((t) => t.shorthand === ticketShorthand) ?? null;
   const parentTicket = ticket?.parentId ? (allTickets.find((pt) => pt.id === ticket.parentId) ?? null) : null;
   const ticketId = ticket?.id ?? "";
-  const content = ticket?.content ?? "";
+  const ticketContent = useTicketContent(ticket?.id);
+  const content = ticketContent.data ?? "";
+  const isContentLoading = ticketContent.isLoading || ticketContent.data === undefined;
   const ticketAttempts = ticket?.attempts ?? [];
   const defaultRepoId = project?.repositories[0]?.id || null;
 
@@ -47,7 +50,10 @@ export const TicketDetailsPanel = () => {
   const autosave = useContentAutosave({
     ticketId,
     content,
-    onSave: (id, c) => updateTicket.mutate({ ticketId: id, content: c }),
+    onSave: async (id, c) => {
+      ticketContent.setOptimisticContent(c);
+      await updateTicket.mutateAsync({ ticketId: id, content: c });
+    },
   });
 
   let latestAttempt = ticketAttempts[0] ?? null;
@@ -62,7 +68,10 @@ export const TicketDetailsPanel = () => {
   const [isBreakModalOpen, setIsBreakModalOpen] = useState(false);
   const [isRefineModalOpen, setIsRefineModalOpen] = useState(false);
 
-  const navigateBack = () => navigate({ to: "/projects/$projectId/tickets", params: { projectId: projectId! } });
+  const navigateBack = async () => {
+    await autosave.flushPending();
+    navigate({ to: "/projects/$projectId/tickets", params: { projectId } });
+  };
 
   const navigateToTicket = (sh: string) => {
     if (!projectId) return;
@@ -89,7 +98,7 @@ export const TicketDetailsPanel = () => {
   };
 
   const handleRunAttempt = () => {
-    const src = ticket.content.trim();
+    const src = content.trim();
     return sessions.runAttempt(ticket.id, src.length > 0 ? src : ticket.title);
   };
 
@@ -131,13 +140,19 @@ export const TicketDetailsPanel = () => {
       />
       <Flex flex="1" minH="0" overflow="hidden">
         <Stack flex="1" minW="0" padding="sm" overflow="auto">
-          <MarkdownEditor
-            key={autosave.editorKey}
-            defaultState={autosave.initialContent}
-            isEditable
-            placeholder="Enter description..."
-            onChange={autosave.handleChange}
-          />
+          {isContentLoading ? (
+            <Text textStyle="paragraph/S/regular" color="foreground.secondary">
+              Loading ticket content...
+            </Text>
+          ) : (
+            <MarkdownEditor
+              key={autosave.editorKey}
+              defaultState={autosave.initialContent}
+              isEditable
+              placeholder="Enter description..."
+              onChange={autosave.handleChange}
+            />
+          )}
         </Stack>
         <TicketDetailSidebar
           ticket={ticket}

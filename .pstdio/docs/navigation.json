@@ -171,6 +171,10 @@
         {
           "text": "Missing Storybook Play Tests",
           "link": "/known-issues/missing_storybook_play_tests"
+        },
+        {
+          "text": "Strict Query Validation",
+          "link": "/known-issues/strict_query_validation"
         }
       ]
     },

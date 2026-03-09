@@ -1,7 +1,8 @@
+import { readFileSync } from "node:fs";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
-import { notFoundResponseSchema, ticketResponseSchema } from "../dto";
+import { notFoundResponseSchema, ticketDetailResponseSchema } from "../dto";
 
 export const getTicketRoute = createRoute({
   method: "get",
@@ -19,7 +20,7 @@ export const getTicketRoute = createRoute({
   responses: {
     200: {
       description: "Ticket found.",
-      content: { "application/json": { schema: ticketResponseSchema } },
+      content: { "application/json": { schema: ticketDetailResponseSchema } },
     },
     404: {
       description: "Ticket not found.",
@@ -29,6 +30,19 @@ export const getTicketRoute = createRoute({
 });
 
 export const getTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof getTicketRoute> => {
+  const getTicketContent = async (fileId: string | null) => {
+    if (!fileId) {
+      return "";
+    }
+
+    const file = await deps.filesService.get(fileId);
+    if (!file) {
+      return "";
+    }
+
+    return readFileSync(file.storage_path, "utf8");
+  };
+
   return async (c) => {
     const { id } = c.req.valid("param");
     const ticket = await deps.ticketsService.get(id);
@@ -37,6 +51,12 @@ export const getTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof getTic
       return c.json({ error: `Ticket not found: ${id}` }, 404);
     }
 
-    return c.json(ticket, 200);
+    return c.json(
+      {
+        ...ticket,
+        content: await getTicketContent(ticket.file_id),
+      },
+      200,
+    );
   };
 };

@@ -213,15 +213,36 @@ describe("GET /v1/tickets", () => {
 });
 
 describe("GET /v1/tickets/:id", () => {
-  test("returns ticket by id", async () => {
-    const listRes = await app.request(`/v1/tickets?project_id=${projectId}`);
-    const tickets = await listRes.json();
-    const ticketId = tickets[0].id;
+  test("returns ticket by id with canonical content", async () => {
+    const content = "# Ticket body heading\n\nSome details";
+    const createRes = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId, content }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json();
 
-    const res = await app.request(`/v1/tickets/${ticketId}`);
+    const res = await app.request(`/v1/tickets/${created.id}`);
     expect(res.status).toBe(200);
     const ticket = await res.json();
-    expect(ticket.id).toBe(ticketId);
+    expect(ticket.id).toBe(created.id);
+    expect(ticket.content).toBe(content);
+  });
+
+  test("returns empty content when ticket has no canonical file", async () => {
+    const createRes = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json();
+
+    const res = await app.request(`/v1/tickets/${created.id}`);
+    expect(res.status).toBe(200);
+    const ticket = await res.json();
+    expect(ticket.content).toBe("");
   });
 
   test("returns 404 for non-existent ticket", async () => {
@@ -254,6 +275,34 @@ describe("PATCH /v1/tickets/:id", () => {
       body: JSON.stringify({ display_title: "Nope" }),
     });
     expect(res.status).toBe(404);
+  });
+
+  test("updates canonical content file and derived display_title when content is provided", async () => {
+    const createRes = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId, content: "# Original title\n\nOriginal body" }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json();
+    expect(created.file_id).not.toBeNull();
+
+    const updatedContent = "# Updated title\n\nUpdated body";
+    const updateRes = await app.request(`/v1/tickets/${created.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: updatedContent }),
+    });
+
+    expect(updateRes.status).toBe(200);
+    const updated = await updateRes.json();
+    expect(updated.display_title).toBe("Updated title");
+    expect(updated.file_id).not.toBeNull();
+    expect(updated.file_id).toBe(created.file_id);
+
+    const fileRes = await app.request(`/v1/tickets/${created.id}/files/${updated.file_id}/content`);
+    expect(fileRes.status).toBe(200);
+    expect(await fileRes.text()).toBe(updatedContent);
   });
 });
 
