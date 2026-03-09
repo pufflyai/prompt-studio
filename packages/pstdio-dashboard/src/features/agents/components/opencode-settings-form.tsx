@@ -1,4 +1,6 @@
-import { HStack, NativeSelect, Spinner, Stack, Switch, Text } from "@chakra-ui/react";
+import { Button, HStack, Icon, Menu, Spinner, Stack, Switch, Text } from "@chakra-ui/react";
+import { MenuItem } from "@pstdio/ui";
+import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAgentModels } from "../hooks/use-agent-models";
 import type { OpencodeSettings } from "../types";
@@ -14,6 +16,8 @@ export const OpencodeSettingsForm = (props: OpencodeSettingsFormProps) => {
   const { settings, onUpdate, isUpdating } = props;
   const { data: models = [], isLoading: isModelsLoading } = useAgentModels("opencode", { enabled: true });
 
+  const selectedModelLabel = settings.model ?? t("opencode.agentDefault");
+
   return (
     <Stack gap="sm">
       <HStack justify="space-between" alignItems="center">
@@ -27,20 +31,38 @@ export const OpencodeSettingsForm = (props: OpencodeSettingsFormProps) => {
         {isModelsLoading ? (
           <Spinner size="xs" />
         ) : (
-          <NativeSelect.Root size="sm" width="auto" minW="220px" disabled={isUpdating}>
-            <NativeSelect.Field
-              value={settings.model ?? ""}
-              onChange={(e) => onUpdate({ model: e.target.value || undefined })}
-            >
-              <option value="">{t("opencode.agentDefault")}</option>
-              {models.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.id}
-                </option>
-              ))}
-            </NativeSelect.Field>
-            <NativeSelect.Indicator />
-          </NativeSelect.Root>
+          <Menu.Root>
+            <Menu.Trigger asChild>
+              <Button
+                size="sm"
+                variant="outline"
+                width="auto"
+                minW="220px"
+                justifyContent="space-between"
+                disabled={isUpdating}
+              >
+                {selectedModelLabel}
+                <Icon as={ChevronDown} color="fg.muted" />
+              </Button>
+            </Menu.Trigger>
+            <Menu.Positioner>
+              <Menu.Content minW="220px" bg="bg">
+                <MenuItem
+                  primaryLabel={t("opencode.agentDefault")}
+                  isSelected={!settings.model}
+                  onClick={() => onUpdate({ model: undefined })}
+                />
+                {models.map((m) => (
+                  <MenuItem
+                    key={m.id}
+                    primaryLabel={m.id}
+                    isSelected={settings.model === m.id}
+                    onClick={() => onUpdate({ model: m.id })}
+                  />
+                ))}
+              </Menu.Content>
+            </Menu.Positioner>
+          </Menu.Root>
         )}
       </HStack>
 

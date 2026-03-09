@@ -1,4 +1,6 @@
-import { Button, CloseButton, Dialog, NativeSelect, Stack, Text } from "@chakra-ui/react";
+import { Button, CloseButton, Dialog, Icon, Menu, Stack, Text } from "@chakra-ui/react";
+import { MenuItem } from "@pstdio/ui";
+import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { WorkspaceAgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
@@ -39,6 +41,10 @@ export const BreakIntoSubTicketsModal = (props: BreakIntoSubTicketsModalProps) =
     onClose();
   };
 
+  const templateLabel = templateName
+    ? (templates.find((tmpl) => tmpl.name === templateName)?.name ?? templateName)
+    : t("breakIntoSubTicketsModal.noTemplate");
+
   return (
     <Dialog.Root open={open} onOpenChange={(details) => !details.open && handleClose()}>
       <Dialog.Backdrop />
@@ -60,17 +66,37 @@ export const BreakIntoSubTicketsModal = (props: BreakIntoSubTicketsModalProps) =
               {templates.length > 0 ? (
                 <Stack gap="2xs">
                   <Text textStyle="label/S/medium">{t("breakIntoSubTicketsModal.template")}</Text>
-                  <NativeSelect.Root size="sm" disabled={isSubmitting}>
-                    <NativeSelect.Field value={templateName} onChange={(event) => setTemplateName(event.target.value)}>
-                      <option value="">{t("breakIntoSubTicketsModal.noTemplate")}</option>
-                      {templates.map((template) => (
-                        <option key={template.id} value={template.name}>
-                          {template.name}
-                        </option>
-                      ))}
-                    </NativeSelect.Field>
-                    <NativeSelect.Indicator />
-                  </NativeSelect.Root>
+                  <Menu.Root>
+                    <Menu.Trigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        width="full"
+                        justifyContent="space-between"
+                        disabled={isSubmitting}
+                      >
+                        {templateLabel}
+                        <Icon as={ChevronDown} color="fg.muted" />
+                      </Button>
+                    </Menu.Trigger>
+                    <Menu.Positioner>
+                      <Menu.Content bg="bg">
+                        <MenuItem
+                          primaryLabel={t("breakIntoSubTicketsModal.noTemplate")}
+                          isSelected={templateName === ""}
+                          onClick={() => setTemplateName("")}
+                        />
+                        {templates.map((template) => (
+                          <MenuItem
+                            key={template.id}
+                            primaryLabel={template.name}
+                            isSelected={templateName === template.name}
+                            onClick={() => setTemplateName(template.name)}
+                          />
+                        ))}
+                      </Menu.Content>
+                    </Menu.Positioner>
+                  </Menu.Root>
                 </Stack>
               ) : null}
 

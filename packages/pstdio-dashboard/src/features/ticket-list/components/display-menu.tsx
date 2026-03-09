@@ -1,17 +1,18 @@
 import {
   Box,
   Button,
-  createListCollection,
   HStack,
+  Icon,
+  Menu,
   Popover,
   Portal,
   SegmentGroup,
-  Select,
   Separator,
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { KanbanSquare, List, Settings2 } from "lucide-react";
+import { MenuItem } from "@pstdio/ui";
+import { ChevronDown, KanbanSquare, List, Settings2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import type { DisplayProperty, DisplaySettings, GroupingField, OrderingField, ViewMode } from "../types";
@@ -62,12 +63,29 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
     { value: "updatedAt", label: t("displayMenu.propertyOptions.updatedAt") },
   ];
 
-  const GROUPING_COLLECTION = createListCollection({ items: GROUPING_OPTIONS });
-  const ORDERING_COLLECTION = createListCollection({ items: ORDERING_OPTIONS });
-  const DISPLAY_PROPERTIES_COLLECTION = createListCollection({ items: DISPLAY_PROPERTY_OPTIONS });
-
   const updateField = <K extends keyof DisplaySettings>(key: K, value: DisplaySettings[K]) => {
     onSettingsChange({ ...settings, [key]: value });
+  };
+
+  const selectedGroupingLabel =
+    GROUPING_OPTIONS.find((o) => o.value === settings.grouping)?.label ?? t("displayMenu.selectGrouping");
+
+  const selectedOrderingLabel =
+    ORDERING_OPTIONS.find((o) => o.value === settings.ordering)?.label ?? t("displayMenu.selectOrdering");
+
+  const displayPropertiesSet = new Set(settings.displayProperties);
+  const selectedDisplayPropertiesLabel =
+    settings.displayProperties.length > 0
+      ? DISPLAY_PROPERTY_OPTIONS.filter((o) => displayPropertiesSet.has(o.value))
+          .map((o) => o.label)
+          .join(", ")
+      : t("displayMenu.selectDisplayProperties");
+
+  const handleDisplayPropertyToggle = (value: DisplayProperty) => {
+    const next = displayPropertiesSet.has(value)
+      ? settings.displayProperties.filter((p) => p !== value)
+      : [...settings.displayProperties, value];
+    updateField("displayProperties", next);
   };
 
   return (
@@ -113,105 +131,76 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
               <Stack gap="xs">
                 <Stack gap="2xs">
                   <SectionLabel>{t("displayMenu.grouping")}</SectionLabel>
-                  <Select.Root
-                    collection={GROUPING_COLLECTION}
-                    size="sm"
-                    value={[settings.grouping]}
-                    onValueChange={(event) => {
-                      const [value] = event.value;
-                      if (!value) return;
-                      updateField("grouping", value as GroupingField);
-                    }}
-                  >
-                    <Select.HiddenSelect />
-                    <Select.Control>
-                      <Select.Trigger>
-                        <Select.ValueText placeholder={t("displayMenu.selectGrouping")} />
-                      </Select.Trigger>
-                      <Select.IndicatorGroup>
-                        <Select.Indicator />
-                      </Select.IndicatorGroup>
-                    </Select.Control>
-                    <Select.Positioner>
-                      <Select.Content>
-                        {GROUPING_COLLECTION.items.map((option) => (
-                          <Select.Item item={option} key={option.value}>
-                            {option.label}
-                            <Select.ItemIndicator />
-                          </Select.Item>
+                  <Menu.Root>
+                    <Menu.Trigger asChild>
+                      <Button size="sm" variant="outline" width="full" justifyContent="space-between">
+                        {selectedGroupingLabel}
+                        <Icon as={ChevronDown} color="fg.muted" />
+                      </Button>
+                    </Menu.Trigger>
+                    <Menu.Positioner>
+                      <Menu.Content minW="280px" bg="bg">
+                        {GROUPING_OPTIONS.map((option) => (
+                          <MenuItem
+                            key={option.value}
+                            primaryLabel={option.label}
+                            isSelected={settings.grouping === option.value}
+                            onClick={() => updateField("grouping", option.value)}
+                          />
                         ))}
-                      </Select.Content>
-                    </Select.Positioner>
-                  </Select.Root>
+                      </Menu.Content>
+                    </Menu.Positioner>
+                  </Menu.Root>
                 </Stack>
 
                 <Stack gap="2xs">
                   <SectionLabel>{t("displayMenu.ordering")}</SectionLabel>
-                  <Select.Root
-                    collection={ORDERING_COLLECTION}
-                    size="sm"
-                    value={[settings.ordering]}
-                    onValueChange={(event) => {
-                      const [value] = event.value;
-                      if (!value) return;
-                      updateField("ordering", value as OrderingField);
-                    }}
-                  >
-                    <Select.HiddenSelect />
-                    <Select.Control>
-                      <Select.Trigger>
-                        <Select.ValueText placeholder={t("displayMenu.selectOrdering")} />
-                      </Select.Trigger>
-                      <Select.IndicatorGroup>
-                        <Select.Indicator />
-                      </Select.IndicatorGroup>
-                    </Select.Control>
-                    <Select.Positioner>
-                      <Select.Content>
-                        {ORDERING_COLLECTION.items.map((option) => (
-                          <Select.Item item={option} key={option.value}>
-                            {option.label}
-                            <Select.ItemIndicator />
-                          </Select.Item>
+                  <Menu.Root>
+                    <Menu.Trigger asChild>
+                      <Button size="sm" variant="outline" width="full" justifyContent="space-between">
+                        {selectedOrderingLabel}
+                        <Icon as={ChevronDown} color="fg.muted" />
+                      </Button>
+                    </Menu.Trigger>
+                    <Menu.Positioner>
+                      <Menu.Content minW="280px" bg="bg">
+                        {ORDERING_OPTIONS.map((option) => (
+                          <MenuItem
+                            key={option.value}
+                            primaryLabel={option.label}
+                            isSelected={settings.ordering === option.value}
+                            onClick={() => updateField("ordering", option.value)}
+                          />
                         ))}
-                      </Select.Content>
-                    </Select.Positioner>
-                  </Select.Root>
+                      </Menu.Content>
+                    </Menu.Positioner>
+                  </Menu.Root>
                 </Stack>
               </Stack>
 
               <Separator />
               <Stack gap="2xs">
                 <SectionLabel>{t("displayMenu.displayProperties")}</SectionLabel>
-                <Select.Root
-                  multiple
-                  collection={DISPLAY_PROPERTIES_COLLECTION}
-                  size="sm"
-                  value={settings.displayProperties}
-                  onValueChange={(event) => {
-                    updateField("displayProperties", event.value as DisplayProperty[]);
-                  }}
-                >
-                  <Select.HiddenSelect />
-                  <Select.Control>
-                    <Select.Trigger>
-                      <Select.ValueText placeholder={t("displayMenu.selectDisplayProperties")} />
-                    </Select.Trigger>
-                    <Select.IndicatorGroup>
-                      <Select.Indicator />
-                    </Select.IndicatorGroup>
-                  </Select.Control>
-                  <Select.Positioner>
-                    <Select.Content>
-                      {DISPLAY_PROPERTIES_COLLECTION.items.map((option) => (
-                        <Select.Item item={option} key={option.value}>
-                          {option.label}
-                          <Select.ItemIndicator />
-                        </Select.Item>
+                <Menu.Root closeOnSelect={false}>
+                  <Menu.Trigger asChild>
+                    <Button size="sm" variant="outline" width="full" justifyContent="space-between">
+                      <Text lineClamp={1}>{selectedDisplayPropertiesLabel}</Text>
+                      <Icon as={ChevronDown} color="fg.muted" />
+                    </Button>
+                  </Menu.Trigger>
+                  <Menu.Positioner>
+                    <Menu.Content minW="280px" bg="bg">
+                      {DISPLAY_PROPERTY_OPTIONS.map((option) => (
+                        <MenuItem
+                          key={option.value}
+                          primaryLabel={option.label}
+                          isSelected={displayPropertiesSet.has(option.value)}
+                          onClick={() => handleDisplayPropertyToggle(option.value)}
+                        />
                       ))}
-                    </Select.Content>
-                  </Select.Positioner>
-                </Select.Root>
+                    </Menu.Content>
+                  </Menu.Positioner>
+                </Menu.Root>
               </Stack>
             </Stack>
           </Popover.Content>

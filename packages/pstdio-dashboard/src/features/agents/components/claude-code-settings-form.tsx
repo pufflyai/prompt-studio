@@ -1,4 +1,6 @@
-import { HStack, NativeSelect, Spinner, Stack, Switch, Text } from "@chakra-ui/react";
+import { Button, HStack, Icon, Menu, Spinner, Stack, Switch, Text } from "@chakra-ui/react";
+import { MenuItem } from "@pstdio/ui";
+import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAgentModels } from "../hooks/use-agent-models";
 import type { ClaudeCodeSettings } from "../types";
@@ -19,6 +21,11 @@ export const ClaudeCodeSettingsForm = (props: ClaudeCodeSettingsFormProps) => {
   ];
   const { data: models = [], isLoading: isModelsLoading } = useAgentModels("claude-code", { enabled: true });
 
+  const selectedModelLabel = settings.model ?? t("claudeCode.agentDefault");
+  const selectedApprovalLabel =
+    APPROVAL_OPTIONS.find((opt) => opt.value === (settings.approvalMode ?? "bypass"))?.label ??
+    APPROVAL_OPTIONS[0].label;
+
   return (
     <Stack gap="sm">
       <HStack justify="space-between" alignItems="center">
@@ -32,20 +39,38 @@ export const ClaudeCodeSettingsForm = (props: ClaudeCodeSettingsFormProps) => {
         {isModelsLoading ? (
           <Spinner size="xs" />
         ) : (
-          <NativeSelect.Root size="sm" width="auto" minW="220px" disabled={isUpdating}>
-            <NativeSelect.Field
-              value={settings.model ?? ""}
-              onChange={(e) => onUpdate({ model: e.target.value || undefined })}
-            >
-              <option value="">{t("claudeCode.agentDefault")}</option>
-              {models.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.id}
-                </option>
-              ))}
-            </NativeSelect.Field>
-            <NativeSelect.Indicator />
-          </NativeSelect.Root>
+          <Menu.Root>
+            <Menu.Trigger asChild>
+              <Button
+                size="sm"
+                variant="outline"
+                width="auto"
+                minW="220px"
+                justifyContent="space-between"
+                disabled={isUpdating}
+              >
+                {selectedModelLabel}
+                <Icon as={ChevronDown} color="fg.muted" />
+              </Button>
+            </Menu.Trigger>
+            <Menu.Positioner>
+              <Menu.Content minW="220px" bg="bg">
+                <MenuItem
+                  primaryLabel={t("claudeCode.agentDefault")}
+                  isSelected={!settings.model}
+                  onClick={() => onUpdate({ model: undefined })}
+                />
+                {models.map((m) => (
+                  <MenuItem
+                    key={m.id}
+                    primaryLabel={m.id}
+                    isSelected={settings.model === m.id}
+                    onClick={() => onUpdate({ model: m.id })}
+                  />
+                ))}
+              </Menu.Content>
+            </Menu.Positioner>
+          </Menu.Root>
         )}
       </HStack>
 
@@ -77,19 +102,33 @@ export const ClaudeCodeSettingsForm = (props: ClaudeCodeSettingsFormProps) => {
           </Text>
         </Stack>
 
-        <NativeSelect.Root size="sm" width="auto" minW="220px" disabled={isUpdating}>
-          <NativeSelect.Field
-            value={settings.approvalMode ?? "bypass"}
-            onChange={(e) => onUpdate({ approvalMode: e.target.value as "bypass" | "prompt" })}
-          >
-            {APPROVAL_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </NativeSelect.Field>
-          <NativeSelect.Indicator />
-        </NativeSelect.Root>
+        <Menu.Root>
+          <Menu.Trigger asChild>
+            <Button
+              size="sm"
+              variant="outline"
+              width="auto"
+              minW="220px"
+              justifyContent="space-between"
+              disabled={isUpdating}
+            >
+              {selectedApprovalLabel}
+              <Icon as={ChevronDown} color="fg.muted" />
+            </Button>
+          </Menu.Trigger>
+          <Menu.Positioner>
+            <Menu.Content minW="220px" bg="bg">
+              {APPROVAL_OPTIONS.map((opt) => (
+                <MenuItem
+                  key={opt.value}
+                  primaryLabel={opt.label}
+                  isSelected={(settings.approvalMode ?? "bypass") === opt.value}
+                  onClick={() => onUpdate({ approvalMode: opt.value as "bypass" | "prompt" })}
+                />
+              ))}
+            </Menu.Content>
+          </Menu.Positioner>
+        </Menu.Root>
       </HStack>
     </Stack>
   );

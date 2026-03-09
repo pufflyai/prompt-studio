@@ -1,5 +1,7 @@
-import { Box, Button, CloseButton, Dialog, NativeSelect, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, CloseButton, Dialog, Icon, Menu, Stack, Text } from "@chakra-ui/react";
+import { MenuItem } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
+import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -31,6 +33,8 @@ export interface CreateTicketModalPayload {
 }
 
 export type { CreateTicketModalProps };
+
+const COMPLEXITY_OPTIONS = ["low", "medium", "high"] as const;
 
 export const CreateTicketModal = (props: CreateTicketModalProps) => {
   const {
@@ -82,6 +86,11 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
     resetForm();
   };
 
+  const complexityLabel = t(`createTicketModal.${complexity}`);
+  const templateLabel = templateName
+    ? (templates.find((tmpl) => tmpl.name === templateName)?.name ?? templateName)
+    : t("createTicketModal.noTemplate");
+
   return (
     <Dialog.Root open={open} onOpenChange={handleClose}>
       <Dialog.Backdrop />
@@ -111,33 +120,68 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
 
               <Stack gap="2xs">
                 <Text textStyle="label/S/medium">{t("createTicketModal.complexity")}</Text>
-                <NativeSelect.Root size="sm" disabled={isSubmitting}>
-                  <NativeSelect.Field
-                    value={complexity}
-                    onChange={(event) => setComplexity(event.target.value as "low" | "medium" | "high")}
-                  >
-                    <option value="low">{t("createTicketModal.low")}</option>
-                    <option value="medium">{t("createTicketModal.medium")}</option>
-                    <option value="high">{t("createTicketModal.high")}</option>
-                  </NativeSelect.Field>
-                  <NativeSelect.Indicator />
-                </NativeSelect.Root>
+                <Menu.Root>
+                  <Menu.Trigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      width="full"
+                      justifyContent="space-between"
+                      disabled={isSubmitting}
+                    >
+                      {complexityLabel}
+                      <Icon as={ChevronDown} color="fg.muted" />
+                    </Button>
+                  </Menu.Trigger>
+                  <Menu.Positioner>
+                    <Menu.Content bg="bg">
+                      {COMPLEXITY_OPTIONS.map((option) => (
+                        <MenuItem
+                          key={option}
+                          primaryLabel={t(`createTicketModal.${option}`)}
+                          isSelected={complexity === option}
+                          onClick={() => setComplexity(option)}
+                        />
+                      ))}
+                    </Menu.Content>
+                  </Menu.Positioner>
+                </Menu.Root>
               </Stack>
 
               {templates.length > 0 && (
                 <Stack gap="2xs">
                   <Text textStyle="label/S/medium">{t("createTicketModal.template")}</Text>
-                  <NativeSelect.Root size="sm" disabled={isSubmitting}>
-                    <NativeSelect.Field value={templateName} onChange={(event) => setTemplateName(event.target.value)}>
-                      <option value="">{t("createTicketModal.noTemplate")}</option>
-                      {templates.map((t) => (
-                        <option key={t.id} value={t.name}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </NativeSelect.Field>
-                    <NativeSelect.Indicator />
-                  </NativeSelect.Root>
+                  <Menu.Root>
+                    <Menu.Trigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        width="full"
+                        justifyContent="space-between"
+                        disabled={isSubmitting}
+                      >
+                        {templateLabel}
+                        <Icon as={ChevronDown} color="fg.muted" />
+                      </Button>
+                    </Menu.Trigger>
+                    <Menu.Positioner>
+                      <Menu.Content bg="bg">
+                        <MenuItem
+                          primaryLabel={t("createTicketModal.noTemplate")}
+                          isSelected={templateName === ""}
+                          onClick={() => setTemplateName("")}
+                        />
+                        {templates.map((tmpl) => (
+                          <MenuItem
+                            key={tmpl.id}
+                            primaryLabel={tmpl.name}
+                            isSelected={templateName === tmpl.name}
+                            onClick={() => setTemplateName(tmpl.name)}
+                          />
+                        ))}
+                      </Menu.Content>
+                    </Menu.Positioner>
+                  </Menu.Root>
                 </Stack>
               )}
             </Stack>
