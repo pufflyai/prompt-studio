@@ -25,7 +25,7 @@ export const useSubTicketCreation = (input: UseSubTicketCreationInput) => {
   const [createModalStatus, setCreateModalStatus] = useState<TicketStatus | null>(null);
 
   const templates = (templateAssets ?? [])
-    .filter((asset) => asset.templateType === "ticket-template")
+    .filter((asset) => asset.templateType === "ticket")
     .map((asset) => ({ id: asset.id, name: asset.name }));
 
   const firstCreatableStatus = statusOptions.find((status) => status.canCreate)?.name ?? null;

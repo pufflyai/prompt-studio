@@ -16,7 +16,7 @@ export interface RepoBranch {
   lastCommitDate: string;
 }
 
-export type ProjectTemplateAssetType = "artifact" | "ticket-template" | "skill";
+export type ProjectTemplateAssetType = "prompt" | "ticket" | "document";
 
 export interface ProjectTemplateAsset {
   id: string;

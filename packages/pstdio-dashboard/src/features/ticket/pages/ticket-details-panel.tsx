@@ -81,7 +81,7 @@ export const TicketDetailsPanel = () => {
   };
 
   const templates = (templateAssets ?? [])
-    .filter((a) => a.templateType === "ticket-template")
+    .filter((a) => a.templateType === "ticket")
     .map((a) => ({ id: a.id, name: a.name }));
 
   if (!ticket) {

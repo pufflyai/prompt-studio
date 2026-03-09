@@ -1,4 +1,4 @@
-import type { ProjectResponse, StatusResponse, TagResponse } from "pstdio-api/dto";
+import type { ProjectResponse, StatusResponse, TagResponse, TemplateResponse } from "pstdio-api/dto";
 import type { Project, ProjectRepository, ProjectTemplateAsset, RepoBranch } from "@/features/project/types";
 import { buildTicketStatusCatalog, toTicketTag } from "@/features/ticket-list/data/api";
 import { apiRequest, readRuntimeConfig } from "@/lib/api";
@@ -122,8 +122,18 @@ export const getRepoBranches = async (repoId: string) => {
 };
 
 export const getProjectTemplateAssets = async (projectId: string): Promise<ProjectTemplateAsset[]> => {
-  void projectId;
-  return [];
+  const templates = await apiRequest<TemplateResponse[]>(`/v1/projects/${projectId}/templates`);
+  return templates.map((t) => ({
+    id: t.id,
+    projectId: t.project_id ?? projectId,
+    name: t.name,
+    templateType: t.template_type as ProjectTemplateAsset["templateType"],
+    fileId: t.file_id,
+    content: "",
+    isDefault: t.is_default,
+    createdAt: t.created_at,
+    updatedAt: t.updated_at,
+  }));
 };
 
 export const updateProjectTemplateAsset = async (projectId: string, assetId: string, content: string) => {

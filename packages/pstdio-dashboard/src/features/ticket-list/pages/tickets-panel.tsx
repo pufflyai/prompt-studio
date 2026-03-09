@@ -58,7 +58,7 @@ export const TicketsPanel = () => {
   };
 
   const templates = (templateAssets ?? [])
-    .filter((asset) => asset.templateType === "ticket-template")
+    .filter((asset) => asset.templateType === "ticket")
     .map((asset) => ({ id: asset.id, name: asset.name }));
 
   const firstCreatableStatus = statusOptions.find((s) => s.canCreate)?.name ?? null;
