@@ -3,6 +3,7 @@ import { EmptyState } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { type MouseEvent, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { DocsSidebar } from "../components/docs-sidebar";
 import { EmptyDocs } from "../components/empty-docs";
 import { LoadingDocs } from "../components/loading-docs";
@@ -10,6 +11,7 @@ import { useDocsContent, useDocsIndex } from "../hooks/use-docs";
 import { flattenDocsSidebar, resolveActiveDocLink, resolveDocsLinkFromHref } from "../utils";
 
 export const DocsPanel = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { projectId } = useParams({ strict: false });
   const { doc: routeDoc } = useSearch({ strict: false });
@@ -84,7 +86,7 @@ export const DocsPanel = () => {
   if (indexError) {
     return (
       <EmptyState
-        title="Unable to load docs"
+        title={t("docs.unableToLoadDocs")}
         description={indexError instanceof Error ? indexError.message : "Try again."}
       />
     );
@@ -100,8 +102,8 @@ export const DocsPanel = () => {
     <EmptyDocs />
   ) : contentError ? (
     <EmptyState
-      title="Unable to load document"
-      description={contentError instanceof Error ? contentError.message : "Try selecting another doc."}
+      title={t("docs.unableToLoadDocument")}
+      description={contentError instanceof Error ? contentError.message : t("docs.trySelectingAnother")}
     />
   ) : (
     <Box width="100%" height="100%" onClick={handleDocumentClick}>
@@ -109,7 +111,7 @@ export const DocsPanel = () => {
         key={content?.path ?? activeLink ?? "docs-empty"}
         defaultState={content?.content ?? ""}
         isEditable={false}
-        placeholder="No content available."
+        placeholder={t("docs.noContentAvailable")}
       />
     </Box>
   );

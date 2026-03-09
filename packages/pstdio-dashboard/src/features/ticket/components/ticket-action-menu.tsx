@@ -42,8 +42,16 @@ export const TicketActionMenu = (props: TicketActionMenuProps) => {
         </Menu.Trigger>
         <Menu.Positioner>
           <Menu.Content minW="200px" bg="background.primary">
-            <MenuItem primaryLabel="Create sub-ticket" leftIcon={Plus} onClick={onCreateSubTicket} />
-            <MenuItem primaryLabel="Break into sub-tickets" leftIcon={Sparkles} onClick={onBreakIntoSubTickets} />
+            <MenuItem
+              primaryLabel={t("ticketPanel.options.createSubTicket")}
+              leftIcon={Plus}
+              onClick={onCreateSubTicket}
+            />
+            <MenuItem
+              primaryLabel={t("ticketPanel.options.breakIntoSubTickets")}
+              leftIcon={Sparkles}
+              onClick={onBreakIntoSubTickets}
+            />
             <MenuItem
               primaryLabel={t("ticketPanel.options.refineTicket")}
               leftIcon={Sparkles}

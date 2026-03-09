@@ -1,6 +1,7 @@
 import { Stack, Text } from "@chakra-ui/react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { getStoredAgent } from "@/features/agents/agent-storage";
 import { useProject, useProjectTemplateAssets } from "@/features/project/hooks/use-project";
@@ -31,6 +32,7 @@ export const TicketsPanel = () => {
   const { data: templateAssets } = useProjectTemplateAssets(projectId);
   const navigate = useNavigate();
 
+  const { t } = useTranslation("tickets");
   const [settings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createModalStatus, setCreateModalStatus] = useState<TicketStatus | null>(null);
@@ -153,7 +155,7 @@ export const TicketsPanel = () => {
     return (
       <Stack gap="lg" height="100%" p="sm">
         <Text textStyle="paragraph/S/regular" color="fg.muted">
-          Loading tickets...
+          {t("loading")}
         </Text>
       </Stack>
     );

@@ -94,7 +94,7 @@ export const TicketProperties = (props: TicketPropertiesProps) => {
         ...(isBlocked ? [{ label: t("ticketPanel.fields.blockedReason"), value: blockedReason }] : []),
         { label: t("ticketPanel.fields.dependsOn"), value: buildTicketLinks(ticket.dependsOn) },
         {
-          label: "Parent",
+          label: t("ticketPanel.fields.parent"),
           value: parentTicket ? (
             <TicketLink
               label={parentTicket.shorthand}
@@ -109,7 +109,7 @@ export const TicketProperties = (props: TicketPropertiesProps) => {
           ),
         },
         {
-          label: "Tags",
+          label: t("ticketPanel.fields.tags"),
           value: (
             <TagSelector
               tags={projectTicketTags}

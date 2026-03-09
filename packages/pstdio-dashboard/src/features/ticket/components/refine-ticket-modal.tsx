@@ -1,5 +1,6 @@
 import { Button, CloseButton, Dialog, NativeSelect, Stack, Text, Textarea } from "@chakra-ui/react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { WorkspaceAgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
 
 interface TemplateOption {
@@ -18,6 +19,7 @@ interface RefineTicketModalProps {
 
 export const RefineTicketModal = (props: RefineTicketModalProps) => {
   const { open, ticketShorthand, templates = [], isSubmitting = false, onClose, onSubmit } = props;
+  const { t } = useTranslation("tickets");
   const [additionalContext, setAdditionalContext] = useState("");
   const [templateName, setTemplateName] = useState("");
 
@@ -46,7 +48,7 @@ export const RefineTicketModal = (props: RefineTicketModalProps) => {
       <Dialog.Positioner>
         <Dialog.Content>
           <Dialog.Header>
-            <Text textStyle="heading/M">Refine Ticket</Text>
+            <Text textStyle="heading/M">{t("refineTicketModal.title")}</Text>
             <Dialog.CloseTrigger>
               <CloseButton size="sm" disabled={isSubmitting} />
             </Dialog.CloseTrigger>
@@ -55,27 +57,27 @@ export const RefineTicketModal = (props: RefineTicketModalProps) => {
           <Dialog.Body>
             <Stack gap="sm">
               <Text textStyle="paragraph/S/regular" color="foreground.secondary">
-                Add extra guidance for this refinement and pick the agent that should run it.
+                {t("refineTicketModal.description")}
               </Text>
 
               <Stack gap="2xs">
-                <Text textStyle="label/S/medium">Additional information</Text>
+                <Text textStyle="label/S/medium">{t("refineTicketModal.additionalInfo")}</Text>
                 <Textarea
                   size="sm"
                   minH="120px"
                   value={additionalContext}
                   onChange={(event) => setAdditionalContext(event.target.value)}
-                  placeholder={`Example: keep it short, target ${ticketShorthand}, and focus on acceptance criteria.`}
+                  placeholder={t("refineTicketModal.placeholder", { ticketShorthand })}
                   disabled={isSubmitting}
                 />
               </Stack>
 
               {templates.length > 0 ? (
                 <Stack gap="2xs">
-                  <Text textStyle="label/S/medium">Template</Text>
+                  <Text textStyle="label/S/medium">{t("refineTicketModal.template")}</Text>
                   <NativeSelect.Root size="sm" disabled={isSubmitting}>
                     <NativeSelect.Field value={templateName} onChange={(event) => setTemplateName(event.target.value)}>
-                      <option value="">No template</option>
+                      <option value="">{t("refineTicketModal.noTemplate")}</option>
                       {templates.map((template) => (
                         <option key={template.id} value={template.name}>
                           {template.name}
@@ -88,7 +90,7 @@ export const RefineTicketModal = (props: RefineTicketModalProps) => {
               ) : null}
 
               <Stack gap="2xs">
-                <Text textStyle="label/S/medium">Agent</Text>
+                <Text textStyle="label/S/medium">{t("refineTicketModal.agent")}</Text>
                 <WorkspaceAgentBrowserContainer isDisabled={isSubmitting} />
               </Stack>
             </Stack>
@@ -97,10 +99,10 @@ export const RefineTicketModal = (props: RefineTicketModalProps) => {
           <Dialog.Footer>
             <Stack direction="row" gap="1">
               <Button size="sm" variant="ghost" onClick={handleClose} disabled={isSubmitting}>
-                Cancel
+                {t("refineTicketModal.cancel")}
               </Button>
               <Button size="sm" variant="solid" onClick={handleSubmit} loading={isSubmitting}>
-                Refine ticket
+                {t("refineTicketModal.submit")}
               </Button>
             </Stack>
           </Dialog.Footer>

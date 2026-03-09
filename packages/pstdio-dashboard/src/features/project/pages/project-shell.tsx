@@ -1,12 +1,14 @@
 import { Box, Flex, Stack, Text } from "@chakra-ui/react";
 import { EmptyState } from "@pstdio/ui";
 import { Outlet, useParams } from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
 import { ProjectSidebar } from "../components/project-sidebar";
 import { useProject } from "../hooks/use-project";
 
 export const ProjectShell = () => {
   const { projectId } = useParams({ strict: false });
   const { data: project, isLoading } = useProject(projectId);
+  const { t } = useTranslation("projects");
 
   return (
     <Flex height="100%" width="100%" minH="0">
@@ -15,10 +17,10 @@ export const ProjectShell = () => {
         <Box flex="1" overflowY="auto">
           {isLoading ? (
             <Text textStyle="paragraph/S/regular" color="fg.muted" p="md">
-              Loading project...
+              {t("shell.loadingProject")}
             </Text>
           ) : !project ? (
-            <EmptyState title="Project not found" description="Choose a project from the list to continue." />
+            <EmptyState title={t("shell.notFound")} description={t("shell.notFoundDescription")} />
           ) : (
             <Outlet />
           )}

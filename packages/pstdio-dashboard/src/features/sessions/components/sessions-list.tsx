@@ -1,6 +1,7 @@
 import { Menu, Skeleton, Stack, Text } from "@chakra-ui/react";
 import type { SessionCompletionStatus } from "@pstdio/ui";
 import { MenuItem, SessionIndicator } from "@pstdio/ui";
+import { useTranslation } from "react-i18next";
 import type { Session } from "../types";
 import { groupSessionsByDate } from "../utils/group-sessions";
 
@@ -20,6 +21,7 @@ const LoadingSkeleton = () => (
 );
 
 export const SessionsList = (props: SessionsListProps) => {
+  const { t } = useTranslation("projects");
   const { sessions, selectedSessionId, isLoading, onSelectSession } = props;
 
   if (isLoading) {
@@ -30,7 +32,7 @@ export const SessionsList = (props: SessionsListProps) => {
     return (
       <Stack px="sm" py="md" align="center">
         <Text textStyle="label/S/regular" color="foreground.secondary">
-          No sessions yet
+          {t("sessions.noSessionsYet")}
         </Text>
       </Stack>
     );

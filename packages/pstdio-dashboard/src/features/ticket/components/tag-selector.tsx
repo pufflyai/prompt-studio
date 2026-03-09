@@ -1,5 +1,7 @@
 import { Button, Icon, Menu } from "@chakra-ui/react";
+import { MenuItem } from "@pstdio/ui";
 import { ChevronDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { TicketTag } from "@/features/ticket-list/types";
 
 interface TagSelectorProps {
@@ -11,10 +13,12 @@ interface TagSelectorProps {
 
 export const TagSelector = (props: TagSelectorProps) => {
   const { tags, selectedTagIds, onChange, isDisabled = false } = props;
+  const { t } = useTranslation("tickets");
 
   const selectedTagSet = new Set(selectedTagIds);
   const selectedTagNames = tags.filter((tag) => selectedTagSet.has(tag.id)).map((tag) => tag.name);
-  const selectedTagsLabel = selectedTagNames.length > 0 ? selectedTagNames.join(", ") : "No tags selected";
+  const selectedTagsLabel =
+    selectedTagNames.length > 0 ? selectedTagNames.join(", ") : t("ticketDetail.noTagsSelected");
 
   const handleTagToggle = (tagId: string) => {
     if (!onChange) {
@@ -31,7 +35,7 @@ export const TagSelector = (props: TagSelectorProps) => {
   if (tags.length === 0) {
     return (
       <Button size="sm" variant="subtle" disabled>
-        No tags
+        {t("ticketDetail.noTags")}
       </Button>
     );
   }
@@ -54,17 +58,14 @@ export const TagSelector = (props: TagSelectorProps) => {
       <Menu.Positioner>
         <Menu.Content minW="220px" bg="background.primary">
           {tags.map((tag) => (
-            <Menu.CheckboxItem
+            <MenuItem
               key={tag.id}
-              value={tag.id}
-              checked={selectedTagSet.has(tag.id)}
-              closeOnSelect={false}
-              onCheckedChange={() => handleTagToggle(tag.id)}
-              disabled={isDisabled || !onChange}
-            >
-              {tag.name}
-              <Menu.ItemIndicator />
-            </Menu.CheckboxItem>
+              id={tag.id}
+              primaryLabel={tag.name}
+              isSelected={selectedTagSet.has(tag.id)}
+              isDisabled={isDisabled || !onChange}
+              onClick={() => handleTagToggle(tag.id)}
+            />
           ))}
         </Menu.Content>
       </Menu.Positioner>

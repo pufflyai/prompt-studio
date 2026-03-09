@@ -12,6 +12,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { KanbanSquare, List, Settings2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import type { DisplayProperty, DisplaySettings, GroupingField, OrderingField, ViewMode } from "../types";
 
@@ -19,39 +20,6 @@ interface DisplayMenuProps {
   settings: DisplaySettings;
   onSettingsChange: (next: DisplaySettings) => void;
 }
-
-const VIEW_OPTIONS: { value: ViewMode; label: string; icon: typeof List }[] = [
-  { value: "list", label: "List", icon: List },
-  { value: "board", label: "Board", icon: KanbanSquare },
-];
-
-const GROUPING_OPTIONS: { value: GroupingField; label: string }[] = [
-  { value: "status", label: "Status" },
-  { value: "complexity", label: "Complexity" },
-  { value: "assignee", label: "Assignee" },
-  { value: "none", label: "No grouping" },
-];
-
-const ORDERING_OPTIONS: { value: OrderingField; label: string }[] = [
-  { value: "manual", label: "Manual" },
-  { value: "updated", label: "Updated" },
-  { value: "title", label: "Title" },
-  { value: "complexity", label: "Complexity" },
-  { value: "shorthand", label: "ID" },
-];
-
-const DISPLAY_PROPERTY_OPTIONS: { value: DisplayProperty; label: string }[] = [
-  { value: "parentId", label: "parent_id" },
-  { value: "status", label: "Status" },
-  { value: "complexity", label: "Complexity" },
-  { value: "assignee", label: "Assignee" },
-  { value: "tags", label: "Tags" },
-  { value: "updatedAt", label: "Updated" },
-];
-
-const GROUPING_COLLECTION = createListCollection({ items: GROUPING_OPTIONS });
-const ORDERING_COLLECTION = createListCollection({ items: ORDERING_OPTIONS });
-const DISPLAY_PROPERTIES_COLLECTION = createListCollection({ items: DISPLAY_PROPERTY_OPTIONS });
 
 const SectionLabel = (props: { children: string }) => (
   <Box>
@@ -63,6 +31,40 @@ const SectionLabel = (props: { children: string }) => (
 
 export const DisplayMenu = (props: DisplayMenuProps) => {
   const { settings, onSettingsChange } = props;
+  const { t } = useTranslation("tickets");
+
+  const VIEW_OPTIONS: { value: ViewMode; label: string; icon: typeof List }[] = [
+    { value: "list", label: t("displayMenu.list"), icon: List },
+    { value: "board", label: t("displayMenu.board"), icon: KanbanSquare },
+  ];
+
+  const GROUPING_OPTIONS: { value: GroupingField; label: string }[] = [
+    { value: "status", label: t("displayMenu.groupingOptions.status") },
+    { value: "complexity", label: t("displayMenu.groupingOptions.complexity") },
+    { value: "assignee", label: t("displayMenu.groupingOptions.assignee") },
+    { value: "none", label: t("displayMenu.groupingOptions.none") },
+  ];
+
+  const ORDERING_OPTIONS: { value: OrderingField; label: string }[] = [
+    { value: "manual", label: t("displayMenu.orderingOptions.manual") },
+    { value: "updated", label: t("displayMenu.orderingOptions.updated") },
+    { value: "title", label: t("displayMenu.orderingOptions.title") },
+    { value: "complexity", label: t("displayMenu.orderingOptions.complexity") },
+    { value: "shorthand", label: t("displayMenu.orderingOptions.shorthand") },
+  ];
+
+  const DISPLAY_PROPERTY_OPTIONS: { value: DisplayProperty; label: string }[] = [
+    { value: "parentId", label: t("displayMenu.propertyOptions.parentId") },
+    { value: "status", label: t("displayMenu.propertyOptions.status") },
+    { value: "complexity", label: t("displayMenu.propertyOptions.complexity") },
+    { value: "assignee", label: t("displayMenu.propertyOptions.assignee") },
+    { value: "tags", label: t("displayMenu.propertyOptions.tags") },
+    { value: "updatedAt", label: t("displayMenu.propertyOptions.updatedAt") },
+  ];
+
+  const GROUPING_COLLECTION = createListCollection({ items: GROUPING_OPTIONS });
+  const ORDERING_COLLECTION = createListCollection({ items: ORDERING_OPTIONS });
+  const DISPLAY_PROPERTIES_COLLECTION = createListCollection({ items: DISPLAY_PROPERTY_OPTIONS });
 
   const updateField = <K extends keyof DisplaySettings>(key: K, value: DisplaySettings[K]) => {
     onSettingsChange({ ...settings, [key]: value });
@@ -74,7 +76,7 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
         <Button variant="ghost" size="sm">
           <HStack gap="2xs">
             <Settings2 size={14} />
-            <Text textStyle="label/XS/medium">Display</Text>
+            <Text textStyle="label/XS/medium">{t("displayMenu.display")}</Text>
           </HStack>
         </Button>
       </Popover.Trigger>
@@ -83,7 +85,7 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
         <Popover.Positioner>
           <Popover.Content w="320px" p="sm" bg="bg">
             <Stack gap="sm">
-              <SectionLabel>View</SectionLabel>
+              <SectionLabel>{t("displayMenu.view")}</SectionLabel>
 
               <SegmentGroup.Root
                 size="sm"
@@ -110,7 +112,7 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
               <Separator />
               <Stack gap="xs">
                 <Stack gap="2xs">
-                  <SectionLabel>Grouping</SectionLabel>
+                  <SectionLabel>{t("displayMenu.grouping")}</SectionLabel>
                   <Select.Root
                     collection={GROUPING_COLLECTION}
                     size="sm"
@@ -124,7 +126,7 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
                     <Select.HiddenSelect />
                     <Select.Control>
                       <Select.Trigger>
-                        <Select.ValueText placeholder="Select grouping" />
+                        <Select.ValueText placeholder={t("displayMenu.selectGrouping")} />
                       </Select.Trigger>
                       <Select.IndicatorGroup>
                         <Select.Indicator />
@@ -144,7 +146,7 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
                 </Stack>
 
                 <Stack gap="2xs">
-                  <SectionLabel>Ordering</SectionLabel>
+                  <SectionLabel>{t("displayMenu.ordering")}</SectionLabel>
                   <Select.Root
                     collection={ORDERING_COLLECTION}
                     size="sm"
@@ -158,7 +160,7 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
                     <Select.HiddenSelect />
                     <Select.Control>
                       <Select.Trigger>
-                        <Select.ValueText placeholder="Select ordering" />
+                        <Select.ValueText placeholder={t("displayMenu.selectOrdering")} />
                       </Select.Trigger>
                       <Select.IndicatorGroup>
                         <Select.Indicator />
@@ -180,7 +182,7 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
 
               <Separator />
               <Stack gap="2xs">
-                <SectionLabel>Display Properties</SectionLabel>
+                <SectionLabel>{t("displayMenu.displayProperties")}</SectionLabel>
                 <Select.Root
                   multiple
                   collection={DISPLAY_PROPERTIES_COLLECTION}
@@ -193,7 +195,7 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
                   <Select.HiddenSelect />
                   <Select.Control>
                     <Select.Trigger>
-                      <Select.ValueText placeholder="Select display properties" />
+                      <Select.ValueText placeholder={t("displayMenu.selectDisplayProperties")} />
                     </Select.Trigger>
                     <Select.IndicatorGroup>
                       <Select.Indicator />

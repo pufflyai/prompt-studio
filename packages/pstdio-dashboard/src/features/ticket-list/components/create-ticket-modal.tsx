@@ -1,6 +1,7 @@
 import { Box, Button, CloseButton, Dialog, NativeSelect, Stack, Text } from "@chakra-ui/react";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import type { TicketStatus } from "@/features/ticket-list/types";
 
@@ -40,9 +41,13 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
     targetStatus = null,
     templates = [],
     parentId = null,
-    title: modalTitle = "Create ticket",
-    submitLabel: submitButtonLabel = "Create",
+    title: modalTitle,
+    submitLabel: submitButtonLabel,
   } = props;
+  const { t } = useTranslation("tickets");
+
+  const resolvedTitle = modalTitle ?? t("createTicketModal.createTicket");
+  const resolvedSubmitLabel = submitButtonLabel ?? t("createTicketModal.create");
 
   const [content, setContent] = useState("");
   const [complexity, setComplexity] = useState<"low" | "medium" | "high">("medium");
@@ -83,7 +88,7 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
       <Dialog.Positioner>
         <Dialog.Content>
           <Dialog.Header>
-            <Text textStyle="heading/M">{modalTitle}</Text>
+            <Text textStyle="heading/M">{resolvedTitle}</Text>
             <Dialog.CloseTrigger>
               <CloseButton size="sm" />
             </Dialog.CloseTrigger>
@@ -92,28 +97,28 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
           <Dialog.Body>
             <Stack gap="sm">
               <Stack gap="2xs">
-                <Box minHeight="180px" borderWidth="1px" padding="xs" borderRadius="sm">
+                <Box height="180px" borderWidth="1px" padding="xs" borderRadius="sm">
                   <MarkdownEditor
                     key={editorKey}
                     defaultState={content}
                     isEditable={!isSubmitting}
                     onChange={setContent}
-                    placeholder="Describe the ticket..."
+                    placeholder={t("createTicketModal.describePlaceholder")}
                     autoFocus
                   />
                 </Box>
               </Stack>
 
               <Stack gap="2xs">
-                <Text textStyle="label/S/medium">Complexity</Text>
+                <Text textStyle="label/S/medium">{t("createTicketModal.complexity")}</Text>
                 <NativeSelect.Root size="sm" disabled={isSubmitting}>
                   <NativeSelect.Field
                     value={complexity}
                     onChange={(event) => setComplexity(event.target.value as "low" | "medium" | "high")}
                   >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
+                    <option value="low">{t("createTicketModal.low")}</option>
+                    <option value="medium">{t("createTicketModal.medium")}</option>
+                    <option value="high">{t("createTicketModal.high")}</option>
                   </NativeSelect.Field>
                   <NativeSelect.Indicator />
                 </NativeSelect.Root>
@@ -121,10 +126,10 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
 
               {templates.length > 0 && (
                 <Stack gap="2xs">
-                  <Text textStyle="label/S/medium">Template</Text>
+                  <Text textStyle="label/S/medium">{t("createTicketModal.template")}</Text>
                   <NativeSelect.Root size="sm" disabled={isSubmitting}>
                     <NativeSelect.Field value={templateName} onChange={(event) => setTemplateName(event.target.value)}>
-                      <option value="">No template</option>
+                      <option value="">{t("createTicketModal.noTemplate")}</option>
                       {templates.map((t) => (
                         <option key={t.id} value={t.name}>
                           {t.name}
@@ -141,10 +146,10 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
           <Dialog.Footer>
             <Stack direction="row" gap="1">
               <Button size="sm" variant="ghost" onClick={handleClose} disabled={isSubmitting}>
-                Cancel
+                {t("createTicketModal.cancel")}
               </Button>
               <Button size="sm" variant="solid" onClick={handleSubmit} loading={isSubmitting} disabled={!canSubmit}>
-                {submitButtonLabel}
+                {resolvedSubmitLabel}
               </Button>
             </Stack>
           </Dialog.Footer>

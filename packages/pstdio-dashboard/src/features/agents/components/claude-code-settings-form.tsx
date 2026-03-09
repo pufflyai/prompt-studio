@@ -1,4 +1,5 @@
 import { HStack, NativeSelect, Spinner, Stack, Switch, Text } from "@chakra-ui/react";
+import { useTranslation } from "react-i18next";
 import { useAgentModels } from "../hooks/use-agent-models";
 import type { ClaudeCodeSettings } from "../types";
 
@@ -8,22 +9,23 @@ interface ClaudeCodeSettingsFormProps {
   isUpdating: boolean;
 }
 
-const APPROVAL_OPTIONS = [
-  { value: "bypass", label: "Bypass (auto-approve all)" },
-  { value: "prompt", label: "Prompt (ask before each tool)" },
-];
-
 export const ClaudeCodeSettingsForm = (props: ClaudeCodeSettingsFormProps) => {
+  const { t } = useTranslation("settings");
   const { settings, onUpdate, isUpdating } = props;
+
+  const APPROVAL_OPTIONS = [
+    { value: "bypass", label: t("claudeCode.approvalOptions.bypass") },
+    { value: "prompt", label: t("claudeCode.approvalOptions.prompt") },
+  ];
   const { data: models = [], isLoading: isModelsLoading } = useAgentModels("claude-code", { enabled: true });
 
   return (
     <Stack gap="sm">
       <HStack justify="space-between" alignItems="center">
         <Stack gap="0">
-          <Text textStyle="label/XS/medium">Model</Text>
+          <Text textStyle="label/XS/medium">{t("claudeCode.model")}</Text>
           <Text textStyle="paragraph/XS/regular" color="fg.muted">
-            Default model for new sessions
+            {t("claudeCode.modelDescription")}
           </Text>
         </Stack>
 
@@ -35,7 +37,7 @@ export const ClaudeCodeSettingsForm = (props: ClaudeCodeSettingsFormProps) => {
               value={settings.model ?? ""}
               onChange={(e) => onUpdate({ model: e.target.value || undefined })}
             >
-              <option value="">Agent default</option>
+              <option value="">{t("claudeCode.agentDefault")}</option>
               {models.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.id}
@@ -49,9 +51,9 @@ export const ClaudeCodeSettingsForm = (props: ClaudeCodeSettingsFormProps) => {
 
       <HStack justify="space-between" alignItems="center">
         <Stack gap="0">
-          <Text textStyle="label/XS/medium">Plan mode</Text>
+          <Text textStyle="label/XS/medium">{t("claudeCode.planMode")}</Text>
           <Text textStyle="paragraph/XS/regular" color="fg.muted">
-            Start sessions in plan mode
+            {t("claudeCode.planModeDescription")}
           </Text>
         </Stack>
 
@@ -69,9 +71,9 @@ export const ClaudeCodeSettingsForm = (props: ClaudeCodeSettingsFormProps) => {
 
       <HStack justify="space-between" alignItems="center">
         <Stack gap="0">
-          <Text textStyle="label/XS/medium">Approval mode</Text>
+          <Text textStyle="label/XS/medium">{t("claudeCode.approvalMode")}</Text>
           <Text textStyle="paragraph/XS/regular" color="fg.muted">
-            How tool use requests are handled
+            {t("claudeCode.approvalModeDescription")}
           </Text>
         </Stack>
 

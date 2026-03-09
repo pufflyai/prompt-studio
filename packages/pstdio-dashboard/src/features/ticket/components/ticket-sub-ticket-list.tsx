@@ -1,5 +1,6 @@
 import { Button, Stack } from "@chakra-ui/react";
 import { ItemSection } from "@pstdio/ui";
+import { useTranslation } from "react-i18next";
 import { TicketLink } from "./ticket-link";
 
 interface SubTicketEntry {
@@ -16,16 +17,17 @@ interface TicketSubTicketListProps {
 
 export const TicketSubTicketList = (props: TicketSubTicketListProps) => {
   const { subTickets = [], knownTicketIds = [], onSelectTicket } = props;
+  const { t } = useTranslation("tickets");
 
   const knownTicketIdSet = new Set(knownTicketIds);
   const hasKnownTickets = knownTicketIdSet.size > 0;
 
   return (
-    <ItemSection title="Sub-tickets" defaultOpen>
+    <ItemSection title={t("ticketDetail.subTickets")} defaultOpen>
       <Stack gap="xs">
         {subTickets.length === 0 ? (
           <Button size="sm" variant="subtle" disabled alignSelf="flex-start">
-            None
+            {t("ticketDetail.none")}
           </Button>
         ) : (
           subTickets.map((subTicket) => {

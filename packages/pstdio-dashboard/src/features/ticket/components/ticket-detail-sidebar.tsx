@@ -1,5 +1,6 @@
-import { Button, Flex, IconButton, Stack } from "@chakra-ui/react";
+import { Flex, IconButton, Stack } from "@chakra-ui/react";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { Project } from "@/features/project/types";
 import type { Ticket } from "@/features/ticket-list/types";
 import { TicketFileList } from "./ticket-file-list";
@@ -16,7 +17,6 @@ interface TicketDetailSidebarProps {
   onSelectTicket: (ticketId: string) => void;
   onComplexityChange: (complexity: Ticket["complexity"]) => void;
   onTagIdsChange: (tagIds: string[]) => void;
-  onBreakIntoSubTickets: () => void;
 }
 
 export const TicketDetailSidebar = (props: TicketDetailSidebarProps) => {
@@ -30,13 +30,13 @@ export const TicketDetailSidebar = (props: TicketDetailSidebarProps) => {
     onSelectTicket,
     onComplexityChange,
     onTagIdsChange,
-    onBreakIntoSubTickets,
   } = props;
+  const { t } = useTranslation("tickets");
 
   if (!isOpen) {
     return (
       <Flex borderLeftWidth="1px" padding="sm" minW="52px" justify="center" align="flex-start">
-        <IconButton aria-label="Open details panel" variant="ghost" size="sm" onClick={onToggle}>
+        <IconButton aria-label={t("ticketDetail.openDetailsPanel")} variant="ghost" size="sm" onClick={onToggle}>
           <PanelRightOpen />
         </IconButton>
       </Flex>
@@ -46,7 +46,7 @@ export const TicketDetailSidebar = (props: TicketDetailSidebarProps) => {
   return (
     <Stack gap="xs" borderLeftWidth="1px" padding="sm" minW="320px" maxW="360px" overflow="auto">
       <Flex justify="flex-end">
-        <IconButton aria-label="Collapse details panel" variant="ghost" size="sm" onClick={onToggle}>
+        <IconButton aria-label={t("ticketDetail.collapseDetailsPanel")} variant="ghost" size="sm" onClick={onToggle}>
           <PanelRightClose />
         </IconButton>
       </Flex>
@@ -60,10 +60,6 @@ export const TicketDetailSidebar = (props: TicketDetailSidebarProps) => {
         onTagIdsChange={onTagIdsChange}
         isUpdatingTags={isUpdatingTags}
       />
-
-      <Button size="sm" variant="subtle" alignSelf="flex-start" onClick={onBreakIntoSubTickets}>
-        Break into sub-tickets
-      </Button>
 
       <TicketSubTicketList
         subTickets={ticket.subTickets ?? []}

@@ -2,15 +2,16 @@ import { Avatar, Box, IconButton, Menu } from "@chakra-ui/react";
 import { MenuItem, Tooltip, toaster, useThemePreference } from "@pstdio/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { FolderIcon, Moon, Sun } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useProject, useSystemInfo } from "@/features/project/hooks/use-project";
 
 const PROJECTS_URL = "/projects";
 
-const copyVersionToClipboard = async (versionLabel: string) => {
+const copyVersionToClipboard = async (versionLabel: string, title: string) => {
   await navigator.clipboard.writeText(versionLabel);
   toaster.create({
     type: "success",
-    title: "Version copied",
+    title,
     description: versionLabel,
   });
 };
@@ -21,10 +22,11 @@ export const ProjectMenu = () => {
   const { data: project } = useProject(projectId);
   const { data: systemInfo } = useSystemInfo();
   const { themePreference, toggleThemePreference } = useThemePreference();
+  const { t } = useTranslation();
   const isDarkMode = themePreference === "dark";
-  const modeLabel = isDarkMode ? "Switch to light mode" : "Switch to dark mode";
+  const modeLabel = isDarkMode ? t("menu.switchToLightMode") : t("menu.switchToDarkMode");
   const projectName = project?.name ?? "Project";
-  const versionLabel = systemInfo ? `v${systemInfo.version}` : "Loading version...";
+  const versionLabel = systemInfo ? `v${systemInfo.version}` : t("menu.loadingVersion");
 
   const handleOpenProjects = () => {
     navigate({ to: PROJECTS_URL });
@@ -35,16 +37,16 @@ export const ProjectMenu = () => {
       return;
     }
 
-    await copyVersionToClipboard(versionLabel);
+    await copyVersionToClipboard(versionLabel, t("menu.versionCopied"));
   };
 
   return (
     <Menu.Root>
       <Menu.Trigger asChild>
         <Box>
-          <Tooltip positioning={{ placement: "bottom-end" }} content="Main menu">
+          <Tooltip positioning={{ placement: "bottom-end" }} content={t("menu.mainMenu")}>
             <IconButton
-              aria-label="Open settings menu"
+              aria-label={t("menu.openSettingsMenu")}
               variant="ghost"
               size="sm"
               _hover={{ bg: "transparent", boxShadow: "none" }}
@@ -59,14 +61,14 @@ export const ProjectMenu = () => {
       </Menu.Trigger>
       <Menu.Positioner>
         <Menu.Content minW="240px" bg="bg">
-          <MenuItem onClick={handleOpenProjects} primaryLabel="Projects" leftIcon={FolderIcon} />
+          <MenuItem onClick={handleOpenProjects} primaryLabel={t("menu.projects")} leftIcon={FolderIcon} />
           <Menu.Separator />
           <MenuItem onClick={toggleThemePreference} primaryLabel={modeLabel} leftIcon={isDarkMode ? Sun : Moon} />
           <Menu.Separator />
           <MenuItem
             isDisabled={!systemInfo}
             onClick={handleCopyVersion}
-            primaryLabel="Prompt Studio"
+            primaryLabel={t("menu.promptStudio")}
             secondaryLabel={versionLabel}
           />
         </Menu.Content>

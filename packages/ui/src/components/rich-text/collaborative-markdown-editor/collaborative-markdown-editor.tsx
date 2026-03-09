@@ -84,7 +84,7 @@ export function CollaborativeMarkdownEditor(props: CollaborativeMarkdownEditorPr
       height="100%"
       position="relative"
       direction="column"
-      overflow="hidden"
+      overflow="visible"
     >
       <AwarenessCursorsCSS />
 

@@ -1,4 +1,5 @@
 import { TicketList, type TicketListItem } from "@pstdio/ui";
+import { useTranslation } from "react-i18next";
 
 import type { Ticket } from "@/features/ticket-list/types";
 
@@ -13,25 +14,21 @@ interface TicketsListViewProps {
   selectedTicketId?: string | null;
 }
 
-const toListItem = (
-  ticket: Ticket,
-  displayProperties: DisplayProperty[],
-  badgeContext: BadgeContext,
-  onSelectTicket?: (ticket: Ticket) => void,
-): TicketListItem => ({
-  id: ticket.id,
-  ticketId: ticket.shorthand,
-  title: ticket.title || "empty ticket",
-  badges: buildTicketBadges(ticket, displayProperties, badgeContext),
-  date: new Date(ticket.updatedAt).toLocaleDateString(),
-  onClick: () => onSelectTicket?.(ticket),
-});
-
 export const TicketsListView = (props: TicketsListViewProps) => {
   const { groups, displayProperties, badgeContext, onSelectTicket, selectedTicketId = null } = props;
+  const { t } = useTranslation("tickets");
+
+  const toListItem = (ticket: Ticket, onSelect?: (ticket: Ticket) => void): TicketListItem => ({
+    id: ticket.id,
+    ticketId: ticket.shorthand,
+    title: ticket.title || t("listView.emptyTicket"),
+    badges: buildTicketBadges(ticket, displayProperties, badgeContext),
+    date: new Date(ticket.updatedAt).toLocaleDateString(),
+    onClick: () => onSelect?.(ticket),
+  });
 
   const items: TicketListItem[] = groups.flatMap((group) =>
-    group.tickets.map((ticket) => toListItem(ticket, displayProperties, badgeContext, onSelectTicket)),
+    group.tickets.map((ticket) => toListItem(ticket, onSelectTicket)),
   );
 
   return <TicketList items={items} selectedItemId={selectedTicketId} />;

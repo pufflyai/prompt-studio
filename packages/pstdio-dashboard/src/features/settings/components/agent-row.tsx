@@ -1,6 +1,7 @@
 import { Badge, Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { Switch } from "@pstdio/ui";
 import { CheckCircle, Terminal, XCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface AgentRowProps {
   name: string;
@@ -13,6 +14,7 @@ interface AgentRowProps {
 }
 
 export const AgentRow = (props: AgentRowProps) => {
+  const { t } = useTranslation("settings");
   const { name, isInstalled, isEnabled, isDefault, isToggling, onToggle, onSetDefault } = props;
 
   return (
@@ -33,7 +35,7 @@ export const AgentRow = (props: AgentRowProps) => {
             <Text textStyle="label/S/medium">{name}</Text>
             {isEnabled && isDefault && (
               <Badge size="sm" colorPalette="blue">
-                Default
+                {t("agentRow.default")}
               </Badge>
             )}
           </HStack>
@@ -43,14 +45,14 @@ export const AgentRow = (props: AgentRowProps) => {
               <>
                 <CheckCircle size={12} color="var(--chakra-colors-foreground-feedback-success)" />
                 <Text textStyle="paragraph/XS/regular" color="foreground.feedback.success">
-                  Installed
+                  {t("agentRow.installed")}
                 </Text>
               </>
             ) : (
               <>
                 <XCircle size={12} color="var(--chakra-colors-foreground-secondary)" />
                 <Text textStyle="paragraph/XS/regular" color="foreground.secondary">
-                  Not found
+                  {t("agentRow.notFound")}
                 </Text>
               </>
             )}
@@ -61,7 +63,7 @@ export const AgentRow = (props: AgentRowProps) => {
       <HStack gap="sm">
         {isEnabled && !isDefault && (
           <Button size="xs" variant="outline" onClick={onSetDefault}>
-            Set as default
+            {t("agentRow.setAsDefault")}
           </Button>
         )}
 

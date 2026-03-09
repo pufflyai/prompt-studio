@@ -1,5 +1,6 @@
 import { Stack } from "@chakra-ui/react";
 import { ItemSection, MenuItem } from "@pstdio/ui";
+import { useTranslation } from "react-i18next";
 import type { ApiTicketFilesResponse } from "@/features/ticket-list/data/api";
 import { useTicketFiles } from "../hooks/use-ticket-files";
 
@@ -36,6 +37,7 @@ const buildTicketFileEntries = (data: ApiTicketFilesResponse | undefined) => {
 
 export const TicketFileList = (props: TicketFileListProps) => {
   const { ticketId } = props;
+  const { t } = useTranslation("tickets");
   const { data } = useTicketFiles(ticketId);
 
   const files = buildTicketFileEntries(data);
@@ -43,7 +45,7 @@ export const TicketFileList = (props: TicketFileListProps) => {
   if (files.length === 0) return null;
 
   return (
-    <ItemSection title="Files" defaultOpen>
+    <ItemSection title={t("ticketDetail.files")} defaultOpen>
       <Stack gap="xs">
         {files.map((file) => (
           <MenuItem key={file.id} primaryLabel={stripExtension(file.fileName)} />

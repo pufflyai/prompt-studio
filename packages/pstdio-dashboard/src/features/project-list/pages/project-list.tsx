@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { format, isSameYear, parseISO } from "date-fns";
 import { Folder, Settings } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CreateProjectDialog } from "../components/create-project-dialog";
 import type { CreateProjectInput } from "../data/api";
 import { useCreateProject, useProjectList } from "../hooks/use-project-list";
@@ -28,6 +29,7 @@ export const ProjectList = () => {
   const [isDialogOpen, setDialogOpen] = useState(false);
   const navigate = useNavigate();
   const projects = data ?? [];
+  const { t } = useTranslation("projects");
 
   const handleOpenDialog = () => setDialogOpen(true);
   const handleCloseDialog = () => setDialogOpen(false);
@@ -38,14 +40,14 @@ export const ProjectList = () => {
       setDialogOpen(false);
       toaster.create({
         type: "success",
-        title: "Project created",
+        title: t("list.projectCreated"),
         description: input.name,
       });
     } catch (createError) {
       const message = createError instanceof Error ? createError.message : "Unable to create project.";
       toaster.create({
         type: "error",
-        title: "Create project failed",
+        title: t("list.createProjectFailed"),
         description: message,
       });
     }
@@ -55,20 +57,20 @@ export const ProjectList = () => {
     navigate({ to: "/projects/$projectId/docs", params: { projectId } });
   };
 
-  const description = isLoading ? "" : `You have ${projects.length} project${projects.length === 1 ? "" : "s"}.`;
+  const description = isLoading ? "" : t("list.projectCount", { count: projects.length });
 
   return (
     <Container>
       <Stack gap="lg" padding="lg">
         <Stack gap="2xs">
           <Stack direction="row" alignItems="center" justifyContent="space-between">
-            <Text textStyle="heading/M">Projects</Text>
+            <Text textStyle="heading/M">{t("list.title")}</Text>
             <Stack direction="row" gap="xs">
               <IconButton size="sm" variant="ghost" aria-label="Settings" onClick={() => navigate({ to: "/settings" })}>
                 <Settings size={18} />
               </IconButton>
               <Button size="sm" variant="solid" onClick={handleOpenDialog}>
-                Create project
+                {t("list.createProject")}
               </Button>
             </Stack>
           </Stack>
@@ -79,17 +81,14 @@ export const ProjectList = () => {
 
         {isLoading ? (
           <Text textStyle="paragraph/S/regular" color="fg.muted">
-            Loading projects...
+            {t("list.loadingProjects")}
           </Text>
         ) : isError ? (
-          <EmptyState
-            title="Unable to load projects"
-            description={error instanceof Error ? error.message : undefined}
-          />
+          <EmptyState title={t("list.unableToLoad")} description={error instanceof Error ? error.message : undefined} />
         ) : projects.length === 0 ? (
-          <EmptyState title="No projects yet" description="Create your first project to get started.">
+          <EmptyState title={t("list.noProjectsYet")} description={t("list.noProjectsDescription")}>
             <Button size="sm" variant="outline" onClick={handleOpenDialog}>
-              Create your first project
+              {t("list.createFirstProject")}
             </Button>
           </EmptyState>
         ) : (

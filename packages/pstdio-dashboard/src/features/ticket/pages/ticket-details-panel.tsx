@@ -2,6 +2,7 @@ import { Flex, Stack, Text } from "@chakra-ui/react";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useProject, useProjectTemplateAssets } from "@/features/project/hooks/use-project";
 import { CreateTicketModal } from "@/features/ticket-list/components/create-ticket-modal";
 import {
@@ -24,6 +25,7 @@ import { buildCreateSubTicketsPrompt, buildRefineTicketPrompt } from "../utils/b
 export const TicketDetailsPanel = () => {
   const { projectId, ticketShorthand } = useParams({ from: "/projects/$projectId/tickets/$ticketShorthand" });
   const navigate = useNavigate();
+  const { t } = useTranslation("tickets");
 
   const { data: project } = useProject(projectId);
   const { data: templateAssets } = useProjectTemplateAssets(projectId);
@@ -86,7 +88,7 @@ export const TicketDetailsPanel = () => {
     return (
       <Stack gap="lg" height="100%" p="sm">
         <Text textStyle="paragraph/S/regular" color="foreground.secondary">
-          Ticket not found.
+          {t("ticketDetail.ticketNotFound")}
         </Text>
       </Stack>
     );
@@ -142,14 +144,14 @@ export const TicketDetailsPanel = () => {
         <Stack flex="1" minW="0" padding="sm" overflow="auto">
           {isContentLoading ? (
             <Text textStyle="paragraph/S/regular" color="foreground.secondary">
-              Loading ticket content...
+              {t("ticketDetail.loadingContent")}
             </Text>
           ) : (
             <MarkdownEditor
               key={autosave.editorKey}
               defaultState={autosave.initialContent}
               isEditable
-              placeholder="Enter description..."
+              placeholder={t("ticketDetail.enterDescription")}
               onChange={autosave.handleChange}
             />
           )}
@@ -164,7 +166,6 @@ export const TicketDetailsPanel = () => {
           onSelectTicket={handleSelectTicket}
           onComplexityChange={(c) => updateTicket.mutate({ ticketId: ticket.id, complexity: c })}
           onTagIdsChange={(ids) => updateTicketTags.mutate({ ticketId: ticket.id, tagIds: ids })}
-          onBreakIntoSubTickets={() => setIsBreakModalOpen(true)}
         />
       </Flex>
       <CreateTicketModal
@@ -175,8 +176,8 @@ export const TicketDetailsPanel = () => {
         targetStatus={subTicketCreation.createModalStatus}
         templates={subTicketCreation.templates}
         parentId={subTicketCreation.parentId}
-        title="Create sub-ticket"
-        submitLabel="Create sub-ticket"
+        title={t("ticketDetail.createSubTicket")}
+        submitLabel={t("ticketDetail.createSubTicket")}
       />
       <BreakIntoSubTicketsModal
         open={isBreakModalOpen}

@@ -1,5 +1,6 @@
 import { Menu, Text } from "@chakra-ui/react";
 import { ItemSection, MenuItem, PanelMenu } from "@pstdio/ui";
+import { useTranslation } from "react-i18next";
 import type { DocsSidebarItem } from "../data/api";
 import { sidebarItemContainsLink } from "../utils";
 
@@ -56,12 +57,13 @@ const DocsSidebarEntry = (props: DocsSidebarEntryProps) => {
 
 export const DocsSidebar = (props: DocsSidebarProps) => {
   const { menuItems, activeLink, onSelectLink } = props;
+  const { t } = useTranslation();
 
   return (
-    <PanelMenu title="Docs" variant="compact">
+    <PanelMenu title={t("docs.title")} variant="compact">
       {menuItems.length === 0 ? (
         <Text textStyle="paragraph/S/regular" color="fg.muted" p="xs">
-          No files
+          {t("docs.noFiles")}
         </Text>
       ) : (
         menuItems.map((item, index) => (

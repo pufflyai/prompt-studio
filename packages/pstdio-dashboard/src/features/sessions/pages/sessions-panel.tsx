@@ -2,6 +2,7 @@ import { Flex, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
 import { HorizontalMenuStack, Tooltip } from "@pstdio/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { PenBox } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { SessionActionMenu } from "../components/session-action-menu";
 import { SessionChatView } from "../components/session-chat-view";
 import { SessionsList } from "../components/sessions-list";
@@ -11,6 +12,7 @@ import { useProjectSessions } from "../hooks/use-project-sessions";
 import { downloadSessionJson } from "../utils/session-download";
 
 export const SessionsPanel = () => {
+  const { t } = useTranslation("projects");
   const { projectId, sessionId } = useParams({ strict: false });
   const navigate = useNavigate();
   const selectedSessionId = typeof sessionId === "string" ? sessionId : null;
@@ -42,11 +44,11 @@ export const SessionsPanel = () => {
         <Stack w="18rem" minW="18rem" borderRightWidth="1px" gap="0" bg="background.primary">
           <HorizontalMenuStack>
             <Text textStyle="label/S/medium" color="foreground.primary">
-              Sessions
+              {t("sessions.title")}
             </Text>
 
-            <Tooltip content="New session">
-              <IconButton size="xs" variant="ghost" aria-label="New session" onClick={handleNewSession}>
+            <Tooltip content={t("sessions.newSession")}>
+              <IconButton size="xs" variant="ghost" aria-label={t("sessions.newSession")} onClick={handleNewSession}>
                 <PenBox size={16} />
               </IconButton>
             </Tooltip>
@@ -65,7 +67,7 @@ export const SessionsPanel = () => {
         <Stack flex="1" minW="0" minH="0" gap="0">
           <HorizontalMenuStack>
             <Text textStyle="label/S/medium" color="foreground.primary" lineClamp={1}>
-              {selectedSession?.title ?? "New session"}
+              {selectedSession?.title ?? t("sessions.newSession")}
             </Text>
 
             <HStack gap="2xs">

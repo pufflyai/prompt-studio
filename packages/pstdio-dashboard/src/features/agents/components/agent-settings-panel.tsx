@@ -1,4 +1,5 @@
 import { Box, Spinner, Stack, Text } from "@chakra-ui/react";
+import { useTranslation } from "react-i18next";
 import { useAgentSettings, useUpdateAgentSettings } from "../hooks/use-agent-settings";
 import type { AgentInfo, ClaudeCodeSettings, OpencodeSettings } from "../types";
 import { ClaudeCodeSettingsForm } from "./claude-code-settings-form";
@@ -9,6 +10,7 @@ interface AgentSettingsPanelProps {
 }
 
 export const AgentSettingsPanel = (props: AgentSettingsPanelProps) => {
+  const { t } = useTranslation("settings");
   const { agent } = props;
   const { data: settings, isLoading } = useAgentSettings(agent.id);
   const updateSettings = useUpdateAgentSettings(agent.id);
@@ -47,7 +49,7 @@ export const AgentSettingsPanel = (props: AgentSettingsPanelProps) => {
 
   return (
     <Text textStyle="paragraph/XS/regular" color="fg.muted">
-      No settings available for this agent.
+      {t("agentSettings.noSettingsAvailable")}
     </Text>
   );
 };
@@ -57,6 +59,7 @@ interface AgentSettingsSectionProps {
 }
 
 export const AgentSettingsSection = (props: AgentSettingsSectionProps) => {
+  const { t } = useTranslation("settings");
   const { agents } = props;
   const installedAgents = agents.filter((a) => a.availability.type === "INSTALLED");
 
@@ -67,9 +70,9 @@ export const AgentSettingsSection = (props: AgentSettingsSectionProps) => {
   return (
     <Stack gap="sm">
       <Stack gap="2xs">
-        <Text textStyle="heading/S">Agent Settings</Text>
+        <Text textStyle="heading/S">{t("agentSettings.title")}</Text>
         <Text textStyle="paragraph/S/regular" color="fg.muted">
-          Configure per-agent options like model, approval mode, and behavior.
+          {t("agentSettings.description")}
         </Text>
       </Stack>
 

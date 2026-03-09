@@ -1,4 +1,5 @@
 import { HStack, NativeSelect, Spinner, Stack, Switch, Text } from "@chakra-ui/react";
+import { useTranslation } from "react-i18next";
 import { useAgentModels } from "../hooks/use-agent-models";
 import type { OpencodeSettings } from "../types";
 
@@ -9,6 +10,7 @@ interface OpencodeSettingsFormProps {
 }
 
 export const OpencodeSettingsForm = (props: OpencodeSettingsFormProps) => {
+  const { t } = useTranslation("settings");
   const { settings, onUpdate, isUpdating } = props;
   const { data: models = [], isLoading: isModelsLoading } = useAgentModels("opencode", { enabled: true });
 
@@ -16,9 +18,9 @@ export const OpencodeSettingsForm = (props: OpencodeSettingsFormProps) => {
     <Stack gap="sm">
       <HStack justify="space-between" alignItems="center">
         <Stack gap="0">
-          <Text textStyle="label/XS/medium">Model</Text>
+          <Text textStyle="label/XS/medium">{t("opencode.model")}</Text>
           <Text textStyle="paragraph/XS/regular" color="fg.muted">
-            Default model for new sessions
+            {t("opencode.modelDescription")}
           </Text>
         </Stack>
 
@@ -30,7 +32,7 @@ export const OpencodeSettingsForm = (props: OpencodeSettingsFormProps) => {
               value={settings.model ?? ""}
               onChange={(e) => onUpdate({ model: e.target.value || undefined })}
             >
-              <option value="">Agent default</option>
+              <option value="">{t("opencode.agentDefault")}</option>
               {models.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.id}
@@ -44,9 +46,9 @@ export const OpencodeSettingsForm = (props: OpencodeSettingsFormProps) => {
 
       <HStack justify="space-between" alignItems="center">
         <Stack gap="0">
-          <Text textStyle="label/XS/medium">Auto-approve</Text>
+          <Text textStyle="label/XS/medium">{t("opencode.autoApprove")}</Text>
           <Text textStyle="paragraph/XS/regular" color="fg.muted">
-            Automatically approve tool use requests
+            {t("opencode.autoApproveDescription")}
           </Text>
         </Stack>
 

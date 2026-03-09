@@ -2,6 +2,7 @@ import { Button, HStack, Text } from "@chakra-ui/react";
 import { DiffBubble } from "@pstdio/ui";
 import { GitBranch } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CreateWorkspaceModal } from "./create-workspace-modal";
 
 interface TicketAttemptButtonProps {
@@ -24,6 +25,7 @@ export const TicketAttemptButton = (props: TicketAttemptButtonProps) => {
     onRunAttempt,
     onViewWorkspace,
   } = props;
+  const { t } = useTranslation("tickets");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const hasAttempts = attemptCount > 0;
   const attemptLabel = `${attemptCount}`;
@@ -52,7 +54,7 @@ export const TicketAttemptButton = (props: TicketAttemptButtonProps) => {
             <DiffBubble additions={additions} deletions={deletions} variant="ghost" size="small" />
           </HStack>
         ) : (
-          "Run Attempt"
+          t("ticketDetail.runAttempt")
         )}
       </Button>
 

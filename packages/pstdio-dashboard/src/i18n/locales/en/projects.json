@@ -120,6 +120,8 @@
       "blockedReason": "Blocked reason",
       "dependsOn": "Depends on",
       "dependencies": "Dependencies",
+      "parent": "Parent",
+      "tags": "Tags",
       "archived": "Archived",
       "complexity": {
         "label": "Complexity",
@@ -144,7 +146,8 @@
       "createSubTicket": "Create sub-ticket",
       "refineTicket": "Refine ticket",
       "archiveTicket": "Archive ticket",
-      "deleteTicket": "Delete ticket"
+      "deleteTicket": "Delete ticket",
+      "breakIntoSubTickets": "Break into sub-tickets"
     },
     "deleteConfirmation": {
       "ticket": {
@@ -190,5 +193,47 @@
     "errors": {
       "missingProjectId": "Project id is required to create an attempt."
     }
+  },
+  "sidebar": {
+    "documentation": "Documentation",
+    "tickets": "Tickets",
+    "projectChangelog": "Project changelog",
+    "projectSettings": "Project settings",
+    "helpLinks": "Help links",
+    "documentationLink": "Documentation",
+    "discordLink": "Discord"
+  },
+  "shell": {
+    "loadingProject": "Loading project...",
+    "notFound": "Project not found",
+    "notFoundDescription": "Choose a project from the list to continue."
+  },
+  "projectSettings": {
+    "title": "Project Settings"
+  },
+  "list": {
+    "projectCreated": "Project created",
+    "createProjectFailed": "Create project failed",
+    "projectCount_one": "You have {{count}} project.",
+    "projectCount_other": "You have {{count}} projects.",
+    "title": "Projects",
+    "createProject": "Create project",
+    "loadingProjects": "Loading projects...",
+    "unableToLoad": "Unable to load projects",
+    "noProjectsYet": "No projects yet",
+    "noProjectsDescription": "Create your first project to get started.",
+    "createFirstProject": "Create your first project",
+    "settingsAriaLabel": "Settings"
+  },
+  "sessions": {
+    "title": "Sessions",
+    "newSession": "New session",
+    "noSessionsYet": "No sessions yet",
+    "noSessionSelected": "No session selected",
+    "selectSession": "Select a session from the sidebar or start a new one.",
+    "followUpPlaceholder": "Send a follow-up message...",
+    "downloadSessionJson": "Download session JSON",
+    "archiveSession": "Archive session",
+    "sessionActions": "Session actions"
   }
 }

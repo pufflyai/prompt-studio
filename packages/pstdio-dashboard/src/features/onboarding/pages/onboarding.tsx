@@ -1,6 +1,7 @@
 import { Badge, Box, Button, Container, Flex, Stack, Text } from "@chakra-ui/react";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   type CodingAgent,
   getStoredAgent,
@@ -17,30 +18,32 @@ type AvailabilityBadge = {
 const getAvailabilityBadge = (
   status: string | null,
   options: { isChecking: boolean; hasError: boolean },
+  t: (key: string) => string,
 ): AvailabilityBadge => {
   if (options.isChecking) {
-    return { label: "Checking availability...", colorPalette: "gray" };
+    return { label: t("onboarding.checkingAvailability"), colorPalette: "gray" };
   }
 
   if (options.hasError) {
-    return { label: "Unavailable", colorPalette: "red" };
+    return { label: t("onboarding.unavailable"), colorPalette: "red" };
   }
 
   if (status === "INSTALLED") {
-    return { label: "Ready", colorPalette: "green" };
+    return { label: t("onboarding.ready"), colorPalette: "green" };
   }
 
-  return { label: "Not detected", colorPalette: "red" };
+  return { label: t("onboarding.notDetected"), colorPalette: "red" };
 };
 
 export const Onboarding = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [selectedAgent, setSelectedAgent] = useState<CodingAgent | null>(getStoredAgent());
   const [setupError, setSetupError] = useState<string | null>(null);
   const { data: availability, isLoading: isChecking, isError: hasError } = useAgentAvailability("opencode");
   const setupMutation = useRunAgentSetup();
   const isOpencodeSelected = selectedAgent === "opencode";
-  const availabilityBadge = getAvailabilityBadge(availability?.type ?? null, { isChecking, hasError });
+  const availabilityBadge = getAvailabilityBadge(availability?.type ?? null, { isChecking, hasError }, t);
 
   const handleContinue = async () => {
     if (!selectedAgent || setupMutation.isPending) {
@@ -55,7 +58,7 @@ export const Onboarding = () => {
       setOnboardingComplete();
       navigate({ to: "/projects" });
     } catch {
-      setSetupError("Failed to run setup. Check your local agent install and try again.");
+      setSetupError(t("onboarding.setupError"));
     }
   };
 
@@ -63,17 +66,17 @@ export const Onboarding = () => {
     <Container>
       <Stack gap="lg" padding="lg">
         <Stack gap="2xs">
-          <Text textStyle="heading/M">Welcome to Prompt Studio</Text>
+          <Text textStyle="heading/M">{t("onboarding.welcome")}</Text>
           <Text textStyle="paragraph/S/regular" color="fg.muted">
-            Pick a coding agent to power new ticket attempts.
+            {t("onboarding.pickAgent")}
           </Text>
         </Stack>
 
         <Stack gap="sm">
           <Stack gap="2xs">
-            <Text textStyle="label/L/medium">Choose a coding agent</Text>
+            <Text textStyle="label/L/medium">{t("onboarding.chooseAgent")}</Text>
             <Text textStyle="paragraph/S/regular" color="fg.muted">
-              You can update this choice later.
+              {t("onboarding.updateLater")}
             </Text>
           </Stack>
 
@@ -92,9 +95,9 @@ export const Onboarding = () => {
           >
             <Flex alignItems="flex-start" justifyContent="space-between" gap="md">
               <Stack gap="xs" flex="1">
-                <Text textStyle="label/L/medium">Opencode</Text>
+                <Text textStyle="label/L/medium">{t("onboarding.opencode")}</Text>
                 <Text textStyle="paragraph/S/regular" color="fg.muted">
-                  Open-source, local-first coding agent for fast iteration.
+                  {t("onboarding.opencodeDescription")}
                 </Text>
               </Stack>
               <Badge colorPalette={availabilityBadge.colorPalette} variant="subtle">
@@ -117,7 +120,7 @@ export const Onboarding = () => {
             onClick={handleContinue}
             disabled={!selectedAgent || setupMutation.isPending}
           >
-            {setupMutation.isPending ? "Setting up..." : "Continue"}
+            {setupMutation.isPending ? t("onboarding.settingUp") : t("onboarding.continue")}
           </Button>
         </Flex>
       </Stack>

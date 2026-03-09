@@ -2,6 +2,7 @@ import { Box, Container, HStack, IconButton, Spinner, Stack, Text } from "@chakr
 import { toaster } from "@pstdio/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   useAgentConfigs,
   useDisableAgent,
@@ -12,6 +13,7 @@ import { useAgents } from "@/features/agents/hooks/use-agents";
 import { AgentRow } from "../components/agent-row";
 
 export const Settings = () => {
+  const { t } = useTranslation("settings");
   const navigate = useNavigate();
   const { data: agents = [], isLoading: isLoadingAgents } = useAgents();
   const { data: configs = [], isLoading: isLoadingConfigs } = useAgentConfigs();
@@ -25,13 +27,13 @@ export const Settings = () => {
     if (isCurrentlyEnabled) {
       disableAgent.mutate(agentId, {
         onError: (error) => {
-          toaster.create({ type: "error", title: "Failed to disable agent", description: error.message });
+          toaster.create({ type: "error", title: t("agentList.failedToDisableAgent"), description: error.message });
         },
       });
     } else {
       enableAgent.mutate(agentId, {
         onError: (error) => {
-          toaster.create({ type: "error", title: "Failed to enable agent", description: error.message });
+          toaster.create({ type: "error", title: t("agentList.failedToEnableAgent"), description: error.message });
         },
       });
     }
@@ -40,7 +42,7 @@ export const Settings = () => {
   const handleSetDefault = (agentId: string) => {
     setDefaultAgent.mutate(agentId, {
       onError: (error) => {
-        toaster.create({ type: "error", title: "Failed to set default agent", description: error.message });
+        toaster.create({ type: "error", title: t("agentList.failedToSetDefaultAgent"), description: error.message });
       },
     });
   };
@@ -52,14 +54,14 @@ export const Settings = () => {
           <IconButton size="sm" variant="ghost" aria-label="Back" onClick={() => navigate({ to: "/projects" })}>
             <ArrowLeft size={18} />
           </IconButton>
-          <Text textStyle="heading/M">Settings</Text>
+          <Text textStyle="heading/M">{t("agentList.title")}</Text>
         </HStack>
 
         <Stack gap="sm">
           <Stack gap="2xs">
-            <Text textStyle="heading/S">Agents</Text>
+            <Text textStyle="heading/S">{t("agentList.agents")}</Text>
             <Text textStyle="paragraph/S/regular" color="foreground.secondary">
-              Registered coding agents and their availability status.
+              {t("agentList.agentsDescription")}
             </Text>
           </Stack>
 
@@ -69,7 +71,7 @@ export const Settings = () => {
             </Box>
           ) : agents.length === 0 ? (
             <Text textStyle="paragraph/S/regular" color="foreground.secondary">
-              No agents found.
+              {t("agentList.noAgentsFound")}
             </Text>
           ) : (
             <Stack gap="xs">

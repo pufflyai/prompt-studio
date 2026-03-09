@@ -1,5 +1,6 @@
 import { Button, CloseButton, Dialog, NativeSelect, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { WorkspaceAgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
 
 interface TemplateOption {
@@ -18,6 +19,7 @@ interface BreakIntoSubTicketsModalProps {
 
 export const BreakIntoSubTicketsModal = (props: BreakIntoSubTicketsModalProps) => {
   const { open, ticketShorthand, templates = [], isSubmitting = false, onClose, onSubmit } = props;
+  const { t } = useTranslation("tickets");
   const [templateName, setTemplateName] = useState("");
 
   const handleClose = () => {
@@ -43,7 +45,7 @@ export const BreakIntoSubTicketsModal = (props: BreakIntoSubTicketsModalProps) =
       <Dialog.Positioner>
         <Dialog.Content>
           <Dialog.Header>
-            <Text textStyle="heading/M">Break into sub-tickets</Text>
+            <Text textStyle="heading/M">{t("breakIntoSubTicketsModal.title")}</Text>
             <Dialog.CloseTrigger>
               <CloseButton size="sm" disabled={isSubmitting} />
             </Dialog.CloseTrigger>
@@ -52,15 +54,15 @@ export const BreakIntoSubTicketsModal = (props: BreakIntoSubTicketsModalProps) =
           <Dialog.Body>
             <Stack gap="sm">
               <Text textStyle="paragraph/S/regular" color="foreground.secondary">
-                Start an agent session to break {ticketShorthand} into concrete sub-tickets.
+                {t("breakIntoSubTicketsModal.description", { ticketShorthand })}
               </Text>
 
               {templates.length > 0 ? (
                 <Stack gap="2xs">
-                  <Text textStyle="label/S/medium">Template</Text>
+                  <Text textStyle="label/S/medium">{t("breakIntoSubTicketsModal.template")}</Text>
                   <NativeSelect.Root size="sm" disabled={isSubmitting}>
                     <NativeSelect.Field value={templateName} onChange={(event) => setTemplateName(event.target.value)}>
-                      <option value="">No template</option>
+                      <option value="">{t("breakIntoSubTicketsModal.noTemplate")}</option>
                       {templates.map((template) => (
                         <option key={template.id} value={template.name}>
                           {template.name}
@@ -73,7 +75,7 @@ export const BreakIntoSubTicketsModal = (props: BreakIntoSubTicketsModalProps) =
               ) : null}
 
               <Stack gap="2xs">
-                <Text textStyle="label/S/medium">Agent</Text>
+                <Text textStyle="label/S/medium">{t("breakIntoSubTicketsModal.agent")}</Text>
                 <WorkspaceAgentBrowserContainer isDisabled={isSubmitting} />
               </Stack>
             </Stack>
@@ -82,10 +84,10 @@ export const BreakIntoSubTicketsModal = (props: BreakIntoSubTicketsModalProps) =
           <Dialog.Footer>
             <Stack direction="row" gap="1">
               <Button size="sm" variant="ghost" onClick={handleClose} disabled={isSubmitting}>
-                Cancel
+                {t("breakIntoSubTicketsModal.cancel")}
               </Button>
               <Button size="sm" variant="solid" onClick={handleSubmit} loading={isSubmitting}>
-                Break into sub-tickets
+                {t("breakIntoSubTicketsModal.submit")}
               </Button>
             </Stack>
           </Dialog.Footer>

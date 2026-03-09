@@ -11,26 +11,8 @@ import {
   Newspaper,
   SettingsIcon,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { ProjectMenu } from "./project-menu";
-
-const projectSections = [
-  { id: "docs", label: "Documentation", icon: ListTreeIcon, path: "docs" },
-  { id: "tickets", label: "Tickets", icon: KanbanSquare, path: "tickets" },
-] as const;
-
-const projectChangelogSection = {
-  id: "changelog",
-  label: "Project changelog",
-  icon: Newspaper,
-  path: "changelog",
-} as const;
-
-const projectSettingsSection = {
-  id: "settings",
-  label: "Project settings",
-  icon: SettingsIcon,
-  path: "settings",
-} as const;
 
 const documentationUrl = "https://prompt.studio/docs";
 const discordUrl = "https://discord.gg/qH5dAqbNad";
@@ -42,6 +24,26 @@ const openExternalLink = (url: string) => {
 export const ProjectSidebar = () => {
   const { location } = useRouterState();
   const { projectId } = useParams({ strict: false });
+  const { t } = useTranslation("projects");
+
+  const projectSections = [
+    { id: "docs", label: t("sidebar.documentation"), icon: ListTreeIcon, path: "docs" },
+    { id: "tickets", label: t("sidebar.tickets"), icon: KanbanSquare, path: "tickets" },
+  ] as const;
+
+  const projectChangelogSection = {
+    id: "changelog",
+    label: t("sidebar.projectChangelog"),
+    icon: Newspaper,
+    path: "changelog",
+  } as const;
+
+  const projectSettingsSection = {
+    id: "settings",
+    label: t("sidebar.projectSettings"),
+    icon: SettingsIcon,
+    path: "settings",
+  } as const;
 
   const projectNavItems = projectId
     ? projectSections.map((item) => ({
@@ -136,8 +138,8 @@ export const ProjectSidebar = () => {
           <Menu.Root>
             <Menu.Trigger asChild>
               <Box>
-                <Tooltip positioning={{ placement: "right" }} content="Help links">
-                  <IconButton aria-label="Help links" variant="ghost" size="sm">
+                <Tooltip positioning={{ placement: "right" }} content={t("sidebar.helpLinks")}>
+                  <IconButton aria-label={t("sidebar.helpLinks")} variant="ghost" size="sm">
                     <ChakraIcon as={CircleHelp} boxSize="18px" />
                   </IconButton>
                 </Tooltip>
@@ -147,13 +149,13 @@ export const ProjectSidebar = () => {
               <Menu.Content minW="220px" bg="bg">
                 <MenuItem
                   onClick={handleOpenDocumentation}
-                  primaryLabel="Documentation"
+                  primaryLabel={t("sidebar.documentationLink")}
                   leftIcon={BookOpen}
                   rightIcon={ArrowUpRight}
                 />
                 <MenuItem
                   onClick={handleOpenDiscord}
-                  primaryLabel="Discord"
+                  primaryLabel={t("sidebar.discordLink")}
                   leftIcon={MessageCircle}
                   rightIcon={ArrowUpRight}
                 />

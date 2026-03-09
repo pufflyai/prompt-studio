@@ -1,6 +1,7 @@
 import { Flex, IconButton } from "@chakra-ui/react";
 import { Breadcrumb, HorizontalMenuStack } from "@pstdio/ui";
 import { ArrowLeft } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { TicketActionMenu } from "./ticket-action-menu";
 import { TicketAttemptButton } from "./ticket-attempt-button";
 
@@ -38,11 +39,12 @@ export const TicketHeader = (props: TicketHeaderProps) => {
     onArchiveTicket,
     onDeleteTicket,
   } = props;
+  const { t } = useTranslation("tickets");
 
   return (
     <HorizontalMenuStack>
       <Flex align="center" gap="sm">
-        <IconButton aria-label="Back to tickets" variant="ghost" size="sm" onClick={onNavigateBack}>
+        <IconButton aria-label={t("ticketDetail.backToTickets")} variant="ghost" size="sm" onClick={onNavigateBack}>
           <ArrowLeft />
         </IconButton>
 

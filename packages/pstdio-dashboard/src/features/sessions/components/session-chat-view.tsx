@@ -1,4 +1,5 @@
 import { ApprovalPrompt, ChatPanel } from "@pstdio/ui/chat-ui";
+import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/api";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useSessionStream } from "../hooks/use-session-stream";
@@ -8,6 +9,7 @@ interface SessionChatViewProps {
 }
 
 export const SessionChatView = (props: SessionChatViewProps) => {
+  const { t } = useTranslation("projects");
   const { sessionId } = props;
   const { messages, isStreaming, approvalRequest } = useSessionStream(sessionId);
   const followUp = useFollowUpSession();
@@ -37,9 +39,9 @@ export const SessionChatView = (props: SessionChatViewProps) => {
     <ChatPanel
       messages={messages}
       streaming={isStreaming}
-      emptyStateTitle="No session selected"
-      emptyStateDescription="Select a session from the sidebar or start a new one."
-      chatInputPlaceholder="Send a follow-up message..."
+      emptyStateTitle={t("sessions.noSessionSelected")}
+      emptyStateDescription={t("sessions.selectSession")}
+      chatInputPlaceholder={t("sessions.followUpPlaceholder")}
       onSubmitMessage={(text: string) => handleSubmitMessage(text)}
       approvalPrompt={
         approvalRequest ? (

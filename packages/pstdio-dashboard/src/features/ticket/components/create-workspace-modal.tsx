@@ -1,13 +1,17 @@
 import { Button, CloseButton, Dialog, HStack, Stack, Text } from "@chakra-ui/react";
 import { ContentPlaceholder, ContentPlaceholderLabel } from "@pstdio/ui";
+import { useTranslation } from "react-i18next";
 import { WorkspaceAgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
 
 // TODO: Build WorkspaceRepoMenuContainer — stubbed as placeholder for now
-const WorkspaceRepoMenuPlaceholder = () => (
-  <ContentPlaceholder>
-    <ContentPlaceholderLabel>Repo selector</ContentPlaceholderLabel>
-  </ContentPlaceholder>
-);
+const WorkspaceRepoMenuPlaceholder = () => {
+  const { t } = useTranslation("tickets");
+  return (
+    <ContentPlaceholder>
+      <ContentPlaceholderLabel>{t("ticketDetail.repoSelector")}</ContentPlaceholderLabel>
+    </ContentPlaceholder>
+  );
+};
 
 interface CreateWorkspaceModalProps {
   open: boolean;
@@ -20,6 +24,7 @@ interface CreateWorkspaceModalProps {
 
 export const CreateWorkspaceModal = (props: CreateWorkspaceModalProps) => {
   const { open, attemptCount, isSubmitting = false, isDisabled = false, onClose, onConfirm } = props;
+  const { t } = useTranslation("tickets");
 
   const handleConfirm = async () => {
     if (isSubmitting || isDisabled) return;
@@ -36,7 +41,7 @@ export const CreateWorkspaceModal = (props: CreateWorkspaceModalProps) => {
       <Dialog.Positioner>
         <Dialog.Content>
           <Dialog.Header>
-            <Text textStyle="heading/M">Create Workspace</Text>
+            <Text textStyle="heading/M">{t("createWorkspaceModal.title")}</Text>
             <Dialog.CloseTrigger>
               <CloseButton size="sm" disabled={isSubmitting} />
             </Dialog.CloseTrigger>
@@ -45,9 +50,7 @@ export const CreateWorkspaceModal = (props: CreateWorkspaceModalProps) => {
           <Dialog.Body>
             <Stack gap="sm">
               <Text textStyle="paragraph/S/regular" color="foreground.secondary">
-                {attemptCount === 0
-                  ? "Configure the first workspace attempt for this ticket."
-                  : "Configure the next workspace attempt from the latest state."}
+                {attemptCount === 0 ? t("createWorkspaceModal.firstAttempt") : t("createWorkspaceModal.nextAttempt")}
               </Text>
 
               <HStack justify="space-between" align="center" wrap="wrap">
@@ -60,10 +63,10 @@ export const CreateWorkspaceModal = (props: CreateWorkspaceModalProps) => {
           <Dialog.Footer>
             <Stack direction="row" gap="1">
               <Button size="sm" variant="ghost" onClick={onClose} disabled={isSubmitting}>
-                Cancel
+                {t("createWorkspaceModal.cancel")}
               </Button>
               <Button size="sm" variant="solid" onClick={handleConfirm} loading={isSubmitting} disabled={isDisabled}>
-                Run Attempt
+                {t("createWorkspaceModal.runAttempt")}
               </Button>
             </Stack>
           </Dialog.Footer>

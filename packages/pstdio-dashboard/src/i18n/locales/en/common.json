@@ -69,7 +69,13 @@
     "searchLabel": "Search current directory:",
     "selectCurrent": "Select Current",
     "gitRepo": "git repo",
-    "selectPath": "Select Path"
+    "selectPath": "Select Path",
+    "errors": {
+      "unableToLoadDirectory": "Unable to load directory",
+      "pathRequired": "Path is required.",
+      "repositoryAlreadySelected": "Repository already selected.",
+      "notGitRepository": "Selected folder is not a git repository."
+    }
   },
   "branchSelector": {
     "placeholder": "Select a branch",
@@ -328,5 +334,47 @@
     "commands": "Commands",
     "noTagsOrFiles": "No tags or files found",
     "noCommands": "No commands available for this agent."
+  },
+  "docs": {
+    "title": "Docs",
+    "noFiles": "No files",
+    "noDocsFound": "No docs found",
+    "unableToLoadDocs": "Unable to load docs",
+    "unableToLoadDocument": "Unable to load document",
+    "trySelectingAnother": "Try selecting another doc.",
+    "noContentAvailable": "No content available."
+  },
+  "changelog": {
+    "unableToLoad": "Unable to load changelog",
+    "noEntries": "No changelog entries",
+    "addEntries": "Add entries to .pstdio/changelog/changelog.md"
+  },
+  "onboarding": {
+    "checkingAvailability": "Checking availability...",
+    "unavailable": "Unavailable",
+    "ready": "Ready",
+    "notDetected": "Not detected",
+    "setupError": "Failed to run setup. Check your local agent install and try again.",
+    "welcome": "Welcome to Prompt Studio",
+    "pickAgent": "Pick a coding agent to power new ticket attempts.",
+    "chooseAgent": "Choose a coding agent",
+    "updateLater": "You can update this choice later.",
+    "opencode": "Opencode",
+    "opencodeDescription": "Open-source, local-first coding agent for fast iteration.",
+    "settingUp": "Setting up...",
+    "continue": "Continue"
+  },
+  "menu": {
+    "versionCopied": "Version copied",
+    "switchToLightMode": "Switch to light mode",
+    "switchToDarkMode": "Switch to dark mode",
+    "loadingVersion": "Loading version...",
+    "mainMenu": "Main menu",
+    "openSettingsMenu": "Open settings menu",
+    "projects": "Projects",
+    "promptStudio": "Prompt Studio"
+  },
+  "workspace": {
+    "title": "Workspace"
   }
 }

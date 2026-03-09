@@ -63,7 +63,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
       height="100%"
       position="relative"
       direction="column"
-      overflow="hidden"
+      overflow="visible"
     >
       <LexicalComposer initialConfig={initialConfig}>
         {autoFocus ? <AutoFocusPlugin /> : null}

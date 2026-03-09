@@ -505,5 +505,46 @@
         }
       }
     }
+  },
+  "agentList": {
+    "title": "Settings",
+    "back": "Back",
+    "agents": "Agents",
+    "agentsDescription": "Registered coding agents and their availability status.",
+    "noAgentsFound": "No agents found.",
+    "failedToDisableAgent": "Failed to disable agent",
+    "failedToEnableAgent": "Failed to enable agent",
+    "failedToSetDefaultAgent": "Failed to set default agent"
+  },
+  "agentRow": {
+    "default": "Default",
+    "installed": "Installed",
+    "notFound": "Not found",
+    "setAsDefault": "Set as default"
+  },
+  "agentSettings": {
+    "title": "Agent Settings",
+    "description": "Configure per-agent options like model, approval mode, and behavior.",
+    "noSettingsAvailable": "No settings available for this agent."
+  },
+  "claudeCode": {
+    "model": "Model",
+    "modelDescription": "Default model for new sessions",
+    "agentDefault": "Agent default",
+    "planMode": "Plan mode",
+    "planModeDescription": "Start sessions in plan mode",
+    "approvalMode": "Approval mode",
+    "approvalModeDescription": "How tool use requests are handled",
+    "approvalOptions": {
+      "bypass": "Bypass (auto-approve all)",
+      "prompt": "Prompt (ask before each tool)"
+    }
+  },
+  "opencode": {
+    "model": "Model",
+    "modelDescription": "Default model for new sessions",
+    "agentDefault": "Agent default",
+    "autoApprove": "Auto-approve",
+    "autoApproveDescription": "Automatically approve tool use requests"
   }
 }

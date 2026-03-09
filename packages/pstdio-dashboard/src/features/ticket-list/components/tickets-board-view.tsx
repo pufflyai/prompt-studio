@@ -1,5 +1,6 @@
 import { TicketBoard, type TicketBoardColumn, type TicketBoardColumnAction, type TicketBoardItem } from "@pstdio/ui";
 import { Archive } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import type { Ticket, TicketColumnAction, TicketStatus } from "@/features/ticket-list/types";
 
@@ -18,29 +19,6 @@ interface TicketsBoardViewProps {
   selectedTicketId?: string | null;
 }
 
-const COLUMN_ACTION_MAP: Record<TicketColumnAction, Omit<TicketBoardColumnAction, "id">> = {
-  archive_all: { label: "Archive all", icon: Archive },
-};
-
-const toColumnActions = (actions: TicketColumnAction[]): TicketBoardColumnAction[] =>
-  actions.map((action) => ({ id: action, ...COLUMN_ACTION_MAP[action] }));
-
-const toBoardItem = (
-  ticket: Ticket,
-  displayProperties: DisplayProperty[],
-  badgeContext: BadgeContext,
-  ticketsById: Map<string, Ticket>,
-): TicketBoardItem => ({
-  id: ticket.id,
-  cardProps: {
-    ticketId: ticket.shorthand,
-    parentPath: buildParentPath(ticket, ticketsById),
-    title: ticket.title || "empty ticket",
-    badges: buildTicketBadges(ticket, displayProperties, badgeContext),
-    onClick: undefined,
-  },
-});
-
 export const TicketsBoardView = (props: TicketsBoardViewProps) => {
   const {
     groups,
@@ -52,6 +30,25 @@ export const TicketsBoardView = (props: TicketsBoardViewProps) => {
     onColumnAction,
     selectedTicketId = null,
   } = props;
+  const { t } = useTranslation("tickets");
+
+  const COLUMN_ACTION_MAP: Record<TicketColumnAction, Omit<TicketBoardColumnAction, "id">> = {
+    archive_all: { label: t("boardView.archiveAll"), icon: Archive },
+  };
+
+  const toColumnActions = (actions: TicketColumnAction[]): TicketBoardColumnAction[] =>
+    actions.map((action) => ({ id: action, ...COLUMN_ACTION_MAP[action] }));
+
+  const toBoardItem = (ticket: Ticket, ticketsById: Map<string, Ticket>): TicketBoardItem => ({
+    id: ticket.id,
+    cardProps: {
+      ticketId: ticket.shorthand,
+      parentPath: buildParentPath(ticket, ticketsById),
+      title: ticket.title || t("boardView.emptyTicket"),
+      badges: buildTicketBadges(ticket, displayProperties, badgeContext),
+      onClick: undefined,
+    },
+  });
 
   const ticketsById = new Map<string, Ticket>();
   for (const group of groups) {
@@ -62,7 +59,7 @@ export const TicketsBoardView = (props: TicketsBoardViewProps) => {
 
   const columns: TicketBoardColumn[] = groups.map((group) => {
     const items = group.tickets.map((ticket) => {
-      const item = toBoardItem(ticket, displayProperties, badgeContext, ticketsById);
+      const item = toBoardItem(ticket, ticketsById);
       item.cardProps.onClick = () => onSelectTicket?.(ticket);
       return item;
     });
