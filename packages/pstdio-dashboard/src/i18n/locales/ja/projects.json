@@ -145,6 +145,7 @@
       "ticket": "タスクオプションを開く",
       "refineTicket": "チケットを精査",
       "archiveTicket": "チケットをアーカイブ",
+      "unarchiveTicket": "チケットのアーカイブを解除",
       "createSubTicket": "サブチケットを作成",
       "deleteTicket": "タスクを削除",
       "breakIntoSubTickets": "サブチケットに分割"

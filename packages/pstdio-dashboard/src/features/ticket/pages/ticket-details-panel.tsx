@@ -127,6 +127,7 @@ export const TicketDetailsPanel = () => {
         additions={latestAttemptDiff?.totals.additions ?? 0}
         deletions={latestAttemptDiff?.totals.deletions ?? 0}
         isRunningAttempt={sessions.isRunningAttempt}
+        isArchived={Boolean(ticket.archived)}
         canDeleteTicket={Boolean(projectId) && !deleteTicket.isPending}
         onNavigateBack={navigateBack}
         onRunAttempt={handleRunAttempt}

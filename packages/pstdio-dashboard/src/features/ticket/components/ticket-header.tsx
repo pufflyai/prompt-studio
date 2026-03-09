@@ -11,6 +11,7 @@ interface TicketHeaderProps {
   additions: number;
   deletions: number;
   isRunningAttempt: boolean;
+  isArchived: boolean;
   canDeleteTicket: boolean;
   onNavigateBack: () => void;
   onRunAttempt: () => Promise<boolean> | boolean;
@@ -29,6 +30,7 @@ export const TicketHeader = (props: TicketHeaderProps) => {
     additions,
     deletions,
     isRunningAttempt,
+    isArchived,
     canDeleteTicket,
     onNavigateBack,
     onRunAttempt,
@@ -62,6 +64,7 @@ export const TicketHeader = (props: TicketHeaderProps) => {
         />
 
         <TicketActionMenu
+          isArchived={isArchived}
           canDeleteTicket={canDeleteTicket}
           onCreateSubTicket={onCreateSubTicket}
           onBreakIntoSubTickets={onBreakIntoSubTickets}

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 interface TicketActionMenuProps {
+  isArchived: boolean;
   canDeleteTicket: boolean;
   onCreateSubTicket: () => void;
   onBreakIntoSubTickets: () => void;
@@ -14,8 +15,15 @@ interface TicketActionMenuProps {
 }
 
 export const TicketActionMenu = (props: TicketActionMenuProps) => {
-  const { canDeleteTicket, onCreateSubTicket, onBreakIntoSubTickets, onRefineTicket, onArchiveTicket, onDeleteTicket } =
-    props;
+  const {
+    isArchived,
+    canDeleteTicket,
+    onCreateSubTicket,
+    onBreakIntoSubTickets,
+    onRefineTicket,
+    onArchiveTicket,
+    onDeleteTicket,
+  } = props;
   const { t } = useTranslation("projects");
   const [isDeleteOpen, setDeleteOpen] = useState(false);
 
@@ -58,7 +66,7 @@ export const TicketActionMenu = (props: TicketActionMenuProps) => {
               onClick={onRefineTicket}
             />
             <MenuItem
-              primaryLabel={t("ticketPanel.options.archiveTicket")}
+              primaryLabel={t(isArchived ? "ticketPanel.options.unarchiveTicket" : "ticketPanel.options.archiveTicket")}
               leftIcon={Archive}
               onClick={onArchiveTicket}
             />

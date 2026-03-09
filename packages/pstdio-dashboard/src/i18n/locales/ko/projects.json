@@ -145,6 +145,7 @@
       "ticket": "작업 옵션 열기",
       "refineTicket": "티켓 정제",
       "archiveTicket": "티켓 보관",
+      "unarchiveTicket": "티켓 보관 해제",
       "deleteTicket": "작업 삭제",
       "breakIntoSubTickets": "하위 티켓으로 분할",
       "createSubTicket": "하위 티켓 생성"

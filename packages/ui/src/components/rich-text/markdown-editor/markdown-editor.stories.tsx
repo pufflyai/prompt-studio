@@ -133,6 +133,10 @@ const meta: Meta<typeof MarkdownEditor> = {
       control: "text",
       description: "Markdown source to render",
     },
+    placeholder: {
+      control: "text",
+      description: "Placeholder text shown when the editor is empty",
+    },
     debug: {
       control: "boolean",
       description: "Show Lexical tree for debugging",
@@ -145,3 +149,10 @@ export default meta;
 type Story = StoryObj<typeof MarkdownEditor>;
 
 export const Basic: Story = {};
+
+export const EmptyWithPlaceholder: Story = {
+  args: {
+    defaultState: "",
+    placeholder: "Start writing Markdown...",
+  },
+};

@@ -146,6 +146,7 @@
       "createSubTicket": "Create sub-ticket",
       "refineTicket": "Refine ticket",
       "archiveTicket": "Archive ticket",
+      "unarchiveTicket": "Unarchive ticket",
       "deleteTicket": "Delete ticket",
       "breakIntoSubTickets": "Break into sub-tickets"
     },

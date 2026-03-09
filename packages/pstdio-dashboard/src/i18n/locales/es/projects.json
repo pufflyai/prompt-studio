@@ -145,6 +145,7 @@
       "ticket": "Abrir opciones de tarea",
       "refineTicket": "Refinar tarea",
       "archiveTicket": "Archivar tarea",
+      "unarchiveTicket": "Desarchivar tarea",
       "createSubTicket": "Crear subtarea",
       "deleteTicket": "Eliminar tarea",
       "breakIntoSubTickets": "Dividir en subtareas"

@@ -145,6 +145,7 @@
       "ticket": "Ouvrir les options de tâche",
       "refineTicket": "Affiner la tâche",
       "archiveTicket": "Archiver la tâche",
+      "unarchiveTicket": "Désarchiver la tâche",
       "deleteTicket": "Supprimer la tâche",
       "breakIntoSubTickets": "Découper en sous-tâches",
       "createSubTicket": "Créer une sous-tâche"

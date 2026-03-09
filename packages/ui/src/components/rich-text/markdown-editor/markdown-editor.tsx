@@ -77,16 +77,19 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
           contentEditable={<ContentEditable fullWidth={false} />}
           placeholder={
             placeholder ? (
-              <Box
+              <Flex
                 position="absolute"
                 top="0"
-                color="fg.muted"
+                left="0"
+                right="0"
                 pointerEvents="none"
                 userSelect="none"
-                textStyle="paragraph/M/regular"
+                justifyContent="center"
               >
-                {placeholder}
-              </Box>
+                <Box width="100%" maxWidth="720px" color="fg.muted" textStyle="paragraph/M/regular">
+                  {placeholder}
+                </Box>
+              </Flex>
             ) : null
           }
           ErrorBoundary={LexicalErrorBoundary}

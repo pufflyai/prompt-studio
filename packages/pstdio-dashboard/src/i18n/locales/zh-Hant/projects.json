@@ -145,6 +145,7 @@
       "ticket": "開啟任務選項",
       "refineTicket": "精煉任務",
       "archiveTicket": "封存任務",
+      "unarchiveTicket": "取消封存任務",
       "deleteTicket": "刪除任務",
       "breakIntoSubTickets": "拆分為子工單",
       "createSubTicket": "建立子任務"
