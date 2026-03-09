@@ -58,11 +58,23 @@ const updateTicketViaApi = async (
   return res.json();
 };
 
+const createTemplateViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  projectId: string,
+  name: string,
+  templateType: string,
+) => {
+  const res = await request.post(`${apiBase}/v1/projects/${projectId}/templates`, {
+    data: { name, template_type: templateType, content: `# ${name}\n\nTemplate content` },
+  });
+  expect(res.ok()).toBe(true);
+  return (await res.json()) as { id: string; name: string; template_type: string };
+};
+
 test.describe("Ticket list", () => {
   let projectId: string;
 
   test.beforeEach(async ({ request }) => {
-    test.setTimeout(5_000);
     await deleteAllProjects(request);
     const project = await createProjectViaApi(request, "Ticket Test Project");
     projectId = project.id;
@@ -141,7 +153,6 @@ test.describe("Ticket list editing and filtering", () => {
   let projectId: string;
 
   test.beforeEach(async ({ request }) => {
-    test.setTimeout(5_000);
     await deleteAllProjects(request);
     const project = await createProjectViaApi(request, "Ticket Test Project");
     projectId = project.id;
@@ -196,7 +207,6 @@ test.describe("Ticket list editing and filtering", () => {
   });
 
   test("preserves edited ticket content after leaving and reopening ticket details", async ({ page, request }) => {
-    test.setTimeout(20_000);
     await bypassOnboarding(page);
     await page.goto(`/projects/${projectId}/tickets`);
 
@@ -284,7 +294,6 @@ test.describe("Ticket list additional coverage", () => {
   let projectId: string;
 
   test.beforeEach(async ({ request }) => {
-    test.setTimeout(5_000);
     await deleteAllProjects(request);
     const project = await createProjectViaApi(request, "Ticket Test Project");
     projectId = project.id;
@@ -326,9 +335,31 @@ test.describe("Ticket list additional coverage", () => {
     await expect(loadingOrBoard).toBeVisible();
   });
 
-  test("toggles a tag on a ticket from the detail sidebar", async ({ page, request }) => {
-    test.setTimeout(10_000);
+  test("shows template selector in refine ticket modal when templates exist", async ({ page, request }) => {
+    const statuses = await getTicketStatuses(request, projectId);
+    const backlog = statuses.find((s) => s.name === "backlog")!;
 
+    await createTemplateViaApi(request, projectId, "Bug Report", "ticket");
+    const ticket = await createTicketViaApi(request, projectId, "Template test ticket", backlog.id);
+
+    await bypassOnboarding(page);
+    await page.goto(`/projects/${projectId}/tickets/${ticket.shorthand}`);
+
+    // Open ticket action menu and click "Refine ticket"
+    await page.getByRole("button", { name: "Open ticket options" }).click();
+    await page.getByText("Refine ticket", { exact: true }).click();
+
+    // The refine modal should open with a template selector
+    const dialog = page.getByRole("dialog").last();
+    await expect(dialog.getByText("Refine Ticket", { exact: true }).first()).toBeVisible();
+    await expect(dialog.getByText("Template", { exact: true })).toBeVisible();
+
+    // Click the template dropdown trigger and verify "Bug Report" is listed
+    await dialog.getByRole("button", { name: "No template" }).click();
+    await expect(page.getByText("Bug Report", { exact: true })).toBeVisible();
+  });
+
+  test("toggles a tag on a ticket from the detail sidebar", async ({ page, request }) => {
     const statuses = await getTicketStatuses(request, projectId);
     const backlog = statuses.find((s) => s.name === "backlog")!;
 
