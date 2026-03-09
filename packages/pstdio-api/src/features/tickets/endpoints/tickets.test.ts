@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -12,10 +12,10 @@ let projectId: string;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-tickets-test-"));
-  app = await createApp({
+  ({ app } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
-  });
+  }));
 
   const res = await app.request("/v1/projects", {
     method: "POST",
@@ -224,6 +224,33 @@ describe("GET /v1/tickets", () => {
     expect(tickets[0].user_prompt).toContain("flaky search indexing");
   });
 
+  test("includes archived tickets in default list", async () => {
+    const createRes = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId, content: "Soon archived" }),
+    });
+    const created = await createRes.json();
+
+    await app.request(`/v1/tickets/${created.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ archived: true }),
+    });
+
+    const allRes = await app.request(`/v1/tickets?project_id=${projectId}`);
+    const all = await allRes.json();
+    expect(all.some((t: { id: string }) => t.id === created.id)).toBe(true);
+
+    const nonArchivedRes = await app.request(`/v1/tickets?project_id=${projectId}&archived=false`);
+    const nonArchived = await nonArchivedRes.json();
+    expect(nonArchived.some((t: { id: string }) => t.id === created.id)).toBe(false);
+
+    const archivedRes = await app.request(`/v1/tickets?project_id=${projectId}&archived=true`);
+    const archived = await archivedRes.json();
+    expect(archived.some((t: { id: string }) => t.id === created.id)).toBe(true);
+  });
+
   test("returns 400 when unknown query params are provided", async () => {
     const res = await app.request(`/v1/tickets?project_id=${projectId}&x=1`);
 
@@ -267,6 +294,34 @@ describe("GET /v1/tickets/:id", () => {
   test("returns 404 for non-existent ticket", async () => {
     const res = await app.request("/v1/tickets/non-existent");
     expect(res.status).toBe(404);
+  });
+
+  test("returns empty content when storage file is missing from disk", async () => {
+    const content = "# Orphaned file\n\nBody that will be deleted from disk.";
+    const createRes = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId, content }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json();
+    expect(created.file_id).not.toBeNull();
+
+    const storagePath = join(tempRoot, "storage");
+    const files = require("node:fs").readdirSync(storagePath, { recursive: true }) as string[];
+    const filePath = files
+      .map((f: string) => join(storagePath, f))
+      .find(
+        (f: string) =>
+          require("node:fs").statSync(f).isFile() && require("node:fs").readFileSync(f, "utf8") === content,
+      );
+    expect(filePath).toBeDefined();
+    unlinkSync(filePath!);
+
+    const res = await app.request(`/v1/tickets/${created.id}`);
+    expect(res.status).toBe(200);
+    const ticket = await res.json();
+    expect(ticket.content).toBe("");
   });
 });
 

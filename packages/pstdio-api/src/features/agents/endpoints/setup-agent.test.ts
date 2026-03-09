@@ -11,10 +11,10 @@ let tempRoot: string;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-setup-agent-test-"));
-  app = await createApp({
+  ({ app } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
-  });
+  }));
 });
 
 afterAll(() => {

@@ -9,22 +9,31 @@ import type { AppBindings } from "./types";
 let app: OpenAPIHono<AppBindings>;
 let appWithAuth: OpenAPIHono<AppBindings>;
 let tempRoot: string;
+let closeDb: () => Promise<void>;
+let closeDbAuth: () => Promise<void>;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-app-test-"));
-  app = await createApp({
+
+  const result = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
   });
+  app = result.app;
+  closeDb = result.close;
 
-  appWithAuth = await createApp({
+  const resultAuth = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage-auth"),
     apiToken: "test-token",
   });
+  appWithAuth = resultAuth.app;
+  closeDbAuth = resultAuth.close;
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await closeDb();
+  await closeDbAuth();
   rmSync(tempRoot, { recursive: true, force: true });
 });
 

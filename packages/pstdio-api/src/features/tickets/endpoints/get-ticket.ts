@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
@@ -37,6 +37,10 @@ export const getTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof getTic
 
     const file = await deps.filesService.get(fileId);
     if (!file) {
+      return "";
+    }
+
+    if (!existsSync(file.storage_path)) {
       return "";
     }
 

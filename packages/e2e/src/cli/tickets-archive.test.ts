@@ -104,8 +104,7 @@ describe("pstdio tickets archive", () => {
       const result = runSafe(`tickets archive --id ${shorthand}`, repo);
 
       expect(result.exitCode).not.toBe(0);
-      // Archived tickets are excluded from default list, so it reports "not found"
-      expect(result.stderr).toContain("Ticket not found");
+      expect(result.stderr).toContain("Ticket already archived");
     },
     TEST_TIMEOUT,
   );

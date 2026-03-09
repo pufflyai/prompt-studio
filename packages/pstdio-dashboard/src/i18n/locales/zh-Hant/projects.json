@@ -31,7 +31,9 @@
       "selectLabel": "選擇代理",
       "unknown": "未知代理",
       "options": {
-        "opencode": "Opencode"
+        "opencode": "Opencode",
+        "codex": "Codex",
+        "claudeCode": "Claude Code"
       }
     },
     "repo": {
@@ -55,25 +57,31 @@
       "branch": "分支"
     },
     "session": {
-      "selectLabel": "Select session",
-      "none": "New Session",
-      "noneHint": "Start a new session",
-      "loading": "Loading sessions...",
-      "noneAvailable": "No sessions yet",
-      "unknown": "Unknown session",
-      "emptyTitle": "New Session",
-      "emptyDescription": "Start a new session or pick one from the menu.",
-      "notFoundTitle": "Session not found",
-      "notFoundDescription": "Select a different session from the list.",
-      "resumePlaceholder": "Resume this session",
-      "openInBubble": "Open in bubble",
-      "viewMore": "View more sessions",
-      "executorSessionIdLabel": "Executor session ID",
-      "panelTitle": "All sessions",
+      "selectLabel": "選擇工作階段",
+      "none": "新工作階段",
+      "noneHint": "開始新的工作階段",
+      "loading": "載入工作階段中...",
+      "noneAvailable": "尚無工作階段",
+      "unknown": "未知工作階段",
+      "emptyTitle": "新工作階段",
+      "emptyDescription": "開始新的工作階段或從選單中選擇一個。",
+      "notFoundTitle": "找不到工作階段",
+      "notFoundDescription": "請從清單中選擇其他工作階段。",
+      "resumePlaceholder": "繼續此工作階段",
+      "openInBubble": "在氣泡中開啟",
+      "viewMore": "查看更多工作階段",
+      "executorSessionIdLabel": "執行器工作階段 ID",
+      "panelTitle": "所有工作階段",
       "group": {
-        "today": "Today",
-        "yesterday": "Yesterday"
+        "today": "今天",
+        "yesterday": "昨天"
       }
+    },
+    "model": {
+      "selectLabel": "選擇模型",
+      "none": "無模型",
+      "noneAvailable": "暫無可用模型",
+      "loading": "載入模型中..."
     }
   },
   "createProjectDialog": {
@@ -120,11 +128,14 @@
           "medium": "中",
           "high": "高"
         }
-      }
+      },
+      "blockedBy": "被阻擋",
+      "dependencies": "相依性",
+      "archived": "已封存"
     },
     "title": {
-      "label": "Ticket title",
-      "placeholder": "Untitled ticket"
+      "label": "任務標題",
+      "placeholder": "未命名任務"
     },
     "none": "無",
     "properties": {
@@ -132,30 +143,31 @@
     },
     "options": {
       "ticket": "開啟任務選項",
-      "refineTicket": "Refine ticket",
-      "archiveTicket": "Archive ticket",
+      "refineTicket": "精煉任務",
+      "archiveTicket": "封存任務",
       "deleteTicket": "刪除任務",
-      "breakIntoSubTickets": "拆分為子工單"
+      "breakIntoSubTickets": "拆分為子工單",
+      "createSubTicket": "建立子任務"
     },
     "deleteConfirmation": {
       "ticket": {
-        "headline": "Delete ticket?",
-        "notification": "This deletes the ticket and removes it from the project."
+        "headline": "刪除任務？",
+        "notification": "這將刪除該任務並從專案中移除。"
       }
     },
     "attempts": {
       "title": "嘗試",
-      "startNew": "Start new attempt",
+      "startNew": "開始新嘗試",
       "emptyTitle": "尚無嘗試",
       "emptyDescription": "在此開始任務嘗試以追蹤工作階段。",
       "updatedLabel": "{{date}} 已更新",
       "dialog": {
-        "title": "Start new attempt",
-        "description": "Choose an agent and repository to start this ticket attempt.",
-        "modelLabel": "Model",
-        "modelPlaceholder": "Use default model",
-        "promptLabel": "Prompt",
-        "start": "Start attempt"
+        "title": "開始新嘗試",
+        "description": "選擇代理和儲存庫以開始此任務嘗試。",
+        "modelLabel": "模型",
+        "modelPlaceholder": "使用預設模型",
+        "promptLabel": "提示",
+        "start": "開始嘗試"
       }
     },
     "description": {

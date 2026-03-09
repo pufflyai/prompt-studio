@@ -14,7 +14,8 @@
     "close": "關閉",
     "replay": "重播",
     "discard": "放棄",
-    "addItem": "新增項目"
+    "addItem": "新增項目",
+    "commit": "提交"
   },
   "form": {
     "notSpecified": "未指定",

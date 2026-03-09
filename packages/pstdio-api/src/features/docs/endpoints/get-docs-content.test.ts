@@ -44,10 +44,10 @@ const setupProjectWithDocs = async () => {
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-docs-content-test-"));
-  app = await createApp({
+  ({ app } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
-  });
+  }));
 });
 
 afterAll(() => {

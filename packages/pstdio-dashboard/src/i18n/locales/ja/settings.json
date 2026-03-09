@@ -22,8 +22,8 @@
         "agentsDesc": "コーディングエージェントの設定",
         "mcp": "MCPサーバー",
         "mcpDesc": "モデルコンテキストプロトコルサーバー",
-        "organizations": "Organization Settings",
-        "organizationsDesc": "Manage organization members and permissions"
+        "organizations": "組織の設定",
+        "organizationsDesc": "組織のメンバーと権限を管理"
       }
     },
     "general": {

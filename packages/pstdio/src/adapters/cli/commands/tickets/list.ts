@@ -93,7 +93,7 @@ export const createHandler =
       tag: argv.tag,
       priority: argv.priority,
       complexity: argv.complexity,
-      archived: argv.archived,
+      archived: argv.archived ?? false,
       draft: argv.draft,
       parent_id: argv["parent-id"],
     });

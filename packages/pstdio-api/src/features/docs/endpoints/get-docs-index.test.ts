@@ -30,10 +30,10 @@ const createProjectWithRepo = async (repoPath: string) => {
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-docs-index-test-"));
   repoDir = join(tempRoot, "repo");
-  app = await createApp({
+  ({ app } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
-  });
+  }));
 });
 
 afterAll(() => {

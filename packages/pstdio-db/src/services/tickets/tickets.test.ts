@@ -92,16 +92,44 @@ describe("createTicketsService", () => {
     expect(fetched!.shorthand).toBe(created.shorthand);
   });
 
-  test("list returns non-draft, non-archived tickets by default", async () => {
+  test("list returns non-draft tickets by default, including archived", async () => {
     await setup();
 
-    await ticketsService.create({ project_id: projectId, display_title: "Visible" });
+    await ticketsService.create({ project_id: projectId, display_title: "Active" });
     await ticketsService.create({ project_id: projectId, display_title: "Draft", draft: true });
+    const archived = await ticketsService.create({ project_id: projectId, display_title: "Archived" });
+    await ticketsService.update(archived.id, { archived: true });
 
     const results = await ticketsService.list(projectId);
 
+    expect(results.length).toBe(2);
+    expect(results.map((r) => r.display_title).sort()).toEqual(["Active", "Archived"]);
+  });
+
+  test("list with archived=false returns only non-archived tickets", async () => {
+    await setup();
+
+    await ticketsService.create({ project_id: projectId, display_title: "Active" });
+    const archived = await ticketsService.create({ project_id: projectId, display_title: "Archived" });
+    await ticketsService.update(archived.id, { archived: true });
+
+    const results = await ticketsService.list(projectId, { archived: false });
+
     expect(results.length).toBe(1);
-    expect(results[0].display_title).toBe("Visible");
+    expect(results[0].display_title).toBe("Active");
+  });
+
+  test("list with archived=true returns only archived tickets", async () => {
+    await setup();
+
+    await ticketsService.create({ project_id: projectId, display_title: "Active" });
+    const archived = await ticketsService.create({ project_id: projectId, display_title: "Archived" });
+    await ticketsService.update(archived.id, { archived: true });
+
+    const results = await ticketsService.list(projectId, { archived: true });
+
+    expect(results.length).toBe(1);
+    expect(results[0].display_title).toBe("Archived");
   });
 
   test("list with draft=true returns draft tickets", async () => {

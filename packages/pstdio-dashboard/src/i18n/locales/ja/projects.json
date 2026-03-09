@@ -31,13 +31,21 @@
       "selectLabel": "エージェントを選択",
       "unknown": "不明なエージェント",
       "options": {
-        "opencode": "Opencode"
+        "opencode": "Opencode",
+        "codex": "Codex",
+        "claudeCode": "Claude Code"
       }
     },
     "repo": {
       "selectLabel": "リポジトリを選択",
       "none": "リポジトリがありません",
       "noneLinked": "リンクされたリポジトリがありません"
+    },
+    "model": {
+      "selectLabel": "モデルを選択",
+      "none": "モデルなし",
+      "noneAvailable": "利用可能なモデルがありません",
+      "loading": "モデルを読み込み中..."
     },
     "branch": {
       "selectLabel": "ブランチを選択",
@@ -109,6 +117,9 @@
       "updated": "更新",
       "status": "ステータス",
       "blockedReason": "ブロック理由",
+      "blockedBy": "ブロック元",
+      "dependencies": "依存関係",
+      "archived": "アーカイブ済み",
       "parent": "親",
       "tags": "タグ",
       "dependsOn": "依存先",
@@ -123,8 +134,8 @@
       }
     },
     "title": {
-      "label": "Ticket title",
-      "placeholder": "Untitled ticket"
+      "label": "チケットタイトル",
+      "placeholder": "無題のチケット"
     },
     "none": "なし",
     "properties": {
@@ -132,8 +143,9 @@
     },
     "options": {
       "ticket": "タスクオプションを開く",
-      "refineTicket": "Refine ticket",
-      "archiveTicket": "Archive ticket",
+      "refineTicket": "チケットを精査",
+      "archiveTicket": "チケットをアーカイブ",
+      "createSubTicket": "サブチケットを作成",
       "deleteTicket": "タスクを削除",
       "breakIntoSubTickets": "サブチケットに分割"
     },

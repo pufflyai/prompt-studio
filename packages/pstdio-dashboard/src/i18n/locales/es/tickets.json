@@ -22,16 +22,16 @@
     "sharedToggleTooltip": "Mostrar/ocultar contenido compartido"
   },
   "actionsMenu": {
-    "attempt": "Attempt",
-    "createNewAttempt": "Create new attempt",
-    "createSubticket": "Create subticket",
-    "duplicate": "Duplicate",
+    "attempt": "Intento",
+    "createNewAttempt": "Crear nuevo intento",
+    "createSubticket": "Crear subtarea",
+    "duplicate": "Duplicar",
     "editBranchName": "Editar nombre de rama",
     "gitActions": "Acciones de Git",
-    "openInIde": "Open attempt in IDE",
-    "ticket": "Ticket",
-    "viewProcesses": "View processes",
-    "viewRelatedTickets": "View related tickets",
+    "openInIde": "Abrir intento en IDE",
+    "ticket": "Tarea",
+    "viewProcesses": "Ver procesos",
+    "viewRelatedTickets": "Ver tareas relacionadas",
     "startReview": "Iniciar revisión",
     "startingReview": "Iniciando revisión..."
   },
@@ -61,11 +61,11 @@
       "startDevServer": "Iniciar servidor de desarrollo",
       "stopDevServer": "Detener servidor de desarrollo"
     },
-    "agent": "Agent",
+    "agent": "Agente",
     "clickToCopy": "Copiar ruta del worktree",
-    "copied": "Copied!",
-    "createSubticket": "Create Subticket",
-    "diffs": "Diffs",
+    "copied": "¡Copiado!",
+    "createSubticket": "Crear subtarea",
+    "diffs": "Diferencias",
     "gitActions": "Acciones de Git",
     "labels": {
       "agent": "Agente",
@@ -74,21 +74,21 @@
       "diffs": "Diferencias",
       "summaryAndActions": "Resumen y Acciones"
     },
-    "newAttempt": "New Attempt",
-    "openInEditor": "Open in {{editor}}",
-    "path": "Path",
+    "newAttempt": "Nuevo intento",
+    "openInEditor": "Ver cambios en {{editor}}",
+    "path": "Ruta",
     "pauseDev": "Pausar Dev",
-    "preview": "Preview",
-    "startDev": "Start Dev",
-    "stopAttempt": "Stop Attempt",
-    "stopDev": "Stop Dev",
-    "stopping": "Stopping...",
-    "viewDevLogs": "View dev server logs",
-    "viewHistory": "View attempt history",
-    "tryAgain": "Try Again",
+    "preview": "Vista previa",
+    "startDev": "Iniciar desarrollo",
+    "stopAttempt": "Detener intento",
+    "stopDev": "Detener desarrollo",
+    "stopping": "Deteniendo...",
+    "viewDevLogs": "Ver registros del servidor de desarrollo",
+    "viewHistory": "Ver historial de intentos",
+    "tryAgain": "Reintentar",
     "runSetup": "Ejecutar Configuración",
     "setupHelpText": "{{agent}} no está configurado correctamente. Haz clic en 'Ejecutar Configuración' para instalarlo e iniciar sesión.",
-    "devScriptMissingTooltip": "To start the dev server, add a dev script to this project"
+    "devScriptMissingTooltip": "Para iniciar el servidor de desarrollo, agrega un script de desarrollo a este proyecto"
   },
   "resolveConflicts": {
     "dialog": {
@@ -133,9 +133,9 @@
     }
   },
   "attemptHeaderActions": {
-    "diffs": "Diffs",
-    "preview": "Preview",
-    "relatedTickets": "Related tickets",
+    "diffs": "Diferencias",
+    "preview": "Vista previa",
+    "relatedTickets": "Tareas relacionadas",
     "tryNewUI": "prueba la nueva interfaz"
   },
   "branches": {
@@ -178,26 +178,26 @@
     }
   },
   "createAttemptDialog": {
-    "baseBranch": "Base branch",
-    "creating": "Creating...",
-    "description": "Start a new attempt with a coding agent. A git worktree and ticket branch will be created.",
-    "error": "Failed to create attempt. Please try again.",
-    "loadingBranches": "Loading branches...",
-    "selectBranch": "Select branch",
-    "start": "Start",
-    "title": "Create Attempt"
+    "baseBranch": "Rama base",
+    "creating": "Creando...",
+    "description": "Inicia un nuevo intento con un agente de codificación. Se crearán un worktree git y una rama de tarea.",
+    "error": "Error al crear el intento. Por favor, inténtalo de nuevo.",
+    "loadingBranches": "Cargando ramas...",
+    "selectBranch": "Seleccionar rama",
+    "start": "Iniciar",
+    "title": "Crear intento"
   },
   "diff": {
-    "collapseAll": "Collapse all diffs",
-    "errorLoadingDiff": "Failed to load diff: {{error}}",
-    "expandAll": "Expand all diffs",
+    "collapseAll": "Contraer todas las diferencias",
+    "errorLoadingDiff": "Error al cargar la diferencia: {{error}}",
+    "expandAll": "Expandir todas las diferencias",
     "ignoreWhitespace": "Ignorar cambios de espacios en blanco",
-    "filesChanged_one": "{{count}} file changed",
-    "filesChanged_other": "{{count}} files changed",
-    "noChanges": "No changes have been made yet",
+    "filesChanged_one": "{{count}} archivo modificado",
+    "filesChanged_other": "{{count}} archivos modificados",
+    "noChanges": "Aún no se han realizado cambios",
     "viewModes": {
-      "inline": "Inline view",
-      "split": "Split view"
+      "inline": "Vista en línea",
+      "split": "Vista dividida"
     },
     "largeDiff": {
       "title": "Archivo grande",
@@ -212,14 +212,14 @@
     "noTickets": "No se encontraron tareas para este proyecto."
   },
   "followUp": {
-    "clearReviewComments": "Clear Review Comments",
-    "edit": "Edit",
-    "queueForNextTurn": "Queue for next turn",
-    "queuing": "Queuing…",
-    "resolveConflicts": "Resolve conflicts",
-    "send": "Send",
-    "stop": "Stop",
-    "unqueuing": "Unqueuing…",
+    "clearReviewComments": "Limpiar comentarios de revisión",
+    "edit": "Editar",
+    "queueForNextTurn": "Encolar para el siguiente turno",
+    "queuing": "Encolando…",
+    "resolveConflicts": "Resolver conflictos",
+    "send": "Enviar",
+    "stop": "Detener",
+    "unqueuing": "Retirando de la cola…",
     "queue": "Encolar",
     "cancelQueue": "Cancelar cola",
     "queuedMessage": "Mensaje en cola - se ejecutará cuando finalice la ejecución actual",
@@ -252,7 +252,7 @@
     },
     "pr": {
       "number": "PR #{{number}}",
-      "open": "Open PR #{{number}}",
+      "open": "Abrir PR #{{number}}",
       "merged": "PR #{{prNumber}} fusionado"
     },
     "createRepo": {
@@ -364,8 +364,8 @@
       "editDevScript": "Editar Script de Servidor de Desarrollo",
       "learnMore": "Más información sobre cómo probar aplicaciones"
     },
-    "selectAttempt": "Select an attempt to see preview",
-    "title": "Preview",
+    "selectAttempt": "Selecciona un intento para ver la vista previa",
+    "title": "Vista previa",
     "toolbar": {
       "copyUrl": "Copiar URL",
       "openInTab": "Abrir en nueva pestaña",
@@ -398,22 +398,22 @@
   },
   "processes": {
     "noLogsAvailable": "No hay registros disponibles",
-    "agent": "Agent:",
-    "backToList": "Back to list",
-    "completed": "Completed: {{date}}",
-    "deleted": "Deleted",
-    "deletedTooltip": "Deleted by restore: timeline was restored to a checkpoint and later executions were removed",
-    "detailsTitle": "Process Details",
-    "errorLoadingDetails": "Failed to load process details. Please try again.",
-    "errorLoadingUpdates": "Failed to load live updates for processes.",
-    "exit": "Exit: {{code}}",
-    "loading": "Loading execution processes...",
-    "loadingDetails": "Loading process details...",
-    "noProcesses": "No execution processes found for this attempt.",
-    "processId": "Process ID: {{id}}",
-    "reconnecting": "Reconnecting...",
-    "selectAttempt": "Select an attempt to view execution processes.",
-    "started": "Started: {{date}}",
+    "agent": "Agente:",
+    "backToList": "Volver a la lista",
+    "completed": "Completado: {{date}}",
+    "deleted": "Eliminado",
+    "deletedTooltip": "Eliminado por restauración: la línea de tiempo fue restaurada a un punto de control y las ejecuciones posteriores fueron eliminadas",
+    "detailsTitle": "Detalles del proceso",
+    "errorLoadingDetails": "Error al cargar los detalles del proceso. Por favor, inténtalo de nuevo.",
+    "errorLoadingUpdates": "Error al cargar actualizaciones en vivo para los procesos.",
+    "exit": "Salida: {{code}}",
+    "loading": "Cargando procesos de ejecución...",
+    "loadingDetails": "Cargando detalles del proceso...",
+    "noProcesses": "No se encontraron procesos de ejecución para este intento.",
+    "processId": "ID del proceso: {{id}}",
+    "reconnecting": "Reconectando...",
+    "selectAttempt": "Selecciona un intento para ver los procesos de ejecución.",
+    "started": "Iniciado: {{date}}",
     "copyLogs": "Copiar registros",
     "logsCopied": "¡Copiado!"
   },
@@ -439,19 +439,19 @@
     }
   },
   "ticketHeader": {
-    "closePanel": "Close panel",
-    "deleteTicket": "Delete ticket",
-    "editTicket": "Edit ticket"
+    "closePanel": "Cerrar panel",
+    "deleteTicket": "Eliminar tarea",
+    "editTicket": "Editar tarea"
   },
   "navigateToParent": "Navegar al intento de tarea padre",
   "ticketPanel": {
-    "attemptsCount": "Attempts ({{count}})",
-    "errorLoadingAttempts": "Failed to load attempts",
-    "loadingAttempts": "Loading attempts...",
-    "noAttempts": "No attempts yet",
+    "attemptsCount": "Intentos ({{count}})",
+    "errorLoadingAttempts": "Error al cargar intentos",
+    "loadingAttempts": "Cargando intentos...",
+    "noAttempts": "Aún no hay intentos",
     "createSubTicket": "Crear subtarea",
     "breakIntoSubTickets": "Dividir en subtareas",
-    "noTicketSelected": "No ticket selected"
+    "noTicketSelected": "Ninguna tarea seleccionada"
   },
   "todos": {
     "title_one": "Todos ({{count}})",
@@ -478,23 +478,23 @@
     }
   },
   "toolbar": {
-    "actions": "Actions",
-    "noAttempts": "No attempts yet",
-    "startAttempt": "Start Attempt",
-    "startFirstAttempt": "Start your first attempt to begin working on this ticket"
+    "actions": "Acciones",
+    "noAttempts": "Aún no hay intentos",
+    "startAttempt": "Iniciar intento",
+    "startFirstAttempt": "Inicia tu primer intento para empezar a trabajar en esta tarea"
   },
   "viewProcessesDialog": {
-    "title": "Execution processes"
+    "title": "Procesos de ejecución"
   },
   "viewRelatedTicketsDialog": {
-    "title": "Related tickets",
-    "empty": "No related tickets for this attempt",
-    "error": "Failed to load related tickets",
-    "ticketsCount": "Tickets ({{count}})",
+    "title": "Tareas relacionadas",
+    "empty": "No hay tareas relacionadas para este intento",
+    "error": "Error al cargar tareas relacionadas",
+    "ticketsCount": "Tareas ({{count}})",
     "columns": {
-      "title": "Title",
-      "description": "Description",
-      "status": "Status"
+      "title": "Título",
+      "description": "Descripción",
+      "status": "Estado"
     }
   },
   "showcases": {
@@ -642,7 +642,7 @@
       "approve": "Aprobar",
       "clearReviewComments": "Limpiar comentarios de revisión",
       "edit": "Editar mensaje",
-      "scrollToPreviousMessage": "Go to previous message"
+      "scrollToPreviousMessage": "Ir al mensaje anterior"
     },
     "approval": {
       "conflictWarning": "Los archivos en conflicto necesitan resolución manual",

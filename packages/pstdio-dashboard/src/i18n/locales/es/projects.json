@@ -31,7 +31,9 @@
       "selectLabel": "Seleccionar agente",
       "unknown": "Agente desconocido",
       "options": {
-        "opencode": "Opencode"
+        "opencode": "Opencode",
+        "codex": "Codex",
+        "claudeCode": "Claude Code"
       }
     },
     "repo": {
@@ -115,6 +117,9 @@
       "updated": "Actualizado",
       "status": "Estado",
       "blockedReason": "Motivo de bloqueo",
+      "blockedBy": "Bloqueado por",
+      "dependencies": "Dependencias",
+      "archived": "Archivado",
       "dependsOn": "Depende de",
       "parent": "Padre",
       "tags": "Etiquetas",
@@ -129,8 +134,8 @@
       }
     },
     "title": {
-      "label": "Ticket title",
-      "placeholder": "Untitled ticket"
+      "label": "Título de la tarea",
+      "placeholder": "Tarea sin título"
     },
     "none": "Ninguna",
     "properties": {
@@ -138,8 +143,9 @@
     },
     "options": {
       "ticket": "Abrir opciones de tarea",
-      "refineTicket": "Refine ticket",
-      "archiveTicket": "Archive ticket",
+      "refineTicket": "Refinar tarea",
+      "archiveTicket": "Archivar tarea",
+      "createSubTicket": "Crear subtarea",
       "deleteTicket": "Eliminar tarea",
       "breakIntoSubTickets": "Dividir en subtareas"
     },

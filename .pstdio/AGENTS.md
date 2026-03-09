@@ -19,7 +19,13 @@ Documentation is organized by category. Each category has its own rules.
 
 - Document **known problems** that are not yet resolved.
 - One file per issue: what it is, why it exists, the risk, and a potential fix.
-- When an issue is resolved, **delete the file**.
+- When an issue is resolved, move to `lessons-learned/`.
+
+### `lessons-learned/` — Lessons Learned
+
+- Document **difficult problems or bugs that were eventually figured out**.
+- One file per topic: what went wrong, why, and how it was solved.
+- Helps future contributors avoid repeating the same mistakes.
 
 ### `contributing/` — Contributor Guides
 

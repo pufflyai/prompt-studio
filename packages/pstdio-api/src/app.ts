@@ -154,5 +154,5 @@ export const createApp = async (options?: AppOptions) => {
 
   swagger(app);
 
-  return app;
+  return { app, close: closeDb };
 };

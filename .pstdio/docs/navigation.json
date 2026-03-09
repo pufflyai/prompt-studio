@@ -165,16 +165,25 @@
           "link": "/known-issues/dupplicate_path_logic"
         },
         {
-          "text": "No Bun EventSource",
-          "link": "/known-issues/no_bun_eventsource"
-        },
-        {
           "text": "Missing Storybook Play Tests",
           "link": "/known-issues/missing_storybook_play_tests"
+        }
+      ]
+    },
+    {
+      "text": "Lessons Learned",
+      "items": [
+        {
+          "text": "No Bun EventSource",
+          "link": "/lessons-learned/no_bun_eventsource"
+        },
+        {
+          "text": "PGlite WAL Corruption",
+          "link": "/lessons-learned/pglite_wal_corruption"
         },
         {
           "text": "Strict Query Validation",
-          "link": "/known-issues/strict_query_validation"
+          "link": "/lessons-learned/strict_query_validation"
         }
       ]
     },

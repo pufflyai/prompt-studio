@@ -14,10 +14,10 @@ let storagePath: string;
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-remove-project-test-"));
   storagePath = join(tempRoot, "storage");
-  app = await createApp({
+  ({ app } = await createApp({
     dbPath: ":memory:",
     storagePath,
-  });
+  }));
 });
 
 afterAll(() => {

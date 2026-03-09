@@ -20,11 +20,11 @@ Maintaining two test frameworks adds unnecessary tooling complexity.
 
 ## What changes
 
-| Before | After |
-|---|---|
-| `vitest` for dashboard unit tests | `bun test` |
+| Before                                          | After                                            |
+| ----------------------------------------------- | ------------------------------------------------ |
+| `vitest` for dashboard unit tests               | `bun test`                                       |
 | `@storybook/addon-vitest` for story smoke tests | `test-storybook` CLI against a running Storybook |
-| Two test frameworks to maintain | One (`bun test`) + Storybook's own test runner |
+| Two test frameworks to maintain                 | One (`bun test`) + Storybook's own test runner   |
 
 ## Trade-offs
 

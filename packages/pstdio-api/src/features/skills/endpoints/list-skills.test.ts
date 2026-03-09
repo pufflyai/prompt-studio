@@ -15,10 +15,10 @@ const bundledSkills = getBundledSkills();
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-skills-test-"));
-  app = await createApp({
+  ({ app } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
-  });
+  }));
 
   const res = await app.request("/v1/projects", {
     method: "POST",

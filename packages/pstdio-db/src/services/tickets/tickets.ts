@@ -120,7 +120,7 @@ export const createTicketsService = (db: DbClient) => {
       )`);
     }
 
-    conditions.push(eq(tickets.archived, filters.archived ?? false));
+    if (filters.archived !== undefined) conditions.push(eq(tickets.archived, filters.archived));
     conditions.push(eq(tickets.draft, filters.draft ?? false));
 
     const rows = await db

@@ -22,8 +22,8 @@
         "agentsDesc": "Configuraciones de agentes",
         "mcp": "Servidores MCP",
         "mcpDesc": "Servidores de Protocolo de Contexto de Modelo (MCP)",
-        "organizations": "Organization Settings",
-        "organizationsDesc": "Manage organization members and permissions"
+        "organizations": "Configuración de la organización",
+        "organizationsDesc": "Gestionar miembros y permisos de la organización"
       }
     },
     "general": {

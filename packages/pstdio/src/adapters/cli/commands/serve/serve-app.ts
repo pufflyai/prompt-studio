@@ -20,7 +20,15 @@ const ensureRuntimeEnv = () => {
 export const serveApp = async (options: ServeAppOptions) => {
   const { port } = options;
   ensureRuntimeEnv();
-  const app = await createApp();
+  const { app, close } = await createApp();
+
+  const shutdown = async () => {
+    await close();
+    process.exit(0);
+  };
+
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 
   const assets = isCompiledBinary() ? loadEmbeddedAssets() : loadFilesystemAssets();
   const baseUrl = `http://localhost:${port}`;
