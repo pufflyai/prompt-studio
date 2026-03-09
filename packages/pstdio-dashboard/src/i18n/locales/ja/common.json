@@ -6,7 +6,13 @@
     "searchLabel": "現在のディレクトリを検索:",
     "selectCurrent": "現在を選択",
     "gitRepo": "git リポジトリ",
-    "selectPath": "パスを選択"
+    "selectPath": "パスを選択",
+    "errors": {
+      "unableToLoadDirectory": "ディレクトリを読み込めません",
+      "pathRequired": "パスは必須です。",
+      "repositoryAlreadySelected": "リポジトリは既に選択されています。",
+      "notGitRepository": "選択されたフォルダはgitリポジトリではありません。"
+    }
   },
   "branchSelector": {
     "badges": {
@@ -36,7 +42,8 @@
     "reset": "リセット",
     "save": "保存",
     "send": "送信",
-    "addItem": "項目を追加"
+    "addItem": "項目を追加",
+    "commit": "コミット"
   },
   "form": {
     "notSpecified": "指定なし",
@@ -327,5 +334,47 @@
     "commands": "コマンド",
     "noTagsOrFiles": "タグまたはファイルが見つかりません",
     "noCommands": "このエージェントで利用可能なコマンドはありません。"
+  },
+  "docs": {
+    "title": "ドキュメント",
+    "noFiles": "ファイルなし",
+    "noDocsFound": "ドキュメントが見つかりません",
+    "unableToLoadDocs": "ドキュメントを読み込めません",
+    "unableToLoadDocument": "ドキュメントを読み込めません",
+    "trySelectingAnother": "別のドキュメントを選択してください。",
+    "noContentAvailable": "コンテンツがありません。"
+  },
+  "changelog": {
+    "unableToLoad": "変更履歴を読み込めません",
+    "noEntries": "変更履歴のエントリがありません",
+    "addEntries": ".pstdio/changelog/changelog.md にエントリを追加してください"
+  },
+  "onboarding": {
+    "checkingAvailability": "利用可能か確認中...",
+    "unavailable": "利用不可",
+    "ready": "準備完了",
+    "notDetected": "検出されません",
+    "setupError": "セットアップに失敗しました。ローカルエージェントのインストールを確認して再試行してください。",
+    "welcome": "Prompt Studio へようこそ",
+    "pickAgent": "新しいチケット試行を支援するコーディングエージェントを選択してください。",
+    "chooseAgent": "コーディングエージェントを選択",
+    "updateLater": "この選択は後から変更できます。",
+    "opencode": "Opencode",
+    "opencodeDescription": "高速な反復のためのオープンソース・ローカルファーストなコーディングエージェント。",
+    "settingUp": "セットアップ中...",
+    "continue": "続行"
+  },
+  "menu": {
+    "versionCopied": "バージョンをコピーしました",
+    "switchToLightMode": "ライトモードに切り替え",
+    "switchToDarkMode": "ダークモードに切り替え",
+    "loadingVersion": "バージョンを読み込み中...",
+    "mainMenu": "メインメニュー",
+    "openSettingsMenu": "設定メニューを開く",
+    "projects": "プロジェクト",
+    "promptStudio": "Prompt Studio"
+  },
+  "workspace": {
+    "title": "ワークスペース"
   }
 }

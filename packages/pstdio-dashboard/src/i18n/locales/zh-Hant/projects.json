@@ -110,6 +110,8 @@
       "status": "狀態",
       "blockedReason": "阻塞原因",
       "dependsOn": "依賴於",
+      "parent": "父級",
+      "tags": "標籤",
       "complexity": {
         "label": "複雜度",
         "options": {
@@ -132,7 +134,8 @@
       "ticket": "開啟任務選項",
       "refineTicket": "Refine ticket",
       "archiveTicket": "Archive ticket",
-      "deleteTicket": "刪除任務"
+      "deleteTicket": "刪除任務",
+      "breakIntoSubTickets": "拆分為子工單"
     },
     "deleteConfirmation": {
       "ticket": {
@@ -173,5 +176,47 @@
     "errors": {
       "missingProjectId": "建立嘗試需要專案 ID。"
     }
+  },
+  "sidebar": {
+    "documentation": "文件",
+    "tickets": "工單",
+    "projectChangelog": "專案變更日誌",
+    "projectSettings": "專案設定",
+    "helpLinks": "說明連結",
+    "documentationLink": "文件",
+    "discordLink": "Discord"
+  },
+  "shell": {
+    "loadingProject": "正在載入專案...",
+    "notFound": "找不到專案",
+    "notFoundDescription": "請從清單中選擇一個專案以繼續。"
+  },
+  "projectSettings": {
+    "title": "專案設定"
+  },
+  "list": {
+    "projectCreated": "專案已建立",
+    "createProjectFailed": "建立專案失敗",
+    "projectCount_one": "您有 {{count}} 個專案。",
+    "projectCount_other": "您有 {{count}} 個專案。",
+    "title": "專案",
+    "createProject": "建立專案",
+    "loadingProjects": "正在載入專案...",
+    "unableToLoad": "無法載入專案",
+    "noProjectsYet": "尚無專案",
+    "noProjectsDescription": "建立您的第一個專案以開始使用。",
+    "createFirstProject": "建立您的第一個專案",
+    "settingsAriaLabel": "設定"
+  },
+  "sessions": {
+    "title": "工作階段",
+    "newSession": "新增工作階段",
+    "noSessionsYet": "尚無工作階段",
+    "noSessionSelected": "未選擇工作階段",
+    "selectSession": "從側邊欄選擇一個工作階段或開始新的工作階段。",
+    "followUpPlaceholder": "傳送後續訊息...",
+    "downloadSessionJson": "下載工作階段 JSON",
+    "archiveSession": "封存工作階段",
+    "sessionActions": "工作階段操作"
   }
 }

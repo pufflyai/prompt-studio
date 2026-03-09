@@ -68,7 +68,13 @@
     "searchLabel": "搜尋目前目錄:",
     "selectCurrent": "選取目前",
     "gitRepo": "Git 儲存庫",
-    "selectPath": "選取路徑"
+    "selectPath": "選取路徑",
+    "errors": {
+      "unableToLoadDirectory": "無法載入目錄",
+      "pathRequired": "路徑為必填。",
+      "repositoryAlreadySelected": "儲存庫已選擇。",
+      "notGitRepository": "所選資料夾不是 git 儲存庫。"
+    }
   },
   "branchSelector": {
     "placeholder": "選擇分支",
@@ -327,5 +333,47 @@
     "commands": "指令",
     "noTagsOrFiles": "找不到標籤或檔案",
     "noCommands": "此代理沒有可用的指令。"
+  },
+  "docs": {
+    "title": "文件",
+    "noFiles": "沒有檔案",
+    "noDocsFound": "找不到文件",
+    "unableToLoadDocs": "無法載入文件",
+    "unableToLoadDocument": "無法載入文件",
+    "trySelectingAnother": "請嘗試選擇其他文件。",
+    "noContentAvailable": "沒有可用內容。"
+  },
+  "changelog": {
+    "unableToLoad": "無法載入變更日誌",
+    "noEntries": "沒有變更日誌條目",
+    "addEntries": "請在 .pstdio/changelog/changelog.md 中新增條目"
+  },
+  "onboarding": {
+    "checkingAvailability": "正在檢查可用性...",
+    "unavailable": "不可用",
+    "ready": "就緒",
+    "notDetected": "未偵測到",
+    "setupError": "設定失敗。請檢查本機代理程式安裝並重試。",
+    "welcome": "歡迎使用 Prompt Studio",
+    "pickAgent": "選擇一個程式碼代理來驅動新的工單嘗試。",
+    "chooseAgent": "選擇程式碼代理",
+    "updateLater": "您可以稍後變更此選擇。",
+    "opencode": "Opencode",
+    "opencodeDescription": "開源、本機優先的程式碼代理，用於快速迭代。",
+    "settingUp": "正在設定...",
+    "continue": "繼續"
+  },
+  "menu": {
+    "versionCopied": "版本已複製",
+    "switchToLightMode": "切換至淺色模式",
+    "switchToDarkMode": "切換至深色模式",
+    "loadingVersion": "正在載入版本...",
+    "mainMenu": "主選單",
+    "openSettingsMenu": "開啟設定選單",
+    "projects": "專案",
+    "promptStudio": "Prompt Studio"
+  },
+  "workspace": {
+    "title": "工作區"
   }
 }

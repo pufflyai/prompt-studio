@@ -505,5 +505,46 @@
         }
       }
     }
+  },
+  "agentList": {
+    "title": "設定",
+    "back": "返回",
+    "agents": "代理",
+    "agentsDescription": "已註冊的程式碼代理及其可用狀態。",
+    "noAgentsFound": "找不到代理。",
+    "failedToDisableAgent": "停用代理失敗",
+    "failedToEnableAgent": "啟用代理失敗",
+    "failedToSetDefaultAgent": "設定預設代理失敗"
+  },
+  "agentRow": {
+    "default": "預設",
+    "installed": "已安裝",
+    "notFound": "找不到",
+    "setAsDefault": "設為預設"
+  },
+  "agentSettings": {
+    "title": "代理設定",
+    "description": "設定每個代理的選項，如模型、核准模式和行為。",
+    "noSettingsAvailable": "此代理沒有可用的設定。"
+  },
+  "claudeCode": {
+    "model": "模型",
+    "modelDescription": "新工作階段的預設模型",
+    "agentDefault": "代理預設",
+    "planMode": "計畫模式",
+    "planModeDescription": "以計畫模式啟動工作階段",
+    "approvalMode": "核准模式",
+    "approvalModeDescription": "工具使用請求的處理方式",
+    "approvalOptions": {
+      "bypass": "略過（自動核准全部）",
+      "prompt": "提示（每個工具使用前詢問）"
+    }
+  },
+  "opencode": {
+    "model": "模型",
+    "modelDescription": "新工作階段的預設模型",
+    "agentDefault": "代理預設",
+    "autoApprove": "自動核准",
+    "autoApproveDescription": "自動核准工具使用請求"
   }
 }

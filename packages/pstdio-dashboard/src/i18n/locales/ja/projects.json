@@ -109,6 +109,8 @@
       "updated": "更新",
       "status": "ステータス",
       "blockedReason": "ブロック理由",
+      "parent": "親",
+      "tags": "タグ",
       "dependsOn": "依存先",
       "complexity": {
         "label": "難易度",
@@ -132,7 +134,8 @@
       "ticket": "タスクオプションを開く",
       "refineTicket": "Refine ticket",
       "archiveTicket": "Archive ticket",
-      "deleteTicket": "タスクを削除"
+      "deleteTicket": "タスクを削除",
+      "breakIntoSubTickets": "サブチケットに分割"
     },
     "deleteConfirmation": {
       "ticket": {
@@ -173,5 +176,47 @@
     "errors": {
       "missingProjectId": "試行を作成するにはプロジェクトIDが必要です。"
     }
+  },
+  "sidebar": {
+    "documentation": "ドキュメント",
+    "tickets": "チケット",
+    "projectChangelog": "プロジェクト変更履歴",
+    "projectSettings": "プロジェクト設定",
+    "helpLinks": "ヘルプリンク",
+    "documentationLink": "ドキュメント",
+    "discordLink": "Discord"
+  },
+  "shell": {
+    "loadingProject": "プロジェクトを読み込み中...",
+    "notFound": "プロジェクトが見つかりません",
+    "notFoundDescription": "リストからプロジェクトを選択して続行してください。"
+  },
+  "projectSettings": {
+    "title": "プロジェクト設定"
+  },
+  "list": {
+    "projectCreated": "プロジェクトを作成しました",
+    "createProjectFailed": "プロジェクトの作成に失敗しました",
+    "projectCount_one": "{{count}}件のプロジェクトがあります。",
+    "projectCount_other": "{{count}}件のプロジェクトがあります。",
+    "title": "プロジェクト",
+    "createProject": "プロジェクトを作成",
+    "loadingProjects": "プロジェクトを読み込み中...",
+    "unableToLoad": "プロジェクトを読み込めません",
+    "noProjectsYet": "まだプロジェクトがありません",
+    "noProjectsDescription": "最初のプロジェクトを作成して始めましょう。",
+    "createFirstProject": "最初のプロジェクトを作成",
+    "settingsAriaLabel": "設定"
+  },
+  "sessions": {
+    "title": "セッション",
+    "newSession": "新しいセッション",
+    "noSessionsYet": "まだセッションがありません",
+    "noSessionSelected": "セッションが選択されていません",
+    "selectSession": "サイドバーからセッションを選択するか、新しいセッションを開始してください。",
+    "followUpPlaceholder": "フォローアップメッセージを送信...",
+    "downloadSessionJson": "セッションJSONをダウンロード",
+    "archiveSession": "セッションをアーカイブ",
+    "sessionActions": "セッション操作"
   }
 }

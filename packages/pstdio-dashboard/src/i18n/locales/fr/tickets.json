@@ -174,7 +174,9 @@
     "loadingAttempts": "Chargement des tentatives...",
     "errorLoadingAttempts": "Échec du chargement des tentatives",
     "attemptsCount": "Tentatives ({{count}})",
-    "noAttempts": "Aucune tentative pour le moment"
+    "noAttempts": "Aucune tentative pour le moment",
+    "createSubTicket": "Créer une sous-tâche",
+    "breakIntoSubTickets": "Découper en sous-tâches"
   },
   "processes": {
     "noLogsAvailable": "Aucun log disponible",
@@ -281,7 +283,7 @@
       "approve": "Approuver",
       "clearReviewComments": "Effacer les commentaires de révision",
       "edit": "Modifier le message",
-      "scrollToPreviousMessage": "Go to previous message"
+      "scrollToPreviousMessage": "Aller au message précédent"
     },
     "approval": {
       "conflictWarning": "Les fichiers en conflit nécessitent une résolution manuelle",
@@ -698,6 +700,107 @@
     "statusSuccess": "Terminé avec succès",
     "statusFailed": "Échec avec le code de sortie {{exitCode}}",
     "statusKilled": "Le processus a été interrompu"
+  },
+  "ticketListHeader": {
+    "title": "Tâches"
+  },
+  "displayMenu": {
+    "display": "Affichage",
+    "view": "Vue",
+    "list": "Liste",
+    "board": "Tableau",
+    "grouping": "Regroupement",
+    "selectGrouping": "Sélectionner le regroupement",
+    "ordering": "Tri",
+    "selectOrdering": "Sélectionner le tri",
+    "displayProperties": "Propriétés d'affichage",
+    "selectDisplayProperties": "Sélectionner les propriétés d'affichage",
+    "groupingOptions": {
+      "status": "Statut",
+      "complexity": "Complexité",
+      "assignee": "Assigné",
+      "none": "Aucun regroupement"
+    },
+    "orderingOptions": {
+      "manual": "Manuel",
+      "updated": "Mis à jour",
+      "title": "Titre",
+      "complexity": "Complexité",
+      "shorthand": "ID"
+    },
+    "propertyOptions": {
+      "parentId": "parent_id",
+      "status": "Statut",
+      "complexity": "Complexité",
+      "assignee": "Assigné",
+      "tags": "Étiquettes",
+      "updatedAt": "Mis à jour"
+    }
+  },
+  "boardView": {
+    "archiveAll": "Tout archiver",
+    "emptyTicket": "tâche vide"
+  },
+  "listView": {
+    "emptyTicket": "tâche vide"
+  },
+  "createTicketModal": {
+    "createTicket": "Créer une tâche",
+    "create": "Créer",
+    "describePlaceholder": "Décrivez la tâche...",
+    "complexity": "Complexité",
+    "low": "Faible",
+    "medium": "Moyenne",
+    "high": "Élevée",
+    "template": "Modèle",
+    "noTemplate": "Aucun modèle",
+    "cancel": "Annuler"
+  },
+  "ticketDetail": {
+    "parent": "Parent",
+    "tags": "Étiquettes",
+    "files": "Fichiers",
+    "subTickets": "Sous-tâches",
+    "none": "Aucun",
+    "noTagsSelected": "Aucune étiquette sélectionnée",
+    "noTags": "Aucune étiquette",
+    "backToTickets": "Retour aux tâches",
+    "openDetailsPanel": "Ouvrir le panneau de détails",
+    "collapseDetailsPanel": "Réduire le panneau de détails",
+    "breakIntoSubTickets": "Découper en sous-tâches",
+    "runAttempt": "Lancer une tentative",
+    "createSubTicket": "Créer une sous-tâche",
+    "ticketNotFound": "Tâche non trouvée.",
+    "loadingContent": "Chargement du contenu de la tâche...",
+    "enterDescription": "Entrez une description...",
+    "repoSelector": "Sélecteur de dépôt"
+  },
+  "breakIntoSubTicketsModal": {
+    "title": "Découper en sous-tâches",
+    "description": "Démarrer une session d'agent pour découper {{ticketShorthand}} en sous-tâches concrètes.",
+    "template": "Modèle",
+    "noTemplate": "Aucun modèle",
+    "agent": "Agent",
+    "cancel": "Annuler",
+    "submit": "Découper en sous-tâches"
+  },
+  "refineTicketModal": {
+    "title": "Affiner la tâche",
+    "description": "Ajoutez des indications supplémentaires pour cet affinage et choisissez l'agent qui doit l'exécuter.",
+    "additionalInfo": "Informations supplémentaires",
+    "placeholder": "Exemple : restez concis, ciblez {{ticketShorthand}} et concentrez-vous sur les critères d'acceptation.",
+    "template": "Modèle",
+    "noTemplate": "Aucun modèle",
+    "agent": "Agent",
+    "cancel": "Annuler",
+    "submit": "Affiner la tâche"
+  },
+  "createWorkspaceModal": {
+    "title": "Créer un espace de travail",
+    "firstAttempt": "Configurez la première tentative d'espace de travail pour cette tâche.",
+    "nextAttempt": "Configurez la prochaine tentative d'espace de travail à partir du dernier état.",
+    "cancel": "Annuler",
+    "runAttempt": "Lancer la tentative"
   },
   "createWorkspaceFromPr": {
     "title": "Créer un espace de travail à partir d'une PR",

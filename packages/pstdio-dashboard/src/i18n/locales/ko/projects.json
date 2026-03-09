@@ -31,7 +31,9 @@
       "selectLabel": "에이전트 선택",
       "unknown": "알 수 없는 에이전트",
       "options": {
-        "opencode": "Opencode"
+        "opencode": "Opencode",
+        "codex": "Codex",
+        "claudeCode": "Claude Code"
       }
     },
     "repo": {
@@ -74,6 +76,12 @@
         "today": "Today",
         "yesterday": "Yesterday"
       }
+    },
+    "model": {
+      "selectLabel": "모델 선택",
+      "none": "모델 없음",
+      "noneAvailable": "사용 가능한 모델 없음",
+      "loading": "모델 로딩 중..."
     }
   },
   "createProjectDialog": {
@@ -110,6 +118,8 @@
       "status": "상태",
       "blockedReason": "차단 사유",
       "dependsOn": "의존 항목",
+      "parent": "상위",
+      "tags": "태그",
       "complexity": {
         "label": "복잡도",
         "options": {
@@ -118,11 +128,14 @@
           "medium": "보통",
           "high": "높음"
         }
-      }
+      },
+      "blockedBy": "차단 원인",
+      "dependencies": "의존성",
+      "archived": "보관됨"
     },
     "title": {
-      "label": "Ticket title",
-      "placeholder": "Untitled ticket"
+      "label": "티켓 제목",
+      "placeholder": "제목 없는 티켓"
     },
     "none": "없음",
     "properties": {
@@ -130,9 +143,11 @@
     },
     "options": {
       "ticket": "작업 옵션 열기",
-      "refineTicket": "Refine ticket",
-      "archiveTicket": "Archive ticket",
-      "deleteTicket": "작업 삭제"
+      "refineTicket": "티켓 정제",
+      "archiveTicket": "티켓 보관",
+      "deleteTicket": "작업 삭제",
+      "breakIntoSubTickets": "하위 티켓으로 분할",
+      "createSubTicket": "하위 티켓 생성"
     },
     "deleteConfirmation": {
       "ticket": {
@@ -173,5 +188,47 @@
     "errors": {
       "missingProjectId": "시도를 만들려면 프로젝트 ID가 필요합니다."
     }
+  },
+  "sidebar": {
+    "documentation": "문서",
+    "tickets": "티켓",
+    "projectChangelog": "프로젝트 변경 로그",
+    "projectSettings": "프로젝트 설정",
+    "helpLinks": "도움말 링크",
+    "documentationLink": "문서",
+    "discordLink": "Discord"
+  },
+  "shell": {
+    "loadingProject": "프로젝트 로딩 중...",
+    "notFound": "프로젝트를 찾을 수 없습니다",
+    "notFoundDescription": "목록에서 프로젝트를 선택하여 계속하세요."
+  },
+  "projectSettings": {
+    "title": "프로젝트 설정"
+  },
+  "list": {
+    "projectCreated": "프로젝트가 생성되었습니다",
+    "createProjectFailed": "프로젝트 생성에 실패했습니다",
+    "projectCount_one": "{{count}}개의 프로젝트가 있습니다.",
+    "projectCount_other": "{{count}}개의 프로젝트가 있습니다.",
+    "title": "프로젝트",
+    "createProject": "프로젝트 생성",
+    "loadingProjects": "프로젝트 로딩 중...",
+    "unableToLoad": "프로젝트를 불러올 수 없습니다",
+    "noProjectsYet": "아직 프로젝트가 없습니다",
+    "noProjectsDescription": "첫 번째 프로젝트를 만들어 시작하세요.",
+    "createFirstProject": "첫 번째 프로젝트 만들기",
+    "settingsAriaLabel": "설정"
+  },
+  "sessions": {
+    "title": "세션",
+    "newSession": "새 세션",
+    "noSessionsYet": "아직 세션이 없습니다",
+    "noSessionSelected": "선택된 세션 없음",
+    "selectSession": "사이드바에서 세션을 선택하거나 새 세션을 시작하세요.",
+    "followUpPlaceholder": "후속 메시지 보내기...",
+    "downloadSessionJson": "세션 JSON 다운로드",
+    "archiveSession": "세션 보관",
+    "sessionActions": "세션 작업"
   }
 }

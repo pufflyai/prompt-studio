@@ -141,6 +141,29 @@ describe("createTicketsService", () => {
     expect(results[0].display_title).toBe("Child");
   });
 
+  test("list filters by search term across title and prompt", async () => {
+    await setup();
+
+    await ticketsService.create({
+      project_id: projectId,
+      display_title: "Improve search ranking",
+      user_prompt: "Tune BM25 scoring",
+    });
+    await ticketsService.create({
+      project_id: projectId,
+      display_title: "Refactor authentication",
+      user_prompt: "Fix token refresh edge case",
+    });
+
+    const titleMatches = await ticketsService.list(projectId, { search: "ranking" });
+    const promptMatches = await ticketsService.list(projectId, { search: "token refresh" });
+
+    expect(titleMatches.length).toBe(1);
+    expect(titleMatches[0].display_title).toBe("Improve search ranking");
+    expect(promptMatches.length).toBe(1);
+    expect(promptMatches[0].display_title).toBe("Refactor authentication");
+  });
+
   test("update modifies ticket fields", async () => {
     await setup();
 

@@ -22,8 +22,8 @@
         "agentsDesc": "코딩 에이전트 구성",
         "mcp": "MCP 서버",
         "mcpDesc": "Model Context Protocol 서버",
-        "organizations": "Organization Settings",
-        "organizationsDesc": "Manage organization members and permissions"
+        "organizations": "조직 설정",
+        "organizationsDesc": "조직 멤버 및 권한 관리"
       }
     },
     "general": {
@@ -505,5 +505,46 @@
         }
       }
     }
+  },
+  "agentList": {
+    "title": "설정",
+    "back": "뒤로",
+    "agents": "에이전트",
+    "agentsDescription": "등록된 코딩 에이전트와 사용 가능 상태.",
+    "noAgentsFound": "에이전트를 찾을 수 없습니다.",
+    "failedToDisableAgent": "에이전트 비활성화에 실패했습니다",
+    "failedToEnableAgent": "에이전트 활성화에 실패했습니다",
+    "failedToSetDefaultAgent": "기본 에이전트 설정에 실패했습니다"
+  },
+  "agentRow": {
+    "default": "기본값",
+    "installed": "설치됨",
+    "notFound": "찾을 수 없음",
+    "setAsDefault": "기본값으로 설정"
+  },
+  "agentSettings": {
+    "title": "에이전트 설정",
+    "description": "모델, 승인 모드, 동작 등 에이전트별 옵션을 구성합니다.",
+    "noSettingsAvailable": "이 에이전트에 사용 가능한 설정이 없습니다."
+  },
+  "claudeCode": {
+    "model": "모델",
+    "modelDescription": "새 세션의 기본 모델",
+    "agentDefault": "에이전트 기본값",
+    "planMode": "계획 모드",
+    "planModeDescription": "계획 모드로 세션 시작",
+    "approvalMode": "승인 모드",
+    "approvalModeDescription": "도구 사용 요청 처리 방법",
+    "approvalOptions": {
+      "bypass": "우회 (모두 자동 승인)",
+      "prompt": "프롬프트 (각 도구 사용 전 확인)"
+    }
+  },
+  "opencode": {
+    "model": "모델",
+    "modelDescription": "새 세션의 기본 모델",
+    "agentDefault": "에이전트 기본값",
+    "autoApprove": "자동 승인",
+    "autoApproveDescription": "도구 사용 요청을 자동으로 승인"
   }
 }

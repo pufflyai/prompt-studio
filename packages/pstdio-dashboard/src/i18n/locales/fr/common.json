@@ -14,7 +14,8 @@
     "close": "Fermer",
     "replay": "Rejouer",
     "discard": "Abandonner",
-    "addItem": "Ajouter un élément"
+    "addItem": "Ajouter un élément",
+    "commit": "Valider"
   },
   "form": {
     "notSpecified": "Non spécifié",
@@ -68,7 +69,13 @@
     "searchLabel": "Rechercher dans le répertoire actuel :",
     "selectCurrent": "Sélectionner l'actuel",
     "gitRepo": "dépôt git",
-    "selectPath": "Sélectionner le chemin"
+    "selectPath": "Sélectionner le chemin",
+    "errors": {
+      "unableToLoadDirectory": "Impossible de charger le répertoire",
+      "pathRequired": "Le chemin est requis.",
+      "repositoryAlreadySelected": "Dépôt déjà sélectionné.",
+      "notGitRepository": "Le dossier sélectionné n'est pas un dépôt git."
+    }
   },
   "branchSelector": {
     "placeholder": "Sélectionner une branche",
@@ -327,5 +334,47 @@
     "commands": "Commandes",
     "noTagsOrFiles": "Aucun tag ou fichier trouvé",
     "noCommands": "Aucune commande disponible pour cet agent."
+  },
+  "docs": {
+    "title": "Documentation",
+    "noFiles": "Aucun fichier",
+    "noDocsFound": "Aucune documentation trouvée",
+    "unableToLoadDocs": "Impossible de charger la documentation",
+    "unableToLoadDocument": "Impossible de charger le document",
+    "trySelectingAnother": "Essayez de sélectionner un autre document.",
+    "noContentAvailable": "Aucun contenu disponible."
+  },
+  "changelog": {
+    "unableToLoad": "Impossible de charger le journal des modifications",
+    "noEntries": "Aucune entrée dans le journal",
+    "addEntries": "Ajoutez des entrées dans .pstdio/changelog/changelog.md"
+  },
+  "onboarding": {
+    "checkingAvailability": "Vérification de la disponibilité...",
+    "unavailable": "Indisponible",
+    "ready": "Prêt",
+    "notDetected": "Non détecté",
+    "setupError": "Échec de la configuration. Vérifiez l'installation de votre agent local et réessayez.",
+    "welcome": "Bienvenue sur Prompt Studio",
+    "pickAgent": "Choisissez un agent de codage pour alimenter les nouvelles tentatives de tâches.",
+    "chooseAgent": "Choisir un agent de codage",
+    "updateLater": "Vous pourrez modifier ce choix plus tard.",
+    "opencode": "Opencode",
+    "opencodeDescription": "Agent de codage open source, local d'abord, pour une itération rapide.",
+    "settingUp": "Configuration en cours...",
+    "continue": "Continuer"
+  },
+  "menu": {
+    "versionCopied": "Version copiée",
+    "switchToLightMode": "Passer en mode clair",
+    "switchToDarkMode": "Passer en mode sombre",
+    "loadingVersion": "Chargement de la version...",
+    "mainMenu": "Menu principal",
+    "openSettingsMenu": "Ouvrir le menu des paramètres",
+    "projects": "Projets",
+    "promptStudio": "Prompt Studio"
+  },
+  "workspace": {
+    "title": "Espace de travail"
   }
 }

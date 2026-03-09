@@ -471,6 +471,47 @@
       }
     }
   },
+  "agentList": {
+    "title": "Configuración",
+    "back": "Volver",
+    "agents": "Agentes",
+    "agentsDescription": "Agentes de codificación registrados y su estado de disponibilidad.",
+    "noAgentsFound": "No se encontraron agentes.",
+    "failedToDisableAgent": "Error al desactivar el agente",
+    "failedToEnableAgent": "Error al activar el agente",
+    "failedToSetDefaultAgent": "Error al establecer el agente predeterminado"
+  },
+  "agentRow": {
+    "default": "Predeterminado",
+    "installed": "Instalado",
+    "notFound": "No encontrado",
+    "setAsDefault": "Establecer como predeterminado"
+  },
+  "agentSettings": {
+    "title": "Configuración del agente",
+    "description": "Configura opciones por agente como modelo, modo de aprobación y comportamiento.",
+    "noSettingsAvailable": "No hay configuración disponible para este agente."
+  },
+  "claudeCode": {
+    "model": "Modelo",
+    "modelDescription": "Modelo predeterminado para nuevas sesiones",
+    "agentDefault": "Predeterminado del agente",
+    "planMode": "Modo plan",
+    "planModeDescription": "Iniciar sesiones en modo plan",
+    "approvalMode": "Modo de aprobación",
+    "approvalModeDescription": "Cómo se manejan las solicitudes de uso de herramientas",
+    "approvalOptions": {
+      "bypass": "Omitir (aprobar todo automáticamente)",
+      "prompt": "Preguntar (preguntar antes de cada herramienta)"
+    }
+  },
+  "opencode": {
+    "model": "Modelo",
+    "modelDescription": "Modelo predeterminado para nuevas sesiones",
+    "agentDefault": "Predeterminado del agente",
+    "autoApprove": "Aprobación automática",
+    "autoApproveDescription": "Aprobar automáticamente las solicitudes de uso de herramientas"
+  },
   "integrations": {
     "github": {
       "cliSetup": {

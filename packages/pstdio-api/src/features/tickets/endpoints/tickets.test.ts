@@ -205,6 +205,25 @@ describe("GET /v1/tickets", () => {
     expect(tickets[0].shorthand).toBe("TP-1");
   });
 
+  test("filters by search term", async () => {
+    await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        project_id: projectId,
+        content: "# Search only ticket\n\nContains a unique phrase",
+        user_prompt: "investigate flaky search indexing",
+      }),
+    });
+
+    const res = await app.request(`/v1/tickets?project_id=${projectId}&search=flaky search`);
+
+    expect(res.status).toBe(200);
+    const tickets = await res.json();
+    expect(tickets.length).toBe(1);
+    expect(tickets[0].user_prompt).toContain("flaky search indexing");
+  });
+
   test("returns 400 when unknown query params are provided", async () => {
     const res = await app.request(`/v1/tickets?project_id=${projectId}&x=1`);
 

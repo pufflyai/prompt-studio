@@ -14,7 +14,8 @@
     "close": "关闭",
     "replay": "重播",
     "discard": "放弃",
-    "addItem": "添加项目"
+    "addItem": "添加项目",
+    "commit": "提交"
   },
   "form": {
     "notSpecified": "未指定",
@@ -68,7 +69,13 @@
     "searchLabel": "搜索当前目录:",
     "selectCurrent": "选择当前",
     "gitRepo": "git 仓库",
-    "selectPath": "选择路径"
+    "selectPath": "选择路径",
+    "errors": {
+      "unableToLoadDirectory": "无法加载目录",
+      "pathRequired": "路径为必填项。",
+      "repositoryAlreadySelected": "仓库已选择。",
+      "notGitRepository": "所选文件夹不是 git 仓库。"
+    }
   },
   "branchSelector": {
     "placeholder": "选择分支",
@@ -327,5 +334,47 @@
     "commands": "命令",
     "noTagsOrFiles": "未找到标签或文件",
     "noCommands": "此代理没有可用的命令。"
+  },
+  "docs": {
+    "title": "文档",
+    "noFiles": "暂无文件",
+    "noDocsFound": "未找到文档",
+    "unableToLoadDocs": "无法加载文档",
+    "unableToLoadDocument": "无法加载文档",
+    "trySelectingAnother": "请尝试选择其他文档。",
+    "noContentAvailable": "暂无内容。"
+  },
+  "changelog": {
+    "unableToLoad": "无法加载变更日志",
+    "noEntries": "暂无变更日志条目",
+    "addEntries": "请在 .pstdio/changelog/changelog.md 中添加条目"
+  },
+  "onboarding": {
+    "checkingAvailability": "正在检查可用性...",
+    "unavailable": "不可用",
+    "ready": "就绪",
+    "notDetected": "未检测到",
+    "setupError": "设置失败。请检查本地代理安装并重试。",
+    "welcome": "欢迎使用 Prompt Studio",
+    "pickAgent": "选择一个编码代理来驱动新的工单尝试。",
+    "chooseAgent": "选择编码代理",
+    "updateLater": "您可以稍后更改此选择。",
+    "opencode": "Opencode",
+    "opencodeDescription": "开源、本地优先的编码代理，用于快速迭代。",
+    "settingUp": "正在设置...",
+    "continue": "继续"
+  },
+  "menu": {
+    "versionCopied": "版本已复制",
+    "switchToLightMode": "切换到浅色模式",
+    "switchToDarkMode": "切换到深色模式",
+    "loadingVersion": "正在加载版本...",
+    "mainMenu": "主菜单",
+    "openSettingsMenu": "打开设置菜单",
+    "projects": "项目",
+    "promptStudio": "Prompt Studio"
+  },
+  "workspace": {
+    "title": "工作区"
   }
 }

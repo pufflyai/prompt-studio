@@ -6,7 +6,13 @@
     "searchLabel": "현재 디렉토리 검색:",
     "selectCurrent": "현재 선택",
     "gitRepo": "git 저장소",
-    "selectPath": "경로 선택"
+    "selectPath": "경로 선택",
+    "errors": {
+      "unableToLoadDirectory": "디렉토리를 불러올 수 없습니다",
+      "pathRequired": "경로는 필수입니다.",
+      "repositoryAlreadySelected": "이미 선택된 저장소입니다.",
+      "notGitRepository": "선택한 폴더는 git 저장소가 아닙니다."
+    }
   },
   "branchSelector": {
     "badges": {
@@ -36,7 +42,8 @@
     "reset": "초기화",
     "save": "저장",
     "send": "보내기",
-    "addItem": "항목 추가"
+    "addItem": "항목 추가",
+    "commit": "커밋"
   },
   "form": {
     "notSpecified": "지정되지 않음",
@@ -327,5 +334,47 @@
     "commands": "명령어",
     "noTagsOrFiles": "태그 또는 파일을 찾을 수 없습니다",
     "noCommands": "이 에이전트에 사용 가능한 명령어가 없습니다."
+  },
+  "docs": {
+    "title": "문서",
+    "noFiles": "파일 없음",
+    "noDocsFound": "문서를 찾을 수 없습니다",
+    "unableToLoadDocs": "문서를 불러올 수 없습니다",
+    "unableToLoadDocument": "문서를 불러올 수 없습니다",
+    "trySelectingAnother": "다른 문서를 선택해 보세요.",
+    "noContentAvailable": "사용 가능한 콘텐츠가 없습니다."
+  },
+  "changelog": {
+    "unableToLoad": "변경 로그를 불러올 수 없습니다",
+    "noEntries": "변경 로그 항목이 없습니다",
+    "addEntries": ".pstdio/changelog/changelog.md에 항목을 추가하세요"
+  },
+  "onboarding": {
+    "checkingAvailability": "사용 가능 여부 확인 중...",
+    "unavailable": "사용 불가",
+    "ready": "준비 완료",
+    "notDetected": "감지되지 않음",
+    "setupError": "설정에 실패했습니다. 로컬 에이전트 설치를 확인하고 다시 시도하세요.",
+    "welcome": "Prompt Studio에 오신 것을 환영합니다",
+    "pickAgent": "새 티켓 시도를 위한 코딩 에이전트를 선택하세요.",
+    "chooseAgent": "코딩 에이전트 선택",
+    "updateLater": "이 선택은 나중에 변경할 수 있습니다.",
+    "opencode": "Opencode",
+    "opencodeDescription": "빠른 반복을 위한 오픈소스, 로컬 우선 코딩 에이전트.",
+    "settingUp": "설정 중...",
+    "continue": "계속"
+  },
+  "menu": {
+    "versionCopied": "버전이 복사되었습니다",
+    "switchToLightMode": "라이트 모드로 전환",
+    "switchToDarkMode": "다크 모드로 전환",
+    "loadingVersion": "버전 로딩 중...",
+    "mainMenu": "메인 메뉴",
+    "openSettingsMenu": "설정 메뉴 열기",
+    "projects": "프로젝트",
+    "promptStudio": "Prompt Studio"
+  },
+  "workspace": {
+    "title": "워크스페이스"
   }
 }

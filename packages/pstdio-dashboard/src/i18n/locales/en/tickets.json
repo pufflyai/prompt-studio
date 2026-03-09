@@ -733,7 +733,9 @@
     }
   },
   "ticketListHeader": {
-    "title": "Tickets"
+    "title": "Tickets",
+    "searchPlaceholder": "Search tickets",
+    "searchAriaLabel": "Search tickets"
   },
   "displayMenu": {
     "display": "Display",

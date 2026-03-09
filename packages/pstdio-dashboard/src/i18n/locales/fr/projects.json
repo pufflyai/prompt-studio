@@ -31,7 +31,9 @@
       "selectLabel": "Sélectionner un agent",
       "unknown": "Agent inconnu",
       "options": {
-        "opencode": "Opencode"
+        "opencode": "Opencode",
+        "codex": "Codex",
+        "claudeCode": "Claude Code"
       }
     },
     "repo": {
@@ -55,25 +57,31 @@
       "branch": "Branche"
     },
     "session": {
-      "selectLabel": "Select session",
-      "none": "New Session",
-      "noneHint": "Start a new session",
-      "loading": "Loading sessions...",
-      "noneAvailable": "No sessions yet",
-      "unknown": "Unknown session",
-      "emptyTitle": "New Session",
-      "emptyDescription": "Start a new session or pick one from the menu.",
-      "notFoundTitle": "Session not found",
-      "notFoundDescription": "Select a different session from the list.",
-      "resumePlaceholder": "Resume this session",
-      "openInBubble": "Open in bubble",
-      "viewMore": "View more sessions",
-      "executorSessionIdLabel": "Executor session ID",
-      "panelTitle": "All sessions",
+      "selectLabel": "Sélectionner une session",
+      "none": "Nouvelle session",
+      "noneHint": "Démarrer une nouvelle session",
+      "loading": "Chargement des sessions...",
+      "noneAvailable": "Aucune session pour le moment",
+      "unknown": "Session inconnue",
+      "emptyTitle": "Nouvelle session",
+      "emptyDescription": "Démarrez une nouvelle session ou choisissez-en une dans le menu.",
+      "notFoundTitle": "Session non trouvée",
+      "notFoundDescription": "Sélectionnez une session différente dans la liste.",
+      "resumePlaceholder": "Reprendre cette session",
+      "openInBubble": "Ouvrir dans une bulle",
+      "viewMore": "Voir plus de sessions",
+      "executorSessionIdLabel": "ID de session de l'exécuteur",
+      "panelTitle": "Toutes les sessions",
       "group": {
-        "today": "Today",
-        "yesterday": "Yesterday"
+        "today": "Aujourd'hui",
+        "yesterday": "Hier"
       }
+    },
+    "model": {
+      "selectLabel": "Sélectionner un modèle",
+      "none": "Aucun modèle",
+      "noneAvailable": "Aucun modèle disponible",
+      "loading": "Chargement des modèles..."
     }
   },
   "createProjectDialog": {
@@ -118,11 +126,16 @@
           "medium": "Moyenne",
           "high": "Haute"
         }
-      }
+      },
+      "parent": "Parent",
+      "tags": "Étiquettes",
+      "blockedBy": "Bloqué par",
+      "dependencies": "Dépendances",
+      "archived": "Archivé"
     },
     "title": {
-      "label": "Ticket title",
-      "placeholder": "Untitled ticket"
+      "label": "Titre de la tâche",
+      "placeholder": "Tâche sans titre"
     },
     "none": "Aucun",
     "properties": {
@@ -130,9 +143,11 @@
     },
     "options": {
       "ticket": "Ouvrir les options de tâche",
-      "refineTicket": "Refine ticket",
-      "archiveTicket": "Archive ticket",
-      "deleteTicket": "Supprimer la tâche"
+      "refineTicket": "Affiner la tâche",
+      "archiveTicket": "Archiver la tâche",
+      "deleteTicket": "Supprimer la tâche",
+      "breakIntoSubTickets": "Découper en sous-tâches",
+      "createSubTicket": "Créer une sous-tâche"
     },
     "deleteConfirmation": {
       "ticket": {
@@ -178,5 +193,47 @@
     "errors": {
       "missingProjectId": "L'identifiant du projet est requis pour créer une tentative."
     }
+  },
+  "sidebar": {
+    "documentation": "Documentation",
+    "tickets": "Tâches",
+    "projectChangelog": "Journal du projet",
+    "projectSettings": "Paramètres du projet",
+    "helpLinks": "Liens d'aide",
+    "documentationLink": "Documentation",
+    "discordLink": "Discord"
+  },
+  "shell": {
+    "loadingProject": "Chargement du projet...",
+    "notFound": "Projet non trouvé",
+    "notFoundDescription": "Choisissez un projet dans la liste pour continuer."
+  },
+  "projectSettings": {
+    "title": "Paramètres du projet"
+  },
+  "list": {
+    "projectCreated": "Projet créé",
+    "createProjectFailed": "Échec de la création du projet",
+    "projectCount_one": "Vous avez {{count}} projet.",
+    "projectCount_other": "Vous avez {{count}} projets.",
+    "title": "Projets",
+    "createProject": "Créer un projet",
+    "loadingProjects": "Chargement des projets...",
+    "unableToLoad": "Impossible de charger les projets",
+    "noProjectsYet": "Aucun projet pour le moment",
+    "noProjectsDescription": "Créez votre premier projet pour commencer.",
+    "createFirstProject": "Créer votre premier projet",
+    "settingsAriaLabel": "Paramètres"
+  },
+  "sessions": {
+    "title": "Sessions",
+    "newSession": "Nouvelle session",
+    "noSessionsYet": "Aucune session pour le moment",
+    "noSessionSelected": "Aucune session sélectionnée",
+    "selectSession": "Sélectionnez une session dans la barre latérale ou démarrez-en une nouvelle.",
+    "followUpPlaceholder": "Envoyer un message de suivi...",
+    "downloadSessionJson": "Télécharger le JSON de la session",
+    "archiveSession": "Archiver la session",
+    "sessionActions": "Actions de session"
   }
 }

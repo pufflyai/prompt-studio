@@ -21,6 +21,7 @@ const listTicketsQuerySchema = z
       .optional(),
     parent_id: z.string().optional(),
     shorthand: z.string().optional(),
+    search: z.string().optional(),
   })
   .strict();
 
@@ -63,6 +64,7 @@ export const listTicketsHandler = (deps: RouteDeps): AppRouteHandler<typeof list
       draft: query.draft,
       parent_id: query.parent_id,
       shorthand: query.shorthand,
+      search: query.search,
     });
 
     const statuses = await deps.db

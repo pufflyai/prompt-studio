@@ -74,7 +74,12 @@ export const createSessionHandler = (deps: RouteDeps) => {
         cwd,
       },
       deps,
-    );
+    ).catch(async () => {
+      const failed = await deps.sessionsService.updateStatus(session.id, "failed");
+      if (failed) {
+        deps.eventBus.emit("sessions", "set", failed);
+      }
+    });
 
     return c.json(session, 201);
   };

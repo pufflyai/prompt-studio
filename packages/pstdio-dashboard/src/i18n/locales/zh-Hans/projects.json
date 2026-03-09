@@ -31,7 +31,9 @@
       "selectLabel": "选择代理",
       "unknown": "未知代理",
       "options": {
-        "opencode": "Opencode"
+        "opencode": "Opencode",
+        "codex": "Codex",
+        "claudeCode": "Claude Code"
       }
     },
     "repo": {
@@ -55,25 +57,31 @@
       "branch": "分支"
     },
     "session": {
-      "selectLabel": "Select session",
-      "none": "New Session",
-      "noneHint": "Start a new session",
-      "loading": "Loading sessions...",
-      "noneAvailable": "No sessions yet",
-      "unknown": "Unknown session",
-      "emptyTitle": "New Session",
-      "emptyDescription": "Start a new session or pick one from the menu.",
-      "notFoundTitle": "Session not found",
-      "notFoundDescription": "Select a different session from the list.",
-      "resumePlaceholder": "Resume this session",
-      "openInBubble": "Open in bubble",
-      "viewMore": "View more sessions",
-      "executorSessionIdLabel": "Executor session ID",
-      "panelTitle": "All sessions",
+      "selectLabel": "选择会话",
+      "none": "新建会话",
+      "noneHint": "开始新会话",
+      "loading": "加载会话中...",
+      "noneAvailable": "暂无会话",
+      "unknown": "未知会话",
+      "emptyTitle": "新建会话",
+      "emptyDescription": "开始新会话或从菜单中选择一个。",
+      "notFoundTitle": "未找到会话",
+      "notFoundDescription": "从列表中选择其他会话。",
+      "resumePlaceholder": "恢复此会话",
+      "openInBubble": "在气泡中打开",
+      "viewMore": "查看更多会话",
+      "executorSessionIdLabel": "执行器会话 ID",
+      "panelTitle": "所有会话",
       "group": {
-        "today": "Today",
-        "yesterday": "Yesterday"
+        "today": "今天",
+        "yesterday": "昨天"
       }
+    },
+    "model": {
+      "selectLabel": "选择模型",
+      "none": "无模型",
+      "noneAvailable": "暂无可用模型",
+      "loading": "加载模型中..."
     }
   },
   "createProjectDialog": {
@@ -118,11 +126,16 @@
           "medium": "中",
           "high": "高"
         }
-      }
+      },
+      "parent": "父级",
+      "tags": "标签",
+      "blockedBy": "被阻塞",
+      "dependencies": "依赖项",
+      "archived": "已归档"
     },
     "title": {
-      "label": "Ticket title",
-      "placeholder": "Untitled ticket"
+      "label": "任务标题",
+      "placeholder": "未命名任务"
     },
     "none": "无",
     "properties": {
@@ -130,29 +143,31 @@
     },
     "options": {
       "ticket": "打开任务选项",
-      "refineTicket": "Refine ticket",
-      "archiveTicket": "Archive ticket",
-      "deleteTicket": "删除任务"
+      "refineTicket": "精化任务",
+      "archiveTicket": "归档任务",
+      "deleteTicket": "删除任务",
+      "breakIntoSubTickets": "拆分为子工单",
+      "createSubTicket": "创建子任务"
     },
     "deleteConfirmation": {
       "ticket": {
-        "headline": "Delete ticket?",
-        "notification": "This deletes the ticket and removes it from the project."
+        "headline": "删除任务？",
+        "notification": "这将删除该任务并将其从项目中移除。"
       }
     },
     "attempts": {
       "title": "尝试",
-      "startNew": "Start new attempt",
+      "startNew": "开始新尝试",
       "emptyTitle": "尚无尝试",
       "emptyDescription": "在此开始任务尝试以跟踪会话。",
       "updatedLabel": "{{date}} 已更新",
       "dialog": {
-        "title": "Start new attempt",
-        "description": "Choose an agent and repository to start this ticket attempt.",
-        "modelLabel": "Model",
-        "modelPlaceholder": "Use default model",
-        "promptLabel": "Prompt",
-        "start": "Start attempt"
+        "title": "开始新尝试",
+        "description": "选择代理和仓库以开始此任务尝试。",
+        "modelLabel": "模型",
+        "modelPlaceholder": "使用默认模型",
+        "promptLabel": "提示",
+        "start": "开始尝试"
       }
     },
     "description": {
@@ -173,5 +188,47 @@
     "errors": {
       "missingProjectId": "创建尝试需要项目 ID。"
     }
+  },
+  "sidebar": {
+    "documentation": "文档",
+    "tickets": "工单",
+    "projectChangelog": "项目变更日志",
+    "projectSettings": "项目设置",
+    "helpLinks": "帮助链接",
+    "documentationLink": "文档",
+    "discordLink": "Discord"
+  },
+  "shell": {
+    "loadingProject": "正在加载项目...",
+    "notFound": "未找到项目",
+    "notFoundDescription": "请从列表中选择一个项目以继续。"
+  },
+  "projectSettings": {
+    "title": "项目设置"
+  },
+  "list": {
+    "projectCreated": "项目已创建",
+    "createProjectFailed": "创建项目失败",
+    "projectCount_one": "您有 {{count}} 个项目。",
+    "projectCount_other": "您有 {{count}} 个项目。",
+    "title": "项目",
+    "createProject": "创建项目",
+    "loadingProjects": "正在加载项目...",
+    "unableToLoad": "无法加载项目",
+    "noProjectsYet": "暂无项目",
+    "noProjectsDescription": "创建您的第一个项目以开始使用。",
+    "createFirstProject": "创建您的第一个项目",
+    "settingsAriaLabel": "设置"
+  },
+  "sessions": {
+    "title": "会话",
+    "newSession": "新建会话",
+    "noSessionsYet": "暂无会话",
+    "noSessionSelected": "未选择会话",
+    "selectSession": "从侧边栏选择一个会话或开始新会话。",
+    "followUpPlaceholder": "发送后续消息...",
+    "downloadSessionJson": "下载会话 JSON",
+    "archiveSession": "归档会话",
+    "sessionActions": "会话操作"
   }
 }

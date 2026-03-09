@@ -135,6 +135,17 @@ test.describe("Ticket list", () => {
     await page.waitForURL(`**/projects/${projectId}/tickets/${ticket.shorthand}`);
     expect(page.url()).toContain(`/tickets/${ticket.shorthand}`);
   });
+});
+
+test.describe("Ticket list editing and filtering", () => {
+  let projectId: string;
+
+  test.beforeEach(async ({ request }) => {
+    test.setTimeout(5_000);
+    await deleteAllProjects(request);
+    const project = await createProjectViaApi(request, "Ticket Test Project");
+    projectId = project.id;
+  });
 
   test("updates ticket display title after editing content and returning to list", async ({ page, request }) => {
     await bypassOnboarding(page);
@@ -247,6 +258,36 @@ test.describe("Ticket list", () => {
 
     await expect(page.getByText("Visible ticket")).toBeVisible();
     await expect(page.getByText("Archived ticket")).not.toBeVisible();
+  });
+
+  test("filters visible tickets by search query", async ({ page, request }) => {
+    const statuses = await getTicketStatuses(request, projectId);
+    const backlog = statuses.find((s) => s.name === "backlog")!;
+
+    await createTicketViaApi(request, projectId, "Add search feature", backlog.id);
+    await createTicketViaApi(request, projectId, "Fix login redirect", backlog.id);
+
+    await bypassOnboarding(page);
+    await page.goto(`/projects/${projectId}/tickets`);
+
+    await expect(page.getByText("Add search feature")).toBeVisible();
+    await expect(page.getByText("Fix login redirect")).toBeVisible();
+
+    await page.getByRole("textbox", { name: "Search tickets" }).fill("search");
+
+    await expect(page.getByText("Add search feature")).toBeVisible();
+    await expect(page.getByText("Fix login redirect")).not.toBeVisible();
+  });
+});
+
+test.describe("Ticket list additional coverage", () => {
+  let projectId: string;
+
+  test.beforeEach(async ({ request }) => {
+    test.setTimeout(5_000);
+    await deleteAllProjects(request);
+    const project = await createProjectViaApi(request, "Ticket Test Project");
+    projectId = project.id;
   });
 
   test("shows ticket shorthand on cards", async ({ page, request }) => {

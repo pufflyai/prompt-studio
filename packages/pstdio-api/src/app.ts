@@ -45,10 +45,12 @@ import type { AppBindings } from "./types";
 interface AppOptions {
   dbPath?: string;
   storagePath?: string;
+  apiToken?: string;
 }
 
 export const createApp = async (options?: AppOptions) => {
   const { db, close: closeDb } = await createDb({ path: options?.dbPath ?? process.env.PSTDIO_DB_PATH });
+  const apiToken = options?.apiToken ?? process.env.PSTDIO_API_TOKEN;
 
   const storageRoot = options?.storagePath ?? resolveStorageRoot(process.env.PSTDIO_STORAGE_PATH);
   ensureStorageRoot(storageRoot);
@@ -99,6 +101,24 @@ export const createApp = async (options?: AppOptions) => {
   const app = new OpenAPIHono<AppBindings>();
 
   app.use("*", cors());
+
+  if (apiToken) {
+    app.use("/v1/*", async (c, next) => {
+      const authorization = c.req.header("authorization");
+
+      if (!authorization?.startsWith("Bearer ")) {
+        return c.json({ error: "Unauthorized" }, 401);
+      }
+
+      const token = authorization.slice("Bearer ".length);
+
+      if (token !== apiToken) {
+        return c.json({ error: "Unauthorized" }, 401);
+      }
+
+      await next();
+    });
+  }
 
   app.route("/", createHealthRoutes(deps));
   app.route("/v1", createProjectRoutes(deps));

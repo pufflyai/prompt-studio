@@ -6,7 +6,13 @@
     "searchLabel": "Buscar en el directorio actual:",
     "selectCurrent": "Seleccionar actual",
     "gitRepo": "repositorio git",
-    "selectPath": "Seleccionar ruta"
+    "selectPath": "Seleccionar ruta",
+    "errors": {
+      "unableToLoadDirectory": "No se pudo cargar el directorio",
+      "pathRequired": "La ruta es obligatoria.",
+      "repositoryAlreadySelected": "Repositorio ya seleccionado.",
+      "notGitRepository": "La carpeta seleccionada no es un repositorio git."
+    }
   },
   "branchSelector": {
     "badges": {
@@ -327,5 +333,47 @@
     "commands": "Comandos",
     "noTagsOrFiles": "No se encontraron etiquetas ni archivos",
     "noCommands": "No hay comandos disponibles para este agente."
+  },
+  "docs": {
+    "title": "Documentación",
+    "noFiles": "Sin archivos",
+    "noDocsFound": "No se encontró documentación",
+    "unableToLoadDocs": "No se pudo cargar la documentación",
+    "unableToLoadDocument": "No se pudo cargar el documento",
+    "trySelectingAnother": "Intenta seleccionar otro documento.",
+    "noContentAvailable": "No hay contenido disponible."
+  },
+  "changelog": {
+    "unableToLoad": "No se pudo cargar el registro de cambios",
+    "noEntries": "Sin entradas en el registro",
+    "addEntries": "Agrega entradas en .pstdio/changelog/changelog.md"
+  },
+  "onboarding": {
+    "checkingAvailability": "Verificando disponibilidad...",
+    "unavailable": "No disponible",
+    "ready": "Listo",
+    "notDetected": "No detectado",
+    "setupError": "Error en la configuración. Verifica la instalación de tu agente local e inténtalo de nuevo.",
+    "welcome": "Bienvenido a Prompt Studio",
+    "pickAgent": "Elige un agente de codificación para las nuevas tentativas de tareas.",
+    "chooseAgent": "Elegir un agente de codificación",
+    "updateLater": "Puedes cambiar esta elección más tarde.",
+    "opencode": "Opencode",
+    "opencodeDescription": "Agente de codificación de código abierto, local primero, para iteración rápida.",
+    "settingUp": "Configurando...",
+    "continue": "Continuar"
+  },
+  "menu": {
+    "versionCopied": "Versión copiada",
+    "switchToLightMode": "Cambiar a modo claro",
+    "switchToDarkMode": "Cambiar a modo oscuro",
+    "loadingVersion": "Cargando versión...",
+    "mainMenu": "Menú principal",
+    "openSettingsMenu": "Abrir menú de configuración",
+    "projects": "Proyectos",
+    "promptStudio": "Prompt Studio"
+  },
+  "workspace": {
+    "title": "Espacio de trabajo"
   }
 }

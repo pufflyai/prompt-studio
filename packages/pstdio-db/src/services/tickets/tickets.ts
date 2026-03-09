@@ -26,6 +26,7 @@ type ListFilters = {
   draft?: boolean;
   parent_id?: string;
   shorthand?: string;
+  search?: string;
 };
 
 type UpdateInput = {
@@ -110,6 +111,14 @@ export const createTicketsService = (db: DbClient) => {
     if (filters.complexity) conditions.push(eq(tickets.complexity, filters.complexity));
     if (filters.parent_id) conditions.push(eq(tickets.parent_id, filters.parent_id));
     if (filters.shorthand) conditions.push(eq(tickets.shorthand, filters.shorthand));
+    if (filters.search) {
+      const term = `%${filters.search.toLowerCase()}%`;
+      conditions.push(sql`(
+        lower(coalesce(${tickets.display_title}, '')) like ${term}
+        or lower(coalesce(${tickets.user_prompt}, '')) like ${term}
+        or lower(${tickets.shorthand}) like ${term}
+      )`);
+    }
 
     conditions.push(eq(tickets.archived, filters.archived ?? false));
     conditions.push(eq(tickets.draft, filters.draft ?? false));

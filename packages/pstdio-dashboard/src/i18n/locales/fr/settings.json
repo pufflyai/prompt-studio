@@ -505,5 +505,46 @@
         }
       }
     }
+  },
+  "agentList": {
+    "title": "Paramètres",
+    "back": "Retour",
+    "agents": "Agents",
+    "agentsDescription": "Agents de codage enregistrés et leur statut de disponibilité.",
+    "noAgentsFound": "Aucun agent trouvé.",
+    "failedToDisableAgent": "Échec de la désactivation de l'agent",
+    "failedToEnableAgent": "Échec de l'activation de l'agent",
+    "failedToSetDefaultAgent": "Échec de la définition de l'agent par défaut"
+  },
+  "agentRow": {
+    "default": "Par défaut",
+    "installed": "Installé",
+    "notFound": "Non trouvé",
+    "setAsDefault": "Définir par défaut"
+  },
+  "agentSettings": {
+    "title": "Paramètres de l'agent",
+    "description": "Configurez les options par agent comme le modèle, le mode d'approbation et le comportement.",
+    "noSettingsAvailable": "Aucun paramètre disponible pour cet agent."
+  },
+  "claudeCode": {
+    "model": "Modèle",
+    "modelDescription": "Modèle par défaut pour les nouvelles sessions",
+    "agentDefault": "Par défaut de l'agent",
+    "planMode": "Mode plan",
+    "planModeDescription": "Démarrer les sessions en mode plan",
+    "approvalMode": "Mode d'approbation",
+    "approvalModeDescription": "Comment les demandes d'utilisation d'outils sont traitées",
+    "approvalOptions": {
+      "bypass": "Contourner (tout approuver automatiquement)",
+      "prompt": "Demander (demander avant chaque outil)"
+    }
+  },
+  "opencode": {
+    "model": "Modèle",
+    "modelDescription": "Modèle par défaut pour les nouvelles sessions",
+    "agentDefault": "Par défaut de l'agent",
+    "autoApprove": "Approbation automatique",
+    "autoApproveDescription": "Approuver automatiquement les demandes d'utilisation d'outils"
   }
 }

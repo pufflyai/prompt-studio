@@ -471,6 +471,47 @@
       }
     }
   },
+  "agentList": {
+    "title": "设置",
+    "back": "返回",
+    "agents": "代理",
+    "agentsDescription": "已注册的编码代理及其可用状态。",
+    "noAgentsFound": "未找到代理。",
+    "failedToDisableAgent": "禁用代理失败",
+    "failedToEnableAgent": "启用代理失败",
+    "failedToSetDefaultAgent": "设置默认代理失败"
+  },
+  "agentRow": {
+    "default": "默认",
+    "installed": "已安装",
+    "notFound": "未找到",
+    "setAsDefault": "设为默认"
+  },
+  "agentSettings": {
+    "title": "代理设置",
+    "description": "配置每个代理的选项，如模型、审批模式和行为。",
+    "noSettingsAvailable": "此代理没有可用的设置。"
+  },
+  "claudeCode": {
+    "model": "模型",
+    "modelDescription": "新会话的默认模型",
+    "agentDefault": "代理默认",
+    "planMode": "计划模式",
+    "planModeDescription": "以计划模式启动会话",
+    "approvalMode": "审批模式",
+    "approvalModeDescription": "工具使用请求的处理方式",
+    "approvalOptions": {
+      "bypass": "绕过（自动批准所有）",
+      "prompt": "提示（每个工具使用前询问）"
+    }
+  },
+  "opencode": {
+    "model": "模型",
+    "modelDescription": "新会话的默认模型",
+    "agentDefault": "代理默认",
+    "autoApprove": "自动批准",
+    "autoApproveDescription": "自动批准工具使用请求"
+  },
   "integrations": {
     "github": {
       "cliSetup": {

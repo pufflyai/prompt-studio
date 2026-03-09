@@ -7,6 +7,7 @@ import { createApp } from "./app";
 import type { AppBindings } from "./types";
 
 let app: OpenAPIHono<AppBindings>;
+let appWithAuth: OpenAPIHono<AppBindings>;
 let tempRoot: string;
 
 beforeAll(async () => {
@@ -14,6 +15,12 @@ beforeAll(async () => {
   app = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
+  });
+
+  appWithAuth = await createApp({
+    dbPath: ":memory:",
+    storagePath: join(tempRoot, "storage-auth"),
+    apiToken: "test-token",
   });
 });
 
@@ -57,5 +64,42 @@ describe("onError handler", () => {
     expect(parsed.status).toBe(500);
 
     stderrSpy.mockRestore();
+  });
+});
+
+describe("api authentication", () => {
+  test("returns 401 when token is missing", async () => {
+    const res = await appWithAuth.request("/v1/projects");
+
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "Unauthorized" });
+  });
+
+  test("returns 401 when token is invalid", async () => {
+    const res = await appWithAuth.request("/v1/projects", {
+      headers: {
+        Authorization: "Bearer wrong-token",
+      },
+    });
+
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "Unauthorized" });
+  });
+
+  test("allows requests with a valid bearer token", async () => {
+    const res = await appWithAuth.request("/v1/projects", {
+      headers: {
+        Authorization: "Bearer test-token",
+      },
+    });
+
+    expect(res.status).toBe(200);
+  });
+
+  test("keeps health endpoints public", async () => {
+    const res = await appWithAuth.request("/healthz");
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
   });
 });
