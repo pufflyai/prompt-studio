@@ -136,6 +136,42 @@ describe("tickets pull", () => {
     expect(content).toContain("# Ticket from DB");
   });
 
+  test("writes parent_id frontmatter using parent ticket shorthand when DB stores parent UUID", async () => {
+    const handler = createHandler({
+      ...baseDeps(),
+      resolveTicketByShorthand: async () => makeListItem({ id: "child-ticket-id", shorthand: "PS-2" }),
+      getTicket: async (_url: string, id: string) => {
+        if (id === "child-ticket-id") {
+          return makeTicket({
+            id: "child-ticket-id",
+            shorthand: "PS-2",
+            parent_id: "parent-ticket-id",
+          });
+        }
+
+        if (id === "parent-ticket-id") {
+          return makeTicket({
+            id: "parent-ticket-id",
+            shorthand: "PS-1",
+            parent_id: null,
+          });
+        }
+
+        return null as never;
+      },
+      listTicketFiles: async () => [],
+      getTicketFileContent: async () => Buffer.from("# Ticket from DB"),
+      log: () => {},
+    });
+
+    await handler({ id: "PS-2", force: false, _: [], $0: "" } as never);
+
+    const ticketPath = join(tmpBase, ".pstdio", "tickets", "PS-2_ticket-from-db", "ticket.md");
+    const content = readFileSync(ticketPath, "utf8");
+    expect(content).toContain('parent_id: "PS-1"');
+    expect(content).not.toContain('parent_id: "parent-ticket-id"');
+  });
+
   test("throws when local file exists and --force is not set", async () => {
     const ticketDir = join(tmpBase, ".pstdio", "tickets", "PS-1_pulled-ticket");
     mkdirSync(join(ticketDir, "files"), { recursive: true });

@@ -25,10 +25,6 @@
   "dependencies": {
     "@tanstack/react-db": "^0.1.74",
     "mustache": "^4.2.0",
-    "pstdio-agents": "workspace:*",
-    "pstdio-api": "workspace:*",
-    "pstdio-db": "workspace:*",
-    "pstdio-wt": "workspace:*",
     "react": "^19.2.4",
     "yargs": "^18.0.0"
   },
@@ -48,6 +44,10 @@
     "@types/node": "^24.3.0",
     "@types/react": "^19.2.14",
     "@types/yargs": "^17.0.35",
+    "pstdio-agents": "workspace:*",
+    "pstdio-api": "workspace:*",
+    "pstdio-db": "workspace:*",
+    "pstdio-wt": "workspace:*",
     "typescript": "~5.9.3"
   }
 }

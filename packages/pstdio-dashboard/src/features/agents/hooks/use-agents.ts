@@ -1,5 +1,9 @@
+import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
-import { useFetch } from "@/lib/use-fetch";
 import type { AgentInfo } from "../types";
 
-export const useAgents = () => useFetch(() => apiRequest<AgentInfo[]>("/v1/agents/info"), []);
+export const useAgents = () =>
+  useQuery({
+    queryKey: ["agents-info"],
+    queryFn: () => apiRequest<AgentInfo[]>("/v1/agents/info"),
+  });

@@ -1,5 +1,5 @@
+import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
-import { useMutation } from "@/lib/use-mutation";
 
 interface FollowUpInput {
   sessionId: string;
@@ -7,9 +7,11 @@ interface FollowUpInput {
 }
 
 export const useFollowUpSession = () =>
-  useMutation(async (input: FollowUpInput) => {
-    await apiRequest(`/v1/sessions/${input.sessionId}/follow-up`, {
-      method: "POST",
-      body: { prompt: input.prompt },
-    });
+  useMutation({
+    mutationFn: async (input: FollowUpInput) => {
+      await apiRequest(`/v1/sessions/${input.sessionId}/follow-up`, {
+        method: "POST",
+        body: { prompt: input.prompt },
+      });
+    },
   });

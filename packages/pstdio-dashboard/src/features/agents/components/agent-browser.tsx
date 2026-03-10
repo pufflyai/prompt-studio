@@ -64,10 +64,18 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
   const isMenuDisabled = isDisabled || (agentOptions.length === 0 && modelOptions.length === 0);
   const defaultMenuContent = modelOptions.length > 0 ? "models" : "agents";
   const [menuContent, setMenuContent] = useState<"models" | "agents">(defaultMenuContent);
+  const [open, setOpen] = useState(false);
   const isShowingAgents = menuContent === "agents";
 
+  const handleOpenChange = (details: { open: boolean }) => {
+    setOpen(details.open);
+    if (details.open) {
+      setMenuContent(defaultMenuContent);
+    }
+  };
+
   return (
-    <Menu.Root lazyMount={false}>
+    <Menu.Root lazyMount={false} open={open} onOpenChange={handleOpenChange} closeOnSelect={false}>
       <Menu.Trigger asChild>
         <Box>
           <Tooltip content={isMenuDisabled ? t("chatInput.model.noneAvailable") : t("chatInput.model.selectLabel")}>
@@ -77,7 +85,6 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
               px="2"
               aria-label={t("chatInput.model.selectLabel")}
               disabled={isMenuDisabled}
-              onClick={() => setMenuContent(defaultMenuContent)}
             >
               <Text textStyle="label/XS/medium" color="fg">
                 {selectedModelLabel}
@@ -136,7 +143,11 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
                     leftIcon={option.icon ?? TerminalIcon}
                     isSelected={option.value === selectedAgent}
                     isDisabled={option.disabled}
-                    onClick={() => !option.disabled && onSelectAgent(option.value)}
+                    onClick={() => {
+                      if (option.disabled) return;
+                      onSelectAgent(option.value);
+                      setMenuContent("models");
+                    }}
                   />
                 ))
               ) : (
@@ -149,7 +160,10 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
                   id={option.value}
                   primaryLabel={option.label}
                   isSelected={option.value === selectedModel}
-                  onClick={() => onSelectModel(option.value)}
+                  onClick={() => {
+                    onSelectModel(option.value);
+                    setOpen(false);
+                  }}
                 />
               ))
             ) : (

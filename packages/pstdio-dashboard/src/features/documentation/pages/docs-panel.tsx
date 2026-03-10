@@ -1,14 +1,13 @@
 import { Box, Flex, Stack } from "@chakra-ui/react";
-import { EmptyState } from "@pstdio/ui";
+import { DocsSidebar, EmptyState } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { type MouseEvent, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { DocsSidebar } from "../components/docs-sidebar";
 import { EmptyDocs } from "../components/empty-docs";
 import { LoadingDocs } from "../components/loading-docs";
 import { useDocsContent, useDocsIndex } from "../hooks/use-docs";
-import { flattenDocsSidebar, resolveActiveDocLink, resolveDocsLinkFromHref } from "../utils";
+import { flattenDocsSidebar, resolveActiveDocLink, resolveDocsLinkFromHref, sidebarItemContainsLink } from "../utils";
 
 export const DocsPanel = () => {
   const { t } = useTranslation();
@@ -118,7 +117,14 @@ export const DocsPanel = () => {
 
   return (
     <Flex height="100%" width="100%" minH="0">
-      <DocsSidebar menuItems={sidebarItems} activeLink={activeLink} onSelectLink={handleSelectLink} />
+      <DocsSidebar
+        title={t("docs.title")}
+        emptyMessage={t("docs.noFiles")}
+        menuItems={sidebarItems}
+        activeLink={activeLink}
+        onSelectLink={handleSelectLink}
+        shouldStartOpen={(item) => sidebarItemContainsLink(item, activeLink)}
+      />
       <Stack height="100%" flex="1" minH="0">
         {pageContent}
       </Stack>

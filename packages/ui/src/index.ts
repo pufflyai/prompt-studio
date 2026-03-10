@@ -11,6 +11,8 @@ export type { DocsOutlineProps } from "./components/documentation/docs-outline";
 export { DocsOutline } from "./components/documentation/docs-outline";
 export type { DocsPaginationItem, DocsPaginationProps } from "./components/documentation/docs-pagination";
 export { DocsPagination } from "./components/documentation/docs-pagination";
+export type { DocsSidebarItem, DocsSidebarProps } from "./components/documentation/docs-sidebar";
+export { DocsSidebar } from "./components/documentation/docs-sidebar";
 export type { EmptyStateProps } from "./components/empty-state";
 export { EmptyState } from "./components/empty-state";
 export { ErrorBoundary } from "./components/error-boundary";

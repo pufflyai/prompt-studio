@@ -1,9 +1,10 @@
+import { useQuery } from "@tanstack/react-query";
 import type { StatusResponse, TagResponse } from "pstdio-api/dto";
 import { DEFAULT_OWNER, DEFAULT_PROJECT_STATUS, getSystemInfo, toProjectRepository } from "@/features/project/data/api";
 import type { Project, ProjectTemplateAsset } from "@/features/project/types";
 import { asSyncedRows, eq, getCollection, useLiveQuery } from "@/features/sync/collections";
 import { toTicketStatusOption, toTicketTag } from "@/features/ticket-list/data/api";
-import { useFetch } from "@/lib/use-fetch";
+import { isProjectQueryLoading } from "./project-query-loading-state";
 
 export const useProject = (projectId: string | undefined) => {
   const { data: rawProject, isLoading: projectLoading } = useLiveQuery(
@@ -17,6 +18,11 @@ export const useProject = (projectId: string | undefined) => {
     [projectId],
   );
   const projectRows = asSyncedRows(rawProject);
+  const isLoading = isProjectQueryLoading({
+    projectId,
+    rawProject,
+    isProjectLoading: projectLoading,
+  });
 
   const { data: rawStatuses } = useLiveQuery(
     (q) =>
@@ -55,7 +61,7 @@ export const useProject = (projectId: string | undefined) => {
 
   const project = projectRows?.[0];
   if (!project || !projectId) {
-    return { data: undefined, isLoading: projectLoading };
+    return { data: undefined, isLoading };
   }
 
   const statusRows = asSyncedRows(rawStatuses);
@@ -82,7 +88,7 @@ export const useProject = (projectId: string | undefined) => {
     ticketTags: tags,
   };
 
-  return { data, isLoading: projectLoading };
+  return { data, isLoading };
 };
 
 export const useProjectRepositories = (projectId: string | undefined) => {
@@ -138,4 +144,8 @@ export const useProjectTemplateAssets = (projectId: string | undefined) => {
   return { data, isLoading };
 };
 
-export const useSystemInfo = () => useFetch(() => getSystemInfo(), []);
+export const useSystemInfo = () =>
+  useQuery({
+    queryKey: ["system-info"],
+    queryFn: () => getSystemInfo(),
+  });

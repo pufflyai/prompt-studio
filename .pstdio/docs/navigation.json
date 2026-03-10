@@ -5,54 +5,66 @@
       "link": "/index"
     },
     {
-      "text": "Specs",
+      "text": "Product",
       "items": [
+        {
+          "text": "Overview",
+          "link": "/product/overview"
+        },
         {
           "text": "CLI",
           "items": [
             {
-              "text": "Setup",
-              "link": "/specs/cli/setup"
-            },
-            {
-              "text": "Projects",
-              "link": "/specs/cli/projects"
+              "text": "Overview",
+              "link": "/product/cli"
             },
             {
               "text": "Agents",
-              "link": "/specs/cli/agents"
+              "link": "/product/cli/agents"
             },
             {
-              "text": "Feedback",
-              "link": "/specs/cli/feedback"
+              "text": "Feedback and Help",
+              "link": "/product/cli/feedback"
+            },
+            {
+              "text": "Projects",
+              "link": "/product/cli/projects"
             },
             {
               "text": "Sessions",
-              "link": "/specs/cli/sessions"
+              "link": "/product/cli/sessions"
+            },
+            {
+              "text": "Runtime and API Setup",
+              "link": "/product/cli/setup"
             },
             {
               "text": "Statuses",
-              "link": "/specs/cli/statuses"
+              "link": "/product/cli/statuses"
             },
             {
               "text": "Tags",
-              "link": "/specs/cli/tags"
+              "link": "/product/cli/tags"
             },
             {
               "text": "Templates",
-              "link": "/specs/cli/templates"
+              "link": "/product/cli/templates"
             },
             {
               "text": "Tickets",
-              "link": "/specs/cli/tickets"
-            },
-            {
-              "text": "Update",
-              "link": "/specs/cli/update"
+              "link": "/product/cli/tickets"
             },
             {
               "text": "Workspaces",
-              "link": "/specs/cli/workspaces"
+              "link": "/product/cli/workspaces"
+            },
+            {
+              "text": "Update (Draft)",
+              "link": "/product/cli/update"
+            },
+            {
+              "text": "Workspaces Multi-Repo (Draft)",
+              "link": "/product/cli/workspaces-multi-repo-draft"
             }
           ]
         },
@@ -61,19 +73,40 @@
           "items": [
             {
               "text": "Documentation",
-              "link": "/specs/dashboard/documentation"
+              "link": "/product/dashboard/documentation"
             },
             {
               "text": "Tickets",
-              "link": "/specs/dashboard/tickets"
-            },
-            {
-              "text": "Sessions",
-              "link": "/specs/dashboard/sessions"
+              "link": "/product/dashboard/tickets"
             },
             {
               "text": "Ticket Detail",
-              "link": "/specs/dashboard/ticket-detail"
+              "link": "/product/dashboard/ticket-detail"
+            },
+            {
+              "text": "Sessions",
+              "link": "/product/dashboard/sessions"
+            },
+            {
+              "text": "Settings",
+              "link": "/product/dashboard/settings"
+            }
+          ]
+        },
+        {
+          "text": "Platform",
+          "items": [
+            {
+              "text": "Templates and Skills",
+              "link": "/product/platform/templates-and-skills"
+            },
+            {
+              "text": "Real-time Updates",
+              "link": "/product/platform/realtime-updates"
+            },
+            {
+              "text": "Versioning and Releases",
+              "link": "/product/platform/versioning-and-releases"
             }
           ]
         },
@@ -82,25 +115,9 @@
           "items": [
             {
               "text": "Error Logs",
-              "link": "/specs/api/error-logs"
+              "link": "/product/api/error-logs"
             }
           ]
-        },
-        {
-          "text": "Customizable Templates",
-          "link": "/specs/customizable-templates"
-        },
-        {
-          "text": "Skill Installation",
-          "link": "/specs/skill-installation"
-        },
-        {
-          "text": "Real-time Updates",
-          "link": "/specs/realtime-updates"
-        },
-        {
-          "text": "Versioning and Releases",
-          "link": "/specs/versioning-and-releases"
         }
       ]
     },

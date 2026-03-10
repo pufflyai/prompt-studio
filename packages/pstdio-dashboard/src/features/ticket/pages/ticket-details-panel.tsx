@@ -21,6 +21,8 @@ import { useTicketAttemptDiff } from "../hooks/use-ticket-attempt-diff";
 import { useTicketContent } from "../hooks/use-ticket-content";
 import { useTicketSessions } from "../hooks/use-ticket-sessions";
 import { buildCreateSubTicketsPrompt, buildRefineTicketPrompt } from "../utils/build-prompts";
+import { isTicketContentReady } from "../utils/ticket-content-ready";
+import { resolveTicketDetailsState } from "../utils/ticket-details-state";
 
 export const TicketDetailsPanel = () => {
   const { projectId, ticketShorthand } = useParams({ from: "/projects/$projectId/tickets/$ticketShorthand" });
@@ -29,17 +31,23 @@ export const TicketDetailsPanel = () => {
 
   const { data: project } = useProject(projectId);
   const { data: templateAssets } = useProjectTemplateAssets(projectId);
-  const { data: allTickets = [] } = useProjectTickets(projectId);
+  const { data: allTickets, isLoading: isTicketsLoading } = useProjectTickets(projectId);
   const updateTicket = useUpdateProjectTicket(projectId);
   const updateTicketTags = useUpdateProjectTicketTags(projectId);
   const deleteTicket = useDeleteProjectTicket(projectId);
 
-  const ticket = allTickets.find((t) => t.shorthand === ticketShorthand) ?? null;
-  const parentTicket = ticket?.parentId ? (allTickets.find((pt) => pt.id === ticket.parentId) ?? null) : null;
+  const allProjectTickets = allTickets ?? [];
+  const ticketState = resolveTicketDetailsState({
+    tickets: allTickets,
+    ticketShorthand,
+    isTicketsLoading,
+  });
+  const ticket = ticketState.ticket;
+  const parentTicket = ticket?.parentId ? (allProjectTickets.find((pt) => pt.id === ticket.parentId) ?? null) : null;
   const ticketId = ticket?.id ?? "";
   const ticketContent = useTicketContent(ticket?.id);
   const content = ticketContent.data ?? "";
-  const isContentLoading = ticketContent.isLoading || ticketContent.data === undefined;
+  const isContentReady = isTicketContentReady(ticketContent.data, ticketContent.isLoading);
   const ticketAttempts = ticket?.attempts ?? [];
   const defaultRepoId = project?.repositories[0]?.id || null;
 
@@ -84,6 +92,16 @@ export const TicketDetailsPanel = () => {
     .filter((a) => a.templateType === "ticket")
     .map((a) => ({ id: a.id, name: a.name }));
 
+  if (ticketState.state === "loading") {
+    return (
+      <Stack gap="lg" height="100%" p="sm">
+        <Text textStyle="paragraph/S/regular" color="foreground.secondary">
+          {t("ticketDetail.loadingContent")}
+        </Text>
+      </Stack>
+    );
+  }
+
   if (!ticket) {
     return (
       <Stack gap="lg" height="100%" p="sm">
@@ -95,7 +113,7 @@ export const TicketDetailsPanel = () => {
   }
 
   const handleSelectTicket = (id: string) => {
-    const target = allTickets.find((t) => t.id === id);
+    const target = allProjectTickets.find((t) => t.id === id);
     if (target) navigateToTicket(target.shorthand);
   };
 
@@ -143,11 +161,7 @@ export const TicketDetailsPanel = () => {
       />
       <Flex flex="1" minH="0" overflow="hidden">
         <Stack flex="1" minW="0" padding="sm" overflow="auto">
-          {isContentLoading ? (
-            <Text textStyle="paragraph/S/regular" color="foreground.secondary">
-              {t("ticketDetail.loadingContent")}
-            </Text>
-          ) : (
+          {isContentReady ? (
             <MarkdownEditor
               key={autosave.editorKey}
               defaultState={autosave.initialContent}
@@ -155,12 +169,12 @@ export const TicketDetailsPanel = () => {
               placeholder={t("ticketDetail.enterDescription")}
               onChange={autosave.handleChange}
             />
-          )}
+          ) : null}
         </Stack>
         <TicketDetailSidebar
           ticket={ticket}
           project={project}
-          allTickets={allTickets}
+          allTickets={allProjectTickets}
           isOpen={isDetailsPanelOpen}
           isUpdatingTags={updateTicketTags.isPending}
           onToggle={() => setIsDetailsPanelOpen(!isDetailsPanelOpen)}

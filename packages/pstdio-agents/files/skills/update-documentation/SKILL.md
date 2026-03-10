@@ -1,6 +1,6 @@
 ---
 name: update-documentation
-description: "Use when asked to update, add, or modify project documentation, save lessons learned or write a new spec. Edit markdown files in `.pstdio/docs/` and update `navigation.json` for sidebar changes."
+description: "Use when asked to update, add, or modify project documentation, save lessons learned, or write a new PRD. Edit markdown files in `.pstdio/docs/` and update `navigation.json` for sidebar changes."
 ---
 
 ## User Input
@@ -12,7 +12,14 @@ $ARGUMENTS
 ## Workflow
 
 1. Read `.pstdio/docs/navigation.json` to understand the current sidebar structure and available pages.
-2. Apply the requested documentation changes while preserving the existing structure and update the `navigation.json` file if needed.
+2. When adding a new documentation page, prefer scaffolding from an existing template before writing markdown manually:
+   - Run `pstdio templates list` to inspect all available project templates.
+   - Bundled documentation templates are `prd`, `adr`, `cookbook`, `review-me`, and `lessons-learned`.
+   - Use `prd` for requirements/specification documents that combine product goals with behavior and interface details.
+   - Use `lessons-learned` for postmortems documenting a resolved bug or incident.
+   - To scaffold one, run `pstdio templates write --name <prd|adr|cookbook|review-me|lessons-learned> --target docs/<path>`.
+   - `pstdio templates write` creates the markdown file and updates `navigation.json` automatically.
+3. Apply the requested documentation changes while preserving the existing structure and update the `navigation.json` file if needed.
 
 
 ## Documentation Location

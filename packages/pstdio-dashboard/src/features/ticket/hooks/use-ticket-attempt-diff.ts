@@ -1,7 +1,9 @@
+import { useQuery } from "@tanstack/react-query";
 import { getTicketAttemptDiff } from "@/features/ticket-list/data/api";
-import { useFetch } from "@/lib/use-fetch";
 
 export const useTicketAttemptDiff = (attemptId: string | null | undefined) =>
-  useFetch(() => getTicketAttemptDiff(attemptId!), [attemptId], {
+  useQuery({
+    queryKey: ["ticket-attempt-diff", attemptId],
+    queryFn: () => getTicketAttemptDiff(attemptId!),
     enabled: Boolean(attemptId),
   });

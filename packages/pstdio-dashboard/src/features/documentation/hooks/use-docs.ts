@@ -1,9 +1,15 @@
-import { useFetch } from "@/lib/use-fetch";
+import { useQuery } from "@tanstack/react-query";
 import { getDocsContent, getDocsIndex } from "../data/api";
 
-export const useDocsIndex = (projectId?: string) => useFetch(() => getDocsIndex(projectId), [projectId]);
+export const useDocsIndex = (projectId?: string) =>
+  useQuery({
+    queryKey: ["docs-index", projectId],
+    queryFn: () => getDocsIndex(projectId),
+  });
 
 export const useDocsContent = (link: string | null, projectId?: string) =>
-  useFetch(() => getDocsContent(link ?? "", projectId), [link, projectId], {
+  useQuery({
+    queryKey: ["docs-content", link, projectId],
+    queryFn: () => getDocsContent(link ?? "", projectId),
     enabled: Boolean(link),
   });

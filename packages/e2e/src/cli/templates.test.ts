@@ -42,10 +42,12 @@ describe("pstdio templates list", () => {
 
       expect(output).toContain("ticket");
       expect(output).toContain("proposal");
-      expect(output).toContain("spec");
+      expect(output).toContain("prd");
       expect(output).toContain("adr");
       expect(output).toContain("cookbook");
       expect(output).toContain("review-me");
+      expect(output).toContain("lessons-learned");
+      expect(output).not.toContain("spec");
     },
     TEST_TIMEOUT,
   );
@@ -61,8 +63,8 @@ describe("pstdio templates list", () => {
       const ticketLine = lines.find((l) => l.match(/^ticket\s/));
       expect(ticketLine).toContain("*");
 
-      const specLine = lines.find((l) => l.match(/^spec\s/));
-      expect(specLine).toContain("*");
+      const prdLine = lines.find((l) => l.match(/^prd\s/));
+      expect(prdLine).toContain("*");
     },
     TEST_TIMEOUT,
   );
@@ -193,14 +195,14 @@ describe("pstdio templates write", () => {
     () => {
       const repo = createInitializedRepo("tpl-write-docs");
 
-      const output = run("templates write --name spec --target docs/specs/cli/new-feature", repo);
-      expect(output).toContain('Wrote template "spec" to .pstdio/docs/specs/cli/new-feature.md');
+      const output = run("templates write --name prd --target docs/specs/cli/new-feature", repo);
+      expect(output).toContain('Wrote template "prd" to .pstdio/docs/specs/cli/new-feature.md');
 
       const filePath = join(repo, ".pstdio", "docs", "specs", "cli", "new-feature.md");
       expect(existsSync(filePath)).toBe(true);
 
       const content = readFileSync(filePath, "utf8");
-      expect(content).toContain("Purpose");
+      expect(content).toContain("Functional Requirements");
 
       const nav = JSON.parse(readFileSync(join(repo, ".pstdio", "docs", "navigation.json"), "utf8"));
       const navStr = JSON.stringify(nav);

@@ -1,14 +1,14 @@
 # Prompt Studio
 
-Prompt Studio is a local-first project management tool for AI-driven development. It runs as a CLI and web dashboard.
+Prompt Studio is a local-first workspace for agent-assisted software delivery. It combines a CLI, a web dashboard, repo-local documentation, ticket files, and live sessions around the same project state.
 
 ## What it does
 
-- **Projects** — organize work into isolated projects, each with its own configuration, tickets, and documentation.
-- **Agents** — define and manage AI coding agents that operate on your codebase.
-- **Tickets** — track tasks with statuses, tags, and templates, all stored as local files.
-- **Sessions** — capture agent work sessions with full history.
-- **Documentation** — write and browse project docs from the CLI or dashboard.
+- **Projects** keep configuration, repositories, statuses, tags, templates, and docs under one project id.
+- **Agents** can be configured once, then used from ticket, session, and workspace flows.
+- **Tickets** support both local draft files and persisted project records.
+- **Sessions** capture agent conversations, follow-ups, approvals, and execution history.
+- **Documentation** lives in `.pstdio/docs` and is rendered in the dashboard from `navigation.json`.
 
 ## Quick start
 
@@ -16,31 +16,30 @@ Prompt Studio is a local-first project management tool for AI-driven development
 # Install dependencies
 bun install
 
-# Initialize a project
-bun run --cwd packages/cli pstdio projects create <name>
+# Create or initialize a project in the current repo
+bun run --cwd packages/pstdio pstdio -- projects create <name>
 
-# Launch the dashboard
-bun run dev:dashboard
-
-# Launch the API
-bun run dev:api
+# Start the local API and dashboard
+bun run --cwd packages/pstdio pstdio
 ```
 
-## Architecture
+## Documentation model
 
-Prompt Studio follows a local-first architecture. All data lives in your repo under `.pstdio/` and can optionally sync to a remote Postgres database via Electric SQL.
+Product behavior now lives under [Product](/product/overview).
 
-```
+- **Product** documents shipped behavior and current constraints.
+- **Architecture** explains how the product is implemented.
+- **Known Issues** captures active gaps.
+- **Lessons Learned** records resolved failures and their takeaways.
+
+## Local project layout
+
+```text
 .pstdio/
-├── config.json        # project configuration
-├── docs/              # markdown documentation
-├── tickets/           # ticket files
-└── templates/         # ticket templates
+├── config.json        # linked project id
+├── docs/              # markdown docs and navigation.json
+├── tickets/           # local ticket files and artifacts
+└── templates/         # project templates written through the API
 ```
 
-Two surfaces consume the same API:
-
-- **CLI** (`pstdio`) — terminal commands
-- **Dashboard** — web-based UI
-
-See the [Architecture](/architecture/api) and [Contributing](/contributing/overview) sections for more details.
+See [Architecture](/architecture/api) and [Contributing](/contributing/overview) for implementation and workflow details.

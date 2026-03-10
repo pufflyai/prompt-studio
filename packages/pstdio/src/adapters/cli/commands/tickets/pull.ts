@@ -53,15 +53,30 @@ type PullTicketOpts = {
   force: boolean;
 };
 
+const resolveParentFrontmatterValue = async (deps: Deps, parentId: string | null) => {
+  if (!parentId) return null;
+  if (/^[A-Za-z]+-\d+$/.test(parentId)) {
+    return parentId;
+  }
+
+  const parentTicket = await deps.getTicket(API_URL, parentId);
+  if (!parentTicket?.shorthand) {
+    return parentId;
+  }
+
+  return parentTicket.shorthand;
+};
+
 const pullSingleTicket = async ({ deps, root, ticketId, shorthand, statusName, force }: PullTicketOpts) => {
   const ticket = await deps.getTicket(API_URL, ticketId);
   if (!ticket) throw new Error(`Ticket not found: ${shorthand}`);
+  const parentId = await resolveParentFrontmatterValue(deps, ticket.parent_id);
 
   const frontmatter = buildTicketFrontmatter({
     shorthand,
     created_at: ticket.created_at,
     status_name: statusName,
-    parent_id: ticket.parent_id,
+    parent_id: parentId,
     user_prompt: ticket.user_prompt ?? null,
     priority: ticket.priority,
     complexity: ticket.complexity,

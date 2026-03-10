@@ -19,7 +19,6 @@ import { TicketsBoardView } from "../components/tickets-board-view";
 import { TicketsHeader } from "../components/tickets-header";
 import { TicketsListView } from "../components/tickets-list-view";
 import { type BadgeContext, DEFAULT_DISPLAY_SETTINGS, type DisplaySettings } from "../types";
-import { filterTickets } from "../utils/filter-tickets";
 import { groupTickets, orderTickets } from "../utils/ticket-grouping";
 
 export const TicketsPanel = () => {
@@ -35,16 +34,14 @@ export const TicketsPanel = () => {
 
   const { t } = useTranslation("tickets");
   const [settings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
-  const [searchQuery, setSearchQuery] = useState("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createModalStatus, setCreateModalStatus] = useState<TicketStatus | null>(null);
 
   const isLoading = isProjectLoading || isTicketsLoading;
   const statusOptions = project?.ticketStatusOptions ?? [];
   const allTickets = (tickets ?? []).filter((t) => !t.archived);
-  const visibleTickets = filterTickets(allTickets, searchQuery);
 
-  const groups = groupTickets(visibleTickets, settings.grouping, statusOptions).map((group) => ({
+  const groups = groupTickets(allTickets, settings.grouping, statusOptions).map((group) => ({
     ...group,
     tickets: orderTickets(group.tickets, settings.ordering),
   }));
@@ -166,7 +163,7 @@ export const TicketsPanel = () => {
 
   return (
     <Stack gap="0" height="100%">
-      <TicketsHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+      <TicketsHeader />
 
       <Stack flex="1" minH="0">
         {settings.viewMode === "board" ? (

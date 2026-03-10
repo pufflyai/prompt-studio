@@ -1,3 +1,4 @@
+import { useMutation } from "@tanstack/react-query";
 import type { StatusResponse, TagResponse } from "pstdio-api/dto";
 import { asSyncedRows, eq, getCollection, type SyncedRow, useLiveQuery } from "@/features/sync/collections";
 import {
@@ -11,7 +12,6 @@ import {
 } from "@/features/ticket-list/data/api";
 import { toTicketStatusOption, toTicketTag } from "@/features/ticket-list/data/api/mappers";
 import type { Ticket, TicketStatus, TicketStatusColor, TicketTag } from "@/features/ticket-list/types";
-import { useMutation } from "@/lib/use-mutation";
 
 const DEFAULT_STATUS_COLOR: TicketStatusColor = "gray";
 const DEFAULT_STATUS_NAME = "Unassigned";
@@ -234,8 +234,8 @@ export const useProjectTicketTags = (projectId: string | undefined) => {
 };
 
 export const useUpdateProjectTicket = (projectId: string | undefined) =>
-  useMutation(
-    async (input: {
+  useMutation({
+    mutationFn: async (input: {
       ticketId: string;
       title?: string;
       content?: string;
@@ -250,40 +250,52 @@ export const useUpdateProjectTicket = (projectId: string | undefined) =>
       if (input.archived !== undefined) body.archived = input.archived;
       await updateProjectTicket(projectId, input.ticketId, body as Parameters<typeof updateProjectTicket>[2]);
     },
-  );
+  });
 
 export const useUpdateProjectTicketStatus = (projectId: string | undefined) =>
-  useMutation(async ({ ticketId, status }: { ticketId: string; status: TicketStatus }) => {
-    if (!projectId) throw new Error("Project id is required to update tickets.");
-    await updateProjectTicketStatus(projectId, { id: ticketId } as Ticket, status);
+  useMutation({
+    mutationFn: async ({ ticketId, status }: { ticketId: string; status: TicketStatus }) => {
+      if (!projectId) throw new Error("Project id is required to update tickets.");
+      await updateProjectTicketStatus(projectId, { id: ticketId } as Ticket, status);
+    },
   });
 
 export const useDeleteProjectTicket = (projectId: string | undefined) =>
-  useMutation(async ({ ticketId }: { ticketId: string }) => {
-    if (!projectId) throw new Error("Project id is required to delete tickets.");
-    await deleteProjectTicket(projectId, ticketId);
+  useMutation({
+    mutationFn: async ({ ticketId }: { ticketId: string }) => {
+      if (!projectId) throw new Error("Project id is required to delete tickets.");
+      await deleteProjectTicket(projectId, ticketId);
+    },
   });
 
 export const useUpdateProjectTicketTags = (projectId: string | undefined) =>
-  useMutation(async ({ ticketId, tagIds }: { ticketId: string; tagIds: string[] }) => {
-    if (!projectId) throw new Error("Project id is required to update ticket tags.");
-    await updateProjectTicketTags(ticketId, tagIds);
+  useMutation({
+    mutationFn: async ({ ticketId, tagIds }: { ticketId: string; tagIds: string[] }) => {
+      if (!projectId) throw new Error("Project id is required to update ticket tags.");
+      await updateProjectTicketTags(ticketId, tagIds);
+    },
   });
 
 export const useCreateProjectTicketTag = (projectId: string | undefined) =>
-  useMutation(async (input: { name: string; color: TicketStatusColor }) => {
-    if (!projectId) throw new Error("Project id is required.");
-    return createProjectTicketTag(projectId, input);
+  useMutation({
+    mutationFn: async (input: { name: string; color: TicketStatusColor }) => {
+      if (!projectId) throw new Error("Project id is required.");
+      return createProjectTicketTag(projectId, input);
+    },
   });
 
 export const useUpdateProjectTicketTag = (projectId: string | undefined) =>
-  useMutation(async (input: { tag: TicketTag; name: string; color: TicketStatusColor }) => {
-    if (!projectId) throw new Error("Project id is required.");
-    return updateProjectTicketTagDefinition(projectId, input.tag.id, { name: input.name, color: input.color });
+  useMutation({
+    mutationFn: async (input: { tag: TicketTag; name: string; color: TicketStatusColor }) => {
+      if (!projectId) throw new Error("Project id is required.");
+      return updateProjectTicketTagDefinition(projectId, input.tag.id, { name: input.name, color: input.color });
+    },
   });
 
 export const useDeleteProjectTicketTag = (projectId: string | undefined) =>
-  useMutation(async (tagId: string) => {
-    if (!projectId) throw new Error("Project id is required.");
-    await deleteProjectTicketTag(projectId, tagId);
+  useMutation({
+    mutationFn: async (tagId: string) => {
+      if (!projectId) throw new Error("Project id is required.");
+      await deleteProjectTicketTag(projectId, tagId);
+    },
   });

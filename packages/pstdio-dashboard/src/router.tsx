@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { Layout } from "@/components/layout";
 import { isOnboardingComplete } from "@/features/agents/agent-storage";
+import { AgentProvider } from "@/features/agents/state";
 import { ChangelogPanel } from "@/features/changelog/pages/changelog-panel";
 import { DocsPanel } from "@/features/documentation/pages/docs-panel";
 import { Onboarding } from "@/features/onboarding/pages/onboarding";
@@ -43,9 +44,11 @@ export const resolveProjectDefaultPath = (projectId?: string) => {
 
 export const AppLayout = () => {
   return (
-    <WorkspaceProvider>
-      <Layout />
-    </WorkspaceProvider>
+    <AgentProvider>
+      <WorkspaceProvider>
+        <Layout />
+      </WorkspaceProvider>
+    </AgentProvider>
   );
 };
 

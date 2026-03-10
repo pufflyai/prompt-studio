@@ -169,7 +169,8 @@ bun changeset
 
 Select the affected packages, choose the semver bump (`patch`, `minor`, `major`), and write a one-line changelog summary. Commit the generated `.changeset/*.md` file with the PR.
 
-- **Do not** add a changeset for changes to private packages (e.g. `e2e`, the root).
+- **Do not** add a changeset for private packages themselves — they are not published.
+- When changes to a private package (e.g. `pstdio-db`, `pstdio-api`) alter what the published `pstdio` or `@pstdio/ui` packages ship, add a changeset for the **published** package.
 - **Do not** manually edit `package.json` versions — Changesets handles that.
 - One changeset per PR is usually enough. Use multiple only if unrelated packages need different bump types.
 
@@ -183,3 +184,7 @@ When changing APIs:
 - Provide proof in artifacts:
   - `curl` requests + responses
   - logs showing handler execution
+
+### Project Planning and Documentation
+
+This project uses `pstdio` to manage tickets and documentation. You can find relevant information in `.pstdio/docs` including project architecture and challenging bugs encountered.

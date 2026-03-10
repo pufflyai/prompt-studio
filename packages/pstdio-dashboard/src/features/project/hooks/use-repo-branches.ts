@@ -1,7 +1,9 @@
+import { useQuery } from "@tanstack/react-query";
 import { getRepoBranches } from "@/features/project/data/api";
-import { useFetch } from "@/lib/use-fetch";
 
 export const useRepoBranches = (repoId?: string | null, options?: { enabled?: boolean }) =>
-  useFetch(() => getRepoBranches(repoId ?? ""), [repoId], {
+  useQuery({
+    queryKey: ["repo-branches", repoId],
+    queryFn: () => getRepoBranches(repoId ?? ""),
     enabled: (options?.enabled ?? true) && Boolean(repoId),
   });

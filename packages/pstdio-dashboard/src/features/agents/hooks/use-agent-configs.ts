@@ -1,6 +1,6 @@
+import { useMutation } from "@tanstack/react-query";
 import { asSyncedRows, getCollection, type SyncedRow, useLiveQuery } from "@/features/sync/collections";
 import { apiRequest } from "@/lib/api";
-import { useMutation } from "@/lib/use-mutation";
 import type { AgentConfig } from "../types";
 
 const toAgentConfig = (row: SyncedRow): AgentConfig => ({
@@ -24,20 +24,24 @@ export const useAgentConfigs = () => {
 };
 
 export const useEnableAgent = () =>
-  useMutation((agentId: string) =>
-    apiRequest<AgentConfig>("/v1/agents", {
-      method: "POST",
-      body: { agent_id: agentId },
-    }),
-  );
+  useMutation({
+    mutationFn: (agentId: string) =>
+      apiRequest<AgentConfig>("/v1/agents", {
+        method: "POST",
+        body: { agent_id: agentId },
+      }),
+  });
 
 export const useDisableAgent = () =>
-  useMutation((agentId: string) => apiRequest<void>(`/v1/agents/${agentId}`, { method: "DELETE" }));
+  useMutation({
+    mutationFn: (agentId: string) => apiRequest<void>(`/v1/agents/${agentId}`, { method: "DELETE" }),
+  });
 
 export const useSetDefaultAgent = () =>
-  useMutation((agentId: string) =>
-    apiRequest<AgentConfig>(`/v1/agents/${agentId}`, {
-      method: "PATCH",
-      body: { is_default: true },
-    }),
-  );
+  useMutation({
+    mutationFn: (agentId: string) =>
+      apiRequest<AgentConfig>(`/v1/agents/${agentId}`, {
+        method: "PATCH",
+        body: { is_default: true },
+      }),
+  });

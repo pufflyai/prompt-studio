@@ -1,6 +1,6 @@
+import { useMutation } from "@tanstack/react-query";
 import { createProjectTicket } from "@/features/ticket-list/data/api";
 import type { TicketStatus } from "@/features/ticket-list/types";
-import { useMutation } from "@/lib/use-mutation";
 
 interface CreateProjectTicketInput {
   title: string;
@@ -11,7 +11,9 @@ interface CreateProjectTicketInput {
 }
 
 export const useCreateProjectTicket = (projectId: string | undefined) =>
-  useMutation(async (input: CreateProjectTicketInput) => {
-    if (!projectId) throw new Error("Project id is required to create tickets.");
-    return createProjectTicket({ projectId, ...input });
+  useMutation({
+    mutationFn: async (input: CreateProjectTicketInput) => {
+      if (!projectId) throw new Error("Project id is required to create tickets.");
+      return createProjectTicket({ projectId, ...input });
+    },
   });

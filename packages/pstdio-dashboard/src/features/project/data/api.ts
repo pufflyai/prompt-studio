@@ -116,9 +116,9 @@ export const removeProjectRepository = async (projectId: string, repoId: string)
   throw new Error(`Removing repositories is not supported yet. projectId=${projectId}, repoId=${repoId}`);
 };
 
-export const getRepoBranches = async (repoId: string) => {
+export const getRepoBranches = async (repoId: string): Promise<RepoBranch[]> => {
   void repoId;
-  return [] satisfies RepoBranch[];
+  return [];
 };
 
 export const getProjectTemplateAssets = async (projectId: string): Promise<ProjectTemplateAsset[]> => {

@@ -49,7 +49,7 @@ Markdown instruction files that teach agents how to perform project-specific wor
 
 ### Templates
 
-Reusable markdown files with `{{PLACEHOLDER}}` tokens, substituted when creating tickets or docs. Two types: **ticket templates** (scaffold new tickets) and **doc templates** (scaffold documentation pages like specs, ADRs, cookbooks).
+Reusable markdown files with `{{PLACEHOLDER}}` tokens, substituted when creating tickets or docs. Two types: **ticket templates** (scaffold new tickets) and **doc templates** (scaffold documentation pages like PRDs, ADRs, cookbooks, and lessons learned).
 
 ### Agents
 
@@ -206,14 +206,14 @@ pstdio workspaces startup-log --id <ws-id>           # Show startup script log
 
 ```bash
 pstdio templates list                                # List all templates
-pstdio templates create --name <n> --type <ticket|docs> --file <path> [--default]
+pstdio templates create --name <n> --type <prompt|ticket|document> --file <path> [--default]
 pstdio templates update --name <n> [--file <path>] [--default]
 pstdio templates write --name <n> --target <ticket-id|docs/path>
 pstdio templates delete --name <n>
 ```
 
 Bundled ticket templates: `ticket`, `proposal`.
-Bundled doc templates: `spec`, `adr`, `cookbook`, `review-me`.
+Bundled doc templates: `prd`, `adr`, `cookbook`, `review-me`, `lessons-learned`.
 
 ### Statuses & Tags
 

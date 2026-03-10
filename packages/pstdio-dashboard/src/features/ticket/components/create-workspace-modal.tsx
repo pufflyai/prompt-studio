@@ -1,17 +1,7 @@
 import { Button, CloseButton, Dialog, HStack, Stack, Text } from "@chakra-ui/react";
-import { ContentPlaceholder, ContentPlaceholderLabel } from "@pstdio/ui";
 import { useTranslation } from "react-i18next";
-import { WorkspaceAgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
-
-// TODO: Build WorkspaceRepoMenuContainer — stubbed as placeholder for now
-const WorkspaceRepoMenuPlaceholder = () => {
-  const { t } = useTranslation("tickets");
-  return (
-    <ContentPlaceholder>
-      <ContentPlaceholderLabel>{t("ticketDetail.repoSelector")}</ContentPlaceholderLabel>
-    </ContentPlaceholder>
-  );
-};
+import { AgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
+import { RepoBrowserContainer } from "@/features/workspaces/components/repo-browser.container";
 
 interface CreateWorkspaceModalProps {
   open: boolean;
@@ -54,8 +44,8 @@ export const CreateWorkspaceModal = (props: CreateWorkspaceModalProps) => {
               </Text>
 
               <HStack justify="space-between" align="center" wrap="wrap">
-                <WorkspaceAgentBrowserContainer isDisabled={isSubmitting} />
-                <WorkspaceRepoMenuPlaceholder />
+                <AgentBrowserContainer isDisabled={isSubmitting} />
+                <RepoBrowserContainer isDisabled={isSubmitting} />
               </HStack>
             </Stack>
           </Dialog.Body>

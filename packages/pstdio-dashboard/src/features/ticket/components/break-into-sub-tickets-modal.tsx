@@ -3,7 +3,7 @@ import { MenuItem } from "@pstdio/ui";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { WorkspaceAgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
+import { AgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
 
 interface TemplateOption {
   id: string;
@@ -102,7 +102,7 @@ export const BreakIntoSubTicketsModal = (props: BreakIntoSubTicketsModalProps) =
 
               <Stack gap="2xs">
                 <Text textStyle="label/S/medium">{t("breakIntoSubTicketsModal.agent")}</Text>
-                <WorkspaceAgentBrowserContainer isDisabled={isSubmitting} />
+                <AgentBrowserContainer isDisabled={isSubmitting} />
               </Stack>
             </Stack>
           </Dialog.Body>

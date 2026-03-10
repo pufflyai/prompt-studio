@@ -46,5 +46,6 @@ config.json
 ## Templates
 
 - `pstdio templates write --name <template-name> --target docs or <ticket-shorthand>`
+- Bundled documentation templates: `prd`, `adr`, `cookbook`, `review-me`, `lessons-learned`
 
 similar to tickets write

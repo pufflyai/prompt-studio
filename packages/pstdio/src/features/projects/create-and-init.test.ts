@@ -7,7 +7,7 @@ import { createAndInitProject } from "./create-and-init";
 const tmpBase = join(import.meta.dirname, "__test-tmp__");
 
 const templateResponse = { status: 201, body: { id: "tpl", name: "t", template_type: "document", is_default: false } };
-const seedTemplateResponses = Array.from({ length: 6 }, () => templateResponse);
+const seedTemplateResponses = Array.from({ length: 7 }, () => templateResponse);
 
 const skillFixture = (name: string) => ({
   id: `id-${name}`,
@@ -54,8 +54,8 @@ describe("createAndInitProject", () => {
     const project = await createAndInitProject(root, "Test", { homedir: fakeHome, repoPaths: [root] });
 
     expect(project).toEqual({ id: "proj-1", name: "Test" });
-    // 1 create + 1 register + 6 templates + 1 agents + 1 skill list + 2 skill gets = 12
-    expect(globalThis.fetch).toHaveBeenCalledTimes(12);
+    // 1 create + 1 register + 7 templates + 1 agents + 1 skill list + 2 skill gets = 13
+    expect(globalThis.fetch).toHaveBeenCalledTimes(13);
 
     const config = JSON.parse(readFileSync(join(root, ".pstdio", "config.json"), "utf8"));
     expect(config.project_id).toBe("proj-1");
@@ -81,8 +81,8 @@ describe("createAndInitProject", () => {
     });
 
     expect(project).toEqual({ id: "proj-no-repo", name: "NoRepo" });
-    // 1 create + 0 registerRepo + 6 templates + 1 agents (empty → early return) = 8
-    expect(globalThis.fetch).toHaveBeenCalledTimes(8);
+    // 1 create + 0 registerRepo + 7 templates + 1 agents (empty → early return) = 9
+    expect(globalThis.fetch).toHaveBeenCalledTimes(9);
 
     const config = JSON.parse(readFileSync(join(root, ".pstdio", "config.json"), "utf8"));
     expect(config.project_id).toBe("proj-no-repo");

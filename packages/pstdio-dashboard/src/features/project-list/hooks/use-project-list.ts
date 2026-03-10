@@ -1,5 +1,5 @@
+import { useMutation } from "@tanstack/react-query";
 import { asSyncedRows, getCollection, type SyncedRow, useLiveQuery } from "@/features/sync/collections";
-import { useMutation } from "@/lib/use-mutation";
 import { createProject, deleteProject } from "../data/api";
 import type { ProjectListItem } from "../types";
 
@@ -23,9 +23,11 @@ export const useProjectList = () => {
   return { data, isLoading };
 };
 
-export const useCreateProject = () => useMutation(createProject);
+export const useCreateProject = () => useMutation({ mutationFn: createProject });
 
 export const useDeleteProject = () =>
-  useMutation(async ({ projectId }: { projectId: string }) => {
-    await deleteProject(projectId);
+  useMutation({
+    mutationFn: async ({ projectId }: { projectId: string }) => {
+      await deleteProject(projectId);
+    },
   });

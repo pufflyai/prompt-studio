@@ -1,25 +1,24 @@
 import { useEffect } from "react";
-import { useWorkspaceStore } from "@/features/workspaces/state";
+import { useAgentStore } from "@/features/agents/state";
 import type { CodingAgent } from "../agent-storage";
-import { setStoredAgent } from "../agent-storage";
 import { useAgentModels } from "../hooks/use-agent-models";
 import { useAgents } from "../hooks/use-agents";
 import { WorkspaceAgentMenu } from "./agent-browser";
 
-interface WorkspaceAgentBrowserContainerProps {
+interface AgentBrowserContainerProps {
   isDisabled?: boolean;
   isAgentSwitchDisabled?: boolean;
 }
 
 const DEFAULT_AGENT_ID = "opencode";
 
-export const WorkspaceAgentBrowserContainer = (props: WorkspaceAgentBrowserContainerProps) => {
+export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
   const { isDisabled = false, isAgentSwitchDisabled = false } = props;
 
-  const selectedAgent = useWorkspaceStore((state) => state.selectedAgent);
-  const selectedModel = useWorkspaceStore((state) => state.selectedModel);
-  const setSelectedAgent = useWorkspaceStore((state) => state.setSelectedAgent);
-  const setSelectedModel = useWorkspaceStore((state) => state.setSelectedModel);
+  const selectedAgent = useAgentStore((state) => state.selectedAgent);
+  const selectedModel = useAgentStore((state) => state.selectedModel);
+  const setSelectedAgent = useAgentStore((state) => state.setSelectedAgent);
+  const setSelectedModel = useAgentStore((state) => state.setSelectedModel);
 
   const { data: agents = [] } = useAgents();
   const { data: models = [], isLoading: isModelsPending } = useAgentModels(selectedAgent, {
@@ -52,9 +51,7 @@ export const WorkspaceAgentBrowserContainer = (props: WorkspaceAgentBrowserConta
   }, [isModelsPending, models, selectedAgent, selectedModel, setSelectedModel]);
 
   const handleSelectAgent = (agent: string) => {
-    const selected = agent as CodingAgent;
-    setSelectedAgent(selected);
-    setStoredAgent(selected);
+    setSelectedAgent(agent as CodingAgent);
   };
 
   const agentOptions = agents.map((agent) => ({
