@@ -1,4 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { eq, ticket_tag_assignments } from "pstdio-db";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { notFoundResponseSchema, ticketResponseSchema, updateTicketBodySchema } from "../dto";
@@ -92,7 +93,21 @@ export const updateTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof upd
     }
 
     if (tag_ids) {
+      // Emit deletes for old assignments before replacing
+      const oldAssignments = await deps.db
+        .select()
+        .from(ticket_tag_assignments)
+        .where(eq(ticket_tag_assignments.ticket_id, id));
+      for (const row of oldAssignments) deps.eventBus.emit("ticket_tag_assignments", "delete", { id: row.id });
+
       await deps.ticketsService.assignTags(id, tag_ids);
+
+      // Emit inserts for new assignments
+      const newAssignments = await deps.db
+        .select()
+        .from(ticket_tag_assignments)
+        .where(eq(ticket_tag_assignments.ticket_id, id));
+      for (const row of newAssignments) deps.eventBus.emit("ticket_tag_assignments", "set", row);
     }
 
     deps.eventBus.emit("tickets", "set", updated);

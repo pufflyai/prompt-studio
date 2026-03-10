@@ -145,7 +145,7 @@ export const useProjectTickets = (projectId: string | undefined) => {
     if (!ticketIds.has(ta.ticket_id as string)) continue;
     const ticketId = ta.ticket_id as string;
     const existing = tagIdsByTicket.get(ticketId) ?? [];
-    existing.push(ta.tag_id as string);
+    existing.push(ta.ticket_tag_id as string);
     tagIdsByTicket.set(ticketId, existing);
   }
 
