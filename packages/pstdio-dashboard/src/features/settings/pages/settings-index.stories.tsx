@@ -1,58 +1,37 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
-
-import type { AgentConfig, AgentInfo } from "@/features/agents/types";
+import { useEffect, useState } from "react";
+import { seedCollection } from "@/features/sync/seed-collections";
 import { Settings } from "./settings-index";
 
-const agentInfos: AgentInfo[] = [
-  { id: "claude-code", name: "Claude Code", availability: { type: "INSTALLED" } },
-  { id: "opencode", name: "OpenCode", availability: { type: "INSTALLED" } },
-  { id: "codex", name: "Codex", availability: { type: "NOT_FOUND" } },
-];
-
-const agentConfigs: AgentConfig[] = [
-  {
-    id: "1",
-    agent_id: "claude-code",
-    is_default: true,
-    config: "{}",
-    created_at: "2026-01-01T00:00:00Z",
-    updated_at: "2026-01-01T00:00:00Z",
-  },
-];
-
-const createMockQueryClient = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: Infinity,
-        gcTime: Infinity,
-        retry: false,
-        refetchOnMount: false,
-        refetchOnWindowFocus: false,
-        refetchOnReconnect: false,
-      },
-      mutations: { retry: false },
-    },
-  });
-
-  queryClient.setQueryData(["agents", "info"], agentInfos);
-  queryClient.setQueryData(["agents", "configs"], agentConfigs);
-
-  return queryClient;
+const seedAgentConfigs = (configs: Array<{ id: string; agent_id: string; is_default: boolean }>) => {
+  seedCollection(
+    "agent_configs",
+    configs.map((c) => ({
+      id: c.id,
+      agent_id: c.agent_id,
+      is_default: c.is_default,
+      config: "{}",
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+    })),
+  );
 };
 
 const SettingsStory = () => {
-  const [queryClient] = useState(createMockQueryClient);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    seedAgentConfigs([{ id: "1", agent_id: "claude-code", is_default: true }]);
+    setReady(true);
+  }, []);
+
+  if (!ready) return null;
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <Box bg="background.primary" minH="100vh">
-        <Settings />
-      </Box>
-    </QueryClientProvider>
+    <Box bg="background.primary" minH="100vh">
+      <Settings />
+    </Box>
   );
 };
 
@@ -69,36 +48,20 @@ export const Default: Story = {
   render: () => <SettingsStory />,
 };
 
-const createEmptyQueryClient = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: Infinity,
-        gcTime: Infinity,
-        retry: false,
-        refetchOnMount: false,
-        refetchOnWindowFocus: false,
-        refetchOnReconnect: false,
-      },
-      mutations: { retry: false },
-    },
-  });
-
-  queryClient.setQueryData(["agents", "info"], []);
-  queryClient.setQueryData(["agents", "configs"], []);
-
-  return queryClient;
-};
-
 const EmptyStory = () => {
-  const [queryClient] = useState(createEmptyQueryClient);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    seedAgentConfigs([]);
+    setReady(true);
+  }, []);
+
+  if (!ready) return null;
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <Box bg="background.primary" minH="100vh">
-        <Settings />
-      </Box>
-    </QueryClientProvider>
+    <Box bg="background.primary" minH="100vh">
+      <Settings />
+    </Box>
   );
 };
 

@@ -19,7 +19,7 @@ export const SessionsPanel = () => {
 
   const { data: sessions = [], isLoading } = useProjectSessions(projectId);
   const { data: selectedSessionDetails } = useProjectSession(projectId, selectedSessionId);
-  const archiveSession = useArchiveSession(projectId);
+  const archiveSession = useArchiveSession();
 
   const selectedSession = sessions.find((s) => s.id === selectedSessionId) ?? null;
   const downloadableSession = selectedSessionDetails ?? selectedSession;

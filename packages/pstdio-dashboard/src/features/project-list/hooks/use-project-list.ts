@@ -1,40 +1,31 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { projectKeys } from "@/features/project/hooks/keys";
-import { createProject, deleteProject, getProjects } from "../data/api";
+import { asSyncedRows, getCollection, type SyncedRow, useLiveQuery } from "@/features/sync/collections";
+import { useMutation } from "@/lib/use-mutation";
+import { createProject, deleteProject } from "../data/api";
+import type { ProjectListItem } from "../types";
 
-export const useProjectList = (options?: { enabled?: boolean }) => {
-  const enabled = options?.enabled ?? true;
+const toProjectListItem = (row: SyncedRow): ProjectListItem => ({
+  id: row.id,
+  name: row.name as string,
+  createdAt: row.created_at as string,
+  updatedAt: row.updated_at as string,
+});
 
-  return useQuery({
-    queryKey: projectKeys.all,
-    queryFn: getProjects,
-    enabled,
-    select: (projects) =>
-      [...projects].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-  });
+export const useProjectList = () => {
+  const { data: rawRows, isLoading } = useLiveQuery((q) =>
+    q.from({ p: getCollection("projects") }).select(({ p }) => ({ ...p })),
+  );
+  const rows = asSyncedRows(rawRows);
+
+  const data = rows
+    ? [...rows].map(toProjectListItem).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    : undefined;
+
+  return { data, isLoading };
 };
 
-export const useCreateProject = () => {
-  const queryClient = useQueryClient();
+export const useCreateProject = () => useMutation(createProject);
 
-  return useMutation({
-    mutationFn: createProject,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.all });
-    },
+export const useDeleteProject = () =>
+  useMutation(async ({ projectId }: { projectId: string }) => {
+    await deleteProject(projectId);
   });
-};
-
-export const useDeleteProject = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ projectId }: { projectId: string }) => deleteProject(projectId),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.all });
-      queryClient.removeQueries({ queryKey: projectKeys.detail(variables.projectId) });
-      queryClient.removeQueries({ queryKey: projectKeys.tickets(variables.projectId) });
-      queryClient.removeQueries({ queryKey: projectKeys.sessions(variables.projectId) });
-    },
-  });
-};

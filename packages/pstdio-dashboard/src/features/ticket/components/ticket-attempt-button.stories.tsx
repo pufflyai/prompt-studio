@@ -1,6 +1,5 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -9,71 +8,33 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { type ComponentProps, useState } from "react";
-import { agentModelKeys } from "@/features/agents/hooks/use-agent-models";
-import { agentKeys } from "@/features/agents/hooks/use-agents";
-import { projectKeys } from "@/features/project/hooks/keys";
-import { repoBranchKeys } from "@/features/project/hooks/use-repo-branches";
+import { type ComponentProps, useEffect, useState } from "react";
+import { seedCollection } from "@/features/sync/seed-collections";
 import { WorkspaceProvider } from "@/features/workspaces/state";
 import { TicketAttemptButton } from "./ticket-attempt-button";
 
 const PROJECT_ID = "project-ticket-attempt-story";
 const REPO_ID = "repo-ticket-attempt-story";
 
-const createTicketAttemptButtonQueryClient = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: Infinity,
-        gcTime: Infinity,
-        retry: false,
-        refetchOnMount: false,
-        refetchOnWindowFocus: false,
-        refetchOnReconnect: false,
-      },
-      mutations: { retry: false },
-    },
-  });
-
-  queryClient.setQueryData(agentKeys.list(), [
-    {
-      id: "opencode",
-      name: "Opencode",
-      availability: { type: "INSTALLED" },
-      capabilities: [],
-      isDefault: true,
-    },
-  ]);
-
-  queryClient.setQueryData(agentModelKeys.byAgent("opencode"), [{ id: "o3" }]);
-
-  queryClient.setQueryData(projectKeys.repositories(PROJECT_ID), [
+const seedStoryData = () => {
+  seedCollection("repos", [
     {
       id: REPO_ID,
       name: "schub",
-      displayName: "Schub",
+      display_name: "Schub",
       path: "/repos/schub",
-      createdAt: "2026-02-20T00:00:00.000Z",
-      updatedAt: "2026-02-20T00:00:00.000Z",
+      created_at: "2026-02-20T00:00:00.000Z",
+      updated_at: "2026-02-20T00:00:00.000Z",
     },
   ]);
 
-  queryClient.setQueryData(repoBranchKeys.byRepo(REPO_ID), [
+  seedCollection("project_repos", [
     {
-      name: "main",
-      isCurrent: true,
-      isRemote: false,
-      lastCommitDate: "2026-02-20T00:00:00.000Z",
-    },
-    {
-      name: "feature/attempt-button",
-      isCurrent: false,
-      isRemote: false,
-      lastCommitDate: "2026-02-20T00:00:00.000Z",
+      id: `pr-${REPO_ID}`,
+      project_id: PROJECT_ID,
+      repo_id: REPO_ID,
     },
   ]);
-
-  return queryClient;
 };
 
 const createTicketAttemptButtonRouter = (props: ComponentProps<typeof TicketAttemptButton>) => {
@@ -124,14 +85,17 @@ const createTicketAttemptButtonRouter = (props: ComponentProps<typeof TicketAtte
 };
 
 const TicketAttemptButtonStory = (props: ComponentProps<typeof TicketAttemptButton>) => {
-  const [queryClient] = useState(createTicketAttemptButtonQueryClient);
+  const [ready, setReady] = useState(false);
   const router = createTicketAttemptButtonRouter(props);
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  );
+  useEffect(() => {
+    seedStoryData();
+    setReady(true);
+  }, []);
+
+  if (!ready) return null;
+
+  return <RouterProvider router={router} />;
 };
 
 const meta = {

@@ -1,6 +1,5 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { projectKeys } from "@/features/project/hooks/keys";
 import { apiRequest } from "@/lib/api";
+import { useMutation } from "@/lib/use-mutation";
 
 interface CreateWorkspaceSessionInput {
   prompt: string;
@@ -14,31 +13,20 @@ interface CreateWorkspaceSessionResult {
   sessionId: string;
 }
 
-export const useCreateWorkspaceSession = (projectId: string | undefined) => {
-  const queryClient = useQueryClient();
+export const useCreateWorkspaceSession = (projectId: string | undefined) =>
+  useMutation(async (input: CreateWorkspaceSessionInput) => {
+    if (!projectId) throw new Error("Project id is required to create a workspace session.");
 
-  return useMutation({
-    mutationFn: async (input: CreateWorkspaceSessionInput) => {
-      if (!projectId) {
-        throw new Error("Project id is required to create a workspace session.");
-      }
+    const response = await apiRequest<{ id: string }>("/v1/sessions", {
+      method: "POST",
+      body: {
+        project_id: projectId,
+        title: input.prompt.slice(0, 100),
+        prompt: input.prompt,
+        agent: input.agent,
+        model: input.model ?? undefined,
+      },
+    });
 
-      const response = await apiRequest<{ id: string }>("/v1/sessions", {
-        method: "POST",
-        body: {
-          project_id: projectId,
-          title: input.prompt.slice(0, 100),
-          prompt: input.prompt,
-          agent: input.agent,
-          model: input.model ?? undefined,
-        },
-      });
-
-      return { sessionId: response.id } satisfies CreateWorkspaceSessionResult;
-    },
-    onSuccess: () => {
-      if (!projectId) return;
-      queryClient.invalidateQueries({ queryKey: projectKeys.sessions(projectId) });
-    },
+    return { sessionId: response.id } satisfies CreateWorkspaceSessionResult;
   });
-};

@@ -9,7 +9,7 @@ The API streams database changes to connected clients in real time using Server-
 │    CLI    │           │   Dashboard   │
 └─────┬─────┘           └───────┬───────┘
       │                         │
-      │                    EventSource
+      │                    fetch + SSE
       │                         │
       │                         │
       └──── REST ────►┐◄──── ───┘
@@ -58,42 +58,51 @@ Some mutations create implicit rows (e.g. creating a project auto-creates defaul
 
 ## Client
 
-Each synced table maps to a TanStack DB `Collection`. An `EventSource` connection routes SSE events to collection writers. Auto-reconnects after 1 second with `?since=<lastSeq>`.
+Each synced table maps to a TanStack DB `Collection`. A `fetch`-based SSE reader connects to the stream endpoint and routes events to collection writers. Auto-reconnects after 1 second with `?since=<lastSeq>`.
 
-### Two-layer state model (Tanstack DB)
+### Querying collections
 
-Each collection maintains two separate layers of state:
+Components read synced data with `useLiveQuery`. Every query must use the **spread pattern** in `.select()` to preserve all fields:
 
-- **Synced data.** Immutable rows written by the sync stream. The collection's `sync` callback receives SSE events and writes them here.
-- **Optimistic state.** Pending local mutations not yet confirmed by the server. Applied as an overlay on top of synced data.
+```ts
+// Correct — spread preserves all fields
+useLiveQuery((q) =>
+  q.from({ t: getCollection("tickets") })
+   .where(({ t }) => eq(t.project_id, projectId))
+   .select(({ t }) => ({ ...t })),
+  [projectId],
+);
 
-`useLiveQuery` merges both layers into a single view. Components always see the combined result — they do not need to know which layer a row came from.
+// Wrong — returning the proxy strips unaccessed fields
+.select(({ t }) => t)
+```
 
-### Optimistic mutations
+TanStack DB's query builder uses JavaScript Proxies to track property access in `.select()`. Returning the proxy directly only includes properties that were explicitly read through it. The spread operator triggers TanStack DB's internal merge mechanism that includes all fields from the source table. See [TanStack DB select proxy](/lessons-learned/tanstack_db_select_proxy) for the full story.
 
-Collections define `onInsert`, `onUpdate`, and `onDelete` handlers that persist changes to the API. Mutations go through the collection, not directly to REST:
+Because all collections use a generic `SyncedRow` type (`{ id: string; [key: string]: unknown }`), the proxy-returned type loses the index signature. The `asSyncedRows()` helper casts the result back.
 
-1. **Mutate the collection.** Call `collection.insert()`, `collection.update()`, or `collection.delete()`. The change is added to the optimistic state layer. `useLiveQuery` immediately reflects it in the merged view.
-2. **Handler persists to API.** The collection's `onInsert`/`onUpdate`/`onDelete` handler fires and sends the mutation to the REST endpoint.
-3. **Success.** The handler resolves. The server emits the change via SSE, which updates the synced data layer. The optimistic entry is dropped — the synced data now contains the confirmed row.
-4. **Failure.** The handler throws. The optimistic entry is removed and the merged view reverts to the synced data layer. No manual rollback needed.
+### Mutations
+
+Mutations go directly to the REST API via `useMutation` + `apiRequest`. They do **not** go through TanStack DB collections. The update flow is:
+
+1. Component calls `mutate()` which sends a REST request (POST/PATCH/DELETE).
+2. The API writes to the database and emits an event to the EventBus.
+3. The SSE stream delivers the event to all connected clients.
+4. The collection writer updates the TanStack DB collection.
+5. `useLiveQuery` re-renders components with the new data.
 
 ```
-collection.update()
-  │
-  ├──► optimistic state (instant, visible via useLiveQuery)
-  │
-  └──► onUpdate handler ──► API ──► DB + EventBus emit
-                                          │
-                               ┌──────────┼──────────┐
-                               ▼          ▼          ▼
-                          this client  client B   client C
-                          (synced      (synced     (synced
-                           data         data        data
-                           replaces     updated)    updated)
-                           optimistic
-                           overlay)
+mutate() ──► REST API ──► DB + EventBus emit
+                                   │
+                        ┌──────────┼──────────┐
+                        ▼          ▼          ▼
+                   this client  client B   client C
+                   (collection  (collection (collection
+                    updated      updated)    updated)
+                    via SSE)
 ```
+
+There is no optimistic state layer — the UI updates only after the SSE event arrives. This keeps the implementation simple at the cost of a small delay (typically < 100 ms on localhost) between a mutation and its visible effect.
 
 ## Rules
 

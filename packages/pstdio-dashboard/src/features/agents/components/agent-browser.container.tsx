@@ -22,7 +22,7 @@ export const WorkspaceAgentBrowserContainer = (props: WorkspaceAgentBrowserConta
   const setSelectedModel = useWorkspaceStore((state) => state.setSelectedModel);
 
   const { data: agents = [] } = useAgents();
-  const { data: models = [], isPending: isModelsPending } = useAgentModels(selectedAgent, {
+  const { data: models = [], isLoading: isModelsPending } = useAgentModels(selectedAgent, {
     enabled: Boolean(selectedAgent),
   });
 

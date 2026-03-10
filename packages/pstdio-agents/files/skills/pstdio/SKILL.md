@@ -234,8 +234,6 @@ Colors: gray, red, orange, amber, yellow, lime, green, teal, cyan, blue, indigo,
 
 ```bash
 pstdio docs init       # Initialize .pstdio/docs/ structure
-pstdio docs pull       # Pull docs from database
-pstdio docs save       # Save local docs to database
 ```
 
 ### Server & Dashboard

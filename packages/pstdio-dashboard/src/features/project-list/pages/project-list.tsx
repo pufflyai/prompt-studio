@@ -24,7 +24,7 @@ const getTimeFormat = (time: string) => {
 const formatProjectSummary = (project: ProjectListItem) => `Updated ${getTimeFormat(project.updatedAt)}`;
 
 export const ProjectList = () => {
-  const { data, isLoading, isError, error } = useProjectList();
+  const { data, isLoading } = useProjectList();
   const createProject = useCreateProject();
   const [isDialogOpen, setDialogOpen] = useState(false);
   const navigate = useNavigate();
@@ -83,8 +83,6 @@ export const ProjectList = () => {
           <Text textStyle="paragraph/S/regular" color="fg.muted">
             {t("list.loadingProjects")}
           </Text>
-        ) : isError ? (
-          <EmptyState title={t("list.unableToLoad")} description={error instanceof Error ? error.message : undefined} />
         ) : projects.length === 0 ? (
           <EmptyState title={t("list.noProjectsYet")} description={t("list.noProjectsDescription")}>
             <Button size="sm" variant="outline" onClick={handleOpenDialog}>

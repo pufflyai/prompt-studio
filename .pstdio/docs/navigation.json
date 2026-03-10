@@ -184,6 +184,10 @@
         {
           "text": "Strict Query Validation",
           "link": "/lessons-learned/strict_query_validation"
+        },
+        {
+          "text": "TanStack DB Select Proxy",
+          "link": "/lessons-learned/tanstack_db_select_proxy"
         }
       ]
     },

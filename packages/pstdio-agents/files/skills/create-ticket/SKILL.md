@@ -33,4 +33,5 @@ $ARGUMENTS
 ## Output Locations
 
 - Tickets: `.pstdio/tickets/<ticket-id>_<slug>/ticket.md`
-- Validation Artifacts: `.pstdio/tickets/<ticket-id>_<slug>/files/`
+- Supporting Files: `.pstdio/tickets/<ticket-id>_<slug>/files/`
+- Validation Artifacts: `.pstdio/tickets/<ticket-id>_<slug>/artifacts/`

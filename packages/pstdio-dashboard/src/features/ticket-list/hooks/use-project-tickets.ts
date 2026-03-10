@@ -1,308 +1,289 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { projectKeys } from "@/features/project/hooks/keys";
-import type { Project } from "@/features/project/types";
+import type { StatusResponse, TagResponse } from "pstdio-api/dto";
+import { asSyncedRows, eq, getCollection, type SyncedRow, useLiveQuery } from "@/features/sync/collections";
 import {
   createProjectTicketTag,
   deleteProjectTicket,
   deleteProjectTicketTag,
-  getProjectTicketStatuses,
-  getProjectTickets,
-  getProjectTicketTags,
   updateProjectTicket,
   updateProjectTicketStatus,
   updateProjectTicketTagDefinition,
   updateProjectTicketTags,
 } from "@/features/ticket-list/data/api";
+import { toTicketStatusOption, toTicketTag } from "@/features/ticket-list/data/api/mappers";
 import type { Ticket, TicketStatus, TicketStatusColor, TicketTag } from "@/features/ticket-list/types";
-import { moveTicket } from "@/features/ticket-list/utils/ticket-mutations";
+import { useMutation } from "@/lib/use-mutation";
 
-export const useProjectTickets = (projectId: string | undefined) =>
-  useQuery({
-    queryKey: projectKeys.tickets(projectId ?? ""),
-    queryFn: () => getProjectTickets(projectId ?? ""),
-    enabled: Boolean(projectId),
+const DEFAULT_STATUS_COLOR: TicketStatusColor = "gray";
+const DEFAULT_STATUS_NAME = "Unassigned";
+
+const toTicketFromRow = (
+  row: SyncedRow,
+  statusById: Map<string, string>,
+  colorById: Map<string, TicketStatusColor>,
+  fallbackName: string,
+  fallbackColor: TicketStatusColor,
+  tagIdsByTicket: Map<string, string[]>,
+  workspacesByTicket: Map<string, SyncedRow[]>,
+  sessionsByWorkspace: Map<string, SyncedRow>,
+  subTicketsByParent: Map<string, SyncedRow[]>,
+): Ticket => {
+  const statusId = row.status_id as string | null;
+  const attempts = (workspacesByTicket.get(row.id) ?? []).map((ws) => {
+    const session = sessionsByWorkspace.get(ws.id);
+    return {
+      id: ws.id,
+      label: (ws.name as string) ?? ws.id,
+      status: (ws.status as "active" | "merged" | "rejected") ?? "active",
+      shorthand: (ws.workspace_shorthand as string) ?? ws.id,
+      sessionId: session?.id ?? "",
+      updatedAt: ws.updated_at as string,
+      worktreePath: (ws.worktree_path as string) ?? null,
+    };
   });
 
-export const useProjectTicketStatuses = (projectId: string | undefined) =>
-  useQuery({
-    queryKey: projectKeys.ticketStatuses(projectId ?? ""),
-    queryFn: () => getProjectTicketStatuses(projectId ?? ""),
-    enabled: Boolean(projectId),
-  });
+  const subTickets = (subTicketsByParent.get(row.id) ?? []).map((st) => ({
+    id: st.id,
+    shorthand: st.shorthand as string,
+    title: (st.display_title as string) ?? "",
+    statusId: (st.status_id as string) ?? null,
+  }));
 
-export const useProjectTicketTags = (projectId: string | undefined) =>
-  useQuery({
-    queryKey: projectKeys.ticketTags(projectId ?? ""),
-    queryFn: () => getProjectTicketTags(projectId ?? ""),
-    enabled: Boolean(projectId),
-  });
-
-type UpdateProjectTicketInput = {
-  ticketId: string;
-  title?: string;
-  content?: string;
-  complexity?: "low" | "medium" | "high" | null;
-  archived?: boolean;
+  return {
+    id: row.id,
+    shorthand: row.shorthand as string,
+    title: (row.display_title as string) ?? "",
+    content: "",
+    tagIds: tagIdsByTicket.get(row.id) ?? [],
+    status: (row.status_name as string) ?? statusById.get(statusId ?? "") ?? fallbackName,
+    statusColor: colorById.get(statusId ?? "") ?? fallbackColor,
+    complexity: row.complexity as Ticket["complexity"],
+    blockedReason: (row.blocked_reason as string) ?? null,
+    dependsOn: (row.depends_on as string) ?? null,
+    parentId: (row.parent_id as string) ?? null,
+    archived: row.archived as boolean,
+    assignee: null,
+    updatedAt: row.updated_at as string,
+    attempts,
+    subTickets,
+  };
 };
 
-const applyTicketUpdate = (ticket: Ticket, input: UpdateProjectTicketInput) => ({
-  ...ticket,
-  title: input.title ?? ticket.title,
-  content: input.content ?? ticket.content,
-  complexity: input.complexity === undefined ? ticket.complexity : input.complexity,
-  archived: input.archived === undefined ? ticket.archived : input.archived,
-});
+export const useProjectTickets = (projectId: string | undefined) => {
+  const { data: rawTicketsData, isLoading } = useLiveQuery(
+    (q) =>
+      projectId
+        ? q
+            .from({ t: getCollection("tickets") })
+            .where(({ t }) => eq(t.project_id, projectId))
+            .select(({ t }) => ({ ...t }))
+        : undefined,
+    [projectId],
+  );
+  const rawTickets = asSyncedRows(rawTicketsData);
 
-const toUpdatePayload = (ticket: Ticket, input: UpdateProjectTicketInput) => {
-  const payload: {
-    title?: string;
-    content?: string;
-    complexity?: "low" | "medium" | "high" | null;
-    archived?: boolean;
-  } = {};
+  const { data: rawStatusesData } = useLiveQuery(
+    (q) =>
+      projectId
+        ? q
+            .from({ s: getCollection("ticket_statuses") })
+            .where(({ s }) => eq(s.project_id, projectId))
+            .select(({ s }) => ({ ...s }))
+        : undefined,
+    [projectId],
+  );
 
-  if (input.title !== undefined) payload.title = ticket.title;
-  if (input.content !== undefined) payload.content = ticket.content;
-  if (input.complexity !== undefined) payload.complexity = ticket.complexity;
-  if (input.archived !== undefined) payload.archived = Boolean(ticket.archived);
+  const { data: rawTagAssignmentsData } = useLiveQuery((q) =>
+    q.from({ ta: getCollection("ticket_tag_assignments") }).select(({ ta }) => ({ ...ta })),
+  );
 
-  return payload;
+  const { data: rawTicketWorkspacesData } = useLiveQuery((q) =>
+    q.from({ tw: getCollection("ticket_workspaces") }).select(({ tw }) => ({ ...tw })),
+  );
+
+  const { data: rawWorkspacesData } = useLiveQuery(
+    (q) =>
+      projectId
+        ? q
+            .from({ w: getCollection("workspaces") })
+            .where(({ w }) => eq(w.project_id, projectId))
+            .select(({ w }) => ({ ...w }))
+        : undefined,
+    [projectId],
+  );
+
+  const { data: rawSessionsData } = useLiveQuery(
+    (q) =>
+      projectId
+        ? q
+            .from({ s: getCollection("sessions") })
+            .where(({ s }) => eq(s.project_id, projectId))
+            .select(({ s }) => ({ ...s }))
+        : undefined,
+    [projectId],
+  );
+
+  if (!rawTickets || !projectId) return { data: undefined, isLoading };
+
+  const rawStatuses = asSyncedRows(rawStatusesData);
+  const rawTagAssignments = asSyncedRows(rawTagAssignmentsData);
+  const rawTicketWorkspaces = asSyncedRows(rawTicketWorkspacesData);
+  const rawWorkspaces = asSyncedRows(rawWorkspacesData);
+  const rawSessions = asSyncedRows(rawSessionsData);
+
+  const statuses = [...(rawStatuses ?? [])].sort((a, b) => (a.sort_order as number) - (b.sort_order as number));
+  const options = statuses.map((s) => toTicketStatusOption(s as unknown as StatusResponse));
+  const defaultStatus = options.find((s) => s.isDefault) ?? options[0];
+  const fallbackName = defaultStatus?.name ?? DEFAULT_STATUS_NAME;
+  const fallbackColor = defaultStatus?.color ?? DEFAULT_STATUS_COLOR;
+  const statusById = new Map(options.map((s) => [s.id, s.name]));
+  const colorById = new Map(options.map((s) => [s.id, s.color]));
+
+  const ticketIds = new Set(rawTickets.map((t) => t.id));
+
+  const tagIdsByTicket = new Map<string, string[]>();
+  for (const ta of rawTagAssignments ?? []) {
+    if (!ticketIds.has(ta.ticket_id as string)) continue;
+    const ticketId = ta.ticket_id as string;
+    const existing = tagIdsByTicket.get(ticketId) ?? [];
+    existing.push(ta.tag_id as string);
+    tagIdsByTicket.set(ticketId, existing);
+  }
+
+  const workspaceIds = new Set((rawWorkspaces ?? []).map((w) => w.id));
+  const workspacesByTicket = new Map<string, SyncedRow[]>();
+  for (const tw of rawTicketWorkspaces ?? []) {
+    if (!workspaceIds.has(tw.workspace_id as string)) continue;
+    const ticketId = tw.ticket_id as string;
+    const ws = (rawWorkspaces ?? []).find((w) => w.id === tw.workspace_id);
+    if (!ws) continue;
+    const existing = workspacesByTicket.get(ticketId) ?? [];
+    existing.push(ws);
+    workspacesByTicket.set(ticketId, existing);
+  }
+
+  const sessionsByWorkspace = new Map<string, SyncedRow>();
+  for (const s of rawSessions ?? []) {
+    const wsId = s.workspace_id as string;
+    if (wsId && workspaceIds.has(wsId)) sessionsByWorkspace.set(wsId, s);
+  }
+
+  const subTicketsByParent = new Map<string, SyncedRow[]>();
+  for (const t of rawTickets) {
+    const parentId = t.parent_id as string | null;
+    if (!parentId) continue;
+    const existing = subTicketsByParent.get(parentId) ?? [];
+    existing.push(t);
+    subTicketsByParent.set(parentId, existing);
+  }
+
+  const data = rawTickets.map((t) =>
+    toTicketFromRow(
+      t,
+      statusById,
+      colorById,
+      fallbackName,
+      fallbackColor,
+      tagIdsByTicket,
+      workspacesByTicket,
+      sessionsByWorkspace,
+      subTicketsByParent,
+    ),
+  );
+
+  return { data, isLoading };
 };
 
-export const useUpdateProjectTicket = (projectId: string | undefined) => {
-  const queryClient = useQueryClient();
+export const useProjectTicketStatuses = (projectId: string | undefined) => {
+  const { data: rawStatusesData, isLoading } = useLiveQuery(
+    (q) =>
+      projectId
+        ? q
+            .from({ s: getCollection("ticket_statuses") })
+            .where(({ s }) => eq(s.project_id, projectId))
+            .select(({ s }) => ({ ...s }))
+        : undefined,
+    [projectId],
+  );
+  const rawStatuses = asSyncedRows(rawStatusesData);
 
-  return useMutation({
-    mutationFn: (input: UpdateProjectTicketInput) => {
-      if (!projectId) {
-        throw new Error("Project id is required to update tickets.");
-      }
-      const tickets = queryClient.getQueryData<Ticket[]>(projectKeys.tickets(projectId)) ?? [];
-      const ticket = tickets.find((item) => item.id === input.ticketId);
+  const data = rawStatuses
+    ? [...rawStatuses]
+        .sort((a, b) => (a.sort_order as number) - (b.sort_order as number))
+        .map((s) => toTicketStatusOption(s as unknown as StatusResponse))
+    : undefined;
 
-      if (!ticket) {
-        throw new Error("Ticket not found.");
-      }
+  return { data, isLoading };
+};
 
-      const nextTicket = applyTicketUpdate(ticket, input);
-      return updateProjectTicket(projectId, input.ticketId, toUpdatePayload(nextTicket, input));
+export const useProjectTicketTags = (projectId: string | undefined) => {
+  const { data: rawTagsData, isLoading } = useLiveQuery(
+    (q) =>
+      projectId
+        ? q
+            .from({ t: getCollection("ticket_tags") })
+            .where(({ t }) => eq(t.project_id, projectId))
+            .select(({ t }) => ({ ...t }))
+        : undefined,
+    [projectId],
+  );
+  const rawTags = asSyncedRows(rawTagsData);
+
+  const data = rawTags?.map((t) => toTicketTag(t as unknown as TagResponse));
+
+  return { data, isLoading };
+};
+
+export const useUpdateProjectTicket = (projectId: string | undefined) =>
+  useMutation(
+    async (input: {
+      ticketId: string;
+      title?: string;
+      content?: string;
+      complexity?: "low" | "medium" | "high" | null;
+      archived?: boolean;
+    }) => {
+      if (!projectId) throw new Error("Project id is required to update tickets.");
+      const body: Record<string, unknown> = {};
+      if (input.title !== undefined) body.display_title = input.title;
+      if (input.content !== undefined) body.content = input.content;
+      if (input.complexity !== undefined) body.complexity = input.complexity;
+      if (input.archived !== undefined) body.archived = input.archived;
+      await updateProjectTicket(projectId, input.ticketId, body as Parameters<typeof updateProjectTicket>[2]);
     },
-    onMutate: async (input) => {
-      if (!projectId) {
-        return { previousTickets: undefined };
-      }
+  );
 
-      await queryClient.cancelQueries({ queryKey: projectKeys.tickets(projectId) });
-      const previousTickets = queryClient.getQueryData<Ticket[]>(projectKeys.tickets(projectId));
-      const nextTickets = previousTickets
-        ? previousTickets.map((ticket) => (ticket.id === input.ticketId ? applyTicketUpdate(ticket, input) : ticket))
-        : previousTickets;
-
-      if (nextTickets) {
-        queryClient.setQueryData(projectKeys.tickets(projectId), nextTickets);
-      }
-
-      return { previousTickets };
-    },
-    onError: (_error, _variables, context) => {
-      if (!projectId) return;
-      if (context?.previousTickets) {
-        queryClient.setQueryData(projectKeys.tickets(projectId), context.previousTickets);
-      }
-    },
-    onSettled: () => {
-      if (!projectId) return;
-      queryClient.invalidateQueries({ queryKey: projectKeys.tickets(projectId) });
-      return queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
-    },
+export const useUpdateProjectTicketStatus = (projectId: string | undefined) =>
+  useMutation(async ({ ticketId, status }: { ticketId: string; status: TicketStatus }) => {
+    if (!projectId) throw new Error("Project id is required to update tickets.");
+    await updateProjectTicketStatus(projectId, { id: ticketId } as Ticket, status);
   });
-};
 
-export const useUpdateProjectTicketStatus = (projectId: string | undefined) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ ticketId, status }: { ticketId: string; status: TicketStatus }) => {
-      if (!projectId) {
-        throw new Error("Project id is required to update tickets.");
-      }
-      const tickets = queryClient.getQueryData<Ticket[]>(projectKeys.tickets(projectId)) ?? [];
-      const ticket = tickets.find((item) => item.id === ticketId);
-
-      if (!ticket) {
-        throw new Error("Ticket not found.");
-      }
-
-      return updateProjectTicketStatus(projectId, ticket, status);
-    },
-    onMutate: async ({ ticketId, status }) => {
-      if (!projectId) {
-        return { previousTickets: undefined };
-      }
-
-      await queryClient.cancelQueries({ queryKey: projectKeys.tickets(projectId) });
-      const previousTickets = queryClient.getQueryData<Ticket[]>(projectKeys.tickets(projectId));
-      const nextTickets = previousTickets ? moveTicket(previousTickets, ticketId, status) : previousTickets;
-
-      if (nextTickets) {
-        queryClient.setQueryData(projectKeys.tickets(projectId), nextTickets);
-      }
-
-      return { previousTickets };
-    },
-    onError: (_error, _variables, context) => {
-      if (!projectId) return;
-      if (context?.previousTickets) {
-        queryClient.setQueryData(projectKeys.tickets(projectId), context.previousTickets);
-      }
-    },
-    onSettled: () => {
-      if (!projectId) return;
-      queryClient.invalidateQueries({ queryKey: projectKeys.tickets(projectId) });
-      return queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
-    },
+export const useDeleteProjectTicket = (projectId: string | undefined) =>
+  useMutation(async ({ ticketId }: { ticketId: string }) => {
+    if (!projectId) throw new Error("Project id is required to delete tickets.");
+    await deleteProjectTicket(projectId, ticketId);
   });
-};
 
-export const useDeleteProjectTicket = (projectId: string | undefined) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ ticketId }: { ticketId: string }) => {
-      if (!projectId) {
-        throw new Error("Project id is required to delete tickets.");
-      }
-      return deleteProjectTicket(projectId, ticketId);
-    },
-    onMutate: async ({ ticketId }) => {
-      if (!projectId) {
-        return { previousTickets: undefined, previousProject: undefined };
-      }
-
-      await queryClient.cancelQueries({ queryKey: projectKeys.tickets(projectId) });
-      await queryClient.cancelQueries({ queryKey: projectKeys.detail(projectId) });
-
-      const previousTickets = queryClient.getQueryData<Ticket[]>(projectKeys.tickets(projectId));
-      const previousProject = queryClient.getQueryData<Project | null>(projectKeys.detail(projectId));
-
-      const nextTickets = previousTickets
-        ? previousTickets.filter((ticket) => ticket.id !== ticketId)
-        : previousTickets;
-      if (nextTickets) {
-        queryClient.setQueryData(projectKeys.tickets(projectId), nextTickets);
-      }
-
-      return { previousTickets, previousProject };
-    },
-    onError: (_error, _variables, context) => {
-      if (!projectId) return;
-      if (context?.previousTickets) {
-        queryClient.setQueryData(projectKeys.tickets(projectId), context.previousTickets);
-      }
-      if (context?.previousProject) {
-        queryClient.setQueryData(projectKeys.detail(projectId), context.previousProject);
-      }
-    },
-    onSettled: () => {
-      if (!projectId) return;
-      queryClient.invalidateQueries({ queryKey: projectKeys.tickets(projectId) });
-      queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
-    },
+export const useUpdateProjectTicketTags = (projectId: string | undefined) =>
+  useMutation(async ({ ticketId, tagIds }: { ticketId: string; tagIds: string[] }) => {
+    if (!projectId) throw new Error("Project id is required to update ticket tags.");
+    await updateProjectTicketTags(ticketId, tagIds);
   });
-};
 
-export const useUpdateProjectTicketTags = (projectId: string | undefined) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ ticketId, tagIds }: { ticketId: string; tagIds: string[] }) => {
-      if (!projectId) {
-        throw new Error("Project id is required to update ticket tags.");
-      }
-      return updateProjectTicketTags(ticketId, tagIds);
-    },
-    onMutate: async ({ ticketId, tagIds }) => {
-      if (!projectId) {
-        return { previousTickets: undefined };
-      }
-
-      await queryClient.cancelQueries({ queryKey: projectKeys.tickets(projectId) });
-      const previousTickets = queryClient.getQueryData<Ticket[]>(projectKeys.tickets(projectId));
-      const nextTickets = previousTickets
-        ? previousTickets.map((ticket) => (ticket.id === ticketId ? { ...ticket, tagIds } : ticket))
-        : previousTickets;
-
-      if (nextTickets) {
-        queryClient.setQueryData(projectKeys.tickets(projectId), nextTickets);
-      }
-
-      return { previousTickets };
-    },
-    onError: (_error, _variables, context) => {
-      if (!projectId) return;
-      if (context?.previousTickets) {
-        queryClient.setQueryData(projectKeys.tickets(projectId), context.previousTickets);
-      }
-    },
-    onSettled: () => {
-      if (!projectId) return;
-      queryClient.invalidateQueries({ queryKey: projectKeys.tickets(projectId) });
-      return queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
-    },
+export const useCreateProjectTicketTag = (projectId: string | undefined) =>
+  useMutation(async (input: { name: string; color: TicketStatusColor }) => {
+    if (!projectId) throw new Error("Project id is required.");
+    return createProjectTicketTag(projectId, input);
   });
-};
 
-export const useCreateProjectTicketTag = (projectId: string | undefined) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (input: { name: string; color: TicketStatusColor }) => {
-      if (!projectId) {
-        throw new Error("Project id is required.");
-      }
-      return createProjectTicketTag(projectId, input);
-    },
-    onSuccess: () => {
-      if (!projectId) return;
-      queryClient.invalidateQueries({ queryKey: projectKeys.ticketTags(projectId) });
-      queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
-    },
+export const useUpdateProjectTicketTag = (projectId: string | undefined) =>
+  useMutation(async (input: { tag: TicketTag; name: string; color: TicketStatusColor }) => {
+    if (!projectId) throw new Error("Project id is required.");
+    return updateProjectTicketTagDefinition(projectId, input.tag.id, { name: input.name, color: input.color });
   });
-};
 
-export const useUpdateProjectTicketTag = (projectId: string | undefined) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (input: { tag: TicketTag; name: string; color: TicketStatusColor }) => {
-      if (!projectId) {
-        throw new Error("Project id is required.");
-      }
-      return updateProjectTicketTagDefinition(projectId, input.tag.id, { name: input.name, color: input.color });
-    },
-    onSuccess: () => {
-      if (!projectId) return;
-      queryClient.invalidateQueries({ queryKey: projectKeys.ticketTags(projectId) });
-      queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
-    },
+export const useDeleteProjectTicketTag = (projectId: string | undefined) =>
+  useMutation(async (tagId: string) => {
+    if (!projectId) throw new Error("Project id is required.");
+    await deleteProjectTicketTag(projectId, tagId);
   });
-};
-
-export const useDeleteProjectTicketTag = (projectId: string | undefined) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (tagId: string) => {
-      if (!projectId) {
-        throw new Error("Project id is required.");
-      }
-      await deleteProjectTicketTag(projectId, tagId);
-    },
-    onSuccess: () => {
-      if (!projectId) return;
-      queryClient.invalidateQueries({ queryKey: projectKeys.ticketTags(projectId) });
-      queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
-      queryClient.invalidateQueries({ queryKey: projectKeys.tickets(projectId) });
-    },
-  });
-};

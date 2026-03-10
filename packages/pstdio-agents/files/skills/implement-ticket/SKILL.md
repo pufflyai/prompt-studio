@@ -30,9 +30,8 @@ $ARGUMENTS
      - There’s test coverage for it, and
      - The full test suite is green.
 4. Evidence
-   - Store artifacts under `.pstdio/tickets/<ticket-id>_<slug>/files/`
-   - Update the ticket file `## Evidence` section to reference generated artifacts.
-   - If tests/commands can’t be run, record why in `## Evidence`.
+   - Store artifacts under `.pstdio/tickets/<ticket-id>_<slug>/artifacts/`
+   - If tests/commands can’t be run, record why in the ticket's `blocked_reason` frontmatter field.
 5. Finish
    - Confirm everything in `## Steps` and `## Acceptance` is checked.
    - If the ticket is not completed due to errors, run `pstdio tickets update --id "<ticket-id>" --status blocked`, document the reason in the ticket's `blocked_reason` frontmatter field, then run `pstdio tickets save --id "<ticket-id>"`.
@@ -62,4 +61,5 @@ Artifacts **must** be:
 ## Output Locations
 
 - Tickets: `.pstdio/tickets/<ticket-id>_<slug>/ticket.md`
-- Validation Artifacts: `.pstdio/tickets/<ticket-id>_<slug>/files/`
+- Supporting Files: `.pstdio/tickets/<ticket-id>_<slug>/files/`
+- Validation Artifacts: `.pstdio/tickets/<ticket-id>_<slug>/artifacts/`

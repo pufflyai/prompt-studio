@@ -1,32 +1,11 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { seedCollection } from "@/features/sync/seed-collections";
 import type { ApiTicketFilesResponse } from "@/features/ticket-list/data/api";
-import { ticketFileKeys } from "../hooks/use-ticket-files";
 import { TicketFileList } from "./ticket-file-list";
 
 const TICKET_ID = "ticket-story";
-
-const createTicketFileQueryClient = (data: ApiTicketFilesResponse) => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: Infinity,
-        gcTime: Infinity,
-        retry: false,
-        refetchOnMount: false,
-        refetchOnWindowFocus: false,
-        refetchOnReconnect: false,
-      },
-      mutations: { retry: false },
-    },
-  });
-
-  queryClient.setQueryData(ticketFileKeys.byTicket(TICKET_ID), data);
-
-  return queryClient;
-};
 
 interface TicketFileListStoryProps {
   data: ApiTicketFilesResponse;
@@ -34,13 +13,52 @@ interface TicketFileListStoryProps {
 
 const TicketFileListStory = (props: TicketFileListStoryProps) => {
   const { data } = props;
-  const [queryClient] = useState(() => createTicketFileQueryClient(data));
+  const [seeded, setSeeded] = useState(false);
+
+  useEffect(() => {
+    seedCollection(
+      "files",
+      data.files.map((f) => ({
+        id: f.id,
+        file_name: f.file_name,
+        file_kind: f.file_kind,
+        mime_type: f.mime_type,
+        size_bytes: f.size_bytes,
+        created_at: f.created_at,
+      })),
+    );
+
+    seedCollection(
+      "ticket_files",
+      data.files.map((f) => ({
+        id: `tf-${f.id}`,
+        ticket_id: TICKET_ID,
+        file_id: f.id,
+      })),
+    );
+
+    seedCollection(
+      "workspace_artifacts",
+      data.artifacts.map((a) => ({
+        id: a.id,
+        file_id: a.file_id,
+        file_name: a.file_name,
+        file_kind: a.file_kind,
+        relative_path: a.relative_path,
+        mime_type: a.mime_type,
+        size_bytes: a.size_bytes,
+        created_at: a.created_at,
+      })),
+    );
+
+    setSeeded(true);
+  }, [data]);
+
+  if (!seeded) return null;
 
   return (
     <Box maxW="360px" p="sm">
-      <QueryClientProvider client={queryClient}>
-        <TicketFileList ticketId={TICKET_ID} />
-      </QueryClientProvider>
+      <TicketFileList ticketId={TICKET_ID} />
     </Box>
   );
 };

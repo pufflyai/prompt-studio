@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSyncExternalStore } from "react";
 
 const SETTINGS_PREFIX = "agent-settings:";
 
@@ -16,23 +16,36 @@ const writeSettings = (agentId: string, settings: Record<string, unknown>) => {
   localStorage.setItem(`${SETTINGS_PREFIX}${agentId}`, JSON.stringify(settings));
 };
 
+let version = 0;
+const listeners = new Set<() => void>();
+const notify = () => {
+  version++;
+  for (const l of listeners) l();
+};
+
 export const useAgentSettings = (agentId: string) => {
-  return useQuery({
-    queryKey: ["agents", agentId, "settings"],
-    queryFn: () => readSettings(agentId),
-  });
+  const snapshot = useSyncExternalStore(
+    (cb) => {
+      listeners.add(cb);
+      return () => listeners.delete(cb);
+    },
+    () => version,
+  );
+
+  void snapshot;
+  return { data: readSettings(agentId), isLoading: false };
 };
 
-export const useUpdateAgentSettings = (agentId: string) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (settings: Record<string, unknown>) => {
-      writeSettings(agentId, settings);
-      return settings;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["agents", agentId, "settings"] });
-    },
-  });
-};
+export const useUpdateAgentSettings = (agentId: string) => ({
+  mutate: (settings: Record<string, unknown>) => {
+    writeSettings(agentId, settings);
+    notify();
+  },
+  mutateAsync: async (settings: Record<string, unknown>) => {
+    writeSettings(agentId, settings);
+    notify();
+    return settings;
+  },
+  isPending: false,
+  error: null,
+});

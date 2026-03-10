@@ -1,36 +1,141 @@
-import { useQuery } from "@tanstack/react-query";
+import type { StatusResponse, TagResponse } from "pstdio-api/dto";
+import { DEFAULT_OWNER, DEFAULT_PROJECT_STATUS, getSystemInfo, toProjectRepository } from "@/features/project/data/api";
+import type { Project, ProjectTemplateAsset } from "@/features/project/types";
+import { asSyncedRows, eq, getCollection, useLiveQuery } from "@/features/sync/collections";
+import { toTicketStatusOption, toTicketTag } from "@/features/ticket-list/data/api";
+import { useFetch } from "@/lib/use-fetch";
 
-import {
-  getProject,
-  getProjectRepositories,
-  getProjectTemplateAssets,
-  getSystemInfo,
-} from "@/features/project/data/api";
-import { projectKeys } from "./keys";
+export const useProject = (projectId: string | undefined) => {
+  const { data: rawProject, isLoading: projectLoading } = useLiveQuery(
+    (q) =>
+      projectId
+        ? q
+            .from({ p: getCollection("projects") })
+            .where(({ p }) => eq(p.id, projectId))
+            .select(({ p }) => ({ ...p }))
+        : undefined,
+    [projectId],
+  );
+  const projectRows = asSyncedRows(rawProject);
 
-export const useProject = (projectId: string | undefined) =>
-  useQuery({
-    queryKey: projectKeys.detail(projectId ?? ""),
-    queryFn: () => getProject(projectId ?? ""),
-    enabled: Boolean(projectId),
-  });
+  const { data: rawStatuses } = useLiveQuery(
+    (q) =>
+      projectId
+        ? q
+            .from({ s: getCollection("ticket_statuses") })
+            .where(({ s }) => eq(s.project_id, projectId))
+            .select(({ s }) => ({ ...s }))
+        : undefined,
+    [projectId],
+  );
 
-export const useProjectRepositories = (projectId: string | undefined) =>
-  useQuery({
-    queryKey: projectKeys.repositories(projectId ?? ""),
-    queryFn: () => getProjectRepositories(projectId ?? ""),
-    enabled: Boolean(projectId),
-  });
+  const { data: rawProjectRepos } = useLiveQuery(
+    (q) =>
+      projectId
+        ? q
+            .from({ pr: getCollection("project_repos") })
+            .where(({ pr }) => eq(pr.project_id, projectId))
+            .select(({ pr }) => ({ ...pr }))
+        : undefined,
+    [projectId],
+  );
 
-export const useProjectTemplateAssets = (projectId: string | undefined) =>
-  useQuery({
-    queryKey: projectKeys.templateAssets(projectId ?? ""),
-    queryFn: () => getProjectTemplateAssets(projectId ?? ""),
-    enabled: Boolean(projectId),
-  });
+  const { data: rawRepos } = useLiveQuery((q) => q.from({ r: getCollection("repos") }).select(({ r }) => ({ ...r })));
 
-export const useSystemInfo = () =>
-  useQuery({
-    queryKey: projectKeys.info(),
-    queryFn: () => getSystemInfo(),
-  });
+  const { data: rawTags } = useLiveQuery(
+    (q) =>
+      projectId
+        ? q
+            .from({ t: getCollection("ticket_tags") })
+            .where(({ t }) => eq(t.project_id, projectId))
+            .select(({ t }) => ({ ...t }))
+        : undefined,
+    [projectId],
+  );
+
+  const project = projectRows?.[0];
+  if (!project || !projectId) {
+    return { data: undefined, isLoading: projectLoading };
+  }
+
+  const statusRows = asSyncedRows(rawStatuses);
+  const projectRepoRows = asSyncedRows(rawProjectRepos);
+  const repoRows = asSyncedRows(rawRepos);
+  const tagRows = asSyncedRows(rawTags);
+
+  const repoIds = new Set((projectRepoRows ?? []).map((pr) => pr.repo_id as string));
+  const repos = (repoRows ?? []).filter((r) => repoIds.has(r.id));
+
+  const statuses = [...(statusRows ?? [])].sort((a, b) => (a.sort_order as number) - (b.sort_order as number));
+  const statusOptions = statuses.map((s) => toTicketStatusOption(s as unknown as StatusResponse));
+  const tags = (tagRows ?? []).map((t) => toTicketTag(t as unknown as TagResponse));
+
+  const data: Project = {
+    id: project.id,
+    name: project.name as string,
+    status: DEFAULT_PROJECT_STATUS,
+    owner: DEFAULT_OWNER,
+    updatedAt: project.updated_at as string,
+    ticketStatuses: statusOptions.length ? statusOptions.map((s) => s.name) : ["Unassigned"],
+    ticketStatusOptions: statusOptions,
+    repositories: repos.map((r) => toProjectRepository(r as Parameters<typeof toProjectRepository>[0])),
+    ticketTags: tags,
+  };
+
+  return { data, isLoading: projectLoading };
+};
+
+export const useProjectRepositories = (projectId: string | undefined) => {
+  const { data: rawProjectRepos } = useLiveQuery(
+    (q) =>
+      projectId
+        ? q
+            .from({ pr: getCollection("project_repos") })
+            .where(({ pr }) => eq(pr.project_id, projectId))
+            .select(({ pr }) => ({ ...pr }))
+        : undefined,
+    [projectId],
+  );
+
+  const { data: rawRepos } = useLiveQuery((q) => q.from({ r: getCollection("repos") }).select(({ r }) => ({ ...r })));
+
+  const projectRepoRows = asSyncedRows(rawProjectRepos);
+  const repoRows = asSyncedRows(rawRepos);
+
+  const repoIds = new Set((projectRepoRows ?? []).map((pr) => pr.repo_id as string));
+  const repos = (repoRows ?? []).filter((r) => repoIds.has(r.id));
+
+  const data = repos.map((r) => toProjectRepository(r as Parameters<typeof toProjectRepository>[0]));
+
+  return { data, isLoading: false };
+};
+
+export const useProjectTemplateAssets = (projectId: string | undefined) => {
+  const { data: rawTemplates, isLoading } = useLiveQuery(
+    (q) =>
+      projectId
+        ? q
+            .from({ t: getCollection("templates") })
+            .where(({ t }) => eq(t.project_id, projectId))
+            .select(({ t }) => ({ ...t }))
+        : undefined,
+    [projectId],
+  );
+  const templateRows = asSyncedRows(rawTemplates);
+
+  const data: ProjectTemplateAsset[] | undefined = templateRows?.map((t) => ({
+    id: t.id,
+    projectId: (t.project_id as string) ?? projectId ?? "",
+    name: t.name as string,
+    templateType: t.template_type as ProjectTemplateAsset["templateType"],
+    fileId: t.file_id as string,
+    content: "",
+    isDefault: t.is_default as boolean,
+    createdAt: t.created_at as string,
+    updatedAt: t.updated_at as string,
+  }));
+
+  return { data, isLoading };
+};
+
+export const useSystemInfo = () => useFetch(() => getSystemInfo(), []);

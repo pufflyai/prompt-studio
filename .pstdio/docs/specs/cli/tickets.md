@@ -87,13 +87,17 @@ Each ticket lives in its own directory under `.pstdio/tickets/`:
     ticket.md
     files/
       architecture.md
+      api-schema.json
+    artifacts/
+      test-output.log
       screenshot.png
   PS-13_add-dark-mode/
     ticket.md
 ```
 
 - `ticket.md` is the canonical local ticket body. Locally it includes YAML frontmatter; the stored version on the server never contains frontmatter.
-- `files/` contains additional local files associated with the ticket.
+- `files/` contains supporting files associated with the ticket (research, schemas, specs).
+- `artifacts/` contains change validation outputs (test logs, screenshots, build output).
 
 ### Frontmatter is Local-Only
 
@@ -278,6 +282,7 @@ pstdio tickets save --id <ticket-shorthand> [--status <status>] [--tag <tag>...]
 6. Resolve the ticket status: use `--status` flag if provided, otherwise use `status` from frontmatter. Look up the status by name and assign its ID.
 7. Set `priority` and `complexity` from frontmatter values when present.
 8. If `.pstdio/tickets/<ticket-shorthand>/files/` exists, upload every file under it and associate it with the ticket.
+9. If `.pstdio/tickets/<ticket-shorthand>/artifacts/` exists, upload every file under it and associate it with the ticket.
 9. If `--tag` values are provided, update the tag assignments.
 
 CLI flags always override frontmatter values. When neither a flag nor a frontmatter value is present, the field is left unchanged in the database.
@@ -325,7 +330,7 @@ pstdio tickets pull [--id <ticket-shorthand>] [--force]
 3. Create the local ticket directory at `.pstdio/tickets/<ticket-shorthand>/` when missing.
 4. Build YAML frontmatter from the ticket's database fields and prepend it to the ticket body content (replacing any existing frontmatter). See [Frontmatter Fields](#frontmatter-fields).
 5. Write the result to `.pstdio/tickets/<ticket-shorthand>/ticket.md`.
-6. Fetch all files linked to the ticket in the database and write them to `.pstdio/tickets/<ticket-shorthand>/files/`.
+6. Fetch all files linked to the ticket in the database and write them to `.pstdio/tickets/<ticket-shorthand>/files/` (supporting files) and `.pstdio/tickets/<ticket-shorthand>/artifacts/` (validation artifacts).
 7. If a target file path already exists and `--force` is not set, fail without overwriting that file.
 
 #### Without `--id`
@@ -406,7 +411,7 @@ pstdio tickets files --id <ticket-shorthand> [--project-id <project-id>]
 1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
 2. Resolve the ticket by shorthand from the database.
 3. List files linked to the ticket in the database.
-4. If running inside a linked project, list local files under `.pstdio/tickets/<ticket-shorthand>/files/`.
+4. If running inside a linked project, list local files under `.pstdio/tickets/<ticket-shorthand>/files/` and `.pstdio/tickets/<ticket-shorthand>/artifacts/`.
 5. Output a merged view showing whether each file exists in DB, locally, or both. When running outside a linked project, the Local column is always `–` .
 
 ### Output
@@ -680,6 +685,8 @@ Archived ticket PS-12
 | Path                                                           | Description                                                                                   |
 | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | `.pstdio/tickets/<shorthand>_<display_title>/ticket.md`        | Local ticket file created by `write`/`pull`, read by `save`.                                  |
-| `.pstdio/tickets/<shorthand>_<display_title>/files/`           | Local directory for ticket-associated files written by `pull`, read by `save`/`files`.        |
-| `.pstdio/tickets/<shorthand>_<display_title>/files/<filename>` | Individual ticket-associated files synced between local project and DB.                       |
+| `.pstdio/tickets/<shorthand>_<display_title>/files/`           | Supporting files (research, schemas, specs) written by `pull`, read by `save`/`files`.        |
+| `.pstdio/tickets/<shorthand>_<display_title>/files/<filename>` | Individual supporting files synced between local project and DB.                              |
+| `.pstdio/tickets/<shorthand>_<display_title>/artifacts/`       | Validation artifacts (test output, screenshots, logs) written by `pull`, read by `save`/`files`. |
+| `.pstdio/tickets/<shorthand>_<display_title>/artifacts/<filename>` | Individual validation artifacts synced between local project and DB.                         |
 | `.pstdio/workspaces/<workspace-shorthand>/`                    | Git worktree path referenced by `pstdio tickets workspaces` for ticket-associated workspaces. |

@@ -1,21 +1,9 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useFetch } from "@/lib/use-fetch";
 import { getDocsContent, getDocsIndex } from "../data/api";
 
-const docsKeys = {
-  index: (projectId?: string) => ["docs", "index", projectId ?? "global"] as const,
-  content: (link: string | null, projectId?: string) => ["docs", "content", projectId ?? "global", link ?? ""] as const,
-};
-
-export const useDocsIndex = (projectId?: string) =>
-  useQuery({
-    queryKey: docsKeys.index(projectId),
-    queryFn: () => getDocsIndex(projectId),
-  });
+export const useDocsIndex = (projectId?: string) => useFetch(() => getDocsIndex(projectId), [projectId]);
 
 export const useDocsContent = (link: string | null, projectId?: string) =>
-  useQuery({
-    queryKey: docsKeys.content(link, projectId),
-    queryFn: () => getDocsContent(link ?? "", projectId),
+  useFetch(() => getDocsContent(link ?? "", projectId), [link, projectId], {
     enabled: Boolean(link),
-    placeholderData: keepPreviousData,
   });

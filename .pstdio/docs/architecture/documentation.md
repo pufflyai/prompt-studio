@@ -20,12 +20,12 @@ Docs are plain markdown files committed to the repo under `.pstdio/docs/`. All c
 ## Architecture
 
 ```
-┌───────────┐   ┌───────────────┐
-│    CLI    │   │   Dashboard   │
-└─────┬─────┘   └───────┬───────┘
-      │                 │
-      └─────────────────┘
-              │  HTTP
+        ┌───────────┐   ┌───────────────┐
+        │    CLI    │   │   Dashboard   │
+        └─────┬─────┘   └───────┬───────┘
+              │                 │
+              └─────────────────┘
+                      │  HTTP
                       ▼
               ┌───────────────┐
               │   pstdio-api  │
@@ -47,10 +47,10 @@ Both surfaces call the same API endpoints. The API delegates to `createDocsServi
 
 ## API endpoints
 
-| Method | Path                              | Description                            |
-| ------ | --------------------------------- | -------------------------------------- |
-| GET    | /v1/projects/:id/docs             | Returns the sidebar (navigation.json)  |
-| GET    | /v1/projects/:id/docs/:link       | Returns a single markdown document     |
+| Method | Path                        | Description                           |
+| ------ | --------------------------- | ------------------------------------- |
+| GET    | /v1/projects/:id/docs       | Returns the sidebar (navigation.json) |
+| GET    | /v1/projects/:id/docs/:link | Returns a single markdown document    |
 
 ## Scaffolding
 
