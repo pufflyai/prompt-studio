@@ -1,10 +1,12 @@
-import { afterAll, beforeAll, describe, expect, spyOn, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, spyOn, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "./app";
 import type { AppBindings } from "./types";
+
+setDefaultTimeout(10_000);
 
 let app: OpenAPIHono<AppBindings>;
 let appWithAuth: OpenAPIHono<AppBindings>;

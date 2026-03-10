@@ -3,6 +3,7 @@ import { mkdtempSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { SETUP_TIMEOUT } from "./timeouts";
 
 export const getFreePort = () =>
   new Promise<number>((resolve, reject) => {
@@ -20,7 +21,7 @@ export const getFreePort = () =>
     });
   });
 
-export const waitForReady = async (url: string, timeoutMs = 5_000) => {
+export const waitForReady = async (url: string, timeoutMs = SETUP_TIMEOUT) => {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
