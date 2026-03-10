@@ -188,6 +188,18 @@
         {
           "text": "TanStack DB Select Proxy",
           "link": "/lessons-learned/tanstack_db_select_proxy"
+        },
+        {
+          "text": "readdirSync Order: macOS vs Linux",
+          "link": "/lessons-learned/readdir_order_macos_vs_linux"
+        },
+        {
+          "text": "Missing SSE Events for Tag Assignments",
+          "link": "/lessons-learned/missing_sse_events_for_tag_assignments"
+        },
+        {
+          "text": "SSE Race in Project Creation",
+          "link": "/lessons-learned/sse_race_in_project_creation"
         }
       ]
     },

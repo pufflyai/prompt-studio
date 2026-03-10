@@ -1,6 +1,6 @@
 ---
 name: update-documentation
-description: "Use when asked to update, add, or modify project documentation."
+description: "Use when asked to update, add, or modify project documentation, save lessons learned or write a new spec. Edit markdown files in `.pstdio/docs/` and update `navigation.json` for sidebar changes."
 ---
 
 ## User Input
@@ -12,12 +12,8 @@ $ARGUMENTS
 ## Workflow
 
 1. Read `.pstdio/docs/navigation.json` to understand the current sidebar structure and available pages.
-2. Apply the requested documentation changes:
-   - **Adding a new page**: create the markdown file under `.pstdio/docs/`, then add a sidebar entry in `navigation.json` with `{ "text": "<title>", "link": "<relative-path>" }`.
-   - **Updating an existing page**: edit the markdown file in place.
-   - **Removing a page**: delete the markdown file and remove its sidebar entry from `navigation.json`.
-   - **Reorganizing**: update `navigation.json` sidebar order or grouping. Groups use `{ "text": "<group>", "items": [...] }`.
-3. Summarize the changes made: list added, updated, and removed pages.
+2. Apply the requested documentation changes while preserving the existing structure and update the `navigation.json` file if needed.
+
 
 ## Documentation Location
 
@@ -29,7 +25,7 @@ All documentation lives in `.pstdio/docs/` at the repo root, committed to versio
 .pstdio/docs/
 ├── navigation.json        ← sidebar structure
 ├── index.md               ← overview / landing page
-├── product-spec/          ← behavioral specifications
+├── specs/                 ← behavioral specifications
 │   └── *.md
 ├── architecture/          ← system design decisions
 │   └── *.md
@@ -45,7 +41,7 @@ All documentation lives in `.pstdio/docs/` at the repo root, committed to versio
 
 | Category | Purpose | One file per |
 | --- | --- | --- |
-| `product-spec/` | What the software does — signatures, arguments, output examples, error messages. No implementation details. | topic |
+| `spec/` | What the software does — signatures, arguments, output examples, error messages. No implementation details. | topic |
 | `architecture/` | System design decisions, component relationships, diagrams, and reasoning behind choices. | topic |
 | `known-issues/` | Unresolved problems — what the issue is, why it exists, the risk, and a potential fix. When resolved, move to `lessons-learned/`. | issue |
 | `lessons-learned/` | Difficult problems or bugs that were eventually figured out — what went wrong, why, and how it was solved. | topic |

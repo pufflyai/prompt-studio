@@ -147,7 +147,7 @@ describe("tickets pull", () => {
       resolveTicketByShorthand: async () => makeListItem(),
       getTicket: async () => makeTicket(),
       listTicketFiles: async () => [makeFile({ size_bytes: 8 })],
-      getTicketFileContent: async () => Buffer.from("new content"),
+      getTicketFileContent: async () => Buffer.from("# Pulled ticket\nnew content"),
       log: () => {},
     });
 
