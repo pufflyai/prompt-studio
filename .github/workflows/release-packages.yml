@@ -38,8 +38,10 @@ jobs:
         uses: changesets/action@v1
         with:
           publish: bun run release
+          createGithubReleases: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Releases
         if: steps.changesets.outputs.published == 'true'
