@@ -56,7 +56,7 @@ Tests must stay green.
 
 ### 4. Prove It Works (Required)
 
-Before completing a task run `bun run validation`. Ensure it passes. Fix any remaining issues.
+Before completing a task run `bun run validate`. Ensure it passes. Fix any remaining issues.
 
 ## Coding Style Rules
 

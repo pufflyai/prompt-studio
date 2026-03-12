@@ -1,11 +1,17 @@
 import { describe, expect, test } from "bun:test";
-import { applyFrontmatter, buildTicketFrontmatter, parseFrontmatter } from "./ticket-frontmatter";
+import {
+  applyFrontmatter,
+  applyFrontmatterValues,
+  buildTicketFrontmatter,
+  parseFrontmatter,
+} from "./ticket-frontmatter";
 
 describe("buildTicketFrontmatter", () => {
   test("builds frontmatter from ticket fields", () => {
     const result = buildTicketFrontmatter({
       shorthand: "PS-12",
       created_at: "2026-03-04T00:00:00.000Z",
+      draft: true,
       status_name: "backlog",
       parent_id: "PS-5",
       user_prompt: "Build the feature",
@@ -22,6 +28,7 @@ describe("buildTicketFrontmatter", () => {
         'ticket_id: "PS-12"',
         'user_prompt: "Build the feature"',
         'created: "2026-03-04T00:00:00.000Z"',
+        "draft: true",
         'status: "backlog"',
         'parent_id: "PS-5"',
         'priority: "P1"',
@@ -38,6 +45,7 @@ describe("buildTicketFrontmatter", () => {
     const result = buildTicketFrontmatter({
       shorthand: "PS-1",
       created_at: "2026-03-04T00:00:00.000Z",
+      draft: null,
       status_name: null,
       parent_id: null,
       user_prompt: 'She said "hello"',
@@ -55,6 +63,7 @@ describe("buildTicketFrontmatter", () => {
     const result = buildTicketFrontmatter({
       shorthand: "PS-1",
       created_at: "2026-03-04T00:00:00.000Z",
+      draft: null,
       status_name: null,
       parent_id: null,
       user_prompt: "line one\nline two",
@@ -72,6 +81,7 @@ describe("buildTicketFrontmatter", () => {
     const result = buildTicketFrontmatter({
       shorthand: "PS-1",
       created_at: "2026-03-04T00:00:00.000Z",
+      draft: null,
       status_name: null,
       parent_id: null,
       user_prompt: "path\\to\\file",
@@ -89,6 +99,7 @@ describe("buildTicketFrontmatter", () => {
     const result = buildTicketFrontmatter({
       shorthand: "PS-1",
       created_at: "2026-03-04T00:00:00.000Z",
+      draft: null,
       status_name: null,
       parent_id: null,
       user_prompt: null,
@@ -169,5 +180,45 @@ describe("parseFrontmatter", () => {
   test("strips quotes from values", () => {
     const content = "---\nstatus: backlog\npriority: 'P1'\n---\n\n# Ticket";
     expect(parseFrontmatter(content)).toEqual({ status: "backlog", priority: "P1" });
+  });
+});
+
+describe("applyFrontmatterValues", () => {
+  test("applies generated values over template frontmatter and preserves custom keys", () => {
+    const frontmatter = [
+      "---",
+      'ticket_id: "PS-5"',
+      'created: "2026-03-04T00:00:00.000Z"',
+      "draft: true",
+      'status: "wip"',
+      "---",
+    ].join("\n");
+    const content = ["---", 'ticket_id: "OLD-1"', 'priority: "[P1|P2|P3]"', "---", "", "# Ticket"].join("\n");
+
+    const result = applyFrontmatterValues(frontmatter, content);
+
+    expect(result).toContain('ticket_id: "PS-5"');
+    expect(result).toContain('created: "2026-03-04T00:00:00.000Z"');
+    expect(result).toContain("draft: true");
+    expect(result).toContain('status: "wip"');
+    expect(result).toContain('priority: "[P1|P2|P3]"');
+  });
+
+  test("creates frontmatter when content has none", () => {
+    const frontmatter = ["---", 'ticket_id: "PS-1"', "draft: true", "---"].join("\n");
+
+    const result = applyFrontmatterValues(frontmatter, "# Ticket");
+
+    expect(result).toBe(["---", 'ticket_id: "PS-1"', "draft: true", "---", "", "# Ticket"].join("\n"));
+  });
+
+  test("replaces existing generated keys", () => {
+    const frontmatter = ["---", "draft: true", "---"].join("\n");
+    const content = ["---", "draft: false", "---", "", "# Ticket"].join("\n");
+
+    const result = applyFrontmatterValues(frontmatter, content);
+
+    expect(result).toContain("draft: true");
+    expect(result).not.toContain("draft: false");
   });
 });

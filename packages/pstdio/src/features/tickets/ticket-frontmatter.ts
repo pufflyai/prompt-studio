@@ -1,6 +1,7 @@
 type FrontmatterFields = {
   shorthand: string;
   created_at: string;
+  draft: boolean | null;
   status_name: string | null;
   parent_id: string | null;
   user_prompt: string | null;
@@ -20,6 +21,7 @@ export const buildTicketFrontmatter = (fields: FrontmatterFields) => {
   lines.push(`ticket_id: ${q(fields.shorthand)}`);
   if (fields.user_prompt) lines.push(`user_prompt: ${q(fields.user_prompt)}`);
   lines.push(`created: ${q(fields.created_at)}`);
+  if (fields.draft !== null) lines.push(`draft: ${fields.draft}`);
 
   if (fields.status_name) lines.push(`status: ${q(fields.status_name)}`);
   if (fields.parent_id) lines.push(`parent_id: ${q(fields.parent_id)}`);
@@ -79,4 +81,56 @@ export const applyFrontmatter = (frontmatter: string, content: string) => {
   const body = stripFrontmatter(content).replace(/^\n+/, "");
   if (!body) return frontmatter;
   return `${frontmatter}\n\n${body}`;
+};
+
+const findFrontmatterClosingIndex = (content: string) => {
+  if (!content.startsWith("---")) return -1;
+  return content.indexOf("---", 3);
+};
+
+const frontmatterLines = (content: string) => {
+  const closingIndex = findFrontmatterClosingIndex(content);
+  if (closingIndex === -1) return [];
+
+  const block = content.slice(3, closingIndex).trim();
+  if (!block) return [];
+  return block.split("\n");
+};
+
+const frontmatterKey = (line: string) => {
+  const colonIndex = line.indexOf(":");
+  if (colonIndex === -1) return null;
+  return line.slice(0, colonIndex).trim();
+};
+
+export const applyFrontmatterValues = (frontmatter: string, content: string) => {
+  if (findFrontmatterClosingIndex(content) === -1) {
+    return applyFrontmatter(frontmatter, content);
+  }
+
+  const overrides = new Map<string, string>();
+  const overrideOrder: string[] = [];
+  for (const line of frontmatterLines(frontmatter)) {
+    const key = frontmatterKey(line);
+    if (!key) continue;
+    overrides.set(key, line);
+    overrideOrder.push(key);
+  }
+
+  const existing = frontmatterLines(content);
+  const merged = existing.map((line) => {
+    const key = frontmatterKey(line);
+    if (!key) return line;
+    if (!overrides.has(key)) return line;
+    return overrides.get(key)!;
+  });
+
+  for (const key of overrideOrder) {
+    if (existing.some((line) => frontmatterKey(line) === key)) continue;
+    const line = overrides.get(key);
+    if (line) merged.push(line);
+  }
+
+  const mergedFrontmatter = ["---", ...merged, "---"].join("\n");
+  return applyFrontmatter(mergedFrontmatter, content);
 };

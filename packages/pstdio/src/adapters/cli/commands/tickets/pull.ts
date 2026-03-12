@@ -75,6 +75,7 @@ const pullSingleTicket = async ({ deps, root, ticketId, shorthand, statusName, f
   const frontmatter = buildTicketFrontmatter({
     shorthand,
     created_at: ticket.created_at,
+    draft: ticket.draft,
     status_name: statusName,
     parent_id: parentId,
     user_prompt: ticket.user_prompt ?? null,

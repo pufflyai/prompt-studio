@@ -59,6 +59,7 @@ export interface Ticket {
   assignee?: string | null;
   updatedAt: string;
   archived?: boolean;
+  draft?: boolean;
   attempts?: TicketAttempt[];
   subTickets?: TicketSubTicket[];
 }

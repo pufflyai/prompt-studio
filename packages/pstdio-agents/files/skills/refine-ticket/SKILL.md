@@ -26,10 +26,9 @@ $ARGUMENTS
    - Steps aligned to Red/Green/Refactor
    - Acceptance criteria with explicit pass/fail conditions
    - Evidence expectations and exact validation commands
-7. Save to DB with `pstdio tickets save --id "<ticket-shorthand>"`.
-8. Stop after refinement and save. Do not implement code changes unless explicitly asked.
+7. If the changes were successful, remove the original file and save your changes with `pstdio tickets save --id "<ticket-shorthand>"`.
+8. Stop after refinement. Do not implement code changes unless explicitly asked.
 
 ## Output Locations
 
 - Ticket: `.pstdio/tickets/<ticket-id>_<slug>/ticket.md`
-- Original backup: `.pstdio/tickets/<ticket-id>_<slug>/ticket.original.md`

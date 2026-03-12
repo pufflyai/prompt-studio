@@ -61,6 +61,7 @@ const toTicketFromRow = (
     dependsOn: (row.depends_on as string) ?? null,
     parentId: (row.parent_id as string) ?? null,
     archived: row.archived as boolean,
+    draft: (row.draft as boolean) ?? false,
     assignee: null,
     updatedAt: row.updated_at as string,
     attempts,

@@ -7,7 +7,7 @@ import { createTicket as defaultCreateTicket } from "@/features/tickets/api/crea
 import { writeTicketFile } from "@/features/tickets/local-ticket";
 import { resolveStatusId as defaultResolveStatusId } from "@/features/tickets/resolve-status-id";
 import { resolveTagIds as defaultResolveTagIds } from "@/features/tickets/resolve-tag-ids";
-import { applyFrontmatter, buildTicketFrontmatter } from "@/features/tickets/ticket-frontmatter";
+import { applyFrontmatterValues, buildTicketFrontmatter } from "@/features/tickets/ticket-frontmatter";
 
 export const command = "write";
 export const describe = "Create a draft ticket with a local file";
@@ -79,27 +79,30 @@ export const createHandler =
       status_id: statusId,
     });
 
-    let content: string;
+    const frontmatter = buildTicketFrontmatter({
+      shorthand: ticket.shorthand,
+      created_at: ticket.created_at,
+      draft: true,
+      status_name: argv.status ?? null,
+      parent_id: argv["parent-id"] ?? null,
+      user_prompt: argv["user-prompt"] ?? null,
+      priority: null,
+      complexity: null,
+      depends_on: null,
+      parallelizable: null,
+      blocked_reason: null,
+    });
+
+    let bodyContent: string;
     if (argv.template) {
       const template = await deps.getTemplate(API_URL, projectId, argv.template);
       if (!template) throw new Error(`Template not found: ${argv.template}`);
-      content = renderTemplate(template.content, ticket.shorthand, argv, ticket.created_at);
+      bodyContent = renderTemplate(template.content, ticket.shorthand, argv, ticket.created_at);
     } else {
-      const body = `# ${argv.title}\n`;
-      const frontmatter = buildTicketFrontmatter({
-        shorthand: ticket.shorthand,
-        created_at: ticket.created_at,
-        status_name: argv.status ?? null,
-        parent_id: argv["parent-id"] ?? null,
-        user_prompt: argv["user-prompt"] ?? null,
-        priority: null,
-        complexity: null,
-        depends_on: null,
-        parallelizable: null,
-        blocked_reason: null,
-      });
-      content = applyFrontmatter(frontmatter, body);
+      bodyContent = `# ${argv.title}\n`;
     }
+
+    const content = applyFrontmatterValues(frontmatter, bodyContent);
 
     const filePath = writeTicketFile(root, ticket.shorthand, content);
     const relativePath = filePath.replace(`${root}/`, "");

@@ -1,6 +1,6 @@
 ---
 name: create-ticket
-description: "Create a new ticket when the user asks to create a ticket or requests changes unrelated to an existing ticket. Always start by creating the ticket via the pstdio CLI."
+description: "Use when asked to make changes unrelated to an existing ticket or when asked to create a new ticket. Create a ticket via the pstdio CLI."
 ---
 
 ## User Input
@@ -12,23 +12,81 @@ $ARGUMENTS
 ## Workflow
 
 1. Decide the ticket status:
-   - If the user explicitly asked to create a ticket, set status to `backlog`.
-   - Otherwise set status to `wip`.
-2. Derive a concise, verb-led ticket title from the user request and immediately run the pstdio CLI to create the ticket.
-   - Run `pstdio tickets write --title "<ticket title>" --user-prompt "<user prompt verbatim>" --status "<status>"`.
-3. Fill the ticket template with concrete details:
+   - If the user explicitly asked to create a ticket, use status `backlog`.
+   - Otherwise use status `wip`.
+2. Write a ticket draft using `pstdio tickets write`. Derive a concise, verb-led ticket title from the user request for the ticket title. Add tags if relevant. Use templates if requested, or relevant.
+3. Fill the resulting ticket at `.pstdio/tickets/<ticket-id>_<slug>/ticket.md` with concrete details. Use information from researching the codebase and documentation:
    - Priority (P1/P2/P3)
    - Parallelizable (yes/no)
-   - Goal, scope, steps, acceptance, and evidence
    - References to existing docs (if any), otherwise record gaps as assumptions
    - Implementation Notes with key files/modules and decisions
    - Acceptance with explicit tests, file paths, and exact commands
    - Documentation updates, or an explicit “no docs” note
-   - If blocked, run `pstdio tickets update --id "<ticket-id>" --status blocked` and document the reason in the ticket's `blocked_reason` frontmatter field
-4. When defining acceptance, list the exact test file paths, cases covered, and commands to run. Tests must live in the same ticket as the feature/bugfix work. Do not create standalone “add tests” tickets. Tests belong with the functional change they validate.
+4. When defining acceptance, list the test file paths, cases covered, and commands to run. Tests belong with the functional change they validate, do not create standalone “add tests” tickets.
 5. Resolve blockers by checking all existing tickets that are not done. If another ticket is a blocker, add it to `depends_on` in frontmatter.
+   - If blocked, run `pstdio tickets update --id "<ticket-id>" --status blocked` and document the reason in the ticket's `blocked_reason` frontmatter field
 6. Run `pstdio tickets save --id "<ticket id>"` to persist the updated ticket content.
 7. If the user only asked to create the ticket, stop after the ticket file(s) are created and saved and do not implement it. Otherwise start the ticket implementation and follow instructions in the implement-ticket skill.
+
+## Cheatsheet
+
+### List Valid Templates (`templates list`)
+
+Use this before `tickets write --template` to pick a valid template name for the current project.
+
+```bash
+pstdio templates list
+```
+
+Bundled ticket templates: `ticket`, `proposal`.
+
+### List Valid Tags (`tags list`)
+
+Use this before `--tag` flags to ensure tag names exist in the current project.
+
+```bash
+pstdio tags list
+```
+
+### Create Draft Ticket (`tickets write`)
+
+Use this to generate local ticket files from a title/prompt, then fill in implementation and acceptance details before publish.
+
+```bash
+pstdio tickets write --title "<title>" [--user-prompt "<prompt>"] [--template <template-name>] [--status <status>] [--tag <tag>] [--parent-id <ticket-id>]
+```
+
+### Create Ticket Directly (`tickets create`)
+
+Use this when you already have canonical ticket content and want to skip the local draft/edit loop.
+
+```bash
+pstdio tickets create --content "<content>"  [--status <status>] [--tag <tag>]
+```
+
+### List Tickets (`tickets list`)
+
+Use this to find blockers, related tickets, and parent/child relationships before setting `depends_on`.
+
+```bash
+pstdio tickets list [--status <status>] [--tag <tag>] [--priority <priority>] [--complexity <complexity>] [--archived] [--draft] [--parent-id <ticket-id>]
+```
+
+### Update Ticket Status/Tags (`tickets update`)
+
+Use this to move ticket lifecycle state (for example `blocked`/`wip`) without changing `ticket.md` content.
+
+```bash
+pstdio tickets update --id "<ticket-id>" [--status <status>] [--tag <tag>]
+```
+
+### Save Ticket Changes (`tickets save`)
+
+Use this after editing local files so the ticket content and artifacts are published.
+
+```bash
+pstdio tickets save --id "<ticket-id>" [--status <status>] [--tag <tag>]
+```
 
 ## Output Locations
 

@@ -20,6 +20,7 @@ import { TicketsHeader } from "../components/tickets-header";
 import { TicketsListView } from "../components/tickets-list-view";
 import { type BadgeContext, DEFAULT_DISPLAY_SETTINGS, type DisplaySettings } from "../types";
 import { groupTickets, orderTickets } from "../utils/ticket-grouping";
+import { getVisibleTickets } from "../utils/ticket-visibility";
 
 export const TicketsPanel = () => {
   const { projectId } = useParams({ strict: false });
@@ -40,7 +41,7 @@ export const TicketsPanel = () => {
 
   const isLoading = isProjectLoading || isTicketsLoading;
   const statusOptions = project?.ticketStatusOptions ?? [];
-  const allTickets = (tickets ?? []).filter((t) => !t.archived);
+  const allTickets = getVisibleTickets(tickets ?? []);
 
   const groups = groupTickets(allTickets, settings.grouping, statusOptions).map((group) => ({
     ...group,

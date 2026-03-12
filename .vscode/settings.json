@@ -10,5 +10,8 @@
   },
   "[json]": {
     "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[skill]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
   }
 }

@@ -61,6 +61,7 @@ describe("tickets write", () => {
     expect(log).toHaveBeenCalledWith(expect.stringContaining("Created ticket PS-1 (draft)"));
     const content = readTicketFile(tmpBase, "PS-1");
     expect(content).toContain("ticket_id:");
+    expect(content).toContain("draft: true");
     expect(content).toContain('created: "2026-03-04T00:00:00.000Z"');
     expect(content).toContain("# My ticket");
   });
@@ -133,6 +134,9 @@ describe("tickets write", () => {
     } as never);
 
     const content = readTicketFile(tmpBase, "PS-2");
+    expect(content).toContain('ticket_id: "PS-2"');
+    expect(content).toContain('created: "2026-03-04T00:00:00.000Z"');
+    expect(content).toContain("draft: true");
     expect(content).toContain("# Templated");
     expect(content).toContain("Ticket: PS-2");
     expect(content).toContain("Input: Some description");

@@ -1,6 +1,6 @@
 ---
 name: implement-ticket
-description: "Implement a single ticket end-to-end: locate the ticket file by id, then update its status (`review`, `wip`, `blocked`) via CLI. Use when asked to implement or complete a ticket."
+description: "Use when asked to implement or complete a ticket. Implement a ticket end-to-end."
 ---
 
 ## User Input
@@ -9,41 +9,29 @@ description: "Implement a single ticket end-to-end: locate the ticket file by id
 $ARGUMENTS
 ```
 
-## Ticket Implement Modes
-
 ## Workflow
 
-1. (Optional) If no ticket description is provided:
-   - If `next` / `continue`: run `pstdio tickets list --status ready`, then pull the first ticket by id.
-   - If valid id: run `pstdio tickets pull --id <shorthand>`.
+1. (Optional) Identify the target ticket shorthand from the user request (e.g. `PS-12`):
+   - If `next` / `continue` is requested: run `pstdio tickets list --status ready`, then pull the first ticket by id.
+   - If valid shorthand: run `pstdio tickets pull --id <shorthand>`.
    - If the ticket is missing, ask the user to confirm the ticket id or `next`.
 2. Update the ticket status
-   - When starting work, run: `pstdio tickets update --id "<ticket-id>" --status wip`.
-   - If blocked: run `pstdio tickets update --id "<ticket-id>" --status blocked` and document the reason in the ticket's `blocked_reason` frontmatter field, then stop the workflow.
-   - If complete: after confirming all checklists are checked, run `pstdio tickets update --id "<ticket-id>" --status review`.
+   - Before starting work, run: `pstdio tickets update --id "<ticket-id>" --status wip`.
 3. Update ticket checklists as you go
-   - Check off `## Steps` only when:
-     - A test exists that covers it, and
-     - Tests pass, and
-     - Any required refactor is done.
-   - Check off `## Acceptance` only when:
-     - There’s test coverage for it, and
-     - The full test suite is green.
 4. Evidence
    - Store artifacts under `.pstdio/tickets/<ticket-id>_<slug>/artifacts/`
    - If tests/commands can’t be run, record why in the ticket's `blocked_reason` frontmatter field.
 5. Finish
-   - Confirm everything in `## Steps` and `## Acceptance` is checked.
-   - If the ticket is not completed due to errors, run `pstdio tickets update --id "<ticket-id>" --status blocked`, document the reason in the ticket's `blocked_reason` frontmatter field, then run `pstdio tickets save --id "<ticket-id>"`.
+   - Confirm everything is checked.
+   - If the ticket is not completed, run `pstdio tickets update --id "<ticket-id>" --status blocked`, document the reason in the ticket's `blocked_reason` frontmatter field.
    - If the ticket is completed, run `pstdio tickets update --id "<ticket-id>" --status review`.
-   - Commit the implementation changes before handing off, including ticket updates and evidence references.
-   - Report completed files and artifacts.
+   - Save the ticket, artifacts and supporting files with `pstdio tickets save --id "<ticket-id>"`.
 
 ## Validation
 
-To be considered complete and ready for review, a ticket should provide Validation Artifacts. Validation Artifacts are **verifiable outputs** produced while doing the ticket e.g. by running `<validation-command> > validation.log 2>&1`
+To be considered complete and ready for review, a ticket should provide "Validation Artifacts": **verifiable outputs** produced while doing the ticket e.g. by running `<validation-command> > .pstdio/tickets/<ticket-id>_<slug>/artifacts/<artifact> 2>&1`
 
-Agents should dump and review artifacts, including:
+Validation Artifacts include:
 
 - Test, Build and Run outputs
 - Walkthroughs

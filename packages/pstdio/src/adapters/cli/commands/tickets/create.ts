@@ -8,7 +8,7 @@ import { uploadTicketFile as defaultUploadTicketFile } from "@/features/tickets/
 import { writeTicketFile as defaultWriteTicketFile } from "@/features/tickets/local-ticket";
 import { resolveStatusId as defaultResolveStatusId } from "@/features/tickets/resolve-status-id";
 import { resolveTagIds as defaultResolveTagIds } from "@/features/tickets/resolve-tag-ids";
-import { buildTicketFrontmatter } from "@/features/tickets/ticket-frontmatter";
+import { applyFrontmatterValues, buildTicketFrontmatter } from "@/features/tickets/ticket-frontmatter";
 
 export const command = "create";
 export const describe = "Create a ticket directly in the database";
@@ -82,6 +82,7 @@ export const createHandler =
       const frontmatter = buildTicketFrontmatter({
         shorthand: ticket.shorthand,
         created_at: ticket.created_at,
+        draft: false,
         status_name: argv.status ?? null,
         parent_id: null,
         user_prompt: null,
@@ -91,7 +92,7 @@ export const createHandler =
         parallelizable: null,
         blocked_reason: null,
       });
-      const content = `${frontmatter}\n\n${ticketContent}`;
+      const content = applyFrontmatterValues(frontmatter, ticketContent);
       deps.writeTicketFile(root, ticket.shorthand, content);
     }
 

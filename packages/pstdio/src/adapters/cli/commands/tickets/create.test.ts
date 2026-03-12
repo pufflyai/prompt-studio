@@ -100,6 +100,7 @@ describe("tickets create", () => {
     expect(content).toStartWith("---\n");
     expect(content).toContain("ticket_id:");
     expect(content).toContain('created: "2026-03-04T00:00:00.000Z"');
+    expect(content).toContain("draft: false");
     expect(content).toContain("# New ticket");
   });
 

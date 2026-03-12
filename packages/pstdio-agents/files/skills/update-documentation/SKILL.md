@@ -19,7 +19,7 @@ $ARGUMENTS
    - `pstdio templates write` creates the markdown file.
 3. Apply the requested documentation changes while preserving the documentation structure and update the `navigation.json` file.
 
-Each existing template has its own rules:
+## Documentation Reference
 
 ### `prd/` — Product Requirements
 
