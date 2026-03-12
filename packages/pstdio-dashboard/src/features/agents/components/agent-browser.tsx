@@ -23,6 +23,8 @@ interface WorkspaceAgentMenuProps {
   onSelectModel: (model: string) => void;
   isDisabled?: boolean;
   isAgentSwitchDisabled?: boolean;
+  isAgentsLoading?: boolean;
+  isModelsLoading?: boolean;
 }
 
 const getSelectedLabel = (
@@ -45,21 +47,17 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
     onSelectModel,
     isDisabled = false,
     isAgentSwitchDisabled = false,
+    isAgentsLoading = false,
+    isModelsLoading = false,
   } = props;
   const { t } = useTranslation("projects");
 
-  const selectedAgentLabel = getSelectedLabel(
-    agentOptions,
-    selectedAgent,
-    t("chatInput.agent.selectLabel"),
-    t("chatInput.agent.unknown"),
-  );
-  const selectedModelLabel = getSelectedLabel(
-    modelOptions,
-    selectedModel,
-    t("chatInput.model.selectLabel"),
-    t("chatInput.model.none"),
-  );
+  const selectedAgentLabel = isAgentsLoading
+    ? t("chatInput.agent.loading")
+    : getSelectedLabel(agentOptions, selectedAgent, t("chatInput.agent.selectLabel"), t("chatInput.agent.unknown"));
+  const selectedModelLabel = isModelsLoading
+    ? t("chatInput.model.loading")
+    : getSelectedLabel(modelOptions, selectedModel, t("chatInput.model.selectLabel"), t("chatInput.model.none"));
   const isSwitchDisabled = isDisabled || isAgentSwitchDisabled || agentOptions.length <= 1;
   const isMenuDisabled = isDisabled || (agentOptions.length === 0 && modelOptions.length === 0);
   const defaultMenuContent = modelOptions.length > 0 ? "models" : "agents";
@@ -134,7 +132,9 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
             data-testid={isShowingAgents ? "workspace-agent-options" : "workspace-agent-model-options"}
           >
             {isShowingAgents ? (
-              agentOptions.length > 0 ? (
+              isAgentsLoading ? (
+                <MenuItem primaryLabel={t("chatInput.agent.loading")} leftIcon={TerminalIcon} isDisabled />
+              ) : agentOptions.length > 0 ? (
                 agentOptions.map((option) => (
                   <MenuItem
                     key={option.value}
@@ -153,6 +153,8 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
               ) : (
                 <MenuItem primaryLabel={t("chatInput.agent.unknown")} leftIcon={TerminalIcon} isDisabled />
               )
+            ) : isModelsLoading ? (
+              <MenuItem primaryLabel={t("chatInput.model.loading")} leftIcon={Cpu} isDisabled />
             ) : modelOptions.length > 0 ? (
               modelOptions.map((option) => (
                 <MenuItem

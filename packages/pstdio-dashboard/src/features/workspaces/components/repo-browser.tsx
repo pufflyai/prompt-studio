@@ -38,6 +38,8 @@ interface RepoBrowserProps {
   onSelectBranch: (branch: string) => void;
   isDisabled?: boolean;
   isRepoSwitchDisabled?: boolean;
+  isReposLoading?: boolean;
+  isBranchesLoading?: boolean;
 }
 
 export const RepoBrowser = (props: RepoBrowserProps) => {
@@ -50,22 +52,23 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
     onSelectBranch,
     isDisabled = false,
     isRepoSwitchDisabled = false,
+    isReposLoading = false,
+    isBranchesLoading = false,
   } = props;
   const { t } = useTranslation("projects");
 
-  const selectedRepositoryLabel = getSelectedLabel(
-    repositoryOptions,
-    selectedRepository,
-    t("chatInput.repo.selectLabel"),
-    t("chatInput.repo.none"),
-  );
+  const selectedRepositoryLabel = isReposLoading
+    ? t("chatInput.repo.loading")
+    : getSelectedLabel(
+        repositoryOptions,
+        selectedRepository,
+        t("chatInput.repo.selectLabel"),
+        t("chatInput.repo.none"),
+      );
 
-  const selectedBranchLabel = getSelectedLabel(
-    branchOptions,
-    selectedBranch,
-    t("chatInput.branch.selectLabel"),
-    t("chatInput.branch.none"),
-  );
+  const selectedBranchLabel = isBranchesLoading
+    ? t("chatInput.branch.loading")
+    : getSelectedLabel(branchOptions, selectedBranch, t("chatInput.branch.selectLabel"), t("chatInput.branch.none"));
 
   const isSwitchDisabled = isDisabled || isRepoSwitchDisabled || repositoryOptions.length <= 1;
   const isMenuDisabled = isDisabled || (repositoryOptions.length === 0 && branchOptions.length === 0);
@@ -142,7 +145,9 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
             data-testid={isShowingRepos ? "workspace-repo-options" : "workspace-repo-branch-options"}
           >
             {isShowingRepos ? (
-              repositoryOptions.length > 0 ? (
+              isReposLoading ? (
+                <MenuItem primaryLabel={t("chatInput.repo.loading")} leftIcon={FolderGit2} isDisabled />
+              ) : repositoryOptions.length > 0 ? (
                 repositoryOptions.map((option) => (
                   <MenuItem
                     key={option.value}
@@ -159,6 +164,8 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
               ) : (
                 <MenuItem primaryLabel={t("chatInput.repo.noneLinked")} leftIcon={FolderGit2} isDisabled />
               )
+            ) : isBranchesLoading ? (
+              <MenuItem primaryLabel={t("chatInput.branch.loading")} leftIcon={GitBranch} isDisabled />
             ) : branchOptions.length > 0 ? (
               branchOptions.map((option) => (
                 <MenuItem

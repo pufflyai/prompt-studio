@@ -25,7 +25,7 @@ export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
   const [selectedAgent, setSelectedAgent] = useState<CodingAgent>(lastSelectedAgent || DEFAULT_AGENT_ID);
   const [selectedModel, setSelectedModel] = useState(lastSelectedModels[0] ?? "");
 
-  const { data: agents = [] } = useAgents();
+  const { data: agents = [], isLoading: isAgentsPending } = useAgents();
   const { data: models = [], isLoading: isModelsPending } = useAgentModels(selectedAgent, {
     enabled: Boolean(selectedAgent),
   });
@@ -97,6 +97,8 @@ export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
       onSelectModel={handleSelectModel}
       isDisabled={isDisabled}
       isAgentSwitchDisabled={isAgentSwitchDisabled}
+      isAgentsLoading={isAgentsPending}
+      isModelsLoading={isModelsPending}
     />
   );
 };

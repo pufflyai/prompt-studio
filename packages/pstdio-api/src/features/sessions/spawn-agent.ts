@@ -14,6 +14,12 @@ type SpawnDeps = Pick<RouteDeps, "agentRegistry" | "sessionStore" | "sessionsSer
 
 // Spawns a new agent session and tracks the process lifecycle
 export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
+  if (process.env.PSTDIO_DRY_RUN) {
+    const completed = await deps.sessionsService.updateStatus(input.sessionId, "completed");
+    if (completed) deps.eventBus.emit("sessions", "set", completed);
+    return {};
+  }
+
   const agent = deps.agentRegistry.get(input.agentId as AgentId);
   if (!agent) throw new Error(`Agent not found: ${input.agentId}`);
 
@@ -53,6 +59,12 @@ type ResumeInput = {
 
 // Resumes an existing agent session with a follow-up prompt
 export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) => {
+  if (process.env.PSTDIO_DRY_RUN) {
+    const completed = await deps.sessionsService.updateStatus(input.sessionId, "completed");
+    if (completed) deps.eventBus.emit("sessions", "set", completed);
+    return {};
+  }
+
   const agent = deps.agentRegistry.get(input.agentId as AgentId);
   if (!agent) throw new Error(`Agent not found: ${input.agentId}`);
 

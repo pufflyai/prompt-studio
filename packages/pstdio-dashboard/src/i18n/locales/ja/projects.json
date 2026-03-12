@@ -30,6 +30,7 @@
     "agent": {
       "selectLabel": "エージェントを選択",
       "unknown": "不明なエージェント",
+      "loading": "エージェントを読み込み中...",
       "options": {
         "opencode": "Opencode",
         "codex": "Codex",
@@ -39,7 +40,8 @@
     "repo": {
       "selectLabel": "リポジトリを選択",
       "none": "リポジトリがありません",
-      "noneLinked": "リンクされたリポジトリがありません"
+      "noneLinked": "リンクされたリポジトリがありません",
+      "loading": "リポジトリを読み込み中..."
     },
     "model": {
       "selectLabel": "モデルを選択",

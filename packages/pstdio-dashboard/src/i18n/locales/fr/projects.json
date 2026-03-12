@@ -30,6 +30,7 @@
     "agent": {
       "selectLabel": "Sélectionner un agent",
       "unknown": "Agent inconnu",
+      "loading": "Chargement des agents...",
       "options": {
         "opencode": "Opencode",
         "codex": "Codex",
@@ -39,7 +40,8 @@
     "repo": {
       "selectLabel": "Sélectionner un dépôt",
       "none": "Aucun dépôt",
-      "noneLinked": "Aucun dépôt lié"
+      "noneLinked": "Aucun dépôt lié",
+      "loading": "Chargement des dépôts..."
     },
     "branch": {
       "selectLabel": "Sélectionner une branche",

@@ -11,13 +11,6 @@
 
 ---
 
-This file answers two questions:
-
-1. **How this repo is organized**
-2. **How to write and verify code here**
-
-## PART 1 — REPO-SPECIFIC RULES
-
 ### Repository Type
 
 - **Bun-managed monorepo**
@@ -46,7 +39,7 @@ import { foo } from "<workspace-package>";
 - Importing from `apps/*`
 - Imports anywhere except the top of the file
 
-## PART 2 — CODING & TESTING RULES
+## CODING & TESTING RULES
 
 ### Default Behavior
 
@@ -188,3 +181,7 @@ When changing APIs:
 ### Project Planning and Documentation
 
 This project uses `pstdio` to manage tickets and documentation. You can find relevant information in `.pstdio/docs` including project architecture and challenging bugs encountered.
+
+### Production DB
+
+- Consider the database at ~/.pstdio/db as containing production data and do not modify it unless you request permission

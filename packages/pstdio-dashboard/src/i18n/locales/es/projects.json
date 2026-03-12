@@ -30,6 +30,7 @@
     "agent": {
       "selectLabel": "Seleccionar agente",
       "unknown": "Agente desconocido",
+      "loading": "Cargando agentes...",
       "options": {
         "opencode": "Opencode",
         "codex": "Codex",
@@ -39,7 +40,8 @@
     "repo": {
       "selectLabel": "Seleccionar repositorio",
       "none": "Sin repositorios",
-      "noneLinked": "No hay repositorios vinculados"
+      "noneLinked": "No hay repositorios vinculados",
+      "loading": "Cargando repositorios..."
     },
     "branch": {
       "selectLabel": "Seleccionar rama",

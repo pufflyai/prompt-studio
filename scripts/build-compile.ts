@@ -38,12 +38,12 @@ console.log("Collecting files to embed...");
 const distFiles = collectFiles(DASHBOARD_DIST);
 const cliFiles = collectFiles(CLI_FILES);
 const drizzleFiles = collectFiles(DRIZZLE_DIR);
-const pgliteFiles = [join(PGLITE_DIST, "pglite.data"), join(PGLITE_DIST, "pglite.wasm")];
-const allFiles = [...distFiles, ...cliFiles, ...drizzleFiles, ...pgliteFiles];
+const allFiles = [...distFiles, ...cliFiles, ...drizzleFiles];
 
 console.log(
-  `  Found ${allFiles.length} files to embed (${distFiles.length} dashboard + ${cliFiles.length} bundled + ${drizzleFiles.length} drizzle + ${pgliteFiles.length} pglite)`,
+  `  Found ${allFiles.length} files to embed (${distFiles.length} dashboard + ${cliFiles.length} bundled + ${drizzleFiles.length} drizzle)`,
 );
+console.log("  PGlite assets (pglite.wasm, pglite.data) are embedded via direct file imports in connection.pglite.ts");
 
 // 3. Generate embed manifest — imports each file with { type: "file" } so Bun embeds them
 const manifestDir = join("packages", "pstdio", "src");

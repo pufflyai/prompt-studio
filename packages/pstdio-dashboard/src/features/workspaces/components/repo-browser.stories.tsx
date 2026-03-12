@@ -110,6 +110,19 @@ export const NoRepositories: Story = {
   },
 };
 
+export const Loading: Story = {
+  args: {
+    repositoryOptions: [],
+    selectedRepository: "",
+    onSelectRepository: () => undefined,
+    branchOptions: [],
+    selectedBranch: "",
+    onSelectBranch: () => undefined,
+    isReposLoading: true,
+    isBranchesLoading: true,
+  },
+};
+
 export const Disabled: Story = {
   args: {
     repositoryOptions,

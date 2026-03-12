@@ -13,7 +13,6 @@ const extractEmbeddedFiles = async () => {
   const root = join(tmpdir(), "pstdio-files");
   if (existsSync(join(root, "docs"))) return root;
 
-  // @ts-expect-error Bun.embeddedFiles is not yet in @types/bun
   const files = Bun.embeddedFiles as (Blob & { name: string })[];
 
   for (const file of files) {

@@ -8,7 +8,6 @@ process.chdir(join(import.meta.dirname, ".."));
 const DASHBOARD_DIST = "./packages/pstdio-dashboard/dist";
 const CLI_FILES = "./packages/pstdio/files";
 const DRIZZLE_DIR = "./packages/pstdio-db/drizzle";
-const PGLITE_DIST = "./packages/pstdio-db/node_modules/@electric-sql/pglite/dist";
 const CLI_ENTRY = "./packages/pstdio/src/index.ts";
 const EMBED_MANIFEST = "./packages/pstdio/src/_embed-manifest.generated.ts";
 
@@ -50,11 +49,10 @@ console.log("Collecting files to embed...");
 const distFiles = collectFiles(DASHBOARD_DIST);
 const cliFiles = collectFiles(CLI_FILES);
 const drizzleFiles = collectFiles(DRIZZLE_DIR);
-const pgliteFiles = [join(PGLITE_DIST, "pglite.data"), join(PGLITE_DIST, "pglite.wasm")];
-const allFiles = [...distFiles, ...cliFiles, ...drizzleFiles, ...pgliteFiles];
+const allFiles = [...distFiles, ...cliFiles, ...drizzleFiles];
 
 console.log(
-  `  Found ${allFiles.length} files to embed (${distFiles.length} dashboard + ${cliFiles.length} bundled + ${drizzleFiles.length} drizzle + ${pgliteFiles.length} pglite)`,
+  `  Found ${allFiles.length} files to embed (${distFiles.length} dashboard + ${cliFiles.length} bundled + ${drizzleFiles.length} drizzle)`,
 );
 
 // 3. Generate embed manifest — imports each file with { type: "file" } so Bun embeds them

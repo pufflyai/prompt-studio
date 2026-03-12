@@ -145,7 +145,9 @@ export const RepoBrowserContainer = (props: RepoBrowserContainerProps) => {
       }))}
       selectedBranch={selectedBranch}
       onSelectBranch={handleSelectBranch}
-      isDisabled={isDisabled || isLoadingBranches || isLocked}
+      isDisabled={isDisabled || isLocked}
+      isReposLoading={isRepositoriesPending}
+      isBranchesLoading={isLoadingBranches}
     />
   );
 };

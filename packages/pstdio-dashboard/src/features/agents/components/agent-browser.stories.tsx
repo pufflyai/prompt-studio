@@ -167,6 +167,19 @@ export const WithDisabledAgent: Story = {
   },
 };
 
+export const Loading: Story = {
+  args: {
+    agentOptions: [],
+    selectedAgent: "",
+    onSelectAgent: () => undefined,
+    modelOptions: [],
+    selectedModel: "",
+    onSelectModel: () => undefined,
+    isAgentsLoading: true,
+    isModelsLoading: true,
+  },
+};
+
 export const NoSelection: Story = {
   render: () => {
     const [selectedAgent, setSelectedAgent] = useState("");

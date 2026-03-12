@@ -30,6 +30,7 @@
     "agent": {
       "selectLabel": "选择代理",
       "unknown": "未知代理",
+      "loading": "加载代理中...",
       "options": {
         "opencode": "Opencode",
         "codex": "Codex",
@@ -39,7 +40,8 @@
     "repo": {
       "selectLabel": "选择仓库",
       "none": "没有仓库",
-      "noneLinked": "未连接仓库"
+      "noneLinked": "未连接仓库",
+      "loading": "加载仓库中..."
     },
     "branch": {
       "selectLabel": "选择分支",

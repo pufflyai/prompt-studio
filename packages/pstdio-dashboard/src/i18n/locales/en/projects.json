@@ -30,6 +30,7 @@
     "agent": {
       "selectLabel": "Select agent",
       "unknown": "Unknown agent",
+      "loading": "Loading agents...",
       "options": {
         "opencode": "Opencode",
         "codex": "Codex",
@@ -39,7 +40,8 @@
     "repo": {
       "selectLabel": "Select repository",
       "none": "No repositories",
-      "noneLinked": "No repositories linked"
+      "noneLinked": "No repositories linked",
+      "loading": "Loading repositories..."
     },
     "branch": {
       "selectLabel": "Select branch",
@@ -219,17 +221,21 @@
     "projectCount_other": "You have {{count}} projects.",
     "title": "Projects",
     "createProject": "Create project",
+    "searchPlaceholder": "Search projects...",
     "loadingProjects": "Loading projects...",
     "unableToLoad": "Unable to load projects",
     "noProjectsYet": "No projects yet",
     "noProjectsDescription": "Create your first project to get started.",
+    "noSearchResults": "No projects match your search.",
     "createFirstProject": "Create your first project",
     "settingsAriaLabel": "Settings"
   },
   "sessions": {
     "title": "Sessions",
     "newSession": "New session",
+    "searchPlaceholder": "Search sessions...",
     "noSessionsYet": "No sessions yet",
+    "noSearchResults": "No sessions match your search.",
     "noSessionSelected": "No session selected",
     "selectSession": "Select a session from the sidebar or start a new one.",
     "followUpPlaceholder": "Send a follow-up message...",

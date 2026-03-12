@@ -8,16 +8,8 @@
       "text": "Product",
       "items": [
         {
-          "text": "Overview",
-          "link": "/product/overview"
-        },
-        {
           "text": "CLI",
           "items": [
-            {
-              "text": "Overview",
-              "link": "/product/cli"
-            },
             {
               "text": "Agents",
               "link": "/product/cli/agents"
@@ -171,6 +163,10 @@
         {
           "text": "Unified Bun Test",
           "link": "/adrs/unified-bun-test"
+        },
+        {
+          "text": "Dry Run Flag",
+          "link": "/adrs/dry-run-flag"
         }
       ]
     },
