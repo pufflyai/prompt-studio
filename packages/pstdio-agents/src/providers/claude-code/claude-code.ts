@@ -111,11 +111,7 @@ const parseTranscript = (content: string): ClaudeCodeTranscriptEntry[] => {
 
 // --- Models ---
 
-const knownModels: AgentModel[] = [
-  { id: "claude-sonnet-4-5-20250929" },
-  { id: "claude-opus-4-6" },
-  { id: "claude-haiku-4-5-20251001" },
-];
+const knownModels: AgentModel[] = [{ id: "sonnet" }, { id: "opus" }, { id: "haiku" }];
 
 // --- Factory ---
 

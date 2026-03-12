@@ -1,9 +1,13 @@
 import { Box, Button, Menu, Text } from "@chakra-ui/react";
 import type { SessionCompletionStatus } from "@pstdio/ui";
 import { MenuItem, SessionIndicator } from "@pstdio/ui";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Session } from "../types";
+import { getRecentSessions } from "../utils/recent-sessions";
+
+const SESSION_DROPDOWN_LIMIT = 6;
 
 interface SessionSelectorProps {
   sessions: Session[];
@@ -14,9 +18,17 @@ interface SessionSelectorProps {
 export const SessionSelector = (props: SessionSelectorProps) => {
   const { sessions, selectedSessionId, onSelectSession } = props;
   const { t } = useTranslation("projects");
+  const navigate = useNavigate();
+  const { projectId } = useParams({ strict: false });
+  const recentSessions = getRecentSessions(sessions, SESSION_DROPDOWN_LIMIT);
 
   const selectedSession = sessions.find((s) => s.id === selectedSessionId);
   const label = selectedSession?.title ?? t("sessions.newSession");
+
+  const handleViewMoreSessions = () => {
+    if (!projectId) return;
+    navigate({ to: `/projects/${projectId}/sessions` });
+  };
 
   return (
     <Menu.Root>
@@ -31,15 +43,16 @@ export const SessionSelector = (props: SessionSelectorProps) => {
       </Menu.Trigger>
       <Menu.Positioner>
         <Menu.Content minW="220px" bg="bg">
-          <Box maxH="18rem" overflowY="auto" py="1">
-            {sessions.length > 0 ? (
-              sessions.map((session) => (
+          <Box maxH="14rem" overflowY="auto" py="1">
+            {recentSessions.length > 0 ? (
+              recentSessions.map((session) => (
                 <MenuItem
                   key={session.id}
                   id={session.id}
                   primaryLabel={session.title}
                   tooltipLabel={session.title}
                   leftSlot={<SessionIndicator status={session.status as SessionCompletionStatus} />}
+                  variant="compact"
                   isSelected={session.id === selectedSessionId}
                   onClick={() => onSelectSession(session.id)}
                 />
@@ -47,6 +60,11 @@ export const SessionSelector = (props: SessionSelectorProps) => {
             ) : (
               <MenuItem primaryLabel={t("sessions.noSessionsYet")} isDisabled />
             )}
+          </Box>
+          <Box borderTopWidth="1px" px="1" py="1">
+            <Button variant="ghost" size="xs" width="full" justifyContent="flex-start" onClick={handleViewMoreSessions}>
+              {t("chatInput.session.viewMore")}
+            </Button>
           </Box>
         </Menu.Content>
       </Menu.Positioner>

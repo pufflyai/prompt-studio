@@ -42,6 +42,11 @@ const createSessionViaApi = async (
   return (await res.json()) as { id: string };
 };
 
+const archiveSessionViaApi = async (request: import("@playwright/test").APIRequestContext, sessionId: string) => {
+  const res = await request.post(`${apiBase}/v1/sessions/${sessionId}/archive`);
+  expect(res.ok()).toBe(true);
+};
+
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
   const res = await request.get(`${apiBase}/v1/projects`);
   expect(res.ok()).toBe(true);
@@ -82,6 +87,36 @@ test.describe("Sessions page", () => {
     await expect(page.getByText("Add search feature")).toBeVisible();
   });
 
+  test("hides archived sessions from the sessions page list", async ({ page, request }) => {
+    await bypassOnboarding(page);
+
+    await createSessionViaApi(request, projectId, "Visible session");
+    const archivedSession = await createSessionViaApi(request, projectId, "Archived session");
+    await archiveSessionViaApi(request, archivedSession.id);
+
+    await page.goto(`/projects/${projectId}/sessions`);
+
+    await expect(page.getByText("Visible session")).toBeVisible();
+    await expect(page.getByText("Archived session")).not.toBeVisible();
+  });
+
+  test("hides the floating session bubble on sessions routes", async ({ page }) => {
+    await bypassOnboarding(page);
+    await page.addInitScript((id: string) => {
+      localStorage.setItem(
+        `pstdio-project-settings/projects/${id}/values`,
+        JSON.stringify({ state: { sessionModalState: "bubble" }, version: 0 }),
+      );
+    }, projectId);
+    await page.goto(`/projects/${projectId}/docs`);
+
+    await expect(page.getByRole("dialog")).toBeVisible();
+
+    await page.goto(`/projects/${projectId}/sessions`);
+
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+
   test("navigates to session on click", async ({ page, request }) => {
     await bypassOnboarding(page);
 
@@ -117,5 +152,35 @@ test.describe("Sessions page", () => {
     await page.getByRole("button", { name: "Session actions" }).click();
     await expect(page.getByText("Download session JSON")).toBeVisible();
     await expect(page.getByText("Archive session")).toBeVisible();
+  });
+
+  test("shows only the 6 most recent sessions in the chat dropdown and links to sessions page", async ({
+    page,
+    request,
+  }) => {
+    await bypassOnboarding(page);
+
+    await createSessionViaApi(request, projectId, "Session 1");
+    await createSessionViaApi(request, projectId, "Session 2");
+    await createSessionViaApi(request, projectId, "Session 3");
+    await createSessionViaApi(request, projectId, "Session 4");
+    await createSessionViaApi(request, projectId, "Session 5");
+    await createSessionViaApi(request, projectId, "Session 6");
+    await createSessionViaApi(request, projectId, "Session 7");
+
+    await page.goto(`/projects/${projectId}/docs`);
+
+    await page.locator("button", { hasText: "New session" }).first().click();
+
+    await expect(page.getByText("Session 7")).toBeVisible();
+    await expect(page.getByText("Session 6")).toBeVisible();
+    await expect(page.getByText("Session 5")).toBeVisible();
+    await expect(page.getByText("Session 4")).toBeVisible();
+    await expect(page.getByText("Session 3")).toBeVisible();
+    await expect(page.getByText("Session 2")).toBeVisible();
+    await expect(page.getByText("Session 1")).not.toBeVisible();
+
+    await page.getByRole("button", { name: "View more sessions" }).click();
+    await page.waitForURL(`**/projects/${projectId}/sessions`);
   });
 });

@@ -20,7 +20,10 @@ type ListFilters = {
 };
 
 type UpdateInput = Partial<
-  Pick<SessionRecord, "title" | "agent" | "agent_session_id" | "last_request_started" | "last_request_ended">
+  Pick<
+    SessionRecord,
+    "title" | "agent" | "agent_session_id" | "last_request_started" | "last_request_ended" | "session_file_id"
+  >
 >;
 
 const nowTimestamp = () => new Date().toISOString();

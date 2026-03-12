@@ -1,6 +1,6 @@
 ---
 name: update-documentation
-description: "Use when asked to update, add, or modify documentation, save lessons learned, write a PRD, ADR, guide, or cookbook. Use when project requirements might get out of sync. Edit documentation and documentation structure."
+description: "Edit documentation and documentation structure. Use when asked to update, add, or modify documentation, save lessons learned, write a PRD, ADR, guide, or cookbook. Use when project requirements might get out of sync."
 ---
 
 ## User Input

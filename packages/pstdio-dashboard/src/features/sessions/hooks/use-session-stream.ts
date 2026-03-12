@@ -1,13 +1,21 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import { useEffect, useRef, useState } from "react";
+
 import { buildApiUrl } from "@/lib/api";
 import type { SessionStatus } from "../types";
+import {
+  applyMessagePatch,
+  getCachedSessionEntry,
+  type JsonPatch,
+  updateCachedSessionEntry,
+} from "./session-stream-cache";
 
-interface JsonPatch {
-  op: "add" | "replace" | "remove";
-  path: string;
-  value?: unknown;
-}
+export {
+  applyMessagePatch,
+  clearSessionStreamCache,
+  getCachedSessionEntry,
+  updateCachedSessionEntry,
+} from "./session-stream-cache";
 
 interface ApprovalRequest {
   id: string;
@@ -23,24 +31,6 @@ interface SessionStreamState {
   approvalRequest: ApprovalRequest | null;
 }
 
-const applyPatch = (messages: SessionMessage[], patch: JsonPatch): SessionMessage[] => {
-  const match = patch.path.match(/^\/messages\/(\d+)$/);
-  if (!match) return messages;
-
-  const index = Number(match[1]);
-  const next = [...messages];
-
-  if (patch.op === "add") {
-    next.splice(index, 0, patch.value as SessionMessage);
-  } else if (patch.op === "replace") {
-    next[index] = patch.value as SessionMessage;
-  } else if (patch.op === "remove") {
-    next.splice(index, 1);
-  }
-
-  return next;
-};
-
 export const useSessionStream = (sessionId: string | null) => {
   const [state, setState] = useState<SessionStreamState>({
     messages: [],
@@ -48,6 +38,7 @@ export const useSessionStream = (sessionId: string | null) => {
     isStreaming: false,
     approvalRequest: null,
   });
+  const [connectionAttempt, setConnectionAttempt] = useState(0);
 
   const messagesRef = useRef<SessionMessage[]>([]);
 
@@ -58,15 +49,25 @@ export const useSessionStream = (sessionId: string | null) => {
       return;
     }
 
-    messagesRef.current = [];
-    setState({ messages: [], status: null, isStreaming: true, approvalRequest: null });
+    const cached = getCachedSessionEntry(sessionId);
+    setState({
+      messages: cached.messages,
+      status: cached.status,
+      isStreaming: true,
+      approvalRequest: null,
+    });
 
-    const url = buildApiUrl(`/v1/sessions/${sessionId}/stream`);
+    // Reset ref so server-replayed history starts from empty — prevents
+    // duplication when the modal is closed and reopened (cache + replay).
+    messagesRef.current = [];
+
+    const url = buildApiUrl(`/v1/sessions/${sessionId}/stream?attempt=${connectionAttempt}`);
     const source = new EventSource(url);
 
     source.addEventListener("patch", (event) => {
       const patch = JSON.parse(event.data) as JsonPatch;
-      messagesRef.current = applyPatch(messagesRef.current, patch);
+      messagesRef.current = applyMessagePatch(messagesRef.current, patch);
+      updateCachedSessionEntry(sessionId, { messages: messagesRef.current });
       setState((prev) => ({ ...prev, messages: messagesRef.current, approvalRequest: null }));
     });
 
@@ -77,9 +78,11 @@ export const useSessionStream = (sessionId: string | null) => {
 
     source.addEventListener("end", (event) => {
       const { status } = JSON.parse(event.data) as { status: string };
+      const resolvedStatus = status as SessionStatus;
+      updateCachedSessionEntry(sessionId, { messages: messagesRef.current, status: resolvedStatus });
       setState((prev) => ({
         ...prev,
-        status: status as SessionStatus,
+        status: resolvedStatus,
         isStreaming: false,
         approvalRequest: null,
       }));
@@ -94,7 +97,11 @@ export const useSessionStream = (sessionId: string | null) => {
     return () => {
       source.close();
     };
-  }, [sessionId]);
+  }, [sessionId, connectionAttempt]);
 
-  return state;
+  const reconnect = () => {
+    setConnectionAttempt((attempt) => attempt + 1);
+  };
+
+  return { ...state, reconnect };
 };

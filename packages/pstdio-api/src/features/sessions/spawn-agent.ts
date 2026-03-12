@@ -1,5 +1,6 @@
 import type { AgentId, ApprovalRequest } from "pstdio-agents";
 import type { RouteDeps } from "../deps";
+import { persistSessionMessages } from "./session-messages";
 
 type SpawnInput = {
   sessionId: string;
@@ -10,7 +11,7 @@ type SpawnInput = {
   cwd?: string;
 };
 
-type SpawnDeps = Pick<RouteDeps, "agentRegistry" | "sessionStore" | "sessionsService" | "eventBus">;
+type SpawnDeps = Pick<RouteDeps, "agentRegistry" | "sessionStore" | "sessionsService" | "eventBus" | "filesService">;
 
 // Spawns a new agent session and tracks the process lifecycle
 export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
@@ -72,13 +73,24 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
     entry.eventStore.push({ op: "add", path: "/approval_request", value: request });
   });
 
+  // Resume streams emit index-based message patches, so we align indices with existing history.
+  let messageOffset = input.messageOffset;
+  if (messageOffset === undefined) {
+    try {
+      const messages = await agent.getMessages(input.agentSessionId, input.cwd ? { cwd: input.cwd } : undefined);
+      messageOffset = messages.length;
+    } catch {
+      messageOffset = 0;
+    }
+  }
+
   const result = await agent.resumeSession(
     {
       sessionId: input.agentSessionId,
       prompt: input.prompt,
       model: input.model,
       cwd: input.cwd,
-      messageOffset: input.messageOffset,
+      messageOffset,
     },
     entry.eventStore,
     entry.approvalService,
@@ -98,6 +110,12 @@ const trackProcessExit = (
   deps: SpawnDeps,
 ) => {
   process.onExit.then(async ({ code }) => {
+    const entry = deps.sessionStore.get(sessionId);
+    if (entry) {
+      const patches = entry.eventStore.getHistory();
+      await persistSessionMessages(sessionId, patches, deps).catch(() => {});
+    }
+
     const status = code === 0 ? "completed" : "failed";
     const updated = await deps.sessionsService.updateStatus(sessionId, status);
     if (updated) deps.eventBus.emit("sessions", "set", updated);

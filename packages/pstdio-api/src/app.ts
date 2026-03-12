@@ -110,7 +110,7 @@ export const createApp = async (options?: AppOptions) => {
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      const token = authorization.replace(/^bearer\s+/i, "");
+      const token = authorization.replace(/^bearer\s+/i, "").trim();
 
       if (token !== apiToken) {
         return c.json({ error: "Unauthorized" }, 401);

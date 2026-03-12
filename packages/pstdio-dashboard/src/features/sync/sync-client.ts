@@ -22,6 +22,11 @@ export interface SyncClient {
   connected: boolean;
 }
 
+interface SyncCallbacks {
+  onConnected?: () => void;
+  onDisconnected?: () => void;
+}
+
 const parseSSE = (chunk: string) => {
   let event = "";
   let data = "";
@@ -32,13 +37,17 @@ const parseSSE = (chunk: string) => {
   return { event, data };
 };
 
-const handleInit = (data: string, state: SyncClient) => {
+const handleInit = (data: string, state: SyncClient, callbacks: SyncCallbacks) => {
   const parsed = JSON.parse(data) as InitEvent;
   for (const [table, rows] of Object.entries(parsed.tables)) {
     const writer = getWriter(table as SyncedTable);
     if (writer) writer.truncateAndWrite(rows);
   }
+  const wasConnected = state.connected;
   state.connected = true;
+  if (!wasConnected) {
+    callbacks.onConnected?.();
+  }
   return parsed.seq;
 };
 
@@ -76,13 +85,18 @@ const readStream = async (body: ReadableStream<Uint8Array>, onMessage: (event: s
   }
 };
 
-export const startSync = (apiUrl: string): SyncClient => {
+export const startSync = (apiUrl: string, callbacks: SyncCallbacks = {}): SyncClient => {
   let lastSeq = 0;
   let abortController: AbortController | null = null;
   const state: SyncClient = { close: () => {}, connected: false };
 
+  const setDisconnected = () => {
+    state.connected = false;
+    callbacks.onDisconnected?.();
+  };
+
   const handleEvent = (event: string, data: string) => {
-    if (event === "init") lastSeq = handleInit(data, state);
+    if (event === "init") lastSeq = handleInit(data, state, callbacks);
     else if (event === "sync:set") lastSeq = Math.max(lastSeq, handleSyncSet(data));
     else if (event === "sync:delete") lastSeq = Math.max(lastSeq, handleSyncDelete(data));
     else if (event === "heartbeat") lastSeq = Math.max(lastSeq, (JSON.parse(data) as { seq: number }).seq);
@@ -100,7 +114,7 @@ export const startSync = (apiUrl: string): SyncClient => {
       if ((err as Error).name === "AbortError") return;
     }
 
-    state.connected = false;
+    setDisconnected();
     setTimeout(connect, 1000);
   };
 

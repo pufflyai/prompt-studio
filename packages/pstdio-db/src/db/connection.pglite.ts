@@ -60,38 +60,6 @@ const resolvePgliteOptions = async () => {
   return { fsBundle, wasmModule };
 };
 
-const acquireDbLock = (dbPath: string) => {
-  if (dbPath === ":memory:") {
-    return null;
-  }
-
-  const lockPath = `${dbPath}.lock`;
-
-  try {
-    const fd = fs.openSync(lockPath, "wx");
-    fs.writeFileSync(
-      fd,
-      JSON.stringify({
-        pid: process.pid,
-        createdAt: new Date().toISOString(),
-      }),
-    );
-
-    return {
-      release: () => {
-        fs.closeSync(fd);
-        fs.rmSync(lockPath, { force: true });
-      },
-    };
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "EEXIST") {
-      throw new Error(`Database path "${dbPath}" is already in use.`);
-    }
-
-    throw error;
-  }
-};
-
 export const createDb = async (options?: { path?: string }) => {
   const dbPath = resolveDbPath(options?.path);
   console.log("[createDb] dbPath:", dbPath);
@@ -99,60 +67,38 @@ export const createDb = async (options?: { path?: string }) => {
   ensureDbDirectory(dbPath);
   console.log("[createDb] ensured db directory");
 
-  const lock = acquireDbLock(dbPath);
-  let pglite: PGlite | null = null;
+  const pgliteOpts = await resolvePgliteOptions();
+  console.log("[createDb] pglite options resolved, keys:", Object.keys(pgliteOpts));
 
-  try {
-    const pgliteOpts = await resolvePgliteOptions();
-    console.log("[createDb] pglite options resolved, keys:", Object.keys(pgliteOpts));
+  const pglite = dbPath === ":memory:" ? new PGlite(pgliteOpts) : new PGlite(dbPath, pgliteOpts);
+  console.log("[createDb] PGlite constructor called, waiting for ready...");
+  await pglite.waitReady;
+  console.log("[createDb] PGlite ready");
 
-    pglite = dbPath === ":memory:" ? new PGlite(pgliteOpts) : new PGlite(dbPath, pgliteOpts);
-    console.log("[createDb] PGlite constructor called, waiting for ready...");
-    await pglite.waitReady;
-    console.log("[createDb] PGlite ready");
-    const client = pglite;
-
-    const db = drizzle(client, { schema });
-    const migrationsFolder = await resolveMigrationsFolder();
-    console.log("[createDb] migrations folder:", migrationsFolder);
-    if (fs.existsSync(migrationsFolder)) {
-      await migrate(db, { migrationsFolder });
-      console.log("[createDb] migrations applied");
-    }
-
-    let closed = false;
-    const close = async () => {
-      if (closed) {
-        return;
-      }
-
-      closed = true;
-
-      try {
-        await client.close();
-      } finally {
-        lock?.release();
-      }
-    };
-
-    return {
-      close,
-      db,
-      path: dbPath,
-      pglite: client,
-    };
-  } catch (error) {
-    if (pglite) {
-      try {
-        await pglite.close();
-      } catch {
-        // keep the original startup error
-      }
-    }
-
-    lock?.release();
-    throw error;
+  const db = drizzle(pglite, { schema });
+  const migrationsFolder = await resolveMigrationsFolder();
+  console.log("[createDb] migrations folder:", migrationsFolder);
+  if (fs.existsSync(migrationsFolder)) {
+    await migrate(db, { migrationsFolder });
+    console.log("[createDb] migrations applied");
   }
+
+  let closed = false;
+  const close = async () => {
+    if (closed) {
+      return;
+    }
+
+    closed = true;
+    await pglite.close();
+  };
+
+  return {
+    close,
+    db,
+    path: dbPath,
+    pglite,
+  };
 };
 
 export type DbClient = PgliteDatabase<typeof schema>;

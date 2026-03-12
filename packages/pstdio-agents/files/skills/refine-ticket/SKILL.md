@@ -1,6 +1,6 @@
 ---
 name: refine-ticket
-description: "Use when asked to refine, improve, expand, or format an existing ticket. Provide additional information by researching the codebase and documentation. Format a ticket given a template."
+description: "Provide additional information to a ticket by researching the codebase and documentation, and/or format a ticket given a template. Use when asked to refine, improve, expand, or format an existing ticket."
 ---
 
 ## User Input

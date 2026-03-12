@@ -3,13 +3,17 @@ import { HorizontalMenuStack, Tooltip } from "@pstdio/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { PenBox } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { AgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
+import { RepoBrowserContainer } from "@/features/workspaces/components/repo-browser.container";
 import { SessionActionMenu } from "../components/session-action-menu";
 import { SessionChatView } from "../components/session-chat-view";
 import { SessionsList } from "../components/sessions-list";
 import { useArchiveSession } from "../hooks/use-archive-session";
 import { useProjectSession } from "../hooks/use-project-session";
 import { useProjectSessions } from "../hooks/use-project-sessions";
+import { useSessionWorkspace } from "../hooks/use-session-workspace";
 import { downloadSessionJson } from "../utils/session-download";
+import { getVisibleSessions } from "../utils/visible-sessions";
 
 export const SessionsPanel = () => {
   const { t } = useTranslation("projects");
@@ -18,10 +22,12 @@ export const SessionsPanel = () => {
   const selectedSessionId = typeof sessionId === "string" ? sessionId : null;
 
   const { data: sessions = [], isLoading } = useProjectSessions(projectId);
+  const visibleSessions = getVisibleSessions(sessions);
   const { data: selectedSessionDetails } = useProjectSession(projectId, selectedSessionId);
+  const workspace = useSessionWorkspace(selectedSessionId);
   const archiveSession = useArchiveSession();
 
-  const selectedSession = sessions.find((s) => s.id === selectedSessionId) ?? null;
+  const selectedSession = visibleSessions.find((s) => s.id === selectedSessionId) ?? null;
   const downloadableSession = selectedSessionDetails ?? selectedSession;
 
   const handleSelectSession = (nextSessionId: string) => {
@@ -56,7 +62,7 @@ export const SessionsPanel = () => {
 
           <Stack flex="1" minH="0" overflowY="auto">
             <SessionsList
-              sessions={sessions}
+              sessions={visibleSessions}
               selectedSessionId={selectedSessionId}
               isLoading={isLoading}
               onSelectSession={handleSelectSession}
@@ -80,8 +86,18 @@ export const SessionsPanel = () => {
             </HStack>
           </HorizontalMenuStack>
 
-          <Stack flex="1" minH="0">
-            <SessionChatView sessionId={selectedSessionId} />
+          <Stack flex="1" minH="0" px="sm" pb="sm" align="flex-start">
+            <Stack flex="1" minH="0" w="full" maxW="52rem">
+              <SessionChatView
+                sessionId={selectedSessionId}
+                repoMenu={
+                  <HStack justify="space-between" align="center" wrap="wrap" w="full">
+                    <AgentBrowserContainer />
+                    <RepoBrowserContainer lockedBranch={workspace?.branch} />
+                  </HStack>
+                }
+              />
+            </Stack>
           </Stack>
         </Stack>
       </Flex>

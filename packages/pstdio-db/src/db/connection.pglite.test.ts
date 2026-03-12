@@ -39,19 +39,4 @@ describe("createDb", () => {
     await client.close();
     fs.rmSync(tempRoot, { force: true, recursive: true });
   });
-
-  it("rejects concurrent access to the same on-disk database path", async () => {
-    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-db-"));
-    const dbPath = path.join(tempRoot, ".pstdio");
-    const first = await createDb({ path: dbPath });
-
-    await expect(createDb({ path: dbPath })).rejects.toThrow("already in use");
-
-    await first.close();
-
-    const second = await createDb({ path: dbPath });
-    await second.close();
-
-    fs.rmSync(tempRoot, { force: true, recursive: true });
-  });
 });

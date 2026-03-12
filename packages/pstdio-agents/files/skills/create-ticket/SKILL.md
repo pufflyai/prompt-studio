@@ -1,6 +1,6 @@
 ---
 name: create-ticket
-description: "Use when asked to make changes unrelated to an existing ticket or when asked to create a new ticket. Create a ticket via the pstdio CLI."
+description: "Create a ticket via pstdio. Use when asked to make changes unrelated to an existing ticket or when asked to create a new ticket."
 ---
 
 ## User Input

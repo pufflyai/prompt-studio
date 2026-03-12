@@ -3,11 +3,25 @@ import { expect, test } from "@playwright/test";
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 
-const bypassOnboarding = async (page: import("@playwright/test").Page) => {
-  await page.addInitScript(() => {
+const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string) => {
+  await page.addInitScript((currentProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "opencode");
-  });
+    localStorage.setItem(
+      `pstdio-project-settings/projects/${currentProjectId}/values`,
+      JSON.stringify({
+        state: {
+          lastSelectedAgent: "opencode",
+          lastSelectedModels: [],
+          lastSelectedRepo: "",
+          lastSelectedBranches: [],
+          sessionModalState: "closed",
+          selectedSessionId: null,
+        },
+        version: 0,
+      }),
+    );
+  }, projectId);
 };
 
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
@@ -81,7 +95,7 @@ test.describe("Ticket list", () => {
   });
 
   test("shows board view with default status columns", async ({ page, request }) => {
-    await bypassOnboarding(page);
+    await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets`);
 
     const statuses = await getTicketStatuses(request, projectId);
@@ -98,7 +112,7 @@ test.describe("Ticket list", () => {
     await createTicketViaApi(request, projectId, "Backlog task", backlogStatus!.id);
     await createTicketViaApi(request, projectId, "Ready task", readyStatus!.id);
 
-    await bypassOnboarding(page);
+    await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets`);
 
     await expect(page.getByText("Backlog task")).toBeVisible();
@@ -113,7 +127,7 @@ test.describe("Ticket list", () => {
     };
     const initialTickets = await listTickets();
 
-    await bypassOnboarding(page);
+    await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets`);
 
     await expect(page.getByText("backlog", { exact: true }).first()).toBeVisible();
@@ -124,7 +138,9 @@ test.describe("Ticket list", () => {
     // Fill in the modal content editor
     const dialog = page.getByRole("dialog").last();
     await expect(dialog.getByText("Describe the ticket...")).toBeVisible();
-    await page.keyboard.type("New E2E Ticket");
+    const contentEditor = dialog.getByRole("textbox").first();
+    await contentEditor.click();
+    await contentEditor.fill("New E2E Ticket");
     await dialog.getByRole("button", { name: "Create", exact: true }).click();
 
     // Verify ticket appears on the board
@@ -139,7 +155,7 @@ test.describe("Ticket list", () => {
     const backlog = statuses.find((s) => s.name === "backlog")!;
     const ticket = await createTicketViaApi(request, projectId, "Detail test", backlog.id);
 
-    await bypassOnboarding(page);
+    await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets`);
 
     await page.getByText("Detail test").click();
@@ -159,7 +175,7 @@ test.describe("Ticket list editing and filtering", () => {
   });
 
   test("updates ticket display title after editing content and returning to list", async ({ page, request }) => {
-    await bypassOnboarding(page);
+    await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets`);
 
     await expect(page.getByText("backlog", { exact: true }).first()).toBeVisible();
@@ -167,7 +183,9 @@ test.describe("Ticket list editing and filtering", () => {
     await page.getByRole("button", { name: "Create ticket" }).first().click();
     const dialog = page.getByRole("dialog").last();
     await expect(dialog.getByText("Describe the ticket...")).toBeVisible();
-    await page.keyboard.type("Original display title");
+    const contentEditor = dialog.getByRole("textbox").first();
+    await contentEditor.click();
+    await contentEditor.fill("Original display title");
     await dialog.getByRole("button", { name: "Create", exact: true }).click();
 
     await expect(page.getByText("Original display title")).toBeVisible();
@@ -193,7 +211,7 @@ test.describe("Ticket list editing and filtering", () => {
         response.status() === 200,
     );
 
-    const editor = page.locator('[contenteditable="true"]:visible').last();
+    const editor = page.locator('[contenteditable="true"]:visible').first();
     await editor.click();
     await page.keyboard.press("ControlOrMeta+A");
     await page.keyboard.type("Updated display title");
@@ -207,7 +225,7 @@ test.describe("Ticket list editing and filtering", () => {
   });
 
   test("preserves edited ticket content after leaving and reopening ticket details", async ({ page, request }) => {
-    await bypassOnboarding(page);
+    await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets`);
 
     await expect(page.getByText("backlog", { exact: true }).first()).toBeVisible();
@@ -215,7 +233,9 @@ test.describe("Ticket list editing and filtering", () => {
     await page.getByRole("button", { name: "Create ticket" }).first().click();
     const dialog = page.getByRole("dialog").last();
     await expect(dialog.getByText("Describe the ticket...")).toBeVisible();
-    await page.keyboard.type("Original content title");
+    const contentEditor = dialog.getByRole("textbox").first();
+    await contentEditor.click();
+    await contentEditor.fill("Original content title");
     await dialog.getByRole("button", { name: "Create", exact: true }).click();
 
     const listTickets = async () => {
@@ -238,7 +258,7 @@ test.describe("Ticket list editing and filtering", () => {
         response.url().includes(`/v1/tickets/${createdTicket!.id}`) &&
         response.status() === 200,
     );
-    const editor = page.locator('[contenteditable="true"]:visible').last();
+    const editor = page.locator('[contenteditable="true"]:visible').first();
     await editor.click();
     await page.keyboard.press("ControlOrMeta+A");
     await page.keyboard.type(updatedContent);
@@ -251,7 +271,7 @@ test.describe("Ticket list editing and filtering", () => {
     await page.getByText("Persisted content title").first().click();
     await page.waitForURL(`**/projects/${projectId}/tickets/${createdTicket!.shorthand}`);
 
-    const reopenedEditor = page.locator('[contenteditable="true"]:visible').last();
+    const reopenedEditor = page.locator('[contenteditable="true"]:visible').first();
     await expect(reopenedEditor).toContainText("persisted-body-marker", { timeout: 12_000 });
   });
 
@@ -263,7 +283,7 @@ test.describe("Ticket list editing and filtering", () => {
     const archivedTicket = await createTicketViaApi(request, projectId, "Archived ticket", backlog.id);
     await updateTicketViaApi(request, archivedTicket.id, { archived: true });
 
-    await bypassOnboarding(page);
+    await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets`);
 
     await expect(page.getByText("Visible ticket")).toBeVisible();
@@ -285,7 +305,7 @@ test.describe("Ticket list additional coverage", () => {
     const backlog = statuses.find((s) => s.name === "backlog")!;
     const ticket = await createTicketViaApi(request, projectId, "Shorthand test", backlog.id);
 
-    await bypassOnboarding(page);
+    await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets`);
 
     await expect(page.getByText(ticket.shorthand)).toBeVisible();
@@ -299,7 +319,7 @@ test.describe("Ticket list additional coverage", () => {
     await createTicketViaApi(request, projectId, "Second task", backlog.id);
     await createTicketViaApi(request, projectId, "Third task", backlog.id);
 
-    await bypassOnboarding(page);
+    await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets`);
 
     await expect(page.getByText("First task")).toBeVisible();
@@ -308,7 +328,7 @@ test.describe("Ticket list additional coverage", () => {
   });
 
   test("shows loading state before tickets are ready", async ({ page }) => {
-    await bypassOnboarding(page);
+    await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets`);
 
     // Either loading text or the board should be visible (loading may be fast)
@@ -323,12 +343,12 @@ test.describe("Ticket list additional coverage", () => {
     await createTemplateViaApi(request, projectId, "Bug Report", "ticket");
     const ticket = await createTicketViaApi(request, projectId, "Template test ticket", backlog.id);
 
-    await bypassOnboarding(page);
+    await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets/${ticket.shorthand}`);
 
     // Open ticket action menu and click "Refine ticket"
     await page.getByRole("button", { name: "Open ticket options" }).click();
-    await page.getByText("Refine ticket", { exact: true }).click();
+    await page.getByRole("option", { name: "Refine ticket", exact: true }).click();
 
     // The refine modal should open with a template selector
     const dialog = page.getByRole("dialog").last();
@@ -345,22 +365,24 @@ test.describe("Ticket list additional coverage", () => {
     const backlog = statuses.find((s) => s.name === "backlog")!;
 
     // Create a tag for the project
+    const tagName = "ui-e2e-bug";
     const tagRes = await request.post(`${apiBase}/v1/projects/${projectId}/tags`, {
-      data: { name: "Bug", color: "red" },
+      data: { name: tagName, color: "red" },
     });
     expect(tagRes.ok()).toBe(true);
 
     // Create a ticket
     const ticket = await createTicketViaApi(request, projectId, "Tag test ticket", backlog.id);
 
-    await bypassOnboarding(page);
+    await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets/${ticket.shorthand}`);
 
     // The tag selector should show "No tags selected"
-    await expect(page.getByText("No tags selected")).toBeVisible();
+    const tagTrigger = page.getByRole("button", { name: "No tags selected", exact: true });
+    await expect(tagTrigger).toBeVisible();
 
-    // Open the tag dropdown and select "Bug"
-    await page.getByText("No tags selected").click();
+    // Open the tag dropdown and select the created tag
+    await tagTrigger.click();
 
     const tagPatchResponse = page.waitForResponse(
       (response) =>
@@ -368,10 +390,10 @@ test.describe("Ticket list additional coverage", () => {
         response.url().includes(`/v1/tickets/${ticket.id}`) &&
         response.status() === 200,
     );
-    await page.getByText("Bug", { exact: true }).click();
+    await page.getByRole("option", { name: tagName, exact: true }).click();
     await tagPatchResponse;
 
-    // The trigger should now show "Bug" instead of "No tags selected"
+    // The trigger should now show the selected tag instead of "No tags selected"
     await expect(page.getByText("No tags selected")).not.toBeVisible();
 
     // Verify via API that the tag was assigned

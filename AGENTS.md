@@ -31,7 +31,7 @@ Follow this loop **every time**:
 
 ❌ Not allowed:
 
-- Tests for UI only changes. Use storybook stories instead
+- Tests for UI changes. Use storybook stories instead.
 - Tests for config only changes.
 
 ### 2. Green — Make it pass
@@ -79,6 +79,11 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 - Tests must be **located next to the file they test**
 - Avoid mocks, test the real thing when possible
 - Bug fixes must add a regression test first
+
+❌ Not allowed:
+
+- Tests for UI changes. Use storybook stories instead.
+- Tests for config only changes.
 
 # Changesets
 

@@ -1,6 +1,6 @@
 ---
 name: create-sub-tickets
-description: "Use when asked to create child or sub-tickets for a ticket. Break a parent ticket into actionable sub-tickets."
+description: "Break a parent ticket into actionable sub-tickets. Use when asked to create child or sub-tickets for a ticket."
 ---
 
 ## User Input (should contain parent ticket shorthand)

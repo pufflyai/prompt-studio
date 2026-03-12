@@ -19,22 +19,15 @@ Drizzle Studio + `pstdio` against the same DB path creates exactly that unsuppor
 
 1. `pstdio` opens and writes to the database in one process.
 2. Drizzle Studio opens the same database from a second process.
-3. The lock file guard (`<dbPath>.lock`) only protects `pstdio` processes that use `createDb()`; Drizzle Studio does not honor it.
-4. Both processes can write/checkpoint WAL concurrently, which can produce invalid WAL offsets and unrecoverable startup failures.
+3. Both processes can write/checkpoint WAL concurrently, which can produce invalid WAL offsets and unrecoverable startup failures.
 
 ## Risk
 
 All data in the PGlite database can become inaccessible until the WAL is repaired or the database is recreated. Running Drizzle Studio concurrently with `pstdio` materially increases this risk.
 
-## Fix
+## Prevention
 
-The fix now has two code guardrails and one operational rule:
-
-1. `createDb()` acquires an exclusive lock file at `<dbPath>.lock` and rejects concurrent opens with a clear error.
-2. `serve` startup is wrapped so if server initialization throws, `close()` is always called before rethrowing.
-3. Do not run Drizzle Studio against `~/.pstdio/pstdio.db` while `pstdio` is running. Stop `pstdio` first, or inspect a copied DB snapshot.
-
-Signal handlers (`SIGINT`, `SIGTERM`) are still kept for normal graceful shutdown.
+Do not run Drizzle Studio against `~/.pstdio/pstdio.db` while `pstdio` is running. Stop `pstdio` first, or inspect a copied DB snapshot.
 
 ## Recovery
 
@@ -43,7 +36,6 @@ If corruption occurs, use native PostgreSQL's `pg_resetwal` to reset the WAL:
 ```bash
 # Remove stale runtime files if present
 rm ~/.pstdio/pstdio.db/postmaster.pid
-rm ~/.pstdio/pstdio.db.lock
 
 # Reset the WAL (requires matching PG version — PGlite uses PG 17)
 pg_resetwal -f ~/.pstdio/pstdio.db

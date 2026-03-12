@@ -1,6 +1,6 @@
 ---
 name: implement-ticket
-description: "Use when asked to implement or complete a ticket. Implement a ticket end-to-end."
+description: "Implement a ticket end-to-end. Use when asked to implement or complete a ticket."
 ---
 
 ## User Input
