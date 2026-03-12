@@ -9,27 +9,30 @@ PANIC: invalid max offset number
 RuntimeError: Aborted(). Build with -sASSERTIONS for more info.
 ```
 
+Confirmed trigger: running Drizzle Studio against the same `PSTDIO_DB_PATH` while `pstdio` is running can corrupt WAL.
+
 ## Why
 
 PGlite uses PostgreSQL's storage engine compiled to WASM and does not safely support concurrent writers to the same data directory.
 
-This issue resurfaced because the first fix only handled graceful shutdown on `SIGINT`/`SIGTERM`. Two important gaps remained:
+Drizzle Studio + `pstdio` against the same DB path creates exactly that unsupported state:
 
-1. There was no inter-process lock, so multiple processes could still open the same `PSTDIO_DB_PATH`.
-2. There was no startup failure guard, so if startup failed after `createApp()` (for example `EADDRINUSE`), the DB close path was skipped.
-
-That combination made it possible to leave WAL in a partial recovery state and then crash again during the next boot, resulting in unrecoverable WAL errors.
+1. `pstdio` opens and writes to the database in one process.
+2. Drizzle Studio opens the same database from a second process.
+3. The lock file guard (`<dbPath>.lock`) only protects `pstdio` processes that use `createDb()`; Drizzle Studio does not honor it.
+4. Both processes can write/checkpoint WAL concurrently, which can produce invalid WAL offsets and unrecoverable startup failures.
 
 ## Risk
 
-All data in the PGlite database can become inaccessible until the WAL is repaired or the database is recreated.
+All data in the PGlite database can become inaccessible until the WAL is repaired or the database is recreated. Running Drizzle Studio concurrently with `pstdio` materially increases this risk.
 
 ## Fix
 
-The fix now has two guardrails:
+The fix now has two code guardrails and one operational rule:
 
 1. `createDb()` acquires an exclusive lock file at `<dbPath>.lock` and rejects concurrent opens with a clear error.
 2. `serve` startup is wrapped so if server initialization throws, `close()` is always called before rethrowing.
+3. Do not run Drizzle Studio against `~/.pstdio/pstdio.db` while `pstdio` is running. Stop `pstdio` first, or inspect a copied DB snapshot.
 
 Signal handlers (`SIGINT`, `SIGTERM`) are still kept for normal graceful shutdown.
 

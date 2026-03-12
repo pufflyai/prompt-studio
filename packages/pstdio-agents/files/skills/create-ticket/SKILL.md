@@ -22,6 +22,7 @@ $ARGUMENTS
    - Implementation Notes with key files/modules and decisions
    - Acceptance with explicit tests, file paths, and exact commands
    - Documentation updates, or an explicit “no docs” note
+   - Track missing information with [MISSING INFORMATION] tags in the ticket.
 4. When defining acceptance, list the test file paths, cases covered, and commands to run. Tests belong with the functional change they validate, do not create standalone “add tests” tickets.
 5. Resolve blockers by checking all existing tickets that are not done. If another ticket is a blocker, add it to `depends_on` in frontmatter.
    - If blocked, run `pstdio tickets update --id "<ticket-id>" --status blocked` and document the reason in the ticket's `blocked_reason` frontmatter field
