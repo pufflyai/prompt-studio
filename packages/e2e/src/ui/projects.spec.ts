@@ -1,5 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
-import { basename, join } from "node:path";
+import { tmpdir } from "node:os";
+import { basename, dirname, join } from "node:path";
+import type { Page, Route } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
@@ -37,63 +39,36 @@ const configureAgent = async (request: import("@playwright/test").APIRequestCont
   expect(res.ok()).toBe(true);
 };
 
-interface DirectorySnapshot {
-  currentPath: string;
-  entries: Array<{ name: string }>;
-}
-
-const resolveParentPath = (value: string) => {
-  const trimmed = value.replace(/\\/g, "/").replace(/\/+$/g, "");
-  if (!trimmed) return "/";
-  const parts = trimmed.split("/").filter(Boolean);
-  if (parts.length <= 1) return "/";
-  return `/${parts.slice(0, -1).join("/")}`;
-};
-
-const listDirectory = async (request: import("@playwright/test").APIRequestContext, path?: string) => {
-  const query = path ? `?path=${encodeURIComponent(path)}` : "";
-  const res = await request.get(`${apiBase}/v1/filesystem/list${query}`);
-  expect(res.ok()).toBe(true);
-  return (await res.json()) as DirectorySnapshot;
-};
-
-const isGitRootFolder = (snapshot: DirectorySnapshot) => snapshot.entries.some((entry) => entry.name === ".git");
-
-const resolveFolderPickerDefaultDirectory = async (request: import("@playwright/test").APIRequestContext) => {
-  let snapshot = await listDirectory(request);
-
-  while (true) {
-    if (isGitRootFolder(snapshot)) {
-      const parentPath = resolveParentPath(snapshot.currentPath);
-      if (parentPath === snapshot.currentPath) {
-        const home = await listDirectory(request, "~");
-        return home.currentPath;
-      }
-      return parentPath;
-    }
-
-    const parentPath = resolveParentPath(snapshot.currentPath);
-    if (parentPath === snapshot.currentPath) {
-      const home = await listDirectory(request, "~");
-      return home.currentPath;
-    }
-
-    snapshot = await listDirectory(request, parentPath);
-  }
-};
-
-const createTempGitRepo = (parentDir: string) => {
-  const repoPath = mkdtempSync(join(parentDir, "pstdio-e2e-picker-"));
+const createTempGitRepo = () => {
+  const repoPath = mkdtempSync(join(tmpdir(), "pstdio-e2e-picker-"));
   mkdirSync(join(repoPath, ".git"), { recursive: true });
   return repoPath;
 };
 
-const selectRepoFromFolderPicker = async (page: import("@playwright/test").Page, repoPath: string) => {
+const navigatePickerToDirectory = async (page: Page, targetPath: string) => {
+  const dialog = page.getByRole("dialog").last();
+
+  // Wait for the picker to finish loading its initial directory
+  await expect(dialog.getByText("Loading...")).not.toBeVisible();
+
+  // Intercept the next filesystem/list call to redirect to targetPath, then unroute
+  const handler = async (route: Route) => {
+    const url = new URL(route.request().url());
+    url.searchParams.set("path", targetPath);
+    await route.continue({ url: url.toString() });
+    await page.unroute("**/v1/filesystem/list*", handler);
+  };
+  await page.route("**/v1/filesystem/list*", handler);
+  await dialog.getByRole("button", { name: "Go to home directory" }).click();
+};
+
+const selectRepoFromFolderPicker = async (page: Page, repoPath: string) => {
   const repoName = basename(repoPath);
   const dialog = page.getByRole("dialog").last();
   const repoOption = dialog.getByRole("option").filter({ hasText: repoName }).first();
 
   await page.getByRole("button", { name: "Browse for repository" }).click();
+  await navigatePickerToDirectory(page, dirname(repoPath));
   await expect(dialog.getByText("No entries found.")).not.toBeVisible();
   await expect(repoOption).toBeVisible();
   await repoOption.click();
@@ -141,64 +116,66 @@ test.describe("Project list", () => {
 });
 
 test.describe("Project creation", () => {
+  const tempRepoPaths: string[] = [];
+
   test.beforeEach(async ({ request }) => {
     test.setTimeout(5_000);
     await deleteAllProjects(request);
   });
 
-  test("folder picker shows directory entries", async ({ page, request }) => {
-    const defaultDirectory = await resolveFolderPickerDefaultDirectory(request);
-    const repoPath = createTempGitRepo(defaultDirectory);
+  test.afterEach(() => {
+    for (const repoPath of tempRepoPaths) {
+      rmSync(repoPath, { recursive: true, force: true });
+    }
+    tempRepoPaths.length = 0;
+  });
+
+  test("folder picker shows directory entries", async ({ page }) => {
+    const repoPath = createTempGitRepo();
+    tempRepoPaths.push(repoPath);
     const repoName = basename(repoPath);
     const dialog = page.getByRole("dialog").last();
     const repoOption = dialog.getByRole("option").filter({ hasText: repoName }).first();
 
-    try {
-      await bypassOnboarding(page);
-      await page.goto("/projects");
+    await bypassOnboarding(page);
+    await page.goto("/projects");
 
-      await page.getByRole("button", { name: "Create project" }).first().click();
-      await page.getByRole("button", { name: "Browse for repository" }).click();
+    await page.getByRole("button", { name: "Create project" }).first().click();
+    await page.getByRole("button", { name: "Browse for repository" }).click();
+    await navigatePickerToDirectory(page, dirname(repoPath));
 
-      await expect(dialog.getByText("No entries found.")).not.toBeVisible();
-      await expect(repoOption).toBeVisible();
-    } finally {
-      rmSync(repoPath, { recursive: true, force: true });
-    }
+    await expect(dialog.getByText("No entries found.")).not.toBeVisible();
+    await expect(repoOption).toBeVisible();
   });
 
-  test("creates a project via the dialog", async ({ page, request }) => {
-    const defaultDirectory = await resolveFolderPickerDefaultDirectory(request);
-    const repoPath = createTempGitRepo(defaultDirectory);
+  test("creates a project via the dialog", async ({ page }) => {
+    const repoPath = createTempGitRepo();
+    tempRepoPaths.push(repoPath);
     const repoName = basename(repoPath);
 
-    try {
-      await bypassOnboarding(page);
-      await page.goto("/projects");
+    await bypassOnboarding(page);
+    await page.goto("/projects");
 
-      // open dialog via header button
-      await page.getByRole("button", { name: "Create project" }).first().click();
-      await expect(page.getByPlaceholder("Project name")).toBeVisible();
+    // open dialog via header button
+    await page.getByRole("button", { name: "Create project" }).first().click();
+    await expect(page.getByPlaceholder("Project name")).toBeVisible();
 
-      // fill project name
-      await page.getByPlaceholder("Project name").fill("My New Project");
+    // fill project name
+    await page.getByPlaceholder("Project name").fill("My New Project");
 
-      // add a repository via folder picker
-      await selectRepoFromFolderPicker(page, repoPath);
+    // add a repository via folder picker
+    await selectRepoFromFolderPicker(page, repoPath);
 
-      // verify repo appears in the dialog
-      const createProjectDialog = page.getByRole("dialog").first();
-      await expect(createProjectDialog.getByText(repoName, { exact: true })).toBeVisible();
+    // verify repo appears in the dialog
+    const createProjectDialog = page.getByRole("dialog").first();
+    await expect(createProjectDialog.getByText(repoName, { exact: true })).toBeVisible();
 
-      // submit via the dialog footer button
-      await page.getByRole("button", { name: "Create project", exact: true }).last().click();
+    // submit via the dialog footer button
+    await page.getByRole("button", { name: "Create project", exact: true }).last().click();
 
-      // verify project appears in the list (scoped to avoid matching toast)
-      const main = page.locator("#root > *").first();
-      await expect(main.getByText("My New Project", { exact: true })).toBeVisible();
-    } finally {
-      rmSync(repoPath, { recursive: true, force: true });
-    }
+    // verify project appears in the list (scoped to avoid matching toast)
+    const main = page.locator("#root > *").first();
+    await expect(main.getByText("My New Project", { exact: true })).toBeVisible();
   });
 
   test("shows validation errors when submitting empty form", async ({ page }) => {
@@ -214,63 +191,55 @@ test.describe("Project creation", () => {
     await expect(page.getByText("Select at least one repository.")).toBeVisible();
   });
 
-  test("can create project from empty state CTA", async ({ page, request }) => {
-    const defaultDirectory = await resolveFolderPickerDefaultDirectory(request);
-    const repoPath = createTempGitRepo(defaultDirectory);
+  test("can create project from empty state CTA", async ({ page }) => {
+    const repoPath = createTempGitRepo();
+    tempRepoPaths.push(repoPath);
 
-    try {
-      await bypassOnboarding(page);
-      await page.goto("/projects");
+    await bypassOnboarding(page);
+    await page.goto("/projects");
 
-      // click the empty-state CTA
-      await page.getByRole("button", { name: "Create your first project" }).click();
+    // click the empty-state CTA
+    await page.getByRole("button", { name: "Create your first project" }).click();
 
-      // dialog should open
-      await expect(page.getByPlaceholder("Project name")).toBeVisible();
+    // dialog should open
+    await expect(page.getByPlaceholder("Project name")).toBeVisible();
 
-      // fill and submit
-      await page.getByPlaceholder("Project name").fill("CTA Project");
-      await selectRepoFromFolderPicker(page, repoPath);
-      await page.getByRole("button", { name: "Create project", exact: true }).last().click();
+    // fill and submit
+    await page.getByPlaceholder("Project name").fill("CTA Project");
+    await selectRepoFromFolderPicker(page, repoPath);
+    await page.getByRole("button", { name: "Create project", exact: true }).last().click();
 
-      const main = page.locator("#root > *").first();
-      await expect(main.getByText("CTA Project", { exact: true })).toBeVisible();
-    } finally {
-      rmSync(repoPath, { recursive: true, force: true });
-    }
+    const main = page.locator("#root > *").first();
+    await expect(main.getByText("CTA Project", { exact: true })).toBeVisible();
   });
 
   test("installs skills in the repo when creating a project with a configured agent", async ({ page, request }) => {
-    const defaultDirectory = await resolveFolderPickerDefaultDirectory(request);
-    const repoPath = createTempGitRepo(defaultDirectory);
+    const repoPath = createTempGitRepo();
+    tempRepoPaths.push(repoPath);
 
-    try {
-      // configure an agent via the API before creating the project
-      await configureAgent(request, "opencode");
+    // configure an agent via the API before creating the project
+    await configureAgent(request, "opencode");
 
-      await bypassOnboarding(page);
-      await page.goto("/projects");
+    await bypassOnboarding(page);
+    await page.goto("/projects");
 
-      await page.getByRole("button", { name: "Create project" }).first().click();
-      await page.getByPlaceholder("Project name").fill("Skills Project");
-      await selectRepoFromFolderPicker(page, repoPath);
-      const repoRegistrationDone = page.waitForResponse(
-        (res) => res.url().includes("/repos") && res.request().method() === "POST" && res.status() === 201,
-      );
-      await page.getByRole("button", { name: "Create project", exact: true }).last().click();
+    await page.getByRole("button", { name: "Create project" }).first().click();
+    await page.getByPlaceholder("Project name").fill("Skills Project");
+    await selectRepoFromFolderPicker(page, repoPath);
+    const repoRegistrationDone = page.waitForResponse(
+      (res) => res.url().includes("/repos") && res.request().method() === "POST" && res.status() === 201,
+    );
+    await page.getByRole("button", { name: "Create project", exact: true }).last().click();
 
-      // Wait for repo registration to complete (skills are installed during this call)
-      await repoRegistrationDone;
+    // Wait for repo registration to complete (skills are installed during this call)
+    await repoRegistrationDone;
 
-      const main = page.locator("#root > *").first();
-      await expect(main.getByText("Skills Project", { exact: true })).toBeVisible();
+    const main = page.locator("#root > *").first();
+    await expect(main.getByText("Skills Project", { exact: true })).toBeVisible();
 
-      // verify skills were installed in the repo
-      expect(existsSync(join(repoPath, ".opencode", "skills", "create-ticket", "SKILL.md"))).toBe(true);
-      expect(existsSync(join(repoPath, ".opencode", "skills", "implement-ticket", "SKILL.md"))).toBe(true);
-      expect(existsSync(join(repoPath, ".opencode", "skills", "create-proposal", "SKILL.md"))).toBe(true);
-    } finally {
-      rmSync(repoPath, { recursive: true, force: true });
-    }
+    // verify skills were installed in the repo
+    expect(existsSync(join(repoPath, ".opencode", "skills", "create-ticket", "SKILL.md"))).toBe(true);
+    expect(existsSync(join(repoPath, ".opencode", "skills", "implement-ticket", "SKILL.md"))).toBe(true);
+    expect(existsSync(join(repoPath, ".opencode", "skills", "create-proposal", "SKILL.md"))).toBe(true);
   });
 });

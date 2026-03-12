@@ -154,7 +154,7 @@ const parseConfigAndValidateLinks = (docsRoot: string, configText: string, avail
 export const isDocsServiceError = (value: unknown): value is Error & { code: DocsErrorCode } =>
   value instanceof Error && "code" in value && typeof value.code === "string";
 
-export const createDocsService = (reposService: ReturnType<typeof createReposService>) => {
+export const createDocsService = (reposService: Pick<ReturnType<typeof createReposService>, "listByProject">) => {
   const resolveDocsDir = async (projectId: string) => {
     const repos = await reposService.listByProject(projectId);
     if (repos.length === 0) {

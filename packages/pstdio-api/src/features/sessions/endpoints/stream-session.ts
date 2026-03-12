@@ -5,7 +5,7 @@ import type { RouteDeps } from "../../deps";
 
 export const streamSessionHandler = (deps: RouteDeps) => {
   return (c: Context<AppBindings>) => {
-    const id = c.req.param("id");
+    const id = c.req.param("id")!;
 
     return streamSSE(c, async (stream) => {
       const entry = deps.sessionStore.get(id);

@@ -1,6 +1,6 @@
 ---
 name: update-documentation
-description: "Use when asked to update, add, or modify project documentation, save lessons learned, or write a new PRD. Edit markdown files in `.pstdio/docs/` and update `navigation.json` for sidebar changes."
+description: "Use when asked to update, add, or modify documentation, save lessons learned, write a PRD, ADR, guide, or cookbook. Use when project requirements might get out of sync. Edit documentation and documentation structure."
 ---
 
 ## User Input
@@ -15,45 +15,35 @@ $ARGUMENTS
 2. When adding a new documentation page, prefer scaffolding from an existing template before writing markdown manually:
    - Run `pstdio templates list` to inspect all available project templates.
    - Bundled documentation templates are `prd`, `adr`, `cookbook`, `review-me`, and `lessons-learned`.
-   - Use `prd` for requirements/specification documents that combine product goals with behavior and interface details.
-   - Use `lessons-learned` for postmortems documenting a resolved bug or incident.
-   - To scaffold one, run `pstdio templates write --name <prd|adr|cookbook|review-me|lessons-learned> --target docs/<path>`.
-   - `pstdio templates write` creates the markdown file and updates `navigation.json` automatically.
-3. Apply the requested documentation changes while preserving the existing structure and update the `navigation.json` file if needed.
+   - To scaffold one, run `pstdio templates write --name <prd|adr|cookbook|lessons-learned> --target docs/<path>`.
+   - `pstdio templates write` creates the markdown file.
+3. Apply the requested documentation changes while preserving the documentation structure and update the `navigation.json` file.
 
+Each existing template has its own rules:
 
-## Documentation Location
+### `prd/` — Product Requirements
 
-All documentation lives in `.pstdio/docs/` at the repo root, committed to version control.
+- Describe what the software does, not how it is implemented.
+- Include signatures, arguments, output examples, and error messages.
+- Do not include internal implementation details, configuration values, or code references.
 
-## Documentation Structure
+### `architecture/` — Architecture Documentation
 
-```
-.pstdio/docs/
-├── navigation.json        ← sidebar structure
-├── index.md               ← overview / landing page
-├── specs/                 ← behavioral specifications
-│   └── *.md
-├── architecture/          ← system design decisions
-│   └── *.md
-├── known-issues/          ← unresolved known problems
-│   └── *.md
-├── lessons-learned/       ← resolved problems and insights
-│   └── *.md
-└── contributing/          ← contributor / setup guides
-    └── *.md
-```
+- Describe system design decisions and how components relate to each other.
+- Keep it high-level and implementation-agnostic.
+- Include ASCII diagrams, rules, and the reasoning behind architectural choices.
 
-### Recommended Categories
+### `known-issues/` — Known Issues
 
-| Category | Purpose | One file per |
-| --- | --- | --- |
-| `spec/` | What the software does — signatures, arguments, output examples, error messages. No implementation details. | topic |
-| `architecture/` | System design decisions, component relationships, diagrams, and reasoning behind choices. | topic |
-| `known-issues/` | Unresolved problems — what the issue is, why it exists, the risk, and a potential fix. When resolved, move to `lessons-learned/`. | issue |
-| `lessons-learned/` | Difficult problems or bugs that were eventually figured out — what went wrong, why, and how it was solved. | topic |
-| `contributing/` | How to set up and run the project locally. Practical, copy-paste-friendly commands. | topic |
+- Document known problems that are not yet resolved.
 
-### Navigation (`navigation.json`)
+### `lessons-learned/` — Lessons Learned
 
-Defines the sidebar tree. Each entry has `text`, an optional `link` (maps to a `.md` file), and optional nested `items`. Update whenever you add, remove, or rename a page.
+- Document difficult problems or bugs that were eventually figured out.
+- Capture guidance that helps future contributors avoid repeating the same mistakes.
+
+### `contributing/` — Contributor Guides
+
+- Describe how to set up and run the project locally.
+- Update when prerequisites, development commands, or project structure change.
+- Keep it practical with copy-pasteable commands.

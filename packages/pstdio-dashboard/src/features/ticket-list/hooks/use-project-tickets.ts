@@ -68,6 +68,85 @@ const toTicketFromRow = (
   };
 };
 
+const buildStatusMetadata = (rawStatuses: SyncedRow[] | undefined) => {
+  const statuses = [...(rawStatuses ?? [])].sort((a, b) => (a.sort_order as number) - (b.sort_order as number));
+  const options = statuses.map((status) => toTicketStatusOption(status as unknown as StatusResponse));
+  const defaultStatus = options.find((status) => status.isDefault) ?? options[0];
+
+  return {
+    fallbackName: defaultStatus?.name ?? DEFAULT_STATUS_NAME,
+    fallbackColor: defaultStatus?.color ?? DEFAULT_STATUS_COLOR,
+    statusById: new Map(options.map((status) => [status.id, status.name])),
+    colorById: new Map(options.map((status) => [status.id, status.color])),
+  };
+};
+
+const buildTagIdsByTicket = (rawTagAssignments: SyncedRow[] | undefined, ticketIds: Set<string>) => {
+  const tagIdsByTicket = new Map<string, string[]>();
+
+  for (const assignment of rawTagAssignments ?? []) {
+    if (!ticketIds.has(assignment.ticket_id as string)) continue;
+    const ticketId = assignment.ticket_id as string;
+    const existing = tagIdsByTicket.get(ticketId) ?? [];
+    existing.push(assignment.ticket_tag_id as string);
+    tagIdsByTicket.set(ticketId, existing);
+  }
+
+  return tagIdsByTicket;
+};
+
+const buildWorkspacesByTicket = (
+  rawTicketWorkspaces: SyncedRow[] | undefined,
+  rawWorkspaces: SyncedRow[] | undefined,
+) => {
+  const workspaceIds = new Set((rawWorkspaces ?? []).map((workspace) => workspace.id));
+  const workspaceById = new Map((rawWorkspaces ?? []).map((workspace) => [workspace.id, workspace]));
+  const workspacesByTicket = new Map<string, SyncedRow[]>();
+
+  for (const ticketWorkspace of rawTicketWorkspaces ?? []) {
+    const workspaceId = ticketWorkspace.workspace_id as string;
+    if (!workspaceIds.has(workspaceId)) continue;
+
+    const workspace = workspaceById.get(workspaceId);
+    if (!workspace) continue;
+
+    const ticketId = ticketWorkspace.ticket_id as string;
+    const existing = workspacesByTicket.get(ticketId) ?? [];
+    existing.push(workspace);
+    workspacesByTicket.set(ticketId, existing);
+  }
+
+  return { workspaceIds, workspacesByTicket };
+};
+
+const buildSessionsByWorkspace = (rawSessions: SyncedRow[] | undefined, workspaceIds: Set<string>) => {
+  const sessionsByWorkspace = new Map<string, SyncedRow>();
+
+  for (const session of rawSessions ?? []) {
+    const workspaceId = session.workspace_id as string;
+    if (workspaceId && workspaceIds.has(workspaceId)) {
+      sessionsByWorkspace.set(workspaceId, session);
+    }
+  }
+
+  return sessionsByWorkspace;
+};
+
+const buildSubTicketsByParent = (rawTickets: SyncedRow[]) => {
+  const subTicketsByParent = new Map<string, SyncedRow[]>();
+
+  for (const ticket of rawTickets) {
+    const parentId = ticket.parent_id as string | null;
+    if (!parentId) continue;
+
+    const existing = subTicketsByParent.get(parentId) ?? [];
+    existing.push(ticket);
+    subTicketsByParent.set(parentId, existing);
+  }
+
+  return subTicketsByParent;
+};
+
 export const useProjectTickets = (projectId: string | undefined) => {
   const { data: rawTicketsData, isLoading } = useLiveQuery(
     (q) =>
@@ -130,59 +209,21 @@ export const useProjectTickets = (projectId: string | undefined) => {
   const rawWorkspaces = asSyncedRows(rawWorkspacesData);
   const rawSessions = asSyncedRows(rawSessionsData);
 
-  const statuses = [...(rawStatuses ?? [])].sort((a, b) => (a.sort_order as number) - (b.sort_order as number));
-  const options = statuses.map((s) => toTicketStatusOption(s as unknown as StatusResponse));
-  const defaultStatus = options.find((s) => s.isDefault) ?? options[0];
-  const fallbackName = defaultStatus?.name ?? DEFAULT_STATUS_NAME;
-  const fallbackColor = defaultStatus?.color ?? DEFAULT_STATUS_COLOR;
-  const statusById = new Map(options.map((s) => [s.id, s.name]));
-  const colorById = new Map(options.map((s) => [s.id, s.color]));
+  const statusMetadata = buildStatusMetadata(rawStatuses);
 
   const ticketIds = new Set(rawTickets.map((t) => t.id));
-
-  const tagIdsByTicket = new Map<string, string[]>();
-  for (const ta of rawTagAssignments ?? []) {
-    if (!ticketIds.has(ta.ticket_id as string)) continue;
-    const ticketId = ta.ticket_id as string;
-    const existing = tagIdsByTicket.get(ticketId) ?? [];
-    existing.push(ta.ticket_tag_id as string);
-    tagIdsByTicket.set(ticketId, existing);
-  }
-
-  const workspaceIds = new Set((rawWorkspaces ?? []).map((w) => w.id));
-  const workspacesByTicket = new Map<string, SyncedRow[]>();
-  for (const tw of rawTicketWorkspaces ?? []) {
-    if (!workspaceIds.has(tw.workspace_id as string)) continue;
-    const ticketId = tw.ticket_id as string;
-    const ws = (rawWorkspaces ?? []).find((w) => w.id === tw.workspace_id);
-    if (!ws) continue;
-    const existing = workspacesByTicket.get(ticketId) ?? [];
-    existing.push(ws);
-    workspacesByTicket.set(ticketId, existing);
-  }
-
-  const sessionsByWorkspace = new Map<string, SyncedRow>();
-  for (const s of rawSessions ?? []) {
-    const wsId = s.workspace_id as string;
-    if (wsId && workspaceIds.has(wsId)) sessionsByWorkspace.set(wsId, s);
-  }
-
-  const subTicketsByParent = new Map<string, SyncedRow[]>();
-  for (const t of rawTickets) {
-    const parentId = t.parent_id as string | null;
-    if (!parentId) continue;
-    const existing = subTicketsByParent.get(parentId) ?? [];
-    existing.push(t);
-    subTicketsByParent.set(parentId, existing);
-  }
+  const tagIdsByTicket = buildTagIdsByTicket(rawTagAssignments, ticketIds);
+  const { workspaceIds, workspacesByTicket } = buildWorkspacesByTicket(rawTicketWorkspaces, rawWorkspaces);
+  const sessionsByWorkspace = buildSessionsByWorkspace(rawSessions, workspaceIds);
+  const subTicketsByParent = buildSubTicketsByParent(rawTickets);
 
   const data = rawTickets.map((t) =>
     toTicketFromRow(
       t,
-      statusById,
-      colorById,
-      fallbackName,
-      fallbackColor,
+      statusMetadata.statusById,
+      statusMetadata.colorById,
+      statusMetadata.fallbackName,
+      statusMetadata.fallbackColor,
       tagIdsByTicket,
       workspacesByTicket,
       sessionsByWorkspace,

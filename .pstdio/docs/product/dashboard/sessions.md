@@ -11,7 +11,7 @@ The dashboard sessions panel is the read-and-continue surface for project sessio
 
 ## Problem
 
-The previous sessions spec implied a fuller session creation workflow than the current dashboard actually ships.
+The previous sessions PRD implied a fuller session creation workflow than the current dashboard actually ships.
 
 ## Goals
 

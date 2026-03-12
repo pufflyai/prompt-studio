@@ -32,7 +32,7 @@ Rules:
 
 1. `user_prompt` is only for agent tasking context (for example, `tickets write --user-prompt ...` or API `user_prompt`).
 2. Ticket body content is read from and written to the file referenced by `file_id`.
-3. Anywhere this spec says "ticket content", it means the body stored in `file_id`.
+3. Anywhere this PRD says "ticket content", it means the body stored in `file_id`.
 
 ---
 
@@ -108,7 +108,7 @@ Each ticket lives in its own directory under `.pstdio/tickets/`:
 ```
 
 - `ticket.md` is the canonical local ticket body. Locally it includes YAML frontmatter; the stored version on the server never contains frontmatter.
-- `files/` contains supporting files associated with the ticket (research, schemas, specs).
+- `files/` contains supporting files associated with the ticket (research, schemas, PRDs).
 - `artifacts/` contains change validation outputs (test logs, screenshots, build output).
 
 ### Frontmatter is Local-Only
@@ -697,7 +697,7 @@ Archived ticket PS-12
 | Path                                                           | Description                                                                                   |
 | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | `.pstdio/tickets/<shorthand>_<display_title>/ticket.md`        | Local ticket file created by `write`/`pull`, read by `save`.                                  |
-| `.pstdio/tickets/<shorthand>_<display_title>/files/`           | Supporting files (research, schemas, specs) written by `pull`, read by `save`/`files`.        |
+| `.pstdio/tickets/<shorthand>_<display_title>/files/`           | Supporting files (research, schemas, PRDs) written by `pull`, read by `save`/`files`.        |
 | `.pstdio/tickets/<shorthand>_<display_title>/files/<filename>` | Individual supporting files synced between local project and DB.                              |
 | `.pstdio/tickets/<shorthand>_<display_title>/artifacts/`       | Validation artifacts (test output, screenshots, logs) written by `pull`, read by `save`/`files`. |
 | `.pstdio/tickets/<shorthand>_<display_title>/artifacts/<filename>` | Individual validation artifacts synced between local project and DB.                         |

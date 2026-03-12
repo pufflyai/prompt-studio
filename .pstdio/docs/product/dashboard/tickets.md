@@ -11,7 +11,7 @@ The dashboard tickets panel is a status-grouped board for browsing, moving, crea
 
 ## Problem
 
-The legacy tickets spec described display controls and alternate views that are not currently exposed in the shipped dashboard.
+The legacy tickets PRD described display controls and alternate views that are not currently exposed in the shipped dashboard.
 
 ## Goals
 

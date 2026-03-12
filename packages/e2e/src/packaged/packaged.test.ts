@@ -95,10 +95,10 @@ describe("packaged pstdio — templates", () => {
     () => {
       const repo = createInitializedRepo("pkg-tpl-write");
 
-      const output = run("templates write --name prd --target docs/specs/test-feature", repo);
+      const output = run("templates write --name prd --target docs/prd/test-feature", repo);
       expect(output).toContain("Wrote template");
 
-      const filePath = join(repo, ".pstdio", "docs", "specs", "test-feature.md");
+      const filePath = join(repo, ".pstdio", "docs", "prd", "test-feature.md");
       expect(existsSync(filePath)).toBe(true);
     },
     TEST_TIMEOUT,

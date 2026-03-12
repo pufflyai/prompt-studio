@@ -17,7 +17,7 @@ blocked_reason: ""
 
 ## References
 
-[Link to relevant docs/specs when available. If none exist, note the gap.]
+[Link to relevant docs when available. If none exist, note the gap.]
 
 - [Reference link or note]
 

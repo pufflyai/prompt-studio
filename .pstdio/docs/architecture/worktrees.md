@@ -52,11 +52,11 @@
 
 The main `pstdio` package has three workspace operations that all delegate to `pstdio-wt`:
 
-| Operation | CLI module | SDK functions used |
-|---|---|---|
-| Create workspace | `create-workspace-for-ticket.ts` | `createWorktree` |
-| Delete workspace | `delete-workspace.ts` | `removeWorktreeAndBranch` |
-| Merge workspace | `merge-workspace.ts` | `git`, `mergeWorktree`, `removeWorktreeAndBranch` |
+| Operation        | CLI module                       | SDK functions used                                |
+| ---------------- | -------------------------------- | ------------------------------------------------- |
+| Create workspace | `create-workspace-for-ticket.ts` | `createWorktree`                                  |
+| Delete workspace | `delete-workspace.ts`            | `removeWorktreeAndBranch`                         |
+| Merge workspace  | `merge-workspace.ts`             | `git`, `mergeWorktree`, `removeWorktreeAndBranch` |
 
 The CLI modules handle the **application logic** (API calls, DB records, user prompts) while `pstdio-wt` handles the **git plumbing**.
 
@@ -85,6 +85,6 @@ The CLI modules handle the **application logic** (API calls, DB records, user pr
 - **Default branch resolved at runtime.** Never hardcoded to `main` or `master`.
 - **Safety by default.** `removeWorktree` refuses to delete dirty worktrees unless `force: true`.
 
-## Full spec
+## Full PRD
 
-See `packages/pstdio-wt/readme.md` for the complete feature spec, implementation status table, and Worktrunk references.
+See `packages/pstdio-wt/readme.md` for the complete feature PRD, implementation status table, and Worktrunk references.

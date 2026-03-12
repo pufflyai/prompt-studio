@@ -11,7 +11,7 @@ The ticket detail panel is the dashboard workspace for reading and editing one t
 
 ## Problem
 
-The old ticket detail spec described broader editing behavior than the current UI actually exposes. The current doc should match the shipped panel.
+The old ticket detail PRD described broader editing behavior than the current UI actually exposes. The current doc should match the shipped panel.
 
 ## Goals
 

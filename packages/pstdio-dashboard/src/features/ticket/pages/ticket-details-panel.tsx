@@ -25,6 +25,54 @@ import { buildCreateSubTicketsPrompt, buildRefineTicketPrompt } from "../utils/b
 import { isTicketContentReady } from "../utils/ticket-content-ready";
 import { resolveTicketDetailsState } from "../utils/ticket-details-state";
 
+const TicketDetailsStatusMessage = (props: { message: string }) => {
+  const { message } = props;
+  return (
+    <Stack gap="lg" height="100%" p="sm">
+      <Text textStyle="paragraph/S/regular" color="foreground.secondary">
+        {message}
+      </Text>
+    </Stack>
+  );
+};
+
+const findLatestAttempt = <T extends { updatedAt: string }>(attempts: T[]) => {
+  let latestAttempt = attempts[0] ?? null;
+
+  for (const attempt of attempts) {
+    if (!latestAttempt || Date.parse(attempt.updatedAt) > Date.parse(latestAttempt.updatedAt)) {
+      latestAttempt = attempt;
+    }
+  }
+
+  return latestAttempt;
+};
+
+const findParentTicket = <T extends { id: string }>(tickets: T[], parentId: string | null | undefined) => {
+  if (!parentId) return null;
+  return tickets.find((ticket) => ticket.id === parentId) ?? null;
+};
+
+const toTicketTemplates = (templateAssets: Array<{ id: string; name: string; templateType: string }> | undefined) =>
+  (templateAssets ?? [])
+    .filter((asset) => asset.templateType === "ticket")
+    .map((asset) => ({ id: asset.id, name: asset.name }));
+
+const buildTicketBreadcrumbs = (
+  ticketShorthand: string,
+  parentShorthand: string | null,
+  navigateToTicket: (sh: string) => void,
+) => {
+  const breadcrumbs = [{ title: ticketShorthand, onClick: () => navigateToTicket(ticketShorthand) }];
+  if (!parentShorthand) return breadcrumbs;
+  return [{ title: parentShorthand, onClick: () => navigateToTicket(parentShorthand) }, ...breadcrumbs];
+};
+
+const resolveAttemptSource = (content: string, fallbackTitle: string) => {
+  const source = content.trim();
+  return source.length > 0 ? source : fallbackTitle;
+};
+
 export const TicketDetailsPanel = () => {
   const { projectId, ticketShorthand } = useParams({ from: "/projects/$projectId/tickets/$ticketShorthand" });
   const navigate = useNavigate();
@@ -44,7 +92,7 @@ export const TicketDetailsPanel = () => {
     isTicketsLoading,
   });
   const ticket = ticketState.ticket;
-  const parentTicket = ticket?.parentId ? (allProjectTickets.find((pt) => pt.id === ticket.parentId) ?? null) : null;
+  const parentTicket = findParentTicket(allProjectTickets, ticket?.parentId);
   const ticketId = ticket?.id ?? "";
   const ticketContent = useTicketContent(ticket?.id);
   const content = ticketContent.data ?? "";
@@ -77,12 +125,7 @@ export const TicketDetailsPanel = () => {
     },
   });
 
-  let latestAttempt = ticketAttempts[0] ?? null;
-  for (const attempt of ticketAttempts) {
-    if (!latestAttempt || Date.parse(attempt.updatedAt) > Date.parse(latestAttempt.updatedAt)) {
-      latestAttempt = attempt;
-    }
-  }
+  const latestAttempt = findLatestAttempt(ticketAttempts);
 
   const { data: latestAttemptDiff } = useTicketAttemptDiff(latestAttempt?.id);
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(true);
@@ -99,28 +142,14 @@ export const TicketDetailsPanel = () => {
     navigate({ to: "/projects/$projectId/tickets/$ticketShorthand", params: { projectId, ticketShorthand: sh } });
   };
 
-  const templates = (templateAssets ?? [])
-    .filter((a) => a.templateType === "ticket")
-    .map((a) => ({ id: a.id, name: a.name }));
+  const templates = toTicketTemplates(templateAssets);
 
   if (ticketState.state === "loading") {
-    return (
-      <Stack gap="lg" height="100%" p="sm">
-        <Text textStyle="paragraph/S/regular" color="foreground.secondary">
-          {t("ticketDetail.loadingContent")}
-        </Text>
-      </Stack>
-    );
+    return <TicketDetailsStatusMessage message={t("ticketDetail.loadingContent")} />;
   }
 
   if (!ticket) {
-    return (
-      <Stack gap="lg" height="100%" p="sm">
-        <Text textStyle="paragraph/S/regular" color="foreground.secondary">
-          {t("ticketDetail.ticketNotFound")}
-        </Text>
-      </Stack>
-    );
+    return <TicketDetailsStatusMessage message={t("ticketDetail.ticketNotFound")} />;
   }
 
   const handleSelectTicket = (id: string) => {
@@ -129,8 +158,7 @@ export const TicketDetailsPanel = () => {
   };
 
   const handleRunAttempt = () => {
-    const src = content.trim();
-    return sessions.runAttempt(ticket.id, src.length > 0 ? src : ticket.title);
+    return sessions.runAttempt(ticket.id, resolveAttemptSource(content, ticket.title));
   };
 
   const handleViewWorkspace = () => {
@@ -141,12 +169,7 @@ export const TicketDetailsPanel = () => {
     });
   };
 
-  const breadcrumbs = [
-    ...(parentTicket
-      ? [{ title: parentTicket.shorthand, onClick: () => navigateToTicket(parentTicket.shorthand) }]
-      : []),
-    { title: ticket.shorthand, onClick: () => navigateToTicket(ticket.shorthand) },
-  ];
+  const breadcrumbs = buildTicketBreadcrumbs(ticket.shorthand, parentTicket?.shorthand ?? null, navigateToTicket);
 
   return (
     <Stack gap="0" height="100%">

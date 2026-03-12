@@ -29,6 +29,49 @@ interface FolderPickerDialogProps {
 
 export type { FolderPickerDialogProps };
 
+const getEntryIcon = (entry: FolderPickerDialogEntry) => {
+  if (!entry.isDirectory) return FileText;
+  if (entry.isGitRepo) return FolderOpen;
+  return Folder;
+};
+
+type FolderPickerListEntryProps = {
+  entry: FolderPickerDialogEntry;
+  selectedPath: string | null;
+  selectedPathSet: Set<string>;
+  onEntryClick: (entry: FolderPickerDialogEntry) => void;
+};
+
+const FolderPickerListEntry = (props: FolderPickerListEntryProps) => {
+  const { entry, selectedPath, selectedPathSet, onEntryClick } = props;
+  const isAlreadySelected = entry.isGitRepo && selectedPathSet.has(entry.path);
+  const isDisabled = !entry.isDirectory || isAlreadySelected;
+
+  const handleClick = () => {
+    if (isAlreadySelected) {
+      return;
+    }
+
+    onEntryClick(entry);
+  };
+
+  return (
+    <Menu.Root>
+      <MenuItem
+        primaryLabel={entry.name}
+        leftIcon={getEntryIcon(entry)}
+        tagLabel={entry.isGitRepo ? "Git repo" : undefined}
+        tagColorPalette={entry.isGitRepo ? "green" : undefined}
+        isDisabled={isDisabled}
+        isSelected={selectedPath === entry.path}
+        width="100%"
+        maxWidth="100%"
+        onClick={handleClick}
+      />
+    </Menu.Root>
+  );
+};
+
 export const FolderPickerDialog = (props: FolderPickerDialogProps) => {
   const {
     open,
@@ -108,32 +151,15 @@ export const FolderPickerDialog = (props: FolderPickerDialogProps) => {
                   </Text>
                 ) : (
                   <Stack gap="xs">
-                    {entries.map((entry) => {
-                      const leftIcon = entry.isDirectory ? (entry.isGitRepo ? FolderOpen : Folder) : FileText;
-                      const isAlreadySelected = entry.isGitRepo && selectedPathSet.has(entry.path);
-
-                      return (
-                        <Menu.Root key={entry.path}>
-                          <MenuItem
-                            primaryLabel={entry.name}
-                            leftIcon={leftIcon}
-                            tagLabel={entry.isGitRepo ? "Git repo" : undefined}
-                            tagColorPalette={entry.isGitRepo ? "green" : undefined}
-                            isDisabled={!entry.isDirectory || isAlreadySelected}
-                            isSelected={selectedPath === entry.path}
-                            width="100%"
-                            maxWidth="100%"
-                            onClick={() => {
-                              if (isAlreadySelected) {
-                                return;
-                              }
-
-                              onEntryClick(entry);
-                            }}
-                          />
-                        </Menu.Root>
-                      );
-                    })}
+                    {entries.map((entry) => (
+                      <FolderPickerListEntry
+                        key={entry.path}
+                        entry={entry}
+                        selectedPath={selectedPath}
+                        selectedPathSet={selectedPathSet}
+                        onEntryClick={onEntryClick}
+                      />
+                    ))}
                   </Stack>
                 )}
               </Stack>

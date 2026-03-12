@@ -3,7 +3,6 @@ import { dirname, join } from "node:path";
 import type { Arguments, Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
-import { addToNavigation } from "@/features/docs/update-navigation";
 import { getTemplate } from "@/features/templates/api/get-template";
 import { replacePlaceholders } from "@/features/templates/replace-placeholders";
 
@@ -26,15 +25,6 @@ export const builder = (yargs: Argv) =>
 type WriteArgs = { name: string; target: string };
 
 const isDocsTarget = (target: string) => target.startsWith("docs/");
-
-const deriveDocText = (path: string) => {
-  const parts = path.split("/");
-  const last = parts[parts.length - 1];
-  return last
-    .split("-")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-};
 
 type Deps = {
   cwd: () => string;
@@ -92,9 +82,6 @@ export const createHandler =
 
       const content = replacePlaceholders(template.content, placeholders);
       writeFileSync(filePath, content);
-
-      const docsDir = join(root, ".pstdio", "docs");
-      addToNavigation(docsDir, docPath, deriveDocText(docPath));
 
       console.log(`Wrote template "${argv.name}" to .pstdio/docs/${docPath}.md`);
     } else {

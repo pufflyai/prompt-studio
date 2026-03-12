@@ -286,37 +286,47 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
   let sharedServerPromise: Promise<string> | null = null;
   let cachedServerUrl: string | null = null;
 
+  const toStartServerError = (error: unknown) =>
+    error instanceof Error ? error : new Error("Failed to start Opencode server.");
+
+  const resolveServerOnPort = async (port: number) => {
+    const candidate = buildServerUrl(defaultServerHost, port);
+    const portOpen = await deps.isPortOpen({ host: defaultServerHost, port });
+
+    if (portOpen) {
+      const healthy = await deps.pingServer(candidate);
+      return healthy ? { url: candidate } : { url: null };
+    }
+
+    try {
+      return { url: await deps.startServer({ host: defaultServerHost, port }) };
+    } catch (error) {
+      return { url: null, error: toStartServerError(error) };
+    }
+  };
+
+  const findOrStartSharedServer = async () => {
+    let lastError: Error | null = null;
+
+    for (let offset = 0; offset < maxServerPortAttempts; offset += 1) {
+      const port = defaultServerPort + offset;
+      const result = await resolveServerOnPort(port);
+      if (result.url) return result.url;
+      if (result.error) lastError = result.error;
+    }
+
+    const maxPort = defaultServerPort + maxServerPortAttempts - 1;
+    const suffix = lastError ? ` ${lastError.message}` : "";
+    throw new Error(`Failed to start Opencode server on ports ${defaultServerPort}-${maxPort}.${suffix}`);
+  };
+
   const ensureSharedServer = async () => {
-    if (sharedServerPromise) return sharedServerPromise;
-
-    sharedServerPromise = (async () => {
-      let lastError: Error | null = null;
-
-      for (let offset = 0; offset < maxServerPortAttempts; offset += 1) {
-        const port = defaultServerPort + offset;
-        const candidate = buildServerUrl(defaultServerHost, port);
-        const portOpen = await deps.isPortOpen({ host: defaultServerHost, port });
-
-        if (portOpen) {
-          const healthy = await deps.pingServer(candidate);
-          if (healthy) return candidate;
-          continue;
-        }
-
-        try {
-          return await deps.startServer({ host: defaultServerHost, port });
-        } catch (error) {
-          lastError = error instanceof Error ? error : new Error("Failed to start Opencode server.");
-        }
-      }
-
-      const maxPort = defaultServerPort + maxServerPortAttempts - 1;
-      const suffix = lastError ? ` ${lastError.message}` : "";
-      throw new Error(`Failed to start Opencode server on ports ${defaultServerPort}-${maxPort}.${suffix}`);
-    })().catch((error) => {
-      sharedServerPromise = null;
-      throw error;
-    });
+    if (!sharedServerPromise) {
+      sharedServerPromise = findOrStartSharedServer().catch((error) => {
+        sharedServerPromise = null;
+        throw error;
+      });
+    }
 
     return sharedServerPromise;
   };

@@ -1,74 +1,40 @@
-# Guidance for Coding Agents working in this repository.
+# Repo Rules
 
----
+- **Lerna + Bun-managed monorepo** with **Nx caching**. **TypeScript only**.
+- Use **bun**, do not use `npm`, `yarn`, or `pnpm`.
+- Other agents might edit this repo at the same time as you.
 
-🚨 **THIS REPO IS UNDER CONSTRUCTION.** 🚨
+# Coding Rules
 
-- BACKWARDS COMPATIBILITY IS NOT NEEDED
-- BREAKING CHANGES ARE OK
-- REMOVE LEGACY / UNUSED CODE
-- MANY AGENTS WORK ON THIS REPO AT THE SAME TIME
-
----
-
-### Repository Type
-
-- **Bun-managed monorepo**
-- **Lerna + Bun workspaces**
-- **Nx caching**
-- **TypeScript only**
-
-### Repo Rules
-
-#### Tooling
-
-- ✅ Use **Bun**
-- ❌ Do not use `npm`, `yarn`, or `pnpm`
-
-#### Imports
-
-✅ Allowed:
-
-```ts
-import { foo } from "<workspace-package>";
-```
-
-❌ Not allowed:
-
-- Deep relative imports across packages
-- Importing from `apps/*`
-- Imports anywhere except the top of the file
-
-## CODING & TESTING RULES
-
-### Default Behavior
-
-We want the simplest change possible, without compromising the project structure. Code readability matters most, and we're happy to make bigger changes to achieve it:
+Never compromise the project structure. Code readability and structure matters most, and we're happy to make bigger changes to achieve it:
 
 - Keep things simple
 - Preserve or improve the project structure
 - Assume the happy path first
+- Avoid backwards compatibility unless specifically requested
 - Do not add defensive or speculative code
-- **Delete legacy code** in the area you are editing
+- Always cleanup legacy or unused code (boy scout rule)
 
-### Required Workflow: TDD
+❌ Not allowed:
+
+- Deep relative imports across packages
+- Importing from `clients/*`
+
+## Required Workflow: TDD
 
 Follow this loop **every time**:
 
-#### 1. Red — Write the test first
+### 1. Red — Write the test first
 
-Write the smallest test that proves the behavior:
+- Write the smallest test that proves the behavior.
+- Confirm the test fails for the right reason.
 
-- Unit tests → pure logic
-- Integration tests → API / DB
-- UI tests → Storybook stories
-- E2E tests → full system flows
+❌ Not allowed:
 
-For visual-only changes, do **not** add test files. Use Storybook stories (and interactions when useful) as the Red step.
+- Tests for UI only changes. Use storybook stories instead
+- Tests for config only changes.
 
-Confirm the test fails for the right reason.
-
-#### 2. Green — Make it pass
+### 2. Green — Make it pass
 
 - Write the **minimum** code needed
 - No generalization
@@ -76,65 +42,30 @@ Confirm the test fails for the right reason.
 
 Run tests often.
 
-#### 3. Refactor — Clean up
+### 3. Refactor — Clean up
 
 - Improve readability
 - Delete unused or legacy code
+- Add / Update e2e tests for new features
+- Ensure project structure is preserved
 - Split files early if they grow (350 lines max)
+- Update documentation
+- Remove tests that cover only implementation details
 
 Tests must stay green.
 
-#### 4. Prove It Works (Required)
+### 4. Prove It Works (Required)
 
-Every change must include **verifiable proof**.
+Before completing a task run `bun run validation`. Ensure it passes. Fix any remaining issues.
 
-Proof must be:
+## Coding Style Rules
 
-- Referenced in the task or PR
-
-Include:
-
-- Exact commands run
-- Observable output:
-  - test output
-  - logs
-  - screenshots / videos / traces
-  - HTTP responses (`curl`)
-
-An LLM or human must be able to verify the change by:
-
-1. Running the commands
-2. Inspecting the artifacts
-
-### Required Validation Commands
-
-After **any** code change, run **all** of these in order:
-
-```bash
-bun run format
-bun run lint
-bun run build
-bun run test
-```
-
-If the change affects UI, API, or E2E:
-
-- Include Storybook builds or interactions
-- Include `curl` requests towards the API + responses
-- Include E2E artifacts (screenshots/videos/traces)
-
-### Coding Style Rules
-
-#### General
-
+- Split content that will grow in separate files (endpoints, schemas, etc.)
 - Files **MUST** stay under **~350 lines**
 - Prefer pure functions
 - Comment **WHY**, not WHAT
 - Do **not** specify return types — let TypeScript infer
-- Do **not** use `void` when calling functions
 - Avoid nested ternaries
-
-Split content that will grow in separate files, e.g. Instead of placing all endpoints in a single file, split it by endpoint: `api/<endpoint-1>`.
 
 ### React Rules
 
@@ -145,43 +76,23 @@ Split content that will grow in separate files, e.g. Instead of placing all endp
 
 ### Testing Rules
 
-- When adding new features, an E2E test must be added as well covering all new flows. Update existing flows that are affected by the change.
 - Tests must be **located next to the file they test**
 - Avoid mocks, test the real thing when possible
-- Control time where needed
 - Bug fixes must add a regression test first
-- Visual-only UI/component changes must use Storybook stories instead of adding test files, add automated tests only when UI changes include non-visual behavior or logic changes
 
-### Changesets
+# Changesets
 
-When a PR changes one or more publishable workspace packages, include a changeset:
+- If a PR changes **any package**, include a changeset for **`pstdio`** only; include **`@pstdio/ui`** only when that package itself changes.
+- Run `bun changeset`, choose the semver bump (`patch`, `minor`, `major`), and write a **one-line changelog summary**.
+- Commit the generated `.changeset/*.md` file and **do not manually edit `package.json` versions**.
 
-```sh
-bun changeset
-```
+---
 
-Select the affected packages, choose the semver bump (`patch`, `minor`, `major`), and write a one-line changelog summary. Commit the generated `.changeset/*.md` file with the PR.
+# Project Planning and Documentation (pstdio)
 
-- **Do not** add a changeset for private packages themselves — they are not published.
-- When changes to a private package (e.g. `pstdio-db`, `pstdio-api`) alter what the published `pstdio` or `@pstdio/ui` packages ship, add a changeset for the **published** package.
-- **Do not** manually edit `package.json` versions — Changesets handles that.
-- One changeset per PR is usually enough. Use multiple only if unrelated packages need different bump types.
+This project uses `pstdio` to manage tickets and documentation.
 
-### API Changes
+- You can find relevant information in `.pstdio/docs`.
+- Consider the database at `~/.pstdio/db` as containing production data and do not modify it unless you are granted permission
 
-When changing APIs:
-
-- Update documentation
-- Update OpenAPI / SDK types if needed
-- Record **WHY** in an ADR if the decision is non-obvious
-- Provide proof in artifacts:
-  - `curl` requests + responses
-  - logs showing handler execution
-
-### Project Planning and Documentation
-
-This project uses `pstdio` to manage tickets and documentation. You can find relevant information in `.pstdio/docs` including project architecture and challenging bugs encountered.
-
-### Production DB
-
-- Consider the database at ~/.pstdio/db as containing production data and do not modify it unless you request permission
+---

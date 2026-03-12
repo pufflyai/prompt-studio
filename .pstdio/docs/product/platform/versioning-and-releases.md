@@ -11,7 +11,7 @@ Publishable Prompt Studio packages are versioned with Changesets and released fr
 
 ## Problem
 
-Release behavior needs one current source of truth that matches the repo scripts and CI workflow instead of a standalone spec page.
+Release behavior needs one current source of truth that matches the repo scripts and CI workflow instead of a standalone PRD page.
 
 ## Goals
 

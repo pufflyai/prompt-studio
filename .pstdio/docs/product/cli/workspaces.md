@@ -16,7 +16,7 @@ This PRD documents current single-repo workspace commands for create, list, merg
 
 Manage active workspaces for a project.
 
-This spec describes the currently implemented CLI behavior, which is single-repo workspace management.
+This PRD describes the currently implemented CLI behavior, which is single-repo workspace management.
 
 Multi-repo behavior is tracked separately in draft form:
 `./workspaces-multi-repo-draft.md`.

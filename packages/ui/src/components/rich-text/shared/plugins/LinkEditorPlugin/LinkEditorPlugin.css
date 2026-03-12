@@ -31,8 +31,15 @@
   background-color: var(--chakra-colors-background-secondary);
 }
 
-.link-editor .button i,
 .actions i {
+  background-size: contain;
+  display: inline-block;
+  height: 20px;
+  width: 20px;
+  vertical-align: -0.25em;
+}
+
+.link-editor .button i {
   background-size: contain;
   display: inline-block;
   height: 20px;

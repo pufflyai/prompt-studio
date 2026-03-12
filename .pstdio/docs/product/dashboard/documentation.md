@@ -11,7 +11,7 @@ The dashboard documentation panel renders repo-local markdown docs using `.pstdi
 
 ## Problem
 
-The old documentation spec described draft behavior and did not clearly separate read-only browsing from authoring workflows.
+The old documentation PRD described draft behavior and did not clearly separate read-only browsing from authoring workflows.
 
 ## Goals
 

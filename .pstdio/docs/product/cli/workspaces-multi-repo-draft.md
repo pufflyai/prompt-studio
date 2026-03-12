@@ -91,4 +91,4 @@ This is intentionally provisional and should be decided with implementation:
 - No migration plan guarantees.
 - No rollout order guarantees.
 
-This file exists only to isolate multi-repo planning from the implementation-aligned spec.
+This file exists only to isolate multi-repo planning from the implementation-aligned PRD.

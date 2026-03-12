@@ -11,7 +11,7 @@ The dashboard currently ships two settings-related surfaces: onboarding and glob
 
 ## Problem
 
-The old settings spec described richer settings behavior than the current dashboard exposes.
+The old settings PRD described richer settings behavior than the current dashboard exposes.
 
 ## Goals
 

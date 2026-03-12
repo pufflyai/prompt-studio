@@ -81,69 +81,90 @@ const parseHeader = (markdown: string) => {
   return { title, description };
 };
 
-const parseEntry = (block: string): ChangelogEntry | null => {
-  const lines = block.split("\n");
-  let version = "";
-  let date = "";
-  let title = "";
-  let tags: string[] | undefined;
-  let image: string | undefined;
-  let description: string | undefined;
-  const changes: ChangelogChange[] = [];
+type EntryParseState = {
+  version: string;
+  date: string;
+  title: string;
+  tags?: string[];
+  image?: string;
+  description?: string;
+  changes: ChangelogChange[];
+  inChanges: boolean;
+};
 
-  let inChanges = false;
+const createEntryParseState = (): EntryParseState => ({
+  version: "",
+  date: "",
+  title: "",
+  tags: undefined,
+  image: undefined,
+  description: undefined,
+  changes: [],
+  inChanges: false,
+});
 
-  for (const line of lines) {
-    const trimmed = line.trim();
+const applyEntryMetadata = (state: EntryParseState, key: string, value: string) => {
+  switch (key) {
+    case "date":
+      state.date = value;
+      return;
+    case "title":
+      state.title = value;
+      return;
+    case "tags":
+      state.tags = value.split(",").map((tag) => tag.trim());
+      return;
+    case "image":
+      state.image = value;
+      return;
+    default:
+      return;
+  }
+};
 
-    if (trimmed.startsWith("## ")) {
-      version = trimmed.slice(3).trim();
-      continue;
-    }
-
-    if (trimmed === "### Changes") {
-      inChanges = true;
-      continue;
-    }
-
-    if (inChanges) {
-      if (trimmed.startsWith("- ")) {
-        changes.push(parseChange(trimmed));
-      }
-      continue;
-    }
-
-    const field = parseMetadataField(trimmed);
-    if (field) {
-      switch (field.key) {
-        case "date":
-          date = field.value;
-          break;
-        case "title":
-          title = field.value;
-          break;
-        case "tags":
-          tags = field.value.split(",").map((t) => t.trim());
-          break;
-        case "image":
-          image = field.value;
-          break;
-      }
-      continue;
-    }
-
-    if (trimmed && !description && version) {
-      description = trimmed;
-    }
+const parseEntryLine = (state: EntryParseState, trimmed: string) => {
+  if (trimmed.startsWith("## ")) {
+    state.version = trimmed.slice(3).trim();
+    return;
   }
 
-  if (!version) return null;
+  if (trimmed === "### Changes") {
+    state.inChanges = true;
+    return;
+  }
 
-  const entry: ChangelogEntry = { version, date, title };
-  if (tags?.length) entry.tags = tags;
-  if (image) entry.image = image;
-  if (description) entry.description = description;
-  if (changes.length) entry.changes = changes;
+  if (state.inChanges) {
+    if (trimmed.startsWith("- ")) {
+      state.changes.push(parseChange(trimmed));
+    }
+    return;
+  }
+
+  const field = parseMetadataField(trimmed);
+  if (field) {
+    applyEntryMetadata(state, field.key, field.value);
+    return;
+  }
+
+  if (trimmed && !state.description && state.version) {
+    state.description = trimmed;
+  }
+};
+
+const parseEntry = (block: string): ChangelogEntry | null => {
+  const state = createEntryParseState();
+
+  for (const line of block.split("\n")) {
+    parseEntryLine(state, line.trim());
+  }
+
+  if (!state.version) return null;
+
+  const entry: ChangelogEntry = { version: state.version, date: state.date, title: state.title };
+  if (state.tags?.length) entry.tags = state.tags;
+  if (state.image) entry.image = state.image;
+  if (state.description) entry.description = state.description;
+  if (state.changes.length) entry.changes = state.changes;
 
   return entry;
 };

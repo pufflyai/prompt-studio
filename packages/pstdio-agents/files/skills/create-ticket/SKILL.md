@@ -20,7 +20,7 @@ $ARGUMENTS
    - Priority (P1/P2/P3)
    - Parallelizable (yes/no)
    - Goal, scope, steps, acceptance, and evidence
-   - References to existing docs/specs (if any), otherwise record gaps as assumptions
+   - References to existing docs (if any), otherwise record gaps as assumptions
    - Implementation Notes with key files/modules and decisions
    - Acceptance with explicit tests, file paths, and exact commands
    - Documentation updates, or an explicit “no docs” note

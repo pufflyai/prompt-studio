@@ -8,7 +8,7 @@ Docs are plain markdown files committed to the repo under `.pstdio/docs/`. All c
 .pstdio/docs/
 ├── navigation.json   ← sidebar structure (sections, links)
 ├── index.md
-├── specs/
+├── prd/
 │   └── *.md
 └── architecture/
     └── *.md

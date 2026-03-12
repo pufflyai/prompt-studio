@@ -14,7 +14,7 @@ This PRD captures the proposed pstdio update behavior. The command remains draft
 
 Status: **DRAFT** (not implemented)
 
-This command is not currently registered in the pstdio CLI command tree. This spec describes proposed future behavior.
+This command is not currently registered in the pstdio CLI command tree. This PRD describes proposed future behavior.
 
 ## Purpose
 

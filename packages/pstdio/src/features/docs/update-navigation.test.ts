@@ -21,15 +21,15 @@ const readNav = (dir: string): DocsConfig => JSON.parse(readFileSync(join(dir, "
 
 describe("addToNavigation", () => {
   test("adds entry to existing group", () => {
-    const dir = setup({ sidebar: [{ text: "Specs", items: [] }] });
+    const dir = setup({ sidebar: [{ text: "Prd", items: [] }] });
 
-    addToNavigation(dir, "specs/cli/templates", "CLI Templates");
+    addToNavigation(dir, "prd/cli/templates", "CLI Templates");
 
     const nav = readNav(dir);
-    const specs = nav.sidebar[0];
-    const cli = specs.items![0];
+    const prd = nav.sidebar[0];
+    const cli = prd.items![0];
     expect(cli.text).toBe("Cli");
-    expect(cli.items![0]).toEqual({ text: "CLI Templates", link: "/specs/cli/templates" });
+    expect(cli.items![0]).toEqual({ text: "CLI Templates", link: "/prd/cli/templates" });
   });
 
   test("creates missing groups", () => {
@@ -44,10 +44,10 @@ describe("addToNavigation", () => {
 
   test("does not duplicate existing entries", () => {
     const dir = setup({
-      sidebar: [{ text: "Specs", items: [{ text: "Existing", link: "/specs/existing" }] }],
+      sidebar: [{ text: "Prd", items: [{ text: "Existing", link: "/prd/existing" }] }],
     });
 
-    addToNavigation(dir, "specs/existing", "Existing");
+    addToNavigation(dir, "prd/existing", "Existing");
 
     const nav = readNav(dir);
     expect(nav.sidebar[0].items).toHaveLength(1);

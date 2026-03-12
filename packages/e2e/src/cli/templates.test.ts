@@ -47,7 +47,6 @@ describe("pstdio templates list", () => {
       expect(output).toContain("cookbook");
       expect(output).toContain("review-me");
       expect(output).toContain("lessons-learned");
-      expect(output).not.toContain("spec");
     },
     TEST_TIMEOUT,
   );
@@ -191,22 +190,22 @@ describe("pstdio templates delete", () => {
 
 describe("pstdio templates write", () => {
   test(
-    "writes a docs template to the filesystem and updates navigation",
+    "writes a docs template to the filesystem without mutating navigation",
     () => {
       const repo = createInitializedRepo("tpl-write-docs");
+      const initialNav = readFileSync(join(repo, ".pstdio", "docs", "navigation.json"), "utf8");
 
-      const output = run("templates write --name prd --target docs/specs/cli/new-feature", repo);
-      expect(output).toContain('Wrote template "prd" to .pstdio/docs/specs/cli/new-feature.md');
+      const output = run("templates write --name prd --target docs/prd/cli/new-feature", repo);
+      expect(output).toContain('Wrote template "prd" to .pstdio/docs/prd/cli/new-feature.md');
 
-      const filePath = join(repo, ".pstdio", "docs", "specs", "cli", "new-feature.md");
+      const filePath = join(repo, ".pstdio", "docs", "prd", "cli", "new-feature.md");
       expect(existsSync(filePath)).toBe(true);
 
       const content = readFileSync(filePath, "utf8");
       expect(content).toContain("Functional Requirements");
 
-      const nav = JSON.parse(readFileSync(join(repo, ".pstdio", "docs", "navigation.json"), "utf8"));
-      const navStr = JSON.stringify(nav);
-      expect(navStr).toContain("/specs/cli/new-feature");
+      const updatedNav = readFileSync(join(repo, ".pstdio", "docs", "navigation.json"), "utf8");
+      expect(updatedNav).toBe(initialNav);
     },
     TEST_TIMEOUT,
   );

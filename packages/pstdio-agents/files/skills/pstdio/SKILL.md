@@ -71,10 +71,11 @@ Conversations between users and agents, tracked in the database. Sessions can be
 ├── tickets/              # Local ticket files
 │   └── <id>_<slug>/
 │       ├── ticket.md     # Ticket content (YAML frontmatter + markdown)
-│       └── files/        # Supporting files (research, specs, screenshots)
+│       ├── artifacts/    # Agent-generated artifacts (tests, builds, logs)
+│       └── files/        # Supporting files (research, screenshots)
 ├── docs/                 # Project documentation
 │   ├── navigation.json   # Sidebar structure
-│   └── *.md              # Documentation pages
+│   └── /**/*.md          # Documentation pages
 ├── templates/            # Project-level template overrides
 ├── skills/               # Project-level skill overrides
 └── prompts/              # Project-level prompt template overrides
