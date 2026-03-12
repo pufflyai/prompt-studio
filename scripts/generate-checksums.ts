@@ -15,14 +15,14 @@ const BINARIES = [
 const checksumLines: string[] = [];
 
 for (const { pkg, bin, asset } of BINARIES) {
-  const binPath = join("./dist/platforms", pkg, "bin", bin);
+  const binPath = join("./packages/pstdio/dist/platforms", pkg, "bin", bin);
   const content = readFileSync(binPath);
   const h = new Bun.CryptoHasher("sha256");
   h.update(content);
   checksumLines.push(`${h.digest("hex")}  ${asset}`);
 }
 
-const outPath = "./dist/platforms/checksums.sha256";
+const outPath = "./packages/pstdio/dist/platforms/checksums.sha256";
 writeFileSync(outPath, `${checksumLines.join("\n")}\n`);
 
 console.log(`Checksums written to ${outPath}:`);

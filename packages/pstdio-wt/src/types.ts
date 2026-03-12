@@ -39,3 +39,10 @@ export type RebaseResult = {
 };
 
 export type StagingPolicy = "all" | "tracked" | "none";
+
+export type BranchInfo = {
+  name: string;
+  isCurrent: boolean;
+  isRemote: boolean;
+  lastCommitDate: string;
+};

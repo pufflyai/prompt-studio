@@ -9,8 +9,8 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { type ComponentProps, useEffect, useState } from "react";
+import { ProjectSettingsProvider } from "@/features/project-settings/store";
 import { seedCollection } from "@/features/sync/seed-collections";
-import { WorkspaceProvider } from "@/features/workspaces/state";
 import { TicketAttemptButton } from "./ticket-attempt-button";
 
 const PROJECT_ID = "project-ticket-attempt-story";
@@ -40,9 +40,9 @@ const seedStoryData = () => {
 const createTicketAttemptButtonRouter = (props: ComponentProps<typeof TicketAttemptButton>) => {
   const rootRoute = createRootRoute({
     component: () => (
-      <WorkspaceProvider>
+      <ProjectSettingsProvider>
         <Outlet />
-      </WorkspaceProvider>
+      </ProjectSettingsProvider>
     ),
   });
 

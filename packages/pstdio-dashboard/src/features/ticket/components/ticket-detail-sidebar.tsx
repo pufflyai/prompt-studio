@@ -1,5 +1,5 @@
 import { Flex, IconButton, Stack } from "@chakra-ui/react";
-import { PanelRightClose, PanelRightOpen } from "lucide-react";
+import { PanelRightOpen } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Project } from "@/features/project/types";
 import type { Ticket } from "@/features/ticket-list/types";
@@ -45,12 +45,6 @@ export const TicketDetailSidebar = (props: TicketDetailSidebarProps) => {
 
   return (
     <Stack gap="xs" borderLeftWidth="1px" padding="sm" minW="320px" maxW="360px" overflow="auto">
-      <Flex justify="flex-end">
-        <IconButton aria-label={t("ticketDetail.collapseDetailsPanel")} variant="ghost" size="sm" onClick={onToggle}>
-          <PanelRightClose />
-        </IconButton>
-      </Flex>
-
       <TicketProperties
         ticket={ticket}
         project={project}

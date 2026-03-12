@@ -6,16 +6,12 @@
     "pstdio": "./bin/pstdio.js"
   },
   "files": [
-    "bin",
-    "dist"
+    "bin"
   ],
   "scripts": {
     "pstdio": "bun ./src/index.ts",
     "dev": "bun --watch ./src/index.ts -- serve & VITE_API_BASE_URL= bun run --cwd ../pstdio-dashboard dev & wait",
-    "build": "bun build ./src/index.ts --outfile dist/index.js --target node --banner \"#!/usr/bin/env node\" --external react",
-    "analyze-bundle": "bun build ./src/index.ts --outfile dist/index.js --target node --banner \"#!/usr/bin/env node\" --external react --metafile=./dist/bundle-meta.json --metafile-md=./dist/bundle-meta.md",
-    "build:bundle": "bun run build && mkdir -p dist/api && cp -r ../pstdio-dashboard/dist ./dist/dashboard && cp ../pstdio-api/dist/index.js ./dist/api/server.js",
-    "build:compile": "bun run ../../scripts/build-compile.ts",
+    "build": "bun run ../../scripts/build-compile.ts",
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && bunx @biomejs/biome lint .",
     "format": "bunx @biomejs/biome format --write .",
@@ -29,14 +25,14 @@
     "yargs": "^18.0.0"
   },
   "optionalDependencies": {
-    "@pstdio/cli-darwin-arm64": "0.0.1",
-    "@pstdio/cli-darwin-x64": "0.0.1",
-    "@pstdio/cli-linux-x64": "0.0.1",
-    "@pstdio/cli-linux-arm64": "0.0.1",
-    "@pstdio/cli-linux-x64-musl": "0.0.1",
-    "@pstdio/cli-linux-arm64-musl": "0.0.1",
-    "@pstdio/cli-win-x64": "0.0.1",
-    "@pstdio/cli-win-arm64": "0.0.1"
+    "@pstdio/cli-darwin-arm64": "0.1.0",
+    "@pstdio/cli-darwin-x64": "0.1.0",
+    "@pstdio/cli-linux-x64": "0.1.0",
+    "@pstdio/cli-linux-arm64": "0.1.0",
+    "@pstdio/cli-linux-x64-musl": "0.1.0",
+    "@pstdio/cli-linux-arm64-musl": "0.1.0",
+    "@pstdio/cli-win-x64": "0.1.0",
+    "@pstdio/cli-win-arm64": "0.1.0"
   },
   "devDependencies": {
     "@types/bun": "latest",

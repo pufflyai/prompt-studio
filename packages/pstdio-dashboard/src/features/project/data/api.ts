@@ -116,9 +116,21 @@ export const removeProjectRepository = async (projectId: string, repoId: string)
   throw new Error(`Removing repositories is not supported yet. projectId=${projectId}, repoId=${repoId}`);
 };
 
+type ApiBranch = {
+  name: string;
+  is_current: boolean;
+  is_remote: boolean;
+  last_commit_date: string;
+};
+
 export const getRepoBranches = async (repoId: string): Promise<RepoBranch[]> => {
-  void repoId;
-  return [];
+  const branches = await apiRequest<ApiBranch[]>(`/v1/repos/${repoId}/branches`);
+  return branches.map((b) => ({
+    name: b.name,
+    isCurrent: b.is_current,
+    isRemote: b.is_remote,
+    lastCommitDate: b.last_commit_date,
+  }));
 };
 
 export const getProjectTemplateAssets = async (projectId: string): Promise<ProjectTemplateAsset[]> => {

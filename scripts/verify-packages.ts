@@ -15,7 +15,7 @@ const EXPECTED = [
 let failed = false;
 
 for (const { pkg, bin } of EXPECTED) {
-  const binPath = join("./dist/platforms", pkg, "bin", bin);
+  const binPath = join("./packages/pstdio/dist/platforms", pkg, "bin", bin);
 
   if (!existsSync(binPath)) {
     process.stderr.write(`MISSING: ${binPath}\n`);

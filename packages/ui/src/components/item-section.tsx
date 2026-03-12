@@ -1,4 +1,4 @@
-import { Box, Collapsible, Flex, Menu, Stack, Text } from "@chakra-ui/react";
+import { Box, Collapsible, Flex, Text } from "@chakra-ui/react";
 import { ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -10,7 +10,7 @@ export interface ItemSectionProps {
 }
 
 /**
- * A collapsible component that displays a section of items (typically MenuItems).
+ * A collapsible section wrapper with a title trigger and optional action.
  */
 export const ItemSection = (props: ItemSectionProps) => {
   const { children, title, defaultOpen = true, action } = props;
@@ -47,13 +47,7 @@ export const ItemSection = (props: ItemSectionProps) => {
           </Box>
         )}
       </Flex>
-      <Collapsible.Content>
-        <Menu.Root>
-          <Stack gap="0" paddingLeft="xs" paddingY="xs">
-            {children}
-          </Stack>
-        </Menu.Root>
-      </Collapsible.Content>
+      <Collapsible.Content>{children}</Collapsible.Content>
     </Collapsible.Root>
   );
 };

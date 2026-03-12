@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { createTemplate } from "./api/create-template";
 
-const TEMPLATES_DIR = join(import.meta.dirname, "../../../files/templates");
+import { resolveFilesRoot } from "../resolve-files-root";
+import { createTemplate } from "./api/create-template";
 
 const BUNDLED_TEMPLATES = [
   { name: "ticket", type: "ticket", file: "ticket-template.md", is_default: true },
@@ -15,8 +15,10 @@ const BUNDLED_TEMPLATES = [
 ];
 
 export const seedBundledTemplates = async (baseUrl: string, projectId: string) => {
+  const filesRoot = await resolveFilesRoot();
+  const templatesDir = join(filesRoot, "templates");
   for (const tpl of BUNDLED_TEMPLATES) {
-    const content = readFileSync(join(TEMPLATES_DIR, tpl.file), "utf8");
+    const content = readFileSync(join(templatesDir, tpl.file), "utf8");
     await createTemplate(baseUrl, projectId, {
       name: tpl.name,
       template_type: tpl.type,

@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useProject, useProjectTemplateAssets } from "@/features/project/hooks/use-project";
+import { useProjectSettingsStore } from "@/features/project-settings/store";
 import { CreateTicketModal } from "@/features/ticket-list/components/create-ticket-modal";
 import {
   useDeleteProjectTicket,
@@ -51,7 +52,17 @@ export const TicketDetailsPanel = () => {
   const ticketAttempts = ticket?.attempts ?? [];
   const defaultRepoId = project?.repositories[0]?.id || null;
 
-  const sessions = useTicketSessions({ projectId, defaultRepoId });
+  const lastSelectedAgent = useProjectSettingsStore((s) => s.lastSelectedAgent);
+  const lastSelectedModels = useProjectSettingsStore((s) => s.lastSelectedModels);
+  const lastSelectedBranches = useProjectSettingsStore((s) => s.lastSelectedBranches);
+
+  const sessions = useTicketSessions({
+    projectId,
+    defaultRepoId,
+    selectedAgent: lastSelectedAgent,
+    selectedModel: lastSelectedModels[0] ?? "",
+    selectedBranch: lastSelectedBranches[0] ?? "",
+  });
   const subTicketCreation = useSubTicketCreation({
     projectId,
     parentTicketId: ticketId,

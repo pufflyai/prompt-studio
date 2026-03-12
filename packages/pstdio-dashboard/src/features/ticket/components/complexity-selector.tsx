@@ -32,7 +32,7 @@ export const ComplexitySelector = (props: ComplexitySelectorProps) => {
         </Button>
       </Menu.Trigger>
       <Menu.Positioner>
-        <Menu.Content minW="160px" bg="background.primary">
+        <Menu.Content minW="160px" bg="bg">
           {COMPLEXITY_OPTIONS.map((complexityOption) => (
             <MenuItem
               key={complexityOption ?? "unspecified"}

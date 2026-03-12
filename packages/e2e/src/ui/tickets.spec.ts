@@ -269,6 +269,25 @@ test.describe("Ticket list editing and filtering", () => {
     await expect(page.getByText("Visible ticket")).toBeVisible();
     await expect(page.getByText("Archived ticket")).not.toBeVisible();
   });
+
+  test("filters tickets by search term", async ({ page, request }) => {
+    const statuses = await getTicketStatuses(request, projectId);
+    const backlog = statuses.find((s) => s.name === "backlog")!;
+
+    await createTicketViaApi(request, projectId, "Add search feature", backlog.id);
+    await createTicketViaApi(request, projectId, "Fix login bug", backlog.id);
+
+    await bypassOnboarding(page);
+    await page.goto(`/projects/${projectId}/tickets`);
+
+    await expect(page.getByText("Add search feature")).toBeVisible();
+    await expect(page.getByText("Fix login bug")).toBeVisible();
+
+    await page.getByPlaceholder("Search tickets...").fill("search");
+
+    await expect(page.getByText("Add search feature")).toBeVisible();
+    await expect(page.getByText("Fix login bug")).not.toBeVisible();
+  });
 });
 
 test.describe("Ticket list additional coverage", () => {

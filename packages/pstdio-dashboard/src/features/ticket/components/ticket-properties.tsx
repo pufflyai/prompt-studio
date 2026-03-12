@@ -1,5 +1,5 @@
 import { Button, Flex } from "@chakra-ui/react";
-import { Properties } from "@pstdio/ui";
+import { ItemSection, Properties } from "@pstdio/ui";
 import { useTranslation } from "react-i18next";
 import type { Project } from "@/features/project/types";
 import type { Ticket } from "@/features/ticket-list/types";
@@ -80,46 +80,47 @@ export const TicketProperties = (props: TicketPropertiesProps) => {
   const parentTicket = ticket.parentId ? ticketById.get(ticket.parentId) : null;
 
   return (
-    <Properties
-      title={t("ticketPanel.properties.title")}
-      items={[
-        { label: t("ticketPanel.fields.id"), value: ticket.shorthand },
-        { label: t("ticketPanel.fields.updated"), value: getTimeFormat(ticket.updatedAt) },
-        { label: t("ticketPanel.fields.status"), value: ticket.status },
-        ...(ticket.archived ? [{ label: t("ticketPanel.fields.archived"), value: "Yes" }] : []),
-        {
-          label: t("ticketPanel.fields.complexity.label"),
-          value: <ComplexitySelector value={ticket.complexity} onChange={onComplexityChange} />,
-        },
-        ...(isBlocked ? [{ label: t("ticketPanel.fields.blockedReason"), value: blockedReason }] : []),
-        { label: t("ticketPanel.fields.dependsOn"), value: buildTicketLinks(ticket.dependsOn) },
-        {
-          label: t("ticketPanel.fields.parent"),
-          value: parentTicket ? (
-            <TicketLink
-              label={parentTicket.shorthand}
-              title={parentTicket.title}
-              onSelect={() => onSelectTicket?.(parentTicket.id)}
-              isDisabled={!onSelectTicket}
-            />
-          ) : (
-            <Button size="sm" variant="subtle" disabled>
-              {t("ticketPanel.none")}
-            </Button>
-          ),
-        },
-        {
-          label: t("ticketPanel.fields.tags"),
-          value: (
-            <TagSelector
-              tags={projectTicketTags}
-              selectedTagIds={selectedTagIds}
-              onChange={onTagIdsChange}
-              isDisabled={isUpdatingTags}
-            />
-          ),
-        },
-      ]}
-    />
+    <ItemSection title={t("ticketPanel.properties.title")}>
+      <Properties
+        items={[
+          { label: t("ticketPanel.fields.id"), value: ticket.shorthand },
+          { label: t("ticketPanel.fields.updated"), value: getTimeFormat(ticket.updatedAt) },
+          { label: t("ticketPanel.fields.status"), value: ticket.status },
+          ...(ticket.archived ? [{ label: t("ticketPanel.fields.archived"), value: "Yes" }] : []),
+          {
+            label: t("ticketPanel.fields.complexity.label"),
+            value: <ComplexitySelector value={ticket.complexity} onChange={onComplexityChange} />,
+          },
+          ...(isBlocked ? [{ label: t("ticketPanel.fields.blockedReason"), value: blockedReason }] : []),
+          { label: t("ticketPanel.fields.dependsOn"), value: buildTicketLinks(ticket.dependsOn) },
+          {
+            label: t("ticketPanel.fields.parent"),
+            value: parentTicket ? (
+              <TicketLink
+                label={parentTicket.shorthand}
+                title={parentTicket.title}
+                onSelect={() => onSelectTicket?.(parentTicket.id)}
+                isDisabled={!onSelectTicket}
+              />
+            ) : (
+              <Button size="sm" variant="subtle" disabled>
+                {t("ticketPanel.none")}
+              </Button>
+            ),
+          },
+          {
+            label: t("ticketPanel.fields.tags"),
+            value: (
+              <TagSelector
+                tags={projectTicketTags}
+                selectedTagIds={selectedTagIds}
+                onChange={onTagIdsChange}
+                isDisabled={isUpdatingTags}
+              />
+            ),
+          },
+        ]}
+      />
+    </ItemSection>
   );
 };

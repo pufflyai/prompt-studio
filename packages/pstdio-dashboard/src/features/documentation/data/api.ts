@@ -8,6 +8,7 @@ export type DocsSidebarItem = {
 
 export type DocsIndex = {
   sidebar: DocsSidebarItem[];
+  missingLinks: string[];
 };
 
 export type DocsContent = {
@@ -18,14 +19,14 @@ export type DocsContent = {
 
 export const getDocsIndex = async (projectId?: string) => {
   if (!projectId) {
-    return { sidebar: [] };
+    return { sidebar: [], missingLinks: [] };
   }
 
   const index = await apiRequest<DocsIndex | null>(`/v1/projects/${projectId}/docs`, {
     allowNotFound: true,
   });
 
-  return index ?? { sidebar: [] };
+  return index ?? { sidebar: [], missingLinks: [] };
 };
 
 export const getDocsContent = (link: string, projectId?: string) => {

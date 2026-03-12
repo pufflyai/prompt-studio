@@ -41,7 +41,7 @@ export const SessionsPanel = () => {
   return (
     <Flex direction="column" height="100%" minH="0">
       <Flex flex="1" minH="0" overflow="hidden">
-        <Stack w="18rem" minW="18rem" borderRightWidth="1px" gap="0" bg="background.primary">
+        <Stack w="18rem" minW="18rem" borderRightWidth="1px" gap="0" bg="bg">
           <HorizontalMenuStack>
             <Text textStyle="label/S/medium" color="foreground.primary">
               {t("sessions.title")}

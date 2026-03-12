@@ -69,15 +69,32 @@ test("getIndex throws when navigation.json is invalid JSON", async () => {
   }
 });
 
-test("getIndex throws when sidebar link points to missing file", async () => {
+test("getIndex returns missingLinks when sidebar link points to missing file", async () => {
   const fixture = createFixture();
   try {
     writeFileSync(
       join(fixture.docsDir, "navigation.json"),
-      JSON.stringify({ sidebar: [{ text: "Missing", link: "/nowhere" }] }),
+      JSON.stringify({
+        sidebar: [
+          { text: "Exists", link: "/guide/getting-started" },
+          { text: "Missing", link: "/nowhere" },
+        ],
+      }),
       "utf8",
     );
-    expect(fixture.docs.getIndex("project-1")).rejects.toThrow("not found");
+    const index = await fixture.docs.getIndex("project-1");
+    expect(index.sidebar).toHaveLength(2);
+    expect(index.missingLinks).toEqual(["/nowhere"]);
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test("getIndex returns empty missingLinks when all links exist", async () => {
+  const fixture = createFixture();
+  try {
+    const index = await fixture.docs.getIndex("project-1");
+    expect(index.missingLinks).toEqual([]);
   } finally {
     rmSync(fixture.root, { recursive: true, force: true });
   }

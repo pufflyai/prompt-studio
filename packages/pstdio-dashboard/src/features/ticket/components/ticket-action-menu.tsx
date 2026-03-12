@@ -49,7 +49,7 @@ export const TicketActionMenu = (props: TicketActionMenuProps) => {
           </IconButton>
         </Menu.Trigger>
         <Menu.Positioner>
-          <Menu.Content minW="200px" bg="background.primary">
+          <Menu.Content minW="200px" bg="bg">
             <MenuItem
               primaryLabel={t("ticketPanel.options.createSubTicket")}
               leftIcon={Plus}

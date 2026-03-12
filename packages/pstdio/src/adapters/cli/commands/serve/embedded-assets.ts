@@ -21,22 +21,27 @@ const MIME_TYPES: Record<string, string> = {
 
 export const resolveMimeType = (filePath: string) => MIME_TYPES[extname(filePath)] ?? "application/octet-stream";
 
-// Bun.embeddedFiles() is available since Bun v1.2.17 but not yet in @types/bun
+// Bun.embeddedFiles is a static array property (not a function) in Bun v1.2+
 const getEmbeddedFiles = (): EmbeddedFile[] => {
   try {
-    const fn = (Bun as Record<string, unknown>).embeddedFiles;
-    if (typeof fn === "function") return fn() as EmbeddedFile[];
+    const files = (Bun as Record<string, unknown>).embeddedFiles;
+    if (Array.isArray(files)) return files as EmbeddedFile[];
   } catch {
     // not available
   }
   return [];
 };
 
+// Embedded file names are relative to the manifest at packages/pstdio/src/
+const DASHBOARD_PREFIX = "../../pstdio-dashboard/dist/";
+
 export const loadEmbeddedAssets = () => {
   const assets = new Map<string, Blob>();
 
   for (const file of getEmbeddedFiles()) {
-    assets.set(file.name, file);
+    if (file.name.startsWith(DASHBOARD_PREFIX)) {
+      assets.set(file.name.slice(DASHBOARD_PREFIX.length), file);
+    }
   }
 
   return assets;

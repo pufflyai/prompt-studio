@@ -10,7 +10,6 @@ import {
 } from "@tanstack/react-router";
 import { Layout } from "@/components/layout";
 import { isOnboardingComplete } from "@/features/agents/agent-storage";
-import { AgentProvider } from "@/features/agents/state";
 import { ChangelogPanel } from "@/features/changelog/pages/changelog-panel";
 import { DocsPanel } from "@/features/documentation/pages/docs-panel";
 import { Onboarding } from "@/features/onboarding/pages/onboarding";
@@ -22,7 +21,6 @@ import { Settings } from "@/features/settings/pages/settings-index";
 import { TicketDetailsPanel } from "@/features/ticket/pages/ticket-details-panel";
 import { TicketsPanel } from "@/features/ticket-list/pages/tickets-panel";
 import { WorkspacePage } from "@/features/workspaces/pages/workspace-page";
-import { WorkspaceProvider } from "@/features/workspaces/state";
 
 const validateDocsSearch = (search: Record<string, unknown>) => ({
   doc: typeof search.doc === "string" ? search.doc : undefined,
@@ -43,13 +41,7 @@ export const resolveProjectDefaultPath = (projectId?: string) => {
 };
 
 export const AppLayout = () => {
-  return (
-    <AgentProvider>
-      <WorkspaceProvider>
-        <Layout />
-      </WorkspaceProvider>
-    </AgentProvider>
-  );
+  return <Layout />;
 };
 
 const rootRoute = createRootRoute({

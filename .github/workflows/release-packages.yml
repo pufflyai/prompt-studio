@@ -16,7 +16,7 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -42,20 +42,63 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Build monorepo
+        run: bun run build
+
+      - name: Compile platform binaries
+        run: bun run scripts/build-all.ts
+
+      - name: Scaffold platform packages
+        run: bun run scripts/scaffold-platform-packages.ts
+
+      - name: Verify binaries
+        run: bun run scripts/verify-packages.ts
+
+      - name: Generate checksums
+        run: bun run scripts/generate-checksums.ts
+
+      - name: Publish platform packages
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: bun run scripts/publish-platform-packages.ts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Create release PR or publish to npm
         id: changesets
         uses: changesets/action@v1
         with:
-          publish: bun run release
+          publish: bunx changeset publish
+          version: bun run scripts/sync-platform-versions.ts && bunx changeset version
           createGithubReleases: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Create GitHub Releases
+      - name: Upload binaries to GitHub Release
         if: steps.changesets.outputs.published == 'true'
         run: |
-          for pkg in $(echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -r '.[] | "\(.name)@\(.version)"'); do
+          VERSION=$(echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -r '.[] | select(.name == "pstdio") | .version')
+          if [ -n "$VERSION" ]; then
+            TAG="pstdio@${VERSION}"
+            gh release create "$TAG" --title "$TAG" --generate-notes \
+              packages/pstdio/dist/platforms/cli-darwin-arm64/bin/pstdio#pstdio-darwin-arm64 \
+              packages/pstdio/dist/platforms/cli-darwin-x64/bin/pstdio#pstdio-darwin-x64 \
+              packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio#pstdio-linux-x64 \
+              packages/pstdio/dist/platforms/cli-linux-arm64/bin/pstdio#pstdio-linux-arm64 \
+              packages/pstdio/dist/platforms/cli-linux-x64-musl/bin/pstdio#pstdio-linux-x64-musl \
+              packages/pstdio/dist/platforms/cli-linux-arm64-musl/bin/pstdio#pstdio-linux-arm64-musl \
+              packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe#pstdio-win-x64.exe \
+              packages/pstdio/dist/platforms/cli-win-arm64/bin/pstdio.exe#pstdio-win-arm64.exe \
+              packages/pstdio/dist/platforms/checksums.sha256#checksums.sha256 \
+              scripts/install.sh#install.sh
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Releases for other packages
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          for pkg in $(echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -r '.[] | select(.name != "pstdio") | "\(.name)@\(.version)"'); do
             tag="${pkg}"
             gh release create "$tag" --title "$tag" --generate-notes
           done

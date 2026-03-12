@@ -73,9 +73,35 @@ describe("GET /v1/projects/:projectId/docs", () => {
     const res = await app.request(`/v1/projects/${projectId}/docs`);
     expect(res.status).toBe(200);
 
-    const body = (await res.json()) as { sidebar: { text: string; link?: string }[] };
+    const body = (await res.json()) as { sidebar: { text: string; link?: string }[]; missingLinks: string[] };
     expect(body.sidebar).toHaveLength(1);
     expect(body.sidebar[0].text).toBe("Welcome");
     expect(body.sidebar[0].link).toBe("index");
+    expect(body.missingLinks).toEqual([]);
+  });
+
+  test("returns 200 with missingLinks when sidebar references a missing file", async () => {
+    const repo2 = join(tempRoot, "repo-missing-links");
+    const docsDir = join(repo2, ".pstdio", "docs");
+    mkdirSync(docsDir, { recursive: true });
+    writeFileSync(join(docsDir, "index.md"), "# Welcome");
+    writeFileSync(
+      join(docsDir, "navigation.json"),
+      JSON.stringify({
+        sidebar: [
+          { text: "Welcome", link: "index" },
+          { text: "Gone", link: "/missing-page" },
+        ],
+      }),
+    );
+
+    const projectId = await createProjectWithRepo(repo2);
+
+    const res = await app.request(`/v1/projects/${projectId}/docs`);
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as { sidebar: unknown[]; missingLinks: string[] };
+    expect(body.sidebar).toHaveLength(2);
+    expect(body.missingLinks).toEqual(["/missing-page"]);
   });
 });

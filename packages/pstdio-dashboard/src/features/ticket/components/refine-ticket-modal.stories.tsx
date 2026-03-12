@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { WorkspaceProvider } from "@/features/workspaces/state";
+import { ProjectSettingsProvider } from "@/features/project-settings/store";
 import { RefineTicketModal } from "./refine-ticket-modal";
 
 const RefineTicketModalStory = (props: {
@@ -12,7 +12,7 @@ const RefineTicketModalStory = (props: {
   const [open, setOpen] = useState(true);
 
   return (
-    <WorkspaceProvider>
+    <ProjectSettingsProvider>
       <RefineTicketModal
         open={open}
         ticketShorthand={ticketShorthand}
@@ -21,7 +21,7 @@ const RefineTicketModalStory = (props: {
         isSubmitting={isSubmitting}
         templates={templates}
       />
-    </WorkspaceProvider>
+    </ProjectSettingsProvider>
   );
 };
 

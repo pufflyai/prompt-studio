@@ -25,6 +25,7 @@ export { MenuItem } from "./components/menu-item";
 export type { OpenSourceNotice, OpenSourceNoticesScreenProps } from "./components/open-source-notices-screen";
 export { OpenSourceNoticesScreen } from "./components/open-source-notices-screen";
 export { PanelMenu } from "./components/panel-menu";
+export type { PropertiesProps, PropertyItem } from "./components/properties";
 export { Properties } from "./components/properties";
 export type { SessionCompletionStatus } from "./components/session-indicator";
 export { SessionIndicator } from "./components/session-indicator";

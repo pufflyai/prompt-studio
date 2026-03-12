@@ -6,6 +6,7 @@
   "scripts": {
     "test": "bun run test:cli && bun run test:ui",
     "test:cli": "bun test src/cli --silent",
+    "test:packaged": "bun test src/packaged --silent",
     "test:ui": "bunx playwright test",
     "report": "bunx playwright show-report"
   },

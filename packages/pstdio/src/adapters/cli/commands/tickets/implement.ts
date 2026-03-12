@@ -70,7 +70,7 @@ export const createHandler =
 
     const launchRoot = root ?? deps.cwd();
     const ticketContent = readTicketFile(launchRoot, argv.id);
-    const prompt = ticketContent ?? renderPrompt("implement-ticket", { ticket_id: argv.id });
+    const prompt = ticketContent ?? (await renderPrompt("implement-ticket", { ticket_id: argv.id }));
 
     deps.log("Launching agent...");
 

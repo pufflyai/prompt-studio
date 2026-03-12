@@ -3,8 +3,8 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { getStoredAgent } from "@/features/agents/agent-storage";
 import { useProject, useProjectTemplateAssets } from "@/features/project/hooks/use-project";
+import { useProjectSettingsStore } from "@/features/project-settings/store";
 import { useCreateProjectTicket } from "@/features/ticket-list/hooks/use-create-project-ticket";
 import { useCreateTicketAttempt } from "@/features/ticket-list/hooks/use-create-ticket-attempt";
 import {
@@ -32,6 +32,7 @@ export const TicketsPanel = () => {
   const { data: templateAssets } = useProjectTemplateAssets(projectId);
   const navigate = useNavigate();
 
+  const lastSelectedAgent = useProjectSettingsStore((s) => s.lastSelectedAgent);
   const { t } = useTranslation("tickets");
   const [settings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -91,7 +92,7 @@ export const TicketsPanel = () => {
 
         await createAttempt.mutateAsync({
           ticketId,
-          agent: getStoredAgent() ?? "opencode",
+          agent: lastSelectedAgent,
           repoId,
           prompt: prompt.length > 0 ? prompt : null,
         });

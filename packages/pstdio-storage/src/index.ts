@@ -2,9 +2,5 @@ export type { Changelog, ChangelogChange, ChangelogEntry } from "./services/chan
 export { createChangelogService, isChangelogServiceError } from "./services/changelog";
 export { createDocsService, isDocsServiceError } from "./services/docs";
 export { createFilesService } from "./services/files";
-export type { DiffMode, FileChange, GitDiffService } from "./services/git-diff";
-export { createGitDiffService } from "./services/git-diff";
-export type { GitWorktreeService } from "./services/git-worktree";
-export { createGitWorktreeService } from "./services/git-worktree";
 export { createSkillsService } from "./services/skills";
 export { ensureStorageRoot, resolveStorageRoot } from "./storage/paths";

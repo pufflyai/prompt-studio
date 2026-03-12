@@ -24,7 +24,8 @@
     "drizzle-orm": "^0.45.1",
     "pstdio-agents": "workspace:*",
     "pstdio-db": "workspace:*",
-    "pstdio-storage": "workspace:*"
+    "pstdio-storage": "workspace:*",
+    "pstdio-wt": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",

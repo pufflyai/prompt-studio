@@ -2,15 +2,15 @@ import { describe, expect, test } from "bun:test";
 import { renderPrompt } from "./render-prompt";
 
 describe("renderPrompt", () => {
-  test("renders commit-message template", () => {
-    const result = renderPrompt("commit-message", { branch: "main", git_diff: "+hello" });
+  test("renders commit-message template", async () => {
+    const result = await renderPrompt("commit-message", { branch: "main", git_diff: "+hello" });
 
     expect(result).toContain("Branch: main");
     expect(result).toContain("+hello");
   });
 
-  test("renders squash-message template with list", () => {
-    const result = renderPrompt("squash-message", {
+  test("renders squash-message template with list", async () => {
+    const result = await renderPrompt("squash-message", {
       commit_count: 2,
       commits: ["fix typo", "add feature"],
       git_diff: "+changed",
@@ -22,8 +22,8 @@ describe("renderPrompt", () => {
     expect(result).toContain("+changed");
   });
 
-  test("renders implement-ticket template", () => {
-    const result = renderPrompt("implement-ticket", { ticket_id: "PS-7" });
+  test("renders implement-ticket template", async () => {
+    const result = await renderPrompt("implement-ticket", { ticket_id: "PS-7" });
 
     expect(result).toBe("Implement ticket: PS-7");
   });

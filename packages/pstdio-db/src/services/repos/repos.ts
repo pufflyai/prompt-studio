@@ -54,5 +54,10 @@ export const createReposService = (db: DbClient) => {
     return rows.map((r) => r.repo);
   };
 
-  return { registerForProject, listByProject };
+  const get = async (repoId: string) => {
+    const [repo] = await db.select().from(repos).where(eq(repos.id, repoId));
+    return repo ?? null;
+  };
+
+  return { get, registerForProject, listByProject };
 };

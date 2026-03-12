@@ -107,10 +107,43 @@ describe("api authentication", () => {
     expect(res.status).toBe(200);
   });
 
+  test("allows requests with lowercase bearer scheme", async () => {
+    const res = await appWithAuth.request("/v1/projects", {
+      headers: {
+        Authorization: "bearer test-token",
+      },
+    });
+
+    expect(res.status).toBe(200);
+  });
+
+  test("allows requests with extra whitespace around token", async () => {
+    const res = await appWithAuth.request("/v1/projects", {
+      headers: {
+        Authorization: "Bearer   test-token   ",
+      },
+    });
+
+    expect(res.status).toBe(200);
+  });
+
   test("keeps health endpoints public", async () => {
     const res = await appWithAuth.request("/healthz");
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
+  });
+
+  test("allows unauthenticated CORS preflight requests", async () => {
+    const res = await appWithAuth.request("/v1/projects", {
+      method: "OPTIONS",
+      headers: {
+        Origin: "http://localhost:5173",
+        "Access-Control-Request-Method": "GET",
+      },
+    });
+
+    expect(res.status).toBe(204);
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
   });
 });

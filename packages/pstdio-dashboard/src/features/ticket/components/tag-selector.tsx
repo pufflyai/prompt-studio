@@ -56,7 +56,7 @@ export const TagSelector = (props: TagSelectorProps) => {
         </Button>
       </Menu.Trigger>
       <Menu.Positioner>
-        <Menu.Content minW="220px" bg="background.primary">
+        <Menu.Content minW="220px" bg="bg">
           {tags.map((tag) => (
             <MenuItem
               key={tag.id}

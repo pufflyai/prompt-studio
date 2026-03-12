@@ -1,22 +1,20 @@
-import { useAgentStore } from "@/features/agents/state";
+import type { CodingAgent } from "@/features/agents/agent-storage";
 import { useCreateTicketAttempt } from "@/features/ticket-list/hooks/use-create-ticket-attempt";
-import { useWorkspaceStore } from "@/features/workspaces/state";
 import { logMutationError } from "@/lib/error-handlers";
 import { useCreateWorkspaceSession } from "./use-create-workspace-session";
 
 interface UseTicketSessionsInput {
   projectId: string | undefined;
   defaultRepoId: string | null;
+  selectedAgent: CodingAgent;
+  selectedModel: string;
+  selectedBranch: string;
 }
 
 export const useTicketSessions = (input: UseTicketSessionsInput) => {
-  const { projectId, defaultRepoId } = input;
+  const { projectId, defaultRepoId, selectedAgent, selectedModel, selectedBranch } = input;
   const createSession = useCreateWorkspaceSession(projectId);
   const createAttempt = useCreateTicketAttempt(projectId);
-
-  const selectedBranch = useWorkspaceStore((s) => s.selectedBranch);
-  const selectedAgent = useAgentStore((s) => s.selectedAgent);
-  const selectedModel = useAgentStore((s) => s.selectedModel);
 
   const startSession = async (prompt: string) => {
     if (!projectId || createSession.isPending) return false;

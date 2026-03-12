@@ -20,7 +20,7 @@ export const SessionActionMenu = (props: SessionActionMenuProps) => {
         </IconButton>
       </Menu.Trigger>
       <Menu.Positioner>
-        <Menu.Content minW="220px" bg="background.primary">
+        <Menu.Content minW="220px" bg="bg">
           <MenuItem primaryLabel={t("sessions.downloadSessionJson")} leftIcon={Download} onClick={onDownloadSession} />
           <MenuItem primaryLabel={t("sessions.archiveSession")} leftIcon={Archive} onClick={onArchiveSession} />
         </Menu.Content>

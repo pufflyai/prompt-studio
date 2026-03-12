@@ -2,13 +2,17 @@ import { Box, Flex, Stack, Text } from "@chakra-ui/react";
 import { EmptyState } from "@pstdio/ui";
 import { Outlet, useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { ProjectSettingsProvider, useProjectSettingsStore } from "@/features/project-settings/store";
+import { SessionAttachedPanel } from "@/features/sessions/components/session-attached-panel";
+import { SessionBubbleContainer } from "@/features/sessions/components/session-bubble.container";
 import { ProjectSidebar } from "../components/project-sidebar";
 import { useProject } from "../hooks/use-project";
 
-export const ProjectShell = () => {
+const ProjectShellContent = () => {
   const { projectId } = useParams({ strict: false });
   const { data: project, isLoading } = useProject(projectId);
   const { t } = useTranslation("projects");
+  const sessionModalState = useProjectSettingsStore((s) => s.sessionModalState);
 
   return (
     <Flex height="100%" width="100%" minH="0">
@@ -26,6 +30,18 @@ export const ProjectShell = () => {
           )}
         </Box>
       </Stack>
+      {sessionModalState === "attached" && <SessionAttachedPanel />}
+      <SessionBubbleContainer />
     </Flex>
+  );
+};
+
+export const ProjectShell = () => {
+  const { projectId } = useParams({ strict: false });
+
+  return (
+    <ProjectSettingsProvider projectId={projectId}>
+      <ProjectShellContent />
+    </ProjectSettingsProvider>
   );
 };

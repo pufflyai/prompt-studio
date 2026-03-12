@@ -1,12 +1,14 @@
 import { cpSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
-const DOCS_DIR = join(".pstdio", "docs");
-const DOCS_TEMPLATE = join(import.meta.dirname, "../../../files/docs");
+import { resolveFilesRoot } from "../resolve-files-root";
 
-export const scaffoldDocs = (root: string) => {
+const DOCS_DIR = join(".pstdio", "docs");
+
+export const scaffoldDocs = async (root: string) => {
   const docsDir = join(root, DOCS_DIR);
   if (existsSync(docsDir)) return;
 
-  cpSync(DOCS_TEMPLATE, docsDir, { recursive: true });
+  const filesRoot = await resolveFilesRoot();
+  cpSync(join(filesRoot, "docs"), docsDir, { recursive: true });
 };

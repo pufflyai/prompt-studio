@@ -161,7 +161,9 @@ packages/api/.data/
 *.db
 .data
 
-packages/pstdio/bin
+
+# Generated embed manifest for compiled binary
+_embed-manifest.generated.ts
 
 # e2e
 packages/e2e/playwright-report

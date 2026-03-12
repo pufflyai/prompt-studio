@@ -29,7 +29,7 @@ const SettingsStory = () => {
   if (!ready) return null;
 
   return (
-    <Box bg="background.primary" minH="100vh">
+    <Box bg="bg" minH="100vh">
       <Settings />
     </Box>
   );
@@ -59,7 +59,7 @@ const EmptyStory = () => {
   if (!ready) return null;
 
   return (
-    <Box bg="background.primary" minH="100vh">
+    <Box bg="bg" minH="100vh">
       <Settings />
     </Box>
   );

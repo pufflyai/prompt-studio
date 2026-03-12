@@ -106,11 +106,11 @@ export const createApp = async (options?: AppOptions) => {
     app.use("/v1/*", async (c, next) => {
       const authorization = c.req.header("authorization");
 
-      if (!authorization?.startsWith("Bearer ")) {
+      if (!authorization || !/^bearer\s+/i.test(authorization)) {
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      const token = authorization.slice("Bearer ".length);
+      const token = authorization.replace(/^bearer\s+/i, "");
 
       if (token !== apiToken) {
         return c.json({ error: "Unauthorized" }, 401);

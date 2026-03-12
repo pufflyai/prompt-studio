@@ -30,7 +30,7 @@ export const linkProject = async (root: string, projectId: string, options?: Lin
   writeConfig(root, { project_id: projectId });
 
   if (!existsSync(join(root, DOCS_DIR))) {
-    scaffoldDocs(root);
+    await scaffoldDocs(root);
   }
 
   await installDefaultSkills(root, projectId, API_URL, options?.homedir);

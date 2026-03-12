@@ -1,3 +1,4 @@
+export { listBranches } from "./branches";
 export { commitChanges } from "./commit";
 export { copyIgnored } from "./copy-ignored";
 export { GitError, git } from "./git";
@@ -6,6 +7,7 @@ export { rebaseOntoTarget } from "./rebase";
 export { runSetup, runSetupScript } from "./setup";
 export { getWorktreeStatus } from "./status";
 export type {
+  BranchInfo,
   CommitResult,
   MergeResult,
   RebaseResult,

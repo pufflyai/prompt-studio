@@ -15,6 +15,7 @@ const docsSidebarItemSchema: z.ZodType = z
 
 const docsIndexSchema = z.object({
   sidebar: z.array(docsSidebarItemSchema),
+  missingLinks: z.array(z.string()),
 });
 
 export const getDocsIndexRoute = createRoute({

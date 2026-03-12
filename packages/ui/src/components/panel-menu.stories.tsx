@@ -1,4 +1,4 @@
-import { Box, Stack } from "@chakra-ui/react";
+import { Box, Menu, Stack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { FileText, Folder, Settings } from "lucide-react";
 import { ItemSection } from "./item-section";
@@ -32,11 +32,19 @@ export const WithSections: Story = {
     children: (
       <Stack gap="sm">
         <ItemSection title="Workspace">
-          <MenuItem primaryLabel="Overview" leftIcon={FileText} />
-          <MenuItem primaryLabel="Files" leftIcon={Folder} />
+          <Menu.Root>
+            <Stack gap="0" paddingLeft="xs" paddingY="xs">
+              <MenuItem primaryLabel="Overview" leftIcon={FileText} />
+              <MenuItem primaryLabel="Files" leftIcon={Folder} />
+            </Stack>
+          </Menu.Root>
         </ItemSection>
         <ItemSection title="Settings">
-          <MenuItem primaryLabel="Preferences" leftIcon={Settings} />
+          <Menu.Root>
+            <Stack gap="0" paddingLeft="xs" paddingY="xs">
+              <MenuItem primaryLabel="Preferences" leftIcon={Settings} />
+            </Stack>
+          </Menu.Root>
         </ItemSection>
       </Stack>
     ),
@@ -50,11 +58,19 @@ export const Compact: Story = {
     children: (
       <Stack gap="2xs">
         <ItemSection title="Workspace">
-          <MenuItem primaryLabel="Overview" leftIcon={FileText} variant="compact" />
-          <MenuItem primaryLabel="Files" leftIcon={Folder} variant="compact" />
+          <Menu.Root>
+            <Stack gap="0" paddingLeft="xs" paddingY="xs">
+              <MenuItem primaryLabel="Overview" leftIcon={FileText} variant="compact" />
+              <MenuItem primaryLabel="Files" leftIcon={Folder} variant="compact" />
+            </Stack>
+          </Menu.Root>
         </ItemSection>
         <ItemSection title="Settings">
-          <MenuItem primaryLabel="Preferences" leftIcon={Settings} variant="compact" />
+          <Menu.Root>
+            <Stack gap="0" paddingLeft="xs" paddingY="xs">
+              <MenuItem primaryLabel="Preferences" leftIcon={Settings} variant="compact" />
+            </Stack>
+          </Menu.Root>
         </ItemSection>
       </Stack>
     ),
