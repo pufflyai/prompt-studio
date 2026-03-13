@@ -26,7 +26,7 @@ for (const name of PLATFORM_PACKAGES) {
 }
 
 if (changed) {
-  writeFileSync(PKG_PATH, `${JSON.stringify(pkg, null, "\t")}\n`);
+  writeFileSync(PKG_PATH, `${JSON.stringify(pkg, null, 2)}\n`);
   console.log(`Synced optionalDependencies to ${version}`);
 } else {
   console.log(`optionalDependencies already at ${version}`);
