@@ -1,39 +1,26 @@
 {
-  "name": "landing-page",
-  "version": "1.0.0",
+  "name": "@pstdio/landing-page",
   "private": true,
-  "description": "landing-page",
-  "author": "au-re",
-  "keywords": [
-    "gatsby"
-  ],
+  "type": "module",
+  "version": "0.0.1",
   "scripts": {
-    "develop": "gatsby develop",
-    "start": "gatsby develop",
-    "build": "node ./node_modules/.bin/gatsby build",
-    "serve": "gatsby serve",
-    "clean": "gatsby clean",
-    "typecheck": "tsc --noEmit"
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/react": "^5.0.0",
     "@chakra-ui/react": "3.32.0",
     "@emotion/react": "11.14.0",
     "@pstdio/ui": "workspace:*",
-    "gatsby": "^5.16.1",
-    "gatsby-plugin-image": "^3.16.0",
-    "gatsby-plugin-manifest": "^5.16.0",
-    "gatsby-plugin-sharp": "^5.16.0",
-    "gatsby-plugin-smoothscroll": "^1.2.0",
-    "gatsby-transformer-sharp": "^5.16.0",
+    "astro": "^6.0.4",
     "lucide-react": "^0.556.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "react-markdown": "^10.1.0"
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
-    "@types/node": "^20.11.19",
     "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
-    "typescript": "^5.3.3"
+    "@types/react-dom": "^19.2.0"
   }
 }

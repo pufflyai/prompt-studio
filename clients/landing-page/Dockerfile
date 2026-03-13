@@ -14,11 +14,6 @@ COPY packages/pstdio-storage/package.json packages/pstdio-storage/package.json
 COPY packages/pstdio-wt/package.json packages/pstdio-wt/package.json
 COPY packages/ui/package.json packages/ui/package.json
 
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates nodejs python3 make g++ \
-  && update-ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
-
 RUN bun install \
   --filter './clients/landing-page' \
   --filter './packages/ui'
@@ -29,11 +24,11 @@ COPY packages/ui packages/ui
 
 RUN cd packages/ui && bun run build
 
-RUN cd clients/landing-page && /usr/bin/node node_modules/gatsby/dist/bin/gatsby.js build
+RUN cd clients/landing-page && bun run build
 
 FROM nginx:1.27-alpine AS runner
 
-COPY --from=builder /app/clients/landing-page/public /usr/share/nginx/html
+COPY --from=builder /app/clients/landing-page/dist /usr/share/nginx/html
 
 EXPOSE 80
 

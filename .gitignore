@@ -122,6 +122,8 @@ dist
 # Firebase cache directory
 .firebase/
 
+.astro
+
 # TernJS port file
 .tern-port
 
@@ -143,9 +145,6 @@ vite.config.ts.timestamp-*
 
 node_modules/
 .cache/
-src/gatsby-types.d.ts
-clients/landing-page/public
-
 .nx
 
 # Agents
@@ -161,7 +160,6 @@ packages/api/.data/
 *.db
 .data
 
-
 # Generated embed manifest for compiled binary
 _embed-manifest.generated.ts
 
@@ -172,11 +170,6 @@ packages/e2e/screenshots
 __test-tmp__
 
 */**/storybook-static
-
-# Docs
-.docusaurus
-.cache-loader
-webapps/documentation/build
 
 .pstdio/tickets
 .pstdio/config.json
