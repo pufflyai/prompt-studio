@@ -1,7 +1,7 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
-import type { Page, Route } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
@@ -45,21 +45,42 @@ const createTempGitRepo = () => {
   return repoPath;
 };
 
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const waitForPickerToLoad = async (dialog: Locator) => {
+  await expect(dialog.getByText("Loading...")).not.toBeVisible();
+};
+
+const readPickerPath = async (dialog: Locator) => {
+  const path = await dialog.locator("p").filter({ hasText: /^\// }).first().textContent();
+  return path?.trim() ?? "/";
+};
+
 const navigatePickerToDirectory = async (page: Page, targetPath: string) => {
   const dialog = page.getByRole("dialog").last();
+  const parentButton = dialog.getByRole("button", { name: "Go to parent directory" });
+  const resolvedTargetPath = realpathSync(targetPath);
 
-  // Wait for the picker to finish loading its initial directory
-  await expect(dialog.getByText("Loading...")).not.toBeVisible();
+  await waitForPickerToLoad(dialog);
+  let currentPath = await readPickerPath(dialog);
 
-  // Intercept the next filesystem/list call to redirect to targetPath, then unroute
-  const handler = async (route: Route) => {
-    const url = new URL(route.request().url());
-    url.searchParams.set("path", targetPath);
-    await route.continue({ url: url.toString() });
-    await page.unroute("**/v1/filesystem/list*", handler);
-  };
-  await page.route("**/v1/filesystem/list*", handler);
-  await dialog.getByRole("button", { name: "Go to home directory" }).click();
+  while (currentPath !== "/") {
+    const previousPath = currentPath;
+    await parentButton.click();
+    await waitForPickerToLoad(dialog);
+    await expect.poll(() => readPickerPath(dialog)).not.toBe(previousPath);
+    currentPath = await readPickerPath(dialog);
+  }
+
+  for (const segment of resolvedTargetPath.split("/").filter(Boolean)) {
+    const expectedPath = currentPath === "/" ? `/${segment}` : `${currentPath}/${segment}`;
+    const segmentOption = dialog.getByRole("option", { name: new RegExp(`^${escapeRegex(segment)}$`) }).first();
+    await expect(segmentOption).toBeVisible();
+    await segmentOption.click();
+    await waitForPickerToLoad(dialog);
+    await expect.poll(() => readPickerPath(dialog)).toBe(expectedPath);
+    currentPath = expectedPath;
+  }
 };
 
 const selectRepoFromFolderPicker = async (page: Page, repoPath: string) => {
@@ -119,7 +140,7 @@ test.describe("Project creation", () => {
   const tempRepoPaths: string[] = [];
 
   test.beforeEach(async ({ request }) => {
-    test.setTimeout(5_000);
+    test.setTimeout(10_000);
     await deleteAllProjects(request);
   });
 
