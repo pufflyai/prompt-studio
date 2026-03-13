@@ -154,29 +154,3 @@ export type CreateTicketAndStartResult = {
   sessionId: string;
   workspaceId: string;
 };
-
-export type MergeTicketAttemptResult =
-  | { status: "merged"; filesChanged: number; commitMessage: string }
-  | { status: "conflict"; conflictFiles: string[] };
-
-export type SwitchToTicketAttemptResult = {
-  status: "switched";
-  ticketLabel: string;
-  attemptLabel: string;
-  previewBranch: string;
-  needsInstall: boolean;
-  installWarning?: string;
-};
-
-export type SwitchBackTicketAttemptResult = {
-  status: "restored";
-  ticketLabel: string;
-  attemptLabel: string;
-  originalBranch: string;
-};
-
-export type TicketAttemptSwapStatus = {
-  swapped: boolean;
-  ticketLabel?: string;
-  attemptLabel?: string;
-};

@@ -2,9 +2,10 @@ import { TicketBoard, type TicketBoardColumn, type TicketBoardColumnAction, type
 import { Archive } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import type { Ticket, TicketColumnAction, TicketStatus } from "@/features/ticket-list/types";
+import type { Ticket, TicketAttempt, TicketColumnAction, TicketStatus } from "@/features/ticket-list/types";
 
 import type { BadgeContext, DisplayProperty, TicketGroup } from "../types";
+import { toSessionIndicatorStatus } from "../utils/ticket-attempts";
 import { buildTicketBadges } from "../utils/ticket-badges";
 import { buildParentPath } from "../utils/ticket-parent-path";
 
@@ -12,8 +13,12 @@ interface TicketsBoardViewProps {
   groups: TicketGroup[];
   displayProperties: DisplayProperty[];
   badgeContext: BadgeContext;
+  latestAttemptsByTicketId?: Map<string, TicketAttempt>;
+  diffTotalsByWorkspaceId?: Map<string, { additions: number; deletions: number }>;
   onMoveTicket?: (ticketId: string, nextStatus: TicketStatus) => void;
   onSelectTicket?: (ticket: Ticket) => void;
+  onOpenSessionBubble?: (sessionId: string | null) => void;
+  onOpenTicketWorkspace?: (ticket: Ticket, workspaceShorthand: string) => void;
   onCreateStart?: (status: TicketStatus) => void;
   onColumnAction?: (status: TicketStatus, action: TicketColumnAction) => Promise<void> | void;
   selectedTicketId?: string | null;
@@ -24,8 +29,12 @@ export const TicketsBoardView = (props: TicketsBoardViewProps) => {
     groups,
     displayProperties,
     badgeContext,
+    latestAttemptsByTicketId = new Map(),
+    diffTotalsByWorkspaceId = new Map(),
     onMoveTicket,
     onSelectTicket,
+    onOpenSessionBubble,
+    onOpenTicketWorkspace,
     onCreateStart,
     onColumnAction,
     selectedTicketId = null,
@@ -39,16 +48,30 @@ export const TicketsBoardView = (props: TicketsBoardViewProps) => {
   const toColumnActions = (actions: TicketColumnAction[]): TicketBoardColumnAction[] =>
     actions.map((action) => ({ id: action, ...COLUMN_ACTION_MAP[action] }));
 
-  const toBoardItem = (ticket: Ticket, ticketsById: Map<string, Ticket>): TicketBoardItem => ({
-    id: ticket.id,
-    cardProps: {
-      ticketId: ticket.shorthand,
-      parentPath: buildParentPath(ticket, ticketsById),
-      title: ticket.title || t("boardView.emptyTicket"),
-      badges: buildTicketBadges(ticket, displayProperties, badgeContext),
-      onClick: undefined,
-    },
-  });
+  const toBoardItem = (ticket: Ticket, ticketsById: Map<string, Ticket>): TicketBoardItem => {
+    const latestAttempt = latestAttemptsByTicketId.get(ticket.id);
+    const diffTotals = latestAttempt ? diffTotalsByWorkspaceId.get(latestAttempt.id) : undefined;
+    const sessionId = latestAttempt?.sessionId || null;
+    const workspaceShorthand = latestAttempt?.shorthand ?? "";
+
+    return {
+      id: ticket.id,
+      cardProps: {
+        ticketId: ticket.shorthand,
+        parentPath: buildParentPath(ticket, ticketsById),
+        title: ticket.title || t("boardView.emptyTicket"),
+        badges: buildTicketBadges(ticket, displayProperties, badgeContext),
+        sessionIndicatorLabel: latestAttempt?.shorthand,
+        sessionIndicatorStatus: latestAttempt ? toSessionIndicatorStatus(latestAttempt.status) : undefined,
+        diffAdditions: diffTotals?.additions,
+        diffDeletions: diffTotals?.deletions,
+        onSessionIndicatorClick: sessionId ? () => onOpenSessionBubble?.(sessionId) : undefined,
+        onDiffBadgeClick:
+          diffTotals && workspaceShorthand ? () => onOpenTicketWorkspace?.(ticket, workspaceShorthand) : undefined,
+        onClick: undefined,
+      },
+    };
+  };
 
   const ticketsById = new Map<string, Ticket>();
   for (const group of groups) {

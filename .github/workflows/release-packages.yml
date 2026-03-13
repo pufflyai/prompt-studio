@@ -17,6 +17,8 @@ jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      NPM_CONFIG_PROVENANCE: true
     steps:
       - uses: actions/checkout@v4
 
@@ -29,7 +31,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22.14.0"
-          registry-url: "https://registry.npmjs.org"
 
       - name: Upgrade npm for trusted publishing
         run: npm i -g npm@latest

@@ -7,6 +7,7 @@ import { ProjectSettingsProvider, useProjectSettingsStore } from "@/features/pro
 import { SessionAttachedPanel } from "@/features/sessions/components/session-attached-panel";
 import { SessionBubbleContainer } from "@/features/sessions/components/session-bubble.container";
 import { isSessionsRoutePath } from "@/features/sessions/utils/sessions-route";
+import { isWorkspaceRoutePath } from "@/features/workspaces/utils/workspace-route";
 import { ProjectSidebar } from "../components/project-sidebar";
 import { useProject } from "../hooks/use-project";
 
@@ -18,6 +19,7 @@ const ProjectShellContent = () => {
   const sessionModalState = useProjectSettingsStore((s) => s.sessionModalState);
   const setLastNonSessionsPath = useProjectSettingsStore((s) => s.setLastNonSessionsPath);
   const isSessionsRoute = isSessionsRoutePath(location.pathname, projectId);
+  const isWorkspaceRoute = isWorkspaceRoutePath(location.pathname, projectId);
 
   useEffect(() => {
     if (isSessionsRoute) return;
@@ -45,7 +47,7 @@ const ProjectShellContent = () => {
         </Box>
       </Stack>
       {sessionModalState === "attached" && !isSessionsRoute ? <SessionAttachedPanel /> : null}
-      {!isSessionsRoute ? <SessionBubbleContainer /> : null}
+      {!isSessionsRoute && !isWorkspaceRoute ? <SessionBubbleContainer /> : null}
     </Flex>
   );
 };

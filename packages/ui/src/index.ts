@@ -7,6 +7,8 @@ export { Checkbox } from "./components/checkbox";
 export { ContentPlaceholder, Label as ContentPlaceholderLabel } from "./components/content-placeholder";
 export { DeleteConfirmationModal } from "./components/delete-confirmation-modal";
 export { DiffBubble } from "./components/diff-bubble";
+export type { Diff } from "./components/diff-card";
+export { DiffDrawer } from "./components/diff-drawer";
 export type { DocsChangelogEntry, DocsChangelogProps } from "./components/documentation/docs-changelog";
 export { DocsChangelog } from "./components/documentation/docs-changelog";
 export type { DocsOutlineProps } from "./components/documentation/docs-outline";

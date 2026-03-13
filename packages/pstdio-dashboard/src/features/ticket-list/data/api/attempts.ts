@@ -4,10 +4,6 @@ import type {
   ApiTicketAttemptDiff,
   CreateTicketAttemptInput,
   CreateTicketAttemptResult,
-  MergeTicketAttemptResult,
-  SwitchBackTicketAttemptResult,
-  SwitchToTicketAttemptResult,
-  TicketAttemptSwapStatus,
 } from "./types";
 
 export const createTicketAttempt = async (input: CreateTicketAttemptInput) => {
@@ -48,28 +44,9 @@ export const createTicketAttempt = async (input: CreateTicketAttemptInput) => {
   } satisfies CreateTicketAttemptResult;
 };
 
-export const getTicketAttemptDiff = async (workspaceId: string) => {
-  return apiRequest<ApiTicketAttemptDiff>(`/v1/ticket-attempts/${workspaceId}/diff`);
-};
+export type DiffMode = "current" | "fork_point";
 
-export const mergeTicketAttempt = async (workspaceId: string) => {
-  return apiRequest<MergeTicketAttemptResult>(`/v1/ticket-attempts/${workspaceId}/merge`, {
-    method: "POST",
-  });
-};
-
-export const switchToTicketAttempt = async (workspaceId: string) => {
-  return apiRequest<SwitchToTicketAttemptResult>(`/v1/ticket-attempts/${workspaceId}/switch-to`, {
-    method: "POST",
-  });
-};
-
-export const switchBackTicketAttempt = async (workspaceId: string) => {
-  return apiRequest<SwitchBackTicketAttemptResult>(`/v1/ticket-attempts/${workspaceId}/switch-back`, {
-    method: "POST",
-  });
-};
-
-export const getTicketAttemptSwapStatus = async (workspaceId: string) => {
-  return apiRequest<TicketAttemptSwapStatus>(`/v1/ticket-attempts/${workspaceId}/swap-status`);
+export const getTicketAttemptDiff = async (workspaceId: string, mode?: DiffMode) => {
+  const params = mode ? `?mode=${mode}` : "";
+  return apiRequest<ApiTicketAttemptDiff>(`/v1/workspaces/${workspaceId}/diff${params}`);
 };

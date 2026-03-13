@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { useProject, useProjectTemplateAssets } from "@/features/project/hooks/use-project";
 import { useProjectSettingsStore } from "@/features/project-settings/store";
+import { openTicketSessionBubble } from "@/features/ticket/utils/open-ticket-session-bubble";
 import { useCreateProjectTicket } from "@/features/ticket-list/hooks/use-create-project-ticket";
 import { useCreateTicketAttempt } from "@/features/ticket-list/hooks/use-create-ticket-attempt";
 import {
@@ -12,6 +13,7 @@ import {
   useUpdateProjectTicket,
   useUpdateProjectTicketStatus,
 } from "@/features/ticket-list/hooks/use-project-tickets";
+import { useTicketAttemptDiffs } from "@/features/ticket-list/hooks/use-ticket-attempt-diffs";
 import type { TicketColumnAction, TicketStatus } from "@/features/ticket-list/types";
 
 import { CreateTicketModal, type CreateTicketModalPayload } from "../components/create-ticket-modal";
@@ -19,6 +21,7 @@ import { TicketsBoardView } from "../components/tickets-board-view";
 import { TicketsHeader } from "../components/tickets-header";
 import { TicketsListView } from "../components/tickets-list-view";
 import { type BadgeContext, DEFAULT_DISPLAY_SETTINGS, type DisplaySettings } from "../types";
+import { buildLatestAttemptsByTicketId } from "../utils/ticket-attempts";
 import { groupTickets, orderTickets } from "../utils/ticket-grouping";
 import { getVisibleTickets } from "../utils/ticket-visibility";
 
@@ -34,6 +37,8 @@ export const TicketsPanel = () => {
   const navigate = useNavigate();
 
   const lastSelectedAgent = useProjectSettingsStore((s) => s.lastSelectedAgent);
+  const setSessionModalState = useProjectSettingsStore((s) => s.setSessionModalState);
+  const setSelectedSessionId = useProjectSettingsStore((s) => s.setSelectedSessionId);
   const { t } = useTranslation("tickets");
   const [settings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -42,6 +47,9 @@ export const TicketsPanel = () => {
   const isLoading = isProjectLoading || isTicketsLoading;
   const statusOptions = project?.ticketStatusOptions ?? [];
   const allTickets = getVisibleTickets(tickets ?? []);
+  const latestAttemptsByTicketId = buildLatestAttemptsByTicketId(allTickets);
+  const latestWorkspaceIds = [...new Set([...latestAttemptsByTicketId.values()].map((attempt) => attempt.id))];
+  const { diffTotalsByWorkspaceId } = useTicketAttemptDiffs(latestWorkspaceIds);
 
   const groups = groupTickets(allTickets, settings.grouping, statusOptions).map((group) => ({
     ...group,
@@ -153,6 +161,23 @@ export const TicketsPanel = () => {
     });
   };
 
+  const handleOpenSessionBubble = (sessionId: string | null) => {
+    openTicketSessionBubble({
+      sessionId,
+      setSessionModalState,
+      setSelectedSessionId,
+    });
+  };
+
+  const handleOpenTicketWorkspace = (ticketShorthand: string, workspaceShorthand: string) => {
+    if (!projectId || !workspaceShorthand) return;
+
+    navigate({
+      to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
+      params: { projectId, ticketShorthand, workspaceShorthand },
+    });
+  };
+
   if (isLoading) {
     return (
       <Stack gap="lg" height="100%" p="sm">
@@ -173,8 +198,14 @@ export const TicketsPanel = () => {
             groups={groups}
             displayProperties={settings.displayProperties}
             badgeContext={badgeContext}
+            latestAttemptsByTicketId={latestAttemptsByTicketId}
+            diffTotalsByWorkspaceId={diffTotalsByWorkspaceId}
             onMoveTicket={handleMoveTicket}
             onSelectTicket={(ticket) => navigateToTicket(ticket.shorthand)}
+            onOpenSessionBubble={handleOpenSessionBubble}
+            onOpenTicketWorkspace={(ticket, workspaceShorthand) =>
+              handleOpenTicketWorkspace(ticket.shorthand, workspaceShorthand)
+            }
             onCreateStart={(status) => openCreateModal(status)}
             onColumnAction={handleColumnAction}
           />

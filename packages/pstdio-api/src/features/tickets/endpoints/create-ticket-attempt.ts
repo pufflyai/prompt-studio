@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { copyFile, mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
@@ -100,6 +101,15 @@ const resolveAgentId = async (deps: Pick<RouteDeps, "agentConfigsService">, requ
   return defaultConfig?.agent_id ?? null;
 };
 
+const copyPstdioConfig = async (repoPath: string, worktreePath: string) => {
+  const srcConfig = join(repoPath, ".pstdio", "config.json");
+  const dstConfig = join(worktreePath, ".pstdio", "config.json");
+  if (existsSync(srcConfig) && !existsSync(dstConfig)) {
+    await mkdir(join(worktreePath, ".pstdio"), { recursive: true });
+    await copyFile(srcConfig, dstConfig);
+  }
+};
+
 export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typeof createTicketAttemptRoute> => {
   const worktreeMode = "worktree";
 
@@ -147,6 +157,8 @@ export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typ
         path: worktreePath,
         base,
       });
+
+      await copyPstdioConfig(repo.path, worktreePath);
     }
 
     const workspaceWithGitMetadata =

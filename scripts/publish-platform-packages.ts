@@ -9,7 +9,7 @@ const entries = readdirSync(PLATFORMS_DIR).filter((e) => e.startsWith("cli-"));
 for (const entry of entries) {
   const pkgDir = join(PLATFORMS_DIR, entry);
   console.log(`Publishing ${entry}...`);
-  await $`npm publish ${pkgDir} --provenance --access public`;
+  await $`npm publish ${pkgDir} --access public`;
 }
 
 console.log(`\nPublished ${entries.length} platform packages.`);
