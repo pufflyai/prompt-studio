@@ -49,6 +49,8 @@ It loads project sessions, groups them by date in the left rail, and renders the
 - The left rail should clearly indicate the selected session.
 - An empty state should appear when no session is selected.
 - Session grouping should be date-based for quick scanning.
+- Follow-up submissions should appear immediately with a temporary "Thinking..." assistant placeholder.
+- After sending a follow-up, focus stays in the chat composer.
 
 ### Operational Requirements
 
@@ -61,8 +63,11 @@ It loads project sessions, groups them by date in the left rail, and renders the
 2. Group sessions by date and render them in the left rail.
 3. When a session is selected, open its streamed chat history in the right pane.
 4. Use the chat input to send follow-up prompts to the selected session.
-5. If the stream exposes a pending approval request, render approve and deny controls above the chat input.
-6. The "new session" button currently clears the selection; it does not create a session by itself.
+5. Show the submitted follow-up immediately with a temporary "Thinking..." assistant placeholder.
+6. Keep the chat composer focused after a follow-up submit.
+7. Clear the optimistic follow-up placeholder when stream history advances or the follow-up fails.
+8. If the stream exposes a pending approval request, render approve and deny controls above the chat input.
+9. The "new session" button currently clears the selection; it does not create a session by itself.
 
 ## Interface
 

@@ -46,20 +46,30 @@ export const ChatInput = (props: ChatInputProps) => {
     onChange?.(resetText);
   }, [defaultState, onChange]);
 
-  const handleContainerClick = () => {
-    setIsSelected(true);
+  const focusEditor = () => {
     const editable = containerRef.current?.querySelector('[contenteditable="true"]');
     if (editable instanceof HTMLElement) {
       editable.focus();
     }
   };
 
-  const resetEditor = () => {
+  const handleContainerClick = () => {
+    setIsSelected(true);
+    focusEditor();
+  };
+
+  const resetEditor = (shouldFocus = false) => {
     setEditorState(defaultState);
     setEditorKey((key) => key + 1);
     const resetText = getTextFromSerializedEditorState(defaultState);
     setText(resetText);
     onChange?.(resetText);
+
+    if (shouldFocus) {
+      requestAnimationFrame(() => {
+        focusEditor();
+      });
+    }
   };
 
   const handleSend = () => {
@@ -75,7 +85,7 @@ export const ChatInput = (props: ChatInputProps) => {
 
     onSubmit(trimmed, attachedResources);
 
-    resetEditor();
+    resetEditor(true);
 
     onClearAttachments?.();
   };

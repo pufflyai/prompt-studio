@@ -1,9 +1,16 @@
 import { ApprovalPrompt, ChatPanel } from "@pstdio/ui/chat-ui";
 import type { ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/api";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useSessionStream } from "../hooks/use-session-stream";
+import {
+  createPendingFollowUpState,
+  mergeMessagesWithPendingFollowUp,
+  type PendingFollowUpState,
+  shouldClearPendingFollowUp,
+} from "./session-chat-state";
 
 interface SessionChatViewProps {
   sessionId: string | null;
@@ -13,55 +20,51 @@ interface SessionChatViewProps {
   repoMenu?: ReactNode;
 }
 
-interface FollowUpMutateOptions {
-  onSuccess?: () => void;
-}
-
-interface SubmitSessionMessageInput {
-  sessionId: string | null;
-  text: string;
-  agent?: string;
-  model?: string;
-  onCreateSession?: (prompt: string) => void;
-  followUpMutate: (
-    input: { sessionId: string; prompt: string; agent?: string; model?: string },
-    options?: FollowUpMutateOptions,
-  ) => void;
-  reconnectStream: () => void;
-}
-
-export const submitSessionMessage = (input: SubmitSessionMessageInput) => {
-  const { sessionId, text, agent, model, onCreateSession, followUpMutate, reconnectStream } = input;
-
-  if (!sessionId) {
-    onCreateSession?.(text);
-    return;
-  }
-
-  followUpMutate(
-    { sessionId, prompt: text, agent, model },
-    {
-      onSuccess: reconnectStream,
-    },
-  );
-};
-
 export const SessionChatView = (props: SessionChatViewProps) => {
   const { t } = useTranslation("projects");
   const { sessionId, agent, model, onCreateSession, repoMenu } = props;
   const { messages, isStreaming, approvalRequest, reconnect } = useSessionStream(sessionId);
   const followUp = useFollowUpSession();
+  const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUpState | null>(null);
+  const pendingIdRef = useRef(0);
+  const lastSessionIdRef = useRef<string | null>(sessionId);
+
+  useEffect(() => {
+    if (lastSessionIdRef.current !== sessionId) {
+      lastSessionIdRef.current = sessionId;
+      setPendingFollowUp(null);
+    }
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (shouldClearPendingFollowUp(pendingFollowUp, messages)) {
+      setPendingFollowUp(null);
+    }
+  }, [messages, pendingFollowUp]);
 
   const handleSubmitMessage = (text: string) => {
-    submitSessionMessage({
-      sessionId,
-      text,
-      agent,
-      model,
-      onCreateSession,
-      followUpMutate: followUp.mutate,
-      reconnectStream: reconnect,
-    });
+    if (!sessionId) {
+      onCreateSession?.(text);
+      return;
+    }
+
+    const pendingId = `pending-${pendingIdRef.current}`;
+    pendingIdRef.current += 1;
+    setPendingFollowUp(
+      createPendingFollowUpState({
+        prompt: text,
+        messageCount: messages.length,
+        pendingId,
+      }),
+    );
+
+    followUp.mutate(
+      { sessionId, prompt: text, agent, model },
+      {
+        onSuccess: reconnect,
+        onError: () => setPendingFollowUp(null),
+      },
+    );
   };
 
   const handleApprove = () => {
@@ -80,9 +83,11 @@ export const SessionChatView = (props: SessionChatViewProps) => {
     });
   };
 
+  const displayedMessages = mergeMessagesWithPendingFollowUp(messages, pendingFollowUp);
+
   return (
     <ChatPanel
-      messages={messages}
+      messages={displayedMessages}
       streaming={isStreaming}
       emptyStateTitle={t("sessions.noSessionSelected")}
       emptyStateDescription={t("sessions.selectSession")}
