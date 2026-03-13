@@ -87,7 +87,7 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 
 # Changesets
 
-- If you change **any package**, include a changeset for **`pstdio`** only; include **`@pstdio/ui`** only when that package itself changes.
+- If you modify **any package**, include a changeset for **`pstdio`** only; include **`@pstdio/ui`** only when that package itself changes.
 - Run `bun changeset`, choose the semver bump (`patch`, `minor`, `major`), and write a **one-line changelog summary**.
 - Commit the generated `.changeset/*.md` file and **do not manually edit `package.json` versions**.
 
