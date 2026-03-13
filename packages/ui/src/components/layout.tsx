@@ -1,8 +1,9 @@
-import { Box, Flex, Stack } from "@chakra-ui/react";
+import { Flex, Stack } from "@chakra-ui/react";
 import { Outlet, useRouterState } from "@tanstack/react-router";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { HorizontalMenuStack } from "@/components/horizontal-menu-stack";
 import { PanelMenu } from "@/components/panel-menu";
+import { ScrollArea } from "@/components/scroll-area";
 import { Toaster } from "@/components/toaster";
 
 export const Layout = () => {
@@ -11,11 +12,11 @@ export const Layout = () => {
     <>
       <Stack flex="1" minH="100vh" gap="0" overflow="hidden">
         <Flex flex="1" height="100%" alignItems="stretch" overflow="hidden">
-          <Box flex="1" bg="bg" overflowY="auto">
+          <ScrollArea flex="1" bg="bg" contentProps={{ minH: "100%" }}>
             <ErrorBoundary key={location.pathname} label="Unable to render this page.">
               <Outlet />
             </ErrorBoundary>
-          </Box>
+          </ScrollArea>
         </Flex>
       </Stack>
       <Toaster />

@@ -31,6 +31,7 @@ export { OpenSourceNoticesScreen } from "./components/open-source-notices-screen
 export { PanelMenu } from "./components/panel-menu";
 export type { PropertiesProps, PropertyItem } from "./components/properties";
 export { Properties } from "./components/properties";
+export { ScrollArea } from "./components/scroll-area";
 export type { SessionCompletionStatus } from "./components/session-indicator";
 export { SessionIndicator } from "./components/session-indicator";
 export type { SwitchProps } from "./components/switch";

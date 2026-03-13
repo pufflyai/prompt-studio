@@ -70,11 +70,6 @@ const resolveBase = async (worktreePath: string) => {
   }
 };
 
-const resolveMainWorktreePath = async (worktreePath: string) => {
-  const worktrees = await listWorktrees(worktreePath);
-  return worktrees[0]?.worktree ?? null;
-};
-
 export const getWorkspaceDiffHandler = (deps: RouteDeps): AppRouteHandler<typeof getWorkspaceDiffRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
@@ -89,26 +84,12 @@ export const getWorkspaceDiffHandler = (deps: RouteDeps): AppRouteHandler<typeof
       return c.json({ error: `Workspace has no worktree: ${id}` }, 404);
     }
 
-    let diff: Awaited<ReturnType<typeof getWorktreeDiff>>;
-    if (mode === "current") {
-      const mainPath = await resolveMainWorktreePath(workspace.worktree_path);
-      if (!mainPath) {
-        return c.json({ error: `Cannot resolve main worktree for workspace: ${id}` }, 404);
-      }
-      diff = await getDiffAgainstDirectory({
-        worktreePath: workspace.worktree_path,
-        referencePath: mainPath,
-        // Exclude pstdio metadata and agent skill directories — these are
-        // infrastructure files, not user code changes.
-        exclude: [".pstdio/", ".claude/skills/", ".opencode/skills/"],
-      });
-    } else {
-      const base = await resolveBase(workspace.worktree_path);
-      diff = await getWorktreeDiff({
-        worktreePath: workspace.worktree_path,
-        base,
-      });
-    }
+    const base = mode === "current" ? "HEAD" : await resolveBase(workspace.worktree_path);
+
+    const diff = await getWorktreeDiff({
+      worktreePath: workspace.worktree_path,
+      base,
+    });
 
     return c.json(
       {

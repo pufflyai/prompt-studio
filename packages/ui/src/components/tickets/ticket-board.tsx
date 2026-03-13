@@ -3,6 +3,7 @@ import { MoreHorizontal, Plus } from "lucide-react";
 import { type ComponentProps, type ComponentType, type DragEvent, useState } from "react";
 
 import { MenuItem } from "@/components/menu-item";
+import { ScrollArea } from "@/components/scroll-area";
 import { Tooltip } from "@/components/tooltip";
 
 import { TicketCard } from "./ticket-card";
@@ -75,14 +76,11 @@ export const TicketBoard = (props: TicketBoardProps) => {
   };
 
   return (
-    <Stack
+    <ScrollArea
       height="100%"
-      direction="row"
-      gap="0"
-      align="stretch"
-      overflowX="auto"
-      overflowY="hidden"
-      paddingBottom="2xs"
+      showHorizontalScrollbar
+      showVerticalScrollbar={false}
+      contentProps={{ display: "flex", alignItems: "stretch", gap: "0", pb: "2xs", minH: "100%" }}
     >
       {columns.map((column) => (
         <Stack
@@ -102,7 +100,7 @@ export const TicketBoard = (props: TicketBoardProps) => {
         >
           <ColumnHeader column={column} onCreateStart={onCreateStart} onColumnAction={onColumnAction} />
 
-          <Stack gap="sm" flex="1" minH="0" overflowY="auto">
+          <ScrollArea flex="1" minH="0" contentProps={{ spaceY: "sm" }}>
             {column.items.map((item) => (
               <TicketCard
                 key={item.id}
@@ -113,10 +111,10 @@ export const TicketBoard = (props: TicketBoardProps) => {
                 onDragEnd={column.canDragOut ? handleDragEnd : undefined}
               />
             ))}
-          </Stack>
+          </ScrollArea>
         </Stack>
       ))}
-    </Stack>
+    </ScrollArea>
   );
 };
 

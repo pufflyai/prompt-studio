@@ -127,12 +127,18 @@ test.describe("Workspace diff", () => {
     repoDirs.length = 0;
   });
 
-  test("current mode (default) — returns empty diff when workspace matches main repo", async ({ request }) => {
+  test("current mode (default) — returns empty diff when no uncommitted changes", async ({ request }) => {
     const repoRoot = createGitRepo();
     repoDirs.push(repoRoot);
     const repo = await registerRepoViaApi(request, projectId, "clean-repo", repoRoot);
     const ticket = await createTicketViaApi(request, projectId, "# Clean workspace test");
     const attempt = await createAttemptViaApi(request, ticket.id, repo.id);
+
+    // Commit a change — should NOT appear in current mode (only uncommitted)
+    const wtPath = attempt.workspace.worktree_path;
+    writeFileSync(join(wtPath, "committed.ts"), "export const x = 1;\n");
+    execSync("git add .", { cwd: wtPath, stdio: "pipe" });
+    execSync('git commit -m "add committed"', { cwd: wtPath, stdio: "pipe" });
 
     const res = await request.get(`${apiBase}/v1/workspaces/${attempt.workspace.id}/diff`);
     expect(res.ok()).toBe(true);
@@ -143,28 +149,32 @@ test.describe("Workspace diff", () => {
     expect(diff.totals.file_count).toBe(0);
   });
 
-  test("current mode — detects committed changes vs main repo", async ({ request }) => {
+  test("current mode — shows only uncommitted changes", async ({ request }) => {
     const repoRoot = createGitRepo();
     repoDirs.push(repoRoot);
-    const repo = await registerRepoViaApi(request, projectId, "current-changed-repo", repoRoot);
-    const ticket = await createTicketViaApi(request, projectId, "# Current mode changed test");
+    const repo = await registerRepoViaApi(request, projectId, "current-dirty-repo", repoRoot);
+    const ticket = await createTicketViaApi(request, projectId, "# Current mode dirty test");
     const attempt = await createAttemptViaApi(request, ticket.id, repo.id);
 
     const wtPath = attempt.workspace.worktree_path;
-    writeFileSync(join(wtPath, "feature.ts"), 'export const greet = () => "hello";\n');
+
+    // Commit a change
+    writeFileSync(join(wtPath, "committed.ts"), "export const x = 1;\n");
     execSync("git add .", { cwd: wtPath, stdio: "pipe" });
-    execSync('git commit -m "add feature"', { cwd: wtPath, stdio: "pipe" });
+    execSync('git commit -m "add committed"', { cwd: wtPath, stdio: "pipe" });
+
+    // Add uncommitted file
+    writeFileSync(join(wtPath, "wip.txt"), "work in progress\n");
 
     const res = await request.get(`${apiBase}/v1/workspaces/${attempt.workspace.id}/diff`);
     expect(res.ok()).toBe(true);
     const diff = (await res.json()) as DiffResponse;
 
     expect(diff.files.length).toBe(1);
-    expect(diff.files[0].filePath).toBe("feature.ts");
-    expect(diff.files[0].change).toBe("added");
+    expect(diff.files[0].filePath).toBe("wip.txt");
   });
 
-  test("fork_point mode — returns diff relative to base branch", async ({ request }) => {
+  test("fork_point mode — returns all changes since branch diverged", async ({ request }) => {
     const repoRoot = createGitRepo();
     repoDirs.push(repoRoot);
     const repo = await registerRepoViaApi(request, projectId, "fork-repo", repoRoot);
@@ -186,23 +196,6 @@ test.describe("Workspace diff", () => {
     expect(featureFile!.additions).toBe(1);
   });
 
-  test("current mode — includes uncommitted changes", async ({ request }) => {
-    const repoRoot = createGitRepo();
-    repoDirs.push(repoRoot);
-    const repo = await registerRepoViaApi(request, projectId, "dirty-repo", repoRoot);
-    const ticket = await createTicketViaApi(request, projectId, "# Dirty workspace test");
-    const attempt = await createAttemptViaApi(request, ticket.id, repo.id);
-
-    writeFileSync(join(attempt.workspace.worktree_path, "wip.txt"), "work in progress\n");
-
-    const res = await request.get(`${apiBase}/v1/workspaces/${attempt.workspace.id}/diff`);
-    expect(res.ok()).toBe(true);
-    const diff = (await res.json()) as DiffResponse;
-
-    const filePaths = diff.files.map((f) => f.filePath);
-    expect(filePaths).toContain("wip.txt");
-  });
-
   test("returns 404 for non-existent workspace", async ({ request }) => {
     const res = await request.get(`${apiBase}/v1/workspaces/non-existent-id/diff`);
     expect(res.status()).toBe(404);
@@ -215,11 +208,9 @@ test.describe("Workspace diff", () => {
     const ticket = await createTicketViaApi(request, projectId, "# UI diff test");
     const attempt = await createAttemptViaApi(request, ticket.id, repo.id);
 
-    // Make changes in the worktree
+    // Add an uncommitted file so current mode (default) picks it up
     const wtPath = attempt.workspace.worktree_path;
     writeFileSync(join(wtPath, "component.tsx"), "export const App = () => <div>Hello</div>;\n");
-    execSync("git add .", { cwd: wtPath, stdio: "pipe" });
-    execSync('git commit -m "add component"', { cwd: wtPath, stdio: "pipe" });
 
     await bypassOnboarding(page, projectId, "fake");
     const wsShorthand = attempt.workspace.workspace_shorthand;

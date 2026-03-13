@@ -1,5 +1,4 @@
 import {
-  Box,
   Checkmark,
   createTreeCollection,
   Icon,
@@ -13,6 +12,7 @@ import { FileText, Folder } from "lucide-react";
 
 import type { FileTreeItem } from "@/components/file-tree-helpers";
 import { EmptyState } from "./empty-state";
+import { ScrollArea } from "./scroll-area";
 
 export interface FileSelectorProps {
   files: FileTreeItem[];
@@ -139,7 +139,13 @@ export const FileSelector = (props: FileSelectorProps) => {
     <Stack gap="xs">
       <Text textStyle="paragraph/M/medium">{label}</Text>
 
-      <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" p="xs" maxH={maxHeight} overflow="auto">
+      <ScrollArea
+        borderWidth="1px"
+        borderColor="border.muted"
+        borderRadius="md"
+        maxH={maxHeight}
+        contentProps={{ p: "xs" }}
+      >
         {files.length === 0 ? (
           <EmptyState title={emptyLabel} size="sm" textAlign="left" alignItems="flex-start" />
         ) : (
@@ -186,7 +192,7 @@ export const FileSelector = (props: FileSelectorProps) => {
             </TreeView.Tree>
           </TreeView.Root>
         )}
-      </Box>
+      </ScrollArea>
     </Stack>
   );
 };

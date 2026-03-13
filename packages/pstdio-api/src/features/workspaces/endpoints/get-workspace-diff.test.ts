@@ -96,8 +96,13 @@ describe("GET /v1/workspaces/:id/diff", () => {
     expect(res.status).toBe(404);
   });
 
-  test("defaults to current mode — returns empty diff when no changes vs main repo", async () => {
-    const { workspace } = await createWorkspaceWithDiff("diff-clean");
+  test("current mode (default) — returns empty diff when no uncommitted changes", async () => {
+    const { workspace } = await createWorkspaceWithDiff("diff-current-clean");
+
+    // Commit a change — should NOT appear in current mode
+    writeFileSync(join(workspace.worktree_path, "committed.txt"), "committed\n");
+    execSync("git add .", { cwd: workspace.worktree_path, stdio: "pipe" });
+    execSync('git commit -m "add file"', { cwd: workspace.worktree_path, stdio: "pipe" });
 
     const res = await app.request(`/v1/workspaces/${workspace.id}/diff`);
     expect(res.status).toBe(200);
@@ -108,36 +113,26 @@ describe("GET /v1/workspaces/:id/diff", () => {
     expect(body.totals.file_count).toBe(0);
   });
 
-  test("current mode — detects committed changes vs main repo", async () => {
-    const { workspace } = await createWorkspaceWithDiff("diff-current-committed");
+  test("current mode — shows only uncommitted changes", async () => {
+    const { workspace } = await createWorkspaceWithDiff("diff-current-dirty");
 
-    writeFileSync(join(workspace.worktree_path, "new-file.txt"), "hello\n");
+    // Commit a change
+    writeFileSync(join(workspace.worktree_path, "committed.txt"), "committed\n");
     execSync("git add .", { cwd: workspace.worktree_path, stdio: "pipe" });
     execSync('git commit -m "add file"', { cwd: workspace.worktree_path, stdio: "pipe" });
 
-    const res = await app.request(`/v1/workspaces/${workspace.id}/diff`);
-    expect(res.status).toBe(200);
-
-    const body = await res.json();
-    expect(body.files.length).toBe(1);
-    expect(body.files[0].filePath).toBe("new-file.txt");
-    expect(body.files[0].change).toBe("added");
-  });
-
-  test("current mode — detects uncommitted changes", async () => {
-    const { workspace } = await createWorkspaceWithDiff("diff-current-dirty");
-
+    // Add uncommitted file
     writeFileSync(join(workspace.worktree_path, "dirty.txt"), "dirty\n");
 
     const res = await app.request(`/v1/workspaces/${workspace.id}/diff`);
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    const filePaths = body.files.map((f: { filePath: string }) => f.filePath);
-    expect(filePaths).toContain("dirty.txt");
+    expect(body.files.length).toBe(1);
+    expect(body.files[0].filePath).toBe("dirty.txt");
   });
 
-  test("fork_point mode — returns diff relative to base branch", async () => {
+  test("fork_point mode — returns all changes since branch diverged", async () => {
     const { workspace } = await createWorkspaceWithDiff("diff-fork-point");
 
     writeFileSync(join(workspace.worktree_path, "feature.txt"), "feature\n");

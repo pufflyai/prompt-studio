@@ -3,6 +3,7 @@ import { PanelRightClose } from "lucide-react";
 import type { ReactNode } from "react";
 import { ContentPlaceholder } from "./content-placeholder";
 import { HorizontalMenuStack } from "./horizontal-menu-stack";
+import { ScrollArea } from "./scroll-area";
 
 interface DrawerInlineProps extends FlexProps {
   open?: boolean;
@@ -69,8 +70,10 @@ export function DrawerInlineBody(props: DrawerInlineBodyProps) {
   const { children, ...rest } = props;
 
   return (
-    <Flex {...rest} direction="column" flex="1" minH="0" gap="sm" borderWidth="0" overflowY="auto">
-      {children}
+    <Flex {...rest} direction="column" flex="1" minH="0" gap="0" borderWidth="0">
+      <ScrollArea flex="1" minH="0" contentProps={{ display: "flex", flexDirection: "column", gap: "sm" }}>
+        {children}
+      </ScrollArea>
     </Flex>
   );
 }

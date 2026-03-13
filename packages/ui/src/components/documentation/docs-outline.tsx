@@ -1,6 +1,7 @@
 import { Box, Collapsible, HStack, Icon, Stack, Text, useEnvironmentContext } from "@chakra-ui/react";
 import { ChevronDown, ChevronRight, FileText } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { ScrollArea } from "../scroll-area";
 
 interface DocHeading {
   id: string;
@@ -211,7 +212,7 @@ export const DocsOutline = (props: DocsOutlineProps) => {
           </Collapsible.Trigger>
 
           <Collapsible.Content>
-            <Box mt="3" maxH="30vh" overflowY="auto">
+            <ScrollArea mt="3" maxH="30vh">
               <Stack gap="0">
                 {headings.map((heading) => (
                   <DocsOutlineItem
@@ -224,12 +225,12 @@ export const DocsOutline = (props: DocsOutlineProps) => {
                   />
                 ))}
               </Stack>
-            </Box>
+            </ScrollArea>
           </Collapsible.Content>
         </Collapsible.Root>
       </Box>
 
-      <Box hideBelow="md" top="6" width="xs" overflowY="auto" position="sticky" maxH="calc(100vh - 3rem)">
+      <ScrollArea hideBelow="md" top="6" width="xs" position="sticky" maxH="calc(100vh - 3rem)">
         <HStack mb="4">
           <Icon as={FileText} color="fg.subtle" />
           <Text fontWeight="medium" textStyle="sm">
@@ -249,7 +250,7 @@ export const DocsOutline = (props: DocsOutlineProps) => {
             />
           ))}
         </Stack>
-      </Box>
+      </ScrollArea>
     </Stack>
   );
 };

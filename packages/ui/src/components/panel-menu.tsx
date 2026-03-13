@@ -1,5 +1,6 @@
 import { Flex, Stack, Text } from "@chakra-ui/react";
 import type { ReactNode } from "react";
+import { ScrollArea } from "./scroll-area";
 
 type PanelMenuVariant = "default" | "compact";
 
@@ -43,9 +44,9 @@ export function PanelMenu(props: PanelMenuProps) {
       )}
 
       {children && (
-        <Stack p={styles.contentPadding} gap={styles.contentGap} flex="1" minH="0" overflowY="auto">
+        <ScrollArea flex="1" minH="0" contentProps={{ p: styles.contentPadding, spaceY: styles.contentGap }}>
           {children}
-        </Stack>
+        </ScrollArea>
       )}
     </Stack>
   );

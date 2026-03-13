@@ -1,6 +1,7 @@
 import { Button, Dialog, Menu, Stack, Text } from "@chakra-ui/react";
 import { ChevronUp, FileText, Folder, FolderOpen, Home } from "lucide-react";
 import { MenuItem } from "./menu-item";
+import { ScrollArea } from "./scroll-area";
 
 export interface FolderPickerDialogEntry {
   name: string;
@@ -128,14 +129,12 @@ export const FolderPickerDialog = (props: FolderPickerDialogProps) => {
                 </Text>
               </Stack>
 
-              <Stack
-                gap="xs"
+              <ScrollArea
                 borderWidth="1px"
                 borderRadius="md"
                 borderColor="border.muted"
-                padding="sm"
                 maxHeight="320px"
-                overflowY="auto"
+                contentProps={{ padding: "sm" }}
               >
                 {isLoading ? (
                   <Text textStyle="paragraph/S/regular" color="fg.muted">
@@ -162,7 +161,7 @@ export const FolderPickerDialog = (props: FolderPickerDialogProps) => {
                     ))}
                   </Stack>
                 )}
-              </Stack>
+              </ScrollArea>
             </Stack>
           </Dialog.Body>
           <Dialog.Footer>

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { join } from "node:path";
-import { getDiffAgainstDirectory, getWorktreeDiff } from "./diff";
+import { getWorktreeDiff } from "./diff";
 import { git } from "./git";
 import { createTempRepo } from "./test-helpers";
 import { createWorktree } from "./worktree";
@@ -111,112 +111,38 @@ describe("getWorktreeDiff", () => {
   });
 });
 
-describe("getDiffAgainstDirectory", () => {
-  test("returns empty diff when directories are identical", async () => {
-    const wtPath = join(repo.dir, "wt-dir-clean");
-    await createWorktree({ repoRoot: repo.dir, branch: "task/dir-clean", path: wtPath });
+describe("getWorktreeDiff with base=HEAD (current mode)", () => {
+  test("returns empty diff when no uncommitted changes", async () => {
+    const wtPath = join(repo.dir, "wt-current-clean");
+    await createWorktree({ repoRoot: repo.dir, branch: "task/current-clean", path: wtPath });
 
-    const diff = await getDiffAgainstDirectory({
-      worktreePath: wtPath,
-      referencePath: repo.dir,
-    });
+    // Commit a change — should NOT appear in HEAD diff
+    await Bun.write(join(wtPath, "committed.txt"), "committed\n");
+    await git(wtPath, ["add", "."]);
+    await git(wtPath, ["commit", "-m", "add file"]);
+
+    const diff = await getWorktreeDiff({ worktreePath: wtPath, base: "HEAD" });
 
     expect(diff.files).toEqual([]);
     expect(diff.totals.file_count).toBe(0);
   });
 
-  test("detects file added in worktree but not in reference", async () => {
-    const wtPath = join(repo.dir, "wt-dir-add");
-    await createWorktree({ repoRoot: repo.dir, branch: "task/dir-add", path: wtPath });
+  test("shows only uncommitted changes, not committed ones", async () => {
+    const wtPath = join(repo.dir, "wt-current-dirty");
+    await createWorktree({ repoRoot: repo.dir, branch: "task/current-dirty", path: wtPath });
 
-    await Bun.write(join(wtPath, "new-file.txt"), "hello\n");
+    // Commit a change
+    await Bun.write(join(wtPath, "committed.txt"), "committed\n");
     await git(wtPath, ["add", "."]);
     await git(wtPath, ["commit", "-m", "add file"]);
 
-    const diff = await getDiffAgainstDirectory({
-      worktreePath: wtPath,
-      referencePath: repo.dir,
-    });
+    // Add uncommitted changes
+    await Bun.write(join(wtPath, "dirty.txt"), "dirty\n");
+
+    const diff = await getWorktreeDiff({ worktreePath: wtPath, base: "HEAD" });
 
     expect(diff.files.length).toBe(1);
-    expect(diff.files[0].filePath).toBe("new-file.txt");
+    expect(diff.files[0].filePath).toBe("dirty.txt");
     expect(diff.files[0].change).toBe("added");
-    expect(diff.files[0].newContent).toBe("hello\n");
-  });
-
-  test("detects file modified relative to reference", async () => {
-    const wtPath = join(repo.dir, "wt-dir-mod");
-    await createWorktree({ repoRoot: repo.dir, branch: "task/dir-mod", path: wtPath });
-
-    await Bun.write(join(wtPath, "README.md"), "# changed\n");
-    await git(wtPath, ["add", "."]);
-    await git(wtPath, ["commit", "-m", "modify readme"]);
-
-    const diff = await getDiffAgainstDirectory({
-      worktreePath: wtPath,
-      referencePath: repo.dir,
-    });
-
-    expect(diff.files.length).toBe(1);
-    expect(diff.files[0].filePath).toBe("README.md");
-    expect(diff.files[0].change).toBe("modified");
-    expect(diff.files[0].oldContent).toBe("# test repo\n");
-    expect(diff.files[0].newContent).toBe("# changed\n");
-  });
-
-  test("detects file deleted in worktree but present in reference", async () => {
-    const wtPath = join(repo.dir, "wt-dir-del");
-    await createWorktree({ repoRoot: repo.dir, branch: "task/dir-del", path: wtPath });
-
-    await git(wtPath, ["rm", "README.md"]);
-    await git(wtPath, ["commit", "-m", "delete readme"]);
-
-    const diff = await getDiffAgainstDirectory({
-      worktreePath: wtPath,
-      referencePath: repo.dir,
-    });
-
-    expect(diff.files.length).toBe(1);
-    expect(diff.files[0].filePath).toBe("README.md");
-    expect(diff.files[0].change).toBe("deleted");
-    expect(diff.files[0].oldContent).toBe("# test repo\n");
-    expect(diff.files[0].newContent).toBe("");
-  });
-
-  test("picks up dirty (uncommitted) changes in reference directory", async () => {
-    const wtPath = join(repo.dir, "wt-dir-dirty-ref");
-    await createWorktree({ repoRoot: repo.dir, branch: "task/dir-dirty-ref", path: wtPath });
-
-    // Modify the main repo (dirty state) without committing
-    await Bun.write(join(repo.dir, "README.md"), "# dirty main\n");
-
-    // Worktree still has original content — diff should show the difference
-    const diff = await getDiffAgainstDirectory({
-      worktreePath: wtPath,
-      referencePath: repo.dir,
-    });
-
-    expect(diff.files.length).toBe(1);
-    expect(diff.files[0].filePath).toBe("README.md");
-    expect(diff.files[0].change).toBe("modified");
-    // oldContent = reference (dirty main), newContent = worktree
-    expect(diff.files[0].oldContent).toBe("# dirty main\n");
-    expect(diff.files[0].newContent).toBe("# test repo\n");
-  });
-
-  test("includes uncommitted files in worktree", async () => {
-    const wtPath = join(repo.dir, "wt-dir-dirty-wt");
-    await createWorktree({ repoRoot: repo.dir, branch: "task/dir-dirty-wt", path: wtPath });
-
-    // Add an uncommitted file to the worktree
-    await Bun.write(join(wtPath, "wip.txt"), "work in progress\n");
-
-    const diff = await getDiffAgainstDirectory({
-      worktreePath: wtPath,
-      referencePath: repo.dir,
-    });
-
-    const filePaths = diff.files.map((f) => f.filePath);
-    expect(filePaths).toContain("wip.txt");
   });
 });

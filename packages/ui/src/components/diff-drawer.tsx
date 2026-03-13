@@ -3,6 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef } from "react";
 import { type Diff, DiffCard } from "./diff-card";
 import { EmptyState } from "./empty-state";
+import { ScrollArea } from "./scroll-area";
 
 interface DiffDrawerProps {
   diffs: Diff[];
@@ -24,9 +25,9 @@ export function DiffDrawer(props: DiffDrawerProps) {
   if (diffs.length === 0) {
     return (
       <Stack h="full" minH="0" gap="0">
-        <Stack flex="1" minH="0" overflowY="auto" p="xs" gap="xs">
+        <ScrollArea flex="1" minH="0" contentProps={{ p: "xs", spaceY: "xs" }}>
           <EmptyState title="No changes detected" description="Make some changes to see the diff here." paddingY="sm" />
-        </Stack>
+        </ScrollArea>
       </Stack>
     );
   }
@@ -34,7 +35,7 @@ export function DiffDrawer(props: DiffDrawerProps) {
   return (
     <Stack h="full" minH="0" gap="0">
       <Box position="relative" flex="1" minH="0">
-        <Box ref={scrollRef} position="absolute" inset="0" overflowY="auto" p="xs">
+        <ScrollArea position="absolute" inset="0" viewportRef={scrollRef} contentProps={{ p: "xs" }}>
           <Box position="relative" width="100%" style={{ height: virtualizer.getTotalSize() }}>
             {virtualizer.getVirtualItems().map((virtualItem) => (
               <Box
@@ -52,7 +53,7 @@ export function DiffDrawer(props: DiffDrawerProps) {
               </Box>
             ))}
           </Box>
-        </Box>
+        </ScrollArea>
       </Box>
     </Stack>
   );
