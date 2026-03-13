@@ -49,20 +49,8 @@ describe("applyMessagePatch", () => {
   });
 });
 
-describe("applyMessagePatch – reconnect duplication", () => {
-  it("duplicates messages when replayed patches are applied on top of cached state", () => {
-    const cached = [message("m1"), message("m2")];
-
-    // Server replays all history from scratch: add m1 at 0, add m2 at 1
-    let messages = applyMessagePatch(cached, { op: "add", path: "/messages/0", value: message("m1") });
-    messages = applyMessagePatch(messages, { op: "add", path: "/messages/1", value: message("m2") });
-
-    // BUG: messages are duplicated because patches applied on top of cache
-    expect(messages).toHaveLength(4); // This is the bug — should be 2
-  });
-
-  it("avoids duplication when patches are applied on an empty array", () => {
-    // FIX: reset to empty before replaying server history
+describe("applyMessagePatch – reconnect replay", () => {
+  it("keeps replayed history stable when patches are applied from an empty array", () => {
     let messages: SessionMessage[] = [];
 
     messages = applyMessagePatch(messages, { op: "add", path: "/messages/0", value: message("m1") });

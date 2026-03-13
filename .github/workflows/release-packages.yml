@@ -68,7 +68,7 @@ jobs:
         uses: changesets/action@v1
         with:
           publish: bunx changeset publish
-          version: bun run scripts/sync-platform-versions.ts && bunx changeset version
+          version: bunx changeset version && bun run scripts/sync-platform-versions.ts
           createGithubReleases: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

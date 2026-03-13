@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { resolvePackageName } = require("./resolve-package.cjs") as {
-  resolvePackageName: (platform: string, arch: string) => string | null;
+  resolvePackageName: (platform: string, arch: string, libc?: "glibc" | "musl" | null) => string | null;
 };
 
 describe("resolvePackageName", () => {
@@ -15,11 +15,19 @@ describe("resolvePackageName", () => {
   });
 
   test("linux x64", () => {
-    expect(resolvePackageName("linux", "x64")).toBe("@pstdio/cli-linux-x64");
+    expect(resolvePackageName("linux", "x64", "glibc")).toBe("@pstdio/cli-linux-x64");
   });
 
   test("linux arm64", () => {
-    expect(resolvePackageName("linux", "arm64")).toBe("@pstdio/cli-linux-arm64");
+    expect(resolvePackageName("linux", "arm64", "glibc")).toBe("@pstdio/cli-linux-arm64");
+  });
+
+  test("linux x64 musl", () => {
+    expect(resolvePackageName("linux", "x64", "musl")).toBe("@pstdio/cli-linux-x64-musl");
+  });
+
+  test("linux arm64 musl", () => {
+    expect(resolvePackageName("linux", "arm64", "musl")).toBe("@pstdio/cli-linux-arm64-musl");
   });
 
   test("win32 x64", () => {

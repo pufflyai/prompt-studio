@@ -2,7 +2,6 @@ import { Box, chakra, Flex, HStack, IconButton, Portal, Spacer } from "@chakra-u
 import { Tooltip } from "@pstdio/ui";
 import { Minus, SquareArrowOutUpRight } from "lucide-react";
 import { forwardRef, type ReactNode } from "react";
-import { SessionBubbleButton } from "./session-bubble-button";
 
 export interface SessionBubbleProps {
   isOpen?: boolean;
@@ -29,7 +28,7 @@ export const SessionBubble = forwardRef<HTMLDivElement, SessionBubbleProps>(func
     children,
   } = props;
 
-  if (!isOpen) return <SessionBubbleButton />;
+  if (!isOpen) return null;
 
   return (
     <Portal>
