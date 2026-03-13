@@ -25,7 +25,7 @@ import {
   SELECTION_CHANGE_COMMAND,
 } from "lexical";
 import type React from "react";
-import { type Dispatch, useCallback, useEffect, useRef, useState } from "react";
+import { type Dispatch, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Tooltip } from "../../../../tooltip";
 import { setFloatingElemPos } from "../LinkEditorPlugin/utils/setFloatingElemPos";
@@ -96,41 +96,40 @@ function FloatingTextToolbar({
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
   const [isUnderline, setIsUnderline] = useState(false);
+  const updateFloatingToolbarRef = useRef<() => boolean | undefined>(() => undefined);
 
-  const formatHeading = useCallback(
-    (headingSize: HeadingTagType) => {
-      if (blockType !== headingSize) {
-        editor.update(() => {
-          const selection = $getSelection();
-          $setBlocksType(selection, () => $createHeadingNode(headingSize));
-        });
-      } else {
-        editor.update(() => {
-          const selection = $getSelection();
-          $setBlocksType(selection, () => $createParagraphNode());
-        });
-      }
-    },
-    [blockType, editor],
-  );
+  const formatHeading = (headingSize: HeadingTagType) => {
+    if (blockType !== headingSize) {
+      editor.update(() => {
+        const selection = $getSelection();
+        $setBlocksType(selection, () => $createHeadingNode(headingSize));
+      });
+      return;
+    }
 
-  const formatBulletList = useCallback(() => {
+    editor.update(() => {
+      const selection = $getSelection();
+      $setBlocksType(selection, () => $createParagraphNode());
+    });
+  };
+
+  const formatBulletList = () => {
     if (blockType !== "bullet") {
       editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined);
     } else {
       editor.dispatchCommand(REMOVE_LIST_COMMAND, undefined);
     }
-  }, [blockType, editor]);
+  };
 
-  const formatNumberedList = useCallback(() => {
+  const formatNumberedList = () => {
     if (blockType !== "number") {
       editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined);
     } else {
       editor.dispatchCommand(REMOVE_LIST_COMMAND, undefined);
     }
-  }, [blockType, editor]);
+  };
 
-  const $updateToolbar = useCallback(() => {
+  const updateToolbar = () => {
     const selection = $getSelection();
     if (!$isRangeSelection(selection)) return;
 
@@ -142,9 +141,9 @@ function FloatingTextToolbar({
     if (nextBlockType) {
       setBlockType(nextBlockType);
     }
-  }, []);
+  };
 
-  const $updateFloatingToolbar = useCallback(() => {
+  updateFloatingToolbarRef.current = () => {
     const selection = $getSelection();
     const editorElem = editorRef.current;
     const nativeSelection = window.getSelection();
@@ -182,17 +181,17 @@ function FloatingTextToolbar({
       setIsToolbarActive(false);
     }
 
-    $updateToolbar();
+    updateToolbar();
 
     return true;
-  }, [anchorElem, editor, setIsToolbarActive, $updateToolbar]);
+  };
 
   useEffect(() => {
     const scrollerElem = anchorElem.parentElement;
 
     const update = () => {
       editor.getEditorState().read(() => {
-        $updateFloatingToolbar();
+        updateFloatingToolbarRef.current();
       });
     };
 
@@ -208,19 +207,19 @@ function FloatingTextToolbar({
         scrollerElem.removeEventListener("scroll", update);
       }
     };
-  }, [anchorElem.parentElement, editor, $updateFloatingToolbar]);
+  }, [anchorElem, editor]);
 
   useEffect(() => {
     return mergeRegister(
       editor.registerUpdateListener(({ editorState }) => {
         editorState.read(() => {
-          $updateFloatingToolbar();
+          updateFloatingToolbarRef.current();
         });
       }),
       editor.registerCommand(
         SELECTION_CHANGE_COMMAND,
         (_payload) => {
-          $updateFloatingToolbar();
+          updateFloatingToolbarRef.current();
           return false;
         },
         COMMAND_PRIORITY_CRITICAL,
@@ -230,14 +229,14 @@ function FloatingTextToolbar({
         (_payload) => {
           const selection = $getSelection();
           if ($isRangeSelection(selection)) {
-            $updateFloatingToolbar();
+            updateFloatingToolbarRef.current();
           }
           return false;
         },
         COMMAND_PRIORITY_HIGH,
       ),
     );
-  }, [editor, $updateFloatingToolbar]);
+  }, [editor]);
 
   return (
     <div ref={editorRef} className={`floating-text-format-toolbar ${isToolbarActive ? "active" : ""}`}>

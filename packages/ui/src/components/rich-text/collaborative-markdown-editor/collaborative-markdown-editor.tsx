@@ -10,7 +10,7 @@ import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import type { Provider } from "@lexical/yjs";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { WebsocketProvider } from "y-websocket";
 import * as Y from "yjs";
 import { ContentEditable } from "../shared/components/content-editable";
@@ -36,21 +36,17 @@ export function CollaborativeMarkdownEditor(props: CollaborativeMarkdownEditorPr
   const [floatingToolbarAnchorElem, setFloatingToolbarAnchorElem] = useState<HTMLElement | null>(null);
   const [synced, setSynced] = useState(false);
 
-  // Create Y.Doc once per component instance (survives React StrictMode remount)
-  const doc = useMemo(() => new Y.Doc(), []);
+  // Keep collaborative state stable for the component lifetime.
+  const [doc] = useState(() => new Y.Doc());
+  const [provider] = useState(() => {
+    const nextProvider = new WebsocketProvider(wsUrl, roomId, doc, { params: wsParams, connect: false });
 
-  // Create WebsocketProvider once per component instance.
-  // useMemo ensures the same provider survives StrictMode's cleanup/remount cycle,
-  // avoiding the broken binding issue in CollaborationPlugin v1 (see Lexical #6640).
-  const provider = useMemo(() => {
-    const p = new WebsocketProvider(wsUrl, roomId, doc, { params: wsParams, connect: false });
-
-    p.on("sync", (isSynced: boolean) => {
+    nextProvider.on("sync", (isSynced: boolean) => {
       if (isSynced) setSynced(true);
     });
 
-    return p;
-  }, [wsUrl, roomId, doc, wsParams]);
+    return nextProvider;
+  });
 
   // Manage provider connect/disconnect lifecycle
   useEffect(() => {

@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useState } from "react";
 import type { ReferenceMenuOption } from "../ReferenceMenuOption";
 
 const localFilter = (data: ReferenceMenuOption[], q: string) =>
@@ -19,32 +18,21 @@ export function useContextLookup(
     description?: string;
   }[] = [],
 ) {
-  const [results, setResults] = useState<Array<ReferenceMenuOption>>([]);
-
-  const baseOptions: ReferenceMenuOption[] = useMemo(
-    () =>
-      items.map(
-        (res, index): ReferenceMenuOption => ({
-          id: res.resourceId,
-          key: res.resourceId,
-          index,
-          group: res.resourceType,
-          name: res.name,
-          description: res.description,
-          setRefElement: () => {},
-        }),
-      ),
-    [items],
+  const baseOptions: ReferenceMenuOption[] = items.map(
+    (res, index): ReferenceMenuOption => ({
+      id: res.resourceId,
+      key: res.resourceId,
+      index,
+      group: res.resourceType,
+      name: res.name,
+      description: res.description,
+      setRefElement: () => {},
+    }),
   );
 
-  useEffect(() => {
-    if (queryString == null || queryString === "") {
-      setResults(baseOptions);
-      return;
-    }
+  if (queryString == null || queryString === "") {
+    return baseOptions;
+  }
 
-    setResults(localFilter(baseOptions, queryString));
-  }, [queryString, baseOptions]);
-
-  return results;
+  return localFilter(baseOptions, queryString);
 }

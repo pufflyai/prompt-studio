@@ -1,5 +1,4 @@
 import { DiffEditor as MonacoDiffEditor } from "@monaco-editor/react";
-import { useMemo } from "react";
 import { customTheme } from "./code-editor";
 
 interface DiffEditorProps {
@@ -13,27 +12,25 @@ interface DiffEditorProps {
 export function DiffEditor(props: DiffEditorProps) {
   const { original, modified, language = "plaintext", sideBySide = false, disableScroll = true } = props;
 
-  const options = useMemo(() => {
-    return {
-      renderSideBySide: sideBySide,
-      readOnly: true,
-      fontSize: 11,
-      minimap: { enabled: false },
-      wordWrap: "on" as const,
-      scrollBeyondLastLine: false,
-      ...(disableScroll
-        ? {
-            scrollbar: {
-              vertical: "hidden" as const,
-              horizontal: "hidden" as const,
-              useShadows: false,
-              alwaysConsumeMouseWheel: false,
-            },
-            overviewRulerLanes: 0,
-          }
-        : {}),
-    } as const;
-  }, [sideBySide, disableScroll]);
+  const options = {
+    renderSideBySide: sideBySide,
+    readOnly: true,
+    fontSize: 11,
+    minimap: { enabled: false },
+    wordWrap: "on" as const,
+    scrollBeyondLastLine: false,
+    ...(disableScroll
+      ? {
+          scrollbar: {
+            vertical: "hidden" as const,
+            horizontal: "hidden" as const,
+            useShadows: false,
+            alwaysConsumeMouseWheel: false,
+          },
+          overviewRulerLanes: 0,
+        }
+      : {}),
+  } as const;
 
   return (
     <MonacoDiffEditor

@@ -1,7 +1,7 @@
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { LexicalTypeaheadMenuPlugin } from "@lexical/react/LexicalTypeaheadMenuPlugin";
 import type { TextNode } from "lexical";
-import { useCallback, useMemo, useState } from "react";
+import { useState } from "react";
 import * as ReactDOM from "react-dom";
 import { INSERT_REFERENCE_COMMAND } from "../../commands";
 import { ReferenceMenu } from "./components/ReferenceMenu/ReferenceMenu";
@@ -28,37 +28,36 @@ export function ReferenceMenuPlugin({ items = [] }: Props) {
   /**
    * triggers when the user selects an option in the context menu
    */
-  const onSelectOption = useCallback(
-    (selectedOption: ReferenceMenuOption, nodeToReplace: TextNode | null, closeMenu: () => void) => {
-      editor.update(() => {
-        if (!nodeToReplace) return;
+  const onSelectOption = (
+    selectedOption: ReferenceMenuOption,
+    nodeToReplace: TextNode | null,
+    closeMenu: () => void,
+  ) => {
+    editor.update(() => {
+      if (!nodeToReplace) return;
 
-        editor.dispatchCommand(INSERT_REFERENCE_COMMAND, {
-          resourceId: selectedOption.id,
-          resourceType: selectedOption.group,
-          name: selectedOption.name,
-          nodeToReplace,
-        });
-
-        closeMenu();
+      editor.dispatchCommand(INSERT_REFERENCE_COMMAND, {
+        resourceId: selectedOption.id,
+        resourceType: selectedOption.group,
+        name: selectedOption.name,
+        nodeToReplace,
       });
-    },
-    [editor],
-  );
+
+      closeMenu();
+    });
+  };
 
   /**
    * checks text nodes and return nodes matching the trigger
    */
-  const checkForTrigger = useCallback((text: string) => {
+  const checkForTrigger = (text: string) => {
     return checkForTriggers(text, 0);
-  }, []);
+  };
 
   /**
    * define the options to display in the context menu
    */
-  const menuOptions = useMemo(() => {
-    return [...searchResults.slice(0, SUGGESTION_LIST_LENGTH_LIMIT)];
-  }, [searchResults]);
+  const menuOptions = searchResults.slice(0, SUGGESTION_LIST_LENGTH_LIMIT);
 
   return (
     <LexicalTypeaheadMenuPlugin<ReferenceMenuOption>

@@ -35,7 +35,6 @@ export const MarkdownPage = (props: MarkdownPageProps) => {
         <Footer
           links={[
             {
-              title: "Legal",
               list: [
                 { item: "Privacy Policy", url: "/privacy-policy/" },
                 { item: "Terms", url: "/terms/" },
