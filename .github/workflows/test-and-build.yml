@@ -22,6 +22,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      # temporary workaround for astro complaining about node version
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.14.0"
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
