@@ -1,5 +1,11 @@
 # pstdio
 
+## 0.1.3
+
+### Patch Changes
+
+- 9f1143f: Fix dashboard serving wrong content-type for root path, skip duplicate GitHub releases, fix version script formatting and lock file sync
+
 ## 0.1.2
 
 ### Patch Changes
