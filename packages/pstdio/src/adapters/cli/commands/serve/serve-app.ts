@@ -91,10 +91,10 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
       const baseUrl = `http://localhost:${port}`;
       const appVersion = process.env.PSTDIO_VERSION ?? "dev";
 
-      const resolveAsset = (pathname: string) => {
-        const assetPath = pathname === "/" ? "index.html" : pathname.slice(1);
-        return assets.get(assetPath) ?? null;
-      };
+      // Without this, "/" reaches resolveMimeType as-is — extname("/") is "",
+      // which falls back to application/octet-stream and the browser downloads
+      // the dashboard HTML instead of rendering it.
+      const resolveAssetPath = (pathname: string) => (pathname === "/" ? "index.html" : pathname.slice(1));
 
       const serveHtml = (blob: Blob) =>
         blob.text().then((html) => {
@@ -102,8 +102,8 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
           return new Response(injected, { headers: { "Content-Type": "text/html" } });
         });
 
-      const serveAsset = (pathname: string, blob: Blob) => {
-        const mimeType = deps.resolveMimeType(pathname);
+      const serveAsset = (assetPath: string, blob: Blob) => {
+        const mimeType = deps.resolveMimeType(assetPath);
 
         if (mimeType === "text/html") {
           return serveHtml(blob);
@@ -123,9 +123,10 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
           }
 
           // Dashboard assets → embedded or filesystem
-          const asset = resolveAsset(url.pathname);
+          const assetPath = resolveAssetPath(url.pathname);
+          const asset = assets.get(assetPath);
           if (asset) {
-            return serveAsset(url.pathname, asset);
+            return serveAsset(assetPath, asset);
           }
 
           // SPA fallback → index.html for client-side routing

@@ -82,17 +82,21 @@ jobs:
           VERSION=$(echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -r '.[] | select(.name == "pstdio") | .version')
           if [ -n "$VERSION" ]; then
             TAG="pstdio@${VERSION}"
-            gh release create "$TAG" --title "$TAG" --generate-notes \
-              packages/pstdio/dist/platforms/cli-darwin-arm64/bin/pstdio#pstdio-darwin-arm64 \
-              packages/pstdio/dist/platforms/cli-darwin-x64/bin/pstdio#pstdio-darwin-x64 \
-              packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio#pstdio-linux-x64 \
-              packages/pstdio/dist/platforms/cli-linux-arm64/bin/pstdio#pstdio-linux-arm64 \
-              packages/pstdio/dist/platforms/cli-linux-x64-musl/bin/pstdio#pstdio-linux-x64-musl \
-              packages/pstdio/dist/platforms/cli-linux-arm64-musl/bin/pstdio#pstdio-linux-arm64-musl \
-              packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe#pstdio-win-x64.exe \
-              packages/pstdio/dist/platforms/cli-win-arm64/bin/pstdio.exe#pstdio-win-arm64.exe \
-              packages/pstdio/dist/platforms/checksums.sha256#checksums.sha256 \
-              scripts/install.sh#install.sh
+            if gh release view "$TAG" > /dev/null 2>&1; then
+              echo "Release $TAG already exists, skipping."
+            else
+              gh release create "$TAG" --title "$TAG" --generate-notes \
+                packages/pstdio/dist/platforms/cli-darwin-arm64/bin/pstdio#pstdio-darwin-arm64 \
+                packages/pstdio/dist/platforms/cli-darwin-x64/bin/pstdio#pstdio-darwin-x64 \
+                packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio#pstdio-linux-x64 \
+                packages/pstdio/dist/platforms/cli-linux-arm64/bin/pstdio#pstdio-linux-arm64 \
+                packages/pstdio/dist/platforms/cli-linux-x64-musl/bin/pstdio#pstdio-linux-x64-musl \
+                packages/pstdio/dist/platforms/cli-linux-arm64-musl/bin/pstdio#pstdio-linux-arm64-musl \
+                packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe#pstdio-win-x64.exe \
+                packages/pstdio/dist/platforms/cli-win-arm64/bin/pstdio.exe#pstdio-win-arm64.exe \
+                packages/pstdio/dist/platforms/checksums.sha256#checksums.sha256 \
+                scripts/install.sh#install.sh
+            fi
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -102,7 +106,11 @@ jobs:
         run: |
           for pkg in $(echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -r '.[] | select(.name != "pstdio") | "\(.name)@\(.version)"'); do
             tag="${pkg}"
-            gh release create "$tag" --title "$tag" --generate-notes
+            if gh release view "$tag" > /dev/null 2>&1; then
+              echo "Release $tag already exists, skipping."
+            else
+              gh release create "$tag" --title "$tag" --generate-notes
+            fi
           done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

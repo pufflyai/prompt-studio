@@ -64,6 +64,20 @@ describe("pstdio serve", () => {
   );
 
   test(
+    "serves dashboard with text/html content-type at root",
+    async () => {
+      const port = await getFreePort();
+      const storagePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-serve-"));
+      child = await startServe(port, storagePath);
+
+      const res = await fetch(`http://localhost:${port}/`);
+      expect(res.ok).toBe(true);
+      expect(res.headers.get("content-type")).toBe("text/html");
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
     "creates a project via serve API",
     async () => {
       const port = await getFreePort();
