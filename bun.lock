@@ -44,9 +44,9 @@
     },
     "packages/pstdio": {
       "name": "pstdio",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "bin": {
-        "pstdio": "./bin/pstdio.js",
+        "pstdio": "./bin/pstdio.cjs",
       },
       "dependencies": {
         "@tanstack/react-db": "^0.1.74",
@@ -68,14 +68,14 @@
         "typescript": "~5.9.3",
       },
       "optionalDependencies": {
-        "@pstdio/cli-darwin-arm64": "0.1.0",
-        "@pstdio/cli-darwin-x64": "0.1.0",
-        "@pstdio/cli-linux-arm64": "0.1.0",
-        "@pstdio/cli-linux-arm64-musl": "0.1.0",
-        "@pstdio/cli-linux-x64": "0.1.0",
-        "@pstdio/cli-linux-x64-musl": "0.1.0",
-        "@pstdio/cli-win-arm64": "0.1.0",
-        "@pstdio/cli-win-x64": "0.1.0",
+        "@pstdio/cli-darwin-arm64": "0.1.2",
+        "@pstdio/cli-darwin-x64": "0.1.2",
+        "@pstdio/cli-linux-arm64": "0.1.2",
+        "@pstdio/cli-linux-arm64-musl": "0.1.2",
+        "@pstdio/cli-linux-x64": "0.1.2",
+        "@pstdio/cli-linux-x64-musl": "0.1.2",
+        "@pstdio/cli-win-arm64": "0.1.2",
+        "@pstdio/cli-win-x64": "0.1.2",
       },
     },
     "packages/pstdio-agents": {
@@ -894,6 +894,22 @@
     "@playwright/test": ["@playwright/test@1.58.2", "", { "dependencies": { "playwright": "1.58.2" }, "bin": { "playwright": "cli.js" } }, "sha512-akea+6bHYBBfA9uQqSYmlJXn61cTa+jbO87xVLCWbTqbWadRVmhxlXATaOjOgcBaWU4ePo0wB41KMFv3o35IXA=="],
 
     "@preact/signals-core": ["@preact/signals-core@1.14.0", "", {}, "sha512-AowtCcCU/33lFlh1zRFf/u+12rfrhtNakj7UpaGEsmMwUKpKWMVvcktOGcwBBNiB4lWrZWc01LhiyyzVklJyaQ=="],
+
+    "@pstdio/cli-darwin-arm64": ["@pstdio/cli-darwin-arm64@0.1.2", "", { "os": "darwin", "cpu": "arm64" }, "sha512-sR58jGlKEY/l5ryNGvnpSfTYokIbse4Bk9ZmPH9DvRIOqpns5DCP5Z1n/RbjLKe9eupOseCz+U51zbV7GHrHvA=="],
+
+    "@pstdio/cli-darwin-x64": ["@pstdio/cli-darwin-x64@0.1.2", "", { "os": "darwin", "cpu": "x64" }, "sha512-8atqLhijuHxmR+aeI7BEYnuZBqi1vfFLdj/L5lRTVBJk+9G5JNg2NBj0hn1uf7JQVKadDPJGbBerZoNiPlhxLw=="],
+
+    "@pstdio/cli-linux-arm64": ["@pstdio/cli-linux-arm64@0.1.2", "", { "os": "linux", "cpu": "arm64" }, "sha512-jDRvvlc1T6fLXpp8zNiJQnO44EedCyITJEwxCc5/g/aW+y798Jt90oDFOvHxtHSo/91ty59/Bl6dZ+HRsHft8w=="],
+
+    "@pstdio/cli-linux-arm64-musl": ["@pstdio/cli-linux-arm64-musl@0.1.2", "", { "os": "linux", "cpu": "arm64" }, "sha512-m6yBuC7ARjPZCjQFzJEoHjKW6Xep3iVnoWdyzJ3Qm8W4y3mKdQ3b4NF0MG2b0KWvWk0gsZcM+n5c7tFxcaLdog=="],
+
+    "@pstdio/cli-linux-x64": ["@pstdio/cli-linux-x64@0.1.2", "", { "os": "linux", "cpu": "x64" }, "sha512-aHXczGkuEz2OTZvEli4LxdMMiB8latM3aiSaYvRiQuTawkWJaTfNGdSxCtjzEhpYPsu/2CTmkxF3Pu05BDcIkw=="],
+
+    "@pstdio/cli-linux-x64-musl": ["@pstdio/cli-linux-x64-musl@0.1.2", "", { "os": "linux", "cpu": "x64" }, "sha512-l0XvM1Q5V/kbZEv3BsuohVptmBWH3bmcGHzj7RF6iF47FM4RXmbT8jidj1ZYN+xjNYaW4AymgiNMnRZiEIXpdg=="],
+
+    "@pstdio/cli-win-arm64": ["@pstdio/cli-win-arm64@0.1.2", "", { "os": "win32", "cpu": "arm64" }, "sha512-2Nhh4Hofz0C3P4eYPcVxfIvGurDXBE71NiZJ6MA3KE/FPFBazLI0DNO4g4ICq6heY69fiAmkPZ7tZ1Zn7lCUgA=="],
+
+    "@pstdio/cli-win-x64": ["@pstdio/cli-win-x64@0.1.2", "", { "os": "win32", "cpu": "x64" }, "sha512-2nC3ovTouInR9pKJhQM4E48CiLjSpfFLNbTZEkhJHwXBHsPZKGWoHkvjYamJ/WlAF+GTLBDqp1E7wyeOqtFlbA=="],
 
     "@pstdio/landing-page": ["@pstdio/landing-page@workspace:clients/landing-page"],
 
