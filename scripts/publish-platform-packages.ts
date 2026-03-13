@@ -11,14 +11,11 @@ let skipped = 0;
 
 for (const entry of entries) {
   const pkgDir = join(PLATFORMS_DIR, entry);
-  const pkg = JSON.parse(
-    readFileSync(join(pkgDir, "package.json"), "utf-8"),
-  );
+  const pkg = JSON.parse(readFileSync(join(pkgDir, "package.json"), "utf-8"));
   const { name, version } = pkg;
 
   // Check if this version is already published
-  const result =
-    await $`npm view ${name}@${version} version 2>/dev/null`.quiet().nothrow();
+  const result = await $`npm view ${name}@${version} version 2>/dev/null`.quiet().nothrow();
   if (result.exitCode === 0 && result.text().trim() === version) {
     console.log(`Skipping ${name}@${version} (already published)`);
     skipped++;
@@ -30,6 +27,4 @@ for (const entry of entries) {
   published++;
 }
 
-console.log(
-  `\nDone: ${published} published, ${skipped} skipped (already on npm).`,
-);
+console.log(`\nDone: ${published} published, ${skipped} skipped (already on npm).`);
