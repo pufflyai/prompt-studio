@@ -3,7 +3,7 @@
   "version": "0.1.1",
   "type": "module",
   "bin": {
-    "pstdio": "./bin/pstdio.js"
+    "pstdio": "./bin/pstdio.cjs"
   },
   "files": [
     "bin"
