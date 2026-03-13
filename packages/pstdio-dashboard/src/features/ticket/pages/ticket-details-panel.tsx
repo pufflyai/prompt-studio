@@ -21,7 +21,12 @@ import { useSubTicketCreation } from "../hooks/use-sub-ticket-creation";
 import { useTicketAttemptDiff } from "../hooks/use-ticket-attempt-diff";
 import { useTicketContent } from "../hooks/use-ticket-content";
 import { useTicketSessions } from "../hooks/use-ticket-sessions";
-import { buildCreateSubTicketsPrompt, buildRefineTicketPrompt } from "../utils/build-prompts";
+import {
+  buildCreateSubTicketsPrompt,
+  buildImplementTicketPrompt,
+  buildRefineTicketPrompt,
+} from "../utils/build-prompts";
+import { openTicketSessionBubble } from "../utils/open-ticket-session-bubble";
 import { isTicketContentReady } from "../utils/ticket-content-ready";
 import { resolveTicketDetailsState } from "../utils/ticket-details-state";
 
@@ -68,11 +73,6 @@ const buildTicketBreadcrumbs = (
   return [{ title: parentShorthand, onClick: () => navigateToTicket(parentShorthand) }, ...breadcrumbs];
 };
 
-const resolveAttemptSource = (content: string, fallbackTitle: string) => {
-  const source = content.trim();
-  return source.length > 0 ? source : fallbackTitle;
-};
-
 export const TicketDetailsPanel = () => {
   const { projectId, ticketShorthand } = useParams({ from: "/projects/$projectId/tickets/$ticketShorthand" });
   const navigate = useNavigate();
@@ -103,6 +103,8 @@ export const TicketDetailsPanel = () => {
   const lastSelectedAgent = useProjectSettingsStore((s) => s.lastSelectedAgent);
   const lastSelectedModels = useProjectSettingsStore((s) => s.lastSelectedModels);
   const lastSelectedBranches = useProjectSettingsStore((s) => s.lastSelectedBranches);
+  const setSessionModalState = useProjectSettingsStore((s) => s.setSessionModalState);
+  const setSelectedSessionId = useProjectSettingsStore((s) => s.setSelectedSessionId);
 
   const sessions = useTicketSessions({
     projectId,
@@ -158,7 +160,13 @@ export const TicketDetailsPanel = () => {
   };
 
   const handleRunAttempt = () => {
-    return sessions.runAttempt(ticket.id, resolveAttemptSource(content, ticket.title));
+    return sessions.runAttempt(ticket.id, buildImplementTicketPrompt(ticket.shorthand)).then((sessionId) =>
+      openTicketSessionBubble({
+        sessionId,
+        setSessionModalState,
+        setSelectedSessionId,
+      }),
+    );
   };
 
   const handleViewWorkspace = () => {
@@ -231,7 +239,9 @@ export const TicketDetailsPanel = () => {
       <BreakIntoSubTicketsModal
         open={isBreakModalOpen}
         onClose={() => setIsBreakModalOpen(false)}
-        onSubmit={(tpl) => sessions.startSession(buildCreateSubTicketsPrompt(ticket.shorthand, tpl ?? undefined))}
+        onSubmit={(tpl) =>
+          sessions.startSession(buildCreateSubTicketsPrompt(ticket.shorthand, tpl ?? undefined)).then(Boolean)
+        }
         ticketShorthand={ticket.shorthand}
         templates={templates}
         isSubmitting={sessions.isStartingSession}
@@ -239,7 +249,15 @@ export const TicketDetailsPanel = () => {
       <RefineTicketModal
         open={isRefineModalOpen}
         onClose={() => setIsRefineModalOpen(false)}
-        onSubmit={(ctx, tpl) => sessions.startSession(buildRefineTicketPrompt(ticket.shorthand, ctx, tpl ?? undefined))}
+        onSubmit={(ctx, tpl) =>
+          sessions.startSession(buildRefineTicketPrompt(ticket.shorthand, ctx, tpl ?? undefined)).then((sessionId) =>
+            openTicketSessionBubble({
+              sessionId,
+              setSessionModalState,
+              setSelectedSessionId,
+            }),
+          )
+        }
         ticketShorthand={ticket.shorthand}
         templates={templates}
         isSubmitting={sessions.isStartingSession}

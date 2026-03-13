@@ -6,6 +6,7 @@ import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Session } from "../types";
 import { getRecentSessions } from "../utils/recent-sessions";
+import { getSessionsRoutePath } from "../utils/sessions-route";
 
 const SESSION_DROPDOWN_LIMIT = 6;
 
@@ -26,8 +27,9 @@ export const SessionSelector = (props: SessionSelectorProps) => {
   const label = selectedSession?.title ?? t("sessions.newSession");
 
   const handleViewMoreSessions = () => {
-    if (!projectId) return;
-    navigate({ to: `/projects/${projectId}/sessions` });
+    const path = getSessionsRoutePath(projectId, selectedSessionId);
+    if (!path) return;
+    navigate({ to: path });
   };
 
   return (

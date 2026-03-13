@@ -100,8 +100,8 @@ describe("tickets pull", () => {
 
     await handler({ id: "PS-1", force: false, _: [], $0: "" } as never);
 
-    const ticketPath = join(tmpBase, ".pstdio", "tickets", "PS-1_ticket-from-db", "ticket.md");
-    const localFilePath = join(tmpBase, ".pstdio", "tickets", "PS-1_ticket-from-db", "files", "notes.txt");
+    const ticketPath = join(tmpBase, ".pstdio", "tickets", "PS-1", "ticket.md");
+    const localFilePath = join(tmpBase, ".pstdio", "tickets", "PS-1", "files", "notes.txt");
     expect(existsSync(ticketPath)).toBe(true);
     expect(existsSync(localFilePath)).toBe(true);
     const ticketContent = readFileSync(ticketPath, "utf8");
@@ -125,7 +125,7 @@ describe("tickets pull", () => {
 
     await handler({ id: "PS-1", force: false, _: [], $0: "" } as never);
 
-    const ticketPath = join(tmpBase, ".pstdio", "tickets", "PS-1_ticket-from-db", "ticket.md");
+    const ticketPath = join(tmpBase, ".pstdio", "tickets", "PS-1", "ticket.md");
     const content = readFileSync(ticketPath, "utf8");
     expect(content).toStartWith("---\n");
     expect(content).toContain("ticket_id:");
@@ -166,14 +166,14 @@ describe("tickets pull", () => {
 
     await handler({ id: "PS-2", force: false, _: [], $0: "" } as never);
 
-    const ticketPath = join(tmpBase, ".pstdio", "tickets", "PS-2_ticket-from-db", "ticket.md");
+    const ticketPath = join(tmpBase, ".pstdio", "tickets", "PS-2", "ticket.md");
     const content = readFileSync(ticketPath, "utf8");
     expect(content).toContain('parent_id: "PS-1"');
     expect(content).not.toContain('parent_id: "parent-ticket-id"');
   });
 
   test("throws when local file exists and --force is not set", async () => {
-    const ticketDir = join(tmpBase, ".pstdio", "tickets", "PS-1_pulled-ticket");
+    const ticketDir = join(tmpBase, ".pstdio", "tickets", "PS-1");
     mkdirSync(join(ticketDir, "files"), { recursive: true });
     writeFileSync(join(ticketDir, "ticket.md"), "# Pulled ticket");
     writeFileSync(join(ticketDir, "files", "notes.txt"), "existing");
@@ -190,6 +190,7 @@ describe("tickets pull", () => {
     await expect(handler({ id: "PS-1", force: false, _: [], $0: "" } as never)).rejects.toThrow(
       "Local file already exists:",
     );
+    expect(existsSync(ticketDir)).toBe(true);
   });
 
   test("pulls all non-archived tickets when --id is omitted", async () => {
@@ -214,8 +215,8 @@ describe("tickets pull", () => {
 
     await handler({ force: false, _: [], $0: "" } as never);
 
-    const ticket1Path = join(tmpBase, ".pstdio", "tickets", "PS-1_first-ticket", "ticket.md");
-    const ticket2Path = join(tmpBase, ".pstdio", "tickets", "PS-2_second-ticket", "ticket.md");
+    const ticket1Path = join(tmpBase, ".pstdio", "tickets", "PS-1", "ticket.md");
+    const ticket2Path = join(tmpBase, ".pstdio", "tickets", "PS-2", "ticket.md");
     expect(existsSync(ticket1Path)).toBe(true);
     expect(existsSync(ticket2Path)).toBe(true);
     expect(readFileSync(ticket1Path, "utf8")).toContain("# First ticket");

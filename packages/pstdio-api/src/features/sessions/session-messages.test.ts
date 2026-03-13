@@ -81,6 +81,30 @@ describe("buildMessagesFromPatches", () => {
     expect(result[2].id).toBe("3");
     expect(result[3].id).toBe("4");
   });
+
+  test("removes empty parts and skips messages with no remaining parts", () => {
+    const patches: JsonPatch[] = [
+      {
+        op: "replace",
+        path: "/messages",
+        value: [
+          { id: "1", role: "assistant", parts: [{ type: "reasoning", text: "" }] },
+          {
+            id: "2",
+            role: "assistant",
+            parts: [
+              { type: "text", text: "   " },
+              { type: "tool", tool: "read" },
+            ],
+          },
+        ] satisfies SessionMessage[],
+      },
+    ];
+
+    const result = buildMessagesFromPatches(patches);
+
+    expect(result).toEqual([{ id: "2", role: "assistant", parts: [{ type: "tool", tool: "read" }] }]);
+  });
 });
 
 const setupDb = async (tempRoot: string, label: string) => {
@@ -183,6 +207,28 @@ describe("persistSessionMessages", () => {
     expect(content).toHaveLength(2);
     expect(content[0].id).toBe("1");
     expect(content[1].id).toBe("2");
+
+    eventStore.close();
+    await conn.close();
+  });
+
+  test("does not persist messages that only contain empty parts", async () => {
+    const { conn, sessionsService, filesService, projectsService } = await setupDb(tempRoot, "empty-parts");
+
+    const proj = await projectsService.create({ name: "test" });
+    const session = await sessionsService.create({ project_id: proj.id, title: "test", agent: "opencode" });
+
+    const eventStore = createEventStore();
+    eventStore.push({
+      op: "replace",
+      path: "/messages",
+      value: [{ id: "1", role: "assistant", parts: [{ type: "reasoning", text: " " }] }] satisfies SessionMessage[],
+    });
+
+    await persistSessionMessages(session.id, eventStore.getHistory(), { sessionsService, filesService });
+
+    const updated = await sessionsService.get(session.id);
+    expect(updated?.session_file_id).toBeNull();
 
     eventStore.close();
     await conn.close();

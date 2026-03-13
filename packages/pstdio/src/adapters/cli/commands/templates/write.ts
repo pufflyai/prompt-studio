@@ -1,10 +1,11 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { Arguments, Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { getTemplate } from "@/features/templates/api/get-template";
 import { replacePlaceholders } from "@/features/templates/replace-placeholders";
+import { resolveTicketDir } from "@/features/tickets/local-ticket";
 
 export const command = "write";
 export const describe = "Write a template to a docs path or ticket";
@@ -86,9 +87,9 @@ export const createHandler =
       console.log(`Wrote template "${argv.name}" to .pstdio/docs/${docPath}.md`);
     } else {
       const shorthand = argv.target;
-      const ticketDir = join(root, ".pstdio", "tickets", shorthand);
+      const ticketDir = resolveTicketDir(root, shorthand);
 
-      if (!existsSync(ticketDir)) {
+      if (!ticketDir) {
         throw new Error(`Ticket not found: ${shorthand}`);
       }
 

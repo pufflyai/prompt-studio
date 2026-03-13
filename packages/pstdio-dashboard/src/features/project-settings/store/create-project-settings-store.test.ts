@@ -26,6 +26,7 @@ describe("createProjectSettingsStore", () => {
     expect(state.lastSelectedBranches).toEqual([]);
     expect(state.sessionModalState).toBe("bubble");
     expect(state.selectedSessionId).toBeNull();
+    expect(state.lastNonSessionsPath).toBeNull();
   });
 
   it("accepts initial hydration", () => {
@@ -170,6 +171,19 @@ describe("createProjectSettingsStore", () => {
     });
   });
 
+  describe("lastNonSessionsPath", () => {
+    it("defaults to null", () => {
+      const store = createProjectSettingsStore();
+      expect(store.getState().lastNonSessionsPath).toBeNull();
+    });
+
+    it("updates the tracked path", () => {
+      const store = createProjectSettingsStore();
+      store.getState().setLastNonSessionsPath("/projects/p1/docs");
+      expect(store.getState().lastNonSessionsPath).toBe("/projects/p1/docs");
+    });
+  });
+
   describe("reset", () => {
     it("resets to default state", () => {
       const store = createProjectSettingsStore({
@@ -191,6 +205,7 @@ describe("createProjectSettingsStore", () => {
       expect(state.lastSelectedBranches).toEqual([]);
       expect(state.sessionModalState).toBe("bubble");
       expect(state.selectedSessionId).toBeNull();
+      expect(state.lastNonSessionsPath).toBeNull();
     });
   });
 

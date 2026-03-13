@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createHandler } from "./save";
 
@@ -8,8 +8,8 @@ const tmpBase = join(import.meta.dirname, "__test-tmp-save__");
 beforeEach(() => {
   mkdirSync(tmpBase, { recursive: true });
   mkdirSync(join(tmpBase, ".git"), { recursive: true });
-  mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-1_updated-content"), { recursive: true });
-  writeFileSync(join(tmpBase, ".pstdio", "tickets", "PS-1_updated-content", "ticket.md"), "# Updated content");
+  mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-1"), { recursive: true });
+  writeFileSync(join(tmpBase, ".pstdio", "tickets", "PS-1", "ticket.md"), "# Updated content");
 });
 
 afterEach(() => {
@@ -146,7 +146,7 @@ describe("tickets save", () => {
 
   test("strips frontmatter before uploading and extracts metadata", async () => {
     writeFileSync(
-      join(tmpBase, ".pstdio", "tickets", "PS-1_updated-content", "ticket.md"),
+      join(tmpBase, ".pstdio", "tickets", "PS-1", "ticket.md"),
       '---\nstatus: "wip"\npriority: "P1"\ncomplexity: "medium"\n---\n\n# Updated content',
     );
 
@@ -186,7 +186,7 @@ describe("tickets save", () => {
 
   test("CLI --status flag overrides frontmatter status and strips frontmatter from upload", async () => {
     writeFileSync(
-      join(tmpBase, ".pstdio", "tickets", "PS-1_updated-content", "ticket.md"),
+      join(tmpBase, ".pstdio", "tickets", "PS-1", "ticket.md"),
       '---\nstatus: "wip"\n---\n\n# Updated content',
     );
 
@@ -220,8 +220,8 @@ describe("tickets save", () => {
   });
 
   test("uploads local ticket files and logs upload count", async () => {
-    mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-1_updated-content", "files"), { recursive: true });
-    writeFileSync(join(tmpBase, ".pstdio", "tickets", "PS-1_updated-content", "files", "notes.txt"), "file body");
+    mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-1", "files"), { recursive: true });
+    writeFileSync(join(tmpBase, ".pstdio", "tickets", "PS-1", "files", "notes.txt"), "file body");
 
     const log = mock();
     const uploadTicketFile = mock(async () => ({
@@ -243,5 +243,20 @@ describe("tickets save", () => {
 
     expect(log).toHaveBeenCalledWith("Saved ticket PS-1");
     expect(log).toHaveBeenCalledWith("Uploaded 1 ticket files");
+  });
+
+  test("fails when only a legacy ticket directory exists", async () => {
+    rmSync(join(tmpBase, ".pstdio", "tickets", "PS-1"), { recursive: true, force: true });
+    mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-1_legacy-title"), { recursive: true });
+    writeFileSync(join(tmpBase, ".pstdio", "tickets", "PS-1_legacy-title", "ticket.md"), "# Updated content");
+
+    const handler = createHandler({ ...baseDeps, log: mock() });
+
+    await expect(handler({ id: "PS-1", _: [], $0: "" } as never)).rejects.toThrow(
+      "Local ticket not found: .pstdio/tickets/PS-1/ticket.md",
+    );
+
+    expect(existsSync(join(tmpBase, ".pstdio", "tickets", "PS-1_legacy-title"))).toBe(true);
+    expect(existsSync(join(tmpBase, ".pstdio", "tickets", "PS-1", "ticket.md"))).toBe(false);
   });
 });

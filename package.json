@@ -11,7 +11,7 @@
   },
   "scripts": {
     "validate": "bun run format && bun run lint && bun run build && bun run test",
-    "build": "bunx cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" lerna run build",
+    "build": "bun x cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" lerna run build",
     "analyze-bundle": "bunx lerna run analyze-bundle --stream",
     "test": "bunx lerna run test",
     "test:coverage": "bunx lerna run test:coverage --stream",

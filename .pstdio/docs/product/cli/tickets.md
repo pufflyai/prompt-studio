@@ -55,7 +55,7 @@ The shorthand is auto-generated when a ticket is created and used as the primary
 
 ## Display Title
 
-Each ticket directory includes a **display title** suffix derived from the ticket's markdown content. The directory name follows the format `<shorthand>_<display_title>`.
+`display_title` is metadata stored in the database/UI and derived from ticket markdown content. It is **not** part of the local ticket directory path.
 
 ### Extracting the display title
 
@@ -72,20 +72,20 @@ The display title is extracted from the markdown content written to `ticket.md`:
    e. Strip any trailing hyphens left after truncation.
 5. **Fallback** — if no `# heading` is found, use the first non-empty, non-frontmatter line instead and apply steps 3–4.
 
-The maximum length of the full directory name (`<shorthand>_<display_title>`) is **80 characters**. The display title is truncated as needed to stay within this limit.
-
 ### Examples
 
-| Markdown content (first heading) | Display Title     | Directory Name          |
-| -------------------------------- | ----------------- | ----------------------- |
-| `# Fix login bug`                | `fix-login-bug`   | `PS-12_fix-login-bug`   |
-| `# Add dark mode`                | `add-dark-mode`   | `PS-13_add-dark-mode`   |
-| `# Update **all** docs`          | `update-all-docs` | `PS-14_update-all-docs` |
-| `# [Link](http://x.com) cleanup` | `link-cleanup`    | `PS-15_link-cleanup`    |
+| Markdown content (first heading) | Display Title     |
+| -------------------------------- | ----------------- |
+| `# Fix login bug`                | `fix-login-bug`   |
+| `# Add dark mode`                | `add-dark-mode`   |
+| `# Update **all** docs`          | `update-all-docs` |
+| `# [Link](http://x.com) cleanup` | `link-cleanup`    |
 
-### Lookup
+### Local Directory Lookup
 
-When looking up a ticket directory by shorthand, the CLI searches for a directory whose name starts with `<shorthand>_`. The display title is set at creation time and is not updated when the ticket content changes.
+The canonical local ticket path is `.pstdio/tickets/<shorthand>/`.
+
+The CLI resolves ticket directories only by exact shorthand path (`.pstdio/tickets/<shorthand>/`).
 
 ---
 
@@ -95,7 +95,7 @@ Each ticket lives in its own directory under `.pstdio/tickets/`:
 
 ```text
 .pstdio/tickets/
-  PS-12_fix-login-bug/
+  PS-12/
     ticket.md
     files/
       architecture.md
@@ -103,7 +103,7 @@ Each ticket lives in its own directory under `.pstdio/tickets/`:
     artifacts/
       test-output.log
       screenshot.png
-  PS-13_add-dark-mode/
+  PS-13/
     ticket.md
 ```
 
@@ -161,7 +161,7 @@ pstdio tickets write --title <title> --template <template-name> --tag <tag>... [
 
 1. Must be run inside a linked project (`.pstdio/config.json` must exist).
 2. Create a ticket in the database with `draft=true`. Assign the status from `--status` if provided, otherwise assign the project's default status.
-3. Create the ticket directory at `.pstdio/tickets/<shorthand>_<display_title>/` (see [Display Title](#display-title)).
+3. Create the ticket directory at `.pstdio/tickets/<shorthand>/`.
 4. If `--template` is provided, fetch the template from the API and populate `ticket.md` with the template content after replacing all placeholders (`{{TICKET_ID}}`, `{{TICKET_TITLE}}`, `{{CREATED_AT}}`, `{{USER_PROMPT}}`, `{{PARENT_ID}}`, `{{STATUS}}`).
 5. If no `--template`, write a minimal `ticket.md` with the title.
 6. If `--tag` values are provided, assign matching tags to the ticket. Tags must already exist in the project.
@@ -169,7 +169,7 @@ pstdio tickets write --title <title> --template <template-name> --tag <tag>... [
 ### Output
 
 ```text
-Created ticket PS-12 (draft) at .pstdio/tickets/PS-12_fix-login-bug/ticket.md
+Created ticket PS-12 (draft) at .pstdio/tickets/PS-12/ticket.md
 ```
 
 ### Errors
@@ -287,7 +287,7 @@ pstdio tickets save --id <ticket-shorthand> [--status <status>] [--tag <tag>...]
 ### Behavior
 
 1. Must be run inside a linked project.
-2. Find the local ticket directory matching `<ticket-shorthand>_*` and read `ticket.md` from it.
+2. Read `ticket.md` from `.pstdio/tickets/<ticket-shorthand>/`.
 3. Parse YAML frontmatter from `ticket.md` and extract actionable fields (`status`, `priority`, `complexity`).
 4. Strip frontmatter from `ticket.md` and upload the body content (without frontmatter) as the ticket file. Apply extracted frontmatter fields as ticket properties.
 5. Set `draft=false` to publish the ticket.
@@ -696,9 +696,9 @@ Archived ticket PS-12
 
 | Path                                                           | Description                                                                                   |
 | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `.pstdio/tickets/<shorthand>_<display_title>/ticket.md`        | Local ticket file created by `write`/`pull`, read by `save`.                                  |
-| `.pstdio/tickets/<shorthand>_<display_title>/files/`           | Supporting files (research, schemas, PRDs) written by `pull`, read by `save`/`files`.        |
-| `.pstdio/tickets/<shorthand>_<display_title>/files/<filename>` | Individual supporting files synced between local project and DB.                              |
-| `.pstdio/tickets/<shorthand>_<display_title>/artifacts/`       | Validation artifacts (test output, screenshots, logs) written by `pull`, read by `save`/`files`. |
-| `.pstdio/tickets/<shorthand>_<display_title>/artifacts/<filename>` | Individual validation artifacts synced between local project and DB.                         |
+| `.pstdio/tickets/<shorthand>/ticket.md`                        | Local ticket file created by `write`/`pull`, read by `save`.                                 |
+| `.pstdio/tickets/<shorthand>/files/`                           | Supporting files (research, schemas, PRDs) written by `pull`, read by `save`/`files`.       |
+| `.pstdio/tickets/<shorthand>/files/<filename>`                 | Individual supporting files synced between local project and DB.                             |
+| `.pstdio/tickets/<shorthand>/artifacts/`                       | Validation artifacts (test output, screenshots, logs) written by `pull`, read by `save`/`files`. |
+| `.pstdio/tickets/<shorthand>/artifacts/<filename>`             | Individual validation artifacts synced between local project and DB.                         |
 | `.pstdio/workspaces/<workspace-shorthand>/`                    | Git worktree path referenced by `pstdio tickets workspaces` for ticket-associated workspaces. |

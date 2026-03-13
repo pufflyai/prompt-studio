@@ -3,6 +3,23 @@ import type { JsonPatch, SessionMessage } from "pstdio-agents";
 import type { createSessionsService } from "pstdio-db";
 import type { createFilesService } from "pstdio-storage";
 
+const isEmptyTextLikePart = (part: SessionMessage["parts"][number]) => {
+  if (part.type !== "text" && part.type !== "reasoning") return false;
+  return part.text.trim().length === 0;
+};
+
+const sanitizeMessages = (messages: SessionMessage[]) => {
+  const sanitized: SessionMessage[] = [];
+
+  for (const message of messages) {
+    const parts = message.parts.filter((part) => !isEmptyTextLikePart(part));
+    if (parts.length === 0) continue;
+    sanitized.push({ ...message, parts });
+  }
+
+  return sanitized;
+};
+
 export const buildMessagesFromPatches = (
   patches: JsonPatch[],
   initialMessages?: SessionMessage[],
@@ -31,7 +48,7 @@ export const buildMessagesFromPatches = (
     }
   }
 
-  return messages;
+  return sanitizeMessages(messages);
 };
 
 type PersistDeps = {

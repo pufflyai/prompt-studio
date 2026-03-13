@@ -17,8 +17,6 @@ const partsMsg = (
   parts,
 });
 
-// --- Part extraction ---
-
 describe("normalizeOpencodeMessage", () => {
   describe("part extraction", () => {
     test("extracts parts from content format", () => {
@@ -35,22 +33,20 @@ describe("normalizeOpencodeMessage", () => {
       expect(result.parts).toEqual([{ type: "text", text: "hello" }]);
     });
 
-    test("returns empty text part when no parts found", () => {
+    test("returns no parts when no parts found", () => {
       const msg = partsMsg([]);
       const result = normalizeOpencodeMessage(msg, 0);
 
-      expect(result.parts).toEqual([{ type: "text", text: "" }]);
+      expect(result.parts).toEqual([]);
     });
 
-    test("filters out null parts and falls back to empty text", () => {
+    test("filters out empty parts", () => {
       const msg = contentMsg("user", [{ type: "text", text: "" }]);
       const result = normalizeOpencodeMessage(msg, 0);
 
-      expect(result.parts).toEqual([{ type: "text", text: "" }]);
+      expect(result.parts).toEqual([]);
     });
   });
-
-  // --- Role resolution ---
 
   describe("role resolution", () => {
     test("resolves role from content format", () => {
@@ -84,8 +80,6 @@ describe("normalizeOpencodeMessage", () => {
     });
   });
 
-  // --- Part normalization ---
-
   describe("text parts", () => {
     test("normalizes text parts", () => {
       const result = normalizeOpencodeMessage(contentMsg("assistant", [{ type: "text", text: "hello world" }]), 0);
@@ -96,13 +90,19 @@ describe("normalizeOpencodeMessage", () => {
     test("filters empty text", () => {
       const result = normalizeOpencodeMessage(contentMsg("assistant", [{ type: "text", text: "" }]), 0);
 
-      expect(result.parts).toEqual([{ type: "text", text: "" }]);
+      expect(result.parts).toEqual([]);
     });
 
     test("filters text with missing text field", () => {
       const result = normalizeOpencodeMessage(contentMsg("assistant", [{ type: "text" }]), 0);
 
-      expect(result.parts).toEqual([{ type: "text", text: "" }]);
+      expect(result.parts).toEqual([]);
+    });
+
+    test("filters whitespace-only text", () => {
+      const result = normalizeOpencodeMessage(contentMsg("assistant", [{ type: "text", text: "   " }]), 0);
+
+      expect(result.parts).toEqual([]);
     });
   });
 
@@ -116,10 +116,18 @@ describe("normalizeOpencodeMessage", () => {
     test("filters reasoning with missing text", () => {
       const result = normalizeOpencodeMessage(contentMsg("assistant", [{ type: "reasoning" }]), 0);
 
-      expect(result.parts).toEqual([{ type: "text", text: "" }]);
+      expect(result.parts).toEqual([]);
+    });
+
+    test("filters empty reasoning text", () => {
+      const result = normalizeOpencodeMessage(contentMsg("assistant", [{ type: "reasoning", text: "  " }]), 0);
+
+      expect(result.parts).toEqual([]);
     });
   });
+});
 
+describe("normalizeOpencodeMessage tool and patch parts", () => {
   describe("tool parts", () => {
     test("normalizes tool part with state", () => {
       const result = normalizeOpencodeMessage(
@@ -261,12 +269,12 @@ describe("normalizeOpencodeMessage", () => {
     test("filters unknown types without text", () => {
       const result = normalizeOpencodeMessage(contentMsg("assistant", [{ type: "custom_type" }]), 0);
 
-      expect(result.parts).toEqual([{ type: "text", text: "" }]);
+      expect(result.parts).toEqual([]);
     });
   });
+});
 
-  // --- ID and metadata ---
-
+describe("normalizeOpencodeMessage metadata", () => {
   describe("id generation", () => {
     test("uses info.id when available", () => {
       const result = normalizeOpencodeMessage(partsMsg([{ type: "text", text: "hi" }], { id: "msg-123" }), 5);
@@ -332,8 +340,6 @@ describe("normalizeOpencodeMessage", () => {
       expect(result.providerId).toBeUndefined();
     });
   });
-
-  // --- Multiple parts ---
 
   describe("multiple parts", () => {
     test("normalizes multiple parts in one message", () => {

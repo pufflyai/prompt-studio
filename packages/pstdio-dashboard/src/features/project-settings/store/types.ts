@@ -9,6 +9,7 @@ export interface ProjectSettingsSnapshot {
   lastSelectedBranches: string[];
   sessionModalState: SessionModalState;
   selectedSessionId: string | null;
+  lastNonSessionsPath: string | null;
 }
 
 export interface ProjectSettingsState extends ProjectSettingsSnapshot {
@@ -18,6 +19,7 @@ export interface ProjectSettingsState extends ProjectSettingsSnapshot {
   setLastSelectedBranch: (branch: string) => void;
   setSessionModalState: (state: SessionModalState) => void;
   setSelectedSessionId: (sessionId: string | null) => void;
+  setLastNonSessionsPath: (path: string | null) => void;
   reset: () => void;
 }
 

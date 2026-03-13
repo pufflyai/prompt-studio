@@ -33,6 +33,7 @@ export const getDefaultProjectSettingsSnapshot = () =>
     lastSelectedBranches: [],
     sessionModalState: "bubble",
     selectedSessionId: null,
+    lastNonSessionsPath: null,
   }) satisfies ProjectSettingsSnapshot;
 
 export const createProjectSettingsStore = (options?: ProjectSettingsStoreOptions) => {
@@ -100,6 +101,14 @@ export const createProjectSettingsStore = (options?: ProjectSettingsStoreOptions
                 },
                 false,
                 actionName("setSelectedSessionId"),
+              ),
+            setLastNonSessionsPath: (path) =>
+              set(
+                (state) => {
+                  state.lastNonSessionsPath = path;
+                },
+                false,
+                actionName("setLastNonSessionsPath"),
               ),
             reset: () => set(getDefaultProjectSettingsSnapshot(), false, actionName("reset")),
           })),

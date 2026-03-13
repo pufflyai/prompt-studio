@@ -1,5 +1,4 @@
 const MAX_DISPLAY_TITLE_LENGTH = 50;
-const MAX_DIR_NAME_LENGTH = 80;
 
 const stripFrontmatter = (content: string) => {
   if (!content.startsWith("---")) return content;
@@ -46,14 +45,4 @@ export const extractDisplayTitle = (content: string) => {
   const raw = extractFirstHeading(body) ?? extractFirstNonEmptyLine(body) ?? "untitled";
   const stripped = stripMarkdownFormatting(raw);
   return slugify(stripped, MAX_DISPLAY_TITLE_LENGTH);
-};
-
-export const ticketDirName = (shorthand: string, content: string) => {
-  const displayTitle = extractDisplayTitle(content);
-  const name = `${shorthand}_${displayTitle}`;
-  if (name.length > MAX_DIR_NAME_LENGTH) {
-    const maxTitleLen = MAX_DIR_NAME_LENGTH - shorthand.length - 1;
-    return `${shorthand}_${slugify(displayTitle, maxTitleLen)}`;
-  }
-  return name;
 };

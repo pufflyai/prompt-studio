@@ -68,11 +68,11 @@ const resolveToolStatus = (status?: string): ToolPartStatus => {
 const normalizePart = (part: OpencodeSessionMessagePart): SessionMessagePart | null => {
   switch (part.type) {
     case "text":
-      if (typeof part.text !== "string" || part.text.length === 0) return null;
+      if (typeof part.text !== "string" || part.text.trim().length === 0) return null;
       return { type: "text", text: part.text };
 
     case "reasoning":
-      if (typeof part.text !== "string") return null;
+      if (typeof part.text !== "string" || part.text.trim().length === 0) return null;
       return { type: "reasoning", text: part.text };
 
     case "tool":
@@ -109,7 +109,7 @@ const normalizePart = (part: OpencodeSessionMessagePart): SessionMessagePart | n
       return { type: "patch", hash: part.hash, files: part.files };
 
     default:
-      if (typeof part.text === "string" && part.text.length > 0) {
+      if (typeof part.text === "string" && part.text.trim().length > 0) {
         return { type: "text", text: part.text };
       }
       return null;
@@ -146,7 +146,7 @@ export const normalizeOpencodeMessage = (message: OpencodeSessionMessage, index:
   return {
     id,
     role,
-    parts: normalizedParts.length > 0 ? normalizedParts : [{ type: "text", text: "" }],
+    parts: normalizedParts,
     index,
     modelId: "info" in message ? message.info?.modelID : undefined,
     providerId: "info" in message ? message.info?.providerID : undefined,

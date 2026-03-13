@@ -16,6 +16,33 @@ type Deps = {
   log: (msg: string) => void;
 };
 
+const parseSSEEvent = (part: string) => {
+  let event = "message";
+  let data = "";
+
+  for (const line of part.split("\n")) {
+    if (line.startsWith("event: ")) {
+      event = line.slice(7);
+      continue;
+    }
+
+    if (line.startsWith("data: ")) {
+      data = line.slice(6);
+    }
+  }
+
+  if (!event || !data) return null;
+  return { event, data };
+};
+
+const consumeSSEBuffer = (buffer: string) => {
+  const parts = buffer.split("\n\n");
+  const remainder = parts.pop() ?? "";
+  const events = parts.map((part) => parseSSEEvent(part)).filter((event): event is SSEEvent => event !== null);
+
+  return { remainder, events };
+};
+
 const defaultConnectSSE = async (url: string, onEvent: (event: SSEEvent) => void) => {
   const res = await fetch(url);
   if (!res.ok || !res.body) throw new Error(`Connection failed: ${res.status}`);
@@ -29,17 +56,11 @@ const defaultConnectSSE = async (url: string, onEvent: (event: SSEEvent) => void
     if (done) break;
 
     buffer += decoder.decode(value, { stream: true });
-    const parts = buffer.split("\n\n");
-    buffer = parts.pop()!;
+    const { remainder, events } = consumeSSEBuffer(buffer);
+    buffer = remainder;
 
-    for (const part of parts) {
-      let event = "message";
-      let data = "";
-      for (const line of part.split("\n")) {
-        if (line.startsWith("event: ")) event = line.slice(7);
-        else if (line.startsWith("data: ")) data = line.slice(6);
-      }
-      if (event && data) onEvent({ event, data });
+    for (const event of events) {
+      onEvent(event);
     }
   }
 };

@@ -1,7 +1,7 @@
 import { Flex, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
 import { HorizontalMenuStack, Tooltip } from "@pstdio/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { ArrowLeft, PenBox } from "lucide-react";
+import { PenBox, SquareArrowOutDownRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
 import { useProjectSettingsStore } from "@/features/project-settings/store";
@@ -15,6 +15,7 @@ import { useProjectSession } from "../hooks/use-project-session";
 import { useProjectSessions } from "../hooks/use-project-sessions";
 import { useSessionWorkspace } from "../hooks/use-session-workspace";
 import { downloadSessionJson } from "../utils/session-download";
+import { getSessionBubbleReturnPath } from "../utils/sessions-route";
 import { getVisibleSessions } from "../utils/visible-sessions";
 import { createSessionFromPrompt, openSessionBubbleAndGoBack } from "./sessions-panel-actions";
 
@@ -24,6 +25,7 @@ export const SessionsPanel = () => {
   const navigate = useNavigate();
   const setSessionModalState = useProjectSettingsStore((state) => state.setSessionModalState);
   const setSelectedSessionId = useProjectSettingsStore((state) => state.setSelectedSessionId);
+  const lastNonSessionsPath = useProjectSettingsStore((state) => state.lastNonSessionsPath);
   const lastSelectedAgent = useProjectSettingsStore((state) => state.lastSelectedAgent);
   const lastSelectedModels = useProjectSettingsStore((state) => state.lastSelectedModels);
   const selectedSessionId = typeof sessionId === "string" ? sessionId : null;
@@ -64,12 +66,8 @@ export const SessionsPanel = () => {
       setSessionModalState,
       setSelectedSessionId,
       navigateBack: () => {
-        if (typeof window !== "undefined" && window.history.length > 1) {
-          window.history.back();
-          return;
-        }
-
-        navigate({ to: projectId ? `/projects/${projectId}` : "/projects" });
+        const returnPath = getSessionBubbleReturnPath({ projectId, lastNonSessionsPath });
+        navigate({ to: returnPath });
       },
     });
   };
@@ -120,12 +118,14 @@ export const SessionsPanel = () => {
                   aria-label={t("chatInput.session.openInBubble")}
                   onClick={handleOpenInBubble}
                 >
-                  <ArrowLeft size={16} />
+                  <SquareArrowOutDownRight size={16} />
                 </IconButton>
               </Tooltip>
               {downloadableSession ? (
                 <SessionActionMenu
-                  onDownloadSession={() => downloadSessionJson(downloadableSession)}
+                  onDownloadSession={() => {
+                    void downloadSessionJson(downloadableSession);
+                  }}
                   onArchiveSession={handleArchive}
                 />
               ) : null}

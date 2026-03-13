@@ -1,18 +1,19 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { ticketDirName } from "./display-title";
 
 const TICKETS_DIR = join(".pstdio", "tickets");
 const TICKET_FILES_DIR = "files";
 
 export const resolveTicketDir = (root: string, shorthand: string) => {
   const ticketsBase = join(root, TICKETS_DIR);
-  if (!existsSync(ticketsBase)) return null;
+  const exactDir = join(ticketsBase, shorthand);
+  if (!existsSync(exactDir)) return null;
 
-  const prefix = `${shorthand}_`;
-  const entries = readdirSync(ticketsBase, { withFileTypes: true });
-  const match = entries.find((e) => e.isDirectory() && e.name.startsWith(prefix));
-  return match ? join(ticketsBase, match.name) : null;
+  if (!statSync(exactDir).isDirectory()) {
+    throw new Error(`Invalid ticket path for ${shorthand}: .pstdio/tickets/${shorthand} is not a directory.`);
+  }
+
+  return exactDir;
 };
 
 const ticketFilesDir = (root: string, shorthand: string) => {
@@ -40,8 +41,8 @@ const resolveTicketAttachmentPath = (root: string, shorthand: string, fileName: 
 };
 
 export const writeTicketFile = (root: string, shorthand: string, content: string, overwrite = true) => {
-  const dirName = ticketDirName(shorthand, content);
-  const dir = join(root, TICKETS_DIR, dirName);
+  const existingDir = resolveTicketDir(root, shorthand);
+  const dir = existingDir ?? join(root, TICKETS_DIR, shorthand);
   const filePath = join(dir, "ticket.md");
 
   if (!overwrite && existsSync(filePath)) {

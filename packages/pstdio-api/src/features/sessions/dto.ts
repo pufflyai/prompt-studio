@@ -45,3 +45,8 @@ export const approveBodySchema = z
 export const notFoundResponseSchema = z.object({
   error: z.string(),
 });
+
+export const sessionConversationResponseSchema = z.object({
+  session: sessionResponseSchema,
+  messages: z.array(z.unknown()),
+});

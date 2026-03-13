@@ -1,6 +1,7 @@
 import { Box, Flex, Stack, Text } from "@chakra-ui/react";
 import { EmptyState } from "@pstdio/ui";
 import { Outlet, useParams, useRouterState } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { ProjectSettingsProvider, useProjectSettingsStore } from "@/features/project-settings/store";
 import { SessionAttachedPanel } from "@/features/sessions/components/session-attached-panel";
@@ -15,7 +16,17 @@ const ProjectShellContent = () => {
   const { data: project, isLoading } = useProject(projectId);
   const { t } = useTranslation("projects");
   const sessionModalState = useProjectSettingsStore((s) => s.sessionModalState);
+  const setLastNonSessionsPath = useProjectSettingsStore((s) => s.setLastNonSessionsPath);
   const isSessionsRoute = isSessionsRoutePath(location.pathname, projectId);
+
+  useEffect(() => {
+    if (isSessionsRoute) return;
+    const currentPath =
+      typeof window === "undefined"
+        ? location.pathname
+        : `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    setLastNonSessionsPath(currentPath);
+  }, [isSessionsRoute, location.pathname, setLastNonSessionsPath]);
 
   return (
     <Flex height="100%" width="100%" minH="0">

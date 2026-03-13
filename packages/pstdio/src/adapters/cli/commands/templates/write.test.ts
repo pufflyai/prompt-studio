@@ -38,4 +38,69 @@ describe("templates write", () => {
     expect(readFileSync(docPath, "utf8")).toContain("# prd");
     expect(existsSync(join(tmpBase, ".pstdio", "docs", "navigation.json"))).toBe(false);
   });
+
+  test("writes ticket template to shorthand ticket directory", async () => {
+    mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-1"), { recursive: true });
+
+    const handler = createHandler({
+      cwd: () => tmpBase,
+      findGitRoot: () => tmpBase,
+      readConfig: () => ({ project_id: "proj-1" }),
+      getTemplate: async () => ({
+        id: "tpl-1",
+        name: "ticket",
+        template_type: "ticket",
+        is_default: true,
+        content: "# {{TICKET_ID}}",
+      }),
+    });
+
+    await handler({ name: "ticket", target: "PS-1", _: [], $0: "" } as never);
+
+    expect(readFileSync(join(tmpBase, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8")).toBe("# PS-1");
+  });
+
+  test("throws when only a legacy ticket directory exists", async () => {
+    mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-2_old-title"), { recursive: true });
+
+    const handler = createHandler({
+      cwd: () => tmpBase,
+      findGitRoot: () => tmpBase,
+      readConfig: () => ({ project_id: "proj-1" }),
+      getTemplate: async () => ({
+        id: "tpl-1",
+        name: "ticket",
+        template_type: "ticket",
+        is_default: true,
+        content: "# Updated",
+      }),
+    });
+
+    await expect(handler({ name: "ticket", target: "PS-2", _: [], $0: "" } as never)).rejects.toThrow(
+      "Ticket not found: PS-2",
+    );
+  });
+
+  test("writes to exact shorthand directory even when legacy directories are present", async () => {
+    mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-3"), { recursive: true });
+    mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-3_old-title"), { recursive: true });
+
+    const handler = createHandler({
+      cwd: () => tmpBase,
+      findGitRoot: () => tmpBase,
+      readConfig: () => ({ project_id: "proj-1" }),
+      getTemplate: async () => ({
+        id: "tpl-1",
+        name: "ticket",
+        template_type: "ticket",
+        is_default: true,
+        content: "# Updated",
+      }),
+    });
+
+    await handler({ name: "ticket", target: "PS-3", _: [], $0: "" } as never);
+
+    expect(readFileSync(join(tmpBase, ".pstdio", "tickets", "PS-3", "ticket.md"), "utf8")).toBe("# Updated");
+    expect(existsSync(join(tmpBase, ".pstdio", "tickets", "PS-3_old-title"))).toBe(true);
+  });
 });

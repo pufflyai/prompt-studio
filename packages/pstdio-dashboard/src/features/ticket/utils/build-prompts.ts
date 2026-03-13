@@ -1,3 +1,5 @@
+export const buildImplementTicketPrompt = (ticketShorthand: string) => `Implement ticket: ${ticketShorthand}`;
+
 export const buildCreateSubTicketsPrompt = (ticketShorthand: string, templateName?: string) => {
   const template = templateName?.trim();
 

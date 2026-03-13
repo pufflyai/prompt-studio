@@ -12,6 +12,23 @@ interface SessionCacheEntry {
   status: SessionStatus | null;
 }
 
+const isEmptyTextLikePart = (part: SessionMessage["parts"][number]) => {
+  if (part.type !== "text" && part.type !== "reasoning") return false;
+  return part.text.trim().length === 0;
+};
+
+const sanitizeMessages = (messages: SessionMessage[]) => {
+  const sanitized: SessionMessage[] = [];
+
+  for (const message of messages) {
+    const parts = message.parts.filter((part) => !isEmptyTextLikePart(part));
+    if (parts.length === 0) continue;
+    sanitized.push({ ...message, parts });
+  }
+
+  return sanitized;
+};
+
 const sessionStreamCache = new Map<string, SessionCacheEntry>();
 
 export const getCachedSessionEntry = (sessionId: string) => {
@@ -38,11 +55,12 @@ export const clearSessionStreamCache = () => {
 
 export const applyMessagePatch = (messages: SessionMessage[], patch: JsonPatch): SessionMessage[] => {
   if (patch.path === "/messages" && (patch.op === "add" || patch.op === "replace")) {
-    return patch.value as SessionMessage[];
+    if (!Array.isArray(patch.value)) return sanitizeMessages(messages);
+    return sanitizeMessages(patch.value as SessionMessage[]);
   }
 
   const match = patch.path.match(/^\/messages\/(\d+)$/);
-  if (!match) return messages;
+  if (!match) return sanitizeMessages(messages);
 
   const index = Number(match[1]);
   const next = [...messages];
@@ -55,5 +73,5 @@ export const applyMessagePatch = (messages: SessionMessage[], patch: JsonPatch):
     next.splice(index, 1);
   }
 
-  return next;
+  return sanitizeMessages(next);
 };

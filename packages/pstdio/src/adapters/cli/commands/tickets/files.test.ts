@@ -16,9 +16,9 @@ afterEach(() => {
 
 describe("tickets files", () => {
   test("prints merged local/db file table", async () => {
-    mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-1_ticket", "files"), { recursive: true });
-    writeFileSync(join(tmpBase, ".pstdio", "tickets", "PS-1_ticket", "files", "both.txt"), "both");
-    writeFileSync(join(tmpBase, ".pstdio", "tickets", "PS-1_ticket", "files", "local-only.txt"), "local");
+    mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-1", "files"), { recursive: true });
+    writeFileSync(join(tmpBase, ".pstdio", "tickets", "PS-1", "files", "both.txt"), "both");
+    writeFileSync(join(tmpBase, ".pstdio", "tickets", "PS-1", "files", "local-only.txt"), "local");
 
     const log = mock();
     const handler = createHandler({
@@ -75,7 +75,7 @@ describe("tickets files", () => {
     expect(table).toContain("both.txt");
     expect(table).toContain("db-only.txt");
     expect(table).toContain("local-only.txt");
-    expect(table).toContain(".pstdio/tickets/PS-1_ticket/files/both.txt");
+    expect(table).toContain(".pstdio/tickets/PS-1/files/both.txt");
   });
 
   test("prints empty state when no db or local files exist", async () => {

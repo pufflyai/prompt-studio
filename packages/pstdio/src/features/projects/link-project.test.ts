@@ -129,7 +129,7 @@ describe("linkProject", () => {
     ]);
 
     const root = setup("link-relink");
-    const ticketsDir = join(root, ".pstdio", "tickets", "PS-1_old-ticket");
+    const ticketsDir = join(root, ".pstdio", "tickets", "PS-1");
     mkdirSync(ticketsDir, { recursive: true });
     writeFileSync(join(root, ".pstdio", "config.json"), `${JSON.stringify({ project_id: "old-project" }, null, 2)}\n`);
     writeFileSync(join(ticketsDir, "ticket.md"), "# old ticket\n");

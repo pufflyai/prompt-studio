@@ -20,27 +20,27 @@ export const useTicketSessions = (input: UseTicketSessionsInput) => {
   const createAttempt = useCreateTicketAttempt(projectId);
 
   const startSession = async (prompt: string) => {
-    if (!projectId || createSession.isPending) return false;
+    if (!projectId || createSession.isPending) return null;
     try {
-      await createSession.mutateAsync({
+      const result = await createSession.mutateAsync({
         prompt,
         agent: selectedAgent,
         repoId: defaultRepoId,
         branch: "",
       });
-      return true;
+      return result.sessionId;
     } catch (error) {
       logMutationError("start session", error);
-      return false;
+      return null;
     }
   };
 
   const runAttempt = async (ticketId: string, prompt: string) => {
-    if (!projectId || createAttempt.isPending) return false;
+    if (!projectId || createAttempt.isPending) return null;
     const branch = selectedBranch.trim() ? selectedBranch : null;
     const model = selectedModel.trim() ? selectedModel : null;
     try {
-      await createAttempt.mutateAsync({
+      const result = await createAttempt.mutateAsync({
         ticketId,
         agent: selectedAgent,
         repoId: defaultRepoId,
@@ -48,11 +48,11 @@ export const useTicketSessions = (input: UseTicketSessionsInput) => {
         model,
         prompt: prompt.length > 0 ? prompt : null,
       });
-      return true;
+      return result.sessionId;
     } catch (error) {
       logMutationError("run attempt", error);
       toaster.create({ type: "error", title: t("createAttemptDialog.error") });
-      return false;
+      return null;
     }
   };
 

@@ -47,6 +47,26 @@ describe("applyMessagePatch", () => {
 
     expect(result).toEqual([message("m1"), message("m2"), message("m3")]);
   });
+
+  it("skips empty message parts and messages with no remaining parts for /messages patches", () => {
+    const result = applyMessagePatch([], {
+      op: "replace",
+      path: "/messages",
+      value: [
+        { id: "m1", role: "assistant", parts: [{ type: "reasoning", text: "" }] },
+        {
+          id: "m2",
+          role: "assistant",
+          parts: [
+            { type: "text", text: " " },
+            { type: "tool", tool: "read" },
+          ],
+        },
+      ],
+    });
+
+    expect(result).toEqual([{ id: "m2", role: "assistant", parts: [{ type: "tool", tool: "read" }] }]);
+  });
 });
 
 describe("applyMessagePatch – reconnect replay", () => {

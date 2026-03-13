@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import {
   listTicketFiles,
   readTicketAttachment,
   readTicketFile,
+  resolveTicketDir,
   ticketFilePath,
   writeTicketAttachment,
   writeTicketFile,
@@ -21,21 +22,21 @@ afterEach(() => {
 });
 
 describe("local-ticket", () => {
-  test("writeTicketFile creates directory with display title and writes file", () => {
+  test("writeTicketFile creates shorthand directory and writes file", () => {
     const path = writeTicketFile(tmpBase, "PS-1", "# Ticket content\n");
 
-    expect(path).toContain("PS-1_ticket-content");
+    expect(path).toContain(join(".pstdio", "tickets", "PS-1", "ticket.md"));
     expect(path).toEndWith("ticket.md");
 
     const content = readTicketFile(tmpBase, "PS-1");
     expect(content).toBe("# Ticket content\n");
   });
 
-  test("ticketFilePath resolves existing ticket by shorthand prefix", () => {
+  test("ticketFilePath resolves existing ticket by shorthand directory", () => {
     writeTicketFile(tmpBase, "PS-1", "# My ticket\n");
 
     const path = ticketFilePath(tmpBase, "PS-1");
-    expect(path).toContain("PS-1_my-ticket");
+    expect(path).toContain(join(".pstdio", "tickets", "PS-1", "ticket.md"));
     expect(path).toEndWith("ticket.md");
   });
 
@@ -79,5 +80,27 @@ describe("local-ticket", () => {
 
     const content = readTicketAttachment(tmpBase, "PS-5", "binary.bin");
     expect(content.toString("utf8")).toBe("abc");
+  });
+
+  test("resolveTicketDir ignores legacy slug directories", () => {
+    const legacyDir = join(tmpBase, ".pstdio", "tickets", "PS-6_old-title");
+    mkdirSync(legacyDir, { recursive: true });
+
+    expect(resolveTicketDir(tmpBase, "PS-6")).toBeNull();
+    expect(existsSync(legacyDir)).toBe(true);
+  });
+
+  test("resolveTicketDir returns exact shorthand directory when it exists", () => {
+    mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-7"), { recursive: true });
+    mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-7_old-title"), { recursive: true });
+
+    expect(resolveTicketDir(tmpBase, "PS-7")).toBe(join(tmpBase, ".pstdio", "tickets", "PS-7"));
+  });
+
+  test("resolveTicketDir returns null when only legacy directories exist", () => {
+    mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-8_old-title"), { recursive: true });
+    mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-8_other-title"), { recursive: true });
+
+    expect(resolveTicketDir(tmpBase, "PS-8")).toBeNull();
   });
 });

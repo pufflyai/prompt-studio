@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanupDirs, createGitRepo, runPstdio, runPstdioSafe } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
@@ -7,10 +7,9 @@ import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 
 const findTicketDir = (repo: string, shorthand: string) => {
   const ticketsBase = join(repo, ".pstdio", "tickets");
-  const prefix = `${shorthand}_`;
-  const match = readdirSync(ticketsBase).find((name) => name.startsWith(prefix));
-  if (!match) throw new Error(`Ticket dir not found for ${shorthand}`);
-  return join(ticketsBase, match);
+  const exactDir = join(ticketsBase, shorthand);
+  if (!existsSync(exactDir)) throw new Error(`Ticket dir not found for ${shorthand}`);
+  return exactDir;
 };
 
 let api: ApiInstance;

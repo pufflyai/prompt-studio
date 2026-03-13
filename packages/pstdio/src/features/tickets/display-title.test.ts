@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { extractDisplayTitle, ticketDirName } from "./display-title";
+import { extractDisplayTitle } from "./display-title";
 
 describe("extractDisplayTitle", () => {
   test("extracts from simple heading", () => {
@@ -74,22 +74,5 @@ No heading here, just text`;
 
 ## Also not this`;
     expect(extractDisplayTitle(content)).toBe("this-one");
-  });
-});
-
-describe("ticketDirName", () => {
-  test("combines shorthand and display title", () => {
-    expect(ticketDirName("PS-12", "# Fix login bug\n")).toBe("PS-12_fix-login-bug");
-  });
-
-  test("respects max dir name length of 80", () => {
-    const longContent = "# " + "a very long title that keeps going ".repeat(5);
-    const result = ticketDirName("PS-12", longContent);
-    expect(result.length).toBeLessThanOrEqual(80);
-    expect(result).toStartWith("PS-12_");
-  });
-
-  test("handles short shorthand", () => {
-    expect(ticketDirName("B-1", "# Quick fix\n")).toBe("B-1_quick-fix");
   });
 });
