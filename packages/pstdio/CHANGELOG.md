@@ -1,5 +1,11 @@
 # pstdio
 
+## 0.1.2
+
+### Patch Changes
+
+- 9e42007: Fix npm entrypoint failing under Node.js due to require() in ESM scope by renaming bin/pstdio.js to bin/pstdio.cjs
+
 ## 0.1.1
 
 ### Patch Changes
