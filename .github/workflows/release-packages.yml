@@ -72,6 +72,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Push tags
+        if: steps.changesets.outputs.published == 'true'
+        run: git push --tags
+
       - name: Upload binaries to GitHub Release
         if: steps.changesets.outputs.published == 'true'
         run: |
