@@ -1,4 +1,5 @@
 import { z } from "@hono/zod-openapi";
+import { workspaceResponseSchema } from "../workspaces/dto";
 
 export const ticketResponseSchema = z.object({
   id: z.string(),
@@ -85,3 +86,34 @@ export const uploadTicketFileBodySchema = z
     mime_type: z.string().optional(),
   })
   .strict();
+
+export const ticketAttemptModeSchema = z.enum(["worktree", "current_branch"]);
+
+export const createTicketAttemptBodySchema = z
+  .object({
+    agent: z.string().min(1).optional(),
+    branch: z.string().optional(),
+    repo_id: z.string().optional(),
+    repo_path: z.string().optional(),
+    mode: ticketAttemptModeSchema.optional(),
+    model: z.string().optional(),
+    prompt: z.string().nullable().optional(),
+    base: z.string().optional(),
+    start_session: z.boolean().optional(),
+  })
+  .strict();
+
+const ticketAttemptSessionSchema = z.object({
+  id: z.string(),
+  workspace_id: z.string(),
+  title: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const ticketAttemptResponseSchema = z.object({
+  mode: ticketAttemptModeSchema,
+  ticket: ticketResponseSchema,
+  workspace: workspaceResponseSchema,
+  session: ticketAttemptSessionSchema.nullable(),
+});

@@ -1,3 +1,5 @@
+import { toaster } from "@pstdio/ui";
+import { useTranslation } from "react-i18next";
 import type { CodingAgent } from "@/features/agents/agent-storage";
 import { useCreateTicketAttempt } from "@/features/ticket-list/hooks/use-create-ticket-attempt";
 import { logMutationError } from "@/lib/error-handlers";
@@ -12,6 +14,7 @@ interface UseTicketSessionsInput {
 }
 
 export const useTicketSessions = (input: UseTicketSessionsInput) => {
+  const { t } = useTranslation("tickets");
   const { projectId, defaultRepoId, selectedAgent, selectedModel, selectedBranch } = input;
   const createSession = useCreateWorkspaceSession(projectId);
   const createAttempt = useCreateTicketAttempt(projectId);
@@ -48,6 +51,7 @@ export const useTicketSessions = (input: UseTicketSessionsInput) => {
       return true;
     } catch (error) {
       logMutationError("run attempt", error);
+      toaster.create({ type: "error", title: t("createAttemptDialog.error") });
       return false;
     }
   };

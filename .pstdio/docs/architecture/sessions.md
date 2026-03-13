@@ -139,7 +139,7 @@ When a session is `in_progress`, no active event store exists, and the last mess
 
 ## Entry points
 
-### 1) Project session — `POST /api/sessions`
+### 1) Project session — `POST /v1/sessions`
 
 General project chat sessions, not tied to a specific ticket.
 
@@ -165,7 +165,7 @@ Server flow:
 7. Persist `agent_session_id` when agent session starts.
 8. Track process exit to set status `completed`/`failed`/`cancelled`, push status patch, clean up stream state.
 
-### 2) Ticket + session — `POST /api/tickets/create-and-start`
+### 2) Ticket + session — `POST /v1/tickets/create-and-start`
 
 Creates ticket, workspace (`Attempt N`), and session in one operation, then starts the agent.
 
@@ -173,20 +173,32 @@ Creates ticket, workspace (`Attempt N`), and session in one operation, then star
 - `cwd` is repository root if `repo_id` is provided.
 - Non-zero agent process exit marks session `failed`.
 
-### 3) Ticket attempt — `POST /api/tickets/:ticket_id/attempts`
+### 3) Ticket attempt — `POST /v1/tickets/:ticket_id/attempts`
 
 Creates a ticket attempt workspace + session and starts the agent.
 
 Modes:
 
-- `worktree` (default): creates isolated git worktree under `~/.pstdio/worktrees/<project>/<ticket>/<attempt>`
+- `worktree` (default): creates branch `workspace/<workspace_shorthand>` and a git worktree at `<workspaces_root>/<workspace_shorthand>`
 - `current_branch`: reuses current repo branch/root
 
-Prompt is built as `Implement ticket <shorthand>:\n<ticket content or fallback title>`.
+`workspaces_root` resolution order:
+
+1. `PSTDIO_WORKSPACES_DIR`
+2. `$HOME/.pstdio/workspaces`
+3. `os.homedir()/.pstdio/workspaces`
+
+Prompt resolution order:
+
+1. explicit request `prompt`
+2. ticket content file body
+3. ticket title fallback (`display_title` then `shorthand`)
+
+The route always creates a ticket-linked workspace row, emits sync updates for `workspaces` + `ticket_workspaces`, and defaults `start_session` to `true`. When a session is started, it links `workspaces.session_id`, emits `sessions` + `workspaces` updates, and starts the agent in the resolved cwd.
 
 ## Follow-up messages
 
-Endpoint: `POST /api/sessions/:session_id/follow-up`
+Endpoint: `POST /v1/sessions/:session_id/follow-up`
 
 ```json
 {
@@ -207,7 +219,7 @@ Server flow:
 
 ## Message source of truth
 
-Endpoint: `GET /api/sessions/:session_id`
+Endpoint: `GET /v1/sessions/:session_id`
 
 Resolution strategy:
 
@@ -238,7 +250,7 @@ type EventStore = {
 
 ### Session message streaming via SSE
 
-Endpoint: `GET /api/sessions/:session_id/stream`
+Endpoint: `GET /v1/sessions/:session_id/stream`
 
 Uses the same SSE pattern as the rest of the application. The server replays buffered patches from the event store, then streams live updates.
 
@@ -251,7 +263,7 @@ Events:
 
 Approval responses are sent via a separate POST endpoint:
 
-- `POST /api/sessions/:session_id/approve` — `{ id, decision: "approve" | "deny" }`
+- `POST /v1/sessions/:session_id/approve` — `{ id, decision: "approve" | "deny" }`
 
 If no active event store exists for the session, the server sends `ready` followed by an `end` event and closes the connection.
 
@@ -265,7 +277,7 @@ Session message streaming is a separate SSE connection from table sync — table
 
 Diffs are a workspace concern — the workspace owns the branch and worktree path.
 
-Endpoint: `GET /api/workspaces/:workspace_id/diff?mode=unstaged|staged|all`
+Endpoint: `GET /v1/workspaces/:workspace_id/diff?mode=unstaged|staged|all`
 
 1. Use `workspace.worktree_path` if present, else repo root from project.
 2. Validate git repository.

@@ -114,5 +114,34 @@ export const createWorkspacesService = (db: DbClient) => {
       .where(eq(workspaces.id, id));
   };
 
-  return { create, get, getBySessionId, list, getByShorthand, softDelete, updateStatus, setStartupLogFileId };
+  const updateGitMetadata = async (id: string, input: { branch: string | null; worktree_path: string | null }) => {
+    const [updated] = await db
+      .update(workspaces)
+      .set({ branch: input.branch, worktree_path: input.worktree_path, updated_at: nowTimestamp() })
+      .where(eq(workspaces.id, id))
+      .returning();
+    return updated ?? null;
+  };
+
+  const setSessionId = async (id: string, sessionId: string | null) => {
+    const [updated] = await db
+      .update(workspaces)
+      .set({ session_id: sessionId, updated_at: nowTimestamp() })
+      .where(eq(workspaces.id, id))
+      .returning();
+    return updated ?? null;
+  };
+
+  return {
+    create,
+    get,
+    getBySessionId,
+    list,
+    getByShorthand,
+    softDelete,
+    updateStatus,
+    setStartupLogFileId,
+    updateGitMetadata,
+    setSessionId,
+  };
 };

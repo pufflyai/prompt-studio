@@ -1,5 +1,11 @@
 import type { ProjectResponse, StatusResponse, TagResponse, TemplateResponse } from "pstdio-api/dto";
-import type { Project, ProjectRepository, ProjectTemplateAsset, RepoBranch } from "@/features/project/types";
+import type {
+  Project,
+  ProjectRepository,
+  ProjectTemplateAsset,
+  ProjectTemplateAssetType,
+  RepoBranch,
+} from "@/features/project/types";
 import { buildTicketStatusCatalog, toTicketTag } from "@/features/ticket-list/data/api";
 import { apiRequest, readRuntimeConfig } from "@/lib/api";
 
@@ -148,7 +154,67 @@ export const getProjectTemplateAssets = async (projectId: string): Promise<Proje
   }));
 };
 
-export const updateProjectTemplateAsset = async (projectId: string, assetId: string, content: string) => {
-  void content;
-  throw new Error(`Updating template assets is not supported yet. projectId=${projectId}, assetId=${assetId}`);
+export const getProjectTemplate = async (projectId: string, name: string) => {
+  const t = await apiRequest<TemplateResponse & { content: string }>(
+    `/v1/projects/${projectId}/templates/${encodeURIComponent(name)}`,
+  );
+
+  return {
+    id: t.id,
+    projectId: t.project_id ?? projectId,
+    name: t.name,
+    templateType: t.template_type as ProjectTemplateAssetType,
+    fileId: t.file_id,
+    content: t.content,
+    isDefault: t.is_default,
+    createdAt: t.created_at,
+    updatedAt: t.updated_at,
+  } satisfies ProjectTemplateAsset;
+};
+
+export const createProjectTemplate = async (
+  projectId: string,
+  input: { name: string; templateType: ProjectTemplateAssetType; content: string; isDefault?: boolean },
+) => {
+  const created = await apiRequest<TemplateResponse>(`/v1/projects/${projectId}/templates`, {
+    method: "POST",
+    body: {
+      name: input.name,
+      template_type: input.templateType,
+      content: input.content,
+      is_default: input.isDefault,
+    },
+  });
+
+  return {
+    id: created.id,
+    projectId: created.project_id ?? projectId,
+    name: created.name,
+    templateType: created.template_type as ProjectTemplateAssetType,
+    fileId: created.file_id,
+    content: input.content,
+    isDefault: created.is_default,
+    createdAt: created.created_at,
+    updatedAt: created.updated_at,
+  } satisfies ProjectTemplateAsset;
+};
+
+export const updateProjectTemplate = async (
+  projectId: string,
+  name: string,
+  input: { content?: string; isDefault?: boolean },
+) => {
+  await apiRequest(`/v1/projects/${projectId}/templates/${encodeURIComponent(name)}`, {
+    method: "PUT",
+    body: {
+      ...(input.content !== undefined ? { content: input.content } : {}),
+      ...(input.isDefault !== undefined ? { is_default: input.isDefault } : {}),
+    },
+  });
+};
+
+export const deleteProjectTemplate = async (projectId: string, name: string) => {
+  await apiRequest(`/v1/projects/${projectId}/templates/${encodeURIComponent(name)}`, {
+    method: "DELETE",
+  });
 };

@@ -1,3 +1,4 @@
+import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { MarkdownEditor } from "./markdown-editor";
 
@@ -120,6 +121,13 @@ print(list(fib(10)))
 const meta: Meta<typeof MarkdownEditor> = {
   title: "Editors/Markdown Editor",
   component: MarkdownEditor,
+  decorators: [
+    (Story) => (
+      <Box height="520px" overflowY="auto" bg="bg" borderWidth="1px" borderColor="border.muted">
+        <Story />
+      </Box>
+    ),
+  ],
   parameters: {
     layout: "padded",
   },

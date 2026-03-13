@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, unlinkSync } from "node:fs";
+import { execSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -9,9 +10,15 @@ import type { AppBindings } from "../../../types";
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
 let projectId: string;
+const previousAgentsEnv = process.env.PSTDIO_AGENTS;
+const previousHomeEnv = process.env.HOME;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-tickets-test-"));
+  process.env.PSTDIO_AGENTS = "fake";
+  const testHome = join(tempRoot, "home");
+  mkdirSync(testHome, { recursive: true });
+  process.env.HOME = testHome;
   ({ app } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
@@ -27,8 +34,30 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
+  if (previousAgentsEnv === undefined) {
+    delete process.env.PSTDIO_AGENTS;
+  } else {
+    process.env.PSTDIO_AGENTS = previousAgentsEnv;
+  }
+  if (previousHomeEnv === undefined) {
+    delete process.env.HOME;
+  } else {
+    process.env.HOME = previousHomeEnv;
+  }
   rmSync(tempRoot, { recursive: true, force: true });
 });
+
+const createGitRepo = (name: string) => {
+  const repoRoot = join(tempRoot, name);
+  mkdirSync(repoRoot, { recursive: true });
+  execSync("git init", { cwd: repoRoot, stdio: "pipe" });
+  execSync('git config user.email "test@test.com"', { cwd: repoRoot, stdio: "pipe" });
+  execSync('git config user.name "Test"', { cwd: repoRoot, stdio: "pipe" });
+  writeFileSync(join(repoRoot, "README.md"), `${name}\n`);
+  execSync("git add README.md", { cwd: repoRoot, stdio: "pipe" });
+  execSync('git commit -m "init"', { cwd: repoRoot, stdio: "pipe" });
+  return repoRoot;
+};
 
 describe("POST /v1/tickets", () => {
   test("returns 404 when project does not exist", async () => {
@@ -480,5 +509,84 @@ describe("GET /v1/projects/:projectId/ticket-statuses", () => {
     expect(statuses.length).toBeGreaterThanOrEqual(6);
     expect(statuses.map((s: { name: string }) => s.name)).toContain("backlog");
     expect(statuses.map((s: { name: string }) => s.name)).toContain("wip");
+  });
+});
+
+describe("POST /v1/tickets/:id/attempts", () => {
+  test("creates workspace worktree and session for run attempt", async () => {
+    const repoRoot = createGitRepo("attempt-success-repo");
+
+    const repoRes = await app.request(`/v1/projects/${projectId}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "attempt-success-repo", path: repoRoot }),
+    });
+    expect(repoRes.status).toBe(201);
+    const repo = await repoRes.json();
+
+    const ticketRes = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId, content: "# Attempt success ticket\n\nImplement me" }),
+    });
+    expect(ticketRes.status).toBe(201);
+    const ticket = await ticketRes.json();
+
+    const attemptRes = await app.request(`/v1/tickets/${ticket.id}/attempts`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        repo_id: repo.id,
+        agent: "fake",
+        prompt: "Implement ticket",
+        mode: "worktree",
+      }),
+    });
+
+    expect(attemptRes.status).toBe(201);
+    const attempt = await attemptRes.json();
+    expect(attempt.mode).toBe("worktree");
+    expect(attempt.ticket.id).toBe(ticket.id);
+    expect(attempt.workspace.workspace_shorthand).toMatch(/^TP-\d+_A\d+$/);
+    expect(attempt.workspace.branch).toBe(`workspace/${attempt.workspace.workspace_shorthand}`);
+    expect(attempt.workspace.worktree_path).toContain(attempt.workspace.workspace_shorthand);
+    expect(attempt.session.workspace_id).toBe(attempt.workspace.id);
+  });
+
+  test("supports workspace-only creation when start_session is false", async () => {
+    const repoRoot = createGitRepo("attempt-workspace-only-repo");
+
+    const repoRes = await app.request(`/v1/projects/${projectId}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "attempt-workspace-only-repo", path: repoRoot }),
+    });
+    expect(repoRes.status).toBe(201);
+    const repo = await repoRes.json();
+
+    const ticketRes = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId, content: "# Attempt workspace-only ticket\n\nNo session" }),
+    });
+    expect(ticketRes.status).toBe(201);
+    const ticket = await ticketRes.json();
+
+    const attemptRes = await app.request(`/v1/tickets/${ticket.id}/attempts`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        repo_id: repo.id,
+        mode: "worktree",
+        start_session: false,
+      }),
+    });
+
+    expect(attemptRes.status).toBe(201);
+    const attempt = await attemptRes.json();
+    expect(attempt.mode).toBe("worktree");
+    expect(attempt.session).toBeNull();
+    expect(attempt.workspace.session_id).toBeNull();
+    expect(attempt.workspace.branch).toBe(`workspace/${attempt.workspace.workspace_shorthand}`);
   });
 });

@@ -35,7 +35,7 @@ The panel lives at `/projects/:projectId/tickets/:ticketShorthand`. It loads the
 
 1. Ticket markdown content must be editable with autosave.
 2. The header must expose ticket navigation plus ticket actions.
-3. The panel must support starting a run attempt for the ticket.
+3. The panel must support starting a run attempt for the ticket and surfacing success/failure clearly.
 4. The sidebar must expose ticket properties, sub-tickets, and attached files.
 5. Users must be able to create sub-tickets, break a ticket into sub-tickets, refine a ticket, archive a ticket, and delete a ticket.
 
@@ -58,6 +58,14 @@ The panel lives at `/projects/:projectId/tickets/:ticketShorthand`. It loads the
 4. Expose header actions for running an attempt, viewing the latest workspace, creating sub-tickets, refining, breaking down, archiving, and deleting.
 5. Render a sidebar with ticket metadata, parent and dependency links, tag editing, sub-ticket navigation, and file listings.
 
+### Run Attempt Flow
+
+1. When no attempts exist, the header shows `Run attempt` and opens the create-workspace modal.
+2. Confirming run attempt calls `POST /v1/tickets/:ticket_id/attempts` with agent/repo/branch/model context.
+3. On success, the modal closes and table-sync updates make the new attempt/session visible without manual refresh.
+4. On failure, the modal stays open and a toast is shown via `createAttemptDialog.error`.
+5. When attempts exist, the header button opens the latest workspace directly (`View workspace` behavior).
+
 ## Interface
 
 ### Route
@@ -70,7 +78,7 @@ The panel lives at `/projects/:projectId/tickets/:ticketShorthand`. It loads the
 
 | Action | Behavior |
 | ------ | -------- |
-| Run attempt | Starts an attempt using the current content or the ticket title. |
+| Run attempt | Starts an attempt using current content fallback to title, creates workspace + session, and closes the modal only on success. |
 | View workspace | Opens the latest attempt workspace when one exists. |
 | Create sub-ticket | Opens the create-ticket modal with the current ticket as parent. |
 | Break into sub-tickets | Starts a session using the built-in breakdown prompt. |
@@ -90,6 +98,7 @@ The panel lives at `/projects/:projectId/tickets/:ticketShorthand`. It loads the
 | ----- | ----- |
 | `ticketNotFound` state | The shorthand does not resolve to a ticket in the current project. |
 | Missing workspace navigation | The ticket has no latest attempt yet. |
+| `createAttemptDialog.error` toast | Attempt creation request fails; modal remains open so the user can retry. |
 
 ## Verification & Evidence
 

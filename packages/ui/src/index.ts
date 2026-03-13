@@ -2,6 +2,8 @@ export { ChakraProvider } from "@chakra-ui/react";
 export type { AlertProps } from "./components/alert";
 export { AlertMessage } from "./components/alert";
 export { Breadcrumb } from "./components/breadcrumb";
+export type { CheckboxProps } from "./components/checkbox";
+export { Checkbox } from "./components/checkbox";
 export { ContentPlaceholder, Label as ContentPlaceholderLabel } from "./components/content-placeholder";
 export { DeleteConfirmationModal } from "./components/delete-confirmation-modal";
 export { DiffBubble } from "./components/diff-bubble";

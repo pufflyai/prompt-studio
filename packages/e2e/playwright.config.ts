@@ -6,6 +6,7 @@ import { defineConfig, devices } from "@playwright/test";
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const dashboardPort = Number(process.env.E2E_DASHBOARD_PORT ?? "5174");
 const storagePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-storage-"));
+const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-home-"));
 
 export default defineConfig({
   testDir: "./src/ui",
@@ -37,6 +38,7 @@ export default defineConfig({
         PSTDIO_DB_PATH: ":memory:",
         PSTDIO_STORAGE_PATH: storagePath,
         PSTDIO_AGENTS: "fake",
+        HOME: homePath,
       },
     },
     {
@@ -46,6 +48,7 @@ export default defineConfig({
       timeout: 30_000,
       env: {
         PSTDIO_DISABLE_API_AUTO_START: "1",
+        HOME: homePath,
       },
     },
   ],

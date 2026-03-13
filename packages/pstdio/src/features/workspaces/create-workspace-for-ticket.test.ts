@@ -31,10 +31,20 @@ const mockWorkspace = {
   updated_at: "2026-03-05T00:00:00.000Z",
 };
 
+const mockTicketAttempt = {
+  mode: "worktree" as const,
+  ticket: {
+    id: "t-1",
+    shorthand: "PS-1",
+    display_title: "Test",
+  },
+  workspace: mockWorkspace,
+  session: null,
+};
+
 const baseDeps = {
   listTickets: async () => [mockTicket],
-  createWorkspace: async () => mockWorkspace,
-  createWorktree: async (_opts: { repoRoot: string; branch: string; path: string; base?: string }) => ({}),
+  createTicketAttempt: async () => mockTicketAttempt,
   getStartupScript: async () => null as string | null,
   setStartupLog: mock(async () => ({ file_id: "f-1" })),
   exec: mock() as never,
@@ -42,18 +52,22 @@ const baseDeps = {
 };
 
 describe("createWorkspaceForTicket", () => {
-  test("creates workspace with worktree", async () => {
+  test("creates workspace via ticket-attempt API with start_session=false", async () => {
     const log = mock();
-    const createWorktree = mock(async () => {});
-    const createWorkspace = mock(async () => mockWorkspace);
+    const createTicketAttempt = mock(async () => mockTicketAttempt);
 
     const result = await createWorkspaceForTicket(
       { projectId: "proj-1", repoRoot: "/repo", ticketShorthand: "PS-1" },
-      { ...baseDeps, createWorkspace, createWorktree, log },
+      { ...baseDeps, createTicketAttempt, log },
     );
 
-    expect(createWorkspace).toHaveBeenCalledTimes(1);
-    expect(createWorktree).toHaveBeenCalledTimes(1);
+    expect(createTicketAttempt).toHaveBeenCalledTimes(1);
+    expect(createTicketAttempt).toHaveBeenCalledWith("http://localhost:19840", "t-1", {
+      mode: "worktree",
+      start_session: false,
+      base: "HEAD",
+      repo_path: "/repo",
+    });
     expect(log).toHaveBeenCalledWith(
       `Created workspace PS-1_A1 for PS-1 at ${join(homedir(), ".pstdio", "workspaces", "PS-1_A1")}`,
     );
@@ -70,18 +84,18 @@ describe("createWorkspaceForTicket", () => {
   });
 
   test("uses base ref when provided", async () => {
-    const createWorktree = mock(async () => {});
+    const createTicketAttempt = mock(async () => mockTicketAttempt);
 
     await createWorkspaceForTicket(
       { projectId: "proj-1", repoRoot: "/repo", ticketShorthand: "PS-1", base: "main" },
-      { ...baseDeps, createWorktree },
+      { ...baseDeps, createTicketAttempt },
     );
 
-    expect(createWorktree).toHaveBeenCalledWith({
-      repoRoot: "/repo",
-      branch: "workspace/PS-1_A1",
-      path: join(homedir(), ".pstdio", "workspaces", "PS-1_A1"),
+    expect(createTicketAttempt).toHaveBeenCalledWith("http://localhost:19840", "t-1", {
+      mode: "worktree",
+      start_session: false,
       base: "main",
+      repo_path: "/repo",
     });
   });
 });

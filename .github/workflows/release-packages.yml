@@ -60,8 +60,6 @@ jobs:
       - name: Publish platform packages
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: bun run scripts/publish-platform-packages.ts
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create release PR or publish to npm
         id: changesets
@@ -72,7 +70,6 @@ jobs:
           createGithubReleases: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Upload binaries to GitHub Release
         if: steps.changesets.outputs.published == 'true'

@@ -1,5 +1,5 @@
-import { Button, HStack, Icon, Menu, Spinner, Stack, Switch, Text } from "@chakra-ui/react";
-import { MenuItem } from "@pstdio/ui";
+import { Button, HStack, Icon, Menu, Spinner, Stack, Text } from "@chakra-ui/react";
+import { MenuItem, Switch } from "@pstdio/ui";
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAgentModels } from "../hooks/use-agent-models";
@@ -74,16 +74,11 @@ export const OpencodeSettingsForm = (props: OpencodeSettingsFormProps) => {
           </Text>
         </Stack>
 
-        <Switch.Root
+        <Switch
           checked={settings.autoApprove ?? false}
           onCheckedChange={(e) => onUpdate({ autoApprove: e.checked })}
           disabled={isUpdating}
-        >
-          <Switch.HiddenInput />
-          <Switch.Control>
-            <Switch.Thumb />
-          </Switch.Control>
-        </Switch.Root>
+        />
       </HStack>
     </Stack>
   );

@@ -133,7 +133,7 @@ export type ApiCreateTicketAttemptResponse = {
     created_at: string;
     updated_at: string;
   };
-  session: { id: string; workspace_id: string; title: string; created_at: string; updated_at: string };
+  session: { id: string; workspace_id: string; title: string; created_at: string; updated_at: string } | null;
 };
 
 export type ApiCreateTicketAndStartResponse = {

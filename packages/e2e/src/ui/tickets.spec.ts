@@ -1,27 +1,45 @@
+import { execSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 
-const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string) => {
-  await page.addInitScript((currentProjectId: string) => {
-    localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "opencode");
-    localStorage.setItem(
-      `pstdio-project-settings/projects/${currentProjectId}/values`,
-      JSON.stringify({
-        state: {
-          lastSelectedAgent: "opencode",
-          lastSelectedModels: [],
-          lastSelectedRepo: "",
-          lastSelectedBranches: [],
-          sessionModalState: "closed",
-          selectedSessionId: null,
-        },
-        version: 0,
-      }),
-    );
-  }, projectId);
+const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string, agentId = "opencode") => {
+  await page.addInitScript(
+    ({ currentProjectId, currentAgentId }: { currentProjectId: string; currentAgentId: string }) => {
+      localStorage.setItem("onboarding-complete", "true");
+      localStorage.setItem("selected-agent", currentAgentId);
+      localStorage.setItem(
+        `pstdio-project-settings/projects/${currentProjectId}/values`,
+        JSON.stringify({
+          state: {
+            lastSelectedAgent: currentAgentId,
+            lastSelectedModels: [],
+            lastSelectedRepo: "",
+            lastSelectedBranches: [],
+            sessionModalState: "closed",
+            selectedSessionId: null,
+          },
+          version: 0,
+        }),
+      );
+    },
+    { currentProjectId: projectId, currentAgentId: agentId },
+  );
+};
+
+const createGitRepo = () => {
+  const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-e2e-ticket-attempt-repo-"));
+  execSync("git init", { cwd: repoRoot, stdio: "pipe" });
+  execSync('git config user.email "test@test.com"', { cwd: repoRoot, stdio: "pipe" });
+  execSync('git config user.name "Test"', { cwd: repoRoot, stdio: "pipe" });
+  writeFileSync(join(repoRoot, "README.md"), "ticket attempt e2e\n");
+  execSync("git add README.md", { cwd: repoRoot, stdio: "pipe" });
+  execSync('git commit -m "init"', { cwd: repoRoot, stdio: "pipe" });
+  return repoRoot;
 };
 
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
@@ -36,6 +54,19 @@ const createProjectViaApi = async (request: import("@playwright/test").APIReques
   const res = await request.post(`${apiBase}/v1/projects`, { data: { name } });
   expect(res.ok()).toBe(true);
   return (await res.json()) as { id: string; name: string };
+};
+
+const registerRepoViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  projectId: string,
+  name: string,
+  path: string,
+) => {
+  const res = await request.post(`${apiBase}/v1/projects/${projectId}/repos`, {
+    data: { name, path },
+  });
+  expect(res.ok()).toBe(true);
+  return (await res.json()) as { id: string; name: string; path: string };
 };
 
 const getTicketStatuses = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
@@ -401,5 +432,93 @@ test.describe("Ticket list additional coverage", () => {
     const allTickets = (await listRes.json()) as { id: string; tag_ids: string[] }[];
     const updatedTicket = allTickets.find((t) => t.id === ticket.id);
     expect(updatedTicket?.tag_ids).toHaveLength(1);
+  });
+});
+
+test.describe("Ticket detail run attempt", () => {
+  let projectId: string;
+  const repoDirs: string[] = [];
+
+  test.beforeEach(async ({ request }) => {
+    await deleteAllProjects(request);
+    const project = await createProjectViaApi(request, "Ticket Attempt Test Project");
+    projectId = project.id;
+  });
+
+  test.afterEach(() => {
+    for (const dir of repoDirs) {
+      rmSync(dir, { recursive: true, force: true });
+    }
+    repoDirs.length = 0;
+  });
+
+  test("creates attempt workspace and session from Run Attempt", async ({ page, request }) => {
+    const statuses = await getTicketStatuses(request, projectId);
+    const backlog = statuses.find((s) => s.name === "backlog")!;
+    const ticket = await createTicketViaApi(request, projectId, "Run attempt success ticket", backlog.id);
+    const repoRoot = createGitRepo();
+    repoDirs.push(repoRoot);
+    await registerRepoViaApi(request, projectId, "attempt-repo", repoRoot);
+
+    await bypassOnboarding(page, projectId, "fake");
+    await page.goto(`/projects/${projectId}/tickets/${ticket.shorthand}`);
+
+    await page.getByRole("button", { name: "Run Attempt", exact: true }).click();
+    const dialog = page.getByRole("dialog").last();
+    await expect(dialog.getByText("Create Workspace", { exact: true })).toBeVisible();
+
+    const attemptResponse = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        response.url().includes(`/v1/tickets/${ticket.id}/attempts`) &&
+        response.status() === 201,
+    );
+
+    await dialog.getByRole("button", { name: "Run Attempt", exact: true }).click();
+    await attemptResponse;
+
+    await expect
+      .poll(async () => {
+        const workspacesRes = await request.get(`${apiBase}/v1/workspaces?project_id=${projectId}`);
+        if (!workspacesRes.ok()) return 0;
+        const workspaces = (await workspacesRes.json()) as Array<{ ticket_shorthand: string }>;
+        return workspaces.filter((workspace) => workspace.ticket_shorthand === ticket.shorthand).length;
+      })
+      .toBe(1);
+
+    await expect
+      .poll(async () => {
+        const sessionsRes = await request.get(`${apiBase}/v1/sessions?project_id=${projectId}`);
+        if (!sessionsRes.ok()) return 0;
+        const sessions = (await sessionsRes.json()) as Array<{ id: string }>;
+        return sessions.length;
+      })
+      .toBeGreaterThan(0);
+  });
+
+  test("shows an error and keeps modal open when Run Attempt fails", async ({ page, request }) => {
+    const statuses = await getTicketStatuses(request, projectId);
+    const backlog = statuses.find((s) => s.name === "backlog")!;
+    const ticket = await createTicketViaApi(request, projectId, "Run attempt failure ticket", backlog.id);
+
+    await bypassOnboarding(page, projectId, "fake");
+    await page.goto(`/projects/${projectId}/tickets/${ticket.shorthand}`);
+
+    await page.getByRole("button", { name: "Run Attempt", exact: true }).click();
+    const dialog = page.getByRole("dialog").last();
+    await expect(dialog.getByText("Create Workspace", { exact: true })).toBeVisible();
+
+    const attemptResponse = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        response.url().includes(`/v1/tickets/${ticket.id}/attempts`) &&
+        response.status() >= 400,
+    );
+
+    await dialog.getByRole("button", { name: "Run Attempt", exact: true }).click();
+    await attemptResponse;
+
+    await expect(dialog.getByText("Create Workspace", { exact: true })).toBeVisible();
+    await expect(page.getByText("Failed to create attempt. Please try again.")).toBeVisible();
   });
 });

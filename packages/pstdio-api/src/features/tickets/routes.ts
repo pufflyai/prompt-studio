@@ -2,6 +2,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
 import type { RouteDeps } from "../deps";
 import { createTicketHandler, createTicketRoute } from "./endpoints/create-ticket";
+import { createTicketAttemptHandler, createTicketAttemptRoute } from "./endpoints/create-ticket-attempt";
 import { deleteTicketHandler, deleteTicketRoute } from "./endpoints/delete-ticket";
 import { getTicketHandler, getTicketRoute } from "./endpoints/get-ticket";
 import { getTicketFileContentHandler, getTicketFileContentRoute } from "./endpoints/get-ticket-file-content";
@@ -16,6 +17,7 @@ export const createTicketRoutes = (deps: RouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
 
   routes.openapi(createTicketRoute, createTicketHandler(deps));
+  routes.openapi(createTicketAttemptRoute, createTicketAttemptHandler(deps));
   routes.openapi(listTicketsRoute, listTicketsHandler(deps));
   routes.openapi(getTicketRoute, getTicketHandler(deps));
   routes.openapi(updateTicketRoute, updateTicketHandler(deps));

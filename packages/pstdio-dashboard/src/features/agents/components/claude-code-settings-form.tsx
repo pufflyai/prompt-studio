@@ -1,5 +1,5 @@
-import { Button, HStack, Icon, Menu, Spinner, Stack, Switch, Text } from "@chakra-ui/react";
-import { MenuItem } from "@pstdio/ui";
+import { Button, HStack, Icon, Menu, Spinner, Stack, Text } from "@chakra-ui/react";
+import { MenuItem, Switch } from "@pstdio/ui";
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAgentModels } from "../hooks/use-agent-models";
@@ -82,16 +82,11 @@ export const ClaudeCodeSettingsForm = (props: ClaudeCodeSettingsFormProps) => {
           </Text>
         </Stack>
 
-        <Switch.Root
+        <Switch
           checked={settings.planMode ?? false}
           onCheckedChange={(e) => onUpdate({ planMode: e.checked })}
           disabled={isUpdating}
-        >
-          <Switch.HiddenInput />
-          <Switch.Control>
-            <Switch.Thumb />
-          </Switch.Control>
-        </Switch.Root>
+        />
       </HStack>
 
       <HStack justify="space-between" alignItems="center">

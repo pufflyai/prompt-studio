@@ -11,17 +11,34 @@ import type {
 } from "./types";
 
 export const createTicketAttempt = async (input: CreateTicketAttemptInput) => {
+  const body: Record<string, unknown> = {
+    mode: input.mode ?? "worktree",
+  };
+
+  if (input.agent) {
+    body.agent = input.agent;
+  }
+  if (input.branch) {
+    body.branch = input.branch;
+  }
+  if (input.repoId) {
+    body.repo_id = input.repoId;
+  }
+  if (input.model) {
+    body.model = input.model;
+  }
+  if (input.prompt !== undefined) {
+    body.prompt = input.prompt;
+  }
+
   const response = await apiRequest<ApiCreateTicketAttemptResponse>(`/v1/tickets/${input.ticketId}/attempts`, {
     method: "POST",
-    body: {
-      agent: input.agent ?? null,
-      branch: input.branch ?? null,
-      repo_id: input.repoId ?? null,
-      mode: input.mode ?? "worktree",
-      model: input.model ?? null,
-      prompt: input.prompt ?? null,
-    },
+    body,
   });
+
+  if (!response.session) {
+    throw new Error("Ticket attempt did not start a session.");
+  }
 
   return {
     ticketId: response.ticket.id,

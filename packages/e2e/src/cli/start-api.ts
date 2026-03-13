@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -39,6 +39,7 @@ export type ApiInstance = {
   url: string;
   port: number;
   storagePath: string;
+  homePath: string;
   process: ChildProcess;
   stop: () => void;
 };
@@ -46,6 +47,7 @@ export type ApiInstance = {
 export const startApi = async (): Promise<ApiInstance> => {
   const port = await getFreePort();
   const storagePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-storage-"));
+  const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-home-"));
 
   const child = spawn("bun", ["run", "../../packages/pstdio-api/src/server.ts"], {
     cwd: join(import.meta.dirname, "../.."),
@@ -55,6 +57,7 @@ export const startApi = async (): Promise<ApiInstance> => {
       PSTDIO_DB_PATH: ":memory:",
       PSTDIO_STORAGE_PATH: storagePath,
       PSTDIO_AGENTS: "fake",
+      HOME: homePath,
     },
     stdio: "pipe",
   });
@@ -66,7 +69,12 @@ export const startApi = async (): Promise<ApiInstance> => {
     url,
     port,
     storagePath,
+    homePath,
     process: child,
-    stop: () => child.kill(),
+    stop: () => {
+      child.kill();
+      rmSync(storagePath, { recursive: true, force: true });
+      rmSync(homePath, { recursive: true, force: true });
+    },
   };
 };

@@ -19,7 +19,7 @@ export const createTempDir = () => mkdtempSync(join(tmpdir(), "pstdio-e2e-"));
 export const runPstdio = (args: string, cwd: string, env: Record<string, string>) =>
   execSync(`bun run ${PSTDIO_CLI} ${args}`, {
     cwd,
-    env: { ...process.env, ...env },
+    env: { ...process.env, PSTDIO_DISABLE_EMBED_MANIFEST: "1", ...env },
     encoding: "utf8",
     timeout: TEST_TIMEOUT,
   });
@@ -28,7 +28,7 @@ export const runPstdioSafe = (args: string, cwd: string, env: Record<string, str
   try {
     const stdout = execSync(`bun run ${PSTDIO_CLI} ${args}`, {
       cwd,
-      env: { ...process.env, ...env },
+      env: { ...process.env, PSTDIO_DISABLE_EMBED_MANIFEST: "1", ...env },
       encoding: "utf8",
       timeout: TEST_TIMEOUT,
     });
