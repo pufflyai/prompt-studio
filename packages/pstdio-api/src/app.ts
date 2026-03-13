@@ -1,6 +1,13 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { cors } from "hono/cors";
-import { createAgentRegistry, createClaudeCodeAgent, createOpencodeAgent } from "pstdio-agents";
+import {
+  type AgentId,
+  type AgentService,
+  createAgentRegistry,
+  createClaudeCodeAgent,
+  createFakeAgent,
+  createOpencodeAgent,
+} from "pstdio-agents";
 import {
   createAgentConfigsService,
   createDb,
@@ -46,7 +53,36 @@ interface AppOptions {
   dbPath?: string;
   storagePath?: string;
   apiToken?: string;
+  agents?: AgentService[];
 }
+
+const agentFactories: Record<AgentId, () => AgentService> = {
+  "claude-code": createClaudeCodeAgent,
+  opencode: createOpencodeAgent,
+  fake: createFakeAgent,
+};
+
+const parseAgentIds = (value: string | undefined) =>
+  value
+    ?.split(",")
+    .map((id) => id.trim())
+    .filter(Boolean) ?? [];
+
+const resolveDefaultAgents = (options?: AppOptions) => {
+  if (options?.agents) return options.agents;
+
+  const configuredAgentIds = parseAgentIds(process.env.PSTDIO_AGENTS);
+  if (configuredAgentIds.length === 0) {
+    return [createClaudeCodeAgent(), createOpencodeAgent()];
+  }
+
+  const ids = [...new Set(configuredAgentIds)];
+  return ids.map((id) => {
+    const factory = agentFactories[id as AgentId];
+    if (!factory) throw new Error(`Unsupported agent in PSTDIO_AGENTS: ${id}`);
+    return factory();
+  });
+};
 
 export const createApp = async (options?: AppOptions) => {
   const { db, close: closeDb } = await createDb({ path: options?.dbPath ?? process.env.PSTDIO_DB_PATH });
@@ -62,7 +98,7 @@ export const createApp = async (options?: AppOptions) => {
 
   const docsService = createDocsService(reposService);
   const changelogService = createChangelogService(reposService);
-  const agentRegistry = createAgentRegistry([createClaudeCodeAgent(), createOpencodeAgent()]);
+  const agentRegistry = createAgentRegistry(resolveDefaultAgents(options));
 
   const agentConfigsService = createAgentConfigsService(db);
   const skillsDbService = createSkillsDbService(db);

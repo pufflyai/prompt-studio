@@ -6,7 +6,7 @@ const apiBase = `http://localhost:${apiPort}`;
 const bypassOnboarding = async (page: import("@playwright/test").Page) => {
   await page.addInitScript(() => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "opencode");
+    localStorage.setItem("selected-agent", "fake");
   });
 };
 
@@ -35,7 +35,7 @@ const createSessionViaApi = async (
       project_id: projectId,
       title,
       prompt: title,
-      agent: "opencode",
+      agent: "fake",
     },
   });
   expect(res.ok()).toBe(true);
@@ -63,7 +63,7 @@ test.describe("Sessions page", () => {
   test.beforeEach(async ({ request }) => {
     test.setTimeout(10_000);
     await deleteAllProjects(request);
-    await configureAgent(request, "opencode");
+    await configureAgent(request, "fake");
     const project = await createProjectViaApi(request, "Sessions Test Project");
     projectId = project.id;
   });
@@ -152,6 +152,35 @@ test.describe("Sessions page", () => {
     await page.getByRole("button", { name: "Session actions" }).click();
     await expect(page.getByText("Download session JSON")).toBeVisible();
     await expect(page.getByText("Archive session")).toBeVisible();
+  });
+
+  test("submits a message from the sessions page and creates a session", async ({ page }) => {
+    await bypassOnboarding(page);
+    const prompt = "Session page new message";
+
+    await page.goto(`/projects/${projectId}/sessions`);
+
+    const contentEditor = page.locator('[contenteditable="true"]').first();
+    await contentEditor.fill(prompt);
+    await page.getByRole("button", { name: "Message Sending" }).click();
+
+    await page.waitForURL(new RegExp(`/projects/${projectId}/sessions/[^/]+$`));
+    await expect(page.getByText(prompt).first()).toBeVisible();
+    await expect(page.getByText(`Fake Agent: completed "${prompt}"`).first()).toBeVisible();
+  });
+
+  test("opens selected session in bubble and navigates back", async ({ page, request }) => {
+    await bypassOnboarding(page);
+    const session = await createSessionViaApi(request, projectId, "Open in bubble session");
+
+    await page.goto(`/projects/${projectId}/docs`);
+    await page.goto(`/projects/${projectId}/sessions/${session.id}`);
+    await page.getByRole("button", { name: "Open in bubble" }).click();
+
+    await page.waitForURL(`**/projects/${projectId}/docs`);
+    const sessionBubble = page.getByRole("dialog");
+    await expect(sessionBubble).toBeVisible();
+    await expect(sessionBubble.getByText("Open in bubble session").first()).toBeVisible();
   });
 
   test("shows only the 6 most recent sessions in the chat dropdown and links to sessions page", async ({

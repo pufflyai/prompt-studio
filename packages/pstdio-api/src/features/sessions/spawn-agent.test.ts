@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import type { AgentService } from "pstdio-agents";
 import { createSessionStore } from "./session-store";
 import { resumeAgentSession } from "./spawn-agent";
@@ -15,7 +15,7 @@ const buildAgent = () => {
     id: "claude-code",
     name: "Claude Code",
     capabilities: () => [],
-    checkAvailability: () => ({ available: false, reason: "NOT_FOUND" }),
+    checkAvailability: () => ({ type: "NOT_FOUND" }),
     listModels: () => [],
     startSession: async () => ({}),
     resumeSession,
@@ -29,20 +29,7 @@ const buildAgent = () => {
 };
 
 describe("resumeAgentSession", () => {
-  const originalDryRun = process.env.PSTDIO_DRY_RUN;
-
-  afterEach(() => {
-    if (originalDryRun === undefined) {
-      delete process.env.PSTDIO_DRY_RUN;
-      return;
-    }
-
-    process.env.PSTDIO_DRY_RUN = originalDryRun;
-  });
-
   test("uses existing message count as default messageOffset", async () => {
-    delete process.env.PSTDIO_DRY_RUN;
-
     const { agent, getMessages, resumeSession } = buildAgent();
     const sessionStore = createSessionStore();
 
@@ -58,7 +45,11 @@ describe("resumeAgentSession", () => {
         agentRegistry: {
           get: () => agent,
           list: () => [],
-          checkAll: () => ({ "claude-code": { available: true }, opencode: { available: true } }),
+          checkAll: () => ({
+            "claude-code": { type: "INSTALLED" },
+            opencode: { type: "INSTALLED" },
+            fake: { type: "INSTALLED" },
+          }),
         },
         sessionStore,
         sessionsService: {
@@ -79,8 +70,6 @@ describe("resumeAgentSession", () => {
   });
 
   test("creates the stream entry before waiting for message history", async () => {
-    delete process.env.PSTDIO_DRY_RUN;
-
     let resolveMessages!: (messages: unknown[]) => void;
     const pendingMessages = new Promise<unknown[]>((resolve) => {
       resolveMessages = resolve;
@@ -92,7 +81,7 @@ describe("resumeAgentSession", () => {
       id: "claude-code",
       name: "Claude Code",
       capabilities: () => [],
-      checkAvailability: () => ({ available: false, reason: "NOT_FOUND" }),
+      checkAvailability: () => ({ type: "NOT_FOUND" }),
       listModels: () => [],
       startSession: async () => ({}),
       resumeSession,
@@ -115,7 +104,11 @@ describe("resumeAgentSession", () => {
         agentRegistry: {
           get: () => agent,
           list: () => [],
-          checkAll: () => ({ "claude-code": { available: true }, opencode: { available: true } }),
+          checkAll: () => ({
+            "claude-code": { type: "INSTALLED" },
+            opencode: { type: "INSTALLED" },
+            fake: { type: "INSTALLED" },
+          }),
         },
         sessionStore,
         sessionsService: {

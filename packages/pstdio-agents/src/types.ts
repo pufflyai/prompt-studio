@@ -1,4 +1,4 @@
-export type AgentId = "opencode" | "claude-code";
+export type AgentId = "opencode" | "claude-code" | "fake";
 
 export type SessionMessageRole = "user" | "assistant" | "tool" | "system" | "developer";
 
@@ -227,5 +227,5 @@ export type AgentService = {
 export type AgentRegistry = {
   get(id: AgentId): AgentService | null;
   list(): AgentService[];
-  checkAll(): Record<AgentId, AvailabilityInfo>;
+  checkAll(): Partial<Record<AgentId, AvailabilityInfo>>;
 };

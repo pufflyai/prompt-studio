@@ -1,25 +1,34 @@
 import { Flex, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
 import { HorizontalMenuStack, Tooltip } from "@pstdio/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { PenBox } from "lucide-react";
+import { ArrowLeft, PenBox } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
+import { useProjectSettingsStore } from "@/features/project-settings/store";
 import { RepoBrowserContainer } from "@/features/workspaces/components/repo-browser.container";
 import { SessionActionMenu } from "../components/session-action-menu";
 import { SessionChatView } from "../components/session-chat-view";
 import { SessionsList } from "../components/sessions-list";
 import { useArchiveSession } from "../hooks/use-archive-session";
+import { useCreateProjectSession } from "../hooks/use-create-project-session";
 import { useProjectSession } from "../hooks/use-project-session";
 import { useProjectSessions } from "../hooks/use-project-sessions";
 import { useSessionWorkspace } from "../hooks/use-session-workspace";
 import { downloadSessionJson } from "../utils/session-download";
 import { getVisibleSessions } from "../utils/visible-sessions";
+import { createSessionFromPrompt, openSessionBubbleAndGoBack } from "./sessions-panel-actions";
 
 export const SessionsPanel = () => {
   const { t } = useTranslation("projects");
   const { projectId, sessionId } = useParams({ strict: false });
   const navigate = useNavigate();
+  const setSessionModalState = useProjectSettingsStore((state) => state.setSessionModalState);
+  const setSelectedSessionId = useProjectSettingsStore((state) => state.setSelectedSessionId);
+  const lastSelectedAgent = useProjectSettingsStore((state) => state.lastSelectedAgent);
+  const lastSelectedModels = useProjectSettingsStore((state) => state.lastSelectedModels);
   const selectedSessionId = typeof sessionId === "string" ? sessionId : null;
+  const createSession = useCreateProjectSession();
+  const model = lastSelectedModels[0] ?? undefined;
 
   const { data: sessions = [], isLoading } = useProjectSessions(projectId);
   const visibleSessions = getVisibleSessions(sessions);
@@ -36,6 +45,33 @@ export const SessionsPanel = () => {
 
   const handleNewSession = () => {
     navigate({ to: `/projects/${projectId}/sessions` });
+  };
+
+  const handleCreateSession = (prompt: string) => {
+    createSessionFromPrompt({
+      projectId,
+      prompt,
+      agent: lastSelectedAgent,
+      model,
+      createSession: createSession.mutate,
+      openSession: handleSelectSession,
+    });
+  };
+
+  const handleOpenInBubble = () => {
+    openSessionBubbleAndGoBack({
+      sessionId: selectedSessionId,
+      setSessionModalState,
+      setSelectedSessionId,
+      navigateBack: () => {
+        if (typeof window !== "undefined" && window.history.length > 1) {
+          window.history.back();
+          return;
+        }
+
+        navigate({ to: projectId ? `/projects/${projectId}` : "/projects" });
+      },
+    });
   };
 
   const handleArchive = () => {
@@ -77,6 +113,16 @@ export const SessionsPanel = () => {
             </Text>
 
             <HStack gap="2xs">
+              <Tooltip content={t("chatInput.session.openInBubble")}>
+                <IconButton
+                  size="xs"
+                  variant="ghost"
+                  aria-label={t("chatInput.session.openInBubble")}
+                  onClick={handleOpenInBubble}
+                >
+                  <ArrowLeft size={16} />
+                </IconButton>
+              </Tooltip>
               {downloadableSession ? (
                 <SessionActionMenu
                   onDownloadSession={() => downloadSessionJson(downloadableSession)}
@@ -90,6 +136,7 @@ export const SessionsPanel = () => {
             <Stack flex="1" minH="0" w="full" maxW="52rem">
               <SessionChatView
                 sessionId={selectedSessionId}
+                onCreateSession={handleCreateSession}
                 repoMenu={
                   <HStack justify="space-between" align="center" wrap="wrap" w="full">
                     <AgentBrowserContainer />

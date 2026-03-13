@@ -42,6 +42,7 @@
     "@types/yargs": "^17.0.35",
     "pstdio-agents": "workspace:*",
     "pstdio-api": "workspace:*",
+    "pstdio-dashboard": "workspace:*",
     "pstdio-db": "workspace:*",
     "pstdio-wt": "workspace:*",
     "typescript": "~5.9.3"

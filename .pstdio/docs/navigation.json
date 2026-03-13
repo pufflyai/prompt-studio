@@ -161,12 +161,21 @@
           "link": "/architecture/worktrees"
         },
         {
-          "text": "Unified Bun Test",
-          "link": "/adrs/unified-bun-test"
-        },
-        {
-          "text": "Dry Run Flag",
-          "link": "/adrs/dry-run-flag"
+          "text": "ADRs",
+          "items": [
+            {
+              "text": "0001 Unified Bun Test",
+              "link": "/adrs/0001-unified-bun-test"
+            },
+            {
+              "text": "0002 Dry Run Flag",
+              "link": "/adrs/0002-dry-run-flag"
+            },
+            {
+              "text": "0003 Replace Dry Run With Fake Agent",
+              "link": "/adrs/0003-replace-dry-run-with-fake-agent"
+            }
+          ]
         }
       ]
     },

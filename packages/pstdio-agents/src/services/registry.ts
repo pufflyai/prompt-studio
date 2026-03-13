@@ -6,9 +6,8 @@ export const createAgentRegistry = (agents: AgentService[]): AgentRegistry => {
   const get = (id: AgentId) => map.get(id) ?? null;
   const list = () => [...map.values()];
   const checkAll = () =>
-    Object.fromEntries(list().map((agent) => [agent.id, agent.checkAvailability()])) as Record<
-      AgentId,
-      AvailabilityInfo
+    Object.fromEntries(list().map((agent) => [agent.id, agent.checkAvailability()])) as Partial<
+      Record<AgentId, AvailabilityInfo>
     >;
 
   return { get, list, checkAll };

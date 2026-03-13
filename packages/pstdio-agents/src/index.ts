@@ -4,6 +4,7 @@ export { implement, review } from "./commands";
 export type { KnownAgent } from "./known-agents";
 export { findAgent, isKnownAgentId, KNOWN_AGENT_IDS, KNOWN_AGENTS } from "./known-agents";
 export { createClaudeCodeAgent } from "./providers/claude-code";
+export { createFakeAgent } from "./providers/fake";
 export { createOpencodeAgent } from "./providers/opencode";
 export { createApprovalService } from "./services/approval-service";
 export { createEventStore } from "./services/event-store";

@@ -54,7 +54,7 @@ export const startApi = async (): Promise<ApiInstance> => {
       PORT: String(port),
       PSTDIO_DB_PATH: ":memory:",
       PSTDIO_STORAGE_PATH: storagePath,
-      PSTDIO_DRY_RUN: "1",
+      PSTDIO_AGENTS: "fake",
     },
     stdio: "pipe",
   });

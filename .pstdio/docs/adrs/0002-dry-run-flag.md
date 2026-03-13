@@ -1,4 +1,8 @@
-# ADR: PSTDIO_DRY_RUN environment variable
+# ADR: `PSTDIO_DRY_RUN` Environment Variable (Superseded)
+
+## Status
+
+Superseded on 2026-03-13 by [ADR: Replace `PSTDIO_DRY_RUN` With Fake Agent](/adrs/0003-replace-dry-run-with-fake-agent).
 
 ## Decision
 
@@ -8,11 +12,11 @@ Add a `PSTDIO_DRY_RUN` environment variable to the API server. When set, `spawnA
 
 E2E tests create sessions via `POST /v1/sessions` to test UI flows (navigation, session list rendering, status updates). The `createSessionHandler` calls `spawnAgentSession`, which launches a real agent process (OpenCode or Claude Code) against the repository.
 
-This meant every E2E test run spawned multiple real AI agents that made actual changes to the codebase — burning tokens, mutating files, and creating noise (e.g. "Navigation test session" branches).
+This meant every E2E test run spawned multiple real AI agents that made actual changes to the codebase: burning tokens, mutating files, and creating noise (for example, "Navigation test session" branches).
 
 The tests only need a session record in the database with the correct status transitions. They do not need the agent to actually run.
 
-## What changes
+## What Changes
 
 | Before                                       | After                                                             |
 | -------------------------------------------- | ----------------------------------------------------------------- |
@@ -28,8 +32,19 @@ The tests only need a session record in the database with the correct status tra
 
 ### Lost: E2E coverage of real agent lifecycle
 
-Tests no longer exercise the full spawn → stream → exit flow. Agent integration must be tested separately (manual or dedicated agent-level tests).
+Tests no longer exercise the full spawn -> stream -> exit flow. Agent integration must be tested separately (manual or dedicated agent-level tests).
 
-### Gained: safe, fast, deterministic E2E tests
+### Gained: Safe, fast, deterministic E2E tests
 
-No real agents running, no token spend, no file mutations, no flaky agent timeouts.
+No real agents running, no token spend, no file mutations, and fewer flaky agent timeouts.
+
+## Why It Was Superseded
+
+`PSTDIO_DRY_RUN` solved cost and safety, but it bypassed important behavior:
+
+- no event-store message patches
+- no SSE lifecycle coverage
+- no process-exit persistence path
+- no session-store cleanup path
+
+The superseding ADR keeps deterministic testing while restoring full lifecycle coverage by using `PSTDIO_AGENTS=fake` and a fake agent implementation instead of skipping code paths.

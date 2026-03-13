@@ -36,6 +36,7 @@ export default defineConfig({
         PORT: String(apiPort),
         PSTDIO_DB_PATH: ":memory:",
         PSTDIO_STORAGE_PATH: storagePath,
+        PSTDIO_AGENTS: "fake",
       },
     },
     {
