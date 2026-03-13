@@ -199,6 +199,46 @@ test.describe("Project creation", () => {
     await expect(main.getByText("My New Project", { exact: true })).toBeVisible();
   });
 
+  test("seeds bundled templates when creating a project via the dialog", async ({ page, request }) => {
+    const repoPath = createTempGitRepo();
+    tempRepoPaths.push(repoPath);
+
+    await bypassOnboarding(page);
+    await page.goto("/projects");
+
+    await page.getByRole("button", { name: "Create project" }).first().click();
+    await page.getByPlaceholder("Project name").fill("Templates Project");
+    await selectRepoFromFolderPicker(page, repoPath);
+
+    const createProjectDone = page.waitForResponse(
+      (response) =>
+        response.url().endsWith("/v1/projects") && response.request().method() === "POST" && response.status() === 201,
+    );
+    await page.getByRole("button", { name: "Create project", exact: true }).last().click();
+    const createdProjectResponse = await createProjectDone;
+    const createdProject = (await createdProjectResponse.json()) as { id: string; name: string };
+
+    const templatesResponse = await request.get(`${apiBase}/v1/projects/${createdProject.id}/templates`);
+    expect(templatesResponse.ok()).toBe(true);
+    const templates = (await templatesResponse.json()) as Array<{ name: string; is_default: boolean }>;
+
+    expect(templates.map((template) => template.name).sort()).toEqual([
+      "adr",
+      "cookbook",
+      "lessons-learned",
+      "prd",
+      "proposal",
+      "review-me",
+      "ticket",
+    ]);
+    expect(
+      templates
+        .filter((template) => template.is_default)
+        .map((template) => template.name)
+        .sort(),
+    ).toEqual(["prd", "ticket"]);
+  });
+
   test("shows validation errors when submitting empty form", async ({ page }) => {
     await bypassOnboarding(page);
     await page.goto("/projects");

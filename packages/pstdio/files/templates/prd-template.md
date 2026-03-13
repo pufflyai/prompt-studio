@@ -95,9 +95,3 @@ created: "{{CREATED_AT}}"
 
 1. [Milestone or phase]
 2. [Milestone or phase]
-
-## Verification & Evidence
-
-- **Commands to run**: [exact commands]
-- **Expected evidence**: [logs, HTTP responses, screenshots/videos/traces, artifacts]
-- **Where to find artifacts**: [paths, URLs, container/log sources]

@@ -36,18 +36,18 @@ describe("POST /v1/projects/:id/templates", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        name: "ticket",
+        name: "custom-ticket",
         template_type: "ticket",
         content: "# {{TICKET_TITLE}}",
-        is_default: true,
+        is_default: false,
       }),
     });
 
     expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.name).toBe("ticket");
+    expect(body.name).toBe("custom-ticket");
     expect(body.template_type).toBe("ticket");
-    expect(body.is_default).toBe(true);
+    expect(body.is_default).toBe(false);
   });
 
   test("returns 409 for duplicate name", async () => {
@@ -55,7 +55,7 @@ describe("POST /v1/projects/:id/templates", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        name: "ticket",
+        name: "custom-ticket",
         template_type: "ticket",
         content: "duplicate",
       }),
@@ -71,8 +71,17 @@ describe("GET /v1/projects/:id/templates", () => {
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body).toHaveLength(1);
-    expect(body[0].name).toBe("ticket");
+    expect(body).toHaveLength(8);
+    expect(body.map((template: { name: string }) => template.name)).toEqual([
+      "adr",
+      "cookbook",
+      "custom-ticket",
+      "lessons-learned",
+      "prd",
+      "proposal",
+      "review-me",
+      "ticket",
+    ]);
   });
 });
 
@@ -83,7 +92,19 @@ describe("GET /v1/projects/:id/templates/:name", () => {
 
     const body = await res.json();
     expect(body.name).toBe("ticket");
-    expect(body.content).toBe("# {{TICKET_TITLE}}");
+    expect(body.content).toContain("# {{TICKET_TITLE}}");
+    expect(body.content).toContain('ticket_id: "{{TICKET_ID}}"');
+  });
+
+  test("returns lessons-learned template with bracket placeholders", async () => {
+    const res = await app.request(`/v1/projects/${projectId}/templates/lessons-learned`);
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.name).toBe("lessons-learned");
+    expect(body.content).toContain("## Summary\n\n[One paragraph.]");
+    expect(body.content).toContain("## Impact\n\n[Who or what was affected?]");
+    expect(body.content).toContain("## Detection\n\n[How was it noticed? CI, user report, local dev, etc.]");
   });
 
   test("returns 404 for missing template", async () => {
@@ -129,7 +150,8 @@ describe("DELETE /v1/projects/:id/templates/:name", () => {
 
     const listRes = await app.request(`/v1/projects/${projectId}/templates`);
     const list = await listRes.json();
-    expect(list).toHaveLength(0);
+    expect(list).toHaveLength(7);
+    expect(list.find((template: { name: string }) => template.name === "ticket")).toBeUndefined();
   });
 
   test("returns 404 for missing template", async () => {

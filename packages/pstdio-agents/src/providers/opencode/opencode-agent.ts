@@ -137,6 +137,7 @@ export const createOpencodeAgent = (
   ) => {
     let lastSnapshot = "";
     let done = false;
+    let failed = false;
 
     messageComplete
       .then(() => {
@@ -144,6 +145,7 @@ export const createOpencodeAgent = (
       })
       .catch(() => {
         done = true;
+        failed = true;
       });
 
     while (!done) {
@@ -172,9 +174,10 @@ export const createOpencodeAgent = (
       // Ignore
     }
 
-    eventStore.push({ op: "replace", path: "/status", value: "completed" });
+    const status = failed ? "failed" : "completed";
+    eventStore.push({ op: "replace", path: "/status", value: status });
 
-    return { code: 0 as number | null, signal: null as string | null };
+    return { code: failed ? 1 : (0 as number | null), signal: null as string | null };
   };
 
   const startSession = async (input: SessionStartInput) => {

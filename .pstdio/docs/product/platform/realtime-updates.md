@@ -82,12 +82,12 @@ Heartbeats carry the latest sequence id to keep the connection warm.
 
 ### SSE Event Types
 
-| Event | Purpose |
-| ----- | ------- |
-| `init` | Full state bootstrap. |
-| `sync:set` | Insert or update one row. |
-| `sync:delete` | Delete one row. |
-| `heartbeat` | Keepalive plus current sequence id. |
+| Event         | Purpose                             |
+| ------------- | ----------------------------------- |
+| `init`        | Full state bootstrap.               |
+| `sync:set`    | Insert or update one row.           |
+| `sync:delete` | Delete one row.                     |
+| `heartbeat`   | Keepalive plus current sequence id. |
 
 ## Rules & Constraints
 
@@ -97,13 +97,7 @@ Heartbeats carry the latest sequence id to keep the connection warm.
 
 ## Errors
 
-| Error | Cause |
-| ----- | ----- |
-| Stale UI after reconnect | The client lost its sequence cursor or failed to replay missed events. |
-| Missing live updates | The sync stream could not connect or the event bus did not emit the change. |
-
-## Verification & Evidence
-
-- **Commands to run**: `sed -n '1,220p' packages/pstdio-api/src/features/sync/stream.ts`, `sed -n '1,220p' packages/pstdio/src/features/sync/collections.ts`
-- **Expected evidence**: The stream emits `init`, `sync:set`, `sync:delete`, and `heartbeat`, and the client collections map the same synced tables.
-- **Where to find artifacts**: `packages/pstdio-api/src/features/sync/`, `packages/pstdio-dashboard/src/features/sync/`, `packages/pstdio/src/features/sync/`
+| Error                    | Cause                                                                       |
+| ------------------------ | --------------------------------------------------------------------------- |
+| Stale UI after reconnect | The client lost its sequence cursor or failed to replay missed events.      |
+| Missing live updates     | The sync stream could not connect or the event bus did not emit the change. |

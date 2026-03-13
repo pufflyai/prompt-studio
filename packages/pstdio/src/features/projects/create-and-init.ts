@@ -2,7 +2,6 @@ import { basename } from "node:path";
 import { readConfig, writeConfig } from "@/features/config/config";
 import { scaffoldDocs } from "@/features/docs/scaffold";
 import { installDefaultSkills } from "@/features/skills/install-default-skills";
-import { seedBundledTemplates } from "@/features/templates/seed-bundled-templates";
 import { API_URL } from "../api-url";
 import { createProject } from "./api/create-project";
 import { registerRepo } from "./api/register-repo";
@@ -25,7 +24,6 @@ export const createAndInitProject = async (root: string, name: string, options?:
 
   writeConfig(root, { project_id: project.id });
   await scaffoldDocs(root);
-  await seedBundledTemplates(API_URL, project.id);
   await installDefaultSkills(root, project.id, API_URL, options?.homedir);
   return project;
 };

@@ -6,9 +6,6 @@ import { createAndInitProject } from "./create-and-init";
 
 const tmpBase = join(import.meta.dirname, "__test-tmp__");
 
-const templateResponse = { status: 201, body: { id: "tpl", name: "t", template_type: "document", is_default: false } };
-const seedTemplateResponses = Array.from({ length: 7 }, () => templateResponse);
-
 const skillFixture = (name: string) => ({
   id: `id-${name}`,
   project_id: "proj-1",
@@ -43,7 +40,6 @@ describe("createAndInitProject", () => {
     mockFetchSequence([
       { status: 201, body: { id: "proj-1", name: "Test" } },
       { status: 201, body: { id: "repo-1", name: "create-init", path: "/tmp/create-init" } },
-      ...seedTemplateResponses,
       { status: 200, body: [{ agent_id: "opencode", is_default: true }] },
       skillListResponse,
       ...skillGetResponses,
@@ -54,8 +50,8 @@ describe("createAndInitProject", () => {
     const project = await createAndInitProject(root, "Test", { homedir: fakeHome, repoPaths: [root] });
 
     expect(project).toEqual({ id: "proj-1", name: "Test" });
-    // 1 create + 1 register + 7 templates + 1 agents + 1 skill list + 2 skill gets = 13
-    expect(globalThis.fetch).toHaveBeenCalledTimes(13);
+    // 1 create + 1 register + 1 agents + 1 skill list + 2 skill gets = 6
+    expect(globalThis.fetch).toHaveBeenCalledTimes(6);
 
     const config = JSON.parse(readFileSync(join(root, ".pstdio", "config.json"), "utf8"));
     expect(config.project_id).toBe("proj-1");
@@ -70,7 +66,6 @@ describe("createAndInitProject", () => {
   test("creates project with no repos when repoPaths is empty", async () => {
     mockFetchSequence([
       { status: 201, body: { id: "proj-no-repo", name: "NoRepo" } },
-      ...seedTemplateResponses,
       { status: 200, body: [] }, // no agents configured
     ]);
     const root = setup("no-repo");
@@ -81,8 +76,8 @@ describe("createAndInitProject", () => {
     });
 
     expect(project).toEqual({ id: "proj-no-repo", name: "NoRepo" });
-    // 1 create + 0 registerRepo + 7 templates + 1 agents (empty → early return) = 9
-    expect(globalThis.fetch).toHaveBeenCalledTimes(9);
+    // 1 create + 0 registerRepo + 1 agents (empty → early return) = 2
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
 
     const config = JSON.parse(readFileSync(join(root, ".pstdio", "config.json"), "utf8"));
     expect(config.project_id).toBe("proj-no-repo");
@@ -103,7 +98,6 @@ describe("createAndInitProject", () => {
     mockFetchSequence([
       { status: 201, body: { id: "proj-3", name: "HasDocs" } },
       { status: 201, body: { id: "repo-3", name: "has-docs", path: "/tmp/has-docs" } },
-      ...seedTemplateResponses,
       { status: 200, body: [] },
     ]);
     const root = setup("has-docs");

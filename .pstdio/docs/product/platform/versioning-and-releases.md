@@ -63,17 +63,17 @@ The release path is:
 
 ### Contributor Commands
 
-| Command | Purpose |
-| ------- | ------- |
-| `bun changeset` | Declare package bumps and changelog summary. |
+| Command           | Purpose                                              |
+| ----------------- | ---------------------------------------------------- |
+| `bun changeset`   | Declare package bumps and changelog summary.         |
 | `bun run release` | Build and publish through Changesets when run by CI. |
 
 ### Workflow
 
-| File | Purpose |
-| ---- | ------- |
+| File                                     | Purpose                                    |
+| ---------------------------------------- | ------------------------------------------ |
 | `.github/workflows/release-packages.yml` | Automates version PR creation and publish. |
-| `.changeset/config.json` | Changesets repo configuration. |
+| `.changeset/config.json`                 | Changesets repo configuration.             |
 
 ## Rules & Constraints
 
@@ -83,13 +83,7 @@ The release path is:
 
 ## Errors
 
-| Error | Cause |
-| ----- | ----- |
-| No version PR appears | No pending changesets were merged to `main`. |
-| Publish step fails | Registry auth, package metadata, or build output was invalid. |
-
-## Verification & Evidence
-
-- **Commands to run**: `sed -n '1,220p' .github/workflows/release-packages.yml`, `sed -n '1,220p' package.json`
-- **Expected evidence**: The workflow publishes through `bun run release`, and the root scripts use Changesets for versioning.
-- **Where to find artifacts**: `.github/workflows/release-packages.yml`, `.changeset/`, `package.json`
+| Error                 | Cause                                                         |
+| --------------------- | ------------------------------------------------------------- |
+| No version PR appears | No pending changesets were merged to `main`.                  |
+| Publish step fails    | Registry auth, package metadata, or build output was invalid. |

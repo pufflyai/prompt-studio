@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { createEventStore } from "../../services/event-store";
+import type { JsonPatch, SessionMessage } from "../../types";
 import { createOpencodeAgent } from "./opencode-agent";
 
 // --- Helper ---
@@ -17,6 +19,20 @@ const agent = (opts: { available?: boolean; modelsOutput?: string } = {}) =>
       fetcher: async () => new Response("{}"),
     },
   );
+
+type MockMessage = { role: string; content: { type: string; text: string }[] };
+
+const serviceOverrides = () => ({
+  startServer: async () => "http://localhost:4096",
+  serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
+  pingServer: async () => true,
+  isPortOpen: async () => true,
+});
+
+const agentDefaults = () => ({
+  isCommandAvailable: () => true,
+  getModelsOutput: () => "",
+});
 
 // --- Factory ---
 
@@ -154,5 +170,83 @@ describe("getMessages", () => {
     expect(messages[0].parts[0]).toMatchObject({ type: "text", text: "hello" });
     expect(messages[1].role).toBe("assistant");
     expect(messages[1].parts[0]).toMatchObject({ type: "text", text: "hi there" });
+  });
+});
+
+// --- resumeSession ---
+
+describe("resumeSession", () => {
+  test("pushes follow-up messages to event store", async () => {
+    const sessionMessages: Record<string, MockMessage[]> = {
+      "oc-1": [
+        { role: "user", content: [{ type: "text", text: "initial" }] },
+        { role: "assistant", content: [{ type: "text", text: "response" }] },
+      ],
+    };
+
+    const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+
+      const postMatch = method === "POST" && url.match(/\/session\/([^/]+)\/message/);
+      if (postMatch) {
+        const id = postMatch[1];
+        const body = JSON.parse(init?.body as string);
+        sessionMessages[id] = sessionMessages[id] ?? [];
+        sessionMessages[id].push(
+          { role: "user", content: [{ type: "text", text: body.parts[0].text }] },
+          { role: "assistant", content: [{ type: "text", text: `Reply: ${body.parts[0].text}` }] },
+        );
+        return new Response(JSON.stringify({ info: {}, parts: [] }));
+      }
+
+      const getMatch = method === "GET" && url.match(/\/session\/([^/]+)\/message/);
+      if (getMatch) {
+        return new Response(JSON.stringify(sessionMessages[getMatch[1]] ?? []));
+      }
+
+      return new Response("{}", { status: 404 });
+    };
+
+    const a = createOpencodeAgent(agentDefaults(), { ...serviceOverrides(), fetcher });
+    const eventStore = createEventStore();
+
+    const result = await a.resumeSession({ sessionId: "oc-1", prompt: "follow-up", cwd: "/test" }, eventStore);
+
+    await result.process!.onExit;
+
+    const history = eventStore.getHistory();
+    const messagePatches = history.filter((p: JsonPatch) => p.path === "/messages");
+    expect(messagePatches.length).toBeGreaterThan(0);
+
+    const lastMessages = messagePatches[messagePatches.length - 1].value as SessionMessage[];
+    expect(lastMessages).toHaveLength(4);
+    expect(lastMessages[2].parts[0]).toMatchObject({ type: "text", text: "follow-up" });
+    expect(lastMessages[3].parts[0]).toMatchObject({ type: "text", text: "Reply: follow-up" });
+  });
+
+  test("returns non-zero exit code when message POST fails", async () => {
+    const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+
+      if (method === "POST" && url.includes("/message")) {
+        return new Response("Internal Server Error", { status: 500 });
+      }
+
+      if (method === "GET" && url.includes("/message")) {
+        return new Response(JSON.stringify([]));
+      }
+
+      return new Response("{}", { status: 404 });
+    };
+
+    const a = createOpencodeAgent(agentDefaults(), { ...serviceOverrides(), fetcher });
+    const eventStore = createEventStore();
+
+    const result = await a.resumeSession({ sessionId: "oc-1", prompt: "will fail", cwd: "/test" }, eventStore);
+
+    const exit = await result.process!.onExit;
+    expect(exit.code).not.toBe(0);
   });
 });

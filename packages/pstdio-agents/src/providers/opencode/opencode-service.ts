@@ -465,12 +465,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
       const sessionId = createResponse.parsed?.id;
       if (!sessionId) throw new Error("Opencode session id not found.");
 
-      const messageComplete = postSessionMessage(baseUrl, sessionId, directory, prompt).catch((error) => {
-        console.warn(
-          `[opencode:startSession] message failed for session ${sessionId}:`,
-          error instanceof Error ? error.message : error,
-        );
-      });
+      const messageComplete = postSessionMessage(baseUrl, sessionId, directory, prompt);
 
       return { sessionId, messageComplete };
     };
@@ -484,12 +479,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
 
     const messageComplete = withServerUrl((baseUrl) =>
       postSessionMessage(baseUrl, input.sessionId, directory, prompt, input.model),
-    ).catch((error) => {
-      console.warn(
-        `[opencode:sendSessionMessage] message failed for session ${input.sessionId}:`,
-        error instanceof Error ? error.message : error,
-      );
-    });
+    );
 
     return { messageComplete };
   };

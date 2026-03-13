@@ -68,23 +68,23 @@ Current bundled skills are installed through agent setup and skill-install flows
 
 ### Bundled Document Templates
 
-| Name | Default | Purpose |
-| ---- | ------- | ------- |
-| `prd` | yes | Product behavior, goals, interface, and verification. |
-| `adr` | no | Architectural decisions and tradeoffs. |
-| `cookbook` | no | Practical how-to guidance. |
-| `review-me` | no | Review context and checklist. |
-| `lessons-learned` | no | Resolved incident or bug postmortems. |
+| Name              | Default | Purpose                                               |
+| ----------------- | ------- | ----------------------------------------------------- |
+| `prd`             | yes     | Product behavior, goals, interface, and verification. |
+| `adr`             | no      | Architectural decisions and tradeoffs.                |
+| `cookbook`        | no      | Practical how-to guidance.                            |
+| `review-me`       | no      | Review context and checklist.                         |
+| `lessons-learned` | no      | Resolved incident or bug postmortems.                 |
 
 ### Template CLI Surface
 
-| Command | Purpose |
-| ------- | ------- |
-| `pstdio templates list` | List project templates. |
+| Command                   | Purpose                                       |
+| ------------------------- | --------------------------------------------- |
+| `pstdio templates list`   | List project templates.                       |
 | `pstdio templates create` | Create a project template from file or stdin. |
-| `pstdio templates update` | Update template content or default status. |
-| `pstdio templates delete` | Delete a project template. |
-| `pstdio templates write` | Materialize a template into docs or a ticket. |
+| `pstdio templates update` | Update template content or default status.    |
+| `pstdio templates delete` | Delete a project template.                    |
+| `pstdio templates write`  | Materialize a template into docs or a ticket. |
 
 ## Rules & Constraints
 
@@ -94,14 +94,8 @@ Current bundled skills are installed through agent setup and skill-install flows
 
 ## Errors
 
-| Error | Cause |
-| ----- | ----- |
-| `Ticket templates cannot target docs. Use a docs template instead.` | A ticket template was written to a docs target. |
-| `Template not found: <name>` | The requested project template does not exist. |
-| `Not inside a pstdio project. Run 'pstdio projects create' first.` | A project-scoped template command was run without linked project config. |
-
-## Verification & Evidence
-
-- **Commands to run**: `sed -n '1,200p' packages/pstdio/src/features/templates/seed-bundled-templates.ts`, `sed -n '1,200p' packages/pstdio/src/adapters/cli/commands/templates/write.ts`
-- **Expected evidence**: `prd` is the default bundled document template, and `templates write` supports docs and ticket targets with different rules.
-- **Where to find artifacts**: `packages/pstdio/src/features/templates/`, `packages/pstdio/src/features/skills/`
+| Error                                                               | Cause                                                                    |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `Ticket templates cannot target docs. Use a docs template instead.` | A ticket template was written to a docs target.                          |
+| `Template not found: <name>`                                        | The requested project template does not exist.                           |
+| `Not inside a pstdio project. Run 'pstdio projects create' first.`  | A project-scoped template command was run without linked project config. |
