@@ -43,6 +43,7 @@ for (const { pkg, name, os, cpu, libc, bin } of TARGETS) {
     libc: libc ? [libc] : undefined,
     main: "./index.cjs",
     files: ["bin", "index.cjs"],
+    repository: { type: "git", url: "https://github.com/pufflyai/prompt-studio" },
     publishConfig: { access: "public" },
   };
 
