@@ -34,6 +34,19 @@ export { Properties } from "./components/properties";
 export { ScrollArea } from "./components/scroll-area";
 export type { SessionCompletionStatus } from "./components/session-indicator";
 export { SessionIndicator } from "./components/session-indicator";
+export { SidebarNext } from "./components/sidebar-next/sidebar-next";
+export { useSidebarNextStore } from "./components/sidebar-next/sidebar-next.store";
+export type { SidebarNextProps } from "./components/sidebar-next/sidebar-next.types";
+export { SidebarTree } from "./components/sidebar-tree/sidebar-tree";
+export type {
+  SidebarAction,
+  SidebarActionContext,
+  SidebarActionMenuItem,
+  SidebarNavigateEvent,
+  SidebarNavigationIntent,
+  SidebarNode,
+  SidebarSection,
+} from "./components/sidebar-tree/sidebar-tree.types";
 export type { SwitchProps } from "./components/switch";
 export { Switch } from "./components/switch";
 export type { TicketBoardColumn, TicketBoardColumnAction, TicketBoardItem } from "./components/tickets/ticket-board";
