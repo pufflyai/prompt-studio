@@ -12,6 +12,13 @@ interface SyncDeleteEvent {
   seq: number;
 }
 
+interface RawSyncDeleteEvent {
+  table: SyncedTable;
+  id?: string;
+  data?: { id?: string };
+  seq: number;
+}
+
 interface InitEvent {
   tables: Record<string, Array<{ id: string; [key: string]: unknown }>>;
   seq: number;
@@ -58,8 +65,23 @@ const handleSyncSet = (data: string) => {
   return parsed.seq;
 };
 
+export const parseSyncDeleteEvent = (data: string): SyncDeleteEvent => {
+  const parsed = JSON.parse(data) as RawSyncDeleteEvent;
+  const id = parsed.id ?? parsed.data?.id;
+
+  if (!id) {
+    throw new Error("Missing id in sync:delete event.");
+  }
+
+  return {
+    table: parsed.table,
+    id,
+    seq: parsed.seq,
+  };
+};
+
 const handleSyncDelete = (data: string) => {
-  const parsed = JSON.parse(data) as SyncDeleteEvent;
+  const parsed = parseSyncDeleteEvent(data);
   const writer = getWriter(parsed.table);
   if (writer) writer.remove(parsed.id);
   return parsed.seq;

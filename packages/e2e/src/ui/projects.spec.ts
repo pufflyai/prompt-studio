@@ -192,11 +192,16 @@ test.describe("Project creation", () => {
     await expect(createProjectDialog.getByText(repoName, { exact: true })).toBeVisible();
 
     // submit via the dialog footer button
+    const createProjectDone = page.waitForResponse(
+      (response) =>
+        response.url().endsWith("/v1/projects") && response.request().method() === "POST" && response.status() === 201,
+    );
     await page.getByRole("button", { name: "Create project", exact: true }).last().click();
+    const createdProjectResponse = await createProjectDone;
+    const createdProject = (await createdProjectResponse.json()) as { id: string };
 
-    // verify project appears in the list (scoped to avoid matching toast)
-    const main = page.locator("#root > *").first();
-    await expect(main.getByText("My New Project", { exact: true })).toBeVisible();
+    await page.waitForURL(`**/projects/${createdProject.id}/docs`);
+    expect(page.url()).toContain(`/projects/${createdProject.id}/docs`);
   });
 
   test("seeds bundled templates when creating a project via the dialog", async ({ page, request }) => {
@@ -268,10 +273,16 @@ test.describe("Project creation", () => {
     // fill and submit
     await page.getByPlaceholder("Project name").fill("CTA Project");
     await selectRepoFromFolderPicker(page, repoPath);
+    const createProjectDone = page.waitForResponse(
+      (response) =>
+        response.url().endsWith("/v1/projects") && response.request().method() === "POST" && response.status() === 201,
+    );
     await page.getByRole("button", { name: "Create project", exact: true }).last().click();
+    const createdProjectResponse = await createProjectDone;
+    const createdProject = (await createdProjectResponse.json()) as { id: string };
 
-    const main = page.locator("#root > *").first();
-    await expect(main.getByText("CTA Project", { exact: true })).toBeVisible();
+    await page.waitForURL(`**/projects/${createdProject.id}/docs`);
+    expect(page.url()).toContain(`/projects/${createdProject.id}/docs`);
   });
 
   test("installs skills in the repo when creating a project with a configured agent", async ({ page, request }) => {
@@ -287,16 +298,21 @@ test.describe("Project creation", () => {
     await page.getByRole("button", { name: "Create project" }).first().click();
     await page.getByPlaceholder("Project name").fill("Skills Project");
     await selectRepoFromFolderPicker(page, repoPath);
+    const createProjectDone = page.waitForResponse(
+      (response) =>
+        response.url().endsWith("/v1/projects") && response.request().method() === "POST" && response.status() === 201,
+    );
     const repoRegistrationDone = page.waitForResponse(
       (res) => res.url().includes("/repos") && res.request().method() === "POST" && res.status() === 201,
     );
     await page.getByRole("button", { name: "Create project", exact: true }).last().click();
+    const createdProjectResponse = await createProjectDone;
+    const createdProject = (await createdProjectResponse.json()) as { id: string };
 
     // Wait for repo registration to complete (skills are installed during this call)
     await repoRegistrationDone;
-
-    const main = page.locator("#root > *").first();
-    await expect(main.getByText("Skills Project", { exact: true })).toBeVisible();
+    await page.waitForURL(`**/projects/${createdProject.id}/docs`);
+    expect(page.url()).toContain(`/projects/${createdProject.id}/docs`);
 
     // verify skills were installed in the repo
     expect(existsSync(join(repoPath, ".opencode", "skills", "create-ticket", "SKILL.md"))).toBe(true);

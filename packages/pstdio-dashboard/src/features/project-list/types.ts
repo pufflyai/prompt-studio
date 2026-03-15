@@ -3,4 +3,5 @@ export interface ProjectListItem {
   name: string;
   createdAt: string;
   updatedAt: string;
+  repoPath: string | null;
 }

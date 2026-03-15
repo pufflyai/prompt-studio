@@ -9,6 +9,7 @@ export const toProjectListItem = (project: ProjectResponse): ProjectListItem => 
   name: project.name,
   createdAt: project.created_at,
   updatedAt: project.updated_at,
+  repoPath: null,
 });
 
 export const getProjects = async () => {
@@ -24,9 +25,17 @@ export const createProject = async (input: CreateProjectInput) => {
     },
   });
 
-  await Promise.all(input.repositories.map((repo) => registerRepo(project.id, repo)));
+  try {
+    await Promise.all(input.repositories.map((repo) => registerRepo(project.id, repo)));
+  } catch (error) {
+    await deleteProject(project.id).catch(() => undefined);
+    throw error;
+  }
 
-  return toProjectListItem(project);
+  return {
+    ...toProjectListItem(project),
+    repoPath: input.repositories[0]?.path ?? null,
+  };
 };
 
 export const deleteProject = async (projectId: string) => {

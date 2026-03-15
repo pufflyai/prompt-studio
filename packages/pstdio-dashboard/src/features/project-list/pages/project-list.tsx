@@ -1,27 +1,12 @@
 import { Button, Container, IconButton, Menu, Stack, Text } from "@chakra-ui/react";
 import { EmptyState, MenuItem, toaster } from "@pstdio/ui";
 import { useNavigate } from "@tanstack/react-router";
-import { format, isSameYear, parseISO } from "date-fns";
 import { Folder, Settings } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CreateProjectDialog } from "../components/create-project-dialog";
 import type { CreateProjectInput } from "../data/api";
 import { useCreateProject, useProjectList } from "../hooks/use-project-list";
-import type { ProjectListItem } from "../types";
-
-const getTimeFormat = (time: string) => {
-  const parsedTime = parseISO(time);
-  const currentTime = new Date();
-
-  if (isSameYear(parsedTime, currentTime)) {
-    return format(parsedTime, "HH:mm MMM dd");
-  }
-
-  return format(parsedTime, "HH:mm MMM dd, yyyy");
-};
-
-const formatProjectSummary = (project: ProjectListItem) => `Updated ${getTimeFormat(project.updatedAt)}`;
 
 export const ProjectList = () => {
   const { data, isLoading } = useProjectList();
@@ -36,13 +21,14 @@ export const ProjectList = () => {
 
   const handleCreateProject = async (input: CreateProjectInput) => {
     try {
-      await createProject.mutateAsync(input);
+      const project = await createProject.mutateAsync(input);
       setDialogOpen(false);
       toaster.create({
         type: "success",
         title: t("list.projectCreated"),
         description: input.name,
       });
+      navigate({ to: "/projects/$projectId/docs", params: { projectId: project.id } });
     } catch (createError) {
       const message = createError instanceof Error ? createError.message : "Unable to create project.";
       toaster.create({
@@ -96,7 +82,7 @@ export const ProjectList = () => {
                 <MenuItem
                   id={project.id}
                   primaryLabel={project.name}
-                  secondaryLabel={formatProjectSummary(project)}
+                  secondaryLabel={project.repoPath ?? t("chatInput.repo.noneLinked")}
                   leftIcon={Folder}
                   onClick={() => handleProjectSelect(project.id)}
                 />
