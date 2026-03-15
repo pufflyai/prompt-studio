@@ -1,7 +1,7 @@
-import { AlertTriangle, FileText, Plus, Tag } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import type { SidebarNavigateEvent, SidebarNode, SidebarSection } from "@pstdio/ui";
 import { SidebarNext } from "@pstdio/ui";
+import { AlertTriangle, FileText, Plus, Tag } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { BackToDashboard } from "@/features/project/components/back-to-dashboard";
 import type { ProjectTemplateAsset } from "@/features/project/types";
 
