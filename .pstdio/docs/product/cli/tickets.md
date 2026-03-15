@@ -675,7 +675,10 @@ pstdio tickets archive --id <ticket-shorthand> [--project-id <project-id>]
 1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
 2. Resolve the ticket by shorthand from the database.
 3. Set `archived=true` on the ticket in the database.
-4. Archived tickets are excluded from `tickets list` by default (use `--archived` to include them).
+4. Archive all linked active workspaces for the ticket.
+5. For each archived workspace, archive the linked session when present.
+6. For each archived workspace, remove the local worktree directory when it exists.
+7. Archived tickets are excluded from `tickets list` by default (use `--archived` to include them).
 
 ### Output
 
@@ -701,4 +704,4 @@ Archived ticket PS-12
 | `.pstdio/tickets/<shorthand>/files/<filename>`                 | Individual supporting files synced between local project and DB.                             |
 | `.pstdio/tickets/<shorthand>/artifacts/`                       | Validation artifacts (test output, screenshots, logs) written by `pull`, read by `save`/`files`. |
 | `.pstdio/tickets/<shorthand>/artifacts/<filename>`             | Individual validation artifacts synced between local project and DB.                         |
-| `.pstdio/workspaces/<workspace-shorthand>/`                    | Git worktree path referenced by `pstdio tickets workspaces` for ticket-associated workspaces. |
+| `.pstdio/workspaces/<workspace-shorthand>/`                    | Git worktree path referenced by `pstdio tickets workspaces` and removed when ticket archival cascades workspace archival. |

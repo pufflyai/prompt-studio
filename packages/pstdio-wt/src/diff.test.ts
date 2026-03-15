@@ -95,6 +95,23 @@ describe("getWorktreeDiff", () => {
     expect(filePaths).toContain("unstaged.txt");
   });
 
+  test("counts additions for untracked files", async () => {
+    const wtPath = join(repo.dir, "wt-diff-untracked");
+    await createWorktree({ repoRoot: repo.dir, branch: "task/untracked", path: wtPath });
+
+    await Bun.write(join(wtPath, "new-file.txt"), "first line\nsecond line\n");
+
+    const diff = await getWorktreeDiff({ worktreePath: wtPath, base: "main" });
+
+    expect(diff.files.length).toBe(1);
+    expect(diff.files[0].filePath).toBe("new-file.txt");
+    expect(diff.files[0].change).toBe("added");
+    expect(diff.files[0].additions).toBe(2);
+    expect(diff.files[0].deletions).toBe(0);
+    expect(diff.totals.additions).toBe(2);
+    expect(diff.totals.deletions).toBe(0);
+  });
+
   test("detects renamed file", async () => {
     const wtPath = join(repo.dir, "wt-diff-rename");
     await createWorktree({ repoRoot: repo.dir, branch: "task/rename", path: wtPath });

@@ -15,6 +15,7 @@ This PRD documents session lifecycle commands, including create, list, view, fol
 ## Purpose
 
 Manage agent sessions from the terminal. Sessions track the lifecycle of a conversation between a user prompt and a coding agent, optionally anchored to a workspace.
+Sessions can be archived directly (`sessions archive`) or indirectly when linked workspaces are archived by workspace or ticket flows.
 
 ---
 

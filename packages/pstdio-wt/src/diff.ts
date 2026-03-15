@@ -88,6 +88,13 @@ const countAdditionsDeletions = async (cwd: string, base: string, filePath: stri
   }
 };
 
+const countContentLines = (content: string) => {
+  if (!content) return 0;
+
+  const lines = content.split("\n");
+  return content.endsWith("\n") ? lines.length - 1 : lines.length;
+};
+
 export const getWorktreeDiff = async (opts: { worktreePath: string; base: string }): Promise<WorktreeDiff> => {
   const { worktreePath, base } = opts;
 
@@ -140,12 +147,16 @@ export const getWorktreeDiff = async (opts: { worktreePath: string; base: string
 
     // Get line stats from the full diff (base to working tree)
     const stats = await countAdditionsDeletions(worktreePath, base, newPath, entry.oldPath);
+    const additions =
+      entry.change === "added" && stats.additions === 0 ? countContentLines(newContent) : stats.additions;
+    const deletions =
+      entry.change === "deleted" && stats.deletions === 0 ? countContentLines(oldContent) : stats.deletions;
 
     files.push({
       filePath: newPath,
       change: entry.change,
-      additions: stats.additions,
-      deletions: stats.deletions,
+      additions,
+      deletions,
       oldContent,
       newContent,
       ...(entry.oldPath ? { oldPath: entry.oldPath } : {}),
