@@ -173,3 +173,5 @@ __test-tmp__
 
 .pstdio/tickets
 .pstdio/config.json
+packages/pstdio/README.md
+packages/pstdio/.readme.generated

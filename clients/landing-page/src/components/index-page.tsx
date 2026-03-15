@@ -6,7 +6,7 @@ import Footer from "./footer";
 import Header from "./header";
 import { RootProvider } from "./root-provider";
 
-const command = "npx pstdio@latest";
+const command = "npm i -g pstdio@latest";
 
 const IndexPageContent = () => {
   const [isCopied, setIsCopied] = useState(false);
@@ -52,7 +52,7 @@ const IndexPageContent = () => {
       <Footer
         links={[
           { item: "GitHub", url: "https://github.com/pufflyai/prompt-studio" },
-          { item: "Discord", url: "https://discord.gg/PYjnYVgR" },
+          { item: "Discord", url: "https://discord.gg/3RxwUEk8fW" },
           { item: "Privacy Policy", url: "/privacy-policy/" },
           { item: "Terms", url: "/terms/" },
         ]}

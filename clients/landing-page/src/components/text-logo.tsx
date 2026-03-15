@@ -1,4 +1,4 @@
-import { Box, Flex, Text } from "@chakra-ui/react";
+import { Badge, Box, Flex, Text } from "@chakra-ui/react";
 import { PromptStudioLogo } from "./prompt-studio-logo";
 
 export const TextLogo = () => {
@@ -7,16 +7,21 @@ export const TextLogo = () => {
       <Box h="1.625rem" w="1.625rem">
         <PromptStudioLogo />
       </Box>
-      <Text
-        textStyle="brand"
-        fontSize="1.375rem"
-        lineHeight="2rem"
-        letterSpacing="-0.04em"
-        textAlign="left"
-        color="foreground.primary"
-      >
-        Prompt Studio
-      </Text>
+      <Flex alignItems="center" gap="0.5rem">
+        <Text
+          textStyle="brand"
+          fontSize="1.375rem"
+          lineHeight="2rem"
+          letterSpacing="-0.04em"
+          textAlign="left"
+          color="foreground.primary"
+        >
+          Prompt Studio
+        </Text>
+        <Badge mt="-2rem" colorPalette="pink">
+          alpha
+        </Badge>
+      </Flex>
     </Flex>
   );
 };

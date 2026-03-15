@@ -15,7 +15,7 @@ import { useTranslation } from "react-i18next";
 import { ProjectMenu } from "./project-menu";
 
 const documentationUrl = "https://prompt.studio/docs";
-const discordUrl = "https://discord.gg/qH5dAqbNad";
+const discordUrl = "https://discord.gg/3RxwUEk8fW";
 
 const openExternalLink = (url: string) => {
   window.open(url, "_blank", "noopener,noreferrer");
