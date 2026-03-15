@@ -1,17 +1,6 @@
 import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import {
-  Copy,
-  EllipsisVertical,
-  FileText,
-  Folder,
-  Home,
-  Link,
-  Plus,
-  Settings,
-  Star,
-  Trash2,
-} from "lucide-react";
+import { Copy, EllipsisVertical, FileText, Folder, Home, Link, Plus, Settings, Star, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { SidebarTree } from "./sidebar-tree";
 import type { SidebarSection } from "./sidebar-tree.types";
@@ -468,9 +457,7 @@ export const EmptySection: Story = {
       {
         id: "guides",
         label: "Guides",
-        nodes: [
-          { id: "quickstart", label: "Quickstart", icon: <FileText size={14} />, isNavigable: true },
-        ],
+        nodes: [{ id: "quickstart", label: "Quickstart", icon: <FileText size={14} />, isNavigable: true }],
       },
     ];
 

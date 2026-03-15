@@ -236,7 +236,7 @@ export const SidebarTree = (props: SidebarTreeProps) => {
                       onToggleNode={onToggleNode}
                     />
                   ))
-                : section.emptyState ?? null
+                : (section.emptyState ?? null)
               : null}
           </Stack>
         );
