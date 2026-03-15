@@ -13,7 +13,7 @@ export const SidebarNextFooter = (props: SidebarNextFooterProps) => {
   }
 
   return (
-    <Box borderTopWidth="1px" borderTopColor="border.muted" px="2" py="2" bg="bg" position="sticky" bottom="0">
+    <Box px="2" py="2" bg="bg" position="sticky" bottom="0" overflow="hidden">
       {children}
     </Box>
   );

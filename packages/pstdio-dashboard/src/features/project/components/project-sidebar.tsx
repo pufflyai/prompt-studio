@@ -1,187 +1,218 @@
-import { Box, Icon as ChakraIcon, Flex, IconButton, Menu, Stack } from "@chakra-ui/react";
-import { MenuItem, Tooltip } from "@pstdio/ui";
-import { Link, useParams, useRouterState } from "@tanstack/react-router";
+import { Box, Menu, Portal, Stack } from "@chakra-ui/react";
+import { MenuItem, type SidebarNavigateEvent, SidebarNext, type SidebarNode, type SidebarSection } from "@pstdio/ui";
+import { useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import {
   ArrowUpRight,
   BookOpen,
   CircleHelp,
+  FileText,
+  Folder,
   KanbanSquare,
-  ListTreeIcon,
   MessageCircle,
   Newspaper,
   SettingsIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { DocsSidebarItem } from "@/features/documentation/data/api";
+import { useDocsIndex } from "@/features/documentation/hooks/use-docs";
 import { ProjectMenu } from "./project-menu";
 
-const documentationUrl = "https://prompt.studio/docs";
-const discordUrl = "https://discord.gg/3RxwUEk8fW";
+export const PROJECT_SIDEBAR_STORAGE_KEY = "project-sidebar";
+const GITHUB_DOCS_URL = "https://github.com/pufflyai/prompt-studio";
+const DISCORD_URL = "https://discord.gg/3RxwUEk8fW";
 
 const openExternalLink = (url: string) => {
   window.open(url, "_blank", "noopener,noreferrer");
 };
 
+const docsSidebarItemToNode = (item: DocsSidebarItem, index: number): SidebarNode => {
+  const id = item.link ?? `doc-folder-${item.text}-${index}`;
+  const children = item.items?.map((child, i) => docsSidebarItemToNode(child, i));
+  const hasChildren = children && children.length > 0;
+
+  return {
+    id,
+    label: item.text,
+    icon: hasChildren ? <Folder size={14} /> : <FileText size={14} />,
+    isNavigable: Boolean(item.link),
+    navigationIntent: item.link ? { id: "docs/open", payload: { link: item.link } } : undefined,
+    children: hasChildren ? children : undefined,
+  };
+};
+
+const resolveActiveNodeId = (pathname: string, routeDoc: string | undefined, projectId?: string) => {
+  if (!projectId) return null;
+
+  const base = `/projects/${projectId}`;
+
+  if (pathname.startsWith(`${base}/tickets`)) return "tickets";
+  if (pathname.startsWith(`${base}/changelog`)) return "changelog";
+  if (pathname.startsWith(`${base}/settings`)) return "settings";
+  if (pathname.startsWith(`${base}/sessions`)) return "sessions";
+  if (pathname.startsWith(`${base}/docs`) && routeDoc) return routeDoc;
+  if (pathname.startsWith(`${base}/docs`)) return "docs";
+
+  return null;
+};
+
 export const ProjectSidebar = () => {
   const { location } = useRouterState();
   const { projectId } = useParams({ strict: false });
+  const routeDoc = (useRouterState().location.search as { doc?: string }).doc;
+  const navigate = useNavigate();
   const { t } = useTranslation("projects");
+  const { data: docsIndex } = useDocsIndex(projectId);
 
-  const projectSections = [
-    { id: "docs", label: t("sidebar.documentation"), icon: ListTreeIcon, path: "docs" },
-    { id: "tickets", label: t("sidebar.tickets"), icon: KanbanSquare, path: "tickets" },
-  ] as const;
+  const sidebarItems = docsIndex?.sidebar ?? [];
+  const hasDocs = sidebarItems.length > 0;
 
-  const projectChangelogSection = {
-    id: "changelog",
-    label: t("sidebar.projectChangelog"),
-    icon: Newspaper,
-    path: "changelog",
-  } as const;
+  const buildSections = (): SidebarSection[] => {
+    const sections: SidebarSection[] = [];
 
-  const projectSettingsSection = {
-    id: "settings",
-    label: t("sidebar.projectSettings"),
-    icon: SettingsIcon,
-    path: "settings",
-  } as const;
+    // Top-level items: tickets
+    const topNodes: SidebarNode[] = [
+      {
+        id: "tickets",
+        label: t("sidebar.tickets"),
+        icon: <KanbanSquare size={14} />,
+        isNavigable: true,
+        navigationIntent: { id: "navigate", payload: { path: "tickets" } },
+      },
+    ];
 
-  const projectNavItems = projectId
-    ? projectSections.map((item) => ({
-        id: item.id,
-        label: item.label,
-        icon: item.icon,
-        to: `/projects/${projectId}/${item.path}`,
-      }))
-    : [];
+    sections.push({ id: "top-level", nodes: topNodes });
 
-  const projectChangelogItem = projectId
-    ? {
-        id: projectChangelogSection.id,
-        label: projectChangelogSection.label,
-        icon: projectChangelogSection.icon,
-        to: `/projects/${projectId}/${projectChangelogSection.path}`,
-      }
-    : null;
+    // Documentation group with changelog
+    if (hasDocs) {
+      const docNodes = sidebarItems.map((item, i) => docsSidebarItemToNode(item, i));
+      const changelogNode: SidebarNode = {
+        id: "changelog",
+        label: t("sidebar.projectChangelog"),
+        icon: <Newspaper size={14} />,
+        isNavigable: true,
+        navigationIntent: { id: "navigate", payload: { path: "changelog" } },
+      };
 
-  const projectSettingsItem = projectId
-    ? {
-        id: projectSettingsSection.id,
-        label: projectSettingsSection.label,
-        icon: projectSettingsSection.icon,
-        to: `/projects/${projectId}/${projectSettingsSection.path}`,
-      }
-    : null;
+      sections.push({
+        id: "documentation",
+        label: t("sidebar.documentation"),
+        nodes: [...docNodes, changelogNode],
+      });
+    } else {
+      // No docs: single documentation item, changelog hidden
+      sections.push({
+        id: "documentation",
+        nodes: [
+          {
+            id: "docs",
+            label: t("sidebar.documentation"),
+            icon: <FileText size={14} />,
+            isNavigable: true,
+            navigationIntent: { id: "navigate", payload: { path: "docs" } },
+          },
+        ],
+      });
+    }
+
+    return sections;
+  };
+
+  const handleNavigate = (event: SidebarNavigateEvent) => {
+    if (!projectId) return;
+
+    const intent = event.intent;
+    if (!intent) return;
+
+    if (intent.id === "docs/open") {
+      const payload = intent.payload as { link: string };
+      navigate({
+        to: "/projects/$projectId/docs",
+        params: { projectId },
+        search: { doc: payload.link },
+      });
+      return;
+    }
+
+    if (intent.id === "navigate") {
+      const payload = intent.payload as { path: string };
+      navigate({ to: `/projects/${projectId}/${payload.path}` });
+    }
+  };
+
+  const activeNodeId = resolveActiveNodeId(location.pathname, routeDoc as string | undefined, projectId);
+
+  return (
+    <SidebarNext
+      storageKey={PROJECT_SIDEBAR_STORAGE_KEY}
+      sections={buildSections()}
+      activeNodeId={activeNodeId}
+      header={<ProjectMenu />}
+      footer={<ProjectSidebarFooter />}
+      onNavigate={handleNavigate}
+      width="240px"
+    />
+  );
+};
+
+const ProjectSidebarFooter = () => {
+  const { projectId } = useParams({ strict: false });
+  const { location } = useRouterState();
+  const navigate = useNavigate();
+  const { t } = useTranslation("projects");
 
   const isPathActive = (href: string) => {
     return location.pathname === href || location.pathname.startsWith(`${href}/`);
   };
 
-  const handleOpenDocumentation = () => {
-    openExternalLink(documentationUrl);
-  };
-
-  const handleOpenDiscord = () => {
-    openExternalLink(discordUrl);
-  };
+  const settingsPath = projectId ? `/projects/${projectId}/settings` : null;
 
   return (
-    <Flex as="nav" borderRightWidth="1px" hideBelow="md" direction="column">
-      <Stack justify="space-between" flex="1" gap="lg" p="xs" align="center">
-        <Stack gap="lg" align="center">
-          <ProjectMenu />
+    <Stack gap="0">
+      <Menu.Root positioning={{ placement: "top-start" }}>
+        <Menu.Trigger asChild>
+          <Box>
+            <MenuItem
+              primaryLabel={t("sidebar.help")}
+              leftIcon={CircleHelp}
+              variant="compact"
+              maxWidth="full"
+              width="full"
+            />
+          </Box>
+        </Menu.Trigger>
+        <Portal>
+          <Menu.Positioner>
+            <Menu.Content minW="220px" bg="bg">
+              <MenuItem
+                onClick={() => openExternalLink(GITHUB_DOCS_URL)}
+                primaryLabel={t("sidebar.documentationLink")}
+                leftIcon={BookOpen}
+                rightIcon={ArrowUpRight}
+              />
+              <MenuItem
+                onClick={() => openExternalLink(DISCORD_URL)}
+                primaryLabel={t("sidebar.discordLink")}
+                leftIcon={MessageCircle}
+                rightIcon={ArrowUpRight}
+              />
+            </Menu.Content>
+          </Menu.Positioner>
+        </Portal>
+      </Menu.Root>
 
-          <Stack gap="xs" align="center">
-            {projectNavItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = isPathActive(item.to);
-
-              return (
-                <Tooltip key={item.id} positioning={{ placement: "right" }} content={item.label}>
-                  <Flex as="li">
-                    <Link to={item.to} preload="intent" style={{ textDecoration: "none" }}>
-                      <IconButton
-                        aria-label={item.label}
-                        aria-current={isActive ? "page" : undefined}
-                        variant="ghost"
-                        bg={isActive ? "bg.muted" : undefined}
-                        size="sm"
-                      >
-                        <ChakraIcon as={Icon} boxSize="18px" />
-                      </IconButton>
-                    </Link>
-                  </Flex>
-                </Tooltip>
-              );
-            })}
-          </Stack>
-        </Stack>
-
-        <Stack gap="xs" align="center">
-          {projectChangelogItem ? (
-            <Tooltip positioning={{ placement: "right" }} content={projectChangelogItem.label}>
-              <Flex as="li">
-                <Link to={projectChangelogItem.to} preload="intent" style={{ textDecoration: "none" }}>
-                  <IconButton
-                    aria-label={projectChangelogItem.label}
-                    aria-current={isPathActive(projectChangelogItem.to) ? "page" : undefined}
-                    variant="ghost"
-                    bg={isPathActive(projectChangelogItem.to) ? "bg.muted" : undefined}
-                    size="sm"
-                  >
-                    <ChakraIcon as={projectChangelogItem.icon} boxSize="18px" />
-                  </IconButton>
-                </Link>
-              </Flex>
-            </Tooltip>
-          ) : null}
-
-          <Menu.Root>
-            <Menu.Trigger asChild>
-              <Box>
-                <Tooltip positioning={{ placement: "right" }} content={t("sidebar.helpLinks")}>
-                  <IconButton aria-label={t("sidebar.helpLinks")} variant="ghost" size="sm">
-                    <ChakraIcon as={CircleHelp} boxSize="18px" />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-            </Menu.Trigger>
-            <Menu.Positioner>
-              <Menu.Content minW="220px" bg="bg">
-                <MenuItem
-                  onClick={handleOpenDocumentation}
-                  primaryLabel={t("sidebar.documentationLink")}
-                  leftIcon={BookOpen}
-                  rightIcon={ArrowUpRight}
-                />
-                <MenuItem
-                  onClick={handleOpenDiscord}
-                  primaryLabel={t("sidebar.discordLink")}
-                  leftIcon={MessageCircle}
-                  rightIcon={ArrowUpRight}
-                />
-              </Menu.Content>
-            </Menu.Positioner>
-          </Menu.Root>
-
-          {projectSettingsItem ? (
-            <Tooltip positioning={{ placement: "right" }} content={projectSettingsItem.label}>
-              <Flex as="li">
-                <Link to={projectSettingsItem.to} preload="intent" style={{ textDecoration: "none" }}>
-                  <IconButton
-                    aria-label={projectSettingsItem.label}
-                    aria-current={isPathActive(projectSettingsItem.to) ? "page" : undefined}
-                    variant="ghost"
-                    bg={isPathActive(projectSettingsItem.to) ? "bg.muted" : undefined}
-                    size="sm"
-                  >
-                    <ChakraIcon as={projectSettingsItem.icon} boxSize="18px" />
-                  </IconButton>
-                </Link>
-              </Flex>
-            </Tooltip>
-          ) : null}
-        </Stack>
-      </Stack>
-    </Flex>
+      {settingsPath ? (
+        <Menu.Root>
+          <MenuItem
+            primaryLabel={t("sidebar.projectSettings")}
+            leftIcon={SettingsIcon}
+            variant="compact"
+            isSelected={isPathActive(settingsPath)}
+            onClick={() => navigate({ to: settingsPath })}
+            maxWidth="full"
+            width="full"
+          />
+        </Menu.Root>
+      ) : null}
+    </Stack>
   );
 };

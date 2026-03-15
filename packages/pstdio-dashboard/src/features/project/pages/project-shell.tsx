@@ -11,6 +11,12 @@ import { isWorkspaceRoutePath } from "@/features/workspaces/utils/workspace-rout
 import { ProjectSidebar } from "../components/project-sidebar";
 import { useProject } from "../hooks/use-project";
 
+const isSettingsRoutePath = (pathname: string, projectId: string | undefined) => {
+  if (!projectId) return false;
+  const settingsPath = `/projects/${projectId}/settings`;
+  return pathname === settingsPath || pathname.startsWith(`${settingsPath}/`);
+};
+
 const ProjectShellContent = () => {
   const { projectId } = useParams({ strict: false });
   const { location } = useRouterState();
@@ -20,6 +26,8 @@ const ProjectShellContent = () => {
   const setLastNonSessionsPath = useProjectSettingsStore((s) => s.setLastNonSessionsPath);
   const isSessionsRoute = isSessionsRoutePath(location.pathname, projectId);
   const isWorkspaceRoute = isWorkspaceRoutePath(location.pathname, projectId);
+  const isSettingsRoute = isSettingsRoutePath(location.pathname, projectId);
+  const showMainSidebar = projectId && !isSessionsRoute && !isSettingsRoute;
 
   useEffect(() => {
     if (isSessionsRoute) return;
@@ -32,7 +40,7 @@ const ProjectShellContent = () => {
 
   return (
     <Flex height="100%" width="100%" minH="0">
-      {projectId ? <ProjectSidebar /> : null}
+      {showMainSidebar ? <ProjectSidebar /> : null}
       <Stack flex="1" minH="0" gap="0" overflow="hidden">
         <Box flex="1" overflowY="auto">
           {isLoading ? (

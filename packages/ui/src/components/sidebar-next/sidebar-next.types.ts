@@ -10,5 +10,6 @@ export interface SidebarNextProps {
   width?: string | number;
   emptyLabel?: string;
   onNavigate?: (event: SidebarNavigateEvent) => void;
+  closable?: boolean;
   onOpenChange?: (open: boolean) => void;
 }

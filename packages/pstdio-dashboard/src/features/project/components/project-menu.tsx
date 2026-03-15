@@ -1,7 +1,7 @@
-import { Avatar, Box, IconButton, Menu } from "@chakra-ui/react";
-import { MenuItem, Tooltip, toaster, useThemePreference } from "@pstdio/ui";
+import { Avatar, Button, HStack, Menu, Text } from "@chakra-ui/react";
+import { MenuItem, toaster, useThemePreference } from "@pstdio/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { FolderIcon, Moon, Sun } from "lucide-react";
+import { ChevronDown, FolderIcon, Moon, Sun } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useProject, useSystemInfo } from "@/features/project/hooks/use-project";
 
@@ -43,21 +43,17 @@ export const ProjectMenu = () => {
   return (
     <Menu.Root>
       <Menu.Trigger asChild>
-        <Box>
-          <Tooltip positioning={{ placement: "bottom-end" }} content={t("menu.mainMenu")}>
-            <IconButton
-              aria-label={t("menu.openSettingsMenu")}
-              variant="ghost"
-              size="sm"
-              _hover={{ bg: "transparent", boxShadow: "none" }}
-              _active={{ bg: "transparent", boxShadow: "none" }}
-            >
-              <Avatar.Root size="xs" borderRadius="0">
-                <Avatar.Fallback name={projectName} />
-              </Avatar.Root>
-            </IconButton>
-          </Tooltip>
-        </Box>
+        <Button variant="ghost" size="sm" width="full" justifyContent="flex-start" px="2">
+          <HStack gap="2" minW="0" flex="1">
+            <Avatar.Root size="2xs">
+              <Avatar.Fallback name={projectName} />
+            </Avatar.Root>
+            <Text textStyle="label/S/medium" truncate>
+              {projectName}
+            </Text>
+          </HStack>
+          <ChevronDown size={14} />
+        </Button>
       </Menu.Trigger>
       <Menu.Positioner>
         <Menu.Content minW="240px" bg="bg">

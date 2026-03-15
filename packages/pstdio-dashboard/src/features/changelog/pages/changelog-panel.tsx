@@ -2,6 +2,7 @@ import { Box, Flex, Spinner, Stack } from "@chakra-ui/react";
 import { DocsChangelog, EmptyState } from "@pstdio/ui";
 import { useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { OpenSidebarButton } from "@/features/project/components/open-sidebar-button";
 import { useChangelog } from "../hooks/use-changelog";
 
 export const ChangelogPanel = () => {
@@ -32,7 +33,8 @@ export const ChangelogPanel = () => {
   }
 
   return (
-    <Stack height="100%" flex="1" overflow="auto">
+    <Stack height="100%" flex="1" overflow="auto" position="relative">
+      <OpenSidebarButton />
       <Box py="16" px={{ base: "6", md: "10" }} maxW="4xl" mx="auto" width="100%">
         <DocsChangelog title={changelog.title} description={changelog.description} entries={changelog.entries} />
       </Box>

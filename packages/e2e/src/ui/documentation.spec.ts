@@ -56,6 +56,11 @@ const setupDocsRepo = () => {
   return repoDir;
 };
 
+const expandDocumentationSection = async (page: import("@playwright/test").Page) => {
+  const sectionHeader = page.getByText("Documentation", { exact: true }).first();
+  await sectionHeader.click();
+};
+
 test.describe("Documentation", () => {
   let repoDir: string;
 
@@ -90,8 +95,12 @@ test.describe("Documentation", () => {
 
     await page.goto(`/projects/${project.id}/docs`);
 
-    await expect(page.getByRole("option", { name: "Welcome" })).toBeVisible();
-    await expect(page.getByRole("option", { name: "Getting Started" })).toBeVisible();
+    // Expand the Documentation section in the sidebar
+    await expandDocumentationSection(page);
+
+    const sidebar = page.locator("aside");
+    await expect(sidebar.getByText("Welcome")).toBeVisible();
+    await expect(sidebar.getByText("Getting Started")).toBeVisible();
   });
 
   test("displays doc content when a sidebar item is active", async ({ page, request }) => {
@@ -114,7 +123,8 @@ test.describe("Documentation", () => {
     // Wait for initial content to load
     await expect(page.getByText("This is the main documentation page.")).toBeVisible();
 
-    // Click "Getting Started" in the sidebar
+    // Expand the Documentation section and click "Getting Started"
+    await expandDocumentationSection(page);
     await page.getByText("Getting Started").click();
 
     // Verify content changed
@@ -129,11 +139,12 @@ test.describe("Documentation", () => {
     // Start on tickets page
     await page.goto(`/projects/${project.id}/tickets`);
 
-    // Click the Documentation sidebar nav item
-    await page.getByLabel("Documentation").click();
+    // Expand the Documentation section and click a doc item
+    await expandDocumentationSection(page);
+    await page.getByText("Welcome").click();
 
     await page.waitForURL(`**/projects/${project.id}/docs**`);
-    await expect(page.getByRole("option", { name: "Welcome" })).toBeVisible();
+    await expect(page.getByText("This is the main documentation page.")).toBeVisible();
   });
 
   test("docs API returns correct index", async ({ request }) => {

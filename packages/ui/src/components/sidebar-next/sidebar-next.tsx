@@ -14,7 +14,8 @@ export const SidebarNext = (props: SidebarNextProps) => {
     activeNodeId,
     header,
     footer,
-    width = "320px",
+    width = "240px",
+    closable = true,
     emptyLabel = "No items available.",
     onNavigate,
     onOpenChange,
@@ -31,7 +32,7 @@ export const SidebarNext = (props: SidebarNextProps) => {
     onOpenChange?.(open);
   }, [onOpenChange, open]);
 
-  if (!open) {
+  if (!open && closable) {
     return null;
   }
 
@@ -47,7 +48,7 @@ export const SidebarNext = (props: SidebarNextProps) => {
       borderRightColor="border.muted"
       bg="bg"
     >
-      <SidebarNextHeader onClose={closeSidebar}>{header}</SidebarNextHeader>
+      <SidebarNextHeader onClose={closable ? closeSidebar : undefined}>{header}</SidebarNextHeader>
 
       <ScrollArea flex="1">
         {sections.length === 0 ? (

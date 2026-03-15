@@ -202,20 +202,26 @@
     "tickets": "Tickets",
     "projectChangelog": "Project changelog",
     "projectSettings": "Project settings",
-    "helpLinks": "Help links",
+    "help": "Help",
     "documentationLink": "Documentation",
     "discordLink": "Discord"
   },
   "shell": {
+    "backToDashboard": "Back to Dashboard",
     "loadingProject": "Loading project...",
     "notFound": "Project not found",
     "notFoundDescription": "Choose a project from the list to continue.",
     "backendConnecting": "Connecting to backend...",
     "backendConnected": "Backend connected",
-    "backendDisconnected": "Backend unavailable"
+    "backendDisconnected": "Backend unavailable",
+    "showSidebar": "Show sidebar"
   },
   "projectSettings": {
-    "title": "Project Settings"
+    "title": "Project Settings",
+    "tags": "Tags",
+    "templates": "Templates",
+    "createTemplate": "Create template",
+    "dangerZone": "Danger zone"
   },
   "list": {
     "projectCreated": "Project created",

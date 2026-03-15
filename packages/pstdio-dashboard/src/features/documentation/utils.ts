@@ -37,27 +37,6 @@ export const flattenDocsSidebar = (items: DocsSidebarItem[], parents: string[] =
     return [...current, ...nested];
   });
 
-const matchesNormalizedLink = (item: DocsSidebarItem, normalizedLink: string): boolean => {
-  if (item.link && normalizeDocsLink(item.link) === normalizedLink) {
-    return true;
-  }
-
-  return item.items?.some((nestedItem) => matchesNormalizedLink(nestedItem, normalizedLink)) ?? false;
-};
-
-export const sidebarItemContainsLink = (item: DocsSidebarItem, link: string | null) => {
-  if (!link) {
-    return false;
-  }
-
-  const normalizedLink = normalizeDocsLink(link);
-  if (!normalizedLink) {
-    return false;
-  }
-
-  return matchesNormalizedLink(item, normalizedLink);
-};
-
 export const resolveActiveDocLink = (routeDoc: unknown, entries: DocsMenuEntry[]) => {
   const selected = typeof routeDoc === "string" ? normalizeDocsLink(routeDoc) : null;
 

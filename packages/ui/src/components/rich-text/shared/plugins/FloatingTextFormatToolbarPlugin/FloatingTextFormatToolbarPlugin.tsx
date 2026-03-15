@@ -24,6 +24,7 @@ import {
   type LexicalNode,
   SELECTION_CHANGE_COMMAND,
 } from "lexical";
+import { List, ListOrdered } from "lucide-react";
 import type React from "react";
 import { type Dispatch, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -366,9 +367,7 @@ function FloatingTextToolbar({
             size="xs"
             onClick={formatBulletList}
           >
-            <Text fontWeight="thin" fontSize=".8rem">
-              •
-            </Text>
+            <List size={14} />
           </IconButton>
         </Tooltip>
         <Tooltip content="Numbered List">
@@ -379,9 +378,7 @@ function FloatingTextToolbar({
             size="xs"
             onClick={formatNumberedList}
           >
-            <Text fontWeight="thin" fontSize=".8rem">
-              1.
-            </Text>
+            <ListOrdered size={14} />
           </IconButton>
         </Tooltip>
       </Stack>

@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { PenBox, SquareArrowOutDownRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
+import { BackToDashboard } from "@/features/project/components/back-to-dashboard";
 import { useProjectSettingsStore } from "@/features/project-settings/store";
 import { RepoBrowserContainer } from "@/features/workspaces/components/repo-browser.container";
 import { SessionActionMenu } from "../components/session-action-menu";
@@ -82,6 +83,7 @@ export const SessionsPanel = () => {
     <Flex direction="column" height="100%" minH="0">
       <Flex flex="1" minH="0" overflow="hidden">
         <Stack w="18rem" minW="18rem" borderRightWidth="1px" gap="0" bg="bg">
+          <BackToDashboard />
           <HorizontalMenuStack>
             <Text textStyle="label/S/medium" color="foreground.primary">
               {t("sessions.title")}

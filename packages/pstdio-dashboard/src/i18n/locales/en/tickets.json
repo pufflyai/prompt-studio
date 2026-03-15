@@ -733,7 +733,8 @@
     }
   },
   "ticketListHeader": {
-    "title": "Tickets"
+    "title": "Tickets",
+    "showSidebar": "Show sidebar"
   },
   "displayMenu": {
     "display": "Display",
