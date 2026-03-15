@@ -1,7 +1,9 @@
+import { exec as runCommand } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { copyFile, mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { PassThrough } from "node:stream";
 import { createRoute, z } from "@hono/zod-openapi";
 import { eq, ticket_workspaces } from "pstdio-db";
 import { createWorktree } from "pstdio-wt";
@@ -110,6 +112,84 @@ const copyPstdioConfig = async (repoPath: string, worktreePath: string) => {
   }
 };
 
+const saveStartupLog = async (
+  deps: Pick<RouteDeps, "filesService" | "workspacesService">,
+  input: {
+    workspaceId: string;
+    projectId: string;
+    existingFileId: string | null;
+    content: string;
+  },
+) => {
+  const data = Buffer.from(input.content, "utf8");
+  if (input.existingFileId) {
+    const updated = await deps.filesService.update(input.existingFileId, { data });
+    if (updated) return input.existingFileId;
+  }
+
+  const file = await deps.filesService.upload({
+    project_id: input.projectId,
+    file_name: "startup.log",
+    file_kind: "startup_log",
+    data,
+    mime_type: "text/plain",
+  });
+
+  await deps.workspacesService.setStartupLogFileId(input.workspaceId, file.id);
+  return file.id;
+};
+
+const runStartupScript = async (
+  deps: Pick<RouteDeps, "filesService" | "workspacesService">,
+  input: {
+    script: string;
+    cwd: string;
+    workspaceId: string;
+    projectId: string;
+    existingStartupLogFileId: string | null;
+  },
+) => {
+  const logChunks: Buffer[] = [];
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const child = runCommand(input.script, { cwd: input.cwd }, (error) => {
+        if (error) reject(error);
+        else resolve();
+      });
+
+      if (child.stdout) {
+        const tee = new PassThrough();
+        child.stdout.pipe(tee);
+        tee.on("data", (chunk: Buffer) => logChunks.push(chunk));
+      }
+
+      if (child.stderr) {
+        const tee = new PassThrough();
+        child.stderr.pipe(tee);
+        tee.on("data", (chunk: Buffer) => logChunks.push(chunk));
+      }
+    });
+  } catch {
+    // Startup script failures should not block workspace creation.
+  }
+
+  const logContent = Buffer.concat(logChunks).toString("utf8");
+  if (logContent.length === 0) return input.existingStartupLogFileId;
+
+  try {
+    return await saveStartupLog(deps, {
+      workspaceId: input.workspaceId,
+      projectId: input.projectId,
+      existingFileId: input.existingStartupLogFileId,
+      content: logContent,
+    });
+  } catch {
+    // Log upload failures should not block workspace creation.
+    return input.existingStartupLogFileId;
+  }
+};
+
 export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typeof createTicketAttemptRoute> => {
   const worktreeMode = "worktree";
 
@@ -123,6 +203,8 @@ export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typ
     }
 
     const mode = input.mode ?? worktreeMode;
+    const project = await deps.projectsService.get(ticket.project_id);
+    const startupScript = mode === worktreeMode ? (project?.startup_script ?? null) : null;
     const repo = await resolveRepoForAttempt(deps, ticket.project_id, input);
     if (!repo) {
       return c.json({ error: `Repo not found for project ${ticket.project_id}` }, 404);
@@ -161,12 +243,29 @@ export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typ
       await copyPstdioConfig(repo.path, worktreePath);
     }
 
-    const workspaceWithGitMetadata =
+    let workspaceWithGitMetadata =
       (await deps.workspacesService.updateGitMetadata(workspace.id, {
         branch,
         worktree_path: worktreePath,
       })) ?? workspace;
     deps.eventBus.emit("workspaces", "set", workspaceWithGitMetadata);
+
+    if (startupScript && workspaceWithGitMetadata.worktree_path) {
+      const startupLogFileId = await runStartupScript(
+        { filesService: deps.filesService, workspacesService: deps.workspacesService },
+        {
+          script: startupScript,
+          cwd: workspaceWithGitMetadata.worktree_path,
+          workspaceId: workspaceWithGitMetadata.id,
+          projectId: workspaceWithGitMetadata.project_id,
+          existingStartupLogFileId: workspaceWithGitMetadata.startup_log_file_id,
+        },
+      );
+
+      if (startupLogFileId && startupLogFileId !== workspaceWithGitMetadata.startup_log_file_id) {
+        workspaceWithGitMetadata = { ...workspaceWithGitMetadata, startup_log_file_id: startupLogFileId };
+      }
+    }
 
     const shouldStartSession = input.start_session ?? true;
     if (!shouldStartSession) {

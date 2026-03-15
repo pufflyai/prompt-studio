@@ -408,34 +408,25 @@ Pulled empty startup script and removed .pstdio/startup.sh
 
 ---
 
-### Integration with `pstdio workspaces create`
+### Integration with Workspace Creation
 
-After `pstdio workspaces create` completes its existing steps (worktree checkout, DB metadata), it adds:
+Startup script execution is handled by backend workspace creation (`POST /v1/tickets/{id}/attempts`), not by the CLI process itself.
 
-8. Reads the project's `startup_script` from the database.
-9. If non-null, executes the script inside the workspace worktree directory using the user's default shell.
-10. Streams script stdout/stderr to the terminal.
-11. If the script exits with a non-zero code, prints a warning but does **not** fail workspace creation.
+That means one configured startup script behavior applies across all workspace creation entry points:
 
-When a startup script runs successfully:
+1. `pstdio workspaces create`
+2. Dashboard attempt/workspace creation
+3. Direct API clients calling `POST /v1/tickets/{id}/attempts`
 
-```text
-Created workspace PS-12/A1 for PS-12 at ~/.pstdio/workspaces/PS-12/A1
-Running startup script...
-<script output>
-Startup script completed.
-```
+For worktree mode, the backend behavior is:
 
-When the script fails:
+1. Create worktree and persist workspace git metadata.
+2. Read `projects.startup_script`.
+3. If configured, run the script in the created worktree directory.
+4. Save stdout/stderr to workspace startup log (`/v1/workspaces/{id}/startup-log`) when output exists.
+5. Continue workspace creation even if the script exits non-zero.
 
-```text
-Created workspace PS-12/A1 for PS-12 at ~/.pstdio/workspaces/PS-12/A1
-Running startup script...
-<script output>
-Warning: startup script exited with code 1.
-```
-
-When no startup script is configured, output is unchanged.
+CLI output remains the workspace creation line; startup script output is available via `pstdio workspaces startup-log --id <workspace-shorthand>`.
 
 ---
 

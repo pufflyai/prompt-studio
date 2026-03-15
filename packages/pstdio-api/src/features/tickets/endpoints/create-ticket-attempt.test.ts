@@ -134,4 +134,51 @@ describe("POST /v1/tickets/:id/attempts", () => {
     expect(attempt.workspace.session_id).toBeNull();
     expect(attempt.workspace.branch).toBe(`workspace/${attempt.workspace.workspace_shorthand}`);
   });
+
+  test("runs project startup script for workspace creation and stores startup log", async () => {
+    const { app, projectId, createGitRepo } = context;
+    const repoRoot = createGitRepo("attempt-startup-script-repo");
+
+    const setStartupRes = await app.request(`/v1/projects/${projectId}/startup-script`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        startup_script: 'echo "startup script ran" && echo "ok" > startup-marker.txt',
+      }),
+    });
+    expect(setStartupRes.status).toBe(204);
+
+    const repoRes = await app.request(`/v1/projects/${projectId}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "attempt-startup-script-repo", path: repoRoot }),
+    });
+    expect(repoRes.status).toBe(201);
+    const repo = await repoRes.json();
+
+    const ticket = await createTicket();
+
+    const attemptRes = await app.request(`/v1/tickets/${ticket.id}/attempts`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        repo_id: repo.id,
+        mode: "worktree",
+        start_session: false,
+      }),
+    });
+    expect(attemptRes.status).toBe(201);
+    const attempt = await attemptRes.json();
+
+    const markerPath = join(attempt.workspace.worktree_path, "startup-marker.txt");
+    expect(existsSync(markerPath)).toBe(true);
+    expect(readFileSync(markerPath, "utf8")).toContain("ok");
+
+    const startupLogRes = await app.request(`/v1/workspaces/${attempt.workspace.id}/startup-log`, {
+      method: "GET",
+    });
+    expect(startupLogRes.status).toBe(200);
+    const startupLog = await startupLogRes.text();
+    expect(startupLog).toContain("startup script ran");
+  });
 });

@@ -1,6 +1,4 @@
 import { describe, expect, mock, test } from "bun:test";
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { createWorkspaceForTicket } from "./create-workspace-for-ticket";
 
 const mockTicket = {
@@ -25,7 +23,7 @@ const mockWorkspace = {
   name: "PS-1_A1",
   workspace_shorthand: "PS-1_A1",
   branch: "workspace/PS-1_A1",
-  worktree_path: join(homedir(), ".pstdio", "workspaces", "PS-1_A1"),
+  worktree_path: "/tmp/pstdio/workspaces/PS-1_A1",
   status: "active",
   created_at: "2026-03-05T00:00:00.000Z",
   updated_at: "2026-03-05T00:00:00.000Z",
@@ -45,9 +43,6 @@ const mockTicketAttempt = {
 const baseDeps = {
   listTickets: async () => [mockTicket],
   createTicketAttempt: async () => mockTicketAttempt,
-  getStartupScript: async () => null as string | null,
-  setStartupLog: mock(async () => ({ file_id: "f-1" })),
-  exec: mock() as never,
   log: mock() as (...args: unknown[]) => void,
 };
 
@@ -68,9 +63,7 @@ describe("createWorkspaceForTicket", () => {
       base: "HEAD",
       repo_path: "/repo",
     });
-    expect(log).toHaveBeenCalledWith(
-      `Created workspace PS-1_A1 for PS-1 at ${join(homedir(), ".pstdio", "workspaces", "PS-1_A1")}`,
-    );
+    expect(log).toHaveBeenCalledWith("Created workspace PS-1_A1 for PS-1 at /tmp/pstdio/workspaces/PS-1_A1");
     expect(result).toEqual(mockWorkspace);
   });
 
@@ -97,52 +90,5 @@ describe("createWorkspaceForTicket", () => {
       base: "main",
       repo_path: "/repo",
     });
-  });
-
-  test("runs startup script in the created worktree directory", async () => {
-    const exec = mock((script: string, options: { cwd: string }, callback: (error: unknown) => void) => {
-      callback(null);
-      return { stdout: null, stderr: null } as never;
-    });
-
-    await createWorkspaceForTicket(
-      { projectId: "proj-1", repoRoot: "/repo", ticketShorthand: "PS-1" },
-      {
-        ...baseDeps,
-        getStartupScript: async () => "echo setup",
-        exec,
-      },
-    );
-
-    expect(exec).toHaveBeenCalledWith(
-      "echo setup",
-      { cwd: join(homedir(), ".pstdio", "workspaces", "PS-1_A1") },
-      expect.any(Function),
-    );
-  });
-
-  test("does not run startup script when worktree path is unavailable", async () => {
-    const exec = mock();
-    const log = mock();
-
-    await createWorkspaceForTicket(
-      { projectId: "proj-1", repoRoot: "/repo", ticketShorthand: "PS-1" },
-      {
-        ...baseDeps,
-        createTicketAttempt: async () => ({
-          ...mockTicketAttempt,
-          workspace: {
-            ...mockWorkspace,
-            worktree_path: null,
-          },
-        }),
-        getStartupScript: async () => "echo setup",
-        exec,
-        log,
-      },
-    );
-
-    expect(exec).not.toHaveBeenCalled();
-    expect(log).toHaveBeenCalledWith("Warning: startup script not run because worktree path is unavailable.");
   });
 });

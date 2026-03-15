@@ -68,33 +68,14 @@ pstdio workspaces create --id <ticket-shorthand> [--base <ref>] [--target worktr
 4. Creates a workspace via API and receives an allocated workspace shorthand (`<ticket>_A<n>`).
 5. Creates a local git worktree from the current repo root at `~/.pstdio/workspaces/<workspace-shorthand>/` on branch `workspace/<workspace-shorthand>`.
 6. Prints the created workspace shorthand and path.
-7. If the project has a `startup_script`, runs it in the workspace directory and streams output.
-8. If script output exists, saves it as the workspace startup log.
-9. If the startup script fails, workspace creation still succeeds and a warning is printed.
+7. Backend workspace creation runs the project's configured `startup_script` (if any) inside the created worktree directory.
+8. If script output exists, backend saves it as the workspace startup log.
+9. If the startup script fails, workspace creation still succeeds.
 
 ### Output
 
 ```text
 Created workspace PS-12_A1 for PS-12 at ~/.pstdio/workspaces/PS-12_A1
-```
-
-When a startup script runs:
-
-```text
-Created workspace PS-12_A1 for PS-12 at ~/.pstdio/workspaces/PS-12_A1
-Running startup script...
-<script output>
-Startup script completed.
-```
-
-When a startup script fails:
-
-```text
-Created workspace PS-12_A1 for PS-12 at ~/.pstdio/workspaces/PS-12_A1
-Running startup script...
-<script output>
-Warning: startup script exited with code 1.
-Startup log saved. View with: pstdio workspaces startup-log --id PS-12_A1
 ```
 
 ### Errors

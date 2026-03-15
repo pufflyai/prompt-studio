@@ -86,6 +86,10 @@
             {
               "text": "Settings",
               "link": "/product/dashboard/settings"
+            },
+            {
+              "text": "Startup Script",
+              "link": "/product/dashboard/startup-script"
             }
           ]
         },

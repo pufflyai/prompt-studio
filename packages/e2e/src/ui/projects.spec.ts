@@ -59,6 +59,21 @@ const getProjectStartupScriptViaApi = async (
   return (await res.json()) as { startup_script: string | null };
 };
 
+const openStartupScriptSection = async (page: Page) => {
+  await page.getByRole("option", { name: "Startup script" }).click();
+};
+
+const openTagsSection = async (page: Page) => {
+  await page.getByRole("option", { name: "Tags" }).click();
+};
+
+const replaceStartupScript = async (page: Page, script: string) => {
+  const editorInput = page.getByRole("textbox", { name: "Editor content" }).first();
+  await editorInput.focus();
+  await page.keyboard.press("ControlOrMeta+A");
+  await page.keyboard.type(script);
+};
+
 const createTempGitRepo = () => {
   const repoPath = mkdtempSync(join(tmpdir(), "pstdio-e2e-picker-"));
   mkdirSync(join(repoPath, ".git"), { recursive: true });
@@ -354,15 +369,12 @@ test.describe("Project settings startup script", () => {
     await setProjectStartupScriptViaApi(request, project.id, "#!/usr/bin/env bash\necho initial\n");
 
     await page.goto(`/projects/${project.id}/settings`);
-    await page.getByRole("button", { name: "Startup script" }).click();
+    await openStartupScriptSection(page);
 
     await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
     await expect(page.locator(".view-lines").first()).toContainText("echo initial");
 
-    const editorInput = page.locator(".monaco-editor textarea").first();
-    await editorInput.click();
-    await page.keyboard.press("Meta+A");
-    await page.keyboard.type("#!/usr/bin/env bash\necho changed\n");
+    await replaceStartupScript(page, "#!/usr/bin/env bash\necho changed\n");
 
     await expect(page.getByText("Unsaved", { exact: true })).toBeVisible();
 
@@ -373,7 +385,7 @@ test.describe("Project settings startup script", () => {
     expect(saved.startup_script).toContain("echo changed");
 
     await page.reload();
-    await page.getByRole("button", { name: "Startup script" }).click();
+    await openStartupScriptSection(page);
 
     await expect(page.locator(".view-lines").first()).toContainText("echo changed");
     await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
@@ -386,19 +398,16 @@ test.describe("Project settings startup script", () => {
     await setProjectStartupScriptViaApi(request, project.id, "#!/usr/bin/env bash\necho original\n");
 
     await page.goto(`/projects/${project.id}/settings`);
-    await page.getByRole("button", { name: "Startup script" }).click();
+    await openStartupScriptSection(page);
     await expect(page.locator(".view-lines").first()).toContainText("echo original");
 
     // Edit without saving
-    const editorInput = page.locator(".monaco-editor textarea").first();
-    await editorInput.click();
-    await page.keyboard.press("Meta+A");
-    await page.keyboard.type("#!/usr/bin/env bash\necho draft\n");
+    await replaceStartupScript(page, "#!/usr/bin/env bash\necho draft\n");
     await expect(page.getByText("Unsaved", { exact: true })).toBeVisible();
 
     // Navigate to tags then back to startup script
-    await page.getByRole("button", { name: "Tags" }).click();
-    await page.getByRole("button", { name: "Startup script" }).click();
+    await openTagsSection(page);
+    await openStartupScriptSection(page);
 
     // The unsaved draft should still be visible
     await expect(page.locator(".view-lines").first()).toContainText("echo draft");
@@ -412,19 +421,16 @@ test.describe("Project settings startup script", () => {
     await setProjectStartupScriptViaApi(request, project.id, "#!/usr/bin/env bash\necho original\n");
 
     await page.goto(`/projects/${project.id}/settings`);
-    await page.getByRole("button", { name: "Startup script" }).click();
+    await openStartupScriptSection(page);
     await expect(page.locator(".view-lines").first()).toContainText("echo original");
 
     // Edit without saving
-    const editorInput = page.locator(".monaco-editor textarea").first();
-    await editorInput.click();
-    await page.keyboard.press("Meta+A");
-    await page.keyboard.type("#!/usr/bin/env bash\necho draft-refresh\n");
+    await replaceStartupScript(page, "#!/usr/bin/env bash\necho draft-refresh\n");
     await expect(page.getByText("Unsaved", { exact: true })).toBeVisible();
 
     // Refresh the page
     await page.reload();
-    await page.getByRole("button", { name: "Startup script" }).click();
+    await openStartupScriptSection(page);
 
     // The unsaved draft should survive the refresh
     await expect(page.locator(".view-lines").first()).toContainText("echo draft-refresh");
@@ -438,19 +444,16 @@ test.describe("Project settings startup script", () => {
     await setProjectStartupScriptViaApi(request, project.id, "#!/usr/bin/env bash\necho original\n");
 
     await page.goto(`/projects/${project.id}/settings`);
-    await page.getByRole("button", { name: "Startup script" }).click();
+    await openStartupScriptSection(page);
 
     // Edit and save
-    const editorInput = page.locator(".monaco-editor textarea").first();
-    await editorInput.click();
-    await page.keyboard.press("Meta+A");
-    await page.keyboard.type("#!/usr/bin/env bash\necho saved\n");
+    await replaceStartupScript(page, "#!/usr/bin/env bash\necho saved\n");
     await page.getByRole("button", { name: "Save" }).click();
     await expect(page.getByText("Unsaved", { exact: true })).not.toBeVisible();
 
     // Refresh — should show saved version, not a stale draft
     await page.reload();
-    await page.getByRole("button", { name: "Startup script" }).click();
+    await openStartupScriptSection(page);
 
     await expect(page.locator(".view-lines").first()).toContainText("echo saved");
     await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
@@ -463,20 +466,17 @@ test.describe("Project settings startup script", () => {
     await setProjectStartupScriptViaApi(request, project.id, "#!/usr/bin/env bash\necho original\n");
 
     await page.goto(`/projects/${project.id}/settings`);
-    await page.getByRole("button", { name: "Startup script" }).click();
+    await openStartupScriptSection(page);
 
     // Edit then cancel
-    const editorInput = page.locator(".monaco-editor textarea").first();
-    await editorInput.click();
-    await page.keyboard.press("Meta+A");
-    await page.keyboard.type("#!/usr/bin/env bash\necho discarded\n");
+    await replaceStartupScript(page, "#!/usr/bin/env bash\necho discarded\n");
     await expect(page.getByText("Unsaved", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Cancel" }).click();
     await expect(page.getByText("Unsaved", { exact: true })).not.toBeVisible();
 
     // Refresh — should show original, draft was cleared
     await page.reload();
-    await page.getByRole("button", { name: "Startup script" }).click();
+    await openStartupScriptSection(page);
 
     await expect(page.locator(".view-lines").first()).toContainText("echo original");
     await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
