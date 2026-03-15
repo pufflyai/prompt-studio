@@ -27,7 +27,7 @@ const ProjectShellContent = () => {
   const isSessionsRoute = isSessionsRoutePath(location.pathname, projectId);
   const isWorkspaceRoute = isWorkspaceRoutePath(location.pathname, projectId);
   const isSettingsRoute = isSettingsRoutePath(location.pathname, projectId);
-  const showMainSidebar = projectId && !isSessionsRoute && !isSettingsRoute;
+  const showMainSidebar = projectId && !isSessionsRoute && !isSettingsRoute && !isWorkspaceRoute;
 
   useEffect(() => {
     if (isSessionsRoute) return;
