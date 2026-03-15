@@ -1,5 +1,15 @@
 # pstdio
 
+## 0.1.5
+
+### Patch Changes
+
+- 10d3b38: Update Discord links to the current community invite URL.
+- 6ac92d7: Fix untracked file diff stats so new files show correct addition counts.
+- 6ac92d7: Fix sync stream race condition that could drop session status updates during SSE bootstrap
+- 10d3b38: Generate the pstdio package README from the root README during publish.
+- a3cfc65: Add router-agnostic SidebarNext and SidebarTree components with persisted zustand state and story-driven behavior coverage.
+
 ## 0.1.4
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @pstdio/ui
 
+## 0.2.0
+
+### Minor Changes
+
+- a3cfc65: Add router-agnostic SidebarNext and SidebarTree components with persisted zustand state and story-driven behavior coverage.
+
 ## 0.1.1
 
 ### Patch Changes
