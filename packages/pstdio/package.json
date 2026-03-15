@@ -1,6 +1,6 @@
 {
   "name": "pstdio",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "type": "module",
   "bin": {
     "pstdio": "./bin/pstdio.cjs"
@@ -29,14 +29,14 @@
     "yargs": "^18.0.0"
   },
   "optionalDependencies": {
-    "@pstdio/cli-darwin-arm64": "0.1.3",
-    "@pstdio/cli-darwin-x64": "0.1.3",
-    "@pstdio/cli-linux-x64": "0.1.3",
-    "@pstdio/cli-linux-arm64": "0.1.3",
-    "@pstdio/cli-linux-x64-musl": "0.1.3",
-    "@pstdio/cli-linux-arm64-musl": "0.1.3",
-    "@pstdio/cli-win-x64": "0.1.3",
-    "@pstdio/cli-win-arm64": "0.1.3"
+    "@pstdio/cli-darwin-arm64": "0.1.4",
+    "@pstdio/cli-darwin-x64": "0.1.4",
+    "@pstdio/cli-linux-x64": "0.1.4",
+    "@pstdio/cli-linux-arm64": "0.1.4",
+    "@pstdio/cli-linux-x64-musl": "0.1.4",
+    "@pstdio/cli-linux-arm64-musl": "0.1.4",
+    "@pstdio/cli-win-x64": "0.1.4",
+    "@pstdio/cli-win-arm64": "0.1.4"
   },
   "devDependencies": {
     "@types/bun": "latest",

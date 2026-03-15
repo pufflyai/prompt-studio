@@ -1,5 +1,14 @@
 # pstdio
 
+## 0.1.4
+
+### Patch Changes
+
+- 07e2570: Fix project creation flow and sync delete handling in dashboard.
+- 186ce1e: Show model and repo selectors in workspace conversation chat.
+- 186ce1e: Fix dashboard ticket card session indicator to use session lifecycle status.
+- 370ca01: Fix packaged project creation seeding in compiled binaries
+
 ## 0.1.3
 
 ### Patch Changes
