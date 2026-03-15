@@ -2,7 +2,7 @@ import { getBundledSkills } from "pstdio-agents";
 import type { RouteDeps } from "../deps";
 
 export const seedDefaultSkills = async (deps: RouteDeps, projectId: string) => {
-  const bundled = getBundledSkills();
+  const bundled = await getBundledSkills();
 
   for (const skill of bundled) {
     const existing = await deps.skillsDbService.getByName(projectId, skill.name);

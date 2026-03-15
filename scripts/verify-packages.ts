@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 
@@ -32,4 +33,15 @@ if (failed) {
   process.exit(1);
 }
 
-process.stdout.write("\nAll platform binaries verified.\n");
+process.stdout.write("\nRunning packaged runtime smoke check...\n");
+const smoke = spawnSync("bun", ["test", "packages/e2e/src/packaged/packaged-serve-smoke.test.ts", "--silent"], {
+  stdio: "inherit",
+  env: process.env,
+});
+
+if (smoke.status !== 0) {
+  process.stderr.write("\nVerification failed: packaged runtime smoke check failed.\n");
+  process.exit(smoke.status ?? 1);
+}
+
+process.stdout.write("\nAll platform binaries and packaged runtime smoke checks passed.\n");

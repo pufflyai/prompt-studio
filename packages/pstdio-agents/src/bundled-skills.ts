@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const SKILLS_DIR = join(import.meta.dirname, "../files/skills");
+const SKILL_FILE_SUFFIX = "/SKILL.md";
 
 const parseFrontmatter = (content: string) => {
   const match = content.match(/^---\n([\s\S]*?)\n---/);
@@ -30,13 +31,58 @@ export type BundledSkill = {
   content: string;
 };
 
-export const getBundledSkills = (): BundledSkill[] => {
-  const entries = readdirSync(SKILLS_DIR, { withFileTypes: true }).filter((e) => e.isDirectory());
+type EmbeddedFile = Blob & { name: string };
+
+const getEmbeddedFiles = () => {
+  const files = (Bun as Record<string, unknown>).embeddedFiles;
+  return Array.isArray(files) ? (files as EmbeddedFile[]) : [];
+};
+
+const resolveEmbeddedSkillName = (fileName: string) => {
+  if (!fileName.endsWith(SKILL_FILE_SUFFIX)) return null;
+  const marker = "/files/skills/";
+  const markerIndex = fileName.indexOf(marker);
+  if (markerIndex < 0) return null;
+
+  const relativePath = fileName.slice(markerIndex + marker.length, -SKILL_FILE_SUFFIX.length);
+  const [skillName] = relativePath.split("/");
+  return skillName || null;
+};
+
+const loadEmbeddedSkills = async () => {
+  const embeddedFiles = getEmbeddedFiles();
+  const files = embeddedFiles
+    .map((file) => {
+      const skillName = resolveEmbeddedSkillName(file.name);
+      if (!skillName) return null;
+      return { skillName, file };
+    })
+    .filter((entry) => entry !== null)
+    .sort((a, b) => a.skillName.localeCompare(b.skillName));
+
+  if (files.length === 0) return null;
+
+  return Promise.all(
+    files.map(async ({ skillName, file }) => {
+      const content = await file.text();
+      const { name, description } = parseFrontmatter(content);
+      return { name: name || skillName, description, content };
+    }),
+  );
+};
+
+const loadFilesystemSkills = () => {
+  const entries = readdirSync(SKILLS_DIR, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return entries.map((entry) => {
-    const skillPath = join(SKILLS_DIR, entry.name, "SKILL.md");
-    const content = readFileSync(skillPath, "utf8");
+    const content = readFileSync(join(SKILLS_DIR, entry.name, "SKILL.md"), "utf8");
     const { name, description } = parseFrontmatter(content);
     return { name: name || entry.name, description, content };
   });
+};
+
+export const getBundledSkills = async () => {
+  return (await loadEmbeddedSkills()) ?? loadFilesystemSkills();
 };

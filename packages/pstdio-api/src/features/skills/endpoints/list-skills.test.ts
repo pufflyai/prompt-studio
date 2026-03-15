@@ -10,8 +10,7 @@ import type { AppBindings } from "../../../types";
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
 let projectId: string;
-
-const bundledSkills = getBundledSkills();
+let bundledSkills: Awaited<ReturnType<typeof getBundledSkills>>;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-skills-test-"));
@@ -19,6 +18,7 @@ beforeAll(async () => {
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
   }));
+  bundledSkills = await getBundledSkills();
 
   const res = await app.request("/v1/projects", {
     method: "POST",

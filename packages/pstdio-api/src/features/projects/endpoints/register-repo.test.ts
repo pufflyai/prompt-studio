@@ -103,7 +103,7 @@ describe("POST /v1/projects/:id/repos", () => {
 
     expect(res.status).toBe(201);
 
-    const bundled = getBundledSkills();
+    const bundled = await getBundledSkills();
     for (const skill of bundled) {
       const skillPath = join(repoPath, ".claude", "skills", skill.name, "SKILL.md");
       expect(existsSync(skillPath)).toBe(true);

@@ -12,6 +12,31 @@ const BUNDLED_TEMPLATES = [
   { name: "lessons-learned", template_type: "document", file_name: "lessons-learned-template.md", is_default: false },
 ] as const;
 
+type EmbeddedFile = Blob & { name: string };
+
+const getEmbeddedFiles = () => {
+  const files = (Bun as Record<string, unknown>).embeddedFiles;
+  return Array.isArray(files) ? (files as EmbeddedFile[]) : [];
+};
+
+const getEmbeddedTemplate = (embeddedFiles: EmbeddedFile[], fileName: string) =>
+  embeddedFiles.find((file) => file.name.endsWith(`/files/templates/${fileName}`));
+
+const loadEmbeddedTemplateContents = async () => {
+  const embeddedFiles = getEmbeddedFiles();
+  if (embeddedFiles.length === 0) return null;
+
+  const contents = new Map<string, string>();
+
+  for (const template of BUNDLED_TEMPLATES) {
+    const embedded = getEmbeddedTemplate(embeddedFiles, template.file_name);
+    if (!embedded) return null;
+    contents.set(template.file_name, await embedded.text());
+  }
+
+  return contents;
+};
+
 const resolveBundledTemplatesDir = () => {
   const templatesDir = resolve(import.meta.dirname, "../../../../pstdio/files/templates");
   if (!existsSync(templatesDir)) {
@@ -20,15 +45,32 @@ const resolveBundledTemplatesDir = () => {
   return templatesDir;
 };
 
-export const seedDefaultTemplates = async (deps: RouteDeps, projectId: string) => {
+const loadTemplateContents = async () => {
+  const embedded = await loadEmbeddedTemplateContents();
+  if (embedded) return embedded;
+
   const templatesDir = resolveBundledTemplatesDir();
+  const contents = new Map<string, string>();
+
+  for (const template of BUNDLED_TEMPLATES) {
+    contents.set(template.file_name, readFileSync(join(templatesDir, template.file_name), "utf8"));
+  }
+
+  return contents;
+};
+
+export const seedDefaultTemplates = async (deps: RouteDeps, projectId: string) => {
+  const contents = await loadTemplateContents();
   const seeded = [];
 
   for (const template of BUNDLED_TEMPLATES) {
     const existing = await deps.templatesService.getByName(projectId, template.name);
     if (existing) continue;
 
-    const content = readFileSync(join(templatesDir, template.file_name), "utf8");
+    const content = contents.get(template.file_name);
+    if (!content) {
+      throw new Error(`Missing bundled template content for ${template.file_name}`);
+    }
     const file = await deps.filesService.upload({
       project_id: projectId,
       file_name: `${template.name}.md`,

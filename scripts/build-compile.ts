@@ -7,6 +7,7 @@ process.chdir(join(import.meta.dirname, ".."));
 
 const DASHBOARD_DIST = "./packages/pstdio-dashboard/dist";
 const CLI_FILES = "./packages/pstdio/files";
+const AGENT_FILES = "./packages/pstdio-agents/files";
 const DRIZZLE_DIR = "./packages/pstdio-db/drizzle";
 const CLI_ENTRY = "./packages/pstdio/src/index.ts";
 const EMBED_MANIFEST = "./packages/pstdio/src/_embed-manifest.generated.ts";
@@ -32,11 +33,12 @@ const collectFiles = (dir: string): string[] => {
 console.log("Collecting files to embed...");
 const distFiles = collectFiles(DASHBOARD_DIST);
 const cliFiles = collectFiles(CLI_FILES);
+const agentFiles = collectFiles(AGENT_FILES);
 const drizzleFiles = collectFiles(DRIZZLE_DIR);
-const allFiles = [...distFiles, ...cliFiles, ...drizzleFiles];
+const allFiles = [...distFiles, ...cliFiles, ...agentFiles, ...drizzleFiles];
 
 console.log(
-  `  Found ${allFiles.length} files to embed (${distFiles.length} dashboard + ${cliFiles.length} bundled + ${drizzleFiles.length} drizzle)`,
+  `  Found ${allFiles.length} files to embed (${distFiles.length} dashboard + ${cliFiles.length} bundled + ${agentFiles.length} skills + ${drizzleFiles.length} drizzle)`,
 );
 console.log("  PGlite assets (pglite.wasm, pglite.data) are embedded via direct file imports in connection.pglite.ts");
 

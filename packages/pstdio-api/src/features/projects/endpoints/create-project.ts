@@ -30,19 +30,24 @@ export const createProjectHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
     const { name } = c.req.valid("json");
     const project = await deps.projectsService.create({ name });
 
-    deps.eventBus.emit("projects", "set", project);
+    try {
+      const templates = await seedDefaultTemplates(deps, project.id);
+      await seedDefaultSkills(deps, project.id);
 
-    const statuses = await deps.db.select().from(ticket_statuses).where(eq(ticket_statuses.project_id, project.id));
-    for (const status of statuses) deps.eventBus.emit("ticket_statuses", "set", status);
+      deps.eventBus.emit("projects", "set", project);
 
-    const tags = await deps.db.select().from(ticket_tags).where(eq(ticket_tags.project_id, project.id));
-    for (const tag of tags) deps.eventBus.emit("ticket_tags", "set", tag);
+      const statuses = await deps.db.select().from(ticket_statuses).where(eq(ticket_statuses.project_id, project.id));
+      for (const status of statuses) deps.eventBus.emit("ticket_statuses", "set", status);
 
-    const templates = await seedDefaultTemplates(deps, project.id);
-    for (const template of templates) deps.eventBus.emit("templates", "set", template);
+      const tags = await deps.db.select().from(ticket_tags).where(eq(ticket_tags.project_id, project.id));
+      for (const tag of tags) deps.eventBus.emit("ticket_tags", "set", tag);
 
-    await seedDefaultSkills(deps, project.id);
+      for (const template of templates) deps.eventBus.emit("templates", "set", template);
 
-    return c.json(project, 201);
+      return c.json(project, 201);
+    } catch (error) {
+      await deps.projectsService.hardDelete(project.id);
+      throw error;
+    }
   };
 };

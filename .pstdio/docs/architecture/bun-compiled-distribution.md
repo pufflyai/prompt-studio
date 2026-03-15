@@ -43,6 +43,8 @@ pstdio dashboard       # starts API + opens dashboard
 
 A compiled single binary MUST NOT depend on sibling files on disk. Hono's `serveStatic` resolves files relative to the process's current working directory, which breaks when the binary runs from an arbitrary location. All assets the binary needs must be embedded inside it.
 
+This applies to project seeding inputs too. Default templates and default skills must be resolved from embedded assets in compiled mode (with filesystem fallback only for workspace/dev execution), otherwise `POST /v1/projects` can fail with 500 in published binaries.
+
 ### Entry point change
 
 `src/cli.ts` becomes the single entry point for compilation. It imports from both the current CLI code and the API server code:
@@ -343,7 +345,7 @@ prompt-studio/
 │  └─ cli.ts                          # compiled entry point (new)
 ├─ scripts/
 │  ├─ build-all.ts                     # cross-platform compile
-│  ├─ verify-packages.ts               # validate binaries exist
+│  ├─ verify-packages.ts               # validate binaries + packaged runtime smoke
 │  └─ install.sh                       # curl install script
 ├─ packages/
 │  ├─ pstdio/                          # wrapper package (npm)
@@ -396,6 +398,14 @@ steps:
 ```
 
 All packages share the same version. Platform packages publish before the wrapper.
+
+`scripts/verify-packages.ts` now includes a required runtime smoke check on the host-platform compiled binary:
+
+1. start `<platform-binary> serve` with isolated `PSTDIO_DB_PATH` and `PSTDIO_STORAGE_PATH`
+2. call `POST /v1/projects`
+3. assert default templates and default skills were seeded via API
+
+This closes the gap where binary presence was verified but core packaged behavior was not.
 
 ---
 
