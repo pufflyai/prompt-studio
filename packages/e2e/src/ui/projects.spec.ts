@@ -39,6 +39,26 @@ const configureAgent = async (request: import("@playwright/test").APIRequestCont
   expect(res.ok()).toBe(true);
 };
 
+const setProjectStartupScriptViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  projectId: string,
+  script: string,
+) => {
+  const res = await request.put(`${apiBase}/v1/projects/${projectId}/startup-script`, {
+    data: { startup_script: script },
+  });
+  expect(res.ok()).toBe(true);
+};
+
+const getProjectStartupScriptViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  projectId: string,
+) => {
+  const res = await request.get(`${apiBase}/v1/projects/${projectId}/startup-script`);
+  expect(res.ok()).toBe(true);
+  return (await res.json()) as { startup_script: string | null };
+};
+
 const createTempGitRepo = () => {
   const repoPath = mkdtempSync(join(tmpdir(), "pstdio-e2e-picker-"));
   mkdirSync(join(repoPath, ".git"), { recursive: true });
@@ -318,5 +338,147 @@ test.describe("Project creation", () => {
     expect(existsSync(join(repoPath, ".opencode", "skills", "create-ticket", "SKILL.md"))).toBe(true);
     expect(existsSync(join(repoPath, ".opencode", "skills", "implement-ticket", "SKILL.md"))).toBe(true);
     expect(existsSync(join(repoPath, ".opencode", "skills", "create-proposal", "SKILL.md"))).toBe(true);
+  });
+});
+
+test.describe("Project settings startup script", () => {
+  test.beforeEach(async ({ request }) => {
+    test.setTimeout(10_000);
+    await deleteAllProjects(request);
+  });
+
+  test("loads, edits, saves, and reloads startup script in settings", async ({ page, request }) => {
+    await bypassOnboarding(page);
+
+    const project = await createProjectViaApi(request, "Startup Script Settings Project");
+    await setProjectStartupScriptViaApi(request, project.id, "#!/usr/bin/env bash\necho initial\n");
+
+    await page.goto(`/projects/${project.id}/settings`);
+    await page.getByRole("button", { name: "Startup script" }).click();
+
+    await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
+    await expect(page.locator(".view-lines").first()).toContainText("echo initial");
+
+    const editorInput = page.locator(".monaco-editor textarea").first();
+    await editorInput.click();
+    await page.keyboard.press("Meta+A");
+    await page.keyboard.type("#!/usr/bin/env bash\necho changed\n");
+
+    await expect(page.getByText("Unsaved", { exact: true })).toBeVisible();
+
+    await page.getByRole("button", { name: "Save" }).click();
+    await expect(page.getByText("Unsaved", { exact: true })).not.toBeVisible();
+
+    const saved = await getProjectStartupScriptViaApi(request, project.id);
+    expect(saved.startup_script).toContain("echo changed");
+
+    await page.reload();
+    await page.getByRole("button", { name: "Startup script" }).click();
+
+    await expect(page.locator(".view-lines").first()).toContainText("echo changed");
+    await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
+  });
+
+  test("preserves unsaved draft after navigating away and back", async ({ page, request }) => {
+    await bypassOnboarding(page);
+
+    const project = await createProjectViaApi(request, "Draft Nav Project");
+    await setProjectStartupScriptViaApi(request, project.id, "#!/usr/bin/env bash\necho original\n");
+
+    await page.goto(`/projects/${project.id}/settings`);
+    await page.getByRole("button", { name: "Startup script" }).click();
+    await expect(page.locator(".view-lines").first()).toContainText("echo original");
+
+    // Edit without saving
+    const editorInput = page.locator(".monaco-editor textarea").first();
+    await editorInput.click();
+    await page.keyboard.press("Meta+A");
+    await page.keyboard.type("#!/usr/bin/env bash\necho draft\n");
+    await expect(page.getByText("Unsaved", { exact: true })).toBeVisible();
+
+    // Navigate to tags then back to startup script
+    await page.getByRole("button", { name: "Tags" }).click();
+    await page.getByRole("button", { name: "Startup script" }).click();
+
+    // The unsaved draft should still be visible
+    await expect(page.locator(".view-lines").first()).toContainText("echo draft");
+    await expect(page.getByText("Unsaved", { exact: true })).toBeVisible();
+  });
+
+  test("preserves unsaved draft across page refresh", async ({ page, request }) => {
+    await bypassOnboarding(page);
+
+    const project = await createProjectViaApi(request, "Draft Refresh Project");
+    await setProjectStartupScriptViaApi(request, project.id, "#!/usr/bin/env bash\necho original\n");
+
+    await page.goto(`/projects/${project.id}/settings`);
+    await page.getByRole("button", { name: "Startup script" }).click();
+    await expect(page.locator(".view-lines").first()).toContainText("echo original");
+
+    // Edit without saving
+    const editorInput = page.locator(".monaco-editor textarea").first();
+    await editorInput.click();
+    await page.keyboard.press("Meta+A");
+    await page.keyboard.type("#!/usr/bin/env bash\necho draft-refresh\n");
+    await expect(page.getByText("Unsaved", { exact: true })).toBeVisible();
+
+    // Refresh the page
+    await page.reload();
+    await page.getByRole("button", { name: "Startup script" }).click();
+
+    // The unsaved draft should survive the refresh
+    await expect(page.locator(".view-lines").first()).toContainText("echo draft-refresh");
+    await expect(page.getByText("Unsaved", { exact: true })).toBeVisible();
+  });
+
+  test("clears draft after saving", async ({ page, request }) => {
+    await bypassOnboarding(page);
+
+    const project = await createProjectViaApi(request, "Draft Clear Project");
+    await setProjectStartupScriptViaApi(request, project.id, "#!/usr/bin/env bash\necho original\n");
+
+    await page.goto(`/projects/${project.id}/settings`);
+    await page.getByRole("button", { name: "Startup script" }).click();
+
+    // Edit and save
+    const editorInput = page.locator(".monaco-editor textarea").first();
+    await editorInput.click();
+    await page.keyboard.press("Meta+A");
+    await page.keyboard.type("#!/usr/bin/env bash\necho saved\n");
+    await page.getByRole("button", { name: "Save" }).click();
+    await expect(page.getByText("Unsaved", { exact: true })).not.toBeVisible();
+
+    // Refresh — should show saved version, not a stale draft
+    await page.reload();
+    await page.getByRole("button", { name: "Startup script" }).click();
+
+    await expect(page.locator(".view-lines").first()).toContainText("echo saved");
+    await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
+  });
+
+  test("clears draft after cancelling", async ({ page, request }) => {
+    await bypassOnboarding(page);
+
+    const project = await createProjectViaApi(request, "Draft Cancel Project");
+    await setProjectStartupScriptViaApi(request, project.id, "#!/usr/bin/env bash\necho original\n");
+
+    await page.goto(`/projects/${project.id}/settings`);
+    await page.getByRole("button", { name: "Startup script" }).click();
+
+    // Edit then cancel
+    const editorInput = page.locator(".monaco-editor textarea").first();
+    await editorInput.click();
+    await page.keyboard.press("Meta+A");
+    await page.keyboard.type("#!/usr/bin/env bash\necho discarded\n");
+    await expect(page.getByText("Unsaved", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByText("Unsaved", { exact: true })).not.toBeVisible();
+
+    // Refresh — should show original, draft was cleared
+    await page.reload();
+    await page.getByRole("button", { name: "Startup script" }).click();
+
+    await expect(page.locator(".view-lines").first()).toContainText("echo original");
+    await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
   });
 });

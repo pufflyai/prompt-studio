@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanupDirs, createGitRepo, runPstdio, runPstdioSafe } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
@@ -110,6 +110,41 @@ describe("pstdio projects startup-script", () => {
 
       const getOutput2 = run("projects startup-script get", repo);
       expect(getOutput2).toContain("No startup script configured");
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
+    "save pushes local .pstdio/startup.sh to remote startup script",
+    () => {
+      const repo = createInitializedRepo("ss-save-local");
+      writeFileSync(join(repo, ".pstdio", "startup.sh"), "#!/usr/bin/env bash\necho from-local\n");
+
+      const saveOutput = run("projects startup-script save", repo);
+      expect(saveOutput).toContain("Saved .pstdio/startup.sh to project startup script");
+
+      const getOutput = run("projects startup-script get", repo);
+      expect(getOutput).toContain("echo from-local");
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
+    "pull refreshes local .pstdio/startup.sh from remote source of truth",
+    () => {
+      const repo = createInitializedRepo("ss-pull-local");
+      const remoteScriptPath = join(repo, "remote.sh");
+      writeFileSync(remoteScriptPath, "#!/usr/bin/env bash\necho from-remote\n");
+      run(`projects startup-script set --file ${remoteScriptPath}`, repo);
+
+      writeFileSync(join(repo, ".pstdio", "startup.sh"), "echo stale-local\n");
+
+      const pullOutput = run("projects startup-script pull", repo);
+      expect(pullOutput).toContain("Pulled startup script to .pstdio/startup.sh");
+
+      const localScript = readFileSync(join(repo, ".pstdio", "startup.sh"), "utf8");
+      expect(localScript).toContain("echo from-remote");
+      expect(localScript).not.toContain("stale-local");
     },
     TEST_TIMEOUT,
   );

@@ -53,15 +53,17 @@ export const createWorkspaceForTicket = async (input: CreateWorkspaceForTicketIn
   });
 
   const shorthand = workspace.workspace_shorthand;
-  const wtPath = workspace.worktree_path ?? repoRoot;
-  deps.log(`Created workspace ${shorthand} for ${ticketShorthand} at ${wtPath}`);
+  const wtPath = workspace.worktree_path;
+  deps.log(`Created workspace ${shorthand} for ${ticketShorthand} at ${wtPath ?? "(unavailable)"}`);
 
   const script = await deps.getStartupScript(API_URL, projectId);
-  if (script) {
+  if (script && wtPath) {
     await runStartupScript(
       { exec: deps.exec, log: deps.log, setStartupLog: deps.setStartupLog },
       { script, cwd: wtPath, apiUrl: API_URL, workspaceId: workspace.id, workspaceShorthand: shorthand },
     );
+  } else if (script) {
+    deps.log("Warning: startup script not run because worktree path is unavailable.");
   }
 
   return workspace;

@@ -36,6 +36,7 @@ export interface Project {
   status: "active" | "archived";
   owner: string;
   updatedAt: string;
+  startupScript: string | null;
   ticketStatuses: TicketStatus[];
   ticketStatusOptions: TicketStatusOption[];
   repositories: ProjectRepository[];

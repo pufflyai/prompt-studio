@@ -4,6 +4,7 @@ export const projectResponseSchema = z.object({
   id: z.string(),
   name: z.string(),
   shorthand: z.string(),
+  startup_script: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
 });

@@ -1,11 +1,11 @@
-import type { SidebarNavigateEvent, SidebarNode, SidebarSection } from "@pstdio/ui";
-import { SidebarNext } from "@pstdio/ui";
-import { AlertTriangle, FileText, Plus, Tag } from "lucide-react";
+import { type SidebarNavigateEvent, SidebarNext, type SidebarNode, type SidebarSection } from "@pstdio/ui";
+import { AlertTriangle, FileText, Plus, Tag, TerminalSquare } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BackToDashboard } from "@/features/project/components/back-to-dashboard";
+
 import type { ProjectTemplateAsset } from "@/features/project/types";
 
-export type SettingsSection = "tags" | "danger-zone" | { template: string };
+export type SettingsSection = "tags" | "startup-script" | "danger-zone" | { template: string };
 
 export const SETTINGS_SIDEBAR_STORAGE_KEY = "settings-sidebar";
 
@@ -19,6 +19,7 @@ interface SettingsSidebarProps {
 const resolveActiveNodeId = (activeSection: SettingsSection | null) => {
   if (!activeSection) return null;
   if (activeSection === "tags") return "tags";
+  if (activeSection === "startup-script") return "startup-script";
   if (activeSection === "danger-zone") return "danger-zone";
   return `template:${activeSection.template}`;
 };
@@ -35,6 +36,13 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
         icon: <Tag size={14} />,
         isNavigable: true,
         navigationIntent: { id: "select", payload: "tags" },
+      },
+      {
+        id: "startup-script",
+        label: t("projectSettings.startupScript", { defaultValue: "Startup script" }),
+        icon: <TerminalSquare size={14} />,
+        isNavigable: true,
+        navigationIntent: { id: "select", payload: "startup-script" },
       },
     ];
 
@@ -81,7 +89,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
     if (!intent) return;
 
     if (intent.id === "select") {
-      onSelectSection(intent.payload as "tags" | "danger-zone");
+      onSelectSection(intent.payload as "tags" | "startup-script" | "danger-zone");
     }
 
     if (intent.id === "select-template") {

@@ -82,6 +82,7 @@ export const useProject = (projectId: string | undefined) => {
     status: DEFAULT_PROJECT_STATUS,
     owner: DEFAULT_OWNER,
     updatedAt: project.updated_at as string,
+    startupScript: (project.startup_script as string | null | undefined) ?? null,
     ticketStatuses: statusOptions.length ? statusOptions.map((s) => s.name) : ["Unassigned"],
     ticketStatusOptions: statusOptions,
     repositories: repos.map((r) => toProjectRepository(r as Parameters<typeof toProjectRepository>[0])),

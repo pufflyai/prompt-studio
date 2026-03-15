@@ -69,6 +69,7 @@ export const getProject = async (projectId: string) => {
     status: DEFAULT_PROJECT_STATUS,
     owner: DEFAULT_OWNER,
     updatedAt: project.updated_at,
+    startupScript: project.startup_script ?? null,
     ticketStatuses: statusCatalog.names,
     ticketStatusOptions: statusCatalog.options,
     repositories: repositories.map(toProjectRepository),
@@ -129,6 +130,10 @@ type ApiBranch = {
   last_commit_date: string;
 };
 
+type ApiStartupScript = {
+  startup_script: string | null;
+};
+
 export const getRepoBranches = async (repoId: string): Promise<RepoBranch[]> => {
   const branches = await apiRequest<ApiBranch[]>(`/v1/repos/${repoId}/branches`);
   return branches.map((b) => ({
@@ -152,6 +157,26 @@ export const getProjectTemplateAssets = async (projectId: string): Promise<Proje
     createdAt: t.created_at,
     updatedAt: t.updated_at,
   }));
+};
+
+export const getProjectStartupScript = async (projectId: string) => {
+  const response = await apiRequest<ApiStartupScript>(`/v1/projects/${projectId}/startup-script`);
+  return response.startup_script;
+};
+
+export const setProjectStartupScript = async (projectId: string, script: string) => {
+  await apiRequest(`/v1/projects/${projectId}/startup-script`, {
+    method: "PUT",
+    body: {
+      startup_script: script,
+    },
+  });
+};
+
+export const clearProjectStartupScript = async (projectId: string) => {
+  await apiRequest(`/v1/projects/${projectId}/startup-script`, {
+    method: "DELETE",
+  });
 };
 
 export const getProjectTemplate = async (projectId: string, name: string) => {

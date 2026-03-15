@@ -5,6 +5,7 @@ import { useProject, useProjectTemplateAssets } from "@/features/project/hooks/u
 import { CreateTemplateDialog } from "../components/create-template-dialog";
 import { ProjectDangerZone } from "../components/project-danger-zone";
 import { type SettingsSection, SettingsSidebar } from "../components/settings-sidebar";
+import { StartupScriptEditor } from "../components/startup-script-editor";
 import { TagManager } from "../components/tag-manager";
 import { TemplateEditor } from "../components/template-editor";
 
@@ -17,6 +18,7 @@ export const ProjectSettings = () => {
 
   const projectName = project?.name ?? "Project";
   const tags = project?.ticketTags ?? [];
+  const startupScript = project?.startupScript;
 
   const handleTemplateCreated = (name: string) => {
     setActiveSection({ template: name });
@@ -47,6 +49,10 @@ export const ProjectSettings = () => {
           <ProjectDangerZone projectId={projectId} projectName={projectName} />
         </Stack>
       );
+    }
+
+    if (activeSection === "startup-script") {
+      return <StartupScriptEditor projectId={projectId} startupScript={startupScript} />;
     }
 
     return (

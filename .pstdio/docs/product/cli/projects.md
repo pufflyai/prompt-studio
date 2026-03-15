@@ -266,6 +266,8 @@ A project can define a startup script that runs automatically when a new workspa
 | -------------------------------------- | -------------------------- |
 | `pstdio projects startup-script set`   | Set the startup script.    |
 | `pstdio projects startup-script get`   | Print the startup script.  |
+| `pstdio projects startup-script save`  | Push local `.pstdio/startup.sh` to remote. |
+| `pstdio projects startup-script pull`  | Refresh local `.pstdio/startup.sh` from remote. |
 | `pstdio projects startup-script clear` | Remove the startup script. |
 
 All subcommands require a linked project (`.pstdio/config.json` exists). If missing, they fail with `"Not inside a pstdio project. Run 'pstdio projects create' first."`.
@@ -342,6 +344,66 @@ pstdio projects startup-script clear
 
 ```text
 Startup script cleared for project "my-app".
+```
+
+---
+
+### `pstdio projects startup-script save`
+
+#### Usage
+
+```sh
+pstdio projects startup-script save
+```
+
+#### Behavior
+
+1. Reads `.pstdio/startup.sh` from the current linked project.
+2. If the file has non-whitespace content, updates `projects.startup_script` with that content.
+3. If the file is empty/whitespace-only, clears `projects.startup_script` to `NULL`.
+
+#### Output
+
+```text
+Saved .pstdio/startup.sh to project startup script
+```
+
+or when empty:
+
+```text
+Saved empty .pstdio/startup.sh and cleared project startup script
+```
+
+#### Errors
+
+- `Local startup script not found: .pstdio/startup.sh`: no local startup script projection exists.
+
+---
+
+### `pstdio projects startup-script pull`
+
+#### Usage
+
+```sh
+pstdio projects startup-script pull
+```
+
+#### Behavior
+
+1. Reads `projects.startup_script` from remote storage (authoritative source).
+2. If non-null, overwrites `.pstdio/startup.sh` with the remote value.
+3. If null, removes local `.pstdio/startup.sh`.
+
+#### Output
+
+```text
+Pulled startup script to .pstdio/startup.sh
+```
+
+or when remote is empty:
+
+```text
+Pulled empty startup script and removed .pstdio/startup.sh
 ```
 
 ---
