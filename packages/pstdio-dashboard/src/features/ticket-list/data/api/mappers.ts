@@ -12,11 +12,6 @@ import type { ApiTicket, ApiTicketAttempt } from "./types";
 const DEFAULT_STATUS_COLOR: TicketStatusColor = "gray";
 const DEFAULT_STATUS_NAME = "Unassigned";
 
-const isWipLike = (name: string) => {
-  const normalized = name.trim().toLowerCase();
-  return normalized.includes("wip") || normalized.includes("progress");
-};
-
 const isClosedLike = (name: string) => {
   const normalized = name.trim().toLowerCase();
   return normalized === "done" || normalized === "closed" || normalized === "archived";
@@ -34,7 +29,6 @@ export const toTicketStatusOption = (status: StatusResponse): TicketStatusOption
     canDragOut: true,
     canDragIn: true,
     canCreate: status.is_default,
-    canAttemptOnDrop: isWipLike(status.name),
     columnActions,
   };
 };
@@ -61,6 +55,7 @@ export const toTicketAttempt = (attempt: ApiTicketAttempt): TicketAttempt => ({
   id: attempt.id,
   label: attempt.label,
   status: attempt.status,
+  sessionStatus: null,
   shorthand: attempt.shorthand ?? attempt.id,
   sessionId: attempt.session_id,
   updatedAt: attempt.updated_at,

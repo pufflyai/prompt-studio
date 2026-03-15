@@ -24,8 +24,7 @@ export const buildLatestAttemptsByTicketId = (tickets: Ticket[]) => {
   return latestAttemptsByTicketId;
 };
 
-export const toSessionIndicatorStatus = (attemptStatus: TicketAttempt["status"]) => {
-  if (attemptStatus === "merged") return "completed";
-  if (attemptStatus === "rejected") return "failed";
-  return "in_progress";
+export const toSessionIndicatorStatus = (sessionStatus: TicketAttempt["sessionStatus"]) => {
+  if (sessionStatus === "cancelled") return "failed";
+  return sessionStatus ?? undefined;
 };

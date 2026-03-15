@@ -1,3 +1,5 @@
+import type { SessionStatus } from "@/features/sessions/types";
+
 export type TicketStatus = string;
 
 export type TicketStatusColor =
@@ -23,7 +25,6 @@ export interface TicketStatusOption {
   canDragOut: boolean;
   canDragIn: boolean;
   canCreate: boolean;
-  canAttemptOnDrop: boolean;
   columnActions: TicketColumnAction[];
 }
 
@@ -31,6 +32,7 @@ export interface TicketAttempt {
   id: string;
   label: string;
   status: "active" | "merged" | "rejected";
+  sessionStatus: SessionStatus | null;
   shorthand: string;
   sessionId: string;
   updatedAt: string;

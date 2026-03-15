@@ -6,6 +6,7 @@ const makeAttempt = (overrides: Partial<TicketAttempt>): TicketAttempt => ({
   id: "workspace-1",
   label: "Attempt 1",
   status: "active",
+  sessionStatus: "in_progress",
   shorthand: "PS-1_A1",
   sessionId: "session-1",
   updatedAt: "2026-03-13T10:00:00.000Z",
@@ -55,9 +56,15 @@ describe("buildLatestAttemptsByTicketId", () => {
 });
 
 describe("toSessionIndicatorStatus", () => {
-  it("maps attempt status to session indicator status", () => {
-    expect(toSessionIndicatorStatus("active")).toBe("in_progress");
-    expect(toSessionIndicatorStatus("merged")).toBe("completed");
-    expect(toSessionIndicatorStatus("rejected")).toBe("failed");
+  it("prefers linked session status for the indicator", () => {
+    expect(toSessionIndicatorStatus("in_progress")).toBe("in_progress");
+    expect(toSessionIndicatorStatus("awaiting_input")).toBe("awaiting_input");
+    expect(toSessionIndicatorStatus("completed")).toBe("completed");
+    expect(toSessionIndicatorStatus("failed")).toBe("failed");
+    expect(toSessionIndicatorStatus("cancelled")).toBe("failed");
+  });
+
+  it("does not derive status from workspace state when session status is unavailable", () => {
+    expect(toSessionIndicatorStatus(null)).toBeUndefined();
   });
 });

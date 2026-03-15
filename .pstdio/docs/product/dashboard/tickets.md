@@ -28,6 +28,7 @@ The legacy tickets PRD described display controls and alternate views that are n
 ## Overview
 
 The tickets panel lives at `/projects/:projectId/tickets`. It loads project metadata and project tickets, filters out archived tickets, groups tickets by status, and renders the result as a board.
+Ticket-card behavior and data-source rules are specified in `/product/dashboard/ticket-cards`.
 
 ## Requirements
 
@@ -44,6 +45,7 @@ The tickets panel lives at `/projects/:projectId/tickets`. It loads project meta
 
 - The panel header must expose the view title.
 - Ticket cards must show shorthand, title, parent path when applicable, and the currently configured badges.
+- Ticket card session indicators must reflect linked `sessions.status` when present.
 
 ### Operational Requirements
 

@@ -72,6 +72,10 @@
               "link": "/product/dashboard/tickets"
             },
             {
+              "text": "Ticket Cards",
+              "link": "/product/dashboard/ticket-cards"
+            },
+            {
               "text": "Ticket Detail",
               "link": "/product/dashboard/ticket-detail"
             },

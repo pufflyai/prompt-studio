@@ -62,7 +62,7 @@ export const TicketsBoardView = (props: TicketsBoardViewProps) => {
         title: ticket.title || t("boardView.emptyTicket"),
         badges: buildTicketBadges(ticket, displayProperties, badgeContext),
         sessionIndicatorLabel: latestAttempt?.shorthand,
-        sessionIndicatorStatus: latestAttempt ? toSessionIndicatorStatus(latestAttempt.status) : undefined,
+        sessionIndicatorStatus: latestAttempt ? toSessionIndicatorStatus(latestAttempt.sessionStatus) : undefined,
         diffAdditions: diffTotals?.additions,
         diffDeletions: diffTotals?.deletions,
         onSessionIndicatorClick: sessionId ? () => onOpenSessionBubble?.(sessionId) : undefined,

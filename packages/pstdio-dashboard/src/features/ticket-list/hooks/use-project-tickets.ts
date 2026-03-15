@@ -12,62 +12,11 @@ import {
 } from "@/features/ticket-list/data/api";
 import { toTicketStatusOption, toTicketTag } from "@/features/ticket-list/data/api/mappers";
 import type { Ticket, TicketStatus, TicketStatusColor, TicketTag } from "@/features/ticket-list/types";
+import { buildSessionsByWorkspace } from "@/features/ticket-list/utils/sessions-by-workspace";
+import { toTicketFromRow } from "./ticket-row-mappers";
 
 const DEFAULT_STATUS_COLOR: TicketStatusColor = "gray";
 const DEFAULT_STATUS_NAME = "Unassigned";
-
-const toTicketFromRow = (
-  row: SyncedRow,
-  statusById: Map<string, string>,
-  colorById: Map<string, TicketStatusColor>,
-  fallbackName: string,
-  fallbackColor: TicketStatusColor,
-  tagIdsByTicket: Map<string, string[]>,
-  workspacesByTicket: Map<string, SyncedRow[]>,
-  sessionsByWorkspace: Map<string, SyncedRow>,
-  subTicketsByParent: Map<string, SyncedRow[]>,
-): Ticket => {
-  const statusId = row.status_id as string | null;
-  const attempts = (workspacesByTicket.get(row.id) ?? []).map((ws) => {
-    const session = sessionsByWorkspace.get(ws.id);
-    return {
-      id: ws.id,
-      label: (ws.name as string) ?? ws.id,
-      status: (ws.status as "active" | "merged" | "rejected") ?? "active",
-      shorthand: (ws.workspace_shorthand as string) ?? ws.id,
-      sessionId: session?.id ?? "",
-      updatedAt: ws.updated_at as string,
-      worktreePath: (ws.worktree_path as string) ?? null,
-    };
-  });
-
-  const subTickets = (subTicketsByParent.get(row.id) ?? []).map((st) => ({
-    id: st.id,
-    shorthand: st.shorthand as string,
-    title: (st.display_title as string) ?? "",
-    statusId: (st.status_id as string) ?? null,
-  }));
-
-  return {
-    id: row.id,
-    shorthand: row.shorthand as string,
-    title: (row.display_title as string) ?? "",
-    content: "",
-    tagIds: tagIdsByTicket.get(row.id) ?? [],
-    status: (row.status_name as string) ?? statusById.get(statusId ?? "") ?? fallbackName,
-    statusColor: colorById.get(statusId ?? "") ?? fallbackColor,
-    complexity: row.complexity as Ticket["complexity"],
-    blockedReason: (row.blocked_reason as string) ?? null,
-    dependsOn: (row.depends_on as string) ?? null,
-    parentId: (row.parent_id as string) ?? null,
-    archived: row.archived as boolean,
-    draft: (row.draft as boolean) ?? false,
-    assignee: null,
-    updatedAt: row.updated_at as string,
-    attempts,
-    subTickets,
-  };
-};
 
 const buildStatusMetadata = (rawStatuses: SyncedRow[] | undefined) => {
   const statuses = [...(rawStatuses ?? [])].sort((a, b) => (a.sort_order as number) - (b.sort_order as number));
@@ -100,14 +49,11 @@ const buildWorkspacesByTicket = (
   rawTicketWorkspaces: SyncedRow[] | undefined,
   rawWorkspaces: SyncedRow[] | undefined,
 ) => {
-  const workspaceIds = new Set((rawWorkspaces ?? []).map((workspace) => workspace.id));
   const workspaceById = new Map((rawWorkspaces ?? []).map((workspace) => [workspace.id, workspace]));
   const workspacesByTicket = new Map<string, SyncedRow[]>();
 
   for (const ticketWorkspace of rawTicketWorkspaces ?? []) {
     const workspaceId = ticketWorkspace.workspace_id as string;
-    if (!workspaceIds.has(workspaceId)) continue;
-
     const workspace = workspaceById.get(workspaceId);
     if (!workspace) continue;
 
@@ -117,20 +63,7 @@ const buildWorkspacesByTicket = (
     workspacesByTicket.set(ticketId, existing);
   }
 
-  return { workspaceIds, workspacesByTicket };
-};
-
-const buildSessionsByWorkspace = (rawSessions: SyncedRow[] | undefined, workspaceIds: Set<string>) => {
-  const sessionsByWorkspace = new Map<string, SyncedRow>();
-
-  for (const session of rawSessions ?? []) {
-    const workspaceId = session.workspace_id as string;
-    if (workspaceId && workspaceIds.has(workspaceId)) {
-      sessionsByWorkspace.set(workspaceId, session);
-    }
-  }
-
-  return sessionsByWorkspace;
+  return workspacesByTicket;
 };
 
 const buildSubTicketsByParent = (rawTickets: SyncedRow[]) => {
@@ -214,8 +147,8 @@ export const useProjectTickets = (projectId: string | undefined) => {
 
   const ticketIds = new Set(rawTickets.map((t) => t.id));
   const tagIdsByTicket = buildTagIdsByTicket(rawTagAssignments, ticketIds);
-  const { workspaceIds, workspacesByTicket } = buildWorkspacesByTicket(rawTicketWorkspaces, rawWorkspaces);
-  const sessionsByWorkspace = buildSessionsByWorkspace(rawSessions, workspaceIds);
+  const workspacesByTicket = buildWorkspacesByTicket(rawTicketWorkspaces, rawWorkspaces);
+  const sessionsByWorkspace = buildSessionsByWorkspace(rawWorkspaces, rawSessions);
   const subTicketsByParent = buildSubTicketsByParent(rawTickets);
 
   const data = rawTickets.map((t) =>

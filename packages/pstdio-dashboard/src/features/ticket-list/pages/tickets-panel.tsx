@@ -7,7 +7,6 @@ import { useProject, useProjectTemplateAssets } from "@/features/project/hooks/u
 import { useProjectSettingsStore } from "@/features/project-settings/store";
 import { openTicketSessionBubble } from "@/features/ticket/utils/open-ticket-session-bubble";
 import { useCreateProjectTicket } from "@/features/ticket-list/hooks/use-create-project-ticket";
-import { useCreateTicketAttempt } from "@/features/ticket-list/hooks/use-create-ticket-attempt";
 import {
   useProjectTickets,
   useUpdateProjectTicket,
@@ -32,11 +31,9 @@ export const TicketsPanel = () => {
   const updateTicketStatus = useUpdateProjectTicketStatus(projectId);
   const updateTicket = useUpdateProjectTicket(projectId);
   const createTicket = useCreateProjectTicket(projectId);
-  const createAttempt = useCreateTicketAttempt(projectId);
   const { data: templateAssets } = useProjectTemplateAssets(projectId);
   const navigate = useNavigate();
 
-  const lastSelectedAgent = useProjectSettingsStore((s) => s.lastSelectedAgent);
   const setSessionModalState = useProjectSettingsStore((s) => s.setSessionModalState);
   const setSelectedSessionId = useProjectSettingsStore((s) => s.setSelectedSessionId);
   const { t } = useTranslation("tickets");
@@ -80,35 +77,13 @@ export const TicketsPanel = () => {
     setCreateModalStatus(null);
   };
 
-  const isWipStatus = (value: string) => {
-    const normalized = value.trim().toLowerCase();
-    return normalized.includes("wip") || normalized.includes("progress");
-  };
-
   const handleMoveTicket = (ticketId: string, status: TicketStatus) => {
     const targetStatus = statusOptions.find((col) => col.id === status || col.name === status);
     const resolvedStatus = targetStatus?.name ?? status;
-    const ticket = allTickets.find((item) => item.id === ticketId);
-    const repoId = project?.repositories[0]?.id ?? null;
-    const promptSource = ticket?.content?.trim() ?? "";
-    const prompt = promptSource.length > 0 ? promptSource : (ticket?.title ?? "");
-    const shouldCreateAttempt = Boolean(targetStatus?.canAttemptOnDrop) || isWipStatus(resolvedStatus);
 
-    updateTicketStatus
-      .mutateAsync({ ticketId, status: resolvedStatus })
-      .then(async () => {
-        if (!shouldCreateAttempt) return;
-
-        await createAttempt.mutateAsync({
-          ticketId,
-          agent: lastSelectedAgent,
-          repoId,
-          prompt: prompt.length > 0 ? prompt : null,
-        });
-      })
-      .catch((error) => {
-        console.error("[move ticket]", error);
-      });
+    updateTicketStatus.mutateAsync({ ticketId, status: resolvedStatus }).catch((error) => {
+      console.error("[move ticket]", error);
+    });
   };
 
   const handleCreateTicket = async (payload: CreateTicketModalPayload) => {

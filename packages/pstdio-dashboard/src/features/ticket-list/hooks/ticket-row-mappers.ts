@@ -1,0 +1,66 @@
+import type { SyncedRow } from "@/features/sync/collections";
+import type { Ticket, TicketAttempt, TicketStatusColor } from "@/features/ticket-list/types";
+
+const SESSION_STATUSES = ["in_progress", "awaiting_input", "completed", "failed", "cancelled"] as const;
+
+const toSessionStatus = (value: unknown) => {
+  if (typeof value !== "string") return null;
+  if (SESSION_STATUSES.includes(value as (typeof SESSION_STATUSES)[number])) {
+    return value as NonNullable<TicketAttempt["sessionStatus"]>;
+  }
+  return null;
+};
+
+export const toTicketFromRow = (
+  row: SyncedRow,
+  statusById: Map<string, string>,
+  colorById: Map<string, TicketStatusColor>,
+  fallbackName: string,
+  fallbackColor: TicketStatusColor,
+  tagIdsByTicket: Map<string, string[]>,
+  workspacesByTicket: Map<string, SyncedRow[]>,
+  sessionsByWorkspace: Map<string, SyncedRow>,
+  subTicketsByParent: Map<string, SyncedRow[]>,
+) => {
+  const statusId = row.status_id as string | null;
+  const attempts = (workspacesByTicket.get(row.id) ?? []).map((ws) => {
+    const session = sessionsByWorkspace.get(ws.id);
+    return {
+      id: ws.id,
+      label: (ws.name as string) ?? ws.id,
+      status: (ws.status as "active" | "merged" | "rejected") ?? "active",
+      sessionStatus: toSessionStatus(session?.status),
+      shorthand: (ws.workspace_shorthand as string) ?? ws.id,
+      sessionId: session?.id ?? "",
+      updatedAt: ws.updated_at as string,
+      worktreePath: (ws.worktree_path as string) ?? null,
+    };
+  });
+
+  const subTickets = (subTicketsByParent.get(row.id) ?? []).map((st) => ({
+    id: st.id,
+    shorthand: st.shorthand as string,
+    title: (st.display_title as string) ?? "",
+    statusId: (st.status_id as string) ?? null,
+  }));
+
+  return {
+    id: row.id,
+    shorthand: row.shorthand as string,
+    title: (row.display_title as string) ?? "",
+    content: "",
+    tagIds: tagIdsByTicket.get(row.id) ?? [],
+    status: (row.status_name as string) ?? statusById.get(statusId ?? "") ?? fallbackName,
+    statusColor: colorById.get(statusId ?? "") ?? fallbackColor,
+    complexity: row.complexity as Ticket["complexity"],
+    blockedReason: (row.blocked_reason as string) ?? null,
+    dependsOn: (row.depends_on as string) ?? null,
+    parentId: (row.parent_id as string) ?? null,
+    archived: row.archived as boolean,
+    draft: (row.draft as boolean) ?? false,
+    assignee: null,
+    updatedAt: row.updated_at as string,
+    attempts,
+    subTickets,
+  };
+};
