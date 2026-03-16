@@ -122,6 +122,28 @@ describe("createWorkspacesService", () => {
     expect(found).toBeNull();
   });
 
+  test("archive marks workspace as archived and hides it from list", async () => {
+    await setup();
+
+    const ws = await workspacesService.create({
+      project_id: projectId,
+      ticket_id: ticketId,
+      ticket_shorthand: ticketShorthand,
+    });
+
+    const archived = await workspacesService.archive(ws.id);
+    expect(archived).not.toBeNull();
+    expect(archived!.archived).toBe(true);
+    expect(archived!.deleted_at).toBeNull();
+
+    const list = await workspacesService.list(projectId);
+    expect(list.length).toBe(0);
+
+    const found = await workspacesService.get(ws.id);
+    expect(found).not.toBeNull();
+    expect(found!.archived).toBe(true);
+  });
+
   test("deleted workspaces count toward shorthand sequence", async () => {
     await setup();
 

@@ -103,6 +103,16 @@ export const createWorkspacesService = (db: DbClient) => {
       .where(eq(workspaces.id, id));
   };
 
+  const archive = async (id: string) => {
+    const timestamp = nowTimestamp();
+    const [updated] = await db
+      .update(workspaces)
+      .set({ archived: true, updated_at: timestamp })
+      .where(eq(workspaces.id, id))
+      .returning();
+    return updated ?? null;
+  };
+
   const updateStatus = async (id: string, status: "active" | "merged" | "rejected") => {
     await db.update(workspaces).set({ status, updated_at: nowTimestamp() }).where(eq(workspaces.id, id));
   };
@@ -139,6 +149,7 @@ export const createWorkspacesService = (db: DbClient) => {
     list,
     getByShorthand,
     softDelete,
+    archive,
     updateStatus,
     setStartupLogFileId,
     updateGitMetadata,
