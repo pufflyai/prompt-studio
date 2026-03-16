@@ -4,6 +4,24 @@ import { join } from "node:path";
 import type { TicketsTestContext } from "./tickets-test-harness";
 import { createTicketsTestContext } from "./tickets-test-harness";
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+const waitForFile = async (path: string, timeoutMs = 5000) => {
+  const deadline = Date.now() + timeoutMs;
+  while (!existsSync(path)) {
+    if (Date.now() > deadline) throw new Error(`Timed out waiting for ${path}`);
+    await sleep(50);
+  }
+};
+
+const waitFor = async (predicate: () => Promise<boolean>, timeoutMs = 5000) => {
+  const deadline = Date.now() + timeoutMs;
+  while (!(await predicate())) {
+    if (Date.now() > deadline) throw new Error("waitFor timed out");
+    await sleep(50);
+  }
+};
+
 let context!: TicketsTestContext;
 
 beforeAll(async () => {
@@ -170,13 +188,18 @@ describe("POST /v1/tickets/:id/attempts", () => {
     expect(attemptRes.status).toBe(201);
     const attempt = await attemptRes.json();
 
+    // Startup script runs in the background (fire-and-forget), so wait for it to finish
     const markerPath = join(attempt.workspace.worktree_path, "startup-marker.txt");
-    expect(existsSync(markerPath)).toBe(true);
+    await waitForFile(markerPath);
     expect(readFileSync(markerPath, "utf8")).toContain("ok");
 
-    const startupLogRes = await app.request(`/v1/workspaces/${attempt.workspace.id}/startup-log`, {
-      method: "GET",
+    // Wait for the startup log to be persisted
+    const startupLogUrl = `/v1/workspaces/${attempt.workspace.id}/startup-log`;
+    await waitFor(async () => {
+      const res = await app.request(startupLogUrl, { method: "GET" });
+      return res.status === 200 && (await res.text()).includes("startup script ran");
     });
+    const startupLogRes = await app.request(startupLogUrl, { method: "GET" });
     expect(startupLogRes.status).toBe(200);
     const startupLog = await startupLogRes.text();
     expect(startupLog).toContain("startup script ran");

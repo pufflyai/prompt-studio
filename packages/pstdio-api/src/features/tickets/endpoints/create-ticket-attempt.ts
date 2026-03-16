@@ -153,7 +153,7 @@ const runStartupScript = async (
 
   try {
     await new Promise<void>((resolve, reject) => {
-      const child = runCommand(input.script, { cwd: input.cwd }, (error) => {
+      const child = runCommand(input.script, { cwd: input.cwd, timeout: 60_000 }, (error) => {
         if (error) reject(error);
         else resolve();
       });
@@ -243,7 +243,7 @@ export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typ
       await copyPstdioConfig(repo.path, worktreePath);
     }
 
-    let workspaceWithGitMetadata =
+    const workspaceWithGitMetadata =
       (await deps.workspacesService.updateGitMetadata(workspace.id, {
         branch,
         worktree_path: worktreePath,
@@ -251,7 +251,8 @@ export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typ
     deps.eventBus.emit("workspaces", "set", workspaceWithGitMetadata);
 
     if (startupScript && workspaceWithGitMetadata.worktree_path) {
-      const startupLogFileId = await runStartupScript(
+      // Fire-and-forget: don't block the response on the startup script
+      runStartupScript(
         { filesService: deps.filesService, workspacesService: deps.workspacesService },
         {
           script: startupScript,
@@ -260,11 +261,14 @@ export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typ
           projectId: workspaceWithGitMetadata.project_id,
           existingStartupLogFileId: workspaceWithGitMetadata.startup_log_file_id,
         },
-      );
-
-      if (startupLogFileId && startupLogFileId !== workspaceWithGitMetadata.startup_log_file_id) {
-        workspaceWithGitMetadata = { ...workspaceWithGitMetadata, startup_log_file_id: startupLogFileId };
-      }
+      ).then((startupLogFileId) => {
+        if (startupLogFileId && startupLogFileId !== workspaceWithGitMetadata.startup_log_file_id) {
+          deps.eventBus.emit("workspaces", "set", {
+            ...workspaceWithGitMetadata,
+            startup_log_file_id: startupLogFileId,
+          });
+        }
+      });
     }
 
     const shouldStartSession = input.start_session ?? true;
