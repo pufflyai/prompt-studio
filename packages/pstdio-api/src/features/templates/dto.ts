@@ -19,7 +19,7 @@ export const createTemplateBodySchema = z
   .object({
     name: z.string().min(1),
     template_type: z.enum(["prompt", "ticket", "document"]),
-    content: z.string().min(1),
+    content: z.string(),
     is_default: z.boolean().optional(),
   })
   .strict();
