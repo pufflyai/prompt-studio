@@ -123,6 +123,8 @@ const SidebarNodeRow = (props: SidebarNodeRowProps) => {
     <Stack gap={!node.children ? "2xs" : "0"}>
       <HStack
         className="group"
+        role="option"
+        aria-selected={isActive}
         justify="space-between"
         align="center"
         borderRadius="xs"
@@ -188,7 +190,7 @@ export const SidebarTree = (props: SidebarTreeProps) => {
   const { sections, expandedSections, expandedNodes, activeNodeId, onNavigate, onToggleSection, onToggleNode } = props;
 
   return (
-    <Stack gap="md" p="md">
+    <Stack role="listbox" gap="md" p="md">
       {sections.map((section) => {
         const sectionExpanded = section.label ? isExpanded(section.id, expandedSections) : true;
 
