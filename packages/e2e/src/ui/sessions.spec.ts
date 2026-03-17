@@ -169,6 +169,21 @@ test.describe("Sessions page", () => {
     await expect(page.getByText(`Fake Agent: completed "${prompt}"`).first()).toBeVisible();
   });
 
+  test("keeps chat input focus while typing in a new session", async ({ page }) => {
+    await bypassOnboarding(page);
+
+    await page.goto(`/projects/${projectId}/sessions`);
+
+    const contentEditor = page.locator('[contenteditable="true"]').first();
+
+    await contentEditor.click();
+    await page.keyboard.type("a");
+    await expect(contentEditor).toContainText("a");
+
+    await page.keyboard.type("bc");
+    await expect(contentEditor).toContainText("abc");
+  });
+
   test("opens selected session in bubble and navigates back", async ({ page, request }) => {
     await bypassOnboarding(page);
     const session = await createSessionViaApi(request, projectId, "Open in bubble session");

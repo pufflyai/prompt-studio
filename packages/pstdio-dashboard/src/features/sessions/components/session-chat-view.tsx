@@ -2,7 +2,7 @@ import { ApprovalPrompt, ChatPanel } from "@pstdio/ui/chat-ui";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useProjectSettingsStore } from "@/features/project-settings/store";
+import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/features/project-settings/store";
 import { apiRequest } from "@/lib/api";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useSessionStream } from "../hooks/use-session-stream";
@@ -24,8 +24,9 @@ interface SessionChatViewProps {
 export const SessionChatView = (props: SessionChatViewProps) => {
   const { t } = useTranslation("projects");
   const { sessionId, agent, model, onCreateSession, repoMenu } = props;
+  const projectSettingsStore = useProjectSettingsStoreApi();
   const draftKey = sessionId ?? "__new__";
-  const chatDraft = useProjectSettingsStore((state) => state.chatDraftsBySession[draftKey] ?? "");
+  const [chatDraft, setChatDraft] = useState(() => projectSettingsStore.getState().chatDraftsBySession[draftKey] ?? "");
   const setSessionDraft = useProjectSettingsStore((state) => state.setSessionDraft);
   const clearSessionDraft = useProjectSettingsStore((state) => state.clearSessionDraft);
   const { messages, isStreaming, approvalRequest, reconnect } = useSessionStream(sessionId);
@@ -42,6 +43,10 @@ export const SessionChatView = (props: SessionChatViewProps) => {
   }, [sessionId]);
 
   useEffect(() => {
+    setChatDraft(projectSettingsStore.getState().chatDraftsBySession[draftKey] ?? "");
+  }, [draftKey, projectSettingsStore]);
+
+  useEffect(() => {
     if (shouldClearPendingFollowUp(pendingFollowUp, messages)) {
       setPendingFollowUp(null);
     }
@@ -50,11 +55,13 @@ export const SessionChatView = (props: SessionChatViewProps) => {
   const handleSubmitMessage = (text: string) => {
     if (!sessionId) {
       clearSessionDraft(null);
+      setChatDraft("");
       onCreateSession?.(text);
       return;
     }
 
     clearSessionDraft(sessionId);
+    setChatDraft("");
 
     const pendingId = `pending-${pendingIdRef.current}`;
     pendingIdRef.current += 1;
