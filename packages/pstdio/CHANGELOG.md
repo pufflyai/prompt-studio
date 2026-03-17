@@ -1,5 +1,18 @@
 # pstdio
 
+## 0.1.6
+
+### Patch Changes
+
+- 1b823eb: Allow creating project templates with empty content from dashboard settings and cover the flow with a UI e2e regression test.
+- d925ee7: Update dashboard page titles to reflect the active project view.
+- 79285d3: Add startup script save/pull workflows and settings editor
+- 79285d3: Run startup scripts in backend workspace creation for CLI, dashboard, and API flows.
+- cad7cc9: Persist unsent chat drafts per session and cap composer height in the sessions chat panel.
+- a62b18b: Auto-start ticket refinement sessions from the tickets board when a create action uses a ticket template.
+- de3bae4: Keep the new-session chat editor stable while typing and add a sessions e2e regression test that verifies focus is retained across consecutive keystrokes.
+- 06ebefb: Remove linked git worktrees when workspaces are deleted or archived.
+
 ## 0.1.5
 
 ### Patch Changes
