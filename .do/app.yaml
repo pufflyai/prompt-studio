@@ -6,14 +6,9 @@ services:
     environment_slug: node-js
     source_dir: /
     build_command: |
-      export BUN_INSTALL="$PWD/.bun"
-      curl -fsSL https://bun.sh/install | bash
-      export PATH="$BUN_INSTALL/bin:$PATH"
-      bun install --frozen-lockfile
+      bun run --filter @pstdio/ui build
       bun run --filter pstdio-dashboard build
     run_command: |
-      export BUN_INSTALL="$PWD/.bun"
-      export PATH="$BUN_INSTALL/bin:$PATH"
       bun run --cwd packages/pstdio pstdio -- serve --port 80
     http_port: 80
     instance_count: 1
