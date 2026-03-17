@@ -40,6 +40,7 @@ Ticket-card behavior and data-source rules are specified in `/product/dashboard/
 4. Dropping into a status with `canAttemptOnDrop`, or into a status whose name contains `wip` or `progress`, must also trigger a ticket attempt.
 5. Columns that expose `archive_all` must archive every visible ticket in that column.
 6. A create-ticket modal must be available from statuses that allow creation.
+7. Creating a ticket with a selected template must auto-start a refine session for the new ticket using that template and open the session bubble.
 
 ### UX Requirements
 
@@ -51,6 +52,7 @@ Ticket-card behavior and data-source rules are specified in `/product/dashboard/
 
 - Ticket statuses and tags come from the current project.
 - Ticket templates shown in the create modal come from project template assets with type `ticket`.
+- Template-based ticket creation reuses the last selected agent/model from project settings to create the refine session.
 
 ## Behavior
 
@@ -59,6 +61,7 @@ Ticket-card behavior and data-source rules are specified in `/product/dashboard/
 3. Group the result by status and render a board column for each group.
 5. When a ticket is moved, update its status and optionally start a ticket attempt.
 6. When a user creates a ticket, write the editor content as both title and content, with optional complexity, status, and parent id.
+7. When ticket creation includes a template, immediately start a session with `refine ticket: <ticket-shorthand> with template <template-name>` and open it in the session bubble.
 
 ## Interface
 
@@ -88,9 +91,10 @@ Ticket-card behavior and data-source rules are specified in `/product/dashboard/
 | ----- | ----- |
 | Ticket board remains empty after load | No non-archived tickets matched the current project. |
 | Automatic attempt does not start | The status does not qualify for `canAttemptOnDrop` and does not look like `wip` or `progress`, or the attempt request failed. |
+| Template refine session does not open after create | Ticket creation succeeded but session creation failed or returned no session id. |
 
 ## Verification & Evidence
 
 - **Commands to run**: `sed -n '1,260p' packages/pstdio-dashboard/src/features/ticket-list/pages/tickets-panel.tsx`
-- **Expected evidence**: The panel uses default board settings, filters archived tickets, and creates attempts on qualifying drops.
+- **Expected evidence**: The panel uses default board settings, filters archived tickets, creates attempts on qualifying drops, and starts refine sessions from template-based ticket creation.
 - **Where to find artifacts**: `packages/pstdio-dashboard/src/features/ticket-list/`
