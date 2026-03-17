@@ -27,6 +27,7 @@ describe("createProjectSettingsStore", () => {
     expect(state.sessionModalState).toBe("bubble");
     expect(state.selectedSessionId).toBeNull();
     expect(state.lastNonSessionsPath).toBeNull();
+    expect(state.chatDraftsBySession).toEqual({});
   });
 
   it("accepts initial hydration", () => {
@@ -184,6 +185,65 @@ describe("createProjectSettingsStore", () => {
     });
   });
 
+  describe("chatDraftsBySession", () => {
+    it("stores a draft for a session", () => {
+      const store = createProjectSettingsStore();
+      store.getState().setSessionDraft("session-1", "Follow-up question");
+
+      expect(store.getState().chatDraftsBySession).toEqual({ "session-1": "Follow-up question" });
+    });
+
+    it("stores a draft for new sessions", () => {
+      const store = createProjectSettingsStore();
+      store.getState().setSessionDraft(null, "Draft for new session");
+
+      expect(store.getState().chatDraftsBySession).toEqual({ __new__: "Draft for new session" });
+    });
+
+    it("removes draft entry when value is blank", () => {
+      const store = createProjectSettingsStore({
+        initialState: {
+          chatDraftsBySession: {
+            "session-1": "Existing draft",
+          },
+        },
+      });
+
+      store.getState().setSessionDraft("session-1", "   ");
+
+      expect(store.getState().chatDraftsBySession).toEqual({});
+    });
+
+    it("clears draft for a specific session", () => {
+      const store = createProjectSettingsStore({
+        initialState: {
+          chatDraftsBySession: {
+            "session-1": "Keep",
+            "session-2": "Remove",
+          },
+        },
+      });
+
+      store.getState().clearSessionDraft("session-2");
+
+      expect(store.getState().chatDraftsBySession).toEqual({ "session-1": "Keep" });
+    });
+
+    it("clears draft for new sessions", () => {
+      const store = createProjectSettingsStore({
+        initialState: {
+          chatDraftsBySession: {
+            __new__: "Remove",
+          },
+        },
+      });
+
+      store.getState().clearSessionDraft(null);
+
+      expect(store.getState().chatDraftsBySession).toEqual({});
+    });
+  });
+
   describe("reset", () => {
     it("resets to default state", () => {
       const store = createProjectSettingsStore({
@@ -193,6 +253,7 @@ describe("createProjectSettingsStore", () => {
           lastSelectedRepo: "repo-1",
           lastSelectedBranches: ["main"],
           sessionModalState: "attached",
+          chatDraftsBySession: { "session-1": "Draft" },
         },
       });
 
@@ -206,6 +267,7 @@ describe("createProjectSettingsStore", () => {
       expect(state.sessionModalState).toBe("bubble");
       expect(state.selectedSessionId).toBeNull();
       expect(state.lastNonSessionsPath).toBeNull();
+      expect(state.chatDraftsBySession).toEqual({});
     });
   });
 

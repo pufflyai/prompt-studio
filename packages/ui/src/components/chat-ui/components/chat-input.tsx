@@ -37,14 +37,19 @@ export const ChatInput = (props: ChatInputProps) => {
   const [editorKey, setEditorKey] = useState(0);
   const [text, setText] = useState(() => getTextFromSerializedEditorState(defaultState));
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
     const resetText = getTextFromSerializedEditorState(defaultState);
     setEditorState(defaultState);
     setEditorKey((key) => key + 1);
     setText(resetText);
-    onChange?.(resetText);
-  }, [defaultState, onChange]);
+    onChangeRef.current?.(resetText);
+  }, [defaultState]);
 
   const focusEditor = () => {
     const editable = containerRef.current?.querySelector('[contenteditable="true"]');
@@ -63,7 +68,7 @@ export const ChatInput = (props: ChatInputProps) => {
     setEditorKey((key) => key + 1);
     const resetText = getTextFromSerializedEditorState(defaultState);
     setText(resetText);
-    onChange?.(resetText);
+    onChangeRef.current?.(resetText);
 
     if (shouldFocus) {
       requestAnimationFrame(() => {
@@ -124,17 +129,19 @@ export const ChatInput = (props: ChatInputProps) => {
     >
       <Flex direction="column" color="fg">
         {attachmentList}
-        <PromptEditor
-          key={editorKey}
-          defaultState={editorState}
-          isEditable={!isDisabled}
-          placeholder={placeholderNode}
-          onChange={(t) => {
-            setText(t);
-            onChange?.(t);
-          }}
-          onSubmit={handleSend}
-        />
+        <Box maxH="10rem" overflowY="auto">
+          <PromptEditor
+            key={editorKey}
+            defaultState={editorState}
+            isEditable={!isDisabled}
+            placeholder={placeholderNode}
+            onChange={(t) => {
+              setText(t);
+              onChange?.(t);
+            }}
+            onSubmit={handleSend}
+          />
+        </Box>
         <HStack gap="1" mt="md">
           {actions}
           <Spacer />

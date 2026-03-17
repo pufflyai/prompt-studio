@@ -10,15 +10,15 @@ import { ChatInput } from "./chat-input";
 import { MessagePartsRenderer } from "./message-parts-renderer";
 import { getMessageOrigin, mergeReasoningToolOnlyMessages, type SessionMessage } from "./message-types";
 
-const EMPTY_PROMPT_STATE = createSerializedPromptState();
-
 interface ChatPanelProps {
   messages: SessionMessage[];
   streaming?: boolean;
   emptyStateTitle: string;
   emptyStateDescription: string;
   chatInputPlaceholder: string;
+  chatInputDefaultValue?: string;
   onSubmitMessage?: (text: string, attachments: string[]) => void;
+  onChatInputChange?: (text: string) => void;
   actions?: ReactNode;
   repoMenu?: ReactNode;
   attachedResources?: string[];
@@ -34,7 +34,9 @@ export const ChatPanel = (props: ChatPanelProps) => {
     emptyStateTitle,
     emptyStateDescription,
     chatInputPlaceholder,
+    chatInputDefaultValue = "",
     onSubmitMessage,
+    onChatInputChange,
     actions,
     repoMenu,
     attachedResources,
@@ -80,9 +82,10 @@ export const ChatPanel = (props: ChatPanelProps) => {
       <Box px="sm">
         <ChatInput
           placeholder={chatInputPlaceholder}
-          defaultState={EMPTY_PROMPT_STATE}
+          defaultState={createSerializedPromptState(chatInputDefaultValue)}
           streaming={streaming}
           onSubmit={onSubmitMessage}
+          onChange={onChatInputChange}
           actions={actions}
           attachedResources={attachedResources}
           onClearAttachments={onClearAttachments}

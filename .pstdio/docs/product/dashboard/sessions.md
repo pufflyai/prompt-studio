@@ -51,6 +51,8 @@ It loads project sessions, groups them by date in the left rail, and renders the
 - Session grouping should be date-based for quick scanning.
 - Follow-up submissions should appear immediately with a temporary "Thinking..." assistant placeholder.
 - After sending a follow-up, focus stays in the chat composer.
+- Draft chat input text should persist per session, including the new-session composer.
+- The chat composer should stop growing after a maximum height and become scrollable.
 
 ### Operational Requirements
 
@@ -68,6 +70,8 @@ It loads project sessions, groups them by date in the left rail, and renders the
 7. Clear the optimistic follow-up placeholder when stream history advances or the follow-up fails.
 8. If the stream exposes a pending approval request, render approve and deny controls above the chat input.
 9. The "new session" button currently clears the selection; it does not create a session by itself.
+10. Preserve unsent chat drafts independently for each session and for the new-session state while switching layouts.
+11. Keep the chat input area scrollable after it reaches its max height so messages stay visible.
 
 ## Interface
 

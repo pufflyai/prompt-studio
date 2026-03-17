@@ -7,6 +7,7 @@ import type { ProjectSettingsSnapshot, ProjectSettingsState, ProjectSettingsStor
 const DEFAULT_AGENT = "opencode";
 const STORE_NAME = "pstdio-project-settings";
 const ACTION_NAME_PREFIX = "projectSettings";
+const NEW_SESSION_DRAFT_KEY = "__new__";
 
 const getStoreName = (projectId?: string) => (projectId ? `${STORE_NAME}/projects/${projectId}/values` : STORE_NAME);
 const MAX_HISTORY = 20;
@@ -23,6 +24,7 @@ const getPersistedSnapshot = (state: ProjectSettingsState) => ({
   lastSelectedBranches: state.lastSelectedBranches,
   sessionModalState: state.sessionModalState,
   selectedSessionId: state.selectedSessionId,
+  chatDraftsBySession: state.chatDraftsBySession,
 });
 
 export const getDefaultProjectSettingsSnapshot = () =>
@@ -34,6 +36,7 @@ export const getDefaultProjectSettingsSnapshot = () =>
     sessionModalState: "bubble",
     selectedSessionId: null,
     lastNonSessionsPath: null,
+    chatDraftsBySession: {},
   }) satisfies ProjectSettingsSnapshot;
 
 export const createProjectSettingsStore = (options?: ProjectSettingsStoreOptions) => {
@@ -109,6 +112,28 @@ export const createProjectSettingsStore = (options?: ProjectSettingsStoreOptions
                 },
                 false,
                 actionName("setLastNonSessionsPath"),
+              ),
+            setSessionDraft: (sessionId, draft) =>
+              set(
+                (state) => {
+                  const key = sessionId ?? NEW_SESSION_DRAFT_KEY;
+                  if (!draft.trim()) {
+                    delete state.chatDraftsBySession[key];
+                    return;
+                  }
+                  state.chatDraftsBySession[key] = draft;
+                },
+                false,
+                actionName("setSessionDraft"),
+              ),
+            clearSessionDraft: (sessionId) =>
+              set(
+                (state) => {
+                  const key = sessionId ?? NEW_SESSION_DRAFT_KEY;
+                  delete state.chatDraftsBySession[key];
+                },
+                false,
+                actionName("clearSessionDraft"),
               ),
             reset: () => set(getDefaultProjectSettingsSnapshot(), false, actionName("reset")),
           })),

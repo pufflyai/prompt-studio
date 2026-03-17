@@ -10,6 +10,7 @@ export interface ProjectSettingsSnapshot {
   sessionModalState: SessionModalState;
   selectedSessionId: string | null;
   lastNonSessionsPath: string | null;
+  chatDraftsBySession: Record<string, string>;
 }
 
 export interface ProjectSettingsState extends ProjectSettingsSnapshot {
@@ -20,6 +21,8 @@ export interface ProjectSettingsState extends ProjectSettingsSnapshot {
   setSessionModalState: (state: SessionModalState) => void;
   setSelectedSessionId: (sessionId: string | null) => void;
   setLastNonSessionsPath: (path: string | null) => void;
+  setSessionDraft: (sessionId: string | null, draft: string) => void;
+  clearSessionDraft: (sessionId: string | null) => void;
   reset: () => void;
 }
 

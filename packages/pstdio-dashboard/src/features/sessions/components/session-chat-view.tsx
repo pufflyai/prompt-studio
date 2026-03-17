@@ -2,6 +2,7 @@ import { ApprovalPrompt, ChatPanel } from "@pstdio/ui/chat-ui";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useProjectSettingsStore } from "@/features/project-settings/store";
 import { apiRequest } from "@/lib/api";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useSessionStream } from "../hooks/use-session-stream";
@@ -23,6 +24,10 @@ interface SessionChatViewProps {
 export const SessionChatView = (props: SessionChatViewProps) => {
   const { t } = useTranslation("projects");
   const { sessionId, agent, model, onCreateSession, repoMenu } = props;
+  const draftKey = sessionId ?? "__new__";
+  const chatDraft = useProjectSettingsStore((state) => state.chatDraftsBySession[draftKey] ?? "");
+  const setSessionDraft = useProjectSettingsStore((state) => state.setSessionDraft);
+  const clearSessionDraft = useProjectSettingsStore((state) => state.clearSessionDraft);
   const { messages, isStreaming, approvalRequest, reconnect } = useSessionStream(sessionId);
   const followUp = useFollowUpSession();
   const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUpState | null>(null);
@@ -44,9 +49,12 @@ export const SessionChatView = (props: SessionChatViewProps) => {
 
   const handleSubmitMessage = (text: string) => {
     if (!sessionId) {
+      clearSessionDraft(null);
       onCreateSession?.(text);
       return;
     }
+
+    clearSessionDraft(sessionId);
 
     const pendingId = `pending-${pendingIdRef.current}`;
     pendingIdRef.current += 1;
@@ -92,7 +100,9 @@ export const SessionChatView = (props: SessionChatViewProps) => {
       emptyStateTitle={t("sessions.noSessionSelected")}
       emptyStateDescription={t("sessions.selectSession")}
       chatInputPlaceholder={t("sessions.followUpPlaceholder")}
+      chatInputDefaultValue={chatDraft}
       onSubmitMessage={(text: string) => handleSubmitMessage(text)}
+      onChatInputChange={(text: string) => setSessionDraft(sessionId, text)}
       repoMenu={repoMenu}
       approvalPrompt={
         approvalRequest ? (
