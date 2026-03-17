@@ -1,4 +1,4 @@
-import { Box, Button, HStack, Input, Menu, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Input, InputGroup, Menu, Text } from "@chakra-ui/react";
 import { MenuItem, Tooltip } from "@pstdio/ui";
 import { ChevronDown, FolderGit2, GitBranch, Repeat, Search } from "lucide-react";
 import { useState } from "react";
@@ -52,7 +52,6 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
     selectedBranch,
     onSelectBranch,
     isDisabled = false,
-    isRepoSwitchDisabled = false,
     isReposLoading = false,
     isBranchesLoading = false,
   } = props;
@@ -71,7 +70,6 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
     ? t("chatInput.branch.loading")
     : getSelectedLabel(branchOptions, selectedBranch, t("chatInput.branch.selectLabel"), t("chatInput.branch.none"));
 
-  const isSwitchDisabled = isDisabled || isRepoSwitchDisabled || repositoryOptions.length <= 1;
   const isMenuDisabled = isDisabled || (repositoryOptions.length === 0 && branchOptions.length === 0);
   const defaultMenuContent = branchOptions.length > 0 ? "branches" : "repos";
   const [menuContent, setMenuContent] = useState<"branches" | "repos">(defaultMenuContent);
@@ -84,6 +82,7 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
   const searchPlaceholder = isShowingRepos
     ? t("chatInput.repo.searchPlaceholder")
     : t("chatInput.branch.searchPlaceholder");
+  const shouldShowSearchInput = isShowingRepos ? repositoryOptions.length > 10 : branchOptions.length > 10;
 
   const handleOpenChange = (details: { open: boolean }) => {
     setOpen(details.open);
@@ -91,11 +90,6 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
       setMenuContent(defaultMenuContent);
       setSearchQuery("");
     }
-  };
-
-  const handleToggleMenuContent = () => {
-    setSearchQuery("");
-    setMenuContent((current) => (current === "branches" ? "repos" : "branches"));
   };
 
   const handleSelectRepository = (value: string) => {
@@ -132,7 +126,7 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
         </Box>
       </Menu.Trigger>
       <Menu.Positioner>
-        <Menu.Content minW="260px" bg="bg" p="0">
+        <Menu.Content w="260px" bg="bg" p="0">
           <HStack justify="space-between" alignItems="center" px="sm" py="xs" gap="xs">
             <HStack gap="xs" minW="0" color="fg.muted">
               <FolderGit2 size={14} />
@@ -140,35 +134,38 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
                 {selectedRepositoryLabel}
               </Text>
             </HStack>
-            <Tooltip content={t("chatInput.repo.selectLabel")}>
-              <Button
-                variant="ghost"
-                size="xs"
-                minW="1.5rem"
-                h="1.5rem"
-                px="1"
-                aria-label={t("chatInput.repo.selectLabel")}
-                disabled={isSwitchDisabled}
-                onMouseDown={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                }}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  handleToggleMenuContent();
-                }}
-              >
-                <Repeat size={14} />
-              </Button>
-            </Tooltip>
+            {repositoryOptions.length > 1 && (
+              <Tooltip content={t("chatInput.repo.selectLabel")}>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  minW="1.5rem"
+                  h="1.5rem"
+                  px="1"
+                  aria-label={t("chatInput.repo.selectLabel")}
+                  disabled={isDisabled}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setSearchQuery("");
+                    setMenuContent((current) => (current === "branches" ? "repos" : "branches"));
+                  }}
+                >
+                  <Repeat size={14} />
+                </Button>
+              </Tooltip>
+            )}
           </HStack>
-          <Menu.Separator margin="0" />
-          <Box px="sm" pt="xs" pb="2xs">
-            <HStack gap="2xs" borderWidth="1px" borderColor="border.default" borderRadius="md" px="xs" py="2xs">
-              <Search size={14} />
+          {shouldShowSearchInput ? (
+            <InputGroup startElement={<Search size={14} />}>
               <Input
-                size="sm"
+                borderRight={0}
+                borderLeft={0}
+                borderRadius="0"
                 value={searchQuery}
                 placeholder={searchPlaceholder}
                 aria-label={searchPlaceholder}
@@ -177,12 +174,13 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
                   event.stopPropagation();
                 }}
               />
-            </HStack>
-          </Box>
+            </InputGroup>
+          ) : (
+            <Menu.Separator margin="0" />
+          )}
           <Box
             maxH="18rem"
             overflowY="auto"
-            py="1"
             data-testid={isShowingRepos ? "workspace-repo-options" : "workspace-repo-branch-options"}
           >
             {isShowingRepos ? (
