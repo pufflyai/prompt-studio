@@ -376,7 +376,7 @@ Saved empty .pstdio/startup.sh and cleared project startup script
 
 #### Errors
 
-- `Local startup script not found: .pstdio/startup.sh`: no local startup script projection exists.
+- `Local startup script not found: .pstdio/startup.sh`: no local startup script file exists.
 
 ---
 
