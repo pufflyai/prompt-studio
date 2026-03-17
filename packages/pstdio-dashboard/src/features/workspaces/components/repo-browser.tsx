@@ -168,7 +168,6 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
             <HStack gap="2xs" borderWidth="1px" borderColor="border.default" borderRadius="md" px="xs" py="2xs">
               <Search size={14} />
               <Input
-                variant="unstyled"
                 size="sm"
                 value={searchQuery}
                 placeholder={searchPlaceholder}
