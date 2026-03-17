@@ -1,8 +1,9 @@
-import { Box, Button, HStack, Menu, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Input, Menu, Text } from "@chakra-ui/react";
 import { MenuItem, Tooltip } from "@pstdio/ui";
-import { ChevronDown, FolderGit2, GitBranch, Repeat } from "lucide-react";
+import { ChevronDown, FolderGit2, GitBranch, Repeat, Search } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { filterMenuOptions } from "../utils/filter-menu-options";
 
 export interface WorkspacePanelMenuOption {
   label: string;
@@ -75,13 +76,38 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
   const defaultMenuContent = branchOptions.length > 0 ? "branches" : "repos";
   const [menuContent, setMenuContent] = useState<"branches" | "repos">(defaultMenuContent);
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const isShowingRepos = menuContent === "repos";
+  const filteredRepositoryOptions = filterMenuOptions(repositoryOptions, searchQuery);
+  const filteredBranchOptions = filterMenuOptions(branchOptions, searchQuery);
+
+  const searchPlaceholder = isShowingRepos
+    ? t("chatInput.repo.searchPlaceholder")
+    : t("chatInput.branch.searchPlaceholder");
 
   const handleOpenChange = (details: { open: boolean }) => {
     setOpen(details.open);
     if (details.open) {
       setMenuContent(defaultMenuContent);
+      setSearchQuery("");
     }
+  };
+
+  const handleToggleMenuContent = () => {
+    setSearchQuery("");
+    setMenuContent((current) => (current === "branches" ? "repos" : "branches"));
+  };
+
+  const handleSelectRepository = (value: string) => {
+    onSelectRepository(value);
+    setSearchQuery("");
+    setMenuContent("branches");
+  };
+
+  const handleSelectBranch = (value: string) => {
+    onSelectBranch(value);
+    setSearchQuery("");
+    setOpen(false);
   };
 
   return (
@@ -130,7 +156,7 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
-                  setMenuContent((current) => (current === "branches" ? "repos" : "branches"));
+                  handleToggleMenuContent();
                 }}
               >
                 <Repeat size={14} />
@@ -138,6 +164,22 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
             </Tooltip>
           </HStack>
           <Menu.Separator margin="0" />
+          <Box px="sm" pt="xs" pb="2xs">
+            <HStack gap="2xs" borderWidth="1px" borderColor="border.default" borderRadius="md" px="xs" py="2xs">
+              <Search size={14} />
+              <Input
+                variant="unstyled"
+                size="sm"
+                value={searchQuery}
+                placeholder={searchPlaceholder}
+                aria-label={searchPlaceholder}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  event.stopPropagation();
+                }}
+              />
+            </HStack>
+          </Box>
           <Box
             maxH="18rem"
             overflowY="auto"
@@ -147,39 +189,37 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
             {isShowingRepos ? (
               isReposLoading ? (
                 <MenuItem primaryLabel={t("chatInput.repo.loading")} leftIcon={FolderGit2} isDisabled />
-              ) : repositoryOptions.length > 0 ? (
-                repositoryOptions.map((option) => (
+              ) : filteredRepositoryOptions.length > 0 ? (
+                filteredRepositoryOptions.map((option) => (
                   <MenuItem
                     key={option.value}
                     id={option.value}
                     primaryLabel={option.label}
                     leftIcon={option.icon ?? FolderGit2}
                     isSelected={option.value === selectedRepository}
-                    onClick={() => {
-                      onSelectRepository(option.value);
-                      setMenuContent("branches");
-                    }}
+                    onClick={() => handleSelectRepository(option.value)}
                   />
                 ))
+              ) : repositoryOptions.length > 0 ? (
+                <MenuItem primaryLabel={t("chatInput.repo.noSearchResults")} leftIcon={FolderGit2} isDisabled />
               ) : (
                 <MenuItem primaryLabel={t("chatInput.repo.noneLinked")} leftIcon={FolderGit2} isDisabled />
               )
             ) : isBranchesLoading ? (
               <MenuItem primaryLabel={t("chatInput.branch.loading")} leftIcon={GitBranch} isDisabled />
-            ) : branchOptions.length > 0 ? (
-              branchOptions.map((option) => (
+            ) : filteredBranchOptions.length > 0 ? (
+              filteredBranchOptions.map((option) => (
                 <MenuItem
                   key={option.value}
                   id={option.value}
                   primaryLabel={option.label}
                   leftIcon={option.icon ?? GitBranch}
                   isSelected={option.value === selectedBranch}
-                  onClick={() => {
-                    onSelectBranch(option.value);
-                    setOpen(false);
-                  }}
+                  onClick={() => handleSelectBranch(option.value)}
                 />
               ))
+            ) : branchOptions.length > 0 ? (
+              <MenuItem primaryLabel={t("chatInput.branch.noSearchResults")} leftIcon={GitBranch} isDisabled />
             ) : (
               <MenuItem primaryLabel={t("chatInput.branch.noneAvailable")} leftIcon={GitBranch} isDisabled />
             )}

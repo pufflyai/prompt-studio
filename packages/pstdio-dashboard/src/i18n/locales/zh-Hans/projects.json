@@ -41,13 +41,17 @@
       "selectLabel": "选择仓库",
       "none": "没有仓库",
       "noneLinked": "未连接仓库",
-      "loading": "加载仓库中..."
+      "loading": "加载仓库中...",
+      "searchPlaceholder": "搜索仓库...",
+      "noSearchResults": "没有仓库匹配你的搜索"
     },
     "branch": {
       "selectLabel": "选择分支",
       "none": "没有分支",
       "noneAvailable": "没有可用分支",
       "loading": "正在加载分支...",
+      "searchPlaceholder": "搜索分支...",
+      "noSearchResults": "没有分支匹配你的搜索",
       "tags": {
         "current": "当前",
         "remote": "远程"

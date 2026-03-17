@@ -41,13 +41,17 @@
       "selectLabel": "選擇儲存庫",
       "none": "沒有儲存庫",
       "noneLinked": "未連結儲存庫",
-      "loading": "載入儲存庫中..."
+      "loading": "載入儲存庫中...",
+      "searchPlaceholder": "搜尋儲存庫...",
+      "noSearchResults": "沒有儲存庫符合你的搜尋"
     },
     "branch": {
       "selectLabel": "選擇分支",
       "none": "沒有分支",
       "noneAvailable": "沒有可用分支",
       "loading": "正在載入分支...",
+      "searchPlaceholder": "搜尋分支...",
+      "noSearchResults": "沒有分支符合你的搜尋",
       "tags": {
         "current": "目前",
         "remote": "遠端"

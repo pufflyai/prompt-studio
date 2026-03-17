@@ -41,13 +41,17 @@
       "selectLabel": "리포지토리 선택",
       "none": "리포지토리 없음",
       "noneLinked": "연결된 리포지토리 없음",
-      "loading": "리포지토리 로딩 중..."
+      "loading": "리포지토리 로딩 중...",
+      "searchPlaceholder": "리포지토리 검색...",
+      "noSearchResults": "검색과 일치하는 리포지토리가 없습니다"
     },
     "branch": {
       "selectLabel": "브랜치 선택",
       "none": "브랜치 없음",
       "noneAvailable": "사용 가능한 브랜치 없음",
       "loading": "브랜치 불러오는 중...",
+      "searchPlaceholder": "브랜치 검색...",
+      "noSearchResults": "검색과 일치하는 브랜치가 없습니다",
       "tags": {
         "current": "현재",
         "remote": "원격"

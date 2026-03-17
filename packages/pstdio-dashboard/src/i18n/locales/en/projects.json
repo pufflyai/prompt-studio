@@ -41,13 +41,17 @@
       "selectLabel": "Select repository",
       "none": "No repositories",
       "noneLinked": "No repositories linked",
-      "loading": "Loading repositories..."
+      "loading": "Loading repositories...",
+      "searchPlaceholder": "Search repositories...",
+      "noSearchResults": "No repositories match your search"
     },
     "branch": {
       "selectLabel": "Select branch",
       "none": "No branches",
       "noneAvailable": "No branches available",
       "loading": "Loading branches...",
+      "searchPlaceholder": "Search branches...",
+      "noSearchResults": "No branches match your search",
       "tags": {
         "current": "Current",
         "remote": "Remote"

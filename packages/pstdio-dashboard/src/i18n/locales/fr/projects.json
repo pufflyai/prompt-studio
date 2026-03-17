@@ -41,13 +41,17 @@
       "selectLabel": "Sélectionner un dépôt",
       "none": "Aucun dépôt",
       "noneLinked": "Aucun dépôt lié",
-      "loading": "Chargement des dépôts..."
+      "loading": "Chargement des dépôts...",
+      "searchPlaceholder": "Rechercher des dépôts...",
+      "noSearchResults": "Aucun dépôt ne correspond a votre recherche"
     },
     "branch": {
       "selectLabel": "Sélectionner une branche",
       "none": "Aucune branche",
       "noneAvailable": "Aucune branche disponible",
       "loading": "Chargement des branches...",
+      "searchPlaceholder": "Rechercher des branches...",
+      "noSearchResults": "Aucune branche ne correspond a votre recherche",
       "tags": {
         "current": "Courante",
         "remote": "Distante"

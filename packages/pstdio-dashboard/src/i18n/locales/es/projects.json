@@ -41,13 +41,17 @@
       "selectLabel": "Seleccionar repositorio",
       "none": "Sin repositorios",
       "noneLinked": "No hay repositorios vinculados",
-      "loading": "Cargando repositorios..."
+      "loading": "Cargando repositorios...",
+      "searchPlaceholder": "Buscar repositorios...",
+      "noSearchResults": "Ningun repositorio coincide con la busqueda"
     },
     "branch": {
       "selectLabel": "Seleccionar rama",
       "none": "Sin ramas",
       "noneAvailable": "No hay ramas disponibles",
       "loading": "Cargando ramas...",
+      "searchPlaceholder": "Buscar ramas...",
+      "noSearchResults": "Ninguna rama coincide con la busqueda",
       "tags": {
         "current": "Actual",
         "remote": "Remoto"
