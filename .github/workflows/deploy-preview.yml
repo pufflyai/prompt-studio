@@ -19,8 +19,11 @@ jobs:
         uses: digitalocean/app_action/deploy@v2
         with:
           deploy_pr_preview: "true"
+          app_spec_location: .do/app.yaml
           project_id: ${{ secrets.DIGITALOCEAN_PROJECT_ID }}
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+          print_build_logs: "true"
+          print_deploy_logs: "true"
 
       # Upsert a single preview comment per PR to avoid duplicates on each push
       - name: Post preview URL
