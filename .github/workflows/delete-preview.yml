@@ -1,7 +1,12 @@
 name: Delete Preview
+
 on:
   pull_request:
     types: [closed]
+
+permissions:
+  contents: read
+
 jobs:
   cleanup:
     runs-on: ubuntu-latest
@@ -11,5 +16,5 @@ jobs:
         with:
           from_pr_preview: "true"
           ignore_not_found: "true"
-          project_id: ee16f77b-a747-4eb7-af56-a21c8832f1ac
+          project_id: ${{ secrets.DIGITALOCEAN_PROJECT_ID }}
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
