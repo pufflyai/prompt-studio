@@ -52,13 +52,13 @@ No heading here, just text`;
   });
 
   test("truncates long titles to 50 characters", () => {
-    const longTitle = "# " + "a".repeat(100);
+    const longTitle = `# ${"a".repeat(100)}`;
     const result = extractDisplayTitle(longTitle);
     expect(result.length).toBeLessThanOrEqual(50);
   });
 
   test("strips trailing hyphens after truncation", () => {
-    const title = "# " + "word ".repeat(20);
+    const title = `# ${"word ".repeat(20)}`;
     const result = extractDisplayTitle(title);
     expect(result).not.toMatch(/-$/);
   });

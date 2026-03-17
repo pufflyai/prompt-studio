@@ -1,4 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { createTicketBodySchema, ticketResponseSchema } from "../dto";
 import { extractTitleFromContent } from "../extract-title";
@@ -26,8 +27,8 @@ export const createTicketRoute = createRoute({
   },
 });
 
-export const createTicketHandler = (deps: RouteDeps) => {
-  return async (c: any) => {
+export const createTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof createTicketRoute> => {
+  return async (c) => {
     const { tag_ids, content, ...input } = c.req.valid("json");
 
     const project = await deps.projectsService.get(input.project_id);

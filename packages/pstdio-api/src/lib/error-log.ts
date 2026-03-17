@@ -1,6 +1,6 @@
-import { mkdirSync, readdirSync, unlinkSync, writeFileSync } from "fs";
-import { homedir } from "os";
-import { join } from "path";
+import { mkdirSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 export interface ErrorLogEntry {
   level: string;
@@ -15,7 +15,7 @@ export interface ErrorLogEntry {
 const MAX_LOG_FILES = 50;
 
 export function logError(entry: ErrorLogEntry) {
-  process.stderr.write(JSON.stringify(entry) + "\n");
+  process.stderr.write(`${JSON.stringify(entry)}\n`);
 }
 
 export function persistErrorLog(entry: ErrorLogEntry, logDir?: string) {
@@ -24,8 +24,8 @@ export function persistErrorLog(entry: ErrorLogEntry, logDir?: string) {
   try {
     mkdirSync(dir, { recursive: true });
 
-    const filename = entry.timestamp.replace(/:/g, "-") + ".json";
-    writeFileSync(join(dir, filename), JSON.stringify(entry, null, 2) + "\n");
+    const filename = `${entry.timestamp.replace(/:/g, "-")}.json`;
+    writeFileSync(join(dir, filename), `${JSON.stringify(entry, null, 2)}\n`);
 
     const files = readdirSync(dir).sort();
     while (files.length > MAX_LOG_FILES) {

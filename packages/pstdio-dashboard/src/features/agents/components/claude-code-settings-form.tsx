@@ -84,7 +84,7 @@ export const ClaudeCodeSettingsForm = (props: ClaudeCodeSettingsFormProps) => {
 
         <Switch
           checked={settings.planMode ?? false}
-          onCheckedChange={(e) => onUpdate({ planMode: e.checked })}
+          onCheckedChange={(e: { checked: boolean }) => onUpdate({ planMode: e.checked })}
           disabled={isUpdating}
         />
       </HStack>

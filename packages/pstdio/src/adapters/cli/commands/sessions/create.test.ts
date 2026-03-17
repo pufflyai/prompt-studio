@@ -1,5 +1,8 @@
 import { describe, expect, type Mock, mock, test } from "bun:test";
-import { createHandler } from "./create";
+import type { Arguments } from "yargs";
+import { type CreateArgs, createHandler } from "./create";
+
+const argv = (args: Partial<CreateArgs>) => ({ _: [], $0: "", ...args }) as Arguments<CreateArgs>;
 
 const makeDeps = (overrides: Partial<Parameters<typeof createHandler>[0]> = {}) => {
   const log = (overrides.log ?? mock()) as Mock<(msg: string) => void>;
@@ -24,7 +27,7 @@ describe("sessions create", () => {
     const deps = makeDeps();
     const handler = createHandler(deps);
 
-    await handler({ prompt: "Do something" } as any);
+    await handler(argv({ prompt: "Do something" }));
 
     const output = deps.log.mock.calls[0][0] as string;
     expect(output).toContain("Created session s_new123");
@@ -36,7 +39,7 @@ describe("sessions create", () => {
     const deps = makeDeps();
     const handler = createHandler(deps);
 
-    await handler({ prompt: "Do something", "workspace-id": "PS-12_A1" } as any);
+    await handler(argv({ prompt: "Do something", "workspace-id": "PS-12_A1" }));
 
     const output = deps.log.mock.calls[0][0] as string;
     expect(output).toContain("PS-12_A1");
@@ -53,7 +56,7 @@ describe("sessions create", () => {
     const deps = makeDeps({ createSession });
     const handler = createHandler(deps);
 
-    await handler({ prompt: "A long prompt that should be truncated to fifty characters maximum" } as any);
+    await handler(argv({ prompt: "A long prompt that should be truncated to fifty characters maximum" }));
 
     expect(createSession).toHaveBeenCalledWith(
       expect.any(String),
@@ -65,6 +68,6 @@ describe("sessions create", () => {
     const deps = makeDeps({ findGitRoot: () => null, readConfig: () => null });
     const handler = createHandler(deps);
 
-    expect(handler({ prompt: "test" } as any)).rejects.toThrow("Not inside a pstdio project");
+    expect(handler(argv({ prompt: "test" }))).rejects.toThrow("Not inside a pstdio project");
   });
 });

@@ -15,7 +15,7 @@ export const builder = (yargs: Argv) =>
     .option("agent", { type: "string", describe: "Agent to use (claude-code, opencode)" })
     .option("model", { type: "string", describe: "Model override" });
 
-type CreateArgs = {
+export type CreateArgs = {
   prompt: string;
   title?: string;
   "workspace-id"?: string;

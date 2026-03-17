@@ -24,7 +24,7 @@ export const createSession = async (baseUrl: string, input: CreateSessionInput) 
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-    throw new Error((body as any).error ?? `Failed to create session: ${res.status}`);
+    throw new Error((body as { error?: string }).error ?? `Failed to create session: ${res.status}`);
   }
 
   return (await res.json()) as Session;

@@ -7,7 +7,7 @@ export const describe = "Tail live session output in the terminal";
 export const builder = (yargs: Argv) =>
   yargs.option("id", { type: "string", demandOption: true, describe: "Session ID to stream" });
 
-type StreamArgs = { id: string };
+export type StreamArgs = { id: string };
 
 type SSEEvent = { event: string; data: string };
 

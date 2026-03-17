@@ -76,7 +76,7 @@ export const OpencodeSettingsForm = (props: OpencodeSettingsFormProps) => {
 
         <Switch
           checked={settings.autoApprove ?? false}
-          onCheckedChange={(e) => onUpdate({ autoApprove: e.checked })}
+          onCheckedChange={(e: { checked: boolean }) => onUpdate({ autoApprove: e.checked })}
           disabled={isUpdating}
         />
       </HStack>

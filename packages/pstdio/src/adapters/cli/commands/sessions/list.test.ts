@@ -1,5 +1,8 @@
 import { describe, expect, type Mock, mock, test } from "bun:test";
-import { createHandler } from "./list";
+import type { Arguments } from "yargs";
+import { createHandler, type ListArgs } from "./list";
+
+const argv = (args: Partial<ListArgs> = {}) => ({ _: [], $0: "", ...args }) as Arguments<ListArgs>;
 
 const makeDeps = (overrides: Partial<Parameters<typeof createHandler>[0]> = {}) => {
   const log = (overrides.log ?? mock()) as Mock<(msg: string) => void>;
@@ -19,7 +22,7 @@ const makeDeps = (overrides: Partial<Parameters<typeof createHandler>[0]> = {}) 
             agent: "claude-code",
             created_at: "2026-03-05T10:00:00Z",
           },
-        ] as any[],
+        ] as never[],
     ),
     ...overrides,
     log,
@@ -31,7 +34,7 @@ describe("sessions list", () => {
     const deps = makeDeps();
     const handler = createHandler(deps);
 
-    await handler({} as any);
+    await handler(argv());
 
     const output = deps.log.mock.calls[0][0] as string;
     expect(output).toContain("s_abc123");
@@ -43,7 +46,7 @@ describe("sessions list", () => {
     const deps = makeDeps({ listSessions: mock(async () => []) });
     const handler = createHandler(deps);
 
-    await handler({} as any);
+    await handler(argv());
 
     const output = deps.log.mock.calls[0][0] as string;
     expect(output).toBe("No sessions found.");
@@ -53,7 +56,7 @@ describe("sessions list", () => {
     const deps = makeDeps({ findGitRoot: () => null, readConfig: () => null });
     const handler = createHandler(deps);
 
-    expect(handler({} as any)).rejects.toThrow("Not inside a pstdio project");
+    expect(handler(argv())).rejects.toThrow("Not inside a pstdio project");
   });
 
   test("uses --project-id flag", async () => {
@@ -61,7 +64,7 @@ describe("sessions list", () => {
     const deps = makeDeps({ listSessions });
     const handler = createHandler(deps);
 
-    await handler({ "project-id": "other-id" } as any);
+    await handler(argv({ "project-id": "other-id" }));
 
     expect(listSessions).toHaveBeenCalledWith(expect.any(String), "other-id", expect.any(Object));
   });

@@ -1,5 +1,8 @@
 import { describe, expect, type Mock, mock, test } from "bun:test";
-import { createHandler } from "./stop";
+import type { Arguments } from "yargs";
+import { createHandler, type StopArgs } from "./stop";
+
+const argv = (args: Partial<StopArgs>) => ({ _: [], $0: "", ...args }) as Arguments<StopArgs>;
 
 const makeSession = (overrides = {}) => ({
   id: "s_abc123",
@@ -32,7 +35,7 @@ describe("sessions stop", () => {
     const deps = makeDeps();
     const handler = createHandler(deps);
 
-    await handler({ id: "s_abc123" } as any);
+    await handler(argv({ id: "s_abc123" }));
 
     expect(deps.updateSessionStatus).toHaveBeenCalledWith(expect.any(String), "s_abc123", "cancelled");
     const output = deps.log.mock.calls[0][0] as string;
@@ -43,13 +46,13 @@ describe("sessions stop", () => {
     const deps = makeDeps({ getSession: async () => null });
     const handler = createHandler(deps);
 
-    expect(handler({ id: "nonexistent" } as any)).rejects.toThrow("Session not found: nonexistent");
+    expect(handler(argv({ id: "nonexistent" }))).rejects.toThrow("Session not found: nonexistent");
   });
 
   test("throws when session is not running", async () => {
     const deps = makeDeps({ getSession: async () => makeSession({ status: "completed" }) });
     const handler = createHandler(deps);
 
-    expect(handler({ id: "s_abc123" } as any)).rejects.toThrow("Session is not running");
+    expect(handler(argv({ id: "s_abc123" }))).rejects.toThrow("Session is not running");
   });
 });

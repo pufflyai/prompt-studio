@@ -21,7 +21,7 @@ describe("session-store", () => {
     store.create("s1", mock());
     const fakeProcess = {
       sessionId: "s1",
-      stdin: {} as any,
+      stdin: {} as import("node:stream").Writable,
       kill: mock(),
       onExit: Promise.resolve({ code: 0, signal: null }),
     };

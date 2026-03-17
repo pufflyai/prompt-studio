@@ -14,7 +14,7 @@ export const builder = (yargs: Argv) =>
     .option("workspace-id", { type: "string", describe: "Filter by workspace ID" })
     .option("archived", { type: "boolean", describe: "Include archived sessions" });
 
-type ListArgs = {
+export type ListArgs = {
   "project-id"?: string;
   status?: string;
   agent?: string;

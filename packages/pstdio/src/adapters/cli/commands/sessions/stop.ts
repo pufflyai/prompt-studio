@@ -9,7 +9,7 @@ export const describe = "Gracefully stop a running session";
 export const builder = (yargs: Argv) =>
   yargs.option("id", { type: "string", demandOption: true, describe: "Session ID" });
 
-type StopArgs = { id: string };
+export type StopArgs = { id: string };
 
 type Deps = {
   getSession: typeof defaultGetSession;

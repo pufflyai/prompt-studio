@@ -1,5 +1,8 @@
 import { describe, expect, type Mock, mock, test } from "bun:test";
-import { createHandler } from "./view";
+import type { Arguments } from "yargs";
+import { createHandler, type ViewArgs } from "./view";
+
+const argv = (args: Partial<ViewArgs>) => ({ _: [], $0: "", ...args }) as Arguments<ViewArgs>;
 
 const makeSession = (overrides = {}) => ({
   id: "s_abc123",
@@ -31,7 +34,7 @@ describe("sessions view", () => {
     const deps = makeDeps();
     const handler = createHandler(deps);
 
-    await handler({ id: "s_abc123" } as any);
+    await handler(argv({ id: "s_abc123" }));
 
     const output = deps.log.mock.calls[0][0] as string;
     expect(output).toContain("s_abc123");
@@ -47,7 +50,7 @@ describe("sessions view", () => {
     });
     const handler = createHandler(deps);
 
-    await handler({ id: "s_abc123" } as any);
+    await handler(argv({ id: "s_abc123" }));
 
     const output = deps.log.mock.calls[0][0] as string;
     expect(output).toContain("in_progress");
@@ -58,6 +61,6 @@ describe("sessions view", () => {
     const deps = makeDeps({ getSession: async () => null });
     const handler = createHandler(deps);
 
-    expect(handler({ id: "nonexistent" } as any)).rejects.toThrow("Session not found: nonexistent");
+    expect(handler(argv({ id: "nonexistent" }))).rejects.toThrow("Session not found: nonexistent");
   });
 });

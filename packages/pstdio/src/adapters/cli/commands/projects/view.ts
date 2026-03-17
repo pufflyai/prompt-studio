@@ -10,7 +10,7 @@ export const describe = "View project details";
 
 export const builder = (yargs: Argv) => yargs.option("project-id", { type: "string", describe: "Project ID" });
 
-type ViewArgs = { "project-id"?: string };
+export type ViewArgs = { "project-id"?: string };
 
 type Deps = {
   cwd: () => string;

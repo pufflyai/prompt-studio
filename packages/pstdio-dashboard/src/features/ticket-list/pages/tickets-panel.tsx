@@ -84,7 +84,7 @@ export const TicketsPanel = () => {
   };
 
   const handleOpenSessionBubble = (sessionId: string | null) => {
-    openTicketSessionBubble({
+    return openTicketSessionBubble({
       sessionId,
       setSessionModalState,
       setSelectedSessionId,

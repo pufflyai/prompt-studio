@@ -1,5 +1,8 @@
 import { describe, expect, type Mock, mock, test } from "bun:test";
-import { createHandler } from "./view";
+import type { Arguments } from "yargs";
+import { createHandler, type ViewArgs } from "./view";
+
+const argv = (args: Partial<ViewArgs>) => ({ _: [], $0: "", ...args }) as Arguments<ViewArgs>;
 
 const makeDeps = (overrides: Partial<Parameters<typeof createHandler>[0]> = {}) => {
   const log = (overrides.log ?? mock()) as Mock<(msg: string) => void>;
@@ -29,7 +32,7 @@ describe("projects view", () => {
     const deps = makeDeps();
     const handler = createHandler(deps);
 
-    await handler({ "project-id": undefined } as any);
+    await handler(argv({ "project-id": undefined }));
 
     const output = deps.log.mock.calls[0][0] as string;
     expect(output).toContain("my-app");
@@ -45,7 +48,7 @@ describe("projects view", () => {
     const deps = makeDeps({ getStartupScript: async () => null });
     const handler = createHandler(deps);
 
-    await handler({ "project-id": undefined } as any);
+    await handler(argv({ "project-id": undefined }));
 
     const output = deps.log.mock.calls[0][0] as string;
     expect(output).toContain("none");
@@ -55,7 +58,7 @@ describe("projects view", () => {
     const deps = makeDeps({ listRepos: async () => [] });
     const handler = createHandler(deps);
 
-    await handler({ "project-id": undefined } as any);
+    await handler(argv({ "project-id": undefined }));
 
     const output = deps.log.mock.calls[0][0] as string;
     expect(output).toContain("none");
@@ -72,7 +75,7 @@ describe("projects view", () => {
     const deps = makeDeps({ getProject });
     const handler = createHandler(deps);
 
-    await handler({ "project-id": "other-id" } as any);
+    await handler(argv({ "project-id": "other-id" }));
 
     expect(getProject).toHaveBeenCalledWith(expect.any(String), "other-id");
   });
@@ -81,7 +84,7 @@ describe("projects view", () => {
     const deps = makeDeps({ findGitRoot: () => null, readConfig: () => null });
     const handler = createHandler(deps);
 
-    expect(handler({ "project-id": undefined } as any)).rejects.toThrow(
+    expect(handler(argv({ "project-id": undefined }))).rejects.toThrow(
       "No project specified. Provide --project-id or run inside a linked project.",
     );
   });
@@ -90,6 +93,6 @@ describe("projects view", () => {
     const deps = makeDeps({ getProject: async () => null });
     const handler = createHandler(deps);
 
-    expect(handler({ "project-id": undefined } as any)).rejects.toThrow("Project not found: proj-1");
+    expect(handler(argv({ "project-id": undefined }))).rejects.toThrow("Project not found: proj-1");
   });
 });

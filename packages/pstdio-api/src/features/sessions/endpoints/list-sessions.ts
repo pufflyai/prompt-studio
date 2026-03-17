@@ -1,4 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { sessionResponseSchema } from "../dto";
 
@@ -11,7 +12,10 @@ export const listSessionsRoute = createRoute({
     query: z
       .object({
         project_id: z.string().openapi({ description: "Project ID" }),
-        status: z.string().optional().openapi({ description: "Filter by status" }),
+        status: z
+          .enum(["in_progress", "awaiting_input", "completed", "failed", "cancelled"])
+          .optional()
+          .openapi({ description: "Filter by status" }),
         agent: z.string().optional().openapi({ description: "Filter by agent" }),
         archived: z.string().optional().openapi({ description: "Include archived" }),
       })
@@ -25,12 +29,12 @@ export const listSessionsRoute = createRoute({
   },
 });
 
-export const listSessionsHandler = (deps: RouteDeps) => {
-  return async (c: any) => {
+export const listSessionsHandler = (deps: RouteDeps): AppRouteHandler<typeof listSessionsRoute> => {
+  return async (c) => {
     const query = c.req.valid("query");
 
     const sessions = await deps.sessionsService.list(query.project_id, {
-      status: query.status as any,
+      status: query.status,
       agent: query.agent,
       includeArchived: query.archived === "true",
     });

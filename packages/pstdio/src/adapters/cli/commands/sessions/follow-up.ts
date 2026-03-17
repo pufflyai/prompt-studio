@@ -12,7 +12,7 @@ export const builder = (yargs: Argv) =>
     .option("agent", { type: "string", describe: "Switch agent for this follow-up" })
     .option("model", { type: "string", describe: "Model override" });
 
-type FollowUpArgs = {
+export type FollowUpArgs = {
   id: string;
   prompt: string;
   agent?: string;

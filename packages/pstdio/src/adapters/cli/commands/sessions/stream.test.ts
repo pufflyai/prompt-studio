@@ -1,5 +1,8 @@
 import { describe, expect, type Mock, mock, test } from "bun:test";
-import { createHandler } from "./stream";
+import type { Arguments } from "yargs";
+import { createHandler, type StreamArgs } from "./stream";
+
+const argv = (args: Partial<StreamArgs>) => ({ _: [], $0: "", ...args }) as Arguments<StreamArgs>;
 
 type SSEEvent = { event: string; data: string };
 
@@ -17,7 +20,7 @@ describe("sessions stream", () => {
     const deps = makeDeps();
     const handler = createHandler(deps);
 
-    await handler({ id: "s_abc123" } as any);
+    await handler(argv({ id: "s_abc123" }));
 
     expect(deps.log.mock.calls[0][0]).toContain("Streaming session s_abc123");
     expect(deps.connectSSE).toHaveBeenCalled();
@@ -36,7 +39,7 @@ describe("sessions stream", () => {
     });
     const handler = createHandler(deps);
 
-    await handler({ id: "s_1" } as any);
+    await handler(argv({ id: "s_1" }));
 
     const outputs = deps.log.mock.calls.map((c) => c[0] as string);
     expect(outputs).toContain("Hello world");
@@ -55,7 +58,7 @@ describe("sessions stream", () => {
     });
     const handler = createHandler(deps);
 
-    await handler({ id: "s_1" } as any);
+    await handler(argv({ id: "s_1" }));
 
     const outputs = deps.log.mock.calls.map((c) => c[0] as string);
     expect(outputs.some((o) => o.includes("Awaiting approval"))).toBe(true);

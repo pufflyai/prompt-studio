@@ -8,7 +8,7 @@ export const describe = "View session details";
 export const builder = (yargs: Argv) =>
   yargs.option("id", { type: "string", demandOption: true, describe: "Session ID" });
 
-type ViewArgs = { id: string };
+export type ViewArgs = { id: string };
 
 type Deps = {
   getSession: typeof defaultGetSession;

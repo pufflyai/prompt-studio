@@ -1,5 +1,8 @@
 import { describe, expect, type Mock, mock, test } from "bun:test";
-import { createHandler } from "./follow-up";
+import type { Arguments } from "yargs";
+import { createHandler, type FollowUpArgs } from "./follow-up";
+
+const argv = (args: Partial<FollowUpArgs>) => ({ _: [], $0: "", ...args }) as Arguments<FollowUpArgs>;
 
 const makeDeps = (overrides: Partial<Parameters<typeof createHandler>[0]> = {}) => {
   const log = (overrides.log ?? mock()) as Mock<(msg: string) => void>;
@@ -19,7 +22,7 @@ describe("sessions follow-up", () => {
     const deps = makeDeps();
     const handler = createHandler(deps);
 
-    await handler({ id: "s_abc123", prompt: "Continue with tests" } as any);
+    await handler(argv({ id: "s_abc123", prompt: "Continue with tests" }));
 
     expect(deps.followUpSession).toHaveBeenCalledWith(
       expect.any(String),
@@ -36,7 +39,7 @@ describe("sessions follow-up", () => {
     const deps = makeDeps();
     const handler = createHandler(deps);
 
-    await handler({ id: "s_1", prompt: "test", agent: "opencode", model: "gpt-5" } as any);
+    await handler(argv({ id: "s_1", prompt: "test", agent: "opencode", model: "gpt-5" }));
 
     expect(deps.followUpSession).toHaveBeenCalledWith(
       expect.any(String),
@@ -53,6 +56,6 @@ describe("sessions follow-up", () => {
     });
     const handler = createHandler(deps);
 
-    expect(handler({ id: "s_1", prompt: "test" } as any)).rejects.toThrow("Session is in_progress");
+    expect(handler(argv({ id: "s_1", prompt: "test" }))).rejects.toThrow("Session is in_progress");
   });
 });

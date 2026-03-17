@@ -1,4 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { approveBodySchema, notFoundResponseSchema } from "../dto";
 
@@ -26,8 +27,8 @@ export const approveSessionRoute = createRoute({
   },
 });
 
-export const approveSessionHandler = (deps: RouteDeps) => {
-  return async (c: any) => {
+export const approveSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof approveSessionRoute> => {
+  return async (c) => {
     const { id } = c.req.valid("param");
     const input = c.req.valid("json");
 
