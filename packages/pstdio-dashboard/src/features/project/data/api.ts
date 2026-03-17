@@ -199,14 +199,14 @@ export const getProjectTemplate = async (projectId: string, name: string) => {
 
 export const createProjectTemplate = async (
   projectId: string,
-  input: { name: string; templateType: ProjectTemplateAssetType; content: string; isDefault?: boolean },
+  input: { name: string; templateType: ProjectTemplateAssetType; content?: string; isDefault?: boolean },
 ) => {
   const created = await apiRequest<TemplateResponse>(`/v1/projects/${projectId}/templates`, {
     method: "POST",
     body: {
       name: input.name,
       template_type: input.templateType,
-      content: input.content,
+      ...(input.content != null && { content: input.content }),
       is_default: input.isDefault,
     },
   });
@@ -217,7 +217,7 @@ export const createProjectTemplate = async (
     name: created.name,
     templateType: created.template_type as ProjectTemplateAssetType,
     fileId: created.file_id,
-    content: input.content,
+    content: input.content ?? "",
     isDefault: created.is_default,
     createdAt: created.created_at,
     updatedAt: created.updated_at,

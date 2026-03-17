@@ -27,9 +27,10 @@ test.describe("Project settings", () => {
     await page.goto("/projects");
     await page.getByText(project.name, { exact: true }).click();
     await page.waitForURL(`**/projects/${project.id}/docs`);
-    await page.getByRole("button", { name: "Project settings" }).click();
+    await page.getByRole("option", { name: "Project settings" }).click();
     await page.waitForURL(`**/projects/${project.id}/settings`);
 
+    await page.getByText("Templates", { exact: true }).hover();
     await page.getByRole("button", { name: "Create template" }).click();
 
     const createDialog = page.getByRole("dialog").last();
@@ -53,6 +54,6 @@ test.describe("Project settings", () => {
     expect(templateResponse.ok()).toBe(true);
     const template = (await templateResponse.json()) as { content: string; name: string };
     expect(template.name).toBe(templateName);
-    expect(template.content).toBe("");
+    expect(template.content).toBe(`# ${templateName}\n`);
   });
 });

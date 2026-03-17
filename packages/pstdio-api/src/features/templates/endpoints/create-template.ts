@@ -35,6 +35,7 @@ export const createTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof c
   return async (c) => {
     const { projectId } = c.req.valid("param");
     const { name, template_type, content, is_default } = c.req.valid("json");
+    const resolvedContent = content ?? `# ${name}\n`;
 
     const existing = await deps.templatesService.getByName(projectId, name);
     if (existing) {
@@ -45,7 +46,7 @@ export const createTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof c
       project_id: projectId,
       file_name: `${name}.md`,
       file_kind: "template",
-      data: Buffer.from(content),
+      data: Buffer.from(resolvedContent),
       mime_type: "text/markdown",
     });
 

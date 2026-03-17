@@ -34,7 +34,6 @@ export const CreateTemplateDialog = (props: CreateTemplateDialogProps) => {
       await createTemplate.mutateAsync({
         name: trimmedName,
         templateType,
-        content: "",
       });
       onCreated(trimmedName);
       setName("");

@@ -60,11 +60,15 @@ const getProjectStartupScriptViaApi = async (
 };
 
 const openStartupScriptSection = async (page: Page) => {
-  await page.getByRole("option", { name: "Startup script" }).click();
+  const settingsSidebar = page.locator("aside").first();
+  await expect(settingsSidebar).toBeVisible();
+  await settingsSidebar.getByText("Startup script", { exact: true }).first().click();
 };
 
 const openTagsSection = async (page: Page) => {
-  await page.getByRole("option", { name: "Tags" }).click();
+  const settingsSidebar = page.locator("aside").first();
+  await expect(settingsSidebar).toBeVisible();
+  await settingsSidebar.getByText("Tags", { exact: true }).first().click();
 };
 
 const replaceStartupScript = async (page: Page, script: string) => {

@@ -50,21 +50,21 @@ describe("POST /v1/projects/:id/templates", () => {
     expect(body.is_default).toBe(false);
   });
 
-  test("creates a template with empty content", async () => {
+  test("uses placeholder content when content is omitted", async () => {
     const res = await app.request(`/v1/projects/${projectId}/templates`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         name: "blank-template",
         template_type: "prompt",
-        content: "",
       }),
     });
 
     expect(res.status).toBe(201);
-    const body = await res.json();
-    expect(body.name).toBe("blank-template");
-    expect(body.template_type).toBe("prompt");
+
+    const getRes = await app.request(`/v1/projects/${projectId}/templates/blank-template`);
+    const body = await getRes.json();
+    expect(body.content).toBe("# blank-template\n");
   });
 
   test("returns 409 for duplicate name", async () => {

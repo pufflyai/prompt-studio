@@ -19,7 +19,7 @@ export const useCreateProjectTemplate = (projectId: string | undefined) =>
     mutationFn: async (input: {
       name: string;
       templateType: ProjectTemplateAssetType;
-      content: string;
+      content?: string;
       isDefault?: boolean;
     }) => {
       if (!projectId) throw new Error("Project id is required.");
