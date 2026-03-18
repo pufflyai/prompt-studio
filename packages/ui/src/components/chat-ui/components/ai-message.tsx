@@ -26,12 +26,10 @@ const recipe = defineSlotRecipe({
         root: {
           mb: "md",
           flexDirection: "row",
-          "& > div": {
-            marginLeft: "lg",
-          },
         },
         content: {
           bg: "bg.muted",
+          width: "full",
           borderBottomRightRadius: 0,
         },
       },
@@ -40,9 +38,9 @@ const recipe = defineSlotRecipe({
           mb: "md",
           flexDirection: "row",
           justifyContent: "start",
-          "& > div": {
-            marginRight: "lg",
-          },
+        },
+        content: {
+          width: "full",
         },
       },
       developer: {

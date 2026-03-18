@@ -81,7 +81,7 @@ export function MessagePartsRenderer(props: MessagePartsProps) {
               },
             }}
           >
-            <RichMessage defaultState={part.text} />
+            <RichMessage defaultState={part.text} fullWidth />
           </Box>,
         );
         break;

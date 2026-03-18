@@ -11,7 +11,7 @@ export const ChatRichContent = (props: ChatRichContentProps) => {
 
   return (
     <Box {...rest}>
-      <RichMessage defaultState={children} />
+      <RichMessage defaultState={children} fullWidth />
     </Box>
   );
 };
