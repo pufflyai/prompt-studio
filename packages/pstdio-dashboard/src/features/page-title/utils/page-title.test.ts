@@ -28,12 +28,12 @@ describe("getPageTitle", () => {
     expect(getPageTitle("/projects/proj-1/tickets/PS-41/workspaces/PS-41_A1", "Project Name")).toBe("PS-41 > A1");
   });
 
-  it("returns session title for session detail route", () => {
+  it("returns just the session title for session detail route", () => {
     expect(
       getPageTitle("/projects/proj-1/sessions/session-123", "Project Name", {
         sessionTitle: "Fix login bug",
       }),
-    ).toBe("Project Name > Fix login bug");
+    ).toBe("Fix login bug");
   });
 
   it("falls back to Sessions when no session title is provided", () => {

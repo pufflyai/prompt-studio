@@ -73,7 +73,9 @@ const getProjectSectionTitle = (pathSegments: string[], options: PageTitleOption
   }
 
   if (section === "sessions") {
-    return { title: getSessionsSectionTitle(pathSegments, options) };
+    const sessionTitle = getSessionsSectionTitle(pathSegments, options);
+    if (sessionTitle !== "Sessions") return { title: sessionTitle, skipProjectPrefix: true };
+    return { title: sessionTitle };
   }
 
   if (section === "changelog") return { title: "Changelog" };
