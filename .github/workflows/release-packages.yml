@@ -80,23 +80,55 @@ jobs:
         if: steps.changesets.outputs.published == 'true'
         run: |
           VERSION=$(echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -r '.[] | select(.name == "pstdio") | .version')
-          if [ -n "$VERSION" ]; then
-            TAG="pstdio@${VERSION}"
-            if ! gh release view "$TAG" > /dev/null 2>&1; then
-              gh release create "$TAG" --title "$TAG" --generate-notes
-            fi
-            gh release upload "$TAG" --clobber \
-              packages/pstdio/dist/platforms/cli-darwin-arm64/bin/pstdio#pstdio-darwin-arm64 \
-              packages/pstdio/dist/platforms/cli-darwin-x64/bin/pstdio#pstdio-darwin-x64 \
-              packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio#pstdio-linux-x64 \
-              packages/pstdio/dist/platforms/cli-linux-arm64/bin/pstdio#pstdio-linux-arm64 \
-              packages/pstdio/dist/platforms/cli-linux-x64-musl/bin/pstdio#pstdio-linux-x64-musl \
-              packages/pstdio/dist/platforms/cli-linux-arm64-musl/bin/pstdio#pstdio-linux-arm64-musl \
-              packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe#pstdio-win-x64.exe \
-              packages/pstdio/dist/platforms/cli-win-arm64/bin/pstdio.exe#pstdio-win-arm64.exe \
-              packages/pstdio/dist/platforms/checksums.sha256#checksums.sha256 \
-              scripts/install.sh#install.sh
+          if [ -z "$VERSION" ]; then
+            echo "pstdio was not published in this run. Skipping binary upload."
+            exit 0
           fi
+
+          TAG="pstdio@${VERSION}"
+          ASSETS=(
+            "packages/pstdio/dist/platforms/cli-darwin-arm64/bin/pstdio#pstdio-darwin-arm64"
+            "packages/pstdio/dist/platforms/cli-darwin-x64/bin/pstdio#pstdio-darwin-x64"
+            "packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio#pstdio-linux-x64"
+            "packages/pstdio/dist/platforms/cli-linux-arm64/bin/pstdio#pstdio-linux-arm64"
+            "packages/pstdio/dist/platforms/cli-linux-x64-musl/bin/pstdio#pstdio-linux-x64-musl"
+            "packages/pstdio/dist/platforms/cli-linux-arm64-musl/bin/pstdio#pstdio-linux-arm64-musl"
+            "packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe#pstdio-win-x64.exe"
+            "packages/pstdio/dist/platforms/cli-win-arm64/bin/pstdio.exe#pstdio-win-arm64.exe"
+            "packages/pstdio/dist/platforms/checksums.sha256#checksums.sha256"
+            "scripts/install.sh#install.sh"
+          )
+
+          if ! gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Creating release $TAG with binary assets."
+            gh release create "$TAG" --title "$TAG" --generate-notes "${ASSETS[@]}"
+            exit 0
+          fi
+
+          IS_IMMUTABLE=$(gh release view "$TAG" --json isImmutable -q '.isImmutable')
+          if [ "$IS_IMMUTABLE" = "true" ]; then
+            echo "Release $TAG is immutable. Verifying required assets."
+            EXISTING_ASSETS=$(gh release view "$TAG" --json assets -q '.assets[].name')
+            MISSING_ASSETS=()
+
+            for asset in "${ASSETS[@]}"; do
+              asset_name="${asset#*#}"
+              if ! echo "$EXISTING_ASSETS" | grep -Fxq "$asset_name"; then
+                MISSING_ASSETS+=("$asset_name")
+              fi
+            done
+
+            if [ ${#MISSING_ASSETS[@]} -gt 0 ]; then
+              echo "::error::Release $TAG is immutable and missing assets: ${MISSING_ASSETS[*]}"
+              echo "::error::Delete and recreate the release/tag, then rerun this workflow."
+              exit 1
+            fi
+
+            echo "All required assets already exist on immutable release $TAG. Skipping upload."
+            exit 0
+          fi
+
+          gh release upload "$TAG" --clobber "${ASSETS[@]}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
