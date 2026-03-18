@@ -71,7 +71,6 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
         children: items.map((template) => ({
           id: `template:${template.name}`,
           label: template.name,
-          description: template.isDefault ? "default" : undefined,
           isNavigable: true,
           navigationIntent: { id: "select-template", payload: template.name },
         })),
