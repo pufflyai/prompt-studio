@@ -101,8 +101,16 @@ const SidebarRowActions = (props: SidebarRowActionsProps) => {
 };
 
 const SidebarNodeRow = (props: SidebarNodeRowProps) => {
-  const { sectionId, node, level, expandedNodes, activeNodeId, linkComponent: LinkComponent, onNavigate, onToggleNode } =
-    props;
+  const {
+    sectionId,
+    node,
+    level,
+    expandedNodes,
+    activeNodeId,
+    linkComponent: LinkComponent,
+    onNavigate,
+    onToggleNode,
+  } = props;
   const hasChildren = (node.children?.length ?? 0) > 0;
   const expanded = hasChildren && isExpanded(node.id, expandedNodes);
   const isNavigable = node.isNavigable || node.navigationIntent !== undefined;
