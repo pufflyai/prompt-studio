@@ -14,6 +14,13 @@ interface RepoBrowserContainerProps {
   onBranchChange?: (branch: string) => void;
 }
 
+interface ResolveBranchSelectionOptions {
+  branches: RepoBranch[];
+  selectedBranch: string;
+  currentBranch?: string;
+  hasUserSelectedBranch: boolean;
+}
+
 const getBranchLabel = (branch: RepoBranch, currentBranchTag: string, remoteBranchTag: string) => {
   if (branch.isCurrent) {
     return `${branch.name} (${currentBranchTag})`;
@@ -26,19 +33,32 @@ const getBranchLabel = (branch: RepoBranch, currentBranchTag: string, remoteBran
   return branch.name;
 };
 
+export const resolveBranchSelection = (options: ResolveBranchSelectionOptions) => {
+  const { branches, selectedBranch, currentBranch, hasUserSelectedBranch } = options;
+
+  if (branches.length === 0) return "";
+
+  const hasSelection = branches.some((branch) => branch.name === selectedBranch);
+  if (hasUserSelectedBranch && hasSelection) {
+    return selectedBranch;
+  }
+
+  return currentBranch ?? branches[0].name;
+};
+
 export const RepoBrowserContainer = (props: RepoBrowserContainerProps) => {
   const { isDisabled = false, lockedBranch, onRepoChange, onBranchChange } = props;
   const { t } = useTranslation("projects");
   const { projectId } = useParams({ strict: false });
 
   const lastSelectedRepo = useProjectSettingsStore((s) => s.lastSelectedRepo);
-  const lastSelectedBranches = useProjectSettingsStore((s) => s.lastSelectedBranches);
   const setLastSelectedRepo = useProjectSettingsStore((s) => s.setLastSelectedRepo);
   const setLastSelectedBranch = useProjectSettingsStore((s) => s.setLastSelectedBranch);
 
   const [selectedRepositoryId, setSelectedRepositoryId] = useState(lastSelectedRepo);
   const isLocked = Boolean(lockedBranch);
-  const [selectedBranch, setSelectedBranch] = useState(lockedBranch ?? lastSelectedBranches[0] ?? "");
+  const [selectedBranch, setSelectedBranch] = useState(lockedBranch ?? "");
+  const [hasUserSelectedBranch, setHasUserSelectedBranch] = useState(false);
 
   const { data: repositories = [], isLoading: isRepositoriesPending } = useProjectRepositories(projectId);
 
@@ -87,6 +107,9 @@ export const RepoBrowserContainer = (props: RepoBrowserContainerProps) => {
         setSelectedBranch("");
         onBranchChange?.("");
       }
+      if (hasUserSelectedBranch) {
+        setHasUserSelectedBranch(false);
+      }
       return;
     }
 
@@ -97,35 +120,48 @@ export const RepoBrowserContainer = (props: RepoBrowserContainerProps) => {
         setSelectedBranch("");
         onBranchChange?.("");
       }
+      if (hasUserSelectedBranch) {
+        setHasUserSelectedBranch(false);
+      }
       return;
     }
 
-    const hasSelection = branches.some((branch) => branch.name === selectedBranch);
-    if (!hasSelection) {
-      // Prefer a previously selected branch if available
-      const preferred = lastSelectedBranches.find((b) => branches.some((branch) => branch.name === b));
-      const next = preferred ?? currentBranch ?? branches[0].name;
+    const next = resolveBranchSelection({
+      branches,
+      selectedBranch,
+      currentBranch,
+      hasUserSelectedBranch,
+    });
+
+    if (next !== selectedBranch) {
       setSelectedBranch(next);
       onBranchChange?.(next);
+    }
+
+    const hasSelection = branches.some((branch) => branch.name === selectedBranch);
+    if (hasUserSelectedBranch && !hasSelection) {
+      setHasUserSelectedBranch(false);
     }
   }, [
     branches,
     currentBranch,
+    hasUserSelectedBranch,
     isBranchesPending,
     isLocked,
     selectedBranch,
     selectedRepositoryId,
-    lastSelectedBranches,
     onBranchChange,
   ]);
 
   const handleSelectRepository = (repoId: string) => {
     setSelectedRepositoryId(repoId);
+    setHasUserSelectedBranch(false);
     setLastSelectedRepo(repoId);
     onRepoChange?.(repoId);
   };
 
   const handleSelectBranch = (branch: string) => {
+    setHasUserSelectedBranch(true);
     setSelectedBranch(branch);
     setLastSelectedBranch(branch);
     onBranchChange?.(branch);
