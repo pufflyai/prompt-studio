@@ -1,6 +1,6 @@
 import { Flex, Stack, Text } from "@chakra-ui/react";
-import { useParams } from "@tanstack/react-router";
-import { useState } from "react";
+import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { useProject, useProjectTemplateAssets } from "@/features/project/hooks/use-project";
 import { CreateTemplateDialog } from "../components/create-template-dialog";
 import { ProjectDangerZone } from "../components/project-danger-zone";
@@ -8,12 +8,15 @@ import { type SettingsSection, SettingsSidebar } from "../components/settings-si
 import { StartupScriptEditor } from "../components/startup-script-editor";
 import { TagManager } from "../components/tag-manager";
 import { TemplateEditor } from "../components/template-editor";
+import { parseSettingsPanel, toSettingsPanel } from "../utils/settings-panel";
 
 export const ProjectSettings = () => {
+  const navigate = useNavigate();
   const { projectId } = useParams({ strict: false });
+  const { panel } = useSearch({ strict: false });
   const { data: project } = useProject(projectId);
   const { data: templates } = useProjectTemplateAssets(projectId);
-  const [activeSection, setActiveSection] = useState<SettingsSection | null>("tags");
+  const [activeSection, setActiveSection] = useState<SettingsSection | null>(() => parseSettingsPanel(panel));
   const [isCreateTemplateOpen, setIsCreateTemplateOpen] = useState(false);
 
   const projectName = project?.name ?? "Project";
@@ -27,6 +30,28 @@ export const ProjectSettings = () => {
   const handleTemplateDeleted = () => {
     setActiveSection("tags");
   };
+
+  useEffect(() => {
+    setActiveSection(parseSettingsPanel(panel));
+  }, [panel]);
+
+  useEffect(() => {
+    if (!projectId || !activeSection) {
+      return;
+    }
+
+    const nextPanel = toSettingsPanel(activeSection);
+    if (panel === nextPanel) {
+      return;
+    }
+
+    navigate({
+      to: "/projects/$projectId/settings",
+      params: { projectId },
+      search: { panel: nextPanel },
+      replace: true,
+    });
+  }, [activeSection, navigate, panel, projectId]);
 
   const renderContent = () => {
     if (!activeSection) {

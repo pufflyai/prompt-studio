@@ -3,7 +3,6 @@ import { EmptyState } from "@pstdio/ui";
 import { Outlet, useParams, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { getPageTitle } from "@/features/page-title/utils/page-title";
 import { ProjectSettingsProvider, useProjectSettingsStore } from "@/features/project-settings/store";
 import { SessionAttachedPanel } from "@/features/sessions/components/session-attached-panel";
 import { SessionBubbleContainer } from "@/features/sessions/components/session-bubble.container";
@@ -38,10 +37,6 @@ const ProjectShellContent = () => {
         : `${window.location.pathname}${window.location.search}${window.location.hash}`;
     setLastNonSessionsPath(currentPath);
   }, [isSessionsRoute, location.pathname, setLastNonSessionsPath]);
-
-  useEffect(() => {
-    document.title = getPageTitle(location.pathname, project?.name);
-  }, [location.pathname, project?.name]);
 
   return (
     <Flex height="100%" width="100%" minH="0">
