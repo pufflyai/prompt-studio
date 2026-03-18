@@ -2,7 +2,7 @@ import { Badge, Button, Flex, HStack, Spinner, Stack, Text } from "@chakra-ui/re
 import { DeleteConfirmationModal, Switch, toaster } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDeleteProjectTemplate, useProjectTemplate, useUpdateProjectTemplate } from "../hooks/use-templates";
 import {
   clearTemplateDraft,
@@ -32,10 +32,12 @@ export const TemplateEditor = (props: TemplateEditorProps) => {
   const [savedContent, setSavedContent] = useState("");
   const [draftContent, setDraftContent] = useState(() => loadTemplateDraft(undefined, projectId, templateName) ?? "");
   const [editorKey, setEditorKey] = useState(0);
+  const hasEditorInitialized = useRef(false);
 
   useEffect(() => {
     if (!template) return;
 
+    hasEditorInitialized.current = false;
     const localDraft = loadTemplateDraft(undefined, projectId, templateName);
     setSavedContent(template.content);
     setDraftContent(localDraft ?? template.content);
@@ -64,11 +66,23 @@ export const TemplateEditor = (props: TemplateEditorProps) => {
   const isCancelDisabled = !isDirty || updateTemplate.isPending;
 
   const handleContentChange = (value: string) => {
+    // Lexical re-serializes markdown on init, which may differ from the original.
+    // Treat the first onChange as the baseline when no draft exists.
+    if (!hasEditorInitialized.current) {
+      hasEditorInitialized.current = true;
+      const hasDraft = loadTemplateDraft(undefined, projectId, templateName) !== null;
+      if (!hasDraft) {
+        setSavedContent(value);
+        setDraftContent(value);
+        return;
+      }
+    }
     setDraftContent(value);
     saveTemplateDraft(undefined, projectId, templateName, value);
   };
 
   const handleCancel = () => {
+    hasEditorInitialized.current = false;
     setDraftContent(savedContent);
     clearTemplateDraft(undefined, projectId, templateName);
     setEditorKey((k) => k + 1);
