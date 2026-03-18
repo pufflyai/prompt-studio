@@ -1,7 +1,28 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 
-const forwardedArgs = process.argv.slice(2).filter((arg) => arg !== "--silent");
+export const sanitizeForwardedArgs = (argv: string[]) => argv.filter((arg) => arg !== "--silent");
+
+export const createRunId = ({ now = Date.now(), pid = process.pid }: { now?: number; pid?: number } = {}) =>
+  `${now}-${pid}`;
+
+export const buildPlaywrightEnv = (
+  env: NodeJS.ProcessEnv,
+  ports: { apiPort: number; dashboardPort: number },
+  runId: string,
+) => ({
+  ...env,
+  E2E_API_PORT: String(ports.apiPort),
+  E2E_DASHBOARD_PORT: String(ports.dashboardPort),
+  E2E_RUN_ID: runId,
+});
+
+export const getPlaywrightCommand = (args: string[]) => ({
+  cmd: process.execPath,
+  args: ["x", "playwright", "test", ...args],
+});
+
+const forwardedArgs = sanitizeForwardedArgs(process.argv.slice(2));
 
 const getFreePort = async () =>
   new Promise<number>((resolve, reject) => {
@@ -30,20 +51,29 @@ const getFreePort = async () =>
     });
   });
 
-const run = async () => {
+const getPortPair = async () => {
   const apiPort = await getFreePort();
-  const dashboardPort = await getFreePort();
+  let dashboardPort = await getFreePort();
 
-  const child = spawn("bunx", ["playwright", "test", ...forwardedArgs], {
-    env: {
-      ...process.env,
-      E2E_API_PORT: String(apiPort),
-      E2E_DASHBOARD_PORT: String(dashboardPort),
-    },
+  while (dashboardPort === apiPort) {
+    dashboardPort = await getFreePort();
+  }
+
+  return { apiPort, dashboardPort };
+};
+
+const run = async () => {
+  const { apiPort, dashboardPort } = await getPortPair();
+  const runId = process.env.E2E_RUN_ID ?? createRunId();
+  const command = getPlaywrightCommand(forwardedArgs);
+
+  const child = spawn(command.cmd, command.args, {
+    env: buildPlaywrightEnv(process.env, { apiPort, dashboardPort }, runId),
     stdio: "inherit",
   });
 
-  child.on("error", () => {
+  child.on("error", (error) => {
+    console.error(error);
     process.exit(1);
   });
 
@@ -52,6 +82,9 @@ const run = async () => {
   });
 };
 
-run().catch(() => {
-  process.exit(1);
-});
+if (import.meta.main) {
+  run().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

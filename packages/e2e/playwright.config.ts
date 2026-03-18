@@ -5,6 +5,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const dashboardPort = Number(process.env.E2E_DASHBOARD_PORT ?? "5174");
+const runId = process.env.E2E_RUN_ID ?? `${Date.now()}-${process.pid}`;
 const storagePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-storage-"));
 const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-home-"));
 
@@ -15,7 +16,8 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: 0,
-  reporter: [["html", { open: "never" }], ["list"]],
+  outputDir: `test-results/${runId}`,
+  reporter: [["html", { open: "never", outputFolder: `playwright-report/${runId}` }], ["list"]],
   use: {
     baseURL: `http://localhost:${dashboardPort}`,
     trace: "on-first-retry",
@@ -31,7 +33,7 @@ export default defineConfig({
     {
       command: `bun run ../../packages/pstdio-api/src/server.ts`,
       port: apiPort,
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: 15_000,
       env: {
         PORT: String(apiPort),
@@ -44,7 +46,7 @@ export default defineConfig({
     {
       command: `bun run --cwd ../../packages/pstdio pstdio -- --api-port ${apiPort} --dashboard-port ${dashboardPort} --no-open-browser`,
       port: dashboardPort,
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: 30_000,
       env: {
         PSTDIO_DISABLE_API_AUTO_START: "1",
