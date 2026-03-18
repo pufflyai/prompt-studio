@@ -24,7 +24,7 @@ const createTemplateViaApi = async (
   name: string,
 ) => {
   const res = await request.post(`${apiBase}/v1/projects/${projectId}/templates`, {
-    data: { name, templateType: "prompt" },
+    data: { name, template_type: "prompt" },
   });
   expect(res.ok()).toBe(true);
   return (await res.json()) as { id: string; name: string; content: string };
@@ -33,6 +33,8 @@ const createTemplateViaApi = async (
 const navigateToTemplate = async (page: import("@playwright/test").Page, projectId: string, templateName: string) => {
   await bypassOnboarding(page);
   await page.goto(`/projects/${projectId}/settings`);
+  await page.getByText("Templates", { exact: true }).click();
+  await page.getByText("Prompts", { exact: true }).click();
   await page.getByText(templateName, { exact: true }).click();
 };
 
@@ -64,6 +66,8 @@ test.describe("Project settings", () => {
     await createDialog.getByRole("button", { name: "Create", exact: true }).click();
     await createResponse;
 
+    await page.getByText("Templates", { exact: true }).click();
+    await page.getByText("Prompts", { exact: true }).click();
     await expect(page.getByText(templateName, { exact: true }).first()).toBeVisible();
 
     const templateResponse = await request.get(
@@ -82,7 +86,7 @@ test.describe("Project settings", () => {
 
     await navigateToTemplate(page, project.id, templateName);
 
-    const editor = page.locator("[contenteditable]");
+    const editor = page.locator("[data-lexical-editor]").first();
     await editor.click();
     await editor.pressSequentially("Updated content");
 
@@ -113,7 +117,7 @@ test.describe("Project settings", () => {
 
     await navigateToTemplate(page, project.id, templateName);
 
-    const editor = page.locator("[contenteditable]");
+    const editor = page.locator("[data-lexical-editor]").first();
     await editor.click();
     await editor.pressSequentially("Unsaved changes");
 
