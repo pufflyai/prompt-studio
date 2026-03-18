@@ -1,6 +1,6 @@
 import { Box, Container, HStack, IconButton, Spinner, Stack, Text } from "@chakra-ui/react";
 import { toaster } from "@pstdio/ui";
-import { useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -14,7 +14,6 @@ import { AgentRow } from "../components/agent-row";
 
 export const Settings = () => {
   const { t } = useTranslation("settings");
-  const navigate = useNavigate();
   const { data: agents = [], isLoading: isLoadingAgents } = useAgents();
   const { data: configs = [], isLoading: isLoadingConfigs } = useAgentConfigs();
   const enableAgent = useEnableAgent();
@@ -51,8 +50,10 @@ export const Settings = () => {
     <Container>
       <Stack gap="lg" padding="lg">
         <HStack gap="xs" alignItems="center">
-          <IconButton size="sm" variant="ghost" aria-label="Back" onClick={() => navigate({ to: "/projects" })}>
-            <ArrowLeft size={18} />
+          <IconButton size="sm" variant="ghost" aria-label="Back" asChild>
+            <Link to="/projects">
+              <ArrowLeft size={18} />
+            </Link>
           </IconButton>
           <Text textStyle="heading/M">{t("agentList.title")}</Text>
         </HStack>

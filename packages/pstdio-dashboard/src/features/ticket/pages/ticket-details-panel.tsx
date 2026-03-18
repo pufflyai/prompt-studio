@@ -63,14 +63,12 @@ const toTicketTemplates = (templateAssets: Array<{ id: string; name: string; tem
     .filter((asset) => asset.templateType === "ticket")
     .map((asset) => ({ id: asset.id, name: asset.name }));
 
-const buildTicketBreadcrumbs = (
-  ticketShorthand: string,
-  parentShorthand: string | null,
-  navigateToTicket: (sh: string) => void,
-) => {
-  const breadcrumbs = [{ title: ticketShorthand, onClick: () => navigateToTicket(ticketShorthand) }];
+const buildTicketBreadcrumbs = (ticketShorthand: string, parentShorthand: string | null, projectId: string) => {
+  const ticketUrl = `/projects/${projectId}/tickets/${ticketShorthand}`;
+  const breadcrumbs = [{ title: ticketShorthand, url: ticketUrl }];
   if (!parentShorthand) return breadcrumbs;
-  return [{ title: parentShorthand, onClick: () => navigateToTicket(parentShorthand) }, ...breadcrumbs];
+  const parentUrl = `/projects/${projectId}/tickets/${parentShorthand}`;
+  return [{ title: parentShorthand, url: parentUrl }, ...breadcrumbs];
 };
 
 export const TicketDetailsPanel = () => {
@@ -139,11 +137,6 @@ export const TicketDetailsPanel = () => {
     navigate({ to: "/projects/$projectId/tickets", params: { projectId } });
   };
 
-  const navigateToTicket = (sh: string) => {
-    if (!projectId) return;
-    navigate({ to: "/projects/$projectId/tickets/$ticketShorthand", params: { projectId, ticketShorthand: sh } });
-  };
-
   const templates = toTicketTemplates(templateAssets);
 
   if (ticketState.state === "loading") {
@@ -156,7 +149,11 @@ export const TicketDetailsPanel = () => {
 
   const handleSelectTicket = (id: string) => {
     const target = allProjectTickets.find((t) => t.id === id);
-    if (target) navigateToTicket(target.shorthand);
+    if (target)
+      navigate({
+        to: "/projects/$projectId/tickets/$ticketShorthand",
+        params: { projectId, ticketShorthand: target.shorthand },
+      });
   };
 
   const handleRunAttempt = () => {
@@ -177,7 +174,7 @@ export const TicketDetailsPanel = () => {
     });
   };
 
-  const breadcrumbs = buildTicketBreadcrumbs(ticket.shorthand, parentTicket?.shorthand ?? null, navigateToTicket);
+  const breadcrumbs = buildTicketBreadcrumbs(ticket.shorthand, parentTicket?.shorthand ?? null, projectId);
 
   return (
     <Stack gap="0" height="100%">

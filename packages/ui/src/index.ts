@@ -1,6 +1,7 @@
 export { ChakraProvider } from "@chakra-ui/react";
 export type { AlertProps } from "./components/alert";
 export { AlertMessage } from "./components/alert";
+export type { BreadcrumbItem } from "./components/breadcrumb";
 export { Breadcrumb } from "./components/breadcrumb";
 export type { CheckboxProps } from "./components/checkbox";
 export { Checkbox } from "./components/checkbox";
@@ -43,6 +44,7 @@ export type {
   SidebarAction,
   SidebarActionContext,
   SidebarActionMenuItem,
+  SidebarLinkComponent,
   SidebarNavigateEvent,
   SidebarNavigationIntent,
   SidebarNode,

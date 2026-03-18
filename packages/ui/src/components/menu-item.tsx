@@ -1,6 +1,13 @@
 import type { IconProps } from "@chakra-ui/react";
 import { Badge, MenuItem as ChakraMenuItem, Flex, Icon, Stack, Text } from "@chakra-ui/react";
-import type { ComponentProps, MouseEvent as ReactMouseEvent, ReactNode } from "react";
+import {
+  Children,
+  type ComponentProps,
+  cloneElement,
+  isValidElement,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+} from "react";
 import { Tooltip } from "./tooltip";
 
 type ChakraMenuItemProps = ComponentProps<typeof ChakraMenuItem>;
@@ -31,115 +38,65 @@ const menuItemVariantStyles = {
   },
 } as const;
 
-export interface MenuItemProps {
-  id?: string;
-  children?: ReactNode;
-  isDisabled?: boolean;
-  isSelected?: boolean;
+interface MenuItemContentProps {
   primaryLabel: string;
   secondaryLabel?: string;
   tooltipLabel?: ReactNode;
   leftIcon?: MenuItemIcon | null;
   leftSlot?: ReactNode;
   rightIcon?: MenuItemIcon | null;
-  leftIconColor?: MenuItemIconColor;
-  rightIconColor?: MenuItemIconColor;
-  leftIconSize?: string;
-  rightIconSize?: string;
+  leftIconColor: MenuItemIconColor;
+  rightIconColor: MenuItemIconColor;
+  leftIconSize: string;
+  rightIconSize: string;
   rightIconAriaLabel?: string;
   rightTooltipLabel?: ReactNode;
   onRightIconClick?: () => void;
   tagLabel?: ReactNode;
-  tagColorPalette?: MenuItemTagColor;
-  tagVariant?: MenuItemTagVariant;
-  variant?: MenuItemVariant;
-  tabIndex?: number;
-  width?: ChakraMenuItemProps["width"];
-  maxWidth?: ChakraMenuItemProps["maxWidth"];
-  setRefElement?: ChakraMenuItemProps["ref"];
-  onClick?: ChakraMenuItemProps["onClick"];
-  onMouseDown?: ChakraMenuItemProps["onMouseDown"];
-  onMouseEnter?: ChakraMenuItemProps["onMouseEnter"];
+  tagColorPalette: MenuItemTagColor;
+  tagVariant: MenuItemTagVariant;
+  variant: MenuItemVariant;
 }
 
-export const MenuItem = (props: MenuItemProps) => {
+const MenuItemContent = (props: MenuItemContentProps) => {
   const {
-    id,
     primaryLabel,
     tooltipLabel,
     secondaryLabel,
-    leftIcon = null,
+    leftIcon,
     leftSlot,
     rightIcon,
-    leftIconColor = "fg.menu-item.default",
-    rightIconColor = "fg.menu-item.default",
+    leftIconColor,
+    rightIconColor,
     leftIconSize,
     rightIconSize,
     rightIconAriaLabel,
     rightTooltipLabel,
     onRightIconClick,
-    isDisabled,
-    isSelected,
     tagLabel,
-    tagColorPalette = "yellow",
-    tagVariant = "subtle",
-    variant = "default",
-    tabIndex,
-    width,
-    maxWidth,
-    setRefElement,
+    tagColorPalette,
+    tagVariant,
+    variant,
   } = props;
-  const { onClick, onMouseDown, onMouseEnter } = props;
+
   const variantStyles = menuItemVariantStyles[variant];
-  const backgroundColor = isSelected ? "bg.menu-item.selected" : "bg.menu-item.default";
-  const resolvedLeftIconSize = leftIconSize ?? variantStyles.iconSize;
-  const resolvedRightIconSize = rightIconSize ?? variantStyles.iconSize;
   const isRightIconInteractive = Boolean(onRightIconClick && rightIcon);
 
   const handleRightIconMouseDown = (event: ReactMouseEvent<HTMLElement>) => {
-    if (!isRightIconInteractive) {
-      return;
-    }
-
+    if (!isRightIconInteractive) return;
     event.preventDefault();
     event.stopPropagation();
   };
 
   const handleRightIconClick = (event: ReactMouseEvent<HTMLElement>) => {
-    if (!isRightIconInteractive || !onRightIconClick) {
-      return;
-    }
-
+    if (!isRightIconInteractive || !onRightIconClick) return;
     event.preventDefault();
     event.stopPropagation();
     onRightIconClick();
   };
 
   return (
-    <ChakraMenuItem
-      id={id}
-      ref={setRefElement}
-      tabIndex={tabIndex}
-      disabled={isDisabled}
-      aria-selected={isSelected}
-      paddingX={variantStyles.paddingX}
-      paddingY={variantStyles.paddingY}
-      onClick={onClick}
-      onMouseDown={onMouseDown}
-      onMouseEnter={onMouseEnter}
-      height="auto"
-      minHeight={variantStyles.minHeight}
-      role="option"
-      width={width}
-      maxWidth={maxWidth ?? "20rem"}
-      overflow={"hidden"}
-      position="relative"
-      cursor={isDisabled ? "default" : "pointer"}
-      value={id ?? primaryLabel}
-      bg={backgroundColor}
-      _hover={{ bg: "bg.menu-item.hover" }}
-      _focus={{ bg: "bg.menu-item.focus" }}
-    >
+    <>
       <Flex justifyContent="space-between" alignItems="center" gap="xs" flex="1">
         <Tooltip positioning={{ placement: "right" }} content={tooltipLabel} disabled={!tooltipLabel}>
           <Stack gap="2xs">
@@ -147,7 +104,7 @@ export const MenuItem = (props: MenuItemProps) => {
               {leftSlot ? (
                 leftSlot
               ) : leftIcon ? (
-                <Icon as={leftIcon} boxSize={resolvedLeftIconSize} color={leftIconColor} />
+                <Icon as={leftIcon} boxSize={leftIconSize} color={leftIconColor} />
               ) : null}
               <Text lineClamp={1} textOverflow="ellipsis" textStyle={variantStyles.primaryTextStyle}>
                 {primaryLabel}
@@ -180,7 +137,7 @@ export const MenuItem = (props: MenuItemProps) => {
                 onMouseDown={handleRightIconMouseDown}
                 onClick={handleRightIconClick}
               >
-                <Icon as={rightIcon} boxSize={resolvedRightIconSize} color={rightIconColor} />
+                <Icon as={rightIcon} boxSize={rightIconSize} color={rightIconColor} />
               </Flex>
             </Tooltip>
           ) : null}
@@ -202,6 +159,138 @@ export const MenuItem = (props: MenuItemProps) => {
           {tagLabel}
         </Badge>
       ) : null}
+    </>
+  );
+};
+
+export interface MenuItemProps {
+  id?: string;
+  children?: ReactNode;
+  /** When true, the single child element becomes the root element (e.g. a Link for cmd+click support). */
+  asChild?: boolean;
+  isDisabled?: boolean;
+  isSelected?: boolean;
+  primaryLabel: string;
+  secondaryLabel?: string;
+  tooltipLabel?: ReactNode;
+  leftIcon?: MenuItemIcon | null;
+  leftSlot?: ReactNode;
+  rightIcon?: MenuItemIcon | null;
+  leftIconColor?: MenuItemIconColor;
+  rightIconColor?: MenuItemIconColor;
+  leftIconSize?: string;
+  rightIconSize?: string;
+  rightIconAriaLabel?: string;
+  rightTooltipLabel?: ReactNode;
+  onRightIconClick?: () => void;
+  tagLabel?: ReactNode;
+  tagColorPalette?: MenuItemTagColor;
+  tagVariant?: MenuItemTagVariant;
+  variant?: MenuItemVariant;
+  tabIndex?: number;
+  width?: ChakraMenuItemProps["width"];
+  maxWidth?: ChakraMenuItemProps["maxWidth"];
+  setRefElement?: ChakraMenuItemProps["ref"];
+  onClick?: ChakraMenuItemProps["onClick"];
+  onMouseDown?: ChakraMenuItemProps["onMouseDown"];
+  onMouseEnter?: ChakraMenuItemProps["onMouseEnter"];
+}
+
+export const MenuItem = (props: MenuItemProps) => {
+  const {
+    id,
+    children,
+    asChild,
+    primaryLabel,
+    tooltipLabel,
+    secondaryLabel,
+    leftIcon = null,
+    leftSlot,
+    rightIcon,
+    leftIconColor = "fg.menu-item.default",
+    rightIconColor = "fg.menu-item.default",
+    leftIconSize,
+    rightIconSize,
+    rightIconAriaLabel,
+    rightTooltipLabel,
+    onRightIconClick,
+    isDisabled,
+    isSelected,
+    tagLabel,
+    tagColorPalette = "yellow",
+    tagVariant = "subtle",
+    variant = "default",
+    tabIndex,
+    width,
+    maxWidth,
+    setRefElement,
+  } = props;
+  const { onClick, onMouseDown, onMouseEnter } = props;
+  const variantStyles = menuItemVariantStyles[variant];
+  const backgroundColor = isSelected ? "bg.menu-item.selected" : "bg.menu-item.default";
+  const resolvedLeftIconSize = leftIconSize ?? variantStyles.iconSize;
+  const resolvedRightIconSize = rightIconSize ?? variantStyles.iconSize;
+
+  const contentProps: MenuItemContentProps = {
+    primaryLabel,
+    secondaryLabel,
+    tooltipLabel,
+    leftIcon,
+    leftSlot,
+    rightIcon,
+    leftIconColor,
+    rightIconColor,
+    leftIconSize: resolvedLeftIconSize,
+    rightIconSize: resolvedRightIconSize,
+    rightIconAriaLabel,
+    rightTooltipLabel,
+    onRightIconClick,
+    tagLabel,
+    tagColorPalette,
+    tagVariant,
+    variant,
+  };
+
+  const commonProps = {
+    id,
+    ref: setRefElement,
+    tabIndex,
+    disabled: isDisabled,
+    "aria-selected": isSelected,
+    paddingX: variantStyles.paddingX,
+    paddingY: variantStyles.paddingY,
+    height: "auto" as const,
+    minHeight: variantStyles.minHeight,
+    role: "option" as const,
+    width,
+    maxWidth: maxWidth ?? "20rem",
+    overflow: "hidden" as const,
+    position: "relative" as const,
+    cursor: isDisabled ? ("default" as const) : ("pointer" as const),
+    value: id ?? primaryLabel,
+    bg: backgroundColor,
+    _hover: { bg: "bg.menu-item.hover" },
+    _focus: { bg: "bg.menu-item.focus" },
+  };
+
+  if (asChild && children) {
+    const child = Children.only(children);
+    if (!isValidElement(child)) return null;
+
+    return (
+      <ChakraMenuItem asChild {...commonProps}>
+        {cloneElement(
+          child,
+          { style: { textDecoration: "none", color: "inherit" } },
+          <MenuItemContent {...contentProps} />,
+        )}
+      </ChakraMenuItem>
+    );
+  }
+
+  return (
+    <ChakraMenuItem {...commonProps} onClick={onClick} onMouseDown={onMouseDown} onMouseEnter={onMouseEnter}>
+      <MenuItemContent {...contentProps} />
     </ChakraMenuItem>
   );
 };

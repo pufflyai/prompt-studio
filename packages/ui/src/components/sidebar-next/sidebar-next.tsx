@@ -17,6 +17,7 @@ export const SidebarNext = (props: SidebarNextProps) => {
     width = "240px",
     closable = true,
     emptyLabel = "No items available.",
+    linkComponent,
     onNavigate,
     onOpenChange,
   } = props;
@@ -61,6 +62,7 @@ export const SidebarNext = (props: SidebarNextProps) => {
             expandedSections={expandedSections}
             expandedNodes={expandedNodes}
             activeNodeId={activeNodeId}
+            linkComponent={linkComponent}
             onNavigate={onNavigate}
             onToggleSection={toggleSection}
             onToggleNode={toggleNode}

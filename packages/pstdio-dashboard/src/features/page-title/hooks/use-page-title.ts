@@ -12,7 +12,7 @@ const parseProjectRoute = (pathname: string) => {
 
   const projectId = segments[1];
   const section = segments[2];
-  const sessionId = section === "sessions" ? segments[3] ?? null : null;
+  const sessionId = section === "sessions" ? (segments[3] ?? null) : null;
 
   return { projectId, section, sessionId };
 };

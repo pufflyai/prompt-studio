@@ -1,6 +1,6 @@
 import { Flex, IconButton, Stack, Text } from "@chakra-ui/react";
 import { Breadcrumb, HorizontalMenuStack } from "@pstdio/ui";
-import { useNavigate, useParams } from "@tanstack/react-router";
+import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { useProject } from "@/features/project/hooks/use-project";
@@ -50,33 +50,6 @@ export const WorkspacePage = () => {
 
   const { data: ticketFilesData } = useTicketFiles(ticketShorthand);
   const artifacts = ticketFilesData?.artifacts ?? [];
-
-  const navigateToTickets = () => {
-    if (!projectId) return;
-
-    navigate({
-      to: "/projects/$projectId/tickets",
-      params: { projectId },
-    });
-  };
-
-  const navigateToTicket = () => {
-    if (!projectId || !ticketShorthand) return;
-
-    navigate({
-      to: "/projects/$projectId/tickets/$ticketShorthand",
-      params: { projectId, ticketShorthand },
-    });
-  };
-
-  const navigateToWorkspace = () => {
-    if (!projectId || !ticketShorthand || !selectedWorkspaceLabel) return;
-
-    navigate({
-      to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
-      params: { projectId, ticketShorthand, workspaceShorthand: selectedWorkspaceLabel },
-    });
-  };
 
   const handleSelectWorkspace = (shorthand: string) => {
     if (!projectId || !ticketShorthand) return;
@@ -128,16 +101,30 @@ export const WorkspacePage = () => {
     <Stack gap="0" height="100%">
       <HorizontalMenuStack>
         <Flex align="center" gap="sm">
-          <IconButton aria-label="Back to tickets" variant="ghost" size="sm" onClick={navigateToTickets}>
-            <ArrowLeft size={14} />
-          </IconButton>
+          {projectId ? (
+            <IconButton aria-label="Back to tickets" variant="ghost" size="sm" asChild>
+              <Link to="/projects/$projectId/tickets" params={{ projectId }}>
+                <ArrowLeft size={14} />
+              </Link>
+            </IconButton>
+          ) : null}
 
           <Breadcrumb
             separator="/"
             separatorGap="xs"
+            linkComponent={Link}
             items={[
-              { title: ticket.shorthand, onClick: navigateToTicket },
-              { title: selectedWorkspaceLabel, onClick: navigateToWorkspace },
+              {
+                title: ticket.shorthand,
+                url: projectId && ticketShorthand ? `/projects/${projectId}/tickets/${ticketShorthand}` : undefined,
+              },
+              {
+                title: selectedWorkspaceLabel,
+                url:
+                  projectId && ticketShorthand && selectedWorkspaceLabel
+                    ? `/projects/${projectId}/tickets/${ticketShorthand}/workspaces/${selectedWorkspaceLabel}`
+                    : undefined,
+              },
             ]}
           />
         </Flex>

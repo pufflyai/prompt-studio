@@ -1,12 +1,14 @@
 import { Flex, IconButton } from "@chakra-ui/react";
+import type { BreadcrumbItem } from "@pstdio/ui";
 import { Breadcrumb, HorizontalMenuStack } from "@pstdio/ui";
+import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { TicketActionMenu } from "./ticket-action-menu";
 import { TicketAttemptButton } from "./ticket-attempt-button";
 
 interface TicketHeaderProps {
-  breadcrumbItems: Array<{ title: string; onClick: () => void }>;
+  breadcrumbItems: BreadcrumbItem[];
   attemptCount: number;
   additions: number;
   deletions: number;
@@ -50,7 +52,7 @@ export const TicketHeader = (props: TicketHeaderProps) => {
           <ArrowLeft />
         </IconButton>
 
-        <Breadcrumb separator="/" separatorGap="xs" items={breadcrumbItems} />
+        <Breadcrumb separator="/" separatorGap="xs" items={breadcrumbItems} linkComponent={Link} />
       </Flex>
 
       <Flex align="center" gap="xs">

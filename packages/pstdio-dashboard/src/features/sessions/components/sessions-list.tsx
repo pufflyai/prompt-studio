@@ -1,6 +1,7 @@
 import { Menu, Skeleton, Stack, Text } from "@chakra-ui/react";
 import type { SessionCompletionStatus } from "@pstdio/ui";
 import { MenuItem, SessionIndicator } from "@pstdio/ui";
+import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { Session } from "../types";
 import { groupSessionsByDate } from "../utils/group-sessions";
@@ -9,6 +10,7 @@ interface SessionsListProps {
   sessions: Session[];
   selectedSessionId: string | null;
   isLoading: boolean;
+  projectId: string | undefined;
   onSelectSession: (sessionId: string) => void;
 }
 
@@ -22,7 +24,7 @@ const LoadingSkeleton = () => (
 
 export const SessionsList = (props: SessionsListProps) => {
   const { t } = useTranslation("projects");
-  const { sessions, selectedSessionId, isLoading, onSelectSession } = props;
+  const { sessions, selectedSessionId, isLoading, projectId, onSelectSession } = props;
 
   if (isLoading) {
     return <LoadingSkeleton />;
@@ -52,13 +54,16 @@ export const SessionsList = (props: SessionsListProps) => {
             {group.sessions.map((session) => (
               <MenuItem
                 key={session.id}
+                asChild={Boolean(projectId)}
                 primaryLabel={session.title}
                 tooltipLabel={session.title}
                 variant="compact"
                 isSelected={session.id === selectedSessionId}
                 leftSlot={<SessionIndicator status={session.status as SessionCompletionStatus} />}
                 onClick={() => onSelectSession(session.id)}
-              />
+              >
+                {projectId ? <Link to={`/projects/${projectId}/sessions/${session.id}`} /> : undefined}
+              </MenuItem>
             ))}
           </Stack>
         ))}
