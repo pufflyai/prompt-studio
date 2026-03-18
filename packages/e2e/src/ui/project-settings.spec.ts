@@ -28,7 +28,7 @@ test.describe("Project settings", () => {
     await page.getByText(project.name, { exact: true }).click();
     await page.waitForURL(`**/projects/${project.id}/docs`);
     await page.getByRole("option", { name: "Project settings" }).click();
-    await page.waitForURL(`**/projects/${project.id}/settings`);
+    await page.waitForURL(`**/projects/${project.id}/settings*`);
 
     await page.getByText("Templates", { exact: true }).hover();
     await page.getByRole("button", { name: "Create template" }).click();
