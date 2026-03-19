@@ -397,7 +397,7 @@ test.describe("Ticket list additional coverage", () => {
 
     // Create a tag for the project
     const tagName = "ui-e2e-bug";
-    const tagRes = await request.post(`${apiBase}/v1/projects/${projectId}/tags`, {
+    const tagRes = await request.post(`${apiBase}/v1/projects/${projectId}/ticket-tags`, {
       data: { name: tagName, color: "red" },
     });
     expect(tagRes.ok()).toBe(true);
