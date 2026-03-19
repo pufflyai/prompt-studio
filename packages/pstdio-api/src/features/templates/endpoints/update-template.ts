@@ -1,12 +1,17 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
-import { notFoundResponseSchema, templateResponseSchema, updateTemplateBodySchema } from "../dto";
+import {
+  badRequestResponseSchema,
+  notFoundResponseSchema,
+  templateResponseSchema,
+  updateTemplateBodySchema,
+} from "../dto";
 
 export const updateTemplateRoute = createRoute({
   method: "put",
   path: "/projects/{projectId}/templates/{name}",
-  description: "Update a template's content or default status.",
+  description: "Update a template's content, type, or default status.",
   tags: ["Templates"],
   request: {
     query: z.object({}).strict(),
@@ -29,6 +34,10 @@ export const updateTemplateRoute = createRoute({
       description: "Template not found.",
       content: { "application/json": { schema: notFoundResponseSchema } },
     },
+    400: {
+      description: "Invalid template update request.",
+      content: { "application/json": { schema: badRequestResponseSchema } },
+    },
   },
 });
 
@@ -42,21 +51,45 @@ export const updateTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof u
       return c.json({ error: `Template not found: ${name}` }, 404);
     }
 
-    let newFileId: string | undefined;
-    if (body.content) {
-      const file = await deps.filesService.update(existing.file_id, {
-        data: Buffer.from(body.content),
+    const handleUpdateError = (error: "not_found" | "cannot_change_only_default_template_type") => {
+      if (error === "cannot_change_only_default_template_type") {
+        return c.json({ error: "Cannot change template_type for the only default template in its current type" }, 400);
+      }
+
+      return c.json({ error: `Template not found: ${name}` }, 404);
+    };
+
+    let updated = existing;
+
+    if (body.is_default !== undefined || body.template_type !== undefined) {
+      const metadataResult = await deps.templatesService.update(projectId, name, {
+        is_default: body.is_default,
+        template_type: body.template_type,
       });
-      if (file) newFileId = file.id;
+
+      if ("error" in metadataResult) {
+        return handleUpdateError(metadataResult.error as "not_found" | "cannot_change_only_default_template_type");
+      }
+
+      updated = metadataResult.template;
     }
 
-    const updated = await deps.templatesService.update(projectId, name, {
-      file_id: newFileId,
-      is_default: body.is_default,
-    });
+    if (body.content) {
+      const file = await deps.filesService.update(updated.file_id, {
+        data: Buffer.from(body.content),
+      });
 
-    if (!updated) {
-      return c.json({ error: `Template not found: ${name}` }, 404);
+      if (file) {
+        const fileResult = await deps.templatesService.update(projectId, name, {
+          file_id: file.id,
+        });
+
+        if ("error" in fileResult) {
+          return handleUpdateError(fileResult.error as "not_found" | "cannot_change_only_default_template_type");
+        }
+
+        updated = fileResult.template;
+      }
     }
 
     deps.eventBus.emit("templates", "set", updated);

@@ -8,7 +8,7 @@ import { type SettingsSection, SettingsSidebar } from "../components/settings-si
 import { StartupScriptEditor } from "../components/startup-script-editor";
 import { TagManager } from "../components/tag-manager";
 import { TemplateEditor } from "../components/template-editor";
-import { parseSettingsPanel, toSettingsPanel } from "../utils/settings-panel";
+import { ensureValidSettingsSection, parseSettingsPanel, toSettingsPanel } from "../utils/settings-panel";
 
 export const ProjectSettings = () => {
   const navigate = useNavigate();
@@ -34,6 +34,17 @@ export const ProjectSettings = () => {
   useEffect(() => {
     setActiveSection(parseSettingsPanel(panel));
   }, [panel]);
+
+  useEffect(() => {
+    if (!activeSection) {
+      return;
+    }
+
+    const safeSection = ensureValidSettingsSection(activeSection, templates);
+    if (safeSection !== activeSection) {
+      setActiveSection(safeSection);
+    }
+  }, [activeSection, templates]);
 
   useEffect(() => {
     if (!projectId || !activeSection) {

@@ -1,5 +1,5 @@
-import { Badge, Button, Flex, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
-import { DeleteConfirmationModal, Switch, toaster } from "@pstdio/ui";
+import { Button, Flex, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
+import { DeleteConfirmationModal, toaster } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -16,12 +16,6 @@ interface TemplateEditorProps {
   templateName: string;
   onDeleted: () => void;
 }
-
-const TEMPLATE_TYPE_LABELS: Record<string, string> = {
-  prompt: "Prompt",
-  ticket: "Ticket",
-  document: "Document",
-};
 
 export const TemplateEditor = (props: TemplateEditorProps) => {
   const { projectId, templateName, onDeleted } = props;
@@ -102,15 +96,6 @@ export const TemplateEditor = (props: TemplateEditorProps) => {
     }
   };
 
-  const handleToggleDefault = async () => {
-    try {
-      await updateTemplate.mutateAsync({ name: templateName, isDefault: !template.isDefault });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to update template.";
-      toaster.create({ type: "error", title: "Update failed", description: message });
-    }
-  };
-
   const handleDelete = async () => {
     try {
       await deleteTemplate.mutateAsync(templateName);
@@ -123,31 +108,14 @@ export const TemplateEditor = (props: TemplateEditorProps) => {
     }
   };
 
-  const typeLabel = TEMPLATE_TYPE_LABELS[template.templateType] ?? template.templateType;
   const editorInitialContent = loadTemplateDraft(undefined, projectId, templateName) ?? template.content;
 
   return (
     <>
       <Stack height="100%" gap="0">
         <Flex padding="md" borderBottomWidth="1px" alignItems="center" justifyContent="space-between">
+          <Text textStyle="heading/S">{template.name}</Text>
           <HStack gap="sm">
-            <Text textStyle="heading/S">{template.name}</Text>
-            <Badge variant="subtle" size="sm">
-              {typeLabel}
-            </Badge>
-          </HStack>
-          <HStack gap="sm">
-            <HStack gap="xs">
-              <Text textStyle="label/XS/medium" color="fg.muted">
-                Default
-              </Text>
-              <Switch
-                size="sm"
-                checked={template.isDefault}
-                onCheckedChange={handleToggleDefault}
-                disabled={updateTemplate.isPending}
-              />
-            </HStack>
             <Button size="sm" variant="ghost" onClick={handleCancel} disabled={isCancelDisabled}>
               Cancel
             </Button>

@@ -11,7 +11,7 @@ let cachedRoot: string | null = null;
 
 const extractEmbeddedFiles = async () => {
   const root = join(tmpdir(), "pstdio-files");
-  if (existsSync(join(root, "docs"))) return root;
+  if (existsSync(join(root, "documentation"))) return root;
 
   const files = Bun.embeddedFiles as (Blob & { name: string })[];
 

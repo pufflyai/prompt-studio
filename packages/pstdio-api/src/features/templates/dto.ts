@@ -1,5 +1,7 @@
 import { z } from "@hono/zod-openapi";
 
+export const templateTypeSchema = z.enum(["prompt", "ticket", "document"]);
+
 export const templateResponseSchema = z.object({
   id: z.string(),
   project_id: z.string().nullable(),
@@ -18,7 +20,7 @@ export const templateWithContentResponseSchema = templateResponseSchema.extend({
 export const createTemplateBodySchema = z
   .object({
     name: z.string().min(1),
-    template_type: z.enum(["prompt", "ticket", "document"]),
+    template_type: templateTypeSchema,
     content: z.string().min(1).optional(),
     is_default: z.boolean().optional(),
   })
@@ -28,6 +30,7 @@ export const updateTemplateBodySchema = z
   .object({
     content: z.string().min(1).optional(),
     is_default: z.boolean().optional(),
+    template_type: templateTypeSchema.optional(),
   })
   .strict();
 

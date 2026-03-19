@@ -268,11 +268,17 @@ test.describe("Project creation", () => {
 
     expect(templates.map((template) => template.name).sort()).toEqual([
       "adr",
+      "changelog-entry",
+      "commit-message",
       "cookbook",
+      "create-sub-tickets",
+      "implement-ticket",
       "lessons-learned",
       "prd",
       "proposal",
+      "refine-ticket",
       "review-me",
+      "squash-message",
       "ticket",
     ]);
     expect(
@@ -280,7 +286,7 @@ test.describe("Project creation", () => {
         .filter((template) => template.is_default)
         .map((template) => template.name)
         .sort(),
-    ).toEqual(["prd", "ticket"]);
+    ).toEqual(["commit-message", "prd", "ticket"]);
   });
 
   test("shows validation errors when submitting empty form", async ({ page }) => {
