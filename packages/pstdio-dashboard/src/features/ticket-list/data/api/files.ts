@@ -5,6 +5,19 @@ export const getTicketFiles = async (ticketId: string) => {
   return apiRequest<ApiTicketFilesResponse>(`/v1/tickets/${ticketId}/files`);
 };
 
+export const getTicketFileContent = async (ticketId: string, fileId: string, signal?: AbortSignal) => {
+  const response = await fetch(`/v1/tickets/${ticketId}/files/${fileId}/content`, {
+    cache: "no-store",
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to load ticket file content");
+  }
+
+  return response.text();
+};
+
 export const uploadTicketFile = async (ticketId: string, file: File) => {
   const formData = new FormData();
   formData.append("file", file);

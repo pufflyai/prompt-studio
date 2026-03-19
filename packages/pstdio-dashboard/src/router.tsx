@@ -135,6 +135,12 @@ const projectTicketRoute = createRoute({
   component: TicketDetailsPanel,
 });
 
+const projectTicketFileRoute = createRoute({
+  getParentRoute: () => projectRoute,
+  path: "tickets/$ticketShorthand/files/$selectedFileId",
+  component: TicketDetailsPanel,
+});
+
 const projectChangelogRoute = createRoute({
   getParentRoute: () => projectRoute,
   path: "changelog",
@@ -185,6 +191,7 @@ const routeTree = rootRoute.addChildren([
       projectIndexRoute,
       projectTicketsRoute,
       projectTicketRoute,
+      projectTicketFileRoute,
       projectTicketWorkspaceRoute,
       projectDocsRoute,
       projectChangelogRoute,

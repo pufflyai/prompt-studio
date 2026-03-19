@@ -2,6 +2,7 @@ import { Flex, IconButton, Stack } from "@chakra-ui/react";
 import { PanelRightOpen } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Project } from "@/features/project/types";
+import type { ApiTicketFilesResponse } from "@/features/ticket-list/data/api";
 import type { Ticket } from "@/features/ticket-list/types";
 import { TicketFileList } from "./ticket-file-list";
 import { TicketProperties } from "./ticket-properties";
@@ -11,9 +12,12 @@ interface TicketDetailSidebarProps {
   ticket: Ticket;
   project: Project | null | undefined;
   allTickets: Ticket[];
+  ticketFiles: ApiTicketFilesResponse | undefined;
+  selectedFileId: string;
   isOpen: boolean;
   isUpdatingTags: boolean;
   onToggle: () => void;
+  onSelectFile: (fileId: string) => void;
   onSelectTicket: (ticketId: string) => void;
   onComplexityChange: (complexity: Ticket["complexity"]) => void;
   onTagIdsChange: (tagIds: string[]) => void;
@@ -24,9 +28,12 @@ export const TicketDetailSidebar = (props: TicketDetailSidebarProps) => {
     ticket,
     project,
     allTickets,
+    ticketFiles,
+    selectedFileId,
     isOpen,
     isUpdatingTags,
     onToggle,
+    onSelectFile,
     onSelectTicket,
     onComplexityChange,
     onTagIdsChange,
@@ -55,13 +62,13 @@ export const TicketDetailSidebar = (props: TicketDetailSidebarProps) => {
         isUpdatingTags={isUpdatingTags}
       />
 
+      <TicketFileList data={ticketFiles} selectedFileId={selectedFileId} onSelect={onSelectFile} />
+
       <TicketSubTicketList
         subTickets={ticket.subTickets ?? []}
         knownTicketIds={allTickets.map((projectTicket) => projectTicket.id)}
         onSelectTicket={onSelectTicket}
       />
-
-      <TicketFileList ticketId={ticket.id} />
     </Stack>
   );
 };

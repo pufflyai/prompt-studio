@@ -760,6 +760,7 @@
     "parent": "Padre",
     "tags": "Etiquetas",
     "files": "Archivos",
+    "ticket": "Ticket",
     "subTickets": "Subtareas",
     "none": "Ninguno",
     "noTagsSelected": "Sin etiquetas seleccionadas",

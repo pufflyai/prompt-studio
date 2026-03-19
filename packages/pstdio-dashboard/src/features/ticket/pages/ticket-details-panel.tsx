@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useProject, useProjectTemplateAssets } from "@/features/project/hooks/use-project";
 import { useProjectSettingsStore } from "@/features/project-settings/store";
 import { CreateTicketModal } from "@/features/ticket-list/components/create-ticket-modal";
+import { uploadTicketFile } from "@/features/ticket-list/data/api";
 import {
   useDeleteProjectTicket,
   useProjectTickets,
@@ -20,6 +21,7 @@ import { useContentAutosave } from "../hooks/use-content-autosave";
 import { useSubTicketCreation } from "../hooks/use-sub-ticket-creation";
 import { useTicketAttemptDiff } from "../hooks/use-ticket-attempt-diff";
 import { useTicketContent } from "../hooks/use-ticket-content";
+import { useTicketFiles } from "../hooks/use-ticket-files";
 import { useTicketSessions } from "../hooks/use-ticket-sessions";
 import {
   buildCreateSubTicketsPrompt,
@@ -29,6 +31,11 @@ import {
 import { openTicketSessionBubble } from "../utils/open-ticket-session-bubble";
 import { isTicketContentReady } from "../utils/ticket-content-ready";
 import { resolveTicketDetailsState } from "../utils/ticket-details-state";
+import {
+  buildSelectableTicketFiles,
+  resolveSelectedTicketFile,
+  TICKET_CONTENT_ITEM_ID,
+} from "../utils/ticket-file-selection";
 
 const TicketDetailsStatusMessage = (props: { message: string }) => {
   const { message } = props;
@@ -72,7 +79,7 @@ const buildTicketBreadcrumbs = (ticketShorthand: string, parentShorthand: string
 };
 
 export const TicketDetailsPanel = () => {
-  const { projectId, ticketShorthand } = useParams({ from: "/projects/$projectId/tickets/$ticketShorthand" });
+  const { projectId, ticketShorthand, selectedFileId } = useParams({ strict: false });
   const navigate = useNavigate();
   const { t } = useTranslation("tickets");
 
@@ -92,7 +99,10 @@ export const TicketDetailsPanel = () => {
   const ticket = ticketState.ticket;
   const parentTicket = findParentTicket(allProjectTickets, ticket?.parentId);
   const ticketId = ticket?.id ?? "";
-  const ticketContent = useTicketContent(ticket?.id);
+  const ticketFiles = useTicketFiles(ticket?.id);
+  const selectableFiles = buildSelectableTicketFiles(ticketFiles.data);
+  const selectedFile = resolveSelectedTicketFile(selectableFiles, selectedFileId);
+  const ticketContent = useTicketContent(ticket?.id, selectedFile.id);
   const content = ticketContent.data ?? "";
   const isContentReady = isTicketContentReady(ticketContent.data, ticketContent.isLoading);
   const ticketAttempts = ticket?.attempts ?? [];
@@ -117,11 +127,26 @@ export const TicketDetailsPanel = () => {
     statusOptions: project?.ticketStatusOptions ?? [],
   });
   const autosave = useContentAutosave({
-    ticketId,
+    scopeKey: ticketId ? `ticket:${ticketId}:${selectedFile.id}` : "ticket:none",
+    saveTargetId: selectedFile.id,
     content,
     onSave: async (id, c) => {
       ticketContent.setOptimisticContent(c);
-      await updateTicket.mutateAsync({ ticketId: id, content: c });
+
+      if (id === TICKET_CONTENT_ITEM_ID) {
+        await updateTicket.mutateAsync({ ticketId, content: c });
+        return;
+      }
+
+      const attachment = selectableFiles.find((file) => file.id === id);
+      if (!attachment) return;
+
+      await uploadTicketFile(
+        ticketId,
+        new File([c], attachment.fileName, {
+          type: attachment.fileName.endsWith(".md") ? "text/markdown" : "text/plain",
+        }),
+      );
     },
   });
 
@@ -154,6 +179,23 @@ export const TicketDetailsPanel = () => {
         to: "/projects/$projectId/tickets/$ticketShorthand",
         params: { projectId, ticketShorthand: target.shorthand },
       });
+  };
+
+  const handleSelectFile = async (fileId: string) => {
+    await autosave.flushPending();
+
+    if (fileId === TICKET_CONTENT_ITEM_ID) {
+      navigate({
+        to: "/projects/$projectId/tickets/$ticketShorthand",
+        params: { projectId, ticketShorthand: ticket.shorthand },
+      });
+      return;
+    }
+
+    navigate({
+      to: "/projects/$projectId/tickets/$ticketShorthand/files/$selectedFileId",
+      params: { projectId, ticketShorthand: ticket.shorthand, selectedFileId: fileId },
+    });
   };
 
   const handleRunAttempt = () => {
@@ -214,9 +256,12 @@ export const TicketDetailsPanel = () => {
           ticket={ticket}
           project={project}
           allTickets={allProjectTickets}
+          ticketFiles={ticketFiles.data}
+          selectedFileId={selectedFile.id}
           isOpen={isDetailsPanelOpen}
           isUpdatingTags={updateTicketTags.isPending}
           onToggle={() => setIsDetailsPanelOpen(!isDetailsPanelOpen)}
+          onSelectFile={handleSelectFile}
           onSelectTicket={handleSelectTicket}
           onComplexityChange={(c) => updateTicket.mutate({ ticketId: ticket.id, complexity: c })}
           onTagIdsChange={(ids) => updateTicketTags.mutate({ ticketId: ticket.id, tagIds: ids })}

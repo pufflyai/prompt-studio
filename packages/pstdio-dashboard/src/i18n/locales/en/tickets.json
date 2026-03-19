@@ -792,6 +792,7 @@
     "parent": "Parent",
     "tags": "Tags",
     "files": "Files",
+    "ticket": "Ticket",
     "subTickets": "Sub-tickets",
     "none": "None",
     "noTagsSelected": "No tags selected",
