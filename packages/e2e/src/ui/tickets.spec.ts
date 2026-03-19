@@ -172,7 +172,7 @@ test.describe("Ticket list", () => {
     const contentEditor = dialog.getByRole("textbox").first();
     await contentEditor.click();
     await contentEditor.fill("New E2E Ticket");
-    await dialog.getByRole("button", { name: "Create", exact: true }).click();
+    await dialog.getByRole("button", { name: "Create ticket", exact: true }).click();
 
     // Verify ticket appears on the board
     await expect(page.getByText("New E2E Ticket")).toBeVisible();
@@ -205,10 +205,10 @@ test.describe("Ticket list", () => {
     await contentEditor.click();
     await contentEditor.fill("Tagged modal ticket");
 
-    await dialog.getByRole("button", { name: "No tags selected", exact: true }).click();
+    await dialog.getByRole("button", { name: "Tags", exact: true }).click();
     await page.getByRole("option", { name: tagName, exact: true }).click();
 
-    await dialog.getByRole("button", { name: "Create", exact: true }).click();
+    await dialog.getByRole("button", { name: "Create ticket", exact: true }).click();
 
     await expect(page.getByText("Tagged modal ticket")).toBeVisible();
 
@@ -257,7 +257,7 @@ test.describe("Ticket list editing and filtering", () => {
     const contentEditor = dialog.getByRole("textbox").first();
     await contentEditor.click();
     await contentEditor.fill("Original display title");
-    await dialog.getByRole("button", { name: "Create", exact: true }).click();
+    await dialog.getByRole("button", { name: "Create ticket", exact: true }).click();
 
     await expect(page.getByText("Original display title")).toBeVisible();
 
@@ -307,7 +307,7 @@ test.describe("Ticket list editing and filtering", () => {
     const contentEditor = dialog.getByRole("textbox").first();
     await contentEditor.click();
     await contentEditor.fill("Original content title");
-    await dialog.getByRole("button", { name: "Create", exact: true }).click();
+    await dialog.getByRole("button", { name: "Create ticket", exact: true }).click();
 
     const listTickets = async () => {
       const res = await request.get(`${apiBase}/v1/tickets?project_id=${projectId}`);
@@ -429,6 +429,47 @@ test.describe("Ticket list additional coverage", () => {
     // Click the template dropdown trigger and verify "Bug Report" is listed
     await dialog.getByRole("button", { name: "No template" }).click();
     await expect(page.getByText("Bug Report", { exact: true })).toBeVisible();
+  });
+
+  test("shows the tag on the ticket detail after creating a ticket with a tag", async ({ page, request }) => {
+    const tagName = "ui-e2e-feature";
+    const tagRes = await request.post(`${apiBase}/v1/projects/${projectId}/tags`, {
+      data: { name: tagName, color: "blue" },
+    });
+    expect(tagRes.ok()).toBe(true);
+
+    await bypassOnboarding(page, projectId);
+    await page.goto(`/projects/${projectId}/tickets`);
+
+    await page.getByRole("button", { name: "Create ticket" }).first().click();
+
+    const dialog = page.getByRole("dialog").last();
+    const contentEditor = dialog.getByRole("textbox").first();
+    await contentEditor.click();
+    await contentEditor.fill("Ticket with tag");
+
+    await dialog.getByRole("button", { name: "Tags", exact: true }).click();
+    await page.getByRole("option", { name: tagName, exact: true }).click();
+
+    await dialog.getByRole("button", { name: "Create ticket", exact: true }).click();
+
+    await expect(page.getByText("Ticket with tag")).toBeVisible();
+
+    const listTickets = async () => {
+      const res = await request.get(`${apiBase}/v1/tickets?project_id=${projectId}`);
+      expect(res.ok()).toBe(true);
+      return (await res.json()) as { id: string; shorthand: string; display_title: string | null }[];
+    };
+
+    await expect.poll(async () => (await listTickets()).length).toBe(1);
+    const [createdTicket] = await listTickets();
+
+    await page.getByText("Ticket with tag").first().click();
+    await page.waitForURL(`**/projects/${projectId}/tickets/${createdTicket.shorthand}`);
+
+    // The tag selector should show the tag name, not "No tags selected"
+    await expect(page.getByText(tagName)).toBeVisible();
+    await expect(page.getByText("No tags selected")).not.toBeVisible();
   });
 
   test("toggles a tag on a ticket from the detail sidebar", async ({ page, request }) => {

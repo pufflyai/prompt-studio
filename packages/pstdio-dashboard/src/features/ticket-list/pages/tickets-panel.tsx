@@ -20,6 +20,7 @@ import { CreateTicketModal, type CreateTicketModalPayload } from "../components/
 import { TicketsBoardView } from "../components/tickets-board-view";
 import { TicketsHeader } from "../components/tickets-header";
 import { TicketsListView } from "../components/tickets-list-view";
+import { uploadTicketFile } from "../data/api/files";
 import { type BadgeContext, DEFAULT_DISPLAY_SETTINGS, type DisplaySettings } from "../types";
 import { autoStartRefineSession } from "../utils/auto-start-refine-session";
 import { buildLatestAttemptsByTicketId } from "../utils/ticket-attempts";
@@ -116,6 +117,14 @@ export const TicketsPanel = () => {
       });
 
       closeCreateModal();
+
+      if (payload.files.length > 0) {
+        try {
+          await Promise.all(payload.files.map((file) => uploadTicketFile(createdTicket.id, file)));
+        } catch (error) {
+          console.error("[create ticket file upload]", error);
+        }
+      }
 
       try {
         await autoStartRefineSession({
@@ -234,6 +243,8 @@ export const TicketsPanel = () => {
         targetStatus={createModalStatus}
         templates={templates}
         tags={tags}
+        projectName={project?.name}
+        statusOptions={statusOptions}
       />
     </Stack>
   );

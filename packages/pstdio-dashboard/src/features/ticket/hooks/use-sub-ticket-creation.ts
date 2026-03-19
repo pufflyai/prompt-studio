@@ -2,6 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useProjectTemplateAssets } from "@/features/project/hooks/use-project";
 import type { CreateTicketModalPayload } from "@/features/ticket-list/components/create-ticket-modal";
+import { uploadTicketFile } from "@/features/ticket-list/data/api/files";
 import { useCreateProjectTicket } from "@/features/ticket-list/hooks/use-create-project-ticket";
 import type { TicketStatus, TicketTag } from "@/features/ticket-list/types";
 import { logMutationError } from "@/lib/error-handlers";
@@ -55,6 +56,14 @@ export const useSubTicketCreation = (input: UseSubTicketCreationInput) => {
       });
 
       closeCreateSubTicketModal();
+
+      if (payload.files.length > 0) {
+        try {
+          await Promise.all(payload.files.map((file) => uploadTicketFile(createdTicket.id, file)));
+        } catch (error) {
+          logMutationError("sub-ticket file upload", error);
+        }
+      }
 
       navigate({
         to: "/projects/$projectId/tickets/$ticketShorthand",

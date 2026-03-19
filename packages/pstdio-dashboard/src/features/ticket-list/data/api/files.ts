@@ -6,20 +6,17 @@ export const getTicketFiles = async (ticketId: string) => {
 };
 
 export const uploadTicketFile = async (ticketId: string, file: File) => {
-  const formData = new FormData();
-  formData.append("file", file);
+  const buffer = await file.arrayBuffer();
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
 
-  const response = await fetch(`/v1/tickets/${ticketId}/files`, {
+  return apiRequest<{ id: string; file_name: string }>(`/v1/tickets/${ticketId}/files`, {
     method: "POST",
-    body: formData,
+    body: {
+      file_name: file.name,
+      content_base64: base64,
+      mime_type: file.type || null,
+    },
   });
-
-  if (!response.ok) {
-    throw new Error("Failed to upload file");
-  }
-
-  const json = await response.json();
-  return json.data as { id: string; file_name: string };
 };
 
 export const deleteTicketFile = async (ticketId: string, fileId: string) => {
