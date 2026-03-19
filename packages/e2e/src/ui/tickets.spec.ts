@@ -189,7 +189,7 @@ test.describe("Ticket list", () => {
     };
 
     const tagName = "ui-e2e-bug";
-    const tagRes = await request.post(`${apiBase}/v1/projects/${projectId}/tags`, {
+    const tagRes = await request.post(`${apiBase}/v1/projects/${projectId}/ticket-tags`, {
       data: { name: tagName, color: "red" },
     });
     expect(tagRes.ok()).toBe(true);
@@ -433,7 +433,7 @@ test.describe("Ticket list additional coverage", () => {
 
   test("shows the tag on the ticket detail after creating a ticket with a tag", async ({ page, request }) => {
     const tagName = "ui-e2e-feature";
-    const tagRes = await request.post(`${apiBase}/v1/projects/${projectId}/tags`, {
+    const tagRes = await request.post(`${apiBase}/v1/projects/${projectId}/ticket-tags`, {
       data: { name: tagName, color: "blue" },
     });
     expect(tagRes.ok()).toBe(true);

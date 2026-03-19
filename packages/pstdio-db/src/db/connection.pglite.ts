@@ -14,8 +14,13 @@ import { ensureDbDirectory, resolveDbPath } from "./paths";
 import * as schema from "./schemas.pg";
 
 type EmbeddedFile = Blob & { name: string };
+// Bun's embedded file objects are runtime-specific; narrowing the contract keeps extraction testable
+// without depending on full Blob behavior that unit tests do not control.
+type EmbeddedMigrationFile = Pick<EmbeddedFile, "name" | "size" | "arrayBuffer">;
 
 const DRIZZLE_PREFIX = "../../pstdio-db/drizzle/";
+const DRIZZLE_EXTRACT_DIR = "pstdio-drizzle";
+const DRIZZLE_JOURNAL_FILE = "meta/_journal.json";
 
 const getEmbeddedFiles = (): EmbeddedFile[] => {
   try {
@@ -29,20 +34,43 @@ const getEmbeddedFiles = (): EmbeddedFile[] => {
 
 const isCompiledBinary = () => getEmbeddedFiles().length > 0;
 
-const resolveMigrationsFolder = async () => {
-  const embedded = getEmbeddedFiles().filter((f) => f.name.startsWith(DRIZZLE_PREFIX));
+const extractEmbeddedMigrations = async (
+  embeddedFiles: readonly EmbeddedMigrationFile[],
+  root: string,
+  logger: (message: string) => void,
+) => {
+  for (const file of embeddedFiles) {
+    const relativePath = file.name.slice(DRIZZLE_PREFIX.length);
+    const outPath = path.join(root, relativePath);
+    fs.mkdirSync(path.dirname(outPath), { recursive: true });
+    logger(`[drizzle] extracting ${relativePath} (${file.size} bytes)`);
+    const buf = await file.arrayBuffer();
+    fs.writeFileSync(outPath, Buffer.from(buf));
+  }
+};
+
+// `_journal.json` is the only reliable signal that a previous extraction finished cleanly.
+// We have seen interrupted writes leave `meta/` behind without a valid journal, which makes
+// later startup look "already extracted" while the migration set is incomplete.
+const hasExtractedMigrationJournal = (root: string) => fs.existsSync(path.join(root, DRIZZLE_JOURNAL_FILE));
+
+export const resolveMigrationsFolder = async (
+  options: {
+    embeddedFiles?: readonly EmbeddedMigrationFile[];
+    tmpDir?: string;
+    logger?: (message: string) => void;
+  } = {},
+) => {
+  const embeddedSource = options.embeddedFiles ?? getEmbeddedFiles();
+  const embedded = embeddedSource.filter((f) => f.name.startsWith(DRIZZLE_PREFIX));
 
   if (embedded.length > 0) {
-    const root = path.join(os.tmpdir(), "pstdio-drizzle");
-    if (!fs.existsSync(path.join(root, "meta"))) {
-      for (const file of embedded) {
-        const relativePath = file.name.slice(DRIZZLE_PREFIX.length);
-        const outPath = path.join(root, relativePath);
-        fs.mkdirSync(path.dirname(outPath), { recursive: true });
-        console.log(`[drizzle] extracting ${relativePath} (${file.size} bytes)`);
-        const buf = await file.arrayBuffer();
-        fs.writeFileSync(outPath, Buffer.from(buf));
-      }
+    const root = path.join(options.tmpDir ?? os.tmpdir(), DRIZZLE_EXTRACT_DIR);
+    if (!hasExtractedMigrationJournal(root)) {
+      // Without a valid journal we cannot trust file contents or ordering, so we rebuild from scratch.
+      // This prevents stale files from an older binary from mixing with the current embedded migrations.
+      fs.rmSync(root, { recursive: true, force: true });
+      await extractEmbeddedMigrations(embedded, root, options.logger ?? console.log);
     }
     return root;
   }
