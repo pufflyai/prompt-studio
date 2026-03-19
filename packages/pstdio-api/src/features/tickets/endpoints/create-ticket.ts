@@ -1,4 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { eq, ticket_tag_assignments } from "pstdio-db";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { createTicketBodySchema, ticketResponseSchema } from "../dto";
@@ -67,6 +68,12 @@ export const createTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof cre
 
     if (tag_ids && tag_ids.length > 0) {
       await deps.ticketsService.assignTags(ticket.id, tag_ids);
+
+      const newAssignments = await deps.db
+        .select()
+        .from(ticket_tag_assignments)
+        .where(eq(ticket_tag_assignments.ticket_id, ticket.id));
+      for (const row of newAssignments) deps.eventBus.emit("ticket_tag_assignments", "set", row);
     }
 
     deps.eventBus.emit("tickets", "set", ticket);

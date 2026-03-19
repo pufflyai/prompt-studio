@@ -43,13 +43,16 @@ export const createTagsService = (db: DbClient) => {
     return record;
   };
 
-  const updateColor = async (id: string, color: string) => {
-    await db.update(ticket_tags).set({ color, updated_at: nowTimestamp() }).where(eq(ticket_tags.id, id));
+  const update = async (id: string, input: { name: string; color: string }) => {
+    await db
+      .update(ticket_tags)
+      .set({ name: input.name, color: input.color, updated_at: nowTimestamp() })
+      .where(eq(ticket_tags.id, id));
   };
 
   const softDelete = async (id: string) => {
     await db.update(ticket_tags).set({ deleted_at: nowTimestamp() }).where(eq(ticket_tags.id, id));
   };
 
-  return { list, getByName, create, updateColor, softDelete };
+  return { list, getByName, create, update, softDelete };
 };

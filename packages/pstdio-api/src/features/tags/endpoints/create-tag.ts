@@ -5,7 +5,7 @@ import { createTagBodySchema, tagResponseSchema } from "../dto";
 
 export const createTagRoute = createRoute({
   method: "post",
-  path: "/projects/{projectId}/tags",
+  path: "/projects/{projectId}/ticket-tags",
   description: "Create a new tag for a project.",
   tags: ["Tags"],
   request: {

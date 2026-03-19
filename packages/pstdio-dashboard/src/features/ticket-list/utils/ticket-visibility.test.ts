@@ -21,4 +21,11 @@ describe("getVisibleTickets", () => {
 
     expect(getVisibleTickets([active, archived, draft])).toEqual([active]);
   });
+
+  it("filters out deleted tickets", () => {
+    const active = makeTicket({ id: "1", shorthand: "PS-1" });
+    const deleted = makeTicket({ id: "2", shorthand: "PS-2", deletedAt: "2026-03-19T00:00:00Z" });
+
+    expect(getVisibleTickets([active, deleted])).toEqual([active]);
+  });
 });

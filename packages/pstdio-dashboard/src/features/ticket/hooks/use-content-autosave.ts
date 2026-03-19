@@ -3,21 +3,20 @@ import { useEffect, useRef, useState } from "react";
 const CONTENT_SAVE_DELAY_MS = 400;
 
 interface UseContentAutosaveInput {
-  ticketId: string;
+  scopeKey: string;
+  saveTargetId: string;
   content: string;
-  onSave: (ticketId: string, content: string) => void | Promise<void>;
+  onSave: (saveTargetId: string, content: string) => void | Promise<void>;
 }
 
 export const useContentAutosave = (input: UseContentAutosaveInput) => {
-  const { ticketId, content, onSave } = input;
-
-  const scopeKey = ticketId ? `ticket:${ticketId}` : "ticket:none";
+  const { scopeKey, saveTargetId, content, onSave } = input;
   const [editorRevision, setEditorRevision] = useState(0);
   const [initialContent, setInitialContent] = useState(content);
   const draftContentRef = useRef(content);
   const savedContentRef = useRef(content);
   const pendingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const activeIdRef = useRef<string | null>(ticketId || null);
+  const activeIdRef = useRef<string | null>(saveTargetId || null);
   const lastKeyRef = useRef(scopeKey);
   const hasLocalEditsRef = useRef(false);
   const onSaveRef = useRef(onSave);
@@ -56,13 +55,13 @@ export const useContentAutosave = (input: UseContentAutosaveInput) => {
     }
 
     lastKeyRef.current = scopeKey;
-    activeIdRef.current = ticketId || null;
+    activeIdRef.current = saveTargetId || null;
     draftContentRef.current = content;
     savedContentRef.current = content;
     hasLocalEditsRef.current = false;
     setInitialContent(content);
     setEditorRevision((revision) => revision + 1);
-  }, [content, scopeKey, ticketId]);
+  }, [content, saveTargetId, scopeKey]);
 
   useEffect(() => {
     if (lastKeyRef.current !== scopeKey) return;

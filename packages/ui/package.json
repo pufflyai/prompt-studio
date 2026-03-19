@@ -37,7 +37,7 @@
     "visualize-bundle": "bunx vite-bundle-visualizer",
     "lint": "bunx biome check .",
     "typegen:tokens": "chakra typegen ./src/theme/theme.ts",
-    "test": "echo 'no tests — use storybook for UI'",
+    "test": "bun test --silent",
     "test-storybook": "test-storybook",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",

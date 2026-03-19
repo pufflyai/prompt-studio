@@ -778,6 +778,7 @@
   },
   "createTicketModal": {
     "createTicket": "Create ticket",
+    "newTicket": "New ticket",
     "create": "Create",
     "describePlaceholder": "Describe the ticket...",
     "complexity": "Complexity",
@@ -786,12 +787,14 @@
     "high": "High",
     "template": "Template",
     "noTemplate": "No template",
+    "noStatus": "Status",
     "cancel": "Cancel"
   },
   "ticketDetail": {
     "parent": "Parent",
     "tags": "Tags",
     "files": "Files",
+    "ticket": "Ticket",
     "subTickets": "Sub-tickets",
     "none": "None",
     "noTagsSelected": "No tags selected",
