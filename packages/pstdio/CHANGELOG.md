@@ -1,5 +1,13 @@
 # pstdio
 
+## 0.1.7
+
+### Patch Changes
+
+- f711a25: Improve dashboard tab titles for deep project and template settings views.
+- 15bf046: Enable ticket details to select, edit, and autosave attached ticket files with URL-synced file selection.
+- 20c6787: Sync local ticket file frontmatter when updating ticket status via CLI.
+
 ## 0.1.6
 
 ### Patch Changes
