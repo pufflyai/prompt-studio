@@ -41,6 +41,20 @@ export class CodeBlockNode extends DecoratorNode<ReactNode> {
     return new CodeBlockNode(language, code);
   }
 
+  exportJSON(): SerializedCodeBlockNode {
+    return {
+      type: "codeblock",
+      language: this.__language,
+      code: this.__code,
+      version: 1,
+    };
+  }
+
+  // Used by Lexical's markdown export as fallback for DecoratorNodes
+  getTextContent() {
+    return `\`\`\`${this.__language}\n${this.__code}\n\`\`\``;
+  }
+
   decorate() {
     return (
       <Box borderRadius="md" overflow="hidden">
