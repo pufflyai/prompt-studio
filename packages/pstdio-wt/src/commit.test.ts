@@ -1,9 +1,16 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { commitChanges } from "./commit";
 import { git } from "./git";
 import { createTempRepo } from "./test-helpers";
 import { createWorktree } from "./worktree";
+
+const writeHook = (repoPath: string, hookName: string, script: string) => {
+  const hooksDir = join(repoPath, ".pstdio", "hooks");
+  mkdirSync(hooksDir, { recursive: true });
+  writeFileSync(join(hooksDir, hookName), script);
+};
 
 let repo: Awaited<ReturnType<typeof createTempRepo>>;
 
@@ -77,5 +84,31 @@ describe("commitChanges", () => {
     expect(status).toContain("?? unstaged.txt");
     expect(status).not.toMatch(/^\?\? staged\.txt$/m);
     expect(status).not.toMatch(/^A\s+staged\.txt$/m);
+  });
+
+  test("pre-commit hook aborts commit on failure", async () => {
+    const wtPath = join(repo.dir, "wt-commit");
+    await createWorktree({ repoRoot: repo.dir, branch: "task/hook-fail", path: wtPath });
+    writeHook(repo.dir, "pre-commit", "exit 1");
+
+    await Bun.write(join(wtPath, "file.txt"), "content");
+
+    await expect(commitChanges({ worktreePath: wtPath, message: "should fail", repoPath: repo.dir })).rejects.toThrow(
+      "HOOK pre-commit FAILED",
+    );
+  });
+
+  test("post-commit hook runs after successful commit", async () => {
+    const wtPath = join(repo.dir, "wt-commit");
+    await createWorktree({ repoRoot: repo.dir, branch: "task/hook-post", path: wtPath });
+    writeHook(repo.dir, "post-commit", `echo "done" > "${repo.dir}/post-commit-marker.txt"`);
+
+    await Bun.write(join(wtPath, "file.txt"), "content");
+
+    await commitChanges({ worktreePath: wtPath, message: "with hook", repoPath: repo.dir });
+
+    // post-commit is fire-and-forget, give it a moment
+    await new Promise((r) => setTimeout(r, 200));
+    expect(existsSync(join(repo.dir, "post-commit-marker.txt"))).toBe(true);
   });
 });

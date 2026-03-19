@@ -1,12 +1,10 @@
-import { exec as runCommand } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { copyFile, mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { PassThrough } from "node:stream";
 import { createRoute, z } from "@hono/zod-openapi";
 import { eq, ticket_workspaces } from "pstdio-db";
-import { createWorktree } from "pstdio-wt";
+import { createWorktree, runHook } from "pstdio-wt";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { spawnAgentSession } from "../../sessions/spawn-agent";
@@ -112,7 +110,7 @@ const copyPstdioConfig = async (repoPath: string, worktreePath: string) => {
   }
 };
 
-const saveStartupLog = async (
+const saveHookLog = async (
   deps: Pick<RouteDeps, "filesService" | "workspacesService">,
   input: {
     workspaceId: string;
@@ -139,53 +137,43 @@ const saveStartupLog = async (
   return file.id;
 };
 
-const runStartupScript = async (
+const runPostCreateHook = async (
   deps: Pick<RouteDeps, "filesService" | "workspacesService">,
   input: {
-    script: string;
-    cwd: string;
-    workspaceId: string;
+    repoPath: string;
+    worktreePath: string;
+    branch: string;
+    workspace: string;
     projectId: string;
+    workspaceId: string;
     existingStartupLogFileId: string | null;
   },
 ) => {
-  const logChunks: Buffer[] = [];
+  const result = await runHook(
+    "post-create",
+    {
+      repoPath: input.repoPath,
+      worktreePath: input.worktreePath,
+      branch: input.branch,
+      workspace: input.workspace,
+      projectId: input.projectId,
+    },
+    input.repoPath,
+  );
 
-  try {
-    await new Promise<void>((resolve, reject) => {
-      const child = runCommand(input.script, { cwd: input.cwd, timeout: 60_000 }, (error) => {
-        if (error) reject(error);
-        else resolve();
-      });
+  if (result.skipped) return input.existingStartupLogFileId;
 
-      if (child.stdout) {
-        const tee = new PassThrough();
-        child.stdout.pipe(tee);
-        tee.on("data", (chunk: Buffer) => logChunks.push(chunk));
-      }
-
-      if (child.stderr) {
-        const tee = new PassThrough();
-        child.stderr.pipe(tee);
-        tee.on("data", (chunk: Buffer) => logChunks.push(chunk));
-      }
-    });
-  } catch {
-    // Startup script failures should not block workspace creation.
-  }
-
-  const logContent = Buffer.concat(logChunks).toString("utf8");
+  const logContent = [result.stdout, result.stderr].filter(Boolean).join("\n");
   if (logContent.length === 0) return input.existingStartupLogFileId;
 
   try {
-    return await saveStartupLog(deps, {
+    return await saveHookLog(deps, {
       workspaceId: input.workspaceId,
       projectId: input.projectId,
       existingFileId: input.existingStartupLogFileId,
       content: logContent,
     });
   } catch {
-    // Log upload failures should not block workspace creation.
     return input.existingStartupLogFileId;
   }
 };
@@ -203,8 +191,6 @@ export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typ
     }
 
     const mode = input.mode ?? worktreeMode;
-    const project = await deps.projectsService.get(ticket.project_id);
-    const startupScript = mode === worktreeMode ? (project?.startup_script ?? null) : null;
     const repo = await resolveRepoForAttempt(deps, ticket.project_id, input);
     if (!repo) {
       return c.json({ error: `Repo not found for project ${ticket.project_id}` }, 404);
@@ -250,15 +236,17 @@ export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typ
       })) ?? workspace;
     deps.eventBus.emit("workspaces", "set", workspaceWithGitMetadata);
 
-    if (startupScript && workspaceWithGitMetadata.worktree_path) {
-      // Fire-and-forget: don't block the response on the startup script
-      runStartupScript(
+    if (mode === worktreeMode && workspaceWithGitMetadata.worktree_path && branch) {
+      // Fire-and-forget: don't block the response on the post-create hook
+      runPostCreateHook(
         { filesService: deps.filesService, workspacesService: deps.workspacesService },
         {
-          script: startupScript,
-          cwd: workspaceWithGitMetadata.worktree_path,
-          workspaceId: workspaceWithGitMetadata.id,
+          repoPath: repo.path,
+          worktreePath: workspaceWithGitMetadata.worktree_path,
+          branch,
+          workspace: workspaceWithGitMetadata.workspace_shorthand,
           projectId: workspaceWithGitMetadata.project_id,
+          workspaceId: workspaceWithGitMetadata.id,
           existingStartupLogFileId: workspaceWithGitMetadata.startup_log_file_id,
         },
       ).then((startupLogFileId) => {

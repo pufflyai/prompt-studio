@@ -1,10 +1,17 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { commitChanges } from "./commit";
 import { git } from "./git";
 import { mergeWorktree } from "./merge";
 import { createTempRepo } from "./test-helpers";
 import { createWorktree } from "./worktree";
+
+const writeHook = (repoPath: string, hookName: string, script: string) => {
+  const hooksDir = join(repoPath, ".pstdio", "hooks");
+  mkdirSync(hooksDir, { recursive: true });
+  writeFileSync(join(hooksDir, hookName), script);
+};
 
 let repo: Awaited<ReturnType<typeof createTempRepo>>;
 
@@ -80,5 +87,50 @@ describe("mergeWorktree", () => {
         target: "main",
       }),
     ).rejects.toThrow("Merge of task/diverge2 into main failed");
+  });
+
+  test("pre-merge hook aborts merge on failure", async () => {
+    const wtPath = join(repo.dir, "wt-merge");
+    await createWorktree({ repoRoot: repo.dir, branch: "task/hook-fail", path: wtPath });
+    writeHook(repo.dir, "pre-merge", "exit 1");
+
+    await Bun.write(join(wtPath, "feature.txt"), "feature");
+    await commitChanges({ worktreePath: wtPath, message: "add feature" });
+
+    await expect(mergeWorktree({ repoRoot: repo.dir, branch: "task/hook-fail", target: "main" })).rejects.toThrow(
+      "HOOK pre-merge FAILED",
+    );
+  });
+
+  test("post-merge hook runs after successful merge", async () => {
+    const wtPath = join(repo.dir, "wt-merge");
+    await createWorktree({ repoRoot: repo.dir, branch: "task/hook-post", path: wtPath });
+    writeHook(repo.dir, "post-merge", `echo "done" > "${repo.dir}/post-merge-marker.txt"`);
+
+    await Bun.write(join(wtPath, "feature.txt"), "feature");
+    await commitChanges({ worktreePath: wtPath, message: "add feature" });
+
+    await mergeWorktree({ repoRoot: repo.dir, branch: "task/hook-post", target: "main" });
+
+    await new Promise((r) => setTimeout(r, 200));
+    expect(existsSync(join(repo.dir, "post-merge-marker.txt"))).toBe(true);
+  });
+
+  test("on-conflict hook runs when merge fails", async () => {
+    const wtPath = join(repo.dir, "wt-merge");
+    await createWorktree({ repoRoot: repo.dir, branch: "task/conflict", path: wtPath });
+    writeHook(repo.dir, "on-conflict", `echo "conflict" > "${repo.dir}/conflict-marker.txt"`);
+
+    await Bun.write(join(wtPath, "feature.txt"), "feature");
+    await commitChanges({ worktreePath: wtPath, message: "branch commit" });
+
+    await Bun.write(join(repo.dir, "main-change.txt"), "main change");
+    await git(repo.dir, ["add", "."]);
+    await git(repo.dir, ["commit", "-m", "main commit"]);
+
+    await expect(mergeWorktree({ repoRoot: repo.dir, branch: "task/conflict", target: "main" })).rejects.toThrow();
+
+    await new Promise((r) => setTimeout(r, 200));
+    expect(existsSync(join(repo.dir, "conflict-marker.txt"))).toBe(true);
   });
 });

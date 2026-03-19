@@ -14,10 +14,13 @@ const makeWorkspace = (shorthand: string) => ({
   updated_at: "2026-03-05T00:00:00.000Z",
 });
 
+const skippedHookResult = { hook: "pre-remove" as const, skipped: true, exitCode: 0, stdout: "", stderr: "" };
+
 const baseDeps = {
   getWorkspace: async () => makeWorkspace("PS-1_A1"),
   deleteWorkspace: async () => {},
   removeWorktreeAndBranch: async () => {},
+  runHook: async () => skippedHookResult,
   log: () => {},
 };
 

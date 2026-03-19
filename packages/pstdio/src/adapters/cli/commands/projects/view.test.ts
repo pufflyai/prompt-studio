@@ -21,14 +21,13 @@ const makeDeps = (overrides: Partial<Parameters<typeof createHandler>[0]> = {}) 
       { id: "r1", name: "repo-1", path: "/p/repo-1", display_name: null, created_at: "", updated_at: "" },
       { id: "r2", name: "repo-2", path: "/p/repo-2", display_name: null, created_at: "", updated_at: "" },
     ],
-    getStartupScript: async () => "#!/bin/bash\necho hello" as string | null,
     ...overrides,
     log,
   };
 };
 
 describe("projects view", () => {
-  test("prints project details with startup script and repos", async () => {
+  test("prints project details with repos", async () => {
     const deps = makeDeps();
     const handler = createHandler(deps);
 
@@ -40,18 +39,7 @@ describe("projects view", () => {
     expect(output).toContain("MA");
     expect(output).toContain("2026-01-15");
     expect(output).toContain("2026-01-20");
-    expect(output).toContain("configured");
     expect(output).toContain("2 linked");
-  });
-
-  test("shows 'none' when no startup script", async () => {
-    const deps = makeDeps({ getStartupScript: async () => null });
-    const handler = createHandler(deps);
-
-    await handler(argv({ "project-id": undefined }));
-
-    const output = deps.log.mock.calls[0][0] as string;
-    expect(output).toContain("none");
   });
 
   test("shows 'none' when no repos linked", async () => {

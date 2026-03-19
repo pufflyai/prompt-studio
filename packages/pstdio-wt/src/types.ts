@@ -46,3 +46,32 @@ export type BranchInfo = {
   isRemote: boolean;
   lastCommitDate: string;
 };
+
+export type HookName =
+  | "pre-create"
+  | "post-create"
+  | "pre-commit"
+  | "post-commit"
+  | "pre-rebase"
+  | "post-rebase"
+  | "pre-merge"
+  | "post-merge"
+  | "pre-remove"
+  | "post-remove"
+  | "on-conflict";
+
+export type HookContext = {
+  branch?: string;
+  worktreePath?: string;
+  repoPath: string;
+  workspace?: string;
+  target?: string;
+  commitSha?: string;
+  commitMessage?: string;
+  projectId?: string;
+};
+
+export type HookResult = SetupResult & {
+  hook: HookName;
+  skipped: boolean;
+};

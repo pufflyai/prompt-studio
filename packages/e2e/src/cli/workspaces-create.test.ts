@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanupDirs, createGitRepo, runPstdio } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
@@ -30,6 +30,12 @@ const createInitializedRepo = (name: string) => {
   execSync("git commit --allow-empty -m init", { cwd: repo, stdio: "pipe" });
   run(`projects create ${name}`, repo);
   return repo;
+};
+
+const writeHook = (repo: string, hookName: string, script: string) => {
+  const hooksDir = join(repo, ".pstdio", "hooks");
+  mkdirSync(hooksDir, { recursive: true });
+  writeFileSync(join(hooksDir, hookName), script);
 };
 
 const readProjectId = (repo: string) => {
@@ -70,17 +76,12 @@ describe("pstdio workspaces create", () => {
   );
 
   test(
-    "runs project startup script when creating a workspace",
+    "runs post-create hook when creating a workspace",
     async () => {
-      const repo = createInitializedRepo("workspace-create-startup-script");
-      const startupScriptPath = join(repo, "startup.sh");
-      writeFileSync(
-        startupScriptPath,
-        '#!/usr/bin/env bash\necho "workspace startup ok"\necho "done" > startup-marker.txt\n',
-      );
-      run(`projects startup-script set --file ${startupScriptPath}`, repo);
+      const repo = createInitializedRepo("workspace-create-hook");
+      writeHook(repo, "post-create", 'echo "hook ok"\necho "done" > post-create-marker.txt');
 
-      const createTicketOutput = run('tickets create --content "Workspace startup ticket"', repo);
+      const createTicketOutput = run('tickets create --content "Workspace hook ticket"', repo);
       const ticketShorthand = createTicketOutput.match(/Created ticket (\S+)/)?.[1];
       expect(ticketShorthand).toBeTruthy();
 
@@ -100,12 +101,12 @@ describe("pstdio workspaces create", () => {
       const workspace = workspaces[0];
       expect(workspace.worktree_path).toBeTruthy();
 
-      const markerPath = join(workspace.worktree_path!, "startup-marker.txt");
+      // post-create is fire-and-forget, give it a moment
+      await new Promise((r) => setTimeout(r, 1000));
+
+      const markerPath = join(workspace.worktree_path!, "post-create-marker.txt");
       expect(existsSync(markerPath)).toBe(true);
       expect(readFileSync(markerPath, "utf8")).toContain("done");
-
-      const startupLogOutput = run(`workspaces startup-log --id ${workspace.workspace_shorthand}`, repo);
-      expect(startupLogOutput).toContain("workspace startup ok");
     },
     TEST_TIMEOUT,
   );

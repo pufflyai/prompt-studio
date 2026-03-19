@@ -7,7 +7,7 @@ created: "2026-03-10T20:12:05Z"
 
 ## Summary
 
-This PRD documents current single-repo workspace commands for create, list, merge, delete, and startup log behavior.
+This PRD documents current single-repo workspace commands for create, list, merge, and delete behavior.
 
 ## Detailed Behavior
 
@@ -40,7 +40,6 @@ Multi-repo behavior is tracked separately in draft form:
 | `pstdio workspaces list`        | List active workspaces.                                  |
 | `pstdio workspaces merge`       | Squash-merge workspace changes into the current branch.  |
 | `pstdio workspaces delete`      | Force-remove a workspace from DB metadata and local git. |
-| `pstdio workspaces startup-log` | Show the startup script log for a workspace.             |
 
 ---
 
@@ -68,9 +67,9 @@ pstdio workspaces create --id <ticket-shorthand> [--base <ref>] [--target worktr
 4. Creates a workspace via API and receives an allocated workspace shorthand (`<ticket>_A<n>`).
 5. Creates a local git worktree from the current repo root at `~/.pstdio/workspaces/<workspace-shorthand>/` on branch `workspace/<workspace-shorthand>`.
 6. Prints the created workspace shorthand and path.
-7. Backend workspace creation runs the project's configured `startup_script` (if any) inside the created worktree directory.
-8. If script output exists, backend saves it as the workspace startup log.
-9. If the startup script fails, workspace creation still succeeds.
+7. Backend runs the `post-create` hook (if `.pstdio/hooks/post-create` exists) inside the created worktree directory.
+8. If hook output exists, backend saves it as the workspace startup log.
+9. If the hook fails, workspace creation still succeeds.
 
 ### Output
 
@@ -191,9 +190,11 @@ pstdio workspaces delete --id <workspace-shorthand>
 1. Must run inside a git repository.
 2. Must run inside a linked pstdio project.
 3. Resolves workspace by shorthand.
-4. Soft-deletes workspace metadata via API.
-5. Removes local worktree and workspace branch (force).
-6. Prints completion message.
+4. Runs `pre-remove` hook if `.pstdio/hooks/pre-remove` exists (blocking — non-zero exit aborts deletion).
+5. Soft-deletes workspace metadata via API.
+6. Removes local worktree and workspace branch (force).
+7. Runs `post-remove` hook if exists (non-blocking).
+8. Prints completion message.
 
 ### Output
 
@@ -206,50 +207,6 @@ Deleted workspace PS-12_A1
 - `"Not inside a git repository."`
 - `"Not inside a pstdio project. Run 'pstdio projects create' first."`
 - `"Workspace not found: <workspace-shorthand>"`
-
----
-
-## `pstdio workspaces startup-log`
-
-### Usage
-
-```sh
-pstdio workspaces startup-log --id <workspace-shorthand>
-```
-
-### Flags
-
-| Flag   | Type     | Required | Description                                   |
-| ------ | -------- | -------- | --------------------------------------------- |
-| `--id` | `string` | yes      | Workspace shorthand (for example `PS-12_A1`). |
-
-### Behavior
-
-1. Must run inside a linked pstdio project.
-2. Lists workspaces and resolves the given shorthand to a workspace ID.
-3. Fetches `GET /v1/workspaces/{id}/startup-log`.
-4. Prints log content if present.
-5. If no log exists, prints a no-log message.
-
-### Output
-
-When a startup log exists:
-
-```text
-<startup script output>
-```
-
-When no startup log exists:
-
-```text
-No startup log for workspace PS-12_A1.
-```
-
-### Errors
-
-- `"Not inside a pstdio project. Run 'pstdio projects create' first."`
-- `"Workspace not found: <workspace-shorthand>"`
-- `"Failed to get startup log: <status>"`
 
 ---
 
