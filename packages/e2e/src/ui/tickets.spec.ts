@@ -181,6 +181,46 @@ test.describe("Ticket list", () => {
     await expect.poll(async () => (await listTickets()).length).toBeGreaterThan(initialTickets.length);
   });
 
+  test("creates a ticket with a selected tag via the create modal", async ({ page, request }) => {
+    const listTickets = async () => {
+      const res = await request.get(`${apiBase}/v1/tickets?project_id=${projectId}`);
+      expect(res.ok()).toBe(true);
+      return (await res.json()) as { id: string; display_title: string | null; tag_ids: string[] }[];
+    };
+
+    const tagName = "ui-e2e-bug";
+    const tagRes = await request.post(`${apiBase}/v1/projects/${projectId}/tags`, {
+      data: { name: tagName, color: "red" },
+    });
+    expect(tagRes.ok()).toBe(true);
+    const createdTag = (await tagRes.json()) as { id: string };
+
+    await bypassOnboarding(page, projectId);
+    await page.goto(`/projects/${projectId}/tickets`);
+
+    await page.getByRole("button", { name: "Create ticket" }).first().click();
+
+    const dialog = page.getByRole("dialog").last();
+    const contentEditor = dialog.getByRole("textbox").first();
+    await contentEditor.click();
+    await contentEditor.fill("Tagged modal ticket");
+
+    await dialog.getByRole("button", { name: "No tags selected", exact: true }).click();
+    await page.getByRole("option", { name: tagName, exact: true }).click();
+
+    await dialog.getByRole("button", { name: "Create", exact: true }).click();
+
+    await expect(page.getByText("Tagged modal ticket")).toBeVisible();
+
+    await expect
+      .poll(async () => {
+        const tickets = await listTickets();
+        const createdTicket = tickets.find((ticket) => ticket.display_title === "Tagged modal ticket");
+        return createdTicket?.tag_ids ?? [];
+      })
+      .toContain(createdTag.id);
+  });
+
   test("navigates to ticket detail on click", async ({ page, request }) => {
     const statuses = await getTicketStatuses(request, projectId);
     const backlog = statuses.find((s) => s.name === "backlog")!;

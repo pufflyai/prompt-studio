@@ -5,7 +5,7 @@ import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { TicketStatus } from "@/features/ticket-list/types";
+import type { TicketStatus, TicketTag } from "@/features/ticket-list/types";
 
 interface TemplateOption {
   id: string;
@@ -19,6 +19,7 @@ interface CreateTicketModalProps {
   isSubmitting?: boolean;
   targetStatus?: TicketStatus | null;
   templates?: TemplateOption[];
+  tags?: TicketTag[];
   parentId?: string | null;
   title?: string;
   submitLabel?: string;
@@ -27,6 +28,7 @@ interface CreateTicketModalProps {
 export interface CreateTicketModalPayload {
   content: string;
   complexity: "low" | "medium" | "high";
+  tagIds: string[];
   templateName: string | null;
   status: TicketStatus | null;
   parentId: string | null;
@@ -44,6 +46,7 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
     isSubmitting = false,
     targetStatus = null,
     templates = [],
+    tags = [],
     parentId = null,
     title: modalTitle,
     submitLabel: submitButtonLabel,
@@ -55,6 +58,7 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
 
   const [content, setContent] = useState("");
   const [complexity, setComplexity] = useState<"low" | "medium" | "high">("medium");
+  const [tagIds, setTagIds] = useState<string[]>([]);
   const [templateName, setTemplateName] = useState("");
   const [editorKey, setEditorKey] = useState(0);
 
@@ -63,6 +67,7 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
   const resetForm = () => {
     setContent("");
     setComplexity("medium");
+    setTagIds([]);
     setTemplateName("");
     setEditorKey((k) => k + 1);
   };
@@ -78,6 +83,7 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
     await onSubmit({
       content: content.trim(),
       complexity,
+      tagIds,
       templateName: templateName || null,
       status: targetStatus,
       parentId,
@@ -90,6 +96,12 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
   const templateLabel = templateName
     ? (templates.find((tmpl) => tmpl.name === templateName)?.name ?? templateName)
     : t("createTicketModal.noTemplate");
+  const selectedTagNames = tags.filter((tag) => tagIds.includes(tag.id)).map((tag) => tag.name);
+  const tagsLabel = selectedTagNames.length > 0 ? selectedTagNames.join(", ") : t("ticketDetail.noTagsSelected");
+
+  const handleTagToggle = (tagId: string) => {
+    setTagIds((current) => (current.includes(tagId) ? current.filter((id) => id !== tagId) : [...current, tagId]));
+  };
 
   return (
     <Dialog.Root open={open} onOpenChange={handleClose}>
@@ -146,6 +158,43 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
                     </Menu.Content>
                   </Menu.Positioner>
                 </Menu.Root>
+              </Stack>
+
+              <Stack gap="2xs">
+                <Text textStyle="label/S/medium">{t("ticketDetail.tags")}</Text>
+                {tags.length === 0 ? (
+                  <Button size="sm" variant="outline" width="full" disabled>
+                    {t("ticketDetail.noTags")}
+                  </Button>
+                ) : (
+                  <Menu.Root closeOnSelect={false}>
+                    <Menu.Trigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        width="full"
+                        justifyContent="space-between"
+                        disabled={isSubmitting}
+                      >
+                        {tagsLabel}
+                        <Icon as={ChevronDown} color="fg.muted" />
+                      </Button>
+                    </Menu.Trigger>
+                    <Menu.Positioner>
+                      <Menu.Content bg="bg">
+                        {tags.map((tag) => (
+                          <MenuItem
+                            key={tag.id}
+                            id={tag.id}
+                            primaryLabel={tag.name}
+                            isSelected={tagIds.includes(tag.id)}
+                            onClick={() => handleTagToggle(tag.id)}
+                          />
+                        ))}
+                      </Menu.Content>
+                    </Menu.Positioner>
+                  </Menu.Root>
+                )}
               </Stack>
 
               {templates.length > 0 && (

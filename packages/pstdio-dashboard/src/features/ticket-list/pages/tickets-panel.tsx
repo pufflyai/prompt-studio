@@ -110,6 +110,7 @@ export const TicketsPanel = () => {
         title: payload.content,
         content: payload.content,
         complexity: payload.complexity,
+        tagIds: payload.tagIds,
         status: payload.status,
         parentId: payload.parentId,
       });
@@ -232,6 +233,7 @@ export const TicketsPanel = () => {
         isSubmitting={createTicket.isPending}
         targetStatus={createModalStatus}
         templates={templates}
+        tags={tags}
       />
     </Stack>
   );
