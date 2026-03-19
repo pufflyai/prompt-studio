@@ -1,6 +1,6 @@
 import { Button, Container, IconButton, Menu, Stack, Text } from "@chakra-ui/react";
 import { EmptyState, MenuItem, toaster } from "@pstdio/ui";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Folder, Settings } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -39,10 +39,6 @@ export const ProjectList = () => {
     }
   };
 
-  const handleProjectSelect = (projectId: string) => {
-    navigate({ to: "/projects/$projectId/docs", params: { projectId } });
-  };
-
   const description = isLoading ? "" : t("list.projectCount", { count: projects.length });
 
   return (
@@ -52,8 +48,10 @@ export const ProjectList = () => {
           <Stack direction="row" alignItems="center" justifyContent="space-between">
             <Text textStyle="heading/M">{t("list.title")}</Text>
             <Stack direction="row" gap="xs">
-              <IconButton size="sm" variant="ghost" aria-label="Settings" onClick={() => navigate({ to: "/settings" })}>
-                <Settings size={18} />
+              <IconButton size="sm" variant="ghost" aria-label="Settings" asChild>
+                <Link to="/settings">
+                  <Settings size={18} />
+                </Link>
               </IconButton>
               <Button size="sm" variant="solid" onClick={handleOpenDialog}>
                 {t("list.createProject")}
@@ -80,12 +78,14 @@ export const ProjectList = () => {
             {projects.map((project) => (
               <Menu.Root key={project.id}>
                 <MenuItem
+                  asChild
                   id={project.id}
                   primaryLabel={project.name}
                   secondaryLabel={project.repoPath ?? t("chatInput.repo.noneLinked")}
                   leftIcon={Folder}
-                  onClick={() => handleProjectSelect(project.id)}
-                />
+                >
+                  <Link to="/projects/$projectId/docs" params={{ projectId: project.id }} />
+                </MenuItem>
               </Menu.Root>
             ))}
           </Stack>

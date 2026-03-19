@@ -7,30 +7,6 @@ import { expect, test } from "@playwright/test";
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 
-const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string, agentId = "opencode") => {
-  await page.addInitScript(
-    ({ currentProjectId, currentAgentId }: { currentProjectId: string; currentAgentId: string }) => {
-      localStorage.setItem("onboarding-complete", "true");
-      localStorage.setItem("selected-agent", currentAgentId);
-      localStorage.setItem(
-        `pstdio-project-settings/projects/${currentProjectId}/values`,
-        JSON.stringify({
-          state: {
-            lastSelectedAgent: currentAgentId,
-            lastSelectedModels: [],
-            lastSelectedRepo: "",
-            lastSelectedBranches: [],
-            sessionModalState: "closed",
-            selectedSessionId: null,
-          },
-          version: 0,
-        }),
-      );
-    },
-    { currentProjectId: projectId, currentAgentId: agentId },
-  );
-};
-
 const createGitRepo = () => {
   const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-e2e-ws-diff-"));
   execSync("git init -b main", { cwd: repoRoot, stdio: "pipe" });
@@ -201,21 +177,34 @@ test.describe("Workspace diff", () => {
     expect(res.status()).toBe(404);
   });
 
-  test("shows diff panel in workspace page when changes exist", async ({ page, request }) => {
+  test("fork_point mode keeps diff after squash merge when workspace remains", async ({ request }) => {
     const repoRoot = createGitRepo();
     repoDirs.push(repoRoot);
     const repo = await registerRepoViaApi(request, projectId, "ui-diff-repo", repoRoot);
-    const ticket = await createTicketViaApi(request, projectId, "# UI diff test");
+    const ticket = await createTicketViaApi(request, projectId, "# Merge diff retention test");
     const attempt = await createAttemptViaApi(request, ticket.id, repo.id);
 
-    // Add an uncommitted file so current mode (default) picks it up
+    // Commit a file on the workspace branch
     const wtPath = attempt.workspace.worktree_path;
     writeFileSync(join(wtPath, "component.tsx"), "export const App = () => <div>Hello</div>;\n");
+    execSync("git add .", { cwd: wtPath, stdio: "pipe" });
+    execSync('git commit -m "add component"', { cwd: wtPath, stdio: "pipe" });
 
-    await bypassOnboarding(page, projectId, "fake");
-    const wsShorthand = attempt.workspace.workspace_shorthand;
-    await page.goto(`/projects/${projectId}/tickets/${ticket.shorthand}/workspaces/${wsShorthand}`);
+    // Squash-merge workspace branch into main while keeping the workspace branch alive
+    const workspaceBranch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: wtPath, stdio: "pipe" })
+      .toString()
+      .trim();
+    execSync("git checkout main", { cwd: repoRoot, stdio: "pipe" });
+    rmSync(join(repoRoot, ".pstdio"), { recursive: true, force: true });
+    execSync(`git merge --squash ${workspaceBranch}`, { cwd: repoRoot, stdio: "pipe" });
+    execSync('git commit -m "squash merge workspace changes"', { cwd: repoRoot, stdio: "pipe" });
 
-    await expect(page.getByTestId("workspace-diff-panel")).toBeVisible();
+    const diffRes = await request.get(`${apiBase}/v1/workspaces/${attempt.workspace.id}/diff?mode=fork_point`);
+    expect(diffRes.ok()).toBe(true);
+    const diff = (await diffRes.json()) as DiffResponse;
+
+    const componentFile = diff.files.find((file) => file.filePath === "component.tsx");
+    expect(componentFile).toBeDefined();
+    expect(componentFile!.change).toBe("added");
   });
 });

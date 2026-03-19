@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createProjectTemplate,
   deleteProjectTemplate,
@@ -27,16 +27,21 @@ export const useCreateProjectTemplate = (projectId: string | undefined) =>
     },
   });
 
-export const useUpdateProjectTemplate = (projectId: string | undefined) =>
-  useMutation({
-    mutationFn: async (input: { name: string; content?: string; isDefault?: boolean }) => {
+export const useUpdateProjectTemplate = (projectId: string | undefined) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { name: string; content?: string }) => {
       if (!projectId) throw new Error("Project id is required.");
       await updateProjectTemplate(projectId, input.name, {
         content: input.content,
-        isDefault: input.isDefault,
       });
+      return input.name;
+    },
+    onSuccess: (name) => {
+      queryClient.invalidateQueries({ queryKey: ["project-template", projectId, name] });
     },
   });
+};
 
 export const useDeleteProjectTemplate = (projectId: string | undefined) =>
   useMutation({

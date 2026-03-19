@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, ne } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { templates } from "../../db/schemas.pg";
 
@@ -17,7 +17,10 @@ type CreateInput = {
 type UpdateInput = {
   file_id?: string;
   is_default?: boolean;
+  template_type?: string;
 };
+
+type UpdateResult = { template: TemplateRecord } | { error: "not_found" | "cannot_change_only_default_template_type" };
 
 export const createTemplatesService = (db: DbClient) => {
   const list = async (projectId: string) =>
@@ -71,20 +74,43 @@ export const createTemplatesService = (db: DbClient) => {
 
   const update = async (projectId: string, name: string, input: UpdateInput) => {
     const existing = await getByName(projectId, name);
-    if (!existing) return null;
+    if (!existing) {
+      return { error: "not_found" } as const satisfies UpdateResult;
+    }
+
+    const nextTemplateType = input.template_type ?? existing.template_type;
+    if (nextTemplateType !== existing.template_type && existing.is_default) {
+      const [otherTemplateInSourceType] = await db
+        .select({ id: templates.id })
+        .from(templates)
+        .where(
+          and(
+            eq(templates.project_id, projectId),
+            eq(templates.template_type, existing.template_type),
+            isNull(templates.deleted_at),
+            ne(templates.id, existing.id),
+          ),
+        );
+
+      if (!otherTemplateInSourceType) {
+        return { error: "cannot_change_only_default_template_type" } as const satisfies UpdateResult;
+      }
+    }
 
     const timestamp = nowTimestamp();
+    const nextIsDefault = input.is_default ?? existing.is_default;
 
-    if (input.is_default) {
+    if (nextIsDefault) {
       await db
         .update(templates)
         .set({ is_default: false, updated_at: timestamp })
         .where(
           and(
             eq(templates.project_id, projectId),
-            eq(templates.template_type, existing.template_type),
+            eq(templates.template_type, nextTemplateType),
             eq(templates.is_default, true),
             isNull(templates.deleted_at),
+            ne(templates.id, existing.id),
           ),
         );
     }
@@ -92,25 +118,40 @@ export const createTemplatesService = (db: DbClient) => {
     const updated: TemplateRecord = {
       ...existing,
       file_id: input.file_id ?? existing.file_id,
-      is_default: input.is_default ?? existing.is_default,
+      is_default: nextIsDefault,
+      template_type: nextTemplateType,
       updated_at: timestamp,
     };
 
     await db
       .update(templates)
-      .set({ file_id: updated.file_id, is_default: updated.is_default, updated_at: updated.updated_at })
+      .set({
+        file_id: updated.file_id,
+        is_default: updated.is_default,
+        template_type: updated.template_type,
+        updated_at: updated.updated_at,
+      })
       .where(eq(templates.id, existing.id));
 
-    return updated;
+    return { template: updated } as const satisfies UpdateResult;
   };
 
   const remove = async (projectId: string, name: string) => {
     const existing = await getByName(projectId, name);
-    if (!existing) return false;
+    if (!existing) return null;
 
-    await db.update(templates).set({ deleted_at: nowTimestamp() }).where(eq(templates.id, existing.id));
-    return true;
+    const deletedAt = nowTimestamp();
+    await db.update(templates).set({ deleted_at: deletedAt }).where(eq(templates.id, existing.id));
+    return { ...existing, deleted_at: deletedAt };
   };
 
-  return { list, getByName, create, update, remove };
+  const hardRemove = async (projectId: string, name: string) => {
+    const deleted = await db
+      .delete(templates)
+      .where(and(eq(templates.project_id, projectId), eq(templates.name, name), isNotNull(templates.deleted_at)))
+      .returning({ id: templates.id });
+    return deleted.length > 0;
+  };
+
+  return { list, getByName, create, update, remove, hardRemove };
 };

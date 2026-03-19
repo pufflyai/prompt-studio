@@ -224,7 +224,7 @@ test.describe("Sessions page", () => {
     await expect(page.getByText("Session 2")).toBeVisible();
     await expect(page.getByText("Session 1")).not.toBeVisible();
 
-    await page.getByRole("button", { name: "View more sessions" }).click();
+    await page.getByRole("link", { name: "View more sessions" }).click();
     await page.waitForURL(`**/projects/${projectId}/sessions`);
   });
 });

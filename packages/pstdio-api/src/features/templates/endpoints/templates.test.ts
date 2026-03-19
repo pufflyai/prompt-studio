@@ -88,16 +88,22 @@ describe("GET /v1/projects/:id/templates", () => {
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body).toHaveLength(9);
+    expect(body).toHaveLength(15);
     expect(body.map((template: { name: string }) => template.name)).toEqual([
       "adr",
       "blank-template",
+      "changelog-entry",
+      "commit-message",
       "cookbook",
+      "create-sub-tickets",
       "custom-ticket",
+      "implement-ticket",
       "lessons-learned",
       "prd",
       "proposal",
+      "refine-ticket",
       "review-me",
+      "squash-message",
       "ticket",
     ]);
   });
@@ -146,6 +152,58 @@ describe("PUT /v1/projects/:id/templates/:name", () => {
     expect(body.content).toBe("# Updated {{TICKET_TITLE}}");
   });
 
+  test("rejects changing template_type for lone default template", async () => {
+    // Remove seeded prompts so blank-template becomes the only prompt
+    for (const name of [
+      "commit-message",
+      "create-sub-tickets",
+      "implement-ticket",
+      "refine-ticket",
+      "squash-message",
+    ]) {
+      await app.request(`/v1/projects/${projectId}/templates/${name}`, { method: "DELETE" });
+    }
+
+    const makeDefaultRes = await app.request(`/v1/projects/${projectId}/templates/blank-template`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ is_default: true }),
+    });
+    expect(makeDefaultRes.status).toBe(200);
+
+    const beforeRes = await app.request(`/v1/projects/${projectId}/templates/blank-template`);
+    const before = await beforeRes.json();
+
+    const res = await app.request(`/v1/projects/${projectId}/templates/blank-template`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ template_type: "ticket", content: "# should-not-save" }),
+    });
+
+    expect(res.status).toBe(400);
+
+    const body = await res.json();
+    expect(body.error).toBe("Cannot change template_type for the only default template in its current type");
+
+    const getRes = await app.request(`/v1/projects/${projectId}/templates/blank-template`);
+    const updated = await getRes.json();
+    expect(updated.template_type).toBe("prompt");
+    expect(updated.content).toBe(before.content);
+  });
+
+  test("allows changing template_type when source type has another template", async () => {
+    const res = await app.request(`/v1/projects/${projectId}/templates/ticket`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ template_type: "document" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.name).toBe("ticket");
+    expect(body.template_type).toBe("document");
+  });
+
   test("returns 404 for missing template", async () => {
     const res = await app.request(`/v1/projects/${projectId}/templates/nonexistent`, {
       method: "PUT",
@@ -168,7 +226,7 @@ describe("DELETE /v1/projects/:id/templates/:name", () => {
 
     const listRes = await app.request(`/v1/projects/${projectId}/templates`);
     const list = await listRes.json();
-    expect(list).toHaveLength(8);
+    expect(list).toHaveLength(9);
     expect(list.find((template: { name: string }) => template.name === "ticket")).toBeUndefined();
   });
 
@@ -177,5 +235,19 @@ describe("DELETE /v1/projects/:id/templates/:name", () => {
       method: "DELETE",
     });
     expect(res.status).toBe(404);
+  });
+
+  test("hard-deletes a soft-deleted template and allows re-creation", async () => {
+    const hardRes = await app.request(`/v1/projects/${projectId}/templates/ticket?hard=true`, {
+      method: "DELETE",
+    });
+    expect(hardRes.status).toBe(204);
+
+    const createRes = await app.request(`/v1/projects/${projectId}/templates`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "ticket", template_type: "ticket", content: "# recreated" }),
+    });
+    expect(createRes.status).toBe(201);
   });
 });

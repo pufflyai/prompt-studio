@@ -1,6 +1,6 @@
 import { Flex, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
 import { HorizontalMenuStack, Tooltip } from "@pstdio/ui";
-import { useNavigate, useParams } from "@tanstack/react-router";
+import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { PenBox, SquareArrowOutDownRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
@@ -46,10 +46,6 @@ export const SessionsPanel = () => {
     navigate({ to: `/projects/${projectId}/sessions/${nextSessionId}` });
   };
 
-  const handleNewSession = () => {
-    navigate({ to: `/projects/${projectId}/sessions` });
-  };
-
   const handleCreateSession = (prompt: string) => {
     createSessionFromPrompt({
       projectId,
@@ -90,8 +86,10 @@ export const SessionsPanel = () => {
             </Text>
 
             <Tooltip content={t("sessions.newSession")}>
-              <IconButton size="xs" variant="ghost" aria-label={t("sessions.newSession")} onClick={handleNewSession}>
-                <PenBox size={16} />
+              <IconButton size="xs" variant="ghost" aria-label={t("sessions.newSession")} asChild>
+                <Link to={`/projects/${projectId}/sessions`}>
+                  <PenBox size={16} />
+                </Link>
               </IconButton>
             </Tooltip>
           </HorizontalMenuStack>
@@ -101,6 +99,7 @@ export const SessionsPanel = () => {
               sessions={visibleSessions}
               selectedSessionId={selectedSessionId}
               isLoading={isLoading}
+              projectId={projectId}
               onSelectSession={handleSelectSession}
             />
           </Stack>

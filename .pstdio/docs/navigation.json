@@ -137,6 +137,10 @@
           "link": "/architecture/agents"
         },
         {
+          "text": "Control and Execution Planes",
+          "link": "/architecture/control-and-execution-planes"
+        },
+        {
           "text": "Bun Compiled Distribution",
           "link": "/architecture/bun-compiled-distribution"
         },

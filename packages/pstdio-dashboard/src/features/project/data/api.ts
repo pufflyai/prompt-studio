@@ -227,13 +227,14 @@ export const createProjectTemplate = async (
 export const updateProjectTemplate = async (
   projectId: string,
   name: string,
-  input: { content?: string; isDefault?: boolean },
+  input: { content?: string; isDefault?: boolean; templateType?: ProjectTemplateAssetType },
 ) => {
   await apiRequest(`/v1/projects/${projectId}/templates/${encodeURIComponent(name)}`, {
     method: "PUT",
     body: {
       ...(input.content !== undefined ? { content: input.content } : {}),
       ...(input.isDefault !== undefined ? { is_default: input.isDefault } : {}),
+      ...(input.templateType !== undefined ? { template_type: input.templateType } : {}),
     },
   });
 };

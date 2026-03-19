@@ -172,13 +172,53 @@ test.describe("Ticket list", () => {
     const contentEditor = dialog.getByRole("textbox").first();
     await contentEditor.click();
     await contentEditor.fill("New E2E Ticket");
-    await dialog.getByRole("button", { name: "Create", exact: true }).click();
+    await dialog.getByRole("button", { name: "Create ticket", exact: true }).click();
 
     // Verify ticket appears on the board
     await expect(page.getByText("New E2E Ticket")).toBeVisible();
 
     // Verify via API
     await expect.poll(async () => (await listTickets()).length).toBeGreaterThan(initialTickets.length);
+  });
+
+  test("creates a ticket with a selected tag via the create modal", async ({ page, request }) => {
+    const listTickets = async () => {
+      const res = await request.get(`${apiBase}/v1/tickets?project_id=${projectId}`);
+      expect(res.ok()).toBe(true);
+      return (await res.json()) as { id: string; display_title: string | null; tag_ids: string[] }[];
+    };
+
+    const tagName = "ui-e2e-bug";
+    const tagRes = await request.post(`${apiBase}/v1/projects/${projectId}/tags`, {
+      data: { name: tagName, color: "red" },
+    });
+    expect(tagRes.ok()).toBe(true);
+    const createdTag = (await tagRes.json()) as { id: string };
+
+    await bypassOnboarding(page, projectId);
+    await page.goto(`/projects/${projectId}/tickets`);
+
+    await page.getByRole("button", { name: "Create ticket" }).first().click();
+
+    const dialog = page.getByRole("dialog").last();
+    const contentEditor = dialog.getByRole("textbox").first();
+    await contentEditor.click();
+    await contentEditor.fill("Tagged modal ticket");
+
+    await dialog.getByRole("button", { name: "Tags", exact: true }).click();
+    await page.getByRole("option", { name: tagName, exact: true }).click();
+
+    await dialog.getByRole("button", { name: "Create ticket", exact: true }).click();
+
+    await expect(page.getByText("Tagged modal ticket")).toBeVisible();
+
+    await expect
+      .poll(async () => {
+        const tickets = await listTickets();
+        const createdTicket = tickets.find((ticket) => ticket.display_title === "Tagged modal ticket");
+        return createdTicket?.tag_ids ?? [];
+      })
+      .toContain(createdTag.id);
   });
 
   test("navigates to ticket detail on click", async ({ page, request }) => {
@@ -217,7 +257,7 @@ test.describe("Ticket list editing and filtering", () => {
     const contentEditor = dialog.getByRole("textbox").first();
     await contentEditor.click();
     await contentEditor.fill("Original display title");
-    await dialog.getByRole("button", { name: "Create", exact: true }).click();
+    await dialog.getByRole("button", { name: "Create ticket", exact: true }).click();
 
     await expect(page.getByText("Original display title")).toBeVisible();
 
@@ -267,7 +307,7 @@ test.describe("Ticket list editing and filtering", () => {
     const contentEditor = dialog.getByRole("textbox").first();
     await contentEditor.click();
     await contentEditor.fill("Original content title");
-    await dialog.getByRole("button", { name: "Create", exact: true }).click();
+    await dialog.getByRole("button", { name: "Create ticket", exact: true }).click();
 
     const listTickets = async () => {
       const res = await request.get(`${apiBase}/v1/tickets?project_id=${projectId}`);
@@ -391,13 +431,54 @@ test.describe("Ticket list additional coverage", () => {
     await expect(page.getByText("Bug Report", { exact: true })).toBeVisible();
   });
 
+  test("shows the tag on the ticket detail after creating a ticket with a tag", async ({ page, request }) => {
+    const tagName = "ui-e2e-feature";
+    const tagRes = await request.post(`${apiBase}/v1/projects/${projectId}/tags`, {
+      data: { name: tagName, color: "blue" },
+    });
+    expect(tagRes.ok()).toBe(true);
+
+    await bypassOnboarding(page, projectId);
+    await page.goto(`/projects/${projectId}/tickets`);
+
+    await page.getByRole("button", { name: "Create ticket" }).first().click();
+
+    const dialog = page.getByRole("dialog").last();
+    const contentEditor = dialog.getByRole("textbox").first();
+    await contentEditor.click();
+    await contentEditor.fill("Ticket with tag");
+
+    await dialog.getByRole("button", { name: "Tags", exact: true }).click();
+    await page.getByRole("option", { name: tagName, exact: true }).click();
+
+    await dialog.getByRole("button", { name: "Create ticket", exact: true }).click();
+
+    await expect(page.getByText("Ticket with tag")).toBeVisible();
+
+    const listTickets = async () => {
+      const res = await request.get(`${apiBase}/v1/tickets?project_id=${projectId}`);
+      expect(res.ok()).toBe(true);
+      return (await res.json()) as { id: string; shorthand: string; display_title: string | null }[];
+    };
+
+    await expect.poll(async () => (await listTickets()).length).toBe(1);
+    const [createdTicket] = await listTickets();
+
+    await page.getByText("Ticket with tag").first().click();
+    await page.waitForURL(`**/projects/${projectId}/tickets/${createdTicket.shorthand}`);
+
+    // The tag selector should show the tag name, not "No tags selected"
+    await expect(page.getByText(tagName)).toBeVisible();
+    await expect(page.getByText("No tags selected")).not.toBeVisible();
+  });
+
   test("toggles a tag on a ticket from the detail sidebar", async ({ page, request }) => {
     const statuses = await getTicketStatuses(request, projectId);
     const backlog = statuses.find((s) => s.name === "backlog")!;
 
     // Create a tag for the project
     const tagName = "ui-e2e-bug";
-    const tagRes = await request.post(`${apiBase}/v1/projects/${projectId}/tags`, {
+    const tagRes = await request.post(`${apiBase}/v1/projects/${projectId}/ticket-tags`, {
       data: { name: tagName, color: "red" },
     });
     expect(tagRes.ok()).toBe(true);

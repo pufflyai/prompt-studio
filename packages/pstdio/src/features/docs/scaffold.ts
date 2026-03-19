@@ -10,5 +10,5 @@ export const scaffoldDocs = async (root: string) => {
   if (existsSync(docsDir)) return;
 
   const filesRoot = await resolveFilesRoot();
-  cpSync(join(filesRoot, "docs"), docsDir, { recursive: true });
+  cpSync(join(filesRoot, "documentation"), docsDir, { recursive: true });
 };

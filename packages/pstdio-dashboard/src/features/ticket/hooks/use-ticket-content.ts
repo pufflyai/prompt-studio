@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { getProjectTicketContent } from "@/features/ticket-list/data/api";
+import { getProjectTicketContent, getTicketFileContent } from "@/features/ticket-list/data/api";
+import { TICKET_CONTENT_ITEM_ID } from "../utils/ticket-file-selection";
 
-export const useTicketContent = (ticketId: string | null | undefined) => {
+export const useTicketContent = (ticketId: string | null | undefined, selectedFileId: string) => {
   const [data, setData] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -15,7 +16,12 @@ export const useTicketContent = (ticketId: string | null | undefined) => {
     const controller = new AbortController();
     setIsLoading(true);
 
-    void getProjectTicketContent(ticketId, controller.signal)
+    const contentPromise =
+      selectedFileId === TICKET_CONTENT_ITEM_ID
+        ? getProjectTicketContent(ticketId, controller.signal)
+        : getTicketFileContent(ticketId, selectedFileId, controller.signal);
+
+    void contentPromise
       .then((content) => {
         if (!controller.signal.aborted) {
           setData(content);
@@ -38,7 +44,7 @@ export const useTicketContent = (ticketId: string | null | undefined) => {
     return () => {
       controller.abort();
     };
-  }, [ticketId]);
+  }, [ticketId, selectedFileId]);
 
   const setOptimisticContent = (nextContent: string) => {
     setData(nextContent);

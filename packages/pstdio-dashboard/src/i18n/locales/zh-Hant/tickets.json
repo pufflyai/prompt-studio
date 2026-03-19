@@ -791,6 +791,7 @@
     "parent": "父級",
     "tags": "標籤",
     "files": "檔案",
+    "ticket": "工單",
     "subTickets": "子工單",
     "none": "無",
     "noTagsSelected": "未選擇標籤",

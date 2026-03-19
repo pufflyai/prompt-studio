@@ -125,6 +125,7 @@ export const createProjectTicket = async (input: CreateProjectTicketInput) => {
       project_id: input.projectId,
       ...(input.content != null && { content: input.content }),
       ...(input.complexity != null && { complexity: input.complexity }),
+      ...(input.tagIds != null && { tag_ids: input.tagIds }),
       ...(statusId != null && { status_id: statusId }),
       ...(input.parentId != null && { parent_id: input.parentId }),
     },

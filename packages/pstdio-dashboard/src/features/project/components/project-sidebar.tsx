@@ -1,6 +1,6 @@
 import { Box, Menu, Portal, Stack } from "@chakra-ui/react";
 import { MenuItem, type SidebarNavigateEvent, SidebarNext, type SidebarNode, type SidebarSection } from "@pstdio/ui";
-import { useNavigate, useParams, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import {
   ArrowUpRight,
   BookOpen,
@@ -25,16 +25,18 @@ const openExternalLink = (url: string) => {
   window.open(url, "_blank", "noopener,noreferrer");
 };
 
-const docsSidebarItemToNode = (item: DocsSidebarItem, index: number): SidebarNode => {
+const docsSidebarItemToNode = (item: DocsSidebarItem, index: number, projectId?: string): SidebarNode => {
   const id = item.link ?? `doc-folder-${item.text}-${index}`;
-  const children = item.items?.map((child, i) => docsSidebarItemToNode(child, i));
+  const children = item.items?.map((child, i) => docsSidebarItemToNode(child, i, projectId));
   const hasChildren = children && children.length > 0;
+  const href = item.link && projectId ? `/projects/${projectId}/docs?doc=${encodeURIComponent(item.link)}` : undefined;
 
   return {
     id,
     label: item.text,
     icon: hasChildren ? <Folder size={14} /> : <FileText size={14} />,
     isNavigable: Boolean(item.link),
+    href,
     navigationIntent: item.link ? { id: "docs/open", payload: { link: item.link } } : undefined,
     children: hasChildren ? children : undefined,
   };
@@ -69,6 +71,8 @@ export const ProjectSidebar = () => {
   const buildSections = (): SidebarSection[] => {
     const sections: SidebarSection[] = [];
 
+    const basePath = projectId ? `/projects/${projectId}` : "";
+
     // Top-level items: tickets
     const topNodes: SidebarNode[] = [
       {
@@ -76,6 +80,7 @@ export const ProjectSidebar = () => {
         label: t("sidebar.tickets"),
         icon: <KanbanSquare size={14} />,
         isNavigable: true,
+        href: `${basePath}/tickets`,
         navigationIntent: { id: "navigate", payload: { path: "tickets" } },
       },
     ];
@@ -84,12 +89,13 @@ export const ProjectSidebar = () => {
 
     // Documentation group with changelog
     if (hasDocs) {
-      const docNodes = sidebarItems.map((item, i) => docsSidebarItemToNode(item, i));
+      const docNodes = sidebarItems.map((item, i) => docsSidebarItemToNode(item, i, projectId));
       const changelogNode: SidebarNode = {
         id: "changelog",
         label: t("sidebar.projectChangelog"),
         icon: <Newspaper size={14} />,
         isNavigable: true,
+        href: `${basePath}/changelog`,
         navigationIntent: { id: "navigate", payload: { path: "changelog" } },
       };
 
@@ -108,6 +114,7 @@ export const ProjectSidebar = () => {
             label: t("sidebar.documentation"),
             icon: <FileText size={14} />,
             isNavigable: true,
+            href: `${basePath}/docs`,
             navigationIntent: { id: "navigate", payload: { path: "docs" } },
           },
         ],
@@ -148,6 +155,7 @@ export const ProjectSidebar = () => {
       activeNodeId={activeNodeId}
       header={<ProjectMenu />}
       footer={<ProjectSidebarFooter />}
+      linkComponent={Link}
       onNavigate={handleNavigate}
       width="240px"
     />
@@ -157,7 +165,6 @@ export const ProjectSidebar = () => {
 const ProjectSidebarFooter = () => {
   const { projectId } = useParams({ strict: false });
   const { location } = useRouterState();
-  const navigate = useNavigate();
   const { t } = useTranslation("projects");
 
   const isPathActive = (href: string) => {
@@ -203,14 +210,16 @@ const ProjectSidebarFooter = () => {
       {settingsPath ? (
         <Menu.Root>
           <MenuItem
+            asChild
             primaryLabel={t("sidebar.projectSettings")}
             leftIcon={SettingsIcon}
             variant="compact"
             isSelected={isPathActive(settingsPath)}
-            onClick={() => navigate({ to: settingsPath })}
             maxWidth="full"
             width="full"
-          />
+          >
+            <Link to={settingsPath} />
+          </MenuItem>
         </Menu.Root>
       ) : null}
     </Stack>

@@ -58,6 +58,7 @@ export const toTicketFromRow = (
     parentId: (row.parent_id as string) ?? null,
     archived: row.archived as boolean,
     draft: (row.draft as boolean) ?? false,
+    deletedAt: (row.deleted_at as string) ?? null,
     assignee: null,
     updatedAt: row.updated_at as string,
     attempts,

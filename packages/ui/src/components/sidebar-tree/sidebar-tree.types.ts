@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 
 export interface SidebarNavigationIntent {
   id?: string;
@@ -32,6 +32,8 @@ export interface SidebarNode {
   icon?: ReactNode;
   disabled?: boolean;
   isNavigable?: boolean;
+  /** URL for the node. When provided with a linkComponent, the row renders as an anchor for cmd+click support. */
+  href?: string;
   navigationIntent?: SidebarNavigationIntent;
   actions?: SidebarAction[];
   children?: SidebarNode[];
@@ -51,3 +53,10 @@ export interface SidebarNavigateEvent {
   node: SidebarNode;
   intent?: SidebarNavigationIntent;
 }
+
+export interface SidebarLinkProps {
+  to: string;
+  children: ReactNode;
+}
+
+export type SidebarLinkComponent = ComponentType<SidebarLinkProps>;

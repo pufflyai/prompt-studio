@@ -2,9 +2,11 @@ import type { Arguments, Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
 import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 import { updateTicket as defaultUpdateTicket } from "@/features/tickets/api/update-ticket";
+import { readTicketFile, writeTicketFile } from "@/features/tickets/local-ticket";
 import { resolveStatusId as defaultResolveStatusId } from "@/features/tickets/resolve-status-id";
 import { resolveTagIds as defaultResolveTagIds } from "@/features/tickets/resolve-tag-ids";
 import { resolveTicketByShorthand as defaultResolveTicketByShorthand } from "@/features/tickets/resolve-ticket-by-shorthand";
+import { applyFrontmatterValues } from "@/features/tickets/ticket-frontmatter";
 
 export const command = "update";
 export const describe = "Update ticket status or tags";
@@ -46,7 +48,7 @@ const defaultDeps: Deps = {
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<UpdateArgs>) => {
-    const { projectId } = deps.resolveProjectId(deps.cwd(), argv["project-id"]);
+    const { projectId, root } = deps.resolveProjectId(deps.cwd(), argv["project-id"]);
 
     const ticket = await deps.resolveTicketByShorthand(API_URL, projectId, argv.id);
     if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
@@ -62,6 +64,15 @@ export const createHandler =
     }
 
     await deps.updateTicket(API_URL, ticket.id, updates);
+
+    if (root && argv.status) {
+      const localContent = readTicketFile(root, argv.id);
+      if (localContent) {
+        const frontmatter = `---\nstatus: "${argv.status}"\n---`;
+        const updated = applyFrontmatterValues(frontmatter, localContent);
+        writeTicketFile(root, argv.id, updated);
+      }
+    }
 
     deps.log(`Updated ticket ${argv.id}`);
   };

@@ -1,12 +1,19 @@
 import { Box, HStack, IconButton, Menu, Stack, Text } from "@chakra-ui/react";
 import { ChevronRight } from "lucide-react";
-import type { SidebarAction, SidebarNavigateEvent, SidebarNode, SidebarSection } from "./sidebar-tree.types";
+import type {
+  SidebarAction,
+  SidebarLinkComponent,
+  SidebarNavigateEvent,
+  SidebarNode,
+  SidebarSection,
+} from "./sidebar-tree.types";
 
 interface SidebarTreeProps {
   sections: SidebarSection[];
   expandedSections: string[];
   expandedNodes: string[];
   activeNodeId?: string | null;
+  linkComponent?: SidebarLinkComponent;
   onNavigate?: (event: SidebarNavigateEvent) => void;
   onToggleSection: (sectionId: string) => void;
   onToggleNode: (nodeId: string) => void;
@@ -24,6 +31,7 @@ interface SidebarNodeRowProps {
   level: number;
   expandedNodes: string[];
   activeNodeId?: string | null;
+  linkComponent?: SidebarLinkComponent;
   onNavigate?: (event: SidebarNavigateEvent) => void;
   onToggleNode: (nodeId: string) => void;
 }
@@ -93,13 +101,23 @@ const SidebarRowActions = (props: SidebarRowActionsProps) => {
 };
 
 const SidebarNodeRow = (props: SidebarNodeRowProps) => {
-  const { sectionId, node, level, expandedNodes, activeNodeId, onNavigate, onToggleNode } = props;
+  const {
+    sectionId,
+    node,
+    level,
+    expandedNodes,
+    activeNodeId,
+    linkComponent: LinkComponent,
+    onNavigate,
+    onToggleNode,
+  } = props;
   const hasChildren = (node.children?.length ?? 0) > 0;
   const expanded = hasChildren && isExpanded(node.id, expandedNodes);
   const isNavigable = node.isNavigable || node.navigationIntent !== undefined;
   const isActive = activeNodeId === node.id;
   const isDisabled = node.disabled === true;
   const paddingLeft = level > 0 ? `calc(var(--chakra-spacing-1) + ${level} * var(--chakra-spacing-3))` : undefined;
+  const canLink = Boolean(LinkComponent && node.href && isNavigable && !hasChildren && !isDisabled);
 
   const handleClick = () => {
     if (isDisabled) return;
@@ -119,54 +137,67 @@ const SidebarNodeRow = (props: SidebarNodeRowProps) => {
     });
   };
 
-  return (
-    <Stack gap={!node.children ? "2xs" : "0"}>
-      <HStack
-        className="group"
-        role="option"
-        aria-selected={isActive}
-        justify="space-between"
-        align="center"
-        borderRadius="xs"
-        px="1"
-        py="2xs"
-        pl={paddingLeft}
-        bg={isActive ? "bg.muted" : "transparent"}
-        _hover={{ bg: isActive ? "bg.muted" : "bg.subtle" }}
-        cursor={isDisabled ? "default" : "pointer"}
-        onClick={handleClick}
-        overflow="hidden"
-      >
-        <HStack gap="2" minW="0" flex="1" overflow="hidden">
-          {node.icon ? (
+  const rowContent = (
+    <HStack gap="2" minW="0" flex="1" overflow="hidden">
+      {node.icon ? (
+        <Box color="fg.muted" flexShrink={0}>
+          {node.icon}
+        </Box>
+      ) : null}
+      <Stack gap="0" minW="0" flex="1">
+        <HStack gap="1" minW="0">
+          <Text textStyle="paragraph/S/regular" color={isDisabled ? "fg.muted" : "fg"} truncate>
+            {node.label}
+          </Text>
+          {hasChildren ? (
             <Box color="fg.muted" flexShrink={0}>
-              {node.icon}
+              <ChevronRight
+                size={14}
+                style={{ transform: expanded ? "rotate(90deg)" : "rotate(0deg)", transition: "120ms" }}
+              />
             </Box>
           ) : null}
-          <Stack gap="0" minW="0" flex="1">
-            <HStack gap="1" minW="0">
-              <Text textStyle="paragraph/S/regular" color={isDisabled ? "fg.muted" : "fg"} truncate>
-                {node.label}
-              </Text>
-              {hasChildren ? (
-                <Box color="fg.muted" flexShrink={0}>
-                  <ChevronRight
-                    size={14}
-                    style={{ transform: expanded ? "rotate(90deg)" : "rotate(0deg)", transition: "120ms" }}
-                  />
-                </Box>
-              ) : null}
-            </HStack>
-            {node.description ? (
-              <Text textStyle="paragraph/XS/regular" color="fg.muted" truncate>
-                {node.description}
-              </Text>
-            ) : null}
-          </Stack>
         </HStack>
+        {node.description ? (
+          <Text textStyle="paragraph/XS/regular" color="fg.muted" truncate>
+            {node.description}
+          </Text>
+        ) : null}
+      </Stack>
+    </HStack>
+  );
 
-        <SidebarRowActions sectionId={sectionId} nodeId={node.id} actions={node.actions ?? []} />
-      </HStack>
+  const rowStyles = {
+    className: "group",
+    role: "option" as const,
+    "aria-selected": isActive,
+    justify: "space-between" as const,
+    align: "center" as const,
+    borderRadius: "xs",
+    px: "1",
+    py: "2xs",
+    pl: paddingLeft,
+    bg: isActive ? "bg.muted" : "transparent",
+    _hover: { bg: isActive ? "bg.muted" : "bg.subtle" },
+    cursor: isDisabled ? ("default" as const) : ("pointer" as const),
+    overflow: "hidden" as const,
+  };
+
+  return (
+    <Stack gap={!node.children ? "2xs" : "0"}>
+      {canLink && LinkComponent && node.href ? (
+        <LinkComponent to={node.href}>
+          <HStack {...rowStyles} onClick={handleClick}>
+            {rowContent}
+            <SidebarRowActions sectionId={sectionId} nodeId={node.id} actions={node.actions ?? []} />
+          </HStack>
+        </LinkComponent>
+      ) : (
+        <HStack {...rowStyles} onClick={handleClick}>
+          {rowContent}
+          <SidebarRowActions sectionId={sectionId} nodeId={node.id} actions={node.actions ?? []} />
+        </HStack>
+      )}
 
       {expanded
         ? node.children?.map((childNode) => (
@@ -177,6 +208,7 @@ const SidebarNodeRow = (props: SidebarNodeRowProps) => {
               level={level + 1}
               expandedNodes={expandedNodes}
               activeNodeId={activeNodeId}
+              linkComponent={LinkComponent}
               onNavigate={onNavigate}
               onToggleNode={onToggleNode}
             />
@@ -187,7 +219,16 @@ const SidebarNodeRow = (props: SidebarNodeRowProps) => {
 };
 
 export const SidebarTree = (props: SidebarTreeProps) => {
-  const { sections, expandedSections, expandedNodes, activeNodeId, onNavigate, onToggleSection, onToggleNode } = props;
+  const {
+    sections,
+    expandedSections,
+    expandedNodes,
+    activeNodeId,
+    linkComponent,
+    onNavigate,
+    onToggleSection,
+    onToggleNode,
+  } = props;
 
   return (
     <Stack role="listbox" gap="md" p="md">
@@ -234,6 +275,7 @@ export const SidebarTree = (props: SidebarTreeProps) => {
                       level={0}
                       expandedNodes={expandedNodes}
                       activeNodeId={activeNodeId}
+                      linkComponent={linkComponent}
                       onNavigate={onNavigate}
                       onToggleNode={onToggleNode}
                     />

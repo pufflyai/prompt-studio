@@ -2,15 +2,39 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { RouteDeps } from "../deps";
 
-const BUNDLED_TEMPLATES = [
-  { name: "ticket", template_type: "ticket", file_name: "ticket-template.md", is_default: true },
-  { name: "proposal", template_type: "ticket", file_name: "proposal-template.md", is_default: false },
-  { name: "prd", template_type: "document", file_name: "prd-template.md", is_default: true },
-  { name: "adr", template_type: "document", file_name: "adr-template.md", is_default: false },
-  { name: "cookbook", template_type: "document", file_name: "cookbook-template.md", is_default: false },
-  { name: "review-me", template_type: "document", file_name: "review-me-template.md", is_default: false },
-  { name: "lessons-learned", template_type: "document", file_name: "lessons-learned-template.md", is_default: false },
-] as const;
+// Folder name determines template_type (strip trailing 's')
+const TEMPLATE_FOLDERS = ["documents", "prompts", "tickets"] as const;
+type TemplateFolder = (typeof TEMPLATE_FOLDERS)[number];
+
+const folderToType = (folder: TemplateFolder) => folder.slice(0, -1) as "document" | "prompt" | "ticket";
+
+interface BundledTemplate {
+  name: string;
+  folder: TemplateFolder;
+  file_name: string;
+  is_default: boolean;
+}
+
+const BUNDLED_TEMPLATES: BundledTemplate[] = [
+  // documents
+  { name: "prd", folder: "documents", file_name: "prd-template.md", is_default: true },
+  { name: "adr", folder: "documents", file_name: "adr-template.md", is_default: false },
+  { name: "changelog-entry", folder: "documents", file_name: "changelog-entry.md", is_default: false },
+  { name: "cookbook", folder: "documents", file_name: "cookbook-template.md", is_default: false },
+  { name: "lessons-learned", folder: "documents", file_name: "lessons-learned-template.md", is_default: false },
+  { name: "review-me", folder: "documents", file_name: "review-me-template.md", is_default: false },
+  // prompts
+  { name: "commit-message", folder: "prompts", file_name: "commit-message.txt", is_default: true },
+  { name: "create-sub-tickets", folder: "prompts", file_name: "create-sub-tickets.txt", is_default: false },
+  { name: "implement-ticket", folder: "prompts", file_name: "implement-ticket.txt", is_default: false },
+  { name: "refine-ticket", folder: "prompts", file_name: "refine-ticket.txt", is_default: false },
+  { name: "squash-message", folder: "prompts", file_name: "squash-message.txt", is_default: false },
+  // tickets
+  { name: "ticket", folder: "tickets", file_name: "ticket-template.md", is_default: true },
+  { name: "proposal", folder: "tickets", file_name: "proposal-template.md", is_default: false },
+];
+
+const templatePath = (template: BundledTemplate) => `${template.folder}/${template.file_name}`;
 
 type EmbeddedFile = Blob & { name: string };
 
@@ -19,8 +43,8 @@ const getEmbeddedFiles = () => {
   return Array.isArray(files) ? (files as EmbeddedFile[]) : [];
 };
 
-const getEmbeddedTemplate = (embeddedFiles: EmbeddedFile[], fileName: string) =>
-  embeddedFiles.find((file) => file.name.endsWith(`/files/templates/${fileName}`));
+const getEmbeddedTemplate = (embeddedFiles: EmbeddedFile[], path: string) =>
+  embeddedFiles.find((file) => file.name.endsWith(`/files/templates/${path}`));
 
 const loadEmbeddedTemplateContents = async () => {
   const embeddedFiles = getEmbeddedFiles();
@@ -29,9 +53,10 @@ const loadEmbeddedTemplateContents = async () => {
   const contents = new Map<string, string>();
 
   for (const template of BUNDLED_TEMPLATES) {
-    const embedded = getEmbeddedTemplate(embeddedFiles, template.file_name);
+    const path = templatePath(template);
+    const embedded = getEmbeddedTemplate(embeddedFiles, path);
     if (!embedded) return null;
-    contents.set(template.file_name, await embedded.text());
+    contents.set(path, await embedded.text());
   }
 
   return contents;
@@ -53,7 +78,8 @@ const loadTemplateContents = async () => {
   const contents = new Map<string, string>();
 
   for (const template of BUNDLED_TEMPLATES) {
-    contents.set(template.file_name, readFileSync(join(templatesDir, template.file_name), "utf8"));
+    const path = templatePath(template);
+    contents.set(path, readFileSync(join(templatesDir, path), "utf8"));
   }
 
   return contents;
@@ -67,9 +93,10 @@ export const seedDefaultTemplates = async (deps: RouteDeps, projectId: string) =
     const existing = await deps.templatesService.getByName(projectId, template.name);
     if (existing) continue;
 
-    const content = contents.get(template.file_name);
+    const path = templatePath(template);
+    const content = contents.get(path);
     if (!content) {
-      throw new Error(`Missing bundled template content for ${template.file_name}`);
+      throw new Error(`Missing bundled template content for ${path}`);
     }
     const file = await deps.filesService.upload({
       project_id: projectId,
@@ -82,7 +109,7 @@ export const seedDefaultTemplates = async (deps: RouteDeps, projectId: string) =
     const created = await deps.templatesService.create({
       project_id: projectId,
       name: template.name,
-      template_type: template.template_type,
+      template_type: folderToType(template.folder),
       file_id: file.id,
       is_default: template.is_default,
     });

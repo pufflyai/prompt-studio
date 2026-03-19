@@ -8,7 +8,12 @@ import { ChatMessage } from "./ai-message";
 import { AutoScroll } from "./auto-scroll";
 import { ChatInput } from "./chat-input";
 import { MessagePartsRenderer } from "./message-parts-renderer";
-import { getMessageOrigin, mergeReasoningToolOnlyMessages, type SessionMessage } from "./message-types";
+import {
+  getMessageOrigin,
+  groupMessagesByTurn,
+  mergeReasoningToolOnlyMessages,
+  type SessionMessage,
+} from "./message-types";
 
 interface ChatPanelProps {
   messages: SessionMessage[];
@@ -26,6 +31,17 @@ interface ChatPanelProps {
   attachmentList?: ReactNode;
   approvalPrompt?: ReactNode;
 }
+
+const renderMessage = (message: SessionMessage, streaming: boolean) => {
+  const from = getMessageOrigin(message.role);
+  return (
+    <ChatMessage.Root key={message.id} from={from}>
+      <ChatMessage.Content from={from}>
+        <MessagePartsRenderer message={message} streaming={streaming} />
+      </ChatMessage.Content>
+    </ChatMessage.Root>
+  );
+};
 
 export const ChatPanel = (props: ChatPanelProps) => {
   const {
@@ -48,6 +64,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
   const merged = mergeReasoningToolOnlyMessages(messages);
   const hasMessages = merged.length > 0;
   const userMessageCount = merged.reduce((count, message) => count + (message.role === "user" ? 1 : 0), 0);
+  const { groups, leadingResponses } = groupMessagesByTurn(merged);
 
   return (
     <Flex position="relative" direction="column" w="full" h="full" overflow="hidden">
@@ -56,17 +73,15 @@ export const ChatPanel = (props: ChatPanelProps) => {
         <ChatPrimitives.Viewport>
           {hasMessages ? (
             <Stack gap="sm">
-              {merged.map((message) => {
-                const from = getMessageOrigin(message.role);
-
-                return (
-                  <ChatMessage.Root key={message.id} from={from}>
-                    <ChatMessage.Content from={from}>
-                      <MessagePartsRenderer message={message} streaming={streaming} />
-                    </ChatMessage.Content>
-                  </ChatMessage.Root>
-                );
-              })}
+              {leadingResponses.map((message) => renderMessage(message, streaming))}
+              {groups.map((group) => (
+                <Box key={group.userMessage.id}>
+                  <Box position="sticky" top="0" zIndex={1}>
+                    {renderMessage(group.userMessage, streaming)}
+                  </Box>
+                  {group.responses.map((message) => renderMessage(message, streaming))}
+                </Box>
+              ))}
             </Stack>
           ) : (
             <EmptyState

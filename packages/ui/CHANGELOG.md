@@ -1,5 +1,13 @@
 # @pstdio/ui
 
+## 0.2.1
+
+### Patch Changes
+
+- 79285d3: Add startup script save/pull workflows and settings editor
+- cad7cc9: Persist unsent chat drafts per session and cap composer height in the sessions chat panel.
+- de3bae4: Keep the new-session chat editor stable while typing and add a sessions e2e regression test that verifies focus is retained across consecutive keystrokes.
+
 ## 0.2.0
 
 ### Minor Changes

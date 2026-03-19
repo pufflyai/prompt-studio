@@ -791,6 +791,7 @@
     "parent": "상위",
     "tags": "태그",
     "files": "파일",
+    "ticket": "티켓",
     "subTickets": "하위 티켓",
     "none": "없음",
     "noTagsSelected": "선택된 태그 없음",

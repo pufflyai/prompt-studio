@@ -760,6 +760,7 @@
     "parent": "父级",
     "tags": "标签",
     "files": "文件",
+    "ticket": "工单",
     "subTickets": "子工单",
     "none": "无",
     "noTagsSelected": "未选择标签",

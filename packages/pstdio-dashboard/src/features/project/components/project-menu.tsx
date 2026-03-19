@@ -1,11 +1,9 @@
 import { Avatar, Button, HStack, Menu, Text } from "@chakra-ui/react";
 import { MenuItem, toaster, useThemePreference } from "@pstdio/ui";
-import { useNavigate, useParams } from "@tanstack/react-router";
+import { Link, useParams } from "@tanstack/react-router";
 import { ChevronDown, FolderIcon, Moon, Sun } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useProject, useSystemInfo } from "@/features/project/hooks/use-project";
-
-const PROJECTS_URL = "/projects";
 
 const copyVersionToClipboard = async (versionLabel: string, title: string) => {
   await navigator.clipboard.writeText(versionLabel);
@@ -17,7 +15,6 @@ const copyVersionToClipboard = async (versionLabel: string, title: string) => {
 };
 
 export const ProjectMenu = () => {
-  const navigate = useNavigate();
   const { projectId } = useParams({ strict: false });
   const { data: project } = useProject(projectId);
   const { data: systemInfo } = useSystemInfo();
@@ -27,10 +24,6 @@ export const ProjectMenu = () => {
   const modeLabel = isDarkMode ? t("menu.switchToLightMode") : t("menu.switchToDarkMode");
   const projectName = project?.name ?? "Project";
   const versionLabel = systemInfo ? `v${systemInfo.version}` : t("menu.loadingVersion");
-
-  const handleOpenProjects = () => {
-    navigate({ to: PROJECTS_URL });
-  };
 
   const handleCopyVersion = async () => {
     if (!systemInfo) {
@@ -57,7 +50,9 @@ export const ProjectMenu = () => {
       </Menu.Trigger>
       <Menu.Positioner>
         <Menu.Content minW="240px" bg="bg">
-          <MenuItem onClick={handleOpenProjects} primaryLabel={t("menu.projects")} leftIcon={FolderIcon} />
+          <MenuItem asChild primaryLabel={t("menu.projects")} leftIcon={FolderIcon}>
+            <Link to="/projects" />
+          </MenuItem>
           <Menu.Separator />
           <MenuItem onClick={toggleThemePreference} primaryLabel={modeLabel} leftIcon={isDarkMode ? Sun : Moon} />
           <Menu.Separator />

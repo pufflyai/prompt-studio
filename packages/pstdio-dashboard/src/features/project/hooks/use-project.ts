@@ -128,7 +128,7 @@ export const useProjectTemplateAssets = (projectId: string | undefined) => {
         : undefined,
     [projectId],
   );
-  const templateRows = asSyncedRows(rawTemplates);
+  const templateRows = asSyncedRows(rawTemplates)?.filter((t) => !t.deleted_at);
 
   const data: ProjectTemplateAsset[] | undefined = templateRows?.map((t) => ({
     id: t.id,

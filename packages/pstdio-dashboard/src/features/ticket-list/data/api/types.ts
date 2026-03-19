@@ -76,6 +76,7 @@ export type CreateProjectTicketInput = {
   projectId: string;
   content?: string | null;
   complexity?: "low" | "medium" | "high" | null;
+  tagIds?: string[];
   dependsOn?: string | null;
   status?: TicketStatus | null;
   parentId?: string | null;

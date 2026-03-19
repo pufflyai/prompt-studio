@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { SidebarNavigateEvent, SidebarSection } from "../sidebar-tree/sidebar-tree.types";
+import type { SidebarLinkComponent, SidebarNavigateEvent, SidebarSection } from "../sidebar-tree/sidebar-tree.types";
 
 export interface SidebarNextProps {
   storageKey: string;
@@ -9,6 +9,7 @@ export interface SidebarNextProps {
   footer?: ReactNode;
   width?: string | number;
   emptyLabel?: string;
+  linkComponent?: SidebarLinkComponent;
   onNavigate?: (event: SidebarNavigateEvent) => void;
   closable?: boolean;
   onOpenChange?: (open: boolean) => void;

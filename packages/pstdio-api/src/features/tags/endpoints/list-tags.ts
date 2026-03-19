@@ -5,7 +5,7 @@ import { tagResponseSchema } from "../dto";
 
 export const listTagsRoute = createRoute({
   method: "get",
-  path: "/projects/{projectId}/tags",
+  path: "/projects/{projectId}/ticket-tags",
   description: "List tags for a project.",
   tags: ["Tags"],
   request: {

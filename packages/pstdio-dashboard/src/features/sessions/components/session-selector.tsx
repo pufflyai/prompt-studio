@@ -1,7 +1,7 @@
 import { Box, Button, Menu, Text } from "@chakra-ui/react";
 import type { SessionCompletionStatus } from "@pstdio/ui";
 import { MenuItem, SessionIndicator } from "@pstdio/ui";
-import { useNavigate, useParams } from "@tanstack/react-router";
+import { Link, useParams } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Session } from "../types";
@@ -19,18 +19,12 @@ interface SessionSelectorProps {
 export const SessionSelector = (props: SessionSelectorProps) => {
   const { sessions, selectedSessionId, onSelectSession } = props;
   const { t } = useTranslation("projects");
-  const navigate = useNavigate();
   const { projectId } = useParams({ strict: false });
   const recentSessions = getRecentSessions(sessions, SESSION_DROPDOWN_LIMIT);
 
   const selectedSession = sessions.find((s) => s.id === selectedSessionId);
   const label = selectedSession?.title ?? t("sessions.newSession");
-
-  const handleViewMoreSessions = () => {
-    const path = getSessionsRoutePath(projectId, selectedSessionId);
-    if (!path) return;
-    navigate({ to: path });
-  };
+  const viewMorePath = getSessionsRoutePath(projectId, selectedSessionId);
 
   return (
     <Menu.Root>
@@ -64,9 +58,11 @@ export const SessionSelector = (props: SessionSelectorProps) => {
             )}
           </Box>
           <Box borderTopWidth="1px" px="1" py="1">
-            <Button variant="ghost" size="xs" width="full" justifyContent="flex-start" onClick={handleViewMoreSessions}>
-              {t("chatInput.session.viewMore")}
-            </Button>
+            {viewMorePath ? (
+              <Button variant="ghost" size="xs" width="full" justifyContent="flex-start" asChild>
+                <Link to={viewMorePath}>{t("chatInput.session.viewMore")}</Link>
+              </Button>
+            ) : null}
           </Box>
         </Menu.Content>
       </Menu.Positioner>

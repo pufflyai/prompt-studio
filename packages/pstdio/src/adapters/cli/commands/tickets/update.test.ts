@@ -1,5 +1,9 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { createHandler } from "./update";
+
+const tmpBase = join(import.meta.dirname, "__test-tmp-update__");
 
 const makeTicket = (overrides: Record<string, unknown> = {}) => ({
   id: "t-1",
@@ -16,6 +20,14 @@ const makeTicket = (overrides: Record<string, unknown> = {}) => ({
   tag_names: [],
   created_at: "2026-03-04T00:00:00.000Z",
   ...overrides,
+});
+
+beforeEach(() => {
+  mkdirSync(tmpBase, { recursive: true });
+});
+
+afterEach(() => {
+  rmSync(tmpBase, { recursive: true, force: true });
 });
 
 describe("tickets update", () => {
@@ -69,5 +81,49 @@ describe("tickets update", () => {
     await expect(handler({ id: "PS-1", status: "nonexistent", _: [], $0: "" } as never)).rejects.toThrow(
       "Status not found: nonexistent",
     );
+  });
+
+  test("updates local ticket file frontmatter when status changes", async () => {
+    const ticketDir = join(tmpBase, ".pstdio", "tickets", "PS-1");
+    mkdirSync(ticketDir, { recursive: true });
+    writeFileSync(
+      join(ticketDir, "ticket.md"),
+      '---\nticket_id: "PS-1"\nstatus: "backlog"\npriority: "P1"\n---\n\n# My Ticket',
+    );
+
+    const handler = createHandler({
+      cwd: () => tmpBase,
+      resolveProjectId: () => ({ projectId: "proj-1", root: tmpBase }),
+      resolveTicketByShorthand: async () => makeTicket(),
+      updateTicket: async () => ({}) as never,
+      resolveStatusId: async () => "s-review",
+      resolveTagIds: async () => [],
+      log: () => {},
+    });
+
+    await handler({ id: "PS-1", status: "review", _: [], $0: "" } as never);
+
+    const content = readFileSync(join(ticketDir, "ticket.md"), "utf8");
+    expect(content).toContain('status: "review"');
+    expect(content).not.toContain('status: "backlog"');
+    expect(content).toContain('priority: "P1"');
+    expect(content).toContain("# My Ticket");
+  });
+
+  test("skips local file update when no local ticket file exists", async () => {
+    const log = mock();
+    const handler = createHandler({
+      cwd: () => tmpBase,
+      resolveProjectId: () => ({ projectId: "proj-1", root: tmpBase }),
+      resolveTicketByShorthand: async () => makeTicket(),
+      updateTicket: async () => ({}) as never,
+      resolveStatusId: async () => "s-review",
+      resolveTagIds: async () => [],
+      log,
+    });
+
+    await handler({ id: "PS-1", status: "review", _: [], $0: "" } as never);
+
+    expect(log).toHaveBeenCalledWith("Updated ticket PS-1");
   });
 });

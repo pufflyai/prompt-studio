@@ -4,7 +4,7 @@ import type { RouteDeps } from "../../deps";
 
 export const deleteTagRoute = createRoute({
   method: "delete",
-  path: "/projects/{projectId}/tags/{id}",
+  path: "/projects/{projectId}/ticket-tags/{id}",
   description: "Soft-delete a tag.",
   tags: ["Tags"],
   request: {

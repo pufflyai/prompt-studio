@@ -1,0 +1,60 @@
+import { useRouterState, useSearch } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { useDocsIndex } from "@/features/documentation/hooks/use-docs";
+import { flattenDocsSidebar, resolveActiveDocLink } from "@/features/documentation/utils";
+import { useProject } from "@/features/project/hooks/use-project";
+import { useProjectSession } from "@/features/sessions/hooks/use-project-session";
+import { getPageTitle } from "../utils/page-title";
+
+const parseProjectRoute = (pathname: string) => {
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments[0] !== "projects" || !segments[1]) return null;
+
+  const projectId = segments[1];
+  const section = segments[2];
+  const sessionId = section === "sessions" ? (segments[3] ?? null) : null;
+
+  return { projectId, section, sessionId };
+};
+
+const useDocTitle = (projectId: string | undefined, section: string | undefined, doc: unknown) => {
+  const { data: index } = useDocsIndex(section === "docs" ? projectId : undefined);
+  if (!index?.sidebar) return undefined;
+
+  const entries = flattenDocsSidebar(index.sidebar);
+  const activeLink = resolveActiveDocLink(doc, entries);
+  if (!activeLink) return undefined;
+
+  // Find the leaf item's own text (not the flattened path)
+  const findTitle = (items: typeof index.sidebar): string | undefined => {
+    for (const item of items) {
+      if (item.link === activeLink) return item.text;
+      if (item.items) {
+        const found = findTitle(item.items);
+        if (found) return found;
+      }
+    }
+    return undefined;
+  };
+
+  return findTitle(index.sidebar);
+};
+
+export const usePageTitle = () => {
+  const { location } = useRouterState();
+  const { panel, doc } = useSearch({ strict: false });
+
+  const parsed = parseProjectRoute(location.pathname);
+
+  const { data: project } = useProject(parsed?.projectId);
+  const { data: session } = useProjectSession(parsed?.projectId, parsed?.sessionId ?? null);
+  const docTitle = useDocTitle(parsed?.projectId, parsed?.section, doc);
+
+  useEffect(() => {
+    document.title = getPageTitle(location.pathname, project?.name, {
+      settingsPanel: typeof panel === "string" ? panel : undefined,
+      sessionTitle: session?.title,
+      docTitle,
+    });
+  }, [location.pathname, panel, project?.name, session?.title, docTitle]);
+};

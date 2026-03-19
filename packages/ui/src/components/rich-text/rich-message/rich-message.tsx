@@ -32,6 +32,7 @@ import { REFERENCE_LINK_TRANSFORMER, ReferenceLinkNode } from "./plugins/Referen
 export interface RichMessageProps {
   debug?: boolean;
   defaultState: string;
+  fullWidth?: boolean;
   isEditable?: boolean;
   onChange?: (value: string) => void;
 }
@@ -45,7 +46,7 @@ const transformers = [
 ];
 
 export function RichMessage(props: RichMessageProps) {
-  const { debug = false, defaultState = "", isEditable = false, onChange } = props;
+  const { debug = false, defaultState = "", fullWidth = false, isEditable = false, onChange } = props;
   const { frontmatter, body } = splitFrontmatter(defaultState);
   const shouldTrackChanges = isEditable && Boolean(onChange);
 
@@ -96,7 +97,10 @@ export function RichMessage(props: RichMessageProps) {
         <HorizontalRulePlugin />
         <ImportCodeBlocksPlugin />
         <EquationPlugin />
-        <RichTextPlugin contentEditable={<ContentEditable fullWidth={false} />} ErrorBoundary={LexicalErrorBoundary} />
+        <RichTextPlugin
+          contentEditable={<ContentEditable fullWidth={fullWidth} />}
+          ErrorBoundary={LexicalErrorBoundary}
+        />
         {shouldTrackChanges ? (
           <OnChangePlugin
             ignoreSelectionChange

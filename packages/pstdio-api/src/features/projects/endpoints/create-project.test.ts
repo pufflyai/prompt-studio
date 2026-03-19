@@ -9,13 +9,19 @@ import type { AppBindings } from "../../../types";
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
 const TEMPLATE_FILES = [
-  "ticket-template.md",
-  "proposal-template.md",
-  "prd-template.md",
-  "adr-template.md",
-  "cookbook-template.md",
-  "review-me-template.md",
-  "lessons-learned-template.md",
+  "documents/prd-template.md",
+  "documents/adr-template.md",
+  "documents/changelog-entry.md",
+  "documents/cookbook-template.md",
+  "documents/lessons-learned-template.md",
+  "documents/review-me-template.md",
+  "prompts/commit-message.txt",
+  "prompts/create-sub-tickets.txt",
+  "prompts/implement-ticket.txt",
+  "prompts/refine-ticket.txt",
+  "prompts/squash-message.txt",
+  "tickets/ticket-template.md",
+  "tickets/proposal-template.md",
 ];
 
 const makeEmbeddedTemplateFile = (fileName: string, content: string) => {
@@ -66,7 +72,21 @@ describe("POST /v1/projects", () => {
     const templates = await templatesRes.json();
     const templateNames = templates.map((template: { name: string }) => template.name);
 
-    expect(templateNames).toEqual(["adr", "cookbook", "lessons-learned", "prd", "proposal", "review-me", "ticket"]);
+    expect(templateNames).toEqual([
+      "adr",
+      "changelog-entry",
+      "commit-message",
+      "cookbook",
+      "create-sub-tickets",
+      "implement-ticket",
+      "lessons-learned",
+      "prd",
+      "proposal",
+      "refine-ticket",
+      "review-me",
+      "squash-message",
+      "ticket",
+    ]);
   });
 
   test("returns 400 when request body contains unknown keys", async () => {
@@ -99,7 +119,7 @@ describe("POST /v1/projects", () => {
       expect(ticketRes.status).toBe(200);
 
       const ticketTemplate = (await ticketRes.json()) as { content: string };
-      expect(ticketTemplate.content).toBe("# embedded:ticket-template.md\n");
+      expect(ticketTemplate.content).toBe("# embedded:tickets/ticket-template.md\n");
     } finally {
       runtime.embeddedFiles = originalEmbeddedFiles;
     }

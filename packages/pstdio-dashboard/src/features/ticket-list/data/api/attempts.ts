@@ -46,6 +46,8 @@ export const createTicketAttempt = async (input: CreateTicketAttemptInput) => {
 
 export type DiffMode = "current" | "fork_point";
 
+export const ATTEMPT_DIFF_MODE = "fork_point" satisfies DiffMode;
+
 export const getTicketAttemptDiff = async (workspaceId: string, mode?: DiffMode) => {
   const params = mode ? `?mode=${mode}` : "";
   return apiRequest<ApiTicketAttemptDiff>(`/v1/workspaces/${workspaceId}/diff${params}`);
