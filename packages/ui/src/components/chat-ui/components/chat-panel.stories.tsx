@@ -7,6 +7,33 @@ import { ChatPanel } from "./chat-panel";
 
 const conversationMessages = rawConversationMessages as unknown as SessionMessage[];
 
+const longUserPrompt = [
+  "I need a release checklist for this rollout and I want every detail captured in one place.",
+  "Include pre-flight checks for database migrations, message queue lag, worker health, API latency budgets, and frontend error budgets.",
+  "Add rollback steps with exact ownership, communication templates, and what metrics should trigger rollback automatically.",
+  "Also include a section that explains canary rollout percentages by minute, regional sequencing, and how we handle failed verification gates.",
+  "Please include dry-run instructions, expected command outputs, and post-deploy validation checks for auth, billing, and audit logs.",
+  "Finally, provide a handoff note that the on-call engineer can use without extra context, including escalation paths and paging thresholds.",
+].join(" ");
+
+const longPromptMessages: SessionMessage[] = [
+  {
+    id: "long-user-prompt",
+    role: "user",
+    parts: [{ type: "text", text: `${longUserPrompt} ${longUserPrompt}` }],
+  },
+  {
+    id: "assistant-response-after-long-prompt",
+    role: "assistant",
+    parts: [
+      {
+        type: "text",
+        text: "Acknowledged. I created a compact rollout checklist with owners, rollback triggers, and post-deploy validation steps so the response stays visible while you review the prompt.",
+      },
+    ],
+  },
+];
+
 const meta: Meta<typeof ChatPanel> = {
   title: "Chat UI/Chat Panel",
   component: ChatPanel,
@@ -392,5 +419,17 @@ export const Streaming: Story = {
   args: {
     ...Empty.args,
     messages: streamingMessages,
+  },
+};
+
+export const LongStickyUserPrompt: Story = {
+  render: (args) => (
+    <Box {...panelContainerStyles}>
+      <MockChatPanelRenderer {...args} />
+    </Box>
+  ),
+  args: {
+    ...Empty.args,
+    messages: longPromptMessages,
   },
 };
