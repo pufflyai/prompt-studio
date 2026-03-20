@@ -14,9 +14,17 @@ if [ -f "$PSTDIO_REPO_PATH/.pstdio/config.json" ]; then
   cp "$PSTDIO_REPO_PATH/.pstdio/config.json" "$PSTDIO_WORKTREE_PATH/.pstdio/config.json"
 fi
 
+# Copy agent folders so workspace-local skills are available in the worktree
+for AGENT_DIR in ".claude" ".opencode"; do
+  if [ -d "$PSTDIO_REPO_PATH/$AGENT_DIR" ]; then
+    mkdir -p "$PSTDIO_WORKTREE_PATH/$AGENT_DIR"
+    cp -R "$PSTDIO_REPO_PATH/$AGENT_DIR/." "$PSTDIO_WORKTREE_PATH/$AGENT_DIR/"
+  fi
+done
+
 # Pull the ticket into the worktree so agents have full context
 # Workspace shorthand is <ticket>_A<n>, extract ticket shorthand
-TICKET_SHORTHAND=$(echo "$PSTDIO_WORKSPACE" | sed 's/_A[0-9]*$//')
+TICKET_SHORTHAND=$(printf '%s\n' "$PSTDIO_WORKSPACE" | sed 's/_A[0-9]*$//')
 if [ -n "$TICKET_SHORTHAND" ]; then
   pstdio tickets pull --id "$TICKET_SHORTHAND" 2>/dev/null || true
 fi
