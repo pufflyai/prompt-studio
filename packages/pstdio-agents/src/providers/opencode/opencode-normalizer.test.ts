@@ -278,6 +278,34 @@ describe("normalizeOpencodeMessage tool and patch parts", () => {
 
       expect(result.parts).toEqual([{ type: "error", errorType: "other", message: "Boom" }]);
     });
+
+    test("extracts error from info.error when parts are empty", () => {
+      const result = normalizeOpencodeMessage(
+        partsMsg([], {
+          role: "assistant",
+          id: "msg-err",
+          error: { name: "UnknownError", data: { message: "Error: Was there a typo in the url or port?" } },
+        }),
+        0,
+      );
+
+      expect(result.parts).toEqual([
+        { type: "error", errorType: "other", message: "Error: Was there a typo in the url or port?" },
+      ]);
+    });
+
+    test("extracts error from info.error using name when no data.message", () => {
+      const result = normalizeOpencodeMessage(
+        partsMsg([], {
+          role: "assistant",
+          id: "msg-err",
+          error: { name: "TimeoutError" },
+        }),
+        0,
+      );
+
+      expect(result.parts).toEqual([{ type: "error", errorType: "timeout", message: "TimeoutError" }]);
+    });
   });
 
   describe("unknown part types", () => {

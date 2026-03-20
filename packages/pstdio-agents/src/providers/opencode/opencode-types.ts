@@ -26,6 +26,10 @@ export type OpencodeSessionMessageInfo = {
   sessionID?: string;
   modelID?: string;
   providerID?: string;
+  error?: {
+    name?: string;
+    data?: { message?: string };
+  };
   tokens?: {
     input?: number;
     output?: number;

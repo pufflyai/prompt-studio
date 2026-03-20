@@ -60,12 +60,37 @@ export const UserTextParts: Story = {
 
 export const ErrorParts: Story = {
   render: () => (
-    <MessagePreview
-      message={{
-        id: "error-1",
-        role: "system",
-        parts: [{ type: "error", errorType: "permission", message: "Permission denied while reading session output." }],
-      }}
-    />
+    <Stack gap="sm">
+      <MessagePreview
+        message={{
+          id: "error-permission",
+          role: "system",
+          parts: [
+            { type: "error", errorType: "permission", message: "Permission denied while reading session output." },
+          ],
+        }}
+      />
+      <MessagePreview
+        message={{
+          id: "error-timeout",
+          role: "assistant",
+          parts: [{ type: "error", errorType: "timeout", message: "Request timed out after 30s." }],
+        }}
+      />
+      <MessagePreview
+        message={{
+          id: "error-crash",
+          role: "assistant",
+          parts: [{ type: "error", errorType: "crash" }],
+        }}
+      />
+      <MessagePreview
+        message={{
+          id: "error-other",
+          role: "assistant",
+          parts: [{ type: "error", errorType: "other", message: "Error: Was there a typo in the url or port?" }],
+        }}
+      />
+    </Stack>
   ),
 };
