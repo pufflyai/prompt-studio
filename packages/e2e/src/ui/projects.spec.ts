@@ -336,30 +336,42 @@ test.describe("Project settings hooks", () => {
   test("creates a hook from the sidebar dropdown and edits it", async ({ page, request }) => {
     await bypassOnboarding(page);
 
-    const project = await createProjectViaApi(request, "Hooks Settings Project");
-    await page.goto(`/projects/${project.id}/settings`);
+    const repoPath = createTempGitRepo();
+    try {
+      const project = await createProjectViaApi(request, "Hooks Settings Project");
+      const registerRepoRes = await request.post(`${apiBase}/v1/projects/${project.id}/repos`, {
+        data: { name: "hooks-settings-repo", path: repoPath },
+      });
+      expect(registerRepoRes.ok()).toBe(true);
 
-    // The sidebar should show the Hooks section
-    const sidebar = page.locator("aside").first();
-    await expect(sidebar.getByText("Hooks")).toBeVisible();
+      await page.goto(`/projects/${project.id}/settings`);
 
-    // Click the + button to open the dropdown
-    const hooksSection = sidebar.locator("text=Hooks").locator("..");
-    const addButton = hooksSection.getByRole("button").first();
-    await addButton.click();
+      // The sidebar should show the Hooks section
+      const sidebar = page.locator("aside").first();
+      await expect(sidebar.getByText("Hooks")).toBeVisible();
 
-    // Select pre-commit from the dropdown
-    await page.getByText("pre-commit", { exact: true }).click();
+      // Reveal the section action buttons and open the add-hook dropdown
+      const hooksSection = sidebar.locator("text=Hooks").locator("..");
+      await hooksSection.hover();
+      const addButton = sidebar.getByRole("button", { name: "Add hook" });
+      await expect(addButton).toBeVisible();
+      await addButton.click();
 
-    // Should navigate to the hook editor
-    await expect(page.getByText("pre-commit").first()).toBeVisible();
-    await expect(page.getByRole("button", { name: "Save" })).toBeVisible();
+      // Select pre-commit from the dropdown
+      await page.getByRole("menuitem", { name: "pre-commit" }).click();
 
-    // Verify the hook was created via API
-    const hooksRes = await request.get(`${apiBase}/v1/projects/${project.id}/hooks`);
-    expect(hooksRes.ok()).toBe(true);
-    const hooks = (await hooksRes.json()) as Array<{ name: string; content: string | null }>;
-    const preCommit = hooks.find((h) => h.name === "pre-commit");
-    expect(preCommit?.content).toBeTruthy();
+      // Should navigate to the hook editor
+      await expect(page.getByText("pre-commit").first()).toBeVisible();
+      await expect(page.getByRole("button", { name: "Save" })).toBeVisible();
+
+      // Verify the hook was created via API
+      const hooksRes = await request.get(`${apiBase}/v1/projects/${project.id}/hooks`);
+      expect(hooksRes.ok()).toBe(true);
+      const hooks = (await hooksRes.json()) as Array<{ name: string; content: string | null }>;
+      const preCommit = hooks.find((h) => h.name === "pre-commit");
+      expect(preCommit?.content).toBeTruthy();
+    } finally {
+      rmSync(repoPath, { recursive: true, force: true });
+    }
   });
 });

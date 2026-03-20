@@ -2,6 +2,7 @@ import type { HTMLChakraProps, IconButtonProps } from "@chakra-ui/react";
 import { AbsoluteCenter, chakra, IconButton } from "@chakra-ui/react";
 import { ArrowDownIcon } from "lucide-react";
 import { StickToBottom as StickToBottomEl, useStickToBottomContext } from "use-stick-to-bottom";
+import { ScrollArea } from "@/components/scroll-area";
 
 export type ConversationRootProps = HTMLChakraProps<"div", React.ComponentProps<typeof StickToBottomEl>>;
 
@@ -18,7 +19,7 @@ export const ConversationRoot = chakra(
     base: {
       position: "relative",
       flex: 1,
-      overflowY: "auto",
+      overflow: "hidden",
       height: "full",
     },
   },
@@ -28,31 +29,45 @@ export const ConversationRoot = chakra(
   },
 );
 
-export type ConversationContentProps = HTMLChakraProps<"div">;
+export type ConversationContentProps = Omit<React.ComponentProps<typeof ScrollArea>, "contentProps" | "viewportRef">;
 
-export const ConversationContent = chakra(
-  StickToBottomEl.Content,
-  {
-    base: {
-      p: "0",
-    },
-  },
-  {
-    defaultProps: {
-      "aria-live": "polite",
-      role: "list",
-    },
-  },
-);
+export const ConversationContent = (props: ConversationContentProps) => {
+  const { children, ...rest } = props;
+  const { contentRef, scrollRef } = useStickToBottomContext();
+
+  return (
+    <ScrollArea
+      {...rest}
+      height="full"
+      width="full"
+      showHorizontalScrollbar={false}
+      viewportRef={scrollRef as React.Ref<HTMLDivElement>}
+      contentRef={contentRef as React.Ref<HTMLDivElement>}
+      contentProps={{
+        p: "sm",
+        "aria-live": "polite",
+        role: "list",
+      }}
+    >
+      {children}
+    </ScrollArea>
+  );
+};
 
 export type ConversationScrollButtonProps = IconButtonProps;
+
+export const conversationScrollButtonContainerDefaultProps = {
+  axis: "horizontal",
+  bottom: "md",
+  zIndex: 2,
+} as const;
 
 export const ConversationScrollButton = (props: ConversationScrollButtonProps) => {
   const { isAtBottom, scrollToBottom } = useStickToBottomContext();
 
   return (
     !isAtBottom && (
-      <AbsoluteCenter axis="horizontal" bottom="md">
+      <AbsoluteCenter {...conversationScrollButtonContainerDefaultProps}>
         <IconButton rounded="full" onClick={() => scrollToBottom()} variant="outline" size="xs" {...props}>
           <ArrowDownIcon size={16} />
         </IconButton>

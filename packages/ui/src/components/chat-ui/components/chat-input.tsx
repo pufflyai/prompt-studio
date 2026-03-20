@@ -1,5 +1,6 @@
 import { Box, Flex, HStack, Spacer, Text } from "@chakra-ui/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { ScrollArea } from "@/components/scroll-area";
 import { getTextFromSerializedEditorState, PromptEditor } from "../../rich-text";
 import { SendButton } from "./send-button";
 
@@ -129,7 +130,7 @@ export const ChatInput = (props: ChatInputProps) => {
     >
       <Flex direction="column" color="fg">
         {attachmentList}
-        <Box maxH="10rem" overflowY="auto">
+        <ScrollArea maxH="10rem" showHorizontalScrollbar={false} contentProps={{ pr: "2xs" }}>
           <PromptEditor
             key={editorKey}
             defaultState={editorState}
@@ -141,7 +142,7 @@ export const ChatInput = (props: ChatInputProps) => {
             }}
             onSubmit={handleSend}
           />
-        </Box>
+        </ScrollArea>
         <HStack gap="1" mt="md">
           {actions}
           <Spacer />

@@ -10,6 +10,7 @@ import type { AppBindings } from "../../../types";
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
 let projectId: string;
+const previousWorkspacesDirEnv = process.env.PSTDIO_WORKSPACES_DIR;
 
 const createGitRepo = (name: string) => {
   const repoRoot = join(tempRoot, name);
@@ -50,6 +51,7 @@ const createWorkspaceAttempt = async (repoRoot: string) => {
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-delete-workspace-test-"));
+  process.env.PSTDIO_WORKSPACES_DIR = join(tempRoot, "worktrees");
   ({ app } = await createApp({ dbPath: ":memory:", storagePath: join(tempRoot, "storage") }));
 
   const projectRes = await app.request("/v1/projects", {
@@ -62,6 +64,11 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
+  if (previousWorkspacesDirEnv === undefined) {
+    delete process.env.PSTDIO_WORKSPACES_DIR;
+  } else {
+    process.env.PSTDIO_WORKSPACES_DIR = previousWorkspacesDirEnv;
+  }
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
