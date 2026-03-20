@@ -1,5 +1,12 @@
 # @pstdio/ui
 
+## 0.2.2
+
+### Patch Changes
+
+- 7289bdd: Improve chat message spacing and add scroll-area handling for rich messages and chat input.
+- c88802f: Add a configurable TicketsWorkspace with persisted display settings, filtering controls, and ticket grouping utilities.
+
 ## 0.2.1
 
 ### Patch Changes

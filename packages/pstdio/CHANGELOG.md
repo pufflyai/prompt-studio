@@ -1,5 +1,19 @@
 # pstdio
 
+## 0.2.0
+
+### Minor Changes
+
+- 7289bdd: Add worktree lifecycle hooks system. Define shell scripts in `.pstdio/hooks/<hook-name>` to run automatically during create, commit, merge, rebase, and remove events. Replaces startup_script with post-create hook.
+
+### Patch Changes
+
+- b3e224d: Recover from incomplete embedded migration extraction
+- 7289bdd: Improve chat message spacing and add scroll-area handling for rich messages and chat input.
+- c88802f: Add a configurable TicketsWorkspace with persisted display settings, filtering controls, and ticket grouping utilities.
+- 7289bdd: Align packaged runtime smoke expectations with the current bundled template seed set.
+- d245e21: guard template type updates and fallback invalid settings template routes
+
 ## 0.1.7
 
 ### Patch Changes
