@@ -1,0 +1,26 @@
+#!/bin/sh
+
+# ──────────────────────────────────────────────────────────
+# pstdio post-create hook
+# Runs after a new worktree is created for a workspace.
+#
+# DO NOT REMOVE this block — it ensures the worktree has
+# the project config and ticket context needed for agents.
+# ──────────────────────────────────────────────────────────
+
+# Copy .pstdio/config.json so the worktree is recognized as a pstdio project
+if [ -f "$PSTDIO_REPO_PATH/.pstdio/config.json" ]; then
+  mkdir -p "$PSTDIO_WORKTREE_PATH/.pstdio"
+  cp "$PSTDIO_REPO_PATH/.pstdio/config.json" "$PSTDIO_WORKTREE_PATH/.pstdio/config.json"
+fi
+
+# Pull the ticket into the worktree so agents have full context
+# Workspace shorthand is <ticket>_A<n>, extract ticket shorthand
+TICKET_SHORTHAND=$(echo "$PSTDIO_WORKSPACE" | sed 's/_A[0-9]*$//')
+if [ -n "$TICKET_SHORTHAND" ]; then
+  pstdio tickets pull --id "$TICKET_SHORTHAND" 2>/dev/null || true
+fi
+
+# ──────────────────────────────────────────────────────────
+# Add additional setup steps below.
+# ──────────────────────────────────────────────────────────

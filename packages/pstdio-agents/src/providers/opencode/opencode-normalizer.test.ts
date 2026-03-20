@@ -420,3 +420,11 @@ describe("normalizeOpencodeMessage metadata", () => {
     });
   });
 });
+
+describe("normalizeOpencodeMessage error parts", () => {
+  test("normalizes error parts into conversation messages", () => {
+    const result = normalizeOpencodeMessage(contentMsg("assistant", [{ type: "error" }]), 0);
+
+    expect(result.parts).toEqual([{ type: "error", errorType: "other" }]);
+  });
+});

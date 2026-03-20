@@ -183,4 +183,90 @@ describe("pstdio hooks", () => {
       TEST_TIMEOUT,
     );
   });
+
+  describe("default post-create hook", () => {
+    test(
+      "project init scaffolds default post-create hook",
+      () => {
+        const repo = createInitializedRepo("scaffold-hooks");
+        const hookPath = join(repo, ".pstdio", "hooks", "post-create");
+
+        expect(existsSync(hookPath)).toBe(true);
+        const content = readFileSync(hookPath, "utf8");
+        expect(content).toContain("config.json");
+        expect(content).toContain("pstdio tickets pull");
+      },
+      TEST_TIMEOUT,
+    );
+
+    test(
+      "default post-create hook copies config.json into worktree",
+      async () => {
+        const repo = createInitializedRepo("hook-copies-config");
+        const workspace = await createWorkspaceInRepo(repo);
+        expect(workspace.worktree_path).toBeTruthy();
+
+        // post-create is fire-and-forget, give it a moment
+        await new Promise((r) => setTimeout(r, 1000));
+
+        const wtConfigPath = join(workspace.worktree_path!, ".pstdio", "config.json");
+        expect(existsSync(wtConfigPath)).toBe(true);
+
+        const config = JSON.parse(readFileSync(wtConfigPath, "utf8")) as { project_id: string };
+        const repoConfig = JSON.parse(readFileSync(join(repo, ".pstdio", "config.json"), "utf8")) as {
+          project_id: string;
+        };
+        expect(config.project_id).toBe(repoConfig.project_id);
+      },
+      TEST_TIMEOUT,
+    );
+  });
+
+  describe("hook CRUD via API", () => {
+    test(
+      "creates, reads, updates, and deletes a hook via API",
+      async () => {
+        const repo = createInitializedRepo("hook-crud-api");
+        const configPath = join(repo, ".pstdio", "config.json");
+        const config = JSON.parse(readFileSync(configPath, "utf8")) as { project_id: string };
+        const projectId = config.project_id;
+
+        // create a hook via API
+        const putRes = await fetch(`${api.url}/v1/projects/${projectId}/hooks/pre-merge`, {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ content: "bun run test" }),
+        });
+        expect(putRes.status).toBe(204);
+
+        // verify file was created
+        expect(existsSync(join(repo, ".pstdio", "hooks", "pre-merge"))).toBe(true);
+        expect(readFileSync(join(repo, ".pstdio", "hooks", "pre-merge"), "utf8")).toBe("bun run test");
+
+        // list hooks and verify
+        const listRes = await fetch(`${api.url}/v1/projects/${projectId}/hooks`);
+        expect(listRes.status).toBe(200);
+        const hooks = (await listRes.json()) as Array<{ name: string; content: string | null }>;
+        const preMerge = hooks.find((h) => h.name === "pre-merge");
+        expect(preMerge?.content).toBe("bun run test");
+
+        // update the hook
+        const updateRes = await fetch(`${api.url}/v1/projects/${projectId}/hooks/pre-merge`, {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ content: "bun run test && bun run build" }),
+        });
+        expect(updateRes.status).toBe(204);
+        expect(readFileSync(join(repo, ".pstdio", "hooks", "pre-merge"), "utf8")).toBe("bun run test && bun run build");
+
+        // delete the hook
+        const delRes = await fetch(`${api.url}/v1/projects/${projectId}/hooks/pre-merge`, {
+          method: "DELETE",
+        });
+        expect(delRes.status).toBe(204);
+        expect(existsSync(join(repo, ".pstdio", "hooks", "pre-merge"))).toBe(false);
+      },
+      TEST_TIMEOUT,
+    );
+  });
 });

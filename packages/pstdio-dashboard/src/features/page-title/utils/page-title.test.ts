@@ -46,15 +46,15 @@ describe("getPageTitle", () => {
     );
   });
 
-  it("returns settings section directly for startup script", () => {
-    expect(getPageTitle("/projects/proj-1/settings", "Project Name", { settingsPanel: "startup-script" })).toBe(
-      "Project Name > Startup Script",
-    );
-  });
-
   it("returns settings section directly for danger zone", () => {
     expect(getPageTitle("/projects/proj-1/settings", "Project Name", { settingsPanel: "danger-zone" })).toBe(
       "Project Name > Danger Zone",
+    );
+  });
+
+  it("returns hook name for hook settings", () => {
+    expect(getPageTitle("/projects/proj-1/settings", "Project Name", { settingsPanel: "hook:pre-commit" })).toBe(
+      "Project Name > pre-commit",
     );
   });
 

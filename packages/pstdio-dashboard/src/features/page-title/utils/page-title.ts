@@ -18,12 +18,15 @@ const getSettingsSectionTitle = (settingsPanel?: string) => {
     }
   }
 
-  if (settingsPanel === "tags") {
-    return "Tags";
+  if (settingsPanel.startsWith("hook:")) {
+    const hookName = settingsPanel.slice("hook:".length);
+    if (hookName) {
+      return hookName;
+    }
   }
 
-  if (settingsPanel === "startup-script") {
-    return "Startup Script";
+  if (settingsPanel === "tags") {
+    return "Tags";
   }
 
   if (settingsPanel === "danger-zone") {

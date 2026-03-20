@@ -248,6 +248,19 @@ describe("resumeSession", () => {
 
     const exit = await result.process!.onExit;
     expect(exit.code).not.toBe(0);
+
+    const history = eventStore.getHistory();
+    const messagePatches = history.filter((patch: JsonPatch) => patch.path === "/messages");
+    const hasConversationError = messagePatches.some((patch) => {
+      if (!Array.isArray(patch.value)) return false;
+
+      return patch.value.some((message) => {
+        const parts = (message as SessionMessage).parts ?? [];
+        return parts.some((part) => part.type === "error");
+      });
+    });
+
+    expect(hasConversationError).toBe(true);
   });
 
   test("appends normalized error message when message POST fails", async () => {
