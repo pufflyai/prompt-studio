@@ -223,6 +223,7 @@
   "projectSettings": {
     "title": "Project Settings",
     "tags": "Tags",
+    "skills": "Skills",
     "templates": "Templates",
     "createTemplate": "Create template",
     "dangerZone": "Danger zone"

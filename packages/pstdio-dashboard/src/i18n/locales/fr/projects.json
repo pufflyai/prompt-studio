@@ -216,7 +216,8 @@
     "notFoundDescription": "Choisissez un projet dans la liste pour continuer."
   },
   "projectSettings": {
-    "title": "Paramètres du projet"
+    "title": "Paramètres du projet",
+    "skills": "Skills"
   },
   "list": {
     "projectCreated": "Projet créé",

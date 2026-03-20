@@ -64,6 +64,12 @@ describe("getPageTitle", () => {
     );
   });
 
+  it("returns skill name for skill settings", () => {
+    expect(getPageTitle("/projects/proj-1/settings", "Project Name", { settingsPanel: "skill:implement-ticket" })).toBe(
+      "Project Name > implement-ticket",
+    );
+  });
+
   it("returns Settings when no settings panel is specified", () => {
     expect(getPageTitle("/projects/proj-1/settings", "Project Name")).toBe("Project Name > Settings");
   });

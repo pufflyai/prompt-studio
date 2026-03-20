@@ -7,9 +7,11 @@ import { CreateTemplateDialog } from "../components/create-template-dialog";
 import { HookEditor } from "../components/hook-editor";
 import { ProjectDangerZone } from "../components/project-danger-zone";
 import { type SettingsSection, SettingsSidebar } from "../components/settings-sidebar";
+import { SkillViewer } from "../components/skill-viewer";
 import { TagManager } from "../components/tag-manager";
 import { TemplateEditor } from "../components/template-editor";
 import { useProjectHooks, useSaveProjectHook } from "../hooks/use-hooks";
+import { useProjectSkills } from "../hooks/use-skills";
 import { ensureValidSettingsSection, parseSettingsPanel, toSettingsPanel } from "../utils/settings-panel";
 
 export const ProjectSettings = () => {
@@ -19,6 +21,7 @@ export const ProjectSettings = () => {
   const { data: project } = useProject(projectId);
   const { data: templates } = useProjectTemplateAssets(projectId);
   const { data: hooks } = useProjectHooks(projectId);
+  const { data: skills } = useProjectSkills(projectId);
   const saveHook = useSaveProjectHook(projectId);
   const [activeSection, setActiveSection] = useState<SettingsSection | null>(() => parseSettingsPanel(panel));
   const [isCreateTemplateOpen, setIsCreateTemplateOpen] = useState(false);
@@ -57,11 +60,11 @@ export const ProjectSettings = () => {
       return;
     }
 
-    const safeSection = ensureValidSettingsSection(activeSection, templates);
+    const safeSection = ensureValidSettingsSection(activeSection, templates, skills);
     if (safeSection !== activeSection) {
       setActiveSection(safeSection);
     }
-  }, [activeSection, templates]);
+  }, [activeSection, skills, templates]);
 
   useEffect(() => {
     if (!projectId || !activeSection) {
@@ -115,6 +118,10 @@ export const ProjectSettings = () => {
       );
     }
 
+    if (typeof activeSection === "object" && "skill" in activeSection) {
+      return <SkillViewer projectId={projectId} skillName={activeSection.skill} />;
+    }
+
     return (
       <TemplateEditor
         key={activeSection.template}
@@ -131,6 +138,7 @@ export const ProjectSettings = () => {
         <SettingsSidebar
           templates={templates ?? []}
           hooks={hooks ?? []}
+          skills={skills ?? []}
           activeSection={activeSection}
           onSelectSection={setActiveSection}
           onCreateTemplate={() => setIsCreateTemplateOpen(true)}

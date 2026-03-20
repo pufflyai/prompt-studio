@@ -211,7 +211,8 @@
     "notFoundDescription": "リストからプロジェクトを選択して続行してください。"
   },
   "projectSettings": {
-    "title": "プロジェクト設定"
+    "title": "プロジェクト設定",
+    "skills": "Skills"
   },
   "list": {
     "projectCreated": "プロジェクトを作成しました",

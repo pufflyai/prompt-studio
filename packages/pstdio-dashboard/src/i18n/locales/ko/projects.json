@@ -211,7 +211,8 @@
     "notFoundDescription": "목록에서 프로젝트를 선택하여 계속하세요."
   },
   "projectSettings": {
-    "title": "프로젝트 설정"
+    "title": "프로젝트 설정",
+    "skills": "Skills"
   },
   "list": {
     "projectCreated": "프로젝트가 생성되었습니다",
