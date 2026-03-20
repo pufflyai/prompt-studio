@@ -103,9 +103,12 @@ describe("agent-configs service", () => {
     await agentConfigs.upsert("claude-code");
     await agentConfigs.upsert("opencode");
 
-    const updated = await agentConfigs.update("opencode", { is_default: true });
+    const result = await agentConfigs.update("opencode", { is_default: true });
 
-    expect(updated!.is_default).toBe(true);
+    expect(result!.updated.is_default).toBe(true);
+    expect(result!.clearedDefaults).toHaveLength(1);
+    expect(result!.clearedDefaults[0].agent_id).toBe("claude-code");
+    expect(result!.clearedDefaults[0].is_default).toBe(false);
 
     const claude = await agentConfigs.get("claude-code");
     expect(claude!.is_default).toBe(false);
@@ -116,12 +119,12 @@ describe("agent-configs service", () => {
 
     await agentConfigs.upsert("claude-code");
 
-    const updated = await agentConfigs.update("claude-code", {
+    const result = await agentConfigs.update("claude-code", {
       binary: "/usr/local/bin/claude",
       skills_dir: "/custom/skills",
     });
 
-    const config = JSON.parse(updated!.config);
+    const config = JSON.parse(result!.updated.config);
     expect(config.binary).toBe("/usr/local/bin/claude");
     expect(config.skills_dir).toBe("/custom/skills");
   });
@@ -131,9 +134,9 @@ describe("agent-configs service", () => {
 
     await agentConfigs.upsert("claude-code");
     await agentConfigs.update("claude-code", { binary: "/bin/claude" });
-    const updated = await agentConfigs.update("claude-code", { skills_dir: "/skills" });
+    const result = await agentConfigs.update("claude-code", { skills_dir: "/skills" });
 
-    const config = JSON.parse(updated!.config);
+    const config = JSON.parse(result!.updated.config);
     expect(config.binary).toBe("/bin/claude");
     expect(config.skills_dir).toBe("/skills");
   });

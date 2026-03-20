@@ -73,6 +73,9 @@ const projectsRoute = createRoute({
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "settings",
+  validateSearch: (search) => ({
+    panel: typeof search.panel === "string" ? search.panel : undefined,
+  }),
   beforeLoad: requireOnboardingComplete,
   component: Settings,
 });

@@ -33,6 +33,10 @@ const getSettingsSectionTitle = (settingsPanel?: string) => {
     return "Danger Zone";
   }
 
+  if (settingsPanel === "agents") {
+    return "Agents";
+  }
+
   return "Settings";
 };
 
@@ -102,7 +106,7 @@ export const getPageTitle = (pathname: string, projectName?: string, options: Pa
   }
 
   if (pathname === "/settings") {
-    return "Settings";
+    return getSettingsSectionTitle(options.settingsPanel);
   }
 
   if (pathname === "/onboarding") {

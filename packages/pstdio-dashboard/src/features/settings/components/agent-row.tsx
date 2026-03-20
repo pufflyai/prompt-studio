@@ -1,13 +1,16 @@
-import { Badge, Button, HStack, Stack, Text } from "@chakra-ui/react";
-import { Switch } from "@pstdio/ui";
-import { CheckCircle, Terminal, XCircle } from "lucide-react";
+import { Badge, Box, HStack, Icon, IconButton, Menu, Table, Text } from "@chakra-ui/react";
+import { MenuItem, Switch, Tooltip } from "@pstdio/ui";
+import { Circle, MoreHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
+
+const ROW_HEIGHT = "48px";
 
 interface AgentRowProps {
   name: string;
   isInstalled: boolean;
   isEnabled: boolean;
   isDefault: boolean;
+  binaryPath?: string;
   isToggling: boolean;
   onToggle: () => void;
   onSetDefault: () => void;
@@ -15,60 +18,78 @@ interface AgentRowProps {
 
 export const AgentRow = (props: AgentRowProps) => {
   const { t } = useTranslation("settings");
-  const { name, isInstalled, isEnabled, isDefault, isToggling, onToggle, onSetDefault } = props;
+  const { name, isInstalled, isEnabled, isDefault, binaryPath, isToggling, onToggle, onSetDefault } = props;
+
+  const toggleDisabled = isToggling || (!isInstalled && !isEnabled);
+  const tooltipLabel = isEnabled ? t("agentRow.toggleEnabled") : t("agentRow.toggleDisabled");
 
   return (
-    <HStack
-      justify="space-between"
-      alignItems="center"
-      px="md"
-      py="sm"
-      borderWidth="1px"
-      borderColor="border.secondary"
-      borderRadius="md"
-    >
-      <HStack gap="sm" alignItems="center">
-        <Terminal size={18} />
+    <Table.Row height={ROW_HEIGHT}>
+      <Table.Cell>
+        <HStack gap="xs">
+          <Text textStyle="label/S/medium">{name}</Text>
+          {isEnabled && isDefault && (
+            <Badge size="sm" colorPalette="blue">
+              {t("agentRow.default")}
+            </Badge>
+          )}
+        </HStack>
+      </Table.Cell>
 
-        <Stack gap="0">
-          <HStack gap="xs">
-            <Text textStyle="label/S/medium">{name}</Text>
-            {isEnabled && isDefault && (
-              <Badge size="sm" colorPalette="blue">
-                {t("agentRow.default")}
-              </Badge>
-            )}
-          </HStack>
+      <Table.Cell>
+        <Text textStyle="paragraph/S/regular" color="fg.muted" truncate>
+          {binaryPath ?? "-"}
+        </Text>
+      </Table.Cell>
 
-          <HStack gap="2xs" alignItems="center">
-            {isInstalled ? (
-              <>
-                <CheckCircle size={12} color="var(--chakra-colors-foreground-feedback-success)" />
-                <Text textStyle="paragraph/XS/regular" color="foreground.feedback.success">
-                  {t("agentRow.installed")}
-                </Text>
-              </>
-            ) : (
-              <>
-                <XCircle size={12} color="var(--chakra-colors-foreground-secondary)" />
-                <Text textStyle="paragraph/XS/regular" color="foreground.secondary">
-                  {t("agentRow.notFound")}
-                </Text>
-              </>
-            )}
-          </HStack>
-        </Stack>
-      </HStack>
+      <Table.Cell>
+        <HStack gap="2xs" alignItems="center">
+          {isInstalled ? (
+            <>
+              <Circle size={8} fill="var(--chakra-colors-fg-success)" stroke="none" />
+              <Text textStyle="paragraph/S/regular" color="fg.success">
+                {t("agentRow.installed")}
+              </Text>
+            </>
+          ) : (
+            <>
+              <Circle size={8} fill="var(--chakra-colors-fg-muted)" stroke="none" />
+              <Text textStyle="paragraph/S/regular" color="fg.muted">
+                {t("agentRow.disconnected")}
+              </Text>
+            </>
+          )}
+        </HStack>
+      </Table.Cell>
 
-      <HStack gap="sm">
-        {isEnabled && !isDefault && (
-          <Button size="xs" variant="outline" onClick={onSetDefault}>
-            {t("agentRow.setAsDefault")}
-          </Button>
-        )}
+      <Table.Cell>
+        <HStack justify="flex-end">
+          <Tooltip content={tooltipLabel}>
+            <Box display="inline-flex">
+              <Switch checked={isEnabled} onCheckedChange={onToggle} disabled={toggleDisabled} />
+            </Box>
+          </Tooltip>
+        </HStack>
+      </Table.Cell>
 
-        <Switch checked={isEnabled} onCheckedChange={onToggle} disabled={!isInstalled || isToggling} />
-      </HStack>
-    </HStack>
+      <Table.Cell width="40px">
+        <Menu.Root>
+          <Menu.Trigger asChild>
+            <IconButton aria-label={t("agentRow.options")} variant="ghost" size="xs">
+              <Icon as={MoreHorizontal} boxSize="16px" />
+            </IconButton>
+          </Menu.Trigger>
+          <Menu.Positioner>
+            <Menu.Content minW="160px" bg="bg">
+              <MenuItem
+                primaryLabel={t("agentRow.setAsDefault")}
+                isDisabled={!isEnabled || isDefault}
+                onClick={onSetDefault}
+              />
+            </Menu.Content>
+          </Menu.Positioner>
+        </Menu.Root>
+      </Table.Cell>
+    </Table.Row>
   );
 };
