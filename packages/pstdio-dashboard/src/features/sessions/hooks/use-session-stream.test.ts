@@ -1,11 +1,14 @@
-import { beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
+import { fetchSessionConversationMessages, resolveStreamEndMessages } from "./session-conversation-hydration";
 import {
   applyMessagePatch,
   clearSessionStreamCache,
   getCachedSessionEntry,
   updateCachedSessionEntry,
 } from "./session-stream-cache";
+
+const originalFetch = globalThis.fetch;
 
 const message = (id: string): SessionMessage => ({
   id,
@@ -85,6 +88,10 @@ describe("session stream cache", () => {
     clearSessionStreamCache();
   });
 
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
   it("hydrates cached session messages when revisiting a session", () => {
     updateCachedSessionEntry("s_1", { messages: [message("m1")], status: "completed" });
 
@@ -100,5 +107,30 @@ describe("session stream cache", () => {
 
     expect(getCachedSessionEntry("s_1").messages).toEqual([message("m1")]);
     expect(getCachedSessionEntry("s_2").messages).toEqual([message("m2")]);
+  });
+
+  it("hydrates from conversation API and keeps hydrated messages on end when stream has no patches", async () => {
+    const fetchMock = mock(async () => {
+      return new Response(JSON.stringify({ messages: [message("m-hydrated")] }), { status: 200 });
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    const hydrated = await fetchSessionConversationMessages("s_1");
+    expect(hydrated).toEqual([message("m-hydrated")]);
+
+    updateCachedSessionEntry("s_1", { messages: hydrated ?? [] });
+
+    const finalMessages = resolveStreamEndMessages([], getCachedSessionEntry("s_1").messages);
+    expect(finalMessages).toEqual([message("m-hydrated")]);
+  });
+
+  it("falls back gracefully when conversation hydration request fails", async () => {
+    const fetchMock = mock(async () => {
+      return new Response("boom", { status: 500 });
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    const hydrated = await fetchSessionConversationMessages("s_1");
+    expect(hydrated).toBeNull();
   });
 });

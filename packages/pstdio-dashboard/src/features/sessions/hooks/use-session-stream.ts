@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { buildApiUrl } from "@/lib/api";
 import type { SessionStatus } from "../types";
+import { fetchSessionConversationMessages, resolveStreamEndMessages } from "./session-conversation-hydration";
 import {
   applyMessagePatch,
   getCachedSessionEntry,
@@ -61,10 +62,23 @@ export const useSessionStream = (sessionId: string | null) => {
     // duplication when the modal is closed and reopened (cache + replay).
     messagesRef.current = [];
 
+    let hasPatchEvent = false;
+    let isDisposed = false;
+
+    void fetchSessionConversationMessages(sessionId).then((messages) => {
+      if (!messages || isDisposed || hasPatchEvent) {
+        return;
+      }
+
+      updateCachedSessionEntry(sessionId, { messages });
+      setState((prev) => ({ ...prev, messages }));
+    });
+
     const url = buildApiUrl(`/v1/sessions/${sessionId}/stream?attempt=${connectionAttempt}`);
     const source = new EventSource(url);
 
     source.addEventListener("patch", (event) => {
+      hasPatchEvent = true;
       const patch = JSON.parse(event.data) as JsonPatch;
       messagesRef.current = applyMessagePatch(messagesRef.current, patch);
       updateCachedSessionEntry(sessionId, { messages: messagesRef.current });
@@ -79,7 +93,10 @@ export const useSessionStream = (sessionId: string | null) => {
     source.addEventListener("end", (event) => {
       const { status } = JSON.parse(event.data) as { status: string };
       const resolvedStatus = status as SessionStatus;
-      updateCachedSessionEntry(sessionId, { messages: messagesRef.current, status: resolvedStatus });
+      const cachedMessages = getCachedSessionEntry(sessionId).messages;
+      const finalMessages = resolveStreamEndMessages(messagesRef.current, cachedMessages);
+
+      updateCachedSessionEntry(sessionId, { messages: finalMessages, status: resolvedStatus });
       setState((prev) => ({
         ...prev,
         status: resolvedStatus,
@@ -95,6 +112,7 @@ export const useSessionStream = (sessionId: string | null) => {
     };
 
     return () => {
+      isDisposed = true;
       source.close();
     };
   }, [sessionId, connectionAttempt]);
