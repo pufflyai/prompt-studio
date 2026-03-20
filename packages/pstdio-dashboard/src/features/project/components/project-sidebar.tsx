@@ -9,7 +9,6 @@ import {
   Folder,
   KanbanSquare,
   MessageCircle,
-  Newspaper,
   SettingsIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -48,7 +47,6 @@ const resolveActiveNodeId = (pathname: string, routeDoc: string | undefined, pro
   const base = `/projects/${projectId}`;
 
   if (pathname.startsWith(`${base}/tickets`)) return "tickets";
-  if (pathname.startsWith(`${base}/changelog`)) return "changelog";
   if (pathname.startsWith(`${base}/settings`)) return "settings";
   if (pathname.startsWith(`${base}/sessions`)) return "sessions";
   if (pathname.startsWith(`${base}/docs`) && routeDoc) return routeDoc;
@@ -87,25 +85,17 @@ export const ProjectSidebar = () => {
 
     sections.push({ id: "top-level", nodes: topNodes });
 
-    // Documentation group with changelog
+    // Documentation group from docs nav
     if (hasDocs) {
       const docNodes = sidebarItems.map((item, i) => docsSidebarItemToNode(item, i, projectId));
-      const changelogNode: SidebarNode = {
-        id: "changelog",
-        label: t("sidebar.projectChangelog"),
-        icon: <Newspaper size={14} />,
-        isNavigable: true,
-        href: `${basePath}/changelog`,
-        navigationIntent: { id: "navigate", payload: { path: "changelog" } },
-      };
 
       sections.push({
         id: "documentation",
         label: t("sidebar.documentation"),
-        nodes: [...docNodes, changelogNode],
+        nodes: docNodes,
       });
     } else {
-      // No docs: single documentation item, changelog hidden
+      // No docs: single documentation item
       sections.push({
         id: "documentation",
         nodes: [
