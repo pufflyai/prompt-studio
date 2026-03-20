@@ -3,6 +3,7 @@ import { Badge, MenuItem as ChakraMenuItem, Flex, Icon, Stack, Text } from "@cha
 import {
   Children,
   type ComponentProps,
+  type HTMLAttributes,
   cloneElement,
   isValidElement,
   type MouseEvent as ReactMouseEvent,
@@ -275,7 +276,7 @@ export const MenuItem = (props: MenuItemProps) => {
 
   if (asChild && children) {
     const child = Children.only(children);
-    if (!isValidElement(child)) return null;
+    if (!isValidElement<React.HTMLAttributes<HTMLElement>>(child)) return null;
 
     return (
       <ChakraMenuItem asChild {...commonProps}>
