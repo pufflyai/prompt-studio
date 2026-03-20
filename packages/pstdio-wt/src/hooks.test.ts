@@ -146,6 +146,18 @@ describe("runHook", () => {
     expect(result.stdout.trim()).toBe(repo.dir);
   });
 
+  test("kills hook that exceeds timeout", async () => {
+    writeHook(repo.dir, "post-create", "sleep 10");
+
+    const result = await runHook("post-create", { repoPath: repo.dir, worktreePath: repo.dir }, repo.dir, {
+      timeoutMs: 500,
+    });
+
+    expect(result.skipped).toBe(false);
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr).toContain("timed out");
+  }, 10_000);
+
   test("runs pre-create hook in repo root (no worktree path)", async () => {
     writeHook(repo.dir, "pre-create", "pwd");
 

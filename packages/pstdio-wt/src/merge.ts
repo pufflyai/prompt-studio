@@ -40,7 +40,7 @@ export const mergeWorktree = async (opts: {
       await git(opts.repoRoot, ["merge", "--ff-only", opts.branch]);
     }
   } catch (err) {
-    runHook("on-conflict", baseContext, opts.repoRoot);
+    void runHook("on-conflict", baseContext, opts.repoRoot).catch(() => {});
 
     if (err instanceof GitError) {
       throw new Error(`Merge of ${opts.branch} into ${target} failed: ${err.stderr}`);
@@ -50,7 +50,7 @@ export const mergeWorktree = async (opts: {
 
   const sha = await git(opts.repoRoot, ["rev-parse", "HEAD"]);
 
-  runHook("post-merge", { ...baseContext, commitSha: sha }, opts.repoRoot);
+  void runHook("post-merge", { ...baseContext, commitSha: sha }, opts.repoRoot).catch(() => {});
 
   return { merged: true, target, sha };
 };

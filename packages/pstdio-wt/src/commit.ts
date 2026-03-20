@@ -36,7 +36,7 @@ export const commitChanges = async (opts: {
 
   const sha = await git(cwd, ["rev-parse", "HEAD"]);
 
-  runHook("post-commit", { ...baseContext, commitSha: sha }, repoPath);
+  void runHook("post-commit", { ...baseContext, commitSha: sha }, repoPath).catch(() => {});
 
   return { sha, message: opts.message };
 };

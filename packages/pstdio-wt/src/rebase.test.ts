@@ -126,6 +126,27 @@ describe("rebaseOntoTarget", () => {
     );
   });
 
+  test("on-conflict hook runs when rebase fails", async () => {
+    const wtPath = join(repo.dir, "wt-rebase");
+    await createWorktree({ repoRoot: repo.dir, branch: "task/rebase-conflict", path: wtPath });
+    writeHook(repo.dir, "on-conflict", `echo "conflict" > "${repo.dir}/rebase-conflict-marker.txt"`);
+
+    // both sides modify the same file
+    await Bun.write(join(wtPath, "README.md"), "branch version");
+    await commitChanges({ worktreePath: wtPath, message: "branch change" });
+
+    await Bun.write(join(repo.dir, "README.md"), "main version");
+    await git(repo.dir, ["add", "."]);
+    await git(repo.dir, ["commit", "-m", "main change"]);
+
+    await expect(
+      rebaseOntoTarget({ repoRoot: repo.dir, branch: "task/rebase-conflict", target: "main" }),
+    ).rejects.toThrow();
+
+    await new Promise((r) => setTimeout(r, 200));
+    expect(existsSync(join(repo.dir, "rebase-conflict-marker.txt"))).toBe(true);
+  });
+
   test("post-rebase hook runs after successful rebase", async () => {
     const wtPath = join(repo.dir, "wt-rebase");
     await createWorktree({ repoRoot: repo.dir, branch: "task/rebase-post", path: wtPath });

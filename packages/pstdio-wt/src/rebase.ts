@@ -45,13 +45,14 @@ export const rebaseOntoTarget = async (opts: {
     } catch {
       // may fail if rebase didn't start
     }
+    void runHook("on-conflict", baseContext, opts.repoRoot).catch(() => {});
     if (err instanceof GitError) {
       throw new Error(`Rebase of ${opts.branch} onto ${target} failed: ${err.stderr}`);
     }
     throw err;
   }
 
-  runHook("post-rebase", baseContext, opts.repoRoot);
+  void runHook("post-rebase", baseContext, opts.repoRoot).catch(() => {});
 
   return { rebased: true, upToDate: false };
 };

@@ -64,7 +64,7 @@ export const deleteWorkspaceWithWorktree = async (input: DeleteWorkspaceInput, d
   }
 
   // post-remove runs in repo root since worktree is already deleted
-  deps.runHook("post-remove", { ...hookContext, worktreePath: undefined }, repoRoot);
+  void deps.runHook("post-remove", { ...hookContext, worktreePath: undefined }, repoRoot).catch(() => {});
 
   deps.log(`Deleted workspace ${workspaceShorthand}`);
 };

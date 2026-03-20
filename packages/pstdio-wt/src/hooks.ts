@@ -50,12 +50,24 @@ const skippedResult = (hookName: HookName): HookResult => ({
   stderr: "",
 });
 
-export const runHook = async (hookName: HookName, context: HookContext, repoPath: string): Promise<HookResult> => {
+const HOOK_TIMEOUT_MS = 60_000;
+
+type RunHookOptions = {
+  timeoutMs?: number;
+};
+
+export const runHook = async (
+  hookName: HookName,
+  context: HookContext,
+  repoPath: string,
+  options?: RunHookOptions,
+): Promise<HookResult> => {
   const scriptPath = resolveHookScript(repoPath, hookName);
   if (!scriptPath) return skippedResult(hookName);
 
   const env = buildHookEnv(hookName, context);
   const cwd = context.worktreePath ?? context.repoPath;
+  const timeoutMs = options?.timeoutMs ?? HOOK_TIMEOUT_MS;
 
   const proc = Bun.spawn(["sh", scriptPath], {
     cwd,
@@ -64,9 +76,31 @@ export const runHook = async (hookName: HookName, context: HookContext, repoPath
     env: { ...process.env, ...env },
   });
 
-  const [stdout, stderr] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
-  const exitCode = await proc.exited;
+  // allow the process to exit if the hook is fire-and-forget
+  if (!isBlockingHook(hookName)) proc.unref();
 
+  const completed = Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+
+  const timeoutPromise = new Promise<null>((resolve) => {
+    const timer = setTimeout(() => resolve(null), timeoutMs);
+    // allow the process to exit if the hook is fire-and-forget
+    if (typeof timer === "object" && "unref" in timer) timer.unref();
+  });
+  const result = await Promise.race([completed, timeoutPromise]);
+
+  if (!result) {
+    proc.kill(9);
+    await proc.exited;
+    return {
+      hook: hookName,
+      skipped: false,
+      exitCode: 1,
+      stdout: "",
+      stderr: `Hook "${hookName}" timed out after ${timeoutMs}ms\n`,
+    };
+  }
+
+  const [stdout, stderr, exitCode] = result;
   return { hook: hookName, skipped: false, exitCode, stdout, stderr };
 };
 
