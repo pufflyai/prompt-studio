@@ -1,0 +1,28 @@
+---
+import type { BlogPostMeta } from "../../components/blog/blog-list-page";
+import { BlogListPage } from "../../components/blog/blog-list-page";
+import BaseLayout from "../../layouts/base-layout.astro";
+
+interface BlogPostModule {
+  frontmatter: BlogPostMeta;
+  url: string;
+}
+
+const postModules = import.meta.glob<BlogPostModule>("./*.md", { eager: true });
+
+const sortedPosts = Object.values(postModules)
+  .map((post) => ({
+    ...post.frontmatter,
+    slug: post.url!,
+  }))
+  .sort((a, b) => new Date(b.released).getTime() - new Date(a.released).getTime());
+---
+
+<BaseLayout title="Blog | Prompt Studio" description="Guides, tips, and updates from the Prompt Studio team.">
+  <BlogListPage
+    client:load
+    headline="Blog"
+    description="Guides, tips, and updates from the Prompt Studio team."
+    posts={sortedPosts}
+  />
+</BaseLayout>
