@@ -52,12 +52,31 @@ export type {
 } from "./components/sidebar-tree/sidebar-tree.types";
 export type { SwitchProps } from "./components/switch";
 export { Switch } from "./components/switch";
+export { DisplayMenu } from "./components/tickets/display-menu";
+export { FilterMenu } from "./components/tickets/filter-menu";
 export type { TicketBoardColumn, TicketBoardColumnAction, TicketBoardItem } from "./components/tickets/ticket-board";
 export { TicketBoard } from "./components/tickets/ticket-board";
 export type { TicketCardBadge } from "./components/tickets/ticket-card";
 export { TicketCard } from "./components/tickets/ticket-card";
 export type { TicketListItem } from "./components/tickets/ticket-list";
 export { TicketList } from "./components/tickets/ticket-list";
+export { TicketsWorkspace } from "./components/tickets/tickets-workspace";
+export type {
+  DisplayProperty,
+  FilterCategory,
+  FilterState,
+  GroupingField,
+  OrderingField,
+  SortDirection,
+  ViewMode,
+  WorkspaceFilterCategory,
+  WorkspaceFilterOption,
+  WorkspaceOption,
+  WorkspaceOrdering,
+  WorkspaceSettings,
+  WorkspaceTicket,
+} from "./components/tickets/types";
+export { useTicketsWorkspaceStore } from "./components/tickets/use-workspace-store";
 export { Toaster, toaster } from "./components/toaster";
 export { Tooltip } from "./components/tooltip";
 export { psTheme } from "./theme";

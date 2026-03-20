@@ -9,7 +9,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { ChevronRight } from "lucide-react";
-import type { ComponentType, ReactNode } from "react";
+import { type ComponentType, type ReactNode, useState } from "react";
 
 import type { TicketCardBadge } from "./ticket-card";
 
@@ -43,10 +43,13 @@ const columns: ColumnDef<TicketListItem, unknown>[] = [
 export const TicketList = (props: TicketListProps) => {
   const { items, selectedItemId = null, onItemClick } = props;
 
+  const [expanded, setExpanded] = useState<ExpandedState>(true);
+
   const table = useReactTable({
     data: items,
     columns,
-    state: { expanded: true as unknown as ExpandedState },
+    state: { expanded },
+    onExpandedChange: setExpanded,
     getSubRows: (row) => row.children,
     getCoreRowModel: getCoreRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
@@ -58,6 +61,7 @@ export const TicketList = (props: TicketListProps) => {
       {table.getRowModel().rows.map((row) => {
         const item = row.original;
         const isSelected = item.id === selectedItemId;
+        const canExpand = row.getCanExpand();
 
         return (
           <HStack
@@ -71,8 +75,12 @@ export const TicketList = (props: TicketListProps) => {
             background={isSelected ? "bg.muted" : "transparent"}
             _hover={{ background: "bg.muted" }}
             onClick={() => {
-              item.onClick?.();
-              onItemClick?.(item);
+              if (canExpand) {
+                row.toggleExpanded();
+              } else {
+                item.onClick?.();
+                onItemClick?.(item);
+              }
             }}
             data-selected={isSelected ? "true" : undefined}
           >
@@ -136,28 +144,26 @@ interface ExpandToggleProps {
 
 const ExpandToggle = (props: ExpandToggleProps) => {
   const { row } = props;
+  const isExpanded = row.getIsExpanded();
 
   return (
     <Box
-      as="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        row.toggleExpanded();
-      }}
-      cursor="pointer"
       display="flex"
       alignItems="center"
       justifyContent="center"
       flexShrink={0}
       width="16px"
       height="16px"
+      data-expanded={isExpanded ? "true" : undefined}
+      aria-label={isExpanded ? "Collapse group" : "Expand group"}
     >
-      <Icon
-        as={ChevronRight}
-        boxSize="14px"
-        color="fg.muted"
-        transform={row.getIsExpanded() ? "rotate(90deg)" : "rotate(0deg)"}
-        transition="transform 0.15s ease"
+      <ChevronRight
+        size={14}
+        style={{
+          color: "var(--chakra-colors-fg-muted)",
+          transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
+          transition: "transform 0.15s ease",
+        }}
       />
     </Box>
   );
