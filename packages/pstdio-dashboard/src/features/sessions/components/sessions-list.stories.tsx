@@ -11,6 +11,7 @@ const mockSessions: Session[] = [
   {
     id: "s1",
     projectId: "p1",
+    agentSessionId: null,
     title: "Fix authentication redirect loop",
     status: "completed",
     archived: false,
@@ -21,6 +22,7 @@ const mockSessions: Session[] = [
   {
     id: "s2",
     projectId: "p1",
+    agentSessionId: null,
     title: "Add dark mode support",
     status: "in_progress",
     archived: false,
@@ -31,6 +33,7 @@ const mockSessions: Session[] = [
   {
     id: "s3",
     projectId: "p1",
+    agentSessionId: null,
     title: "Refactor database queries",
     status: "failed",
     archived: false,
@@ -41,6 +44,7 @@ const mockSessions: Session[] = [
   {
     id: "s4",
     projectId: "p1",
+    agentSessionId: null,
     title: "Implement user settings page",
     status: "completed",
     archived: false,
@@ -51,6 +55,7 @@ const mockSessions: Session[] = [
   {
     id: "s5",
     projectId: "p1",
+    agentSessionId: null,
     title: "Set up CI pipeline",
     status: "completed",
     archived: false,

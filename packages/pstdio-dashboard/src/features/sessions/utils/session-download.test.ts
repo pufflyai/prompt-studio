@@ -6,6 +6,7 @@ import { buildSessionDownload } from "./session-download";
 const session: Session = {
   id: "session-123",
   projectId: "project-1",
+  agentSessionId: null,
   title: "Fix flaky tests",
   status: "completed",
   archived: false,

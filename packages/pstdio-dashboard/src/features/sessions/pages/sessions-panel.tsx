@@ -124,6 +124,7 @@ export const SessionsPanel = () => {
               </Tooltip>
               {downloadableSession ? (
                 <SessionActionMenu
+                  agentSessionId={downloadableSession.agentSessionId}
                   onDownloadSession={() => {
                     void downloadSessionJson(downloadableSession);
                   }}

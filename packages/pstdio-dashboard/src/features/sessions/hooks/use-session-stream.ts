@@ -62,23 +62,28 @@ export const useSessionStream = (sessionId: string | null) => {
     // duplication when the modal is closed and reopened (cache + replay).
     messagesRef.current = [];
 
-    let hasPatchEvent = false;
+    let isStreaming = false;
     let isDisposed = false;
 
-    void fetchSessionConversationMessages(sessionId).then((messages) => {
-      if (!messages || isDisposed || hasPatchEvent) {
-        return;
-      }
+    void fetchSessionConversationMessages(sessionId).then((hydrated) => {
+      if (!hydrated || isDisposed) return;
 
-      updateCachedSessionEntry(sessionId, { messages });
-      setState((prev) => ({ ...prev, messages }));
+      // The conversation API fetches directly from the agent and is the
+      // most complete source. Always apply it — but during an active
+      // stream, only use it if it has more messages than what the stream
+      // has replayed so far, to avoid overwriting live patches.
+      if (isStreaming && hydrated.length <= messagesRef.current.length) return;
+
+      messagesRef.current = hydrated;
+      updateCachedSessionEntry(sessionId, { messages: hydrated });
+      setState((prev) => ({ ...prev, messages: hydrated }));
     });
 
     const url = buildApiUrl(`/v1/sessions/${sessionId}/stream?attempt=${connectionAttempt}`);
     const source = new EventSource(url);
 
     source.addEventListener("patch", (event) => {
-      hasPatchEvent = true;
+      isStreaming = true;
       const patch = JSON.parse(event.data) as JsonPatch;
       messagesRef.current = applyMessagePatch(messagesRef.current, patch);
       updateCachedSessionEntry(sessionId, { messages: messagesRef.current });
@@ -99,6 +104,7 @@ export const useSessionStream = (sessionId: string | null) => {
       updateCachedSessionEntry(sessionId, { messages: finalMessages, status: resolvedStatus });
       setState((prev) => ({
         ...prev,
+        messages: finalMessages,
         status: resolvedStatus,
         isStreaming: false,
         approvalRequest: null,

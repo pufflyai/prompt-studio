@@ -169,6 +169,37 @@ test.describe("Sessions page", () => {
     await expect(page.getByText(`Fake Agent: completed "${prompt}"`).first()).toBeVisible();
   });
 
+  test("shows conversation messages when navigating to a completed session", async ({ page, request }) => {
+    await bypassOnboarding(page);
+    const prompt = "Hydration test message";
+
+    const session = await createSessionViaApi(request, projectId, prompt);
+
+    // Wait for the fake agent to complete and persist messages
+    await page.waitForTimeout(200);
+
+    await page.goto(`/projects/${projectId}/sessions/${session.id}`);
+
+    await expect(page.getByText(prompt).first()).toBeVisible();
+    await expect(page.getByText(`Fake Agent: completed "${prompt}"`).first()).toBeVisible();
+  });
+
+  test("preserves conversation messages after page reload", async ({ page, request }) => {
+    await bypassOnboarding(page);
+    const prompt = "Reload persistence test";
+
+    const session = await createSessionViaApi(request, projectId, prompt);
+    await page.waitForTimeout(200);
+
+    await page.goto(`/projects/${projectId}/sessions/${session.id}`);
+    await expect(page.getByText(`Fake Agent: completed "${prompt}"`).first()).toBeVisible();
+
+    await page.reload();
+
+    await expect(page.getByText(prompt).first()).toBeVisible();
+    await expect(page.getByText(`Fake Agent: completed "${prompt}"`).first()).toBeVisible();
+  });
+
   test("keeps chat input focus while typing in a new session", async ({ page }) => {
     await bypassOnboarding(page);
 

@@ -5,6 +5,7 @@ import { getDateLabel, groupSessionsByDate } from "./group-sessions";
 const makeSession = (overrides: Partial<Session> & { updatedAt: string }): Session => ({
   id: "s1",
   projectId: "p1",
+  agentSessionId: null,
   title: "Test session",
   status: "completed",
   archived: false,
