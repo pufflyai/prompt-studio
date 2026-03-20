@@ -3,12 +3,6 @@ name: implement-ticket
 description: "Implement a ticket end-to-end. Use when asked to implement or complete a ticket."
 ---
 
-## User Input
-
-```text
-$ARGUMENTS
-```
-
 ## Workflow
 
 1. (Optional) Identify the target ticket shorthand from the user request (e.g. `PS-12`):
