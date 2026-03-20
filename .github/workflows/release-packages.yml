@@ -82,9 +82,11 @@ jobs:
           VERSION=$(echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -r '.[] | select(.name == "pstdio") | .version')
           if [ -n "$VERSION" ]; then
             TAG="pstdio@${VERSION}"
-            if ! gh release view "$TAG" > /dev/null 2>&1; then
-              gh release create "$TAG" --title "$TAG" --generate-notes
+            # Delete existing release if present (changesets may auto-create an immutable one)
+            if gh release view "$TAG" > /dev/null 2>&1; then
+              gh release delete "$TAG" --yes
             fi
+            gh release create "$TAG" --title "$TAG" --generate-notes
             gh release upload "$TAG" --clobber \
               packages/pstdio/dist/platforms/cli-darwin-arm64/bin/pstdio#pstdio-darwin-arm64 \
               packages/pstdio/dist/platforms/cli-darwin-x64/bin/pstdio#pstdio-darwin-x64 \

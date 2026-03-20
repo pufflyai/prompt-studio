@@ -1,0 +1,18 @@
+---
+import type { DocsPageMeta } from "../../components/docs/docs-page-shell";
+
+interface DocsModule {
+  frontmatter: DocsPageMeta;
+  url: string;
+}
+
+const docModules = import.meta.glob<DocsModule>("./*.md", { eager: true });
+
+const firstDoc = Object.values(docModules)
+  .map((mod) => ({ url: mod.url!, order: mod.frontmatter.order }))
+  .sort((a, b) => a.order - b.order)[0];
+
+if (firstDoc) {
+  return Astro.redirect(firstDoc.url);
+}
+---
