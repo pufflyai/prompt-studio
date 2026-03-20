@@ -15,6 +15,7 @@ import type {
   SessionMessagesInput,
   SessionStartInput,
 } from "../../types";
+import { normalizeErrorPart } from "../normalized-error";
 import { normalizeOpencodeMessage } from "./opencode-normalizer";
 import { createOpencodeService } from "./opencode-service";
 
@@ -97,6 +98,18 @@ const runOpencodeCommand = (args: readonly string[]) => {
   return result.stdout!.trim();
 };
 
+const toErrorMessage = (error: unknown) => {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+
+  if (typeof error === "string" && error.trim().length > 0) {
+    return error;
+  }
+
+  return "OpenCode session failed.";
+};
+
 // --- Factory ---
 
 const defaultDeps: OpencodeAgentDeps = {
@@ -136,16 +149,19 @@ export const createOpencodeAgent = (
     messageComplete: Promise<void>,
   ) => {
     let lastSnapshot = "";
+    let latestMessages: SessionMessage[] = [];
     let done = false;
     let failed = false;
+    let failureMessage = "";
 
     messageComplete
       .then(() => {
         done = true;
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         done = true;
         failed = true;
+        failureMessage = toErrorMessage(error);
       });
 
     while (!done) {
@@ -159,6 +175,7 @@ export const createOpencodeAgent = (
         if (snapshot !== lastSnapshot) {
           eventStore.push({ op: "replace", path: "/messages", value: normalized });
           lastSnapshot = snapshot;
+          latestMessages = normalized;
         }
       } catch {
         // Ignore transient fetch errors
@@ -170,8 +187,22 @@ export const createOpencodeAgent = (
       const messages = await opencode.getSessionMessages(sessionId, cwd);
       const normalized = messages.map(normalizeOpencodeMessage);
       eventStore.push({ op: "replace", path: "/messages", value: normalized });
+      latestMessages = normalized;
     } catch {
       // Ignore
+    }
+
+    if (failed) {
+      const failurePart = normalizeErrorPart({ message: failureMessage });
+      const normalizedFailureMessage: SessionMessage = {
+        id: `opencode-error-${sessionId}-${latestMessages.length}`,
+        role: "system",
+        parts: [failurePart],
+        index: latestMessages.length,
+      };
+
+      const nextMessages = [...latestMessages, normalizedFailureMessage];
+      eventStore.push({ op: "replace", path: "/messages", value: nextMessages });
     }
 
     const status = failed ? "failed" : "completed";

@@ -23,7 +23,12 @@ const formatTokenCount = (count: number) => {
   return String(count);
 };
 
-const getErrorMessage = (errorType: ErrorPart["errorType"]) => {
+const getErrorMessage = (part: ErrorPart) => {
+  if (part.message && part.message.trim().length > 0) {
+    return part.message;
+  }
+
+  const { errorType } = part;
   switch (errorType) {
     case "timeout":
       return "Session timed out.";
@@ -109,7 +114,7 @@ export function MessagePartsRenderer(props: MessagePartsProps) {
         nodes.push(
           <Box key={key} py="2">
             <Text fontSize="sm" color="fg.error">
-              {getErrorMessage(part.errorType)}
+              {getErrorMessage(part)}
             </Text>
           </Box>,
         );

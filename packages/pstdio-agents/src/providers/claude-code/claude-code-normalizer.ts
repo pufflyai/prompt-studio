@@ -1,5 +1,6 @@
 import { parseStdoutLine } from "../../parse-stdout-line";
 import type { RawLogEvent, SessionMessage, SessionMessageRole, ToolPartActionType } from "../../types";
+import { normalizeErrorPart } from "../normalized-error";
 import type { ClaudeCodeContentBlock, ClaudeCodeTranscriptEntry } from "./claude-code-types";
 
 // --- Tool classification ---
@@ -386,7 +387,7 @@ export async function* normalizeClaudeCodeStream(raw: AsyncIterable<RawLogEvent>
       yield {
         id: `stream-error-${ctx.index}`,
         role: "system",
-        parts: [{ type: "error", errorType: "other" }],
+        parts: [normalizeErrorPart({ message: event.data })],
         index: ctx.index,
       };
       ctx.index += 1;

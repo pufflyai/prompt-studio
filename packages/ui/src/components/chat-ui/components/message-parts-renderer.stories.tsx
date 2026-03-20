@@ -57,3 +57,15 @@ export const AssistantReasoningAndToolParts: Story = {
 export const UserTextParts: Story = {
   render: () => <MessagePreview message={userMessageWithText} />,
 };
+
+export const ErrorParts: Story = {
+  render: () => (
+    <MessagePreview
+      message={{
+        id: "error-1",
+        role: "system",
+        parts: [{ type: "error", errorType: "permission", message: "Permission denied while reading session output." }],
+      }}
+    />
+  ),
+};

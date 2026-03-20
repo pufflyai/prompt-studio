@@ -179,7 +179,22 @@ describe("normalizeClaudeCodeStream", () => {
     const result = await collect(normalizeClaudeCodeStream(toAsync(events)));
 
     expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({ role: "system", parts: [{ type: "error", errorType: "other" }], index: 0 });
+    expect(result[0]).toMatchObject({
+      role: "system",
+      parts: [{ type: "error", errorType: "other", message: "something broke" }],
+      index: 0,
+    });
+  });
+
+  test("maps stderr permission failures to permission error type", async () => {
+    const events: RawLogEvent[] = [{ type: "stderr", data: "Permission denied while reading file" }];
+    const result = await collect(normalizeClaudeCodeStream(toAsync(events)));
+
+    expect(result[0]).toMatchObject({
+      role: "system",
+      parts: [{ type: "error", errorType: "permission", message: "Permission denied while reading file" }],
+      index: 0,
+    });
   });
 
   test("skips non-stdout/stderr events", async () => {

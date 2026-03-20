@@ -64,6 +64,7 @@ const loadingPartSchema = z.object({
 const errorPartSchema = z.object({
   type: z.literal("error"),
   errorType: z.enum(["timeout", "crash", "permission", "other"]),
+  message: z.string().optional(),
 });
 
 const tokenUsagePartSchema = z.object({

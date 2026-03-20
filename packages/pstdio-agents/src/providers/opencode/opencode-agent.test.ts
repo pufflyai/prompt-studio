@@ -249,4 +249,38 @@ describe("resumeSession", () => {
     const exit = await result.process!.onExit;
     expect(exit.code).not.toBe(0);
   });
+
+  test("appends normalized error message when message POST fails", async () => {
+    const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+
+      if (method === "POST" && url.includes("/message")) {
+        return new Response("permission denied", { status: 403 });
+      }
+
+      if (method === "GET" && url.includes("/message")) {
+        return new Response(JSON.stringify([]));
+      }
+
+      return new Response("{}", { status: 404 });
+    };
+
+    const a = createOpencodeAgent(agentDefaults(), { ...serviceOverrides(), fetcher });
+    const eventStore = createEventStore();
+
+    const result = await a.resumeSession({ sessionId: "oc-1", prompt: "will fail", cwd: "/test" }, eventStore);
+
+    await result.process!.onExit;
+
+    const history = eventStore.getHistory();
+    const messagePatches = history.filter((p: JsonPatch) => p.path === "/messages");
+    const finalMessages = messagePatches[messagePatches.length - 1]?.value as SessionMessage[];
+
+    expect(finalMessages.at(-1)?.parts).toContainEqual({
+      type: "error",
+      errorType: "permission",
+      message: "OpenCode session.prompt failed: HTTP 403 permission denied",
+    });
+  });
 });

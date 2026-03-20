@@ -88,6 +88,12 @@ describe("sessionMessagePartSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts an error part with message", () => {
+    const part: SessionMessagePart = { type: "error", errorType: "permission", message: "Permission denied" };
+    const result = z.safeParse(sessionMessagePartSchema, part);
+    expect(result.success).toBe(true);
+  });
+
   it("accepts a token_usage part", () => {
     const part: SessionMessagePart = {
       type: "token_usage",

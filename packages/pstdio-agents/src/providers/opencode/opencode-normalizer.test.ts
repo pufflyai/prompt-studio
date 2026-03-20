@@ -256,6 +256,30 @@ describe("normalizeOpencodeMessage tool and patch parts", () => {
     });
   });
 
+  describe("error parts", () => {
+    test("normalizes explicit error part with message", () => {
+      const result = normalizeOpencodeMessage(
+        contentMsg("system", [
+          { type: "error", errorType: "permission", message: "Permission denied" } as OpencodeSessionMessagePart,
+        ]),
+        0,
+      );
+
+      expect(result.parts).toEqual([{ type: "error", errorType: "permission", message: "Permission denied" }]);
+    });
+
+    test("falls back to other error type for unknown values", () => {
+      const result = normalizeOpencodeMessage(
+        contentMsg("system", [
+          { type: "error", errorType: "unknown_problem", text: "Boom" } as OpencodeSessionMessagePart,
+        ]),
+        0,
+      );
+
+      expect(result.parts).toEqual([{ type: "error", errorType: "other", message: "Boom" }]);
+    });
+  });
+
   describe("unknown part types", () => {
     test("falls back to text if text field is present", () => {
       const result = normalizeOpencodeMessage(

@@ -41,7 +41,11 @@ export type FilePart = { type: "file"; mediaType?: string; filename?: string; ur
 
 export type LoadingPart = { type: "loading" };
 
-export type ErrorPart = { type: "error"; errorType: "timeout" | "crash" | "permission" | "other" };
+export type ErrorPart = {
+  type: "error";
+  errorType: "timeout" | "crash" | "permission" | "other";
+  message?: string;
+};
 
 export type TokenUsagePart = {
   type: "token_usage";

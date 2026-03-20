@@ -1,4 +1,5 @@
 import type { SessionMessage, SessionMessagePart, ToolPartActionType, ToolPartStatus } from "../../types";
+import { normalizeErrorPart } from "../normalized-error";
 import type { OpencodeSessionMessage, OpencodeSessionMessagePart } from "./opencode-types";
 
 // --- Part extraction ---
@@ -107,6 +108,12 @@ const normalizePart = (part: OpencodeSessionMessagePart): SessionMessagePart | n
 
     case "patch":
       return { type: "patch", hash: part.hash, files: part.files };
+
+    case "error":
+      return normalizeErrorPart({
+        errorType: part.errorType,
+        message: typeof part.message === "string" ? part.message : part.text,
+      });
 
     default:
       if (typeof part.text === "string" && part.text.trim().length > 0) {
