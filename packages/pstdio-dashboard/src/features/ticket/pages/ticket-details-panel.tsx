@@ -242,7 +242,7 @@ export const TicketDetailsPanel = () => {
         }}
       />
       <Flex flex="1" minH="0" overflow="hidden">
-        <Stack flex="1" minW="0" padding="sm" overflow="auto">
+        <Stack flex="1" minW="0">
           {isContentReady ? (
             <MarkdownEditor
               key={autosave.editorKey}

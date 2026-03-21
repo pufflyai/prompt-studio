@@ -63,8 +63,7 @@ export const TicketCard = (props: TicketCardProps) => {
       padding="sm"
       borderRadius="sm"
       borderWidth="1px"
-      width="calc(100% - 8px)"
-      alignSelf="center"
+      width="100%"
       background="bg"
       transition="box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out"
       _hover={{

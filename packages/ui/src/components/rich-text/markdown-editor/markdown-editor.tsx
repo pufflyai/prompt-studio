@@ -74,11 +74,12 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
         <ImportCodeBlocksPlugin />
         <EquationPlugin />
         <RichTextPlugin
-          contentEditable={<ContentEditable fullWidth={false} />}
+          contentEditable={<ContentEditable fullWidth={false} padding="sm" />}
           placeholder={
             placeholder ? (
               <Flex
                 position="absolute"
+                padding="sm"
                 top="0"
                 left="0"
                 right="0"

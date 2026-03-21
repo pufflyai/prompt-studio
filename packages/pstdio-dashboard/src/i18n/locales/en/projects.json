@@ -215,9 +215,6 @@
     "loadingProject": "Loading project...",
     "notFound": "Project not found",
     "notFoundDescription": "Choose a project from the list to continue.",
-    "backendConnecting": "Connecting to backend...",
-    "backendConnected": "Backend connected",
-    "backendDisconnected": "Backend unavailable",
     "showSidebar": "Show sidebar"
   },
   "projectSettings": {

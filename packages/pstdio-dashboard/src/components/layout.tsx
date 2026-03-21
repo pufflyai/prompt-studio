@@ -2,11 +2,8 @@ import { Flex } from "@chakra-ui/react";
 import { Toaster } from "@pstdio/ui";
 import { Outlet } from "@tanstack/react-router";
 import { usePageTitle } from "@/features/page-title/hooks/use-page-title";
-import { BackendConnectionDot } from "@/features/sync/backend-connection-dot";
-import { useBackendConnectionStatus } from "@/features/sync/sync-provider";
 
 export const Layout = () => {
-  const connectionStatus = useBackendConnectionStatus();
   usePageTitle();
 
   return (
@@ -14,7 +11,6 @@ export const Layout = () => {
       <Flex flex="1" minW={0} direction="column">
         <Outlet />
       </Flex>
-      <BackendConnectionDot status={connectionStatus} />
       <Toaster />
     </Flex>
   );

@@ -97,7 +97,7 @@ export const TicketBoard = (props: TicketBoardProps) => {
           key={column.id}
           data-testid={`board-column-${column.id}`}
           gap="xs"
-          _notFirst={{ borderLeft: "1px solid", borderColor: "border" }}
+          _notFirst={{ borderLeft: "1px solid", borderColor: "border.muted" }}
           background={activeColumn === column.id ? "bg.subtle" : "bg"}
           transition="background 150ms ease"
           height="100%"
@@ -111,7 +111,16 @@ export const TicketBoard = (props: TicketBoardProps) => {
         >
           <ColumnHeader column={column} onCreateStart={onCreateStart} onColumnAction={onColumnAction} />
 
-          <ScrollArea flex="1" minH="0" contentProps={{ spaceY: "sm" }}>
+          <ScrollArea
+            flex="1"
+            minH="0"
+            verticalScrollbarProps={{ margin: "0" }}
+            contentProps={{
+              spaceY: "sm",
+              ps: "xs",
+              pe: "xs",
+            }}
+          >
             {column.groups && column.groups.length > 0
               ? column.groups.map((group) => {
                   const groupId = `${column.id}::${group.key}`;
