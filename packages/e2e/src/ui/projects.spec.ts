@@ -277,7 +277,10 @@ test.describe("Project creation", () => {
       (response) =>
         response.url().endsWith("/v1/projects") && response.request().method() === "POST" && response.status() === 201,
     );
-    const createProjectButton = getCreateProjectDialog(page).getByRole("button", { name: "Create project", exact: true });
+    const createProjectButton = getCreateProjectDialog(page).getByRole("button", {
+      name: "Create project",
+      exact: true,
+    });
     await expect(createProjectButton).toBeEnabled();
     await createProjectButton.click();
     const createdProjectResponse = await createProjectDone;
@@ -343,7 +346,10 @@ test.describe("Project creation", () => {
       (response) =>
         response.url().endsWith("/v1/projects") && response.request().method() === "POST" && response.status() === 201,
     );
-    const createProjectButton = getCreateProjectDialog(page).getByRole("button", { name: "Create project", exact: true });
+    const createProjectButton = getCreateProjectDialog(page).getByRole("button", {
+      name: "Create project",
+      exact: true,
+    });
     await expect(createProjectButton).toBeEnabled();
     await createProjectButton.click();
     const createdProjectResponse = await createProjectDone;
@@ -373,7 +379,10 @@ test.describe("Project creation", () => {
     const repoRegistrationDone = page.waitForResponse(
       (res) => res.url().includes("/repos") && res.request().method() === "POST" && res.status() === 201,
     );
-    const createProjectButton = getCreateProjectDialog(page).getByRole("button", { name: "Create project", exact: true });
+    const createProjectButton = getCreateProjectDialog(page).getByRole("button", {
+      name: "Create project",
+      exact: true,
+    });
     await expect(createProjectButton).toBeEnabled();
     await createProjectButton.click();
     const createdProjectResponse = await createProjectDone;
