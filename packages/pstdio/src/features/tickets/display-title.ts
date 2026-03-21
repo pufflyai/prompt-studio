@@ -40,6 +40,11 @@ const slugify = (text: string, maxLength: number) =>
     .slice(0, maxLength)
     .replace(/-+$/, "");
 
+export const extractRawTitle = (content: string) => {
+  const body = stripFrontmatter(content);
+  return extractFirstHeading(body) ?? extractFirstNonEmptyLine(body) ?? null;
+};
+
 export const extractDisplayTitle = (content: string) => {
   const body = stripFrontmatter(content);
   const raw = extractFirstHeading(body) ?? extractFirstNonEmptyLine(body) ?? "untitled";
