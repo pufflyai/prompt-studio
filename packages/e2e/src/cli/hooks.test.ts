@@ -200,9 +200,13 @@ describe("pstdio hooks", () => {
     );
 
     test(
-      "default post-create hook copies config.json into worktree",
+      "default post-create hook copies config and agent folders into worktree",
       async () => {
         const repo = createInitializedRepo("hook-copies-config");
+        mkdirSync(join(repo, ".claude", "skills", "custom-skill"), { recursive: true });
+        writeFileSync(join(repo, ".claude", "skills", "custom-skill", "SKILL.md"), "# custom");
+        mkdirSync(join(repo, ".opencode", "skills", "custom-skill"), { recursive: true });
+        writeFileSync(join(repo, ".opencode", "skills", "custom-skill", "SKILL.md"), "# custom");
         const workspace = await createWorkspaceInRepo(repo);
         expect(workspace.worktree_path).toBeTruthy();
 
@@ -211,6 +215,10 @@ describe("pstdio hooks", () => {
 
         const wtConfigPath = join(workspace.worktree_path!, ".pstdio", "config.json");
         expect(existsSync(wtConfigPath)).toBe(true);
+        expect(existsSync(join(workspace.worktree_path!, ".claude", "skills", "custom-skill", "SKILL.md"))).toBe(true);
+        expect(existsSync(join(workspace.worktree_path!, ".opencode", "skills", "custom-skill", "SKILL.md"))).toBe(
+          true,
+        );
 
         const config = JSON.parse(readFileSync(wtConfigPath, "utf8")) as { project_id: string };
         const repoConfig = JSON.parse(readFileSync(join(repo, ".pstdio", "config.json"), "utf8")) as {

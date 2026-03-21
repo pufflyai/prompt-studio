@@ -62,7 +62,9 @@ describe("groupSessionsByDate", () => {
   });
 
   it("sorts sessions by updatedAt descending within groups", () => {
+    // Pin to noon so subtracting 1 hour never crosses a day boundary
     const now = new Date();
+    now.setHours(12, 0, 0, 0);
     const earlier = new Date(now.getTime() - 3600_000).toISOString();
     const later = now.toISOString();
 

@@ -24,6 +24,7 @@ export const agentConfigListResponseSchema = z.array(agentConfigResponseSchema);
 export const setupAgentBodySchema = z
   .object({
     agent_id: z.string().min(1).openapi({ description: "Agent identifier (e.g. claude-code, opencode)" }),
+    binary: z.string().min(1).optional().openapi({ description: "Agent binary path to store when creating config" }),
   })
   .strict();
 

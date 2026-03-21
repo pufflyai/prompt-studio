@@ -1,4 +1,4 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Table } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 
 import { AgentRow } from "./agent-row";
@@ -10,7 +10,11 @@ const meta: Meta<typeof AgentRow> = {
   decorators: [
     (Story) => (
       <Box maxWidth="640px">
-        <Story />
+        <Table.Root size="sm" variant="outline">
+          <Table.Body>
+            <Story />
+          </Table.Body>
+        </Table.Root>
       </Box>
     ),
   ],
@@ -26,6 +30,7 @@ export const EnabledDefault: Story = {
     isInstalled: true,
     isEnabled: true,
     isDefault: true,
+    binaryPath: "/usr/local/bin/claude",
     isToggling: false,
     onToggle: () => undefined,
     onSetDefault: () => undefined,
@@ -38,6 +43,7 @@ export const EnabledNotDefault: Story = {
     isInstalled: true,
     isEnabled: true,
     isDefault: false,
+    binaryPath: "/usr/local/bin/opencode",
     isToggling: false,
     onToggle: () => undefined,
     onSetDefault: () => undefined,

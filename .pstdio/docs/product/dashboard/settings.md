@@ -7,15 +7,17 @@ created: "2026-03-10T20:12:05Z"
 
 ## Summary
 
-The dashboard currently ships two settings-related surfaces: onboarding and global agent settings. A project settings route exists, but it is still a placeholder.
+The dashboard currently ships two settings-related surfaces: onboarding and global settings. Global settings now uses a sidebar + panel layout aligned with project settings, with an Agents panel focused on agent configuration.
 
 ## Problem
 
-The old settings PRD described richer settings behavior than the current dashboard exposes.
+The old settings PRD described richer settings behavior than the current dashboard exposes and did not match the current global settings information architecture.
 
 ## Goals
 
 - Document the current onboarding and global settings flows.
+- Document the global settings sidebar/panel information architecture.
+- Document manual agent add behavior and executable-path constraints.
 - Call out the project settings placeholder plainly.
 - Remove stale expectations about per-project configuration UIs.
 
@@ -33,7 +35,7 @@ Current settings routes:
 - `/settings`
 - `/projects/:projectId/settings`
 
-Onboarding blocks the main app until the user selects and configures an agent. The global settings page lists available agents and lets the user enable, disable, and set a default. The per-project settings route is a placeholder label only.
+Onboarding blocks the main app until the user selects and configures an agent. The global settings page uses a sidebar with an `Agents` panel that lists known agents, indicates which agents are configured/default, and supports enable/disable/default actions. Manual add allows creating a config for a supported agent id (`claude-code` or `opencode`) with an executable path at creation time. Existing configured executable paths are shown as read-only text in this iteration.
 
 ## Requirements
 
@@ -41,14 +43,19 @@ Onboarding blocks the main app until the user selects and configures an agent. T
 
 1. Accessing `/projects` before onboarding is complete must redirect to `/onboarding`.
 2. Onboarding must run agent setup and persist the selected agent locally before continuing.
-3. Global settings must show available agents and current agent configs.
-4. Global settings must support enabling, disabling, and setting the default agent.
-5. `/projects/:projectId/settings` must remain explicitly documented as placeholder behavior until a real UI ships.
+3. Global settings must use panel-based navigation with an `Agents` section.
+4. Global settings must show available agents and current agent configs.
+5. Global settings must support enabling, disabling, and setting the default agent.
+6. Global settings must support manually adding a supported agent config with an executable path.
+7. Existing configured executable paths must be displayed but not editable.
+8. `/projects/:projectId/settings` must remain explicitly documented as placeholder behavior until a real UI ships.
 
 ### UX Requirements
 
 - Onboarding should clearly show readiness for the supported agent.
 - Global settings should distinguish installed, enabled, and default states.
+- Global settings should expose manual-add affordance from the Agents panel.
+- Existing configured executable paths should be visible as read-only values.
 
 ### Operational Requirements
 
@@ -60,8 +67,10 @@ Onboarding blocks the main app until the user selects and configures an agent. T
 1. If onboarding has not been completed, project routes redirect to `/onboarding`.
 2. The onboarding screen currently offers a single choice: `opencode`.
 3. Continuing onboarding runs the setup mutation, stores the selected agent, marks onboarding complete, and redirects to `/projects`.
-4. The global settings page loads available agents and configured agents, then renders toggle and default actions for each one.
-5. The per-project settings route currently renders placeholder content only.
+4. The global settings page loads available agents and configured agents, then renders toggle and default actions for each one inside the `Agents` panel.
+5. Selecting `Add agent manually` opens a flow that captures supported `agent_id` and executable path, then creates/updates the config via setup endpoint.
+6. Existing configured rows show executable path text as read-only (`Not set` when absent).
+7. The per-project settings route currently renders placeholder content only.
 
 ## Interface
 
@@ -70,7 +79,7 @@ Onboarding blocks the main app until the user selects and configures an agent. T
 | Route | Purpose |
 | ----- | ------- |
 | `/onboarding` | Initial agent selection and setup. |
-| `/settings` | Global agent settings. |
+| `/settings` | Global settings shell with sidebar + `Agents` panel. |
 | `/projects/:projectId/settings` | Placeholder project settings route. |
 
 ### Current Actions
@@ -80,12 +89,15 @@ Onboarding blocks the main app until the user selects and configures an agent. T
 | Continue onboarding | Configures the selected agent and unlocks the app. |
 | Toggle agent | Enables or disables a configured agent. |
 | Set default agent | Marks the selected agent config as default. |
+| Add agent manually | Creates/updates a supported agent config with executable path at create time. |
 
 ## Rules & Constraints
 
 - Onboarding currently supports `opencode` only.
+- Manual add in global settings supports `claude-code` and `opencode` only.
 - Project settings are not implemented yet.
 - Settings behavior is global; there is no shipped per-project settings editor.
+- Existing configured executable path is read-only in global settings for this phase.
 
 ## Errors
 

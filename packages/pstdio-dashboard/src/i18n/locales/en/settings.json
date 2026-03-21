@@ -511,6 +511,13 @@
     "back": "Back",
     "agents": "Agents",
     "agentsDescription": "Registered coding agents and their availability status.",
+    "addAgentManually": "Add agent manually",
+    "manualAddTitle": "Add agent manually",
+    "manualAddAgent": "Agent",
+    "manualAddBinary": "Executable path",
+    "manualAddBinaryPlaceholder": "/usr/local/bin/agent",
+    "cancel": "Cancel",
+    "addAgent": "Add agent",
     "noAgentsFound": "No agents found.",
     "failedToDisableAgent": "Failed to disable agent",
     "failedToEnableAgent": "Failed to enable agent",
@@ -519,8 +526,17 @@
   "agentRow": {
     "default": "Default",
     "installed": "Installed",
+    "disconnected": "Disconnected",
     "notFound": "Not found",
-    "setAsDefault": "Set as default"
+    "setAsDefault": "Set as default",
+    "binary": "Executable",
+    "columnName": "Agent",
+    "columnExecutable": "Executable Path",
+    "columnStatus": "Status",
+    "columnEnabled": "Enabled",
+    "toggleEnabled": "Enabled",
+    "toggleDisabled": "Disabled",
+    "options": "Options"
   },
   "agentSettings": {
     "title": "Agent Settings",

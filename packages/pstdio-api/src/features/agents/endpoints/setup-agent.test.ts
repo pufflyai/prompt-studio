@@ -59,4 +59,43 @@ describe("POST /v1/agents", () => {
     expect(body.agent_id).toBe("opencode");
     expect(body.is_default).toBe(false);
   });
+
+  test("persists binary when creating an agent config manually", async () => {
+    const res = await app.request("/v1/agents", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ agent_id: "claude-code", binary: "/custom/bin/claude-code" }),
+    });
+    expect(res.status).toBe(201);
+
+    const body = await res.json();
+    const config = JSON.parse(body.config);
+    expect(config.binary).toBe("/custom/bin/claude-code");
+  });
+
+  test("keeps existing config values when adding binary", async () => {
+    await app.request("/v1/agents", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ agent_id: "claude-code" }),
+    });
+
+    await app.request("/v1/agents/claude-code", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ skills_dir: "/custom/skills" }),
+    });
+
+    const res = await app.request("/v1/agents", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ agent_id: "claude-code", binary: "/custom/bin/claude-code" }),
+    });
+    expect(res.status).toBe(201);
+
+    const body = await res.json();
+    const config = JSON.parse(body.config);
+    expect(config.binary).toBe("/custom/bin/claude-code");
+    expect(config.skills_dir).toBe("/custom/skills");
+  });
 });

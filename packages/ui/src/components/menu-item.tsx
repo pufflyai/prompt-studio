@@ -4,6 +4,7 @@ import {
   Children,
   type ComponentProps,
   cloneElement,
+  type HTMLAttributes,
   isValidElement,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
@@ -275,7 +276,7 @@ export const MenuItem = (props: MenuItemProps) => {
 
   if (asChild && children) {
     const child = Children.only(children);
-    if (!isValidElement(child)) return null;
+    if (!isValidElement<HTMLAttributes<HTMLElement>>(child)) return null;
 
     return (
       <ChakraMenuItem asChild {...commonProps}>
