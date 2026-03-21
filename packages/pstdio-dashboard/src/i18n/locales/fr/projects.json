@@ -206,7 +206,7 @@
     "tickets": "Tâches",
     "projectChangelog": "Journal du projet",
     "projectSettings": "Paramètres du projet",
-    "helpLinks": "Liens d'aide",
+    "help": "Aide",
     "documentationLink": "Documentation",
     "discordLink": "Discord"
   },
@@ -217,7 +217,7 @@
   },
   "projectSettings": {
     "title": "Paramètres du projet",
-    "skills": "Skills"
+    "skills": "Compétences"
   },
   "list": {
     "projectCreated": "Projet créé",
