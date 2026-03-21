@@ -188,7 +188,14 @@ export const createApp = async (options?: AppOptions) => {
 
   swagger(app);
 
-  await runStartupTasks(deps);
+  const startupAbort = new AbortController();
+  const startupDone = runStartupTasks(deps, startupAbort.signal).catch((err) => console.error("[startup] failed:", err));
 
-  return { app, close: closeDb };
+  const close = async () => {
+    startupAbort.abort();
+    await startupDone;
+    await closeDb();
+  };
+
+  return { app, close };
 };

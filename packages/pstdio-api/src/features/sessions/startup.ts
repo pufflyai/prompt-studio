@@ -29,11 +29,13 @@ const resolveSessionStatus = async (session: StaleSession, deps: Deps) => {
   }
 };
 
-export const resolveOrphanedSessions = async (deps: Deps) => {
+export const resolveOrphanedSessions = async (deps: Deps, signal?: AbortSignal) => {
   const staleSessions = await deps.sessionsService.listByStatus("in_progress");
   if (staleSessions.length === 0) return;
 
   for (const session of staleSessions) {
+    if (signal?.aborted) return;
+
     // Skip sessions that have an active process (they're legitimately in_progress)
     if (deps.sessionStore?.get(session.id)) continue;
 

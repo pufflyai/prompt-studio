@@ -6,8 +6,10 @@ import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createFakeAgent } from "pstdio-agents";
 import { createApp } from "../../app";
 import type { AppBindings } from "../../types";
+import { resolveOrphanedSessions } from "./startup";
 
 let app: OpenAPIHono<AppBindings>;
+let close: () => Promise<void>;
 let tempRoot: string;
 
 const waitForSessionStatus = async (sessionId: string, expectedStatus: string) => {
@@ -24,14 +26,15 @@ beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-startup-test-"));
   const fakeAgent = createFakeAgent();
 
-  ({ app } = await createApp({
+  ({ app, close } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     agents: [fakeAgent],
   }));
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await close();
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
@@ -93,5 +96,82 @@ describe("resolveOrphanedSessions (via createApp startup)", () => {
 
     const res = await app.request(`/v1/sessions/${session.id}`);
     expect((await res.json()).status).toBe("completed");
+  });
+});
+
+describe("resolveOrphanedSessions abort", () => {
+  test("stops resolving sessions when signal is aborted", async () => {
+    // Create a project and multiple stale sessions
+    const projectRes = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Abort Test Project" }),
+    });
+    const project = await projectRes.json();
+
+    const sessionIds: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      const createRes = await app.request("/v1/sessions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          project_id: project.id,
+          title: `stale-${i}`,
+          prompt: "hello",
+          agent: "fake",
+        }),
+      });
+      const session = await createRes.json();
+      await waitForSessionStatus(session.id, "completed");
+
+      // Force back to in_progress
+      await app.request(`/v1/sessions/${session.id}/status`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: "in_progress" }),
+      });
+      sessionIds.push(session.id);
+    }
+
+    // Abort immediately
+    const controller = new AbortController();
+    controller.abort();
+
+    const fakeAgent = createFakeAgent();
+    const deps = {
+      sessionsService: {
+        listByStatus: async () => {
+          const results = [];
+          for (const id of sessionIds) {
+            const res = await app.request(`/v1/sessions/${id}`);
+            results.push(await res.json());
+          }
+          return results;
+        },
+        updateStatus: async (id: string, status: string) => {
+          const res = await app.request(`/v1/sessions/${id}/status`, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ status }),
+          });
+          return await res.json();
+        },
+      },
+      workspacesService: { getBySessionId: async () => null },
+      reposService: {},
+      agentRegistry: { get: () => fakeAgent },
+      eventBus: { emit: () => {} },
+      sessionStore: { get: () => undefined },
+      db: {},
+    } as unknown as Parameters<typeof resolveOrphanedSessions>[0];
+
+    await resolveOrphanedSessions(deps, controller.signal);
+
+    // All sessions should still be in_progress (none resolved)
+    for (const id of sessionIds) {
+      const res = await app.request(`/v1/sessions/${id}`);
+      const body = await res.json();
+      expect(body.status).toBe("in_progress");
+    }
   });
 });
