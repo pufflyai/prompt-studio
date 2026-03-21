@@ -56,9 +56,10 @@ const resolveActiveNodeId = (pathname: string, routeDoc: string | undefined, pro
 };
 
 export const ProjectSidebar = () => {
-  const { location } = useRouterState();
+  const routerState = useRouterState();
+  const { location } = routerState;
   const { projectId } = useParams({ strict: false });
-  const routeDoc = (useRouterState().location.search as { doc?: string }).doc;
+  const routeDoc = (routerState.location.search as { doc?: string }).doc;
   const navigate = useNavigate();
   const { t } = useTranslation("projects");
   const { data: docsIndex } = useDocsIndex(projectId);
@@ -136,7 +137,7 @@ export const ProjectSidebar = () => {
     }
   };
 
-  const activeNodeId = resolveActiveNodeId(location.pathname, routeDoc as string | undefined, projectId);
+  const activeNodeId = resolveActiveNodeId(location.pathname, routeDoc, projectId);
 
   return (
     <SidebarNext
