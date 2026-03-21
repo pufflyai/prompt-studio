@@ -2,7 +2,6 @@ import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import { useEffect, useRef, useState } from "react";
 
 import { buildApiUrl } from "@/lib/api";
-import type { SessionStatus } from "../types";
 import { fetchSessionConversationMessages, resolveStreamEndMessages } from "./session-conversation-hydration";
 import {
   applyMessagePatch,
@@ -27,7 +26,6 @@ interface ApprovalRequest {
 
 interface SessionStreamState {
   messages: SessionMessage[];
-  status: SessionStatus | null;
   isStreaming: boolean;
   approvalRequest: ApprovalRequest | null;
 }
@@ -35,7 +33,6 @@ interface SessionStreamState {
 export const useSessionStream = (sessionId: string | null) => {
   const [state, setState] = useState<SessionStreamState>({
     messages: [],
-    status: null,
     isStreaming: false,
     approvalRequest: null,
   });
@@ -45,7 +42,7 @@ export const useSessionStream = (sessionId: string | null) => {
 
   useEffect(() => {
     if (!sessionId) {
-      setState({ messages: [], status: null, isStreaming: false, approvalRequest: null });
+      setState({ messages: [], isStreaming: false, approvalRequest: null });
       messagesRef.current = [];
       return;
     }
@@ -53,7 +50,6 @@ export const useSessionStream = (sessionId: string | null) => {
     const cached = getCachedSessionEntry(sessionId);
     setState({
       messages: cached.messages,
-      status: cached.status,
       isStreaming: true,
       approvalRequest: null,
     });
@@ -95,17 +91,14 @@ export const useSessionStream = (sessionId: string | null) => {
       setState((prev) => ({ ...prev, approvalRequest: request }));
     });
 
-    source.addEventListener("end", (event) => {
-      const { status } = JSON.parse(event.data) as { status: string };
-      const resolvedStatus = status as SessionStatus;
+    source.addEventListener("end", () => {
       const cachedMessages = getCachedSessionEntry(sessionId).messages;
       const finalMessages = resolveStreamEndMessages(messagesRef.current, cachedMessages);
 
-      updateCachedSessionEntry(sessionId, { messages: finalMessages, status: resolvedStatus });
+      updateCachedSessionEntry(sessionId, { messages: finalMessages });
       setState((prev) => ({
         ...prev,
         messages: finalMessages,
-        status: resolvedStatus,
         isStreaming: false,
         approvalRequest: null,
       }));

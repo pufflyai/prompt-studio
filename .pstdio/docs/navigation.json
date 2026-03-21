@@ -166,6 +166,10 @@
           "link": "/architecture/sessions"
         },
         {
+          "text": "Session Status Lifecycle",
+          "link": "/architecture/session-status-lifecycle"
+        },
+        {
           "text": "Streaming",
           "link": "/architecture/stream"
         },

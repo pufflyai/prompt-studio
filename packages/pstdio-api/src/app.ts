@@ -45,6 +45,7 @@ import { createTemplateRoutes } from "./features/templates/routes";
 import { createTicketRoutes } from "./features/tickets/routes";
 import { createWorkspaceRoutes } from "./features/workspaces/routes";
 import { logError, persistErrorLog } from "./lib/error-log";
+import { runStartupTasks } from "./startup";
 import { swagger } from "./swagger";
 import type { AppBindings } from "./types";
 
@@ -186,6 +187,8 @@ export const createApp = async (options?: AppOptions) => {
   });
 
   swagger(app);
+
+  await runStartupTasks(deps);
 
   return { app, close: closeDb };
 };
