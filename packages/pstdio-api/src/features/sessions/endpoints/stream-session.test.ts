@@ -9,20 +9,22 @@ import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
+let close: () => Promise<void>;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-stream-test-"));
 
   const fakeAgent = createFakeAgent();
 
-  ({ app } = await createApp({
+  ({ app, close } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     agents: [fakeAgent],
   }));
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await close();
   rmSync(tempRoot, { recursive: true, force: true });
 });
 

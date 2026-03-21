@@ -317,6 +317,6 @@ Clients (CLI, dashboard) use TanStack React-DB with SSE sync:
 
 ## Current gaps
 
-- Event stores are lost on API restart — no persistence layer. Stale `in_progress` sessions are resolved lazily when the stream endpoint is opened (see [Session Status Lifecycle](/architecture/session-status-lifecycle)).
+- Event stores are lost on API restart — no persistence layer. Stale `in_progress` sessions are resolved proactively by the startup sweep (`runStartupTasks` → `resolveOrphanedSessions`) when the server boots (see [Session Status Lifecycle](/architecture/session-status-lifecycle)).
 - `ticket_attempts` Zod schema exists but has no DB table (virtual/API-only).
 - Queue routes exist as placeholders.

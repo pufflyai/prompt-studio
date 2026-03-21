@@ -25,7 +25,7 @@ const resolveSessionStatus = async (session: StaleSession, deps: Deps) => {
     const messages = await agent.getMessages(session.agent_session_id, cwd ? { cwd } : undefined);
     return messages.length > 0 ? ("completed" as const) : ("failed" as const);
   } catch {
-    return "completed" as const;
+    return "failed" as const;
   }
 };
 

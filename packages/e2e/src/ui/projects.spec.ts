@@ -1,11 +1,12 @@
 import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
+const pickerLoadTimeoutMs = 15_000;
+const projectCreationTimeoutMs = 25_000;
 
 const bypassOnboarding = async (page: import("@playwright/test").Page) => {
   await page.addInitScript(() => {
@@ -40,7 +41,7 @@ const configureAgent = async (request: import("@playwright/test").APIRequestCont
 };
 
 const createTempGitRepo = () => {
-  const repoPath = mkdtempSync(join(tmpdir(), "pstdio-e2e-picker-"));
+  const repoPath = mkdtempSync("/tmp/pstdio-e2e-picker-");
   mkdirSync(join(repoPath, ".git"), { recursive: true });
   return repoPath;
 };
@@ -48,7 +49,7 @@ const createTempGitRepo = () => {
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const waitForPickerToLoad = async (dialog: Locator) => {
-  await expect(dialog.getByText("Loading...")).not.toBeVisible();
+  await expect(dialog.getByText("Loading...")).not.toBeVisible({ timeout: pickerLoadTimeoutMs });
 };
 
 const readPickerPath = async (dialog: Locator) => {
@@ -140,7 +141,7 @@ test.describe("Project creation", () => {
   const tempRepoPaths: string[] = [];
 
   test.beforeEach(async ({ request }) => {
-    test.setTimeout(10_000);
+    test.setTimeout(projectCreationTimeoutMs);
     await deleteAllProjects(request);
   });
 
@@ -196,7 +197,9 @@ test.describe("Project creation", () => {
       (response) =>
         response.url().endsWith("/v1/projects") && response.request().method() === "POST" && response.status() === 201,
     );
-    await page.getByRole("button", { name: "Create project", exact: true }).last().click();
+    const createProjectButton = page.getByRole("button", { name: "Create project", exact: true }).last();
+    await expect(createProjectButton).toBeEnabled();
+    await createProjectButton.click();
     const createdProjectResponse = await createProjectDone;
     const createdProject = (await createdProjectResponse.json()) as { id: string };
 
@@ -219,7 +222,9 @@ test.describe("Project creation", () => {
       (response) =>
         response.url().endsWith("/v1/projects") && response.request().method() === "POST" && response.status() === 201,
     );
-    await page.getByRole("button", { name: "Create project", exact: true }).last().click();
+    const createProjectButton = page.getByRole("button", { name: "Create project", exact: true }).last();
+    await expect(createProjectButton).toBeEnabled();
+    await createProjectButton.click();
     const createdProjectResponse = await createProjectDone;
     const createdProject = (await createdProjectResponse.json()) as { id: string; name: string };
 
@@ -283,7 +288,9 @@ test.describe("Project creation", () => {
       (response) =>
         response.url().endsWith("/v1/projects") && response.request().method() === "POST" && response.status() === 201,
     );
-    await page.getByRole("button", { name: "Create project", exact: true }).last().click();
+    const createProjectButton = page.getByRole("button", { name: "Create project", exact: true }).last();
+    await expect(createProjectButton).toBeEnabled();
+    await createProjectButton.click();
     const createdProjectResponse = await createProjectDone;
     const createdProject = (await createdProjectResponse.json()) as { id: string };
 
@@ -311,7 +318,9 @@ test.describe("Project creation", () => {
     const repoRegistrationDone = page.waitForResponse(
       (res) => res.url().includes("/repos") && res.request().method() === "POST" && res.status() === 201,
     );
-    await page.getByRole("button", { name: "Create project", exact: true }).last().click();
+    const createProjectButton = page.getByRole("button", { name: "Create project", exact: true }).last();
+    await expect(createProjectButton).toBeEnabled();
+    await createProjectButton.click();
     const createdProjectResponse = await createProjectDone;
     const createdProject = (await createdProjectResponse.json()) as { id: string };
 

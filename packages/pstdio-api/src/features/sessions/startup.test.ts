@@ -175,3 +175,128 @@ describe("resolveOrphanedSessions abort", () => {
     }
   });
 });
+
+describe("resolveOrphanedSessions resolution", () => {
+  test("updates orphaned in_progress session to completed and emits sessions set event", async () => {
+    const staleSession = {
+      id: "session-completed",
+      agent: null,
+      agent_session_id: null,
+      project_id: null,
+    };
+    const updatedSession = { ...staleSession, status: "completed" };
+    const emitted: unknown[] = [];
+
+    const deps = {
+      sessionsService: {
+        listByStatus: async () => [staleSession],
+        updateStatus: async (id: string, status: string) => {
+          expect(id).toBe(staleSession.id);
+          expect(status).toBe("completed");
+          return updatedSession;
+        },
+      },
+      workspacesService: { getBySessionId: async () => null },
+      reposService: {},
+      agentRegistry: { get: () => null },
+      eventBus: {
+        emit: (...args: unknown[]) => {
+          emitted.push(args);
+        },
+      },
+      sessionStore: { get: () => undefined },
+      db: {},
+    } as unknown as Parameters<typeof resolveOrphanedSessions>[0];
+
+    await resolveOrphanedSessions(deps);
+
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0]).toEqual(["sessions", "set", updatedSession]);
+  });
+
+  test("updates orphaned in_progress session to failed when agent has no messages and emits sessions set event", async () => {
+    const staleSession = {
+      id: "session-failed",
+      agent: "fake",
+      agent_session_id: "agent-session-failed",
+      project_id: null,
+    };
+    const updatedSession = { ...staleSession, status: "failed" };
+    const emitted: unknown[] = [];
+
+    const deps = {
+      sessionsService: {
+        listByStatus: async () => [staleSession],
+        updateStatus: async (id: string, status: string) => {
+          expect(id).toBe(staleSession.id);
+          expect(status).toBe("failed");
+          return updatedSession;
+        },
+      },
+      workspacesService: { getBySessionId: async () => null },
+      reposService: {},
+      agentRegistry: {
+        get: () =>
+          ({
+            getMessages: async () => [],
+          }) as { getMessages: (sessionId: string, options?: { cwd?: string }) => Promise<unknown[]> },
+      },
+      eventBus: {
+        emit: (...args: unknown[]) => {
+          emitted.push(args);
+        },
+      },
+      sessionStore: { get: () => undefined },
+      db: {},
+    } as unknown as Parameters<typeof resolveOrphanedSessions>[0];
+
+    await resolveOrphanedSessions(deps);
+
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0]).toEqual(["sessions", "set", updatedSession]);
+  });
+
+  test("updates orphaned in_progress session to failed when agent message lookup throws and emits sessions set event", async () => {
+    const staleSession = {
+      id: "session-fetch-error",
+      agent: "fake",
+      agent_session_id: "agent-session-fetch-error",
+      project_id: null,
+    };
+    const updatedSession = { ...staleSession, status: "failed" };
+    const emitted: unknown[] = [];
+
+    const deps = {
+      sessionsService: {
+        listByStatus: async () => [staleSession],
+        updateStatus: async (id: string, status: string) => {
+          expect(id).toBe(staleSession.id);
+          expect(status).toBe("failed");
+          return updatedSession;
+        },
+      },
+      workspacesService: { getBySessionId: async () => null },
+      reposService: {},
+      agentRegistry: {
+        get: () =>
+          ({
+            getMessages: async () => {
+              throw new Error("agent unavailable");
+            },
+          }) as { getMessages: (sessionId: string, options?: { cwd?: string }) => Promise<unknown[]> },
+      },
+      eventBus: {
+        emit: (...args: unknown[]) => {
+          emitted.push(args);
+        },
+      },
+      sessionStore: { get: () => undefined },
+      db: {},
+    } as unknown as Parameters<typeof resolveOrphanedSessions>[0];
+
+    await resolveOrphanedSessions(deps);
+
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0]).toEqual(["sessions", "set", updatedSession]);
+  });
+});
