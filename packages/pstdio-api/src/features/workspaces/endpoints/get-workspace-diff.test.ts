@@ -148,4 +148,35 @@ describe("GET /v1/workspaces/:id/diff", () => {
     expect(featureFile.change).toBe("added");
     expect(featureFile.newContent).toBe("feature\n");
   });
+
+  test("fork_point mode keeps diff after fast-forward merge", async () => {
+    const { workspace, repoRoot } = await createWorkspaceWithDiff("diff-fork-point-fast-forward");
+
+    writeFileSync(join(workspace.worktree_path, "feature.txt"), "feature\n");
+    execSync("git add .", { cwd: workspace.worktree_path, stdio: "pipe" });
+    execSync('git commit -m "add feature"', { cwd: workspace.worktree_path, stdio: "pipe" });
+
+    const workspaceBranch = execSync("git rev-parse --abbrev-ref HEAD", {
+      cwd: workspace.worktree_path,
+      stdio: "pipe",
+    })
+      .toString()
+      .trim();
+    const defaultBranch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: repoRoot, stdio: "pipe" })
+      .toString()
+      .trim();
+
+    rmSync(join(repoRoot, ".pstdio"), { recursive: true, force: true });
+    execSync(`git checkout ${defaultBranch}`, { cwd: repoRoot, stdio: "pipe" });
+    execSync(`git merge --ff-only ${workspaceBranch}`, { cwd: repoRoot, stdio: "pipe" });
+
+    const res = await app.request(`/v1/workspaces/${workspace.id}/diff?mode=fork_point`);
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    const featureFile = body.files.find((f: { filePath: string }) => f.filePath === "feature.txt");
+    expect(featureFile).toBeDefined();
+    expect(featureFile.change).toBe("added");
+    expect(featureFile.newContent).toBe("feature\n");
+  });
 });

@@ -52,11 +52,39 @@ export const getWorkspaceDiffRoute = createRoute({
 // Workspace branches are created via `git worktree add -b <branch> <path> <base>`.
 // The base is the commit the branch forked from. We find it by looking for the
 // merge-base between HEAD and the repo's default branch (main/master).
+const resolveBranchStart = async (worktreePath: string, head: string) => {
+  try {
+    const branch = await git(worktreePath, ["rev-parse", "--abbrev-ref", "HEAD"]);
+    if (branch === "HEAD") return null;
+
+    const reflog = await git(worktreePath, ["reflog", "show", "--format=%H", branch]);
+    const entries = reflog.split("\n").filter(Boolean);
+    const start = entries[entries.length - 1];
+    if (!start || start === head) return null;
+
+    return start;
+  } catch {
+    return null;
+  }
+};
+
 const resolveBase = async (worktreePath: string) => {
+  const head = await git(worktreePath, ["rev-parse", "HEAD"]).catch(() => "HEAD");
+
   // Try common default branch names
   for (const candidate of ["main", "master"]) {
     try {
-      return await git(worktreePath, ["merge-base", "HEAD", candidate]);
+      const mergeBase = await git(worktreePath, ["merge-base", "HEAD", candidate]);
+      if (mergeBase !== head) {
+        return mergeBase;
+      }
+
+      const branchStart = await resolveBranchStart(worktreePath, head);
+      if (branchStart) {
+        return branchStart;
+      }
+
+      return mergeBase;
     } catch {
       // branch doesn't exist, try next
     }
