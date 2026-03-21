@@ -28,6 +28,10 @@ test("list returns default statuses seeded on project creation", async () => {
   expect(statuses.length).toBe(6);
   expect(statuses[0].name).toBe("backlog");
   expect(statuses[0].is_default).toBe(true);
+
+  const done = statuses.find((status) => status.name === "done");
+  expect(done?.can_create).toBe(false);
+  expect(done?.column_actions).toBe(JSON.stringify(["archive_all"]));
 });
 
 test("create adds a new status with next sort_order", async () => {
@@ -35,6 +39,8 @@ test("create adds a new status with next sort_order", async () => {
 
   expect(created.name).toBe("triaging");
   expect(created.sort_order).toBe(7); // 6 defaults + 1
+  expect(created.can_create).toBe(false);
+  expect(created.column_actions).toBe("[]");
 
   const statuses = await service.list(projectId);
   expect(statuses.length).toBe(7);

@@ -14,7 +14,6 @@ const DEFAULT_TICKET_STATUSES = [
     can_drag_out: true,
     can_drag_in: true,
     can_create: true,
-    can_attempt_on_drop: false,
     column_actions: [],
   },
   {
@@ -25,7 +24,6 @@ const DEFAULT_TICKET_STATUSES = [
     can_drag_out: true,
     can_drag_in: true,
     can_create: false,
-    can_attempt_on_drop: false,
     column_actions: [],
   },
   {
@@ -36,7 +34,6 @@ const DEFAULT_TICKET_STATUSES = [
     can_drag_out: false,
     can_drag_in: true,
     can_create: false,
-    can_attempt_on_drop: true,
     column_actions: [],
   },
   {
@@ -47,7 +44,6 @@ const DEFAULT_TICKET_STATUSES = [
     can_drag_out: true,
     can_drag_in: true,
     can_create: false,
-    can_attempt_on_drop: false,
     column_actions: [],
   },
   {
@@ -58,7 +54,6 @@ const DEFAULT_TICKET_STATUSES = [
     can_drag_out: true,
     can_drag_in: true,
     can_create: false,
-    can_attempt_on_drop: false,
     column_actions: [],
   },
   {
@@ -69,7 +64,6 @@ const DEFAULT_TICKET_STATUSES = [
     can_drag_out: true,
     can_drag_in: true,
     can_create: false,
-    can_attempt_on_drop: false,
     column_actions: ["archive_all"],
   },
 ] as const;
@@ -119,7 +113,6 @@ export const createProjectsService = (db: DbClient) => {
         can_drag_out: status.can_drag_out,
         can_drag_in: status.can_drag_in,
         can_create: status.can_create,
-        can_attempt_on_drop: status.can_attempt_on_drop,
         column_actions: JSON.stringify(status.column_actions),
         created_at: timestamp,
         updated_at: timestamp,

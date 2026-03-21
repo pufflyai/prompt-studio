@@ -1,5 +1,6 @@
 import { afterAll, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
+import { createStatusesService } from "../statuses/statuses";
 import { createProjectsService } from "./projects";
 
 let close: () => Promise<void>;
@@ -39,4 +40,23 @@ test("projects service supports basic CRUD", async () => {
   const removed = await projects.remove(created.id);
   expect(removed).toBe(true);
   expect(await projects.get(created.id)).toBeNull();
+});
+
+test("projects seed statuses with correct column controls", async () => {
+  const { db, close: close2 } = await createDb({ path: ":memory:" });
+  const projectsService = createProjectsService(db);
+  const seededProject = await projectsService.create({ name: "Seeded" });
+  const statusesService = createStatusesService(db);
+  const seededStatuses = await statusesService.list(seededProject.id);
+
+  expect(seededStatuses.length).toBe(6);
+
+  const backlog = seededStatuses.find((status) => status.name === "backlog");
+  const done = seededStatuses.find((status) => status.name === "done");
+
+  expect(backlog?.can_create).toBe(true);
+  expect(done?.can_create).toBe(false);
+  expect(done?.column_actions).toBe(JSON.stringify(["archive_all"]));
+
+  await close2();
 });
