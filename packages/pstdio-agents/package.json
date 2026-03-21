@@ -7,14 +7,15 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "bunx tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && bunx biome check .",
     "format": "bunx biome check --write .",
     "test": "bun test --silent",
     "test:coverage": "bun test --coverage"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "typescript": "~5.9.3"
   },
   "dependencies": {
     "zod": "^4.3.6"

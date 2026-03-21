@@ -11,6 +11,9 @@ export interface WorkspacePanelMenuOption {
   icon?: React.ComponentType<{ size?: number }>;
 }
 
+type MenuContent = "branches" | "repos";
+type ProjectsTranslate = (key: string) => string;
+
 export const getSelectedLabel = (
   options: WorkspacePanelMenuOption[],
   selectedValue: string,
@@ -43,6 +46,125 @@ interface RepoBrowserProps {
   isBranchesLoading?: boolean;
 }
 
+interface RepoBrowserMenuOptionsProps {
+  menuContent: MenuContent;
+  repositoryOptions: WorkspacePanelMenuOption[];
+  selectedRepository: string;
+  filteredRepositoryOptions: WorkspacePanelMenuOption[];
+  isReposLoading: boolean;
+  branchOptions: WorkspacePanelMenuOption[];
+  selectedBranch: string;
+  filteredBranchOptions: WorkspacePanelMenuOption[];
+  isBranchesLoading: boolean;
+  onSelectRepository: (repoId: string) => void;
+  onSelectBranch: (branch: string) => void;
+  t: ProjectsTranslate;
+}
+
+const getSelectedRepositoryLabel = (
+  t: ProjectsTranslate,
+  repositoryOptions: WorkspacePanelMenuOption[],
+  selectedRepository: string,
+  isReposLoading: boolean,
+) => {
+  if (isReposLoading) return t("chatInput.repo.loading");
+  return getSelectedLabel(
+    repositoryOptions,
+    selectedRepository,
+    t("chatInput.repo.selectLabel"),
+    t("chatInput.repo.none"),
+  );
+};
+
+const getSelectedBranchLabel = (
+  t: ProjectsTranslate,
+  branchOptions: WorkspacePanelMenuOption[],
+  selectedBranch: string,
+  isBranchesLoading: boolean,
+) => {
+  if (isBranchesLoading) return t("chatInput.branch.loading");
+  return getSelectedLabel(branchOptions, selectedBranch, t("chatInput.branch.selectLabel"), t("chatInput.branch.none"));
+};
+
+const getSearchPlaceholder = (menuContent: MenuContent, t: ProjectsTranslate) => {
+  if (menuContent === "repos") return t("chatInput.repo.searchPlaceholder");
+  return t("chatInput.branch.searchPlaceholder");
+};
+
+const shouldShowSearch = (
+  menuContent: MenuContent,
+  repositoryOptions: WorkspacePanelMenuOption[],
+  branchOptions: WorkspacePanelMenuOption[],
+) => {
+  if (menuContent === "repos") return repositoryOptions.length > 10;
+  return branchOptions.length > 10;
+};
+
+const RepoBrowserMenuOptions = (props: RepoBrowserMenuOptionsProps) => {
+  const {
+    menuContent,
+    repositoryOptions,
+    selectedRepository,
+    filteredRepositoryOptions,
+    isReposLoading,
+    branchOptions,
+    selectedBranch,
+    filteredBranchOptions,
+    isBranchesLoading,
+    onSelectRepository,
+    onSelectBranch,
+    t,
+  } = props;
+
+  if (menuContent === "repos") {
+    if (isReposLoading) {
+      return <MenuItem primaryLabel={t("chatInput.repo.loading")} leftIcon={FolderGit2} isDisabled />;
+    }
+
+    if (filteredRepositoryOptions.length > 0) {
+      return filteredRepositoryOptions.map((option) => (
+        <MenuItem
+          key={option.value}
+          id={option.value}
+          primaryLabel={option.label}
+          leftIcon={option.icon ?? FolderGit2}
+          isSelected={option.value === selectedRepository}
+          onClick={() => onSelectRepository(option.value)}
+        />
+      ));
+    }
+
+    if (repositoryOptions.length > 0) {
+      return <MenuItem primaryLabel={t("chatInput.repo.noSearchResults")} leftIcon={FolderGit2} isDisabled />;
+    }
+
+    return <MenuItem primaryLabel={t("chatInput.repo.noneLinked")} leftIcon={FolderGit2} isDisabled />;
+  }
+
+  if (isBranchesLoading) {
+    return <MenuItem primaryLabel={t("chatInput.branch.loading")} leftIcon={GitBranch} isDisabled />;
+  }
+
+  if (filteredBranchOptions.length > 0) {
+    return filteredBranchOptions.map((option) => (
+      <MenuItem
+        key={option.value}
+        id={option.value}
+        primaryLabel={option.label}
+        leftIcon={option.icon ?? GitBranch}
+        isSelected={option.value === selectedBranch}
+        onClick={() => onSelectBranch(option.value)}
+      />
+    ));
+  }
+
+  if (branchOptions.length > 0) {
+    return <MenuItem primaryLabel={t("chatInput.branch.noSearchResults")} leftIcon={GitBranch} isDisabled />;
+  }
+
+  return <MenuItem primaryLabel={t("chatInput.branch.noneAvailable")} leftIcon={GitBranch} isDisabled />;
+};
+
 export const RepoBrowser = (props: RepoBrowserProps) => {
   const {
     repositoryOptions,
@@ -57,32 +179,18 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
   } = props;
   const { t } = useTranslation("projects");
 
-  const selectedRepositoryLabel = isReposLoading
-    ? t("chatInput.repo.loading")
-    : getSelectedLabel(
-        repositoryOptions,
-        selectedRepository,
-        t("chatInput.repo.selectLabel"),
-        t("chatInput.repo.none"),
-      );
-
-  const selectedBranchLabel = isBranchesLoading
-    ? t("chatInput.branch.loading")
-    : getSelectedLabel(branchOptions, selectedBranch, t("chatInput.branch.selectLabel"), t("chatInput.branch.none"));
+  const selectedRepositoryLabel = getSelectedRepositoryLabel(t, repositoryOptions, selectedRepository, isReposLoading);
+  const selectedBranchLabel = getSelectedBranchLabel(t, branchOptions, selectedBranch, isBranchesLoading);
 
   const isMenuDisabled = isDisabled || (repositoryOptions.length === 0 && branchOptions.length === 0);
-  const defaultMenuContent = branchOptions.length > 0 ? "branches" : "repos";
-  const [menuContent, setMenuContent] = useState<"branches" | "repos">(defaultMenuContent);
+  const defaultMenuContent: MenuContent = branchOptions.length > 0 ? "branches" : "repos";
+  const [menuContent, setMenuContent] = useState<MenuContent>(defaultMenuContent);
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const isShowingRepos = menuContent === "repos";
   const filteredRepositoryOptions = filterMenuOptions(repositoryOptions, searchQuery);
   const filteredBranchOptions = filterMenuOptions(branchOptions, searchQuery);
-
-  const searchPlaceholder = isShowingRepos
-    ? t("chatInput.repo.searchPlaceholder")
-    : t("chatInput.branch.searchPlaceholder");
-  const shouldShowSearchInput = isShowingRepos ? repositoryOptions.length > 10 : branchOptions.length > 10;
+  const searchPlaceholder = getSearchPlaceholder(menuContent, t);
+  const shouldShowSearchInput = shouldShowSearch(menuContent, repositoryOptions, branchOptions);
 
   const handleOpenChange = (details: { open: boolean }) => {
     setOpen(details.open);
@@ -181,45 +289,22 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
           <Box
             maxH="18rem"
             overflowY="auto"
-            data-testid={isShowingRepos ? "workspace-repo-options" : "workspace-repo-branch-options"}
+            data-testid={menuContent === "repos" ? "workspace-repo-options" : "workspace-repo-branch-options"}
           >
-            {isShowingRepos ? (
-              isReposLoading ? (
-                <MenuItem primaryLabel={t("chatInput.repo.loading")} leftIcon={FolderGit2} isDisabled />
-              ) : filteredRepositoryOptions.length > 0 ? (
-                filteredRepositoryOptions.map((option) => (
-                  <MenuItem
-                    key={option.value}
-                    id={option.value}
-                    primaryLabel={option.label}
-                    leftIcon={option.icon ?? FolderGit2}
-                    isSelected={option.value === selectedRepository}
-                    onClick={() => handleSelectRepository(option.value)}
-                  />
-                ))
-              ) : repositoryOptions.length > 0 ? (
-                <MenuItem primaryLabel={t("chatInput.repo.noSearchResults")} leftIcon={FolderGit2} isDisabled />
-              ) : (
-                <MenuItem primaryLabel={t("chatInput.repo.noneLinked")} leftIcon={FolderGit2} isDisabled />
-              )
-            ) : isBranchesLoading ? (
-              <MenuItem primaryLabel={t("chatInput.branch.loading")} leftIcon={GitBranch} isDisabled />
-            ) : filteredBranchOptions.length > 0 ? (
-              filteredBranchOptions.map((option) => (
-                <MenuItem
-                  key={option.value}
-                  id={option.value}
-                  primaryLabel={option.label}
-                  leftIcon={option.icon ?? GitBranch}
-                  isSelected={option.value === selectedBranch}
-                  onClick={() => handleSelectBranch(option.value)}
-                />
-              ))
-            ) : branchOptions.length > 0 ? (
-              <MenuItem primaryLabel={t("chatInput.branch.noSearchResults")} leftIcon={GitBranch} isDisabled />
-            ) : (
-              <MenuItem primaryLabel={t("chatInput.branch.noneAvailable")} leftIcon={GitBranch} isDisabled />
-            )}
+            <RepoBrowserMenuOptions
+              menuContent={menuContent}
+              repositoryOptions={repositoryOptions}
+              selectedRepository={selectedRepository}
+              filteredRepositoryOptions={filteredRepositoryOptions}
+              isReposLoading={isReposLoading}
+              branchOptions={branchOptions}
+              selectedBranch={selectedBranch}
+              filteredBranchOptions={filteredBranchOptions}
+              isBranchesLoading={isBranchesLoading}
+              onSelectRepository={handleSelectRepository}
+              onSelectBranch={handleSelectBranch}
+              t={t}
+            />
           </Box>
         </Menu.Content>
       </Menu.Positioner>

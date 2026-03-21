@@ -163,6 +163,13 @@ test.describe("Project settings", () => {
     expect(skills.length).toBeGreaterThan(0);
     const selectedSkill = skills[0];
     const selectedSkillDetails = await getSkillViaApi(request, project.id, selectedSkill.name);
+    const expectedContentSnippet = selectedSkillDetails.content
+      .replace(/^---[\s\S]*?---\s*/, "")
+      .split("\n")
+      .map((line) => line.trim())
+      .map((line) => line.replace(/^#+\s*/, ""))
+      .find((line) => line.length > 0);
+    expect(expectedContentSnippet).toBeDefined();
 
     await bypassOnboarding(page);
     await page.goto(`/projects/${project.id}/settings`);
@@ -171,6 +178,6 @@ test.describe("Project settings", () => {
 
     await expect(page.getByTestId("project-skill-name")).toContainText(selectedSkill.name);
     await expect(page.getByTestId("project-skill-description")).toContainText(selectedSkillDetails.description);
-    await expect(page.getByTestId("project-skill-content")).toContainText("User Input");
+    await expect(page.getByTestId("project-skill-content")).toContainText(expectedContentSnippet!);
   });
 });
