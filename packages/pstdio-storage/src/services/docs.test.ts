@@ -109,6 +109,37 @@ test("getIndex returns empty missingLinks when all links exist", async () => {
   }
 });
 
+test("getIndex preserves template metadata on sidebar items", async () => {
+  const fixture = createFixture();
+  try {
+    writeFileSync(
+      join(fixture.docsDir, "navigation.json"),
+      JSON.stringify({
+        sidebar: [
+          {
+            text: "Release notes",
+            link: "/guide/getting-started",
+            template: "changelog",
+          },
+        ],
+      }),
+      "utf8",
+    );
+
+    const index = await fixture.docs.getIndex("project-1");
+    expect(index.sidebar).toEqual([
+      {
+        text: "Release notes",
+        link: "/guide/getting-started",
+        template: "changelog",
+        items: undefined,
+      },
+    ]);
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
 test("getDocument throws when document does not exist", async () => {
   const fixture = createFixture();
   try {

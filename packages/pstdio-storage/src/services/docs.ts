@@ -7,6 +7,7 @@ type DocsErrorCode = "DOCS_CONFIG_NOT_FOUND" | "DOCS_CONFIG_INVALID" | "DOCS_LIN
 type DocsSidebarItem = {
   text: string;
   link?: string;
+  template?: string;
   items?: DocsSidebarItem[];
 };
 
@@ -57,6 +58,7 @@ const parseSidebarItem = (value: unknown, location: string): DocsSidebarItem => 
 
   const text = typeof value.text === "string" ? value.text.trim() : "";
   const link = typeof value.link === "string" ? value.link.trim() : undefined;
+  const template = typeof value.template === "string" ? value.template.trim() : undefined;
   const items = Array.isArray(value.items)
     ? value.items.map((item, index) => parseSidebarItem(item, `${location}.items[${index}]`))
     : undefined;
@@ -73,7 +75,11 @@ const parseSidebarItem = (value: unknown, location: string): DocsSidebarItem => 
     throw createDocsError("DOCS_CONFIG_INVALID", `Sidebar item at ${location} has an empty link.`);
   }
 
-  return { text, link, items };
+  if (template === "") {
+    throw createDocsError("DOCS_CONFIG_INVALID", `Sidebar item at ${location} has an empty template.`);
+  }
+
+  return { text, link, ...(template ? { template } : {}), items };
 };
 
 const parseSidebar = (parsed: unknown) => {

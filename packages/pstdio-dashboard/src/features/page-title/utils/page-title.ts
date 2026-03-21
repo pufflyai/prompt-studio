@@ -81,8 +81,6 @@ const getProjectSectionTitle = (pathSegments: string[], options: PageTitleOption
     return { title: sessionTitle };
   }
 
-  if (section === "changelog") return { title: "Changelog" };
-
   if (section === "settings") {
     return { title: getSettingsSectionTitle(options.settingsPanel) };
   }

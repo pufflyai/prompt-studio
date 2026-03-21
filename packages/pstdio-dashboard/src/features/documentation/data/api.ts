@@ -3,6 +3,7 @@ import { apiRequest } from "@/lib/api";
 export type DocsSidebarItem = {
   text: string;
   link?: string;
+  template?: string;
   items?: DocsSidebarItem[];
 };
 

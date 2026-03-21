@@ -1,7 +1,7 @@
 import { useRouterState, useSearch } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useDocsIndex } from "@/features/documentation/hooks/use-docs";
-import { flattenDocsSidebar, resolveActiveDocLink } from "@/features/documentation/utils";
+import { flattenDocsSidebar, resolveActiveDocEntry } from "@/features/documentation/utils";
 import { useProject } from "@/features/project/hooks/use-project";
 import { useProjectSession } from "@/features/sessions/hooks/use-project-session";
 import { getPageTitle } from "../utils/page-title";
@@ -22,22 +22,8 @@ const useDocTitle = (projectId: string | undefined, section: string | undefined,
   if (!index?.sidebar) return undefined;
 
   const entries = flattenDocsSidebar(index.sidebar);
-  const activeLink = resolveActiveDocLink(doc, entries);
-  if (!activeLink) return undefined;
-
-  // Find the leaf item's own text (not the flattened path)
-  const findTitle = (items: typeof index.sidebar): string | undefined => {
-    for (const item of items) {
-      if (item.link === activeLink) return item.text;
-      if (item.items) {
-        const found = findTitle(item.items);
-        if (found) return found;
-      }
-    }
-    return undefined;
-  };
-
-  return findTitle(index.sidebar);
+  const activeEntry = resolveActiveDocEntry(doc, entries);
+  return activeEntry?.itemText;
 };
 
 export const usePageTitle = () => {

@@ -104,4 +104,30 @@ describe("GET /v1/projects/:projectId/docs", () => {
     expect(body.sidebar).toHaveLength(2);
     expect(body.missingLinks).toEqual(["/missing-page"]);
   });
+
+  test("returns sidebar template metadata when present", async () => {
+    const repoWithTemplate = join(tempRoot, "repo-with-template");
+    const docsDir = join(repoWithTemplate, ".pstdio", "docs");
+    mkdirSync(docsDir, { recursive: true });
+    writeFileSync(join(docsDir, "releases.md"), "# Releases");
+    writeFileSync(
+      join(docsDir, "navigation.json"),
+      JSON.stringify({
+        sidebar: [{ text: "Releases", link: "releases", template: "changelog" }],
+      }),
+    );
+
+    const projectId = await createProjectWithRepo(repoWithTemplate);
+
+    const res = await app.request(`/v1/projects/${projectId}/docs`);
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as {
+      sidebar: Array<{ text: string; link?: string; template?: string }>;
+      missingLinks: string[];
+    };
+
+    expect(body.sidebar).toEqual([{ text: "Releases", link: "releases", template: "changelog" }]);
+    expect(body.missingLinks).toEqual([]);
+  });
 });

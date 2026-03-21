@@ -34,6 +34,12 @@ The docs panel is available at:
 
 It loads the docs index for the selected project, derives the active document from the `doc` search parameter, and renders markdown content in a read-only editor.
 
+Sidebar items may also declare an optional `template` field in `.pstdio/docs/navigation.json`.
+Supported values:
+
+- `changelog`: render markdown content with the changelog timeline UI.
+- any other value (or missing): render via the standard markdown viewer.
+
 ## Requirements
 
 ### Functional Requirements
@@ -42,6 +48,7 @@ It loads the docs index for the selected project, derives the active document fr
 2. The active doc must be reflected in the `doc` search parameter.
 3. Internal markdown links must resolve to other docs in the same tree without a full page reload.
 4. Missing docs and load failures must resolve to clear empty or error states.
+5. Template-aware docs pages must switch renderers based on the active sidebar item's `template`.
 
 ### UX Requirements
 
@@ -58,7 +65,7 @@ It loads the docs index for the selected project, derives the active document fr
 1. Load the docs index for the current project.
 2. Flatten the sidebar items and resolve the active link.
 3. If the current route has no valid `doc`, update the URL to the resolved active doc.
-4. Fetch the selected document content and render it as markdown.
+4. Fetch the selected document content and render it using the template-aware renderer.
 5. Intercept internal markdown links and navigate to the matching docs link inside the panel.
 
 ## Interface
