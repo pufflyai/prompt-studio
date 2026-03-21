@@ -8,8 +8,8 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "lint": "bun run typecheck && bunx biome check .",
-    "format": "bunx biome check --write .",
+    "lint": "bun run typecheck && biome check .",
+    "format": "biome check --write .",
     "test": "bun test --silent",
     "test:coverage": "bun test --coverage"
   },

@@ -19,8 +19,8 @@
     "prepack": "bun run ../../scripts/sync-package-readme.ts --package pstdio",
     "postpack": "bun run ../../scripts/sync-package-readme.ts --package pstdio --cleanup",
     "typecheck": "tsc --noEmit",
-    "lint": "bun run typecheck && bunx @biomejs/biome lint .",
-    "format": "bunx @biomejs/biome format --write .",
+    "lint": "bun run typecheck && biome lint .",
+    "format": "biome format --write .",
     "test": "bun test --silent",
     "test:coverage": "bun test --coverage"
   },
