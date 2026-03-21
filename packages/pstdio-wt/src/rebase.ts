@@ -1,11 +1,13 @@
 import { GitError, git } from "./git";
-import type { RebaseResult } from "./types";
+import { runHook } from "./hooks";
+import type { HookContext, RebaseResult } from "./types";
 import { findWorktreeByBranch } from "./worktree";
 
 export const rebaseOntoTarget = async (opts: {
   repoRoot: string;
   branch: string;
   target?: string;
+  hookContext?: Partial<HookContext>;
 }): Promise<RebaseResult> => {
   const target = opts.target ?? (await git(opts.repoRoot, ["symbolic-ref", "--short", "HEAD"]));
 
@@ -16,6 +18,18 @@ export const rebaseOntoTarget = async (opts: {
 
   if (upToDate) {
     return { rebased: true, upToDate: true };
+  }
+
+  const baseContext: HookContext = {
+    repoPath: opts.repoRoot,
+    branch: opts.branch,
+    target,
+    ...opts.hookContext,
+  };
+
+  const preResult = await runHook("pre-rebase", baseContext, opts.repoRoot);
+  if (!preResult.skipped && preResult.exitCode !== 0) {
+    throw new Error(`HOOK pre-rebase FAILED (exit ${preResult.exitCode})\n${preResult.stderr || preResult.stdout}`);
   }
 
   // resolve the worktree path for this branch — rebase must run inside the worktree
@@ -31,11 +45,14 @@ export const rebaseOntoTarget = async (opts: {
     } catch {
       // may fail if rebase didn't start
     }
+    void runHook("on-conflict", baseContext, opts.repoRoot).catch(() => {});
     if (err instanceof GitError) {
       throw new Error(`Rebase of ${opts.branch} onto ${target} failed: ${err.stderr}`);
     }
     throw err;
   }
+
+  void runHook("post-rebase", baseContext, opts.repoRoot).catch(() => {});
 
   return { rebased: true, upToDate: false };
 };

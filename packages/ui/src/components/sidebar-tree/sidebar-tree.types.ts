@@ -13,6 +13,7 @@ export interface SidebarActionContext {
 export interface SidebarActionMenuItem {
   id: string;
   label: string;
+  description?: string;
   icon?: ReactNode;
   onAction?: () => void;
 }

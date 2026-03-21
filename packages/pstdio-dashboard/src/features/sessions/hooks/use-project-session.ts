@@ -4,6 +4,7 @@ import type { Session } from "../types";
 const toSession = (row: SyncedRow): Session => ({
   id: row.id,
   projectId: (row.project_id as string) ?? null,
+  agentSessionId: (row.agent_session_id as string) ?? null,
   title: row.title as string,
   status: row.status as Session["status"],
   archived: row.archived as boolean,

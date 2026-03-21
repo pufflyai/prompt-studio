@@ -153,23 +153,20 @@ describe("POST /v1/tickets/:id/attempts", () => {
     expect(attempt.workspace.branch).toBe(`workspace/${attempt.workspace.workspace_shorthand}`);
   });
 
-  test("runs project startup script for workspace creation and stores startup log", async () => {
+  test("runs post-create hook for workspace creation and stores hook log", async () => {
     const { app, projectId, createGitRepo } = context;
-    const repoRoot = createGitRepo("attempt-startup-script-repo");
+    const repoRoot = createGitRepo("attempt-post-create-hook-repo");
 
-    const setStartupRes = await app.request(`/v1/projects/${projectId}/startup-script`, {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        startup_script: 'echo "startup script ran" && echo "ok" > startup-marker.txt',
-      }),
-    });
-    expect(setStartupRes.status).toBe(204);
+    // Write post-create hook to .pstdio/hooks/
+    const { mkdirSync, writeFileSync } = await import("node:fs");
+    const hooksDir = join(repoRoot, ".pstdio", "hooks");
+    mkdirSync(hooksDir, { recursive: true });
+    writeFileSync(join(hooksDir, "post-create"), 'echo "post-create hook ran" && echo "ok" > post-create-marker.txt');
 
     const repoRes = await app.request(`/v1/projects/${projectId}/repos`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "attempt-startup-script-repo", path: repoRoot }),
+      body: JSON.stringify({ name: "attempt-post-create-hook-repo", path: repoRoot }),
     });
     expect(repoRes.status).toBe(201);
     const repo = await repoRes.json();
@@ -188,20 +185,20 @@ describe("POST /v1/tickets/:id/attempts", () => {
     expect(attemptRes.status).toBe(201);
     const attempt = await attemptRes.json();
 
-    // Startup script runs in the background (fire-and-forget), so wait for it to finish
-    const markerPath = join(attempt.workspace.worktree_path, "startup-marker.txt");
+    // Hook runs in the background (fire-and-forget), so wait for it to finish
+    const markerPath = join(attempt.workspace.worktree_path, "post-create-marker.txt");
     await waitForFile(markerPath);
     expect(readFileSync(markerPath, "utf8")).toContain("ok");
 
-    // Wait for the startup log to be persisted
+    // Wait for the hook log to be persisted
     const startupLogUrl = `/v1/workspaces/${attempt.workspace.id}/startup-log`;
     await waitFor(async () => {
       const res = await app.request(startupLogUrl, { method: "GET" });
-      return res.status === 200 && (await res.text()).includes("startup script ran");
+      return res.status === 200 && (await res.text()).includes("post-create hook ran");
     });
-    const startupLogRes = await app.request(startupLogUrl, { method: "GET" });
-    expect(startupLogRes.status).toBe(200);
-    const startupLog = await startupLogRes.text();
-    expect(startupLog).toContain("startup script ran");
+    const logRes = await app.request(startupLogUrl, { method: "GET" });
+    expect(logRes.status).toBe(200);
+    const logContent = await logRes.text();
+    expect(logContent).toContain("post-create hook ran");
   });
 });

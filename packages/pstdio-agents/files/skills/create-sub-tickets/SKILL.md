@@ -3,12 +3,6 @@ name: create-sub-tickets
 description: "Break a parent ticket into actionable sub-tickets. Use when asked to create child or sub-tickets for a ticket."
 ---
 
-## User Input (should contain parent ticket shorthand)
-
-```text
-$ARGUMENTS
-```
-
 ## Workflow
 
 1. Identify the parent ticket shorthand from the user request as well as possible templates.

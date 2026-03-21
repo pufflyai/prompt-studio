@@ -16,6 +16,8 @@ This PRD documents status management commands and default status rules used by t
 
 Manage ticket statuses within a pstdio project. Statuses represent workflow stages (e.g. backlog, wip, done) and are displayed as columns in the board UI. Every project has a default status that is automatically assigned to new tickets on creation.
 
+Statuses control board capabilities (for example whether tickets can be created in a column and which column-level actions are available). Statuses do not trigger implementation automation.
+
 ---
 
 ## Available Colors
@@ -199,6 +201,12 @@ Deleted status "triaging"
 ## Auto-Apply on Ticket Creation
 
 When a ticket is created (via `tickets write`, `tickets create`, or the API), the project's default status is automatically assigned as the ticket's `status_id`. This ensures every ticket starts in a known workflow stage without requiring the caller to specify a status explicitly.
+
+---
+
+## Automation
+
+Implementation automation (for example automatically starting work) is configured with hooks in `.pstdio/hooks`, not with status metadata. See `.pstdio/docs/product/cli/hooks.md` for hook lifecycle behavior.
 
 ---
 

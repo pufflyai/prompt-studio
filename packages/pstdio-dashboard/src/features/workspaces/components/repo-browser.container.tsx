@@ -21,6 +21,21 @@ interface ResolveBranchSelectionOptions {
   hasUserSelectedBranch: boolean;
 }
 
+interface ResolveBranchStateOptions {
+  isLocked: boolean;
+  isBranchesPending: boolean;
+  selectedRepositoryId: string;
+  branches: RepoBranch[];
+  currentBranch?: string;
+  selectedBranch: string;
+  hasUserSelectedBranch: boolean;
+}
+
+interface BranchState {
+  selectedBranch: string;
+  hasUserSelectedBranch: boolean;
+}
+
 const getBranchLabel = (branch: RepoBranch, currentBranchTag: string, remoteBranchTag: string) => {
   if (branch.isCurrent) {
     return `${branch.name} (${currentBranchTag})`;
@@ -44,6 +59,40 @@ export const resolveBranchSelection = (options: ResolveBranchSelectionOptions) =
   }
 
   return currentBranch ?? branches[0].name;
+};
+
+const resolveBranchState = (options: ResolveBranchStateOptions) => {
+  const {
+    isLocked,
+    isBranchesPending,
+    selectedRepositoryId,
+    branches,
+    currentBranch,
+    selectedBranch,
+    hasUserSelectedBranch,
+  } = options;
+
+  if (isLocked || isBranchesPending) return null;
+
+  if (!selectedRepositoryId || branches.length === 0) {
+    return {
+      selectedBranch: "",
+      hasUserSelectedBranch: false,
+    } satisfies BranchState;
+  }
+
+  const nextSelectedBranch = resolveBranchSelection({
+    branches,
+    selectedBranch,
+    currentBranch,
+    hasUserSelectedBranch,
+  });
+  const hasSelection = branches.some((branch) => branch.name === selectedBranch);
+
+  return {
+    selectedBranch: nextSelectedBranch,
+    hasUserSelectedBranch: hasUserSelectedBranch && hasSelection,
+  } satisfies BranchState;
 };
 
 export const RepoBrowserContainer = (props: RepoBrowserContainerProps) => {
@@ -100,47 +149,24 @@ export const RepoBrowserContainer = (props: RepoBrowserContainerProps) => {
   }, [isLocked, lockedBranch, selectedBranch, onBranchChange]);
 
   useEffect(() => {
-    if (isLocked) return;
-
-    if (!selectedRepositoryId) {
-      if (selectedBranch) {
-        setSelectedBranch("");
-        onBranchChange?.("");
-      }
-      if (hasUserSelectedBranch) {
-        setHasUserSelectedBranch(false);
-      }
-      return;
-    }
-
-    if (isBranchesPending) return;
-
-    if (branches.length === 0) {
-      if (selectedBranch) {
-        setSelectedBranch("");
-        onBranchChange?.("");
-      }
-      if (hasUserSelectedBranch) {
-        setHasUserSelectedBranch(false);
-      }
-      return;
-    }
-
-    const next = resolveBranchSelection({
+    const nextState = resolveBranchState({
+      isLocked,
+      isBranchesPending,
+      selectedRepositoryId,
       branches,
-      selectedBranch,
       currentBranch,
+      selectedBranch,
       hasUserSelectedBranch,
     });
+    if (!nextState) return;
 
-    if (next !== selectedBranch) {
-      setSelectedBranch(next);
-      onBranchChange?.(next);
+    if (nextState.selectedBranch !== selectedBranch) {
+      setSelectedBranch(nextState.selectedBranch);
+      onBranchChange?.(nextState.selectedBranch);
     }
 
-    const hasSelection = branches.some((branch) => branch.name === selectedBranch);
-    if (hasUserSelectedBranch && !hasSelection) {
-      setHasUserSelectedBranch(false);
+    if (nextState.hasUserSelectedBranch !== hasUserSelectedBranch) {
+      setHasUserSelectedBranch(nextState.hasUserSelectedBranch);
     }
   }, [
     branches,

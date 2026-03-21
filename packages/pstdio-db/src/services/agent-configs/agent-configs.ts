@@ -46,8 +46,13 @@ export const createAgentConfigsService = (db: DbClient) => {
 
     const timestamp = nowTimestamp();
     const updates: Record<string, unknown> = { updated_at: timestamp };
+    let clearedDefaults: (typeof existing)[] = [];
 
     if (fields.is_default === true) {
+      const allConfigs = await list();
+      clearedDefaults = allConfigs
+        .filter((c) => c.is_default && c.agent_id !== agentId)
+        .map((c) => ({ ...c, is_default: false, updated_at: timestamp }));
       await db.update(agent_configs).set({ is_default: false, updated_at: timestamp });
       updates.is_default = true;
     }
@@ -61,11 +66,13 @@ export const createAgentConfigsService = (db: DbClient) => {
 
     await db.update(agent_configs).set(updates).where(eq(agent_configs.id, existing.id));
 
-    return {
+    const updated = {
       ...existing,
       ...updates,
       config: (updates.config as string) ?? existing.config,
     };
+
+    return { updated, clearedDefaults };
   };
 
   const remove = async (agentId: string) => {

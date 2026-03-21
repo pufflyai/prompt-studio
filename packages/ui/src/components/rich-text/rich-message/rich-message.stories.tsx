@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { ScrollArea } from "@/components/scroll-area";
 import { RichMessage } from "./rich-message";
 
 const message = `
@@ -143,4 +144,17 @@ export default meta;
 
 type Story = StoryObj<typeof RichMessage>;
 
-export const Basic: Story = {};
+export const Basic: Story = {
+  render: (args) => (
+    <ScrollArea
+      maxH="36rem"
+      borderWidth="1px"
+      borderColor="border.muted"
+      borderRadius="md"
+      bg="bg"
+      contentProps={{ p: "md" }}
+    >
+      <RichMessage {...args} />
+    </ScrollArea>
+  ),
+};

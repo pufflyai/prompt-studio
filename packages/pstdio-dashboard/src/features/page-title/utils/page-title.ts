@@ -18,16 +18,30 @@ const getSettingsSectionTitle = (settingsPanel?: string) => {
     }
   }
 
+  if (settingsPanel.startsWith("hook:")) {
+    const hookName = settingsPanel.slice("hook:".length);
+    if (hookName) {
+      return hookName;
+    }
+  }
+
+  if (settingsPanel.startsWith("skill:")) {
+    const skillName = settingsPanel.slice("skill:".length);
+    if (skillName) {
+      return skillName;
+    }
+  }
+
   if (settingsPanel === "tags") {
     return "Tags";
   }
 
-  if (settingsPanel === "startup-script") {
-    return "Startup Script";
-  }
-
   if (settingsPanel === "danger-zone") {
     return "Danger Zone";
+  }
+
+  if (settingsPanel === "agents") {
+    return "Agents";
   }
 
   return "Settings";
@@ -78,8 +92,6 @@ const getProjectSectionTitle = (pathSegments: string[], options: PageTitleOption
     return { title: sessionTitle };
   }
 
-  if (section === "changelog") return { title: "Changelog" };
-
   if (section === "settings") {
     return { title: getSettingsSectionTitle(options.settingsPanel) };
   }
@@ -99,7 +111,7 @@ export const getPageTitle = (pathname: string, projectName?: string, options: Pa
   }
 
   if (pathname === "/settings") {
-    return "Settings";
+    return getSettingsSectionTitle(options.settingsPanel);
   }
 
   if (pathname === "/onboarding") {

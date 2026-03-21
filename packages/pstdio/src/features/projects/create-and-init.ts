@@ -1,6 +1,7 @@
 import { basename } from "node:path";
 import { readConfig, writeConfig } from "@/features/config/config";
 import { scaffoldDocs } from "@/features/docs/scaffold";
+import { scaffoldHooks } from "@/features/hooks/scaffold";
 import { installDefaultSkills } from "@/features/skills/install-default-skills";
 import { API_URL } from "../api-url";
 import { createProject } from "./api/create-project";
@@ -24,6 +25,7 @@ export const createAndInitProject = async (root: string, name: string, options?:
 
   writeConfig(root, { project_id: project.id });
   await scaffoldDocs(root);
+  await scaffoldHooks(root);
   await installDefaultSkills(root, project.id, API_URL, options?.homedir);
   return project;
 };

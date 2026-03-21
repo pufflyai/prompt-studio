@@ -25,10 +25,10 @@ export const useAgentConfigs = () => {
 
 export const useEnableAgent = () =>
   useMutation({
-    mutationFn: (agentId: string) =>
+    mutationFn: ({ agentId, binary }: { agentId: string; binary?: string }) =>
       apiRequest<AgentConfig>("/v1/agents", {
         method: "POST",
-        body: { agent_id: agentId },
+        body: binary ? { agent_id: agentId, binary } : { agent_id: agentId },
       }),
   });
 

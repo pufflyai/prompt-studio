@@ -18,6 +18,10 @@
   --rich-text-font-scale: 0.8;
 }
 
+.rich-text[data-rich-message="true"] .rich-text__p:last-child {
+  margin-bottom: 0;
+}
+
 .rich-text__paragraph {
   margin: 0;
   position: relative;

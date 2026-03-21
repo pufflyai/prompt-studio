@@ -18,6 +18,8 @@ const baseDeps = {
   getWorkspace: async () => makeWorkspace("PS-1_A1"),
   deleteWorkspace: async () => {},
   removeWorktreeAndBranch: async () => {},
+  runHook: async (hookName: "pre-remove" | "post-remove") =>
+    ({ hook: hookName, skipped: true, exitCode: 0, stdout: "", stderr: "" }) as const,
   log: () => {},
 };
 

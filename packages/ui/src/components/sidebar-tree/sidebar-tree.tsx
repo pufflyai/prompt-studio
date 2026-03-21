@@ -1,5 +1,6 @@
 import { Box, HStack, IconButton, Menu, Stack, Text } from "@chakra-ui/react";
 import { ChevronRight } from "lucide-react";
+import { Tooltip } from "../tooltip";
 import type {
   SidebarAction,
   SidebarLinkComponent,
@@ -52,10 +53,12 @@ const SidebarActionButton = (props: { action: SidebarAction; sectionId: string; 
         <Menu.Positioner>
           <Menu.Content minW="160px" bg="bg">
             {action.menuItems.map((item) => (
-              <Menu.Item key={item.id} value={item.id} onClick={() => item.onAction?.()}>
-                {item.icon ? <Box mr="2">{item.icon}</Box> : null}
-                {item.label}
-              </Menu.Item>
+              <Tooltip key={item.id} content={item.description} disabled={!item.description} openDelay={300}>
+                <Menu.Item value={item.id} onClick={() => item.onAction?.()}>
+                  {item.icon ? <Box mr="2">{item.icon}</Box> : null}
+                  {item.label}
+                </Menu.Item>
+              </Tooltip>
             ))}
           </Menu.Content>
         </Menu.Positioner>

@@ -1,18 +1,17 @@
-import { exec as runCommand } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { copyFile, mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { PassThrough } from "node:stream";
 import { createRoute, z } from "@hono/zod-openapi";
 import { eq, ticket_workspaces } from "pstdio-db";
-import { createWorktree } from "pstdio-wt";
+import { createWorktree, runHook } from "pstdio-wt";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { spawnAgentSession } from "../../sessions/spawn-agent";
 import { createTicketAttemptBodySchema, notFoundResponseSchema, ticketAttemptResponseSchema } from "../dto";
 
 const badRequestSchema = z.object({ error: z.string() });
+type WorkspaceRecord = Awaited<ReturnType<RouteDeps["workspacesService"]["create"]>>;
 
 const resolveWorkspacesRoot = () => {
   const configured = process.env.PSTDIO_WORKSPACES_DIR?.trim();
@@ -112,7 +111,7 @@ const copyPstdioConfig = async (repoPath: string, worktreePath: string) => {
   }
 };
 
-const saveStartupLog = async (
+const saveHookLog = async (
   deps: Pick<RouteDeps, "filesService" | "workspacesService">,
   input: {
     workspaceId: string;
@@ -139,55 +138,219 @@ const saveStartupLog = async (
   return file.id;
 };
 
-const runStartupScript = async (
+const runPostCreateHook = async (
   deps: Pick<RouteDeps, "filesService" | "workspacesService">,
   input: {
-    script: string;
-    cwd: string;
-    workspaceId: string;
+    repoPath: string;
+    worktreePath: string;
+    branch: string;
+    workspace: string;
     projectId: string;
+    workspaceId: string;
     existingStartupLogFileId: string | null;
   },
 ) => {
-  const logChunks: Buffer[] = [];
+  const result = await runHook(
+    "post-create",
+    {
+      repoPath: input.repoPath,
+      worktreePath: input.worktreePath,
+      branch: input.branch,
+      workspace: input.workspace,
+      projectId: input.projectId,
+    },
+    input.repoPath,
+  );
 
-  try {
-    await new Promise<void>((resolve, reject) => {
-      const child = runCommand(input.script, { cwd: input.cwd, timeout: 60_000 }, (error) => {
-        if (error) reject(error);
-        else resolve();
-      });
+  if (result.skipped) return input.existingStartupLogFileId;
 
-      if (child.stdout) {
-        const tee = new PassThrough();
-        child.stdout.pipe(tee);
-        tee.on("data", (chunk: Buffer) => logChunks.push(chunk));
-      }
-
-      if (child.stderr) {
-        const tee = new PassThrough();
-        child.stderr.pipe(tee);
-        tee.on("data", (chunk: Buffer) => logChunks.push(chunk));
-      }
-    });
-  } catch {
-    // Startup script failures should not block workspace creation.
-  }
-
-  const logContent = Buffer.concat(logChunks).toString("utf8");
+  const logContent = [result.stdout, result.stderr].filter(Boolean).join("\n");
   if (logContent.length === 0) return input.existingStartupLogFileId;
 
   try {
-    return await saveStartupLog(deps, {
+    return await saveHookLog(deps, {
       workspaceId: input.workspaceId,
       projectId: input.projectId,
       existingFileId: input.existingStartupLogFileId,
       content: logContent,
     });
   } catch {
-    // Log upload failures should not block workspace creation.
     return input.existingStartupLogFileId;
   }
+};
+
+const emitTicketWorkspaceLink = async (deps: Pick<RouteDeps, "db" | "eventBus">, input: { workspaceId: string }) => {
+  const [ticketWorkspaceLink] = await deps.db
+    .select()
+    .from(ticket_workspaces)
+    .where(eq(ticket_workspaces.workspace_id, input.workspaceId));
+  if (ticketWorkspaceLink) {
+    deps.eventBus.emit("ticket_workspaces", "set", ticketWorkspaceLink);
+  }
+};
+
+const resolveWorkspaceGitMetadata = async (input: {
+  mode: string;
+  worktreeMode: string;
+  workspaceShorthand: string;
+  repoPath: string;
+  base: string;
+}) => {
+  if (input.mode !== input.worktreeMode) {
+    return { branch: null as string | null, worktreePath: input.repoPath };
+  }
+
+  const branch = `workspace/${input.workspaceShorthand}`;
+  const worktreePath = join(resolveWorkspacesRoot(), input.workspaceShorthand);
+
+  await createWorktree({
+    repoRoot: input.repoPath,
+    branch,
+    path: worktreePath,
+    base: input.base,
+  });
+
+  await copyPstdioConfig(input.repoPath, worktreePath);
+  return { branch, worktreePath };
+};
+
+const queuePostCreateHook = (
+  deps: Pick<RouteDeps, "filesService" | "workspacesService" | "eventBus">,
+  input: {
+    mode: string;
+    worktreeMode: string;
+    workspace: WorkspaceRecord;
+    repoPath: string;
+    branch: string | null;
+  },
+) => {
+  if (input.mode !== input.worktreeMode || !input.workspace.worktree_path || !input.branch) {
+    return;
+  }
+
+  // Fire-and-forget: don't block the response on the post-create hook
+  runPostCreateHook(
+    { filesService: deps.filesService, workspacesService: deps.workspacesService },
+    {
+      repoPath: input.repoPath,
+      worktreePath: input.workspace.worktree_path,
+      branch: input.branch,
+      workspace: input.workspace.workspace_shorthand,
+      projectId: input.workspace.project_id,
+      workspaceId: input.workspace.id,
+      existingStartupLogFileId: input.workspace.startup_log_file_id,
+    },
+  ).then((startupLogFileId) => {
+    if (startupLogFileId && startupLogFileId !== input.workspace.startup_log_file_id) {
+      deps.eventBus.emit("workspaces", "set", {
+        ...input.workspace,
+        startup_log_file_id: startupLogFileId,
+      });
+    }
+  });
+};
+
+const createAttemptWorkspace = async (
+  deps: Pick<RouteDeps, "workspacesService" | "eventBus" | "db" | "filesService">,
+  input: {
+    projectId: string;
+    ticketId: string;
+    ticketShorthand: string;
+    mode: string;
+    worktreeMode: string;
+    repoPath: string;
+    base: string;
+  },
+) => {
+  const workspace = await deps.workspacesService.create({
+    project_id: input.projectId,
+    ticket_id: input.ticketId,
+    ticket_shorthand: input.ticketShorthand,
+  });
+  deps.eventBus.emit("workspaces", "set", workspace);
+  await emitTicketWorkspaceLink(deps, { workspaceId: workspace.id });
+
+  const gitMetadata = await resolveWorkspaceGitMetadata({
+    mode: input.mode,
+    worktreeMode: input.worktreeMode,
+    workspaceShorthand: workspace.workspace_shorthand,
+    repoPath: input.repoPath,
+    base: input.base,
+  });
+  const workspaceWithGitMetadata =
+    (await deps.workspacesService.updateGitMetadata(workspace.id, {
+      branch: gitMetadata.branch,
+      worktree_path: gitMetadata.worktreePath,
+    })) ?? workspace;
+  deps.eventBus.emit("workspaces", "set", workspaceWithGitMetadata);
+
+  queuePostCreateHook(deps, {
+    mode: input.mode,
+    worktreeMode: input.worktreeMode,
+    workspace: workspaceWithGitMetadata,
+    repoPath: input.repoPath,
+    branch: gitMetadata.branch,
+  });
+
+  return workspaceWithGitMetadata;
+};
+
+const startAttemptSession = async (
+  deps: RouteDeps,
+  input: {
+    ticket: {
+      id: string;
+      project_id: string;
+      shorthand: string;
+      display_title: string | null;
+      file_id: string | null;
+    };
+    workspace: WorkspaceRecord;
+    repoPath: string;
+    mode: string;
+    worktreeMode: string;
+    requestedAgent: string | undefined;
+    requestedModel: string | undefined;
+    requestedPrompt: string | undefined;
+  },
+) => {
+  const agentId = await resolveAgentId(deps, input.requestedAgent);
+  if (!agentId) return null;
+
+  const title = input.ticket.display_title ?? input.ticket.shorthand;
+  const prompt = await resolvePrompt(deps, input.requestedPrompt, input.ticket.file_id, title);
+  const session = await deps.sessionsService.create({
+    project_id: input.ticket.project_id,
+    title,
+    agent: agentId,
+  });
+  deps.eventBus.emit("sessions", "set", session);
+
+  const workspaceWithSession = (await deps.workspacesService.setSessionId(input.workspace.id, session.id)) ?? {
+    ...input.workspace,
+    session_id: session.id,
+  };
+  deps.eventBus.emit("workspaces", "set", workspaceWithSession);
+
+  const cwd =
+    input.mode === input.worktreeMode ? (workspaceWithSession.worktree_path ?? input.repoPath) : input.repoPath;
+
+  spawnAgentSession(
+    {
+      sessionId: session.id,
+      agentId,
+      prompt,
+      title,
+      model: input.requestedModel,
+      cwd,
+    },
+    deps,
+  ).catch(async () => {
+    const failed = await deps.sessionsService.updateStatus(session.id, "failed");
+    if (failed) deps.eventBus.emit("sessions", "set", failed);
+  });
+
+  return { session, workspaceWithSession };
 };
 
 export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typeof createTicketAttemptRoute> => {
@@ -203,73 +366,21 @@ export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typ
     }
 
     const mode = input.mode ?? worktreeMode;
-    const project = await deps.projectsService.get(ticket.project_id);
-    const startupScript = mode === worktreeMode ? (project?.startup_script ?? null) : null;
     const repo = await resolveRepoForAttempt(deps, ticket.project_id, input);
     if (!repo) {
       return c.json({ error: `Repo not found for project ${ticket.project_id}` }, 404);
     }
 
-    const workspace = await deps.workspacesService.create({
-      project_id: ticket.project_id,
-      ticket_id: ticket.id,
-      ticket_shorthand: ticket.shorthand,
-    });
-    deps.eventBus.emit("workspaces", "set", workspace);
-
-    const [ticketWorkspaceLink] = await deps.db
-      .select()
-      .from(ticket_workspaces)
-      .where(eq(ticket_workspaces.workspace_id, workspace.id));
-    if (ticketWorkspaceLink) {
-      deps.eventBus.emit("ticket_workspaces", "set", ticketWorkspaceLink);
-    }
-
     const base = input.base?.trim() || input.branch?.trim() || "HEAD";
-    let branch: string | null = null;
-    let worktreePath = repo.path;
-
-    if (mode === worktreeMode) {
-      branch = `workspace/${workspace.workspace_shorthand}`;
-      worktreePath = join(resolveWorkspacesRoot(), workspace.workspace_shorthand);
-
-      await createWorktree({
-        repoRoot: repo.path,
-        branch,
-        path: worktreePath,
-        base,
-      });
-
-      await copyPstdioConfig(repo.path, worktreePath);
-    }
-
-    const workspaceWithGitMetadata =
-      (await deps.workspacesService.updateGitMetadata(workspace.id, {
-        branch,
-        worktree_path: worktreePath,
-      })) ?? workspace;
-    deps.eventBus.emit("workspaces", "set", workspaceWithGitMetadata);
-
-    if (startupScript && workspaceWithGitMetadata.worktree_path) {
-      // Fire-and-forget: don't block the response on the startup script
-      runStartupScript(
-        { filesService: deps.filesService, workspacesService: deps.workspacesService },
-        {
-          script: startupScript,
-          cwd: workspaceWithGitMetadata.worktree_path,
-          workspaceId: workspaceWithGitMetadata.id,
-          projectId: workspaceWithGitMetadata.project_id,
-          existingStartupLogFileId: workspaceWithGitMetadata.startup_log_file_id,
-        },
-      ).then((startupLogFileId) => {
-        if (startupLogFileId && startupLogFileId !== workspaceWithGitMetadata.startup_log_file_id) {
-          deps.eventBus.emit("workspaces", "set", {
-            ...workspaceWithGitMetadata,
-            startup_log_file_id: startupLogFileId,
-          });
-        }
-      });
-    }
+    const workspaceWithGitMetadata = await createAttemptWorkspace(deps, {
+      projectId: ticket.project_id,
+      ticketId: ticket.id,
+      ticketShorthand: ticket.shorthand,
+      mode,
+      worktreeMode,
+      repoPath: repo.path,
+      base,
+    });
 
     const shouldStartSession = input.start_session ?? true;
     if (!shouldStartSession) {
@@ -284,54 +395,31 @@ export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typ
       );
     }
 
-    const agentId = await resolveAgentId(deps, input.agent);
-    if (!agentId) {
+    const started = await startAttemptSession(deps, {
+      ticket,
+      workspace: workspaceWithGitMetadata,
+      repoPath: repo.path,
+      mode,
+      worktreeMode,
+      requestedAgent: input.agent,
+      requestedModel: input.model ?? undefined,
+      requestedPrompt: input.prompt ?? undefined,
+    });
+    if (!started) {
       return c.json({ error: "No agent configured for ticket attempts." }, 400);
     }
-
-    const title = ticket.display_title ?? ticket.shorthand;
-    const prompt = await resolvePrompt(deps, input.prompt, ticket.file_id, title);
-    const session = await deps.sessionsService.create({
-      project_id: ticket.project_id,
-      title,
-      agent: agentId,
-    });
-    deps.eventBus.emit("sessions", "set", session);
-
-    const workspaceWithSession = (await deps.workspacesService.setSessionId(workspace.id, session.id)) ?? {
-      ...workspaceWithGitMetadata,
-      session_id: session.id,
-    };
-    deps.eventBus.emit("workspaces", "set", workspaceWithSession);
-
-    const cwd = mode === worktreeMode ? (workspaceWithSession.worktree_path ?? repo.path) : repo.path;
-
-    spawnAgentSession(
-      {
-        sessionId: session.id,
-        agentId,
-        prompt,
-        title,
-        model: input.model,
-        cwd,
-      },
-      deps,
-    ).catch(async () => {
-      const failed = await deps.sessionsService.updateStatus(session.id, "failed");
-      if (failed) deps.eventBus.emit("sessions", "set", failed);
-    });
 
     return c.json(
       {
         mode,
         ticket,
-        workspace: workspaceWithSession,
+        workspace: started.workspaceWithSession,
         session: {
-          id: session.id,
-          workspace_id: workspaceWithSession.id,
-          title: session.title,
-          created_at: session.created_at,
-          updated_at: session.updated_at,
+          id: started.session.id,
+          workspace_id: started.workspaceWithSession.id,
+          title: started.session.title,
+          created_at: started.session.created_at,
+          updated_at: started.session.updated_at,
         },
       },
       201,

@@ -8,6 +8,7 @@ const makeSession = (overrides: Partial<Session> & { id: string; archived: boole
   return {
     id,
     projectId: "project-1",
+    agentSessionId: null,
     title: id,
     status: "in_progress",
     archived,

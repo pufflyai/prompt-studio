@@ -1,6 +1,6 @@
 {
   "name": "@pstdio/ui",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "repository": {
     "type": "git",
     "url": "https://github.com/pufflyai/prompt-studio"
@@ -35,7 +35,7 @@
   "scripts": {
     "build": "vite build",
     "visualize-bundle": "bunx vite-bundle-visualizer",
-    "lint": "bunx biome check .",
+    "lint": "biome check .",
     "typegen:tokens": "chakra typegen ./src/theme/theme.ts",
     "test": "bun test --silent",
     "test-storybook": "test-storybook",

@@ -1,6 +1,5 @@
 import { Box, Stack } from "@chakra-ui/react";
 import { EmptyState } from "@pstdio/ui";
-import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { type MouseEvent, useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -8,7 +7,8 @@ import { OpenSidebarButton } from "@/features/project/components/open-sidebar-bu
 import { EmptyDocs } from "../components/empty-docs";
 import { LoadingDocs } from "../components/loading-docs";
 import { useDocsContent, useDocsIndex } from "../hooks/use-docs";
-import { flattenDocsSidebar, resolveActiveDocLink, resolveDocsLinkFromHref } from "../utils";
+import { DocsTemplateRenderer } from "../renderers/docs-template-renderer";
+import { flattenDocsSidebar, resolveActiveDocEntry, resolveDocsLinkFromHref } from "../utils";
 
 export const DocsPanel = () => {
   const { t } = useTranslation();
@@ -19,7 +19,8 @@ export const DocsPanel = () => {
   const { data: index, isLoading: isIndexLoading, error: indexError } = useDocsIndex(resolvedProjectId);
   const sidebarItems = index?.sidebar ?? [];
   const menuEntries = flattenDocsSidebar(sidebarItems);
-  const activeLink = resolveActiveDocLink(routeDoc, menuEntries);
+  const activeEntry = resolveActiveDocEntry(routeDoc, menuEntries);
+  const activeLink = activeEntry?.link ?? null;
   const {
     data: content,
     isLoading: isContentLoading,
@@ -107,11 +108,11 @@ export const DocsPanel = () => {
     />
   ) : (
     <Box width="100%" height="100%" onClick={handleDocumentClick}>
-      <MarkdownEditor
-        key={content?.path ?? activeLink ?? "docs-empty"}
-        defaultState={content?.content ?? ""}
-        isEditable={false}
-        placeholder={t("docs.noContentAvailable")}
+      <DocsTemplateRenderer
+        key={`${content?.path ?? activeLink ?? "docs-empty"}-${activeEntry?.template ?? "markdown"}`}
+        content={content?.content ?? ""}
+        template={activeEntry?.template}
+        markdownPlaceholder={t("docs.noContentAvailable")}
       />
     </Box>
   );

@@ -57,6 +57,64 @@ export const registerRepoRoute = createRoute({
   },
 });
 
+const resolveRelinkState = async (
+  deps: Pick<RouteDeps, "projectsService">,
+  input: {
+    configPath: string;
+    projectId: string;
+  },
+) => {
+  if (!existsSync(input.configPath)) {
+    return { isRelinking: false, linkedProjectError: null as string | null };
+  }
+
+  const existing = JSON.parse(await readFile(input.configPath, "utf8"));
+  if (!existing.project_id || existing.project_id === input.projectId) {
+    return { isRelinking: false, linkedProjectError: null as string | null };
+  }
+
+  const existingProject = await deps.projectsService.get(existing.project_id);
+  if (existingProject) {
+    return {
+      isRelinking: false,
+      linkedProjectError: `Repo is already linked to project ${existing.project_id}`,
+    };
+  }
+
+  return { isRelinking: true, linkedProjectError: null as string | null };
+};
+
+const emitProjectRepoLink = async (
+  deps: Pick<RouteDeps, "db" | "eventBus">,
+  input: { projectId: string; repoId: string },
+) => {
+  const [link] = await deps.db
+    .select()
+    .from(project_repos)
+    .where(and(eq(project_repos.project_id, input.projectId), eq(project_repos.repo_id, input.repoId)));
+  if (link) deps.eventBus.emit("project_repos", "set", link);
+};
+
+const installProjectSkillsToRepo = async (
+  deps: Pick<RouteDeps, "skillsDbService" | "agentConfigsService" | "filesService">,
+  input: { projectId: string; repoPath: string },
+) => {
+  const [skills, agents] = await Promise.all([
+    deps.skillsDbService.list(input.projectId),
+    deps.agentConfigsService.list(),
+  ]);
+
+  for (const skill of skills) {
+    const file = await deps.filesService.get(skill.file_id);
+    if (!file) continue;
+
+    const content = await readFile(file.storage_path, "utf8");
+    for (const agent of agents) {
+      installSkillToRepo(input.repoPath, agent.agent_id, skill.name, content);
+    }
+  }
+};
+
 export const registerRepoHandler = (deps: RouteDeps): AppRouteHandler<typeof registerRepoRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
@@ -69,23 +127,17 @@ export const registerRepoHandler = (deps: RouteDeps): AppRouteHandler<typeof reg
 
     const pstdioPath = join(path, ".pstdio");
     const configPath = join(pstdioPath, "config.json");
-    let isRelinking = false;
-
-    if (existsSync(configPath)) {
-      const existing = JSON.parse(await readFile(configPath, "utf8"));
-      if (existing.project_id && existing.project_id !== id) {
-        const existingProject = await deps.projectsService.get(existing.project_id);
-        if (existingProject) {
-          return c.json({ error: `Repo is already linked to project ${existing.project_id}` }, 409);
-        }
-
-        isRelinking = true;
-      }
+    const relinkState = await resolveRelinkState(deps, {
+      configPath,
+      projectId: id,
+    });
+    if (relinkState.linkedProjectError) {
+      return c.json({ error: relinkState.linkedProjectError }, 409);
     }
 
     const repo = await deps.reposService.registerForProject(id, { name, path });
 
-    if (isRelinking) {
+    if (relinkState.isRelinking) {
       await rm(join(pstdioPath, "tickets"), { recursive: true, force: true });
     }
 
@@ -93,25 +145,9 @@ export const registerRepoHandler = (deps: RouteDeps): AppRouteHandler<typeof reg
     await writeFile(configPath, `${JSON.stringify({ project_id: id }, null, 2)}\n`);
 
     deps.eventBus.emit("repos", "set", repo);
+    await emitProjectRepoLink(deps, { projectId: id, repoId: repo.id });
 
-    const [link] = await deps.db
-      .select()
-      .from(project_repos)
-      .where(and(eq(project_repos.project_id, id), eq(project_repos.repo_id, repo.id)));
-    if (link) deps.eventBus.emit("project_repos", "set", link);
-
-    const [skills, agents] = await Promise.all([deps.skillsDbService.list(id), deps.agentConfigsService.list()]);
-
-    for (const skill of skills) {
-      const file = await deps.filesService.get(skill.file_id);
-      if (!file) continue;
-
-      const content = await readFile(file.storage_path, "utf8");
-
-      for (const agent of agents) {
-        installSkillToRepo(repo.path, agent.agent_id, skill.name, content);
-      }
-    }
+    await installProjectSkillsToRepo(deps, { projectId: id, repoPath: repo.path });
 
     return c.json(repo, 201);
   };

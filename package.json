@@ -11,16 +11,16 @@
   },
   "scripts": {
     "validate": "bun run format && bun run lint && bun run build && bun run test",
-    "build": "bun x cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" lerna run build",
-    "analyze-bundle": "bunx lerna run analyze-bundle --stream",
-    "test": "bunx lerna run test",
-    "test:coverage": "bunx lerna run test:coverage --stream",
+    "build": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" lerna run build",
+    "analyze-bundle": "lerna run analyze-bundle --stream",
+    "test": "lerna run test",
+    "test:coverage": "lerna run test:coverage --stream",
     "test:e2e": "bun run --cwd packages/e2e test",
-    "lint": "bunx lerna run lint",
-    "format": "bunx biome check --write .",
-    "format:check": "bunx biome check .",
+    "lint": "lerna run lint",
+    "format": "biome check --write .",
+    "format:check": "biome check .",
     "clean": "find . -type d \\( -name node_modules -o -name dist -o -name .cache \\) -prune -exec rm -rf '{}' + && rm -rf .nx",
-    "knip": "bunx knip",
+    "knip": "knip",
     "setup:demo": "bun run --cwd scripts setup-demo-project",
     "dev:api": "bun run --cwd packages/api dev",
     "dev:landing-page": "bun run --cwd clients/landing-page develop",
@@ -30,8 +30,8 @@
     "report:e2e": "bun run --cwd packages/e2e report",
     "storybook:dashboard": "bun run --cwd packages/pstdio-dashboard storybook",
     "build-storybook:dashboard": "bun run --cwd packages/pstdio-dashboard build-storybook",
-    "changeset": "bunx changeset",
-    "release": "bun run build && bunx changeset publish"
+    "changeset": "changeset",
+    "release": "bun run build && changeset publish"
   },
   "engines": {
     "bun": ">=1.3.10"

@@ -12,8 +12,8 @@
     "build": "bun build ./src/index.ts --outdir ./dist --target bun",
     "analyze-bundle": "bun build ./src/index.ts --outdir ./dist --target bun --metafile=./dist/bundle-meta.json --metafile-md=./dist/bundle-meta.md",
     "typecheck": "tsc --noEmit",
-    "lint": "bun run typecheck && bunx biome check .",
-    "format": "bunx biome check --write .",
+    "lint": "bun run typecheck && biome check .",
+    "format": "biome check --write .",
     "test": "bun test --silent",
     "test:coverage": "bun test --coverage"
   },

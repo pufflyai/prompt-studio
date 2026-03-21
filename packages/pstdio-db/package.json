@@ -9,12 +9,12 @@
   "scripts": {
     "build": "bun build ./src/index.ts --outdir ./dist --target bun",
     "analyze-bundle": "bun build ./src/index.ts --outdir ./dist --target bun --metafile=./dist/bundle-meta.json --metafile-md=./dist/bundle-meta.md",
-    "db:generate": "bunx drizzle-kit generate --config ./drizzle.config.ts",
-    "db:migrate": "bunx drizzle-kit migrate --config ./drizzle.config.ts",
+    "db:generate": "drizzle-kit generate --config ./drizzle.config.ts",
+    "db:migrate": "drizzle-kit migrate --config ./drizzle.config.ts",
     "typecheck": "tsc --noEmit --project ./tsconfig.json",
-    "studio": "bunx drizzle-kit studio --config ./drizzle.config.ts",
-    "lint": "bun run typecheck && bunx biome check .",
-    "format": "bunx biome check --write .",
+    "studio": "drizzle-kit studio --config ./drizzle.config.ts",
+    "lint": "bun run typecheck && biome check .",
+    "format": "biome check --write .",
     "test": "bun test --silent",
     "test:coverage": "bun test --coverage"
   },

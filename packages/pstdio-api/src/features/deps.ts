@@ -12,12 +12,7 @@ import type {
   createWorkspacesService,
   DbClient,
 } from "pstdio-db";
-import type {
-  createChangelogService,
-  createDocsService,
-  createFilesService,
-  createSkillsService,
-} from "pstdio-storage";
+import type { createDocsService, createFilesService, createSkillsService } from "pstdio-storage";
 import type { SessionStore } from "./sessions/session-store";
 
 import type { EventBus } from "./sync/event-bus";
@@ -45,7 +40,6 @@ export interface RouteDeps {
   statusesService: ReturnType<typeof createStatusesService>;
   tagsService: ReturnType<typeof createTagsService>;
   docsService: ReturnType<typeof createDocsService>;
-  changelogService: ReturnType<typeof createChangelogService>;
   agentRegistry: AgentRegistry;
   sessionStore: SessionStore;
 }

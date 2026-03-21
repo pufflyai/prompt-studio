@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { extractDisplayTitle } from "./display-title";
+import { extractDisplayTitle, extractRawTitle } from "./display-title";
 
 describe("extractDisplayTitle", () => {
   test("extracts from simple heading", () => {
@@ -74,5 +74,28 @@ No heading here, just text`;
 
 ## Also not this`;
     expect(extractDisplayTitle(content)).toBe("this-one");
+  });
+});
+
+describe("extractRawTitle", () => {
+  test("extracts heading text without slugifying", () => {
+    expect(extractRawTitle("# My Important Feature\n\nBody")).toBe("My Important Feature");
+  });
+
+  test("extracts heading after frontmatter", () => {
+    const content = `---
+ticket_id: PS-1
+---
+
+# Add dark mode`;
+    expect(extractRawTitle(content)).toBe("Add dark mode");
+  });
+
+  test("falls back to first non-empty line", () => {
+    expect(extractRawTitle("Just some text")).toBe("Just some text");
+  });
+
+  test("returns null for empty content", () => {
+    expect(extractRawTitle("")).toBeNull();
   });
 });

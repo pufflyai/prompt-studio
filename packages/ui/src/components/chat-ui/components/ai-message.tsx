@@ -11,6 +11,9 @@ const recipe = defineSlotRecipe({
       alignItems: "end",
       justifyContent: "end",
       gap: "sm",
+      "&:has(+ [data-scope='ai-message'][data-part='root'])": {
+        mb: 0,
+      },
     },
     content: {
       display: "flex",
@@ -28,7 +31,9 @@ const recipe = defineSlotRecipe({
           flexDirection: "row",
         },
         content: {
-          bg: "bg.muted",
+          border: "1px solid",
+          borderColor: "border.muted",
+          bg: "bg.subtle",
           width: "full",
           borderBottomRightRadius: 0,
         },
@@ -68,7 +73,7 @@ const recipe = defineSlotRecipe({
     },
     shape: {
       rounded: {
-        content: { rounded: "lg" },
+        content: { rounded: "xs" },
       },
       pill: {
         content: { rounded: "full" },

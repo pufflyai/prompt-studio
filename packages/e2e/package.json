@@ -8,7 +8,7 @@
     "test:cli": "bun test src/cli --silent",
     "test:packaged": "bun test src/packaged --silent",
     "test:ui": "bun run src/scripts/run-playwright.ts",
-    "report": "bunx playwright show-report"
+    "report": "playwright show-report"
   },
   "devDependencies": {
     "@playwright/test": "^1.50.0",

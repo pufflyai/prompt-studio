@@ -223,6 +223,7 @@
   "projectSettings": {
     "title": "Project Settings",
     "tags": "Tags",
+    "skills": "Skills",
     "templates": "Templates",
     "createTemplate": "Create template",
     "dangerZone": "Danger zone"
@@ -253,6 +254,7 @@
     "selectSession": "Select a session from the sidebar or start a new one.",
     "followUpPlaceholder": "Send a follow-up message...",
     "downloadSessionJson": "Download session JSON",
+    "copyAgentSessionId": "Copy agent session ID",
     "archiveSession": "Archive session",
     "sessionActions": "Session actions"
   }

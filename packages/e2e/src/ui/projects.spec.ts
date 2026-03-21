@@ -39,45 +39,6 @@ const configureAgent = async (request: import("@playwright/test").APIRequestCont
   expect(res.ok()).toBe(true);
 };
 
-const setProjectStartupScriptViaApi = async (
-  request: import("@playwright/test").APIRequestContext,
-  projectId: string,
-  script: string,
-) => {
-  const res = await request.put(`${apiBase}/v1/projects/${projectId}/startup-script`, {
-    data: { startup_script: script },
-  });
-  expect(res.ok()).toBe(true);
-};
-
-const getProjectStartupScriptViaApi = async (
-  request: import("@playwright/test").APIRequestContext,
-  projectId: string,
-) => {
-  const res = await request.get(`${apiBase}/v1/projects/${projectId}/startup-script`);
-  expect(res.ok()).toBe(true);
-  return (await res.json()) as { startup_script: string | null };
-};
-
-const openStartupScriptSection = async (page: Page) => {
-  const settingsSidebar = page.locator("aside").first();
-  await expect(settingsSidebar).toBeVisible();
-  await settingsSidebar.getByText("Startup script", { exact: true }).first().click();
-};
-
-const openTagsSection = async (page: Page) => {
-  const settingsSidebar = page.locator("aside").first();
-  await expect(settingsSidebar).toBeVisible();
-  await settingsSidebar.getByText("Tags", { exact: true }).first().click();
-};
-
-const replaceStartupScript = async (page: Page, script: string) => {
-  const editorInput = page.getByRole("textbox", { name: "Editor content" }).first();
-  await editorInput.focus();
-  await page.keyboard.press("ControlOrMeta+A");
-  await page.keyboard.type(script);
-};
-
 const createTempGitRepo = () => {
   const repoPath = mkdtempSync(join(tmpdir(), "pstdio-e2e-picker-"));
   mkdirSync(join(repoPath, ".git"), { recursive: true });
@@ -366,129 +327,51 @@ test.describe("Project creation", () => {
   });
 });
 
-test.describe("Project settings startup script", () => {
+test.describe("Project settings hooks", () => {
   test.beforeEach(async ({ request }) => {
-    test.setTimeout(10_000);
+    test.setTimeout(15_000);
     await deleteAllProjects(request);
   });
 
-  test("loads, edits, saves, and reloads startup script in settings", async ({ page, request }) => {
+  test("creates a hook from the sidebar dropdown and edits it", async ({ page, request }) => {
     await bypassOnboarding(page);
 
-    const project = await createProjectViaApi(request, "Startup Script Settings Project");
-    await setProjectStartupScriptViaApi(request, project.id, "#!/usr/bin/env bash\necho initial\n");
+    const repoPath = createTempGitRepo();
+    try {
+      const project = await createProjectViaApi(request, "Hooks Settings Project");
+      const registerRepoRes = await request.post(`${apiBase}/v1/projects/${project.id}/repos`, {
+        data: { name: "hooks-settings-repo", path: repoPath },
+      });
+      expect(registerRepoRes.ok()).toBe(true);
 
-    await page.goto(`/projects/${project.id}/settings`);
-    await openStartupScriptSection(page);
+      await page.goto(`/projects/${project.id}/settings`);
 
-    await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
-    await expect(page.locator(".view-lines").first()).toContainText("echo initial");
+      // The sidebar should show the Hooks section
+      const sidebar = page.locator("aside").first();
+      await expect(sidebar.getByText("Hooks")).toBeVisible();
 
-    await replaceStartupScript(page, "#!/usr/bin/env bash\necho changed\n");
+      // Reveal the section action buttons and open the add-hook dropdown
+      const hooksSection = sidebar.locator("text=Hooks").locator("..");
+      await hooksSection.hover();
+      const addButton = sidebar.getByRole("button", { name: "Add hook" });
+      await expect(addButton).toBeVisible();
+      await addButton.click();
 
-    await expect(page.getByText("Unsaved", { exact: true })).toBeVisible();
+      // Select pre-commit from the dropdown
+      await page.getByRole("menuitem", { name: "pre-commit" }).click();
 
-    await page.getByRole("button", { name: "Save" }).click();
-    await expect(page.getByText("Unsaved", { exact: true })).not.toBeVisible();
+      // Should navigate to the hook editor
+      await expect(page.getByText("pre-commit").first()).toBeVisible();
+      await expect(page.getByRole("button", { name: "Save" })).toBeVisible();
 
-    const saved = await getProjectStartupScriptViaApi(request, project.id);
-    expect(saved.startup_script).toContain("echo changed");
-
-    await page.reload();
-    await openStartupScriptSection(page);
-
-    await expect(page.locator(".view-lines").first()).toContainText("echo changed");
-    await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
-  });
-
-  test("preserves unsaved draft after navigating away and back", async ({ page, request }) => {
-    await bypassOnboarding(page);
-
-    const project = await createProjectViaApi(request, "Draft Nav Project");
-    await setProjectStartupScriptViaApi(request, project.id, "#!/usr/bin/env bash\necho original\n");
-
-    await page.goto(`/projects/${project.id}/settings`);
-    await openStartupScriptSection(page);
-    await expect(page.locator(".view-lines").first()).toContainText("echo original");
-
-    // Edit without saving
-    await replaceStartupScript(page, "#!/usr/bin/env bash\necho draft\n");
-    await expect(page.getByText("Unsaved", { exact: true })).toBeVisible();
-
-    // Navigate to tags then back to startup script
-    await openTagsSection(page);
-    await openStartupScriptSection(page);
-
-    // The unsaved draft should still be visible
-    await expect(page.locator(".view-lines").first()).toContainText("echo draft");
-    await expect(page.getByText("Unsaved", { exact: true })).toBeVisible();
-  });
-
-  test("preserves unsaved draft across page refresh", async ({ page, request }) => {
-    await bypassOnboarding(page);
-
-    const project = await createProjectViaApi(request, "Draft Refresh Project");
-    await setProjectStartupScriptViaApi(request, project.id, "#!/usr/bin/env bash\necho original\n");
-
-    await page.goto(`/projects/${project.id}/settings`);
-    await openStartupScriptSection(page);
-    await expect(page.locator(".view-lines").first()).toContainText("echo original");
-
-    // Edit without saving
-    await replaceStartupScript(page, "#!/usr/bin/env bash\necho draft-refresh\n");
-    await expect(page.getByText("Unsaved", { exact: true })).toBeVisible();
-
-    // Refresh the page
-    await page.reload();
-    await openStartupScriptSection(page);
-
-    // The unsaved draft should survive the refresh
-    await expect(page.locator(".view-lines").first()).toContainText("echo draft-refresh");
-    await expect(page.getByText("Unsaved", { exact: true })).toBeVisible();
-  });
-
-  test("clears draft after saving", async ({ page, request }) => {
-    await bypassOnboarding(page);
-
-    const project = await createProjectViaApi(request, "Draft Clear Project");
-    await setProjectStartupScriptViaApi(request, project.id, "#!/usr/bin/env bash\necho original\n");
-
-    await page.goto(`/projects/${project.id}/settings`);
-    await openStartupScriptSection(page);
-
-    // Edit and save
-    await replaceStartupScript(page, "#!/usr/bin/env bash\necho saved\n");
-    await page.getByRole("button", { name: "Save" }).click();
-    await expect(page.getByText("Unsaved", { exact: true })).not.toBeVisible();
-
-    // Refresh — should show saved version, not a stale draft
-    await page.reload();
-    await openStartupScriptSection(page);
-
-    await expect(page.locator(".view-lines").first()).toContainText("echo saved");
-    await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
-  });
-
-  test("clears draft after cancelling", async ({ page, request }) => {
-    await bypassOnboarding(page);
-
-    const project = await createProjectViaApi(request, "Draft Cancel Project");
-    await setProjectStartupScriptViaApi(request, project.id, "#!/usr/bin/env bash\necho original\n");
-
-    await page.goto(`/projects/${project.id}/settings`);
-    await openStartupScriptSection(page);
-
-    // Edit then cancel
-    await replaceStartupScript(page, "#!/usr/bin/env bash\necho discarded\n");
-    await expect(page.getByText("Unsaved", { exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Cancel" }).click();
-    await expect(page.getByText("Unsaved", { exact: true })).not.toBeVisible();
-
-    // Refresh — should show original, draft was cleared
-    await page.reload();
-    await openStartupScriptSection(page);
-
-    await expect(page.locator(".view-lines").first()).toContainText("echo original");
-    await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
+      // Verify the hook was created via API
+      const hooksRes = await request.get(`${apiBase}/v1/projects/${project.id}/hooks`);
+      expect(hooksRes.ok()).toBe(true);
+      const hooks = (await hooksRes.json()) as Array<{ name: string; content: string | null }>;
+      const preCommit = hooks.find((h) => h.name === "pre-commit");
+      expect(preCommit?.content).toBeTruthy();
+    } finally {
+      rmSync(repoPath, { recursive: true, force: true });
+    }
   });
 });

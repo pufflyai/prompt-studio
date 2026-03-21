@@ -2,7 +2,6 @@ import type { Arguments, Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { getProject } from "@/features/projects/api/get-project";
-import { getStartupScript } from "@/features/projects/api/get-startup-script";
 import { listRepos } from "@/features/projects/api/list-repos";
 
 export const command = "view";
@@ -18,7 +17,6 @@ type Deps = {
   readConfig: typeof readConfig;
   getProject: typeof getProject;
   listRepos: typeof listRepos;
-  getStartupScript: typeof getStartupScript;
   log: (msg: string) => void;
 };
 
@@ -28,7 +26,6 @@ const defaultDeps: Deps = {
   readConfig,
   getProject,
   listRepos,
-  getStartupScript,
   log: console.log,
 };
 
@@ -50,10 +47,7 @@ export const createHandler =
     const project = await deps.getProject(API_URL, projectId);
     if (!project) throw new Error(`Project not found: ${projectId}`);
 
-    const [repos, startupScript] = await Promise.all([
-      deps.listRepos(API_URL, projectId),
-      deps.getStartupScript(API_URL, projectId),
-    ]);
+    const repos = await deps.listRepos(API_URL, projectId);
 
     const lines = [
       `Name:             ${project.name}`,
@@ -62,7 +56,6 @@ export const createHandler =
       `Created:          ${formatDate(project.created_at)}`,
       `Updated:          ${formatDate(project.updated_at)}`,
       "",
-      `Startup script:   ${startupScript ? "configured" : "none"}`,
       `Repos:            ${repos.length > 0 ? `${repos.length} linked` : "none"}`,
     ];
 

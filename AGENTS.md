@@ -58,6 +58,12 @@ Tests must stay green.
 
 Before completing a task run `bun run validate`. Ensure it passes. Fix any remaining issues.
 
+### 5. Packaged Artifacts Smoke Test
+
+- If bundled runtime artifacts change (for example embedded templates, prompts, skills, or other packaged defaults), update packaged smoke-test expectations accordingly.
+- Keep `packages/e2e/src/packaged/packaged-serve-smoke.test.ts` aligned with the current bundled artifact set.
+- When validating packaged output, run `bun run scripts/verify-packages.ts`.
+
 ## Coding Style Rules
 
 - Split content that will grow in separate files (endpoints, schemas, etc.)

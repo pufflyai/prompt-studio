@@ -37,6 +37,7 @@
 │  ├─ merge.ts ────── ff-only or squash merge          │
 │  ├─ rebase.ts ───── rebase onto target               │
 │  ├─ status.ts ───── dirty / conflicts / ahead-behind │
+│  ├─ hooks.ts ────── lifecycle hook resolution + exec  │
 │  ├─ setup.ts ────── run scripts inside a worktree    │
 │  ├─ default-branch.ts ── detect main/master          │
 │  └─ copy-ignored.ts ─── copy node_modules etc.       │
@@ -70,12 +71,17 @@ The CLI modules handle the **application logic** (API calls, DB records, user pr
 │ create │───▶│  agent   │───▶│  commit  │───▶│  merge   │───▶│ remove │
 │Worktree│    │  works   │    │ Changes  │    │Worktree  │    │Worktree│
 └────────┘    └──────────┘    └──────────┘    └──────────┘    └────────┘
-     │                             │               │
-     │ idempotent:                 │ staging        │ squash or
-     │ reuses existing             │ policy:        │ ff-only
-     │ branch/worktree             │ all/tracked/   │
-     │                             │ none           │
+  ▲     │                      ▲     │         ▲     │        ▲     │
+  │     │                      │     │         │     │        │     │
+ pre   post                   pre   post      pre   post     pre   post
+create create                commit commit   merge  merge   remove remove
+                                              │
+                                           on-conflict
 ```
+
+### Hooks
+
+Hooks are shell scripts in `.pstdio/hooks/<hook-name>`. They run automatically at each lifecycle stage. `pre-*` hooks are blocking (non-zero exit aborts the operation). `post-*` hooks are non-blocking. See `.pstdio/docs/product/cli/hooks.md` for the full reference.
 
 ## Key design choices
 

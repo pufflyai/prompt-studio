@@ -2,7 +2,9 @@ import type { DocsSidebarItem } from "./data/api";
 
 export type DocsMenuEntry = {
   text: string;
+  itemText: string;
   link: string;
+  template?: string;
 };
 
 const DOCS_URL_BASE = "https://docs.local";
@@ -32,22 +34,22 @@ export const flattenDocsSidebar = (items: DocsSidebarItem[], parents: string[] =
   items.flatMap((item) => {
     const nextParents = item.items?.length ? [...parents, item.text] : parents;
     const label = [...parents, item.text].join(" / ");
-    const current = item.link ? [{ text: label, link: item.link }] : [];
+    const current = item.link ? [{ text: label, itemText: item.text, link: item.link, template: item.template }] : [];
     const nested = item.items?.length ? flattenDocsSidebar(item.items, nextParents) : [];
     return [...current, ...nested];
   });
 
-export const resolveActiveDocLink = (routeDoc: unknown, entries: DocsMenuEntry[]) => {
+export const resolveActiveDocEntry = (routeDoc: unknown, entries: DocsMenuEntry[]) => {
   const selected = typeof routeDoc === "string" ? normalizeDocsLink(routeDoc) : null;
 
   if (selected) {
     const matched = entries.find((entry) => normalizeDocsLink(entry.link) === selected);
     if (matched) {
-      return matched.link;
+      return matched;
     }
   }
 
-  return entries[0]?.link ?? null;
+  return entries[0] ?? null;
 };
 
 export const resolveDocsLinkFromHref = (href: string, currentLink: string | null) => {

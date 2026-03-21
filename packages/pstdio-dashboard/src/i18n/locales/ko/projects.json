@@ -63,24 +63,24 @@
       "branch": "브랜치"
     },
     "session": {
-      "selectLabel": "Select session",
-      "none": "New Session",
-      "noneHint": "Start a new session",
-      "loading": "Loading sessions...",
-      "noneAvailable": "No sessions yet",
-      "unknown": "Unknown session",
-      "emptyTitle": "New Session",
-      "emptyDescription": "Start a new session or pick one from the menu.",
-      "notFoundTitle": "Session not found",
-      "notFoundDescription": "Select a different session from the list.",
-      "resumePlaceholder": "Resume this session",
-      "openInBubble": "Open in bubble",
-      "viewMore": "View more sessions",
-      "executorSessionIdLabel": "Executor session ID",
-      "panelTitle": "All sessions",
+      "selectLabel": "세션 선택",
+      "none": "새 세션",
+      "noneHint": "새 세션 시작",
+      "loading": "세션 로딩 중...",
+      "noneAvailable": "아직 세션이 없습니다",
+      "unknown": "알 수 없는 세션",
+      "emptyTitle": "새 세션",
+      "emptyDescription": "새 세션을 시작하거나 메뉴에서 선택하세요.",
+      "notFoundTitle": "세션을 찾을 수 없습니다",
+      "notFoundDescription": "목록에서 다른 세션을 선택하세요.",
+      "resumePlaceholder": "이 세션 재개",
+      "openInBubble": "버블에서 열기",
+      "viewMore": "더 많은 세션 보기",
+      "executorSessionIdLabel": "실행자 세션 ID",
+      "panelTitle": "모든 세션",
       "group": {
-        "today": "Today",
-        "yesterday": "Yesterday"
+        "today": "오늘",
+        "yesterday": "어제"
       }
     },
     "model": {
@@ -158,23 +158,23 @@
     },
     "deleteConfirmation": {
       "ticket": {
-        "headline": "Delete ticket?",
-        "notification": "This deletes the ticket and removes it from the project."
+        "headline": "티켓을 삭제하시겠습니까?",
+        "notification": "이 티켓이 삭제되고 프로젝트에서 제거됩니다."
       }
     },
     "attempts": {
       "title": "시도",
-      "startNew": "Start new attempt",
+      "startNew": "새 시도 시작",
       "emptyTitle": "아직 시도가 없습니다",
       "emptyDescription": "여기에서 작업 시도를 시작해 세션을 추적하세요.",
       "updatedLabel": "{{date}} 업데이트됨",
       "dialog": {
-        "title": "Start new attempt",
-        "description": "Choose an agent and repository to start this ticket attempt.",
-        "modelLabel": "Model",
-        "modelPlaceholder": "Use default model",
-        "promptLabel": "Prompt",
-        "start": "Start attempt"
+        "title": "새 시도 시작",
+        "description": "이 티켓 시도를 시작할 에이전트와 리포지토리를 선택하세요.",
+        "modelLabel": "모델",
+        "modelPlaceholder": "기본 모델 사용",
+        "promptLabel": "프롬프트",
+        "start": "시도 시작"
       }
     },
     "description": {
@@ -201,7 +201,7 @@
     "tickets": "티켓",
     "projectChangelog": "프로젝트 변경 로그",
     "projectSettings": "프로젝트 설정",
-    "helpLinks": "도움말 링크",
+    "help": "도움말",
     "documentationLink": "문서",
     "discordLink": "Discord"
   },
@@ -211,7 +211,8 @@
     "notFoundDescription": "목록에서 프로젝트를 선택하여 계속하세요."
   },
   "projectSettings": {
-    "title": "프로젝트 설정"
+    "title": "프로젝트 설정",
+    "skills": "스킬"
   },
   "list": {
     "projectCreated": "프로젝트가 생성되었습니다",

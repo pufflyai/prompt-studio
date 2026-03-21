@@ -3,12 +3,6 @@ name: create-ticket
 description: "Create a ticket via pstdio. Use when asked to make changes unrelated to an existing ticket or when asked to create a new ticket."
 ---
 
-## User Input
-
-```text
-$ARGUMENTS
-```
-
 ## Workflow
 
 1. Decide the ticket status:

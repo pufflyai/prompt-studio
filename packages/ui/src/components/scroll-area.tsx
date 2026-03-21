@@ -6,6 +6,7 @@ type HorizontalScrollbarProps = Omit<ChakraScrollArea.ScrollbarProps, "orientati
 
 export interface ScrollAreaProps extends ChakraScrollArea.RootProps {
   viewportRef?: React.Ref<HTMLDivElement>;
+  contentRef?: React.Ref<HTMLDivElement>;
   viewportProps?: ChakraScrollArea.ViewportProps;
   contentProps?: ChakraScrollArea.ContentProps;
   verticalScrollbarProps?: VerticalScrollbarProps;
@@ -19,6 +20,7 @@ export const ScrollArea = React.forwardRef<HTMLDivElement, ScrollAreaProps>(func
   const {
     children,
     viewportRef,
+    contentRef,
     viewportProps,
     contentProps,
     verticalScrollbarProps,
@@ -32,7 +34,9 @@ export const ScrollArea = React.forwardRef<HTMLDivElement, ScrollAreaProps>(func
   return (
     <ChakraScrollArea.Root ref={ref} {...rest}>
       <ChakraScrollArea.Viewport {...viewportProps} ref={viewportRef}>
-        <ChakraScrollArea.Content {...contentProps}>{children}</ChakraScrollArea.Content>
+        <ChakraScrollArea.Content {...contentProps} ref={contentRef}>
+          {children}
+        </ChakraScrollArea.Content>
       </ChakraScrollArea.Viewport>
       {showVerticalScrollbar ? <ChakraScrollArea.Scrollbar {...verticalScrollbarProps} borderRadius={"xs"} /> : null}
       {showHorizontalScrollbar ? (

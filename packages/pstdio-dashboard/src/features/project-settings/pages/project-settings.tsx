@@ -1,13 +1,17 @@
 import { Flex, Stack, Text } from "@chakra-ui/react";
+import { toaster } from "@pstdio/ui";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useProject, useProjectTemplateAssets } from "@/features/project/hooks/use-project";
 import { CreateTemplateDialog } from "../components/create-template-dialog";
+import { HookEditor } from "../components/hook-editor";
 import { ProjectDangerZone } from "../components/project-danger-zone";
 import { type SettingsSection, SettingsSidebar } from "../components/settings-sidebar";
-import { StartupScriptEditor } from "../components/startup-script-editor";
+import { SkillViewer } from "../components/skill-viewer";
 import { TagManager } from "../components/tag-manager";
 import { TemplateEditor } from "../components/template-editor";
+import { useProjectHooks, useSaveProjectHook } from "../hooks/use-hooks";
+import { useProjectSkills } from "../hooks/use-skills";
 import { ensureValidSettingsSection, parseSettingsPanel, toSettingsPanel } from "../utils/settings-panel";
 
 export const ProjectSettings = () => {
@@ -16,18 +20,34 @@ export const ProjectSettings = () => {
   const { panel } = useSearch({ strict: false });
   const { data: project } = useProject(projectId);
   const { data: templates } = useProjectTemplateAssets(projectId);
+  const { data: hooks } = useProjectHooks(projectId);
+  const { data: skills } = useProjectSkills(projectId);
+  const saveHook = useSaveProjectHook(projectId);
   const [activeSection, setActiveSection] = useState<SettingsSection | null>(() => parseSettingsPanel(panel));
   const [isCreateTemplateOpen, setIsCreateTemplateOpen] = useState(false);
 
   const projectName = project?.name ?? "Project";
   const tags = project?.ticketTags ?? [];
-  const startupScript = project?.startupScript;
 
   const handleTemplateCreated = (name: string) => {
     setActiveSection({ template: name });
   };
 
   const handleTemplateDeleted = () => {
+    setActiveSection("tags");
+  };
+
+  const handleAddHook = async (hookName: string) => {
+    try {
+      await saveHook.mutateAsync({ hookName, content: "#!/bin/sh\n" });
+      setActiveSection({ hook: hookName });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to create hook.";
+      toaster.create({ type: "error", title: "Create hook failed", description: message });
+    }
+  };
+
+  const handleHookDeleted = () => {
     setActiveSection("tags");
   };
 
@@ -40,11 +60,11 @@ export const ProjectSettings = () => {
       return;
     }
 
-    const safeSection = ensureValidSettingsSection(activeSection, templates);
+    const safeSection = ensureValidSettingsSection(activeSection, templates, skills);
     if (safeSection !== activeSection) {
       setActiveSection(safeSection);
     }
-  }, [activeSection, templates]);
+  }, [activeSection, skills, templates]);
 
   useEffect(() => {
     if (!projectId || !activeSection) {
@@ -87,8 +107,19 @@ export const ProjectSettings = () => {
       );
     }
 
-    if (activeSection === "startup-script") {
-      return <StartupScriptEditor projectId={projectId} startupScript={startupScript} />;
+    if (typeof activeSection === "object" && "hook" in activeSection) {
+      return (
+        <HookEditor
+          key={activeSection.hook}
+          projectId={projectId}
+          hookName={activeSection.hook}
+          onDeleted={handleHookDeleted}
+        />
+      );
+    }
+
+    if (typeof activeSection === "object" && "skill" in activeSection) {
+      return <SkillViewer projectId={projectId} skillName={activeSection.skill} />;
     }
 
     return (
@@ -106,9 +137,12 @@ export const ProjectSettings = () => {
       <Flex height="100%" width="100%" minH="0">
         <SettingsSidebar
           templates={templates ?? []}
+          hooks={hooks ?? []}
+          skills={skills ?? []}
           activeSection={activeSection}
           onSelectSection={setActiveSection}
           onCreateTemplate={() => setIsCreateTemplateOpen(true)}
+          onAddHook={handleAddHook}
         />
         <Stack flex="1" minH="0" overflow="auto">
           {renderContent()}

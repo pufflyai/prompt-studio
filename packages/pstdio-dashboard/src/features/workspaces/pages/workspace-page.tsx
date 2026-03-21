@@ -8,6 +8,7 @@ import { useProjectSettingsStore } from "@/features/project-settings/store";
 import { CreateWorkspaceModal } from "@/features/ticket/components/create-workspace-modal";
 import { useTicketAttemptDiff } from "@/features/ticket/hooks/use-ticket-attempt-diff";
 import { useTicketFiles } from "@/features/ticket/hooks/use-ticket-files";
+import { buildImplementTicketPrompt } from "@/features/ticket/utils/build-prompts";
 import { useCreateTicketAttempt } from "@/features/ticket-list/hooks/use-create-ticket-attempt";
 import { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
 import { transformFileDiffs } from "@/features/workspaces/utils/transform-diff";
@@ -63,8 +64,7 @@ export const WorkspacePage = () => {
   const handleRunAttempt = async () => {
     if (!ticket || !projectId || createAttempt.isPending) return false;
 
-    const promptSource = ticket.content.trim();
-    const prompt = promptSource.length > 0 ? promptSource : ticket.title;
+    const prompt = buildImplementTicketPrompt(ticket.shorthand);
     const repoId = lastSelectedRepo || project?.repositories[0]?.id || null;
     const branch = lastSelectedBranches[0]?.trim() ? lastSelectedBranches[0] : null;
     const model = lastSelectedModels[0]?.trim() ? lastSelectedModels[0] : null;
@@ -76,7 +76,7 @@ export const WorkspacePage = () => {
         repoId,
         branch,
         model,
-        prompt: prompt.length > 0 ? prompt : null,
+        prompt,
       });
 
       handleSelectWorkspace(result.workspaceShorthand);

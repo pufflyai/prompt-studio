@@ -81,6 +81,51 @@ describe("templates write", () => {
     );
   });
 
+  test("preserves existing ticket title when writing template", async () => {
+    const ticketDir = join(tmpBase, ".pstdio", "tickets", "PS-4");
+    mkdirSync(ticketDir, { recursive: true });
+    writeFileSync(join(ticketDir, "ticket.md"), "# My important feature\n\nSome content");
+
+    const handler = createHandler({
+      cwd: () => tmpBase,
+      findGitRoot: () => tmpBase,
+      readConfig: () => ({ project_id: "proj-1" }),
+      getTemplate: async () => ({
+        id: "tpl-1",
+        name: "ticket",
+        template_type: "ticket",
+        is_default: true,
+        content: "# {{TICKET_TITLE}}\n\n## Details",
+      }),
+    });
+
+    await handler({ name: "ticket", target: "PS-4", _: [], $0: "" } as never);
+
+    const result = readFileSync(join(ticketDir, "ticket.md"), "utf8");
+    expect(result).toBe("# My important feature\n\n## Details");
+  });
+
+  test("falls back to shorthand when no existing ticket content", async () => {
+    mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-5"), { recursive: true });
+
+    const handler = createHandler({
+      cwd: () => tmpBase,
+      findGitRoot: () => tmpBase,
+      readConfig: () => ({ project_id: "proj-1" }),
+      getTemplate: async () => ({
+        id: "tpl-1",
+        name: "ticket",
+        template_type: "ticket",
+        is_default: true,
+        content: "# {{TICKET_TITLE}}",
+      }),
+    });
+
+    await handler({ name: "ticket", target: "PS-5", _: [], $0: "" } as never);
+
+    expect(readFileSync(join(tmpBase, ".pstdio", "tickets", "PS-5", "ticket.md"), "utf8")).toBe("# PS-5");
+  });
+
   test("writes to exact shorthand directory even when legacy directories are present", async () => {
     mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-3"), { recursive: true });
     mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-3_old-title"), { recursive: true });

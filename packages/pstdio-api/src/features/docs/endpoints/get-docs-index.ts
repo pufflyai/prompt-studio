@@ -8,6 +8,7 @@ const docsSidebarItemSchema: z.ZodType = z
     z.object({
       text: z.string(),
       link: z.string().optional(),
+      template: z.string().optional(),
       items: z.array(docsSidebarItemSchema).optional(),
     }),
   )

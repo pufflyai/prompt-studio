@@ -114,6 +114,44 @@ describe("GET /v1/sessions/:id/conversation", () => {
     expect(textParts).toContain(promptB);
   });
 
+  test("fetches messages from agent for completed sessions", async () => {
+    const prompt = "agent source of truth";
+
+    const projectRes = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Agent Messages Project" }),
+    });
+    const project = (await projectRes.json()) as { id: string };
+
+    const createRes = await app.request("/v1/sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: project.id, title: "Agent test", prompt, agent: "fake" }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = (await createRes.json()) as { id: string };
+
+    await waitForSessionStatus(created.id, "completed");
+
+    // Session is now completed and not in sessionStore — conversation
+    // endpoint should fetch fresh messages from the agent, not just
+    // the persisted file, so it picks up any messages the agent has
+    // that were missed during persistence.
+    const conversationRes = await app.request(`/v1/sessions/${created.id}/conversation`);
+    expect(conversationRes.status).toBe(200);
+    const conversation = (await conversationRes.json()) as {
+      session: { id: string; agent_session_id: string | null };
+      messages: unknown[];
+    };
+
+    expect(conversation.session.agent_session_id).not.toBeNull();
+
+    const textParts = extractTextParts(conversation.messages);
+    expect(textParts).toContain(prompt);
+    expect(textParts).toContain(`Fake Agent: completed "${prompt}"`);
+  });
+
   test("returns 404 for an unknown session id", async () => {
     const response = await app.request("/v1/sessions/nonexistent/conversation");
 

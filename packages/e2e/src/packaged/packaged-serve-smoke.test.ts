@@ -9,7 +9,21 @@ const BUILD_TIMEOUT = 180_000;
 const SMOKE_TEST_TIMEOUT = 30_000;
 const REPO_ROOT = join(import.meta.dirname, "../../../..");
 const BINARY_PATH = join(REPO_ROOT, "dist/pstdio");
-const REQUIRED_TEMPLATE_NAMES = ["adr", "cookbook", "lessons-learned", "prd", "proposal", "review-me", "ticket"];
+const REQUIRED_TEMPLATE_NAMES = [
+  "adr",
+  "changelog-entry",
+  "commit-message",
+  "cookbook",
+  "create-sub-tickets",
+  "implement-ticket",
+  "lessons-learned",
+  "prd",
+  "proposal",
+  "refine-ticket",
+  "review-me",
+  "squash-message",
+  "ticket",
+];
 const REQUIRED_SKILL_NAMES = [
   "create-proposal",
   "create-sub-tickets",

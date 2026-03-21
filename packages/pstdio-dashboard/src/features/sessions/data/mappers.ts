@@ -3,6 +3,7 @@ import type { Session } from "../types";
 interface SessionDto {
   id: string;
   project_id: string | null;
+  agent_session_id: string | null;
   title: string;
   status: Session["status"];
   archived: boolean;
@@ -14,6 +15,7 @@ interface SessionDto {
 export const toSession = (dto: SessionDto): Session => ({
   id: dto.id,
   projectId: dto.project_id,
+  agentSessionId: dto.agent_session_id,
   title: dto.title,
   status: dto.status,
   archived: dto.archived,

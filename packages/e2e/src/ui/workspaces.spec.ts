@@ -207,4 +207,36 @@ test.describe("Workspace diff", () => {
     expect(componentFile).toBeDefined();
     expect(componentFile!.change).toBe("added");
   });
+
+  test("fork_point mode keeps diff after fast-forward merge when workspace remains", async ({ request }) => {
+    const repoRoot = createGitRepo();
+    repoDirs.push(repoRoot);
+    const repo = await registerRepoViaApi(request, projectId, "ui-diff-ff-repo", repoRoot);
+    const ticket = await createTicketViaApi(request, projectId, "# Fast-forward merge diff retention test");
+    const attempt = await createAttemptViaApi(request, ticket.id, repo.id);
+
+    const wtPath = attempt.workspace.worktree_path;
+    writeFileSync(join(wtPath, "widget.tsx"), "export const Widget = () => <div>Widget</div>;\n");
+    execSync("git add .", { cwd: wtPath, stdio: "pipe" });
+    execSync('git commit -m "add widget"', { cwd: wtPath, stdio: "pipe" });
+
+    const workspaceBranch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: wtPath, stdio: "pipe" })
+      .toString()
+      .trim();
+    const defaultBranch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: repoRoot, stdio: "pipe" })
+      .toString()
+      .trim();
+
+    rmSync(join(repoRoot, ".pstdio"), { recursive: true, force: true });
+    execSync(`git checkout ${defaultBranch}`, { cwd: repoRoot, stdio: "pipe" });
+    execSync(`git merge --ff-only ${workspaceBranch}`, { cwd: repoRoot, stdio: "pipe" });
+
+    const diffRes = await request.get(`${apiBase}/v1/workspaces/${attempt.workspace.id}/diff?mode=fork_point`);
+    expect(diffRes.ok()).toBe(true);
+    const diff = (await diffRes.json()) as DiffResponse;
+
+    const widgetFile = diff.files.find((file) => file.filePath === "widget.tsx");
+    expect(widgetFile).toBeDefined();
+    expect(widgetFile!.change).toBe("added");
+  });
 });

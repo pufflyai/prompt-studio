@@ -6,6 +6,7 @@
     },
     {
       "text": "Changelog",
+      "template": "changelog",
       "link": "/changelog"
     },
     {

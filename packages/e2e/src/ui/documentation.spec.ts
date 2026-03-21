@@ -176,4 +176,47 @@ test.describe("Documentation", () => {
     const res = await request.get(`${apiBase}/v1/projects/${project.id}/docs/content?link=nonexistent`);
     expect(res.status()).toBe(404);
   });
+
+  test("renders changelog template as timeline instead of markdown", async ({ page, request }) => {
+    const changelogDir = join(repoDir, ".pstdio", "docs");
+
+    writeFileSync(
+      join(changelogDir, "changelog.md"),
+      [
+        "# Changelog",
+        "",
+        "Latest updates.",
+        "",
+        "---",
+        "",
+        "## 1.0.0",
+        "",
+        "**Date:** Mar 20, 2026",
+        "**Title:** First release",
+        "",
+        "### Changes",
+        "",
+        "- **Feature A** — The first feature.",
+      ].join("\n"),
+    );
+
+    writeFileSync(
+      join(changelogDir, "navigation.json"),
+      JSON.stringify({
+        sidebar: [
+          { text: "Welcome", link: "index" },
+          { text: "Changelog", link: "/changelog", template: "changelog" },
+        ],
+      }),
+    );
+
+    const project = await createProjectWithDocs(request, repoDir);
+
+    await bypassOnboarding(page);
+    await page.goto(`/projects/${project.id}/docs?doc=/changelog`);
+
+    await expect(page.getByText("Changelog")).toBeVisible();
+    await expect(page.getByText("First release")).toBeVisible();
+    await expect(page.getByText("Feature A")).toBeVisible();
+  });
 });

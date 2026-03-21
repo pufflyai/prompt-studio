@@ -4,6 +4,7 @@ import {
   Children,
   type ComponentProps,
   cloneElement,
+  type HTMLAttributes,
   isValidElement,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
@@ -271,19 +272,17 @@ export const MenuItem = (props: MenuItemProps) => {
     bg: backgroundColor,
     _hover: { bg: "bg.menu-item.hover" },
     _focus: { bg: "bg.menu-item.focus" },
+    textDecoration: "none",
+    color: "inherit",
   };
 
   if (asChild && children) {
     const child = Children.only(children);
-    if (!isValidElement(child)) return null;
+    if (!isValidElement<HTMLAttributes<HTMLElement>>(child)) return null;
 
     return (
       <ChakraMenuItem asChild {...commonProps}>
-        {cloneElement(
-          child,
-          { style: { textDecoration: "none", color: "inherit" } },
-          <MenuItemContent {...contentProps} />,
-        )}
+        {cloneElement(child, undefined, <MenuItemContent {...contentProps} />)}
       </ChakraMenuItem>
     );
   }

@@ -72,7 +72,6 @@ export const ticket_statuses = pgTable("ticket_statuses", {
   can_drag_out: boolean("can_drag_out").notNull(),
   can_drag_in: boolean("can_drag_in").notNull(),
   can_create: boolean("can_create").notNull(),
-  can_attempt_on_drop: boolean("can_attempt_on_drop").notNull(),
   column_actions: text("column_actions").notNull().default("[]"),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),

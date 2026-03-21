@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { buildApiUrl } from "@/lib/api";
 import type { SessionStatus } from "../types";
+import { fetchSessionConversationMessages, resolveStreamEndMessages } from "./session-conversation-hydration";
 import {
   applyMessagePatch,
   getCachedSessionEntry,
@@ -61,10 +62,28 @@ export const useSessionStream = (sessionId: string | null) => {
     // duplication when the modal is closed and reopened (cache + replay).
     messagesRef.current = [];
 
+    let isStreaming = false;
+    let isDisposed = false;
+
+    void fetchSessionConversationMessages(sessionId).then((hydrated) => {
+      if (!hydrated || isDisposed) return;
+
+      // The conversation API fetches directly from the agent and is the
+      // most complete source. Always apply it — but during an active
+      // stream, only use it if it has more messages than what the stream
+      // has replayed so far, to avoid overwriting live patches.
+      if (isStreaming && hydrated.length <= messagesRef.current.length) return;
+
+      messagesRef.current = hydrated;
+      updateCachedSessionEntry(sessionId, { messages: hydrated });
+      setState((prev) => ({ ...prev, messages: hydrated }));
+    });
+
     const url = buildApiUrl(`/v1/sessions/${sessionId}/stream?attempt=${connectionAttempt}`);
     const source = new EventSource(url);
 
     source.addEventListener("patch", (event) => {
+      isStreaming = true;
       const patch = JSON.parse(event.data) as JsonPatch;
       messagesRef.current = applyMessagePatch(messagesRef.current, patch);
       updateCachedSessionEntry(sessionId, { messages: messagesRef.current });
@@ -79,9 +98,13 @@ export const useSessionStream = (sessionId: string | null) => {
     source.addEventListener("end", (event) => {
       const { status } = JSON.parse(event.data) as { status: string };
       const resolvedStatus = status as SessionStatus;
-      updateCachedSessionEntry(sessionId, { messages: messagesRef.current, status: resolvedStatus });
+      const cachedMessages = getCachedSessionEntry(sessionId).messages;
+      const finalMessages = resolveStreamEndMessages(messagesRef.current, cachedMessages);
+
+      updateCachedSessionEntry(sessionId, { messages: finalMessages, status: resolvedStatus });
       setState((prev) => ({
         ...prev,
+        messages: finalMessages,
         status: resolvedStatus,
         isStreaming: false,
         approvalRequest: null,
@@ -95,6 +118,7 @@ export const useSessionStream = (sessionId: string | null) => {
     };
 
     return () => {
+      isDisposed = true;
       source.close();
     };
   }, [sessionId, connectionAttempt]);

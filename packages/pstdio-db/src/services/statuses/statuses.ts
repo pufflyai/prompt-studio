@@ -59,7 +59,6 @@ export const createStatusesService = (db: DbClient) => {
       can_drag_out: true,
       can_drag_in: true,
       can_create: false,
-      can_attempt_on_drop: false,
       column_actions: "[]",
       created_at: timestamp,
       updated_at: timestamp,
