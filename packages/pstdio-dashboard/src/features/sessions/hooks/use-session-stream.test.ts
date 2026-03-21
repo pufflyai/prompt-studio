@@ -7,6 +7,7 @@ import {
   getCachedSessionEntry,
   updateCachedSessionEntry,
 } from "./session-stream-cache";
+import { resolveStatusOnStreamActivity } from "./session-stream-status";
 
 const originalFetch = globalThis.fetch;
 
@@ -168,5 +169,32 @@ describe("session stream cache", () => {
 
     const hydrated = await fetchSessionConversationMessages("s_1");
     expect(hydrated).toBeNull();
+  });
+});
+
+describe("resolveStatusOnStreamActivity", () => {
+  it("replaces stale failed status when patch activity arrives", () => {
+    const status = resolveStatusOnStreamActivity("patch", "failed");
+    expect(status).toBe("in_progress");
+  });
+
+  it("maps approval request activity to awaiting_input", () => {
+    const status = resolveStatusOnStreamActivity("approval_request", "failed");
+    expect(status).toBe("awaiting_input");
+  });
+
+  it("keeps active status unchanged when patch activity arrives", () => {
+    const status = resolveStatusOnStreamActivity("patch", "in_progress");
+    expect(status).toBe("in_progress");
+  });
+
+  it("keeps completed status unchanged when patch activity arrives", () => {
+    const status = resolveStatusOnStreamActivity("patch", "completed");
+    expect(status).toBe("completed");
+  });
+
+  it("keeps cancelled status unchanged when patch activity arrives", () => {
+    const status = resolveStatusOnStreamActivity("patch", "cancelled");
+    expect(status).toBe("cancelled");
   });
 });

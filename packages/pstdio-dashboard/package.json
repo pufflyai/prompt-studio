@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "prebuild": "bun run typegen:tokens",
-    "typecheck": "bun run typegen:tokens && bunx tsc -b",
+    "typecheck": "bun run typegen:tokens && tsc -b",
     "lint": "bun run typecheck && bunx biome check .",
     "test": "bun test --silent --tsconfig-override tsconfig.app.json",
     "test:coverage": "bun test --coverage --tsconfig-override tsconfig.app.json",

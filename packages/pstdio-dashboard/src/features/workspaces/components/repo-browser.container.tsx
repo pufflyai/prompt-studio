@@ -61,6 +61,7 @@ export const resolveBranchSelection = (options: ResolveBranchSelectionOptions) =
   return currentBranch ?? branches[0].name;
 };
 
+<<<<<<< Updated upstream
 const resolveBranchState = (options: ResolveBranchStateOptions) => {
   const {
     isLocked,
@@ -93,6 +94,23 @@ const resolveBranchState = (options: ResolveBranchStateOptions) => {
     selectedBranch: nextSelectedBranch,
     hasUserSelectedBranch: hasUserSelectedBranch && hasSelection,
   } satisfies BranchState;
+=======
+const resetBranchSelection = (input: {
+  selectedBranch: string;
+  hasUserSelectedBranch: boolean;
+  onBranchChange?: (branch: string) => void;
+  setSelectedBranch: (branch: string) => void;
+  setHasUserSelectedBranch: (hasUserSelectedBranch: boolean) => void;
+}) => {
+  if (input.selectedBranch) {
+    input.setSelectedBranch("");
+    input.onBranchChange?.("");
+  }
+
+  if (input.hasUserSelectedBranch) {
+    input.setHasUserSelectedBranch(false);
+  }
+>>>>>>> Stashed changes
 };
 
 export const RepoBrowserContainer = (props: RepoBrowserContainerProps) => {
@@ -149,10 +167,40 @@ export const RepoBrowserContainer = (props: RepoBrowserContainerProps) => {
   }, [isLocked, lockedBranch, selectedBranch, onBranchChange]);
 
   useEffect(() => {
+<<<<<<< Updated upstream
     const nextState = resolveBranchState({
       isLocked,
       isBranchesPending,
       selectedRepositoryId,
+=======
+    if (isLocked) return;
+
+    if (!selectedRepositoryId) {
+      resetBranchSelection({
+        selectedBranch,
+        hasUserSelectedBranch,
+        onBranchChange,
+        setSelectedBranch,
+        setHasUserSelectedBranch,
+      });
+      return;
+    }
+
+    if (isBranchesPending) return;
+
+    if (branches.length === 0) {
+      resetBranchSelection({
+        selectedBranch,
+        hasUserSelectedBranch,
+        onBranchChange,
+        setSelectedBranch,
+        setHasUserSelectedBranch,
+      });
+      return;
+    }
+
+    const next = resolveBranchSelection({
+>>>>>>> Stashed changes
       branches,
       currentBranch,
       selectedBranch,

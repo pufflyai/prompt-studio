@@ -11,8 +11,104 @@ export interface WorkspacePanelMenuOption {
   icon?: React.ComponentType<{ size?: number }>;
 }
 
+<<<<<<< Updated upstream
 type MenuContent = "branches" | "repos";
 type ProjectsTranslate = (key: string) => string;
+=======
+interface RepositoryMenuContentProps {
+  repositoryOptions: WorkspacePanelMenuOption[];
+  filteredRepositoryOptions: WorkspacePanelMenuOption[];
+  selectedRepository: string;
+  isReposLoading: boolean;
+  loadingLabel: string;
+  noSearchResultsLabel: string;
+  noneLinkedLabel: string;
+  onSelectRepository: (repository: string) => void;
+}
+
+interface BranchMenuContentProps {
+  branchOptions: WorkspacePanelMenuOption[];
+  filteredBranchOptions: WorkspacePanelMenuOption[];
+  selectedBranch: string;
+  isBranchesLoading: boolean;
+  loadingLabel: string;
+  noSearchResultsLabel: string;
+  noneAvailableLabel: string;
+  onSelectBranch: (branch: string) => void;
+}
+
+const renderRepositoryMenuContent = (props: RepositoryMenuContentProps) => {
+  const {
+    repositoryOptions,
+    filteredRepositoryOptions,
+    selectedRepository,
+    isReposLoading,
+    loadingLabel,
+    noSearchResultsLabel,
+    noneLinkedLabel,
+    onSelectRepository,
+  } = props;
+
+  if (isReposLoading) {
+    return <MenuItem primaryLabel={loadingLabel} leftIcon={FolderGit2} isDisabled />;
+  }
+
+  if (filteredRepositoryOptions.length > 0) {
+    return filteredRepositoryOptions.map((option) => (
+      <MenuItem
+        key={option.value}
+        id={option.value}
+        primaryLabel={option.label}
+        leftIcon={option.icon ?? FolderGit2}
+        isSelected={option.value === selectedRepository}
+        onClick={() => onSelectRepository(option.value)}
+      />
+    ));
+  }
+
+  if (repositoryOptions.length > 0) {
+    return <MenuItem primaryLabel={noSearchResultsLabel} leftIcon={FolderGit2} isDisabled />;
+  }
+
+  return <MenuItem primaryLabel={noneLinkedLabel} leftIcon={FolderGit2} isDisabled />;
+};
+
+const renderBranchMenuContent = (props: BranchMenuContentProps) => {
+  const {
+    branchOptions,
+    filteredBranchOptions,
+    selectedBranch,
+    isBranchesLoading,
+    loadingLabel,
+    noSearchResultsLabel,
+    noneAvailableLabel,
+    onSelectBranch,
+  } = props;
+
+  if (isBranchesLoading) {
+    return <MenuItem primaryLabel={loadingLabel} leftIcon={GitBranch} isDisabled />;
+  }
+
+  if (filteredBranchOptions.length > 0) {
+    return filteredBranchOptions.map((option) => (
+      <MenuItem
+        key={option.value}
+        id={option.value}
+        primaryLabel={option.label}
+        leftIcon={option.icon ?? GitBranch}
+        isSelected={option.value === selectedBranch}
+        onClick={() => onSelectBranch(option.value)}
+      />
+    ));
+  }
+
+  if (branchOptions.length > 0) {
+    return <MenuItem primaryLabel={noSearchResultsLabel} leftIcon={GitBranch} isDisabled />;
+  }
+
+  return <MenuItem primaryLabel={noneAvailableLabel} leftIcon={GitBranch} isDisabled />;
+};
+>>>>>>> Stashed changes
 
 export const getSelectedLabel = (
   options: WorkspacePanelMenuOption[],
@@ -212,6 +308,28 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
     setOpen(false);
   };
 
+  const menuItems = isShowingRepos
+    ? renderRepositoryMenuContent({
+        repositoryOptions,
+        filteredRepositoryOptions,
+        selectedRepository,
+        isReposLoading,
+        loadingLabel: t("chatInput.repo.loading"),
+        noSearchResultsLabel: t("chatInput.repo.noSearchResults"),
+        noneLinkedLabel: t("chatInput.repo.noneLinked"),
+        onSelectRepository: handleSelectRepository,
+      })
+    : renderBranchMenuContent({
+        branchOptions,
+        filteredBranchOptions,
+        selectedBranch,
+        isBranchesLoading,
+        loadingLabel: t("chatInput.branch.loading"),
+        noSearchResultsLabel: t("chatInput.branch.noSearchResults"),
+        noneAvailableLabel: t("chatInput.branch.noneAvailable"),
+        onSelectBranch: handleSelectBranch,
+      });
+
   return (
     <Menu.Root lazyMount={false} open={open} onOpenChange={handleOpenChange} closeOnSelect={false}>
       <Menu.Trigger asChild>
@@ -291,6 +409,7 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
             overflowY="auto"
             data-testid={menuContent === "repos" ? "workspace-repo-options" : "workspace-repo-branch-options"}
           >
+<<<<<<< Updated upstream
             <RepoBrowserMenuOptions
               menuContent={menuContent}
               repositoryOptions={repositoryOptions}
@@ -305,6 +424,9 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
               onSelectBranch={handleSelectBranch}
               t={t}
             />
+=======
+            {menuItems}
+>>>>>>> Stashed changes
           </Box>
         </Menu.Content>
       </Menu.Positioner>

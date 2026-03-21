@@ -10,6 +10,91 @@ import { useDocsContent, useDocsIndex } from "../hooks/use-docs";
 import { DocsTemplateRenderer } from "../renderers/docs-template-renderer";
 import { flattenDocsSidebar, resolveActiveDocEntry, resolveDocsLinkFromHref } from "../utils";
 
+const navigateToDocLink = (input: {
+  link: string;
+  navigate: ReturnType<typeof useNavigate>;
+  projectId: string | undefined;
+  replace?: boolean;
+}) => {
+  const { link, navigate, projectId, replace = false } = input;
+  if (projectId) {
+    navigate({ to: "/projects/$projectId/docs", params: { projectId }, search: { doc: link }, replace });
+    return;
+  }
+
+  navigate({ to: "/docs", search: { doc: link }, replace });
+};
+
+const resolveErrorDescription = (error: unknown, fallback: string) => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallback;
+};
+
+const resolveClickedDocLink = (target: EventTarget | null, activeLink: string | null) => {
+  if (!(target instanceof HTMLElement)) {
+    return null;
+  }
+
+  const anchor = target.closest("a");
+  const href = anchor?.getAttribute("href");
+  if (!href) {
+    return null;
+  }
+
+  return resolveDocsLinkFromHref(href, activeLink);
+};
+
+interface ResolvePageContentInput {
+  activeLink: string | null;
+  content:
+    | {
+        content?: string | null;
+        path?: string | null;
+      }
+    | null
+    | undefined;
+  contentError: Error | null;
+  handleDocumentClick: (event: MouseEvent<HTMLDivElement>) => void;
+  isContentLoading: boolean;
+  t: (key: string) => string;
+  template: string | undefined;
+}
+
+const resolvePageContent = (input: ResolvePageContentInput) => {
+  const { activeLink, content, contentError, handleDocumentClick, isContentLoading, t, template } = input;
+
+  if (isContentLoading) {
+    return <LoadingDocs />;
+  }
+
+  if (!content && !contentError) {
+    return <EmptyDocs />;
+  }
+
+  if (contentError) {
+    return (
+      <EmptyState
+        title={t("docs.unableToLoadDocument")}
+        description={resolveErrorDescription(contentError, t("docs.trySelectingAnother"))}
+      />
+    );
+  }
+
+  return (
+    <Box width="100%" height="100%" onClick={handleDocumentClick}>
+      <DocsTemplateRenderer
+        key={`${content?.path ?? activeLink ?? "docs-empty"}-${template ?? "markdown"}`}
+        content={content?.content ?? ""}
+        template={template}
+        markdownPlaceholder={t("docs.noContentAvailable")}
+      />
+    </Box>
+  );
+};
+
 export const DocsPanel = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -32,17 +117,7 @@ export const DocsPanel = () => {
       return;
     }
 
-    if (resolvedProjectId) {
-      navigate({
-        to: "/projects/$projectId/docs",
-        params: { projectId: resolvedProjectId },
-        search: { doc: activeLink },
-        replace: true,
-      });
-      return;
-    }
-
-    navigate({ to: "/docs", search: { doc: activeLink }, replace: true });
+    navigateToDocLink({ link: activeLink, navigate, projectId: resolvedProjectId, replace: true });
   }, [activeLink, navigate, resolvedProjectId, routeDoc]);
 
   const handleSelectLink = (link: string) => {
@@ -50,28 +125,11 @@ export const DocsPanel = () => {
       return;
     }
 
-    if (resolvedProjectId) {
-      navigate({ to: "/projects/$projectId/docs", params: { projectId: resolvedProjectId }, search: { doc: link } });
-      return;
-    }
-
-    navigate({ to: "/docs", search: { doc: link } });
+    navigateToDocLink({ link, navigate, projectId: resolvedProjectId });
   };
 
   const handleDocumentClick = (event: MouseEvent<HTMLDivElement>) => {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) {
-      return;
-    }
-
-    const anchor = target.closest("a");
-    const href = anchor?.getAttribute("href");
-
-    if (!href) {
-      return;
-    }
-
-    const nextLink = resolveDocsLinkFromHref(href, activeLink);
+    const nextLink = resolveClickedDocLink(event.target, activeLink);
     if (!nextLink) {
       return;
     }
@@ -86,10 +144,7 @@ export const DocsPanel = () => {
 
   if (indexError) {
     return (
-      <EmptyState
-        title={t("docs.unableToLoadDocs")}
-        description={indexError instanceof Error ? indexError.message : "Try again."}
-      />
+      <EmptyState title={t("docs.unableToLoadDocs")} description={resolveErrorDescription(indexError, "Try again.")} />
     );
   }
 
@@ -97,25 +152,15 @@ export const DocsPanel = () => {
     return <EmptyDocs />;
   }
 
-  const pageContent = isContentLoading ? (
-    <LoadingDocs />
-  ) : !content && !contentError ? (
-    <EmptyDocs />
-  ) : contentError ? (
-    <EmptyState
-      title={t("docs.unableToLoadDocument")}
-      description={contentError instanceof Error ? contentError.message : t("docs.trySelectingAnother")}
-    />
-  ) : (
-    <Box width="100%" height="100%" onClick={handleDocumentClick}>
-      <DocsTemplateRenderer
-        key={`${content?.path ?? activeLink ?? "docs-empty"}-${activeEntry?.template ?? "markdown"}`}
-        content={content?.content ?? ""}
-        template={activeEntry?.template}
-        markdownPlaceholder={t("docs.noContentAvailable")}
-      />
-    </Box>
-  );
+  const pageContent = resolvePageContent({
+    activeLink,
+    content: content ?? null,
+    contentError,
+    handleDocumentClick,
+    isContentLoading,
+    t,
+    template: activeEntry?.template,
+  });
 
   return (
     <Stack height="100%" flex="1" minH="0" position="relative">

@@ -65,11 +65,16 @@ const resolveRelinkState = async (
   },
 ) => {
   if (!existsSync(input.configPath)) {
+<<<<<<< Updated upstream
     return { isRelinking: false, linkedProjectError: null as string | null };
+=======
+    return { isRelinking: false, linkedProjectId: null };
+>>>>>>> Stashed changes
   }
 
   const existing = JSON.parse(await readFile(input.configPath, "utf8"));
   if (!existing.project_id || existing.project_id === input.projectId) {
+<<<<<<< Updated upstream
     return { isRelinking: false, linkedProjectError: null as string | null };
   }
 
@@ -82,11 +87,29 @@ const resolveRelinkState = async (
   }
 
   return { isRelinking: true, linkedProjectError: null as string | null };
+=======
+    return { isRelinking: false, linkedProjectId: null };
+  }
+
+  const linkedProject = await deps.projectsService.get(existing.project_id);
+  if (linkedProject) {
+    return { isRelinking: false, linkedProjectId: existing.project_id };
+  }
+
+  return { isRelinking: true, linkedProjectId: null };
+>>>>>>> Stashed changes
 };
 
 const emitProjectRepoLink = async (
   deps: Pick<RouteDeps, "db" | "eventBus">,
+<<<<<<< Updated upstream
   input: { projectId: string; repoId: string },
+=======
+  input: {
+    projectId: string;
+    repoId: string;
+  },
+>>>>>>> Stashed changes
 ) => {
   const [link] = await deps.db
     .select()
@@ -95,9 +118,18 @@ const emitProjectRepoLink = async (
   if (link) deps.eventBus.emit("project_repos", "set", link);
 };
 
+<<<<<<< Updated upstream
 const installProjectSkillsToRepo = async (
   deps: Pick<RouteDeps, "skillsDbService" | "agentConfigsService" | "filesService">,
   input: { projectId: string; repoPath: string },
+=======
+const installProjectSkills = async (
+  deps: Pick<RouteDeps, "skillsDbService" | "agentConfigsService" | "filesService">,
+  input: {
+    projectId: string;
+    repoPath: string;
+  },
+>>>>>>> Stashed changes
 ) => {
   const [skills, agents] = await Promise.all([
     deps.skillsDbService.list(input.projectId),
@@ -127,12 +159,18 @@ export const registerRepoHandler = (deps: RouteDeps): AppRouteHandler<typeof reg
 
     const pstdioPath = join(path, ".pstdio");
     const configPath = join(pstdioPath, "config.json");
+<<<<<<< Updated upstream
     const relinkState = await resolveRelinkState(deps, {
       configPath,
       projectId: id,
     });
     if (relinkState.linkedProjectError) {
       return c.json({ error: relinkState.linkedProjectError }, 409);
+=======
+    const relinkState = await resolveRelinkState(deps, { configPath, projectId: id });
+    if (relinkState.linkedProjectId) {
+      return c.json({ error: `Repo is already linked to project ${relinkState.linkedProjectId}` }, 409);
+>>>>>>> Stashed changes
     }
 
     const repo = await deps.reposService.registerForProject(id, { name, path });
@@ -146,8 +184,12 @@ export const registerRepoHandler = (deps: RouteDeps): AppRouteHandler<typeof reg
 
     deps.eventBus.emit("repos", "set", repo);
     await emitProjectRepoLink(deps, { projectId: id, repoId: repo.id });
+<<<<<<< Updated upstream
 
     await installProjectSkillsToRepo(deps, { projectId: id, repoPath: repo.path });
+=======
+    await installProjectSkills(deps, { projectId: id, repoPath: repo.path });
+>>>>>>> Stashed changes
 
     return c.json(repo, 201);
   };

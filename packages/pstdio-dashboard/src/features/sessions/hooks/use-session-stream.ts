@@ -10,6 +10,7 @@ import {
   type JsonPatch,
   updateCachedSessionEntry,
 } from "./session-stream-cache";
+import { resolveStatusOnStreamActivity } from "./session-stream-status";
 
 export {
   applyMessagePatch,
@@ -86,13 +87,20 @@ export const useSessionStream = (sessionId: string | null) => {
       isStreaming = true;
       const patch = JSON.parse(event.data) as JsonPatch;
       messagesRef.current = applyMessagePatch(messagesRef.current, patch);
-      updateCachedSessionEntry(sessionId, { messages: messagesRef.current });
-      setState((prev) => ({ ...prev, messages: messagesRef.current, approvalRequest: null }));
+      setState((prev) => {
+        const status = resolveStatusOnStreamActivity("patch", prev.status);
+        updateCachedSessionEntry(sessionId, { messages: messagesRef.current, status });
+        return { ...prev, messages: messagesRef.current, status, approvalRequest: null };
+      });
     });
 
     source.addEventListener("approval_request", (event) => {
       const request = JSON.parse(event.data) as ApprovalRequest;
-      setState((prev) => ({ ...prev, approvalRequest: request }));
+      setState((prev) => {
+        const status = resolveStatusOnStreamActivity("approval_request", prev.status);
+        updateCachedSessionEntry(sessionId, { status });
+        return { ...prev, status, approvalRequest: request };
+      });
     });
 
     source.addEventListener("end", (event) => {

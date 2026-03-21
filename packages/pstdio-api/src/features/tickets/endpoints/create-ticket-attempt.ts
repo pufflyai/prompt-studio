@@ -1,27 +1,15 @@
-import { existsSync, readFileSync } from "node:fs";
-import { copyFile, mkdir } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
-import { eq, ticket_workspaces } from "pstdio-db";
-import { createWorktree, runHook } from "pstdio-wt";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
-import { spawnAgentSession } from "../../sessions/spawn-agent";
 import { createTicketAttemptBodySchema, notFoundResponseSchema, ticketAttemptResponseSchema } from "../dto";
+import {
+  createWorkspaceForAttempt,
+  prepareWorkspaceForAttempt,
+  startAttemptSession,
+} from "./create-ticket-attempt-workflow";
 
 const badRequestSchema = z.object({ error: z.string() });
 type WorkspaceRecord = Awaited<ReturnType<RouteDeps["workspacesService"]["create"]>>;
-
-const resolveWorkspacesRoot = () => {
-  const configured = process.env.PSTDIO_WORKSPACES_DIR?.trim();
-  if (configured) return configured;
-
-  const home = process.env.HOME?.trim();
-  if (home) return join(home, ".pstdio", "workspaces");
-
-  return join(homedir(), ".pstdio", "workspaces");
-};
 
 export const createTicketAttemptRoute = createRoute({
   method: "post",
@@ -74,6 +62,7 @@ const resolveRepoForAttempt = async (
   return repos[0] ?? null;
 };
 
+<<<<<<< Updated upstream
 const resolvePrompt = async (
   deps: Pick<RouteDeps, "filesService">,
   inputPrompt: string | null | undefined,
@@ -353,6 +342,8 @@ const startAttemptSession = async (
   return { session, workspaceWithSession };
 };
 
+=======
+>>>>>>> Stashed changes
 export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typeof createTicketAttemptRoute> => {
   const worktreeMode = "worktree";
 
@@ -371,6 +362,7 @@ export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typ
       return c.json({ error: `Repo not found for project ${ticket.project_id}` }, 404);
     }
 
+<<<<<<< Updated upstream
     const base = input.base?.trim() || input.branch?.trim() || "HEAD";
     const workspaceWithGitMetadata = await createAttemptWorkspace(deps, {
       projectId: ticket.project_id,
@@ -380,6 +372,21 @@ export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typ
       worktreeMode,
       repoPath: repo.path,
       base,
+=======
+    const workspace = await createWorkspaceForAttempt(deps, {
+      projectId: ticket.project_id,
+      ticketId: ticket.id,
+      ticketShorthand: ticket.shorthand,
+    });
+
+    const base = input.base?.trim() || input.branch?.trim() || "HEAD";
+    const workspaceWithGitMetadata = await prepareWorkspaceForAttempt(deps, {
+      mode,
+      worktreeMode,
+      base,
+      repoPath: repo.path,
+      workspace,
+>>>>>>> Stashed changes
     });
 
     const shouldStartSession = input.start_session ?? true;
@@ -395,6 +402,7 @@ export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typ
       );
     }
 
+<<<<<<< Updated upstream
     const started = await startAttemptSession(deps, {
       ticket,
       workspace: workspaceWithGitMetadata,
@@ -407,12 +415,32 @@ export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typ
     });
     if (!started) {
       return c.json({ error: "No agent configured for ticket attempts." }, 400);
+=======
+    const startedSession = await startAttemptSession(deps, {
+      workspace: workspaceWithGitMetadata,
+      mode,
+      worktreeMode,
+      repoPath: repo.path,
+      prompt: input.prompt,
+      model: input.model,
+      agent: input.agent,
+      ticket: {
+        project_id: ticket.project_id,
+        shorthand: ticket.shorthand,
+        display_title: ticket.display_title,
+        file_id: ticket.file_id,
+      },
+    });
+    if (startedSession.error) {
+      return c.json({ error: startedSession.error }, 400);
+>>>>>>> Stashed changes
     }
 
     return c.json(
       {
         mode,
         ticket,
+<<<<<<< Updated upstream
         workspace: started.workspaceWithSession,
         session: {
           id: started.session.id,
@@ -420,6 +448,15 @@ export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typ
           title: started.session.title,
           created_at: started.session.created_at,
           updated_at: started.session.updated_at,
+=======
+        workspace: startedSession.workspaceWithSession,
+        session: {
+          id: startedSession.session.id,
+          workspace_id: startedSession.workspaceWithSession.id,
+          title: startedSession.session.title,
+          created_at: startedSession.session.created_at,
+          updated_at: startedSession.session.updated_at,
+>>>>>>> Stashed changes
         },
       },
       201,
