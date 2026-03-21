@@ -1,5 +1,17 @@
 # pstdio
 
+## 0.2.1
+
+### Patch Changes
+
+- 403da88: Resolve stale in_progress session status to completed when process handle is lost.
+- 205cf2d: Add a Skills section in project settings so users can browse installed skills and read their content in the dashboard.
+- 05705ba: Remove the backend connection indicator dot from the dashboard layout.
+- 403da88: Fix server startup blocking by making orphaned session resolution non-blocking
+- 6e577b6: Add template-aware docs rendering so changelog docs entries use the changelog UI.
+- 14b174f: Reshape global settings into a sidebar Agents panel and support manual agent setup with executable paths.
+- 05705ba: Use ScrollArea for rich-text content editable scrolling.
+
 ## 0.2.0
 
 ### Minor Changes
