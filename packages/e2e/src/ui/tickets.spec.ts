@@ -282,7 +282,7 @@ test.describe("Ticket list editing and filtering", () => {
         response.status() === 200,
     );
 
-    const editor = page.locator('[contenteditable="true"]:visible').first();
+    const editor = page.locator("[data-testid='content-editable']").first();
     await editor.click();
     await page.keyboard.press("ControlOrMeta+A");
     await page.keyboard.type("Updated display title");
@@ -329,7 +329,7 @@ test.describe("Ticket list editing and filtering", () => {
         response.url().includes(`/v1/tickets/${createdTicket!.id}`) &&
         response.status() === 200,
     );
-    const editor = page.locator('[contenteditable="true"]:visible').first();
+    const editor = page.locator("[data-testid='content-editable']").first();
     await editor.click();
     await page.keyboard.press("ControlOrMeta+A");
     await page.keyboard.type(updatedContent);
@@ -342,7 +342,7 @@ test.describe("Ticket list editing and filtering", () => {
     await page.getByText("Persisted content title").first().click();
     await page.waitForURL(`**/projects/${projectId}/tickets/${createdTicket!.shorthand}`);
 
-    const reopenedEditor = page.locator('[contenteditable="true"]:visible').first();
+    const reopenedEditor = page.locator("[data-testid='content-editable']").first();
     await expect(reopenedEditor).toContainText("persisted-body-marker", { timeout: 12_000 });
   });
 

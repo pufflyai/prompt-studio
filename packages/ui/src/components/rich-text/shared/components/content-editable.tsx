@@ -23,6 +23,7 @@ export function ContentEditable({ onRef, fullWidth = false, padding, isRichMessa
     >
       <Flex ref={onRef} width="100%" minH="100%" padding={padding} justifyContent={fullWidth ? "flex-start" : "center"}>
         <StyledEditable
+          data-testid="content-editable"
           height="fit-content"
           minH="100%"
           width="100%"

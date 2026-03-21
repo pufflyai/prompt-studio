@@ -40,43 +40,91 @@ const configureAgent = async (request: import("@playwright/test").APIRequestCont
   expect(res.ok()).toBe(true);
 };
 
+const resolveFolderPickerWorkspacePath = () => {
+  let currentPath = process.cwd();
+
+  while (true) {
+    if (existsSync(join(currentPath, ".git"))) {
+      return join(dirname(currentPath), "pstdio-e2e-picker-workspace");
+    }
+
+    const parentPath = dirname(currentPath);
+
+    if (parentPath === currentPath) {
+      return join(process.cwd(), "pstdio-e2e-picker-workspace");
+    }
+
+    currentPath = parentPath;
+  }
+};
+
 const createTempGitRepo = () => {
-  const repoPath = mkdtempSync("/tmp/pstdio-e2e-picker-");
+  const pickerWorkspacePath = resolveFolderPickerWorkspacePath();
+  mkdirSync(pickerWorkspacePath, { recursive: true });
+
+  const repoPath = mkdtempSync(join(pickerWorkspacePath, "pstdio-e2e-picker-"));
   mkdirSync(join(repoPath, ".git"), { recursive: true });
   return repoPath;
 };
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const splitPath = (path: string) => path.split("/").filter(Boolean);
+const getCommonPrefixLength = (left: string[], right: string[]) => {
+  let index = 0;
+
+  while (index < left.length && index < right.length && left[index] === right[index]) {
+    index += 1;
+  }
+
+  return index;
+};
+
+const getCreateProjectDialog = (page: Page) =>
+  page
+    .getByRole("dialog")
+    .filter({ has: page.getByRole("button", { name: "Browse for repository" }) })
+    .first();
+
+const getFolderPickerDialog = (page: Page) =>
+  page
+    .getByRole("dialog")
+    .filter({ has: page.getByRole("button", { name: "Go to parent directory" }) })
+    .last();
 
 const waitForPickerToLoad = async (dialog: Locator) => {
   await expect(dialog.getByText("Loading...")).not.toBeVisible({ timeout: pickerLoadTimeoutMs });
 };
 
 const readPickerPath = async (dialog: Locator) => {
-  const path = await dialog.locator("p").filter({ hasText: /^\// }).first().textContent();
+  const path = await dialog.locator("[data-testid='folder-picker-path']").textContent();
   return path?.trim() ?? "/";
 };
 
-const navigatePickerToDirectory = async (page: Page, targetPath: string) => {
-  const dialog = page.getByRole("dialog").last();
+const navigatePickerToDirectory = async (dialog: Locator, targetPath: string) => {
   const parentButton = dialog.getByRole("button", { name: "Go to parent directory" });
   const resolvedTargetPath = realpathSync(targetPath);
+  const targetSegments = splitPath(resolvedTargetPath);
 
   await waitForPickerToLoad(dialog);
   let currentPath = await readPickerPath(dialog);
+  let currentSegments = splitPath(currentPath);
+  const commonPrefixLength = getCommonPrefixLength(currentSegments, targetSegments);
 
-  while (currentPath !== "/") {
+  while (currentSegments.length > commonPrefixLength) {
     const previousPath = currentPath;
     await parentButton.click();
     await waitForPickerToLoad(dialog);
     await expect.poll(() => readPickerPath(dialog)).not.toBe(previousPath);
     currentPath = await readPickerPath(dialog);
+    currentSegments = splitPath(currentPath);
   }
 
-  for (const segment of resolvedTargetPath.split("/").filter(Boolean)) {
+  for (const segment of targetSegments.slice(commonPrefixLength)) {
     const expectedPath = currentPath === "/" ? `/${segment}` : `${currentPath}/${segment}`;
-    const segmentOption = dialog.getByRole("option", { name: new RegExp(`^${escapeRegex(segment)}$`) }).first();
-    await expect(segmentOption).toBeVisible();
+    const segmentOption = dialog
+      .getByRole("option", { name: new RegExp(`^${escapeRegex(segment)}(?:\\s+Git repo)?$`) })
+      .first();
+    await expect(segmentOption).toBeAttached();
     await segmentOption.click();
     await waitForPickerToLoad(dialog);
     await expect.poll(() => readPickerPath(dialog)).toBe(expectedPath);
@@ -86,15 +134,20 @@ const navigatePickerToDirectory = async (page: Page, targetPath: string) => {
 
 const selectRepoFromFolderPicker = async (page: Page, repoPath: string) => {
   const repoName = basename(repoPath);
-  const dialog = page.getByRole("dialog").last();
+  const createProjectDialog = getCreateProjectDialog(page);
+
+  await createProjectDialog.getByRole("button", { name: "Browse for repository" }).click();
+
+  const dialog = getFolderPickerDialog(page);
   const repoOption = dialog.getByRole("option").filter({ hasText: repoName }).first();
 
-  await page.getByRole("button", { name: "Browse for repository" }).click();
-  await navigatePickerToDirectory(page, dirname(repoPath));
+  await expect(dialog).toBeVisible();
+  await navigatePickerToDirectory(dialog, dirname(repoPath));
   await expect(dialog.getByText("No entries found.")).not.toBeVisible();
-  await expect(repoOption).toBeVisible();
+  await expect(repoOption).toBeAttached();
   await repoOption.click();
-  await dialog.getByRole("button", { name: /Select (Path|repository)/ }).click();
+  await dialog.getByRole("button", { name: "Select repository", exact: true }).click();
+  await expect(createProjectDialog.getByText(repoName, { exact: true })).toBeVisible();
 };
 
 test.describe("Project list", () => {
@@ -156,18 +209,20 @@ test.describe("Project creation", () => {
     const repoPath = createTempGitRepo();
     tempRepoPaths.push(repoPath);
     const repoName = basename(repoPath);
-    const dialog = page.getByRole("dialog").last();
-    const repoOption = dialog.getByRole("option").filter({ hasText: repoName }).first();
 
     await bypassOnboarding(page);
     await page.goto("/projects");
 
     await page.getByRole("button", { name: "Create project" }).first().click();
-    await page.getByRole("button", { name: "Browse for repository" }).click();
-    await navigatePickerToDirectory(page, dirname(repoPath));
+    await getCreateProjectDialog(page).getByRole("button", { name: "Browse for repository" }).click();
+    const dialog = getFolderPickerDialog(page);
+    const repoOption = dialog.getByRole("option").filter({ hasText: repoName }).first();
+
+    await expect(dialog).toBeVisible();
+    await navigatePickerToDirectory(dialog, dirname(repoPath));
 
     await expect(dialog.getByText("No entries found.")).not.toBeVisible();
-    await expect(repoOption).toBeVisible();
+    await expect(repoOption).toBeAttached();
   });
 
   test("creates a project via the dialog", async ({ page }) => {
@@ -189,7 +244,7 @@ test.describe("Project creation", () => {
     await selectRepoFromFolderPicker(page, repoPath);
 
     // verify repo appears in the dialog
-    const createProjectDialog = page.getByRole("dialog").first();
+    const createProjectDialog = getCreateProjectDialog(page);
     await expect(createProjectDialog.getByText(repoName, { exact: true })).toBeVisible();
 
     // submit via the dialog footer button
@@ -197,7 +252,7 @@ test.describe("Project creation", () => {
       (response) =>
         response.url().endsWith("/v1/projects") && response.request().method() === "POST" && response.status() === 201,
     );
-    const createProjectButton = page.getByRole("button", { name: "Create project", exact: true }).last();
+    const createProjectButton = createProjectDialog.getByRole("button", { name: "Create project", exact: true });
     await expect(createProjectButton).toBeEnabled();
     await createProjectButton.click();
     const createdProjectResponse = await createProjectDone;
@@ -222,7 +277,7 @@ test.describe("Project creation", () => {
       (response) =>
         response.url().endsWith("/v1/projects") && response.request().method() === "POST" && response.status() === 201,
     );
-    const createProjectButton = page.getByRole("button", { name: "Create project", exact: true }).last();
+    const createProjectButton = getCreateProjectDialog(page).getByRole("button", { name: "Create project", exact: true });
     await expect(createProjectButton).toBeEnabled();
     await createProjectButton.click();
     const createdProjectResponse = await createProjectDone;
@@ -262,7 +317,7 @@ test.describe("Project creation", () => {
     await page.getByRole("button", { name: "Create project" }).first().click();
 
     // click create without filling anything
-    await page.getByRole("button", { name: "Create project", exact: true }).last().click();
+    await getCreateProjectDialog(page).getByRole("button", { name: "Create project", exact: true }).click();
 
     await expect(page.getByText("Project name is required.")).toBeVisible();
     await expect(page.getByText("Select at least one repository.")).toBeVisible();
@@ -288,7 +343,7 @@ test.describe("Project creation", () => {
       (response) =>
         response.url().endsWith("/v1/projects") && response.request().method() === "POST" && response.status() === 201,
     );
-    const createProjectButton = page.getByRole("button", { name: "Create project", exact: true }).last();
+    const createProjectButton = getCreateProjectDialog(page).getByRole("button", { name: "Create project", exact: true });
     await expect(createProjectButton).toBeEnabled();
     await createProjectButton.click();
     const createdProjectResponse = await createProjectDone;
@@ -318,7 +373,7 @@ test.describe("Project creation", () => {
     const repoRegistrationDone = page.waitForResponse(
       (res) => res.url().includes("/repos") && res.request().method() === "POST" && res.status() === 201,
     );
-    const createProjectButton = page.getByRole("button", { name: "Create project", exact: true }).last();
+    const createProjectButton = getCreateProjectDialog(page).getByRole("button", { name: "Create project", exact: true });
     await expect(createProjectButton).toBeEnabled();
     await createProjectButton.click();
     const createdProjectResponse = await createProjectDone;
@@ -356,11 +411,11 @@ test.describe("Project settings hooks", () => {
       await page.goto(`/projects/${project.id}/settings`);
 
       // The sidebar should show the Hooks section
-      const sidebar = page.locator("aside").first();
+      const sidebar = page.locator("[data-testid='sidebar']");
       await expect(sidebar.getByText("Hooks")).toBeVisible();
 
       // Reveal the section action buttons and open the add-hook dropdown
-      const hooksSection = sidebar.locator("text=Hooks").locator("..");
+      const hooksSection = page.locator("[data-testid='sidebar-section-hooks']");
       await hooksSection.hover();
       const addButton = sidebar.getByRole("button", { name: "Add hook" });
       await expect(addButton).toBeVisible();

@@ -2,7 +2,7 @@
 
 - **Lerna + Bun-managed monorepo** with **Nx caching**. **TypeScript only**.
 - Use **bun**, do not use `npm`, `yarn`, or `pnpm`.
-- Other agents might edit this repo at the same time as you.
+- Your work is not done until all tests are passing.
 
 # Coding Rules
 

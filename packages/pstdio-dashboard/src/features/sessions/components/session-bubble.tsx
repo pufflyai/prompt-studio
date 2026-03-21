@@ -35,6 +35,7 @@ export const SessionBubble = forwardRef<HTMLDivElement, SessionBubbleProps>(func
       <chakra.section
         ref={ref}
         role="dialog"
+        data-testid="session-bubble"
         aria-label={ariaLabel ?? title}
         position="fixed"
         bottom="3"
