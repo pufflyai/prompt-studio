@@ -189,7 +189,9 @@ export const createApp = async (options?: AppOptions) => {
   swagger(app);
 
   const startupAbort = new AbortController();
-  const startupDone = runStartupTasks(deps, startupAbort.signal).catch((err) => console.error("[startup] failed:", err));
+  const startupDone = runStartupTasks(deps, startupAbort.signal).catch((err) =>
+    console.error("[startup] failed:", err),
+  );
 
   const close = async () => {
     startupAbort.abort();
