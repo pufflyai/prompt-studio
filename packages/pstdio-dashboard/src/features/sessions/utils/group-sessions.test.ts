@@ -74,6 +74,7 @@ describe("groupSessionsByDate", () => {
     ];
 
     const groups = groupSessionsByDate(sessions);
+    expect(groups).toHaveLength(1);
     expect(groups[0].sessions[0].title).toBe("Later");
     expect(groups[0].sessions[1].title).toBe("Earlier");
   });

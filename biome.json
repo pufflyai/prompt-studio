@@ -15,7 +15,8 @@
       "!!**/.nx",
       "!!packages/pstdio-dashboard/chakra-config.json",
       "!!packages/e2e/playwright-report",
-      "!!packages/e2e/test-results"
+      "!!packages/e2e/test-results",
+      "!!packages/pstdio-agents/src/providers/opencode/mocks/full-conversation.json"
     ]
   },
   "formatter": {

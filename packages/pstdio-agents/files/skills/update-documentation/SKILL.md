@@ -3,12 +3,6 @@ name: update-documentation
 description: "Edit documentation and documentation structure. Use when asked to update, add, or modify documentation, save lessons learned, write a PRD, ADR, guide, or cookbook. Use when project requirements might get out of sync."
 ---
 
-## User Input
-
-```text
-$ARGUMENTS
-```
-
 ## Workflow
 
 1. Read `.pstdio/docs/navigation.json` to understand the current sidebar structure and available pages.

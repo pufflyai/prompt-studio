@@ -272,6 +272,8 @@ export const MenuItem = (props: MenuItemProps) => {
     bg: backgroundColor,
     _hover: { bg: "bg.menu-item.hover" },
     _focus: { bg: "bg.menu-item.focus" },
+    textDecoration: "none",
+    color: "inherit",
   };
 
   if (asChild && children) {
@@ -280,11 +282,7 @@ export const MenuItem = (props: MenuItemProps) => {
 
     return (
       <ChakraMenuItem asChild {...commonProps}>
-        {cloneElement(
-          child,
-          { style: { textDecoration: "none", color: "inherit" } },
-          <MenuItemContent {...contentProps} />,
-        )}
+        {cloneElement(child, undefined, <MenuItemContent {...contentProps} />)}
       </ChakraMenuItem>
     );
   }

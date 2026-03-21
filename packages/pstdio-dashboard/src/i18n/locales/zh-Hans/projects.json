@@ -201,7 +201,7 @@
     "tickets": "工单",
     "projectChangelog": "项目变更日志",
     "projectSettings": "项目设置",
-    "helpLinks": "帮助链接",
+    "help": "帮助",
     "documentationLink": "文档",
     "discordLink": "Discord"
   },
@@ -211,7 +211,8 @@
     "notFoundDescription": "请从列表中选择一个项目以继续。"
   },
   "projectSettings": {
-    "title": "项目设置"
+    "title": "项目设置",
+    "skills": "技能"
   },
   "list": {
     "projectCreated": "项目已创建",

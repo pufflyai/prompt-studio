@@ -25,6 +25,13 @@ const getSettingsSectionTitle = (settingsPanel?: string) => {
     }
   }
 
+  if (settingsPanel.startsWith("skill:")) {
+    const skillName = settingsPanel.slice("skill:".length);
+    if (skillName) {
+      return skillName;
+    }
+  }
+
   if (settingsPanel === "tags") {
     return "Tags";
   }

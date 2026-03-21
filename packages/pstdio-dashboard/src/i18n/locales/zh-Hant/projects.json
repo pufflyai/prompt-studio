@@ -201,7 +201,7 @@
     "tickets": "工單",
     "projectChangelog": "專案變更日誌",
     "projectSettings": "專案設定",
-    "helpLinks": "說明連結",
+    "help": "說明",
     "documentationLink": "文件",
     "discordLink": "Discord"
   },
@@ -211,7 +211,8 @@
     "notFoundDescription": "請從清單中選擇一個專案以繼續。"
   },
   "projectSettings": {
-    "title": "專案設定"
+    "title": "專案設定",
+    "skills": "技能"
   },
   "list": {
     "projectCreated": "專案已建立",

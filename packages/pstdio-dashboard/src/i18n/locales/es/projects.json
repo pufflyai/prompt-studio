@@ -82,7 +82,7 @@
       "resumePlaceholder": "Reanudar esta sesión",
       "openInBubble": "Abrir en burbuja",
       "viewMore": "Ver más sesiones",
-      "executorSessionIdLabel": "Executor session ID",
+      "executorSessionIdLabel": "ID de sesión del ejecutor",
       "panelTitle": "Todas las sesiones",
       "group": {
         "today": "Hoy",
@@ -206,7 +206,7 @@
     "tickets": "Tareas",
     "projectChangelog": "Registro del proyecto",
     "projectSettings": "Configuración del proyecto",
-    "helpLinks": "Enlaces de ayuda",
+    "help": "Ayuda",
     "documentationLink": "Documentación",
     "discordLink": "Discord"
   },
@@ -216,7 +216,8 @@
     "notFoundDescription": "Elige un proyecto de la lista para continuar."
   },
   "projectSettings": {
-    "title": "Configuración del proyecto"
+    "title": "Configuración del proyecto",
+    "skills": "Habilidades"
   },
   "list": {
     "projectCreated": "Proyecto creado",

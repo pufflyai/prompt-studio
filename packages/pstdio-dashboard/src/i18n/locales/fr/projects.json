@@ -206,7 +206,7 @@
     "tickets": "Tâches",
     "projectChangelog": "Journal du projet",
     "projectSettings": "Paramètres du projet",
-    "helpLinks": "Liens d'aide",
+    "help": "Aide",
     "documentationLink": "Documentation",
     "discordLink": "Discord"
   },
@@ -216,7 +216,8 @@
     "notFoundDescription": "Choisissez un projet dans la liste pour continuer."
   },
   "projectSettings": {
-    "title": "Paramètres du projet"
+    "title": "Paramètres du projet",
+    "skills": "Compétences"
   },
   "list": {
     "projectCreated": "Projet créé",

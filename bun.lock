@@ -85,6 +85,7 @@
       },
       "devDependencies": {
         "@types/bun": "latest",
+        "typescript": "~5.9.3",
       },
     },
     "packages/pstdio-api": {

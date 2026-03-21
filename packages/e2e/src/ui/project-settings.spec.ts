@@ -30,6 +30,22 @@ const createTemplateViaApi = async (
   return (await res.json()) as { id: string; name: string; content: string };
 };
 
+const listSkillsViaApi = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
+  const res = await request.get(`${apiBase}/v1/projects/${projectId}/skills`);
+  expect(res.ok()).toBe(true);
+  return (await res.json()) as Array<{ name: string; description: string }>;
+};
+
+const getSkillViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  projectId: string,
+  name: string,
+) => {
+  const res = await request.get(`${apiBase}/v1/projects/${projectId}/skills/${encodeURIComponent(name)}`);
+  expect(res.ok()).toBe(true);
+  return (await res.json()) as { name: string; description: string; content: string };
+};
+
 const navigateToTemplate = async (page: import("@playwright/test").Page, projectId: string, templateName: string) => {
   await bypassOnboarding(page);
   await page.goto(`/projects/${projectId}/settings`);
@@ -139,5 +155,29 @@ test.describe("Project settings", () => {
 
     await expect(page.getByRole("button", { name: "Cancel", exact: true })).toBeDisabled();
     await expect(page.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
+  });
+
+  test("shows installed skills and selected skill details", async ({ page, request }) => {
+    const project = await createProjectViaApi(request, `Skills Settings ${Date.now()}`);
+    const skills = await listSkillsViaApi(request, project.id);
+    expect(skills.length).toBeGreaterThan(0);
+    const selectedSkill = skills[0];
+    const selectedSkillDetails = await getSkillViaApi(request, project.id, selectedSkill.name);
+    const expectedContentSnippet = selectedSkillDetails.content
+      .replace(/^---[\s\S]*?---\s*/, "")
+      .split("\n")
+      .map((line) => line.trim())
+      .map((line) => line.replace(/^#+\s*/, ""))
+      .find((line) => line.length > 0);
+    expect(expectedContentSnippet).toBeDefined();
+
+    await bypassOnboarding(page);
+    await page.goto(`/projects/${project.id}/settings`);
+    await page.getByText("Skills", { exact: true }).click();
+    await page.getByText(selectedSkill.name, { exact: true }).click();
+
+    await expect(page.getByTestId("project-skill-name")).toContainText(selectedSkill.name);
+    await expect(page.getByTestId("project-skill-description")).toContainText(selectedSkillDetails.description);
+    await expect(page.getByTestId("project-skill-content")).toContainText(expectedContentSnippet!);
   });
 });

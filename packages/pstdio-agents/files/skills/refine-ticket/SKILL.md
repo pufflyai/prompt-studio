@@ -3,12 +3,6 @@ name: refine-ticket
 description: "Provide additional information to a ticket by researching the codebase and documentation, and/or format a ticket given a template. Use when asked to refine, improve, expand, or format an existing ticket."
 ---
 
-## User Input
-
-```text
-$ARGUMENTS
-```
-
 ## Workflow
 
 1. Identify the target ticket shorthand from the user request (e.g. `PS-12`).

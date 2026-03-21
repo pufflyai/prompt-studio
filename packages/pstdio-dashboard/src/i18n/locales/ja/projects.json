@@ -69,24 +69,24 @@
       "branch": "ブランチ"
     },
     "session": {
-      "selectLabel": "Select session",
-      "none": "New Session",
-      "noneHint": "Start a new session",
-      "loading": "Loading sessions...",
-      "noneAvailable": "No sessions yet",
-      "unknown": "Unknown session",
-      "emptyTitle": "New Session",
-      "emptyDescription": "Start a new session or pick one from the menu.",
-      "notFoundTitle": "Session not found",
-      "notFoundDescription": "Select a different session from the list.",
-      "resumePlaceholder": "Resume this session",
-      "openInBubble": "Open in bubble",
-      "viewMore": "View more sessions",
-      "executorSessionIdLabel": "Executor session ID",
-      "panelTitle": "All sessions",
+      "selectLabel": "セッションを選択",
+      "none": "新しいセッション",
+      "noneHint": "新しいセッションを開始",
+      "loading": "セッションを読み込み中...",
+      "noneAvailable": "まだセッションがありません",
+      "unknown": "不明なセッション",
+      "emptyTitle": "新しいセッション",
+      "emptyDescription": "新しいセッションを開始するか、メニューから選択してください。",
+      "notFoundTitle": "セッションが見つかりません",
+      "notFoundDescription": "リストから別のセッションを選択してください。",
+      "resumePlaceholder": "このセッションを再開",
+      "openInBubble": "バブルで開く",
+      "viewMore": "セッションをもっと見る",
+      "executorSessionIdLabel": "エグゼキューターセッション ID",
+      "panelTitle": "すべてのセッション",
       "group": {
-        "today": "Today",
-        "yesterday": "Yesterday"
+        "today": "今日",
+        "yesterday": "昨日"
       }
     }
   },
@@ -158,23 +158,23 @@
     },
     "deleteConfirmation": {
       "ticket": {
-        "headline": "Delete ticket?",
-        "notification": "This deletes the ticket and removes it from the project."
+        "headline": "チケットを削除しますか？",
+        "notification": "チケットが削除され、プロジェクトから除外されます。"
       }
     },
     "attempts": {
       "title": "試行",
-      "startNew": "Start new attempt",
+      "startNew": "新しい試行を開始",
       "emptyTitle": "まだ試行がありません",
       "emptyDescription": "ここでタスクの試行を開始してセッションを追跡します。",
       "updatedLabel": "{{date}} 更新",
       "dialog": {
-        "title": "Start new attempt",
-        "description": "Choose an agent and repository to start this ticket attempt.",
-        "modelLabel": "Model",
-        "modelPlaceholder": "Use default model",
-        "promptLabel": "Prompt",
-        "start": "Start attempt"
+        "title": "新しい試行を開始",
+        "description": "このチケットの試行を開始するエージェントとリポジトリを選択してください。",
+        "modelLabel": "モデル",
+        "modelPlaceholder": "デフォルトモデルを使用",
+        "promptLabel": "プロンプト",
+        "start": "試行を開始"
       }
     },
     "description": {
@@ -201,7 +201,7 @@
     "tickets": "チケット",
     "projectChangelog": "プロジェクト変更履歴",
     "projectSettings": "プロジェクト設定",
-    "helpLinks": "ヘルプリンク",
+    "help": "ヘルプ",
     "documentationLink": "ドキュメント",
     "discordLink": "Discord"
   },
@@ -211,7 +211,8 @@
     "notFoundDescription": "リストからプロジェクトを選択して続行してください。"
   },
   "projectSettings": {
-    "title": "プロジェクト設定"
+    "title": "プロジェクト設定",
+    "skills": "スキル"
   },
   "list": {
     "projectCreated": "プロジェクトを作成しました",

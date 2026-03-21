@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { BackToDashboard } from "@/features/project/components/back-to-dashboard";
 import type { ProjectTemplateAsset, ProjectTemplateAssetType } from "@/features/project/types";
 import type { HookEntry } from "../data/hooks-api";
+import type { ProjectSkill } from "../data/skills-api";
 
 const TEMPLATE_TYPE_CONFIG: Record<ProjectTemplateAssetType, { icon: React.ReactNode; label: string }> = {
   prompt: { icon: <MessageSquareText size={14} />, label: "Prompts" },
@@ -14,7 +15,7 @@ const TEMPLATE_TYPE_CONFIG: Record<ProjectTemplateAssetType, { icon: React.React
 
 const TEMPLATE_TYPE_ORDER: ProjectTemplateAssetType[] = ["prompt", "ticket", "document"];
 
-export type SettingsSection = "tags" | "danger-zone" | { template: string } | { hook: string };
+export type SettingsSection = "tags" | "danger-zone" | { template: string } | { hook: string } | { skill: string };
 
 export const SETTINGS_SIDEBAR_STORAGE_KEY = "settings-sidebar";
 
@@ -35,6 +36,7 @@ const HOOK_DESCRIPTIONS: Record<string, string> = {
 interface SettingsSidebarProps {
   templates: ProjectTemplateAsset[];
   hooks: HookEntry[];
+  skills: ProjectSkill[];
   activeSection: SettingsSection | null;
   onSelectSection: (section: SettingsSection) => void;
   onCreateTemplate: () => void;
@@ -46,11 +48,12 @@ const resolveActiveNodeId = (activeSection: SettingsSection | null) => {
   if (activeSection === "tags") return "tags";
   if (activeSection === "danger-zone") return "danger-zone";
   if (typeof activeSection === "object" && "hook" in activeSection) return `hook:${activeSection.hook}`;
+  if (typeof activeSection === "object" && "skill" in activeSection) return `skill:${activeSection.skill}`;
   return `template:${activeSection.template}`;
 };
 
 export const SettingsSidebar = (props: SettingsSidebarProps) => {
-  const { templates, hooks, activeSection, onSelectSection, onCreateTemplate, onAddHook } = props;
+  const { templates, hooks, skills, activeSection, onSelectSection, onCreateTemplate, onAddHook } = props;
   const { t } = useTranslation("projects");
 
   const buildSections = (): SidebarSection[] => {
@@ -97,6 +100,13 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
       navigationIntent: { id: "select-hook", payload: hook.name },
     }));
 
+    const skillNodes: SidebarNode[] = skills.map((skill) => ({
+      id: `skill:${skill.name}`,
+      label: skill.name,
+      isNavigable: true,
+      navigationIntent: { id: "select-skill", payload: skill.name },
+    }));
+
     const addHookMenuItems: SidebarActionMenuItem[] = uninstalledHooks.map((hook) => ({
       id: hook.name,
       label: hook.name,
@@ -133,6 +143,11 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
             : [],
       },
       {
+        id: "skills",
+        label: t("projectSettings.skills"),
+        nodes: skillNodes,
+      },
+      {
         id: "templates",
         label: t("projectSettings.templates"),
         nodes: templateNodes,
@@ -163,6 +178,10 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
 
     if (intent.id === "select-hook") {
       onSelectSection({ hook: intent.payload as string });
+    }
+
+    if (intent.id === "select-skill") {
+      onSelectSection({ skill: intent.payload as string });
     }
   };
 
