@@ -71,6 +71,7 @@ export const toTicket = (
 ): Ticket => ({
   id: ticket.id,
   shorthand: ticket.shorthand,
+  createdAt: ticket.created_at,
   title: ticket.display_title ?? "",
   content: "",
   tagIds: Array.isArray(ticket.tag_ids) ? ticket.tag_ids : [],
