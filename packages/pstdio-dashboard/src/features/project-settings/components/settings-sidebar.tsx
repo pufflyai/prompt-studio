@@ -31,6 +31,10 @@ const HOOK_DESCRIPTIONS: Record<string, string> = {
   "pre-remove": "Before worktree deletion",
   "post-remove": "After worktree is removed",
   "on-conflict": "When merge/rebase hits conflicts",
+  "on-ticket-status-change": "When ticket status changes",
+  "on-ticket-archive": "When ticket is archived/unarchived",
+  "on-ticket-delete": "When ticket is deleted",
+  "on-session-complete": "When a session reaches a terminal status",
 };
 
 interface SettingsSidebarProps {

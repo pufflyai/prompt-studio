@@ -51,7 +51,7 @@ const SidebarActionButton = (props: { action: SidebarAction; sectionId: string; 
           </IconButton>
         </Menu.Trigger>
         <Menu.Positioner>
-          <Menu.Content minW="160px" bg="bg">
+          <Menu.Content minW="160px" maxH="320px" overflowY="auto" bg="bg">
             {action.menuItems.map((item) => (
               <Tooltip key={item.id} content={item.description} disabled={!item.description} openDelay={300}>
                 <Menu.Item value={item.id} onClick={() => item.onAction?.()}>
