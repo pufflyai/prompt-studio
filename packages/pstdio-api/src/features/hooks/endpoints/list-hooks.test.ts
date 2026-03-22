@@ -52,7 +52,7 @@ describe("GET /v1/projects/:id/hooks", () => {
     expect(res.status).toBe(200);
 
     const body = (await res.json()) as Array<{ name: string; content: string | null; blocking: boolean }>;
-    expect(body.length).toBe(11);
+    expect(body.length).toBe(15);
     expect(body.every((h) => h.content === null)).toBe(true);
   });
 

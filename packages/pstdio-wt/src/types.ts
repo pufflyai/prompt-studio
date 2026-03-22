@@ -58,7 +58,11 @@ export type HookName =
   | "post-merge"
   | "pre-remove"
   | "post-remove"
-  | "on-conflict";
+  | "on-conflict"
+  | "on-ticket-status-change"
+  | "on-ticket-archive"
+  | "on-ticket-delete"
+  | "on-session-complete";
 
 export type HookContext = {
   branch?: string;
@@ -69,6 +73,14 @@ export type HookContext = {
   commitSha?: string;
   commitMessage?: string;
   projectId?: string;
+  ticketId?: string;
+  ticketShorthand?: string;
+  ticketStatusOld?: string;
+  ticketStatusNew?: string;
+  ticketArchivedAt?: string;
+  ticketDeletedAt?: string;
+  sessionId?: string;
+  sessionStatus?: string;
 };
 
 export type HookResult = SetupResult & {

@@ -4,8 +4,11 @@ import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { notFoundResponseSchema, ticketResponseSchema, updateTicketBodySchema } from "../dto";
 import { extractTitleFromContent } from "../extract-title";
+import { queueTicketHooks } from "./ticket-hooks";
 
 const TICKET_CONTENT_FILE_NAME = "ticket.md";
+
+type TicketRecord = NonNullable<Awaited<ReturnType<RouteDeps["ticketsService"]["get"]>>>;
 
 const upsertTicketContentFile = async (input: {
   deps: RouteDeps;
@@ -33,6 +36,63 @@ const upsertTicketContentFile = async (input: {
   await deps.filesService.attachToTicket(ticketId, uploaded.id);
 
   return uploaded.id;
+};
+
+const syncTicketTagAssignments = async (deps: RouteDeps, ticketId: string, tagIds: string[]) => {
+  const oldAssignments = await deps.db
+    .select()
+    .from(ticket_tag_assignments)
+    .where(eq(ticket_tag_assignments.ticket_id, ticketId));
+  for (const row of oldAssignments) deps.eventBus.emit("ticket_tag_assignments", "delete", { id: row.id });
+
+  await deps.ticketsService.assignTags(ticketId, tagIds);
+
+  const newAssignments = await deps.db
+    .select()
+    .from(ticket_tag_assignments)
+    .where(eq(ticket_tag_assignments.ticket_id, ticketId));
+  for (const row of newAssignments) deps.eventBus.emit("ticket_tag_assignments", "set", row);
+};
+
+const buildTicketUpdateHooks = (existing: TicketRecord, updated: TicketRecord) => {
+  const hooks = [] as Array<{
+    hookName: "on-ticket-status-change" | "on-ticket-archive";
+    context: {
+      projectId: string;
+      ticketId: string;
+      ticketShorthand: string;
+      ticketStatusOld?: string;
+      ticketStatusNew?: string;
+      ticketArchivedAt?: string;
+    };
+  }>;
+
+  if (existing.status_id !== updated.status_id && updated.status_id !== null) {
+    hooks.push({
+      hookName: "on-ticket-status-change",
+      context: {
+        projectId: updated.project_id,
+        ticketId: updated.id,
+        ticketShorthand: updated.shorthand,
+        ticketStatusOld: existing.status_id ?? undefined,
+        ticketStatusNew: updated.status_id,
+      },
+    });
+  }
+
+  if (existing.archived !== updated.archived) {
+    hooks.push({
+      hookName: "on-ticket-archive",
+      context: {
+        projectId: updated.project_id,
+        ticketId: updated.id,
+        ticketShorthand: updated.shorthand,
+        ticketArchivedAt: updated.archived ? updated.updated_at : undefined,
+      },
+    });
+  }
+
+  return hooks;
 };
 
 export const updateTicketRoute = createRoute({
@@ -92,25 +152,16 @@ export const updateTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof upd
       return c.json({ error: `Ticket not found: ${id}` }, 404);
     }
 
-    if (tag_ids) {
-      // Emit deletes for old assignments before replacing
-      const oldAssignments = await deps.db
-        .select()
-        .from(ticket_tag_assignments)
-        .where(eq(ticket_tag_assignments.ticket_id, id));
-      for (const row of oldAssignments) deps.eventBus.emit("ticket_tag_assignments", "delete", { id: row.id });
-
-      await deps.ticketsService.assignTags(id, tag_ids);
-
-      // Emit inserts for new assignments
-      const newAssignments = await deps.db
-        .select()
-        .from(ticket_tag_assignments)
-        .where(eq(ticket_tag_assignments.ticket_id, id));
-      for (const row of newAssignments) deps.eventBus.emit("ticket_tag_assignments", "set", row);
-    }
+    if (tag_ids) await syncTicketTagAssignments(deps, id, tag_ids);
 
     deps.eventBus.emit("tickets", "set", updated);
+
+    const hooks = buildTicketUpdateHooks(existing, updated);
+
+    void queueTicketHooks(deps, {
+      projectId: updated.project_id,
+      hooks,
+    });
 
     return c.json(updated, 200);
   };

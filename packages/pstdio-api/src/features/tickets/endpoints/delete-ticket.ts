@@ -2,6 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { notFoundResponseSchema, ticketResponseSchema } from "../dto";
+import { queueTicketHooks } from "./ticket-hooks";
 
 export const deleteTicketRoute = createRoute({
   method: "delete",
@@ -39,6 +40,21 @@ export const deleteTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof del
     }
 
     deps.eventBus.emit("tickets", "set", deleted);
+
+    void queueTicketHooks(deps, {
+      projectId: deleted.project_id,
+      hooks: [
+        {
+          hookName: "on-ticket-delete",
+          context: {
+            projectId: deleted.project_id,
+            ticketId: deleted.id,
+            ticketShorthand: deleted.shorthand,
+            ticketDeletedAt: deleted.deleted_at ?? undefined,
+          },
+        },
+      ],
+    });
 
     return c.json(deleted, 200);
   };

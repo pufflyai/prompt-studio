@@ -14,6 +14,10 @@ const HOOK_NAMES: HookName[] = [
   "pre-remove",
   "post-remove",
   "on-conflict",
+  "on-ticket-status-change",
+  "on-ticket-archive",
+  "on-ticket-delete",
+  "on-session-complete",
 ];
 
 const BLOCKING_HOOKS = new Set<HookName>(["pre-create", "pre-commit", "pre-rebase", "pre-merge", "pre-remove"]);
@@ -38,6 +42,14 @@ export const buildHookEnv = (hookName: HookName, context: HookContext) => {
   if (context.commitSha) env.PSTDIO_COMMIT_SHA = context.commitSha;
   if (context.commitMessage) env.PSTDIO_COMMIT_MESSAGE = context.commitMessage;
   if (context.projectId) env.PSTDIO_PROJECT_ID = context.projectId;
+  if (context.ticketId) env.PSTDIO_TICKET_ID = context.ticketId;
+  if (context.ticketShorthand) env.PSTDIO_TICKET_SHORTHAND = context.ticketShorthand;
+  if (context.ticketStatusOld) env.PSTDIO_TICKET_STATUS_OLD = context.ticketStatusOld;
+  if (context.ticketStatusNew) env.PSTDIO_TICKET_STATUS_NEW = context.ticketStatusNew;
+  if (context.ticketArchivedAt) env.PSTDIO_TICKET_ARCHIVED_AT = context.ticketArchivedAt;
+  if (context.ticketDeletedAt) env.PSTDIO_TICKET_DELETED_AT = context.ticketDeletedAt;
+  if (context.sessionId) env.PSTDIO_SESSION_ID = context.sessionId;
+  if (context.sessionStatus) env.PSTDIO_SESSION_STATUS = context.sessionStatus;
 
   return env;
 };

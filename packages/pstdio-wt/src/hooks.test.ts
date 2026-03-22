@@ -45,6 +45,14 @@ describe("buildHookEnv", () => {
       workspace: "PS-1_A1",
       target: "main",
       projectId: "proj-1",
+      ticketId: "ticket-1",
+      ticketShorthand: "PS-1",
+      ticketStatusOld: "status-a",
+      ticketStatusNew: "status-b",
+      ticketArchivedAt: "2026-03-20T10:00:00.000Z",
+      ticketDeletedAt: "2026-03-20T10:10:00.000Z",
+      sessionId: "sess-1",
+      sessionStatus: "completed",
     });
 
     expect(env.PSTDIO_HOOK).toBe("pre-merge");
@@ -54,6 +62,14 @@ describe("buildHookEnv", () => {
     expect(env.PSTDIO_WORKSPACE).toBe("PS-1_A1");
     expect(env.PSTDIO_TARGET).toBe("main");
     expect(env.PSTDIO_PROJECT_ID).toBe("proj-1");
+    expect(env.PSTDIO_TICKET_ID).toBe("ticket-1");
+    expect(env.PSTDIO_TICKET_SHORTHAND).toBe("PS-1");
+    expect(env.PSTDIO_TICKET_STATUS_OLD).toBe("status-a");
+    expect(env.PSTDIO_TICKET_STATUS_NEW).toBe("status-b");
+    expect(env.PSTDIO_TICKET_ARCHIVED_AT).toBe("2026-03-20T10:00:00.000Z");
+    expect(env.PSTDIO_TICKET_DELETED_AT).toBe("2026-03-20T10:10:00.000Z");
+    expect(env.PSTDIO_SESSION_ID).toBe("sess-1");
+    expect(env.PSTDIO_SESSION_STATUS).toBe("completed");
   });
 
   test("omits undefined context fields", () => {
@@ -67,6 +83,17 @@ describe("buildHookEnv", () => {
     expect(env.PSTDIO_REPO_PATH).toBe("/repo");
     expect(env.PSTDIO_WORKTREE_PATH).toBeUndefined();
     expect(env.PSTDIO_TARGET).toBeUndefined();
+  });
+
+  test("includes session fields when provided", () => {
+    const env = buildHookEnv("on-session-complete", {
+      repoPath: "/repo",
+      sessionId: "sess-42",
+      sessionStatus: "failed",
+    });
+
+    expect(env.PSTDIO_SESSION_ID).toBe("sess-42");
+    expect(env.PSTDIO_SESSION_STATUS).toBe("failed");
   });
 
   test("includes commit fields when provided", () => {
@@ -174,7 +201,7 @@ describe("listHooks", () => {
 
     const hooks = listHooks(repo.dir);
 
-    expect(hooks.length).toBe(11);
+    expect(hooks.length).toBe(15);
 
     const preCommit = hooks.find((h) => h.name === "pre-commit");
     expect(preCommit?.exists).toBe(true);
@@ -184,6 +211,9 @@ describe("listHooks", () => {
 
     const preMerge = hooks.find((h) => h.name === "pre-merge");
     expect(preMerge?.exists).toBe(false);
+
+    const ticketDelete = hooks.find((h) => h.name === "on-ticket-delete");
+    expect(ticketDelete?.exists).toBe(false);
   });
 
   test("returns all hooks as not existing when no hooks directory", () => {

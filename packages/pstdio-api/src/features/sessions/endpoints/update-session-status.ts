@@ -2,6 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { notFoundResponseSchema, sessionResponseSchema } from "../dto";
+import { isTerminalStatus, queueSessionCompleteHook } from "../session-hooks";
 
 export const updateSessionStatusRoute = createRoute({
   method: "patch",
@@ -50,6 +51,15 @@ export const updateSessionStatusHandler = (deps: RouteDeps): AppRouteHandler<typ
     }
 
     deps.eventBus.emit("sessions", "set", updated);
+
+    if (isTerminalStatus(status) && updated.project_id) {
+      void queueSessionCompleteHook(deps, {
+        sessionId: id,
+        sessionStatus: status,
+        projectId: updated.project_id,
+      });
+    }
+
     return c.json(updated, 200);
   };
 };
