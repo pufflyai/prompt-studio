@@ -4,6 +4,7 @@ import { AlertTriangle, FileText, MessageSquareText, Plus, Tag, Ticket } from "l
 import { useTranslation } from "react-i18next";
 import { BackToDashboard } from "@/features/project/components/back-to-dashboard";
 import type { ProjectTemplateAsset, ProjectTemplateAssetType } from "@/features/project/types";
+import type { TicketTag } from "@/features/ticket-list/types";
 import type { HookEntry } from "../data/hooks-api";
 import type { ProjectSkill } from "../data/skills-api";
 
@@ -15,7 +16,14 @@ const TEMPLATE_TYPE_CONFIG: Record<ProjectTemplateAssetType, { icon: React.React
 
 const TEMPLATE_TYPE_ORDER: ProjectTemplateAssetType[] = ["prompt", "ticket", "document"];
 
-export type SettingsSection = "tags" | "danger-zone" | { template: string } | { hook: string } | { skill: string };
+export type SettingsSection =
+  | "ticket-statuses"
+  | "tags"
+  | "danger-zone"
+  | { tag: string }
+  | { template: string }
+  | { hook: string }
+  | { skill: string };
 
 export const SETTINGS_SIDEBAR_STORAGE_KEY = "settings-sidebar";
 
@@ -37,33 +45,60 @@ interface SettingsSidebarProps {
   templates: ProjectTemplateAsset[];
   hooks: HookEntry[];
   skills: ProjectSkill[];
+  tags: TicketTag[];
   activeSection: SettingsSection | null;
   onSelectSection: (section: SettingsSection) => void;
   onCreateTemplate: () => void;
+  onCreateTag: () => void;
   onAddHook: (hookName: string) => void;
 }
 
 const resolveActiveNodeId = (activeSection: SettingsSection | null) => {
   if (!activeSection) return null;
+  if (activeSection === "ticket-statuses") return "ticket-statuses";
   if (activeSection === "tags") return "tags";
   if (activeSection === "danger-zone") return "danger-zone";
+  if (typeof activeSection === "object" && "tag" in activeSection) return `tag:${activeSection.tag}`;
   if (typeof activeSection === "object" && "hook" in activeSection) return `hook:${activeSection.hook}`;
   if (typeof activeSection === "object" && "skill" in activeSection) return `skill:${activeSection.skill}`;
   return `template:${activeSection.template}`;
 };
 
 export const SettingsSidebar = (props: SettingsSidebarProps) => {
-  const { templates, hooks, skills, activeSection, onSelectSection, onCreateTemplate, onAddHook } = props;
+  const { templates, hooks, skills, tags, activeSection, onSelectSection, onCreateTemplate, onCreateTag, onAddHook } =
+    props;
   const { t } = useTranslation("projects");
 
   const buildSections = (): SidebarSection[] => {
+    const tagChildNodes: SidebarNode[] = tags.map((tag) => ({
+      id: `tag:${tag.id}`,
+      label: tag.name,
+      isNavigable: true,
+      navigationIntent: { id: "select-tag", payload: tag.id },
+    }));
+
     const generalNodes: SidebarNode[] = [
+      {
+        id: "ticket-statuses",
+        label: "Statuses",
+        icon: <Ticket size={14} />,
+        isNavigable: true,
+        navigationIntent: { id: "select", payload: "ticket-statuses" },
+      },
       {
         id: "tags",
         label: t("projectSettings.tags"),
         icon: <Tag size={14} />,
-        isNavigable: true,
-        navigationIntent: { id: "select", payload: "tags" },
+        isNavigable: false,
+        children: tagChildNodes,
+        actions: [
+          {
+            id: "create-tag",
+            label: "Create tag",
+            icon: <Plus size={14} />,
+            onAction: () => onCreateTag(),
+          },
+        ],
       },
     ];
 
@@ -169,7 +204,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
     if (!intent) return;
 
     if (intent.id === "select") {
-      onSelectSection(intent.payload as "tags" | "danger-zone");
+      onSelectSection(intent.payload as "ticket-statuses" | "tags" | "danger-zone");
     }
 
     if (intent.id === "select-template") {
@@ -180,8 +215,16 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
       onSelectSection({ hook: intent.payload as string });
     }
 
+    if (intent.id === "select-tag") {
+      onSelectSection({ tag: intent.payload as string });
+    }
+
     if (intent.id === "select-skill") {
       onSelectSection({ skill: intent.payload as string });
+    }
+
+    if (intent.id === "create-tag") {
+      onCreateTag();
     }
   };
 

@@ -14,7 +14,6 @@ import {
 const ticketBase = {
   archived: false,
   blocked_reason: null,
-  complexity: "low",
   created_at: "2026-01-01T00:00:00.000Z",
   deleted_at: null,
   depends_on: null,
@@ -24,7 +23,6 @@ const ticketBase = {
   id: "ticket-1",
   parallelizable: "yes",
   parent_id: null,
-  priority: "high",
   project_id: "project-1",
   shorthand: "TK0001",
   status_id: null,

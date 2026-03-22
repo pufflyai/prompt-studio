@@ -60,11 +60,14 @@ export const TicketsPanel = () => {
     tickets: orderTickets(group.tickets, settings.ordering),
   }));
 
-  const tags = project?.ticketTags ?? [];
+  const tagDefs = project?.ticketTags ?? [];
+  const tagEntries = tagDefs.flatMap((t) =>
+    t.options.map((o) => ({ id: o.id, name: o.name, color: o.color, tagName: t.name })),
+  );
   const badgeContext: BadgeContext = {
     statusOptions: statusOptions.map((s) => ({ name: s.name, color: s.color })),
-    tags,
-    tagMap: new Map(tags.map((t) => [t.id, t])),
+    tags: tagEntries,
+    tagMap: new Map(tagEntries.map((e) => [e.id, e])),
     ticketShorthandById: Object.fromEntries(allTickets.map((ticket) => [ticket.id, ticket.shorthand])),
   };
 
@@ -110,7 +113,6 @@ export const TicketsPanel = () => {
       const createdTicket = await createTicket.mutateAsync({
         title: payload.content,
         content: payload.content,
-        complexity: payload.complexity,
         tagIds: payload.tagIds,
         status: payload.status,
         parentId: payload.parentId,
@@ -242,7 +244,7 @@ export const TicketsPanel = () => {
         isSubmitting={createTicket.isPending}
         targetStatus={createModalStatus}
         templates={templates}
-        tags={tags}
+        tags={tagDefs}
         projectName={project?.name}
         statusOptions={statusOptions}
       />

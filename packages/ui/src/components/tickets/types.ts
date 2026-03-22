@@ -1,14 +1,14 @@
 export type ViewMode = "board" | "list";
 
-export type GroupingField = "status" | "complexity" | "assignee" | "priority" | "none";
+export type GroupingField = "status" | "assignee" | "none";
 
-export type OrderingField = "manual" | "updated" | "title" | "complexity" | "priority" | "ticketId";
+export type OrderingField = "manual" | "updated" | "title" | "ticketId";
 
 export type SortDirection = "asc" | "desc";
 
-export type DisplayProperty = "id" | "status" | "assignee" | "priority" | "complexity" | "labels" | "updated";
+export type DisplayProperty = "id" | "status" | "assignee" | "labels" | "updated";
 
-export type FilterCategory = "status" | "assignee" | "priority" | "complexity" | "labels";
+export type FilterCategory = "status" | "assignee" | "labels";
 
 export interface WorkspaceOrdering {
   field: OrderingField;
@@ -48,8 +48,6 @@ export interface WorkspaceTicket {
   status?: string | null;
   statusColor?: string;
   assignee?: string | null;
-  priority?: string | null;
-  complexity?: string | null;
   labels?: string[];
   updatedAt?: string | null;
   parentPath?: string[];
@@ -64,14 +62,12 @@ export const DEFAULT_WORKSPACE_SETTINGS: WorkspaceSettings = {
     field: "manual",
     direction: "asc",
   },
-  displayProperties: ["complexity", "priority", "labels"],
+  displayProperties: ["labels"],
 };
 
 export const DEFAULT_GROUPING_OPTIONS: WorkspaceOption<GroupingField>[] = [
   { value: "status", label: "Status" },
-  { value: "complexity", label: "Complexity" },
   { value: "assignee", label: "Assignee" },
-  { value: "priority", label: "Priority" },
   { value: "none", label: "No grouping" },
 ];
 
@@ -79,8 +75,6 @@ export const DEFAULT_ORDERING_OPTIONS: WorkspaceOption<OrderingField>[] = [
   { value: "manual", label: "Manual" },
   { value: "updated", label: "Updated" },
   { value: "title", label: "Title" },
-  { value: "complexity", label: "Complexity" },
-  { value: "priority", label: "Priority" },
   { value: "ticketId", label: "ID" },
 ];
 
@@ -88,8 +82,6 @@ export const DEFAULT_DISPLAY_PROPERTY_OPTIONS: WorkspaceOption<DisplayProperty>[
   { value: "id", label: "ID" },
   { value: "status", label: "Status" },
   { value: "assignee", label: "Assignee" },
-  { value: "priority", label: "Priority" },
-  { value: "complexity", label: "Complexity" },
   { value: "labels", label: "Labels" },
   { value: "updated", label: "Updated" },
 ];

@@ -264,7 +264,6 @@ export const TicketDetailsPanel = () => {
           onToggle={() => setIsDetailsPanelOpen(!isDetailsPanelOpen)}
           onSelectFile={handleSelectFile}
           onSelectTicket={handleSelectTicket}
-          onComplexityChange={(c) => updateTicket.mutate({ ticketId: ticket.id, complexity: c })}
           onTagIdsChange={(ids) => updateTicketTags.mutate({ ticketId: ticket.id, tagIds: ids })}
         />
       </Flex>

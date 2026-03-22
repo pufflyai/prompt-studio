@@ -717,7 +717,6 @@
     "selectDisplayProperties": "Sélectionner les propriétés d'affichage",
     "groupingOptions": {
       "status": "Statut",
-      "complexity": "Complexité",
       "assignee": "Assigné",
       "none": "Aucun regroupement"
     },
@@ -725,13 +724,11 @@
       "manual": "Manuel",
       "updated": "Mis à jour",
       "title": "Titre",
-      "complexity": "Complexité",
       "shorthand": "ID"
     },
     "propertyOptions": {
       "parentId": "parent_id",
       "status": "Statut",
-      "complexity": "Complexité",
       "assignee": "Assigné",
       "tags": "Étiquettes",
       "updatedAt": "Mis à jour"
@@ -748,10 +745,6 @@
     "createTicket": "Créer une tâche",
     "create": "Créer",
     "describePlaceholder": "Décrivez la tâche...",
-    "complexity": "Complexité",
-    "low": "Faible",
-    "medium": "Moyenne",
-    "high": "Élevée",
     "template": "Modèle",
     "noTemplate": "Aucun modèle",
     "cancel": "Annuler"

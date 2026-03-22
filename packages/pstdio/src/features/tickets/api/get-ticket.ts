@@ -6,8 +6,6 @@ type Ticket = {
   display_title: string | null;
   user_prompt: string | null;
   file_id: string | null;
-  priority: string | null;
-  complexity: string | null;
   parent_id: string | null;
   parallelizable: string | null;
   blocked_reason: string | null;

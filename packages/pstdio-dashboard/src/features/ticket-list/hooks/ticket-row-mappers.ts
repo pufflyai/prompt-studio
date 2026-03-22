@@ -1,5 +1,5 @@
 import type { SyncedRow } from "@/features/sync/collections";
-import type { Ticket, TicketAttempt, TicketStatusColor } from "@/features/ticket-list/types";
+import type { TicketAttempt, TicketStatusColor } from "@/features/ticket-list/types";
 
 const SESSION_STATUSES = ["in_progress", "awaiting_input", "completed", "failed", "cancelled"] as const;
 
@@ -52,7 +52,6 @@ export const toTicketFromRow = (
     tagIds: tagIdsByTicket.get(row.id) ?? [],
     status: (row.status_name as string) ?? statusById.get(statusId ?? "") ?? fallbackName,
     statusColor: colorById.get(statusId ?? "") ?? fallbackColor,
-    complexity: row.complexity as Ticket["complexity"],
     blockedReason: (row.blocked_reason as string) ?? null,
     dependsOn: (row.depends_on as string) ?? null,
     parentId: (row.parent_id as string) ?? null,

@@ -1,6 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { projects, ticket_statuses, ticket_tags } from "../../db/schemas.pg";
+import { projects, ticket_statuses, ticket_tag_options, ticket_tags } from "../../db/schemas.pg";
 import { deriveShorthand } from "./derive-shorthand";
 
 type ProjectRecord = typeof projects.$inferSelect;
@@ -10,7 +10,6 @@ const DEFAULT_TICKET_STATUSES = [
     name: "backlog",
     color: "gray",
     is_default: true,
-    is_open: true,
     can_drag_out: true,
     can_drag_in: true,
     can_create: true,
@@ -18,9 +17,8 @@ const DEFAULT_TICKET_STATUSES = [
   },
   {
     name: "ready",
-    color: "teal",
+    color: "green",
     is_default: false,
-    is_open: true,
     can_drag_out: true,
     can_drag_in: true,
     can_create: false,
@@ -30,7 +28,6 @@ const DEFAULT_TICKET_STATUSES = [
     name: "wip",
     color: "blue",
     is_default: false,
-    is_open: true,
     can_drag_out: false,
     can_drag_in: true,
     can_create: false,
@@ -40,7 +37,6 @@ const DEFAULT_TICKET_STATUSES = [
     name: "blocked",
     color: "red",
     is_default: false,
-    is_open: true,
     can_drag_out: true,
     can_drag_in: true,
     can_create: false,
@@ -50,7 +46,6 @@ const DEFAULT_TICKET_STATUSES = [
     name: "review",
     color: "amber",
     is_default: false,
-    is_open: true,
     can_drag_out: true,
     can_drag_in: true,
     can_create: false,
@@ -60,7 +55,6 @@ const DEFAULT_TICKET_STATUSES = [
     name: "done",
     color: "green",
     is_default: false,
-    is_open: false,
     can_drag_out: true,
     can_drag_in: true,
     can_create: false,
@@ -68,11 +62,36 @@ const DEFAULT_TICKET_STATUSES = [
   },
 ] as const;
 
-const DEFAULT_TICKET_TAGS = [
-  { name: "bug", color: "red" },
-  { name: "feature", color: "blue" },
-  { name: "documentation", color: "purple" },
-] as const;
+const DEFAULT_TAG_DEFINITIONS = [
+  {
+    name: "label",
+    type: "single_select" as const,
+    options: [
+      { name: "bug", color: "red", sort_order: 1, icon: "bug" },
+      { name: "feature", color: "blue", sort_order: 2, icon: "sparkles" },
+      { name: "documentation", color: "purple", sort_order: 3, icon: "book-open" },
+      { name: "chore", color: "gray", sort_order: 4, icon: "wrench" },
+    ],
+  },
+  {
+    name: "complexity",
+    type: "single_select" as const,
+    options: [
+      { name: "low", color: "green", sort_order: 1, icon: "gauge" },
+      { name: "medium", color: "orange", sort_order: 2, icon: "gauge" },
+      { name: "high", color: "red", sort_order: 3, icon: "gauge" },
+    ],
+  },
+  {
+    name: "priority",
+    type: "single_select" as const,
+    options: [
+      { name: "P1", color: "red", sort_order: 1, icon: "alert-triangle" },
+      { name: "P2", color: "orange", sort_order: 2, icon: "alert-triangle" },
+      { name: "P3", color: "yellow", sort_order: 3, icon: "alert-triangle" },
+    ],
+  },
+];
 
 const nowTimestamp = () => new Date().toISOString();
 
@@ -109,7 +128,6 @@ export const createProjectsService = (db: DbClient) => {
         color: status.color,
         sort_order: index + 1,
         is_default: status.is_default,
-        is_open: status.is_open,
         can_drag_out: status.can_drag_out,
         can_drag_in: status.can_drag_in,
         can_create: status.can_create,
@@ -119,16 +137,29 @@ export const createProjectsService = (db: DbClient) => {
       })),
     );
 
-    await db.insert(ticket_tags).values(
-      DEFAULT_TICKET_TAGS.map((tag) => ({
-        id: crypto.randomUUID(),
+    for (const def of DEFAULT_TAG_DEFINITIONS) {
+      const tagId = crypto.randomUUID();
+      await db.insert(ticket_tags).values({
+        id: tagId,
         project_id: project.id,
-        name: tag.name,
-        color: tag.color,
+        name: def.name,
+        type: def.type,
         created_at: timestamp,
         updated_at: timestamp,
-      })),
-    );
+      });
+      await db.insert(ticket_tag_options).values(
+        def.options.map((opt) => ({
+          id: crypto.randomUUID(),
+          tag_id: tagId,
+          name: opt.name,
+          color: opt.color,
+          icon: "icon" in opt ? opt.icon : null,
+          sort_order: opt.sort_order,
+          created_at: timestamp,
+          updated_at: timestamp,
+        })),
+      );
+    }
 
     return project;
   };

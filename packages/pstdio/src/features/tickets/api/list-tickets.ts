@@ -2,8 +2,6 @@ type ListTicketsParams = {
   project_id: string;
   status?: string;
   tag?: string[];
-  priority?: string;
-  complexity?: string;
   archived?: boolean;
   draft?: boolean;
   parent_id?: string;
@@ -17,8 +15,6 @@ type TicketListItem = {
   status_id: string | null;
   display_title: string | null;
   file_id: string | null;
-  priority: string | null;
-  complexity: string | null;
   draft: boolean;
   archived: boolean;
   status_name: string | null;
@@ -32,8 +28,6 @@ export const listTickets = async (baseUrl: string, params: ListTicketsParams) =>
 
   if (params.status) url.searchParams.set("status", params.status);
   if (params.tag) for (const t of params.tag) url.searchParams.append("tag", t);
-  if (params.priority) url.searchParams.set("priority", params.priority);
-  if (params.complexity) url.searchParams.set("complexity", params.complexity);
   if (params.archived !== undefined) url.searchParams.set("archived", String(params.archived));
   if (params.draft !== undefined) url.searchParams.set("draft", String(params.draft));
   if (params.parent_id) url.searchParams.set("parent_id", params.parent_id);

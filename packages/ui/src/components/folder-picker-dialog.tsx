@@ -95,7 +95,13 @@ export const FolderPickerDialog = (props: FolderPickerDialogProps) => {
   const selectedPathSet = new Set(selectedPaths);
 
   return (
-    <Dialog.Root closeOnInteractOutside={false} open={open} onOpenChange={(details) => !details.open && onClose()}>
+    <Dialog.Root
+      lazyMount
+      unmountOnExit
+      closeOnInteractOutside={false}
+      open={open}
+      onOpenChange={(details) => !details.open && onClose()}
+    >
       <Dialog.Backdrop />
       <Dialog.Positioner>
         <Dialog.Content>

@@ -42,11 +42,11 @@ describe("createTicketsWorkspaceStore", () => {
   it("updates column and row grouping independently", () => {
     const store = createTicketsWorkspaceStore({ storageKey: STORAGE_KEY });
 
-    store.getState().setColumnGrouping("complexity");
-    store.getState().setRowGrouping("assignee");
+    store.getState().setColumnGrouping("assignee");
+    store.getState().setRowGrouping("status");
 
-    expect(store.getState().settings.columnGrouping).toBe("complexity");
-    expect(store.getState().settings.rowGrouping).toBe("assignee");
+    expect(store.getState().settings.columnGrouping).toBe("assignee");
+    expect(store.getState().settings.rowGrouping).toBe("status");
   });
 
   it("updates ordering field and toggles sort direction", () => {

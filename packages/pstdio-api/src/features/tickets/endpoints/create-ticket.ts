@@ -67,7 +67,7 @@ export const createTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof cre
     }
 
     if (tag_ids && tag_ids.length > 0) {
-      await deps.ticketsService.assignTags(ticket.id, tag_ids);
+      await deps.ticketsService.assignTagOptions(ticket.id, tag_ids);
 
       const newAssignments = await deps.db
         .select()

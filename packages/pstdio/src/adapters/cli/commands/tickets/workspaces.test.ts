@@ -8,8 +8,6 @@ const ticketFixture = {
   status_id: null,
   display_title: "Ticket",
   file_id: null,
-  priority: null,
-  complexity: null,
   draft: false,
   archived: false,
   status_name: null,

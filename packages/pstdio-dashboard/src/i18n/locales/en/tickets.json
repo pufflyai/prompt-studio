@@ -749,7 +749,6 @@
     "selectDisplayProperties": "Select display properties",
     "groupingOptions": {
       "status": "Status",
-      "complexity": "Complexity",
       "assignee": "Assignee",
       "none": "No grouping"
     },
@@ -757,13 +756,11 @@
       "manual": "Manual",
       "updated": "Updated",
       "title": "Title",
-      "complexity": "Complexity",
       "shorthand": "ID"
     },
     "propertyOptions": {
       "parentId": "parent_id",
       "status": "Status",
-      "complexity": "Complexity",
       "assignee": "Assignee",
       "tags": "Tags",
       "updatedAt": "Updated"
@@ -781,10 +778,6 @@
     "newTicket": "New ticket",
     "create": "Create",
     "describePlaceholder": "Describe the ticket...",
-    "complexity": "Complexity",
-    "low": "Low",
-    "medium": "Medium",
-    "high": "High",
     "template": "Template",
     "noTemplate": "No template",
     "noStatus": "Status",

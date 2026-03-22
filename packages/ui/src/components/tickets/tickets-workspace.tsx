@@ -54,20 +54,6 @@ interface TicketsWorkspaceProps<TTicket extends WorkspaceTicket = WorkspaceTicke
   getBoardColumnConfig?: (groupKey: string) => BoardColumnConfig;
 }
 
-const PRIORITY_COLORS: Record<string, string> = {
-  p0: "red",
-  p1: "red",
-  p2: "orange",
-  p3: "yellow",
-  p4: "gray",
-};
-
-const COMPLEXITY_COLORS: Record<string, string> = {
-  high: "red",
-  medium: "yellow",
-  low: "green",
-};
-
 const toTitleCase = (value: string) =>
   value
     .replaceAll("_", " ")
@@ -79,8 +65,6 @@ const toTitleCase = (value: string) =>
 const filterValueGetters: Record<FilterCategory, (ticket: WorkspaceTicket) => string[]> = {
   status: (ticket) => (ticket.status ? [ticket.status] : []),
   assignee: (ticket) => (ticket.assignee ? [ticket.assignee] : []),
-  priority: (ticket) => (ticket.priority ? [ticket.priority] : []),
-  complexity: (ticket) => (ticket.complexity ? [ticket.complexity] : []),
   labels: (ticket) => ticket.labels ?? [],
 };
 
@@ -103,8 +87,6 @@ const buildDefaultFilterCategories = (tickets: WorkspaceTicket[]): WorkspaceFilt
   return [
     { id: "status", label: "Status", options: collectCategoryOptions(tickets, "status") },
     { id: "assignee", label: "Assignee", options: collectCategoryOptions(tickets, "assignee") },
-    { id: "priority", label: "Priority", options: collectCategoryOptions(tickets, "priority") },
-    { id: "complexity", label: "Complexity", options: collectCategoryOptions(tickets, "complexity") },
     { id: "labels", label: "Labels", options: collectCategoryOptions(tickets, "labels") },
   ];
 };
@@ -119,14 +101,6 @@ const toBadges = (ticket: WorkspaceTicket, displayProperties: DisplayProperty[])
 
   if (includes("assignee") && ticket.assignee) {
     badges.push({ label: ticket.assignee, color: "blue" });
-  }
-
-  if (includes("priority") && ticket.priority) {
-    badges.push({ label: ticket.priority, color: PRIORITY_COLORS[ticket.priority.toLowerCase()] ?? "gray" });
-  }
-
-  if (includes("complexity") && ticket.complexity) {
-    badges.push({ label: ticket.complexity, color: COMPLEXITY_COLORS[ticket.complexity.toLowerCase()] ?? "gray" });
   }
 
   if (includes("updated") && ticket.updatedAt) {

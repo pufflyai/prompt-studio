@@ -8,8 +8,6 @@ const makeListItem = (overrides: Record<string, unknown> = {}) => ({
   status_id: "s-1",
   display_title: "Fix login bug",
   file_id: null,
-  priority: null,
-  complexity: null,
   draft: false,
   archived: false,
   status_name: "backlog",
@@ -26,8 +24,6 @@ const makeTicket = (overrides: Record<string, unknown> = {}) => ({
   display_title: "Fix login bug",
   user_prompt: null,
   file_id: null,
-  priority: "P1",
-  complexity: "medium",
   parent_id: null,
   parallelizable: null,
   blocked_reason: null,
@@ -57,17 +53,15 @@ describe("tickets view", () => {
     expect(log).toHaveBeenCalledWith(expect.stringContaining("Fix login bug"));
     expect(log).toHaveBeenCalledWith(expect.stringContaining("backlog"));
     expect(log).toHaveBeenCalledWith(expect.stringContaining("bug"));
-    expect(log).toHaveBeenCalledWith(expect.stringContaining("P1"));
-    expect(log).toHaveBeenCalledWith(expect.stringContaining("medium"));
   });
 
-  test("shows dash for missing tags, priority, complexity", async () => {
+  test("shows dash for missing tags", async () => {
     const log = mock();
     const handler = createHandler({
       cwd: () => "/work/repo",
       resolveProjectId: () => ({ projectId: "proj-1", root: "/work/repo" }),
       resolveTicketByShorthand: async () => makeListItem({ tag_names: [], status_name: null }),
-      getTicket: async () => makeTicket({ priority: null, complexity: null }),
+      getTicket: async () => makeTicket(),
       log,
     });
 
@@ -75,11 +69,7 @@ describe("tickets view", () => {
 
     const calls = log.mock.calls.map((c) => c[0] as string);
     const tagsLine = calls.find((c) => c.startsWith("Tags:"));
-    const priorityLine = calls.find((c) => c.startsWith("Priority:"));
-    const complexityLine = calls.find((c) => c.startsWith("Complexity:"));
     expect(tagsLine).toContain("-");
-    expect(priorityLine).toContain("-");
-    expect(complexityLine).toContain("-");
   });
 
   test("passes --project-id override to resolveProjectId", async () => {

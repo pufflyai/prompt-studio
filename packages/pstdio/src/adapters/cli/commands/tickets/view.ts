@@ -50,8 +50,6 @@ export const createHandler =
     deps.log(formatField("Title", ticket.display_title));
     deps.log(formatField("Status", listItem.status_name));
     deps.log(formatField("Tags", listItem.tag_names.length > 0 ? listItem.tag_names.join(", ") : null));
-    deps.log(formatField("Priority", ticket.priority));
-    deps.log(formatField("Complexity", ticket.complexity));
     deps.log(formatField("Created", ticket.created_at));
     deps.log(formatField("Updated", ticket.updated_at));
   };

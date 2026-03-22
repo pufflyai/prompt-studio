@@ -9,6 +9,17 @@ type CreateInput = {
   is_default?: boolean;
 };
 
+type UpdateInput = {
+  name?: string;
+  color?: string;
+  sort_order?: number;
+  can_create?: boolean;
+  can_drag_in?: boolean;
+  can_drag_out?: boolean;
+  can_attempt_on_drop?: boolean;
+  column_actions?: string[];
+};
+
 const nowTimestamp = () => new Date().toISOString();
 
 export const createStatusesService = (db: DbClient) => {
@@ -55,7 +66,6 @@ export const createStatusesService = (db: DbClient) => {
       color: input.color,
       sort_order: maxRow.max + 1,
       is_default: input.is_default ?? false,
-      is_open: true,
       can_drag_out: true,
       can_drag_in: true,
       can_create: false,
@@ -101,9 +111,23 @@ export const createStatusesService = (db: DbClient) => {
     await db.update(ticket_statuses).set({ color, updated_at: nowTimestamp() }).where(eq(ticket_statuses.id, id));
   };
 
+  const update = async (id: string, input: UpdateInput) => {
+    const next: Record<string, unknown> = { updated_at: nowTimestamp() };
+    if (input.name !== undefined) next.name = input.name;
+    if (input.color !== undefined) next.color = input.color;
+    if (input.sort_order !== undefined) next.sort_order = input.sort_order;
+    if (input.can_create !== undefined) next.can_create = input.can_create;
+    if (input.can_drag_in !== undefined) next.can_drag_in = input.can_drag_in;
+    if (input.can_drag_out !== undefined) next.can_drag_out = input.can_drag_out;
+    if (input.can_attempt_on_drop !== undefined) next.can_attempt_on_drop = input.can_attempt_on_drop;
+    if (input.column_actions !== undefined) next.column_actions = JSON.stringify(input.column_actions);
+
+    await db.update(ticket_statuses).set(next).where(eq(ticket_statuses.id, id));
+  };
+
   const softDelete = async (id: string) => {
     await db.update(ticket_statuses).set({ deleted_at: nowTimestamp() }).where(eq(ticket_statuses.id, id));
   };
 
-  return { list, getByName, getDefault, create, setDefault, updateColor, softDelete };
+  return { list, getByName, getDefault, create, setDefault, updateColor, update, softDelete };
 };

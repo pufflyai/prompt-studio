@@ -9,8 +9,6 @@ const listTicketsQuerySchema = z
     project_id: z.string(),
     status: z.string().optional(),
     tag: z.union([z.string(), z.array(z.string())]).optional(),
-    priority: z.string().optional(),
-    complexity: z.enum(["low", "medium", "high"]).optional(),
     archived: z
       .string()
       .transform((v) => v === "true")
@@ -58,8 +56,6 @@ export const listTicketsHandler = (deps: RouteDeps): AppRouteHandler<typeof list
 
     const tickets = await deps.ticketsService.list(query.project_id, {
       status_id: statusId,
-      priority: query.priority,
-      complexity: query.complexity,
       archived: query.archived,
       draft: query.draft,
       parent_id: query.parent_id,
@@ -76,7 +72,7 @@ export const listTicketsHandler = (deps: RouteDeps): AppRouteHandler<typeof list
 
     const enriched = await Promise.all(
       tickets.map(async (t) => {
-        const tags = await deps.ticketsService.getTagAssignments(t.id);
+        const tags = await deps.ticketsService.getTagOptionAssignments(t.id);
         return {
           ...t,
           status_name: t.status_id ? (statusMap.get(t.status_id) ?? null) : null,

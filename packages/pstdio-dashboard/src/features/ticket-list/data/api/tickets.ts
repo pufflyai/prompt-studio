@@ -67,7 +67,6 @@ export const updateProjectTicketStatus = async (projectId: string, ticket: Ticke
 type UpdateProjectTicketInput = {
   title?: string;
   content?: string;
-  complexity?: "low" | "medium" | "high" | null;
   archived?: boolean;
 };
 
@@ -77,7 +76,6 @@ export const updateProjectTicket = async (projectId: string, ticketId: string, i
 
   if (input.title !== undefined) body.display_title = input.title;
   if (input.content !== undefined) body.content = input.content;
-  if (input.complexity !== undefined) body.complexity = input.complexity;
   if (input.archived !== undefined) body.archived = input.archived;
 
   if (Object.keys(body).length === 0) {
@@ -124,7 +122,6 @@ export const createProjectTicket = async (input: CreateProjectTicketInput) => {
     body: {
       project_id: input.projectId,
       ...(input.content != null && { content: input.content }),
-      ...(input.complexity != null && { complexity: input.complexity }),
       ...(input.tagIds != null && { tag_ids: input.tagIds }),
       ...(statusId != null && { status_id: statusId }),
       ...(input.parentId != null && { parent_id: input.parentId }),
@@ -146,7 +143,6 @@ export const createTicketAndStart = async (input: CreateTicketAndStartInput) => 
     body: {
       project_id: input.projectId,
       ...(input.content != null && { content: input.content }),
-      ...(input.complexity != null && { complexity: input.complexity }),
       ...(input.dependsOn != null && { depends_on: input.dependsOn }),
       ...(input.statusId != null && { status_id: input.statusId }),
       ...(input.agent != null && { agent: input.agent }),

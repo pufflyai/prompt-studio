@@ -41,7 +41,6 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
 
   const GROUPING_OPTIONS: { value: GroupingField; label: string }[] = [
     { value: "status", label: t("displayMenu.groupingOptions.status") },
-    { value: "complexity", label: t("displayMenu.groupingOptions.complexity") },
     { value: "assignee", label: t("displayMenu.groupingOptions.assignee") },
     { value: "none", label: t("displayMenu.groupingOptions.none") },
   ];
@@ -50,14 +49,12 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
     { value: "manual", label: t("displayMenu.orderingOptions.manual") },
     { value: "updated", label: t("displayMenu.orderingOptions.updated") },
     { value: "title", label: t("displayMenu.orderingOptions.title") },
-    { value: "complexity", label: t("displayMenu.orderingOptions.complexity") },
     { value: "shorthand", label: t("displayMenu.orderingOptions.shorthand") },
   ];
 
   const DISPLAY_PROPERTY_OPTIONS: { value: DisplayProperty; label: string }[] = [
     { value: "parentId", label: t("displayMenu.propertyOptions.parentId") },
     { value: "status", label: t("displayMenu.propertyOptions.status") },
-    { value: "complexity", label: t("displayMenu.propertyOptions.complexity") },
     { value: "assignee", label: t("displayMenu.propertyOptions.assignee") },
     { value: "tags", label: t("displayMenu.propertyOptions.tags") },
     { value: "updatedAt", label: t("displayMenu.propertyOptions.updatedAt") },

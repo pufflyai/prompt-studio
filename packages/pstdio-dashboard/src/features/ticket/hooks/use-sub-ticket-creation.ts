@@ -49,7 +49,6 @@ export const useSubTicketCreation = (input: UseSubTicketCreationInput) => {
       const createdTicket = await createTicket.mutateAsync({
         title: payload.content,
         content: payload.content,
-        complexity: payload.complexity,
         tagIds: payload.tagIds,
         status: payload.status,
         parentId: payload.parentId,

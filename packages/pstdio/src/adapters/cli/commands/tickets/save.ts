@@ -95,8 +95,6 @@ export const createHandler =
       draft: false,
       tag_ids: tagIds,
       status_id: statusId,
-      priority: frontmatter.priority,
-      complexity: frontmatter.complexity,
     });
 
     const uploadedCount = await uploadLocalTicketFiles(deps, root, argv.id, ticket.id);

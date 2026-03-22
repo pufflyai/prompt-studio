@@ -5,7 +5,6 @@ import type { TicketStatus } from "@/features/ticket-list/types";
 interface CreateProjectTicketInput {
   title: string;
   content?: string | null;
-  complexity?: "low" | "medium" | "high" | null;
   tagIds?: string[];
   status?: TicketStatus | null;
   parentId?: string | null;

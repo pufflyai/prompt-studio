@@ -27,11 +27,12 @@ describe("emitCascadeDeletes", () => {
     const bus = new EventBus();
     await emitCascadeDeletes(bus, db, "projects", project.id);
 
-    // Should emit deletes for: 7 statuses + 4 tags + 1 project = 12
+    // Should emit deletes for: 6 statuses + 4 tag options + 1 tag def + 1 project = 12
     const events = bus.getSince(0);
 
     const tables = events.map((e) => e.table);
     expect(tables).toContain("ticket_statuses");
+    expect(tables).toContain("ticket_tag_options");
     expect(tables).toContain("ticket_tags");
     expect(tables).toContain("projects");
 

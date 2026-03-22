@@ -1,9 +1,10 @@
 import { Box, Button, CloseButton, Dialog, Flex, Icon, Menu, Stack, Text } from "@chakra-ui/react";
 import { MenuItem } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
-import { BarChart3, ChevronRight, Circle, Paperclip } from "lucide-react";
+import { ChevronRight, Circle, Paperclip } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { SingleTagSelector } from "@/features/ticket/components/single-tag-selector";
 
 import type { TicketStatus, TicketStatusOption, TicketTag } from "@/features/ticket-list/types";
 
@@ -29,7 +30,6 @@ interface CreateTicketModalProps {
 
 export interface CreateTicketModalPayload {
   content: string;
-  complexity: "low" | "medium" | "high";
   tagIds: string[];
   templateName: string | null;
   status: TicketStatus | null;
@@ -38,8 +38,6 @@ export interface CreateTicketModalPayload {
 }
 
 export type { CreateTicketModalProps };
-
-const COMPLEXITY_OPTIONS = ["low", "medium", "high"] as const;
 
 const STATUS_COLOR_MAP: Record<string, string> = {
   gray: "gray.400",
@@ -52,12 +50,6 @@ const STATUS_COLOR_MAP: Record<string, string> = {
   cyan: "cyan.400",
   purple: "purple.400",
   pink: "pink.400",
-};
-
-const COMPLEXITY_ICON_COLOR: Record<string, string> = {
-  low: "green.400",
-  medium: "orange.400",
-  high: "red.400",
 };
 
 export const CreateTicketModal = (props: CreateTicketModalProps) => {
@@ -81,7 +73,6 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
   const resolvedSubmitLabel = submitButtonLabel ?? t("createTicketModal.createTicket");
 
   const [content, setContent] = useState("");
-  const [complexity, setComplexity] = useState<"low" | "medium" | "high">("medium");
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [templateName, setTemplateName] = useState("");
   const [editorKey, setEditorKey] = useState(0);
@@ -92,7 +83,6 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
 
   const resetForm = () => {
     setContent("");
-    setComplexity("medium");
     setTagIds([]);
     setTemplateName("");
     setEditorKey((k) => k + 1);
@@ -109,7 +99,6 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
 
     await onSubmit({
       content: content.trim(),
-      complexity,
       tagIds,
       templateName: templateName || null,
       status: targetStatus,
@@ -124,18 +113,9 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
   const statusLabel = statusOption?.name ?? targetStatus ?? t("createTicketModal.noStatus");
   const statusColor = STATUS_COLOR_MAP[statusOption?.color ?? "gray"] ?? "gray.400";
 
-  const complexityLabel = t(`createTicketModal.${complexity}`);
-
-  const selectedTagNames = tags.filter((tag) => tagIds.includes(tag.id)).map((tag) => tag.name);
-  const tagsLabel = selectedTagNames.length > 0 ? selectedTagNames.join(", ") : t("ticketDetail.tags");
-
   const templateLabel = templateName
     ? (templates.find((tmpl) => tmpl.name === templateName)?.name ?? templateName)
     : t("createTicketModal.template");
-
-  const handleTagToggle = (tagId: string) => {
-    setTagIds((current) => (current.includes(tagId) ? current.filter((id) => id !== tagId) : [...current, tagId]));
-  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
@@ -191,49 +171,17 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
               {statusLabel}
             </Button>
 
-            <Menu.Root>
-              <Menu.Trigger asChild>
-                <Button size="xs" variant="outline" disabled={isSubmitting}>
-                  <Icon as={BarChart3} boxSize="3" color={COMPLEXITY_ICON_COLOR[complexity]} />
-                  {complexityLabel}
-                </Button>
-              </Menu.Trigger>
-              <Menu.Positioner>
-                <Menu.Content bg="bg">
-                  {COMPLEXITY_OPTIONS.map((option) => (
-                    <MenuItem
-                      key={option}
-                      primaryLabel={t(`createTicketModal.${option}`)}
-                      isSelected={complexity === option}
-                      onClick={() => setComplexity(option)}
-                    />
-                  ))}
-                </Menu.Content>
-              </Menu.Positioner>
-            </Menu.Root>
-
-            {tags.length > 0 && (
-              <Menu.Root closeOnSelect={false}>
-                <Menu.Trigger asChild>
-                  <Button size="xs" variant="outline" disabled={isSubmitting}>
-                    {tagsLabel}
-                  </Button>
-                </Menu.Trigger>
-                <Menu.Positioner>
-                  <Menu.Content bg="bg">
-                    {tags.map((tag) => (
-                      <MenuItem
-                        key={tag.id}
-                        id={tag.id}
-                        primaryLabel={tag.name}
-                        isSelected={tagIds.includes(tag.id)}
-                        onClick={() => handleTagToggle(tag.id)}
-                      />
-                    ))}
-                  </Menu.Content>
-                </Menu.Positioner>
-              </Menu.Root>
-            )}
+            {tags.map((tag) => (
+              <SingleTagSelector
+                key={tag.id}
+                tag={tag}
+                selectedOptionIds={tagIds}
+                onChange={setTagIds}
+                isDisabled={isSubmitting}
+                size="xs"
+                variant="outline"
+              />
+            ))}
 
             {templates.length > 0 && (
               <Menu.Root>

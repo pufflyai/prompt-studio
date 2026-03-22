@@ -6,7 +6,6 @@ const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
   },
 });
 
-export const ticketComplexityEnum = pgEnum("ticket_complexity", ["low", "medium", "high"]);
 export const sessionStatusEnum = pgEnum("session_status", [
   "in_progress",
   "awaiting_input",
@@ -68,7 +67,6 @@ export const ticket_statuses = pgTable("ticket_statuses", {
   color: text("color").notNull(),
   sort_order: integer("sort_order").notNull(),
   is_default: boolean("is_default").notNull(),
-  is_open: boolean("is_open").notNull().default(true),
   can_drag_out: boolean("can_drag_out").notNull(),
   can_drag_in: boolean("can_drag_in").notNull(),
   can_create: boolean("can_create").notNull(),
@@ -92,9 +90,7 @@ export const tickets = pgTable(
     display_title: text("display_title"),
     user_prompt: text("user_prompt"),
     file_id: text("file_id").references(() => files.id, { onDelete: "set null" }),
-    priority: text("priority"),
     parallelizable: text("parallelizable"),
-    complexity: ticketComplexityEnum("complexity"),
     parent_id: text("parent_id"),
     blocked_reason: text("blocked_reason"),
     depends_on: text("depends_on"),
@@ -115,12 +111,31 @@ export const ticket_tags = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    color: text("color").notNull(),
+    type: text("type").notNull().default("single_select"),
     created_at: text("created_at").notNull(),
     updated_at: text("updated_at").notNull(),
     deleted_at: text("deleted_at"),
   },
   (table) => [uniqueIndex("ticket_tags_project_name_idx").on(table.project_id, table.name)],
+);
+
+export const ticket_tag_options = pgTable(
+  "ticket_tag_options",
+  {
+    id: text("id").primaryKey(),
+    tag_id: text("tag_id")
+      .notNull()
+      .references(() => ticket_tags.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    color: text("color").notNull(),
+    icon: text("icon"),
+    description: text("description"),
+    sort_order: integer("sort_order").notNull(),
+    created_at: text("created_at").notNull(),
+    updated_at: text("updated_at").notNull(),
+    deleted_at: text("deleted_at"),
+  },
+  (table) => [uniqueIndex("ticket_tag_options_tag_name_idx").on(table.tag_id, table.name)],
 );
 
 export const ticket_tag_assignments = pgTable(
@@ -130,12 +145,12 @@ export const ticket_tag_assignments = pgTable(
     ticket_id: text("ticket_id")
       .notNull()
       .references(() => tickets.id, { onDelete: "cascade" }),
-    ticket_tag_id: text("ticket_tag_id")
+    ticket_tag_option_id: text("ticket_tag_option_id")
       .notNull()
-      .references(() => ticket_tags.id, { onDelete: "cascade" }),
+      .references(() => ticket_tag_options.id, { onDelete: "cascade" }),
     created_at: text("created_at").notNull(),
   },
-  (table) => [uniqueIndex("ticket_tag_assignments_ticket_tag_idx").on(table.ticket_id, table.ticket_tag_id)],
+  (table) => [uniqueIndex("ticket_tag_assignments_ticket_option_idx").on(table.ticket_id, table.ticket_tag_option_id)],
 );
 
 export const sessions = pgTable("sessions", {

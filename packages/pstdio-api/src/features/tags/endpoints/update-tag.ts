@@ -1,28 +1,28 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
-import { createTagBodySchema, tagResponseSchema } from "../dto";
+import { tagResponseSchema, updateTagBodySchema } from "../dto";
 
 export const updateTagRoute = createRoute({
   method: "put",
   path: "/projects/{projectId}/ticket-tags/{id}",
-  description: "Update a tag.",
+  description: "Update a tag definition.",
   tags: ["Tags"],
   request: {
     query: z.object({}).strict(),
     params: z
       .object({
         projectId: z.string().openapi({ description: "Project ID" }),
-        id: z.string().openapi({ description: "Tag ID" }),
+        id: z.string().openapi({ description: "Tag definition ID" }),
       })
       .strict(),
     body: {
-      content: { "application/json": { schema: createTagBodySchema } },
+      content: { "application/json": { schema: updateTagBodySchema } },
     },
   },
   responses: {
     200: {
-      description: "Tag updated.",
+      description: "Tag definition updated.",
       content: { "application/json": { schema: tagResponseSchema } },
     },
   },
@@ -34,7 +34,7 @@ export const updateTagHandler = (deps: RouteDeps): AppRouteHandler<typeof update
     const body = c.req.valid("json");
     await deps.tagsService.update(id, body);
 
-    const tags = await deps.tagsService.list(projectId);
+    const tags = await deps.tagsService.listWithOptions(projectId);
     const updated = tags.find((t) => t.id === id);
 
     deps.eventBus.emit("ticket_tags", "set", { id, project_id: projectId, ...body });

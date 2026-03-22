@@ -86,11 +86,10 @@ export const createHandler =
         status_name: argv.status ?? null,
         parent_id: null,
         user_prompt: null,
-        priority: null,
-        complexity: null,
         depends_on: null,
         parallelizable: null,
         blocked_reason: null,
+        tag_names: [],
       });
       const content = applyFrontmatterValues(frontmatter, ticketContent);
       deps.writeTicketFile(root, ticket.shorthand, content);

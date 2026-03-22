@@ -157,6 +157,89 @@ test.describe("Project settings", () => {
     await expect(page.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
   });
 
+  test("deletes a non-default status from the status manager", async ({ page, request }) => {
+    const project = await createProjectViaApi(request, `Status Delete ${Date.now()}`);
+
+    const createRes = await request.post(`${apiBase}/v1/projects/${project.id}/statuses`, {
+      data: { name: "to-delete", color: "pink" },
+    });
+    expect(createRes.ok()).toBe(true);
+    const created = (await createRes.json()) as { id: string; name: string };
+
+    await bypassOnboarding(page);
+    await page.goto(`/projects/${project.id}/settings?panel=ticket-statuses`);
+    await expect(page.getByText("to-delete")).toBeVisible();
+
+    // Hide the session bubble so it doesn't intercept pointer events on the table
+    await page.addStyleTag({ content: "[data-testid='session-bubble'] { display: none !important; }" });
+
+    const row = page.getByRole("row").filter({ hasText: "to-delete" });
+    await row.getByRole("button", { name: "Delete to-delete" }).click();
+
+    const dialog = page.getByRole("dialog").last();
+    await expect(dialog.getByText("Delete status?")).toBeVisible();
+    await dialog.getByRole("button", { name: "Delete status" }).click();
+
+    // Status removed from draft, now save
+    const saveButton = page.getByRole("button", { name: "Save", exact: true });
+    await expect(saveButton).toBeEnabled();
+
+    const deleteResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes(`/v1/projects/${project.id}/statuses/${created.id}`) &&
+        response.request().method() === "DELETE" &&
+        response.status() === 200,
+    );
+    await saveButton.click();
+    await deleteResponse;
+
+    const listRes = await request.get(`${apiBase}/v1/projects/${project.id}/statuses`);
+    expect(listRes.ok()).toBe(true);
+    const remaining = (await listRes.json()) as Array<{ name: string }>;
+    expect(remaining.find((s) => s.name === "to-delete")).toBeUndefined();
+  });
+
+  test("cancel reverts status changes", async ({ page, request }) => {
+    const project = await createProjectViaApi(request, `Status Cancel ${Date.now()}`);
+
+    await request.post(`${apiBase}/v1/projects/${project.id}/statuses`, {
+      data: { name: "temp-status", color: "pink" },
+    });
+
+    await bypassOnboarding(page);
+    await page.goto(`/projects/${project.id}/settings?panel=ticket-statuses`);
+    await expect(page.getByText("temp-status")).toBeVisible();
+
+    await page.addStyleTag({ content: "[data-testid='session-bubble'] { display: none !important; }" });
+
+    // Delete the status from draft
+    const row = page.getByRole("row").filter({ hasText: "temp-status" });
+    await row.getByRole("button", { name: "Delete temp-status" }).click();
+    const dialog = page.getByRole("dialog").last();
+    await dialog.getByRole("button", { name: "Delete status" }).click();
+
+    // Cancel reverts
+    const cancelButton = page.getByRole("button", { name: "Cancel", exact: true });
+    await expect(cancelButton).toBeEnabled();
+    await cancelButton.click();
+
+    // Status should reappear
+    await expect(page.getByText("temp-status")).toBeVisible();
+    await expect(cancelButton).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
+  });
+
+  test("status save and cancel are disabled when no changes are made", async ({ page, request }) => {
+    const project = await createProjectViaApi(request, `Status Disabled ${Date.now()}`);
+
+    await bypassOnboarding(page);
+    await page.goto(`/projects/${project.id}/settings?panel=ticket-statuses`);
+    await expect(page.getByText("Statuses", { exact: true }).first()).toBeVisible();
+
+    await expect(page.getByRole("button", { name: "Cancel", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
+  });
+
   test("shows installed skills and selected skill details", async ({ page, request }) => {
     const project = await createProjectViaApi(request, `Skills Settings ${Date.now()}`);
     const skills = await listSkillsViaApi(request, project.id);
@@ -179,5 +262,46 @@ test.describe("Project settings", () => {
     await expect(page.getByTestId("project-skill-name")).toContainText(selectedSkill.name);
     await expect(page.getByTestId("project-skill-description")).toContainText(selectedSkillDetails.description);
     await expect(page.getByTestId("project-skill-content")).toContainText(expectedContentSnippet!);
+  });
+
+  test("persists tag option icon after update", async ({ request }) => {
+    const project = await createProjectViaApi(request, `Tag Icon ${Date.now()}`);
+
+    const tagsRes = await request.get(`${apiBase}/v1/projects/${project.id}/ticket-tags`);
+    const tags = (await tagsRes.json()) as {
+      id: string;
+      name: string;
+      options: { id: string; name: string; icon: string | null; color: string }[];
+    }[];
+    const label = tags.find((t) => t.name === "label")!;
+    const bugOption = label.options.find((o) => o.name === "bug")!;
+
+    const updateRes = await request.put(
+      `${apiBase}/v1/projects/${project.id}/ticket-tags/${label.id}/options/${bugOption.id}`,
+      { data: { icon: "star" } },
+    );
+    expect(updateRes.ok()).toBe(true);
+    const updated = (await updateRes.json()) as { icon: string | null };
+    expect(updated.icon).toBe("star");
+
+    // Verify icon persists when fetching again
+    const tagsAfter = await request.get(`${apiBase}/v1/projects/${project.id}/ticket-tags`);
+    const tagsData = (await tagsAfter.json()) as typeof tags;
+    const labelAfter = tagsData.find((t) => t.name === "label")!;
+    const bugAfter = labelAfter.options.find((o) => o.name === "bug")!;
+    expect(bugAfter.icon).toBe("star");
+
+    // Update color without touching icon — icon should remain
+    const colorRes = await request.put(
+      `${apiBase}/v1/projects/${project.id}/ticket-tags/${label.id}/options/${bugOption.id}`,
+      { data: { color: "green" } },
+    );
+    expect(colorRes.ok()).toBe(true);
+
+    const tagsAfterColor = await request.get(`${apiBase}/v1/projects/${project.id}/ticket-tags`);
+    const tagsColorData = (await tagsAfterColor.json()) as typeof tags;
+    const bugAfterColor = tagsColorData.find((t) => t.name === "label")!.options.find((o) => o.name === "bug")!;
+    expect(bugAfterColor.icon).toBe("star");
+    expect(bugAfterColor.color).toBe("green");
   });
 });

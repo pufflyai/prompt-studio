@@ -28,7 +28,7 @@ export const deleteStatusHandler = (deps: RouteDeps): AppRouteHandler<typeof del
   return async (c) => {
     const { id } = c.req.valid("param");
     await deps.statusesService.softDelete(id);
-    deps.eventBus.emit("ticket_statuses", "delete", id);
+    deps.eventBus.emit("ticket_statuses", "delete", { id });
     return c.json({ deleted: true }, 200);
   };
 };

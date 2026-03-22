@@ -2,16 +2,23 @@ import { useMutation } from "@tanstack/react-query";
 import type { StatusResponse, TagResponse } from "pstdio-api/dto";
 import { asSyncedRows, eq, getCollection, type SyncedRow, useLiveQuery } from "@/features/sync/collections";
 import {
+  createProjectStatus,
   createProjectTicketTag,
+  createTagOption,
   deleteProjectTicket,
+  deleteProjectTicketStatus,
   deleteProjectTicketTag,
+  deleteTagOption,
+  setProjectDefaultStatus,
+  updateProjectStatus,
   updateProjectTicket,
   updateProjectTicketStatus,
   updateProjectTicketTagDefinition,
   updateProjectTicketTags,
+  updateTagOption,
 } from "@/features/ticket-list/data/api";
 import { toTicketStatusOption, toTicketTag } from "@/features/ticket-list/data/api/mappers";
-import type { Ticket, TicketStatus, TicketStatusColor, TicketTag } from "@/features/ticket-list/types";
+import type { Ticket, TicketStatus, TicketStatusColor } from "@/features/ticket-list/types";
 import { buildSessionsByWorkspace } from "@/features/ticket-list/utils/sessions-by-workspace";
 import { toTicketFromRow } from "./ticket-row-mappers";
 
@@ -38,7 +45,7 @@ const buildTagIdsByTicket = (rawTagAssignments: SyncedRow[] | undefined, ticketI
     if (!ticketIds.has(assignment.ticket_id as string)) continue;
     const ticketId = assignment.ticket_id as string;
     const existing = tagIdsByTicket.get(ticketId) ?? [];
-    existing.push(assignment.ticket_tag_id as string);
+    existing.push(assignment.ticket_tag_option_id as string);
     tagIdsByTicket.set(ticketId, existing);
   }
 
@@ -203,25 +210,39 @@ export const useProjectTicketTags = (projectId: string | undefined) => {
   );
   const rawTags = asSyncedRows(rawTagsData);
 
-  const data = rawTags?.map((t) => toTicketTag(t as unknown as TagResponse));
+  const { data: rawOptionsData } = useLiveQuery((q) =>
+    q.from({ o: getCollection("ticket_tag_options") }).select(({ o }) => ({ ...o })),
+  );
+  const rawOptions = asSyncedRows(rawOptionsData);
+
+  const data = rawTags?.map((t) => {
+    const tagOptions = (rawOptions ?? [])
+      .filter((o) => o.tag_id === t.id && !o.deleted_at)
+      .sort((a, b) => (a.sort_order as number) - (b.sort_order as number));
+
+    return toTicketTag({
+      ...t,
+      options: tagOptions.map((o) => ({
+        id: o.id as string,
+        name: o.name as string,
+        color: o.color as string,
+        sort_order: o.sort_order as number,
+        icon: (o.icon as string) ?? null,
+        description: (o.description as string) ?? null,
+      })),
+    } as unknown as TagResponse);
+  });
 
   return { data, isLoading };
 };
 
 export const useUpdateProjectTicket = (projectId: string | undefined) =>
   useMutation({
-    mutationFn: async (input: {
-      ticketId: string;
-      title?: string;
-      content?: string;
-      complexity?: "low" | "medium" | "high" | null;
-      archived?: boolean;
-    }) => {
+    mutationFn: async (input: { ticketId: string; title?: string; content?: string; archived?: boolean }) => {
       if (!projectId) throw new Error("Project id is required to update tickets.");
       const body: Record<string, unknown> = {};
       if (input.title !== undefined) body.display_title = input.title;
       if (input.content !== undefined) body.content = input.content;
-      if (input.complexity !== undefined) body.complexity = input.complexity;
       if (input.archived !== undefined) body.archived = input.archived;
       await updateProjectTicket(projectId, input.ticketId, body as Parameters<typeof updateProjectTicket>[2]);
     },
@@ -253,7 +274,11 @@ export const useUpdateProjectTicketTags = (projectId: string | undefined) =>
 
 export const useCreateProjectTicketTag = (projectId: string | undefined) =>
   useMutation({
-    mutationFn: async (input: { name: string; color: TicketStatusColor }) => {
+    mutationFn: async (input: {
+      name: string;
+      type: "single_select" | "multi_select";
+      options?: { name: string; color: string }[];
+    }) => {
       if (!projectId) throw new Error("Project id is required.");
       return createProjectTicketTag(projectId, input);
     },
@@ -261,9 +286,9 @@ export const useCreateProjectTicketTag = (projectId: string | undefined) =>
 
 export const useUpdateProjectTicketTag = (projectId: string | undefined) =>
   useMutation({
-    mutationFn: async (input: { tag: TicketTag; name: string; color: TicketStatusColor }) => {
+    mutationFn: async (input: { tagId: string; name?: string; type?: string }) => {
       if (!projectId) throw new Error("Project id is required.");
-      return updateProjectTicketTagDefinition(projectId, input.tag.id, { name: input.name, color: input.color });
+      return updateProjectTicketTagDefinition(projectId, input.tagId, { name: input.name, type: input.type });
     },
   });
 
@@ -272,5 +297,90 @@ export const useDeleteProjectTicketTag = (projectId: string | undefined) =>
     mutationFn: async (tagId: string) => {
       if (!projectId) throw new Error("Project id is required.");
       await deleteProjectTicketTag(projectId, tagId);
+    },
+  });
+
+export const useCreateProjectTicketStatus = (projectId: string | undefined) =>
+  useMutation({
+    mutationFn: async (input: { name: string; color: TicketStatusColor }) => {
+      if (!projectId) throw new Error("Project id is required.");
+      return createProjectStatus(projectId, input);
+    },
+  });
+
+export const useUpdateProjectTicketStatusDefinition = (projectId: string | undefined) =>
+  useMutation({
+    mutationFn: async (input: {
+      statusId: string;
+      name?: string;
+      color?: TicketStatusColor;
+      sort_order?: number;
+      can_create?: boolean;
+      can_drag_in?: boolean;
+      can_drag_out?: boolean;
+      column_actions?: string[];
+    }) => {
+      if (!projectId) throw new Error("Project id is required.");
+      const { statusId, ...rest } = input;
+      return updateProjectStatus(projectId, statusId, rest);
+    },
+  });
+
+export const useSetProjectDefaultTicketStatus = (projectId: string | undefined) =>
+  useMutation({
+    mutationFn: async (statusId: string) => {
+      if (!projectId) throw new Error("Project id is required.");
+      await setProjectDefaultStatus(projectId, statusId);
+    },
+  });
+
+export const useDeleteProjectTicketStatusDefinition = (projectId: string | undefined) =>
+  useMutation({
+    mutationFn: async (statusId: string) => {
+      if (!projectId) throw new Error("Project id is required.");
+      await deleteProjectTicketStatus(projectId, statusId);
+    },
+  });
+
+export const useCreateTagOption = (projectId: string | undefined) =>
+  useMutation({
+    mutationFn: async (input: { tagId: string; name: string; color: string; icon?: string; description?: string }) => {
+      if (!projectId) throw new Error("Project id is required.");
+      return createTagOption(projectId, input.tagId, {
+        name: input.name,
+        color: input.color,
+        icon: input.icon,
+        description: input.description,
+      });
+    },
+  });
+
+export const useUpdateTagOption = (projectId: string | undefined) =>
+  useMutation({
+    mutationFn: async (input: {
+      tagId: string;
+      optionId: string;
+      name?: string;
+      color?: string;
+      sort_order?: number;
+      icon?: string | null;
+      description?: string | null;
+    }) => {
+      if (!projectId) throw new Error("Project id is required.");
+      return updateTagOption(projectId, input.tagId, input.optionId, {
+        name: input.name,
+        color: input.color,
+        sort_order: input.sort_order,
+        icon: input.icon,
+        description: input.description,
+      });
+    },
+  });
+
+export const useDeleteTagOption = (projectId: string | undefined) =>
+  useMutation({
+    mutationFn: async (input: { tagId: string; optionId: string }) => {
+      if (!projectId) throw new Error("Project id is required.");
+      await deleteTagOption(projectId, input.tagId, input.optionId);
     },
   });

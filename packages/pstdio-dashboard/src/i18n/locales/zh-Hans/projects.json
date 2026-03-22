@@ -124,15 +124,6 @@
       "status": "状态",
       "blockedReason": "阻塞原因",
       "dependsOn": "依赖于",
-      "complexity": {
-        "label": "复杂度",
-        "options": {
-          "unspecified": "未指定",
-          "low": "低",
-          "medium": "中",
-          "high": "高"
-        }
-      },
       "parent": "父级",
       "tags": "标签",
       "blockedBy": "被阻塞",

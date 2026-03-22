@@ -16,6 +16,8 @@ export type TicketStatusColor =
 
 export type TicketColumnAction = "archive_all";
 
+export type StatusAction = "create_ticket" | "drag_in" | "drag_out" | "archive_all";
+
 export interface TicketStatusOption {
   id: string;
   name: TicketStatus;
@@ -26,6 +28,7 @@ export interface TicketStatusOption {
   canDragIn: boolean;
   canCreate: boolean;
   columnActions: TicketColumnAction[];
+  actions: StatusAction[];
 }
 
 export interface TicketAttempt {
@@ -52,7 +55,6 @@ export interface Ticket {
   title: string;
   content: string;
   tagIds: string[];
-  complexity?: "low" | "medium" | "high" | null;
   blockedReason?: string | null;
   dependsOn?: string | null;
   parentId?: string | null;
@@ -67,10 +69,22 @@ export interface Ticket {
   subTickets?: TicketSubTicket[];
 }
 
-export interface TicketTag {
+export type TagType = "single_select" | "multi_select";
+
+export interface TagOption {
   id: string;
   name: string;
   color: TicketStatusColor;
+  sortOrder: number;
+  icon: string | null;
+  description: string | null;
+}
+
+export interface TicketTag {
+  id: string;
+  name: string;
+  type: TagType;
+  options: TagOption[];
 }
 
 export interface TicketFilePreview {
@@ -84,11 +98,11 @@ export interface TicketFilePreview {
 
 export type ViewMode = "board" | "list";
 
-export type GroupingField = "status" | "complexity" | "assignee" | "none";
+export type GroupingField = "status" | "assignee" | "none";
 
-export type OrderingField = "manual" | "updated" | "title" | "complexity" | "shorthand";
+export type OrderingField = "manual" | "updated" | "title" | "shorthand";
 
-export type DisplayProperty = "parentId" | "status" | "complexity" | "assignee" | "tags" | "updatedAt";
+export type DisplayProperty = "parentId" | "status" | "assignee" | "tags" | "updatedAt";
 
 export interface DisplaySettings {
   viewMode: ViewMode;
@@ -101,7 +115,7 @@ export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
   viewMode: "board",
   grouping: "status",
   ordering: "manual",
-  displayProperties: ["complexity"],
+  displayProperties: [],
 };
 
 export interface TicketGroup {
@@ -115,7 +129,7 @@ export interface TicketGroup {
   columnActions: TicketColumnAction[];
 }
 
-export type TagEntry = { id: string; name: string; color: TicketStatusColor };
+export type TagEntry = { id: string; name: string; color: TicketStatusColor; tagName: string };
 
 export interface BadgeContext {
   statusOptions: { name: string; color: TicketStatusColor }[];

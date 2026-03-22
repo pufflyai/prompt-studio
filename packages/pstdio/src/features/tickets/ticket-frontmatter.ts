@@ -5,11 +5,10 @@ type FrontmatterFields = {
   status_name: string | null;
   parent_id: string | null;
   user_prompt: string | null;
-  priority: string | null;
-  complexity: string | null;
   depends_on: string | null;
   parallelizable: string | null;
   blocked_reason: string | null;
+  tag_names: string[];
 };
 
 const escapeYamlScalar = (value: string) => value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
@@ -25,11 +24,10 @@ export const buildTicketFrontmatter = (fields: FrontmatterFields) => {
 
   if (fields.status_name) lines.push(`status: ${q(fields.status_name)}`);
   if (fields.parent_id) lines.push(`parent_id: ${q(fields.parent_id)}`);
-  if (fields.priority) lines.push(`priority: ${q(fields.priority)}`);
-  if (fields.complexity) lines.push(`complexity: ${q(fields.complexity)}`);
   if (fields.depends_on) lines.push(`depends_on: ${q(fields.depends_on)}`);
   if (fields.parallelizable) lines.push(`parallelizable: ${q(fields.parallelizable)}`);
   if (fields.blocked_reason) lines.push(`blocked_reason: ${q(fields.blocked_reason)}`);
+  if (fields.tag_names.length > 0) lines.push(`tags: [${fields.tag_names.map(q).join(", ")}]`);
 
   lines.push("---");
   return lines.join("\n");
@@ -44,11 +42,9 @@ export const stripFrontmatter = (content: string) => {
 
 type ParsedFrontmatter = {
   status?: string;
-  priority?: string;
-  complexity?: string;
 };
 
-const ACTIONABLE_FIELDS = ["status", "priority", "complexity"] as const;
+const ACTIONABLE_FIELDS = ["status"] as const;
 
 export const parseFrontmatter = (content: string): ParsedFrontmatter => {
   if (!content.startsWith("---")) return {};

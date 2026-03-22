@@ -23,8 +23,6 @@ const ticketFixture = {
   status_id: null,
   display_title: "Draft",
   file_id: null as string | null,
-  priority: null,
-  complexity: null,
   draft: true,
   archived: false,
   status_name: null,
@@ -147,7 +145,7 @@ describe("tickets save", () => {
   test("strips frontmatter before uploading and extracts metadata", async () => {
     writeFileSync(
       join(tmpBase, ".pstdio", "tickets", "PS-1", "ticket.md"),
-      '---\nstatus: "wip"\npriority: "P1"\ncomplexity: "medium"\n---\n\n# Updated content',
+      '---\nstatus: "wip"\n---\n\n# Updated content',
     );
 
     const uploadTicketFile = mock(async () => makeUploadResponse());
@@ -178,8 +176,6 @@ describe("tickets save", () => {
       expect.objectContaining({
         display_title: "updated-content",
         status_id: "s-wip",
-        priority: "P1",
-        complexity: "medium",
       }),
     );
   });

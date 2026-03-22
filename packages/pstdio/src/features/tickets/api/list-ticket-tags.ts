@@ -1,8 +1,12 @@
-type TicketTag = {
+type TagOption = {
   id: string;
   name: string;
   color: string;
+  icon: string | null;
+  description: string | null;
+  sort_order: number;
 };
+type TicketTag = { id: string; name: string; type: string; options: TagOption[] };
 
 export const listTicketTags = async (baseUrl: string, projectId: string) => {
   const res = await fetch(`${baseUrl}/v1/projects/${encodeURIComponent(projectId)}/ticket-tags`);

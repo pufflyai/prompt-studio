@@ -126,15 +126,6 @@
       "dependsOn": "의존 항목",
       "parent": "상위",
       "tags": "태그",
-      "complexity": {
-        "label": "복잡도",
-        "options": {
-          "unspecified": "지정되지 않음",
-          "low": "낮음",
-          "medium": "보통",
-          "high": "높음"
-        }
-      },
       "blockedBy": "차단 원인",
       "dependencies": "의존성",
       "archived": "보관됨"

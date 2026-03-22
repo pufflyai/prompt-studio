@@ -6,6 +6,19 @@ import {
   parseFrontmatter,
 } from "./ticket-frontmatter";
 
+const baseFields = {
+  shorthand: "PS-1",
+  created_at: "2026-03-04T00:00:00.000Z",
+  draft: null,
+  status_name: null,
+  parent_id: null,
+  user_prompt: null,
+  depends_on: null,
+  parallelizable: null,
+  blocked_reason: null,
+  tag_names: [] as string[],
+};
+
 describe("buildTicketFrontmatter", () => {
   test("builds frontmatter from ticket fields", () => {
     const result = buildTicketFrontmatter({
@@ -15,11 +28,10 @@ describe("buildTicketFrontmatter", () => {
       status_name: "backlog",
       parent_id: "PS-5",
       user_prompt: "Build the feature",
-      priority: "P1",
-      complexity: "medium",
       depends_on: "PS-3,PS-4",
       parallelizable: "yes",
       blocked_reason: "waiting on API",
+      tag_names: [],
     });
 
     expect(result).toBe(
@@ -31,8 +43,6 @@ describe("buildTicketFrontmatter", () => {
         "draft: true",
         'status: "backlog"',
         'parent_id: "PS-5"',
-        'priority: "P1"',
-        'complexity: "medium"',
         'depends_on: "PS-3,PS-4"',
         'parallelizable: "yes"',
         'blocked_reason: "waiting on API"',
@@ -42,75 +52,28 @@ describe("buildTicketFrontmatter", () => {
   });
 
   test("escapes double quotes in values", () => {
-    const result = buildTicketFrontmatter({
-      shorthand: "PS-1",
-      created_at: "2026-03-04T00:00:00.000Z",
-      draft: null,
-      status_name: null,
-      parent_id: null,
-      user_prompt: 'She said "hello"',
-      priority: null,
-      complexity: null,
-      depends_on: null,
-      parallelizable: null,
-      blocked_reason: null,
-    });
-
+    const result = buildTicketFrontmatter({ ...baseFields, user_prompt: 'She said "hello"' });
     expect(result).toContain('user_prompt: "She said \\"hello\\""');
   });
 
   test("escapes newlines in values", () => {
-    const result = buildTicketFrontmatter({
-      shorthand: "PS-1",
-      created_at: "2026-03-04T00:00:00.000Z",
-      draft: null,
-      status_name: null,
-      parent_id: null,
-      user_prompt: "line one\nline two",
-      priority: null,
-      complexity: null,
-      depends_on: null,
-      parallelizable: null,
-      blocked_reason: null,
-    });
-
+    const result = buildTicketFrontmatter({ ...baseFields, user_prompt: "line one\nline two" });
     expect(result).toContain('user_prompt: "line one\\nline two"');
   });
 
   test("escapes backslashes in values", () => {
-    const result = buildTicketFrontmatter({
-      shorthand: "PS-1",
-      created_at: "2026-03-04T00:00:00.000Z",
-      draft: null,
-      status_name: null,
-      parent_id: null,
-      user_prompt: "path\\to\\file",
-      priority: null,
-      complexity: null,
-      depends_on: null,
-      parallelizable: null,
-      blocked_reason: null,
-    });
-
+    const result = buildTicketFrontmatter({ ...baseFields, user_prompt: "path\\to\\file" });
     expect(result).toContain('user_prompt: "path\\\\to\\\\file"');
   });
 
   test("omits null/empty fields", () => {
-    const result = buildTicketFrontmatter({
-      shorthand: "PS-1",
-      created_at: "2026-03-04T00:00:00.000Z",
-      draft: null,
-      status_name: null,
-      parent_id: null,
-      user_prompt: null,
-      priority: null,
-      complexity: null,
-      depends_on: null,
-      parallelizable: null,
-      blocked_reason: null,
-    });
-
+    const result = buildTicketFrontmatter(baseFields);
     expect(result).toBe(["---", 'ticket_id: "PS-1"', 'created: "2026-03-04T00:00:00.000Z"', "---"].join("\n"));
+  });
+
+  test("includes tags in frontmatter", () => {
+    const result = buildTicketFrontmatter({ ...baseFields, tag_names: ["bug", "P1"] });
+    expect(result).toContain('tags: ["bug", "P1"]');
   });
 });
 
@@ -145,7 +108,6 @@ describe("parseFrontmatter", () => {
       'ticket_id: "PS-12"',
       'status: "wip"',
       'priority: "P1"',
-      'complexity: "medium"',
       'parent_id: "PS-5"',
       'depends_on: "PS-3,PS-4"',
       'parallelizable: "yes"',
@@ -158,8 +120,6 @@ describe("parseFrontmatter", () => {
     const result = parseFrontmatter(content);
     expect(result).toEqual({
       status: "wip",
-      priority: "P1",
-      complexity: "medium",
     });
   });
 
@@ -173,13 +133,13 @@ describe("parseFrontmatter", () => {
   });
 
   test("ignores fields with empty values", () => {
-    const content = '---\nstatus: ""\npriority: "P2"\n---\n\n# Ticket';
-    expect(parseFrontmatter(content)).toEqual({ priority: "P2" });
+    const content = '---\nstatus: ""\n---\n\n# Ticket';
+    expect(parseFrontmatter(content)).toEqual({});
   });
 
   test("strips quotes from values", () => {
-    const content = "---\nstatus: backlog\npriority: 'P1'\n---\n\n# Ticket";
-    expect(parseFrontmatter(content)).toEqual({ status: "backlog", priority: "P1" });
+    const content = "---\nstatus: backlog\n---\n\n# Ticket";
+    expect(parseFrontmatter(content)).toEqual({ status: "backlog" });
   });
 });
 
@@ -193,7 +153,7 @@ describe("applyFrontmatterValues", () => {
       'status: "wip"',
       "---",
     ].join("\n");
-    const content = ["---", 'ticket_id: "OLD-1"', 'priority: "[P1|P2|P3]"', "---", "", "# Ticket"].join("\n");
+    const content = ["---", 'ticket_id: "OLD-1"', 'parallelizable: "[no|yes]"', "---", "", "# Ticket"].join("\n");
 
     const result = applyFrontmatterValues(frontmatter, content);
 
@@ -201,7 +161,7 @@ describe("applyFrontmatterValues", () => {
     expect(result).toContain('created: "2026-03-04T00:00:00.000Z"');
     expect(result).toContain("draft: true");
     expect(result).toContain('status: "wip"');
-    expect(result).toContain('priority: "[P1|P2|P3]"');
+    expect(result).toContain('parallelizable: "[no|yes]"');
   });
 
   test("creates frontmatter when content has none", () => {

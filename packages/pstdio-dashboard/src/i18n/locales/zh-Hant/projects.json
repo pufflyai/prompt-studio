@@ -126,15 +126,6 @@
       "dependsOn": "依賴於",
       "parent": "父級",
       "tags": "標籤",
-      "complexity": {
-        "label": "複雜度",
-        "options": {
-          "unspecified": "未指定",
-          "low": "低",
-          "medium": "中",
-          "high": "高"
-        }
-      },
       "blockedBy": "被阻擋",
       "dependencies": "相依性",
       "archived": "已封存"

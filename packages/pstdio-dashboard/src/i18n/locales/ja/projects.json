@@ -128,16 +128,7 @@
       "archived": "アーカイブ済み",
       "parent": "親",
       "tags": "タグ",
-      "dependsOn": "依存先",
-      "complexity": {
-        "label": "難易度",
-        "options": {
-          "unspecified": "未指定",
-          "low": "低",
-          "medium": "中",
-          "high": "高"
-        }
-      }
+      "dependsOn": "依存先"
     },
     "title": {
       "label": "チケットタイトル",

@@ -28,7 +28,7 @@ export const deleteTagHandler = (deps: RouteDeps): AppRouteHandler<typeof delete
   return async (c) => {
     const { id } = c.req.valid("param");
     await deps.tagsService.softDelete(id);
-    deps.eventBus.emit("ticket_tags", "delete", id);
+    deps.eventBus.emit("ticket_tags", "delete", { id });
     return c.json({ deleted: true }, 200);
   };
 };

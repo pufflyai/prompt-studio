@@ -23,21 +23,14 @@ const defaultDeps: Deps = {
 };
 
 const formatTable = (tags: Awaited<ReturnType<typeof listTags>>) => {
-  const header = { name: "Name", color: "Color" };
-  const rows = tags.map((t) => ({
-    name: t.name,
-    color: t.color,
-  }));
-
-  const widths = {
-    name: Math.max(header.name.length, ...rows.map((r) => r.name.length)),
-    color: Math.max(header.color.length, ...rows.map((r) => r.color.length)),
-  };
-
-  const pad = (s: string, w: number) => s.padEnd(w);
-  const line = (r: { name: string; color: string }) => `${pad(r.name, widths.name)}   ${r.color}`;
-
-  return [line(header), ...rows.map(line)].join("\n");
+  const lines: string[] = [];
+  for (const tag of tags) {
+    lines.push(`${tag.name} (${tag.type})`);
+    for (const opt of tag.options) {
+      lines.push(`  ${opt.name}  ${opt.color}`);
+    }
+  }
+  return lines.join("\n");
 };
 
 export const createHandler =

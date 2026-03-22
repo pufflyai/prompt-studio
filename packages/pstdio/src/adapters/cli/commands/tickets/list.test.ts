@@ -16,8 +16,6 @@ describe("tickets list", () => {
           status_id: "s-1",
           display_title: "Fix login bug",
           file_id: null,
-          priority: "P1",
-          complexity: null,
           draft: false,
           archived: false,
           status_name: "backlog",

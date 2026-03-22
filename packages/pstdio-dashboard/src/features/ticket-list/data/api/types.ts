@@ -75,7 +75,6 @@ export type ApiTicketAttemptDiff = {
 export type CreateProjectTicketInput = {
   projectId: string;
   content?: string | null;
-  complexity?: "low" | "medium" | "high" | null;
   tagIds?: string[];
   dependsOn?: string | null;
   status?: TicketStatus | null;
@@ -85,7 +84,6 @@ export type CreateProjectTicketInput = {
 export type CreateTicketAndStartInput = {
   projectId: string;
   content?: string | null;
-  complexity?: "low" | "medium" | "high" | null;
   dependsOn?: string | null;
   statusId?: string | null;
   agent?: string | null;
@@ -100,7 +98,23 @@ export type CreateProjectTicketStatusInput = {
 
 export type CreateProjectTicketTagInput = {
   name: string;
-  color: TicketStatusColor;
+  type: "single_select" | "multi_select";
+  options?: { name: string; color: string }[];
+};
+
+export type CreateTagOptionInput = {
+  name: string;
+  color: string;
+  icon?: string;
+  description?: string;
+};
+
+export type UpdateTagOptionInput = {
+  name?: string;
+  color?: string;
+  sort_order?: number;
+  icon?: string | null;
+  description?: string | null;
 };
 
 export type TicketAttemptMode = "worktree" | "current_branch";

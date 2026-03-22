@@ -3,8 +3,6 @@ type UpdateTicketInput = {
   user_prompt?: string;
   file_id?: string;
   status_id?: string;
-  priority?: string;
-  complexity?: string;
   draft?: boolean;
   archived?: boolean;
   tag_ids?: string[];

@@ -10,7 +10,6 @@ description: "Create a ticket via pstdio. Use when asked to make changes unrelat
    - Otherwise use status `wip`.
 2. Write a ticket draft using `pstdio tickets write`. Derive a concise, verb-led ticket title from the user request for the ticket title. Add tags if relevant. Use templates if requested, or relevant.
 3. Fill the resulting ticket at `.pstdio/tickets/<ticket-id>_<slug>/ticket.md` with concrete details. Use information from researching the codebase and documentation:
-   - Priority (P1/P2/P3)
    - Parallelizable (yes/no)
    - References to existing docs (if any), otherwise record gaps as assumptions
    - Implementation Notes with key files/modules and decisions
@@ -64,7 +63,7 @@ pstdio tickets create --content "<content>"  [--status <status>] [--tag <tag>]
 Use this to find blockers, related tickets, and parent/child relationships before setting `depends_on`.
 
 ```bash
-pstdio tickets list [--status <status>] [--tag <tag>] [--priority <priority>] [--complexity <complexity>] [--archived] [--draft] [--parent-id <ticket-id>]
+pstdio tickets list [--status <status>] [--tag <tag>] [--archived] [--draft] [--parent-id <ticket-id>]
 ```
 
 ### Update Ticket Status/Tags (`tickets update`)

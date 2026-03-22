@@ -100,7 +100,7 @@ export const updateTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof upd
         .where(eq(ticket_tag_assignments.ticket_id, id));
       for (const row of oldAssignments) deps.eventBus.emit("ticket_tag_assignments", "delete", { id: row.id });
 
-      await deps.ticketsService.assignTags(id, tag_ids);
+      await deps.ticketsService.assignTagOptions(id, tag_ids);
 
       // Emit inserts for new assignments
       const newAssignments = await deps.db

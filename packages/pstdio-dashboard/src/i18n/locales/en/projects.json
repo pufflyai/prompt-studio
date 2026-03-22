@@ -128,16 +128,7 @@
       "dependencies": "Dependencies",
       "parent": "Parent",
       "tags": "Tags",
-      "archived": "Archived",
-      "complexity": {
-        "label": "Complexity",
-        "options": {
-          "unspecified": "Unspecified",
-          "low": "Low",
-          "medium": "Medium",
-          "high": "High"
-        }
-      }
+      "archived": "Archived"
     },
     "title": {
       "label": "Ticket title",

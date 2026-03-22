@@ -2,10 +2,22 @@ import type { SettingsSection } from "../components/settings-sidebar";
 
 type TemplateLike = { name: string };
 type SkillLike = { name: string };
+type TagLike = { id: string };
 
 export const parseSettingsPanel = (panel: unknown): SettingsSection => {
+  if (panel === "ticket-statuses") {
+    return "ticket-statuses";
+  }
+
   if (panel === "danger-zone") {
     return "danger-zone";
+  }
+
+  if (typeof panel === "string" && panel.startsWith("tag:")) {
+    const tagId = panel.slice("tag:".length);
+    if (tagId) {
+      return { tag: tagId };
+    }
   }
 
   if (typeof panel === "string" && panel.startsWith("template:")) {
@@ -33,8 +45,10 @@ export const parseSettingsPanel = (panel: unknown): SettingsSection => {
 };
 
 export const toSettingsPanel = (section: SettingsSection) => {
+  if (section === "ticket-statuses") return "ticket-statuses";
   if (section === "tags") return "tags";
   if (section === "danger-zone") return "danger-zone";
+  if (typeof section === "object" && "tag" in section) return `tag:${section.tag}`;
   if (typeof section === "object" && "hook" in section) return `hook:${section.hook}`;
   if (typeof section === "object" && "skill" in section) return `skill:${section.skill}`;
   return `template:${section.template}`;
@@ -44,9 +58,15 @@ export const ensureValidSettingsSection = (
   section: SettingsSection,
   templates: TemplateLike[] | undefined,
   skills: SkillLike[] | undefined,
+  tags: TagLike[] | undefined,
 ): SettingsSection => {
-  if (section === "tags" || section === "danger-zone") {
+  if (section === "ticket-statuses" || section === "tags" || section === "danger-zone") {
     return section;
+  }
+
+  if ("tag" in section) {
+    if (!tags) return section;
+    return tags.some((t) => t.id === section.tag) ? section : "tags";
   }
 
   // Hook sections are always valid — the editor handles missing hooks

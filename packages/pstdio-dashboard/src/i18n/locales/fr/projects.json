@@ -124,15 +124,6 @@
       "status": "Statut",
       "blockedReason": "Raison du blocage",
       "dependsOn": "Dépend de",
-      "complexity": {
-        "label": "Complexité",
-        "options": {
-          "unspecified": "Non spécifiée",
-          "low": "Basse",
-          "medium": "Moyenne",
-          "high": "Haute"
-        }
-      },
       "parent": "Parent",
       "tags": "Étiquettes",
       "blockedBy": "Bloqué par",

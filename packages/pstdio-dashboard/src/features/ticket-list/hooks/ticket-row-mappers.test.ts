@@ -8,7 +8,6 @@ const baseTicketRow: SyncedRow = {
   display_title: "Fix session indicator",
   status_id: "status-1",
   status_name: "In Progress",
-  complexity: "low",
   blocked_reason: null,
   depends_on: null,
   parent_id: null,

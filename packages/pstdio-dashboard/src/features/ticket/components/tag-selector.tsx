@@ -1,7 +1,8 @@
-import { Button, Icon, Menu } from "@chakra-ui/react";
+import { Button, Icon, Menu, Stack, Text } from "@chakra-ui/react";
 import { MenuItem } from "@pstdio/ui";
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { getIconComponent } from "@/features/project-settings/components/tag-icon-color-picker";
 import type { TicketTag } from "@/features/ticket-list/types";
 
 interface TagSelectorProps {
@@ -16,23 +17,38 @@ export const TagSelector = (props: TagSelectorProps) => {
   const { t } = useTranslation("tickets");
 
   const selectedTagSet = new Set(selectedTagIds);
-  const selectedTagNames = tags.filter((tag) => selectedTagSet.has(tag.id)).map((tag) => tag.name);
-  const selectedTagsLabel =
-    selectedTagNames.length > 0 ? selectedTagNames.join(", ") : t("ticketDetail.noTagsSelected");
+  const allOptions = tags.flatMap((tag) => tag.options.map((o) => ({ ...o, tagName: tag.name, tagType: tag.type })));
+  const selectedNames = allOptions.filter((o) => selectedTagSet.has(o.id)).map((o) => o.name);
+  const selectedLabel = selectedNames.length > 0 ? selectedNames.join(", ") : t("ticketDetail.noTagsSelected");
 
-  const handleTagToggle = (tagId: string) => {
-    if (!onChange) {
-      return;
+  const handleOptionToggle = (optionId: string) => {
+    if (!onChange) return;
+
+    const option = allOptions.find((o) => o.id === optionId);
+    if (!option) return;
+
+    if (option.tagType === "single_select") {
+      // For single-select: replace any other option from the same tag
+      const sameTagOptionIds = new Set(
+        tags.find((t) => t.options.some((o) => o.id === optionId))!.options.map((o) => o.id),
+      );
+      const otherTagIds = selectedTagIds.filter((id) => !sameTagOptionIds.has(id));
+
+      if (selectedTagSet.has(optionId)) {
+        onChange(otherTagIds);
+      } else {
+        onChange([...otherTagIds, optionId]);
+      }
+    } else {
+      // Multi-select: toggle
+      const nextTagIds = selectedTagSet.has(optionId)
+        ? selectedTagIds.filter((id) => id !== optionId)
+        : [...selectedTagIds, optionId];
+      onChange(nextTagIds);
     }
-
-    const nextTagIds = selectedTagSet.has(tagId)
-      ? selectedTagIds.filter((id) => id !== tagId)
-      : [...selectedTagIds, tagId];
-
-    onChange(nextTagIds);
   };
 
-  if (tags.length === 0) {
+  if (allOptions.length === 0) {
     return (
       <Button size="sm" variant="subtle" disabled>
         {t("ticketDetail.noTags")}
@@ -51,21 +67,31 @@ export const TagSelector = (props: TagSelectorProps) => {
           _hover={{ bg: "background.tertiary" }}
           disabled={isDisabled || !onChange}
         >
-          {selectedTagsLabel}
+          {selectedLabel}
           <Icon as={ChevronDown} color="foreground.tertiary" />
         </Button>
       </Menu.Trigger>
       <Menu.Positioner>
         <Menu.Content minW="220px" bg="bg">
           {tags.map((tag) => (
-            <MenuItem
-              key={tag.id}
-              id={tag.id}
-              primaryLabel={tag.name}
-              isSelected={selectedTagSet.has(tag.id)}
-              isDisabled={isDisabled || !onChange}
-              onClick={() => handleTagToggle(tag.id)}
-            />
+            <Stack key={tag.id} gap="0">
+              <Text textStyle="paragraph/XS/regular" color="fg.muted" px="sm" pt="sm" pb="2xs">
+                {tag.name} {tag.type === "single_select" ? "(single)" : "(multi)"}
+              </Text>
+              {tag.options.map((option) => (
+                <MenuItem
+                  key={option.id}
+                  id={option.id}
+                  primaryLabel={option.name}
+                  isSelected={selectedTagSet.has(option.id)}
+                  isDisabled={isDisabled || !onChange}
+                  leftIcon={getIconComponent(option.icon)}
+                  leftIconColor={`${option.color}.500`}
+                  tooltipLabel={option.description}
+                  onClick={() => handleOptionToggle(option.id)}
+                />
+              ))}
+            </Stack>
           ))}
         </Menu.Content>
       </Menu.Positioner>

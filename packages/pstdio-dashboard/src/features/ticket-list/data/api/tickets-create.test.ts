@@ -23,8 +23,6 @@ const ticketResponse = {
   display_title: "Create a tagged ticket",
   user_prompt: null,
   file_id: null,
-  priority: null,
-  complexity: "medium",
   parent_id: null,
   parallelizable: null,
   blocked_reason: null,
@@ -58,7 +56,6 @@ describe("createProjectTicket", () => {
     await createProjectTicket({
       projectId: "project-1",
       content: "Create a tagged ticket",
-      complexity: "medium",
       tagIds: ["tag-bug"],
     });
 
@@ -75,7 +72,6 @@ describe("createProjectTicket", () => {
       expect.objectContaining({
         project_id: "project-1",
         content: "Create a tagged ticket",
-        complexity: "medium",
         tag_ids: ["tag-bug"],
       }),
     );

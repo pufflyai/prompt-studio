@@ -19,7 +19,6 @@ interface TicketDetailSidebarProps {
   onToggle: () => void;
   onSelectFile: (fileId: string) => void;
   onSelectTicket: (ticketId: string) => void;
-  onComplexityChange: (complexity: Ticket["complexity"]) => void;
   onTagIdsChange: (tagIds: string[]) => void;
 }
 
@@ -35,7 +34,6 @@ export const TicketDetailSidebar = (props: TicketDetailSidebarProps) => {
     onToggle,
     onSelectFile,
     onSelectTicket,
-    onComplexityChange,
     onTagIdsChange,
   } = props;
   const { t } = useTranslation("tickets");
@@ -57,7 +55,6 @@ export const TicketDetailSidebar = (props: TicketDetailSidebarProps) => {
         project={project}
         tickets={allTickets}
         onSelectTicket={onSelectTicket}
-        onComplexityChange={onComplexityChange}
         onTagIdsChange={onTagIdsChange}
         isUpdatingTags={isUpdatingTags}
       />

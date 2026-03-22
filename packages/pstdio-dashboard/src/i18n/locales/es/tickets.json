@@ -717,7 +717,6 @@
     "selectDisplayProperties": "Seleccionar propiedades de visualización",
     "groupingOptions": {
       "status": "Estado",
-      "complexity": "Complejidad",
       "assignee": "Asignado",
       "none": "Sin agrupación"
     },
@@ -725,13 +724,11 @@
       "manual": "Manual",
       "updated": "Actualizado",
       "title": "Título",
-      "complexity": "Complejidad",
       "shorthand": "ID"
     },
     "propertyOptions": {
       "parentId": "parent_id",
       "status": "Estado",
-      "complexity": "Complejidad",
       "assignee": "Asignado",
       "tags": "Etiquetas",
       "updatedAt": "Actualizado"
@@ -748,10 +745,6 @@
     "createTicket": "Crear tarea",
     "create": "Crear",
     "describePlaceholder": "Describe la tarea...",
-    "complexity": "Complejidad",
-    "low": "Baja",
-    "medium": "Media",
-    "high": "Alta",
     "template": "Plantilla",
     "noTemplate": "Sin plantilla",
     "cancel": "Cancelar"

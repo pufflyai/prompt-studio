@@ -748,7 +748,6 @@
     "selectDisplayProperties": "表示プロパティを選択",
     "groupingOptions": {
       "status": "ステータス",
-      "complexity": "複雑さ",
       "assignee": "担当者",
       "none": "グループ化なし"
     },
@@ -756,13 +755,11 @@
       "manual": "手動",
       "updated": "更新日",
       "title": "タイトル",
-      "complexity": "複雑さ",
       "shorthand": "ID"
     },
     "propertyOptions": {
       "parentId": "parent_id",
       "status": "ステータス",
-      "complexity": "複雑さ",
       "assignee": "担当者",
       "tags": "タグ",
       "updatedAt": "更新日"
@@ -779,10 +776,6 @@
     "createTicket": "チケットを作成",
     "create": "作成",
     "describePlaceholder": "チケットの説明を入力...",
-    "complexity": "複雑さ",
-    "low": "低",
-    "medium": "中",
-    "high": "高",
     "template": "テンプレート",
     "noTemplate": "テンプレートなし",
     "cancel": "キャンセル"

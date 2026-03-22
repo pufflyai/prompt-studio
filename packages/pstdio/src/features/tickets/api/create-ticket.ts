@@ -3,8 +3,6 @@ type CreateTicketInput = {
   content?: string;
   user_prompt?: string;
   file_id?: string;
-  priority?: string;
-  complexity?: string;
   parent_id?: string;
   draft?: boolean;
   tag_ids?: string[];
