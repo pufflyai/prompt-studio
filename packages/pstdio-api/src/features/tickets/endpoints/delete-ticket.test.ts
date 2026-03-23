@@ -60,7 +60,7 @@ describe("DELETE /v1/tickets/:id", () => {
     const hooksDir = join(repoRoot, ".pstdio", "hooks");
     mkdirSync(hooksDir, { recursive: true });
     writeFileSync(
-      join(hooksDir, "on-ticket-delete"),
+      join(hooksDir, "post-ticket-delete"),
       'echo "$PSTDIO_TICKET_ID|$PSTDIO_TICKET_SHORTHAND|$PSTDIO_TICKET_DELETED_AT" > delete-hook.txt',
     );
 
@@ -86,7 +86,7 @@ describe("DELETE /v1/tickets/:id", () => {
     const repoRoot = await registerRepo("ticket-delete-hook-failure-repo");
     const hooksDir = join(repoRoot, ".pstdio", "hooks");
     mkdirSync(hooksDir, { recursive: true });
-    writeFileSync(join(hooksDir, "on-ticket-delete"), 'echo "delete hook failed" >&2; exit 5');
+    writeFileSync(join(hooksDir, "post-ticket-delete"), 'echo "delete hook failed" >&2; exit 5');
 
     const created = await createTicket({ content: "delete hook failure ticket" });
     const stderrSpy = spyOn(process.stderr, "write").mockReturnValue(true);
@@ -100,7 +100,7 @@ describe("DELETE /v1/tickets/:id", () => {
 
     await waitFor(async () =>
       stderrSpy.mock.calls.some(
-        (call) => String(call[0]).includes("on-ticket-delete") && String(call[0]).includes("delete hook failed"),
+        (call) => String(call[0]).includes("post-ticket-delete") && String(call[0]).includes("delete hook failed"),
       ),
     );
 
@@ -114,5 +114,24 @@ describe("DELETE /v1/tickets/:id", () => {
     });
 
     expect(res.status).toBe(404);
+  });
+
+  test("skips hooks when skip_hooks=true", async () => {
+    const repoRoot = await registerRepo("ticket-delete-skip-hooks-repo");
+    const hooksDir = join(repoRoot, ".pstdio", "hooks");
+    mkdirSync(hooksDir, { recursive: true });
+    const markerPath = join(repoRoot, "delete-skip-marker.txt");
+    writeFileSync(join(hooksDir, "post-ticket-delete"), `echo "ran" > "${markerPath}"`);
+
+    const created = await createTicket({ content: "skip hooks delete ticket" });
+
+    const { app } = context;
+    const res = await app.request(`/v1/tickets/${created.id}?skip_hooks=true`, {
+      method: "DELETE",
+    });
+
+    expect(res.status).toBe(200);
+    await sleep(200);
+    expect(existsSync(markerPath)).toBe(false);
   });
 });

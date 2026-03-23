@@ -29,7 +29,11 @@ export const updateTicket = async (baseUrl: string, id: string, input: UpdateTic
     body: JSON.stringify(input),
   });
 
-  if (!res.ok) throw new Error(`Failed to update ticket: ${res.status}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    const detail = body && typeof body === "object" && "error" in body ? String(body.error) : `status ${res.status}`;
+    throw new Error(`Failed to update ticket: ${detail}`);
+  }
 
   return (await res.json()) as Ticket;
 };

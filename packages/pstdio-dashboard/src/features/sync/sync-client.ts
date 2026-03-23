@@ -29,9 +29,16 @@ export interface SyncClient {
   connected: boolean;
 }
 
+export interface SyncNotification {
+  title: string;
+  description?: string;
+  type: "info" | "success" | "warning" | "error";
+}
+
 interface SyncCallbacks {
   onConnected?: () => void;
   onDisconnected?: () => void;
+  onNotify?: (notification: SyncNotification) => void;
 }
 
 const parseSSE = (chunk: string) => {
@@ -117,10 +124,17 @@ export const startSync = (apiUrl: string, callbacks: SyncCallbacks = {}): SyncCl
     callbacks.onDisconnected?.();
   };
 
+  const handleSyncNotify = (data: string) => {
+    const parsed = JSON.parse(data) as { data: SyncNotification; seq: number };
+    callbacks.onNotify?.(parsed.data);
+    return parsed.seq;
+  };
+
   const handleEvent = (event: string, data: string) => {
     if (event === "init") lastSeq = handleInit(data, state, callbacks);
     else if (event === "sync:set") lastSeq = Math.max(lastSeq, handleSyncSet(data));
     else if (event === "sync:delete") lastSeq = Math.max(lastSeq, handleSyncDelete(data));
+    else if (event === "sync:notify") lastSeq = Math.max(lastSeq, handleSyncNotify(data));
     else if (event === "heartbeat") lastSeq = Math.max(lastSeq, (JSON.parse(data) as { seq: number }).seq);
   };
 

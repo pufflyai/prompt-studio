@@ -58,14 +58,19 @@ const getStatusIds = async () => {
   const { app, projectId } = context;
   const res = await app.request(`/v1/projects/${projectId}/ticket-statuses`);
   expect(res.status).toBe(200);
-  const statuses = (await res.json()) as Array<{ id: string; is_default: boolean }>;
+  const statuses = (await res.json()) as Array<{ id: string; name: string; is_default: boolean }>;
   const defaultStatus = statuses.find((item) => item.is_default) ?? statuses[0];
   if (!defaultStatus) throw new Error("No ticket statuses found");
 
   const nextStatus = statuses.find((item) => item.id !== defaultStatus.id);
   if (!nextStatus) throw new Error("Need at least two ticket statuses for this test");
 
-  return { defaultStatusId: defaultStatus.id, nextStatusId: nextStatus.id };
+  return {
+    defaultStatusId: defaultStatus.id,
+    defaultStatusName: defaultStatus.name,
+    nextStatusId: nextStatus.id,
+    nextStatusName: nextStatus.name,
+  };
 };
 
 describe("PATCH /v1/tickets/:id", () => {
@@ -118,12 +123,12 @@ describe("PATCH /v1/tickets/:id", () => {
   });
 
   test("runs status-change hook when status changes", async () => {
-    const { defaultStatusId, nextStatusId } = await getStatusIds();
+    const { defaultStatusId, defaultStatusName, nextStatusId, nextStatusName } = await getStatusIds();
     const repoRoot = await registerRepo("ticket-status-hook-repo");
     const hooksDir = join(repoRoot, ".pstdio", "hooks");
     mkdirSync(hooksDir, { recursive: true });
     writeFileSync(
-      join(hooksDir, "on-ticket-status-change"),
+      join(hooksDir, "post-ticket-status-change"),
       'echo "$PSTDIO_TICKET_SHORTHAND|$PSTDIO_TICKET_STATUS_OLD|$PSTDIO_TICKET_STATUS_NEW" > status-hook.txt',
     );
 
@@ -140,7 +145,7 @@ describe("PATCH /v1/tickets/:id", () => {
 
     const markerPath = join(repoRoot, "status-hook.txt");
     await waitForFile(markerPath);
-    expect(readFileSync(markerPath, "utf8")).toContain(`${created.shorthand}|${defaultStatusId}|${nextStatusId}`);
+    expect(readFileSync(markerPath, "utf8")).toContain(`${created.shorthand}|${defaultStatusName}|${nextStatusName}`);
   });
 
   test("does not run status-change hook when status remains unchanged", async () => {
@@ -149,7 +154,7 @@ describe("PATCH /v1/tickets/:id", () => {
     const hooksDir = join(repoRoot, ".pstdio", "hooks");
     mkdirSync(hooksDir, { recursive: true });
     const markerPath = join(repoRoot, "status-hook-unchanged.txt");
-    writeFileSync(join(hooksDir, "on-ticket-status-change"), `echo "$PSTDIO_TICKET_STATUS_NEW" > "${markerPath}"`);
+    writeFileSync(join(hooksDir, "post-ticket-status-change"), `echo "$PSTDIO_TICKET_STATUS_NEW" > "${markerPath}"`);
 
     const created = await createTicket({ content: "status unchanged ticket", status_id: defaultStatusId });
 
@@ -166,16 +171,16 @@ describe("PATCH /v1/tickets/:id", () => {
   });
 
   test("runs both status and archive hooks when both transition in one update", async () => {
-    const { defaultStatusId, nextStatusId } = await getStatusIds();
+    const { defaultStatusId, nextStatusId, nextStatusName } = await getStatusIds();
     const repoRoot = await registerRepo("ticket-multi-hook-repo");
     const hooksDir = join(repoRoot, ".pstdio", "hooks");
     mkdirSync(hooksDir, { recursive: true });
     writeFileSync(
-      join(hooksDir, "on-ticket-status-change"),
+      join(hooksDir, "post-ticket-status-change"),
       'echo "status:$PSTDIO_TICKET_STATUS_NEW" > status-combined.txt',
     );
     writeFileSync(
-      join(hooksDir, "on-ticket-archive"),
+      join(hooksDir, "post-ticket-archive"),
       'echo "archive:$PSTDIO_TICKET_ARCHIVED_AT" > archive-combined.txt',
     );
 
@@ -195,7 +200,7 @@ describe("PATCH /v1/tickets/:id", () => {
     await waitForFile(statusPath);
     await waitForFile(archivePath);
 
-    expect(readFileSync(statusPath, "utf8")).toContain(`status:${nextStatusId}`);
+    expect(readFileSync(statusPath, "utf8")).toContain(`status:${nextStatusName}`);
     expect(readFileSync(archivePath, "utf8")).toContain("archive:");
   });
 
@@ -204,7 +209,7 @@ describe("PATCH /v1/tickets/:id", () => {
     const repoRoot = await registerRepo("ticket-hook-failure-repo");
     const hooksDir = join(repoRoot, ".pstdio", "hooks");
     mkdirSync(hooksDir, { recursive: true });
-    writeFileSync(join(hooksDir, "on-ticket-status-change"), 'echo "hook failed" >&2; exit 7');
+    writeFileSync(join(hooksDir, "post-ticket-status-change"), 'echo "hook failed" >&2; exit 7');
 
     const created = await createTicket({ content: "hook failure ticket", status_id: defaultStatusId });
     const stderrSpy = spyOn(process.stderr, "write").mockReturnValue(true);
@@ -220,10 +225,57 @@ describe("PATCH /v1/tickets/:id", () => {
 
     await waitFor(async () =>
       stderrSpy.mock.calls.some(
-        (call) => String(call[0]).includes("on-ticket-status-change") && String(call[0]).includes("hook failed"),
+        (call) => String(call[0]).includes("post-ticket-status-change") && String(call[0]).includes("hook failed"),
       ),
     );
 
     stderrSpy.mockRestore();
+  });
+
+  test("pre-hook receives status names and can reject based on target status", async () => {
+    const { defaultStatusId, nextStatusId, nextStatusName } = await getStatusIds();
+    const repoRoot = await registerRepo("ticket-pre-hook-status-name-repo");
+    const hooksDir = join(repoRoot, ".pstdio", "hooks");
+    mkdirSync(hooksDir, { recursive: true });
+    // Hook rejects transition to the next status by name, proving it receives names not IDs
+    writeFileSync(
+      join(hooksDir, "pre-ticket-status-change"),
+      `#!/bin/sh\nif [ "$PSTDIO_TICKET_STATUS_NEW" = "${nextStatusName}" ]; then echo "blocked transition to ${nextStatusName}" >&2; exit 1; fi`,
+    );
+
+    const created = await createTicket({ content: "pre-hook name test", status_id: defaultStatusId });
+
+    const { app } = context;
+    const res = await app.request(`/v1/tickets/${created.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status_id: nextStatusId }),
+    });
+
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toContain(`blocked transition to ${nextStatusName}`);
+  });
+
+  test("skips hooks when skip_hooks=true", async () => {
+    const { defaultStatusId, nextStatusId } = await getStatusIds();
+    const repoRoot = await registerRepo("ticket-skip-hooks-repo");
+    const hooksDir = join(repoRoot, ".pstdio", "hooks");
+    mkdirSync(hooksDir, { recursive: true });
+    const markerPath = join(repoRoot, "skip-hooks-marker.txt");
+    writeFileSync(join(hooksDir, "post-ticket-status-change"), `echo "ran" > "${markerPath}"`);
+
+    const created = await createTicket({ content: "skip hooks ticket", status_id: defaultStatusId });
+
+    const { app } = context;
+    const res = await app.request(`/v1/tickets/${created.id}?skip_hooks=true`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status_id: nextStatusId }),
+    });
+
+    expect(res.status).toBe(200);
+    await sleep(200);
+    expect(existsSync(markerPath)).toBe(false);
   });
 });

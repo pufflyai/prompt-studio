@@ -1,0 +1,31 @@
+#!/bin/sh
+
+# ──────────────────────────────────────────────────────────
+# pstdio pre-ticket-status-change hook
+# Runs validation before allowing a ticket status transition.
+# ──────────────────────────────────────────────────────────
+
+HOOK_LOG="/tmp/pstdio-hooks.log"
+log() { echo "[$(date)] pre-ticket-status-change: $*" >> "$HOOK_LOG"; }
+
+log "START ticket=$PSTDIO_TICKET_SHORTHAND old=$PSTDIO_TICKET_STATUS_OLD new=$PSTDIO_TICKET_STATUS_NEW"
+
+# Only validate when transitioning to review
+[ "$PSTDIO_TICKET_STATUS_NEW" != "review" ] && { log "SKIP not moving to review"; exit 0; }
+
+# Only validate when there is a worktree to validate in
+[ -z "$PSTDIO_WORKTREE_PATH" ] && { log "SKIP no worktree"; exit 0; }
+
+cd "$PSTDIO_WORKTREE_PATH" || { log "FAIL cd $PSTDIO_WORKTREE_PATH"; exit 1; }
+
+log "Running validation..."
+output=$(bun run validate 2>&1)
+rc=$?
+log "Validation exited with code=$rc"
+
+if [ $rc -ne 0 ]; then
+  echo "$output" >&2
+  exit 1
+fi
+
+log "DONE validation passed"

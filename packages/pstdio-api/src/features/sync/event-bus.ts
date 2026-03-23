@@ -1,6 +1,8 @@
+export type SyncOp = "set" | "delete" | "notify";
+
 export interface SyncEvent {
   table: string;
-  op: "set" | "delete";
+  op: SyncOp;
   data: unknown;
   seq: number;
 }
@@ -23,7 +25,7 @@ export class EventBus {
     return this._seq;
   }
 
-  emit(table: string, op: "set" | "delete", data: unknown) {
+  emit(table: string, op: SyncOp, data: unknown) {
     this._seq++;
     const event: SyncEvent = { table, op, data, seq: this._seq };
 

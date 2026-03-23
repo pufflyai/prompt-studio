@@ -48,7 +48,7 @@ export const updateProjectTicketStatus = async (projectId: string, ticket: Ticke
     throw new Error("Ticket status not found");
   }
 
-  const updated = await apiRequest<ApiTicket>(`/v1/tickets/${ticket.id}`, {
+  const updated = await apiRequest<ApiTicket>(`/v1/tickets/${ticket.id}?skip_hooks=true`, {
     method: "PATCH",
     body: {
       status_id: statusId,
@@ -84,7 +84,7 @@ export const updateProjectTicket = async (projectId: string, ticketId: string, i
     throw new Error("No ticket fields to update.");
   }
 
-  const updated = await apiRequest<ApiTicket>(`/v1/tickets/${ticketId}`, {
+  const updated = await apiRequest<ApiTicket>(`/v1/tickets/${ticketId}?skip_hooks=true`, {
     method: "PATCH",
     body,
   });
@@ -99,7 +99,7 @@ export const updateProjectTicket = async (projectId: string, ticketId: string, i
 };
 
 export const updateProjectTicketTags = async (ticketId: string, tagIds: string[]) => {
-  await apiRequest(`/v1/tickets/${ticketId}`, {
+  await apiRequest(`/v1/tickets/${ticketId}?skip_hooks=true`, {
     method: "PATCH",
     body: { tag_ids: tagIds },
   });
@@ -108,7 +108,7 @@ export const updateProjectTicketTags = async (ticketId: string, tagIds: string[]
 };
 
 export const deleteProjectTicket = async (_projectId: string, ticketId: string) => {
-  await apiRequest(`/v1/tickets/${ticketId}`, { method: "DELETE" });
+  await apiRequest(`/v1/tickets/${ticketId}?skip_hooks=true`, { method: "DELETE" });
 };
 
 export const createProjectTicket = async (input: CreateProjectTicketInput) => {

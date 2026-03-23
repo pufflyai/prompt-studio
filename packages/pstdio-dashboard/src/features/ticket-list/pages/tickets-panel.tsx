@@ -1,4 +1,5 @@
 import { Stack, Text } from "@chakra-ui/react";
+import { toaster } from "@pstdio/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -97,7 +98,8 @@ export const TicketsPanel = () => {
     const resolvedStatus = targetStatus?.name ?? status;
 
     updateTicketStatus.mutateAsync({ ticketId, status: resolvedStatus }).catch((error) => {
-      console.error("[move ticket]", error);
+      const message = error instanceof Error ? error.message : "Failed to move ticket";
+      toaster.create({ type: "error", title: message });
     });
   };
 
@@ -174,7 +176,8 @@ export const TicketsPanel = () => {
     const firstFailure = results.find((r) => r.status === "rejected");
 
     if (firstFailure && firstFailure.status === "rejected") {
-      console.error("[archive all]", firstFailure.reason);
+      const message = firstFailure.reason instanceof Error ? firstFailure.reason.message : "Failed to archive tickets";
+      toaster.create({ type: "error", title: message });
     }
   };
 

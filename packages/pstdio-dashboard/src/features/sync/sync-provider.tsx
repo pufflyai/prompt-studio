@@ -1,3 +1,4 @@
+import { toaster } from "@pstdio/ui";
 import { createContext, useContext, useEffect, useState } from "react";
 import { buildApiUrl } from "@/lib/api";
 import { type BackendConnectionStatus, getNextBackendConnectionStatus } from "./backend-connection-dot";
@@ -23,6 +24,14 @@ export const SyncProvider = ({ children }: { children: React.ReactNode }) => {
       },
       onDisconnected: () => {
         setConnectionStatus((prev) => getNextBackendConnectionStatus(prev, "disconnected"));
+      },
+      onNotify: (notification) => {
+        toaster.create({
+          title: notification.title,
+          description: notification.description,
+          type: notification.type,
+          duration: 10_000,
+        });
       },
     });
 

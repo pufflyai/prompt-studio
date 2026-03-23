@@ -14,13 +14,25 @@ const HOOK_NAMES: HookName[] = [
   "pre-remove",
   "post-remove",
   "on-conflict",
-  "on-ticket-status-change",
-  "on-ticket-archive",
-  "on-ticket-delete",
-  "on-session-complete",
+  "pre-ticket-status-change",
+  "post-ticket-status-change",
+  "pre-ticket-archive",
+  "post-ticket-archive",
+  "pre-ticket-delete",
+  "post-ticket-delete",
+  "post-session-complete",
 ];
 
-const BLOCKING_HOOKS = new Set<HookName>(["pre-create", "pre-commit", "pre-rebase", "pre-merge", "pre-remove"]);
+const BLOCKING_HOOKS = new Set<HookName>([
+  "pre-create",
+  "pre-commit",
+  "pre-rebase",
+  "pre-merge",
+  "pre-remove",
+  "pre-ticket-status-change",
+  "pre-ticket-archive",
+  "pre-ticket-delete",
+]);
 
 export const isBlockingHook = (hookName: HookName) => BLOCKING_HOOKS.has(hookName);
 
@@ -62,7 +74,7 @@ const skippedResult = (hookName: HookName): HookResult => ({
   stderr: "",
 });
 
-const HOOK_TIMEOUT_MS = 60_000;
+const HOOK_TIMEOUT_MS = 600_000;
 
 type RunHookOptions = {
   timeoutMs?: number;

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EventBus } from "../sync/event-bus";
 import { isTerminalStatus, queueSessionCompleteHook } from "./session-hooks";
 
 let tempDir: string;
@@ -17,7 +18,7 @@ afterEach(() => {
 const writeHook = (script: string) => {
   const hooksDir = join(tempDir, ".pstdio", "hooks");
   mkdirSync(hooksDir, { recursive: true });
-  writeFileSync(join(hooksDir, "on-session-complete"), script);
+  writeFileSync(join(hooksDir, "post-session-complete"), script);
 };
 
 const buildDeps = (overrides?: {
@@ -40,6 +41,7 @@ const buildDeps = (overrides?: {
   reposService: {
     listByProject: async () => (overrides?.repoPaths ?? [tempDir]).map((p) => ({ path: p })),
   } as never,
+  eventBus: new EventBus(),
 });
 
 describe("isTerminalStatus", () => {
@@ -141,5 +143,29 @@ describe("queueSessionCompleteHook", () => {
     });
 
     await Bun.sleep(500);
+  });
+
+  test("emits notify event when hook fails", async () => {
+    writeHook("exit 1");
+
+    const eventBus = new EventBus();
+    const deps = { ...buildDeps(), eventBus };
+
+    await queueSessionCompleteHook(deps, {
+      sessionId: "s1",
+      sessionStatus: "completed",
+      projectId: "proj-1",
+    });
+
+    await Bun.sleep(500);
+
+    const events = eventBus.getSince(0);
+    expect(events).toHaveLength(1);
+    expect(events[0].table).toBe("notifications");
+    expect(events[0].op).toBe("notify");
+    expect(events[0].data).toMatchObject({
+      title: 'Hook "post-session-complete" failed',
+      type: "error",
+    });
   });
 });

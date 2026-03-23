@@ -86,7 +86,7 @@ describe("buildHookEnv", () => {
   });
 
   test("includes session fields when provided", () => {
-    const env = buildHookEnv("on-session-complete", {
+    const env = buildHookEnv("post-session-complete", {
       repoPath: "/repo",
       sessionId: "sess-42",
       sessionStatus: "failed",
@@ -201,7 +201,7 @@ describe("listHooks", () => {
 
     const hooks = listHooks(repo.dir);
 
-    expect(hooks.length).toBe(15);
+    expect(hooks.length).toBe(18);
 
     const preCommit = hooks.find((h) => h.name === "pre-commit");
     expect(preCommit?.exists).toBe(true);
@@ -212,7 +212,7 @@ describe("listHooks", () => {
     const preMerge = hooks.find((h) => h.name === "pre-merge");
     expect(preMerge?.exists).toBe(false);
 
-    const ticketDelete = hooks.find((h) => h.name === "on-ticket-delete");
+    const ticketDelete = hooks.find((h) => h.name === "post-ticket-delete");
     expect(ticketDelete?.exists).toBe(false);
   });
 

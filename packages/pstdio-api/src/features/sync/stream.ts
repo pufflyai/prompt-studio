@@ -11,9 +11,15 @@ interface StreamDeps {
   getFullState?: (db: DbClient) => Promise<Record<string, unknown[]>>;
 }
 
+const sseEventName = (op: SyncEvent["op"]) => {
+  if (op === "set") return "sync:set" as const;
+  if (op === "delete") return "sync:delete" as const;
+  return "sync:notify" as const;
+};
+
 const formatSSE = (event: SyncEvent) => ({
   data: JSON.stringify({ table: event.table, data: event.data, seq: event.seq }),
-  event: event.op === "set" ? ("sync:set" as const) : ("sync:delete" as const),
+  event: sseEventName(event.op),
   id: String(event.seq),
 });
 

@@ -2,14 +2,15 @@ import { eq, ticket_workspaces, tickets } from "pstdio-db";
 import type { HookContext, HookName, HookResult } from "pstdio-wt";
 import { resolveHookScript, runHook } from "pstdio-wt";
 import type { RouteDeps } from "../deps";
+import type { EventBus } from "../sync/event-bus";
 
-const HOOK_NAME: Extract<HookName, "on-session-complete"> = "on-session-complete";
+const HOOK_NAME: Extract<HookName, "post-session-complete"> = "post-session-complete";
 
 const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
 
 export const isTerminalStatus = (status: string) => TERMINAL_STATUSES.has(status);
 
-type SessionHookDeps = Pick<RouteDeps, "db" | "workspacesService" | "reposService">;
+type SessionHookDeps = Pick<RouteDeps, "db" | "workspacesService" | "reposService" | "eventBus">;
 
 type SessionHookInput = {
   sessionId: string;
@@ -17,15 +18,25 @@ type SessionHookInput = {
   projectId: string;
 };
 
-const logFailure = (result: HookResult) => {
+const notifyHookFailure = (eventBus: EventBus, hookName: string, message: string) => {
+  eventBus.emit("notifications", "notify", {
+    title: `Hook "${hookName}" failed`,
+    description: message,
+    type: "error",
+  });
+};
+
+const logFailure = (eventBus: EventBus, result: HookResult) => {
   const output = [result.stdout, result.stderr].filter(Boolean).join("\n").trim();
   const suffix = output.length > 0 ? `\n${output}` : "";
   process.stderr.write(`[session-hooks] ${HOOK_NAME} failed with exit code ${result.exitCode}${suffix}\n`);
+  notifyHookFailure(eventBus, HOOK_NAME, output || `Hook exited with code ${result.exitCode}`);
 };
 
-const logError = (error: unknown) => {
+const logError = (eventBus: EventBus, error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
   process.stderr.write(`[session-hooks] ${HOOK_NAME} execution error: ${message}\n`);
+  notifyHookFailure(eventBus, HOOK_NAME, message);
 };
 
 const resolveTicketForWorkspace = async (db: SessionHookDeps["db"], workspaceId: string) => {
@@ -72,10 +83,10 @@ export const queueSessionCompleteHook = async (deps: SessionHookDeps, input: Ses
     void runHook(HOOK_NAME, { ...context, repoPath }, repoPath)
       .then((result) => {
         if (result.skipped || result.exitCode === 0) return;
-        logFailure(result);
+        logFailure(deps.eventBus, result);
       })
       .catch((error) => {
-        logError(error);
+        logError(deps.eventBus, error);
       });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

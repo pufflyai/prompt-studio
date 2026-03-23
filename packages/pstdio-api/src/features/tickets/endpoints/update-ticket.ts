@@ -4,7 +4,8 @@ import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { notFoundResponseSchema, ticketResponseSchema, updateTicketBodySchema } from "../dto";
 import { extractTitleFromContent } from "../extract-title";
-import { queueTicketHooks } from "./ticket-hooks";
+import type { TicketHookSpec } from "./ticket-hooks";
+import { buildHookErrorMessage, queuePostTicketHooks, runPreTicketHook } from "./ticket-hooks";
 
 const TICKET_CONTENT_FILE_NAME = "ticket.md";
 
@@ -54,35 +55,58 @@ const syncTicketTagAssignments = async (deps: RouteDeps, ticketId: string, tagId
   for (const row of newAssignments) deps.eventBus.emit("ticket_tag_assignments", "set", row);
 };
 
-const buildTicketUpdateHooks = (existing: TicketRecord, updated: TicketRecord) => {
-  const hooks = [] as Array<{
-    hookName: "on-ticket-status-change" | "on-ticket-archive";
-    context: {
-      projectId: string;
-      ticketId: string;
-      ticketShorthand: string;
-      ticketStatusOld?: string;
-      ticketStatusNew?: string;
-      ticketArchivedAt?: string;
-    };
-  }>;
+type StatusNameMap = Map<string, string>;
+
+const buildPreHooks = (existing: TicketRecord, input: Record<string, unknown>, statusNames: StatusNameMap) => {
+  const hooks: TicketHookSpec[] = [];
+
+  if ("status_id" in input && input.status_id !== existing.status_id && input.status_id !== null) {
+    const newId = input.status_id as string;
+    hooks.push({
+      hookName: "pre-ticket-status-change",
+      context: {
+        projectId: existing.project_id,
+        ticketId: existing.id,
+        ticketShorthand: existing.shorthand,
+        ticketStatusOld: existing.status_id ? statusNames.get(existing.status_id) : undefined,
+        ticketStatusNew: statusNames.get(newId),
+      },
+    });
+  }
+
+  if ("archived" in input && input.archived !== existing.archived) {
+    hooks.push({
+      hookName: "pre-ticket-archive",
+      context: {
+        projectId: existing.project_id,
+        ticketId: existing.id,
+        ticketShorthand: existing.shorthand,
+      },
+    });
+  }
+
+  return hooks;
+};
+
+const buildPostHooks = (existing: TicketRecord, updated: TicketRecord, statusNames: StatusNameMap) => {
+  const hooks: TicketHookSpec[] = [];
 
   if (existing.status_id !== updated.status_id && updated.status_id !== null) {
     hooks.push({
-      hookName: "on-ticket-status-change",
+      hookName: "post-ticket-status-change",
       context: {
         projectId: updated.project_id,
         ticketId: updated.id,
         ticketShorthand: updated.shorthand,
-        ticketStatusOld: existing.status_id ?? undefined,
-        ticketStatusNew: updated.status_id,
+        ticketStatusOld: existing.status_id ? statusNames.get(existing.status_id) : undefined,
+        ticketStatusNew: statusNames.get(updated.status_id),
       },
     });
   }
 
   if (existing.archived !== updated.archived) {
     hooks.push({
-      hookName: "on-ticket-archive",
+      hookName: "post-ticket-archive",
       context: {
         projectId: updated.project_id,
         ticketId: updated.id,
@@ -101,7 +125,11 @@ export const updateTicketRoute = createRoute({
   description: "Update a ticket.",
   tags: ["Tickets"],
   request: {
-    query: z.object({}).strict(),
+    query: z
+      .object({
+        skip_hooks: z.string().optional().openapi({ description: "Skip lifecycle hooks (pre/post)" }),
+      })
+      .strict(),
     params: z
       .object({
         id: z.string().openapi({ description: "Ticket ID" }),
@@ -120,17 +148,49 @@ export const updateTicketRoute = createRoute({
       description: "Ticket not found.",
       content: { "application/json": { schema: notFoundResponseSchema } },
     },
+    409: {
+      description: "Pre-hook rejected the operation.",
+      content: { "application/json": { schema: notFoundResponseSchema } },
+    },
   },
 });
+
+const resolveStatusNames = async (deps: RouteDeps, projectId: string) => {
+  const statuses = await deps.statusesService.list(projectId);
+  return new Map(statuses.map((s) => [s.id, s.name])) as StatusNameMap;
+};
+
+const runPreHooksOrReject = async (
+  deps: RouteDeps,
+  existing: TicketRecord,
+  input: Record<string, unknown>,
+  statusNames: StatusNameMap,
+) => {
+  const preHooks = buildPreHooks(existing, input, statusNames);
+  for (const hook of preHooks) {
+    const failure = await runPreTicketHook(deps, existing.project_id, hook);
+    if (failure) return buildHookErrorMessage(hook.hookName, failure);
+  }
+  return null;
+};
 
 export const updateTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof updateTicketRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
+    const { skip_hooks } = c.req.valid("query");
     const { content, tag_ids, ...input } = c.req.valid("json");
+    const skipHooks = skip_hooks === "true";
 
     const existing = await deps.ticketsService.get(id);
     if (!existing) {
       return c.json({ error: `Ticket not found: ${id}` }, 404);
+    }
+
+    const statusNames = !skipHooks && "status_id" in input ? await resolveStatusNames(deps, existing.project_id) : new Map<string, string>();
+
+    if (!skipHooks) {
+      const rejection = await runPreHooksOrReject(deps, existing, input, statusNames);
+      if (rejection) return c.json({ error: rejection }, 409);
     }
 
     const nextInput = { ...input };
@@ -156,12 +216,12 @@ export const updateTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof upd
 
     deps.eventBus.emit("tickets", "set", updated);
 
-    const hooks = buildTicketUpdateHooks(existing, updated);
-
-    void queueTicketHooks(deps, {
-      projectId: updated.project_id,
-      hooks,
-    });
+    if (!skipHooks) {
+      void queuePostTicketHooks(deps, {
+        projectId: updated.project_id,
+        hooks: buildPostHooks(existing, updated, statusNames),
+      });
+    }
 
     return c.json(updated, 200);
   };

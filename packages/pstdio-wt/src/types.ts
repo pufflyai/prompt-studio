@@ -59,10 +59,13 @@ export type HookName =
   | "pre-remove"
   | "post-remove"
   | "on-conflict"
-  | "on-ticket-status-change"
-  | "on-ticket-archive"
-  | "on-ticket-delete"
-  | "on-session-complete";
+  | "pre-ticket-status-change"
+  | "post-ticket-status-change"
+  | "pre-ticket-archive"
+  | "post-ticket-archive"
+  | "pre-ticket-delete"
+  | "post-ticket-delete"
+  | "post-session-complete";
 
 export type HookContext = {
   branch?: string;
