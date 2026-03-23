@@ -110,5 +110,10 @@ export const createSessionsService = (db: DbClient) => {
     return updated ?? null;
   };
 
-  return { create, get, list, update, updateStatus, archive };
+  const listByStatus = async (status: SessionStatus) => {
+    const rows = await db.select().from(sessions).where(eq(sessions.status, status));
+    return rows;
+  };
+
+  return { create, get, list, listByStatus, update, updateStatus, archive };
 };

@@ -15,7 +15,7 @@
 }
 
 .rich-text[data-rich-message="true"] {
-  --rich-text-font-scale: 0.8;
+  --rich-text-font-scale: 0.9;
 }
 
 .rich-text[data-rich-message="true"] .rich-text__p:last-child {
@@ -747,6 +747,8 @@ ol.rich-text__ol5 :where(ul, ol) {
 
 .rich-text__p {
   font-family: var(--chakra-fonts-body);
+  font-size: calc(var(--chakra-font-sizes-md) * var(--rich-text-font-scale));
+  line-height: 171%;
   letter-spacing: 0.14px;
   margin: 0;
   margin-top: var(--chakra-spacing-3, 0.75rem);
@@ -763,6 +765,8 @@ ol.rich-text__ol5 :where(ul, ol) {
 
 .rich-text__p2 {
   font-family: var(--chakra-fonts-body);
+  font-size: calc(var(--chakra-font-sizes-md) * var(--rich-text-font-scale));
+  line-height: 171%;
   letter-spacing: 0.14px;
   margin: 0;
 }

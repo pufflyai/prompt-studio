@@ -45,6 +45,7 @@ import { createTemplateRoutes } from "./features/templates/routes";
 import { createTicketRoutes } from "./features/tickets/routes";
 import { createWorkspaceRoutes } from "./features/workspaces/routes";
 import { logError, persistErrorLog } from "./lib/error-log";
+import { runStartupTasks } from "./startup";
 import { swagger } from "./swagger";
 import type { AppBindings } from "./types";
 
@@ -187,5 +188,16 @@ export const createApp = async (options?: AppOptions) => {
 
   swagger(app);
 
-  return { app, close: closeDb };
+  const startupAbort = new AbortController();
+  const startupDone = runStartupTasks(deps, startupAbort.signal).catch((err) =>
+    console.error("[startup] failed:", err),
+  );
+
+  const close = async () => {
+    startupAbort.abort();
+    await startupDone;
+    await closeDb();
+  };
+
+  return { app, close };
 };

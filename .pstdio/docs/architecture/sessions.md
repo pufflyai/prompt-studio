@@ -317,10 +317,6 @@ Clients (CLI, dashboard) use TanStack React-DB with SSE sync:
 
 ## Current gaps
 
-- Session DB service layer (`createSessionsService`) is not yet implemented.
-- Dedicated session API endpoints (create, get, follow-up, stream, stop, approve) are not yet wired up.
-- Session SSE streaming endpoint is not yet implemented.
-- Approval flow end-to-end (SSE push + POST response) is not yet connected.
-- Event stores are lost on API restart — no persistence layer.
+- Event stores are lost on API restart — no persistence layer. Stale `in_progress` sessions are resolved proactively by the startup sweep (`runStartupTasks` → `resolveOrphanedSessions`) when the server boots (see [Session Status Lifecycle](/architecture/session-status-lifecycle)).
 - `ticket_attempts` Zod schema exists but has no DB table (virtual/API-only).
 - Queue routes exist as placeholders.

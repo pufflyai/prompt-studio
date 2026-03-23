@@ -98,7 +98,7 @@ export function RichMessage(props: RichMessageProps) {
         <ImportCodeBlocksPlugin />
         <EquationPlugin />
         <RichTextPlugin
-          contentEditable={<ContentEditable fullWidth={fullWidth} />}
+          contentEditable={<ContentEditable fullWidth={fullWidth} isRichMessage />}
           ErrorBoundary={LexicalErrorBoundary}
         />
         {shouldTrackChanges ? (

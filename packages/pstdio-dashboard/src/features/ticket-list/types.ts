@@ -49,6 +49,7 @@ export interface TicketSubTicket {
 export interface Ticket {
   id: string;
   shorthand: string;
+  createdAt?: string;
   title: string;
   content: string;
   tagIds: string[];

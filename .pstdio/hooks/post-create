@@ -33,5 +33,10 @@ fi
 # Add additional setup steps below.
 # ──────────────────────────────────────────────────────────
 
+# Copy .env so the worktree uses the same dev database paths
+if [ -f "$PSTDIO_REPO_PATH/.env" ]; then
+  cp "$PSTDIO_REPO_PATH/.env" "$PSTDIO_WORKTREE_PATH/.env"
+fi
+
 bun install
 bun run build

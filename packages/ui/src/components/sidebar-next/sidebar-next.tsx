@@ -40,6 +40,7 @@ export const SidebarNext = (props: SidebarNextProps) => {
   return (
     <Flex
       as="aside"
+      data-testid="sidebar"
       direction="column"
       h="100%"
       w={width}

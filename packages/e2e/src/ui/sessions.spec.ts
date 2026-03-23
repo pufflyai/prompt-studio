@@ -110,11 +110,11 @@ test.describe("Sessions page", () => {
     }, projectId);
     await page.goto(`/projects/${projectId}/docs`);
 
-    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(page.locator("[data-testid='session-bubble']")).toBeVisible();
 
     await page.goto(`/projects/${projectId}/sessions`);
 
-    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.locator("[data-testid='session-bubble']")).toHaveCount(0);
   });
 
   test("navigates to session on click", async ({ page, request }) => {
@@ -160,9 +160,9 @@ test.describe("Sessions page", () => {
 
     await page.goto(`/projects/${projectId}/sessions`);
 
-    const contentEditor = page.locator('[contenteditable="true"]').first();
+    const contentEditor = page.locator("[data-testid='content-editable']").first();
     await contentEditor.fill(prompt);
-    await page.getByRole("button", { name: "Message Sending" }).click();
+    await page.locator("[data-testid='send-message-button']").click();
 
     await page.waitForURL(new RegExp(`/projects/${projectId}/sessions/[^/]+$`));
     await expect(page.getByText(prompt).first()).toBeVisible();
@@ -205,7 +205,7 @@ test.describe("Sessions page", () => {
 
     await page.goto(`/projects/${projectId}/sessions`);
 
-    const contentEditor = page.locator('[contenteditable="true"]').first();
+    const contentEditor = page.locator("[data-testid='content-editable']").first();
 
     await contentEditor.click();
     await page.keyboard.type("a");
@@ -224,7 +224,7 @@ test.describe("Sessions page", () => {
     await page.getByRole("button", { name: "Open in bubble" }).click();
 
     await page.waitForURL(`**/projects/${projectId}/docs`);
-    const sessionBubble = page.getByRole("dialog");
+    const sessionBubble = page.locator("[data-testid='session-bubble']");
     await expect(sessionBubble).toBeVisible();
     await expect(sessionBubble.getByText("Open in bubble session").first()).toBeVisible();
   });

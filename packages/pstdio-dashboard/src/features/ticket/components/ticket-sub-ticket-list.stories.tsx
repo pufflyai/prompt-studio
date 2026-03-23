@@ -1,4 +1,4 @@
-import { Box, Button, Stack } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import type { ComponentProps } from "react";
 import { TicketSubTicketList } from "./ticket-sub-ticket-list";
@@ -15,12 +15,7 @@ type Story = StoryObj<typeof TicketSubTicketList>;
 
 const SidebarCompositionStory = (args: ComponentProps<typeof TicketSubTicketList>) => (
   <Box maxW="360px" p="sm">
-    <Stack gap="xs">
-      <Button size="sm" variant="subtle" alignSelf="flex-start">
-        Add sub-ticket
-      </Button>
-      <TicketSubTicketList {...args} />
-    </Stack>
+    <TicketSubTicketList {...args} />
   </Box>
 );
 

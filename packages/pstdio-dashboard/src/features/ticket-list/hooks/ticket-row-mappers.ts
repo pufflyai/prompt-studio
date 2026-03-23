@@ -47,6 +47,7 @@ export const toTicketFromRow = (
   return {
     id: row.id,
     shorthand: row.shorthand as string,
+    createdAt: (row.created_at as string) ?? undefined,
     title: (row.display_title as string) ?? "",
     content: "",
     tagIds: tagIdsByTicket.get(row.id) ?? [],

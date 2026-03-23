@@ -239,7 +239,7 @@ export const SidebarTree = (props: SidebarTreeProps) => {
         const sectionExpanded = section.label ? isExpanded(section.id, expandedSections) : true;
 
         return (
-          <Stack key={section.id} gap="0">
+          <Stack key={section.id} gap="0" data-testid={`sidebar-section-${section.id}`}>
             {section.label ? (
               <HStack
                 className="group"

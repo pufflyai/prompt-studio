@@ -19,6 +19,7 @@ export const SendButton = (props: SendButtonProps) => {
 
   const button = (
     <IconButton
+      data-testid="send-message-button"
       size="sm"
       variant="solid"
       borderRadius="full"

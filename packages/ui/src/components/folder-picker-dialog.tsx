@@ -124,7 +124,13 @@ export const FolderPickerDialog = (props: FolderPickerDialogProps) => {
                 >
                   <ChevronUp size={16} />
                 </Button>
-                <Text textStyle="paragraph/S/regular" color="fg.muted" flex="1" lineClamp={1}>
+                <Text
+                  data-testid="folder-picker-path"
+                  textStyle="paragraph/S/regular"
+                  color="fg.muted"
+                  flex="1"
+                  lineClamp={1}
+                >
                   {currentPath || "Home"}
                 </Text>
               </Stack>

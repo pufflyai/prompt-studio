@@ -1,5 +1,12 @@
 # @pstdio/ui
 
+## 0.2.3
+
+### Patch Changes
+
+- e6a54d3: Improve collapsed sticky user message: shorter height, no scroll, overlay show-more button, stays floating when expanded
+- 05705ba: Use ScrollArea for rich-text content editable scrolling.
+
 ## 0.2.2
 
 ### Patch Changes

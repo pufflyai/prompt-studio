@@ -75,7 +75,19 @@ const groupByAssignee = (tickets: Ticket[]): TicketGroup[] => {
 
 export const orderTickets = (tickets: Ticket[], ordering: OrderingField) => {
   if (ordering === "manual") {
-    return tickets;
+    return [...tickets].sort((a, b) => {
+      const createdAtDelta = new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime();
+      if (createdAtDelta !== 0) {
+        return createdAtDelta;
+      }
+
+      const shorthandDelta = a.shorthand.localeCompare(b.shorthand, undefined, { numeric: true });
+      if (shorthandDelta !== 0) {
+        return shorthandDelta;
+      }
+
+      return a.id.localeCompare(b.id);
+    });
   }
 
   return [...tickets].sort(comparators[ordering]);
