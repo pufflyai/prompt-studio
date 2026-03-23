@@ -4,10 +4,11 @@ import { SessionChat } from "@/features/workspaces/components/session-chat";
 
 interface WorkspaceConversationPanelProps {
   sessionId: string | null;
+  onEditAction?: () => void;
 }
 
 export const WorkspaceConversationPanel = (props: WorkspaceConversationPanelProps) => {
-  const { sessionId } = props;
+  const { sessionId, onEditAction } = props;
   const workspace = useSessionWorkspace(sessionId);
 
   return (
@@ -22,7 +23,7 @@ export const WorkspaceConversationPanel = (props: WorkspaceConversationPanelProp
       data-testid="workspace-conversation-panel"
     >
       <Stack flex="1" minH="0" w="full" maxW="52rem">
-        <SessionChat sessionId={sessionId} lockedBranch={workspace?.branch} />
+        <SessionChat sessionId={sessionId} lockedBranch={workspace?.branch} onEditAction={onEditAction} />
       </Stack>
     </Stack>
   );

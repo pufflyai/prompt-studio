@@ -1,8 +1,9 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { getWorktreeDiff, git } from "pstdio-wt";
+import { getWorktreeDiff } from "pstdio-wt";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { notFoundResponseSchema } from "../dto";
+import { resolveBase } from "../resolve-base";
 
 const fileDiffSchema = z.object({
   filePath: z.string(),
@@ -48,55 +49,6 @@ export const getWorkspaceDiffRoute = createRoute({
     },
   },
 });
-
-// Workspace branches are created via `git worktree add -b <branch> <path> <base>`.
-// The base is the commit the branch forked from. We find it by looking for the
-// merge-base between HEAD and the repo's default branch (main/master).
-const resolveBranchStart = async (worktreePath: string, head: string) => {
-  try {
-    const branch = await git(worktreePath, ["rev-parse", "--abbrev-ref", "HEAD"]);
-    if (branch === "HEAD") return null;
-
-    const reflog = await git(worktreePath, ["reflog", "show", "--format=%H", branch]);
-    const entries = reflog.split("\n").filter(Boolean);
-    const start = entries[entries.length - 1];
-    if (!start || start === head) return null;
-
-    return start;
-  } catch {
-    return null;
-  }
-};
-
-const resolveBase = async (worktreePath: string) => {
-  const head = await git(worktreePath, ["rev-parse", "HEAD"]).catch(() => "HEAD");
-
-  // Try common default branch names
-  for (const candidate of ["main", "master"]) {
-    try {
-      const mergeBase = await git(worktreePath, ["merge-base", "HEAD", candidate]);
-      if (mergeBase !== head) {
-        return mergeBase;
-      }
-
-      const branchStart = await resolveBranchStart(worktreePath, head);
-      if (branchStart) {
-        return branchStart;
-      }
-
-      return mergeBase;
-    } catch {
-      // branch doesn't exist, try next
-    }
-  }
-  // Last resort: diff against the initial commit
-  try {
-    const root = await git(worktreePath, ["rev-list", "--max-parents=0", "HEAD"]);
-    return root.split("\n")[0];
-  } catch {
-    return "HEAD";
-  }
-};
 
 export const getWorkspaceDiffHandler = (deps: RouteDeps): AppRouteHandler<typeof getWorkspaceDiffRoute> => {
   return async (c) => {

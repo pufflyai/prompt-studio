@@ -2,9 +2,11 @@ import { readFileSync } from "node:fs";
 import type { Context } from "hono";
 import type { SSEStreamingApi } from "hono/streaming";
 import { streamSSE } from "hono/streaming";
-import type { EventStore } from "pstdio-agents";
+import type { EventStore, JsonPatch } from "pstdio-agents";
 import type { AppBindings } from "../../../types";
 import type { RouteDeps } from "../../deps";
+
+const SESSION_STREAM_HEARTBEAT_MS = 1000;
 
 const replayPersistedMessages = async (sessionFileId: string, deps: RouteDeps, stream: SSEStreamingApi) => {
   const file = await deps.filesService.get(sessionFileId);
@@ -21,9 +23,31 @@ const streamLivePatches = async (eventStore: EventStore, stream: SSEStreamingApi
     aborted = true;
   });
 
-  for await (const patch of eventStore.historyPlusStream()) {
+  const iterator = eventStore.historyPlusStream()[Symbol.asyncIterator]();
+  let nextPatchPromise: Promise<IteratorResult<JsonPatch>> | null = null;
+
+  while (!aborted) {
+    nextPatchPromise ??= iterator.next();
+
+    const nextItem = await Promise.race([
+      nextPatchPromise.then((patchResult) => ({ type: "patch" as const, patchResult })),
+      stream.sleep(SESSION_STREAM_HEARTBEAT_MS).then(() => ({ type: "heartbeat" as const })),
+    ]);
+
     if (aborted) break;
 
+    if (nextItem.type === "heartbeat") {
+      await stream.writeSSE({
+        data: JSON.stringify({ timestamp: Date.now() }),
+        event: "heartbeat",
+      });
+      continue;
+    }
+
+    nextPatchPromise = null;
+    if (nextItem.patchResult.done) break;
+
+    const patch = nextItem.patchResult.value;
     if (patch.path === "/approval_request") {
       await stream.writeSSE({ data: JSON.stringify(patch.value), event: "approval_request" });
     } else {
@@ -31,6 +55,7 @@ const streamLivePatches = async (eventStore: EventStore, stream: SSEStreamingApi
     }
   }
 
+  await iterator.return?.();
   return aborted;
 };
 

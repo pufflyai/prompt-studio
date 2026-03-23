@@ -19,7 +19,7 @@ import { TicketDetailSidebar } from "../components/ticket-detail-sidebar";
 import { TicketHeader } from "../components/ticket-header";
 import { useContentAutosave } from "../hooks/use-content-autosave";
 import { useSubTicketCreation } from "../hooks/use-sub-ticket-creation";
-import { useTicketAttemptDiff } from "../hooks/use-ticket-attempt-diff";
+import { useTicketAttemptDiffSummary } from "../hooks/use-ticket-attempt-diff-summary";
 import { useTicketContent } from "../hooks/use-ticket-content";
 import { useTicketFiles } from "../hooks/use-ticket-files";
 import { useTicketSessions } from "../hooks/use-ticket-sessions";
@@ -153,7 +153,7 @@ export const TicketDetailsPanel = () => {
 
   const latestAttempt = findLatestAttempt(ticketAttempts);
 
-  const { data: latestAttemptDiff } = useTicketAttemptDiff(latestAttempt?.id);
+  const { data: latestAttemptDiffSummary } = useTicketAttemptDiffSummary(latestAttempt?.id);
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(true);
   const [isBreakModalOpen, setIsBreakModalOpen] = useState(false);
   const [isRefineModalOpen, setIsRefineModalOpen] = useState(false);
@@ -224,8 +224,8 @@ export const TicketDetailsPanel = () => {
       <TicketHeader
         breadcrumbItems={breadcrumbs}
         attemptCount={ticketAttempts.length}
-        additions={latestAttemptDiff?.totals.additions ?? 0}
-        deletions={latestAttemptDiff?.totals.deletions ?? 0}
+        additions={latestAttemptDiffSummary?.additions ?? 0}
+        deletions={latestAttemptDiffSummary?.deletions ?? 0}
         isRunningAttempt={sessions.isRunningAttempt}
         isArchived={Boolean(ticket.archived)}
         canDeleteTicket={Boolean(projectId) && !deleteTicket.isPending}

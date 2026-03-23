@@ -6,14 +6,16 @@ import { RepoBrowserContainer } from "./repo-browser.container";
 interface SessionChatProps {
   sessionId: string | null;
   lockedBranch?: string | null;
+  onEditAction?: () => void;
 }
 
 export const SessionChat = (props: SessionChatProps) => {
-  const { sessionId, lockedBranch } = props;
+  const { sessionId, lockedBranch, onEditAction } = props;
 
   return (
     <SessionChatView
       sessionId={sessionId}
+      onEditAction={onEditAction}
       repoMenu={
         <HStack justify="space-between" align="center" wrap="wrap" w="full">
           <AgentBrowserContainer />

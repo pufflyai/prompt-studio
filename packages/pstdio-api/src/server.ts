@@ -13,6 +13,7 @@ process.on("SIGTERM", shutdown);
 
 Bun.serve({
   fetch: app.fetch,
+  idleTimeout: 20,
   port,
 });
 

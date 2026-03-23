@@ -23,7 +23,7 @@ import { TicketsListView } from "../components/tickets-list-view";
 import { uploadTicketFile } from "../data/api/files";
 import { type BadgeContext, DEFAULT_DISPLAY_SETTINGS, type DisplaySettings } from "../types";
 import { autoStartRefineSession } from "../utils/auto-start-refine-session";
-import { buildLatestAttemptsByTicketId } from "../utils/ticket-attempts";
+import { buildLatestAttemptsByTicketId, isSessionSettled } from "../utils/ticket-attempts";
 import { groupTickets, orderTickets } from "../utils/ticket-grouping";
 import { getVisibleTickets } from "../utils/ticket-visibility";
 
@@ -52,8 +52,11 @@ export const TicketsPanel = () => {
   const statusOptions = project?.ticketStatusOptions ?? [];
   const allTickets = getVisibleTickets(tickets ?? []);
   const latestAttemptsByTicketId = buildLatestAttemptsByTicketId(allTickets);
-  const latestWorkspaceIds = [...new Set([...latestAttemptsByTicketId.values()].map((attempt) => attempt.id))];
-  const { diffTotalsByWorkspaceId } = useTicketAttemptDiffs(latestWorkspaceIds);
+  const attemptDiffInputs = [...latestAttemptsByTicketId.values()].map((attempt) => ({
+    workspaceId: attempt.id,
+    settled: isSessionSettled(attempt.sessionStatus),
+  }));
+  const { diffTotalsByWorkspaceId } = useTicketAttemptDiffs(attemptDiffInputs);
 
   const groups = groupTickets(allTickets, settings.grouping, statusOptions).map((group) => ({
     ...group,

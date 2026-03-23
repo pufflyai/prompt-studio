@@ -13,17 +13,20 @@ import {
   shouldClearPendingFollowUp,
 } from "./session-chat-state";
 
+const EDIT_ACTION_TYPES = new Set(["write", "execute"]);
+
 interface SessionChatViewProps {
   sessionId: string | null;
   agent?: string;
   model?: string;
   onCreateSession?: (prompt: string) => void;
+  onEditAction?: () => void;
   repoMenu?: ReactNode;
 }
 
 export const SessionChatView = (props: SessionChatViewProps) => {
   const { t } = useTranslation("projects");
-  const { sessionId, agent, model, onCreateSession, repoMenu } = props;
+  const { sessionId, agent, model, onCreateSession, onEditAction, repoMenu } = props;
   const projectSettingsStore = useProjectSettingsStoreApi();
   const draftKey = sessionId ?? "__new__";
   const [chatDraft, setChatDraft] = useState(() => projectSettingsStore.getState().chatDraftsBySession[draftKey] ?? "");
@@ -34,13 +37,38 @@ export const SessionChatView = (props: SessionChatViewProps) => {
   const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUpState | null>(null);
   const pendingIdRef = useRef(0);
   const lastSessionIdRef = useRef<string | null>(sessionId);
+  const editCountRef = useRef(0);
 
   useEffect(() => {
     if (lastSessionIdRef.current !== sessionId) {
       lastSessionIdRef.current = sessionId;
+      editCountRef.current = 0;
       setPendingFollowUp(null);
     }
   }, [sessionId]);
+
+  useEffect(() => {
+    if (!onEditAction) return;
+
+    let count = 0;
+    for (const msg of messages) {
+      for (const part of msg.parts) {
+        if (
+          part.type === "tool" &&
+          part.actionType &&
+          EDIT_ACTION_TYPES.has(part.actionType) &&
+          part.status === "completed"
+        ) {
+          count++;
+        }
+      }
+    }
+
+    if (count > editCountRef.current) {
+      editCountRef.current = count;
+      onEditAction();
+    }
+  }, [messages, onEditAction]);
 
   useEffect(() => {
     setChatDraft(projectSettingsStore.getState().chatDraftsBySession[draftKey] ?? "");

@@ -113,6 +113,7 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
       };
 
       deps.serve({
+        idleTimeout: 20,
         port,
         fetch(req) {
           const url = new URL(req.url);

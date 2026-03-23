@@ -62,8 +62,6 @@ export type ApiFileDiff = {
 
 export type ApiTicketAttemptDiff = {
   workspace_id: string;
-  mode: "unstaged" | "staged" | "all";
-  diff_text: string;
   files: ApiFileDiff[];
   totals: {
     additions: number;
