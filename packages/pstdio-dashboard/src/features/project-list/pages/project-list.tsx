@@ -4,6 +4,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { Folder, Settings } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { resolveProjectDefaultPath } from "@/features/project/utils/project-default-path";
 import { CreateProjectDialog } from "../components/create-project-dialog";
 import type { CreateProjectInput } from "../data/api";
 import { useCreateProject, useProjectList } from "../hooks/use-project-list";
@@ -28,7 +29,7 @@ export const ProjectList = () => {
         title: t("list.projectCreated"),
         description: input.name,
       });
-      navigate({ to: "/projects/$projectId/docs", params: { projectId: project.id } });
+      navigate({ to: resolveProjectDefaultPath(project.id) });
     } catch (createError) {
       const message = createError instanceof Error ? createError.message : "Unable to create project.";
       toaster.create({
@@ -84,7 +85,7 @@ export const ProjectList = () => {
                   secondaryLabel={project.repoPath ?? t("chatInput.repo.noneLinked")}
                   leftIcon={Folder}
                 >
-                  <Link to="/projects/$projectId/docs" params={{ projectId: project.id }} />
+                  <Link to={resolveProjectDefaultPath(project.id)} />
                 </MenuItem>
               </Menu.Root>
             ))}
