@@ -1,4 +1,4 @@
-import { Box, Button, Flex, HStack } from "@chakra-ui/react";
+import { Box, Button, Flex } from "@chakra-ui/react";
 import { ApprovalPrompt, ChatPanel, ChatSkeleton, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
 import { Link, useParams } from "@tanstack/react-router";
 import { ArrowUpRight } from "lucide-react";

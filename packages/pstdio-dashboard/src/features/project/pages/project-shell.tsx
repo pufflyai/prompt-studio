@@ -1,7 +1,7 @@
 import { Box, Flex, Stack, Text } from "@chakra-ui/react";
 import { EmptyState } from "@pstdio/ui";
 import { Outlet, useParams, useRouterState } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { ProjectSettingsProvider, useProjectSettingsStore } from "@/features/project-settings/store";
 import { SessionAttachedPanel } from "@/features/sessions/components/session-attached-panel";
@@ -29,14 +29,14 @@ const ProjectShellContent = () => {
   const isSettingsRoute = isSettingsRoutePath(location.pathname, projectId);
   const showMainSidebar = projectId && !isSessionsRoute && !isSettingsRoute && !isWorkspaceRoute;
 
-  useEffect(() => {
-    if (isSessionsRoute) return;
+  useLayoutEffect(() => {
+    if (!projectId || isSessionsRoute) return;
     const currentPath =
       typeof window === "undefined"
         ? location.pathname
         : `${window.location.pathname}${window.location.search}${window.location.hash}`;
     setLastNonSessionsPath(currentPath);
-  }, [isSessionsRoute, location.pathname, setLastNonSessionsPath]);
+  }, [isSessionsRoute, location.pathname, projectId, setLastNonSessionsPath]);
 
   return (
     <Flex height="100%" width="100%" minH="0">

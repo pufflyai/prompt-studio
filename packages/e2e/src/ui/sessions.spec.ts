@@ -217,9 +217,19 @@ test.describe("Sessions page", () => {
 
   test("opens selected session in bubble and navigates back", async ({ page, request }) => {
     await bypassOnboarding(page);
+    await page.addInitScript((id: string) => {
+      localStorage.setItem(
+        `pstdio-project-settings/projects/${id}/values`,
+        JSON.stringify({
+          state: {
+            lastNonSessionsPath: `/projects/${id}/docs`,
+          },
+          version: 0,
+        }),
+      );
+    }, projectId);
     const session = await createSessionViaApi(request, projectId, "Open in bubble session");
 
-    await page.goto(`/projects/${projectId}/docs`);
     await page.goto(`/projects/${projectId}/sessions/${session.id}`);
     await page.getByRole("button", { name: "Open in bubble" }).click();
 
