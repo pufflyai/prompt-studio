@@ -2,6 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { notFoundResponseSchema, ticketFileResponseSchema, uploadTicketFileBodySchema } from "../dto";
+import { emitSyncedFile, emitSyncedTicketFile } from "../emit-ticket-file-sync";
 
 export const uploadTicketFileRoute = createRoute({
   method: "post",
@@ -51,6 +52,9 @@ export const uploadTicketFileHandler = (deps: RouteDeps): AppRouteHandler<typeof
 
     if (existing) {
       const updated = await deps.filesService.update(existing.id, { data });
+      if (updated) {
+        emitSyncedFile(deps, updated);
+      }
       return c.json(updated ?? existing, 200);
     }
 
@@ -62,7 +66,9 @@ export const uploadTicketFileHandler = (deps: RouteDeps): AppRouteHandler<typeof
       mime_type: mime_type ?? null,
     });
 
-    await deps.filesService.attachToTicket(id, file.id);
+    const ticketFile = await deps.filesService.attachToTicket(id, file.id);
+    emitSyncedFile(deps, file);
+    emitSyncedTicketFile(deps, ticketFile);
 
     return c.json(file, 201);
   };

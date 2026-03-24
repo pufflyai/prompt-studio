@@ -3,6 +3,7 @@ import { eq, ticket_tag_assignments } from "pstdio-db";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { createTicketBodySchema, ticketResponseSchema } from "../dto";
+import { emitSyncedFile, emitSyncedTicketFile } from "../emit-ticket-file-sync";
 import { extractTitleFromContent } from "../extract-title";
 
 export const createTicketRoute = createRoute({
@@ -58,7 +59,9 @@ export const createTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof cre
         data,
         mime_type: "text/markdown",
       });
-      await deps.filesService.attachToTicket(ticket.id, file.id);
+      const ticketFile = await deps.filesService.attachToTicket(ticket.id, file.id);
+      emitSyncedFile(deps, file);
+      emitSyncedTicketFile(deps, ticketFile);
       const updated = await deps.ticketsService.update(ticket.id, { file_id: file.id });
       if (!updated) {
         throw new Error(`Ticket not found right after creation: ${ticket.id}`);

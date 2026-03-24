@@ -3,6 +3,7 @@ import { eq, ticket_tag_assignments } from "pstdio-db";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { notFoundResponseSchema, ticketResponseSchema, updateTicketBodySchema } from "../dto";
+import { emitSyncedFile, emitSyncedTicketFile } from "../emit-ticket-file-sync";
 import { extractTitleFromContent } from "../extract-title";
 
 const TICKET_CONTENT_FILE_NAME = "ticket.md";
@@ -19,7 +20,10 @@ const upsertTicketContentFile = async (input: {
 
   if (currentFileId) {
     const updated = await deps.filesService.update(currentFileId, { data });
-    if (updated) return currentFileId;
+    if (updated) {
+      emitSyncedFile(deps, updated);
+      return currentFileId;
+    }
   }
 
   const uploaded = await deps.filesService.upload({
@@ -30,7 +34,9 @@ const upsertTicketContentFile = async (input: {
     mime_type: "text/markdown",
   });
 
-  await deps.filesService.attachToTicket(ticketId, uploaded.id);
+  const ticketFile = await deps.filesService.attachToTicket(ticketId, uploaded.id);
+  emitSyncedFile(deps, uploaded);
+  emitSyncedTicketFile(deps, ticketFile);
 
   return uploaded.id;
 };

@@ -1,5 +1,5 @@
 import { HStack } from "@chakra-ui/react";
-import { ApprovalPrompt, ChatPanel } from "@pstdio/ui/chat-ui";
+import { ApprovalPrompt, ChatPanel, ChatSkeleton } from "@pstdio/ui/chat-ui";
 import { useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -12,10 +12,12 @@ import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useSessionAgent } from "../hooks/use-session-agent";
 import { useSessionStream } from "../hooks/use-session-stream";
 import {
+  assignPendingFollowUpSession,
   createPendingFollowUpState,
   mergeMessagesWithPendingFollowUp,
   type PendingFollowUpState,
   shouldClearPendingFollowUp,
+  shouldShowPendingFollowUp,
 } from "./session-chat-state";
 
 const EDIT_ACTION_TYPES = new Set(["write", "execute"]);
@@ -54,7 +56,6 @@ export const SessionChatView = (props: SessionChatViewProps) => {
     if (lastSessionIdRef.current !== sessionId) {
       lastSessionIdRef.current = sessionId;
       editCountRef.current = 0;
-      setPendingFollowUp(null);
     }
   }, [sessionId]);
 
@@ -91,28 +92,67 @@ export const SessionChatView = (props: SessionChatViewProps) => {
     }
   }, [messages, pendingFollowUp]);
 
+  useEffect(() => {
+    if (!pendingFollowUp?.sessionId) {
+      return;
+    }
+
+    if (pendingFollowUp.sessionId !== sessionId) {
+      setPendingFollowUp(null);
+    }
+  }, [pendingFollowUp, sessionId]);
+
   const handleSubmitMessage = (text: string) => {
+    const pendingId = `pending-${pendingIdRef.current}`;
+    pendingIdRef.current += 1;
+
     if (!sessionId) {
       if (!projectId || !agent) return;
       clearSessionDraft(null);
       setChatDraft("");
+
+      const pending = createPendingFollowUpState({
+        prompt: text,
+        messageCount: messages.length,
+        pendingId,
+      });
+      setPendingFollowUp(pending);
+
       createSession.mutate(
         { projectId, prompt: text, agent, model },
-        { onSuccess: ({ sessionId }) => onSessionCreated?.(sessionId) },
+        {
+          onSuccess: ({ sessionId }) => {
+            setPendingFollowUp((current) => {
+              if (!current || current.userMessageId !== pending.userMessageId) {
+                return current;
+              }
+
+              return assignPendingFollowUpSession(current, sessionId);
+            });
+            onSessionCreated?.(sessionId);
+          },
+          onError: () => {
+            setPendingFollowUp((current) => {
+              if (!current || current.userMessageId !== pending.userMessageId) {
+                return current;
+              }
+
+              return null;
+            });
+          },
+        },
       );
       return;
     }
 
     clearSessionDraft(sessionId);
     setChatDraft("");
-
-    const pendingId = `pending-${pendingIdRef.current}`;
-    pendingIdRef.current += 1;
     setPendingFollowUp(
       createPendingFollowUpState({
         prompt: text,
         messageCount: messages.length,
         pendingId,
+        sessionId,
       }),
     );
 
@@ -141,14 +181,21 @@ export const SessionChatView = (props: SessionChatViewProps) => {
     });
   };
 
-  const displayedMessages = mergeMessagesWithPendingFollowUp(messages, pendingFollowUp);
+  const displayedMessages = mergeMessagesWithPendingFollowUp(
+    messages,
+    shouldShowPendingFollowUp(pendingFollowUp, sessionId) ? pendingFollowUp : null,
+  );
+  const loadingContent = sessionId ? <ChatSkeleton /> : undefined;
+  const emptyStateTitle = sessionId ? t("chatInput.session.notFoundTitle") : t("sessions.nextBuildTitle");
+  const emptyStateDescription = sessionId ? t("chatInput.session.notFoundDescription") : "";
 
   return (
     <ChatPanel
       messages={displayedMessages}
       streaming={isStreaming}
-      emptyStateTitle={t("sessions.noSessionSelected")}
-      emptyStateDescription={t("sessions.selectSession")}
+      emptyStateTitle={emptyStateTitle}
+      emptyStateDescription={emptyStateDescription}
+      loadingContent={loadingContent}
       chatInputPlaceholder={t("sessions.followUpPlaceholder")}
       chatInputDefaultValue={chatDraft}
       onSubmitMessage={(text: string) => handleSubmitMessage(text)}

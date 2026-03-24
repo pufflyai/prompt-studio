@@ -28,13 +28,17 @@ const createSseReader = (response: Response) => {
   const reader = response.body!.getReader() as ReadableStreamDefaultReader<Uint8Array>;
   const decoder = new TextDecoder();
   let buffer = "";
+  const queuedEvents: SseEvent[] = [];
 
   const readEvent = async (timeoutMs = 3_000) => {
+    const nextQueuedEvent = queuedEvents.shift();
+    if (nextQueuedEvent) return nextQueuedEvent;
+
     const deadline = Date.now() + timeoutMs;
 
     while (Date.now() < deadline) {
       const { done, value } = await reader.read();
-      if (done) return null;
+      if (done) return queuedEvents.shift() ?? null;
 
       buffer += decoder.decode(value, { stream: true });
       const blocks = buffer.split("\n\n");
@@ -42,11 +46,14 @@ const createSseReader = (response: Response) => {
 
       for (const block of blocks) {
         const parsed = parseSseBlock(block);
-        if (parsed) return parsed;
+        if (parsed) queuedEvents.push(parsed);
       }
+
+      const nextEvent = queuedEvents.shift();
+      if (nextEvent) return nextEvent;
     }
 
-    return null;
+    return queuedEvents.shift() ?? null;
   };
 
   const close = async () => {

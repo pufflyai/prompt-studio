@@ -223,6 +223,7 @@
     "title": "会话",
     "newSession": "新建会话",
     "noSessionsYet": "暂无会话",
+    "nextBuildTitle": "接下来我们应该构建什么？",
     "noSessionSelected": "未选择会话",
     "selectSession": "从侧边栏选择一个会话或开始新会话。",
     "followUpPlaceholder": "发送后续消息...",

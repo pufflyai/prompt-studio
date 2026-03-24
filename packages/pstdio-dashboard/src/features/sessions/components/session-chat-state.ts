@@ -5,18 +5,31 @@ export type PendingFollowUpState = {
   messageCount: number;
   userMessageId: string;
   assistantMessageId: string;
+  sessionId: string | null;
 };
 
 export const createPendingFollowUpState = (input: {
   prompt: string;
   messageCount: number;
   pendingId: string;
+  sessionId?: string | null;
 }): PendingFollowUpState => {
   return {
     prompt: input.prompt,
     messageCount: input.messageCount,
     userMessageId: `${input.pendingId}-user`,
     assistantMessageId: `${input.pendingId}-assistant`,
+    sessionId: input.sessionId ?? null,
+  };
+};
+
+export const assignPendingFollowUpSession = (
+  pending: PendingFollowUpState,
+  sessionId: string,
+): PendingFollowUpState => {
+  return {
+    ...pending,
+    sessionId,
   };
 };
 
@@ -33,6 +46,11 @@ export const createOptimisticFollowUpMessages = (pending: PendingFollowUpState):
       parts: [{ type: "loading" }],
     },
   ];
+};
+
+export const shouldShowPendingFollowUp = (pending: PendingFollowUpState | null, sessionId: string | null) => {
+  if (!pending) return false;
+  return pending.sessionId === sessionId;
 };
 
 export const mergeMessagesWithPendingFollowUp = (

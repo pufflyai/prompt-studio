@@ -1,10 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import {
+  assignPendingFollowUpSession,
   createOptimisticFollowUpMessages,
   createPendingFollowUpState,
   mergeMessagesWithPendingFollowUp,
   shouldClearPendingFollowUp,
+  shouldShowPendingFollowUp,
 } from "./session-chat-state";
 
 const message = (id: string, role: SessionMessage["role"] = "assistant"): SessionMessage => ({
@@ -58,5 +60,24 @@ describe("session chat optimistic state", () => {
 
     expect(shouldClearPendingFollowUp(pending, [message("m1")])).toBe(false);
     expect(shouldClearPendingFollowUp(pending, [message("m1"), message("m2")])).toBe(true);
+  });
+
+  it("keeps the first pending turn visible while a new session is assigned", () => {
+    const pending = createPendingFollowUpState({
+      prompt: "Start a new session",
+      messageCount: 0,
+      pendingId: "pending-4",
+    });
+
+    expect(shouldShowPendingFollowUp(pending, null)).toBe(true);
+
+    const assigned = assignPendingFollowUpSession(pending, "session-1");
+
+    expect(shouldShowPendingFollowUp(assigned, "session-1")).toBe(true);
+    expect(shouldShowPendingFollowUp(assigned, "session-2")).toBe(false);
+    expect(mergeMessagesWithPendingFollowUp([], assigned).map((entry) => entry.id)).toEqual([
+      "pending-4-user",
+      "pending-4-assistant",
+    ]);
   });
 });

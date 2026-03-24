@@ -223,6 +223,7 @@
     "title": "セッション",
     "newSession": "新しいセッション",
     "noSessionsYet": "まだセッションがありません",
+    "nextBuildTitle": "次は何を作りましょうか？",
     "noSessionSelected": "セッションが選択されていません",
     "selectSession": "サイドバーからセッションを選択するか、新しいセッションを開始してください。",
     "followUpPlaceholder": "フォローアップメッセージを送信...",

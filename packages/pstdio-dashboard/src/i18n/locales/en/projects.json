@@ -238,6 +238,7 @@
     "searchPlaceholder": "Search sessions...",
     "noSessionsYet": "No sessions yet",
     "noSearchResults": "No sessions match your search.",
+    "nextBuildTitle": "What should we build next?",
     "noSessionSelected": "No session selected",
     "selectSession": "Select a session from the sidebar or start a new one.",
     "followUpPlaceholder": "Send a follow-up message...",

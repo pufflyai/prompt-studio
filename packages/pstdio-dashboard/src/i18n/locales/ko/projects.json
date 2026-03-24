@@ -223,6 +223,7 @@
     "title": "세션",
     "newSession": "새 세션",
     "noSessionsYet": "아직 세션이 없습니다",
+    "nextBuildTitle": "다음에는 무엇을 만들까요?",
     "noSessionSelected": "선택된 세션 없음",
     "selectSession": "사이드바에서 세션을 선택하거나 새 세션을 시작하세요.",
     "followUpPlaceholder": "후속 메시지 보내기...",

@@ -223,6 +223,7 @@
     "title": "工作階段",
     "newSession": "新增工作階段",
     "noSessionsYet": "尚無工作階段",
+    "nextBuildTitle": "接下來我們應該建構什麼？",
     "noSessionSelected": "未選擇工作階段",
     "selectSession": "從側邊欄選擇一個工作階段或開始新的工作階段。",
     "followUpPlaceholder": "傳送後續訊息...",

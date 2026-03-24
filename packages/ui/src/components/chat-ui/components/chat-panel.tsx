@@ -24,6 +24,8 @@ interface ChatPanelProps {
   streaming?: boolean;
   emptyStateTitle: string;
   emptyStateDescription: string;
+  emptyStateContent?: ReactNode;
+  loadingContent?: ReactNode;
   chatInputPlaceholder: string;
   chatInputDefaultValue?: string;
   onSubmitMessage?: (text: string, attachments: string[]) => void;
@@ -53,6 +55,8 @@ export const ChatPanel = (props: ChatPanelProps) => {
     streaming = false,
     emptyStateTitle,
     emptyStateDescription,
+    emptyStateContent,
+    loadingContent,
     chatInputPlaceholder,
     chatInputDefaultValue = "",
     onSubmitMessage,
@@ -70,6 +74,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
   const userMessageCount = merged.reduce((count, message) => count + (message.role === "user" ? 1 : 0), 0);
   const { groups, leadingResponses } = groupMessagesByTurn(merged);
   const [expandedStickyMessageIds, setExpandedStickyMessageIds] = useState(() => new Set<string>());
+  const emptyContent = streaming ? (loadingContent ?? emptyStateContent) : emptyStateContent;
 
   const toggleStickyMessageExpanded = (messageId: string) => {
     setExpandedStickyMessageIds((current) => {
@@ -153,11 +158,13 @@ export const ChatPanel = (props: ChatPanelProps) => {
               })}
             </Stack>
           ) : (
-            <EmptyState
-              icon={<MessageCircleIcon size={48} strokeWidth={1.5} />}
-              title={emptyStateTitle}
-              description={emptyStateDescription}
-            />
+            (emptyContent ?? (
+              <EmptyState
+                icon={<MessageCircleIcon size={48} strokeWidth={1.5} />}
+                title={emptyStateTitle}
+                description={emptyStateDescription}
+              />
+            ))
           )}
         </ChatPrimitives.Viewport>
         <ChatPrimitives.ScrollToBottom aria-label="Scroll to latest message" />

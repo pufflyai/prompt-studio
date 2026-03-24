@@ -228,6 +228,7 @@
     "title": "Sessions",
     "newSession": "Nouvelle session",
     "noSessionsYet": "Aucune session pour le moment",
+    "nextBuildTitle": "Que devrions-nous construire ensuite ?",
     "noSessionSelected": "Aucune session sélectionnée",
     "selectSession": "Sélectionnez une session dans la barre latérale ou démarrez-en une nouvelle.",
     "followUpPlaceholder": "Envoyer un message de suivi...",
