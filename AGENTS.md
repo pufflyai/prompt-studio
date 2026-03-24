@@ -78,6 +78,7 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 - Do **not** use `memo()`, `useCallback()` or `useMemo()` (we use the react compiler)
 - Extract complex props into an interface
 - Destructure props **inside** the function
+- Prefer components over `render*` helper functions; when UI logic needs extracting, move it into a component instead of a render function
 - Component file names in kebab-case "my-component.tsx"
 
 ### Testing Rules

@@ -82,6 +82,6 @@ describe("settings-panel", () => {
   });
 
   test("ensureValidSettingsSection keeps repositories section", () => {
-    expect(ensureValidSettingsSection("repositories", undefined, undefined)).toBe("repositories");
+    expect(ensureValidSettingsSection("repositories", undefined, undefined, undefined)).toBe("repositories");
   });
 });

@@ -1,14 +1,41 @@
-import { Box, Stack } from "@chakra-ui/react";
+import { Stack } from "@chakra-ui/react";
 import { EmptyState } from "@pstdio/ui";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { type MouseEvent, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { OpenSidebarButton } from "@/features/project/components/open-sidebar-button";
+import { DocsPageContent } from "../components/docs-page-content";
 import { EmptyDocs } from "../components/empty-docs";
 import { LoadingDocs } from "../components/loading-docs";
 import { useDocsContent, useDocsIndex } from "../hooks/use-docs";
-import { DocsTemplateRenderer } from "../renderers/docs-template-renderer";
 import { flattenDocsSidebar, resolveActiveDocEntry, resolveDocsLinkFromHref } from "../utils";
+
+const navigateToDoc = (navigate: ReturnType<typeof useNavigate>, link: string, projectId?: string, replace = false) => {
+  if (projectId) {
+    navigate({
+      to: "/projects/$projectId/docs",
+      params: { projectId },
+      search: { doc: link },
+      replace,
+    });
+    return;
+  }
+
+  navigate({ to: "/docs", search: { doc: link }, replace });
+};
+
+const resolveClickedDocsLink = (target: EventTarget | null, currentLink: string | null) => {
+  if (!(target instanceof HTMLElement)) {
+    return null;
+  }
+
+  const href = target.closest("a")?.getAttribute("href");
+  if (!href) {
+    return null;
+  }
+
+  return resolveDocsLinkFromHref(href, currentLink);
+};
 
 export const DocsPanel = () => {
   const { t } = useTranslation();
@@ -32,17 +59,7 @@ export const DocsPanel = () => {
       return;
     }
 
-    if (resolvedProjectId) {
-      navigate({
-        to: "/projects/$projectId/docs",
-        params: { projectId: resolvedProjectId },
-        search: { doc: activeLink },
-        replace: true,
-      });
-      return;
-    }
-
-    navigate({ to: "/docs", search: { doc: activeLink }, replace: true });
+    navigateToDoc(navigate, activeLink, resolvedProjectId, true);
   }, [activeLink, navigate, resolvedProjectId, routeDoc]);
 
   const handleSelectLink = (link: string) => {
@@ -50,28 +67,11 @@ export const DocsPanel = () => {
       return;
     }
 
-    if (resolvedProjectId) {
-      navigate({ to: "/projects/$projectId/docs", params: { projectId: resolvedProjectId }, search: { doc: link } });
-      return;
-    }
-
-    navigate({ to: "/docs", search: { doc: link } });
+    navigateToDoc(navigate, link, resolvedProjectId);
   };
 
   const handleDocumentClick = (event: MouseEvent<HTMLDivElement>) => {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) {
-      return;
-    }
-
-    const anchor = target.closest("a");
-    const href = anchor?.getAttribute("href");
-
-    if (!href) {
-      return;
-    }
-
-    const nextLink = resolveDocsLinkFromHref(href, activeLink);
+    const nextLink = resolveClickedDocsLink(event.target, activeLink);
     if (!nextLink) {
       return;
     }
@@ -97,30 +97,20 @@ export const DocsPanel = () => {
     return <EmptyDocs />;
   }
 
-  const pageContent = isContentLoading ? (
-    <LoadingDocs />
-  ) : !content && !contentError ? (
-    <EmptyDocs />
-  ) : contentError ? (
-    <EmptyState
-      title={t("docs.unableToLoadDocument")}
-      description={contentError instanceof Error ? contentError.message : t("docs.trySelectingAnother")}
-    />
-  ) : (
-    <Box width="100%" height="100%" onClick={handleDocumentClick}>
-      <DocsTemplateRenderer
-        key={`${content?.path ?? activeLink ?? "docs-empty"}-${activeEntry?.template ?? "markdown"}`}
-        content={content?.content ?? ""}
-        template={activeEntry?.template}
-        markdownPlaceholder={t("docs.noContentAvailable")}
-      />
-    </Box>
-  );
-
   return (
     <Stack height="100%" flex="1" minH="0" position="relative">
       <OpenSidebarButton />
-      {pageContent}
+      <DocsPageContent
+        activeEntry={activeEntry}
+        activeLink={activeLink}
+        content={content}
+        contentError={contentError}
+        isContentLoading={isContentLoading}
+        noContentLabel={t("docs.noContentAvailable")}
+        onDocumentClick={handleDocumentClick}
+        trySelectingAnotherLabel={t("docs.trySelectingAnother")}
+        unableToLoadDocumentLabel={t("docs.unableToLoadDocument")}
+      />
     </Stack>
   );
 };

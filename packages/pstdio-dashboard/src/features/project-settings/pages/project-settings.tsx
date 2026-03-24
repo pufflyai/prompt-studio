@@ -1,4 +1,4 @@
-import { Flex, Stack, Text } from "@chakra-ui/react";
+import { Flex, Stack } from "@chakra-ui/react";
 import { toaster } from "@pstdio/ui";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -9,14 +9,8 @@ import {
   useProjectTicketStatuses,
 } from "@/features/ticket-list/hooks/use-project-tickets";
 import { CreateTemplateDialog } from "../components/create-template-dialog";
-import { HookEditor } from "../components/hook-editor";
-import { ProjectDangerZone } from "../components/project-danger-zone";
-import { ProjectRepositoriesPanel } from "../components/project-repositories-panel";
+import { SettingsContent } from "../components/settings-content";
 import { type SettingsSection, SettingsSidebar } from "../components/settings-sidebar";
-import { SkillViewer } from "../components/skill-viewer";
-import { TagManager } from "../components/tag-manager";
-import { TemplateEditor } from "../components/template-editor";
-import { TicketStatusManager } from "../components/ticket-status-manager";
 import { useProjectHooks, useSaveProjectHook } from "../hooks/use-hooks";
 import { useProjectSkills } from "../hooks/use-skills";
 import { ensureValidSettingsSection, parseSettingsPanel, toSettingsPanel } from "../utils/settings-panel";
@@ -114,76 +108,6 @@ export const ProjectSettings = () => {
     });
   }, [activeSection, navigate, panel, projectId]);
 
-  const renderTagContent = (tagId?: string) => {
-    const tag = tagId ? tags.find((t) => t.id === tagId) : tags[0];
-    if (!tag) {
-      return (
-        <Flex flex="1" justifyContent="center" alignItems="center">
-          <Text textStyle="paragraph/S/regular" color="fg.muted">
-            {tagId ? "Tag not found." : "No tags defined. Create one from the sidebar."}
-          </Text>
-        </Flex>
-      );
-    }
-    return <TagManager key={tag.id} projectId={projectId} tag={tag} onDeleteTag={handleDeleteTag} />;
-  };
-
-  const renderContent = () => {
-    if (!activeSection) {
-      return (
-        <Flex flex="1" justifyContent="center" alignItems="center">
-          <Text textStyle="paragraph/S/regular" color="fg.muted">
-            Select a section from the sidebar.
-          </Text>
-        </Flex>
-      );
-    }
-
-    if (activeSection === "tags") return renderTagContent();
-
-    if (typeof activeSection === "object" && "tag" in activeSection) return renderTagContent(activeSection.tag);
-
-    if (activeSection === "ticket-statuses") {
-      return <TicketStatusManager projectId={projectId} statuses={ticketStatuses ?? []} />;
-    }
-
-    if (activeSection === "repositories") {
-      return <ProjectRepositoriesPanel projectId={projectId} repositories={project?.repositories ?? []} />;
-    }
-
-    if (activeSection === "danger-zone") {
-      return (
-        <Stack padding="lg" gap="lg">
-          <ProjectDangerZone projectId={projectId} projectName={projectName} />
-        </Stack>
-      );
-    }
-
-    if (typeof activeSection === "object" && "hook" in activeSection) {
-      return (
-        <HookEditor
-          key={activeSection.hook}
-          projectId={projectId}
-          hookName={activeSection.hook}
-          onDeleted={handleHookDeleted}
-        />
-      );
-    }
-
-    if (typeof activeSection === "object" && "skill" in activeSection) {
-      return <SkillViewer projectId={projectId} skillName={activeSection.skill} />;
-    }
-
-    return (
-      <TemplateEditor
-        key={activeSection.template}
-        projectId={projectId}
-        templateName={activeSection.template}
-        onDeleted={handleTemplateDeleted}
-      />
-    );
-  };
-
   return (
     <>
       <Flex height="100%" width="100%" minH="0">
@@ -199,7 +123,17 @@ export const ProjectSettings = () => {
           onAddHook={handleAddHook}
         />
         <Stack flex="1" minH="0" overflow="auto">
-          {renderContent()}
+          <SettingsContent
+            activeSection={activeSection}
+            projectId={projectId}
+            projectName={projectName}
+            repositories={project?.repositories ?? []}
+            tags={tags}
+            ticketStatuses={ticketStatuses ?? []}
+            onDeleteTag={handleDeleteTag}
+            onHookDeleted={handleHookDeleted}
+            onTemplateDeleted={handleTemplateDeleted}
+          />
         </Stack>
       </Flex>
 
