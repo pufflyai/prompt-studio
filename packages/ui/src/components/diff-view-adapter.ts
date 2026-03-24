@@ -73,7 +73,7 @@ export const buildDiffViewData = ({
     modified,
     fileLanguage,
     fileLanguage,
-    { context: Number.MAX_SAFE_INTEGER },
+    { context: 3 },
     "pstdio-diff-view",
   );
 

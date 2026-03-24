@@ -90,14 +90,13 @@ export const DiffCard = (props: DiffCardProps) => {
       </Grid>
 
       {isExpanded && (
-        <Box height="400px" bg="bg">
+        <Box bg="bg">
           <DiffEditor
             original={diff.oldContent || ""}
             modified={diff.newContent || ""}
             oldPath={diff.oldPath}
             newPath={diff.newPath}
             sideBySide={false}
-            disableScroll={false}
           />
         </Box>
       )}

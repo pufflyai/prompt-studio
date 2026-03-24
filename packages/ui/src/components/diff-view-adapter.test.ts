@@ -32,4 +32,23 @@ describe("buildDiffViewData", () => {
     expect(data.hunks.length).toBe(1);
     expect(data.hunks[0]).toContain("@@");
   });
+
+  it("uses limited context so hunks are expandable", () => {
+    const lines = Array.from({ length: 30 }, (_, i) => `line ${i + 1}`);
+    const modified = [...lines];
+    modified[15] = "changed line 16";
+
+    const data = buildDiffViewData({
+      original: lines.join("\n"),
+      modified: modified.join("\n"),
+      oldPath: "big.ts",
+      newPath: "big.ts",
+    });
+
+    // With limited context (3), only lines near the change are included
+    const hunkContent = data.hunks.join("\n");
+    expect(hunkContent).not.toContain("line 2\n");
+    expect(hunkContent).not.toContain("line 30");
+    expect(hunkContent).toContain("changed line 16");
+  });
 });
