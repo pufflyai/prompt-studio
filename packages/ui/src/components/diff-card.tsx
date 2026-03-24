@@ -18,45 +18,11 @@ interface DiffCardProps {
   diff: Diff;
 }
 
-const getLanguage = (path: string) => {
-  const ext = path.split(".").pop()?.toLowerCase();
-  switch (ext) {
-    case "ts":
-    case "tsx":
-      return "typescript";
-    case "js":
-    case "jsx":
-      return "javascript";
-    case "json":
-      return "json";
-    case "md":
-      return "markdown";
-    case "py":
-      return "python";
-    case "go":
-      return "go";
-    case "rs":
-      return "rust";
-    case "css":
-      return "css";
-    case "html":
-      return "html";
-    case "sh":
-      return "shell";
-    case "yml":
-    case "yaml":
-      return "yaml";
-    default:
-      return "plaintext";
-  }
-};
-
 export const DiffCard = (props: DiffCardProps) => {
   const { diff } = props;
   const [isExpanded, setIsExpanded] = useState(true);
 
   const filePath = diff.newPath || diff.oldPath || "unknown";
-  const language = getLanguage(filePath);
 
   const additions = diff.additions ?? 0;
   const deletions = diff.deletions ?? 0;
@@ -124,13 +90,13 @@ export const DiffCard = (props: DiffCardProps) => {
       </Grid>
 
       {isExpanded && (
-        <Box height="400px" bg="bg">
+        <Box bg="bg">
           <DiffEditor
             original={diff.oldContent || ""}
             modified={diff.newContent || ""}
-            language={language}
+            oldPath={diff.oldPath}
+            newPath={diff.newPath}
             sideBySide={false}
-            disableScroll={false}
           />
         </Box>
       )}
