@@ -59,6 +59,20 @@ describe("repos service", () => {
     expect(linked).toHaveLength(1);
   });
 
+  test("removeFromProject unlinks a repo from the project", async () => {
+    await setup();
+
+    const project = await projects.create({ name: "TestProject" });
+    const repoA = await repos.registerForProject(project.id, { name: "repo-a", path: "/a" });
+    await repos.registerForProject(project.id, { name: "repo-b", path: "/b" });
+
+    await repos.removeFromProject(project.id, repoA.id);
+
+    const linked = await repos.listByProject(project.id);
+    expect(linked).toHaveLength(1);
+    expect(linked[0].name).toBe("repo-b");
+  });
+
   test("registerForProject links same repo to multiple projects", async () => {
     await setup();
 

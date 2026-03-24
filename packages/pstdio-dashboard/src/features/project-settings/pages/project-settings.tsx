@@ -11,6 +11,7 @@ import {
 import { CreateTemplateDialog } from "../components/create-template-dialog";
 import { HookEditor } from "../components/hook-editor";
 import { ProjectDangerZone } from "../components/project-danger-zone";
+import { ProjectRepositoriesPanel } from "../components/project-repositories-panel";
 import { type SettingsSection, SettingsSidebar } from "../components/settings-sidebar";
 import { SkillViewer } from "../components/skill-viewer";
 import { TagManager } from "../components/tag-manager";
@@ -144,6 +145,10 @@ export const ProjectSettings = () => {
 
     if (activeSection === "ticket-statuses") {
       return <TicketStatusManager projectId={projectId} statuses={ticketStatuses ?? []} />;
+    }
+
+    if (activeSection === "repositories") {
+      return <ProjectRepositoriesPanel projectId={projectId} repositories={project?.repositories ?? []} />;
     }
 
     if (activeSection === "danger-zone") {

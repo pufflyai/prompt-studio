@@ -18,12 +18,11 @@ The old settings PRD described richer settings behavior than the current dashboa
 - Document the current onboarding and global settings flows.
 - Document the global settings sidebar/panel information architecture.
 - Document manual agent add behavior and executable-path constraints.
-- Call out the project settings placeholder plainly.
-- Remove stale expectations about per-project configuration UIs.
+- Document the project settings information architecture including the repositories panel.
 
 ## Non-Goals
 
-- A complete project settings experience.
+- Editing, linking, or unlinking repositories from project settings.
 - In-dashboard template editing.
 - Multi-agent onboarding.
 
@@ -48,7 +47,7 @@ Onboarding blocks the main app until the user selects and configures an agent. T
 5. Global settings must support enabling, disabling, and setting the default agent.
 6. Global settings must support manually adding a supported agent config with an executable path.
 7. Existing configured executable paths must be displayed but not editable.
-8. `/projects/:projectId/settings` must remain explicitly documented as placeholder behavior until a real UI ships.
+8. `/projects/:projectId/settings` must support a read-only repositories panel that shows linked repos with name and path, plus an empty state when none are linked.
 
 ### UX Requirements
 
@@ -70,7 +69,7 @@ Onboarding blocks the main app until the user selects and configures an agent. T
 4. The global settings page loads available agents and configured agents, then renders toggle and default actions for each one inside the `Agents` panel.
 5. Selecting `Add agent manually` opens a flow that captures supported `agent_id` and executable path, then creates/updates the config via setup endpoint.
 6. Existing configured rows show executable path text as read-only (`Not set` when absent).
-7. The per-project settings route currently renders placeholder content only.
+7. The per-project settings route includes a read-only repositories panel showing linked repos (name and path) with an empty state when no repos are linked.
 
 ## Interface
 
@@ -80,7 +79,7 @@ Onboarding blocks the main app until the user selects and configures an agent. T
 | ----- | ------- |
 | `/onboarding` | Initial agent selection and setup. |
 | `/settings` | Global settings shell with sidebar + `Agents` panel. |
-| `/projects/:projectId/settings` | Placeholder project settings route. |
+| `/projects/:projectId/settings` | Project settings with tags, repositories, hooks, skills, templates, and danger zone panels. |
 
 ### Current Actions
 
@@ -95,8 +94,8 @@ Onboarding blocks the main app until the user selects and configures an agent. T
 
 - Onboarding currently supports `opencode` only.
 - Manual add in global settings supports `claude-code` and `opencode` only.
-- Project settings are not implemented yet.
-- Settings behavior is global; there is no shipped per-project settings editor.
+- Project settings include tags, repositories (read-only), hooks, skills, templates, and danger zone.
+- Repository management (add/remove) is handled in global settings, not project settings.
 - Existing configured executable path is read-only in global settings for this phase.
 
 ## Errors

@@ -72,4 +72,16 @@ describe("settings-panel", () => {
     const section = ensureValidSettingsSection(activeSection, undefined, undefined, [{ id: "abc-123" }]);
     expect(section).toBe(activeSection);
   });
+
+  test("parseSettingsPanel parses repositories panel id", () => {
+    expect(parseSettingsPanel("repositories")).toBe("repositories");
+  });
+
+  test("toSettingsPanel serializes repositories section", () => {
+    expect(toSettingsPanel("repositories")).toBe("repositories");
+  });
+
+  test("ensureValidSettingsSection keeps repositories section", () => {
+    expect(ensureValidSettingsSection("repositories", undefined, undefined)).toBe("repositories");
+  });
 });

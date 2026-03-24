@@ -211,6 +211,14 @@
   "projectSettings": {
     "title": "Project Settings",
     "tags": "Tags",
+    "repositories": "Repositories",
+    "repositoriesEmpty": "No repositories linked to this project.",
+    "removeRepository": "Remove repository",
+    "removeRepositoryConfirm": {
+      "headline": "Remove repository?",
+      "notification": "This will unlink \"{{name}}\" from the project. The repository itself will not be deleted.",
+      "button": "Remove"
+    },
     "skills": "Skills",
     "templates": "Templates",
     "createTemplate": "Create template",

@@ -1,6 +1,6 @@
 import type { SidebarActionMenuItem } from "@pstdio/ui";
 import { type SidebarNavigateEvent, SidebarNext, type SidebarNode, type SidebarSection } from "@pstdio/ui";
-import { AlertTriangle, FileText, MessageSquareText, Plus, Tag, Ticket } from "lucide-react";
+import { AlertTriangle, FileText, GitFork, MessageSquareText, Plus, Tag, Ticket } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BackToDashboard } from "@/features/project/components/back-to-dashboard";
 import type { ProjectTemplateAsset, ProjectTemplateAssetType } from "@/features/project/types";
@@ -19,6 +19,8 @@ const TEMPLATE_TYPE_ORDER: ProjectTemplateAssetType[] = ["prompt", "ticket", "do
 export type SettingsSection =
   | "ticket-statuses"
   | "tags"
+  | "danger-zone"
+  | "repositories"
   | "danger-zone"
   | { tag: string }
   | { template: string }
@@ -57,6 +59,7 @@ const resolveActiveNodeId = (activeSection: SettingsSection | null) => {
   if (!activeSection) return null;
   if (activeSection === "ticket-statuses") return "ticket-statuses";
   if (activeSection === "tags") return "tags";
+  if (activeSection === "repositories") return "repositories";
   if (activeSection === "danger-zone") return "danger-zone";
   if (typeof activeSection === "object" && "tag" in activeSection) return `tag:${activeSection.tag}`;
   if (typeof activeSection === "object" && "hook" in activeSection) return `hook:${activeSection.hook}`;
@@ -99,6 +102,16 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
             onAction: () => onCreateTag(),
           },
         ],
+      },
+    ];
+
+    const repositoryNodes: SidebarNode[] = [
+      {
+        id: "repositories",
+        label: t("projectSettings.repositories"),
+        icon: <GitFork size={14} />,
+        isNavigable: true,
+        navigationIntent: { id: "select", payload: "repositories" },
       },
     ];
 
@@ -195,6 +208,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
           },
         ],
       },
+      { id: "repositories", nodes: repositoryNodes },
       { id: "danger", nodes: dangerNodes },
     ];
   };
@@ -204,7 +218,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
     if (!intent) return;
 
     if (intent.id === "select") {
-      onSelectSection(intent.payload as "ticket-statuses" | "tags" | "danger-zone");
+      onSelectSection(intent.payload as "ticket-statuses" | "repositories" | "tags" | "danger-zone");
     }
 
     if (intent.id === "select-template") {
