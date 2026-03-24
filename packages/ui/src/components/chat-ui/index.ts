@@ -15,5 +15,6 @@ export { ChatSkeleton } from "./components/chat-skeleton";
 export type { SessionMessage, SessionMessagePart } from "./components/message-types";
 export type { SendButtonProps } from "./components/send-button";
 export { SendButton } from "./components/send-button";
+export { ChatWorkspaceHub } from "./components/workspace-hub";
 
 export { createSerializedPromptState } from "./utils/editor-state";

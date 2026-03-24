@@ -10,18 +10,9 @@ export const WorkspaceConversationPanel = (props: WorkspaceConversationPanelProp
   const { sessionId, onEditAction } = props;
 
   return (
-    <Stack
-      h="full"
-      flex="1"
-      minW="0"
-      minH="0"
-      px="sm"
-      pb="sm"
-      align="flex-start"
-      data-testid="workspace-conversation-panel"
-    >
+    <Stack h="full" flex="1" minW="0" minH="0" align="flex-start" data-testid="workspace-conversation-panel">
       <Stack flex="1" minH="0" w="full" maxW="52rem">
-        <SessionChatView sessionId={sessionId} onEditAction={onEditAction} />
+        <SessionChatView sessionId={sessionId} onEditAction={onEditAction} showWorkspaceHub={false} />
       </Stack>
     </Stack>
   );

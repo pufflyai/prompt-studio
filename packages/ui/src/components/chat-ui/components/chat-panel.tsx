@@ -36,6 +36,7 @@ interface ChatPanelProps {
   onClearAttachments?: () => void;
   attachmentList?: ReactNode;
   approvalPrompt?: ReactNode;
+  workspaceHub?: ReactNode;
 }
 
 const renderMessage = (message: SessionMessage, streaming: boolean) => {
@@ -67,6 +68,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     onClearAttachments,
     attachmentList,
     approvalPrompt,
+    workspaceHub,
   } = props;
 
   const merged = mergeReasoningToolOnlyMessages(messages);
@@ -75,6 +77,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
   const { groups, leadingResponses } = groupMessagesByTurn(merged);
   const [expandedStickyMessageIds, setExpandedStickyMessageIds] = useState(() => new Set<string>());
   const emptyContent = streaming ? (loadingContent ?? emptyStateContent) : emptyStateContent;
+  const hasWorkspaceHub = Boolean(workspaceHub);
 
   const toggleStickyMessageExpanded = (messageId: string) => {
     setExpandedStickyMessageIds((current) => {
@@ -170,7 +173,8 @@ export const ChatPanel = (props: ChatPanelProps) => {
         <ChatPrimitives.ScrollToBottom aria-label="Scroll to latest message" />
       </ChatPrimitives.Root>
       {approvalPrompt}
-      <Box px="sm">
+      <Stack px="sm" gap={hasWorkspaceHub ? "0" : "xs"}>
+        {workspaceHub}
         <ChatInput
           placeholder={chatInputPlaceholder}
           defaultState={createSerializedPromptState(chatInputDefaultValue)}
@@ -181,8 +185,9 @@ export const ChatPanel = (props: ChatPanelProps) => {
           attachedResources={attachedResources}
           onClearAttachments={onClearAttachments}
           attachmentList={attachmentList}
+          attachedToTop={hasWorkspaceHub}
         />
-      </Box>
+      </Stack>
       <Flex p="2xs" justifyContent="flex-end">
         {repoMenu}
       </Flex>

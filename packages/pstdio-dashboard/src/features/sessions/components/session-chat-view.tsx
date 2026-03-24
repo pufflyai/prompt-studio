@@ -1,16 +1,20 @@
-import { HStack } from "@chakra-ui/react";
-import { ApprovalPrompt, ChatPanel, ChatSkeleton } from "@pstdio/ui/chat-ui";
-import { useParams } from "@tanstack/react-router";
+import { Box, Button, Flex, HStack } from "@chakra-ui/react";
+import { ApprovalPrompt, ChatPanel, ChatSkeleton, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
+import { Link, useParams } from "@tanstack/react-router";
+import { ArrowUpRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/features/project-settings/store";
+import { useTicketAttemptDiffSummary } from "@/features/ticket/hooks/use-ticket-attempt-diff-summary";
 import { RepoBrowserContainer } from "@/features/workspaces/components/repo-browser.container";
 import { apiRequest } from "@/lib/api";
 import { useCreateProjectSession } from "../hooks/use-create-project-session";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useSessionAgent } from "../hooks/use-session-agent";
 import { useSessionStream } from "../hooks/use-session-stream";
+import { useSessionWorkspace } from "../hooks/use-session-workspace";
+import { buildSessionWorkspaceHubModel } from "../utils/workspace-hub";
 import {
   assignPendingFollowUpSession,
   createPendingFollowUpState,
@@ -26,11 +30,12 @@ interface SessionChatViewProps {
   sessionId: string | null;
   onSessionCreated?: (sessionId: string) => void;
   onEditAction?: () => void;
+  showWorkspaceHub?: boolean;
 }
 
 export const SessionChatView = (props: SessionChatViewProps) => {
-  const { t } = useTranslation("projects");
-  const { sessionId, onSessionCreated, onEditAction } = props;
+  const { t } = useTranslation(["projects", "tickets"]);
+  const { sessionId, onSessionCreated, onEditAction, showWorkspaceHub = true } = props;
   const { projectId } = useParams({ strict: false });
 
   const sessionAgent = useSessionAgent(sessionId);
@@ -45,6 +50,8 @@ export const SessionChatView = (props: SessionChatViewProps) => {
   const setSessionDraft = useProjectSettingsStore((state) => state.setSessionDraft);
   const clearSessionDraft = useProjectSettingsStore((state) => state.clearSessionDraft);
   const { messages, isStreaming, approvalRequest, reconnect } = useSessionStream(sessionId);
+  const sessionWorkspace = useSessionWorkspace(sessionId);
+  const { data: workspaceDiffSummary } = useTicketAttemptDiffSummary(showWorkspaceHub ? sessionWorkspace?.id : null);
   const createSession = useCreateProjectSession();
   const followUp = useFollowUpSession();
   const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUpState | null>(null);
@@ -188,6 +195,13 @@ export const SessionChatView = (props: SessionChatViewProps) => {
   const loadingContent = sessionId ? <ChatSkeleton /> : undefined;
   const emptyStateTitle = sessionId ? t("chatInput.session.notFoundTitle") : t("sessions.nextBuildTitle");
   const emptyStateDescription = sessionId ? t("chatInput.session.notFoundDescription") : "";
+  const workspaceHub = showWorkspaceHub
+    ? buildSessionWorkspaceHubModel({
+        projectId,
+        workspace: sessionWorkspace,
+        diffSummary: workspaceDiffSummary,
+      })
+    : null;
 
   return (
     <ChatPanel
@@ -200,11 +214,40 @@ export const SessionChatView = (props: SessionChatViewProps) => {
       chatInputDefaultValue={chatDraft}
       onSubmitMessage={(text: string) => handleSubmitMessage(text)}
       onChatInputChange={(text: string) => setSessionDraft(sessionId, text)}
+      workspaceHub={
+        workspaceHub ? (
+          <ChatWorkspaceHub
+            changesLabel={t("tickets:diff.filesChanged", { count: workspaceHub.fileCount })}
+            additions={workspaceHub.additions}
+            deletions={workspaceHub.deletions}
+            action={
+              <Button size="sm" variant="plain" asChild>
+                <Link to={workspaceHub.href}>
+                  Review changes
+                  <ArrowUpRight size={14} />
+                </Link>
+              </Button>
+            }
+          />
+        ) : undefined
+      }
       repoMenu={
-        <HStack key={sessionId} justify="space-between" align="center" wrap="wrap" w="full">
-          <AgentBrowserContainer sessionId={sessionId} />
+        <Flex
+          key={sessionId}
+          justifyContent="space-between"
+          align="center"
+          gap="2xs"
+          w="full"
+          minW="0"
+          px="xs"
+          pb="xs"
+          wrap="nowrap"
+        >
+          <Box flexShrink="0">
+            <AgentBrowserContainer sessionId={sessionId} />
+          </Box>
           <RepoBrowserContainer sessionId={sessionId} />
-        </HStack>
+        </Flex>
       }
       approvalPrompt={
         approvalRequest ? (

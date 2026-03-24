@@ -11,11 +11,10 @@ const renderSkeletonLines = (widths: string[]) => (
 
 export const ChatSkeleton = () => {
   return (
-    <Stack gap="sm" minH="full" py="xs">
+    <Stack minH="full" py="xs" gap="0">
       <ChatMessage.Root from="user">
         <ChatMessage.Content from="user">{renderSkeletonLines(["72%", "46%"])}</ChatMessage.Content>
       </ChatMessage.Root>
-
       <ChatMessage.Root from="assistant">
         <ChatMessage.Content from="assistant">{renderSkeletonLines(["76%", "62%", "40%"])}</ChatMessage.Content>
       </ChatMessage.Root>

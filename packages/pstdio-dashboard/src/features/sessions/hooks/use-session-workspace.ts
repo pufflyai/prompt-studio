@@ -3,11 +3,13 @@ import { asSyncedRows, eq, getCollection, type SyncedRow, useLiveQuery } from "@
 interface SessionWorkspace {
   id: string;
   branch: string | null;
+  workspaceShorthand: string | null;
 }
 
 const toSessionWorkspace = (row: SyncedRow): SessionWorkspace => ({
   id: row.id,
   branch: (row.branch as string) ?? null,
+  workspaceShorthand: (row.workspace_shorthand as string) ?? null,
 });
 
 export const useSessionWorkspace = (sessionId: string | null) => {

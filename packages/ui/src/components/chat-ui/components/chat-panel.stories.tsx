@@ -4,6 +4,7 @@ import { type ComponentProps, useEffect, useRef, useState } from "react";
 import type { SessionMessage } from "../agent-types";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
 import { ChatPanel } from "./chat-panel";
+import { ChatWorkspaceHub } from "./workspace-hub";
 
 const conversationMessages = rawConversationMessages as unknown as SessionMessage[];
 
@@ -261,6 +262,7 @@ function MockChatPanelRenderer(props: ChatPanelProps) {
     chatInputPlaceholder,
     actions,
     repoMenu,
+    workspaceHub,
   } = props;
 
   const [messages, setMessages] = useState<SessionMessage[]>(initialMessages);
@@ -318,6 +320,7 @@ function MockChatPanelRenderer(props: ChatPanelProps) {
       onSubmitMessage={handleSubmitMessage}
       actions={actions}
       repoMenu={repoMenu}
+      workspaceHub={workspaceHub}
     />
   );
 }
@@ -431,5 +434,28 @@ export const LongStickyUserPrompt: Story = {
   args: {
     ...Empty.args,
     messages: longPromptMessages,
+  },
+};
+
+export const ConversationWithWorkspaceHub: Story = {
+  render: (args) => (
+    <Box {...panelContainerStyles}>
+      <MockChatPanelRenderer {...args} />
+    </Box>
+  ),
+  args: {
+    ...Conversation.args,
+    workspaceHub: (
+      <ChatWorkspaceHub
+        changesLabel="9 files changed"
+        additions={83}
+        deletions={9}
+        action={
+          <Button size="sm" variant="plain">
+            Review changes
+          </Button>
+        }
+      />
+    ),
   },
 };
