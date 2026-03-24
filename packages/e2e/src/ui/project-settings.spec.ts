@@ -62,7 +62,7 @@ test.describe("Project settings", () => {
     await bypassOnboarding(page);
     await page.goto("/projects");
     await page.getByText(project.name, { exact: true }).click();
-    await page.waitForURL(`**/projects/${project.id}/docs`);
+    await page.waitForURL(`**/projects/${project.id}/tickets`);
     await page.getByRole("option", { name: "Project settings" }).click();
     await page.waitForURL(`**/projects/${project.id}/settings*`);
 

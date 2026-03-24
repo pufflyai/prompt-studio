@@ -7,6 +7,7 @@ const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 const pickerLoadTimeoutMs = 15_000;
 const projectCreationTimeoutMs = 25_000;
+const resolveProjectDefaultPath = (projectId: string) => `/projects/${projectId}/tickets`;
 
 const bypassOnboarding = async (page: import("@playwright/test").Page) => {
   await page.addInitScript(() => {
@@ -185,8 +186,8 @@ test.describe("Project list", () => {
     await page.goto("/projects");
     await page.getByText("Nav Test Project", { exact: true }).click();
 
-    await page.waitForURL(`**/projects/${project.id}/docs`);
-    expect(page.url()).toContain(`/projects/${project.id}/docs`);
+    await page.waitForURL(`**${resolveProjectDefaultPath(project.id)}`);
+    expect(page.url()).toContain(resolveProjectDefaultPath(project.id));
   });
 });
 
@@ -258,8 +259,8 @@ test.describe("Project creation", () => {
     const createdProjectResponse = await createProjectDone;
     const createdProject = (await createdProjectResponse.json()) as { id: string };
 
-    await page.waitForURL(`**/projects/${createdProject.id}/docs`);
-    expect(page.url()).toContain(`/projects/${createdProject.id}/docs`);
+    await page.waitForURL(`**${resolveProjectDefaultPath(createdProject.id)}`);
+    expect(page.url()).toContain(resolveProjectDefaultPath(createdProject.id));
   });
 
   test("seeds bundled templates when creating a project via the dialog", async ({ page, request }) => {
@@ -355,8 +356,8 @@ test.describe("Project creation", () => {
     const createdProjectResponse = await createProjectDone;
     const createdProject = (await createdProjectResponse.json()) as { id: string };
 
-    await page.waitForURL(`**/projects/${createdProject.id}/docs`);
-    expect(page.url()).toContain(`/projects/${createdProject.id}/docs`);
+    await page.waitForURL(`**${resolveProjectDefaultPath(createdProject.id)}`);
+    expect(page.url()).toContain(resolveProjectDefaultPath(createdProject.id));
   });
 
   test("installs skills in the repo when creating a project with a configured agent", async ({ page, request }) => {
@@ -390,8 +391,8 @@ test.describe("Project creation", () => {
 
     // Wait for repo registration to complete (skills are installed during this call)
     await repoRegistrationDone;
-    await page.waitForURL(`**/projects/${createdProject.id}/docs`);
-    expect(page.url()).toContain(`/projects/${createdProject.id}/docs`);
+    await page.waitForURL(`**${resolveProjectDefaultPath(createdProject.id)}`);
+    expect(page.url()).toContain(resolveProjectDefaultPath(createdProject.id));
 
     // verify skills were installed in the repo
     expect(existsSync(join(repoPath, ".opencode", "skills", "create-ticket", "SKILL.md"))).toBe(true);
