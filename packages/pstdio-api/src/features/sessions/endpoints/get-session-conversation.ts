@@ -15,11 +15,18 @@ const getPersistedSessionMessages = async (sessionFileId: string, deps: RouteDep
   return JSON.parse(readFileSync(file.storage_path, "utf-8")) as SessionMessage[];
 };
 
-const getAgentMessages = async (agentId: string, agentSessionId: string, projectId: string, deps: RouteDeps) => {
+const getAgentMessages = async (
+  agentId: string,
+  agentSessionId: string,
+  projectId: string,
+  sessionId: string,
+  deps: RouteDeps,
+) => {
   const agent = deps.agentRegistry.get(agentId as AgentId);
   if (!agent) return null;
 
-  const cwd = await resolveSessionCwd(deps, projectId);
+  const workspace = await deps.workspacesService.getBySessionId(sessionId);
+  const cwd = await resolveSessionCwd(deps, projectId, workspace?.id);
   return agent.getMessages(agentSessionId, cwd ? { cwd } : undefined);
 };
 
@@ -70,6 +77,7 @@ export const getSessionConversationHandler = (deps: RouteDeps) => {
         session.agent,
         session.agent_session_id,
         session.project_id,
+        session.id,
         deps,
       ).catch(() => null);
       messages = agentMessages ?? persistedMessages;

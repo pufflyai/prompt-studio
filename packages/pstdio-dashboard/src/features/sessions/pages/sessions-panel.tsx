@@ -3,22 +3,18 @@ import { HorizontalMenuStack, Tooltip } from "@pstdio/ui";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { PenBox, SquareArrowOutDownRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { AgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
 import { BackToDashboard } from "@/features/project/components/back-to-dashboard";
 import { useProjectSettingsStore } from "@/features/project-settings/store";
-import { RepoBrowserContainer } from "@/features/workspaces/components/repo-browser.container";
 import { SessionActionMenu } from "../components/session-action-menu";
 import { SessionChatView } from "../components/session-chat-view";
 import { SessionsList } from "../components/sessions-list";
 import { useArchiveSession } from "../hooks/use-archive-session";
-import { useCreateProjectSession } from "../hooks/use-create-project-session";
 import { useProjectSession } from "../hooks/use-project-session";
 import { useProjectSessions } from "../hooks/use-project-sessions";
-import { useSessionWorkspace } from "../hooks/use-session-workspace";
 import { downloadSessionJson } from "../utils/session-download";
 import { getSessionBubbleReturnPath } from "../utils/sessions-route";
 import { getVisibleSessions } from "../utils/visible-sessions";
-import { createSessionFromPrompt, openSessionBubbleAndGoBack } from "./sessions-panel-actions";
+import { openSessionBubbleAndGoBack } from "./sessions-panel-actions";
 
 export const SessionsPanel = () => {
   const { t } = useTranslation("projects");
@@ -27,16 +23,11 @@ export const SessionsPanel = () => {
   const setSessionModalState = useProjectSettingsStore((state) => state.setSessionModalState);
   const setSelectedSessionId = useProjectSettingsStore((state) => state.setSelectedSessionId);
   const lastNonSessionsPath = useProjectSettingsStore((state) => state.lastNonSessionsPath);
-  const lastSelectedAgent = useProjectSettingsStore((state) => state.lastSelectedAgent);
-  const lastSelectedModels = useProjectSettingsStore((state) => state.lastSelectedModels);
   const selectedSessionId = typeof sessionId === "string" ? sessionId : null;
-  const createSession = useCreateProjectSession();
-  const model = lastSelectedModels[0] ?? undefined;
 
   const { data: sessions = [], isLoading } = useProjectSessions(projectId);
   const visibleSessions = getVisibleSessions(sessions);
   const { data: selectedSessionDetails } = useProjectSession(projectId, selectedSessionId);
-  const workspace = useSessionWorkspace(selectedSessionId);
   const archiveSession = useArchiveSession();
 
   const selectedSession = visibleSessions.find((s) => s.id === selectedSessionId) ?? null;
@@ -44,17 +35,6 @@ export const SessionsPanel = () => {
 
   const handleSelectSession = (nextSessionId: string) => {
     navigate({ to: `/projects/${projectId}/sessions/${nextSessionId}` });
-  };
-
-  const handleCreateSession = (prompt: string) => {
-    createSessionFromPrompt({
-      projectId,
-      prompt,
-      agent: lastSelectedAgent,
-      model,
-      createSession: createSession.mutate,
-      openSession: handleSelectSession,
-    });
   };
 
   const handleOpenInBubble = () => {
@@ -136,16 +116,7 @@ export const SessionsPanel = () => {
 
           <Stack flex="1" minH="0" px="sm" pb="sm" align="flex-start">
             <Stack flex="1" minH="0" w="full" maxW="52rem">
-              <SessionChatView
-                sessionId={selectedSessionId}
-                onCreateSession={handleCreateSession}
-                repoMenu={
-                  <HStack justify="space-between" align="center" wrap="wrap" w="full">
-                    <AgentBrowserContainer />
-                    <RepoBrowserContainer lockedBranch={workspace?.branch} />
-                  </HStack>
-                }
-              />
+              <SessionChatView sessionId={selectedSessionId} onSessionCreated={handleSelectSession} />
             </Stack>
           </Stack>
         </Stack>

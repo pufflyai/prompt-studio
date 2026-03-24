@@ -1,6 +1,5 @@
 import { Stack } from "@chakra-ui/react";
-import { useSessionWorkspace } from "@/features/sessions/hooks/use-session-workspace";
-import { SessionChat } from "@/features/workspaces/components/session-chat";
+import { SessionChatView } from "@/features/sessions/components/session-chat-view";
 
 interface WorkspaceConversationPanelProps {
   sessionId: string | null;
@@ -9,7 +8,6 @@ interface WorkspaceConversationPanelProps {
 
 export const WorkspaceConversationPanel = (props: WorkspaceConversationPanelProps) => {
   const { sessionId, onEditAction } = props;
-  const workspace = useSessionWorkspace(sessionId);
 
   return (
     <Stack
@@ -23,7 +21,7 @@ export const WorkspaceConversationPanel = (props: WorkspaceConversationPanelProp
       data-testid="workspace-conversation-panel"
     >
       <Stack flex="1" minH="0" w="full" maxW="52rem">
-        <SessionChat sessionId={sessionId} lockedBranch={workspace?.branch} onEditAction={onEditAction} />
+        <SessionChatView sessionId={sessionId} onEditAction={onEditAction} />
       </Stack>
     </Stack>
   );

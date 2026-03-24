@@ -240,12 +240,10 @@ const queuePostCreateHook = (
       workspaceId: input.workspace.id,
       existingStartupLogFileId: input.workspace.startup_log_file_id,
     },
-  ).then((startupLogFileId) => {
+  ).then(async (startupLogFileId) => {
     if (startupLogFileId && startupLogFileId !== input.workspace.startup_log_file_id) {
-      deps.eventBus.emit("workspaces", "set", {
-        ...input.workspace,
-        startup_log_file_id: startupLogFileId,
-      });
+      const current = await deps.workspacesService.get(input.workspace.id);
+      if (current) deps.eventBus.emit("workspaces", "set", current);
     }
   });
 };

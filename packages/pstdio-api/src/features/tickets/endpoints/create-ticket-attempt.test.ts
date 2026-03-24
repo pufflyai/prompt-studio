@@ -201,4 +201,63 @@ describe("POST /v1/tickets/:id/attempts", () => {
     const logContent = await logRes.text();
     expect(logContent).toContain("post-create hook ran");
   });
+
+  test("post-create hook does not overwrite workspace session_id", async () => {
+    const { app, projectId, createGitRepo, eventBus } = context;
+    const repoRoot = createGitRepo("attempt-hook-session-id-repo");
+
+    const { mkdirSync, writeFileSync } = await import("node:fs");
+    const hooksDir = join(repoRoot, ".pstdio", "hooks");
+    mkdirSync(hooksDir, { recursive: true });
+    writeFileSync(join(hooksDir, "post-create"), 'echo "hook ran" && echo "ok" > hook-marker.txt');
+
+    const repoRes = await app.request(`/v1/projects/${projectId}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "attempt-hook-session-id-repo", path: repoRoot }),
+    });
+    expect(repoRes.status).toBe(201);
+    const repo = await repoRes.json();
+
+    const ticket = await createTicket();
+
+    // Capture all workspace events emitted via the event bus
+    const workspaceEvents: Array<{ session_id: unknown }> = [];
+    const unsubscribe = eventBus.subscribe((event) => {
+      if (event.table === "workspaces" && event.op === "set") {
+        workspaceEvents.push(event.data as { session_id: unknown });
+      }
+    });
+
+    const attemptRes = await app.request(`/v1/tickets/${ticket.id}/attempts`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        repo_id: repo.id,
+        agent: "fake",
+        prompt: "Implement ticket",
+        mode: "worktree",
+      }),
+    });
+    expect(attemptRes.status).toBe(201);
+    const attempt = await attemptRes.json();
+    expect(attempt.session).not.toBeNull();
+
+    // Wait for the post-create hook to finish and emit
+    const markerPath = join(attempt.workspace.worktree_path, "hook-marker.txt");
+    await waitForFile(markerPath);
+    await waitFor(async () => {
+      const res = await app.request(`/v1/workspaces/${attempt.workspace.id}/startup-log`, { method: "GET" });
+      return res.status === 200;
+    });
+
+    unsubscribe();
+
+    // Every workspace event after the session was linked must preserve session_id
+    const eventsAfterSessionLinked = workspaceEvents.filter((e) => e.session_id !== null);
+    expect(eventsAfterSessionLinked.length).toBeGreaterThan(0);
+
+    const lastEvent = workspaceEvents[workspaceEvents.length - 1];
+    expect(lastEvent.session_id).toBe(attempt.session.id);
+  });
 });

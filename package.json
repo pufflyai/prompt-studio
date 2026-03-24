@@ -20,6 +20,7 @@
     "format": "biome check --write .",
     "format:check": "biome check .",
     "clean": "find . -type d \\( -name node_modules -o -name dist -o -name .cache \\) -prune -exec rm -rf '{}' + && rm -rf .nx",
+    "reset": "bun run clean && bun install && bun run build",
     "knip": "knip",
     "setup:demo": "bun run --cwd scripts setup-demo-project",
     "dev": "PSTDIO_DISABLE_EMBED_MANIFEST=1 bun --watch packages/pstdio/src/index.ts -- serve & VITE_API_BASE_URL= bun run --cwd packages/pstdio-dashboard dev & wait",

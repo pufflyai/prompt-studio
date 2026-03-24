@@ -145,7 +145,7 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
               )}
               <Text textStyle="label/S/medium">{resolvedTitle}</Text>
             </Flex>
-            <Dialog.CloseTrigger>
+            <Dialog.CloseTrigger asChild>
               <CloseButton size="sm" />
             </Dialog.CloseTrigger>
           </Dialog.Header>

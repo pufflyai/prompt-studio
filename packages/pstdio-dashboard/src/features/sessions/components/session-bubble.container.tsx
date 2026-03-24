@@ -1,14 +1,10 @@
-import { HStack, IconButton } from "@chakra-ui/react";
+import { IconButton } from "@chakra-ui/react";
 import { Tooltip } from "@pstdio/ui";
 import { useParams } from "@tanstack/react-router";
 import { PenBox } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { AgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
 import { useProjectSettingsStore } from "@/features/project-settings/store";
-import { RepoBrowserContainer } from "@/features/workspaces/components/repo-browser.container";
-import { useCreateProjectSession } from "../hooks/use-create-project-session";
 import { useProjectSessions } from "../hooks/use-project-sessions";
-import { useSessionWorkspace } from "../hooks/use-session-workspace";
 import { SessionBubble } from "./session-bubble";
 import { SessionBubbleButton } from "./session-bubble-button";
 import { SessionChatView } from "./session-chat-view";
@@ -21,23 +17,8 @@ export const SessionBubbleContainer = () => {
   const setSessionModalState = useProjectSettingsStore((s) => s.setSessionModalState);
   const selectedSessionId = useProjectSettingsStore((s) => s.selectedSessionId);
   const setSelectedSessionId = useProjectSettingsStore((s) => s.setSelectedSessionId);
-  const lastSelectedAgent = useProjectSettingsStore((s) => s.lastSelectedAgent);
-  const lastSelectedModels = useProjectSettingsStore((s) => s.lastSelectedModels);
 
   const { data: sessions = [] } = useProjectSessions(projectId);
-  const workspace = useSessionWorkspace(selectedSessionId);
-  const createSession = useCreateProjectSession();
-
-  const agent = lastSelectedAgent;
-  const model = lastSelectedModels[0] ?? undefined;
-
-  const handleCreateSession = (prompt: string) => {
-    if (!projectId || !agent) return;
-    createSession.mutate(
-      { projectId, prompt, agent, model },
-      { onSuccess: ({ sessionId }) => setSelectedSessionId(sessionId) },
-    );
-  };
 
   if (sessionModalState === "closed") {
     return <SessionBubbleButton onClick={() => setSessionModalState("bubble")} />;
@@ -72,18 +53,7 @@ export const SessionBubbleContainer = () => {
         </>
       }
     >
-      <SessionChatView
-        sessionId={selectedSessionId}
-        agent={agent}
-        model={model}
-        onCreateSession={handleCreateSession}
-        repoMenu={
-          <HStack justify="space-between" align="center" wrap="wrap" w="full">
-            <AgentBrowserContainer />
-            <RepoBrowserContainer lockedBranch={workspace?.branch} />
-          </HStack>
-        }
-      />
+      <SessionChatView sessionId={selectedSessionId} onSessionCreated={setSelectedSessionId} />
     </SessionBubble>
   );
 };

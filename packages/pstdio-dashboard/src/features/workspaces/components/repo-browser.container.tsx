@@ -5,11 +5,12 @@ import { useProjectRepositories } from "@/features/project/hooks/use-project";
 import { useRepoBranches } from "@/features/project/hooks/use-repo-branches";
 import type { RepoBranch } from "@/features/project/types";
 import { useProjectSettingsStore } from "@/features/project-settings/store";
+import { useSessionWorkspace } from "@/features/sessions/hooks/use-session-workspace";
 import { RepoBrowser } from "./repo-browser";
 
 interface RepoBrowserContainerProps {
+  sessionId?: string | null;
   isDisabled?: boolean;
-  lockedBranch?: string | null;
   onRepoChange?: (repoId: string) => void;
   onBranchChange?: (branch: string) => void;
 }
@@ -96,16 +97,19 @@ const resolveBranchState = (options: ResolveBranchStateOptions) => {
 };
 
 export const RepoBrowserContainer = (props: RepoBrowserContainerProps) => {
-  const { isDisabled = false, lockedBranch, onRepoChange, onBranchChange } = props;
+  const { sessionId, isDisabled = false, onRepoChange, onBranchChange } = props;
   const { t } = useTranslation("projects");
   const { projectId } = useParams({ strict: false });
+
+  const workspace = useSessionWorkspace(sessionId ?? null);
+  const lockedBranch = workspace?.branch ?? null;
+  const isLocked = lockedBranch != null;
 
   const lastSelectedRepo = useProjectSettingsStore((s) => s.lastSelectedRepo);
   const setLastSelectedRepo = useProjectSettingsStore((s) => s.setLastSelectedRepo);
   const setLastSelectedBranch = useProjectSettingsStore((s) => s.setLastSelectedBranch);
 
   const [selectedRepositoryId, setSelectedRepositoryId] = useState(lastSelectedRepo);
-  const isLocked = Boolean(lockedBranch);
   const [selectedBranch, setSelectedBranch] = useState(lockedBranch ?? "");
   const [hasUserSelectedBranch, setHasUserSelectedBranch] = useState(false);
 
@@ -142,6 +146,7 @@ export const RepoBrowserContainer = (props: RepoBrowserContainerProps) => {
   });
   const currentBranch = branches.find((branch) => branch.isCurrent)?.name;
 
+  // Sync when locked branch changes (workspace loads or switches)
   useEffect(() => {
     if (!isLocked || !lockedBranch || selectedBranch === lockedBranch) return;
     setSelectedBranch(lockedBranch);
@@ -205,7 +210,7 @@ export const RepoBrowserContainer = (props: RepoBrowserContainerProps) => {
         label: getBranchLabel(branch, t("chatInput.branch.tags.current"), t("chatInput.branch.tags.remote")),
         value: branch.name,
       }))}
-      selectedBranch={selectedBranch}
+      selectedBranch={isLocked ? (lockedBranch ?? "") : selectedBranch}
       onSelectBranch={handleSelectBranch}
       isDisabled={isDisabled || isLocked}
       isReposLoading={isRepositoriesPending}

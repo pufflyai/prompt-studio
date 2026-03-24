@@ -1,10 +1,15 @@
+import { HStack } from "@chakra-ui/react";
 import { ApprovalPrompt, ChatPanel } from "@pstdio/ui/chat-ui";
-import type { ReactNode } from "react";
+import { useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/features/project-settings/store";
+import { RepoBrowserContainer } from "@/features/workspaces/components/repo-browser.container";
 import { apiRequest } from "@/lib/api";
+import { useCreateProjectSession } from "../hooks/use-create-project-session";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
+import { useSessionAgent } from "../hooks/use-session-agent";
 import { useSessionStream } from "../hooks/use-session-stream";
 import {
   createPendingFollowUpState,
@@ -17,22 +22,28 @@ const EDIT_ACTION_TYPES = new Set(["write", "execute"]);
 
 interface SessionChatViewProps {
   sessionId: string | null;
-  agent?: string;
-  model?: string;
-  onCreateSession?: (prompt: string) => void;
+  onSessionCreated?: (sessionId: string) => void;
   onEditAction?: () => void;
-  repoMenu?: ReactNode;
 }
 
 export const SessionChatView = (props: SessionChatViewProps) => {
   const { t } = useTranslation("projects");
-  const { sessionId, agent, model, onCreateSession, onEditAction, repoMenu } = props;
+  const { sessionId, onSessionCreated, onEditAction } = props;
+  const { projectId } = useParams({ strict: false });
+
+  const sessionAgent = useSessionAgent(sessionId);
+  const lastSelectedAgent = useProjectSettingsStore((s) => s.lastSelectedAgent);
+  const lastSelectedModels = useProjectSettingsStore((s) => s.lastSelectedModels);
+  const agent = sessionId && sessionAgent ? sessionAgent : lastSelectedAgent;
+  const model = lastSelectedModels[0] ?? undefined;
+
   const projectSettingsStore = useProjectSettingsStoreApi();
   const draftKey = sessionId ?? "__new__";
   const [chatDraft, setChatDraft] = useState(() => projectSettingsStore.getState().chatDraftsBySession[draftKey] ?? "");
   const setSessionDraft = useProjectSettingsStore((state) => state.setSessionDraft);
   const clearSessionDraft = useProjectSettingsStore((state) => state.clearSessionDraft);
   const { messages, isStreaming, approvalRequest, reconnect } = useSessionStream(sessionId);
+  const createSession = useCreateProjectSession();
   const followUp = useFollowUpSession();
   const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUpState | null>(null);
   const pendingIdRef = useRef(0);
@@ -82,9 +93,13 @@ export const SessionChatView = (props: SessionChatViewProps) => {
 
   const handleSubmitMessage = (text: string) => {
     if (!sessionId) {
+      if (!projectId || !agent) return;
       clearSessionDraft(null);
       setChatDraft("");
-      onCreateSession?.(text);
+      createSession.mutate(
+        { projectId, prompt: text, agent, model },
+        { onSuccess: ({ sessionId }) => onSessionCreated?.(sessionId) },
+      );
       return;
     }
 
@@ -138,7 +153,12 @@ export const SessionChatView = (props: SessionChatViewProps) => {
       chatInputDefaultValue={chatDraft}
       onSubmitMessage={(text: string) => handleSubmitMessage(text)}
       onChatInputChange={(text: string) => setSessionDraft(sessionId, text)}
-      repoMenu={repoMenu}
+      repoMenu={
+        <HStack key={sessionId} justify="space-between" align="center" wrap="wrap" w="full">
+          <AgentBrowserContainer sessionId={sessionId} />
+          <RepoBrowserContainer sessionId={sessionId} />
+        </HStack>
+      }
       approvalPrompt={
         approvalRequest ? (
           <ApprovalPrompt
