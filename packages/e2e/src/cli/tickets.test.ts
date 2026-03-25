@@ -200,6 +200,35 @@ describe("pstdio tickets save", () => {
   );
 
   test(
+    "persists parent_id from ticket frontmatter",
+    () => {
+      const repo = createInitializedRepo("tk-save-parent");
+
+      const parentOutput = run('tickets create --content "Parent ticket"', repo);
+      const parentShorthand = parentOutput.match(/Created ticket (\S+)/)![1];
+
+      const childOutput = run('tickets write --title "Child ticket"', repo);
+      const childShorthand = childOutput.match(/Created ticket (\S+)/)![1];
+
+      const ticketFile = join(findTicketDir(repo, childShorthand), "ticket.md");
+      const content = readFileSync(ticketFile, "utf8");
+      const updatedContent = content.replace(
+        "---\n\n# Child ticket",
+        `parent_id: "${parentShorthand}"\n---\n\n# Child ticket`,
+      );
+      writeFileSync(ticketFile, updatedContent);
+
+      const saveOutput = run(`tickets save --id ${childShorthand}`, repo);
+      expect(saveOutput).toContain(`Saved ticket ${childShorthand}`);
+
+      const listOutput = run(`tickets list --parent-id ${parentShorthand}`, repo);
+      expect(listOutput).toContain(childShorthand);
+      expect(listOutput).toContain("child-ticket");
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
     "fails for nonexistent ticket",
     () => {
       const repo = createInitializedRepo("tk-save-missing");

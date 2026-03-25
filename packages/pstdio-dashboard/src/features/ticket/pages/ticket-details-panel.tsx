@@ -29,6 +29,7 @@ import {
   buildRefineTicketPrompt,
 } from "../utils/build-prompts";
 import { openTicketSessionBubble } from "../utils/open-ticket-session-bubble";
+import { resolveParentTicketReference } from "../utils/resolve-parent-ticket-reference";
 import { isTicketContentReady } from "../utils/ticket-content-ready";
 import { resolveTicketDetailsState } from "../utils/ticket-details-state";
 import {
@@ -58,11 +59,6 @@ const findLatestAttempt = <T extends { updatedAt: string }>(attempts: T[]) => {
   }
 
   return latestAttempt;
-};
-
-const findParentTicket = <T extends { id: string }>(tickets: T[], parentId: string | null | undefined) => {
-  if (!parentId) return null;
-  return tickets.find((ticket) => ticket.id === parentId) ?? null;
 };
 
 const toTicketTemplates = (templateAssets: Array<{ id: string; name: string; templateType: string }> | undefined) =>
@@ -97,7 +93,7 @@ export const TicketDetailsPanel = () => {
     isTicketsLoading,
   });
   const ticket = ticketState.ticket;
-  const parentTicket = findParentTicket(allProjectTickets, ticket?.parentId);
+  const parentReference = resolveParentTicketReference(allProjectTickets, ticket?.parentId);
   const ticketId = ticket?.id ?? "";
   const ticketFiles = useTicketFiles(ticket?.id);
   const selectableFiles = buildSelectableTicketFiles(ticketFiles.data);
@@ -217,7 +213,7 @@ export const TicketDetailsPanel = () => {
     });
   };
 
-  const breadcrumbs = buildTicketBreadcrumbs(ticket.shorthand, parentTicket?.shorthand ?? null, projectId);
+  const breadcrumbs = buildTicketBreadcrumbs(ticket.shorthand, parentReference.shorthand, projectId);
 
   return (
     <Stack gap="0" height="100%">

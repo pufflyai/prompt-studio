@@ -4,11 +4,16 @@ import { resolveProjectId as defaultResolveProjectId } from "@/features/projects
 import { updateTicket as defaultUpdateTicket } from "@/features/tickets/api/update-ticket";
 import { uploadTicketFile as defaultUploadTicketFile } from "@/features/tickets/api/upload-ticket-file";
 import { extractDisplayTitle } from "@/features/tickets/display-title";
-import { listTicketFiles, readTicketAttachment, readTicketFile } from "@/features/tickets/local-ticket";
+import {
+  listTicketFiles,
+  readTicketAttachment,
+  readTicketFile,
+  writeTicketFile,
+} from "@/features/tickets/local-ticket";
 import { resolveStatusId as defaultResolveStatusId } from "@/features/tickets/resolve-status-id";
 import { resolveTagIds as defaultResolveTagIds } from "@/features/tickets/resolve-tag-ids";
 import { resolveTicketByShorthand as defaultResolveTicketByShorthand } from "@/features/tickets/resolve-ticket-by-shorthand";
-import { parseFrontmatter, stripFrontmatter } from "@/features/tickets/ticket-frontmatter";
+import { applyFrontmatterValues, parseFrontmatter, stripFrontmatter } from "@/features/tickets/ticket-frontmatter";
 
 export const command = "save";
 export const describe = "Save local ticket content and files to the database";
@@ -61,6 +66,9 @@ const uploadLocalTicketFiles = async (deps: Deps, root: string, shorthand: strin
   return localFiles.length;
 };
 
+const markLocalTicketAsSaved = (content: string) =>
+  applyFrontmatterValues(["---", "draft: false", "---"].join("\n"), content);
+
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<SaveArgs>) => {
@@ -90,14 +98,17 @@ export const createHandler =
     });
 
     await deps.updateTicket(API_URL, ticket.id, {
+      blocked_reason: frontmatter.blocked_reason,
       file_id: uploaded.id,
       display_title: extractDisplayTitle(bodyContent),
       draft: false,
+      parent_id: frontmatter.parent_id,
       tag_ids: tagIds,
       status_id: statusId,
     });
 
     const uploadedCount = await uploadLocalTicketFiles(deps, root, argv.id, ticket.id);
+    writeTicketFile(root, argv.id, markLocalTicketAsSaved(content));
 
     deps.log(`Saved ticket ${argv.id}`);
     if (uploadedCount > 0) deps.log(`Uploaded ${uploadedCount} ticket files`);

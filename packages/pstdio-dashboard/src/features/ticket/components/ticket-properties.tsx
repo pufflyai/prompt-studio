@@ -3,6 +3,7 @@ import { ItemSection, Properties } from "@pstdio/ui";
 import { useTranslation } from "react-i18next";
 import type { Project } from "@/features/project/types";
 import type { Ticket } from "@/features/ticket-list/types";
+import { resolveParentTicketReference } from "../utils/resolve-parent-ticket-reference";
 import { getTimeFormat } from "../utils/time-format";
 import { SingleTagSelector } from "./single-tag-selector";
 import { TicketLink } from "./ticket-link";
@@ -33,8 +34,8 @@ export const TicketProperties = (props: TicketPropertiesProps) => {
   const isBlocked = ticket.status.trim().toLowerCase() === "blocked";
 
   const ticketByShorthand = new Map(tickets.map((projectTicket) => [projectTicket.shorthand, projectTicket]));
-  const ticketById = new Map(tickets.map((projectTicket) => [projectTicket.id, projectTicket]));
   const blockedReason = ticket.blockedReason?.trim() || "-";
+  const parentReference = resolveParentTicketReference(tickets, ticket.parentId);
 
   const buildTicketLinks = (value: string | null | undefined) => {
     const shorthands = parseShorthands(value);
@@ -67,8 +68,6 @@ export const TicketProperties = (props: TicketPropertiesProps) => {
     );
   };
 
-  const parentTicket = ticket.parentId ? ticketById.get(ticket.parentId) : null;
-
   const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
   const tagItems = projectTicketTags.map((tag) => ({
@@ -95,12 +94,12 @@ export const TicketProperties = (props: TicketPropertiesProps) => {
           { label: t("ticketPanel.fields.dependsOn"), value: buildTicketLinks(ticket.dependsOn) },
           {
             label: t("ticketPanel.fields.parent"),
-            value: parentTicket ? (
+            value: parentReference.shorthand ? (
               <TicketLink
-                label={parentTicket.shorthand}
-                title={parentTicket.title}
-                onSelect={() => onSelectTicket?.(parentTicket.id)}
-                isDisabled={!onSelectTicket}
+                label={parentReference.shorthand}
+                title={parentReference.ticket?.title ?? parentReference.shorthand}
+                onSelect={() => parentReference.ticket && onSelectTicket?.(parentReference.ticket.id)}
+                isDisabled={!parentReference.ticket || !onSelectTicket}
               />
             ) : (
               <Button size="sm" variant="subtle" disabled>

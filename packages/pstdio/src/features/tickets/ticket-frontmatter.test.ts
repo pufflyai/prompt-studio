@@ -102,7 +102,7 @@ describe("applyFrontmatter", () => {
 });
 
 describe("parseFrontmatter", () => {
-  test("extracts all known fields from frontmatter", () => {
+  test("extracts actionable fields from frontmatter", () => {
     const content = [
       "---",
       'ticket_id: "PS-12"',
@@ -119,6 +119,8 @@ describe("parseFrontmatter", () => {
 
     const result = parseFrontmatter(content);
     expect(result).toEqual({
+      blocked_reason: "waiting on API",
+      parent_id: "PS-5",
       status: "wip",
     });
   });

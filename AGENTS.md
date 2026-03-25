@@ -104,7 +104,7 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 
 This project uses `pstdio` to manage tickets and documentation.
 
-- You can find relevant information in `.pstdio/docs`.
+- You can find relevant documentation in `.pstdio/docs`.
 - Consider the database at `~/.pstdio/db` as containing production data and do not modify it unless you are granted permission
 
 ---

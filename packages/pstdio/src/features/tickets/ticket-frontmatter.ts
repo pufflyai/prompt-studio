@@ -41,10 +41,12 @@ export const stripFrontmatter = (content: string) => {
 };
 
 type ParsedFrontmatter = {
+  blocked_reason?: string;
+  parent_id?: string;
   status?: string;
 };
 
-const ACTIONABLE_FIELDS = ["status"] as const;
+const ACTIONABLE_FIELDS = ["blocked_reason", "parent_id", "status"] as const;
 
 export const parseFrontmatter = (content: string): ParsedFrontmatter => {
   if (!content.startsWith("---")) return {};

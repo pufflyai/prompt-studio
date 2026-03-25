@@ -49,6 +49,7 @@ export const updateTicketBodySchema = z
     display_title: z.string().optional(),
     user_prompt: z.string().optional(),
     file_id: z.string().optional(),
+    parent_id: z.string().optional(),
     status_id: z.string().optional(),
     draft: z.boolean().optional(),
     archived: z.boolean().optional(),
