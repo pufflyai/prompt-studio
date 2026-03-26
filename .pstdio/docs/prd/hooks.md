@@ -21,7 +21,7 @@ Fired during the lifecycle of a worktree. `pre-*` hooks are blocking — a non-z
 | Hook                   | Fires when                            | Blocking |
 | ---------------------- | ------------------------------------- | -------- |
 | `pre-worktree-create`  | Before worktree is created            | Yes      |
-| `post-worktree-create` | After worktree is created             | No       |
+| `post-worktree-create` | After worktree is created             | Yes      |
 | `pre-commit`           | Before staging and committing changes | Yes      |
 | `post-commit`          | After a commit is created             | No       |
 | `pre-rebase`           | Before rebasing onto target           | Yes      |
@@ -39,7 +39,7 @@ Fired during the lifecycle of a ticket. `pre-*` hooks are blocking — a non-zer
 | Hook                        | Fires when                       | Blocking |
 | --------------------------- | -------------------------------- | -------- |
 | `pre-ticket-creation`       | Before a ticket is created       | Yes      |
-| `on-ticket-creation`        | After a new ticket is created    | No       |
+| `post-ticket-creation`      | After a new ticket is created    | No       |
 | `pre-ticket-status-change`  | Before a ticket's status changes | Yes      |
 | `post-ticket-status-change` | After a ticket's status changes  | No       |
 | `pre-ticket-archive`        | Before a ticket is archived      | Yes      |

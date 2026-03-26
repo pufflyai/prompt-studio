@@ -1,6 +1,7 @@
 import { Box, HStack, IconButton, Menu, Stack, Text } from "@chakra-ui/react";
 import { ChevronRight } from "lucide-react";
 import { Tooltip } from "../tooltip";
+import { SearchableActionMenu } from "./searchable-action-menu";
 import type {
   SidebarAction,
   SidebarLinkComponent,
@@ -43,6 +44,10 @@ const SidebarActionButton = (props: { action: SidebarAction; sectionId: string; 
   const { action, sectionId, nodeId } = props;
 
   if (action.menuItems && action.menuItems.length > 0) {
+    if (action.menuItems.length >= 8) {
+      return <SearchableActionMenu action={action} />;
+    }
+
     return (
       <Menu.Root>
         <Menu.Trigger asChild>

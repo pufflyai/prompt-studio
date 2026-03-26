@@ -1,4 +1,5 @@
 import type { Argv } from "yargs";
+import * as attemptStatusCommand from "./attempt-status";
 import * as createCommand from "./create";
 import * as deleteCommand from "./delete";
 import * as listCommand from "./list";
@@ -11,7 +12,12 @@ let _yargs: Argv;
 
 export const builder = (yargs: Argv) => {
   _yargs = yargs;
-  return yargs.command(createCommand).command(listCommand).command(deleteCommand).command(mergeCommand);
+  return yargs
+    .command(createCommand)
+    .command(listCommand)
+    .command(deleteCommand)
+    .command(mergeCommand)
+    .command(attemptStatusCommand);
 };
 
 export const handler = () => {

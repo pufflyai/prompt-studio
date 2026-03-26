@@ -5,6 +5,37 @@ import type { RouteDeps } from "../../deps";
 import { createTicketBodySchema, ticketResponseSchema } from "../dto";
 import { emitSyncedFile, emitSyncedTicketFile } from "../emit-ticket-file-sync";
 import { extractTitleFromContent } from "../extract-title";
+import { fireTicketHook, fireTicketHookAsync } from "../ticket-hooks";
+
+const hookRejectedSchema = z.object({ error: z.string() });
+
+type TicketRecord = Awaited<ReturnType<RouteDeps["ticketsService"]["create"]>>;
+
+const attachContentToTicket = async (deps: RouteDeps, ticket: TicketRecord, projectId: string, content: string) => {
+  const data = Buffer.from(content);
+  const file = await deps.filesService.upload({
+    project_id: projectId,
+    file_name: "ticket.md",
+    file_kind: "ticket_file",
+    data,
+    mime_type: "text/markdown",
+  });
+  const ticketFile = await deps.filesService.attachToTicket(ticket.id, file.id);
+  emitSyncedFile(deps, file);
+  emitSyncedTicketFile(deps, ticketFile);
+  const updated = await deps.ticketsService.update(ticket.id, { file_id: file.id });
+  if (!updated) throw new Error(`Ticket not found right after creation: ${ticket.id}`);
+  return updated;
+};
+
+const assignTags = async (deps: RouteDeps, ticketId: string, tagIds: string[]) => {
+  await deps.ticketsService.assignTagOptions(ticketId, tagIds);
+  const newAssignments = await deps.db
+    .select()
+    .from(ticket_tag_assignments)
+    .where(eq(ticket_tag_assignments.ticket_id, ticketId));
+  for (const row of newAssignments) deps.eventBus.emit("ticket_tag_assignments", "set", row);
+};
 
 export const createTicketRoute = createRoute({
   method: "post",
@@ -21,6 +52,10 @@ export const createTicketRoute = createRoute({
     201: {
       description: "Ticket created.",
       content: { "application/json": { schema: ticketResponseSchema } },
+    },
+    403: {
+      description: "Rejected by pre-ticket-creation hook.",
+      content: { "application/json": { schema: hookRejectedSchema } },
     },
     404: {
       description: "Project not found.",
@@ -45,41 +80,33 @@ export const createTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof cre
 
     const displayTitle = content ? extractTitleFromContent(content) : undefined;
 
+    const preHook = await fireTicketHook(deps, "pre-ticket-creation", input.project_id, {
+      ...input,
+      display_title: displayTitle,
+      content,
+    });
+    if (preHook.rejected) {
+      return c.json({ error: preHook.stderr.trim() || "Rejected by pre-ticket-creation hook" }, 403);
+    }
+
     let ticket = await deps.ticketsService.create({
       ...input,
       display_title: displayTitle,
     });
 
     if (content) {
-      const data = Buffer.from(content);
-      const file = await deps.filesService.upload({
-        project_id: input.project_id,
-        file_name: "ticket.md",
-        file_kind: "ticket_file",
-        data,
-        mime_type: "text/markdown",
-      });
-      const ticketFile = await deps.filesService.attachToTicket(ticket.id, file.id);
-      emitSyncedFile(deps, file);
-      emitSyncedTicketFile(deps, ticketFile);
-      const updated = await deps.ticketsService.update(ticket.id, { file_id: file.id });
-      if (!updated) {
-        throw new Error(`Ticket not found right after creation: ${ticket.id}`);
-      }
-      ticket = updated;
+      ticket = await attachContentToTicket(deps, ticket, input.project_id, content);
     }
 
     if (tag_ids && tag_ids.length > 0) {
-      await deps.ticketsService.assignTagOptions(ticket.id, tag_ids);
-
-      const newAssignments = await deps.db
-        .select()
-        .from(ticket_tag_assignments)
-        .where(eq(ticket_tag_assignments.ticket_id, ticket.id));
-      for (const row of newAssignments) deps.eventBus.emit("ticket_tag_assignments", "set", row);
+      await assignTags(deps, ticket.id, tag_ids);
     }
 
     deps.eventBus.emit("tickets", "set", ticket);
+    fireTicketHookAsync(deps, "post-ticket-creation", input.project_id, {
+      id: ticket.id,
+      shorthand: ticket.shorthand,
+    });
 
     return c.json(ticket, 201);
   };

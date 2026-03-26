@@ -160,7 +160,10 @@ describe("POST /v1/tickets/:id/attempts", () => {
     const { mkdirSync, writeFileSync } = await import("node:fs");
     const hooksDir = join(repoRoot, ".pstdio", "hooks");
     mkdirSync(hooksDir, { recursive: true });
-    writeFileSync(join(hooksDir, "post-create"), 'echo "post-create hook ran" && echo "ok" > post-create-marker.txt');
+    writeFileSync(
+      join(hooksDir, "post-worktree-create"),
+      'echo "post-create hook ran" && echo "ok" > post-create-marker.txt',
+    );
 
     const repoRes = await app.request(`/v1/projects/${projectId}/repos`, {
       method: "POST",
@@ -208,7 +211,7 @@ describe("POST /v1/tickets/:id/attempts", () => {
     const { mkdirSync, writeFileSync } = await import("node:fs");
     const hooksDir = join(repoRoot, ".pstdio", "hooks");
     mkdirSync(hooksDir, { recursive: true });
-    writeFileSync(join(hooksDir, "post-create"), 'echo "hook ran" && echo "ok" > hook-marker.txt');
+    writeFileSync(join(hooksDir, "post-worktree-create"), 'echo "hook ran" && echo "ok" > hook-marker.txt');
 
     const repoRes = await app.request(`/v1/projects/${projectId}/repos`, {
       method: "POST",

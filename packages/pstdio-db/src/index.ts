@@ -7,6 +7,7 @@ export * from "./db/schemas.pg";
 export * from "./db/schemas.zod";
 
 export { createAgentConfigsService } from "./services/agent-configs/agent-configs";
+export { createAttemptStatusesService } from "./services/attempt-statuses/attempt-statuses";
 export type { ValidColor } from "./services/colors";
 export { isValidColor, VALID_COLORS } from "./services/colors";
 export { createProjectsService } from "./services/projects/projects";

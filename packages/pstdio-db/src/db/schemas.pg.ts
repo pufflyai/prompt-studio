@@ -76,6 +76,24 @@ export const ticket_statuses = pgTable("ticket_statuses", {
   deleted_at: text("deleted_at"),
 });
 
+export const attempt_statuses = pgTable(
+  "attempt_statuses",
+  {
+    id: text("id").primaryKey(),
+    project_id: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    color: text("color").notNull(),
+    sort_order: integer("sort_order").notNull(),
+    is_default: boolean("is_default").notNull(),
+    created_at: text("created_at").notNull(),
+    updated_at: text("updated_at").notNull(),
+    deleted_at: text("deleted_at"),
+  },
+  (table) => [uniqueIndex("attempt_statuses_project_name_idx").on(table.project_id, table.name)],
+);
+
 export const tickets = pgTable(
   "tickets",
   {
@@ -220,6 +238,7 @@ export const workspace_sessions = pgTable(
     session_id: text("session_id")
       .notNull()
       .references(() => sessions.id, { onDelete: "cascade" }),
+    attempt_status_id: text("attempt_status_id").references(() => attempt_statuses.id, { onDelete: "set null" }),
     created_at: text("created_at").notNull(),
   },
   (table) => [uniqueIndex("workspace_sessions_ws_session_idx").on(table.workspace_id, table.session_id)],

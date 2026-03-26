@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { sessions, workspace_sessions, workspaces } from "../../db/schemas.pg";
 
@@ -38,5 +38,24 @@ export const createWorkspaceSessionsService = (db: DbClient) => {
     return rows.map((r) => r.session);
   };
 
-  return { link, getWorkspaceBySessionId, listByWorkspace };
+  const updateAttemptStatusId = async (workspaceId: string, sessionId: string, attemptStatusId: string) => {
+    const [updated] = await db
+      .update(workspace_sessions)
+      .set({ attempt_status_id: attemptStatusId })
+      .where(and(eq(workspace_sessions.workspace_id, workspaceId), eq(workspace_sessions.session_id, sessionId)))
+      .returning();
+
+    return updated ?? null;
+  };
+
+  const getByWorkspaceAndSession = async (workspaceId: string, sessionId: string) => {
+    const [row] = await db
+      .select()
+      .from(workspace_sessions)
+      .where(and(eq(workspace_sessions.workspace_id, workspaceId), eq(workspace_sessions.session_id, sessionId)));
+
+    return row ?? null;
+  };
+
+  return { link, getWorkspaceBySessionId, listByWorkspace, updateAttemptStatusId, getByWorkspaceAndSession };
 };

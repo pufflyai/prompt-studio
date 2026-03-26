@@ -18,7 +18,7 @@ describe("scaffoldHooks", () => {
   test("copies default hooks into .pstdio/hooks", async () => {
     await scaffoldHooks(tempDir);
 
-    const postCreatePath = join(tempDir, ".pstdio", "hooks", "post-create");
+    const postCreatePath = join(tempDir, ".pstdio", "hooks", "post-worktree-create");
     expect(existsSync(postCreatePath)).toBe(true);
 
     const content = readFileSync(postCreatePath, "utf8");
@@ -30,11 +30,11 @@ describe("scaffoldHooks", () => {
     const { mkdirSync, writeFileSync } = await import("node:fs");
     const hooksDir = join(tempDir, ".pstdio", "hooks");
     mkdirSync(hooksDir, { recursive: true });
-    writeFileSync(join(hooksDir, "post-create"), "custom script");
+    writeFileSync(join(hooksDir, "post-worktree-create"), "custom script");
 
     await scaffoldHooks(tempDir);
 
-    const content = readFileSync(join(hooksDir, "post-create"), "utf8");
+    const content = readFileSync(join(hooksDir, "post-worktree-create"), "utf8");
     expect(content).toBe("custom script");
   });
 });

@@ -79,7 +79,7 @@ describe("pstdio workspaces create", () => {
     "runs post-create hook when creating a workspace",
     async () => {
       const repo = createInitializedRepo("workspace-create-hook");
-      writeHook(repo, "post-create", 'echo "hook ok"\necho "done" > post-create-marker.txt');
+      writeHook(repo, "post-worktree-create", 'echo "hook ok"\necho "done" > post-create-marker.txt');
 
       const createTicketOutput = run('tickets create --content "Workspace hook ticket"', repo);
       const ticketShorthand = createTicketOutput.match(/Created ticket (\S+)/)?.[1];

@@ -1,6 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { projects, ticket_statuses, ticket_tag_options, ticket_tags } from "../../db/schemas.pg";
+import { attempt_statuses, projects, ticket_statuses, ticket_tag_options, ticket_tags } from "../../db/schemas.pg";
 import { deriveShorthand } from "./derive-shorthand";
 
 type ProjectRecord = typeof projects.$inferSelect;
@@ -60,6 +60,14 @@ const DEFAULT_TICKET_STATUSES = [
     can_create: false,
     column_actions: ["archive_all"],
   },
+] as const;
+
+const DEFAULT_ATTEMPT_STATUSES = [
+  { name: "running", color: "blue", is_default: true },
+  { name: "blocked", color: "red", is_default: false },
+  { name: "review-ready", color: "amber", is_default: false },
+  { name: "reviewed", color: "green", is_default: false },
+  { name: "changes-requested", color: "orange", is_default: false },
 ] as const;
 
 const DEFAULT_TAG_DEFINITIONS = [
@@ -132,6 +140,19 @@ export const createProjectsService = (db: DbClient) => {
         can_drag_in: status.can_drag_in,
         can_create: status.can_create,
         column_actions: JSON.stringify(status.column_actions),
+        created_at: timestamp,
+        updated_at: timestamp,
+      })),
+    );
+
+    await db.insert(attempt_statuses).values(
+      DEFAULT_ATTEMPT_STATUSES.map((status, index) => ({
+        id: crypto.randomUUID(),
+        project_id: project.id,
+        name: status.name,
+        color: status.color,
+        sort_order: index + 1,
+        is_default: status.is_default,
         created_at: timestamp,
         updated_at: timestamp,
       })),

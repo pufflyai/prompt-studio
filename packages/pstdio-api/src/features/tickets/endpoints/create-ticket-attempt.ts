@@ -7,6 +7,7 @@ import { eq, ticket_workspaces } from "pstdio-db";
 import { createWorktree, runHook } from "pstdio-wt";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
+import { fireSessionStartHook } from "../../sessions/session-hooks";
 import { spawnAgentSession } from "../../sessions/spawn-agent";
 import { createTicketAttemptBodySchema, notFoundResponseSchema, ticketAttemptResponseSchema } from "../dto";
 
@@ -151,7 +152,7 @@ const runPostCreateHook = async (
   },
 ) => {
   const result = await runHook(
-    "post-create",
+    "post-worktree-create",
     {
       repoPath: input.repoPath,
       worktreePath: input.worktreePath,
@@ -214,7 +215,7 @@ const resolveWorkspaceGitMetadata = async (input: {
   return { branch, worktreePath };
 };
 
-const queuePostCreateHook = (
+const awaitPostCreateHook = async (
   deps: Pick<RouteDeps, "filesService" | "workspacesService" | "eventBus">,
   input: {
     mode: string;
@@ -228,8 +229,7 @@ const queuePostCreateHook = (
     return;
   }
 
-  // Fire-and-forget: don't block the response on the post-create hook
-  runPostCreateHook(
+  const startupLogFileId = await runPostCreateHook(
     { filesService: deps.filesService, workspacesService: deps.workspacesService },
     {
       repoPath: input.repoPath,
@@ -240,12 +240,12 @@ const queuePostCreateHook = (
       workspaceId: input.workspace.id,
       existingStartupLogFileId: input.workspace.startup_log_file_id,
     },
-  ).then(async (startupLogFileId) => {
-    if (startupLogFileId && startupLogFileId !== input.workspace.startup_log_file_id) {
-      const current = await deps.workspacesService.get(input.workspace.id);
-      if (current) deps.eventBus.emit("workspaces", "set", current);
-    }
-  });
+  );
+
+  if (startupLogFileId && startupLogFileId !== input.workspace.startup_log_file_id) {
+    const current = await deps.workspacesService.get(input.workspace.id);
+    if (current) deps.eventBus.emit("workspaces", "set", current);
+  }
 };
 
 const createAttemptWorkspace = async (
@@ -282,7 +282,7 @@ const createAttemptWorkspace = async (
     })) ?? workspace;
   deps.eventBus.emit("workspaces", "set", workspaceWithGitMetadata);
 
-  queuePostCreateHook(deps, {
+  await awaitPostCreateHook(deps, {
     mode: input.mode,
     worktreeMode: input.worktreeMode,
     workspace: workspaceWithGitMetadata,
@@ -323,6 +323,7 @@ const startAttemptSession = async (
     agent: agentId,
   });
   deps.eventBus.emit("sessions", "set", session);
+  fireSessionStartHook(deps, { id: session.id, project_id: input.ticket.project_id, status: session.status });
 
   const workspaceSessionLink = await deps.workspaceSessionsService.link(input.workspace.id, session.id);
   deps.eventBus.emit("workspace_sessions", "set", workspaceSessionLink);
