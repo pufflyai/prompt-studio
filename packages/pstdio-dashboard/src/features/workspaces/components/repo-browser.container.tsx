@@ -35,6 +35,7 @@ interface ResolveBranchStateOptions {
 interface BranchState {
   selectedBranch: string;
   hasUserSelectedBranch: boolean;
+  shouldPersistBranch: boolean;
 }
 
 const getBranchLabel = (branch: RepoBranch, currentBranchTag: string, remoteBranchTag: string) => {
@@ -62,7 +63,7 @@ export const resolveBranchSelection = (options: ResolveBranchSelectionOptions) =
   return currentBranch ?? branches[0].name;
 };
 
-const resolveBranchState = (options: ResolveBranchStateOptions) => {
+export const resolveBranchState = (options: ResolveBranchStateOptions) => {
   const {
     isLocked,
     isBranchesPending,
@@ -79,6 +80,7 @@ const resolveBranchState = (options: ResolveBranchStateOptions) => {
     return {
       selectedBranch: "",
       hasUserSelectedBranch: false,
+      shouldPersistBranch: false,
     } satisfies BranchState;
   }
 
@@ -93,6 +95,7 @@ const resolveBranchState = (options: ResolveBranchStateOptions) => {
   return {
     selectedBranch: nextSelectedBranch,
     hasUserSelectedBranch: hasUserSelectedBranch && hasSelection,
+    shouldPersistBranch: nextSelectedBranch !== selectedBranch && nextSelectedBranch.length > 0,
   } satisfies BranchState;
 };
 
@@ -167,6 +170,9 @@ export const RepoBrowserContainer = (props: RepoBrowserContainerProps) => {
 
     if (nextState.selectedBranch !== selectedBranch) {
       setSelectedBranch(nextState.selectedBranch);
+      if (nextState.shouldPersistBranch) {
+        setLastSelectedBranch(nextState.selectedBranch);
+      }
       onBranchChange?.(nextState.selectedBranch);
     }
 
@@ -182,6 +188,7 @@ export const RepoBrowserContainer = (props: RepoBrowserContainerProps) => {
     selectedBranch,
     selectedRepositoryId,
     onBranchChange,
+    setLastSelectedBranch,
   ]);
 
   const handleSelectRepository = (repoId: string) => {
