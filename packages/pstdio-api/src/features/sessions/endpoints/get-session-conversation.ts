@@ -25,7 +25,7 @@ const getAgentMessages = async (
   const agent = deps.agentRegistry.get(agentId as AgentId);
   if (!agent) return null;
 
-  const workspace = await deps.workspacesService.getBySessionId(sessionId);
+  const workspace = await deps.workspaceSessionsService.getWorkspaceBySessionId(sessionId);
   const cwd = await resolveSessionCwd(deps, projectId, workspace?.id);
   return agent.getMessages(agentSessionId, cwd ? { cwd } : undefined);
 };

@@ -28,7 +28,7 @@ const DEFAULT_TICKET_STATUSES = [
     name: "wip",
     color: "blue",
     is_default: false,
-    can_drag_out: false,
+    can_drag_out: true,
     can_drag_in: true,
     can_create: false,
     column_actions: [],

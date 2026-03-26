@@ -4,7 +4,6 @@ export const workspaceResponseSchema = z.object({
   id: z.string(),
   project_id: z.string(),
   name: z.string(),
-  session_id: z.string().nullable(),
   branch: z.string().nullable(),
   worktree_path: z.string().nullable(),
   status: z.string(),

@@ -142,6 +142,10 @@ export const useProjectTickets = (projectId: string | undefined) => {
     [projectId],
   );
 
+  const { data: rawWorkspaceSessionsData } = useLiveQuery((q) =>
+    q.from({ ws: getCollection("workspace_sessions") }).select(({ ws }) => ({ ...ws })),
+  );
+
   if (!rawTickets || !projectId) return { data: undefined, isLoading };
 
   const rawStatuses = asSyncedRows(rawStatusesData);
@@ -149,13 +153,14 @@ export const useProjectTickets = (projectId: string | undefined) => {
   const rawTicketWorkspaces = asSyncedRows(rawTicketWorkspacesData);
   const rawWorkspaces = asSyncedRows(rawWorkspacesData);
   const rawSessions = asSyncedRows(rawSessionsData);
+  const rawWorkspaceSessions = asSyncedRows(rawWorkspaceSessionsData);
 
   const statusMetadata = buildStatusMetadata(rawStatuses);
 
   const ticketIds = new Set(rawTickets.map((t) => t.id));
   const tagIdsByTicket = buildTagIdsByTicket(rawTagAssignments, ticketIds);
   const workspacesByTicket = buildWorkspacesByTicket(rawTicketWorkspaces, rawWorkspaces);
-  const sessionsByWorkspace = buildSessionsByWorkspace(rawWorkspaces, rawSessions);
+  const sessionsByWorkspace = buildSessionsByWorkspace(rawWorkspaceSessions, rawSessions);
   const subTicketsByParent = buildSubTicketsByParent(rawTickets);
 
   const data = rawTickets.map((t) =>
@@ -172,7 +177,7 @@ export const useProjectTickets = (projectId: string | undefined) => {
     ),
   );
 
-  return { data, isLoading };
+  return { data, sessionsByWorkspace, isLoading };
 };
 
 export const useProjectTicketStatuses = (projectId: string | undefined) => {

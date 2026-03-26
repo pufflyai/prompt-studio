@@ -8,7 +8,6 @@ const makeAttempt = (overrides: Partial<TicketAttempt>): TicketAttempt => ({
   status: "active",
   sessionStatus: "in_progress",
   shorthand: "PS-1_A1",
-  sessionId: "session-1",
   updatedAt: "2026-03-13T10:00:00.000Z",
   worktreePath: null,
   ...overrides,

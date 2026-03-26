@@ -177,7 +177,6 @@ export const workspaces = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    session_id: text("session_id").references(() => sessions.id, { onDelete: "set null" }),
     branch: text("branch"),
     worktree_path: text("worktree_path"),
     status: workspaceStatusEnum("status").notNull().default("active"),
@@ -209,6 +208,21 @@ export const ticket_workspaces = pgTable(
     uniqueIndex("ticket_workspaces_ticket_workspace_idx").on(table.ticket_id, table.workspace_id),
     uniqueIndex("ticket_workspaces_workspace_idx").on(table.workspace_id),
   ],
+);
+
+export const workspace_sessions = pgTable(
+  "workspace_sessions",
+  {
+    id: text("id").primaryKey(),
+    workspace_id: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    session_id: text("session_id")
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    created_at: text("created_at").notNull(),
+  },
+  (table) => [uniqueIndex("workspace_sessions_ws_session_idx").on(table.workspace_id, table.session_id)],
 );
 
 export const files = pgTable("files", {

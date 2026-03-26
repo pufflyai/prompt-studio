@@ -61,7 +61,8 @@ const ColorPicker = (props: {
               id={color}
               primaryLabel={color}
               isSelected={color === value}
-              leftSlot={<Icon as={Circle} boxSize="14px" fill={`${color}.500`} color={`${color}.500`} />}
+              leftIcon={Circle}
+              leftIconColor={`${color}.500`}
               onClick={() => onChange(color)}
             />
           ))}

@@ -30,7 +30,7 @@ import { getVisibleTickets } from "../utils/ticket-visibility";
 export const TicketsPanel = () => {
   const { projectId } = useParams({ strict: false });
   const { data: project, isLoading: isProjectLoading } = useProject(projectId);
-  const { data: tickets, isLoading: isTicketsLoading } = useProjectTickets(projectId);
+  const { data: tickets, sessionsByWorkspace, isLoading: isTicketsLoading } = useProjectTickets(projectId);
   const updateTicketStatus = useUpdateProjectTicketStatus(projectId);
   const updateTicket = useUpdateProjectTicket(projectId);
   const createTicket = useCreateProjectTicket(projectId);
@@ -221,6 +221,7 @@ export const TicketsPanel = () => {
             badgeContext={badgeContext}
             latestAttemptsByTicketId={latestAttemptsByTicketId}
             diffTotalsByWorkspaceId={diffTotalsByWorkspaceId}
+            sessionsByWorkspace={sessionsByWorkspace}
             onMoveTicket={handleMoveTicket}
             onSelectTicket={(ticket) => navigateToTicket(ticket.shorthand)}
             onOpenSessionBubble={handleOpenSessionBubble}

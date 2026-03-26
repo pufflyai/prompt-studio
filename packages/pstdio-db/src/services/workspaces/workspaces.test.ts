@@ -3,7 +3,6 @@ import { sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { createDb } from "../../db/connection.pglite";
 import { createProjectsService } from "../projects/projects";
-import { createSessionsService } from "../sessions/sessions";
 import { createTicketsService } from "../tickets/tickets";
 import { createWorkspacesService } from "./workspaces";
 
@@ -210,28 +209,5 @@ describe("createWorkspacesService", () => {
     expect(found).not.toBeNull();
     expect(found!.branch).toBe(`workspace/${ws.workspace_shorthand}`);
     expect(found!.worktree_path).toBe(`/tmp/workspaces/${ws.workspace_shorthand}`);
-  });
-
-  test("setSessionId links workspace to a session", async () => {
-    await setup();
-
-    const ws = await workspacesService.create({
-      project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
-    });
-
-    const sessionsService = createSessionsService(db);
-    const session = await sessionsService.create({
-      project_id: projectId,
-      title: "Session for workspace",
-      agent: "fake",
-    });
-
-    await workspacesService.setSessionId(ws.id, session.id);
-
-    const found = await workspacesService.get(ws.id);
-    expect(found).not.toBeNull();
-    expect(found!.session_id).toBe(session.id);
   });
 });

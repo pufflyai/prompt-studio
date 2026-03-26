@@ -42,7 +42,7 @@ Every session has two identifiers:
 - `session.id` — pstdio's database record for lifecycle, metadata, and cached content.
 - `session.agent_session_id` — the external agent's own session/thread ID (for `opencode` or `claude-code`).
 
-A session is optionally associated with a workspace (`workspace.session_id`). When linked, the workspace anchors repo/worktree context. When no workspace is linked, the session runs at the project root.
+A session is optionally associated with a workspace via the `workspace_sessions` join table. When linked, the workspace anchors repo/worktree context. When no workspace is linked, the session runs at the project root. A workspace can have multiple sessions (e.g. an implementation session followed by a review session).
 
 ### Session ↔ workspace ↔ ticket relationship
 
@@ -50,15 +50,18 @@ A session is optionally associated with a workspace (`workspace.session_id`). Wh
 ticket ──┐
          │ ticket_workspaces (join)
          ▼
-     workspace ──── session
-       │
+     workspace ──┐
+       │         │ workspace_sessions (join)
+       │         ▼
+       │      session(s)
        ├── branch
        ├── worktree_path
        └── workspace_shorthand (e.g. A0001)
 ```
 
 - A workspace belongs to at most one ticket (unique constraint on `workspace_id` in `ticket_workspaces`).
-- A workspace has at most one session (`workspace.session_id`).
+- A workspace can have many sessions via `workspace_sessions` (one-to-many).
+- Multiple concurrent sessions per workspace are allowed.
 - Ticket attempts are workspaces with attempt naming (`Attempt N`) and linked sessions.
 
 ## Data model
@@ -80,6 +83,17 @@ ticket ──┐
 | created_at           | text          | Row creation timestamp                                 |
 | updated_at           | text          | Row update timestamp                                   |
 
+### `workspace_sessions` table
+
+| Column       | Type          | Notes                                          |
+| ------------ | ------------- | ---------------------------------------------- |
+| id           | text PK       | Unique link identifier                         |
+| workspace_id | text FK       | References `workspaces.id`, CASCADE on delete  |
+| session_id   | text FK       | References `sessions.id`, CASCADE on delete    |
+| created_at   | text NOT NULL | Row creation timestamp                         |
+
+Unique constraint on `(workspace_id, session_id)`.
+
 ### `workspaces` table (session-relevant columns)
 
 | Column              | Type          | Notes                                        |
@@ -87,7 +101,6 @@ ticket ──┐
 | id                  | text PK       | Unique workspace identifier                  |
 | project_id          | text FK       | References `projects.id`                     |
 | name                | text NOT NULL | Display name (e.g. `Session 1`, `Attempt 2`) |
-| session_id          | text FK       | References `sessions.id`, SET NULL on delete |
 | branch              | text          | Git branch name                              |
 | worktree_path       | text          | Absolute path to git worktree                |
 | status              | enum          | `active`, `merged`, `rejected`               |
@@ -309,7 +322,7 @@ Clients (CLI, dashboard) use TanStack React-DB with SSE sync:
 
 ## Rules
 
-1. **Sessions optionally link to a workspace.** When linked, the workspace provides cwd and diff context. Without a workspace, the session runs at the project root and has no diff tracking.
+1. **Sessions optionally link to a workspace via `workspace_sessions`.** When linked, the workspace provides cwd and diff context. Without a workspace, the session runs at the project root and has no diff tracking. A workspace can have multiple sessions.
 2. **Agent is the message authority.** pstdio always tries to fetch messages from the agent first and only falls back to cached content.
 3. **Event stores are ephemeral.** They live in-memory for the duration of the API process and are not persisted.
 4. **All session mutations emit to EventBus.** Clients receive real-time updates via SSE sync.

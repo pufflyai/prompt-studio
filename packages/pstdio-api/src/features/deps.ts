@@ -9,6 +9,7 @@ import type {
   createTagsService,
   createTemplatesService,
   createTicketsService,
+  createWorkspaceSessionsService,
   createWorkspacesService,
   DbClient,
 } from "pstdio-db";
@@ -36,6 +37,7 @@ export interface RouteDeps {
   templatesService: ReturnType<typeof createTemplatesService>;
   ticketsService: ReturnType<typeof createTicketsService>;
   workspacesService: ReturnType<typeof createWorkspacesService>;
+  workspaceSessionsService: ReturnType<typeof createWorkspaceSessionsService>;
   sessionsService: ReturnType<typeof createSessionsService>;
   statusesService: ReturnType<typeof createStatusesService>;
   tagsService: ReturnType<typeof createTagsService>;

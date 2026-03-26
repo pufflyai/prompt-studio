@@ -38,7 +38,6 @@ describe("schemas.zod", () => {
         {
           id: "workspace-1",
           label: "Attempt 1",
-          session_id: "session-1",
           status: "active",
           updated_at: "2026-01-01T00:00:00.000Z",
         },
@@ -90,7 +89,6 @@ describe("schemas.zod", () => {
       id: "workspace-1",
       name: "Main",
       project_id: "project-1",
-      session_id: null,
       status: "active",
       startup_log_file_id: null,
       ticket_id: null,

@@ -53,7 +53,7 @@ export const followUpSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof 
     const updated = await deps.sessionsService.updateStatus(session.id, "in_progress");
     deps.eventBus.emit("sessions", "set", updated);
 
-    const workspace = await deps.workspacesService.getBySessionId(session.id);
+    const workspace = await deps.workspaceSessionsService.getWorkspaceBySessionId(session.id);
     const cwd = await resolveSessionCwd(deps, session.project_id!, workspace?.id);
 
     const agentId = input.agent ?? session.agent!;

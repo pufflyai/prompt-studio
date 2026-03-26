@@ -31,7 +31,6 @@ export const toTicketFromRow = (
       status: (ws.status as "active" | "merged" | "rejected") ?? "active",
       sessionStatus: toSessionStatus(session?.status),
       shorthand: (ws.workspace_shorthand as string) ?? ws.id,
-      sessionId: session?.id ?? "",
       updatedAt: ws.updated_at as string,
       worktreePath: (ws.worktree_path as string) ?? null,
     };

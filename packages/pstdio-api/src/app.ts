@@ -19,6 +19,7 @@ import {
   createTagsService,
   createTemplatesService,
   createTicketsService,
+  createWorkspaceSessionsService,
   createWorkspacesService,
 } from "pstdio-db";
 import {
@@ -105,6 +106,7 @@ export const createApp = async (options?: AppOptions) => {
   const sessionsService = createSessionsService(db);
   const ticketsService = createTicketsService(db);
   const workspacesService = createWorkspacesService(db);
+  const workspaceSessionsService = createWorkspaceSessionsService(db);
   const statusesService = createStatusesService(db);
   const tagsService = createTagsService(db);
   const eventBus = new EventBus();
@@ -126,6 +128,7 @@ export const createApp = async (options?: AppOptions) => {
     templatesService,
     ticketsService,
     workspacesService,
+    workspaceSessionsService,
     statusesService,
     tagsService,
     agentRegistry,

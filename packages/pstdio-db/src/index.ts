@@ -17,4 +17,5 @@ export { createStatusesService } from "./services/statuses/statuses";
 export { createTagsService } from "./services/tags/tags";
 export { createTemplatesService } from "./services/templates/templates";
 export { createTicketsService } from "./services/tickets/tickets";
+export { createWorkspaceSessionsService } from "./services/workspace-sessions/workspace-sessions";
 export { createWorkspacesService } from "./services/workspaces/workspaces";

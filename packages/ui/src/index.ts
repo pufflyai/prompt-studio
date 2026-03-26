@@ -35,7 +35,11 @@ export type { PropertiesProps, PropertyItem } from "./components/properties";
 export { Properties } from "./components/properties";
 export { ScrollArea } from "./components/scroll-area";
 export type { SessionCompletionStatus } from "./components/session-indicator";
-export { SessionIndicator } from "./components/session-indicator";
+export {
+  resolveSessionIndicatorColor,
+  resolveSessionIndicatorIcon,
+  SessionIndicator,
+} from "./components/session-indicator";
 export { SidebarNext } from "./components/sidebar-next/sidebar-next";
 export { useSidebarNextStore } from "./components/sidebar-next/sidebar-next.store";
 export type { SidebarNextProps } from "./components/sidebar-next/sidebar-next.types";

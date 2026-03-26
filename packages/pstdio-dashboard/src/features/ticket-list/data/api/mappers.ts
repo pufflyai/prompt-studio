@@ -63,7 +63,6 @@ export const toTicketAttempt = (attempt: ApiTicketAttempt): TicketAttempt => ({
   status: attempt.status,
   sessionStatus: null,
   shorthand: attempt.shorthand ?? attempt.id,
-  sessionId: attempt.session_id,
   updatedAt: attempt.updated_at,
   worktreePath: attempt.worktree_path ?? null,
 });

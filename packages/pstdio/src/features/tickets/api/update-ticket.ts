@@ -6,6 +6,8 @@ type UpdateTicketInput = {
   draft?: boolean;
   archived?: boolean;
   tag_ids?: string[];
+  blocked_reason?: string;
+  parent_id?: string;
 };
 
 type Ticket = {

@@ -30,7 +30,6 @@ export const createWorkspacesService = (db: DbClient) => {
       id: crypto.randomUUID(),
       project_id: input.project_id,
       name: shorthand,
-      session_id: null,
       branch: input.branch ?? null,
       worktree_path: input.worktree_path ?? null,
       status: "active",
@@ -73,11 +72,6 @@ export const createWorkspacesService = (db: DbClient) => {
 
   const get = async (id: string) => {
     const [row] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    return row ?? null;
-  };
-
-  const getBySessionId = async (sessionId: string) => {
-    const [row] = await db.select().from(workspaces).where(eq(workspaces.session_id, sessionId));
     return row ?? null;
   };
 
@@ -133,19 +127,9 @@ export const createWorkspacesService = (db: DbClient) => {
     return updated ?? null;
   };
 
-  const setSessionId = async (id: string, sessionId: string | null) => {
-    const [updated] = await db
-      .update(workspaces)
-      .set({ session_id: sessionId, updated_at: nowTimestamp() })
-      .where(eq(workspaces.id, id))
-      .returning();
-    return updated ?? null;
-  };
-
   return {
     create,
     get,
-    getBySessionId,
     list,
     getByShorthand,
     softDelete,
@@ -153,6 +137,5 @@ export const createWorkspacesService = (db: DbClient) => {
     updateStatus,
     setStartupLogFileId,
     updateGitMetadata,
-    setSessionId,
   };
 };

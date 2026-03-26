@@ -16,6 +16,7 @@ import {
   ticket_workspaces,
   tickets,
   workspace_artifacts,
+  workspace_sessions,
   workspaces,
 } from "pstdio-db";
 
@@ -35,6 +36,7 @@ const tableMap = {
   files,
   ticket_files,
   workspace_artifacts,
+  workspace_sessions,
   templates,
 } as const;
 

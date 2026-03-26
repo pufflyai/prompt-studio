@@ -37,7 +37,6 @@ export interface TicketAttempt {
   status: "active" | "merged" | "rejected";
   sessionStatus: SessionStatus | null;
   shorthand: string;
-  sessionId: string;
   updatedAt: string;
   worktreePath: string | null;
 }

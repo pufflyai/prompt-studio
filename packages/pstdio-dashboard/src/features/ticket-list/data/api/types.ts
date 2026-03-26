@@ -19,7 +19,6 @@ export type ApiTicketAttempt = {
   label: string;
   status: "active" | "merged" | "rejected";
   shorthand: string | null;
-  session_id: string;
   updated_at: string;
   worktree_path: string | null;
 };

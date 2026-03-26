@@ -18,6 +18,7 @@ const SYNCED_TABLES = [
   "files",
   "ticket_files",
   "workspace_artifacts",
+  "workspace_sessions",
   "templates",
 ] as const;
 

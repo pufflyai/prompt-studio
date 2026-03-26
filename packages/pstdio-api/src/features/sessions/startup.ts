@@ -4,7 +4,14 @@ import { resolveSessionCwd } from "./resolve-session-cwd";
 
 type Deps = Pick<
   RouteDeps,
-  "sessionsService" | "workspacesService" | "reposService" | "agentRegistry" | "eventBus" | "sessionStore" | "db"
+  | "sessionsService"
+  | "workspacesService"
+  | "workspaceSessionsService"
+  | "reposService"
+  | "agentRegistry"
+  | "eventBus"
+  | "sessionStore"
+  | "db"
 >;
 
 type StaleSession = {
@@ -19,7 +26,7 @@ const resolveSessionStatus = async (session: StaleSession, deps: Deps) => {
   if (!agent || !session.agent_session_id) return "completed" as const;
 
   try {
-    const workspace = await deps.workspacesService.getBySessionId(session.id);
+    const workspace = await deps.workspaceSessionsService.getWorkspaceBySessionId(session.id);
     const cwd = session.project_id ? await resolveSessionCwd(deps, session.project_id, workspace?.id) : undefined;
 
     const messages = await agent.getMessages(session.agent_session_id, cwd ? { cwd } : undefined);

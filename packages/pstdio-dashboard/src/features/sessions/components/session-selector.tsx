@@ -1,6 +1,6 @@
 import { Box, Button, Menu, Text } from "@chakra-ui/react";
 import type { SessionCompletionStatus } from "@pstdio/ui";
-import { MenuItem, SessionIndicator } from "@pstdio/ui";
+import { MenuItem, resolveSessionIndicatorColor, resolveSessionIndicatorIcon, SessionIndicator } from "@pstdio/ui";
 import { Link, useParams } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -47,7 +47,8 @@ export const SessionSelector = (props: SessionSelectorProps) => {
                   id={session.id}
                   primaryLabel={session.title}
                   tooltipLabel={session.title}
-                  leftSlot={<SessionIndicator status={session.status as SessionCompletionStatus} />}
+                  leftIcon={resolveSessionIndicatorIcon(session.status as SessionCompletionStatus)}
+                  leftIconColor={resolveSessionIndicatorColor(session.status as SessionCompletionStatus)}
                   variant="compact"
                   isSelected={session.id === selectedSessionId}
                   onClick={() => onSelectSession(session.id)}

@@ -24,7 +24,6 @@ export const workspaceSelectSchema = createSelectSchema(workspaces);
 export const ticketAttemptSchema = z.object({
   id: z.string(),
   label: z.string(),
-  session_id: z.string(),
   status: z.enum(["active", "merged", "rejected"]),
   updated_at: z.string(),
 });

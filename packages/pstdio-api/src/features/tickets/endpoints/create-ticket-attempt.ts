@@ -324,14 +324,10 @@ const startAttemptSession = async (
   });
   deps.eventBus.emit("sessions", "set", session);
 
-  const workspaceWithSession = (await deps.workspacesService.setSessionId(input.workspace.id, session.id)) ?? {
-    ...input.workspace,
-    session_id: session.id,
-  };
-  deps.eventBus.emit("workspaces", "set", workspaceWithSession);
+  const workspaceSessionLink = await deps.workspaceSessionsService.link(input.workspace.id, session.id);
+  deps.eventBus.emit("workspace_sessions", "set", workspaceSessionLink);
 
-  const cwd =
-    input.mode === input.worktreeMode ? (workspaceWithSession.worktree_path ?? input.repoPath) : input.repoPath;
+  const cwd = input.mode === input.worktreeMode ? (input.workspace.worktree_path ?? input.repoPath) : input.repoPath;
 
   spawnAgentSession(
     {
@@ -348,7 +344,7 @@ const startAttemptSession = async (
     if (failed) deps.eventBus.emit("sessions", "set", failed);
   });
 
-  return { session, workspaceWithSession };
+  return { session, workspace: input.workspace };
 };
 
 export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typeof createTicketAttemptRoute> => {
@@ -411,10 +407,10 @@ export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typ
       {
         mode,
         ticket,
-        workspace: started.workspaceWithSession,
+        workspace: started.workspace,
         session: {
           id: started.session.id,
-          workspace_id: started.workspaceWithSession.id,
+          workspace_id: started.workspace.id,
           title: started.session.title,
           created_at: started.session.created_at,
           updated_at: started.session.updated_at,

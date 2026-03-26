@@ -1,6 +1,6 @@
 import { Menu, Skeleton, Stack, Text } from "@chakra-ui/react";
 import type { SessionCompletionStatus } from "@pstdio/ui";
-import { MenuItem, SessionIndicator } from "@pstdio/ui";
+import { MenuItem, resolveSessionIndicatorColor, resolveSessionIndicatorIcon } from "@pstdio/ui";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { Session } from "../types";
@@ -59,7 +59,8 @@ export const SessionsList = (props: SessionsListProps) => {
                 tooltipLabel={session.title}
                 variant="compact"
                 isSelected={session.id === selectedSessionId}
-                leftSlot={<SessionIndicator status={session.status as SessionCompletionStatus} />}
+                leftIcon={resolveSessionIndicatorIcon(session.status as SessionCompletionStatus)}
+                leftIconColor={resolveSessionIndicatorColor(session.status as SessionCompletionStatus)}
                 onClick={() => onSelectSession(session.id)}
               >
                 {projectId ? <Link to={`/projects/${projectId}/sessions/${session.id}`} /> : undefined}
