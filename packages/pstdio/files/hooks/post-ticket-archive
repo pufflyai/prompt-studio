@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# ──────────────────────────────────────────────────────────
+# pstdio post-ticket-archive hook
+# Runs after a ticket is archived.
+#
+# Removes all worktrees for the ticket.
+# ──────────────────────────────────────────────────────────
+
+if [ -z "$PSTDIO_TICKET" ]; then
+  exit 0
+fi
+
+pstdio tickets clean-worktrees --id "$PSTDIO_TICKET"

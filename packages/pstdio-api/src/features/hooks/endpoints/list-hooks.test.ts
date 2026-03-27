@@ -64,7 +64,15 @@ describe("GET /v1/projects/:id/hooks", () => {
     const postStart = body.find((h) => h.name === "post-session-start");
     expect(postStart?.content).toContain("wip");
 
-    const scaffolded = new Set(["post-worktree-create", "post-session-success", "post-session-start"]);
+    const postTicketArchive = body.find((h) => h.name === "post-ticket-archive");
+    expect(postTicketArchive?.content).toContain("clean-worktrees");
+
+    const scaffolded = new Set([
+      "post-worktree-create",
+      "post-session-success",
+      "post-session-start",
+      "post-ticket-archive",
+    ]);
     expect(body.filter((h) => !scaffolded.has(h.name)).every((h) => h.content === null)).toBe(true);
   });
 

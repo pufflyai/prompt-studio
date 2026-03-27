@@ -1,5 +1,6 @@
 import type { Argv } from "yargs";
 import * as archiveCommand from "./archive";
+import * as cleanWorktreesCommand from "./clean-worktrees";
 import * as createCommand from "./create";
 import * as deleteCommand from "./delete";
 import * as filesCommand from "./files";
@@ -31,7 +32,8 @@ export const builder = (yargs: Argv) => {
     .command(filesCommand)
     .command(workspacesCommand)
     .command(deleteCommand)
-    .command(archiveCommand);
+    .command(archiveCommand)
+    .command(cleanWorktreesCommand);
 };
 
 export const handler = () => {
