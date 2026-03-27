@@ -1,5 +1,29 @@
 # pstdio
 
+## 0.4.0
+
+### Minor Changes
+
+- 16dc458: Add `tickets clean-worktrees` CLI command and `post-ticket-archive` hook template to remove worktrees on ticket archive.
+- 277d7c9: Replace workspace.session_id with workspace_sessions join table to support multiple sessions per workspace
+
+### Patch Changes
+
+- 8eaf4ac: Add docs initialization guidance to the bundled documentation skill.
+- 8eaf4ac: Add a hooks create command and document all supported hook types.
+- 8eaf4ac: Fix validate failures in ticket attempts and session chat flows
+- 277d7c9: Persist blocked_reason frontmatter and mark saved tickets as non-draft
+- 8eaf4ac: Add version metadata to bundled skill templates.
+- 16dc458: Fix missing workspace setup translations in the session workspace hub.
+- 8eaf4ac: Document hook creation in the bundled pstdio skill template.
+- 16dc458: Restore chat input top corners when the workspace hub is hidden
+- 8eaf4ac: Create the default post-worktree-create hook when new projects register a repo.
+- 277d7c9: Persist parent_id frontmatter when saving tickets
+- 47b5f7a: Keep ticket cards within kanban column bounds by wrapping long unbroken title strings and add Storybook coverage for URL-like tokens.
+- 8eaf4ac: Add a shared searchable menu for hooks and repo branch selection.
+- 277d7c9: Show parent shorthand in the ticket details panel
+- 8eaf4ac: Add a token usage story for the chat message parts renderer.
+
 ## 0.3.0
 
 ### Minor Changes

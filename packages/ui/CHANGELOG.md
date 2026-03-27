@@ -1,5 +1,13 @@
 # @pstdio/ui
 
+## 0.2.5
+
+### Patch Changes
+
+- 47b5f7a: Keep ticket cards within kanban column bounds by wrapping long unbroken title strings and add Storybook coverage for URL-like tokens.
+- 8eaf4ac: Add a shared searchable menu for hooks and repo branch selection.
+- 8eaf4ac: Add a token usage story for the chat message parts renderer.
+
 ## 0.2.4
 
 ### Patch Changes
