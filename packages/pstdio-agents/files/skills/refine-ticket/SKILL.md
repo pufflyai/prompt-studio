@@ -1,6 +1,8 @@
 ---
 name: refine-ticket
 description: "Provide additional information to a ticket by researching the codebase and documentation, and/or format a ticket given a template. Use when asked to refine, improve, expand, or format an existing ticket."
+metadata:
+  - version: 0.0.1
 ---
 
 ## Workflow

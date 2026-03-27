@@ -5,7 +5,6 @@ export type Workspace = {
   workspace_shorthand: string;
   branch: string | null;
   worktree_path: string | null;
-  status: string;
   created_at: string;
   updated_at: string;
 };

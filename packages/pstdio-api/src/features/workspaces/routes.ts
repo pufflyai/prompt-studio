@@ -10,6 +10,7 @@ import { getWorkspaceDiffHandler, getWorkspaceDiffRoute } from "./endpoints/get-
 import { getWorkspaceDiffSummaryHandler, getWorkspaceDiffSummaryRoute } from "./endpoints/get-workspace-diff-summary";
 import { listWorkspacesHandler, listWorkspacesRoute } from "./endpoints/list-workspaces";
 import { setStartupLogHandler, setStartupLogRoute } from "./endpoints/set-startup-log";
+import { updateAttemptStatusHandler, updateAttemptStatusRoute } from "./endpoints/update-attempt-status";
 
 export const createWorkspaceRoutes = (deps: RouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
@@ -23,6 +24,7 @@ export const createWorkspaceRoutes = (deps: RouteDeps) => {
   routes.openapi(archiveWorkspaceRoute, archiveWorkspaceHandler(deps));
   routes.openapi(setStartupLogRoute, setStartupLogHandler(deps));
   routes.openapi(getStartupLogRoute, getStartupLogHandler(deps));
+  routes.openapi(updateAttemptStatusRoute, updateAttemptStatusHandler(deps));
 
   return routes;
 };

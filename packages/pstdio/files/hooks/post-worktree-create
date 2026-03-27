@@ -1,10 +1,10 @@
 #!/bin/sh
 
 # ──────────────────────────────────────────────────────────
-# pstdio post-create hook
+# pstdio post-worktree-create hook
 # Runs after a new worktree is created for a workspace.
 #
-# DO NOT REMOVE this block — it ensures the worktree has
+# Do not remove this block. It ensures the worktree has
 # the project config and ticket context needed for agents.
 # ──────────────────────────────────────────────────────────
 

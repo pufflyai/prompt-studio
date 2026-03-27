@@ -31,7 +31,7 @@ export const SessionSelector = (props: SessionSelectorProps) => {
       <Menu.Trigger asChild>
         <Button variant="ghost" size="sm" px="2" maxW="10rem">
           <SessionIndicator status={selectedSession?.status as SessionCompletionStatus} />
-          <Text textStyle="label/XS/medium" color="fg" lineClamp={1} ml="2xs">
+          <Text textStyle="label/XS/medium" color="fg" lineClamp={1} ml="2xs" textAlign="left">
             {label}
           </Text>
           <ChevronDown size={14} />

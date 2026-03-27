@@ -14,7 +14,11 @@ type Deps = {
   getWorkspace: typeof defaultGetWorkspace;
   deleteWorkspace: typeof defaultDeleteWorkspaceApi;
   removeWorktreeAndBranch: (opts: { repoRoot: string; path: string; branch: string; force?: boolean }) => Promise<void>;
-  runHook: (hookName: "pre-remove" | "post-remove", context: HookContext, repoPath: string) => Promise<HookResult>;
+  runHook: (
+    hookName: "pre-worktree-remove" | "post-worktree-remove",
+    context: HookContext,
+    repoPath: string,
+  ) => Promise<HookResult>;
   log: (msg: string) => void;
 };
 
@@ -42,9 +46,11 @@ export const deleteWorkspaceWithWorktree = async (input: DeleteWorkspaceInput, d
   };
 
   if (workspace.worktree_path) {
-    const preResult = await deps.runHook("pre-remove", hookContext, repoRoot);
+    const preResult = await deps.runHook("pre-worktree-remove", hookContext, repoRoot);
     if (!preResult.skipped && preResult.exitCode !== 0) {
-      throw new Error(`HOOK pre-remove FAILED (exit ${preResult.exitCode})\n${preResult.stderr || preResult.stdout}`);
+      throw new Error(
+        `HOOK pre-worktree-remove FAILED (exit ${preResult.exitCode})\n${preResult.stderr || preResult.stdout}`,
+      );
     }
   }
 
@@ -64,7 +70,7 @@ export const deleteWorkspaceWithWorktree = async (input: DeleteWorkspaceInput, d
   }
 
   // post-remove runs in repo root since worktree is already deleted
-  void deps.runHook("post-remove", { ...hookContext, worktreePath: undefined }, repoRoot).catch(() => {});
+  void deps.runHook("post-worktree-remove", { ...hookContext, worktreePath: undefined }, repoRoot).catch(() => {});
 
   deps.log(`Deleted workspace ${workspaceShorthand}`);
 };

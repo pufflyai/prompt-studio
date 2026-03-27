@@ -47,18 +47,37 @@ export type BranchInfo = {
   lastCommitDate: string;
 };
 
-export type HookName =
-  | "pre-create"
-  | "post-create"
+export type WorktreeHookName =
+  | "pre-worktree-create"
+  | "post-worktree-create"
   | "pre-commit"
   | "post-commit"
   | "pre-rebase"
   | "post-rebase"
   | "pre-merge"
   | "post-merge"
-  | "pre-remove"
-  | "post-remove"
+  | "pre-worktree-remove"
+  | "post-worktree-remove"
   | "on-conflict";
+
+export type SessionHookName =
+  | "post-session-start"
+  | "post-session-success"
+  | "post-session-fail"
+  | "post-session-resume"
+  | "post-session-await-input";
+
+export type TicketHookName =
+  | "pre-ticket-creation"
+  | "post-ticket-creation"
+  | "pre-ticket-status-change"
+  | "post-ticket-status-change"
+  | "pre-ticket-archive"
+  | "post-ticket-archive"
+  | "pre-ticket-deletion"
+  | "post-ticket-deletion";
+
+export type HookName = WorktreeHookName | SessionHookName | TicketHookName;
 
 export type HookContext = {
   branch?: string;
@@ -69,6 +88,7 @@ export type HookContext = {
   commitSha?: string;
   commitMessage?: string;
   projectId?: string;
+  payload?: Record<string, unknown>;
 };
 
 export type HookResult = SetupResult & {

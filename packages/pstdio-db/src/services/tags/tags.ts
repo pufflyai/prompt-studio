@@ -66,8 +66,8 @@ export const createTagsService = (db: DbClient) => {
       .where(eq(ticket_tags.id, id));
   };
 
-  const softDelete = async (id: string) => {
-    await db.update(ticket_tags).set({ deleted_at: nowTimestamp() }).where(eq(ticket_tags.id, id));
+  const remove = async (id: string) => {
+    await db.delete(ticket_tags).where(eq(ticket_tags.id, id));
   };
 
   // --- Options ---
@@ -109,8 +109,8 @@ export const createTagsService = (db: DbClient) => {
       .where(eq(ticket_tag_options.id, id));
   };
 
-  const softDeleteOption = async (id: string) => {
-    await db.update(ticket_tag_options).set({ deleted_at: nowTimestamp() }).where(eq(ticket_tag_options.id, id));
+  const removeOption = async (id: string) => {
+    await db.delete(ticket_tag_options).where(eq(ticket_tag_options.id, id));
   };
 
   return {
@@ -119,10 +119,10 @@ export const createTagsService = (db: DbClient) => {
     getByName,
     create,
     update,
-    softDelete,
+    remove,
     listOptions,
     createOption,
     updateOption,
-    softDeleteOption,
+    removeOption,
   };
 };

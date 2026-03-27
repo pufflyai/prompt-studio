@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
@@ -94,6 +94,18 @@ const getFolderPickerDialog = (page: Page) =>
 
 const waitForPickerToLoad = async (dialog: Locator) => {
   await expect(dialog.getByText("Loading...")).not.toBeVisible({ timeout: pickerLoadTimeoutMs });
+};
+
+const removeTempRepo = async (repoPath: string) => {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      rmSync(repoPath, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      if (attempt === 4) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  }
 };
 
 const readPickerPath = async (dialog: Locator) => {
@@ -199,9 +211,9 @@ test.describe("Project creation", () => {
     await deleteAllProjects(request);
   });
 
-  test.afterEach(() => {
+  test.afterEach(async () => {
     for (const repoPath of tempRepoPaths) {
-      rmSync(repoPath, { recursive: true, force: true });
+      await removeTempRepo(repoPath);
     }
     tempRepoPaths.length = 0;
   });
@@ -399,6 +411,43 @@ test.describe("Project creation", () => {
     expect(existsSync(join(repoPath, ".opencode", "skills", "implement-ticket", "SKILL.md"))).toBe(true);
     expect(existsSync(join(repoPath, ".opencode", "skills", "create-proposal", "SKILL.md"))).toBe(true);
   });
+
+  test("creates the default post-worktree-create hook in the repo", async ({ page }) => {
+    const repoPath = createTempGitRepo();
+    tempRepoPaths.push(repoPath);
+
+    await bypassOnboarding(page);
+    await page.goto("/projects");
+
+    await page.getByRole("button", { name: "Create project" }).first().click();
+    await page.getByPlaceholder("Project name").fill("Hook Project");
+    await selectRepoFromFolderPicker(page, repoPath);
+
+    const createProjectDone = page.waitForResponse(
+      (response) =>
+        response.url().endsWith("/v1/projects") && response.request().method() === "POST" && response.status() === 201,
+    );
+    const repoRegistrationDone = page.waitForResponse(
+      (response) =>
+        response.url().includes("/repos") && response.request().method() === "POST" && response.status() === 201,
+    );
+    const createProjectButton = getCreateProjectDialog(page).getByRole("button", {
+      name: "Create project",
+      exact: true,
+    });
+    await expect(createProjectButton).toBeEnabled();
+    await createProjectButton.click();
+
+    const createdProjectResponse = await createProjectDone;
+    const createdProject = (await createdProjectResponse.json()) as { id: string };
+    await repoRegistrationDone;
+
+    await page.waitForURL(`**${resolveProjectDefaultPath(createdProject.id)}`);
+    expect(existsSync(join(repoPath, ".pstdio", "hooks", "post-worktree-create"))).toBe(true);
+    expect(readFileSync(join(repoPath, ".pstdio", "hooks", "post-worktree-create"), "utf8")).toContain(
+      "pstdio tickets pull",
+    );
+  });
 });
 
 test.describe("Project settings hooks", () => {
@@ -431,8 +480,9 @@ test.describe("Project settings hooks", () => {
       await expect(addButton).toBeVisible();
       await addButton.click();
 
-      // Select pre-commit from the dropdown
-      await page.getByRole("menuitem", { name: "pre-commit" }).click();
+      // Filter and select pre-commit from the searchable dropdown
+      await page.getByRole("textbox", { name: "Search hooks…" }).fill("pre-commit");
+      await page.getByRole("option", { name: "pre-commit" }).click();
 
       // Should navigate to the hook editor
       await expect(page.getByText("pre-commit").first()).toBeVisible();

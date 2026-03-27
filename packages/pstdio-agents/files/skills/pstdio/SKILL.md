@@ -1,9 +1,9 @@
 ---
 name: pstdio
 description: Guidance for pstdio, a CLI tool for managing project workflows. Covers setup, configuration (.pstdio/config.json), agent configuration, CLI reference, and troubleshooting. Use for "setting up pstdio", "configuring agents", "how does pstdio work", "what commands are available", or general pstdio questions.
+metadata:
+  - version: 0.0.2
 ---
-
-<!-- pstdio-skill-version: 0.0.1 -->
 
 # pstdio
 
@@ -23,6 +23,7 @@ Prompt Studio (pstdio) is a local-first project management tool for AI-driven de
 3. **Validate** — Review artifacts (tests, builds, diffs), then merge the workspace back
 
 This skill covers pstdio itself. For task-specific workflows, defer to the dedicated skills:
+
 - **create-ticket** — Creating tickets
 - **implement-ticket** — Implementing tickets
 - **create-proposal** — Writing proposals
@@ -84,20 +85,25 @@ Conversations between users and agents, tracked in the database. Sessions can be
 ## Setting Up a Project
 
 1. **Create a new project**
+
    ```bash
    pstdio projects create [name]
    ```
+
    If `name` is omitted, the current folder name is used. This also installs default skills, seeds templates, and scaffolds docs.
 
 2. **Or link to an existing project**
+
    ```bash
    pstdio projects link --project-id <id>
    ```
 
 3. **Configure an agent**
+
    ```bash
    pstdio agents setup claude-code
    ```
+
    Installs bundled skills to the agent's skills directory (e.g. `.claude/skills/`).
 
 4. **Verify setup**
@@ -109,6 +115,7 @@ Conversations between users and agents, tracked in the database. Sessions can be
 ## Configuration
 
 ### Project Config (`.pstdio/config.json`)
+
 - **Scope**: Links the local repo to a pstdio project
 - **Location**: `<repo-root>/.pstdio/config.json` (checked into git)
 
@@ -119,6 +126,7 @@ Conversations between users and agents, tracked in the database. Sessions can be
 ```
 
 ### Agent Configuration
+
 Stored in the database. The first configured agent becomes the default.
 
 ```bash
@@ -130,6 +138,40 @@ pstdio agents install-skills <id> # Reinstall bundled skills (missing only, neve
 ```
 
 Available agents: `claude-code`, `opencode`.
+
+## Creating Hooks
+
+Hooks are shell scripts stored at `.pstdio/hooks/<hook-name>`. Use `pstdio hooks create <hook-name>` to create one from the CLI. The command reuses the bundled scaffold when one exists, and otherwise writes a minimal shell-script starter. You can also create and edit hooks through the dashboard at `Project Settings > Hooks`.
+
+Use `pstdio hooks list` to see the supported hook names and whether each one is already installed. Current hook names:
+
+- **Worktree**: `pre-worktree-create`, `post-worktree-create`, `pre-commit`, `post-commit`, `pre-rebase`, `post-rebase`, `pre-merge`, `post-merge`, `pre-worktree-remove`, `post-worktree-remove`, `on-conflict`
+- **Session**: `post-session-start`, `post-session-success`, `post-session-fail`, `post-session-resume`, `post-session-await-input`
+- **Ticket**: `pre-ticket-creation`, `post-ticket-creation`, `pre-ticket-status-change`, `post-ticket-status-change`, `pre-ticket-archive`, `post-ticket-archive`, `pre-ticket-deletion`, `post-ticket-deletion`
+
+Recommended workflow:
+
+1. Run `pstdio hooks list` to pick the correct hook name and confirm whether a script already exists.
+2. Run `pstdio hooks create <hook-name>` to create the script. `pstdio projects create` also scaffolds a default `post-worktree-create` hook, so extend that file instead of replacing it when possible.
+3. Read the event payload from stdin if the hook needs structured data. Hooks also receive env vars such as `PSTDIO_HOOK`, `PSTDIO_REPO_PATH`, and `PSTDIO_PROJECT_ID`, plus workspace-specific vars like `PSTDIO_WORKTREE_PATH`, `PSTDIO_WORKSPACE`, and `PSTDIO_BRANCH` when available.
+4. Write JSON to stdout only when the hook intentionally modifies the payload for downstream processing. Exit non-zero only when you want a blocking hook to fail the parent operation.
+5. Test the script manually with `pstdio hooks run <hook-name> [--worktree-path <path>]` before relying on it in normal workflows.
+
+Example:
+
+```sh
+#!/bin/sh
+
+# .pstdio/hooks/pre-commit
+bun run validate
+```
+
+Current behavior to keep in mind:
+
+- Hooks are executed from `.pstdio/hooks/<hook-name>` using `sh <script-path>`, so write them as shell scripts.
+- `pstdio hooks create` fails instead of overwriting an existing hook file.
+- Hooks time out after 60 seconds.
+- Use `.pstdio/docs/product/cli/hooks.md` for the detailed CLI and lifecycle reference.
 
 ## CLI Reference
 
@@ -199,6 +241,7 @@ pstdio sessions archive --id <id>                    # Archive session
 pstdio workspaces create --id <ticket-id> [--base <ref>]  # Create worktree for ticket
 pstdio workspaces list                               # List active workspaces
 pstdio workspaces merge --id <ws-id> [--delete-workspace]  # Squash-merge into current branch
+pstdio workspaces set-status [--workspace <shorthand>] --status <s>  # Update attempt status (auto-detects workspace from branch)
 pstdio workspaces delete --id <ws-id>                # Force-remove workspace
 pstdio workspaces startup-log --id <ws-id>           # Show startup script log
 ```
@@ -250,6 +293,7 @@ pstdio [--api-port <n>] [--dashboard-port <n>]       # Launch dashboard + open b
 - **"Project not found"**: Run `pstdio projects list` to verify the project exists, then `pstdio projects link --project-id <id>`.
 - **Skills not installed**: Run `pstdio agents install-skills <agent-id>` to reinstall missing skills.
 - **Config missing**: Check that `.pstdio/config.json` exists at the git root. Create with `pstdio projects create` or `pstdio projects link`.
-- **API not reachable**: Run `pstdio serve` to start the API manually, or check if it's already running on the expected port.
+- **API not reachable**: Run `pstdio serve` to start the API manually, or check if it's already running on the expected port. Check `~/.pstdio/error-logs/` for startup and runtime error details.
+- **Error logs**: Startup failures and runtime errors are persisted to `~/.pstdio/error-logs/` as JSON files. Check the most recent file for details when the server fails silently.
 - **Agent not found**: Run `pstdio agents list` to check availability. Ensure the agent binary is installed and on your PATH.
 - **Workspace issues**: Run `pstdio workspaces list` to see active workspaces. Use `--force` with `workspaces delete` if a worktree is stuck.

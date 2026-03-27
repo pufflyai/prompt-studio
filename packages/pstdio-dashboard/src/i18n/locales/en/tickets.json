@@ -303,7 +303,8 @@
     },
     "workspace": {
       "create": "Create",
-      "creating": "Creating..."
+      "creating": "Creating...",
+      "settingUp": "Setting up workspace..."
     },
     "fileEntry": {
       "created": "Created",

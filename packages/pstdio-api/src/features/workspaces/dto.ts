@@ -6,7 +6,7 @@ export const workspaceResponseSchema = z.object({
   name: z.string(),
   branch: z.string().nullable(),
   worktree_path: z.string().nullable(),
-  status: z.string(),
+  attempt_status_id: z.string().nullable(),
   archived: z.boolean(),
   workspace_shorthand: z.string(),
   startup_log_file_id: z.string().nullable(),

@@ -23,7 +23,7 @@
     "reset": "bun run clean && bun install && bun run build",
     "knip": "knip",
     "setup:demo": "bun run --cwd scripts setup-demo-project",
-    "dev": "PSTDIO_DISABLE_EMBED_MANIFEST=1 bun --watch packages/pstdio/src/index.ts -- serve & VITE_API_BASE_URL= bun run --cwd packages/pstdio-dashboard dev & wait",
+    "dev": "PSTDIO_DISABLE_EMBED_MANIFEST=1 bun --watch packages/pstdio/src/index.ts -- serve --port 19841 & VITE_API_BASE_URL=http://localhost:19841 bun run --cwd packages/pstdio-dashboard dev & wait",
     "dev:api": "bun run --cwd packages/api dev",
     "dev:landing-page": "bun run --cwd clients/landing-page develop",
     "storybook:ui": "bun run --cwd packages/ui storybook",

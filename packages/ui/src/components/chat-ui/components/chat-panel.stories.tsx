@@ -445,6 +445,7 @@ export const ConversationWithWorkspaceHub: Story = {
   ),
   args: {
     ...Conversation.args,
+    streaming: true,
     workspaceHub: (
       <ChatWorkspaceHub
         changesLabel="9 files changed"

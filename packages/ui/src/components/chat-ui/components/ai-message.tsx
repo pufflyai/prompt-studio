@@ -11,6 +11,9 @@ const recipe = defineSlotRecipe({
       alignItems: "end",
       justifyContent: "end",
       gap: "sm",
+      animationName: "message-fade-in",
+      animationDuration: "200ms",
+      animationTimingFunction: "ease-out",
       "&:has(+ [data-scope='ai-message'][data-part='root'])": {
         mb: 0,
       },
@@ -34,6 +37,8 @@ const recipe = defineSlotRecipe({
           border: "1px solid",
           borderColor: "border.muted",
           bg: "bg.subtle",
+          px: "xs",
+          py: "xs",
           width: "full",
           borderBottomRightRadius: 0,
         },
@@ -61,14 +66,12 @@ const recipe = defineSlotRecipe({
     size: {
       sm: {
         root: { gap: "xs" },
-        content: { px: "xs", py: "xs", textStyle: "xs" },
+        content: { textStyle: "xs" },
       },
-      md: {
-        content: { px: "xs", py: "xs" },
-      },
+      md: {},
       lg: {
         root: { gap: "md" },
-        content: { px: "sm", py: "xs", textStyle: "md" },
+        content: { textStyle: "md" },
       },
     },
     shape: {

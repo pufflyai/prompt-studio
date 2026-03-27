@@ -21,7 +21,7 @@ Fired during the lifecycle of a worktree. `pre-*` hooks are blocking — a non-z
 | Hook                   | Fires when                            | Blocking |
 | ---------------------- | ------------------------------------- | -------- |
 | `pre-worktree-create`  | Before worktree is created            | Yes      |
-| `post-worktree-create` | After worktree is created             | No       |
+| `post-worktree-create` | After worktree is created             | Yes      |
 | `pre-commit`           | Before staging and committing changes | Yes      |
 | `post-commit`          | After a commit is created             | No       |
 | `pre-rebase`           | Before rebasing onto target           | Yes      |
@@ -39,7 +39,7 @@ Fired during the lifecycle of a ticket. `pre-*` hooks are blocking — a non-zer
 | Hook                        | Fires when                       | Blocking |
 | --------------------------- | -------------------------------- | -------- |
 | `pre-ticket-creation`       | Before a ticket is created       | Yes      |
-| `on-ticket-creation`        | After a new ticket is created    | No       |
+| `post-ticket-creation`      | After a new ticket is created    | No       |
 | `pre-ticket-status-change`  | Before a ticket's status changes | Yes      |
 | `post-ticket-status-change` | After a ticket's status changes  | No       |
 | `pre-ticket-archive`        | Before a ticket is archived      | Yes      |
@@ -70,6 +70,45 @@ jq '.priority = "medium"'
 echo "Missing description" >&2
 exit 1
 ```
+
+### Environment Variables
+
+Every hook receives environment variables alongside the JSON payload. Which variables are set depends on the hook type and the available context.
+
+#### All hooks
+
+| Variable            | Description                    | Always set |
+| ------------------- | ------------------------------ | ---------- |
+| `PSTDIO_HOOK`       | Name of the hook being run     | Yes        |
+| `PSTDIO_REPO_PATH`  | Absolute path to the repo root | Yes        |
+| `PSTDIO_PROJECT_ID` | Project ID                     | Yes        |
+
+#### Worktree hooks
+
+Set for all worktree lifecycle hooks (`pre-worktree-create`, `post-worktree-create`, `pre-commit`, `post-commit`, `pre-rebase`, `post-rebase`, `pre-merge`, `post-merge`, `pre-worktree-remove`, `post-worktree-remove`, `on-conflict`).
+
+| Variable                | Description                          | When set                                                              |
+| ----------------------- | ------------------------------------ | --------------------------------------------------------------------- |
+| `PSTDIO_BRANCH`         | Workspace branch name                | Always                                                                |
+| `PSTDIO_WORKTREE_PATH`  | Absolute path to the worktree        | After worktree exists                                                 |
+| `PSTDIO_WORKSPACE`      | Workspace shorthand (e.g. `PS-1_A1`) | Always                                                                |
+| `PSTDIO_TARGET`         | Target branch for merge/rebase       | `pre-merge`, `post-merge`, `pre-rebase`, `post-rebase`, `on-conflict` |
+| `PSTDIO_COMMIT_SHA`     | Commit hash                          | `post-commit`, `post-merge`                                           |
+| `PSTDIO_COMMIT_MESSAGE` | Commit message                       | `pre-commit`, `post-commit`                                           |
+
+#### Session hooks
+
+Set for all session lifecycle hooks (`post-session-start`, `post-session-success`, `post-session-fail`, `post-session-resume`, `post-session-await-input`). When the session is linked to a workspace, the workspace variables are also available.
+
+| Variable               | Description                   | When set                                      |
+| ---------------------- | ----------------------------- | --------------------------------------------- |
+| `PSTDIO_WORKSPACE`     | Workspace shorthand           | Session linked to a workspace                 |
+| `PSTDIO_WORKTREE_PATH` | Absolute path to the worktree | Session linked to a workspace with a worktree |
+| `PSTDIO_BRANCH`        | Workspace branch name         | Session linked to a workspace                 |
+
+#### Ticket hooks
+
+Set for all ticket lifecycle hooks (`pre-ticket-creation`, `post-ticket-creation`, `pre-ticket-status-change`, `post-ticket-status-change`, `pre-ticket-archive`, `post-ticket-archive`, `pre-ticket-deletion`, `post-ticket-deletion`). Ticket hooks do not receive workspace variables — use the JSON payload for ticket data.
 
 ### Payload Modification
 

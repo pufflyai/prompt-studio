@@ -30,17 +30,30 @@ export type SettingsSection =
 export const SETTINGS_SIDEBAR_STORAGE_KEY = "settings-sidebar";
 
 const HOOK_DESCRIPTIONS: Record<string, string> = {
-  "pre-create": "Before worktree is created",
-  "post-create": "After worktree is created",
+  "pre-worktree-create": "Before worktree is created",
+  "post-worktree-create": "After worktree is created",
   "pre-commit": "Before staging and committing",
   "post-commit": "After a commit is created",
   "pre-rebase": "Before rebasing onto target",
   "post-rebase": "After successful rebase",
   "pre-merge": "Before squash-merging",
   "post-merge": "After successful merge",
-  "pre-remove": "Before worktree deletion",
-  "post-remove": "After worktree is removed",
+  "pre-worktree-remove": "Before worktree deletion",
+  "post-worktree-remove": "After worktree is removed",
   "on-conflict": "When merge/rebase hits conflicts",
+  "post-session-start": "After a session begins",
+  "post-session-success": "After session completes successfully",
+  "post-session-fail": "After session ends with error",
+  "post-session-resume": "After session resumes",
+  "post-session-await-input": "Session waiting for input",
+  "pre-ticket-creation": "Before ticket is created",
+  "post-ticket-creation": "After ticket is created",
+  "pre-ticket-status-change": "Before ticket status changes",
+  "post-ticket-status-change": "After ticket status changes",
+  "pre-ticket-archive": "Before ticket is archived",
+  "post-ticket-archive": "After ticket is archived",
+  "pre-ticket-deletion": "Before ticket is deleted",
+  "post-ticket-deletion": "After ticket is deleted",
 };
 
 interface SettingsSidebarProps {
@@ -185,6 +198,8 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
                   id: "add-hook",
                   label: "Add hook",
                   icon: <Plus size={14} />,
+                  searchPlaceholder: "Search hooks…",
+                  emptyMenuLabel: "No hooks found",
                   menuItems: addHookMenuItems,
                 },
               ]

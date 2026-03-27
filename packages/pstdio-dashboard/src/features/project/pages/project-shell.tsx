@@ -54,7 +54,7 @@ const ProjectShellContent = () => {
           )}
         </Box>
       </Stack>
-      {sessionModalState === "attached" && !isSessionsRoute ? <SessionAttachedPanel /> : null}
+      {sessionModalState === "attached" && !isSessionsRoute && !isWorkspaceRoute ? <SessionAttachedPanel /> : null}
       {!isSessionsRoute && !isWorkspaceRoute ? <SessionBubbleContainer /> : null}
     </Flex>
   );

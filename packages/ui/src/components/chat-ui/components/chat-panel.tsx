@@ -1,4 +1,4 @@
-import { Box, Button, Flex, Stack } from "@chakra-ui/react";
+import { Box, Button, Flex, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
 import { MessageCircleIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
@@ -37,6 +37,8 @@ interface ChatPanelProps {
   attachmentList?: ReactNode;
   approvalPrompt?: ReactNode;
   workspaceHub?: ReactNode;
+  workspaceInitializing?: boolean;
+  inputDisabled?: boolean;
 }
 
 const renderMessage = (message: SessionMessage, streaming: boolean) => {
@@ -69,6 +71,8 @@ export const ChatPanel = (props: ChatPanelProps) => {
     attachmentList,
     approvalPrompt,
     workspaceHub,
+    workspaceInitializing = false,
+    inputDisabled = false,
   } = props;
 
   const merged = mergeReasoningToolOnlyMessages(messages);
@@ -78,6 +82,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
   const [expandedStickyMessageIds, setExpandedStickyMessageIds] = useState(() => new Set<string>());
   const emptyContent = streaming ? (loadingContent ?? emptyStateContent) : emptyStateContent;
   const hasWorkspaceHub = Boolean(workspaceHub);
+  const showThinkingIndicator = streaming && hasMessages && !workspaceInitializing;
 
   const toggleStickyMessageExpanded = (messageId: string) => {
     setExpandedStickyMessageIds((current) => {
@@ -173,6 +178,14 @@ export const ChatPanel = (props: ChatPanelProps) => {
         <ChatPrimitives.ScrollToBottom aria-label="Scroll to latest message" />
       </ChatPrimitives.Root>
       {approvalPrompt}
+      {showThinkingIndicator ? (
+        <HStack gap="xs" px="sm" py="2xs">
+          <Spinner size="xs" color="fg.muted" />
+          <Text textStyle="label/XS/regular" color="fg.muted">
+            Working...
+          </Text>
+        </HStack>
+      ) : null}
       <Stack px="sm" gap={hasWorkspaceHub ? "0" : "xs"}>
         {workspaceHub}
         <ChatInput
@@ -185,6 +198,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
           attachedResources={attachedResources}
           onClearAttachments={onClearAttachments}
           attachmentList={attachmentList}
+          isDisabled={inputDisabled}
           attachedToTop={hasWorkspaceHub}
         />
       </Stack>

@@ -3,6 +3,7 @@ import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { followUpBodySchema, notFoundResponseSchema, sessionResponseSchema } from "../dto";
 import { resolveSessionCwd } from "../resolve-session-cwd";
+import { fireSessionResumeHook } from "../session-hooks";
 import { resumeAgentSession, spawnAgentSession } from "../spawn-agent";
 
 export const followUpSessionRoute = createRoute({
@@ -52,6 +53,9 @@ export const followUpSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof 
 
     const updated = await deps.sessionsService.updateStatus(session.id, "in_progress");
     deps.eventBus.emit("sessions", "set", updated);
+    if (session.project_id) {
+      fireSessionResumeHook(deps, { id: session.id, project_id: session.project_id, status: "in_progress" });
+    }
 
     const workspace = await deps.workspaceSessionsService.getWorkspaceBySessionId(session.id);
     const cwd = await resolveSessionCwd(deps, session.project_id!, workspace?.id);

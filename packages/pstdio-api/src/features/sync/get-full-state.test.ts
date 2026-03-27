@@ -69,7 +69,7 @@ describe("getFullState", () => {
     const statuses = await statusesService.list(project.id);
     const statusToDelete = statuses.find((s) => !s.is_default)!;
 
-    await statusesService.softDelete(statusToDelete.id);
+    await statusesService.remove(statusToDelete.id);
 
     const state = await getFullState(db);
     const syncedStatuses = state.ticket_statuses as { id: string }[];

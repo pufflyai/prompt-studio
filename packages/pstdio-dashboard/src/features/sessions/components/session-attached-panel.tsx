@@ -18,7 +18,15 @@ export const SessionAttachedPanel = () => {
   const { data: sessions = [] } = useProjectSessions(projectId);
 
   return (
-    <Flex direction="column" w="28rem" minW="28rem" h="100%" borderLeftWidth="1px" bg="bg">
+    <Flex
+      data-testid="session-attached-panel"
+      direction="column"
+      w="28rem"
+      minW="28rem"
+      h="100%"
+      borderLeftWidth="1px"
+      bg="bg"
+    >
       <HStack px="sm" pt="sm" pb="xs">
         <SessionSelector
           sessions={sessions}

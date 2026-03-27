@@ -48,9 +48,10 @@ export const useSessionStream = (sessionId: string | null) => {
     }
 
     const cached = getCachedSessionEntry(sessionId);
+    const hasCachedMessages = cached.messages.length > 0;
     setState({
       messages: cached.messages,
-      isStreaming: true,
+      isStreaming: !hasCachedMessages,
       approvalRequest: null,
     });
 
@@ -78,12 +79,17 @@ export const useSessionStream = (sessionId: string | null) => {
     const url = buildApiUrl(`/v1/sessions/${sessionId}/stream?attempt=${connectionAttempt}`);
     const source = new EventSource(url);
 
+    source.addEventListener("ready", () => {
+      isStreaming = true;
+      setState((prev) => ({ ...prev, isStreaming: true }));
+    });
+
     source.addEventListener("patch", (event) => {
       isStreaming = true;
       const patch = JSON.parse(event.data) as JsonPatch;
       messagesRef.current = applyMessagePatch(messagesRef.current, patch);
       updateCachedSessionEntry(sessionId, { messages: messagesRef.current });
-      setState((prev) => ({ ...prev, messages: messagesRef.current, approvalRequest: null }));
+      setState((prev) => ({ ...prev, messages: messagesRef.current, isStreaming: true, approvalRequest: null }));
     });
 
     source.addEventListener("approval_request", (event) => {

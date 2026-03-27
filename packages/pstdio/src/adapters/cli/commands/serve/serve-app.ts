@@ -1,4 +1,5 @@
 import { createApp } from "pstdio-api/app";
+import { persistStartupError } from "pstdio-api/error-log";
 import { injectConfig } from "../../dashboard/serve-dashboard";
 import { resolveDefaultDbPath, resolveDefaultStoragePath } from "../../dashboard/state-paths";
 import { isCompiledBinary, loadEmbeddedAssets, resolveMimeType } from "./embedded-assets";
@@ -24,6 +25,7 @@ type ServeAppDeps = {
   resolveMimeType: typeof resolveMimeType;
   serve: typeof Bun.serve;
   log: (message: string) => void;
+  persistError: (error: Error) => void;
   onSignal: (signal: NodeJS.Signals, listener: () => void) => void;
   offSignal: (signal: NodeJS.Signals, listener: () => void) => void;
   exit: (code?: number) => never;
@@ -47,6 +49,7 @@ const defaultDeps: ServeAppDeps = {
   resolveMimeType,
   serve: Bun.serve,
   log: (message) => process.stdout.write(message),
+  persistError: persistStartupError,
   onSignal: (signal, listener) => process.on(signal, listener),
   offSignal: (signal, listener) => process.off(signal, listener),
   exit: (code = 0) => process.exit(code),
@@ -146,6 +149,9 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
     } catch (error) {
       removeShutdownListeners();
       await closeApp();
+      if (error instanceof Error) {
+        deps.persistError(error);
+      }
       throw error;
     }
   };

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { commitChanges } from "./commit";
 import { git } from "./git";
@@ -9,7 +9,9 @@ import { createWorktree } from "./worktree";
 const writeHook = (repoPath: string, hookName: string, script: string) => {
   const hooksDir = join(repoPath, ".pstdio", "hooks");
   mkdirSync(hooksDir, { recursive: true });
-  writeFileSync(join(hooksDir, hookName), script);
+  const path = join(hooksDir, hookName);
+  writeFileSync(path, `#!/bin/sh\n${script}`);
+  chmodSync(path, 0o755);
 };
 
 let repo: Awaited<ReturnType<typeof createTempRepo>>;
@@ -108,7 +110,7 @@ describe("commitChanges", () => {
     await commitChanges({ worktreePath: wtPath, message: "with hook", repoPath: repo.dir });
 
     // post-commit is fire-and-forget, give it a moment
-    await new Promise((r) => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 500));
     expect(existsSync(join(repo.dir, "post-commit-marker.txt"))).toBe(true);
   });
 });

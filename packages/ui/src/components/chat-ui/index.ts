@@ -1,3 +1,4 @@
+export type { AlertPart } from "../chat-ui/agent-types";
 export type {
   ConversationContentProps,
   ConversationRootProps,

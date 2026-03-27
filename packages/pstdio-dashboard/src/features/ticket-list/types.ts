@@ -34,7 +34,7 @@ export interface TicketStatusOption {
 export interface TicketAttempt {
   id: string;
   label: string;
-  status: "active" | "merged" | "rejected";
+  attemptStatusId: string | null;
   sessionStatus: SessionStatus | null;
   shorthand: string;
   updatedAt: string;

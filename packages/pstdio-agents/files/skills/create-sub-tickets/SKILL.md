@@ -1,6 +1,8 @@
 ---
 name: create-sub-tickets
 description: "Break a parent ticket into actionable sub-tickets. Use when asked to create child or sub-tickets for a ticket."
+metadata:
+  - version: 0.0.1
 ---
 
 ## Workflow
@@ -26,7 +28,7 @@ description: "Break a parent ticket into actionable sub-tickets. Use when asked 
    - Track missing information with [MISSING INFORMATION] tags in the ticket.
 6. When defining acceptance, list the test file paths, cases covered, and commands to run. Tests belong with the functional change they validate, do not create standalone “add tests” tickets.
 7. Resolve blockers by checking all existing tickets that are not done. If another ticket is a blocker, add it to `depends_on` in frontmatter.
-   - If blocked, run `pstdio tickets update --id "<ticket-id>" --status blocked` and document the reason in the ticket's `blocked_reason` frontmatter field
+   - If blocked, run `pstdio tickets update --id "<ticket-id>" --status blocked`
 8. Run `pstdio tickets save --id "<ticket id>"` to persist the updated ticket content.
 9. Stop after the sub-ticket files are created. Do not implement code or modify plan artifacts.
 

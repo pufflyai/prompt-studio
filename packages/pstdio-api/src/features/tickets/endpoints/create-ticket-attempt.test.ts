@@ -157,10 +157,12 @@ describe("POST /v1/tickets/:id/attempts", () => {
     const repoRoot = createGitRepo("attempt-post-create-hook-repo");
 
     // Write post-create hook to .pstdio/hooks/
-    const { mkdirSync, writeFileSync } = await import("node:fs");
+    const { chmodSync, mkdirSync, writeFileSync } = await import("node:fs");
     const hooksDir = join(repoRoot, ".pstdio", "hooks");
     mkdirSync(hooksDir, { recursive: true });
-    writeFileSync(join(hooksDir, "post-create"), 'echo "post-create hook ran" && echo "ok" > post-create-marker.txt');
+    const hookPath = join(hooksDir, "post-worktree-create");
+    writeFileSync(hookPath, '#!/bin/sh\necho "post-create hook ran" && echo "ok" > post-create-marker.txt');
+    chmodSync(hookPath, 0o755);
 
     const repoRes = await app.request(`/v1/projects/${projectId}/repos`, {
       method: "POST",
@@ -205,10 +207,12 @@ describe("POST /v1/tickets/:id/attempts", () => {
     const { app, projectId, createGitRepo } = context;
     const repoRoot = createGitRepo("attempt-hook-session-id-repo");
 
-    const { mkdirSync, writeFileSync } = await import("node:fs");
+    const { chmodSync: chmod, mkdirSync: mkDir, writeFileSync: writeFile } = await import("node:fs");
     const hooksDir = join(repoRoot, ".pstdio", "hooks");
-    mkdirSync(hooksDir, { recursive: true });
-    writeFileSync(join(hooksDir, "post-create"), 'echo "hook ran" && echo "ok" > hook-marker.txt');
+    mkDir(hooksDir, { recursive: true });
+    const hookPath = join(hooksDir, "post-worktree-create");
+    writeFile(hookPath, '#!/bin/sh\necho "hook ran" && echo "ok" > hook-marker.txt');
+    chmod(hookPath, 0o755);
 
     const repoRes = await app.request(`/v1/projects/${projectId}/repos`, {
       method: "POST",

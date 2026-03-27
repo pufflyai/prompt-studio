@@ -94,14 +94,55 @@ const streamLivePatches = async (eventStore: EventStore, stream: SSEStreamingApi
   return aborted;
 };
 
+const WAIT_FOR_AGENT_POLL_MS = 500;
+const WAIT_FOR_AGENT_MAX_MS = 120_000;
+
+const waitForSessionStoreEntry = async (sessionId: string, deps: RouteDeps, stream: SSEStreamingApi) => {
+  // Only wait if the session exists but the agent hasn't been spawned yet.
+  // This happens when workspace initialization is blocking the agent spawn.
+  const session = await deps.sessionsService.get(sessionId);
+  if (!session) return null;
+
+  // Session already has an agent_session_id — the agent was spawned but is no longer running.
+  // This is an orphaned/completed session, not a pending spawn.
+  if (session.agent_session_id) return null;
+
+  const terminal = session.status === "completed" || session.status === "failed" || session.status === "cancelled";
+  if (terminal) return null;
+
+  const deadline = Date.now() + WAIT_FOR_AGENT_MAX_MS;
+
+  while (Date.now() < deadline) {
+    const entry = deps.sessionStore.get(sessionId);
+    if (entry) return entry;
+
+    const current = await deps.sessionsService.get(sessionId);
+    if (!current) return null;
+
+    const isTerminal = current.status === "completed" || current.status === "failed" || current.status === "cancelled";
+    if (isTerminal || current.agent_session_id) return null;
+
+    await stream.writeSSE({ data: JSON.stringify({ timestamp: Date.now() }), event: "heartbeat" });
+    await new Promise((resolve) => setTimeout(resolve, WAIT_FOR_AGENT_POLL_MS));
+  }
+
+  return null;
+};
+
 export const streamSessionHandler = (deps: RouteDeps) => {
   return (c: Context<AppBindings>) => {
     const id = c.req.param("id")!;
 
     return streamSSE(c, async (stream) => {
-      const entry = deps.sessionStore.get(id);
+      let entry = deps.sessionStore.get(id);
 
       await stream.writeSSE({ data: JSON.stringify({ sessionId: id }), event: "ready" });
+
+      // The agent may not have started yet (workspace is initializing).
+      // Wait for the session store entry to appear before giving up.
+      if (!entry) {
+        entry = await waitForSessionStoreEntry(id, deps, stream);
+      }
 
       if (!entry) {
         const session = await deps.sessionsService.get(id);

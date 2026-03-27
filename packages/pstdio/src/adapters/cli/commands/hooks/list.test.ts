@@ -7,7 +7,9 @@ const baseDeps = {
   readConfig: () => ({ project_id: "proj-1" }) as { project_id: string } | null,
   listHooks: () => [
     { name: "pre-commit" as const, exists: true, blocking: true },
-    { name: "post-create" as const, exists: false, blocking: false },
+    { name: "post-worktree-create" as const, exists: false, blocking: true },
+    { name: "post-session-start" as const, exists: false, blocking: false },
+    { name: "pre-ticket-creation" as const, exists: false, blocking: true },
   ],
   log: mock(),
 };
@@ -18,11 +20,13 @@ describe("hooks list", () => {
     const handler = createHandler({ ...baseDeps, log });
     await handler();
 
-    expect(log).toHaveBeenCalledTimes(3); // header + 2 hooks
+    expect(log).toHaveBeenCalledTimes(5); // header + 4 hooks
     expect(log.mock.calls[0][0]).toContain("Hook");
     expect(log.mock.calls[1][0]).toContain("pre-commit");
     expect(log.mock.calls[1][0]).toContain("yes");
-    expect(log.mock.calls[2][0]).toContain("post-create");
+    expect(log.mock.calls[2][0]).toContain("post-worktree-create");
+    expect(log.mock.calls[3][0]).toContain("post-session-start");
+    expect(log.mock.calls[4][0]).toContain("pre-ticket-creation");
   });
 
   test("throws when not in git repo", async () => {

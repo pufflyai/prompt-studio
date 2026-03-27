@@ -13,7 +13,6 @@ export const sessionStatusEnum = pgEnum("session_status", [
   "failed",
   "cancelled",
 ]);
-export const workspaceStatusEnum = pgEnum("workspace_status", ["active", "merged", "rejected"]);
 
 export const projects = pgTable("projects", {
   id: text("id").primaryKey(),
@@ -58,23 +57,45 @@ export const agent_configs = pgTable(
   (table) => [uniqueIndex("agent_configs_agent_id_idx").on(table.agent_id)],
 );
 
-export const ticket_statuses = pgTable("ticket_statuses", {
-  id: text("id").primaryKey(),
-  project_id: text("project_id")
-    .notNull()
-    .references(() => projects.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  color: text("color").notNull(),
-  sort_order: integer("sort_order").notNull(),
-  is_default: boolean("is_default").notNull(),
-  can_drag_out: boolean("can_drag_out").notNull(),
-  can_drag_in: boolean("can_drag_in").notNull(),
-  can_create: boolean("can_create").notNull(),
-  column_actions: text("column_actions").notNull().default("[]"),
-  created_at: text("created_at").notNull(),
-  updated_at: text("updated_at").notNull(),
-  deleted_at: text("deleted_at"),
-});
+export const ticket_statuses = pgTable(
+  "ticket_statuses",
+  {
+    id: text("id").primaryKey(),
+    project_id: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    color: text("color").notNull(),
+    sort_order: integer("sort_order").notNull(),
+    is_default: boolean("is_default").notNull(),
+    can_drag_out: boolean("can_drag_out").notNull(),
+    can_drag_in: boolean("can_drag_in").notNull(),
+    can_create: boolean("can_create").notNull(),
+    column_actions: text("column_actions").notNull().default("[]"),
+    created_at: text("created_at").notNull(),
+    updated_at: text("updated_at").notNull(),
+    deleted_at: text("deleted_at"),
+  },
+  (table) => [uniqueIndex("ticket_statuses_project_name_idx").on(table.project_id, table.name)],
+);
+
+export const attempt_statuses = pgTable(
+  "attempt_statuses",
+  {
+    id: text("id").primaryKey(),
+    project_id: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    color: text("color").notNull(),
+    sort_order: integer("sort_order").notNull(),
+    is_default: boolean("is_default").notNull(),
+    created_at: text("created_at").notNull(),
+    updated_at: text("updated_at").notNull(),
+    deleted_at: text("deleted_at"),
+  },
+  (table) => [uniqueIndex("attempt_statuses_project_name_idx").on(table.project_id, table.name)],
+);
 
 export const tickets = pgTable(
   "tickets",
@@ -179,9 +200,10 @@ export const workspaces = pgTable(
     name: text("name").notNull(),
     branch: text("branch"),
     worktree_path: text("worktree_path"),
-    status: workspaceStatusEnum("status").notNull().default("active"),
+    attempt_status_id: text("attempt_status_id").references(() => attempt_statuses.id, { onDelete: "set null" }),
     archived: boolean("archived").notNull().default(false),
     workspace_shorthand: text("workspace_shorthand").notNull(),
+    initializing: boolean("initializing").notNull().default(false),
     startup_log_file_id: text("startup_log_file_id").references(() => files.id, { onDelete: "set null" }),
     created_at: text("created_at").notNull(),
     updated_at: text("updated_at").notNull(),

@@ -17,7 +17,7 @@ export type ApiTicket = TicketListItem & {
 export type ApiTicketAttempt = {
   id: string;
   label: string;
-  status: "active" | "merged" | "rejected";
+  attempt_status_id: string | null;
   shorthand: string | null;
   updated_at: string;
   worktree_path: string | null;

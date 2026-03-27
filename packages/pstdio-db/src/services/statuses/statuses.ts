@@ -125,9 +125,9 @@ export const createStatusesService = (db: DbClient) => {
     await db.update(ticket_statuses).set(next).where(eq(ticket_statuses.id, id));
   };
 
-  const softDelete = async (id: string) => {
-    await db.update(ticket_statuses).set({ deleted_at: nowTimestamp() }).where(eq(ticket_statuses.id, id));
+  const remove = async (id: string) => {
+    await db.delete(ticket_statuses).where(eq(ticket_statuses.id, id));
   };
 
-  return { list, getByName, getDefault, create, setDefault, updateColor, update, softDelete };
+  return { list, getByName, getDefault, create, setDefault, updateColor, update, remove };
 };

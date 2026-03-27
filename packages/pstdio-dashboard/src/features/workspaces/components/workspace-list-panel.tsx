@@ -2,7 +2,7 @@ import { Flex, IconButton, Menu, Stack, Text } from "@chakra-ui/react";
 import type { SessionCompletionStatus } from "@pstdio/ui";
 import { MenuItem, resolveSessionIndicatorColor, resolveSessionIndicatorIcon, Tooltip } from "@pstdio/ui";
 import { ChevronRight, Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { WorkspaceSessionEntry } from "../hooks/use-workspace-sessions";
 
 interface WorkspaceListItem {
@@ -27,6 +27,16 @@ export const WorkspaceListPanel = (props: WorkspaceListPanelProps) => {
   const { workspaces, sessionsByWorkspaceId, activeSessionId, onSelectSession, onCreateAttempt } = props;
 
   const [expandedWorkspaces, setExpandedWorkspaces] = useState<Set<string>>(() => new Set(workspaces.map((w) => w.id)));
+
+  useEffect(() => {
+    if (!activeSessionId) return;
+    for (const [workspaceId, sessions] of sessionsByWorkspaceId) {
+      if (sessions.some((s) => s.id === activeSessionId)) {
+        setExpandedWorkspaces((prev) => (prev.has(workspaceId) ? prev : new Set(prev).add(workspaceId)));
+        break;
+      }
+    }
+  }, [activeSessionId, sessionsByWorkspaceId]);
 
   const toggleWorkspace = (id: string) => {
     setExpandedWorkspaces((prev) => {

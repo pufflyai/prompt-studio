@@ -60,7 +60,7 @@ export const buildTicketStatusCatalog = (statuses: StatusResponse[]) => {
 export const toTicketAttempt = (attempt: ApiTicketAttempt): TicketAttempt => ({
   id: attempt.id,
   label: attempt.label,
-  status: attempt.status,
+  attemptStatusId: attempt.attempt_status_id,
   sessionStatus: null,
   shorthand: attempt.shorthand ?? attempt.id,
   updatedAt: attempt.updated_at,

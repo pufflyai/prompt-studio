@@ -28,7 +28,7 @@ export const toTicketFromRow = (
     return {
       id: ws.id,
       label: (ws.name as string) ?? ws.id,
-      status: (ws.status as "active" | "merged" | "rejected") ?? "active",
+      attemptStatusId: (ws.attempt_status_id as string) ?? null,
       sessionStatus: toSessionStatus(session?.status),
       shorthand: (ws.workspace_shorthand as string) ?? ws.id,
       updatedAt: ws.updated_at as string,

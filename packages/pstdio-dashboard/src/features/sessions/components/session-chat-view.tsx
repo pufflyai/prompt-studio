@@ -1,30 +1,30 @@
-import { Box, Button, Flex } from "@chakra-ui/react";
-import { ApprovalPrompt, ChatPanel, ChatSkeleton, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
-import { Link, useParams } from "@tanstack/react-router";
-import { ArrowUpRight } from "lucide-react";
+import { Box, Flex } from "@chakra-ui/react";
+import { ChatPanel, ChatSkeleton } from "@pstdio/ui/chat-ui";
+import { useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/features/project-settings/store";
 import { useTicketAttemptDiffSummary } from "@/features/ticket/hooks/use-ticket-attempt-diff-summary";
 import { RepoBrowserContainer } from "@/features/workspaces/components/repo-browser.container";
-import { apiRequest } from "@/lib/api";
 import { useCreateProjectSession } from "../hooks/use-create-project-session";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useSessionAgent } from "../hooks/use-session-agent";
 import { useSessionStream } from "../hooks/use-session-stream";
 import { useSessionWorkspace } from "../hooks/use-session-workspace";
-import { buildSessionWorkspaceHubModel } from "../utils/workspace-hub";
 import {
-  assignPendingFollowUpSession,
-  createPendingFollowUpState,
   mergeMessagesWithPendingFollowUp,
   type PendingFollowUpState,
-  shouldClearPendingFollowUp,
   shouldShowPendingFollowUp,
 } from "./session-chat-state";
-
-const EDIT_ACTION_TYPES = new Set(["write", "execute"]);
+import { submitSessionMessage } from "./session-chat-view-actions";
+import {
+  useEditActionNotifier,
+  useReconnectWhenWorkspaceReady,
+  useResetEditCountOnSessionChange,
+  useSyncPendingFollowUp,
+} from "./session-chat-view-hooks";
+import { SessionChatApprovalPromptPanel, SessionChatWorkspaceHubPanel } from "./session-chat-view-panels";
 
 interface SessionChatViewProps {
   sessionId: string | null;
@@ -56,180 +56,71 @@ export const SessionChatView = (props: SessionChatViewProps) => {
   const followUp = useFollowUpSession();
   const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUpState | null>(null);
   const pendingIdRef = useRef(0);
-  const lastSessionIdRef = useRef<string | null>(sessionId);
   const editCountRef = useRef(0);
+  const isWorkspaceInitializing = sessionWorkspace?.initializing ?? false;
 
-  useEffect(() => {
-    if (lastSessionIdRef.current !== sessionId) {
-      lastSessionIdRef.current = sessionId;
-      editCountRef.current = 0;
-    }
-  }, [sessionId]);
-
-  useEffect(() => {
-    if (!onEditAction) return;
-
-    let count = 0;
-    for (const msg of messages) {
-      for (const part of msg.parts) {
-        if (
-          part.type === "tool" &&
-          part.actionType &&
-          EDIT_ACTION_TYPES.has(part.actionType) &&
-          part.status === "completed"
-        ) {
-          count++;
-        }
-      }
-    }
-
-    if (count > editCountRef.current) {
-      editCountRef.current = count;
-      onEditAction();
-    }
-  }, [messages, onEditAction]);
+  useResetEditCountOnSessionChange(sessionId, editCountRef);
+  useReconnectWhenWorkspaceReady(isWorkspaceInitializing, reconnect);
+  useEditActionNotifier(messages, onEditAction, editCountRef);
+  useSyncPendingFollowUp({
+    messages,
+    pendingFollowUp,
+    sessionId,
+    setPendingFollowUp,
+  });
 
   useEffect(() => {
     setChatDraft(projectSettingsStore.getState().chatDraftsBySession[draftKey] ?? "");
   }, [draftKey, projectSettingsStore]);
-
-  useEffect(() => {
-    if (shouldClearPendingFollowUp(pendingFollowUp, messages)) {
-      setPendingFollowUp(null);
-    }
-  }, [messages, pendingFollowUp]);
-
-  useEffect(() => {
-    if (!pendingFollowUp?.sessionId) {
-      return;
-    }
-
-    if (pendingFollowUp.sessionId !== sessionId) {
-      setPendingFollowUp(null);
-    }
-  }, [pendingFollowUp, sessionId]);
-
-  const handleSubmitMessage = (text: string) => {
-    const pendingId = `pending-${pendingIdRef.current}`;
-    pendingIdRef.current += 1;
-
-    if (!sessionId) {
-      if (!projectId || !agent) return;
-      clearSessionDraft(null);
-      setChatDraft("");
-
-      const pending = createPendingFollowUpState({
-        prompt: text,
-        messageCount: messages.length,
-        pendingId,
-      });
-      setPendingFollowUp(pending);
-
-      createSession.mutate(
-        { projectId, prompt: text, agent, model },
-        {
-          onSuccess: ({ sessionId }) => {
-            setPendingFollowUp((current) => {
-              if (!current || current.userMessageId !== pending.userMessageId) {
-                return current;
-              }
-
-              return assignPendingFollowUpSession(current, sessionId);
-            });
-            onSessionCreated?.(sessionId);
-          },
-          onError: () => {
-            setPendingFollowUp((current) => {
-              if (!current || current.userMessageId !== pending.userMessageId) {
-                return current;
-              }
-
-              return null;
-            });
-          },
-        },
-      );
-      return;
-    }
-
-    clearSessionDraft(sessionId);
-    setChatDraft("");
-    setPendingFollowUp(
-      createPendingFollowUpState({
-        prompt: text,
-        messageCount: messages.length,
-        pendingId,
-        sessionId,
-      }),
-    );
-
-    followUp.mutate(
-      { sessionId, prompt: text, agent, model },
-      {
-        onSuccess: reconnect,
-        onError: () => setPendingFollowUp(null),
-      },
-    );
-  };
-
-  const handleApprove = () => {
-    if (!sessionId || !approvalRequest) return;
-    apiRequest(`/v1/sessions/${sessionId}/approve`, {
-      method: "POST",
-      body: { id: approvalRequest.id, decision: "approve" },
-    });
-  };
-
-  const handleDeny = () => {
-    if (!sessionId || !approvalRequest) return;
-    apiRequest(`/v1/sessions/${sessionId}/approve`, {
-      method: "POST",
-      body: { id: approvalRequest.id, decision: "deny" },
-    });
-  };
 
   const displayedMessages = mergeMessagesWithPendingFollowUp(
     messages,
     shouldShowPendingFollowUp(pendingFollowUp, sessionId) ? pendingFollowUp : null,
   );
   const loadingContent = sessionId ? <ChatSkeleton /> : undefined;
+  const effectiveStreaming = isStreaming || isWorkspaceInitializing;
   const emptyStateTitle = sessionId ? t("chatInput.session.notFoundTitle") : t("sessions.nextBuildTitle");
   const emptyStateDescription = sessionId ? t("chatInput.session.notFoundDescription") : "";
-  const workspaceHub = showWorkspaceHub
-    ? buildSessionWorkspaceHubModel({
-        projectId,
-        workspace: sessionWorkspace,
-        diffSummary: workspaceDiffSummary,
-      })
-    : null;
 
   return (
     <ChatPanel
       messages={displayedMessages}
-      streaming={isStreaming}
+      streaming={effectiveStreaming}
+      workspaceInitializing={isWorkspaceInitializing}
       emptyStateTitle={emptyStateTitle}
       emptyStateDescription={emptyStateDescription}
       loadingContent={loadingContent}
       chatInputPlaceholder={t("sessions.followUpPlaceholder")}
       chatInputDefaultValue={chatDraft}
-      onSubmitMessage={(text: string) => handleSubmitMessage(text)}
+      onSubmitMessage={(text: string) =>
+        submitSessionMessage({
+          sessionId,
+          projectId,
+          agent,
+          model,
+          text,
+          messages,
+          pendingIdRef,
+          clearSessionDraft,
+          setChatDraft,
+          setPendingFollowUp,
+          createSession,
+          followUp,
+          reconnect,
+          onSessionCreated,
+        })
+      }
       onChatInputChange={(text: string) => setSessionDraft(sessionId, text)}
       workspaceHub={
-        workspaceHub ? (
-          <ChatWorkspaceHub
-            changesLabel={t("tickets:diff.filesChanged", { count: workspaceHub.fileCount })}
-            additions={workspaceHub.additions}
-            deletions={workspaceHub.deletions}
-            action={
-              <Button size="sm" variant="plain" asChild>
-                <Link to={workspaceHub.href}>
-                  Review changes
-                  <ArrowUpRight size={14} />
-                </Link>
-              </Button>
-            }
-          />
-        ) : undefined
+        <SessionChatWorkspaceHubPanel
+          showWorkspaceHub={showWorkspaceHub}
+          isWorkspaceInitializing={isWorkspaceInitializing}
+          projectId={projectId}
+          workspace={sessionWorkspace}
+          diffSummary={workspaceDiffSummary}
+          statusLabel={t("tickets:workspace.settingUp")}
+          changesLabel={(count) => t("tickets:diff.filesChanged", { count })}
+        />
       }
       repoMenu={
         <Flex
@@ -249,16 +140,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
           <RepoBrowserContainer sessionId={sessionId} />
         </Flex>
       }
-      approvalPrompt={
-        approvalRequest ? (
-          <ApprovalPrompt
-            toolName={approvalRequest.toolName}
-            toolInput={approvalRequest.toolInput}
-            onApprove={handleApprove}
-            onDeny={handleDeny}
-          />
-        ) : undefined
-      }
+      approvalPrompt={<SessionChatApprovalPromptPanel sessionId={sessionId} approvalRequest={approvalRequest} />}
     />
   );
 };

@@ -42,6 +42,17 @@ const branchesByRepo: Record<string, WorkspacePanelMenuOption[]> = {
   "pstdio-docs": [{ label: "main", value: "main" }],
 };
 
+const searchableBranches = Array.from({ length: 16 }, (_, index) => {
+  if (index === 0) {
+    return { label: "main", value: "main" };
+  }
+
+  return {
+    label: `feature/searchable-branch-${index}`,
+    value: `feature/searchable-branch-${index}`,
+  };
+});
+
 export const Default: Story = {
   render: () => {
     const [selectedRepo, setSelectedRepo] = useState("prompt-studio");
@@ -151,6 +162,23 @@ export const NoSelection: Story = {
         selectedRepository={selectedRepo}
         onSelectRepository={handleSelectRepo}
         branchOptions={branchesByRepo[selectedRepo] ?? []}
+        selectedBranch={selectedBranch}
+        onSelectBranch={setSelectedBranch}
+      />
+    );
+  },
+};
+
+export const SearchableBranches: Story = {
+  render: () => {
+    const [selectedBranch, setSelectedBranch] = useState("main");
+
+    return (
+      <RepoBrowser
+        repositoryOptions={[repositoryOptions[0]]}
+        selectedRepository="prompt-studio"
+        onSelectRepository={() => undefined}
+        branchOptions={searchableBranches}
         selectedBranch={selectedBranch}
         onSelectBranch={setSelectedBranch}
       />

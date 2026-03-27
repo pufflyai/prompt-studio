@@ -5,7 +5,7 @@ import { buildLatestAttemptsByTicketId, toSessionIndicatorStatus } from "./ticke
 const makeAttempt = (overrides: Partial<TicketAttempt>): TicketAttempt => ({
   id: "workspace-1",
   label: "Attempt 1",
-  status: "active",
+  attemptStatusId: null,
   sessionStatus: "in_progress",
   shorthand: "PS-1_A1",
   updatedAt: "2026-03-13T10:00:00.000Z",

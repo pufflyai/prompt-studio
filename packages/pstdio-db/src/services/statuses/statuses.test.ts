@@ -108,12 +108,12 @@ test("getDefault returns null when no default exists", async () => {
   await close2();
 });
 
-test("softDelete hides status from list", async () => {
+test("remove deletes status from list", async () => {
   const before = await service.list(projectId);
   const triaging = before.find((s) => s.name === "triaging");
   expect(triaging).not.toBeUndefined();
 
-  await service.softDelete(triaging!.id);
+  await service.remove(triaging!.id);
 
   const after = await service.list(projectId);
   expect(after.find((s) => s.name === "triaging")).toBeUndefined();

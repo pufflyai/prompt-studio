@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { createDb } from "../../db/connection.pglite";
+import { createAttemptStatusesService } from "../attempt-statuses/attempt-statuses";
 import { createProjectsService } from "../projects/projects";
 import { createTicketsService } from "../tickets/tickets";
 import { createWorkspacesService } from "./workspaces";
@@ -48,7 +48,7 @@ describe("createWorkspacesService", () => {
 
     expect(ws.workspace_shorthand).toBe("PS-1_A1");
     expect(ws.name).toBe("PS-1_A1");
-    expect(ws.status).toBe("active");
+    expect(ws.attempt_status_id).toBeNull();
     expect(ws.archived).toBe(false);
   });
 
@@ -162,7 +162,7 @@ describe("createWorkspacesService", () => {
     expect(ws2.workspace_shorthand).toBe("PS-1_A2");
   });
 
-  test("updateStatus changes workspace status", async () => {
+  test("updateAttemptStatusId sets attempt status on workspace", async () => {
     await setup();
 
     const ws = await workspacesService.create({
@@ -171,24 +171,14 @@ describe("createWorkspacesService", () => {
       ticket_shorthand: ticketShorthand,
     });
 
-    await workspacesService.updateStatus(ws.id, "merged");
+    const attemptStatusesService = createAttemptStatusesService(db);
+    const status = await attemptStatusesService.getByName(projectId, "running");
 
-    const found = await workspacesService.getByShorthand(projectId, ws.workspace_shorthand);
-    expect(found!.status).toBe("merged");
-  });
+    const updated = await workspacesService.updateAttemptStatusId(ws.id, status!.id);
+    expect(updated!.attempt_status_id).toBe(status!.id);
 
-  test("rejects invalid status values at DB layer", async () => {
-    await setup();
-
-    const ws = await workspacesService.create({
-      project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
-    });
-
-    await expect(
-      db.execute(sql`update workspaces set status = ${"paused"} where id = ${ws.id}`).execute(),
-    ).rejects.toThrow();
+    const found = await workspacesService.get(ws.id);
+    expect(found!.attempt_status_id).toBe(status!.id);
   });
 
   test("updateGitMetadata stores branch and worktree_path", async () => {

@@ -3,6 +3,7 @@ import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { createSessionBodySchema, sessionResponseSchema } from "../dto";
 import { resolveSessionCwd } from "../resolve-session-cwd";
+import { fireSessionStartHook } from "../session-hooks";
 import { spawnAgentSession } from "../spawn-agent";
 
 export const createSessionRoute = createRoute({
@@ -51,6 +52,7 @@ export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
     });
 
     deps.eventBus.emit("sessions", "set", session);
+    fireSessionStartHook(deps, { id: session.id, project_id: input.project_id, status: session.status });
 
     if (input.workspace_id) {
       const link = await deps.workspaceSessionsService.link(input.workspace_id, session.id);

@@ -1,6 +1,8 @@
 ---
 name: create-ticket
 description: "Create a ticket via pstdio. Use when asked to make changes unrelated to an existing ticket or when asked to create a new ticket."
+metadata:
+  - version: 0.0.1
 ---
 
 ## Workflow
@@ -18,7 +20,7 @@ description: "Create a ticket via pstdio. Use when asked to make changes unrelat
    - Track missing information with [MISSING INFORMATION] tags in the ticket.
 4. When defining acceptance, list the test file paths, cases covered, and commands to run. Tests belong with the functional change they validate, do not create standalone “add tests” tickets.
 5. Resolve blockers by checking all existing tickets that are not done. If another ticket is a blocker, add it to `depends_on` in frontmatter.
-   - If blocked, run `pstdio tickets update --id "<ticket-id>" --status blocked` and document the reason in the ticket's `blocked_reason` frontmatter field
+   - If blocked, run `pstdio tickets update --id "<ticket-id>" --status blocked`.
 6. Run `pstdio tickets save --id "<ticket id>"` to persist the updated ticket content.
 7. If the user only asked to create the ticket, stop after the ticket file(s) are created and saved and do not implement it. Otherwise start the ticket implementation and follow instructions in the implement-ticket skill.
 
@@ -66,12 +68,12 @@ Use this to find blockers, related tickets, and parent/child relationships befor
 pstdio tickets list [--status <status>] [--tag <tag>] [--archived] [--draft] [--parent-id <ticket-id>]
 ```
 
-### Update Ticket Status/Tags (`tickets update`)
+### Update Workspace Status (`workspaces set-status`)
 
-Use this to move ticket lifecycle state (for example `blocked`/`wip`) without changing `ticket.md` content.
+Use this to move the workspace attempt status (for example `blocked`/`running`). Ticket status is derived automatically via hooks — do not set it directly.
 
 ```bash
-pstdio tickets update --id "<ticket-id>" [--status <status>] [--tag <tag>]
+pstdio workspaces set-status [--workspace <shorthand>] --status <status>
 ```
 
 ### Save Ticket Changes (`tickets save`)

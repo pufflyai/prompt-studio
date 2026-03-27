@@ -5,7 +5,7 @@ import type { RouteDeps } from "../../deps";
 export const deleteTagOptionRoute = createRoute({
   method: "delete",
   path: "/projects/{projectId}/ticket-tags/{tagId}/options/{optionId}",
-  description: "Soft-delete a tag option.",
+  description: "Delete a tag option.",
   tags: ["Tags"],
   request: {
     query: z.object({}).strict(),
@@ -28,7 +28,7 @@ export const deleteTagOptionRoute = createRoute({
 export const deleteTagOptionHandler = (deps: RouteDeps): AppRouteHandler<typeof deleteTagOptionRoute> => {
   return async (c) => {
     const { optionId } = c.req.valid("param");
-    await deps.tagsService.softDeleteOption(optionId);
+    await deps.tagsService.removeOption(optionId);
     deps.eventBus.emit("ticket_tag_options", "delete", { id: optionId });
     return c.json({ deleted: true }, 200);
   };

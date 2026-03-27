@@ -4,7 +4,6 @@ type WorkspaceListItem = {
   ticket_shorthand: string;
   branch: string | null;
   worktree_path: string | null;
-  status: string;
 };
 
 export const listWorkspaces = async (baseUrl: string, projectId: string) => {

@@ -17,8 +17,11 @@ export type {
   HookResult,
   MergeResult,
   RebaseResult,
+  SessionHookName,
   SetupResult,
   StagingPolicy,
+  TicketHookName,
+  WorktreeHookName,
   WorktreeInfo,
   WorktreeStatus,
 } from "./types";

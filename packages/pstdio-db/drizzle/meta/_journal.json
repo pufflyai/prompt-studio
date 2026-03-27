@@ -29,6 +29,13 @@
       "when": 1774523260837,
       "tag": "0003_bent_roxanne_simpson",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1774615712620,
+      "tag": "0004_slow_gunslinger",
+      "breakpoints": true
     }
   ]
 }

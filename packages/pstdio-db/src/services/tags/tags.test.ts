@@ -86,11 +86,11 @@ test("update renames a tag definition", async () => {
   expect(updated.find((t) => t.name === "severity")).toBeUndefined();
 });
 
-test("softDelete hides tag definition from list", async () => {
+test("remove deletes tag definition from list", async () => {
   const tags = await service.list(projectId);
   const components = tags.find((t) => t.name === "components")!;
 
-  await service.softDelete(components.id);
+  await service.remove(components.id);
 
   const after = await service.list(projectId);
   expect(after.find((t) => t.name === "components")).toBeUndefined();
@@ -134,13 +134,13 @@ test("updateOption changes option name and color", async () => {
   expect(improved!.color).toBe("teal");
 });
 
-test("softDeleteOption hides option from list", async () => {
+test("removeOption deletes option from list", async () => {
   const tags = await service.list(projectId);
   const label = tags.find((t) => t.name === "label")!;
   const options = await service.listOptions(label.id);
   const improvement = options.find((o) => o.name === "improvement")!;
 
-  await service.softDeleteOption(improvement.id);
+  await service.removeOption(improvement.id);
 
   const after = await service.listOptions(label.id);
   expect(after.find((o) => o.name === "improvement")).toBeUndefined();

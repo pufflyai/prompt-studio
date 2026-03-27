@@ -25,7 +25,7 @@ describe("toTicketFromRow", () => {
           {
             id: "workspace-1",
             name: "PS-1_A1",
-            status: "active",
+            attempt_status_id: null,
             workspace_shorthand: "PS-1_A1",
             updated_at: "2026-03-15T12:00:00.000Z",
             worktree_path: "/tmp/ws",
@@ -55,7 +55,7 @@ describe("toTicketFromRow", () => {
       new Map(),
     );
 
-    expect(ticket.attempts?.[0]?.status).toBe("active");
+    expect(ticket.attempts?.[0]?.attemptStatusId).toBeNull();
     expect(ticket.attempts?.[0]?.sessionStatus).toBe("completed");
   });
 });

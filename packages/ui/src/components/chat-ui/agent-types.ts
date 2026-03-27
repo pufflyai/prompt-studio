@@ -55,6 +55,13 @@ export type TokenUsagePart = {
   cacheWriteTokens?: number;
 };
 
+export type AlertPart = {
+  type: "alert";
+  status: "info" | "warning" | "error" | "success" | "loading";
+  title: string;
+  message?: string;
+};
+
 export type SessionMessagePart =
   | TextPart
   | ReasoningPart
@@ -65,7 +72,8 @@ export type SessionMessagePart =
   | FilePart
   | LoadingPart
   | ErrorPart
-  | TokenUsagePart;
+  | TokenUsagePart
+  | AlertPart;
 
 export type SessionMessage = {
   id: string;
