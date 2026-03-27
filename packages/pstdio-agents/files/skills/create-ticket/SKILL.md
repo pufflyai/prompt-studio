@@ -11,7 +11,7 @@ metadata:
    - If the user explicitly asked to create a ticket, use status `backlog`.
    - Otherwise use status `wip`.
 2. Write a ticket draft using `pstdio tickets write`. Derive a concise, verb-led ticket title from the user request for the ticket title. Add tags if relevant. Use templates if requested, or relevant.
-3. Fill the resulting ticket at `.pstdio/tickets/<ticket-id>_<slug>/ticket.md` with concrete details. Use information from researching the codebase and documentation:
+3. Fill the resulting ticket at `.pstdio/tickets/<shorthand>/ticket.md` with concrete details. Use information from researching the codebase and documentation:
    - Parallelizable (yes/no)
    - References to existing docs (if any), otherwise record gaps as assumptions
    - Implementation Notes with key files/modules and decisions
@@ -20,8 +20,8 @@ metadata:
    - Track missing information with [MISSING INFORMATION] tags in the ticket.
 4. When defining acceptance, list the test file paths, cases covered, and commands to run. Tests belong with the functional change they validate, do not create standalone “add tests” tickets.
 5. Resolve blockers by checking all existing tickets that are not done. If another ticket is a blocker, add it to `depends_on` in frontmatter.
-   - If blocked, run `pstdio tickets update --id "<ticket-id>" --status blocked`.
-6. Run `pstdio tickets save --id "<ticket id>"` to persist the updated ticket content.
+   - If blocked, run `pstdio tickets update --id "<shorthand>" --status blocked`.
+6. Run `pstdio tickets save --id "<shorthand>"` to persist the updated ticket content.
 7. If the user only asked to create the ticket, stop after the ticket file(s) are created and saved and do not implement it. Otherwise start the ticket implementation and follow instructions in the implement-ticket skill.
 
 ## Cheatsheet
@@ -49,7 +49,7 @@ pstdio tags list
 Use this to generate local ticket files from a title/prompt, then fill in implementation and acceptance details before publish.
 
 ```bash
-pstdio tickets write --title "<title>" [--user-prompt "<prompt>"] [--template <template-name>] [--status <status>] [--tag <tag>] [--parent-id <ticket-id>]
+pstdio tickets write --title "<title>" [--user-prompt "<prompt>"] [--template <template-name>] [--status <status>] [--tag <tag>] [--parent-id <shorthand>]
 ```
 
 ### Create Ticket Directly (`tickets create`)
@@ -65,7 +65,7 @@ pstdio tickets create --content "<content>"  [--status <status>] [--tag <tag>]
 Use this to find blockers, related tickets, and parent/child relationships before setting `depends_on`.
 
 ```bash
-pstdio tickets list [--status <status>] [--tag <tag>] [--archived] [--draft] [--parent-id <ticket-id>]
+pstdio tickets list [--status <status>] [--tag <tag>] [--archived] [--draft] [--parent-id <shorthand>]
 ```
 
 ### Update Workspace Status (`workspaces set-status`)
@@ -81,11 +81,11 @@ pstdio workspaces set-status [--workspace <shorthand>] --status <status>
 Use this after editing local files so the ticket content and artifacts are published.
 
 ```bash
-pstdio tickets save --id "<ticket-id>" [--status <status>] [--tag <tag>]
+pstdio tickets save --id "<shorthand>" [--status <status>] [--tag <tag>]
 ```
 
 ## Output Locations
 
-- Tickets: `.pstdio/tickets/<ticket-id>_<slug>/ticket.md`
-- Supporting Files: `.pstdio/tickets/<ticket-id>_<slug>/files/`
-- Validation Artifacts: `.pstdio/tickets/<ticket-id>_<slug>/artifacts/`
+- Tickets: `.pstdio/tickets/<shorthand>/ticket.md`
+- Supporting Files: `.pstdio/tickets/<shorthand>/files/`
+- Validation Artifacts: `.pstdio/tickets/<shorthand>/artifacts/`

@@ -7,6 +7,7 @@ import { listAgentModelsHandler, listAgentModelsRoute } from "./endpoints/list-a
 import { listAgentsHandler, listAgentsRoute } from "./endpoints/list-agents";
 import { removeAgentHandler, removeAgentRoute } from "./endpoints/remove-agent";
 import { setupAgentHandler, setupAgentRoute } from "./endpoints/setup-agent";
+import { setupAvailableAgentsHandler, setupAvailableAgentsRoute } from "./endpoints/setup-available-agents";
 import { updateAgentHandler, updateAgentRoute } from "./endpoints/update-agent";
 
 export const createAgentRoutes = (deps: RouteDeps) => {
@@ -17,6 +18,7 @@ export const createAgentRoutes = (deps: RouteDeps) => {
   routes.openapi(listAgentModelsRoute, listAgentModelsHandler(deps));
   routes.openapi(listAgentsRoute, listAgentsHandler(deps));
   routes.openapi(setupAgentRoute, setupAgentHandler(deps));
+  routes.openapi(setupAvailableAgentsRoute, setupAvailableAgentsHandler(deps));
   routes.openapi(updateAgentRoute, updateAgentHandler(deps));
   routes.openapi(removeAgentRoute, removeAgentHandler(deps));
 

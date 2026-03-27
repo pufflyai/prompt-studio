@@ -7,16 +7,15 @@ metadata:
 
 ## Workflow
 
-1. (Optional) Identify the target ticket shorthand from the user request (e.g. `PS-12`):
-   - If `next` / `continue` is requested: run `pstdio tickets list --status ready`, then pull the first ticket by id.
-   - If valid shorthand: run `pstdio tickets pull --id <shorthand>`.
-   - If the ticket is missing, ask the user to confirm the ticket id or `next`.
+1. The ticket should live in `.pstdio/tickets/<shorthand>/ticket.md`.
+   - If `next ticket` is requested: run `pstdio tickets list --status ready`, then pull the first ticket by id.
+   - If the ticket is missing, try to pull the ticket `pstdio tickets pull --id <shorthand>` and if it doesn't exist, ask the user to confirm the ticket id.
 2. Update the workspace status
    - Before starting work, run: `pstdio workspaces set-status --status running`.
    - The workspace is auto-detected from the current branch. Ticket status is derived automatically via hooks — do not set it directly.
 3. Update ticket checklists as you go
 4. Evidence
-   - Store artifacts under `.pstdio/tickets/<ticket-id>_<slug>/artifacts/`
+   - Store artifacts under `.pstdio/tickets/<shorthand>/artifacts/`
    - If tests/commands can’t be run, record why in the ticket’s `blocked_reason` frontmatter field.
 5. Finish
    - Confirm everything is checked.
@@ -25,7 +24,7 @@ metadata:
 
 ## Validation
 
-To be considered complete and ready for review, a ticket should provide "Validation Artifacts": **verifiable outputs** produced while doing the ticket e.g. by running `<validation-command> > .pstdio/tickets/<ticket-id>_<slug>/artifacts/<artifact> 2>&1`
+To be considered complete and ready for review, a ticket should provide "Validation Artifacts": **verifiable outputs** produced while doing the ticket e.g. by running `<validation-command> > .pstdio/tickets/<shorthand>/artifacts/<artifact> 2>&1`
 
 Validation Artifacts include:
 
@@ -44,6 +43,6 @@ Artifacts **must** be:
 
 ## Output Locations
 
-- Tickets: `.pstdio/tickets/<ticket-id>_<slug>/ticket.md`
-- Supporting Files: `.pstdio/tickets/<ticket-id>_<slug>/files/`
-- Validation Artifacts: `.pstdio/tickets/<ticket-id>_<slug>/artifacts/`
+- Tickets: `.pstdio/tickets/<shorthand>/ticket.md`
+- Supporting Files: `.pstdio/tickets/<shorthand>/files/`
+- Validation Artifacts: `.pstdio/tickets/<shorthand>/artifacts/`

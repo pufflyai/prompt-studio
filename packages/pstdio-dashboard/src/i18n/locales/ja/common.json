@@ -359,6 +359,8 @@
     "pickAgent": "新しいチケット試行を支援するコーディングエージェントを選択してください。",
     "chooseAgent": "コーディングエージェントを選択",
     "updateLater": "この選択は後から変更できます。",
+    "claudeCode": "Claude Code",
+    "claudeCodeDescription": "Anthropicの高度な推論とツール使用を備えたコーディングエージェント。",
     "opencode": "Opencode",
     "opencodeDescription": "高速な反復のためのオープンソース・ローカルファーストなコーディングエージェント。",
     "settingUp": "セットアップ中...",

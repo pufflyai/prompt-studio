@@ -2,10 +2,10 @@ import { Button } from "@chakra-ui/react";
 import { ApprovalPrompt, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight } from "lucide-react";
-import { buildSessionWorkspaceHubModel } from "../utils/workspace-hub";
+import type { buildSessionWorkspaceHubPanelModel } from "../utils/workspace-hub";
 import { submitApprovalDecision } from "./session-chat-view-actions";
 
-type WorkspaceHubModelInput = Parameters<typeof buildSessionWorkspaceHubModel>[0];
+type SessionChatWorkspaceHubPanelProps = NonNullable<ReturnType<typeof buildSessionWorkspaceHubPanelModel>>;
 
 type ApprovalRequest = {
   id: string;
@@ -13,39 +13,16 @@ type ApprovalRequest = {
   toolInput: unknown;
 };
 
-export const SessionChatWorkspaceHubPanel = (
-  props: WorkspaceHubModelInput & {
-    showWorkspaceHub: boolean;
-    isWorkspaceInitializing: boolean;
-    statusLabel: string;
-    changesLabel: (count: number) => string;
-  },
-) => {
-  if (!props.showWorkspaceHub) {
-    return undefined;
-  }
-
-  const workspaceHub = buildSessionWorkspaceHubModel({
-    projectId: props.projectId,
-    workspace: props.workspace,
-    diffSummary: props.diffSummary,
-  });
-
-  if (!props.isWorkspaceInitializing && !workspaceHub) {
-    return undefined;
-  }
+export const SessionChatWorkspaceHubPanel = (props: SessionChatWorkspaceHubPanelProps) => {
+  const { href, ...workspaceHubProps } = props;
 
   return (
     <ChatWorkspaceHub
-      status={props.isWorkspaceInitializing ? "loading" : "ready"}
-      statusLabel={props.statusLabel}
-      changesLabel={workspaceHub ? props.changesLabel(workspaceHub.fileCount) : ""}
-      additions={workspaceHub?.additions ?? 0}
-      deletions={workspaceHub?.deletions ?? 0}
+      {...workspaceHubProps}
       action={
-        workspaceHub ? (
+        href ? (
           <Button size="sm" variant="plain" asChild>
-            <Link to={workspaceHub.href}>
+            <Link to={href}>
               Review changes
               <ArrowUpRight size={14} />
             </Link>

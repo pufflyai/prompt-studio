@@ -21,3 +21,12 @@ export const useRunAgentSetup = () =>
         body: { agent_id: agent },
       }),
   });
+
+export const useSetupAvailableAgents = () =>
+  useMutation({
+    mutationFn: (defaultAgentId: string) =>
+      apiRequest<AgentConfig[]>("/v1/agents/setup-available", {
+        method: "POST",
+        body: { default_agent_id: defaultAgentId },
+      }),
+  });

@@ -673,7 +673,8 @@
     },
     "workspace": {
       "create": "Crear",
-      "creating": "Creando..."
+      "creating": "Creando...",
+      "settingUp": "Configurando espacio de trabajo..."
     },
     "fileEntry": {
       "created": "Creado",

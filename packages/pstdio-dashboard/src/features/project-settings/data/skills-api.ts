@@ -13,6 +13,7 @@ export type ProjectSkill = {
 export type ProjectSkillWithContent = ProjectSkill & {
   content: string;
   bundled_version: string;
+  installed_agents: string[];
 };
 
 export const getProjectSkills = async (projectId: string) =>

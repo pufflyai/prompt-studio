@@ -359,6 +359,8 @@
     "pickAgent": "Elige un agente de codificación para las nuevas tentativas de tareas.",
     "chooseAgent": "Elegir un agente de codificación",
     "updateLater": "Puedes cambiar esta elección más tarde.",
+    "claudeCode": "Claude Code",
+    "claudeCodeDescription": "Agente de codificación de Anthropic con razonamiento profundo y uso de herramientas.",
     "opencode": "Opencode",
     "opencodeDescription": "Agente de codificación de código abierto, local primero, para iteración rápida.",
     "settingUp": "Configurando...",

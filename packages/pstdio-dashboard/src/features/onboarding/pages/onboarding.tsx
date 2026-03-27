@@ -8,42 +8,45 @@ import {
   setOnboardingComplete,
   setStoredAgent,
 } from "@/features/agents/agent-storage";
-import { useAgentAvailability, useRunAgentSetup } from "@/features/agents/hooks/use-agent-availability";
+import { useSetupAvailableAgents } from "@/features/agents/hooks/use-agent-availability";
+import { useAgents } from "@/features/agents/hooks/use-agents";
+import type { AgentInfo } from "@/features/agents/types";
 
 type AvailabilityBadge = {
   label: string;
-  colorPalette: "gray" | "green" | "orange" | "red";
+  colorPalette: "gray" | "green" | "red";
 };
 
 const getAvailabilityBadge = (
-  status: string | null,
-  options: { isChecking: boolean; hasError: boolean },
+  agent: AgentInfo | undefined,
+  isLoading: boolean,
   t: (key: string) => string,
 ): AvailabilityBadge => {
-  if (options.isChecking) {
+  if (isLoading) {
     return { label: t("onboarding.checkingAvailability"), colorPalette: "gray" };
   }
 
-  if (options.hasError) {
-    return { label: t("onboarding.unavailable"), colorPalette: "red" };
-  }
-
-  if (status === "INSTALLED") {
+  if (agent?.availability.type === "INSTALLED") {
     return { label: t("onboarding.ready"), colorPalette: "green" };
   }
 
   return { label: t("onboarding.notDetected"), colorPalette: "red" };
 };
 
+const AGENTS: { id: CodingAgent; nameKey: string; descriptionKey: string }[] = [
+  { id: "claude-code", nameKey: "onboarding.claudeCode", descriptionKey: "onboarding.claudeCodeDescription" },
+  { id: "opencode", nameKey: "onboarding.opencode", descriptionKey: "onboarding.opencodeDescription" },
+];
+
 export const Onboarding = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [selectedAgent, setSelectedAgent] = useState<CodingAgent | null>(getStoredAgent());
   const [setupError, setSetupError] = useState<string | null>(null);
-  const { data: availability, isLoading: isChecking, isError: hasError } = useAgentAvailability("opencode");
-  const setupMutation = useRunAgentSetup();
-  const isOpencodeSelected = selectedAgent === "opencode";
-  const availabilityBadge = getAvailabilityBadge(availability?.type ?? null, { isChecking, hasError }, t);
+  const { data: agentInfoList, isLoading } = useAgents();
+  const setupMutation = useSetupAvailableAgents();
+
+  const findAgentInfo = (id: string) => agentInfoList?.find((a) => a.id === id);
 
   const handleContinue = async () => {
     if (!selectedAgent || setupMutation.isPending) {
@@ -80,31 +83,39 @@ export const Onboarding = () => {
             </Text>
           </Stack>
 
-          <Box
-            as="button"
-            onClick={() => setSelectedAgent("opencode")}
-            borderWidth="1px"
-            borderRadius="lg"
-            borderColor={isOpencodeSelected ? "border.accent" : "border.muted"}
-            bg={isOpencodeSelected ? "bg.emphasized" : "bg"}
-            px="lg"
-            py="md"
-            textAlign="left"
-            transition="border-color 0.2s ease"
-            _hover={{ borderColor: "border" }}
-          >
-            <Flex alignItems="flex-start" justifyContent="space-between" gap="md">
-              <Stack gap="xs" flex="1">
-                <Text textStyle="label/L/medium">{t("onboarding.opencode")}</Text>
-                <Text textStyle="paragraph/S/regular" color="fg.muted">
-                  {t("onboarding.opencodeDescription")}
-                </Text>
-              </Stack>
-              <Badge colorPalette={availabilityBadge.colorPalette} variant="subtle">
-                {availabilityBadge.label}
-              </Badge>
-            </Flex>
-          </Box>
+          {AGENTS.map((agent) => {
+            const isSelected = selectedAgent === agent.id;
+            const badge = getAvailabilityBadge(findAgentInfo(agent.id), isLoading, t);
+
+            return (
+              <Box
+                key={agent.id}
+                as="button"
+                onClick={() => setSelectedAgent(agent.id)}
+                borderWidth="1px"
+                borderRadius="lg"
+                borderColor={isSelected ? "border.accent" : "border.muted"}
+                bg={isSelected ? "bg.emphasized" : "bg"}
+                px="lg"
+                py="md"
+                textAlign="left"
+                transition="border-color 0.2s ease"
+                _hover={{ borderColor: "border" }}
+              >
+                <Flex alignItems="flex-start" justifyContent="space-between" gap="md">
+                  <Stack gap="xs" flex="1">
+                    <Text textStyle="label/L/medium">{t(agent.nameKey)}</Text>
+                    <Text textStyle="paragraph/S/regular" color="fg.muted">
+                      {t(agent.descriptionKey)}
+                    </Text>
+                  </Stack>
+                  <Badge colorPalette={badge.colorPalette} variant="subtle">
+                    {badge.label}
+                  </Badge>
+                </Flex>
+              </Box>
+            );
+          })}
         </Stack>
 
         {setupError ? (

@@ -359,6 +359,8 @@
     "pickAgent": "Choisissez un agent de codage pour alimenter les nouvelles tentatives de tâches.",
     "chooseAgent": "Choisir un agent de codage",
     "updateLater": "Vous pourrez modifier ce choix plus tard.",
+    "claudeCode": "Claude Code",
+    "claudeCodeDescription": "Agent de codage d'Anthropic avec raisonnement approfondi et utilisation d'outils.",
     "opencode": "Opencode",
     "opencodeDescription": "Agent de codage open source, local d'abord, pour une itération rapide.",
     "settingUp": "Configuration en cours...",

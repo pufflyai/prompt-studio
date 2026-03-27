@@ -371,6 +371,8 @@
     "pickAgent": "Pick a coding agent to power new ticket attempts.",
     "chooseAgent": "Choose a coding agent",
     "updateLater": "You can update this choice later.",
+    "claudeCode": "Claude Code",
+    "claudeCodeDescription": "Anthropic's coding agent with deep reasoning and tool use.",
     "opencode": "Opencode",
     "opencodeDescription": "Open-source, local-first coding agent for fast iteration.",
     "settingUp": "Setting up...",

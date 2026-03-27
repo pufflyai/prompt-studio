@@ -69,9 +69,25 @@ export const SkillViewer = (props: SkillViewerProps) => {
               </Button>
             )}
           </Flex>
-          <Text textStyle="paragraph/S/regular" color="fg.muted" data-testid="project-skill-description">
-            {skill.description}
-          </Text>
+          <Flex alignItems="center" gap="sm">
+            <Text textStyle="paragraph/S/regular" color="fg.muted" data-testid="project-skill-description">
+              {skill.description}
+            </Text>
+          </Flex>
+          {skill.installed_agents.length > 0 && (
+            <Flex gap="xs" data-testid="project-skill-installed-agents">
+              {skill.installed_agents.map((agentId) => (
+                <Badge key={agentId} size="sm" colorPalette="green">
+                  {agentId}
+                </Badge>
+              ))}
+            </Flex>
+          )}
+          {skill.installed_agents.length === 0 && (
+            <Text textStyle="paragraph/XS/regular" color="fg.muted" data-testid="project-skill-not-installed">
+              Not installed locally
+            </Text>
+          )}
         </Stack>
       </Flex>
       <Stack flex="1" minH="0" padding="sm" overflow="auto" data-testid="project-skill-content">

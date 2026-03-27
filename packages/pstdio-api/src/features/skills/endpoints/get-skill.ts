@@ -1,6 +1,8 @@
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
-import { getBundledSkills } from "pstdio-agents";
+import { findAgent, getBundledSkills } from "pstdio-agents";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { notFoundResponseSchema, skillWithContentResponseSchema } from "../dto";
@@ -43,10 +45,22 @@ export const getSkillHandler = (deps: RouteDeps): AppRouteHandler<typeof getSkil
     const file = await deps.filesService.get(skill.file_id);
     const content = file ? await readFile(file.storage_path, "utf8") : "";
 
-    const bundled = await getBundledSkills();
+    const [bundled, repos, agents] = await Promise.all([
+      getBundledSkills(),
+      deps.reposService.listByProject(projectId),
+      deps.agentConfigsService.list(),
+    ]);
     const bundledSkill = bundled.find((s) => s.name === name);
     const bundled_version = bundledSkill?.version ?? "";
 
-    return c.json({ ...skill, content, bundled_version }, 200);
+    const installed_agents = agents
+      .filter((agent) => {
+        const knownAgent = findAgent(agent.agent_id);
+        if (!knownAgent) return false;
+        return repos.some((repo) => existsSync(join(repo.path, knownAgent.skillsDir, name, "SKILL.md")));
+      })
+      .map((agent) => agent.agent_id);
+
+    return c.json({ ...skill, content, bundled_version, installed_agents }, 200);
   };
 };

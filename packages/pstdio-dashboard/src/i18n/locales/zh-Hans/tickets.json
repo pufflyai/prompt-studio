@@ -662,7 +662,8 @@
     },
     "workspace": {
       "create": "创建",
-      "creating": "创建中..."
+      "creating": "创建中...",
+      "settingUp": "正在设置工作区..."
     },
     "fileEntry": {
       "created": "已创建",

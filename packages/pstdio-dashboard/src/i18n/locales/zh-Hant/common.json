@@ -359,6 +359,8 @@
     "pickAgent": "選擇一個程式碼代理來驅動新的工單嘗試。",
     "chooseAgent": "選擇程式碼代理",
     "updateLater": "您可以稍後變更此選擇。",
+    "claudeCode": "Claude Code",
+    "claudeCodeDescription": "Anthropic 的程式碼代理，具備深度推理和工具使用能力。",
     "opencode": "Opencode",
     "opencodeDescription": "開源、本機優先的程式碼代理，用於快速迭代。",
     "settingUp": "正在設定...",

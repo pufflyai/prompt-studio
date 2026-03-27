@@ -303,7 +303,8 @@
     },
     "workspace": {
       "create": "Créer",
-      "creating": "Création en cours..."
+      "creating": "Création en cours...",
+      "settingUp": "Configuration de l'espace de travail..."
     },
     "fileEntry": {
       "created": "Créé",

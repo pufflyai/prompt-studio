@@ -673,7 +673,8 @@
     },
     "workspace": {
       "create": "作成",
-      "creating": "作成中..."
+      "creating": "作成中...",
+      "settingUp": "ワークスペースを設定中..."
     },
     "fileEntry": {
       "created": "作成済み",

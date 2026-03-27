@@ -5,7 +5,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { and, eq, project_repos } from "pstdio-db";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
-import { installSkillToRepo } from "../../skills/install-skill-to-repo";
+import { installProjectSkillsToRepo } from "../../skills/install-skill-to-repo";
 import { notFoundResponseSchema } from "../dto";
 
 const registerRepoBodySchema = z
@@ -93,26 +93,6 @@ const emitProjectRepoLink = async (
     .from(project_repos)
     .where(and(eq(project_repos.project_id, input.projectId), eq(project_repos.repo_id, input.repoId)));
   if (link) deps.eventBus.emit("project_repos", "set", link);
-};
-
-const installProjectSkillsToRepo = async (
-  deps: Pick<RouteDeps, "skillsDbService" | "agentConfigsService" | "filesService">,
-  input: { projectId: string; repoPath: string },
-) => {
-  const [skills, agents] = await Promise.all([
-    deps.skillsDbService.list(input.projectId),
-    deps.agentConfigsService.list(),
-  ]);
-
-  for (const skill of skills) {
-    const file = await deps.filesService.get(skill.file_id);
-    if (!file) continue;
-
-    const content = await readFile(file.storage_path, "utf8");
-    for (const agent of agents) {
-      installSkillToRepo(input.repoPath, agent.agent_id, skill.name, content);
-    }
-  }
 };
 
 export const registerRepoHandler = (deps: RouteDeps): AppRouteHandler<typeof registerRepoRoute> => {

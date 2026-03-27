@@ -673,7 +673,8 @@
     },
     "workspace": {
       "create": "만들기",
-      "creating": "만드는 중..."
+      "creating": "만드는 중...",
+      "settingUp": "작업 공간 설정 중..."
     },
     "fileEntry": {
       "created": "생성됨",

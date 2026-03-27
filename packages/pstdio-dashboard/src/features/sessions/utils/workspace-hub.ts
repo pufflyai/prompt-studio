@@ -17,6 +17,13 @@ interface BuildSessionWorkspaceHubModelInput {
   diffSummary: WorkspaceDiffSummaryLike | undefined;
 }
 
+interface BuildSessionWorkspaceHubPanelModelInput extends BuildSessionWorkspaceHubModelInput {
+  showWorkspaceHub: boolean;
+  isWorkspaceInitializing: boolean;
+  statusLabel: string;
+  changesLabel: (count: number) => string;
+}
+
 export const getTicketShorthandFromWorkspaceShorthand = (workspaceShorthand: string | null | undefined) => {
   const [ticketShorthand, attemptSuffix] = workspaceShorthand?.trim().split("_") ?? [];
   if (!ticketShorthand || !attemptSuffix) return null;
@@ -35,5 +42,31 @@ export const buildSessionWorkspaceHubModel = (input: BuildSessionWorkspaceHubMod
     fileCount: diffSummary.file_count,
     additions: diffSummary.additions,
     deletions: diffSummary.deletions,
+  };
+};
+
+export const buildSessionWorkspaceHubPanelModel = (input: BuildSessionWorkspaceHubPanelModelInput) => {
+  const { showWorkspaceHub, isWorkspaceInitializing, statusLabel, changesLabel } = input;
+  if (!showWorkspaceHub) return null;
+
+  if (isWorkspaceInitializing) {
+    return {
+      status: "loading" as const,
+      statusLabel,
+      changesLabel: "",
+      additions: 0,
+      deletions: 0,
+    };
+  }
+
+  const workspaceHub = buildSessionWorkspaceHubModel(input);
+  if (!workspaceHub) return null;
+
+  return {
+    status: "ready" as const,
+    changesLabel: changesLabel(workspaceHub.fileCount),
+    additions: workspaceHub.additions,
+    deletions: workspaceHub.deletions,
+    href: workspaceHub.href,
   };
 };

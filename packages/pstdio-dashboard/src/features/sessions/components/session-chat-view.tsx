@@ -12,6 +12,7 @@ import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useSessionAgent } from "../hooks/use-session-agent";
 import { useSessionStream } from "../hooks/use-session-stream";
 import { useSessionWorkspace } from "../hooks/use-session-workspace";
+import { buildSessionWorkspaceHubPanelModel } from "../utils/workspace-hub";
 import {
   mergeMessagesWithPendingFollowUp,
   type PendingFollowUpState,
@@ -77,6 +78,15 @@ export const SessionChatView = (props: SessionChatViewProps) => {
     messages,
     shouldShowPendingFollowUp(pendingFollowUp, sessionId) ? pendingFollowUp : null,
   );
+  const workspaceHub = buildSessionWorkspaceHubPanelModel({
+    showWorkspaceHub,
+    isWorkspaceInitializing,
+    projectId,
+    workspace: sessionWorkspace,
+    diffSummary: workspaceDiffSummary,
+    statusLabel: t("tickets:conversation.workspace.settingUp"),
+    changesLabel: (count) => t("tickets:diff.filesChanged", { count }),
+  });
   const loadingContent = sessionId ? <ChatSkeleton /> : undefined;
   const effectiveStreaming = isStreaming || isWorkspaceInitializing;
   const emptyStateTitle = sessionId ? t("chatInput.session.notFoundTitle") : t("sessions.nextBuildTitle");
@@ -111,17 +121,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
         })
       }
       onChatInputChange={(text: string) => setSessionDraft(sessionId, text)}
-      workspaceHub={
-        <SessionChatWorkspaceHubPanel
-          showWorkspaceHub={showWorkspaceHub}
-          isWorkspaceInitializing={isWorkspaceInitializing}
-          projectId={projectId}
-          workspace={sessionWorkspace}
-          diffSummary={workspaceDiffSummary}
-          statusLabel={t("tickets:workspace.settingUp")}
-          changesLabel={(count) => t("tickets:diff.filesChanged", { count })}
-        />
-      }
+      workspaceHub={workspaceHub ? <SessionChatWorkspaceHubPanel {...workspaceHub} /> : undefined}
       repoMenu={
         <Flex
           key={sessionId}

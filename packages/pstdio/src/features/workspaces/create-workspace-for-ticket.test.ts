@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { API_URL } from "@/features/api-url";
 import { createWorkspaceForTicket } from "./create-workspace-for-ticket";
 
 const mockTicket = {
@@ -55,7 +56,7 @@ describe("createWorkspaceForTicket", () => {
     );
 
     expect(createTicketAttempt).toHaveBeenCalledTimes(1);
-    expect(createTicketAttempt).toHaveBeenCalledWith("http://localhost:19840", "t-1", {
+    expect(createTicketAttempt).toHaveBeenCalledWith(API_URL, "t-1", {
       mode: "worktree",
       start_session: false,
       base: "HEAD",
@@ -82,7 +83,7 @@ describe("createWorkspaceForTicket", () => {
       { ...baseDeps, createTicketAttempt },
     );
 
-    expect(createTicketAttempt).toHaveBeenCalledWith("http://localhost:19840", "t-1", {
+    expect(createTicketAttempt).toHaveBeenCalledWith(API_URL, "t-1", {
       mode: "worktree",
       start_session: false,
       base: "main",

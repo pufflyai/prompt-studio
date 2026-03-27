@@ -673,7 +673,8 @@
     },
     "workspace": {
       "create": "建立",
-      "creating": "建立中..."
+      "creating": "建立中...",
+      "settingUp": "正在設定工作區..."
     },
     "fileEntry": {
       "created": "已建立",

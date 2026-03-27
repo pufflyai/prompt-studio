@@ -4,6 +4,7 @@ import { getBundledSkills } from "pstdio-agents";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { notFoundResponseSchema, skillWithContentResponseSchema } from "../dto";
+import { installSkillToRepo } from "../install-skill-to-repo";
 
 export const updateSkillRoute = createRoute({
   method: "post",
@@ -54,8 +55,23 @@ export const updateSkillHandler = (deps: RouteDeps): AppRouteHandler<typeof upda
       description: bundledSkill.description,
     });
 
-    const updated = await deps.skillsDbService.getByName(projectId, name);
+    const [repos, agents] = await Promise.all([
+      deps.reposService.listByProject(projectId),
+      deps.agentConfigsService.list(),
+    ]);
 
-    return c.json({ ...updated!, content: bundledSkill.content, bundled_version: bundledSkill.version }, 200);
+    for (const repo of repos) {
+      for (const agent of agents) {
+        installSkillToRepo(repo.path, agent.agent_id, name, bundledSkill.content);
+      }
+    }
+
+    const updated = await deps.skillsDbService.getByName(projectId, name);
+    const installed_agents = agents.map((a) => a.agent_id);
+
+    return c.json(
+      { ...updated!, content: bundledSkill.content, bundled_version: bundledSkill.version, installed_agents },
+      200,
+    );
   };
 };

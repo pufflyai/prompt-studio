@@ -70,6 +70,9 @@ Onboarding blocks the main app until the user selects and configures an agent. T
 5. Selecting `Add agent manually` opens a flow that captures supported `agent_id` and executable path, then creates/updates the config via setup endpoint.
 6. Existing configured rows show executable path text as read-only (`Not set` when absent).
 7. The per-project settings route includes a read-only repositories panel showing linked repos (name and path) with an empty state when no repos are linked.
+8. The skill detail view shows the skill name, current version badge, description, and full content.
+9. When a newer bundled version is available, an "Update to vX" button appears and propagates the updated skill to all agent directories in linked repos.
+10. Each skill shows per-agent installation badges (green, e.g. `claude-code`, `opencode`) indicating which agents have the skill installed locally on disk. When no agents have the skill installed, a "Not installed locally" label is shown instead.
 
 ## Interface
 
@@ -97,6 +100,7 @@ Onboarding blocks the main app until the user selects and configures an agent. T
 - Project settings include tags, repositories (read-only), hooks, skills, templates, and danger zone.
 - Repository management (add/remove) is handled in global settings, not project settings.
 - Existing configured executable path is read-only in global settings for this phase.
+- Skill installation badges reflect real-time filesystem checks against agent directories in linked repos.
 
 ## Errors
 

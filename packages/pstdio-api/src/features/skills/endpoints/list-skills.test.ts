@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -48,7 +48,7 @@ describe("GET /v1/projects/:id/skills", () => {
 });
 
 describe("GET /v1/projects/:id/skills/:name", () => {
-  test("returns skill with content and bundled_version", async () => {
+  test("returns skill with content, bundled_version, and empty installed_agents", async () => {
     const skill = bundledSkills[0];
     const res = await app.request(`/v1/projects/${projectId}/skills/${skill.name}`);
     expect(res.status).toBe(200);
@@ -57,6 +57,7 @@ describe("GET /v1/projects/:id/skills/:name", () => {
     expect(body.name).toBe(skill.name);
     expect(body.content).toBe(skill.content);
     expect(body.bundled_version).toBe(skill.version);
+    expect(body.installed_agents).toEqual([]);
   });
 
   test("returns 404 for missing skill", async () => {
@@ -84,6 +85,53 @@ describe("POST /v1/projects/:id/skills/:name/update", () => {
       method: "POST",
     });
     expect(res.status).toBe(404);
+  });
+});
+
+describe("POST /v1/projects/:id/skills/:name/update — repo propagation", () => {
+  test("writes updated skill to agent directories in linked repos", async () => {
+    const skill = bundledSkills[0];
+    const repoPath = join(tempRoot, "repo");
+
+    // Configure an agent
+    await app.request("/v1/agents", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ agent_id: "claude-code" }),
+    });
+
+    // Register the repo for the project
+    await app.request(`/v1/projects/${projectId}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "test-repo", path: repoPath }),
+    });
+
+    // Write a stale skill to simulate an outdated agent directory
+    const skillDir = join(repoPath, ".claude", "skills", skill.name);
+    mkdirSync(skillDir, { recursive: true });
+    writeFileSync(join(skillDir, "SKILL.md"), "# stale content", "utf8");
+
+    // Update the skill via the API
+    const res = await app.request(`/v1/projects/${projectId}/skills/${skill.name}/update`, {
+      method: "POST",
+    });
+    expect(res.status).toBe(200);
+
+    // Verify the skill was propagated to the repo's agent directory
+    const updatedContent = readFileSync(join(skillDir, "SKILL.md"), "utf8");
+    expect(updatedContent).toBe(skill.content);
+  });
+});
+
+describe("GET /v1/projects/:id/skills/:name — installed_agents", () => {
+  test("returns agent IDs where the skill is installed locally", async () => {
+    const skill = bundledSkills[0];
+    const res = await app.request(`/v1/projects/${projectId}/skills/${skill.name}`);
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.installed_agents).toContain("claude-code");
   });
 });
 

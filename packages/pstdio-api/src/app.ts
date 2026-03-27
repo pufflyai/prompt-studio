@@ -207,5 +207,5 @@ export const createApp = async (options?: AppOptions) => {
     await closeDb();
   };
 
-  return { app, close, eventBus };
+  return { app, close, deps, eventBus };
 };

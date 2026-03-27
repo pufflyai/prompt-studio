@@ -238,7 +238,7 @@ pstdio sessions archive --id <id>                    # Archive session
 ### Workspaces
 
 ```bash
-pstdio workspaces create --id <ticket-id> [--base <ref>]  # Create worktree for ticket
+pstdio workspaces create --id <shorthand> [--base <ref>]  # Create worktree for ticket
 pstdio workspaces list                               # List active workspaces
 pstdio workspaces merge --id <ws-id> [--delete-workspace]  # Squash-merge into current branch
 pstdio workspaces set-status [--workspace <shorthand>] --status <s>  # Update attempt status (auto-detects workspace from branch)
@@ -252,7 +252,7 @@ pstdio workspaces startup-log --id <ws-id>           # Show startup script log
 pstdio templates list                                # List all templates
 pstdio templates create --name <n> --type <prompt|ticket|document> --file <path> [--default]
 pstdio templates update --name <n> [--file <path>] [--default]
-pstdio templates write --name <n> --target <ticket-id|docs/path>
+pstdio templates write --name <n> --target <shorthand|docs/path>
 pstdio templates delete --name <n>
 ```
 

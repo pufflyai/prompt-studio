@@ -1,5 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { buildSessionWorkspaceHubModel, getTicketShorthandFromWorkspaceShorthand } from "./workspace-hub";
+import {
+  buildSessionWorkspaceHubModel,
+  buildSessionWorkspaceHubPanelModel,
+  getTicketShorthandFromWorkspaceShorthand,
+} from "./workspace-hub";
 
 describe("workspace hub helpers", () => {
   it("derives the ticket shorthand from a workspace shorthand", () => {
@@ -66,5 +70,60 @@ describe("workspace hub helpers", () => {
         },
       }),
     ).toBeNull();
+  });
+
+  it("returns null when the workspace hub should not render after setup", () => {
+    expect(
+      buildSessionWorkspaceHubPanelModel({
+        showWorkspaceHub: false,
+        isWorkspaceInitializing: false,
+        statusLabel: "Setting up workspace...",
+        changesLabel: (count) => `${count} files changed`,
+        projectId: "project-1",
+        workspace: {
+          id: "workspace-1",
+          branch: "workspace/PS-42_A3",
+          workspaceShorthand: "PS-42_A3",
+        },
+        diffSummary: {
+          workspace_id: "workspace-1",
+          file_count: 9,
+          additions: 83,
+          deletions: 9,
+        },
+      }),
+    ).toBeNull();
+
+    expect(
+      buildSessionWorkspaceHubPanelModel({
+        showWorkspaceHub: true,
+        isWorkspaceInitializing: false,
+        statusLabel: "Setting up workspace...",
+        changesLabel: (count) => `${count} files changed`,
+        projectId: "project-1",
+        workspace: null,
+        diffSummary: undefined,
+      }),
+    ).toBeNull();
+  });
+
+  it("returns a loading model while the workspace is initializing", () => {
+    expect(
+      buildSessionWorkspaceHubPanelModel({
+        showWorkspaceHub: true,
+        isWorkspaceInitializing: true,
+        statusLabel: "Setting up workspace...",
+        changesLabel: (count) => `${count} files changed`,
+        projectId: "project-1",
+        workspace: null,
+        diffSummary: undefined,
+      }),
+    ).toEqual({
+      status: "loading",
+      statusLabel: "Setting up workspace...",
+      changesLabel: "",
+      additions: 0,
+      deletions: 0,
+    });
   });
 });
