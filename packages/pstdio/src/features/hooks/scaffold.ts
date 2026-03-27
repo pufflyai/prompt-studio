@@ -10,8 +10,5 @@ export const scaffoldHooks = async (root: string) => {
   if (existsSync(hooksDir)) return;
 
   const filesRoot = await resolveFilesRoot();
-  const sourceDir = join(filesRoot, "hooks");
-  if (!existsSync(sourceDir)) return;
-
-  cpSync(sourceDir, hooksDir, { recursive: true });
+  cpSync(join(filesRoot, "hooks"), hooksDir, { recursive: true });
 };

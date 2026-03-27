@@ -339,6 +339,18 @@
     "title": "Docs",
     "noFiles": "No files",
     "noDocsFound": "No docs found",
+    "empty": {
+      "title": "Setup your project documentation",
+      "description": "The dashboard reads repo-local markdown. Add docs under `.pstdio/docs`, register them in `navigation.json`, and reopen this page.",
+      "suggestionsTitle": "Ask your agent to setup your project documentation.",
+      "suggestionsProjectHint": "Open documentation from a project to start a session from one of these prompts.",
+      "startSessionError": "Couldn't start a documentation session. Try again.",
+      "questionPurpose": "Create documentation in .pstdio/docs describing what this repo owns and what is out of scope.",
+      "questionEntryPoints": "Create a getting-started guide in .pstdio/docs covering key packages, services, and directories for new contributors.",
+      "questionRunValidate": "Write a development guide in .pstdio/docs explaining how to run the app, validate changes, and debug failures locally.",
+      "questionDependencies": "Document the required env vars, external services, and shared dependencies in .pstdio/docs.",
+      "questionRunbooks": "Create troubleshooting runbooks in .pstdio/docs for workflows that fail often enough to need a guide."
+    },
     "unableToLoadDocs": "Unable to load docs",
     "unableToLoadDocument": "Unable to load document",
     "trySelectingAnother": "Try selecting another doc.",
@@ -376,5 +388,10 @@
   },
   "workspace": {
     "title": "Workspace"
+  },
+  "connectionLost": {
+    "title": "Connection Lost",
+    "description": "Unable to reach the backend server. Make sure it is running and try again.",
+    "retry": "Retry Connection"
   }
 }

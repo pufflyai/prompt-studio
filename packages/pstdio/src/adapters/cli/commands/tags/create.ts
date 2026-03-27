@@ -3,26 +3,10 @@ import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { createTag } from "@/features/tags/api/create-tag";
 
-const VALID_COLORS = [
-  "gray",
-  "red",
-  "orange",
-  "amber",
-  "yellow",
-  "lime",
-  "green",
-  "teal",
-  "cyan",
-  "blue",
-  "indigo",
-  "violet",
-  "purple",
-  "pink",
-  "rose",
-] as const;
+const VALID_TYPES = ["single_select", "multi_select"] as const;
 
 export const command = "create";
-export const describe = "Create a new tag";
+export const describe = "Create a new tag definition";
 
 export const builder = (yargs: Argv) =>
   yargs
@@ -31,15 +15,15 @@ export const builder = (yargs: Argv) =>
       demandOption: true,
       describe: "Tag name",
     })
-    .option("color", {
+    .option("type", {
       type: "string",
-      demandOption: true,
-      describe: `Tag color (${VALID_COLORS.join(", ")})`,
+      default: "single_select",
+      describe: `Tag type (${VALID_TYPES.join(", ")})`,
     });
 
 type CreateArgs = {
   name: string;
-  color: string;
+  type: string;
 };
 
 type Deps = {
@@ -59,9 +43,9 @@ const defaultDeps: Deps = {
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<CreateArgs>) => {
-    const validColors: readonly string[] = VALID_COLORS;
-    if (!validColors.includes(argv.color)) {
-      throw new Error(`Invalid color: ${argv.color}. Must be one of: ${VALID_COLORS.join(", ")}`);
+    const validTypes: readonly string[] = VALID_TYPES;
+    if (!validTypes.includes(argv.type)) {
+      throw new Error(`Invalid type: ${argv.type}. Must be one of: ${VALID_TYPES.join(", ")}`);
     }
 
     const root = deps.findGitRoot(deps.cwd());
@@ -72,7 +56,7 @@ export const createHandler =
 
     await deps.createTag(API_URL, config.project_id, {
       name: argv.name,
-      color: argv.color,
+      type: argv.type as "single_select" | "multi_select",
     });
 
     console.log(`Created tag "${argv.name}"`);

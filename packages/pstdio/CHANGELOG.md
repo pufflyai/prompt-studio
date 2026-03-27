@@ -1,5 +1,27 @@
 # pstdio
 
+## 0.3.0
+
+### Minor Changes
+
+- 49e6c52: Redesign tags as typed field definitions with options (single-select/multi-select).
+
+### Patch Changes
+
+- 8b04ba9: Improve the documentation empty state with repo authoring guidance
+- 8b04ba9: Show a workspace diff hub above session chat inputs for workspace-backed sessions.
+- abadf39: Replace read-only Monaco diff surfaces with git-diff-view and add adapter coverage tests.
+- 8b04ba9: Keep the first session message visible while a new session starts streaming.
+- 8b04ba9: Make project navigation open tickets by default
+- 8b04ba9: Fix workspace diff CPU spike: only fetch diffs for settled attempts on kanban, add lightweight diff-summary endpoint, refresh diffs on edit actions in workspace page. **Breaking:** `resolveBase` now prefers the reflog fork point over merge-base, so diffs reflect the actual branch creation point rather than moving with the default branch.
+- 8b04ba9: Keep ticket attachment lists in sync after saves and show icons in the ticket sidebar.
+- 8b04ba9: Keep session streams alive with heartbeat events and raise Bun idle timeout to 20 seconds.
+- 8b04ba9: Add repositories panel to project settings with remove support
+- 8b04ba9: Prevent chat repo controls from wrapping
+- 0a1f61d: Sort tickets in kanban columns by `created_at` in the default manual ordering.
+- 8b04ba9: Replace the session chat empty state with a reusable chat skeleton and unavailable-session fallback.
+- 8b04ba9: Use dashboard translations in session chat stories.
+
 ## 0.2.1
 
 ### Patch Changes

@@ -23,9 +23,67 @@ describe("serveApp", () => {
       serve: () => {
         throw new Error("listen EADDRINUSE");
       },
+      persistError: () => {},
     });
 
     await expect(serveApp({ port: 19840 })).rejects.toThrow("EADDRINUSE");
     expect(closed).toBe(true);
+  });
+
+  it("persists the error when server startup throws", async () => {
+    let persistedError: Error | undefined;
+
+    const serveApp = createServeApp({
+      createApp: async () => ({
+        app: {
+          fetch: () => new Response("ok"),
+        },
+        close: async () => {},
+      }),
+      injectConfig: (html) => html,
+      isCompiledBinary: () => false,
+      loadEmbeddedAssets: () => new Map(),
+      loadFilesystemAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
+      resolveMimeType: () => "text/html",
+      serve: () => {
+        throw new Error("listen EADDRINUSE");
+      },
+      persistError: (error) => {
+        persistedError = error;
+      },
+    });
+
+    await expect(serveApp({ port: 19840 })).rejects.toThrow("EADDRINUSE");
+    expect(persistedError).toBeDefined();
+    expect(persistedError!.message).toBe("listen EADDRINUSE");
+  });
+
+  it("configures Bun idle timeout to 20 seconds", async () => {
+    const captured = { idleTimeout: undefined as number | undefined };
+
+    const serveApp = createServeApp({
+      createApp: async () => ({
+        app: {
+          fetch: () => new Response("ok"),
+        },
+        close: async () => {},
+      }),
+      injectConfig: (html) => html,
+      isCompiledBinary: () => false,
+      loadEmbeddedAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
+      loadFilesystemAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
+      resolveMimeType: () => "text/html",
+      serve: (options) => {
+        captured.idleTimeout = options.idleTimeout;
+        return {} as ReturnType<typeof Bun.serve>;
+      },
+      onSignal: () => {},
+      offSignal: () => {},
+      log: () => {},
+    });
+
+    await serveApp({ port: 19840 });
+
+    expect(captured.idleTimeout).toBe(20);
   });
 });

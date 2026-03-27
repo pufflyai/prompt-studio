@@ -16,6 +16,12 @@ This PRD documents ticket creation, local file layout, content rules, sync behav
 
 Manage tickets within a pstdio project. Tickets track work items (bugs, features, proposals) and can be created locally for editing before syncing to the database, or created directly via the API.
 
+## Status and Tag Semantics
+
+- `status` is a single required workflow value resolved from the project's Ticket Statuses definition.
+- `tag` values are optional labels resolved from the project's Tags set.
+- Ticket creation, update, and list filtering support both status and tags without changing their distinct behavior.
+
 ---
 
 ## Ticket Content Model
@@ -115,7 +121,7 @@ Each ticket lives in its own directory under `.pstdio/tickets/`:
 
 YAML frontmatter in `ticket.md` is a local convention only. The server stores the ticket body without frontmatter.
 
-- **On save**: strip frontmatter from `ticket.md` before uploading. Actionable fields (`status`, `priority`, `complexity`) are extracted and sent as ticket properties.
+- **On save**: strip frontmatter from `ticket.md` before uploading. Actionable fields (`status`) are extracted and sent as ticket properties.
 - **On pull**: build frontmatter from the ticket's database fields and prepend it to the downloaded body content.
 - **On write/create**: write frontmatter to the local file. Upload the body content without frontmatter.
 
@@ -134,7 +140,7 @@ Templates contain placeholder tokens that are automatically replaced when a tick
 | `{{PARENT_ID}}`    | Value of `--parent-id`, or empty string if omitted.   | `--parent-id` flag   |
 | `{{STATUS}}`       | Value of `--status`, or `"backlog"` if omitted.       | `--status` flag      |
 
-Additional template variables can be passed as flags and are matched by name (e.g. `--priority P1` replaces `{{PRIORITY}}`).
+Additional template variables can be passed as flags and are matched by name.
 
 ---
 
@@ -250,15 +256,11 @@ Shorthand:   PS-12
 Title:       Fix login bug
 Status:      backlog
 Tags:        bug
-Priority:    P1
-Complexity:  medium
 Created:     2026-01-15T10:00:00Z
 Updated:     2026-01-20T14:30:00Z
 ```
 
 When a ticket has no tags, the `Tags` line shows `-`.
-
-When priority or complexity is not set, those lines show `-`.
 
 ### Errors
 
@@ -288,12 +290,11 @@ pstdio tickets save --id <ticket-shorthand> [--status <status>] [--tag <tag>...]
 
 1. Must be run inside a linked project.
 2. Read `ticket.md` from `.pstdio/tickets/<ticket-shorthand>/`.
-3. Parse YAML frontmatter from `ticket.md` and extract actionable fields (`status`, `priority`, `complexity`).
+3. Parse YAML frontmatter from `ticket.md` and extract actionable fields (`status`).
 4. Strip frontmatter from `ticket.md` and upload the body content (without frontmatter) as the ticket file. Apply extracted frontmatter fields as ticket properties.
 5. Set `draft=false` to publish the ticket.
 6. Resolve the ticket status: use `--status` flag if provided, otherwise use `status` from frontmatter. Look up the status by name and assign its ID.
-7. Set `priority` and `complexity` from frontmatter values when present.
-8. If `.pstdio/tickets/<ticket-shorthand>/files/` exists, upload every file under it and associate it with the ticket.
+7. If `.pstdio/tickets/<ticket-shorthand>/files/` exists, upload every file under it and associate it with the ticket.
 9. If `.pstdio/tickets/<ticket-shorthand>/artifacts/` exists, upload every file under it and associate it with the ticket.
 9. If `--tag` values are provided, update the tag assignments.
 
@@ -366,8 +367,6 @@ The following fields are included only when non-null:
 | ---------------- | ------------------------------ |
 | `status`         | Status name (resolved from ID) |
 | `parent_id`      | `parent_id` from DB            |
-| `priority`       | `priority` from DB             |
-| `complexity`     | `complexity` from DB           |
 | `depends_on`     | `depends_on` from DB           |
 | `parallelizable` | `parallelizable` from DB       |
 | `blocked_reason` | `blocked_reason` from DB       |
@@ -498,7 +497,7 @@ No ticket workspaces found.
 ### Usage
 
 ```sh
-pstdio tickets list [--project-id <project-id>] [--status <status>] [--tag <tag>...] [--priority <priority>] [--complexity <complexity>] [--archived] [--draft] [--parent-id <parent-id>]
+pstdio tickets list [--project-id <project-id>] [--status <status>] [--tag <tag>...] [--archived] [--draft] [--parent-id <parent-id>]
 ```
 
 ### Flags
@@ -508,8 +507,6 @@ pstdio tickets list [--project-id <project-id>] [--status <status>] [--tag <tag>
 | `--project-id` | `string`   | no       | List tickets for a specific project. Defaults to the current project.       |
 | `--status`     | `string`   | no       | Filter by status name.                                                      |
 | `--tag`        | `string[]` | no       | Filter by tag. Repeatable. Tickets matching **any** given tag are returned. |
-| `--priority`   | `string`   | no       | Filter by priority (e.g. `P1`, `P2`, `P3`).                                 |
-| `--complexity` | `string`   | no       | Filter by complexity (`low`, `medium`, `high`).                             |
 | `--archived`   | `boolean`  | no       | Include archived tickets. Excluded by default.                              |
 | `--draft`      | `boolean`  | no       | Include draft tickets. Excluded by default.                                 |
 | `--parent-id`  | `string`   | no       | Filter by parent ticket shorthand. Returns only sub-tickets.                |

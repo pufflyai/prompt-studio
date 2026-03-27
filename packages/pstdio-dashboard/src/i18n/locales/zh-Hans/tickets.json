@@ -717,7 +717,6 @@
     "selectDisplayProperties": "选择显示属性",
     "groupingOptions": {
       "status": "状态",
-      "complexity": "复杂度",
       "assignee": "负责人",
       "none": "不分组"
     },
@@ -725,13 +724,11 @@
       "manual": "手动",
       "updated": "更新时间",
       "title": "标题",
-      "complexity": "复杂度",
       "shorthand": "ID"
     },
     "propertyOptions": {
       "parentId": "parent_id",
       "status": "状态",
-      "complexity": "复杂度",
       "assignee": "负责人",
       "tags": "标签",
       "updatedAt": "更新时间"
@@ -748,10 +745,6 @@
     "createTicket": "创建工单",
     "create": "创建",
     "describePlaceholder": "描述工单...",
-    "complexity": "复杂度",
-    "low": "低",
-    "medium": "中",
-    "high": "高",
     "template": "模板",
     "noTemplate": "无模板",
     "cancel": "取消"

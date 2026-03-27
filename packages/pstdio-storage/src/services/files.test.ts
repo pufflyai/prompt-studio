@@ -65,7 +65,8 @@ test("files service supports upload and ticket attachments", async () => {
   expect(listBefore).toHaveLength(0);
 
   const attached = await files.attachToTicket(ticketId, uploaded.id);
-  expect(attached?.id).toBe(uploaded.id);
+  expect(attached?.ticket_id).toBe(ticketId);
+  expect(attached?.file_id).toBe(uploaded.id);
 
   const listAfter = await files.listForTicket(ticketId);
   expect(listAfter).toHaveLength(1);

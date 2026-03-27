@@ -21,23 +21,7 @@ interface TicketColumnGroup {
 
 const FALLBACK_LABELS: Record<Exclude<GroupingField, "none">, string> = {
   status: "No status",
-  complexity: "Unspecified",
   assignee: "Unassigned",
-  priority: "Unspecified",
-};
-
-const COMPLEXITY_RANK: Record<string, number> = {
-  high: 3,
-  medium: 2,
-  low: 1,
-};
-
-const PRIORITY_RANK: Record<string, number> = {
-  p0: 5,
-  p1: 4,
-  p2: 3,
-  p3: 2,
-  p4: 1,
 };
 
 const normalize = (value: string | null | undefined, fallback: string) => {
@@ -57,15 +41,7 @@ const getGroupingValue = (ticket: WorkspaceTicket, grouping: GroupingField) => {
     return normalize(ticket.status, FALLBACK_LABELS.status);
   }
 
-  if (grouping === "complexity") {
-    return normalize(ticket.complexity, FALLBACK_LABELS.complexity);
-  }
-
-  if (grouping === "assignee") {
-    return normalize(ticket.assignee, FALLBACK_LABELS.assignee);
-  }
-
-  return normalize(ticket.priority, FALLBACK_LABELS.priority);
+  return normalize(ticket.assignee, FALLBACK_LABELS.assignee);
 };
 
 const compareGroupKey = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
@@ -87,18 +63,6 @@ export const orderTickets = (tickets: WorkspaceTicket[], ordering: WorkspaceOrde
 
     if (ordering.field === "title") {
       return orderByDirection(a.title.localeCompare(b.title), ordering.direction);
-    }
-
-    if (ordering.field === "complexity") {
-      const left = COMPLEXITY_RANK[(a.complexity ?? "").toLowerCase()] ?? 0;
-      const right = COMPLEXITY_RANK[(b.complexity ?? "").toLowerCase()] ?? 0;
-      return orderByDirection(left - right, ordering.direction);
-    }
-
-    if (ordering.field === "priority") {
-      const left = PRIORITY_RANK[(a.priority ?? "").toLowerCase()] ?? 0;
-      const right = PRIORITY_RANK[(b.priority ?? "").toLowerCase()] ?? 0;
-      return orderByDirection(left - right, ordering.direction);
     }
 
     return orderByDirection(a.ticketId.localeCompare(b.ticketId, undefined, { numeric: true }), ordering.direction);
@@ -166,15 +130,7 @@ const getTicketFilterValues = (ticket: WorkspaceTicket, category: FilterCategory
     return [normalize(ticket.status, FALLBACK_LABELS.status)];
   }
 
-  if (category === "assignee") {
-    return [normalize(ticket.assignee, FALLBACK_LABELS.assignee)];
-  }
-
-  if (category === "priority") {
-    return [normalize(ticket.priority, FALLBACK_LABELS.priority)];
-  }
-
-  return [normalize(ticket.complexity, FALLBACK_LABELS.complexity)];
+  return [normalize(ticket.assignee, FALLBACK_LABELS.assignee)];
 };
 
 export const filterTickets = (tickets: WorkspaceTicket[], filters: FilterState) => {

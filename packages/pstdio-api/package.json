@@ -4,7 +4,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./app": "./src/app.ts",
-    "./dto": "./src/dto.ts"
+    "./dto": "./src/dto.ts",
+    "./error-log": "./src/lib/error-log.ts"
   },
   "scripts": {
     "start": "bun run src/index.ts",

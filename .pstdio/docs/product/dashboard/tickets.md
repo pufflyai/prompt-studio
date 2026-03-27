@@ -60,7 +60,7 @@ Ticket-card behavior and data-source rules are specified in `/product/dashboard/
 2. Drop archived tickets from the visible set.
 3. Group the result by status and render a board column for each group.
 4. When a ticket is moved, update its status.
-5. When a user creates a ticket, write the editor content as both title and content, with optional complexity, status, and parent id.
+5. When a user creates a ticket, write the editor content as both title and content, with optional status and parent id.
 6. When ticket creation includes a template, immediately start a session with `refine ticket: <ticket-shorthand> with template <template-name>` and open it in the session bubble.
 
 ## Interface
@@ -81,7 +81,7 @@ Ticket-card behavior and data-source rules are specified in `/product/dashboard/
 
 ## Rules & Constraints
 
-- The shipped UI currently uses the default display settings only: board view, grouping by status, ordering `manual`, and `complexity` badges.
+- The shipped UI currently uses the default display settings only: board view, grouping by status, and ordering `manual`.
 - Archived tickets are hidden instead of toggleable.
 - Implementation automation is configured through hooks, not through status metadata.
 

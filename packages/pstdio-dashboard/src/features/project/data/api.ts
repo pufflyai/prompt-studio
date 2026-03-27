@@ -119,7 +119,7 @@ export const addProjectRepository = async (projectId: string, input: { path: str
 };
 
 export const removeProjectRepository = async (projectId: string, repoId: string) => {
-  throw new Error(`Removing repositories is not supported yet. projectId=${projectId}, repoId=${repoId}`);
+  await apiRequest(`/v1/projects/${projectId}/repos/${repoId}`, { method: "DELETE" });
 };
 
 type ApiBranch = {

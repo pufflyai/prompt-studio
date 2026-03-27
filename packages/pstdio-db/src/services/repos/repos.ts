@@ -59,5 +59,11 @@ export const createReposService = (db: DbClient) => {
     return repo ?? null;
   };
 
-  return { get, registerForProject, listByProject };
+  const removeFromProject = async (projectId: string, repoId: string) => {
+    await db
+      .delete(project_repos)
+      .where(and(eq(project_repos.project_id, projectId), eq(project_repos.repo_id, repoId)));
+  };
+
+  return { get, registerForProject, listByProject, removeFromProject };
 };

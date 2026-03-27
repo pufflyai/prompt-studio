@@ -748,7 +748,6 @@
     "selectDisplayProperties": "표시 속성 선택",
     "groupingOptions": {
       "status": "상태",
-      "complexity": "복잡도",
       "assignee": "담당자",
       "none": "그룹화 없음"
     },
@@ -756,13 +755,11 @@
       "manual": "수동",
       "updated": "업데이트순",
       "title": "제목",
-      "complexity": "복잡도",
       "shorthand": "ID"
     },
     "propertyOptions": {
       "parentId": "parent_id",
       "status": "상태",
-      "complexity": "복잡도",
       "assignee": "담당자",
       "tags": "태그",
       "updatedAt": "업데이트"
@@ -779,10 +776,6 @@
     "createTicket": "티켓 생성",
     "create": "생성",
     "describePlaceholder": "티켓 설명을 입력하세요...",
-    "complexity": "복잡도",
-    "low": "낮음",
-    "medium": "보통",
-    "high": "높음",
     "template": "템플릿",
     "noTemplate": "템플릿 없음",
     "cancel": "취소"

@@ -8,6 +8,7 @@ const SYNCED_TABLES = [
   "ticket_statuses",
   "tickets",
   "ticket_tags",
+  "ticket_tag_options",
   "ticket_tag_assignments",
   "sessions",
   "workspaces",

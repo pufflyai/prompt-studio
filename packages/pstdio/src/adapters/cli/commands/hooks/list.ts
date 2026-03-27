@@ -33,9 +33,9 @@ export const createHandler =
 
     const hooks = deps.listHooks(root);
 
-    deps.log("Hook            Blocking   Installed");
+    deps.log("Hook                          Blocking   Installed");
     for (const hook of hooks) {
-      const name = hook.name.padEnd(16);
+      const name = hook.name.padEnd(30);
       const blocking = (hook.blocking ? "yes" : "no").padEnd(11);
       const installed = hook.exists ? "yes" : "no";
       deps.log(`${name}${blocking}${installed}`);

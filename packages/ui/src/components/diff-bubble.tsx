@@ -42,7 +42,7 @@ export const DiffBubble = (props: DiffBubbleProps) => {
       cursor={onClick ? "pointer" : "default"}
       onClick={onClick}
       _hover={{
-        background: "bg.muted",
+        background: onClick ? "bg.muted" : "none",
       }}
     >
       {label}

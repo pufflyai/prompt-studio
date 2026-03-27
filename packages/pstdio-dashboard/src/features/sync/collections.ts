@@ -10,6 +10,7 @@ const SYNCED_TABLES = [
   "ticket_statuses",
   "tickets",
   "ticket_tags",
+  "ticket_tag_options",
   "ticket_tag_assignments",
   "sessions",
   "workspaces",
@@ -17,6 +18,7 @@ const SYNCED_TABLES = [
   "files",
   "ticket_files",
   "workspace_artifacts",
+  "workspace_sessions",
   "templates",
 ] as const;
 

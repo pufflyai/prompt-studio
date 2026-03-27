@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanupDirs, createGitRepo, runPstdio, runPstdioSafe } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
@@ -29,7 +29,9 @@ const runSafe = (args: string, cwd: string) => runPstdioSafe(args, cwd, { PSTDIO
 const writeHook = (repo: string, hookName: string, script: string) => {
   const hooksDir = join(repo, ".pstdio", "hooks");
   mkdirSync(hooksDir, { recursive: true });
-  writeFileSync(join(hooksDir, hookName), script);
+  const path = join(hooksDir, hookName);
+  writeFileSync(path, `#!/bin/sh\n${script}`);
+  chmodSync(path, 0o755);
 };
 
 const createInitializedRepo = (name: string) => {
@@ -68,13 +70,32 @@ describe("pstdio hooks", () => {
       () => {
         const repo = createInitializedRepo("hooks-list");
         writeHook(repo, "pre-commit", "exit 0");
-        writeHook(repo, "post-create", "echo hi");
+        writeHook(repo, "post-worktree-create", "echo hi");
 
         const output = run("hooks list", repo);
 
         expect(output).toContain("pre-commit");
-        expect(output).toContain("post-create");
+        expect(output).toContain("post-worktree-create");
         expect(output).toContain("pre-merge");
+      },
+      TEST_TIMEOUT,
+    );
+  });
+
+  describe("hooks create", () => {
+    test(
+      "creates a hook file and reuses the bundled scaffold when available",
+      () => {
+        const repo = createGitRepo();
+        dirs.push(repo);
+
+        const output = run("hooks create post-worktree-create", repo);
+        const hookPath = join(repo, ".pstdio", "hooks", "post-worktree-create");
+        const content = readFileSync(hookPath, "utf8");
+
+        expect(output).toContain('Created hook "post-worktree-create"');
+        expect(content).toContain("pstdio tickets pull");
+        expect(run("hooks list", repo)).toContain("post-worktree-create          yes");
       },
       TEST_TIMEOUT,
     );
@@ -135,30 +156,30 @@ describe("pstdio hooks", () => {
     );
   });
 
-  describe("pre-remove", () => {
+  describe("pre-worktree-remove", () => {
     test(
       "blocks workspace deletion on failure",
       async () => {
         const repo = createInitializedRepo("preremove-block");
         const workspace = await createWorkspaceInRepo(repo);
-        writeHook(repo, "pre-remove", "exit 1");
+        writeHook(repo, "pre-worktree-remove", "exit 1");
 
         const result = runSafe(`workspaces delete --id ${workspace.workspace_shorthand}`, repo);
 
         expect(result.exitCode).not.toBe(0);
-        expect(result.stderr).toContain("HOOK pre-remove FAILED");
+        expect(result.stderr).toContain("HOOK pre-worktree-remove FAILED");
       },
       TEST_TIMEOUT,
     );
   });
 
-  describe("post-remove", () => {
+  describe("post-worktree-remove", () => {
     test(
       "runs after workspace deletion",
       async () => {
         const repo = createInitializedRepo("postremove-run");
         const workspace = await createWorkspaceInRepo(repo);
-        writeHook(repo, "post-remove", `echo "removed" > "${repo}/post-remove-marker.txt"`);
+        writeHook(repo, "post-worktree-remove", `echo "removed" > "${repo}/post-remove-marker.txt"`);
 
         run(`workspaces delete --id ${workspace.workspace_shorthand}`, repo);
 
@@ -184,12 +205,12 @@ describe("pstdio hooks", () => {
     );
   });
 
-  describe("default post-create hook", () => {
+  describe("default post-worktree-create hook", () => {
     test(
-      "project init scaffolds default post-create hook",
+      "project init scaffolds default post-worktree-create hook",
       () => {
         const repo = createInitializedRepo("scaffold-hooks");
-        const hookPath = join(repo, ".pstdio", "hooks", "post-create");
+        const hookPath = join(repo, ".pstdio", "hooks", "post-worktree-create");
 
         expect(existsSync(hookPath)).toBe(true);
         const content = readFileSync(hookPath, "utf8");
@@ -200,7 +221,7 @@ describe("pstdio hooks", () => {
     );
 
     test(
-      "default post-create hook copies config and agent folders into worktree",
+      "default post-worktree-create hook copies config and agent folders into worktree",
       async () => {
         const repo = createInitializedRepo("hook-copies-config");
         mkdirSync(join(repo, ".claude", "skills", "custom-skill"), { recursive: true });

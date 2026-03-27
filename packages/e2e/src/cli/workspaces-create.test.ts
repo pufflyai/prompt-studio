@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanupDirs, createGitRepo, runPstdio } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
@@ -35,7 +35,9 @@ const createInitializedRepo = (name: string) => {
 const writeHook = (repo: string, hookName: string, script: string) => {
   const hooksDir = join(repo, ".pstdio", "hooks");
   mkdirSync(hooksDir, { recursive: true });
-  writeFileSync(join(hooksDir, hookName), script);
+  const path = join(hooksDir, hookName);
+  writeFileSync(path, `#!/bin/sh\n${script}`);
+  chmodSync(path, 0o755);
 };
 
 const readProjectId = (repo: string) => {
@@ -79,7 +81,7 @@ describe("pstdio workspaces create", () => {
     "runs post-create hook when creating a workspace",
     async () => {
       const repo = createInitializedRepo("workspace-create-hook");
-      writeHook(repo, "post-create", 'echo "hook ok"\necho "done" > post-create-marker.txt');
+      writeHook(repo, "post-worktree-create", 'echo "hook ok"\necho "done" > post-create-marker.txt');
 
       const createTicketOutput = run('tickets create --content "Workspace hook ticket"', repo);
       const ticketShorthand = createTicketOutput.match(/Created ticket (\S+)/)?.[1];

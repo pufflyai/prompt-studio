@@ -19,7 +19,7 @@ import { TicketDetailSidebar } from "../components/ticket-detail-sidebar";
 import { TicketHeader } from "../components/ticket-header";
 import { useContentAutosave } from "../hooks/use-content-autosave";
 import { useSubTicketCreation } from "../hooks/use-sub-ticket-creation";
-import { useTicketAttemptDiff } from "../hooks/use-ticket-attempt-diff";
+import { useTicketAttemptDiffSummary } from "../hooks/use-ticket-attempt-diff-summary";
 import { useTicketContent } from "../hooks/use-ticket-content";
 import { useTicketFiles } from "../hooks/use-ticket-files";
 import { useTicketSessions } from "../hooks/use-ticket-sessions";
@@ -29,6 +29,7 @@ import {
   buildRefineTicketPrompt,
 } from "../utils/build-prompts";
 import { openTicketSessionBubble } from "../utils/open-ticket-session-bubble";
+import { resolveParentTicketReference } from "../utils/resolve-parent-ticket-reference";
 import { isTicketContentReady } from "../utils/ticket-content-ready";
 import { resolveTicketDetailsState } from "../utils/ticket-details-state";
 import {
@@ -58,11 +59,6 @@ const findLatestAttempt = <T extends { updatedAt: string }>(attempts: T[]) => {
   }
 
   return latestAttempt;
-};
-
-const findParentTicket = <T extends { id: string }>(tickets: T[], parentId: string | null | undefined) => {
-  if (!parentId) return null;
-  return tickets.find((ticket) => ticket.id === parentId) ?? null;
 };
 
 const toTicketTemplates = (templateAssets: Array<{ id: string; name: string; templateType: string }> | undefined) =>
@@ -97,7 +93,7 @@ export const TicketDetailsPanel = () => {
     isTicketsLoading,
   });
   const ticket = ticketState.ticket;
-  const parentTicket = findParentTicket(allProjectTickets, ticket?.parentId);
+  const parentReference = resolveParentTicketReference(allProjectTickets, ticket?.parentId);
   const ticketId = ticket?.id ?? "";
   const ticketFiles = useTicketFiles(ticket?.id);
   const selectableFiles = buildSelectableTicketFiles(ticketFiles.data);
@@ -153,7 +149,7 @@ export const TicketDetailsPanel = () => {
 
   const latestAttempt = findLatestAttempt(ticketAttempts);
 
-  const { data: latestAttemptDiff } = useTicketAttemptDiff(latestAttempt?.id);
+  const { data: latestAttemptDiffSummary } = useTicketAttemptDiffSummary(latestAttempt?.id);
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(true);
   const [isBreakModalOpen, setIsBreakModalOpen] = useState(false);
   const [isRefineModalOpen, setIsRefineModalOpen] = useState(false);
@@ -217,15 +213,15 @@ export const TicketDetailsPanel = () => {
     });
   };
 
-  const breadcrumbs = buildTicketBreadcrumbs(ticket.shorthand, parentTicket?.shorthand ?? null, projectId);
+  const breadcrumbs = buildTicketBreadcrumbs(ticket.shorthand, parentReference.shorthand, projectId);
 
   return (
     <Stack gap="0" height="100%">
       <TicketHeader
         breadcrumbItems={breadcrumbs}
         attemptCount={ticketAttempts.length}
-        additions={latestAttemptDiff?.totals.additions ?? 0}
-        deletions={latestAttemptDiff?.totals.deletions ?? 0}
+        additions={latestAttemptDiffSummary?.additions ?? 0}
+        deletions={latestAttemptDiffSummary?.deletions ?? 0}
         isRunningAttempt={sessions.isRunningAttempt}
         isArchived={Boolean(ticket.archived)}
         canDeleteTicket={Boolean(projectId) && !deleteTicket.isPending}
@@ -264,7 +260,6 @@ export const TicketDetailsPanel = () => {
           onToggle={() => setIsDetailsPanelOpen(!isDetailsPanelOpen)}
           onSelectFile={handleSelectFile}
           onSelectTicket={handleSelectTicket}
-          onComplexityChange={(c) => updateTicket.mutate({ ticketId: ticket.id, complexity: c })}
           onTagIdsChange={(ids) => updateTicketTags.mutate({ ticketId: ticket.id, tagIds: ids })}
         />
       </Flex>

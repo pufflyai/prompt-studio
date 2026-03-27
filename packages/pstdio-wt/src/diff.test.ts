@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { getWorktreeDiff } from "./diff";
 import { git } from "./git";
@@ -161,5 +162,27 @@ describe("getWorktreeDiff with base=HEAD (current mode)", () => {
     expect(diff.files.length).toBe(1);
     expect(diff.files[0].filePath).toBe("dirty.txt");
     expect(diff.files[0].change).toBe("added");
+  });
+
+  test("respects .gitignore entries for scaffold files copied into the worktree", async () => {
+    await Bun.write(join(repo.dir, ".gitignore"), ".pstdio/\n.opencode/\n.claude/\n");
+    await git(repo.dir, ["add", ".gitignore"]);
+    await git(repo.dir, ["commit", "-m", "ignore scaffold files"]);
+
+    const wtPath = join(repo.dir, "wt-current-scaffold");
+    await createWorktree({ repoRoot: repo.dir, branch: "task/current-scaffold", path: wtPath });
+
+    mkdirSync(join(wtPath, ".pstdio"), { recursive: true });
+    mkdirSync(join(wtPath, ".opencode", "skills", "custom-skill"), { recursive: true });
+    mkdirSync(join(wtPath, ".claude", "skills", "custom-skill"), { recursive: true });
+
+    await Bun.write(join(wtPath, ".pstdio", "config.json"), '{"project_id":"proj-1"}\n');
+    await Bun.write(join(wtPath, ".opencode", "skills", "custom-skill", "SKILL.md"), "# custom\n");
+    await Bun.write(join(wtPath, ".claude", "skills", "custom-skill", "SKILL.md"), "# custom\n");
+
+    const diff = await getWorktreeDiff({ worktreePath: wtPath, base: "HEAD" });
+
+    expect(diff.files).toEqual([]);
+    expect(diff.totals.file_count).toBe(0);
   });
 });

@@ -1,0 +1,20 @@
+#!/bin/sh
+
+# ──────────────────────────────────────────────────────────
+# pstdio post-session-start hook
+# Runs after an attempt session is started.
+#
+# Moves the ticket to "wip" unless it is already in "review".
+# ──────────────────────────────────────────────────────────
+
+if [ -z "$PSTDIO_TICKET" ]; then
+  exit 0
+fi
+
+# Check current status — skip if already in review
+CURRENT_STATUS=$(pstdio tickets view status --id "$PSTDIO_TICKET" 2>/dev/null)
+if [ "$CURRENT_STATUS" = "review" ]; then
+  exit 0
+fi
+
+pstdio tickets update --id "$PSTDIO_TICKET" --status "wip"

@@ -6,7 +6,7 @@ import { tagResponseSchema } from "../dto";
 export const listTagsRoute = createRoute({
   method: "get",
   path: "/projects/{projectId}/ticket-tags",
-  description: "List tags for a project.",
+  description: "List tag definitions for a project.",
   tags: ["Tags"],
   request: {
     query: z.object({}).strict(),
@@ -18,7 +18,7 @@ export const listTagsRoute = createRoute({
   },
   responses: {
     200: {
-      description: "List of tags.",
+      description: "List of tag definitions with options.",
       content: { "application/json": { schema: z.array(tagResponseSchema) } },
     },
   },
@@ -27,7 +27,7 @@ export const listTagsRoute = createRoute({
 export const listTagsHandler = (deps: RouteDeps): AppRouteHandler<typeof listTagsRoute> => {
   return async (c) => {
     const { projectId } = c.req.valid("param");
-    const tags = await deps.tagsService.list(projectId);
+    const tags = await deps.tagsService.listWithOptions(projectId);
     return c.json(tags, 200);
   };
 };

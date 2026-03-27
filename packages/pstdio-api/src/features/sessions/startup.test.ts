@@ -157,7 +157,7 @@ describe("resolveOrphanedSessions abort", () => {
           return await res.json();
         },
       },
-      workspacesService: { getBySessionId: async () => null },
+      workspaceSessionsService: { getWorkspaceBySessionId: async () => null },
       reposService: {},
       agentRegistry: { get: () => fakeAgent },
       eventBus: { emit: () => {} },
@@ -196,7 +196,7 @@ describe("resolveOrphanedSessions resolution", () => {
           return updatedSession;
         },
       },
-      workspacesService: { getBySessionId: async () => null },
+      workspaceSessionsService: { getWorkspaceBySessionId: async () => null },
       reposService: {},
       agentRegistry: { get: () => null },
       eventBus: {
@@ -233,7 +233,7 @@ describe("resolveOrphanedSessions resolution", () => {
           return updatedSession;
         },
       },
-      workspacesService: { getBySessionId: async () => null },
+      workspaceSessionsService: { getWorkspaceBySessionId: async () => null },
       reposService: {},
       agentRegistry: {
         get: () =>
@@ -275,7 +275,7 @@ describe("resolveOrphanedSessions resolution", () => {
           return updatedSession;
         },
       },
-      workspacesService: { getBySessionId: async () => null },
+      workspaceSessionsService: { getWorkspaceBySessionId: async () => null },
       reposService: {},
       agentRegistry: {
         get: () =>

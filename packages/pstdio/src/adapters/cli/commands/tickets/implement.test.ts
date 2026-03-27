@@ -8,8 +8,6 @@ const makeTicket = (overrides: Record<string, unknown> = {}) => ({
   status_id: "s-1",
   display_title: "Implement me",
   file_id: null,
-  priority: null,
-  complexity: null,
   draft: false,
   archived: false,
   status_name: "backlog",

@@ -14,8 +14,6 @@ const makeListItem = (
   status_id: null,
   display_title: overrides.display_title ?? "Pulled ticket",
   file_id: "file-content-1" as string | null,
-  priority: null,
-  complexity: null,
   draft: false,
   archived: false,
   status_name: overrides.status_name ?? null,
@@ -28,8 +26,6 @@ type TicketOverrides = Partial<{
   shorthand: string;
   display_title: string;
   file_id: string | null;
-  priority: string | null;
-  complexity: string | null;
   parent_id: string | null;
 }>;
 
@@ -41,8 +37,6 @@ const makeTicket = (overrides: TicketOverrides = {}) => ({
   display_title: overrides.display_title ?? "Pulled ticket",
   user_prompt: null,
   file_id: overrides.file_id ?? "file-content-1",
-  priority: overrides.priority ?? null,
-  complexity: overrides.complexity ?? null,
   parent_id: overrides.parent_id ?? null,
   parallelizable: null,
   blocked_reason: null,
@@ -117,7 +111,7 @@ describe("tickets pull", () => {
     const handler = createHandler({
       ...baseDeps(),
       resolveTicketByShorthand: async () => makeListItem({ status_name: "wip" }),
-      getTicket: async () => makeTicket({ priority: "P1", complexity: "medium", parent_id: "PS-0" }),
+      getTicket: async () => makeTicket({ parent_id: "PS-0" }),
       listTicketFiles: async () => [],
       getTicketFileContent: async () => Buffer.from("# Ticket from DB"),
       log: () => {},
@@ -130,8 +124,6 @@ describe("tickets pull", () => {
     expect(content).toStartWith("---\n");
     expect(content).toContain("ticket_id:");
     expect(content).toContain('status: "wip"');
-    expect(content).toContain('priority: "P1"');
-    expect(content).toContain('complexity: "medium"');
     expect(content).toContain('parent_id: "PS-0"');
     expect(content).toContain("# Ticket from DB");
   });

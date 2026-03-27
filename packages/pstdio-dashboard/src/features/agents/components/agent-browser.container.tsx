@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useProjectSettingsStore } from "@/features/project-settings/store";
+import { useSessionAgent } from "@/features/sessions/hooks/use-session-agent";
 import type { CodingAgent } from "../agent-storage";
 import { useAgentModels } from "../hooks/use-agent-models";
 import { useAgents } from "../hooks/use-agents";
 import { WorkspaceAgentMenu } from "./agent-browser";
 
 interface AgentBrowserContainerProps {
+  sessionId?: string | null;
   isDisabled?: boolean;
-  isAgentSwitchDisabled?: boolean;
   onAgentChange?: (agent: CodingAgent) => void;
   onModelChange?: (model: string) => void;
 }
@@ -15,15 +16,26 @@ interface AgentBrowserContainerProps {
 const DEFAULT_AGENT_ID = "opencode";
 
 export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
-  const { isDisabled = false, isAgentSwitchDisabled = false, onAgentChange, onModelChange } = props;
+  const { sessionId, isDisabled = false, onAgentChange, onModelChange } = props;
+
+  const sessionAgent = useSessionAgent(sessionId ?? null);
+  const isAgentLocked = sessionId != null && sessionAgent != null;
 
   const lastSelectedAgent = useProjectSettingsStore((s) => s.lastSelectedAgent);
   const lastSelectedModels = useProjectSettingsStore((s) => s.lastSelectedModels);
   const setLastSelectedAgent = useProjectSettingsStore((s) => s.setLastSelectedAgent);
   const setLastSelectedModel = useProjectSettingsStore((s) => s.setLastSelectedModel);
 
-  const [selectedAgent, setSelectedAgent] = useState<CodingAgent>(lastSelectedAgent || DEFAULT_AGENT_ID);
+  const resolvedAgent = (isAgentLocked ? sessionAgent : (lastSelectedAgent ?? DEFAULT_AGENT_ID)) as CodingAgent;
+  const [selectedAgent, setSelectedAgent] = useState<CodingAgent>(resolvedAgent);
   const [selectedModel, setSelectedModel] = useState(lastSelectedModels[0] ?? "");
+
+  // Sync when the resolved agent changes (e.g. session loads, or session switches)
+  useEffect(() => {
+    if (resolvedAgent !== selectedAgent) {
+      setSelectedAgent(resolvedAgent);
+    }
+  }, [resolvedAgent, selectedAgent]);
 
   const { data: agents = [], isLoading: isAgentsPending } = useAgents();
   const { data: models = [], isLoading: isModelsPending } = useAgentModels(selectedAgent, {
@@ -96,7 +108,7 @@ export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
       selectedModel={selectedModel}
       onSelectModel={handleSelectModel}
       isDisabled={isDisabled}
-      isAgentSwitchDisabled={isAgentSwitchDisabled}
+      isAgentSwitchDisabled={isAgentLocked}
       isAgentsLoading={isAgentsPending}
       isModelsLoading={isModelsPending}
     />

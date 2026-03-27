@@ -150,17 +150,17 @@ describe("POST /v1/tickets", () => {
     expect(await fileRes.text()).toBe(content);
   });
 
-  test("creates a ticket with tag_ids and returns them via list", async () => {
+  test("creates a ticket with tag option ids and returns them via list", async () => {
     const { app, projectId } = context;
 
     const tagsRes = await app.request(`/v1/projects/${projectId}/ticket-tags`);
-    const tags = (await tagsRes.json()) as { id: string; name: string }[];
-    const tagId = tags[0].id;
+    const tags = (await tagsRes.json()) as { id: string; name: string; options: { id: string }[] }[];
+    const optionId = tags[0].options[0].id;
 
     const createRes = await app.request("/v1/tickets", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: projectId, content: "Tagged ticket", tag_ids: [tagId] }),
+      body: JSON.stringify({ project_id: projectId, content: "Tagged ticket", tag_ids: [optionId] }),
     });
     expect(createRes.status).toBe(201);
     const ticket = await createRes.json();
@@ -168,7 +168,7 @@ describe("POST /v1/tickets", () => {
     const listRes = await app.request(`/v1/tickets?project_id=${projectId}`);
     const tickets = (await listRes.json()) as { id: string; tag_ids: string[] }[];
     const found = tickets.find((t) => t.id === ticket.id);
-    expect(found?.tag_ids).toContain(tagId);
+    expect(found?.tag_ids).toContain(optionId);
   });
 
   test("rejects display_title even when content is provided", async () => {

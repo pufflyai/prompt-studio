@@ -3,11 +3,11 @@ type UpdateTicketInput = {
   user_prompt?: string;
   file_id?: string;
   status_id?: string;
-  priority?: string;
-  complexity?: string;
   draft?: boolean;
   archived?: boolean;
   tag_ids?: string[];
+  blocked_reason?: string;
+  parent_id?: string;
 };
 
 type Ticket = {

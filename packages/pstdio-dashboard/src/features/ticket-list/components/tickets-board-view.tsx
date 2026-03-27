@@ -2,6 +2,7 @@ import { TicketBoard, type TicketBoardColumn, type TicketBoardColumnAction, type
 import { Archive } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import type { SyncedRow } from "@/features/sync/collections";
 import type { Ticket, TicketAttempt, TicketColumnAction, TicketStatus } from "@/features/ticket-list/types";
 
 import type { BadgeContext, DisplayProperty, TicketGroup } from "../types";
@@ -15,6 +16,7 @@ interface TicketsBoardViewProps {
   badgeContext: BadgeContext;
   latestAttemptsByTicketId?: Map<string, TicketAttempt>;
   diffTotalsByWorkspaceId?: Map<string, { additions: number; deletions: number }>;
+  sessionsByWorkspace?: Map<string, SyncedRow>;
   onMoveTicket?: (ticketId: string, nextStatus: TicketStatus) => void;
   onSelectTicket?: (ticket: Ticket) => void;
   onOpenSessionBubble?: (sessionId: string | null) => void;
@@ -31,6 +33,7 @@ export const TicketsBoardView = (props: TicketsBoardViewProps) => {
     badgeContext,
     latestAttemptsByTicketId = new Map(),
     diffTotalsByWorkspaceId = new Map(),
+    sessionsByWorkspace = new Map(),
     onMoveTicket,
     onSelectTicket,
     onOpenSessionBubble,
@@ -51,7 +54,7 @@ export const TicketsBoardView = (props: TicketsBoardViewProps) => {
   const toBoardItem = (ticket: Ticket, ticketsById: Map<string, Ticket>): TicketBoardItem => {
     const latestAttempt = latestAttemptsByTicketId.get(ticket.id);
     const diffTotals = latestAttempt ? diffTotalsByWorkspaceId.get(latestAttempt.id) : undefined;
-    const sessionId = latestAttempt?.sessionId || null;
+    const sessionId = latestAttempt ? ((sessionsByWorkspace.get(latestAttempt.id)?.id as string) ?? null) : null;
     const workspaceShorthand = latestAttempt?.shorthand ?? "";
 
     return {

@@ -124,15 +124,6 @@
       "status": "Statut",
       "blockedReason": "Raison du blocage",
       "dependsOn": "Dépend de",
-      "complexity": {
-        "label": "Complexité",
-        "options": {
-          "unspecified": "Non spécifiée",
-          "low": "Basse",
-          "medium": "Moyenne",
-          "high": "Haute"
-        }
-      },
       "parent": "Parent",
       "tags": "Étiquettes",
       "blockedBy": "Bloqué par",
@@ -237,6 +228,7 @@
     "title": "Sessions",
     "newSession": "Nouvelle session",
     "noSessionsYet": "Aucune session pour le moment",
+    "nextBuildTitle": "Que devrions-nous construire ensuite ?",
     "noSessionSelected": "Aucune session sélectionnée",
     "selectSession": "Sélectionnez une session dans la barre latérale ou démarrez-en une nouvelle.",
     "followUpPlaceholder": "Envoyer un message de suivi...",

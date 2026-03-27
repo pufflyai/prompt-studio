@@ -9,8 +9,15 @@ const apiBase = `http://localhost:${apiPort}`;
 const bypassOnboarding = async (page: import("@playwright/test").Page) => {
   await page.addInitScript(() => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "opencode");
+    localStorage.setItem("selected-agent", "fake");
   });
+};
+
+const configureAgent = async (request: import("@playwright/test").APIRequestContext, agentId: string) => {
+  const res = await request.post(`${apiBase}/v1/agents`, {
+    data: { agent_id: agentId },
+  });
+  expect(res.ok()).toBe(true);
 };
 
 const createProjectWithDocs = async (request: import("@playwright/test").APIRequestContext, repoPath: string) => {
@@ -65,7 +72,7 @@ test.describe("Documentation", () => {
   let repoDir: string;
 
   test.beforeEach(() => {
-    test.setTimeout(5_000);
+    test.setTimeout(10_000);
     repoDir = setupDocsRepo();
   });
 
@@ -76,6 +83,7 @@ test.describe("Documentation", () => {
 
   test("shows empty state when project has no docs", async ({ page, request }) => {
     await bypassOnboarding(page);
+    await configureAgent(request, "fake");
 
     const emptyRepoDir = join(tmpdir(), `pstdio-e2e-empty-${Date.now()}`);
     mkdirSync(emptyRepoDir, { recursive: true });
@@ -83,7 +91,33 @@ test.describe("Documentation", () => {
     const project = await createProjectWithDocs(request, emptyRepoDir);
 
     await page.goto(`/projects/${project.id}/docs`);
-    await expect(page.getByText("No docs found")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Setup your project documentation" })).toBeVisible();
+    await expect(page.getByText("Ask your agent to setup your project documentation.")).toBeVisible();
+    await expect(
+      page.getByRole("button", {
+        name: "Create documentation in .pstdio/docs describing what this repo owns and what is out of scope.",
+      }),
+    ).toBeVisible();
+
+    rmSync(emptyRepoDir, { recursive: true, force: true });
+  });
+
+  test("starts a new session from a documentation prompt suggestion", async ({ page, request }) => {
+    await bypassOnboarding(page);
+    await configureAgent(request, "fake");
+
+    const emptyRepoDir = join(tmpdir(), `pstdio-e2e-empty-${Date.now()}`);
+    mkdirSync(emptyRepoDir, { recursive: true });
+
+    const project = await createProjectWithDocs(request, emptyRepoDir);
+    const prompt = "Create documentation in .pstdio/docs describing what this repo owns and what is out of scope.";
+
+    await page.goto(`/projects/${project.id}/docs`);
+    await page.getByRole("button", { name: prompt }).click();
+
+    // Session should open as a bubble overlay, not navigate to the session page
+    await expect(page.getByText(prompt).first()).toBeVisible();
+    await expect(page.getByText(`Fake Agent: completed "${prompt}"`).first()).toBeVisible();
 
     rmSync(emptyRepoDir, { recursive: true, force: true });
   });

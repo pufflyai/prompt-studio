@@ -15,8 +15,6 @@ const builders: Record<DisplayProperty, BadgeBuilder> = {
 
   status: (ticket) => [{ label: ticket.status, color: ticket.statusColor }],
 
-  complexity: (ticket) => (ticket.complexity ? [{ label: ticket.complexity }] : []),
-
   assignee: (ticket) => (ticket.assignee ? [{ label: ticket.assignee }] : []),
 
   tags: (ticket, context) => {

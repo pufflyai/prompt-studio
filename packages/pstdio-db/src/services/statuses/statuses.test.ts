@@ -108,13 +108,26 @@ test("getDefault returns null when no default exists", async () => {
   await close2();
 });
 
-test("softDelete hides status from list", async () => {
+test("remove deletes status from list", async () => {
   const before = await service.list(projectId);
   const triaging = before.find((s) => s.name === "triaging");
   expect(triaging).not.toBeUndefined();
 
-  await service.softDelete(triaging!.id);
+  await service.remove(triaging!.id);
 
   const after = await service.list(projectId);
   expect(after.find((s) => s.name === "triaging")).toBeUndefined();
+});
+
+test("update edits status metadata", async () => {
+  const backlog = await service.getByName(projectId, "backlog");
+  expect(backlog).not.toBeNull();
+
+  await service.update(backlog!.id, { name: "queued", color: "pink", sort_order: 99 });
+
+  const statuses = await service.list(projectId);
+  const updated = statuses.find((status) => status.id === backlog!.id);
+  expect(updated?.name).toBe("queued");
+  expect(updated?.color).toBe("pink");
+  expect(updated?.sort_order).toBe(99);
 });

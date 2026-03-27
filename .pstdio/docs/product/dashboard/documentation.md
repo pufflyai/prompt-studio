@@ -87,7 +87,7 @@ Supported values:
 ## Rules & Constraints
 
 - The dashboard treats docs as read-only.
-- If `navigation.json` is empty, the panel shows an empty docs state.
+- If `navigation.json` is empty, the panel shows an authoring-focused empty state with repo-local doc setup guidance and clickable prompt suggestions that start a new project session from the selected documentation question.
 - The docs panel depends on `.pstdio/docs` in the linked repo; it does not maintain a second copy.
 
 ## Errors

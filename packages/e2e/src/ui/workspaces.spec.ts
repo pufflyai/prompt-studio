@@ -13,7 +13,8 @@ const createGitRepo = () => {
   execSync('git config user.email "test@test.com"', { cwd: repoRoot, stdio: "pipe" });
   execSync('git config user.name "Test"', { cwd: repoRoot, stdio: "pipe" });
   writeFileSync(join(repoRoot, "README.md"), "workspace diff e2e\n");
-  execSync("git add README.md", { cwd: repoRoot, stdio: "pipe" });
+  writeFileSync(join(repoRoot, ".gitignore"), ".pstdio/\n.opencode/\n.claude/\n");
+  execSync("git add README.md .gitignore", { cwd: repoRoot, stdio: "pipe" });
   execSync('git commit -m "init"', { cwd: repoRoot, stdio: "pipe" });
   return repoRoot;
 };
@@ -113,7 +114,7 @@ test.describe("Workspace diff", () => {
     // Commit a change — should NOT appear in current mode (only uncommitted)
     const wtPath = attempt.workspace.worktree_path;
     writeFileSync(join(wtPath, "committed.ts"), "export const x = 1;\n");
-    execSync("git add .", { cwd: wtPath, stdio: "pipe" });
+    execSync("git add committed.ts", { cwd: wtPath, stdio: "pipe" });
     execSync('git commit -m "add committed"', { cwd: wtPath, stdio: "pipe" });
 
     const res = await request.get(`${apiBase}/v1/workspaces/${attempt.workspace.id}/diff`);
@@ -159,7 +160,7 @@ test.describe("Workspace diff", () => {
 
     const wtPath = attempt.workspace.worktree_path;
     writeFileSync(join(wtPath, "feature.ts"), 'export const greet = () => "hello";\n');
-    execSync("git add .", { cwd: wtPath, stdio: "pipe" });
+    execSync("git add feature.ts", { cwd: wtPath, stdio: "pipe" });
     execSync('git commit -m "add feature"', { cwd: wtPath, stdio: "pipe" });
 
     const res = await request.get(`${apiBase}/v1/workspaces/${attempt.workspace.id}/diff?mode=fork_point`);
@@ -187,7 +188,7 @@ test.describe("Workspace diff", () => {
     // Commit a file on the workspace branch
     const wtPath = attempt.workspace.worktree_path;
     writeFileSync(join(wtPath, "component.tsx"), "export const App = () => <div>Hello</div>;\n");
-    execSync("git add .", { cwd: wtPath, stdio: "pipe" });
+    execSync("git add component.tsx", { cwd: wtPath, stdio: "pipe" });
     execSync('git commit -m "add component"', { cwd: wtPath, stdio: "pipe" });
 
     // Squash-merge workspace branch into main while keeping the workspace branch alive
@@ -217,7 +218,7 @@ test.describe("Workspace diff", () => {
 
     const wtPath = attempt.workspace.worktree_path;
     writeFileSync(join(wtPath, "widget.tsx"), "export const Widget = () => <div>Widget</div>;\n");
-    execSync("git add .", { cwd: wtPath, stdio: "pipe" });
+    execSync("git add widget.tsx", { cwd: wtPath, stdio: "pipe" });
     execSync('git commit -m "add widget"', { cwd: wtPath, stdio: "pipe" });
 
     const workspaceBranch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: wtPath, stdio: "pipe" })

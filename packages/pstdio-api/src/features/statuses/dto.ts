@@ -6,6 +6,10 @@ export const statusResponseSchema = z.object({
   color: z.string(),
   sort_order: z.number(),
   is_default: z.boolean(),
+  can_create: z.boolean(),
+  can_drag_in: z.boolean(),
+  can_drag_out: z.boolean(),
+  column_actions: z.array(z.string()),
 });
 
 export const createStatusBodySchema = z

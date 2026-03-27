@@ -1,27 +1,58 @@
 # Lifecycle Hooks
 
-Hooks are shell scripts in `.pstdio/hooks/<hook-name>` that run automatically during worktree lifecycle events. They replace the legacy `startup_script` system.
+Hooks are shell scripts in `.pstdio/hooks/<hook-name>` that run during worktree, session, and ticket lifecycle events.
 
-## Hook Reference
+## Supported Hook Names
 
-| Hook          | Event                                       | Blocking | Typical Use                              |
-| ------------- | ------------------------------------------- | -------- | ---------------------------------------- |
-| `pre-create`  | Before worktree is created                  | Yes      | Validate branch name, check disk space   |
-| `post-create` | After worktree is created and config copied | No       | Install deps, generate config, seed data |
-| `pre-commit`  | Before staging and committing changes       | Yes      | Lint, format, type-check                 |
-| `post-commit` | After a commit is created                   | No       | Notifications, trigger CI                |
-| `pre-rebase`  | Before rebasing worktree onto target        | Yes      | Run tests, check for WIP commits         |
-| `post-rebase` | After successful rebase                     | No       | Reinstall deps if lockfile changed       |
-| `pre-merge`   | Before squash-merging worktree              | Yes      | Run full test suite, build               |
-| `post-merge`  | After successful merge                      | No       | Deploy, tag release, notify team         |
-| `pre-remove`  | Before worktree deletion                    | Yes      | Archive artifacts, check unpushed work   |
-| `post-remove` | After worktree is removed                   | No       | Kill dev servers, clean caches           |
-| `on-conflict` | When a merge or rebase hits conflicts       | No       | Notify user, log conflict details        |
+### Worktree hooks
 
-## Blocking Semantics
+- `pre-worktree-create`
+- `post-worktree-create`
+- `pre-commit`
+- `post-commit`
+- `pre-rebase`
+- `post-rebase`
+- `pre-merge`
+- `post-merge`
+- `pre-worktree-remove`
+- `post-worktree-remove`
+- `on-conflict`
 
-- **Blocking hooks** (`pre-*`): non-zero exit aborts the parent operation.
-- **Non-blocking hooks** (`post-*`, `on-conflict`): failures are logged but do not affect the parent operation.
+### Session hooks
+
+- `post-session-start`
+- `post-session-success`
+- `post-session-fail`
+- `post-session-resume`
+- `post-session-await-input`
+
+### Ticket hooks
+
+- `pre-ticket-creation`
+- `post-ticket-creation`
+- `pre-ticket-status-change`
+- `post-ticket-status-change`
+- `pre-ticket-archive`
+- `post-ticket-archive`
+- `pre-ticket-deletion`
+- `post-ticket-deletion`
+
+## Blocking Hooks
+
+Non-zero exit codes abort the parent operation for:
+
+- `pre-worktree-create`
+- `post-worktree-create`
+- `pre-commit`
+- `pre-rebase`
+- `pre-merge`
+- `pre-worktree-remove`
+- `pre-ticket-creation`
+- `pre-ticket-status-change`
+- `pre-ticket-archive`
+- `pre-ticket-deletion`
+
+All other hooks are non-blocking.
 
 ## Environment Variables
 
@@ -45,6 +76,14 @@ All hooks receive context as environment variables:
 
 Show all supported hooks and whether each script file exists.
 
+### `pstdio hooks create <hook-name>`
+
+Create `.pstdio/hooks/<hook-name>`.
+
+- Reuses the bundled scaffold when one exists, such as `post-worktree-create`
+- Otherwise writes a minimal shell-script starter
+- Fails instead of overwriting an existing hook file
+
 ### `pstdio hooks run <hook-name>`
 
 Manually run a hook script. Useful for testing hooks before they fire automatically.
@@ -58,14 +97,14 @@ Options:
 ### Install dependencies on workspace creation
 
 ```sh
-# .pstdio/hooks/post-create
+# .pstdio/hooks/post-worktree-create
 bun install
 ```
 
 ### Copy `.env` files into new worktrees
 
 ```sh
-# .pstdio/hooks/post-create
+# .pstdio/hooks/post-worktree-create
 for f in .env .env.local .env.test; do
   if [ -f "$PSTDIO_REPO_PATH/$f" ]; then
     cp "$PSTDIO_REPO_PATH/$f" "$PSTDIO_WORKTREE_PATH/$f"

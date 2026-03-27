@@ -1,9 +1,10 @@
 import type { SidebarActionMenuItem } from "@pstdio/ui";
 import { type SidebarNavigateEvent, SidebarNext, type SidebarNode, type SidebarSection } from "@pstdio/ui";
-import { AlertTriangle, FileText, MessageSquareText, Plus, Tag, Ticket } from "lucide-react";
+import { AlertTriangle, FileText, GitFork, MessageSquareText, Plus, Tag, Ticket } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BackToDashboard } from "@/features/project/components/back-to-dashboard";
 import type { ProjectTemplateAsset, ProjectTemplateAssetType } from "@/features/project/types";
+import type { TicketTag } from "@/features/ticket-list/types";
 import type { HookEntry } from "../data/hooks-api";
 import type { ProjectSkill } from "../data/skills-api";
 
@@ -15,55 +16,115 @@ const TEMPLATE_TYPE_CONFIG: Record<ProjectTemplateAssetType, { icon: React.React
 
 const TEMPLATE_TYPE_ORDER: ProjectTemplateAssetType[] = ["prompt", "ticket", "document"];
 
-export type SettingsSection = "tags" | "danger-zone" | { template: string } | { hook: string } | { skill: string };
+export type SettingsSection =
+  | "ticket-statuses"
+  | "tags"
+  | "danger-zone"
+  | "repositories"
+  | "danger-zone"
+  | { tag: string }
+  | { template: string }
+  | { hook: string }
+  | { skill: string };
 
 export const SETTINGS_SIDEBAR_STORAGE_KEY = "settings-sidebar";
 
 const HOOK_DESCRIPTIONS: Record<string, string> = {
-  "pre-create": "Before worktree is created",
-  "post-create": "After worktree is created",
+  "pre-worktree-create": "Before worktree is created",
+  "post-worktree-create": "After worktree is created",
   "pre-commit": "Before staging and committing",
   "post-commit": "After a commit is created",
   "pre-rebase": "Before rebasing onto target",
   "post-rebase": "After successful rebase",
   "pre-merge": "Before squash-merging",
   "post-merge": "After successful merge",
-  "pre-remove": "Before worktree deletion",
-  "post-remove": "After worktree is removed",
+  "pre-worktree-remove": "Before worktree deletion",
+  "post-worktree-remove": "After worktree is removed",
   "on-conflict": "When merge/rebase hits conflicts",
+  "post-session-start": "After a session begins",
+  "post-session-success": "After session completes successfully",
+  "post-session-fail": "After session ends with error",
+  "post-session-resume": "After session resumes",
+  "post-session-await-input": "Session waiting for input",
+  "pre-ticket-creation": "Before ticket is created",
+  "post-ticket-creation": "After ticket is created",
+  "pre-ticket-status-change": "Before ticket status changes",
+  "post-ticket-status-change": "After ticket status changes",
+  "pre-ticket-archive": "Before ticket is archived",
+  "post-ticket-archive": "After ticket is archived",
+  "pre-ticket-deletion": "Before ticket is deleted",
+  "post-ticket-deletion": "After ticket is deleted",
 };
 
 interface SettingsSidebarProps {
   templates: ProjectTemplateAsset[];
   hooks: HookEntry[];
   skills: ProjectSkill[];
+  tags: TicketTag[];
   activeSection: SettingsSection | null;
   onSelectSection: (section: SettingsSection) => void;
   onCreateTemplate: () => void;
+  onCreateTag: () => void;
   onAddHook: (hookName: string) => void;
 }
 
 const resolveActiveNodeId = (activeSection: SettingsSection | null) => {
   if (!activeSection) return null;
+  if (activeSection === "ticket-statuses") return "ticket-statuses";
   if (activeSection === "tags") return "tags";
+  if (activeSection === "repositories") return "repositories";
   if (activeSection === "danger-zone") return "danger-zone";
+  if (typeof activeSection === "object" && "tag" in activeSection) return `tag:${activeSection.tag}`;
   if (typeof activeSection === "object" && "hook" in activeSection) return `hook:${activeSection.hook}`;
   if (typeof activeSection === "object" && "skill" in activeSection) return `skill:${activeSection.skill}`;
   return `template:${activeSection.template}`;
 };
 
 export const SettingsSidebar = (props: SettingsSidebarProps) => {
-  const { templates, hooks, skills, activeSection, onSelectSection, onCreateTemplate, onAddHook } = props;
+  const { templates, hooks, skills, tags, activeSection, onSelectSection, onCreateTemplate, onCreateTag, onAddHook } =
+    props;
   const { t } = useTranslation("projects");
 
   const buildSections = (): SidebarSection[] => {
+    const tagChildNodes: SidebarNode[] = tags.map((tag) => ({
+      id: `tag:${tag.id}`,
+      label: tag.name,
+      isNavigable: true,
+      navigationIntent: { id: "select-tag", payload: tag.id },
+    }));
+
     const generalNodes: SidebarNode[] = [
+      {
+        id: "ticket-statuses",
+        label: "Statuses",
+        icon: <Ticket size={14} />,
+        isNavigable: true,
+        navigationIntent: { id: "select", payload: "ticket-statuses" },
+      },
       {
         id: "tags",
         label: t("projectSettings.tags"),
         icon: <Tag size={14} />,
+        isNavigable: false,
+        children: tagChildNodes,
+        actions: [
+          {
+            id: "create-tag",
+            label: "Create tag",
+            icon: <Plus size={14} />,
+            onAction: () => onCreateTag(),
+          },
+        ],
+      },
+    ];
+
+    const repositoryNodes: SidebarNode[] = [
+      {
+        id: "repositories",
+        label: t("projectSettings.repositories"),
+        icon: <GitFork size={14} />,
         isNavigable: true,
-        navigationIntent: { id: "select", payload: "tags" },
+        navigationIntent: { id: "select", payload: "repositories" },
       },
     ];
 
@@ -137,6 +198,8 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
                   id: "add-hook",
                   label: "Add hook",
                   icon: <Plus size={14} />,
+                  searchPlaceholder: "Search hooks…",
+                  emptyMenuLabel: "No hooks found",
                   menuItems: addHookMenuItems,
                 },
               ]
@@ -160,6 +223,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
           },
         ],
       },
+      { id: "repositories", nodes: repositoryNodes },
       { id: "danger", nodes: dangerNodes },
     ];
   };
@@ -169,7 +233,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
     if (!intent) return;
 
     if (intent.id === "select") {
-      onSelectSection(intent.payload as "tags" | "danger-zone");
+      onSelectSection(intent.payload as "ticket-statuses" | "repositories" | "tags" | "danger-zone");
     }
 
     if (intent.id === "select-template") {
@@ -180,8 +244,16 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
       onSelectSection({ hook: intent.payload as string });
     }
 
+    if (intent.id === "select-tag") {
+      onSelectSection({ tag: intent.payload as string });
+    }
+
     if (intent.id === "select-skill") {
       onSelectSection({ skill: intent.payload as string });
+    }
+
+    if (intent.id === "create-tag") {
+      onCreateTag();
     }
   };
 

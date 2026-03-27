@@ -215,11 +215,38 @@ test.describe("Sessions page", () => {
     await expect(contentEditor).toContainText("abc");
   });
 
+  test("hides the attached session panel on workspace routes", async ({ page }) => {
+    await bypassOnboarding(page);
+    await page.addInitScript((id: string) => {
+      localStorage.setItem(
+        `pstdio-project-settings/projects/${id}/values`,
+        JSON.stringify({ state: { sessionModalState: "attached" }, version: 0 }),
+      );
+    }, projectId);
+    await page.goto(`/projects/${projectId}/docs`);
+
+    await expect(page.locator("[data-testid='session-attached-panel']")).toBeVisible();
+
+    await page.goto(`/projects/${projectId}/tickets/TK-1/workspaces/W-1`);
+
+    await expect(page.locator("[data-testid='session-attached-panel']")).toHaveCount(0);
+  });
+
   test("opens selected session in bubble and navigates back", async ({ page, request }) => {
     await bypassOnboarding(page);
+    await page.addInitScript((id: string) => {
+      localStorage.setItem(
+        `pstdio-project-settings/projects/${id}/values`,
+        JSON.stringify({
+          state: {
+            lastNonSessionsPath: `/projects/${id}/docs`,
+          },
+          version: 0,
+        }),
+      );
+    }, projectId);
     const session = await createSessionViaApi(request, projectId, "Open in bubble session");
 
-    await page.goto(`/projects/${projectId}/docs`);
     await page.goto(`/projects/${projectId}/sessions/${session.id}`);
     await page.getByRole("button", { name: "Open in bubble" }).click();
 

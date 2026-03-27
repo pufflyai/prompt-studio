@@ -6,11 +6,12 @@ const SKILL_FILE_SUFFIX = "/SKILL.md";
 
 const parseFrontmatter = (content: string) => {
   const match = content.match(/^---\n([\s\S]*?)\n---/);
-  if (!match?.[1]) return { name: "", description: "" };
+  if (!match?.[1]) return { name: "", description: "", version: "" };
 
   const lines = match[1].split("\n");
   let name = "";
   let description = "";
+  let version = "";
 
   for (const line of lines) {
     const [key, ...rest] = line.split(":");
@@ -20,14 +21,16 @@ const parseFrontmatter = (content: string) => {
       .replace(/^"(.*)"$/, "$1");
     if (key?.trim() === "name") name = value;
     if (key?.trim() === "description") description = value;
+    if (key?.trim() === "- version") version = value;
   }
 
-  return { name, description };
+  return { name, description, version };
 };
 
 export type BundledSkill = {
   name: string;
   description: string;
+  version: string;
   content: string;
 };
 
@@ -65,8 +68,8 @@ const loadEmbeddedSkills = async () => {
   return Promise.all(
     files.map(async ({ skillName, file }) => {
       const content = await file.text();
-      const { name, description } = parseFrontmatter(content);
-      return { name: name || skillName, description, content };
+      const { name, description, version } = parseFrontmatter(content);
+      return { name: name || skillName, description, version, content };
     }),
   );
 };
@@ -78,8 +81,8 @@ const loadFilesystemSkills = () => {
 
   return entries.map((entry) => {
     const content = readFileSync(join(SKILLS_DIR, entry.name, "SKILL.md"), "utf8");
-    const { name, description } = parseFrontmatter(content);
-    return { name: name || entry.name, description, content };
+    const { name, description, version } = parseFrontmatter(content);
+    return { name: name || entry.name, description, version, content };
   });
 };
 

@@ -12,6 +12,7 @@ export type ProjectSkill = {
 
 export type ProjectSkillWithContent = ProjectSkill & {
   content: string;
+  bundled_version: string;
 };
 
 export const getProjectSkills = async (projectId: string) =>
@@ -19,3 +20,8 @@ export const getProjectSkills = async (projectId: string) =>
 
 export const getProjectSkill = async (projectId: string, name: string) =>
   apiRequest<ProjectSkillWithContent>(`/v1/projects/${projectId}/skills/${encodeURIComponent(name)}`);
+
+export const updateProjectSkill = async (projectId: string, name: string) =>
+  apiRequest<ProjectSkillWithContent>(`/v1/projects/${projectId}/skills/${encodeURIComponent(name)}/update`, {
+    method: "POST",
+  });

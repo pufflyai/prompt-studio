@@ -124,15 +124,6 @@
       "status": "状态",
       "blockedReason": "阻塞原因",
       "dependsOn": "依赖于",
-      "complexity": {
-        "label": "复杂度",
-        "options": {
-          "unspecified": "未指定",
-          "low": "低",
-          "medium": "中",
-          "high": "高"
-        }
-      },
       "parent": "父级",
       "tags": "标签",
       "blockedBy": "被阻塞",
@@ -232,6 +223,7 @@
     "title": "会话",
     "newSession": "新建会话",
     "noSessionsYet": "暂无会话",
+    "nextBuildTitle": "接下来我们应该构建什么？",
     "noSessionSelected": "未选择会话",
     "selectSession": "从侧边栏选择一个会话或开始新会话。",
     "followUpPlaceholder": "发送后续消息...",

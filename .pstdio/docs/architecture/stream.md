@@ -108,5 +108,6 @@ There is no optimistic state layer — the UI updates only after the SSE event a
 
 1. **Endpoints emit events after mutations.** The EventBus is the single mechanism for notifying clients. No client polls for changes.
 2. **Cascade deletes emit per-row events.** Clients must receive individual `sync:delete` events for every dependent row — not just the parent.
-3. **Session content stays out of the stream.** Sessions reference files via `session_file_id`. Content is fetched on demand.
+3. **Session streams send heartbeats.** `GET /v1/sessions/:id/stream` emits a `heartbeat` event every second while live patches are pending, keeping the connection alive within the Bun idle timeout (20 s).
+4. **Session content stays out of the stream.** Sessions reference files via `session_file_id`. Content is fetched on demand.
 4. **Y.js tables are excluded.** Y.js has its own binary sync protocol.

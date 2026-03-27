@@ -1,5 +1,5 @@
 import type { SyncedRow } from "@/features/sync/collections";
-import type { Ticket, TicketAttempt, TicketStatusColor } from "@/features/ticket-list/types";
+import type { TicketAttempt, TicketStatusColor } from "@/features/ticket-list/types";
 
 const SESSION_STATUSES = ["in_progress", "awaiting_input", "completed", "failed", "cancelled"] as const;
 
@@ -28,10 +28,9 @@ export const toTicketFromRow = (
     return {
       id: ws.id,
       label: (ws.name as string) ?? ws.id,
-      status: (ws.status as "active" | "merged" | "rejected") ?? "active",
+      attemptStatusId: (ws.attempt_status_id as string) ?? null,
       sessionStatus: toSessionStatus(session?.status),
       shorthand: (ws.workspace_shorthand as string) ?? ws.id,
-      sessionId: session?.id ?? "",
       updatedAt: ws.updated_at as string,
       worktreePath: (ws.worktree_path as string) ?? null,
     };
@@ -53,7 +52,6 @@ export const toTicketFromRow = (
     tagIds: tagIdsByTicket.get(row.id) ?? [],
     status: (row.status_name as string) ?? statusById.get(statusId ?? "") ?? fallbackName,
     statusColor: colorById.get(statusId ?? "") ?? fallbackColor,
-    complexity: row.complexity as Ticket["complexity"],
     blockedReason: (row.blocked_reason as string) ?? null,
     dependsOn: (row.depends_on as string) ?? null,
     parentId: (row.parent_id as string) ?? null,

@@ -44,7 +44,6 @@ interface MenuItemContentProps {
   secondaryLabel?: string;
   tooltipLabel?: ReactNode;
   leftIcon?: MenuItemIcon | null;
-  leftSlot?: ReactNode;
   rightIcon?: MenuItemIcon | null;
   leftIconColor: MenuItemIconColor;
   rightIconColor: MenuItemIconColor;
@@ -65,7 +64,6 @@ const MenuItemContent = (props: MenuItemContentProps) => {
     tooltipLabel,
     secondaryLabel,
     leftIcon,
-    leftSlot,
     rightIcon,
     leftIconColor,
     rightIconColor,
@@ -102,11 +100,7 @@ const MenuItemContent = (props: MenuItemContentProps) => {
         <Tooltip positioning={{ placement: "right" }} content={tooltipLabel} disabled={!tooltipLabel}>
           <Stack gap="2xs">
             <Flex alignItems="flex-start" gap="xs" flex="1">
-              {leftSlot ? (
-                leftSlot
-              ) : leftIcon ? (
-                <Icon as={leftIcon} boxSize={leftIconSize} color={leftIconColor} />
-              ) : null}
+              {leftIcon ? <Icon as={leftIcon} boxSize={leftIconSize} color={leftIconColor} /> : null}
               <Text lineClamp={1} textOverflow="ellipsis" textStyle={variantStyles.primaryTextStyle}>
                 {primaryLabel}
               </Text>
@@ -175,7 +169,6 @@ export interface MenuItemProps {
   secondaryLabel?: string;
   tooltipLabel?: ReactNode;
   leftIcon?: MenuItemIcon | null;
-  leftSlot?: ReactNode;
   rightIcon?: MenuItemIcon | null;
   leftIconColor?: MenuItemIconColor;
   rightIconColor?: MenuItemIconColor;
@@ -206,7 +199,6 @@ export const MenuItem = (props: MenuItemProps) => {
     tooltipLabel,
     secondaryLabel,
     leftIcon = null,
-    leftSlot,
     rightIcon,
     leftIconColor = "fg.menu-item.default",
     rightIconColor = "fg.menu-item.default",
@@ -237,7 +229,6 @@ export const MenuItem = (props: MenuItemProps) => {
     secondaryLabel,
     tooltipLabel,
     leftIcon,
-    leftSlot,
     rightIcon,
     leftIconColor,
     rightIconColor,

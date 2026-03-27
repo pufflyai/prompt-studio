@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import { getProjectSkill, getProjectSkills } from "../data/skills-api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getProjectSkill, getProjectSkills, updateProjectSkill } from "../data/skills-api";
 
 export const useProjectSkills = (projectId: string | undefined) =>
   useQuery({
@@ -14,3 +14,14 @@ export const useProjectSkill = (projectId: string | undefined, skillName: string
     queryFn: () => getProjectSkill(projectId!, skillName!),
     enabled: Boolean(projectId && skillName),
   });
+
+export const useUpdateProjectSkill = (projectId: string | undefined, skillName: string | undefined) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => updateProjectSkill(projectId!, skillName!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-skill", projectId, skillName] });
+    },
+  });
+};

@@ -10,6 +10,7 @@ import {
 } from "pstdio-agents";
 import {
   createAgentConfigsService,
+  createAttemptStatusesService,
   createDb,
   createProjectsService,
   createReposService,
@@ -19,6 +20,7 @@ import {
   createTagsService,
   createTemplatesService,
   createTicketsService,
+  createWorkspaceSessionsService,
   createWorkspacesService,
 } from "pstdio-db";
 import {
@@ -29,6 +31,7 @@ import {
   resolveStorageRoot,
 } from "pstdio-storage";
 import { createAgentRoutes } from "./features/agents/routes";
+import { createAttemptStatusRoutes } from "./features/attempt-statuses/routes";
 import { createDocsRoutes } from "./features/docs/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
@@ -105,7 +108,9 @@ export const createApp = async (options?: AppOptions) => {
   const sessionsService = createSessionsService(db);
   const ticketsService = createTicketsService(db);
   const workspacesService = createWorkspacesService(db);
+  const workspaceSessionsService = createWorkspaceSessionsService(db);
   const statusesService = createStatusesService(db);
+  const attemptStatusesService = createAttemptStatusesService(db);
   const tagsService = createTagsService(db);
   const eventBus = new EventBus();
   const sessionStore = createSessionStore();
@@ -126,7 +131,9 @@ export const createApp = async (options?: AppOptions) => {
     templatesService,
     ticketsService,
     workspacesService,
+    workspaceSessionsService,
     statusesService,
+    attemptStatusesService,
     tagsService,
     agentRegistry,
     sessionStore,
@@ -164,6 +171,7 @@ export const createApp = async (options?: AppOptions) => {
   app.route("/v1", createTemplateRoutes(deps));
   app.route("/v1", createTicketRoutes(deps));
   app.route("/v1", createStatusRoutes(deps));
+  app.route("/v1", createAttemptStatusRoutes(deps));
   app.route("/v1", createSessionRoutes(deps));
   app.route("/v1", createWorkspaceRoutes(deps));
   app.route("/v1", createTagRoutes(deps));
@@ -199,5 +207,5 @@ export const createApp = async (options?: AppOptions) => {
     await closeDb();
   };
 
-  return { app, close };
+  return { app, close, eventBus };
 };

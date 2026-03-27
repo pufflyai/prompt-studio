@@ -22,6 +22,8 @@ export interface SidebarAction {
   id: string;
   label: string;
   icon?: ReactNode;
+  searchPlaceholder?: string;
+  emptyMenuLabel?: string;
   menuItems?: SidebarActionMenuItem[];
   onAction?: (context: SidebarActionContext) => void;
 }

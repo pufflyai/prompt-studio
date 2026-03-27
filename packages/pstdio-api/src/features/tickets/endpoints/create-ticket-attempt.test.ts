@@ -149,7 +149,6 @@ describe("POST /v1/tickets/:id/attempts", () => {
     const attempt = await attemptRes.json();
     expect(attempt.mode).toBe("worktree");
     expect(attempt.session).toBeNull();
-    expect(attempt.workspace.session_id).toBeNull();
     expect(attempt.workspace.branch).toBe(`workspace/${attempt.workspace.workspace_shorthand}`);
   });
 
@@ -158,10 +157,12 @@ describe("POST /v1/tickets/:id/attempts", () => {
     const repoRoot = createGitRepo("attempt-post-create-hook-repo");
 
     // Write post-create hook to .pstdio/hooks/
-    const { mkdirSync, writeFileSync } = await import("node:fs");
+    const { chmodSync, mkdirSync, writeFileSync } = await import("node:fs");
     const hooksDir = join(repoRoot, ".pstdio", "hooks");
     mkdirSync(hooksDir, { recursive: true });
-    writeFileSync(join(hooksDir, "post-create"), 'echo "post-create hook ran" && echo "ok" > post-create-marker.txt');
+    const hookPath = join(hooksDir, "post-worktree-create");
+    writeFileSync(hookPath, '#!/bin/sh\necho "post-create hook ran" && echo "ok" > post-create-marker.txt');
+    chmodSync(hookPath, 0o755);
 
     const repoRes = await app.request(`/v1/projects/${projectId}/repos`, {
       method: "POST",
@@ -200,5 +201,49 @@ describe("POST /v1/tickets/:id/attempts", () => {
     expect(logRes.status).toBe(200);
     const logContent = await logRes.text();
     expect(logContent).toContain("post-create hook ran");
+  });
+
+  test("post-create hook runs alongside session creation", async () => {
+    const { app, projectId, createGitRepo } = context;
+    const repoRoot = createGitRepo("attempt-hook-session-id-repo");
+
+    const { chmodSync: chmod, mkdirSync: mkDir, writeFileSync: writeFile } = await import("node:fs");
+    const hooksDir = join(repoRoot, ".pstdio", "hooks");
+    mkDir(hooksDir, { recursive: true });
+    const hookPath = join(hooksDir, "post-worktree-create");
+    writeFile(hookPath, '#!/bin/sh\necho "hook ran" && echo "ok" > hook-marker.txt');
+    chmod(hookPath, 0o755);
+
+    const repoRes = await app.request(`/v1/projects/${projectId}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "attempt-hook-session-id-repo", path: repoRoot }),
+    });
+    expect(repoRes.status).toBe(201);
+    const repo = await repoRes.json();
+
+    const ticket = await createTicket();
+
+    const attemptRes = await app.request(`/v1/tickets/${ticket.id}/attempts`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        repo_id: repo.id,
+        agent: "fake",
+        prompt: "Implement ticket",
+        mode: "worktree",
+      }),
+    });
+    expect(attemptRes.status).toBe(201);
+    const attempt = await attemptRes.json();
+    expect(attempt.session).not.toBeNull();
+
+    // Wait for the post-create hook to finish
+    const markerPath = join(attempt.workspace.worktree_path, "hook-marker.txt");
+    await waitForFile(markerPath);
+    await waitFor(async () => {
+      const res = await app.request(`/v1/workspaces/${attempt.workspace.id}/startup-log`, { method: "GET" });
+      return res.status === 200;
+    });
   });
 });

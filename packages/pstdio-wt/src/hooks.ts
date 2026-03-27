@@ -1,22 +1,54 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import type { HookContext, HookName, HookResult } from "./types";
+import type { HookContext, HookName, HookResult, SessionHookName, TicketHookName, WorktreeHookName } from "./types";
 
-const HOOK_NAMES: HookName[] = [
-  "pre-create",
-  "post-create",
+const WORKTREE_HOOK_NAMES: WorktreeHookName[] = [
+  "pre-worktree-create",
+  "post-worktree-create",
   "pre-commit",
   "post-commit",
   "pre-rebase",
   "post-rebase",
   "pre-merge",
   "post-merge",
-  "pre-remove",
-  "post-remove",
+  "pre-worktree-remove",
+  "post-worktree-remove",
   "on-conflict",
 ];
 
-const BLOCKING_HOOKS = new Set<HookName>(["pre-create", "pre-commit", "pre-rebase", "pre-merge", "pre-remove"]);
+const SESSION_HOOK_NAMES: SessionHookName[] = [
+  "post-session-start",
+  "post-session-success",
+  "post-session-fail",
+  "post-session-resume",
+  "post-session-await-input",
+];
+
+const TICKET_HOOK_NAMES: TicketHookName[] = [
+  "pre-ticket-creation",
+  "post-ticket-creation",
+  "pre-ticket-status-change",
+  "post-ticket-status-change",
+  "pre-ticket-archive",
+  "post-ticket-archive",
+  "pre-ticket-deletion",
+  "post-ticket-deletion",
+];
+
+const HOOK_NAMES: HookName[] = [...WORKTREE_HOOK_NAMES, ...SESSION_HOOK_NAMES, ...TICKET_HOOK_NAMES];
+
+const BLOCKING_HOOKS = new Set<HookName>([
+  "pre-worktree-create",
+  "post-worktree-create",
+  "pre-commit",
+  "pre-rebase",
+  "pre-merge",
+  "pre-worktree-remove",
+  "pre-ticket-creation",
+  "pre-ticket-status-change",
+  "pre-ticket-archive",
+  "pre-ticket-deletion",
+]);
 
 export const isBlockingHook = (hookName: HookName) => BLOCKING_HOOKS.has(hookName);
 
@@ -34,6 +66,7 @@ export const buildHookEnv = (hookName: HookName, context: HookContext) => {
   if (context.branch) env.PSTDIO_BRANCH = context.branch;
   if (context.worktreePath) env.PSTDIO_WORKTREE_PATH = context.worktreePath;
   if (context.workspace) env.PSTDIO_WORKSPACE = context.workspace;
+  if (context.ticketShorthand) env.PSTDIO_TICKET = context.ticketShorthand;
   if (context.target) env.PSTDIO_TARGET = context.target;
   if (context.commitSha) env.PSTDIO_COMMIT_SHA = context.commitSha;
   if (context.commitMessage) env.PSTDIO_COMMIT_MESSAGE = context.commitMessage;
@@ -69,8 +102,11 @@ export const runHook = async (
   const cwd = context.worktreePath ?? context.repoPath;
   const timeoutMs = options?.timeoutMs ?? HOOK_TIMEOUT_MS;
 
-  const proc = Bun.spawn(["sh", scriptPath], {
+  const stdinPayload = context.payload ? JSON.stringify(context.payload) : undefined;
+
+  const proc = Bun.spawn([scriptPath], {
     cwd,
+    stdin: stdinPayload ? new Blob([stdinPayload]) : undefined,
     stdout: "pipe",
     stderr: "pipe",
     env: { ...process.env, ...env },

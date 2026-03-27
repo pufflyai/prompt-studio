@@ -22,6 +22,12 @@ export type WorktreeDiff = {
   };
 };
 
+export type DiffSummary = {
+  additions: number;
+  deletions: number;
+  file_count: number;
+};
+
 const STATUS_TO_CHANGE: Record<string, FileChange> = {
   A: "added",
   D: "deleted",
@@ -29,11 +35,12 @@ const STATUS_TO_CHANGE: Record<string, FileChange> = {
   T: "permissionChange",
 };
 
-const parseStatusLine = (line: string) => {
+type ParsedEntry = { change: FileChange; filePath: string; oldPath?: string; newPath?: string };
+
+const parseStatusLine = (line: string): ParsedEntry => {
   const status = line.slice(0, 1);
   const rest = line.slice(1).trim();
 
-  // Renames/copies: R100\told\tnew
   if (status === "R" || status === "C") {
     const similarity = line.slice(1).match(/^\d+/)?.[0] ?? "";
     const pathPart = rest.slice(similarity.length).trim();
@@ -46,15 +53,57 @@ const parseStatusLine = (line: string) => {
     };
   }
 
-  return {
-    change: STATUS_TO_CHANGE[status] ?? "modified",
-    filePath: rest,
-  };
+  return { change: STATUS_TO_CHANGE[status] ?? "modified", filePath: rest };
+};
+
+// Discover all changed files: committed + uncommitted + untracked
+const discoverChangedFiles = async (worktreePath: string, base: string) => {
+  const committedRaw = await git(worktreePath, ["diff", "--name-status", base, "HEAD"]).catch(() => "");
+  const uncommittedRaw = await git(worktreePath, ["diff", "--name-status", "HEAD"]).catch(() => "");
+  const untrackedRaw = await git(worktreePath, ["ls-files", "--others", "--exclude-standard"]).catch(() => "");
+
+  const fileMap = new Map<string, ParsedEntry>();
+
+  for (const line of committedRaw.split("\n").filter(Boolean)) {
+    const parsed = parseStatusLine(line);
+    fileMap.set(parsed.filePath, parsed);
+  }
+  for (const line of uncommittedRaw.split("\n").filter(Boolean)) {
+    const parsed = parseStatusLine(line);
+    fileMap.set(parsed.filePath, parsed);
+  }
+
+  const untrackedPaths = untrackedRaw.split("\n").filter(Boolean);
+  for (const filePath of untrackedPaths) {
+    fileMap.set(filePath, { change: "added", filePath });
+  }
+
+  const untrackedSet = new Set(untrackedPaths);
+  return { fileMap, untrackedPaths, untrackedSet };
+};
+
+const countContentLines = (content: string) => {
+  if (!content) return 0;
+  const lines = content.split("\n");
+  return content.endsWith("\n") ? lines.length - 1 : lines.length;
+};
+
+const countUntrackedLines = async (worktreePath: string, paths: string[]) => {
+  const counts = await Promise.all(
+    paths.map(async (filePath) => {
+      try {
+        const content = await Bun.file(`${worktreePath}/${filePath}`).text();
+        return countContentLines(content);
+      } catch {
+        return 0;
+      }
+    }),
+  );
+  return counts.reduce((sum, c) => sum + c, 0);
 };
 
 const getFileContent = async (cwd: string, ref: string, filePath: string) => {
   try {
-    // Use Bun.spawn directly to avoid trim() from git() helper
     const proc = Bun.spawn(["git", "show", `${ref}:${filePath}`], { cwd, stdout: "pipe", stderr: "pipe" });
     const stdout = await new Response(proc.stdout).text();
     const exitCode = await proc.exited;
@@ -67,8 +116,7 @@ const getFileContent = async (cwd: string, ref: string, filePath: string) => {
 
 const getWorkingContent = async (cwd: string, filePath: string) => {
   try {
-    const file = Bun.file(`${cwd}/${filePath}`);
-    return await file.text();
+    return await Bun.file(`${cwd}/${filePath}`).text();
   } catch {
     return "";
   }
@@ -88,47 +136,37 @@ const countAdditionsDeletions = async (cwd: string, base: string, filePath: stri
   }
 };
 
-const countContentLines = (content: string) => {
-  if (!content) return 0;
+export const getWorktreeDiffSummary = async (opts: { worktreePath: string; base: string }): Promise<DiffSummary> => {
+  const { worktreePath, base } = opts;
+  const { fileMap, untrackedPaths, untrackedSet } = await discoverChangedFiles(worktreePath, base);
 
-  const lines = content.split("\n");
-  return content.endsWith("\n") ? lines.length - 1 : lines.length;
+  const file_count = fileMap.size;
+  if (file_count === 0) return { additions: 0, deletions: 0, file_count: 0 };
+
+  // Numstat for tracked files (committed + uncommitted, not untracked)
+  const trackedPaths = [...fileMap.keys()].filter((p) => !untrackedSet.has(p));
+  let additions = 0;
+  let deletions = 0;
+
+  if (trackedPaths.length > 0) {
+    const numstatRaw = await git(worktreePath, ["diff", "--numstat", base, "--", ...trackedPaths]).catch(() => "");
+    for (const line of numstatRaw.split("\n").filter(Boolean)) {
+      const [addStr, delStr] = line.split("\t");
+      if (addStr !== "-") additions += Number.parseInt(addStr, 10) || 0;
+      if (delStr !== "-") deletions += Number.parseInt(delStr, 10) || 0;
+    }
+  }
+
+  // Count lines in untracked files (same as full diff)
+  additions += await countUntrackedLines(worktreePath, untrackedPaths);
+
+  return { additions, deletions, file_count };
 };
 
 export const getWorktreeDiff = async (opts: { worktreePath: string; base: string }): Promise<WorktreeDiff> => {
   const { worktreePath, base } = opts;
+  const { fileMap } = await discoverChangedFiles(worktreePath, base);
 
-  // Stage everything temporarily to capture all changes (committed + staged + unstaged)
-  // We compare HEAD against the base to get committed changes,
-  // and also check working tree for uncommitted changes.
-
-  // Get committed changes relative to base
-  const committedRaw = await git(worktreePath, ["diff", "--name-status", base, "HEAD"]).catch(() => "");
-
-  // Get uncommitted changes (staged + unstaged) relative to HEAD
-  const uncommittedRaw = await git(worktreePath, ["diff", "--name-status", "HEAD"]).catch(() => "");
-
-  // Get untracked files
-  const untrackedRaw = await git(worktreePath, ["ls-files", "--others", "--exclude-standard"]).catch(() => "");
-
-  // Build a map of all changed files, preferring the most recent state
-  const fileMap = new Map<string, ReturnType<typeof parseStatusLine>>();
-
-  for (const line of committedRaw.split("\n").filter(Boolean)) {
-    const parsed = parseStatusLine(line);
-    fileMap.set(parsed.filePath, parsed);
-  }
-
-  for (const line of uncommittedRaw.split("\n").filter(Boolean)) {
-    const parsed = parseStatusLine(line);
-    fileMap.set(parsed.filePath, parsed);
-  }
-
-  for (const filePath of untrackedRaw.split("\n").filter(Boolean)) {
-    fileMap.set(filePath, { change: "added", filePath });
-  }
-
-  // Build full diff with content for each file
   const files: FileDiff[] = [];
 
   for (const entry of fileMap.values()) {
@@ -141,11 +179,9 @@ export const getWorktreeDiff = async (opts: { worktreePath: string; base: string
     if (entry.change === "deleted") {
       newContent = "";
     } else {
-      // Try working tree first, fall back to HEAD
       newContent = await getWorkingContent(worktreePath, newPath);
     }
 
-    // Get line stats from the full diff (base to working tree)
     const stats = await countAdditionsDeletions(worktreePath, base, newPath, entry.oldPath);
     const additions =
       entry.change === "added" && stats.additions === 0 ? countContentLines(newContent) : stats.additions;

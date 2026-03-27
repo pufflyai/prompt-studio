@@ -150,7 +150,6 @@ describe("tickets write", () => {
       'user_prompt: "{{USER_PROMPT}}"',
       'created: "{{CREATED_AT}}"',
       'status: "{{STATUS}}"',
-      'priority: "[P1|P2|P3]"',
       "---",
       "",
       "# {{TICKET_TITLE}}",
@@ -180,7 +179,6 @@ describe("tickets write", () => {
     const content = readTicketFile(tmpBase, "PS-5");
     expect(content).toContain('user_prompt: "Build the thing"');
     expect(content).toContain('status: "wip"');
-    expect(content).toContain('priority: "[P1|P2|P3]"');
     expect(content).toContain("# With template FM");
   });
 

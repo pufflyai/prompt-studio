@@ -11,12 +11,15 @@ This PRD documents status management commands and default status rules used by t
 
 ## Detailed Behavior
 
-
 ## Purpose
 
 Manage ticket statuses within a pstdio project. Statuses represent workflow stages (e.g. backlog, wip, done) and are displayed as columns in the board UI. Every project has a default status that is automatically assigned to new tickets on creation.
 
-Statuses control board capabilities (for example whether tickets can be created in a column and which column-level actions are available). Statuses do not trigger implementation automation.
+## Project Settings Placement
+
+- Statuses are managed in Project Settings under a dedicated **Ticket Statuses** section.
+- Statuses are treated as a project-level single-select definition: users can create, edit, reorder, set default, and archive options.
+- Archiving a status removes it from active selectors while preserving existing ticket references.
 
 ---
 

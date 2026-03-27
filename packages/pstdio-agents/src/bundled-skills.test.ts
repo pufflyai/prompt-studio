@@ -16,6 +16,8 @@ describe("getBundledSkills", () => {
         `---
 name: "alpha"
 description: "Alpha skill"
+metadata:
+  - version: 1.2.3
 ---
 alpha content
 `,
@@ -34,9 +36,49 @@ bravo content
     try {
       const skills = await getBundledSkills();
       expect(skills).toEqual([
-        { name: "alpha", description: "Alpha skill", content: expect.stringContaining("alpha content") },
-        { name: "bravo", description: "Bravo skill", content: expect.stringContaining("bravo content") },
+        {
+          name: "alpha",
+          description: "Alpha skill",
+          version: "1.2.3",
+          content: expect.stringContaining("alpha content"),
+        },
+        { name: "bravo", description: "Bravo skill", version: "", content: expect.stringContaining("bravo content") },
       ]);
+    } finally {
+      runtime.embeddedFiles = originalEmbeddedFiles;
+    }
+  });
+
+  test("loads version metadata from bundled skill frontmatter", async () => {
+    const runtime = Bun as unknown as { embeddedFiles: (Blob & { name: string })[] | undefined };
+    const originalEmbeddedFiles = runtime.embeddedFiles;
+    runtime.embeddedFiles = [];
+
+    try {
+      const skills = await getBundledSkills();
+
+      expect(skills).not.toHaveLength(0);
+      for (const skill of skills) {
+        const expectedVersion = skill.name === "pstdio" ? "0.0.2" : "0.0.1";
+        expect(skill.content).toContain(`metadata:\n  - version: ${expectedVersion}`);
+      }
+    } finally {
+      runtime.embeddedFiles = originalEmbeddedFiles;
+    }
+  });
+
+  test("update-documentation explains how to initialize docs when missing", async () => {
+    const runtime = Bun as unknown as { embeddedFiles: (Blob & { name: string })[] | undefined };
+    const originalEmbeddedFiles = runtime.embeddedFiles;
+    runtime.embeddedFiles = [];
+
+    try {
+      const skills = await getBundledSkills();
+      const skill = skills.find((entry) => entry.name === "update-documentation");
+
+      expect(skill).toBeDefined();
+      expect(skill?.content).toContain("pstdio docs init");
+      expect(skill?.content).toContain("If `.pstdio/docs/navigation.json` is missing");
     } finally {
       runtime.embeddedFiles = originalEmbeddedFiles;
     }

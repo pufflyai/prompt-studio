@@ -1,8 +1,8 @@
 export { listBranches } from "./branches";
 export { commitChanges } from "./commit";
 export { copyIgnored } from "./copy-ignored";
-export type { FileDiff, WorktreeDiff } from "./diff";
-export { getWorktreeDiff } from "./diff";
+export type { DiffSummary, FileDiff, WorktreeDiff } from "./diff";
+export { getWorktreeDiff, getWorktreeDiffSummary } from "./diff";
 export { GitError, git } from "./git";
 export { buildHookEnv, isBlockingHook, listHooks, resolveHookScript, runHook } from "./hooks";
 export { mergeWorktree } from "./merge";
@@ -17,8 +17,11 @@ export type {
   HookResult,
   MergeResult,
   RebaseResult,
+  SessionHookName,
   SetupResult,
   StagingPolicy,
+  TicketHookName,
+  WorktreeHookName,
   WorktreeInfo,
   WorktreeStatus,
 } from "./types";

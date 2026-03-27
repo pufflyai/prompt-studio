@@ -2,7 +2,7 @@ import { Button, Flex } from "@chakra-ui/react";
 import { Link, useParams } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { resolveProjectDefaultPath } from "@/router";
+import { resolveProjectDefaultPath } from "../utils/project-default-path";
 
 export const BackToDashboard = () => {
   const { projectId } = useParams({ strict: false });

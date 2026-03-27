@@ -3,6 +3,7 @@ import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { createSessionBodySchema, sessionResponseSchema } from "../dto";
 import { resolveSessionCwd } from "../resolve-session-cwd";
+import { fireSessionStartHook } from "../session-hooks";
 import { spawnAgentSession } from "../spawn-agent";
 
 export const createSessionRoute = createRoute({
@@ -25,10 +26,6 @@ export const createSessionRoute = createRoute({
       description: "Project or workspace not found.",
       content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
-    409: {
-      description: "Workspace already has an active session.",
-      content: { "application/json": { schema: z.object({ error: z.string() }) } },
-    },
   },
 });
 
@@ -46,13 +43,6 @@ export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
       if (!workspace) {
         return c.json({ error: `Workspace not found: ${input.workspace_id}` }, 404);
       }
-
-      if (workspace.session_id) {
-        const existingSession = await deps.sessionsService.get(workspace.session_id);
-        if (existingSession && existingSession.status === "in_progress") {
-          return c.json({ error: `Workspace already has an active session: ${workspace.session_id}` }, 409);
-        }
-      }
     }
 
     const session = await deps.sessionsService.create({
@@ -62,6 +52,12 @@ export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
     });
 
     deps.eventBus.emit("sessions", "set", session);
+    fireSessionStartHook(deps, { id: session.id, project_id: input.project_id, status: session.status });
+
+    if (input.workspace_id) {
+      const link = await deps.workspaceSessionsService.link(input.workspace_id, session.id);
+      deps.eventBus.emit("workspace_sessions", "set", link);
+    }
 
     const cwd = await resolveSessionCwd(deps, input.project_id, input.workspace_id);
 

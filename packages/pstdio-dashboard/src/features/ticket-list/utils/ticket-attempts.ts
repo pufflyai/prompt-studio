@@ -1,4 +1,9 @@
+import type { SessionStatus } from "@/features/sessions/types";
 import type { Ticket, TicketAttempt } from "@/features/ticket-list/types";
+
+const SETTLED_STATUSES = new Set<SessionStatus>(["completed", "failed", "cancelled"]);
+
+export const isSessionSettled = (status: SessionStatus | null) => status !== null && SETTLED_STATUSES.has(status);
 
 const findLatestAttempt = (attempts: TicketAttempt[]) => {
   let latestAttempt = attempts[0] ?? null;

@@ -21,6 +21,15 @@ const assistantMessageWithRichParts =
 const userMessageWithText =
   conversationMessages.find((message) => message.role === "user" && hasTextPart(message)) ?? conversationMessages[0];
 
+const assistantMessageWithTokenUsage: SessionMessage = {
+  id: "assistant-token-usage",
+  role: "assistant",
+  parts: [
+    { type: "text", text: "Request completed. Here is the token usage for this response." },
+    { type: "token_usage", inputTokens: 12_840, outputTokens: 912, cacheReadTokens: 6_400 },
+  ],
+};
+
 const meta: Meta<typeof MessagePartsRenderer> = {
   title: "Chat UI/Message Parts Renderer",
   component: MessagePartsRenderer,
@@ -56,6 +65,10 @@ export const AssistantReasoningAndToolParts: Story = {
 
 export const UserTextParts: Story = {
   render: () => <MessagePreview message={userMessageWithText} />,
+};
+
+export const TokenUsageParts: Story = {
+  render: () => <MessagePreview message={assistantMessageWithTokenUsage} />,
 };
 
 export const ErrorParts: Story = {

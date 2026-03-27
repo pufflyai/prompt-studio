@@ -110,7 +110,13 @@ export const CreateProjectDialog = (props: CreateProjectDialogProps) => {
 
   return (
     <>
-      <Dialog.Root open={open} onOpenChange={(details) => !details.open && onClose()}>
+      <Dialog.Root
+        lazyMount
+        unmountOnExit
+        open={open}
+        onOpenChange={(details) => !details.open && onClose()}
+        closeOnInteractOutside={false}
+      >
         <Dialog.Backdrop />
         <Dialog.Positioner>
           <Dialog.Content>

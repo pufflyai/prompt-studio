@@ -1,5 +1,13 @@
 # @pstdio/ui
 
+## 0.2.4
+
+### Patch Changes
+
+- 8b04ba9: Show a workspace diff hub above session chat inputs for workspace-backed sessions.
+- abadf39: Replace read-only Monaco diff surfaces with git-diff-view and add adapter coverage tests.
+- 8b04ba9: Replace the session chat empty state with a reusable chat skeleton and unavailable-session fallback.
+
 ## 0.2.3
 
 ### Patch Changes

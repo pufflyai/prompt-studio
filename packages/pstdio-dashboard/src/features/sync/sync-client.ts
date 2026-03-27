@@ -1,4 +1,5 @@
 import { getWriter, type SyncedTable } from "./collections";
+import { createHeartbeatMonitor } from "./heartbeat-monitor";
 
 interface SyncSetEvent {
   table: SyncedTable;
@@ -32,6 +33,7 @@ export interface SyncClient {
 interface SyncCallbacks {
   onConnected?: () => void;
   onDisconnected?: () => void;
+  onConnectionLost?: () => void;
 }
 
 const parseSSE = (chunk: string) => {
@@ -107,10 +109,19 @@ const readStream = async (body: ReadableStream<Uint8Array>, onMessage: (event: s
   }
 };
 
+const HEARTBEAT_INTERVAL_MS = 10_000;
+const HEARTBEAT_THRESHOLD = 3;
+
 export const startSync = (apiUrl: string, callbacks: SyncCallbacks = {}): SyncClient => {
   let lastSeq = 0;
   let abortController: AbortController | null = null;
   const state: SyncClient = { close: () => {}, connected: false };
+
+  const heartbeatMonitor = createHeartbeatMonitor({
+    intervalMs: HEARTBEAT_INTERVAL_MS,
+    threshold: HEARTBEAT_THRESHOLD,
+    onConnectionLost: () => callbacks.onConnectionLost?.(),
+  });
 
   const setDisconnected = () => {
     state.connected = false;
@@ -118,6 +129,8 @@ export const startSync = (apiUrl: string, callbacks: SyncCallbacks = {}): SyncCl
   };
 
   const handleEvent = (event: string, data: string) => {
+    heartbeatMonitor.recordHeartbeat();
+
     if (event === "init") lastSeq = handleInit(data, state, callbacks);
     else if (event === "sync:set") lastSeq = Math.max(lastSeq, handleSyncSet(data));
     else if (event === "sync:delete") lastSeq = Math.max(lastSeq, handleSyncDelete(data));
@@ -140,10 +153,12 @@ export const startSync = (apiUrl: string, callbacks: SyncCallbacks = {}): SyncCl
     setTimeout(connect, 1000);
   };
 
+  heartbeatMonitor.start();
   connect();
 
   state.close = () => {
     state.connected = false;
+    heartbeatMonitor.stop();
     abortController?.abort();
   };
 

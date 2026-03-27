@@ -7,36 +7,36 @@ created: "2026-03-10T20:12:05Z"
 
 ## Summary
 
-This PRD documents tag management commands and project-scoped tag behavior for tickets.
+Tags are typed field definitions that can be assigned to tickets for structured categorization. Each tag has a name, a type (`single_select` or `multi_select`), and a list of value options. Options have a name and a color.
 
-## Detailed Behavior
+## Project Settings Placement
 
-
-## Purpose
-
-Manage ticket tags within a pstdio project. Tags are labels that can be assigned to tickets for categorization and filtering (e.g. `bug`, `feature`, `ui`).
-
----
-
-## Available Colors
-
-The `--color` flag accepts one of the following values:
-
-`gray`, `red`, `orange`, `amber`, `yellow`, `lime`, `green`, `teal`, `cyan`, `blue`, `indigo`, `violet`, `purple`, `pink`, `rose`
-
-Using a value not in this list is an error.
+- Tags are managed in Project Settings under **Tags**.
+- Each tag definition appears as a navigable sidebar item.
+- Users can create new tag definitions, set their type, and manage options (create, edit, delete).
+- Removing a tag definition soft-deletes it, preserving historical auditability.
 
 ---
 
 ## Default Tags
 
-Projects are initialized with the following tags:
+Projects are initialized with the following tag definitions:
 
-| Name            | Color    |
-| --------------- | -------- |
-| `bug`           | `red`    |
-| `feature`       | `blue`   |
-| `documentation` | `purple` |
+| Tag Name     | Type            | Options                                                        |
+| ------------ | --------------- | -------------------------------------------------------------- |
+| `label`      | `single_select` | `bug` (red), `feature` (blue), `documentation` (purple), `chore` (gray) |
+| `complexity` | `single_select` | `low` (green), `medium` (orange), `high` (red) |
+| `priority`   | `single_select` | `P1` (red), `P2` (orange), `P3` (yellow) |
+
+---
+
+## Available Colors
+
+The `--color` flag on options accepts one of the following values:
+
+`gray`, `red`, `orange`, `amber`, `yellow`, `lime`, `green`, `teal`, `cyan`, `blue`, `indigo`, `violet`, `purple`, `pink`, `rose`
+
+Using a value not in this list is an error.
 
 ---
 
@@ -45,33 +45,27 @@ Projects are initialized with the following tags:
 ### Usage
 
 ```sh
-pstdio tags create --name <name> --color <color> [--project-id <project-id>]
+pstdio tags create --name <name> [--type <type>] [--project-id <project-id>]
 ```
 
 ### Flags
 
-| Flag           | Type     | Required | Description                                                                 |
-| -------------- | -------- | -------- | --------------------------------------------------------------------------- |
-| `--name`       | `string` | yes      | Tag name. Must be unique within the project.                                |
-| `--color`      | `string` | yes      | Display color for the tag.                                                  |
-| `--project-id` | `string` | no       | Target project. Defaults to the current project from `.pstdio/config.json`. |
+| Flag           | Type     | Required | Default          | Description                                                                 |
+| -------------- | -------- | -------- | ---------------- | --------------------------------------------------------------------------- |
+| `--name`       | `string` | yes      |                  | Tag definition name. Must be unique within the project.                     |
+| `--type`       | `string` | no       | `single_select`  | Tag type: `single_select` or `multi_select`.                                |
+| `--project-id` | `string` | no       |                  | Target project. Defaults to the current project from `.pstdio/config.json`. |
 
 ### Behavior
 
 1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
-2. Create the tag in the database, associated with the project.
+2. Create the tag definition in the database, associated with the project.
 
 ### Output
 
 ```text
-Created tag "bug"
+Created tag "priority"
 ```
-
-### Errors
-
-- `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
-- `"Project not found: <project-id>"`: the given project ID does not exist.
-- `"Tag already exists: <name>"`: a tag with this name already exists in the project.
 
 ---
 
@@ -83,24 +77,23 @@ Created tag "bug"
 pstdio tags list [--project-id <project-id>]
 ```
 
-### Flags
-
-| Flag           | Type     | Required | Description                                                                 |
-| -------------- | -------- | -------- | --------------------------------------------------------------------------- |
-| `--project-id` | `string` | no       | Target project. Defaults to the current project from `.pstdio/config.json`. |
-
 ### Behavior
 
-1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
-2. Fetch all tags for the project, ordered by name.
+1. Resolve the project.
+2. Fetch all tag definitions with their options, ordered by name.
 
 ### Output
 
 ```text
-Name       Color
-bug        red
-feature    blue
-ui         purple
+label (single_select)
+  bug  red
+  feature  blue
+  documentation  purple
+  chore  gray
+priority (single_select)
+  P1  red
+  P2  orange
+  P3  yellow
 ```
 
 If no tags exist:
@@ -108,11 +101,6 @@ If no tags exist:
 ```text
 No tags found.
 ```
-
-### Errors
-
-- `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
-- `"Project not found: <project-id>"`: the given project ID does not exist.
 
 ---
 
@@ -124,37 +112,54 @@ No tags found.
 pstdio tags delete --name <name> [--project-id <project-id>]
 ```
 
-### Flags
-
-| Flag           | Type     | Required | Description                                                                 |
-| -------------- | -------- | -------- | --------------------------------------------------------------------------- |
-| `--name`       | `string` | yes      | Name of the tag to delete.                                                  |
-| `--project-id` | `string` | no       | Target project. Defaults to the current project from `.pstdio/config.json`. |
-
 ### Behavior
 
-1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
-2. Look up the tag by name. Fail if it does not exist.
-3. Soft-delete the tag by setting `deleted_at`. Existing tag assignments are preserved — deleted tags are hidden from lists and cannot be assigned to new tickets, but if the tag is restored (by clearing `deleted_at`), tickets retain their original tag assignments.
+1. Resolve the project.
+2. Look up the tag definition by name. Fail if it does not exist.
+3. Soft-delete the tag definition by setting `deleted_at`. Existing option assignments are preserved.
 
 ### Output
 
 ```text
-Deleted tag "bug"
+Deleted tag "priority"
 ```
-
-### Errors
-
-- `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
-- `"Project not found: <project-id>"`: the given project ID does not exist.
-- `"Tag not found: <name>"`: the tag does not exist or is already deleted.
 
 ---
 
-## Schema Changes Required
+## Schema
 
-The `ticket_tags` table needs the following columns added:
+### `ticket_tags` (tag definitions)
 
-| Column       | Type   | Description                                           |
-| ------------ | ------ | ----------------------------------------------------- |
-| `deleted_at` | `text` | Soft-delete timestamp. `null` when the tag is active. |
+| Column       | Type   | Description                                      |
+| ------------ | ------ | ------------------------------------------------ |
+| `id`         | `text` | Primary key (UUID).                              |
+| `project_id` | `text` | FK → projects.id.                                |
+| `name`       | `text` | Tag definition name.                             |
+| `type`       | `text` | `single_select` or `multi_select`.               |
+| `created_at` | `text` | Creation timestamp.                              |
+| `updated_at` | `text` | Last update timestamp.                           |
+| `deleted_at` | `text` | Soft-delete timestamp. `null` when active.       |
+
+### `ticket_tag_options`
+
+| Column       | Type      | Description                                      |
+| ------------ | --------- | ------------------------------------------------ |
+| `id`         | `text`    | Primary key (UUID).                              |
+| `tag_id`     | `text`    | FK → ticket_tags.id.                             |
+| `name`       | `text`    | Option display name.                             |
+| `color`      | `text`    | Display color.                                   |
+| `icon`       | `text`    | Optional icon identifier. `null` when unset.     |
+| `description`| `text`    | Optional description text. `null` when unset.    |
+| `sort_order` | `integer` | Display ordering within the tag.                 |
+| `created_at` | `text`    | Creation timestamp.                              |
+| `updated_at` | `text`    | Last update timestamp.                           |
+| `deleted_at` | `text`    | Soft-delete timestamp. `null` when active.       |
+
+### `ticket_tag_assignments`
+
+| Column                 | Type   | Description                              |
+| ---------------------- | ------ | ---------------------------------------- |
+| `id`                   | `text` | Primary key (UUID).                      |
+| `ticket_id`            | `text` | FK → tickets.id.                         |
+| `ticket_tag_option_id` | `text` | FK → ticket_tag_options.id.              |
+| `created_at`           | `text` | Creation timestamp.                      |

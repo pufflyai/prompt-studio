@@ -15,6 +15,27 @@
       "when": 1774109854522,
       "tag": "0001_wide_lorna_dane",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774212494523,
+      "tag": "0002_fantastic_mimic",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1774523260837,
+      "tag": "0003_bent_roxanne_simpson",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1774615712620,
+      "tag": "0004_slow_gunslinger",
+      "breakpoints": true
     }
   ]
 }

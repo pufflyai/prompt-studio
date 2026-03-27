@@ -12,6 +12,7 @@ export const skillResponseSchema = z.object({
 
 export const skillWithContentResponseSchema = skillResponseSchema.extend({
   content: z.string(),
+  bundled_version: z.string(),
 });
 
 export const notFoundResponseSchema = z.object({

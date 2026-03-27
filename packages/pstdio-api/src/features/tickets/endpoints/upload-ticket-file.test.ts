@@ -44,6 +44,33 @@ describe("POST /v1/tickets/:id/files", () => {
     expect(uploaded.file_name).toBe("notes.txt");
   });
 
+  test("emits sync events for the new file and ticket attachment", async () => {
+    const { app, eventBus } = context;
+    const ticket = await createTicket();
+    const baselineSeq = eventBus.seq;
+
+    const uploadRes = await app.request(`/v1/tickets/${ticket.id}/files`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        file_name: "sync-notes.txt",
+        content_base64: Buffer.from("hello from sync", "utf8").toString("base64"),
+        mime_type: "text/plain",
+      }),
+    });
+
+    expect(uploadRes.status).toBe(201);
+
+    const events = eventBus.getSince(baselineSeq);
+    const fileEvent = events.find((event) => event.table === "files" && event.op === "set");
+    const ticketFileEvent = events.find((event) => event.table === "ticket_files" && event.op === "set");
+
+    expect(fileEvent).toBeDefined();
+    expect(ticketFileEvent).toBeDefined();
+    expect((fileEvent?.data as { file_name: string }).file_name).toBe("sync-notes.txt");
+    expect((ticketFileEvent?.data as { ticket_id: string }).ticket_id).toBe(ticket.id);
+  });
+
   test("updates file content when uploading same file_name", async () => {
     const { app } = context;
     const ticket = await createTicket();

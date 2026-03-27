@@ -15,26 +15,32 @@ afterEach(() => {
 });
 
 describe("scaffoldHooks", () => {
-  test("copies default hooks into .pstdio/hooks", async () => {
+  test("writes default hooks into .pstdio/hooks", async () => {
     await scaffoldHooks(tempDir);
 
-    const postCreatePath = join(tempDir, ".pstdio", "hooks", "post-create");
+    const postCreatePath = join(tempDir, ".pstdio", "hooks", "post-worktree-create");
     expect(existsSync(postCreatePath)).toBe(true);
 
-    const content = readFileSync(postCreatePath, "utf8");
-    expect(content).toContain("pstdio tickets pull");
-    expect(content).toContain("config.json");
+    const postCreateContent = readFileSync(postCreatePath, "utf8");
+    expect(postCreateContent).toContain("pstdio tickets pull");
+    expect(postCreateContent).toContain("config.json");
+
+    const postSuccessPath = join(tempDir, ".pstdio", "hooks", "post-session-success");
+    expect(existsSync(postSuccessPath)).toBe(true);
+
+    const postSuccessContent = readFileSync(postSuccessPath, "utf8");
+    expect(postSuccessContent).toContain("review-ready");
   });
 
   test("does not overwrite existing hooks directory", async () => {
     const { mkdirSync, writeFileSync } = await import("node:fs");
     const hooksDir = join(tempDir, ".pstdio", "hooks");
     mkdirSync(hooksDir, { recursive: true });
-    writeFileSync(join(hooksDir, "post-create"), "custom script");
+    writeFileSync(join(hooksDir, "post-worktree-create"), "custom script");
 
     await scaffoldHooks(tempDir);
 
-    const content = readFileSync(join(hooksDir, "post-create"), "utf8");
+    const content = readFileSync(join(hooksDir, "post-worktree-create"), "utf8");
     expect(content).toBe("custom script");
   });
 });

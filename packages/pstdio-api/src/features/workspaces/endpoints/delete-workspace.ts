@@ -35,7 +35,7 @@ export const deleteWorkspaceHandler = (deps: RouteDeps): AppRouteHandler<typeof 
       await cleanupWorkspaceWorktree(deps, workspace);
     }
 
-    deps.eventBus.emit("workspaces", "delete", id);
+    deps.eventBus.emit("workspaces", "delete", { id });
     return c.json({ deleted: true }, 200);
   };
 };

@@ -1,0 +1,58 @@
+#!/bin/sh
+
+# ──────────────────────────────────────────────────────────
+# pstdio post-session-success hook
+# Runs after an attempt session completes successfully.
+#
+# - "blocked": moves the ticket to "blocked" status
+# - "review-ready":
+#   1. Runs a validation command (replace with your own below)
+#   2. If validation fails, resumes the session with the error
+#   3. If validation passes and no attempt is still WIP,
+#      moves the ticket to "review" status
+# ──────────────────────────────────────────────────────────
+
+PAYLOAD=$(cat)
+
+ATTEMPT_STATUS=$(printf '%s\n' "$PAYLOAD" | jq -r '.attempt.status // empty')
+TICKET_ID=$(printf '%s\n' "$PAYLOAD" | jq -r '.ticket.id // empty')
+
+# ──────────────────────────────────────────────────────────
+# Blocked — move the ticket to "blocked" status.
+# ──────────────────────────────────────────────────────────
+
+if [ "$ATTEMPT_STATUS" = "blocked" ] && [ -n "$TICKET_ID" ]; then
+  pstdio tickets update --id "$TICKET_ID" --status "blocked"
+  exit 0
+fi
+
+if [ "$ATTEMPT_STATUS" != "review-ready" ]; then
+  exit 0
+fi
+
+# ──────────────────────────────────────────────────────────
+# >>> Replace with your validation command <<<
+# ──────────────────────────────────────────────────────────
+VALIDATE_OUTPUT=$(echo "No validation configured" 2>&1)
+# ──────────────────────────────────────────────────────────
+
+if [ $? -ne 0 ]; then
+  SESSION_ID=$(printf '%s\n' "$PAYLOAD" | jq -r '.session.id // empty')
+  if [ -n "$SESSION_ID" ]; then
+    pstdio sessions follow-up --id "$SESSION_ID" \
+      --prompt "Validation failed. Fix the errors and mark the attempt review-ready again:
+
+$VALIDATE_OUTPUT"
+  fi
+  exit 0
+fi
+
+# ──────────────────────────────────────────────────────────
+# If no attempt is still WIP, move the ticket to review.
+# ──────────────────────────────────────────────────────────
+
+WIP_COUNT=$(printf '%s\n' "$PAYLOAD" | jq '[.ticket.attempts[] | select(.status == "running")] | length')
+
+if [ "$WIP_COUNT" -eq 0 ]; then
+  pstdio tickets update --id "$TICKET_ID" --status "review"
+fi

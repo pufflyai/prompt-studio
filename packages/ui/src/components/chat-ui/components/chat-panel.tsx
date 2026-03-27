@@ -1,4 +1,4 @@
-import { Box, Button, Flex, Stack } from "@chakra-ui/react";
+import { Box, Button, Flex, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
 import { MessageCircleIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
@@ -24,6 +24,8 @@ interface ChatPanelProps {
   streaming?: boolean;
   emptyStateTitle: string;
   emptyStateDescription: string;
+  emptyStateContent?: ReactNode;
+  loadingContent?: ReactNode;
   chatInputPlaceholder: string;
   chatInputDefaultValue?: string;
   onSubmitMessage?: (text: string, attachments: string[]) => void;
@@ -34,6 +36,9 @@ interface ChatPanelProps {
   onClearAttachments?: () => void;
   attachmentList?: ReactNode;
   approvalPrompt?: ReactNode;
+  workspaceHub?: ReactNode;
+  workspaceInitializing?: boolean;
+  inputDisabled?: boolean;
 }
 
 const renderMessage = (message: SessionMessage, streaming: boolean) => {
@@ -53,6 +58,8 @@ export const ChatPanel = (props: ChatPanelProps) => {
     streaming = false,
     emptyStateTitle,
     emptyStateDescription,
+    emptyStateContent,
+    loadingContent,
     chatInputPlaceholder,
     chatInputDefaultValue = "",
     onSubmitMessage,
@@ -63,6 +70,9 @@ export const ChatPanel = (props: ChatPanelProps) => {
     onClearAttachments,
     attachmentList,
     approvalPrompt,
+    workspaceHub,
+    workspaceInitializing = false,
+    inputDisabled = false,
   } = props;
 
   const merged = mergeReasoningToolOnlyMessages(messages);
@@ -70,6 +80,9 @@ export const ChatPanel = (props: ChatPanelProps) => {
   const userMessageCount = merged.reduce((count, message) => count + (message.role === "user" ? 1 : 0), 0);
   const { groups, leadingResponses } = groupMessagesByTurn(merged);
   const [expandedStickyMessageIds, setExpandedStickyMessageIds] = useState(() => new Set<string>());
+  const emptyContent = streaming ? (loadingContent ?? emptyStateContent) : emptyStateContent;
+  const hasWorkspaceHub = Boolean(workspaceHub);
+  const showThinkingIndicator = streaming && hasMessages && !workspaceInitializing;
 
   const toggleStickyMessageExpanded = (messageId: string) => {
     setExpandedStickyMessageIds((current) => {
@@ -153,17 +166,28 @@ export const ChatPanel = (props: ChatPanelProps) => {
               })}
             </Stack>
           ) : (
-            <EmptyState
-              icon={<MessageCircleIcon size={48} strokeWidth={1.5} />}
-              title={emptyStateTitle}
-              description={emptyStateDescription}
-            />
+            (emptyContent ?? (
+              <EmptyState
+                icon={<MessageCircleIcon size={48} strokeWidth={1.5} />}
+                title={emptyStateTitle}
+                description={emptyStateDescription}
+              />
+            ))
           )}
         </ChatPrimitives.Viewport>
         <ChatPrimitives.ScrollToBottom aria-label="Scroll to latest message" />
       </ChatPrimitives.Root>
       {approvalPrompt}
-      <Box px="sm">
+      {showThinkingIndicator ? (
+        <HStack gap="xs" px="sm" py="2xs">
+          <Spinner size="xs" color="fg.muted" />
+          <Text textStyle="label/XS/regular" color="fg.muted">
+            Working...
+          </Text>
+        </HStack>
+      ) : null}
+      <Stack px="sm" gap={hasWorkspaceHub ? "0" : "xs"}>
+        {workspaceHub}
         <ChatInput
           placeholder={chatInputPlaceholder}
           defaultState={createSerializedPromptState(chatInputDefaultValue)}
@@ -174,8 +198,10 @@ export const ChatPanel = (props: ChatPanelProps) => {
           attachedResources={attachedResources}
           onClearAttachments={onClearAttachments}
           attachmentList={attachmentList}
+          isDisabled={inputDisabled}
+          attachedToTop={hasWorkspaceHub}
         />
-      </Box>
+      </Stack>
       <Flex p="2xs" justifyContent="flex-end">
         {repoMenu}
       </Flex>

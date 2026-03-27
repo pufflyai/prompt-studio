@@ -188,12 +188,14 @@ test.describe("Ticket list", () => {
       return (await res.json()) as { id: string; display_title: string | null; tag_ids: string[] }[];
     };
 
-    const tagName = "ui-e2e-bug";
+    const tagName = "ui-e2e-label";
+    const optionName = "ui-e2e-bug";
     const tagRes = await request.post(`${apiBase}/v1/projects/${projectId}/ticket-tags`, {
-      data: { name: tagName, color: "red" },
+      data: { name: tagName, type: "single_select", options: [{ name: optionName, color: "red" }] },
     });
     expect(tagRes.ok()).toBe(true);
-    const createdTag = (await tagRes.json()) as { id: string };
+    const createdTag = (await tagRes.json()) as { id: string; options: { id: string }[] };
+    const optionId = createdTag.options[0].id;
 
     await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets`);
@@ -205,8 +207,8 @@ test.describe("Ticket list", () => {
     await contentEditor.click();
     await contentEditor.fill("Tagged modal ticket");
 
-    await dialog.getByRole("button", { name: "Tags", exact: true }).click();
-    await page.getByRole("option", { name: tagName, exact: true }).click();
+    await dialog.getByRole("button", { name: tagName, exact: true }).click();
+    await page.getByRole("option", { name: optionName, exact: true }).click();
 
     await dialog.getByRole("button", { name: "Create ticket", exact: true }).click();
 
@@ -218,7 +220,7 @@ test.describe("Ticket list", () => {
         const createdTicket = tickets.find((ticket) => ticket.display_title === "Tagged modal ticket");
         return createdTicket?.tag_ids ?? [];
       })
-      .toContain(createdTag.id);
+      .toContain(optionId);
   });
 
   test("navigates to ticket detail on click", async ({ page, request }) => {
@@ -432,9 +434,9 @@ test.describe("Ticket list additional coverage", () => {
   });
 
   test("shows the tag on the ticket detail after creating a ticket with a tag", async ({ page, request }) => {
-    const tagName = "ui-e2e-feature";
+    const optionName = "ui-e2e-feature";
     const tagRes = await request.post(`${apiBase}/v1/projects/${projectId}/ticket-tags`, {
-      data: { name: tagName, color: "blue" },
+      data: { name: "type", type: "single_select", options: [{ name: optionName, color: "blue" }] },
     });
     expect(tagRes.ok()).toBe(true);
 
@@ -448,8 +450,8 @@ test.describe("Ticket list additional coverage", () => {
     await contentEditor.click();
     await contentEditor.fill("Ticket with tag");
 
-    await dialog.getByRole("button", { name: "Tags", exact: true }).click();
-    await page.getByRole("option", { name: tagName, exact: true }).click();
+    await dialog.getByRole("button", { name: "type", exact: true }).click();
+    await page.getByRole("option", { name: optionName, exact: true }).click();
 
     await dialog.getByRole("button", { name: "Create ticket", exact: true }).click();
 
@@ -467,8 +469,8 @@ test.describe("Ticket list additional coverage", () => {
     await page.getByText("Ticket with tag").first().click();
     await page.waitForURL(`**/projects/${projectId}/tickets/${createdTicket.shorthand}`);
 
-    // The tag selector should show the tag name, not "No tags selected"
-    await expect(page.getByText(tagName)).toBeVisible();
+    // The tag selector should show the option name, not "No tags selected"
+    await expect(page.getByText(optionName)).toBeVisible();
     await expect(page.getByText("No tags selected")).not.toBeVisible();
   });
 
@@ -476,10 +478,10 @@ test.describe("Ticket list additional coverage", () => {
     const statuses = await getTicketStatuses(request, projectId);
     const backlog = statuses.find((s) => s.name === "backlog")!;
 
-    // Create a tag for the project
-    const tagName = "ui-e2e-bug";
+    // Create a tag definition with an option for the project
+    const optionName = "ui-e2e-bug";
     const tagRes = await request.post(`${apiBase}/v1/projects/${projectId}/ticket-tags`, {
-      data: { name: tagName, color: "red" },
+      data: { name: "severity", type: "single_select", options: [{ name: optionName, color: "red" }] },
     });
     expect(tagRes.ok()).toBe(true);
 
@@ -489,11 +491,11 @@ test.describe("Ticket list additional coverage", () => {
     await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets/${ticket.shorthand}`);
 
-    // The tag selector should show "No tags selected"
-    const tagTrigger = page.getByRole("button", { name: "No tags selected", exact: true });
+    // The tag selector should show the tag name as the default label
+    const tagTrigger = page.getByRole("button", { name: "severity", exact: true });
     await expect(tagTrigger).toBeVisible();
 
-    // Open the tag dropdown and select the created tag
+    // Open the tag dropdown and select the created option
     await tagTrigger.click();
 
     const tagPatchResponse = page.waitForResponse(
@@ -502,11 +504,8 @@ test.describe("Ticket list additional coverage", () => {
         response.url().includes(`/v1/tickets/${ticket.id}`) &&
         response.status() === 200,
     );
-    await page.getByRole("option", { name: tagName, exact: true }).click();
+    await page.getByRole("option", { name: optionName, exact: true }).click();
     await tagPatchResponse;
-
-    // The trigger should now show the selected tag instead of "No tags selected"
-    await expect(page.getByText("No tags selected")).not.toBeVisible();
 
     // Verify via API that the tag was assigned
     const listRes = await request.get(`${apiBase}/v1/tickets?project_id=${projectId}`);

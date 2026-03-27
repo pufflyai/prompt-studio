@@ -4,8 +4,6 @@ user_prompt: "{{USER_PROMPT}}"
 created: "{{CREATED_AT}}"
 status: "{{STATUS}}"
 parent_id: "{{PARENT_ID}}"
-priority: "[P1|P2|P3]"
-complexity: "[low|medium|high]"
 depends_on: []
 parallelizable: "[no|yes]"
 blocked_reason: ""

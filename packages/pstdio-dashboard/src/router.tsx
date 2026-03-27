@@ -13,6 +13,7 @@ import { isOnboardingComplete } from "@/features/agents/agent-storage";
 import { DocsPanel } from "@/features/documentation/pages/docs-panel";
 import { Onboarding } from "@/features/onboarding/pages/onboarding";
 import { ProjectShell } from "@/features/project/pages/project-shell";
+import { resolveProjectDefaultPath } from "@/features/project/utils/project-default-path";
 import { ProjectList } from "@/features/project-list/pages/project-list";
 import { ProjectSettings } from "@/features/project-settings/pages/project-settings";
 import { SessionsPanel } from "@/features/sessions/pages/sessions-panel";
@@ -29,14 +30,6 @@ const requireOnboardingComplete = () => {
   if (!isOnboardingComplete()) {
     throw redirect({ to: "/onboarding" });
   }
-};
-
-export const resolveProjectDefaultPath = (projectId?: string) => {
-  if (!projectId) {
-    return "/projects";
-  }
-
-  return `/projects/${projectId}/docs`;
 };
 
 export const AppLayout = () => {

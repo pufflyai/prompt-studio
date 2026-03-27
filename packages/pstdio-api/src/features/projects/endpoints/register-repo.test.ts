@@ -137,6 +137,30 @@ describe("POST /v1/projects/:id/repos", () => {
     expect(config.project_id).toBe(project.id);
   });
 
+  test("scaffolds the default post-worktree-create hook", async () => {
+    const createRes = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Hook Project" }),
+    });
+    const project = await createRes.json();
+
+    const repoPath = join(tempRoot, "hook-repo");
+    mkdirSync(repoPath, { recursive: true });
+
+    const res = await app.request(`/v1/projects/${project.id}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "hook-repo", path: repoPath }),
+    });
+
+    expect(res.status).toBe(201);
+
+    const hookPath = join(repoPath, ".pstdio", "hooks", "post-worktree-create");
+    expect(existsSync(hookPath)).toBe(true);
+    expect(readFileSync(hookPath, "utf8")).toContain("pstdio tickets pull");
+  });
+
   test("returns 409 when repo is already linked to a different project", async () => {
     const resA = await app.request("/v1/projects", {
       method: "POST",

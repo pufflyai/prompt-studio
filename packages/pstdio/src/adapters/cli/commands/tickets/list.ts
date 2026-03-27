@@ -11,8 +11,6 @@ export const builder = (yargs: Argv) =>
     .option("project-id", { type: "string", describe: "Project ID" })
     .option("status", { type: "string", describe: "Filter by status name" })
     .option("tag", { type: "array", string: true, describe: "Filter by tag" })
-    .option("priority", { type: "string", describe: "Filter by priority" })
-    .option("complexity", { type: "string", describe: "Filter by complexity" })
     .option("archived", { type: "boolean", describe: "Include archived" })
     .option("draft", { type: "boolean", describe: "Include drafts" })
     .option("parent-id", { type: "string", describe: "Filter by parent ticket" });
@@ -21,8 +19,6 @@ type ListArgs = {
   "project-id"?: string;
   status?: string;
   tag?: string[];
-  priority?: string;
-  complexity?: string;
   archived?: boolean;
   draft?: boolean;
   "parent-id"?: string;
@@ -91,8 +87,6 @@ export const createHandler =
       project_id: projectId,
       status: argv.status,
       tag: argv.tag,
-      priority: argv.priority,
-      complexity: argv.complexity,
       archived: argv.archived ?? false,
       draft: argv.draft,
       parent_id: argv["parent-id"],

@@ -1,23 +1,30 @@
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
-import { sessions, ticket_tags, tickets, workspaces, ydocAwareness, ydocResumeState, ydocUpdates } from "./schemas.pg";
+import {
+  sessions,
+  ticket_tag_options,
+  ticket_tags,
+  tickets,
+  workspaces,
+  ydocAwareness,
+  ydocResumeState,
+  ydocUpdates,
+} from "./schemas.pg";
 
-export const ticketSelectSchema = createSelectSchema(tickets, {
-  complexity: z.enum(["low", "medium", "high"]).nullable(),
-});
+export const ticketSelectSchema = createSelectSchema(tickets);
 
 export const sessionSelectSchema = createSelectSchema(sessions, {
   status: z.enum(["in_progress", "awaiting_input", "completed", "failed", "cancelled"]),
 });
 
 export const ticketTagSelectSchema = createSelectSchema(ticket_tags);
+export const ticketTagOptionSelectSchema = createSelectSchema(ticket_tag_options);
 export const workspaceSelectSchema = createSelectSchema(workspaces);
 
 export const ticketAttemptSchema = z.object({
   id: z.string(),
   label: z.string(),
-  session_id: z.string(),
-  status: z.enum(["active", "merged", "rejected"]),
+  attempt_status_id: z.string().nullable(),
   updated_at: z.string(),
 });
 

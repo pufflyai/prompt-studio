@@ -1,5 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { eq, ticket_statuses, ticket_tags } from "pstdio-db";
+import { eq, ticket_statuses, ticket_tag_options, ticket_tags } from "pstdio-db";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { seedDefaultSkills } from "../../skills/seed-default-skills";
@@ -40,7 +40,11 @@ export const createProjectHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
       for (const status of statuses) deps.eventBus.emit("ticket_statuses", "set", status);
 
       const tags = await deps.db.select().from(ticket_tags).where(eq(ticket_tags.project_id, project.id));
-      for (const tag of tags) deps.eventBus.emit("ticket_tags", "set", tag);
+      for (const tag of tags) {
+        deps.eventBus.emit("ticket_tags", "set", tag);
+        const options = await deps.db.select().from(ticket_tag_options).where(eq(ticket_tag_options.tag_id, tag.id));
+        for (const option of options) deps.eventBus.emit("ticket_tag_options", "set", option);
+      }
 
       for (const template of templates) deps.eventBus.emit("templates", "set", template);
 

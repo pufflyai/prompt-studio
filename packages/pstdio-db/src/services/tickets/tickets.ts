@@ -1,18 +1,15 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { projects, ticket_tag_assignments, ticket_tags, tickets } from "../../db/schemas.pg";
+import { projects, ticket_tag_assignments, ticket_tag_options, tickets } from "../../db/schemas.pg";
 import { nextTicketShorthand } from "./next-shorthand";
 
 type TicketRecord = typeof tickets.$inferSelect;
-type TicketComplexity = NonNullable<TicketRecord["complexity"]>;
 
 type CreateInput = {
   project_id: string;
   display_title?: string;
   user_prompt?: string;
   file_id?: string;
-  priority?: string;
-  complexity?: TicketComplexity;
   parent_id?: string;
   draft?: boolean;
   status_id?: string;
@@ -20,8 +17,6 @@ type CreateInput = {
 
 type ListFilters = {
   status_id?: string;
-  priority?: string;
-  complexity?: TicketComplexity;
   archived?: boolean;
   draft?: boolean;
   parent_id?: string;
@@ -34,8 +29,6 @@ type UpdateInput = {
   user_prompt?: string | null;
   file_id?: string | null;
   status_id?: string | null;
-  priority?: string | null;
-  complexity?: TicketComplexity | null;
   parent_id?: string | null;
   blocked_reason?: string | null;
   depends_on?: string | null;
@@ -70,9 +63,7 @@ export const createTicketsService = (db: DbClient) => {
       display_title: input.display_title ?? null,
       user_prompt: input.user_prompt ?? null,
       file_id: input.file_id ?? null,
-      priority: input.priority ?? null,
       parallelizable: null,
-      complexity: input.complexity ?? null,
       parent_id: input.parent_id ?? null,
       blocked_reason: null,
       depends_on: null,
@@ -107,8 +98,6 @@ export const createTicketsService = (db: DbClient) => {
     const conditions = [eq(tickets.project_id, projectId), isNull(tickets.deleted_at)];
 
     if (filters.status_id) conditions.push(eq(tickets.status_id, filters.status_id));
-    if (filters.priority) conditions.push(eq(tickets.priority, filters.priority));
-    if (filters.complexity) conditions.push(eq(tickets.complexity, filters.complexity));
     if (filters.parent_id) conditions.push(eq(tickets.parent_id, filters.parent_id));
     if (filters.shorthand) conditions.push(eq(tickets.shorthand, filters.shorthand));
     if (filters.search) {
@@ -141,30 +130,30 @@ export const createTicketsService = (db: DbClient) => {
     return updated ?? null;
   };
 
-  const assignTags = async (ticketId: string, tagIds: string[]) => {
+  const assignTagOptions = async (ticketId: string, optionIds: string[]) => {
     await db.delete(ticket_tag_assignments).where(eq(ticket_tag_assignments.ticket_id, ticketId));
 
-    if (tagIds.length === 0) return;
+    if (optionIds.length === 0) return;
 
     const timestamp = nowTimestamp();
     await db.insert(ticket_tag_assignments).values(
-      tagIds.map((tagId) => ({
+      optionIds.map((optionId) => ({
         id: crypto.randomUUID(),
         ticket_id: ticketId,
-        ticket_tag_id: tagId,
+        ticket_tag_option_id: optionId,
         created_at: timestamp,
       })),
     );
   };
 
-  const getTagAssignments = async (ticketId: string) => {
+  const getTagOptionAssignments = async (ticketId: string) => {
     const rows = await db
-      .select({ tag: ticket_tags })
+      .select({ option: ticket_tag_options })
       .from(ticket_tag_assignments)
-      .innerJoin(ticket_tags, eq(ticket_tag_assignments.ticket_tag_id, ticket_tags.id))
+      .innerJoin(ticket_tag_options, eq(ticket_tag_assignments.ticket_tag_option_id, ticket_tag_options.id))
       .where(eq(ticket_tag_assignments.ticket_id, ticketId));
 
-    return rows.map((r) => r.tag);
+    return rows.map((r) => r.option);
   };
 
   const softDelete = async (id: string) => {
@@ -177,5 +166,5 @@ export const createTicketsService = (db: DbClient) => {
     return updated ?? null;
   };
 
-  return { create, get, getByShorthand, list, update, softDelete, assignTags, getTagAssignments };
+  return { create, get, getByShorthand, list, update, softDelete, assignTagOptions, getTagOptionAssignments };
 };

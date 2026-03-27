@@ -23,14 +23,14 @@ import { TicketsListView } from "../components/tickets-list-view";
 import { uploadTicketFile } from "../data/api/files";
 import { type BadgeContext, DEFAULT_DISPLAY_SETTINGS, type DisplaySettings } from "../types";
 import { autoStartRefineSession } from "../utils/auto-start-refine-session";
-import { buildLatestAttemptsByTicketId } from "../utils/ticket-attempts";
+import { buildLatestAttemptsByTicketId, isSessionSettled } from "../utils/ticket-attempts";
 import { groupTickets, orderTickets } from "../utils/ticket-grouping";
 import { getVisibleTickets } from "../utils/ticket-visibility";
 
 export const TicketsPanel = () => {
   const { projectId } = useParams({ strict: false });
   const { data: project, isLoading: isProjectLoading } = useProject(projectId);
-  const { data: tickets, isLoading: isTicketsLoading } = useProjectTickets(projectId);
+  const { data: tickets, sessionsByWorkspace, isLoading: isTicketsLoading } = useProjectTickets(projectId);
   const updateTicketStatus = useUpdateProjectTicketStatus(projectId);
   const updateTicket = useUpdateProjectTicket(projectId);
   const createTicket = useCreateProjectTicket(projectId);
@@ -52,19 +52,25 @@ export const TicketsPanel = () => {
   const statusOptions = project?.ticketStatusOptions ?? [];
   const allTickets = getVisibleTickets(tickets ?? []);
   const latestAttemptsByTicketId = buildLatestAttemptsByTicketId(allTickets);
-  const latestWorkspaceIds = [...new Set([...latestAttemptsByTicketId.values()].map((attempt) => attempt.id))];
-  const { diffTotalsByWorkspaceId } = useTicketAttemptDiffs(latestWorkspaceIds);
+  const attemptDiffInputs = [...latestAttemptsByTicketId.values()].map((attempt) => ({
+    workspaceId: attempt.id,
+    settled: isSessionSettled(attempt.sessionStatus),
+  }));
+  const { diffTotalsByWorkspaceId } = useTicketAttemptDiffs(attemptDiffInputs);
 
   const groups = groupTickets(allTickets, settings.grouping, statusOptions).map((group) => ({
     ...group,
     tickets: orderTickets(group.tickets, settings.ordering),
   }));
 
-  const tags = project?.ticketTags ?? [];
+  const tagDefs = project?.ticketTags ?? [];
+  const tagEntries = tagDefs.flatMap((t) =>
+    t.options.map((o) => ({ id: o.id, name: o.name, color: o.color, tagName: t.name })),
+  );
   const badgeContext: BadgeContext = {
     statusOptions: statusOptions.map((s) => ({ name: s.name, color: s.color })),
-    tags,
-    tagMap: new Map(tags.map((t) => [t.id, t])),
+    tags: tagEntries,
+    tagMap: new Map(tagEntries.map((e) => [e.id, e])),
     ticketShorthandById: Object.fromEntries(allTickets.map((ticket) => [ticket.id, ticket.shorthand])),
   };
 
@@ -110,7 +116,6 @@ export const TicketsPanel = () => {
       const createdTicket = await createTicket.mutateAsync({
         title: payload.content,
         content: payload.content,
-        complexity: payload.complexity,
         tagIds: payload.tagIds,
         status: payload.status,
         parentId: payload.parentId,
@@ -216,6 +221,7 @@ export const TicketsPanel = () => {
             badgeContext={badgeContext}
             latestAttemptsByTicketId={latestAttemptsByTicketId}
             diffTotalsByWorkspaceId={diffTotalsByWorkspaceId}
+            sessionsByWorkspace={sessionsByWorkspace}
             onMoveTicket={handleMoveTicket}
             onSelectTicket={(ticket) => navigateToTicket(ticket.shorthand)}
             onOpenSessionBubble={handleOpenSessionBubble}
@@ -242,7 +248,7 @@ export const TicketsPanel = () => {
         isSubmitting={createTicket.isPending}
         targetStatus={createModalStatus}
         templates={templates}
-        tags={tags}
+        tags={tagDefs}
         projectName={project?.name}
         statusOptions={statusOptions}
       />

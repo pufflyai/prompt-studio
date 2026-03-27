@@ -1,6 +1,8 @@
 ---
 name: refine-ticket
 description: "Provide additional information to a ticket by researching the codebase and documentation, and/or format a ticket given a template. Use when asked to refine, improve, expand, or format an existing ticket."
+metadata:
+  - version: 0.0.1
 ---
 
 ## Workflow
@@ -15,7 +17,7 @@ description: "Provide additional information to a ticket by researching the code
    - The `--name` value is a lowercase slug matching the template name (e.g. `ticket`, `proposal`).
 5. Refine `ticket.md` by incorporating information from `ticket.original.md` into the template sections.
 6. Add missing detail using repo/docs research so the ticket is implementation-ready:
-   - Priority, complexity, parallelizable
+   - Priority, parallelizable
    - Goal, references, scope, implementation notes
    - Steps aligned to Red/Green/Refactor
    - Acceptance criteria with explicit pass/fail conditions

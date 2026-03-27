@@ -16,6 +16,7 @@ interface ChatInputProps {
   onChange?: (text: string) => void;
   attachmentList?: ReactNode;
   actions?: ReactNode;
+  attachedToTop?: boolean;
 }
 
 export const ChatInput = (props: ChatInputProps) => {
@@ -31,6 +32,7 @@ export const ChatInput = (props: ChatInputProps) => {
     placeholder,
     attachmentList,
     actions,
+    attachedToTop = false,
   } = props;
 
   const [isSelected, setIsSelected] = useState(false);
@@ -107,23 +109,29 @@ export const ChatInput = (props: ChatInputProps) => {
   return (
     <Box
       ref={containerRef}
+      position="relative"
       width="100%"
       paddingX="lg"
       paddingY="md"
+      mt={attachedToTop ? "-1px" : undefined}
       bg="bg"
       borderRadius="md"
+      borderTopRadius={attachedToTop ? "0" : undefined}
       borderWidth="1px"
       borderStyle="solid"
       borderColor={isSelected ? "blue.border" : "border.muted"}
       boxShadow={isSelected ? "mid" : "low"}
+      zIndex={isSelected ? 1 : 0}
       transition="box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out"
       _hover={{
         borderColor: isSelected ? "blue.border" : "border",
         boxShadow: "mid",
+        zIndex: 1,
       }}
       _focusWithin={{
         borderColor: "blue.border",
         boxShadow: "mid",
+        zIndex: 1,
       }}
       onClick={handleContainerClick}
       onBlur={() => setIsSelected(false)}

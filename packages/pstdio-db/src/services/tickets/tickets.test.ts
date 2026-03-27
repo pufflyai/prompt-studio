@@ -1,29 +1,28 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { eq, sql } from "drizzle-orm";
-import { createDb, type DbClient } from "../../db/connection.pglite";
-import { ticket_tags } from "../../db/schemas.pg";
+import { eq } from "drizzle-orm";
+import { createDb } from "../../db/connection.pglite";
+import { ticket_tag_options, ticket_tags } from "../../db/schemas.pg";
 import { createProjectsService } from "../projects/projects";
 import { createTicketsService } from "./tickets";
 
 let close: () => Promise<void>;
-let db: DbClient;
 let ticketsService: ReturnType<typeof createTicketsService>;
 let projectId: string;
-let bugTagId: string;
-let featureTagId: string;
+let bugOptionId: string;
+let featureOptionId: string;
 
 const setup = async () => {
   const result = await createDb({ path: ":memory:" });
   close = result.close;
-  db = result.db;
 
   const projectsService = createProjectsService(result.db);
   const project = await projectsService.create({ name: "prompt-studio" });
   projectId = project.id;
 
-  const tags = await result.db.select().from(ticket_tags).where(eq(ticket_tags.project_id, projectId));
-  bugTagId = tags.find((t) => t.name === "bug")!.id;
-  featureTagId = tags.find((t) => t.name === "feature")!.id;
+  const [labelTag] = await result.db.select().from(ticket_tags).where(eq(ticket_tags.project_id, projectId));
+  const options = await result.db.select().from(ticket_tag_options).where(eq(ticket_tag_options.tag_id, labelTag.id));
+  bugOptionId = options.find((o) => o.name === "bug")!.id;
+  featureOptionId = options.find((o) => o.name === "feature")!.id;
 
   ticketsService = createTicketsService(result.db);
 };
@@ -144,18 +143,6 @@ describe("createTicketsService", () => {
     expect(results[0].display_title).toBe("Draft");
   });
 
-  test("list filters by priority", async () => {
-    await setup();
-
-    await ticketsService.create({ project_id: projectId, display_title: "P1", priority: "P1" });
-    await ticketsService.create({ project_id: projectId, display_title: "P2", priority: "P2" });
-
-    const results = await ticketsService.list(projectId, { priority: "P1" });
-
-    expect(results.length).toBe(1);
-    expect(results[0].display_title).toBe("P1");
-  });
-
   test("list filters by parent_id", async () => {
     await setup();
 
@@ -228,42 +215,28 @@ describe("createTicketsService", () => {
     expect(withoutPrompt.user_prompt).toBeNull();
   });
 
-  test("assignTags and getTagAssignments round-trip", async () => {
+  test("assignTagOptions and getTagOptionAssignments round-trip", async () => {
     await setup();
 
     const ticket = await ticketsService.create({ project_id: projectId, display_title: "Tagged" });
-    await ticketsService.assignTags(ticket.id, [bugTagId, featureTagId]);
+    await ticketsService.assignTagOptions(ticket.id, [bugOptionId, featureOptionId]);
 
-    const tags = await ticketsService.getTagAssignments(ticket.id);
+    const options = await ticketsService.getTagOptionAssignments(ticket.id);
 
-    expect(tags.length).toBe(2);
-    expect(tags.map((t) => t.name).sort()).toEqual(["bug", "feature"]);
+    expect(options.length).toBe(2);
+    expect(options.map((o) => o.name).sort()).toEqual(["bug", "feature"]);
   });
 
-  test("assignTags replaces existing tags", async () => {
+  test("assignTagOptions replaces existing options", async () => {
     await setup();
 
     const ticket = await ticketsService.create({ project_id: projectId, display_title: "Re-tagged" });
-    await ticketsService.assignTags(ticket.id, [bugTagId, featureTagId]);
-    await ticketsService.assignTags(ticket.id, [bugTagId]);
+    await ticketsService.assignTagOptions(ticket.id, [bugOptionId, featureOptionId]);
+    await ticketsService.assignTagOptions(ticket.id, [bugOptionId]);
 
-    const tags = await ticketsService.getTagAssignments(ticket.id);
+    const options = await ticketsService.getTagOptionAssignments(ticket.id);
 
-    expect(tags.length).toBe(1);
-    expect(tags[0].name).toBe("bug");
-  });
-
-  test("rejects invalid complexity values at DB layer", async () => {
-    await setup();
-
-    const ticket = await ticketsService.create({
-      project_id: projectId,
-      display_title: "Complexity guard",
-      complexity: "low",
-    });
-
-    await expect(
-      db.execute(sql`update tickets set complexity = ${"not_a_real_complexity"} where id = ${ticket.id}`).execute(),
-    ).rejects.toThrow();
+    expect(options.length).toBe(1);
+    expect(options[0].name).toBe("bug");
   });
 });

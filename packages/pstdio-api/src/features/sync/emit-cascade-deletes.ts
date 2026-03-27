@@ -12,6 +12,7 @@ import {
   ticket_files,
   ticket_statuses,
   ticket_tag_assignments,
+  ticket_tag_options,
   ticket_tags,
   ticket_workspaces,
   tickets,
@@ -45,8 +46,12 @@ const projectDependents = async (db: DbClient, projectId: string, bus: EventBus)
   // Tickets themselves
   for (const ticket of projectTickets) bus.emit("tickets", "delete", { id: ticket.id });
 
-  // Ticket tags (their tag_assignments already emitted above via tickets)
+  // Ticket tag options and definitions (assignments already emitted above via tickets)
   const tags = await db.select().from(ticket_tags).where(eq(ticket_tags.project_id, projectId));
+  for (const tag of tags) {
+    const options = await db.select().from(ticket_tag_options).where(eq(ticket_tag_options.tag_id, tag.id));
+    for (const row of options) bus.emit("ticket_tag_options", "delete", { id: row.id });
+  }
   for (const row of tags) bus.emit("ticket_tags", "delete", { id: row.id });
 
   // Ticket statuses
@@ -76,6 +81,7 @@ type SupportedTable =
   | "agent_configs"
   | "tickets"
   | "ticket_tags"
+  | "ticket_tag_options"
   | "sessions"
   | "workspaces"
   | "files"
@@ -93,6 +99,7 @@ const tableRefs = {
   agent_configs,
   tickets,
   ticket_tags,
+  ticket_tag_options,
   sessions,
   workspaces,
   files,

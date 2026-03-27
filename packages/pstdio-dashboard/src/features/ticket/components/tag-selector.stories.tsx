@@ -1,6 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
+import type { TicketTag } from "@/features/ticket-list/types";
 import { TagSelector } from "./tag-selector";
 
 const meta: Meta<typeof TagSelector> = {
@@ -13,10 +14,17 @@ export default meta;
 
 type Story = StoryObj<typeof TagSelector>;
 
-const SAMPLE_TAGS = [
-  { id: "tag-1", name: "Bug", color: "red" as const },
-  { id: "tag-2", name: "Feature", color: "blue" as const },
-  { id: "tag-3", name: "Improvement", color: "green" as const },
+const SAMPLE_TAGS: TicketTag[] = [
+  {
+    id: "tag-label",
+    name: "Label",
+    type: "single_select",
+    options: [
+      { id: "opt-1", name: "Bug", color: "red", sortOrder: 1, icon: null, description: null },
+      { id: "opt-2", name: "Feature", color: "blue", sortOrder: 2, icon: null, description: null },
+      { id: "opt-3", name: "Improvement", color: "green", sortOrder: 3, icon: null, description: null },
+    ],
+  },
 ];
 
 const InteractiveStory = () => {
@@ -36,7 +44,7 @@ export const Default: Story = {
 export const WithPreselectedTags: Story = {
   args: {
     tags: SAMPLE_TAGS,
-    selectedTagIds: ["tag-1", "tag-3"],
+    selectedTagIds: ["opt-1", "opt-3"],
     onChange: () => {},
   },
   render: (args) => (
@@ -61,7 +69,7 @@ export const NoTags: Story = {
 export const Disabled: Story = {
   args: {
     tags: SAMPLE_TAGS,
-    selectedTagIds: ["tag-2"],
+    selectedTagIds: ["opt-2"],
     isDisabled: true,
     onChange: () => {},
   },
@@ -75,7 +83,7 @@ export const Disabled: Story = {
 export const ReadOnly: Story = {
   args: {
     tags: SAMPLE_TAGS,
-    selectedTagIds: ["tag-1"],
+    selectedTagIds: ["opt-1"],
   },
   render: (args) => (
     <Box maxW="360px" p="sm">

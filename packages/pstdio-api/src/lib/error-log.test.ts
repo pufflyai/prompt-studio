@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ErrorLogEntry } from "./error-log";
-import { logError, persistErrorLog } from "./error-log";
+import { logError, persistErrorLog, persistStartupError } from "./error-log";
 
 function makeEntry(overrides?: Partial<ErrorLogEntry>): ErrorLogEntry {
   return {
@@ -95,6 +95,23 @@ describe("persistErrorLog", () => {
     expect(files).not.toContain("2026-01-01T00-00-00.000Z.json");
     // New file should exist
     expect(files).toContain("2026-03-04T12-00-00.000Z.json");
+  });
+
+  it("persists startup errors with source field", () => {
+    const logDir = join(tempDir, "error-logs");
+    const error = new Error("listen EADDRINUSE: address already in use");
+    error.stack = "Error: listen EADDRINUSE\n    at Server.listen (net.js:1)";
+
+    persistStartupError(error, logDir);
+
+    const files = readdirSync(logDir);
+    expect(files).toHaveLength(1);
+
+    const content = JSON.parse(readFileSync(join(logDir, files[0]), "utf-8"));
+    expect(content.source).toBe("startup");
+    expect(content.level).toBe("error");
+    expect(content.message).toBe("listen EADDRINUSE: address already in use");
+    expect(content.stack).toContain("EADDRINUSE");
   });
 
   it("does not throw when directory is not writable", () => {

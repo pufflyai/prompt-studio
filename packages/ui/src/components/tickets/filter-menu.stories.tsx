@@ -15,19 +15,10 @@ const categories: WorkspaceFilterCategory[] = [
       { value: "done", label: "Done" },
     ],
   },
-  {
-    id: "priority",
-    label: "Priority",
-    options: [
-      { value: "p1", label: "P1" },
-      { value: "p2", label: "P2" },
-    ],
-  },
 ];
 
 const countsByCategory = {
   status: { todo: 4, in_progress: 2, done: 1 },
-  priority: { p1: 3, p2: 4 },
 };
 
 const meta: Meta = {

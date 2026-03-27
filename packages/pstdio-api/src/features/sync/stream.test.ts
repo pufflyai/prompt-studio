@@ -96,15 +96,15 @@ describe("GET /v1/sync/stream", () => {
     const res = await app.request("/v1/sync/stream");
     const sse = createSSEReader(res);
 
-    // Create a project through the API (emits: 1 project + 6 statuses + 3 tags = 10 events)
+    // Create a project through the API (emits: 1 project + 6 statuses + 3 tags + 10 options = 20 events)
     await app.request("/v1/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: "sync-test-project" }),
     });
 
-    // Read init + all 10 sync events in one go to avoid chunking issues
-    const allEvents = await sse.readEvents(11);
+    // Read init + all 20 sync events in one go to avoid chunking issues
+    const allEvents = await sse.readEvents(21);
     sse.close();
 
     expect(allEvents[0].event).toBe("init");
@@ -120,5 +120,8 @@ describe("GET /v1/sync/stream", () => {
 
     const tagEvents = syncEvents.filter((e) => (e.data as { table: string }).table === "ticket_tags");
     expect(tagEvents).toHaveLength(3);
+
+    const tagOptionEvents = syncEvents.filter((e) => (e.data as { table: string }).table === "ticket_tag_options");
+    expect(tagOptionEvents).toHaveLength(10);
   });
 });

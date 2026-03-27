@@ -30,12 +30,12 @@ export const createWorkspacesService = (db: DbClient) => {
       id: crypto.randomUUID(),
       project_id: input.project_id,
       name: shorthand,
-      session_id: null,
       branch: input.branch ?? null,
       worktree_path: input.worktree_path ?? null,
-      status: "active",
+      attempt_status_id: null,
       archived: false,
       workspace_shorthand: shorthand,
+      initializing: false,
       startup_log_file_id: null,
       created_at: timestamp,
       updated_at: timestamp,
@@ -76,11 +76,6 @@ export const createWorkspacesService = (db: DbClient) => {
     return row ?? null;
   };
 
-  const getBySessionId = async (sessionId: string) => {
-    const [row] = await db.select().from(workspaces).where(eq(workspaces.session_id, sessionId));
-    return row ?? null;
-  };
-
   const getByShorthand = async (projectId: string, shorthand: string) => {
     const [row] = await db
       .select()
@@ -113,8 +108,13 @@ export const createWorkspacesService = (db: DbClient) => {
     return updated ?? null;
   };
 
-  const updateStatus = async (id: string, status: "active" | "merged" | "rejected") => {
-    await db.update(workspaces).set({ status, updated_at: nowTimestamp() }).where(eq(workspaces.id, id));
+  const updateAttemptStatusId = async (id: string, attemptStatusId: string) => {
+    const [updated] = await db
+      .update(workspaces)
+      .set({ attempt_status_id: attemptStatusId, updated_at: nowTimestamp() })
+      .where(eq(workspaces.id, id))
+      .returning();
+    return updated ?? null;
   };
 
   const setStartupLogFileId = async (id: string, fileId: string) => {
@@ -122,6 +122,15 @@ export const createWorkspacesService = (db: DbClient) => {
       .update(workspaces)
       .set({ startup_log_file_id: fileId, updated_at: nowTimestamp() })
       .where(eq(workspaces.id, id));
+  };
+
+  const setInitializing = async (id: string, initializing: boolean) => {
+    const [updated] = await db
+      .update(workspaces)
+      .set({ initializing, updated_at: nowTimestamp() })
+      .where(eq(workspaces.id, id))
+      .returning();
+    return updated ?? null;
   };
 
   const updateGitMetadata = async (id: string, input: { branch: string | null; worktree_path: string | null }) => {
@@ -133,26 +142,16 @@ export const createWorkspacesService = (db: DbClient) => {
     return updated ?? null;
   };
 
-  const setSessionId = async (id: string, sessionId: string | null) => {
-    const [updated] = await db
-      .update(workspaces)
-      .set({ session_id: sessionId, updated_at: nowTimestamp() })
-      .where(eq(workspaces.id, id))
-      .returning();
-    return updated ?? null;
-  };
-
   return {
     create,
     get,
-    getBySessionId,
     list,
     getByShorthand,
     softDelete,
     archive,
-    updateStatus,
+    updateAttemptStatusId,
+    setInitializing,
     setStartupLogFileId,
     updateGitMetadata,
-    setSessionId,
   };
 };

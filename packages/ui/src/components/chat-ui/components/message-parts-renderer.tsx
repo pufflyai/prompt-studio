@@ -1,7 +1,8 @@
 import { Box, Spinner, Text } from "@chakra-ui/react";
 import type { ReactNode } from "react";
+import { AlertMessage } from "@/components/alert";
 import { RichMessage } from "@/components/rich-text";
-import type { ErrorPart, SessionMessage, SessionMessagePart, ToolPart } from "../agent-types";
+import type { AlertPart, ErrorPart, SessionMessage, SessionMessagePart, ToolPart } from "../agent-types";
 import { Response } from "./ai-response";
 import { ToolInvocationTimeline, type ToolInvocationTimelineProps } from "./tool-invocation-timeline";
 
@@ -39,6 +40,14 @@ const getErrorMessage = (part: ErrorPart) => {
     default:
       return "An error occurred.";
   }
+};
+
+const ALERT_COLOR_PALETTE: Record<AlertPart["status"], string> = {
+  info: "blue",
+  warning: "orange",
+  error: "red",
+  success: "green",
+  loading: "blue",
 };
 
 const collectToolInvocations = (parts: SessionMessagePart[], startIndex: number) => {
@@ -100,32 +109,36 @@ export function MessagePartsRenderer(props: MessagePartsProps) {
         );
         break;
       }
-      case "loading":
-        nodes.push(
-          <Box key={key} display="flex" alignItems="center" gap="2" py="2">
-            <Spinner size="sm" />
-            <Text fontSize="sm" color="fg.muted">
-              Thinking...
-            </Text>
-          </Box>,
-        );
-        break;
       case "error":
         nodes.push(
-          <Box key={key} py="2">
-            <Text fontSize="sm" color="fg.error">
-              {getErrorMessage(part)}
-            </Text>
+          <Box key={key} py="2" width="full">
+            <AlertMessage borderRadius="xs" status="error" colorPalette="red" title={getErrorMessage(part)} size="sm" />
           </Box>,
         );
         break;
       case "token_usage":
         nodes.push(
-          <Box key={key} py="1">
+          <Box key={key}>
             <Text fontSize="xs" color="fg.subtle">
               Tokens: {formatTokenCount(part.inputTokens)} in / {formatTokenCount(part.outputTokens)} out
               {part.cacheReadTokens ? ` / ${formatTokenCount(part.cacheReadTokens)} cache read` : ""}
             </Text>
+          </Box>,
+        );
+        break;
+      case "alert":
+        nodes.push(
+          <Box key={key} width="full">
+            <AlertMessage
+              borderRadius="xs"
+              status={part.status === "loading" ? "info" : part.status}
+              colorPalette={ALERT_COLOR_PALETTE[part.status]}
+              title={part.title}
+              icon={part.status === "loading" ? <Spinner size="sm" /> : undefined}
+              size="sm"
+            >
+              {part.message}
+            </AlertMessage>
           </Box>,
         );
         break;

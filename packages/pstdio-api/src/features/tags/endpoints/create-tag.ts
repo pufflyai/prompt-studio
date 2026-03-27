@@ -6,7 +6,7 @@ import { createTagBodySchema, tagResponseSchema } from "../dto";
 export const createTagRoute = createRoute({
   method: "post",
   path: "/projects/{projectId}/ticket-tags",
-  description: "Create a new tag for a project.",
+  description: "Create a new tag definition for a project.",
   tags: ["Tags"],
   request: {
     query: z.object({}).strict(),
@@ -21,7 +21,7 @@ export const createTagRoute = createRoute({
   },
   responses: {
     201: {
-      description: "Tag created.",
+      description: "Tag definition created.",
       content: { "application/json": { schema: tagResponseSchema } },
     },
   },
@@ -30,9 +30,19 @@ export const createTagRoute = createRoute({
 export const createTagHandler = (deps: RouteDeps): AppRouteHandler<typeof createTagRoute> => {
   return async (c) => {
     const { projectId } = c.req.valid("param");
-    const body = c.req.valid("json");
-    const result = await deps.tagsService.create({ project_id: projectId, ...body });
-    deps.eventBus.emit("ticket_tags", "set", result);
-    return c.json(result, 201);
+    const { options: initialOptions, ...body } = c.req.valid("json");
+    const tag = await deps.tagsService.create({ project_id: projectId, ...body });
+    deps.eventBus.emit("ticket_tags", "set", tag);
+
+    const createdOptions = [];
+    if (initialOptions) {
+      for (const opt of initialOptions) {
+        const option = await deps.tagsService.createOption({ tag_id: tag.id, ...opt });
+        deps.eventBus.emit("ticket_tag_options", "set", option);
+        createdOptions.push(option);
+      }
+    }
+
+    return c.json({ ...tag, options: createdOptions }, 201);
   };
 };

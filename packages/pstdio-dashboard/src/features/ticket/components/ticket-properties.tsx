@@ -3,9 +3,9 @@ import { ItemSection, Properties } from "@pstdio/ui";
 import { useTranslation } from "react-i18next";
 import type { Project } from "@/features/project/types";
 import type { Ticket } from "@/features/ticket-list/types";
+import { resolveParentTicketReference } from "../utils/resolve-parent-ticket-reference";
 import { getTimeFormat } from "../utils/time-format";
-import { ComplexitySelector } from "./complexity-selector";
-import { TagSelector } from "./tag-selector";
+import { SingleTagSelector } from "./single-tag-selector";
 import { TicketLink } from "./ticket-link";
 
 interface TicketPropertiesProps {
@@ -13,7 +13,6 @@ interface TicketPropertiesProps {
   project?: Project | null;
   tickets?: Ticket[];
   onSelectTicket?: (ticketId: string) => void;
-  onComplexityChange?: (complexity: Ticket["complexity"]) => void;
   onTagIdsChange?: (tagIds: string[]) => void;
   isUpdatingTags?: boolean;
 }
@@ -27,24 +26,16 @@ const parseShorthands = (value: string | null | undefined) => {
 };
 
 export const TicketProperties = (props: TicketPropertiesProps) => {
-  const {
-    ticket,
-    project = null,
-    tickets = [],
-    onSelectTicket,
-    onComplexityChange,
-    onTagIdsChange,
-    isUpdatingTags = false,
-  } = props;
+  const { ticket, project = null, tickets = [], onSelectTicket, onTagIdsChange, isUpdatingTags = false } = props;
   const { t } = useTranslation("projects");
 
   const projectTicketTags = project?.ticketTags ?? [];
   const selectedTagIds = ticket.tagIds ?? [];
   const isBlocked = ticket.status.trim().toLowerCase() === "blocked";
 
-  const ticketById = new Map(tickets.map((projectTicket) => [projectTicket.id, projectTicket]));
   const ticketByShorthand = new Map(tickets.map((projectTicket) => [projectTicket.shorthand, projectTicket]));
   const blockedReason = ticket.blockedReason?.trim() || "-";
+  const parentReference = resolveParentTicketReference(tickets, ticket.parentId);
 
   const buildTicketLinks = (value: string | null | undefined) => {
     const shorthands = parseShorthands(value);
@@ -77,7 +68,19 @@ export const TicketProperties = (props: TicketPropertiesProps) => {
     );
   };
 
-  const parentTicket = ticket.parentId ? ticketById.get(ticket.parentId) : null;
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  const tagItems = projectTicketTags.map((tag) => ({
+    label: capitalize(tag.name),
+    value: (
+      <SingleTagSelector
+        tag={tag}
+        selectedOptionIds={selectedTagIds}
+        onChange={onTagIdsChange}
+        isDisabled={isUpdatingTags}
+      />
+    ),
+  }));
 
   return (
     <ItemSection title={t("ticketPanel.properties.title")}>
@@ -87,20 +90,16 @@ export const TicketProperties = (props: TicketPropertiesProps) => {
           { label: t("ticketPanel.fields.updated"), value: getTimeFormat(ticket.updatedAt) },
           { label: t("ticketPanel.fields.status"), value: ticket.status },
           ...(ticket.archived ? [{ label: t("ticketPanel.fields.archived"), value: "Yes" }] : []),
-          {
-            label: t("ticketPanel.fields.complexity.label"),
-            value: <ComplexitySelector value={ticket.complexity} onChange={onComplexityChange} />,
-          },
           ...(isBlocked ? [{ label: t("ticketPanel.fields.blockedReason"), value: blockedReason }] : []),
           { label: t("ticketPanel.fields.dependsOn"), value: buildTicketLinks(ticket.dependsOn) },
           {
             label: t("ticketPanel.fields.parent"),
-            value: parentTicket ? (
+            value: parentReference.shorthand ? (
               <TicketLink
-                label={parentTicket.shorthand}
-                title={parentTicket.title}
-                onSelect={() => onSelectTicket?.(parentTicket.id)}
-                isDisabled={!onSelectTicket}
+                label={parentReference.shorthand}
+                title={parentReference.ticket?.title ?? parentReference.shorthand}
+                onSelect={() => parentReference.ticket && onSelectTicket?.(parentReference.ticket.id)}
+                isDisabled={!parentReference.ticket || !onSelectTicket}
               />
             ) : (
               <Button size="sm" variant="subtle" disabled>
@@ -108,17 +107,7 @@ export const TicketProperties = (props: TicketPropertiesProps) => {
               </Button>
             ),
           },
-          {
-            label: t("ticketPanel.fields.tags"),
-            value: (
-              <TagSelector
-                tags={projectTicketTags}
-                selectedTagIds={selectedTagIds}
-                onChange={onTagIdsChange}
-                isDisabled={isUpdatingTags}
-              />
-            ),
-          },
+          ...tagItems,
         ]}
       />
     </ItemSection>

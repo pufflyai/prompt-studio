@@ -1,6 +1,6 @@
-import { existsSync } from "node:fs";
+import { cpSync, existsSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
 import { and, eq, project_repos } from "pstdio-db";
 import type { AppRouteHandler } from "../../../types";
@@ -143,6 +143,13 @@ export const registerRepoHandler = (deps: RouteDeps): AppRouteHandler<typeof reg
 
     await mkdir(pstdioPath, { recursive: true });
     await writeFile(configPath, `${JSON.stringify({ project_id: id }, null, 2)}\n`);
+    const hooksDir = join(path, ".pstdio", "hooks");
+    if (!existsSync(hooksDir)) {
+      const bundledHooksDir = resolve(import.meta.dirname, "../../../../../pstdio/files/hooks");
+      if (existsSync(bundledHooksDir)) {
+        cpSync(bundledHooksDir, hooksDir, { recursive: true });
+      }
+    }
 
     deps.eventBus.emit("repos", "set", repo);
     await emitProjectRepoLink(deps, { projectId: id, repoId: repo.id });

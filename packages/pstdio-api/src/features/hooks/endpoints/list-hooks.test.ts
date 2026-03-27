@@ -47,13 +47,25 @@ afterAll(() => {
 });
 
 describe("GET /v1/projects/:id/hooks", () => {
-  test("lists all hooks with no hooks installed", async () => {
+  test("lists all hooks with the default hooks installed", async () => {
     const res = await app.request(`/v1/projects/${projectId}/hooks`);
     expect(res.status).toBe(200);
 
     const body = (await res.json()) as Array<{ name: string; content: string | null; blocking: boolean }>;
-    expect(body.length).toBe(11);
-    expect(body.every((h) => h.content === null)).toBe(true);
+    // 11 worktree + 5 session + 8 ticket = 24
+    expect(body.length).toBe(24);
+    const postCreate = body.find((h) => h.name === "post-worktree-create");
+    expect(postCreate?.content).toContain("pstdio tickets pull");
+    expect(postCreate?.blocking).toBe(true);
+
+    const postSuccess = body.find((h) => h.name === "post-session-success");
+    expect(postSuccess?.content).toContain("review-ready");
+
+    const postStart = body.find((h) => h.name === "post-session-start");
+    expect(postStart?.content).toContain("wip");
+
+    const scaffolded = new Set(["post-worktree-create", "post-session-success", "post-session-start"]);
+    expect(body.filter((h) => !scaffolded.has(h.name)).every((h) => h.content === null)).toBe(true);
   });
 
   test("returns content for installed hooks", async () => {
@@ -69,9 +81,9 @@ describe("GET /v1/projects/:id/hooks", () => {
     expect(preCommit?.content).toBe("bun run lint");
     expect(preCommit?.blocking).toBe(true);
 
-    const postCreate = body.find((h) => h.name === "post-create");
-    expect(postCreate?.content).toBeNull();
-    expect(postCreate?.blocking).toBe(false);
+    const postCreate = body.find((h) => h.name === "post-worktree-create");
+    expect(postCreate?.content).toContain("pstdio tickets pull");
+    expect(postCreate?.blocking).toBe(true);
   });
 
   test("returns 404 for unknown project", async () => {
@@ -82,7 +94,7 @@ describe("GET /v1/projects/:id/hooks", () => {
 
 describe("PUT /v1/projects/:id/hooks/:hookName", () => {
   test("creates a hook file", async () => {
-    const res = await app.request(`/v1/projects/${projectId}/hooks/post-create`, {
+    const res = await app.request(`/v1/projects/${projectId}/hooks/post-worktree-create`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ content: "bun install" }),
@@ -91,12 +103,12 @@ describe("PUT /v1/projects/:id/hooks/:hookName", () => {
 
     const listRes = await app.request(`/v1/projects/${projectId}/hooks`);
     const hooks = (await listRes.json()) as Array<{ name: string; content: string | null }>;
-    const postCreate = hooks.find((h) => h.name === "post-create");
+    const postCreate = hooks.find((h) => h.name === "post-worktree-create");
     expect(postCreate?.content).toBe("bun install");
   });
 
   test("updates an existing hook", async () => {
-    const res = await app.request(`/v1/projects/${projectId}/hooks/post-create`, {
+    const res = await app.request(`/v1/projects/${projectId}/hooks/post-worktree-create`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ content: "bun install && bun run build" }),
@@ -105,27 +117,27 @@ describe("PUT /v1/projects/:id/hooks/:hookName", () => {
 
     const listRes = await app.request(`/v1/projects/${projectId}/hooks`);
     const hooks = (await listRes.json()) as Array<{ name: string; content: string | null }>;
-    expect(hooks.find((h) => h.name === "post-create")?.content).toBe("bun install && bun run build");
+    expect(hooks.find((h) => h.name === "post-worktree-create")?.content).toBe("bun install && bun run build");
   });
 });
 
 describe("DELETE /v1/projects/:id/hooks/:hookName", () => {
   test("deletes an existing hook", async () => {
     // ensure hook exists first
-    await app.request(`/v1/projects/${projectId}/hooks/post-create`, {
+    await app.request(`/v1/projects/${projectId}/hooks/post-worktree-create`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ content: "echo delete-me" }),
     });
 
-    const res = await app.request(`/v1/projects/${projectId}/hooks/post-create`, {
+    const res = await app.request(`/v1/projects/${projectId}/hooks/post-worktree-create`, {
       method: "DELETE",
     });
     expect(res.status).toBe(204);
 
     const listRes = await app.request(`/v1/projects/${projectId}/hooks`);
     const hooks = (await listRes.json()) as Array<{ name: string; content: string | null }>;
-    expect(hooks.find((h) => h.name === "post-create")?.content).toBeNull();
+    expect(hooks.find((h) => h.name === "post-worktree-create")?.content).toBeNull();
   });
 
   test("returns 204 even when hook does not exist", async () => {

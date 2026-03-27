@@ -1,5 +1,6 @@
 import type { StatusResponse, TagResponse } from "pstdio-api/dto";
 import type {
+  StatusAction,
   Ticket,
   TicketAttempt,
   TicketColumnAction,
@@ -12,13 +13,17 @@ import type { ApiTicket, ApiTicketAttempt } from "./types";
 const DEFAULT_STATUS_COLOR: TicketStatusColor = "gray";
 const DEFAULT_STATUS_NAME = "Unassigned";
 
-const isClosedLike = (name: string) => {
-  const normalized = name.trim().toLowerCase();
-  return normalized === "done" || normalized === "closed" || normalized === "archived";
+const toActions = (status: StatusResponse): StatusAction[] => {
+  const actions: StatusAction[] = [];
+  if (status.can_create) actions.push("create_ticket");
+  if (status.can_drag_in) actions.push("drag_in");
+  if (status.can_drag_out) actions.push("drag_out");
+  if (status.column_actions?.includes("archive_all")) actions.push("archive_all");
+  return actions;
 };
 
 export const toTicketStatusOption = (status: StatusResponse): TicketStatusOption => {
-  const columnActions: TicketColumnAction[] = isClosedLike(status.name) ? ["archive_all"] : [];
+  const columnActions: TicketColumnAction[] = status.column_actions?.includes("archive_all") ? ["archive_all"] : [];
 
   return {
     id: status.id,
@@ -26,10 +31,11 @@ export const toTicketStatusOption = (status: StatusResponse): TicketStatusOption
     color: (status.color || DEFAULT_STATUS_COLOR) as TicketStatusColor,
     sortOrder: status.sort_order,
     isDefault: status.is_default,
-    canDragOut: true,
-    canDragIn: true,
-    canCreate: status.is_default,
+    canDragOut: status.can_drag_out ?? true,
+    canDragIn: status.can_drag_in ?? true,
+    canCreate: status.can_create ?? status.is_default,
     columnActions,
+    actions: toActions(status),
   };
 };
 
@@ -54,10 +60,9 @@ export const buildTicketStatusCatalog = (statuses: StatusResponse[]) => {
 export const toTicketAttempt = (attempt: ApiTicketAttempt): TicketAttempt => ({
   id: attempt.id,
   label: attempt.label,
-  status: attempt.status,
+  attemptStatusId: attempt.attempt_status_id,
   sessionStatus: null,
   shorthand: attempt.shorthand ?? attempt.id,
-  sessionId: attempt.session_id,
   updatedAt: attempt.updated_at,
   worktreePath: attempt.worktree_path ?? null,
 });
@@ -77,7 +82,6 @@ export const toTicket = (
   tagIds: Array.isArray(ticket.tag_ids) ? ticket.tag_ids : [],
   status: ticket.status_name ?? statusById.get(ticket.status_id ?? "") ?? fallbackStatusName,
   statusColor: colorById.get(ticket.status_id ?? "") ?? fallbackColor,
-  complexity: ticket.complexity,
   blockedReason: ticket.blocked_reason ?? null,
   dependsOn: ticket.depends_on ?? null,
   parentId: ticket.parent_id ?? null,
@@ -98,5 +102,15 @@ export const toTicket = (
 export const toTicketTag = (tag: TagResponse): TicketTag => ({
   id: tag.id,
   name: tag.name,
-  color: (tag.color || DEFAULT_STATUS_COLOR) as TicketStatusColor,
+  type: (tag.type ?? "single_select") as TicketTag["type"],
+  options: Array.isArray(tag.options)
+    ? tag.options.map((o) => ({
+        id: o.id,
+        name: o.name,
+        color: (o.color || DEFAULT_STATUS_COLOR) as TicketStatusColor,
+        sortOrder: o.sort_order,
+        icon: o.icon ?? null,
+        description: o.description ?? null,
+      }))
+    : [],
 });

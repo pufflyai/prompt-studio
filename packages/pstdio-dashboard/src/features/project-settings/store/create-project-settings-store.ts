@@ -1,5 +1,5 @@
 import { createStore } from "zustand";
-import { devtools, persist, subscribeWithSelector } from "zustand/middleware";
+import { createJSONStorage, devtools, persist, subscribeWithSelector } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { getStoredAgent } from "@/features/agents/agent-storage";
 import type { ProjectSettingsSnapshot, ProjectSettingsState, ProjectSettingsStoreOptions } from "./types";
@@ -24,6 +24,7 @@ const getPersistedSnapshot = (state: ProjectSettingsState) => ({
   lastSelectedBranches: state.lastSelectedBranches,
   sessionModalState: state.sessionModalState,
   selectedSessionId: state.selectedSessionId,
+  lastNonSessionsPath: state.lastNonSessionsPath,
   chatDraftsBySession: state.chatDraftsBySession,
 });
 
@@ -42,6 +43,7 @@ export const getDefaultProjectSettingsSnapshot = () =>
 export const createProjectSettingsStore = (options?: ProjectSettingsStoreOptions) => {
   const { projectId, initialState } = options ?? {};
   const storeName = getStoreName(projectId);
+  const storage = createJSONStorage<ProjectSettingsSnapshot>(() => globalThis.localStorage);
   const initialSnapshot = {
     ...getDefaultProjectSettingsSnapshot(),
     ...initialState,
@@ -142,6 +144,7 @@ export const createProjectSettingsStore = (options?: ProjectSettingsStoreOptions
       ),
       {
         name: storeName,
+        storage,
         partialize: getPersistedSnapshot,
         merge: (persistedState, currentState) => ({
           ...currentState,

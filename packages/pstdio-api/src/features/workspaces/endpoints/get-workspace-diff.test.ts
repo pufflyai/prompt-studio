@@ -55,7 +55,8 @@ const createGitRepo = (name: string) => {
   execSync('git config user.email "test@test.com"', { cwd: repoRoot, stdio: "pipe" });
   execSync('git config user.name "Test"', { cwd: repoRoot, stdio: "pipe" });
   writeFileSync(join(repoRoot, "README.md"), "# test\n");
-  execSync("git add README.md", { cwd: repoRoot, stdio: "pipe" });
+  writeFileSync(join(repoRoot, ".gitignore"), ".pstdio/\n.opencode/\n.claude/\n");
+  execSync("git add README.md .gitignore", { cwd: repoRoot, stdio: "pipe" });
   execSync('git commit -m "init"', { cwd: repoRoot, stdio: "pipe" });
   return repoRoot;
 };
@@ -101,7 +102,7 @@ describe("GET /v1/workspaces/:id/diff", () => {
 
     // Commit a change — should NOT appear in current mode
     writeFileSync(join(workspace.worktree_path, "committed.txt"), "committed\n");
-    execSync("git add .", { cwd: workspace.worktree_path, stdio: "pipe" });
+    execSync("git add committed.txt", { cwd: workspace.worktree_path, stdio: "pipe" });
     execSync('git commit -m "add file"', { cwd: workspace.worktree_path, stdio: "pipe" });
 
     const res = await app.request(`/v1/workspaces/${workspace.id}/diff`);
@@ -118,7 +119,7 @@ describe("GET /v1/workspaces/:id/diff", () => {
 
     // Commit a change
     writeFileSync(join(workspace.worktree_path, "committed.txt"), "committed\n");
-    execSync("git add .", { cwd: workspace.worktree_path, stdio: "pipe" });
+    execSync("git add committed.txt", { cwd: workspace.worktree_path, stdio: "pipe" });
     execSync('git commit -m "add file"', { cwd: workspace.worktree_path, stdio: "pipe" });
 
     // Add uncommitted file
@@ -136,7 +137,7 @@ describe("GET /v1/workspaces/:id/diff", () => {
     const { workspace } = await createWorkspaceWithDiff("diff-fork-point");
 
     writeFileSync(join(workspace.worktree_path, "feature.txt"), "feature\n");
-    execSync("git add .", { cwd: workspace.worktree_path, stdio: "pipe" });
+    execSync("git add feature.txt", { cwd: workspace.worktree_path, stdio: "pipe" });
     execSync('git commit -m "add feature"', { cwd: workspace.worktree_path, stdio: "pipe" });
 
     const res = await app.request(`/v1/workspaces/${workspace.id}/diff?mode=fork_point`);
@@ -153,7 +154,7 @@ describe("GET /v1/workspaces/:id/diff", () => {
     const { workspace, repoRoot } = await createWorkspaceWithDiff("diff-fork-point-fast-forward");
 
     writeFileSync(join(workspace.worktree_path, "feature.txt"), "feature\n");
-    execSync("git add .", { cwd: workspace.worktree_path, stdio: "pipe" });
+    execSync("git add feature.txt", { cwd: workspace.worktree_path, stdio: "pipe" });
     execSync('git commit -m "add feature"', { cwd: workspace.worktree_path, stdio: "pipe" });
 
     const workspaceBranch = execSync("git rev-parse --abbrev-ref HEAD", {

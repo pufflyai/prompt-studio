@@ -128,16 +128,7 @@
       "dependencies": "Dependencies",
       "parent": "Parent",
       "tags": "Tags",
-      "archived": "Archived",
-      "complexity": {
-        "label": "Complexity",
-        "options": {
-          "unspecified": "Unspecified",
-          "low": "Low",
-          "medium": "Medium",
-          "high": "High"
-        }
-      }
+      "archived": "Archived"
     },
     "title": {
       "label": "Ticket title",
@@ -220,6 +211,14 @@
   "projectSettings": {
     "title": "Project Settings",
     "tags": "Tags",
+    "repositories": "Repositories",
+    "repositoriesEmpty": "No repositories linked to this project.",
+    "removeRepository": "Remove repository",
+    "removeRepositoryConfirm": {
+      "headline": "Remove repository?",
+      "notification": "This will unlink \"{{name}}\" from the project. The repository itself will not be deleted.",
+      "button": "Remove"
+    },
     "skills": "Skills",
     "templates": "Templates",
     "createTemplate": "Create template",
@@ -247,6 +246,7 @@
     "searchPlaceholder": "Search sessions...",
     "noSessionsYet": "No sessions yet",
     "noSearchResults": "No sessions match your search.",
+    "nextBuildTitle": "What should we build next?",
     "noSessionSelected": "No session selected",
     "selectSession": "Select a session from the sidebar or start a new one.",
     "followUpPlaceholder": "Send a follow-up message...",

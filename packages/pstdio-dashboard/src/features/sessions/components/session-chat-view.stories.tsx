@@ -1,7 +1,9 @@
 import { Box } from "@chakra-ui/react";
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
-import { ChatPanel } from "@pstdio/ui/chat-ui";
+import { ChatPanel, ChatSkeleton } from "@pstdio/ui/chat-ui";
 import type { Meta, StoryObj } from "@storybook/react";
+import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { createPendingFollowUpState, mergeMessagesWithPendingFollowUp } from "./session-chat-state";
 
 const mockMessages: SessionMessage[] = [
@@ -33,6 +35,15 @@ const pendingFollowUp = mergeMessagesWithPendingFollowUp(
   }),
 );
 
+const pendingFirstMessage = mergeMessagesWithPendingFollowUp(
+  [],
+  createPendingFollowUpState({
+    prompt: "Help me investigate the flaky CI failure.",
+    messageCount: 0,
+    pendingId: "pending-first-message",
+  }),
+);
+
 const meta: Meta = {
   title: "Sessions/SessionChatView",
   parameters: { layout: "padded" },
@@ -42,44 +53,83 @@ export default meta;
 
 type Story = StoryObj;
 
-export const WithMessages: Story = {
-  render: () => (
+interface LocalizedChatPanelProps {
+  emptyStateDescriptionKey?: string;
+  emptyStateTitleKey: string;
+  loadingContent?: ReactNode;
+  messages: SessionMessage[];
+  streaming: boolean;
+}
+
+const LocalizedChatPanel = (props: LocalizedChatPanelProps) => {
+  const { emptyStateDescriptionKey, emptyStateTitleKey, loadingContent, messages, streaming } = props;
+  const { t } = useTranslation("projects");
+
+  return (
     <Box w="720px" h="500px" borderWidth="1px" borderRadius="lg">
       <ChatPanel
-        messages={mockMessages}
-        streaming={false}
-        emptyStateTitle="No session selected"
-        emptyStateDescription="Select a session from the sidebar."
-        chatInputPlaceholder="Send a follow-up message..."
+        messages={messages}
+        streaming={streaming}
+        emptyStateTitle={t(emptyStateTitleKey)}
+        emptyStateDescription={emptyStateDescriptionKey ? t(emptyStateDescriptionKey) : ""}
+        chatInputPlaceholder={t("sessions.followUpPlaceholder")}
+        loadingContent={loadingContent}
       />
     </Box>
+  );
+};
+
+export const WithMessages: Story = {
+  render: () => (
+    <LocalizedChatPanel
+      messages={mockMessages}
+      streaming={false}
+      emptyStateTitleKey="sessions.noSessionSelected"
+      emptyStateDescriptionKey="sessions.selectSession"
+    />
   ),
 };
 
 export const WithPendingFollowUp: Story = {
   render: () => (
-    <Box w="720px" h="500px" borderWidth="1px" borderRadius="lg">
-      <ChatPanel
-        messages={pendingFollowUp}
-        streaming
-        emptyStateTitle="No session selected"
-        emptyStateDescription="Select a session from the sidebar."
-        chatInputPlaceholder="Send a follow-up message..."
-      />
-    </Box>
+    <LocalizedChatPanel
+      messages={pendingFollowUp}
+      streaming
+      emptyStateTitleKey="sessions.noSessionSelected"
+      emptyStateDescriptionKey="sessions.selectSession"
+    />
   ),
 };
 
-export const Empty: Story = {
+export const LoadingConversation: Story = {
   render: () => (
-    <Box w="720px" h="500px" borderWidth="1px" borderRadius="lg">
-      <ChatPanel
-        messages={[]}
-        streaming={false}
-        emptyStateTitle="No session selected"
-        emptyStateDescription="Select a session from the sidebar or start a new one."
-        chatInputPlaceholder="Send a follow-up message..."
-      />
-    </Box>
+    <LocalizedChatPanel
+      messages={[]}
+      streaming
+      loadingContent={<ChatSkeleton />}
+      emptyStateTitleKey="sessions.noSessionSelected"
+      emptyStateDescriptionKey="sessions.selectSession"
+    />
+  ),
+};
+
+export const StartingNewSession: Story = {
+  render: () => (
+    <LocalizedChatPanel messages={pendingFirstMessage} streaming emptyStateTitleKey="sessions.nextBuildTitle" />
+  ),
+};
+
+export const NewSession: Story = {
+  render: () => <LocalizedChatPanel messages={[]} streaming={false} emptyStateTitleKey="sessions.nextBuildTitle" />,
+};
+
+export const ConversationUnavailable: Story = {
+  render: () => (
+    <LocalizedChatPanel
+      messages={[]}
+      streaming={false}
+      emptyStateTitleKey="chatInput.session.notFoundTitle"
+      emptyStateDescriptionKey="chatInput.session.notFoundDescription"
+    />
   ),
 };

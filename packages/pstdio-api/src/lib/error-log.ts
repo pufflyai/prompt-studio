@@ -14,11 +14,11 @@ export interface ErrorLogEntry {
 
 const MAX_LOG_FILES = 50;
 
-export function logError(entry: ErrorLogEntry) {
+export function logError<T extends object>(entry: T) {
   process.stderr.write(`${JSON.stringify(entry)}\n`);
 }
 
-export function persistErrorLog(entry: ErrorLogEntry, logDir?: string) {
+export function persistErrorLog<T extends { timestamp: string }>(entry: T, logDir?: string) {
   const dir = logDir ?? join(homedir(), ".pstdio", "error-logs");
 
   try {
@@ -35,4 +35,17 @@ export function persistErrorLog(entry: ErrorLogEntry, logDir?: string) {
   } catch (err) {
     process.stderr.write(`Failed to persist error log: ${(err as Error).message}\n`);
   }
+}
+
+export function persistStartupError(error: Error, logDir?: string) {
+  const entry = {
+    source: "startup" as const,
+    level: "error" as const,
+    timestamp: new Date().toISOString(),
+    message: error.message,
+    stack: error.stack,
+  };
+
+  logError(entry);
+  persistErrorLog(entry, logDir);
 }

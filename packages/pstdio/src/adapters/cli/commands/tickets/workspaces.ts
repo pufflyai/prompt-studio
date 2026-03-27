@@ -35,7 +35,6 @@ const defaultDeps: Deps = {
 
 type WorkspaceRow = {
   workspace: string;
-  status: string;
   branch: string;
   path: string;
 };
@@ -43,21 +42,19 @@ type WorkspaceRow = {
 const formatTable = (rows: WorkspaceRow[]) => {
   const header: WorkspaceRow = {
     workspace: "Workspace",
-    status: "Status",
     branch: "Branch",
     path: "Path",
   };
 
   const widths = {
     workspace: Math.max(header.workspace.length, ...rows.map((row) => row.workspace.length)),
-    status: Math.max(header.status.length, ...rows.map((row) => row.status.length)),
     branch: Math.max(header.branch.length, ...rows.map((row) => row.branch.length)),
     path: Math.max(header.path.length, ...rows.map((row) => row.path.length)),
   };
 
   const pad = (value: string, width: number) => value.padEnd(width);
   const line = (row: WorkspaceRow) =>
-    `${pad(row.workspace, widths.workspace)}   ${pad(row.status, widths.status)}   ${pad(row.branch, widths.branch)}   ${pad(row.path, widths.path)}`;
+    `${pad(row.workspace, widths.workspace)}   ${pad(row.branch, widths.branch)}   ${pad(row.path, widths.path)}`;
 
   return [line(header), ...rows.map(line)].join("\n");
 };
@@ -80,7 +77,6 @@ export const createHandler =
 
     const rows = ticketWorkspaces.map((workspace) => ({
       workspace: workspace.workspace_shorthand,
-      status: workspace.status,
       branch: workspace.branch ?? "-",
       path: workspace.worktree_path ?? "-",
     }));

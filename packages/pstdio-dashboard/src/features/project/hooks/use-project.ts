@@ -59,6 +59,10 @@ export const useProject = (projectId: string | undefined) => {
     [projectId],
   );
 
+  const { data: rawTagOptions } = useLiveQuery((q) =>
+    q.from({ o: getCollection("ticket_tag_options") }).select(({ o }) => ({ ...o })),
+  );
+
   const project = projectRows?.[0];
   if (!project || !projectId) {
     return { data: undefined, isLoading };
@@ -74,7 +78,23 @@ export const useProject = (projectId: string | undefined) => {
 
   const statuses = [...(statusRows ?? [])].sort((a, b) => (a.sort_order as number) - (b.sort_order as number));
   const statusOptions = statuses.map((s) => toTicketStatusOption(s as unknown as StatusResponse));
-  const tags = (tagRows ?? []).map((t) => toTicketTag(t as unknown as TagResponse));
+  const tagOptionRows = asSyncedRows(rawTagOptions);
+  const tags = (tagRows ?? []).map((t) => {
+    const options = (tagOptionRows ?? [])
+      .filter((o) => o.tag_id === t.id && !o.deleted_at)
+      .sort((a, b) => (a.sort_order as number) - (b.sort_order as number));
+    return toTicketTag({
+      ...t,
+      options: options.map((o) => ({
+        id: o.id as string,
+        name: o.name as string,
+        color: o.color as string,
+        sort_order: o.sort_order as number,
+        icon: (o.icon as string | null) ?? null,
+        description: (o.description as string | null) ?? null,
+      })),
+    } as unknown as TagResponse);
+  });
 
   const data: Project = {
     id: project.id,

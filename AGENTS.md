@@ -78,6 +78,7 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 - Do **not** use `memo()`, `useCallback()` or `useMemo()` (we use the react compiler)
 - Extract complex props into an interface
 - Destructure props **inside** the function
+- Prefer components over `render*` helper functions; when UI logic needs extracting, move it into a component instead of a render function
 - Component file names in kebab-case "my-component.tsx"
 
 ### Testing Rules
@@ -103,7 +104,7 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 
 This project uses `pstdio` to manage tickets and documentation.
 
-- You can find relevant information in `.pstdio/docs`.
+- You can find relevant documentation in `.pstdio/docs`.
 - Consider the database at `~/.pstdio/db` as containing production data and do not modify it unless you are granted permission
 
 ---

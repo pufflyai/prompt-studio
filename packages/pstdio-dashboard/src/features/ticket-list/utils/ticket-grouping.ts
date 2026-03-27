@@ -9,16 +9,10 @@ const DISABLED_GROUP: Pick<TicketGroup, "canDragIn" | "canDragOut" | "canCreate"
   columnActions: [],
 };
 
-const COMPLEXITY_ORDER = ["low", "medium", "high", "unspecified"] as const;
-
-const COMPLEXITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
-
 export const groupTickets = (tickets: Ticket[], grouping: GroupingField, statusOptions: TicketStatusOption[]) => {
   switch (grouping) {
     case "status":
       return groupByStatus(tickets, statusOptions);
-    case "complexity":
-      return groupByComplexity(tickets);
     case "assignee":
       return groupByAssignee(tickets);
     case "none":
@@ -36,14 +30,6 @@ const groupByStatus = (tickets: Ticket[], statusOptions: TicketStatusOption[]): 
     canDragIn: status.canDragIn,
     canCreate: status.canCreate,
     columnActions: status.columnActions,
-  }));
-
-const groupByComplexity = (tickets: Ticket[]): TicketGroup[] =>
-  COMPLEXITY_ORDER.map((level) => ({
-    id: level,
-    label: level,
-    tickets: tickets.filter((t) => (level === "unspecified" ? !t.complexity : t.complexity === level)),
-    ...DISABLED_GROUP,
   }));
 
 const groupByAssignee = (tickets: Ticket[]): TicketGroup[] => {
@@ -96,6 +82,5 @@ export const orderTickets = (tickets: Ticket[], ordering: OrderingField) => {
 const comparators: Record<Exclude<OrderingField, "manual">, (a: Ticket, b: Ticket) => number> = {
   updated: (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
   title: (a, b) => a.title.localeCompare(b.title),
-  complexity: (a, b) => (COMPLEXITY_RANK[a.complexity ?? ""] ?? 3) - (COMPLEXITY_RANK[b.complexity ?? ""] ?? 3),
   shorthand: (a, b) => a.shorthand.localeCompare(b.shorthand, undefined, { numeric: true }),
 };

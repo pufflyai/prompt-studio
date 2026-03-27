@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { RepoBranch } from "@/features/project/types";
-import { resolveBranchSelection } from "./repo-browser.container";
+import { resolveBranchSelection, resolveBranchState } from "./repo-browser.container";
 
 const createBranch = (name: string, options?: { isCurrent?: boolean; isRemote?: boolean }): RepoBranch => ({
   name,
@@ -47,5 +47,27 @@ describe("resolveBranchSelection", () => {
     });
 
     expect(selectedBranch).toBe("release/1");
+  });
+});
+
+describe("resolveBranchState", () => {
+  it("marks auto-resolved branch updates for persistence", () => {
+    const branches = [createBranch("main", { isCurrent: true }), createBranch("feature/old")];
+
+    const nextState = resolveBranchState({
+      isLocked: false,
+      isBranchesPending: false,
+      selectedRepositoryId: "repo-1",
+      branches,
+      currentBranch: "main",
+      selectedBranch: "feature/old",
+      hasUserSelectedBranch: false,
+    });
+
+    expect(nextState).toEqual({
+      selectedBranch: "main",
+      hasUserSelectedBranch: false,
+      shouldPersistBranch: true,
+    });
   });
 });

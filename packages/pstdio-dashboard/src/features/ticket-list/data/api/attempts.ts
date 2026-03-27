@@ -52,3 +52,14 @@ export const getTicketAttemptDiff = async (workspaceId: string, mode?: DiffMode)
   const params = mode ? `?mode=${mode}` : "";
   return apiRequest<ApiTicketAttemptDiff>(`/v1/workspaces/${workspaceId}/diff${params}`);
 };
+
+interface DiffSummary {
+  workspace_id: string;
+  additions: number;
+  deletions: number;
+  file_count: number;
+}
+
+export const getTicketAttemptDiffSummary = async (workspaceId: string) => {
+  return apiRequest<DiffSummary>(`/v1/workspaces/${workspaceId}/diff-summary`);
+};

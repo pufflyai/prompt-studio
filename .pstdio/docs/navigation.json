@@ -123,6 +123,15 @@
               "link": "/product/api/error-logs"
             }
           ]
+        },
+        {
+          "text": "PRDs",
+          "items": [
+            {
+              "text": "Cross-Platform Support",
+              "link": "/prd/cross-platform-support"
+            }
+          ]
         }
       ]
     },

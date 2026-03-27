@@ -31,10 +31,11 @@ export const createStatusHandler = (deps: RouteDeps): AppRouteHandler<typeof cre
   return async (c) => {
     const { projectId } = c.req.valid("param");
     const body = c.req.valid("json");
-    const result = await deps.statusesService.create({ project_id: projectId, ...body });
+    const row = await deps.statusesService.create({ project_id: projectId, ...body });
 
-    deps.eventBus.emit("ticket_statuses", "set", result);
+    deps.eventBus.emit("ticket_statuses", "set", row);
 
+    const result = { ...row, column_actions: JSON.parse(row.column_actions) as string[] };
     return c.json(result, 201);
   };
 };

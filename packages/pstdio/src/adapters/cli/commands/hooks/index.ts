@@ -1,4 +1,5 @@
 import type { Argv } from "yargs";
+import * as createCommand from "./create";
 import * as listCommand from "./list";
 import * as runCommand from "./run";
 
@@ -9,7 +10,7 @@ let _yargs: Argv;
 
 export const builder = (yargs: Argv) => {
   _yargs = yargs;
-  return yargs.command(listCommand).command(runCommand);
+  return yargs.command(listCommand).command(createCommand).command(runCommand);
 };
 
 export const handler = () => {

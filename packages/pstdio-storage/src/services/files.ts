@@ -116,7 +116,7 @@ export const createFilesService = (db: DbClient, storageRoot: string) => {
 
     await db.insert(ticket_files).values(link);
 
-    return existing;
+    return link;
   };
 
   const detachFromTicket = async (ticketId: string, fileId: string) => {

@@ -11,11 +11,15 @@ import { useTicketFiles } from "@/features/ticket/hooks/use-ticket-files";
 import { buildImplementTicketPrompt } from "@/features/ticket/utils/build-prompts";
 import { useCreateTicketAttempt } from "@/features/ticket-list/hooks/use-create-ticket-attempt";
 import { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
+import { isSessionSettled } from "@/features/ticket-list/utils/ticket-attempts";
+import { useInvalidateDiffOnEdits } from "@/features/workspaces/hooks/use-invalidate-diff-on-edits";
 import { transformFileDiffs } from "@/features/workspaces/utils/transform-diff";
 import { logMutationError } from "@/lib/error-handlers";
 import { WorkspaceConversationPanel } from "../components/workspace-conversation-panel";
 import { WorkspaceDiffPanel } from "../components/workspace-diff-panel";
 import { type WorkspaceListItem, WorkspaceListPanel } from "../components/workspace-list-panel";
+import { useWorkspaceSession } from "../hooks/use-workspace-session";
+import { useWorkspaceSessions } from "../hooks/use-workspace-sessions";
 
 export const WorkspacePage = () => {
   const { projectId, ticketShorthand, workspaceShorthand } = useParams({ strict: false });
@@ -37,27 +41,32 @@ export const WorkspacePage = () => {
     id: attempt.id,
     label: attempt.label,
     shorthand: attempt.shorthand,
-    sessionId: attempt.sessionId,
     updatedAt: attempt.updatedAt,
     worktreePath: attempt.worktreePath,
   }));
 
-  const selectedWorkspace = workspaces.find((w) => w.shorthand === workspaceShorthand) ?? null;
-  const sessionId = selectedWorkspace?.sessionId ?? null;
-  const selectedWorkspaceLabel = selectedWorkspace?.shorthand ?? workspaceShorthand ?? "";
+  const workspaceIds = workspaces.map((w) => w.id);
+  const sessionsByWorkspaceId = useWorkspaceSessions(workspaceIds);
 
-  const { data: diffData } = useTicketAttemptDiff(selectedWorkspace?.id);
+  const selectedWorkspace = workspaces.find((w) => w.shorthand === workspaceShorthand) ?? null;
+  const selectedAttempt = attempts.find((a) => a.shorthand === workspaceShorthand) ?? null;
+  const sessionId = useWorkspaceSession(selectedWorkspace?.id ?? null);
+  const selectedWorkspaceLabel = selectedWorkspace?.shorthand ?? workspaceShorthand ?? "";
+  const sessionSettled = isSessionSettled(selectedAttempt?.sessionStatus ?? null);
+
+  const { data: diffData } = useTicketAttemptDiff(selectedWorkspace?.id, { enabled: sessionSettled });
   const diffs = diffData?.files ? transformFileDiffs(diffData.files) : [];
+  const invalidateDiff = useInvalidateDiffOnEdits(selectedWorkspace?.id ?? null);
 
   const { data: ticketFilesData } = useTicketFiles(ticketShorthand);
   const artifacts = ticketFilesData?.artifacts ?? [];
 
-  const handleSelectWorkspace = (shorthand: string) => {
+  const handleSelectSession = (workspaceShorthand: string, _sessionId: string) => {
     if (!projectId || !ticketShorthand) return;
 
     navigate({
       to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
-      params: { projectId, ticketShorthand, workspaceShorthand: shorthand },
+      params: { projectId, ticketShorthand, workspaceShorthand },
     });
   };
 
@@ -79,7 +88,7 @@ export const WorkspacePage = () => {
         prompt,
       });
 
-      handleSelectWorkspace(result.workspaceShorthand);
+      handleSelectSession(result.workspaceShorthand, "");
       return true;
     } catch (error) {
       logMutationError("run attempt", error);
@@ -133,12 +142,13 @@ export const WorkspacePage = () => {
       <Flex flex="1" minH="0">
         <WorkspaceListPanel
           workspaces={workspaces}
-          selectedWorkspaceShorthand={workspaceShorthand ?? ""}
-          onSelectWorkspace={handleSelectWorkspace}
+          sessionsByWorkspaceId={sessionsByWorkspaceId}
+          activeSessionId={sessionId}
+          onSelectSession={handleSelectSession}
           onCreateAttempt={() => setIsCreateModalOpen(true)}
         />
 
-        <WorkspaceConversationPanel sessionId={sessionId} />
+        <WorkspaceConversationPanel sessionId={sessionId} onEditAction={invalidateDiff} />
 
         <WorkspaceDiffPanel diffs={diffs} artifacts={artifacts} />
       </Flex>

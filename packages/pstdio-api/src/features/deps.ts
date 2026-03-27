@@ -1,6 +1,7 @@
 import type { AgentRegistry } from "pstdio-agents";
 import type {
   createAgentConfigsService,
+  createAttemptStatusesService,
   createProjectsService,
   createReposService,
   createSessionsService,
@@ -9,6 +10,7 @@ import type {
   createTagsService,
   createTemplatesService,
   createTicketsService,
+  createWorkspaceSessionsService,
   createWorkspacesService,
   DbClient,
 } from "pstdio-db";
@@ -36,8 +38,10 @@ export interface RouteDeps {
   templatesService: ReturnType<typeof createTemplatesService>;
   ticketsService: ReturnType<typeof createTicketsService>;
   workspacesService: ReturnType<typeof createWorkspacesService>;
+  workspaceSessionsService: ReturnType<typeof createWorkspaceSessionsService>;
   sessionsService: ReturnType<typeof createSessionsService>;
   statusesService: ReturnType<typeof createStatusesService>;
+  attemptStatusesService: ReturnType<typeof createAttemptStatusesService>;
   tagsService: ReturnType<typeof createTagsService>;
   docsService: ReturnType<typeof createDocsService>;
   agentRegistry: AgentRegistry;
