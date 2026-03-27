@@ -99,6 +99,14 @@ export const LongTitle: Story = {
   },
 };
 
+export const LongUnbrokenUrlLikeTitle: Story = {
+  args: {
+    title:
+      "https://tickets.example.com/projects/ps-100/thisisaverylongunbrokentokenthatshouldwrapinsidethecardwithoutchangingthekanbancolumnwidthorcausinghorizontalscroll",
+    badges: [{ label: "layout", color: "blue" }],
+  },
+};
+
 export const NoBadges: Story = {
   args: {
     title: "Quick typo fix in README",

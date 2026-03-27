@@ -38,6 +38,7 @@ Ticket card behavior was only implicitly documented inside the broader tickets p
 7. Diff badge counts must use the latest attempt workspace diff totals.
 8. Session indicator click must open the session bubble only when a session id exists.
 9. Diff badge click must open the workspace route only when diff totals and workspace shorthand exist.
+10. Long unbroken strings in ticket text (for example URL-like tokens) must wrap within card bounds and must not expand kanban column width.
 
 ### Session Indicator Mapping
 

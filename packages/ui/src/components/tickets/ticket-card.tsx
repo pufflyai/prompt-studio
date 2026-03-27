@@ -112,8 +112,8 @@ export const TicketCard = (props: TicketCardProps) => {
         ) : null}
       </HStack>
 
-      <HStack align="start" gap="2xs" flexWrap="wrap">
-        <Text textStyle="label/S/regular" flex="1" minW="0">
+      <HStack align="start" gap="2xs" flexWrap="wrap" minW="0">
+        <Text textStyle="label/S/regular" flex="1" minW="0" overflowWrap="anywhere">
           {title}
         </Text>
       </HStack>
