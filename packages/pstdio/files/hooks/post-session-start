@@ -17,4 +17,9 @@ if [ "$CURRENT_STATUS" = "review" ]; then
   exit 0
 fi
 
+# Also mark the attempt as wip
+if [ -n "$PSTDIO_WORKSPACE" ]; then
+  pstdio workspaces set-status --workspace "$PSTDIO_WORKSPACE" --status wip
+fi
+
 pstdio tickets update --id "$PSTDIO_TICKET" --status "wip"

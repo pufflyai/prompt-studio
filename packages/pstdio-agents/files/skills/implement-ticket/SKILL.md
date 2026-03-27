@@ -2,7 +2,7 @@
 name: implement-ticket
 description: "Implement a ticket end-to-end. Use when asked to implement or complete a ticket."
 metadata:
-  - version: 0.0.1
+  - version: 0.0.2
 ---
 
 ## Workflow
@@ -10,14 +10,10 @@ metadata:
 1. The ticket should live in `.pstdio/tickets/<shorthand>/ticket.md`.
    - If `next ticket` is requested: run `pstdio tickets list --status ready`, then pull the first ticket by id.
    - If the ticket is missing, try to pull the ticket `pstdio tickets pull --id <shorthand>` and if it doesn't exist, ask the user to confirm the ticket id.
-2. Update the workspace status
-   - Before starting work, run: `pstdio workspaces set-status --status running`.
-   - The workspace is auto-detected from the current branch. Ticket status is derived automatically via hooks — do not set it directly.
-3. Update ticket checklists as you go
-4. Evidence
+2. Update ticket checklists as you go
+3. Evidence
    - Store artifacts under `.pstdio/tickets/<shorthand>/artifacts/`
-   - If tests/commands can’t be run, record why in the ticket’s `blocked_reason` frontmatter field.
-5. Finish
+4. Finish
    - Confirm everything is checked.
    - If the ticket is not completed, run `pstdio workspaces set-status --status blocked`.
    - If the ticket is completed, run `pstdio workspaces set-status --status review-ready`.
