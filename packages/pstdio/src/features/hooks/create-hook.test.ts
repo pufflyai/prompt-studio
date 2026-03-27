@@ -42,6 +42,15 @@ describe("createHookFile", () => {
     expect(content).toContain("Replace with your validation command");
   });
 
+  test("reuses the bundled post-session-start template", async () => {
+    const hookPath = await createHookFile(tempDir, "post-session-start");
+    const content = readFileSync(hookPath, "utf8");
+
+    expect(content).toContain("pstdio tickets update");
+    expect(content).toContain("wip");
+    expect(content).toContain("review");
+  });
+
   test("fails when the hook file already exists", async () => {
     const hookPath = join(tempDir, ".pstdio", "hooks", "pre-commit");
     await Bun.write(hookPath, "echo existing");

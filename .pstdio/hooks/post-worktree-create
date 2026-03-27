@@ -24,9 +24,8 @@ done
 
 # Pull the ticket into the worktree so agents have full context
 # Workspace shorthand is <ticket>_A<n>, extract ticket shorthand
-TICKET_SHORTHAND=$(printf '%s\n' "$PSTDIO_WORKSPACE" | sed 's/_A[0-9]*$//')
-if [ -n "$TICKET_SHORTHAND" ]; then
-  pstdio tickets pull --id "$TICKET_SHORTHAND" 2>/dev/null || true
+if [ -n "$PSTDIO_TICKET" ]; then
+  pstdio tickets pull --id "$PSTDIO_TICKET" 2>/dev/null || true
 fi
 
 # ──────────────────────────────────────────────────────────

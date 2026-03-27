@@ -71,6 +71,24 @@ describe("buildHookEnv", () => {
     expect(env.PSTDIO_TARGET).toBeUndefined();
   });
 
+  test("includes ticket shorthand when provided", () => {
+    const env = buildHookEnv("post-session-start", {
+      repoPath: "/repo",
+      workspace: "PS-1_A1",
+      ticketShorthand: "PS-1",
+    });
+
+    expect(env.PSTDIO_TICKET).toBe("PS-1");
+  });
+
+  test("omits PSTDIO_TICKET when ticketShorthand not provided", () => {
+    const env = buildHookEnv("post-session-start", {
+      repoPath: "/repo",
+    });
+
+    expect(env.PSTDIO_TICKET).toBeUndefined();
+  });
+
   test("includes commit fields when provided", () => {
     const env = buildHookEnv("post-commit", {
       repoPath: "/repo",

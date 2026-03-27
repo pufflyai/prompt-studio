@@ -33,6 +33,10 @@ fi
 VALIDATE_OUTPUT=$(bun run validate 2>&1)
 
 if [ $? -ne 0 ]; then
+  if [ -n "$PSTDIO_WORKSPACE" ]; then
+    pstdio workspaces set-status --workspace "$PSTDIO_WORKSPACE" --status wip
+  fi
+
   SESSION_ID=$(printf '%s\n' "$PAYLOAD" | jq -r '.session.id // empty')
   if [ -n "$SESSION_ID" ]; then
     pstdio sessions follow-up --id "$SESSION_ID" \

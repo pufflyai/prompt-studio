@@ -16,6 +16,8 @@ describe("getBundledSkills", () => {
         `---
 name: "alpha"
 description: "Alpha skill"
+metadata:
+  - version: 1.2.3
 ---
 alpha content
 `,
@@ -34,8 +36,13 @@ bravo content
     try {
       const skills = await getBundledSkills();
       expect(skills).toEqual([
-        { name: "alpha", description: "Alpha skill", content: expect.stringContaining("alpha content") },
-        { name: "bravo", description: "Bravo skill", content: expect.stringContaining("bravo content") },
+        {
+          name: "alpha",
+          description: "Alpha skill",
+          version: "1.2.3",
+          content: expect.stringContaining("alpha content"),
+        },
+        { name: "bravo", description: "Bravo skill", version: "", content: expect.stringContaining("bravo content") },
       ]);
     } finally {
       runtime.embeddedFiles = originalEmbeddedFiles;

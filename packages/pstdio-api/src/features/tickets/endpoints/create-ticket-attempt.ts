@@ -78,6 +78,7 @@ export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typ
 
     continueTicketAttemptSetup(deps, {
       workspace: workspaceWithGitMetadata,
+      ticketShorthand: context.ticket.shorthand,
       repo: context.repo,
       mode: context.mode,
       worktreeMode,

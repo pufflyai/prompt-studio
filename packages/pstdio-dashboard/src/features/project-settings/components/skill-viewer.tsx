@@ -1,6 +1,7 @@
-import { Flex, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Badge, Button, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
-import { useProjectSkill } from "../hooks/use-skills";
+import { useProjectSkill, useUpdateProjectSkill } from "../hooks/use-skills";
+import { parseSkillVersion } from "../utils/parse-skill-version";
 
 interface SkillViewerProps {
   projectId: string | undefined;
@@ -10,6 +11,7 @@ interface SkillViewerProps {
 export const SkillViewer = (props: SkillViewerProps) => {
   const { projectId, skillName } = props;
   const { data: skill, isLoading, error } = useProjectSkill(projectId, skillName);
+  const updateSkill = useUpdateProjectSkill(projectId, skillName);
 
   if (isLoading) {
     return (
@@ -39,13 +41,34 @@ export const SkillViewer = (props: SkillViewerProps) => {
     );
   }
 
+  const currentVersion = parseSkillVersion(skill.content);
+  const hasUpdate = skill.bundled_version && currentVersion !== skill.bundled_version;
+
   return (
     <Stack height="100%" gap="0">
       <Flex padding="md" borderBottomWidth="1px" justifyContent="center">
         <Stack gap="xs" width="100%" maxWidth="720px">
-          <Text textStyle="heading/S" data-testid="project-skill-name">
-            {skill.name}
-          </Text>
+          <Flex alignItems="center" gap="sm">
+            <Text textStyle="heading/S" data-testid="project-skill-name">
+              {skill.name}
+            </Text>
+            {currentVersion && (
+              <Badge size="sm" data-testid="project-skill-version">
+                v{currentVersion}
+              </Badge>
+            )}
+            {hasUpdate && (
+              <Button
+                size="xs"
+                variant="outline"
+                loading={updateSkill.isPending}
+                onClick={() => updateSkill.mutate()}
+                data-testid="project-skill-update-button"
+              >
+                Update to v{skill.bundled_version}
+              </Button>
+            )}
+          </Flex>
           <Text textStyle="paragraph/S/regular" color="fg.muted" data-testid="project-skill-description">
             {skill.description}
           </Text>

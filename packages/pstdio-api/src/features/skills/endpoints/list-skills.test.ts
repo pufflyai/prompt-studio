@@ -48,9 +48,30 @@ describe("GET /v1/projects/:id/skills", () => {
 });
 
 describe("GET /v1/projects/:id/skills/:name", () => {
-  test("returns skill with content", async () => {
+  test("returns skill with content and bundled_version", async () => {
     const skill = bundledSkills[0];
     const res = await app.request(`/v1/projects/${projectId}/skills/${skill.name}`);
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.name).toBe(skill.name);
+    expect(body.content).toBe(skill.content);
+    expect(body.bundled_version).toBe(skill.version);
+  });
+
+  test("returns 404 for missing skill", async () => {
+    const res = await app.request(`/v1/projects/${projectId}/skills/nonexistent`);
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("POST /v1/projects/:id/skills/:name/update", () => {
+  test("updates skill content from bundled version", async () => {
+    const skill = bundledSkills[0];
+
+    const res = await app.request(`/v1/projects/${projectId}/skills/${skill.name}/update`, {
+      method: "POST",
+    });
     expect(res.status).toBe(200);
 
     const body = await res.json();
@@ -59,7 +80,9 @@ describe("GET /v1/projects/:id/skills/:name", () => {
   });
 
   test("returns 404 for missing skill", async () => {
-    const res = await app.request(`/v1/projects/${projectId}/skills/nonexistent`);
+    const res = await app.request(`/v1/projects/${projectId}/skills/nonexistent/update`, {
+      method: "POST",
+    });
     expect(res.status).toBe(404);
   });
 });

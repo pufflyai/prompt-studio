@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { createRoute, z } from "@hono/zod-openapi";
+import { getBundledSkills } from "pstdio-agents";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { notFoundResponseSchema, skillWithContentResponseSchema } from "../dto";
@@ -42,6 +43,10 @@ export const getSkillHandler = (deps: RouteDeps): AppRouteHandler<typeof getSkil
     const file = await deps.filesService.get(skill.file_id);
     const content = file ? await readFile(file.storage_path, "utf8") : "";
 
-    return c.json({ ...skill, content }, 200);
+    const bundled = await getBundledSkills();
+    const bundledSkill = bundled.find((s) => s.name === name);
+    const bundled_version = bundledSkill?.version ?? "";
+
+    return c.json({ ...skill, content, bundled_version }, 200);
   };
 };

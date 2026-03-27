@@ -145,6 +145,7 @@ const runPostCreateHook = async (
     worktreePath: string;
     branch: string;
     workspace: string;
+    ticketShorthand: string;
     projectId: string;
     workspaceId: string;
     existingStartupLogFileId: string | null;
@@ -157,6 +158,7 @@ const runPostCreateHook = async (
       worktreePath: input.worktreePath,
       branch: input.branch,
       workspace: input.workspace,
+      ticketShorthand: input.ticketShorthand,
       projectId: input.projectId,
     },
     input.repoPath,
@@ -220,6 +222,7 @@ const awaitPostCreateHook = async (
     mode: AttemptMode;
     worktreeMode: AttemptMode;
     workspace: WorkspaceRecord;
+    ticketShorthand: string;
     repoPath: string;
     branch: string | null;
   },
@@ -235,6 +238,7 @@ const awaitPostCreateHook = async (
       worktreePath: input.workspace.worktree_path,
       branch: input.branch,
       workspace: input.workspace.workspace_shorthand,
+      ticketShorthand: input.ticketShorthand,
       projectId: input.workspace.project_id,
       workspaceId: input.workspace.id,
       existingStartupLogFileId: input.workspace.startup_log_file_id,
@@ -311,6 +315,7 @@ const runSetupAndSpawnAgent = (
   deps: RouteDeps,
   input: {
     workspace: WorkspaceRecord;
+    ticketShorthand: string;
     repoPath: string;
     mode: AttemptMode;
     worktreeMode: AttemptMode;
@@ -326,6 +331,7 @@ const runSetupAndSpawnAgent = (
       mode: input.mode,
       worktreeMode: input.worktreeMode,
       workspace: input.workspace,
+      ticketShorthand: input.ticketShorthand,
       repoPath: input.repoPath,
       branch: input.workspace.branch,
     });
@@ -464,6 +470,7 @@ export const continueTicketAttemptSetup = (
   deps: RouteDeps,
   input: {
     workspace: WorkspaceRecord;
+    ticketShorthand: string;
     repo: RepoRecord;
     mode: AttemptMode;
     worktreeMode: AttemptMode;
@@ -474,6 +481,7 @@ export const continueTicketAttemptSetup = (
   if (input.workspace.initializing) {
     runSetupAndSpawnAgent(deps, {
       workspace: input.workspace,
+      ticketShorthand: input.ticketShorthand,
       repoPath: input.repo.path,
       mode: input.mode,
       worktreeMode: input.worktreeMode,

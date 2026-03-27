@@ -18,12 +18,18 @@ type SessionRecord = {
 
 type SessionHookDeps = Pick<RouteDeps, "reposService" | "workspaceSessionsService">;
 
+const parseTicketShorthand = (workspaceShorthand: string) => {
+  const match = workspaceShorthand.match(/^(.+)_A\d+$/);
+  return match?.[1] ?? undefined;
+};
+
 const resolveWorkspaceContext = async (deps: SessionHookDeps, sessionId: string) => {
   const workspace = await deps.workspaceSessionsService.getWorkspaceBySessionId(sessionId);
   if (!workspace) return undefined;
 
   return {
     workspace: workspace.workspace_shorthand,
+    ticketShorthand: parseTicketShorthand(workspace.workspace_shorthand),
     worktreePath: workspace.worktree_path ?? undefined,
     branch: workspace.branch ?? undefined,
   };

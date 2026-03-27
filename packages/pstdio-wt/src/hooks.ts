@@ -66,6 +66,7 @@ export const buildHookEnv = (hookName: HookName, context: HookContext) => {
   if (context.branch) env.PSTDIO_BRANCH = context.branch;
   if (context.worktreePath) env.PSTDIO_WORKTREE_PATH = context.worktreePath;
   if (context.workspace) env.PSTDIO_WORKSPACE = context.workspace;
+  if (context.ticketShorthand) env.PSTDIO_TICKET = context.ticketShorthand;
   if (context.target) env.PSTDIO_TARGET = context.target;
   if (context.commitSha) env.PSTDIO_COMMIT_SHA = context.commitSha;
   if (context.commitMessage) env.PSTDIO_COMMIT_MESSAGE = context.commitMessage;

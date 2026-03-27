@@ -84,6 +84,7 @@ export type HookContext = {
   worktreePath?: string;
   repoPath: string;
   workspace?: string;
+  ticketShorthand?: string;
   target?: string;
   commitSha?: string;
   commitMessage?: string;
