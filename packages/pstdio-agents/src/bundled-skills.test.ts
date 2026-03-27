@@ -6,6 +6,11 @@ const makeEmbeddedFile = (name: string, content: string) => {
   return Object.assign(blob, { name });
 };
 
+const extractVersion = (content: string) => {
+  const match = content.match(/metadata:\n {2}- version: ([^\n]+)/);
+  return match?.[1] ?? "";
+};
+
 describe("getBundledSkills", () => {
   test("prefers embedded skill files in compiled runtime", async () => {
     const runtime = Bun as unknown as { embeddedFiles: (Blob & { name: string })[] };
@@ -59,8 +64,9 @@ bravo content
 
       expect(skills).not.toHaveLength(0);
       for (const skill of skills) {
-        const expectedVersion = skill.name === "pstdio" ? "0.0.2" : "0.0.1";
-        expect(skill.content).toContain(`metadata:\n  - version: ${expectedVersion}`);
+        const expectedVersion = extractVersion(skill.content);
+        expect(expectedVersion).not.toBe("");
+        expect(skill.version).toBe(expectedVersion);
       }
     } finally {
       runtime.embeddedFiles = originalEmbeddedFiles;
