@@ -8,7 +8,8 @@ export const PSTDIO_CLI = join(import.meta.dirname, "../../../pstdio/src/index.t
 
 export const createGitRepo = () => {
   const dir = mkdtempSync(join(tmpdir(), "pstdio-e2e-"));
-  execSync("git init", { cwd: dir, stdio: "pipe" });
+  // Keep e2e repos deterministic across environments where git default branch may differ.
+  execSync("git init -b main", { cwd: dir, stdio: "pipe" });
   execSync('git config user.email "test@test.com"', { cwd: dir, stdio: "pipe" });
   execSync('git config user.name "Test"', { cwd: dir, stdio: "pipe" });
   return dir;

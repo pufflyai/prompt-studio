@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { execSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { commitChanges, mergeWorktree, rebaseOntoTarget } from "pstdio-wt";
@@ -88,13 +89,32 @@ describe("merge hooks", () => {
       const repo = createRepoForWorktreeOps(ctx);
       createBranchWithCommit(repo, "feat-merge-post", "feat.txt", "feature");
       writeHook(repo, "post-merge", `echo "$PSTDIO_TARGET" > "${repo}/post-merge-marker.txt"`);
+      const targetBranch = execSync("git symbolic-ref --short HEAD", { cwd: repo, encoding: "utf8" }).trim();
 
       await mergeWorktree({ repoRoot: repo, branch: "feat-merge-post" });
 
       await wait(500);
       expect(existsSync(join(repo, "post-merge-marker.txt"))).toBe(true);
       const marker = readFileSync(join(repo, "post-merge-marker.txt"), "utf8").trim();
-      expect(marker).toBe("main");
+      expect(marker).toBe(targetBranch);
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
+    "merge hooks work when target branch is not named main",
+    async () => {
+      const repo = createRepoForWorktreeOps(ctx);
+      execSync("git branch -m master", { cwd: repo, stdio: "pipe" });
+      createBranchWithCommit(repo, "feat-merge-master", "feat.txt", "feature");
+      writeHook(repo, "post-merge", `echo "$PSTDIO_TARGET" > "${repo}/post-merge-master-marker.txt"`);
+
+      await mergeWorktree({ repoRoot: repo, branch: "feat-merge-master" });
+
+      await wait(500);
+      expect(existsSync(join(repo, "post-merge-master-marker.txt"))).toBe(true);
+      const marker = readFileSync(join(repo, "post-merge-master-marker.txt"), "utf8").trim();
+      expect(marker).toBe("master");
     },
     TEST_TIMEOUT,
   );

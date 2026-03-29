@@ -189,12 +189,13 @@ export const createRepoForWorktreeOps = (ctx: HookTestContext) => {
   return repo;
 };
 
-/** Creates a feature branch off main with one extra commit. */
+/** Creates a feature branch off the current branch with one extra commit. */
 export const createBranchWithCommit = (repo: string, branch: string, file: string, content: string) => {
+  const baseBranch = execSync("git symbolic-ref --short HEAD", { cwd: repo, encoding: "utf8" }).trim();
   execSync(`git checkout -b ${branch}`, { cwd: repo, stdio: "pipe" });
   writeFileSync(join(repo, file), content);
   execSync(`git add -A && git commit -m "add ${file}"`, { cwd: repo, stdio: "pipe" });
-  execSync("git checkout main", { cwd: repo, stdio: "pipe" });
+  execSync(`git checkout ${baseBranch}`, { cwd: repo, stdio: "pipe" });
 };
 
 /** Creates a feature branch in a git worktree (needed for rebase tests). */
@@ -213,7 +214,7 @@ export const createWorktreeBranchWithCommit = (
   return wtPath;
 };
 
-/** Adds a commit on main that conflicts with the given file content. */
+/** Adds a conflicting commit on the currently checked-out branch. */
 export const createConflictOnMain = (repo: string, file: string, content: string) => {
   writeFileSync(join(repo, file), content);
   execSync(`git add -A && git commit -m "conflict on ${file}"`, { cwd: repo, stdio: "pipe" });
