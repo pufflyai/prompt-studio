@@ -42,8 +42,6 @@ export default defineConfig({
     }),
     dts({ tsconfigPath: "./tsconfig.json", afterDiagnostic: () => {} }),
     svgr(),
-    externalizeDeps({
-      include: [/@chakra-ui\/[a-zA-Z-]+/],
-    }),
+    externalizeDeps(),
   ],
 });
