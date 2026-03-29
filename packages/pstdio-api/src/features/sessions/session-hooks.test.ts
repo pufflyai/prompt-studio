@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, test } from "bun:test";
-import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -23,6 +23,18 @@ const writeHook = (hookName: string, script: string) => {
   chmodSync(path, 0o755);
 };
 
+const waitForHookPayloadFile = async (path: string) => {
+  for (let index = 0; index < 200; index += 1) {
+    if (existsSync(path)) {
+      const content = readFileSync(path, "utf8").trim();
+      if (content.length > 0) return content;
+    }
+    await Bun.sleep(10);
+  }
+
+  throw new Error(`Timed out waiting for hook payload file: ${path}`);
+};
+
 const makeDeps = () => ({
   reposService: {
     listByProject: async () => [{ path: repoDir }],
@@ -41,6 +53,73 @@ describe("fireSessionStatusHook", () => {
       id: "sess_1",
       project_id: "proj-1",
       status: "completed",
+    });
+  });
+
+  test("includes attempt status payload when session is linked to a workspace", async () => {
+    const payloadFile = join(repoDir, "post-session-success.payload.json");
+    writeHook("post-session-success", `cat > "${payloadFile}"`);
+
+    const deps = {
+      reposService: {
+        listByProject: async () => [{ path: repoDir }],
+      } as never,
+      workspaceSessionsService: {
+        getWorkspaceBySessionId: async () => ({
+          id: "ws-1",
+          workspace_shorthand: "TP-5_A1",
+          branch: "workspace/TP-5_A1",
+          worktree_path: repoDir,
+          attempt_status_id: "status-review-ready",
+        }),
+      } as never,
+      workspacesService: {
+        list: async () => [
+          {
+            id: "ws-1",
+            workspace_shorthand: "TP-5_A1",
+            attempt_status_id: "status-review-ready",
+            ticket_shorthand: "TP-5",
+          },
+          {
+            id: "ws-2",
+            workspace_shorthand: "TP-5_A2",
+            attempt_status_id: "status-running",
+            ticket_shorthand: "TP-5",
+          },
+          {
+            id: "ws-3",
+            workspace_shorthand: "TP-7_A1",
+            attempt_status_id: "status-running",
+            ticket_shorthand: "TP-7",
+          },
+        ],
+      } as never,
+      attemptStatusesService: {
+        list: async () => [
+          { id: "status-running", name: "running" },
+          { id: "status-review-ready", name: "review-ready" },
+        ],
+      } as never,
+    };
+
+    fireSessionStatusHook(deps as never, {
+      id: "sess_1",
+      project_id: "proj-1",
+      status: "completed",
+    });
+
+    const content = await waitForHookPayloadFile(payloadFile);
+    expect(JSON.parse(content)).toEqual({
+      session: { id: "sess_1", status: "completed" },
+      attempt: { id: "TP-5_A1", status: "review-ready" },
+      ticket: {
+        id: "TP-5",
+        attempts: [
+          { id: "TP-5_A1", status: "review-ready" },
+          { id: "TP-5_A2", status: "running" },
+        ],
+      },
     });
   });
 

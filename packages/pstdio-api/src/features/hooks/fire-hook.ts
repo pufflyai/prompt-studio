@@ -6,7 +6,7 @@ type FireHookInput = {
   hookName: HookName;
   projectId: string;
   payload: Record<string, unknown>;
-  context?: Partial<Pick<HookContext, "workspace" | "worktreePath" | "branch">>;
+  context?: Partial<Pick<HookContext, "workspace" | "worktreePath" | "branch" | "ticketShorthand">>;
 };
 
 const resolveRepoPath = async (deps: Pick<RouteDeps, "reposService">, projectId: string) => {
