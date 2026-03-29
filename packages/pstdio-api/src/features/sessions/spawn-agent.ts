@@ -1,5 +1,6 @@
 import type { AgentId, ApprovalRequest } from "pstdio-agents";
 import type { RouteDeps } from "../deps";
+import { fireSessionStatusHook } from "./session-hooks";
 import { persistSessionMessages } from "./session-messages";
 
 type SpawnInput = {
@@ -11,7 +12,16 @@ type SpawnInput = {
   cwd?: string;
 };
 
-type SpawnDeps = Pick<RouteDeps, "agentRegistry" | "sessionStore" | "sessionsService" | "eventBus" | "filesService">;
+type SpawnDeps = Pick<
+  RouteDeps,
+  | "agentRegistry"
+  | "sessionStore"
+  | "sessionsService"
+  | "eventBus"
+  | "filesService"
+  | "reposService"
+  | "workspaceSessionsService"
+>;
 
 // Spawns a new agent session and tracks the process lifecycle
 export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
@@ -106,7 +116,12 @@ const trackProcessExit = (
 
     const status = code === 0 ? "completed" : "failed";
     const updated = await deps.sessionsService.updateStatus(sessionId, status);
-    if (updated) deps.eventBus.emit("sessions", "set", updated);
+    if (updated) {
+      deps.eventBus.emit("sessions", "set", updated);
+      if (updated.project_id) {
+        fireSessionStatusHook(deps, { id: updated.id, project_id: updated.project_id, status: updated.status });
+      }
+    }
     deps.sessionStore.remove(sessionId);
   });
 };

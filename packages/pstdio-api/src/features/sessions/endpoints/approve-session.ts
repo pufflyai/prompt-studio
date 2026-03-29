@@ -2,6 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { approveBodySchema, notFoundResponseSchema } from "../dto";
+import { fireSessionResumeHook } from "../session-hooks";
 
 export const approveSessionRoute = createRoute({
   method: "post",
@@ -50,6 +51,9 @@ export const approveSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof a
     if (input.decision === "approve" && session.status === "awaiting_input") {
       const updated = await deps.sessionsService.updateStatus(id, "in_progress");
       deps.eventBus.emit("sessions", "set", updated);
+      if (updated.project_id) {
+        fireSessionResumeHook(deps, { id: updated.id, project_id: updated.project_id, status: updated.status });
+      }
     }
 
     return c.json({ ok: true }, 200);

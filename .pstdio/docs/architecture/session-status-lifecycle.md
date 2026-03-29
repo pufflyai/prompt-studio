@@ -78,6 +78,26 @@ create / follow-up ──► in_progress
 | User stop              | `cancelled`            | `stopSessionHandler`                      |
 | Stale recovery         | `completed` / `failed` | `resolveOrphanedSessions` (startup sweep) |
 
+### Multi-path status updates
+
+Session status can change through multiple paths, but each transition must run one shared side-effect contract:
+
+1. Persist the new status in `sessions` (`sessionsService.updateStatus`).
+2. Emit sync event (`eventBus.emit("sessions", "set", updated)`).
+3. Fire the session lifecycle hook for that transition when `project_id` exists:
+   - `fireSessionStatusHook` for status hooks (`completed`, `failed`, `awaiting_input`)
+   - `fireSessionResumeHook` for resume transitions back to `in_progress`
+
+Current paths that must follow this contract:
+
+- `PATCH /v1/sessions/:id/status` (`updateSessionStatusHandler`)
+- Agent process exit (`trackProcessExit`)
+- Startup orphan recovery (`resolveOrphanedSessions`)
+- Session create spawn failure fallback (`createSessionHandler` catch path)
+- Session follow-up transition to `in_progress` (`followUpSessionHandler`)
+- Approval transition `awaiting_input -> in_progress` (`approveSessionHandler`)
+- Ticket attempt spawn failure fallback (`failStartedSession` in `create-ticket-attempt.utils.ts`)
+
 ## Stale status recovery
 
 ### The problem

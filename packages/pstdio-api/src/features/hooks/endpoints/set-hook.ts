@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { HookName } from "pstdio-wt";
@@ -41,7 +41,10 @@ export const setHookHandler = (deps: RouteDeps): AppRouteHandler<typeof setHookR
     const repoPath = repos[0].path;
     const hooksDir = join(repoPath, ".pstdio", "hooks");
     mkdirSync(hooksDir, { recursive: true });
-    writeFileSync(join(hooksDir, hookName as HookName), content);
+    const hookPath = join(hooksDir, hookName as HookName);
+    writeFileSync(hookPath, content);
+    // Hooks are spawned directly, so the script must retain execute permissions after edits.
+    chmodSync(hookPath, 0o755);
 
     return c.body(null, 204);
   };

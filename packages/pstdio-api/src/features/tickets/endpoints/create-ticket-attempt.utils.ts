@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { eq, ticket_workspaces } from "pstdio-db";
 import { createWorktree, runHook } from "pstdio-wt";
 import type { RouteDeps } from "../../deps";
-import { fireSessionStartHook } from "../../sessions/session-hooks";
+import { fireSessionStartHook, fireSessionStatusHook } from "../../sessions/session-hooks";
 import { spawnAgentSession } from "../../sessions/spawn-agent";
 
 type WorkspaceRecord = Awaited<ReturnType<RouteDeps["workspacesService"]["create"]>>;
@@ -303,7 +303,12 @@ const startAttemptSession = async (
 
 const failStartedSession = async (deps: RouteDeps, sessionId: string) => {
   const failed = await deps.sessionsService.updateStatus(sessionId, "failed");
-  if (failed) deps.eventBus.emit("sessions", "set", failed);
+  if (failed) {
+    deps.eventBus.emit("sessions", "set", failed);
+    if (failed.project_id) {
+      fireSessionStatusHook(deps, { id: failed.id, project_id: failed.project_id, status: failed.status });
+    }
+  }
 };
 
 const spawnStartedSession = (

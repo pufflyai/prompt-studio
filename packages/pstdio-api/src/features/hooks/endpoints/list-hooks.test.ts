@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { execSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -126,6 +126,20 @@ describe("PUT /v1/projects/:id/hooks/:hookName", () => {
     const listRes = await app.request(`/v1/projects/${projectId}/hooks`);
     const hooks = (await listRes.json()) as Array<{ name: string; content: string | null }>;
     expect(hooks.find((h) => h.name === "post-worktree-create")?.content).toBe("bun install && bun run build");
+  });
+
+  test("creates executable hook files", async () => {
+    const hookName = "pre-merge";
+    const res = await app.request(`/v1/projects/${projectId}/hooks/${hookName}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: "#!/bin/sh\necho run\n" }),
+    });
+    expect(res.status).toBe(204);
+
+    const hookPath = join(repoRoot, ".pstdio", "hooks", hookName);
+    const mode = statSync(hookPath).mode;
+    expect(mode & 0o100).toBe(0o100);
   });
 });
 

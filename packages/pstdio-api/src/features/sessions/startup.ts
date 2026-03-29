@@ -1,6 +1,7 @@
 import type { AgentId } from "pstdio-agents";
 import type { RouteDeps } from "../deps";
 import { resolveSessionCwd } from "./resolve-session-cwd";
+import { fireSessionStatusHook } from "./session-hooks";
 
 type Deps = Pick<
   RouteDeps,
@@ -48,6 +49,11 @@ export const resolveOrphanedSessions = async (deps: Deps, signal?: AbortSignal) 
 
     const status = await resolveSessionStatus(session, deps);
     const updated = await deps.sessionsService.updateStatus(session.id, status);
-    if (updated) deps.eventBus.emit("sessions", "set", updated);
+    if (updated) {
+      deps.eventBus.emit("sessions", "set", updated);
+      if (updated.project_id) {
+        fireSessionStatusHook(deps, { id: updated.id, project_id: updated.project_id, status: updated.status });
+      }
+    }
   }
 };

@@ -3,7 +3,7 @@ import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { createSessionBodySchema, sessionResponseSchema } from "../dto";
 import { resolveSessionCwd } from "../resolve-session-cwd";
-import { fireSessionStartHook } from "../session-hooks";
+import { fireSessionStartHook, fireSessionStatusHook } from "../session-hooks";
 import { spawnAgentSession } from "../spawn-agent";
 
 export const createSessionRoute = createRoute({
@@ -75,6 +75,9 @@ export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
       const failed = await deps.sessionsService.updateStatus(session.id, "failed");
       if (failed) {
         deps.eventBus.emit("sessions", "set", failed);
+        if (failed.project_id) {
+          fireSessionStatusHook(deps, { id: failed.id, project_id: failed.project_id, status: failed.status });
+        }
       }
     });
 

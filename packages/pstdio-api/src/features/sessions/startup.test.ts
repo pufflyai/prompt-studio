@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -177,6 +177,41 @@ describe("resolveOrphanedSessions abort", () => {
 });
 
 describe("resolveOrphanedSessions resolution", () => {
+  test("fires session status hook when orphaned session is resolved", async () => {
+    const staleSession = {
+      id: "session-hooked",
+      agent: null,
+      agent_session_id: null,
+      project_id: "project-1",
+    };
+    const updatedSession = { ...staleSession, status: "completed" };
+    const listByProject = mock(async () => []);
+    const getWorkspaceBySessionId = mock(async () => null);
+
+    const deps = {
+      sessionsService: {
+        listByStatus: async () => [staleSession],
+        updateStatus: async () => updatedSession,
+      },
+      workspaceSessionsService: { getWorkspaceBySessionId },
+      reposService: { listByProject },
+      agentRegistry: { get: () => null },
+      eventBus: { emit: () => {} },
+      sessionStore: { get: () => undefined },
+      db: {},
+    } as unknown as Parameters<typeof resolveOrphanedSessions>[0];
+
+    await resolveOrphanedSessions(deps);
+
+    for (let index = 0; index < 20; index += 1) {
+      if (listByProject.mock.calls.length > 0) break;
+      await Bun.sleep(10);
+    }
+
+    expect(getWorkspaceBySessionId).toHaveBeenCalledWith(staleSession.id);
+    expect(listByProject).toHaveBeenCalledWith(staleSession.project_id);
+  });
+
   test("updates orphaned in_progress session to completed and emits sessions set event", async () => {
     const staleSession = {
       id: "session-completed",

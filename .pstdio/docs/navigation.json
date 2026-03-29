@@ -252,6 +252,10 @@
         {
           "text": "SSE Race in Project Creation",
           "link": "/lessons-learned/sse_race_in_project_creation"
+        },
+        {
+          "text": "Session Hooks Across Status Paths",
+          "link": "/lessons-learned/session_status_hooks_missing_on_secondary_paths"
         }
       ]
     },
