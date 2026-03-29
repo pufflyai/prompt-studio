@@ -76,28 +76,29 @@ jobs:
         if: steps.changesets.outputs.published == 'true'
         run: git push --tags
 
-      - name: Upload binaries to GitHub Release
+      - name: Create pstdio GitHub Release
         if: steps.changesets.outputs.published == 'true'
         run: |
           VERSION=$(echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -r '.[] | select(.name == "pstdio") | .version')
           if [ -n "$VERSION" ]; then
             TAG="pstdio@${VERSION}"
-            # Delete existing release if present (changesets may auto-create an immutable one)
             if gh release view "$TAG" > /dev/null 2>&1; then
-              gh release delete "$TAG" --yes
+              echo "Release $TAG already exists, skipping."
+            else
+              gh release create "$TAG" \
+                --title "$TAG" \
+                --generate-notes \
+                packages/pstdio/dist/platforms/cli-darwin-arm64/bin/pstdio#pstdio-darwin-arm64 \
+                packages/pstdio/dist/platforms/cli-darwin-x64/bin/pstdio#pstdio-darwin-x64 \
+                packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio#pstdio-linux-x64 \
+                packages/pstdio/dist/platforms/cli-linux-arm64/bin/pstdio#pstdio-linux-arm64 \
+                packages/pstdio/dist/platforms/cli-linux-x64-musl/bin/pstdio#pstdio-linux-x64-musl \
+                packages/pstdio/dist/platforms/cli-linux-arm64-musl/bin/pstdio#pstdio-linux-arm64-musl \
+                packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe#pstdio-win-x64.exe \
+                packages/pstdio/dist/platforms/cli-win-arm64/bin/pstdio.exe#pstdio-win-arm64.exe \
+                packages/pstdio/dist/platforms/checksums.sha256#checksums.sha256 \
+                scripts/install.sh#install.sh
             fi
-            gh release create "$TAG" --title "$TAG" --generate-notes
-            gh release upload "$TAG" --clobber \
-              packages/pstdio/dist/platforms/cli-darwin-arm64/bin/pstdio#pstdio-darwin-arm64 \
-              packages/pstdio/dist/platforms/cli-darwin-x64/bin/pstdio#pstdio-darwin-x64 \
-              packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio#pstdio-linux-x64 \
-              packages/pstdio/dist/platforms/cli-linux-arm64/bin/pstdio#pstdio-linux-arm64 \
-              packages/pstdio/dist/platforms/cli-linux-x64-musl/bin/pstdio#pstdio-linux-x64-musl \
-              packages/pstdio/dist/platforms/cli-linux-arm64-musl/bin/pstdio#pstdio-linux-arm64-musl \
-              packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe#pstdio-win-x64.exe \
-              packages/pstdio/dist/platforms/cli-win-arm64/bin/pstdio.exe#pstdio-win-arm64.exe \
-              packages/pstdio/dist/platforms/checksums.sha256#checksums.sha256 \
-              scripts/install.sh#install.sh
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
