@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { type ChildProcess, spawn } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildBinary } from "./packaged-helpers";
@@ -32,6 +32,12 @@ const REQUIRED_SKILL_NAMES = [
   "pstdio",
   "refine-ticket",
   "update-documentation",
+];
+const REQUIRED_HOOK_NAMES = [
+  "post-session-start",
+  "post-session-success",
+  "post-ticket-archive",
+  "post-worktree-create",
 ];
 
 const createCandidatePort = () => 42_000 + Math.floor(Math.random() * 200);
@@ -119,7 +125,7 @@ beforeAll(() => {
 
 describe("packaged pstdio — self-hosted serve", () => {
   test(
-    "creates project with bundled templates and skills",
+    "creates project with bundled templates and repo bootstrap artifacts",
     async () => {
       const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
       let child: ChildProcess | null = null;
@@ -149,6 +155,23 @@ describe("packaged pstdio — self-hosted serve", () => {
         const skills = (await skillsRes.json()) as { name: string }[];
         const skillNames = skills.map((skill) => skill.name).sort();
         expect(skillNames).toEqual(REQUIRED_SKILL_NAMES);
+
+        const repoPath = join(tempRoot, "repo");
+        mkdirSync(repoPath, { recursive: true });
+
+        const repoRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/repos`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "repo", path: repoPath }),
+        });
+        expect(repoRes.status).toBe(201);
+
+        expect(existsSync(join(repoPath, ".pstdio", "config.json"))).toBe(true);
+        expect(existsSync(join(repoPath, ".pstdio", "docs", "index.md"))).toBe(true);
+        expect(existsSync(join(repoPath, ".pstdio", "docs", "navigation.json"))).toBe(true);
+        for (const hookName of REQUIRED_HOOK_NAMES) {
+          expect(existsSync(join(repoPath, ".pstdio", "hooks", hookName))).toBe(true);
+        }
       } finally {
         if (child) {
           await stopProcess(child);

@@ -41,12 +41,30 @@ const toApiSkill = (s: (typeof SKILL_FIXTURES)[number]) => ({
 
 const originalFetch = globalThis.fetch;
 
-const mockApi = (agents: { agent_id: string; is_default: boolean }[]) => {
-  globalThis.fetch = mock((url: string) => {
+const mockApi = (
+  agents: { agent_id: string; is_default: boolean }[],
+  options?: {
+    availableAgents?: { id: string; availability: { type: "INSTALLED" | "NOT_FOUND" } }[];
+    setupAvailableAgentsResponse?: { agent_id: string; is_default: boolean }[];
+  },
+) => {
+  globalThis.fetch = mock((input: string | URL | Request, init?: RequestInit) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
     const path = new URL(url).pathname;
+    const method = init?.method ?? "GET";
 
-    if (path === "/v1/agents") {
+    if (path === "/v1/agents" && method === "GET") {
       return Promise.resolve(new Response(JSON.stringify(agents), { status: 200 }));
+    }
+
+    if (path === "/v1/agents/info") {
+      return Promise.resolve(new Response(JSON.stringify(options?.availableAgents ?? []), { status: 200 }));
+    }
+
+    if (path === "/v1/agents/setup-available" && method === "POST") {
+      return Promise.resolve(
+        new Response(JSON.stringify(options?.setupAvailableAgentsResponse ?? []), { status: 201 }),
+      );
     }
 
     // GET /v1/projects/:id/skills/:name — must match before the list route
@@ -130,6 +148,21 @@ describe("installDefaultSkills", () => {
     await installDefaultSkills(root, TEST_PROJECT_ID, TEST_BASE_URL, FAKE_HOME);
 
     expect(existsSync(join(root, ".claude", "skills"))).toBe(false);
+    expect(existsSync(join(root, ".opencode", "skills"))).toBe(false);
+  });
+
+  test("configures the first available agent when none are set up yet", async () => {
+    mockApi([], {
+      availableAgents: [{ id: "claude-code", availability: { type: "INSTALLED" } }],
+      setupAvailableAgentsResponse: [{ agent_id: "claude-code", is_default: true }],
+    });
+    const root = setup("auto-setup-agent");
+
+    await installDefaultSkills(root, TEST_PROJECT_ID, TEST_BASE_URL, FAKE_HOME);
+
+    for (const skill of SKILL_NAMES) {
+      expect(existsSync(join(root, ".claude", "skills", skill, "SKILL.md"))).toBe(true);
+    }
     expect(existsSync(join(root, ".opencode", "skills"))).toBe(false);
   });
 

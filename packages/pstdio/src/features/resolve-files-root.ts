@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -6,20 +6,29 @@ import { isCompiledBinary } from "../adapters/cli/commands/serve/embedded-assets
 
 // Embedded file names are relative to the manifest at packages/pstdio/src/
 const FILES_PREFIX = "../files/";
+type EmbeddedFile = Blob & { name: string };
 
-let cachedRoot: string | null = null;
+const normalizeEmbeddedRelativePath = (relativePath: string) =>
+  relativePath.endsWith(".") ? relativePath.slice(0, -1) : relativePath;
+
+const listEmbeddedFiles = () =>
+  (Bun.embeddedFiles as EmbeddedFile[]).filter((file) => file.name.startsWith(FILES_PREFIX));
+
+const resolveEmbeddedOutputPath = (root: string, file: EmbeddedFile) =>
+  join(root, normalizeEmbeddedRelativePath(file.name.slice(FILES_PREFIX.length)));
+
+const hasCompleteEmbeddedFilesRoot = (root: string, files: EmbeddedFile[]) =>
+  files.every((file) => existsSync(resolveEmbeddedOutputPath(root, file)));
 
 const extractEmbeddedFiles = async () => {
   const root = join(tmpdir(), "pstdio-files");
-  if (existsSync(join(root, "documentation"))) return root;
+  const files = listEmbeddedFiles();
+  if (hasCompleteEmbeddedFilesRoot(root, files)) return root;
 
-  const files = Bun.embeddedFiles as (Blob & { name: string })[];
+  rmSync(root, { recursive: true, force: true });
 
   for (const file of files) {
-    if (!file.name.startsWith(FILES_PREFIX)) continue;
-
-    const relativePath = file.name.slice(FILES_PREFIX.length);
-    const outPath = join(root, relativePath);
+    const outPath = resolveEmbeddedOutputPath(root, file);
     mkdirSync(dirname(outPath), { recursive: true });
     await Bun.write(outPath, file);
   }
@@ -28,13 +37,8 @@ const extractEmbeddedFiles = async () => {
 };
 
 export const resolveFilesRoot = async () => {
-  if (cachedRoot) return cachedRoot;
-
   if (isCompiledBinary()) {
-    cachedRoot = await extractEmbeddedFiles();
-  } else {
-    cachedRoot = join(import.meta.dirname, "../../files");
+    return extractEmbeddedFiles();
   }
-
-  return cachedRoot;
+  return join(import.meta.dirname, "../../files");
 };

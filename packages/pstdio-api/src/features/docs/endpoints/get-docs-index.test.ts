@@ -53,13 +53,17 @@ describe("GET /v1/projects/:projectId/docs", () => {
     expect(res.status).toBe(404);
   });
 
-  test("returns 404 when docs directory does not exist", async () => {
+  test("returns starter docs after repo registration scaffolds them", async () => {
     const emptyRepo = join(tempRoot, "empty-repo");
     mkdirSync(emptyRepo, { recursive: true });
     const projectId = await createProjectWithRepo(emptyRepo);
 
     const res = await app.request(`/v1/projects/${projectId}/docs`);
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as { sidebar: { text: string; link?: string }[]; missingLinks: string[] };
+    expect(body.sidebar).toEqual([{ text: "Getting Started", link: "/index" }]);
+    expect(body.missingLinks).toEqual([]);
   });
 
   test("returns docs index when navigation.json exists", async () => {

@@ -46,6 +46,10 @@ describe("pstdio projects create", () => {
 
       expect(existsSync(join(repo, ".pstdio", "docs", "navigation.json"))).toBe(true);
       expect(existsSync(join(repo, ".pstdio", "docs", "index.md"))).toBe(true);
+      expect(existsSync(join(repo, ".pstdio", "hooks", "post-worktree-create"))).toBe(true);
+      expect(existsSync(join(repo, ".pstdio", "hooks", "post-session-start"))).toBe(true);
+      expect(existsSync(join(repo, ".pstdio", "hooks", "post-session-success"))).toBe(true);
+      expect(existsSync(join(repo, ".pstdio", "hooks", "post-ticket-archive"))).toBe(true);
 
       expect(existsSync(join(repo, ".claude", "skills", "create-ticket", "SKILL.md"))).toBe(true);
       expect(existsSync(join(repo, ".claude", "skills", "implement-ticket", "SKILL.md"))).toBe(true);
@@ -54,6 +58,18 @@ describe("pstdio projects create", () => {
       const res = execSync(`curl -s ${api.url}/v1/projects/${config.project_id}`, { encoding: "utf8" });
       const project = JSON.parse(res);
       expect(project.name).toBe("my-project");
+
+      const hooksResponse = execSync(`curl -s ${api.url}/v1/projects/${config.project_id}/hooks`, {
+        encoding: "utf8",
+      });
+      const hooks = JSON.parse(hooksResponse) as { name: string; content: string | null }[];
+      const installedHooks = hooks.filter((hook) => hook.content !== null).map((hook) => hook.name);
+      expect(installedHooks).toEqual([
+        "post-worktree-create",
+        "post-session-start",
+        "post-session-success",
+        "post-ticket-archive",
+      ]);
     },
     TEST_TIMEOUT,
   );

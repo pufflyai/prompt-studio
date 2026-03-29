@@ -18,10 +18,13 @@ export const createAndInitProject = async (root: string, name: string, options?:
   }
 
   const project = await createProject(API_URL, name);
+  const repoPaths = options?.repoPaths ?? [];
 
-  for (const repoPath of options?.repoPaths ?? []) {
+  for (const repoPath of repoPaths) {
     await registerRepo(API_URL, project.id, { name: basename(repoPath), path: repoPath });
   }
+
+  if (repoPaths.includes(root)) return project;
 
   writeConfig(root, { project_id: project.id });
   await scaffoldDocs(root);

@@ -62,7 +62,7 @@ export const updateSkillHandler = (deps: RouteDeps): AppRouteHandler<typeof upda
 
     for (const repo of repos) {
       for (const agent of agents) {
-        installSkillToRepo(repo.path, agent.agent_id, name, bundledSkill.content);
+        installSkillToRepo(repo.path, agent.agent_id, name, bundledSkill.content, { overwrite: true });
       }
     }
 

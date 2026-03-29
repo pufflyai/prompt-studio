@@ -15,6 +15,45 @@ type InstallSkillsOptions = {
   homedir?: string;
 };
 
+type AgentConfig = {
+  agent_id: string;
+  is_default: boolean;
+};
+
+const listAvailableAgents = async (baseUrl: string) => {
+  const res = await fetch(`${baseUrl}/v1/agents/info`);
+  if (!res.ok) {
+    throw new Error(`Failed to list agent info: ${res.status}`);
+  }
+
+  return (await res.json()) as { id: string; availability: { type: "INSTALLED" | "NOT_FOUND" } }[];
+};
+
+const setupAvailableAgents = async (baseUrl: string, defaultAgentId: string) => {
+  const res = await fetch(`${baseUrl}/v1/agents/setup-available`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ default_agent_id: defaultAgentId }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to set up available agents: ${res.status}`);
+  }
+
+  return (await res.json()) as AgentConfig[];
+};
+
+const resolveConfiguredAgents = async (baseUrl: string) => {
+  const configured = await listAgents(baseUrl);
+  if (configured.length > 0) return configured;
+
+  const available = await listAvailableAgents(baseUrl);
+  const installed = available.filter((agent) => agent.availability.type === "INSTALLED");
+  if (installed.length === 0) return [];
+
+  return setupAvailableAgents(baseUrl, installed[0]!.id);
+};
+
 export const installSkillsForAgent = async (options: InstallSkillsOptions) => {
   const { root, agentId, baseUrl, projectId, global: isGlobal = false, homedir = defaultHomedir() } = options;
   const agent = findAgent(agentId);
@@ -68,7 +107,7 @@ export const installDefaultSkills = async (
   baseUrl = API_URL,
   homedir = defaultHomedir(),
 ) => {
-  const configured = await listAgents(baseUrl);
+  const configured = await resolveConfiguredAgents(baseUrl);
   if (configured.length === 0) return;
 
   const skills = await listSkillsWithContent(baseUrl, projectId);

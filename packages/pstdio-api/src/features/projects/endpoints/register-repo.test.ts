@@ -3,12 +3,28 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
+import type { AgentId, AgentService, AvailabilityInfo } from "pstdio-agents";
 import { getBundledSkills } from "pstdio-agents";
 import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
+
+const createTestAgent = (id: AgentId, availability: AvailabilityInfo): AgentService =>
+  ({
+    id,
+    name: id,
+    capabilities: () => [],
+    checkAvailability: () => availability,
+    listModels: () => [],
+    startSession: async () => ({}),
+    resumeSession: async () => ({}),
+    getMessages: async () => [],
+    listSessions: async () => [],
+    exportSession: async () => ({ session: { id: "session", title: "Session" }, messages: [] }),
+    launchSession: async () => ({}),
+  }) as unknown as AgentService;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-register-repo-test-"));
@@ -22,23 +38,31 @@ afterAll(() => {
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
-describe("POST /v1/projects/:id/repos", () => {
+const createProject = async (name: string) => {
+  const response = await app.request("/v1/projects", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+
+  return response.json();
+};
+
+const registerRepo = (projectId: string, name: string, path: string, extraBody?: Record<string, unknown>) =>
+  app.request(`/v1/projects/${projectId}/repos`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name, path, ...extraBody }),
+  });
+
+describe("POST /v1/projects/:id/repos - basic behavior", () => {
   test("registers a repo and links it to the project", async () => {
-    const createRes = await app.request("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Test Project" }),
-    });
-    const project = await createRes.json();
+    const project = await createProject("Test Project");
 
     const repoPath = join(tempRoot, "my-repo");
     mkdirSync(repoPath, { recursive: true });
 
-    const res = await app.request(`/v1/projects/${project.id}/repos`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "my-repo", path: repoPath }),
-    });
+    const res = await registerRepo(project.id, "my-repo", repoPath);
 
     expect(res.status).toBe(201);
 
@@ -59,32 +83,18 @@ describe("POST /v1/projects/:id/repos", () => {
   });
 
   test("returns 400 when body contains unknown keys", async () => {
-    const createRes = await app.request("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Strict Repo Project" }),
-    });
-    const project = await createRes.json();
+    const project = await createProject("Strict Repo Project");
 
     const repoPath = join(tempRoot, "strict-repo");
     mkdirSync(repoPath, { recursive: true });
 
-    const res = await app.request(`/v1/projects/${project.id}/repos`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "strict-repo", path: repoPath, unknown_key: "value" }),
-    });
+    const res = await registerRepo(project.id, "strict-repo", repoPath, { unknown_key: "value" });
 
     expect(res.status).toBe(400);
   });
 
   test("installs bundled skills to repo for configured agents", async () => {
-    const createRes = await app.request("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Skill Install Project" }),
-    });
-    const project = await createRes.json();
+    const project = await createProject("Skill Install Project");
 
     await app.request("/v1/agents", {
       method: "POST",
@@ -95,11 +105,7 @@ describe("POST /v1/projects/:id/repos", () => {
     const repoPath = join(tempRoot, "skill-repo");
     mkdirSync(repoPath, { recursive: true });
 
-    const res = await app.request(`/v1/projects/${project.id}/repos`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "skill-repo", path: repoPath }),
-    });
+    const res = await registerRepo(project.id, "skill-repo", repoPath);
 
     expect(res.status).toBe(201);
 
@@ -111,22 +117,77 @@ describe("POST /v1/projects/:id/repos", () => {
     }
   });
 
-  test("writes .pstdio/config.json with project_id", async () => {
-    const createRes = await app.request("/v1/projects", {
+  test("preserves existing repo-local skill customizations", async () => {
+    const project = await createProject("Skill Customization Project");
+
+    await app.request("/v1/agents", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Config Project" }),
+      body: JSON.stringify({ agent_id: "claude-code" }),
     });
-    const project = await createRes.json();
+
+    const repoPath = join(tempRoot, "custom-skill-repo");
+    const customSkillPath = join(repoPath, ".claude", "skills", "create-ticket", "SKILL.md");
+    mkdirSync(join(repoPath, ".claude", "skills", "create-ticket"), { recursive: true });
+    writeFileSync(customSkillPath, "# Custom Skill");
+
+    const res = await registerRepo(project.id, "custom-skill-repo", repoPath);
+
+    expect(res.status).toBe(201);
+    expect(readFileSync(customSkillPath, "utf8")).toBe("# Custom Skill");
+  });
+
+  test("auto-configures the first installed agent before installing bundled skills", async () => {
+    const isolatedRoot = mkdtempSync(join(tmpdir(), "pstdio-api-register-repo-agent-install-test-"));
+    const handle = await createApp({
+      agents: [createTestAgent("claude-code", { type: "INSTALLED" })],
+      dbPath: ":memory:",
+      storagePath: join(isolatedRoot, "storage"),
+    });
+
+    try {
+      const createRes = await handle.app.request("/v1/projects", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "Auto Agent Project" }),
+      });
+      const project = await createRes.json();
+
+      const repoPath = join(isolatedRoot, "auto-agent-repo");
+      mkdirSync(repoPath, { recursive: true });
+
+      const res = await handle.app.request(`/v1/projects/${project.id}/repos`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "auto-agent-repo", path: repoPath }),
+      });
+
+      expect(res.status).toBe(201);
+      expect(existsSync(join(repoPath, ".claude", "skills", "create-ticket", "SKILL.md"))).toBe(true);
+
+      const agentsRes = await handle.app.request("/v1/agents");
+      expect(agentsRes.status).toBe(200);
+      expect(await agentsRes.json()).toEqual([
+        expect.objectContaining({
+          agent_id: "claude-code",
+          is_default: true,
+        }),
+      ]);
+    } finally {
+      await handle.close();
+      rmSync(isolatedRoot, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("POST /v1/projects/:id/repos - repo bootstrap", () => {
+  test("writes .pstdio/config.json with project_id", async () => {
+    const project = await createProject("Config Project");
 
     const repoPath = join(tempRoot, "config-repo");
     mkdirSync(repoPath, { recursive: true });
 
-    const res = await app.request(`/v1/projects/${project.id}/repos`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "config-repo", path: repoPath }),
-    });
+    const res = await registerRepo(project.id, "config-repo", repoPath);
 
     expect(res.status).toBe(201);
 
@@ -138,21 +199,12 @@ describe("POST /v1/projects/:id/repos", () => {
   });
 
   test("scaffolds the default post-worktree-create hook", async () => {
-    const createRes = await app.request("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Hook Project" }),
-    });
-    const project = await createRes.json();
+    const project = await createProject("Hook Project");
 
     const repoPath = join(tempRoot, "hook-repo");
     mkdirSync(repoPath, { recursive: true });
 
-    const res = await app.request(`/v1/projects/${project.id}/repos`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "hook-repo", path: repoPath }),
-    });
+    const res = await registerRepo(project.id, "hook-repo", repoPath);
 
     expect(res.status).toBe(201);
 
@@ -161,49 +213,36 @@ describe("POST /v1/projects/:id/repos", () => {
     expect(readFileSync(hookPath, "utf8")).toContain("pstdio tickets pull");
   });
 
-  test("returns 409 when repo is already linked to a different project", async () => {
-    const resA = await app.request("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Project A" }),
-    });
-    const projectA = await resA.json();
+  test("scaffolds starter docs when missing", async () => {
+    const project = await createProject("Docs Project");
 
-    const resB = await app.request("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Project B" }),
-    });
-    const projectB = await resB.json();
-
-    const repoPath = join(tempRoot, "conflict-repo");
+    const repoPath = join(tempRoot, "docs-repo");
     mkdirSync(repoPath, { recursive: true });
 
-    const first = await app.request(`/v1/projects/${projectA.id}/repos`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "conflict-repo", path: repoPath }),
-    });
-    expect(first.status).toBe(201);
+    const res = await registerRepo(project.id, "docs-repo", repoPath);
 
-    const second = await app.request(`/v1/projects/${projectB.id}/repos`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "conflict-repo", path: repoPath }),
-    });
-    expect(second.status).toBe(409);
+    expect(res.status).toBe(201);
+    expect(existsSync(join(repoPath, ".pstdio", "docs", "navigation.json"))).toBe(true);
+    expect(existsSync(join(repoPath, ".pstdio", "docs", "index.md"))).toBe(true);
+  });
 
-    const body = await second.json();
-    expect(body.error).toContain("already linked");
+  test("preserves existing local docs", async () => {
+    const project = await createProject("Existing Docs Project");
+
+    const repoPath = join(tempRoot, "existing-docs-repo");
+    const docsDir = join(repoPath, ".pstdio", "docs");
+    mkdirSync(docsDir, { recursive: true });
+    writeFileSync(join(docsDir, "local.md"), "local doc");
+
+    const res = await registerRepo(project.id, "existing-docs-repo", repoPath);
+
+    expect(res.status).toBe(201);
+    expect(readFileSync(join(docsDir, "local.md"), "utf8")).toBe("local doc");
+    expect(existsSync(join(docsDir, "navigation.json"))).toBe(false);
   });
 
   test("overrides stale config when the linked project no longer exists and clears local tickets", async () => {
-    const createRes = await app.request("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Relink Target" }),
-    });
-    const project = await createRes.json();
+    const project = await createProject("Relink Target");
 
     const repoPath = join(tempRoot, "stale-config-repo");
     const stalePstdioDir = join(repoPath, ".pstdio");
@@ -214,11 +253,7 @@ describe("POST /v1/projects/:id/repos", () => {
     writeFileSync(staleConfigPath, `${JSON.stringify({ project_id: "missing-project-id" }, null, 2)}\n`);
     writeFileSync(join(staleTicketsDir, "ticket.md"), "# stale ticket\n");
 
-    const res = await app.request(`/v1/projects/${project.id}/repos`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "stale-config-repo", path: repoPath }),
-    });
+    const res = await registerRepo(project.id, "stale-config-repo", repoPath);
 
     expect(res.status).toBe(201);
     expect(existsSync(join(repoPath, ".pstdio", "tickets"))).toBe(false);
@@ -226,30 +261,36 @@ describe("POST /v1/projects/:id/repos", () => {
     const config = JSON.parse(readFileSync(staleConfigPath, "utf8"));
     expect(config.project_id).toBe(project.id);
   });
+});
+
+describe("POST /v1/projects/:id/repos - conflicts and idempotency", () => {
+  test("returns 409 when repo is already linked to a different project", async () => {
+    const projectA = await createProject("Project A");
+    const projectB = await createProject("Project B");
+
+    const repoPath = join(tempRoot, "conflict-repo");
+    mkdirSync(repoPath, { recursive: true });
+
+    const first = await registerRepo(projectA.id, "conflict-repo", repoPath);
+    expect(first.status).toBe(201);
+
+    const second = await registerRepo(projectB.id, "conflict-repo", repoPath);
+    expect(second.status).toBe(409);
+
+    const body = await second.json();
+    expect(body.error).toContain("already linked");
+  });
 
   test("is idempotent for same repo path", async () => {
-    const createRes = await app.request("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Idempotent Test" }),
-    });
-    const project = await createRes.json();
+    const project = await createProject("Idempotent Test");
 
     const repoPath = join(tempRoot, "same-repo");
     mkdirSync(repoPath, { recursive: true });
 
-    const first = await app.request(`/v1/projects/${project.id}/repos`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "my-repo", path: repoPath }),
-    });
+    const first = await registerRepo(project.id, "my-repo", repoPath);
     const firstBody = await first.json();
 
-    const second = await app.request(`/v1/projects/${project.id}/repos`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "my-repo", path: repoPath }),
-    });
+    const second = await registerRepo(project.id, "my-repo", repoPath);
     const secondBody = await second.json();
 
     expect(secondBody.id).toBe(firstBody.id);

@@ -6,21 +6,6 @@ import { createAndInitProject } from "./create-and-init";
 
 const tmpBase = join(import.meta.dirname, "__test-tmp__");
 
-const skillFixture = (name: string) => ({
-  id: `id-${name}`,
-  project_id: "proj-1",
-  name,
-  description: `${name} desc`,
-  file_id: `file-${name}`,
-  content: `---\nname: ${name}\n---\n${name} content`,
-  created_at: "2026-01-01T00:00:00Z",
-  updated_at: "2026-01-01T00:00:00Z",
-});
-
-const SKILL_NAMES = ["create-ticket", "implement-ticket"];
-const skillListResponse = { status: 200, body: SKILL_NAMES.map(skillFixture) };
-const skillGetResponses = SKILL_NAMES.map((name) => ({ status: 200, body: skillFixture(name) }));
-
 const setup = (name: string) => {
   const dir = join(tmpBase, name);
   mkdirSync(dir, { recursive: true });
@@ -36,13 +21,10 @@ afterEach(() => {
 });
 
 describe("createAndInitProject", () => {
-  test("creates project via API, registers repo, writes config, scaffolds docs, installs skills", async () => {
+  test("delegates repo initialization to the API when creating inside a repo", async () => {
     mockFetchSequence([
       { status: 201, body: { id: "proj-1", name: "Test" } },
       { status: 201, body: { id: "repo-1", name: "create-init", path: "/tmp/create-init" } },
-      { status: 200, body: [{ agent_id: "opencode", is_default: true }] },
-      skillListResponse,
-      ...skillGetResponses,
     ]);
     const root = setup("create-init");
 
@@ -50,23 +32,16 @@ describe("createAndInitProject", () => {
     const project = await createAndInitProject(root, "Test", { homedir: fakeHome, repoPaths: [root] });
 
     expect(project).toEqual({ id: "proj-1", name: "Test" });
-    // 1 create + 1 register + 1 agents + 1 skill list + 2 skill gets = 6
-    expect(globalThis.fetch).toHaveBeenCalledTimes(6);
-
-    const config = JSON.parse(readFileSync(join(root, ".pstdio", "config.json"), "utf8"));
-    expect(config.project_id).toBe("proj-1");
-
-    expect(existsSync(join(root, ".pstdio", "docs", "navigation.json"))).toBe(true);
-    expect(existsSync(join(root, ".pstdio", "docs", "index.md"))).toBe(true);
-
-    expect(existsSync(join(root, ".opencode", "skills", "create-ticket", "SKILL.md"))).toBe(true);
-    expect(existsSync(join(root, ".opencode", "skills", "implement-ticket", "SKILL.md"))).toBe(true);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    expect(existsSync(join(root, ".pstdio"))).toBe(false);
+    expect(existsSync(join(root, ".opencode"))).toBe(false);
   });
 
   test("creates project with no repos when repoPaths is empty", async () => {
     mockFetchSequence([
       { status: 201, body: { id: "proj-no-repo", name: "NoRepo" } },
       { status: 200, body: [] }, // no agents configured
+      { status: 200, body: [] }, // no installed agents available
     ]);
     const root = setup("no-repo");
 
@@ -76,8 +51,8 @@ describe("createAndInitProject", () => {
     });
 
     expect(project).toEqual({ id: "proj-no-repo", name: "NoRepo" });
-    // 1 create + 0 registerRepo + 1 agents (empty → early return) = 2
-    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    // 1 create + 0 registerRepo + 1 agents + 1 agents/info = 3
+    expect(globalThis.fetch).toHaveBeenCalledTimes(3);
 
     const config = JSON.parse(readFileSync(join(root, ".pstdio", "config.json"), "utf8"));
     expect(config.project_id).toBe("proj-no-repo");
@@ -94,11 +69,10 @@ describe("createAndInitProject", () => {
     expect(createAndInitProject(root, "Duplicate")).rejects.toThrow("already initialized");
   });
 
-  test("does not scaffold docs when .pstdio/docs already exists", async () => {
+  test("keeps repo bootstrap delegated to the API even when local docs already exist", async () => {
     mockFetchSequence([
       { status: 201, body: { id: "proj-3", name: "HasDocs" } },
       { status: 201, body: { id: "repo-3", name: "has-docs", path: "/tmp/has-docs" } },
-      { status: 200, body: [] },
     ]);
     const root = setup("has-docs");
 
@@ -111,11 +85,9 @@ describe("createAndInitProject", () => {
       repoPaths: [root],
     });
     expect(project).toEqual({ id: "proj-3", name: "HasDocs" });
-
-    // Should NOT have added starter files
     expect(existsSync(join(docsDir, "navigation.json"))).toBe(false);
     expect(existsSync(join(docsDir, "index.md"))).toBe(false);
-    // Existing doc untouched
     expect(readFileSync(join(docsDir, "my-doc.md"), "utf8")).toBe("existing doc");
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
   });
 });

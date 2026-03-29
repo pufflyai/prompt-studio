@@ -2,6 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { agentConfigListResponseSchema } from "../dto";
+import { setupInstalledAgents } from "../setup-installed-agents";
 
 export const setupAvailableAgentsBodySchema = z
   .object({
@@ -31,21 +32,7 @@ export const setupAvailableAgentsRoute = createRoute({
 export const setupAvailableAgentsHandler = (deps: RouteDeps): AppRouteHandler<typeof setupAvailableAgentsRoute> => {
   return async (c) => {
     const { default_agent_id } = c.req.valid("json");
-    const agents = deps.agentRegistry.list();
-
-    const configs = [];
-    for (const agent of agents) {
-      const config = await deps.agentConfigsService.upsert(agent.id);
-      configs.push(config);
-    }
-
-    await deps.agentConfigsService.update(default_agent_id, { is_default: true });
-
-    const updated = await deps.agentConfigsService.list();
-    for (const config of updated) {
-      deps.eventBus.emit("agent_configs", "set", config);
-    }
-
+    const updated = await setupInstalledAgents(deps, default_agent_id);
     return c.json(updated, 201);
   };
 };
