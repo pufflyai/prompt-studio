@@ -17,6 +17,7 @@ metadata:
    - Confirm everything is checked.
    - If the ticket is not completed, run `pstdio workspaces set-status --status blocked`.
    - If the ticket is completed, run `pstdio workspaces set-status --status review-ready`.
+   - Do not set ticket status directly with `pstdio tickets update` during or after implementation.
 
 ## Validation
 

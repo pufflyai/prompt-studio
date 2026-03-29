@@ -68,12 +68,12 @@ Use this to find blockers, related tickets, and parent/child relationships befor
 pstdio tickets list [--status <status>] [--tag <tag>] [--archived] [--draft] [--parent-id <shorthand>]
 ```
 
-### Update Workspace Status (`workspaces set-status`)
+### Update Ticket Status (`tickets update`)
 
-Use this to move the workspace attempt status (for example `blocked`/`running`). Ticket status is derived automatically via hooks — do not set it directly.
+Use this during ticket creation/refinement when no implementation attempt status exists yet (for example, marking a newly created ticket as `blocked` because of dependencies).
 
 ```bash
-pstdio workspaces set-status [--workspace <shorthand>] --status <status>
+pstdio tickets update --id "<shorthand>" [--status <status>] [--tag <tag>]
 ```
 
 ### Save Ticket Changes (`tickets save`)
