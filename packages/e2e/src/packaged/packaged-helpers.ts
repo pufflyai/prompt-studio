@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { TEST_TIMEOUT } from "../cli/timeouts";
 
 const REPO_ROOT = join(import.meta.dirname, "../../../..");
-const BINARY_PATH = join(REPO_ROOT, "dist/pstdio");
+export const PACKAGED_BINARY_PATH = join(REPO_ROOT, "dist/pstdio");
 
 export const buildBinary = () => {
   console.log("Compiling pstdio binary for local platform…");
@@ -14,13 +14,13 @@ export const buildBinary = () => {
     timeout: 300_000,
   });
 
-  if (!existsSync(BINARY_PATH)) {
-    throw new Error(`Compiled binary not found at ${BINARY_PATH}`);
+  if (!existsSync(PACKAGED_BINARY_PATH)) {
+    throw new Error(`Compiled binary not found at ${PACKAGED_BINARY_PATH}`);
   }
 };
 
 export const runPackaged = (args: string, cwd: string, env: Record<string, string>) =>
-  execSync(`${BINARY_PATH} ${args}`, {
+  execSync(`${PACKAGED_BINARY_PATH} ${args}`, {
     cwd,
     env: { ...process.env, ...env },
     encoding: "utf8",
@@ -29,7 +29,7 @@ export const runPackaged = (args: string, cwd: string, env: Record<string, strin
 
 export const runPackagedSafe = (args: string, cwd: string, env: Record<string, string>) => {
   try {
-    const stdout = execSync(`${BINARY_PATH} ${args}`, {
+    const stdout = execSync(`${PACKAGED_BINARY_PATH} ${args}`, {
       cwd,
       env: { ...process.env, ...env },
       encoding: "utf8",

@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { cleanupDirs, createGitRepo, createTempDir, shutdownApiViaHttp } from "../cli/helpers";
 import { type ApiInstance, getFreePort, startApi, waitForReady } from "../cli/start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "../cli/timeouts";
-import { buildBinary, runPackaged, runPackagedSafe } from "./packaged-helpers";
+import { buildBinary, PACKAGED_BINARY_PATH, runPackaged, runPackagedSafe } from "./packaged-helpers";
 
 const BUILD_TIMEOUT = 180_000;
 
@@ -82,20 +82,16 @@ describe("packaged pstdio — project lifecycle", () => {
       writeFileSync(join(extractedRoot, "hooks", "post-ticket-archive."), "#!/bin/sh\necho stale\n");
       writeFileSync(join(extractedRoot, "templates", "stale.txt"), "stale");
 
-      const server = spawn(
-        "/Users/au-re/Documents/Projects/prompt-studio/dist/pstdio",
-        ["serve", "--port", String(port)],
-        {
-          env: {
-            ...process.env,
-            HOME: fakeHome,
-            PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
-            PSTDIO_DB_PATH: dbPath,
-            PSTDIO_STORAGE_PATH: storageDir,
-          },
-          stdio: "ignore",
+      const server = spawn(PACKAGED_BINARY_PATH, ["serve", "--port", String(port)], {
+        env: {
+          ...process.env,
+          HOME: fakeHome,
+          PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
+          PSTDIO_DB_PATH: dbPath,
+          PSTDIO_STORAGE_PATH: storageDir,
         },
-      );
+        stdio: "ignore",
+      });
 
       try {
         await waitForReady(url);
@@ -149,19 +145,15 @@ describe("packaged pstdio — project lifecycle", () => {
       const port = await getFreePort();
       const url = `http://localhost:${port}`;
 
-      const server = spawn(
-        "/Users/au-re/Documents/Projects/prompt-studio/dist/pstdio",
-        ["serve", "--port", String(port)],
-        {
-          env: {
-            ...process.env,
-            HOME: fakeHome,
-            PSTDIO_DB_PATH: dbPath,
-            PSTDIO_STORAGE_PATH: storageDir,
-          },
-          stdio: "ignore",
+      const server = spawn(PACKAGED_BINARY_PATH, ["serve", "--port", String(port)], {
+        env: {
+          ...process.env,
+          HOME: fakeHome,
+          PSTDIO_DB_PATH: dbPath,
+          PSTDIO_STORAGE_PATH: storageDir,
         },
-      );
+        stdio: "ignore",
+      });
 
       try {
         await waitForReady(url);
