@@ -36,7 +36,7 @@ const runSafe = (args: string, cwd: string, timeout?: number) =>
 const createInitializedRepo = (name: string) => {
   const repo = createGitRepo();
   dirs.push(repo);
-  run(`projects create ${name}`, repo);
+  run(`projects create ${name}`, repo, FLOW_TIMEOUT);
   return repo;
 };
 
@@ -347,19 +347,19 @@ describe("pstdio tickets full flow", () => {
       const repo = createInitializedRepo("tk-flow");
 
       // 1. Write a draft
-      const writeOutput = run('tickets write --title "Lifecycle ticket"', repo);
+      const writeOutput = run('tickets write --title "Lifecycle ticket"', repo, FLOW_TIMEOUT);
       const shorthandMatch = writeOutput.match(/Created ticket (\S+)/);
       const shorthand = shorthandMatch![1];
 
       // 2. Draft should not appear in default list
-      const emptyList = run("tickets list", repo);
+      const emptyList = run("tickets list", repo, FLOW_TIMEOUT);
       expect(emptyList).toContain("No tickets found");
 
       // 3. Save the draft
-      run(`tickets save --id ${shorthand}`, repo);
+      run(`tickets save --id ${shorthand}`, repo, FLOW_TIMEOUT);
 
       // 4. Now appears in list
-      const listOutput = run("tickets list", repo);
+      const listOutput = run("tickets list", repo, FLOW_TIMEOUT);
       expect(listOutput).toContain("lifecycle-ticket");
       expect(listOutput).toContain(shorthand);
 

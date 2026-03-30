@@ -61,9 +61,6 @@ type StatusContext = {
   toStatusName: string | undefined;
 };
 
-const buildStatusNameById = (statuses: Awaited<ReturnType<RouteDeps["statusService"]["list"]>>) =>
-  new Map(statuses.map((status) => [status.id, status.name]));
-
 const resolveStatusContext = async (
   deps: Pick<RouteDeps, "statusService">,
   projectId: string,
@@ -71,10 +68,9 @@ const resolveStatusContext = async (
   toStatusId: string | null,
 ): Promise<StatusContext> => {
   const statuses = await deps.statusService.list(projectId);
-  const statusNameById = buildStatusNameById(statuses);
   return {
-    fromStatusName: fromStatusId ? statusNameById.get(fromStatusId) : undefined,
-    toStatusName: toStatusId ? statusNameById.get(toStatusId) : undefined,
+    fromStatusName: fromStatusId ? statuses.find((s) => s.id === fromStatusId)?.name : undefined,
+    toStatusName: toStatusId ? statuses.find((s) => s.id === toStatusId)?.name : undefined,
   };
 };
 

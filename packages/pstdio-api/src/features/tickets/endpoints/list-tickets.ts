@@ -42,11 +42,9 @@ export const listTicketsHandler = (deps: RouteDeps): AppRouteHandler<typeof list
   return async (c) => {
     const query = c.req.valid("query");
 
-    const statuses = await deps.statusService.list(query.project_id);
-
     let statusId: string | undefined;
     if (query.status) {
-      const status = statuses.find((s) => s.name === query.status);
+      const status = await deps.statusService.getByName(query.project_id, query.status);
       if (status) statusId = status.id;
     }
 
@@ -59,6 +57,8 @@ export const listTicketsHandler = (deps: RouteDeps): AppRouteHandler<typeof list
       search: query.search,
     });
 
+    const needStatusNames = tickets.some((t) => t.status_id);
+    const statuses = needStatusNames ? await deps.statusService.list(query.project_id) : [];
     const statusMap = new Map(statuses.map((s) => [s.id, s.name]));
 
     const enriched = await Promise.all(
