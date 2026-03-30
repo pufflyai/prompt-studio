@@ -18,7 +18,7 @@ type CreateOptionInput = {
 
 const nowTimestamp = () => new Date().toISOString();
 
-export const createTagsService = (db: DbClient) => {
+export const createTagsDBService = (db: DbClient) => {
   const list = async (projectId: string) =>
     db
       .select()

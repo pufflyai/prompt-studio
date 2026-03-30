@@ -33,21 +33,21 @@ export const installSkillToRepo = (
   writeFileSync(join(dir, "SKILL.md"), content, "utf8");
 };
 
-const resolveTargetAgents = async (deps: Pick<RouteDeps, "agentConfigsService" | "agentRegistry" | "eventBus">) => {
-  const configured = await deps.agentConfigsService.list();
+const resolveTargetAgents = async (deps: Pick<RouteDeps, "agentConfigService" | "agentRegistry" | "eventBus">) => {
+  const configured = await deps.agentConfigService.list();
   if (configured.length > 0) return configured;
 
   return setupInstalledAgents(deps);
 };
 
 export const installProjectSkillsToRepo = async (
-  deps: Pick<RouteDeps, "skillsDbService" | "agentConfigsService" | "filesService" | "agentRegistry" | "eventBus">,
+  deps: Pick<RouteDeps, "skillService" | "agentConfigService" | "fileService" | "agentRegistry" | "eventBus">,
   input: { projectId: string; repoPath: string },
 ) => {
-  const [skills, agents] = await Promise.all([deps.skillsDbService.list(input.projectId), resolveTargetAgents(deps)]);
+  const [skills, agents] = await Promise.all([deps.skillService.list(input.projectId), resolveTargetAgents(deps)]);
 
   for (const skill of skills) {
-    const file = await deps.filesService.get(skill.file_id);
+    const file = await deps.fileService.get(skill.file_id);
     if (!file) continue;
 
     const content = await readFile(file.storage_path, "utf8");

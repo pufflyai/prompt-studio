@@ -29,11 +29,17 @@ export const createSessionBodySchema = z
 
 export const followUpBodySchema = z
   .object({
-    prompt: z.string().min(1),
+    prompt: z.string().min(1).optional(),
     agent: z.string().optional(),
     model: z.string().optional(),
+    summary_from_session_id: z.string().optional(),
+    summary_format: z.enum(["brief", "detailed"]).default("brief").optional(),
+    summary_role: z.enum(["assistant", "all"]).default("assistant").optional(),
   })
-  .strict();
+  .strict()
+  .refine((data) => data.prompt || data.summary_from_session_id, {
+    message: "At least one of 'prompt' or 'summary_from_session_id' is required.",
+  });
 
 export const approveBodySchema = z
   .object({

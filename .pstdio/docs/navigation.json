@@ -5,11 +5,6 @@
       "link": "/index"
     },
     {
-      "text": "Changelog",
-      "template": "changelog",
-      "link": "/changelog"
-    },
-    {
       "text": "Product",
       "items": [
         {
@@ -66,6 +61,35 @@
           ]
         },
         {
+          "text": "Hooks",
+          "items": [
+            {
+              "text": "Reference",
+              "link": "/product/hooks/index"
+            },
+            {
+              "text": "Events and Blocking",
+              "link": "/product/hooks/events"
+            },
+            {
+              "text": "Interface and Environment",
+              "link": "/product/hooks/interface"
+            },
+            {
+              "text": "Payload Schemas",
+              "link": "/product/hooks/payloads"
+            },
+            {
+              "text": "Attempt Status",
+              "link": "/product/hooks/attempt-status"
+            },
+            {
+              "text": "Cookbook",
+              "link": "/product/hooks/cookbook"
+            }
+          ]
+        },
+        {
           "text": "Dashboard",
           "items": [
             {
@@ -91,10 +115,6 @@
             {
               "text": "Settings",
               "link": "/product/dashboard/settings"
-            },
-            {
-              "text": "Startup Script",
-              "link": "/product/dashboard/startup-script"
             }
           ]
         },
@@ -121,15 +141,6 @@
             {
               "text": "Error Logs",
               "link": "/product/api/error-logs"
-            }
-          ]
-        },
-        {
-          "text": "PRDs",
-          "items": [
-            {
-              "text": "Cross-Platform Support",
-              "link": "/prd/cross-platform-support"
             }
           ]
         }

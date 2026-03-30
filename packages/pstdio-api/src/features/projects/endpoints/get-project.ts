@@ -31,7 +31,7 @@ export const getProjectRoute = createRoute({
 export const getProjectHandler = (deps: RouteDeps): AppRouteHandler<typeof getProjectRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
-    const project = await deps.projectsService.get(id);
+    const project = await deps.projectService.get(id);
 
     if (!project) {
       return c.json({ error: "Project not found" }, 404);

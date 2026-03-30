@@ -151,6 +151,70 @@ describe("POST /v1/tickets/:id/attempts", () => {
     expect(attempt.session).toBeNull();
     expect(attempt.workspace.branch).toBe(`workspace/${attempt.workspace.workspace_shorthand}`);
   });
+});
+
+describe("POST /v1/tickets/:id/attempts hooks", () => {
+  test("pre-worktree-create payload is available via stdin and field env vars", async () => {
+    const { app, projectId, createGitRepo } = context;
+    const repoRoot = createGitRepo("attempt-pre-create-payload-repo");
+
+    const { chmodSync, mkdirSync, writeFileSync } = await import("node:fs");
+    const hooksDir = join(repoRoot, ".pstdio", "hooks");
+    mkdirSync(hooksDir, { recursive: true });
+
+    const stdinPath = join(repoRoot, "pre-worktree-create.payload.stdin.json");
+    const envPath = join(repoRoot, "pre-worktree-create.payload.env.json");
+    writeFileSync(
+      join(hooksDir, "pre-worktree-create"),
+      `#!/bin/sh
+cat > "${stdinPath}"
+printf '{"repo_path":"%s","branch":"%s","workspace":"%s","ticket":"%s","project_id":"%s"}' \
+"$PSTDIO_REPO_PATH" \
+"$PSTDIO_BRANCH" \
+"$PSTDIO_WORKSPACE" \
+"$PSTDIO_TICKET" \
+"$PSTDIO_PROJECT_ID" > "${envPath}"
+`,
+    );
+    chmodSync(join(hooksDir, "pre-worktree-create"), 0o755);
+
+    const repoRes = await app.request(`/v1/projects/${projectId}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "attempt-pre-create-payload-repo", path: repoRoot }),
+    });
+    expect(repoRes.status).toBe(201);
+    const repo = await repoRes.json();
+
+    const ticket = await createTicket();
+
+    const attemptRes = await app.request(`/v1/tickets/${ticket.id}/attempts`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        repo_id: repo.id,
+        mode: "worktree",
+        start_session: false,
+      }),
+    });
+    expect(attemptRes.status).toBe(201);
+    const attempt = await attemptRes.json();
+
+    const stdinPayload = JSON.parse(readFileSync(stdinPath, "utf8"));
+    const envPayload = JSON.parse(readFileSync(envPath, "utf8"));
+
+    expect(envPayload.repo_path).toBe(stdinPayload.repo_path);
+    expect(envPayload.branch).toBe(stdinPayload.branch);
+    expect(envPayload.workspace).toBe(stdinPayload.workspace);
+    expect(envPayload.ticket).toBe(stdinPayload.ticket);
+    expect(envPayload.project_id).toBe(stdinPayload.project_id);
+    expect(stdinPayload.repo_path).toBe(repoRoot);
+    expect(stdinPayload.project_id).toBe(projectId);
+    expect(stdinPayload.workspace).toBe(attempt.workspace.workspace_shorthand);
+    expect(stdinPayload.ticket).toBe(ticket.shorthand);
+    expect(stdinPayload.worktree_path).toBe(attempt.workspace.worktree_path);
+    expect(stdinPayload.base).toBe("HEAD");
+  });
 
   test("runs post-create hook for workspace creation and stores hook log", async () => {
     const { app, projectId, createGitRepo } = context;

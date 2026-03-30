@@ -1,22 +1,19 @@
 import type { AgentRegistry } from "pstdio-agents";
-import type {
-  createAgentConfigsService,
-  createAttemptStatusesService,
-  createProjectsService,
-  createReposService,
-  createSessionsService,
-  createSkillsDbService,
-  createStatusesService,
-  createTagsService,
-  createTemplatesService,
-  createTicketsService,
-  createWorkspaceSessionsService,
-  createWorkspacesService,
-  DbClient,
-} from "pstdio-db";
-import type { createDocsService, createFilesService, createSkillsService } from "pstdio-storage";
-import type { SessionStore } from "./sessions/session-store";
-
+import type { createAgentConfigService } from "../services/agent-config-service";
+import type { createAttemptStatusService } from "../services/attempt-status-service";
+import type { createDocService } from "../services/doc-service";
+import type { createFileService } from "../services/file-service";
+import type { createProjectService } from "../services/project-service";
+import type { createRepoService } from "../services/repo-service";
+import type { createSessionService } from "../services/session-service";
+import type { createSkillService } from "../services/skill-service";
+import type { createStatusService } from "../services/status-service";
+import type { createSyncService } from "../services/sync-service";
+import type { createTagService } from "../services/tag-service";
+import type { createTemplateService } from "../services/template-service";
+import type { createTicketService } from "../services/ticket-service";
+import type { createWorkspaceService } from "../services/workspace-service";
+import type { createWorkspaceSessionService } from "../services/workspace-session-service";
 import type { EventBus } from "./sync/event-bus";
 
 export interface ReadinessChecks {
@@ -26,24 +23,22 @@ export interface ReadinessChecks {
 
 export interface RouteDeps {
   readiness: ReadinessChecks;
-  db: DbClient;
   closeDb: () => Promise<void>;
   eventBus: EventBus;
-  projectsService: ReturnType<typeof createProjectsService>;
-  reposService: ReturnType<typeof createReposService>;
-  agentConfigsService: ReturnType<typeof createAgentConfigsService>;
-  filesService: ReturnType<typeof createFilesService>;
-  skillsService: ReturnType<typeof createSkillsService>;
-  skillsDbService: ReturnType<typeof createSkillsDbService>;
-  templatesService: ReturnType<typeof createTemplatesService>;
-  ticketsService: ReturnType<typeof createTicketsService>;
-  workspacesService: ReturnType<typeof createWorkspacesService>;
-  workspaceSessionsService: ReturnType<typeof createWorkspaceSessionsService>;
-  sessionsService: ReturnType<typeof createSessionsService>;
-  statusesService: ReturnType<typeof createStatusesService>;
-  attemptStatusesService: ReturnType<typeof createAttemptStatusesService>;
-  tagsService: ReturnType<typeof createTagsService>;
-  docsService: ReturnType<typeof createDocsService>;
   agentRegistry: AgentRegistry;
-  sessionStore: SessionStore;
+  projectService: ReturnType<typeof createProjectService>;
+  repoService: ReturnType<typeof createRepoService>;
+  sessionService: ReturnType<typeof createSessionService>;
+  ticketService: ReturnType<typeof createTicketService>;
+  workspaceService: ReturnType<typeof createWorkspaceService>;
+  workspaceSessionService: ReturnType<typeof createWorkspaceSessionService>;
+  statusService: ReturnType<typeof createStatusService>;
+  tagService: ReturnType<typeof createTagService>;
+  templateService: ReturnType<typeof createTemplateService>;
+  attemptStatusService: ReturnType<typeof createAttemptStatusService>;
+  agentConfigService: ReturnType<typeof createAgentConfigService>;
+  skillService: ReturnType<typeof createSkillService>;
+  fileService: ReturnType<typeof createFileService>;
+  docService: ReturnType<typeof createDocService>;
+  syncService: ReturnType<typeof createSyncService>;
 }

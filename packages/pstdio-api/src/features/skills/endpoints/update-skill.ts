@@ -35,7 +35,7 @@ export const updateSkillHandler = (deps: RouteDeps): AppRouteHandler<typeof upda
   return async (c) => {
     const { projectId, name } = c.req.valid("param");
 
-    const skill = await deps.skillsDbService.getByName(projectId, name);
+    const skill = await deps.skillService.getByName(projectId, name);
     if (!skill) {
       return c.json({ error: `Skill not found: ${name}` }, 404);
     }
@@ -46,18 +46,18 @@ export const updateSkillHandler = (deps: RouteDeps): AppRouteHandler<typeof upda
       return c.json({ error: `No bundled version found for: ${name}` }, 404);
     }
 
-    const file = await deps.filesService.get(skill.file_id);
+    const file = await deps.fileService.get(skill.file_id);
     if (file) {
       await writeFile(file.storage_path, bundledSkill.content, "utf8");
     }
 
-    await deps.skillsDbService.update(projectId, name, {
+    await deps.skillService.update(projectId, name, {
       description: bundledSkill.description,
     });
 
     const [repos, agents] = await Promise.all([
-      deps.reposService.listByProject(projectId),
-      deps.agentConfigsService.list(),
+      deps.repoService.listByProject(projectId),
+      deps.agentConfigService.list(),
     ]);
 
     for (const repo of repos) {
@@ -66,7 +66,7 @@ export const updateSkillHandler = (deps: RouteDeps): AppRouteHandler<typeof upda
       }
     }
 
-    const updated = await deps.skillsDbService.getByName(projectId, name);
+    const updated = await deps.skillService.getByName(projectId, name);
     const installed_agents = agents.map((a) => a.agent_id);
 
     return c.json(

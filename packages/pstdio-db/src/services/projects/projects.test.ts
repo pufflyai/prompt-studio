@@ -1,15 +1,15 @@
 import { afterAll, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
-import { createStatusesService } from "../statuses/statuses";
-import { createProjectsService } from "./projects";
+import { createStatusesDBService } from "../statuses/statuses";
+import { createProjectsDBService } from "./projects";
 
 let close: () => Promise<void>;
-let projects: ReturnType<typeof createProjectsService>;
+let projects: ReturnType<typeof createProjectsDBService>;
 
 const setup = async () => {
   const result = await createDb({ path: ":memory:" });
   close = result.close;
-  projects = createProjectsService(result.db);
+  projects = createProjectsDBService(result.db);
 };
 
 afterAll(async () => {
@@ -44,9 +44,9 @@ test("projects service supports basic CRUD", async () => {
 
 test("projects seed statuses with correct column controls", async () => {
   const { db, close: close2 } = await createDb({ path: ":memory:" });
-  const projectsService = createProjectsService(db);
+  const projectsService = createProjectsDBService(db);
   const seededProject = await projectsService.create({ name: "Seeded" });
-  const statusesService = createStatusesService(db);
+  const statusesService = createStatusesDBService(db);
   const seededStatuses = await statusesService.list(seededProject.id);
 
   expect(seededStatuses.length).toBe(6);

@@ -55,23 +55,20 @@ const createSSEReader = (response: Response) => {
 describe("stream bootstrap race condition", () => {
   test("does not drop events emitted during initial snapshot", async () => {
     const eventBus = new EventBus();
-    const db = {} as Parameters<typeof streamHandler>[0]["db"];
+
+    const syncService = {
+      getFullState: async () => {
+        // Simulate a DB write happening while getFullState is running:
+        // a session completes during the snapshot read
+        eventBus.emit("sessions", "set", { id: "s1", status: "completed" });
+        // Return stale snapshot (session still in_progress)
+        return { sessions: [{ id: "s1", status: "in_progress" }] };
+      },
+      emitCascadeDeletes: async () => {},
+    } as Parameters<typeof streamHandler>[0]["syncService"];
 
     const app = new Hono();
-    app.get(
-      "/stream",
-      streamHandler({
-        eventBus,
-        db,
-        getFullState: async () => {
-          // Simulate a DB write happening while getFullState is running:
-          // a session completes during the snapshot read
-          eventBus.emit("sessions", "set", { id: "s1", status: "completed" });
-          // Return stale snapshot (session still in_progress)
-          return { sessions: [{ id: "s1", status: "in_progress" }] };
-        },
-      }),
-    );
+    app.get("/stream", streamHandler({ eventBus, syncService }));
 
     const res = await app.request("/stream");
     const sse = createSSEReader(res);
@@ -96,7 +93,6 @@ describe("stream bootstrap race condition", () => {
 
   test("does not drop events emitted during reconnect replay", async () => {
     const eventBus = new EventBus();
-    const db = {} as Parameters<typeof streamHandler>[0]["db"];
 
     // Pre-seed the event bus with an event the client already has
     eventBus.emit("sessions", "set", { id: "s1", status: "in_progress" });
@@ -113,15 +109,13 @@ describe("stream bootstrap race condition", () => {
       return missed;
     };
 
+    const syncService = {
+      getFullState: async () => ({}),
+      emitCascadeDeletes: async () => {},
+    } as Parameters<typeof streamHandler>[0]["syncService"];
+
     const app = new Hono();
-    app.get(
-      "/stream",
-      streamHandler({
-        eventBus,
-        db,
-        getFullState: async () => ({}),
-      }),
-    );
+    app.get("/stream", streamHandler({ eventBus, syncService }));
 
     const res = await app.request(`/stream?since=${clientLastSeq}`);
     const sse = createSSEReader(res);

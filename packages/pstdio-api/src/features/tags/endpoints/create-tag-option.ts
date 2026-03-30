@@ -32,7 +32,7 @@ export const createTagOptionHandler = (deps: RouteDeps): AppRouteHandler<typeof 
   return async (c) => {
     const { tagId } = c.req.valid("param");
     const body = c.req.valid("json");
-    const option = await deps.tagsService.createOption({ tag_id: tagId, ...body });
+    const option = await deps.tagService.createOption({ tag_id: tagId, ...body });
     deps.eventBus.emit("ticket_tag_options", "set", option);
     return c.json(option, 201);
   };

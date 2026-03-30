@@ -4,7 +4,7 @@ import { sessions, workspace_sessions, workspaces } from "../../db/schemas.pg";
 
 const nowTimestamp = () => new Date().toISOString();
 
-export const createWorkspaceSessionsService = (db: DbClient) => {
+export const createWorkspaceSessionsDBService = (db: DbClient) => {
   const link = async (workspaceId: string, sessionId: string) => {
     const record = {
       id: crypto.randomUUID(),

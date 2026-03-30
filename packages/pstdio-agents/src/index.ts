@@ -8,7 +8,7 @@ export { createFakeAgent } from "./providers/fake";
 export { createOpencodeAgent } from "./providers/opencode";
 export { createApprovalService } from "./services/approval-service";
 export { createEventStore } from "./services/event-store";
-export { createAgentRegistry } from "./services/registry";
+export { createAgentRegistry, resolveDefaultAgents } from "./services/registry";
 export { sessionMessagePartSchema, sessionMessageRoleSchema, sessionMessageSchema } from "./services/schemas";
 export type {
   AgentCapability,

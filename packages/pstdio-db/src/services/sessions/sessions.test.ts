@@ -1,21 +1,22 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
-import { createDb, type DbClient } from "../../db/connection.pglite";
-import { createProjectsService } from "../projects/projects";
-import { createSessionsService } from "./sessions";
+import type { DbClient } from "../../db/connection.pglite";
+import { createDb } from "../../db/connection.pglite";
+import { createProjectsDBService } from "../projects/projects";
+import { createSessionsDBService } from "./sessions";
 
 let db: DbClient;
 let close: () => Promise<void>;
-let sessionsService: ReturnType<typeof createSessionsService>;
-let projectsService: ReturnType<typeof createProjectsService>;
+let sessionsService: ReturnType<typeof createSessionsDBService>;
+let projectsService: ReturnType<typeof createProjectsDBService>;
 let projectId: string;
 
 beforeEach(async () => {
   const conn = await createDb({ path: ":memory:" });
   db = conn.db;
   close = conn.close;
-  sessionsService = createSessionsService(db);
-  projectsService = createProjectsService(db);
+  sessionsService = createSessionsDBService(db);
+  projectsService = createProjectsDBService(db);
 
   const project = await projectsService.create({ name: "test-project" });
   projectId = project.id;

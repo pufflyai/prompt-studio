@@ -139,7 +139,12 @@ describe("resolveOrphanedSessions abort", () => {
 
     const fakeAgent = createFakeAgent();
     const deps = {
-      sessionsService: {
+      repoService: {},
+      agentRegistry: { get: () => fakeAgent },
+      eventBus: { emit: () => {} },
+      workspaceSessionService: { getWorkspaceBySessionId: async () => null },
+      sessionService: {
+        store: { get: () => undefined },
         listByStatus: async () => {
           const results = [];
           for (const id of sessionIds) {
@@ -148,7 +153,7 @@ describe("resolveOrphanedSessions abort", () => {
           }
           return results;
         },
-        updateStatus: async (id: string, status: string) => {
+        transitionStatus: async (id: string, status: string) => {
           const res = await app.request(`/v1/sessions/${id}/status`, {
             method: "PATCH",
             headers: { "content-type": "application/json" },
@@ -157,11 +162,6 @@ describe("resolveOrphanedSessions abort", () => {
           return await res.json();
         },
       },
-      workspaceSessionsService: { getWorkspaceBySessionId: async () => null },
-      reposService: {},
-      agentRegistry: { get: () => fakeAgent },
-      eventBus: { emit: () => {} },
-      sessionStore: { get: () => undefined },
       db: {},
     } as unknown as Parameters<typeof resolveOrphanedSessions>[0];
 
@@ -177,141 +177,103 @@ describe("resolveOrphanedSessions abort", () => {
 });
 
 describe("resolveOrphanedSessions resolution", () => {
-  test("fires session status hook when orphaned session is resolved", async () => {
+  test("calls sessionService.transitionStatus when orphaned session is resolved", async () => {
     const staleSession = {
       id: "session-hooked",
       agent: null,
       agent_session_id: null,
       project_id: "project-1",
     };
-    const updatedSession = { ...staleSession, status: "completed" };
-    const listByProject = mock(async () => []);
-    const getWorkspaceBySessionId = mock(async () => null);
+    const transitionStatus = mock(async () => ({ ...staleSession, status: "completed" }));
 
     const deps = {
-      sessionsService: {
-        listByStatus: async () => [staleSession],
-        updateStatus: async () => updatedSession,
-      },
-      workspaceSessionsService: { getWorkspaceBySessionId },
-      reposService: { listByProject },
+      repoService: {},
       agentRegistry: { get: () => null },
       eventBus: { emit: () => {} },
-      sessionStore: { get: () => undefined },
+      workspaceSessionService: { getWorkspaceBySessionId: async () => null },
+      sessionService: {
+        store: { get: () => undefined },
+        listByStatus: async () => [staleSession],
+        transitionStatus,
+      },
       db: {},
     } as unknown as Parameters<typeof resolveOrphanedSessions>[0];
 
     await resolveOrphanedSessions(deps);
 
-    for (let index = 0; index < 20; index += 1) {
-      if (listByProject.mock.calls.length > 0) break;
-      await Bun.sleep(10);
-    }
-
-    expect(getWorkspaceBySessionId).toHaveBeenCalledWith(staleSession.id);
-    expect(listByProject).toHaveBeenCalledWith(staleSession.project_id);
+    expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "completed");
   });
 
-  test("updates orphaned in_progress session to completed and emits sessions set event", async () => {
+  test("transitions orphaned in_progress session to completed via sessionService", async () => {
     const staleSession = {
       id: "session-completed",
       agent: null,
       agent_session_id: null,
       project_id: null,
     };
-    const updatedSession = { ...staleSession, status: "completed" };
-    const emitted: unknown[] = [];
+    const transitionStatus = mock(async () => ({ ...staleSession, status: "completed" }));
 
     const deps = {
-      sessionsService: {
-        listByStatus: async () => [staleSession],
-        updateStatus: async (id: string, status: string) => {
-          expect(id).toBe(staleSession.id);
-          expect(status).toBe("completed");
-          return updatedSession;
-        },
-      },
-      workspaceSessionsService: { getWorkspaceBySessionId: async () => null },
-      reposService: {},
+      repoService: {},
       agentRegistry: { get: () => null },
-      eventBus: {
-        emit: (...args: unknown[]) => {
-          emitted.push(args);
-        },
+      eventBus: { emit: () => {} },
+      workspaceSessionService: { getWorkspaceBySessionId: async () => null },
+      sessionService: {
+        store: { get: () => undefined },
+        listByStatus: async () => [staleSession],
+        transitionStatus,
       },
-      sessionStore: { get: () => undefined },
       db: {},
     } as unknown as Parameters<typeof resolveOrphanedSessions>[0];
 
     await resolveOrphanedSessions(deps);
 
-    expect(emitted).toHaveLength(1);
-    expect(emitted[0]).toEqual(["sessions", "set", updatedSession]);
+    expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "completed");
   });
 
-  test("updates orphaned in_progress session to failed when agent has no messages and emits sessions set event", async () => {
+  test("transitions orphaned session to failed when agent has no messages", async () => {
     const staleSession = {
       id: "session-failed",
       agent: "fake",
       agent_session_id: "agent-session-failed",
       project_id: null,
     };
-    const updatedSession = { ...staleSession, status: "failed" };
-    const emitted: unknown[] = [];
+    const transitionStatus = mock(async () => ({ ...staleSession, status: "failed" }));
 
     const deps = {
-      sessionsService: {
-        listByStatus: async () => [staleSession],
-        updateStatus: async (id: string, status: string) => {
-          expect(id).toBe(staleSession.id);
-          expect(status).toBe("failed");
-          return updatedSession;
-        },
-      },
-      workspaceSessionsService: { getWorkspaceBySessionId: async () => null },
-      reposService: {},
+      repoService: {},
       agentRegistry: {
         get: () =>
           ({
             getMessages: async () => [],
           }) as { getMessages: (sessionId: string, options?: { cwd?: string }) => Promise<unknown[]> },
       },
-      eventBus: {
-        emit: (...args: unknown[]) => {
-          emitted.push(args);
-        },
+      eventBus: { emit: () => {} },
+      workspaceSessionService: { getWorkspaceBySessionId: async () => null },
+      sessionService: {
+        store: { get: () => undefined },
+        listByStatus: async () => [staleSession],
+        transitionStatus,
       },
-      sessionStore: { get: () => undefined },
       db: {},
     } as unknown as Parameters<typeof resolveOrphanedSessions>[0];
 
     await resolveOrphanedSessions(deps);
 
-    expect(emitted).toHaveLength(1);
-    expect(emitted[0]).toEqual(["sessions", "set", updatedSession]);
+    expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "failed");
   });
 
-  test("updates orphaned in_progress session to failed when agent message lookup throws and emits sessions set event", async () => {
+  test("transitions orphaned session to failed when agent message lookup throws", async () => {
     const staleSession = {
       id: "session-fetch-error",
       agent: "fake",
       agent_session_id: "agent-session-fetch-error",
       project_id: null,
     };
-    const updatedSession = { ...staleSession, status: "failed" };
-    const emitted: unknown[] = [];
+    const transitionStatus = mock(async () => ({ ...staleSession, status: "failed" }));
 
     const deps = {
-      sessionsService: {
-        listByStatus: async () => [staleSession],
-        updateStatus: async (id: string, status: string) => {
-          expect(id).toBe(staleSession.id);
-          expect(status).toBe("failed");
-          return updatedSession;
-        },
-      },
-      workspaceSessionsService: { getWorkspaceBySessionId: async () => null },
-      reposService: {},
+      repoService: {},
       agentRegistry: {
         get: () =>
           ({
@@ -320,18 +282,18 @@ describe("resolveOrphanedSessions resolution", () => {
             },
           }) as { getMessages: (sessionId: string, options?: { cwd?: string }) => Promise<unknown[]> },
       },
-      eventBus: {
-        emit: (...args: unknown[]) => {
-          emitted.push(args);
-        },
+      eventBus: { emit: () => {} },
+      workspaceSessionService: { getWorkspaceBySessionId: async () => null },
+      sessionService: {
+        store: { get: () => undefined },
+        listByStatus: async () => [staleSession],
+        transitionStatus,
       },
-      sessionStore: { get: () => undefined },
       db: {},
     } as unknown as Parameters<typeof resolveOrphanedSessions>[0];
 
     await resolveOrphanedSessions(deps);
 
-    expect(emitted).toHaveLength(1);
-    expect(emitted[0]).toEqual(["sessions", "set", updatedSession]);
+    expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "failed");
   });
 });

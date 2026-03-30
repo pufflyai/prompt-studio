@@ -1,17 +1,14 @@
 import fs from "node:fs";
-import { type DbClient, eq, workspaces } from "pstdio-db";
+import type { RouteDeps } from "../deps";
 
 export const cleanupProjectArtifacts = async (
-  db: DbClient,
+  workspaceService: RouteDeps["workspaceService"],
   projectId: string,
   deps: {
     removeProjectStorage: (projectId: string) => void;
   },
 ) => {
-  const projectWorkspaces = await db
-    .select({ worktree_path: workspaces.worktree_path })
-    .from(workspaces)
-    .where(eq(workspaces.project_id, projectId));
+  const projectWorkspaces = await workspaceService.list(projectId);
 
   for (const ws of projectWorkspaces) {
     if (ws.worktree_path && fs.existsSync(ws.worktree_path)) {

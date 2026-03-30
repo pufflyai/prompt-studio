@@ -46,9 +46,9 @@ export const updateStatusColorHandler = (deps: RouteDeps): AppRouteHandler<typeo
   return async (c) => {
     const { projectId, id } = c.req.valid("param");
     const input = c.req.valid("json");
-    await deps.statusesService.update(id, input);
+    await deps.statusService.update(id, input);
 
-    const statuses = await deps.statusesService.list(projectId);
+    const statuses = await deps.statusService.list(projectId);
     const row = statuses.find((s) => s.id === id)!;
     const updated = { ...row, column_actions: JSON.parse(row.column_actions) as string[] };
 

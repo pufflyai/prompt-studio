@@ -2,7 +2,6 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir as defaultHomedir } from "node:os";
 import { join } from "node:path";
 import { findAgent, type KnownAgent } from "pstdio-agents";
-import type { createReposService } from "pstdio-db";
 
 type Skill = {
   name: string;
@@ -58,24 +57,18 @@ const readSkillsFromDir = (skillsDir: string): Skill[] => {
 
 const resolveAgent = (agentId: string): KnownAgent | null => findAgent(agentId);
 
-export const createSkillsService = (
-  reposService: ReturnType<typeof createReposService>,
-  options?: SkillsServiceOptions,
-) => {
+export const createSkillsStorageService = (options?: SkillsServiceOptions) => {
   const home = options?.homedir ?? defaultHomedir();
 
-  const listProjectSkills = async (projectId: string, agentId: string) => {
+  const listProjectSkills = (repoPath: string, agentId: string) => {
     const agent = resolveAgent(agentId);
     if (!agent) return [];
 
-    const repos = await reposService.listByProject(projectId);
-    if (repos.length === 0) return [];
-
-    const skillsDir = join(repos[0].path, agent.skillsDir);
+    const skillsDir = join(repoPath, agent.skillsDir);
     return readSkillsFromDir(skillsDir);
   };
 
-  const listGlobalSkills = async (agentId: string) => {
+  const listGlobalSkills = (agentId: string) => {
     const agent = resolveAgent(agentId);
     if (!agent) return [];
 

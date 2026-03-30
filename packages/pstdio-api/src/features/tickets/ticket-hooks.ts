@@ -1,18 +1,22 @@
 import type { TicketHookName } from "pstdio-wt";
-import { isBlockingHook } from "pstdio-wt";
-import type { RouteDeps } from "../deps";
+import { isBlockingHook, parsePayloadOverride } from "pstdio-wt";
 import { fireHook } from "../hooks/fire-hook";
 
 type TicketPayload = Record<string, unknown>;
 
-type FireTicketHookResult = {
+export type FireTicketHookDeps = {
+  repoService: { listByProject: (projectId: string) => Promise<{ path: string }[]> };
+};
+
+export type FireTicketHookResult = {
   rejected: boolean;
   stderr: string;
   modifiedPayload: TicketPayload | null;
 };
 
+// Synchronous hook — awaits result and supports blocking/rejection
 export const fireTicketHook = async (
-  deps: Pick<RouteDeps, "reposService">,
+  deps: FireTicketHookDeps,
   hookName: TicketHookName,
   projectId: string,
   payload: TicketPayload,
@@ -27,20 +31,17 @@ export const fireTicketHook = async (
     return { rejected: true, stderr: result.stderr, modifiedPayload: null };
   }
 
-  if (result.stdout.trim()) {
-    try {
-      const modified = JSON.parse(result.stdout) as TicketPayload;
-      return { rejected: false, stderr: "", modifiedPayload: modified };
-    } catch {
-      // stdout wasn't valid JSON — treat as no modification
-    }
+  const modified = parsePayloadOverride(result.stdout);
+  if (modified) {
+    return { rejected: false, stderr: "", modifiedPayload: modified };
   }
 
   return { rejected: false, stderr: result.stderr, modifiedPayload: null };
 };
 
+// Async hook — fire-and-forget
 export const fireTicketHookAsync = (
-  deps: Pick<RouteDeps, "reposService">,
+  deps: FireTicketHookDeps,
   hookName: TicketHookName,
   projectId: string,
   payload: TicketPayload,

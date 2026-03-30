@@ -1,26 +1,26 @@
 import { git } from "./git";
 import { runHook } from "./hooks";
-import type { CommitResult, HookContext, StagingPolicy } from "./types";
+import type { CommitResult, HookPayload, StagingPolicy } from "./types";
 
 export const commitChanges = async (opts: {
   worktreePath: string;
   message: string;
   stage?: StagingPolicy;
   repoPath?: string;
-  hookContext?: Partial<HookContext>;
+  hookPayload?: HookPayload;
 }): Promise<CommitResult> => {
   const cwd = opts.worktreePath;
   const policy = opts.stage ?? "all";
   const repoPath = opts.repoPath ?? opts.worktreePath;
-
-  const baseContext: HookContext = {
-    repoPath,
-    worktreePath: opts.worktreePath,
-    commitMessage: opts.message,
-    ...opts.hookContext,
+  const basePayload: HookPayload = {
+    repo_path: repoPath,
+    worktree_path: opts.worktreePath,
+    commit_message: opts.message,
+    stage_policy: policy,
+    ...opts.hookPayload,
   };
 
-  const preResult = await runHook("pre-commit", baseContext, repoPath);
+  const preResult = await runHook("pre-commit", basePayload, { repoPath });
   if (!preResult.skipped && preResult.exitCode !== 0) {
     throw new Error(`HOOK pre-commit FAILED (exit ${preResult.exitCode})\n${preResult.stderr || preResult.stdout}`);
   }
@@ -36,7 +36,7 @@ export const commitChanges = async (opts: {
 
   const sha = await git(cwd, ["rev-parse", "HEAD"]);
 
-  void runHook("post-commit", { ...baseContext, commitSha: sha }, repoPath).catch(() => {});
+  void runHook("post-commit", { ...basePayload, commit_sha: sha }, { repoPath }).catch(() => {});
 
   return { sha, message: opts.message };
 };

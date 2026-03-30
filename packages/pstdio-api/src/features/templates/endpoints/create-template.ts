@@ -37,12 +37,12 @@ export const createTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof c
     const { name, template_type, content, is_default } = c.req.valid("json");
     const resolvedContent = content ?? `# ${name}\n`;
 
-    const existing = await deps.templatesService.getByName(projectId, name);
+    const existing = await deps.templateService.getByName(projectId, name);
     if (existing) {
       return c.json({ error: `Template already exists: ${name}` }, 409);
     }
 
-    const file = await deps.filesService.upload({
+    const file = await deps.fileService.upload({
       project_id: projectId,
       file_name: `${name}.md`,
       file_kind: "template",
@@ -50,7 +50,7 @@ export const createTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof c
       mime_type: "text/markdown",
     });
 
-    const template = await deps.templatesService.create({
+    const template = await deps.templateService.create({
       project_id: projectId,
       name,
       template_type,

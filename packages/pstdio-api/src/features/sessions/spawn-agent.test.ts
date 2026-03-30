@@ -1,6 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { AgentService } from "pstdio-agents";
-import { createSessionStore } from "./session-store";
 import { resumeAgentSession, spawnAgentSession } from "./spawn-agent";
 
 const buildAgent = () => {
@@ -31,7 +30,24 @@ const buildAgent = () => {
 describe("resumeAgentSession", () => {
   test("uses existing message count as default messageOffset", async () => {
     const { agent, getMessages, resumeSession } = buildAgent();
-    const sessionStore = createSessionStore();
+    const storeEntries = new Map<string, unknown>();
+    const sessionService = {
+      update: async () => null,
+      transitionStatus: async () => null,
+      store: {
+        create: mock((id: string) => {
+          const entry = {
+            eventStore: { push: () => {}, getHistory: () => [] },
+            approvalService: { handleResponse: () => {} },
+          };
+          storeEntries.set(id, entry);
+          return entry;
+        }),
+        get: mock((id: string) => storeEntries.get(id) ?? null),
+        setProcess: mock(() => {}),
+        remove: mock(() => {}),
+      },
+    };
 
     await resumeAgentSession(
       {
@@ -51,10 +67,7 @@ describe("resumeAgentSession", () => {
             fake: { type: "INSTALLED" },
           }),
         },
-        sessionStore,
-        sessionsService: {
-          updateStatus: async () => null,
-        },
+        sessionService,
         eventBus: {
           emit: () => {},
         },
@@ -91,7 +104,24 @@ describe("resumeAgentSession", () => {
       launchSession: async () => ({}),
     } as unknown as AgentService;
 
-    const sessionStore = createSessionStore();
+    const storeEntries = new Map<string, unknown>();
+    const sessionService = {
+      update: async () => null,
+      transitionStatus: async () => null,
+      store: {
+        create: mock((id: string) => {
+          const entry = {
+            eventStore: { push: () => {}, getHistory: () => [] },
+            approvalService: { handleResponse: () => {} },
+          };
+          storeEntries.set(id, entry);
+          return entry;
+        }),
+        get: mock((id: string) => storeEntries.get(id) ?? null),
+        setProcess: mock(() => {}),
+        remove: mock(() => {}),
+      },
+    };
     const resumePromise = resumeAgentSession(
       {
         sessionId: "s_1",
@@ -110,17 +140,14 @@ describe("resumeAgentSession", () => {
             fake: { type: "INSTALLED" },
           }),
         },
-        sessionStore,
-        sessionsService: {
-          updateStatus: async () => null,
-        },
+        sessionService,
         eventBus: {
           emit: () => {},
         },
       } as unknown as Parameters<typeof resumeAgentSession>[1],
     );
 
-    expect(sessionStore.get("s_1")).not.toBeNull();
+    expect(sessionService.store.create).toHaveBeenCalledTimes(1);
 
     resolveMessages([
       { id: "m1", role: "user", parts: [{ type: "text", text: "hello" }] },
@@ -155,10 +182,7 @@ describe("spawnAgentSession", () => {
       launchSession: async () => ({}),
     } as unknown as AgentService;
 
-    const sessionStore = createSessionStore();
-    const updateStatus = mock(async () => ({ id: "session_1", project_id: "project_1", status: "completed" }));
-    const listByProject = mock(async () => []);
-    const getWorkspaceBySessionId = mock(async () => null);
+    const transitionStatus = mock(async () => ({ id: "session_1", project_id: "project_1", status: "completed" }));
 
     await spawnAgentSession(
       {
@@ -177,36 +201,35 @@ describe("spawnAgentSession", () => {
             fake: { type: "INSTALLED" },
           }),
         },
-        sessionStore,
-        sessionsService: {
-          get: async () => null,
-          update: async () => null,
-          updateStatus,
-        },
         eventBus: {
           emit: () => {},
         },
-        filesService: {
+        fileService: {
           get: async () => null,
           upload: async () => ({ id: "file_1" }),
           update: async () => null,
         },
-        reposService: {
-          listByProject,
-        },
-        workspaceSessionsService: {
-          getWorkspaceBySessionId,
+        sessionService: {
+          update: async () => null,
+          transitionStatus,
+          store: {
+            create: mock(() => ({
+              eventStore: { push: () => {}, getHistory: () => [] },
+              approvalService: { handleResponse: () => {} },
+            })),
+            get: mock(() => null),
+            setProcess: mock(() => {}),
+            remove: mock(() => {}),
+          },
         },
       } as unknown as Parameters<typeof spawnAgentSession>[1],
     );
 
     for (let index = 0; index < 20; index += 1) {
-      if (listByProject.mock.calls.length > 0) break;
+      if (transitionStatus.mock.calls.length > 0) break;
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
 
-    expect(updateStatus).toHaveBeenCalledWith("session_1", "completed");
-    expect(getWorkspaceBySessionId).toHaveBeenCalledWith("session_1");
-    expect(listByProject).toHaveBeenCalledWith("project_1");
+    expect(transitionStatus).toHaveBeenCalledWith("session_1", "completed");
   });
 });

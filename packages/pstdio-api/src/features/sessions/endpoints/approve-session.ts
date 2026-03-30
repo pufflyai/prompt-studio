@@ -2,7 +2,6 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { approveBodySchema, notFoundResponseSchema } from "../dto";
-import { fireSessionResumeHook } from "../session-hooks";
 
 export const approveSessionRoute = createRoute({
   method: "post",
@@ -33,12 +32,12 @@ export const approveSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof a
     const { id } = c.req.valid("param");
     const input = c.req.valid("json");
 
-    const session = await deps.sessionsService.get(id);
+    const session = await deps.sessionService.get(id);
     if (!session) {
       return c.json({ error: `Session not found: ${id}` }, 404);
     }
 
-    const entry = deps.sessionStore.get(id);
+    const entry = deps.sessionService.store.get(id);
     if (!entry) {
       return c.json({ error: `No active session process for: ${id}` }, 404);
     }
@@ -49,11 +48,7 @@ export const approveSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof a
     entry.approvalService.handleResponse({ id: input.id, decision: input.decision });
 
     if (input.decision === "approve" && session.status === "awaiting_input") {
-      const updated = await deps.sessionsService.updateStatus(id, "in_progress");
-      deps.eventBus.emit("sessions", "set", updated);
-      if (updated.project_id) {
-        fireSessionResumeHook(deps, { id: updated.id, project_id: updated.project_id, status: updated.status });
-      }
+      await deps.sessionService.resume(id);
     }
 
     return c.json({ ok: true }, 200);

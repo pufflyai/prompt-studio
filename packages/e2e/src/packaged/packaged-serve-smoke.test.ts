@@ -32,6 +32,7 @@ const REQUIRED_SKILL_NAMES = [
   "pstdio",
   "refine-ticket",
   "update-documentation",
+  "write-pstdio-hook",
 ];
 const REQUIRED_HOOK_NAMES = [
   "post-session-start",

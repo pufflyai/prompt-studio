@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { commitChanges } from "./commit";
 import { git } from "./git";
@@ -134,5 +134,47 @@ describe("mergeWorktree", () => {
 
     await new Promise((r) => setTimeout(r, 500));
     expect(existsSync(join(repo.dir, "conflict-marker.txt"))).toBe(true);
+  });
+
+  test("pre-merge payload is available via stdin and field env vars", async () => {
+    const wtPath = join(repo.dir, "wt-merge");
+    await createWorktree({ repoRoot: repo.dir, branch: "task/merge-payload", path: wtPath });
+
+    const stdinPath = join(repo.dir, "pre-merge.payload.stdin.json");
+    const envPath = join(repo.dir, "pre-merge.payload.env.json");
+    writeHook(
+      repo.dir,
+      "pre-merge",
+      `cat > "${stdinPath}"
+printf '{"repo_path":"%s","branch":"%s","target":"%s","project_id":"%s"}' \
+"$PSTDIO_REPO_PATH" \
+"$PSTDIO_BRANCH" \
+"$PSTDIO_TARGET" \
+"$PSTDIO_PROJECT_ID" > "${envPath}"`,
+    );
+
+    await Bun.write(join(wtPath, "feature.txt"), "feature");
+    await commitChanges({ worktreePath: wtPath, message: "add feature" });
+
+    await mergeWorktree({
+      repoRoot: repo.dir,
+      branch: "task/merge-payload",
+      target: "main",
+      hookPayload: {
+        project_id: "proj-1",
+      },
+    });
+
+    const stdinPayload = JSON.parse(readFileSync(stdinPath, "utf8"));
+    const envPayload = JSON.parse(readFileSync(envPath, "utf8"));
+
+    expect(envPayload.repo_path).toBe(stdinPayload.repo_path);
+    expect(envPayload.branch).toBe(stdinPayload.branch);
+    expect(envPayload.target).toBe(stdinPayload.target);
+    expect(envPayload.project_id).toBe(stdinPayload.project_id);
+    expect(stdinPayload.branch).toBe("task/merge-payload");
+    expect(stdinPayload.target).toBe("main");
+    expect(stdinPayload.project_id).toBe("proj-1");
+    expect(stdinPayload.squash).toBe(false);
   });
 });

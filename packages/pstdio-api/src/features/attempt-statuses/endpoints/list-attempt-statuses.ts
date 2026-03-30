@@ -33,7 +33,7 @@ export const listAttemptStatusesRoute = createRoute({
 export const listAttemptStatusesHandler = (deps: RouteDeps): AppRouteHandler<typeof listAttemptStatusesRoute> => {
   return async (c) => {
     const { projectId } = c.req.valid("param");
-    const rows = await deps.attemptStatusesService.list(projectId);
+    const rows = await deps.attemptStatusService.list(projectId);
     return c.json(rows, 200);
   };
 };

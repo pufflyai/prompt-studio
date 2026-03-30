@@ -1,0 +1,165 @@
+import { describe, expect, mock, test } from "bun:test";
+import { createSessionService } from "./session-service";
+
+const buildDeps = () => {
+  const updateStatus = mock(async (id: string, status: string) => ({
+    id,
+    project_id: "project_1",
+    status,
+  }));
+  const create = mock(async (input: { project_id: string; title: string; agent: string }) => ({
+    id: "session_1",
+    project_id: input.project_id,
+    status: "in_progress",
+    title: input.title,
+    agent: input.agent,
+  }));
+  const archive = mock(async (id: string) => ({
+    id,
+    project_id: "project_1",
+    status: "completed",
+    archived: true,
+  }));
+
+  const emitted: unknown[][] = [];
+  const eventBus = { emit: (...args: unknown[]) => emitted.push(args) };
+
+  const onSessionStarted = mock(() => {});
+  const onSessionStatusChanged = mock(() => {});
+  const onSessionResumed = mock(() => {});
+
+  const sessionsDb = {
+    create,
+    updateStatus,
+    archive,
+    get: mock(async () => null),
+    list: mock(async () => []),
+    listByStatus: mock(async () => []),
+    update: mock(async () => null),
+  };
+
+  return {
+    deps: {
+      sessionsDb,
+      eventBus,
+      onSessionStarted,
+      onSessionStatusChanged,
+      onSessionResumed,
+    } as unknown as Parameters<typeof createSessionService>[0],
+    mocks: { updateStatus, create, archive, onSessionStarted, onSessionStatusChanged, onSessionResumed },
+    sessionsDb,
+    emitted,
+  };
+};
+
+describe("SessionService", () => {
+  describe("transitionStatus", () => {
+    test("updates DB, emits event, and fires status callback", async () => {
+      const { deps, mocks, emitted } = buildDeps();
+      const service = createSessionService(deps);
+
+      const result = await service.transitionStatus("s1", "completed");
+
+      expect(result).toMatchObject({ id: "s1", project_id: "project_1", status: "completed" });
+      expect(mocks.updateStatus).toHaveBeenCalledWith("s1", "completed");
+      expect(emitted).toContainEqual(["sessions", "set", { id: "s1", project_id: "project_1", status: "completed" }]);
+      expect(mocks.onSessionStatusChanged).toHaveBeenCalledWith({
+        id: "s1",
+        project_id: "project_1",
+        status: "completed",
+      });
+    });
+
+    test("fires callback for failed status", async () => {
+      const { deps, mocks } = buildDeps();
+      const service = createSessionService(deps);
+
+      await service.transitionStatus("s1", "failed");
+
+      expect(mocks.onSessionStatusChanged).toHaveBeenCalledWith({
+        id: "s1",
+        project_id: "project_1",
+        status: "failed",
+      });
+    });
+
+    test("returns null when session not found", async () => {
+      const { deps, sessionsDb } = buildDeps();
+      (sessionsDb.updateStatus as ReturnType<typeof mock>).mockImplementation(async () => null);
+      const service = createSessionService(deps);
+
+      const result = await service.transitionStatus("missing", "completed");
+      expect(result).toBeNull();
+    });
+
+    test("does not emit or fire callbacks when session not found", async () => {
+      const { deps, sessionsDb, mocks, emitted } = buildDeps();
+      (sessionsDb.updateStatus as ReturnType<typeof mock>).mockImplementation(async () => null);
+      const service = createSessionService(deps);
+
+      await service.transitionStatus("missing", "completed");
+
+      expect(emitted).toHaveLength(0);
+      expect(mocks.onSessionStatusChanged).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("create", () => {
+    test("creates session, emits event, and fires start callback", async () => {
+      const { deps, mocks, emitted } = buildDeps();
+      const service = createSessionService(deps);
+
+      const result = await service.create({ project_id: "p1", title: "test", agent: "claude-code" });
+
+      expect(result).toMatchObject({ id: "session_1", project_id: "p1" });
+      expect(mocks.create).toHaveBeenCalledWith({ project_id: "p1", title: "test", agent: "claude-code" });
+      expect(emitted).toContainEqual(["sessions", "set", expect.objectContaining({ id: "session_1" })]);
+      expect(mocks.onSessionStarted).toHaveBeenCalledWith({
+        id: "session_1",
+        project_id: "p1",
+        status: "in_progress",
+      });
+    });
+  });
+
+  describe("archive", () => {
+    test("archives session and emits event", async () => {
+      const { deps, mocks, emitted } = buildDeps();
+      const service = createSessionService(deps);
+
+      const result = await service.archive("s1");
+
+      expect(result).toMatchObject({ id: "s1", archived: true });
+      expect(mocks.archive).toHaveBeenCalledWith("s1");
+      expect(emitted).toContainEqual(["sessions", "set", expect.objectContaining({ id: "s1", archived: true })]);
+    });
+
+    test("returns null when session not found", async () => {
+      const { deps, sessionsDb, emitted } = buildDeps();
+      (sessionsDb.archive as ReturnType<typeof mock>).mockImplementation(async () => null);
+      const service = createSessionService(deps);
+
+      const result = await service.archive("missing");
+      expect(result).toBeNull();
+      expect(emitted).toHaveLength(0);
+    });
+  });
+
+  describe("resume", () => {
+    test("transitions to in_progress and fires resume callback", async () => {
+      const { deps, mocks, emitted } = buildDeps();
+      const service = createSessionService(deps);
+
+      const result = await service.resume("s1");
+
+      expect(result).toMatchObject({ id: "s1", status: "in_progress" });
+      expect(mocks.updateStatus).toHaveBeenCalledWith("s1", "in_progress");
+      expect(emitted).toContainEqual(["sessions", "set", { id: "s1", project_id: "project_1", status: "in_progress" }]);
+      expect(mocks.onSessionResumed).toHaveBeenCalledWith({
+        id: "s1",
+        project_id: "project_1",
+        status: "in_progress",
+      });
+    });
+  });
+});

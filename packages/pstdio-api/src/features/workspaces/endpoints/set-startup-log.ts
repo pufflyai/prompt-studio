@@ -36,7 +36,7 @@ export const setStartupLogHandler = (deps: RouteDeps): AppRouteHandler<typeof se
     const { id } = c.req.valid("param");
     const { content_base64 } = c.req.valid("json");
 
-    const workspace = await deps.workspacesService.get(id);
+    const workspace = await deps.workspaceService.get(id);
     if (!workspace) {
       return c.json({ error: `Workspace not found: ${id}` }, 404);
     }
@@ -44,13 +44,13 @@ export const setStartupLogHandler = (deps: RouteDeps): AppRouteHandler<typeof se
     const data = Buffer.from(content_base64, "base64");
 
     if (workspace.startup_log_file_id) {
-      const updated = await deps.filesService.update(workspace.startup_log_file_id, { data });
+      const updated = await deps.fileService.update(workspace.startup_log_file_id, { data });
       if (updated) {
         return c.json({ file_id: workspace.startup_log_file_id }, 200);
       }
     }
 
-    const file = await deps.filesService.upload({
+    const file = await deps.fileService.upload({
       project_id: workspace.project_id,
       file_name: "startup.log",
       file_kind: "startup_log",
@@ -58,7 +58,7 @@ export const setStartupLogHandler = (deps: RouteDeps): AppRouteHandler<typeof se
       mime_type: "text/plain",
     });
 
-    await deps.workspacesService.setStartupLogFileId(id, file.id);
+    await deps.workspaceService.setStartupLogFileId(id, file.id);
 
     return c.json({ file_id: file.id }, 200);
   };

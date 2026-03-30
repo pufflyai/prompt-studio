@@ -4,8 +4,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { JsonPatch, SessionMessage } from "pstdio-agents";
 import { createEventStore } from "pstdio-agents";
-import { createDb, createProjectsService, createSessionsService } from "pstdio-db";
-import { createFilesService } from "pstdio-storage";
+import { createDb, createFilesDBService, createProjectsDBService, createSessionsDBService } from "pstdio-db";
+import { createFilesStorageService } from "pstdio-storage";
+import { createFileService } from "../../services/file-service";
 import { buildMessagesFromPatches, persistSessionMessages } from "./session-messages";
 
 const msg = (id: string, role: "user" | "assistant", text: string): SessionMessage => ({
@@ -112,11 +113,14 @@ const setupDb = async (tempRoot: string, label: string) => {
   const storageRoot = join(tempRoot, `storage-${label}`);
   fs.mkdirSync(storageRoot, { recursive: true });
 
+  const filesDBService = createFilesDBService(conn.db);
+  const filesStorageService = createFilesStorageService(storageRoot);
+
   return {
     conn,
-    sessionsService: createSessionsService(conn.db),
-    filesService: createFilesService(conn.db, storageRoot),
-    projectsService: createProjectsService(conn.db),
+    sessionsService: createSessionsDBService(conn.db),
+    fileService: createFileService({ filesDBService, filesStorageService }),
+    projectsService: createProjectsDBService(conn.db),
   };
 };
 
@@ -128,7 +132,7 @@ describe("persistSessionMessages", () => {
   });
 
   test("uploads file and sets session_file_id on first run", async () => {
-    const { conn, sessionsService, filesService, projectsService } = await setupDb(tempRoot, "first-run");
+    const { conn, sessionsService, fileService, projectsService } = await setupDb(tempRoot, "first-run");
 
     const proj = await projectsService.create({ name: "test" });
     const session = await sessionsService.create({ project_id: proj.id, title: "test", agent: "claude-code" });
@@ -137,12 +141,15 @@ describe("persistSessionMessages", () => {
     eventStore.push({ op: "add", path: "/messages/0", value: msg("1", "user", "hello") });
     eventStore.push({ op: "add", path: "/messages/1", value: msg("2", "assistant", "hi") });
 
-    await persistSessionMessages(session.id, eventStore.getHistory(), { sessionsService, filesService });
+    await persistSessionMessages(session.id, eventStore.getHistory(), {
+      sessionService: sessionsService,
+      fileService,
+    });
 
     const updated = await sessionsService.get(session.id);
     expect(updated?.session_file_id).not.toBeNull();
 
-    const file = await filesService.get(updated!.session_file_id!);
+    const file = await fileService.get(updated!.session_file_id!);
     const content = JSON.parse(fs.readFileSync(file!.storage_path, "utf-8"));
     expect(content).toHaveLength(2);
     expect(content[0].id).toBe("1");
@@ -153,7 +160,7 @@ describe("persistSessionMessages", () => {
   });
 
   test("updates existing file on resume", async () => {
-    const { conn, sessionsService, filesService, projectsService } = await setupDb(tempRoot, "resume");
+    const { conn, sessionsService, fileService, projectsService } = await setupDb(tempRoot, "resume");
 
     const proj = await projectsService.create({ name: "test" });
     const session = await sessionsService.create({ project_id: proj.id, title: "test", agent: "claude-code" });
@@ -162,18 +169,24 @@ describe("persistSessionMessages", () => {
     const eventStore1 = createEventStore();
     eventStore1.push({ op: "add", path: "/messages/0", value: msg("1", "user", "hello") });
     eventStore1.push({ op: "add", path: "/messages/1", value: msg("2", "assistant", "hi") });
-    await persistSessionMessages(session.id, eventStore1.getHistory(), { sessionsService, filesService });
+    await persistSessionMessages(session.id, eventStore1.getHistory(), {
+      sessionService: sessionsService,
+      fileService,
+    });
     eventStore1.close();
 
     // Resume — new messages at offset 2
     const eventStore2 = createEventStore();
     eventStore2.push({ op: "add", path: "/messages/2", value: msg("3", "user", "follow up") });
     eventStore2.push({ op: "add", path: "/messages/3", value: msg("4", "assistant", "sure") });
-    await persistSessionMessages(session.id, eventStore2.getHistory(), { sessionsService, filesService });
+    await persistSessionMessages(session.id, eventStore2.getHistory(), {
+      sessionService: sessionsService,
+      fileService,
+    });
     eventStore2.close();
 
     const updated = await sessionsService.get(session.id);
-    const file = await filesService.get(updated!.session_file_id!);
+    const file = await fileService.get(updated!.session_file_id!);
     const content = JSON.parse(fs.readFileSync(file!.storage_path, "utf-8"));
 
     expect(content).toHaveLength(4);
@@ -185,7 +198,7 @@ describe("persistSessionMessages", () => {
   });
 
   test("uploads file when history contains /messages replace patch", async () => {
-    const { conn, sessionsService, filesService, projectsService } = await setupDb(tempRoot, "replace-patch");
+    const { conn, sessionsService, fileService, projectsService } = await setupDb(tempRoot, "replace-patch");
 
     const proj = await projectsService.create({ name: "test" });
     const session = await sessionsService.create({ project_id: proj.id, title: "test", agent: "opencode" });
@@ -197,12 +210,15 @@ describe("persistSessionMessages", () => {
       value: [msg("1", "user", "hello"), msg("2", "assistant", "hi")],
     });
 
-    await persistSessionMessages(session.id, eventStore.getHistory(), { sessionsService, filesService });
+    await persistSessionMessages(session.id, eventStore.getHistory(), {
+      sessionService: sessionsService,
+      fileService,
+    });
 
     const updated = await sessionsService.get(session.id);
     expect(updated?.session_file_id).not.toBeNull();
 
-    const file = await filesService.get(updated!.session_file_id!);
+    const file = await fileService.get(updated!.session_file_id!);
     const content = JSON.parse(fs.readFileSync(file!.storage_path, "utf-8"));
     expect(content).toHaveLength(2);
     expect(content[0].id).toBe("1");
@@ -213,7 +229,7 @@ describe("persistSessionMessages", () => {
   });
 
   test("does not persist messages that only contain empty parts", async () => {
-    const { conn, sessionsService, filesService, projectsService } = await setupDb(tempRoot, "empty-parts");
+    const { conn, sessionsService, fileService, projectsService } = await setupDb(tempRoot, "empty-parts");
 
     const proj = await projectsService.create({ name: "test" });
     const session = await sessionsService.create({ project_id: proj.id, title: "test", agent: "opencode" });
@@ -225,7 +241,10 @@ describe("persistSessionMessages", () => {
       value: [{ id: "1", role: "assistant", parts: [{ type: "reasoning", text: " " }] }] satisfies SessionMessage[],
     });
 
-    await persistSessionMessages(session.id, eventStore.getHistory(), { sessionsService, filesService });
+    await persistSessionMessages(session.id, eventStore.getHistory(), {
+      sessionService: sessionsService,
+      fileService,
+    });
 
     const updated = await sessionsService.get(session.id);
     expect(updated?.session_file_id).toBeNull();

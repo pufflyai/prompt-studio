@@ -4,7 +4,7 @@ import { project_repos, repos } from "../../db/schemas.pg";
 
 const nowTimestamp = () => new Date().toISOString();
 
-export const createReposService = (db: DbClient) => {
+export const createReposDBService = (db: DbClient) => {
   const findByPath = async (path: string) => {
     const [repo] = await db.select().from(repos).where(eq(repos.path, path));
     return repo ?? null;
@@ -59,11 +59,19 @@ export const createReposService = (db: DbClient) => {
     return repo ?? null;
   };
 
+  const getProjectRepoLink = async (projectId: string, repoId: string) => {
+    const [link] = await db
+      .select()
+      .from(project_repos)
+      .where(and(eq(project_repos.project_id, projectId), eq(project_repos.repo_id, repoId)));
+    return link ?? null;
+  };
+
   const removeFromProject = async (projectId: string, repoId: string) => {
     await db
       .delete(project_repos)
       .where(and(eq(project_repos.project_id, projectId), eq(project_repos.repo_id, repoId)));
   };
 
-  return { get, registerForProject, listByProject, removeFromProject };
+  return { get, registerForProject, listByProject, getProjectRepoLink, removeFromProject };
 };

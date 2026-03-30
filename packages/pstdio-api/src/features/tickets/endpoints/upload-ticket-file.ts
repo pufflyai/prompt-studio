@@ -41,24 +41,24 @@ export const uploadTicketFileHandler = (deps: RouteDeps): AppRouteHandler<typeof
     const { id } = c.req.valid("param");
     const { file_name, content_base64, mime_type } = c.req.valid("json");
 
-    const ticket = await deps.ticketsService.get(id);
+    const ticket = await deps.ticketService.get(id);
     if (!ticket) {
       return c.json({ error: `Ticket not found: ${id}` }, 404);
     }
 
     const data = Buffer.from(content_base64, "base64");
-    const attachedFiles = await deps.filesService.listForTicket(id);
+    const attachedFiles = await deps.fileService.listForTicket(id);
     const existing = attachedFiles.find((file) => file.file_name === file_name);
 
     if (existing) {
-      const updated = await deps.filesService.update(existing.id, { data });
+      const updated = await deps.fileService.update(existing.id, { data });
       if (updated) {
         emitSyncedFile(deps, updated);
       }
       return c.json(updated ?? existing, 200);
     }
 
-    const file = await deps.filesService.upload({
+    const file = await deps.fileService.upload({
       project_id: ticket.project_id,
       file_name,
       file_kind: "ticket_file",
@@ -66,7 +66,7 @@ export const uploadTicketFileHandler = (deps: RouteDeps): AppRouteHandler<typeof
       mime_type: mime_type ?? null,
     });
 
-    const ticketFile = await deps.filesService.attachToTicket(id, file.id);
+    const ticketFile = await deps.fileService.attachToTicket(id, file.id);
     emitSyncedFile(deps, file);
     emitSyncedTicketFile(deps, ticketFile);
 

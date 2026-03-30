@@ -6,7 +6,7 @@ import { resolveProjectId as defaultResolveProjectId } from "@/features/projects
 import { resolveTicketByShorthand as defaultResolveTicketByShorthand } from "@/features/tickets/resolve-ticket-by-shorthand";
 import { listWorkspaces as defaultListWorkspaces } from "@/features/workspaces/api/list-workspaces";
 
-export const command = "clean-worktrees";
+export const command = "remove-all";
 export const describe = "Remove all worktrees for a ticket";
 
 export const builder = (yargs: Argv) =>
@@ -14,7 +14,7 @@ export const builder = (yargs: Argv) =>
     .option("id", { type: "string", demandOption: true, describe: "Ticket shorthand (e.g. PS-12)" })
     .option("project-id", { type: "string", describe: "Project ID" });
 
-type CleanWorktreesArgs = {
+type RemoveAllArgs = {
   id: string;
   "project-id"?: string;
 };
@@ -43,7 +43,7 @@ const defaultDeps: Deps = {
 
 export const createHandler =
   (deps: Deps = defaultDeps) =>
-  async (argv: Arguments<CleanWorktreesArgs>) => {
+  async (argv: Arguments<RemoveAllArgs>) => {
     const root = deps.findGitRoot(deps.cwd());
     if (!root) throw new Error("Not inside a git repository.");
 

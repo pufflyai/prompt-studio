@@ -20,27 +20,16 @@ const createContext = (input: { id: string; body: { id: string; decision: "appro
 };
 
 describe("approveSessionHandler", () => {
-  test("fires the session resume hook when awaiting input is approved", async () => {
-    const updateStatus = mock(async () => ({ id: "session-1", project_id: "project-1", status: "in_progress" }));
-    const listByProject = mock(async () => []);
-    const getWorkspaceBySessionId = mock(async () => null);
+  test("calls sessionService.resume when awaiting input is approved", async () => {
+    const resume = mock(async () => ({ id: "session-1", project_id: "project-1", status: "in_progress" }));
     const handleResponse = mock(() => {});
     const deps = {
-      sessionsService: {
+      sessionService: {
         get: async () => ({ id: "session-1", project_id: "project-1", status: "awaiting_input" }),
-        updateStatus,
-      },
-      sessionStore: {
-        get: () => ({ approvalService: { handleResponse } }),
-      },
-      eventBus: {
-        emit: () => {},
-      },
-      reposService: {
-        listByProject,
-      },
-      workspaceSessionsService: {
-        getWorkspaceBySessionId,
+        resume,
+        store: {
+          get: () => ({ approvalService: { handleResponse } }),
+        },
       },
     } as unknown as Parameters<typeof approveSessionHandler>[0];
 
@@ -50,14 +39,6 @@ describe("approveSessionHandler", () => {
 
     expect(response.status).toBe(200);
     expect(handleResponse).toHaveBeenCalledWith({ id: "approval-1", decision: "approve" });
-    expect(updateStatus).toHaveBeenCalledWith("session-1", "in_progress");
-
-    for (let index = 0; index < 20; index += 1) {
-      if (listByProject.mock.calls.length > 0) break;
-      await Bun.sleep(10);
-    }
-
-    expect(getWorkspaceBySessionId).toHaveBeenCalledWith("session-1");
-    expect(listByProject).toHaveBeenCalledWith("project-1");
+    expect(resume).toHaveBeenCalledWith("session-1");
   });
 });

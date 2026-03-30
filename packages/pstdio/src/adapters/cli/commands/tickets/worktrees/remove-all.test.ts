@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { Arguments } from "yargs";
-import { createHandler } from "./clean-worktrees";
+import { createHandler } from "./remove-all";
 
 type Workspace = {
   id: string;
@@ -43,7 +43,7 @@ const makeDeps = (overrides: Record<string, unknown> = {}) => ({
 
 type Args = { id: string; "project-id"?: string };
 
-describe("tickets clean-worktrees", () => {
+describe("tickets worktrees remove-all", () => {
   test("removes worktree and branch for each workspace", async () => {
     const deps = makeDeps();
     const handler = createHandler(deps as never);

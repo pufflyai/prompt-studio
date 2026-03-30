@@ -27,32 +27,41 @@ const createContext = (body: {
 };
 
 describe("createSessionHandler hooks", () => {
-  test("fires post-session-fail when agent startup fails", async () => {
-    const listByProject = mock(async () => []);
-    const updateStatus = mock(async () => ({ id: "session-1", project_id: "project-1", status: "failed" }));
-    const getWorkspaceBySessionId = mock(async () => null);
+  test("calls sessionService.transitionStatus to failed when agent startup fails", async () => {
+    const transitionStatus = mock(async () => ({ id: "session-1", project_id: "project-1", status: "failed" }));
+    const sessionCreate = mock(async () => ({
+      id: "session-1",
+      project_id: "project-1",
+      status: "in_progress",
+      title: "Session",
+      agent: "missing-agent",
+    }));
     const deps = {
-      projectsService: {
+      projectService: {
         get: async () => ({ id: "project-1" }),
       },
-      reposService: {
-        listByProject,
+      repoService: {
+        listByProject: async () => [],
       },
-      sessionsService: {
-        create: async () => ({
-          id: "session-1",
-          project_id: "project-1",
-          status: "in_progress",
-          title: "Session",
-          agent: "missing-agent",
-        }),
-        updateStatus,
-      },
-      workspacesService: {
+      workspaceService: {
         get: async () => null,
       },
-      workspaceSessionsService: {
-        getWorkspaceBySessionId,
+      workspaceSessionService: {
+        getWorkspaceBySessionId: async () => null,
+        link: async () => ({}),
+      },
+      sessionService: {
+        create: sessionCreate,
+        transitionStatus,
+        store: {
+          create: mock(() => ({
+            eventStore: { push: () => {}, getHistory: () => [] },
+            approvalService: { handleResponse: () => {} },
+          })),
+          get: mock(() => null),
+          setProcess: mock(() => {}),
+          remove: mock(() => {}),
+        },
       },
       eventBus: {
         emit: () => {},
@@ -74,14 +83,10 @@ describe("createSessionHandler hooks", () => {
     expect(response.status).toBe(201);
 
     for (let index = 0; index < 30; index += 1) {
-      if (getWorkspaceBySessionId.mock.calls.length >= 2) break;
+      if (transitionStatus.mock.calls.length > 0) break;
       await Bun.sleep(10);
     }
 
-    expect(updateStatus).toHaveBeenCalledWith("session-1", "failed");
-    // post-session-start + post-session-fail
-    expect(getWorkspaceBySessionId.mock.calls.length).toBeGreaterThanOrEqual(2);
-    // post-session-start + post-session-fail
-    expect(listByProject.mock.calls.length).toBeGreaterThanOrEqual(3);
+    expect(transitionStatus).toHaveBeenCalledWith("session-1", "failed");
   });
 });

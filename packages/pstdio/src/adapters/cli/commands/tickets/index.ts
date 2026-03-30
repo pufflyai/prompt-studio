@@ -1,6 +1,5 @@
 import type { Argv } from "yargs";
 import * as archiveCommand from "./archive";
-import * as cleanWorktreesCommand from "./clean-worktrees";
 import * as createCommand from "./create";
 import * as deleteCommand from "./delete";
 import * as filesCommand from "./files";
@@ -9,8 +8,10 @@ import * as listCommand from "./list";
 import * as pullCommand from "./pull";
 import * as saveCommand from "./save";
 import * as updateCommand from "./update";
+import * as updateWhenAttemptStatusCommand from "./update-when-attempt-status";
 import * as viewCommand from "./view";
 import * as workspacesCommand from "./workspaces";
+import * as worktreesCommand from "./worktrees";
 import * as writeCommand from "./write";
 
 export const command = "tickets [command]";
@@ -31,9 +32,10 @@ export const builder = (yargs: Argv) => {
     .command(pullCommand)
     .command(filesCommand)
     .command(workspacesCommand)
+    .command(worktreesCommand)
+    .command(updateWhenAttemptStatusCommand)
     .command(deleteCommand)
-    .command(archiveCommand)
-    .command(cleanWorktreesCommand);
+    .command(archiveCommand);
 };
 
 export const handler = () => {

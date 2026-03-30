@@ -163,14 +163,8 @@ describe("ticket status change hook triggers further actions", () => {
       writeHook(
         repo,
         "post-ticket-status-change",
-        `${cliPreamble()}
-PAYLOAD=$(cat)
-STATUS_ID=$(echo "$PAYLOAD" | grep -o '"status_id":"[^"]*"' | head -1 | cut -d'"' -f4)
-STATUSES=$($PSTDIO tickets list-statuses 2>/dev/null || echo "")
-
-# Resolve status name from the API
-API="${api.url}"
-STATUS_NAME=$(curl -s "$API/v1/projects/$PSTDIO_PROJECT_ID/statuses" | grep -o "\\"id\\":\\"$STATUS_ID\\"[^}]*\\"name\\":\\"[^\\"]*" | grep -o '[^"]*$')
+        `
+STATUS_NAME="$PSTDIO_TO_STATUS"
 
 if [ "$STATUS_NAME" = "wip" ]; then
   echo "moved-to-wip" > "${repo}/status-action.txt"

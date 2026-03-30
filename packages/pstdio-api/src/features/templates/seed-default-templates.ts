@@ -90,7 +90,7 @@ export const seedDefaultTemplates = async (deps: RouteDeps, projectId: string) =
   const seeded = [];
 
   for (const template of BUNDLED_TEMPLATES) {
-    const existing = await deps.templatesService.getByName(projectId, template.name);
+    const existing = await deps.templateService.getByName(projectId, template.name);
     if (existing) continue;
 
     const path = templatePath(template);
@@ -98,7 +98,7 @@ export const seedDefaultTemplates = async (deps: RouteDeps, projectId: string) =
     if (!content) {
       throw new Error(`Missing bundled template content for ${path}`);
     }
-    const file = await deps.filesService.upload({
+    const file = await deps.fileService.upload({
       project_id: projectId,
       file_name: `${template.name}.md`,
       file_kind: "template",
@@ -106,7 +106,7 @@ export const seedDefaultTemplates = async (deps: RouteDeps, projectId: string) =
       mime_type: "text/markdown",
     });
 
-    const created = await deps.templatesService.create({
+    const created = await deps.templateService.create({
       project_id: projectId,
       name: template.name,
       template_type: folderToType(template.folder),

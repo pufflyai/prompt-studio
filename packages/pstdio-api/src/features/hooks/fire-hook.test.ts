@@ -24,7 +24,7 @@ const writeHook = (hookName: string, script: string) => {
 };
 
 const makeDeps = () => ({
-  reposService: {
+  repoService: {
     listByProject: async () => [{ path: repoDir }],
   } as never,
 });
@@ -46,7 +46,7 @@ describe("fireHook", () => {
 
   test("returns null when project has no repos", async () => {
     const deps = {
-      reposService: {
+      repoService: {
         listByProject: async () => [],
       } as never,
     };

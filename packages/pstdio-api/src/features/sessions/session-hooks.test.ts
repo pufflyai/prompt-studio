@@ -56,7 +56,7 @@ describe("fireSessionStatusHook", () => {
     });
   });
 
-  test("includes attempt status payload when session is linked to a workspace", async () => {
+  test("sends flat payload with workspace enrichment when session is linked", async () => {
     const payloadFile = join(repoDir, "post-session-success.payload.json");
     writeHook("post-session-success", `cat > "${payloadFile}"`);
 
@@ -72,28 +72,6 @@ describe("fireSessionStatusHook", () => {
           worktree_path: repoDir,
           attempt_status_id: "status-review-ready",
         }),
-      } as never,
-      workspacesService: {
-        list: async () => [
-          {
-            id: "ws-1",
-            workspace_shorthand: "TP-5_A1",
-            attempt_status_id: "status-review-ready",
-            ticket_shorthand: "TP-5",
-          },
-          {
-            id: "ws-2",
-            workspace_shorthand: "TP-5_A2",
-            attempt_status_id: "status-running",
-            ticket_shorthand: "TP-5",
-          },
-          {
-            id: "ws-3",
-            workspace_shorthand: "TP-7_A1",
-            attempt_status_id: "status-running",
-            ticket_shorthand: "TP-7",
-          },
-        ],
       } as never,
       attemptStatusesService: {
         list: async () => [
@@ -111,15 +89,13 @@ describe("fireSessionStatusHook", () => {
 
     const content = await waitForHookPayloadFile(payloadFile);
     expect(JSON.parse(content)).toEqual({
-      session: { id: "sess_1", status: "completed" },
-      attempt: { id: "TP-5_A1", status: "review-ready" },
-      ticket: {
-        id: "TP-5",
-        attempts: [
-          { id: "TP-5_A1", status: "review-ready" },
-          { id: "TP-5_A2", status: "running" },
-        ],
-      },
+      session_id: "sess_1",
+      session_status: "completed",
+      workspace: "TP-5_A1",
+      worktree_path: repoDir,
+      branch: "workspace/TP-5_A1",
+      ticket: "TP-5",
+      attempt_status: "review-ready",
     });
   });
 

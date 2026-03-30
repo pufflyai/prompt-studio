@@ -11,7 +11,6 @@ This PRD documents ticket creation, local file layout, content rules, sync behav
 
 ## Detailed Behavior
 
-
 ## Purpose
 
 Manage tickets within a pstdio project. Tickets track work items (bugs, features, proposals) and can be created locally for editing before syncing to the database, or created directly via the API.
@@ -295,7 +294,7 @@ pstdio tickets save --id <ticket-shorthand> [--status <status>] [--tag <tag>...]
 5. Set `draft=false` to publish the ticket.
 6. Resolve the ticket status: use `--status` flag if provided, otherwise use `status` from frontmatter. Look up the status by name and assign its ID.
 7. If `.pstdio/tickets/<ticket-shorthand>/files/` exists, upload every file under it and associate it with the ticket.
-9. If `.pstdio/tickets/<ticket-shorthand>/artifacts/` exists, upload every file under it and associate it with the ticket.
+8. If `.pstdio/tickets/<ticket-shorthand>/artifacts/` exists, upload every file under it and associate it with the ticket.
 9. If `--tag` values are provided, update the tag assignments.
 
 CLI flags always override frontmatter values. When neither a flag nor a frontmatter value is present, the field is left unchanged in the database.
@@ -486,6 +485,95 @@ No ticket workspaces found.
 
 ### Errors
 
+- `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
+- `"Project not found: <project-id>"`: the given project ID does not exist.
+- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
+
+---
+
+## `pstdio tickets worktrees list`
+
+### Usage
+
+```sh
+pstdio tickets worktrees list --id <ticket-shorthand> [--project-id <project-id>] [--json]
+```
+
+### Flags
+
+| Flag           | Type      | Required | Description                                                                 |
+| -------------- | --------- | -------- | --------------------------------------------------------------------------- |
+| `--id`         | `string`  | yes      | The ticket shorthand (e.g. `PS-12`).                                        |
+| `--project-id` | `string`  | no       | Target project. Defaults to the current project from `.pstdio/config.json`. |
+| `--json`       | `boolean` | no       | Output as JSON rows.                                                        |
+
+### Behavior
+
+1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
+2. Resolve the ticket by shorthand from the database.
+3. List active workspaces linked to the ticket.
+4. Keep only rows that have a non-null `worktree_path`.
+
+### Output
+
+```text
+Workspace   Branch               Path
+PS-12/A1    workspace/PS-12/A1   /repo/.pstdio/workspaces/PS-12/A1
+PS-12/A2    workspace/PS-12/A2   /repo/.pstdio/workspaces/PS-12/A2
+```
+
+If the ticket has no active worktrees:
+
+```text
+No worktrees found for ticket PS-12
+```
+
+### Errors
+
+- `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
+- `"Project not found: <project-id>"`: the given project ID does not exist.
+- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
+
+---
+
+## `pstdio tickets worktrees remove-all`
+
+### Usage
+
+```sh
+pstdio tickets worktrees remove-all --id <ticket-shorthand> [--project-id <project-id>]
+```
+
+### Flags
+
+| Flag           | Type     | Required | Description                                                                 |
+| -------------- | -------- | -------- | --------------------------------------------------------------------------- |
+| `--id`         | `string` | yes      | The ticket shorthand (e.g. `PS-12`).                                        |
+| `--project-id` | `string` | no       | Target project. Defaults to the current project from `.pstdio/config.json`. |
+
+### Behavior
+
+1. Resolve the project and ticket.
+2. List active workspaces linked to the ticket.
+3. For each workspace with a worktree path, remove the git worktree and branch.
+4. Continue on individual failures and report total removals.
+
+### Output
+
+```text
+Removed 2 worktree(s) for ticket PS-12
+```
+
+If the ticket has no active worktrees:
+
+```text
+No worktrees found for ticket PS-12
+```
+
+### Errors
+
+- `"Not inside a git repository."`: command is run outside a git repository.
+- `"Not inside a pstdio project. Run 'pstdio projects create' first."`: no project config is available.
 - `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
 - `"Project not found: <project-id>"`: the given project ID does not exist.
 - `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
@@ -694,11 +782,11 @@ Archived ticket PS-12
 
 ## Local Side Effects
 
-| Path                                                           | Description                                                                                   |
-| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `.pstdio/tickets/<shorthand>/ticket.md`                        | Local ticket file created by `write`/`pull`, read by `save`.                                 |
-| `.pstdio/tickets/<shorthand>/files/`                           | Supporting files (research, schemas, PRDs) written by `pull`, read by `save`/`files`.       |
-| `.pstdio/tickets/<shorthand>/files/<filename>`                 | Individual supporting files synced between local project and DB.                             |
-| `.pstdio/tickets/<shorthand>/artifacts/`                       | Validation artifacts (test output, screenshots, logs) written by `pull`, read by `save`/`files`. |
-| `.pstdio/tickets/<shorthand>/artifacts/<filename>`             | Individual validation artifacts synced between local project and DB.                         |
-| `.pstdio/workspaces/<workspace-shorthand>/`                    | Git worktree path referenced by `pstdio tickets workspaces` and removed when ticket archival cascades workspace archival. |
+| Path                                               | Description                                                                                                               |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `.pstdio/tickets/<shorthand>/ticket.md`            | Local ticket file created by `write`/`pull`, read by `save`.                                                              |
+| `.pstdio/tickets/<shorthand>/files/`               | Supporting files (research, schemas, PRDs) written by `pull`, read by `save`/`files`.                                     |
+| `.pstdio/tickets/<shorthand>/files/<filename>`     | Individual supporting files synced between local project and DB.                                                          |
+| `.pstdio/tickets/<shorthand>/artifacts/`           | Validation artifacts (test output, screenshots, logs) written by `pull`, read by `save`/`files`.                          |
+| `.pstdio/tickets/<shorthand>/artifacts/<filename>` | Individual validation artifacts synced between local project and DB.                                                      |
+| `.pstdio/workspaces/<workspace-shorthand>/`        | Git worktree path referenced by `pstdio tickets workspaces` and removed when ticket archival cascades workspace archival. |

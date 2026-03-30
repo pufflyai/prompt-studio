@@ -22,7 +22,7 @@ type UpdateInput = {
 
 type UpdateResult = { template: TemplateRecord } | { error: "not_found" | "cannot_change_only_default_template_type" };
 
-export const createTemplatesService = (db: DbClient) => {
+export const createTemplatesDBService = (db: DbClient) => {
   const list = async (projectId: string) =>
     db
       .select()

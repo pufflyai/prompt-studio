@@ -1,4 +1,4 @@
-import type { HookContext, HookName } from "pstdio-wt";
+import type { HookName, HookPayload, RunHookOptions } from "pstdio-wt";
 import { runHook as defaultRunHook } from "pstdio-wt";
 import type { Arguments, Argv } from "yargs";
 import { findGitRoot, readConfig } from "@/features/config/config";
@@ -42,13 +42,15 @@ export const createHandler =
     if (!config) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
 
     const hookName = argv.hook as HookName;
-    const context: HookContext = {
-      repoPath: root,
-      worktreePath: argv["worktree-path"] ?? deps.cwd(),
-      projectId: config.project_id,
+    const worktreePath = argv["worktree-path"] ?? deps.cwd();
+    const payload: HookPayload = {
+      repo_path: root,
+      worktree_path: worktreePath,
+      project_id: config.project_id,
     };
+    const options: RunHookOptions = { repoPath: root, cwd: worktreePath };
 
-    const result = await deps.runHook(hookName, context, root);
+    const result = await deps.runHook(hookName, payload, options);
 
     if (result.skipped) {
       deps.log(`No hook script found for "${hookName}".`);

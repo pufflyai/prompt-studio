@@ -1,6 +1,14 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import type { HookContext, HookName, HookResult, SessionHookName, TicketHookName, WorktreeHookName } from "./types";
+import type {
+  HookName,
+  HookPayload,
+  HookResult,
+  RunHookOptions,
+  SessionHookName,
+  TicketHookName,
+  WorktreeHookName,
+} from "./types";
 
 const WORKTREE_HOOK_NAMES: WorktreeHookName[] = [
   "pre-worktree-create",
@@ -57,20 +65,24 @@ export const resolveHookScript = (repoPath: string, hookName: HookName) => {
   return existsSync(scriptPath) ? scriptPath : null;
 };
 
-export const buildHookEnv = (hookName: HookName, context: HookContext) => {
-  const env: Record<string, string> = {
-    PSTDIO_HOOK: hookName,
-    PSTDIO_REPO_PATH: context.repoPath,
-  };
+const toUpperSnake = (key: string) => key.toUpperCase();
 
-  if (context.branch) env.PSTDIO_BRANCH = context.branch;
-  if (context.worktreePath) env.PSTDIO_WORKTREE_PATH = context.worktreePath;
-  if (context.workspace) env.PSTDIO_WORKSPACE = context.workspace;
-  if (context.ticketShorthand) env.PSTDIO_TICKET = context.ticketShorthand;
-  if (context.target) env.PSTDIO_TARGET = context.target;
-  if (context.commitSha) env.PSTDIO_COMMIT_SHA = context.commitSha;
-  if (context.commitMessage) env.PSTDIO_COMMIT_MESSAGE = context.commitMessage;
-  if (context.projectId) env.PSTDIO_PROJECT_ID = context.projectId;
+const formatEnvValue = (value: unknown): string | undefined => {
+  if (value === null || value === undefined) return undefined;
+  if (Array.isArray(value)) return JSON.stringify(value);
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+};
+
+export const buildEnvFromPayload = (hookName: HookName, payload: HookPayload) => {
+  const env: Record<string, string> = { PSTDIO_HOOK: hookName };
+
+  for (const [key, value] of Object.entries(payload)) {
+    const formatted = formatEnvValue(value);
+    if (formatted !== undefined) {
+      env[`PSTDIO_${toUpperSnake(key)}`] = formatted;
+    }
+  }
 
   return env;
 };
@@ -85,28 +97,24 @@ const skippedResult = (hookName: HookName): HookResult => ({
 
 const HOOK_TIMEOUT_MS = 60_000;
 
-type RunHookOptions = {
-  timeoutMs?: number;
-};
-
 export const runHook = async (
   hookName: HookName,
-  context: HookContext,
-  repoPath: string,
-  options?: RunHookOptions,
+  payload: HookPayload,
+  options: RunHookOptions,
 ): Promise<HookResult> => {
-  const scriptPath = resolveHookScript(repoPath, hookName);
+  const scriptPath = resolveHookScript(options.repoPath, hookName);
   if (!scriptPath) return skippedResult(hookName);
 
-  const env = buildHookEnv(hookName, context);
-  const cwd = context.worktreePath ?? context.repoPath;
-  const timeoutMs = options?.timeoutMs ?? HOOK_TIMEOUT_MS;
+  const env = buildEnvFromPayload(hookName, payload);
+  const worktreePath = typeof payload.worktree_path === "string" ? payload.worktree_path : undefined;
+  const cwd = options.cwd ?? (worktreePath && existsSync(worktreePath) ? worktreePath : options.repoPath);
+  const timeoutMs = options.timeoutMs ?? HOOK_TIMEOUT_MS;
 
-  const stdinPayload = context.payload ? JSON.stringify(context.payload) : undefined;
+  const stdinPayload = JSON.stringify(payload);
 
   const proc = Bun.spawn([scriptPath], {
     cwd,
-    stdin: stdinPayload ? new Blob([stdinPayload]) : undefined,
+    stdin: new Blob([stdinPayload]),
     stdout: "pipe",
     stderr: "pipe",
     env: { ...process.env, ...env },
@@ -138,6 +146,23 @@ export const runHook = async (
 
   const [stdout, stderr, exitCode] = result;
   return { hook: hookName, skipped: false, exitCode, stdout, stderr };
+};
+
+const PAYLOAD_OVERRIDE_PREFIX = "PSTDIO_PAYLOAD=";
+
+export const parsePayloadOverride = (stdout: string): Record<string, unknown> | null => {
+  const lines = stdout.split("\n");
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i]!;
+    if (line.startsWith(PAYLOAD_OVERRIDE_PREFIX)) {
+      try {
+        return JSON.parse(line.slice(PAYLOAD_OVERRIDE_PREFIX.length)) as Record<string, unknown>;
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
 };
 
 export const listHooks = (repoPath: string) =>

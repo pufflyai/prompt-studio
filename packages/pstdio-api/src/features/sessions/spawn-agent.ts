@@ -1,6 +1,5 @@
 import type { AgentId, ApprovalRequest } from "pstdio-agents";
 import type { RouteDeps } from "../deps";
-import { fireSessionStatusHook } from "./session-hooks";
 import { persistSessionMessages } from "./session-messages";
 
 type SpawnInput = {
@@ -12,23 +11,14 @@ type SpawnInput = {
   cwd?: string;
 };
 
-type SpawnDeps = Pick<
-  RouteDeps,
-  | "agentRegistry"
-  | "sessionStore"
-  | "sessionsService"
-  | "eventBus"
-  | "filesService"
-  | "reposService"
-  | "workspaceSessionsService"
->;
+type SpawnDeps = Pick<RouteDeps, "agentRegistry" | "eventBus" | "fileService" | "sessionService">;
 
 // Spawns a new agent session and tracks the process lifecycle
 export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
   const agent = deps.agentRegistry.get(input.agentId as AgentId);
   if (!agent) throw new Error(`Agent not found: ${input.agentId}`);
 
-  const entry = deps.sessionStore.create(input.sessionId, (request: ApprovalRequest) => {
+  const entry = deps.sessionService.store.create(input.sessionId, (request: ApprovalRequest) => {
     entry.eventStore.push({ op: "add", path: "/approval_request", value: request });
   });
 
@@ -41,11 +31,11 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
   });
 
   if (result.sessionId) {
-    await deps.sessionsService.update(input.sessionId, { agent_session_id: result.sessionId });
+    await deps.sessionService.update(input.sessionId, { agent_session_id: result.sessionId });
   }
 
   if (result.process) {
-    deps.sessionStore.setProcess(input.sessionId, result.process);
+    deps.sessionService.store.setProcess(input.sessionId, result.process);
     trackProcessExit(input.sessionId, result.process, deps);
   }
 
@@ -67,7 +57,7 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
   const agent = deps.agentRegistry.get(input.agentId as AgentId);
   if (!agent) throw new Error(`Agent not found: ${input.agentId}`);
 
-  const entry = deps.sessionStore.create(input.sessionId, (request: ApprovalRequest) => {
+  const entry = deps.sessionService.store.create(input.sessionId, (request: ApprovalRequest) => {
     entry.eventStore.push({ op: "add", path: "/approval_request", value: request });
   });
 
@@ -95,7 +85,7 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
   );
 
   if (result.process) {
-    deps.sessionStore.setProcess(input.sessionId, result.process);
+    deps.sessionService.store.setProcess(input.sessionId, result.process);
     trackProcessExit(input.sessionId, result.process, deps);
   }
 
@@ -108,20 +98,14 @@ const trackProcessExit = (
   deps: SpawnDeps,
 ) => {
   process.onExit.then(async ({ code }) => {
-    const entry = deps.sessionStore.get(sessionId);
+    const entry = deps.sessionService.store.get(sessionId);
     if (entry) {
       const patches = entry.eventStore.getHistory();
       await persistSessionMessages(sessionId, patches, deps).catch(() => {});
     }
 
     const status = code === 0 ? "completed" : "failed";
-    const updated = await deps.sessionsService.updateStatus(sessionId, status);
-    if (updated) {
-      deps.eventBus.emit("sessions", "set", updated);
-      if (updated.project_id) {
-        fireSessionStatusHook(deps, { id: updated.id, project_id: updated.project_id, status: updated.status });
-      }
-    }
-    deps.sessionStore.remove(sessionId);
+    await deps.sessionService.transitionStatus(sessionId, status);
+    deps.sessionService.store.remove(sessionId);
   });
 };

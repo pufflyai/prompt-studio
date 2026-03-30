@@ -1,7 +1,6 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { projects, ticket_tag_assignments, ticket_tag_options, tickets } from "../../db/schemas.pg";
-import { nextTicketShorthand } from "./next-shorthand";
 
 type TicketRecord = typeof tickets.$inferSelect;
 
@@ -38,7 +37,10 @@ type UpdateInput = {
 
 const nowTimestamp = () => new Date().toISOString();
 
-export const createTicketsService = (db: DbClient) => {
+const nextTicketShorthand = (projectShorthand: string, existingCount: number) =>
+  `${projectShorthand}-${existingCount + 1}`;
+
+export const createTicketsDBService = (db: DbClient) => {
   const create = async (input: CreateInput) => {
     const [project] = await db
       .select({ shorthand: projects.shorthand })
@@ -82,7 +84,7 @@ export const createTicketsService = (db: DbClient) => {
     const [ticket] = await db
       .select()
       .from(tickets)
-      .where(and(eq(tickets.id, id), isNull(tickets.deleted_at)));
+      .where(and(eq(tickets.id, id), sql`${tickets.deleted_at} is null`));
     return ticket ?? null;
   };
 
@@ -90,12 +92,14 @@ export const createTicketsService = (db: DbClient) => {
     const [ticket] = await db
       .select()
       .from(tickets)
-      .where(and(eq(tickets.project_id, projectId), eq(tickets.shorthand, shorthand), isNull(tickets.deleted_at)));
+      .where(
+        and(eq(tickets.project_id, projectId), eq(tickets.shorthand, shorthand), sql`${tickets.deleted_at} is null`),
+      );
     return ticket ?? null;
   };
 
   const list = async (projectId: string, filters: ListFilters = {}) => {
-    const conditions = [eq(tickets.project_id, projectId), isNull(tickets.deleted_at)];
+    const conditions = [eq(tickets.project_id, projectId), sql`${tickets.deleted_at} is null`];
 
     if (filters.status_id) conditions.push(eq(tickets.status_id, filters.status_id));
     if (filters.parent_id) conditions.push(eq(tickets.parent_id, filters.parent_id));
@@ -125,7 +129,7 @@ export const createTicketsService = (db: DbClient) => {
     const [updated] = await db
       .update(tickets)
       .set({ ...input, updated_at: nowTimestamp() })
-      .where(and(eq(tickets.id, id), isNull(tickets.deleted_at)))
+      .where(and(eq(tickets.id, id), sql`${tickets.deleted_at} is null`))
       .returning();
     return updated ?? null;
   };
@@ -161,10 +165,23 @@ export const createTicketsService = (db: DbClient) => {
     const [updated] = await db
       .update(tickets)
       .set({ deleted_at: timestamp, updated_at: timestamp })
-      .where(and(eq(tickets.id, id), isNull(tickets.deleted_at)))
+      .where(and(eq(tickets.id, id), sql`${tickets.deleted_at} is null`))
       .returning();
     return updated ?? null;
   };
 
-  return { create, get, getByShorthand, list, update, softDelete, assignTagOptions, getTagOptionAssignments };
+  const listTagAssignments = async (ticketId: string) =>
+    db.select().from(ticket_tag_assignments).where(eq(ticket_tag_assignments.ticket_id, ticketId));
+
+  return {
+    create,
+    get,
+    getByShorthand,
+    list,
+    update,
+    softDelete,
+    assignTagOptions,
+    getTagOptionAssignments,
+    listTagAssignments,
+  };
 };

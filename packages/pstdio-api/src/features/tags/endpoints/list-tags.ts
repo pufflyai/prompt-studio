@@ -27,7 +27,7 @@ export const listTagsRoute = createRoute({
 export const listTagsHandler = (deps: RouteDeps): AppRouteHandler<typeof listTagsRoute> => {
   return async (c) => {
     const { projectId } = c.req.valid("param");
-    const tags = await deps.tagsService.listWithOptions(projectId);
+    const tags = await deps.tagService.listWithOptions(projectId);
     return c.json(tags, 200);
   };
 };

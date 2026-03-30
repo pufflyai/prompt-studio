@@ -37,13 +37,13 @@ export const getTicketFileContentRoute = createRoute({
 export const getTicketFileContentHandler = (deps: RouteDeps): AppRouteHandler<typeof getTicketFileContentRoute> => {
   return async (c) => {
     const { id, fileId } = c.req.valid("param");
-    const ticket = await deps.ticketsService.get(id);
+    const ticket = await deps.ticketService.get(id);
 
     if (!ticket) {
       return c.json({ error: `Ticket not found: ${id}` }, 404);
     }
 
-    const files = await deps.filesService.listForTicket(id);
+    const files = await deps.fileService.listForTicket(id);
     const file = files.find((item) => item.id === fileId);
 
     if (!file) {

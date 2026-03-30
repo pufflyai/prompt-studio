@@ -30,8 +30,8 @@ export const removeAgentRoute = createRoute({
 export const removeAgentHandler = (deps: RouteDeps): AppRouteHandler<typeof removeAgentRoute> => {
   return async (c) => {
     const { agentId } = c.req.valid("param");
-    const config = await deps.agentConfigsService.get(agentId);
-    const removed = await deps.agentConfigsService.remove(agentId);
+    const config = await deps.agentConfigService.get(agentId);
+    const removed = await deps.agentConfigService.remove(agentId);
     if (!removed || !config) {
       return c.json({ error: "Agent not found" }, 404);
     }

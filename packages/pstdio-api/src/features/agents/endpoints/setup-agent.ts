@@ -25,13 +25,13 @@ export const setupAgentRoute = createRoute({
 export const setupAgentHandler = (deps: RouteDeps): AppRouteHandler<typeof setupAgentRoute> => {
   return async (c) => {
     const { agent_id, binary } = c.req.valid("json");
-    const createdOrExisting = await deps.agentConfigsService.upsert(agent_id);
+    const createdOrExisting = await deps.agentConfigService.upsert(agent_id);
     if (!binary) {
       deps.eventBus.emit("agent_configs", "set", createdOrExisting);
       return c.json(createdOrExisting, 201);
     }
 
-    const result = await deps.agentConfigsService.update(agent_id, { binary });
+    const result = await deps.agentConfigService.update(agent_id, { binary });
     const agent = result?.updated ?? createdOrExisting;
     deps.eventBus.emit("agent_configs", "set", agent);
     return c.json(agent, 201);

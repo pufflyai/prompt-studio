@@ -1,7 +1,10 @@
 type FollowUpInput = {
-  prompt: string;
+  prompt?: string;
   agent?: string;
   model?: string;
+  summary_from_session_id?: string;
+  summary_format?: "brief" | "detailed";
+  summary_role?: "assistant" | "all";
 };
 
 export const followUpSession = async (baseUrl: string, sessionId: string, input: FollowUpInput) => {

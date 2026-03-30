@@ -10,6 +10,7 @@ import { listTicketFilesHandler, listTicketFilesRoute } from "./endpoints/list-t
 import { listTicketStatusesHandler, listTicketStatusesRoute } from "./endpoints/list-ticket-statuses";
 import { listTicketsHandler, listTicketsRoute } from "./endpoints/list-tickets";
 import { updateTicketHandler, updateTicketRoute } from "./endpoints/update-ticket";
+import { updateWhenAttemptStatusHandler, updateWhenAttemptStatusRoute } from "./endpoints/update-when-attempt-status";
 import { uploadTicketFileHandler, uploadTicketFileRoute } from "./endpoints/upload-ticket-file";
 
 export const createTicketRoutes = (deps: RouteDeps) => {
@@ -20,6 +21,7 @@ export const createTicketRoutes = (deps: RouteDeps) => {
   routes.openapi(listTicketsRoute, listTicketsHandler(deps));
   routes.openapi(getTicketRoute, getTicketHandler(deps));
   routes.openapi(updateTicketRoute, updateTicketHandler(deps));
+  routes.openapi(updateWhenAttemptStatusRoute, updateWhenAttemptStatusHandler(deps));
   routes.openapi(listTicketStatusesRoute, listTicketStatusesHandler(deps));
   routes.openapi(listTicketFilesRoute, listTicketFilesHandler(deps));
   routes.openapi(uploadTicketFileRoute, uploadTicketFileHandler(deps));

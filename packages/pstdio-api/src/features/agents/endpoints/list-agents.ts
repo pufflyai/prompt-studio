@@ -22,7 +22,7 @@ export const listAgentsRoute = createRoute({
 
 export const listAgentsHandler = (deps: RouteDeps): AppRouteHandler<typeof listAgentsRoute> => {
   return async (c) => {
-    const agents = await deps.agentConfigsService.list();
+    const agents = await deps.agentConfigService.list();
     return c.json(agents, 200);
   };
 };

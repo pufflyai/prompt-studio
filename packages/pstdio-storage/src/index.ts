@@ -1,4 +1,4 @@
-export { createDocsService, isDocsServiceError } from "./services/docs";
-export { createFilesService } from "./services/files";
-export { createSkillsService } from "./services/skills";
+export { createDocsStorageService, isDocsServiceError } from "./services/docs";
+export { createFilesStorageService } from "./services/files";
+export { createSkillsStorageService } from "./services/skills";
 export { ensureStorageRoot, resolveStorageRoot } from "./storage/paths";

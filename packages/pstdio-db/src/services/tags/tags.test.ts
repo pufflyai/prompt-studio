@@ -1,18 +1,18 @@
 import { afterAll, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
-import { createProjectsService } from "../projects/projects";
-import { createTagsService } from "./tags";
+import { createProjectsDBService } from "../projects/projects";
+import { createTagsDBService } from "./tags";
 
 let close: () => Promise<void>;
-let service: ReturnType<typeof createTagsService>;
+let service: ReturnType<typeof createTagsDBService>;
 let projectId: string;
 
 const setup = async () => {
   const result = await createDb({ path: ":memory:" });
   close = result.close;
-  service = createTagsService(result.db);
+  service = createTagsDBService(result.db);
 
-  const projectsService = createProjectsService(result.db);
+  const projectsService = createProjectsDBService(result.db);
   const project = await projectsService.create({ name: "test-project" });
   projectId = project.id;
 };

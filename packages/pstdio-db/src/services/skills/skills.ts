@@ -18,7 +18,7 @@ type UpdateInput = {
   description?: string;
 };
 
-export const createSkillsDbService = (db: DbClient) => {
+export const createSkillsDBService = (db: DbClient) => {
   const list = async (projectId: string) =>
     db
       .select()

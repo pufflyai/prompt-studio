@@ -40,6 +40,9 @@ describe("createHookFile", () => {
 
     expect(content).toContain("review-ready");
     expect(content).toContain("Replace with your validation command");
+    expect(content).toContain("changes-requested");
+    expect(content).toContain("update-when-attempt-status");
+    expect(content).toContain("If all attempts are reviewed, move the ticket to review");
   });
 
   test("reuses the bundled post-session-start template", async () => {
@@ -49,6 +52,13 @@ describe("createHookFile", () => {
     expect(content).toContain("pstdio tickets update");
     expect(content).toContain("wip");
     expect(content).toContain("review");
+  });
+
+  test("reuses the bundled post-ticket-archive template", async () => {
+    const hookPath = await createHookFile(tempDir, "post-ticket-archive");
+    const content = readFileSync(hookPath, "utf8");
+
+    expect(content).toContain("pstdio tickets worktrees remove-all");
   });
 
   test("fails when the hook file already exists", async () => {

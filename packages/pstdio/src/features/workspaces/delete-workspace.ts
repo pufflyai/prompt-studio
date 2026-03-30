@@ -1,4 +1,4 @@
-import type { HookContext, HookResult } from "pstdio-wt";
+import type { HookName, HookPayload, HookResult, RunHookOptions } from "pstdio-wt";
 import { removeWorktreeAndBranch as defaultRemoveWorktreeAndBranch, runHook as defaultRunHook } from "pstdio-wt";
 import { API_URL } from "@/features/api-url";
 import { deleteWorkspace as defaultDeleteWorkspaceApi } from "./api/delete-workspace";
@@ -14,11 +14,7 @@ type Deps = {
   getWorkspace: typeof defaultGetWorkspace;
   deleteWorkspace: typeof defaultDeleteWorkspaceApi;
   removeWorktreeAndBranch: (opts: { repoRoot: string; path: string; branch: string; force?: boolean }) => Promise<void>;
-  runHook: (
-    hookName: "pre-worktree-remove" | "post-worktree-remove",
-    context: HookContext,
-    repoPath: string,
-  ) => Promise<HookResult>;
+  runHook: (hookName: HookName, payload: HookPayload, options: RunHookOptions) => Promise<HookResult>;
   log: (msg: string) => void;
 };
 
@@ -30,6 +26,11 @@ const defaultDeps: Deps = {
   log: console.log,
 };
 
+const parseTicketShorthand = (workspaceShorthand: string) => {
+  const match = workspaceShorthand.match(/^(.+)_A\d+$/);
+  return match?.[1] ?? undefined;
+};
+
 export const deleteWorkspaceWithWorktree = async (input: DeleteWorkspaceInput, deps: Deps = defaultDeps) => {
   const { repoRoot, projectId, workspaceShorthand } = input;
 
@@ -37,16 +38,19 @@ export const deleteWorkspaceWithWorktree = async (input: DeleteWorkspaceInput, d
   if (!workspace) throw new Error(`Workspace not found: ${workspaceShorthand}`);
 
   const branch = workspace.branch ?? `workspace/${workspace.workspace_shorthand}`;
-  const hookContext: HookContext = {
-    repoPath: repoRoot,
-    worktreePath: workspace.worktree_path ?? undefined,
+  const ticketShorthand = parseTicketShorthand(workspace.workspace_shorthand);
+  const payload: HookPayload = {
+    repo_path: repoRoot,
+    worktree_path: workspace.worktree_path,
     branch,
     workspace: workspace.workspace_shorthand,
-    projectId,
+    workspace_id: workspace.id,
+    ticket: ticketShorthand ?? null,
+    project_id: projectId,
   };
 
   if (workspace.worktree_path) {
-    const preResult = await deps.runHook("pre-worktree-remove", hookContext, repoRoot);
+    const preResult = await deps.runHook("pre-worktree-remove", payload, { repoPath: repoRoot });
     if (!preResult.skipped && preResult.exitCode !== 0) {
       throw new Error(
         `HOOK pre-worktree-remove FAILED (exit ${preResult.exitCode})\n${preResult.stderr || preResult.stdout}`,
@@ -70,7 +74,8 @@ export const deleteWorkspaceWithWorktree = async (input: DeleteWorkspaceInput, d
   }
 
   // post-remove runs in repo root since worktree is already deleted
-  void deps.runHook("post-worktree-remove", { ...hookContext, worktreePath: undefined }, repoRoot).catch(() => {});
+  const postPayload: HookPayload = { ...payload, worktree_path: null };
+  void deps.runHook("post-worktree-remove", postPayload, { repoPath: repoRoot, cwd: repoRoot }).catch(() => {});
 
   deps.log(`Deleted workspace ${workspaceShorthand}`);
 };

@@ -38,14 +38,14 @@ export const deleteTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof d
     const { hard } = c.req.valid("query");
 
     if (hard === "true") {
-      const removed = await deps.templatesService.hardRemove(projectId, name);
+      const removed = await deps.templateService.hardRemove(projectId, name);
       if (!removed) {
         return c.json({ error: `Template not found: ${name}` }, 404);
       }
       return c.body(null, 204);
     }
 
-    const removed = await deps.templatesService.remove(projectId, name);
+    const removed = await deps.templateService.remove(projectId, name);
 
     if (!removed) {
       return c.json({ error: `Template not found: ${name}` }, 404);

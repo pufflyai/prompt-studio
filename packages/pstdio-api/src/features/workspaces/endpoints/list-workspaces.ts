@@ -28,7 +28,7 @@ export const listWorkspacesRoute = createRoute({
 export const listWorkspacesHandler = (deps: RouteDeps): AppRouteHandler<typeof listWorkspacesRoute> => {
   return async (c) => {
     const { project_id } = c.req.valid("query");
-    const workspaces = await deps.workspacesService.list(project_id);
+    const workspaces = await deps.workspaceService.list(project_id);
     return c.json(workspaces, 200);
   };
 };

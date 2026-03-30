@@ -37,10 +37,10 @@ export const listHooksHandler = (deps: RouteDeps): AppRouteHandler<typeof listHo
   return async (c) => {
     const { id } = c.req.valid("param");
 
-    const project = await deps.projectsService.get(id);
+    const project = await deps.projectService.get(id);
     if (!project) return c.json({ error: `Project not found: ${id}` }, 404);
 
-    const repos = await deps.reposService.listByProject(id);
+    const repos = await deps.repoService.listByProject(id);
     if (repos.length === 0) return c.json({ error: "No repo linked to project" }, 404);
 
     const repoPath = repos[0].path;

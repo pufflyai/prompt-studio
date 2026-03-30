@@ -1,5 +1,4 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { eq, ticket_statuses, ticket_tag_options, ticket_tags } from "pstdio-db";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { seedDefaultSkills } from "../../skills/seed-default-skills";
@@ -28,7 +27,7 @@ export const createProjectRoute = createRoute({
 export const createProjectHandler = (deps: RouteDeps): AppRouteHandler<typeof createProjectRoute> => {
   return async (c) => {
     const { name } = c.req.valid("json");
-    const project = await deps.projectsService.create({ name });
+    const project = await deps.projectService.create({ name });
 
     try {
       const templates = await seedDefaultTemplates(deps, project.id);
@@ -36,13 +35,13 @@ export const createProjectHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
 
       deps.eventBus.emit("projects", "set", project);
 
-      const statuses = await deps.db.select().from(ticket_statuses).where(eq(ticket_statuses.project_id, project.id));
+      const statuses = await deps.statusService.list(project.id);
       for (const status of statuses) deps.eventBus.emit("ticket_statuses", "set", status);
 
-      const tags = await deps.db.select().from(ticket_tags).where(eq(ticket_tags.project_id, project.id));
+      const tags = await deps.tagService.list(project.id);
       for (const tag of tags) {
         deps.eventBus.emit("ticket_tags", "set", tag);
-        const options = await deps.db.select().from(ticket_tag_options).where(eq(ticket_tag_options.tag_id, tag.id));
+        const options = await deps.tagService.listOptions(tag.id);
         for (const option of options) deps.eventBus.emit("ticket_tag_options", "set", option);
       }
 
@@ -50,7 +49,7 @@ export const createProjectHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
 
       return c.json(project, 201);
     } catch (error) {
-      await deps.projectsService.hardDelete(project.id);
+      await deps.projectService.hardDelete(project.id);
       throw error;
     }
   };

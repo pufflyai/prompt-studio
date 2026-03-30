@@ -27,7 +27,7 @@ export const deleteTagRoute = createRoute({
 export const deleteTagHandler = (deps: RouteDeps): AppRouteHandler<typeof deleteTagRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
-    await deps.tagsService.remove(id);
+    await deps.tagService.remove(id);
     deps.eventBus.emit("ticket_tags", "delete", { id });
     return c.json({ deleted: true }, 200);
   };

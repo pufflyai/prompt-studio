@@ -27,7 +27,7 @@ export const listStatusesRoute = createRoute({
 export const listStatusesHandler = (deps: RouteDeps): AppRouteHandler<typeof listStatusesRoute> => {
   return async (c) => {
     const { projectId } = c.req.valid("param");
-    const rows = await deps.statusesService.list(projectId);
+    const rows = await deps.statusService.list(projectId);
     const statuses = rows.map((row) => ({
       ...row,
       column_actions: JSON.parse(row.column_actions) as string[],

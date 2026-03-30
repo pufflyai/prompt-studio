@@ -1,14 +1,14 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import type { DbClient } from "../../db/connection.pglite";
 import { createDb } from "../../db/connection.pglite";
-import { createAttemptStatusesService } from "../attempt-statuses/attempt-statuses";
-import { createProjectsService } from "../projects/projects";
-import { createTicketsService } from "../tickets/tickets";
-import { createWorkspacesService } from "./workspaces";
+import { createAttemptStatusesDBService } from "../attempt-statuses/attempt-statuses";
+import { createProjectsDBService } from "../projects/projects";
+import { createTicketsDBService } from "../tickets/tickets";
+import { createWorkspacesDBService } from "./workspaces";
 
 let close: () => Promise<void>;
 let db: DbClient;
-let workspacesService: ReturnType<typeof createWorkspacesService>;
+let workspacesService: ReturnType<typeof createWorkspacesDBService>;
 let projectId: string;
 let ticketId: string;
 let ticketShorthand: string;
@@ -18,23 +18,23 @@ const setup = async () => {
   close = result.close;
   db = result.db;
 
-  const projectsService = createProjectsService(result.db);
+  const projectsService = createProjectsDBService(result.db);
   const project = await projectsService.create({ name: "prompt-studio" });
   projectId = project.id;
 
-  const ticketsService = createTicketsService(result.db);
+  const ticketsService = createTicketsDBService(result.db);
   const ticket = await ticketsService.create({ project_id: projectId, display_title: "Test ticket" });
   ticketId = ticket.id;
   ticketShorthand = ticket.shorthand;
 
-  workspacesService = createWorkspacesService(result.db);
+  workspacesService = createWorkspacesDBService(result.db);
 };
 
 afterAll(async () => {
   await close?.();
 });
 
-describe("createWorkspacesService", () => {
+describe("createWorkspacesDBService", () => {
   test("creates a workspace with auto-generated shorthand", async () => {
     await setup();
 
@@ -171,7 +171,7 @@ describe("createWorkspacesService", () => {
       ticket_shorthand: ticketShorthand,
     });
 
-    const attemptStatusesService = createAttemptStatusesService(db);
+    const attemptStatusesService = createAttemptStatusesDBService(db);
     const status = await attemptStatusesService.getByName(projectId, "running");
 
     const updated = await workspacesService.updateAttemptStatusId(ws.id, status!.id);

@@ -2,11 +2,11 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { createDb } from "../../db/connection.pglite";
 import { ticket_tag_options, ticket_tags } from "../../db/schemas.pg";
-import { createProjectsService } from "../projects/projects";
-import { createTicketsService } from "./tickets";
+import { createProjectsDBService } from "../projects/projects";
+import { createTicketsDBService } from "./tickets";
 
 let close: () => Promise<void>;
-let ticketsService: ReturnType<typeof createTicketsService>;
+let ticketsService: ReturnType<typeof createTicketsDBService>;
 let projectId: string;
 let bugOptionId: string;
 let featureOptionId: string;
@@ -15,7 +15,7 @@ const setup = async () => {
   const result = await createDb({ path: ":memory:" });
   close = result.close;
 
-  const projectsService = createProjectsService(result.db);
+  const projectsService = createProjectsDBService(result.db);
   const project = await projectsService.create({ name: "prompt-studio" });
   projectId = project.id;
 
@@ -24,14 +24,14 @@ const setup = async () => {
   bugOptionId = options.find((o) => o.name === "bug")!.id;
   featureOptionId = options.find((o) => o.name === "feature")!.id;
 
-  ticketsService = createTicketsService(result.db);
+  ticketsService = createTicketsDBService(result.db);
 };
 
 afterAll(async () => {
   await close?.();
 });
 
-describe("createTicketsService", () => {
+describe("createTicketsDBService", () => {
   test("creates a ticket with auto-generated shorthand", async () => {
     await setup();
 

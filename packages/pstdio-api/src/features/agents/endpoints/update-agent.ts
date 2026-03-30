@@ -36,7 +36,7 @@ export const updateAgentHandler = (deps: RouteDeps): AppRouteHandler<typeof upda
     const { agentId } = c.req.valid("param");
     const body = c.req.valid("json");
 
-    const result = await deps.agentConfigsService.update(agentId, body);
+    const result = await deps.agentConfigService.update(agentId, body);
     if (!result) {
       return c.json({ error: "Agent not found" }, 404);
     }

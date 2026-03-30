@@ -27,7 +27,7 @@ export const setDefaultStatusRoute = createRoute({
 export const setDefaultStatusHandler = (deps: RouteDeps): AppRouteHandler<typeof setDefaultStatusRoute> => {
   return async (c) => {
     const { projectId, id } = c.req.valid("param");
-    await deps.statusesService.setDefault(projectId, id);
+    await deps.statusService.setDefault(projectId, id);
 
     deps.eventBus.emit("ticket_statuses", "set", { id, project_id: projectId });
 

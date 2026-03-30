@@ -39,7 +39,7 @@ export const listRepoBranchesHandler = (deps: RouteDeps): AppRouteHandler<typeof
   return async (c) => {
     const { repoId } = c.req.valid("param");
 
-    const repo = await deps.reposService.get(repoId);
+    const repo = await deps.repoService.get(repoId);
     if (!repo) {
       return c.json({ error: "Repository not found" }, 404);
     }

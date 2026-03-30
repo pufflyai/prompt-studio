@@ -30,6 +30,7 @@ This skill covers pstdio itself. For task-specific workflows, defer to the dedic
 - **create-sub-tickets** — Breaking tickets into sub-tickets
 - **update-documentation** — Managing project documentation
 - **refine-ticket** — Refining ticket content
+- **write-pstdio-hook** — Writing or editing lifecycle hooks
 
 For command-specific options, run `pstdio <command> --help`.
 For the full command and troubleshooting reference, see [references/cli-reference.md](references/cli-reference.md).

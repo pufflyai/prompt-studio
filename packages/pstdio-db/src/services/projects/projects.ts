@@ -103,7 +103,7 @@ const DEFAULT_TAG_DEFINITIONS = [
 
 const nowTimestamp = () => new Date().toISOString();
 
-export const createProjectsService = (db: DbClient) => {
+export const createProjectsDBService = (db: DbClient) => {
   const list = async () => db.select().from(projects).where(isNull(projects.deleted_at)).orderBy(projects.created_at);
 
   const get = async (id: string) => {

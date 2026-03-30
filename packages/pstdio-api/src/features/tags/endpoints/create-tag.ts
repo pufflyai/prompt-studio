@@ -31,13 +31,13 @@ export const createTagHandler = (deps: RouteDeps): AppRouteHandler<typeof create
   return async (c) => {
     const { projectId } = c.req.valid("param");
     const { options: initialOptions, ...body } = c.req.valid("json");
-    const tag = await deps.tagsService.create({ project_id: projectId, ...body });
+    const tag = await deps.tagService.create({ project_id: projectId, ...body });
     deps.eventBus.emit("ticket_tags", "set", tag);
 
     const createdOptions = [];
     if (initialOptions) {
       for (const opt of initialOptions) {
-        const option = await deps.tagsService.createOption({ tag_id: tag.id, ...opt });
+        const option = await deps.tagService.createOption({ tag_id: tag.id, ...opt });
         deps.eventBus.emit("ticket_tag_options", "set", option);
         createdOptions.push(option);
       }

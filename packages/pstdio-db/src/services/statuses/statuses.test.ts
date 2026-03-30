@@ -1,18 +1,18 @@
 import { afterAll, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
-import { createProjectsService } from "../projects/projects";
-import { createStatusesService } from "./statuses";
+import { createProjectsDBService } from "../projects/projects";
+import { createStatusesDBService } from "./statuses";
 
 let close: () => Promise<void>;
-let service: ReturnType<typeof createStatusesService>;
+let service: ReturnType<typeof createStatusesDBService>;
 let projectId: string;
 
 const setup = async () => {
   const result = await createDb({ path: ":memory:" });
   close = result.close;
-  service = createStatusesService(result.db);
+  service = createStatusesDBService(result.db);
 
-  const projectsService = createProjectsService(result.db);
+  const projectsService = createProjectsDBService(result.db);
   const project = await projectsService.create({ name: "test-project" });
   projectId = project.id;
 };
@@ -87,9 +87,9 @@ test("getDefault returns the default status", async () => {
 
 test("getDefault returns null when no default exists", async () => {
   const { db: db2, close: close2 } = await createDb({ path: ":memory:" });
-  const projectsService2 = createProjectsService(db2);
+  const projectsService2 = createProjectsDBService(db2);
   const project2 = await projectsService2.create({ name: "empty-project" });
-  const service2 = createStatusesService(db2);
+  const service2 = createStatusesDBService(db2);
 
   // Unset all defaults
   const statuses = await service2.list(project2.id);

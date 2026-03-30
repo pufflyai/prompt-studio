@@ -95,7 +95,7 @@ describe("ticket hooks", () => {
       await wait(500);
       expect(existsSync(join(repo, "post-ticket-creation-payload.json"))).toBe(true);
       const payload = JSON.parse(readFileSync(join(repo, "post-ticket-creation-payload.json"), "utf8"));
-      expect(payload.shorthand).toBeTruthy();
+      expect(payload.ticket).toBeTruthy();
     },
     TEST_TIMEOUT,
   );
@@ -218,7 +218,9 @@ describe("ticket hooks", () => {
       await wait(500);
       expect(existsSync(join(repo, "post-ticket-status-payload.json"))).toBe(true);
       const payload = JSON.parse(readFileSync(join(repo, "post-ticket-status-payload.json"), "utf8"));
-      expect(payload.status_id).toBe(newStatusId);
+      expect(payload.ticket).toBeTruthy();
+      expect(payload.from_status).toBeTruthy();
+      expect(payload.to_status).toBeTruthy();
     },
     TEST_TIMEOUT,
   );
@@ -239,7 +241,7 @@ describe("session hooks", () => {
       await wait(500);
       expect(existsSync(join(repo, "session-start-payload.json"))).toBe(true);
       const payload = JSON.parse(readFileSync(join(repo, "session-start-payload.json"), "utf8"));
-      expect(payload.session.id).toBeTruthy();
+      expect(payload.session_id).toBeTruthy();
     },
     TEST_TIMEOUT,
   );
@@ -258,7 +260,7 @@ describe("session hooks", () => {
       await wait(500);
       expect(existsSync(join(repo, "session-success-payload.json"))).toBe(true);
       const payload = JSON.parse(readFileSync(join(repo, "session-success-payload.json"), "utf8"));
-      expect(payload.session.status).toBe("completed");
+      expect(payload.session_status).toBe("completed");
     },
     TEST_TIMEOUT,
   );
@@ -277,7 +279,7 @@ describe("session hooks", () => {
       await wait(500);
       expect(existsSync(join(repo, "session-fail-payload.json"))).toBe(true);
       const payload = JSON.parse(readFileSync(join(repo, "session-fail-payload.json"), "utf8"));
-      expect(payload.session.status).toBe("failed");
+      expect(payload.session_status).toBe("failed");
     },
     TEST_TIMEOUT,
   );
@@ -296,7 +298,7 @@ describe("session hooks", () => {
       await wait(500);
       expect(existsSync(join(repo, "session-await-payload.json"))).toBe(true);
       const payload = JSON.parse(readFileSync(join(repo, "session-await-payload.json"), "utf8"));
-      expect(payload.session.status).toBe("awaiting_input");
+      expect(payload.session_status).toBe("awaiting_input");
     },
     TEST_TIMEOUT,
   );
@@ -325,7 +327,7 @@ describe("session resume hook", () => {
       await wait(500);
       expect(existsSync(join(repo, "session-resume-payload.json"))).toBe(true);
       const payload = JSON.parse(readFileSync(join(repo, "session-resume-payload.json"), "utf8"));
-      expect(payload.session.id).toBe(session.id);
+      expect(payload.session_id).toBe(session.id);
     },
     TEST_TIMEOUT,
   );

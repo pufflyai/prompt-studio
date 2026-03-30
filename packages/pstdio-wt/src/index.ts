@@ -4,7 +4,14 @@ export { copyIgnored } from "./copy-ignored";
 export type { DiffSummary, FileDiff, WorktreeDiff } from "./diff";
 export { getWorktreeDiff, getWorktreeDiffSummary } from "./diff";
 export { GitError, git } from "./git";
-export { buildHookEnv, isBlockingHook, listHooks, resolveHookScript, runHook } from "./hooks";
+export {
+  buildEnvFromPayload,
+  isBlockingHook,
+  listHooks,
+  parsePayloadOverride,
+  resolveHookScript,
+  runHook,
+} from "./hooks";
 export { mergeWorktree } from "./merge";
 export { rebaseOntoTarget } from "./rebase";
 export { runSetup, runSetupScript } from "./setup";
@@ -12,11 +19,12 @@ export { getWorktreeStatus } from "./status";
 export type {
   BranchInfo,
   CommitResult,
-  HookContext,
   HookName,
+  HookPayload,
   HookResult,
   MergeResult,
   RebaseResult,
+  RunHookOptions,
   SessionHookName,
   SetupResult,
   StagingPolicy,

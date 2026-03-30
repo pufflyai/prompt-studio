@@ -1,12 +1,12 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
 import { files, projects } from "../../db/schemas.pg";
-import { createTemplatesService } from "./templates";
+import { createTemplatesDBService } from "./templates";
 
 const nowTimestamp = () => new Date().toISOString();
 
 let close: () => Promise<void>;
-let svc: ReturnType<typeof createTemplatesService>;
+let svc: ReturnType<typeof createTemplatesDBService>;
 let db: Awaited<ReturnType<typeof createDb>>["db"];
 let projectId: string;
 let fileId1: string;
@@ -16,7 +16,7 @@ const setup = async () => {
   const result = await createDb({ path: ":memory:" });
   close = result.close;
   db = result.db;
-  svc = createTemplatesService(db);
+  svc = createTemplatesDBService(db);
 
   const timestamp = nowTimestamp();
   projectId = crypto.randomUUID();

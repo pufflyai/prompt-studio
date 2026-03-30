@@ -32,9 +32,9 @@ export const updateTagHandler = (deps: RouteDeps): AppRouteHandler<typeof update
   return async (c) => {
     const { projectId, id } = c.req.valid("param");
     const body = c.req.valid("json");
-    await deps.tagsService.update(id, body);
+    await deps.tagService.update(id, body);
 
-    const tags = await deps.tagsService.listWithOptions(projectId);
+    const tags = await deps.tagService.listWithOptions(projectId);
     const updated = tags.find((t) => t.id === id);
 
     deps.eventBus.emit("ticket_tags", "set", { id, project_id: projectId, ...body });

@@ -17,6 +17,7 @@ export const workspaceResponseSchema = z.object({
 
 export const workspaceListItemSchema = workspaceResponseSchema.extend({
   ticket_shorthand: z.string(),
+  attempt_status_name: z.string().nullable(),
 });
 
 export const createWorkspaceBodySchema = z

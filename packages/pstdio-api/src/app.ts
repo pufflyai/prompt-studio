@@ -1,32 +1,27 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { cors } from "hono/cors";
+import { logger } from "hono/logger";
+import { type AgentService, createAgentRegistry, resolveDefaultAgents } from "pstdio-agents";
 import {
-  type AgentId,
-  type AgentService,
-  createAgentRegistry,
-  createClaudeCodeAgent,
-  createFakeAgent,
-  createOpencodeAgent,
-} from "pstdio-agents";
-import {
-  createAgentConfigsService,
-  createAttemptStatusesService,
+  createAgentConfigsDBService,
+  createAttemptStatusesDBService,
   createDb,
-  createProjectsService,
-  createReposService,
-  createSessionsService,
-  createSkillsDbService,
-  createStatusesService,
-  createTagsService,
-  createTemplatesService,
-  createTicketsService,
-  createWorkspaceSessionsService,
-  createWorkspacesService,
+  createFilesDBService,
+  createProjectsDBService,
+  createReposDBService,
+  createSessionsDBService,
+  createSkillsDBService,
+  createStatusesDBService,
+  createTagsDBService,
+  createTemplatesDBService,
+  createTicketsDBService,
+  createWorkspaceSessionsDBService,
+  createWorkspacesDBService,
 } from "pstdio-db";
 import {
-  createDocsService,
-  createFilesService,
-  createSkillsService,
+  createDocsStorageService,
+  createFilesStorageService,
+  createSkillsStorageService,
   ensureStorageRoot,
   resolveStorageRoot,
 } from "pstdio-storage";
@@ -38,7 +33,7 @@ import { createHealthRoutes } from "./features/health/routes";
 import { createHookRoutes } from "./features/hooks/routes";
 import { createProjectRoutes } from "./features/projects/routes";
 import { createSessionRoutes } from "./features/sessions/routes";
-import { createSessionStore } from "./features/sessions/session-store";
+import { fireSessionResumeHook, fireSessionStartHook, fireSessionStatusHook } from "./features/sessions/session-hooks";
 import { createSkillRoutes } from "./features/skills/routes";
 import { createStatusRoutes } from "./features/statuses/routes";
 import { EventBus } from "./features/sync/event-bus";
@@ -46,8 +41,24 @@ import { createSyncRoutes } from "./features/sync/routes";
 import { createTagRoutes } from "./features/tags/routes";
 import { createTemplateRoutes } from "./features/templates/routes";
 import { createTicketRoutes } from "./features/tickets/routes";
+import { fireTicketHook, fireTicketHookAsync } from "./features/tickets/ticket-hooks";
 import { createWorkspaceRoutes } from "./features/workspaces/routes";
 import { logError, persistErrorLog } from "./lib/error-log";
+import { createAgentConfigService } from "./services/agent-config-service";
+import { createAttemptStatusService } from "./services/attempt-status-service";
+import { createDocService } from "./services/doc-service";
+import { createFileService } from "./services/file-service";
+import { createProjectService } from "./services/project-service";
+import { createRepoService } from "./services/repo-service";
+import { createSessionService } from "./services/session-service";
+import { createSkillService } from "./services/skill-service";
+import { createStatusService } from "./services/status-service";
+import { createSyncService } from "./services/sync-service";
+import { createTagService } from "./services/tag-service";
+import { createTemplateService } from "./services/template-service";
+import { createTicketService } from "./services/ticket-service";
+import { createWorkspaceService } from "./services/workspace-service";
+import { createWorkspaceSessionService } from "./services/workspace-session-service";
 import { runStartupTasks } from "./startup";
 import { swagger } from "./swagger";
 import type { AppBindings } from "./types";
@@ -59,34 +70,6 @@ interface AppOptions {
   agents?: AgentService[];
 }
 
-const agentFactories: Record<AgentId, () => AgentService> = {
-  "claude-code": createClaudeCodeAgent,
-  opencode: createOpencodeAgent,
-  fake: createFakeAgent,
-};
-
-const parseAgentIds = (value: string | undefined) =>
-  value
-    ?.split(",")
-    .map((id) => id.trim())
-    .filter(Boolean) ?? [];
-
-const resolveDefaultAgents = (options?: AppOptions) => {
-  if (options?.agents) return options.agents;
-
-  const configuredAgentIds = parseAgentIds(process.env.PSTDIO_AGENTS);
-  if (configuredAgentIds.length === 0) {
-    return [createClaudeCodeAgent(), createOpencodeAgent()];
-  }
-
-  const ids = [...new Set(configuredAgentIds)];
-  return ids.map((id) => {
-    const factory = agentFactories[id as AgentId];
-    if (!factory) throw new Error(`Unsupported agent in PSTDIO_AGENTS: ${id}`);
-    return factory();
-  });
-};
-
 export const createApp = async (options?: AppOptions) => {
   const { db, close: closeDb } = await createDb({ path: options?.dbPath ?? process.env.PSTDIO_DB_PATH });
   const apiToken = options?.apiToken ?? process.env.PSTDIO_API_TOKEN;
@@ -94,54 +77,101 @@ export const createApp = async (options?: AppOptions) => {
   const storageRoot = options?.storagePath ?? resolveStorageRoot(process.env.PSTDIO_STORAGE_PATH);
   ensureStorageRoot(storageRoot);
 
-  const projectsService = createProjectsService(db);
-  const reposService = createReposService(db);
-  const filesService = createFilesService(db, storageRoot);
-  const skillsService = createSkillsService(reposService);
+  // --- db services ---
+  const projectsDBService = createProjectsDBService(db);
+  const reposDBService = createReposDBService(db);
+  const sessionsDBService = createSessionsDBService(db);
+  const ticketsDBService = createTicketsDBService(db);
+  const workspacesDBService = createWorkspacesDBService(db);
+  const workspaceSessionsDBService = createWorkspaceSessionsDBService(db);
+  const statusesDBService = createStatusesDBService(db);
+  const attemptStatusesDBService = createAttemptStatusesDBService(db);
+  const tagsDBService = createTagsDBService(db);
+  const agentConfigsDBService = createAgentConfigsDBService(db);
+  const skillsDBService = createSkillsDBService(db);
+  const templatesDBService = createTemplatesDBService(db);
+  const filesDBService = createFilesDBService(db);
 
-  const docsService = createDocsService(reposService);
-  const agentRegistry = createAgentRegistry(resolveDefaultAgents(options));
+  // --- storage services ---
+  const filesStorageService = createFilesStorageService(storageRoot);
+  const docsStorageService = createDocsStorageService();
+  const skillsStorageService = createSkillsStorageService();
 
-  const agentConfigsService = createAgentConfigsService(db);
-  const skillsDbService = createSkillsDbService(db);
-  const templatesService = createTemplatesService(db);
-  const sessionsService = createSessionsService(db);
-  const ticketsService = createTicketsService(db);
-  const workspacesService = createWorkspacesService(db);
-  const workspaceSessionsService = createWorkspaceSessionsService(db);
-  const statusesService = createStatusesService(db);
-  const attemptStatusesService = createAttemptStatusesService(db);
-  const tagsService = createTagsService(db);
+  // --- infrastructure ---
   const eventBus = new EventBus();
-  const sessionStore = createSessionStore();
+  const agentRegistry = createAgentRegistry(resolveDefaultAgents(options?.agents));
 
+  // --- domain services ---
+  const projectService = createProjectService({ projectsDBService });
+  const repoService = createRepoService({ reposDBService });
+  const statusService = createStatusService({ statusesDBService });
+  const tagService = createTagService({ tagsDBService });
+  const templateService = createTemplateService({ templatesDBService });
+  const attemptStatusService = createAttemptStatusService({ attemptStatusesDBService });
+  const agentConfigService = createAgentConfigService({ agentConfigsDBService });
+  const skillService = createSkillService({ skillsDBService, skillsStorageService });
+  const fileService = createFileService({ filesDBService, filesStorageService });
+  const docService = createDocService({ docsStorageService, reposDBService });
+  const syncService = createSyncService({ db, eventBus });
+
+  const workspaceSessionService = createWorkspaceSessionService({ workspaceSessionsDBService });
+  const workspaceService = createWorkspaceService({ workspacesDb: workspacesDBService, eventBus });
+
+  const sessionHookDeps = {
+    reposService: repoService,
+    workspaceSessionsService: workspaceSessionService,
+    attemptStatusesService: attemptStatusService,
+  };
+
+  const sessionService = createSessionService({
+    sessionsDb: sessionsDBService,
+    eventBus,
+    onSessionStarted: (session) => fireSessionStartHook(sessionHookDeps, session),
+    onSessionStatusChanged: (session) => fireSessionStatusHook(sessionHookDeps, session),
+    onSessionResumed: (session) => fireSessionResumeHook(sessionHookDeps, session),
+  });
+
+  const ticketHookDeps = { repoService };
+
+  const ticketService = createTicketService({
+    ticketsDb: ticketsDBService,
+    eventBus,
+    onPreTicketDeletion: async (projectId, payload) => {
+      const result = await fireTicketHook(ticketHookDeps, "pre-ticket-deletion", projectId, payload);
+      return { rejected: result.rejected, error: result.stderr };
+    },
+    onPostTicketDeletion: (projectId, payload) => {
+      fireTicketHookAsync(ticketHookDeps, "post-ticket-deletion", projectId, payload);
+    },
+  });
+
+  // --- ONLY DOMAIN SERVICES ARE PASSED TO ROUTES ---
   const deps = {
     readiness: { database: true, storage: true },
-    db,
     closeDb,
     eventBus,
-    projectsService,
-    reposService,
-    docsService,
-    agentConfigsService,
-    filesService,
-    sessionsService,
-    skillsService,
-    skillsDbService,
-    templatesService,
-    ticketsService,
-    workspacesService,
-    workspaceSessionsService,
-    statusesService,
-    attemptStatusesService,
-    tagsService,
     agentRegistry,
-    sessionStore,
+    projectService,
+    repoService,
+    sessionService,
+    ticketService,
+    workspaceService,
+    workspaceSessionService,
+    statusService,
+    tagService,
+    templateService,
+    attemptStatusService,
+    agentConfigService,
+    skillService,
+    fileService,
+    docService,
+    syncService,
   };
 
   const app = new OpenAPIHono<AppBindings>();
 
   app.use("*", cors());
+  app.use("*", logger());
 
   if (apiToken) {
     app.use("/v1/*", async (c, next) => {

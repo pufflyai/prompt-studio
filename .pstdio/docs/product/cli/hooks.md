@@ -2,6 +2,8 @@
 
 Hooks are shell scripts in `.pstdio/hooks/<hook-name>` that run during worktree, session, and ticket lifecycle events.
 
+For the full hook contract (interface, payload schemas, attempt status, and cookbook), see [Hooks Reference](../hooks/index.md).
+
 ## Supported Hook Names
 
 ### Worktree hooks
@@ -58,17 +60,20 @@ All other hooks are non-blocking.
 
 All hooks receive context as environment variables:
 
-| Variable                | Description                    | Available In                |
-| ----------------------- | ------------------------------ | --------------------------- |
-| `PSTDIO_HOOK`           | Hook name (e.g. `pre-merge`)   | All                         |
-| `PSTDIO_BRANCH`         | Worktree branch name           | All                         |
-| `PSTDIO_WORKTREE_PATH`  | Absolute path to worktree      | All (except `pre-create`)   |
-| `PSTDIO_REPO_PATH`      | Absolute path to main repo     | All                         |
-| `PSTDIO_WORKSPACE`      | Workspace shorthand            | All                         |
-| `PSTDIO_TARGET`         | Target branch for merge/rebase | merge and rebase hooks      |
-| `PSTDIO_COMMIT_SHA`     | Commit SHA after commit/merge  | `post-commit`, `post-merge` |
-| `PSTDIO_COMMIT_MESSAGE` | Commit message                 | `pre-commit`, `post-commit` |
-| `PSTDIO_PROJECT_ID`     | Project ID                     | All                         |
+| Variable                | Description                    | Available In                  |
+| ----------------------- | ------------------------------ | ----------------------------- |
+| `PSTDIO_HOOK`           | Hook name (e.g. `pre-merge`)   | All                           |
+| `PSTDIO_BRANCH`         | Worktree branch name           | All                           |
+| `PSTDIO_WORKTREE_PATH`  | Absolute path to worktree      | All (except `pre-create`)     |
+| `PSTDIO_REPO_PATH`      | Absolute path to main repo     | All                           |
+| `PSTDIO_WORKSPACE`      | Workspace shorthand            | All                           |
+| `PSTDIO_TICKET`         | Ticket shorthand               | When ticket context exists    |
+| `PSTDIO_ATTEMPT_STATUS` | Attempt status                 | When workspace context exists |
+| `PSTDIO_FROM_STATUS`    | Previous status                | Ticket status change hooks    |
+| `PSTDIO_TO_STATUS`      | New status                     | Ticket status change hooks    |
+| `PSTDIO_TARGET`         | Target branch for merge/rebase | merge and rebase hooks        |
+| `PSTDIO_COMMIT_SHA`     | Commit SHA after commit/merge  | `post-commit`, `post-merge`   |
+| `PSTDIO_COMMIT_MESSAGE` | Commit message                 | `pre-commit`, `post-commit`   |
 
 ## CLI Commands
 

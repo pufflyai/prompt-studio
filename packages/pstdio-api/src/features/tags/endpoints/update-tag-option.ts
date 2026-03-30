@@ -33,9 +33,9 @@ export const updateTagOptionHandler = (deps: RouteDeps): AppRouteHandler<typeof 
   return async (c) => {
     const { tagId, optionId } = c.req.valid("param");
     const body = c.req.valid("json");
-    await deps.tagsService.updateOption(optionId, body);
+    await deps.tagService.updateOption(optionId, body);
 
-    const options = await deps.tagsService.listOptions(tagId);
+    const options = await deps.tagService.listOptions(tagId);
     const updated = options.find((o) => o.id === optionId);
 
     deps.eventBus.emit("ticket_tag_options", "set", updated);

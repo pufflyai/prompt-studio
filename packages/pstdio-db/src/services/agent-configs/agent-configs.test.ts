@@ -1,14 +1,14 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
-import { createAgentConfigsService } from "./agent-configs";
+import { createAgentConfigsDBService } from "./agent-configs";
 
 let close: () => Promise<void>;
-let agentConfigs: ReturnType<typeof createAgentConfigsService>;
+let agentConfigs: ReturnType<typeof createAgentConfigsDBService>;
 
 const setup = async () => {
   const result = await createDb({ path: ":memory:" });
   close = result.close;
-  agentConfigs = createAgentConfigsService(result.db);
+  agentConfigs = createAgentConfigsDBService(result.db);
 };
 
 afterAll(async () => {

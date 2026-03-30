@@ -37,7 +37,7 @@ export const archiveWorkspaceHandler = (deps: RouteDeps): AppRouteHandler<typeof
   return async (c) => {
     const { id } = c.req.valid("param");
 
-    const workspace = await deps.workspacesService.get(id);
+    const workspace = await deps.workspaceService.get(id);
     if (!workspace) {
       return c.json({ error: `Workspace not found: ${id}` }, 404);
     }
@@ -46,14 +46,12 @@ export const archiveWorkspaceHandler = (deps: RouteDeps): AppRouteHandler<typeof
       return c.json({ error: `Workspace already archived: ${id}` }, 409);
     }
 
-    const updated = await deps.workspacesService.archive(id);
+    const updated = await deps.workspaceService.archive(id);
     if (!updated) {
       return c.json({ error: `Workspace not found: ${id}` }, 404);
     }
 
     await cleanupWorkspaceWorktree(deps, workspace);
-
-    deps.eventBus.emit("workspaces", "set", updated);
     return c.json(updated, 200);
   };
 };

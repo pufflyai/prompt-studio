@@ -11,7 +11,7 @@ type CreateInput = {
 
 const nowTimestamp = () => new Date().toISOString();
 
-export const createAttemptStatusesService = (db: DbClient) => {
+export const createAttemptStatusesDBService = (db: DbClient) => {
   const list = async (projectId: string) =>
     db
       .select()

@@ -1,7 +1,6 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { ticket_workspaces, tickets, workspaces } from "../../db/schemas.pg";
-import { nextWorkspaceShorthand } from "./next-workspace-shorthand";
+import { attempt_statuses, ticket_workspaces, tickets, workspaces } from "../../db/schemas.pg";
 
 type WorkspaceRecord = typeof workspaces.$inferSelect;
 
@@ -15,7 +14,10 @@ type CreateInput = {
 
 const nowTimestamp = () => new Date().toISOString();
 
-export const createWorkspacesService = (db: DbClient) => {
+const nextWorkspaceShorthand = (ticketShorthand: string, existingCount: number) =>
+  `${ticketShorthand}_A${existingCount + 1}`;
+
+export const createWorkspacesDBService = (db: DbClient) => {
   const create = async (input: CreateInput) => {
     // Count all workspaces ever created for this ticket (including deleted) to avoid shorthand reuse
     const [countResult] = await db
@@ -61,14 +63,26 @@ export const createWorkspacesService = (db: DbClient) => {
       .select({
         workspace: workspaces,
         ticket_shorthand: tickets.shorthand,
+        attempt_status_name: attempt_statuses.name,
       })
       .from(workspaces)
       .innerJoin(ticket_workspaces, eq(workspaces.id, ticket_workspaces.workspace_id))
       .innerJoin(tickets, eq(ticket_workspaces.ticket_id, tickets.id))
-      .where(and(eq(workspaces.project_id, projectId), eq(workspaces.archived, false), isNull(workspaces.deleted_at)))
+      .leftJoin(attempt_statuses, eq(workspaces.attempt_status_id, attempt_statuses.id))
+      .where(
+        and(
+          eq(workspaces.project_id, projectId),
+          eq(workspaces.archived, false),
+          sql`${workspaces.deleted_at} is null`,
+        ),
+      )
       .orderBy(workspaces.created_at);
 
-    return rows.map((r) => ({ ...r.workspace, ticket_shorthand: r.ticket_shorthand }));
+    return rows.map((r) => ({
+      ...r.workspace,
+      ticket_shorthand: r.ticket_shorthand,
+      attempt_status_name: r.attempt_status_name,
+    }));
   };
 
   const get = async (id: string) => {
@@ -84,7 +98,7 @@ export const createWorkspacesService = (db: DbClient) => {
         and(
           eq(workspaces.project_id, projectId),
           eq(workspaces.workspace_shorthand, shorthand),
-          isNull(workspaces.deleted_at),
+          sql`${workspaces.deleted_at} is null`,
         ),
       );
     return row ?? null;
@@ -142,11 +156,35 @@ export const createWorkspacesService = (db: DbClient) => {
     return updated ?? null;
   };
 
+  const listByTicketId = async (ticketId: string) => {
+    const rows = await db
+      .select({ workspace: workspaces })
+      .from(workspaces)
+      .innerJoin(ticket_workspaces, eq(workspaces.id, ticket_workspaces.workspace_id))
+      .where(
+        and(
+          eq(ticket_workspaces.ticket_id, ticketId),
+          eq(workspaces.archived, false),
+          sql`${workspaces.deleted_at} is null`,
+        ),
+      )
+      .orderBy(workspaces.created_at);
+
+    return rows.map((r) => r.workspace);
+  };
+
+  const getTicketWorkspaceLink = async (workspaceId: string) => {
+    const [link] = await db.select().from(ticket_workspaces).where(eq(ticket_workspaces.workspace_id, workspaceId));
+    return link ?? null;
+  };
+
   return {
     create,
     get,
     list,
+    listByTicketId,
     getByShorthand,
+    getTicketWorkspaceLink,
     softDelete,
     archive,
     updateAttemptStatusId,

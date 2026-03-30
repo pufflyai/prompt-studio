@@ -1,17 +1,17 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
-import { createProjectsService } from "../projects/projects";
-import { createReposService } from "./repos";
+import { createProjectsDBService } from "../projects/projects";
+import { createReposDBService } from "./repos";
 
 let close: () => Promise<void>;
-let projects: ReturnType<typeof createProjectsService>;
-let repos: ReturnType<typeof createReposService>;
+let projects: ReturnType<typeof createProjectsDBService>;
+let repos: ReturnType<typeof createReposDBService>;
 
 const setup = async () => {
   const result = await createDb({ path: ":memory:" });
   close = result.close;
-  projects = createProjectsService(result.db);
-  repos = createReposService(result.db);
+  projects = createProjectsDBService(result.db);
+  repos = createReposDBService(result.db);
 };
 
 afterAll(async () => {

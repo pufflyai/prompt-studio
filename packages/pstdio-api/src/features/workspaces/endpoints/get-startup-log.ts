@@ -33,7 +33,7 @@ export const getStartupLogHandler = (deps: RouteDeps): AppRouteHandler<typeof ge
   return async (c) => {
     const { id } = c.req.valid("param");
 
-    const workspace = await deps.workspacesService.get(id);
+    const workspace = await deps.workspaceService.get(id);
     if (!workspace) {
       return c.json({ error: `Workspace not found: ${id}` }, 404);
     }
@@ -42,7 +42,7 @@ export const getStartupLogHandler = (deps: RouteDeps): AppRouteHandler<typeof ge
       return c.json({ error: "No startup log for this workspace." }, 404);
     }
 
-    const file = await deps.filesService.get(workspace.startup_log_file_id);
+    const file = await deps.fileService.get(workspace.startup_log_file_id);
     if (!file) {
       return c.json({ error: "Startup log file not found." }, 404);
     }

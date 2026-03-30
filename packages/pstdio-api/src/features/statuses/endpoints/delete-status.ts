@@ -27,7 +27,7 @@ export const deleteStatusRoute = createRoute({
 export const deleteStatusHandler = (deps: RouteDeps): AppRouteHandler<typeof deleteStatusRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
-    await deps.statusesService.remove(id);
+    await deps.statusService.remove(id);
     deps.eventBus.emit("ticket_statuses", "delete", { id });
     return c.json({ deleted: true }, 200);
   };

@@ -37,7 +37,7 @@ export const getWorkspaceDiffSummaryHandler = (
 ): AppRouteHandler<typeof getWorkspaceDiffSummaryRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
-    const workspace = await deps.workspacesService.get(id);
+    const workspace = await deps.workspaceService.get(id);
 
     if (!workspace) {
       return c.json({ error: `Workspace not found: ${id}` }, 404);

@@ -22,7 +22,7 @@ export const listProjectsRoute = createRoute({
 
 export const listProjectsHandler = (deps: RouteDeps): AppRouteHandler<typeof listProjectsRoute> => {
   return async (c) => {
-    const projects = await deps.projectsService.list();
+    const projects = await deps.projectService.list();
     return c.json(projects, 200);
   };
 };

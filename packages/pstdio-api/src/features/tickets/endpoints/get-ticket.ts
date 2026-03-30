@@ -35,7 +35,7 @@ export const getTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof getTic
       return "";
     }
 
-    const file = await deps.filesService.get(fileId);
+    const file = await deps.fileService.get(fileId);
     if (!file) {
       return "";
     }
@@ -49,7 +49,7 @@ export const getTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof getTic
 
   return async (c) => {
     const { id } = c.req.valid("param");
-    const ticket = await deps.ticketsService.get(id);
+    const ticket = await deps.ticketService.get(id);
 
     if (!ticket) {
       return c.json({ error: `Ticket not found: ${id}` }, 404);

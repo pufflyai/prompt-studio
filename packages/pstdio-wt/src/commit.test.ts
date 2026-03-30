@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { commitChanges } from "./commit";
 import { git } from "./git";
@@ -112,5 +112,61 @@ describe("commitChanges", () => {
     // post-commit is fire-and-forget, give it a moment
     await new Promise((r) => setTimeout(r, 500));
     expect(existsSync(join(repo.dir, "post-commit-marker.txt"))).toBe(true);
+  });
+
+  test("pre-commit payload is available via stdin and field env vars", async () => {
+    const wtPath = join(repo.dir, "wt-commit");
+    await createWorktree({ repoRoot: repo.dir, branch: "task/payload", path: wtPath });
+
+    const stdinPath = join(repo.dir, "pre-commit.payload.stdin.json");
+    const envPath = join(repo.dir, "pre-commit.payload.env.json");
+    writeHook(
+      repo.dir,
+      "pre-commit",
+      `cat > "${stdinPath}"
+printf '{"repo_path":"%s","worktree_path":"%s","branch":"%s","workspace":"%s","workspace_id":"%s","ticket":"%s","project_id":"%s","commit_message":"%s"}' \
+"$PSTDIO_REPO_PATH" \
+"$PSTDIO_WORKTREE_PATH" \
+"$PSTDIO_BRANCH" \
+"$PSTDIO_WORKSPACE" \
+"$PSTDIO_WORKSPACE_ID" \
+"$PSTDIO_TICKET" \
+"$PSTDIO_PROJECT_ID" \
+"$PSTDIO_COMMIT_MESSAGE" > "${envPath}"`,
+    );
+
+    await Bun.write(join(wtPath, "payload.txt"), "payload");
+    await commitChanges({
+      worktreePath: wtPath,
+      message: "payload commit",
+      repoPath: repo.dir,
+      stage: "all",
+      hookPayload: {
+        branch: "workspace/PS-1_A1",
+        workspace: "PS-1_A1",
+        workspace_id: "ws-1",
+        ticket: "PS-1",
+        project_id: "proj-1",
+      },
+    });
+
+    const stdinPayload = JSON.parse(readFileSync(stdinPath, "utf8"));
+    const envPayload = JSON.parse(readFileSync(envPath, "utf8"));
+
+    expect(envPayload.repo_path).toBe(stdinPayload.repo_path);
+    expect(envPayload.worktree_path).toBe(stdinPayload.worktree_path);
+    expect(envPayload.branch).toBe(stdinPayload.branch);
+    expect(envPayload.workspace).toBe(stdinPayload.workspace);
+    expect(envPayload.workspace_id).toBe(stdinPayload.workspace_id);
+    expect(envPayload.ticket).toBe(stdinPayload.ticket);
+    expect(envPayload.project_id).toBe(stdinPayload.project_id);
+    expect(envPayload.commit_message).toBe(stdinPayload.commit_message);
+    expect(stdinPayload.commit_message).toBe("payload commit");
+    expect(stdinPayload.branch).toBe("workspace/PS-1_A1");
+    expect(stdinPayload.workspace).toBe("PS-1_A1");
+    expect(stdinPayload.workspace_id).toBe("ws-1");
+    expect(stdinPayload.ticket).toBe("PS-1");
+    expect(stdinPayload.project_id).toBe("proj-1");
+    expect(stdinPayload.stage_policy).toBe("all");
   });
 });

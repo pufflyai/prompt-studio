@@ -1,5 +1,4 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { eq, ticket_statuses } from "pstdio-db";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { ticketListItemSchema } from "../dto";
@@ -43,18 +42,15 @@ export const listTicketsHandler = (deps: RouteDeps): AppRouteHandler<typeof list
   return async (c) => {
     const query = c.req.valid("query");
 
+    const statuses = await deps.statusService.list(query.project_id);
+
     let statusId: string | undefined;
     if (query.status) {
-      const [status] = await deps.db
-        .select()
-        .from(ticket_statuses)
-        .where(eq(ticket_statuses.project_id, query.project_id))
-        .then((rows) => rows.filter((r) => r.name === query.status));
-
+      const status = statuses.find((s) => s.name === query.status);
       if (status) statusId = status.id;
     }
 
-    const tickets = await deps.ticketsService.list(query.project_id, {
+    const tickets = await deps.ticketService.list(query.project_id, {
       status_id: statusId,
       archived: query.archived,
       draft: query.draft,
@@ -63,16 +59,11 @@ export const listTicketsHandler = (deps: RouteDeps): AppRouteHandler<typeof list
       search: query.search,
     });
 
-    const statuses = await deps.db
-      .select()
-      .from(ticket_statuses)
-      .where(eq(ticket_statuses.project_id, query.project_id));
-
     const statusMap = new Map(statuses.map((s) => [s.id, s.name]));
 
     const enriched = await Promise.all(
       tickets.map(async (t) => {
-        const tags = await deps.ticketsService.getTagOptionAssignments(t.id);
+        const tags = await deps.ticketService.getTagOptionAssignments(t.id);
         return {
           ...t,
           status_name: t.status_id ? (statusMap.get(t.status_id) ?? null) : null,

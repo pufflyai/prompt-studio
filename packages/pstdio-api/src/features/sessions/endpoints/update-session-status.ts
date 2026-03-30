@@ -2,7 +2,6 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { notFoundResponseSchema, sessionResponseSchema } from "../dto";
-import { fireSessionStatusHook } from "../session-hooks";
 
 export const updateSessionStatusRoute = createRoute({
   method: "patch",
@@ -45,15 +44,11 @@ export const updateSessionStatusHandler = (deps: RouteDeps): AppRouteHandler<typ
     const { id } = c.req.valid("param");
     const { status } = c.req.valid("json");
 
-    const updated = await deps.sessionsService.updateStatus(id, status);
+    const updated = await deps.sessionService.transitionStatus(id, status);
     if (!updated) {
       return c.json({ error: `Session not found: ${id}` }, 404);
     }
 
-    deps.eventBus.emit("sessions", "set", updated);
-    if (updated.project_id) {
-      fireSessionStatusHook(deps, { id: updated.id, project_id: updated.project_id, status: updated.status });
-    }
     return c.json(updated, 200);
   };
 };

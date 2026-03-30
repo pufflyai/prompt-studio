@@ -27,7 +27,7 @@ export const listSkillsRoute = createRoute({
 export const listSkillsHandler = (deps: RouteDeps): AppRouteHandler<typeof listSkillsRoute> => {
   return async (c) => {
     const { projectId } = c.req.valid("param");
-    const skills = await deps.skillsDbService.list(projectId);
+    const skills = await deps.skillService.list(projectId);
     return c.json(skills, 200);
   };
 };

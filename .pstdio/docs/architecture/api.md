@@ -52,6 +52,10 @@ The `dev` script (`bun run --hot`) is reserved for interactive development only.
 
 `pstdio close` sends a `POST /shutdown` request. The endpoint responds with 200 and calls `process.exit(0)` after a short delay. If the API is not running, the CLI prints "API is not running." and exits normally.
 
+## Service Layer
+
+See [Service Layer](./service-layer.md) for the three-tier architecture (DB services, storage services, domain services) and the rules for how routes access data.
+
 ## Rules
 
 1. **All client requests go through the API.** Clients must never read from or write to the database directly. File-system access for local config (`.pstdio/config.json`, `.pstdio/docs/`) is fine — persistent data is the API's job.

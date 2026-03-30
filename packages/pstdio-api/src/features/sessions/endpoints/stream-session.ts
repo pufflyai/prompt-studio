@@ -24,7 +24,7 @@ const replayMessagesAsPatch = async (messages: SessionMessage[], stream: SSEStre
 };
 
 const replayPersistedMessages = async (sessionFileId: string, deps: RouteDeps, stream: SSEStreamingApi) => {
-  const file = await deps.filesService.get(sessionFileId);
+  const file = await deps.fileService.get(sessionFileId);
   if (!file) return;
 
   const messages = JSON.parse(readFileSync(file.storage_path, "utf-8")) as SessionMessage[];
@@ -35,7 +35,7 @@ const fetchAgentMessages = async (session: SessionRecord, deps: RouteDeps) => {
   const agent = deps.agentRegistry.get(session.agent as AgentId);
   if (!agent) return null;
 
-  const workspace = await deps.workspaceSessionsService.getWorkspaceBySessionId(session.id);
+  const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(session.id);
   const cwd = await resolveSessionCwd(deps, session.project_id, workspace?.id);
   return agent.getMessages(session.agent_session_id, cwd ? { cwd } : undefined).catch(() => null);
 };
@@ -100,7 +100,7 @@ const WAIT_FOR_AGENT_MAX_MS = 120_000;
 const waitForSessionStoreEntry = async (sessionId: string, deps: RouteDeps, stream: SSEStreamingApi) => {
   // Only wait if the session exists but the agent hasn't been spawned yet.
   // This happens when workspace initialization is blocking the agent spawn.
-  const session = await deps.sessionsService.get(sessionId);
+  const session = await deps.sessionService.get(sessionId);
   if (!session) return null;
 
   // Session already has an agent_session_id — the agent was spawned but is no longer running.
@@ -113,10 +113,10 @@ const waitForSessionStoreEntry = async (sessionId: string, deps: RouteDeps, stre
   const deadline = Date.now() + WAIT_FOR_AGENT_MAX_MS;
 
   while (Date.now() < deadline) {
-    const entry = deps.sessionStore.get(sessionId);
+    const entry = deps.sessionService.store.get(sessionId);
     if (entry) return entry;
 
-    const current = await deps.sessionsService.get(sessionId);
+    const current = await deps.sessionService.get(sessionId);
     if (!current) return null;
 
     const isTerminal = current.status === "completed" || current.status === "failed" || current.status === "cancelled";
@@ -134,7 +134,7 @@ export const streamSessionHandler = (deps: RouteDeps) => {
     const id = c.req.param("id")!;
 
     return streamSSE(c, async (stream) => {
-      let entry = deps.sessionStore.get(id);
+      let entry = deps.sessionService.store.get(id);
 
       await stream.writeSSE({ data: JSON.stringify({ sessionId: id }), event: "ready" });
 
@@ -145,7 +145,7 @@ export const streamSessionHandler = (deps: RouteDeps) => {
       }
 
       if (!entry) {
-        const session = await deps.sessionsService.get(id);
+        const session = await deps.sessionService.get(id);
 
         if (session?.agent && session.agent_session_id && session.project_id) {
           await replayCompletedSession(session as SessionRecord, deps, stream);
@@ -159,7 +159,7 @@ export const streamSessionHandler = (deps: RouteDeps) => {
       const aborted = await streamLivePatches(entry.eventStore, stream);
 
       if (!aborted) {
-        const session = await deps.sessionsService.get(id);
+        const session = await deps.sessionService.get(id);
         const status = session?.status ?? "completed";
         await stream.writeSSE({ data: JSON.stringify({ status }), event: "end" });
       }

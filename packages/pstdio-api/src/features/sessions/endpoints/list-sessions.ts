@@ -33,7 +33,7 @@ export const listSessionsHandler = (deps: RouteDeps): AppRouteHandler<typeof lis
   return async (c) => {
     const query = c.req.valid("query");
 
-    const sessions = await deps.sessionsService.list(query.project_id, {
+    const sessions = await deps.sessionService.list(query.project_id, {
       status: query.status,
       agent: query.agent,
       includeArchived: query.archived === "true",

@@ -1,6 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { extname, isAbsolute, join, relative, resolve } from "node:path";
-import type { createReposService } from "pstdio-db";
 
 type DocsErrorCode = "DOCS_CONFIG_NOT_FOUND" | "DOCS_CONFIG_INVALID" | "DOCS_LINK_INVALID" | "DOCS_DOCUMENT_NOT_FOUND";
 
@@ -160,17 +159,11 @@ const parseConfigAndValidateLinks = (docsRoot: string, configText: string, avail
 export const isDocsServiceError = (value: unknown): value is Error & { code: DocsErrorCode } =>
   value instanceof Error && "code" in value && typeof value.code === "string";
 
-export const createDocsService = (reposService: Pick<ReturnType<typeof createReposService>, "listByProject">) => {
-  const resolveDocsDir = async (projectId: string) => {
-    const repos = await reposService.listByProject(projectId);
-    if (repos.length === 0) {
-      throw createDocsError("DOCS_CONFIG_NOT_FOUND", `No repo linked to project ${projectId}.`);
-    }
-    return join(repos[0].path, DOCS_DIR);
-  };
+const resolveDocsDir = (repoPath: string) => join(repoPath, DOCS_DIR);
 
-  const getIndex = async (projectId: string) => {
-    const docsDir = await resolveDocsDir(projectId);
+export const createDocsStorageService = () => {
+  const getIndex = (repoPath: string) => {
+    const docsDir = resolveDocsDir(repoPath);
     const configPath = join(docsDir, DOCS_CONFIG_NAME);
 
     if (!existsSync(configPath)) {
@@ -182,8 +175,8 @@ export const createDocsService = (reposService: Pick<ReturnType<typeof createRep
     return parseConfigAndValidateLinks(docsDir, configText, availableFiles);
   };
 
-  const getDocument = async (projectId: string, link: string) => {
-    const docsDir = await resolveDocsDir(projectId);
+  const getDocument = (repoPath: string, link: string) => {
+    const docsDir = resolveDocsDir(repoPath);
     const relativePath = normalizeSidebarLinkPath(docsDir, link);
     const filePath = join(docsDir, relativePath);
 

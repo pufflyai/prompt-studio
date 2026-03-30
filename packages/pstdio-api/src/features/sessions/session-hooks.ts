@@ -1,5 +1,7 @@
-import type { SessionHookName } from "pstdio-wt";
-import type { RouteDeps } from "../deps";
+import type { HookPayload, SessionHookName } from "pstdio-wt";
+import type { createAttemptStatusService } from "../../services/attempt-status-service";
+import type { createRepoService } from "../../services/repo-service";
+import type { createWorkspaceSessionService } from "../../services/workspace-session-service";
 import { fireHook } from "../hooks/fire-hook";
 
 type SessionStatus = "in_progress" | "awaiting_input" | "completed" | "failed" | "cancelled";
@@ -16,123 +18,73 @@ type SessionRecord = {
   status: string;
 };
 
-type SessionHookDeps = Pick<RouteDeps, "reposService" | "workspaceSessionsService"> &
-  Partial<Pick<RouteDeps, "workspacesService" | "attemptStatusesService">>;
-
-type SessionPayloadDeps = Pick<RouteDeps, "workspacesService" | "attemptStatusesService">;
-
-type AttemptStatusRecord = Awaited<ReturnType<RouteDeps["attemptStatusesService"]["list"]>>[number];
+export type SessionHookDeps = {
+  reposService: ReturnType<typeof createRepoService>;
+  workspaceSessionsService: ReturnType<typeof createWorkspaceSessionService>;
+  attemptStatusesService?: ReturnType<typeof createAttemptStatusService>;
+};
 
 const parseTicketShorthand = (workspaceShorthand: string) => {
   const match = workspaceShorthand.match(/^(.+)_A\d+$/);
   return match?.[1] ?? undefined;
 };
 
-const resolveWorkspaceContext = async (deps: SessionHookDeps, sessionId: string) => {
-  const workspace = await deps.workspaceSessionsService.getWorkspaceBySessionId(sessionId);
-  if (!workspace) return undefined;
-
-  return {
-    id: workspace.id,
-    workspace: workspace.workspace_shorthand,
-    ticketShorthand: parseTicketShorthand(workspace.workspace_shorthand),
-    worktreePath: workspace.worktree_path ?? undefined,
-    branch: workspace.branch ?? undefined,
-    attemptStatusId: workspace.attempt_status_id ?? null,
-  };
-};
-
-const buildAttemptStatusNameById = (attemptStatuses: AttemptStatusRecord[]) =>
-  new Map(attemptStatuses.map((status) => [status.id, status.name]));
-
-const resolveAttemptStatus = (workspace: { attempt_status_id: string | null }, statusById: Map<string, string>) => {
-  if (!workspace.attempt_status_id) return null;
-  return statusById.get(workspace.attempt_status_id) ?? null;
-};
-
-const resolveSessionPayload = async (
-  deps: SessionPayloadDeps,
-  session: SessionRecord,
-  workspaceContext: Awaited<ReturnType<typeof resolveWorkspaceContext>>,
+const resolveAttemptStatusName = async (
+  deps: { attemptStatusesService: ReturnType<typeof createAttemptStatusService> },
+  projectId: string,
+  attemptStatusId: string | null,
 ) => {
-  const payload = { session: { id: session.id, status: session.status } };
-  if (!workspaceContext) return { payload, ticketShorthand: undefined };
-
-  const [workspaces, attemptStatuses] = await Promise.all([
-    deps.workspacesService.list(session.project_id),
-    deps.attemptStatusesService.list(session.project_id),
-  ]);
-
-  const currentWorkspace = workspaces.find((workspace) => workspace.id === workspaceContext.id);
-  const ticketShorthand = currentWorkspace?.ticket_shorthand ?? workspaceContext.ticketShorthand;
-  if (!ticketShorthand) return { payload, ticketShorthand: workspaceContext.ticketShorthand };
-
-  const statusById = buildAttemptStatusNameById(attemptStatuses);
-
-  const attempts = workspaces
-    .filter((workspace) => workspace.ticket_shorthand === ticketShorthand)
-    .map((workspace) => ({
-      id: workspace.workspace_shorthand,
-      status: resolveAttemptStatus(workspace, statusById),
-    }));
-
-  const fallbackCurrentAttempt = {
-    id: workspaceContext.workspace,
-    status: resolveAttemptStatus({ attempt_status_id: workspaceContext.attemptStatusId }, statusById),
-  };
-
-  const currentAttempt =
-    attempts.find((attempt) => attempt.id === workspaceContext.workspace) ?? fallbackCurrentAttempt;
-  const ticketAttempts = attempts.some((attempt) => attempt.id === currentAttempt.id)
-    ? attempts
-    : [...attempts, currentAttempt];
-
-  return {
-    payload: {
-      ...payload,
-      attempt: currentAttempt,
-      ticket: {
-        id: ticketShorthand,
-        attempts: ticketAttempts,
-      },
-    },
-    ticketShorthand,
-  };
+  if (!attemptStatusId) return undefined;
+  const statuses = await deps.attemptStatusesService.list(projectId);
+  return statuses.find((s) => s.id === attemptStatusId)?.name;
 };
 
-const canResolveSessionPayload = (deps: SessionHookDeps): deps is SessionHookDeps & SessionPayloadDeps =>
-  Boolean(deps.workspacesService && deps.attemptStatusesService);
+const resolveSessionPayload = async (deps: SessionHookDeps, session: SessionRecord): Promise<HookPayload> => {
+  const base: HookPayload = {
+    session_id: session.id,
+    session_status: session.status,
+  };
+
+  const workspace = await deps.workspaceSessionsService.getWorkspaceBySessionId(session.id);
+  if (!workspace) return base;
+
+  const ticketShorthand =
+    parseTicketShorthand(workspace.workspace_shorthand) ??
+    (workspace as { ticket_shorthand?: string }).ticket_shorthand;
+
+  let attemptStatus: string | undefined;
+  if (deps.attemptStatusesService && workspace.attempt_status_id) {
+    try {
+      attemptStatus = await resolveAttemptStatusName(
+        { attemptStatusesService: deps.attemptStatusesService },
+        session.project_id,
+        workspace.attempt_status_id,
+      );
+    } catch {
+      // best-effort
+    }
+  }
+
+  return {
+    ...base,
+    workspace: workspace.workspace_shorthand,
+    worktree_path: workspace.worktree_path ?? undefined,
+    branch: workspace.branch ?? undefined,
+    ticket: ticketShorthand,
+    ...(attemptStatus !== undefined && { attempt_status: attemptStatus }),
+  };
+};
 
 const fireSessionHook = (deps: SessionHookDeps, hookName: SessionHookName, session: SessionRecord) => {
   void (async () => {
-    const context = await resolveWorkspaceContext(deps, session.id);
-    const basePayload = { session: { id: session.id, status: session.status } };
-    let payload: Record<string, unknown> = basePayload;
-    let ticketShorthand = context?.ticketShorthand;
-
-    if (context && canResolveSessionPayload(deps)) {
-      try {
-        const resolved = await resolveSessionPayload(deps, session, context);
-        payload = resolved.payload;
-        ticketShorthand = resolved.ticketShorthand ?? ticketShorthand;
-      } catch {
-        payload = basePayload;
-      }
+    let payload: HookPayload;
+    try {
+      payload = await resolveSessionPayload(deps, session);
+    } catch {
+      payload = { session_id: session.id, session_status: session.status };
     }
 
-    await fireHook(deps, {
-      hookName,
-      projectId: session.project_id,
-      payload,
-      context: context
-        ? {
-            workspace: context.workspace,
-            ticketShorthand,
-            worktreePath: context.worktreePath,
-            branch: context.branch,
-          }
-        : undefined,
-    });
+    await fireHook({ repoService: deps.reposService }, { hookName, projectId: session.project_id, payload });
   })().catch(() => {});
 };
 

@@ -36,7 +36,7 @@ export const archiveSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof a
   return async (c) => {
     const { id } = c.req.valid("param");
 
-    const session = await deps.sessionsService.get(id);
+    const session = await deps.sessionService.get(id);
     if (!session) {
       return c.json({ error: `Session not found: ${id}` }, 404);
     }
@@ -45,8 +45,10 @@ export const archiveSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof a
       return c.json({ error: `Session already archived: ${id}` }, 409);
     }
 
-    const updated = await deps.sessionsService.archive(id);
-    deps.eventBus.emit("sessions", "set", updated);
+    const updated = await deps.sessionService.archive(id);
+    if (!updated) {
+      return c.json({ error: `Session not found: ${id}` }, 404);
+    }
     return c.json(updated, 200);
   };
 };

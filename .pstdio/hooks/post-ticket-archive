@@ -11,4 +11,4 @@ if [ -z "$PSTDIO_TICKET" ]; then
   exit 0
 fi
 
-pstdio tickets clean-worktrees --id "$PSTDIO_TICKET"
+pstdio tickets worktrees remove-all --id "$PSTDIO_TICKET"

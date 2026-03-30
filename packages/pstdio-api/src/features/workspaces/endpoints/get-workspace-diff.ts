@@ -54,7 +54,7 @@ export const getWorkspaceDiffHandler = (deps: RouteDeps): AppRouteHandler<typeof
   return async (c) => {
     const { id } = c.req.valid("param");
     const { mode } = c.req.valid("query");
-    const workspace = await deps.workspacesService.get(id);
+    const workspace = await deps.workspaceService.get(id);
 
     if (!workspace) {
       return c.json({ error: `Workspace not found: ${id}` }, 404);

@@ -31,7 +31,7 @@ export const getSessionRoute = createRoute({
 export const getSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof getSessionRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
-    const session = await deps.sessionsService.get(id);
+    const session = await deps.sessionService.get(id);
 
     if (!session) {
       return c.json({ error: `Session not found: ${id}` }, 404);

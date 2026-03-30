@@ -41,12 +41,12 @@ export const listReposHandler = (deps: RouteDeps): AppRouteHandler<typeof listRe
   return async (c) => {
     const { id } = c.req.valid("param");
 
-    const project = await deps.projectsService.get(id);
+    const project = await deps.projectService.get(id);
     if (!project) {
       return c.json({ error: "Project not found" }, 404);
     }
 
-    const repos = await deps.reposService.listByProject(id);
+    const repos = await deps.repoService.listByProject(id);
     return c.json(repos, 200);
   };
 };

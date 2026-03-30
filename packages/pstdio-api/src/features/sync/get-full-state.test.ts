@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import type { DbClient } from "pstdio-db";
-import { createAgentConfigsService, createDb, createProjectsService, createStatusesService } from "pstdio-db";
+import { createAgentConfigsDBService, createDb, createProjectsDBService, createStatusesDBService } from "pstdio-db";
 import { getFullState, SYNCED_TABLES } from "./get-full-state";
 
 let close: () => Promise<void>;
@@ -39,8 +39,8 @@ describe("getFullState", () => {
   test("returns inserted data", async () => {
     await setup();
 
-    const projectsService = createProjectsService(db);
-    const agentConfigsService = createAgentConfigsService(db);
+    const projectsService = createProjectsDBService(db);
+    const agentConfigsService = createAgentConfigsDBService(db);
 
     await projectsService.create({ name: "test-project" });
     await agentConfigsService.upsert("claude-code");
@@ -62,8 +62,8 @@ describe("getFullState", () => {
   test("excludes soft-deleted rows", async () => {
     await setup();
 
-    const projectsService = createProjectsService(db);
-    const statusesService = createStatusesService(db);
+    const projectsService = createProjectsDBService(db);
+    const statusesService = createStatusesDBService(db);
 
     const project = await projectsService.create({ name: "soft-delete-test" });
     const statuses = await statusesService.list(project.id);

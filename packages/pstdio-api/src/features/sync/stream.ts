@@ -1,14 +1,12 @@
 import type { Context } from "hono";
 import { streamSSE } from "hono/streaming";
-import type { DbClient } from "pstdio-db";
+import type { createSyncService } from "../../services/sync-service";
 import type { AppBindings } from "../../types";
 import type { EventBus, SyncEvent } from "./event-bus";
-import { getFullState as getFullStateDefault } from "./get-full-state";
 
 interface StreamDeps {
   eventBus: EventBus;
-  db: DbClient;
-  getFullState?: (db: DbClient) => Promise<Record<string, unknown[]>>;
+  syncService: ReturnType<typeof createSyncService>;
 }
 
 const formatSSE = (event: SyncEvent) => ({
@@ -44,10 +42,9 @@ export const streamHandler = (deps: StreamDeps) => {
           await stream.writeSSE(formatSSE(event));
         }
       } else {
-        const resolveState = deps.getFullState ?? getFullStateDefault;
         // Capture seq before reading so events emitted during the read are replayed
         snapshotSeq = deps.eventBus.seq;
-        const tables = await resolveState(deps.db);
+        const tables = await deps.syncService.getFullState();
 
         await stream.writeSSE({
           data: JSON.stringify({ tables, seq: snapshotSeq }),

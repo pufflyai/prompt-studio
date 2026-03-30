@@ -49,7 +49,7 @@ export const getDocsIndexHandler = (deps: RouteDeps): AppRouteHandler<typeof get
     const { projectId } = c.req.valid("param");
 
     try {
-      const index = await deps.docsService.getIndex(projectId);
+      const index = await deps.docService.getIndex(projectId);
       return c.json(index, 200);
     } catch (err) {
       if (isDocsServiceError(err)) {

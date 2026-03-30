@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import type { DbClient } from "pstdio-db";
-import { createDb, createProjectsService } from "pstdio-db";
+import { createDb, createProjectsDBService } from "pstdio-db";
 import { emitCascadeDeletes } from "./emit-cascade-deletes";
 import { EventBus } from "./event-bus";
 
@@ -21,7 +21,7 @@ describe("emitCascadeDeletes", () => {
   test("emits delete events for project and its dependents", async () => {
     await setup();
 
-    const projectsService = createProjectsService(db);
+    const projectsService = createProjectsDBService(db);
     const project = await projectsService.create({ name: "to-delete" });
 
     const bus = new EventBus();
@@ -58,8 +58,8 @@ describe("emitCascadeDeletes", () => {
   test("emits delete for simple table without dependents", async () => {
     await setup();
 
-    const { createAgentConfigsService } = await import("pstdio-db");
-    const agentConfigsService = createAgentConfigsService(db);
+    const { createAgentConfigsDBService } = await import("pstdio-db");
+    const agentConfigsService = createAgentConfigsDBService(db);
     const config = await agentConfigsService.upsert("test-agent");
 
     const bus = new EventBus();

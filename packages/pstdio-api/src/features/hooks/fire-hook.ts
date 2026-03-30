@@ -1,31 +1,24 @@
-import type { HookContext, HookName } from "pstdio-wt";
+import type { HookName, HookPayload } from "pstdio-wt";
 import { runHook } from "pstdio-wt";
-import type { RouteDeps } from "../deps";
+
+type FireHookDeps = {
+  repoService: { listByProject: (projectId: string) => Promise<{ path: string }[]> };
+};
 
 type FireHookInput = {
   hookName: HookName;
   projectId: string;
-  payload: Record<string, unknown>;
-  context?: Partial<Pick<HookContext, "workspace" | "worktreePath" | "branch" | "ticketShorthand">>;
+  payload: HookPayload;
 };
 
-const resolveRepoPath = async (deps: Pick<RouteDeps, "reposService">, projectId: string) => {
-  const repos = await deps.reposService.listByProject(projectId);
+const resolveRepoPath = async (deps: FireHookDeps, projectId: string) => {
+  const repos = await deps.repoService.listByProject(projectId);
   return repos[0]?.path ?? null;
 };
 
-export const fireHook = async (deps: Pick<RouteDeps, "reposService">, input: FireHookInput) => {
+export const fireHook = async (deps: FireHookDeps, input: FireHookInput) => {
   const repoPath = await resolveRepoPath(deps, input.projectId);
   if (!repoPath) return null;
 
-  return runHook(
-    input.hookName,
-    {
-      repoPath,
-      projectId: input.projectId,
-      payload: input.payload,
-      ...input.context,
-    },
-    repoPath,
-  );
+  return runHook(input.hookName, input.payload, { repoPath });
 };

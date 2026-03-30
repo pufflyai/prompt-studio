@@ -28,7 +28,7 @@ type UpdateInput = Partial<
 
 const nowTimestamp = () => new Date().toISOString();
 
-export const createSessionsService = (db: DbClient) => {
+export const createSessionsDBService = (db: DbClient) => {
   const create = async (input: CreateInput) => {
     const timestamp = nowTimestamp();
 

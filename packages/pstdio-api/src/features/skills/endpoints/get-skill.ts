@@ -36,19 +36,19 @@ export const getSkillRoute = createRoute({
 export const getSkillHandler = (deps: RouteDeps): AppRouteHandler<typeof getSkillRoute> => {
   return async (c) => {
     const { projectId, name } = c.req.valid("param");
-    const skill = await deps.skillsDbService.getByName(projectId, name);
+    const skill = await deps.skillService.getByName(projectId, name);
 
     if (!skill) {
       return c.json({ error: `Skill not found: ${name}` }, 404);
     }
 
-    const file = await deps.filesService.get(skill.file_id);
+    const file = await deps.fileService.get(skill.file_id);
     const content = file ? await readFile(file.storage_path, "utf8") : "";
 
     const [bundled, repos, agents] = await Promise.all([
       getBundledSkills(),
-      deps.reposService.listByProject(projectId),
-      deps.agentConfigsService.list(),
+      deps.repoService.listByProject(projectId),
+      deps.agentConfigService.list(),
     ]);
     const bundledSkill = bundled.find((s) => s.name === name);
     const bundled_version = bundledSkill?.version ?? "";

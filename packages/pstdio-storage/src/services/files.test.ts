@@ -1,11 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createDb, projects, tickets } from "pstdio-db";
-import { createFilesService } from "./files";
-
-const nowTimestamp = () => new Date().toISOString();
+import { createFilesStorageService } from "./files";
 
 const roots: string[] = [];
 
@@ -16,68 +13,71 @@ afterEach(() => {
   roots.length = 0;
 });
 
-test("files service supports upload and ticket attachments", async () => {
-  const storagePath = mkdtempSync(join(tmpdir(), "pstdio-files-"));
-  roots.push(storagePath);
+test("writeFile creates project directory and writes data", () => {
+  const storageRoot = mkdtempSync(join(tmpdir(), "pstdio-files-"));
+  roots.push(storageRoot);
 
-  const { db, close } = await createDb({ path: ":memory:" });
-  const files = createFilesService(db, storagePath);
+  const service = createFilesStorageService(storageRoot);
+  const projectId = "proj-1";
+  const fileId = "file-1";
+  const data = Buffer.from("hello world");
 
-  const timestamp = nowTimestamp();
-  const projectId = crypto.randomUUID();
-  await db
-    .insert(projects)
-    .values({ id: projectId, name: "Alpha", shorthand: "A", created_at: timestamp, updated_at: timestamp });
+  const storagePath = service.writeFile(projectId, fileId, data);
 
-  const ticketId = crypto.randomUUID();
-  await db.insert(tickets).values({
-    id: ticketId,
-    shorthand: "T-1",
-    project_id: projectId,
-    display_title: "Ticket One",
-    created_at: timestamp,
-    updated_at: timestamp,
-  });
+  expect(readFileSync(storagePath, "utf8")).toBe("hello world");
+  expect(storagePath).toBe(join(storageRoot, projectId, fileId));
+});
 
-  const uploaded = await files.upload({
-    project_id: projectId,
-    file_name: "note.txt",
-    file_kind: "attachment",
-    mime_type: "text/plain",
-    data: Buffer.from("hello world"),
-  });
+test("deleteFile removes the file from disk", () => {
+  const storageRoot = mkdtempSync(join(tmpdir(), "pstdio-files-"));
+  roots.push(storageRoot);
 
-  expect(uploaded.project_id).toBe(projectId);
-  expect(readFileSync(uploaded.storage_path, "utf8")).toBe("hello world");
+  const service = createFilesStorageService(storageRoot);
+  const storagePath = service.writeFile("proj-1", "file-1", Buffer.from("data"));
 
-  const fetched = await files.get(uploaded.id);
-  expect(fetched?.id).toBe(uploaded.id);
+  expect(existsSync(storagePath)).toBe(true);
 
-  const updated = await files.update(uploaded.id, {
-    data: Buffer.from("updated content"),
-  });
+  service.deleteFile(storagePath);
 
-  expect(updated?.id).toBe(uploaded.id);
-  expect(updated?.size_bytes).toBe(Buffer.byteLength("updated content"));
-  expect(readFileSync(uploaded.storage_path, "utf8")).toBe("updated content");
+  expect(existsSync(storagePath)).toBe(false);
+});
 
-  const listBefore = await files.listForTicket(ticketId);
-  expect(listBefore).toHaveLength(0);
+test("deleteFile is a no-op when file does not exist", () => {
+  const storageRoot = mkdtempSync(join(tmpdir(), "pstdio-files-"));
+  roots.push(storageRoot);
 
-  const attached = await files.attachToTicket(ticketId, uploaded.id);
-  expect(attached?.ticket_id).toBe(ticketId);
-  expect(attached?.file_id).toBe(uploaded.id);
+  const service = createFilesStorageService(storageRoot);
 
-  const listAfter = await files.listForTicket(ticketId);
-  expect(listAfter).toHaveLength(1);
-  expect(listAfter[0]?.id).toBe(uploaded.id);
+  // Should not throw
+  service.deleteFile(join(storageRoot, "nonexistent"));
+});
 
-  const detached = await files.detachFromTicket(ticketId, uploaded.id);
-  expect(detached).toBe(true);
-  expect(await files.listForTicket(ticketId)).toHaveLength(0);
+test("removeProjectStorage removes the entire project directory", () => {
+  const storageRoot = mkdtempSync(join(tmpdir(), "pstdio-files-"));
+  roots.push(storageRoot);
 
-  const removed = await files.remove(uploaded.id);
-  expect(removed).toBe(true);
+  const service = createFilesStorageService(storageRoot);
+  service.writeFile("proj-1", "file-1", Buffer.from("a"));
+  service.writeFile("proj-1", "file-2", Buffer.from("b"));
 
-  await close();
+  const projectDir = join(storageRoot, "proj-1");
+  expect(existsSync(projectDir)).toBe(true);
+
+  service.removeProjectStorage("proj-1");
+
+  expect(existsSync(projectDir)).toBe(false);
+});
+
+test("computeHash returns a consistent sha256 hex digest", () => {
+  const storageRoot = mkdtempSync(join(tmpdir(), "pstdio-files-"));
+  roots.push(storageRoot);
+
+  const service = createFilesStorageService(storageRoot);
+  const data = Buffer.from("hello world");
+
+  const hash1 = service.computeHash(data);
+  const hash2 = service.computeHash(data);
+
+  expect(hash1).toBe(hash2);
+  expect(hash1).toHaveLength(64);
 });

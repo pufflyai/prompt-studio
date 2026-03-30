@@ -1,7 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
-import { emitCascadeDeletes } from "../../sync/emit-cascade-deletes";
 import { cleanupProjectArtifacts } from "../cleanup-project";
 import { notFoundResponseSchema } from "../dto";
 
@@ -33,18 +32,18 @@ export const removeProjectHandler = (deps: RouteDeps): AppRouteHandler<typeof re
   return async (c) => {
     const { id } = c.req.valid("param");
 
-    const project = await deps.projectsService.get(id);
+    const project = await deps.projectService.get(id);
     if (!project) {
       return c.json({ error: "Project not found" }, 404);
     }
 
-    await emitCascadeDeletes(deps.eventBus, deps.db, "projects", id);
+    await deps.syncService.emitCascadeDeletes("projects", id);
 
-    await cleanupProjectArtifacts(deps.db, id, {
-      removeProjectStorage: deps.filesService.removeProjectStorage,
+    await cleanupProjectArtifacts(deps.workspaceService, id, {
+      removeProjectStorage: deps.fileService.removeProjectStorage,
     });
 
-    await deps.projectsService.hardDelete(id);
+    await deps.projectService.hardDelete(id);
 
     return c.body(null, 204);
   };

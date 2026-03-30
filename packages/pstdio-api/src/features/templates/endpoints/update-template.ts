@@ -46,7 +46,7 @@ export const updateTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof u
     const { projectId, name } = c.req.valid("param");
     const body = c.req.valid("json");
 
-    const existing = await deps.templatesService.getByName(projectId, name);
+    const existing = await deps.templateService.getByName(projectId, name);
     if (!existing) {
       return c.json({ error: `Template not found: ${name}` }, 404);
     }
@@ -62,7 +62,7 @@ export const updateTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof u
     let updated = existing;
 
     if (body.is_default !== undefined || body.template_type !== undefined) {
-      const metadataResult = await deps.templatesService.update(projectId, name, {
+      const metadataResult = await deps.templateService.update(projectId, name, {
         is_default: body.is_default,
         template_type: body.template_type,
       });
@@ -75,12 +75,12 @@ export const updateTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof u
     }
 
     if (body.content) {
-      const file = await deps.filesService.update(updated.file_id, {
+      const file = await deps.fileService.update(updated.file_id, {
         data: Buffer.from(body.content),
       });
 
       if (file) {
-        const fileResult = await deps.templatesService.update(projectId, name, {
+        const fileResult = await deps.templateService.update(projectId, name, {
           file_id: file.id,
         });
 

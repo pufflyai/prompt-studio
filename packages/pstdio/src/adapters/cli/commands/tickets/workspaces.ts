@@ -10,11 +10,13 @@ export const describe = "List active workspaces linked to a ticket";
 export const builder = (yargs: Argv) =>
   yargs
     .option("id", { type: "string", demandOption: true, describe: "Ticket shorthand (e.g. PS-12)" })
-    .option("project-id", { type: "string", describe: "Project ID" });
+    .option("project-id", { type: "string", describe: "Project ID" })
+    .option("json", { type: "boolean", describe: "Output as JSON" });
 
 type WorkspacesArgs = {
   id: string;
   "project-id"?: string;
+  json?: boolean;
 };
 
 type Deps = {
@@ -33,18 +35,14 @@ const defaultDeps: Deps = {
   log: console.log,
 };
 
-type WorkspaceRow = {
+type TableRow = {
   workspace: string;
   branch: string;
   path: string;
 };
 
-const formatTable = (rows: WorkspaceRow[]) => {
-  const header: WorkspaceRow = {
-    workspace: "Workspace",
-    branch: "Branch",
-    path: "Path",
-  };
+const formatTable = (rows: TableRow[]) => {
+  const header: TableRow = { workspace: "Workspace", branch: "Branch", path: "Path" };
 
   const widths = {
     workspace: Math.max(header.workspace.length, ...rows.map((row) => row.workspace.length)),
@@ -53,7 +51,7 @@ const formatTable = (rows: WorkspaceRow[]) => {
   };
 
   const pad = (value: string, width: number) => value.padEnd(width);
-  const line = (row: WorkspaceRow) =>
+  const line = (row: TableRow) =>
     `${pad(row.workspace, widths.workspace)}   ${pad(row.branch, widths.branch)}   ${pad(row.path, widths.path)}`;
 
   return [line(header), ...rows.map(line)].join("\n");
@@ -72,6 +70,19 @@ export const createHandler =
 
     if (ticketWorkspaces.length === 0) {
       deps.log("No ticket workspaces found.");
+      return;
+    }
+
+    if (argv.json) {
+      const jsonRows = ticketWorkspaces.map((ws) => ({
+        workspace_shorthand: ws.workspace_shorthand,
+        workspace_id: ws.id,
+        attempt_status_id: ws.attempt_status_id ?? null,
+        attempt_status_name: ws.attempt_status_name ?? null,
+        branch: ws.branch ?? null,
+        worktree_path: ws.worktree_path ?? null,
+      }));
+      deps.log(JSON.stringify(jsonRows, null, 2));
       return;
     }
 

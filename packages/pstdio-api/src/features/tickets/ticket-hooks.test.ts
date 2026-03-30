@@ -24,14 +24,14 @@ const writeHook = (hookName: string, script: string) => {
 };
 
 const makeDeps = () => ({
-  reposService: {
+  repoService: {
     listByProject: async () => [{ path: repoDir }],
   } as never,
 });
 
 describe("fireTicketHook", () => {
-  test("pre-ticket-creation can modify payload", async () => {
-    writeHook("pre-ticket-creation", 'jq \'. + {"priority": "medium"}\'');
+  test("pre-ticket-creation can modify payload via PSTDIO_PAYLOAD marker", async () => {
+    writeHook("pre-ticket-creation", 'NEXT=$(jq -c \'. + {"priority": "medium"}\')\necho "PSTDIO_PAYLOAD=$NEXT"');
 
     const result = await fireTicketHook(makeDeps(), "pre-ticket-creation", "proj-1", {
       title: "Test ticket",
@@ -92,6 +92,20 @@ describe("fireTicketHook", () => {
     });
 
     expect(result.rejected).toBe(false);
+  });
+
+  test("derives env vars from payload fields", async () => {
+    writeHook("post-ticket-status-change", 'echo "$PSTDIO_TICKET|$PSTDIO_FROM_STATUS|$PSTDIO_TO_STATUS"');
+
+    const result = await fireTicketHook(makeDeps(), "post-ticket-status-change", "proj-1", {
+      id: "TK-1",
+      ticket: "PS-1",
+      from_status: "wip",
+      to_status: "review",
+    });
+
+    expect(result.rejected).toBe(false);
+    expect(result.modifiedPayload).toBeNull();
   });
 
   test("pre-ticket-archive can reject", async () => {

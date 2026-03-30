@@ -25,10 +25,7 @@ export const createWorkspaceRoute = createRoute({
 export const createWorkspaceHandler = (deps: RouteDeps): AppRouteHandler<typeof createWorkspaceRoute> => {
   return async (c) => {
     const input = c.req.valid("json");
-    const workspace = await deps.workspacesService.create(input);
-
-    deps.eventBus.emit("workspaces", "set", workspace);
-
+    const workspace = await deps.workspaceService.create(input);
     return c.json(workspace, 201);
   };
 };

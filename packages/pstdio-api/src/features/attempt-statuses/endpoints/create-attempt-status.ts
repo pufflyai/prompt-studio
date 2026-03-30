@@ -46,7 +46,7 @@ export const createAttemptStatusHandler = (deps: RouteDeps): AppRouteHandler<typ
   return async (c) => {
     const { projectId } = c.req.valid("param");
     const body = c.req.valid("json");
-    const row = await deps.attemptStatusesService.create({ project_id: projectId, ...body });
+    const row = await deps.attemptStatusService.create({ project_id: projectId, ...body });
 
     deps.eventBus.emit("attempt_statuses", "set", row);
     return c.json(row, 201);

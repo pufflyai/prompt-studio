@@ -44,7 +44,7 @@ export const getDocsContentHandler = (deps: RouteDeps): AppRouteHandler<typeof g
     const { link } = c.req.valid("query");
 
     try {
-      const document = await deps.docsService.getDocument(projectId, link);
+      const document = await deps.docService.getDocument(projectId, link);
       return c.json(document, 200);
     } catch (err) {
       if (isDocsServiceError(err)) {

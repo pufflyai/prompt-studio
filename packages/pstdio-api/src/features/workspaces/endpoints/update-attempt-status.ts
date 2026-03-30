@@ -43,19 +43,17 @@ export const updateAttemptStatusHandler = (deps: RouteDeps): AppRouteHandler<typ
     const { id } = c.req.valid("param");
     const { status } = c.req.valid("json");
 
-    const workspace = await deps.workspacesService.get(id);
+    const workspace = await deps.workspaceService.get(id);
     if (!workspace) {
       return c.json({ error: `Workspace not found: ${id}` }, 404);
     }
 
-    const attemptStatus = await deps.attemptStatusesService.getByName(workspace.project_id, status);
+    const attemptStatus = await deps.attemptStatusService.getByName(workspace.project_id, status);
     if (!attemptStatus) {
       return c.json({ error: `Attempt status not found: "${status}"` }, 404);
     }
 
-    const updated = await deps.workspacesService.updateAttemptStatusId(id, attemptStatus.id);
-
-    deps.eventBus.emit("workspaces", "set", updated);
+    const updated = await deps.workspaceService.updateAttemptStatus(id, attemptStatus.id);
     return c.json({ id: updated!.id, attempt_status_id: updated!.attempt_status_id }, 200);
   };
 };

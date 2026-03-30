@@ -2,7 +2,6 @@ import { existsSync } from "node:fs";
 import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
-import { and, eq, project_repos } from "pstdio-db";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { installProjectSkillsToRepo } from "../../skills/install-skill-to-repo";
@@ -59,7 +58,7 @@ export const registerRepoRoute = createRoute({
 });
 
 const resolveRelinkState = async (
-  deps: Pick<RouteDeps, "projectsService">,
+  deps: Pick<RouteDeps, "projectService">,
   input: {
     configPath: string;
     projectId: string;
@@ -74,7 +73,7 @@ const resolveRelinkState = async (
     return { isRelinking: false, linkedProjectError: null as string | null };
   }
 
-  const existingProject = await deps.projectsService.get(existing.project_id);
+  const existingProject = await deps.projectService.get(existing.project_id);
   if (existingProject) {
     return {
       isRelinking: false,
@@ -86,13 +85,10 @@ const resolveRelinkState = async (
 };
 
 const emitProjectRepoLink = async (
-  deps: Pick<RouteDeps, "db" | "eventBus">,
+  deps: Pick<RouteDeps, "repoService" | "eventBus">,
   input: { projectId: string; repoId: string },
 ) => {
-  const [link] = await deps.db
-    .select()
-    .from(project_repos)
-    .where(and(eq(project_repos.project_id, input.projectId), eq(project_repos.repo_id, input.repoId)));
+  const link = await deps.repoService.getProjectRepoLink(input.projectId, input.repoId);
   if (link) deps.eventBus.emit("project_repos", "set", link);
 };
 
@@ -101,7 +97,7 @@ export const registerRepoHandler = (deps: RouteDeps): AppRouteHandler<typeof reg
     const { id } = c.req.valid("param");
     const { name, path } = c.req.valid("json");
 
-    const project = await deps.projectsService.get(id);
+    const project = await deps.projectService.get(id);
     if (!project) {
       return c.json({ error: "Project not found" }, 404);
     }
@@ -116,7 +112,7 @@ export const registerRepoHandler = (deps: RouteDeps): AppRouteHandler<typeof reg
       return c.json({ error: relinkState.linkedProjectError }, 409);
     }
 
-    const repo = await deps.reposService.registerForProject(id, { name, path });
+    const repo = await deps.repoService.registerForProject(id, { name, path });
 
     if (relinkState.isRelinking) {
       await rm(join(pstdioPath, "tickets"), { recursive: true, force: true });

@@ -31,13 +31,13 @@ export const listTicketFilesRoute = createRoute({
 export const listTicketFilesHandler = (deps: RouteDeps): AppRouteHandler<typeof listTicketFilesRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
-    const ticket = await deps.ticketsService.get(id);
+    const ticket = await deps.ticketService.get(id);
 
     if (!ticket) {
       return c.json({ error: `Ticket not found: ${id}` }, 404);
     }
 
-    const files = await deps.filesService.listForTicket(id);
+    const files = await deps.fileService.listForTicket(id);
     return c.json(files, 200);
   };
 };

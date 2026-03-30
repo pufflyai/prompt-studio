@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import type { JsonPatch, SessionMessage } from "pstdio-agents";
-import type { createSessionsService } from "pstdio-db";
-import type { createFilesService } from "pstdio-storage";
+import type { createFileService } from "../../services/file-service";
+import type { createSessionService } from "../../services/session-service";
 
 const isEmptyTextLikePart = (part: SessionMessage["parts"][number]) => {
   if (part.type !== "text" && part.type !== "reasoning") return false;
@@ -52,19 +52,19 @@ export const buildMessagesFromPatches = (
 };
 
 type PersistDeps = {
-  sessionsService: Pick<ReturnType<typeof createSessionsService>, "get" | "update">;
-  filesService: Pick<ReturnType<typeof createFilesService>, "get" | "upload" | "update">;
+  sessionService: Pick<ReturnType<typeof createSessionService>, "get" | "update">;
+  fileService: Pick<ReturnType<typeof createFileService>, "get" | "upload" | "update">;
 };
 
 export const persistSessionMessages = async (sessionId: string, patches: JsonPatch[], deps: PersistDeps) => {
-  const session = await deps.sessionsService.get(sessionId);
+  const session = await deps.sessionService.get(sessionId);
   if (!session) return;
 
   let initialMessages: SessionMessage[] | undefined;
 
   // Resume case: merge with existing file content
   if (session.session_file_id) {
-    const file = await deps.filesService.get(session.session_file_id);
+    const file = await deps.fileService.get(session.session_file_id);
     if (file) {
       initialMessages = JSON.parse(fs.readFileSync(file.storage_path, "utf-8"));
     }
@@ -76,15 +76,15 @@ export const persistSessionMessages = async (sessionId: string, patches: JsonPat
   const data = Buffer.from(JSON.stringify(messages));
 
   if (session.session_file_id) {
-    await deps.filesService.update(session.session_file_id, { data });
+    await deps.fileService.update(session.session_file_id, { data });
   } else {
-    const file = await deps.filesService.upload({
+    const file = await deps.fileService.upload({
       project_id: session.project_id!,
       file_name: "session-messages.json",
       file_kind: "session_messages",
       data,
       mime_type: "application/json",
     });
-    await deps.sessionsService.update(sessionId, { session_file_id: file.id });
+    await deps.sessionService.update(sessionId, { session_file_id: file.id });
   }
 };

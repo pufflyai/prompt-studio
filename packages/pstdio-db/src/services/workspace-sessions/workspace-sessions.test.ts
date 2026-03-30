@@ -1,17 +1,17 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import type { DbClient } from "../../db/connection.pglite";
 import { createDb } from "../../db/connection.pglite";
-import { createProjectsService } from "../projects/projects";
-import { createSessionsService } from "../sessions/sessions";
-import { createTicketsService } from "../tickets/tickets";
-import { createWorkspacesService } from "../workspaces/workspaces";
-import { createWorkspaceSessionsService } from "./workspace-sessions";
+import { createProjectsDBService } from "../projects/projects";
+import { createSessionsDBService } from "../sessions/sessions";
+import { createTicketsDBService } from "../tickets/tickets";
+import { createWorkspacesDBService } from "../workspaces/workspaces";
+import { createWorkspaceSessionsDBService } from "./workspace-sessions";
 
 let close: () => Promise<void>;
 let db: DbClient;
-let workspacesService: ReturnType<typeof createWorkspacesService>;
-let sessionsService: ReturnType<typeof createSessionsService>;
-let workspaceSessionsService: ReturnType<typeof createWorkspaceSessionsService>;
+let workspacesService: ReturnType<typeof createWorkspacesDBService>;
+let sessionsService: ReturnType<typeof createSessionsDBService>;
+let workspaceSessionsService: ReturnType<typeof createWorkspaceSessionsDBService>;
 let projectId: string;
 let ticketId: string;
 let ticketShorthand: string;
@@ -21,25 +21,25 @@ const setup = async () => {
   close = result.close;
   db = result.db;
 
-  const projectsService = createProjectsService(db);
+  const projectsService = createProjectsDBService(db);
   const project = await projectsService.create({ name: "test-project" });
   projectId = project.id;
 
-  const ticketsService = createTicketsService(db);
+  const ticketsService = createTicketsDBService(db);
   const ticket = await ticketsService.create({ project_id: projectId, display_title: "Test ticket" });
   ticketId = ticket.id;
   ticketShorthand = ticket.shorthand;
 
-  workspacesService = createWorkspacesService(db);
-  sessionsService = createSessionsService(db);
-  workspaceSessionsService = createWorkspaceSessionsService(db);
+  workspacesService = createWorkspacesDBService(db);
+  sessionsService = createSessionsDBService(db);
+  workspaceSessionsService = createWorkspaceSessionsDBService(db);
 };
 
 afterAll(async () => {
   await close?.();
 });
 
-describe("createWorkspaceSessionsService", () => {
+describe("createWorkspaceSessionsDBService", () => {
   test("link creates a workspace-session association", async () => {
     await setup();
 

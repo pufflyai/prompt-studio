@@ -48,6 +48,51 @@ describe("sessions follow-up", () => {
     );
   });
 
+  test("passes summary-of flags", async () => {
+    const deps = makeDeps();
+    const handler = createHandler(deps);
+
+    await handler(
+      argv({
+        id: "s_impl",
+        "summary-of": "s_review",
+        "summary-format": "detailed",
+        "summary-role": "all",
+      }),
+    );
+
+    expect(deps.followUpSession).toHaveBeenCalledWith(expect.any(String), "s_impl", {
+      summary_from_session_id: "s_review",
+      summary_format: "detailed",
+      summary_role: "all",
+    });
+  });
+
+  test("passes both prompt and summary-of together", async () => {
+    const deps = makeDeps();
+    const handler = createHandler(deps);
+
+    await handler(
+      argv({
+        id: "s_impl",
+        prompt: "Apply the review feedback",
+        "summary-of": "s_review",
+      }),
+    );
+
+    expect(deps.followUpSession).toHaveBeenCalledWith(expect.any(String), "s_impl", {
+      prompt: "Apply the review feedback",
+      summary_from_session_id: "s_review",
+    });
+  });
+
+  test("fails when neither prompt nor summary-of is provided", async () => {
+    const deps = makeDeps();
+    const handler = createHandler(deps);
+
+    expect(handler(argv({ id: "s_1" }))).rejects.toThrow("At least one of --prompt or --summary-of is required");
+  });
+
   test("propagates API errors", async () => {
     const deps = makeDeps({
       followUpSession: mock(async () => {

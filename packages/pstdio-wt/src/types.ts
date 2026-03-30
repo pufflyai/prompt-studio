@@ -79,17 +79,12 @@ export type TicketHookName =
 
 export type HookName = WorktreeHookName | SessionHookName | TicketHookName;
 
-export type HookContext = {
-  branch?: string;
-  worktreePath?: string;
+export type HookPayload = Record<string, unknown>;
+
+export type RunHookOptions = {
   repoPath: string;
-  workspace?: string;
-  ticketShorthand?: string;
-  target?: string;
-  commitSha?: string;
-  commitMessage?: string;
-  projectId?: string;
-  payload?: Record<string, unknown>;
+  cwd?: string;
+  timeoutMs?: number;
 };
 
 export type HookResult = SetupResult & {

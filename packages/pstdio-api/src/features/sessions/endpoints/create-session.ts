@@ -3,7 +3,6 @@ import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { createSessionBodySchema, sessionResponseSchema } from "../dto";
 import { resolveSessionCwd } from "../resolve-session-cwd";
-import { fireSessionStartHook, fireSessionStatusHook } from "../session-hooks";
 import { spawnAgentSession } from "../spawn-agent";
 
 export const createSessionRoute = createRoute({
@@ -33,29 +32,26 @@ export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
   return async (c) => {
     const input = c.req.valid("json");
 
-    const project = await deps.projectsService.get(input.project_id);
+    const project = await deps.projectService.get(input.project_id);
     if (!project) {
       return c.json({ error: `Project not found: ${input.project_id}` }, 404);
     }
 
     if (input.workspace_id) {
-      const workspace = await deps.workspacesService.get(input.workspace_id);
+      const workspace = await deps.workspaceService.get(input.workspace_id);
       if (!workspace) {
         return c.json({ error: `Workspace not found: ${input.workspace_id}` }, 404);
       }
     }
 
-    const session = await deps.sessionsService.create({
+    const session = await deps.sessionService.create({
       project_id: input.project_id,
       title: input.title,
       agent: input.agent,
     });
 
-    deps.eventBus.emit("sessions", "set", session);
-    fireSessionStartHook(deps, { id: session.id, project_id: input.project_id, status: session.status });
-
     if (input.workspace_id) {
-      const link = await deps.workspaceSessionsService.link(input.workspace_id, session.id);
+      const link = await deps.workspaceSessionService.link(input.workspace_id, session.id);
       deps.eventBus.emit("workspace_sessions", "set", link);
     }
 
@@ -72,13 +68,7 @@ export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
       },
       deps,
     ).catch(async () => {
-      const failed = await deps.sessionsService.updateStatus(session.id, "failed");
-      if (failed) {
-        deps.eventBus.emit("sessions", "set", failed);
-        if (failed.project_id) {
-          fireSessionStatusHook(deps, { id: failed.id, project_id: failed.project_id, status: failed.status });
-        }
-      }
+      await deps.sessionService.transitionStatus(session.id, "failed");
     });
 
     return c.json(session, 201);

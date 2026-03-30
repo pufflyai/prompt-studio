@@ -27,7 +27,7 @@ export const listTemplatesRoute = createRoute({
 export const listTemplatesHandler = (deps: RouteDeps): AppRouteHandler<typeof listTemplatesRoute> => {
   return async (c) => {
     const { projectId } = c.req.valid("param");
-    const templates = await deps.templatesService.list(projectId);
+    const templates = await deps.templateService.list(projectId);
     return c.json(templates, 200);
   };
 };

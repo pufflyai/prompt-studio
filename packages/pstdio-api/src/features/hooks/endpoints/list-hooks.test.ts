@@ -65,7 +65,7 @@ describe("GET /v1/projects/:id/hooks", () => {
     expect(postStart?.content).toContain("wip");
 
     const postTicketArchive = body.find((h) => h.name === "post-ticket-archive");
-    expect(postTicketArchive?.content).toContain("clean-worktrees");
+    expect(postTicketArchive?.content).toContain("tickets worktrees remove-all");
 
     const scaffolded = new Set([
       "post-worktree-create",

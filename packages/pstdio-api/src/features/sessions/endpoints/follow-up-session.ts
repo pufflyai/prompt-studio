@@ -1,9 +1,10 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
+import { composeSummary } from "../compose-summary";
 import { followUpBodySchema, notFoundResponseSchema, sessionResponseSchema } from "../dto";
+import { getSessionMessages } from "../get-session-messages";
 import { resolveSessionCwd } from "../resolve-session-cwd";
-import { fireSessionResumeHook } from "../session-hooks";
 import { resumeAgentSession, spawnAgentSession } from "../spawn-agent";
 
 export const followUpSessionRoute = createRoute({
@@ -34,12 +35,39 @@ export const followUpSessionRoute = createRoute({
   },
 });
 
+const buildFollowUpPrompt = async (
+  input: {
+    prompt?: string;
+    summary_from_session_id?: string;
+    summary_format?: "brief" | "detailed";
+    summary_role?: "assistant" | "all";
+  },
+  deps: RouteDeps,
+) => {
+  let prompt = input.prompt ?? "";
+
+  if (input.summary_from_session_id) {
+    const messages = await getSessionMessages(input.summary_from_session_id, deps);
+    const summary = composeSummary(messages, {
+      format: input.summary_format ?? "brief",
+      role: input.summary_role ?? "assistant",
+    });
+
+    if (summary) {
+      const block = `<session-summary>\n${summary}\n</session-summary>`;
+      prompt = prompt ? `${prompt}\n\n${block}` : block;
+    }
+  }
+
+  return prompt;
+};
+
 export const followUpSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof followUpSessionRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const input = c.req.valid("json");
 
-    const session = await deps.sessionsService.get(id);
+    const session = await deps.sessionService.get(id);
     if (!session) {
       return c.json({ error: `Session not found: ${id}` }, 404);
     }
@@ -51,39 +79,37 @@ export const followUpSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof 
       );
     }
 
-    const updated = await deps.sessionsService.updateStatus(session.id, "in_progress");
-    deps.eventBus.emit("sessions", "set", updated);
-    if (session.project_id) {
-      fireSessionResumeHook(deps, { id: session.id, project_id: session.project_id, status: "in_progress" });
-    }
+    const prompt = await buildFollowUpPrompt(input, deps);
 
-    const workspace = await deps.workspaceSessionsService.getWorkspaceBySessionId(session.id);
+    await deps.sessionService.resume(session.id);
+
+    const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(session.id);
     const cwd = await resolveSessionCwd(deps, session.project_id!, workspace?.id);
 
     const agentId = input.agent ?? session.agent!;
     const switchingAgent = input.agent && input.agent !== session.agent;
 
     if (switchingAgent) {
-      await deps.sessionsService.update(session.id, { agent: agentId, agent_session_id: null });
+      await deps.sessionService.update(session.id, { agent: agentId, agent_session_id: null });
 
-      spawnAgentSession({ sessionId: session.id, agentId, prompt: input.prompt, model: input.model, cwd }, deps);
+      spawnAgentSession({ sessionId: session.id, agentId, prompt, model: input.model, cwd }, deps);
     } else if (session.agent_session_id) {
       resumeAgentSession(
         {
           sessionId: session.id,
           agentSessionId: session.agent_session_id,
           agentId,
-          prompt: input.prompt,
+          prompt,
           model: input.model,
           cwd,
         },
         deps,
       );
     } else {
-      spawnAgentSession({ sessionId: session.id, agentId, prompt: input.prompt, model: input.model, cwd }, deps);
+      spawnAgentSession({ sessionId: session.id, agentId, prompt, model: input.model, cwd }, deps);
     }
 
-    const result = await deps.sessionsService.get(session.id);
+    const result = await deps.sessionService.get(session.id);
     return c.json(result, 200);
   };
 };

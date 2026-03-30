@@ -8,25 +8,58 @@
 # - "review-ready":
 #   1. Runs a validation command (replace with your own below)
 #   2. If validation fails, resumes the session with the error
-#   3. If validation passes and no attempt is still WIP,
-#      moves the ticket to "review" status
+#      - ATTEMPT_STATUS: "running"
+#   3. If validation passes, runs a review command (replace with your own below)
+#   4. Review command decides attempt status:
+#      - "changes-requested": follow-up implementation session
+#      - "reviewed": ticket can move to review once all attempts are reviewed
+# - "reviewed":
+#   1. If all attempts are reviewed, move the ticket to review
+# - "changes-requested":
+#   1. Follows up the implementation session with review summary
+#   2. ATTEMPT_STATUS: "running"
 # ──────────────────────────────────────────────────────────
-
-PAYLOAD=$(cat)
-
-ATTEMPT_STATUS=$(printf '%s\n' "$PAYLOAD" | jq -r '.attempt.status // empty')
-TICKET_ID=$(printf '%s\n' "$PAYLOAD" | jq -r '.ticket.id // empty')
 
 # ──────────────────────────────────────────────────────────
 # Blocked — move the ticket to "blocked" status.
 # ──────────────────────────────────────────────────────────
 
-if [ "$ATTEMPT_STATUS" = "blocked" ] && [ -n "$TICKET_ID" ]; then
-  pstdio tickets update --id "$TICKET_ID" --status "blocked"
+if [ "$PSTDIO_ATTEMPT_STATUS" = "blocked" ] && [ -n "$PSTDIO_TICKET" ]; then
+  pstdio tickets update --id "$PSTDIO_TICKET" --status "blocked"
   exit 0
 fi
 
-if [ "$ATTEMPT_STATUS" != "review-ready" ]; then
+# ──────────────────────────────────────────────────────────
+# Changes requested — follow up with review summary.
+# ──────────────────────────────────────────────────────────
+
+if [ "$PSTDIO_ATTEMPT_STATUS" = "changes-requested" ]; then
+  if [ -n "$PSTDIO_ORIGINAL_SESSION_ID" ] && [ -n "$PSTDIO_SESSION_ID" ]; then
+    pstdio sessions follow-up \
+      --id "$PSTDIO_ORIGINAL_SESSION_ID" \
+      --summary-of "$PSTDIO_SESSION_ID"
+
+    pstdio workspaces set-status \
+      --workspace "$PSTDIO_WORKSPACE" \
+      --status "running"
+  fi
+  exit 0
+fi
+
+if [ "$PSTDIO_ATTEMPT_STATUS" = "reviewed" ]; then
+  # ────────────────────────────────────────────────────────
+  # If all attempts are reviewed, move the ticket to review.
+  # ────────────────────────────────────────────────────────
+  if [ -n "$PSTDIO_TICKET" ]; then
+    pstdio tickets update-when-attempt-status \
+      --id "$PSTDIO_TICKET" \
+      --all-attempts-status "reviewed" \
+      --set-status "review"
+  fi
+  exit 0
+fi
+
+if [ "$PSTDIO_ATTEMPT_STATUS" != "review-ready" ]; then
   exit 0
 fi
 
@@ -37,9 +70,14 @@ VALIDATE_OUTPUT=$(echo "No validation configured" 2>&1)
 # ──────────────────────────────────────────────────────────
 
 if [ $? -ne 0 ]; then
-  SESSION_ID=$(printf '%s\n' "$PAYLOAD" | jq -r '.session.id // empty')
-  if [ -n "$SESSION_ID" ]; then
-    pstdio sessions follow-up --id "$SESSION_ID" \
+  if [ -n "$PSTDIO_WORKSPACE" ]; then
+    pstdio workspaces set-status \
+      --workspace "$PSTDIO_WORKSPACE" \
+      --status "running"
+  fi
+
+  if [ -n "$PSTDIO_SESSION_ID" ]; then
+    pstdio sessions follow-up --id "$PSTDIO_SESSION_ID" \
       --prompt "Validation failed. Fix the errors and mark the attempt review-ready again:
 
 $VALIDATE_OUTPUT"
@@ -48,11 +86,9 @@ $VALIDATE_OUTPUT"
 fi
 
 # ──────────────────────────────────────────────────────────
-# If no attempt is still WIP, move the ticket to review.
+# >>> Replace with your review command <<<
+# update the attempt status to "changes-requested" or "reviewed" based on the review outcome
+# or prompt the reviewer to update the attempt status after the review.
 # ──────────────────────────────────────────────────────────
-
-WIP_COUNT=$(printf '%s\n' "$PAYLOAD" | jq '[.ticket.attempts[] | select(.status == "running")] | length')
-
-if [ "$WIP_COUNT" -eq 0 ]; then
-  pstdio tickets update --id "$TICKET_ID" --status "review"
-fi
+echo "No review configured" >/dev/null 2>&1
+# ──────────────────────────────────────────────────────────

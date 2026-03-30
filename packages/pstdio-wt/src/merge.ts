@@ -1,6 +1,6 @@
 import { GitError, git } from "./git";
 import { runHook } from "./hooks";
-import type { HookContext, MergeResult } from "./types";
+import type { HookPayload, MergeResult } from "./types";
 
 export const mergeWorktree = async (opts: {
   repoRoot: string;
@@ -8,19 +8,20 @@ export const mergeWorktree = async (opts: {
   target?: string;
   squash?: boolean;
   message?: string;
-  hookContext?: Partial<HookContext>;
+  hookPayload?: HookPayload;
 }): Promise<MergeResult> => {
   const target = opts.target ?? (await getCurrentBranch(opts.repoRoot));
   const shouldSquash = opts.squash ?? false;
-
-  const baseContext: HookContext = {
-    repoPath: opts.repoRoot,
+  const basePayload: HookPayload = {
+    repo_path: opts.repoRoot,
     branch: opts.branch,
     target,
-    ...opts.hookContext,
+    squash: shouldSquash,
+    commit_message: opts.message ?? null,
+    ...opts.hookPayload,
   };
 
-  const preResult = await runHook("pre-merge", baseContext, opts.repoRoot);
+  const preResult = await runHook("pre-merge", basePayload, { repoPath: opts.repoRoot });
   if (!preResult.skipped && preResult.exitCode !== 0) {
     throw new Error(`HOOK pre-merge FAILED (exit ${preResult.exitCode})\n${preResult.stderr || preResult.stdout}`);
   }
@@ -40,7 +41,11 @@ export const mergeWorktree = async (opts: {
       await git(opts.repoRoot, ["merge", "--ff-only", opts.branch]);
     }
   } catch (err) {
-    void runHook("on-conflict", baseContext, opts.repoRoot).catch(() => {});
+    const conflictPayload: HookPayload = {
+      ...basePayload,
+      operation: "merge",
+    };
+    void runHook("on-conflict", conflictPayload, { repoPath: opts.repoRoot }).catch(() => {});
 
     if (err instanceof GitError) {
       throw new Error(`Merge of ${opts.branch} into ${target} failed: ${err.stderr}`);
@@ -50,7 +55,7 @@ export const mergeWorktree = async (opts: {
 
   const sha = await git(opts.repoRoot, ["rev-parse", "HEAD"]);
 
-  void runHook("post-merge", { ...baseContext, commitSha: sha }, opts.repoRoot).catch(() => {});
+  void runHook("post-merge", { ...basePayload, commit_sha: sha }, { repoPath: opts.repoRoot }).catch(() => {});
 
   return { merged: true, target, sha };
 };

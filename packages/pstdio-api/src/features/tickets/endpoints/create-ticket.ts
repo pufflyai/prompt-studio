@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { eq, ticket_tag_assignments } from "pstdio-db";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
+import { buildTicketPayload } from "../build-ticket-payload";
 import { createTicketBodySchema, ticketResponseSchema } from "../dto";
 import { emitSyncedFile, emitSyncedTicketFile } from "../emit-ticket-file-sync";
 import { extractTitleFromContent } from "../extract-title";
@@ -9,31 +9,28 @@ import { fireTicketHook, fireTicketHookAsync } from "../ticket-hooks";
 
 const hookRejectedSchema = z.object({ error: z.string() });
 
-type TicketRecord = Awaited<ReturnType<RouteDeps["ticketsService"]["create"]>>;
+type TicketRecord = NonNullable<Awaited<ReturnType<RouteDeps["ticketService"]["get"]>>>;
 
 const attachContentToTicket = async (deps: RouteDeps, ticket: TicketRecord, projectId: string, content: string) => {
   const data = Buffer.from(content);
-  const file = await deps.filesService.upload({
+  const file = await deps.fileService.upload({
     project_id: projectId,
     file_name: "ticket.md",
     file_kind: "ticket_file",
     data,
     mime_type: "text/markdown",
   });
-  const ticketFile = await deps.filesService.attachToTicket(ticket.id, file.id);
+  const ticketFile = await deps.fileService.attachToTicket(ticket.id, file.id);
   emitSyncedFile(deps, file);
   emitSyncedTicketFile(deps, ticketFile);
-  const updated = await deps.ticketsService.update(ticket.id, { file_id: file.id });
+  const updated = await deps.ticketService.update(ticket.id, { file_id: file.id });
   if (!updated) throw new Error(`Ticket not found right after creation: ${ticket.id}`);
   return updated;
 };
 
 const assignTags = async (deps: RouteDeps, ticketId: string, tagIds: string[]) => {
-  await deps.ticketsService.assignTagOptions(ticketId, tagIds);
-  const newAssignments = await deps.db
-    .select()
-    .from(ticket_tag_assignments)
-    .where(eq(ticket_tag_assignments.ticket_id, ticketId));
+  await deps.ticketService.assignTagOptions(ticketId, tagIds);
+  const newAssignments = await deps.ticketService.listTagAssignments(ticketId);
   for (const row of newAssignments) deps.eventBus.emit("ticket_tag_assignments", "set", row);
 };
 
@@ -68,28 +65,41 @@ export const createTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof cre
   return async (c) => {
     const { tag_ids, content, ...input } = c.req.valid("json");
 
-    const project = await deps.projectsService.get(input.project_id);
+    const project = await deps.projectService.get(input.project_id);
     if (!project) {
       return c.json({ error: `Project not found: ${input.project_id}` }, 404);
     }
 
     if (!input.status_id) {
-      const defaultStatus = await deps.statusesService.getDefault(input.project_id);
+      const defaultStatus = await deps.statusService.getDefault(input.project_id);
       if (defaultStatus) input.status_id = defaultStatus.id;
     }
 
     const displayTitle = content ? extractTitleFromContent(content) : undefined;
 
+    const statusName = input.status_id
+      ? ((await deps.statusService.list(input.project_id)).find((s) => s.id === input.status_id)?.name ?? null)
+      : null;
+
     const preHook = await fireTicketHook(deps, "pre-ticket-creation", input.project_id, {
-      ...input,
-      display_title: displayTitle,
-      content,
+      id: null,
+      ticket: null,
+      display_title: displayTitle ?? null,
+      user_prompt: input.user_prompt ?? null,
+      content: content ?? null,
+      parent_id: input.parent_id ?? null,
+      draft: input.draft ?? false,
+      archived: false,
+      status: statusName,
+      tag_ids: tag_ids ?? [],
+      tag_names: [],
+      file_ids: [],
     });
     if (preHook.rejected) {
       return c.json({ error: preHook.stderr.trim() || "Rejected by pre-ticket-creation hook" }, 403);
     }
 
-    let ticket = await deps.ticketsService.create({
+    let ticket = await deps.ticketService.create({
       ...input,
       display_title: displayTitle,
     });
@@ -103,10 +113,9 @@ export const createTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof cre
     }
 
     deps.eventBus.emit("tickets", "set", ticket);
-    fireTicketHookAsync(deps, "post-ticket-creation", input.project_id, {
-      id: ticket.id,
-      shorthand: ticket.shorthand,
-    });
+
+    const postPayload = await buildTicketPayload(deps, ticket, input.project_id);
+    fireTicketHookAsync(deps, "post-ticket-creation", input.project_id, postPayload);
 
     return c.json(ticket, 201);
   };

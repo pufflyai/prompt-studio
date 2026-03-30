@@ -4,7 +4,7 @@ import { agent_configs } from "../../db/schemas.pg";
 
 const nowTimestamp = () => new Date().toISOString();
 
-export const createAgentConfigsService = (db: DbClient) => {
+export const createAgentConfigsDBService = (db: DbClient) => {
   const list = async () => db.select().from(agent_configs).orderBy(agent_configs.created_at);
 
   const get = async (agentId: string) => {
