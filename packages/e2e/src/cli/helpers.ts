@@ -17,21 +17,21 @@ export const createGitRepo = () => {
 
 export const createTempDir = () => mkdtempSync(join(tmpdir(), "pstdio-e2e-"));
 
-export const runPstdio = (args: string, cwd: string, env: Record<string, string>) =>
+export const runPstdio = (args: string, cwd: string, env: Record<string, string>, timeout = TEST_TIMEOUT) =>
   execSync(`bun run ${PSTDIO_CLI} ${args}`, {
     cwd,
     env: { ...process.env, PSTDIO_DISABLE_EMBED_MANIFEST: "1", PSTDIO_DISABLE_API_AUTO_START: "1", ...env },
     encoding: "utf8",
-    timeout: TEST_TIMEOUT,
+    timeout,
   });
 
-export const runPstdioSafe = (args: string, cwd: string, env: Record<string, string>) => {
+export const runPstdioSafe = (args: string, cwd: string, env: Record<string, string>, timeout = TEST_TIMEOUT) => {
   try {
     const stdout = execSync(`bun run ${PSTDIO_CLI} ${args}`, {
       cwd,
       env: { ...process.env, PSTDIO_DISABLE_EMBED_MANIFEST: "1", PSTDIO_DISABLE_API_AUTO_START: "1", ...env },
       encoding: "utf8",
-      timeout: TEST_TIMEOUT,
+      timeout,
     });
     return { stdout, stderr: "", exitCode: 0 };
   } catch (error: unknown) {

@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { join } from "node:path";
 import { cleanupDirs, createGitRepo, runPstdio, runPstdioSafe } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
-import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
+import { FLOW_TIMEOUT, SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 
 const findTicketDir = (repo: string, shorthand: string) => {
   const ticketsBase = join(repo, ".pstdio", "tickets");
@@ -28,9 +28,10 @@ afterEach(() => {
   cleanupDirs(dirs);
 });
 
-const run = (args: string, cwd: string) => runPstdio(args, cwd, { PSTDIO_API_URL: api.url });
+const run = (args: string, cwd: string, timeout?: number) => runPstdio(args, cwd, { PSTDIO_API_URL: api.url }, timeout);
 
-const runSafe = (args: string, cwd: string) => runPstdioSafe(args, cwd, { PSTDIO_API_URL: api.url });
+const runSafe = (args: string, cwd: string, timeout?: number) =>
+  runPstdioSafe(args, cwd, { PSTDIO_API_URL: api.url }, timeout);
 
 const createInitializedRepo = (name: string) => {
   const repo = createGitRepo();
@@ -331,11 +332,11 @@ describe("pstdio tickets update", () => {
     () => {
       const repo = createInitializedRepo("tk-update-missing");
 
-      const result = runSafe("tickets update --id MISSING-99 --status wip", repo);
+      const result = runSafe("tickets update --id MISSING-99 --status wip", repo, FLOW_TIMEOUT);
       expect(result.exitCode).not.toBe(0);
       expect(result.stderr).toContain("Ticket not found");
     },
-    TEST_TIMEOUT,
+    FLOW_TIMEOUT,
   );
 });
 
@@ -361,7 +362,11 @@ describe("pstdio tickets full flow", () => {
       const listOutput = run("tickets list", repo);
       expect(listOutput).toContain("lifecycle-ticket");
       expect(listOutput).toContain(shorthand);
+
+      // 5. Update status
+      const updateOutput = run(`tickets update --id ${shorthand} --status wip`, repo, FLOW_TIMEOUT);
+      expect(updateOutput).toContain(`Updated ticket ${shorthand}`);
     },
-    TEST_TIMEOUT,
+    FLOW_TIMEOUT,
   );
 });
