@@ -57,6 +57,7 @@ describe("createSyncService", () => {
       expect(state.projects).toHaveLength(1);
       expect((state.projects[0] as Record<string, unknown>).name).toBe("test-project");
       expect(state.ticket_statuses).toHaveLength(6);
+      expect(state.attempt_statuses).toHaveLength(5);
       expect(state.ticket_tags).toHaveLength(3);
       expect(state.ticket_tag_options).toHaveLength(10);
       expect(state.agent_configs).toHaveLength(1);
@@ -118,6 +119,7 @@ describe("createSyncService", () => {
       // Should emit deletes for dependents (statuses, tags, tag_options) plus the project itself
       const tables = events.map((e) => e.table);
       expect(tables).toContain("ticket_statuses");
+      expect(tables).toContain("attempt_statuses");
       expect(tables).toContain("ticket_tags");
       expect(tables).toContain("ticket_tag_options");
       expect(tables).toContain("projects");

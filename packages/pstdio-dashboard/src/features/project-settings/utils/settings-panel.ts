@@ -9,6 +9,10 @@ export const parseSettingsPanel = (panel: unknown): SettingsSection => {
     return "ticket-statuses";
   }
 
+  if (panel === "attempt-statuses") {
+    return "attempt-statuses";
+  }
+
   if (panel === "repositories") {
     return "repositories";
   }
@@ -50,6 +54,7 @@ export const parseSettingsPanel = (panel: unknown): SettingsSection => {
 
 export const toSettingsPanel = (section: SettingsSection) => {
   if (section === "ticket-statuses") return "ticket-statuses";
+  if (section === "attempt-statuses") return "attempt-statuses";
   if (section === "tags") return "tags";
   if (section === "repositories") return "repositories";
   if (section === "danger-zone") return "danger-zone";
@@ -65,7 +70,13 @@ export const ensureValidSettingsSection = (
   skills: SkillLike[] | undefined,
   tags: TagLike[] | undefined,
 ): SettingsSection => {
-  if (section === "ticket-statuses" || section === "tags" || section === "repositories" || section === "danger-zone") {
+  if (
+    section === "ticket-statuses" ||
+    section === "attempt-statuses" ||
+    section === "tags" ||
+    section === "repositories" ||
+    section === "danger-zone"
+  ) {
     return section;
   }
 

@@ -8,6 +8,7 @@ const SYNCED_TABLES = [
   "project_repos",
   "agent_configs",
   "ticket_statuses",
+  "attempt_statuses",
   "tickets",
   "ticket_tags",
   "ticket_tag_options",

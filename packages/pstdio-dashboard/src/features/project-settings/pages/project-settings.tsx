@@ -11,6 +11,7 @@ import {
 import { CreateTemplateDialog } from "../components/create-template-dialog";
 import { SettingsContent } from "../components/settings-content";
 import { type SettingsSection, SettingsSidebar } from "../components/settings-sidebar";
+import { useProjectAttemptStatuses } from "../hooks/use-attempt-statuses";
 import { useProjectHooks, useSaveProjectHook } from "../hooks/use-hooks";
 import { useProjectSkills } from "../hooks/use-skills";
 import { ensureValidSettingsSection, parseSettingsPanel, toSettingsPanel } from "../utils/settings-panel";
@@ -24,6 +25,7 @@ export const ProjectSettings = () => {
   const { data: hooks } = useProjectHooks(projectId);
   const { data: skills } = useProjectSkills(projectId);
   const { data: ticketStatuses } = useProjectTicketStatuses(projectId);
+  const { data: attemptStatuses } = useProjectAttemptStatuses(projectId);
   const createTag = useCreateProjectTicketTag(projectId);
   const deleteTag = useDeleteProjectTicketTag(projectId);
   const saveHook = useSaveProjectHook(projectId);
@@ -130,6 +132,7 @@ export const ProjectSettings = () => {
             repositories={project?.repositories ?? []}
             tags={tags}
             ticketStatuses={ticketStatuses ?? []}
+            attemptStatuses={attemptStatuses ?? []}
             onDeleteTag={handleDeleteTag}
             onHookDeleted={handleHookDeleted}
             onTemplateDeleted={handleTemplateDeleted}

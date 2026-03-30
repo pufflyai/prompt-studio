@@ -1,6 +1,7 @@
 import { isNull } from "drizzle-orm";
 import {
   agent_configs,
+  attempt_statuses,
   type DbClient,
   eq,
   files,
@@ -29,6 +30,7 @@ const tableMap = {
   project_repos,
   agent_configs,
   ticket_statuses,
+  attempt_statuses,
   tickets,
   ticket_tags,
   ticket_tag_options,
@@ -86,6 +88,9 @@ const emitProjectDependents = async (db: DbClient, projectId: string, bus: Event
 
   const statuses = await db.select().from(ticket_statuses).where(eq(ticket_statuses.project_id, projectId));
   for (const row of statuses) bus.emit("ticket_statuses", "delete", { id: row.id });
+
+  const aStatuses = await db.select().from(attempt_statuses).where(eq(attempt_statuses.project_id, projectId));
+  for (const row of aStatuses) bus.emit("attempt_statuses", "delete", { id: row.id });
 
   const ws = await db.select().from(workspaces).where(eq(workspaces.project_id, projectId));
   for (const row of ws) bus.emit("workspaces", "delete", { id: row.id });

@@ -72,9 +72,35 @@ export const createAttemptStatusesDBService = (db: DbClient) => {
     return record;
   };
 
+  const update = async (
+    id: string,
+    input: { name?: string; color?: string; sort_order?: number; is_default?: boolean },
+  ) => {
+    const timestamp = nowTimestamp();
+
+    if (input.is_default) {
+      const row = await get(id);
+      if (row) {
+        await db
+          .update(attempt_statuses)
+          .set({ is_default: false, updated_at: timestamp })
+          .where(and(eq(attempt_statuses.project_id, row.project_id), eq(attempt_statuses.is_default, true)));
+      }
+    }
+
+    const next: Record<string, unknown> = { updated_at: timestamp };
+    if (input.name !== undefined) next.name = input.name;
+    if (input.color !== undefined) next.color = input.color;
+    if (input.sort_order !== undefined) next.sort_order = input.sort_order;
+    if (input.is_default !== undefined) next.is_default = input.is_default;
+
+    const [updated] = await db.update(attempt_statuses).set(next).where(eq(attempt_statuses.id, id)).returning();
+    return updated;
+  };
+
   const remove = async (id: string) => {
     await db.delete(attempt_statuses).where(eq(attempt_statuses.id, id));
   };
 
-  return { list, get, getByName, create, remove };
+  return { list, get, getByName, create, update, remove };
 };

@@ -1,6 +1,8 @@
 import { Flex, Stack, Text } from "@chakra-ui/react";
 import type { ProjectRepository } from "@/features/project/types";
 import type { TicketStatusOption, TicketTag } from "@/features/ticket-list/types";
+import type { AttemptStatusOption } from "../hooks/use-attempt-statuses";
+import { AttemptStatusManager } from "./attempt-status-manager";
 import { HookEditor } from "./hook-editor";
 import { ProjectDangerZone } from "./project-danger-zone";
 import { ProjectRepositoriesPanel } from "./project-repositories-panel";
@@ -17,6 +19,7 @@ interface SettingsContentProps {
   repositories: ProjectRepository[];
   tags: TicketTag[];
   ticketStatuses: TicketStatusOption[];
+  attemptStatuses: AttemptStatusOption[];
   onDeleteTag: (tagId: string) => Promise<void>;
   onHookDeleted: () => void;
   onTemplateDeleted: () => void;
@@ -48,9 +51,13 @@ interface StaticSettingsContentProps {
   projectName: string;
   repositories: ProjectRepository[];
   ticketStatuses: TicketStatusOption[];
+  attemptStatuses: AttemptStatusOption[];
 }
 
-type DynamicSettingsSection = Exclude<SettingsSection, "ticket-statuses" | "tags" | "repositories" | "danger-zone">;
+type DynamicSettingsSection = Exclude<
+  SettingsSection,
+  "ticket-statuses" | "attempt-statuses" | "tags" | "repositories" | "danger-zone"
+>;
 type StaticSettingsSection = Exclude<SettingsSection, DynamicSettingsSection | "tags">;
 
 const SettingsPlaceholder = (props: SettingsPlaceholderProps) => {
@@ -102,10 +109,14 @@ const DynamicSettingsContent = (props: DynamicSettingsContentProps) => {
 };
 
 const StaticSettingsContent = (props: StaticSettingsContentProps) => {
-  const { section, projectId, projectName, repositories, ticketStatuses } = props;
+  const { section, projectId, projectName, repositories, ticketStatuses, attemptStatuses } = props;
 
   if (section === "ticket-statuses") {
     return <TicketStatusManager projectId={projectId} statuses={ticketStatuses} />;
+  }
+
+  if (section === "attempt-statuses") {
+    return <AttemptStatusManager projectId={projectId} statuses={attemptStatuses} />;
   }
 
   if (section === "repositories") {
@@ -127,6 +138,7 @@ export const SettingsContent = (props: SettingsContentProps) => {
     repositories,
     tags,
     ticketStatuses,
+    attemptStatuses,
     onDeleteTag,
     onHookDeleted,
     onTemplateDeleted,
@@ -160,6 +172,7 @@ export const SettingsContent = (props: SettingsContentProps) => {
       projectName={projectName}
       repositories={repositories}
       ticketStatuses={ticketStatuses}
+      attemptStatuses={attemptStatuses}
     />
   );
 };

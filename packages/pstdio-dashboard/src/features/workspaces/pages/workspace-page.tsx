@@ -18,6 +18,7 @@ import { logMutationError } from "@/lib/error-handlers";
 import { WorkspaceConversationPanel } from "../components/workspace-conversation-panel";
 import { WorkspaceDiffPanel } from "../components/workspace-diff-panel";
 import { type WorkspaceListItem, WorkspaceListPanel } from "../components/workspace-list-panel";
+import { useAttemptStatusMap } from "../hooks/use-attempt-status-map";
 import { useWorkspaceSession } from "../hooks/use-workspace-session";
 import { useWorkspaceSessions } from "../hooks/use-workspace-sessions";
 
@@ -30,6 +31,7 @@ export const WorkspacePage = () => {
   const { data: allTickets = [] } = useProjectTickets(projectId);
   const ticket = allTickets.find((t) => t.shorthand === ticketShorthand) ?? null;
   const attempts = ticket?.attempts ?? [];
+  const attemptStatusMap = useAttemptStatusMap(projectId);
 
   const createAttempt = useCreateTicketAttempt(projectId);
   const lastSelectedAgent = useProjectSettingsStore((s) => s.lastSelectedAgent);
@@ -37,13 +39,18 @@ export const WorkspacePage = () => {
   const lastSelectedBranches = useProjectSettingsStore((s) => s.lastSelectedBranches);
   const lastSelectedRepo = useProjectSettingsStore((s) => s.lastSelectedRepo);
 
-  const workspaces: WorkspaceListItem[] = attempts.map((attempt) => ({
-    id: attempt.id,
-    label: attempt.label,
-    shorthand: attempt.shorthand,
-    updatedAt: attempt.updatedAt,
-    worktreePath: attempt.worktreePath,
-  }));
+  const workspaces: WorkspaceListItem[] = attempts.map((attempt) => {
+    const status = attempt.attemptStatusId ? attemptStatusMap.get(attempt.attemptStatusId) : undefined;
+    return {
+      id: attempt.id,
+      label: attempt.label,
+      shorthand: attempt.shorthand,
+      updatedAt: attempt.updatedAt,
+      worktreePath: attempt.worktreePath,
+      attemptStatusName: status?.name,
+      attemptStatusColor: status?.color,
+    };
+  });
 
   const workspaceIds = workspaces.map((w) => w.id);
   const sessionsByWorkspaceId = useWorkspaceSessions(workspaceIds);

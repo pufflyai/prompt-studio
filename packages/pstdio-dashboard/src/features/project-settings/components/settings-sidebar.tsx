@@ -1,6 +1,6 @@
 import type { SidebarActionMenuItem } from "@pstdio/ui";
 import { type SidebarNavigateEvent, SidebarNext, type SidebarNode, type SidebarSection } from "@pstdio/ui";
-import { AlertTriangle, FileText, GitFork, MessageSquareText, Plus, Tag, Ticket } from "lucide-react";
+import { AlertTriangle, CircleDot, FileText, GitFork, MessageSquareText, Plus, Tag, Ticket } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BackToDashboard } from "@/features/project/components/back-to-dashboard";
 import type { ProjectTemplateAsset, ProjectTemplateAssetType } from "@/features/project/types";
@@ -18,10 +18,10 @@ const TEMPLATE_TYPE_ORDER: ProjectTemplateAssetType[] = ["prompt", "ticket", "do
 
 export type SettingsSection =
   | "ticket-statuses"
+  | "attempt-statuses"
   | "tags"
   | "danger-zone"
   | "repositories"
-  | "danger-zone"
   | { tag: string }
   | { template: string }
   | { hook: string }
@@ -71,6 +71,7 @@ interface SettingsSidebarProps {
 const resolveActiveNodeId = (activeSection: SettingsSection | null) => {
   if (!activeSection) return null;
   if (activeSection === "ticket-statuses") return "ticket-statuses";
+  if (activeSection === "attempt-statuses") return "attempt-statuses";
   if (activeSection === "tags") return "tags";
   if (activeSection === "repositories") return "repositories";
   if (activeSection === "danger-zone") return "danger-zone";
@@ -100,6 +101,13 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
         icon: <Ticket size={14} />,
         isNavigable: true,
         navigationIntent: { id: "select", payload: "ticket-statuses" },
+      },
+      {
+        id: "attempt-statuses",
+        label: "Attempt Statuses",
+        icon: <CircleDot size={14} />,
+        isNavigable: true,
+        navigationIntent: { id: "select", payload: "attempt-statuses" },
       },
       {
         id: "tags",
@@ -233,7 +241,9 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
     if (!intent) return;
 
     if (intent.id === "select") {
-      onSelectSection(intent.payload as "ticket-statuses" | "repositories" | "tags" | "danger-zone");
+      onSelectSection(
+        intent.payload as "ticket-statuses" | "attempt-statuses" | "repositories" | "tags" | "danger-zone",
+      );
     }
 
     if (intent.id === "select-template") {
