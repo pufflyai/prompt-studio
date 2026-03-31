@@ -23,6 +23,22 @@ const makeDeps = (overrides: Partial<Parameters<typeof createHandler>[0]> = {}) 
 };
 
 describe("sessions create", () => {
+  test("omits agent when --agent is not provided", async () => {
+    const createSession = mock(async () => ({
+      id: "s_1",
+      project_id: "proj-1",
+      title: "Test",
+      status: "in_progress",
+      agent: "fake",
+    }));
+    const deps = makeDeps({ createSession });
+    const handler = createHandler(deps);
+
+    await handler(argv({ prompt: "Do something" }));
+
+    expect(createSession).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ agent: undefined }));
+  });
+
   test("creates a session and prints output", async () => {
     const deps = makeDeps();
     const handler = createHandler(deps);

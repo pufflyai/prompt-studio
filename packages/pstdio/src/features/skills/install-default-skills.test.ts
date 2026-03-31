@@ -41,6 +41,34 @@ const toApiSkill = (s: (typeof SKILL_FIXTURES)[number]) => ({
 
 const originalFetch = globalThis.fetch;
 
+const getRequestDetails = (input: string | URL | Request, init?: RequestInit) => {
+  const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+  return {
+    path: new URL(url).pathname,
+    method: init?.method ?? "GET",
+  };
+};
+
+const jsonResponse = (body: unknown, status = 200) => {
+  return Promise.resolve(new Response(JSON.stringify(body), { status }));
+};
+
+const getSkillResponse = (path: string) => {
+  const skillMatch = path.match(/\/v1\/projects\/[^/]+\/skills\/(.+)/);
+  if (!skillMatch) return null;
+
+  const skill = SKILL_FIXTURES.find((fixture) => fixture.name === skillMatch[1]);
+  return skill ? jsonResponse(toApiSkill(skill)) : jsonResponse({ error: "not found" }, 404);
+};
+
+const getSkillsListResponse = (path: string) => {
+  if (!path.match(/\/v1\/projects\/[^/]+\/skills$/)) {
+    return null;
+  }
+
+  return jsonResponse(SKILL_FIXTURES.map(toApiSkill));
+};
+
 const mockApi = (
   agents: { agent_id: string; is_default: boolean }[],
   options?: {
@@ -49,38 +77,27 @@ const mockApi = (
   },
 ) => {
   globalThis.fetch = mock((input: string | URL | Request, init?: RequestInit) => {
-    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
-    const path = new URL(url).pathname;
-    const method = init?.method ?? "GET";
+    const { path, method } = getRequestDetails(input, init);
 
     if (path === "/v1/agents" && method === "GET") {
-      return Promise.resolve(new Response(JSON.stringify(agents), { status: 200 }));
+      return jsonResponse(agents);
     }
 
     if (path === "/v1/agents/info") {
-      return Promise.resolve(new Response(JSON.stringify(options?.availableAgents ?? []), { status: 200 }));
+      return jsonResponse(options?.availableAgents ?? []);
     }
 
     if (path === "/v1/agents/setup-available" && method === "POST") {
-      return Promise.resolve(
-        new Response(JSON.stringify(options?.setupAvailableAgentsResponse ?? []), { status: 201 }),
-      );
+      return jsonResponse(options?.setupAvailableAgentsResponse ?? [], 201);
     }
 
-    // GET /v1/projects/:id/skills/:name — must match before the list route
-    const skillMatch = path.match(/\/v1\/projects\/[^/]+\/skills\/(.+)/);
-    if (skillMatch) {
-      const skill = SKILL_FIXTURES.find((s) => s.name === skillMatch[1]);
-      if (skill) return Promise.resolve(new Response(JSON.stringify(toApiSkill(skill)), { status: 200 }));
-      return Promise.resolve(new Response(JSON.stringify({ error: "not found" }), { status: 404 }));
-    }
+    const skillResponse = getSkillResponse(path);
+    if (skillResponse) return skillResponse;
 
-    // GET /v1/projects/:id/skills
-    if (path.match(/\/v1\/projects\/[^/]+\/skills$/)) {
-      return Promise.resolve(new Response(JSON.stringify(SKILL_FIXTURES.map(toApiSkill)), { status: 200 }));
-    }
+    const skillsListResponse = getSkillsListResponse(path);
+    if (skillsListResponse) return skillsListResponse;
 
-    return Promise.resolve(new Response(JSON.stringify({}), { status: 200 }));
+    return jsonResponse({});
   }) as unknown as typeof fetch;
 };
 

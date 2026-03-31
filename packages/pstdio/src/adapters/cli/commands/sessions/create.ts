@@ -56,7 +56,7 @@ export const createHandler =
     }
 
     const title = argv.title ?? argv.prompt.slice(0, 50);
-    const agent = argv.agent ?? "claude-code";
+    const agent = argv.agent;
 
     const session = await deps.createSession(API_URL, {
       project_id: projectId,

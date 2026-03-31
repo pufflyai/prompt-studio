@@ -21,12 +21,26 @@ export const createSessionRoute = createRoute({
       description: "Session created.",
       content: { "application/json": { schema: sessionResponseSchema } },
     },
+    400: {
+      description: "No default agent is configured.",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
     404: {
       description: "Project or workspace not found.",
       content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
   },
 });
+
+const resolveCreateSessionAgent = async (inputAgent: string | undefined, deps: RouteDeps) => {
+  if (inputAgent) {
+    return inputAgent;
+  }
+
+  const configuredAgents = await deps.agentConfigService.list();
+  const defaultAgent = configuredAgents.find((config) => config.is_default);
+  return defaultAgent?.agent_id;
+};
 
 export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof createSessionRoute> => {
   return async (c) => {
@@ -49,11 +63,16 @@ export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
     }
 
     const cwd = await resolveSessionCwd(deps, input.project_id, resolvedWorkspaceId);
+    const agentId = await resolveCreateSessionAgent(input.agent, deps);
+
+    if (!agentId) {
+      return c.json({ error: "No agent configured. Set a default agent with 'pstdio agents setup' first." }, 400);
+    }
 
     const session = await deps.sessionService.create({
       project_id: input.project_id,
       title: input.title,
-      agent: input.agent,
+      agent: agentId,
       original_session_id: input.original_session_id,
       cwd: cwd ?? undefined,
     });
@@ -66,7 +85,7 @@ export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
     spawnAgentSession(
       {
         sessionId: session.id,
-        agentId: input.agent,
+        agentId,
         prompt: input.prompt,
         title: input.title,
         model: input.model,

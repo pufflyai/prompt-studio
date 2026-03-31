@@ -23,7 +23,7 @@ export const createSessionBodySchema = z
     project_id: z.string().min(1),
     title: z.string().min(1),
     prompt: z.string().min(1),
-    agent: z.string().min(1),
+    agent: z.string().min(1).optional(),
     workspace_id: z.string().optional(),
     model: z.string().optional(),
     original_session_id: z.string().optional(),

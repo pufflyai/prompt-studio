@@ -5,7 +5,7 @@ const createContext = (body: {
   project_id: string;
   title: string;
   prompt: string;
-  agent: string;
+  agent?: string;
   model?: string;
   workspace_id?: string;
 }) => {
@@ -27,6 +27,133 @@ const createContext = (body: {
 };
 
 describe("createSessionHandler hooks", () => {
+  test("uses configured default agent when request omits agent", async () => {
+    const sessionCreate = mock(async (input: { agent: string }) => ({
+      id: "session-1",
+      project_id: "project-1",
+      status: "in_progress",
+      title: "Session",
+      agent: input.agent,
+    }));
+    const deps = {
+      projectService: {
+        get: async () => ({ id: "project-1" }),
+      },
+      repoService: {
+        listByProject: async () => [],
+      },
+      workspaceService: {
+        get: async () => null,
+        getByShorthand: async () => null,
+      },
+      workspaceSessionService: {
+        getWorkspaceBySessionId: async () => null,
+        link: async () => ({}),
+      },
+      sessionService: {
+        create: sessionCreate,
+        transitionStatus: mock(async () => null),
+        store: {
+          create: mock(() => ({
+            eventStore: { push: () => {}, getHistory: () => [] },
+            approvalService: { handleResponse: () => {} },
+          })),
+          get: mock(() => null),
+          setProcess: mock(() => {}),
+          remove: mock(() => {}),
+        },
+      },
+      agentConfigService: {
+        list: async () => [{ agent_id: "fake", is_default: true }],
+      },
+      eventBus: {
+        emit: () => {},
+      },
+      agentRegistry: {
+        get: () => ({
+          startSession: async () => ({ sessionId: "agent-session-1" }),
+        }),
+      },
+    } as unknown as Parameters<typeof createSessionHandler>[0];
+
+    const handler = createSessionHandler(deps);
+    const { context, response } = createContext({
+      project_id: "project-1",
+      title: "Session",
+      prompt: "Run task",
+    });
+    await handler(context as never, undefined as never);
+
+    expect(response.status).toBe(201);
+    expect(sessionCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agent: "fake",
+      }),
+    );
+  });
+
+  test("returns 400 when request omits agent and no default agent is configured", async () => {
+    const sessionCreate = mock(async () => ({
+      id: "session-1",
+      project_id: "project-1",
+      status: "in_progress",
+      title: "Session",
+      agent: "fake",
+    }));
+    const deps = {
+      projectService: {
+        get: async () => ({ id: "project-1" }),
+      },
+      repoService: {
+        listByProject: async () => [],
+      },
+      workspaceService: {
+        get: async () => null,
+        getByShorthand: async () => null,
+      },
+      workspaceSessionService: {
+        getWorkspaceBySessionId: async () => null,
+        link: async () => ({}),
+      },
+      sessionService: {
+        create: sessionCreate,
+        transitionStatus: mock(async () => null),
+        store: {
+          create: mock(() => ({
+            eventStore: { push: () => {}, getHistory: () => [] },
+            approvalService: { handleResponse: () => {} },
+          })),
+          get: mock(() => null),
+          setProcess: mock(() => {}),
+          remove: mock(() => {}),
+        },
+      },
+      agentConfigService: {
+        list: async () => [],
+      },
+      eventBus: {
+        emit: () => {},
+      },
+      agentRegistry: {
+        get: () => null,
+      },
+    } as unknown as Parameters<typeof createSessionHandler>[0];
+
+    const handler = createSessionHandler(deps);
+    const { context, response } = createContext({
+      project_id: "project-1",
+      title: "Session",
+      prompt: "Run task",
+    });
+    await handler(context as never, undefined as never);
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      error: "No agent configured. Set a default agent with 'pstdio agents setup' first.",
+    });
+    expect(sessionCreate).not.toHaveBeenCalled();
+  });
+
   test("calls sessionService.transitionStatus to failed when agent startup fails", async () => {
     const transitionStatus = mock(async () => ({ id: "session-1", project_id: "project-1", status: "failed" }));
     const sessionCreate = mock(async () => ({
@@ -45,6 +172,7 @@ describe("createSessionHandler hooks", () => {
       },
       workspaceService: {
         get: async () => null,
+        getByShorthand: async () => null,
       },
       workspaceSessionService: {
         getWorkspaceBySessionId: async () => null,
@@ -62,6 +190,9 @@ describe("createSessionHandler hooks", () => {
           setProcess: mock(() => {}),
           remove: mock(() => {}),
         },
+      },
+      agentConfigService: {
+        list: async () => [],
       },
       eventBus: {
         emit: () => {},

@@ -54,12 +54,14 @@ const replaceTagAssignments = async (deps: RouteDeps, ticketId: string, tagIds: 
   for (const row of newAssignments) deps.eventBus.emit("ticket_tag_assignments", "set", row);
 };
 
-type TicketRecord = { id: string; shorthand: string; project_id: string; status_id: string | null };
+type TicketRecord = NonNullable<Awaited<ReturnType<RouteDeps["ticketService"]["get"]>>>;
 
 type StatusContext = {
   fromStatusName: string | undefined;
   toStatusName: string | undefined;
 };
+
+type UpdateTicketInput = z.infer<typeof updateTicketBodySchema>;
 
 const resolveStatusContext = async (
   deps: Pick<RouteDeps, "statusService">,
@@ -110,6 +112,88 @@ const runPreUpdateHooks = async (
   return { rejected: false, error: "" };
 };
 
+const resolveUpdateState = async (
+  deps: RouteDeps,
+  existing: TicketRecord & {
+    archived: boolean;
+  },
+  input: Pick<UpdateTicketInput, "status_id" | "archived">,
+) => {
+  const statusChanging = input.status_id !== undefined && input.status_id !== existing.status_id;
+  const archiving = input.archived === true && !existing.archived;
+  const statusContext = statusChanging
+    ? await resolveStatusContext(deps, existing.project_id, existing.status_id, input.status_id ?? null)
+    : undefined;
+
+  return {
+    statusChanging,
+    archiving,
+    statusContext,
+  };
+};
+
+const buildTicketUpdateInput = async (
+  deps: RouteDeps,
+  id: string,
+  existing: { project_id: string; file_id: string | null },
+  input: Omit<UpdateTicketInput, "content" | "tag_ids">,
+  content: string | undefined,
+) => {
+  const nextInput = { ...input };
+
+  if (content === undefined) {
+    return nextInput;
+  }
+
+  nextInput.display_title = extractTitleFromContent(content);
+  nextInput.file_id = await upsertTicketContentFile({
+    deps,
+    ticketId: id,
+    projectId: existing.project_id,
+    currentFileId: existing.file_id,
+    content,
+  });
+
+  return nextInput;
+};
+
+const finalizeUpdatedTicket = async (input: {
+  deps: RouteDeps;
+  ticketId: string;
+  projectId: string;
+  updated: TicketRecord;
+  tagIds: string[] | undefined;
+  statusChanging: boolean;
+  archiving: boolean;
+  statusContext?: StatusContext;
+}) => {
+  const { deps, ticketId, projectId, updated, tagIds, statusChanging, archiving, statusContext } = input;
+
+  if (tagIds) {
+    await replaceTagAssignments(deps, ticketId, tagIds);
+  }
+
+  deps.eventBus.emit("tickets", "set", updated);
+
+  if (!statusChanging && !archiving) {
+    return;
+  }
+
+  const postPayload = await buildTicketPayload(deps, updated, projectId);
+
+  if (statusChanging) {
+    fireTicketHookAsync(deps, "post-ticket-status-change", projectId, {
+      ...postPayload,
+      from_status: statusContext?.fromStatusName ?? null,
+      to_status: statusContext?.toStatusName ?? null,
+    });
+  }
+
+  if (archiving) {
+    fireTicketHookAsync(deps, "post-ticket-archive", projectId, postPayload);
+  }
+};
+
 export const updateTicketRoute = createRoute({
   method: "patch",
   path: "/tickets/{id}",
@@ -152,11 +236,7 @@ export const updateTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof upd
       return c.json({ error: `Ticket not found: ${id}` }, 404);
     }
 
-    const statusChanging = input.status_id !== undefined && input.status_id !== existing.status_id;
-    const archiving = input.archived === true && !existing.archived;
-    const statusContext = statusChanging
-      ? await resolveStatusContext(deps, existing.project_id, existing.status_id, input.status_id ?? null)
-      : undefined;
+    const { statusChanging, archiving, statusContext } = await resolveUpdateState(deps, existing, input);
 
     const preHookResult = await runPreUpdateHooks(
       deps,
@@ -171,18 +251,7 @@ export const updateTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof upd
       return c.json({ error: preHookResult.error }, 403);
     }
 
-    const nextInput = { ...input };
-
-    if (content !== undefined) {
-      nextInput.display_title = extractTitleFromContent(content);
-      nextInput.file_id = await upsertTicketContentFile({
-        deps,
-        ticketId: id,
-        projectId: existing.project_id,
-        currentFileId: existing.file_id,
-        content,
-      });
-    }
+    const nextInput = await buildTicketUpdateInput(deps, id, existing, input, content);
 
     const updated = await deps.ticketService.update(id, nextInput);
 
@@ -190,27 +259,16 @@ export const updateTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof upd
       return c.json({ error: `Ticket not found: ${id}` }, 404);
     }
 
-    if (tag_ids) {
-      await replaceTagAssignments(deps, id, tag_ids);
-    }
-
-    deps.eventBus.emit("tickets", "set", updated);
-
-    if (statusChanging || archiving) {
-      const postPayload = await buildTicketPayload(deps, updated, existing.project_id);
-
-      if (statusChanging) {
-        fireTicketHookAsync(deps, "post-ticket-status-change", existing.project_id, {
-          ...postPayload,
-          from_status: statusContext?.fromStatusName ?? null,
-          to_status: statusContext?.toStatusName ?? null,
-        });
-      }
-
-      if (archiving) {
-        fireTicketHookAsync(deps, "post-ticket-archive", existing.project_id, postPayload);
-      }
-    }
+    await finalizeUpdatedTicket({
+      deps,
+      ticketId: id,
+      projectId: existing.project_id,
+      updated,
+      tagIds: tag_ids,
+      statusChanging,
+      archiving,
+      statusContext,
+    });
 
     return c.json(updated, 200);
   };

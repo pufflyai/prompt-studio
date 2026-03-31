@@ -16,6 +16,20 @@ const writeHook = (repoPath: string, hookName: string, script: string) => {
 
 let repo: Awaited<ReturnType<typeof createTempRepo>>;
 
+const waitFor = async (predicate: () => boolean, timeoutMs = 2_000) => {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    if (predicate()) {
+      return;
+    }
+
+    await Bun.sleep(50);
+  }
+
+  throw new Error(`Condition not met within ${timeoutMs}ms`);
+};
+
 beforeEach(async () => {
   repo = await createTempRepo();
 });
@@ -109,8 +123,7 @@ describe("commitChanges", () => {
 
     await commitChanges({ worktreePath: wtPath, message: "with hook", repoPath: repo.dir });
 
-    // post-commit is fire-and-forget, give it a moment
-    await new Promise((r) => setTimeout(r, 500));
+    await waitFor(() => existsSync(join(repo.dir, "post-commit-marker.txt")));
     expect(existsSync(join(repo.dir, "post-commit-marker.txt"))).toBe(true);
   });
 

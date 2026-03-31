@@ -20,7 +20,7 @@ interface BlogPostShellProps {
   children: ReactNode;
 }
 
-function readingTime(text: string) {
+function _readingTime(text: string) {
   const wpm = 225;
   const words = text.trim().split(/\s+/).length;
   return Math.ceil(words / wpm);
