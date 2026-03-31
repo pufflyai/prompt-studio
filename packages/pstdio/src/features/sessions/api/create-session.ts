@@ -5,6 +5,7 @@ type CreateSessionInput = {
   agent: string;
   workspace_id?: string;
   model?: string;
+  original_session_id?: string;
 };
 
 type Session = {

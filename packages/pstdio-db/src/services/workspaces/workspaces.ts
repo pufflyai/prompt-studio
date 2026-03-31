@@ -38,6 +38,7 @@ export const createWorkspacesDBService = (db: DbClient) => {
       archived: false,
       workspace_shorthand: shorthand,
       initializing: false,
+      setup_error: null,
       startup_log_file_id: null,
       created_at: timestamp,
       updated_at: timestamp,
@@ -147,6 +148,15 @@ export const createWorkspacesDBService = (db: DbClient) => {
     return updated ?? null;
   };
 
+  const setSetupError = async (id: string, error: string | null) => {
+    const [updated] = await db
+      .update(workspaces)
+      .set({ setup_error: error, initializing: false, updated_at: nowTimestamp() })
+      .where(eq(workspaces.id, id))
+      .returning();
+    return updated ?? null;
+  };
+
   const updateGitMetadata = async (id: string, input: { branch: string | null; worktree_path: string | null }) => {
     const [updated] = await db
       .update(workspaces)
@@ -189,6 +199,7 @@ export const createWorkspacesDBService = (db: DbClient) => {
     archive,
     updateAttemptStatusId,
     setInitializing,
+    setSetupError,
     setStartupLogFileId,
     updateGitMetadata,
   };

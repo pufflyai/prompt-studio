@@ -157,6 +157,9 @@ const projectSessionRoute = createRoute({
 const projectTicketWorkspaceRoute = createRoute({
   getParentRoute: () => projectRoute,
   path: "tickets/$ticketShorthand/workspaces/$workspaceShorthand",
+  validateSearch: (search: Record<string, unknown>) => ({
+    sessionId: typeof search.sessionId === "string" ? search.sessionId : undefined,
+  }),
   component: WorkspacePage,
 });
 

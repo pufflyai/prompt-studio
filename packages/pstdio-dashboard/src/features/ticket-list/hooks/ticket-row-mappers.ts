@@ -33,6 +33,7 @@ export const toTicketFromRow = (
       shorthand: (ws.workspace_shorthand as string) ?? ws.id,
       updatedAt: ws.updated_at as string,
       worktreePath: (ws.worktree_path as string) ?? null,
+      setupError: (ws.setup_error as string) ?? null,
     };
   });
 

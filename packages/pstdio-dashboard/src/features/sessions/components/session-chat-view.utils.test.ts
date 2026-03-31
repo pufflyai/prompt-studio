@@ -1,7 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import { createPendingFollowUpState } from "./session-chat-state";
-import { countCompletedEditActions, shouldResetPendingFollowUpForSession } from "./session-chat-view.utils";
+import {
+  countCompletedEditActions,
+  shouldReconnectForExternalResume,
+  shouldResetPendingFollowUpForSession,
+} from "./session-chat-view.utils";
 
 const message = (id: string, parts: SessionMessage["parts"]): SessionMessage => ({
   id,
@@ -23,6 +27,36 @@ describe("session chat view utils", () => {
     ];
 
     expect(countCompletedEditActions(messages)).toBe(2);
+  });
+
+  describe("shouldReconnectForExternalResume", () => {
+    it("returns true when transitioning from failed to in_progress while not streaming", () => {
+      expect(shouldReconnectForExternalResume("failed", "in_progress", false)).toBe(true);
+    });
+
+    it("returns true when transitioning from completed to in_progress while not streaming", () => {
+      expect(shouldReconnectForExternalResume("completed", "in_progress", false)).toBe(true);
+    });
+
+    it("returns true when transitioning from cancelled to in_progress while not streaming", () => {
+      expect(shouldReconnectForExternalResume("cancelled", "in_progress", false)).toBe(true);
+    });
+
+    it("returns false on initial mount (prevStatus is null)", () => {
+      expect(shouldReconnectForExternalResume(null, "in_progress", false)).toBe(false);
+    });
+
+    it("returns false when already streaming (dashboard-initiated reconnect)", () => {
+      expect(shouldReconnectForExternalResume("failed", "in_progress", true)).toBe(false);
+    });
+
+    it("returns false when transitioning to a non-in_progress status", () => {
+      expect(shouldReconnectForExternalResume("in_progress", "failed", false)).toBe(false);
+    });
+
+    it("returns false when staying in the same terminal status", () => {
+      expect(shouldReconnectForExternalResume("failed", "failed", false)).toBe(false);
+    });
   });
 
   it("resets pending follow up when it belongs to another session", () => {

@@ -58,6 +58,36 @@ describe("createWorktree", () => {
     expect(result.path).toBe(wtPath);
   });
 
+  test("deletes stale branch and creates fresh worktree from requested base", async () => {
+    // Create a branch at the initial commit, then add a new commit to main
+    const initialSha = await git(repo.dir, ["rev-parse", "HEAD"]);
+    await git(repo.dir, ["branch", "task/stale"]);
+
+    await Bun.write(join(repo.dir, "new-file.txt"), "new");
+    await git(repo.dir, ["add", "new-file.txt"]);
+    await git(repo.dir, ["commit", "-m", "advance main"]);
+    const advancedSha = await git(repo.dir, ["rev-parse", "HEAD"]);
+
+    // Stale branch is behind main
+    const staleSha = await git(repo.dir, ["rev-parse", "task/stale"]);
+    expect(staleSha).toBe(initialSha);
+
+    // Creating a worktree with the stale branch name should recreate from the new base
+    const wtPath = join(repo.dir, "wt-stale");
+    const result = await createWorktree({
+      repoRoot: repo.dir,
+      branch: "task/stale",
+      path: wtPath,
+      base: "main",
+    });
+
+    expect(result.created).toBe(true);
+
+    // The worktree HEAD should be at the advanced main commit, not the stale one
+    const worktreeHead = await git(wtPath, ["rev-parse", "HEAD"]);
+    expect(worktreeHead).toBe(advancedSha);
+  });
+
   test("creates from a specific base", async () => {
     const wtPath = join(repo.dir, "wt-test");
     const result = await createWorktree({

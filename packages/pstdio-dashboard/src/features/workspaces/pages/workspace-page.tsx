@@ -1,6 +1,6 @@
 import { Flex, IconButton, Stack, Text } from "@chakra-ui/react";
 import { Breadcrumb, HorizontalMenuStack } from "@pstdio/ui";
-import { Link, useNavigate, useParams } from "@tanstack/react-router";
+import { Link, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { useProject } from "@/features/project/hooks/use-project";
@@ -24,6 +24,7 @@ import { useWorkspaceSessions } from "../hooks/use-workspace-sessions";
 
 export const WorkspacePage = () => {
   const { projectId, ticketShorthand, workspaceShorthand } = useParams({ strict: false });
+  const { sessionId: searchSessionId } = useSearch({ strict: false });
   const navigate = useNavigate();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
@@ -47,6 +48,7 @@ export const WorkspacePage = () => {
       shorthand: attempt.shorthand,
       updatedAt: attempt.updatedAt,
       worktreePath: attempt.worktreePath,
+      setupError: attempt.setupError,
       attemptStatusName: status?.name,
       attemptStatusColor: status?.color,
     };
@@ -57,7 +59,8 @@ export const WorkspacePage = () => {
 
   const selectedWorkspace = workspaces.find((w) => w.shorthand === workspaceShorthand) ?? null;
   const selectedAttempt = attempts.find((a) => a.shorthand === workspaceShorthand) ?? null;
-  const sessionId = useWorkspaceSession(selectedWorkspace?.id ?? null);
+  const latestSessionId = useWorkspaceSession(selectedWorkspace?.id ?? null);
+  const sessionId = searchSessionId === "new" ? null : (searchSessionId ?? latestSessionId);
   const selectedWorkspaceLabel = selectedWorkspace?.shorthand ?? workspaceShorthand ?? "";
   const sessionSettled = isSessionSettled(selectedAttempt?.sessionStatus ?? null);
 
@@ -68,12 +71,17 @@ export const WorkspacePage = () => {
   const { data: ticketFilesData } = useTicketFiles(ticketShorthand);
   const artifacts = ticketFilesData?.artifacts ?? [];
 
-  const handleSelectSession = (workspaceShorthand: string, _sessionId: string) => {
+  const handleCreateSession = (_workspaceId: string, wsShorthand: string) => {
+    handleSelectSession(wsShorthand, "new");
+  };
+
+  const handleSelectSession = (workspaceShorthand: string, sessionId: string) => {
     if (!projectId || !ticketShorthand) return;
 
     navigate({
       to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
       params: { projectId, ticketShorthand, workspaceShorthand },
+      search: sessionId ? { sessionId } : {},
     });
   };
 
@@ -153,11 +161,27 @@ export const WorkspacePage = () => {
           activeSessionId={sessionId}
           onSelectSession={handleSelectSession}
           onCreateAttempt={() => setIsCreateModalOpen(true)}
+          onCreateSession={handleCreateSession}
         />
 
-        <WorkspaceConversationPanel sessionId={sessionId} onEditAction={invalidateDiff} />
+        <WorkspaceConversationPanel
+          sessionId={sessionId}
+          workspaceId={selectedWorkspace?.id}
+          setupError={selectedWorkspace?.setupError}
+          onEditAction={invalidateDiff}
+          onSessionCreated={(newSessionId) => {
+            if (selectedWorkspace) {
+              handleSelectSession(selectedWorkspace.shorthand, newSessionId);
+            }
+          }}
+        />
 
-        <WorkspaceDiffPanel diffs={diffs} artifacts={artifacts} />
+        <WorkspaceDiffPanel
+          diffs={diffs}
+          artifacts={artifacts}
+          baseRef={diffData?.base_ref}
+          headRef={diffData?.head_ref}
+        />
       </Flex>
 
       {isCreateModalOpen ? (

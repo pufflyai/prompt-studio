@@ -4,7 +4,6 @@ import type { RouteDeps } from "../../deps";
 import { composeSummary } from "../compose-summary";
 import { followUpBodySchema, notFoundResponseSchema, sessionResponseSchema } from "../dto";
 import { getSessionMessages } from "../get-session-messages";
-import { resolveSessionCwd } from "../resolve-session-cwd";
 import { resumeAgentSession, spawnAgentSession } from "../spawn-agent";
 
 export const followUpSessionRoute = createRoute({
@@ -83,8 +82,7 @@ export const followUpSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof 
 
     await deps.sessionService.resume(session.id);
 
-    const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(session.id);
-    const cwd = await resolveSessionCwd(deps, session.project_id!, workspace?.id);
+    const cwd = session.cwd!;
 
     const agentId = input.agent ?? session.agent!;
     const switchingAgent = input.agent && input.agent !== session.agent;

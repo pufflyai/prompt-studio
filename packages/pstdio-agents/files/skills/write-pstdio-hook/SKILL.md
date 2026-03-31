@@ -23,6 +23,7 @@ metadata:
 ## Key Rules
 
 - Hooks are scripts at `.pstdio/hooks/<hook-name>`.
+- Hook files **must be executable** (`chmod +x`). `pstdio hooks create` sets this automatically, but if you write or replace a hook file directly, ensure the executable bit is set.
 - Hooks are executed with `sh <script-path>`, so keep them POSIX-compatible.
 - Hooks time out after 60 seconds — keep them fast or background long-running work.
 - `pstdio hooks create` fails if the file already exists — edit the existing file instead.

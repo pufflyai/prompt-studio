@@ -22,6 +22,7 @@ const buildDeps = () => {
     getByShorthand: mock(async () => null),
     list: mock(async () => []),
     setInitializing: mock(async () => null),
+    setSetupError: mock(async () => null),
     setStartupLogFileId: mock(async () => {}),
     updateGitMetadata: mock(async () => null),
   };

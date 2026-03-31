@@ -97,7 +97,7 @@ const trackProcessExit = (
   process: { onExit: Promise<{ code: number | null; signal: string | null }> },
   deps: SpawnDeps,
 ) => {
-  process.onExit.then(async ({ code }) => {
+  process.onExit.then(async ({ code, signal }) => {
     const entry = deps.sessionService.store.get(sessionId);
     if (entry) {
       const patches = entry.eventStore.getHistory();
@@ -105,6 +105,9 @@ const trackProcessExit = (
     }
 
     const status = code === 0 ? "completed" : "failed";
+    if (status === "failed") {
+      console.error(`[session] agent process exited with code=${code} signal=${signal} for session ${sessionId}`);
+    }
     await deps.sessionService.transitionStatus(sessionId, status);
     deps.sessionService.store.remove(sessionId);
   });

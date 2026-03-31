@@ -20,6 +20,7 @@ interface BuildSessionWorkspaceHubModelInput {
 interface BuildSessionWorkspaceHubPanelModelInput extends BuildSessionWorkspaceHubModelInput {
   showWorkspaceHub: boolean;
   isWorkspaceInitializing: boolean;
+  setupError: string | null;
   statusLabel: string;
   changesLabel: (count: number) => string;
 }
@@ -46,8 +47,18 @@ export const buildSessionWorkspaceHubModel = (input: BuildSessionWorkspaceHubMod
 };
 
 export const buildSessionWorkspaceHubPanelModel = (input: BuildSessionWorkspaceHubPanelModelInput) => {
-  const { showWorkspaceHub, isWorkspaceInitializing, statusLabel, changesLabel } = input;
+  const { showWorkspaceHub, isWorkspaceInitializing, setupError, statusLabel, changesLabel } = input;
   if (!showWorkspaceHub) return null;
+
+  if (setupError) {
+    return {
+      status: "error" as const,
+      statusLabel: setupError,
+      changesLabel: "",
+      additions: 0,
+      deletions: 0,
+    };
+  }
 
   if (isWorkspaceInitializing) {
     return {

@@ -44,6 +44,7 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
 
   // Pass-through mutations that don't need events (used internally by ticket-attempt setup)
   const setInitializing = raw.setInitializing;
+  const setSetupError = raw.setSetupError;
   const setStartupLogFileId = raw.setStartupLogFileId;
   const updateGitMetadata = raw.updateGitMetadata;
   const updateAttemptStatusId = raw.updateAttemptStatusId;
@@ -59,6 +60,7 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     softDelete,
     updateAttemptStatus,
     setInitializing,
+    setSetupError,
     setStartupLogFileId,
     updateGitMetadata,
     updateAttemptStatusId,

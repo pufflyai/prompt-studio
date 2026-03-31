@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type {
   HookName,
@@ -111,6 +111,17 @@ export const runHook = async (
   const timeoutMs = options.timeoutMs ?? HOOK_TIMEOUT_MS;
 
   const stdinPayload = JSON.stringify(payload);
+
+  const mode = statSync(scriptPath).mode;
+  if (!(mode & 0o111)) {
+    return {
+      hook: hookName,
+      skipped: false,
+      exitCode: 1,
+      stdout: "",
+      stderr: `Hook "${hookName}" is not executable: ${scriptPath}\nRun: chmod +x ${scriptPath}\n`,
+    };
+  }
 
   const proc = Bun.spawn([scriptPath], {
     cwd,

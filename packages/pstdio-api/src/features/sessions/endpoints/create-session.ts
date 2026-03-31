@@ -37,25 +37,31 @@ export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
       return c.json({ error: `Project not found: ${input.project_id}` }, 404);
     }
 
+    let resolvedWorkspaceId: string | undefined;
     if (input.workspace_id) {
-      const workspace = await deps.workspaceService.get(input.workspace_id);
+      const workspace =
+        (await deps.workspaceService.get(input.workspace_id)) ??
+        (await deps.workspaceService.getByShorthand(input.project_id, input.workspace_id));
       if (!workspace) {
         return c.json({ error: `Workspace not found: ${input.workspace_id}` }, 404);
       }
+      resolvedWorkspaceId = workspace.id;
     }
+
+    const cwd = await resolveSessionCwd(deps, input.project_id, resolvedWorkspaceId);
 
     const session = await deps.sessionService.create({
       project_id: input.project_id,
       title: input.title,
       agent: input.agent,
+      original_session_id: input.original_session_id,
+      cwd: cwd ?? undefined,
     });
 
-    if (input.workspace_id) {
-      const link = await deps.workspaceSessionService.link(input.workspace_id, session.id);
+    if (resolvedWorkspaceId) {
+      const link = await deps.workspaceSessionService.link(resolvedWorkspaceId, session.id);
       deps.eventBus.emit("workspace_sessions", "set", link);
     }
-
-    const cwd = await resolveSessionCwd(deps, input.project_id, input.workspace_id);
 
     spawnAgentSession(
       {

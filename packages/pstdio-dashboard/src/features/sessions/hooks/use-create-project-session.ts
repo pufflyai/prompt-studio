@@ -6,6 +6,7 @@ interface CreateProjectSessionInput {
   prompt: string;
   agent: string;
   model?: string;
+  workspaceId?: string;
 }
 
 export const useCreateProjectSession = () =>
@@ -19,6 +20,7 @@ export const useCreateProjectSession = () =>
           prompt: input.prompt,
           agent: input.agent,
           model: input.model,
+          workspace_id: input.workspaceId,
         },
       });
 

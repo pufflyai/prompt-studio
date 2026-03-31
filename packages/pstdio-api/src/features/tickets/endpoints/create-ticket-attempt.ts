@@ -7,6 +7,7 @@ import {
   continueTicketAttemptSetup,
   createAttemptWorkspace,
   resolveCreateTicketAttemptContext,
+  resolveSessionCwd,
   startOptionalAttemptSession,
 } from "./create-ticket-attempt.utils";
 
@@ -66,9 +67,17 @@ export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typ
       base: context.base,
     });
 
+    const cwd = resolveSessionCwd({
+      mode: context.mode,
+      worktreeMode,
+      repoPath: context.repo.path,
+      worktreePath: workspaceWithGitMetadata.worktree_path,
+    });
+
     const sessionStart = await startOptionalAttemptSession(deps, {
       ticket: context.ticket,
       workspace: workspaceWithGitMetadata,
+      cwd,
       request: input,
     });
 

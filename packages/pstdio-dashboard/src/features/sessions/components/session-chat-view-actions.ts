@@ -9,7 +9,7 @@ import {
 
 export type CreateSessionMutation = {
   mutate: (
-    input: { projectId: string; prompt: string; agent: string; model: string | undefined },
+    input: { projectId: string; prompt: string; agent: string; model: string | undefined; workspaceId?: string },
     options: {
       onSuccess: (result: { sessionId: string }) => void;
       onError: () => void;
@@ -51,6 +51,7 @@ const submitNewSessionMessage = (input: {
   projectId: string | undefined;
   agent: string | null;
   model: string | undefined;
+  workspaceId?: string;
   text: string;
   messages: SessionMessage[];
   pendingId: string;
@@ -80,6 +81,7 @@ const submitNewSessionMessage = (input: {
       prompt: input.text,
       agent: input.agent,
       model: input.model,
+      workspaceId: input.workspaceId,
     },
     {
       onSuccess: ({ sessionId }) => {
@@ -131,6 +133,7 @@ export const submitSessionMessage = (input: {
   projectId: string | undefined;
   agent: string | null;
   model: string | undefined;
+  workspaceId?: string;
   text: string;
   messages: SessionMessage[];
   pendingIdRef: { current: number };
@@ -150,6 +153,7 @@ export const submitSessionMessage = (input: {
       projectId: input.projectId,
       agent: input.agent,
       model: input.model,
+      workspaceId: input.workspaceId,
       text: input.text,
       messages: input.messages,
       pendingId,

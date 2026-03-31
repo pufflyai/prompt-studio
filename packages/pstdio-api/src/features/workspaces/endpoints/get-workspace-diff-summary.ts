@@ -47,8 +47,8 @@ export const getWorkspaceDiffSummaryHandler = (
       return c.json({ error: `Workspace has no worktree: ${id}` }, 404);
     }
 
-    const base = await resolveBase(workspace.worktree_path);
-    const summary = await getWorktreeDiffSummary({ worktreePath: workspace.worktree_path, base });
+    const resolved = await resolveBase(workspace.worktree_path);
+    const summary = await getWorktreeDiffSummary({ worktreePath: workspace.worktree_path, base: resolved.sha });
 
     return c.json({ workspace_id: workspace.id, ...summary }, 200);
   };

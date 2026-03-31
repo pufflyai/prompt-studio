@@ -120,6 +120,11 @@ Default hook templates should use `#!/usr/bin/env node` so they work everywhere 
 - Do not break existing Unix hook scripts. The `#!/bin/sh` shebang must continue to work as before on macOS and Linux.
 - Maintain backward compatibility with the `.pstdio` directory name on all platforms.
 
+## Known Issues
+
+- **Hook execute-bit check is Unix-only.** `runHook` in `packages/pstdio-wt/src/hooks.ts` checks `statSync().mode` for the execute bit and returns an error with a `chmod +x` suggestion if missing. On Windows, `statSync().mode` always reports execute bits as set, so this check is silently skipped — but `Bun.spawn` may still fail to run the script. The hook runner needs a Windows-specific strategy (e.g. spawn via interpreter based on shebang, or use `sh` from Git Bash).
+- **Hook `EACCES` errors surface differently per platform.** On Unix, a missing execute bit produces `EACCES` from `posix_spawn`. On Windows, the equivalent error is a different code/message. Error handling and user-facing messages should be platform-aware.
+
 ## Risks & Open Questions
 
 - **Bun on Windows maturity.** Bun's Windows support is still evolving. Some Bun APIs (e.g. `Bun.spawn`, signal handling) may behave differently. Verify against the Bun version pinned in the project.

@@ -4,7 +4,7 @@ import type { EventBus } from "../features/sync/event-bus";
 
 type SessionStatus = "in_progress" | "awaiting_input" | "completed" | "failed" | "cancelled";
 
-type SessionRecord = { id: string; project_id: string; status: string };
+type SessionRecord = { id: string; project_id: string; status: string; original_session_id?: string | null };
 
 export type SessionServiceDeps = {
   sessionsDb: ReturnType<typeof createSessionsDBService>;
@@ -30,7 +30,12 @@ export const createSessionService = (deps: SessionServiceDeps) => {
 
     deps.eventBus.emit("sessions", "set", updated);
     if (updated.project_id) {
-      deps.onSessionStatusChanged?.({ id: updated.id, project_id: updated.project_id, status: updated.status });
+      deps.onSessionStatusChanged?.({
+        id: updated.id,
+        project_id: updated.project_id,
+        status: updated.status,
+        original_session_id: updated.original_session_id,
+      });
     }
     return updated;
   };
@@ -38,7 +43,12 @@ export const createSessionService = (deps: SessionServiceDeps) => {
   const create = async (input: Parameters<typeof raw.create>[0]) => {
     const session = await raw.create(input);
     deps.eventBus.emit("sessions", "set", session);
-    deps.onSessionStarted?.({ id: session.id, project_id: input.project_id, status: session.status });
+    deps.onSessionStarted?.({
+      id: session.id,
+      project_id: input.project_id,
+      status: session.status,
+      original_session_id: session.original_session_id,
+    });
     return session;
   };
 
@@ -58,7 +68,12 @@ export const createSessionService = (deps: SessionServiceDeps) => {
 
     deps.eventBus.emit("sessions", "set", updated);
     if (updated.project_id) {
-      deps.onSessionResumed?.({ id: updated.id, project_id: updated.project_id, status: updated.status });
+      deps.onSessionResumed?.({
+        id: updated.id,
+        project_id: updated.project_id,
+        status: updated.status,
+        original_session_id: updated.original_session_id,
+      });
     }
     return updated;
   };

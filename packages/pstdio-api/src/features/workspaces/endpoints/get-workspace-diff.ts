@@ -3,7 +3,7 @@ import { getWorktreeDiff } from "pstdio-wt";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { notFoundResponseSchema } from "../dto";
-import { resolveBase } from "../resolve-base";
+import { resolveBase, resolveHeadLabel } from "../resolve-base";
 
 const fileDiffSchema = z.object({
   filePath: z.string(),
@@ -18,6 +18,8 @@ const fileDiffSchema = z.object({
 
 const workspaceDiffResponseSchema = z.object({
   workspace_id: z.string(),
+  base_ref: z.string(),
+  head_ref: z.string(),
   files: z.array(fileDiffSchema),
   totals: z.object({
     additions: z.number(),
@@ -64,16 +66,19 @@ export const getWorkspaceDiffHandler = (deps: RouteDeps): AppRouteHandler<typeof
       return c.json({ error: `Workspace has no worktree: ${id}` }, 404);
     }
 
-    const base = mode === "current" ? "HEAD" : await resolveBase(workspace.worktree_path);
+    const resolved = mode === "current" ? { sha: "HEAD", label: "HEAD" } : await resolveBase(workspace.worktree_path);
+    const headLabel = await resolveHeadLabel(workspace.worktree_path);
 
     const diff = await getWorktreeDiff({
       worktreePath: workspace.worktree_path,
-      base,
+      base: resolved.sha,
     });
 
     return c.json(
       {
         workspace_id: workspace.id,
+        base_ref: resolved.label,
+        head_ref: headLabel,
         files: diff.files,
         totals: diff.totals,
       },

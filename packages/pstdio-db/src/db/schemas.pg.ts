@@ -186,6 +186,8 @@ export const sessions = pgTable("sessions", {
   agent: text("agent"),
   agent_session_id: text("agent_session_id"),
   session_file_id: text("session_file_id").references(() => files.id),
+  original_session_id: text("original_session_id"),
+  cwd: text("cwd"),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
 });
@@ -204,6 +206,7 @@ export const workspaces = pgTable(
     archived: boolean("archived").notNull().default(false),
     workspace_shorthand: text("workspace_shorthand").notNull(),
     initializing: boolean("initializing").notNull().default(false),
+    setup_error: text("setup_error"),
     startup_log_file_id: text("startup_log_file_id").references(() => files.id, { onDelete: "set null" }),
     created_at: text("created_at").notNull(),
     updated_at: text("updated_at").notNull(),

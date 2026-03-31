@@ -12,6 +12,8 @@ export const sessionResponseSchema = z.object({
   agent: z.string().nullable(),
   agent_session_id: z.string().nullable(),
   session_file_id: z.string().nullable(),
+  original_session_id: z.string().nullable(),
+  cwd: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
 });
@@ -24,6 +26,7 @@ export const createSessionBodySchema = z
     agent: z.string().min(1),
     workspace_id: z.string().optional(),
     model: z.string().optional(),
+    original_session_id: z.string().optional(),
   })
   .strict();
 

@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # ──────────────────────────────────────────────────────────
-# pstdio post-create hook
+# pstdio post-worktree-create hook
 # Runs after a new worktree is created for a workspace.
 #
 # DO NOT REMOVE this block — it ensures the worktree has
@@ -23,7 +23,6 @@ for AGENT_DIR in ".claude" ".opencode"; do
 done
 
 # Pull the ticket into the worktree so agents have full context
-# Workspace shorthand is <ticket>_A<n>, extract ticket shorthand
 if [ -n "$PSTDIO_TICKET" ]; then
   pstdio tickets pull --id "$PSTDIO_TICKET" 2>/dev/null || true
 fi

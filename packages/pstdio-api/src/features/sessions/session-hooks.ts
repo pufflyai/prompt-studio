@@ -16,6 +16,7 @@ type SessionRecord = {
   id: string;
   project_id: string;
   status: string;
+  original_session_id?: string | null;
 };
 
 export type SessionHookDeps = {
@@ -43,6 +44,8 @@ const resolveSessionPayload = async (deps: SessionHookDeps, session: SessionReco
   const base: HookPayload = {
     session_id: session.id,
     session_status: session.status,
+    project_id: session.project_id,
+    ...(session.original_session_id && { original_session_id: session.original_session_id }),
   };
 
   const workspace = await deps.workspaceSessionsService.getWorkspaceBySessionId(session.id);
@@ -68,6 +71,7 @@ const resolveSessionPayload = async (deps: SessionHookDeps, session: SessionReco
   return {
     ...base,
     workspace: workspace.workspace_shorthand,
+    workspace_id: workspace.id,
     worktree_path: workspace.worktree_path ?? undefined,
     branch: workspace.branch ?? undefined,
     ticket: ticketShorthand,

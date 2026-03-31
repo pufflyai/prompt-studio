@@ -77,6 +77,7 @@ describe("workspace hub helpers", () => {
       buildSessionWorkspaceHubPanelModel({
         showWorkspaceHub: false,
         isWorkspaceInitializing: false,
+        setupError: null,
         statusLabel: "Setting up workspace...",
         changesLabel: (count) => `${count} files changed`,
         projectId: "project-1",
@@ -98,6 +99,7 @@ describe("workspace hub helpers", () => {
       buildSessionWorkspaceHubPanelModel({
         showWorkspaceHub: true,
         isWorkspaceInitializing: false,
+        setupError: null,
         statusLabel: "Setting up workspace...",
         changesLabel: (count) => `${count} files changed`,
         projectId: "project-1",
@@ -107,11 +109,33 @@ describe("workspace hub helpers", () => {
     ).toBeNull();
   });
 
+  it("returns an error model when workspace setup failed", () => {
+    expect(
+      buildSessionWorkspaceHubPanelModel({
+        showWorkspaceHub: true,
+        isWorkspaceInitializing: false,
+        setupError: "Hook post-worktree-create failed (exit 1)",
+        statusLabel: "Setting up workspace...",
+        changesLabel: (count) => `${count} files changed`,
+        projectId: "project-1",
+        workspace: null,
+        diffSummary: undefined,
+      }),
+    ).toEqual({
+      status: "error",
+      statusLabel: "Hook post-worktree-create failed (exit 1)",
+      changesLabel: "",
+      additions: 0,
+      deletions: 0,
+    });
+  });
+
   it("returns a loading model while the workspace is initializing", () => {
     expect(
       buildSessionWorkspaceHubPanelModel({
         showWorkspaceHub: true,
         isWorkspaceInitializing: true,
+        setupError: null,
         statusLabel: "Setting up workspace...",
         changesLabel: (count) => `${count} files changed`,
         projectId: "project-1",

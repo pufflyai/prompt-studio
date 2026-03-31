@@ -63,17 +63,13 @@ export const createWorktree = async (opts: {
   try {
     await git(opts.repoRoot, ["worktree", "add", "-b", opts.branch, opts.path, base]);
   } catch (err) {
-    // branch exists but no worktree — reuse branch
+    // branch exists but no worktree — stale leftover from a previous cleanup
     if (err instanceof GitError && err.stderr.includes("already exists")) {
-      await git(opts.repoRoot, ["worktree", "add", opts.path, opts.branch]);
-      return {
-        branch: opts.branch,
-        path: opts.path,
-        base,
-        created: false,
-      };
+      await git(opts.repoRoot, ["branch", "-D", opts.branch]);
+      await git(opts.repoRoot, ["worktree", "add", "-b", opts.branch, opts.path, base]);
+    } else {
+      throw err;
     }
-    throw err;
   }
 
   return {

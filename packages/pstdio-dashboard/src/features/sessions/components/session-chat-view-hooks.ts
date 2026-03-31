@@ -1,7 +1,11 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import { useEffect, useRef } from "react";
 import { type PendingFollowUpState, shouldClearPendingFollowUp } from "./session-chat-state";
-import { countCompletedEditActions, shouldResetPendingFollowUpForSession } from "./session-chat-view.utils";
+import {
+  countCompletedEditActions,
+  shouldReconnectForExternalResume,
+  shouldResetPendingFollowUpForSession,
+} from "./session-chat-view.utils";
 
 export const useResetEditCountOnSessionChange = (sessionId: string | null, editCountRef: { current: number }) => {
   const lastSessionIdRef = useRef<string | null>(sessionId);
@@ -46,6 +50,23 @@ export const useEditActionNotifier = (
     editCountRef.current = nextCount;
     onEditAction();
   }, [messages, onEditAction, editCountRef]);
+};
+
+export const useReconnectOnExternalResume = (
+  sessionStatus: string | null,
+  isStreaming: boolean,
+  reconnect: () => void,
+) => {
+  const prevStatusRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const prevStatus = prevStatusRef.current;
+    prevStatusRef.current = sessionStatus;
+
+    if (shouldReconnectForExternalResume(prevStatus, sessionStatus, isStreaming)) {
+      reconnect();
+    }
+  }, [sessionStatus, isStreaming, reconnect]);
 };
 
 export const useSyncPendingFollowUp = (input: {

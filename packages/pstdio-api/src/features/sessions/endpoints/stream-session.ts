@@ -5,7 +5,6 @@ import { streamSSE } from "hono/streaming";
 import type { AgentId, EventStore, JsonPatch, SessionMessage } from "pstdio-agents";
 import type { AppBindings } from "../../../types";
 import type { RouteDeps } from "../../deps";
-import { resolveSessionCwd } from "../resolve-session-cwd";
 
 const SESSION_STREAM_HEARTBEAT_MS = 1000;
 
@@ -15,6 +14,7 @@ type SessionRecord = {
   agent_session_id: string;
   project_id: string;
   session_file_id: string | null;
+  cwd: string | null;
   status: string | null;
 };
 
@@ -35,8 +35,7 @@ const fetchAgentMessages = async (session: SessionRecord, deps: RouteDeps) => {
   const agent = deps.agentRegistry.get(session.agent as AgentId);
   if (!agent) return null;
 
-  const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(session.id);
-  const cwd = await resolveSessionCwd(deps, session.project_id, workspace?.id);
+  const cwd = session.cwd;
   return agent.getMessages(session.agent_session_id, cwd ? { cwd } : undefined).catch(() => null);
 };
 

@@ -26,3 +26,16 @@ export const shouldResetPendingFollowUpForSession = (
   pendingFollowUp: PendingFollowUpState | null,
   sessionId: string | null,
 ) => Boolean(pendingFollowUp?.sessionId && pendingFollowUp.sessionId !== sessionId);
+
+const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
+
+// Detects when a session transitions from a terminal state to in_progress
+// while the stream is not already active (external resume by hook/CLI/API).
+export const shouldReconnectForExternalResume = (
+  prevStatus: string | null,
+  currentStatus: string | null,
+  isStreaming: boolean,
+) => {
+  if (!prevStatus || isStreaming) return false;
+  return TERMINAL_STATUSES.has(prevStatus) && currentStatus === "in_progress";
+};

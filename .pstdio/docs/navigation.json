@@ -84,6 +84,10 @@
               "link": "/product/hooks/attempt-status"
             },
             {
+              "text": "Attempt Status Hooks (Draft)",
+              "link": "/product/hooks/attempt-status-hooks-draft"
+            },
+            {
               "text": "Cookbook",
               "link": "/product/hooks/cookbook"
             }

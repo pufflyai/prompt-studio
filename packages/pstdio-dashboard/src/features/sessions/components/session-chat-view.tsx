@@ -10,6 +10,7 @@ import { RepoBrowserContainer } from "@/features/workspaces/components/repo-brow
 import { useCreateProjectSession } from "../hooks/use-create-project-session";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useSessionAgent } from "../hooks/use-session-agent";
+import { useSessionStatus } from "../hooks/use-session-status";
 import { useSessionStream } from "../hooks/use-session-stream";
 import { useSessionWorkspace } from "../hooks/use-session-workspace";
 import { buildSessionWorkspaceHubPanelModel } from "../utils/workspace-hub";
@@ -21,6 +22,7 @@ import {
 import { submitSessionMessage } from "./session-chat-view-actions";
 import {
   useEditActionNotifier,
+  useReconnectOnExternalResume,
   useReconnectWhenWorkspaceReady,
   useResetEditCountOnSessionChange,
   useSyncPendingFollowUp,
@@ -29,6 +31,7 @@ import { SessionChatApprovalPromptPanel, SessionChatWorkspaceHubPanel } from "./
 
 interface SessionChatViewProps {
   sessionId: string | null;
+  workspaceId?: string;
   onSessionCreated?: (sessionId: string) => void;
   onEditAction?: () => void;
   showWorkspaceHub?: boolean;
@@ -36,7 +39,7 @@ interface SessionChatViewProps {
 
 export const SessionChatView = (props: SessionChatViewProps) => {
   const { t } = useTranslation(["projects", "tickets"]);
-  const { sessionId, onSessionCreated, onEditAction, showWorkspaceHub = true } = props;
+  const { sessionId, workspaceId, onSessionCreated, onEditAction, showWorkspaceHub = true } = props;
   const { projectId } = useParams({ strict: false });
 
   const sessionAgent = useSessionAgent(sessionId);
@@ -60,8 +63,11 @@ export const SessionChatView = (props: SessionChatViewProps) => {
   const editCountRef = useRef(0);
   const isWorkspaceInitializing = sessionWorkspace?.initializing ?? false;
 
+  const sessionStatus = useSessionStatus(sessionId);
+
   useResetEditCountOnSessionChange(sessionId, editCountRef);
   useReconnectWhenWorkspaceReady(isWorkspaceInitializing, reconnect);
+  useReconnectOnExternalResume(sessionStatus, isStreaming, reconnect);
   useEditActionNotifier(messages, onEditAction, editCountRef);
   useSyncPendingFollowUp({
     messages,
@@ -81,6 +87,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
   const workspaceHub = buildSessionWorkspaceHubPanelModel({
     showWorkspaceHub,
     isWorkspaceInitializing,
+    setupError: sessionWorkspace?.setupError ?? null,
     projectId,
     workspace: sessionWorkspace,
     diffSummary: workspaceDiffSummary,
@@ -108,6 +115,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
           projectId,
           agent,
           model,
+          workspaceId,
           text,
           messages,
           pendingIdRef,

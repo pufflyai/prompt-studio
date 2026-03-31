@@ -13,7 +13,8 @@ export const builder = (yargs: Argv) =>
     .option("workspace-id", { type: "string", describe: "Workspace ID or shorthand" })
     .option("project-id", { type: "string", describe: "Project ID" })
     .option("agent", { type: "string", describe: "Agent to use (claude-code, opencode)" })
-    .option("model", { type: "string", describe: "Model override" });
+    .option("model", { type: "string", describe: "Model override" })
+    .option("original-session-id", { type: "string", describe: "ID of the session that triggered this one" });
 
 export type CreateArgs = {
   prompt: string;
@@ -22,6 +23,7 @@ export type CreateArgs = {
   "project-id"?: string;
   agent?: string;
   model?: string;
+  "original-session-id"?: string;
 };
 
 type Deps = {
@@ -63,6 +65,7 @@ export const createHandler =
       agent,
       workspace_id: argv["workspace-id"],
       model: argv.model,
+      original_session_id: argv["original-session-id"],
     });
 
     const lines = [`Created session ${session.id}`];

@@ -1,17 +1,13 @@
 import type { AgentId } from "pstdio-agents";
 import type { RouteDeps } from "../deps";
-import { resolveSessionCwd } from "./resolve-session-cwd";
 
-type Deps = Pick<
-  RouteDeps,
-  "sessionService" | "workspaceSessionService" | "repoService" | "agentRegistry" | "eventBus" | "workspaceService"
->;
+type Deps = Pick<RouteDeps, "sessionService" | "agentRegistry" | "eventBus">;
 
 type StaleSession = {
   id: string;
   agent: string | null;
   agent_session_id: string | null;
-  project_id: string | null;
+  cwd: string | null;
 };
 
 const resolveSessionStatus = async (session: StaleSession, deps: Deps) => {
@@ -19,9 +15,7 @@ const resolveSessionStatus = async (session: StaleSession, deps: Deps) => {
   if (!agent || !session.agent_session_id) return "completed" as const;
 
   try {
-    const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(session.id);
-    const cwd = session.project_id ? await resolveSessionCwd(deps, session.project_id, workspace?.id) : undefined;
-
+    const cwd = session.cwd;
     const messages = await agent.getMessages(session.agent_session_id, cwd ? { cwd } : undefined);
     return messages.length > 0 ? ("completed" as const) : ("failed" as const);
   } catch {

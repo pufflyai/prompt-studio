@@ -11,6 +11,7 @@ interface WorkspaceListItem {
   shorthand: string;
   updatedAt: string;
   worktreePath: string | null;
+  setupError: string | null;
   attemptStatusName?: string;
   attemptStatusColor?: string;
 }
@@ -21,12 +22,14 @@ interface WorkspaceListPanelProps {
   activeSessionId: string | null;
   onSelectSession: (workspaceShorthand: string, sessionId: string) => void;
   onCreateAttempt?: () => void;
+  onCreateSession?: (workspaceId: string, workspaceShorthand: string) => void;
 }
 
 export type { WorkspaceListItem };
 
 export const WorkspaceListPanel = (props: WorkspaceListPanelProps) => {
-  const { workspaces, sessionsByWorkspaceId, activeSessionId, onSelectSession, onCreateAttempt } = props;
+  const { workspaces, sessionsByWorkspaceId, activeSessionId, onSelectSession, onCreateAttempt, onCreateSession } =
+    props;
 
   const [expandedWorkspaces, setExpandedWorkspaces] = useState<Set<string>>(() => new Set(workspaces.map((w) => w.id)));
 
@@ -97,6 +100,21 @@ export const WorkspaceListPanel = (props: WorkspaceListPanelProps) => {
                         fill="currentColor"
                         color={`var(--chakra-colors-${workspace.attemptStatusColor}-solid)`}
                       />
+                    </Tooltip>
+                  ) : null}
+                  {onCreateSession ? (
+                    <Tooltip content="New workspace session">
+                      <IconButton
+                        size="2xs"
+                        variant="ghost"
+                        aria-label="New workspace session"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCreateSession(workspace.id, workspace.shorthand);
+                        }}
+                      >
+                        <Plus size={12} />
+                      </IconButton>
                     </Tooltip>
                   ) : null}
                 </Flex>

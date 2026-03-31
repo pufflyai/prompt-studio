@@ -5,6 +5,7 @@ interface SessionWorkspace {
   branch: string | null;
   workspaceShorthand: string | null;
   initializing: boolean;
+  setupError: string | null;
 }
 
 const toSessionWorkspace = (row: SyncedRow): SessionWorkspace => ({
@@ -12,6 +13,7 @@ const toSessionWorkspace = (row: SyncedRow): SessionWorkspace => ({
   branch: (row.branch as string) ?? null,
   workspaceShorthand: (row.workspace_shorthand as string) ?? null,
   initializing: (row.initializing as boolean) ?? false,
+  setupError: (row.setup_error as string) ?? null,
 });
 
 export const useSessionWorkspace = (sessionId: string | null) => {
