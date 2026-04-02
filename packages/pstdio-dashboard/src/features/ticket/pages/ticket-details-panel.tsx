@@ -269,7 +269,6 @@ export const TicketDetailsPanel = () => {
         onSubmit={subTicketCreation.handleCreateSubTicket}
         isSubmitting={subTicketCreation.isCreatingSubTicket}
         targetStatus={subTicketCreation.createModalStatus}
-        templates={subTicketCreation.templates}
         parentId={subTicketCreation.parentId}
         tags={subTicketCreation.tags}
         title={t("ticketDetail.createSubTicket")}

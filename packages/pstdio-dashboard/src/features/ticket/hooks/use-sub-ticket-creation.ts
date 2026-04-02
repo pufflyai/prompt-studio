@@ -1,6 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { useProjectTemplateAssets } from "@/features/project/hooks/use-project";
 import type { CreateTicketModalPayload } from "@/features/ticket-list/components/create-ticket-modal";
 import { uploadTicketFile } from "@/features/ticket-list/data/api/files";
 import { useCreateProjectTicket } from "@/features/ticket-list/hooks/use-create-project-ticket";
@@ -14,21 +13,13 @@ interface UseSubTicketCreationInput {
   tags: TicketTag[];
 }
 
-// TODO: Rebuild startRefineSession — stubbed as no-op for now
-const startRefineSession = async (_shorthand: string, _templateName: string) => {};
-
 export const useSubTicketCreation = (input: UseSubTicketCreationInput) => {
   const { projectId, parentTicketId, statusOptions, tags } = input;
   const navigate = useNavigate();
-  const { data: templateAssets } = useProjectTemplateAssets(projectId);
   const createTicket = useCreateProjectTicket(projectId);
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createModalStatus, setCreateModalStatus] = useState<TicketStatus | null>(null);
-
-  const templates = (templateAssets ?? [])
-    .filter((asset) => asset.templateType === "ticket")
-    .map((asset) => ({ id: asset.id, name: asset.name }));
 
   const firstCreatableStatus = statusOptions.find((status) => status.canCreate)?.name ?? null;
 
@@ -68,10 +59,6 @@ export const useSubTicketCreation = (input: UseSubTicketCreationInput) => {
         to: "/projects/$projectId/tickets/$ticketShorthand",
         params: { projectId, ticketShorthand: createdTicket.shorthand },
       });
-
-      if (payload.templateName) {
-        await startRefineSession(createdTicket.shorthand, payload.templateName);
-      }
     } catch (error) {
       logMutationError("create sub-ticket", error);
     }
@@ -84,7 +71,6 @@ export const useSubTicketCreation = (input: UseSubTicketCreationInput) => {
     closeCreateSubTicketModal,
     handleCreateSubTicket,
     isCreatingSubTicket: createTicket.isPending,
-    templates,
     parentId: parentTicketId,
     tags,
   };

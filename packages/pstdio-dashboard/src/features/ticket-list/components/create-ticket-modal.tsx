@@ -1,5 +1,4 @@
-import { Box, Button, CloseButton, Dialog, Flex, Icon, Menu, Stack, Text } from "@chakra-ui/react";
-import { MenuItem } from "@pstdio/ui";
+import { Box, Button, CloseButton, Dialog, Flex, Icon, Stack, Text } from "@chakra-ui/react";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { ChevronRight, Circle, Paperclip } from "lucide-react";
 import { useRef, useState } from "react";
@@ -8,18 +7,12 @@ import { SingleTagSelector } from "@/features/ticket/components/single-tag-selec
 
 import type { TicketStatus, TicketStatusOption, TicketTag } from "@/features/ticket-list/types";
 
-interface TemplateOption {
-  id: string;
-  name: string;
-}
-
 interface CreateTicketModalProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (payload: CreateTicketModalPayload) => void | Promise<void>;
   isSubmitting?: boolean;
   targetStatus?: TicketStatus | null;
-  templates?: TemplateOption[];
   tags?: TicketTag[];
   parentId?: string | null;
   title?: string;
@@ -31,7 +24,6 @@ interface CreateTicketModalProps {
 export interface CreateTicketModalPayload {
   content: string;
   tagIds: string[];
-  templateName: string | null;
   status: TicketStatus | null;
   parentId: string | null;
   files: File[];
@@ -59,7 +51,6 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
     onSubmit,
     isSubmitting = false,
     targetStatus = null,
-    templates = [],
     tags = [],
     parentId = null,
     title: modalTitle,
@@ -74,7 +65,6 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
 
   const [content, setContent] = useState("");
   const [tagIds, setTagIds] = useState<string[]>([]);
-  const [templateName, setTemplateName] = useState("");
   const [editorKey, setEditorKey] = useState(0);
   const [files, setFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -84,7 +74,6 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
   const resetForm = () => {
     setContent("");
     setTagIds([]);
-    setTemplateName("");
     setEditorKey((k) => k + 1);
     setFiles([]);
   };
@@ -100,7 +89,6 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
     await onSubmit({
       content: content.trim(),
       tagIds,
-      templateName: templateName || null,
       status: targetStatus,
       parentId,
       files,
@@ -112,10 +100,6 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
   const statusOption = statusOptions.find((s) => s.name === targetStatus);
   const statusLabel = statusOption?.name ?? targetStatus ?? t("createTicketModal.noStatus");
   const statusColor = STATUS_COLOR_MAP[statusOption?.color ?? "gray"] ?? "gray.400";
-
-  const templateLabel = templateName
-    ? (templates.find((tmpl) => tmpl.name === templateName)?.name ?? templateName)
-    : t("createTicketModal.template");
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
@@ -182,33 +166,6 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
                 variant="outline"
               />
             ))}
-
-            {templates.length > 0 && (
-              <Menu.Root>
-                <Menu.Trigger asChild>
-                  <Button size="xs" variant="outline" disabled={isSubmitting}>
-                    {templateLabel}
-                  </Button>
-                </Menu.Trigger>
-                <Menu.Positioner>
-                  <Menu.Content bg="bg">
-                    <MenuItem
-                      primaryLabel={t("createTicketModal.noTemplate")}
-                      isSelected={templateName === ""}
-                      onClick={() => setTemplateName("")}
-                    />
-                    {templates.map((tmpl) => (
-                      <MenuItem
-                        key={tmpl.id}
-                        primaryLabel={tmpl.name}
-                        isSelected={templateName === tmpl.name}
-                        onClick={() => setTemplateName(tmpl.name)}
-                      />
-                    ))}
-                  </Menu.Content>
-                </Menu.Positioner>
-              </Menu.Root>
-            )}
           </Flex>
 
           {files.length > 0 && (

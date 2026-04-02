@@ -3,9 +3,8 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { useProject, useProjectTemplateAssets } from "@/features/project/hooks/use-project";
+import { useProject } from "@/features/project/hooks/use-project";
 import { useProjectSettingsStore } from "@/features/project-settings/store";
-import { useCreateWorkspaceSession } from "@/features/ticket/hooks/use-create-workspace-session";
 import { openTicketSessionBubble } from "@/features/ticket/utils/open-ticket-session-bubble";
 import { useCreateProjectTicket } from "@/features/ticket-list/hooks/use-create-project-ticket";
 import {
@@ -22,7 +21,6 @@ import { TicketsHeader } from "../components/tickets-header";
 import { TicketsListView } from "../components/tickets-list-view";
 import { uploadTicketFile } from "../data/api/files";
 import { type BadgeContext, DEFAULT_DISPLAY_SETTINGS, type DisplaySettings } from "../types";
-import { autoStartRefineSession } from "../utils/auto-start-refine-session";
 import { buildLatestAttemptsByTicketId, isSessionSettled } from "../utils/ticket-attempts";
 import { groupTickets, orderTickets } from "../utils/ticket-grouping";
 import { getVisibleTickets } from "../utils/ticket-visibility";
@@ -34,13 +32,8 @@ export const TicketsPanel = () => {
   const updateTicketStatus = useUpdateProjectTicketStatus(projectId);
   const updateTicket = useUpdateProjectTicket(projectId);
   const createTicket = useCreateProjectTicket(projectId);
-  const createSession = useCreateWorkspaceSession(projectId);
-  const { data: templateAssets } = useProjectTemplateAssets(projectId);
   const navigate = useNavigate();
 
-  const lastSelectedAgent = useProjectSettingsStore((s) => s.lastSelectedAgent);
-  const lastSelectedModels = useProjectSettingsStore((s) => s.lastSelectedModels);
-  const lastSelectedRepo = useProjectSettingsStore((s) => s.lastSelectedRepo);
   const setSessionModalState = useProjectSettingsStore((s) => s.setSessionModalState);
   const setSelectedSessionId = useProjectSettingsStore((s) => s.setSelectedSessionId);
   const { t } = useTranslation("tickets");
@@ -74,10 +67,6 @@ export const TicketsPanel = () => {
     ticketShorthandById: Object.fromEntries(allTickets.map((ticket) => [ticket.id, ticket.shorthand])),
   };
 
-  const templates = (templateAssets ?? [])
-    .filter((asset) => asset.templateType === "ticket")
-    .map((asset) => ({ id: asset.id, name: asset.name }));
-
   const firstCreatableStatus = statusOptions.find((s) => s.canCreate)?.name ?? null;
 
   const openCreateModal = (status?: TicketStatus) => {
@@ -110,8 +99,6 @@ export const TicketsPanel = () => {
   const handleCreateTicket = async (payload: CreateTicketModalPayload) => {
     if (createTicket.isPending) return;
 
-    const defaultRepoId = project?.repositories[0]?.id ?? null;
-
     try {
       const createdTicket = await createTicket.mutateAsync({
         title: payload.content,
@@ -129,29 +116,6 @@ export const TicketsPanel = () => {
         } catch (error) {
           console.error("[create ticket file upload]", error);
         }
-      }
-
-      try {
-        await autoStartRefineSession({
-          ticketShorthand: createdTicket.shorthand,
-          templateName: payload.templateName,
-          startSession: async (prompt) => {
-            if (createSession.isPending) return null;
-
-            const result = await createSession.mutateAsync({
-              prompt,
-              agent: lastSelectedAgent,
-              repoId: lastSelectedRepo || defaultRepoId,
-              branch: "",
-              model: lastSelectedModels[0] ?? null,
-            });
-
-            return result.sessionId;
-          },
-          openSessionBubble: handleOpenSessionBubble,
-        });
-      } catch (error) {
-        console.error("[create ticket refine session]", error);
       }
     } catch (error) {
       console.error("[create ticket]", error);
@@ -247,7 +211,6 @@ export const TicketsPanel = () => {
         onSubmit={handleCreateTicket}
         isSubmitting={createTicket.isPending}
         targetStatus={createModalStatus}
-        templates={templates}
         tags={tagDefs}
         projectName={project?.name}
         statusOptions={statusOptions}
