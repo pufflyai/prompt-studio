@@ -1,6 +1,6 @@
 import type { TicketHookName } from "pstdio-wt";
 import { isBlockingHook, parsePayloadOverride } from "pstdio-wt";
-import { fireHook } from "../hooks/fire-hook";
+import { fireHook } from "./fire-hook";
 
 type TicketPayload = Record<string, unknown>;
 

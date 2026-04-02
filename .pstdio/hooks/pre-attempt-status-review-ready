@@ -1,10 +1,12 @@
 #!/bin/sh
+set -eu
 
 # ──────────────────────────────────────────────────────────
-# pstdio post-ticket-archive hook
-# Runs after a ticket is archived.
-#
-# Removes all worktrees for the ticket.
+# Pre-hook: validate before allowing transition to review-ready
+# Runs bun run validate; rejects transition on failure.
 # ──────────────────────────────────────────────────────────
 
-pstdio tickets worktrees remove-all --id "$PSTDIO_TICKET"
+REPO_PATH=${PSTDIO_WORKTREE_PATH:-$REPO_PATH}
+
+cd "$REPO_PATH"
+exec bun run validate

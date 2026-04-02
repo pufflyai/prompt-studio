@@ -52,14 +52,19 @@ describe("GET /v1/projects/:id/hooks", () => {
     expect(res.status).toBe(200);
 
     const body = (await res.json()) as Array<{ name: string; content: string | null; blocking: boolean }>;
-    // 11 worktree + 5 session + 8 ticket = 24
-    expect(body.length).toBe(24);
+    // 11 worktree + 5 session + 8 ticket + 5 attempt-status (discovered from disk) = 29
+    expect(body.length).toBe(29);
     const postCreate = body.find((h) => h.name === "post-worktree-create");
     expect(postCreate?.content).toContain("pstdio tickets pull");
     expect(postCreate?.blocking).toBe(true);
 
-    const postSuccess = body.find((h) => h.name === "post-session-success");
-    expect(postSuccess?.content).toContain("review-ready");
+    const preReviewReady = body.find((h) => h.name === "pre-attempt-status-review-ready");
+    expect(preReviewReady?.content).toContain("validate");
+    expect(preReviewReady?.blocking).toBe(true);
+
+    const postBlocked = body.find((h) => h.name === "post-attempt-status-blocked");
+    expect(postBlocked?.content).toContain("blocked");
+    expect(postBlocked?.blocking).toBe(false);
 
     const postStart = body.find((h) => h.name === "post-session-start");
     expect(postStart?.content).toContain("wip");
@@ -69,9 +74,13 @@ describe("GET /v1/projects/:id/hooks", () => {
 
     const scaffolded = new Set([
       "post-worktree-create",
-      "post-session-success",
       "post-session-start",
       "post-ticket-archive",
+      "pre-attempt-status-review-ready",
+      "post-attempt-status-review-ready",
+      "post-attempt-status-blocked",
+      "post-attempt-status-changes-requested",
+      "post-attempt-status-reviewed",
     ]);
     expect(body.filter((h) => !scaffolded.has(h.name)).every((h) => h.content === null)).toBe(true);
   });

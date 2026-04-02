@@ -1,10 +1,8 @@
 #!/bin/sh
+set -eu
 
 # ──────────────────────────────────────────────────────────
-# pstdio post-ticket-archive hook
-# Runs after a ticket is archived.
-#
-# Removes all worktrees for the ticket.
+# Post-hook: move ticket to blocked status
 # ──────────────────────────────────────────────────────────
 
-pstdio tickets worktrees remove-all --id "$PSTDIO_TICKET"
+pstdio tickets update --id "$PSTDIO_TICKET" --status "blocked"

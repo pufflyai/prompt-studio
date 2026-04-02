@@ -27,6 +27,4 @@ if [ -n "$PSTDIO_TICKET" ]; then
   pstdio tickets pull --id "$PSTDIO_TICKET" 2>/dev/null || true
 fi
 
-# ──────────────────────────────────────────────────────────
-# Add additional setup steps below.
-# ──────────────────────────────────────────────────────────
+# >>> Add additional setup steps below. <<<

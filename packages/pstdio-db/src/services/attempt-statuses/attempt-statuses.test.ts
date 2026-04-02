@@ -24,7 +24,7 @@ afterAll(async () => {
 test("update edits attempt status metadata", async () => {
   await setup();
 
-  const running = await service.getByName(projectId, "running");
+  const running = await service.getByName(projectId, "wip");
   expect(running).not.toBeNull();
 
   const updated = await service.update(running!.id, { name: "in-progress", color: "purple", sort_order: 10 });

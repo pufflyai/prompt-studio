@@ -14,6 +14,7 @@ import type { createTemplateService } from "../services/template-service";
 import type { createTicketService } from "../services/ticket-service";
 import type { createWorkspaceService } from "../services/workspace-service";
 import type { createWorkspaceSessionService } from "../services/workspace-session-service";
+import type { createPostHookStore } from "./hooks/post-hook-store";
 import type { EventBus } from "./sync/event-bus";
 
 export interface ReadinessChecks {
@@ -41,4 +42,5 @@ export interface RouteDeps {
   fileService: ReturnType<typeof createFileService>;
   docService: ReturnType<typeof createDocService>;
   syncService: ReturnType<typeof createSyncService>;
+  postHookStore: ReturnType<typeof createPostHookStore>;
 }

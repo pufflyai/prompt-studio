@@ -14,6 +14,8 @@ This keeps agents focused on signaling intent, while hooks own workflow automati
 
 ## Configuration
 
+Default attempt statuses:
+
 ```json
 {
   "attemptStatuses": [

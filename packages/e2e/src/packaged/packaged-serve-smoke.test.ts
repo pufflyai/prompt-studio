@@ -36,9 +36,13 @@ const REQUIRED_SKILL_NAMES = [
 ];
 const REQUIRED_HOOK_NAMES = [
   "post-session-start",
-  "post-session-success",
   "post-ticket-archive",
   "post-worktree-create",
+  "pre-attempt-status-review-ready",
+  "post-attempt-status-review-ready",
+  "post-attempt-status-blocked",
+  "post-attempt-status-changes-requested",
+  "post-attempt-status-reviewed",
 ];
 
 const createCandidatePort = () => 42_000 + Math.floor(Math.random() * 200);

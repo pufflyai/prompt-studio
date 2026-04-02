@@ -71,6 +71,8 @@ describe("PATCH /v1/workspaces/:id/attempt-status", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.attempt_status_id).toBeTruthy();
+    expect(body.to_status).toBe("review-ready");
+    expect(body.status_change_id).toBeTruthy();
   });
 
   test("updates attempt status using a custom status", async () => {
@@ -86,6 +88,31 @@ describe("PATCH /v1/workspaces/:id/attempt-status", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.attempt_status_id).toBe(status.id);
+    expect(body.to_status).toBe("qa-passed");
+    expect(body.from_status).toBeNull();
+  });
+
+  test("returns from_status when transitioning between statuses", async () => {
+    const workspace = await createWorkspace();
+
+    // First set to "wip"
+    await app.request(`/v1/workspaces/${workspace.id}/attempt-status`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status: "wip" }),
+    });
+
+    // Then transition to "review-ready"
+    const res = await app.request(`/v1/workspaces/${workspace.id}/attempt-status`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status: "review-ready" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.from_status).toBe("wip");
+    expect(body.to_status).toBe("review-ready");
   });
 
   test("returns 404 for unknown workspace", async () => {

@@ -1,7 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { buildEnvFromPayload, listHooks, parsePayloadOverride, resolveHookScript, runHook } from "./hooks";
+import {
+  buildEnvFromPayload,
+  isAttemptStatusHook,
+  isBlockingHook,
+  listHooks,
+  parsePayloadOverride,
+  resolveHookScript,
+  runHook,
+} from "./hooks";
 import { createTempRepo } from "./test-helpers";
 
 let repo: Awaited<ReturnType<typeof createTempRepo>>;
@@ -329,5 +337,94 @@ describe("listHooks", () => {
     const ticketHook = hooks.find((h) => h.name === "pre-ticket-creation");
     expect(ticketHook).toBeDefined();
     expect(ticketHook?.blocking).toBe(true);
+  });
+
+  test("discovers attempt-status hooks from filesystem", () => {
+    writeHook(repo.dir, "pre-attempt-status-review-ready", "exit 0");
+    writeHook(repo.dir, "post-attempt-status-blocked", "exit 0");
+
+    const hooks = listHooks(repo.dir);
+
+    const preReviewReady = hooks.find((h) => h.name === "pre-attempt-status-review-ready");
+    expect(preReviewReady).toBeDefined();
+    expect(preReviewReady?.exists).toBe(true);
+    expect(preReviewReady?.blocking).toBe(true);
+
+    const postBlocked = hooks.find((h) => h.name === "post-attempt-status-blocked");
+    expect(postBlocked).toBeDefined();
+    expect(postBlocked?.exists).toBe(true);
+    expect(postBlocked?.blocking).toBe(false);
+  });
+
+  test("does not include attempt-status hooks when none exist on disk", () => {
+    const hooks = listHooks(repo.dir);
+    const attemptHooks = hooks.filter((h) => h.name.includes("attempt-status"));
+    expect(attemptHooks).toHaveLength(0);
+  });
+});
+
+describe("isBlockingHook", () => {
+  test("pre-attempt-status hooks are blocking", () => {
+    expect(isBlockingHook("pre-attempt-status-review-ready")).toBe(true);
+    expect(isBlockingHook("pre-attempt-status-blocked")).toBe(true);
+    expect(isBlockingHook("pre-attempt-status")).toBe(true);
+  });
+
+  test("post-attempt-status hooks are not blocking", () => {
+    expect(isBlockingHook("post-attempt-status-review-ready")).toBe(false);
+    expect(isBlockingHook("post-attempt-status-blocked")).toBe(false);
+    expect(isBlockingHook("post-attempt-status")).toBe(false);
+  });
+});
+
+describe("isAttemptStatusHook", () => {
+  test("identifies attempt-status hooks", () => {
+    expect(isAttemptStatusHook("pre-attempt-status-review-ready")).toBe(true);
+    expect(isAttemptStatusHook("post-attempt-status-blocked")).toBe(true);
+    expect(isAttemptStatusHook("pre-attempt-status")).toBe(true);
+    expect(isAttemptStatusHook("post-attempt-status")).toBe(true);
+  });
+
+  test("rejects non-attempt-status hooks", () => {
+    expect(isAttemptStatusHook("pre-commit")).toBe(false);
+    expect(isAttemptStatusHook("post-session-success")).toBe(false);
+    expect(isAttemptStatusHook("pre-ticket-creation")).toBe(false);
+  });
+});
+
+describe("runHook with attempt-status hooks", () => {
+  test("runs pre-attempt-status hook as blocking", async () => {
+    writeHook(repo.dir, "pre-attempt-status-review-ready", 'echo "validating"; exit 1');
+
+    const result = await runHook(
+      "pre-attempt-status-review-ready",
+      { attempt_status_from: "wip", attempt_status_to: "review-ready" },
+      { repoPath: repo.dir },
+    );
+
+    expect(result.skipped).toBe(false);
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toContain("validating");
+  });
+
+  test("runs post-attempt-status hook", async () => {
+    writeHook(repo.dir, "post-attempt-status-blocked", "cat");
+
+    const payload = { attempt_status_from: "wip", attempt_status_to: "blocked", ticket: "PS-1" };
+    const result = await runHook("post-attempt-status-blocked", payload, { repoPath: repo.dir });
+
+    expect(result.skipped).toBe(false);
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual(payload);
+  });
+
+  test("skips when no attempt-status hook script exists", async () => {
+    const result = await runHook(
+      "pre-attempt-status-review-ready",
+      { attempt_status_to: "review-ready" },
+      { repoPath: repo.dir },
+    );
+
+    expect(result.skipped).toBe(true);
   });
 });

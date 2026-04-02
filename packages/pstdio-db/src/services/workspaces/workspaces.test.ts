@@ -172,7 +172,7 @@ describe("createWorkspacesDBService", () => {
     });
 
     const attemptStatusesService = createAttemptStatusesDBService(db);
-    const status = await attemptStatusesService.getByName(projectId, "running");
+    const status = await attemptStatusesService.getByName(projectId, "wip");
 
     const updated = await workspacesService.updateAttemptStatusId(ws.id, status!.id);
     expect(updated!.attempt_status_id).toBe(status!.id);

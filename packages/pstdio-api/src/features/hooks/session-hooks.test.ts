@@ -75,7 +75,7 @@ describe("fireSessionStatusHook", () => {
       } as never,
       attemptStatusesService: {
         list: async () => [
-          { id: "status-running", name: "running" },
+          { id: "status-wip", name: "wip" },
           { id: "status-review-ready", name: "review-ready" },
         ],
       } as never,

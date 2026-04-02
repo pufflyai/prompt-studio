@@ -48,8 +48,12 @@ describe("pstdio projects create", () => {
       expect(existsSync(join(repo, ".pstdio", "docs", "index.md"))).toBe(true);
       expect(existsSync(join(repo, ".pstdio", "hooks", "post-worktree-create"))).toBe(true);
       expect(existsSync(join(repo, ".pstdio", "hooks", "post-session-start"))).toBe(true);
-      expect(existsSync(join(repo, ".pstdio", "hooks", "post-session-success"))).toBe(true);
       expect(existsSync(join(repo, ".pstdio", "hooks", "post-ticket-archive"))).toBe(true);
+      expect(existsSync(join(repo, ".pstdio", "hooks", "pre-attempt-status-review-ready"))).toBe(true);
+      expect(existsSync(join(repo, ".pstdio", "hooks", "post-attempt-status-review-ready"))).toBe(true);
+      expect(existsSync(join(repo, ".pstdio", "hooks", "post-attempt-status-blocked"))).toBe(true);
+      expect(existsSync(join(repo, ".pstdio", "hooks", "post-attempt-status-changes-requested"))).toBe(true);
+      expect(existsSync(join(repo, ".pstdio", "hooks", "post-attempt-status-reviewed"))).toBe(true);
 
       expect(existsSync(join(repo, ".claude", "skills", "create-ticket", "SKILL.md"))).toBe(true);
       expect(existsSync(join(repo, ".claude", "skills", "implement-ticket", "SKILL.md"))).toBe(true);
@@ -67,8 +71,12 @@ describe("pstdio projects create", () => {
       expect(installedHooks).toEqual([
         "post-worktree-create",
         "post-session-start",
-        "post-session-success",
         "post-ticket-archive",
+        "post-attempt-status-blocked",
+        "post-attempt-status-changes-requested",
+        "post-attempt-status-review-ready",
+        "post-attempt-status-reviewed",
+        "pre-attempt-status-review-ready",
       ]);
     },
     TEST_TIMEOUT,

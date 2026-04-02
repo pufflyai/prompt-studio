@@ -1,5 +1,5 @@
 import type { RouteDeps } from "../../deps";
-import { fireSessionStartHook } from "../../sessions/session-hooks";
+import { fireSessionStartHook } from "../../hooks/session-hooks";
 import { spawnAgentSession } from "../../sessions/spawn-agent";
 import { awaitPostCreateHook, resolveAgentId, resolvePrompt } from "./attempt-workspace-setup";
 

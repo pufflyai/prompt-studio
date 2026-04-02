@@ -1,10 +1,16 @@
 #!/bin/sh
+set -eu
 
 # ──────────────────────────────────────────────────────────
-# pstdio post-ticket-archive hook
-# Runs after a ticket is archived.
+# Pre-hook: validate before allowing transition to review-ready
+# Rejects the transition if the command below exits non-zero.
 #
-# Removes all worktrees for the ticket.
+# Replace the command below with your validation step.
 # ──────────────────────────────────────────────────────────
 
-pstdio tickets worktrees remove-all --id "$PSTDIO_TICKET"
+REPO_PATH=${PSTDIO_WORKTREE_PATH:-$(pwd)}
+
+cd "$REPO_PATH"
+
+# >>> Replace with your validation command <<<
+echo "No validation configured"

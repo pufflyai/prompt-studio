@@ -4,13 +4,13 @@ import { buildAttemptStatusMap } from "./attempt-status-map";
 describe("buildAttemptStatusMap", () => {
   test("returns map from rows", () => {
     const rows = [
-      { id: "s1", name: "running", color: "blue", project_id: "p1" },
+      { id: "s1", name: "wip", color: "blue", project_id: "p1" },
       { id: "s2", name: "blocked", color: "red", project_id: "p1" },
     ];
     const map = buildAttemptStatusMap(rows);
 
     expect(map.size).toBe(2);
-    expect(map.get("s1")).toEqual({ name: "running", color: "blue" });
+    expect(map.get("s1")).toEqual({ name: "wip", color: "blue" });
     expect(map.get("s2")).toEqual({ name: "blocked", color: "red" });
   });
 

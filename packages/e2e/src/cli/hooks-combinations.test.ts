@@ -54,7 +54,7 @@ describe("post-session-start moves ticket to wip", () => {
         "post-session-start",
         `${cliPreamble()}
 $PSTDIO tickets update --id "$PSTDIO_TICKET" --status wip
-$PSTDIO workspaces set-status --workspace "$PSTDIO_WORKSPACE" --status running
+$PSTDIO workspaces set-status --workspace "$PSTDIO_WORKSPACE" --status wip
 `,
       );
 
@@ -69,10 +69,10 @@ $PSTDIO workspaces set-status --workspace "$PSTDIO_WORKSPACE" --status running
       const statusName = tickets[0].status_id ? await getStatusName(ctx, projectId, tickets[0].status_id) : null;
       expect(statusName).toBe("wip");
 
-      // Verify workspace attempt status is running
+      // Verify workspace attempt status is wip
       const ws = await getWorkspace(ctx, projectId, attempt.workspace.id);
       const wsStatus = ws.attempt_status_id ? await getAttemptStatusName(ctx, projectId, ws.attempt_status_id) : null;
-      expect(wsStatus).toBe("running");
+      expect(wsStatus).toBe("wip");
     },
     TEST_TIMEOUT,
   );

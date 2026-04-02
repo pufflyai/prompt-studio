@@ -77,7 +77,13 @@ export type TicketHookName =
   | "pre-ticket-deletion"
   | "post-ticket-deletion";
 
-export type HookName = WorktreeHookName | SessionHookName | TicketHookName;
+export type AttemptStatusHookName =
+  | "pre-attempt-status"
+  | "post-attempt-status"
+  | `pre-attempt-status-${string}`
+  | `post-attempt-status-${string}`;
+
+export type HookName = WorktreeHookName | SessionHookName | TicketHookName | AttemptStatusHookName;
 
 export type HookPayload = Record<string, unknown>;
 

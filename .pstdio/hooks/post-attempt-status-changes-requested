@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+
+# ──────────────────────────────────────────────────────────
+# Post-hook: runs after a review session ends with changes-requested
+# Follows up the original session with the review summary.
+# ──────────────────────────────────────────────────────────
+
+run_pstdio workspaces set-status \
+  --workspace "$PSTDIO_WORKSPACE" \
+  --status "wip"
+
+run_pstdio sessions follow-up \
+  --id "$PSTDIO_ORIGINAL_SESSION_ID" \
+  --prompt "Fix the issues described in .pstdio/tickets/$PSTDIO_TICKET/review.md, then mark the attempt review-ready again."
+

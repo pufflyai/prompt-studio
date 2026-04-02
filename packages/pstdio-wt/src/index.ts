@@ -6,6 +6,7 @@ export { getWorktreeDiff, getWorktreeDiffSummary } from "./diff";
 export { GitError, git } from "./git";
 export {
   buildEnvFromPayload,
+  isAttemptStatusHook,
   isBlockingHook,
   listHooks,
   parsePayloadOverride,
@@ -17,6 +18,7 @@ export { rebaseOntoTarget } from "./rebase";
 export { runSetup, runSetupScript } from "./setup";
 export { getWorktreeStatus } from "./status";
 export type {
+  AttemptStatusHookName,
   BranchInfo,
   CommitResult,
   HookName,

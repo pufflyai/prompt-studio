@@ -2,7 +2,9 @@ import type { HookPayload, SessionHookName } from "pstdio-wt";
 import type { createAttemptStatusService } from "../../services/attempt-status-service";
 import type { createRepoService } from "../../services/repo-service";
 import type { createWorkspaceSessionService } from "../../services/workspace-session-service";
-import { fireHook } from "../hooks/fire-hook";
+import { deliverPostAttemptStatusHook } from "./attempt-status-hooks";
+import { fireHook } from "./fire-hook";
+import type { createPostHookStore } from "./post-hook-store";
 
 type SessionStatus = "in_progress" | "awaiting_input" | "completed" | "failed" | "cancelled";
 
@@ -23,6 +25,7 @@ export type SessionHookDeps = {
   reposService: ReturnType<typeof createRepoService>;
   workspaceSessionsService: ReturnType<typeof createWorkspaceSessionService>;
   attemptStatusesService?: ReturnType<typeof createAttemptStatusService>;
+  postHookStore?: ReturnType<typeof createPostHookStore>;
 };
 
 const parseTicketShorthand = (workspaceShorthand: string) => {
@@ -79,6 +82,8 @@ const resolveSessionPayload = async (deps: SessionHookDeps, session: SessionReco
   };
 };
 
+const SESSION_TERMINAL_STATUSES = new Set(["completed", "failed"]);
+
 const fireSessionHook = (deps: SessionHookDeps, hookName: SessionHookName, session: SessionRecord) => {
   void (async () => {
     let payload: HookPayload;
@@ -89,6 +94,13 @@ const fireSessionHook = (deps: SessionHookDeps, hookName: SessionHookName, sessi
     }
 
     await fireHook({ repoService: deps.reposService }, { hookName, projectId: session.project_id, payload });
+
+    // Deliver queued post-attempt-status hooks when session completes
+    if (deps.postHookStore && SESSION_TERMINAL_STATUSES.has(session.status)) {
+      await deliverPostAttemptStatusHook({ repoService: deps.reposService }, deps.postHookStore, session.id).catch(
+        () => {},
+      );
+    }
   })().catch(() => {});
 };
 

@@ -63,7 +63,7 @@ const DEFAULT_TICKET_STATUSES = [
 ] as const;
 
 const DEFAULT_ATTEMPT_STATUSES = [
-  { name: "running", color: "blue", is_default: true },
+  { name: "wip", color: "blue", is_default: true },
   { name: "blocked", color: "red", is_default: false },
   { name: "review-ready", color: "amber", is_default: false },
   { name: "reviewed", color: "green", is_default: false },

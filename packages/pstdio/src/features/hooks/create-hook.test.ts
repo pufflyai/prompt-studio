@@ -34,15 +34,44 @@ describe("createHookFile", () => {
     expect(content).toContain("config.json");
   });
 
-  test("reuses the bundled post-session-success template", async () => {
-    const hookPath = await createHookFile(tempDir, "post-session-success");
+  test("reuses the bundled pre-attempt-status-review-ready template", async () => {
+    const hookPath = await createHookFile(tempDir, "pre-attempt-status-review-ready");
     const content = readFileSync(hookPath, "utf8");
 
-    expect(content).toContain("review-ready");
-    expect(content).toContain("Replace with your validation command");
-    expect(content).toContain("changes-requested");
+    expect(content).toContain("validate");
+    expect(content).toContain("PSTDIO_WORKTREE_PATH");
+  });
+
+  test("reuses the bundled post-attempt-status-review-ready template", async () => {
+    const hookPath = await createHookFile(tempDir, "post-attempt-status-review-ready");
+    const content = readFileSync(hookPath, "utf8");
+
+    expect(content).toContain("sessions create");
+    expect(content).toContain("PSTDIO_WORKSPACE_ID");
+  });
+
+  test("reuses the bundled post-attempt-status-blocked template", async () => {
+    const hookPath = await createHookFile(tempDir, "post-attempt-status-blocked");
+    const content = readFileSync(hookPath, "utf8");
+
+    expect(content).toContain("tickets update");
+    expect(content).toContain("blocked");
+  });
+
+  test("reuses the bundled post-attempt-status-changes-requested template", async () => {
+    const hookPath = await createHookFile(tempDir, "post-attempt-status-changes-requested");
+    const content = readFileSync(hookPath, "utf8");
+
+    expect(content).toContain("sessions follow-up");
+    expect(content).toContain("PSTDIO_ORIGINAL_SESSION_ID");
+  });
+
+  test("reuses the bundled post-attempt-status-reviewed template", async () => {
+    const hookPath = await createHookFile(tempDir, "post-attempt-status-reviewed");
+    const content = readFileSync(hookPath, "utf8");
+
     expect(content).toContain("update-when-attempt-status");
-    expect(content).toContain("If all attempts are reviewed, move the ticket to review");
+    expect(content).toContain("reviewed");
   });
 
   test("reuses the bundled post-session-start template", async () => {

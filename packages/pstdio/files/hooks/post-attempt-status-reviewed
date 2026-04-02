@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+
+# ────────────────────────────────────────────────────────────────────
+# Post-hook: advance ticket to review when all attempts are reviewed
+# ────────────────────────────────────────────────────────────────────
+
+pstdio tickets update-when-attempt-status \
+  --id "$PSTDIO_TICKET" \
+  --all-attempts-status "reviewed" \
+  --set-status "review"

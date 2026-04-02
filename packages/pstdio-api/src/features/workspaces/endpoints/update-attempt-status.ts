@@ -1,18 +1,25 @@
+import { randomUUID } from "node:crypto";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
+import { firePreAttemptStatusHook } from "../../hooks/attempt-status-hooks";
 
 const attemptStatusBodySchema = z
   .object({
     status: z.string().openapi({ description: "Attempt status name" }),
+    session_id: z.string().optional().openapi({ description: "Session requesting this transition" }),
   })
   .strict();
 
 const attemptStatusResponseSchema = z.object({
   id: z.string(),
   attempt_status_id: z.string().nullable(),
+  from_status: z.string().nullable(),
+  to_status: z.string(),
+  status_change_id: z.string(),
 });
 
+const hookRejectedSchema = z.object({ error: z.string(), hook_output: z.string() });
 const errorSchema = z.object({ error: z.string() });
 
 export const updateAttemptStatusRoute = createRoute({
@@ -35,25 +42,80 @@ export const updateAttemptStatusRoute = createRoute({
       description: "Workspace or status not found.",
       content: { "application/json": { schema: errorSchema } },
     },
+    422: {
+      description: "Pre-hook rejected the transition.",
+      content: { "application/json": { schema: hookRejectedSchema } },
+    },
   },
 });
 
 export const updateAttemptStatusHandler = (deps: RouteDeps): AppRouteHandler<typeof updateAttemptStatusRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
-    const { status } = c.req.valid("json");
+    const { status, session_id: sessionId } = c.req.valid("json");
 
     const workspace = await deps.workspaceService.get(id);
     if (!workspace) {
       return c.json({ error: `Workspace not found: ${id}` }, 404);
     }
 
-    const attemptStatus = await deps.attemptStatusService.getByName(workspace.project_id, status);
-    if (!attemptStatus) {
+    const toAttemptStatus = await deps.attemptStatusService.getByName(workspace.project_id, status);
+    if (!toAttemptStatus) {
       return c.json({ error: `Attempt status not found: "${status}"` }, 404);
     }
 
-    const updated = await deps.workspaceService.updateAttemptStatus(id, attemptStatus.id);
-    return c.json({ id: updated!.id, attempt_status_id: updated!.attempt_status_id }, 200);
+    // Resolve "from" status name
+    let fromStatusName: string | null = null;
+    if (workspace.attempt_status_id) {
+      const fromStatus = await deps.attemptStatusService.get(workspace.attempt_status_id);
+      fromStatusName = fromStatus?.name ?? null;
+    }
+
+    // Build payload for hooks
+    const payload = {
+      workspace_id: workspace.id,
+      workspace: workspace.workspace_shorthand,
+      project_id: workspace.project_id,
+      attempt_status_from: fromStatusName ?? "",
+      attempt_status_to: status,
+      ...(sessionId && { session_id: sessionId }),
+    };
+
+    // Run pre-hook
+    const preResult = await firePreAttemptStatusHook(
+      { repoService: deps.repoService },
+      { projectId: workspace.project_id, fromStatus: fromStatusName ?? "", toStatus: status, payload },
+    );
+
+    if (preResult.rejected) {
+      return c.json({ error: "Pre-hook rejected the transition", hook_output: preResult.stderr }, 422);
+    }
+
+    // Commit the transition
+    const updated = await deps.workspaceService.updateAttemptStatus(id, toAttemptStatus.id);
+    const statusChangeId = randomUUID();
+
+    // Queue post-hook for deferred delivery at session completion
+    if (sessionId) {
+      deps.postHookStore.queue(sessionId, {
+        hookName: `post-attempt-status-${status}`,
+        statusChangeId,
+        projectId: workspace.project_id,
+        fromStatus: fromStatusName ?? "",
+        toStatus: status,
+        payload: { ...payload, status_change_id: statusChangeId },
+      });
+    }
+
+    return c.json(
+      {
+        id: updated!.id,
+        attempt_status_id: updated!.attempt_status_id,
+        from_status: fromStatusName,
+        to_status: status,
+        status_change_id: statusChangeId,
+      },
+      200,
+    );
   };
 };

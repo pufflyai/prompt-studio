@@ -17,7 +17,7 @@ if [ "$CURRENT_STATUS" = "review" ]; then
   exit 0
 fi
 
-# Also mark the attempt as wip
+# Also mark the attempt as running
 if [ -n "$PSTDIO_WORKSPACE" ]; then
   pstdio workspaces set-status --workspace "$PSTDIO_WORKSPACE" --status wip
 fi

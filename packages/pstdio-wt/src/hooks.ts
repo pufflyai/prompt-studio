@@ -1,4 +1,4 @@
-import { existsSync, statSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type {
   HookName,
@@ -45,7 +45,7 @@ const TICKET_HOOK_NAMES: TicketHookName[] = [
 
 const HOOK_NAMES: HookName[] = [...WORKTREE_HOOK_NAMES, ...SESSION_HOOK_NAMES, ...TICKET_HOOK_NAMES];
 
-const BLOCKING_HOOKS = new Set<HookName>([
+const BLOCKING_HOOKS = new Set<WorktreeHookName | TicketHookName>([
   "pre-worktree-create",
   "post-worktree-create",
   "pre-commit",
@@ -58,7 +58,14 @@ const BLOCKING_HOOKS = new Set<HookName>([
   "pre-ticket-deletion",
 ]);
 
-export const isBlockingHook = (hookName: HookName) => BLOCKING_HOOKS.has(hookName);
+export const isAttemptStatusHook = (hookName: string) =>
+  hookName.startsWith("pre-attempt-status") || hookName.startsWith("post-attempt-status");
+
+const isPreAttemptStatusHook = (hookName: string): hookName is `pre-attempt-status-${string}` =>
+  hookName.startsWith("pre-attempt-status");
+
+export const isBlockingHook = (hookName: HookName) =>
+  BLOCKING_HOOKS.has(hookName as WorktreeHookName | TicketHookName) || isPreAttemptStatusHook(hookName);
 
 export const resolveHookScript = (repoPath: string, hookName: HookName) => {
   const scriptPath = join(repoPath, ".pstdio", "hooks", hookName);
@@ -176,9 +183,27 @@ export const parsePayloadOverride = (stdout: string): Record<string, unknown> | 
   return null;
 };
 
-export const listHooks = (repoPath: string) =>
-  HOOK_NAMES.map((name) => ({
+const discoverAttemptStatusHooks = (repoPath: string): HookName[] => {
+  const hooksDir = join(repoPath, ".pstdio", "hooks");
+  if (!existsSync(hooksDir)) return [];
+
+  try {
+    const entries = readdirSync(hooksDir);
+    return entries
+      .filter((name) => name.startsWith("pre-attempt-status") || name.startsWith("post-attempt-status"))
+      .sort() as HookName[];
+  } catch {
+    return [];
+  }
+};
+
+export const listHooks = (repoPath: string) => {
+  const attemptStatusHooks = discoverAttemptStatusHooks(repoPath);
+  const allHooks: HookName[] = [...HOOK_NAMES, ...attemptStatusHooks];
+
+  return allHooks.map((name) => ({
     name,
     exists: resolveHookScript(repoPath, name) !== null,
     blocking: isBlockingHook(name),
   }));
+};
