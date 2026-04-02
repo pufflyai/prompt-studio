@@ -1,17 +1,14 @@
-import { Box, Flex, Menu, Stack, Text } from "@chakra-ui/react";
+import { Box, Menu, Stack, Text } from "@chakra-ui/react";
 import { type Diff, DiffDrawer, MenuItem } from "@pstdio/ui";
-import { ArrowRight } from "lucide-react";
 import type { ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
 
 interface WorkspaceDiffPanelProps {
   diffs: Diff[];
   artifacts: ApiWorkspaceArtifact[];
-  baseRef?: string;
-  headRef?: string;
 }
 
 export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
-  const { diffs, artifacts, baseRef, headRef } = props;
+  const { diffs, artifacts } = props;
 
   const hasDiffs = diffs.length > 0;
   const hasArtifacts = artifacts.length > 0;
@@ -29,18 +26,6 @@ export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
       gap="0"
       data-testid="workspace-diff-panel"
     >
-      {baseRef && headRef ? (
-        <Flex align="center" gap="xs" px="sm" py="xs" borderBottomWidth="1px">
-          <Text textStyle="label/S/medium" color="foreground.secondary">
-            {baseRef}
-          </Text>
-          <ArrowRight size={12} color="var(--chakra-colors-foreground-tertiary)" />
-          <Text textStyle="label/S/medium" color="foreground.secondary">
-            {headRef}
-          </Text>
-        </Flex>
-      ) : null}
-
       {hasArtifacts ? (
         <Stack gap="0" px="sm" py="xs" borderBottomWidth={hasDiffs ? "1px" : "0"}>
           <Text textStyle="label/S/medium" color="foreground.secondary" py="xs">

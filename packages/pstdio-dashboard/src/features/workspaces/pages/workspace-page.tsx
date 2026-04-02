@@ -176,12 +176,7 @@ export const WorkspacePage = () => {
           }}
         />
 
-        <WorkspaceDiffPanel
-          diffs={diffs}
-          artifacts={artifacts}
-          baseRef={diffData?.base_ref}
-          headRef={diffData?.head_ref}
-        />
+        <WorkspaceDiffPanel diffs={diffs} artifacts={artifacts} />
       </Flex>
 
       {isCreateModalOpen ? (

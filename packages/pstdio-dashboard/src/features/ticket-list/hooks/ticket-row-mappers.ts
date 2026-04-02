@@ -23,7 +23,10 @@ export const toTicketFromRow = (
   subTicketsByParent: Map<string, SyncedRow[]>,
 ) => {
   const statusId = row.status_id as string | null;
-  const attempts = (workspacesByTicket.get(row.id) ?? []).map((ws) => {
+  const sortedWorkspaces = (workspacesByTicket.get(row.id) ?? []).sort((a, b) =>
+    String(a.workspace_shorthand).localeCompare(String(b.workspace_shorthand)),
+  );
+  const attempts = sortedWorkspaces.map((ws) => {
     const session = sessionsByWorkspace.get(ws.id);
     return {
       id: ws.id,
