@@ -65,6 +65,7 @@
         "pstdio-api": "workspace:*",
         "pstdio-dashboard": "workspace:*",
         "pstdio-db": "workspace:*",
+        "pstdio-hooks": "workspace:*",
         "pstdio-wt": "workspace:*",
         "typescript": "~5.9.3",
       },
@@ -98,6 +99,7 @@
         "hono": "^4.10.7",
         "pstdio-agents": "workspace:*",
         "pstdio-db": "workspace:*",
+        "pstdio-hooks": "workspace:*",
         "pstdio-storage": "workspace:*",
         "pstdio-wt": "workspace:*",
       },
@@ -188,6 +190,13 @@
         "typescript": "~5.9.3",
       },
     },
+    "packages/pstdio-hooks": {
+      "name": "pstdio-hooks",
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "~5.9.3",
+      },
+    },
     "packages/pstdio-storage": {
       "name": "pstdio-storage",
       "dependencies": {
@@ -202,6 +211,9 @@
     },
     "packages/pstdio-wt": {
       "name": "pstdio-wt",
+      "dependencies": {
+        "pstdio-hooks": "workspace:*",
+      },
       "devDependencies": {
         "@types/bun": "latest",
         "typescript": "~5.9.3",
@@ -918,6 +930,22 @@
     "@playwright/test": ["@playwright/test@1.58.2", "", { "dependencies": { "playwright": "1.58.2" }, "bin": { "playwright": "cli.js" } }, "sha512-akea+6bHYBBfA9uQqSYmlJXn61cTa+jbO87xVLCWbTqbWadRVmhxlXATaOjOgcBaWU4ePo0wB41KMFv3o35IXA=="],
 
     "@preact/signals-core": ["@preact/signals-core@1.14.0", "", {}, "sha512-AowtCcCU/33lFlh1zRFf/u+12rfrhtNakj7UpaGEsmMwUKpKWMVvcktOGcwBBNiB4lWrZWc01LhiyyzVklJyaQ=="],
+
+    "@pstdio/cli-darwin-arm64": ["@pstdio/cli-darwin-arm64@0.4.0", "", { "os": "darwin", "cpu": "arm64" }, "sha512-KuqDtGdpv4/AVSdl7u8AlB+13E4dL90zmw5gE00THkb2q/i8mhbWfDAdHk/t/jQLOgvfd2hWPRKTzIFiviyi6w=="],
+
+    "@pstdio/cli-darwin-x64": ["@pstdio/cli-darwin-x64@0.4.0", "", { "os": "darwin", "cpu": "x64" }, "sha512-9OJtF3zhRFAce/CTXvLlm51so4HgauIV0mbaqAeFvr3t8AFqvl4PrnzMvkc95m315akUxh75jdtfq3bkY7GV3g=="],
+
+    "@pstdio/cli-linux-arm64": ["@pstdio/cli-linux-arm64@0.4.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-aBQXFd4+y/lPQG8Q1fAbrhe8owEiSQ4HFbBAk1xdyo5MOyFoM9Ms+arnouHaP3mSAaDXb2tW/jhCUfjNhFkIxQ=="],
+
+    "@pstdio/cli-linux-arm64-musl": ["@pstdio/cli-linux-arm64-musl@0.4.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-saxPlqJX6w4DfRqLFytWrun1ZZeMtvsyMwh3qjZ8vLVm+EKz78wRchm7SpmcCUCsTGoF173Kqc93ewCYRQSWGg=="],
+
+    "@pstdio/cli-linux-x64": ["@pstdio/cli-linux-x64@0.4.0", "", { "os": "linux", "cpu": "x64" }, "sha512-fCBKiw4MOzxgi7QSQuFknlZfiMXKBeNpKha+KaLRWnjb4zp/6ri2ydQdUnmLzbmM3GG8q5G67DHzW8H2pYRMsw=="],
+
+    "@pstdio/cli-linux-x64-musl": ["@pstdio/cli-linux-x64-musl@0.4.0", "", { "os": "linux", "cpu": "x64" }, "sha512-0RnAPjNhQ5ggOGuXJbdpjlG0Jp0ErmTeTLcYuvwSbPbam6ZyJ7HUN+1LYR2AHw1Lk0t5kyY4N2QxVLmEUcqx3A=="],
+
+    "@pstdio/cli-win-arm64": ["@pstdio/cli-win-arm64@0.4.0", "", { "os": "win32", "cpu": "arm64" }, "sha512-r1jLQLRg7m83s6RUT/R3kLqnstWeAxzoafj4A6U3kfCEmhRCTb7H9zg6jhzmLsGgFOe2JY0X9bo7WyGak7hhYQ=="],
+
+    "@pstdio/cli-win-x64": ["@pstdio/cli-win-x64@0.4.0", "", { "os": "win32", "cpu": "x64" }, "sha512-Syc4RHldiGWle/mAFGVaTTx6APzDWeI4LgnQ5hgCA+tYQ3gzzSZvyTgDKRy9AiLSPJE4QSl0i1MidQVctCXDxw=="],
 
     "@pstdio/landing-page": ["@pstdio/landing-page@workspace:clients/landing-page"],
 
@@ -2817,6 +2845,8 @@
 
     "pstdio-db": ["pstdio-db@workspace:packages/pstdio-db"],
 
+    "pstdio-hooks": ["pstdio-hooks@workspace:packages/pstdio-hooks"],
+
     "pstdio-storage": ["pstdio-storage@workspace:packages/pstdio-storage"],
 
     "pstdio-wt": ["pstdio-wt@workspace:packages/pstdio-wt"],
@@ -3821,6 +3851,8 @@
 
     "pstdio-db/@types/bun": ["@types/bun@1.3.11", "", { "dependencies": { "bun-types": "1.3.11" } }, "sha512-5vPne5QvtpjGpsGYXiFyycfpDF2ECyPcTSsFBMa0fraoxiQyMJ3SmuQIGhzPg2WJuWxVBoxWJ2kClYTcw/4fAg=="],
 
+    "pstdio-hooks/@types/bun": ["@types/bun@1.3.11", "", { "dependencies": { "bun-types": "1.3.11" } }, "sha512-5vPne5QvtpjGpsGYXiFyycfpDF2ECyPcTSsFBMa0fraoxiQyMJ3SmuQIGhzPg2WJuWxVBoxWJ2kClYTcw/4fAg=="],
+
     "pstdio-storage/@types/bun": ["@types/bun@1.3.11", "", { "dependencies": { "bun-types": "1.3.11" } }, "sha512-5vPne5QvtpjGpsGYXiFyycfpDF2ECyPcTSsFBMa0fraoxiQyMJ3SmuQIGhzPg2WJuWxVBoxWJ2kClYTcw/4fAg=="],
 
     "pstdio-wt/@types/bun": ["@types/bun@1.3.11", "", { "dependencies": { "bun-types": "1.3.11" } }, "sha512-5vPne5QvtpjGpsGYXiFyycfpDF2ECyPcTSsFBMa0fraoxiQyMJ3SmuQIGhzPg2WJuWxVBoxWJ2kClYTcw/4fAg=="],
@@ -4250,6 +4282,8 @@
     "pstdio-dashboard/@types/node/undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
 
     "pstdio-db/@types/bun/bun-types": ["bun-types@1.3.11", "", { "dependencies": { "@types/node": "*" } }, "sha512-1KGPpoxQWl9f6wcZh57LvrPIInQMn2TQ7jsgxqpRzg+l0QPOFvJVH7HmvHo/AiPgwXy+/Thf6Ov3EdVn1vOabg=="],
+
+    "pstdio-hooks/@types/bun/bun-types": ["bun-types@1.3.11", "", { "dependencies": { "@types/node": "*" } }, "sha512-1KGPpoxQWl9f6wcZh57LvrPIInQMn2TQ7jsgxqpRzg+l0QPOFvJVH7HmvHo/AiPgwXy+/Thf6Ov3EdVn1vOabg=="],
 
     "pstdio-storage/@types/bun/bun-types": ["bun-types@1.3.11", "", { "dependencies": { "@types/node": "*" } }, "sha512-1KGPpoxQWl9f6wcZh57LvrPIInQMn2TQ7jsgxqpRzg+l0QPOFvJVH7HmvHo/AiPgwXy+/Thf6Ov3EdVn1vOabg=="],
 

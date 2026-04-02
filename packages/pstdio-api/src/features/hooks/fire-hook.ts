@@ -1,5 +1,5 @@
-import type { HookName, HookPayload } from "pstdio-wt";
-import { runHook } from "pstdio-wt";
+import type { HookName, HookPayload } from "pstdio-hooks";
+import { runHook } from "pstdio-hooks";
 
 type FireHookDeps = {
   repoService: { listByProject: (projectId: string) => Promise<{ path: string }[]> };

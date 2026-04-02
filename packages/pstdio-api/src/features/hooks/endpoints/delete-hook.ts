@@ -1,7 +1,7 @@
 import { rmSync } from "node:fs";
 import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
-import type { HookName } from "pstdio-wt";
+import type { HookName } from "pstdio-hooks";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 

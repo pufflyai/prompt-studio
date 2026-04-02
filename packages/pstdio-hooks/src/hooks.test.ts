@@ -10,16 +10,16 @@ import {
   resolveHookScript,
   runHook,
 } from "./hooks";
-import { createTempRepo } from "./test-helpers";
+import { createTempDir } from "./test-helpers";
 
-let repo: Awaited<ReturnType<typeof createTempRepo>>;
+let tmp: Awaited<ReturnType<typeof createTempDir>>;
 
 beforeEach(async () => {
-  repo = await createTempRepo();
+  tmp = await createTempDir();
 });
 
 afterEach(async () => {
-  await repo.cleanup();
+  await tmp.cleanup();
 });
 
 const writeHook = (repoPath: string, hookName: string, script: string) => {
@@ -32,15 +32,15 @@ const writeHook = (repoPath: string, hookName: string, script: string) => {
 
 describe("resolveHookScript", () => {
   test("returns script path when hook file exists", () => {
-    writeHook(repo.dir, "pre-commit", "echo lint");
+    writeHook(tmp.dir, "pre-commit", "echo lint");
 
-    const result = resolveHookScript(repo.dir, "pre-commit");
+    const result = resolveHookScript(tmp.dir, "pre-commit");
 
-    expect(result).toBe(join(repo.dir, ".pstdio", "hooks", "pre-commit"));
+    expect(result).toBe(join(tmp.dir, ".pstdio", "hooks", "pre-commit"));
   });
 
   test("returns null when hook file does not exist", () => {
-    const result = resolveHookScript(repo.dir, "pre-commit");
+    const result = resolveHookScript(tmp.dir, "pre-commit");
 
     expect(result).toBeNull();
   });
@@ -135,9 +135,9 @@ describe("buildEnvFromPayload", () => {
 
 describe("runHook", () => {
   test("runs hook script and returns result", async () => {
-    writeHook(repo.dir, "post-worktree-create", 'echo "hook executed"');
+    writeHook(tmp.dir, "post-worktree-create", 'echo "hook executed"');
 
-    const result = await runHook("post-worktree-create", { worktree_path: repo.dir }, { repoPath: repo.dir });
+    const result = await runHook("post-worktree-create", { worktree_path: tmp.dir }, { repoPath: tmp.dir });
 
     expect(result.skipped).toBe(false);
     expect(result.exitCode).toBe(0);
@@ -146,7 +146,7 @@ describe("runHook", () => {
   });
 
   test("returns skipped result when hook file does not exist", async () => {
-    const result = await runHook("post-worktree-create", { worktree_path: repo.dir }, { repoPath: repo.dir });
+    const result = await runHook("post-worktree-create", { worktree_path: tmp.dir }, { repoPath: tmp.dir });
 
     expect(result.skipped).toBe(true);
     expect(result.exitCode).toBe(0);
@@ -154,9 +154,9 @@ describe("runHook", () => {
   });
 
   test("blocking hook returns non-zero exit code", async () => {
-    writeHook(repo.dir, "pre-commit", "exit 1");
+    writeHook(tmp.dir, "pre-commit", "exit 1");
 
-    const result = await runHook("pre-commit", { worktree_path: repo.dir }, { repoPath: repo.dir });
+    const result = await runHook("pre-commit", { worktree_path: tmp.dir }, { repoPath: tmp.dir });
 
     expect(result.skipped).toBe(false);
     expect(result.exitCode).not.toBe(0);
@@ -164,9 +164,9 @@ describe("runHook", () => {
   });
 
   test("non-blocking hook catches failures and returns result", async () => {
-    writeHook(repo.dir, "post-commit", "exit 1");
+    writeHook(tmp.dir, "post-commit", "exit 1");
 
-    const result = await runHook("post-commit", { worktree_path: repo.dir }, { repoPath: repo.dir });
+    const result = await runHook("post-commit", { worktree_path: tmp.dir }, { repoPath: tmp.dir });
 
     expect(result.skipped).toBe(false);
     expect(result.exitCode).not.toBe(0);
@@ -174,32 +174,32 @@ describe("runHook", () => {
   });
 
   test("sets PSTDIO env vars from payload", async () => {
-    writeHook(repo.dir, "pre-merge", 'echo "$PSTDIO_HOOK|$PSTDIO_BRANCH|$PSTDIO_TARGET"');
+    writeHook(tmp.dir, "pre-merge", 'echo "$PSTDIO_HOOK|$PSTDIO_BRANCH|$PSTDIO_TARGET"');
 
     const result = await runHook(
       "pre-merge",
-      { branch: "workspace/PS-1_A1", target: "main", worktree_path: repo.dir },
-      { repoPath: repo.dir },
+      { branch: "workspace/PS-1_A1", target: "main", worktree_path: tmp.dir },
+      { repoPath: tmp.dir },
     );
 
     expect(result.stdout.trim()).toBe("pre-merge|workspace/PS-1_A1|main");
   });
 
   test("runs hook in worktree_path from payload when no cwd option", async () => {
-    writeHook(repo.dir, "post-worktree-create", "pwd");
+    writeHook(tmp.dir, "post-worktree-create", "pwd");
 
-    const result = await runHook("post-worktree-create", { worktree_path: repo.dir }, { repoPath: repo.dir });
+    const result = await runHook("post-worktree-create", { worktree_path: tmp.dir }, { repoPath: tmp.dir });
 
-    expect(result.stdout.trim()).toBe(repo.dir);
+    expect(result.stdout.trim()).toBe(tmp.dir);
   });
 
   test("kills hook that exceeds timeout", async () => {
-    writeHook(repo.dir, "post-worktree-create", "sleep 10");
+    writeHook(tmp.dir, "post-worktree-create", "sleep 10");
 
     const result = await runHook(
       "post-worktree-create",
-      { worktree_path: repo.dir },
-      { repoPath: repo.dir, timeoutMs: 500 },
+      { worktree_path: tmp.dir },
+      { repoPath: tmp.dir, timeoutMs: 500 },
     );
 
     expect(result.skipped).toBe(false);
@@ -208,28 +208,28 @@ describe("runHook", () => {
   }, 10_000);
 
   test("runs pre-worktree-create hook in repo root (no worktree_path)", async () => {
-    writeHook(repo.dir, "pre-worktree-create", "pwd");
+    writeHook(tmp.dir, "pre-worktree-create", "pwd");
 
-    const result = await runHook("pre-worktree-create", {}, { repoPath: repo.dir });
+    const result = await runHook("pre-worktree-create", {}, { repoPath: tmp.dir });
 
-    expect(result.stdout.trim()).toBe(repo.dir);
+    expect(result.stdout.trim()).toBe(tmp.dir);
   });
 
   test("passes JSON payload on stdin", async () => {
-    writeHook(repo.dir, "pre-ticket-creation", "cat");
+    writeHook(tmp.dir, "pre-ticket-creation", "cat");
 
     const payload = { title: "Test ticket", priority: "medium" };
-    const result = await runHook("pre-ticket-creation", payload, { repoPath: repo.dir });
+    const result = await runHook("pre-ticket-creation", payload, { repoPath: tmp.dir });
 
     expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual(payload);
   });
 
   test("captures hook stdout output", async () => {
-    writeHook(repo.dir, "pre-ticket-creation", 'jq \'. + {"labels": ["needs-triage"]}\'');
+    writeHook(tmp.dir, "pre-ticket-creation", 'jq \'. + {"labels": ["needs-triage"]}\'');
 
     const payload = { title: "Test ticket" };
-    const result = await runHook("pre-ticket-creation", payload, { repoPath: repo.dir });
+    const result = await runHook("pre-ticket-creation", payload, { repoPath: tmp.dir });
 
     expect(result.exitCode).toBe(0);
     const output = JSON.parse(result.stdout);
@@ -238,34 +238,34 @@ describe("runHook", () => {
   });
 
   test("empty stdout means no output", async () => {
-    writeHook(repo.dir, "post-session-start", "cat > /dev/null");
+    writeHook(tmp.dir, "post-session-start", "cat > /dev/null");
 
     const payload = { session_id: "sess_1", session_status: "in_progress" };
-    const result = await runHook("post-session-start", payload, { repoPath: repo.dir });
+    const result = await runHook("post-session-start", payload, { repoPath: tmp.dir });
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toBe("");
   });
 
   test("blocking hook rejection aborts with stderr message", async () => {
-    writeHook(repo.dir, "pre-ticket-creation", 'echo "Missing description" >&2; exit 1');
+    writeHook(tmp.dir, "pre-ticket-creation", 'echo "Missing description" >&2; exit 1');
 
     const payload = { title: "Incomplete" };
-    const result = await runHook("pre-ticket-creation", payload, { repoPath: repo.dir });
+    const result = await runHook("pre-ticket-creation", payload, { repoPath: tmp.dir });
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain("Missing description");
   });
 
   test("runs session hooks with flat payload", async () => {
-    writeHook(repo.dir, "post-session-success", "cat");
+    writeHook(tmp.dir, "post-session-success", "cat");
 
     const payload = {
       session_id: "sess_1",
       session_status: "completed",
       attempt_status: "review-ready",
     };
-    const result = await runHook("post-session-success", payload, { repoPath: repo.dir });
+    const result = await runHook("post-session-success", payload, { repoPath: tmp.dir });
 
     expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual(payload);
@@ -303,10 +303,10 @@ describe("parsePayloadOverride", () => {
 
 describe("listHooks", () => {
   test("returns all supported hooks with existence status", () => {
-    writeHook(repo.dir, "pre-commit", "echo lint");
-    writeHook(repo.dir, "post-worktree-create", "echo setup");
+    writeHook(tmp.dir, "pre-commit", "echo lint");
+    writeHook(tmp.dir, "post-worktree-create", "echo setup");
 
-    const hooks = listHooks(repo.dir);
+    const hooks = listHooks(tmp.dir);
 
     // 11 worktree + 5 session + 8 ticket = 24
     expect(hooks.length).toBe(24);
@@ -322,13 +322,13 @@ describe("listHooks", () => {
   });
 
   test("returns all hooks as not existing when no hooks directory", () => {
-    const hooks = listHooks(repo.dir);
+    const hooks = listHooks(tmp.dir);
 
     expect(hooks.every((h) => !h.exists)).toBe(true);
   });
 
   test("includes session and ticket hooks", () => {
-    const hooks = listHooks(repo.dir);
+    const hooks = listHooks(tmp.dir);
 
     const sessionHook = hooks.find((h) => h.name === "post-session-start");
     expect(sessionHook).toBeDefined();
@@ -340,10 +340,10 @@ describe("listHooks", () => {
   });
 
   test("discovers attempt-status hooks from filesystem", () => {
-    writeHook(repo.dir, "pre-attempt-status-review-ready", "exit 0");
-    writeHook(repo.dir, "post-attempt-status-blocked", "exit 0");
+    writeHook(tmp.dir, "pre-attempt-status-review-ready", "exit 0");
+    writeHook(tmp.dir, "post-attempt-status-blocked", "exit 0");
 
-    const hooks = listHooks(repo.dir);
+    const hooks = listHooks(tmp.dir);
 
     const preReviewReady = hooks.find((h) => h.name === "pre-attempt-status-review-ready");
     expect(preReviewReady).toBeDefined();
@@ -357,7 +357,7 @@ describe("listHooks", () => {
   });
 
   test("does not include attempt-status hooks when none exist on disk", () => {
-    const hooks = listHooks(repo.dir);
+    const hooks = listHooks(tmp.dir);
     const attemptHooks = hooks.filter((h) => h.name.includes("attempt-status"));
     expect(attemptHooks).toHaveLength(0);
   });
@@ -394,12 +394,12 @@ describe("isAttemptStatusHook", () => {
 
 describe("runHook with attempt-status hooks", () => {
   test("runs pre-attempt-status hook as blocking", async () => {
-    writeHook(repo.dir, "pre-attempt-status-review-ready", 'echo "validating"; exit 1');
+    writeHook(tmp.dir, "pre-attempt-status-review-ready", 'echo "validating"; exit 1');
 
     const result = await runHook(
       "pre-attempt-status-review-ready",
       { attempt_status_from: "wip", attempt_status_to: "review-ready" },
-      { repoPath: repo.dir },
+      { repoPath: tmp.dir },
     );
 
     expect(result.skipped).toBe(false);
@@ -408,10 +408,10 @@ describe("runHook with attempt-status hooks", () => {
   });
 
   test("runs post-attempt-status hook", async () => {
-    writeHook(repo.dir, "post-attempt-status-blocked", "cat");
+    writeHook(tmp.dir, "post-attempt-status-blocked", "cat");
 
     const payload = { attempt_status_from: "wip", attempt_status_to: "blocked", ticket: "PS-1" };
-    const result = await runHook("post-attempt-status-blocked", payload, { repoPath: repo.dir });
+    const result = await runHook("post-attempt-status-blocked", payload, { repoPath: tmp.dir });
 
     expect(result.skipped).toBe(false);
     expect(result.exitCode).toBe(0);
@@ -422,7 +422,7 @@ describe("runHook with attempt-status hooks", () => {
     const result = await runHook(
       "pre-attempt-status-review-ready",
       { attempt_status_to: "review-ready" },
-      { repoPath: repo.dir },
+      { repoPath: tmp.dir },
     );
 
     expect(result.skipped).toBe(true);

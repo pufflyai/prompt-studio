@@ -1,6 +1,7 @@
+import type { HookPayload } from "pstdio-hooks";
+import { runHook } from "pstdio-hooks";
 import { GitError, git } from "./git";
-import { runHook } from "./hooks";
-import type { HookPayload, RebaseResult } from "./types";
+import type { RebaseResult } from "./types";
 import { findWorktreeByBranch } from "./worktree";
 
 export const rebaseOntoTarget = async (opts: {

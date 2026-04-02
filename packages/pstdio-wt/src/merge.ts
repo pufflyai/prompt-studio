@@ -1,6 +1,7 @@
+import type { HookPayload } from "pstdio-hooks";
+import { runHook } from "pstdio-hooks";
 import { GitError, git } from "./git";
-import { runHook } from "./hooks";
-import type { HookPayload, MergeResult } from "./types";
+import type { MergeResult } from "./types";
 
 export const mergeWorktree = async (opts: {
   repoRoot: string;

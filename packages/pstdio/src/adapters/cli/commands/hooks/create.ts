@@ -1,5 +1,5 @@
-import type { HookName } from "pstdio-wt";
-import { listHooks as defaultListHooks } from "pstdio-wt";
+import type { HookName } from "pstdio-hooks";
+import { listHooks as defaultListHooks } from "pstdio-hooks";
 import type { Arguments, Argv } from "yargs";
 import { findGitRoot } from "@/features/config/config";
 import { createHookFile as defaultCreateHookFile } from "@/features/hooks/create-hook";

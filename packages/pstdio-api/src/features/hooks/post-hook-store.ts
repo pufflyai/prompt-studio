@@ -1,4 +1,4 @@
-import type { AttemptStatusHookName, HookPayload } from "pstdio-wt";
+import type { AttemptStatusHookName, HookPayload } from "pstdio-hooks";
 
 export type QueuedPostHook = {
   hookName: AttemptStatusHookName;

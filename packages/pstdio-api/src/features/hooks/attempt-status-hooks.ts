@@ -1,4 +1,4 @@
-import type { AttemptStatusHookName, HookPayload, HookResult } from "pstdio-wt";
+import type { AttemptStatusHookName, HookPayload, HookResult } from "pstdio-hooks";
 import { fireHook } from "./fire-hook";
 import type { createPostHookStore } from "./post-hook-store";
 

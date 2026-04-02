@@ -2,7 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { copyFile, mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { createWorktree, runHook } from "pstdio-wt";
+import { runHook } from "pstdio-hooks";
+import { createWorktree } from "pstdio-wt";
 import type { RouteDeps } from "../../deps";
 
 type AttemptMode = "worktree" | "current_branch";

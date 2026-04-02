@@ -1,4 +1,4 @@
-import type { HookPayload, SessionHookName } from "pstdio-wt";
+import type { HookPayload, SessionHookName } from "pstdio-hooks";
 import type { createAttemptStatusService } from "../../services/attempt-status-service";
 import type { createRepoService } from "../../services/repo-service";
 import type { createWorkspaceSessionService } from "../../services/workspace-session-service";

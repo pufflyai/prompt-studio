@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import { homedir } from "node:os";
-import type { HookName, HookPayload, HookResult, RunHookOptions } from "pstdio-wt";
+import type { HookName, HookPayload, HookResult, RunHookOptions } from "pstdio-hooks";
 import { deleteWorkspaceWithWorktree } from "./delete-workspace";
 
 const makeWorkspace = (shorthand: string) => ({

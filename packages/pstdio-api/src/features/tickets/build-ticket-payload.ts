@@ -1,4 +1,4 @@
-import type { HookPayload } from "pstdio-wt";
+import type { HookPayload } from "pstdio-hooks";
 import type { RouteDeps } from "../deps";
 
 type TicketRecord = {

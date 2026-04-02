@@ -50,6 +50,7 @@
     "pstdio-api": "workspace:*",
     "pstdio-dashboard": "workspace:*",
     "pstdio-db": "workspace:*",
+    "pstdio-hooks": "workspace:*",
     "pstdio-wt": "workspace:*",
     "typescript": "~5.9.3"
   }

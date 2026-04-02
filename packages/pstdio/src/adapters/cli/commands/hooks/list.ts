@@ -1,4 +1,4 @@
-import { listHooks as defaultListHooks } from "pstdio-wt";
+import { listHooks as defaultListHooks } from "pstdio-hooks";
 import type { Argv } from "yargs";
 import { findGitRoot, readConfig } from "@/features/config/config";
 

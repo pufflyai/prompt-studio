@@ -1,6 +1,7 @@
+import type { HookPayload } from "pstdio-hooks";
+import { runHook } from "pstdio-hooks";
 import { git } from "./git";
-import { runHook } from "./hooks";
-import type { CommitResult, HookPayload, StagingPolicy } from "./types";
+import type { CommitResult, StagingPolicy } from "./types";
 
 export const commitChanges = async (opts: {
   worktreePath: string;

@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { HookName } from "pstdio-wt";
+import type { HookName } from "pstdio-hooks";
 
 import { resolveFilesRoot } from "../resolve-files-root";
 

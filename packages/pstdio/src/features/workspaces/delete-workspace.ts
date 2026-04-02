@@ -1,5 +1,6 @@
-import type { HookName, HookPayload, HookResult, RunHookOptions } from "pstdio-wt";
-import { removeWorktreeAndBranch as defaultRemoveWorktreeAndBranch, runHook as defaultRunHook } from "pstdio-wt";
+import type { HookName, HookPayload, HookResult, RunHookOptions } from "pstdio-hooks";
+import { runHook as defaultRunHook } from "pstdio-hooks";
+import { removeWorktreeAndBranch as defaultRemoveWorktreeAndBranch } from "pstdio-wt";
 import { API_URL } from "@/features/api-url";
 import { deleteWorkspace as defaultDeleteWorkspaceApi } from "./api/delete-workspace";
 import { getWorkspace as defaultGetWorkspace } from "./api/get-workspace";

@@ -1,5 +1,5 @@
-import type { HookName, HookPayload, RunHookOptions } from "pstdio-wt";
-import { runHook as defaultRunHook } from "pstdio-wt";
+import type { HookName, HookPayload, RunHookOptions } from "pstdio-hooks";
+import { runHook as defaultRunHook } from "pstdio-hooks";
 import type { Arguments, Argv } from "yargs";
 import { findGitRoot, readConfig } from "@/features/config/config";
 
