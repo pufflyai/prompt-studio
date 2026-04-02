@@ -28,9 +28,42 @@ describe("listWorktrees", () => {
     expect(entries.length).toBe(1);
     expect(entries[0].branch).toBe("main");
   });
+
+  test("excludes prunable worktrees", async () => {
+    const wtPath = join(repo.dir, "wt-prunable");
+    await createWorktree({ repoRoot: repo.dir, branch: "task/prunable", path: wtPath });
+
+    // Manually remove the worktree directory to make it prunable
+    const { rmSync } = await import("node:fs");
+    rmSync(wtPath, { recursive: true });
+
+    const entries = await listWorktrees(repo.dir);
+    const prunable = entries.find((e) => e.branch === "task/prunable");
+    expect(prunable).toBeUndefined();
+  });
 });
 
 describe("createWorktree", () => {
+  test("recreates worktree when previous one was prunable", async () => {
+    const wtPath = join(repo.dir, "wt-prunable-recreate");
+    await createWorktree({ repoRoot: repo.dir, branch: "task/prunable-recreate", path: wtPath });
+
+    // Manually remove the worktree directory to make it prunable
+    const { rmSync } = await import("node:fs");
+    rmSync(wtPath, { recursive: true });
+
+    // Creating a worktree with the same branch should create a fresh one
+    const newPath = join(repo.dir, "wt-prunable-new");
+    const result = await createWorktree({
+      repoRoot: repo.dir,
+      branch: "task/prunable-recreate",
+      path: newPath,
+    });
+
+    expect(result.created).toBe(true);
+    expect(result.path).toBe(newPath);
+  });
+
   test("creates a new worktree and branch", async () => {
     const wtPath = join(repo.dir, "wt-test");
     const result = await createWorktree({

@@ -7,6 +7,7 @@ type ListEntry = {
   branch: string;
   HEAD: string;
   bare: boolean;
+  prunable: boolean;
 };
 
 export const listWorktrees = async (repoRoot: string) => {
@@ -23,6 +24,8 @@ export const listWorktrees = async (repoRoot: string) => {
       current.branch = line.slice("branch ".length).replace("refs/heads/", "");
     } else if (line === "bare") {
       current.bare = true;
+    } else if (line.startsWith("prunable ")) {
+      current.prunable = true;
     } else if (line === "" && current.worktree) {
       entries.push(current as ListEntry);
       current = {};
@@ -33,7 +36,7 @@ export const listWorktrees = async (repoRoot: string) => {
     entries.push(current as ListEntry);
   }
 
-  return entries;
+  return entries.filter((e) => !e.prunable);
 };
 
 export const findWorktreeByBranch = async (repoRoot: string, branch: string) => {
@@ -65,6 +68,7 @@ export const createWorktree = async (opts: {
   } catch (err) {
     // branch exists but no worktree — stale leftover from a previous cleanup
     if (err instanceof GitError && err.stderr.includes("already exists")) {
+      await git(opts.repoRoot, ["worktree", "prune"]);
       await git(opts.repoRoot, ["branch", "-D", opts.branch]);
       await git(opts.repoRoot, ["worktree", "add", "-b", opts.branch, opts.path, base]);
     } else {
