@@ -95,6 +95,37 @@ describe("POST /v1/workspaces/:id/archive", () => {
     expect(branchOutput).toBe("");
   });
 
+  test("archives all sessions within the workspace", async () => {
+    const repoRoot = createGitRepo("archive-sessions-repo");
+    const attempt = await createWorkspaceAttempt(repoRoot);
+    const { workspace } = attempt;
+
+    // Create a session linked to the workspace
+    const sessionRes = await app.request("/v1/sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        project_id: projectId,
+        title: "test session",
+        prompt: "hello",
+        agent: "echo",
+        workspace_id: workspace.id,
+      }),
+    });
+    expect(sessionRes.status).toBe(201);
+    const session = await sessionRes.json();
+    expect(session.archived).toBe(false);
+
+    // Archive the workspace
+    const res = await app.request(`/v1/workspaces/${workspace.id}/archive`, { method: "POST" });
+    expect(res.status).toBe(200);
+
+    // Verify the session is now archived
+    const updatedSessionRes = await app.request(`/v1/sessions/${session.id}`);
+    const updatedSession = await updatedSessionRes.json();
+    expect(updatedSession.archived).toBe(true);
+  });
+
   test("returns 404 when workspace is missing", async () => {
     const res = await app.request("/v1/workspaces/non-existent/archive", {
       method: "POST",

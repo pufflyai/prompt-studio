@@ -51,6 +51,9 @@ export const archiveWorkspaceHandler = (deps: RouteDeps): AppRouteHandler<typeof
       return c.json({ error: `Workspace not found: ${id}` }, 404);
     }
 
+    const sessions = await deps.workspaceSessionService.listByWorkspace(id);
+    await Promise.all(sessions.map((s) => deps.sessionService.archive(s.id)));
+
     await cleanupWorkspaceWorktree(deps, workspace);
     return c.json(updated, 200);
   };
