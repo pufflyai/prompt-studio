@@ -20,6 +20,8 @@ const TEMPLATE_FILES = [
   "prompts/implement-ticket.txt",
   "prompts/refine-ticket.txt",
   "prompts/squash-message.txt",
+  "prompts/fix-changes-requested.txt",
+  "prompts/code-review.txt",
   "tickets/ticket-template.md",
   "tickets/proposal-template.md",
 ];
@@ -75,9 +77,11 @@ describe("POST /v1/projects", () => {
     expect(templateNames).toEqual([
       "adr",
       "changelog-entry",
+      "code-review",
       "commit-message",
       "cookbook",
       "create-sub-tickets",
+      "fix-changes-requested",
       "implement-ticket",
       "lessons-learned",
       "prd",

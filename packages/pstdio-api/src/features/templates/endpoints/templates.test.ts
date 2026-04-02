@@ -88,15 +88,17 @@ describe("GET /v1/projects/:id/templates", () => {
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body).toHaveLength(15);
+    expect(body).toHaveLength(17);
     expect(body.map((template: { name: string }) => template.name)).toEqual([
       "adr",
       "blank-template",
       "changelog-entry",
+      "code-review",
       "commit-message",
       "cookbook",
       "create-sub-tickets",
       "custom-ticket",
+      "fix-changes-requested",
       "implement-ticket",
       "lessons-learned",
       "prd",
@@ -160,6 +162,8 @@ describe("PUT /v1/projects/:id/templates/:name", () => {
       "implement-ticket",
       "refine-ticket",
       "squash-message",
+      "fix-changes-requested",
+      "code-review",
     ]) {
       await app.request(`/v1/projects/${projectId}/templates/${name}`, { method: "DELETE" });
     }

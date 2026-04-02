@@ -1,0 +1,1 @@
+Fix the issues described in .pstdio/tickets/{{ticket}}/review.md, then mark the attempt review-ready again.

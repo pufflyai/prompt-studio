@@ -306,9 +306,11 @@ test.describe("Project creation", () => {
     expect(templates.map((template) => template.name).sort()).toEqual([
       "adr",
       "changelog-entry",
+      "code-review",
       "commit-message",
       "cookbook",
       "create-sub-tickets",
+      "fix-changes-requested",
       "implement-ticket",
       "lessons-learned",
       "prd",

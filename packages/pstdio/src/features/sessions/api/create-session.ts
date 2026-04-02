@@ -1,7 +1,9 @@
 type CreateSessionInput = {
   project_id: string;
   title: string;
-  prompt: string;
+  prompt?: string;
+  template?: string;
+  vars?: Record<string, string>;
   agent?: string;
   workspace_id?: string;
   model?: string;

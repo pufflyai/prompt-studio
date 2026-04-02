@@ -90,7 +90,30 @@ describe("sessions follow-up", () => {
     const deps = makeDeps();
     const handler = createHandler(deps);
 
-    expect(handler(argv({ id: "s_1" }))).rejects.toThrow("At least one of --prompt or --summary-of is required");
+    expect(handler(argv({ id: "s_1" }))).rejects.toThrow(
+      "At least one of --prompt, --template, or --summary-of is required.",
+    );
+  });
+
+  test("passes template and vars to API", async () => {
+    const deps = makeDeps();
+    const handler = createHandler(deps);
+
+    await handler(argv({ id: "s_1", template: "fix-it", var: ["ticket=PS-7", "output=error log"] }));
+
+    expect(deps.followUpSession).toHaveBeenCalledWith(expect.any(String), "s_1", {
+      template: "fix-it",
+      vars: { ticket: "PS-7", output: "error log" },
+    });
+  });
+
+  test("rejects --prompt and --template together", async () => {
+    const deps = makeDeps();
+    const handler = createHandler(deps);
+
+    expect(handler(argv({ id: "s_1", prompt: "inline", template: "tpl" }))).rejects.toThrow(
+      "--prompt and --template are mutually exclusive",
+    );
   });
 
   test("propagates API errors", async () => {

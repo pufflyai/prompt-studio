@@ -4,6 +4,7 @@ import type { RouteDeps } from "../../deps";
 import { composeSummary } from "../compose-summary";
 import { followUpBodySchema, notFoundResponseSchema, sessionResponseSchema } from "../dto";
 import { getSessionMessages } from "../get-session-messages";
+import { resolvePrompt } from "../resolve-prompt";
 import { resumeAgentSession, spawnAgentSession } from "../spawn-agent";
 
 export const followUpSessionRoute = createRoute({
@@ -37,13 +38,16 @@ export const followUpSessionRoute = createRoute({
 const buildFollowUpPrompt = async (
   input: {
     prompt?: string;
+    template?: string;
+    vars?: Record<string, string>;
     summary_from_session_id?: string;
     summary_format?: "brief" | "detailed";
     summary_role?: "assistant" | "all";
   },
+  projectId: string,
   deps: RouteDeps,
 ) => {
-  let prompt = input.prompt ?? "";
+  let prompt = await resolvePrompt(input, projectId, deps);
 
   if (input.summary_from_session_id) {
     const messages = await getSessionMessages(input.summary_from_session_id, deps);
@@ -78,7 +82,7 @@ export const followUpSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof 
       );
     }
 
-    const prompt = await buildFollowUpPrompt(input, deps);
+    const prompt = await buildFollowUpPrompt(input, session.project_id!, deps);
 
     await deps.sessionService.resume(session.id);
 

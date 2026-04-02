@@ -29,6 +29,8 @@ const BUNDLED_TEMPLATES: BundledTemplate[] = [
   { name: "implement-ticket", folder: "prompts", file_name: "implement-ticket.txt", is_default: false },
   { name: "refine-ticket", folder: "prompts", file_name: "refine-ticket.txt", is_default: false },
   { name: "squash-message", folder: "prompts", file_name: "squash-message.txt", is_default: false },
+  { name: "fix-changes-requested", folder: "prompts", file_name: "fix-changes-requested.txt", is_default: false },
+  { name: "code-review", folder: "prompts", file_name: "code-review.txt", is_default: false },
   // tickets
   { name: "ticket", folder: "tickets", file_name: "ticket-template.md", is_default: true },
   { name: "proposal", folder: "tickets", file_name: "proposal-template.md", is_default: false },

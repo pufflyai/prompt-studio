@@ -22,17 +22,27 @@ export const createSessionBodySchema = z
   .object({
     project_id: z.string().min(1),
     title: z.string().min(1),
-    prompt: z.string().min(1),
+    prompt: z.string().min(1).optional(),
+    template: z.string().min(1).optional(),
+    vars: z.record(z.string(), z.string()).optional(),
     agent: z.string().min(1).optional(),
     workspace_id: z.string().optional(),
     model: z.string().optional(),
     original_session_id: z.string().optional(),
   })
-  .strict();
+  .strict()
+  .refine((data) => data.prompt || data.template, {
+    message: "At least one of 'prompt' or 'template' is required.",
+  })
+  .refine((data) => !(data.prompt && data.template), {
+    message: "--prompt and --template are mutually exclusive",
+  });
 
 export const followUpBodySchema = z
   .object({
     prompt: z.string().min(1).optional(),
+    template: z.string().min(1).optional(),
+    vars: z.record(z.string(), z.string()).optional(),
     agent: z.string().optional(),
     model: z.string().optional(),
     summary_from_session_id: z.string().optional(),
@@ -40,8 +50,11 @@ export const followUpBodySchema = z
     summary_role: z.enum(["assistant", "all"]).default("assistant").optional(),
   })
   .strict()
-  .refine((data) => data.prompt || data.summary_from_session_id, {
-    message: "At least one of 'prompt' or 'summary_from_session_id' is required.",
+  .refine((data) => data.prompt || data.template || data.summary_from_session_id, {
+    message: "At least one of 'prompt', 'template', or 'summary_from_session_id' is required.",
+  })
+  .refine((data) => !(data.prompt && data.template), {
+    message: "--prompt and --template are mutually exclusive",
   });
 
 export const approveBodySchema = z

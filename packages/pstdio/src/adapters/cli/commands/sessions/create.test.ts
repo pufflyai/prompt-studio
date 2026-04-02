@@ -80,6 +80,44 @@ describe("sessions create", () => {
     );
   });
 
+  test("passes template and vars to API", async () => {
+    const createSession = mock(async () => ({
+      id: "s_1",
+      project_id: "proj-1",
+      title: "fix-it",
+      status: "in_progress",
+      agent: "claude-code",
+    }));
+    const deps = makeDeps({ createSession });
+    const handler = createHandler(deps);
+
+    await handler(argv({ template: "fix-it", var: ["ticket=PS-7"] }));
+
+    expect(createSession).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        template: "fix-it",
+        vars: { ticket: "PS-7" },
+      }),
+    );
+  });
+
+  test("derives title from template name when no --title or --prompt", async () => {
+    const createSession = mock(async () => ({
+      id: "s_1",
+      project_id: "proj-1",
+      title: "fix-it",
+      status: "in_progress",
+      agent: "claude-code",
+    }));
+    const deps = makeDeps({ createSession });
+    const handler = createHandler(deps);
+
+    await handler(argv({ template: "fix-it" }));
+
+    expect(createSession).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ title: "fix-it" }));
+  });
+
   test("throws when no project context", async () => {
     const deps = makeDeps({ findGitRoot: () => null, readConfig: () => null });
     const handler = createHandler(deps);

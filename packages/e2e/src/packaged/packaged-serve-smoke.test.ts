@@ -12,9 +12,11 @@ const BINARY_PATH = join(REPO_ROOT, "dist/pstdio");
 const REQUIRED_TEMPLATE_NAMES = [
   "adr",
   "changelog-entry",
+  "code-review",
   "commit-message",
   "cookbook",
   "create-sub-tickets",
+  "fix-changes-requested",
   "implement-ticket",
   "lessons-learned",
   "prd",

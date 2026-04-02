@@ -1,5 +1,7 @@
 type FollowUpInput = {
   prompt?: string;
+  template?: string;
+  vars?: Record<string, string>;
   agent?: string;
   model?: string;
   summary_from_session_id?: string;
