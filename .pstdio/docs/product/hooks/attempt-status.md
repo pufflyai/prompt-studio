@@ -19,7 +19,7 @@ Default attempt statuses:
 ```json
 {
   "attemptStatuses": [
-    "running",
+    "wip",
     "blocked",
     "review-ready",
     "reviewed",

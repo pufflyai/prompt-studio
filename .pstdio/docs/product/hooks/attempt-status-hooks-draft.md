@@ -78,7 +78,7 @@ For this proposal, "session reaches a terminal state" means `completed`, `failed
 
 ## Lifecycle
 
-When a session asks to change an attempt from `running` to `review-ready`:
+When a session asks to change an attempt from `wip` to `review-ready`:
 
 1. Resolve the current attempt status and target status.
 2. Run `pre-attempt-status-review-ready`.
@@ -358,7 +358,7 @@ For machine-readable mode, `--json` should return a structured error such as:
 {
   "error": "attempt_status_transition_blocked",
   "hook": "pre-attempt-status-review-ready",
-  "attempt_status_from": "running",
+  "attempt_status_from": "wip",
   "attempt_status_to": "review-ready",
   "exit_code": 1,
   "stderr": "validation failed"

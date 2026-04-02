@@ -146,7 +146,7 @@ if [ $? -ne 0 ]; then
   if [ -n "$PSTDIO_WORKSPACE" ]; then
     pstdio workspaces set-status \
       --workspace "$PSTDIO_WORKSPACE" \
-      --status "running"
+      --status "wip"
   fi
 
   if [ -n "$PSTDIO_SESSION_ID" ]; then
