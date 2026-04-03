@@ -7,6 +7,7 @@ import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
+let appDeps: Awaited<ReturnType<typeof createApp>>["deps"];
 let tempRoot: string;
 let projectId: string;
 let repoDir: string;
@@ -14,10 +15,12 @@ let repoDir: string;
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-attempt-status-test-"));
   repoDir = mkdtempSync(join(tmpdir(), "pstdio-attempt-status-repo-"));
-  ({ app } = await createApp({
+  const created = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
-  }));
+  });
+  app = created.app;
+  appDeps = created.deps;
 
   const projectRes = await app.request("/v1/projects", {
     method: "POST",
@@ -250,5 +253,46 @@ describe("PATCH /v1/workspaces/:id/attempt-status", () => {
     expect(postFired).toBe(true);
     expect(readFileSync(preOutputPath, "utf-8").trim()).toBe(workspace.ticketShorthand);
     expect(readFileSync(postOutputPath, "utf-8").trim()).toBe(workspace.ticketShorthand);
+  });
+
+  test("includes original_session_id in deferred post-hook payload", async () => {
+    const workspace = await createWorkspace();
+    const outputPath = join(repoDir, `post-attempt-status-changes-requested-orig-${Date.now()}.txt`);
+
+    writeHook(
+      "post-attempt-status-changes-requested",
+      `set -eu
+if [ "$PSTDIO_WORKSPACE_ID" = "${workspace.id}" ]; then
+  printf '%s|%s' "$PSTDIO_SESSION_ID" "\${PSTDIO_ORIGINAL_SESSION_ID:-}" > "${outputPath}"
+fi`,
+    );
+
+    const originalSession = await appDeps.sessionService.create({
+      project_id: projectId,
+      title: "Original session",
+      agent: "fake",
+    });
+
+    const reviewSession = await appDeps.sessionService.create({
+      project_id: projectId,
+      title: "Review session",
+      agent: "fake",
+      original_session_id: originalSession.id,
+    });
+
+    const res = await app.request(`/v1/workspaces/${workspace.id}/attempt-status`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status: "changes-requested", session_id: reviewSession.id }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(existsSync(outputPath)).toBe(false);
+
+    await appDeps.sessionService.transitionStatus(reviewSession.id, "completed");
+
+    const fired = await waitForPath(outputPath);
+    expect(fired).toBe(true);
+    expect(readFileSync(outputPath, "utf-8").trim()).toBe(`${reviewSession.id}|${originalSession.id}`);
   });
 });

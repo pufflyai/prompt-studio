@@ -11,15 +11,33 @@ import type {
   WorktreeHookName,
 } from "./types";
 
-let hooksLogger: ReturnType<typeof createLogger> | null = null;
+const LOGGER_CONFIG_KEYS = [
+  "PSTDIO_DB_PATH",
+  "PSTDIO_LOG_LEVEL",
+  "PSTDIO_LOG_PATH",
+  "PSTDIO_LOG_TARGETS",
+  "PSTDIO_STATE_DIR",
+  "PSTDIO_STORAGE_PATH",
+] as const;
+
+let hooksLogger: {
+  cacheKey: string;
+  logger: ReturnType<typeof createLogger>;
+} | null = null;
+
+const getLoggerCacheKey = () => LOGGER_CONFIG_KEYS.map((key) => `${key}=${process.env[key] ?? ""}`).join("|");
 
 const getHooksLogger = () => {
-  if (hooksLogger) {
-    return hooksLogger;
+  const cacheKey = getLoggerCacheKey();
+  if (hooksLogger && hooksLogger.cacheKey === cacheKey) {
+    return hooksLogger.logger;
   }
 
-  hooksLogger = createLogger({ component: "hooks", service: "pstdio-hooks" });
-  return hooksLogger;
+  hooksLogger = {
+    cacheKey,
+    logger: createLogger({ component: "hooks", service: "pstdio-hooks" }),
+  };
+  return hooksLogger.logger;
 };
 
 const WORKTREE_HOOK_NAMES: WorktreeHookName[] = [

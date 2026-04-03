@@ -80,4 +80,43 @@ describe("hook logging", () => {
       rmSync(tmp, { recursive: true, force: true });
     }
   });
+
+  test("runHook rebinds logger when log path changes in-process", async () => {
+    const firstTmp = mkdtempSync(join(tmpdir(), "pstdio-hooks-logging-first-"));
+    const secondTmp = mkdtempSync(join(tmpdir(), "pstdio-hooks-logging-second-"));
+    const firstLogPath = join(firstTmp, "logs.jsonl");
+    const secondLogPath = join(secondTmp, "logs.jsonl");
+    process.env.PSTDIO_LOG_LEVEL = "info";
+
+    const writeExecutableHook = (repoPath: string) => {
+      const hookPath = join(repoPath, ".pstdio", "hooks", "post-worktree-create");
+      mkdirSync(join(repoPath, ".pstdio", "hooks"), { recursive: true });
+      writeFileSync(hookPath, "#!/bin/sh\necho ok\n");
+      chmodSync(hookPath, 0o755);
+      return hookPath;
+    };
+
+    try {
+      process.env.PSTDIO_LOG_PATH = firstLogPath;
+      writeExecutableHook(firstTmp);
+
+      const { runHook } = await import("./hooks");
+      const firstResult = await runHook("post-worktree-create", { worktree_path: firstTmp }, { repoPath: firstTmp });
+      expect(firstResult.exitCode).toBe(0);
+      await waitForLogEntry(firstLogPath, (entry) => entry.event === "hook.run.completed");
+
+      process.env.PSTDIO_LOG_PATH = secondLogPath;
+      writeExecutableHook(secondTmp);
+
+      const secondResult = await runHook("post-worktree-create", { worktree_path: secondTmp }, { repoPath: secondTmp });
+      expect(secondResult.exitCode).toBe(0);
+
+      const secondEntries = await waitForLogEntry(secondLogPath, (entry) => entry.event === "hook.run.completed");
+      expect(secondEntries.some((entry) => entry.event === "hook.run.start")).toBeTrue();
+      expect(secondEntries.some((entry) => entry.event === "hook.run.completed")).toBeTrue();
+    } finally {
+      rmSync(firstTmp, { recursive: true, force: true });
+      rmSync(secondTmp, { recursive: true, force: true });
+    }
+  });
 });

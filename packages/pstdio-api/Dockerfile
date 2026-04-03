@@ -11,6 +11,8 @@ COPY packages/pstdio-api/package.json packages/pstdio-api/package.json
 COPY packages/pstdio-agents/package.json packages/pstdio-agents/package.json
 COPY packages/pstdio-dashboard/package.json packages/pstdio-dashboard/package.json
 COPY packages/pstdio-db/package.json packages/pstdio-db/package.json
+COPY packages/pstdio-hooks/package.json packages/pstdio-hooks/package.json
+COPY packages/pstdio-logging/package.json packages/pstdio-logging/package.json
 COPY packages/pstdio-storage/package.json packages/pstdio-storage/package.json
 COPY packages/pstdio-wt/package.json packages/pstdio-wt/package.json
 COPY packages/ui/package.json packages/ui/package.json

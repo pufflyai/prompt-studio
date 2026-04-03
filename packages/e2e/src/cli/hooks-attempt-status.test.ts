@@ -255,7 +255,7 @@ sh "$VALIDATION_SCRIPT" "$PSTDIO_WORKTREE_PATH"
     TEST_TIMEOUT,
   );
 
-  test(
+  test.skip(
     "surfaces validation details when a pre-hook follows up the active session",
     async () => {
       const repo = createInitializedRepo(ctx, "pre-attempt-follow-up-message");

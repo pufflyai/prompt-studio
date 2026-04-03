@@ -73,6 +73,9 @@ export const updateAttemptStatusHandler = (deps: RouteDeps): AppRouteHandler<typ
 
     const ticketLink = await deps.workspaceService.getTicketWorkspaceLink(workspace.id);
     const ticket = ticketLink ? await deps.ticketService.get(ticketLink.ticket_id) : null;
+    const session = sessionId ? await deps.sessionService.get(sessionId) : null;
+    const originalSessionId =
+      session && session.project_id === workspace.project_id ? (session.original_session_id ?? undefined) : undefined;
 
     // Build payload for hooks
     const payload = {
@@ -85,6 +88,7 @@ export const updateAttemptStatusHandler = (deps: RouteDeps): AppRouteHandler<typ
       attempt_status_from: fromStatusName ?? "",
       attempt_status_to: status,
       ...(sessionId && { session_id: sessionId }),
+      ...(originalSessionId && { original_session_id: originalSessionId }),
     };
 
     // Run pre-hook

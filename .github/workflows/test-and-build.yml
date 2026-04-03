@@ -46,7 +46,7 @@ jobs:
         run: bun run lint
 
       - name: Install Playwright browsers
-        run: bunx playwright install --with-deps chromium
+        run: bun run --cwd packages/e2e playwright install --with-deps chromium
 
       - name: Test monorepo
         run: bun run test
