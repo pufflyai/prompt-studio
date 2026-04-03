@@ -169,6 +169,7 @@ export type EventStore = {
   getHistory(): JsonPatch[];
   subscribe(): AsyncIterable<JsonPatch>;
   historyPlusStream(): AsyncIterable<JsonPatch>;
+  snapshotAndSubscribe(): { history: JsonPatch[]; stream: AsyncIterable<JsonPatch> };
 };
 
 // --- Spawned Process ---

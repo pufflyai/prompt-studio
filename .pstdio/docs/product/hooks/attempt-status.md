@@ -31,7 +31,9 @@ Why this matters:
 Provider note:
 
 - Claude Code flows can read `PSTDIO_SESSION_ID` from env, and `pstdio workspaces set-status` can fall back to it.
-- OpenCode flows should include explicit command guidance in prompt/instructions to pass `--session-id`.
+- OpenCode flows should use a `shell.env` bridge that maps OpenCode `sessionID` to the pstdio session id and exports `PSTDIO_SESSION_ID` into shell execution.
+
+If the OpenCode bridge cannot resolve a pstdio session id, the status update can still succeed, but deferred `post-attempt-status-*` delivery remains sessionless and is not queued.
 
 ## Configuration
 

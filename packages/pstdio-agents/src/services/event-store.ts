@@ -116,11 +116,23 @@ export const createEventStore = (options?: EventStoreOptions): EventStore & { cl
     },
   });
 
+  const snapshotAndSubscribe = () => {
+    const historySnapshot = [...history];
+    const liveIterator = subscribe()[Symbol.asyncIterator]();
+
+    return {
+      history: historySnapshot,
+      stream: {
+        [Symbol.asyncIterator]: () => liveIterator,
+      },
+    };
+  };
+
   const close = () => {
     closed = true;
     emitter.emit(CLOSE_EVENT);
     emitter.removeAllListeners();
   };
 
-  return { push, getHistory, subscribe, historyPlusStream, close };
+  return { push, getHistory, subscribe, historyPlusStream, snapshotAndSubscribe, close };
 };

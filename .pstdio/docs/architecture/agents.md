@@ -176,7 +176,9 @@ If a user runs `pstdio workspaces set-status` directly, `--session-id` can be om
 Provider runtime model determines whether per-session env is reliable:
 
 - **Claude Code (stdio child process):** pstdio can inject `PSTDIO_SESSION_ID` per spawn/resume call.
-- **OpenCode (shared HTTP server):** process env is shared at server level, so env is not a reliable per-session channel under concurrency.
+- **OpenCode (shared HTTP server):** process env passed at session start is shared at server level, so it is not a reliable per-session channel under concurrency.
+
+OpenCode's `shell.env` plugin hook is the correct bridge point for shell execution. The hook can inject env vars per shell run, and newer OpenCode builds can pass optional `sessionID` and `callID` into that hook for bash/prompt execution paths.
 
 ### Contract
 
@@ -187,9 +189,11 @@ Provider runtime model determines whether per-session env is reliable:
 ### Provider-specific strategy
 
 - **Claude Code path:** use env propagation (`PSTDIO_SESSION_ID`) and pass it through in hook scripts.
-- **OpenCode path:** inject explicit session-id command guidance into the prompt/instructions (for example, `pstdio workspaces set-status --status <status> --session-id <id>`).
+- **OpenCode path:** use a pstdio-managed `shell.env` bridge. The bridge reads OpenCode's `sessionID` and `callID`, resolves `sessionID` to the matching pstdio session, and exports `PSTDIO_SESSION_ID` into shell execution so the existing CLI fallback continues to work. It may also export raw OpenCode diagnostics such as `OPENCODE_EXECUTOR_SESSION_ID` and `OPENCODE_EXECUTOR_CALL_ID`.
 
-This keeps session correlation explicit and avoids ambiguous workspace-only inference when multiple sessions run in parallel.
+This keeps session correlation explicit without relying on prompt compliance, and avoids ambiguous workspace-only inference when multiple sessions run in parallel.
+
+Longer term, once OpenCode exposes session env directly to child processes without a custom plugin, pstdio should consume that native env and remove the separate plugin-install step.
 
 ## Permissions and approvals
 

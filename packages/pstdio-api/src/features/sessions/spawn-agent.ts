@@ -89,6 +89,8 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
   if (result.process) {
     deps.sessionService.store.setProcess(input.sessionId, result.process);
     trackProcessExit(input.sessionId, result.process, deps);
+  } else {
+    console.warn(`[session:${input.sessionId}] resume returned NO process — status will stay in_progress`);
   }
 
   return result;
@@ -99,18 +101,26 @@ const trackProcessExit = (
   process: { onExit: Promise<{ code: number | null; signal: string | null }> },
   deps: SpawnDeps,
 ) => {
-  process.onExit.then(async ({ code, signal }) => {
-    const entry = deps.sessionService.store.get(sessionId);
-    if (entry) {
-      const patches = entry.eventStore.getHistory();
-      await persistSessionMessages(sessionId, patches, deps).catch(() => {});
-    }
+  process.onExit
+    .then(async ({ code, signal }) => {
+      const entry = deps.sessionService.store.get(sessionId);
+      if (entry) {
+        const patches = entry.eventStore.getHistory();
+        await persistSessionMessages(sessionId, patches, deps).catch((err) => {
+          console.error(`[session:${sessionId}] persistSessionMessages failed:`, err);
+        });
+      } else {
+        console.warn(`[session:${sessionId}] no store entry found on exit — messages not persisted`);
+      }
 
-    const status = code === 0 ? "completed" : "failed";
-    if (status === "failed") {
-      console.error(`[session] agent process exited with code=${code} signal=${signal} for session ${sessionId}`);
-    }
-    await deps.sessionService.transitionStatus(sessionId, status);
-    deps.sessionService.store.remove(sessionId);
-  });
+      const status = code === 0 ? "completed" : "failed";
+      if (status === "failed") {
+        console.error(`[session] agent process exited with code=${code} signal=${signal} for session ${sessionId}`);
+      }
+      await deps.sessionService.transitionStatus(sessionId, status);
+      deps.sessionService.store.remove(sessionId);
+    })
+    .catch((err) => {
+      console.error(`[session:${sessionId}] trackProcessExit failed:`, err);
+    });
 };

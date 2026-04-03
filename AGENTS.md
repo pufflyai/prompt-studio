@@ -73,6 +73,10 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 - Run `bun changeset`, choose the semver bump (`patch`, `minor`, `major`), and write a **one-line changelog summary**.
 - **Do not manually edit `package.json` versions**.
 
+❌ Not allowed:
+
+- Changesets for tests and refactor only changes.
+
 ## Coding Style Rules
 
 - Split content that will grow in separate files (endpoints, schemas, etc.)
@@ -92,9 +96,9 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 
 ### Testing Rules
 
-- Tests must be **located next to the file they test**
-- Avoid mocks, test the real thing when possible
-- Bug fixes must add a regression test first
+- Tests must be **located next to the file they test**.
+- Avoid mocks, test the real thing when possible.
+- Bug fixes must add a regression test first.
 
 ❌ Not allowed:
 

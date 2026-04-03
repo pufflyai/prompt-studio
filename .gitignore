@@ -151,6 +151,7 @@ node_modules/
 .claude
 .opencode
 .codex
+.agents
 
 # Local API database
 packages/api/.db/
@@ -171,7 +172,9 @@ __test-tmp__
 
 */**/storybook-static
 
-.pstdio/tickets
-.pstdio/config.json
 packages/pstdio/README.md
 packages/pstdio/.readme.generated
+
+# pstdio
+.pstdio/tickets
+.pstdio/config.json

@@ -5,6 +5,7 @@ import { streamSSE } from "hono/streaming";
 import type { AgentId, EventStore, JsonPatch, SessionMessage } from "pstdio-agents";
 import type { AppBindings } from "../../../types";
 import type { RouteDeps } from "../../deps";
+import { buildMessagesFromPatches, resolveMessagePatchIndexOffset } from "../session-messages";
 
 const SESSION_STREAM_HEARTBEAT_MS = 1000;
 
@@ -23,11 +24,15 @@ const replayMessagesAsPatch = async (messages: SessionMessage[], stream: SSEStre
   await stream.writeSSE({ data: JSON.stringify(patch), event: "patch" });
 };
 
-const replayPersistedMessages = async (sessionFileId: string, deps: RouteDeps, stream: SSEStreamingApi) => {
+const getPersistedMessages = async (sessionFileId: string, deps: RouteDeps) => {
   const file = await deps.fileService.get(sessionFileId);
-  if (!file) return;
+  if (!file) return [];
 
-  const messages = JSON.parse(readFileSync(file.storage_path, "utf-8")) as SessionMessage[];
+  return JSON.parse(readFileSync(file.storage_path, "utf-8")) as SessionMessage[];
+};
+
+const replayPersistedMessages = async (sessionFileId: string, deps: RouteDeps, stream: SSEStreamingApi) => {
+  const messages = await getPersistedMessages(sessionFileId, deps);
   await replayMessagesAsPatch(messages, stream);
 };
 
@@ -51,13 +56,13 @@ const replayCompletedSession = async (session: SessionRecord, deps: RouteDeps, s
   }
 };
 
-const streamLivePatches = async (eventStore: EventStore, stream: SSEStreamingApi) => {
+const streamLivePatches = async (patches: AsyncIterable<JsonPatch>, stream: SSEStreamingApi) => {
   let aborted = false;
   stream.onAbort(() => {
     aborted = true;
   });
 
-  const iterator = eventStore.historyPlusStream()[Symbol.asyncIterator]();
+  const iterator = patches[Symbol.asyncIterator]();
   let nextPatchPromise: Promise<IteratorResult<JsonPatch>> | null = null;
 
   while (!aborted) {
@@ -91,6 +96,46 @@ const streamLivePatches = async (eventStore: EventStore, stream: SSEStreamingApi
 
   await iterator.return?.();
   return aborted;
+};
+
+const shiftIndexedMessagePatch = (patch: JsonPatch, indexOffset: number): JsonPatch => {
+  if (indexOffset === 0) {
+    return patch;
+  }
+
+  const match = patch.path.match(/^\/messages\/(\d+)$/);
+  if (!match) {
+    return patch;
+  }
+
+  return {
+    ...patch,
+    path: `/messages/${Number(match[1]) + indexOffset}`,
+  };
+};
+
+async function* translateIndexedMessagePatches(patches: AsyncIterable<JsonPatch>, indexOffset: number) {
+  for await (const patch of patches) {
+    yield shiftIndexedMessagePatch(patch, indexOffset);
+  }
+}
+
+const replayActiveSession = async (
+  session: SessionRecord,
+  eventStore: EventStore,
+  deps: RouteDeps,
+  stream: SSEStreamingApi,
+) => {
+  const persistedMessages = session.session_file_id ? await getPersistedMessages(session.session_file_id, deps) : [];
+  const snapshot = eventStore.snapshotAndSubscribe();
+  const indexOffset = resolveMessagePatchIndexOffset(snapshot.history, persistedMessages.length);
+  const messages = buildMessagesFromPatches(snapshot.history, persistedMessages);
+
+  if (messages.length > 0) {
+    await replayMessagesAsPatch(messages, stream);
+  }
+
+  return streamLivePatches(translateIndexedMessagePatches(snapshot.stream, indexOffset), stream);
 };
 
 const WAIT_FOR_AGENT_POLL_MS = 500;
@@ -155,11 +200,15 @@ export const streamSessionHandler = (deps: RouteDeps) => {
         return;
       }
 
-      const aborted = await streamLivePatches(entry.eventStore, stream);
+      const session = await deps.sessionService.get(id);
+      const activeSession = session as SessionRecord | null;
+      const aborted = activeSession
+        ? await replayActiveSession(activeSession, entry.eventStore, deps, stream)
+        : await streamLivePatches(entry.eventStore.subscribe(), stream);
 
       if (!aborted) {
-        const session = await deps.sessionService.get(id);
-        const status = session?.status ?? "completed";
+        const finalSession = await deps.sessionService.get(id);
+        const status = finalSession?.status ?? "completed";
         await stream.writeSSE({ data: JSON.stringify({ status }), event: "end" });
       }
     });

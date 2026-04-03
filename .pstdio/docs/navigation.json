@@ -287,6 +287,10 @@
         {
           "text": "Attempt Status Session Correlation",
           "link": "/lessons-learned/attempt_status_session_correlation_in_concurrent_sessions"
+        },
+        {
+          "text": "Follow-up Message Ordering in Claude Code Sessions",
+          "link": "/lessons-learned/follow_up_message_ordering_in_claude_code_sessions"
         }
       ]
     },

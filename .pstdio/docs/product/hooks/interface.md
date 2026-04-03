@@ -103,4 +103,6 @@ pstdio workspaces set-status --workspace "$PSTDIO_WORKSPACE" --status review-rea
 Provider caveat:
 
 - Claude Code can reliably provide `PSTDIO_SESSION_ID` via per-session process env.
-- OpenCode uses a shared server process, so explicit `--session-id` propagation from instructions/prompts is preferred.
+- OpenCode should use a `shell.env` plugin bridge. The bridge reads OpenCode's optional `sessionID` / `callID`, resolves the matching pstdio session, and exports `PSTDIO_SESSION_ID` before shell execution.
+
+`callID` is useful for diagnostics, but `PSTDIO_SESSION_ID` remains the only value the pstdio CLI needs for attempt-status correlation.

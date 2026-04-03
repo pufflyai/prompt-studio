@@ -83,6 +83,24 @@ describe("buildMessagesFromPatches", () => {
     expect(result[3].id).toBe("4");
   });
 
+  test("resume with messageOffset=0 preserves original messages before follow-up", () => {
+    // When getMessages() fails or returns empty, messageOffset falls back to 0.
+    // The accumulator pushes follow-up patches starting at index 0.
+    // On persist, these are merged with initialMessages from the prior session file.
+    // splice(0, 0, followUpUser) inserts BEFORE the originals → wrong order.
+    const initial: SessionMessage[] = [msg("1", "user", "original prompt"), msg("2", "assistant", "original reply")];
+
+    const patches: JsonPatch[] = [
+      { op: "add", path: "/messages/0", value: msg("3", "user", "follow-up prompt") },
+      { op: "add", path: "/messages/1", value: msg("4", "assistant", "follow-up reply") },
+    ];
+
+    const result = buildMessagesFromPatches(patches, initial);
+
+    // Follow-up must appear AFTER originals
+    expect(result.map((m) => m.id)).toEqual(["1", "2", "3", "4"]);
+  });
+
   test("removes empty parts and skips messages with no remaining parts", () => {
     const patches: JsonPatch[] = [
       {

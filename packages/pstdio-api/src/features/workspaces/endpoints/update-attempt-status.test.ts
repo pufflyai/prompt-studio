@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -9,9 +9,11 @@ import type { AppBindings } from "../../../types";
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
 let projectId: string;
+let repoDir: string;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-attempt-status-test-"));
+  repoDir = mkdtempSync(join(tmpdir(), "pstdio-attempt-status-repo-"));
   ({ app } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
@@ -24,10 +26,19 @@ beforeAll(async () => {
   });
   const project = await projectRes.json();
   projectId = project.id;
+
+  // Register repo so hooks can be discovered
+  mkdirSync(repoDir, { recursive: true });
+  await app.request(`/v1/projects/${projectId}/repos`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name: "test-repo", path: repoDir }),
+  });
 });
 
 afterAll(() => {
   rmSync(tempRoot, { recursive: true, force: true });
+  rmSync(repoDir, { recursive: true, force: true });
 });
 
 const createAttemptStatus = async (name: string) => {
@@ -56,6 +67,14 @@ const createWorkspace = async () => {
   });
   expect(wsRes.status).toBe(201);
   return (await wsRes.json()) as { id: string };
+};
+
+const writeHook = (hookName: string, script: string) => {
+  const hooksDir = join(repoDir, ".pstdio", "hooks");
+  mkdirSync(hooksDir, { recursive: true });
+  const path = join(hooksDir, hookName);
+  writeFileSync(path, `#!/bin/sh\n${script}`);
+  chmodSync(path, 0o755);
 };
 
 describe("PATCH /v1/workspaces/:id/attempt-status", () => {
@@ -123,6 +142,38 @@ describe("PATCH /v1/workspaces/:id/attempt-status", () => {
     });
 
     expect(res.status).toBe(404);
+  });
+
+  test("returns 422 with hook output when pre-hook rejects", async () => {
+    writeHook("pre-attempt-status-review-ready", 'echo "lint: 3 errors found" >&2; exit 1');
+
+    const workspace = await createWorkspace();
+
+    const res = await app.request(`/v1/workspaces/${workspace.id}/attempt-status`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status: "review-ready" }),
+    });
+
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.hook_output).toContain("lint: 3 errors found");
+  });
+
+  test("returns 422 with stdout when pre-hook writes to stdout and exits non-zero", async () => {
+    writeHook("pre-attempt-status-review-ready", 'echo "test suite failed: 2 failures"; exit 1');
+
+    const workspace = await createWorkspace();
+
+    const res = await app.request(`/v1/workspaces/${workspace.id}/attempt-status`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status: "review-ready" }),
+    });
+
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.hook_output).toContain("test suite failed: 2 failures");
   });
 
   test("returns 404 for unknown status name", async () => {

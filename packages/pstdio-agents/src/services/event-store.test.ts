@@ -120,6 +120,25 @@ describe("createEventStore", () => {
     expect(items[0]).toMatchObject({ path: "/messages/0" });
   });
 
+  test("snapshotAndSubscribe returns history separately and streams only live patches", async () => {
+    const store = createEventStore();
+
+    store.push(patch(0));
+    store.push(patch(1));
+
+    const snapshot = store.snapshotAndSubscribe();
+
+    setTimeout(() => store.push(patch(2)), 10);
+
+    const items = await collect(snapshot.stream, 1);
+
+    expect(snapshot.history).toHaveLength(2);
+    expect(snapshot.history[0]).toMatchObject({ path: "/messages/0" });
+    expect(snapshot.history[1]).toMatchObject({ path: "/messages/1" });
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ path: "/messages/2" });
+  });
+
   test("FIFO eviction when exceeding maxSizeBytes", () => {
     const smallPatch: JsonPatch = { op: "add", path: "/messages/0", value: "x" };
     const patchSize = JSON.stringify(smallPatch).length;

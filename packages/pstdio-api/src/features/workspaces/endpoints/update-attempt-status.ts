@@ -90,7 +90,8 @@ export const updateAttemptStatusHandler = (deps: RouteDeps): AppRouteHandler<typ
     );
 
     if (preResult.rejected) {
-      return c.json({ error: "Pre-hook rejected the transition", hook_output: preResult.stderr }, 422);
+      const hookOutput = [preResult.stdout, preResult.stderr].filter(Boolean).join("\n").trim();
+      return c.json({ error: "Pre-hook rejected the transition", hook_output: hookOutput }, 422);
     }
 
     // Commit the transition

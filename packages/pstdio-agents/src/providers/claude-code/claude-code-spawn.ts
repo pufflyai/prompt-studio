@@ -278,6 +278,10 @@ const defaultSpawnProcess = (args: string[], options?: { cwd?: string; env?: Nod
     env: { ...cleanEnv(), ...options?.env },
   }) as ChildProcess;
 
+  child.on("error", (err) => {
+    console.error(`[claude-code:spawn] child process error:`, err);
+  });
+
   const onExit = new Promise<{ code: number | null; signal: string | null }>((resolve) => {
     child.once("exit", (code, signal) => resolve({ code, signal }));
   });

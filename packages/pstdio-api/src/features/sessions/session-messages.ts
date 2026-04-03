@@ -20,11 +20,28 @@ const sanitizeMessages = (messages: SessionMessage[]) => {
   return sanitized;
 };
 
+// When resuming with messageOffset=0 (e.g. getMessages failed), the accumulator
+// emits patches at /messages/0, /messages/1, etc. If we naively splice into
+// initialMessages at those indices, the follow-up gets inserted *before* the
+// originals. Detect this case and shift patch indices past the initial messages.
+export const resolveMessagePatchIndexOffset = (patches: JsonPatch[], initialCount: number) => {
+  if (initialCount === 0) return 0;
+
+  const firstIndexedPatch = patches.find((p) => /^\/messages\/\d+$/.test(p.path) && p.op === "add");
+  if (!firstIndexedPatch) return 0;
+
+  const firstIndex = Number(firstIndexedPatch.path.match(/\/messages\/(\d+)/)![1]);
+  if (firstIndex < initialCount) return initialCount;
+
+  return 0;
+};
+
 export const buildMessagesFromPatches = (
   patches: JsonPatch[],
   initialMessages?: SessionMessage[],
 ): SessionMessage[] => {
   let messages: SessionMessage[] = initialMessages ? [...initialMessages] : [];
+  const indexOffset = resolveMessagePatchIndexOffset(patches, initialMessages?.length ?? 0);
 
   for (const patch of patches) {
     if (patch.path === "/messages" && (patch.op === "add" || patch.op === "replace")) {
@@ -37,7 +54,7 @@ export const buildMessagesFromPatches = (
     const match = patch.path.match(/^\/messages\/(\d+)$/);
     if (!match) continue;
 
-    const index = Number(match[1]);
+    const index = Number(match[1]) + indexOffset;
 
     if (patch.op === "add") {
       messages.splice(index, 0, patch.value as SessionMessage);
