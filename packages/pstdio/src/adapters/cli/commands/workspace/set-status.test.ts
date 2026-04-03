@@ -1,8 +1,10 @@
 import { describe, expect, mock, test } from "bun:test";
+import yargs from "yargs";
 import { createHandler, detectWorkspaceFromBranch } from "./set-status";
 
 const baseDeps = {
   cwd: () => "/repo",
+  env: () => process.env,
   findGitRoot: () => "/repo" as string | null,
   readConfig: () => ({ project_id: "proj-1" }) as { project_id: string } | null,
   getWorkspace: async () => ({
@@ -29,7 +31,63 @@ describe("workspaces set-status", () => {
     await handler({ workspace: "PS-1_A1", status: "review-ready", _: [], $0: "" } as never);
 
     expect(updateAttemptStatus).toHaveBeenCalledTimes(1);
+    expect(updateAttemptStatus).toHaveBeenCalledWith("http://localhost:19840", "ws-1", "review-ready", undefined);
     expect(log).toHaveBeenCalledWith('Updated attempt status to "review-ready" for workspace PS-1_A1');
+  });
+
+  test("passes session id when provided", async () => {
+    const updateAttemptStatus = mock(async () => ({}));
+    const handler = createHandler({ ...baseDeps, updateAttemptStatus });
+
+    await handler({ workspace: "PS-1_A1", status: "review-ready", "session-id": "sess-123", _: [], $0: "" } as never);
+
+    expect(updateAttemptStatus).toHaveBeenCalledWith("http://localhost:19840", "ws-1", "review-ready", "sess-123");
+  });
+
+  test("falls back to PSTDIO_SESSION_ID from env", async () => {
+    const updateAttemptStatus = mock(async () => ({}));
+    const originalSessionId = process.env.PSTDIO_SESSION_ID;
+    process.env.PSTDIO_SESSION_ID = "sess-from-env";
+
+    try {
+      const handler = createHandler({ ...baseDeps, updateAttemptStatus });
+
+      await handler({ workspace: "PS-1_A1", status: "review-ready", _: [], $0: "" } as never);
+    } finally {
+      if (originalSessionId === undefined) {
+        delete process.env.PSTDIO_SESSION_ID;
+      } else {
+        process.env.PSTDIO_SESSION_ID = originalSessionId;
+      }
+    }
+
+    expect(updateAttemptStatus).toHaveBeenCalledWith("http://localhost:19840", "ws-1", "review-ready", "sess-from-env");
+  });
+
+  test("prefers explicit session id over PSTDIO_SESSION_ID from env", async () => {
+    const updateAttemptStatus = mock(async () => ({}));
+    const originalSessionId = process.env.PSTDIO_SESSION_ID;
+    process.env.PSTDIO_SESSION_ID = "sess-from-env";
+
+    try {
+      const handler = createHandler({ ...baseDeps, updateAttemptStatus });
+
+      await handler({
+        workspace: "PS-1_A1",
+        status: "review-ready",
+        "session-id": "sess-explicit",
+        _: [],
+        $0: "",
+      } as never);
+    } finally {
+      if (originalSessionId === undefined) {
+        delete process.env.PSTDIO_SESSION_ID;
+      } else {
+        process.env.PSTDIO_SESSION_ID = originalSessionId;
+      }
+    }
+
+    expect(updateAttemptStatus).toHaveBeenCalledWith("http://localhost:19840", "ws-1", "review-ready", "sess-explicit");
   });
 
   test("auto-detects workspace from branch", async () => {
@@ -96,5 +154,18 @@ describe("detectWorkspaceFromBranch", () => {
 
   test("returns null for bare prefix", () => {
     expect(detectWorkspaceFromBranch("workspace/")).toBeNull();
+  });
+});
+
+describe("help", () => {
+  test("includes command to list available attempt statuses", async () => {
+    const { builder } = await import("./set-status");
+    const cli = builder(
+      yargs([])
+        .exitProcess(false)
+        .fail(() => {}),
+    );
+    const help = await cli.getHelp();
+    expect(help).toContain("pstdio workspaces list-statuses");
   });
 });

@@ -76,6 +76,8 @@ export const updateAttemptStatusHandler = (deps: RouteDeps): AppRouteHandler<typ
       workspace_id: workspace.id,
       workspace: workspace.workspace_shorthand,
       project_id: workspace.project_id,
+      worktree_path: workspace.worktree_path ?? undefined,
+      branch: workspace.branch ?? undefined,
       attempt_status_from: fromStatusName ?? "",
       attempt_status_to: status,
       ...(sessionId && { session_id: sessionId }),

@@ -88,6 +88,7 @@ export type SessionStartInput = {
   title?: string;
   model?: string | null;
   cwd?: string;
+  env?: NodeJS.ProcessEnv;
   eventStore?: EventStore;
 };
 
@@ -101,6 +102,7 @@ export type SessionMessageInput = {
   prompt: string;
   model?: string | null;
   cwd?: string;
+  env?: NodeJS.ProcessEnv;
   messageOffset?: number;
 };
 

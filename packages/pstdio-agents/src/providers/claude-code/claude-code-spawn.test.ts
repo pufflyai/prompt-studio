@@ -101,6 +101,44 @@ describe("spawnClaudeCodeSession", () => {
     expect(userPatch.path).toBe("/messages/0");
     expect((userPatch.value as { role: string }).role).toBe("user");
   });
+
+  test("forwards custom env vars to spawned Claude process", async () => {
+    const stdout = new PassThrough();
+    const stdin = new Writable({
+      write(_chunk, _encoding, callback) {
+        callback();
+      },
+    });
+
+    const spawnOptions: Array<{ cwd?: string; env?: NodeJS.ProcessEnv }> = [];
+    const deps: SpawnDeps = {
+      spawnProcess: (_args, options) => {
+        spawnOptions.push(options ?? {});
+        queueMicrotask(() => {
+          stdout.write(`${JSON.stringify({ type: "system", session_id: "session-abc" })}\n`);
+          stdout.end();
+        });
+
+        return {
+          stdin,
+          stdout,
+          stderr: new PassThrough(),
+          kill: () => {},
+          onExit: Promise.resolve({ code: 0, signal: null }),
+        };
+      },
+    };
+
+    await spawnClaudeCodeSession(
+      {
+        prompt: "Hello",
+        env: { PSTDIO_SESSION_ID: "s_123" },
+      },
+      deps,
+    );
+
+    expect(spawnOptions[0]?.env?.PSTDIO_SESSION_ID).toBe("s_123");
+  });
 });
 
 describe("spawnClaudeCodeMessage (resume)", () => {

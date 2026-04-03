@@ -9,7 +9,6 @@ type CreateInput = {
   project_id: string;
   title: string;
   agent: string;
-  workspace_id?: string;
   original_session_id?: string;
   cwd?: string;
 };

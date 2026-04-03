@@ -16,3 +16,4 @@ This reference defines the hook contract used by `pstdio`: names, blocking behav
 
 - [CLI Lifecycle Hooks](../cli/hooks.md)
 - [Attempt Status Hooks (Draft)](./attempt-status-hooks-draft.md)
+- [Hook Lifecycle Logging (Draft)](./lifecycle-logging.md)

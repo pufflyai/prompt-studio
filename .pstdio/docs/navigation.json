@@ -55,6 +55,14 @@
               "link": "/product/cli/update"
             },
             {
+              "text": "Attempt Status Session Correlation (Draft)",
+              "link": "/product/cli/proposals/attempt-status-session-correlation"
+            },
+            {
+              "text": "Origin Session Tracking Contract (Draft)",
+              "link": "/product/cli/proposals/origin-session-tracking-contract"
+            },
+            {
               "text": "Workspaces Multi-Repo (Draft)",
               "link": "/product/cli/workspaces-multi-repo-draft"
             }
@@ -86,6 +94,10 @@
             {
               "text": "Attempt Status Hooks (Draft)",
               "link": "/product/hooks/attempt-status-hooks-draft"
+            },
+            {
+              "text": "Hook Lifecycle Logging (Draft)",
+              "link": "/product/hooks/lifecycle-logging"
             },
             {
               "text": "Cookbook",
@@ -271,6 +283,10 @@
         {
           "text": "Session Hooks Across Status Paths",
           "link": "/lessons-learned/session_status_hooks_missing_on_secondary_paths"
+        },
+        {
+          "text": "Attempt Status Session Correlation",
+          "link": "/lessons-learned/attempt_status_session_correlation_in_concurrent_sessions"
         }
       ]
     },

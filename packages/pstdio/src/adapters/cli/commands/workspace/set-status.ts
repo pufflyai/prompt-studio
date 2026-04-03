@@ -11,17 +11,21 @@ export const describe = "Update the attempt status for a workspace";
 export const builder = (yargs: Argv) =>
   yargs
     .option("workspace", { type: "string", describe: "Workspace shorthand (auto-detected from branch if omitted)" })
-    .option("status", { type: "string", demandOption: true, describe: "New attempt status" });
+    .option("status", { type: "string", demandOption: true, describe: "New attempt status" })
+    .option("session-id", { type: "string", describe: "Session ID for deferred post-attempt-status hooks" })
+    .epilog("Run `pstdio workspaces list-statuses` to see available attempt statuses.");
 
 type SetStatusArgs = {
   workspace?: string;
   status: string;
+  "session-id"?: string;
 };
 
 const WORKSPACE_BRANCH_PREFIX = "workspace/";
 
 type Deps = {
   cwd: () => string;
+  env: () => NodeJS.ProcessEnv;
   findGitRoot: typeof findGitRoot;
   readConfig: typeof readConfig;
   getWorkspace: typeof defaultGetWorkspace;
@@ -40,6 +44,7 @@ const getCurrentBranch = (cwd: string) => {
 
 const defaultDeps: Deps = {
   cwd: () => process.cwd(),
+  env: () => process.env,
   findGitRoot,
   readConfig,
   getWorkspace: defaultGetWorkspace,
@@ -63,7 +68,9 @@ export const createHandler =
     const workspace = await deps.getWorkspace(API_URL, config.project_id, shorthand);
     if (!workspace) throw new Error(`Workspace not found: ${shorthand}`);
 
-    await deps.updateAttemptStatus(API_URL, workspace.id, argv.status);
+    const sessionId = argv["session-id"] ?? deps.env().PSTDIO_SESSION_ID;
+
+    await deps.updateAttemptStatus(API_URL, workspace.id, argv.status, sessionId);
 
     deps.log(`Updated attempt status to "${argv.status}" for workspace ${shorthand}`);
   };

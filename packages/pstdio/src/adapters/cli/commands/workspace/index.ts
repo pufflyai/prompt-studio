@@ -2,6 +2,7 @@ import type { Argv } from "yargs";
 import * as createCommand from "./create";
 import * as deleteCommand from "./delete";
 import * as listCommand from "./list";
+import * as listStatusesCommand from "./list-statuses";
 import * as mergeCommand from "./merge";
 import * as setStatusCommand from "./set-status";
 
@@ -15,6 +16,7 @@ export const builder = (yargs: Argv) => {
   return yargs
     .command(createCommand)
     .command(listCommand)
+    .command(listStatusesCommand)
     .command(deleteCommand)
     .command(mergeCommand)
     .command(setStatusCommand);

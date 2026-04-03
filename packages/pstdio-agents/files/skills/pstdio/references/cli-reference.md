@@ -79,15 +79,18 @@ pstdio sessions archive --id <id>                    # Archive session
 pstdio workspaces create --id <shorthand> [--base <ref>]  # Create worktree for ticket
 pstdio workspaces list                               # List active workspaces
 pstdio workspaces merge --id <ws-id> [--delete-workspace]  # Squash-merge into current branch
-pstdio workspaces set-status [--workspace <shorthand>] --status <s>  # Update attempt status (auto-detects workspace from branch)
+pstdio workspaces set-status [--workspace <shorthand>] --status <s> [--session-id <id>]  # Update attempt status (auto-detects workspace from branch)
 pstdio workspaces delete --id <ws-id>                # Force-remove workspace
 pstdio workspaces startup-log --id <ws-id>           # Show startup script log
 ```
+
+Default attempt statuses: `wip`, `blocked`, `review-ready`, `reviewed`, `changes-requested`.
 
 Status rule:
 
 - During creation/planning, `pstdio tickets update --status ...` is valid.
 - During and after implementation, prefer `pstdio workspaces set-status` and avoid direct ticket status updates.
+- For agent-driven transitions, pass `--session-id` when available to preserve session-bound post-attempt-status hook correlation. If omitted, `workspaces set-status` falls back to `PSTDIO_SESSION_ID` when present.
 
 ## Templates
 

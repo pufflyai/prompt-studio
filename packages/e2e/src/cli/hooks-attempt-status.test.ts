@@ -1,14 +1,19 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { cleanupDirs } from "./helpers";
 import {
   configureAgent,
   createAttemptWithSession,
   createInitializedRepo,
+  createRun,
   getAttemptStatusName,
   getProjectId,
   getWorkspace,
   type HookTestContext,
   registerRepo,
+  updateSessionStatus,
+  wait,
   writeHook,
 } from "./hooks-infra";
 import { type ApiInstance, startApi } from "./start-api";
@@ -42,6 +47,29 @@ const updateAttemptStatus = async (workspaceId: string, status: string, sessionI
 };
 
 describe("attempt-status hooks", () => {
+  test(
+    "pre-hook receives worktree path in environment",
+    async () => {
+      const repo = createInitializedRepo(ctx, "pre-attempt-worktree-path");
+      const projectId = getProjectId(repo);
+      await registerRepo(ctx, projectId, repo, "pre-attempt-worktree-path-repo");
+      await configureAgent(ctx);
+
+      writeHook(
+        repo,
+        "pre-attempt-status-review-ready",
+        'if [ -z "$PSTDIO_WORKTREE_PATH" ]; then echo "missing worktree path" >&2; exit 1; fi\nif [ ! -d "$PSTDIO_WORKTREE_PATH" ]; then echo "invalid worktree path" >&2; exit 1; fi',
+      );
+
+      const { attempt } = await createAttemptWithSession(ctx, repo, "pre-attempt-worktree-path");
+      const workspaceId = attempt.workspace.id;
+
+      const res = await updateAttemptStatus(workspaceId, "review-ready");
+      expect(res.status).toBe(200);
+    },
+    TEST_TIMEOUT,
+  );
+
   test(
     "pre-hook rejects transition and leaves status unchanged",
     async () => {
@@ -135,6 +163,34 @@ describe("attempt-status hooks", () => {
       const body = (await res.json()) as { from_status: string; to_status: string };
       expect(body.from_status).toBe("wip");
       expect(body.to_status).toBe("review-ready");
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
+    "post-attempt-status-review-ready fires when session ends after CLI set-status",
+    async () => {
+      const repo = createInitializedRepo(ctx, "post-attempt-session-end");
+      const projectId = getProjectId(repo);
+      await registerRepo(ctx, projectId, repo, "post-attempt-session-end-repo");
+      await configureAgent(ctx);
+
+      const outputPath = join(repo, "post-attempt-status-review-ready-fired.txt");
+      writeHook(repo, "post-attempt-status-review-ready", `echo "$PSTDIO_SESSION_ID" > "${outputPath}"`);
+
+      const { attempt } = await createAttemptWithSession(ctx, repo, "post-attempt-session-end");
+      expect(attempt.session).toBeTruthy();
+      const run = createRun(ctx);
+
+      run(
+        `workspaces set-status --workspace "${attempt.workspace.workspace_shorthand}" --status review-ready --session-id "${attempt.session!.id}"`,
+        repo,
+      );
+
+      await updateSessionStatus(ctx, attempt.session!.id, "completed");
+      await wait(1000);
+
+      expect(existsSync(outputPath)).toBe(true);
     },
     TEST_TIMEOUT,
   );

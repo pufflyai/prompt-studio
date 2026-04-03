@@ -86,3 +86,21 @@ When using session commands that take `--workspace-id`, the value may be either:
 
 - workspace shorthand (for example `PS-1_A1`)
 - workspace ID
+
+## Session Correlation Note (attempt status)
+
+`PSTDIO_SESSION_ID` is the correlation key used for session-bound attempt-status post hooks.
+It only matters when a status change was triggered from an agent session and we need to map the change back to that session.
+
+User-triggered `pstdio workspaces set-status` calls can omit `--session-id`; the workspace status still updates.
+
+In concurrent workflows, do not rely on workspace context alone to infer session ownership. When possible, pass the session id explicitly:
+
+```sh
+pstdio workspaces set-status --workspace "$PSTDIO_WORKSPACE" --status review-ready --session-id "$PSTDIO_SESSION_ID"
+```
+
+Provider caveat:
+
+- Claude Code can reliably provide `PSTDIO_SESSION_ID` via per-session process env.
+- OpenCode uses a shared server process, so explicit `--session-id` propagation from instructions/prompts is preferred.

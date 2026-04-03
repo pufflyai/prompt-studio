@@ -27,6 +27,7 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
     title: input.title,
     model: input.model,
     cwd: input.cwd,
+    env: { PSTDIO_SESSION_ID: input.sessionId },
     eventStore: entry.eventStore,
   });
 
@@ -78,6 +79,7 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
       prompt: input.prompt,
       model: input.model,
       cwd: input.cwd,
+      env: { PSTDIO_SESSION_ID: input.sessionId },
       messageOffset,
     },
     entry.eventStore,

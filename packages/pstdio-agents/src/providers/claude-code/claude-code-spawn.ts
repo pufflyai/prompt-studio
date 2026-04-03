@@ -268,14 +268,14 @@ type SpawnedChild = {
 };
 
 export type SpawnDeps = {
-  spawnProcess: (args: string[], options?: { cwd?: string }) => SpawnedChild;
+  spawnProcess: (args: string[], options?: { cwd?: string; env?: NodeJS.ProcessEnv }) => SpawnedChild;
 };
 
-const defaultSpawnProcess = (args: string[], options?: { cwd?: string }): SpawnedChild => {
+const defaultSpawnProcess = (args: string[], options?: { cwd?: string; env?: NodeJS.ProcessEnv }): SpawnedChild => {
   const child = spawn("claude", args, {
     stdio: ["pipe", "pipe", "pipe"],
     cwd: options?.cwd,
-    env: cleanEnv(),
+    env: { ...cleanEnv(), ...options?.env },
   }) as ChildProcess;
 
   const onExit = new Promise<{ code: number | null; signal: string | null }>((resolve) => {
@@ -297,7 +297,7 @@ const defaultDeps: SpawnDeps = { spawnProcess: defaultSpawnProcess };
 
 export const spawnClaudeCodeSession = async (input: SessionStartInput, deps: SpawnDeps = defaultDeps) => {
   const args = buildStartSessionArgs(input);
-  const child = deps.spawnProcess(args, { cwd: input.cwd });
+  const child = deps.spawnProcess(args, { cwd: input.cwd, env: input.env });
 
   sendUserMessage(child.stdin, input.prompt);
 
@@ -339,7 +339,7 @@ export const spawnClaudeCodeMessage = async (
   deps: SpawnDeps = defaultDeps,
 ) => {
   const args = buildSpawnArgs(input);
-  const child = deps.spawnProcess(args, { cwd: input.cwd });
+  const child = deps.spawnProcess(args, { cwd: input.cwd, env: input.env });
 
   sendUserMessage(child.stdin, input.prompt, { keepOpen: Boolean(approvalService) });
 
