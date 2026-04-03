@@ -82,22 +82,34 @@ jobs:
           VERSION=$(echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -r '.[] | select(.name == "pstdio") | .version')
           if [ -n "$VERSION" ]; then
             TAG="pstdio@${VERSION}"
-            if gh release view "$TAG" > /dev/null 2>&1; then
+            RELEASE_ASSETS_DIR="packages/pstdio/dist/release-assets"
+
+            rm -rf "$RELEASE_ASSETS_DIR"
+            mkdir -p "$RELEASE_ASSETS_DIR"
+
+            install -m 755 packages/pstdio/dist/platforms/cli-darwin-arm64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-darwin-arm64"
+            install -m 755 packages/pstdio/dist/platforms/cli-darwin-x64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-darwin-x64"
+            install -m 755 packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-linux-x64"
+            install -m 755 packages/pstdio/dist/platforms/cli-linux-arm64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-linux-arm64"
+            install -m 755 packages/pstdio/dist/platforms/cli-linux-x64-musl/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-linux-x64-musl"
+            install -m 755 packages/pstdio/dist/platforms/cli-linux-arm64-musl/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-linux-arm64-musl"
+            install -m 755 packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe "$RELEASE_ASSETS_DIR/pstdio-win-x64.exe"
+            install -m 755 packages/pstdio/dist/platforms/cli-win-arm64/bin/pstdio.exe "$RELEASE_ASSETS_DIR/pstdio-win-arm64.exe"
+            install -m 644 packages/pstdio/dist/platforms/checksums.sha256 "$RELEASE_ASSETS_DIR/checksums.sha256"
+            install -m 755 scripts/install.sh "$RELEASE_ASSETS_DIR/install.sh"
+
+            RELEASE_DRAFT=$(gh release view "$TAG" --json isDraft -q '.isDraft' 2>/dev/null || true)
+
+            if [ "$RELEASE_DRAFT" = "true" ]; then
+              echo "Release $TAG exists as a draft, uploading assets and publishing."
+              gh release upload "$TAG" "$RELEASE_ASSETS_DIR"/* --clobber
+              gh release edit "$TAG" --draft=false
+            elif [ "$RELEASE_DRAFT" = "false" ]; then
               echo "Release $TAG already exists, skipping."
             else
-              gh release create "$TAG" \
-                --title "$TAG" \
-                --generate-notes \
-                packages/pstdio/dist/platforms/cli-darwin-arm64/bin/pstdio#pstdio-darwin-arm64 \
-                packages/pstdio/dist/platforms/cli-darwin-x64/bin/pstdio#pstdio-darwin-x64 \
-                packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio#pstdio-linux-x64 \
-                packages/pstdio/dist/platforms/cli-linux-arm64/bin/pstdio#pstdio-linux-arm64 \
-                packages/pstdio/dist/platforms/cli-linux-x64-musl/bin/pstdio#pstdio-linux-x64-musl \
-                packages/pstdio/dist/platforms/cli-linux-arm64-musl/bin/pstdio#pstdio-linux-arm64-musl \
-                packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe#pstdio-win-x64.exe \
-                packages/pstdio/dist/platforms/cli-win-arm64/bin/pstdio.exe#pstdio-win-arm64.exe \
-                packages/pstdio/dist/platforms/checksums.sha256#checksums.sha256 \
-                scripts/install.sh#install.sh
+              gh release create "$TAG" --title "$TAG" --generate-notes --draft --verify-tag
+              gh release upload "$TAG" "$RELEASE_ASSETS_DIR"/*
+              gh release edit "$TAG" --draft=false
             fi
           fi
         env:

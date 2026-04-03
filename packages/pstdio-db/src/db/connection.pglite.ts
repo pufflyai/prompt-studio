@@ -20,7 +20,6 @@ type EmbeddedMigrationFile = Pick<EmbeddedFile, "name" | "size" | "arrayBuffer">
 
 const DRIZZLE_PREFIX = "../../pstdio-db/drizzle/";
 const DRIZZLE_EXTRACT_DIR = "pstdio-drizzle";
-const DRIZZLE_JOURNAL_FILE = "meta/_journal.json";
 
 const getEmbeddedFiles = (): EmbeddedFile[] => {
   try {
@@ -49,11 +48,6 @@ const extractEmbeddedMigrations = async (
   }
 };
 
-// `_journal.json` is the only reliable signal that a previous extraction finished cleanly.
-// We have seen interrupted writes leave `meta/` behind without a valid journal, which makes
-// later startup look "already extracted" while the migration set is incomplete.
-const hasExtractedMigrationJournal = (root: string) => fs.existsSync(path.join(root, DRIZZLE_JOURNAL_FILE));
-
 export const resolveMigrationsFolder = async (
   options: {
     embeddedFiles?: readonly EmbeddedMigrationFile[];
@@ -66,12 +60,8 @@ export const resolveMigrationsFolder = async (
 
   if (embedded.length > 0) {
     const root = path.join(options.tmpDir ?? os.tmpdir(), DRIZZLE_EXTRACT_DIR);
-    if (!hasExtractedMigrationJournal(root)) {
-      // Without a valid journal we cannot trust file contents or ordering, so we rebuild from scratch.
-      // This prevents stale files from an older binary from mixing with the current embedded migrations.
-      fs.rmSync(root, { recursive: true, force: true });
-      await extractEmbeddedMigrations(embedded, root, options.logger ?? console.log);
-    }
+    fs.rmSync(root, { recursive: true, force: true });
+    await extractEmbeddedMigrations(embedded, root, options.logger ?? console.log);
     return root;
   }
 
