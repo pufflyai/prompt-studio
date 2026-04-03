@@ -118,5 +118,16 @@ export const createSessionsDBService = (db: DbClient) => {
     return rows;
   };
 
-  return { create, get, list, listByStatus, update, updateStatus, archive };
+  const listByAgentSession = async (agent: string, agentSessionId: string) => {
+    const rows = await db
+      .select()
+      .from(sessions)
+      .where(
+        and(eq(sessions.agent, agent), eq(sessions.agent_session_id, agentSessionId), eq(sessions.archived, false)),
+      )
+      .orderBy(sessions.created_at);
+    return rows;
+  };
+
+  return { create, get, list, listByStatus, listByAgentSession, update, updateStatus, archive };
 };

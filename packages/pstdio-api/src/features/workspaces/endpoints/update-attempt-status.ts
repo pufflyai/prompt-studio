@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
-import { firePreAttemptStatusHook } from "../../hooks/attempt-status-hooks";
+import { firePostAttemptStatusHook, firePreAttemptStatusHook } from "../../hooks/attempt-status-hooks";
 
 const attemptStatusBodySchema = z
   .object({
@@ -71,10 +71,14 @@ export const updateAttemptStatusHandler = (deps: RouteDeps): AppRouteHandler<typ
       fromStatusName = fromStatus?.name ?? null;
     }
 
+    const ticketLink = await deps.workspaceService.getTicketWorkspaceLink(workspace.id);
+    const ticket = ticketLink ? await deps.ticketService.get(ticketLink.ticket_id) : null;
+
     // Build payload for hooks
     const payload = {
       workspace_id: workspace.id,
       workspace: workspace.workspace_shorthand,
+      ticket: ticket?.shorthand,
       project_id: workspace.project_id,
       worktree_path: workspace.worktree_path ?? undefined,
       branch: workspace.branch ?? undefined,
@@ -98,6 +102,8 @@ export const updateAttemptStatusHandler = (deps: RouteDeps): AppRouteHandler<typ
     const updated = await deps.workspaceService.updateAttemptStatus(id, toAttemptStatus.id);
     const statusChangeId = randomUUID();
 
+    const postHookPayload = { ...payload, status_change_id: statusChangeId };
+
     // Queue post-hook for deferred delivery at session completion
     if (sessionId) {
       deps.postHookStore.queue(sessionId, {
@@ -106,8 +112,17 @@ export const updateAttemptStatusHandler = (deps: RouteDeps): AppRouteHandler<typ
         projectId: workspace.project_id,
         fromStatus: fromStatusName ?? "",
         toStatus: status,
-        payload: { ...payload, status_change_id: statusChangeId },
+        payload: postHookPayload,
       });
+    } else {
+      void firePostAttemptStatusHook(
+        { repoService: deps.repoService },
+        {
+          projectId: workspace.project_id,
+          toStatus: status,
+          payload: postHookPayload,
+        },
+      ).catch(() => {});
     }
 
     return c.json(

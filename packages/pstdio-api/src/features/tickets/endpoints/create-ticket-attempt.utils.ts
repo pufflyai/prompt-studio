@@ -1,3 +1,4 @@
+import { ticketLogger } from "../../../lib/logger";
 import type { RouteDeps } from "../../deps";
 import { fireSessionStartHook } from "../../hooks/session-hooks";
 import { spawnAgentSession } from "../../sessions/spawn-agent";
@@ -133,7 +134,14 @@ const spawnStartedSession = (
     },
     deps,
   ).catch(async (err) => {
-    console.error(`[attempt] agent spawn failed for session ${input.session.id}:`, err);
+    ticketLogger.error(
+      {
+        err,
+        event: "ticket_attempt.agent_spawn.error",
+        session_id: input.session.id,
+      },
+      "Agent spawn failed for ticket attempt session",
+    );
     await failStartedSession(deps, input.session.id);
   });
 };
@@ -185,7 +193,14 @@ const runSetupAndSpawnAgent = (
 
   void run().catch(async (err) => {
     const message = err instanceof Error ? err.message : String(err);
-    console.error(`[attempt] workspace setup failed for ${input.workspace.id}:`, err);
+    ticketLogger.error(
+      {
+        err,
+        event: "ticket_attempt.workspace_setup.error",
+        workspace_id: input.workspace.id,
+      },
+      "Ticket attempt workspace setup failed",
+    );
 
     const updated = await deps.workspaceService.setSetupError(input.workspace.id, message);
     if (updated) deps.eventBus.emit("workspaces", "set", updated);

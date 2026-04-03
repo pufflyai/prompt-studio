@@ -42,6 +42,7 @@ afterAll(async () => {
 describe("onError handler", () => {
   test("returns 500 with generic message for unhandled errors", async () => {
     const stderrSpy = spyOn(process.stderr, "write").mockReturnValue(true);
+    const stdoutSpy = spyOn(process.stdout, "write").mockReturnValue(true);
 
     // Request a non-existent route that triggers an internal path causing an error
     // We use an endpoint that will throw when the underlying service fails
@@ -56,12 +57,12 @@ describe("onError handler", () => {
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: "Internal server error" });
 
-    // Verify structured JSON was written to stderr
-    const calls = stderrSpy.mock.calls;
-    const errorLog = calls.find((call) => {
+    // Verify structured JSON was written to stdout via shared logger.
+    const stdoutCalls = stdoutSpy.mock.calls;
+    const errorLog = stdoutCalls.find((call) => {
       try {
         const parsed = JSON.parse(call[0] as string);
-        return parsed.message === "test unhandled error";
+        return parsed.event === "api.request.error" && parsed.message === "test unhandled error";
       } catch {
         return false;
       }
@@ -74,7 +75,20 @@ describe("onError handler", () => {
     expect(parsed.path).toBe("/test-error");
     expect(parsed.status).toBe(500);
 
+    // Legacy per-error stderr JSON persistence was removed.
+    const stderrCalls = stderrSpy.mock.calls;
+    const hasStructuredStderrError = stderrCalls.some((call) => {
+      try {
+        const parsed = JSON.parse(call[0] as string);
+        return parsed.message === "test unhandled error";
+      } catch {
+        return false;
+      }
+    });
+    expect(hasStructuredStderrError).toBe(false);
+
     stderrSpy.mockRestore();
+    stdoutSpy.mockRestore();
   });
 });
 

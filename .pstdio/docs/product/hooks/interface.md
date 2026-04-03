@@ -94,6 +94,11 @@ It only matters when a status change was triggered from an agent session and we 
 
 User-triggered `pstdio workspaces set-status` calls can omit `--session-id`; the workspace status still updates.
 
+Post-hook delivery rules:
+
+1. With `session_id`: post hook delivery is deferred to session termination.
+2. Without `session_id`: post hook runs immediately after the status update is committed.
+
 In concurrent workflows, do not rely on workspace context alone to infer session ownership. When possible, pass the session id explicitly:
 
 ```sh
@@ -104,5 +109,3 @@ Provider caveat:
 
 - Claude Code can reliably provide `PSTDIO_SESSION_ID` via per-session process env.
 - OpenCode should use a `shell.env` plugin bridge. The bridge reads OpenCode's optional `sessionID` / `callID`, resolves the matching pstdio session, and exports `PSTDIO_SESSION_ID` before shell execution.
-
-`callID` is useful for diagnostics, but `PSTDIO_SESSION_ID` remains the only value the pstdio CLI needs for attempt-status correlation.

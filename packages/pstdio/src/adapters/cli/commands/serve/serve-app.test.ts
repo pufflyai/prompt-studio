@@ -23,15 +23,15 @@ describe("serveApp", () => {
       serve: () => {
         throw new Error("listen EADDRINUSE");
       },
-      persistError: () => {},
+      reportStartupError: () => {},
     });
 
     await expect(serveApp({ port: 19840 })).rejects.toThrow("EADDRINUSE");
     expect(closed).toBe(true);
   });
 
-  it("persists the error when server startup throws", async () => {
-    let persistedError: Error | undefined;
+  it("reports the error through startup logging when server startup throws", async () => {
+    let reportedError: Error | undefined;
 
     const serveApp = createServeApp({
       createApp: async () => ({
@@ -48,14 +48,14 @@ describe("serveApp", () => {
       serve: () => {
         throw new Error("listen EADDRINUSE");
       },
-      persistError: (error) => {
-        persistedError = error;
+      reportStartupError: (error) => {
+        reportedError = error;
       },
     });
 
     await expect(serveApp({ port: 19840 })).rejects.toThrow("EADDRINUSE");
-    expect(persistedError).toBeDefined();
-    expect(persistedError!.message).toBe("listen EADDRINUSE");
+    expect(reportedError).toBeDefined();
+    expect(reportedError!.message).toBe("listen EADDRINUSE");
   });
 
   it("configures Bun idle timeout to 20 seconds", async () => {

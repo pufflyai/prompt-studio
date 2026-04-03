@@ -6,7 +6,5 @@ set -eu
 # Runs bun run validate; rejects transition on failure.
 # ──────────────────────────────────────────────────────────
 
-REPO_PATH=${PSTDIO_WORKTREE_PATH:-$REPO_PATH}
-
-cd "$REPO_PATH"
+cd "${PSTDIO_WORKTREE_PATH:-$(pwd)}"
 exec bun run validate

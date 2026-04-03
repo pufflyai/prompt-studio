@@ -139,7 +139,7 @@ pstdio [--api-port <n>] [--dashboard-port <n>]       # Launch dashboard + open b
 - **"Project not found"**: Run `pstdio projects list` to verify the project exists, then `pstdio projects link --project-id <id>`.
 - **Skills not installed**: Run `pstdio agents install-skills <agent-id>` to reinstall missing skills.
 - **Config missing**: Check that `.pstdio/config.json` exists at the git root. Create with `pstdio projects create` or `pstdio projects link`.
-- **API not reachable**: Run `pstdio serve` to start the API manually, or check if it is already running on the expected port. Check `~/.pstdio/error-logs/` for startup and runtime error details.
-- **Error logs**: Startup failures and runtime errors are persisted to `~/.pstdio/error-logs/` as JSON files. Check the most recent file for details when the server fails silently.
+- **API not reachable**: Run `pstdio serve` to start the API manually, or check if it is already running on the expected port. Check runtime logs in `~/.pstdio/logs.jsonl` (or your configured log path).
+- **Error logs**: Startup failures and runtime errors are emitted through the shared logger stream (`stdout` and the configured JSONL target).
 - **Agent not found**: Run `pstdio agents list` to check availability. Ensure the agent binary is installed and on your PATH.
 - **Workspace issues**: Run `pstdio workspaces list` to see active workspaces. Use `--force` with `workspaces delete` if a worktree is stuck.

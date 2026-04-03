@@ -22,6 +22,7 @@ export const createSessionService = (deps: SessionServiceDeps) => {
   const get = raw.get;
   const list = raw.list;
   const listByStatus = raw.listByStatus;
+  const listByAgentSession = raw.listByAgentSession;
 
   // --- mutations (orchestrated) ---
   const transitionStatus = async (id: string, status: SessionStatus) => {
@@ -82,6 +83,7 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     get,
     list,
     listByStatus,
+    listByAgentSession,
     create,
     update,
     transitionStatus,

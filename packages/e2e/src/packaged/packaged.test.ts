@@ -210,6 +210,20 @@ describe("packaged pstdio — project lifecycle", () => {
     },
     TEST_TIMEOUT,
   );
+
+  test(
+    "installs bundled OpenCode plugin artifacts in packaged mode",
+    () => {
+      const repo = createInitializedRepo("pkg-opencode-plugin");
+
+      run("agents install-plugins opencode", repo);
+      expect(existsSync(join(repo, ".opencode", "plugins", "pstdio-session-bridge.js"))).toBe(true);
+
+      const secondRun = run("agents install-plugins opencode", repo);
+      expect(secondRun).toContain("All plugin artifacts already installed.");
+    },
+    TEST_TIMEOUT,
+  );
 });
 
 describe("packaged pstdio — tickets", () => {

@@ -291,6 +291,10 @@
         {
           "text": "Follow-up Message Ordering in Claude Code Sessions",
           "link": "/lessons-learned/follow_up_message_ordering_in_claude_code_sessions"
+        },
+        {
+          "text": "Claude Code Follow-up Resume Requires EOF",
+          "link": "/lessons-learned/claude_code_follow_up_resume_requires_eof"
         }
       ]
     },
@@ -300,6 +304,10 @@
         {
           "text": "Overview",
           "link": "/contributing/overview"
+        },
+        {
+          "text": "Tests",
+          "link": "/contributing/tests"
         }
       ]
     }

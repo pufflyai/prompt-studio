@@ -73,6 +73,26 @@ When the session is linked to a ticket workspace, payload also includes:
 }
 ```
 
+## Attempt Status Payloads
+
+Attempt-status hooks receive workspace context plus transition metadata.
+
+Base fields for `pre-attempt-status-*` and `post-attempt-status-*`:
+
+- `workspace_id`
+- `workspace`
+- `ticket`
+- `project_id`
+- `worktree_path`
+- `branch`
+- `attempt_status_from`
+- `attempt_status_to`
+- `session_id` (when provided by caller)
+
+Additional field for `post-attempt-status-*`:
+
+- `status_change_id`
+
 ## Ticket Payloads
 
 Ticket hook payloads contain ticket-level data only.

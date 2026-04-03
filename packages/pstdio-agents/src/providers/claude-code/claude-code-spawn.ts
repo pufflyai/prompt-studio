@@ -345,7 +345,8 @@ export const spawnClaudeCodeMessage = async (
   const args = buildSpawnArgs(input);
   const child = deps.spawnProcess(args, { cwd: input.cwd, env: input.env });
 
-  sendUserMessage(child.stdin, input.prompt, { keepOpen: Boolean(approvalService) });
+  // Claude resume can stall until it sees EOF from stdin in our spawned process.
+  sendUserMessage(child.stdin, input.prompt);
 
   const userMessage: SessionMessage = {
     id: `user-${Date.now()}`,

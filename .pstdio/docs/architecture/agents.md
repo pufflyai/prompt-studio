@@ -161,7 +161,7 @@ The stream endpoint addresses this by replaying persisted messages before live p
 
 Attempt status is workspace-scoped.
 
-`session_id` is only used to point back to the agent session that performed a status change, so deferred `post-attempt-status-*` hooks can be queued on the correct session, or specific sessions can be resumed.
+`session_id` is used to point back to the agent session that performed a status change when `post-attempt-status-*` delivery should be deferred until that session terminates.
 
 This is why session identity must be propagated when agent flows call:
 
@@ -169,7 +169,7 @@ This is why session identity must be propagated when agent flows call:
 pstdio workspaces set-status --status <status>
 ```
 
-If a user runs `pstdio workspaces set-status` directly, `--session-id` can be omitted. The workspace status still updates; only session-bound deferred post-hook queueing depends on `session_id`.
+If a user runs `pstdio workspaces set-status` directly, `--session-id` can be omitted. The workspace status still updates, and post-hook delivery falls back to immediate execution after commit.
 
 ### Why provider behavior differs
 
@@ -185,11 +185,12 @@ OpenCode's `shell.env` plugin hook is the correct bridge point for shell executi
 1. The canonical correlation key is `session_id` on `PATCH /v1/workspaces/{id}/attempt-status`.
 2. `pstdio workspaces set-status` supports `--session-id` and should pass it in agent-driven flows. User-driven calls can omit it.
 3. Queue behavior stays **last status wins per session** (single queued post-hook entry keyed by session id).
+4. When `session_id` is absent, post-hook delivery is immediate (not queued/deferred).
 
 ### Provider-specific strategy
 
 - **Claude Code path:** use env propagation (`PSTDIO_SESSION_ID`) and pass it through in hook scripts.
-- **OpenCode path:** use a pstdio-managed `shell.env` bridge. The bridge reads OpenCode's `sessionID` and `callID`, resolves `sessionID` to the matching pstdio session, and exports `PSTDIO_SESSION_ID` into shell execution so the existing CLI fallback continues to work. It may also export raw OpenCode diagnostics such as `OPENCODE_EXECUTOR_SESSION_ID` and `OPENCODE_EXECUTOR_CALL_ID`.
+- **OpenCode path:** use a pstdio-managed `shell.env` bridge. The bridge reads OpenCode's optional `sessionID`, resolves it to the matching pstdio session, and exports `PSTDIO_SESSION_ID` into shell execution so the existing CLI fallback continues to work.
 
 This keeps session correlation explicit without relying on prompt compliance, and avoids ambiguous workspace-only inference when multiple sessions run in parallel.
 

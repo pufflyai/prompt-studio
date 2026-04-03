@@ -16,11 +16,16 @@ This keeps agents focused on signaling intent, while hooks own workflow automati
 
 Attempt status is workspace-scoped.
 
-`session_id` is only needed to point back to the agent session that performed the status change, so deferred `post-attempt-status-*` delivery is attached to the right session.
+`session_id` is used to point back to the agent session that performed the status change when post-hook delivery must be deferred until that session ends.
 
 If a user runs `pstdio workspaces set-status` manually, `--session-id` can be omitted. The status update still applies to the workspace.
 
 When calling `pstdio workspaces set-status` from agent automation, pass `--session-id` whenever the session id is available. If the flag is omitted, the CLI falls back to `PSTDIO_SESSION_ID` when present.
+
+Delivery behavior:
+
+1. If `session_id` is present, `post-attempt-status-*` is queued and delivered when that session reaches a terminal state.
+2. If `session_id` is absent, `post-attempt-status-*` runs immediately after the status commit.
 
 Why this matters:
 
@@ -33,7 +38,7 @@ Provider note:
 - Claude Code flows can read `PSTDIO_SESSION_ID` from env, and `pstdio workspaces set-status` can fall back to it.
 - OpenCode flows should use a `shell.env` bridge that maps OpenCode `sessionID` to the pstdio session id and exports `PSTDIO_SESSION_ID` into shell execution.
 
-If the OpenCode bridge cannot resolve a pstdio session id, the status update can still succeed, but deferred `post-attempt-status-*` delivery remains sessionless and is not queued.
+If the OpenCode bridge cannot resolve a pstdio session id, the status update still succeeds and `post-attempt-status-*` falls back to immediate delivery (non-deferred).
 
 ## Configuration
 

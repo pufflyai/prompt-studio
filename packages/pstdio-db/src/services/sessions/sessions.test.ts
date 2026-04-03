@@ -103,6 +103,19 @@ describe("sessions service", () => {
     expect(list[0].title).toBe("S2");
   });
 
+  test("lists by external agent session id", async () => {
+    const first = await sessionsService.create({ project_id: projectId, title: "S1", agent: "opencode" });
+    const second = await sessionsService.create({ project_id: projectId, title: "S2", agent: "opencode" });
+    await sessionsService.create({ project_id: projectId, title: "S3", agent: "claude-code" });
+
+    await sessionsService.update(first.id, { agent_session_id: "oc-123" });
+    await sessionsService.update(second.id, { agent_session_id: "oc-123" });
+
+    const list = await sessionsService.listByAgentSession("opencode", "oc-123");
+    expect(list).toHaveLength(2);
+    expect(list.map((session) => session.id)).toEqual([first.id, second.id]);
+  });
+
   test("updates session status", async () => {
     const session = await sessionsService.create({ project_id: projectId, title: "S1", agent: "claude-code" });
     const updated = await sessionsService.updateStatus(session.id, "completed");

@@ -2,6 +2,7 @@ import { execSync } from "node:child_process";
 import type { Arguments, Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
+import { resolveCliSessionId } from "@/features/sessions/resolve-cli-session-id";
 import { getWorkspace as defaultGetWorkspace } from "@/features/workspaces/api/get-workspace";
 import { updateAttemptStatus as defaultUpdateAttemptStatus } from "@/features/workspaces/api/update-attempt-status";
 
@@ -68,7 +69,10 @@ export const createHandler =
     const workspace = await deps.getWorkspace(API_URL, config.project_id, shorthand);
     if (!workspace) throw new Error(`Workspace not found: ${shorthand}`);
 
-    const sessionId = argv["session-id"] ?? deps.env().PSTDIO_SESSION_ID;
+    const sessionId = resolveCliSessionId({
+      explicitSessionId: argv["session-id"],
+      env: deps.env(),
+    });
 
     await deps.updateAttemptStatus(API_URL, workspace.id, argv.status, sessionId);
 

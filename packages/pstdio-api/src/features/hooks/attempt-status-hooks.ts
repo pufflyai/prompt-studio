@@ -19,6 +19,12 @@ type PreHookResult = {
   stdout: string;
 };
 
+type PostHookContext = {
+  projectId: string;
+  toStatus: string;
+  payload: HookPayload;
+};
+
 export const firePreAttemptStatusHook = async (
   deps: AttemptStatusHookDeps,
   context: PreHookContext,
@@ -57,4 +63,9 @@ export const deliverPostAttemptStatusHook = async (
   });
 
   return result;
+};
+
+export const firePostAttemptStatusHook = async (deps: AttemptStatusHookDeps, context: PostHookContext) => {
+  const hookName: AttemptStatusHookName = `post-attempt-status-${context.toStatus}`;
+  return fireHook(deps, { hookName, projectId: context.projectId, payload: context.payload });
 };

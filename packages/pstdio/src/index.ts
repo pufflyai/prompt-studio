@@ -6,7 +6,9 @@ import { topLevelCommandModules } from "./adapters/cli/commands";
 import * as dashboardCommand from "./adapters/cli/commands/dashboard";
 import { API_URL } from "./features/api-url";
 import { ensureApi } from "./features/ensure-api";
+import { createCliCommandTracker } from "./features/logging/cli-command-log";
 import { resolveCliVersion } from "./features/resolve-cli-version";
+import { resolveCliSessionId } from "./features/sessions/resolve-cli-session-id";
 import { shouldLoadEmbedManifest } from "./features/should-load-embed-manifest";
 
 if (shouldLoadEmbedManifest()) {
@@ -40,11 +42,18 @@ const applyApiPortFromArgs = (argv: Record<string, unknown>) => {
   process.env.PSTDIO_API_PORT = String(apiPort);
 };
 
-const cli = yargs(hideBin(process.argv))
+const rawArgs = hideBin(process.argv);
+const commandTracker = createCliCommandTracker({
+  rawArgs,
+  sessionId: resolveCliSessionId({ env: process.env }),
+});
+
+const cli = yargs(rawArgs)
   .scriptName("pstdio")
   .version(cliVersion)
   .strict()
   .fail((msg, err, yargs) => {
+    commandTracker.logFailure(err ?? msg);
     if (err) {
       process.stderr.write(`Error: ${err.message}\n`);
       process.exit(1);
@@ -55,6 +64,9 @@ const cli = yargs(hideBin(process.argv))
     process.exit(1);
   })
   .middleware(async (argv) => {
+    commandTracker.captureArgv(argv);
+    commandTracker.logStart();
+
     const topLevelCommand = argv._[0];
     if (topLevelCommand === "close" || topLevelCommand === "serve") return;
 
@@ -68,8 +80,14 @@ for (const mod of topLevelCommandModules) {
   cli.command(mod as any);
 }
 
-cli.parseAsync().catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error);
-  process.stderr.write(`Error: ${message}\n`);
-  process.exit(1);
-});
+cli
+  .parseAsync()
+  .then(() => {
+    commandTracker.logSuccess();
+  })
+  .catch((error: unknown) => {
+    commandTracker.logFailure(error);
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`Error: ${message}\n`);
+    process.exit(1);
+  });

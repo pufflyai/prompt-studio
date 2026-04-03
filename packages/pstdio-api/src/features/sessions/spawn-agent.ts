@@ -1,4 +1,5 @@
-import type { AgentId, ApprovalRequest } from "pstdio-agents";
+import type { AgentId, ApprovalRequest, SpawnedProcess } from "pstdio-agents";
+import { sessionLogger } from "../../lib/logger";
 import type { RouteDeps } from "../deps";
 import { persistSessionMessages } from "./session-messages";
 
@@ -11,7 +12,102 @@ type SpawnInput = {
   cwd?: string;
 };
 
-type SpawnDeps = Pick<RouteDeps, "agentRegistry" | "eventBus" | "fileService" | "sessionService">;
+type SpawnDeps = Pick<RouteDeps, "agentRegistry" | "eventBus" | "fileService" | "sessionService"> & {
+  processExitTimeoutMs?: number;
+};
+
+const DEFAULT_PROCESS_EXIT_TIMEOUT_MS = 10 * 60 * 1000;
+
+const withProcessExitTimeout = (
+  sessionId: string,
+  process: Pick<SpawnedProcess, "kill" | "onExit">,
+  activity: AsyncIterable<unknown>,
+  timeoutMs: number,
+) =>
+  new Promise<{ code: number | null; signal: string | null }>((resolve, reject) => {
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const activityIterator = activity[Symbol.asyncIterator]();
+
+    const settle = (result: { code: number | null; signal: string | null }) => {
+      if (settled) return;
+      settled = true;
+      if (timer) {
+        clearTimeout(timer);
+      }
+      void activityIterator.return?.();
+      resolve(result);
+    };
+
+    const killProcess = () => {
+      sessionLogger.error(
+        {
+          event: "session.process.timeout",
+          session_id: sessionId,
+          timeout_ms: timeoutMs,
+        },
+        "Agent process timed out without new events; killing process",
+      );
+
+      try {
+        process.kill();
+      } catch (error) {
+        sessionLogger.error(
+          {
+            err: error,
+            event: "session.process.kill.error",
+            session_id: sessionId,
+          },
+          "Failed to kill timed out agent process",
+        );
+      }
+
+      settle({ code: null, signal: "SIGKILL" });
+    };
+
+    const resetTimer = () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+
+      timer = setTimeout(() => {
+        killProcess();
+      }, timeoutMs);
+    };
+
+    resetTimer();
+
+    void (async () => {
+      try {
+        while (!settled) {
+          const { done } = await activityIterator.next();
+          if (done || settled) break;
+          resetTimer();
+        }
+      } catch (error) {
+        if (!settled) {
+          sessionLogger.error(
+            {
+              err: error,
+              event: "session.activity_watcher.error",
+              session_id: sessionId,
+            },
+            "Session activity watcher failed",
+          );
+        }
+      }
+    })();
+
+    process.onExit.then(settle).catch((error) => {
+      if (settled) return;
+      settled = true;
+      if (timer) {
+        clearTimeout(timer);
+      }
+      void activityIterator.return?.();
+      reject(error);
+    });
+  });
 
 // Spawns a new agent session and tracks the process lifecycle
 export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
@@ -37,7 +133,7 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
 
   if (result.process) {
     deps.sessionService.store.setProcess(input.sessionId, result.process);
-    trackProcessExit(input.sessionId, result.process, deps);
+    trackProcessExit(input.sessionId, result.process, entry.eventStore.subscribe(), deps);
   }
 
   return result;
@@ -88,9 +184,15 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
 
   if (result.process) {
     deps.sessionService.store.setProcess(input.sessionId, result.process);
-    trackProcessExit(input.sessionId, result.process, deps);
+    trackProcessExit(input.sessionId, result.process, entry.eventStore.subscribe(), deps);
   } else {
-    console.warn(`[session:${input.sessionId}] resume returned NO process — status will stay in_progress`);
+    sessionLogger.warn(
+      {
+        event: "session.resume.no_process",
+        session_id: input.sessionId,
+      },
+      "Resume returned no process; session status remains in_progress",
+    );
   }
 
   return result;
@@ -98,29 +200,58 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
 
 const trackProcessExit = (
   sessionId: string,
-  process: { onExit: Promise<{ code: number | null; signal: string | null }> },
+  process: Pick<SpawnedProcess, "kill" | "onExit">,
+  activity: AsyncIterable<unknown>,
   deps: SpawnDeps,
 ) => {
-  process.onExit
+  withProcessExitTimeout(sessionId, process, activity, deps.processExitTimeoutMs ?? DEFAULT_PROCESS_EXIT_TIMEOUT_MS)
     .then(async ({ code, signal }) => {
       const entry = deps.sessionService.store.get(sessionId);
       if (entry) {
         const patches = entry.eventStore.getHistory();
         await persistSessionMessages(sessionId, patches, deps).catch((err) => {
-          console.error(`[session:${sessionId}] persistSessionMessages failed:`, err);
+          sessionLogger.error(
+            {
+              err,
+              event: "session.messages.persist.error",
+              session_id: sessionId,
+            },
+            "Failed to persist session messages on process exit",
+          );
         });
       } else {
-        console.warn(`[session:${sessionId}] no store entry found on exit — messages not persisted`);
+        sessionLogger.warn(
+          {
+            event: "session.store.missing_on_exit",
+            session_id: sessionId,
+          },
+          "No store entry found on process exit; messages were not persisted",
+        );
       }
 
       const status = code === 0 ? "completed" : "failed";
       if (status === "failed") {
-        console.error(`[session] agent process exited with code=${code} signal=${signal} for session ${sessionId}`);
+        sessionLogger.error(
+          {
+            code,
+            event: "session.process.exit.failed",
+            session_id: sessionId,
+            signal,
+          },
+          "Agent process exited with failure",
+        );
       }
       await deps.sessionService.transitionStatus(sessionId, status);
       deps.sessionService.store.remove(sessionId);
     })
     .catch((err) => {
-      console.error(`[session:${sessionId}] trackProcessExit failed:`, err);
+      sessionLogger.error(
+        {
+          err,
+          event: "session.process.exit_tracking.error",
+          session_id: sessionId,
+        },
+        "Process exit tracking failed",
+      );
     });
 };

@@ -1,8 +1,8 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
+import { archiveWorkspaceCascade } from "../archive-workspace-cascade";
 import { notFoundResponseSchema, workspaceResponseSchema } from "../dto";
-import { cleanupWorkspaceWorktree } from "../worktree-cleanup";
 
 export const archiveWorkspaceRoute = createRoute({
   method: "post",
@@ -46,15 +46,11 @@ export const archiveWorkspaceHandler = (deps: RouteDeps): AppRouteHandler<typeof
       return c.json({ error: `Workspace already archived: ${id}` }, 409);
     }
 
-    const updated = await deps.workspaceService.archive(id);
+    const updated = await archiveWorkspaceCascade(deps, workspace);
     if (!updated) {
       return c.json({ error: `Workspace not found: ${id}` }, 404);
     }
 
-    const sessions = await deps.workspaceSessionService.listByWorkspace(id);
-    await Promise.all(sessions.map((s) => deps.sessionService.archive(s.id)));
-
-    await cleanupWorkspaceWorktree(deps, workspace);
     return c.json(updated, 200);
   };
 };

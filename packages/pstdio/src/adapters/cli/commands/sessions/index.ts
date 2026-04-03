@@ -7,6 +7,7 @@ import * as createCommand from "./create";
 import * as denyCommand from "./deny";
 import * as followUpCommand from "./follow-up";
 import * as listCommand from "./list";
+import * as resolveSessionIdCommand from "./resolve-session-id";
 import * as stopCommand from "./stop";
 import * as streamCommand from "./stream";
 import * as viewCommand from "./view";
@@ -25,6 +26,7 @@ export const builder = (yargs: Argv) => {
     .command(denyCommand)
     .command(followUpCommand)
     .command(listCommand)
+    .command(resolveSessionIdCommand)
     .command(streamCommand)
     .command(stopCommand)
     .command(viewCommand);

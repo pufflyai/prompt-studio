@@ -1,6 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { cors } from "hono/cors";
-import { logger } from "hono/logger";
 import { type AgentService, createAgentRegistry, resolveDefaultAgents } from "pstdio-agents";
 import {
   createAgentConfigsDBService,
@@ -44,7 +43,7 @@ import { createTagRoutes } from "./features/tags/routes";
 import { createTemplateRoutes } from "./features/templates/routes";
 import { createTicketRoutes } from "./features/tickets/routes";
 import { createWorkspaceRoutes } from "./features/workspaces/routes";
-import { logError, persistErrorLog } from "./lib/error-log";
+import { apiLogger } from "./lib/logger";
 import { createAgentConfigService } from "./services/agent-config-service";
 import { createAttemptStatusService } from "./services/attempt-status-service";
 import { createDocService } from "./services/doc-service";
@@ -175,7 +174,24 @@ export const createApp = async (options?: AppOptions) => {
   const app = new OpenAPIHono<AppBindings>();
 
   app.use("*", cors());
-  app.use("*", logger());
+  app.use("*", async (c, next) => {
+    const start = performance.now();
+    try {
+      await next();
+    } finally {
+      apiLogger.info(
+        {
+          duration_ms: Math.round(performance.now() - start),
+          event: "api.request.completed",
+          method: c.req.method,
+          path: c.req.path,
+          request_id: c.req.header("x-request-id"),
+          status: c.res.status,
+        },
+        "API request completed",
+      );
+    }
+  });
 
   if (apiToken) {
     app.use("/v1/*", async (c, next) => {
@@ -222,8 +238,7 @@ export const createApp = async (options?: AppOptions) => {
       stack: err.stack,
     };
 
-    logError(entry);
-    persistErrorLog(entry);
+    apiLogger.error({ event: "api.request.error", ...entry }, "API request failed");
 
     return c.json({ error: "Internal server error" }, 500);
   });
@@ -232,7 +247,7 @@ export const createApp = async (options?: AppOptions) => {
 
   const startupAbort = new AbortController();
   const startupDone = runStartupTasks(deps, startupAbort.signal).catch((err) =>
-    console.error("[startup] failed:", err),
+    apiLogger.error({ err, event: "api.startup.error" }, "Startup task failed"),
   );
 
   const close = async () => {

@@ -1,6 +1,11 @@
 import { describe, expect, mock, test } from "bun:test";
-import type { AgentService } from "pstdio-agents";
+import { type AgentService, createEventStore } from "pstdio-agents";
 import { resumeAgentSession, spawnAgentSession } from "./spawn-agent";
+
+const createStoreEntry = () => ({
+  eventStore: createEventStore(),
+  approvalService: { handleResponse: () => {}, dispose: () => {} },
+});
 
 const buildAgent = () => {
   const getMessages = mock(async () => [
@@ -36,10 +41,7 @@ describe("resumeAgentSession", () => {
       transitionStatus: async () => null,
       store: {
         create: mock((id: string) => {
-          const entry = {
-            eventStore: { push: () => {}, getHistory: () => [] },
-            approvalService: { handleResponse: () => {} },
-          };
+          const entry = createStoreEntry();
           storeEntries.set(id, entry);
           return entry;
         }),
@@ -110,10 +112,7 @@ describe("resumeAgentSession", () => {
       transitionStatus: async () => null,
       store: {
         create: mock((id: string) => {
-          const entry = {
-            eventStore: { push: () => {}, getHistory: () => [] },
-            approvalService: { handleResponse: () => {} },
-          };
+          const entry = createStoreEntry();
           storeEntries.set(id, entry);
           return entry;
         }),
@@ -166,10 +165,7 @@ describe("resumeAgentSession", () => {
       transitionStatus: async () => null,
       store: {
         create: mock((id: string) => {
-          const entry = {
-            eventStore: { push: () => {}, getHistory: () => [] },
-            approvalService: { handleResponse: () => {} },
-          };
+          const entry = createStoreEntry();
           storeEntries.set(id, entry);
           return entry;
         }),
@@ -265,8 +261,7 @@ describe("spawnAgentSession", () => {
           transitionStatus,
           store: {
             create: mock(() => ({
-              eventStore: { push: () => {}, getHistory: () => [] },
-              approvalService: { handleResponse: () => {} },
+              ...createStoreEntry(),
             })),
             get: mock(() => null),
             setProcess: mock(() => {}),
@@ -330,8 +325,7 @@ describe("spawnAgentSession", () => {
           transitionStatus: async () => null,
           store: {
             create: mock(() => ({
-              eventStore: { push: () => {}, getHistory: () => [] },
-              approvalService: { handleResponse: () => {} },
+              ...createStoreEntry(),
             })),
             get: mock(() => null),
             setProcess: mock(() => {}),

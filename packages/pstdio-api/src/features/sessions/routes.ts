@@ -8,6 +8,7 @@ import { followUpSessionHandler, followUpSessionRoute } from "./endpoints/follow
 import { getSessionHandler, getSessionRoute } from "./endpoints/get-session";
 import { getSessionConversationHandler, getSessionConversationRoute } from "./endpoints/get-session-conversation";
 import { listSessionsHandler, listSessionsRoute } from "./endpoints/list-sessions";
+import { resolveSessionIdHandler, resolveSessionIdRoute } from "./endpoints/resolve-session-id";
 import { streamSessionHandler } from "./endpoints/stream-session";
 import { updateSessionStatusHandler, updateSessionStatusRoute } from "./endpoints/update-session-status";
 
@@ -16,6 +17,7 @@ export const createSessionRoutes = (deps: RouteDeps) => {
 
   routes.openapi(createSessionRoute, createSessionHandler(deps));
   routes.openapi(listSessionsRoute, listSessionsHandler(deps));
+  routes.openapi(resolveSessionIdRoute, resolveSessionIdHandler(deps));
   routes.openapi(getSessionRoute, getSessionHandler(deps));
   routes.openapi(getSessionConversationRoute, getSessionConversationHandler(deps));
   routes.openapi(updateSessionStatusRoute, updateSessionStatusHandler(deps));

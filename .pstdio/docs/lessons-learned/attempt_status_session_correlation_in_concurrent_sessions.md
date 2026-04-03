@@ -21,6 +21,7 @@ That assumption held for Claude Code, but not for OpenCode when session identity
    - Claude Code path uses env propagation.
    - OpenCode path should use a `shell.env` bridge that receives OpenCode `sessionID`, resolves it to the matching pstdio session, and exports `PSTDIO_SESSION_ID`.
 3. Kept queue semantics unchanged (single queued post-hook entry per session, overwrite on subsequent status changes in the same session).
+4. Added explicit fallback behavior: if `session_id` is absent, post-attempt-status hooks execute immediately after the status commit instead of being queued.
 
 ## Open limitation
 
@@ -28,4 +29,4 @@ OpenCode's `sessionID` / `callID` values are optional in the `shell.env` hook in
 
 ## Key takeaway
 
-Session correlation must be treated as an explicit contract, not inferred context. In concurrent, multi-provider systems, any session-bound side effect should rely on an identity bridge that matches the provider's runtime model. For attempt status specifically, `session_id` exists to link an agent-triggered change back to its originating session; user-triggered status updates can remain sessionless. OpenCode should therefore bridge its own session identity into `PSTDIO_SESSION_ID` at shell-execution time instead of relying on prompt wording or ambient server env.
+Session correlation must be treated as an explicit contract, not inferred context. In concurrent, multi-provider systems, any session-bound side effect should rely on an identity bridge that matches the provider's runtime model. For attempt status specifically, `session_id` exists to link an agent-triggered change back to its originating session for deferred delivery; user-triggered status updates can remain sessionless and still run post hooks immediately. OpenCode should therefore bridge its own session identity into `PSTDIO_SESSION_ID` at shell-execution time instead of relying on prompt wording or ambient server env.

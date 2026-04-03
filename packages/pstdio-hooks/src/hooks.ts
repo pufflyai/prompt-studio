@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { createLogger } from "pstdio-logging";
 import type {
   HookName,
   HookPayload,
@@ -9,6 +10,17 @@ import type {
   TicketHookName,
   WorktreeHookName,
 } from "./types";
+
+let hooksLogger: ReturnType<typeof createLogger> | null = null;
+
+const getHooksLogger = () => {
+  if (hooksLogger) {
+    return hooksLogger;
+  }
+
+  hooksLogger = createLogger({ component: "hooks", service: "pstdio-hooks" });
+  return hooksLogger;
+};
 
 const WORKTREE_HOOK_NAMES: WorktreeHookName[] = [
   "pre-worktree-create",
@@ -81,6 +93,17 @@ const formatEnvValue = (value: unknown): string | undefined => {
   return String(value);
 };
 
+const asString = (value: unknown) => (typeof value === "string" && value.length > 0 ? value : undefined);
+
+const collectHookContext = (payload: HookPayload) => ({
+  project_id: asString(payload.project_id),
+  request_id: asString(payload.request_id),
+  session_id: asString(payload.session_id),
+  ticket_id: asString(payload.ticket_id),
+  workspace: asString(payload.workspace),
+  workspace_id: asString(payload.workspace_id),
+});
+
 export const buildEnvFromPayload = (hookName: HookName, payload: HookPayload) => {
   const env: Record<string, string> = { PSTDIO_HOOK: hookName };
 
@@ -110,17 +133,55 @@ export const runHook = async (
   options: RunHookOptions,
 ): Promise<HookResult> => {
   const scriptPath = resolveHookScript(options.repoPath, hookName);
-  if (!scriptPath) return skippedResult(hookName);
+  const hookContext = collectHookContext(payload);
+
+  if (!scriptPath) {
+    getHooksLogger().info(
+      {
+        event: "hook.run.skipped",
+        hook_name: hookName,
+        repo_path: options.repoPath,
+        ...hookContext,
+      },
+      "Hook script not found; skipping execution",
+    );
+    return skippedResult(hookName);
+  }
 
   const env = buildEnvFromPayload(hookName, payload);
   const worktreePath = typeof payload.worktree_path === "string" ? payload.worktree_path : undefined;
   const cwd = options.cwd ?? (worktreePath && existsSync(worktreePath) ? worktreePath : options.repoPath);
   const timeoutMs = options.timeoutMs ?? HOOK_TIMEOUT_MS;
+  const start = performance.now();
+
+  getHooksLogger().info(
+    {
+      cwd,
+      event: "hook.run.start",
+      hook_name: hookName,
+      is_blocking: isBlockingHook(hookName),
+      repo_path: options.repoPath,
+      timeout_ms: timeoutMs,
+      ...hookContext,
+    },
+    "Hook execution started",
+  );
 
   const stdinPayload = JSON.stringify(payload);
 
   const mode = statSync(scriptPath).mode;
   if (!(mode & 0o111)) {
+    getHooksLogger().warn(
+      {
+        event: "hook.run.completed",
+        exit_code: 1,
+        hook_name: hookName,
+        reason: "not_executable",
+        ...hookContext,
+      },
+      "Hook script is not executable",
+    );
+
     return {
       hook: hookName,
       skipped: false,
@@ -153,6 +214,20 @@ export const runHook = async (
   if (!result) {
     proc.kill(9);
     await proc.exited;
+
+    getHooksLogger().warn(
+      {
+        duration_ms: Math.round(performance.now() - start),
+        event: "hook.run.completed",
+        exit_code: 1,
+        hook_name: hookName,
+        reason: "timeout",
+        timeout_ms: timeoutMs,
+        ...hookContext,
+      },
+      "Hook execution timed out",
+    );
+
     return {
       hook: hookName,
       skipped: false,
@@ -163,6 +238,22 @@ export const runHook = async (
   }
 
   const [stdout, stderr, exitCode] = result;
+  const durationMs = Math.round(performance.now() - start);
+  const level = exitCode === 0 ? "info" : "warn";
+
+  getHooksLogger()[level](
+    {
+      duration_ms: durationMs,
+      event: "hook.run.completed",
+      exit_code: exitCode,
+      hook_name: hookName,
+      stderr_present: stderr.length > 0,
+      stdout_present: stdout.length > 0,
+      ...hookContext,
+    },
+    exitCode === 0 ? "Hook execution completed" : "Hook execution finished with non-zero exit code",
+  );
+
   return { hook: hookName, skipped: false, exitCode, stdout, stderr };
 };
 

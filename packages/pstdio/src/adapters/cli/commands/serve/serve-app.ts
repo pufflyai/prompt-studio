@@ -1,5 +1,5 @@
 import { createApp } from "pstdio-api/app";
-import { persistStartupError } from "pstdio-api/error-log";
+import { createLogger } from "pstdio-logging";
 import { injectConfig } from "../../dashboard/serve-dashboard";
 import { resolveDefaultDbPath, resolveDefaultStoragePath } from "../../dashboard/state-paths";
 import { isCompiledBinary, loadEmbeddedAssets, resolveMimeType } from "./embedded-assets";
@@ -25,10 +25,32 @@ type ServeAppDeps = {
   resolveMimeType: typeof resolveMimeType;
   serve: typeof Bun.serve;
   log: (message: string) => void;
-  persistError: (error: Error) => void;
+  reportStartupError: (error: Error) => void;
   onSignal: (signal: NodeJS.Signals, listener: () => void) => void;
   offSignal: (signal: NodeJS.Signals, listener: () => void) => void;
   exit: (code?: number) => never;
+};
+
+let serveLogger: ReturnType<typeof createLogger> | null = null;
+
+const getServeLogger = () => {
+  if (serveLogger) {
+    return serveLogger;
+  }
+
+  serveLogger = createLogger({ component: "serve", service: "pstdio" });
+  return serveLogger;
+};
+
+const reportStartupError = (error: Error) => {
+  getServeLogger().error(
+    {
+      event: "serve.startup.error",
+      message: error.message,
+      stack: error.stack,
+    },
+    "pstdio serve failed to start",
+  );
 };
 
 const ensureRuntimeEnv = () => {
@@ -49,7 +71,7 @@ const defaultDeps: ServeAppDeps = {
   resolveMimeType,
   serve: Bun.serve,
   log: (message) => process.stdout.write(message),
-  persistError: persistStartupError,
+  reportStartupError,
   onSignal: (signal, listener) => process.on(signal, listener),
   offSignal: (signal, listener) => process.off(signal, listener),
   exit: (code = 0) => process.exit(code),
@@ -150,7 +172,7 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
       removeShutdownListeners();
       await closeApp();
       if (error instanceof Error) {
-        deps.persistError(error);
+        deps.reportStartupError(error);
       }
       throw error;
     }

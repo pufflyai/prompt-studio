@@ -1,4 +1,5 @@
 import { createApp } from "./app";
+import { apiLogger } from "./lib/logger";
 
 const { app, close } = await createApp();
 const port = Number(process.env.PORT ?? "19840");
@@ -17,4 +18,4 @@ Bun.serve({
   port,
 });
 
-console.log(`Server running on http://localhost:${port}`);
+apiLogger.info({ event: "api.server.started", port }, `Server running on http://localhost:${port}`);

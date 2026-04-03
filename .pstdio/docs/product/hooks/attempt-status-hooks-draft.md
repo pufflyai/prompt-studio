@@ -63,16 +63,16 @@ Hook lookup is derived from the current status name, not preserved as a stable s
 
 ### `post-attempt-status-<status-slug>`
 
-- Is queued only after the attempt status successfully changes to the status whose current name resolves to `<status-slug>`.
-- Does not run inline when the status changes.
-- Is delivered after the originating session reaches a terminal state.
+- Is queued only when `session_id` is present and the attempt status successfully changes to the status whose current name resolves to `<status-slug>`.
+- Runs inline after commit when `session_id` is absent.
+- Deferred entries are delivered after the originating session reaches a terminal state.
 - Only the most recent queued post hook for the same session + attempt is delivered.
 
 `review-ready` remains a good example because the label already matches the slug. A user-defined status like `My Status` resolves to `my-status`.
 
 ## Proposed Rule
 
-> `post-attempt-status-<status-slug>` is queued when the attempt status changes to the status whose name resolves to `<status-slug>`, and executed only after the originating session reaches a terminal state; if multiple attempt status changes occur for the same attempt in that session, only the final queued post hook is executed. If that status has since been renamed or no longer exists, the queued hook is skipped.
+> `post-attempt-status-<status-slug>` uses deferred delivery only when the status transition includes `session_id`; in that case it is queued and executed after the originating session reaches a terminal state. Without `session_id`, the post hook executes immediately after commit. If multiple status changes occur for the same attempt in the same session, only the final queued post hook is executed. If that status has since been renamed or no longer exists, the queued hook is skipped.
 
 For this proposal, "session reaches a terminal state" means `completed`, `failed`, or `cancelled`. The session is over; the hook delivery is no longer allowed to overlap with it.
 

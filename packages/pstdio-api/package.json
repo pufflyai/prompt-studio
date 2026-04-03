@@ -4,8 +4,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./app": "./src/app.ts",
-    "./dto": "./src/dto.ts",
-    "./error-log": "./src/lib/error-log.ts"
+    "./dto": "./src/dto.ts"
   },
   "scripts": {
     "start": "bun run src/index.ts",
@@ -27,6 +26,7 @@
     "pstdio-agents": "workspace:*",
     "pstdio-db": "workspace:*",
     "pstdio-hooks": "workspace:*",
+    "pstdio-logging": "workspace:*",
     "pstdio-storage": "workspace:*",
     "pstdio-wt": "workspace:*"
   },

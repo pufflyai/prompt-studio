@@ -2,6 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { fireTicketHook, fireTicketHookAsync } from "../../hooks/ticket-hooks";
+import { archiveWorkspaceCascade } from "../../workspaces/archive-workspace-cascade";
 import { buildTicketPayload } from "../build-ticket-payload";
 import { notFoundResponseSchema, ticketResponseSchema, updateTicketBodySchema } from "../dto";
 import { emitSyncedFile, emitSyncedTicketFile } from "../emit-ticket-file-sync";
@@ -157,6 +158,11 @@ const buildTicketUpdateInput = async (
   return nextInput;
 };
 
+const archiveTicketWorkspaces = async (deps: RouteDeps, ticketId: string) => {
+  const workspaces = await deps.workspaceService.listByTicketId(ticketId);
+  await Promise.all(workspaces.map((workspace) => archiveWorkspaceCascade(deps, workspace)));
+};
+
 const finalizeUpdatedTicket = async (input: {
   deps: RouteDeps;
   ticketId: string;
@@ -168,6 +174,10 @@ const finalizeUpdatedTicket = async (input: {
   statusContext?: StatusContext;
 }) => {
   const { deps, ticketId, projectId, updated, tagIds, statusChanging, archiving, statusContext } = input;
+
+  if (archiving) {
+    await archiveTicketWorkspaces(deps, ticketId);
+  }
 
   if (tagIds) {
     await replaceTagAssignments(deps, ticketId, tagIds);
