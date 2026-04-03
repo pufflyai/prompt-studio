@@ -1,5 +1,11 @@
 # @pstdio/ui
 
+## 0.3.0
+
+### Minor Changes
+
+- 8b565f0: Release the updated @pstdio/ui dependency contract.
+
 ## 0.2.5
 
 ### Patch Changes

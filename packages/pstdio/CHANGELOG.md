@@ -1,5 +1,36 @@
 # pstdio
 
+## 0.5.0
+
+### Minor Changes
+
+- 00001f2: Add --template and --var flags to sessions create and follow-up commands
+- 00001f2: Add attempt-status hooks: blocking pre-hooks that gate status transitions and deferred post-hooks that fire after session completion
+- 00001f2: Add shared pino-based runtime logging with configurable JSONL targets across CLI, API, and hooks.
+
+### Patch Changes
+
+- 3e8d1b7: Add API service layer to centralize state-transition orchestration (DB update + EventBus emit + hook firing) for sessions, tickets, and workspaces
+- 3e8d1b7: Use the configured default agent for sessions created without --agent.
+- 00001f2: Include workspace ticket in attempt-status hook payloads.
+- ce8bf76: Refine bundled pstdio skills: remove stale review references, clarify status handling, and split CLI guidance into references.
+- ce8bf76: Fix packaged project setup.
+- 3e8d1b7: Add structured Hono request logging middleware for API routes.
+- 00001f2: Surface pre-hook rejection output when setting workspace attempt status.
+- 00001f2: Archive ticket-linked workspaces and sessions together.
+- 00001f2: Fix hook logging to recreate the hooks logger when log destination env settings change in-process.
+- ce8bf76: Ensure API-managed hooks stay executable and run consistently across all session status-transition paths.
+- 00001f2: Add `workspaces list-statuses` and point `workspaces set-status --help` to it.
+- 00001f2: Fire post attempt-status hooks immediately when no session id is provided.
+- 00001f2: Propagate `original_session_id` into attempt-status hook payloads for session-driven status updates.
+- 00001f2: Fix Claude follow-up hangs and reset session timeouts on stream activity.
+- 00001f2: Fix Claude follow-up message ordering in the dashboard stream and add provider E2E regression coverage.
+- 3e8d1b7: Rename ticket worktree cleanup commands to `tickets worktrees` and add `list` plus `remove-all` subcommands.
+- 5684e88: Move `pstdio-logging` to devDependencies so changeset versioning remains valid.
+- 00001f2: Fall back to PSTDIO_SESSION_ID in workspaces set-status.
+- 00001f2: Fix worktree creation failing when prunable (stale) worktree entries exist
+- ce8bf76: Include workspace attempt statuses in session hook payloads so post-session-success can react to review-ready and blocked states.
+
 ## 0.4.0
 
 ### Minor Changes
