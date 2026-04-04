@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createGitRepo, runPstdio, runPstdioSafe } from "./helpers";
 import type { ApiInstance } from "./start-api";
@@ -178,6 +178,45 @@ export const getStatusId = async (ctx: HookTestContext, projectId: string, name:
 };
 
 export const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+export const waitFor = async (predicate: () => boolean, timeoutMs = 5_000) => {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    if (predicate()) {
+      return true;
+    }
+
+    await wait(50);
+  }
+
+  return predicate();
+};
+
+export const waitForPath = async (path: string, timeoutMs = 5_000) => {
+  return waitFor(() => existsSync(path), timeoutMs);
+};
+
+export const waitForJsonFile = async <T>(path: string, timeoutMs = 5_000) => {
+  const ready = await waitFor(() => {
+    if (!existsSync(path)) {
+      return false;
+    }
+
+    try {
+      JSON.parse(readFileSync(path, "utf8"));
+      return true;
+    } catch {
+      return false;
+    }
+  }, timeoutMs);
+
+  if (!ready) {
+    throw new Error(`JSON file not ready within ${timeoutMs}ms: ${path}`);
+  }
+
+  return JSON.parse(readFileSync(path, "utf8")) as T;
+};
 
 /** Creates a bare git repo with one commit on main and a `.pstdio/` dir (for hooks). */
 export const createRepoForWorktreeOps = (ctx: HookTestContext) => {

@@ -3,7 +3,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "n
 import { join } from "node:path";
 import { commitChanges } from "./commit";
 import { git } from "./git";
-import { createTempRepo } from "./test-helpers";
+import { createTempRepo, waitFor } from "./test-helpers";
 import { createWorktree } from "./worktree";
 
 const writeHook = (repoPath: string, hookName: string, script: string) => {
@@ -15,20 +15,6 @@ const writeHook = (repoPath: string, hookName: string, script: string) => {
 };
 
 let repo: Awaited<ReturnType<typeof createTempRepo>>;
-
-const waitFor = async (predicate: () => boolean, timeoutMs = 2_000) => {
-  const startedAt = Date.now();
-
-  while (Date.now() - startedAt < timeoutMs) {
-    if (predicate()) {
-      return;
-    }
-
-    await Bun.sleep(50);
-  }
-
-  throw new Error(`Condition not met within ${timeoutMs}ms`);
-};
 
 beforeEach(async () => {
   repo = await createTempRepo();
@@ -123,8 +109,7 @@ describe("commitChanges", () => {
 
     await commitChanges({ worktreePath: wtPath, message: "with hook", repoPath: repo.dir });
 
-    await waitFor(() => existsSync(join(repo.dir, "post-commit-marker.txt")));
-    expect(existsSync(join(repo.dir, "post-commit-marker.txt"))).toBe(true);
+    expect(await waitFor(() => existsSync(join(repo.dir, "post-commit-marker.txt")))).toBe(true);
   });
 
   test("pre-commit payload is available via stdin and field env vars", async () => {

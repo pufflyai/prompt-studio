@@ -9,7 +9,7 @@ import {
   createWorkspaceInRepo,
   getProjectId,
   type HookTestContext,
-  wait,
+  waitForPath,
   writeHook,
 } from "./hooks-infra";
 import { type ApiInstance, startApi } from "./start-api";
@@ -202,11 +202,14 @@ describe("default post-worktree-create hook", () => {
 
       const { workspace } = await createWorkspaceInRepo(ctx, repo);
       expect(workspace.worktree_path).toBeTruthy();
-      await wait(1000);
 
-      expect(existsSync(join(workspace.worktree_path!, ".pstdio", "config.json"))).toBe(true);
-      expect(existsSync(join(workspace.worktree_path!, ".claude", "skills", "custom-skill", "SKILL.md"))).toBe(true);
-      expect(existsSync(join(workspace.worktree_path!, ".opencode", "skills", "custom-skill", "SKILL.md"))).toBe(true);
+      expect(await waitForPath(join(workspace.worktree_path!, ".pstdio", "config.json"))).toBe(true);
+      expect(await waitForPath(join(workspace.worktree_path!, ".claude", "skills", "custom-skill", "SKILL.md"))).toBe(
+        true,
+      );
+      expect(await waitForPath(join(workspace.worktree_path!, ".opencode", "skills", "custom-skill", "SKILL.md"))).toBe(
+        true,
+      );
     },
     TEST_TIMEOUT,
   );
@@ -237,10 +240,9 @@ EOF
 
       const { workspace, ticketShorthand } = await createWorkspaceInRepo(ctx, repo);
       expect(workspace.worktree_path).toBeTruthy();
-      await wait(1000);
 
       const envFile = join(workspace.worktree_path!, "files", "env-dump.txt");
-      expect(existsSync(envFile)).toBe(true);
+      expect(await waitForPath(envFile)).toBe(true);
 
       const content = readFileSync(envFile, "utf8");
       const realRepo = realpathSync(repo);
@@ -281,10 +283,7 @@ describe("worktree removal hooks", () => {
       writeHook(repo, "post-worktree-remove", `echo "removed" > "${repo}/post-remove-marker.txt"`);
 
       createRun(ctx)(`workspaces delete --id ${workspace.workspace_shorthand}`, repo);
-      // post-remove is fire-and-forget — give it time
-      await wait(1000);
-
-      expect(existsSync(join(repo, "post-remove-marker.txt"))).toBe(true);
+      expect(await waitForPath(join(repo, "post-remove-marker.txt"))).toBe(true);
     },
     TEST_TIMEOUT,
   );

@@ -77,6 +77,11 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 
 - Changesets for tests and refactor only changes.
 
+## Fixing Bugs
+
+- Always reproduce an issue before fixing it.
+- Always write a regression test to prevent it from happening again.
+
 ## Coding Style Rules
 
 - Split content that will grow in separate files (endpoints, schemas, etc.)

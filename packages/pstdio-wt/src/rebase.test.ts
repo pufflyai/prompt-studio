@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { commitChanges } from "./commit";
 import { git } from "./git";
 import { rebaseOntoTarget } from "./rebase";
-import { createTempRepo } from "./test-helpers";
+import { createTempRepo, waitFor } from "./test-helpers";
 import { createWorktree } from "./worktree";
 
 const writeHook = (repoPath: string, hookName: string, script: string) => {
@@ -145,8 +145,7 @@ describe("rebaseOntoTarget", () => {
       rebaseOntoTarget({ repoRoot: repo.dir, branch: "task/rebase-conflict", target: "main" }),
     ).rejects.toThrow();
 
-    await new Promise((r) => setTimeout(r, 500));
-    expect(existsSync(join(repo.dir, "rebase-conflict-marker.txt"))).toBe(true);
+    expect(await waitFor(() => existsSync(join(repo.dir, "rebase-conflict-marker.txt")))).toBe(true);
   });
 
   test("post-rebase hook runs after successful rebase", async () => {
@@ -164,8 +163,7 @@ describe("rebaseOntoTarget", () => {
 
     await rebaseOntoTarget({ repoRoot: repo.dir, branch: "task/rebase-post", target: "main" });
 
-    await new Promise((r) => setTimeout(r, 500));
-    expect(existsSync(join(repo.dir, "post-rebase-marker.txt"))).toBe(true);
+    expect(await waitFor(() => existsSync(join(repo.dir, "post-rebase-marker.txt")))).toBe(true);
   });
 
   test("pre-rebase payload is available via stdin and field env vars", async () => {

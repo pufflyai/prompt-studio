@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanupDirs, PSTDIO_CLI } from "./helpers";
 import {
@@ -14,7 +14,7 @@ import {
   type HookTestContext,
   registerRepo,
   updateSessionStatus,
-  wait,
+  waitForPath,
   writeHook,
 } from "./hooks-infra";
 import { type ApiInstance, startApi } from "./start-api";
@@ -248,9 +248,7 @@ sh "$VALIDATION_SCRIPT" "$PSTDIO_WORKTREE_PATH"
       );
 
       await updateSessionStatus(ctx, attempt.session!.id, "completed");
-      await wait(1000);
-
-      expect(existsSync(outputPath)).toBe(true);
+      expect(await waitForPath(outputPath)).toBe(true);
     },
     TEST_TIMEOUT,
   );

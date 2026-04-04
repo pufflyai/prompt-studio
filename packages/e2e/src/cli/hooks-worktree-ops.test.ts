@@ -10,7 +10,7 @@ import {
   createRepoForWorktreeOps,
   createWorktreeBranchWithCommit,
   type HookTestContext,
-  wait,
+  waitForPath,
   writeHook,
 } from "./hooks-infra";
 import { TEST_TIMEOUT } from "./timeouts";
@@ -46,9 +46,7 @@ describe("commit hooks", () => {
       const result = await commitChanges({ worktreePath: repo, message: "test commit" });
       expect(result.sha).toBeTruthy();
 
-      // post-commit is fire-and-forget — give it time
-      await wait(500);
-      expect(existsSync(join(repo, "post-commit-marker.txt"))).toBe(true);
+      expect(await waitForPath(join(repo, "post-commit-marker.txt"))).toBe(true);
       const marker = readFileSync(join(repo, "post-commit-marker.txt"), "utf8").trim();
       expect(marker).toBe(result.sha);
     },
@@ -93,8 +91,7 @@ describe("merge hooks", () => {
 
       await mergeWorktree({ repoRoot: repo, branch: "feat-merge-post" });
 
-      await wait(500);
-      expect(existsSync(join(repo, "post-merge-marker.txt"))).toBe(true);
+      expect(await waitForPath(join(repo, "post-merge-marker.txt"))).toBe(true);
       const marker = readFileSync(join(repo, "post-merge-marker.txt"), "utf8").trim();
       expect(marker).toBe(targetBranch);
     },
@@ -111,8 +108,7 @@ describe("merge hooks", () => {
 
       await mergeWorktree({ repoRoot: repo, branch: "feat-merge-master" });
 
-      await wait(500);
-      expect(existsSync(join(repo, "post-merge-master-marker.txt"))).toBe(true);
+      expect(await waitForPath(join(repo, "post-merge-master-marker.txt"))).toBe(true);
       const marker = readFileSync(join(repo, "post-merge-master-marker.txt"), "utf8").trim();
       expect(marker).toBe("master");
     },
@@ -131,8 +127,7 @@ describe("merge hooks", () => {
       const err = await mergeWorktree({ repoRoot: repo, branch: "feat-merge-conflict", squash: true }).catch((e) => e);
       expect(err).toBeInstanceOf(Error);
 
-      await wait(500);
-      expect(existsSync(join(repo, "on-conflict-marker.txt"))).toBe(true);
+      expect(await waitForPath(join(repo, "on-conflict-marker.txt"))).toBe(true);
     },
     TEST_TIMEOUT,
   );
@@ -165,8 +160,7 @@ describe("rebase hooks", () => {
       const result = await rebaseOntoTarget({ repoRoot: repo, branch: "feat-rebase-post" });
       expect(result.rebased).toBe(true);
 
-      await wait(500);
-      expect(existsSync(join(repo, "post-rebase-marker.txt"))).toBe(true);
+      expect(await waitForPath(join(repo, "post-rebase-marker.txt"))).toBe(true);
     },
     TEST_TIMEOUT,
   );
@@ -183,8 +177,7 @@ describe("rebase hooks", () => {
       const err = await rebaseOntoTarget({ repoRoot: repo, branch: "feat-rebase-conflict" }).catch((e) => e);
       expect(err).toBeInstanceOf(Error);
 
-      await wait(500);
-      expect(existsSync(join(repo, "on-conflict-rebase-marker.txt"))).toBe(true);
+      expect(await waitForPath(join(repo, "on-conflict-rebase-marker.txt"))).toBe(true);
     },
     TEST_TIMEOUT,
   );

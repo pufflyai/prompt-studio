@@ -14,7 +14,9 @@ import {
   type HookTestContext,
   registerRepo,
   updateSessionStatus,
-  wait,
+  waitFor,
+  waitForJsonFile,
+  waitForPath,
   writeHook,
 } from "./hooks-infra";
 import { type ApiInstance, startApi } from "./start-api";
@@ -92,9 +94,7 @@ describe("ticket hooks", () => {
       const { res } = await createTicketViaApi(ctx, projectId);
       expect(res.status).toBe(201);
 
-      await wait(500);
-      expect(existsSync(join(repo, "post-ticket-creation-payload.json"))).toBe(true);
-      const payload = JSON.parse(readFileSync(join(repo, "post-ticket-creation-payload.json"), "utf8"));
+      const payload = await waitForJsonFile<{ ticket: string }>(join(repo, "post-ticket-creation-payload.json"));
       expect(payload.ticket).toBeTruthy();
     },
     TEST_TIMEOUT,
@@ -129,8 +129,7 @@ describe("ticket hooks", () => {
       const deleteRes = await fetch(`${api.url}/v1/tickets/${ticket.id}`, { method: "DELETE" });
       expect(deleteRes.status).toBe(200);
 
-      await wait(500);
-      expect(existsSync(join(repo, "post-ticket-deletion-payload.json"))).toBe(true);
+      expect(await waitForPath(join(repo, "post-ticket-deletion-payload.json"))).toBe(true);
     },
     TEST_TIMEOUT,
   );
@@ -171,8 +170,7 @@ describe("ticket hooks", () => {
         body: JSON.stringify({ archived: true }),
       });
 
-      await wait(500);
-      expect(existsSync(join(repo, "post-ticket-archive-payload.json"))).toBe(true);
+      expect(await waitForPath(join(repo, "post-ticket-archive-payload.json"))).toBe(true);
     },
     TEST_TIMEOUT,
   );
@@ -215,9 +213,11 @@ describe("ticket hooks", () => {
         body: JSON.stringify({ status_id: newStatusId }),
       });
 
-      await wait(500);
-      expect(existsSync(join(repo, "post-ticket-status-payload.json"))).toBe(true);
-      const payload = JSON.parse(readFileSync(join(repo, "post-ticket-status-payload.json"), "utf8"));
+      const payload = await waitForJsonFile<{
+        ticket: string;
+        from_status: string;
+        to_status: string;
+      }>(join(repo, "post-ticket-status-payload.json"));
       expect(payload.ticket).toBeTruthy();
       expect(payload.from_status).toBeTruthy();
       expect(payload.to_status).toBeTruthy();
@@ -238,9 +238,7 @@ describe("session hooks", () => {
       const { res } = await createSessionViaApi(ctx, projectId);
       expect(res.status).toBe(201);
 
-      await wait(500);
-      expect(existsSync(join(repo, "session-start-payload.json"))).toBe(true);
-      const payload = JSON.parse(readFileSync(join(repo, "session-start-payload.json"), "utf8"));
+      const payload = await waitForJsonFile<{ session_id: string }>(join(repo, "session-start-payload.json"));
       expect(payload.session_id).toBeTruthy();
     },
     TEST_TIMEOUT,
@@ -257,9 +255,7 @@ describe("session hooks", () => {
       const { session } = await createSessionViaApi(ctx, projectId);
       await updateSessionStatus(ctx, session.id, "completed");
 
-      await wait(500);
-      expect(existsSync(join(repo, "session-success-payload.json"))).toBe(true);
-      const payload = JSON.parse(readFileSync(join(repo, "session-success-payload.json"), "utf8"));
+      const payload = await waitForJsonFile<{ session_status: string }>(join(repo, "session-success-payload.json"));
       expect(payload.session_status).toBe("completed");
     },
     TEST_TIMEOUT,
@@ -276,9 +272,7 @@ describe("session hooks", () => {
       const { session } = await createSessionViaApi(ctx, projectId);
       await updateSessionStatus(ctx, session.id, "failed");
 
-      await wait(500);
-      expect(existsSync(join(repo, "session-fail-payload.json"))).toBe(true);
-      const payload = JSON.parse(readFileSync(join(repo, "session-fail-payload.json"), "utf8"));
+      const payload = await waitForJsonFile<{ session_status: string }>(join(repo, "session-fail-payload.json"));
       expect(payload.session_status).toBe("failed");
     },
     TEST_TIMEOUT,
@@ -295,9 +289,7 @@ describe("session hooks", () => {
       const { session } = await createSessionViaApi(ctx, projectId);
       await updateSessionStatus(ctx, session.id, "awaiting_input");
 
-      await wait(500);
-      expect(existsSync(join(repo, "session-await-payload.json"))).toBe(true);
-      const payload = JSON.parse(readFileSync(join(repo, "session-await-payload.json"), "utf8"));
+      const payload = await waitForJsonFile<{ session_status: string }>(join(repo, "session-await-payload.json"));
       expect(payload.session_status).toBe("awaiting_input");
     },
     TEST_TIMEOUT,
@@ -324,9 +316,7 @@ describe("session resume hook", () => {
       });
       expect(followUpRes.status).toBe(200);
 
-      await wait(500);
-      expect(existsSync(join(repo, "session-resume-payload.json"))).toBe(true);
-      const payload = JSON.parse(readFileSync(join(repo, "session-resume-payload.json"), "utf8"));
+      const payload = await waitForJsonFile<{ session_id: string }>(join(repo, "session-resume-payload.json"));
       expect(payload.session_id).toBe(session.id);
     },
     TEST_TIMEOUT,
@@ -360,10 +350,11 @@ echo "post-session-start worktree=$PSTDIO_WORKTREE_PATH" >> "$NOTE_ROOT/files/ho
       expect(attemptRes.status).toBe(201);
       expect(attempt.workspace.worktree_path).toBeTruthy();
       expect(attempt.session).toBeTruthy();
-      await wait(2000);
 
       const logFile = join(attempt.workspace.worktree_path!, "files", "hook-log.txt");
-      expect(existsSync(logFile)).toBe(true);
+      expect(
+        await waitFor(() => existsSync(logFile) && readFileSync(logFile, "utf8").includes("post-session-start"), 5_000),
+      ).toBe(true);
 
       const content = readFileSync(logFile, "utf8");
       expect(content).toContain("post-worktree-create");
@@ -397,12 +388,15 @@ echo "post-session-success worktree=$PSTDIO_WORKTREE_PATH" >> "$NOTE_ROOT/files/
 
       const { attempt } = await createAttemptWithSession(ctx, repo, "hook-complete-flow-repo");
       expect(attempt.session).toBeTruthy();
-      await wait(2000);
 
       await updateSessionStatus(ctx, attempt.session!.id, "completed");
-      await wait(1000);
       const logFile = join(attempt.workspace.worktree_path!, "files", "hook-log.txt");
-      expect(existsSync(logFile)).toBe(true);
+      expect(
+        await waitFor(
+          () => existsSync(logFile) && readFileSync(logFile, "utf8").includes("post-session-success"),
+          5_000,
+        ),
+      ).toBe(true);
 
       const content = readFileSync(logFile, "utf8");
       expect(content).toContain("post-worktree-create");

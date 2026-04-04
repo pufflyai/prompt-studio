@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { commitChanges } from "./commit";
 import { git } from "./git";
 import { mergeWorktree } from "./merge";
-import { createTempRepo } from "./test-helpers";
+import { createTempRepo, waitFor } from "./test-helpers";
 import { createWorktree } from "./worktree";
 
 const writeHook = (repoPath: string, hookName: string, script: string) => {
@@ -114,8 +114,7 @@ describe("mergeWorktree", () => {
 
     await mergeWorktree({ repoRoot: repo.dir, branch: "task/hook-post", target: "main" });
 
-    await new Promise((r) => setTimeout(r, 500));
-    expect(existsSync(join(repo.dir, "post-merge-marker.txt"))).toBe(true);
+    expect(await waitFor(() => existsSync(join(repo.dir, "post-merge-marker.txt")))).toBe(true);
   });
 
   test("on-conflict hook runs when merge fails", async () => {
@@ -132,8 +131,7 @@ describe("mergeWorktree", () => {
 
     await expect(mergeWorktree({ repoRoot: repo.dir, branch: "task/conflict", target: "main" })).rejects.toThrow();
 
-    await new Promise((r) => setTimeout(r, 500));
-    expect(existsSync(join(repo.dir, "conflict-marker.txt"))).toBe(true);
+    expect(await waitFor(() => existsSync(join(repo.dir, "conflict-marker.txt")))).toBe(true);
   });
 
   test("pre-merge payload is available via stdin and field env vars", async () => {
