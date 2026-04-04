@@ -1,5 +1,11 @@
 # pstdio
 
+## 0.5.1
+
+### Patch Changes
+
+- 2af6eba: Stabilize asynchronous hook tests by polling for hook outputs instead of relying on fixed sleeps
+
 ## 0.5.0
 
 ### Minor Changes
