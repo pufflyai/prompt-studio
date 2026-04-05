@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanupDirs, PSTDIO_CLI } from "./helpers";
+import { cleanupDirs } from "./helpers";
 import {
   configureAgent,
   createAttemptWithSession,
@@ -15,7 +15,7 @@ import {
   registerRepo,
   updateSessionStatus,
   waitForPath,
-  writeHook,
+  writePlugin,
 } from "./hooks-infra";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
@@ -49,17 +49,19 @@ const updateAttemptStatus = async (workspaceId: string, status: string, sessionI
 
 describe("attempt-status hooks", () => {
   test(
-    "pre-hook receives worktree path in environment",
+    "pre-hook receives workspace context",
     async () => {
       const repo = createInitializedRepo(ctx, "pre-attempt-worktree-path");
       const projectId = getProjectId(repo);
       await registerRepo(ctx, projectId, repo, "pre-attempt-worktree-path-repo");
       await configureAgent(ctx);
 
-      writeHook(
+      const outputPath = join(repo, "pre-ctx-check.txt");
+      writePlugin(
         repo,
-        "pre-attempt-status-review-ready",
-        'if [ -z "$PSTDIO_WORKTREE_PATH" ]; then echo "missing worktree path" >&2; exit 1; fi\nif [ ! -d "$PSTDIO_WORKTREE_PATH" ]; then echo "invalid worktree path" >&2; exit 1; fi',
+        "ctx-check.ts",
+        `import { writeFileSync } from "node:fs";
+export default { hooks: { preAttemptStatusChange(ctx) { if (ctx.toStatus === "review-ready") { writeFileSync(${JSON.stringify(outputPath)}, ctx.workspaceId ?? "missing"); } } } };`,
       );
 
       const { attempt } = await createAttemptWithSession(ctx, repo, "pre-attempt-worktree-path");
@@ -67,6 +69,8 @@ describe("attempt-status hooks", () => {
 
       const res = await updateAttemptStatus(workspaceId, "review-ready");
       expect(res.status).toBe(200);
+      expect(await waitForPath(outputPath)).toBe(true);
+      expect(readFileSync(outputPath, "utf8")).toBeTruthy();
     },
     TEST_TIMEOUT,
   );
@@ -79,7 +83,11 @@ describe("attempt-status hooks", () => {
       await registerRepo(ctx, projectId, repo, "pre-attempt-reject-repo");
       await configureAgent(ctx);
 
-      writeHook(repo, "pre-attempt-status-review-ready", 'echo "tests failing" >&2; exit 1');
+      writePlugin(
+        repo,
+        "reject-guard.ts",
+        `export default { hooks: { preAttemptStatusChange(ctx) { if (ctx.toStatus === "review-ready") return { reject: true, reason: "tests failing" }; } } };`,
+      );
 
       const { attempt } = await createAttemptWithSession(ctx, repo, "pre-attempt-reject");
       const workspaceId = attempt.workspace.id;
@@ -103,51 +111,26 @@ describe("attempt-status hooks", () => {
   );
 
   test(
-    "CLI surfaces stdout from a customer-style review-ready validator",
+    "CLI surfaces rejection reason from a review-ready validator plugin",
     async () => {
-      const repo = createInitializedRepo(ctx, "pre-attempt-cli-stdout-message");
+      const repo = createInitializedRepo(ctx, "pre-attempt-cli-plugin-reject");
 
-      const validatorsDir = join(repo, ".pstdio", "validators");
-      mkdirSync(validatorsDir, { recursive: true });
-
-      const validatorPath = join(validatorsDir, "mock-validation.sh");
-      writeFileSync(
-        validatorPath,
-        `#!/bin/sh
-set -eu
-
-WORKTREE_PATH="\${1:-.}"
-FILES_DIR="$WORKTREE_PATH/files"
-
-if [ ! -d "$FILES_DIR" ]; then
-  echo "Mock validation failed: missing directory $FILES_DIR"
-  exit 1
-fi
-
-NON_GITKEEP_COUNT=$(find "$FILES_DIR" -maxdepth 1 -type f ! -name '.gitkeep' | wc -l | tr -d ' ')
-if [ "$NON_GITKEEP_COUNT" -eq 0 ]; then
-  echo "You should add your poems to the ./files folder"
-  exit 1
-fi
-
-echo "Mock validation passed: found $NON_GITKEEP_COUNT files in $FILES_DIR"
-`,
-      );
-      chmodSync(validatorPath, 0o755);
-
-      writeHook(
+      writePlugin(
         repo,
-        "pre-attempt-status-review-ready",
-        `set -eu
-
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-VALIDATION_SCRIPT="$SCRIPT_DIR/../validators/mock-validation.sh"
-
-sh "$VALIDATION_SCRIPT" "$PSTDIO_WORKTREE_PATH"
-`,
+        "validator-guard.ts",
+        `import { existsSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+export default { hooks: { preAttemptStatusChange(ctx) {
+  if (ctx.toStatus !== "review-ready") return;
+  const worktreePath = ctx.worktreePath ?? ".";
+  const filesDir = join(worktreePath, "files");
+  if (!existsSync(filesDir)) return { reject: true, reason: "Mock validation failed: missing directory " + filesDir };
+  const nonGitkeep = readdirSync(filesDir).filter(f => f !== ".gitkeep");
+  if (nonGitkeep.length === 0) return { reject: true, reason: "You should add your poems to the ./files folder" };
+} } };`,
       );
 
-      const { attempt } = await createAttemptWithSession(ctx, repo, "pre-attempt-cli-stdout-message");
+      const { attempt } = await createAttemptWithSession(ctx, repo, "pre-attempt-cli-plugin-reject");
       mkdirSync(join(attempt.workspace.worktree_path!, "files"), { recursive: true });
       writeFileSync(join(attempt.workspace.worktree_path!, "files", ".gitkeep"), "");
 
@@ -162,14 +145,18 @@ sh "$VALIDATION_SCRIPT" "$PSTDIO_WORKTREE_PATH"
   );
 
   test(
-    "pre-hook allows transition when it exits zero",
+    "pre-hook allows transition when plugin returns undefined",
     async () => {
       const repo = createInitializedRepo(ctx, "pre-attempt-allow");
       const projectId = getProjectId(repo);
       await registerRepo(ctx, projectId, repo, "pre-attempt-allow-repo");
       await configureAgent(ctx);
 
-      writeHook(repo, "pre-attempt-status-review-ready", "exit 0");
+      writePlugin(
+        repo,
+        "allow-guard.ts",
+        `export default { hooks: { preAttemptStatusChange() { return undefined; } } };`,
+      );
 
       const { attempt } = await createAttemptWithSession(ctx, repo, "pre-attempt-allow");
       const workspaceId = attempt.workspace.id;
@@ -185,14 +172,14 @@ sh "$VALIDATION_SCRIPT" "$PSTDIO_WORKTREE_PATH"
   );
 
   test(
-    "transition succeeds when no hook script exists",
+    "transition succeeds when no plugin exists",
     async () => {
       const repo = createInitializedRepo(ctx, "no-hook-transition");
       const projectId = getProjectId(repo);
       await registerRepo(ctx, projectId, repo, "no-hook-transition-repo");
       await configureAgent(ctx);
 
-      // No hooks written — transition should work
+      // No plugins written — transition should work
       const { attempt } = await createAttemptWithSession(ctx, repo, "no-hook-transition");
       const workspaceId = attempt.workspace.id;
 
@@ -228,7 +215,7 @@ sh "$VALIDATION_SCRIPT" "$PSTDIO_WORKTREE_PATH"
   );
 
   test(
-    "post-attempt-status-review-ready fires when session ends after CLI set-status",
+    "postAttemptStatusChange fires when session ends after CLI set-status",
     async () => {
       const repo = createInitializedRepo(ctx, "post-attempt-session-end");
       const projectId = getProjectId(repo);
@@ -236,7 +223,12 @@ sh "$VALIDATION_SCRIPT" "$PSTDIO_WORKTREE_PATH"
       await configureAgent(ctx);
 
       const outputPath = join(repo, "post-attempt-status-review-ready-fired.txt");
-      writeHook(repo, "post-attempt-status-review-ready", `echo "$PSTDIO_SESSION_ID" > "${outputPath}"`);
+      writePlugin(
+        repo,
+        "post-marker.ts",
+        `import { writeFileSync } from "node:fs";
+export default { hooks: { postAttemptStatusChange(ctx) { if (ctx.toStatus === "review-ready") writeFileSync(${JSON.stringify(outputPath)}, ctx.sessionId ?? ""); } } };`,
+      );
 
       const { attempt } = await createAttemptWithSession(ctx, repo, "post-attempt-session-end");
       expect(attempt.session).toBeTruthy();
@@ -254,64 +246,26 @@ sh "$VALIDATION_SCRIPT" "$PSTDIO_WORKTREE_PATH"
   );
 
   test.skip(
-    "surfaces validation details when a pre-hook follows up the active session",
+    "surfaces validation details when a pre-hook plugin follows up the active session",
     async () => {
       const repo = createInitializedRepo(ctx, "pre-attempt-follow-up-message");
       const projectId = getProjectId(repo);
       await registerRepo(ctx, projectId, repo, "pre-attempt-follow-up-message-repo");
       await configureAgent(ctx);
 
-      const validatorsDir = join(repo, ".pstdio", "validators");
-      mkdirSync(validatorsDir, { recursive: true });
-
-      const validatorPath = join(validatorsDir, "mock-validation.sh");
-      writeFileSync(
-        validatorPath,
-        `#!/bin/sh
-set -eu
-
-WORKTREE_PATH="\${1:-.}"
-FILES_DIR="$WORKTREE_PATH/files"
-
-if [ ! -d "$FILES_DIR" ]; then
-  echo "Mock validation failed: missing directory $FILES_DIR"
-  exit 1
-fi
-
-NON_GITKEEP_COUNT=$(find "$FILES_DIR" -maxdepth 1 -type f ! -name '.gitkeep' | wc -l | tr -d ' ')
-if [ "$NON_GITKEEP_COUNT" -eq 0 ]; then
-  echo "You should add your poems to the ./files folder"
-  exit 1
-fi
-`,
-      );
-      chmodSync(validatorPath, 0o755);
-
-      writeHook(
+      writePlugin(
         repo,
-        "pre-attempt-status-review-ready",
-        `set -eu
-
-PSTDIO_DEV_CLI="${PSTDIO_CLI}"
-
-run_pstdio() {
-  PSTDIO_API_URL="${api.url}" PSTDIO_DISABLE_API_AUTO_START=1 PSTDIO_DISABLE_EMBED_MANIFEST=1 bun run "$PSTDIO_DEV_CLI" "$@"
-}
-
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-VALIDATION_SCRIPT="$SCRIPT_DIR/../validators/mock-validation.sh"
-
-if ! VALIDATION_OUTPUT=$(sh "$VALIDATION_SCRIPT" "$PSTDIO_WORKTREE_PATH" 2>&1); then
-  run_pstdio sessions follow-up --id "$PSTDIO_SESSION_ID" \\
-    --prompt "Validation failed. Fix the errors and mark the attempt review-ready again:
-
-$VALIDATION_OUTPUT" || true
-
-  printf '%s\\n\\n%s\\n' \\
-    "Validation failed. Fix the errors and mark the attempt review-ready again:" \\
-    "$VALIDATION_OUTPUT" >&2
-  exit 1
-fi`,
+        "followup-guard.ts",
+        `import { existsSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+export default { hooks: { preAttemptStatusChange(ctx) {
+  if (ctx.toStatus !== "review-ready") return;
+  const worktreePath = ctx.worktreePath ?? ".";
+  const filesDir = join(worktreePath, "files");
+  if (!existsSync(filesDir)) return { reject: true, reason: "Validation failed. Fix the errors and mark the attempt review-ready again:\\n\\nMock validation failed: missing directory " + filesDir };
+  const nonGitkeep = readdirSync(filesDir).filter(f => f !== ".gitkeep");
+  if (nonGitkeep.length === 0) return { reject: true, reason: "Validation failed. Fix the errors and mark the attempt review-ready again:\\n\\nYou should add your poems to the ./files folder" };
+} } };`,
       );
 
       const { attempt } = await createAttemptWithSession(ctx, repo, "pre-attempt-follow-up-message");
@@ -325,9 +279,6 @@ fi`,
       expect(session.status).toBe("in_progress");
 
       const runSafe = createRunSafe(ctx);
-      const directFollowUp = runSafe(`sessions follow-up --id "${attempt.session!.id}" --prompt "probe"`, repo);
-      expect(directFollowUp.exitCode).toBe(1);
-      expect(directFollowUp.stderr).toContain("Session is in_progress");
 
       const result = runSafe(
         `workspaces set-status --workspace "${attempt.workspace.workspace_shorthand}" --status review-ready --session-id "${attempt.session!.id}"`,

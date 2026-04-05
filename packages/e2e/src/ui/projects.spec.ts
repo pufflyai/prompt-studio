@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
@@ -445,10 +445,7 @@ test.describe("Project creation", () => {
     await repoRegistrationDone;
 
     await page.waitForURL(`**${resolveProjectDefaultPath(createdProject.id)}`);
-    expect(existsSync(join(repoPath, ".pstdio", "hooks", "post-worktree-create"))).toBe(true);
-    expect(readFileSync(join(repoPath, ".pstdio", "hooks", "post-worktree-create"), "utf8")).toContain(
-      "pstdio tickets pull",
-    );
+    expect(existsSync(join(repoPath, ".pstdio", "plugins", "worktree-bootstrap.js"))).toBe(true);
   });
 });
 

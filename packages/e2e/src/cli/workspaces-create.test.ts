@@ -1,8 +1,9 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { execSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanupDirs, createGitRepo, runPstdio } from "./helpers";
+import { writePlugin } from "./hooks-infra";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 
@@ -30,14 +31,6 @@ const createInitializedRepo = (name: string) => {
   execSync("git commit --allow-empty -m init", { cwd: repo, stdio: "pipe" });
   run(`projects create ${name}`, repo);
   return repo;
-};
-
-const writeHook = (repo: string, hookName: string, script: string) => {
-  const hooksDir = join(repo, ".pstdio", "hooks");
-  mkdirSync(hooksDir, { recursive: true });
-  const path = join(hooksDir, hookName);
-  writeFileSync(path, `#!/bin/sh\n${script}`);
-  chmodSync(path, 0o755);
 };
 
 const readProjectId = (repo: string) => {
@@ -81,7 +74,21 @@ describe("pstdio workspaces create", () => {
     "runs post-create hook when creating a workspace",
     async () => {
       const repo = createInitializedRepo("workspace-create-hook");
-      writeHook(repo, "post-worktree-create", 'echo "hook ok"\necho "done" > post-create-marker.txt');
+      writePlugin(
+        repo,
+        "post-create-marker.ts",
+        `
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+export default {
+  hooks: {
+    postWorktreeCreate(context: any) {
+      writeFileSync(join(context.worktreePath, "post-create-marker.txt"), "done");
+    },
+  },
+};
+`,
+      );
 
       const createTicketOutput = run('tickets create --content "Workspace hook ticket"', repo);
       const ticketShorthand = createTicketOutput.match(/Created ticket (\S+)/)?.[1];

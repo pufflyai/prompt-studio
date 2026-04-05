@@ -31,6 +31,14 @@ const run = (args: string, cwd: string) => runPackaged(args, cwd, { PSTDIO_API_U
 
 const runSafe = (args: string, cwd: string) => runPackagedSafe(args, cwd, { PSTDIO_API_URL: api.url });
 
+const REQUIRED_DEFAULT_PLUGIN_FILES = [
+  "code-review-lifecycle.ts",
+  "ticket-actions.ts",
+  "ticket-lifecycle.ts",
+  "workspace-actions.ts",
+  "worktree-lifecycle.ts",
+];
+
 const createInitializedRepo = (name: string) => {
   const repo = createGitRepo();
   dirs.push(repo);
@@ -107,23 +115,17 @@ describe("packaged pstdio — project lifecycle", () => {
         const config = JSON.parse(readFileSync(join(repo, ".pstdio", "config.json"), "utf8")) as {
           project_id: string;
         };
-        expect(existsSync(join(repo, ".pstdio", "hooks", "post-worktree-create"))).toBe(true);
-        expect(existsSync(join(repo, ".pstdio", "hooks", "post-session-start"))).toBe(true);
-        expect(existsSync(join(repo, ".pstdio", "hooks", "post-session-success"))).toBe(true);
-        expect(existsSync(join(repo, ".pstdio", "hooks", "post-ticket-archive"))).toBe(true);
-        expect(existsSync(join(repo, ".pstdio", "hooks", "post-worktree-create."))).toBe(false);
+        const pluginFiles = REQUIRED_DEFAULT_PLUGIN_FILES.filter((file) =>
+          existsSync(join(repo, ".pstdio", "plugins", file)),
+        );
+        expect(pluginFiles).toEqual(REQUIRED_DEFAULT_PLUGIN_FILES);
         expect(existsSync(join(repo, ".claude", "skills", "create-ticket", "SKILL.md"))).toBe(true);
 
         const response = await fetch(`${url}/v1/projects/${config.project_id}/hooks`);
         expect(response.ok).toBe(true);
         const hooks = (await response.json()) as { name: string; content: string | null }[];
         const installedHooks = hooks.filter((hook) => hook.content !== null).map((hook) => hook.name);
-        expect(installedHooks).toEqual([
-          "post-worktree-create",
-          "post-session-start",
-          "post-session-success",
-          "post-ticket-archive",
-        ]);
+        expect(installedHooks).toEqual([]);
       } finally {
         await shutdownApiViaHttp(url);
         server.kill();
@@ -176,21 +178,16 @@ describe("packaged pstdio — project lifecycle", () => {
         expect(existsSync(join(repo, ".pstdio", "config.json"))).toBe(true);
         expect(existsSync(join(repo, ".pstdio", "docs", "navigation.json"))).toBe(true);
         expect(existsSync(join(repo, ".pstdio", "docs", "index.md"))).toBe(true);
-        expect(existsSync(join(repo, ".pstdio", "hooks", "post-worktree-create"))).toBe(true);
-        expect(existsSync(join(repo, ".pstdio", "hooks", "post-session-start"))).toBe(true);
-        expect(existsSync(join(repo, ".pstdio", "hooks", "post-session-success"))).toBe(true);
-        expect(existsSync(join(repo, ".pstdio", "hooks", "post-ticket-archive"))).toBe(true);
+        const pluginFiles = REQUIRED_DEFAULT_PLUGIN_FILES.filter((file) =>
+          existsSync(join(repo, ".pstdio", "plugins", file)),
+        );
+        expect(pluginFiles).toEqual(REQUIRED_DEFAULT_PLUGIN_FILES);
 
         const hooksResponse = await fetch(`${url}/v1/projects/${project.id}/hooks`);
         expect(hooksResponse.ok).toBe(true);
         const hooks = (await hooksResponse.json()) as { name: string; content: string | null }[];
         const installedHooks = hooks.filter((hook) => hook.content !== null).map((hook) => hook.name);
-        expect(installedHooks).toEqual([
-          "post-worktree-create",
-          "post-session-start",
-          "post-session-success",
-          "post-ticket-archive",
-        ]);
+        expect(installedHooks).toEqual([]);
       } finally {
         await shutdownApiViaHttp(url);
         server.kill();

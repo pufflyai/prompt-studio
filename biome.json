@@ -13,6 +13,7 @@
       "!!**/coverage",
       "!!**/dist",
       "!!**/.nx",
+      "bun.lock",
       "!!packages/pstdio-dashboard/chakra-config.json",
       "!!packages/e2e/playwright-report",
       "!!packages/e2e/test-results",

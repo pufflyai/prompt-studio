@@ -152,6 +152,35 @@
           ]
         },
         {
+          "text": "SDK",
+          "items": [
+            {
+              "text": "Overview",
+              "link": "/product/sdk/index"
+            },
+            {
+              "text": "Client",
+              "link": "/product/sdk/client"
+            },
+            {
+              "text": "Method Reference",
+              "link": "/product/sdk/reference"
+            },
+            {
+              "text": "Resource Types",
+              "link": "/product/sdk/resources"
+            },
+            {
+              "text": "Plugins",
+              "link": "/product/sdk/plugins"
+            },
+            {
+              "text": "Cookbook",
+              "link": "/product/sdk/cookbook"
+            }
+          ]
+        },
+        {
           "text": "API",
           "items": [
             {

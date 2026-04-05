@@ -11,6 +11,7 @@ import {
   type HookTestContext,
   waitForPath,
   writeHook,
+  writePlugin,
 } from "./hooks-infra";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
@@ -65,7 +66,7 @@ describe("hooks CLI", () => {
   );
 
   test(
-    "creates a hook file using bundled scaffold",
+    "creates a hook file with a generic stub",
     () => {
       const repo = createGitRepo();
       ctx.dirs.push(repo);
@@ -75,7 +76,8 @@ describe("hooks CLI", () => {
       const content = readFileSync(hookPath, "utf8");
 
       expect(output).toContain('Created hook "post-worktree-create"');
-      expect(content).toContain("pstdio tickets pull");
+      expect(content).toContain("#!/bin/sh");
+      expect(content).toContain("# .pstdio/hooks/post-worktree-create");
       expect(createRun(ctx)("hooks list", repo)).toContain("post-worktree-create          yes");
     },
     TEST_TIMEOUT,
@@ -178,15 +180,12 @@ describe("hook CRUD via API", () => {
 
 describe("default post-worktree-create hook", () => {
   test(
-    "project init scaffolds default post-worktree-create hook",
+    "project init scaffolds default worktree-bootstrap plugin",
     () => {
       const repo = createInitializedRepo(ctx, "scaffold-hooks");
-      const hookPath = join(repo, ".pstdio", "hooks", "post-worktree-create");
+      const pluginPath = join(repo, ".pstdio", "plugins", "worktree-bootstrap.js");
 
-      expect(existsSync(hookPath)).toBe(true);
-      const content = readFileSync(hookPath, "utf8");
-      expect(content).toContain("config.json");
-      expect(content).toContain("pstdio tickets pull");
+      expect(existsSync(pluginPath)).toBe(true);
     },
     TEST_TIMEOUT,
   );
@@ -217,24 +216,32 @@ describe("default post-worktree-create hook", () => {
 
 describe("custom post-worktree-create hook", () => {
   test(
-    "creates files and receives all env vars in worktree",
+    "creates files and receives context in worktree",
     async () => {
       const repo = createInitializedRepo(ctx, "custom-hook-env");
 
-      writeHook(
+      writePlugin(
         repo,
-        "post-worktree-create",
+        "post-create-env.ts",
         `
-mkdir -p "$PSTDIO_WORKTREE_PATH/files"
-cat > "$PSTDIO_WORKTREE_PATH/files/env-dump.txt" <<EOF
-HOOK=$PSTDIO_HOOK
-REPO=$PSTDIO_REPO_PATH
-WORKSPACE=$PSTDIO_WORKSPACE
-TICKET=$PSTDIO_TICKET
-BRANCH=$PSTDIO_BRANCH
-PROJECT=$PSTDIO_PROJECT_ID
-CWD=$(pwd)
-EOF
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+export default {
+  hooks: {
+    postWorktreeCreate(context: any) {
+      const dir = join(context.worktreePath, "files");
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, "env-dump.txt"), [
+        "HOOK=postWorktreeCreate",
+        "REPO=" + context.repoPath,
+        "WORKSPACE=" + context.workspace,
+        "TICKET=" + context.ticket,
+        "BRANCH=" + context.branch,
+        "PROJECT=" + context.projectId,
+      ].join("\\n") + "\\n");
+    },
+  },
+};
 `,
       );
 
@@ -246,15 +253,12 @@ EOF
 
       const content = readFileSync(envFile, "utf8");
       const realRepo = realpathSync(repo);
-      expect(content).toContain("HOOK=post-worktree-create");
+      expect(content).toContain("HOOK=postWorktreeCreate");
       expect(content).toContain(`REPO=${realRepo}`);
       expect(content).toContain(`WORKSPACE=${workspace.workspace_shorthand}`);
       expect(content).toContain(`TICKET=${ticketShorthand}`);
       expect(content).toContain(`BRANCH=workspace/${workspace.workspace_shorthand}`);
       expect(content).not.toContain("PROJECT=\n");
-      // cwd should be the worktree
-      const cwdLine = content.split("\n").find((l) => l.startsWith("CWD="))!;
-      expect(realpathSync(cwdLine.replace("CWD=", ""))).toBe(realpathSync(workspace.worktree_path!));
     },
     TEST_TIMEOUT,
   );
@@ -266,11 +270,14 @@ describe("worktree removal hooks", () => {
     async () => {
       const repo = createInitializedRepo(ctx, "preremove-block");
       const { workspace } = await createWorkspaceInRepo(ctx, repo);
-      writeHook(repo, "pre-worktree-remove", "exit 1");
+      writePlugin(
+        repo,
+        "pre-remove-block.ts",
+        `export default { hooks: { preWorktreeRemove: () => ({ reject: true, reason: "blocked" }) } };`,
+      );
 
       const result = createRunSafe(ctx)(`workspaces delete --id ${workspace.workspace_shorthand}`, repo);
       expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain("HOOK pre-worktree-remove FAILED");
     },
     TEST_TIMEOUT,
   );
@@ -280,7 +287,14 @@ describe("worktree removal hooks", () => {
     async () => {
       const repo = createInitializedRepo(ctx, "postremove-run");
       const { workspace } = await createWorkspaceInRepo(ctx, repo);
-      writeHook(repo, "post-worktree-remove", `echo "removed" > "${repo}/post-remove-marker.txt"`);
+      writePlugin(
+        repo,
+        "post-remove-marker.ts",
+        `
+import { writeFileSync } from "node:fs";
+export default { hooks: { postWorktreeRemove() { writeFileSync("${repo}/post-remove-marker.txt", "removed"); } } };
+`,
+      );
 
       createRun(ctx)(`workspaces delete --id ${workspace.workspace_shorthand}`, repo);
       expect(await waitForPath(join(repo, "post-remove-marker.txt"))).toBe(true);

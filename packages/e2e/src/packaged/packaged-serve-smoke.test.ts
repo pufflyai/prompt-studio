@@ -36,15 +36,12 @@ const REQUIRED_SKILL_NAMES = [
   "update-documentation",
   "write-pstdio-hook",
 ];
-const REQUIRED_HOOK_NAMES = [
-  "post-session-start",
-  "post-ticket-archive",
-  "post-worktree-create",
-  "pre-attempt-status-review-ready",
-  "post-attempt-status-review-ready",
-  "post-attempt-status-blocked",
-  "post-attempt-status-changes-requested",
-  "post-attempt-status-reviewed",
+const REQUIRED_DEFAULT_PLUGIN_FILES = [
+  "code-review-lifecycle.ts",
+  "ticket-actions.ts",
+  "ticket-lifecycle.ts",
+  "workspace-actions.ts",
+  "worktree-lifecycle.ts",
 ];
 
 const createCandidatePort = () => 42_000 + Math.floor(Math.random() * 200);
@@ -176,9 +173,10 @@ describe("packaged pstdio — self-hosted serve", () => {
         expect(existsSync(join(repoPath, ".pstdio", "config.json"))).toBe(true);
         expect(existsSync(join(repoPath, ".pstdio", "docs", "index.md"))).toBe(true);
         expect(existsSync(join(repoPath, ".pstdio", "docs", "navigation.json"))).toBe(true);
-        for (const hookName of REQUIRED_HOOK_NAMES) {
-          expect(existsSync(join(repoPath, ".pstdio", "hooks", hookName))).toBe(true);
-        }
+        const pluginFiles = REQUIRED_DEFAULT_PLUGIN_FILES.filter((file) =>
+          existsSync(join(repoPath, ".pstdio", "plugins", file)),
+        );
+        expect(pluginFiles).toEqual(REQUIRED_DEFAULT_PLUGIN_FILES);
       } finally {
         if (child) {
           await stopProcess(child);

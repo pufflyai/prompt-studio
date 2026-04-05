@@ -1,124 +1,253 @@
 # Cookbook
 
-## Set Up a Worktree for Development
+Use SDK plugins (`definePlugin`) for all lifecycle automation. Plugins in `.pstdio/plugins/` are the only hook mechanism.
 
-`post-worktree-create` — copy config, agent folders, env files, pull ticket context, and install dependencies.
+For SDK plugin files under `.pstdio/plugins`, plugin identity comes from file path. Use one default-exported plugin per file and do not set an explicit plugin `key`.
 
-```sh
-#!/bin/sh
+## Shared Helpers
 
-WORKTREE="$PSTDIO_WORKTREE_PATH"
-REPO="$PSTDIO_REPO_PATH"
-TICKET="${PSTDIO_TICKET}"
+Use SDK helpers from `@pstdio/sdk/plugins`:
 
-mkdir -p "$WORKTREE/.pstdio"
-cp "$REPO/.pstdio/config.json" "$WORKTREE/.pstdio/config.json"
-
-for dir in ".claude" ".opencode"; do
-  if [ -d "$REPO/$dir" ]; then
-    mkdir -p "$WORKTREE/$dir"
-    cp -R "$REPO/$dir/." "$WORKTREE/$dir/"
-  fi
-done
-
-for f in .env .env.local .env.test; do
-  [ -f "$REPO/$f" ] && cp "$REPO/$f" "$WORKTREE/$f"
-done
-
-[ -n "$TICKET" ] && pstdio tickets pull --id "$TICKET" 2>/dev/null || true
-
-bun install
-bun run build
+```ts
+import {
+  findTicketByRef,
+  removeAllWorkspacesForTicket,
+  setTicketStatus,
+  setWorkspaceAttemptStatus,
+  updateTicketWhenAllAttemptsMatch,
+} from "@pstdio/sdk/plugins";
 ```
 
-## Validate Before Committing
+## Set Up a Worktree for Development
 
-`pre-commit` — run full validation before allowing a commit.
+`postWorktreeCreate` — copy config, agent folders, env files, then install and build.
+
+```ts
+import { cpSync, existsSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
+import { definePlugin } from "@pstdio/sdk/plugins";
+
+const run = async (cwd: string, command: string[]) => {
+  const proc = Bun.spawn(command, {
+    cwd,
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+  return (await proc.exited) === 0;
+};
+
+export default definePlugin({
+  hooks: {
+    async postWorktreeCreate(ctx) {
+      const repoConfig = join(ctx.repoPath, ".pstdio", "config.json");
+      const worktreeConfigDir = join(ctx.worktreePath, ".pstdio");
+      const worktreeConfig = join(worktreeConfigDir, "config.json");
+
+      if (existsSync(repoConfig)) {
+        mkdirSync(worktreeConfigDir, { recursive: true });
+        cpSync(repoConfig, worktreeConfig);
+      }
+
+      for (const agentDir of [".claude", ".opencode"]) {
+        const fromDir = join(ctx.repoPath, agentDir);
+        const toDir = join(ctx.worktreePath, agentDir);
+        if (!existsSync(fromDir)) continue;
+        mkdirSync(toDir, { recursive: true });
+        cpSync(fromDir, toDir, { recursive: true });
+      }
+
+      for (const envFile of [".env", ".env.local", ".env.test"]) {
+        const fromFile = join(ctx.repoPath, envFile);
+        const toFile = join(ctx.worktreePath, envFile);
+        if (!existsSync(fromFile)) continue;
+        cpSync(fromFile, toFile);
+      }
+
+      if (!(await run(ctx.worktreePath, ["bun", "install"]))) return;
+      await run(ctx.worktreePath, ["bun", "run", "build"]);
+    },
+  },
+});
+```
+
+## Validate Before Committing / Before Merging
+
+`pre-commit` and `pre-merge` are git-level hooks dispatched via shell scripts (not through the plugin system):
 
 ```sh
-#!/bin/sh
+# .pstdio/hooks/pre-commit
 bun run validate
 ```
 
-## Run Tests Before Merging
-
-`pre-merge` — gate merges on tests.
-
 ```sh
-#!/bin/sh
+# .pstdio/hooks/pre-merge
 bun run test
 ```
 
 ## Auto-Assign Default Fields on Ticket Creation
 
-`pre-ticket-creation` — enrich tickets before persistence.
+Use `postTicketCreation` to normalize status/tags after persistence.
 
-```sh
-#!/bin/sh
-NEXT=$(jq '.priority //= "medium" | .labels += ["needs-triage"]')
-echo "PSTDIO_PAYLOAD=$NEXT"
+```ts
+import { definePlugin } from "@pstdio/sdk/plugins";
+
+export default definePlugin({
+  hooks: {
+    async postTicketCreation(ctx) {
+      if (ctx.parentId) return;
+
+      const backlogStatusId = await findStatusId(ctx, "backlog");
+      const tags = await ctx.client.tags.list(ctx.projectId);
+      const triageTagOptionId = tags
+        .find((tag) => tag.name === "workflow")
+        ?.options.find((option) => option.name === "needs-triage")?.id;
+
+      const tagIds =
+        triageTagOptionId && !ctx.tagIds.includes(triageTagOptionId)
+          ? [...ctx.tagIds, triageTagOptionId]
+          : ctx.tagIds;
+
+      if (!backlogStatusId && tagIds.length === ctx.tagIds.length) return;
+
+      await ctx.client.tickets.update(ctx.id, {
+        status_id: backlogStatusId,
+        tag_ids: tagIds,
+      });
+    },
+  },
+});
 ```
 
 ## Branch on Completion Status
 
-`post-session-success` — branch automation by `attempt_status`.
+Use `postAttemptStatusChange` instead of branching inside `post-session-success`.
 
-```sh
-#!/bin/sh
-STATUS="${PSTDIO_ATTEMPT_STATUS:-}"
-TICKET="${PSTDIO_TICKET:-}"
-WORKSPACE="${PSTDIO_WORKSPACE:-}"
+```ts
+import { definePlugin, setTicketStatus } from "@pstdio/sdk/plugins";
 
-if [ "$STATUS" = "blocked" ] && [ -n "$TICKET" ]; then
-  pstdio tickets update --id "$TICKET" --status blocked
-  exit 0
-fi
+export default definePlugin({
+  hooks: {
+    async postAttemptStatusChange(ctx) {
+      if (ctx.toStatus === "blocked" && ctx.ticket) {
+        await setTicketStatus(ctx, {
+          ticket: ctx.ticket.shorthand,
+          status: "blocked",
+        });
+      }
 
-if [ "$STATUS" = "review-ready" ] && [ -n "$WORKSPACE" ]; then
-  pstdio sessions create \
-    --workspace-id "$WORKSPACE" \
-    --agent reviewer \
-    --prompt "Run a code review for ticket $TICKET"
-fi
+      if (ctx.toStatus === "review-ready" && ctx.ticket) {
+        await ctx.client.sessions.create({
+          project_id: ctx.projectId,
+          workspace_id: ctx.workspace.id,
+          title: `Code review: ${ctx.ticket.shorthand}`,
+          prompt:
+            "Run a code review for this workspace and summarize actionable findings.",
+          agent: "reviewer",
+        });
+      }
+    },
+  },
+});
 ```
-
-`--workspace-id` accepts workspace shorthand or workspace ID.
 
 ## Move Ticket to WIP When Work Starts
 
-`post-session-start` — move ticket to WIP when session begins in a workspace.
+`postSessionStart` — move ticket to `wip` when a workspace session starts.
 
-```sh
-#!/bin/sh
-TICKET="${PSTDIO_TICKET:-}"
-if [ -n "$TICKET" ]; then
-  pstdio tickets update --id "$TICKET" --status wip
-fi
+```ts
+import {
+  definePlugin,
+  findTicketByRef,
+  setTicketStatus,
+} from "@pstdio/sdk/plugins";
+
+export default definePlugin({
+  hooks: {
+    async postSessionStart(ctx) {
+      if (!ctx.ticket) return;
+      const ticket = await findTicketByRef(ctx, {
+        ticketId: ctx.ticket.shorthand,
+      });
+      if (!ticket) return;
+      if (ticket.status_name === "review" || ticket.status_name === "wip")
+        return;
+
+      await setTicketStatus(ctx, {
+        ticket: ticket.id,
+        status: "wip",
+      });
+    },
+  },
+});
 ```
 
 ## Notify on Ticket Status Change
 
-`post-ticket-status-change` — send a Slack message when a ticket changes status.
+`postTicketStatusChange` — send a Slack message when a ticket changes status.
 
-```sh
-#!/bin/sh
-TICKET="${PSTDIO_TICKET:-}"
-STATUS="${PSTDIO_TO_STATUS:-}"
-[ -z "$TICKET" ] && exit 0
-[ -z "$STATUS" ] && exit 0
+```ts
+import { definePlugin } from "@pstdio/sdk/plugins";
 
-curl -X POST "$SLACK_WEBHOOK" \
-  -H 'Content-Type: application/json' \
-  -d "{\"text\": \"Ticket $TICKET moved to $STATUS\"}"
+export default definePlugin({
+  hooks: {
+    async postTicketStatusChange(ctx) {
+      if (!ctx.toStatus || !process.env.SLACK_WEBHOOK) return;
+      await fetch(process.env.SLACK_WEBHOOK, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          text: `Ticket ${ctx.shorthand} moved to ${ctx.toStatus}`,
+        }),
+      });
+    },
+  },
+});
 ```
 
 ## Cleanup Worktrees on Archive
 
-`post-ticket-archive` — remove worktrees associated with the archived ticket.
+`postTicketArchive` — remove worktrees associated with the archived ticket.
 
-```sh
-#!/bin/sh
-TICKET="${PSTDIO_TICKET:-}"
-[ -z "$TICKET" ] && exit 0
-pstdio tickets worktrees remove-all --id "$TICKET"
+```ts
+import {
+  definePlugin,
+  removeAllWorkspacesForTicket,
+} from "@pstdio/sdk/plugins";
+
+export default definePlugin({
+  hooks: {
+    async postTicketArchive(ctx) {
+      await removeAllWorkspacesForTicket(ctx, { ticketId: ctx.id });
+    },
+  },
+});
+```
+
+## Add a Manual Action Trigger
+
+Use plugin actions when the user should click a button instead of waiting for a lifecycle hook.
+
+```ts
+import { definePlugin } from "@pstdio/sdk/plugins";
+
+export default definePlugin({
+  actions: [
+    {
+      key: "run-review",
+      label: "Run review",
+      targetType: "workspace",
+      placement: "secondary",
+      async trigger(ctx) {
+        await ctx.client.sessions.create({
+          project_id: ctx.projectId,
+          workspace_id: ctx.targetId,
+          title: "Manual review",
+          prompt:
+            "Review this workspace for correctness, regressions, and missing tests.",
+          agent: "reviewer",
+        });
+      },
+    },
+  ],
+});
 ```

@@ -17,7 +17,7 @@ import {
   waitFor,
   waitForJsonFile,
   waitForPath,
-  writeHook,
+  writePlugin,
 } from "./hooks-infra";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
@@ -47,7 +47,11 @@ describe("worktree creation hooks", () => {
       await registerRepo(ctx, projectId, repo, "pre-wt-create-block-repo");
       await configureAgent(ctx);
 
-      writeHook(repo, "pre-worktree-create", 'echo "blocked" >&2; exit 1');
+      writePlugin(
+        repo,
+        "pre-wt-guard.ts",
+        `export default { hooks: { preWorktreeCreate: () => ({ reject: true, reason: "blocked" }) } };`,
+      );
 
       const run = createRun(ctx);
       const createTicketOutput = run('tickets create --content "hook block test"', repo);
@@ -74,7 +78,11 @@ describe("ticket hooks", () => {
     async () => {
       const repo = createInitializedRepo(ctx, "pre-ticket-reject");
       const projectId = getProjectId(repo);
-      writeHook(repo, "pre-ticket-creation", 'echo "Missing description" >&2; exit 1');
+      writePlugin(
+        repo,
+        "pre-ticket-create-guard.ts",
+        `export default { hooks: { preTicketCreation: () => ({ reject: true, reason: "Missing description" }) } };`,
+      );
       await registerRepo(ctx, projectId, repo, "pre-ticket-reject-repo");
 
       const { res } = await createTicketViaApi(ctx, projectId);
@@ -88,14 +96,22 @@ describe("ticket hooks", () => {
     async () => {
       const repo = createInitializedRepo(ctx, "post-ticket-create");
       const projectId = getProjectId(repo);
-      writeHook(repo, "post-ticket-creation", `cat > "${repo}/post-ticket-creation-payload.json"`);
+      const payloadFile = join(repo, "post-ticket-creation-payload.json");
+      writePlugin(
+        repo,
+        "post-ticket-create-logger.ts",
+        `
+import { writeFileSync } from "node:fs";
+export default { hooks: { postTicketCreation(ctx) { writeFileSync("${payloadFile}", JSON.stringify(ctx)); } } };
+`,
+      );
       await registerRepo(ctx, projectId, repo, "post-ticket-create-repo");
 
       const { res } = await createTicketViaApi(ctx, projectId);
       expect(res.status).toBe(201);
 
-      const payload = await waitForJsonFile<{ ticket: string }>(join(repo, "post-ticket-creation-payload.json"));
-      expect(payload.ticket).toBeTruthy();
+      const payload = await waitForJsonFile<{ shorthand: string }>(payloadFile);
+      expect(payload.shorthand).toBeTruthy();
     },
     TEST_TIMEOUT,
   );
@@ -107,8 +123,12 @@ describe("ticket hooks", () => {
       const projectId = getProjectId(repo);
       await registerRepo(ctx, projectId, repo, "pre-ticket-delete-repo");
 
+      writePlugin(
+        repo,
+        "pre-ticket-delete-guard.ts",
+        `export default { hooks: { preTicketDeletion: () => ({ reject: true, reason: "rejected" }) } };`,
+      );
       const { ticket } = await createTicketViaApi(ctx, projectId);
-      writeHook(repo, "pre-ticket-deletion", "exit 1");
 
       const deleteRes = await fetch(`${api.url}/v1/tickets/${ticket.id}`, { method: "DELETE" });
       expect(deleteRes.status).toBe(403);
@@ -123,13 +143,21 @@ describe("ticket hooks", () => {
       const projectId = getProjectId(repo);
       await registerRepo(ctx, projectId, repo, "post-ticket-delete-repo");
 
-      const { ticket } = await createTicketViaApi(ctx, projectId);
-      writeHook(repo, "post-ticket-deletion", `cat > "${repo}/post-ticket-deletion-payload.json"`);
+      const markerFile = join(repo, "post-ticket-deletion-payload.json");
+      writePlugin(
+        repo,
+        "post-ticket-delete-logger.ts",
+        `
+import { writeFileSync } from "node:fs";
+export default { hooks: { postTicketDeletion(ctx) { writeFileSync("${markerFile}", JSON.stringify(ctx)); } } };
+`,
+      );
 
+      const { ticket } = await createTicketViaApi(ctx, projectId);
       const deleteRes = await fetch(`${api.url}/v1/tickets/${ticket.id}`, { method: "DELETE" });
       expect(deleteRes.status).toBe(200);
 
-      expect(await waitForPath(join(repo, "post-ticket-deletion-payload.json"))).toBe(true);
+      expect(await waitForPath(markerFile)).toBe(true);
     },
     TEST_TIMEOUT,
   );
@@ -141,8 +169,12 @@ describe("ticket hooks", () => {
       const projectId = getProjectId(repo);
       await registerRepo(ctx, projectId, repo, "pre-ticket-archive-repo");
 
+      writePlugin(
+        repo,
+        "pre-ticket-archive-guard.ts",
+        `export default { hooks: { preTicketArchive: () => ({ reject: true, reason: "rejected" }) } };`,
+      );
       const { ticket } = await createTicketViaApi(ctx, projectId);
-      writeHook(repo, "pre-ticket-archive", "exit 1");
 
       const archiveRes = await fetch(`${api.url}/v1/tickets/${ticket.id}`, {
         method: "PATCH",
@@ -161,8 +193,16 @@ describe("ticket hooks", () => {
       const projectId = getProjectId(repo);
       await registerRepo(ctx, projectId, repo, "post-ticket-archive-repo");
 
+      const markerFile = join(repo, "post-ticket-archive-payload.json");
+      writePlugin(
+        repo,
+        "post-ticket-archive-logger.ts",
+        `
+import { writeFileSync } from "node:fs";
+export default { hooks: { postTicketArchive(ctx) { writeFileSync("${markerFile}", JSON.stringify(ctx)); } } };
+`,
+      );
       const { ticket } = await createTicketViaApi(ctx, projectId);
-      writeHook(repo, "post-ticket-archive", `cat > "${repo}/post-ticket-archive-payload.json"`);
 
       await fetch(`${api.url}/v1/tickets/${ticket.id}`, {
         method: "PATCH",
@@ -170,7 +210,7 @@ describe("ticket hooks", () => {
         body: JSON.stringify({ archived: true }),
       });
 
-      expect(await waitForPath(join(repo, "post-ticket-archive-payload.json"))).toBe(true);
+      expect(await waitForPath(markerFile)).toBe(true);
     },
     TEST_TIMEOUT,
   );
@@ -182,9 +222,13 @@ describe("ticket hooks", () => {
       const projectId = getProjectId(repo);
       await registerRepo(ctx, projectId, repo, "pre-ticket-status-repo");
 
+      writePlugin(
+        repo,
+        "pre-ticket-status-guard.ts",
+        `export default { hooks: { preTicketStatusChange: () => ({ reject: true, reason: "rejected" }) } };`,
+      );
       const { ticket } = await createTicketViaApi(ctx, projectId);
       const newStatusId = await getAlternateStatusId(ctx, projectId, ticket.status_id ?? null);
-      writeHook(repo, "pre-ticket-status-change", "exit 1");
 
       const res = await fetch(`${api.url}/v1/tickets/${ticket.id}`, {
         method: "PATCH",
@@ -203,9 +247,17 @@ describe("ticket hooks", () => {
       const projectId = getProjectId(repo);
       await registerRepo(ctx, projectId, repo, "post-ticket-status-repo");
 
+      const payloadFile = join(repo, "post-ticket-status-payload.json");
+      writePlugin(
+        repo,
+        "post-ticket-status-logger.ts",
+        `
+import { writeFileSync } from "node:fs";
+export default { hooks: { postTicketStatusChange(ctx) { writeFileSync("${payloadFile}", JSON.stringify(ctx)); } } };
+`,
+      );
       const { ticket } = await createTicketViaApi(ctx, projectId);
       const newStatusId = await getAlternateStatusId(ctx, projectId, ticket.status_id ?? null);
-      writeHook(repo, "post-ticket-status-change", `cat > "${repo}/post-ticket-status-payload.json"`);
 
       await fetch(`${api.url}/v1/tickets/${ticket.id}`, {
         method: "PATCH",
@@ -214,13 +266,13 @@ describe("ticket hooks", () => {
       });
 
       const payload = await waitForJsonFile<{
-        ticket: string;
-        from_status: string;
-        to_status: string;
-      }>(join(repo, "post-ticket-status-payload.json"));
-      expect(payload.ticket).toBeTruthy();
-      expect(payload.from_status).toBeTruthy();
-      expect(payload.to_status).toBeTruthy();
+        shorthand: string;
+        fromStatus: string;
+        toStatus: string;
+      }>(payloadFile);
+      expect(payload.shorthand).toBeTruthy();
+      expect(payload.fromStatus).toBeTruthy();
+      expect(payload.toStatus).toBeTruthy();
     },
     TEST_TIMEOUT,
   );
@@ -232,14 +284,22 @@ describe("session hooks", () => {
     async () => {
       const repo = createInitializedRepo(ctx, "session-start");
       const projectId = getProjectId(repo);
-      writeHook(repo, "post-session-start", `cat > "${repo}/session-start-payload.json"`);
+      const payloadFile = join(repo, "session-start-payload.json");
+      writePlugin(
+        repo,
+        "session-start-logger.ts",
+        `
+import { writeFileSync } from "node:fs";
+export default { hooks: { postSessionStart(ctx) { writeFileSync("${payloadFile}", JSON.stringify(ctx)); } } };
+`,
+      );
       await registerRepo(ctx, projectId, repo, "session-start-repo");
 
       const { res } = await createSessionViaApi(ctx, projectId);
       expect(res.status).toBe(201);
 
-      const payload = await waitForJsonFile<{ session_id: string }>(join(repo, "session-start-payload.json"));
-      expect(payload.session_id).toBeTruthy();
+      const payload = await waitForJsonFile<{ sessionId: string }>(payloadFile);
+      expect(payload.sessionId).toBeTruthy();
     },
     TEST_TIMEOUT,
   );
@@ -249,14 +309,22 @@ describe("session hooks", () => {
     async () => {
       const repo = createInitializedRepo(ctx, "session-success");
       const projectId = getProjectId(repo);
-      writeHook(repo, "post-session-success", `cat > "${repo}/session-success-payload.json"`);
+      const payloadFile = join(repo, "session-success-payload.json");
+      writePlugin(
+        repo,
+        "session-success-logger.ts",
+        `
+import { writeFileSync } from "node:fs";
+export default { hooks: { postSessionSuccess(ctx) { writeFileSync("${payloadFile}", JSON.stringify(ctx)); } } };
+`,
+      );
       await registerRepo(ctx, projectId, repo, "session-success-repo");
 
       const { session } = await createSessionViaApi(ctx, projectId);
       await updateSessionStatus(ctx, session.id, "completed");
 
-      const payload = await waitForJsonFile<{ session_status: string }>(join(repo, "session-success-payload.json"));
-      expect(payload.session_status).toBe("completed");
+      const payload = await waitForJsonFile<{ sessionStatus: string }>(payloadFile);
+      expect(payload.sessionStatus).toBe("completed");
     },
     TEST_TIMEOUT,
   );
@@ -266,14 +334,22 @@ describe("session hooks", () => {
     async () => {
       const repo = createInitializedRepo(ctx, "session-fail");
       const projectId = getProjectId(repo);
-      writeHook(repo, "post-session-fail", `cat > "${repo}/session-fail-payload.json"`);
+      const payloadFile = join(repo, "session-fail-payload.json");
+      writePlugin(
+        repo,
+        "session-fail-logger.ts",
+        `
+import { writeFileSync } from "node:fs";
+export default { hooks: { postSessionFail(ctx) { writeFileSync("${payloadFile}", JSON.stringify(ctx)); } } };
+`,
+      );
       await registerRepo(ctx, projectId, repo, "session-fail-repo");
 
       const { session } = await createSessionViaApi(ctx, projectId);
       await updateSessionStatus(ctx, session.id, "failed");
 
-      const payload = await waitForJsonFile<{ session_status: string }>(join(repo, "session-fail-payload.json"));
-      expect(payload.session_status).toBe("failed");
+      const payload = await waitForJsonFile<{ sessionStatus: string }>(payloadFile);
+      expect(payload.sessionStatus).toBe("failed");
     },
     TEST_TIMEOUT,
   );
@@ -283,14 +359,22 @@ describe("session hooks", () => {
     async () => {
       const repo = createInitializedRepo(ctx, "session-await");
       const projectId = getProjectId(repo);
-      writeHook(repo, "post-session-await-input", `cat > "${repo}/session-await-payload.json"`);
+      const payloadFile = join(repo, "session-await-payload.json");
+      writePlugin(
+        repo,
+        "session-await-logger.ts",
+        `
+import { writeFileSync } from "node:fs";
+export default { hooks: { postSessionAwaitInput(ctx) { writeFileSync("${payloadFile}", JSON.stringify(ctx)); } } };
+`,
+      );
       await registerRepo(ctx, projectId, repo, "session-await-repo");
 
       const { session } = await createSessionViaApi(ctx, projectId);
       await updateSessionStatus(ctx, session.id, "awaiting_input");
 
-      const payload = await waitForJsonFile<{ session_status: string }>(join(repo, "session-await-payload.json"));
-      expect(payload.session_status).toBe("awaiting_input");
+      const payload = await waitForJsonFile<{ sessionStatus: string }>(payloadFile);
+      expect(payload.sessionStatus).toBe("awaiting_input");
     },
     TEST_TIMEOUT,
   );
@@ -302,7 +386,15 @@ describe("session resume hook", () => {
     async () => {
       const repo = createInitializedRepo(ctx, "session-resume");
       const projectId = getProjectId(repo);
-      writeHook(repo, "post-session-resume", `cat > "${repo}/session-resume-payload.json"`);
+      const payloadFile = join(repo, "session-resume-payload.json");
+      writePlugin(
+        repo,
+        "session-resume-logger.ts",
+        `
+import { writeFileSync } from "node:fs";
+export default { hooks: { postSessionResume(ctx) { writeFileSync("${payloadFile}", JSON.stringify(ctx)); } } };
+`,
+      );
       await registerRepo(ctx, projectId, repo, "session-resume-repo");
 
       const { session } = await createSessionViaApi(ctx, projectId);
@@ -316,8 +408,8 @@ describe("session resume hook", () => {
       });
       expect(followUpRes.status).toBe(200);
 
-      const payload = await waitForJsonFile<{ session_id: string }>(join(repo, "session-resume-payload.json"));
-      expect(payload.session_id).toBe(session.id);
+      const payload = await waitForJsonFile<{ sessionId: string }>(payloadFile);
+      expect(payload.sessionId).toBe(session.id);
     },
     TEST_TIMEOUT,
   );
@@ -325,24 +417,27 @@ describe("session resume hook", () => {
 
 describe("attempt flow — session hooks receive worktree context", () => {
   test(
-    "post-session-start receives PSTDIO_WORKTREE_PATH via attempt",
+    "post-session-start receives worktreePath via attempt",
     async () => {
       const repo = createInitializedRepo(ctx, "attempt-start");
 
-      writeHook(
+      writePlugin(
         repo,
-        "post-worktree-create",
+        "attempt-start-wt.ts",
         `
-mkdir -p "$PSTDIO_WORKTREE_PATH/files"
-echo "post-worktree-create" > "$PSTDIO_WORKTREE_PATH/files/hook-log.txt"
-`,
-      );
-      writeHook(
-        repo,
-        "post-session-start",
-        `
-NOTE_ROOT=\${PSTDIO_WORKTREE_PATH:-$PSTDIO_REPO_PATH}
-echo "post-session-start worktree=$PSTDIO_WORKTREE_PATH" >> "$NOTE_ROOT/files/hook-log.txt"
+import { mkdirSync, writeFileSync, appendFileSync } from "node:fs";
+export default {
+  hooks: {
+    postWorktreeCreate(ctx) {
+      mkdirSync(ctx.worktreePath + "/files", { recursive: true });
+      writeFileSync(ctx.worktreePath + "/files/hook-log.txt", "post-worktree-create\\n");
+    },
+    postSessionStart(ctx) {
+      const root = ctx.worktreePath || ctx.repoPath || "";
+      appendFileSync(root + "/files/hook-log.txt", "post-session-start worktree=" + (ctx.worktreePath || "") + "\\n");
+    },
+  },
+};
 `,
       );
 
@@ -369,20 +464,23 @@ echo "post-session-start worktree=$PSTDIO_WORKTREE_PATH" >> "$NOTE_ROOT/files/ho
     async () => {
       const repo = createInitializedRepo(ctx, "hook-complete-flow");
 
-      writeHook(
+      writePlugin(
         repo,
-        "post-worktree-create",
+        "hook-complete-flow-wt.ts",
         `
-mkdir -p "$PSTDIO_WORKTREE_PATH/files"
-echo "post-worktree-create" > "$PSTDIO_WORKTREE_PATH/files/hook-log.txt"
-`,
-      );
-      writeHook(
-        repo,
-        "post-session-success",
-        `
-NOTE_ROOT=\${PSTDIO_WORKTREE_PATH:-$PSTDIO_REPO_PATH}
-echo "post-session-success worktree=$PSTDIO_WORKTREE_PATH" >> "$NOTE_ROOT/files/hook-log.txt"
+import { mkdirSync, writeFileSync, appendFileSync } from "node:fs";
+export default {
+  hooks: {
+    postWorktreeCreate(ctx) {
+      mkdirSync(ctx.worktreePath + "/files", { recursive: true });
+      writeFileSync(ctx.worktreePath + "/files/hook-log.txt", "post-worktree-create\\n");
+    },
+    postSessionSuccess(ctx) {
+      const root = ctx.worktreePath || ctx.repoPath || "";
+      appendFileSync(root + "/files/hook-log.txt", "post-session-success worktree=" + (ctx.worktreePath || "") + "\\n");
+    },
+  },
+};
 `,
       );
 

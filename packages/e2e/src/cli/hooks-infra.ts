@@ -23,6 +23,12 @@ export const writeHook = (repo: string, hookName: string, script: string) => {
   chmodSync(path, 0o755);
 };
 
+export const writePlugin = (repo: string, fileName: string, code: string) => {
+  const pluginsDir = join(repo, ".pstdio", "plugins");
+  mkdirSync(pluginsDir, { recursive: true });
+  writeFileSync(join(pluginsDir, fileName), code);
+};
+
 export const createInitializedRepo = (ctx: HookTestContext, name: string) => {
   const repo = createGitRepo();
   ctx.dirs.push(repo);

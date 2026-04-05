@@ -1,9 +1,0 @@
-#!/bin/sh
-set -eu
-
-# ──────────────────────────────────────────────────────────
-# Post-hook: runs after a session ends with blocked
-# Use this to update the ticket or notify the team.
-# ──────────────────────────────────────────────────────────
-
-pstdio tickets update --id "$PSTDIO_TICKET" --status "blocked"

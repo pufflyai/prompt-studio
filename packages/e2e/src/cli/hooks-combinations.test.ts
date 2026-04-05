@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanupDirs, PSTDIO_CLI } from "./helpers";
+import { cleanupDirs } from "./helpers";
 import {
   createAttemptWithSession,
   createInitializedRepo,
@@ -14,7 +14,7 @@ import {
   registerRepo,
   updateSessionStatus,
   wait,
-  writeHook,
+  writePlugin,
 } from "./hooks-infra";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
@@ -35,11 +35,46 @@ afterEach(() => {
   cleanupDirs(ctx.dirs);
 });
 
-// Builds a shell preamble that lets hooks call the pstdio CLI against the test API
-const cliPreamble = () =>
-  `export PSTDIO_API_URL="${api.url}"
-export PSTDIO_DISABLE_API_AUTO_START=1
-PSTDIO="bun run ${PSTDIO_CLI}"`;
+// Helper: generates plugin code that updates a ticket status and workspace attempt status
+const sessionActionPlugin = (hookName: string, ticketStatus: string, wsStatus: string) => `
+import { mkdirSync } from "node:fs";
+
+const API = "${api.url}";
+
+const findTicketId = async (projectId, shorthand) => {
+  const res = await fetch(API + "/v1/tickets?project_id=" + encodeURIComponent(projectId) + "&shorthand=" + encodeURIComponent(shorthand));
+  const tickets = await res.json();
+  return tickets[0]?.id;
+};
+
+const findStatusId = async (projectId, name) => {
+  const res = await fetch(API + "/v1/projects/" + projectId + "/statuses");
+  const statuses = await res.json();
+  return statuses.find(s => s.name === name)?.id;
+};
+
+export default {
+  hooks: {
+    postWorktreeCreate(ctx) {
+      mkdirSync(ctx.worktreePath + "/files", { recursive: true });
+    },
+    async ${hookName}(ctx) {
+      const ticketId = await findTicketId(ctx.projectId, ctx.ticket.shorthand);
+      const statusId = await findStatusId(ctx.projectId, "${ticketStatus}");
+      await fetch(API + "/v1/tickets/" + ticketId, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status_id: statusId }),
+      });
+      await fetch(API + "/v1/workspaces/" + ctx.workspaceId + "/attempt-status", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: "${wsStatus}" }),
+      });
+    },
+  },
+};
+`;
 
 describe("post-session-start moves ticket to wip", () => {
   test(
@@ -47,16 +82,7 @@ describe("post-session-start moves ticket to wip", () => {
     async () => {
       const repo = createInitializedRepo(ctx, "combo-session-wip");
 
-      writeHook(repo, "post-worktree-create", `mkdir -p "$PSTDIO_WORKTREE_PATH/files"`);
-
-      writeHook(
-        repo,
-        "post-session-start",
-        `${cliPreamble()}
-$PSTDIO tickets update --id "$PSTDIO_TICKET" --status wip
-$PSTDIO workspaces set-status --workspace "$PSTDIO_WORKSPACE" --status wip
-`,
-      );
+      writePlugin(repo, "combo-session-wip-plugin.ts", sessionActionPlugin("postSessionStart", "wip", "wip"));
 
       const { attempt, attemptRes, projectId } = await createAttemptWithSession(ctx, repo, "combo-session-wip-repo");
       expect(attemptRes.status).toBe(201);
@@ -84,16 +110,7 @@ describe("post-session-success branches on session outcome", () => {
     async () => {
       const repo = createInitializedRepo(ctx, "combo-success-done");
 
-      writeHook(repo, "post-worktree-create", `mkdir -p "$PSTDIO_WORKTREE_PATH/files"`);
-
-      writeHook(
-        repo,
-        "post-session-success",
-        `${cliPreamble()}
-$PSTDIO tickets update --id "$PSTDIO_TICKET" --status done
-$PSTDIO workspaces set-status --workspace "$PSTDIO_WORKSPACE" --status reviewed
-`,
-      );
+      writePlugin(repo, "combo-success-done-plugin.ts", sessionActionPlugin("postSessionSuccess", "done", "reviewed"));
 
       const { attempt, projectId } = await createAttemptWithSession(ctx, repo, "combo-success-done-repo");
       expect(attempt.session).toBeTruthy();
@@ -120,16 +137,7 @@ $PSTDIO workspaces set-status --workspace "$PSTDIO_WORKSPACE" --status reviewed
     async () => {
       const repo = createInitializedRepo(ctx, "combo-fail-block");
 
-      writeHook(repo, "post-worktree-create", `mkdir -p "$PSTDIO_WORKTREE_PATH/files"`);
-
-      writeHook(
-        repo,
-        "post-session-fail",
-        `${cliPreamble()}
-$PSTDIO tickets update --id "$PSTDIO_TICKET" --status blocked
-$PSTDIO workspaces set-status --workspace "$PSTDIO_WORKSPACE" --status blocked
-`,
-      );
+      writePlugin(repo, "combo-fail-block-plugin.ts", sessionActionPlugin("postSessionFail", "blocked", "blocked"));
 
       const { attempt, projectId } = await createAttemptWithSession(ctx, repo, "combo-fail-block-repo");
       expect(attempt.session).toBeTruthy();
@@ -154,23 +162,30 @@ $PSTDIO workspaces set-status --workspace "$PSTDIO_WORKSPACE" --status blocked
 
 describe("ticket status change hook triggers further actions", () => {
   test(
-    "post-ticket-status-change branches on target status name",
+    "postTicketStatusChange branches on target status name",
     async () => {
       const repo = createInitializedRepo(ctx, "combo-status-branch");
       const projectId = getProjectId(repo);
       await registerRepo(ctx, projectId, repo, "combo-status-branch-repo");
 
-      writeHook(
+      writePlugin(
         repo,
-        "post-ticket-status-change",
+        "combo-status-branch-plugin.ts",
         `
-STATUS_NAME="$PSTDIO_TO_STATUS"
+import { writeFileSync } from "node:fs";
 
-if [ "$STATUS_NAME" = "wip" ]; then
-  echo "moved-to-wip" > "${repo}/status-action.txt"
-elif [ "$STATUS_NAME" = "done" ]; then
-  echo "moved-to-done" > "${repo}/status-action.txt"
-fi
+export default {
+  hooks: {
+    postTicketStatusChange(ctx) {
+      const statusName = ctx.toStatus;
+      if (statusName === "wip") {
+        writeFileSync("${repo}/status-action.txt", "moved-to-wip");
+      } else if (statusName === "done") {
+        writeFileSync("${repo}/status-action.txt", "moved-to-done");
+      }
+    },
+  },
+};
 `,
       );
 

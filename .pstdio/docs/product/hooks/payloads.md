@@ -1,8 +1,10 @@
 # Payload Schemas
 
+> **Plugin hooks vs shell hooks**: For hooks dispatched through the plugin system (session, ticket, attempt-status, worktree-create), the payload is passed as a typed context object with camelCase fields (e.g. `ctx.repoPath`, `ctx.worktreePath`, `ctx.sessionId`). See [SDK Plugins — Hook Contexts](../sdk/plugins.md#hook-contexts) for the typed context definitions. The flat JSON / env var schemas below apply to shell hooks (commit, rebase, merge, conflict, worktree-remove).
+
 Payloads are flat JSON objects.
 
-Each hook receives exactly one payload object on stdin.
+Each shell hook receives exactly one payload object on stdin.
 
 ## Worktree Payloads
 
@@ -197,11 +199,34 @@ Status transition hooks also include:
 }
 ```
 
-## Querying Related Data
+## Querying Related Data (Shell Hooks)
 
-If a hook needs related workspaces or sessions, query via CLI commands inside the script.
+If a shell hook needs related workspaces or sessions, query via CLI commands inside the script. For plugin hooks, use `ctx.client` instead.
 
 Example:
 
 - `pstdio tickets workspaces --id "$PSTDIO_TICKET"`
 - `pstdio sessions list --workspace-id "<workspace-or-id>"` where `--workspace-id` accepts either workspace shorthand or workspace ID.
+
+## SDK Plugin Context Mapping
+
+SDK plugins are the primary hook mechanism for session, ticket, attempt-status, and worktree-create hooks. Plugin hook handlers receive typed `ctx` objects with camelCase fields rather than raw stdin JSON or env vars.
+
+Examples:
+
+- Ticket hooks: `ctx.id`, `ctx.shorthand`, `ctx.status`, `ctx.tagIds`, ...
+- Session hooks: `ctx.sessionId`, `ctx.sessionStatus`, `ctx.workspace` (rich workspace object), `ctx.ticket` (rich ticket object), ...
+- Attempt hooks: `ctx.workspace` (rich workspace object), `ctx.ticket` (rich ticket object), `ctx.fromStatus`, `ctx.toStatus`, ...
+- Worktree-create hooks: `ctx.repoPath`, `ctx.worktreePath`, `ctx.branch`, `ctx.workspace`, ...
+
+Import context types from `@pstdio/sdk/hooks`:
+
+```ts
+import type { TicketStatusChangeContext, SessionHookContext } from "@pstdio/sdk/hooks";
+```
+
+To preserve compatibility with filesystem-hook payload access patterns, SDK hook contexts also include:
+
+- `ctx.payload?: Record<string, unknown>`
+
+Use `ctx.payload` only as a fallback for fields not yet modeled in typed context fields.

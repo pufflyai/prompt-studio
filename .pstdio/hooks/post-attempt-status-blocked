@@ -1,8 +1,0 @@
-#!/bin/sh
-set -eu
-
-# ──────────────────────────────────────────────────────────
-# Post-hook: move ticket to blocked status
-# ──────────────────────────────────────────────────────────
-
-pstdio tickets update --id "$PSTDIO_TICKET" --status "blocked"
