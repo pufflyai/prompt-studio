@@ -39,7 +39,6 @@ export const createSessionsDBService = (db: DbClient) => {
       title: input.title,
       status: "in_progress",
       archived: false,
-      created: timestamp,
       last_request_started: timestamp,
       last_request_ended: null,
       agent: input.agent,

@@ -180,7 +180,6 @@ export const sessions = pgTable("sessions", {
   status: sessionStatusEnum("status").notNull().default("in_progress"),
   project_id: text("project_id").references(() => projects.id, { onDelete: "cascade" }),
   archived: boolean("archived").notNull().default(false),
-  created: text("created"),
   last_request_started: text("last_request_started"),
   last_request_ended: text("last_request_ended"),
   agent: text("agent"),

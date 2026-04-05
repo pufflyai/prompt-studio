@@ -81,7 +81,7 @@ create create                commit commit   merge  merge   remove remove
 
 ### Hooks
 
-Hooks are shell scripts in `.pstdio/hooks/<hook-name>`. They run automatically at each lifecycle stage. `pre-*` hooks are blocking (non-zero exit aborts the operation). `post-*` hooks are non-blocking. See `.pstdio/docs/product/cli/hooks.md` for the full reference.
+Hooks run automatically at each lifecycle stage. All hooks are SDK plugins in `.pstdio/plugins/` defined via `definePlugin`. `pre-*` hooks are blocking (non-zero exit or rejection aborts the operation). `post-*` hooks are non-blocking. See `.pstdio/docs/product/cli/hooks.md` for the full reference.
 
 ## Key design choices
 

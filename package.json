@@ -43,13 +43,13 @@
     "packages/*"
   ],
   "devDependencies": {
-    "@biomejs/biome": "2.4.5",
-    "@changesets/cli": "^2.30.0",
-    "@types/bun": "latest",
-    "@types/node": "^24.8.1",
-    "cross-env": "^10.0.0",
-    "knip": "^5.66.1",
-    "lerna": "^9.0.1"
+    "@biomejs/biome": "2.4.10",
+    "@changesets/cli": "2.30.0",
+    "@types/bun": "1.3.11",
+    "@types/node": "25.5.2",
+    "cross-env": "10.1.0",
+    "knip": "6.3.0",
+    "lerna": "9.0.7"
   },
   "packageManager": "bun@1.3.10"
 }

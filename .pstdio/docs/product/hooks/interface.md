@@ -1,16 +1,16 @@
 # Interface and Environment
 
-> **Note**: This page documents the shell hook interface used for git-level hooks (commit, rebase, merge, conflict, worktree-remove). For lifecycle hooks (session, ticket, attempt-status, worktree-create), use SDK plugins instead. See the [SDK Plugins docs](../sdk/plugins.md) for the recommended approach.
+> All hooks are SDK plugins defined via `definePlugin` in `.pstdio/plugins/`. See the [SDK Plugins docs](../sdk/plugins.md).
 
-## Hook Script Location
+## Hook Location
 
-Shell hooks are executable scripts stored at:
+Hooks are TypeScript/JavaScript modules stored at:
 
-- `.pstdio/hooks/<hook-name>`
+- `.pstdio/plugins/<hook-name>.ts`
 
 ## Input and Output Contract
 
-All shell hooks follow the same stdin/stdout JSON pipe interface.
+All hooks receive a typed context object via their handler function.
 
 - **Stdin**: event payload as JSON
 - **Stdout**: optional output

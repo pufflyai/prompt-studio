@@ -209,7 +209,7 @@ When a ticket is created (via `tickets write`, `tickets create`, or the API), th
 
 ## Automation
 
-Implementation automation (for example automatically starting work) is configured with hooks in `.pstdio/hooks`, not with status metadata. See `.pstdio/docs/product/cli/hooks.md` for hook lifecycle behavior.
+Implementation automation (for example automatically starting work) is configured with plugins in `.pstdio/plugins/`, not with status metadata. See `.pstdio/docs/product/cli/hooks.md` for hook lifecycle behavior.
 
 ---
 

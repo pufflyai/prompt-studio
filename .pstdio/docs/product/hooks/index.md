@@ -9,7 +9,7 @@ This reference covers event names, blocking behavior, payload schemas, and cookb
 ## Reference Pages
 
 - [Events and Blocking](./events.md)
-- [Interface and Environment](./interface.md) — shell hook contract
+- [Interface and Environment](./interface.md) — hook contract
 - [Payload Schemas](./payloads.md)
 - [Attempt Status](./attempt-status.md)
 - [Cookbook](./cookbook.md)

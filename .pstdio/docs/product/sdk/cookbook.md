@@ -182,7 +182,7 @@ export default definePlugin({
     async preAttemptStatusChange(ctx) {
       if (ctx.toStatus !== "review-ready" || !ctx.worktreePath) return;
 
-      const validation = await runCommand(Bun.spawn, ctx.worktreePath, ["bun", "run", "validate"]);
+      const validation = await runCommand(ctx.worktreePath, ["bun", "run", "validate"]);
       if (validation.exitCode === 0) return;
 
       const output = [validation.stdout, validation.stderr].join("\n").trim();
@@ -257,8 +257,8 @@ export default definePlugin({
         ticketId: ctx.ticket,
       });
 
-      await runCommand(Bun.spawn, ctx.worktreePath, ["bun", "install"]);
-      await runCommand(Bun.spawn, ctx.worktreePath, ["bun", "run", "build"]);
+      await runCommand(ctx.worktreePath, ["bun", "install"]);
+      await runCommand(ctx.worktreePath, ["bun", "run", "build"]);
     },
   },
 });

@@ -1,10 +1,8 @@
 # Payload Schemas
 
-> **Plugin hooks vs shell hooks**: For hooks dispatched through the plugin system (session, ticket, attempt-status, worktree-create), the payload is passed as a typed context object with camelCase fields (e.g. `ctx.repoPath`, `ctx.worktreePath`, `ctx.sessionId`). See [SDK Plugins — Hook Contexts](../sdk/plugins.md#hook-contexts) for the typed context definitions. The flat JSON / env var schemas below apply to shell hooks (commit, rebase, merge, conflict, worktree-remove).
+All hooks are SDK plugins. The payload is passed as a typed context object with camelCase fields (e.g. `ctx.repoPath`, `ctx.worktreePath`, `ctx.sessionId`). See [SDK Plugins — Hook Contexts](../sdk/plugins.md#hook-contexts) for the typed context definitions.
 
-Payloads are flat JSON objects.
-
-Each shell hook receives exactly one payload object on stdin.
+The flat JSON schemas below document the underlying payload structure.
 
 ## Worktree Payloads
 
@@ -199,9 +197,9 @@ Status transition hooks also include:
 }
 ```
 
-## Querying Related Data (Shell Hooks)
+## Querying Related Data
 
-If a shell hook needs related workspaces or sessions, query via CLI commands inside the script. For plugin hooks, use `ctx.client` instead.
+Use `ctx.client` to query related workspaces or sessions inside a plugin hook.
 
 Example:
 

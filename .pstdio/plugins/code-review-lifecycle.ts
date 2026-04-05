@@ -22,7 +22,7 @@ export default definePlugin({
       const validationCMD = ["bun", "run", "validate"];
       // ────────────────────────────────────────────────────────
 
-      const validation = await runCommand(Bun.spawn, ctx.worktreePath, validationCMD);
+      const validation = await runCommand(ctx.worktreePath, validationCMD);
 
       if (validation.exitCode !== 0) {
         const output = [validation.stdout, validation.stderr].join("\n").trim();

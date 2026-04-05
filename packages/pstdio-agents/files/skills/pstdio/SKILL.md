@@ -142,7 +142,7 @@ Available agents: `claude-code`, `opencode`.
 
 ## Creating Hooks
 
-Hooks are shell scripts stored at `.pstdio/hooks/<hook-name>`. Use `pstdio hooks create <hook-name>` to create one from the CLI. The command reuses the bundled scaffold when one exists, and otherwise writes a minimal shell-script starter. You can also create and edit hooks through the dashboard at `Project Settings > Hooks`.
+Hooks are defined via SDK plugins in `.pstdio/plugins/`. Use `definePlugin` from `@pstdio/sdk/plugins` to create TypeScript/JavaScript plugins that respond to lifecycle events. Git-level hooks (commit, merge, rebase) are shell scripts also stored in `.pstdio/plugins/`. You can also create and edit hooks through the dashboard at `Project Settings > Hooks`.
 
 Use `pstdio hooks list` to see the supported hook names and whether each one is already installed. Current hook names:
 
@@ -152,24 +152,41 @@ Use `pstdio hooks list` to see the supported hook names and whether each one is 
 
 Recommended workflow:
 
-1. Run `pstdio hooks list` to pick the correct hook name and confirm whether a script already exists.
-2. Run `pstdio hooks create <hook-name>` to create the script. `pstdio projects create` also scaffolds a default `post-worktree-create` hook, so extend that file instead of replacing it when possible.
-3. Read the event payload from stdin if the hook needs structured data. Hooks also receive env vars such as `PSTDIO_HOOK`, `PSTDIO_REPO_PATH`, and `PSTDIO_PROJECT_ID`, plus workspace-specific vars like `PSTDIO_WORKTREE_PATH`, `PSTDIO_WORKSPACE`, and `PSTDIO_BRANCH` when available.
-4. Write JSON to stdout only when the hook intentionally modifies the payload for downstream processing. Exit non-zero only when you want a blocking hook to fail the parent operation.
-5. Test the script manually with `pstdio hooks run <hook-name> [--worktree-path <path>]` before relying on it in normal workflows.
+1. Run `pstdio hooks list` to pick the correct hook name and confirm whether a hook already exists.
+2. Create a plugin file in `.pstdio/plugins/` using `definePlugin`. For git-level hooks (commit, merge, rebase), use `pstdio hooks create <hook-name>` to scaffold a shell script.
+3. Plugin hooks receive a typed context object (`ctx`) with all event data. Shell hooks receive env vars such as `PSTDIO_HOOK`, `PSTDIO_REPO_PATH`, and `PSTDIO_PROJECT_ID`.
+4. For blocking hooks (`pre-*`), return `{ reject: true, reason: "..." }` from plugins, or `exit 1` from shell scripts, to abort the parent operation.
+5. Test shell hooks manually with `pstdio hooks run <hook-name> [--worktree-path <path>]` before relying on them in normal workflows.
 
-Example:
+Example plugin:
+
+```ts
+// .pstdio/plugins/ticket-lifecycle.ts
+import { definePlugin, setTicketStatus } from "@pstdio/sdk/plugins";
+
+export default definePlugin({
+  hooks: {
+    async postSessionStart(ctx) {
+      if (!ctx.ticket) return;
+      await setTicketStatus(ctx, { ticket: ctx.ticket.shorthand, status: "wip" });
+    },
+  },
+});
+```
+
+Example shell hook (git-level):
 
 ```sh
 #!/bin/sh
 
-# .pstdio/hooks/pre-commit
+# .pstdio/plugins/pre-commit
 bun run validate
 ```
 
 Current behavior to keep in mind:
 
-- Hooks are executed from `.pstdio/hooks/<hook-name>` using `sh <script-path>`, so write them as shell scripts.
+- Lifecycle hooks use SDK plugins in `.pstdio/plugins/` — TypeScript/JavaScript modules loaded via `import()`.
+- Git-level hooks (commit, merge, rebase) are shell scripts in `.pstdio/plugins/`, executed with `sh <script-path>`.
 - `pstdio hooks create` fails instead of overwriting an existing hook file.
 - Hooks time out after 60 seconds.
 - Use `.pstdio/docs/product/cli/hooks.md` for the detailed CLI and lifecycle reference.

@@ -24,6 +24,7 @@ import {
   ensureStorageRoot,
   resolveStorageRoot,
 } from "pstdio-storage";
+import { createActionRoutes } from "./features/actions/routes";
 import { createAgentRoutes } from "./features/agents/routes";
 import { createAttemptStatusRoutes } from "./features/attempt-statuses/routes";
 import { createDocsRoutes } from "./features/docs/routes";
@@ -223,6 +224,7 @@ export const createApp = async (options: AppOptions) => {
   app.route("/v1", createProjectRoutes(deps));
   app.route("/v1", createFilesystemRoutes(deps));
   app.route("/v1", createDocsRoutes(deps));
+  app.route("/v1", createActionRoutes(deps));
   app.route("/v1", createAgentRoutes(deps));
   app.route("/v1", createSkillRoutes(deps));
   app.route("/v1", createTemplateRoutes(deps));

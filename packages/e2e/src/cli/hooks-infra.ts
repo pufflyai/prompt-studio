@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createGitRepo, runPstdio, runPstdioSafe } from "./helpers";
 import type { ApiInstance } from "./start-api";
@@ -14,14 +14,6 @@ export const createRun = (ctx: HookTestContext) => (args: string, cwd: string) =
 
 export const createRunSafe = (ctx: HookTestContext) => (args: string, cwd: string) =>
   runPstdioSafe(args, cwd, { PSTDIO_API_URL: ctx.api.url });
-
-export const writeHook = (repo: string, hookName: string, script: string) => {
-  const hooksDir = join(repo, ".pstdio", "hooks");
-  mkdirSync(hooksDir, { recursive: true });
-  const path = join(hooksDir, hookName);
-  writeFileSync(path, `#!/bin/sh\n${script}`);
-  chmodSync(path, 0o755);
-};
 
 export const writePlugin = (repo: string, fileName: string, code: string) => {
   const pluginsDir = join(repo, ".pstdio", "plugins");
@@ -230,7 +222,7 @@ export const createRepoForWorktreeOps = (ctx: HookTestContext) => {
   ctx.dirs.push(repo);
   writeFileSync(join(repo, "file.txt"), "initial");
   execSync("git add -A && git commit -m init", { cwd: repo, stdio: "pipe" });
-  mkdirSync(join(repo, ".pstdio", "hooks"), { recursive: true });
+  mkdirSync(join(repo, ".pstdio", "plugins"), { recursive: true });
   return repo;
 };
 

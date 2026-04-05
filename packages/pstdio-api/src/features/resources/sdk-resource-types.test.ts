@@ -1,23 +1,43 @@
-import { describe, expect, it } from "bun:test";
-import type { AgentConfig, AgentInfo } from "./agent";
-import type { Project } from "./project";
-import type { Skill } from "./skill";
-import type { Status } from "./status";
-import type { Tag } from "./tag";
-import type { Template } from "./template";
-import type { Ticket, TicketDetail, TicketListItem } from "./ticket";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type { OpenAPIHono } from "@hono/zod-openapi";
+import type {
+  AgentConfig,
+  AgentInfo,
+  Project,
+  Skill,
+  Status,
+  Tag,
+  Template,
+  Ticket,
+  TicketDetail,
+  TicketListItem,
+} from "@pstdio/sdk/resources";
+import { createApp } from "../../app";
+import type { AppBindings } from "../../types";
 
-/**
- * These tests validate that SDK resource types match the actual API response shapes.
- * Each test calls the live API and checks that every field declared in the type exists
- * in the response (and vice versa — no undeclared fields sneak through).
- *
- * Requires the pstdio API to be running on localhost:19840 with at least one project.
- */
+let app: OpenAPIHono<AppBindings>;
+let close: () => Promise<void>;
+let tempRoot: string;
 
-const API = process.env.PSTDIO_API_URL ?? "http://localhost:19840";
+beforeAll(async () => {
+  tempRoot = mkdtempSync(join(tmpdir(), "pstdio-sdk-resource-test-"));
+  ({ app, close } = await createApp({
+    dbPath: ":memory:",
+    storagePath: join(tempRoot, "storage"),
+    filesRoot: "",
+  }));
+});
+
+afterAll(async () => {
+  await close();
+  rmSync(tempRoot, { recursive: true, force: true });
+});
+
 const json = async <T>(path: string): Promise<T> => {
-  const res = await fetch(`${API}${path}`);
+  const res = await app.request(path);
   if (!res.ok) throw new Error(`${path}: ${res.status}`);
   return res.json() as Promise<T>;
 };
@@ -131,25 +151,36 @@ const matchesShape = (obj: Record<string, unknown>, keys: string[]) => {
   hasNoExtraKeys(obj, keys);
 };
 
-describe("resource types match API responses", () => {
+describe("SDK resource types match API responses", () => {
   let projectId: string;
 
   it("Project matches GET /v1/projects", async () => {
+    const res = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Resource Test" }),
+    });
+    const project = (await res.json()) as Project;
+    projectId = project.id;
+
     const projects = await json<Project[]>("/v1/projects");
     expect(projects.length).toBeGreaterThan(0);
-    projectId = projects[0]!.id;
     matchesShape(projects[0]! as unknown as Record<string, unknown>, PROJECT_KEYS);
   });
 
   it("TicketListItem matches GET /v1/tickets", async () => {
+    await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId, user_prompt: "resource test ticket" }),
+    });
     const tickets = await json<TicketListItem[]>(`/v1/tickets?project_id=${projectId}`);
-    if (tickets.length === 0) return; // skip if no tickets
+    expect(tickets.length).toBeGreaterThan(0);
     matchesShape(tickets[0]! as unknown as Record<string, unknown>, [...TICKET_KEYS, ...TICKET_LIST_ITEM_EXTRA_KEYS]);
   });
 
   it("TicketDetail matches GET /v1/tickets/:id", async () => {
     const tickets = await json<TicketListItem[]>(`/v1/tickets?project_id=${projectId}`);
-    if (tickets.length === 0) return;
     const detail = await json<TicketDetail>(`/v1/tickets/${tickets[0]!.id}`);
     matchesShape(detail as unknown as Record<string, unknown>, [...TICKET_KEYS, ...TICKET_DETAIL_EXTRA_KEYS]);
   });
@@ -179,14 +210,19 @@ describe("resource types match API responses", () => {
   });
 
   it("AgentConfig matches GET /v1/agents", async () => {
+    await app.request("/v1/agents", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ agent_id: "fake" }),
+    });
     const agents = await json<AgentConfig[]>("/v1/agents");
-    if (agents.length === 0) return;
+    expect(agents.length).toBeGreaterThan(0);
     matchesShape(agents[0]! as unknown as Record<string, unknown>, AGENT_CONFIG_KEYS);
   });
 
   it("AgentInfo matches GET /v1/agents/info", async () => {
     const info = await json<AgentInfo[]>("/v1/agents/info");
-    if (info.length === 0) return;
+    expect(info.length).toBeGreaterThan(0);
     matchesShape(info[0]! as unknown as Record<string, unknown>, AGENT_INFO_KEYS);
   });
 });

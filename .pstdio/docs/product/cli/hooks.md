@@ -1,6 +1,6 @@
 # Lifecycle Hooks
 
-Hooks are shell scripts in `.pstdio/hooks/<hook-name>` that run during worktree, session, and ticket lifecycle events.
+Hooks run during worktree, session, and ticket lifecycle events. All hooks are SDK plugins (`definePlugin`) in `.pstdio/plugins/`.
 
 For the full hook contract (interface, payload schemas, attempt status, and cookbook), see [Hooks Reference](../hooks/index.md).
 
@@ -58,7 +58,7 @@ All other hooks are non-blocking.
 
 ## Environment Variables
 
-All hooks receive context as environment variables:
+Plugin hooks receive context as environment variables:
 
 | Variable                | Description                    | Available In                  |
 | ----------------------- | ------------------------------ | ----------------------------- |
@@ -79,19 +79,19 @@ All hooks receive context as environment variables:
 
 ### `pstdio hooks list`
 
-Show all supported hooks and whether each script file exists.
+Show all supported hooks and whether each one exists.
 
 ### `pstdio hooks create <hook-name>`
 
-Create `.pstdio/hooks/<hook-name>`.
+Create `.pstdio/plugins/<hook-name>`.
 
 - Reuses the bundled scaffold when one exists, such as `post-worktree-create`
-- Otherwise writes a minimal shell-script starter
+- Otherwise writes a minimal plugin starter
 - Fails instead of overwriting an existing hook file
 
 ### `pstdio hooks run <hook-name>`
 
-Manually run a hook script. Useful for testing hooks before they fire automatically.
+Manually run a hook. Useful for testing hooks before they fire automatically.
 
 Options:
 
@@ -101,39 +101,71 @@ Options:
 
 ### Install dependencies on workspace creation
 
-```sh
-# .pstdio/hooks/post-worktree-create
-bun install
-```
+Use a plugin for worktree setup:
 
-### Copy `.env` files into new worktrees
+```ts
+// .pstdio/plugins/worktree-bootstrap.ts
+import { definePlugin } from "@pstdio/sdk/plugins";
 
-```sh
-# .pstdio/hooks/post-worktree-create
-for f in .env .env.local .env.test; do
-  if [ -f "$PSTDIO_REPO_PATH/$f" ]; then
-    cp "$PSTDIO_REPO_PATH/$f" "$PSTDIO_WORKTREE_PATH/$f"
-  fi
-done
+export default definePlugin({
+  hooks: {
+    async postWorktreeCreate(ctx) {
+      const proc = Bun.spawn(["bun", "install"], {
+        cwd: ctx.worktreePath,
+        stdout: "inherit",
+        stderr: "inherit",
+      });
+      await proc.exited;
+    },
+  },
+});
 ```
 
 ### Run validation before committing
 
-```sh
-# .pstdio/hooks/pre-commit
-bun run validate
+```ts
+// .pstdio/plugins/pre-commit.ts
+import { definePlugin } from "@pstdio/sdk/plugins";
+
+export default definePlugin({
+  hooks: {
+    async preCommit(ctx) {
+      const proc = Bun.spawn(["bun", "run", "validate"], {
+        cwd: ctx.worktreePath,
+        stdout: "inherit",
+        stderr: "inherit",
+      });
+      const code = await proc.exited;
+      if (code !== 0) throw new Error("Validation failed");
+    },
+  },
+});
 ```
 
 ### Run tests before merging
 
-```sh
-# .pstdio/hooks/pre-merge
-bun run test
+```ts
+// .pstdio/plugins/pre-merge.ts
+import { definePlugin } from "@pstdio/sdk/plugins";
+
+export default definePlugin({
+  hooks: {
+    async preMerge(ctx) {
+      const proc = Bun.spawn(["bun", "run", "test"], {
+        cwd: ctx.worktreePath,
+        stdout: "inherit",
+        stderr: "inherit",
+      });
+      const code = await proc.exited;
+      if (code !== 0) throw new Error("Tests failed");
+    },
+  },
+});
 ```
 
 ## Storage & Configuration
 
-- **Source of truth**: filesystem at `.pstdio/hooks/<hook-name>`
+- **Source of truth**: filesystem at `.pstdio/plugins/`
 - **Discovery**: hooks are resolved from the filesystem at execution time
-- **Execution**: `sh <script-path>` — executable permissions are optional
+- **Plugin hooks**: TypeScript/JavaScript modules loaded via `import()`
 - **Timeout**: 60 seconds — hooks that exceed this limit are killed

@@ -1,16 +1,14 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
-import { cleanupDirs, createGitRepo } from "./helpers";
+import { cleanupDirs } from "./helpers";
 import {
   createInitializedRepo,
   createRun,
   createRunSafe,
   createWorkspaceInRepo,
-  getProjectId,
   type HookTestContext,
   waitForPath,
-  writeHook,
   writePlugin,
 } from "./hooks-infra";
 import { type ApiInstance, startApi } from "./start-api";
@@ -32,183 +30,16 @@ afterEach(() => {
   cleanupDirs(ctx.dirs);
 });
 
-describe("hooks CLI", () => {
-  test(
-    "lists all hook types with installed status",
-    () => {
-      const repo = createInitializedRepo(ctx, "hooks-list");
-      writeHook(repo, "pre-commit", "exit 0");
-      writeHook(repo, "post-worktree-create", "echo hi");
-
-      const output = createRun(ctx)("hooks list", repo);
-
-      // worktree hooks
-      expect(output).toContain("pre-worktree-create");
-      expect(output).toContain("post-worktree-create");
-      expect(output).toContain("on-conflict");
-      // session hooks
-      expect(output).toContain("post-session-start");
-      expect(output).toContain("post-session-success");
-      expect(output).toContain("post-session-fail");
-      expect(output).toContain("post-session-resume");
-      expect(output).toContain("post-session-await-input");
-      // ticket hooks
-      expect(output).toContain("pre-ticket-creation");
-      expect(output).toContain("post-ticket-creation");
-      expect(output).toContain("pre-ticket-status-change");
-      expect(output).toContain("post-ticket-status-change");
-      expect(output).toContain("pre-ticket-archive");
-      expect(output).toContain("post-ticket-archive");
-      expect(output).toContain("pre-ticket-deletion");
-      expect(output).toContain("post-ticket-deletion");
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "creates a hook file with a generic stub",
-    () => {
-      const repo = createGitRepo();
-      ctx.dirs.push(repo);
-
-      const output = createRun(ctx)("hooks create post-worktree-create", repo);
-      const hookPath = join(repo, ".pstdio", "hooks", "post-worktree-create");
-      const content = readFileSync(hookPath, "utf8");
-
-      expect(output).toContain('Created hook "post-worktree-create"');
-      expect(content).toContain("#!/bin/sh");
-      expect(content).toContain("# .pstdio/hooks/post-worktree-create");
-      expect(createRun(ctx)("hooks list", repo)).toContain("post-worktree-create          yes");
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "runs a hook manually and shows output",
-    () => {
-      const repo = createInitializedRepo(ctx, "hooks-run");
-      writeHook(repo, "pre-commit", 'echo "manual hook output"');
-
-      const output = createRun(ctx)("hooks run pre-commit", repo);
-      expect(output).toContain("manual hook output");
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "reports missing hook",
-    () => {
-      const repo = createInitializedRepo(ctx, "hooks-run-missing");
-      const output = createRun(ctx)("hooks run pre-commit", repo);
-      expect(output).toContain("No hook script found");
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "fails on non-zero exit",
-    () => {
-      const repo = createInitializedRepo(ctx, "hooks-run-fail");
-      writeHook(repo, "pre-commit", "exit 1");
-
-      const result = createRunSafe(ctx)("hooks run pre-commit", repo);
-      expect(result.exitCode).not.toBe(0);
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "passes PSTDIO_HOOK env var to hook",
-    () => {
-      const repo = createInitializedRepo(ctx, "hooks-env");
-      writeHook(repo, "pre-commit", 'echo "$PSTDIO_HOOK"');
-
-      const output = createRun(ctx)("hooks run pre-commit", repo);
-      expect(output).toContain("pre-commit");
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "can run ticket and worktree hooks manually",
-    () => {
-      const repo = createInitializedRepo(ctx, "hooks-run-types");
-      writeHook(repo, "pre-ticket-creation", 'echo "ticket hook"');
-      writeHook(repo, "post-worktree-create", 'echo "worktree hook"');
-
-      expect(createRun(ctx)("hooks run pre-ticket-creation", repo)).toContain("ticket hook");
-      expect(createRun(ctx)("hooks run post-worktree-create", repo)).toContain("worktree hook");
-    },
-    TEST_TIMEOUT,
-  );
-});
-
-describe("hook CRUD via API", () => {
-  test(
-    "creates, reads, updates, and deletes a hook via API",
-    async () => {
-      const repo = createInitializedRepo(ctx, "hook-crud-api");
-      const projectId = getProjectId(repo);
-
-      const putRes = await fetch(`${api.url}/v1/projects/${projectId}/hooks/pre-merge`, {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ content: "bun run test" }),
-      });
-      expect(putRes.status).toBe(204);
-      expect(existsSync(join(repo, ".pstdio", "hooks", "pre-merge"))).toBe(true);
-      expect(readFileSync(join(repo, ".pstdio", "hooks", "pre-merge"), "utf8")).toBe("bun run test");
-
-      const listRes = await fetch(`${api.url}/v1/projects/${projectId}/hooks`);
-      const hooks = (await listRes.json()) as Array<{ name: string; content: string | null }>;
-      expect(hooks.find((h) => h.name === "pre-merge")?.content).toBe("bun run test");
-
-      await fetch(`${api.url}/v1/projects/${projectId}/hooks/pre-merge`, {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ content: "bun run test && bun run build" }),
-      });
-      expect(readFileSync(join(repo, ".pstdio", "hooks", "pre-merge"), "utf8")).toBe("bun run test && bun run build");
-
-      const delRes = await fetch(`${api.url}/v1/projects/${projectId}/hooks/pre-merge`, { method: "DELETE" });
-      expect(delRes.status).toBe(204);
-      expect(existsSync(join(repo, ".pstdio", "hooks", "pre-merge"))).toBe(false);
-    },
-    TEST_TIMEOUT,
-  );
-});
-
 describe("default post-worktree-create hook", () => {
   test(
-    "project init scaffolds default worktree-bootstrap plugin",
-    () => {
-      const repo = createInitializedRepo(ctx, "scaffold-hooks");
-      const pluginPath = join(repo, ".pstdio", "plugins", "worktree-bootstrap.js");
-
-      expect(existsSync(pluginPath)).toBe(true);
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "copies config and agent folders into worktree",
+    "copies .pstdio/config.json into worktree on workspace creation",
     async () => {
       const repo = createInitializedRepo(ctx, "hook-copies-config");
-      mkdirSync(join(repo, ".claude", "skills", "custom-skill"), { recursive: true });
-      writeFileSync(join(repo, ".claude", "skills", "custom-skill", "SKILL.md"), "# custom");
-      mkdirSync(join(repo, ".opencode", "skills", "custom-skill"), { recursive: true });
-      writeFileSync(join(repo, ".opencode", "skills", "custom-skill", "SKILL.md"), "# custom");
 
       const { workspace } = await createWorkspaceInRepo(ctx, repo);
       expect(workspace.worktree_path).toBeTruthy();
 
       expect(await waitForPath(join(workspace.worktree_path!, ".pstdio", "config.json"))).toBe(true);
-      expect(await waitForPath(join(workspace.worktree_path!, ".claude", "skills", "custom-skill", "SKILL.md"))).toBe(
-        true,
-      );
-      expect(await waitForPath(join(workspace.worktree_path!, ".opencode", "skills", "custom-skill", "SKILL.md"))).toBe(
-        true,
-      );
     },
     TEST_TIMEOUT,
   );

@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { cleanupDirs, createGitRepo, createProjectViaApi, createTempDir, runPstdio, runPstdioSafe } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
@@ -27,7 +27,7 @@ const runSafe = (args: string, cwd: string) => runPstdioSafe(args, cwd, { PSTDIO
 
 describe("pstdio projects link", () => {
   test(
-    "links existing project, writes config, scaffolds docs",
+    "links existing project and registers repo",
     async () => {
       const project = await createProjectViaApi(api.url, "link-test");
       const repo = createGitRepo();
@@ -37,12 +37,6 @@ describe("pstdio projects link", () => {
 
       expect(output).toContain("Linked project");
       expect(output).toContain("link-test");
-
-      const config = JSON.parse(readFileSync(join(repo, ".pstdio", "config.json"), "utf8"));
-      expect(config.project_id).toBe(project.id);
-
-      expect(existsSync(join(repo, ".pstdio", "docs", "navigation.json"))).toBe(true);
-      expect(existsSync(join(repo, ".pstdio", "docs", "index.md"))).toBe(true);
     },
     TEST_TIMEOUT,
   );

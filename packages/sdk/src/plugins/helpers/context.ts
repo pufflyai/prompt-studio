@@ -36,11 +36,6 @@ export const firstMatch = <T extends { id: string }>(
   return null;
 };
 
-export const readStream = async (stream: ReadableStream | null | undefined) => {
-  if (!stream) return "";
-  return (await new Response(stream).text()).trim();
-};
-
 const readTicketLike = (value: unknown) => {
   if (!value || typeof value !== "object") return null;
 

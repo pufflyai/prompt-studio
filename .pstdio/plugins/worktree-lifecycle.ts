@@ -25,8 +25,8 @@ export default definePlugin({
       // ──────────────────────────────────────────────────────────
       // Add additional setup steps below.
       // ──────────────────────────────────────────────────────────
-      await runCommand(Bun.spawn, ctx.worktreePath, ["bun", "install"]);
-      await runCommand(Bun.spawn, ctx.worktreePath, ["bun", "run", "build"]);
+      await runCommand(ctx.worktreePath, ["bun", "install"]);
+      await runCommand(ctx.worktreePath, ["bun", "run", "build"]);
     },
   },
 });

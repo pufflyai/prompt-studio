@@ -14,13 +14,13 @@ pstdio currently assumes a Unix environment (macOS / Linux). It should run corre
 
 Several parts of the codebase use Unix-specific APIs and conventions that fail or behave incorrectly on Windows:
 
-- Hook scripts are executed via `sh`, which does not exist on Windows.
+- Plugin hooks are loaded via `import()`, but any spawned processes may rely on Unix-specific tools.
 - Home directory resolution relies on `process.env.HOME`, which is undefined on Windows.
 - Agent binary detection uses the `which` command, unavailable on Windows.
 - Path construction hardcodes forward-slash separators in places.
 - Signal handling uses `SIGTERM`, which Windows does not support in the same way.
 
-Users on Windows cannot run pstdio hooks, and several CLI commands produce incorrect paths or crash.
+Several CLI commands produce incorrect paths or crash on Windows.
 
 ## Goals
 
@@ -31,7 +31,7 @@ Users on Windows cannot run pstdio hooks, and several CLI commands produce incor
 ## Non-Goals
 
 - Native Windows installer or MSI packaging.
-- PowerShell-native hook authoring (hooks are scripts with a shebang or Node.js files).
+- PowerShell-native hook authoring (hooks are SDK plugins loaded via `import()`).
 - Windows-specific UI shell integration (e.g. Explorer context menus).
 
 ## Overview
@@ -40,18 +40,9 @@ The changes fall into five areas, ordered by severity.
 
 ### 1. Hook Execution
 
-**Current behavior:** hooks are invoked with `Bun.spawn(["sh", scriptPath])`. This hardcodes the Unix shell as the interpreter.
+**Current behavior:** hooks are SDK plugins (TypeScript/JavaScript modules) loaded via `import()`. This works cross-platform since Bun handles module loading on all platforms.
 
-**Required behavior:** the hook runner should delegate interpreter selection to the OS by spawning the script directly (`Bun.spawn([scriptPath])`), relying on the shebang line. On Windows, where shebangs are not natively supported, the runner should detect the script type (by reading the first line) and invoke the appropriate interpreter:
-
-| First line                   | Invocation on Unix | Invocation on Windows           |
-| ---------------------------- | ------------------ | ------------------------------- |
-| `#!/bin/sh` or `#!/bin/bash` | `sh scriptPath`    | `sh scriptPath` (Git Bash `sh`) |
-| `#!/usr/bin/env node`        | `node scriptPath`  | `node scriptPath`               |
-| `#!/usr/bin/env bun`         | `bun scriptPath`   | `bun scriptPath`                |
-| (no shebang)                 | `sh scriptPath`    | `sh scriptPath` (Git Bash `sh`) |
-
-Default hook templates should use `#!/usr/bin/env node` so they work everywhere Node/Bun is installed. Existing `#!/bin/sh` hooks continue to work on Unix unchanged, and work on Windows when Git Bash is on `PATH`.
+**Remaining concern:** plugin hooks that spawn child processes (e.g. `Bun.spawn(["sh", ...])`) may use Unix-specific commands. Plugin authors should use cross-platform alternatives or guard platform-specific invocations.
 
 ### 2. Home Directory Resolution
 
@@ -103,8 +94,7 @@ Default hook templates should use `#!/usr/bin/env node` so they work everywhere 
 ### Functional Requirements
 
 1. `pstdio` CLI commands execute without errors on Windows, macOS, and Linux.
-2. Hook scripts with `#!/usr/bin/env node` shebangs execute correctly on all three platforms.
-3. Hook scripts with `#!/bin/sh` shebangs execute on Unix, and on Windows when Git Bash `sh` is available on `PATH`.
+2. Plugin hooks (TypeScript/JavaScript modules) load and execute correctly on all three platforms.
 4. All filesystem path construction uses `path.join()` or `path.resolve()` — no hardcoded separators.
 5. Home directory is resolved via `os.homedir()` in all production code paths.
 6. The API server shuts down gracefully on all platforms.
@@ -112,27 +102,23 @@ Default hook templates should use `#!/usr/bin/env node` so they work everywhere 
 ### Operational Requirements
 
 - CI runs tests on Ubuntu and macOS (current), and adds a Windows runner for at least the unit test suite.
-- Hook documentation examples show both `sh` and `node` variants.
 
 ## Rules & Constraints
 
-- Do not introduce a runtime dependency on Git Bash. If `sh` is not available on Windows, hooks with shell shebangs should fail with a clear error message telling the user to install Git for Windows or rewrite the hook in Node.
-- Do not break existing Unix hook scripts. The `#!/bin/sh` shebang must continue to work as before on macOS and Linux.
+- Do not introduce a runtime dependency on Git Bash.
 - Maintain backward compatibility with the `.pstdio` directory name on all platforms.
 
 ## Known Issues
 
-- **Hook execute-bit check is Unix-only.** `runHook` in `packages/pstdio-wt/src/hooks.ts` checks `statSync().mode` for the execute bit and returns an error with a `chmod +x` suggestion if missing. On Windows, `statSync().mode` always reports execute bits as set, so this check is silently skipped — but `Bun.spawn` may still fail to run the script. The hook runner needs a Windows-specific strategy (e.g. spawn via interpreter based on shebang, or use `sh` from Git Bash).
-- **Hook `EACCES` errors surface differently per platform.** On Unix, a missing execute bit produces `EACCES` from `posix_spawn`. On Windows, the equivalent error is a different code/message. Error handling and user-facing messages should be platform-aware.
+- **No known hook-specific issues.** Hooks are SDK plugins loaded via `import()`, which works cross-platform.
 
 ## Risks & Open Questions
 
 - **Bun on Windows maturity.** Bun's Windows support is still evolving. Some Bun APIs (e.g. `Bun.spawn`, signal handling) may behave differently. Verify against the Bun version pinned in the project.
-- **Git Bash availability.** Many Windows developers have Git Bash, but not all. Should pstdio check for `sh` at init time and warn if it is missing?
-- **File permissions.** Unix file modes (e.g. making hooks executable) have no direct Windows equivalent. The hook runner should not require executable permission on the script file.
+- **File permissions.** Unix file modes have no direct Windows equivalent. Plugin modules loaded via `import()` do not require executable permission.
 
 ## Rollout Plan
 
-1. **Phase 1 — Hook runner and home directory** (highest impact): update hook spawning logic, replace `process.env.HOME` usage, fix binary detection. Add Windows CI lane for unit tests.
+1. **Phase 1 — Home directory and binary detection** (highest impact): replace `process.env.HOME` usage, fix binary detection. Add Windows CI lane for unit tests.
 2. **Phase 2 — Path handling and signals**: audit and fix remaining path separator issues. Guard signal handlers. Add Windows CI lane for e2e tests.
-3. **Phase 3 — Documentation and templates**: update hook docs with cross-platform examples. Ship default hook templates in Node.js. Add a "Windows Setup" section to the contributing guide.
+3. **Phase 3 — Documentation**: add a "Windows Setup" section to the contributing guide.

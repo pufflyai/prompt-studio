@@ -1,9 +1,6 @@
 # Events and Blocking
 
-Hooks are dispatched through two mechanisms depending on the event type:
-
-- **Plugin** — dispatched via SDK plugins (`definePlugin` in `.pstdio/plugins/`). Handlers receive a typed context object.
-- **Shell** — dispatched by executing scripts in `.pstdio/hooks/`. Scripts receive JSON on stdin and env vars.
+All hooks are dispatched via SDK plugins (`definePlugin` in `.pstdio/plugins/`). Handlers receive a typed context object.
 
 ## Session Hooks
 
@@ -19,7 +16,7 @@ All session hooks are non-blocking. Dispatched via plugins.
 
 ## Worktree Hooks
 
-Worktree-create hooks are dispatched via plugins. Git-level hooks (commit, rebase, merge, conflict, worktree-remove) are dispatched via shell scripts.
+All worktree hooks are dispatched via plugins.
 
 `pre-*` hooks are always blocking.
 `post-*` hooks can be blocking or non-blocking, per hook.
@@ -29,15 +26,15 @@ Worktree-create hooks are dispatched via plugins. Git-level hooks (commit, rebas
 | ---------------------- | ------------------------------------- | -------- | -------- |
 | `pre-worktree-create`  | Before worktree is created            | Yes      | Plugin   |
 | `post-worktree-create` | After worktree is created             | Yes      | Plugin   |
-| `pre-commit`           | Before staging and committing changes | Yes      | Shell    |
-| `post-commit`          | After a commit is created             | No       | Shell    |
-| `pre-rebase`           | Before rebasing onto target           | Yes      | Shell    |
-| `post-rebase`          | After successful rebase               | No       | Shell    |
-| `pre-merge`            | Before squash-merging                 | Yes      | Shell    |
-| `post-merge`           | After successful merge                | No       | Shell    |
-| `pre-worktree-remove`  | Before worktree deletion              | Yes      | Shell    |
-| `post-worktree-remove` | After worktree is removed             | No       | Shell    |
-| `on-conflict`          | When a merge or rebase hits conflicts | No       | Shell    |
+| `pre-commit`           | Before staging and committing changes | Yes      | Plugin   |
+| `post-commit`          | After a commit is created             | No       | Plugin   |
+| `pre-rebase`           | Before rebasing onto target           | Yes      | Plugin   |
+| `post-rebase`          | After successful rebase               | No       | Plugin   |
+| `pre-merge`            | Before squash-merging                 | Yes      | Plugin   |
+| `post-merge`           | After successful merge                | No       | Plugin   |
+| `pre-worktree-remove`  | Before worktree deletion              | Yes      | Plugin   |
+| `post-worktree-remove` | After worktree is removed             | No       | Plugin   |
+| `on-conflict`          | When a merge or rebase hits conflicts | No       | Plugin   |
 
 ## Ticket Hooks
 

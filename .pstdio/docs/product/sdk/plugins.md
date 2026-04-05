@@ -362,12 +362,12 @@ Equivalent intent to `pstdio tickets update --status <name>`.
 
 Equivalent intent to `pstdio workspaces set-status`. When `ctx.workspace` already matches, it uses that object directly instead of listing workspaces first.
 
-### `runCommand(spawn, cwd, command, { quiet? })`
+### `runCommand(cwd, command, { quiet? })`
 
 Runs a command and captures `{ exitCode, stdout, stderr }` with trimmed output.
 
 ```ts
-const validation = await runCommand(Bun.spawn, ctx.worktreePath, ["bun", "run", "validate"]);
+const validation = await runCommand(ctx.worktreePath, ["bun", "run", "validate"]);
 ```
 
 ### `updateTicketWhenAllAttemptsMatch(ctx, { ticketId?, allAttemptsStatus, setStatus })`

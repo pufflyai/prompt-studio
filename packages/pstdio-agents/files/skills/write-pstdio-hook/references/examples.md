@@ -1,250 +1,344 @@
 # Hook Examples
 
+All current hook examples use SDK plugins in `.pstdio/plugins/*.ts`. The filename is arbitrary; `pstdio` registers hooks from the method names inside the plugin's `hooks` object. You can keep one hook per file or group related hooks together.
+
 ## Worktree Hooks
 
 ### Copy environment files into new worktrees
 
-```sh
-#!/bin/sh
+```ts
+// .pstdio/plugins/worktree-env.ts
+import { cpSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { definePlugin } from "@pstdio/sdk/plugins";
 
-# .pstdio/hooks/post-worktree-create
-# Copies .env files from the main repo into the new worktree.
-
-for f in .env .env.local .env.test; do
-  if [ -f "$PSTDIO_REPO_PATH/$f" ]; then
-    cp "$PSTDIO_REPO_PATH/$f" "$PSTDIO_WORKTREE_PATH/$f"
-  fi
-done
+export default definePlugin({
+  hooks: {
+    postWorktreeCreate(ctx) {
+      for (const name of [".env", ".env.local", ".env.test"]) {
+        const source = join(ctx.repoPath, name);
+        const destination = join(ctx.worktreePath, name);
+        if (existsSync(source)) {
+          cpSync(source, destination);
+        }
+      }
+    },
+  },
+});
 ```
 
-### Install dependencies after worktree creation
+### Bootstrap a full worktree and install dependencies
 
-```sh
-#!/bin/sh
+```ts
+// .pstdio/plugins/worktree-lifecycle.ts
+import { bootstrapWorktree, definePlugin, runCommand } from "@pstdio/sdk/plugins";
 
-# .pstdio/hooks/post-worktree-create
-# Installs dependencies so the workspace is ready to use.
+export default definePlugin({
+  hooks: {
+    async postWorktreeCreate(ctx) {
+      await bootstrapWorktree(ctx, {
+        repoPath: ctx.repoPath,
+        worktreePath: ctx.worktreePath,
+        ticketId: ctx.ticket,
+      });
 
-bun install
-```
-
-### Full worktree setup (copy config, agent dirs, pull ticket, install)
-
-```sh
-#!/bin/sh
-
-# .pstdio/hooks/post-worktree-create
-# Complete workspace bootstrap: config, agent skills, ticket context, deps.
-
-# Copy .pstdio/config.json so the worktree is recognized as a pstdio project
-if [ -f "$PSTDIO_REPO_PATH/.pstdio/config.json" ]; then
-  mkdir -p "$PSTDIO_WORKTREE_PATH/.pstdio"
-  cp "$PSTDIO_REPO_PATH/.pstdio/config.json" "$PSTDIO_WORKTREE_PATH/.pstdio/config.json"
-fi
-
-# Copy agent folders so workspace-local skills are available
-for AGENT_DIR in ".claude" ".opencode"; do
-  if [ -d "$PSTDIO_REPO_PATH/$AGENT_DIR" ]; then
-    mkdir -p "$PSTDIO_WORKTREE_PATH/$AGENT_DIR"
-    cp -R "$PSTDIO_REPO_PATH/$AGENT_DIR/." "$PSTDIO_WORKTREE_PATH/$AGENT_DIR/"
-  fi
-done
-
-# Pull ticket into worktree so agents have full context
-if [ -n "$PSTDIO_TICKET" ]; then
-  pstdio tickets pull --id "$PSTDIO_TICKET" 2>/dev/null || true
-fi
-
-bun install
+      await runCommand(ctx.worktreePath, ["bun", "install"]);
+      await runCommand(ctx.worktreePath, ["bun", "run", "build"]);
+    },
+  },
+});
 ```
 
 ### Gate commits with validation
 
-```sh
-#!/bin/sh
+```ts
+// .pstdio/plugins/pre-commit-guard.ts
+import { definePlugin, runCommand } from "@pstdio/sdk/plugins";
 
-# .pstdio/hooks/pre-commit
-# Blocks the commit if validation fails.
+export default definePlugin({
+  hooks: {
+    async preCommit(ctx) {
+      const validation = await runCommand(ctx.worktreePath, ["bun", "run", "validate"]);
+      if (validation.exitCode === 0) return;
 
-bun run validate
+      const output = [validation.stdout, validation.stderr].filter(Boolean).join("\n\n");
+      return {
+        reject: true,
+        reason: output || "bun run validate failed",
+      };
+    },
+  },
+});
 ```
 
 ### Run tests before merging
 
-```sh
-#!/bin/sh
+```ts
+// .pstdio/plugins/pre-merge-guard.ts
+import { definePlugin, runCommand } from "@pstdio/sdk/plugins";
 
-# .pstdio/hooks/pre-merge
-# Blocks the merge if tests fail.
+export default definePlugin({
+  hooks: {
+    async preMerge(ctx) {
+      const testRun = await runCommand(ctx.repoPath, ["bun", "test"]);
+      if (testRun.exitCode === 0) return;
 
-bun run test
+      const output = [testRun.stdout, testRun.stderr].filter(Boolean).join("\n\n");
+      return {
+        reject: true,
+        reason: output || "bun test failed",
+      };
+    },
+  },
+});
 ```
 
-### Clean up build artifacts on worktree removal
+### Clean up caches before removing a worktree
 
-```sh
-#!/bin/sh
+```ts
+// .pstdio/plugins/worktree-cleanup.ts
+import { existsSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { definePlugin } from "@pstdio/sdk/plugins";
 
-# .pstdio/hooks/pre-worktree-remove
-# Cleans build caches before removing the worktree.
+export default definePlugin({
+  hooks: {
+    preWorktreeRemove(ctx) {
+      if (!ctx.worktreePath) return;
 
-if [ -d "$PSTDIO_WORKTREE_PATH/node_modules" ]; then
-  rm -rf "$PSTDIO_WORKTREE_PATH/node_modules"
-fi
+      const nodeModules = join(ctx.worktreePath, "node_modules");
+      if (existsSync(nodeModules)) {
+        rmSync(nodeModules, { recursive: true, force: true });
+      }
+    },
+  },
+});
 ```
 
 ## Session Hooks
 
-### Move ticket to "wip" when a session starts
+### Move the ticket to `wip` when a session starts
 
-```sh
-#!/bin/sh
+```ts
+// .pstdio/plugins/ticket-lifecycle.ts
+import { definePlugin, setTicketStatus, setWorkspaceAttemptStatus } from "@pstdio/sdk/plugins";
 
-# .pstdio/hooks/post-session-start
-# Moves the ticket to "wip" unless it's already in "review".
+export default definePlugin({
+  hooks: {
+    async postSessionStart(ctx) {
+      if (!ctx.ticket) return;
 
-if [ -z "$PSTDIO_TICKET" ]; then
-  exit 0
-fi
+      if (ctx.ticket.status_name !== "review") {
+        await setTicketStatus(ctx, { ticket: ctx.ticket.shorthand, status: "wip" });
+      }
 
-CURRENT_STATUS=$(pstdio tickets view status --id "$PSTDIO_TICKET" 2>/dev/null)
-if [ "$CURRENT_STATUS" = "review" ]; then
-  exit 0
-fi
-
-if [ -n "$PSTDIO_WORKSPACE" ]; then
-  pstdio workspaces set-status --workspace "$PSTDIO_WORKSPACE" --status wip
-fi
-
-pstdio tickets update --id "$PSTDIO_TICKET" --status "wip"
+      if (ctx.workspace && !ctx.workspace.attempt_status_name) {
+        await setWorkspaceAttemptStatus(ctx, {
+          workspaceId: ctx.workspace.id,
+          statusName: "wip",
+          sessionId: ctx.sessionId,
+        });
+      }
+    },
+  },
+});
 ```
 
-### Validate and review on session success
+### Mark the ticket as blocked when a session fails
 
-```sh
-#!/bin/sh
+```ts
+// .pstdio/plugins/session-failure.ts
+import { definePlugin, setTicketStatus, setWorkspaceAttemptStatus } from "@pstdio/sdk/plugins";
 
-# .pstdio/hooks/post-session-success
-# When attempt is "review-ready":
-#   1. Runs validation — on failure, resumes the session with the error
-#   2. On success, launches a review session
+export default definePlugin({
+  hooks: {
+    async postSessionFail(ctx) {
+      if (ctx.ticket) {
+        await setTicketStatus(ctx, {
+          ticket: ctx.ticket.shorthand,
+          status: "blocked",
+        });
+      }
 
-if [ "$PSTDIO_ATTEMPT_STATUS" = "blocked" ] && [ -n "$PSTDIO_TICKET" ]; then
-  pstdio tickets update --id "$PSTDIO_TICKET" --status "blocked"
-  exit 0
-fi
-
-if [ "$PSTDIO_ATTEMPT_STATUS" != "review-ready" ]; then
-  exit 0
-fi
-
-# Run validation
-VALIDATE_OUTPUT=$(bun run validate 2>&1)
-
-if [ $? -ne 0 ]; then
-  # Validation failed — resume with the error
-  if [ -n "$PSTDIO_WORKSPACE" ]; then
-    pstdio workspaces set-status \
-      --workspace "$PSTDIO_WORKSPACE" \
-      --status "wip"
-  fi
-
-  if [ -n "$PSTDIO_SESSION_ID" ]; then
-    pstdio sessions follow-up --id "$PSTDIO_SESSION_ID" \
-      --prompt "Validation failed. Fix the errors and mark review-ready again:
-
-$VALIDATE_OUTPUT"
-  fi
-  exit 0
-fi
-
-# Validation passed — launch review session
-if [ -n "$PSTDIO_WORKSPACE_ID" ]; then
-  TICKET_LABEL="${PSTDIO_TICKET:-ticket}"
-  pstdio sessions create \
-    --workspace-id "$PSTDIO_WORKSPACE_ID" \
-    --title "Code review: $TICKET_LABEL" \
-    --prompt "Run a code review for ticket $TICKET_LABEL in this workspace." \
-    >/dev/null 2>&1 || true
-fi
+      if (ctx.workspace) {
+        await setWorkspaceAttemptStatus(ctx, {
+          workspaceId: ctx.workspace.id,
+          statusName: "blocked",
+          sessionId: ctx.sessionId,
+        });
+      }
+    },
+  },
+});
 ```
 
-### Notify on session failure
+### Log sessions that are waiting for input
 
-```sh
-#!/bin/sh
+```ts
+// .pstdio/plugins/session-await-input.ts
+import { appendFileSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
+import { definePlugin } from "@pstdio/sdk/plugins";
 
-# .pstdio/hooks/post-session-fail
-# Marks the ticket as blocked when a session fails.
+export default definePlugin({
+  hooks: {
+    postSessionAwaitInput(ctx) {
+      const root = ctx.worktreePath ?? process.cwd();
+      const dir = join(root, ".pstdio", "sessions");
+      mkdirSync(dir, { recursive: true });
 
-if [ -n "$PSTDIO_TICKET" ]; then
-  pstdio tickets update --id "$PSTDIO_TICKET" --status "blocked"
-fi
+      appendFileSync(
+        join(dir, "await-input.log"),
+        `${new Date().toISOString()} ${ctx.sessionId} awaiting_input\n`,
+      );
+    },
+  },
+});
+```
+
+## Attempt Status Hooks
+
+### Validate before moving an attempt to `review-ready`
+
+```ts
+// .pstdio/plugins/code-review-lifecycle.ts
+import { definePlugin, runCommand } from "@pstdio/sdk/plugins";
+
+export default definePlugin({
+  hooks: {
+    async preAttemptStatusChange(ctx) {
+      if (ctx.toStatus !== "review-ready") return;
+      if (!ctx.worktreePath) return;
+
+      const validation = await runCommand(ctx.worktreePath, ["bun", "run", "validate"]);
+      if (validation.exitCode === 0) return;
+
+      const output = [validation.stdout, validation.stderr].join("\n").trim();
+      return {
+        reject: true,
+        reason: output
+          ? `Validation failed; cannot move to review-ready\n\n${output}`
+          : "Validation failed; cannot move to review-ready",
+      };
+    },
+  },
+});
+```
+
+### Launch review on `review-ready`, then route changes back to the original session
+
+```ts
+// .pstdio/plugins/code-review-lifecycle.ts
+import {
+  createSession,
+  definePlugin,
+  followupSession,
+  setWorkspaceAttemptStatus,
+} from "@pstdio/sdk/plugins";
+
+export default definePlugin({
+  hooks: {
+    async postAttemptStatusChange(ctx) {
+      if (!ctx.ticket) return;
+
+      if (ctx.toStatus === "review-ready") {
+        await createSession(ctx, {
+          workspace_id: ctx.workspace.id,
+          title: `Code review: ${ctx.ticket.shorthand}`,
+          template: "code-review",
+          vars: { ticket: ctx.ticket.shorthand },
+          original_session_id: ctx.sessionId,
+        });
+      }
+
+      if (ctx.toStatus === "changes-requested") {
+        await setWorkspaceAttemptStatus(ctx, {
+          workspaceId: ctx.workspace.id,
+          sessionId: ctx.sessionId,
+          statusName: "wip",
+        });
+
+        await followupSession(ctx, {
+          sessionId: ctx.originalSessionId,
+          template: "fix-changes-requested",
+          vars: { ticket: ctx.ticket.shorthand },
+        });
+      }
+    },
+  },
+});
 ```
 
 ## Ticket Hooks
 
-### Prevent archiving tickets that are in progress
+### Prevent archiving tickets that are still in progress
 
-```sh
-#!/bin/sh
+```ts
+// .pstdio/plugins/ticket-archive-guard.ts
+import { definePlugin } from "@pstdio/sdk/plugins";
 
-# .pstdio/hooks/pre-ticket-archive
-# Blocks archival if the ticket is still "wip".
+export default definePlugin({
+  hooks: {
+    preTicketArchive(ctx) {
+      if (ctx.status !== "wip") return;
 
-if [ "$PSTDIO_TO_STATUS" = "wip" ] || [ -z "$PSTDIO_TO_STATUS" ]; then
-  CURRENT_STATUS=$(pstdio tickets view status --id "$PSTDIO_TICKET" 2>/dev/null)
-  if [ "$CURRENT_STATUS" = "wip" ]; then
-    echo "Cannot archive a ticket that is still in progress." >&2
-    exit 1
-  fi
-fi
+      return {
+        reject: true,
+        reason: "Cannot archive a ticket that is still in progress.",
+      };
+    },
+  },
+});
 ```
 
-### Remove worktrees when a ticket is archived
+### Remove all worktrees when a ticket is archived
 
-```sh
-#!/bin/sh
+```ts
+// .pstdio/plugins/worktree-lifecycle.ts
+import { definePlugin, removeAllWorktreesForTicket } from "@pstdio/sdk/plugins";
 
-# .pstdio/hooks/post-ticket-archive
-# Removes all worktrees associated with the archived ticket.
-
-if [ -n "$PSTDIO_TICKET" ]; then
-  pstdio workspaces list --ticket "$PSTDIO_TICKET" --format json 2>/dev/null \
-    | jq -r '.[].shorthand' \
-    | while read -r ws; do
-        pstdio workspaces remove --workspace "$ws" 2>/dev/null || true
-      done
-fi
+export default definePlugin({
+  hooks: {
+    async postTicketArchive(ctx) {
+      await removeAllWorktreesForTicket(ctx, { ticketId: ctx.id });
+    },
+  },
+});
 ```
 
 ### Log ticket status transitions
 
-```sh
-#!/bin/sh
+```ts
+// .pstdio/plugins/ticket-status-log.ts
+import { definePlugin } from "@pstdio/sdk/plugins";
 
-# .pstdio/hooks/post-ticket-status-change
-# Appends a line to a status log file for auditing.
-
-if [ -n "$PSTDIO_TICKET" ] && [ -n "$PSTDIO_FROM_STATUS" ] && [ -n "$PSTDIO_TO_STATUS" ]; then
-  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $PSTDIO_TICKET: $PSTDIO_FROM_STATUS -> $PSTDIO_TO_STATUS" \
-    >> ".pstdio/tickets/status-changes.log"
-fi
+export default definePlugin({
+  hooks: {
+    postTicketStatusChange(ctx) {
+      console.log(
+        `[pstdio] ${new Date().toISOString()} ${ctx.shorthand}: ${ctx.fromStatus} -> ${ctx.toStatus}`,
+      );
+    },
+  },
+});
 ```
 
-### Validate ticket content before creation
+### Require ticket content before creation
 
-```sh
-#!/bin/sh
+```ts
+// .pstdio/plugins/ticket-create-guard.ts
+import { definePlugin } from "@pstdio/sdk/plugins";
 
-# .pstdio/hooks/pre-ticket-creation
-# Reads the ticket payload from stdin and checks for required fields.
+export default definePlugin({
+  hooks: {
+    preTicketCreation(ctx) {
+      if (ctx.content?.trim()) return;
 
-PAYLOAD=$(cat)
-TITLE=$(echo "$PAYLOAD" | jq -r '.title // empty')
-
-if [ -z "$TITLE" ]; then
-  echo "Ticket must have a title." >&2
-  exit 1
-fi
+      return {
+        reject: true,
+        reason: "Ticket must include content.",
+      };
+    },
+  },
+});
 ```

@@ -237,13 +237,13 @@ Updates an agent configuration.
 
 Deletes an agent configuration.
 
-### `client.actions.list(targetType?: TargetType)`
+### `client.actions.list(projectId: string, targetType?: TargetType)`
 
-Lists registered UI actions, optionally filtered to a target type.
+Lists registered UI actions for a project, optionally filtered to a target type.
 
-### `client.actions.execute(actionKey: string, input: ExecuteActionInput)`
+### `client.actions.execute(projectId: string, actionKey: string, input: ExecuteActionInput)`
 
-Executes a registered action for the provided target.
+Executes a registered action for the provided target within a project.
 
 ## `@pstdio/sdk/plugins`
 
@@ -318,7 +318,7 @@ Lists workspaces whose `ticket_shorthand` matches the resolved ticket.
 
 Best-effort removes every worktree attached to the resolved ticket and returns the number removed.
 
-### `runCommand(spawn, cwd, command, options?)`
+### `runCommand(cwd, command, options?)`
 
 Runs a command, captures `stdout` and `stderr` by default, and returns `{ exitCode, stdout, stderr }`.
 

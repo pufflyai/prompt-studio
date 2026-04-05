@@ -82,16 +82,14 @@ test.describe("Documentation", () => {
     rmSync(repoDir, { recursive: true, force: true });
   });
 
-  test("shows starter docs when project repo is newly linked", async ({ page, request }) => {
+  test("shows setup prompt when project repo has no docs", async ({ page, request }) => {
     await bypassOnboarding(page);
 
     const emptyRepoDir = setupEmptyRepo();
     const project = await createProjectWithDocs(request, emptyRepoDir);
 
     await page.goto(`/projects/${project.id}/docs`);
-    await expect(page.getByRole("heading", { name: "Getting Started" })).toBeVisible();
-    await expect(page.getByText("Welcome to your project documentation.")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Setup your project documentation" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Setup your project documentation" })).toBeVisible();
 
     rmSync(emptyRepoDir, { recursive: true, force: true });
   });

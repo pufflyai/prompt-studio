@@ -193,6 +193,14 @@ describe("pstdio templates write", () => {
     "writes a docs template to the filesystem without mutating navigation",
     () => {
       const repo = createInitializedRepo("tpl-write-docs");
+
+      // projects create inside a git repo delegates scaffolding to the API,
+      // so we scaffold docs manually for this test
+      const docsDir = join(repo, ".pstdio", "docs");
+      mkdirSync(docsDir, { recursive: true });
+      writeFileSync(join(docsDir, "navigation.json"), JSON.stringify({ sidebar: [] }));
+      writeFileSync(join(docsDir, "index.md"), "# Docs\n");
+
       const initialNav = readFileSync(join(repo, ".pstdio", "docs", "navigation.json"), "utf8");
 
       const output = run("templates write --name prd --target docs/prd/cli/new-feature", repo);

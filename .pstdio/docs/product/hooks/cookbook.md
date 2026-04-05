@@ -72,16 +72,44 @@ export default definePlugin({
 
 ## Validate Before Committing / Before Merging
 
-`pre-commit` and `pre-merge` are git-level hooks dispatched via shell scripts (not through the plugin system):
+`preCommit` and `preMerge` are git-level hooks dispatched via plugins:
 
-```sh
-# .pstdio/hooks/pre-commit
-bun run validate
+```ts
+// .pstdio/plugins/pre-commit.ts
+import { definePlugin } from "@pstdio/sdk/plugins";
+
+export default definePlugin({
+  hooks: {
+    async preCommit(ctx) {
+      const proc = Bun.spawn(["bun", "run", "validate"], {
+        cwd: ctx.worktreePath,
+        stdout: "inherit",
+        stderr: "inherit",
+      });
+      const code = await proc.exited;
+      if (code !== 0) throw new Error("Validation failed");
+    },
+  },
+});
 ```
 
-```sh
-# .pstdio/hooks/pre-merge
-bun run test
+```ts
+// .pstdio/plugins/pre-merge.ts
+import { definePlugin } from "@pstdio/sdk/plugins";
+
+export default definePlugin({
+  hooks: {
+    async preMerge(ctx) {
+      const proc = Bun.spawn(["bun", "run", "test"], {
+        cwd: ctx.worktreePath,
+        stdout: "inherit",
+        stderr: "inherit",
+      });
+      const code = await proc.exited;
+      if (code !== 0) throw new Error("Tests failed");
+    },
+  },
+});
 ```
 
 ## Auto-Assign Default Fields on Ticket Creation

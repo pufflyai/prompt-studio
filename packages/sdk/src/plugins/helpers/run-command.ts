@@ -1,36 +1,28 @@
-import { readStream } from "./context";
-
-type CommandSpawn = (
-  command: string[],
-  options: {
-    cwd: string;
-    stdout: "pipe" | "ignore";
-    stderr: "pipe" | "ignore";
-  },
-) => {
-  exited: Promise<number>;
-  stdout?: ReadableStream | null;
-  stderr?: ReadableStream | null;
-};
-
-type RunCommandSpawn = CommandSpawn | typeof Bun.spawn;
+import { spawn as nodeSpawn } from "node:child_process";
 
 type CommandOutputOptions = {
   quiet?: boolean;
 };
 
-export const runCommand = async (
-  spawn: RunCommandSpawn,
-  cwd: string,
-  command: string[],
-  options: CommandOutputOptions = {},
-) => {
-  const proc = (spawn as CommandSpawn)(command, {
-    cwd,
-    stdout: options.quiet ? "ignore" : "pipe",
-    stderr: options.quiet ? "ignore" : "pipe",
-  });
+export const runCommand = async (cwd: string, command: string[], options: CommandOutputOptions = {}) => {
+  const [cmd, ...args] = command;
+  const stdio = options.quiet ? "ignore" : "pipe";
 
-  const [exitCode, stdout, stderr] = await Promise.all([proc.exited, readStream(proc.stdout), readStream(proc.stderr)]);
-  return { exitCode, stdout, stderr };
+  return new Promise<{ exitCode: number; stdout: string; stderr: string }>((resolve) => {
+    const proc = nodeSpawn(cmd, args, { cwd, stdio: ["ignore", stdio, stdio] });
+
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    proc.stdout?.on("data", (chunk: Buffer) => stdout.push(chunk.toString()));
+    proc.stderr?.on("data", (chunk: Buffer) => stderr.push(chunk.toString()));
+
+    proc.on("close", (code) => {
+      resolve({
+        exitCode: code ?? 1,
+        stdout: stdout.join("").trim(),
+        stderr: stderr.join("").trim(),
+      });
+    });
+  });
 };
