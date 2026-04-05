@@ -26,6 +26,7 @@ const writePlugin = (fileName: string, code: string) => {
 const makeDeps = () => ({
   pluginService: createPluginService({
     repoService: { listByProject: async () => [{ path: repoDir }] },
+    ensureWorkspace: async () => {},
   }),
 });
 

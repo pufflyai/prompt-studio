@@ -1,7 +1,5 @@
-import type { HookPayload } from "pstdio-hooks";
-import { runHook } from "pstdio-hooks";
 import { GitError, git } from "./git";
-import type { MergeResult } from "./types";
+import type { HookDispatch, MergeResult } from "./types";
 
 export const mergeWorktree = async (opts: {
   repoRoot: string;
@@ -9,25 +7,27 @@ export const mergeWorktree = async (opts: {
   target?: string;
   squash?: boolean;
   message?: string;
-  hookPayload?: HookPayload;
+  dispatch?: HookDispatch;
 }): Promise<MergeResult> => {
   const target = opts.target ?? (await getCurrentBranch(opts.repoRoot));
   const shouldSquash = opts.squash ?? false;
-  const basePayload: HookPayload = {
-    repo_path: opts.repoRoot,
+  const dispatch = opts.dispatch;
+
+  const ctx = {
+    repoPath: opts.repoRoot,
     branch: opts.branch,
     target,
     squash: shouldSquash,
-    commit_message: opts.message ?? null,
-    ...opts.hookPayload,
+    commitMessage: opts.message ?? null,
   };
 
-  const preResult = await runHook("pre-merge", basePayload, { repoPath: opts.repoRoot });
-  if (!preResult.skipped && preResult.exitCode !== 0) {
-    throw new Error(`HOOK pre-merge FAILED (exit ${preResult.exitCode})\n${preResult.stderr || preResult.stdout}`);
+  if (dispatch) {
+    const preResult = await dispatch.firePreHook("preMerge", ctx);
+    if (preResult.rejected) {
+      throw new Error(`HOOK preMerge FAILED\n${preResult.reason ?? ""}`);
+    }
   }
 
-  // ensure we're on the target branch
   const currentBranch = await getCurrentBranch(opts.repoRoot);
   if (currentBranch !== target) {
     await git(opts.repoRoot, ["checkout", target]);
@@ -42,12 +42,9 @@ export const mergeWorktree = async (opts: {
       await git(opts.repoRoot, ["merge", "--ff-only", opts.branch]);
     }
   } catch (err) {
-    const conflictPayload: HookPayload = {
-      ...basePayload,
-      operation: "merge",
-    };
-    void runHook("on-conflict", conflictPayload, { repoPath: opts.repoRoot }).catch(() => {});
-
+    if (dispatch) {
+      void dispatch.firePostHook("onConflict", { ...ctx, operation: "merge" as const }).catch(() => {});
+    }
     if (err instanceof GitError) {
       throw new Error(`Merge of ${opts.branch} into ${target} failed: ${err.stderr}`);
     }
@@ -56,7 +53,9 @@ export const mergeWorktree = async (opts: {
 
   const sha = await git(opts.repoRoot, ["rev-parse", "HEAD"]);
 
-  void runHook("post-merge", { ...basePayload, commit_sha: sha }, { repoPath: opts.repoRoot }).catch(() => {});
+  if (dispatch) {
+    void dispatch.firePostHook("postMerge", { ...ctx, commitSha: sha }).catch(() => {});
+  }
 
   return { merged: true, target, sha };
 };

@@ -1,28 +1,33 @@
 import { Icon, IconButton, Menu } from "@chakra-ui/react";
 import { DeleteConfirmationModal, MenuItem } from "@pstdio/ui";
-import { Archive, MoreHorizontal, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Archive, MoreHorizontal, Play, Plus, Sparkles, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { ActionDescriptor } from "@/features/plugin-actions/api";
 
 interface TicketActionMenuProps {
   isArchived: boolean;
   canDeleteTicket: boolean;
+  pluginActions?: ActionDescriptor[];
   onCreateSubTicket: () => void;
   onBreakIntoSubTickets: () => void;
   onRefineTicket: () => void;
   onArchiveTicket: () => void;
   onDeleteTicket: () => void | Promise<void>;
+  onPluginAction?: (actionKey: string) => void;
 }
 
 export const TicketActionMenu = (props: TicketActionMenuProps) => {
   const {
     isArchived,
     canDeleteTicket,
+    pluginActions = [],
     onCreateSubTicket,
     onBreakIntoSubTickets,
     onRefineTicket,
     onArchiveTicket,
     onDeleteTicket,
+    onPluginAction,
   } = props;
   const { t } = useTranslation("projects");
   const [isDeleteOpen, setDeleteOpen] = useState(false);
@@ -39,6 +44,8 @@ export const TicketActionMenu = (props: TicketActionMenuProps) => {
     await onDeleteTicket();
     setDeleteOpen(false);
   };
+
+  const overflowActions = pluginActions.filter((a) => a.placement === "overflow");
 
   return (
     <>
@@ -65,6 +72,14 @@ export const TicketActionMenu = (props: TicketActionMenuProps) => {
               leftIcon={Sparkles}
               onClick={onRefineTicket}
             />
+            {overflowActions.map((action) => (
+              <MenuItem
+                key={action.key}
+                primaryLabel={action.label}
+                leftIcon={Play}
+                onClick={() => onPluginAction?.(action.key)}
+              />
+            ))}
             <MenuItem
               primaryLabel={t(isArchived ? "ticketPanel.options.unarchiveTicket" : "ticketPanel.options.archiveTicket")}
               leftIcon={Archive}

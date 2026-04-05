@@ -4,6 +4,16 @@ import {
   waitForHealthy as defaultWaitForHealthy,
 } from "@/adapters/cli/dashboard/health-check";
 
+/**
+ * Ensures the pstdio API server is running before CLI commands that need it.
+ *
+ * Checks the /healthz endpoint first — if the API is already up, returns immediately.
+ * Otherwise spawns a detached API process in the background and waits until it becomes
+ * healthy. Throws if the API cannot be started.
+ *
+ * Dependencies are injected so the module can be tested without spawning real processes.
+ */
+
 export type EnsureApiDeps = {
   isHealthy: typeof defaultIsHealthy;
   waitForHealthy: typeof defaultWaitForHealthy;

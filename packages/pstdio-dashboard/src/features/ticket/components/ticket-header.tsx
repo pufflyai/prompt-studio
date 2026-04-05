@@ -4,6 +4,7 @@ import { Breadcrumb, HorizontalMenuStack } from "@pstdio/ui";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { ActionDescriptor } from "@/features/plugin-actions/api";
 import { TicketActionMenu } from "./ticket-action-menu";
 import { TicketAttemptButton } from "./ticket-attempt-button";
 
@@ -15,6 +16,7 @@ interface TicketHeaderProps {
   isRunningAttempt: boolean;
   isArchived: boolean;
   canDeleteTicket: boolean;
+  pluginActions?: ActionDescriptor[];
   onNavigateBack: () => void;
   onRunAttempt: () => Promise<boolean> | boolean;
   onViewWorkspace: () => void;
@@ -23,6 +25,7 @@ interface TicketHeaderProps {
   onRefineTicket: () => void;
   onArchiveTicket: () => void;
   onDeleteTicket: () => void | Promise<void>;
+  onPluginAction?: (actionKey: string) => void;
 }
 
 export const TicketHeader = (props: TicketHeaderProps) => {
@@ -34,6 +37,7 @@ export const TicketHeader = (props: TicketHeaderProps) => {
     isRunningAttempt,
     isArchived,
     canDeleteTicket,
+    pluginActions,
     onNavigateBack,
     onRunAttempt,
     onViewWorkspace,
@@ -42,6 +46,7 @@ export const TicketHeader = (props: TicketHeaderProps) => {
     onRefineTicket,
     onArchiveTicket,
     onDeleteTicket,
+    onPluginAction,
   } = props;
   const { t } = useTranslation("tickets");
 
@@ -68,11 +73,13 @@ export const TicketHeader = (props: TicketHeaderProps) => {
         <TicketActionMenu
           isArchived={isArchived}
           canDeleteTicket={canDeleteTicket}
+          pluginActions={pluginActions}
           onCreateSubTicket={onCreateSubTicket}
           onBreakIntoSubTickets={onBreakIntoSubTickets}
           onRefineTicket={onRefineTicket}
           onArchiveTicket={onArchiveTicket}
           onDeleteTicket={onDeleteTicket}
+          onPluginAction={onPluginAction}
         />
       </Flex>
     </HorizontalMenuStack>

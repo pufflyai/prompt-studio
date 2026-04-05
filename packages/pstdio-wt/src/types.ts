@@ -40,6 +40,11 @@ export type RebaseResult = {
 
 export type StagingPolicy = "all" | "tracked" | "none";
 
+export type HookDispatch = {
+  firePreHook(hookName: string, ctx: unknown): Promise<{ rejected: boolean; reason?: string }>;
+  firePostHook(hookName: string, ctx: unknown): Promise<void>;
+};
+
 export type BranchInfo = {
   name: string;
   isCurrent: boolean;

@@ -1,0 +1,95 @@
+import { afterEach, describe, expect, mock, test } from "bun:test";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+// Mock child_process to avoid real installs in tests
+const execFileSyncMock = mock();
+mock.module("node:child_process", () => ({ execFileSync: execFileSyncMock }));
+
+const { ensurePluginWorkspace, detectRuntime } = await import("./workspace");
+
+let tempDirs: string[] = [];
+
+const createTempDir = () => {
+  const dir = mkdtempSync(join(tmpdir(), "pstdio-workspace-test-"));
+  tempDirs.push(dir);
+  return dir;
+};
+
+afterEach(() => {
+  for (const dir of tempDirs) {
+    rmSync(dir, { recursive: true, force: true });
+  }
+  tempDirs = [];
+  execFileSyncMock.mockReset();
+});
+
+describe("ensurePluginWorkspace", () => {
+  test("creates package.json with @pstdio/sdk dependency", async () => {
+    const dir = createTempDir();
+
+    await ensurePluginWorkspace(dir);
+
+    const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+    expect(pkg.private).toBe(true);
+    expect(pkg.type).toBe("module");
+    expect(pkg.dependencies["@pstdio/sdk"]).toBe("latest");
+  });
+
+  test("creates .gitignore", async () => {
+    const dir = createTempDir();
+
+    await ensurePluginWorkspace(dir);
+
+    const gitignore = readFileSync(join(dir, ".gitignore"), "utf8");
+    expect(gitignore).toContain("node_modules");
+    expect(gitignore).toContain("package.json");
+    expect(gitignore).toContain("package-lock.json");
+    expect(gitignore).toContain("bun.lock");
+  });
+
+  test("runs install after writing package.json", async () => {
+    const dir = createTempDir();
+
+    await ensurePluginWorkspace(dir);
+
+    const installCall = execFileSyncMock.mock.calls.find(
+      (call: unknown[]) => call[0] === "bun" && (call[1] as string[])?.[0] === "install",
+    ) as unknown[] | undefined;
+    expect(installCall).toBeDefined();
+    expect((installCall![2] as { cwd: string }).cwd).toBe(dir);
+  });
+
+  test("skips when package.json already has @pstdio/sdk", async () => {
+    const dir = createTempDir();
+    const existingPkg = {
+      private: true,
+      type: "module",
+      dependencies: { "@pstdio/sdk": "0.1.0" },
+    };
+    writeFileSync(join(dir, "package.json"), JSON.stringify(existingPkg));
+
+    await ensurePluginWorkspace(dir);
+
+    const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+    expect(pkg.dependencies["@pstdio/sdk"]).toBe("0.1.0");
+    expect(execFileSyncMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("detectRuntime", () => {
+  test("returns bun when bun is available", () => {
+    execFileSyncMock.mockImplementation(() => Buffer.from("1.0.0"));
+
+    expect(detectRuntime()).toBe("bun");
+  });
+
+  test("returns npm when bun is not available", () => {
+    execFileSyncMock.mockImplementation(() => {
+      throw new Error("not found");
+    });
+
+    expect(detectRuntime()).toBe("npm");
+  });
+});

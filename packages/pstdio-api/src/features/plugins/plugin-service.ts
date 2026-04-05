@@ -3,11 +3,12 @@ import { existsSync, watch } from "node:fs";
 import { join } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
 import { createHookDispatcher } from "pstdio-hooks";
-import { createPluginRegistry, loadPlugins } from "pstdio-plugins";
+import { createPluginRegistry, ensurePluginWorkspace, loadPlugins } from "pstdio-plugins";
 import { registerPluginHooks } from "./register-plugin-hooks";
 
 type PluginServiceDeps = {
   repoService: { listByProject: (projectId: string) => Promise<{ path: string }[]> };
+  ensureWorkspace?: (pstdioDir: string) => Promise<void>;
 };
 
 type ProjectPlugins = {
@@ -25,6 +26,7 @@ const EMPTY_PLUGINS: ProjectPlugins = {
 };
 
 export const createPluginService = (deps: PluginServiceDeps) => {
+  const ensureWorkspace = deps.ensureWorkspace ?? ensurePluginWorkspace;
   const cache = new Map<string, ProjectPlugins>();
   const watchers = new Map<string, FSWatcher>();
 
@@ -38,7 +40,6 @@ export const createPluginService = (deps: PluginServiceDeps) => {
     if (!existsSync(pluginsDir)) return;
 
     const watcher = watch(pluginsDir, { recursive: true }, () => {
-      // Guard: only invalidate if this watcher is still the active one
       if (watchers.get(projectId) !== watcher) return;
       cache.delete(projectId);
       stopWatching(projectId);
@@ -57,7 +58,9 @@ export const createPluginService = (deps: PluginServiceDeps) => {
     const repoPath = repos[0]?.path;
     if (!repoPath) return EMPTY_PLUGINS;
 
-    const pluginsDir = join(repoPath, ".pstdio", "plugins");
+    const pstdioDir = join(repoPath, ".pstdio");
+    const pluginsDir = join(pstdioDir, "plugins");
+    await ensureWorkspace(pstdioDir);
     const plugins = await loadPlugins(pluginsDir);
 
     const dispatcher = createHookDispatcher();

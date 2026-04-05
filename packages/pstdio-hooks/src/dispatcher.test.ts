@@ -65,6 +65,38 @@ describe("createHookDispatcher", () => {
       await dispatcher.firePreHook("preTicketCreation", ctx);
       expect(received).toBe(ctx);
     });
+
+    test("collects data from non-rejecting handlers", async () => {
+      const dispatcher = createHookDispatcher();
+
+      dispatcher.register("preTicketCreation", () => ({ data: { priority: "high" } }));
+      dispatcher.register("preTicketCreation", () => ({ data: { label: "urgent" } }));
+
+      const result = await dispatcher.firePreHook("preTicketCreation", {});
+      expect(result.rejected).toBe(false);
+      expect(result.data).toEqual({ priority: "high", label: "urgent" });
+    });
+
+    test("does not include data when handler rejects", async () => {
+      const dispatcher = createHookDispatcher();
+
+      dispatcher.register("preTicketCreation", () => ({ data: { priority: "high" } }));
+      dispatcher.register("preTicketCreation", () => ({ reject: true, reason: "nope" }));
+
+      const result = await dispatcher.firePreHook("preTicketCreation", {});
+      expect(result.rejected).toBe(true);
+      expect(result.data).toBeUndefined();
+    });
+
+    test("returns no data when handlers return void", async () => {
+      const dispatcher = createHookDispatcher();
+
+      dispatcher.register("preTicketCreation", () => {});
+
+      const result = await dispatcher.firePreHook("preTicketCreation", {});
+      expect(result.rejected).toBe(false);
+      expect(result.data).toBeUndefined();
+    });
   });
 
   describe("firePostHook", () => {

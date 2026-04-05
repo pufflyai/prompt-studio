@@ -44,4 +44,4 @@ export const deleteProject = async (projectId: string) => {
   });
 };
 
-export type { ProjectResponse, CreateProjectInput };
+export type { CreateProjectInput, ProjectResponse };

@@ -2,7 +2,10 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import { createPluginService } from "./plugin-service";
+
+const noopWorkspace = async () => {};
 
 let tempDirs: string[] = [];
 
@@ -30,7 +33,7 @@ describe("createPluginService", () => {
       listByProject: async () => [{ path: repo }],
     };
 
-    const service = createPluginService({ repoService });
+    const service = createPluginService({ repoService, ensureWorkspace: noopWorkspace });
     const { dispatcher, registry } = await service.getForProject("project-1");
 
     expect(registry.getHookHandlers("postSessionStart")).toHaveLength(1);
@@ -47,7 +50,7 @@ describe("createPluginService", () => {
       listByProject: async () => [{ path: repo }],
     };
 
-    const service = createPluginService({ repoService });
+    const service = createPluginService({ repoService, ensureWorkspace: noopWorkspace });
     const first = await service.getForProject("project-1");
     const second = await service.getForProject("project-1");
 
@@ -59,7 +62,7 @@ describe("createPluginService", () => {
       listByProject: async () => [],
     };
 
-    const service = createPluginService({ repoService });
+    const service = createPluginService({ repoService, ensureWorkspace: noopWorkspace });
     const { dispatcher, registry } = await service.getForProject("no-repo");
 
     // Should not throw, just have empty handlers

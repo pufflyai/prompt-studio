@@ -1,18 +1,15 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { join } from "node:path";
 import { commitChanges } from "./commit";
 import { git } from "./git";
-import { createTempRepo, waitFor } from "./test-helpers";
+import { createTempRepo } from "./test-helpers";
+import type { HookDispatch } from "./types";
 import { createWorktree } from "./worktree";
 
-const writeHook = (repoPath: string, hookName: string, script: string) => {
-  const hooksDir = join(repoPath, ".pstdio", "hooks");
-  mkdirSync(hooksDir, { recursive: true });
-  const path = join(hooksDir, hookName);
-  writeFileSync(path, `#!/bin/sh\n${script}`);
-  chmodSync(path, 0o755);
-};
+const noopDispatch = (): HookDispatch => ({
+  firePreHook: mock(() => Promise.resolve({ rejected: false })),
+  firePostHook: mock(() => Promise.resolve()),
+});
 
 let repo: Awaited<ReturnType<typeof createTempRepo>>;
 
@@ -91,47 +88,44 @@ describe("commitChanges", () => {
   test("pre-commit hook aborts commit on failure", async () => {
     const wtPath = join(repo.dir, "wt-commit");
     await createWorktree({ repoRoot: repo.dir, branch: "task/hook-fail", path: wtPath });
-    writeHook(repo.dir, "pre-commit", "exit 1");
+
+    const dispatch: HookDispatch = {
+      firePreHook: mock(() => Promise.resolve({ rejected: true, reason: "lint failed" })),
+      firePostHook: mock(() => Promise.resolve()),
+    };
 
     await Bun.write(join(wtPath, "file.txt"), "content");
 
-    await expect(commitChanges({ worktreePath: wtPath, message: "should fail", repoPath: repo.dir })).rejects.toThrow(
-      "HOOK pre-commit FAILED",
-    );
+    await expect(
+      commitChanges({ worktreePath: wtPath, message: "should fail", repoPath: repo.dir, dispatch }),
+    ).rejects.toThrow("HOOK preCommit FAILED");
   });
 
   test("post-commit hook runs after successful commit", async () => {
     const wtPath = join(repo.dir, "wt-commit");
     await createWorktree({ repoRoot: repo.dir, branch: "task/hook-post", path: wtPath });
-    writeHook(repo.dir, "post-commit", `echo "done" > "${repo.dir}/post-commit-marker.txt"`);
+
+    const dispatch = noopDispatch();
 
     await Bun.write(join(wtPath, "file.txt"), "content");
 
-    await commitChanges({ worktreePath: wtPath, message: "with hook", repoPath: repo.dir });
+    await commitChanges({ worktreePath: wtPath, message: "with hook", repoPath: repo.dir, dispatch });
 
-    expect(await waitFor(() => existsSync(join(repo.dir, "post-commit-marker.txt")))).toBe(true);
+    expect(dispatch.firePostHook).toHaveBeenCalledWith(
+      "postCommit",
+      expect.objectContaining({
+        repoPath: repo.dir,
+        worktreePath: wtPath,
+        commitMessage: "with hook",
+      }),
+    );
   });
 
-  test("pre-commit payload is available via stdin and field env vars", async () => {
+  test("dispatch ctx contains expected fields", async () => {
     const wtPath = join(repo.dir, "wt-commit");
     await createWorktree({ repoRoot: repo.dir, branch: "task/payload", path: wtPath });
 
-    const stdinPath = join(repo.dir, "pre-commit.payload.stdin.json");
-    const envPath = join(repo.dir, "pre-commit.payload.env.json");
-    writeHook(
-      repo.dir,
-      "pre-commit",
-      `cat > "${stdinPath}"
-printf '{"repo_path":"%s","worktree_path":"%s","branch":"%s","workspace":"%s","workspace_id":"%s","ticket":"%s","project_id":"%s","commit_message":"%s"}' \
-"$PSTDIO_REPO_PATH" \
-"$PSTDIO_WORKTREE_PATH" \
-"$PSTDIO_BRANCH" \
-"$PSTDIO_WORKSPACE" \
-"$PSTDIO_WORKSPACE_ID" \
-"$PSTDIO_TICKET" \
-"$PSTDIO_PROJECT_ID" \
-"$PSTDIO_COMMIT_MESSAGE" > "${envPath}"`,
-    );
+    const dispatch = noopDispatch();
 
     await Bun.write(join(wtPath, "payload.txt"), "payload");
     await commitChanges({
@@ -139,32 +133,25 @@ printf '{"repo_path":"%s","worktree_path":"%s","branch":"%s","workspace":"%s","w
       message: "payload commit",
       repoPath: repo.dir,
       stage: "all",
-      hookPayload: {
-        branch: "workspace/PS-1_A1",
-        workspace: "PS-1_A1",
-        workspace_id: "ws-1",
-        ticket: "PS-1",
-        project_id: "proj-1",
-      },
+      dispatch,
     });
 
-    const stdinPayload = JSON.parse(readFileSync(stdinPath, "utf8"));
-    const envPayload = JSON.parse(readFileSync(envPath, "utf8"));
+    expect(dispatch.firePreHook).toHaveBeenCalledWith("preCommit", {
+      repoPath: repo.dir,
+      worktreePath: wtPath,
+      commitMessage: "payload commit",
+      stagePolicy: "all",
+    });
 
-    expect(envPayload.repo_path).toBe(stdinPayload.repo_path);
-    expect(envPayload.worktree_path).toBe(stdinPayload.worktree_path);
-    expect(envPayload.branch).toBe(stdinPayload.branch);
-    expect(envPayload.workspace).toBe(stdinPayload.workspace);
-    expect(envPayload.workspace_id).toBe(stdinPayload.workspace_id);
-    expect(envPayload.ticket).toBe(stdinPayload.ticket);
-    expect(envPayload.project_id).toBe(stdinPayload.project_id);
-    expect(envPayload.commit_message).toBe(stdinPayload.commit_message);
-    expect(stdinPayload.commit_message).toBe("payload commit");
-    expect(stdinPayload.branch).toBe("workspace/PS-1_A1");
-    expect(stdinPayload.workspace).toBe("PS-1_A1");
-    expect(stdinPayload.workspace_id).toBe("ws-1");
-    expect(stdinPayload.ticket).toBe("PS-1");
-    expect(stdinPayload.project_id).toBe("proj-1");
-    expect(stdinPayload.stage_policy).toBe("all");
+    expect(dispatch.firePostHook).toHaveBeenCalledWith(
+      "postCommit",
+      expect.objectContaining({
+        repoPath: repo.dir,
+        worktreePath: wtPath,
+        commitMessage: "payload commit",
+        stagePolicy: "all",
+        commitSha: expect.stringMatching(/^[0-9a-f]{40}$/),
+      }),
+    );
   });
 });

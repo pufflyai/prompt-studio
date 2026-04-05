@@ -207,6 +207,10 @@
           "link": "/architecture/agents"
         },
         {
+          "text": "Hook Runtime Boundaries (Draft)",
+          "link": "/architecture/hooks-runtime-boundaries"
+        },
+        {
           "text": "Control and Execution Planes",
           "link": "/architecture/control-and-execution-planes"
         },

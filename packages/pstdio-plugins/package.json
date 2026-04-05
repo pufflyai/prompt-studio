@@ -1,5 +1,5 @@
 {
-  "name": "pstdio-hooks",
+  "name": "pstdio-plugins",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",

@@ -1,20 +1,23 @@
 import { describe, expect, type Mock, mock, test } from "bun:test";
+import type { Session } from "@pstdio/sdk/resources";
 import type { Arguments } from "yargs";
 import { createHandler, type ViewArgs } from "./view";
 
 const argv = (args: Partial<ViewArgs>) => ({ _: [], $0: "", ...args }) as Arguments<ViewArgs>;
 
-const makeSession = (overrides = {}) => ({
+const makeSession = (overrides: Partial<Session> = {}): Session => ({
   id: "s_abc123",
   project_id: "proj-1",
   title: "Test session",
   status: "completed",
   archived: false,
-  created: "2026-03-05T10:00:00Z",
   last_request_started: "2026-03-05T10:00:00Z",
   last_request_ended: "2026-03-05T10:05:32Z",
   agent: "claude-code",
   agent_session_id: null,
+  session_file_id: null,
+  original_session_id: null,
+  cwd: null,
   created_at: "2026-03-05T10:00:00Z",
   updated_at: "2026-03-05T10:05:32Z",
   ...overrides,

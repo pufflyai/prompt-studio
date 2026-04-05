@@ -1,5 +1,6 @@
 import { createApp } from "pstdio-api/app";
 import { createLogger } from "pstdio-logging";
+import { resolveFilesRoot } from "@/features/resolve-files-root";
 import { injectConfig } from "../../dashboard/serve-dashboard";
 import { resolveDefaultDbPath, resolveDefaultStoragePath } from "../../dashboard/state-paths";
 import { isCompiledBinary, loadEmbeddedAssets, resolveMimeType } from "./embedded-assets";
@@ -63,7 +64,7 @@ const ensureRuntimeEnv = () => {
 };
 
 const defaultDeps: ServeAppDeps = {
-  createApp,
+  createApp: async () => createApp({ filesRoot: await resolveFilesRoot() }),
   injectConfig,
   isCompiledBinary,
   loadEmbeddedAssets,

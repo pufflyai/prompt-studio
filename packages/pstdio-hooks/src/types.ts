@@ -37,17 +37,3 @@ export type AttemptStatusHookName =
 export type HookName = WorktreeHookName | SessionHookName | TicketHookName | AttemptStatusHookName;
 
 export type HookPayload = Record<string, unknown>;
-
-export type RunHookOptions = {
-  repoPath: string;
-  cwd?: string;
-  timeoutMs?: number;
-};
-
-export type HookResult = {
-  hook: HookName;
-  skipped: boolean;
-  exitCode: number;
-  stdout: string;
-  stderr: string;
-};

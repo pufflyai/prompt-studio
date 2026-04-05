@@ -1,17 +1,4 @@
-type Session = {
-  id: string;
-  project_id: string | null;
-  title: string;
-  status: string;
-  archived: boolean;
-  created: string | null;
-  last_request_started: string | null;
-  last_request_ended: string | null;
-  agent: string | null;
-  agent_session_id: string | null;
-  created_at: string;
-  updated_at: string;
-};
+import type { Session } from "@pstdio/sdk/resources";
 
 export const getSession = async (baseUrl: string, sessionId: string) => {
   const res = await fetch(`${baseUrl}/v1/sessions/${sessionId}`);

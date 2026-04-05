@@ -32,7 +32,7 @@ export const createHandler =
       `Agent:       ${session.agent ?? "-"}`,
     ];
 
-    if (session.created) lines.push(`Started:     ${session.created}`);
+    if (session.created_at) lines.push(`Started:     ${session.created_at}`);
     if (session.last_request_ended) lines.push(`Finished:    ${session.last_request_ended}`);
 
     deps.log(lines.join("\n"));

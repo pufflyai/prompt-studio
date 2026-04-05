@@ -3,12 +3,15 @@ import { join } from "node:path";
 
 import { resolveFilesRoot } from "../resolve-files-root";
 
-const HOOKS_DIR = join(".pstdio", "hooks");
+const PLUGINS_DIR = join(".pstdio", "plugins");
 
-export const scaffoldHooks = async (root: string) => {
-  const hooksDir = join(root, HOOKS_DIR);
-  if (existsSync(hooksDir)) return;
+export const scaffoldPlugins = async (root: string) => {
+  const pluginsDir = join(root, PLUGINS_DIR);
+  if (existsSync(pluginsDir)) return;
 
   const filesRoot = await resolveFilesRoot();
-  cpSync(join(filesRoot, "hooks"), hooksDir, { recursive: true });
+  const defaultPluginsDir = join(filesRoot, "plugins", "pstdio");
+  if (existsSync(defaultPluginsDir)) {
+    cpSync(defaultPluginsDir, pluginsDir, { recursive: true });
+  }
 };

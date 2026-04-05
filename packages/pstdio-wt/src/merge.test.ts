@@ -1,19 +1,16 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { join } from "node:path";
 import { commitChanges } from "./commit";
 import { git } from "./git";
 import { mergeWorktree } from "./merge";
-import { createTempRepo, waitFor } from "./test-helpers";
+import { createTempRepo } from "./test-helpers";
+import type { HookDispatch } from "./types";
 import { createWorktree } from "./worktree";
 
-const writeHook = (repoPath: string, hookName: string, script: string) => {
-  const hooksDir = join(repoPath, ".pstdio", "hooks");
-  mkdirSync(hooksDir, { recursive: true });
-  const path = join(hooksDir, hookName);
-  writeFileSync(path, `#!/bin/sh\n${script}`);
-  chmodSync(path, 0o755);
-};
+const noopDispatch = (): HookDispatch => ({
+  firePreHook: mock(() => Promise.resolve({ rejected: false })),
+  firePostHook: mock(() => Promise.resolve()),
+});
 
 let repo: Awaited<ReturnType<typeof createTempRepo>>;
 
@@ -94,33 +91,46 @@ describe("mergeWorktree", () => {
   test("pre-merge hook aborts merge on failure", async () => {
     const wtPath = join(repo.dir, "wt-merge");
     await createWorktree({ repoRoot: repo.dir, branch: "task/hook-fail", path: wtPath });
-    writeHook(repo.dir, "pre-merge", "exit 1");
+
+    const dispatch: HookDispatch = {
+      firePreHook: mock(() => Promise.resolve({ rejected: true, reason: "blocked" })),
+      firePostHook: mock(() => Promise.resolve()),
+    };
 
     await Bun.write(join(wtPath, "feature.txt"), "feature");
     await commitChanges({ worktreePath: wtPath, message: "add feature" });
 
-    await expect(mergeWorktree({ repoRoot: repo.dir, branch: "task/hook-fail", target: "main" })).rejects.toThrow(
-      "HOOK pre-merge FAILED",
-    );
+    await expect(
+      mergeWorktree({ repoRoot: repo.dir, branch: "task/hook-fail", target: "main", dispatch }),
+    ).rejects.toThrow("HOOK preMerge FAILED");
   });
 
   test("post-merge hook runs after successful merge", async () => {
     const wtPath = join(repo.dir, "wt-merge");
     await createWorktree({ repoRoot: repo.dir, branch: "task/hook-post", path: wtPath });
-    writeHook(repo.dir, "post-merge", `echo "done" > "${repo.dir}/post-merge-marker.txt"`);
+
+    const dispatch = noopDispatch();
 
     await Bun.write(join(wtPath, "feature.txt"), "feature");
     await commitChanges({ worktreePath: wtPath, message: "add feature" });
 
-    await mergeWorktree({ repoRoot: repo.dir, branch: "task/hook-post", target: "main" });
+    await mergeWorktree({ repoRoot: repo.dir, branch: "task/hook-post", target: "main", dispatch });
 
-    expect(await waitFor(() => existsSync(join(repo.dir, "post-merge-marker.txt")))).toBe(true);
+    expect(dispatch.firePostHook).toHaveBeenCalledWith(
+      "postMerge",
+      expect.objectContaining({
+        repoPath: repo.dir,
+        branch: "task/hook-post",
+        target: "main",
+      }),
+    );
   });
 
   test("on-conflict hook runs when merge fails", async () => {
     const wtPath = join(repo.dir, "wt-merge");
     await createWorktree({ repoRoot: repo.dir, branch: "task/conflict", path: wtPath });
-    writeHook(repo.dir, "on-conflict", `echo "conflict" > "${repo.dir}/conflict-marker.txt"`);
+
+    const dispatch = noopDispatch();
 
     await Bun.write(join(wtPath, "feature.txt"), "feature");
     await commitChanges({ worktreePath: wtPath, message: "branch commit" });
@@ -129,27 +139,26 @@ describe("mergeWorktree", () => {
     await git(repo.dir, ["add", "."]);
     await git(repo.dir, ["commit", "-m", "main commit"]);
 
-    await expect(mergeWorktree({ repoRoot: repo.dir, branch: "task/conflict", target: "main" })).rejects.toThrow();
+    await expect(
+      mergeWorktree({ repoRoot: repo.dir, branch: "task/conflict", target: "main", dispatch }),
+    ).rejects.toThrow();
 
-    expect(await waitFor(() => existsSync(join(repo.dir, "conflict-marker.txt")))).toBe(true);
+    expect(dispatch.firePostHook).toHaveBeenCalledWith(
+      "onConflict",
+      expect.objectContaining({
+        repoPath: repo.dir,
+        branch: "task/conflict",
+        target: "main",
+        operation: "merge",
+      }),
+    );
   });
 
-  test("pre-merge payload is available via stdin and field env vars", async () => {
+  test("dispatch ctx contains expected fields", async () => {
     const wtPath = join(repo.dir, "wt-merge");
     await createWorktree({ repoRoot: repo.dir, branch: "task/merge-payload", path: wtPath });
 
-    const stdinPath = join(repo.dir, "pre-merge.payload.stdin.json");
-    const envPath = join(repo.dir, "pre-merge.payload.env.json");
-    writeHook(
-      repo.dir,
-      "pre-merge",
-      `cat > "${stdinPath}"
-printf '{"repo_path":"%s","branch":"%s","target":"%s","project_id":"%s"}' \
-"$PSTDIO_REPO_PATH" \
-"$PSTDIO_BRANCH" \
-"$PSTDIO_TARGET" \
-"$PSTDIO_PROJECT_ID" > "${envPath}"`,
-    );
+    const dispatch = noopDispatch();
 
     await Bun.write(join(wtPath, "feature.txt"), "feature");
     await commitChanges({ worktreePath: wtPath, message: "add feature" });
@@ -158,21 +167,26 @@ printf '{"repo_path":"%s","branch":"%s","target":"%s","project_id":"%s"}' \
       repoRoot: repo.dir,
       branch: "task/merge-payload",
       target: "main",
-      hookPayload: {
-        project_id: "proj-1",
-      },
+      dispatch,
     });
 
-    const stdinPayload = JSON.parse(readFileSync(stdinPath, "utf8"));
-    const envPayload = JSON.parse(readFileSync(envPath, "utf8"));
+    expect(dispatch.firePreHook).toHaveBeenCalledWith("preMerge", {
+      repoPath: repo.dir,
+      branch: "task/merge-payload",
+      target: "main",
+      squash: false,
+      commitMessage: null,
+    });
 
-    expect(envPayload.repo_path).toBe(stdinPayload.repo_path);
-    expect(envPayload.branch).toBe(stdinPayload.branch);
-    expect(envPayload.target).toBe(stdinPayload.target);
-    expect(envPayload.project_id).toBe(stdinPayload.project_id);
-    expect(stdinPayload.branch).toBe("task/merge-payload");
-    expect(stdinPayload.target).toBe("main");
-    expect(stdinPayload.project_id).toBe("proj-1");
-    expect(stdinPayload.squash).toBe(false);
+    expect(dispatch.firePostHook).toHaveBeenCalledWith(
+      "postMerge",
+      expect.objectContaining({
+        repoPath: repo.dir,
+        branch: "task/merge-payload",
+        target: "main",
+        squash: false,
+        commitSha: expect.stringMatching(/^[0-9a-f]{40}$/),
+      }),
+    );
   });
 });

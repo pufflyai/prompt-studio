@@ -3,6 +3,7 @@ import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useExecutePluginAction, usePluginActions } from "@/features/plugin-actions/hooks/use-plugin-actions";
 import { useProject, useProjectTemplateAssets } from "@/features/project/hooks/use-project";
 import { useProjectSettingsStore } from "@/features/project-settings/store";
 import { CreateTicketModal } from "@/features/ticket-list/components/create-ticket-modal";
@@ -81,6 +82,8 @@ export const TicketDetailsPanel = () => {
 
   const { data: project } = useProject(projectId);
   const { data: templateAssets } = useProjectTemplateAssets(projectId);
+  const { data: pluginActions } = usePluginActions(projectId, "ticket");
+  const executePluginAction = useExecutePluginAction(projectId);
   const { data: allTickets, isLoading: isTicketsLoading } = useProjectTickets(projectId);
   const updateTicket = useUpdateProjectTicket(projectId);
   const updateTicketTags = useUpdateProjectTicketTags(projectId);
@@ -228,9 +231,13 @@ export const TicketDetailsPanel = () => {
         onNavigateBack={navigateBack}
         onRunAttempt={handleRunAttempt}
         onViewWorkspace={handleViewWorkspace}
+        pluginActions={pluginActions}
         onCreateSubTicket={subTicketCreation.openCreateSubTicketModal}
         onBreakIntoSubTickets={() => setIsBreakModalOpen(true)}
         onRefineTicket={() => setIsRefineModalOpen(true)}
+        onPluginAction={(actionKey) =>
+          executePluginAction.mutate({ actionKey, input: { target_type: "ticket", target_id: ticket.id } })
+        }
         onArchiveTicket={() => updateTicket.mutate({ ticketId: ticket.id, archived: !ticket.archived })}
         onDeleteTicket={async () => {
           await deleteTicket.mutateAsync({ ticketId: ticket.id });
