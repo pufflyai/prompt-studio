@@ -101,6 +101,8 @@ const startAttemptSession = async (
       reposService: deps.repoService,
       workspaceSessionsService: deps.workspaceSessionService,
       attemptStatusesService: deps.attemptStatusService,
+      ticketService: deps.ticketService,
+      pluginService: deps.pluginService,
     },
     { id: session.id, project_id: input.ticket.project_id, status: session.status },
   );

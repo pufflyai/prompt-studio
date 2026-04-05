@@ -26,6 +26,7 @@ const createTestApp = async (agents: AgentService[]) => {
     agents,
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
+    filesRoot: "",
   });
 
   return {

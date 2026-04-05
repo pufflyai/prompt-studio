@@ -1,16 +1,16 @@
-import type { AttemptStatusHookName, HookPayload, HookResult } from "pstdio-hooks";
-import { fireHook } from "./fire-hook";
+import type { createPluginService } from "../plugins/plugin-service";
+import { withHookSessionClient } from "./hook-client";
 import type { createPostHookStore } from "./post-hook-store";
 
 type AttemptStatusHookDeps = {
-  repoService: { listByProject: (projectId: string) => Promise<{ path: string }[]> };
+  pluginService: ReturnType<typeof createPluginService>;
 };
 
 type PreHookContext = {
   projectId: string;
   fromStatus: string;
   toStatus: string;
-  payload: HookPayload;
+  payload: Record<string, unknown>;
 };
 
 type PreHookResult = {
@@ -22,50 +22,74 @@ type PreHookResult = {
 type PostHookContext = {
   projectId: string;
   toStatus: string;
-  payload: HookPayload;
+  payload: Record<string, unknown>;
 };
 
 export const firePreAttemptStatusHook = async (
   deps: AttemptStatusHookDeps,
   context: PreHookContext,
 ): Promise<PreHookResult> => {
-  const hookName: AttemptStatusHookName = `pre-attempt-status-${context.toStatus}`;
+  const { dispatcher, client } = await deps.pluginService.getForProject(context.projectId);
 
-  const result = await fireHook(deps, {
-    hookName,
+  const hookContext = {
     projectId: context.projectId,
-    payload: context.payload,
-  });
+    fromStatus: context.fromStatus,
+    toStatus: context.toStatus,
+    ...context.payload,
+  };
 
-  if (!result || result.skipped) {
-    return { rejected: false, stderr: "", stdout: "" };
+  const ctx = {
+    ...hookContext,
+    client: withHookSessionClient(client, hookContext),
+  };
+
+  const result = await dispatcher.firePreHook("preAttemptStatusChange", ctx);
+
+  if (result.rejected) {
+    return { rejected: true, stderr: result.reason ?? "", stdout: "" };
   }
 
-  if (result.exitCode !== 0) {
-    return { rejected: true, stderr: result.stderr, stdout: result.stdout };
-  }
-
-  return { rejected: false, stderr: result.stderr, stdout: result.stdout };
+  return { rejected: false, stderr: "", stdout: "" };
 };
 
 export const deliverPostAttemptStatusHook = async (
   deps: AttemptStatusHookDeps,
   store: ReturnType<typeof createPostHookStore>,
   sessionId: string,
-): Promise<HookResult | null> => {
+) => {
   const entry = store.consume(sessionId);
   if (!entry) return null;
 
-  const result = await fireHook(deps, {
-    hookName: entry.hookName,
-    projectId: entry.projectId,
-    payload: entry.payload,
-  });
+  const { dispatcher, client } = await deps.pluginService.getForProject(entry.projectId);
 
-  return result;
+  const hookContext = {
+    projectId: entry.projectId,
+    fromStatus: entry.fromStatus,
+    toStatus: entry.toStatus,
+    ...entry.payload,
+  };
+
+  const ctx = {
+    ...hookContext,
+    client: withHookSessionClient(client, hookContext),
+  };
+
+  await dispatcher.firePostHook("postAttemptStatusChange", ctx);
 };
 
 export const firePostAttemptStatusHook = async (deps: AttemptStatusHookDeps, context: PostHookContext) => {
-  const hookName: AttemptStatusHookName = `post-attempt-status-${context.toStatus}`;
-  return fireHook(deps, { hookName, projectId: context.projectId, payload: context.payload });
+  const { dispatcher, client } = await deps.pluginService.getForProject(context.projectId);
+
+  const hookContext = {
+    projectId: context.projectId,
+    toStatus: context.toStatus,
+    ...context.payload,
+  };
+
+  const ctx = {
+    ...hookContext,
+    client: withHookSessionClient(client, hookContext),
+  };
+
+  await dispatcher.firePostHook("postAttemptStatusChange", ctx);
 };

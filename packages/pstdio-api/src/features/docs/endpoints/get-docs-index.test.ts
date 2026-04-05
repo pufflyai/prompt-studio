@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "../../../app";
+import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
@@ -33,6 +34,7 @@ beforeAll(async () => {
   ({ app } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
+    filesRoot: resolveTestFilesRoot(),
   }));
 });
 

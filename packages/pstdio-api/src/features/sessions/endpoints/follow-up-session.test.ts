@@ -76,6 +76,7 @@ beforeAll(async () => {
   ({ app } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
+    filesRoot: "",
     agents: [opencodeAgent],
   }));
 });
@@ -184,6 +185,7 @@ describe("POST /v1/sessions/:id/follow-up (opencode)", () => {
     const { app: failApp } = await createApp({
       dbPath: ":memory:",
       storagePath: join(failTempRoot, "storage"),
+      filesRoot: "",
       agents: [failAgent],
     });
 

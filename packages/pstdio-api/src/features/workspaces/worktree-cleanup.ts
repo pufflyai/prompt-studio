@@ -12,10 +12,10 @@ export const cleanupWorkspaceWorktree = async (
   deps: Pick<RouteDeps, "repoService">,
   workspace: WorkspaceForCleanup,
 ) => {
-  if (!workspace.worktree_path) return;
+  if (!workspace.worktree_path) return false;
 
   const repos = await deps.repoService.listByProject(workspace.project_id);
-  if (repos.length === 0) return;
+  if (repos.length === 0) return false;
 
   const branch = workspace.branch ?? `workspace/${workspace.workspace_shorthand}`;
 
@@ -27,9 +27,11 @@ export const cleanupWorkspaceWorktree = async (
         branch,
         force: true,
       });
-      return;
+      return true;
     } catch {
       // Ignore and try the next repo.
     }
   }
+
+  return false;
 };

@@ -1,212 +1,227 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { mkdtemp, realpath, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { describe, expect, test } from "bun:test";
+import type { SessionHookDeps } from "./session-hooks";
 import { fireSessionResumeHook, fireSessionStartHook, fireSessionStatusHook } from "./session-hooks";
 
-let repoDir: string;
-
-beforeEach(async () => {
-  repoDir = await realpath(await mkdtemp(join(tmpdir(), "pstdio-session-hooks-test-")));
-});
-
-afterEach(async () => {
-  await rm(repoDir, { recursive: true, force: true });
-});
-
-const writeHook = (hookName: string, script: string) => {
-  const hooksDir = join(repoDir, ".pstdio", "hooks");
-  mkdirSync(hooksDir, { recursive: true });
-  const path = join(hooksDir, hookName);
-  writeFileSync(path, `#!/bin/sh\n${script}`);
-  chmodSync(path, 0o755);
+const baseWorkspace = {
+  id: "ws-1",
+  project_id: "proj-1",
+  name: "Workspace 1",
+  branch: "workspace/PS-1_A1",
+  worktree_path: "/tmp/ws-1",
+  attempt_status_id: "attempt-review-ready",
+  archived: false,
+  workspace_shorthand: "PS-1_A1",
+  startup_log_file_id: null,
+  created_at: "2026-01-01T00:00:00.000Z",
+  updated_at: "2026-01-01T00:00:00.000Z",
+  deleted_at: null,
+  initializing: false,
+  setup_error: null,
 };
 
-const waitForHookPayloadFile = async (path: string) => {
-  for (let index = 0; index < 200; index += 1) {
-    if (existsSync(path)) {
-      const content = readFileSync(path, "utf8").trim();
-      if (content.length > 0) return content;
-    }
-    await Bun.sleep(10);
-  }
-
-  throw new Error(`Timed out waiting for hook payload file: ${path}`);
+const baseTicket = {
+  id: "ticket-1",
+  shorthand: "PS-1",
+  project_id: "proj-1",
+  status_id: "status-wip",
+  display_title: "Implement feature",
+  user_prompt: "Do the thing",
+  file_id: "file-1",
+  parent_id: null,
+  parallelizable: null,
+  blocked_reason: null,
+  depends_on: null,
+  draft: false,
+  archived: false,
+  deleted_at: null,
+  created_at: "2026-01-01T00:00:00.000Z",
+  updated_at: "2026-01-01T00:00:00.000Z",
 };
 
-const makeDeps = () => ({
-  reposService: {
-    listByProject: async () => [{ path: repoDir }],
-  } as never,
-  workspaceSessionsService: {
-    getWorkspaceBySessionId: async () => null,
-  } as never,
-});
+type CapturedCall = {
+  hookName: string;
+  ctx: Record<string, unknown>;
+};
+
+const createDeferred = <T>() => {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((innerResolve) => {
+    resolve = innerResolve;
+  });
+  return { promise, resolve };
+};
+
+const makeDeps = (input?: {
+  workspace?: Record<string, unknown> | null;
+  ticket?: Record<string, unknown> | null;
+  attemptStatuses?: Array<{ id: string; name: string }>;
+  statuses?: Array<{ id: string; name: string }>;
+}) => {
+  const pending: Array<{ resolve: (value: CapturedCall) => void }> = [];
+  const calls: CapturedCall[] = [];
+
+  const nextCall = () => {
+    const deferred = createDeferred<CapturedCall>();
+    pending.push({ resolve: deferred.resolve });
+    return deferred.promise;
+  };
+
+  const workspace = input?.workspace ?? null;
+  const ticket = input?.ticket ?? null;
+  const attemptStatuses = input?.attemptStatuses ?? [];
+  const statuses = input?.statuses ?? [];
+
+  const deps: SessionHookDeps = {
+    reposService: { listByProject: async () => [] } as never,
+    workspaceSessionsService: {
+      getWorkspaceBySessionId: async () => workspace,
+    } as never,
+    attemptStatusesService: {
+      list: async () => attemptStatuses,
+    } as never,
+    ticketService: {
+      getByShorthand: async () => ticket,
+    } as never,
+    statusService: {
+      list: async () => statuses,
+    } as never,
+    pluginService: {
+      getForProject: async () => ({
+        dispatcher: {
+          register: () => {},
+          firePreHook: async () => ({ rejected: false }),
+          firePostHook: async (hookName: string, ctx: unknown) => {
+            const call = { hookName, ctx: ctx as Record<string, unknown> };
+            calls.push(call);
+            pending.shift()?.resolve(call);
+          },
+        },
+        client: {},
+      }),
+    } as never,
+  };
+
+  return { deps, nextCall, calls };
+};
+
+const sessionBase = {
+  id: "sess_1",
+  project_id: "proj-1",
+};
 
 describe("fireSessionStatusHook", () => {
-  test("fires post-session-success on completed", () => {
-    writeHook("post-session-success", "cat");
-
-    // fire-and-forget — just verify it doesn't throw
-    fireSessionStatusHook(makeDeps(), {
-      id: "sess_1",
-      project_id: "proj-1",
-      status: "completed",
+  test("includes workspace and ticket objects for postSessionSuccess", async () => {
+    const { deps, nextCall } = makeDeps({
+      workspace: baseWorkspace,
+      ticket: baseTicket,
+      attemptStatuses: [{ id: "attempt-review-ready", name: "review-ready" }],
+      statuses: [{ id: "status-wip", name: "wip" }],
     });
+
+    const call = nextCall();
+    fireSessionStatusHook(deps, { ...sessionBase, status: "completed" });
+
+    const { hookName, ctx } = await call;
+    expect(hookName).toBe("postSessionSuccess");
+    expect(ctx.workspace).toEqual({
+      ...baseWorkspace,
+      ticket_shorthand: "PS-1",
+      attempt_status_name: "review-ready",
+    });
+    expect(ctx.workspaceId).toBe("ws-1");
+    expect(ctx.ticket).toEqual({ ...baseTicket, status_name: "wip" });
+    expect(ctx.attemptStatus).toBe("review-ready");
   });
 
-  test("sends flat payload with workspace enrichment when session is linked", async () => {
-    const payloadFile = join(repoDir, "post-session-success.payload.json");
-    writeHook("post-session-success", `cat > "${payloadFile}"`);
+  test("includes workspace and ticket objects for postSessionFail", async () => {
+    const { deps, nextCall } = makeDeps({ workspace: baseWorkspace, ticket: baseTicket });
 
-    const deps = {
-      reposService: {
-        listByProject: async () => [{ path: repoDir }],
-      } as never,
-      workspaceSessionsService: {
-        getWorkspaceBySessionId: async () => ({
-          id: "ws-1",
-          workspace_shorthand: "TP-5_A1",
-          branch: "workspace/TP-5_A1",
-          worktree_path: repoDir,
-          attempt_status_id: "status-review-ready",
-        }),
-      } as never,
-      attemptStatusesService: {
-        list: async () => [
-          { id: "status-wip", name: "wip" },
-          { id: "status-review-ready", name: "review-ready" },
-        ],
-      } as never,
-    };
+    const call = nextCall();
+    fireSessionStatusHook(deps, { ...sessionBase, status: "failed" });
 
-    fireSessionStatusHook(deps as never, {
-      id: "sess_1",
-      project_id: "proj-1",
-      status: "completed",
+    const { hookName, ctx } = await call;
+    expect(hookName).toBe("postSessionFail");
+    expect(ctx.workspace).toEqual({
+      ...baseWorkspace,
+      ticket_shorthand: "PS-1",
+      attempt_status_name: null,
     });
-
-    const content = await waitForHookPayloadFile(payloadFile);
-    expect(JSON.parse(content)).toEqual({
-      session_id: "sess_1",
-      session_status: "completed",
-      project_id: "proj-1",
-      workspace: "TP-5_A1",
-      workspace_id: "ws-1",
-      worktree_path: repoDir,
-      branch: "workspace/TP-5_A1",
-      ticket: "TP-5",
-      attempt_status: "review-ready",
-    });
+    expect(ctx.ticket).toEqual({ ...baseTicket, status_name: null });
   });
 
-  test("includes original_session_id in payload when set", async () => {
-    const payloadFile = join(repoDir, "post-session-success-orig.payload.json");
-    writeHook("post-session-success", `cat > "${payloadFile}"`);
+  test("includes workspace and ticket objects for postSessionAwaitInput", async () => {
+    const { deps, nextCall } = makeDeps({ workspace: baseWorkspace, ticket: baseTicket });
 
-    const deps = {
-      reposService: {
-        listByProject: async () => [{ path: repoDir }],
-      } as never,
-      workspaceSessionsService: {
-        getWorkspaceBySessionId: async () => ({
-          id: "ws-1",
-          workspace_shorthand: "TP-5_A1",
-          branch: "workspace/TP-5_A1",
-          worktree_path: repoDir,
-          attempt_status_id: null,
-        }),
-      } as never,
-    };
+    const call = nextCall();
+    fireSessionStatusHook(deps, { ...sessionBase, status: "awaiting_input" });
 
-    fireSessionStatusHook(deps as never, {
-      id: "review_sess_1",
-      project_id: "proj-1",
-      status: "completed",
-      original_session_id: "orig_sess_1",
+    const { hookName, ctx } = await call;
+    expect(hookName).toBe("postSessionAwaitInput");
+    expect(ctx.workspace).toEqual({
+      ...baseWorkspace,
+      ticket_shorthand: "PS-1",
+      attempt_status_name: null,
     });
-
-    const content = await waitForHookPayloadFile(payloadFile);
-    const payload = JSON.parse(content);
-    expect(payload.original_session_id).toBe("orig_sess_1");
-    expect(payload.project_id).toBe("proj-1");
+    expect(ctx.ticket).toEqual({ ...baseTicket, status_name: null });
   });
 
-  test("omits original_session_id from payload when not set", async () => {
-    const payloadFile = join(repoDir, "post-session-success-no-orig.payload.json");
-    writeHook("post-session-success", `cat > "${payloadFile}"`);
+  test("does not fire for in_progress", async () => {
+    const { deps, calls } = makeDeps();
 
-    const deps = {
-      reposService: {
-        listByProject: async () => [{ path: repoDir }],
-      } as never,
-      workspaceSessionsService: {
-        getWorkspaceBySessionId: async () => null,
-      } as never,
-    };
+    fireSessionStatusHook(deps, { ...sessionBase, status: "in_progress" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    fireSessionStatusHook(deps as never, {
-      id: "sess_1",
-      project_id: "proj-1",
-      status: "completed",
-    });
-
-    const content = await waitForHookPayloadFile(payloadFile);
-    const payload = JSON.parse(content);
-    expect(payload.original_session_id).toBeUndefined();
-  });
-
-  test("fires post-session-fail on failed", () => {
-    writeHook("post-session-fail", "cat");
-
-    fireSessionStatusHook(makeDeps(), {
-      id: "sess_1",
-      project_id: "proj-1",
-      status: "failed",
-    });
-  });
-
-  test("fires post-session-await-input on awaiting_input", () => {
-    writeHook("post-session-await-input", "cat");
-
-    fireSessionStatusHook(makeDeps(), {
-      id: "sess_1",
-      project_id: "proj-1",
-      status: "awaiting_input",
-    });
-  });
-
-  test("does not fire on in_progress status", () => {
-    // No hook should fire for in_progress
-    fireSessionStatusHook(makeDeps(), {
-      id: "sess_1",
-      project_id: "proj-1",
-      status: "in_progress",
-    });
+    expect(calls).toHaveLength(0);
   });
 });
 
 describe("fireSessionStartHook", () => {
-  test("fires post-session-start", () => {
-    writeHook("post-session-start", "cat");
+  test("includes workspace and ticket objects when available", async () => {
+    const { deps, nextCall } = makeDeps({ workspace: baseWorkspace, ticket: baseTicket });
 
-    fireSessionStartHook(makeDeps(), {
-      id: "sess_1",
-      project_id: "proj-1",
-      status: "in_progress",
+    const call = nextCall();
+    fireSessionStartHook(deps, { ...sessionBase, status: "in_progress" });
+
+    const { hookName, ctx } = await call;
+    expect(hookName).toBe("postSessionStart");
+    expect(ctx.workspace).toEqual({
+      ...baseWorkspace,
+      ticket_shorthand: "PS-1",
+      attempt_status_name: null,
     });
+    expect(ctx.ticket).toEqual({ ...baseTicket, status_name: null });
+  });
+
+  test("omits workspace and ticket objects when session has no linked workspace", async () => {
+    const { deps, nextCall } = makeDeps();
+
+    const call = nextCall();
+    fireSessionStartHook(deps, { ...sessionBase, status: "in_progress" });
+
+    const { ctx } = await call;
+    expect(ctx.workspace).toBeUndefined();
+    expect(ctx.workspaceId).toBeUndefined();
+    expect(ctx.ticket).toBeUndefined();
   });
 });
 
 describe("fireSessionResumeHook", () => {
-  test("fires post-session-resume", () => {
-    writeHook("post-session-resume", "cat");
+  test("includes workspace and ticket objects when available", async () => {
+    const { deps, nextCall } = makeDeps({ workspace: baseWorkspace, ticket: baseTicket });
 
-    fireSessionResumeHook(makeDeps(), {
-      id: "sess_1",
-      project_id: "proj-1",
+    const call = nextCall();
+    fireSessionResumeHook(deps, {
+      ...sessionBase,
       status: "in_progress",
     });
+
+    const { hookName, ctx } = await call;
+    expect(hookName).toBe("postSessionResume");
+    expect(ctx.workspace).toEqual({
+      ...baseWorkspace,
+      ticket_shorthand: "PS-1",
+      attempt_status_name: null,
+    });
+    expect(ctx.ticket).toEqual({ ...baseTicket, status_name: null });
   });
 });

@@ -11,6 +11,7 @@ const createMockDeps = (
     get: async (_fileId: string) => (overrides.fileContent !== undefined ? { storage_path: "/fake/path" } : null),
   },
   readFileContent: (_storagePath: string) => overrides.fileContent ?? "",
+  filesRoot: "",
 });
 
 describe("resolvePrompt", () => {

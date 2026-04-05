@@ -12,15 +12,35 @@ const readJsonLines = (filePath: string) =>
     .filter(Boolean)
     .map((line) => JSON.parse(line) as Record<string, unknown>);
 
-const waitForFile = async (filePath: string, timeoutMs: number) => {
+const waitForLogEntry = async (
+  filePath: string,
+  timeoutMs: number,
+  predicate: (entry: Record<string, unknown>) => boolean,
+) => {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
     if (existsSync(filePath)) {
-      return true;
+      try {
+        const entry = readJsonLines(filePath).find(predicate);
+        if (entry) {
+          return entry;
+        }
+      } catch {
+        // The async file target may expose the file before the full JSON line is flushed.
+      }
     }
     await Bun.sleep(20);
   }
-  return existsSync(filePath);
+
+  if (!existsSync(filePath)) {
+    return null;
+  }
+
+  try {
+    return readJsonLines(filePath).find(predicate) ?? null;
+  } catch {
+    return null;
+  }
 };
 
 describe("api logging", () => {
@@ -41,6 +61,7 @@ describe("api logging", () => {
     const appResult = await createApp({
       dbPath: ":memory:",
       storagePath: join(tempRoot, "storage"),
+      filesRoot: "",
     });
 
     app = appResult.app;
@@ -67,10 +88,9 @@ describe("api logging", () => {
     const response = await app.request("/healthz");
     expect(response.status).toBe(200);
 
-    expect(await waitForFile(logPath, 1_000)).toBe(true);
-
-    const entries = readJsonLines(logPath);
-    const completed = entries.find(
+    const completed = await waitForLogEntry(
+      logPath,
+      1_000,
       (entry) => entry.event === "api.request.completed" && entry.path === "/healthz" && entry.status === 200,
     );
 

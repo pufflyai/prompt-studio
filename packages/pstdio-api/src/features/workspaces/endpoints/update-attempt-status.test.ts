@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -18,6 +18,7 @@ beforeAll(async () => {
   const created = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
+    filesRoot: "",
   });
   app = created.app;
   appDeps = created.deps;
@@ -69,16 +70,16 @@ const createWorkspace = async () => {
     body: JSON.stringify({ project_id: projectId, ticket_id: ticket.id, ticket_shorthand: ticket.shorthand }),
   });
   expect(wsRes.status).toBe(201);
-  const workspace = (await wsRes.json()) as { id: string };
-  return { ...workspace, ticketShorthand: ticket.shorthand };
+  const workspace = (await wsRes.json()) as { id: string; workspace_shorthand: string };
+  return { ...workspace, ticket };
 };
 
-const writeHook = (hookName: string, script: string) => {
-  const hooksDir = join(repoDir, ".pstdio", "hooks");
-  mkdirSync(hooksDir, { recursive: true });
-  const path = join(hooksDir, hookName);
-  writeFileSync(path, `#!/bin/sh\n${script}`);
-  chmodSync(path, 0o755);
+const writePlugin = (fileName: string, code: string) => {
+  const pluginsDir = join(repoDir, ".pstdio", "plugins");
+  rmSync(pluginsDir, { recursive: true, force: true });
+  mkdirSync(pluginsDir, { recursive: true });
+  writeFileSync(join(pluginsDir, fileName), code);
+  appDeps.pluginService.invalidate(projectId);
 };
 
 const waitForPath = async (path: string, timeoutMs = 1_000) => {
@@ -159,7 +160,10 @@ describe("PATCH /v1/workspaces/:id/attempt-status", () => {
   });
 
   test("returns 422 with hook output when pre-hook rejects", async () => {
-    writeHook("pre-attempt-status-review-ready", 'echo "lint: 3 errors found" >&2; exit 1');
+    writePlugin(
+      "guard.ts",
+      `export default { hooks: { preAttemptStatusChange: () => ({ reject: true, reason: "lint: 3 errors found" }) } };`,
+    );
 
     const workspace = await createWorkspace();
 
@@ -174,8 +178,11 @@ describe("PATCH /v1/workspaces/:id/attempt-status", () => {
     expect(body.hook_output).toContain("lint: 3 errors found");
   });
 
-  test("returns 422 with stdout when pre-hook writes to stdout and exits non-zero", async () => {
-    writeHook("pre-attempt-status-review-ready", 'echo "test suite failed: 2 failures"; exit 1');
+  test("returns 422 with reason when pre-hook rejects with message", async () => {
+    writePlugin(
+      "guard-2.ts",
+      `export default { hooks: { preAttemptStatusChange: () => ({ reject: true, reason: "test suite failed: 2 failures" }) } };`,
+    );
 
     const workspace = await createWorkspace();
 
@@ -206,11 +213,12 @@ describe("PATCH /v1/workspaces/:id/attempt-status", () => {
 
   test("fires post-hook immediately when no session_id is provided", async () => {
     const workspace = await createWorkspace();
-    const outputPath = join(repoDir, `post-attempt-status-review-ready-${Date.now()}.txt`);
-    writeHook("pre-attempt-status-review-ready", "exit 0");
-    writeHook(
-      "post-attempt-status-review-ready",
-      `if [ "$PSTDIO_WORKSPACE_ID" = "${workspace.id}" ]; then echo "$PSTDIO_STATUS_CHANGE_ID" > "${outputPath}"; fi`,
+    const outputPath = join(repoDir, `post-hook-${Date.now()}.txt`);
+
+    writePlugin(
+      "post-handler.ts",
+      `import { writeFileSync } from "node:fs";
+export default { hooks: { postAttemptStatusChange(ctx) { writeFileSync("${outputPath}", ctx.statusChangeId ?? "no-id"); } } };`,
     );
 
     const res = await app.request(`/v1/workspaces/${workspace.id}/attempt-status`, {
@@ -226,18 +234,18 @@ describe("PATCH /v1/workspaces/:id/attempt-status", () => {
     expect(readFileSync(outputPath, "utf-8").trim()).toBe(body.status_change_id);
   });
 
-  test("includes ticket in attempt-status hook payload", async () => {
+  test("includes rich ticket and workspace objects in attempt-status hook context", async () => {
     const workspace = await createWorkspace();
-    const preOutputPath = join(repoDir, `pre-attempt-status-review-ready-ticket-${Date.now()}.txt`);
-    const postOutputPath = join(repoDir, `post-attempt-status-review-ready-ticket-${Date.now()}.txt`);
+    const preOutputPath = join(repoDir, `pre-ticket-${Date.now()}.txt`);
+    const postOutputPath = join(repoDir, `post-ticket-${Date.now()}.txt`);
 
-    writeHook(
-      "pre-attempt-status-review-ready",
-      `set -eu\nif [ "$PSTDIO_WORKSPACE_ID" = "${workspace.id}" ]; then echo "$PSTDIO_TICKET" > "${preOutputPath}"; fi`,
-    );
-    writeHook(
-      "post-attempt-status-review-ready",
-      `set -eu\nif [ "$PSTDIO_WORKSPACE_ID" = "${workspace.id}" ]; then echo "$PSTDIO_TICKET" > "${postOutputPath}"; fi`,
+    writePlugin(
+      "ticket-check.ts",
+      `import { writeFileSync } from "node:fs";
+export default { hooks: {
+  preAttemptStatusChange(ctx) { writeFileSync("${preOutputPath}", JSON.stringify({ ticket: ctx.ticket, workspace: ctx.workspace })); },
+  postAttemptStatusChange(ctx) { writeFileSync("${postOutputPath}", JSON.stringify({ ticket: ctx.ticket, workspace: ctx.workspace })); },
+} };`,
     );
 
     const res = await app.request(`/v1/workspaces/${workspace.id}/attempt-status`, {
@@ -251,20 +259,46 @@ describe("PATCH /v1/workspaces/:id/attempt-status", () => {
     const postFired = await waitForPath(postOutputPath);
     expect(preFired).toBe(true);
     expect(postFired).toBe(true);
-    expect(readFileSync(preOutputPath, "utf-8").trim()).toBe(workspace.ticketShorthand);
-    expect(readFileSync(postOutputPath, "utf-8").trim()).toBe(workspace.ticketShorthand);
+    const preContext = JSON.parse(readFileSync(preOutputPath, "utf-8")) as {
+      ticket: { id: string; shorthand: string; status_name: string | null };
+      workspace: {
+        id: string;
+        workspace_shorthand: string;
+        ticket_shorthand: string;
+        attempt_status_name: string | null;
+      };
+    };
+    const postContext = JSON.parse(readFileSync(postOutputPath, "utf-8")) as typeof preContext;
+
+    expect(preContext.ticket.id).toBe(workspace.ticket.id);
+    expect(preContext.ticket.shorthand).toBe(workspace.ticket.shorthand);
+    expect(preContext.ticket.status_name).toBe("backlog");
+    expect(preContext.workspace.id).toBe(workspace.id);
+    expect(preContext.workspace.workspace_shorthand).toBe(workspace.workspace_shorthand);
+    expect(preContext.workspace.ticket_shorthand).toBe(workspace.ticket.shorthand);
+    expect(preContext.workspace.attempt_status_name).toBeNull();
+
+    expect(postContext.ticket.id).toBe(workspace.ticket.id);
+    expect(postContext.ticket.shorthand).toBe(workspace.ticket.shorthand);
+    expect(postContext.ticket.status_name).toBe("backlog");
+    expect(postContext.workspace.id).toBe(workspace.id);
+    expect(postContext.workspace.workspace_shorthand).toBe(workspace.workspace_shorthand);
+    expect(postContext.workspace.ticket_shorthand).toBe(workspace.ticket.shorthand);
+    expect(postContext.workspace.attempt_status_name).toBe("review-ready");
   });
 
-  test("includes original_session_id in deferred post-hook payload", async () => {
+  test("includes original_session_id in deferred post-hook context", async () => {
     const workspace = await createWorkspace();
-    const outputPath = join(repoDir, `post-attempt-status-changes-requested-orig-${Date.now()}.txt`);
+    const outputPath = join(repoDir, `post-deferred-${Date.now()}.txt`);
 
-    writeHook(
-      "post-attempt-status-changes-requested",
-      `set -eu
-if [ "$PSTDIO_WORKSPACE_ID" = "${workspace.id}" ]; then
-  printf '%s|%s' "$PSTDIO_SESSION_ID" "\${PSTDIO_ORIGINAL_SESSION_ID:-}" > "${outputPath}"
-fi`,
+    writePlugin(
+      "deferred-check.ts",
+      `import { writeFileSync } from "node:fs";
+export default { hooks: {
+  postAttemptStatusChange(ctx) {
+    writeFileSync("${outputPath}", [ctx.sessionId ?? "", ctx.originalSessionId ?? ""].join("|"));
+  },
+} };`,
     );
 
     const originalSession = await appDeps.sessionService.create({

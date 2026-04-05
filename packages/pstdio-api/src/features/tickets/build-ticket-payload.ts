@@ -1,5 +1,6 @@
-import type { HookPayload } from "pstdio-hooks";
 import type { RouteDeps } from "../deps";
+
+type HookPayload = Record<string, unknown>;
 
 type TicketRecord = {
   id: string;
@@ -46,15 +47,15 @@ export const buildTicketPayload = async (
 
   return {
     id: ticket.id,
-    ticket: ticket.shorthand,
-    display_title: ticket.display_title,
-    user_prompt: ticket.user_prompt,
-    parent_id: ticket.parent_id,
+    shorthand: ticket.shorthand,
+    displayTitle: ticket.display_title,
+    userPrompt: ticket.user_prompt,
+    parentId: ticket.parent_id,
     draft: ticket.draft,
     archived: ticket.archived,
     status,
-    tag_ids: tags.tag_ids,
-    tag_names: tags.tag_names,
-    file_ids: fileIds,
+    tagIds: tags.tag_ids,
+    tagNames: tags.tag_names,
+    fileIds: fileIds,
   };
 };

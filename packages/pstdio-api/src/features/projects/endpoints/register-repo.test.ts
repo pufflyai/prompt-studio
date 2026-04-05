@@ -6,6 +6,7 @@ import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { AgentId, AgentService, AvailabilityInfo } from "pstdio-agents";
 import { getBundledSkills } from "pstdio-agents";
 import { createApp } from "../../../app";
+import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
@@ -31,6 +32,7 @@ beforeAll(async () => {
   ({ app } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
+    filesRoot: resolveTestFilesRoot(),
   }));
 });
 
@@ -143,6 +145,7 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
       agents: [createTestAgent("claude-code", { type: "INSTALLED" })],
       dbPath: ":memory:",
       storagePath: join(isolatedRoot, "storage"),
+      filesRoot: resolveTestFilesRoot(),
     });
 
     try {
@@ -198,7 +201,7 @@ describe("POST /v1/projects/:id/repos - repo bootstrap", () => {
     expect(config.project_id).toBe(project.id);
   });
 
-  test("scaffolds the default post-worktree-create hook", async () => {
+  test("scaffolds the default starter plugins", async () => {
     const project = await createProject("Hook Project");
 
     const repoPath = join(tempRoot, "hook-repo");
@@ -208,9 +211,12 @@ describe("POST /v1/projects/:id/repos - repo bootstrap", () => {
 
     expect(res.status).toBe(201);
 
-    const hookPath = join(repoPath, ".pstdio", "hooks", "post-worktree-create");
-    expect(existsSync(hookPath)).toBe(true);
-    expect(readFileSync(hookPath, "utf8")).toContain("pstdio tickets pull");
+    const pluginDir = join(repoPath, ".pstdio", "plugins");
+    expect(existsSync(join(pluginDir, "code-review-lifecycle.ts"))).toBe(true);
+    expect(existsSync(join(pluginDir, "ticket-actions.ts"))).toBe(true);
+    expect(existsSync(join(pluginDir, "ticket-lifecycle.ts"))).toBe(true);
+    expect(existsSync(join(pluginDir, "workspace-actions.ts"))).toBe(true);
+    expect(existsSync(join(pluginDir, "worktree-lifecycle.ts"))).toBe(true);
   });
 
   test("scaffolds starter docs when missing", async () => {

@@ -15,6 +15,7 @@ import type { createTicketService } from "../services/ticket-service";
 import type { createWorkspaceService } from "../services/workspace-service";
 import type { createWorkspaceSessionService } from "../services/workspace-session-service";
 import type { createPostHookStore } from "./hooks/post-hook-store";
+import type { createPluginService } from "./plugins/plugin-service";
 import type { EventBus } from "./sync/event-bus";
 
 export interface ReadinessChecks {
@@ -23,6 +24,7 @@ export interface ReadinessChecks {
 }
 
 export interface RouteDeps {
+  filesRoot: string;
   readiness: ReadinessChecks;
   closeDb: () => Promise<void>;
   eventBus: EventBus;
@@ -43,4 +45,5 @@ export interface RouteDeps {
   docService: ReturnType<typeof createDocService>;
   syncService: ReturnType<typeof createSyncService>;
   postHookStore: ReturnType<typeof createPostHookStore>;
+  pluginService: ReturnType<typeof createPluginService>;
 }

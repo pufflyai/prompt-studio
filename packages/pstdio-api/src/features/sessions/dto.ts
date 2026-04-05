@@ -6,7 +6,6 @@ export const sessionResponseSchema = z.object({
   title: z.string(),
   status: z.enum(["in_progress", "awaiting_input", "completed", "failed", "cancelled"]),
   archived: z.boolean(),
-  created: z.string().nullable(),
   last_request_started: z.string().nullable(),
   last_request_ended: z.string().nullable(),
   agent: z.string().nullable(),

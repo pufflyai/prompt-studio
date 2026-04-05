@@ -1,7 +1,7 @@
-import type { AttemptStatusHookName, HookPayload } from "pstdio-hooks";
+type HookPayload = Record<string, unknown>;
 
 export type QueuedPostHook = {
-  hookName: AttemptStatusHookName;
+  hookName: string;
   statusChangeId: string;
   projectId: string;
   fromStatus: string;

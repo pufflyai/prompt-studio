@@ -39,7 +39,7 @@ const createMappedSession = async (input: {
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-resolve-session-id-test-"));
-  const created = await createApp({ dbPath: ":memory:", storagePath: join(tempRoot, "storage") });
+  const created = await createApp({ dbPath: ":memory:", storagePath: join(tempRoot, "storage"), filesRoot: "" });
 
   app = created.app;
   deps = created.deps;

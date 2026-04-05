@@ -1,50 +1,44 @@
-import type { TicketHookName } from "pstdio-hooks";
-import { isBlockingHook, parsePayloadOverride } from "pstdio-hooks";
-import { fireHook } from "./fire-hook";
-
-type TicketPayload = Record<string, unknown>;
+import type { createPluginService } from "../plugins/plugin-service";
+import { withHookSessionClient } from "./hook-client";
 
 export type FireTicketHookDeps = {
-  repoService: { listByProject: (projectId: string) => Promise<{ path: string }[]> };
+  pluginService: ReturnType<typeof createPluginService>;
 };
 
 export type FireTicketHookResult = {
   rejected: boolean;
   stderr: string;
-  modifiedPayload: TicketPayload | null;
+  modifiedPayload: Record<string, unknown> | null;
 };
 
-// Synchronous hook — awaits result and supports blocking/rejection
 export const fireTicketHook = async (
   deps: FireTicketHookDeps,
-  hookName: TicketHookName,
+  hookName: string,
   projectId: string,
-  payload: TicketPayload,
+  payload: Record<string, unknown>,
 ): Promise<FireTicketHookResult> => {
-  const result = await fireHook(deps, { hookName, projectId, payload });
+  const { dispatcher, client } = await deps.pluginService.getForProject(projectId);
+  const hookContext = { projectId, ...payload };
+  const ctx = { ...hookContext, client: withHookSessionClient(client, hookContext) };
+  const result = await dispatcher.firePreHook(hookName, ctx);
 
-  if (!result || result.skipped) {
-    return { rejected: false, stderr: "", modifiedPayload: null };
+  if (result.rejected) {
+    return { rejected: true, stderr: result.reason ?? "", modifiedPayload: null };
   }
 
-  if (isBlockingHook(hookName) && result.exitCode !== 0) {
-    return { rejected: true, stderr: result.stderr, modifiedPayload: null };
-  }
-
-  const modified = parsePayloadOverride(result.stdout);
-  if (modified) {
-    return { rejected: false, stderr: "", modifiedPayload: modified };
-  }
-
-  return { rejected: false, stderr: result.stderr, modifiedPayload: null };
+  return { rejected: false, stderr: "", modifiedPayload: result.data ?? null };
 };
 
-// Async hook — fire-and-forget
 export const fireTicketHookAsync = (
   deps: FireTicketHookDeps,
-  hookName: TicketHookName,
+  hookName: string,
   projectId: string,
-  payload: TicketPayload,
+  payload: Record<string, unknown>,
 ) => {
-  void fireHook(deps, { hookName, projectId, payload }).catch(() => {});
+  void (async () => {
+    const { dispatcher, client } = await deps.pluginService.getForProject(projectId);
+    const hookContext = { projectId, ...payload };
+    const ctx = { ...hookContext, client: withHookSessionClient(client, hookContext) };
+    await dispatcher.firePostHook(hookName, ctx);
+  })().catch(() => {});
 };

@@ -94,10 +94,10 @@ const runPreUpdateHooks = async (
 
   if (statusChanging) {
     const basePayload = await buildTicketPayload(deps, existing, existing.project_id);
-    const result = await fireTicketHook(deps, "pre-ticket-status-change", existing.project_id, {
+    const result = await fireTicketHook(deps, "preTicketStatusChange", existing.project_id, {
       ...basePayload,
-      from_status: statusContext?.fromStatusName ?? null,
-      to_status: statusContext?.toStatusName ?? null,
+      fromStatus: statusContext?.fromStatusName ?? null,
+      toStatus: statusContext?.toStatusName ?? null,
     });
     if (result.rejected)
       return { rejected: true, error: result.stderr.trim() || "Rejected by pre-ticket-status-change hook" };
@@ -105,7 +105,7 @@ const runPreUpdateHooks = async (
 
   if (archiving) {
     const basePayload = await buildTicketPayload(deps, existing, existing.project_id);
-    const result = await fireTicketHook(deps, "pre-ticket-archive", existing.project_id, basePayload);
+    const result = await fireTicketHook(deps, "preTicketArchive", existing.project_id, basePayload);
     if (result.rejected)
       return { rejected: true, error: result.stderr.trim() || "Rejected by pre-ticket-archive hook" };
   }
@@ -192,15 +192,15 @@ const finalizeUpdatedTicket = async (input: {
   const postPayload = await buildTicketPayload(deps, updated, projectId);
 
   if (statusChanging) {
-    fireTicketHookAsync(deps, "post-ticket-status-change", projectId, {
+    fireTicketHookAsync(deps, "postTicketStatusChange", projectId, {
       ...postPayload,
-      from_status: statusContext?.fromStatusName ?? null,
-      to_status: statusContext?.toStatusName ?? null,
+      fromStatus: statusContext?.fromStatusName ?? null,
+      toStatus: statusContext?.toStatusName ?? null,
     });
   }
 
   if (archiving) {
-    fireTicketHookAsync(deps, "post-ticket-archive", projectId, postPayload);
+    fireTicketHookAsync(deps, "postTicketArchive", projectId, postPayload);
   }
 };
 

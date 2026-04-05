@@ -17,6 +17,7 @@ beforeAll(async () => {
   ({ app } = await createApp({
     dbPath: ":memory:",
     storagePath,
+    filesRoot: "",
   }));
 });
 

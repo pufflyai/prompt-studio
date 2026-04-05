@@ -3,6 +3,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { firePostAttemptStatusHook, firePreAttemptStatusHook } from "../../hooks/attempt-status-hooks";
+import { parseTicketShorthand } from "../parse-ticket-shorthand";
 
 const attemptStatusBodySchema = z
   .object({
@@ -67,6 +68,15 @@ const resolveFromStatusName = async (deps: RouteDeps, attemptStatusId: string | 
   return fromStatus?.name ?? null;
 };
 
+const resolveTicketStatusName = async (deps: RouteDeps, projectId: string, statusId: string | null) => {
+  if (!statusId) {
+    return null;
+  }
+
+  const statuses = await deps.statusService.list(projectId);
+  return statuses.find((status) => status.id === statusId)?.name ?? null;
+};
+
 const resolveTransitionSession = async (deps: RouteDeps, projectId: string, sessionId?: string) => {
   if (!sessionId) {
     return undefined;
@@ -80,39 +90,47 @@ const resolveTransitionSession = async (deps: RouteDeps, projectId: string, sess
   return session;
 };
 
-const resolveTicketShorthand = async (deps: RouteDeps, workspaceId: string) => {
+const resolveWorkspaceTicket = async (deps: RouteDeps, workspaceId: string) => {
   const ticketLink = await deps.workspaceService.getTicketWorkspaceLink(workspaceId);
   if (!ticketLink) {
-    return undefined;
+    return null;
   }
 
-  const ticket = await deps.ticketService.get(ticketLink.ticket_id);
-  return ticket?.shorthand;
+  return deps.ticketService.get(ticketLink.ticket_id);
 };
 
 const buildHookPayload = async (
   deps: RouteDeps,
-  workspace: Awaited<ReturnType<RouteDeps["workspaceService"]["get"]>>,
-  status: string,
-  fromStatusName: string | null,
-  sessionId?: string,
+  input: {
+    workspace: Awaited<ReturnType<RouteDeps["workspaceService"]["get"]>>;
+    attemptStatusName: string | null;
+    sessionId?: string;
+  },
 ) => {
-  const [ticketShorthand, session] = await Promise.all([
-    resolveTicketShorthand(deps, workspace.id),
-    resolveTransitionSession(deps, workspace.project_id, sessionId),
+  const [ticket, session] = await Promise.all([
+    resolveWorkspaceTicket(deps, input.workspace.id),
+    resolveTransitionSession(deps, input.workspace.project_id, input.sessionId),
   ]);
+  const ticketStatusName = ticket
+    ? await resolveTicketStatusName(deps, input.workspace.project_id, ticket.status_id)
+    : null;
+  const ticketShorthand =
+    ticket?.shorthand ??
+    parseTicketShorthand(input.workspace.workspace_shorthand) ??
+    input.workspace.workspace_shorthand;
 
   return {
-    workspace_id: workspace.id,
-    workspace: workspace.workspace_shorthand,
-    ticket: ticketShorthand,
-    project_id: workspace.project_id,
-    worktree_path: workspace.worktree_path ?? undefined,
-    branch: workspace.branch ?? undefined,
-    attempt_status_from: fromStatusName ?? "",
-    attempt_status_to: status,
-    ...(sessionId && { session_id: sessionId }),
-    ...(session?.original_session_id && { original_session_id: session.original_session_id }),
+    workspace: {
+      ...input.workspace,
+      ticket_shorthand: ticketShorthand,
+      attempt_status_name: input.attemptStatusName,
+    },
+    workspaceId: input.workspace.id,
+    ticket: ticket ? { ...ticket, status_name: ticketStatusName } : undefined,
+    worktreePath: input.workspace.worktree_path ?? undefined,
+    branch: input.workspace.branch ?? undefined,
+    ...(input.sessionId && { sessionId: input.sessionId }),
+    ...(session?.original_session_id && { originalSessionId: session.original_session_id }),
   };
 };
 
@@ -127,14 +145,14 @@ const queueOrFirePostHook = (
     statusChangeId,
   }: {
     fromStatusName: string | null;
-    payload: Record<string, string | undefined>;
+    payload: Record<string, unknown>;
     projectId: string;
     sessionId?: string;
     status: string;
     statusChangeId: string;
   },
 ) => {
-  const postHookPayload = { ...payload, status_change_id: statusChangeId };
+  const postHookPayload = { ...payload, statusChangeId };
 
   if (sessionId) {
     deps.postHookStore.queue(sessionId, {
@@ -149,7 +167,7 @@ const queueOrFirePostHook = (
   }
 
   void firePostAttemptStatusHook(
-    { repoService: deps.repoService },
+    { pluginService: deps.pluginService },
     {
       projectId,
       toStatus: status,
@@ -174,10 +192,14 @@ export const updateAttemptStatusHandler = (deps: RouteDeps): AppRouteHandler<typ
     }
 
     const fromStatusName = await resolveFromStatusName(deps, workspace.attempt_status_id);
-    const payload = await buildHookPayload(deps, workspace, status, fromStatusName, sessionId);
+    const preHookPayload = await buildHookPayload(deps, {
+      workspace,
+      attemptStatusName: fromStatusName,
+      sessionId,
+    });
     const preResult = await firePreAttemptStatusHook(
-      { repoService: deps.repoService },
-      { projectId: workspace.project_id, fromStatus: fromStatusName ?? "", toStatus: status, payload },
+      { pluginService: deps.pluginService },
+      { projectId: workspace.project_id, fromStatus: fromStatusName ?? "", toStatus: status, payload: preHookPayload },
     );
 
     if (preResult.rejected) {
@@ -186,10 +208,15 @@ export const updateAttemptStatusHandler = (deps: RouteDeps): AppRouteHandler<typ
 
     const updated = (await deps.workspaceService.updateAttemptStatus(id, toAttemptStatus.id))!;
     const statusChangeId = randomUUID();
+    const postHookPayload = await buildHookPayload(deps, {
+      workspace: updated,
+      attemptStatusName: status,
+      sessionId,
+    });
 
     queueOrFirePostHook(deps, {
       fromStatusName,
-      payload,
+      payload: postHookPayload,
       projectId: workspace.project_id,
       sessionId,
       status,

@@ -20,6 +20,7 @@ beforeAll(async () => {
   const result = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
+    filesRoot: "",
   });
   app = result.app;
   closeDb = result.close;
@@ -27,6 +28,7 @@ beforeAll(async () => {
   const resultAuth = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage-auth"),
+    filesRoot: "",
     apiToken: "test-token",
   });
   appWithAuth = resultAuth.app;

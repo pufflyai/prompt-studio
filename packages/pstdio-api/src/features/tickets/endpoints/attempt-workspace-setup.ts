@@ -2,9 +2,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { copyFile, mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { runHook } from "pstdio-hooks";
 import { createWorktree } from "pstdio-wt";
 import type { RouteDeps } from "../../deps";
+import { withHookSessionClient } from "../../hooks/hook-client";
 
 type AttemptMode = "worktree" | "current_branch";
 type WorkspaceRecord = Awaited<ReturnType<RouteDeps["workspaceService"]["create"]>>;
@@ -28,35 +28,8 @@ const copyPstdioConfig = async (repoPath: string, worktreePath: string) => {
   }
 };
 
-const saveHookLog = async (
-  deps: Pick<RouteDeps, "fileService" | "workspaceService">,
-  input: {
-    workspaceId: string;
-    projectId: string;
-    existingFileId: string | null;
-    content: string;
-  },
-) => {
-  const data = Buffer.from(input.content, "utf8");
-  if (input.existingFileId) {
-    const updated = await deps.fileService.update(input.existingFileId, { data });
-    if (updated) return input.existingFileId;
-  }
-
-  const file = await deps.fileService.upload({
-    project_id: input.projectId,
-    file_name: "startup.log",
-    file_kind: "startup_log",
-    data,
-    mime_type: "text/plain",
-  });
-
-  await deps.workspaceService.setStartupLogFileId(input.workspaceId, file.id);
-  return file.id;
-};
-
 const runPostCreateHook = async (
-  deps: Pick<RouteDeps, "fileService" | "workspaceService">,
+  deps: Pick<RouteDeps, "fileService" | "workspaceService" | "pluginService">,
   input: {
     repoPath: string;
     worktreePath: string;
@@ -68,69 +41,58 @@ const runPostCreateHook = async (
     existingStartupLogFileId: string | null;
   },
 ) => {
-  const payload = {
-    repo_path: input.repoPath,
-    worktree_path: input.worktreePath,
+  const { dispatcher, client } = await deps.pluginService.getForProject(input.projectId);
+
+  const hookContext = {
+    projectId: input.projectId,
+    repoPath: input.repoPath,
+    worktreePath: input.worktreePath,
     branch: input.branch,
     workspace: input.workspace,
-    workspace_id: input.workspaceId,
+    workspaceId: input.workspaceId,
     ticket: input.ticketShorthand,
-    project_id: input.projectId,
   };
 
-  const result = await runHook("post-worktree-create", payload, { repoPath: input.repoPath });
+  const ctx = { ...hookContext, client: withHookSessionClient(client, hookContext) };
+  await dispatcher.firePostHook("postWorktreeCreate", ctx);
 
-  if (result.skipped) return { logFileId: input.existingStartupLogFileId, exitCode: 0, stderr: "" };
-
-  const logContent = [result.stdout, result.stderr].filter(Boolean).join("\n");
-
-  let logFileId = input.existingStartupLogFileId;
-  if (logContent.length > 0) {
-    try {
-      logFileId = await saveHookLog(deps, {
-        workspaceId: input.workspaceId,
-        projectId: input.projectId,
-        existingFileId: input.existingStartupLogFileId,
-        content: logContent,
-      });
-    } catch {
-      // keep existing log file ID
-    }
-  }
-
-  return { logFileId, exitCode: result.exitCode, stderr: result.stderr };
+  return { logFileId: input.existingStartupLogFileId, exitCode: 0, stderr: "" };
 };
 
-export const resolveWorkspaceGitMetadata = async (input: {
-  mode: AttemptMode;
-  worktreeMode: AttemptMode;
-  workspaceShorthand: string;
-  repoPath: string;
-  base: string;
-  projectId: string;
-  ticketShorthand: string;
-}) => {
+export const resolveWorkspaceGitMetadata = async (
+  deps: Pick<RouteDeps, "pluginService">,
+  input: {
+    mode: AttemptMode;
+    worktreeMode: AttemptMode;
+    workspaceShorthand: string;
+    repoPath: string;
+    base: string;
+    projectId: string;
+    ticketShorthand: string;
+  },
+) => {
   if (input.mode !== input.worktreeMode) {
     return { branch: null as string | null, worktreePath: input.repoPath };
   }
 
   const branch = `workspace/${input.workspaceShorthand}`;
   const worktreePath = join(resolveWorkspacesRoot(), input.workspaceShorthand);
-  const payload = {
-    repo_path: input.repoPath,
-    worktree_path: worktreePath,
+
+  const { dispatcher, client } = await deps.pluginService.getForProject(input.projectId);
+  const hookContext = {
+    projectId: input.projectId,
+    repoPath: input.repoPath,
+    worktreePath,
     branch,
     workspace: input.workspaceShorthand,
     ticket: input.ticketShorthand,
-    project_id: input.projectId,
     base: input.base,
   };
 
-  const preResult = await runHook("pre-worktree-create", payload, { repoPath: input.repoPath });
-  if (!preResult.skipped && preResult.exitCode !== 0) {
-    throw new Error(
-      `HOOK pre-worktree-create FAILED (exit ${preResult.exitCode})\n${preResult.stderr || preResult.stdout}`,
-    );
+  const ctx = { ...hookContext, client: withHookSessionClient(client, hookContext) };
+  const preResult = await dispatcher.firePreHook("preWorktreeCreate", ctx);
+  if (preResult.rejected) {
+    throw new Error(`HOOK preWorktreeCreate FAILED\n${preResult.reason ?? ""}`);
   }
 
   await createWorktree({
@@ -145,7 +107,7 @@ export const resolveWorkspaceGitMetadata = async (input: {
 };
 
 export const awaitPostCreateHook = async (
-  deps: Pick<RouteDeps, "fileService" | "workspaceService" | "eventBus">,
+  deps: Pick<RouteDeps, "fileService" | "workspaceService" | "eventBus" | "pluginService">,
   input: {
     mode: AttemptMode;
     worktreeMode: AttemptMode;
@@ -160,7 +122,7 @@ export const awaitPostCreateHook = async (
   }
 
   const { logFileId, exitCode, stderr } = await runPostCreateHook(
-    { fileService: deps.fileService, workspaceService: deps.workspaceService },
+    { fileService: deps.fileService, workspaceService: deps.workspaceService, pluginService: deps.pluginService },
     {
       repoPath: input.repoPath,
       worktreePath: input.workspace.worktree_path,
@@ -191,7 +153,7 @@ const emitTicketWorkspaceLink = async (deps: Pick<RouteDeps, "workspaceService" 
 };
 
 export const createAttemptWorkspace = async (
-  deps: Pick<RouteDeps, "workspaceService" | "eventBus" | "fileService">,
+  deps: Pick<RouteDeps, "workspaceService" | "eventBus" | "fileService" | "pluginService">,
   input: {
     projectId: string;
     ticketId: string;
@@ -210,7 +172,7 @@ export const createAttemptWorkspace = async (
   deps.eventBus.emit("workspaces", "set", workspace);
   await emitTicketWorkspaceLink(deps, workspace.id);
 
-  const gitMetadata = await resolveWorkspaceGitMetadata({
+  const gitMetadata = await resolveWorkspaceGitMetadata(deps, {
     mode: input.mode,
     worktreeMode: input.worktreeMode,
     workspaceShorthand: workspace.workspace_shorthand,

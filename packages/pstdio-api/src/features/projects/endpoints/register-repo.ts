@@ -118,7 +118,7 @@ export const registerRepoHandler = (deps: RouteDeps): AppRouteHandler<typeof reg
       await rm(join(pstdioPath, "tickets"), { recursive: true, force: true });
     }
 
-    await bootstrapProjectRepo(path, id);
+    await bootstrapProjectRepo(path, id, deps.filesRoot);
 
     deps.eventBus.emit("repos", "set", repo);
     await emitProjectRepoLink(deps, { projectId: id, repoId: repo.id });

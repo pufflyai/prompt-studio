@@ -1,7 +1,7 @@
 import { createApp } from "./app";
 import { apiLogger } from "./lib/logger";
 
-const { app, close } = await createApp();
+const { app, close } = await createApp({ filesRoot: process.env.PSTDIO_FILES_ROOT ?? "" });
 const port = Number(process.env.PORT ?? "19840");
 
 const shutdown = async () => {

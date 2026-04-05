@@ -9,6 +9,7 @@ import { getWorkspaceHandler, getWorkspaceRoute } from "./endpoints/get-workspac
 import { getWorkspaceDiffHandler, getWorkspaceDiffRoute } from "./endpoints/get-workspace-diff";
 import { getWorkspaceDiffSummaryHandler, getWorkspaceDiffSummaryRoute } from "./endpoints/get-workspace-diff-summary";
 import { listWorkspacesHandler, listWorkspacesRoute } from "./endpoints/list-workspaces";
+import { removeWorkspaceWorktreeHandler, removeWorkspaceWorktreeRoute } from "./endpoints/remove-worktree";
 import { setStartupLogHandler, setStartupLogRoute } from "./endpoints/set-startup-log";
 import { updateAttemptStatusHandler, updateAttemptStatusRoute } from "./endpoints/update-attempt-status";
 
@@ -22,6 +23,7 @@ export const createWorkspaceRoutes = (deps: RouteDeps) => {
   routes.openapi(getWorkspaceDiffSummaryRoute, getWorkspaceDiffSummaryHandler(deps));
   routes.openapi(deleteWorkspaceRoute, deleteWorkspaceHandler(deps));
   routes.openapi(archiveWorkspaceRoute, archiveWorkspaceHandler(deps));
+  routes.openapi(removeWorkspaceWorktreeRoute, removeWorkspaceWorktreeHandler(deps));
   routes.openapi(setStartupLogRoute, setStartupLogHandler(deps));
   routes.openapi(getStartupLogRoute, getStartupLogHandler(deps));
   routes.openapi(updateAttemptStatusRoute, updateAttemptStatusHandler(deps));

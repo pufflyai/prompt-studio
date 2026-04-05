@@ -30,9 +30,9 @@ import { createDocsRoutes } from "./features/docs/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
 import { createPostHookStore } from "./features/hooks/post-hook-store";
-import { createHookRoutes } from "./features/hooks/routes";
 import { fireSessionResumeHook, fireSessionStartHook, fireSessionStatusHook } from "./features/hooks/session-hooks";
 import { fireTicketHook, fireTicketHookAsync } from "./features/hooks/ticket-hooks";
+import { createPluginService } from "./features/plugins/plugin-service";
 import { createProjectRoutes } from "./features/projects/routes";
 import { createSessionRoutes } from "./features/sessions/routes";
 import { createSkillRoutes } from "./features/skills/routes";
@@ -66,11 +66,12 @@ import type { AppBindings } from "./types";
 interface AppOptions {
   dbPath?: string;
   storagePath?: string;
+  filesRoot: string;
   apiToken?: string;
   agents?: AgentService[];
 }
 
-export const createApp = async (options?: AppOptions) => {
+export const createApp = async (options: AppOptions) => {
   const { db, close: closeDb } = await createDb({ path: options?.dbPath ?? process.env.PSTDIO_DB_PATH });
   const apiToken = options?.apiToken ?? process.env.PSTDIO_API_TOKEN;
 
@@ -118,11 +119,30 @@ export const createApp = async (options?: AppOptions) => {
   const workspaceSessionService = createWorkspaceSessionService({ workspaceSessionsDBService });
   const workspaceService = createWorkspaceService({ workspacesDb: workspacesDBService, eventBus });
 
+  const pluginService = createPluginService({ repoService });
+
+  const ticketHookDeps = { pluginService };
+
+  const ticketService = createTicketService({
+    ticketsDb: ticketsDBService,
+    eventBus,
+    onPreTicketDeletion: async (projectId, payload) => {
+      const result = await fireTicketHook(ticketHookDeps, "preTicketDeletion", projectId, payload);
+      return { rejected: result.rejected, error: result.stderr };
+    },
+    onPostTicketDeletion: (projectId, payload) => {
+      fireTicketHookAsync(ticketHookDeps, "postTicketDeletion", projectId, payload);
+    },
+  });
+
   const sessionHookDeps = {
     reposService: repoService,
     workspaceSessionsService: workspaceSessionService,
     attemptStatusesService: attemptStatusService,
+    statusService,
+    ticketService,
     postHookStore,
+    pluginService,
   };
 
   const sessionService = createSessionService({
@@ -133,22 +153,9 @@ export const createApp = async (options?: AppOptions) => {
     onSessionResumed: (session) => fireSessionResumeHook(sessionHookDeps, session),
   });
 
-  const ticketHookDeps = { repoService };
-
-  const ticketService = createTicketService({
-    ticketsDb: ticketsDBService,
-    eventBus,
-    onPreTicketDeletion: async (projectId, payload) => {
-      const result = await fireTicketHook(ticketHookDeps, "pre-ticket-deletion", projectId, payload);
-      return { rejected: result.rejected, error: result.stderr };
-    },
-    onPostTicketDeletion: (projectId, payload) => {
-      fireTicketHookAsync(ticketHookDeps, "post-ticket-deletion", projectId, payload);
-    },
-  });
-
   // --- ONLY DOMAIN SERVICES ARE PASSED TO ROUTES ---
   const deps = {
+    filesRoot: options.filesRoot,
     readiness: { database: true, storage: true },
     closeDb,
     eventBus,
@@ -169,6 +176,7 @@ export const createApp = async (options?: AppOptions) => {
     docService,
     syncService,
     postHookStore,
+    pluginService,
   };
 
   const app = new OpenAPIHono<AppBindings>();
@@ -214,7 +222,6 @@ export const createApp = async (options?: AppOptions) => {
   app.route("/", createHealthRoutes(deps));
   app.route("/v1", createProjectRoutes(deps));
   app.route("/v1", createFilesystemRoutes(deps));
-  app.route("/v1", createHookRoutes(deps));
   app.route("/v1", createDocsRoutes(deps));
   app.route("/v1", createAgentRoutes(deps));
   app.route("/v1", createSkillRoutes(deps));

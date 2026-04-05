@@ -29,6 +29,7 @@ beforeAll(async () => {
   ({ app, close } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
+    filesRoot: "",
     agents: [fakeAgent],
   }));
 });

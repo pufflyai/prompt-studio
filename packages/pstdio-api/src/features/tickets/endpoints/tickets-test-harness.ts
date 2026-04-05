@@ -5,10 +5,12 @@ import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
+import type { RouteDeps } from "../../deps";
 import type { EventBus } from "../../sync/event-bus";
 
 export type TicketsTestContext = {
   app: OpenAPIHono<AppBindings>;
+  deps: RouteDeps;
   eventBus: EventBus;
   projectId: string;
   tempRoot: string;
@@ -26,9 +28,10 @@ export const createTicketsTestContext = async () => {
   mkdirSync(testHome, { recursive: true });
   process.env.HOME = testHome;
 
-  const { app, eventBus } = await createApp({
+  const { app, eventBus, deps } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
+    filesRoot: "",
   });
 
   const projectRes = await app.request("/v1/projects", {
@@ -68,6 +71,7 @@ export const createTicketsTestContext = async () => {
 
   return {
     app,
+    deps,
     eventBus,
     projectId: project.id as string,
     tempRoot,

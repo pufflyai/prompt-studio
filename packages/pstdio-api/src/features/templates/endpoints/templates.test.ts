@@ -15,6 +15,7 @@ beforeAll(async () => {
   ({ app } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
+    filesRoot: "",
   }));
 
   const res = await app.request("/v1/projects", {

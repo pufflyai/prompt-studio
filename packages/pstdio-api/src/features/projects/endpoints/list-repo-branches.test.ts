@@ -32,6 +32,7 @@ beforeAll(async () => {
   const result = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
+    filesRoot: "",
   });
   app = result.app;
   closeDb = result.close;

@@ -52,7 +52,7 @@ const createWorkspaceAttempt = async (repoRoot: string) => {
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-delete-workspace-test-"));
   process.env.PSTDIO_WORKSPACES_DIR = join(tempRoot, "worktrees");
-  ({ app } = await createApp({ dbPath: ":memory:", storagePath: join(tempRoot, "storage") }));
+  ({ app } = await createApp({ dbPath: ":memory:", storagePath: join(tempRoot, "storage"), filesRoot: "" }));
 
   const projectRes = await app.request("/v1/projects", {
     method: "POST",

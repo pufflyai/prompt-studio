@@ -23,16 +23,18 @@
     "drizzle-orm": "^0.45.1",
     "hono": "^4.10.7",
     "mustache": "^4.2.0",
+    "@pstdio/sdk": "workspace:*",
     "pstdio-agents": "workspace:*",
     "pstdio-db": "workspace:*",
     "pstdio-hooks": "workspace:*",
     "pstdio-logging": "workspace:*",
+    "pstdio-plugins": "workspace:*",
     "pstdio-storage": "workspace:*",
     "pstdio-wt": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/mustache": "^4.2.6",
-    "typescript": "~5.9.3"
+    "typescript": "^5.9.3"
   }
 }

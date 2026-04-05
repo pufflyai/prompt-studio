@@ -21,6 +21,7 @@ beforeAll(async () => {
   ({ app, close } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
+    filesRoot: "",
     agents: [fakeAgent],
   }));
 });
@@ -345,6 +346,7 @@ describe("GET /v1/sessions/:id/stream", () => {
     const { app: heartbeatApp, close: closeHeartbeatApp } = await createApp({
       dbPath: ":memory:",
       storagePath: join(heartbeatRoot, "storage"),
+      filesRoot: "",
       agents: [createSlowFakeAgent(1200)],
     });
 
@@ -413,6 +415,7 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
     const { app: replayApp, close: closeReplayApp } = await createApp({
       dbPath: ":memory:",
       storagePath: join(replayRoot, "storage"),
+      filesRoot: "",
       agents: [
         createHistoryReplayAgent({
           initialPatches,
@@ -489,6 +492,7 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
     const { app: overlapApp, close: closeOverlapApp } = await createApp({
       dbPath: ":memory:",
       storagePath: join(overlapRoot, "storage"),
+      filesRoot: "",
       agents: [createResumeOverlapAgent()],
     });
 

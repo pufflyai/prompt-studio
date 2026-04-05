@@ -68,19 +68,19 @@ const runPreCreateHook = async (
 ) => {
   const displayTitle = content ? extractTitleFromContent(content) : undefined;
   const statusName = await resolveStatusName(deps, input.project_id, input.status_id);
-  const preHook = await fireTicketHook(deps, "pre-ticket-creation", input.project_id, {
+  const preHook = await fireTicketHook(deps, "preTicketCreation", input.project_id, {
     id: null,
-    ticket: null,
-    display_title: displayTitle ?? null,
-    user_prompt: input.user_prompt ?? null,
+    shorthand: null,
+    displayTitle: displayTitle ?? null,
+    userPrompt: input.user_prompt ?? null,
     content: content ?? null,
-    parent_id: input.parent_id ?? null,
+    parentId: input.parent_id ?? null,
     draft: input.draft ?? false,
     archived: false,
     status: statusName,
-    tag_ids: tagIds ?? [],
-    tag_names: [],
-    file_ids: [],
+    tagIds: tagIds ?? [],
+    tagNames: [],
+    fileIds: [],
   });
 
   return {
@@ -109,7 +109,7 @@ const finalizeCreatedTicket = async (
 
   deps.eventBus.emit("tickets", "set", nextTicket);
   const postPayload = await buildTicketPayload(deps, nextTicket, input.project_id);
-  fireTicketHookAsync(deps, "post-ticket-creation", input.project_id, postPayload);
+  fireTicketHookAsync(deps, "postTicketCreation", input.project_id, postPayload);
 
   return nextTicket;
 };
