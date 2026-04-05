@@ -1,0 +1,60 @@
+{
+  "name": "@pstdio/sdk",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pufflyai/prompt-studio"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    "./resources": {
+      "import": "./dist/resources/index.js",
+      "types": "./dist/resources/index.d.ts"
+    },
+    "./api": {
+      "import": "./dist/api/index.js",
+      "types": "./dist/api/index.d.ts"
+    },
+    "./client": {
+      "import": "./dist/client/index.js",
+      "types": "./dist/client/index.d.ts"
+    },
+    "./plugins": {
+      "import": "./dist/plugins/index.js",
+      "types": "./dist/plugins/index.d.ts"
+    },
+    "./prompts": {
+      "import": "./dist/prompts/index.js",
+      "types": "./dist/prompts/index.d.ts"
+    },
+    "./hooks": {
+      "import": "./dist/hooks/index.js",
+      "types": "./dist/hooks/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "rm -rf ./dist && bun run build:js && bun run build:types",
+    "build:js": "bun build ./src/api/index.ts ./src/client/index.ts ./src/plugins/index.ts ./src/prompts/index.ts ./src/hooks/index.ts ./src/resources/index.ts --outdir ./dist --root ./src --target node --format esm --packages external",
+    "build:types": "tsc --project ./tsconfig.build.json",
+    "prepack": "bun run build",
+    "typecheck": "tsc --noEmit",
+    "lint": "bun run typecheck && biome check .",
+    "format": "biome check --write .",
+    "test": "bun test --silent",
+    "test:coverage": "bun test --coverage"
+  },
+  "dependencies": {
+    "mustache": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/mustache": "^4.2.6",
+    "typescript": "^5.9.3"
+  }
+}
