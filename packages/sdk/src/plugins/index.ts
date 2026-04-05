@@ -18,7 +18,14 @@ export {
   setWorkspaceAttemptStatus,
   updateTicketWhenAllAttemptsMatch,
 } from "./helpers";
-export type { HookResponse, PluginHooks, PostHookReturn, PreHookReturn } from "./hooks";
+export type {
+  HookResponse,
+  PluginHooks,
+  PostHookReturn,
+  PostPluginHooks,
+  PreHookReturn,
+  PrePluginHooks,
+} from "./hooks";
 export type {
   ActionDefinition,
   ActionDescriptor,

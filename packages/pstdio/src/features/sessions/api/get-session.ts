@@ -1,10 +1,11 @@
-import type { Session } from "@pstdio/sdk/resources";
+import { PstdioApiError } from "@pstdio/sdk/client";
+import { apiClient } from "@/features/api-client";
 
-export const getSession = async (baseUrl: string, sessionId: string) => {
-  const res = await fetch(`${baseUrl}/v1/sessions/${sessionId}`);
-
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`Failed to fetch session: ${res.status}`);
-
-  return (await res.json()) as Session;
+export const getSession = async (sessionId: string) => {
+  try {
+    return await apiClient().sessions.get(sessionId);
+  } catch (error) {
+    if (error instanceof PstdioApiError && error.status === 404) return null;
+    throw error;
+  }
 };

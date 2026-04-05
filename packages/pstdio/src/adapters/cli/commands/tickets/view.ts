@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 import { getTicket as defaultGetTicket } from "@/features/tickets/api/get-ticket";
 import { resolveTicketByShorthand as defaultResolveTicketByShorthand } from "@/features/tickets/resolve-ticket-by-shorthand";
@@ -54,10 +53,10 @@ export const createHandler =
   async (argv: Arguments<ViewArgs>) => {
     const { projectId } = deps.resolveProjectId(deps.cwd(), argv["project-id"]);
 
-    const listItem = await deps.resolveTicketByShorthand(API_URL, projectId, argv.id);
+    const listItem = await deps.resolveTicketByShorthand(projectId, argv.id);
     if (!listItem) throw new Error(`Ticket not found: ${argv.id}`);
 
-    const ticket = await deps.getTicket(API_URL, listItem.id);
+    const ticket = await deps.getTicket(listItem.id);
     if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
     if (argv.field) {

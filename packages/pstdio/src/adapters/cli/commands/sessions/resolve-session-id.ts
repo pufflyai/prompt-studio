@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { resolveSessionId as defaultResolveSessionId } from "@/features/sessions/api/resolve-session-id";
 
 export const command = "resolve-session-id";
@@ -47,7 +46,7 @@ const defaultDeps: Deps = {
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<ResolveSessionIdArgs>) => {
-    const resolved = await deps.resolveSessionId(API_URL, {
+    const resolved = await deps.resolveSessionId({
       agent: argv.agent,
       agent_session_id: argv["agent-session-id"],
       cwd: argv.cwd,

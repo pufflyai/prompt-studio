@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { archiveSession as defaultArchiveSession } from "@/features/sessions/api/archive-session";
 
 export const command = "archive";
@@ -23,7 +22,7 @@ const defaultDeps: Deps = {
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<ArchiveArgs>) => {
-    await deps.archiveSession(API_URL, argv.id);
+    await deps.archiveSession(argv.id);
     deps.log(`Archived session ${argv.id}`);
   };
 

@@ -1,1 +1,1 @@
-export type CreateProjectInput = { name: string };
+export type { CreateProjectInput, RegisterRepoInput } from "pstdio-api-contracts";

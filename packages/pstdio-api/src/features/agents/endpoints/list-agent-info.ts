@@ -1,16 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
-
-const agentInfoSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  availability: z.object({
-    type: z.enum(["INSTALLED", "NOT_FOUND"]),
-  }),
-});
-
-const agentInfoListSchema = z.array(agentInfoSchema);
+import { agentInfoListResponseSchema } from "../dto";
 
 export const listAgentInfoRoute = createRoute({
   method: "get",
@@ -24,7 +15,7 @@ export const listAgentInfoRoute = createRoute({
   responses: {
     200: {
       description: "List of known agents with availability.",
-      content: { "application/json": { schema: agentInfoListSchema } },
+      content: { "application/json": { schema: agentInfoListResponseSchema } },
     },
   },
 });

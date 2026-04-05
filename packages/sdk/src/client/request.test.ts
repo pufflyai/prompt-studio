@@ -89,6 +89,34 @@ describe("createRequest", () => {
     }
   });
 
+  it("includes hook output in the error message when present", async () => {
+    const request = createRequest({
+      baseUrl: "http://test:1234",
+      fetch: mockFetchFn(() =>
+        Promise.resolve(
+          jsonResponse(
+            {
+              error: "Pre-hook rejected the transition",
+              hook_output: "You should add your poems to the ./files folder",
+            },
+            422,
+          ),
+        ),
+      ),
+    });
+
+    try {
+      await request("/v1/workspaces/ws-1/attempt-status", { method: "PATCH", body: { status: "review-ready" } });
+      expect.unreachable("should have thrown");
+    } catch (err) {
+      expect(err).toBeInstanceOf(PstdioApiError);
+      expect((err as PstdioApiError).message).toBe(
+        "Pre-hook rejected the transition\nYou should add your poems to the ./files folder",
+      );
+      expect((err as PstdioApiError).status).toBe(422);
+    }
+  });
+
   it("returns undefined for 204 responses", async () => {
     const request = createRequest({
       baseUrl: "http://test:1234",

@@ -87,10 +87,9 @@ const makeDeps = (input?: {
     } as never,
     pluginService: {
       getForProject: async () => ({
-        dispatcher: {
-          register: () => {},
-          firePreHook: async () => ({ rejected: false }),
-          firePostHook: async (hookName: string, ctx: unknown) => {
+        hooks: {
+          firePre: async () => ({ rejected: false }),
+          firePost: async (hookName: string, ctx: unknown) => {
             const call = { hookName, ctx: ctx as Record<string, unknown> };
             calls.push(call);
             pending.shift()?.resolve(call);

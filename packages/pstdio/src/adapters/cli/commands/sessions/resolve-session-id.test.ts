@@ -21,7 +21,7 @@ describe("sessions resolve-session-id", () => {
 
     await handler(argv({ agent: "opencode", "agent-session-id": "oc-1", cwd: "/repo/a", json: true }));
 
-    expect(deps.resolveSessionId).toHaveBeenCalledWith("http://localhost:19840", {
+    expect(deps.resolveSessionId).toHaveBeenCalledWith({
       agent: "opencode",
       agent_session_id: "oc-1",
       cwd: "/repo/a",

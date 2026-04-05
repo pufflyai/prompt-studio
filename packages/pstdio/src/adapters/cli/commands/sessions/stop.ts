@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { getSession as defaultGetSession } from "@/features/sessions/api/get-session";
 import { updateSessionStatus as defaultUpdateSessionStatus } from "@/features/sessions/api/update-session-status";
 
@@ -26,14 +25,14 @@ const defaultDeps: Deps = {
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<StopArgs>) => {
-    const session = await deps.getSession(API_URL, argv.id);
+    const session = await deps.getSession(argv.id);
     if (!session) throw new Error(`Session not found: ${argv.id}`);
 
     if (session.status !== "in_progress" && session.status !== "awaiting_input") {
       throw new Error(`Session is not running`);
     }
 
-    await deps.updateSessionStatus(API_URL, argv.id, "cancelled");
+    await deps.updateSessionStatus(argv.id, "cancelled");
     deps.log(`Stopped session ${argv.id}.`);
   };
 

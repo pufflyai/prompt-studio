@@ -1,5 +1,4 @@
 import type { Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { listStatuses } from "@/features/statuses/api/list-statuses";
 
@@ -52,7 +51,7 @@ export const createHandler =
     const config = deps.readConfig(root);
     if (!config) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
 
-    const statuses = await deps.listStatuses(API_URL, config.project_id);
+    const statuses = await deps.listStatuses(config.project_id);
 
     if (statuses.length === 0) {
       console.log("No statuses found.");

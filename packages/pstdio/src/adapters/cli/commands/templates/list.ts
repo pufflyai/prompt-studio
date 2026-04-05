@@ -1,5 +1,4 @@
 import type { Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { listTemplates } from "@/features/templates/api/list-templates";
 
@@ -52,7 +51,7 @@ export const createHandler =
     const config = deps.readConfig(root);
     if (!config) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
 
-    const templates = await deps.listTemplates(API_URL, config.project_id);
+    const templates = await deps.listTemplates(config.project_id);
 
     if (templates.length === 0) {
       console.log("No templates found.");

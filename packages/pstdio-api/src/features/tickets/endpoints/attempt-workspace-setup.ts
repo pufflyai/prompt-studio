@@ -41,7 +41,7 @@ const runPostCreateHook = async (
     existingStartupLogFileId: string | null;
   },
 ) => {
-  const { dispatcher, client } = await deps.pluginService.getForProject(input.projectId);
+  const runtime = await deps.pluginService.getForProject(input.projectId);
 
   const hookContext = {
     projectId: input.projectId,
@@ -53,8 +53,8 @@ const runPostCreateHook = async (
     ticket: input.ticketShorthand,
   };
 
-  const ctx = { ...hookContext, client: withHookSessionClient(client, hookContext) };
-  await dispatcher.firePostHook("postWorktreeCreate", ctx);
+  const ctx = { ...hookContext, client: withHookSessionClient(runtime.client, hookContext) };
+  await runtime.hooks.firePost("postWorktreeCreate", ctx as never);
 
   return { logFileId: input.existingStartupLogFileId, exitCode: 0, stderr: "" };
 };
@@ -78,7 +78,7 @@ export const resolveWorkspaceGitMetadata = async (
   const branch = `workspace/${input.workspaceShorthand}`;
   const worktreePath = join(resolveWorkspacesRoot(), input.workspaceShorthand);
 
-  const { dispatcher, client } = await deps.pluginService.getForProject(input.projectId);
+  const runtime = await deps.pluginService.getForProject(input.projectId);
   const hookContext = {
     projectId: input.projectId,
     repoPath: input.repoPath,
@@ -89,8 +89,8 @@ export const resolveWorkspaceGitMetadata = async (
     base: input.base,
   };
 
-  const ctx = { ...hookContext, client: withHookSessionClient(client, hookContext) };
-  const preResult = await dispatcher.firePreHook("preWorktreeCreate", ctx);
+  const ctx = { ...hookContext, client: withHookSessionClient(runtime.client, hookContext) };
+  const preResult = await runtime.hooks.firePre("preWorktreeCreate", ctx as never);
   if (preResult.rejected) {
     throw new Error(`HOOK preWorktreeCreate FAILED\n${preResult.reason ?? ""}`);
   }

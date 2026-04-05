@@ -30,8 +30,8 @@ export const listActionsHandler = (deps: RouteDeps): AppRouteHandler<typeof list
   return async (c) => {
     const { projectId } = c.req.valid("param");
     const { targetType } = c.req.valid("query");
-    const { registry } = await deps.pluginService.getForProject(projectId);
-    const actions = registry.getActions(targetType);
+    const runtime = await deps.pluginService.getForProject(projectId);
+    const actions = runtime.actions.list(targetType);
     return c.json(actions, 200);
   };
 };

@@ -1,15 +1,3 @@
-type Project = {
-  id: string;
-  name: string;
-  created_at: string;
-};
+import { apiClient } from "@/features/api-client";
 
-export const listProjects = async (baseUrl: string) => {
-  const res = await fetch(`${baseUrl}/v1/projects`);
-
-  if (!res.ok) {
-    throw new Error(`Failed to list projects: ${res.status}`);
-  }
-
-  return (await res.json()) as Project[];
-};
+export const listProjects = async () => apiClient().projects.list();

@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 import { updateWhenAttemptStatus as defaultUpdateWhenAttemptStatus } from "@/features/tickets/api/update-when-attempt-status";
 import { resolveTicketByShorthand as defaultResolveTicketByShorthand } from "@/features/tickets/resolve-ticket-by-shorthand";
@@ -50,10 +49,10 @@ export const createHandler =
   async (argv: Arguments<UpdateWhenAttemptStatusArgs>) => {
     const { projectId } = deps.resolveProjectId(deps.cwd(), argv["project-id"]);
 
-    const ticket = await deps.resolveTicketByShorthand(API_URL, projectId, argv.id);
+    const ticket = await deps.resolveTicketByShorthand(projectId, argv.id);
     if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
-    const result = await deps.updateWhenAttemptStatus(API_URL, ticket.id, {
+    const result = await deps.updateWhenAttemptStatus(ticket.id, {
       all_attempts_status: argv["all-attempts-status"],
       set_status: argv["set-status"],
     });

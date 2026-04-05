@@ -2,12 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { AgentId } from "pstdio-agents";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
-
-const agentModelSchema = z.object({
-  id: z.string(),
-});
-
-const agentModelsListSchema = z.array(agentModelSchema);
+import { agentModelsListResponseSchema } from "../dto";
 
 const agentIdParamSchema = z
   .object({
@@ -27,7 +22,7 @@ export const listAgentModelsRoute = createRoute({
   responses: {
     200: {
       description: "List of available models.",
-      content: { "application/json": { schema: agentModelsListSchema } },
+      content: { "application/json": { schema: agentModelsListResponseSchema } },
     },
     404: {
       description: "Agent not found.",

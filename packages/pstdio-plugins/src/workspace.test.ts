@@ -61,6 +61,26 @@ describe("ensurePluginWorkspace", () => {
     expect((installCall![2] as { cwd: string }).cwd).toBe(dir);
   });
 
+  test("does not throw when install fails", async () => {
+    const dir = createTempDir();
+    execFileSyncMock.mockImplementation((command: string, args: string[]) => {
+      if (command === "bun" && args[0] === "--version") {
+        return Buffer.from("1.0.0");
+      }
+
+      if (command === "bun" && args[0] === "install") {
+        throw new Error("install failed");
+      }
+
+      return Buffer.from("");
+    });
+
+    await expect(ensurePluginWorkspace(dir)).resolves.toBeUndefined();
+
+    const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+    expect(pkg.dependencies["@pstdio/sdk"]).toBe("latest");
+  });
+
   test("skips when package.json already has @pstdio/sdk", async () => {
     const dir = createTempDir();
     const existingPkg = {

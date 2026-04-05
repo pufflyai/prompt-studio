@@ -1,16 +1,3 @@
-type Template = {
-  id: string;
-  name: string;
-  template_type: string;
-  is_default: boolean;
-};
+import { apiClient } from "@/features/api-client";
 
-export const listTemplates = async (baseUrl: string, projectId: string) => {
-  const res = await fetch(`${baseUrl}/v1/projects/${projectId}/templates`);
-
-  if (!res.ok) {
-    throw new Error(`Failed to list templates: ${res.status}`);
-  }
-
-  return (await res.json()) as Template[];
-};
+export const listTemplates = async (projectId: string) => apiClient().templates.list(projectId);

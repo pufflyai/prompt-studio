@@ -21,36 +21,37 @@ describe("tickets worktrees list", () => {
     const handler = createHandler({
       cwd: () => "/repo",
       resolveProjectId: () => ({ projectId: "proj-1", root: "/repo" }),
-      resolveTicketByShorthand: async () => ticketFixture,
-      listWorkspaces: async () => [
-        {
-          id: "ws-1",
-          workspace_shorthand: "PS-1_A1",
-          ticket_shorthand: "PS-1",
-          branch: "workspace/PS-1_A1",
-          worktree_path: "/repo/.pstdio/workspaces/PS-1_A1",
-          attempt_status_id: null,
-          attempt_status_name: null,
-        },
-        {
-          id: "ws-2",
-          workspace_shorthand: "PS-1_A2",
-          ticket_shorthand: "PS-1",
-          branch: "workspace/PS-1_A2",
-          worktree_path: null,
-          attempt_status_id: null,
-          attempt_status_name: null,
-        },
-        {
-          id: "ws-3",
-          workspace_shorthand: "PS-2_A1",
-          ticket_shorthand: "PS-2",
-          branch: "workspace/PS-2_A1",
-          worktree_path: "/repo/.pstdio/workspaces/PS-2_A1",
-          attempt_status_id: null,
-          attempt_status_name: null,
-        },
-      ],
+      resolveTicketByShorthand: async () => ticketFixture as never,
+      listWorkspaces: async () =>
+        [
+          {
+            id: "ws-1",
+            workspace_shorthand: "PS-1_A1",
+            ticket_shorthand: "PS-1",
+            branch: "workspace/PS-1_A1",
+            worktree_path: "/repo/.pstdio/workspaces/PS-1_A1",
+            attempt_status_id: null,
+            attempt_status_name: null,
+          },
+          {
+            id: "ws-2",
+            workspace_shorthand: "PS-1_A2",
+            ticket_shorthand: "PS-1",
+            branch: "workspace/PS-1_A2",
+            worktree_path: null,
+            attempt_status_id: null,
+            attempt_status_name: null,
+          },
+          {
+            id: "ws-3",
+            workspace_shorthand: "PS-2_A1",
+            ticket_shorthand: "PS-2",
+            branch: "workspace/PS-2_A1",
+            worktree_path: "/repo/.pstdio/workspaces/PS-2_A1",
+            attempt_status_id: null,
+            attempt_status_name: null,
+          },
+        ] as never,
       log,
     });
 
@@ -68,18 +69,19 @@ describe("tickets worktrees list", () => {
     const handler = createHandler({
       cwd: () => "/repo",
       resolveProjectId: () => ({ projectId: "proj-1", root: "/repo" }),
-      resolveTicketByShorthand: async () => ticketFixture,
-      listWorkspaces: async () => [
-        {
-          id: "ws-1",
-          workspace_shorthand: "PS-1_A1",
-          ticket_shorthand: "PS-1",
-          branch: "workspace/PS-1_A1",
-          worktree_path: "/repo/.pstdio/workspaces/PS-1_A1",
-          attempt_status_id: "as-1",
-          attempt_status_name: "reviewed",
-        },
-      ],
+      resolveTicketByShorthand: async () => ticketFixture as never,
+      listWorkspaces: async () =>
+        [
+          {
+            id: "ws-1",
+            workspace_shorthand: "PS-1_A1",
+            ticket_shorthand: "PS-1",
+            branch: "workspace/PS-1_A1",
+            worktree_path: "/repo/.pstdio/workspaces/PS-1_A1",
+            attempt_status_id: "as-1",
+            attempt_status_name: "reviewed",
+          },
+        ] as never,
       log,
     });
 
@@ -97,18 +99,19 @@ describe("tickets worktrees list", () => {
     const handler = createHandler({
       cwd: () => "/repo",
       resolveProjectId: () => ({ projectId: "proj-1", root: "/repo" }),
-      resolveTicketByShorthand: async () => ticketFixture,
-      listWorkspaces: async () => [
-        {
-          id: "ws-2",
-          workspace_shorthand: "PS-1_A2",
-          ticket_shorthand: "PS-1",
-          branch: "workspace/PS-1_A2",
-          worktree_path: null,
-          attempt_status_id: null,
-          attempt_status_name: null,
-        },
-      ],
+      resolveTicketByShorthand: async () => ticketFixture as never,
+      listWorkspaces: async () =>
+        [
+          {
+            id: "ws-2",
+            workspace_shorthand: "PS-1_A2",
+            ticket_shorthand: "PS-1",
+            branch: "workspace/PS-1_A2",
+            worktree_path: null,
+            attempt_status_id: null,
+            attempt_status_name: null,
+          },
+        ] as never,
       log,
     });
 

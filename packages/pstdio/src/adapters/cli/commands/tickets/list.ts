@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { listTickets as defaultListTickets } from "@/features/tickets/api/list-tickets";
 
@@ -83,7 +82,7 @@ export const createHandler =
       projectId = config.project_id;
     }
 
-    const tickets = await deps.listTickets(API_URL, {
+    const tickets = await deps.listTickets({
       project_id: projectId,
       status: argv.status,
       tag: argv.tag,

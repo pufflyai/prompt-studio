@@ -1,23 +1,31 @@
 import { describe, expect, mock, test } from "bun:test";
+import type { Workspace } from "@pstdio/sdk/resources";
 import yargs from "yargs";
 import { createHandler, detectWorkspaceFromBranch } from "./set-status";
+
+const makeWorkspace = (overrides: Partial<Workspace> = {}): Workspace => ({
+  id: "ws-1",
+  project_id: "proj-1",
+  name: "PS-1_A1",
+  branch: "workspace/PS-1_A1",
+  worktree_path: "/wt/PS-1_A1",
+  attempt_status_id: null,
+  archived: false,
+  workspace_shorthand: "PS-1_A1",
+  startup_log_file_id: null,
+  created_at: "",
+  updated_at: "",
+  deleted_at: null,
+  ...overrides,
+});
 
 const baseDeps = {
   cwd: () => "/repo",
   env: () => process.env,
   findGitRoot: () => "/repo" as string | null,
   readConfig: () => ({ project_id: "proj-1" }) as { project_id: string } | null,
-  getWorkspace: async () => ({
-    id: "ws-1",
-    project_id: "proj-1",
-    name: "PS-1_A1",
-    workspace_shorthand: "PS-1_A1",
-    branch: "workspace/PS-1_A1",
-    worktree_path: "/wt/PS-1_A1",
-    created_at: "",
-    updated_at: "",
-  }),
-  updateAttemptStatus: mock(async () => ({})),
+  getWorkspace: async () => makeWorkspace(),
+  updateAttemptStatus: mock(async () => ({}) as never),
   getCurrentBranch: () => "workspace/PS-1_A1",
   log: mock(),
 };
@@ -25,27 +33,27 @@ const baseDeps = {
 describe("workspaces set-status", () => {
   test("updates attempt status with explicit workspace", async () => {
     const log = mock();
-    const updateAttemptStatus = mock(async () => ({}));
+    const updateAttemptStatus = mock(async () => ({}) as never);
     const handler = createHandler({ ...baseDeps, updateAttemptStatus, log });
 
     await handler({ workspace: "PS-1_A1", status: "review-ready", _: [], $0: "" } as never);
 
     expect(updateAttemptStatus).toHaveBeenCalledTimes(1);
-    expect(updateAttemptStatus).toHaveBeenCalledWith("http://localhost:19840", "ws-1", "review-ready", undefined);
+    expect(updateAttemptStatus).toHaveBeenCalledWith("ws-1", "review-ready", undefined);
     expect(log).toHaveBeenCalledWith('Updated attempt status to "review-ready" for workspace PS-1_A1');
   });
 
   test("passes session id when provided", async () => {
-    const updateAttemptStatus = mock(async () => ({}));
+    const updateAttemptStatus = mock(async () => ({}) as never);
     const handler = createHandler({ ...baseDeps, updateAttemptStatus });
 
     await handler({ workspace: "PS-1_A1", status: "review-ready", "session-id": "sess-123", _: [], $0: "" } as never);
 
-    expect(updateAttemptStatus).toHaveBeenCalledWith("http://localhost:19840", "ws-1", "review-ready", "sess-123");
+    expect(updateAttemptStatus).toHaveBeenCalledWith("ws-1", "review-ready", "sess-123");
   });
 
   test("falls back to PSTDIO_SESSION_ID from env", async () => {
-    const updateAttemptStatus = mock(async () => ({}));
+    const updateAttemptStatus = mock(async () => ({}) as never);
     const originalSessionId = process.env.PSTDIO_SESSION_ID;
     process.env.PSTDIO_SESSION_ID = "sess-from-env";
 
@@ -61,11 +69,11 @@ describe("workspaces set-status", () => {
       }
     }
 
-    expect(updateAttemptStatus).toHaveBeenCalledWith("http://localhost:19840", "ws-1", "review-ready", "sess-from-env");
+    expect(updateAttemptStatus).toHaveBeenCalledWith("ws-1", "review-ready", "sess-from-env");
   });
 
   test("prefers explicit session id over PSTDIO_SESSION_ID from env", async () => {
-    const updateAttemptStatus = mock(async () => ({}));
+    const updateAttemptStatus = mock(async () => ({}) as never);
     const originalSessionId = process.env.PSTDIO_SESSION_ID;
     process.env.PSTDIO_SESSION_ID = "sess-from-env";
 
@@ -87,25 +95,23 @@ describe("workspaces set-status", () => {
       }
     }
 
-    expect(updateAttemptStatus).toHaveBeenCalledWith("http://localhost:19840", "ws-1", "review-ready", "sess-explicit");
+    expect(updateAttemptStatus).toHaveBeenCalledWith("ws-1", "review-ready", "sess-explicit");
   });
 
   test("auto-detects workspace from branch", async () => {
     const log = mock();
-    const updateAttemptStatus = mock(async () => ({}));
+    const updateAttemptStatus = mock(async () => ({}) as never);
     const handler = createHandler({
       ...baseDeps,
       getCurrentBranch: () => "workspace/PS-2_A1",
-      getWorkspace: async () => ({
-        id: "ws-2",
-        project_id: "proj-1",
-        name: "PS-2_A1",
-        workspace_shorthand: "PS-2_A1",
-        branch: "workspace/PS-2_A1",
-        worktree_path: "/wt/PS-2_A1",
-        created_at: "",
-        updated_at: "",
-      }),
+      getWorkspace: async () =>
+        makeWorkspace({
+          id: "ws-2",
+          name: "PS-2_A1",
+          branch: "workspace/PS-2_A1",
+          worktree_path: "/wt/PS-2_A1",
+          workspace_shorthand: "PS-2_A1",
+        }),
       updateAttemptStatus,
       log,
     });

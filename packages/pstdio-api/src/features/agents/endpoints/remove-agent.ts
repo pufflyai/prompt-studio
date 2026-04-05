@@ -33,7 +33,7 @@ export const removeAgentHandler = (deps: RouteDeps): AppRouteHandler<typeof remo
     const config = await deps.agentConfigService.get(agentId);
     const removed = await deps.agentConfigService.remove(agentId);
     if (!removed || !config) {
-      return c.json({ error: "Agent not found" }, 404);
+      return c.json({ error: `Agent not found: ${agentId}` }, 404);
     }
     deps.eventBus.emit("agent_configs", "delete", { id: config.id });
     return c.body(null, 204);

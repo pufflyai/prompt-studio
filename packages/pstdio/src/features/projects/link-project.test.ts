@@ -46,7 +46,7 @@ describe("linkProject", () => {
       shorthand: "E",
       created_at: "2026-01-01T00:00:00Z",
       updated_at: "2026-01-01T00:00:00Z",
-    });
+    } as never);
     expect(globalThis.fetch).toHaveBeenCalledTimes(2);
     expect(existsSync(join(root, ".pstdio"))).toBe(false);
     expect(existsSync(join(root, ".opencode"))).toBe(false);

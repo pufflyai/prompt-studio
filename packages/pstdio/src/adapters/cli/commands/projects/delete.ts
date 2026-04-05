@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { deleteProject } from "@/features/projects/api/delete-project";
 
 export const command = "delete <project-id>";
@@ -15,6 +14,6 @@ export const builder = (yargs: Argv) =>
 export const handler = async (argv: Arguments<{ "project-id": string }>) => {
   const projectId = argv["project-id"];
 
-  await deleteProject(API_URL, projectId);
+  await deleteProject(projectId);
   console.log(`Project "${projectId}" deleted.`);
 };

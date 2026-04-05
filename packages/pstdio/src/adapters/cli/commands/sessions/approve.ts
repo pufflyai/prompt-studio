@@ -36,7 +36,7 @@ const defaultDeps: Deps = {
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<ApproveArgs>) => {
-    const session = await deps.getSession(API_URL, argv.id);
+    const session = await deps.getSession(argv.id);
     if (!session) throw new Error(`Session not found: ${argv.id}`);
 
     if (session.status !== "awaiting_input") {

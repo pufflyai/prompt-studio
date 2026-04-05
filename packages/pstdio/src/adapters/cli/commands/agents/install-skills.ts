@@ -1,6 +1,5 @@
 import { isKnownAgentId, KNOWN_AGENT_IDS } from "pstdio-agents";
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { installSkillsForAgent } from "@/features/skills/install-default-skills";
 
@@ -41,7 +40,6 @@ export const handler = async (argv: Arguments<{ "agent-id": string; "global-skil
   const installed = await installSkillsForAgent({
     root: root ?? process.cwd(),
     agentId,
-    baseUrl: API_URL,
     projectId: projectConfig?.project_id,
     global: argv["global-skills"],
   });

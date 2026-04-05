@@ -1,6 +1,5 @@
 import { removeWorktreeAndBranch as defaultRemoveWorktreeAndBranch } from "pstdio-wt";
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { findGitRoot as defaultFindGitRoot, readConfig as defaultReadConfig } from "@/features/config/config";
 import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 import { resolveTicketByShorthand as defaultResolveTicketByShorthand } from "@/features/tickets/resolve-ticket-by-shorthand";
@@ -52,10 +51,10 @@ export const createHandler =
 
     const { projectId } = deps.resolveProjectId(deps.cwd(), argv["project-id"]);
 
-    const ticket = await deps.resolveTicketByShorthand(API_URL, projectId, argv.id);
+    const ticket = await deps.resolveTicketByShorthand(projectId, argv.id);
     if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
-    const workspaces = await deps.listWorkspaces(API_URL, projectId);
+    const workspaces = await deps.listWorkspaces(projectId);
     const withWorktree = workspaces.filter((ws) => ws.ticket_shorthand === ticket.shorthand && ws.worktree_path);
 
     if (withWorktree.length === 0) {

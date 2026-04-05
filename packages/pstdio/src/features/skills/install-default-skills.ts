@@ -9,7 +9,6 @@ import { listSkillsWithContent } from "./api/list-skills";
 type InstallSkillsOptions = {
   root: string;
   agentId: string;
-  baseUrl: string;
   projectId?: string;
   global?: boolean;
   homedir?: string;
@@ -44,7 +43,7 @@ const setupAvailableAgents = async (baseUrl: string, defaultAgentId: string) => 
 };
 
 const resolveConfiguredAgents = async (baseUrl: string) => {
-  const configured = await listAgents(baseUrl);
+  const configured = await listAgents();
   if (configured.length > 0) return configured;
 
   const available = await listAvailableAgents(baseUrl);
@@ -55,14 +54,14 @@ const resolveConfiguredAgents = async (baseUrl: string) => {
 };
 
 export const installSkillsForAgent = async (options: InstallSkillsOptions) => {
-  const { root, agentId, baseUrl, projectId, global: isGlobal = false, homedir = defaultHomedir() } = options;
+  const { root, agentId, projectId, global: isGlobal = false, homedir = defaultHomedir() } = options;
   const agent = findAgent(agentId);
   if (!agent) return [];
   if (!projectId) return [];
 
   const targetDir = isGlobal ? join(homedir, agent.globalSkillsDir) : join(root, agent.skillsDir);
 
-  const skills = await listSkillsWithContent(baseUrl, projectId);
+  const skills = await listSkillsWithContent(projectId);
   const installed: string[] = [];
 
   for (const skill of skills) {
@@ -77,17 +76,12 @@ export const installSkillsForAgent = async (options: InstallSkillsOptions) => {
   return installed;
 };
 
-export const removeBundledSkillsForAgent = async (
-  root: string,
-  agentId: string,
-  baseUrl: string,
-  projectId: string,
-) => {
+export const removeBundledSkillsForAgent = async (root: string, agentId: string, projectId: string) => {
   const agent = findAgent(agentId);
   if (!agent) return [];
 
   const skillsDir = join(root, agent.skillsDir);
-  const skills = await listSkillsWithContent(baseUrl, projectId);
+  const skills = await listSkillsWithContent(projectId);
   const removed: string[] = [];
 
   for (const skill of skills) {
@@ -110,7 +104,7 @@ export const installDefaultSkills = async (
   const configured = await resolveConfiguredAgents(baseUrl);
   if (configured.length === 0) return;
 
-  const skills = await listSkillsWithContent(baseUrl, projectId);
+  const skills = await listSkillsWithContent(projectId);
 
   for (const { agent_id } of configured) {
     const agent = findAgent(agent_id);

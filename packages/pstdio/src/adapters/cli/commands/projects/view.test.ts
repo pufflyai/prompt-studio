@@ -14,8 +14,10 @@ const makeDeps = (overrides: Partial<Parameters<typeof createHandler>[0]> = {}) 
       id: "proj-1",
       name: "my-app",
       shorthand: "MA",
+      startup_script: null,
       created_at: "2026-01-15T00:00:00.000Z",
       updated_at: "2026-01-20T12:00:00.000Z",
+      deleted_at: null,
     }),
     listRepos: async () => [
       { id: "r1", name: "repo-1", path: "/p/repo-1", display_name: null, created_at: "", updated_at: "" },
@@ -57,15 +59,17 @@ describe("projects view", () => {
       id: "other-id",
       name: "other",
       shorthand: "O",
+      startup_script: null,
       created_at: "2026-03-01T00:00:00.000Z",
       updated_at: "2026-03-01T00:00:00.000Z",
+      deleted_at: null,
     }));
     const deps = makeDeps({ getProject });
     const handler = createHandler(deps);
 
     await handler(argv({ "project-id": "other-id" }));
 
-    expect(getProject).toHaveBeenCalledWith(expect.any(String), "other-id");
+    expect(getProject).toHaveBeenCalledWith("other-id");
   });
 
   test("throws when no project specified and no config", async () => {

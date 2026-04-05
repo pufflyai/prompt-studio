@@ -6,8 +6,24 @@ describe("projects list", () => {
     const log = mock();
     const handler = createHandler({
       listProjects: async () => [
-        { id: "aaa", name: "alpha", created_at: "2026-01-15T00:00:00.000Z" },
-        { id: "bbb", name: "beta", created_at: "2026-02-20T00:00:00.000Z" },
+        {
+          id: "aaa",
+          name: "alpha",
+          shorthand: "A",
+          startup_script: null,
+          created_at: "2026-01-15T00:00:00.000Z",
+          updated_at: "2026-01-15T00:00:00.000Z",
+          deleted_at: null,
+        },
+        {
+          id: "bbb",
+          name: "beta",
+          shorthand: "B",
+          startup_script: null,
+          created_at: "2026-02-20T00:00:00.000Z",
+          updated_at: "2026-02-20T00:00:00.000Z",
+          deleted_at: null,
+        },
       ],
       log,
     });

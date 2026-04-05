@@ -1,8 +1,9 @@
+import type { HookHandler } from "./hooks/dispatcher";
 import type { ActionDescriptor, LoadedPlugin, ResolvedAction } from "./types";
 
 type HookHandlerEntry = {
   pluginIdentity: string;
-  handler: (...args: unknown[]) => unknown;
+  handler: HookHandler;
 };
 
 export const createPluginRegistry = (plugins: LoadedPlugin[]) => {
@@ -22,7 +23,7 @@ export const createPluginRegistry = (plugins: LoadedPlugin[]) => {
         namespacedKey,
         pluginIdentity: plugin.identity,
         descriptor: { ...descriptor, key: namespacedKey },
-        trigger,
+        trigger: trigger as ResolvedAction["trigger"],
       });
     }
 
@@ -30,7 +31,10 @@ export const createPluginRegistry = (plugins: LoadedPlugin[]) => {
       if (typeof handler !== "function") continue;
 
       const list = hookHandlers.get(hookName);
-      const entry = { pluginIdentity: plugin.identity, handler };
+      const entry: HookHandlerEntry = {
+        pluginIdentity: plugin.identity,
+        handler: handler as HookHandlerEntry["handler"],
+      };
 
       if (list) {
         list.push(entry);

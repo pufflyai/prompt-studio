@@ -79,14 +79,14 @@ afterEach(() => {
 describe("tickets pull", () => {
   test("pulls ticket content from file and attachment files into local ticket directory", async () => {
     const log = mock();
-    const getTicketFileContent = mock(async (_url: string, _ticketId: string, fileId: string) =>
+    const getTicketFileContent = mock(async (_ticketId: string, fileId: string) =>
       fileId === "file-content-1" ? Buffer.from("# Ticket from DB", "utf8") : Buffer.from("hello from db", "utf8"),
     );
 
     const handler = createHandler({
       ...baseDeps(),
-      resolveTicketByShorthand: async () => makeListItem(),
-      getTicket: async () => makeTicket(),
+      resolveTicketByShorthand: async () => makeListItem() as never,
+      getTicket: async () => makeTicket() as never,
       listTicketFiles: async () => [makeFile()],
       getTicketFileContent,
       log,
@@ -110,8 +110,8 @@ describe("tickets pull", () => {
   test("populates frontmatter with ticket metadata from DB", async () => {
     const handler = createHandler({
       ...baseDeps(),
-      resolveTicketByShorthand: async () => makeListItem({ status_name: "wip" }),
-      getTicket: async () => makeTicket({ parent_id: "PS-0" }),
+      resolveTicketByShorthand: async () => makeListItem({ status_name: "wip" }) as never,
+      getTicket: async () => makeTicket({ parent_id: "PS-0" }) as never,
       listTicketFiles: async () => [],
       getTicketFileContent: async () => Buffer.from("# Ticket from DB"),
       log: () => {},
@@ -131,14 +131,14 @@ describe("tickets pull", () => {
   test("writes parent_id frontmatter using parent ticket shorthand when DB stores parent UUID", async () => {
     const handler = createHandler({
       ...baseDeps(),
-      resolveTicketByShorthand: async () => makeListItem({ id: "child-ticket-id", shorthand: "PS-2" }),
-      getTicket: async (_url: string, id: string) => {
+      resolveTicketByShorthand: async () => makeListItem({ id: "child-ticket-id", shorthand: "PS-2" }) as never,
+      getTicket: async (id: string) => {
         if (id === "child-ticket-id") {
           return makeTicket({
             id: "child-ticket-id",
             shorthand: "PS-2",
             parent_id: "parent-ticket-id",
-          });
+          }) as never;
         }
 
         if (id === "parent-ticket-id") {
@@ -146,7 +146,7 @@ describe("tickets pull", () => {
             id: "parent-ticket-id",
             shorthand: "PS-1",
             parent_id: null,
-          });
+          }) as never;
         }
 
         return null as never;
@@ -172,8 +172,8 @@ describe("tickets pull", () => {
 
     const handler = createHandler({
       ...baseDeps(),
-      resolveTicketByShorthand: async () => makeListItem(),
-      getTicket: async () => makeTicket(),
+      resolveTicketByShorthand: async () => makeListItem() as never,
+      getTicket: async () => makeTicket() as never,
       listTicketFiles: async () => [makeFile({ size_bytes: 8 })],
       getTicketFileContent: async () => Buffer.from("# Pulled ticket\nnew content"),
       log: () => {},
@@ -191,16 +191,21 @@ describe("tickets pull", () => {
     const handler = createHandler({
       ...baseDeps(),
       resolveTicketByShorthand: async () => null as never,
-      getTicket: async (_baseUrl: string, id: string) =>
-        id === "ticket-1"
+      getTicket: async (id: string) =>
+        (id === "ticket-1"
           ? makeTicket({ id: "ticket-1", shorthand: "PS-1", display_title: "First ticket", file_id: "fc-1" })
-          : makeTicket({ id: "ticket-2", shorthand: "PS-2", display_title: "Second ticket", file_id: "fc-2" }),
+          : makeTicket({
+              id: "ticket-2",
+              shorthand: "PS-2",
+              display_title: "Second ticket",
+              file_id: "fc-2",
+            })) as never,
       listTicketFiles: async () => [],
-      getTicketFileContent: async (_url: string, _ticketId: string, fileId: string) =>
+      getTicketFileContent: async (_ticketId: string, fileId: string) =>
         fileId === "fc-1" ? Buffer.from("# First ticket") : Buffer.from("# Second ticket"),
       listTickets: async () => [
-        makeListItem({ id: "ticket-1", shorthand: "PS-1", display_title: "First ticket" }),
-        makeListItem({ id: "ticket-2", shorthand: "PS-2", display_title: "Second ticket" }),
+        makeListItem({ id: "ticket-1", shorthand: "PS-1", display_title: "First ticket" }) as never,
+        makeListItem({ id: "ticket-2", shorthand: "PS-2", display_title: "Second ticket" }) as never,
       ],
       log,
     });

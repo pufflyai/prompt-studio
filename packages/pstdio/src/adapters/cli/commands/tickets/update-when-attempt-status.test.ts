@@ -24,7 +24,7 @@ describe("tickets update-when-attempt-status", () => {
 
     await handler(argv({ id: "PS-1", "all-attempts-status": "reviewed", "set-status": "review" }));
 
-    expect(deps.updateWhenAttemptStatus).toHaveBeenCalledWith(expect.any(String), "ticket_1", {
+    expect(deps.updateWhenAttemptStatus).toHaveBeenCalledWith("ticket_1", {
       all_attempts_status: "reviewed",
       set_status: "review",
     });

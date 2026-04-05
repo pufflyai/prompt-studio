@@ -1,4 +1,12 @@
 import { z } from "@hono/zod-openapi";
+import {
+  agentAvailabilityTypeSchema,
+  agentConfigSchema,
+  agentInfoSchema,
+  agentModelSchema,
+  setupAgentInputSchema,
+  updateAgentInputSchema,
+} from "pstdio-api-contracts";
 
 export const checkAgentAvailabilityQuerySchema = z
   .object({
@@ -7,35 +15,17 @@ export const checkAgentAvailabilityQuerySchema = z
   .strict();
 
 export const availabilitySchema = z.object({
-  type: z.enum(["INSTALLED", "NOT_FOUND"]).openapi({ description: "Whether the agent is installed" }),
+  type: agentAvailabilityTypeSchema.openapi({ description: "Whether the agent is installed" }),
 });
 
-export const agentConfigResponseSchema = z.object({
-  id: z.string(),
-  agent_id: z.string(),
-  is_default: z.boolean(),
-  config: z.string(),
-  created_at: z.string(),
-  updated_at: z.string(),
-});
-
+export const agentConfigResponseSchema = agentConfigSchema;
 export const agentConfigListResponseSchema = z.array(agentConfigResponseSchema);
+export const agentInfoResponseSchema = agentInfoSchema;
+export const agentInfoListResponseSchema = z.array(agentInfoResponseSchema);
+export const agentModelResponseSchema = agentModelSchema;
+export const agentModelsListResponseSchema = z.array(agentModelResponseSchema);
 
-export const setupAgentBodySchema = z
-  .object({
-    agent_id: z.string().min(1).openapi({ description: "Agent identifier (e.g. claude-code, opencode)" }),
-    binary: z.string().min(1).optional().openapi({ description: "Agent binary path to store when creating config" }),
-  })
-  .strict();
+export const setupAgentBodySchema = setupAgentInputSchema.strict();
+export const updateAgentBodySchema = updateAgentInputSchema.strict();
 
-export const updateAgentBodySchema = z
-  .object({
-    is_default: z.boolean().optional().openapi({ description: "Set as the default agent" }),
-    binary: z.string().optional().openapi({ description: "Override the agent binary path" }),
-    skills_dir: z.string().optional().openapi({ description: "Override the agent skills directory" }),
-  })
-  .strict();
-
-export const notFoundResponseSchema = z.object({
-  error: z.string(),
-});
+export const notFoundResponseSchema = z.object({ error: z.string() });

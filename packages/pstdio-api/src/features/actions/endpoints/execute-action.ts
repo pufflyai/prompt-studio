@@ -60,8 +60,8 @@ export const executeActionHandler = (deps: RouteDeps): AppRouteHandler<typeof ex
     const { projectId, actionKey } = c.req.valid("param");
     const { target_type, target_id } = c.req.valid("json");
 
-    const { registry, client } = await deps.pluginService.getForProject(projectId);
-    const action = registry.getAction(actionKey);
+    const runtime = await deps.pluginService.getForProject(projectId);
+    const action = runtime.actions.get(actionKey);
 
     if (!action) {
       return c.json({ error: "Action not found" }, 404);
@@ -71,7 +71,7 @@ export const executeActionHandler = (deps: RouteDeps): AppRouteHandler<typeof ex
     const prompts = await resolvePrompts(deps, projectId);
 
     const ctx = {
-      client,
+      client: runtime.client,
       projectId,
       prompts,
       targetType: target_type,

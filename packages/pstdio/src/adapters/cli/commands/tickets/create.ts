@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { readConfig } from "@/features/config/config";
 import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 import { createTicket as defaultCreateTicket } from "@/features/tickets/api/create-ticket";
@@ -57,10 +56,10 @@ export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<CreateArgs>) => {
     const { root, projectId } = deps.resolveProjectId(deps.cwd(), argv["project-id"]);
-    const tagIds = argv.tag?.length ? await deps.resolveTagIds(API_URL, projectId, argv.tag) : undefined;
-    const statusId = argv.status ? await deps.resolveStatusId(API_URL, projectId, argv.status) : undefined;
+    const tagIds = argv.tag?.length ? await deps.resolveTagIds(projectId, argv.tag) : undefined;
+    const statusId = argv.status ? await deps.resolveStatusId(projectId, argv.status) : undefined;
 
-    const ticket = await deps.createTicket(API_URL, {
+    const ticket = await deps.createTicket({
       project_id: projectId,
       content: argv.content,
       draft: false,
@@ -70,12 +69,12 @@ export const createHandler =
 
     const ticketContent = `# ${argv.content}\n`;
     const contentBase64 = Buffer.from(ticketContent).toString("base64");
-    const uploaded = await deps.uploadTicketFile(API_URL, ticket.id, {
+    const uploaded = await deps.uploadTicketFile(ticket.id, {
       file_name: "ticket.md",
       content_base64: contentBase64,
       mime_type: "text/markdown",
     });
-    await deps.updateTicket(API_URL, ticket.id, { file_id: uploaded.id });
+    await deps.updateTicket(ticket.id, { file_id: uploaded.id });
 
     const isLocalProject = root && deps.readConfig(root);
     if (isLocalProject) {

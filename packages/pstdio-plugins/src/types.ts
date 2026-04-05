@@ -1,18 +1,6 @@
-export type ActionDescriptor = {
-  key: string;
-  label: string;
-  targetType: string;
-  placement: string;
-};
+import type { ActionDefinition, ActionDescriptor, PluginDefinition } from "@pstdio/sdk/plugins";
 
-export type ActionDefinition = ActionDescriptor & {
-  trigger: (ctx: unknown) => void | Promise<void>;
-};
-
-export type PluginDefinition = {
-  actions?: ActionDefinition[];
-  hooks?: Record<string, (...args: unknown[]) => unknown>;
-};
+export type { ActionDefinition, ActionDescriptor, PluginDefinition };
 
 export type LoadedPlugin = {
   identity: string;

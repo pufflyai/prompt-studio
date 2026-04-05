@@ -1,4 +1,3 @@
-import { API_URL } from "@/features/api-url";
 import { createTicketAttempt as defaultCreateTicketAttempt } from "@/features/tickets/api/create-ticket-attempt";
 import { listTickets as defaultListTickets } from "@/features/tickets/api/list-tickets";
 
@@ -25,11 +24,11 @@ export const createWorkspaceForTicket = async (input: CreateWorkspaceForTicketIn
   const { projectId, repoRoot, ticketShorthand, base } = input;
   const baseRef = base ?? "HEAD";
 
-  const tickets = await deps.listTickets(API_URL, { project_id: projectId, shorthand: ticketShorthand });
+  const tickets = await deps.listTickets({ project_id: projectId, shorthand: ticketShorthand });
   if (tickets.length === 0) throw new Error(`Ticket not found: ${ticketShorthand}`);
   const ticket = tickets[0];
 
-  const { workspace } = await deps.createTicketAttempt(API_URL, ticket.id, {
+  const { workspace } = await deps.createTicketAttempt(ticket.id, {
     mode: "worktree",
     start_session: false,
     base: baseRef,

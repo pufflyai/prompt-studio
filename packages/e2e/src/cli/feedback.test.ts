@@ -17,7 +17,7 @@ afterAll(() => {
 const runPstdioCaptured = (args: string, env: Record<string, string>) => {
   const result = spawnSync("bun", ["run", PSTDIO_CLI, ...args.split(" ")], {
     cwd: process.cwd(),
-    env: { ...process.env, ...env },
+    env: { ...process.env, PSTDIO_DISABLE_EMBED_MANIFEST: "1", PSTDIO_DISABLE_API_AUTO_START: "1", ...env },
     encoding: "utf8",
     timeout: TEST_TIMEOUT,
   });

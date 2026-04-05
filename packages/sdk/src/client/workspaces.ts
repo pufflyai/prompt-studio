@@ -3,13 +3,13 @@ import type {
   RemoveWorktreeResponse,
   UpdateAttemptStatusInput,
   UpdateAttemptStatusResponse,
-} from "../api/workspaces";
+} from "pstdio-api-contracts";
 import type { Workspace, WorkspaceListItem } from "../resources";
 import type { RequestFn } from "./request";
 
 export type WorkspaceClient = {
   list(projectId: string): Promise<WorkspaceListItem[]>;
-  get(workspaceId: string): Promise<Workspace>;
+  getByShorthand(projectId: string, shorthand: string): Promise<Workspace>;
   create(input: CreateWorkspaceInput): Promise<Workspace>;
   updateAttemptStatus(workspaceId: string, input: UpdateAttemptStatusInput): Promise<UpdateAttemptStatusResponse>;
   removeWorktree(workspaceId: string): Promise<RemoveWorktreeResponse>;
@@ -18,7 +18,10 @@ export type WorkspaceClient = {
 
 export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
   list: (projectId) => request(`/v1/workspaces?project_id=${projectId}`),
-  get: (workspaceId) => request(`/v1/workspaces/${workspaceId}`),
+  getByShorthand: (projectId, shorthand) =>
+    request(
+      `/v1/workspaces/by-shorthand?project_id=${encodeURIComponent(projectId)}&shorthand=${encodeURIComponent(shorthand)}`,
+    ),
   create: (input) => request("/v1/workspaces", { method: "POST", body: input }),
   updateAttemptStatus: (workspaceId, input) =>
     request(`/v1/workspaces/${workspaceId}/attempt-status`, { method: "PATCH", body: input }),

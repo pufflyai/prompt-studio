@@ -21,7 +21,7 @@ describe("tickets list", () => {
           status_name: "backlog",
           tag_names: ["bug"],
           created_at: "2026-03-04T00:00:00.000Z",
-        },
+        } as never,
       ],
       log,
     });

@@ -1,9 +1,11 @@
 import { afterEach, mock } from "bun:test";
+import { resetApiClient } from "@/features/api-client";
 
 const originalFetch = globalThis.fetch;
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  resetApiClient();
 });
 
 export const mockFetch = (status: number, body?: unknown) => {

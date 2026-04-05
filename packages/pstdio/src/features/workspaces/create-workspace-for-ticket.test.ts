@@ -1,5 +1,4 @@
 import { describe, expect, mock, test } from "bun:test";
-import { API_URL } from "@/features/api-url";
 import { createWorkspaceForTicket } from "./create-workspace-for-ticket";
 
 const mockTicket = {
@@ -40,15 +39,15 @@ const mockTicketAttempt = {
 };
 
 const baseDeps = {
-  listTickets: async () => [mockTicket],
-  createTicketAttempt: async () => mockTicketAttempt,
+  listTickets: async () => [mockTicket] as never,
+  createTicketAttempt: async () => mockTicketAttempt as never,
   log: mock() as (...args: unknown[]) => void,
 };
 
 describe("createWorkspaceForTicket", () => {
   test("creates workspace via ticket-attempt API with start_session=false", async () => {
     const log = mock();
-    const createTicketAttempt = mock(async () => mockTicketAttempt);
+    const createTicketAttempt = mock(async () => mockTicketAttempt) as never;
 
     const result = await createWorkspaceForTicket(
       { projectId: "proj-1", repoRoot: "/repo", ticketShorthand: "PS-1" },
@@ -56,34 +55,34 @@ describe("createWorkspaceForTicket", () => {
     );
 
     expect(createTicketAttempt).toHaveBeenCalledTimes(1);
-    expect(createTicketAttempt).toHaveBeenCalledWith(API_URL, "t-1", {
+    expect(createTicketAttempt).toHaveBeenCalledWith("t-1", {
       mode: "worktree",
       start_session: false,
       base: "HEAD",
       repo_path: "/repo",
     });
     expect(log).toHaveBeenCalledWith("Created workspace PS-1_A1 for PS-1 at /tmp/pstdio/workspaces/PS-1_A1");
-    expect(result).toEqual(mockWorkspace);
+    expect(result).toEqual(mockWorkspace as never);
   });
 
   test("throws when ticket not found", async () => {
     await expect(
       createWorkspaceForTicket(
         { projectId: "proj-1", repoRoot: "/repo", ticketShorthand: "PS-99" },
-        { ...baseDeps, listTickets: async () => [] },
+        { ...baseDeps, listTickets: async () => [] as never },
       ),
     ).rejects.toThrow("Ticket not found: PS-99");
   });
 
   test("uses base ref when provided", async () => {
-    const createTicketAttempt = mock(async () => mockTicketAttempt);
+    const createTicketAttempt = mock(async () => mockTicketAttempt) as never;
 
     await createWorkspaceForTicket(
       { projectId: "proj-1", repoRoot: "/repo", ticketShorthand: "PS-1", base: "main" },
       { ...baseDeps, createTicketAttempt },
     );
 
-    expect(createTicketAttempt).toHaveBeenCalledWith(API_URL, "t-1", {
+    expect(createTicketAttempt).toHaveBeenCalledWith("t-1", {
       mode: "worktree",
       start_session: false,
       base: "main",

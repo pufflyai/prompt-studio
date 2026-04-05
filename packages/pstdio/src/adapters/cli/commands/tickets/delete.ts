@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 import { deleteTicket as defaultDeleteTicket } from "@/features/tickets/api/delete-ticket";
 import { removeTicketDir as defaultRemoveTicketDir } from "@/features/tickets/local-ticket";
@@ -41,10 +40,10 @@ export const createHandler =
   async (argv: Arguments<DeleteArgs>) => {
     const { projectId, root } = deps.resolveProjectId(deps.cwd(), argv["project-id"]);
 
-    const ticket = await deps.resolveTicketByShorthand(API_URL, projectId, argv.id);
+    const ticket = await deps.resolveTicketByShorthand(projectId, argv.id);
     if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
-    await deps.deleteTicket(API_URL, ticket.id);
+    await deps.deleteTicket(ticket.id);
 
     if (root) {
       deps.removeTicketDir(root, argv.id);

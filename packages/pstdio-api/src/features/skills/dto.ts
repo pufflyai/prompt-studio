@@ -1,21 +1,6 @@
 import { z } from "@hono/zod-openapi";
+import { skillSchema, skillWithContentSchema } from "pstdio-api-contracts";
 
-export const skillResponseSchema = z.object({
-  id: z.string(),
-  project_id: z.string(),
-  name: z.string(),
-  description: z.string(),
-  file_id: z.string(),
-  created_at: z.string(),
-  updated_at: z.string(),
-});
-
-export const skillWithContentResponseSchema = skillResponseSchema.extend({
-  content: z.string(),
-  bundled_version: z.string(),
-  installed_agents: z.array(z.string()),
-});
-
-export const notFoundResponseSchema = z.object({
-  error: z.string(),
-});
+export const skillResponseSchema = skillSchema;
+export const skillWithContentResponseSchema = skillWithContentSchema;
+export const notFoundResponseSchema = z.object({ error: z.string() });

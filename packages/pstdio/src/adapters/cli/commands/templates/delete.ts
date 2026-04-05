@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { deleteTemplate } from "@/features/templates/api/delete-template";
 
@@ -38,7 +37,7 @@ export const createHandler =
     const config = deps.readConfig(root);
     if (!config) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
 
-    await deps.deleteTemplate(API_URL, config.project_id, argv.name);
+    await deps.deleteTemplate(config.project_id, argv.name);
     console.log(`Deleted template "${argv.name}"`);
   };
 

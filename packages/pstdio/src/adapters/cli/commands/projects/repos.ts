@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { listRepos } from "@/features/projects/api/list-repos";
 
@@ -59,7 +58,7 @@ export const createHandler =
       projectId = config.project_id;
     }
 
-    const repos = await deps.listRepos(API_URL, projectId);
+    const repos = await deps.listRepos(projectId);
 
     if (repos.length === 0) {
       console.log(

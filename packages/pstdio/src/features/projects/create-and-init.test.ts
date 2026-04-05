@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { resetApiClient } from "@/features/api-client";
 import { mockFetchSequence } from "@/test-utils/mock-fetch";
 import { createAndInitProject } from "./create-and-init";
 
@@ -13,6 +14,7 @@ const setup = (name: string) => {
 };
 
 beforeEach(() => {
+  resetApiClient();
   mkdirSync(tmpBase, { recursive: true });
 });
 
@@ -31,7 +33,7 @@ describe("createAndInitProject", () => {
     const fakeHome = join(tmpBase, "__fake-home__");
     const project = await createAndInitProject(root, "Test", { homedir: fakeHome, repoPaths: [root] });
 
-    expect(project).toEqual({ id: "proj-1", name: "Test" });
+    expect(project).toEqual({ id: "proj-1", name: "Test" } as never);
     expect(globalThis.fetch).toHaveBeenCalledTimes(2);
     expect(existsSync(join(root, ".pstdio"))).toBe(false);
     expect(existsSync(join(root, ".opencode"))).toBe(false);
@@ -50,7 +52,7 @@ describe("createAndInitProject", () => {
       repoPaths: [],
     });
 
-    expect(project).toEqual({ id: "proj-no-repo", name: "NoRepo" });
+    expect(project).toEqual({ id: "proj-no-repo", name: "NoRepo" } as never);
     // 1 create + 0 registerRepo + 1 agents + 1 agents/info = 3
     expect(globalThis.fetch).toHaveBeenCalledTimes(3);
 
@@ -84,7 +86,7 @@ describe("createAndInitProject", () => {
       homedir: join(tmpBase, "__fake-home__"),
       repoPaths: [root],
     });
-    expect(project).toEqual({ id: "proj-3", name: "HasDocs" });
+    expect(project).toEqual({ id: "proj-3", name: "HasDocs" } as never);
     expect(existsSync(join(docsDir, "navigation.json"))).toBe(false);
     expect(existsSync(join(docsDir, "index.md"))).toBe(false);
     expect(readFileSync(join(docsDir, "my-doc.md"), "utf8")).toBe("existing doc");

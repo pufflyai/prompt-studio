@@ -2,7 +2,6 @@ import { isKnownAgentId, KNOWN_AGENT_IDS } from "pstdio-agents";
 import type { Arguments, Argv } from "yargs";
 import { setupAgent } from "@/features/agents/api/setup-agent";
 import { doesAgentRequirePlugins, installPluginsForAgent } from "@/features/agents/install-agent-plugins";
-import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { installSkillsForAgent } from "@/features/skills/install-default-skills";
 
@@ -35,7 +34,7 @@ type SetupArgs = {
 
 type Deps = {
   cwd: () => string;
-  setupAgent: (agentId: string) => Promise<{ agent_id: string; is_default: boolean }>;
+  setupAgent: typeof setupAgent;
   findGitRoot: typeof findGitRoot;
   readConfig: typeof readConfig;
   installSkillsForAgent: typeof installSkillsForAgent;
@@ -76,7 +75,6 @@ export const createHandler = (deps: Deps) => {
       installedSkills = await deps.installSkillsForAgent({
         root: installRoot,
         agentId,
-        baseUrl: API_URL,
         projectId: projectConfig?.project_id,
         global: shouldInstallGlobalSkills,
       });
@@ -108,7 +106,7 @@ export const createHandler = (deps: Deps) => {
 
 export const handler = createHandler({
   cwd: () => process.cwd(),
-  setupAgent: (agentId) => setupAgent(API_URL, agentId),
+  setupAgent,
   findGitRoot,
   readConfig,
   installSkillsForAgent,

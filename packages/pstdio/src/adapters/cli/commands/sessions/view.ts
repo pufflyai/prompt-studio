@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { getSession as defaultGetSession } from "@/features/sessions/api/get-session";
 
 export const command = "view";
@@ -23,7 +22,7 @@ const defaultDeps: Deps = {
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<ViewArgs>) => {
-    const session = await deps.getSession(API_URL, argv.id);
+    const session = await deps.getSession(argv.id);
     if (!session) throw new Error(`Session not found: ${argv.id}`);
 
     const lines = [

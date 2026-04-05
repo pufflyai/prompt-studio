@@ -145,7 +145,7 @@ Defaults should apply when this block is absent.
 
 Primary implementation points:
 
-1. `packages/pstdio-hooks/src/hooks.ts`
+1. `packages/pstdio-plugins/src/hooks/dispatcher.ts`
    - emit `hook.run.*` events around execution lifecycle.
    - include timeout and spawn-failure logging paths.
 2. `packages/pstdio-api/src/features/hooks/post-hook-store.ts`

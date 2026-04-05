@@ -1,7 +1,6 @@
 import { isKnownAgentId, KNOWN_AGENT_IDS } from "pstdio-agents";
 import type { Arguments, Argv } from "yargs";
 import { updateAgent as updateAgentApi } from "@/features/agents/api/update-agent";
-import { API_URL } from "@/features/api-url";
 
 export const command = "update <agent-id>";
 export const describe = "Update an agent configuration";
@@ -63,5 +62,5 @@ export const createHandler = (deps: Deps) => {
 };
 
 export const handler = createHandler({
-  updateAgent: (agentId, fields) => updateAgentApi(API_URL, agentId, fields),
+  updateAgent: (agentId, fields) => updateAgentApi(agentId, fields),
 });

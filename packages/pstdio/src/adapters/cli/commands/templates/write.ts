@@ -1,7 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { getTemplate } from "@/features/templates/api/get-template";
 import { replacePlaceholders } from "@/features/templates/replace-placeholders";
@@ -89,7 +88,7 @@ export const createHandler =
     const config = deps.readConfig(root);
     if (!config) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
 
-    const template = await deps.getTemplate(API_URL, config.project_id, argv.name);
+    const template = await deps.getTemplate(config.project_id, argv.name);
     if (!template) throw new Error(`Template not found: ${argv.name}`);
 
     const docsTarget = isDocsTarget(argv.target);

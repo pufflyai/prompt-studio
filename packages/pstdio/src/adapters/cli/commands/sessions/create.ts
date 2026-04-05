@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { createSession as defaultCreateSession } from "@/features/sessions/api/create-session";
 import { parseVars } from "./parse-vars";
@@ -68,7 +67,7 @@ export const createHandler =
     const title = argv.title ?? (argv.prompt ?? argv.template ?? "").slice(0, 50);
     const agent = argv.agent;
 
-    const session = await deps.createSession(API_URL, {
+    const session = await deps.createSession({
       project_id: projectId,
       title,
       prompt: argv.prompt,

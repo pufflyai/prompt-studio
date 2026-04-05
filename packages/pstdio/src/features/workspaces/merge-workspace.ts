@@ -3,7 +3,6 @@ import {
   mergeWorktree as defaultMergeWorktree,
   removeWorktreeAndBranch as defaultRemoveWorktreeAndBranch,
 } from "pstdio-wt";
-import { API_URL } from "@/features/api-url";
 import { deleteWorkspace as defaultDeleteWorkspace } from "./api/delete-workspace";
 import { getWorkspace as defaultGetWorkspace } from "./api/get-workspace";
 
@@ -54,7 +53,7 @@ const cleanupWorkspace = async (
   worktreePath: string | null,
   branch: string,
 ) => {
-  await deps.deleteWorkspace(API_URL, workspaceId);
+  await deps.deleteWorkspace(workspaceId);
   if (worktreePath) {
     try {
       await deps.removeWorktreeAndBranch({ repoRoot: root, path: worktreePath, branch, force: true });
@@ -70,7 +69,7 @@ export const mergeWorkspace = async (input: MergeWorkspaceInput, deps: Deps = de
   const clean = await deps.isCleanWorkingTree(repoRoot);
   if (!clean) throw new Error("Branch has uncommitted changes");
 
-  const workspace = await deps.getWorkspace(API_URL, projectId, workspaceShorthand);
+  const workspace = await deps.getWorkspace(projectId, workspaceShorthand);
   if (!workspace) throw new Error(`Workspace not found: ${workspaceShorthand}`);
 
   const branch = workspace.branch ?? `workspace/${workspace.workspace_shorthand}`;

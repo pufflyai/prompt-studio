@@ -24,19 +24,20 @@ describe("tickets files", () => {
     const handler = createHandler({
       cwd: () => tmpBase,
       resolveProjectId: () => ({ projectId: "proj-1", root: tmpBase }),
-      resolveTicketByShorthand: async () => ({
-        id: "ticket-1",
-        shorthand: "PS-1",
-        project_id: "proj-1",
-        status_id: null,
-        display_title: "Ticket",
-        file_id: null,
-        draft: false,
-        archived: false,
-        status_name: null,
-        tag_names: [],
-        created_at: "2026-03-04T00:00:00.000Z",
-      }),
+      resolveTicketByShorthand: async () =>
+        ({
+          id: "ticket-1",
+          shorthand: "PS-1",
+          project_id: "proj-1",
+          status_id: null,
+          display_title: "Ticket",
+          file_id: null,
+          draft: false,
+          archived: false,
+          status_name: null,
+          tag_names: [],
+          created_at: "2026-03-04T00:00:00.000Z",
+        }) as never,
       listTicketFiles: async () => [
         {
           id: "db-1",
@@ -81,19 +82,20 @@ describe("tickets files", () => {
     const handler = createHandler({
       cwd: () => tmpBase,
       resolveProjectId: () => ({ projectId: "proj-1", root: tmpBase }),
-      resolveTicketByShorthand: async () => ({
-        id: "ticket-1",
-        shorthand: "PS-1",
-        project_id: "proj-1",
-        status_id: null,
-        display_title: "Ticket",
-        file_id: null,
-        draft: false,
-        archived: false,
-        status_name: null,
-        tag_names: [],
-        created_at: "2026-03-04T00:00:00.000Z",
-      }),
+      resolveTicketByShorthand: async () =>
+        ({
+          id: "ticket-1",
+          shorthand: "PS-1",
+          project_id: "proj-1",
+          status_id: null,
+          display_title: "Ticket",
+          file_id: null,
+          draft: false,
+          archived: false,
+          status_name: null,
+          tag_names: [],
+          created_at: "2026-03-04T00:00:00.000Z",
+        }) as never,
       listTicketFiles: async () => [],
       log,
     });

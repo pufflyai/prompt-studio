@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 import { getTicket as defaultGetTicket } from "@/features/tickets/api/get-ticket";
 import { getTicketFileContent as defaultGetTicketFileContent } from "@/features/tickets/api/get-ticket-file-content";
@@ -60,7 +59,7 @@ const resolveParentFrontmatterValue = async (deps: Deps, parentId: string | null
     return parentId;
   }
 
-  const parentTicket = await deps.getTicket(API_URL, parentId);
+  const parentTicket = await deps.getTicket(parentId);
   if (!parentTicket?.shorthand) {
     return parentId;
   }
@@ -69,7 +68,7 @@ const resolveParentFrontmatterValue = async (deps: Deps, parentId: string | null
 };
 
 const pullSingleTicket = async ({ deps, root, ticketId, shorthand, statusName, tagNames, force }: PullTicketOpts) => {
-  const ticket = await deps.getTicket(API_URL, ticketId);
+  const ticket = await deps.getTicket(ticketId);
   if (!ticket) throw new Error(`Ticket not found: ${shorthand}`);
   const parentId = await resolveParentFrontmatterValue(deps, ticket.parent_id);
 
@@ -88,7 +87,7 @@ const pullSingleTicket = async ({ deps, root, ticketId, shorthand, statusName, t
 
   let bodyContent = "";
   if (ticket.file_id) {
-    const fileBuffer = await deps.getTicketFileContent(API_URL, ticket.id, ticket.file_id);
+    const fileBuffer = await deps.getTicketFileContent(ticket.id, ticket.file_id);
     bodyContent = fileBuffer.toString("utf-8");
   }
 
@@ -96,11 +95,11 @@ const pullSingleTicket = async ({ deps, root, ticketId, shorthand, statusName, t
   const filePath = writeTicketFile(root, shorthand, content, force);
   const ticketDir = filePath.replace(/\/ticket\.md$/, "").replace(`${root}/`, "");
 
-  const files = await deps.listTicketFiles(API_URL, ticket.id);
+  const files = await deps.listTicketFiles(ticket.id);
   const attachments = files.filter((f) => f.id !== ticket.file_id);
 
   for (const file of attachments) {
-    const fileContent = await deps.getTicketFileContent(API_URL, ticket.id, file.id);
+    const fileContent = await deps.getTicketFileContent(ticket.id, file.id);
     writeTicketAttachment(root, shorthand, file.file_name, fileContent, force);
   }
 
@@ -115,7 +114,7 @@ export const createHandler =
     if (!root) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
 
     if (argv.id) {
-      const ticketListItem = await deps.resolveTicketByShorthand(API_URL, projectId, argv.id);
+      const ticketListItem = await deps.resolveTicketByShorthand(projectId, argv.id);
       if (!ticketListItem) throw new Error(`Ticket not found: ${argv.id}`);
       await pullSingleTicket({
         deps,
@@ -129,7 +128,7 @@ export const createHandler =
       return;
     }
 
-    const tickets = await deps.listTickets(API_URL, { project_id: projectId, archived: false });
+    const tickets = await deps.listTickets({ project_id: projectId, archived: false });
 
     if (tickets.length === 0) {
       deps.log("No tickets to pull.");

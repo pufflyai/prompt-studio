@@ -37,7 +37,7 @@ describe("tickets delete", () => {
 
     await handler({ id: "PS-1" } as Arguments<{ id: string }>);
 
-    expect(deps.deleteTicket).toHaveBeenCalledWith(expect.any(String), "t-1");
+    expect(deps.deleteTicket).toHaveBeenCalledWith("t-1");
     expect(deps.removeTicketDir).toHaveBeenCalledWith("/fake", "PS-1");
     expect(deps.log).toHaveBeenCalledWith("Deleted ticket PS-1");
   });
@@ -55,7 +55,7 @@ describe("tickets delete", () => {
 
     await handler({ id: "PS-1", "project-id": "proj-1" } as Arguments<{ id: string; "project-id"?: string }>);
 
-    expect(deps.deleteTicket).toHaveBeenCalledWith(expect.any(String), "t-1");
+    expect(deps.deleteTicket).toHaveBeenCalledWith("t-1");
     expect(deps.log).toHaveBeenCalledWith("Deleted ticket PS-1");
   });
 

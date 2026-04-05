@@ -1,3 +1,4 @@
+export type { Repo } from "pstdio-api-contracts";
 export type { AgentAvailabilityType, AgentConfig, AgentInfo, AgentModel } from "./agent";
 export type { FileRecord } from "./file";
 export type { Project } from "./project";

@@ -1,5 +1,21 @@
-import { describe, expect, it } from "bun:test";
-import plugin from "../../../files/plugins/pstdio/code-review-lifecycle";
+import { beforeAll, describe, expect, it } from "bun:test";
+import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+const TEMPLATE_DIR = join(import.meta.dirname, "../../../files/plugins/pstdio");
+
+let plugin: { hooks?: Record<string, (...args: never[]) => Promise<void>> };
+
+beforeAll(async () => {
+  const src = join(TEMPLATE_DIR, "code-review-lifecycle.ts.txt");
+  const tmp = join(TEMPLATE_DIR, `__test_temp_${Date.now()}__.ts`);
+  writeFileSync(tmp, readFileSync(src, "utf8"));
+  try {
+    plugin = (await import(tmp)).default;
+  } finally {
+    rmSync(tmp, { force: true });
+  }
+});
 
 describe("default code-review-lifecycle plugin", () => {
   it("creates review sessions linked back to the current implementation session", async () => {

@@ -74,8 +74,7 @@ function LinkEditor({
     if (
       selection !== null &&
       nativeSelection !== null &&
-      rootElement !== null &&
-      rootElement.contains(nativeSelection.anchorNode) &&
+      rootElement?.contains(nativeSelection.anchorNode) &&
       editor.isEditable()
     ) {
       const domRect: DOMRect | undefined = nativeSelection.focusNode?.parentElement?.getBoundingClientRect();

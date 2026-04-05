@@ -1,5 +1,1 @@
-export type CreateStatusInput = {
-  name: string;
-  color: string;
-  is_default?: boolean;
-};
+export type { CreateAttemptStatusInput, CreateStatusInput } from "pstdio-api-contracts";

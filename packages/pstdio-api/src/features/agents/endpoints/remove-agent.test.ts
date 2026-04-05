@@ -30,7 +30,7 @@ describe("DELETE /v1/agents/:agentId", () => {
     expect(res.status).toBe(404);
 
     const body = await res.json();
-    expect(body.error).toBe("Agent not found");
+    expect(body.error).toBe("Agent not found: unknown");
   });
 
   test("removes a configured agent", async () => {

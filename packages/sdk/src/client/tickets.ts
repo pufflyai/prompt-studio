@@ -25,6 +25,7 @@ export type TicketClient = {
   listFiles(ticketId: string): Promise<TicketFile[]>;
   getFileContent(ticketId: string, fileId: string): Promise<Uint8Array>;
   uploadFile(ticketId: string, input: UploadTicketFileInput): Promise<TicketFile>;
+  deleteFile(ticketId: string, fileId: string): Promise<void>;
 };
 
 const resolveBaseUrl = (options: ClientOptions) =>
@@ -89,4 +90,5 @@ export const createTicketClient = (request: RequestFn, options: ClientOptions = 
     return new Uint8Array(await response.arrayBuffer());
   },
   uploadFile: (ticketId, input) => request(`/v1/tickets/${ticketId}/files`, { method: "POST", body: input }),
+  deleteFile: (ticketId, fileId) => request(`/v1/tickets/${ticketId}/files/${fileId}`, { method: "DELETE" }),
 });

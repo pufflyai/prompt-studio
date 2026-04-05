@@ -1,8 +1,6 @@
-import { join } from "node:path";
-import { createHookDispatcher } from "pstdio-hooks";
-import { loadPlugins } from "pstdio-plugins";
+import type { PstdioClient } from "@pstdio/sdk/client";
+import { loadPluginRuntime } from "pstdio-plugins/hooks";
 import { removeWorktreeAndBranch as defaultRemoveWorktreeAndBranch } from "pstdio-wt";
-import { API_URL } from "@/features/api-url";
 import { deleteWorkspace as defaultDeleteWorkspaceApi } from "./api/delete-workspace";
 import { getWorkspace as defaultGetWorkspace } from "./api/get-workspace";
 
@@ -26,15 +24,14 @@ type Deps = {
 };
 
 const createDispatchForRepo = async (repoRoot: string): Promise<HookDispatch> => {
-  const pluginsDir = join(repoRoot, ".pstdio", "plugins");
-  const plugins = await loadPlugins(pluginsDir);
-  const dispatcher = createHookDispatcher();
-  for (const plugin of plugins) {
-    for (const [hookName, handler] of Object.entries(plugin.definition.hooks ?? {})) {
-      if (typeof handler === "function") dispatcher.register(hookName, handler as never);
-    }
-  }
-  return dispatcher;
+  const runtime = await loadPluginRuntime({
+    repoPath: repoRoot,
+    client: {} as PstdioClient,
+  });
+  return {
+    firePreHook: (hookName, ctx) => runtime.hooks.firePre(hookName as never, ctx as never),
+    firePostHook: (hookName, ctx) => runtime.hooks.firePost(hookName as never, ctx as never),
+  };
 };
 
 const defaultDeps: Deps = {
@@ -53,7 +50,7 @@ export const deleteWorkspaceWithWorktree = async (input: DeleteWorkspaceInput, d
   const { repoRoot, projectId, workspaceShorthand } = input;
   const dispatch = deps.dispatch ?? (await createDispatchForRepo(repoRoot));
 
-  const workspace = await deps.getWorkspace(API_URL, projectId, workspaceShorthand);
+  const workspace = await deps.getWorkspace(projectId, workspaceShorthand);
   if (!workspace) throw new Error(`Workspace not found: ${workspaceShorthand}`);
 
   const branch = workspace.branch ?? `workspace/${workspace.workspace_shorthand}`;
@@ -75,7 +72,7 @@ export const deleteWorkspaceWithWorktree = async (input: DeleteWorkspaceInput, d
     }
   }
 
-  await deps.deleteWorkspace(API_URL, workspace.id);
+  await deps.deleteWorkspace(workspace.id);
 
   if (workspace.worktree_path) {
     try {

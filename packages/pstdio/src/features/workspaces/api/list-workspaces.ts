@@ -1,17 +1,3 @@
-type WorkspaceListItem = {
-  id: string;
-  workspace_shorthand: string;
-  ticket_shorthand: string;
-  branch: string | null;
-  worktree_path: string | null;
-  attempt_status_id: string | null;
-  attempt_status_name: string | null;
-};
+import { apiClient } from "@/features/api-client";
 
-export const listWorkspaces = async (baseUrl: string, projectId: string) => {
-  const res = await fetch(`${baseUrl}/v1/workspaces?project_id=${encodeURIComponent(projectId)}`);
-
-  if (!res.ok) throw new Error(`Failed to list workspaces: ${res.status}`);
-
-  return (await res.json()) as WorkspaceListItem[];
-};
+export const listWorkspaces = async (projectId: string) => apiClient().workspaces.list(projectId);

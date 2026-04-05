@@ -39,12 +39,16 @@ export const ensurePluginWorkspace = async (pstdioDir: string) => {
   writeFileSync(join(pstdioDir, ".gitignore"), `${GITIGNORE_ENTRIES}\n`);
 
   const runtime = detectRuntime();
-  if (runtime === "bun") {
-    execFileSync("bun", ["install"], { cwd: pstdioDir, stdio: "ignore" });
-  } else {
-    execFileSync("npm", ["install", "--ignore-scripts", "--no-audit", "--fund=false"], {
-      cwd: pstdioDir,
-      stdio: "ignore",
-    });
+  try {
+    if (runtime === "bun") {
+      execFileSync("bun", ["install"], { cwd: pstdioDir, stdio: "ignore" });
+    } else {
+      execFileSync("npm", ["install", "--ignore-scripts", "--no-audit", "--fund=false"], {
+        cwd: pstdioDir,
+        stdio: "ignore",
+      });
+    }
+  } catch {
+    // Keep local plugin loading available even if SDK installation is unavailable.
   }
 };

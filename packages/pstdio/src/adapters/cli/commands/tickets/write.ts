@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 import { getTemplate } from "@/features/templates/api/get-template";
 import { replacePlaceholders } from "@/features/templates/replace-placeholders";
@@ -66,10 +65,10 @@ export const createHandler =
   async (argv: Arguments<WriteArgs>) => {
     const { root, projectId } = deps.resolveProjectId(deps.cwd());
     if (!root) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
-    const tagIds = argv.tag?.length ? await deps.resolveTagIds(API_URL, projectId, argv.tag) : undefined;
-    const statusId = argv.status ? await deps.resolveStatusId(API_URL, projectId, argv.status) : undefined;
+    const tagIds = argv.tag?.length ? await deps.resolveTagIds(projectId, argv.tag) : undefined;
+    const statusId = argv.status ? await deps.resolveStatusId(projectId, argv.status) : undefined;
 
-    const ticket = await deps.createTicket(API_URL, {
+    const ticket = await deps.createTicket({
       project_id: projectId,
       content: `# ${argv.title}\n`,
       user_prompt: argv["user-prompt"],
@@ -94,7 +93,7 @@ export const createHandler =
 
     let bodyContent: string;
     if (argv.template) {
-      const template = await deps.getTemplate(API_URL, projectId, argv.template);
+      const template = await deps.getTemplate(projectId, argv.template);
       if (!template) throw new Error(`Template not found: ${argv.template}`);
       bodyContent = renderTemplate(template.content, ticket.shorthand, argv, ticket.created_at);
     } else {

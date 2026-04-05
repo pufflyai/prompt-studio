@@ -42,8 +42,8 @@ describe("tickets view", () => {
     const handler = createHandler({
       cwd: () => "/work/repo",
       resolveProjectId: () => ({ projectId: "proj-1", root: "/work/repo" }),
-      resolveTicketByShorthand: async () => makeListItem(),
-      getTicket: async () => makeTicket(),
+      resolveTicketByShorthand: async () => makeListItem() as never,
+      getTicket: async () => makeTicket() as never,
       log,
     });
 
@@ -60,8 +60,8 @@ describe("tickets view", () => {
     const handler = createHandler({
       cwd: () => "/work/repo",
       resolveProjectId: () => ({ projectId: "proj-1", root: "/work/repo" }),
-      resolveTicketByShorthand: async () => makeListItem({ tag_names: [], status_name: null }),
-      getTicket: async () => makeTicket(),
+      resolveTicketByShorthand: async () => makeListItem({ tag_names: [], status_name: null }) as never,
+      getTicket: async () => makeTicket() as never,
       log,
     });
 
@@ -77,8 +77,8 @@ describe("tickets view", () => {
     const handler = createHandler({
       cwd: () => "/work/repo",
       resolveProjectId,
-      resolveTicketByShorthand: async () => makeListItem(),
-      getTicket: async () => makeTicket(),
+      resolveTicketByShorthand: async () => makeListItem() as never,
+      getTicket: async () => makeTicket() as never,
       log: mock(),
     });
 
@@ -92,8 +92,8 @@ describe("tickets view", () => {
     const handler = createHandler({
       cwd: () => "/work/repo",
       resolveProjectId: () => ({ projectId: "proj-1", root: "/work/repo" }),
-      resolveTicketByShorthand: async () => makeListItem({ status_name: "review" }),
-      getTicket: async () => makeTicket(),
+      resolveTicketByShorthand: async () => makeListItem({ status_name: "review" }) as never,
+      getTicket: async () => makeTicket() as never,
       log,
     });
 
@@ -108,8 +108,8 @@ describe("tickets view", () => {
     const handler = createHandler({
       cwd: () => "/work/repo",
       resolveProjectId: () => ({ projectId: "proj-1", root: "/work/repo" }),
-      resolveTicketByShorthand: async () => makeListItem(),
-      getTicket: async () => makeTicket({ display_title: "Fix login bug" }),
+      resolveTicketByShorthand: async () => makeListItem() as never,
+      getTicket: async () => makeTicket({ display_title: "Fix login bug" }) as never,
       log,
     });
 
@@ -124,8 +124,8 @@ describe("tickets view", () => {
     const handler = createHandler({
       cwd: () => "/work/repo",
       resolveProjectId: () => ({ projectId: "proj-1", root: "/work/repo" }),
-      resolveTicketByShorthand: async () => makeListItem({ tag_names: ["bug", "urgent"] }),
-      getTicket: async () => makeTicket(),
+      resolveTicketByShorthand: async () => makeListItem({ tag_names: ["bug", "urgent"] }) as never,
+      getTicket: async () => makeTicket() as never,
       log,
     });
 
@@ -140,7 +140,7 @@ describe("tickets view", () => {
       cwd: () => "/work/repo",
       resolveProjectId: () => ({ projectId: "proj-1", root: "/work/repo" }),
       resolveTicketByShorthand: async () => null as never,
-      getTicket: async () => null,
+      getTicket: async () => null as never,
       log: () => {},
     });
 

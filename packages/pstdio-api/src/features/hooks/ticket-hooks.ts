@@ -17,10 +17,10 @@ export const fireTicketHook = async (
   projectId: string,
   payload: Record<string, unknown>,
 ): Promise<FireTicketHookResult> => {
-  const { dispatcher, client } = await deps.pluginService.getForProject(projectId);
+  const runtime = await deps.pluginService.getForProject(projectId);
   const hookContext = { projectId, ...payload };
-  const ctx = { ...hookContext, client: withHookSessionClient(client, hookContext) };
-  const result = await dispatcher.firePreHook(hookName, ctx);
+  const ctx = { ...hookContext, client: withHookSessionClient(runtime.client, hookContext) };
+  const result = await runtime.hooks.firePre(hookName as never, ctx as never);
 
   if (result.rejected) {
     return { rejected: true, stderr: result.reason ?? "", modifiedPayload: null };
@@ -36,9 +36,9 @@ export const fireTicketHookAsync = (
   payload: Record<string, unknown>,
 ) => {
   void (async () => {
-    const { dispatcher, client } = await deps.pluginService.getForProject(projectId);
+    const runtime = await deps.pluginService.getForProject(projectId);
     const hookContext = { projectId, ...payload };
-    const ctx = { ...hookContext, client: withHookSessionClient(client, hookContext) };
-    await dispatcher.firePostHook(hookName, ctx);
+    const ctx = { ...hookContext, client: withHookSessionClient(runtime.client, hookContext) };
+    await runtime.hooks.firePost(hookName as never, ctx as never);
   })().catch(() => {});
 };

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createRoute, z } from "@hono/zod-openapi";
+import { updateAttemptStatusResponseSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { firePostAttemptStatusHook, firePreAttemptStatusHook } from "../../hooks/attempt-status-hooks";
@@ -12,13 +13,7 @@ const attemptStatusBodySchema = z
   })
   .strict();
 
-const attemptStatusResponseSchema = z.object({
-  id: z.string(),
-  attempt_status_id: z.string().nullable(),
-  from_status: z.string().nullable(),
-  to_status: z.string(),
-  status_change_id: z.string(),
-});
+const attemptStatusResponseSchema = updateAttemptStatusResponseSchema;
 
 const hookRejectedSchema = z.object({ error: z.string(), hook_output: z.string() });
 const errorSchema = z.object({ error: z.string() });

@@ -29,7 +29,7 @@ export const firePreAttemptStatusHook = async (
   deps: AttemptStatusHookDeps,
   context: PreHookContext,
 ): Promise<PreHookResult> => {
-  const { dispatcher, client } = await deps.pluginService.getForProject(context.projectId);
+  const runtime = await deps.pluginService.getForProject(context.projectId);
 
   const hookContext = {
     projectId: context.projectId,
@@ -40,10 +40,10 @@ export const firePreAttemptStatusHook = async (
 
   const ctx = {
     ...hookContext,
-    client: withHookSessionClient(client, hookContext),
+    client: withHookSessionClient(runtime.client, hookContext),
   };
 
-  const result = await dispatcher.firePreHook("preAttemptStatusChange", ctx);
+  const result = await runtime.hooks.firePre("preAttemptStatusChange", ctx as never);
 
   if (result.rejected) {
     return { rejected: true, stderr: result.reason ?? "", stdout: "" };
@@ -60,7 +60,7 @@ export const deliverPostAttemptStatusHook = async (
   const entry = store.consume(sessionId);
   if (!entry) return null;
 
-  const { dispatcher, client } = await deps.pluginService.getForProject(entry.projectId);
+  const runtime = await deps.pluginService.getForProject(entry.projectId);
 
   const hookContext = {
     projectId: entry.projectId,
@@ -71,14 +71,14 @@ export const deliverPostAttemptStatusHook = async (
 
   const ctx = {
     ...hookContext,
-    client: withHookSessionClient(client, hookContext),
+    client: withHookSessionClient(runtime.client, hookContext),
   };
 
-  await dispatcher.firePostHook("postAttemptStatusChange", ctx);
+  await runtime.hooks.firePost("postAttemptStatusChange", ctx as never);
 };
 
 export const firePostAttemptStatusHook = async (deps: AttemptStatusHookDeps, context: PostHookContext) => {
-  const { dispatcher, client } = await deps.pluginService.getForProject(context.projectId);
+  const runtime = await deps.pluginService.getForProject(context.projectId);
 
   const hookContext = {
     projectId: context.projectId,
@@ -88,8 +88,8 @@ export const firePostAttemptStatusHook = async (deps: AttemptStatusHookDeps, con
 
   const ctx = {
     ...hookContext,
-    client: withHookSessionClient(client, hookContext),
+    client: withHookSessionClient(runtime.client, hookContext),
   };
 
-  await dispatcher.firePostHook("postAttemptStatusChange", ctx);
+  await runtime.hooks.firePost("postAttemptStatusChange", ctx as never);
 };

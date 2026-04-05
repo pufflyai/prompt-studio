@@ -129,9 +129,9 @@ const fireSessionHook = (deps: SessionHookDeps, hookName: string, session: Sessi
       ctx = { projectId: session.project_id, sessionId: session.id, sessionStatus: session.status };
     }
 
-    const { dispatcher, client } = await deps.pluginService.getForProject(session.project_id);
-    const hookClient = withHookSessionClient(client, ctx);
-    await dispatcher.firePostHook(hookName, { ...ctx, client: hookClient });
+    const runtime = await deps.pluginService.getForProject(session.project_id);
+    const hookClient = withHookSessionClient(runtime.client, ctx);
+    await runtime.hooks.firePost(hookName as never, { ...ctx, client: hookClient } as never);
 
     if (deps.postHookStore && SESSION_TERMINAL_STATUSES.has(session.status)) {
       await deliverPostAttemptStatusHook(deps, deps.postHookStore, session.id).catch(() => {});

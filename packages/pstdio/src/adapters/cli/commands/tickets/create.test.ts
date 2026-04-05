@@ -3,17 +3,25 @@ import { createHandler } from "./create";
 
 const makeTicketResponse = (
   overrides: Partial<{ id: string; shorthand: string; display_title: string; status_id: string | null }> = {},
-) => ({
-  id: overrides.id ?? "t-1",
-  shorthand: overrides.shorthand ?? "PS-1",
-  project_id: "proj-1",
-  status_id: overrides.status_id ?? null,
-  display_title: overrides.display_title ?? "New ticket",
-  file_id: null as string | null,
-  draft: false,
-  created_at: "2026-03-04T00:00:00.000Z",
-  updated_at: "2026-03-04T00:00:00.000Z",
-});
+) =>
+  ({
+    id: overrides.id ?? "t-1",
+    shorthand: overrides.shorthand ?? "PS-1",
+    project_id: "proj-1",
+    status_id: overrides.status_id ?? null,
+    display_title: overrides.display_title ?? "New ticket",
+    user_prompt: null,
+    file_id: null as string | null,
+    parent_id: null,
+    parallelizable: null,
+    blocked_reason: null,
+    depends_on: null,
+    draft: false,
+    archived: false,
+    deleted_at: null,
+    created_at: "2026-03-04T00:00:00.000Z",
+    updated_at: "2026-03-04T00:00:00.000Z",
+  }) as never;
 
 const makeUploadResponse = () => ({
   id: "file-1",
@@ -35,7 +43,7 @@ const baseDeps = {
   createTicket: mock(async () => makeTicketResponse()),
   updateTicket: mock(async () => makeTicketResponse()),
   uploadTicketFile: mock(async () => makeUploadResponse()),
-  resolveStatusId: async (_url: string, _pid: string, name: string) => {
+  resolveStatusId: async (_pid: string, name: string) => {
     const statuses: Record<string, string> = { backlog: "s-backlog", wip: "s-wip" };
     const id = statuses[name];
     if (!id) throw new Error(`Status not found: ${name}`);
@@ -58,7 +66,7 @@ describe("tickets create", () => {
 
     await handler({ content: "New ticket", _: [], $0: "" } as never);
 
-    expect(createTicket).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ draft: false }));
+    expect(createTicket).toHaveBeenCalledWith(expect.objectContaining({ draft: false }));
   });
 
   test("uploads content as file and updates ticket with file_id", async () => {
@@ -74,12 +82,12 @@ describe("tickets create", () => {
 
     await handler({ content: "New ticket", _: [], $0: "" } as never);
 
-    expect(uploadTicketFile).toHaveBeenCalledWith(expect.any(String), "t-1", {
+    expect(uploadTicketFile).toHaveBeenCalledWith("t-1", {
       file_name: "ticket.md",
       content_base64: Buffer.from("# New ticket\n").toString("base64"),
       mime_type: "text/markdown",
     });
-    expect(updateTicket).toHaveBeenCalledWith(expect.any(String), "t-1", { file_id: "file-1" });
+    expect(updateTicket).toHaveBeenCalledWith("t-1", { file_id: "file-1" });
   });
 
   test("writes local file with frontmatter when in a pstdio project", async () => {
@@ -153,7 +161,7 @@ describe("tickets create", () => {
 
     await handler({ content: "Status ticket", status: "wip", _: [], $0: "" } as never);
 
-    expect(createTicket).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ status_id: "s-wip" }));
+    expect(createTicket).toHaveBeenCalledWith(expect.objectContaining({ status_id: "s-wip" }));
   });
 
   test("includes status in frontmatter when --status is provided", async () => {

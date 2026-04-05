@@ -1,8 +1,8 @@
 import { listTicketTags } from "./api/list-ticket-tags";
 
 // Resolves option names to option IDs across all tag definitions
-export const resolveTagIds = async (baseUrl: string, projectId: string, tagNames: string[]) => {
-  const allTags = await listTicketTags(baseUrl, projectId);
+export const resolveTagIds = async (projectId: string, tagNames: string[]) => {
+  const allTags = await listTicketTags(projectId);
   const allOptions = allTags.flatMap((t) => t.options);
   const ids: string[] = [];
 

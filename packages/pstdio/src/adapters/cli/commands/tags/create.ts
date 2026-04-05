@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { createTag } from "@/features/tags/api/create-tag";
 
@@ -54,7 +53,7 @@ export const createHandler =
     const config = deps.readConfig(root);
     if (!config) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
 
-    await deps.createTag(API_URL, config.project_id, {
+    await deps.createTag(config.project_id, {
       name: argv.name,
       type: argv.type as "single_select" | "multi_select",
     });

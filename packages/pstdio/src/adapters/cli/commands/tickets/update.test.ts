@@ -36,7 +36,7 @@ describe("tickets update", () => {
     const handler = createHandler({
       cwd: () => "/work/repo",
       resolveProjectId: () => ({ projectId: "proj-1", root: "/work/repo" }),
-      resolveTicketByShorthand: async () => makeTicket(),
+      resolveTicketByShorthand: async () => makeTicket() as never,
       updateTicket,
       resolveStatusId: async () => "s-wip",
       resolveTagIds: async () => [],
@@ -45,7 +45,7 @@ describe("tickets update", () => {
 
     await handler({ id: "PS-1", status: "wip", _: [], $0: "" } as never);
 
-    expect(updateTicket).toHaveBeenCalledWith(expect.any(String), "t-1", { status_id: "s-wip" });
+    expect(updateTicket).toHaveBeenCalledWith("t-1", { status_id: "s-wip" });
     expect(log).toHaveBeenCalledWith("Updated ticket PS-1");
   });
 
@@ -67,7 +67,7 @@ describe("tickets update", () => {
     const handler = createHandler({
       cwd: () => "/work/repo",
       resolveProjectId: () => ({ projectId: "proj-1", root: "/work/repo" }),
-      resolveTicketByShorthand: async () => makeTicket(),
+      resolveTicketByShorthand: async () => makeTicket() as never,
       updateTicket: async () => ({}) as never,
       resolveStatusId: async () => {
         throw new Error("Status not found: nonexistent");
@@ -89,7 +89,7 @@ describe("tickets update", () => {
     const handler = createHandler({
       cwd: () => tmpBase,
       resolveProjectId: () => ({ projectId: "proj-1", root: tmpBase }),
-      resolveTicketByShorthand: async () => makeTicket(),
+      resolveTicketByShorthand: async () => makeTicket() as never,
       updateTicket: async () => ({}) as never,
       resolveStatusId: async () => "s-review",
       resolveTagIds: async () => [],
@@ -109,7 +109,7 @@ describe("tickets update", () => {
     const handler = createHandler({
       cwd: () => tmpBase,
       resolveProjectId: () => ({ projectId: "proj-1", root: tmpBase }),
-      resolveTicketByShorthand: async () => makeTicket(),
+      resolveTicketByShorthand: async () => makeTicket() as never,
       updateTicket: async () => ({}) as never,
       resolveStatusId: async () => "s-review",
       resolveTagIds: async () => [],

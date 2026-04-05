@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 import { listAttemptStatuses as defaultListAttemptStatuses } from "@/features/workspaces/api/list-attempt-statuses";
 
@@ -54,7 +53,7 @@ export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<ListStatusesArgs>) => {
     const { projectId } = deps.resolveProjectId(deps.cwd(), argv["project-id"]);
-    const statuses = await deps.listAttemptStatuses(API_URL, projectId);
+    const statuses = await deps.listAttemptStatuses(projectId);
 
     if (statuses.length === 0) {
       deps.log("No attempt statuses found.");

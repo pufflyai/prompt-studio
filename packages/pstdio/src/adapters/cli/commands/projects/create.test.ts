@@ -57,6 +57,11 @@ describe("createHandler", () => {
     const createAndInitProject = mock(async (_root: string, _name: string, _opts?: unknown) => ({
       id: "proj-1",
       name: "prompt-studio",
+      shorthand: "PS",
+      startup_script: null,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      deleted_at: null,
     }));
     const handler = createHandler({
       cwd: () => "/work/prompt-studio",
@@ -80,6 +85,11 @@ describe("createHandler", () => {
     const createAndInitProject = mock(async (_root: string, _name: string, _opts?: unknown) => ({
       id: "proj-2",
       name: "my-project",
+      shorthand: "MP",
+      startup_script: null,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      deleted_at: null,
     }));
     const handler = createHandler({
       cwd: () => "/work/my-project",
@@ -98,6 +108,11 @@ describe("createHandler", () => {
     const createAndInitProject = mock(async (_root: string, _name: string, _opts?: unknown) => ({
       id: "proj-3",
       name: "multi",
+      shorthand: "M",
+      startup_script: null,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      deleted_at: null,
     }));
     const handler = createHandler({
       cwd: () => "/work/multi",
@@ -118,6 +133,11 @@ describe("createHandler", () => {
     const createAndInitProject = mock(async (_root: string, _name: string, _opts?: unknown) => ({
       id: "proj-4",
       name: "prompt-studio",
+      shorthand: "PS",
+      startup_script: null,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      deleted_at: null,
     }));
     const handler = createHandler({
       cwd: () => "/work/prompt-studio/packages/cli",
@@ -141,7 +161,15 @@ describe("createHandler", () => {
     const handler = createHandler({
       cwd: () => "/work/project",
       findGitRoot: () => null,
-      createAndInitProject: async () => ({ id: "proj-1", name: "ignored" }),
+      createAndInitProject: async () => ({
+        id: "proj-1",
+        name: "ignored",
+        shorthand: "I",
+        startup_script: null,
+        created_at: "t",
+        updated_at: "t",
+        deleted_at: null,
+      }),
     });
 
     await expect(handler({ repo: ["/not-a-repo"] } as never)).rejects.toThrow("Not a git repository: /not-a-repo");

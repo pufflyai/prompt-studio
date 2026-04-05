@@ -23,24 +23,25 @@ const makeConfig = () => {
 
 const fakeTicket =
   (overrides: Partial<{ shorthand: string; status_id: string | null; display_title: string }> = {}) =>
-  async () => ({
-    id: "t-1",
-    shorthand: overrides.shorthand ?? "PS-1",
-    project_id: "proj-1",
-    status_id: overrides.status_id ?? (null as string | null),
-    display_title: overrides.display_title ?? "Ticket",
-    file_id: null as string | null,
-    draft: true,
-    created_at: "2026-03-04T00:00:00.000Z",
-    updated_at: "2026-03-04T00:00:00.000Z",
-  });
+  async () =>
+    ({
+      id: "t-1",
+      shorthand: overrides.shorthand ?? "PS-1",
+      project_id: "proj-1",
+      status_id: overrides.status_id ?? (null as string | null),
+      display_title: overrides.display_title ?? "Ticket",
+      file_id: null as string | null,
+      draft: true,
+      created_at: "2026-03-04T00:00:00.000Z",
+      updated_at: "2026-03-04T00:00:00.000Z",
+    }) as never;
 
 const baseDeps = {
   cwd: () => tmpBase,
   resolveProjectId: () => ({ projectId: "proj-1", root: tmpBase }),
   getTemplate: async () => null as never,
   createTicket: fakeTicket(),
-  resolveStatusId: async (_url: string, _pid: string, name: string) => {
+  resolveStatusId: async (_pid: string, name: string) => {
     const statuses: Record<string, string> = { backlog: "s-backlog", wip: "s-wip" };
     const id = statuses[name];
     if (!id) throw new Error(`Status not found: ${name}`);
@@ -88,7 +89,7 @@ describe("tickets write", () => {
 
     await handler({ title: "With status", status: "wip", _: [], $0: "" } as never);
 
-    expect(createTicket).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ status_id: "s-wip" }));
+    expect(createTicket).toHaveBeenCalledWith(expect.objectContaining({ status_id: "s-wip" }));
   });
 
   test("does not pass status_id when --status is omitted", async () => {
@@ -98,7 +99,7 @@ describe("tickets write", () => {
 
     await handler({ title: "No status", _: [], $0: "" } as never);
 
-    expect(createTicket).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ status_id: undefined }));
+    expect(createTicket).toHaveBeenCalledWith(expect.objectContaining({ status_id: undefined }));
   });
 
   test("throws when status not found", async () => {
@@ -114,13 +115,14 @@ describe("tickets write", () => {
     const log = mock();
     const handler = createHandler({
       ...baseDeps,
-      getTemplate: async () => ({
-        id: "tpl-1",
-        name: "ticket",
-        template_type: "ticket",
-        is_default: true,
-        content: "# {{TICKET_TITLE}}\n\nTicket: {{TICKET_ID}}\nInput: {{INPUT}}",
-      }),
+      getTemplate: async () =>
+        ({
+          id: "tpl-1",
+          name: "ticket",
+          template_type: "ticket",
+          is_default: true,
+          content: "# {{TICKET_TITLE}}\n\nTicket: {{TICKET_ID}}\nInput: {{INPUT}}",
+        }) as never,
       createTicket: fakeTicket({ shorthand: "PS-2" }),
       log,
     });
@@ -156,13 +158,14 @@ describe("tickets write", () => {
     ].join("\n");
     const handler = createHandler({
       ...baseDeps,
-      getTemplate: async () => ({
-        id: "tpl-1",
-        name: "ticket",
-        template_type: "ticket",
-        is_default: true,
-        content: templateContent,
-      }),
+      getTemplate: async () =>
+        ({
+          id: "tpl-1",
+          name: "ticket",
+          template_type: "ticket",
+          is_default: true,
+          content: templateContent,
+        }) as never,
       createTicket: fakeTicket({ shorthand: "PS-5" }),
       log: mock(),
     });
@@ -200,10 +203,7 @@ describe("tickets write", () => {
 
     await handler({ title: "API content", _: [], $0: "" } as never);
 
-    expect(createTicket).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({ content: "# API content\n" }),
-    );
+    expect(createTicket).toHaveBeenCalledWith(expect.objectContaining({ content: "# API content\n" }));
   });
 
   test("throws when template not found", async () => {
@@ -218,7 +218,7 @@ describe("tickets write", () => {
     makeConfig();
     const handler = createHandler({
       ...baseDeps,
-      resolveTagIds: async (_url: string, _pid: string, names: string[]) => {
+      resolveTagIds: async (_pid: string, names: string[]) => {
         throw new Error(`Tag not found: ${names[0]}`);
       },
       log: () => {},

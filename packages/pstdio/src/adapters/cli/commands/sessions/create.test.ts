@@ -4,19 +4,31 @@ import { type CreateArgs, createHandler } from "./create";
 
 const argv = (args: Partial<CreateArgs>) => ({ _: [], $0: "", ...args }) as Arguments<CreateArgs>;
 
+const makeSessionResponse = (overrides: Record<string, unknown> = {}) =>
+  ({
+    id: "s_new123",
+    project_id: "proj-1",
+    title: "Test",
+    status: "in_progress",
+    archived: false,
+    last_request_started: null,
+    last_request_ended: null,
+    agent_session_id: null,
+    agent: "claude-code",
+    model: null,
+    workspace_id: null,
+    created_at: "2026-03-05T10:00:00Z",
+    updated_at: "2026-03-05T10:00:00Z",
+    ...overrides,
+  }) as never;
+
 const makeDeps = (overrides: Partial<Parameters<typeof createHandler>[0]> = {}) => {
   const log = (overrides.log ?? mock()) as Mock<(msg: string) => void>;
   return {
     cwd: () => "/fake/repo",
     findGitRoot: () => "/fake/repo",
     readConfig: () => ({ project_id: "proj-1" }),
-    createSession: mock(async () => ({
-      id: "s_new123",
-      project_id: "proj-1",
-      title: "Test",
-      status: "in_progress",
-      agent: "claude-code",
-    })),
+    createSession: mock(async () => makeSessionResponse()),
     ...overrides,
     log,
   };
@@ -24,19 +36,13 @@ const makeDeps = (overrides: Partial<Parameters<typeof createHandler>[0]> = {}) 
 
 describe("sessions create", () => {
   test("omits agent when --agent is not provided", async () => {
-    const createSession = mock(async () => ({
-      id: "s_1",
-      project_id: "proj-1",
-      title: "Test",
-      status: "in_progress",
-      agent: "fake",
-    }));
+    const createSession = mock(async () => makeSessionResponse({ id: "s_1", agent: "fake" }));
     const deps = makeDeps({ createSession });
     const handler = createHandler(deps);
 
     await handler(argv({ prompt: "Do something" }));
 
-    expect(createSession).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ agent: undefined }));
+    expect(createSession).toHaveBeenCalledWith(expect.objectContaining({ agent: undefined }));
   });
 
   test("creates a session and prints output", async () => {
@@ -62,39 +68,25 @@ describe("sessions create", () => {
   });
 
   test("derives title from prompt when no --title", async () => {
-    const createSession = mock(async () => ({
-      id: "s_1",
-      project_id: "proj-1",
-      title: "A long prompt that should be",
-      status: "in_progress",
-      agent: "claude-code",
-    }));
+    const createSession = mock(async () => makeSessionResponse({ id: "s_1", title: "A long prompt that should be" }));
     const deps = makeDeps({ createSession });
     const handler = createHandler(deps);
 
     await handler(argv({ prompt: "A long prompt that should be truncated to fifty characters maximum" }));
 
     expect(createSession).toHaveBeenCalledWith(
-      expect.any(String),
       expect.objectContaining({ title: "A long prompt that should be truncated to fifty ch" }),
     );
   });
 
   test("passes template and vars to API", async () => {
-    const createSession = mock(async () => ({
-      id: "s_1",
-      project_id: "proj-1",
-      title: "fix-it",
-      status: "in_progress",
-      agent: "claude-code",
-    }));
+    const createSession = mock(async () => makeSessionResponse({ id: "s_1", title: "fix-it" }));
     const deps = makeDeps({ createSession });
     const handler = createHandler(deps);
 
     await handler(argv({ template: "fix-it", var: ["ticket=PS-7"] }));
 
     expect(createSession).toHaveBeenCalledWith(
-      expect.any(String),
       expect.objectContaining({
         template: "fix-it",
         vars: { ticket: "PS-7" },
@@ -103,19 +95,13 @@ describe("sessions create", () => {
   });
 
   test("derives title from template name when no --title or --prompt", async () => {
-    const createSession = mock(async () => ({
-      id: "s_1",
-      project_id: "proj-1",
-      title: "fix-it",
-      status: "in_progress",
-      agent: "claude-code",
-    }));
+    const createSession = mock(async () => makeSessionResponse({ id: "s_1", title: "fix-it" }));
     const deps = makeDeps({ createSession });
     const handler = createHandler(deps);
 
     await handler(argv({ template: "fix-it" }));
 
-    expect(createSession).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ title: "fix-it" }));
+    expect(createSession).toHaveBeenCalledWith(expect.objectContaining({ title: "fix-it" }));
   });
 
   test("throws when no project context", async () => {

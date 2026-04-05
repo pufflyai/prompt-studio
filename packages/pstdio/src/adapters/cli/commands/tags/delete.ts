@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { deleteTag } from "@/features/tags/api/delete-tag";
 import { listTags } from "@/features/tags/api/list-tags";
@@ -41,11 +40,11 @@ export const createHandler =
     const config = deps.readConfig(root);
     if (!config) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
 
-    const tags = await deps.listTags(API_URL, config.project_id);
+    const tags = await deps.listTags(config.project_id);
     const tag = tags.find((t) => t.name === argv.name);
     if (!tag) throw new Error(`Tag not found: ${argv.name}`);
 
-    await deps.deleteTag(API_URL, config.project_id, tag.id);
+    await deps.deleteTag(config.project_id, tag.id);
     console.log(`Deleted tag "${argv.name}"`);
   };
 

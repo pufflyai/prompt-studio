@@ -3,7 +3,14 @@ import { createHandler } from "./setup";
 
 describe("agents setup", () => {
   test("installs skills and plugins for opencode", async () => {
-    const setupAgent = mock(async () => ({ agent_id: "opencode", is_default: true }));
+    const setupAgent = mock(async () => ({
+      id: "1",
+      agent_id: "opencode",
+      is_default: true,
+      config: "{}",
+      created_at: "t",
+      updated_at: "t",
+    }));
     const installSkillsForAgent = mock(async () => ["create-ticket"]);
     const installPluginsForAgent = mock(async () => ["pstdio-session-bridge.js"]);
     const log = mock();
@@ -24,7 +31,6 @@ describe("agents setup", () => {
     expect(installSkillsForAgent).toHaveBeenCalledWith({
       root: "/repo",
       agentId: "opencode",
-      baseUrl: "http://localhost:19840",
       projectId: "proj-1",
       global: false,
     });
@@ -45,7 +51,14 @@ describe("agents setup", () => {
 
     const handler = createHandler({
       cwd: () => "/repo",
-      setupAgent: async () => ({ agent_id: "opencode", is_default: false }),
+      setupAgent: async () => ({
+        id: "1",
+        agent_id: "opencode",
+        is_default: false,
+        config: "{}",
+        created_at: "t",
+        updated_at: "t",
+      }),
       findGitRoot: () => "/repo",
       readConfig: () => null,
       installSkillsForAgent,
@@ -66,7 +79,14 @@ describe("agents setup", () => {
 
     const handler = createHandler({
       cwd: () => "/cwd",
-      setupAgent: async () => ({ agent_id: "opencode", is_default: false }),
+      setupAgent: async () => ({
+        id: "1",
+        agent_id: "opencode",
+        is_default: false,
+        config: "{}",
+        created_at: "t",
+        updated_at: "t",
+      }),
       findGitRoot: () => null,
       readConfig: () => null,
       installSkillsForAgent: async () => [],
@@ -86,7 +106,14 @@ describe("agents setup", () => {
   test("throws for unknown agents", async () => {
     const handler = createHandler({
       cwd: () => "/cwd",
-      setupAgent: async () => ({ agent_id: "opencode", is_default: false }),
+      setupAgent: async () => ({
+        id: "1",
+        agent_id: "opencode",
+        is_default: false,
+        config: "{}",
+        created_at: "t",
+        updated_at: "t",
+      }),
       findGitRoot: () => "/cwd",
       readConfig: () => ({ project_id: "p1" }),
       installSkillsForAgent: async () => [],

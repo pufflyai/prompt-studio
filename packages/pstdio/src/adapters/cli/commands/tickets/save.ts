@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 import { updateTicket as defaultUpdateTicket } from "@/features/tickets/api/update-ticket";
 import { uploadTicketFile as defaultUploadTicketFile } from "@/features/tickets/api/upload-ticket-file";
@@ -57,7 +56,7 @@ const uploadLocalTicketFiles = async (deps: Deps, root: string, shorthand: strin
 
   for (const fileName of localFiles) {
     const data = readTicketAttachment(root, shorthand, fileName);
-    await deps.uploadTicketFile(API_URL, ticketId, {
+    await deps.uploadTicketFile(ticketId, {
       file_name: fileName,
       content_base64: data.toString("base64"),
     });
@@ -80,24 +79,24 @@ export const createHandler =
       throw new Error(`Local ticket not found: .pstdio/tickets/${argv.id}/ticket.md`);
     }
 
-    const ticket = await deps.resolveTicketByShorthand(API_URL, projectId, argv.id);
+    const ticket = await deps.resolveTicketByShorthand(projectId, argv.id);
     if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
     const frontmatter = parseFrontmatter(content);
 
     const statusName = argv.status ?? frontmatter.status;
-    const tagIds = argv.tag?.length ? await deps.resolveTagIds(API_URL, projectId, argv.tag) : undefined;
-    const statusId = statusName ? await deps.resolveStatusId(API_URL, projectId, statusName) : undefined;
+    const tagIds = argv.tag?.length ? await deps.resolveTagIds(projectId, argv.tag) : undefined;
+    const statusId = statusName ? await deps.resolveStatusId(projectId, statusName) : undefined;
 
     const bodyContent = stripFrontmatter(content).replace(/^\n+/, "");
     const contentBase64 = Buffer.from(bodyContent).toString("base64");
-    const uploaded = await deps.uploadTicketFile(API_URL, ticket.id, {
+    const uploaded = await deps.uploadTicketFile(ticket.id, {
       file_name: "ticket.md",
       content_base64: contentBase64,
       mime_type: "text/markdown",
     });
 
-    await deps.updateTicket(API_URL, ticket.id, {
+    await deps.updateTicket(ticket.id, {
       blocked_reason: frontmatter.blocked_reason,
       file_id: uploaded.id,
       display_title: extractDisplayTitle(bodyContent),

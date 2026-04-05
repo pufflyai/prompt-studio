@@ -1,4 +1,3 @@
-import { API_URL } from "@/features/api-url";
 import { listProjects as defaultListProjects } from "@/features/projects/api/list-projects";
 
 type Deps = {
@@ -7,7 +6,7 @@ type Deps = {
 };
 
 const defaultDeps: Deps = {
-  listProjects: (baseUrl: string) => defaultListProjects(baseUrl),
+  listProjects: defaultListProjects,
   log: console.log,
 };
 
@@ -36,7 +35,7 @@ const formatTable = (projects: Awaited<ReturnType<typeof defaultListProjects>>) 
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async () => {
-    const projects = await deps.listProjects(API_URL);
+    const projects = await deps.listProjects();
 
     if (projects.length === 0) {
       deps.log("No projects found. Run `pstdio projects create [name]` to create one.");

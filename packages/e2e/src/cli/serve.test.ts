@@ -13,6 +13,7 @@ const startServe = async (port: number, storagePath: string) => {
     cwd: join(import.meta.dirname, "../.."),
     env: {
       ...process.env,
+      PSTDIO_DISABLE_EMBED_MANIFEST: "1",
       PSTDIO_DB_PATH: ":memory:",
       PSTDIO_STORAGE_PATH: storagePath,
     },

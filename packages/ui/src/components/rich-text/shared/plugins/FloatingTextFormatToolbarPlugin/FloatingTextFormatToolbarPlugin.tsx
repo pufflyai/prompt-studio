@@ -162,8 +162,7 @@ function FloatingTextToolbar({
       !selection.isCollapsed() &&
       nativeSelection !== null &&
       !nativeSelection.isCollapsed &&
-      rootElement !== null &&
-      rootElement.contains(nativeSelection.anchorNode) &&
+      rootElement?.contains(nativeSelection.anchorNode) &&
       editor.isEditable()
     ) {
       const domRect: DOMRect | undefined = nativeSelection.getRangeAt(0).getBoundingClientRect();

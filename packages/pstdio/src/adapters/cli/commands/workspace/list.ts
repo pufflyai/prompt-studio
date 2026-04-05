@@ -1,5 +1,4 @@
 import type { Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { listWorkspaces as defaultListWorkspaces } from "@/features/workspaces/api/list-workspaces";
 
@@ -33,7 +32,7 @@ export const createHandler =
     const config = deps.readConfig(root);
     if (!config) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
 
-    const workspaces = await deps.listWorkspaces(API_URL, config.project_id);
+    const workspaces = await deps.listWorkspaces(config.project_id);
 
     if (workspaces.length === 0) {
       deps.log("No active workspaces.");

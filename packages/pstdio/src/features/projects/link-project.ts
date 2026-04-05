@@ -1,5 +1,4 @@
 import { basename } from "node:path";
-import { API_URL } from "../api-url";
 import { getProject } from "./api/get-project";
 import { registerRepo } from "./api/register-repo";
 
@@ -8,11 +7,11 @@ type LinkOptions = {
 };
 
 export const linkProject = async (root: string, projectId: string, _options?: LinkOptions) => {
-  const project = await getProject(API_URL, projectId);
+  const project = await getProject(projectId);
   if (!project) {
     throw new Error(`Project not found: ${projectId}`);
   }
 
-  await registerRepo(API_URL, projectId, { name: basename(root), path: root });
+  await registerRepo(projectId, { name: basename(root), path: root });
   return project;
 };

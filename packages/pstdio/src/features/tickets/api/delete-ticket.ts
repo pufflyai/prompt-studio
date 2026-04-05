@@ -1,17 +1,11 @@
-type Ticket = {
-  id: string;
-  shorthand: string;
-  project_id: string;
-  deleted_at: string | null;
-};
+import { PstdioApiError } from "@pstdio/sdk/client";
+import { apiClient } from "@/features/api-client";
 
-export const deleteTicket = async (baseUrl: string, id: string) => {
-  const res = await fetch(`${baseUrl}/v1/tickets/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-  });
-
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`Failed to delete ticket: ${res.status}`);
-
-  return (await res.json()) as Ticket;
+export const deleteTicket = async (id: string) => {
+  try {
+    await apiClient().tickets.delete(id);
+  } catch (error) {
+    if (error instanceof PstdioApiError && error.status === 404) return null;
+    throw error;
+  }
 };

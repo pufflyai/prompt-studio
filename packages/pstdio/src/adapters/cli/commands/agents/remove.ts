@@ -1,7 +1,6 @@
 import { isKnownAgentId, KNOWN_AGENT_IDS } from "pstdio-agents";
 import type { Arguments, Argv } from "yargs";
 import { removeAgent } from "@/features/agents/api/remove-agent";
-import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { removeBundledSkillsForAgent } from "@/features/skills/install-default-skills";
 
@@ -29,14 +28,14 @@ export const handler = async (argv: Arguments<{ "agent-id": string; "delete-skil
     throw new Error(`Unknown agent: ${agentId}. Available: ${KNOWN_AGENT_IDS.join(", ")}`);
   }
 
-  await removeAgent(API_URL, agentId);
+  await removeAgent(agentId);
 
   if (deleteSkills) {
     const root = findGitRoot(process.cwd());
     const projectConfig = root ? readConfig(root) : null;
 
     if (root && projectConfig) {
-      const removed = await removeBundledSkillsForAgent(root, agentId, API_URL, projectConfig.project_id);
+      const removed = await removeBundledSkillsForAgent(root, agentId, projectConfig.project_id);
       if (removed.length > 0) {
         console.log(`Deleted ${removed.length} skill(s): ${removed.join(", ")}`);
       }

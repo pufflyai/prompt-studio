@@ -36,7 +36,7 @@ describe("tickets archive", () => {
 
     await handler({ id: "PS-1" } as Arguments<{ id: string }>);
 
-    expect(deps.updateTicket).toHaveBeenCalledWith(expect.any(String), "t-1", { archived: true });
+    expect(deps.updateTicket).toHaveBeenCalledWith("t-1", { archived: true });
     expect(deps.log).toHaveBeenCalledWith("Archived ticket PS-1");
   });
 
@@ -62,7 +62,7 @@ describe("tickets archive", () => {
 
     await handler({ id: "PS-1", "project-id": "proj-1" } as Arguments<{ id: string; "project-id"?: string }>);
 
-    expect(deps.updateTicket).toHaveBeenCalledWith(expect.any(String), "t-1", { archived: true });
+    expect(deps.updateTicket).toHaveBeenCalledWith("t-1", { archived: true });
   });
 
   test("throws when no project can be resolved", async () => {

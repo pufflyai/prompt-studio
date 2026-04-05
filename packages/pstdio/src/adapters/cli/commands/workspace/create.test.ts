@@ -17,12 +17,12 @@ const baseDeps = {
   cwd: () => "/repo",
   findGitRoot: () => "/repo" as string | null,
   readConfig: () => ({ project_id: "proj-1" }) as { project_id: string } | null,
-  createWorkspaceForTicket: mock(async () => mockWorkspace),
+  createWorkspaceForTicket: mock(async () => mockWorkspace) as never,
 };
 
 describe("workspaces create", () => {
   test("delegates to createWorkspaceForTicket", async () => {
-    const createWorkspaceForTicket = mock(async () => mockWorkspace);
+    const createWorkspaceForTicket = mock(async () => mockWorkspace) as never;
 
     const handler = createHandler({ ...baseDeps, createWorkspaceForTicket });
     await handler({ id: "PS-1", target: "worktree", _: [], $0: "" } as never);
@@ -36,7 +36,7 @@ describe("workspaces create", () => {
   });
 
   test("passes base ref to feature function", async () => {
-    const createWorkspaceForTicket = mock(async () => mockWorkspace);
+    const createWorkspaceForTicket = mock(async () => mockWorkspace) as never;
 
     const handler = createHandler({ ...baseDeps, createWorkspaceForTicket });
     await handler({ id: "PS-1", target: "worktree", base: "main", _: [], $0: "" } as never);

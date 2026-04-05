@@ -1,12 +1,5 @@
-export const deleteTag = async (baseUrl: string, projectId: string, tagId: string) => {
-  const res = await fetch(
-    `${baseUrl}/v1/projects/${encodeURIComponent(projectId)}/ticket-tags/${encodeURIComponent(tagId)}`,
-    {
-      method: "DELETE",
-    },
-  );
+import { apiClient } from "@/features/api-client";
 
-  if (!res.ok) {
-    throw new Error(`Failed to delete tag: ${res.status}`);
-  }
+export const deleteTag = async (projectId: string, tagId: string) => {
+  await apiClient().tags.delete(projectId, tagId);
 };

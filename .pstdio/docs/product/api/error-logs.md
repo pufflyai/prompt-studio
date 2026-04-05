@@ -93,6 +93,6 @@ Runtime failures are emitted as structured entries in the shared logger stream (
 
 ## Verification & Evidence
 
-- **Commands to run**: `sed -n '1,260p' packages/pstdio-logging/src/index.ts`, `sed -n '1,260p' packages/pstdio-api/src/app.ts`, `sed -n '1,260p' packages/pstdio-hooks/src/hooks.ts`, `sed -n '1,260p' packages/pstdio/src/index.ts`
+- **Commands to run**: `sed -n '1,260p' packages/pstdio-logging/src/index.ts`, `sed -n '1,260p' packages/pstdio-api/src/app.ts`, `sed -n '1,260p' packages/pstdio/src/index.ts`
 - **Expected evidence**: Runtime surfaces emit structured JSONL entries via shared logger and API still returns generic 500 payloads on unhandled errors.
-- **Where to find artifacts**: `packages/pstdio-logging`, `packages/pstdio-api`, `packages/pstdio-hooks`, `packages/pstdio`
+- **Where to find artifacts**: `packages/pstdio-logging`, `packages/pstdio-api`, `packages/pstdio-plugins`, `packages/pstdio`

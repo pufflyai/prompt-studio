@@ -7,11 +7,14 @@ const argv = (args: Partial<FollowUpArgs>) => ({ _: [], $0: "", ...args }) as Ar
 const makeDeps = (overrides: Partial<Parameters<typeof createHandler>[0]> = {}) => {
   const log = (overrides.log ?? mock()) as Mock<(msg: string) => void>;
   return {
-    followUpSession: mock(async () => ({
-      id: "s_abc123",
-      status: "in_progress",
-      agent: "claude-code",
-    })),
+    followUpSession: mock(
+      async () =>
+        ({
+          id: "s_abc123",
+          status: "in_progress",
+          agent: "claude-code",
+        }) as never,
+    ),
     ...overrides,
     log,
   };
@@ -25,7 +28,6 @@ describe("sessions follow-up", () => {
     await handler(argv({ id: "s_abc123", prompt: "Continue with tests" }));
 
     expect(deps.followUpSession).toHaveBeenCalledWith(
-      expect.any(String),
       "s_abc123",
       expect.objectContaining({ prompt: "Continue with tests" }),
     );
@@ -42,7 +44,6 @@ describe("sessions follow-up", () => {
     await handler(argv({ id: "s_1", prompt: "test", agent: "opencode", model: "gpt-5" }));
 
     expect(deps.followUpSession).toHaveBeenCalledWith(
-      expect.any(String),
       "s_1",
       expect.objectContaining({ prompt: "test", agent: "opencode", model: "gpt-5" }),
     );
@@ -61,7 +62,7 @@ describe("sessions follow-up", () => {
       }),
     );
 
-    expect(deps.followUpSession).toHaveBeenCalledWith(expect.any(String), "s_impl", {
+    expect(deps.followUpSession).toHaveBeenCalledWith("s_impl", {
       summary_from_session_id: "s_review",
       summary_format: "detailed",
       summary_role: "all",
@@ -80,7 +81,7 @@ describe("sessions follow-up", () => {
       }),
     );
 
-    expect(deps.followUpSession).toHaveBeenCalledWith(expect.any(String), "s_impl", {
+    expect(deps.followUpSession).toHaveBeenCalledWith("s_impl", {
       prompt: "Apply the review feedback",
       summary_from_session_id: "s_review",
     });
@@ -101,7 +102,7 @@ describe("sessions follow-up", () => {
 
     await handler(argv({ id: "s_1", template: "fix-it", var: ["ticket=PS-7", "output=error log"] }));
 
-    expect(deps.followUpSession).toHaveBeenCalledWith(expect.any(String), "s_1", {
+    expect(deps.followUpSession).toHaveBeenCalledWith("s_1", {
       template: "fix-it",
       vars: { ticket: "PS-7", output: "error log" },
     });
@@ -120,7 +121,7 @@ describe("sessions follow-up", () => {
     const deps = makeDeps({
       followUpSession: mock(async () => {
         throw new Error("Session is in_progress");
-      }),
+      }) as never,
     });
     const handler = createHandler(deps);
 

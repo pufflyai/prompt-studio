@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { deleteStatus } from "@/features/statuses/api/delete-status";
 import { listStatuses } from "@/features/statuses/api/list-statuses";
@@ -41,7 +40,7 @@ export const createHandler =
     const config = deps.readConfig(root);
     if (!config) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
 
-    const statuses = await deps.listStatuses(API_URL, config.project_id);
+    const statuses = await deps.listStatuses(config.project_id);
     const status = statuses.find((s) => s.name === argv.name);
 
     if (!status) {
@@ -52,7 +51,7 @@ export const createHandler =
       throw new Error(`Cannot delete the default status "${argv.name}". Set another status as default first.`);
     }
 
-    await deps.deleteStatus(API_URL, config.project_id, status.id);
+    await deps.deleteStatus(config.project_id, status.id);
 
     console.log(`Deleted status "${argv.name}"`);
   };

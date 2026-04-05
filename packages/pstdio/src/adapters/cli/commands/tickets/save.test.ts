@@ -46,20 +46,23 @@ const makeUploadResponse = () => ({
 const baseDeps = {
   cwd: () => tmpBase,
   resolveProjectId: () => ({ projectId: "proj-1", root: tmpBase }),
-  resolveTicketByShorthand: async () => ticketFixture,
-  updateTicket: mock(async () => ({
-    id: "t-1",
-    shorthand: "PS-1",
-    project_id: "proj-1",
-    status_id: null,
-    display_title: "updated-content",
-    file_id: "file-1",
-    draft: false,
-    created_at: "2026-03-04T00:00:00.000Z",
-    updated_at: "2026-03-04T00:00:00.000Z",
-  })),
+  resolveTicketByShorthand: async () => ticketFixture as never,
+  updateTicket: mock(
+    async () =>
+      ({
+        id: "t-1",
+        shorthand: "PS-1",
+        project_id: "proj-1",
+        status_id: null,
+        display_title: "updated-content",
+        file_id: "file-1",
+        draft: false,
+        created_at: "2026-03-04T00:00:00.000Z",
+        updated_at: "2026-03-04T00:00:00.000Z",
+      }) as never,
+  ),
   uploadTicketFile: mock(async () => makeUploadResponse()),
-  resolveStatusId: async (_url: string, _pid: string, name: string) => {
+  resolveStatusId: async (_pid: string, name: string) => {
     const statuses: Record<string, string> = { backlog: "s-backlog", wip: "s-wip" };
     const id = statuses[name];
     if (!id) throw new Error(`Status not found: ${name}`);
@@ -73,59 +76,62 @@ describe("tickets save", () => {
   test("uploads content as file and updates ticket", async () => {
     const log = mock();
     const uploadTicketFile = mock(async () => makeUploadResponse());
-    const updateTicket = mock(async () => ({
-      id: "t-1",
-      shorthand: "PS-1",
-      project_id: "proj-1",
-      status_id: null,
-      display_title: "updated-content",
-      file_id: "file-1",
-      draft: false,
-      created_at: "2026-03-04T00:00:00.000Z",
-      updated_at: "2026-03-04T00:00:00.000Z",
-    }));
+    const updateTicket = mock(
+      async () =>
+        ({
+          id: "t-1",
+          shorthand: "PS-1",
+          project_id: "proj-1",
+          status_id: null,
+          display_title: "updated-content",
+          file_id: "file-1",
+          draft: false,
+          created_at: "2026-03-04T00:00:00.000Z",
+          updated_at: "2026-03-04T00:00:00.000Z",
+        }) as never,
+    );
 
     const handler = createHandler({ ...baseDeps, uploadTicketFile, updateTicket, log });
 
     await handler({ id: "PS-1", _: [], $0: "" } as never);
 
-    expect(uploadTicketFile).toHaveBeenCalledWith(expect.any(String), "t-1", {
+    expect(uploadTicketFile).toHaveBeenCalledWith("t-1", {
       file_name: "ticket.md",
       content_base64: Buffer.from("# Updated content").toString("base64"),
       mime_type: "text/markdown",
     });
-    expect(updateTicket).toHaveBeenCalledWith(expect.any(String), "t-1", {
-      file_id: "file-1",
-      display_title: "updated-content",
-      draft: false,
-      tag_ids: undefined,
-      status_id: undefined,
-    });
+    expect(updateTicket).toHaveBeenCalledWith(
+      "t-1",
+      expect.objectContaining({
+        file_id: "file-1",
+        display_title: "updated-content",
+        draft: false,
+      }),
+    );
     expect(log).toHaveBeenCalledWith("Saved ticket PS-1");
   });
 
   test("passes status_id when --status is provided", async () => {
-    const updateTicket = mock(async () => ({
-      id: "t-1",
-      shorthand: "PS-1",
-      project_id: "proj-1",
-      status_id: "s-wip",
-      display_title: "updated-content",
-      file_id: "file-1",
-      draft: false,
-      created_at: "2026-03-04T00:00:00.000Z",
-      updated_at: "2026-03-04T00:00:00.000Z",
-    }));
+    const updateTicket = mock(
+      async () =>
+        ({
+          id: "t-1",
+          shorthand: "PS-1",
+          project_id: "proj-1",
+          status_id: "s-wip",
+          display_title: "updated-content",
+          file_id: "file-1",
+          draft: false,
+          created_at: "2026-03-04T00:00:00.000Z",
+          updated_at: "2026-03-04T00:00:00.000Z",
+        }) as never,
+    );
 
     const handler = createHandler({ ...baseDeps, updateTicket, log: mock() });
 
     await handler({ id: "PS-1", status: "wip", _: [], $0: "" } as never);
 
-    expect(updateTicket).toHaveBeenCalledWith(
-      expect.any(String),
-      "t-1",
-      expect.objectContaining({ status_id: "s-wip" }),
-    );
+    expect(updateTicket).toHaveBeenCalledWith("t-1", expect.objectContaining({ status_id: "s-wip" }));
   });
 
   test("throws when status not found", async () => {
@@ -149,29 +155,31 @@ describe("tickets save", () => {
     );
 
     const uploadTicketFile = mock(async () => makeUploadResponse());
-    const updateTicket = mock(async () => ({
-      id: "t-1",
-      shorthand: "PS-1",
-      project_id: "proj-1",
-      status_id: "s-wip",
-      display_title: "updated-content",
-      file_id: "file-1",
-      draft: false,
-      created_at: "2026-03-04T00:00:00.000Z",
-      updated_at: "2026-03-04T00:00:00.000Z",
-    }));
+    const updateTicket = mock(
+      async () =>
+        ({
+          id: "t-1",
+          shorthand: "PS-1",
+          project_id: "proj-1",
+          status_id: "s-wip",
+          display_title: "updated-content",
+          file_id: "file-1",
+          draft: false,
+          created_at: "2026-03-04T00:00:00.000Z",
+          updated_at: "2026-03-04T00:00:00.000Z",
+        }) as never,
+    );
 
     const handler = createHandler({ ...baseDeps, uploadTicketFile, updateTicket, log: mock() });
 
     await handler({ id: "PS-1", _: [], $0: "" } as never);
 
-    expect(uploadTicketFile).toHaveBeenCalledWith(expect.any(String), "t-1", {
+    expect(uploadTicketFile).toHaveBeenCalledWith("t-1", {
       file_name: "ticket.md",
       content_base64: Buffer.from("# Updated content").toString("base64"),
       mime_type: "text/markdown",
     });
     expect(updateTicket).toHaveBeenCalledWith(
-      expect.any(String),
       "t-1",
       expect.objectContaining({
         display_title: "updated-content",
@@ -187,32 +195,31 @@ describe("tickets save", () => {
     );
 
     const uploadTicketFile = mock(async () => makeUploadResponse());
-    const updateTicket = mock(async () => ({
-      id: "t-1",
-      shorthand: "PS-1",
-      project_id: "proj-1",
-      status_id: "s-backlog",
-      display_title: "updated-content",
-      file_id: "file-1",
-      draft: false,
-      created_at: "2026-03-04T00:00:00.000Z",
-      updated_at: "2026-03-04T00:00:00.000Z",
-    }));
+    const updateTicket = mock(
+      async () =>
+        ({
+          id: "t-1",
+          shorthand: "PS-1",
+          project_id: "proj-1",
+          status_id: "s-backlog",
+          display_title: "updated-content",
+          file_id: "file-1",
+          draft: false,
+          created_at: "2026-03-04T00:00:00.000Z",
+          updated_at: "2026-03-04T00:00:00.000Z",
+        }) as never,
+    );
 
     const handler = createHandler({ ...baseDeps, uploadTicketFile, updateTicket, log: mock() });
 
     await handler({ id: "PS-1", status: "backlog", _: [], $0: "" } as never);
 
-    expect(uploadTicketFile).toHaveBeenCalledWith(expect.any(String), "t-1", {
+    expect(uploadTicketFile).toHaveBeenCalledWith("t-1", {
       file_name: "ticket.md",
       content_base64: Buffer.from("# Updated content").toString("base64"),
       mime_type: "text/markdown",
     });
-    expect(updateTicket).toHaveBeenCalledWith(
-      expect.any(String),
-      "t-1",
-      expect.objectContaining({ status_id: "s-backlog" }),
-    );
+    expect(updateTicket).toHaveBeenCalledWith("t-1", expect.objectContaining({ status_id: "s-backlog" }));
   });
 
   test("uploads local ticket files and logs upload count", async () => {

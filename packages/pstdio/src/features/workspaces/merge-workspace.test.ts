@@ -1,20 +1,24 @@
 import { describe, expect, mock, test } from "bun:test";
+import type { Workspace } from "@pstdio/sdk/resources";
 import { mergeWorkspace } from "./merge-workspace";
 
-const makeWorkspace = (shorthand: string) => ({
+const makeWorkspace = (shorthand: string): Workspace => ({
   id: "ws-1",
   project_id: "proj-1",
   name: shorthand,
-  workspace_shorthand: shorthand,
   branch: `workspace/${shorthand}`,
   worktree_path: `~/.pstdio/workspaces/${shorthand}`,
-  status: "active" as const,
+  attempt_status_id: null,
+  archived: false,
+  workspace_shorthand: shorthand,
+  startup_log_file_id: null,
   created_at: "",
   updated_at: "",
+  deleted_at: null,
 });
 
 const baseDeps = {
-  getWorkspace: async () => makeWorkspace("PS-1_A1"),
+  getWorkspace: async () => makeWorkspace("PS-1_A1") as never,
   deleteWorkspace: async () => {},
   isCleanWorkingTree: async () => true,
   squashMerge: async () => {},

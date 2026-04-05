@@ -1,7 +1,7 @@
+import { renderPrompt } from "@pstdio/sdk/prompts";
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
-import { renderPrompt } from "@/features/prompts/render-prompt";
+import { getTemplate as defaultGetTemplate } from "@/features/templates/api/get-template";
 import { listTicketStatuses as defaultListTicketStatuses } from "@/features/tickets/api/list-ticket-statuses";
 import { updateTicket as defaultUpdateTicket } from "@/features/tickets/api/update-ticket";
 import { readTicketFile } from "@/features/tickets/local-ticket";
@@ -23,6 +23,7 @@ type ImplementArgs = {
 type Deps = {
   cwd: () => string;
   resolveProjectId: typeof defaultResolveProjectId;
+  getTemplate: typeof defaultGetTemplate;
   resolveTicketByShorthand: typeof defaultResolveTicketByShorthand;
   updateTicket: typeof defaultUpdateTicket;
   listTicketStatuses: typeof defaultListTicketStatuses;
@@ -45,6 +46,7 @@ const defaultLaunchAgent = async (ticketId: string, root: string, title: string 
 const defaultDeps: Deps = {
   cwd: () => process.cwd(),
   resolveProjectId: defaultResolveProjectId,
+  getTemplate: defaultGetTemplate,
   resolveTicketByShorthand: defaultResolveTicketByShorthand,
   updateTicket: defaultUpdateTicket,
   listTicketStatuses: defaultListTicketStatuses,
@@ -57,20 +59,27 @@ export const createHandler =
   async (argv: Arguments<ImplementArgs>) => {
     const { projectId, root } = deps.resolveProjectId(deps.cwd(), argv["project-id"]);
 
-    const ticket = await deps.resolveTicketByShorthand(API_URL, projectId, argv.id);
+    const ticket = await deps.resolveTicketByShorthand(projectId, argv.id);
     if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
-    const statuses = await deps.listTicketStatuses(API_URL, projectId);
+    const statuses = await deps.listTicketStatuses(projectId);
     const wipStatus = statuses.find((s) => s.name === "wip");
     if (wipStatus) {
-      await deps.updateTicket(API_URL, ticket.id, { status_id: wipStatus.id });
+      await deps.updateTicket(ticket.id, { status_id: wipStatus.id });
     }
 
     deps.log(`Ticket ${argv.id} moved to wip`);
 
     const launchRoot = root ?? deps.cwd();
     const ticketContent = readTicketFile(launchRoot, argv.id);
-    const prompt = ticketContent ?? (await renderPrompt("implement-ticket", { ticket_id: argv.id }));
+    let prompt = ticketContent;
+    if (!prompt) {
+      const promptTemplate = await deps.getTemplate(projectId, "implement-ticket");
+      if (!promptTemplate) {
+        throw new Error("Template not found: implement-ticket");
+      }
+      prompt = renderPrompt(promptTemplate.content, { ticket_id: argv.id });
+    }
 
     deps.log("Launching agent...");
 

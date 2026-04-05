@@ -1,10 +1,4 @@
-export const getTicketFileContent = async (baseUrl: string, ticketId: string, fileId: string) => {
-  const res = await fetch(
-    `${baseUrl}/v1/tickets/${encodeURIComponent(ticketId)}/files/${encodeURIComponent(fileId)}/content`,
-  );
+import { apiClient } from "@/features/api-client";
 
-  if (!res.ok) throw new Error(`Failed to get ticket file content: ${res.status}`);
-
-  const arrayBuffer = await res.arrayBuffer();
-  return Buffer.from(arrayBuffer);
-};
+export const getTicketFileContent = async (ticketId: string, fileId: string) =>
+  Buffer.from(await apiClient().tickets.getFileContent(ticketId, fileId));

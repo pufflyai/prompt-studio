@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 type EmbeddedFile = Blob & { name: string };
@@ -14,12 +14,20 @@ export const scaffoldBundledFiles = async (
   input: {
     bundledSourceDir: string;
     embeddedPrefix: string;
+    transformName?: (name: string) => string;
   },
 ) => {
   if (existsSync(targetDir)) return;
 
   if (existsSync(input.bundledSourceDir)) {
-    cpSync(input.bundledSourceDir, targetDir, { recursive: true });
+    if (input.transformName) {
+      mkdirSync(targetDir, { recursive: true });
+      for (const entry of readdirSync(input.bundledSourceDir)) {
+        copyFileSync(join(input.bundledSourceDir, entry), join(targetDir, input.transformName(entry)));
+      }
+    } else {
+      cpSync(input.bundledSourceDir, targetDir, { recursive: true });
+    }
     return;
   }
 
@@ -28,7 +36,8 @@ export const scaffoldBundledFiles = async (
 
   mkdirSync(targetDir, { recursive: true });
   for (const file of embeddedFiles) {
-    const outPath = join(targetDir, normalizeEmbeddedRelativePath(file.name.slice(input.embeddedPrefix.length)));
+    const name = normalizeEmbeddedRelativePath(file.name.slice(input.embeddedPrefix.length));
+    const outPath = join(targetDir, input.transformName ? input.transformName(name) : name);
     mkdirSync(dirname(outPath), { recursive: true });
     await Bun.write(outPath, file);
   }

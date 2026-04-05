@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { scaffoldPlugins } from "./scaffold";
+import { scaffoldPlugins, stripTemplateSuffix } from "./scaffold";
 
 let tempDir: string;
 
@@ -33,6 +33,24 @@ describe("scaffoldPlugins", () => {
     const content = readFileSync(bootstrapPath, "utf8");
     expect(content).toContain("postWorktreeCreate");
     expect(content).toContain("bootstrapWorktree");
+  });
+
+  test("strips .txt suffix from template files during scaffolding", async () => {
+    const { mkdirSync, writeFileSync } = await import("node:fs");
+    const srcDir = join(tempDir, "src-plugins");
+    mkdirSync(srcDir, { recursive: true });
+    writeFileSync(join(srcDir, "my-plugin.ts.txt"), "export default {}");
+    writeFileSync(join(srcDir, "readme.txt"), "plain text");
+
+    const pluginsDir = join(tempDir, ".pstdio", "plugins");
+    mkdirSync(pluginsDir, { recursive: true });
+
+    const { copyFileSync } = await import("node:fs");
+    for (const entry of readdirSync(srcDir)) {
+      copyFileSync(join(srcDir, entry), join(pluginsDir, stripTemplateSuffix(entry)));
+    }
+
+    expect(readdirSync(pluginsDir).sort()).toEqual(["my-plugin.ts", "readme.txt"]);
   });
 
   test("does not overwrite existing plugins directory", async () => {

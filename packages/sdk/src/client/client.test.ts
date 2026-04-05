@@ -146,4 +146,16 @@ describe("createClient", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe("http://test:1234/v1/projects/proj-1/ticket-tags");
   });
+
+  it("client.templates.update calls PUT /v1/projects/:id/templates/:name", async () => {
+    const { fetchFn, calls } = trackingFetch();
+    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+
+    await client.templates.update("proj-1", "adr", { content: "# Updated", is_default: true });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toBe("http://test:1234/v1/projects/proj-1/templates/adr");
+    expect(calls[0]!.method).toBe("PUT");
+    expect(JSON.parse(calls[0]!.body!)).toEqual({ content: "# Updated", is_default: true });
+  });
 });

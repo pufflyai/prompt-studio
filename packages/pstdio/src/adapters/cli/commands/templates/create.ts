@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { createTemplate } from "@/features/templates/api/create-template";
 
@@ -75,7 +74,7 @@ export const createHandler =
 
     const content = deps.readInput(argv.file);
 
-    await deps.createTemplate(API_URL, config.project_id, {
+    await deps.createTemplate(config.project_id, {
       name: argv.name,
       template_type: argv.type,
       content,

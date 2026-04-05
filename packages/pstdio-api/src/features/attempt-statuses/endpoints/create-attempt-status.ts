@@ -1,26 +1,10 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { attemptStatusSchema, createAttemptStatusInputSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 
-const createAttemptStatusBodySchema = z
-  .object({
-    name: z.string().min(1),
-    color: z.string().min(1),
-    is_default: z.boolean().optional(),
-  })
-  .strict();
-
-const attemptStatusResponseSchema = z.object({
-  id: z.string(),
-  project_id: z.string(),
-  name: z.string(),
-  color: z.string(),
-  sort_order: z.number(),
-  is_default: z.boolean(),
-  created_at: z.string(),
-  updated_at: z.string(),
-  deleted_at: z.string().nullable(),
-});
+const createAttemptStatusBodySchema = createAttemptStatusInputSchema.strict();
+const attemptStatusResponseSchema = attemptStatusSchema;
 
 export const createAttemptStatusRoute = createRoute({
   method: "post",

@@ -1,4 +1,4 @@
-export type HookResponse = { reject?: boolean; reason?: string; data?: Record<string, unknown> };
+import type { HookResponse } from "@pstdio/sdk/plugins";
 
 // biome-ignore lint/suspicious/noConfusingVoidType: handlers may return void (post-hooks) or HookResponse (pre-hooks)
 export type HookHandler = (ctx: unknown) => HookResponse | void | Promise<HookResponse | void>;

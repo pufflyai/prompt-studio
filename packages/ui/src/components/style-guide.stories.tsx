@@ -1,137 +1,166 @@
-import { Box, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Menu, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { FileText, Folder, Settings } from "lucide-react";
 import type { ReactNode } from "react";
 import { expect, within } from "storybook/test";
 
+import { MenuItem } from "./menu-item";
 import { StyleGuide } from "./style-guide";
 
 type StoryFn = () => ReactNode;
 
-interface ColorToken {
+interface SurfaceToken {
   label: string;
   token: string;
+  description: string;
+  foreground?: string;
 }
 
-const backgroundTokens: ColorToken[] = [
-  { label: "Background primary", token: "bg" },
-  { label: "Background secondary", token: "bg.muted" },
-  { label: "Background subtle", token: "bg.subtle" },
-  { label: "Background active", token: "bg.emphasized" },
-  { label: "Background hover", token: "bg.muted" },
-  { label: "Background inverse", token: "bg.inverted" },
-  { label: "Background dark", token: "bg.dark" },
-  { label: "Background white", token: "bg.white" },
-  { label: "Background light", token: "bg.panel" },
-  { label: "Background display very light", token: "bg.display.very-light" },
-
-  { label: "Accent primary very light", token: "bg.accent-primary.very-light" },
-  { label: "Accent primary light", token: "bg.accent-primary.light" },
-  { label: "Accent primary medium", token: "bg.accent-primary.medium" },
-  { label: "Accent primary dark", token: "bg.accent-primary.dark" },
-
-  { label: "Accent secondary grey dark", token: "bg.accent-secondary.grey-dark" },
-  { label: "Accent secondary grey light", token: "bg.accent-secondary.grey-light" },
-  { label: "Accent secondary red very light", token: "bg.accent-secondary.red-very-light" },
-  { label: "Accent secondary red light", token: "bg.accent-secondary.red-light" },
-  { label: "Accent secondary pink light", token: "bg.accent-secondary.pink-light" },
-  { label: "Accent secondary pink medium", token: "bg.accent-secondary.pink-medium" },
-  { label: "Accent secondary blue very light", token: "bg.accent-secondary.blue-very-light" },
-  { label: "Accent secondary blue light", token: "bg.accent-secondary.blue-light" },
-  { label: "Accent secondary blue medium", token: "bg.accent-secondary.blue-medium" },
-  { label: "Accent secondary blue dark", token: "bg.accent-secondary.blue-dark" },
-  { label: "Accent secondary cyan light", token: "bg.accent-secondary.cyan-light" },
-  { label: "Accent secondary green light", token: "bg.accent-secondary.green-light" },
-  { label: "Accent secondary yellow light", token: "bg.accent-secondary.yellow-light" },
-  { label: "Accent secondary yellow medium", token: "bg.accent-secondary.yellow-medium" },
-  { label: "Accent secondary sand light", token: "bg.accent-secondary.sand-light" },
+const surfaceTokens: SurfaceToken[] = [
+  {
+    label: "Base background",
+    token: "bg",
+    description: "Default canvas for pages and cards.",
+  },
+  {
+    label: "Subtle background",
+    token: "bg.subtle",
+    description: "Quiet nesting surface for supporting sections.",
+  },
+  {
+    label: "Muted background",
+    token: "bg.muted",
+    description: "Selected, hovered, or emphasized page backplate.",
+  },
+  {
+    label: "Panel background",
+    token: "bg.panel",
+    description: "Persistent navigation and utility surfaces.",
+  },
+  {
+    label: "Dark background",
+    token: "bg.dark",
+    description: "High-contrast backdrop for elevated layers.",
+    foreground: "fg.inverted",
+  },
 ];
 
-const foregroundTokens: ColorToken[] = [
-  { label: "Foreground primary", token: "fg" },
-  { label: "Foreground secondary", token: "fg.muted" },
-  { label: "Foreground tertiary", token: "fg.subtle" },
-  { label: "Foreground inverse", token: "fg.inverted" },
-  { label: "Foreground feedback success", token: "fg.success" },
-  { label: "Foreground feedback alert", token: "fg.error" },
-  { label: "Foreground accent pink dark", token: "fg.accent.pink-dark" },
-  { label: "Foreground green dark", token: "fg.green-dark" },
-  { label: "Foreground blue dark", token: "fg.blue-dark" },
-  { label: "Foreground blue very dark", token: "fg.blue-very-dark" },
-];
+const SurfaceMenuPreview = () => (
+  <Menu.Root>
+    <Stack
+      gap="2px"
+      padding="xs"
+      borderRadius="sm"
+      borderWidth="1px"
+      borderColor="border.muted"
+      background="bg"
+      boxShadow="low"
+    >
+      <MenuItem id="overview" primaryLabel="Overview" secondaryLabel="Workspace summary" leftIcon={FileText} />
+      <MenuItem
+        id="activity"
+        primaryLabel="Recent activity"
+        secondaryLabel="Deploys and review notes"
+        leftIcon={Folder}
+        isSelected
+      />
+      <MenuItem id="settings" primaryLabel="Settings" secondaryLabel="Alerts and access" leftIcon={Settings} />
+    </Stack>
+  </Menu.Root>
+);
 
-interface ColorCombinationTileProps {
-  background: ColorToken;
-  foreground: ColorToken;
+const SurfaceModalPreview = () => (
+  <Box layerStyle="modal">
+    <Stack gap="sm">
+      <Stack gap="2xs">
+        <Text textStyle="label/L/medium">Modal surface</Text>
+        <Text textStyle="label/XS" color="fg.muted">
+          Elevated content stays on the default surface even when the page background shifts.
+        </Text>
+      </Stack>
+
+      <HStack gap="sm" flexWrap="wrap">
+        <Button size="sm" variant="outline">
+          Cancel
+        </Button>
+        <Button size="sm" variant="primary">
+          Publish
+        </Button>
+      </HStack>
+    </Stack>
+  </Box>
+);
+
+interface SurfaceCompositionCardProps {
+  surface: SurfaceToken;
 }
 
-const ColorCombinationTile = (props: ColorCombinationTileProps) => {
-  const { background, foreground } = props;
+const SurfaceCompositionCard = (props: SurfaceCompositionCardProps) => {
+  const { surface } = props;
+  const foreground = surface.foreground ?? "fg";
 
   return (
-    <Box background="bg" borderWidth="1px" borderColor="border.muted" borderRadius="sm" overflow="hidden">
-      <Box padding="sm" background={background.token} color={foreground.token} minHeight="96px">
+    <Box
+      borderWidth="1px"
+      borderColor="border.muted"
+      borderRadius="md"
+      background={surface.token}
+      color={foreground}
+      padding="md"
+      minHeight="100%"
+    >
+      <Stack gap="md">
         <Stack gap="2xs">
-          <Text textStyle="label/M/medium">Aa</Text>
-          <Text textStyle="paragraph/XS/regular">Sample text</Text>
-        </Stack>
-      </Box>
-
-      <Box padding="sm">
-        <Stack gap="2xs">
-          <Text textStyle="label/XS" color="fg">
-            {foreground.label}
+          <Text textStyle="label/L/medium">{surface.label}</Text>
+          <Text textStyle="label/XS" color={foreground} opacity={0.72}>
+            {surface.token}
           </Text>
-          <Text textStyle="label/XS" color="fg.muted">
-            {foreground.token}
-          </Text>
-        </Stack>
-      </Box>
-    </Box>
-  );
-};
-
-interface BackgroundForegroundCardProps {
-  background: ColorToken;
-}
-
-const BackgroundForegroundCard = (props: BackgroundForegroundCardProps) => {
-  const { background } = props;
-
-  return (
-    <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" background="bg" padding="md">
-      <Stack gap="sm">
-        <Stack gap="2xs">
-          <Text textStyle="label/L/medium">{background.label}</Text>
-          <Text textStyle="label/XS" color="fg.muted">
-            {background.token}
+          <Text textStyle="paragraph/XS/regular" color={foreground} opacity={0.8}>
+            {surface.description}
           </Text>
         </Stack>
 
-        <SimpleGrid columns={{ base: 1, md: 2 }} gap="sm">
-          {foregroundTokens.map((foreground) => (
-            <ColorCombinationTile
-              key={`${background.token}-${foreground.token}`}
-              background={background}
-              foreground={foreground}
-            />
-          ))}
-        </SimpleGrid>
+        <HStack gap="sm" flexWrap="wrap">
+          <Button size="sm" variant="primary">
+            Primary action
+          </Button>
+          <Button size="sm" variant="outline">
+            Secondary
+          </Button>
+          <Button size="sm" variant="subtle">
+            Subtle
+          </Button>
+        </HStack>
+
+        <Stack gap="xs">
+          <Text textStyle="label/S/medium" color={foreground}>
+            Menu surface
+          </Text>
+          <SurfaceMenuPreview />
+        </Stack>
+
+        <Stack gap="xs">
+          <Text textStyle="label/S/medium" color={foreground}>
+            Modal surface
+          </Text>
+          <SurfaceModalPreview />
+        </Stack>
       </Stack>
     </Box>
   );
 };
 
-const BackgroundForegroundStory = () => (
+const SurfaceCompositionsStory = () => (
   <Stack gap="lg">
     <Stack gap="xs">
-      <Text textStyle="heading/M">Background and foreground permutations</Text>
+      <Text textStyle="heading/M">Surface compositions</Text>
       <Text textStyle="paragraph/S/regular" color="fg.muted">
-        Every background token combined with each foreground text color to check legibility.
+        Compare the core page backgrounds with buttons, menus, and modal surfaces layered on top.
       </Text>
     </Stack>
 
     <SimpleGrid columns={{ base: 1, xl: 2 }} gap="md">
-      {backgroundTokens.map((backgroundToken) => (
-        <BackgroundForegroundCard key={backgroundToken.token} background={backgroundToken} />
+      {surfaceTokens.map((surfaceToken) => (
+        <SurfaceCompositionCard key={surfaceToken.token} surface={surfaceToken} />
       ))}
     </SimpleGrid>
   </Stack>
@@ -156,9 +185,9 @@ export const Overview = {
   render: () => <StyleGuide />,
 };
 
-export const BackgroundForegroundPermutations = {
-  name: "Background x foreground",
-  render: () => <BackgroundForegroundStory />,
+export const SurfaceCompositions = {
+  name: "Surface compositions",
+  render: () => <SurfaceCompositionsStory />,
 };
 
 export const AccentPrimaryShades = {

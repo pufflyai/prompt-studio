@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 import { listTicketFiles as defaultListTicketFiles } from "@/features/tickets/api/list-ticket-files";
 import { listTicketFiles as listLocalTicketFiles, resolveTicketDir } from "@/features/tickets/local-ticket";
@@ -79,10 +78,10 @@ export const createHandler =
   async (argv: Arguments<FilesArgs>) => {
     const { projectId, root } = deps.resolveProjectId(deps.cwd(), argv["project-id"]);
 
-    const ticket = await deps.resolveTicketByShorthand(API_URL, projectId, argv.id);
+    const ticket = await deps.resolveTicketByShorthand(projectId, argv.id);
     if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
-    const dbFiles = await deps.listTicketFiles(API_URL, ticket.id);
+    const dbFiles = await deps.listTicketFiles(ticket.id);
     const localFiles = root ? listLocalTicketFiles(root, argv.id) : [];
     const ticketDir = root ? resolveTicketDir(root, argv.id) : null;
     const ticketDirRelative = ticketDir && root ? ticketDir.replace(`${root}/`, "") : null;

@@ -15,6 +15,6 @@ export const createTemplateClient = (request: RequestFn): TemplateClient => ({
   get: (projectId, templateId) => request(`/v1/projects/${projectId}/templates/${templateId}`),
   create: (projectId, input) => request(`/v1/projects/${projectId}/templates`, { method: "POST", body: input }),
   update: (projectId, templateId, input) =>
-    request(`/v1/projects/${projectId}/templates/${templateId}`, { method: "PATCH", body: input }),
+    request(`/v1/projects/${projectId}/templates/${templateId}`, { method: "PUT", body: input }),
   delete: (projectId, templateId) => request(`/v1/projects/${projectId}/templates/${templateId}`, { method: "DELETE" }),
 });

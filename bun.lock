@@ -40,7 +40,6 @@
         "@types/pg": "^8.11.0",
         "pg": "^8.13.0",
         "pstdio-db": "workspace:*",
-        "pstdio-hooks": "workspace:*",
         "pstdio-plugins": "workspace:*",
         "pstdio-wt": "workspace:*",
       },
@@ -68,7 +67,6 @@
         "pstdio-api": "workspace:*",
         "pstdio-dashboard": "workspace:*",
         "pstdio-db": "workspace:*",
-        "pstdio-hooks": "workspace:*",
         "pstdio-logging": "workspace:*",
         "pstdio-plugins": "workspace:*",
         "pstdio-wt": "workspace:*",
@@ -105,8 +103,8 @@
         "hono": "^4.10.7",
         "mustache": "^4.2.0",
         "pstdio-agents": "workspace:*",
+        "pstdio-api-contracts": "workspace:*",
         "pstdio-db": "workspace:*",
-        "pstdio-hooks": "workspace:*",
         "pstdio-logging": "workspace:*",
         "pstdio-plugins": "workspace:*",
         "pstdio-storage": "workspace:*",
@@ -115,6 +113,16 @@
       "devDependencies": {
         "@types/bun": "latest",
         "@types/mustache": "^4.2.6",
+        "typescript": "^5.9.3",
+      },
+    },
+    "packages/pstdio-api-contracts": {
+      "name": "pstdio-api-contracts",
+      "dependencies": {
+        "zod": "^4.3.6",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
         "typescript": "^5.9.3",
       },
     },
@@ -200,13 +208,6 @@
         "typescript": "^5.9.3",
       },
     },
-    "packages/pstdio-hooks": {
-      "name": "pstdio-hooks",
-      "devDependencies": {
-        "@types/bun": "latest",
-        "typescript": "^5.9.3",
-      },
-    },
     "packages/pstdio-logging": {
       "name": "pstdio-logging",
       "dependencies": {
@@ -219,6 +220,9 @@
     },
     "packages/pstdio-plugins": {
       "name": "pstdio-plugins",
+      "dependencies": {
+        "@pstdio/sdk": "workspace:*",
+      },
       "devDependencies": {
         "@types/bun": "latest",
         "typescript": "^5.9.3",
@@ -252,6 +256,7 @@
       "devDependencies": {
         "@types/bun": "latest",
         "@types/mustache": "^4.2.6",
+        "pstdio-api-contracts": "workspace:*",
         "typescript": "^5.9.3",
       },
     },
@@ -2929,11 +2934,11 @@
 
     "pstdio-api": ["pstdio-api@workspace:packages/pstdio-api"],
 
+    "pstdio-api-contracts": ["pstdio-api-contracts@workspace:packages/pstdio-api-contracts"],
+
     "pstdio-dashboard": ["pstdio-dashboard@workspace:packages/pstdio-dashboard"],
 
     "pstdio-db": ["pstdio-db@workspace:packages/pstdio-db"],
-
-    "pstdio-hooks": ["pstdio-hooks@workspace:packages/pstdio-hooks"],
 
     "pstdio-logging": ["pstdio-logging@workspace:packages/pstdio-logging"],
 
@@ -3965,7 +3970,7 @@
 
     "pstdio-dashboard/@lexical/utils": ["@lexical/utils@0.36.2", "", { "dependencies": { "@lexical/list": "0.36.2", "@lexical/selection": "0.36.2", "@lexical/table": "0.36.2", "lexical": "0.36.2" } }, "sha512-P9+t2Ob10YNGYT/PWEER+1EqH8SAjCNRn+7SBvKbr0IdleGF2JvzbJwAWaRwZs1c18P11XdQZ779dGvWlfwBIw=="],
 
-    "pstdio-dashboard/@types/node": ["@types/node@22.19.15", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-F0R/h2+dsy5wJAUe3tAU6oqa2qbWY5TpNfL/RGmo1y38hiyO1w3x2jPtt76wmuaJI4DQnOBu21cNXQ2STIUUWg=="],
+    "pstdio-dashboard/@types/node": ["@types/node@24.12.0", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-GYDxsZi3ChgmckRT9HPU0WEhKLP08ev/Yfcq2AstjrDASOYCSXeyjDsHg4v5t4jOj7cyDX3vmprafKlWIG9MXQ=="],
 
     "pstdio-dashboard/@types/react": ["@types/react@19.2.3", "", { "dependencies": { "csstype": "^3.0.2" } }, "sha512-k5dJVszUiNr1DSe8Cs+knKR6IrqhqdhpUwzqhkS8ecQTSf3THNtbfIp/umqHMpX2bv+9dkx3fwDv/86LcSfvSg=="],
 
@@ -4407,7 +4412,7 @@
 
     "pstdio-dashboard/@lexical/table/@lexical/extension": ["@lexical/extension@0.36.2", "", { "dependencies": { "@lexical/utils": "0.36.2", "@preact/signals-core": "^1.11.0", "lexical": "0.36.2" } }, "sha512-NWxtqMFMzScq4Eemqp1ST2KREIfj57fUbn7qHv+mMnYgQZK4iIhrHKo5klonxi1oBURcxUZMIbdtH7MJ4BdisA=="],
 
-    "pstdio-dashboard/@types/node/undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
+    "pstdio-dashboard/@types/node/undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
 
     "pstdio/@types/node/undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
 

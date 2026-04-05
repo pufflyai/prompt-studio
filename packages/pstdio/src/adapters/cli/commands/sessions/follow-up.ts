@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { followUpSession as defaultFollowUp } from "@/features/sessions/api/follow-up-session";
 import { parseVars } from "./parse-vars";
 
@@ -73,7 +72,7 @@ export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<FollowUpArgs>) => {
     const input = buildFollowUpInput(argv);
-    const result = await deps.followUpSession(API_URL, argv.id, input);
+    const result = await deps.followUpSession(argv.id, input);
 
     const lines = [`Follow-up sent to session ${result.id}`];
     lines.push(`Agent:  ${result.agent ?? "unknown"}`);

@@ -1,5 +1,4 @@
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { getProject } from "@/features/projects/api/get-project";
 import { listRepos } from "@/features/projects/api/list-repos";
@@ -44,10 +43,10 @@ export const createHandler =
       projectId = config.project_id;
     }
 
-    const project = await deps.getProject(API_URL, projectId);
+    const project = await deps.getProject(projectId);
     if (!project) throw new Error(`Project not found: ${projectId}`);
 
-    const repos = await deps.listRepos(API_URL, projectId);
+    const repos = await deps.listRepos(projectId);
 
     const lines = [
       `Name:             ${project.name}`,

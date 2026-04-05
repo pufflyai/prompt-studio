@@ -1,7 +1,5 @@
-export const deleteWorkspace = async (baseUrl: string, id: string) => {
-  const res = await fetch(`${baseUrl}/v1/workspaces/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-  });
+import { apiClient } from "@/features/api-client";
 
-  if (!res.ok) throw new Error(`Failed to delete workspace: ${res.status}`);
+export const deleteWorkspace = async (id: string) => {
+  await apiClient().workspaces.delete(id);
 };

@@ -8,84 +8,91 @@ For the full hook contract (interface, payload schemas, attempt status, and cook
 
 ### Worktree hooks
 
-- `pre-worktree-create`
-- `post-worktree-create`
-- `pre-commit`
-- `post-commit`
-- `pre-rebase`
-- `post-rebase`
-- `pre-merge`
-- `post-merge`
-- `pre-worktree-remove`
-- `post-worktree-remove`
-- `on-conflict`
+- `preWorktreeCreate`
+- `postWorktreeCreate`
+- `preCommit`
+- `postCommit`
+- `preRebase`
+- `postRebase`
+- `preMerge`
+- `postMerge`
+- `preWorktreeRemove`
+- `postWorktreeRemove`
+- `onConflict`
 
 ### Session hooks
 
-- `post-session-start`
-- `post-session-success`
-- `post-session-fail`
-- `post-session-resume`
-- `post-session-await-input`
+- `postSessionStart`
+- `postSessionSuccess`
+- `postSessionFail`
+- `postSessionResume`
+- `postSessionAwaitInput`
 
 ### Ticket hooks
 
-- `pre-ticket-creation`
-- `post-ticket-creation`
-- `pre-ticket-status-change`
-- `post-ticket-status-change`
-- `pre-ticket-archive`
-- `post-ticket-archive`
-- `pre-ticket-deletion`
-- `post-ticket-deletion`
+- `preTicketCreation`
+- `postTicketCreation`
+- `preTicketStatusChange`
+- `postTicketStatusChange`
+- `preTicketArchive`
+- `postTicketArchive`
+- `preTicketDeletion`
+- `postTicketDeletion`
+
+### Attempt status hooks
+
+- `preAttemptStatusChange`
+- `postAttemptStatusChange`
 
 ## Blocking Hooks
 
-Non-zero exit codes abort the parent operation for:
+Pre-hooks can reject the parent operation by returning `{ reject: true }`:
 
-- `pre-worktree-create`
-- `post-worktree-create`
-- `pre-commit`
-- `pre-rebase`
-- `pre-merge`
-- `pre-worktree-remove`
-- `pre-ticket-creation`
-- `pre-ticket-status-change`
-- `pre-ticket-archive`
-- `pre-ticket-deletion`
+- `preWorktreeCreate`
+- `preCommit`
+- `preRebase`
+- `preMerge`
+- `preWorktreeRemove`
+- `preTicketCreation`
+- `preTicketStatusChange`
+- `preTicketArchive`
+- `preTicketDeletion`
+- `preAttemptStatusChange`
 
-All other hooks are non-blocking.
+All post-hooks and `onConflict` are non-blocking.
 
-## Environment Variables
+## Context Objects
 
-Plugin hooks receive context as environment variables:
+Plugin hooks receive typed context objects. Each hook type has its own context shape defined in `@pstdio/sdk/plugins` (`PluginHooks`).
 
-| Variable                | Description                    | Available In                  |
-| ----------------------- | ------------------------------ | ----------------------------- |
-| `PSTDIO_HOOK`           | Hook name (e.g. `pre-merge`)   | All                           |
-| `PSTDIO_BRANCH`         | Worktree branch name           | All                           |
-| `PSTDIO_WORKTREE_PATH`  | Absolute path to worktree      | All (except `pre-create`)     |
-| `PSTDIO_REPO_PATH`      | Absolute path to main repo     | All                           |
-| `PSTDIO_WORKSPACE`      | Workspace shorthand            | All                           |
-| `PSTDIO_TICKET`         | Ticket shorthand               | When ticket context exists    |
-| `PSTDIO_ATTEMPT_STATUS` | Attempt status                 | When workspace context exists |
-| `PSTDIO_FROM_STATUS`    | Previous status                | Ticket status change hooks    |
-| `PSTDIO_TO_STATUS`      | New status                     | Ticket status change hooks    |
-| `PSTDIO_TARGET`         | Target branch for merge/rebase | merge and rebase hooks        |
-| `PSTDIO_COMMIT_SHA`     | Commit SHA after commit/merge  | `post-commit`, `post-merge`   |
-| `PSTDIO_COMMIT_MESSAGE` | Commit message                 | `pre-commit`, `post-commit`   |
+Common context fields by hook category:
+
+| Field           | Description                    | Available In                          |
+| --------------- | ------------------------------ | ------------------------------------- |
+| `repoPath`      | Absolute path to main repo     | Worktree hooks                        |
+| `worktreePath`  | Absolute path to worktree      | Worktree hooks                        |
+| `branch`        | Worktree branch name           | Worktree hooks                        |
+| `workspace`     | Workspace shorthand            | Worktree hooks                        |
+| `ticket`        | Ticket shorthand               | Worktree hooks                        |
+| `target`        | Target branch for merge/rebase | merge and rebase hooks                |
+| `commitSha`     | Commit SHA                     | commit hooks                          |
+| `commitMessage` | Commit message                 | commit hooks                          |
+| `projectId`     | Project ID                     | Ticket, session, attempt status hooks |
+| `fromStatus`    | Previous status                | Status change hooks                   |
+| `toStatus`      | New status                     | Status change hooks                   |
+| `client`        | SDK client for API calls       | All hooks fired via API               |
 
 ## CLI Commands
 
 ### `pstdio hooks list`
 
-Show all supported hooks and whether each one exists.
+Show all supported hooks and whether each one has a matching plugin.
 
 ### `pstdio hooks create <hook-name>`
 
 Create `.pstdio/plugins/<hook-name>`.
 
-- Reuses the bundled scaffold when one exists, such as `post-worktree-create`
+- Reuses the bundled scaffold when one exists, such as `postWorktreeCreate`
 - Otherwise writes a minimal plugin starter
 - Fails instead of overwriting an existing hook file
 
@@ -100,8 +107,6 @@ Options:
 ## Cookbook
 
 ### Install dependencies on workspace creation
-
-Use a plugin for worktree setup:
 
 ```ts
 // .pstdio/plugins/worktree-bootstrap.ts
@@ -166,6 +171,5 @@ export default definePlugin({
 ## Storage & Configuration
 
 - **Source of truth**: filesystem at `.pstdio/plugins/`
-- **Discovery**: hooks are resolved from the filesystem at execution time
-- **Plugin hooks**: TypeScript/JavaScript modules loaded via `import()`
-- **Timeout**: 60 seconds — hooks that exceed this limit are killed
+- **Discovery**: plugins are resolved from the filesystem at execution time
+- **Runtime**: TypeScript/JavaScript modules loaded via `import()`

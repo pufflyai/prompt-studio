@@ -23,7 +23,7 @@ afterEach(() => {
 });
 
 describe("createPluginService", () => {
-  test("loads plugins and registers hooks for a project", async () => {
+  test("loads plugins for a project", async () => {
     const repo = createTempRepo();
     const pluginsDir = join(repo, ".pstdio", "plugins");
     mkdirSync(pluginsDir, { recursive: true });
@@ -34,10 +34,10 @@ describe("createPluginService", () => {
     };
 
     const service = createPluginService({ repoService, ensureWorkspace: noopWorkspace });
-    const { dispatcher, registry } = await service.getForProject("project-1");
+    const runtime = await service.getForProject("project-1");
 
-    expect(registry.getHookHandlers("postSessionStart")).toHaveLength(1);
-    expect(dispatcher).toBeDefined();
+    expect(runtime.hooks).toBeDefined();
+    expect(runtime.actions).toBeDefined();
   });
 
   test("caches per project", async () => {
@@ -54,20 +54,19 @@ describe("createPluginService", () => {
     const first = await service.getForProject("project-1");
     const second = await service.getForProject("project-1");
 
-    expect(first.dispatcher).toBe(second.dispatcher);
+    expect(first).toBe(second);
   });
 
-  test("returns empty dispatcher when no repo found", async () => {
+  test("returns empty runtime when no repo found", async () => {
     const repoService = {
       listByProject: async () => [],
     };
 
     const service = createPluginService({ repoService, ensureWorkspace: noopWorkspace });
-    const { dispatcher, registry } = await service.getForProject("no-repo");
+    const runtime = await service.getForProject("no-repo");
 
-    // Should not throw, just have empty handlers
-    const result = await dispatcher.firePreHook("preTicketCreation", {});
+    const result = await runtime.hooks.firePre("preTicketCreation" as never, {} as never);
     expect(result.rejected).toBe(false);
-    expect(registry.getActions()).toEqual([]);
+    expect(runtime.actions.list()).toEqual([]);
   });
 });

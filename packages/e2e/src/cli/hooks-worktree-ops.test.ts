@@ -22,17 +22,15 @@ afterEach(() => {
 });
 
 const createDispatchForRepo = async (repo: string) => {
-  const { createHookDispatcher } = await import("pstdio-hooks");
-  const { loadPlugins } = await import("pstdio-plugins");
-  const pluginsDir = join(repo, ".pstdio", "plugins");
-  const plugins = await loadPlugins(pluginsDir);
-  const dispatcher = createHookDispatcher();
-  for (const plugin of plugins) {
-    for (const [hookName, handler] of Object.entries(plugin.definition.hooks ?? {})) {
-      if (typeof handler === "function") dispatcher.register(hookName, handler);
-    }
-  }
-  return dispatcher;
+  const { loadPluginRuntime } = await import("pstdio-plugins/hooks");
+  const runtime = await loadPluginRuntime({
+    repoPath: repo,
+    client: {} as never,
+  });
+  return {
+    firePreHook: (hookName: string, ctx: unknown) => runtime.hooks.firePre(hookName as never, ctx as never),
+    firePostHook: (hookName: string, ctx: unknown) => runtime.hooks.firePost(hookName as never, ctx as never),
+  };
 };
 
 describe("commit hooks", () => {

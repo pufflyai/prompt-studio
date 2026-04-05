@@ -1,41 +1,9 @@
 import { z } from "@hono/zod-openapi";
+import { createWorkspaceInputSchema, workspaceListItemSchema, workspaceSchema } from "pstdio-api-contracts";
 
-export const workspaceResponseSchema = z.object({
-  id: z.string(),
-  project_id: z.string(),
-  name: z.string(),
-  branch: z.string().nullable(),
-  worktree_path: z.string().nullable(),
-  attempt_status_id: z.string().nullable(),
-  archived: z.boolean(),
-  workspace_shorthand: z.string(),
-  startup_log_file_id: z.string().nullable(),
-  created_at: z.string(),
-  updated_at: z.string(),
-  deleted_at: z.string().nullable(),
-});
+export const workspaceResponseSchema = workspaceSchema;
+export { workspaceListItemSchema };
+export const createWorkspaceBodySchema = createWorkspaceInputSchema.strict();
 
-export const workspaceListItemSchema = workspaceResponseSchema.extend({
-  ticket_shorthand: z.string(),
-  attempt_status_name: z.string().nullable(),
-});
-
-export const createWorkspaceBodySchema = z
-  .object({
-    project_id: z.string().min(1),
-    ticket_id: z.string().min(1),
-    ticket_shorthand: z.string().min(1),
-    branch: z.string().optional(),
-    worktree_path: z.string().optional(),
-  })
-  .strict();
-
-export const uploadStartupLogBodySchema = z
-  .object({
-    content_base64: z.string(),
-  })
-  .strict();
-
-export const notFoundResponseSchema = z.object({
-  error: z.string(),
-});
+export const uploadStartupLogBodySchema = z.object({ content_base64: z.string() }).strict();
+export const notFoundResponseSchema = z.object({ error: z.string() });

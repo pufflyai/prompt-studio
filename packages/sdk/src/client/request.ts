@@ -21,6 +21,18 @@ export type RequestOptions = {
 
 export type RequestFn = <T>(path: string, options?: RequestOptions) => Promise<T>;
 
+const readErrorMessage = (errorBody: unknown, status: number) => {
+  if (errorBody && typeof errorBody === "object" && errorBody !== null && "error" in errorBody) {
+    const message = String((errorBody as { error: string }).error);
+    const hookOutput =
+      "hook_output" in errorBody && typeof errorBody.hook_output === "string" ? errorBody.hook_output.trim() : "";
+
+    return hookOutput ? `${message}\n${hookOutput}` : message;
+  }
+
+  return `Request failed: ${status}`;
+};
+
 export const createRequest = (options: ClientOptions): RequestFn => {
   const baseUrl =
     options.baseUrl ??
@@ -42,10 +54,7 @@ export const createRequest = (options: ClientOptions): RequestFn => {
 
     if (!response.ok) {
       const errorBody: unknown = await response.json().catch(() => null);
-      const message =
-        errorBody && typeof errorBody === "object" && errorBody !== null && "error" in errorBody
-          ? String((errorBody as { error: string }).error)
-          : `Request failed: ${response.status}`;
+      const message = readErrorMessage(errorBody, response.status);
       throw new PstdioApiError(message, response.status);
     }
 

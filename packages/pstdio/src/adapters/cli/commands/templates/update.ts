@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
 import type { Arguments, Argv } from "yargs";
-import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { updateTemplate } from "@/features/templates/api/update-template";
 
@@ -63,7 +62,7 @@ export const createHandler =
 
     const content = argv.file ? deps.readInput(argv.file) : undefined;
 
-    await deps.updateTemplate(API_URL, config.project_id, argv.name, {
+    await deps.updateTemplate(config.project_id, argv.name, {
       content,
       is_default: argv.default,
     });

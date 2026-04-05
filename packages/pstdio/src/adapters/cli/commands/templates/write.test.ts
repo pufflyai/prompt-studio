@@ -22,13 +22,14 @@ describe("templates write", () => {
       cwd: () => tmpBase,
       findGitRoot: () => tmpBase,
       readConfig: () => ({ project_id: "proj-1" }),
-      getTemplate: async () => ({
-        id: "tpl-1",
-        name: "prd",
-        template_type: "document",
-        is_default: true,
-        content: "# {{TICKET_TITLE}}",
-      }),
+      getTemplate: async () =>
+        ({
+          id: "tpl-1",
+          name: "prd",
+          template_type: "document",
+          is_default: true,
+          content: "# {{TICKET_TITLE}}",
+        }) as never,
     });
 
     await handler({ name: "prd", target: "docs/prd/new-feature", _: [], $0: "" } as never);
@@ -46,13 +47,14 @@ describe("templates write", () => {
       cwd: () => tmpBase,
       findGitRoot: () => tmpBase,
       readConfig: () => ({ project_id: "proj-1" }),
-      getTemplate: async () => ({
-        id: "tpl-1",
-        name: "ticket",
-        template_type: "ticket",
-        is_default: true,
-        content: "# {{TICKET_ID}}",
-      }),
+      getTemplate: async () =>
+        ({
+          id: "tpl-1",
+          name: "ticket",
+          template_type: "ticket",
+          is_default: true,
+          content: "# {{TICKET_ID}}",
+        }) as never,
     });
 
     await handler({ name: "ticket", target: "PS-1", _: [], $0: "" } as never);
@@ -67,13 +69,14 @@ describe("templates write", () => {
       cwd: () => tmpBase,
       findGitRoot: () => tmpBase,
       readConfig: () => ({ project_id: "proj-1" }),
-      getTemplate: async () => ({
-        id: "tpl-1",
-        name: "ticket",
-        template_type: "ticket",
-        is_default: true,
-        content: "# Updated",
-      }),
+      getTemplate: async () =>
+        ({
+          id: "tpl-1",
+          name: "ticket",
+          template_type: "ticket",
+          is_default: true,
+          content: "# Updated",
+        }) as never,
     });
 
     await expect(handler({ name: "ticket", target: "PS-2", _: [], $0: "" } as never)).rejects.toThrow(
@@ -90,13 +93,14 @@ describe("templates write", () => {
       cwd: () => tmpBase,
       findGitRoot: () => tmpBase,
       readConfig: () => ({ project_id: "proj-1" }),
-      getTemplate: async () => ({
-        id: "tpl-1",
-        name: "ticket",
-        template_type: "ticket",
-        is_default: true,
-        content: "# {{TICKET_TITLE}}\n\n## Details",
-      }),
+      getTemplate: async () =>
+        ({
+          id: "tpl-1",
+          name: "ticket",
+          template_type: "ticket",
+          is_default: true,
+          content: "# {{TICKET_TITLE}}\n\n## Details",
+        }) as never,
     });
 
     await handler({ name: "ticket", target: "PS-4", _: [], $0: "" } as never);
@@ -112,13 +116,14 @@ describe("templates write", () => {
       cwd: () => tmpBase,
       findGitRoot: () => tmpBase,
       readConfig: () => ({ project_id: "proj-1" }),
-      getTemplate: async () => ({
-        id: "tpl-1",
-        name: "ticket",
-        template_type: "ticket",
-        is_default: true,
-        content: "# {{TICKET_TITLE}}",
-      }),
+      getTemplate: async () =>
+        ({
+          id: "tpl-1",
+          name: "ticket",
+          template_type: "ticket",
+          is_default: true,
+          content: "# {{TICKET_TITLE}}",
+        }) as never,
     });
 
     await handler({ name: "ticket", target: "PS-5", _: [], $0: "" } as never);
@@ -134,13 +139,14 @@ describe("templates write", () => {
       cwd: () => tmpBase,
       findGitRoot: () => tmpBase,
       readConfig: () => ({ project_id: "proj-1" }),
-      getTemplate: async () => ({
-        id: "tpl-1",
-        name: "ticket",
-        template_type: "ticket",
-        is_default: true,
-        content: "# Updated",
-      }),
+      getTemplate: async () =>
+        ({
+          id: "tpl-1",
+          name: "ticket",
+          template_type: "ticket",
+          is_default: true,
+          content: "# Updated",
+        }) as never,
     });
 
     await handler({ name: "ticket", target: "PS-3", _: [], $0: "" } as never);

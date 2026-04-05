@@ -1,21 +1,11 @@
-type Project = {
-  id: string;
-  name: string;
-  shorthand: string;
-  created_at: string;
-  updated_at: string;
-};
+import { PstdioApiError } from "@pstdio/sdk/client";
+import { apiClient } from "@/features/api-client";
 
-export const getProject = async (baseUrl: string, projectId: string) => {
-  const res = await fetch(`${baseUrl}/v1/projects/${projectId}`);
-
-  if (res.status === 404) {
-    return null;
+export const getProject = async (projectId: string) => {
+  try {
+    return await apiClient().projects.get(projectId);
+  } catch (error) {
+    if (error instanceof PstdioApiError && error.status === 404) return null;
+    throw error;
   }
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch project: ${res.status}`);
-  }
-
-  return (await res.json()) as Project;
 };

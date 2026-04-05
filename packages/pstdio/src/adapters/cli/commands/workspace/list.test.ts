@@ -9,17 +9,18 @@ describe("workspaces list", () => {
       cwd: () => "/repo",
       findGitRoot: () => "/repo",
       readConfig: () => ({ project_id: "proj-1" }),
-      listWorkspaces: async () => [
-        {
-          id: "ws-1",
-          workspace_shorthand: "PS-1_A1",
-          ticket_shorthand: "PS-1",
-          branch: "workspace/PS-1_A1",
-          worktree_path: "~/.pstdio/workspaces/PS-1_A1",
-          attempt_status_id: null,
-          attempt_status_name: null,
-        },
-      ],
+      listWorkspaces: async () =>
+        [
+          {
+            id: "ws-1",
+            workspace_shorthand: "PS-1_A1",
+            ticket_shorthand: "PS-1",
+            branch: "workspace/PS-1_A1",
+            worktree_path: "~/.pstdio/workspaces/PS-1_A1",
+            attempt_status_id: null,
+            attempt_status_name: null,
+          },
+        ] as never,
       log,
     });
 
