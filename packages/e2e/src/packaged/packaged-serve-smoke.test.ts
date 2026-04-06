@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { type ChildProcess, spawn } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildBinary } from "./packaged-helpers";
@@ -31,6 +31,37 @@ const waitForReady = async (baseUrl: string, timeoutMs = 10_000) => {
   }
 
   throw new Error(`Packaged API did not become ready within ${timeoutMs}ms`);
+};
+
+const waitForFile = async (filePath: string, timeoutMs = 10_000) => {
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    if (existsSync(filePath)) return;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+
+  throw new Error(`Expected file to exist within ${timeoutMs}ms: ${filePath}`);
+};
+
+const waitForActionKeys = async (baseUrl: string, projectId: string, expectedKeys: string[], timeoutMs = 10_000) => {
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    const res = await fetch(`${baseUrl}/v1/projects/${projectId}/actions?targetType=ticket`);
+    if (res.ok) {
+      const actions = (await res.json()) as { key: string }[];
+      const keys = actions.map((action) => action.key);
+
+      if (expectedKeys.every((key) => keys.includes(key))) {
+        return keys;
+      }
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+
+  throw new Error(`Expected actions to be available within ${timeoutMs}ms: ${expectedKeys.join(", ")}`);
 };
 
 const startPackagedServe = async (tempRoot: string) => {
@@ -139,6 +170,150 @@ describe("packaged pstdio — self-hosted serve", () => {
         const pluginsDir = join(repoPath, ".pstdio", "plugins");
         expect(existsSync(pluginsDir)).toBe(true);
         expect(readdirSync(pluginsDir).length).toBeGreaterThan(0);
+
+        const actionKeys = await waitForActionKeys(started.baseUrl, project.id, ["ticket-actions/run-attempt"]);
+        expect(actionKeys).toContain("ticket-actions/run-attempt");
+      } finally {
+        if (child) {
+          await stopProcess(child);
+        }
+        rmSync(tempRoot, { recursive: true, force: true });
+      }
+    },
+    SMOKE_TEST_TIMEOUT,
+  );
+
+  test(
+    "restores starter plugins for already-linked repos on packaged server restart",
+    async () => {
+      const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-restart-"));
+      let child: ChildProcess | null = null;
+
+      try {
+        let started = await startPackagedServe(tempRoot);
+        child = started.child;
+
+        const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "packaged-serve-restart-project" }),
+        });
+        expect(createRes.status).toBe(201);
+
+        const project = (await createRes.json()) as { id: string };
+        const repoPath = join(tempRoot, "restart-repo");
+        mkdirSync(repoPath, { recursive: true });
+
+        const repoRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/repos`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "restart-repo", path: repoPath }),
+        });
+        expect(repoRes.status).toBe(201);
+
+        const pluginsDir = join(repoPath, ".pstdio", "plugins");
+        const ticketActionsPath = join(pluginsDir, "ticket-actions.ts");
+        rmSync(pluginsDir, { recursive: true, force: true });
+        expect(existsSync(ticketActionsPath)).toBe(false);
+
+        await stopProcess(child);
+        child = null;
+
+        started = await startPackagedServe(tempRoot);
+        child = started.child;
+
+        const projectsRes = await fetch(`${started.baseUrl}/v1/projects`);
+        expect(projectsRes.status).toBe(200);
+
+        await waitForFile(ticketActionsPath);
+        expect(readdirSync(pluginsDir).length).toBeGreaterThan(0);
+      } finally {
+        if (child) {
+          await stopProcess(child);
+        }
+        rmSync(tempRoot, { recursive: true, force: true });
+      }
+    },
+    SMOKE_TEST_TIMEOUT,
+  );
+
+  test(
+    "loads custom TypeScript and JavaScript project plugins in packaged mode",
+    async () => {
+      const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-project-plugins-"));
+      let child: ChildProcess | null = null;
+
+      try {
+        const started = await startPackagedServe(tempRoot);
+        child = started.child;
+
+        const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "packaged-serve-project-plugins" }),
+        });
+        expect(createRes.status).toBe(201);
+
+        const project = (await createRes.json()) as { id: string };
+        const repoPath = join(tempRoot, "project-plugins-repo");
+        mkdirSync(repoPath, { recursive: true });
+
+        const repoRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/repos`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "project-plugins-repo", path: repoPath }),
+        });
+        expect(repoRes.status).toBe(201);
+
+        const pluginsDir = join(repoPath, ".pstdio", "plugins");
+        writeFileSync(
+          join(pluginsDir, "project-ts.ts"),
+          [
+            'import { definePlugin } from "@pstdio/sdk/plugins";',
+            "",
+            "export default definePlugin({",
+            "  actions: [",
+            "    {",
+            '      key: "ts-action",',
+            '      label: "TS action",',
+            '      targetType: "ticket",',
+            '      placement: "primary",',
+            "      async trigger() {},",
+            "    },",
+            "  ],",
+            "});",
+            "",
+          ].join("\n"),
+          "utf8",
+        );
+        writeFileSync(
+          join(pluginsDir, "project-js.js"),
+          [
+            "export default {",
+            "  actions: [",
+            "    {",
+            '      key: "js-action",',
+            '      label: "JS action",',
+            '      targetType: "ticket",',
+            '      placement: "secondary",',
+            "      async trigger() {},",
+            "    },",
+            "  ],",
+            "};",
+            "",
+          ].join("\n"),
+          "utf8",
+        );
+
+        const actionKeys = await waitForActionKeys(started.baseUrl, project.id, [
+          "ticket-actions/run-attempt",
+          "project-ts/ts-action",
+          "project-js/js-action",
+        ]);
+
+        expect(actionKeys).toContain("ticket-actions/run-attempt");
+        expect(actionKeys).toContain("project-ts/ts-action");
+        expect(actionKeys).toContain("project-js/js-action");
       } finally {
         if (child) {
           await stopProcess(child);

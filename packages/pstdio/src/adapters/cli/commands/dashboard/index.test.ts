@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { Server } from "node:http";
+import packageData from "../../../../../package.json";
 import { launch } from ".";
 
 let stdoutWriteSpy: ReturnType<typeof mock>;
@@ -57,7 +58,7 @@ afterEach(() => {
 });
 
 describe("launch", () => {
-  test("injects app version into dashboard runtime config", async () => {
+  test("injects the package version into dashboard runtime config", async () => {
     const { calls, deps } = createStubDeps({ dashboardRoot: "/my/dashboard" });
     const previousVersion = process.env.PSTDIO_VERSION;
     process.env.PSTDIO_VERSION = "9.8.7";
@@ -76,14 +77,13 @@ describe("launch", () => {
       {
         root: "/my/dashboard",
         port: 5555,
-        config: { apiBaseUrl: "http://localhost:3000", version: "9.8.7" },
+        config: { apiBaseUrl: "http://localhost:3000", version: packageData.version },
       },
     ]);
   });
 
   test("starts dashboard server with correct options", async () => {
     const { calls, deps } = createStubDeps({ dashboardRoot: "/my/dashboard" });
-    const expectedVersion = process.env.PSTDIO_VERSION ?? "dev";
 
     await launch({ apiPort: 3000, dashboardPort: 5555, openBrowser: true }, deps);
 
@@ -91,7 +91,7 @@ describe("launch", () => {
       {
         root: "/my/dashboard",
         port: 5555,
-        config: { apiBaseUrl: "http://localhost:3000", version: expectedVersion },
+        config: { apiBaseUrl: "http://localhost:3000", version: packageData.version },
       },
     ]);
   });

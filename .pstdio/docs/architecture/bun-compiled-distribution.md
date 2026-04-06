@@ -421,6 +421,14 @@ This closes the gap where binary presence was verified but core packaged behavio
 - Update `ensureApi` to self-spawn via `process.execPath` with `serve`
 - Verify `bun build --compile` works for darwin-arm64 (local machine)
 
+For manual local smoke testing, point `pstdio` at the compiled binary after building:
+
+```bash
+alias pstdio="$PWD/dist/pstdio"
+```
+
+Run that from the repo root. It lets contributors run normal commands such as `pstdio --help` or `pstdio serve` against the compiled executable without changing their global install.
+
 ### Phase 2: platform packages
 
 - Create platform package scaffolding (package.json, index.cjs)

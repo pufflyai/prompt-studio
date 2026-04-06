@@ -1,5 +1,6 @@
 import { createApp } from "pstdio-api/app";
 import { createLogger } from "pstdio-logging";
+import { CLI_VERSION } from "@/features/cli-version";
 import { resolveFilesRoot } from "@/features/resolve-files-root";
 import { injectConfig } from "../../dashboard/serve-dashboard";
 import { resolveDefaultDbPath, resolveDefaultStoragePath } from "../../dashboard/state-paths";
@@ -115,7 +116,6 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
     try {
       const assets = deps.isCompiledBinary() ? deps.loadEmbeddedAssets() : deps.loadFilesystemAssets();
       const baseUrl = `http://localhost:${port}`;
-      const appVersion = process.env.PSTDIO_VERSION ?? "dev";
 
       // Without this, "/" reaches resolveMimeType as-is — extname("/") is "",
       // which falls back to application/octet-stream and the browser downloads
@@ -124,7 +124,7 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
 
       const serveHtml = (blob: Blob) =>
         blob.text().then((html) => {
-          const injected = deps.injectConfig(html, { apiBaseUrl: baseUrl, version: appVersion });
+          const injected = deps.injectConfig(html, { apiBaseUrl: baseUrl, version: CLI_VERSION });
           return new Response(injected, { headers: { "Content-Type": "text/html" } });
         });
 

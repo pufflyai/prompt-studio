@@ -1,5 +1,6 @@
 import type { Server } from "node:http";
 import type { Argv } from "yargs";
+import { CLI_VERSION } from "@/features/cli-version";
 import { openBrowser as defaultOpenBrowser } from "../../dashboard/open-browser";
 import { resolveDashboardRoot as defaultResolveDashboardRoot } from "../../dashboard/resolve-dashboard-root";
 import { serveDashboard as defaultServeDashboard } from "../../dashboard/serve-dashboard";
@@ -49,13 +50,12 @@ export const launch = async (options: LaunchOptions, deps: LaunchDeps = defaultD
   const { apiPort, dashboardPort, openBrowser } = options;
   const apiUrl = `http://localhost:${apiPort}`;
   const dashboardUrl = `http://localhost:${dashboardPort}`;
-  const appVersion = process.env.PSTDIO_VERSION ?? "dev";
 
   const dashboardRoot = deps.resolveDashboardRoot(process.cwd());
   const server = deps.serveDashboard({
     root: dashboardRoot,
     port: dashboardPort,
-    config: { apiBaseUrl: apiUrl, version: appVersion },
+    config: { apiBaseUrl: apiUrl, version: CLI_VERSION },
   });
 
   if (openBrowser) {

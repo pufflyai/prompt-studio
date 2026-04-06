@@ -1,8 +1,52 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { derivePluginIdentity, discoverPluginFiles } from "./discovery";
 import type { LoadedPlugin, PluginDefinition } from "./types";
 
 const isValidPluginShape = (value: unknown): value is PluginDefinition =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isCompiledBinary = () => {
+  const embeddedFiles = (Bun as Record<string, unknown>).embeddedFiles;
+  return Array.isArray(embeddedFiles) && embeddedFiles.length > 0;
+};
+
+const importBundledPluginModule = async (filePath: string) => {
+  const tempDir = mkdtempSync(join(tmpdir(), "pstdio-plugin-build-"));
+  const outputName = `${basename(filePath).replace(/\.[^.]+$/, "")}.js`;
+
+  try {
+    const result = await Bun.build({
+      entrypoints: [filePath],
+      outdir: tempDir,
+      naming: "[name].js",
+      format: "esm",
+      target: "bun",
+    });
+
+    if (!result.success) {
+      throw new Error(`Failed to bundle plugin module: ${filePath}`);
+    }
+
+    return import(pathToFileURL(join(tempDir, outputName)).href);
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+};
+
+const importPluginModule = async (filePath: string) => {
+  if (isCompiledBinary()) {
+    return importBundledPluginModule(filePath);
+  }
+
+  try {
+    return await import(pathToFileURL(filePath).href);
+  } catch {
+    return importBundledPluginModule(filePath);
+  }
+};
 
 export const loadPlugins = async (pluginsDir: string) => {
   const files = discoverPluginFiles(pluginsDir);
@@ -14,7 +58,7 @@ export const loadPlugins = async (pluginsDir: string) => {
   for (const filePath of files) {
     let mod: Record<string, unknown>;
     try {
-      mod = await import(filePath);
+      mod = await importPluginModule(filePath);
     } catch {
       continue;
     }
