@@ -10,7 +10,7 @@
     "url": "git+https://github.com/pufflyai/prompt-studio.git"
   },
   "scripts": {
-    "validate": "bun run format && bun run lint && bun run build && bun run test",
+    "validate": "bun run validate:changesets && bun run format && bun run lint && bun run build && bun run test",
     "build": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" lerna run build",
     "analyze-bundle": "lerna run analyze-bundle --stream",
     "test": "lerna run test",
@@ -32,6 +32,7 @@
     "report:e2e": "bun run --cwd packages/e2e report",
     "storybook:dashboard": "bun run --cwd packages/pstdio-dashboard storybook",
     "build-storybook:dashboard": "bun run --cwd packages/pstdio-dashboard build-storybook",
+    "validate:changesets": "bun run scripts/validate-changesets.ts",
     "changeset": "changeset",
     "release": "bun run build && changeset publish"
   },
