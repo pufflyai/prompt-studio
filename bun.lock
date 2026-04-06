@@ -46,7 +46,7 @@
     },
     "packages/pstdio": {
       "name": "pstdio",
-      "version": "0.6.0",
+      "version": "0.6.1",
       "bin": {
         "pstdio": "./bin/pstdio.cjs",
       },
@@ -73,14 +73,14 @@
         "typescript": "^5.9.3",
       },
       "optionalDependencies": {
-        "@pstdio/cli-darwin-arm64": "0.6.0",
-        "@pstdio/cli-darwin-x64": "0.6.0",
-        "@pstdio/cli-linux-arm64": "0.6.0",
-        "@pstdio/cli-linux-arm64-musl": "0.6.0",
-        "@pstdio/cli-linux-x64": "0.6.0",
-        "@pstdio/cli-linux-x64-musl": "0.6.0",
-        "@pstdio/cli-win-arm64": "0.6.0",
-        "@pstdio/cli-win-x64": "0.6.0",
+        "@pstdio/cli-darwin-arm64": "0.6.1",
+        "@pstdio/cli-darwin-x64": "0.6.1",
+        "@pstdio/cli-linux-arm64": "0.6.1",
+        "@pstdio/cli-linux-arm64-musl": "0.6.1",
+        "@pstdio/cli-linux-x64": "0.6.1",
+        "@pstdio/cli-linux-x64-musl": "0.6.1",
+        "@pstdio/cli-win-arm64": "0.6.1",
+        "@pstdio/cli-win-x64": "0.6.1",
       },
     },
     "packages/pstdio-agents": {

@@ -1,5 +1,13 @@
 # pstdio
 
+## 0.6.1
+
+### Patch Changes
+
+- 42c9d33: Fix starter plugin backfill for linked repos.
+- 42c9d33: Fix packaged pstdio plugin loading for project TypeScript plugins.
+- 42c9d33: Use package version instead of PSTDIO_VERSION.
+
 ## 0.6.0
 
 ### Minor Changes
