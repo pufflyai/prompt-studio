@@ -1,5 +1,12 @@
 # @pstdio/ui
 
+## 0.3.1
+
+### Patch Changes
+
+- 1d384f8: Replace the background permutation story with a surface composition story for buttons, menus, and modals.
+- 1d384f8: Align TypeScript dependency ranges to ^5.9.3 across workspace packages.
+
 ## 0.3.0
 
 ### Minor Changes
