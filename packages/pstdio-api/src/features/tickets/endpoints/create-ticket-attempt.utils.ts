@@ -84,28 +84,19 @@ const startAttemptSession = async (
 
   const title = input.ticket.display_title ?? input.ticket.shorthand;
   const prompt = await resolvePrompt(deps, input.requestedPrompt, input.ticket.file_id, title);
-  const session = await deps.sessionService.create({
-    project_id: input.ticket.project_id,
-    title,
-    agent: agentId,
-    cwd: input.cwd,
-  });
+  const session = await deps.sessionService.create(
+    {
+      project_id: input.ticket.project_id,
+      title,
+      agent: agentId,
+      cwd: input.cwd,
+    },
+    { emitStartedHook: false },
+  );
   deps.eventBus.emit("sessions", "set", session);
 
   const workspaceSessionLink = await deps.workspaceSessionService.link(input.workspace.id, session.id);
   deps.eventBus.emit("workspace_sessions", "set", workspaceSessionLink);
-
-  // Fire start hook after the workspace-session link so the hook can resolve worktree context.
-  fireSessionStartHook(
-    {
-      reposService: deps.repoService,
-      workspaceSessionsService: deps.workspaceSessionService,
-      attemptStatusesService: deps.attemptStatusService,
-      ticketService: deps.ticketService,
-      pluginService: deps.pluginService,
-    },
-    { id: session.id, project_id: input.ticket.project_id, status: session.status },
-  );
 
   return { session, agentId, prompt, title };
 };
@@ -175,6 +166,25 @@ const runSetupAndSpawnAgent = (
 
     const ready = await deps.workspaceService.setInitializing(input.workspace.id, false);
     if (ready) deps.eventBus.emit("workspaces", "set", ready);
+
+    if (input.session) {
+      fireSessionStartHook(
+        {
+          reposService: deps.repoService,
+          workspaceSessionsService: deps.workspaceSessionService,
+          attemptStatusesService: deps.attemptStatusService,
+          statusService: deps.statusService,
+          ticketService: deps.ticketService,
+          pluginService: deps.pluginService,
+        },
+        {
+          id: input.session.id,
+          project_id: input.workspace.project_id,
+          status: input.session.status,
+          original_session_id: input.session.original_session_id,
+        },
+      );
+    }
 
     if (input.session && input.agentId && input.prompt && input.title) {
       spawnStartedSession(deps, {
@@ -299,6 +309,23 @@ export const continueTicketAttemptSetup = (
   if (!input.started) {
     return;
   }
+
+  fireSessionStartHook(
+    {
+      reposService: deps.repoService,
+      workspaceSessionsService: deps.workspaceSessionService,
+      attemptStatusesService: deps.attemptStatusService,
+      statusService: deps.statusService,
+      ticketService: deps.ticketService,
+      pluginService: deps.pluginService,
+    },
+    {
+      id: input.started.session.id,
+      project_id: input.workspace.project_id,
+      status: input.started.session.status,
+      original_session_id: input.started.session.original_session_id,
+    },
+  );
 
   spawnStartedSession(deps, {
     session: input.started.session,

@@ -120,6 +120,15 @@ describe("SessionService", () => {
         status: "in_progress",
       });
     });
+
+    test("skips the start callback when requested", async () => {
+      const { deps, mocks } = buildDeps();
+      const service = createSessionService(deps);
+
+      await service.create({ project_id: "p1", title: "test", agent: "claude-code" }, { emitStartedHook: false });
+
+      expect(mocks.onSessionStarted).not.toHaveBeenCalled();
+    });
   });
 
   describe("archive", () => {

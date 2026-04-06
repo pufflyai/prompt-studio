@@ -119,11 +119,28 @@ const resolveSessionHookContext = async (deps: SessionHookDeps, session: Session
 };
 
 const SESSION_TERMINAL_STATUSES = new Set(["completed", "failed"]);
+const WORKSPACE_READY_TIMEOUT_MS = 5_000;
+const WORKSPACE_READY_POLL_MS = 25;
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const waitForWorkspaceReady = async (deps: SessionHookDeps, sessionId: string) => {
+  let workspace = await deps.workspaceSessionsService.getWorkspaceBySessionId(sessionId);
+  const deadline = Date.now() + WORKSPACE_READY_TIMEOUT_MS;
+
+  while (workspace?.initializing && Date.now() < deadline) {
+    await wait(WORKSPACE_READY_POLL_MS);
+    workspace = await deps.workspaceSessionsService.getWorkspaceBySessionId(sessionId);
+  }
+
+  return workspace;
+};
 
 const fireSessionHook = (deps: SessionHookDeps, hookName: string, session: SessionRecord) => {
   void (async () => {
     let ctx: Record<string, unknown>;
     try {
+      await waitForWorkspaceReady(deps, session.id);
       ctx = await resolveSessionHookContext(deps, session);
     } catch {
       ctx = { projectId: session.project_id, sessionId: session.id, sessionStatus: session.status };

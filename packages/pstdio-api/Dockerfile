@@ -14,6 +14,11 @@ COPY packages/pstdio-plugins/package.json packages/pstdio-plugins/package.json
 COPY packages/pstdio-storage/package.json packages/pstdio-storage/package.json
 COPY packages/pstdio-wt/package.json packages/pstdio-wt/package.json
 COPY packages/sdk/package.json packages/sdk/package.json
+COPY packages/e2e/package.json packages/e2e/package.json
+COPY packages/pstdio-dashboard/package.json packages/pstdio-dashboard/package.json
+COPY packages/pstdio/package.json packages/pstdio/package.json
+COPY packages/ui/package.json packages/ui/package.json
+COPY clients/landing-page/package.json clients/landing-page/package.json
 
 RUN bun install --frozen-lockfile --ignore-scripts \
   --filter './packages/pstdio-api' \

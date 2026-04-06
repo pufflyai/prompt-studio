@@ -14,6 +14,10 @@ export type SessionServiceDeps = {
   onSessionResumed?: (session: SessionRecord) => void;
 };
 
+type CreateSessionOptions = {
+  emitStartedHook?: boolean;
+};
+
 export const createSessionService = (deps: SessionServiceDeps) => {
   const raw = deps.sessionsDb;
   const store = createSessionStore();
@@ -41,15 +45,17 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     return updated;
   };
 
-  const create = async (input: Parameters<typeof raw.create>[0]) => {
+  const create = async (input: Parameters<typeof raw.create>[0], options: CreateSessionOptions = {}) => {
     const session = await raw.create(input);
     deps.eventBus.emit("sessions", "set", session);
-    deps.onSessionStarted?.({
-      id: session.id,
-      project_id: input.project_id,
-      status: session.status,
-      original_session_id: session.original_session_id,
-    });
+    if (options.emitStartedHook !== false) {
+      deps.onSessionStarted?.({
+        id: session.id,
+        project_id: input.project_id,
+        status: session.status,
+        original_session_id: session.original_session_id,
+      });
+    }
     return session;
   };
 

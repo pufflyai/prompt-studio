@@ -53,6 +53,7 @@ const createDeferred = <T>() => {
 
 const makeDeps = (input?: {
   workspace?: Record<string, unknown> | null;
+  getWorkspaceBySessionId?: () => Promise<Record<string, unknown> | null>;
   ticket?: Record<string, unknown> | null;
   attemptStatuses?: Array<{ id: string; name: string }>;
   statuses?: Array<{ id: string; name: string }>;
@@ -74,7 +75,7 @@ const makeDeps = (input?: {
   const deps: SessionHookDeps = {
     reposService: { listByProject: async () => [] } as never,
     workspaceSessionsService: {
-      getWorkspaceBySessionId: async () => workspace,
+      getWorkspaceBySessionId: input?.getWorkspaceBySessionId ?? (async () => workspace),
     } as never,
     attemptStatusesService: {
       list: async () => attemptStatuses,
@@ -191,6 +192,28 @@ describe("fireSessionStartHook", () => {
     expect(ctx.ticket).toEqual({ ...baseTicket, status_name: null });
   });
 
+  test("waits for linked workspace setup to finish before firing", async () => {
+    let workspace = { ...baseWorkspace, initializing: true };
+    const { deps, calls, nextCall } = makeDeps({
+      getWorkspaceBySessionId: async () => workspace,
+      ticket: baseTicket,
+    });
+
+    const call = nextCall();
+    fireSessionStartHook(deps, { ...sessionBase, status: "in_progress" });
+
+    await Bun.sleep(10);
+    expect(calls).toHaveLength(0);
+
+    workspace = { ...baseWorkspace, initializing: false };
+    const { ctx } = await call;
+    expect(ctx.workspace).toEqual({
+      ...baseWorkspace,
+      ticket_shorthand: "PS-1",
+      attempt_status_name: null,
+    });
+  });
+
   test("omits workspace and ticket objects when session has no linked workspace", async () => {
     const { deps, nextCall } = makeDeps();
 
@@ -222,5 +245,28 @@ describe("fireSessionResumeHook", () => {
       attempt_status_name: null,
     });
     expect(ctx.ticket).toEqual({ ...baseTicket, status_name: null });
+  });
+
+  test("waits for linked workspace setup to finish before firing", async () => {
+    let workspace = { ...baseWorkspace, initializing: true };
+    const { deps, calls, nextCall } = makeDeps({
+      getWorkspaceBySessionId: async () => workspace,
+      ticket: baseTicket,
+    });
+
+    const call = nextCall();
+    fireSessionStatusHook(deps, { ...sessionBase, status: "completed" });
+
+    await Bun.sleep(10);
+    expect(calls).toHaveLength(0);
+
+    workspace = { ...baseWorkspace, initializing: false };
+    const { hookName, ctx } = await call;
+    expect(hookName).toBe("postSessionSuccess");
+    expect(ctx.workspace).toEqual({
+      ...baseWorkspace,
+      ticket_shorthand: "PS-1",
+      attempt_status_name: null,
+    });
   });
 });
