@@ -3,8 +3,10 @@ FROM oven/bun:1.3.10 AS builder
 WORKDIR /app
 
 COPY package.json bun.lock ./
-# Preserve workspace paths without hand-maintaining every package manifest.
-COPY --parents clients/*/package.json packages/*/package.json ./
+
+# Copy the workspace manifests Bun needs.
+COPY clients/landing-page/package.json clients/landing-page/package.json
+COPY packages/ui/package.json packages/ui/package.json
 
 RUN bun install \
   --filter './clients/landing-page' \

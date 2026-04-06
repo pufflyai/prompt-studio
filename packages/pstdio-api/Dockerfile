@@ -4,8 +4,16 @@ WORKDIR /app
 
 # Copy dependency manifests first for a cacheable, reproducible install layer.
 COPY package.json bun.lock ./
-# Preserve workspace paths without hand-maintaining every package manifest.
-COPY --parents clients/*/package.json packages/*/package.json ./
+# Copy the workspace manifests Bun needs.
+COPY packages/pstdio-api/package.json packages/pstdio-api/package.json
+COPY packages/pstdio-agents/package.json packages/pstdio-agents/package.json
+COPY packages/pstdio-api-contracts/package.json packages/pstdio-api-contracts/package.json
+COPY packages/pstdio-db/package.json packages/pstdio-db/package.json
+COPY packages/pstdio-logging/package.json packages/pstdio-logging/package.json
+COPY packages/pstdio-plugins/package.json packages/pstdio-plugins/package.json
+COPY packages/pstdio-storage/package.json packages/pstdio-storage/package.json
+COPY packages/pstdio-wt/package.json packages/pstdio-wt/package.json
+COPY packages/sdk/package.json packages/sdk/package.json
 
 RUN bun install --frozen-lockfile --ignore-scripts \
   --filter './packages/pstdio-api' \
