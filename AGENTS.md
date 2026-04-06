@@ -34,6 +34,8 @@ Follow this loop **every time**:
 - Tests for UI changes. Use storybook stories instead.
 - Tests for config only changes.
 - Tests for documentation only changes.
+- Tests that assert literal bundled copy.
+- Tests that assert generated file wording.
 
 ### 2. Green — Make it pass
 
@@ -110,6 +112,8 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 - Tests for UI changes. Use storybook stories instead.
 - Tests for config changes.
 - Tests for documentation changes.
+- Tests that assert literal bundled copy.
+- Tests that assert generated file wording.
 
 ---
 

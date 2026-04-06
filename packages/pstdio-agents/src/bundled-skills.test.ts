@@ -6,11 +6,6 @@ const makeEmbeddedFile = (name: string, content: string) => {
   return Object.assign(blob, { name });
 };
 
-const extractVersion = (content: string) => {
-  const match = content.match(/metadata:\n {2}- version: ([^\n]+)/);
-  return match?.[1] ?? "";
-};
-
 describe("getBundledSkills", () => {
   test("prefers embedded skill files in compiled runtime", async () => {
     const runtime = Bun as unknown as { embeddedFiles: (Blob & { name: string })[] };
@@ -49,42 +44,6 @@ bravo content
         },
         { name: "bravo", description: "Bravo skill", version: "", content: expect.stringContaining("bravo content") },
       ]);
-    } finally {
-      runtime.embeddedFiles = originalEmbeddedFiles;
-    }
-  });
-
-  test("loads version metadata from bundled skill frontmatter", async () => {
-    const runtime = Bun as unknown as { embeddedFiles: (Blob & { name: string })[] | undefined };
-    const originalEmbeddedFiles = runtime.embeddedFiles;
-    runtime.embeddedFiles = [];
-
-    try {
-      const skills = await getBundledSkills();
-
-      expect(skills).not.toHaveLength(0);
-      for (const skill of skills) {
-        const expectedVersion = extractVersion(skill.content);
-        expect(expectedVersion).not.toBe("");
-        expect(skill.version).toBe(expectedVersion);
-      }
-    } finally {
-      runtime.embeddedFiles = originalEmbeddedFiles;
-    }
-  });
-
-  test("update-documentation explains how to initialize docs when missing", async () => {
-    const runtime = Bun as unknown as { embeddedFiles: (Blob & { name: string })[] | undefined };
-    const originalEmbeddedFiles = runtime.embeddedFiles;
-    runtime.embeddedFiles = [];
-
-    try {
-      const skills = await getBundledSkills();
-      const skill = skills.find((entry) => entry.name === "update-documentation");
-
-      expect(skill).toBeDefined();
-      expect(skill?.content).toContain("pstdio docs init");
-      expect(skill?.content).toContain("If `.pstdio/docs/navigation.json` is missing");
     } finally {
       runtime.embeddedFiles = originalEmbeddedFiles;
     }

@@ -17,6 +17,7 @@ export {
   setTicketStatus,
   setWorkspaceAttemptStatus,
   updateTicketWhenAllAttemptsMatch,
+  workspacesForTicket,
 } from "./helpers";
 export type {
   HookResponse,
@@ -30,9 +31,19 @@ export type {
   ActionDefinition,
   ActionDescriptor,
   ActionInput,
+  ActionParamDef,
+  ActionParamValue,
   ActionPlacement,
   ActionTargetMap,
   ActionTriggerContext,
+  AgentActionParam,
+  AgentParamValue,
+  LongTextActionParam,
   PluginDefinition,
+  RepoActionParam,
+  RepoParamValue,
+  SelectActionParam,
   TargetType,
+  TemplateSelectActionParam,
+  TextActionParam,
 } from "./types";

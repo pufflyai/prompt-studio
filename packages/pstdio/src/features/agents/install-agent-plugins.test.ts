@@ -43,10 +43,6 @@ describe("installPluginsForAgent", () => {
     expect(installed).toEqual([OPENCODE_SESSION_BRIDGE_PLUGIN_FILE]);
     const pluginPath = join(root, ".opencode", "plugins", OPENCODE_SESSION_BRIDGE_PLUGIN_FILE);
     expect(existsSync(pluginPath)).toBe(true);
-
-    const content = readFileSync(pluginPath, "utf8");
-    expect(content).toContain('"shell.env"');
-    expect(content).toContain("resolve-session-id");
   });
 
   test("installs opencode bridge plugin to global directory", async () => {

@@ -35,13 +35,6 @@ export const parseSettingsPanel = (panel: unknown): SettingsSection => {
     }
   }
 
-  if (typeof panel === "string" && panel.startsWith("hook:")) {
-    const hookName = panel.slice("hook:".length);
-    if (hookName) {
-      return { hook: hookName };
-    }
-  }
-
   if (typeof panel === "string" && panel.startsWith("skill:")) {
     const skillName = panel.slice("skill:".length);
     if (skillName) {
@@ -59,7 +52,7 @@ export const toSettingsPanel = (section: SettingsSection) => {
   if (section === "repositories") return "repositories";
   if (section === "danger-zone") return "danger-zone";
   if (typeof section === "object" && "tag" in section) return `tag:${section.tag}`;
-  if (typeof section === "object" && "hook" in section) return `hook:${section.hook}`;
+
   if (typeof section === "object" && "skill" in section) return `skill:${section.skill}`;
   return `template:${section.template}`;
 };
@@ -83,11 +76,6 @@ export const ensureValidSettingsSection = (
   if ("tag" in section) {
     if (!tags) return section;
     return tags.some((t) => t.id === section.tag) ? section : "tags";
-  }
-
-  // Hook sections are always valid — the editor handles missing hooks
-  if ("hook" in section) {
-    return section;
   }
 
   if ("skill" in section) {

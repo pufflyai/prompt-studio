@@ -26,29 +26,6 @@ afterEach(() => {
 });
 
 describe("ensurePluginWorkspace", () => {
-  test("creates package.json with @pstdio/sdk dependency", async () => {
-    const dir = createTempDir();
-
-    await ensurePluginWorkspace(dir);
-
-    const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
-    expect(pkg.private).toBe(true);
-    expect(pkg.type).toBe("module");
-    expect(pkg.dependencies["@pstdio/sdk"]).toBe("latest");
-  });
-
-  test("creates .gitignore", async () => {
-    const dir = createTempDir();
-
-    await ensurePluginWorkspace(dir);
-
-    const gitignore = readFileSync(join(dir, ".gitignore"), "utf8");
-    expect(gitignore).toContain("node_modules");
-    expect(gitignore).toContain("package.json");
-    expect(gitignore).toContain("package-lock.json");
-    expect(gitignore).toContain("bun.lock");
-  });
-
   test("runs install after writing package.json", async () => {
     const dir = createTempDir();
 

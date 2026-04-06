@@ -1,10 +1,6 @@
 import type { PluginHelperContext, TicketRef } from "./context";
-import { resolveTicketShorthand } from "./find-ticket-by-ref";
+import { workspacesForTicket } from "./workspaces-for-ticket";
 
 export const getAttemptsForTicket = async (ctx: PluginHelperContext, input: TicketRef) => {
-  const ticketShorthand = await resolveTicketShorthand(ctx, input);
-  if (!ticketShorthand) return [];
-
-  const workspaces = await ctx.client.workspaces.list(ctx.projectId);
-  return workspaces.filter((workspace) => workspace.ticket_shorthand === ticketShorthand);
+  return workspacesForTicket(ctx, input);
 };

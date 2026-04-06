@@ -2,11 +2,23 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 
+const actionParamSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  type: z.string(),
+  description: z.string().optional(),
+  required: z.boolean().optional(),
+  defaultValue: z.string().optional(),
+  options: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  templateType: z.string().optional(),
+});
+
 const actionDescriptorSchema = z.object({
   key: z.string(),
   label: z.string(),
   targetType: z.string(),
   placement: z.string(),
+  params: z.array(actionParamSchema).optional(),
 });
 
 export const listActionsRoute = createRoute({

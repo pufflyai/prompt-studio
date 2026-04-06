@@ -12,7 +12,7 @@ import { CreateTemplateDialog } from "../components/create-template-dialog";
 import { SettingsContent } from "../components/settings-content";
 import { type SettingsSection, SettingsSidebar } from "../components/settings-sidebar";
 import { useProjectAttemptStatuses } from "../hooks/use-attempt-statuses";
-import { useProjectHooks, useSaveProjectHook } from "../hooks/use-hooks";
+
 import { useProjectSkills } from "../hooks/use-skills";
 import { ensureValidSettingsSection, parseSettingsPanel, toSettingsPanel } from "../utils/settings-panel";
 
@@ -22,13 +22,11 @@ export const ProjectSettings = () => {
   const { panel } = useSearch({ strict: false });
   const { data: project } = useProject(projectId);
   const { data: templates } = useProjectTemplateAssets(projectId);
-  const { data: hooks } = useProjectHooks(projectId);
   const { data: skills } = useProjectSkills(projectId);
   const { data: ticketStatuses } = useProjectTicketStatuses(projectId);
   const { data: attemptStatuses } = useProjectAttemptStatuses(projectId);
   const createTag = useCreateProjectTicketTag(projectId);
   const deleteTag = useDeleteProjectTicketTag(projectId);
-  const saveHook = useSaveProjectHook(projectId);
   const [activeSection, setActiveSection] = useState<SettingsSection | null>(() => parseSettingsPanel(panel));
   const [isCreateTemplateOpen, setIsCreateTemplateOpen] = useState(false);
 
@@ -40,20 +38,6 @@ export const ProjectSettings = () => {
   };
 
   const handleTemplateDeleted = () => {
-    setActiveSection("tags");
-  };
-
-  const handleAddHook = async (hookName: string) => {
-    try {
-      await saveHook.mutateAsync({ hookName, content: "#!/bin/sh\n" });
-      setActiveSection({ hook: hookName });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to create hook.";
-      toaster.create({ type: "error", title: "Create hook failed", description: message });
-    }
-  };
-
-  const handleHookDeleted = () => {
     setActiveSection("tags");
   };
 
@@ -115,14 +99,12 @@ export const ProjectSettings = () => {
       <Flex height="100%" width="100%" minH="0">
         <SettingsSidebar
           templates={templates ?? []}
-          hooks={hooks ?? []}
           skills={skills ?? []}
           tags={tags}
           activeSection={activeSection}
           onSelectSection={setActiveSection}
           onCreateTemplate={() => setIsCreateTemplateOpen(true)}
           onCreateTag={handleCreateTag}
-          onAddHook={handleAddHook}
         />
         <Stack flex="1" minH="0" overflow="auto">
           <SettingsContent
@@ -134,7 +116,6 @@ export const ProjectSettings = () => {
             ticketStatuses={ticketStatuses ?? []}
             attemptStatuses={attemptStatuses ?? []}
             onDeleteTag={handleDeleteTag}
-            onHookDeleted={handleHookDeleted}
             onTemplateDeleted={handleTemplateDeleted}
           />
         </Stack>

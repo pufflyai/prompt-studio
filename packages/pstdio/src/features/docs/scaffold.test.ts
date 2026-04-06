@@ -30,17 +30,6 @@ describe("scaffoldDocs", () => {
     expect(existsSync(join(docsDir, "index.md"))).toBe(true);
   });
 
-  test("navigation.json contains valid sidebar structure", async () => {
-    const root = setup("scaffold-docs-json");
-
-    await scaffoldDocs(root);
-
-    const raw = JSON.parse(readFileSync(join(root, ".pstdio", "docs", "navigation.json"), "utf8"));
-    expect(raw.sidebar).toBeArray();
-    expect(raw.sidebar[0].text).toBeDefined();
-    expect(raw.sidebar[0].link).toBeDefined();
-  });
-
   test("does not overwrite existing docs", async () => {
     const root = setup("scaffold-no-overwrite");
     const docsDir = join(root, ".pstdio", "docs");

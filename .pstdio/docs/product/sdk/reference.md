@@ -310,9 +310,13 @@ Looks up a ticket by id or shorthand within the current project. Reuses `ctx.tic
 
 Looks up a workspace by id or workspace shorthand within the current project. Reuses `ctx.workspace` or a workspace action target when one already matches.
 
-### `getAttemptsForTicket(ctx, { ticketId? })`
+### `workspacesForTicket(ctx, { ticketId? })`
 
 Lists workspaces whose `ticket_shorthand` matches the resolved ticket.
+
+### `getAttemptsForTicket(ctx, { ticketId? })`
+
+Alias of `workspacesForTicket(ctx, { ticketId? })`.
 
 ### `removeAllWorktreesForTicket(ctx, { ticketId? })`
 

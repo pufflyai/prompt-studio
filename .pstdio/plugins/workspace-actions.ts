@@ -1,4 +1,4 @@
-import { createSession, definePlugin, renderPrompt } from "@pstdio/sdk/plugins";
+import { createSession, definePlugin } from "@pstdio/sdk/plugins";
 
 export default definePlugin({
   actions: [
@@ -11,13 +11,18 @@ export default definePlugin({
       label: "Run review",
       targetType: "workspace",
       placement: "secondary",
+      params: [{ key: "agent", label: "Agent", type: "agent" }],
       async trigger(ctx) {
-        const ticketId = ctx.target.ticket_shorthand || null;
+        const agent = ctx.params.agent as { agent: string; model: string } | undefined;
+        const ticketId = ctx.target.ticket_shorthand as string;
 
         await createSession(ctx, {
           workspace_id: ctx.target.id,
           title: `Code review: ${ticketId ?? "ticket"}`,
-          prompt: renderPrompt(ctx.prompts["code-review"], ticketId ? { ticket: ticketId } : {}),
+          agent: agent?.agent,
+          model: agent?.model,
+          template: "code-review",
+          vars: { ticket: ticketId },
         });
       },
     },

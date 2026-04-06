@@ -308,6 +308,7 @@ import {
   setTicketStatus,
   setWorkspaceAttemptStatus,
   updateTicketWhenAllAttemptsMatch,
+  workspacesForTicket,
 } from "@pstdio/sdk/plugins";
 ```
 
@@ -337,9 +338,13 @@ Looks up a ticket by ID or shorthand and returns the matching ticket, or `null`.
 
 Looks up a workspace by ID or shorthand and returns the matching workspace, or `null`. When the current hook or action context already carries the matching rich workspace object, it reuses that object first.
 
-### `getAttemptsForTicket(ctx, { ticketId? })`
+### `workspacesForTicket(ctx, { ticketId? })`
 
 Lists the workspaces associated with the resolved ticket.
+
+### `getAttemptsForTicket(ctx, { ticketId? })`
+
+Alias of `workspacesForTicket(ctx, { ticketId? })`.
 
 ### `removeAllWorktreesForTicket(ctx, { ticketId? })`
 

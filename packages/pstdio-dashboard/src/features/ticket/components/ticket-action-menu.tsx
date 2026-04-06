@@ -1,6 +1,6 @@
 import { Icon, IconButton, Menu } from "@chakra-ui/react";
 import { DeleteConfirmationModal, MenuItem } from "@pstdio/ui";
-import { Archive, MoreHorizontal, Play, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Archive, MoreHorizontal, Plus, Sparkles, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ActionDescriptor } from "@/features/plugin-actions/api";
@@ -21,13 +21,13 @@ export const TicketActionMenu = (props: TicketActionMenuProps) => {
   const {
     isArchived,
     canDeleteTicket,
-    pluginActions = [],
+    pluginActions: _pluginActions = [],
     onCreateSubTicket,
     onBreakIntoSubTickets,
     onRefineTicket,
     onArchiveTicket,
     onDeleteTicket,
-    onPluginAction,
+    onPluginAction: _onPluginAction,
   } = props;
   const { t } = useTranslation("projects");
   const [isDeleteOpen, setDeleteOpen] = useState(false);
@@ -45,7 +45,7 @@ export const TicketActionMenu = (props: TicketActionMenuProps) => {
     setDeleteOpen(false);
   };
 
-  const overflowActions = pluginActions.filter((a) => a.placement === "overflow");
+  /* const overflowActions = pluginActions.filter((a) => a.placement === "overflow"); */
 
   return (
     <>
@@ -72,14 +72,14 @@ export const TicketActionMenu = (props: TicketActionMenuProps) => {
               leftIcon={Sparkles}
               onClick={onRefineTicket}
             />
-            {overflowActions.map((action) => (
+            {/* overflowActions.map((action) => (
               <MenuItem
                 key={action.key}
                 primaryLabel={action.label}
                 leftIcon={Play}
                 onClick={() => onPluginAction?.(action.key)}
               />
-            ))}
+            )) */}
             <MenuItem
               primaryLabel={t(isArchived ? "ticketPanel.options.unarchiveTicket" : "ticketPanel.options.archiveTicket")}
               leftIcon={Archive}

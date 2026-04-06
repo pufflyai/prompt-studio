@@ -3,7 +3,7 @@ import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useExecutePluginAction, usePluginActions } from "@/features/plugin-actions/hooks/use-plugin-actions";
+import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
 import { useProject, useProjectTemplateAssets } from "@/features/project/hooks/use-project";
 import { useProjectSettingsStore } from "@/features/project-settings/store";
 import { CreateTicketModal } from "@/features/ticket-list/components/create-ticket-modal";
@@ -82,19 +82,14 @@ export const TicketDetailsPanel = () => {
 
   const { data: project } = useProject(projectId);
   const { data: templateAssets } = useProjectTemplateAssets(projectId);
-  const { data: pluginActions } = usePluginActions(projectId, "ticket");
-  const executePluginAction = useExecutePluginAction(projectId);
+  const pluginActionTrigger = usePluginActionTrigger(projectId);
   const { data: allTickets, isLoading: isTicketsLoading } = useProjectTickets(projectId);
   const updateTicket = useUpdateProjectTicket(projectId);
   const updateTicketTags = useUpdateProjectTicketTags(projectId);
   const deleteTicket = useDeleteProjectTicket(projectId);
 
   const allProjectTickets = allTickets ?? [];
-  const ticketState = resolveTicketDetailsState({
-    tickets: allTickets,
-    ticketShorthand,
-    isTicketsLoading,
-  });
+  const ticketState = resolveTicketDetailsState({ tickets: allTickets, ticketShorthand, isTicketsLoading });
   const ticket = ticketState.ticket;
   const parentReference = resolveParentTicketReference(allProjectTickets, ticket?.parentId);
   const ticketId = ticket?.id ?? "";
@@ -106,7 +101,6 @@ export const TicketDetailsPanel = () => {
   const isContentReady = isTicketContentReady(ticketContent.data, ticketContent.isLoading);
   const ticketAttempts = ticket?.attempts ?? [];
   const defaultRepoId = project?.repositories[0]?.id || null;
-
   const lastSelectedAgent = useProjectSettingsStore((s) => s.lastSelectedAgent);
   const lastSelectedModels = useProjectSettingsStore((s) => s.lastSelectedModels);
   const lastSelectedBranches = useProjectSettingsStore((s) => s.lastSelectedBranches);
@@ -151,7 +145,6 @@ export const TicketDetailsPanel = () => {
   });
 
   const latestAttempt = findLatestAttempt(ticketAttempts);
-
   const { data: latestAttemptDiffSummary } = useTicketAttemptDiffSummary(latestAttempt?.id);
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(true);
   const [isBreakModalOpen, setIsBreakModalOpen] = useState(false);
@@ -161,16 +154,10 @@ export const TicketDetailsPanel = () => {
     await autosave.flushPending();
     navigate({ to: "/projects/$projectId/tickets", params: { projectId } });
   };
-
   const templates = toTicketTemplates(templateAssets);
 
-  if (ticketState.state === "loading") {
-    return <TicketDetailsStatusMessage message={t("ticketDetail.loadingContent")} />;
-  }
-
-  if (!ticket) {
-    return <TicketDetailsStatusMessage message={t("ticketDetail.ticketNotFound")} />;
-  }
+  if (ticketState.state === "loading") return <TicketDetailsStatusMessage message={t("ticketDetail.loadingContent")} />;
+  if (!ticket) return <TicketDetailsStatusMessage message={t("ticketDetail.ticketNotFound")} />;
 
   const handleSelectTicket = (id: string) => {
     const target = allProjectTickets.find((t) => t.id === id);
@@ -231,13 +218,11 @@ export const TicketDetailsPanel = () => {
         onNavigateBack={navigateBack}
         onRunAttempt={handleRunAttempt}
         onViewWorkspace={handleViewWorkspace}
-        pluginActions={pluginActions}
+        pluginActions={pluginActionTrigger.pluginActions}
         onCreateSubTicket={subTicketCreation.openCreateSubTicketModal}
         onBreakIntoSubTickets={() => setIsBreakModalOpen(true)}
         onRefineTicket={() => setIsRefineModalOpen(true)}
-        onPluginAction={(actionKey) =>
-          executePluginAction.mutate({ actionKey, input: { target_type: "ticket", target_id: ticket.id } })
-        }
+        onPluginAction={(actionKey) => pluginActionTrigger.trigger(actionKey, "ticket", ticket.id)}
         onArchiveTicket={() => updateTicket.mutate({ ticketId: ticket.id, archived: !ticket.archived })}
         onDeleteTicket={async () => {
           await deleteTicket.mutateAsync({ ticketId: ticket.id });
@@ -307,6 +292,15 @@ export const TicketDetailsPanel = () => {
         templates={templates}
         isSubmitting={sessions.isStartingSession}
       />
+      {/* pluginActionTrigger.activeParamAction ? (
+        <ActionParamsDialog
+          open
+          action={pluginActionTrigger.activeParamAction}
+          projectId={projectId!}
+          onClose={pluginActionTrigger.cancelParams}
+          onSubmit={(params) => pluginActionTrigger.submitWithParams("ticket", ticket.id, params)}
+        />
+      ) : null */}
     </Stack>
   );
 };

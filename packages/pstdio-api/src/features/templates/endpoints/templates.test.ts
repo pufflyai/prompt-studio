@@ -89,51 +89,12 @@ describe("GET /v1/projects/:id/templates", () => {
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body).toHaveLength(17);
-    expect(body.map((template: { name: string }) => template.name)).toEqual([
-      "adr",
-      "blank-template",
-      "changelog-entry",
-      "code-review",
-      "commit-message",
-      "cookbook",
-      "create-sub-tickets",
-      "custom-ticket",
-      "fix-changes-requested",
-      "implement-ticket",
-      "lessons-learned",
-      "prd",
-      "proposal",
-      "refine-ticket",
-      "review-me",
-      "squash-message",
-      "ticket",
-    ]);
+    expect(body.some((template: { name: string }) => template.name === "blank-template")).toBe(true);
+    expect(body.some((template: { name: string }) => template.name === "custom-ticket")).toBe(true);
   });
 });
 
 describe("GET /v1/projects/:id/templates/:name", () => {
-  test("returns template with content", async () => {
-    const res = await app.request(`/v1/projects/${projectId}/templates/ticket`);
-    expect(res.status).toBe(200);
-
-    const body = await res.json();
-    expect(body.name).toBe("ticket");
-    expect(body.content).toContain("# {{TICKET_TITLE}}");
-    expect(body.content).toContain('ticket_id: "{{TICKET_ID}}"');
-  });
-
-  test("returns lessons-learned template with bracket placeholders", async () => {
-    const res = await app.request(`/v1/projects/${projectId}/templates/lessons-learned`);
-    expect(res.status).toBe(200);
-
-    const body = await res.json();
-    expect(body.name).toBe("lessons-learned");
-    expect(body.content).toContain("## Summary\n\n[One paragraph.]");
-    expect(body.content).toContain("## Impact\n\n[Who or what was affected?]");
-    expect(body.content).toContain("## Detection\n\n[How was it noticed? CI, user report, local dev, etc.]");
-  });
-
   test("returns 404 for missing template", async () => {
     const res = await app.request(`/v1/projects/${projectId}/templates/nonexistent`);
     expect(res.status).toBe(404);

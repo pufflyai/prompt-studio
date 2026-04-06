@@ -3,9 +3,12 @@ import type { ActionTriggerContext, TargetType } from "@pstdio/sdk/plugins";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 
+const actionParamValueSchema = z.union([z.string(), z.record(z.string(), z.string())]);
+
 const executeActionInputSchema = z.object({
   target_type: z.enum(["ticket", "workspace", "session"]),
   target_id: z.string(),
+  params: z.record(z.string(), actionParamValueSchema).optional(),
 });
 
 const actionResultSchema = z.discriminatedUnion("status", [
@@ -58,7 +61,7 @@ const resolvePrompts = async (_deps: RouteDeps, _projectId: string) => {
 export const executeActionHandler = (deps: RouteDeps): AppRouteHandler<typeof executeActionRoute> => {
   return async (c) => {
     const { projectId, actionKey } = c.req.valid("param");
-    const { target_type, target_id } = c.req.valid("json");
+    const { target_type, target_id, params: paramValues } = c.req.valid("json");
 
     const runtime = await deps.pluginService.getForProject(projectId);
     const action = runtime.actions.get(actionKey);
@@ -74,6 +77,7 @@ export const executeActionHandler = (deps: RouteDeps): AppRouteHandler<typeof ex
       client: runtime.client,
       projectId,
       prompts,
+      params: paramValues ?? {},
       targetType: target_type,
       targetId: target_id,
       target,

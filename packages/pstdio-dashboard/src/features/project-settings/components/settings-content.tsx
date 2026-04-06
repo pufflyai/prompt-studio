@@ -3,7 +3,7 @@ import type { ProjectRepository } from "@/features/project/types";
 import type { TicketStatusOption, TicketTag } from "@/features/ticket-list/types";
 import type { AttemptStatusOption } from "../hooks/use-attempt-statuses";
 import { AttemptStatusManager } from "./attempt-status-manager";
-import { HookEditor } from "./hook-editor";
+
 import { ProjectDangerZone } from "./project-danger-zone";
 import { ProjectRepositoriesPanel } from "./project-repositories-panel";
 import type { SettingsSection } from "./settings-sidebar";
@@ -21,7 +21,6 @@ interface SettingsContentProps {
   ticketStatuses: TicketStatusOption[];
   attemptStatuses: AttemptStatusOption[];
   onDeleteTag: (tagId: string) => Promise<void>;
-  onHookDeleted: () => void;
   onTemplateDeleted: () => void;
 }
 
@@ -41,7 +40,6 @@ interface DynamicSettingsContentProps {
   projectId: string | undefined;
   tags: TicketTag[];
   onDeleteTag: (tagId: string) => Promise<void>;
-  onHookDeleted: () => void;
   onTemplateDeleted: () => void;
 }
 
@@ -84,14 +82,10 @@ const SettingsTagContent = (props: SettingsTagContentProps) => {
 };
 
 const DynamicSettingsContent = (props: DynamicSettingsContentProps) => {
-  const { section, projectId, tags, onDeleteTag, onHookDeleted, onTemplateDeleted } = props;
+  const { section, projectId, tags, onDeleteTag, onTemplateDeleted } = props;
 
   if ("tag" in section) {
     return <SettingsTagContent projectId={projectId} tagId={section.tag} tags={tags} onDeleteTag={onDeleteTag} />;
-  }
-
-  if ("hook" in section) {
-    return <HookEditor key={section.hook} projectId={projectId} hookName={section.hook} onDeleted={onHookDeleted} />;
   }
 
   if ("skill" in section) {
@@ -140,7 +134,6 @@ export const SettingsContent = (props: SettingsContentProps) => {
     ticketStatuses,
     attemptStatuses,
     onDeleteTag,
-    onHookDeleted,
     onTemplateDeleted,
   } = props;
 
@@ -159,7 +152,6 @@ export const SettingsContent = (props: SettingsContentProps) => {
         projectId={projectId}
         tags={tags}
         onDeleteTag={onDeleteTag}
-        onHookDeleted={onHookDeleted}
         onTemplateDeleted={onTemplateDeleted}
       />
     );

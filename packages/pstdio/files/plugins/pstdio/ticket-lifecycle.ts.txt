@@ -7,6 +7,10 @@ import {
 
 export default definePlugin({
   hooks: {
+    // ──────────────────────────────────────────────────────────
+    // Runs after a new session starts:
+    // update the ticket and attempt status to "wip".
+    // ──────────────────────────────────────────────────────────
     async postSessionStart(ctx) {
       if (!ctx.ticket) return;
 
@@ -26,6 +30,10 @@ export default definePlugin({
     async postAttemptStatusChange(ctx) {
       if (!ctx.ticket) return;
 
+      // ──────────────────────────────────────────────────────────
+      // Mirror blocked attempts onto the ticket so delivery status
+      // reflects active blockers as soon as they are reported.
+      // ──────────────────────────────────────────────────────────
       if (ctx.toStatus === "blocked") {
         await setTicketStatus(ctx, {
           ticket: ctx.ticket.shorthand,
@@ -33,6 +41,10 @@ export default definePlugin({
         });
       }
 
+      // ──────────────────────────────────────────────────────────
+      // Advance the ticket to review only when every attempt reaches
+      // reviewed to keep multi-attempt work in sync.
+      // ──────────────────────────────────────────────────────────
       if (ctx.toStatus === "reviewed") {
         await updateTicketWhenAllAttemptsMatch(ctx, {
           ticketId: ctx.ticket.shorthand,

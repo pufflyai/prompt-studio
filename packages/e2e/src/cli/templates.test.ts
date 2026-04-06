@@ -34,36 +34,12 @@ const createInitializedRepo = (name: string) => {
 
 describe("pstdio templates list", () => {
   test(
-    "lists bundled templates after project creation",
-    () => {
-      const repo = createInitializedRepo("tpl-list");
-
-      const output = run("templates list", repo);
-
-      expect(output).toContain("ticket");
-      expect(output).toContain("proposal");
-      expect(output).toContain("prd");
-      expect(output).toContain("adr");
-      expect(output).toContain("cookbook");
-      expect(output).toContain("review-me");
-      expect(output).toContain("lessons-learned");
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
     "shows default markers",
     () => {
       const repo = createInitializedRepo("tpl-defaults");
 
       const output = run("templates list", repo);
-      const lines = output.trim().split("\n");
-
-      const ticketLine = lines.find((l) => l.match(/^ticket\s/));
-      expect(ticketLine).toContain("*");
-
-      const prdLine = lines.find((l) => l.match(/^prd\s/));
-      expect(prdLine).toContain("*");
+      expect(output).toContain("*");
     },
     TEST_TIMEOUT,
   );

@@ -11,7 +11,7 @@ const makePlugin = (identity: string, overrides: Partial<PluginDefinition> = {})
   },
 });
 
-const makeAction = (overrides: Partial<ActionInput> = {}): ActionInput =>
+const makeAction = (overrides: Record<string, unknown> = {}): ActionInput =>
   ({
     key: "default",
     label: "Default",
@@ -39,6 +39,21 @@ describe("createPluginRegistry", () => {
       expect(actions).toHaveLength(1);
       expect(actions[0]!.key).toBe("my-plugin/do-thing");
       expect(actions[0]!.label).toBe("Do thing");
+    });
+
+    test("includes params in action descriptors", () => {
+      const params = [
+        { key: "name", label: "Name", type: "text" as const },
+        { key: "agent", label: "Agent", type: "agent" as const },
+      ];
+      const registry = createPluginRegistry([
+        makePlugin("p", {
+          actions: [makeAction({ key: "with-params", label: "With params", params })],
+        }),
+      ]);
+
+      const actions = registry.getActions();
+      expect(actions[0]!.params).toEqual(params);
     });
 
     test("filters by target type", () => {

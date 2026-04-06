@@ -11,4 +11,5 @@ export { setTicketStatus } from "./set-ticket-status";
 export { setWorkspaceAttemptStatus } from "./set-workspace-attempt-status";
 export { type PullTicketsInput, type PullTicketsResult, pullTickets } from "./ticket-pull";
 export { updateTicketWhenAllAttemptsMatch } from "./update-ticket-when-all-attempts-match";
+export { workspacesForTicket } from "./workspaces-for-ticket";
 export { bootstrapWorktree } from "./worktree-bootstrap";

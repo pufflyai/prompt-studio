@@ -145,4 +145,61 @@ describe("GET /v1/projects/:projectId/actions", () => {
     await close3();
     rmSync(tempRoot3, { recursive: true, force: true });
   });
+
+  test("returns actions with params schema", async () => {
+    const tempRoot4 = mkdtempSync(join(tmpdir(), "pstdio-api-actions-test4-"));
+    const repoPath4 = join(tempRoot4, "repo");
+    const pluginsDir = join(repoPath4, ".pstdio", "plugins");
+    mkdirSync(pluginsDir, { recursive: true });
+    writeFileSync(
+      join(pluginsDir, "param-actions.ts"),
+      `export default {
+        actions: [
+          {
+            key: "with-params",
+            label: "With params",
+            targetType: "ticket",
+            placement: "overflow",
+            params: [
+              { key: "name", label: "Name", type: "text" },
+              { key: "agent", label: "Agent", type: "agent" },
+            ],
+            trigger() {},
+          },
+        ],
+      };`,
+    );
+
+    const { app: app4, close: close4 } = await createApp({
+      dbPath: ":memory:",
+      storagePath: join(tempRoot4, "storage"),
+      filesRoot: "",
+    });
+
+    const projRes = await app4.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Params Project" }),
+    });
+    const proj = await projRes.json();
+
+    await app4.request(`/v1/projects/${proj.id}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "test-repo", path: repoPath4 }),
+    });
+
+    const res = await app4.request(`/v1/projects/${proj.id}/actions`);
+    expect(res.status).toBe(200);
+
+    const actions = await res.json();
+    expect(actions).toHaveLength(1);
+    expect(actions[0].params).toEqual([
+      { key: "name", label: "Name", type: "text" },
+      { key: "agent", label: "Agent", type: "agent" },
+    ]);
+
+    await close4();
+    rmSync(tempRoot4, { recursive: true, force: true });
+  });
 });
