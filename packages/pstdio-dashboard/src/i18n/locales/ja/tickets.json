@@ -822,8 +822,7 @@
     "submit": "チケットを改善"
   },
   "createWorkspaceModal": {
-    "title": "ワークスペースを作成",
-    "firstAttempt": "このチケットの最初のワークスペース試行を設定します。",
+    "title": "試行を実行",
     "nextAttempt": "最新の状態から次のワークスペース試行を設定します。",
     "cancel": "キャンセル",
     "runAttempt": "試行を実行"

@@ -1,4 +1,4 @@
-import { Button, CloseButton, Dialog, HStack, Stack, Text } from "@chakra-ui/react";
+import { Button, CloseButton, Dialog, Heading, HStack, Stack, Text } from "@chakra-ui/react";
 import { useTranslation } from "react-i18next";
 import { AgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
 import { RepoBrowserContainer } from "@/features/workspaces/components/repo-browser.container";
@@ -31,7 +31,7 @@ export const CreateWorkspaceModal = (props: CreateWorkspaceModalProps) => {
       <Dialog.Positioner>
         <Dialog.Content>
           <Dialog.Header>
-            <Text textStyle="heading/M">{t("createWorkspaceModal.title")}</Text>
+            <Heading textStyle="heading/M">{t("createWorkspaceModal.title")}</Heading>
             <Dialog.CloseTrigger>
               <CloseButton size="sm" disabled={isSubmitting} />
             </Dialog.CloseTrigger>
@@ -39,9 +39,11 @@ export const CreateWorkspaceModal = (props: CreateWorkspaceModalProps) => {
 
           <Dialog.Body>
             <Stack gap="sm">
-              <Text textStyle="paragraph/S/regular" color="foreground.secondary">
-                {attemptCount === 0 ? t("createWorkspaceModal.firstAttempt") : t("createWorkspaceModal.nextAttempt")}
-              </Text>
+              {attemptCount > 0 ? (
+                <Text textStyle="paragraph/S/regular" color="foreground.secondary">
+                  {t("createWorkspaceModal.nextAttempt")}
+                </Text>
+              ) : null}
 
               <HStack justify="space-between" align="center" wrap="wrap">
                 <AgentBrowserContainer isDisabled={isSubmitting} />

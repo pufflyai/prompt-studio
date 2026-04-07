@@ -791,8 +791,7 @@
     "submit": "优化工单"
   },
   "createWorkspaceModal": {
-    "title": "创建工作区",
-    "firstAttempt": "为此工单配置第一次工作区尝试。",
+    "title": "执行尝试",
     "nextAttempt": "从最新状态配置下一次工作区尝试。",
     "cancel": "取消",
     "runAttempt": "执行尝试"

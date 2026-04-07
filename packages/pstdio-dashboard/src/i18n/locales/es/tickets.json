@@ -791,8 +791,7 @@
     "submit": "Refinar tarea"
   },
   "createWorkspaceModal": {
-    "title": "Crear espacio de trabajo",
-    "firstAttempt": "Configura la primera tentativa de espacio de trabajo para esta tarea.",
+    "title": "Ejecutar tentativa",
     "nextAttempt": "Configura la siguiente tentativa desde el último estado.",
     "cancel": "Cancelar",
     "runAttempt": "Ejecutar tentativa"

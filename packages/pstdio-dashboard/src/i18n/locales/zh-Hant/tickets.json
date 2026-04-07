@@ -822,8 +822,7 @@
     "submit": "優化工單"
   },
   "createWorkspaceModal": {
-    "title": "建立工作區",
-    "firstAttempt": "為此工單設定第一次工作區嘗試。",
+    "title": "執行嘗試",
     "nextAttempt": "從最新狀態設定下一次工作區嘗試。",
     "cancel": "取消",
     "runAttempt": "執行嘗試"

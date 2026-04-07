@@ -791,8 +791,7 @@
     "submit": "Affiner la tâche"
   },
   "createWorkspaceModal": {
-    "title": "Créer un espace de travail",
-    "firstAttempt": "Configurez la première tentative d'espace de travail pour cette tâche.",
+    "title": "Lancer la tentative",
     "nextAttempt": "Configurez la prochaine tentative d'espace de travail à partir du dernier état.",
     "cancel": "Annuler",
     "runAttempt": "Lancer la tentative"

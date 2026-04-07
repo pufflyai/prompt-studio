@@ -825,8 +825,7 @@
     "submit": "Refine ticket"
   },
   "createWorkspaceModal": {
-    "title": "Create Workspace",
-    "firstAttempt": "Configure the first workspace attempt for this ticket.",
+    "title": "Run Attempt",
     "nextAttempt": "Configure the next workspace attempt from the latest state.",
     "cancel": "Cancel",
     "runAttempt": "Run Attempt"

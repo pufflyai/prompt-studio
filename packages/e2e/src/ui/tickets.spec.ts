@@ -545,7 +545,7 @@ test.describe("Ticket detail run attempt", () => {
 
     await page.getByRole("button", { name: "Run Attempt", exact: true }).click();
     const dialog = page.getByRole("dialog").last();
-    await expect(dialog.getByText("Create Workspace", { exact: true })).toBeVisible();
+    await expect(dialog.getByRole("heading", { name: "Run Attempt" })).toBeVisible();
 
     const attemptResponse = page.waitForResponse(
       (response) =>
@@ -586,7 +586,7 @@ test.describe("Ticket detail run attempt", () => {
 
     await page.getByRole("button", { name: "Run Attempt", exact: true }).click();
     const dialog = page.getByRole("dialog").last();
-    await expect(dialog.getByText("Create Workspace", { exact: true })).toBeVisible();
+    await expect(dialog.getByRole("heading", { name: "Run Attempt" })).toBeVisible();
 
     const attemptResponse = page.waitForResponse(
       (response) =>
@@ -598,7 +598,7 @@ test.describe("Ticket detail run attempt", () => {
     await dialog.getByRole("button", { name: "Run Attempt", exact: true }).click();
     await attemptResponse;
 
-    await expect(dialog.getByText("Create Workspace", { exact: true })).toBeVisible();
+    await expect(dialog.getByRole("heading", { name: "Run Attempt" })).toBeVisible();
     await expect(page.getByText("Failed to create attempt. Please try again.")).toBeVisible();
   });
 });

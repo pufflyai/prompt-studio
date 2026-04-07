@@ -822,8 +822,7 @@
     "submit": "티켓 개선"
   },
   "createWorkspaceModal": {
-    "title": "워크스페이스 생성",
-    "firstAttempt": "이 티켓의 첫 번째 워크스페이스 시도를 구성합니다.",
+    "title": "시도 실행",
     "nextAttempt": "최신 상태에서 다음 워크스페이스 시도를 구성합니다.",
     "cancel": "취소",
     "runAttempt": "시도 실행"
