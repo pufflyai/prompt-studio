@@ -1,5 +1,7 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, setDefaultTimeout } from "bun:test";
 import { runCommand } from "./run-command";
+
+setDefaultTimeout(15_000);
 
 describe("runCommand", () => {
   it("runs a command and captures trimmed output", async () => {

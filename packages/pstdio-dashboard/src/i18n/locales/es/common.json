@@ -335,15 +335,6 @@
     "noTagsOrFiles": "No se encontraron etiquetas ni archivos",
     "noCommands": "No hay comandos disponibles para este agente."
   },
-  "docs": {
-    "title": "Documentación",
-    "noFiles": "Sin archivos",
-    "noDocsFound": "No se encontró documentación",
-    "unableToLoadDocs": "No se pudo cargar la documentación",
-    "unableToLoadDocument": "No se pudo cargar el documento",
-    "trySelectingAnother": "Intenta seleccionar otro documento.",
-    "noContentAvailable": "No hay contenido disponible."
-  },
   "changelog": {
     "unableToLoad": "No se pudo cargar el registro de cambios",
     "noEntries": "Sin entradas en el registro",

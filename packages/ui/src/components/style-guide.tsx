@@ -259,7 +259,9 @@ export const StyleGuide = () => (
           <Stack gap="sm">
             <Text textStyle="label/L/medium">Buttons</Text>
             <HStack gap="sm" flexWrap="wrap">
-              <Button variant="solid">Primary</Button>
+              <Button borderRadius="xl" variant="primary">
+                Primary
+              </Button>
               <Button variant="solid">Solid</Button>
               <Button variant="surface">Surface</Button>
               <Button variant="outline">Outline</Button>
@@ -295,8 +297,8 @@ export const StyleGuide = () => (
           <Stack gap="sm">
             <Text textStyle="label/L/medium">Inputs</Text>
             <Stack gap="sm">
-              <Input placeholder="Company name" />
-              <Textarea placeholder="Notes" minHeight="96px" />
+              <Input borderRadius="xl" placeholder="Company name" />
+              <Textarea borderRadius="lg" placeholder="Notes" minHeight="96px" />
             </Stack>
           </Stack>
         </Box>

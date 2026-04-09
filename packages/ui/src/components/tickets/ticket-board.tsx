@@ -224,7 +224,7 @@ const GroupSection = (props: GroupSectionProps) => {
         py="2xs"
         gap="2xs"
         cursor="pointer"
-        _hover={{ bg: "bg.muted" }}
+        _hover={{ bg: "bg.hover" }}
         borderRadius="sm"
         onClick={() => setExpanded((v) => !v)}
       >

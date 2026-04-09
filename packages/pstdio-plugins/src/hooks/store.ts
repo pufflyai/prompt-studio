@@ -13,6 +13,7 @@ const createEmptyRuntime = (client: PstdioClient): PluginRuntime => {
   return {
     repoPath: null,
     client,
+    plugins: [],
     hooks: {
       firePre: (hookName, ctx) => dispatcher.firePreHook(hookName, ctx),
       firePost: (hookName, ctx) => dispatcher.firePostHook(hookName, ctx),

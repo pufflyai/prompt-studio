@@ -22,6 +22,14 @@ afterEach(() => {
   tempDirs = [];
 });
 
+const makePluginService = (repoService: { listByProject: (projectId: string) => Promise<{ path: string }[]> }) =>
+  createPluginService({
+    repoService,
+    filesRoot: "",
+    storageRoot: createTempRepo(),
+    ensureWorkspace: noopWorkspace,
+  });
+
 describe("createPluginService", () => {
   test("loads plugins for a project", async () => {
     const repo = createTempRepo();
@@ -33,7 +41,7 @@ describe("createPluginService", () => {
       listByProject: async () => [{ path: repo }],
     };
 
-    const service = createPluginService({ repoService, ensureWorkspace: noopWorkspace });
+    const service = makePluginService(repoService);
     const runtime = await service.getForProject("project-1");
 
     expect(runtime.hooks).toBeDefined();
@@ -50,7 +58,7 @@ describe("createPluginService", () => {
       listByProject: async () => [{ path: repo }],
     };
 
-    const service = createPluginService({ repoService, ensureWorkspace: noopWorkspace });
+    const service = makePluginService(repoService);
     const first = await service.getForProject("project-1");
     const second = await service.getForProject("project-1");
 
@@ -62,7 +70,7 @@ describe("createPluginService", () => {
       listByProject: async () => [],
     };
 
-    const service = createPluginService({ repoService, ensureWorkspace: noopWorkspace });
+    const service = makePluginService(repoService);
     const runtime = await service.getForProject("no-repo");
 
     const result = await runtime.hooks.firePre("preTicketCreation" as never, {} as never);

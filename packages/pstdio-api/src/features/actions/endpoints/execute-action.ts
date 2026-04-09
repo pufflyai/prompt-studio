@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { ActionTriggerContext, TargetType } from "@pstdio/sdk/plugins";
 import type { AppRouteHandler } from "../../../types";
@@ -49,13 +50,27 @@ const resolveTarget = async (deps: RouteDeps, targetType: TargetType, targetId: 
   if (targetType === "session") {
     return deps.sessionService.get(targetId);
   }
-  return null;
+  return deps.workspaceService.get(targetId);
 };
 
-const resolvePrompts = async (_deps: RouteDeps, _projectId: string) => {
-  // TODO: resolve template content from file storage once available
-  const prompts: Record<string, string> = {};
-  return prompts;
+const resolvePrompts = async (deps: RouteDeps, projectId: string) => {
+  const templates = await deps.templateService.list(projectId);
+  const promptTemplates = templates.filter((template) => template.template_type === "prompt");
+
+  const promptEntries = await Promise.all(
+    promptTemplates.map(async (template) => {
+      const file = await deps.fileService.get(template.file_id);
+      if (!file) return null;
+
+      try {
+        return [template.name, readFileSync(file.storage_path, "utf8")] as const;
+      } catch {
+        return null;
+      }
+    }),
+  );
+
+  return Object.fromEntries(promptEntries.filter((entry) => entry !== null));
 };
 
 export const executeActionHandler = (deps: RouteDeps): AppRouteHandler<typeof executeActionRoute> => {
@@ -84,8 +99,10 @@ export const executeActionHandler = (deps: RouteDeps): AppRouteHandler<typeof ex
     } as ActionTriggerContext;
 
     try {
-      await action.trigger(ctx);
-      return c.json({ status: "success" as const }, 200);
+      const result = await action.trigger(ctx);
+      const sessionId = result?.session_id;
+
+      return c.json({ status: "success" as const, ...(sessionId ? { session_id: sessionId } : {}) }, 200);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Action execution failed";
       return c.json({ status: "error" as const, message }, 200);

@@ -119,6 +119,7 @@ export const registerRepoHandler = (deps: RouteDeps): AppRouteHandler<typeof reg
     }
 
     await bootstrapProjectRepo(path, id, deps.filesRoot);
+    deps.pluginService.invalidate(id);
 
     deps.eventBus.emit("repos", "set", repo);
     await emitProjectRepoLink(deps, { projectId: id, repoId: repo.id });

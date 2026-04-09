@@ -121,7 +121,7 @@ export const TemplateEditor = (props: TemplateEditorProps) => {
             </Button>
             <Button
               size="sm"
-              variant="solid"
+              variant="primary"
               onClick={handleSave}
               loading={updateTemplate.isPending}
               disabled={isSaveDisabled}

@@ -21,7 +21,8 @@ export function ReferenceMenuItem(props: ReferenceMenuItemProps) {
       gap="2xs"
       padding="2xs"
       paddingX="sm"
-      bg={isSelected ? "bg.muted" : "transparent"}
+      bg={isSelected ? "bg.active" : "transparent"}
+      _hover={{ bg: isSelected ? "bg.active" : "bg.hover" }}
       tabIndex={tabIndex}
       ref={setRefElement}
       role="option"

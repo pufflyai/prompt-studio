@@ -1,14 +1,17 @@
 interface OpenTicketSessionBubbleInput {
   sessionId: string | null;
-  setSessionModalState: (state: "bubble") => void;
+  setSessionModalState?: (state: "bubble") => void;
   setSelectedSessionId: (sessionId: string | null) => void;
+  forceBubble?: boolean;
 }
 
 export const openTicketSessionBubble = (input: OpenTicketSessionBubbleInput) => {
-  const { sessionId, setSessionModalState, setSelectedSessionId } = input;
+  const { sessionId, setSessionModalState, setSelectedSessionId, forceBubble = false } = input;
   if (!sessionId) return false;
 
-  setSessionModalState("bubble");
+  if (forceBubble && setSessionModalState) {
+    setSessionModalState("bubble");
+  }
   setSelectedSessionId(sessionId);
   return true;
 };

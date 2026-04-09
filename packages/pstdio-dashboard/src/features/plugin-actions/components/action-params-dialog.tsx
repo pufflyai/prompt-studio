@@ -2,10 +2,9 @@ import { Button, CloseButton, Dialog, Icon, Input, Menu, Stack, Text, Textarea }
 import { MenuItem } from "@pstdio/ui";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
-import { AgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
 import { useProjectTemplateAssets } from "@/features/project/hooks/use-project";
-import { RepoBrowserContainer } from "@/features/workspaces/components/repo-browser.container";
 import type { ActionDescriptor, ActionParamDescriptor, ActionParamValue } from "../api";
+import { AgentParamField, RepoParamField } from "./action-param-composite-fields";
 
 interface ActionParamsDialogProps {
   open: boolean;
@@ -13,8 +12,26 @@ interface ActionParamsDialogProps {
   projectId: string;
   isSubmitting?: boolean;
   onClose: () => void;
-  onSubmit: (params: Record<string, ActionParamValue>) => void;
+  onSubmit: (params: Record<string, ActionParamValue>) => boolean | undefined | Promise<boolean | undefined>;
 }
+
+export const isActionParamValueFilled = (param: ActionParamDescriptor, value: ActionParamValue | undefined) => {
+  if (value == null) return false;
+
+  if (typeof value === "string") {
+    return value.length > 0;
+  }
+
+  if (param.type === "agent") {
+    return typeof value.agent === "string" && value.agent.length > 0;
+  }
+
+  if (param.type === "repo") {
+    return typeof value.repo === "string" && value.repo.length > 0;
+  }
+
+  return true;
+};
 
 export const ActionParamsDialog = (props: ActionParamsDialogProps) => {
   const { open, action, projectId, isSubmitting = false, onClose, onSubmit } = props;
@@ -28,9 +45,11 @@ export const ActionParamsDialog = (props: ActionParamsDialogProps) => {
     onClose();
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (isSubmitting) return;
-    onSubmit(values);
+    const result = await onSubmit(values);
+    if (result === false) return;
+
     setValues({});
     onClose();
   };
@@ -39,14 +58,7 @@ export const ActionParamsDialog = (props: ActionParamsDialogProps) => {
     setValues((prev) => ({ ...prev, [key]: value }));
   };
 
-  const isValid = params
-    .filter((p) => p.required !== false)
-    .every((p) => {
-      const val = values[p.key];
-      if (val == null) return false;
-      if (typeof val === "string") return val.length > 0;
-      return true;
-    });
+  const isValid = params.filter((p) => p.required !== false).every((p) => isActionParamValueFilled(p, values[p.key]));
 
   return (
     <Dialog.Root open={open} onOpenChange={(details) => !details.open && handleClose()}>
@@ -80,7 +92,13 @@ export const ActionParamsDialog = (props: ActionParamsDialogProps) => {
               <Button size="sm" variant="ghost" onClick={handleClose} disabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button size="sm" variant="solid" onClick={handleSubmit} loading={isSubmitting} disabled={!isValid}>
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => void handleSubmit()}
+                loading={isSubmitting}
+                disabled={!isValid}
+              >
                 Run
               </Button>
             </Stack>
@@ -124,7 +142,7 @@ const ActionParamField = (props: ActionParamFieldProps) => {
     case "agent":
       return <AgentParamField param={param} onChange={onChange} isDisabled={isDisabled} />;
     case "repo":
-      return <RepoParamField param={param} onChange={onChange} isDisabled={isDisabled} />;
+      return <RepoParamField param={param} projectId={projectId} onChange={onChange} isDisabled={isDisabled} />;
     default:
       return null;
   }
@@ -248,72 +266,6 @@ const TemplateSelectParamField = ({ param, projectId, value, onChange, isDisable
           </Menu.Content>
         </Menu.Positioner>
       </Menu.Root>
-    </Stack>
-  );
-};
-
-interface CompositeParamFieldProps {
-  param: ActionParamDescriptor;
-  onChange: (value: ActionParamValue) => void;
-  isDisabled: boolean;
-}
-
-const AgentParamField = ({ param, onChange, isDisabled }: CompositeParamFieldProps) => {
-  const [, setValue] = useState({ agent: "", model: "" });
-
-  return (
-    <Stack gap="2xs">
-      <Text textStyle="label/S/medium">{param.label}</Text>
-      {param.description ? (
-        <Text textStyle="paragraph/XS/regular" color="foreground.secondary">
-          {param.description}
-        </Text>
-      ) : null}
-      <AgentBrowserContainer
-        isDisabled={isDisabled}
-        onAgentChange={(a) => {
-          const next = { agent: String(a), model: "" };
-          setValue(next);
-          onChange(next);
-        }}
-        onModelChange={(m) => {
-          setValue((prev) => {
-            const next = { ...prev, model: m };
-            onChange(next);
-            return next;
-          });
-        }}
-      />
-    </Stack>
-  );
-};
-
-const RepoParamField = ({ param, onChange, isDisabled }: CompositeParamFieldProps) => {
-  const [, setValue] = useState({ repo: "", branch: "" });
-
-  return (
-    <Stack gap="2xs">
-      <Text textStyle="label/S/medium">{param.label}</Text>
-      {param.description ? (
-        <Text textStyle="paragraph/XS/regular" color="foreground.secondary">
-          {param.description}
-        </Text>
-      ) : null}
-      <RepoBrowserContainer
-        isDisabled={isDisabled}
-        onRepoChange={(r) => {
-          const next = { repo: r, branch: "" };
-          setValue(next);
-          onChange(next);
-        }}
-        onBranchChange={(b) => {
-          setValue((prev) => {
-            const next = { ...prev, branch: b };
-            onChange(next);
-            return next;
-          });
-        }}
-      />
     </Stack>
   );
 };

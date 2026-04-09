@@ -105,14 +105,28 @@ export const bg = {
 
   muted: {
     value: {
-      base: "{colors.blacks.200}",
-      _dark: "{colors.blacks.800}",
+      base: "{colors.neutral.200}",
+      _dark: "{colors.neutral.800}",
     },
   },
 
   subtle: {
     value: {
-      base: "{colors.blacks.75}",
+      base: "{colors.neutral.50}",
+      _dark: "{colors.neutral.950}",
+    },
+  },
+
+  hover: {
+    value: {
+      base: "{colors.neutral.100}",
+      _dark: "{colors.neutral.850}",
+    },
+  },
+
+  active: {
+    value: {
+      base: "{colors.neutral.75}",
       _dark: "{colors.blacks.850}",
     },
   },
@@ -126,8 +140,8 @@ export const bg = {
 
   emphasized: {
     value: {
-      base: "{colors.blacks.50}",
-      _dark: "{colors.blacks.600}",
+      base: "{colors.bg.active}",
+      _dark: "{colors.bg.active}",
     },
   },
 
@@ -162,13 +176,22 @@ export const bg = {
   button: {
     primary: {
       default: {
-        value: "{colors.bg.accent-primary.default}",
+        value: {
+          base: "{colors.bg.accent-primary.default}",
+          _dark: "{colors.bg.accent-primary.dark}",
+        },
       },
       hover: {
-        value: "{colors.bg.accent-primary.hover}",
+        value: {
+          base: "{colors.bg.accent-primary.hover}",
+          _dark: "{colors.bg.accent-primary.medium}",
+        },
       },
       pressed: {
-        value: "{colors.bg.accent-primary.pressed}",
+        value: {
+          base: "{colors.bg.accent-primary.pressed}",
+          _dark: "{colors.bg.accent-primary.medium}",
+        },
       },
       disabled: {
         value: "{colors.bg.muted}",
@@ -181,13 +204,13 @@ export const bg = {
       value: "{colors.bg}",
     },
     hover: {
-      value: "{colors.bg.muted}",
+      value: "{colors.bg.hover}",
     },
     focus: {
-      value: "{colors.bg.muted}",
+      value: "{colors.bg.hover}",
     },
     selected: {
-      value: "{colors.bg.muted}",
+      value: "{colors.bg.active}",
     },
   },
 
@@ -203,44 +226,44 @@ export const bg = {
   "accent-primary": {
     default: {
       value: {
-        base: "{colors.orange.100}",
-        _dark: "{colors.orange.300}",
+        base: "{colors.yellow.75}",
+        _dark: "{colors.yellow.75}",
       },
     },
     hover: {
       value: {
-        base: "{colors.orange.200}",
-        _dark: "{colors.orange.200}",
+        base: "{colors.yellow.100}",
+        _dark: "{colors.yellow.100}",
       },
     },
     pressed: {
       value: {
-        base: "{colors.orange.300}",
-        _dark: "{colors.orange.100}",
+        base: "{colors.yellow.150}",
+        _dark: "{colors.yellow.150}",
       },
     },
     "very-light": {
       value: {
-        base: "{colors.orange.100}",
-        _dark: "{colors.blacks.1000}",
+        base: "{colors.yellow.75}",
+        _dark: "{colors.yellow.75}",
       },
     },
     light: {
       value: {
-        base: "{colors.orange.100}",
-        _dark: "{colors.orange.300}",
+        base: "{colors.yellow.75}",
+        _dark: "{colors.yellow.75}",
       },
     },
     medium: {
       value: {
-        base: "{colors.orange.200}",
-        _dark: "{colors.orange.200}",
+        base: "{colors.yellow.100}",
+        _dark: "{colors.yellow.100}",
       },
     },
     dark: {
       value: {
-        base: "{colors.orange.300}",
-        _dark: "{colors.orange.100}",
+        base: "{colors.yellow.150}",
+        _dark: "{colors.yellow.150}",
       },
     },
   },
@@ -290,14 +313,14 @@ export const bg = {
     },
     "blue-light": {
       value: {
-        base: "{colors.blue.50}",
-        _dark: "{colors.blue.700}",
+        base: "{colors.mint.100}",
+        _dark: "{colors.mint.100}",
       },
     },
     "blue-medium": {
       value: {
-        base: "{colors.blue.100}",
-        _dark: "{colors.blue.800}",
+        base: "{colors.mint.200}",
+        _dark: "{colors.mint.200}",
       },
     },
     "blue-dark": {
@@ -320,14 +343,20 @@ export const bg = {
     },
     "yellow-light": {
       value: {
-        base: "{colors.yellow.50}",
-        _dark: "{colors.yellow.100}",
+        base: "{colors.yellow.75}",
+        _dark: "{colors.yellow.75}",
       },
     },
     "yellow-medium": {
       value: {
         base: "{colors.yellow.100}",
-        _dark: "{colors.yellow.200}",
+        _dark: "{colors.yellow.100}",
+      },
+    },
+    "yellow-dark": {
+      value: {
+        base: "{colors.yellow.150}",
+        _dark: "{colors.yellow.150}",
       },
     },
     "sand-light": {
@@ -342,36 +371,36 @@ export const bg = {
 export const border = {
   DEFAULT: {
     value: {
-      base: "{colors.blacks.400}",
-      _dark: "{colors.blacks.600}",
+      base: "{colors.neutral.500}",
+      _dark: "{colors.neutral.600}",
     },
   },
 
   muted: {
     value: {
-      base: "{colors.blacks.300}",
-      _dark: "{colors.blacks.700}",
+      base: "{colors.neutral.400}",
+      _dark: "{colors.neutral.700}",
     },
   },
 
   subtle: {
     value: {
-      base: "{colors.blacks.300}",
-      _dark: "{colors.blacks.50}",
+      base: "{colors.neutral.300}",
+      _dark: "{colors.neutral.750}",
     },
   },
 
   inverted: {
     value: {
-      base: "{colors.blacks.400}",
-      _dark: "{colors.blacks.600}",
+      base: "{colors.neutral.600}",
+      _dark: "{colors.neutral.500}",
     },
   },
 
   "accent-light": {
     value: {
-      base: "{colors.blue.200}",
-      _dark: "{colors.blue.900}",
+      base: "{colors.mint.100}",
+      _dark: "{colors.mint.100}",
     },
   },
 
@@ -392,8 +421,59 @@ export const border = {
 export const blue = {
   border: {
     value: {
-      base: "{colors.blue.700}",
-      _dark: "{colors.blue.200}",
+      _light: "{colors.mint.200}",
+      _dark: "{colors.mint.200}",
+    },
+  },
+};
+
+export const orange = {
+  contrast: {
+    value: {
+      _light: "black",
+      _dark: "black",
+    },
+  },
+  fg: {
+    value: {
+      _light: "{colors.orange.700}",
+      _dark: "{colors.orange.300}",
+    },
+  },
+  subtle: {
+    value: {
+      _light: "{colors.orange.100}",
+      _dark: "{colors.orange.900}",
+    },
+  },
+  muted: {
+    value: {
+      _light: "{colors.orange.200}",
+      _dark: "{colors.orange.800}",
+    },
+  },
+  emphasized: {
+    value: {
+      _light: "{colors.orange.300}",
+      _dark: "{colors.orange.700}",
+    },
+  },
+  solid: {
+    value: {
+      _light: "{colors.orange.500}",
+      _dark: "{colors.orange.400}",
+    },
+  },
+  focusRing: {
+    value: {
+      _light: "{colors.orange.500}",
+      _dark: "{colors.orange.500}",
+    },
+  },
+  border: {
+    value: {
+      _light: "{colors.orange.400}",
+      _dark: "{colors.orange.500}",
     },
   },
 };
@@ -581,6 +661,7 @@ export const semanticColors = {
   bg,
   border,
   blue,
+  orange,
   vis,
   text,
 };

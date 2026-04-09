@@ -197,7 +197,7 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
                   <Icon as={Paperclip} boxSize="4" />
                 </Button>
               </Box>
-              <Button size="sm" variant="solid" onClick={handleSubmit} loading={isSubmitting} disabled={!canSubmit}>
+              <Button size="sm" variant="primary" onClick={handleSubmit} loading={isSubmitting} disabled={!canSubmit}>
                 {resolvedSubmitLabel}
               </Button>
             </Flex>

@@ -17,29 +17,6 @@ afterEach(() => {
 });
 
 describe("templates write", () => {
-  test("writes docs template without requiring navigation.json", async () => {
-    const handler = createHandler({
-      cwd: () => tmpBase,
-      findGitRoot: () => tmpBase,
-      readConfig: () => ({ project_id: "proj-1" }),
-      getTemplate: async () =>
-        ({
-          id: "tpl-1",
-          name: "prd",
-          template_type: "document",
-          is_default: true,
-          content: "# {{TICKET_TITLE}}",
-        }) as never,
-    });
-
-    await handler({ name: "prd", target: "docs/prd/new-feature", _: [], $0: "" } as never);
-
-    const docPath = join(tmpBase, ".pstdio", "docs", "prd", "new-feature.md");
-    expect(existsSync(docPath)).toBe(true);
-    expect(readFileSync(docPath, "utf8")).toContain("# prd");
-    expect(existsSync(join(tmpBase, ".pstdio", "docs", "navigation.json"))).toBe(false);
-  });
-
   test("writes ticket template to shorthand ticket directory", async () => {
     mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-1"), { recursive: true });
 

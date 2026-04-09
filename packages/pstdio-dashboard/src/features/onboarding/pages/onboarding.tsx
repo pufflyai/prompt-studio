@@ -126,7 +126,7 @@ export const Onboarding = () => {
 
         <Flex justifyContent="flex-end">
           <Button
-            variant="solid"
+            variant="primary"
             size="sm"
             onClick={handleContinue}
             disabled={!selectedAgent || setupMutation.isPending}

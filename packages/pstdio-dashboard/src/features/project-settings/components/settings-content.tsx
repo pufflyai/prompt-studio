@@ -4,6 +4,7 @@ import type { TicketStatusOption, TicketTag } from "@/features/ticket-list/types
 import type { AttemptStatusOption } from "../hooks/use-attempt-statuses";
 import { AttemptStatusManager } from "./attempt-status-manager";
 
+import { PluginsPanel } from "./plugins-panel";
 import { ProjectDangerZone } from "./project-danger-zone";
 import { ProjectRepositoriesPanel } from "./project-repositories-panel";
 import type { SettingsSection } from "./settings-sidebar";
@@ -54,7 +55,7 @@ interface StaticSettingsContentProps {
 
 type DynamicSettingsSection = Exclude<
   SettingsSection,
-  "ticket-statuses" | "attempt-statuses" | "tags" | "repositories" | "danger-zone"
+  "ticket-statuses" | "attempt-statuses" | "tags" | "plugins" | "repositories" | "danger-zone"
 >;
 type StaticSettingsSection = Exclude<SettingsSection, DynamicSettingsSection | "tags">;
 
@@ -111,6 +112,10 @@ const StaticSettingsContent = (props: StaticSettingsContentProps) => {
 
   if (section === "attempt-statuses") {
     return <AttemptStatusManager projectId={projectId} statuses={attemptStatuses} />;
+  }
+
+  if (section === "plugins") {
+    return <PluginsPanel projectId={projectId} />;
   }
 
   if (section === "repositories") {

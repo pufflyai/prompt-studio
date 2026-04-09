@@ -19,7 +19,7 @@ export default definePlugin({
         const agent = ctx.params.agent as { agent: string; model: string } | undefined;
         const repo = ctx.params.repo as { repo: string; branch: string } | undefined;
 
-        await createAttempt(ctx, {
+        const result = await createAttempt(ctx, {
           ticketId: ctx.target.shorthand,
           agent: agent?.agent,
           model: agent?.model,
@@ -27,6 +27,8 @@ export default definePlugin({
           branch: repo?.branch,
           prompt: `Implement ticket: ${ctx.target.shorthand}`,
         });
+
+        return { session_id: result?.session?.id };
       },
     },
     // ──────────────────────────────────────────────────────────
@@ -52,12 +54,14 @@ export default definePlugin({
         if (template) parts.push(`Use template: ${template}`);
         if (context) parts.push(`Additional context:\n${context}`);
 
-        await createSession(ctx, {
+        const session = await createSession(ctx, {
           title: `Refine ticket: ${ctx.target.shorthand}`,
           agent: agent?.agent,
           model: agent?.model,
           prompt: parts.join("\n\n"),
         });
+
+        return { session_id: session.id };
       },
     },
     // ──────────────────────────────────────────────────────────
@@ -80,12 +84,14 @@ export default definePlugin({
         const parts = [`Breakdown ticket: ${ctx.target.shorthand} into sub-tickets`];
         if (template) parts.push(`Use template: ${template}`);
 
-        await createSession(ctx, {
+        const session = await createSession(ctx, {
           title: `Break into sub-tickets: ${ctx.target.shorthand}`,
           agent: agent?.agent,
           model: agent?.model,
           prompt: parts.join("\n\n"),
         });
+
+        return { session_id: session.id };
       },
     },
   ],

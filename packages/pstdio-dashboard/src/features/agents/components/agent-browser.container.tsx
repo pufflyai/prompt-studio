@@ -37,6 +37,12 @@ export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
     }
   }, [resolvedAgent, selectedAgent]);
 
+  useEffect(() => {
+    if (selectedAgent) {
+      onAgentChange?.(selectedAgent);
+    }
+  }, [selectedAgent, onAgentChange]);
+
   const { data: agents = [], isLoading: isAgentsPending } = useAgents();
   const { data: models = [], isLoading: isModelsPending } = useAgentModels(selectedAgent, {
     enabled: Boolean(selectedAgent),
@@ -75,7 +81,6 @@ export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
     const codingAgent = agent as CodingAgent;
     setSelectedAgent(codingAgent);
     setLastSelectedAgent(codingAgent);
-    onAgentChange?.(codingAgent);
   };
 
   const handleSelectModel = (model: string) => {

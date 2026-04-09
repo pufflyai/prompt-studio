@@ -6,16 +6,6 @@ describe("getPageTitle", () => {
     expect(getPageTitle("/projects")).toBe("Projects");
   });
 
-  it("returns just the doc title when viewing a specific doc", () => {
-    expect(getPageTitle("/projects/proj-1/docs", "Project Name", { docTitle: "Getting Started" })).toBe(
-      "Getting Started",
-    );
-  });
-
-  it("falls back to Docs when no doc title is provided", () => {
-    expect(getPageTitle("/projects/proj-1/docs", "Project Name")).toBe("Project Name > Docs");
-  });
-
   it("returns project tickets title for tickets route", () => {
     expect(getPageTitle("/projects/proj-1/tickets", "Project Name")).toBe("Project Name > Tickets");
   });
@@ -78,7 +68,7 @@ describe("getPageTitle", () => {
     expect(getPageTitle("/projects/proj-1/tickets/PS-41")).toBe("Project > PS-41");
   });
 
-  it("falls back to app title when project route has no name yet", () => {
-    expect(getPageTitle("/projects/proj-1/docs")).toBe("Project > Docs");
+  it("falls back to app title for unknown project section", () => {
+    expect(getPageTitle("/projects/proj-1/unknown")).toBe("Prompt Studio");
   });
 });

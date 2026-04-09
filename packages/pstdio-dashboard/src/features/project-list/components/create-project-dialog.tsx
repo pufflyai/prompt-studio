@@ -211,7 +211,7 @@ export const CreateProjectDialog = (props: CreateProjectDialogProps) => {
                 <Button onClick={onClose} variant="outline">
                   {t("common:buttons.cancel")}
                 </Button>
-                <Button onClick={handleSubmit} loading={isSubmitting} variant="solid">
+                <Button onClick={handleSubmit} loading={isSubmitting} variant="primary">
                   {t("createProjectDialog.actions.create")}
                 </Button>
               </Stack>

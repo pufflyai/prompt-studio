@@ -1,10 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { scaffoldBundledDocs } from "./scaffold-bundled-docs";
 import { scaffoldBundledPlugins } from "./scaffold-bundled-plugins";
 
 export const ensureProjectRepoScaffolding = async (repoPath: string, filesRoot: string) => {
-  await scaffoldBundledDocs(repoPath, join(filesRoot, "documentation"));
   await scaffoldBundledPlugins(repoPath, join(filesRoot, "plugins", "pstdio"));
 };
 

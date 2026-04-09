@@ -46,6 +46,11 @@ const withDefaultDataPaths = (env: NodeJS.ProcessEnv) => ({
   PSTDIO_STORAGE_PATH: resolveDefaultStoragePath(),
 });
 
+const withWorkspaceRuntimeEnv = (env: NodeJS.ProcessEnv, apiRoot: string) => ({
+  ...withDefaultDataPaths(env),
+  PSTDIO_FILES_ROOT: join(apiRoot, "..", "pstdio", "files"),
+});
+
 test("resolveApiRoot finds pstdio-api workspace above start directory", () => {
   const base = mkdtempSync(join(tmpdir(), "pstdio-api-root-"));
   const apiRoot = writeApiPackage(base);
@@ -70,7 +75,7 @@ test("runApi spawns bun start in the api workspace", () => {
     {
       command: "bun",
       args: ["run", "start"],
-      options: { cwd: apiRoot, stdio: "ignore", detached: true, env: withDefaultDataPaths(env) },
+      options: { cwd: apiRoot, stdio: "ignore", detached: true, env: withWorkspaceRuntimeEnv(env, apiRoot) },
     },
   ]);
   expect(unrefCalled()).toBe(true);
@@ -91,7 +96,7 @@ test("runApi keeps child attached when detached is false", () => {
     {
       command: "bun",
       args: ["run", "start"],
-      options: { cwd: apiRoot, stdio: "inherit", detached: false, env: withDefaultDataPaths(env) },
+      options: { cwd: apiRoot, stdio: "inherit", detached: false, env: withWorkspaceRuntimeEnv(env, apiRoot) },
     },
   ]);
   expect(unrefCalled()).toBe(false);
@@ -112,7 +117,7 @@ test("runApi uses stdio override when provided", () => {
     {
       command: "bun",
       args: ["run", "start"],
-      options: { cwd: apiRoot, stdio: "inherit", detached: true, env: withDefaultDataPaths(env) },
+      options: { cwd: apiRoot, stdio: "inherit", detached: true, env: withWorkspaceRuntimeEnv(env, apiRoot) },
     },
   ]);
 });
@@ -136,7 +141,7 @@ test("runApi forwards PSTDIO_API_PORT as PORT", () => {
         cwd: apiRoot,
         stdio: "ignore",
         detached: true,
-        env: withDefaultDataPaths({ ...env, PORT: "4511" }),
+        env: withWorkspaceRuntimeEnv({ ...env, PORT: "4511" }, apiRoot),
       },
     },
   ]);
@@ -227,4 +232,5 @@ test("runApi sets default PSTDIO_DB_PATH and PSTDIO_STORAGE_PATH for workspace m
   expect(calls[0]?.options.cwd).toBe(apiRoot);
   expect(spawnedEnv.PSTDIO_DB_PATH).toBe(resolveDefaultDbPath());
   expect(spawnedEnv.PSTDIO_STORAGE_PATH).toBe(resolveDefaultStoragePath());
+  expect(spawnedEnv.PSTDIO_FILES_ROOT).toBe(join(apiRoot, "..", "pstdio", "files"));
 });

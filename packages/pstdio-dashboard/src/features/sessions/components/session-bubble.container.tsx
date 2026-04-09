@@ -1,12 +1,10 @@
 import { IconButton } from "@chakra-ui/react";
-import { Tooltip } from "@pstdio/ui";
+import { BubbleButton, BubblePanel, Tooltip } from "@pstdio/ui";
 import { useParams } from "@tanstack/react-router";
-import { PenBox } from "lucide-react";
+import { MessageCircle, PenBox } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useProjectSettingsStore } from "@/features/project-settings/store";
 import { useProjectSessions } from "../hooks/use-project-sessions";
-import { SessionBubble } from "./session-bubble";
-import { SessionBubbleButton } from "./session-bubble-button";
 import { SessionChatView } from "./session-chat-view";
 import { SessionSelector } from "./session-selector";
 
@@ -21,7 +19,15 @@ export const SessionBubbleContainer = () => {
   const { data: sessions = [] } = useProjectSessions(projectId);
 
   if (sessionModalState === "closed") {
-    return <SessionBubbleButton onClick={() => setSessionModalState("bubble")} />;
+    return (
+      <BubbleButton
+        aria-label={t("chatInput.ariaLabel")}
+        tooltip={t("chatInput.ariaLabel")}
+        onClick={() => setSessionModalState("bubble")}
+      >
+        <MessageCircle size={20} strokeWidth={2} />
+      </BubbleButton>
+    );
   }
 
   if (sessionModalState === "attached") {
@@ -29,10 +35,14 @@ export const SessionBubbleContainer = () => {
   }
 
   return (
-    <SessionBubble
+    <BubblePanel
       isOpen
+      aria-label={t("chatInput.ariaLabel")}
+      testId="session-bubble"
       onClose={() => setSessionModalState("closed")}
+      closeLabel={t("chatInput.closeLabel")}
       onPopOut={() => setSessionModalState("attached")}
+      popOutLabel="Attach panel"
       menu={
         <>
           <SessionSelector
@@ -54,6 +64,6 @@ export const SessionBubbleContainer = () => {
       }
     >
       <SessionChatView sessionId={selectedSessionId} onSessionCreated={setSelectedSessionId} />
-    </SessionBubble>
+    </BubblePanel>
   );
 };

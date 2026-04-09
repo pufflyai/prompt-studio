@@ -1,4 +1,11 @@
+import { rmSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import {
+  createAttemptWithSessionViaApi,
+  createGitRepo,
+  createTicketViaApi,
+  registerRepoViaApi,
+} from "./helpers/workspace-session-attempt";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
@@ -57,8 +64,12 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
   }
 };
 
+const getSessionBubble = (page: import("@playwright/test").Page) =>
+  page.getByRole("dialog").filter({ has: page.getByRole("button", { name: "Attach panel" }) });
+
 test.describe("Sessions page", () => {
   let projectId: string;
+  const repoDirs: string[] = [];
 
   test.beforeEach(async ({ request }) => {
     test.setTimeout(10_000);
@@ -66,6 +77,13 @@ test.describe("Sessions page", () => {
     await configureAgent(request, "fake");
     const project = await createProjectViaApi(request, "Sessions Test Project");
     projectId = project.id;
+  });
+
+  test.afterEach(() => {
+    for (const dir of repoDirs) {
+      rmSync(dir, { recursive: true, force: true });
+    }
+    repoDirs.length = 0;
   });
 
   test("shows empty state when no sessions exist", async ({ page }) => {
@@ -108,13 +126,13 @@ test.describe("Sessions page", () => {
         JSON.stringify({ state: { sessionModalState: "bubble" }, version: 0 }),
       );
     }, projectId);
-    await page.goto(`/projects/${projectId}/docs`);
+    await page.goto(`/projects/${projectId}/tickets`);
 
-    await expect(page.locator("[data-testid='session-bubble']")).toBeVisible();
+    await expect(getSessionBubble(page)).toBeVisible();
 
     await page.goto(`/projects/${projectId}/sessions`);
 
-    await expect(page.locator("[data-testid='session-bubble']")).toHaveCount(0);
+    await expect(getSessionBubble(page)).toHaveCount(0);
   });
 
   test("navigates to session on click", async ({ page, request }) => {
@@ -141,7 +159,7 @@ test.describe("Sessions page", () => {
     await expect(header.first()).toBeVisible();
   });
 
-  test("shows action menu with download option", async ({ page, request }) => {
+  test("shows action menu with archive option", async ({ page, request }) => {
     await bypassOnboarding(page);
 
     await createSessionViaApi(request, projectId, "Action menu test");
@@ -150,7 +168,6 @@ test.describe("Sessions page", () => {
     await page.getByText("Action menu test").click();
 
     await page.getByRole("button", { name: "Session actions" }).click();
-    await expect(page.getByText("Download session JSON")).toBeVisible();
     await expect(page.getByText("Archive session")).toBeVisible();
   });
 
@@ -215,21 +232,42 @@ test.describe("Sessions page", () => {
     await expect(contentEditor).toContainText("abc");
   });
 
-  test("hides the attached session panel on workspace routes", async ({ page }) => {
+  test("shows the attached session panel on workspace routes and hides workspace hub", async ({ page, request }) => {
     await bypassOnboarding(page);
-    await page.addInitScript((id: string) => {
-      localStorage.setItem(
-        `pstdio-project-settings/projects/${id}/values`,
-        JSON.stringify({ state: { sessionModalState: "attached" }, version: 0 }),
-      );
-    }, projectId);
-    await page.goto(`/projects/${projectId}/docs`);
+    const prompt = "workspace attached panel regression";
+    const repoRoot = createGitRepo("pstdio-e2e-sessions-repo-", "sessions e2e");
+    repoDirs.push(repoRoot);
+    const repo = await registerRepoViaApi(request, apiBase, projectId, "sessions-workspace-repo", repoRoot);
+    const ticket = await createTicketViaApi(
+      request,
+      apiBase,
+      projectId,
+      "# Workspace panel ticket\n\nValidate hub visibility",
+    );
+    const attempt = await createAttemptWithSessionViaApi(request, apiBase, ticket.id, repo.id, prompt);
+
+    await page.addInitScript(
+      ({ id, sessionId }: { id: string; sessionId: string }) => {
+        localStorage.setItem(
+          `pstdio-project-settings/projects/${id}/values`,
+          JSON.stringify({ state: { sessionModalState: "attached", selectedSessionId: sessionId }, version: 0 }),
+        );
+      },
+      { id: projectId, sessionId: attempt.session.id },
+    );
+    await page.goto(`/projects/${projectId}/tickets`);
 
     await expect(page.locator("[data-testid='session-attached-panel']")).toBeVisible();
+    await expect(page.locator("[data-testid='session-attached-panel']").getByText(prompt).first()).toBeVisible();
+    await expect(page.locator("[data-testid='session-attached-panel']").getByText("Review changes")).toBeVisible();
 
-    await page.goto(`/projects/${projectId}/tickets/TK-1/workspaces/W-1`);
+    await page.goto(
+      `/projects/${projectId}/tickets/${ticket.shorthand}/workspaces/${attempt.workspace.workspace_shorthand}`,
+    );
 
-    await expect(page.locator("[data-testid='session-attached-panel']")).toHaveCount(0);
+    await expect(page.locator("[data-testid='session-attached-panel']")).toBeVisible();
+    await expect(page.locator("[data-testid='session-attached-panel']").getByText(prompt).first()).toBeVisible();
+    await expect(page.locator("[data-testid='session-attached-panel']").getByText("Review changes")).toHaveCount(0);
   });
 
   test("opens selected session in bubble and navigates back", async ({ page, request }) => {
@@ -239,7 +277,7 @@ test.describe("Sessions page", () => {
         `pstdio-project-settings/projects/${id}/values`,
         JSON.stringify({
           state: {
-            lastNonSessionsPath: `/projects/${id}/docs`,
+            lastNonSessionsPath: `/projects/${id}/tickets`,
           },
           version: 0,
         }),
@@ -250,8 +288,8 @@ test.describe("Sessions page", () => {
     await page.goto(`/projects/${projectId}/sessions/${session.id}`);
     await page.getByRole("button", { name: "Open in bubble" }).click();
 
-    await page.waitForURL(`**/projects/${projectId}/docs`);
-    const sessionBubble = page.locator("[data-testid='session-bubble']");
+    await page.waitForURL(`**/projects/${projectId}/tickets`);
+    const sessionBubble = getSessionBubble(page);
     await expect(sessionBubble).toBeVisible();
     await expect(sessionBubble.getByText("Open in bubble session").first()).toBeVisible();
   });
@@ -270,7 +308,7 @@ test.describe("Sessions page", () => {
     await createSessionViaApi(request, projectId, "Session 6");
     await createSessionViaApi(request, projectId, "Session 7");
 
-    await page.goto(`/projects/${projectId}/docs`);
+    await page.goto(`/projects/${projectId}/tickets`);
 
     await page.locator("button", { hasText: "New session" }).first().click();
 

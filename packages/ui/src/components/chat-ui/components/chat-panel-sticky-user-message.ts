@@ -1,7 +1,7 @@
 import type { SessionMessage } from "./message-types";
 
 export const STICKY_USER_MESSAGE_COLLAPSE_TEXT_THRESHOLD = 360;
-export const STICKY_USER_MESSAGE_COLLAPSED_MAX_HEIGHT = "min(20vh, 8rem)";
+export const STICKY_USER_MESSAGE_COLLAPSED_MAX_HEIGHT = "min(10vh, 4rem)";
 
 const getMessageTextLength = (message: SessionMessage) => {
   return message.parts.reduce((total, part) => {

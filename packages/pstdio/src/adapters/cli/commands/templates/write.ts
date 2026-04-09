@@ -1,5 +1,5 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import type { Arguments, Argv } from "yargs";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { getTemplate } from "@/features/templates/api/get-template";
@@ -8,7 +8,7 @@ import { extractRawTitle } from "@/features/tickets/display-title";
 import { readTicketFile, resolveTicketDir } from "@/features/tickets/local-ticket";
 
 export const command = "write";
-export const describe = "Write a template to a docs path or ticket";
+export const describe = "Write a template to a ticket";
 
 export const builder = (yargs: Argv) =>
   yargs
@@ -20,12 +20,10 @@ export const builder = (yargs: Argv) =>
     .option("target", {
       type: "string",
       demandOption: true,
-      describe: "Target path: docs/<path> or <ticket-shorthand>",
+      describe: "Target ticket shorthand",
     });
 
 type WriteArgs = { name: string; target: string };
-
-const isDocsTarget = (target: string) => target.startsWith("docs/");
 
 type Deps = {
   cwd: () => string;
@@ -39,24 +37,6 @@ const defaultDeps: Deps = {
   findGitRoot,
   readConfig,
   getTemplate,
-};
-
-const writeDocsTemplate = (
-  root: string,
-  templateName: string,
-  target: string,
-  templateContent: string,
-  placeholders: Record<string, string>,
-) => {
-  placeholders.TICKET_ID = "";
-  placeholders.TICKET_TITLE = templateName;
-
-  const docPath = target.replace(/^docs\//, "");
-  const filePath = join(root, ".pstdio", "docs", `${docPath}.md`);
-
-  mkdirSync(dirname(filePath), { recursive: true });
-  writeFileSync(filePath, replacePlaceholders(templateContent, placeholders));
-  console.log(`Wrote template "${templateName}" to .pstdio/docs/${docPath}.md`);
 };
 
 const writeTicketTemplate = (
@@ -91,23 +71,13 @@ export const createHandler =
     const template = await deps.getTemplate(config.project_id, argv.name);
     if (!template) throw new Error(`Template not found: ${argv.name}`);
 
-    const docsTarget = isDocsTarget(argv.target);
-
-    if (docsTarget && template.template_type === "ticket") {
-      throw new Error("Ticket templates cannot target docs. Use a docs template instead.");
-    }
-
     const placeholders: Record<string, string> = {
       CREATED_AT: new Date().toISOString(),
       USER_PROMPT: "",
       PARENT_ID: "",
     };
 
-    if (docsTarget) {
-      writeDocsTemplate(root, argv.name, argv.target, template.content, placeholders);
-    } else {
-      writeTicketTemplate(root, argv.target, argv.name, template.content, placeholders);
-    }
+    writeTicketTemplate(root, argv.target, argv.name, template.content, placeholders);
   };
 
 export const handler = createHandler();

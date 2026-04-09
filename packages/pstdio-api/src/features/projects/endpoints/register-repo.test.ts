@@ -214,34 +214,6 @@ describe("POST /v1/projects/:id/repos - repo bootstrap", () => {
     expect(readdirSync(pluginDir).length).toBeGreaterThan(0);
   });
 
-  test("scaffolds starter docs when missing", async () => {
-    const project = await createProject("Docs Project");
-
-    const repoPath = join(tempRoot, "docs-repo");
-    mkdirSync(repoPath, { recursive: true });
-
-    const res = await registerRepo(project.id, "docs-repo", repoPath);
-
-    expect(res.status).toBe(201);
-    expect(existsSync(join(repoPath, ".pstdio", "docs", "navigation.json"))).toBe(true);
-    expect(existsSync(join(repoPath, ".pstdio", "docs", "index.md"))).toBe(true);
-  });
-
-  test("preserves existing local docs", async () => {
-    const project = await createProject("Existing Docs Project");
-
-    const repoPath = join(tempRoot, "existing-docs-repo");
-    const docsDir = join(repoPath, ".pstdio", "docs");
-    mkdirSync(docsDir, { recursive: true });
-    writeFileSync(join(docsDir, "local.md"), "local doc");
-
-    const res = await registerRepo(project.id, "existing-docs-repo", repoPath);
-
-    expect(res.status).toBe(201);
-    expect(readFileSync(join(docsDir, "local.md"), "utf8")).toBe("local doc");
-    expect(existsSync(join(docsDir, "navigation.json"))).toBe(false);
-  });
-
   test("overrides stale config when the linked project no longer exists and clears local tickets", async () => {
     const project = await createProject("Relink Target");
 

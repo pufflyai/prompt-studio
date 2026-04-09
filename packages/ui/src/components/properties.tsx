@@ -27,8 +27,8 @@ export const Properties = (props: PropertiesProps) => {
   return (
     <Stack gap="sm" paddingLeft="sm" paddingY="xs">
       {items.map((item, index) => (
-        <HStack key={`${item.label}-${index}`} gap="md" alignItems="center">
-          <Box width="140px" flexShrink={0}>
+        <HStack key={`${item.label}-${index}`} gap="xs" alignItems="center">
+          <Box width="110px" flexShrink={0}>
             <HStack gap="1" alignItems="center">
               <Text textStyle="label/S/medium" color="fg.muted">
                 {item.label}

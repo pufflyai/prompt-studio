@@ -72,8 +72,8 @@ export const TicketList = (props: TicketListProps) => {
             cursor="pointer"
             borderBottomWidth="1px"
             borderColor="border.muted"
-            background={isSelected ? "bg.muted" : "transparent"}
-            _hover={{ background: "bg.muted" }}
+            background={isSelected ? "bg.active" : "transparent"}
+            _hover={{ background: isSelected ? "bg.active" : "bg.hover" }}
             onClick={() => {
               if (canExpand) {
                 row.toggleExpanded();

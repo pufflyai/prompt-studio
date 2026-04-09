@@ -165,8 +165,6 @@ describe("packaged pstdio — self-hosted serve", () => {
         expect(repoRes.status).toBe(201);
 
         expect(existsSync(join(repoPath, ".pstdio", "config.json"))).toBe(true);
-        expect(existsSync(join(repoPath, ".pstdio", "docs", "index.md"))).toBe(true);
-        expect(existsSync(join(repoPath, ".pstdio", "docs", "navigation.json"))).toBe(true);
         const pluginsDir = join(repoPath, ".pstdio", "plugins");
         expect(existsSync(pluginsDir)).toBe(true);
         expect(readdirSync(pluginsDir).length).toBeGreaterThan(0);

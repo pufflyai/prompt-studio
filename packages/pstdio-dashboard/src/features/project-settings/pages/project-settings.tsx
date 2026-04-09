@@ -1,5 +1,5 @@
-import { Flex, Stack } from "@chakra-ui/react";
-import { toaster } from "@pstdio/ui";
+import { Stack } from "@chakra-ui/react";
+import { PanelLayout, toaster } from "@pstdio/ui";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useProject, useProjectTemplateAssets } from "@/features/project/hooks/use-project";
@@ -94,32 +94,33 @@ export const ProjectSettings = () => {
     });
   }, [activeSection, navigate, panel, projectId]);
 
+  const sidebar = (
+    <SettingsSidebar
+      templates={templates ?? []}
+      skills={skills ?? []}
+      tags={tags}
+      activeSection={activeSection}
+      onSelectSection={setActiveSection}
+      onCreateTemplate={() => setIsCreateTemplateOpen(true)}
+      onCreateTag={handleCreateTag}
+    />
+  );
+
   return (
-    <>
-      <Flex height="100%" width="100%" minH="0">
-        <SettingsSidebar
-          templates={templates ?? []}
-          skills={skills ?? []}
-          tags={tags}
+    <PanelLayout sidebar={sidebar}>
+      <Stack flex="1" minH="0" overflow="auto">
+        <SettingsContent
           activeSection={activeSection}
-          onSelectSection={setActiveSection}
-          onCreateTemplate={() => setIsCreateTemplateOpen(true)}
-          onCreateTag={handleCreateTag}
+          projectId={projectId}
+          projectName={projectName}
+          repositories={project?.repositories ?? []}
+          tags={tags}
+          ticketStatuses={ticketStatuses ?? []}
+          attemptStatuses={attemptStatuses ?? []}
+          onDeleteTag={handleDeleteTag}
+          onTemplateDeleted={handleTemplateDeleted}
         />
-        <Stack flex="1" minH="0" overflow="auto">
-          <SettingsContent
-            activeSection={activeSection}
-            projectId={projectId}
-            projectName={projectName}
-            repositories={project?.repositories ?? []}
-            tags={tags}
-            ticketStatuses={ticketStatuses ?? []}
-            attemptStatuses={attemptStatuses ?? []}
-            onDeleteTag={handleDeleteTag}
-            onTemplateDeleted={handleTemplateDeleted}
-          />
-        </Stack>
-      </Flex>
+      </Stack>
 
       <CreateTemplateDialog
         projectId={projectId}
@@ -127,6 +128,6 @@ export const ProjectSettings = () => {
         onClose={() => setIsCreateTemplateOpen(false)}
         onCreated={handleTemplateCreated}
       />
-    </>
+    </PanelLayout>
   );
 };

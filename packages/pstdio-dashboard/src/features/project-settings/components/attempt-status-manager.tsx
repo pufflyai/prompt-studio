@@ -306,7 +306,7 @@ export const AttemptStatusManager = (props: AttemptStatusManagerProps) => {
                     <Table.Cell />
                     <Table.Cell>
                       <HStack gap="2xs">
-                        <Button size="2xs" variant="solid" onClick={handleAddOption} disabled={!addForm.name.trim()}>
+                        <Button size="2xs" variant="primary" onClick={handleAddOption} disabled={!addForm.name.trim()}>
                           Add
                         </Button>
                         <Button
@@ -333,7 +333,7 @@ export const AttemptStatusManager = (props: AttemptStatusManagerProps) => {
             <Button size="sm" variant="outline" onClick={handleCancel} disabled={!hasChanges || isSaving}>
               Cancel
             </Button>
-            <Button size="sm" variant="solid" onClick={handleSave} loading={isSaving} disabled={!hasChanges}>
+            <Button size="sm" variant="primary" onClick={handleSave} loading={isSaving} disabled={!hasChanges}>
               Save
             </Button>
           </HStack>

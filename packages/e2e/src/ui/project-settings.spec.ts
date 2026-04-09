@@ -46,6 +46,15 @@ const getSkillViaApi = async (
   return (await res.json()) as { name: string; description: string; content: string };
 };
 
+const closeSessionBubble = async (page: import("@playwright/test").Page, projectId: string) => {
+  await page.addInitScript((id: string) => {
+    localStorage.setItem(
+      `pstdio-project-settings/projects/${id}/values`,
+      JSON.stringify({ state: { sessionModalState: "closed" }, version: 0 }),
+    );
+  }, projectId);
+};
+
 const navigateToTemplate = async (page: import("@playwright/test").Page, projectId: string, templateName: string) => {
   await bypassOnboarding(page);
   await page.goto(`/projects/${projectId}/settings`);
@@ -167,11 +176,9 @@ test.describe("Project settings", () => {
     const created = (await createRes.json()) as { id: string; name: string };
 
     await bypassOnboarding(page);
+    await closeSessionBubble(page, project.id);
     await page.goto(`/projects/${project.id}/settings?panel=ticket-statuses`);
     await expect(page.getByText("to-delete")).toBeVisible();
-
-    // Hide the session bubble so it doesn't intercept pointer events on the table
-    await page.addStyleTag({ content: "[data-testid='session-bubble'] { display: none !important; }" });
 
     const row = page.getByRole("row").filter({ hasText: "to-delete" });
     await row.getByRole("button", { name: "Delete to-delete" }).click();
@@ -207,10 +214,9 @@ test.describe("Project settings", () => {
     });
 
     await bypassOnboarding(page);
+    await closeSessionBubble(page, project.id);
     await page.goto(`/projects/${project.id}/settings?panel=ticket-statuses`);
     await expect(page.getByText("temp-status")).toBeVisible();
-
-    await page.addStyleTag({ content: "[data-testid='session-bubble'] { display: none !important; }" });
 
     // Delete the status from draft
     const row = page.getByRole("row").filter({ hasText: "temp-status" });

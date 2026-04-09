@@ -1,10 +1,10 @@
 import { Box, Container, Flex, Stack, Text } from "@chakra-ui/react";
-import type { DocsPaginationItem, DocsSidebarItem } from "@pstdio/ui";
-import { DocsOutline, DocsPagination, DocsSidebar } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import Footer from "../footer";
 import Header from "../header";
 import { RootProvider } from "../root-provider";
+import { DocsPagination, type DocsPaginationItem, DocsSidebar, type DocsSidebarItem } from "./docs-navigation";
+import { DocsOutline } from "./docs-outline";
 
 export interface DocsPageMeta {
   title: string;

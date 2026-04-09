@@ -1,3 +1,4 @@
+import type { IconProps } from "@chakra-ui/react";
 import type { ComponentType, ReactNode } from "react";
 
 export interface SidebarNavigationIntent {
@@ -33,6 +34,12 @@ export interface SidebarNode {
   label: string;
   description?: string;
   icon?: ReactNode;
+  iconColor?: IconProps["color"];
+  indicator?: {
+    icon: ReactNode;
+    color?: IconProps["color"];
+    tooltip?: string | null;
+  };
   disabled?: boolean;
   isNavigable?: boolean;
   /** URL for the node. When provided with a linkComponent, the row renders as an anchor for cmd+click support. */
@@ -45,6 +52,7 @@ export interface SidebarNode {
 export interface SidebarSection {
   id: string;
   label?: string;
+  collapsible?: boolean;
   actions?: SidebarAction[];
   emptyState?: ReactNode;
   nodes: SidebarNode[];

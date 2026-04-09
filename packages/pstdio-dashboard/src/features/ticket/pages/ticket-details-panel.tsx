@@ -1,12 +1,15 @@
 import { Flex, Stack, Text } from "@chakra-ui/react";
+import { DeleteConfirmationModal, PanelLayout } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { useNavigate, useParams } from "@tanstack/react-router";
+import { Archive, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
+import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
 import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
-import { useProject, useProjectTemplateAssets } from "@/features/project/hooks/use-project";
+import { useProject } from "@/features/project/hooks/use-project";
 import { useProjectSettingsStore } from "@/features/project-settings/store";
-import { CreateTicketModal } from "@/features/ticket-list/components/create-ticket-modal";
 import { uploadTicketFile } from "@/features/ticket-list/data/api";
 import {
   useDeleteProjectTicket,
@@ -14,21 +17,14 @@ import {
   useUpdateProjectTicket,
   useUpdateProjectTicketTags,
 } from "@/features/ticket-list/hooks/use-project-tickets";
-import { BreakIntoSubTicketsModal } from "../components/break-into-sub-tickets-modal";
-import { RefineTicketModal } from "../components/refine-ticket-modal";
+import { useAttemptStatusMap } from "@/features/workspaces/hooks/use-attempt-status-map";
+import { useWorkspaceSessions } from "@/features/workspaces/hooks/use-workspace-sessions";
 import { TicketDetailSidebar } from "../components/ticket-detail-sidebar";
 import { TicketHeader } from "../components/ticket-header";
+import { TicketSidebar } from "../components/ticket-sidebar";
 import { useContentAutosave } from "../hooks/use-content-autosave";
-import { useSubTicketCreation } from "../hooks/use-sub-ticket-creation";
-import { useTicketAttemptDiffSummary } from "../hooks/use-ticket-attempt-diff-summary";
 import { useTicketContent } from "../hooks/use-ticket-content";
 import { useTicketFiles } from "../hooks/use-ticket-files";
-import { useTicketSessions } from "../hooks/use-ticket-sessions";
-import {
-  buildCreateSubTicketsPrompt,
-  buildImplementTicketPrompt,
-  buildRefineTicketPrompt,
-} from "../utils/build-prompts";
 import { openTicketSessionBubble } from "../utils/open-ticket-session-bubble";
 import { resolveParentTicketReference } from "../utils/resolve-parent-ticket-reference";
 import { isTicketContentReady } from "../utils/ticket-content-ready";
@@ -41,6 +37,7 @@ import {
 
 const TicketDetailsStatusMessage = (props: { message: string }) => {
   const { message } = props;
+
   return (
     <Stack gap="lg" height="100%" p="sm">
       <Text textStyle="paragraph/S/regular" color="foreground.secondary">
@@ -50,27 +47,11 @@ const TicketDetailsStatusMessage = (props: { message: string }) => {
   );
 };
 
-const findLatestAttempt = <T extends { updatedAt: string }>(attempts: T[]) => {
-  let latestAttempt = attempts[0] ?? null;
-
-  for (const attempt of attempts) {
-    if (!latestAttempt || Date.parse(attempt.updatedAt) > Date.parse(latestAttempt.updatedAt)) {
-      latestAttempt = attempt;
-    }
-  }
-
-  return latestAttempt;
-};
-
-const toTicketTemplates = (templateAssets: Array<{ id: string; name: string; templateType: string }> | undefined) =>
-  (templateAssets ?? [])
-    .filter((asset) => asset.templateType === "ticket")
-    .map((asset) => ({ id: asset.id, name: asset.name }));
-
 const buildTicketBreadcrumbs = (ticketShorthand: string, parentShorthand: string | null, projectId: string) => {
   const ticketUrl = `/projects/${projectId}/tickets/${ticketShorthand}`;
   const breadcrumbs = [{ title: ticketShorthand, url: ticketUrl }];
   if (!parentShorthand) return breadcrumbs;
+
   const parentUrl = `/projects/${projectId}/tickets/${parentShorthand}`;
   return [{ title: parentShorthand, url: parentUrl }, ...breadcrumbs];
 };
@@ -78,11 +59,11 @@ const buildTicketBreadcrumbs = (ticketShorthand: string, parentShorthand: string
 export const TicketDetailsPanel = () => {
   const { projectId, ticketShorthand, selectedFileId } = useParams({ strict: false });
   const navigate = useNavigate();
-  const { t } = useTranslation("tickets");
+  const { t } = useTranslation(["projects", "tickets"]);
+  const setSessionModalState = useProjectSettingsStore((state) => state.setSessionModalState);
+  const setSelectedSessionId = useProjectSettingsStore((state) => state.setSelectedSessionId);
 
   const { data: project } = useProject(projectId);
-  const { data: templateAssets } = useProjectTemplateAssets(projectId);
-  const pluginActionTrigger = usePluginActionTrigger(projectId);
   const { data: allTickets, isLoading: isTicketsLoading } = useProjectTickets(projectId);
   const updateTicket = useUpdateProjectTicket(projectId);
   const updateTicketTags = useUpdateProjectTicketTags(projectId);
@@ -97,38 +78,39 @@ export const TicketDetailsPanel = () => {
   const selectableFiles = buildSelectableTicketFiles(ticketFiles.data);
   const selectedFile = resolveSelectedTicketFile(selectableFiles, selectedFileId);
   const ticketContent = useTicketContent(ticket?.id, selectedFile.id);
+  const workspaces = ticket?.attempts ?? [];
+  const attemptStatusMap = useAttemptStatusMap(projectId);
+  const workspaceIds = workspaces.map((w) => w.id);
+  const sessionsByWorkspaceId = useWorkspaceSessions(workspaceIds);
   const content = ticketContent.data ?? "";
   const isContentReady = isTicketContentReady(ticketContent.data, ticketContent.isLoading);
-  const ticketAttempts = ticket?.attempts ?? [];
-  const defaultRepoId = project?.repositories[0]?.id || null;
-  const lastSelectedAgent = useProjectSettingsStore((s) => s.lastSelectedAgent);
-  const lastSelectedModels = useProjectSettingsStore((s) => s.lastSelectedModels);
-  const lastSelectedBranches = useProjectSettingsStore((s) => s.lastSelectedBranches);
-  const setSessionModalState = useProjectSettingsStore((s) => s.setSessionModalState);
-  const setSelectedSessionId = useProjectSettingsStore((s) => s.setSelectedSessionId);
+  const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(true);
+  const [isDeleteOpen, setDeleteOpen] = useState(false);
 
-  const sessions = useTicketSessions({
+  const pluginActionTrigger = usePluginActionTrigger({
     projectId,
-    defaultRepoId,
-    selectedAgent: lastSelectedAgent,
-    selectedModel: lastSelectedModels[0] ?? "",
-    selectedBranch: lastSelectedBranches[0] ?? "",
+    targetType: "ticket",
+    onSuccess: async (result) => {
+      if (!result.session_id) return;
+
+      openTicketSessionBubble({
+        sessionId: result.session_id,
+        setSessionModalState,
+        setSelectedSessionId,
+        forceBubble: true,
+      });
+    },
   });
-  const subTicketCreation = useSubTicketCreation({
-    projectId,
-    parentTicketId: ticketId,
-    statusOptions: project?.ticketStatusOptions ?? [],
-    tags: project?.ticketTags ?? [],
-  });
+
   const autosave = useContentAutosave({
     scopeKey: ticketId ? `ticket:${ticketId}:${selectedFile.id}` : "ticket:none",
     saveTargetId: selectedFile.id,
     content,
-    onSave: async (id, c) => {
-      ticketContent.setOptimisticContent(c);
+    onSave: async (id, nextContent) => {
+      ticketContent.setOptimisticContent(nextContent);
 
       if (id === TICKET_CONTENT_ITEM_ID) {
-        await updateTicket.mutateAsync({ ticketId, content: c });
+        await updateTicket.mutateAsync({ ticketId, content: nextContent });
         return;
       }
 
@@ -137,35 +119,34 @@ export const TicketDetailsPanel = () => {
 
       await uploadTicketFile(
         ticketId,
-        new File([c], attachment.fileName, {
+        new File([nextContent], attachment.fileName, {
           type: attachment.fileName.endsWith(".md") ? "text/markdown" : "text/plain",
         }),
       );
     },
   });
 
-  const latestAttempt = findLatestAttempt(ticketAttempts);
-  const { data: latestAttemptDiffSummary } = useTicketAttemptDiffSummary(latestAttempt?.id);
-  const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(true);
-  const [isBreakModalOpen, setIsBreakModalOpen] = useState(false);
-  const [isRefineModalOpen, setIsRefineModalOpen] = useState(false);
-
   const navigateBack = async () => {
     await autosave.flushPending();
     navigate({ to: "/projects/$projectId/tickets", params: { projectId } });
   };
-  const templates = toTicketTemplates(templateAssets);
 
-  if (ticketState.state === "loading") return <TicketDetailsStatusMessage message={t("ticketDetail.loadingContent")} />;
-  if (!ticket) return <TicketDetailsStatusMessage message={t("ticketDetail.ticketNotFound")} />;
+  if (ticketState.state === "loading") {
+    return <TicketDetailsStatusMessage message={t("tickets:ticketDetail.loadingContent")} />;
+  }
+
+  if (!ticket) {
+    return <TicketDetailsStatusMessage message={t("tickets:ticketDetail.ticketNotFound")} />;
+  }
 
   const handleSelectTicket = (id: string) => {
-    const target = allProjectTickets.find((t) => t.id === id);
-    if (target)
-      navigate({
-        to: "/projects/$projectId/tickets/$ticketShorthand",
-        params: { projectId, ticketShorthand: target.shorthand },
-      });
+    const target = allProjectTickets.find((item) => item.id === id);
+    if (!target) return;
+
+    navigate({
+      to: "/projects/$projectId/tickets/$ticketShorthand",
+      params: { projectId, ticketShorthand: target.shorthand },
+    });
   };
 
   const handleSelectFile = async (fileId: string) => {
@@ -185,122 +166,123 @@ export const TicketDetailsPanel = () => {
     });
   };
 
-  const handleRunAttempt = () => {
-    return sessions.runAttempt(ticket.id, buildImplementTicketPrompt(ticket.shorthand)).then((sessionId) =>
-      openTicketSessionBubble({
-        sessionId,
-        setSessionModalState,
-        setSelectedSessionId,
-      }),
-    );
-  };
+  const handleSelectWorkspace = (workspaceShorthand: string) => {
+    if (!projectId) return;
 
-  const handleViewWorkspace = () => {
-    if (!projectId || !ticketShorthand || !latestAttempt) return;
     navigate({
       to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
-      params: { projectId, ticketShorthand, workspaceShorthand: latestAttempt.shorthand },
+      params: { projectId, ticketShorthand: ticket.shorthand, workspaceShorthand },
     });
   };
 
+  const handleSelectWorkspaceSession = (workspaceShorthand: string, sessionId: string) => {
+    if (!projectId) return;
+
+    navigate({
+      to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
+      params: { projectId, ticketShorthand: ticket.shorthand, workspaceShorthand },
+      search: sessionId ? { sessionId } : {},
+    });
+  };
+
+  const defaultOverflowActions: HeaderActionItem[] = [
+    {
+      key: "archive-ticket",
+      label: t(
+        ticket.archived ? "projects:ticketPanel.options.unarchiveTicket" : "projects:ticketPanel.options.archiveTicket",
+      ),
+      kind: "default",
+      icon: Archive,
+      isDisabled: updateTicket.isPending,
+      onClick: () => updateTicket.mutate({ ticketId: ticket.id, archived: !ticket.archived }),
+    },
+    {
+      key: "delete-ticket",
+      label: t("projects:ticketPanel.options.deleteTicket"),
+      kind: "default",
+      icon: Trash2,
+      isDisabled: !projectId || deleteTicket.isPending,
+      onClick: () => setDeleteOpen(true),
+    },
+  ];
+
   const breadcrumbs = buildTicketBreadcrumbs(ticket.shorthand, parentReference.shorthand, projectId);
 
+  const sidebar = (
+    <TicketSidebar
+      files={selectableFiles}
+      selectedFileId={selectedFile.id}
+      workspaces={workspaces}
+      attemptStatusMap={attemptStatusMap}
+      sessionsByWorkspaceId={sessionsByWorkspaceId}
+      onSelectFile={handleSelectFile}
+      onSelectWorkspace={handleSelectWorkspace}
+      onSelectSession={handleSelectWorkspaceSession}
+    />
+  );
+
   return (
-    <Stack gap="0" height="100%">
-      <TicketHeader
-        breadcrumbItems={breadcrumbs}
-        attemptCount={ticketAttempts.length}
-        additions={latestAttemptDiffSummary?.additions ?? 0}
-        deletions={latestAttemptDiffSummary?.deletions ?? 0}
-        isRunningAttempt={sessions.isRunningAttempt}
-        isArchived={Boolean(ticket.archived)}
-        canDeleteTicket={Boolean(projectId) && !deleteTicket.isPending}
-        onNavigateBack={navigateBack}
-        onRunAttempt={handleRunAttempt}
-        onViewWorkspace={handleViewWorkspace}
-        pluginActions={pluginActionTrigger.pluginActions}
-        onCreateSubTicket={subTicketCreation.openCreateSubTicketModal}
-        onBreakIntoSubTickets={() => setIsBreakModalOpen(true)}
-        onRefineTicket={() => setIsRefineModalOpen(true)}
-        onPluginAction={(actionKey) => pluginActionTrigger.trigger(actionKey, "ticket", ticket.id)}
-        onArchiveTicket={() => updateTicket.mutate({ ticketId: ticket.id, archived: !ticket.archived })}
-        onDeleteTicket={async () => {
-          await deleteTicket.mutateAsync({ ticketId: ticket.id });
-          navigateBack();
-        }}
-      />
-      <Flex flex="1" minH="0" overflow="hidden">
-        <Stack flex="1" minW="0">
-          {isContentReady ? (
-            <MarkdownEditor
-              key={autosave.editorKey}
-              defaultState={autosave.initialContent}
-              isEditable
-              placeholder={t("ticketDetail.enterDescription")}
-              onChange={autosave.handleChange}
-            />
-          ) : null}
-        </Stack>
-        <TicketDetailSidebar
-          ticket={ticket}
-          project={project}
-          allTickets={allProjectTickets}
-          ticketFiles={ticketFiles.data}
-          selectedFileId={selectedFile.id}
-          isOpen={isDetailsPanelOpen}
-          isUpdatingTags={updateTicketTags.isPending}
-          onToggle={() => setIsDetailsPanelOpen(!isDetailsPanelOpen)}
-          onSelectFile={handleSelectFile}
-          onSelectTicket={handleSelectTicket}
-          onTagIdsChange={(ids) => updateTicketTags.mutate({ ticketId: ticket.id, tagIds: ids })}
+    <PanelLayout sidebar={sidebar}>
+      <Stack flex="1" gap="0" minH="0">
+        <TicketHeader
+          breadcrumbItems={breadcrumbs}
+          pluginActions={pluginActionTrigger.pluginActions}
+          defaultOverflowActions={defaultOverflowActions}
+          pendingActionKey={pluginActionTrigger.pendingActionKey}
+          isExecuting={pluginActionTrigger.isExecuting}
+          onNavigateBack={navigateBack}
+          onPluginAction={(actionKey) => void pluginActionTrigger.trigger(actionKey, ticket.id)}
         />
-      </Flex>
-      <CreateTicketModal
-        open={subTicketCreation.createModalOpen}
-        onClose={subTicketCreation.closeCreateSubTicketModal}
-        onSubmit={subTicketCreation.handleCreateSubTicket}
-        isSubmitting={subTicketCreation.isCreatingSubTicket}
-        targetStatus={subTicketCreation.createModalStatus}
-        parentId={subTicketCreation.parentId}
-        tags={subTicketCreation.tags}
-        title={t("ticketDetail.createSubTicket")}
-        submitLabel={t("ticketDetail.createSubTicket")}
-      />
-      <BreakIntoSubTicketsModal
-        open={isBreakModalOpen}
-        onClose={() => setIsBreakModalOpen(false)}
-        onSubmit={(tpl) =>
-          sessions.startSession(buildCreateSubTicketsPrompt(ticket.shorthand, tpl ?? undefined)).then(Boolean)
-        }
-        ticketShorthand={ticket.shorthand}
-        templates={templates}
-        isSubmitting={sessions.isStartingSession}
-      />
-      <RefineTicketModal
-        open={isRefineModalOpen}
-        onClose={() => setIsRefineModalOpen(false)}
-        onSubmit={(ctx, tpl) =>
-          sessions.startSession(buildRefineTicketPrompt(ticket.shorthand, ctx, tpl ?? undefined)).then((sessionId) =>
-            openTicketSessionBubble({
-              sessionId,
-              setSessionModalState,
-              setSelectedSessionId,
-            }),
-          )
-        }
-        ticketShorthand={ticket.shorthand}
-        templates={templates}
-        isSubmitting={sessions.isStartingSession}
-      />
-      {/* pluginActionTrigger.activeParamAction ? (
+
+        <Flex flex="1" minH="0" overflow="hidden">
+          <Stack flex="1" minW="0">
+            {isContentReady ? (
+              <MarkdownEditor
+                key={autosave.editorKey}
+                defaultState={autosave.initialContent}
+                isEditable
+                placeholder={t("tickets:ticketDetail.enterDescription")}
+                onChange={autosave.handleChange}
+              />
+            ) : null}
+          </Stack>
+
+          <TicketDetailSidebar
+            ticket={ticket}
+            project={project}
+            allTickets={allProjectTickets}
+            isOpen={isDetailsPanelOpen}
+            isUpdatingTags={updateTicketTags.isPending}
+            onToggle={() => setIsDetailsPanelOpen(!isDetailsPanelOpen)}
+            onSelectTicket={handleSelectTicket}
+            onTagIdsChange={(ids) => updateTicketTags.mutate({ ticketId: ticket.id, tagIds: ids })}
+          />
+        </Flex>
+      </Stack>
+
+      {pluginActionTrigger.activeParamAction && projectId ? (
         <ActionParamsDialog
           open
           action={pluginActionTrigger.activeParamAction}
-          projectId={projectId!}
+          projectId={projectId}
+          isSubmitting={pluginActionTrigger.isExecuting}
           onClose={pluginActionTrigger.cancelParams}
-          onSubmit={(params) => pluginActionTrigger.submitWithParams("ticket", ticket.id, params)}
+          onSubmit={(params) => pluginActionTrigger.submitWithParams(params)}
         />
-      ) : null */}
-    </Stack>
+      ) : null}
+
+      <DeleteConfirmationModal
+        open={isDeleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onDelete={async () => {
+          await deleteTicket.mutateAsync({ ticketId: ticket.id });
+          setDeleteOpen(false);
+          await navigateBack();
+        }}
+        headline={t("projects:ticketPanel.deleteConfirmation.ticket.headline")}
+        notificationText={t("projects:ticketPanel.deleteConfirmation.ticket.notification")}
+        buttonText={t("projects:ticketPanel.options.deleteTicket")}
+      />
+    </PanelLayout>
   );
 };

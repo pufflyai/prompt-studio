@@ -190,7 +190,7 @@ test.describe("Project list", () => {
     await expect(page.getByText(/You have \d+ projects?/)).toBeVisible();
   });
 
-  test("navigates to project docs on click", async ({ page, request }) => {
+  test("navigates to project default path on click", async ({ page, request }) => {
     await bypassOnboarding(page);
 
     const project = await createProjectViaApi(request, "Nav Test Project");

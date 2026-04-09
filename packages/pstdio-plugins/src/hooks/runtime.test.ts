@@ -98,6 +98,39 @@ describe("loadPluginRuntime", () => {
     expect(calls).toEqual([join(repoPath, ".pstdio")]);
   });
 
+  test("exposes loaded plugins list", async () => {
+    const repoPath = createTempDir();
+    const pluginsDir = join(repoPath, ".pstdio", "plugins");
+    mkdirSync(pluginsDir, { recursive: true });
+
+    writeFileSync(
+      join(pluginsDir, "my-plugin.ts"),
+      `export default {
+        actions: [{
+          key: "greet",
+          label: "Greet",
+          targetType: "ticket",
+          placement: "primary",
+          trigger() {},
+        }],
+      };`,
+    );
+
+    const runtime = await loadPluginRuntime({ repoPath, client: stubClient });
+
+    expect(runtime.plugins).toHaveLength(1);
+    expect(runtime.plugins[0].identity).toBe("my-plugin");
+    expect(runtime.plugins[0].filePath).toContain("my-plugin.ts");
+  });
+
+  test("returns empty plugins list when no plugins exist", async () => {
+    const repoPath = createTempDir();
+
+    const runtime = await loadPluginRuntime({ repoPath, client: stubClient });
+
+    expect(runtime.plugins).toEqual([]);
+  });
+
   test("post hooks fire without rejection", async () => {
     const repoPath = createTempDir();
     const pluginsDir = join(repoPath, ".pstdio", "plugins");

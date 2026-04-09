@@ -1,8 +1,9 @@
 import { Stack, Text } from "@chakra-ui/react";
+import { PanelLayout } from "@pstdio/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-
+import { ProjectSidebar } from "@/features/project/components/project-sidebar";
 import { useProject } from "@/features/project/hooks/use-project";
 import { useProjectSettingsStore } from "@/features/project-settings/store";
 import { openTicketSessionBubble } from "@/features/ticket/utils/open-ticket-session-bubble";
@@ -84,6 +85,7 @@ export const TicketsPanel = () => {
       sessionId,
       setSessionModalState,
       setSelectedSessionId,
+      forceBubble: true,
     });
   };
 
@@ -165,56 +167,60 @@ export const TicketsPanel = () => {
 
   if (isLoading) {
     return (
-      <Stack gap="lg" height="100%" p="sm">
-        <Text textStyle="paragraph/S/regular" color="fg.muted">
-          {t("loading")}
-        </Text>
-      </Stack>
+      <PanelLayout sidebar={<ProjectSidebar />}>
+        <Stack gap="lg" height="100%" p="sm">
+          <Text textStyle="paragraph/S/regular" color="fg.muted">
+            {t("loading")}
+          </Text>
+        </Stack>
+      </PanelLayout>
     );
   }
 
   return (
-    <Stack gap="0" height="100%">
-      <TicketsHeader />
+    <PanelLayout sidebar={<ProjectSidebar />}>
+      <Stack gap="0" height="100%" flex="1">
+        <TicketsHeader />
 
-      <Stack flex="1" minH="0">
-        {settings.viewMode === "board" ? (
-          <TicketsBoardView
-            groups={groups}
-            displayProperties={settings.displayProperties}
-            badgeContext={badgeContext}
-            latestAttemptsByTicketId={latestAttemptsByTicketId}
-            diffTotalsByWorkspaceId={diffTotalsByWorkspaceId}
-            sessionsByWorkspace={sessionsByWorkspace}
-            onMoveTicket={handleMoveTicket}
-            onSelectTicket={(ticket) => navigateToTicket(ticket.shorthand)}
-            onOpenSessionBubble={handleOpenSessionBubble}
-            onOpenTicketWorkspace={(ticket, workspaceShorthand) =>
-              handleOpenTicketWorkspace(ticket.shorthand, workspaceShorthand)
-            }
-            onCreateStart={(status) => openCreateModal(status)}
-            onColumnAction={handleColumnAction}
-          />
-        ) : (
-          <TicketsListView
-            groups={groups}
-            displayProperties={settings.displayProperties}
-            badgeContext={badgeContext}
-            onSelectTicket={(ticket) => navigateToTicket(ticket.shorthand)}
-          />
-        )}
+        <Stack flex="1" minH="0">
+          {settings.viewMode === "board" ? (
+            <TicketsBoardView
+              groups={groups}
+              displayProperties={settings.displayProperties}
+              badgeContext={badgeContext}
+              latestAttemptsByTicketId={latestAttemptsByTicketId}
+              diffTotalsByWorkspaceId={diffTotalsByWorkspaceId}
+              sessionsByWorkspace={sessionsByWorkspace}
+              onMoveTicket={handleMoveTicket}
+              onSelectTicket={(ticket) => navigateToTicket(ticket.shorthand)}
+              onOpenSessionBubble={handleOpenSessionBubble}
+              onOpenTicketWorkspace={(ticket, workspaceShorthand) =>
+                handleOpenTicketWorkspace(ticket.shorthand, workspaceShorthand)
+              }
+              onCreateStart={(status) => openCreateModal(status)}
+              onColumnAction={handleColumnAction}
+            />
+          ) : (
+            <TicketsListView
+              groups={groups}
+              displayProperties={settings.displayProperties}
+              badgeContext={badgeContext}
+              onSelectTicket={(ticket) => navigateToTicket(ticket.shorthand)}
+            />
+          )}
+        </Stack>
+
+        <CreateTicketModal
+          open={createModalOpen}
+          onClose={closeCreateModal}
+          onSubmit={handleCreateTicket}
+          isSubmitting={createTicket.isPending}
+          targetStatus={createModalStatus}
+          tags={tagDefs}
+          projectName={project?.name}
+          statusOptions={statusOptions}
+        />
       </Stack>
-
-      <CreateTicketModal
-        open={createModalOpen}
-        onClose={closeCreateModal}
-        onSubmit={handleCreateTicket}
-        isSubmitting={createTicket.isPending}
-        targetStatus={createModalStatus}
-        tags={tagDefs}
-        projectName={project?.name}
-        statusOptions={statusOptions}
-      />
-    </Stack>
+    </PanelLayout>
   );
 };

@@ -36,6 +36,7 @@ export type {
   ActionPlacement,
   ActionTargetMap,
   ActionTriggerContext,
+  ActionTriggerResult,
   AgentActionParam,
   AgentParamValue,
   LongTextActionParam,

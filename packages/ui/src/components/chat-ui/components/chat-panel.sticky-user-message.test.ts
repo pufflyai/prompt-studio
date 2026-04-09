@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
   isStickyUserMessageCollapsible,
   STICKY_USER_MESSAGE_COLLAPSE_TEXT_THRESHOLD,
+  STICKY_USER_MESSAGE_COLLAPSED_MAX_HEIGHT,
 } from "./chat-panel-sticky-user-message";
 import type { SessionMessage } from "./message-types";
 
@@ -12,6 +13,10 @@ const createUserMessage = (text: string): SessionMessage => ({
 });
 
 describe("isStickyUserMessageCollapsible", () => {
+  it("uses a shorter collapsed max height for sticky user messages", () => {
+    expect(STICKY_USER_MESSAGE_COLLAPSED_MAX_HEIGHT).toBe("min(10vh, 4rem)");
+  });
+
   it("returns false for user messages below the collapse threshold", () => {
     const message = createUserMessage("x".repeat(STICKY_USER_MESSAGE_COLLAPSE_TEXT_THRESHOLD));
 

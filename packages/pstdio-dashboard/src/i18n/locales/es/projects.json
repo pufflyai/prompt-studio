@@ -193,7 +193,6 @@
     }
   },
   "sidebar": {
-    "documentation": "Documentación",
     "tickets": "Tareas",
     "projectChangelog": "Registro del proyecto",
     "projectSettings": "Configuración del proyecto",

@@ -83,7 +83,7 @@ export const FilterMenu = (props: FilterMenuProps) => {
                         const count = countsByCategory[activeCategory.id]?.[option.value] ?? 0;
 
                         return (
-                          <Box key={option.value} px="xs" py="2xs" borderRadius="sm" _hover={{ bg: "bg.subtle" }}>
+                          <Box key={option.value} px="xs" py="2xs" borderRadius="sm" _hover={{ bg: "bg.hover" }}>
                             <Checkbox
                               checked={checked}
                               onCheckedChange={() => onToggleFilterValue(activeCategory.id, option.value)}

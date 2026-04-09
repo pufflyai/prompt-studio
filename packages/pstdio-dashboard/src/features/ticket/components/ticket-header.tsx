@@ -1,87 +1,59 @@
-import { Flex, IconButton } from "@chakra-ui/react";
+import { Flex } from "@chakra-ui/react";
 import type { BreadcrumbItem } from "@pstdio/ui";
 import { Breadcrumb, HorizontalMenuStack } from "@pstdio/ui";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { KanbanSquare } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ActionDescriptor } from "@/features/plugin-actions/api";
-import { TicketActionMenu } from "./ticket-action-menu";
-import { TicketAttemptButton } from "./ticket-attempt-button";
+import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
+import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin-header-actions";
 
 interface TicketHeaderProps {
   breadcrumbItems: BreadcrumbItem[];
-  attemptCount: number;
-  additions: number;
-  deletions: number;
-  isRunningAttempt: boolean;
-  isArchived: boolean;
-  canDeleteTicket: boolean;
   pluginActions?: ActionDescriptor[];
+  defaultOverflowActions?: HeaderActionItem[];
+  pendingActionKey?: string | null;
+  isExecuting?: boolean;
   onNavigateBack: () => void;
-  onRunAttempt: () => Promise<boolean> | boolean;
-  onViewWorkspace: () => void;
-  onCreateSubTicket: () => void;
-  onBreakIntoSubTickets: () => void;
-  onRefineTicket: () => void;
-  onArchiveTicket: () => void;
-  onDeleteTicket: () => void | Promise<void>;
-  onPluginAction?: (actionKey: string) => void;
+  onPluginAction: (actionKey: string) => void;
 }
 
 export const TicketHeader = (props: TicketHeaderProps) => {
   const {
     breadcrumbItems,
-    attemptCount,
-    additions,
-    deletions,
-    isRunningAttempt,
-    isArchived,
-    canDeleteTicket,
     pluginActions,
+    defaultOverflowActions,
+    pendingActionKey,
+    isExecuting = false,
     onNavigateBack,
-    onRunAttempt,
-    onViewWorkspace,
-    onCreateSubTicket,
-    onBreakIntoSubTickets,
-    onRefineTicket,
-    onArchiveTicket,
-    onDeleteTicket,
     onPluginAction,
   } = props;
-  const { t } = useTranslation("tickets");
+  const { t } = useTranslation(["tickets", "projects"]);
+  const ticketListBreadcrumb: BreadcrumbItem = {
+    title: (
+      <Flex as="span" align="center" gap="2xs">
+        <KanbanSquare size={14} />
+        {t("projects:sidebar.tickets")}
+      </Flex>
+    ),
+    onClick: onNavigateBack,
+  };
+  const items = [ticketListBreadcrumb, ...breadcrumbItems];
 
   return (
     <HorizontalMenuStack>
       <Flex align="center" gap="sm">
-        <IconButton aria-label={t("ticketDetail.backToTickets")} variant="ghost" size="sm" onClick={onNavigateBack}>
-          <ArrowLeft />
-        </IconButton>
-
-        <Breadcrumb separator="/" separatorGap="xs" items={breadcrumbItems} linkComponent={Link} />
+        <Breadcrumb separator="/" separatorGap="xs" items={items} linkComponent={Link} />
       </Flex>
 
-      <Flex align="center" gap="xs">
-        <TicketAttemptButton
-          attemptCount={attemptCount}
-          additions={additions}
-          deletions={deletions}
-          isRunning={isRunningAttempt}
-          onRunAttempt={onRunAttempt}
-          onViewWorkspace={onViewWorkspace}
-        />
-
-        <TicketActionMenu
-          isArchived={isArchived}
-          canDeleteTicket={canDeleteTicket}
-          pluginActions={pluginActions}
-          onCreateSubTicket={onCreateSubTicket}
-          onBreakIntoSubTickets={onBreakIntoSubTickets}
-          onRefineTicket={onRefineTicket}
-          onArchiveTicket={onArchiveTicket}
-          onDeleteTicket={onDeleteTicket}
-          onPluginAction={onPluginAction}
-        />
-      </Flex>
+      <PluginHeaderActions
+        pluginActions={pluginActions}
+        defaultOverflowActions={defaultOverflowActions}
+        onPluginAction={onPluginAction}
+        pendingActionKey={pendingActionKey}
+        isExecuting={isExecuting}
+        overflowLabel={t("projects:ticketPanel.options.ticket")}
+      />
     </HorizontalMenuStack>
   );
 };

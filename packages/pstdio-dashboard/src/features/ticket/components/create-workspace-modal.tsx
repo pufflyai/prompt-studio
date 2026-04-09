@@ -55,7 +55,7 @@ export const CreateWorkspaceModal = (props: CreateWorkspaceModalProps) => {
               <Button size="sm" variant="ghost" onClick={onClose} disabled={isSubmitting}>
                 {t("createWorkspaceModal.cancel")}
               </Button>
-              <Button size="sm" variant="solid" onClick={handleConfirm} loading={isSubmitting} disabled={isDisabled}>
+              <Button size="sm" variant="primary" onClick={handleConfirm} loading={isSubmitting} disabled={isDisabled}>
                 {t("createWorkspaceModal.runAttempt")}
               </Button>
             </Stack>

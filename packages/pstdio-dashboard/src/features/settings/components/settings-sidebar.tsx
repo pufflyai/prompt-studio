@@ -1,4 +1,4 @@
-import { type SidebarNavigateEvent, SidebarNext, type SidebarSection } from "@pstdio/ui";
+import { Sidebar, type SidebarNavigateEvent, type SidebarSection } from "@pstdio/ui";
 import { Terminal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BackToProjects } from "./back-to-projects";
@@ -41,7 +41,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
   };
 
   return (
-    <SidebarNext
+    <Sidebar
       storageKey={GLOBAL_SETTINGS_SIDEBAR_STORAGE_KEY}
       sections={sections(t("agentList.agents"))}
       activeNodeId={activeSection}

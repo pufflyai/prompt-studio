@@ -190,16 +190,16 @@ describe("createProjectSettingsStore lastNonSessionsPath", () => {
 
   it("updates the tracked path", () => {
     const store = createProjectSettingsStore();
-    store.getState().setLastNonSessionsPath("/projects/p1/docs");
-    expect(store.getState().lastNonSessionsPath).toBe("/projects/p1/docs");
+    store.getState().setLastNonSessionsPath("/projects/p1/tickets");
+    expect(store.getState().lastNonSessionsPath).toBe("/projects/p1/tickets");
   });
 
   it("persists the tracked path for a project store", () => {
     const store = createProjectSettingsStore({ projectId: "proj-path" });
-    store.getState().setLastNonSessionsPath("/projects/proj-path/docs?doc=%2Findex");
+    store.getState().setLastNonSessionsPath("/projects/proj-path/tickets");
 
     const rehydratedStore = createProjectSettingsStore({ projectId: "proj-path" });
-    expect(rehydratedStore.getState().lastNonSessionsPath).toBe("/projects/proj-path/docs?doc=%2Findex");
+    expect(rehydratedStore.getState().lastNonSessionsPath).toBe("/projects/proj-path/tickets");
   });
 });
 

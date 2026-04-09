@@ -1,11 +1,11 @@
 import { IconButton } from "@chakra-ui/react";
-import { useSidebarNextStore } from "@pstdio/ui";
+import { useSidebarStore } from "@pstdio/ui";
 import { PanelLeftOpen } from "lucide-react";
 import { PROJECT_SIDEBAR_STORAGE_KEY } from "./project-sidebar";
 
 export const OpenSidebarButton = () => {
-  const open = useSidebarNextStore(PROJECT_SIDEBAR_STORAGE_KEY, (s) => s.open);
-  const openSidebar = useSidebarNextStore(PROJECT_SIDEBAR_STORAGE_KEY, (s) => s.openSidebar);
+  const open = useSidebarStore(PROJECT_SIDEBAR_STORAGE_KEY, (s) => s.open);
+  const openSidebar = useSidebarStore(PROJECT_SIDEBAR_STORAGE_KEY, (s) => s.openSidebar);
 
   if (open) return null;
 

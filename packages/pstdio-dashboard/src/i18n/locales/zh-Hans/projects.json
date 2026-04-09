@@ -188,7 +188,6 @@
     }
   },
   "sidebar": {
-    "documentation": "文档",
     "tickets": "工单",
     "projectChangelog": "项目变更日志",
     "projectSettings": "项目设置",

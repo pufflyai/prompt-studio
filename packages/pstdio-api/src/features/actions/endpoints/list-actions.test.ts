@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "../../../app";
+import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
@@ -96,6 +97,66 @@ describe("GET /v1/projects/:projectId/actions", () => {
 
     await close2();
     rmSync(tempRoot2, { recursive: true, force: true });
+  });
+
+  test("returns bundled starter ticket actions when project has no linked repo", async () => {
+    const tempRoot5 = mkdtempSync(join(tmpdir(), "pstdio-api-actions-test5-"));
+
+    const { app: app5, close: close5 } = await createApp({
+      dbPath: ":memory:",
+      storagePath: join(tempRoot5, "storage"),
+      filesRoot: resolveTestFilesRoot(),
+    });
+
+    const projRes = await app5.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Bundled Actions Project" }),
+    });
+    const proj = await projRes.json();
+
+    const res = await app5.request(`/v1/projects/${proj.id}/actions?targetType=ticket`);
+    expect(res.status).toBe(200);
+
+    const actions = (await res.json()) as Array<{ key: string; placement: string }>;
+    const actionKeys = actions.map((action) => action.key);
+
+    expect(actionKeys).toContain("ticket-actions/run-attempt");
+    expect(actionKeys).toContain("ticket-actions/refine-ticket");
+    expect(actionKeys).toContain("ticket-actions/break-into-sub-tickets");
+    expect(actions.find((action) => action.key === "ticket-actions/run-attempt")?.placement).toBe("primary");
+
+    await close5();
+    rmSync(tempRoot5, { recursive: true, force: true });
+  });
+
+  test("returns bundled starter workspace actions when project has no linked repo", async () => {
+    const tempRoot6 = mkdtempSync(join(tmpdir(), "pstdio-api-actions-test6-"));
+
+    const { app: app6, close: close6 } = await createApp({
+      dbPath: ":memory:",
+      storagePath: join(tempRoot6, "storage"),
+      filesRoot: resolveTestFilesRoot(),
+    });
+
+    const projRes = await app6.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Bundled Workspace Actions Project" }),
+    });
+    const proj = await projRes.json();
+
+    const res = await app6.request(`/v1/projects/${proj.id}/actions?targetType=workspace`);
+    expect(res.status).toBe(200);
+
+    const actions = (await res.json()) as Array<{ key: string }>;
+    const actionKeys = actions.map((action) => action.key);
+
+    expect(actionKeys).toContain("workspace-actions/run-review");
+    expect(actionKeys).toContain("workspace-actions/open-worktree-in-vscode");
+
+    await close6();
+    rmSync(tempRoot6, { recursive: true, force: true });
   });
 
   test("filters actions by targetType query param", async () => {

@@ -1,7 +1,6 @@
 import type { AgentRegistry } from "pstdio-agents";
 import type { createAgentConfigService } from "../services/agent-config-service";
 import type { createAttemptStatusService } from "../services/attempt-status-service";
-import type { createDocService } from "../services/doc-service";
 import type { createFileService } from "../services/file-service";
 import type { createProjectService } from "../services/project-service";
 import type { createRepoService } from "../services/repo-service";
@@ -42,7 +41,6 @@ export interface RouteDeps {
   agentConfigService: ReturnType<typeof createAgentConfigService>;
   skillService: ReturnType<typeof createSkillService>;
   fileService: ReturnType<typeof createFileService>;
-  docService: ReturnType<typeof createDocService>;
   syncService: ReturnType<typeof createSyncService>;
   postHookStore: ReturnType<typeof createPostHookStore>;
   pluginService: ReturnType<typeof createPluginService>;

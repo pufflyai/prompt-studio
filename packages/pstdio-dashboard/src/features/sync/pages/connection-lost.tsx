@@ -17,7 +17,7 @@ export const ConnectionLost = () => {
             {t("connectionLost.description")}
           </Text>
         </Stack>
-        <Button variant="solid" size="sm" onClick={handleRetry}>
+        <Button variant="primary" size="sm" onClick={handleRetry}>
           {t("connectionLost.retry")}
         </Button>
       </Stack>

@@ -17,9 +17,15 @@ export type HookRuntime = {
   ): Promise<void>;
 };
 
+export type PluginInfo = {
+  identity: string;
+  filePath: string;
+};
+
 export type PluginRuntime = {
   repoPath: string | null;
   client: PstdioClient;
+  plugins: PluginInfo[];
   hooks: HookRuntime;
   actions: {
     list(targetType?: string): ActionDescriptor[];
@@ -55,6 +61,7 @@ export const loadPluginRuntime = async (input: {
   return {
     repoPath,
     client,
+    plugins: plugins.map((p) => ({ identity: p.identity, filePath: p.filePath })),
     hooks: {
       firePre: (hookName, ctx) => dispatcher.firePreHook(hookName, ctx),
       firePost: (hookName, ctx) => dispatcher.firePostHook(hookName, ctx),

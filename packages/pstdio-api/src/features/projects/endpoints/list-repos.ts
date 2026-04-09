@@ -49,6 +49,7 @@ export const listReposHandler = (deps: RouteDeps): AppRouteHandler<typeof listRe
 
     const repos = await deps.repoService.listByProject(id);
     await Promise.all(repos.map((repo) => ensureProjectRepoScaffolding(repo.path, deps.filesRoot)));
+    deps.pluginService.invalidate(id);
     return c.json(repos, 200);
   };
 };

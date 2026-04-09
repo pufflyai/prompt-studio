@@ -10,6 +10,7 @@ const agentEnv = process.env.E2E_AGENTS ?? "fake";
 const storagePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-storage-"));
 const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-home-"));
 const resolvedHomePath = process.env.E2E_HOME ?? homePath;
+const filesRoot = join(import.meta.dirname, "../pstdio/files");
 
 export default defineConfig({
   testDir: "./src/ui",
@@ -41,6 +42,7 @@ export default defineConfig({
         PORT: String(apiPort),
         PSTDIO_DB_PATH: ":memory:",
         PSTDIO_STORAGE_PATH: storagePath,
+        PSTDIO_FILES_ROOT: filesRoot,
         PSTDIO_AGENTS: agentEnv,
         HOME: resolvedHomePath,
       },
@@ -51,6 +53,7 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 30_000,
       env: {
+        PSTDIO_DISABLE_EMBED_MANIFEST: "1",
         PSTDIO_DISABLE_API_AUTO_START: "1",
         HOME: resolvedHomePath,
       },

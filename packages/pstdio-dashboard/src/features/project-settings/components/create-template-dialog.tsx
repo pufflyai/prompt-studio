@@ -103,8 +103,7 @@ export const CreateTemplateDialog = (props: CreateTemplateDialogProps) => {
             <Stack direction="row" gap="1">
               <Button onClick={onClose}>Cancel</Button>
               <Button
-                variant="solid"
-                colorPalette="blue"
+                variant="primary"
                 onClick={handleCreate}
                 loading={createTemplate.isPending}
                 disabled={!name.trim()}

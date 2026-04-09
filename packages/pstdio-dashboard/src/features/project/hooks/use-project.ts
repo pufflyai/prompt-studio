@@ -23,6 +23,7 @@ export const useProject = (projectId: string | undefined) => {
     rawProject,
     isProjectLoading: projectLoading,
   });
+  const project = projectRows?.[0];
 
   const { data: rawStatuses } = useLiveQuery(
     (q) =>
@@ -63,8 +64,11 @@ export const useProject = (projectId: string | undefined) => {
     q.from({ o: getCollection("ticket_tag_options") }).select(({ o }) => ({ ...o })),
   );
 
-  const project = projectRows?.[0];
-  if (!project || !projectId) {
+  if (!projectId) {
+    return { data: undefined, isLoading };
+  }
+
+  if (!project) {
     return { data: undefined, isLoading };
   }
 

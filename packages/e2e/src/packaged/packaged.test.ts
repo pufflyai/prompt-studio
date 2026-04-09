@@ -71,11 +71,8 @@ describe("packaged pstdio — project lifecycle", () => {
       chmodSync(claudePath, 0o755);
 
       rmSync(extractedRoot, { recursive: true, force: true });
-      mkdirSync(join(extractedRoot, "documentation"), { recursive: true });
       mkdirSync(join(extractedRoot, "hooks"), { recursive: true });
       mkdirSync(join(extractedRoot, "templates"), { recursive: true });
-      writeFileSync(join(extractedRoot, "documentation", "index.md"), "# stale");
-      writeFileSync(join(extractedRoot, "documentation", "navigation.json"), "[]");
       writeFileSync(join(extractedRoot, "hooks", "post-worktree-create."), "#!/bin/sh\necho stale\n");
       writeFileSync(join(extractedRoot, "hooks", "post-session-success."), "#!/bin/sh\necho stale\n");
       writeFileSync(join(extractedRoot, "hooks", "post-session-start."), "#!/bin/sh\necho stale\n");
@@ -164,8 +161,6 @@ describe("packaged pstdio — project lifecycle", () => {
         expect(registerRepoResponse.ok).toBe(true);
 
         expect(existsSync(join(repo, ".pstdio", "config.json"))).toBe(true);
-        expect(existsSync(join(repo, ".pstdio", "docs", "navigation.json"))).toBe(true);
-        expect(existsSync(join(repo, ".pstdio", "docs", "index.md"))).toBe(true);
         const pluginsDir = join(repo, ".pstdio", "plugins");
         expect(existsSync(pluginsDir)).toBe(true);
         expect(readdirSync(pluginsDir).length).toBeGreaterThan(0);
@@ -215,22 +210,6 @@ describe("packaged pstdio — tickets", () => {
 
       const listOutput = run("tickets list", repo);
       expect(listOutput).toContain("Packaged test ticket");
-    },
-    TEST_TIMEOUT,
-  );
-});
-
-describe("packaged pstdio — templates", () => {
-  test(
-    "writes a template to docs",
-    () => {
-      const repo = createInitializedRepo("pkg-tpl-write");
-
-      const output = run("templates write --name prd --target docs/prd/test-feature", repo);
-      expect(output).toContain("Wrote template");
-
-      const filePath = join(repo, ".pstdio", "docs", "prd", "test-feature.md");
-      expect(existsSync(filePath)).toBe(true);
     },
     TEST_TIMEOUT,
   );

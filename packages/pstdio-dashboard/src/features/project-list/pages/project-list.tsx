@@ -54,7 +54,7 @@ export const ProjectList = () => {
                   <Settings size={18} />
                 </Link>
               </IconButton>
-              <Button size="sm" variant="solid" onClick={handleOpenDialog}>
+              <Button size="sm" variant="primary" onClick={handleOpenDialog}>
                 {t("list.createProject")}
               </Button>
             </Stack>

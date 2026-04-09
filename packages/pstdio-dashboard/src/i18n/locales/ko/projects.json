@@ -188,7 +188,6 @@
     }
   },
   "sidebar": {
-    "documentation": "문서",
     "tickets": "티켓",
     "projectChangelog": "프로젝트 변경 로그",
     "projectSettings": "프로젝트 설정",

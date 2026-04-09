@@ -7,7 +7,7 @@ How pstdio presents workspace diffs to users in the dashboard.
 Covers the workspace screen and diff summary badges:
 
 - Route: `/projects/:projectId/tickets/:ticketShorthand/workspaces/:workspaceShorthand`
-- Diff source: `GET /api/ticket-attempts/:id/diff`
+- Diff source: `GET /v1/workspaces/:id/diff`
 - Renderer: right-side workspace diff panel
 
 ## Where Users See Diffs
@@ -45,7 +45,7 @@ sequenceDiagram
 
 ### Endpoint
 
-`GET /api/ticket-attempts/:id/diff` in `pstdio-api`.
+`GET /v1/workspaces/:id/diff` in `pstdio-api`.
 
 ### Validation
 
@@ -96,8 +96,9 @@ API file diff objects are transformed into UI diff types. Rename paths fall back
 
 ### Panel Layout
 
-- Hidden when no diffs and no artifacts exist
+- Workspace panel remains visible even when there are no diffs
 - Artifacts section shown at top when present
+- Empty state is shown when there are no diffs
 - Diff drawer shown below artifacts when diffs exist
 
 ### File Cards
@@ -112,7 +113,7 @@ One card per changed file, expanded by default:
 
 ## Artifact Section
 
-Artifacts come from `GET /api/tickets/:ticket_id/files` in `pstdio-api`. They are listed per ticket (not per attempt). Displayed as compact rows with the file extension stripped from the label.
+Artifacts come from `GET /v1/tickets/:ticketId/files` in `pstdio-api`. They are listed per ticket (not per attempt). Displayed as compact rows with the file extension stripped from the label.
 
 ## Errors and Empty States
 
@@ -125,8 +126,8 @@ Artifacts come from `GET /api/tickets/:ticket_id/files` in `pstdio-api`. They ar
 ### UI behavior
 
 - No workspace selected: diff query disabled
-- No files and no artifacts: panel hidden
-- Artifacts but no files: only artifacts shown
+- No files: panel shows an empty state
+- Artifacts but no files: artifacts remain visible above the empty state
 
 ## Verification
 

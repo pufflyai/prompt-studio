@@ -108,7 +108,9 @@ const resolveApiEnv = (env: NodeJS.ProcessEnv) => {
   return resolved;
 };
 
-const resolveApiRuntimeEnv = (env: NodeJS.ProcessEnv) => {
+const resolveWorkspaceFilesRoot = (apiRoot: string) => join(dirname(apiRoot), "pstdio", "files");
+
+const resolveApiRuntimeEnv = (env: NodeJS.ProcessEnv, filesRoot?: string) => {
   const resolved = resolveApiEnv(env);
 
   if (!resolved.PSTDIO_DB_PATH) {
@@ -117,6 +119,10 @@ const resolveApiRuntimeEnv = (env: NodeJS.ProcessEnv) => {
 
   if (!resolved.PSTDIO_STORAGE_PATH) {
     resolved.PSTDIO_STORAGE_PATH = resolveDefaultStoragePath();
+  }
+
+  if (!resolved.PSTDIO_FILES_ROOT && filesRoot) {
+    resolved.PSTDIO_FILES_ROOT = filesRoot;
   }
 
   return resolved;
@@ -147,7 +153,10 @@ export const runApi = (startDir: string, options: ApiLaunchOptions = {}) => {
 
   if (apiRoot) {
     const { command, args, options: spawnOptions } = buildApiStartCommand(apiRoot, stdio, detached);
-    const child = spawner(command, args, { ...spawnOptions, env: resolveApiRuntimeEnv(env) });
+    const child = spawner(command, args, {
+      ...spawnOptions,
+      env: resolveApiRuntimeEnv(env, resolveWorkspaceFilesRoot(apiRoot)),
+    });
 
     if (detached) {
       child.unref?.();

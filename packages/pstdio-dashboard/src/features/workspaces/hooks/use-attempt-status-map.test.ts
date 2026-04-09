@@ -10,8 +10,8 @@ describe("buildAttemptStatusMap", () => {
     const map = buildAttemptStatusMap(rows);
 
     expect(map.size).toBe(2);
-    expect(map.get("s1")).toEqual({ name: "wip", color: "blue" });
-    expect(map.get("s2")).toEqual({ name: "blocked", color: "red" });
+    expect(map.get("s1")).toEqual({ name: "wip", color: "blue", description: null });
+    expect(map.get("s2")).toEqual({ name: "blocked", color: "red", description: null });
   });
 
   test("returns empty map for undefined", () => {

@@ -252,19 +252,19 @@ export const colorGroups: ColorGroup[] = [
         description: "Secondary panels and cards.",
       },
       {
+        label: "Background hover",
+        token: "bg.hover",
+        description: "Hover state for cards and rows.",
+      },
+      {
         label: "Background subtle",
         token: "bg.subtle",
         description: "Muted surfaces and quiet states.",
       },
       {
         label: "Background active",
-        token: "bg.emphasized",
+        token: "bg.active",
         description: "Selected states and active rows.",
-      },
-      {
-        label: "Background hover",
-        token: "bg.muted",
-        description: "Hover state for cards and rows.",
       },
       {
         label: "Background inverse",
@@ -309,9 +309,19 @@ export const colorGroups: ColorGroup[] = [
         description: "Success feedback surfaces.",
       },
       {
+        label: "Accent yellow light",
+        token: "bg.accent-secondary.yellow-light",
+        description: "Subtle warning and pending surfaces.",
+      },
+      {
         label: "Accent yellow medium",
         token: "bg.accent-secondary.yellow-medium",
         description: "Warning and pending emphasis surfaces.",
+      },
+      {
+        label: "Accent yellow dark",
+        token: "bg.accent-secondary.yellow-dark",
+        description: "Stronger warning and pending highlights.",
       },
     ],
   },

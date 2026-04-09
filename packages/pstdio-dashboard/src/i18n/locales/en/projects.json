@@ -193,7 +193,6 @@
     }
   },
   "sidebar": {
-    "documentation": "Documentation",
     "tickets": "Tickets",
     "projectChangelog": "Project changelog",
     "projectSettings": "Project settings",

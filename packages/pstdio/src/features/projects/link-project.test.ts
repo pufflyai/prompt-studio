@@ -52,33 +52,6 @@ describe("linkProject", () => {
     expect(existsSync(join(root, ".opencode"))).toBe(false);
   });
 
-  test("leaves existing local docs untouched while delegating setup to the API", async () => {
-    mockFetchSequence([
-      {
-        status: 200,
-        body: {
-          id: "abc",
-          name: "Existing",
-          shorthand: "E",
-          created_at: "2026-01-01T00:00:00Z",
-          updated_at: "2026-01-01T00:00:00Z",
-        },
-      },
-      { status: 201, body: { id: "repo-1", name: "link-existing-docs", path: "/tmp/link-existing-docs" } },
-    ]);
-    const root = setup("link-existing-docs");
-
-    const docsDir = join(root, ".pstdio", "docs");
-    mkdirSync(docsDir, { recursive: true });
-    writeFileSync(join(docsDir, "local.md"), "local content");
-
-    await linkProject(root, "abc", { homedir: join(tmpBase, "__fake-home__") });
-
-    expect(readFileSync(join(docsDir, "local.md"), "utf8")).toBe("local content");
-    expect(existsSync(join(docsDir, "navigation.json"))).toBe(false);
-    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
-  });
-
   test("throws when project not found", async () => {
     mockFetchSequence([{ status: 404, body: { error: "Not found" } }]);
     const root = setup("link-404");

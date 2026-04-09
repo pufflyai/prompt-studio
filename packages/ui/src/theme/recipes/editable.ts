@@ -11,7 +11,7 @@ export const editableSlotRecipe = defineSlotRecipe({
       lineHeight: "1.5rem",
       transitionProperty: "common",
       transitionDuration: "normal",
-      _hover: { bg: "bg.muted" },
+      _hover: { bg: "bg.hover" },
     },
     input: {
       textStyle: "label/L/medium",

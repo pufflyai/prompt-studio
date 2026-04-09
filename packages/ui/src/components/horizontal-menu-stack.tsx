@@ -5,10 +5,19 @@ interface HorizontalMenuStackProps extends StackProps {
 }
 
 export function HorizontalMenuStack(props: HorizontalMenuStackProps) {
-  const { children, ...rest } = props;
+  const { children, h = "41px", px = "xs", py = "xs", borderBottomWidth = "1px", ...rest } = props;
 
   return (
-    <HStack {...rest} minH="49px" justify="space-between" align="center" borderBottomWidth="1px" p="xs">
+    <HStack
+      {...rest}
+      h={h}
+      justify="space-between"
+      align="center"
+      borderBottomWidth={borderBottomWidth}
+      borderColor={"border.muted"}
+      px={px}
+      py={py}
+    >
       {children}
     </HStack>
   );

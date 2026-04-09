@@ -335,15 +335,6 @@
     "noTagsOrFiles": "找不到標籤或檔案",
     "noCommands": "此代理沒有可用的指令。"
   },
-  "docs": {
-    "title": "文件",
-    "noFiles": "沒有檔案",
-    "noDocsFound": "找不到文件",
-    "unableToLoadDocs": "無法載入文件",
-    "unableToLoadDocument": "無法載入文件",
-    "trySelectingAnother": "請嘗試選擇其他文件。",
-    "noContentAvailable": "沒有可用內容。"
-  },
   "changelog": {
     "unableToLoad": "無法載入變更日誌",
     "noEntries": "沒有變更日誌條目",

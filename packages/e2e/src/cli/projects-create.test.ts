@@ -28,7 +28,7 @@ const runSafe = (args: string, cwd: string) => runPstdioSafe(args, cwd, { PSTDIO
 
 describe("pstdio projects create", () => {
   test(
-    "creates project, writes config, scaffolds docs, installs skills",
+    "creates project, writes config, and installs skills",
     () => {
       const repo = createGitRepo();
       dirs.push(repo);
@@ -45,7 +45,6 @@ describe("pstdio projects create", () => {
       expect(config.project_id).toBeTruthy();
 
       // When creating from inside a git repo, scaffolding is delegated to the API
-      // Local docs/plugins/skills are not written in this mode
       const res = execSync(`curl -s ${api.url}/v1/projects/${config.project_id}`, { encoding: "utf8" });
       const project = JSON.parse(res);
       expect(project.name).toBe("my-project");

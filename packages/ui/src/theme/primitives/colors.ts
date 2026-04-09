@@ -11,7 +11,7 @@ export const blacks = {
   700: { value: "#444750" },
   750: { value: "#33363E" },
   800: { value: "#22252C" },
-  850: { value: "#1A1C21" },
+  850: { value: "#1b2028" },
   900: { value: "#0A0D15" },
   1000: { value: "#000000" },
 };
@@ -89,23 +89,25 @@ export const red = {
 };
 
 export const orange = {
-  DEFAULT: { value: "#EB9D2A" },
-  50: { value: "#FDF3E5" },
-  100: { value: "#FAE6C8" },
-  200: { value: "#F7D6A6" },
-  300: { value: "#F3C683" },
-  400: { value: "#EB9D2A" },
-  500: { value: "#CF8A25" },
-  600: { value: "#B37720" },
-  700: { value: "#92611A" },
-  800: { value: "#714B14" },
-  900: { value: "#52370F" },
+  DEFAULT: { value: "#F78C25" },
+  50: { value: "#FFF4E8" },
+  100: { value: "#FFE2C1" },
+  200: { value: "#FFC98E" },
+  300: { value: "#FFAD57" },
+  400: { value: "#F78C25" },
+  500: { value: "#E26F12" },
+  600: { value: "#C85D12" },
+  700: { value: "#A74810" },
+  800: { value: "#7E330C" },
+  900: { value: "#552107" },
 };
 
 export const yellow = {
   DEFAULT: { value: "#FFD643" },
   50: { value: "#FFF7D9" },
+  75: { value: "#FFF3C2" },
   100: { value: "#FFEEB3" },
+  150: { value: "#FFE999" },
   200: { value: "#FFE792" },
   300: { value: "#FFDE67" },
   400: { value: "#FFD643" },
@@ -186,6 +188,28 @@ export const sand = {
   900: { value: "#E8CECE" },
 };
 
+export const neutral = {
+  50: { value: "#FCFDFC" },
+  75: { value: "#F7F9F7" },
+  100: { value: "#F1F5F2" },
+  200: { value: "#EDF1EE" },
+  300: { value: "#E9EFEA" },
+  400: { value: "#DEE5DF" },
+  500: { value: "#CCD1CE" },
+  600: { value: "#404347" },
+  700: { value: "#31363C" },
+  750: { value: "#252A2F" },
+  800: { value: "#222A35" },
+  850: { value: "#1A202A" },
+  900: { value: "#141923" },
+  950: { value: "#10141B" },
+};
+
+export const mint = {
+  100: { value: "#D3ECEE" },
+  200: { value: "#B3DEE2" },
+};
+
 export const colors = {
   sand,
   blacks,
@@ -200,4 +224,6 @@ export const colors = {
   teal,
   cyan,
   purple,
+  neutral,
+  mint,
 };

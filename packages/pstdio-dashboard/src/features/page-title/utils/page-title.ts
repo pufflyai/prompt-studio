@@ -3,7 +3,6 @@ const APP_TITLE = "Prompt Studio";
 export interface PageTitleOptions {
   settingsPanel?: string;
   sessionTitle?: string;
-  docTitle?: string;
 }
 
 const getSettingsSectionTitle = (settingsPanel?: string) => {
@@ -81,11 +80,6 @@ const getProjectSectionTitle = (pathSegments: string[], options: PageTitleOption
     return getTicketSectionTitle(pathSegments);
   }
 
-  if (section === "docs") {
-    if (options.docTitle) return { title: options.docTitle, skipProjectPrefix: true };
-    return { title: "Docs" };
-  }
-
   if (section === "sessions") {
     const sessionTitle = getSessionsSectionTitle(pathSegments, options);
     if (sessionTitle !== "Sessions") return { title: sessionTitle, skipProjectPrefix: true };
@@ -104,10 +98,6 @@ export const getPageTitle = (pathname: string, projectName?: string, options: Pa
 
   if (pathname === "/projects") {
     return "Projects";
-  }
-
-  if (pathname === "/docs") {
-    return "Docs";
   }
 
   if (pathname === "/settings") {

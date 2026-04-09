@@ -290,7 +290,7 @@ test.describe("Ticket list editing and filtering", () => {
     await page.keyboard.type("Updated display title");
     await saveResponse;
 
-    await page.getByRole("button", { name: "Back to tickets" }).click();
+    await page.getByRole("button", { name: "Tickets" }).click();
     await page.waitForURL(`**/projects/${projectId}/tickets`);
 
     await expect(page.getByText("Updated display title")).toBeVisible();
@@ -338,7 +338,7 @@ test.describe("Ticket list editing and filtering", () => {
     await saveResponse;
     await expect(editor).toContainText("persisted-body-marker");
 
-    await page.getByRole("button", { name: "Back to tickets" }).click();
+    await page.getByRole("button", { name: "Tickets" }).click();
     await page.waitForURL(`**/projects/${projectId}/tickets`);
     await expect(page.getByText("Persisted content title")).toBeVisible();
     await page.getByText("Persisted content title").first().click();
@@ -419,17 +419,17 @@ test.describe("Ticket list additional coverage", () => {
     await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets/${ticket.shorthand}`);
 
-    // Open ticket action menu and click "Refine ticket"
+    // Open the plugin action overflow and click "Refine ticket"
     await page.getByRole("button", { name: "Open ticket options" }).click();
     await page.getByRole("option", { name: "Refine ticket", exact: true }).click();
 
-    // The refine modal should open with a template selector
+    // The plugin params dialog should open with a template selector
     const dialog = page.getByRole("dialog").last();
-    await expect(dialog.getByText("Refine Ticket", { exact: true }).first()).toBeVisible();
+    await expect(dialog.getByText("Refine ticket", { exact: true }).first()).toBeVisible();
     await expect(dialog.getByText("Template", { exact: true })).toBeVisible();
 
     // Click the template dropdown trigger and verify "Bug Report" is listed
-    await dialog.getByRole("button", { name: "No template" }).click();
+    await dialog.getByRole("button", { name: "Select template...", exact: true }).click();
     await expect(page.getByText("Bug Report", { exact: true })).toBeVisible();
   });
 
@@ -532,29 +532,43 @@ test.describe("Ticket detail run attempt", () => {
     repoDirs.length = 0;
   });
 
-  test("creates attempt workspace and session from Run Attempt", async ({ page, request }) => {
+  test("creates attempt workspace and session from Run attempt", async ({ page, request }) => {
     const statuses = await getTicketStatuses(request, projectId);
     const backlog = statuses.find((s) => s.name === "backlog")!;
     const ticket = await createTicketViaApi(request, projectId, "Run attempt success ticket", backlog.id);
-    const repoRoot = createGitRepo();
-    repoDirs.push(repoRoot);
-    await registerRepoViaApi(request, projectId, "attempt-repo", repoRoot);
+    const firstRepoRoot = createGitRepo();
+    const secondRepoRoot = createGitRepo();
+    repoDirs.push(firstRepoRoot, secondRepoRoot);
+    await registerRepoViaApi(request, projectId, "attempt-repo-a", firstRepoRoot);
+    await registerRepoViaApi(request, projectId, "attempt-repo-b", secondRepoRoot);
 
     await bypassOnboarding(page, projectId, "fake");
     await page.goto(`/projects/${projectId}/tickets/${ticket.shorthand}`);
 
-    await page.getByRole("button", { name: "Run Attempt", exact: true }).click();
+    await page.getByRole("button", { name: "Run attempt", exact: true }).click();
     const dialog = page.getByRole("dialog").last();
-    await expect(dialog.getByText("Create Workspace", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("Run attempt", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("Agent", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("Repository", { exact: true })).toBeVisible();
+    const modelButton = dialog.getByRole("button", { name: "Select model", exact: true });
+    const branchButton = dialog.getByRole("button", { name: "Select branch", exact: true });
+    await expect(modelButton).toBeVisible();
+    await expect(branchButton).toBeVisible();
+
+    await branchButton.click();
+    await expect(page.getByText(/attempt-repo-[ab]/, { exact: false }).first()).toBeVisible();
+    await expect(page.getByTestId("workspace-repo-branch-options")).toBeVisible();
+    await page.getByTestId("workspace-repo-branch-options").getByText("main (Current)", { exact: true }).click();
 
     const attemptResponse = page.waitForResponse(
       (response) =>
         response.request().method() === "POST" &&
-        response.url().includes(`/v1/tickets/${ticket.id}/attempts`) &&
-        response.status() === 201,
+        response.url().includes("/actions/ticket-actions%2Frun-attempt/execute") &&
+        response.status() === 200,
     );
 
-    await dialog.getByRole("button", { name: "Run Attempt", exact: true }).click();
+    await expect(dialog.getByRole("button", { name: "Run", exact: true })).toBeEnabled();
+    await dialog.getByRole("button", { name: "Run", exact: true }).click();
     await attemptResponse;
 
     await expect
@@ -576,7 +590,7 @@ test.describe("Ticket detail run attempt", () => {
       .toBeGreaterThan(0);
   });
 
-  test("shows an error and keeps modal open when Run Attempt fails", async ({ page, request }) => {
+  test("keeps the run attempt dialog open and disabled when no repository is available", async ({ page, request }) => {
     const statuses = await getTicketStatuses(request, projectId);
     const backlog = statuses.find((s) => s.name === "backlog")!;
     const ticket = await createTicketViaApi(request, projectId, "Run attempt failure ticket", backlog.id);
@@ -584,21 +598,9 @@ test.describe("Ticket detail run attempt", () => {
     await bypassOnboarding(page, projectId, "fake");
     await page.goto(`/projects/${projectId}/tickets/${ticket.shorthand}`);
 
-    await page.getByRole("button", { name: "Run Attempt", exact: true }).click();
+    await page.getByRole("button", { name: "Run attempt", exact: true }).click();
     const dialog = page.getByRole("dialog").last();
-    await expect(dialog.getByText("Create Workspace", { exact: true })).toBeVisible();
-
-    const attemptResponse = page.waitForResponse(
-      (response) =>
-        response.request().method() === "POST" &&
-        response.url().includes(`/v1/tickets/${ticket.id}/attempts`) &&
-        response.status() >= 400,
-    );
-
-    await dialog.getByRole("button", { name: "Run Attempt", exact: true }).click();
-    await attemptResponse;
-
-    await expect(dialog.getByText("Create Workspace", { exact: true })).toBeVisible();
-    await expect(page.getByText("Failed to create attempt. Please try again.")).toBeVisible();
+    await expect(dialog.getByText("Run attempt", { exact: true })).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Run", exact: true })).toBeDisabled();
   });
 });

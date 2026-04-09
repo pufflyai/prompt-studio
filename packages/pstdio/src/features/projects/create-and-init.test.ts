@@ -70,26 +70,4 @@ describe("createAndInitProject", () => {
 
     expect(createAndInitProject(root, "Duplicate")).rejects.toThrow("already initialized");
   });
-
-  test("keeps repo bootstrap delegated to the API even when local docs already exist", async () => {
-    mockFetchSequence([
-      { status: 201, body: { id: "proj-3", name: "HasDocs" } },
-      { status: 201, body: { id: "repo-3", name: "has-docs", path: "/tmp/has-docs" } },
-    ]);
-    const root = setup("has-docs");
-
-    const docsDir = join(root, ".pstdio", "docs");
-    mkdirSync(docsDir, { recursive: true });
-    writeFileSync(join(docsDir, "my-doc.md"), "existing doc");
-
-    const project = await createAndInitProject(root, "HasDocs", {
-      homedir: join(tmpBase, "__fake-home__"),
-      repoPaths: [root],
-    });
-    expect(project).toEqual({ id: "proj-3", name: "HasDocs" } as never);
-    expect(existsSync(join(docsDir, "navigation.json"))).toBe(false);
-    expect(existsSync(join(docsDir, "index.md"))).toBe(false);
-    expect(readFileSync(join(docsDir, "my-doc.md"), "utf8")).toBe("existing doc");
-    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
-  });
 });

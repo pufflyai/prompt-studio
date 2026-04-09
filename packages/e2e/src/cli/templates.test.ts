@@ -166,35 +166,6 @@ describe("pstdio templates delete", () => {
 
 describe("pstdio templates write", () => {
   test(
-    "writes a docs template to the filesystem without mutating navigation",
-    () => {
-      const repo = createInitializedRepo("tpl-write-docs");
-
-      // projects create inside a git repo delegates scaffolding to the API,
-      // so we scaffold docs manually for this test
-      const docsDir = join(repo, ".pstdio", "docs");
-      mkdirSync(docsDir, { recursive: true });
-      writeFileSync(join(docsDir, "navigation.json"), JSON.stringify({ sidebar: [] }));
-      writeFileSync(join(docsDir, "index.md"), "# Docs\n");
-
-      const initialNav = readFileSync(join(repo, ".pstdio", "docs", "navigation.json"), "utf8");
-
-      const output = run("templates write --name prd --target docs/prd/cli/new-feature", repo);
-      expect(output).toContain('Wrote template "prd" to .pstdio/docs/prd/cli/new-feature.md');
-
-      const filePath = join(repo, ".pstdio", "docs", "prd", "cli", "new-feature.md");
-      expect(existsSync(filePath)).toBe(true);
-
-      const content = readFileSync(filePath, "utf8");
-      expect(content).toContain("Functional Requirements");
-
-      const updatedNav = readFileSync(join(repo, ".pstdio", "docs", "navigation.json"), "utf8");
-      expect(updatedNav).toBe(initialNav);
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
     "writes a ticket template to an existing ticket directory",
     () => {
       const repo = createInitializedRepo("tpl-write-ticket");
@@ -222,18 +193,6 @@ describe("pstdio templates write", () => {
       const result = runSafe("templates write --name ticket --target MISSING-1", repo);
       expect(result.exitCode).not.toBe(0);
       expect(result.stderr).toContain("Ticket not found");
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "fails when using ticket template for docs target",
-    () => {
-      const repo = createInitializedRepo("tpl-write-badtarget");
-
-      const result = runSafe("templates write --name ticket --target docs/bad/path", repo);
-      expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain("Ticket templates cannot target docs");
     },
     TEST_TIMEOUT,
   );

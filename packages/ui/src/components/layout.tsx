@@ -2,7 +2,7 @@ import { Flex, Stack } from "@chakra-ui/react";
 import { Outlet, useRouterState } from "@tanstack/react-router";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { HorizontalMenuStack } from "@/components/horizontal-menu-stack";
-import { PanelMenu } from "@/components/panel-menu";
+import { PANEL_HEADER_HEIGHT } from "@/components/panel-header.constants";
 import { ScrollArea } from "@/components/scroll-area";
 import { Toaster } from "@/components/toaster";
 
@@ -25,18 +25,21 @@ export const Layout = () => {
 };
 
 interface PanelLayoutProps {
-  title: string;
-  menuContent?: React.ReactNode;
+  sidebar?: React.ReactNode;
   errorLabel?: string;
   children?: React.ReactNode;
 }
 
 export const PanelLayout = (props: PanelLayoutProps) => {
-  const { title, menuContent, errorLabel, children } = props;
+  const { sidebar, errorLabel, children } = props;
 
   return (
     <Flex height="100%" width="100%" minH="0">
-      <PanelMenu title={title}>{menuContent}</PanelMenu>
+      {sidebar ? (
+        <Flex minH="0" flexShrink={0}>
+          {sidebar}
+        </Flex>
+      ) : null}
       <ErrorBoundary label={errorLabel ?? "Unable to render the panel."}>
         <Flex flex="1" overflow="hidden" minH="0">
           {children ?? <Outlet />}
@@ -55,14 +58,23 @@ export const PanelSectionLayout = (props: PanelSectionLayoutProps) => {
   const { actions, content } = props;
   return (
     <Stack height="100%" width="100%" gap="0" minH="0">
-      <HorizontalMenuStack align="flex-start" flexWrap="wrap" gap="sm">
+      <HorizontalMenuStack
+        data-testid="panel-section-actions"
+        align="flex-start"
+        minH={PANEL_HEADER_HEIGHT}
+        flexWrap="wrap"
+        gap="sm"
+        py="2xs"
+      >
         {actions}
       </HorizontalMenuStack>
-      <ErrorBoundary label="Unable to render the panel.">
-        <Flex flex="1" overflow="hidden" minH="0">
-          {content}
-        </Flex>
-      </ErrorBoundary>
+      <ScrollArea flex="1" bg="bg" contentProps={{ minH: "100%" }}>
+        <ErrorBoundary label="Unable to render the panel.">
+          <Flex flex="1" overflow="hidden" minH="0">
+            {content}
+          </Flex>
+        </ErrorBoundary>
+      </ScrollArea>
     </Stack>
   );
 };

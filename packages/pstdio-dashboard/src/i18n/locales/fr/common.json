@@ -335,15 +335,6 @@
     "noTagsOrFiles": "Aucun tag ou fichier trouvé",
     "noCommands": "Aucune commande disponible pour cet agent."
   },
-  "docs": {
-    "title": "Documentation",
-    "noFiles": "Aucun fichier",
-    "noDocsFound": "Aucune documentation trouvée",
-    "unableToLoadDocs": "Impossible de charger la documentation",
-    "unableToLoadDocument": "Impossible de charger le document",
-    "trySelectingAnother": "Essayez de sélectionner un autre document.",
-    "noContentAvailable": "Aucun contenu disponible."
-  },
   "changelog": {
     "unableToLoad": "Impossible de charger le journal des modifications",
     "noEntries": "Aucune entrée dans le journal",

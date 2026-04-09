@@ -1,36 +1,40 @@
 export { ChakraProvider } from "@chakra-ui/react";
 export type { AlertProps } from "./components/alert";
 export { AlertMessage } from "./components/alert";
+export { AttachedPanel } from "./components/attached-panel";
 export type { BreadcrumbItem } from "./components/breadcrumb";
 export { Breadcrumb } from "./components/breadcrumb";
+export { BubbleButton } from "./components/bubble-button";
+export { BubblePanel } from "./components/bubble-panel";
 export type { CheckboxProps } from "./components/checkbox";
 export { Checkbox } from "./components/checkbox";
 export { CodeDiffEditor, CodeEditor } from "./components/code-editor";
-export { ContentPlaceholder, Label as ContentPlaceholderLabel } from "./components/content-placeholder";
+export {
+  ContentPlaceholder,
+  Label as ContentPlaceholderLabel,
+} from "./components/content-placeholder";
 export { DeleteConfirmationModal } from "./components/delete-confirmation-modal";
 export { DiffBubble } from "./components/diff-bubble";
 export type { Diff } from "./components/diff-card";
 export { DiffDrawer } from "./components/diff-drawer";
-export type { DocsChangelogEntry, DocsChangelogProps } from "./components/documentation/docs-changelog";
-export { DocsChangelog } from "./components/documentation/docs-changelog";
-export type { DocsOutlineProps } from "./components/documentation/docs-outline";
-export { DocsOutline } from "./components/documentation/docs-outline";
-export type { DocsPaginationItem, DocsPaginationProps } from "./components/documentation/docs-pagination";
-export { DocsPagination } from "./components/documentation/docs-pagination";
-export type { DocsSidebarItem, DocsSidebarProps } from "./components/documentation/docs-sidebar";
-export { DocsSidebar } from "./components/documentation/docs-sidebar";
 export type { EmptyStateProps } from "./components/empty-state";
 export { EmptyState } from "./components/empty-state";
 export { ErrorBoundary } from "./components/error-boundary";
-export type { FolderPickerDialogEntry, FolderPickerDialogProps } from "./components/folder-picker-dialog";
+export type {
+  FolderPickerDialogEntry,
+  FolderPickerDialogProps,
+} from "./components/folder-picker-dialog";
 export { FolderPickerDialog } from "./components/folder-picker-dialog";
 export { HorizontalMenuStack } from "./components/horizontal-menu-stack";
 export type { ItemSectionProps } from "./components/item-section";
 export { ItemSection } from "./components/item-section";
+export { PanelLayout, PanelSectionLayout } from "./components/layout";
 export { MenuItem } from "./components/menu-item";
-export type { OpenSourceNotice, OpenSourceNoticesScreenProps } from "./components/open-source-notices-screen";
+export type {
+  OpenSourceNotice,
+  OpenSourceNoticesScreenProps,
+} from "./components/open-source-notices-screen";
 export { OpenSourceNoticesScreen } from "./components/open-source-notices-screen";
-export { PanelMenu } from "./components/panel-menu";
 export type { PropertiesProps, PropertyItem } from "./components/properties";
 export { Properties } from "./components/properties";
 export { ScrollArea } from "./components/scroll-area";
@@ -42,9 +46,10 @@ export {
   resolveSessionIndicatorIcon,
   SessionIndicator,
 } from "./components/session-indicator";
-export { SidebarNext } from "./components/sidebar-next/sidebar-next";
-export { useSidebarNextStore } from "./components/sidebar-next/sidebar-next.store";
-export type { SidebarNextProps } from "./components/sidebar-next/sidebar-next.types";
+export { Sidebar } from "./components/sidebar/sidebar";
+export { useSidebarStore } from "./components/sidebar/sidebar.store";
+export type { SidebarProps } from "./components/sidebar/sidebar.types";
+export { SidebarProjectMenu } from "./components/sidebar/sidebar-project-menu";
 export { SidebarTree } from "./components/sidebar-tree/sidebar-tree";
 export type {
   SidebarAction,
@@ -60,7 +65,11 @@ export type { SwitchProps } from "./components/switch";
 export { Switch } from "./components/switch";
 export { DisplayMenu } from "./components/tickets/display-menu";
 export { FilterMenu } from "./components/tickets/filter-menu";
-export type { TicketBoardColumn, TicketBoardColumnAction, TicketBoardItem } from "./components/tickets/ticket-board";
+export type {
+  TicketBoardColumn,
+  TicketBoardColumnAction,
+  TicketBoardItem,
+} from "./components/tickets/ticket-board";
 export { TicketBoard } from "./components/tickets/ticket-board";
 export type { TicketCardBadge } from "./components/tickets/ticket-card";
 export { TicketCard } from "./components/tickets/ticket-card";
@@ -86,5 +95,12 @@ export { useTicketsWorkspaceStore } from "./components/tickets/use-workspace-sto
 export { Toaster, toaster } from "./components/toaster";
 export { Tooltip } from "./components/tooltip";
 export { psTheme } from "./theme";
-export { applyThemePreference, type ThemePreference } from "./utils/apply-theme-preference";
-export { getInitialThemePreference, ThemePreferenceProvider, useThemePreference } from "./utils/theme-preference";
+export {
+  applyThemePreference,
+  type ThemePreference,
+} from "./utils/apply-theme-preference";
+export {
+  getInitialThemePreference,
+  ThemePreferenceProvider,
+  useThemePreference,
+} from "./utils/theme-preference";

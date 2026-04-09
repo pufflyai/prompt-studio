@@ -18,7 +18,6 @@ import {
   createWorkspacesDBService,
 } from "pstdio-db";
 import {
-  createDocsStorageService,
   createFilesStorageService,
   createSkillsStorageService,
   ensureStorageRoot,
@@ -27,13 +26,13 @@ import {
 import { createActionRoutes } from "./features/actions/routes";
 import { createAgentRoutes } from "./features/agents/routes";
 import { createAttemptStatusRoutes } from "./features/attempt-statuses/routes";
-import { createDocsRoutes } from "./features/docs/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
 import { createPostHookStore } from "./features/hooks/post-hook-store";
 import { fireSessionResumeHook, fireSessionStartHook, fireSessionStatusHook } from "./features/hooks/session-hooks";
 import { fireTicketHook, fireTicketHookAsync } from "./features/hooks/ticket-hooks";
 import { createPluginService } from "./features/plugins/plugin-service";
+import { createPluginRoutes } from "./features/plugins/routes";
 import { createProjectRoutes } from "./features/projects/routes";
 import { createSessionRoutes } from "./features/sessions/routes";
 import { createSkillRoutes } from "./features/skills/routes";
@@ -47,7 +46,6 @@ import { createWorkspaceRoutes } from "./features/workspaces/routes";
 import { apiLogger } from "./lib/logger";
 import { createAgentConfigService } from "./services/agent-config-service";
 import { createAttemptStatusService } from "./services/attempt-status-service";
-import { createDocService } from "./services/doc-service";
 import { createFileService } from "./services/file-service";
 import { createProjectService } from "./services/project-service";
 import { createRepoService } from "./services/repo-service";
@@ -75,6 +73,7 @@ interface AppOptions {
 export const createApp = async (options: AppOptions) => {
   const { db, close: closeDb } = await createDb({ path: options?.dbPath ?? process.env.PSTDIO_DB_PATH });
   const apiToken = options?.apiToken ?? process.env.PSTDIO_API_TOKEN;
+  const app = new OpenAPIHono<AppBindings>();
 
   const storageRoot = options?.storagePath ?? resolveStorageRoot(process.env.PSTDIO_STORAGE_PATH);
   ensureStorageRoot(storageRoot);
@@ -96,7 +95,6 @@ export const createApp = async (options: AppOptions) => {
 
   // --- storage services ---
   const filesStorageService = createFilesStorageService(storageRoot);
-  const docsStorageService = createDocsStorageService();
   const skillsStorageService = createSkillsStorageService();
 
   // --- infrastructure ---
@@ -114,13 +112,28 @@ export const createApp = async (options: AppOptions) => {
   const agentConfigService = createAgentConfigService({ agentConfigsDBService });
   const skillService = createSkillService({ skillsDBService, skillsStorageService });
   const fileService = createFileService({ filesDBService, filesStorageService });
-  const docService = createDocService({ docsStorageService, reposDBService });
   const syncService = createSyncService({ db, eventBus });
 
   const workspaceSessionService = createWorkspaceSessionService({ workspaceSessionsDBService });
   const workspaceService = createWorkspaceService({ workspacesDb: workspacesDBService, eventBus });
+  const pluginClientFetch = Object.assign(
+    (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = input instanceof Request ? input : new Request(input, init);
+      return app.request(request);
+    },
+    { preconnect: globalThis.fetch.preconnect?.bind(globalThis.fetch) },
+  ) as typeof fetch;
 
-  const pluginService = createPluginService({ repoService });
+  const pluginService = createPluginService({
+    repoService,
+    filesRoot: options.filesRoot,
+    storageRoot,
+    clientOptions: {
+      baseUrl: "http://pstdio.internal",
+      fetch: pluginClientFetch,
+      token: apiToken,
+    },
+  });
 
   const ticketHookDeps = { pluginService };
 
@@ -174,13 +187,10 @@ export const createApp = async (options: AppOptions) => {
     agentConfigService,
     skillService,
     fileService,
-    docService,
     syncService,
     postHookStore,
     pluginService,
   };
-
-  const app = new OpenAPIHono<AppBindings>();
 
   app.use("*", cors());
   app.use("*", async (c, next) => {
@@ -223,8 +233,8 @@ export const createApp = async (options: AppOptions) => {
   app.route("/", createHealthRoutes(deps));
   app.route("/v1", createProjectRoutes(deps));
   app.route("/v1", createFilesystemRoutes(deps));
-  app.route("/v1", createDocsRoutes(deps));
   app.route("/v1", createActionRoutes(deps));
+  app.route("/v1", createPluginRoutes(deps));
   app.route("/v1", createAgentRoutes(deps));
   app.route("/v1", createSkillRoutes(deps));
   app.route("/v1", createTemplateRoutes(deps));

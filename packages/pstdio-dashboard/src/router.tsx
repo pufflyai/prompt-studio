@@ -10,7 +10,6 @@ import {
 } from "@tanstack/react-router";
 import { Layout } from "@/components/layout";
 import { isOnboardingComplete } from "@/features/agents/agent-storage";
-import { DocsPanel } from "@/features/documentation/pages/docs-panel";
 import { Onboarding } from "@/features/onboarding/pages/onboarding";
 import { ProjectShell } from "@/features/project/pages/project-shell";
 import { resolveProjectDefaultPath } from "@/features/project/utils/project-default-path";
@@ -21,10 +20,6 @@ import { Settings } from "@/features/settings/pages/settings-index";
 import { TicketDetailsPanel } from "@/features/ticket/pages/ticket-details-panel";
 import { TicketsPanel } from "@/features/ticket-list/pages/tickets-panel";
 import { WorkspacePage } from "@/features/workspaces/pages/workspace-page";
-
-const validateDocsSearch = (search: Record<string, unknown>) => ({
-  doc: typeof search.doc === "string" ? search.doc : undefined,
-});
 
 const requireOnboardingComplete = () => {
   if (!isOnboardingComplete()) {
@@ -72,13 +67,6 @@ const settingsRoute = createRoute({
   component: Settings,
 });
 
-const docsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "docs",
-  validateSearch: validateDocsSearch,
-  component: DocsPanel,
-});
-
 const onboardingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "onboarding",
@@ -115,13 +103,6 @@ const projectTicketsRoute = createRoute({
   getParentRoute: () => projectRoute,
   path: "tickets",
   component: TicketsPanel,
-});
-
-const projectDocsRoute = createRoute({
-  getParentRoute: () => projectRoute,
-  path: "docs",
-  validateSearch: validateDocsSearch,
-  component: DocsPanel,
 });
 
 const projectTicketRoute = createRoute({
@@ -175,7 +156,6 @@ const notFoundRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   settingsRoute,
-  docsRoute,
   onboardingRoute,
   projectsRoute.addChildren([
     projectsIndexRoute,
@@ -185,7 +165,6 @@ const routeTree = rootRoute.addChildren([
       projectTicketRoute,
       projectTicketFileRoute,
       projectTicketWorkspaceRoute,
-      projectDocsRoute,
       projectSettingsRoute,
       projectSessionsRoute,
       projectSessionRoute,

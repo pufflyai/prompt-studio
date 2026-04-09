@@ -148,7 +148,7 @@ const SidebarNodeRow = (props: SidebarNodeRowProps) => {
   const rowContent = (
     <HStack gap="2" minW="0" flex="1" overflow="hidden">
       {node.icon ? (
-        <Box color="fg.muted" flexShrink={0}>
+        <Box color={node.iconColor ?? "fg.muted"} flexShrink={0}>
           {node.icon}
         </Box>
       ) : null}
@@ -157,6 +157,13 @@ const SidebarNodeRow = (props: SidebarNodeRowProps) => {
           <Text textStyle="paragraph/S/regular" color={isDisabled ? "fg.muted" : "fg"} truncate>
             {node.label}
           </Text>
+          {node.indicator ? (
+            <Tooltip content={node.indicator.tooltip} disabled={!node.indicator.tooltip} openDelay={300}>
+              <Box color={node.indicator.color ?? "fg.muted"} flexShrink={0}>
+                {node.indicator.icon}
+              </Box>
+            </Tooltip>
+          ) : null}
           {hasChildren ? (
             <Box color="fg.muted" flexShrink={0}>
               <ChevronRight
@@ -181,18 +188,21 @@ const SidebarNodeRow = (props: SidebarNodeRowProps) => {
     "aria-selected": isActive,
     justify: "space-between" as const,
     align: "center" as const,
+    w: "full",
+    minW: "0",
+    maxW: "full",
     borderRadius: "xs",
     px: "1",
     py: "2xs",
     pl: paddingLeft,
-    bg: isActive ? "bg.muted" : "transparent",
-    _hover: { bg: isActive ? "bg.muted" : "bg.subtle" },
+    bg: isActive ? "bg.active" : "transparent",
+    _hover: { bg: isActive ? "bg.active" : "bg.hover" },
     cursor: isDisabled ? ("default" as const) : ("pointer" as const),
     overflow: "hidden" as const,
   };
 
   return (
-    <Stack gap={!node.children ? "2xs" : "0"}>
+    <Stack gap="1px" w="full" minW="0" maxW="full">
       {canLink && LinkComponent && node.href ? (
         <LinkComponent to={node.href}>
           <HStack {...rowStyles} onClick={handleClick}>
@@ -226,6 +236,50 @@ const SidebarNodeRow = (props: SidebarNodeRowProps) => {
   );
 };
 
+interface SidebarSectionHeaderProps {
+  section: SidebarSection;
+  collapsible: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+}
+
+const SidebarSectionHeader = (props: SidebarSectionHeaderProps) => {
+  const { section, collapsible, expanded, onToggle } = props;
+
+  return (
+    <HStack
+      className="group"
+      justify="space-between"
+      align="center"
+      w="full"
+      minW="0"
+      maxW="full"
+      px="1"
+      py="2xs"
+      minH="7"
+      cursor={collapsible ? "pointer" : "default"}
+      borderRadius="xs"
+      _hover={collapsible ? { bg: "bg.hover" } : undefined}
+      onClick={collapsible ? onToggle : undefined}
+    >
+      <HStack gap="1" flex="1" minW="0">
+        <Text textStyle="label/XS" textTransform="uppercase" color="fg.muted" letterSpacing="0.08em" truncate>
+          {section.label}
+        </Text>
+        {collapsible ? (
+          <Box color="fg.muted" flexShrink={0}>
+            <ChevronRight
+              size={14}
+              style={{ transform: expanded ? "rotate(90deg)" : "rotate(0deg)", transition: "120ms" }}
+            />
+          </Box>
+        ) : null}
+      </HStack>
+      <SidebarRowActions sectionId={section.id} actions={section.actions ?? []} />
+    </HStack>
+  );
+};
+
 export const SidebarTree = (props: SidebarTreeProps) => {
   const {
     sections,
@@ -239,43 +293,26 @@ export const SidebarTree = (props: SidebarTreeProps) => {
   } = props;
 
   return (
-    <Stack role="listbox" gap="md" p="md">
+    <Stack role="listbox" gap="md" w="full" minW="0" maxW="full" overflowX="hidden">
       {sections.map((section) => {
-        const sectionExpanded = section.label ? isExpanded(section.id, expandedSections) : true;
+        const collapsible = section.collapsible !== false && section.label !== undefined;
+        const sectionExpanded = collapsible ? isExpanded(section.id, expandedSections) : true;
 
         return (
-          <Stack key={section.id} gap="0" data-testid={`sidebar-section-${section.id}`}>
+          <Stack key={section.id} gap="0" w="full" minW="0" maxW="full" data-testid={`sidebar-section-${section.id}`}>
             {section.label ? (
-              <HStack
-                className="group"
-                justify="space-between"
-                align="center"
-                px="1"
-                py="2xs"
-                minH="7"
-                cursor="pointer"
-                borderRadius="xs"
-                _hover={{ bg: "bg.subtle" }}
-                onClick={() => onToggleSection(section.id)}
-              >
-                <HStack gap="1" flex="1" minW="0">
-                  <Text textStyle="label/XS" textTransform="uppercase" color="fg.muted" letterSpacing="0.08em" truncate>
-                    {section.label}
-                  </Text>
-                  <Box color="fg.muted" flexShrink={0}>
-                    <ChevronRight
-                      size={14}
-                      style={{ transform: sectionExpanded ? "rotate(90deg)" : "rotate(0deg)", transition: "120ms" }}
-                    />
-                  </Box>
-                </HStack>
-                <SidebarRowActions sectionId={section.id} actions={section.actions ?? []} />
-              </HStack>
+              <SidebarSectionHeader
+                section={section}
+                collapsible={collapsible}
+                expanded={sectionExpanded}
+                onToggle={() => onToggleSection(section.id)}
+              />
             ) : null}
 
-            {sectionExpanded
-              ? section.nodes.length > 0
-                ? section.nodes.map((node) => (
+            {sectionExpanded ? (
+              section.nodes.length > 0 ? (
+                <Stack gap="1px" w="full" minW="0" maxW="full">
+                  {section.nodes.map((node) => (
                     <SidebarNodeRow
                       key={node.id}
                       sectionId={section.id}
@@ -287,9 +324,12 @@ export const SidebarTree = (props: SidebarTreeProps) => {
                       onNavigate={onNavigate}
                       onToggleNode={onToggleNode}
                     />
-                  ))
-                : (section.emptyState ?? null)
-              : null}
+                  ))}
+                </Stack>
+              ) : (
+                (section.emptyState ?? null)
+              )
+            ) : null}
           </Stack>
         );
       })}

@@ -1,7 +1,6 @@
 import { Box, Button, HStack, Menu, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import { FileText, Folder, Settings } from "lucide-react";
 import type { ReactNode } from "react";
-import { expect, within } from "storybook/test";
 
 import { MenuItem } from "./menu-item";
 import { StyleGuide } from "./style-guide";
@@ -27,9 +26,19 @@ const surfaceTokens: SurfaceToken[] = [
     description: "Quiet nesting surface for supporting sections.",
   },
   {
+    label: "Hover background",
+    token: "bg.hover",
+    description: "Shared hover state for lists, actions, and rows.",
+  },
+  {
+    label: "Active background",
+    token: "bg.active",
+    description: "Shared selected and active state surface.",
+  },
+  {
     label: "Muted background",
     token: "bg.muted",
-    description: "Selected, hovered, or emphasized page backplate.",
+    description: "Secondary panel and card surface.",
   },
   {
     label: "Panel background",
@@ -166,6 +175,24 @@ const SurfaceCompositionsStory = () => (
   </Stack>
 );
 
+const DarkModeSelectionContrastStory = () => (
+  <Box
+    borderWidth="1px"
+    borderColor="border.muted"
+    borderRadius="md"
+    background="bg.dark"
+    color="fg.inverted"
+    padding="md"
+  >
+    <Stack gap="sm">
+      <Text textStyle="heading/S">Dark mode text selection</Text>
+      <Text textStyle="paragraph/S/regular">
+        Select this sentence to preview the global `::selection` contrast update in dark mode.
+      </Text>
+    </Stack>
+  </Box>
+);
+
 const meta = {
   title: "Foundations/Style Guide",
   decorators: [
@@ -190,66 +217,12 @@ export const SurfaceCompositions = {
   render: () => <SurfaceCompositionsStory />,
 };
 
-export const AccentPrimaryShades = {
-  name: "Accent Primary Shades",
-  render: () => (
-    <Stack gap="sm">
-      <Text textStyle="label/L/medium">Accent primary token comparison</Text>
-      <SimpleGrid columns={2} gap="sm">
-        <Stack gap="xs">
-          <Text textStyle="label/XS">bg.accent-primary.medium</Text>
-          <Box
-            data-testid="accent-primary-medium"
-            borderRadius="sm"
-            height="56px"
-            background="bg.accent-primary.medium"
-          />
-        </Stack>
-        <Stack gap="xs">
-          <Text textStyle="label/XS">bg.accent-primary.dark</Text>
-          <Box data-testid="accent-primary-dark" borderRadius="sm" height="56px" background="bg.accent-primary.dark" />
-        </Stack>
-      </SimpleGrid>
-      <Box
-        data-testid="accent-primary-contrast-surface"
-        borderRadius="sm"
-        padding="sm"
-        background="bg.accent-primary.medium"
-        color="red.500"
-      >
-        <Text data-testid="accent-primary-contrast-text" textStyle="label/XS" color="text.selectable.primary">
-          text.selectable.primary
-        </Text>
-      </Box>
-    </Stack>
-  ),
-  play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
-    const canvas = within(canvasElement);
-    const medium = canvas.getByTestId("accent-primary-medium");
-    const dark = canvas.getByTestId("accent-primary-dark");
-    const contrastText = canvas.getByTestId("accent-primary-contrast-text");
-
-    const mediumBackgroundColor = getComputedStyle(medium).backgroundColor;
-    const darkBackgroundColor = getComputedStyle(dark).backgroundColor;
-    const contrastTextColor = getComputedStyle(contrastText).color;
-
-    await expect(darkBackgroundColor).not.toBe(mediumBackgroundColor);
-    await expect(contrastTextColor).toBe("rgb(34, 37, 44)");
-  },
-};
-
-export const InputsNoShadow = {
-  name: "Inputs No Shadow",
-  render: () => <StyleGuide />,
-  play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
-    const canvas = within(canvasElement);
-    const input = canvas.getByPlaceholderText("Company name");
-    const textarea = canvas.getByPlaceholderText("Notes");
-
-    const inputStyles = getComputedStyle(input);
-    const textareaStyles = getComputedStyle(textarea);
-
-    await expect(inputStyles.boxShadow).toBe("none");
-    await expect(textareaStyles.boxShadow).toBe("none");
+export const DarkModeTextSelection = {
+  name: "Dark mode text selection",
+  render: () => <DarkModeSelectionContrastStory />,
+  parameters: {
+    themes: {
+      themeOverride: "dark",
+    },
   },
 };

@@ -105,7 +105,7 @@ export const AddAgentManuallyDialog = (props: AddAgentManuallyDialogProps) => {
             </Button>
             <Button
               size="sm"
-              variant="solid"
+              variant="primary"
               onClick={handleCreate}
               loading={isSubmitting}
               disabled={binaryPath.trim().length === 0}

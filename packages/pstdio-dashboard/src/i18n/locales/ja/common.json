@@ -335,15 +335,6 @@
     "noTagsOrFiles": "タグまたはファイルが見つかりません",
     "noCommands": "このエージェントで利用可能なコマンドはありません。"
   },
-  "docs": {
-    "title": "ドキュメント",
-    "noFiles": "ファイルなし",
-    "noDocsFound": "ドキュメントが見つかりません",
-    "unableToLoadDocs": "ドキュメントを読み込めません",
-    "unableToLoadDocument": "ドキュメントを読み込めません",
-    "trySelectingAnother": "別のドキュメントを選択してください。",
-    "noContentAvailable": "コンテンツがありません。"
-  },
   "changelog": {
     "unableToLoad": "変更履歴を読み込めません",
     "noEntries": "変更履歴のエントリがありません",

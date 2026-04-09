@@ -335,15 +335,6 @@
     "noTagsOrFiles": "未找到标签或文件",
     "noCommands": "此代理没有可用的命令。"
   },
-  "docs": {
-    "title": "文档",
-    "noFiles": "暂无文件",
-    "noDocsFound": "未找到文档",
-    "unableToLoadDocs": "无法加载文档",
-    "unableToLoadDocument": "无法加载文档",
-    "trySelectingAnother": "请尝试选择其他文档。",
-    "noContentAvailable": "暂无内容。"
-  },
   "changelog": {
     "unableToLoad": "无法加载变更日志",
     "noEntries": "暂无变更日志条目",
