@@ -87,8 +87,8 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
   };
 
   const handleClose = () => {
-    setTagIds([]);
-    setFiles([]);
+    clearCreateTicketDraft();
+    resetForm();
     onClose();
   };
 

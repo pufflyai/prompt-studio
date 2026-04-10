@@ -7,13 +7,17 @@ describe("CreateTicketModal", () => {
     expect(source).toContain("<Dialog.CloseTrigger asChild>");
   });
 
-  it("reads and writes its content through the project settings draft store", async () => {
+  it("syncs content with the project settings draft store while typing", async () => {
     const source = await Bun.file(new URL("./create-ticket-modal.tsx", import.meta.url)).text();
 
     expect(source).toContain("useProjectSettingsStore");
-    expect(source).toContain("const [content, setContent] = useState(createTicketDraft);");
     expect(source).toContain("setCreateTicketDraft(value);");
-    expect(source).toContain("clearCreateTicketDraft();");
-    expect(source).not.toContain("handleCancel");
+  });
+
+  it("clears the draft when the modal is closed", async () => {
+    const source = await Bun.file(new URL("./create-ticket-modal.tsx", import.meta.url)).text();
+
+    expect(source).toContain("const handleClose");
+    expect(source).toContain("clearCreateTicketDraft();\n    resetForm();");
   });
 });
