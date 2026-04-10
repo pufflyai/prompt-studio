@@ -80,7 +80,6 @@
       "notFoundTitle": "セッションが見つかりません",
       "notFoundDescription": "リストから別のセッションを選択してください。",
       "resumePlaceholder": "このセッションを再開",
-      "openInBubble": "バブルで開く",
       "viewMore": "セッションをもっと見る",
       "executorSessionIdLabel": "エグゼキューターセッション ID",
       "panelTitle": "すべてのセッション",

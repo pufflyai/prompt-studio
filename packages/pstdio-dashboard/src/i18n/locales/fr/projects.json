@@ -74,7 +74,6 @@
       "notFoundTitle": "Session non trouvée",
       "notFoundDescription": "Sélectionnez une session différente dans la liste.",
       "resumePlaceholder": "Reprendre cette session",
-      "openInBubble": "Ouvrir dans une bulle",
       "viewMore": "Voir plus de sessions",
       "executorSessionIdLabel": "ID de session de l'exécuteur",
       "panelTitle": "Toutes les sessions",

@@ -270,30 +270,6 @@ test.describe("Sessions page", () => {
     await expect(page.locator("[data-testid='session-attached-panel']").getByText("Review changes")).toHaveCount(0);
   });
 
-  test("opens selected session in bubble and navigates back", async ({ page, request }) => {
-    await bypassOnboarding(page);
-    await page.addInitScript((id: string) => {
-      localStorage.setItem(
-        `pstdio-project-settings/projects/${id}/values`,
-        JSON.stringify({
-          state: {
-            lastNonSessionsPath: `/projects/${id}/tickets`,
-          },
-          version: 0,
-        }),
-      );
-    }, projectId);
-    const session = await createSessionViaApi(request, projectId, "Open in bubble session");
-
-    await page.goto(`/projects/${projectId}/sessions/${session.id}`);
-    await page.getByRole("button", { name: "Open in bubble" }).click();
-
-    await page.waitForURL(`**/projects/${projectId}/tickets`);
-    const sessionBubble = getSessionBubble(page);
-    await expect(sessionBubble).toBeVisible();
-    await expect(sessionBubble.getByText("Open in bubble session").first()).toBeVisible();
-  });
-
   test("shows only the 6 most recent sessions in the chat dropdown and links to sessions page", async ({
     page,
     request,

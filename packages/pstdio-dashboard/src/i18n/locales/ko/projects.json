@@ -74,7 +74,6 @@
       "notFoundTitle": "세션을 찾을 수 없습니다",
       "notFoundDescription": "목록에서 다른 세션을 선택하세요.",
       "resumePlaceholder": "이 세션 재개",
-      "openInBubble": "버블에서 열기",
       "viewMore": "더 많은 세션 보기",
       "executorSessionIdLabel": "실행자 세션 ID",
       "panelTitle": "모든 세션",

@@ -80,7 +80,6 @@
       "notFoundTitle": "Session not found",
       "notFoundDescription": "Select a different session from the list.",
       "resumePlaceholder": "Resume this session",
-      "openInBubble": "Open in bubble",
       "viewMore": "View more sessions",
       "executorSessionIdLabel": "Executor session ID",
       "panelTitle": "All sessions",
