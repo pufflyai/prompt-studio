@@ -65,6 +65,10 @@ export type ActionTriggerContext<TTargetType extends TargetType = TargetType> = 
     : never);
 
 export type ActionTriggerResult = { session_id?: string };
+type ActionTrigger<TTargetType extends TargetType = TargetType> =
+  | ((ctx: ActionTriggerContext<TTargetType>) => void)
+  | ((ctx: ActionTriggerContext<TTargetType>) => ActionTriggerResult)
+  | ((ctx: ActionTriggerContext<TTargetType>) => Promise<ActionTriggerResult | undefined>);
 
 export type ActionInput = {
   [K in TargetType]: {
@@ -73,7 +77,7 @@ export type ActionInput = {
     targetType: K;
     placement: ActionPlacement;
     params?: ActionParamDef[];
-    trigger: (ctx: ActionTriggerContext<K>) => void | ActionTriggerResult | Promise<void | ActionTriggerResult>;
+    trigger: ActionTrigger<K>;
   };
 }[TargetType];
 
@@ -86,7 +90,7 @@ export type ActionDescriptor = {
 };
 
 export type ActionDefinition = ActionDescriptor & {
-  trigger: (ctx: ActionTriggerContext) => void | ActionTriggerResult | Promise<void | ActionTriggerResult>;
+  trigger: ActionTrigger;
 };
 
 export type PluginDefinition = {

@@ -12,6 +12,14 @@ describe("runCommand", () => {
     expect(result.stderr).toBe("");
   });
 
+  it("returns spawn errors instead of hanging", async () => {
+    const result = await runCommand("/tmp", ["definitely-not-a-real-command"]);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr.length).toBeGreaterThan(0);
+  });
+
   it("captures stderr", async () => {
     const result = await runCommand("/tmp", ["sh", "-c", "echo warning >&2"]);
 

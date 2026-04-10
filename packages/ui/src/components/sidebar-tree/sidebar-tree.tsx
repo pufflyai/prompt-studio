@@ -2,6 +2,7 @@ import { Box, HStack, IconButton, Menu, Stack, Text } from "@chakra-ui/react";
 import { ChevronRight } from "lucide-react";
 import { Tooltip } from "../tooltip";
 import { SearchableActionMenu } from "./searchable-action-menu";
+import { SidebarNodeContent } from "./sidebar-node-content";
 import type {
   SidebarAction,
   SidebarLinkComponent,
@@ -39,6 +40,36 @@ interface SidebarNodeRowProps {
 }
 
 const isExpanded = (id: string, values: string[]) => values.includes(id);
+
+const handleSidebarNodeClick = ({
+  sectionId,
+  node,
+  hasChildren,
+  isDisabled,
+  isNavigable,
+  onNavigate,
+  onToggleNode,
+}: Pick<SidebarNodeRowProps, "sectionId" | "node" | "onNavigate" | "onToggleNode"> & {
+  hasChildren: boolean;
+  isDisabled: boolean;
+  isNavigable: boolean;
+}) => {
+  if (isDisabled) return;
+
+  if (hasChildren) {
+    onToggleNode(node.id);
+    return;
+  }
+
+  if (!isNavigable) return;
+
+  onNavigate?.({
+    sectionId,
+    nodeId: node.id,
+    node,
+    intent: node.navigationIntent,
+  });
+};
 
 const SidebarActionButton = (props: { action: SidebarAction; sectionId: string; nodeId?: string }) => {
   const { action, sectionId, nodeId } = props;
@@ -127,60 +158,16 @@ const SidebarNodeRow = (props: SidebarNodeRowProps) => {
   const paddingLeft = level > 0 ? `calc(var(--chakra-spacing-1) + ${level} * var(--chakra-spacing-3))` : undefined;
   const canLink = Boolean(LinkComponent && node.href && isNavigable && !hasChildren && !isDisabled);
 
-  const handleClick = () => {
-    if (isDisabled) return;
-
-    if (hasChildren) {
-      onToggleNode(node.id);
-      return;
-    }
-
-    if (!isNavigable) return;
-
-    onNavigate?.({
+  const handleClick = () =>
+    handleSidebarNodeClick({
       sectionId,
-      nodeId: node.id,
       node,
-      intent: node.navigationIntent,
+      hasChildren,
+      isDisabled,
+      isNavigable,
+      onNavigate,
+      onToggleNode,
     });
-  };
-
-  const rowContent = (
-    <HStack gap="2" minW="0" flex="1" overflow="hidden">
-      {node.icon ? (
-        <Box color={node.iconColor ?? "fg.muted"} flexShrink={0}>
-          {node.icon}
-        </Box>
-      ) : null}
-      <Stack gap="0" minW="0" flex="1">
-        <HStack gap="1" minW="0">
-          <Text textStyle="paragraph/S/regular" color={isDisabled ? "fg.muted" : "fg"} truncate>
-            {node.label}
-          </Text>
-          {node.indicator ? (
-            <Tooltip content={node.indicator.tooltip} disabled={!node.indicator.tooltip} openDelay={300}>
-              <Box color={node.indicator.color ?? "fg.muted"} flexShrink={0}>
-                {node.indicator.icon}
-              </Box>
-            </Tooltip>
-          ) : null}
-          {hasChildren ? (
-            <Box color="fg.muted" flexShrink={0}>
-              <ChevronRight
-                size={14}
-                style={{ transform: expanded ? "rotate(90deg)" : "rotate(0deg)", transition: "120ms" }}
-              />
-            </Box>
-          ) : null}
-        </HStack>
-        {node.description ? (
-          <Text textStyle="paragraph/XS/regular" color="fg.muted" truncate>
-            {node.description}
-          </Text>
-        ) : null}
-      </Stack>
-    </HStack>
-  );
 
   const rowStyles = {
     className: "group",
@@ -206,13 +193,13 @@ const SidebarNodeRow = (props: SidebarNodeRowProps) => {
       {canLink && LinkComponent && node.href ? (
         <LinkComponent to={node.href}>
           <HStack {...rowStyles} onClick={handleClick}>
-            {rowContent}
+            <SidebarNodeContent node={node} expanded={expanded} hasChildren={hasChildren} isDisabled={isDisabled} />
             <SidebarRowActions sectionId={sectionId} nodeId={node.id} actions={node.actions ?? []} />
           </HStack>
         </LinkComponent>
       ) : (
         <HStack {...rowStyles} onClick={handleClick}>
-          {rowContent}
+          <SidebarNodeContent node={node} expanded={expanded} hasChildren={hasChildren} isDisabled={isDisabled} />
           <SidebarRowActions sectionId={sectionId} nodeId={node.id} actions={node.actions ?? []} />
         </HStack>
       )}
