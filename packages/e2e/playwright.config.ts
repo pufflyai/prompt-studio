@@ -45,6 +45,7 @@ export default defineConfig({
         PSTDIO_FILES_ROOT: filesRoot,
         PSTDIO_AGENTS: agentEnv,
         HOME: resolvedHomePath,
+        PSTDIO_WORKSPACES_DIR: join(resolvedHomePath, ".pstdio", "workspaces"),
       },
     },
     {

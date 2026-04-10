@@ -13,6 +13,7 @@ let projectId: string;
 
 const previousAgentsEnv = process.env.PSTDIO_AGENTS;
 const previousHomeEnv = process.env.HOME;
+const previousWorkspacesDirEnv = process.env.PSTDIO_WORKSPACES_DIR;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-ws-diff-test-"));
@@ -20,6 +21,7 @@ beforeAll(async () => {
   const testHome = join(tempRoot, "home");
   mkdirSync(testHome, { recursive: true });
   process.env.HOME = testHome;
+  process.env.PSTDIO_WORKSPACES_DIR = join(testHome, ".pstdio", "workspaces");
   ({ app } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
@@ -45,6 +47,11 @@ afterAll(() => {
     delete process.env.HOME;
   } else {
     process.env.HOME = previousHomeEnv;
+  }
+  if (previousWorkspacesDirEnv === undefined) {
+    delete process.env.PSTDIO_WORKSPACES_DIR;
+  } else {
+    process.env.PSTDIO_WORKSPACES_DIR = previousWorkspacesDirEnv;
   }
   rmSync(tempRoot, { recursive: true, force: true });
 });

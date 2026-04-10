@@ -58,6 +58,7 @@ export const startApi = async (): Promise<ApiInstance> => {
       PSTDIO_STORAGE_PATH: storagePath,
       PSTDIO_AGENTS: "fake",
       HOME: homePath,
+      PSTDIO_WORKSPACES_DIR: join(homePath, ".pstdio", "workspaces"),
     },
     stdio: "pipe",
   });

@@ -22,11 +22,13 @@ export const createTicketsTestContext = async () => {
   const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-tickets-test-"));
   const previousAgentsEnv = process.env.PSTDIO_AGENTS;
   const previousHomeEnv = process.env.HOME;
+  const previousWorkspacesDirEnv = process.env.PSTDIO_WORKSPACES_DIR;
 
   process.env.PSTDIO_AGENTS = "fake";
   const testHome = join(tempRoot, "home");
   mkdirSync(testHome, { recursive: true });
   process.env.HOME = testHome;
+  process.env.PSTDIO_WORKSPACES_DIR = join(testHome, ".pstdio", "workspaces");
 
   const { app, eventBus, deps } = await createApp({
     dbPath: ":memory:",
@@ -64,6 +66,12 @@ export const createTicketsTestContext = async () => {
       delete process.env.HOME;
     } else {
       process.env.HOME = previousHomeEnv;
+    }
+
+    if (previousWorkspacesDirEnv === undefined) {
+      delete process.env.PSTDIO_WORKSPACES_DIR;
+    } else {
+      process.env.PSTDIO_WORKSPACES_DIR = previousWorkspacesDirEnv;
     }
 
     rmSync(tempRoot, { recursive: true, force: true });
