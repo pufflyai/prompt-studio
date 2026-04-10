@@ -11,7 +11,12 @@ export const projectSchema = z.object({
 });
 
 export const createProjectInputSchema = z.object({
-  name: z.string().min(1),
+  name: z
+    .string()
+    .min(1)
+    .refine((name) => /[a-zA-Z]/.test(name), {
+      message: "Project name must contain at least one letter",
+    }),
 });
 
 export type Project = z.infer<typeof projectSchema>;

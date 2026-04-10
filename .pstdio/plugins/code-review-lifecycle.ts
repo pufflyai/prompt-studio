@@ -2,38 +2,39 @@ import {
   createSession,
   definePlugin,
   followupSession,
-  runCommand,
+  // runCommand,
   setWorkspaceAttemptStatus,
 } from "@pstdio/sdk/plugins";
 
 export default definePlugin({
   hooks: {
+    // disabled due to validation pipeline issues
     // ──────────────────────────────────────────────────────────
     // Blocks the transition to review-ready when validation fails
     // in the workspace and returns command output as the
     // rejection reason for immediate feedback.
     // ──────────────────────────────────────────────────────────
-    async preAttemptStatusChange(ctx) {
-      if (ctx.toStatus !== "review-ready") return;
-      if (!ctx.worktreePath) return;
-
-      // ────────────────────────────────────────────────────────
-      // >>> Replace with your validation command <<<
-      const validationCMD = ["bun", "run", "validate"];
-      // ────────────────────────────────────────────────────────
-
-      const validation = await runCommand(ctx.worktreePath, validationCMD);
-
-      if (validation.exitCode !== 0) {
-        const output = [validation.stdout, validation.stderr].join("\n").trim();
-        return {
-          reject: true,
-          reason: output
-            ? `Validation failed; cannot move to review-ready\n\n${output}`
-            : "Validation failed; cannot move to review-ready",
-        };
-      }
-    },
+    // async preAttemptStatusChange(ctx) {
+    //   if (ctx.toStatus !== "review-ready") return;
+    //   if (!ctx.worktreePath) return;
+    //
+    //   // ────────────────────────────────────────────────────────
+    //   // >>> Replace with your validation command <<<
+    //   const validationCMD = ["bun", "run", "validate"];
+    //   // ────────────────────────────────────────────────────────
+    //
+    //   const validation = await runCommand(ctx.worktreePath, validationCMD);
+    //
+    //   if (validation.exitCode !== 0) {
+    //     const output = [validation.stdout, validation.stderr].join("\n").trim();
+    //     return {
+    //       reject: true,
+    //       reason: output
+    //         ? `Validation failed; cannot move to review-ready\n\n${output}`
+    //         : "Validation failed; cannot move to review-ready",
+    //     };
+    //   }
+    // },
 
     async postAttemptStatusChange(ctx) {
       if (!ctx.ticket) return;

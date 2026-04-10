@@ -29,4 +29,16 @@ describe("deriveShorthand", () => {
   test("already uppercase input", () => {
     expect(deriveShorthand("MY-APP")).toBe("MA");
   });
+
+  test("strips non-letter characters", () => {
+    expect(deriveShorthand("my (cool) project")).toBe("MCP");
+  });
+
+  test("words made entirely of non-letter characters are excluded", () => {
+    expect(deriveShorthand("app --- 123 test")).toBe("AT");
+  });
+
+  test("leading special characters in words are ignored", () => {
+    expect(deriveShorthand("#my-@app")).toBe("MA");
+  });
 });
