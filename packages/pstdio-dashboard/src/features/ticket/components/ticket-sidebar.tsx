@@ -1,3 +1,4 @@
+import { Text } from "@chakra-ui/react";
 import {
   resolveSessionIndicatorColor,
   resolveSessionIndicatorIcon,
@@ -89,7 +90,16 @@ const buildWorkspacesSection = (
     };
   });
 
-  return { id: "workspaces", label: "Workspaces", nodes };
+  return {
+    id: "workspaces",
+    label: "Workspaces",
+    nodes,
+    emptyState: (
+      <Text textStyle="paragraph/S/regular" color="fg.muted" px="3" py="4" textAlign="center">
+        No workspaces yet
+      </Text>
+    ),
+  };
 };
 
 const buildSessionsSection = (sessions: WorkspaceSessionEntry[], workspaceShorthand: string): SidebarSection => {

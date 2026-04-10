@@ -35,6 +35,7 @@ export const TicketsPanel = () => {
   const createTicket = useCreateProjectTicket(projectId);
   const navigate = useNavigate();
 
+  const sessionModalState = useProjectSettingsStore((s) => s.sessionModalState);
   const setSessionModalState = useProjectSettingsStore((s) => s.setSessionModalState);
   const setSelectedSessionId = useProjectSettingsStore((s) => s.setSelectedSessionId);
   const { t } = useTranslation("tickets");
@@ -83,9 +84,9 @@ export const TicketsPanel = () => {
   const handleOpenSessionBubble = (sessionId: string | null) => {
     return openTicketSessionBubble({
       sessionId,
+      sessionModalState,
       setSessionModalState,
       setSelectedSessionId,
-      forceBubble: true,
     });
   };
 
@@ -121,6 +122,7 @@ export const TicketsPanel = () => {
       }
     } catch (error) {
       console.error("[create ticket]", error);
+      throw error;
     }
   };
 
@@ -211,6 +213,7 @@ export const TicketsPanel = () => {
         </Stack>
 
         <CreateTicketModal
+          key={projectId ?? "global"}
           open={createModalOpen}
           onClose={closeCreateModal}
           onSubmit={handleCreateTicket}

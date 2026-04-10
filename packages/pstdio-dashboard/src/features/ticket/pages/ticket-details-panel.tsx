@@ -9,7 +9,7 @@ import { ActionParamsDialog } from "@/features/plugin-actions/components/action-
 import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
 import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
 import { useProject } from "@/features/project/hooks/use-project";
-import { useProjectSettingsStore } from "@/features/project-settings/store";
+import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/features/project-settings/store";
 import { uploadTicketFile } from "@/features/ticket-list/data/api";
 import {
   useDeleteProjectTicket,
@@ -60,6 +60,7 @@ export const TicketDetailsPanel = () => {
   const { projectId, ticketShorthand, selectedFileId } = useParams({ strict: false });
   const navigate = useNavigate();
   const { t } = useTranslation(["projects", "tickets"]);
+  const projectSettingsStore = useProjectSettingsStoreApi();
   const setSessionModalState = useProjectSettingsStore((state) => state.setSessionModalState);
   const setSelectedSessionId = useProjectSettingsStore((state) => state.setSelectedSessionId);
 
@@ -95,9 +96,9 @@ export const TicketDetailsPanel = () => {
 
       openTicketSessionBubble({
         sessionId: result.session_id,
+        sessionModalState: projectSettingsStore.getState().sessionModalState,
         setSessionModalState,
         setSelectedSessionId,
-        forceBubble: true,
       });
     },
   });

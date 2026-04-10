@@ -3,8 +3,8 @@ import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { ChevronRight, Circle, Paperclip } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useProjectSettingsStore } from "@/features/project-settings/store";
 import { SingleTagSelector } from "@/features/ticket/components/single-tag-selector";
-
 import type { TicketStatus, TicketStatusOption, TicketTag } from "@/features/ticket-list/types";
 
 interface CreateTicketModalProps {
@@ -59,11 +59,14 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
     statusOptions = [],
   } = props;
   const { t } = useTranslation("tickets");
+  const createTicketDraft = useProjectSettingsStore((state) => state.createTicketDraft);
+  const setCreateTicketDraft = useProjectSettingsStore((state) => state.setCreateTicketDraft);
+  const clearCreateTicketDraft = useProjectSettingsStore((state) => state.clearCreateTicketDraft);
 
   const resolvedTitle = modalTitle ?? t("createTicketModal.newTicket");
   const resolvedSubmitLabel = submitButtonLabel ?? t("createTicketModal.createTicket");
 
-  const [content, setContent] = useState("");
+  const [content, setContent] = useState(createTicketDraft);
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [editorKey, setEditorKey] = useState(0);
   const [files, setFiles] = useState<File[]>([]);
@@ -78,7 +81,13 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
     setFiles([]);
   };
 
+  const handleContentChange = (value: string) => {
+    setContent(value);
+    setCreateTicketDraft(value);
+  };
+
   const handleClose = () => {
+    clearCreateTicketDraft();
     resetForm();
     onClose();
   };
@@ -94,6 +103,7 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
       files,
     });
 
+    clearCreateTicketDraft();
     resetForm();
   };
 
@@ -141,7 +151,7 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
                   key={editorKey}
                   defaultState={content}
                   isEditable={!isSubmitting}
-                  onChange={setContent}
+                  onChange={handleContentChange}
                   placeholder={t("createTicketModal.describePlaceholder")}
                   autoFocus
                 />
