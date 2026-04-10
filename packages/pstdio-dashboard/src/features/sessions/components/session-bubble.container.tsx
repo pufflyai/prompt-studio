@@ -39,7 +39,10 @@ export const SessionBubbleContainer = () => {
       isOpen
       aria-label={t("chatInput.ariaLabel")}
       testId="session-bubble"
-      onClose={() => setSessionModalState("closed")}
+      onClose={() => {
+        setSessionModalState("closed");
+        setSelectedSessionId(null);
+      }}
       closeLabel={t("chatInput.closeLabel")}
       onPopOut={() => setSessionModalState("attached")}
       popOutLabel="Attach panel"

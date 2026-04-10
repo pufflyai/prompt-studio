@@ -1,6 +1,6 @@
 import { Box, chakra, Flex, HStack, type HTMLChakraProps, IconButton, Portal, Spacer } from "@chakra-ui/react";
 import { Minus, SquareArrowOutUpRight } from "lucide-react";
-import { forwardRef, type ReactNode } from "react";
+import { forwardRef, type ReactNode, useEffect } from "react";
 import { Tooltip } from "./tooltip";
 
 export interface BubblePanelProps {
@@ -35,6 +35,15 @@ export const BubblePanel = forwardRef<HTMLDivElement, BubblePanelProps>(function
     "aria-label": ariaLabel,
     children,
   } = props;
+
+  useEffect(() => {
+    if (!isOpen || !onClose) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
