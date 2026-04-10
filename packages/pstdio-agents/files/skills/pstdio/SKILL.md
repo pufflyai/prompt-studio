@@ -28,7 +28,6 @@ This skill covers pstdio itself. For task-specific workflows, defer to the dedic
 - **implement-ticket** — Implementing tickets
 - **create-proposal** — Writing proposals
 - **create-sub-tickets** — Breaking tickets into sub-tickets
-- **update-documentation** — Managing project documentation
 - **refine-ticket** — Refining ticket content
 - **write-pstdio-hook** — Writing or editing lifecycle hooks
 

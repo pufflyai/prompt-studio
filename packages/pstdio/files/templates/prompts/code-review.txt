@@ -1,5 +1,7 @@
 Review the changes in this worktree. Focus on correctness, regressions, and missing tests. Summarize findings with file references.
-
 Write the review to .pstdio/tickets/{{ticket}}/review.md in the ticket folder.
+If the review passes: 
+    1. mark the workspace attempt status as "reviewed".
 
-If the review passes, mark the workspace attempt status as "reviewed". If the review fails, mark the workspace attempt status as "changes-requested".
+If the review fails:
+    1. mark the workspace attempt status as "changes-requested".

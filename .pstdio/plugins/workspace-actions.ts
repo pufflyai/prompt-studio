@@ -1,4 +1,4 @@
-// import { spawn, spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createSession, definePlugin } from "@pstdio/sdk/plugins";
 
 export default definePlugin({
@@ -29,45 +29,58 @@ export default definePlugin({
         return { session_id: session.id };
       },
     },
-    // {
-    //   key: "open-worktree-in-vscode",
-    //   label: "Open in VS Code",
-    //   targetType: "workspace",
-    //   placement: "overflow",
-    //   trigger(ctx) {
-    //     if (!ctx.target.worktree_path) {
-    //       throw new Error("Workspace has no worktree path");
-    //     }
-    //
-    //     const result = spawnSync("code", [ctx.target.worktree_path]);
-    //     if (result.error) {
-    //       throw new Error("Failed to open VS Code. Ensure `code` is installed and available in PATH.");
-    //     }
-    //   },
-    // },
-    // {
-    //   key: "run-frontend",
-    //   label: "Run frontend",
-    //   targetType: "workspace",
-    //   placement: "overflow",
-    //   async trigger(ctx) {
-    //     if (!ctx.target.worktree_path) {
-    //       throw new Error("Workspace has no worktree path");
-    //     }
-    //
-    //     const child = spawn("bun", ["run", "--cwd", "packages/pstdio-dashboard", "dev", "--", "--open"], {
-    //       cwd: ctx.target.worktree_path,
-    //       detached: true,
-    //       stdio: "ignore",
-    //     });
-    //
-    //     await new Promise<void>((resolve, reject) => {
-    //       child.once("spawn", resolve);
-    //       child.once("error", reject);
-    //     });
-    //
-    //     child.unref();
-    //   },
-    // },
+    {
+      key: "open-worktree-in-vscode",
+      label: "Open in VS Code",
+      targetType: "workspace",
+      placement: "overflow",
+      trigger(ctx) {
+        if (!ctx.target.worktree_path) {
+          throw new Error("Workspace has no worktree path");
+        }
+
+        const result = spawnSync("code", [ctx.target.worktree_path]);
+        if (result.error) {
+          throw new Error("Failed to open VS Code. Ensure `code` is installed and available in PATH.");
+        }
+      },
+    },
+    {
+      key: "run-frontend",
+      label: "Run frontend",
+      targetType: "workspace",
+      placement: "overflow",
+      async trigger(ctx) {
+        if (!ctx.target.worktree_path) {
+          throw new Error("Workspace has no worktree path");
+        }
+
+        const child = spawn(
+          "env",
+          [
+            "VITE_API_BASE_URL=http://localhost:19841",
+            "bun",
+            "run",
+            "--cwd",
+            "packages/pstdio-dashboard",
+            "dev",
+            "--",
+            "--open",
+          ],
+          {
+            cwd: ctx.target.worktree_path,
+            detached: true,
+            stdio: "ignore",
+          },
+        );
+
+        await new Promise<void>((resolve, reject) => {
+          child.once("spawn", resolve);
+          child.once("error", reject);
+        });
+
+        child.unref();
+      },
+    },
   ],
 });

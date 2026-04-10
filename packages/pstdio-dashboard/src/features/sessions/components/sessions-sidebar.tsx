@@ -1,3 +1,4 @@
+import { HStack, IconButton } from "@chakra-ui/react";
 import {
   resolveSessionIndicatorColor,
   resolveSessionIndicatorIcon,
@@ -5,8 +6,11 @@ import {
   Sidebar,
   type SidebarNavigateEvent,
   type SidebarSection,
+  Tooltip,
 } from "@pstdio/ui";
+import { PenBox } from "lucide-react";
 import { createElement } from "react";
+import { useTranslation } from "react-i18next";
 import { BackToDashboard } from "@/features/project/components/back-to-dashboard";
 import type { Session } from "../types";
 import { groupSessionsByDate } from "../utils/group-sessions";
@@ -20,6 +24,7 @@ interface SessionsSidebarProps {
   sessions: Session[];
   selectedSessionId: string | null;
   onSelectSession: (sessionId: string) => void;
+  onCreateSession: () => void;
 }
 
 const buildSections = (sessions: Session[]): SidebarSection[] => {
@@ -41,7 +46,8 @@ const buildSections = (sessions: Session[]): SidebarSection[] => {
 };
 
 export const SessionsSidebar = (props: SessionsSidebarProps) => {
-  const { sessions, selectedSessionId, onSelectSession } = props;
+  const { sessions, selectedSessionId, onSelectSession, onCreateSession } = props;
+  const { t } = useTranslation("projects");
 
   const sections = buildSections(sessions);
 
@@ -54,12 +60,23 @@ export const SessionsSidebar = (props: SessionsSidebarProps) => {
     }
   };
 
+  const header = (
+    <HStack justify="space-between" flex="1">
+      <BackToDashboard />
+      <Tooltip content={t("sessions.newSession")}>
+        <IconButton size="xs" variant="ghost" aria-label={t("sessions.newSession")} onClick={onCreateSession}>
+          <PenBox size={16} />
+        </IconButton>
+      </Tooltip>
+    </HStack>
+  );
+
   return (
     <Sidebar
       storageKey={SESSIONS_SIDEBAR_STORAGE_KEY}
       sections={sections}
       activeNodeId={selectedSessionId}
-      header={<BackToDashboard />}
+      header={header}
       onNavigate={handleNavigate}
       closable={false}
       width="18rem"
