@@ -25,18 +25,22 @@ export const detectRuntime = (): "bun" | "npm" => {
   }
 };
 
+const isInstalled = (pstdioDir: string) => existsSync(join(pstdioDir, "node_modules", "@pstdio", "sdk"));
+
 export const ensurePluginWorkspace = async (pstdioDir: string) => {
   const existing = readPackageJson(pstdioDir);
-  if (existing?.dependencies?.["@pstdio/sdk"]) return;
+  if (existing?.dependencies?.["@pstdio/sdk"] && isInstalled(pstdioDir)) return;
 
-  const pkg: PackageJson = {
-    private: true,
-    type: "module",
-    dependencies: { "@pstdio/sdk": "latest" },
-  };
+  if (!existing?.dependencies?.["@pstdio/sdk"]) {
+    const pkg: PackageJson = {
+      private: true,
+      type: "module",
+      dependencies: { "@pstdio/sdk": "latest" },
+    };
 
-  writeFileSync(join(pstdioDir, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
-  writeFileSync(join(pstdioDir, ".gitignore"), `${GITIGNORE_ENTRIES}\n`);
+    writeFileSync(join(pstdioDir, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
+    writeFileSync(join(pstdioDir, ".gitignore"), `${GITIGNORE_ENTRIES}\n`);
+  }
 
   const runtime = detectRuntime();
   try {

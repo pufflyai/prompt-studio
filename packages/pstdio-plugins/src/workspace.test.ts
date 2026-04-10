@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -58,7 +58,24 @@ describe("ensurePluginWorkspace", () => {
     expect(pkg.dependencies["@pstdio/sdk"]).toBe("latest");
   });
 
-  test("skips when package.json already has @pstdio/sdk", async () => {
+  test("skips when package.json already has @pstdio/sdk and node_modules exists", async () => {
+    const dir = createTempDir();
+    const existingPkg = {
+      private: true,
+      type: "module",
+      dependencies: { "@pstdio/sdk": "0.1.0" },
+    };
+    writeFileSync(join(dir, "package.json"), JSON.stringify(existingPkg));
+    mkdirSync(join(dir, "node_modules", "@pstdio", "sdk"), { recursive: true });
+
+    await ensurePluginWorkspace(dir);
+
+    const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+    expect(pkg.dependencies["@pstdio/sdk"]).toBe("0.1.0");
+    expect(execFileSyncMock).not.toHaveBeenCalled();
+  });
+
+  test("re-installs when package.json has @pstdio/sdk but node_modules is missing", async () => {
     const dir = createTempDir();
     const existingPkg = {
       private: true,
@@ -69,9 +86,10 @@ describe("ensurePluginWorkspace", () => {
 
     await ensurePluginWorkspace(dir);
 
-    const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
-    expect(pkg.dependencies["@pstdio/sdk"]).toBe("0.1.0");
-    expect(execFileSyncMock).not.toHaveBeenCalled();
+    const installCall = execFileSyncMock.mock.calls.find(
+      (call: unknown[]) => call[0] === "bun" && (call[1] as string[])?.[0] === "install",
+    ) as unknown[] | undefined;
+    expect(installCall).toBeDefined();
   });
 });
 
