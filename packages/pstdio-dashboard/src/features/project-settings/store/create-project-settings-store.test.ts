@@ -37,6 +37,7 @@ describe("createProjectSettingsStore defaults", () => {
     expect(state.selectedSessionId).toBeNull();
     expect(state.lastNonSessionsPath).toBeNull();
     expect(state.chatDraftsBySession).toEqual({});
+    expect(state.createTicketDraft).toBe("");
   });
 
   it("accepts initial hydration", () => {
@@ -260,6 +261,38 @@ describe("createProjectSettingsStore chatDraftsBySession", () => {
 
     expect(store.getState().chatDraftsBySession).toEqual({});
   });
+
+  it("stores a create ticket modal draft", () => {
+    const store = createProjectSettingsStore();
+
+    store.getState().setCreateTicketDraft("Draft ticket");
+
+    expect(store.getState().createTicketDraft).toBe("Draft ticket");
+  });
+
+  it("removes the create ticket modal draft when blank", () => {
+    const store = createProjectSettingsStore({
+      initialState: {
+        createTicketDraft: "Existing draft",
+      },
+    });
+
+    store.getState().setCreateTicketDraft("   ");
+
+    expect(store.getState().createTicketDraft).toBe("");
+  });
+
+  it("clears the create ticket modal draft", () => {
+    const store = createProjectSettingsStore({
+      initialState: {
+        createTicketDraft: "Remove me",
+      },
+    });
+
+    store.getState().clearCreateTicketDraft();
+
+    expect(store.getState().createTicketDraft).toBe("");
+  });
 });
 
 describe("createProjectSettingsStore reset", () => {
@@ -272,6 +305,7 @@ describe("createProjectSettingsStore reset", () => {
         lastSelectedBranches: ["main"],
         sessionModalState: "attached",
         chatDraftsBySession: { "session-1": "Draft" },
+        createTicketDraft: "Draft ticket",
       },
     });
 
@@ -286,6 +320,7 @@ describe("createProjectSettingsStore reset", () => {
     expect(state.selectedSessionId).toBeNull();
     expect(state.lastNonSessionsPath).toBeNull();
     expect(state.chatDraftsBySession).toEqual({});
+    expect(state.createTicketDraft).toBe("");
   });
 });
 
@@ -311,5 +346,14 @@ describe("createProjectSettingsStore per-project persistence", () => {
 
     expect(store1.getState().lastSelectedAgent).toBe("claude-code");
     expect(store2.getState().lastSelectedAgent).toBe("opencode");
+  });
+
+  it("rehydrates the create ticket draft from local storage", () => {
+    const store = createProjectSettingsStore({ projectId: "proj-draft" });
+    store.getState().setCreateTicketDraft("Persisted ticket draft");
+
+    const rehydratedStore = createProjectSettingsStore({ projectId: "proj-draft" });
+
+    expect(rehydratedStore.getState().createTicketDraft).toBe("Persisted ticket draft");
   });
 });

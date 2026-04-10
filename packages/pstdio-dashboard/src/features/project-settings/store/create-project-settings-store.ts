@@ -26,6 +26,7 @@ const getPersistedSnapshot = (state: ProjectSettingsState) => ({
   selectedSessionId: state.selectedSessionId,
   lastNonSessionsPath: state.lastNonSessionsPath,
   chatDraftsBySession: state.chatDraftsBySession,
+  createTicketDraft: state.createTicketDraft,
 });
 
 export const getDefaultProjectSettingsSnapshot = () =>
@@ -38,6 +39,7 @@ export const getDefaultProjectSettingsSnapshot = () =>
     selectedSessionId: null,
     lastNonSessionsPath: null,
     chatDraftsBySession: {},
+    createTicketDraft: "",
   }) satisfies ProjectSettingsSnapshot;
 
 export const createProjectSettingsStore = (options?: ProjectSettingsStoreOptions) => {
@@ -136,6 +138,22 @@ export const createProjectSettingsStore = (options?: ProjectSettingsStoreOptions
                 },
                 false,
                 actionName("clearSessionDraft"),
+              ),
+            setCreateTicketDraft: (draft) =>
+              set(
+                (state) => {
+                  state.createTicketDraft = draft.trim() ? draft : "";
+                },
+                false,
+                actionName("setCreateTicketDraft"),
+              ),
+            clearCreateTicketDraft: () =>
+              set(
+                (state) => {
+                  state.createTicketDraft = "";
+                },
+                false,
+                actionName("clearCreateTicketDraft"),
               ),
             reset: () => set(getDefaultProjectSettingsSnapshot(), false, actionName("reset")),
           })),

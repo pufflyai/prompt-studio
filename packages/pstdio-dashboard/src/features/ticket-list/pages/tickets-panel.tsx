@@ -121,6 +121,7 @@ export const TicketsPanel = () => {
       }
     } catch (error) {
       console.error("[create ticket]", error);
+      throw error;
     }
   };
 
@@ -211,6 +212,7 @@ export const TicketsPanel = () => {
         </Stack>
 
         <CreateTicketModal
+          key={projectId ?? "global"}
           open={createModalOpen}
           onClose={closeCreateModal}
           onSubmit={handleCreateTicket}
