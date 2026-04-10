@@ -56,6 +56,6 @@
     "@types/bun": "latest",
     "@types/mustache": "^4.2.6",
     "pstdio-api-contracts": "workspace:*",
-    "typescript": "^5.9.3"
+    "typescript": "6.0.2"
   }
 }
