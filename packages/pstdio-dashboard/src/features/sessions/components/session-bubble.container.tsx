@@ -10,11 +10,12 @@ import { SessionSelector } from "./session-selector";
 
 export const SessionBubbleContainer = () => {
   const { t } = useTranslation("projects");
-  const { projectId } = useParams({ strict: false });
+  const { projectId, workspaceShorthand } = useParams({ strict: false });
   const sessionModalState = useProjectSettingsStore((s) => s.sessionModalState);
   const setSessionModalState = useProjectSettingsStore((s) => s.setSessionModalState);
   const selectedSessionId = useProjectSettingsStore((s) => s.selectedSessionId);
   const setSelectedSessionId = useProjectSettingsStore((s) => s.setSelectedSessionId);
+  const isWorkspaceRoute = typeof workspaceShorthand === "string" && workspaceShorthand.length > 0;
 
   const { data: sessions = [] } = useProjectSessions(projectId);
 
@@ -63,7 +64,11 @@ export const SessionBubbleContainer = () => {
         </>
       }
     >
-      <SessionChatView sessionId={selectedSessionId} onSessionCreated={setSelectedSessionId} />
+      <SessionChatView
+        sessionId={selectedSessionId}
+        onSessionCreated={setSelectedSessionId}
+        showWorkspaceHub={!isWorkspaceRoute}
+      />
     </BubblePanel>
   );
 };
