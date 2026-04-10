@@ -168,7 +168,7 @@ export const TicketsPanel = () => {
   if (isLoading) {
     return (
       <PanelLayout sidebar={<ProjectSidebar />}>
-        <Stack gap="lg" height="100%" p="sm">
+        <Stack gap="lg" height="100%" minW="0" p="sm">
           <Text textStyle="paragraph/S/regular" color="fg.muted">
             {t("loading")}
           </Text>
@@ -179,10 +179,10 @@ export const TicketsPanel = () => {
 
   return (
     <PanelLayout sidebar={<ProjectSidebar />}>
-      <Stack gap="0" height="100%" flex="1">
+      <Stack gap="0" height="100%" flex="1" minW="0">
         <TicketsHeader />
 
-        <Stack flex="1" minH="0">
+        <Stack flex="1" minH="0" minW="0">
           {settings.viewMode === "board" ? (
             <TicketsBoardView
               groups={groups}

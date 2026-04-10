@@ -1077,6 +1077,9 @@
       "bg": {
         "base": "bg.accent-secondary.blue-medium",
         "_dark": "bg.accent-secondary.blue-medium"
+      },
+      "color": {
+        "_dark": "fg.inverted"
       }
     },
     ":root": {
@@ -2021,7 +2024,7 @@
             "value": "#22252C"
           },
           "850": {
-            "value": "#1A1C21"
+            "value": "#1b2028"
           },
           "900": {
             "value": "#0A0D15"

@@ -34,14 +34,14 @@ export const PanelLayout = (props: PanelLayoutProps) => {
   const { sidebar, errorLabel, children } = props;
 
   return (
-    <Flex height="100%" width="100%" minH="0">
+    <Flex height="100%" width="100%" minH="0" minW="0">
       {sidebar ? (
         <Flex minH="0" flexShrink={0}>
           {sidebar}
         </Flex>
       ) : null}
       <ErrorBoundary label={errorLabel ?? "Unable to render the panel."}>
-        <Flex flex="1" overflow="hidden" minH="0">
+        <Flex flex="1" overflow="hidden" minH="0" minW="0">
           {children ?? <Outlet />}
         </Flex>
       </ErrorBoundary>

@@ -1,6 +1,7 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { apiClient } from "@/features/api-client";
 import { mockFetchSequence } from "@/test-utils/mock-fetch";
 import { linkProject } from "./link-project";
 
@@ -57,6 +58,32 @@ describe("linkProject", () => {
     const root = setup("link-404");
 
     expect(linkProject(root, "missing")).rejects.toThrow("Project not found: missing");
+  });
+
+  test("refreshes the API client when fetch mocks change between tests", async () => {
+    const staleFetch = mock(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            id: "stale-project",
+            name: "Stale Project",
+            shorthand: "SP",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          }),
+          { status: 200 },
+        ),
+      ),
+    ) as unknown as typeof fetch;
+    globalThis.fetch = staleFetch;
+    await apiClient().projects.get("stale-project");
+
+    mockFetchSequence([{ status: 404, body: { error: "Not found" } }]);
+    const root = setup("link-refresh-client");
+
+    await expect(linkProject(root, "missing")).rejects.toThrow("Project not found: missing");
+    expect(staleFetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
 
   test("delegates stale ticket cleanup to the API", async () => {
