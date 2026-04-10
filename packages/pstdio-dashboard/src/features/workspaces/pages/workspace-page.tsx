@@ -8,7 +8,7 @@ import { ActionParamsDialog } from "@/features/plugin-actions/components/action-
 import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin-header-actions";
 import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
 import { useProject } from "@/features/project/hooks/use-project";
-import { useProjectSettingsStore } from "@/features/project-settings/store";
+import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/features/project-settings/store";
 import { CreateWorkspaceModal } from "@/features/ticket/components/create-workspace-modal";
 import { TicketSidebar } from "@/features/ticket/components/ticket-sidebar";
 import { useTicketAttemptDiff } from "@/features/ticket/hooks/use-ticket-attempt-diff";
@@ -226,6 +226,7 @@ export const WorkspacePage = () => {
   const { projectId, ticketShorthand, workspaceShorthand } = useParams({ strict: false });
   const navigate = useNavigate();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const projectSettingsStore = useProjectSettingsStoreApi();
   const setSessionModalState = useProjectSettingsStore((state) => state.setSessionModalState);
   const setSelectedSessionId = useProjectSettingsStore((state) => state.setSelectedSessionId);
 
@@ -255,9 +256,9 @@ export const WorkspacePage = () => {
       if (!result.session_id) return;
       openTicketSessionBubble({
         sessionId: result.session_id,
+        sessionModalState: projectSettingsStore.getState().sessionModalState,
         setSessionModalState,
         setSelectedSessionId,
-        forceBubble: true,
       });
     },
   });
@@ -278,7 +279,12 @@ export const WorkspacePage = () => {
   };
 
   const handleSelectSession = (_workspaceShorthand: string, sessionId: string) => {
-    openTicketSessionBubble({ sessionId, setSessionModalState, setSelectedSessionId });
+    openTicketSessionBubble({
+      sessionId,
+      sessionModalState: projectSettingsStore.getState().sessionModalState,
+      setSessionModalState,
+      setSelectedSessionId,
+    });
   };
 
   const handleSelectFile = () => {
