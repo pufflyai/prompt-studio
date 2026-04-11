@@ -82,7 +82,8 @@ export const TicketDetailsPanel = () => {
   const workspaces = ticket?.attempts ?? [];
   const attemptStatusMap = useAttemptStatusMap(projectId);
   const workspaceIds = workspaces.map((w) => w.id);
-  const sessionsByWorkspaceId = useWorkspaceSessions(workspaceIds);
+  const workspaceSessions = useWorkspaceSessions(workspaceIds);
+  const sessionsByWorkspaceId = workspaceSessions.sessionsByWorkspaceId;
   const content = ticketContent.data ?? "";
   const isContentReady = isTicketContentReady(ticketContent.data, ticketContent.isLoading);
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(true);

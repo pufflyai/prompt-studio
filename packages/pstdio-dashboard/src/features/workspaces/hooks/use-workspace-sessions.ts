@@ -49,5 +49,8 @@ export const useWorkspaceSessions = (workspaceIds: string[]) => {
     entries.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
-  return sessionsByWorkspaceId;
+  return {
+    sessionsByWorkspaceId,
+    isReady: rawLinks !== undefined && rawSessions !== undefined,
+  };
 };

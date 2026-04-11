@@ -1,8 +1,8 @@
 import { Flex, Stack, Text } from "@chakra-ui/react";
 import { Breadcrumb, HorizontalMenuStack, PanelLayout } from "@pstdio/ui";
-import { Link, useNavigate, useParams } from "@tanstack/react-router";
+import { Link, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { KanbanSquare } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
 import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin-header-actions";
@@ -26,6 +26,8 @@ import { WorkspaceDiffPanel } from "../components/workspace-diff-panel";
 import type { WorkspaceListItem } from "../components/workspace-list-panel";
 import { useAttemptStatusMap } from "../hooks/use-attempt-status-map";
 import { useWorkspaceSessions } from "../hooks/use-workspace-sessions";
+import { resolveActiveWorkspaceSessionId } from "../utils/selected-workspace-session";
+import { resolveWorkspacePageSessionSearch } from "./workspace-page-session-search";
 
 const buildWorkspaceListItems = (
   attempts: NonNullable<ReturnType<typeof useProjectTickets>["data"]>[number]["attempts"],
@@ -92,12 +94,13 @@ interface WorkspacePageContentProps {
   attemptStatusMap: ReturnType<typeof useAttemptStatusMap>;
   selectedWorkspaceLabel: string;
   selectedWorkspace: WorkspaceListItem | null;
-  sessionsByWorkspaceId: ReturnType<typeof useWorkspaceSessions>;
+  sessionsByWorkspaceId: ReturnType<typeof useWorkspaceSessions>["sessionsByWorkspaceId"];
   diffs: ReturnType<typeof transformFileDiffs>;
   artifacts: ApiWorkspaceArtifact[];
   attempts: NonNullable<ReturnType<typeof useProjectTickets>["data"]>[number]["attempts"];
   selectableFiles: ReturnType<typeof buildSelectableTicketFiles>;
   createAttemptIsPending: boolean;
+  activeSessionId: string | null;
   selectWorkspace: (workspaceShorthand: string) => void;
   selectSession: (workspaceShorthand: string, sessionId: string) => void;
   selectFile: (fileId: string) => void;
@@ -122,6 +125,7 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
     attempts,
     selectableFiles,
     createAttemptIsPending,
+    activeSessionId,
     selectWorkspace,
     selectSession,
     selectFile,
@@ -141,6 +145,7 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
       attemptStatusMap={attemptStatusMap}
       sessionsByWorkspaceId={sessionsByWorkspaceId}
       selectedWorkspaceId={selectedWorkspace?.id}
+      activeSessionId={activeSessionId}
       onSelectFile={selectFile}
       onSelectWorkspace={selectWorkspace}
       onSelectSession={selectSession}
@@ -224,6 +229,8 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
 
 export const WorkspacePage = () => {
   const { projectId, ticketShorthand, workspaceShorthand } = useParams({ strict: false });
+  const search = useSearch({ strict: false });
+  const sessionId = typeof search.sessionId === "string" ? search.sessionId : undefined;
   const navigate = useNavigate();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const projectSettingsStore = useProjectSettingsStoreApi();
@@ -243,11 +250,31 @@ export const WorkspacePage = () => {
   const workspaces = buildWorkspaceListItems(attempts, attemptStatusMap);
 
   const workspaceIds = workspaces.map((workspace) => workspace.id);
-  const sessionsByWorkspaceId = useWorkspaceSessions(workspaceIds);
+  const workspaceSessions = useWorkspaceSessions(workspaceIds);
+  const sessionsByWorkspaceId = workspaceSessions.sessionsByWorkspaceId;
   const selectedWorkspace = workspaces.find((workspace) => workspace.shorthand === workspaceShorthand) ?? null;
+  const selectedWorkspaceSessions = selectedWorkspace ? (sessionsByWorkspaceId.get(selectedWorkspace.id) ?? []) : [];
+  const activeSessionId = resolveActiveWorkspaceSessionId(selectedWorkspaceSessions, sessionId);
   const selectedAttempt = attempts.find((attempt) => attempt.shorthand === workspaceShorthand) ?? null;
   const selectedWorkspaceLabel = selectedWorkspace?.shorthand ?? workspaceShorthand ?? "";
   const sessionSettled = isSessionSettled(selectedAttempt?.sessionStatus ?? null);
+
+  useEffect(() => {
+    if (!projectId || !ticketShorthand || !workspaceShorthand) return;
+    const normalizedSearch = resolveWorkspacePageSessionSearch({
+      requestedSessionId: sessionId,
+      activeSessionId,
+      areWorkspaceSessionsReady: workspaceSessions.isReady,
+    });
+    if (!normalizedSearch) return;
+
+    navigate({
+      to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
+      params: { projectId, ticketShorthand, workspaceShorthand },
+      search: normalizedSearch,
+      replace: true,
+    });
+  }, [activeSessionId, navigate, projectId, sessionId, ticketShorthand, workspaceSessions.isReady, workspaceShorthand]);
 
   const pluginActionTrigger = usePluginActionTrigger({
     projectId,
@@ -272,15 +299,29 @@ export const WorkspacePage = () => {
 
   const handleSelectWorkspace = (nextWorkspaceShorthand: string) => {
     if (!projectId || !ticketShorthand) return;
+
+    const nextWorkspace = workspaces.find((workspace) => workspace.shorthand === nextWorkspaceShorthand);
+    const nextWorkspaceSessions = nextWorkspace ? (sessionsByWorkspaceId.get(nextWorkspace.id) ?? []) : [];
+    const nextSessionId = resolveActiveWorkspaceSessionId(nextWorkspaceSessions, undefined);
+
     navigate({
       to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
       params: { projectId, ticketShorthand, workspaceShorthand: nextWorkspaceShorthand },
+      search: nextSessionId ? { sessionId: nextSessionId } : {},
     });
   };
 
-  const handleSelectSession = (_workspaceShorthand: string, sessionId: string) => {
+  const handleSelectSession = (nextWorkspaceShorthand: string, nextSessionId: string) => {
+    if (!projectId || !ticketShorthand) return;
+
+    navigate({
+      to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
+      params: { projectId, ticketShorthand, workspaceShorthand: nextWorkspaceShorthand },
+      search: { sessionId: nextSessionId },
+    });
+
     openTicketSessionBubble({
-      sessionId,
+      sessionId: nextSessionId,
       sessionModalState: projectSettingsStore.getState().sessionModalState,
       setSessionModalState,
       setSelectedSessionId,
@@ -333,6 +374,7 @@ export const WorkspacePage = () => {
       attempts={attempts}
       selectableFiles={selectableFiles}
       createAttemptIsPending={createAttempt.isPending}
+      activeSessionId={activeSessionId}
       selectWorkspace={handleSelectWorkspace}
       selectSession={handleSelectSession}
       selectFile={handleSelectFile}
