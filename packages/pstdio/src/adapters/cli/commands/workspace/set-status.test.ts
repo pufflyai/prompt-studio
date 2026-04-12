@@ -21,7 +21,7 @@ const makeWorkspace = (overrides: Partial<Workspace> = {}): Workspace => ({
 
 const baseDeps = {
   cwd: () => "/repo",
-  env: () => process.env,
+  env: () => ({}),
   findGitRoot: () => "/repo" as string | null,
   readConfig: () => ({ project_id: "proj-1" }) as { project_id: string } | null,
   getWorkspace: async () => makeWorkspace(),
@@ -54,46 +54,32 @@ describe("workspaces set-status", () => {
 
   test("falls back to PSTDIO_SESSION_ID from env", async () => {
     const updateAttemptStatus = mock(async () => ({}) as never);
-    const originalSessionId = process.env.PSTDIO_SESSION_ID;
-    process.env.PSTDIO_SESSION_ID = "sess-from-env";
+    const handler = createHandler({
+      ...baseDeps,
+      updateAttemptStatus,
+      env: () => ({ PSTDIO_SESSION_ID: "sess-from-env" }),
+    });
 
-    try {
-      const handler = createHandler({ ...baseDeps, updateAttemptStatus });
-
-      await handler({ workspace: "PS-1_A1", status: "review-ready", _: [], $0: "" } as never);
-    } finally {
-      if (originalSessionId === undefined) {
-        delete process.env.PSTDIO_SESSION_ID;
-      } else {
-        process.env.PSTDIO_SESSION_ID = originalSessionId;
-      }
-    }
+    await handler({ workspace: "PS-1_A1", status: "review-ready", _: [], $0: "" } as never);
 
     expect(updateAttemptStatus).toHaveBeenCalledWith("ws-1", "review-ready", "sess-from-env");
   });
 
   test("prefers explicit session id over PSTDIO_SESSION_ID from env", async () => {
     const updateAttemptStatus = mock(async () => ({}) as never);
-    const originalSessionId = process.env.PSTDIO_SESSION_ID;
-    process.env.PSTDIO_SESSION_ID = "sess-from-env";
+    const handler = createHandler({
+      ...baseDeps,
+      updateAttemptStatus,
+      env: () => ({ PSTDIO_SESSION_ID: "sess-from-env" }),
+    });
 
-    try {
-      const handler = createHandler({ ...baseDeps, updateAttemptStatus });
-
-      await handler({
-        workspace: "PS-1_A1",
-        status: "review-ready",
-        "session-id": "sess-explicit",
-        _: [],
-        $0: "",
-      } as never);
-    } finally {
-      if (originalSessionId === undefined) {
-        delete process.env.PSTDIO_SESSION_ID;
-      } else {
-        process.env.PSTDIO_SESSION_ID = originalSessionId;
-      }
-    }
+    await handler({
+      workspace: "PS-1_A1",
+      status: "review-ready",
+      "session-id": "sess-explicit",
+      _: [],
+      $0: "",
+    } as never);
 
     expect(updateAttemptStatus).toHaveBeenCalledWith("ws-1", "review-ready", "sess-explicit");
   });

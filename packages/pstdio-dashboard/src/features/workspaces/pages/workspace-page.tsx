@@ -11,6 +11,7 @@ import { useProject } from "@/features/project/hooks/use-project";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/features/project-settings/store";
 import { CreateWorkspaceModal } from "@/features/ticket/components/create-workspace-modal";
 import { TicketSidebar } from "@/features/ticket/components/ticket-sidebar";
+import { useCreateWorkspaceSession } from "@/features/ticket/hooks/use-create-workspace-session";
 import { useTicketAttemptDiff } from "@/features/ticket/hooks/use-ticket-attempt-diff";
 import { useTicketFiles } from "@/features/ticket/hooks/use-ticket-files";
 import { buildImplementTicketPrompt } from "@/features/ticket/utils/build-prompts";
@@ -20,6 +21,7 @@ import type { ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types
 import { useCreateTicketAttempt } from "@/features/ticket-list/hooks/use-create-ticket-attempt";
 import { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
 import { isSessionSettled } from "@/features/ticket-list/utils/ticket-attempts";
+import { createWorkspaceSessionFromSelection } from "@/features/workspaces/utils/create-workspace-session-from-selection";
 import { transformFileDiffs } from "@/features/workspaces/utils/transform-diff";
 import { logMutationError } from "@/lib/error-handlers";
 import { WorkspaceDiffPanel } from "../components/workspace-diff-panel";
@@ -85,6 +87,43 @@ const runWorkspaceAttempt = async (input: {
   }
 };
 
+interface CreateWorkspaceSessionHandlerInput {
+  ticket: { shorthand: string } | null;
+  attempts: { id: string; shorthand: string }[];
+  lastSelectedAgent: string | null;
+  lastSelectedModels: string[];
+  createWorkspaceSession: (input: {
+    workspaceId: string;
+    prompt: string;
+    agent: string;
+    model: string | null;
+  }) => Promise<{
+    sessionId: string;
+  }>;
+  onCreated: (sessionId: string) => void;
+  onError?: (error: unknown) => void;
+}
+
+export const createWorkspaceSessionHandler = (input: CreateWorkspaceSessionHandlerInput) => {
+  return async (workspaceShorthand: string) => {
+    if (!input.ticket) return;
+
+    try {
+      await createWorkspaceSessionFromSelection({
+        attempts: input.attempts,
+        workspaceShorthand,
+        ticketShorthand: input.ticket.shorthand,
+        lastSelectedAgent: input.lastSelectedAgent,
+        lastSelectedModels: input.lastSelectedModels,
+        createWorkspaceSession: input.createWorkspaceSession,
+        onCreated: input.onCreated,
+      });
+    } catch (error) {
+      input.onError?.(error);
+    }
+  };
+};
+
 interface WorkspacePageContentProps {
   projectId: string | undefined;
   ticketShorthand: string | undefined;
@@ -100,6 +139,7 @@ interface WorkspacePageContentProps {
   createAttemptIsPending: boolean;
   selectWorkspace: (workspaceShorthand: string) => void;
   selectSession: (workspaceShorthand: string, sessionId: string) => void;
+  createWorkspaceSession: (workspaceShorthand: string) => void;
   selectFile: (fileId: string) => void;
   isCreateModalOpen: boolean;
   closeCreateModal: () => void;
@@ -124,6 +164,7 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
     createAttemptIsPending,
     selectWorkspace,
     selectSession,
+    createWorkspaceSession,
     selectFile,
     isCreateModalOpen,
     closeCreateModal,
@@ -144,6 +185,7 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
       onSelectFile={selectFile}
       onSelectWorkspace={selectWorkspace}
       onSelectSession={selectSession}
+      onCreateWorkspaceSession={createWorkspaceSession}
     />
   );
 
@@ -236,6 +278,7 @@ export const WorkspacePage = () => {
   const attempts = ticket?.attempts ?? [];
   const attemptStatusMap = useAttemptStatusMap(projectId);
   const createAttempt = useCreateTicketAttempt(projectId);
+  const createWorkspaceSession = useCreateWorkspaceSession(projectId);
   const lastSelectedAgent = useProjectSettingsStore((state) => state.lastSelectedAgent);
   const lastSelectedModels = useProjectSettingsStore((state) => state.lastSelectedModels);
   const lastSelectedBranches = useProjectSettingsStore((state) => state.lastSelectedBranches);
@@ -309,6 +352,22 @@ export const WorkspacePage = () => {
     });
   };
 
+  const handleCreateWorkspaceSession = createWorkspaceSessionHandler({
+    ticket,
+    attempts,
+    lastSelectedAgent,
+    lastSelectedModels,
+    createWorkspaceSession: createWorkspaceSession.mutateAsync,
+    onCreated: (sessionId) =>
+      openTicketSessionBubble({
+        sessionId,
+        sessionModalState: projectSettingsStore.getState().sessionModalState,
+        setSessionModalState,
+        setSelectedSessionId,
+      }),
+    onError: (error) => logMutationError("create workspace session", error),
+  });
+
   if (!ticket) {
     return (
       <Stack gap="lg" height="100%" p="sm">
@@ -335,6 +394,7 @@ export const WorkspacePage = () => {
       createAttemptIsPending={createAttempt.isPending}
       selectWorkspace={handleSelectWorkspace}
       selectSession={handleSelectSession}
+      createWorkspaceSession={handleCreateWorkspaceSession}
       selectFile={handleSelectFile}
       isCreateModalOpen={isCreateModalOpen}
       closeCreateModal={() => setIsCreateModalOpen(false)}
