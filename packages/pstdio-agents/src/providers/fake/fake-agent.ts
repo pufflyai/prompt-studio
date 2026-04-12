@@ -10,6 +10,13 @@ import type {
 } from "../../types";
 
 const EXIT_DELAY_MS = 50;
+const HOLD_OPEN_MARKER = "[fake-agent:hold-open]";
+const HOLD_OPEN_EXIT_DELAY_MS = 30_000;
+
+const sanitizePrompt = (prompt: string) => prompt.replace(HOLD_OPEN_MARKER, "").trim();
+
+const resolveExitDelayMs = (prompt: string) =>
+  prompt.includes(HOLD_OPEN_MARKER) ? HOLD_OPEN_EXIT_DELAY_MS : EXIT_DELAY_MS;
 
 type FakeSession = {
   id: string;
@@ -32,13 +39,13 @@ const createMessage = (
 });
 
 const buildStartMessages = (sessionId: string, input: SessionStartInput) => [
-  createMessage(sessionId, 0, "user", input.prompt),
-  createMessage(sessionId, 1, "assistant", `Fake Agent: completed "${input.prompt}"`),
+  createMessage(sessionId, 0, "user", sanitizePrompt(input.prompt)),
+  createMessage(sessionId, 1, "assistant", `Fake Agent: completed "${sanitizePrompt(input.prompt)}"`),
 ];
 
 const buildResumeMessages = (sessionId: string, input: SessionMessageInput, startIndex: number) => [
-  createMessage(sessionId, startIndex, "user", input.prompt),
-  createMessage(sessionId, startIndex + 1, "assistant", `Fake Agent: follow-up "${input.prompt}"`),
+  createMessage(sessionId, startIndex, "user", sanitizePrompt(input.prompt)),
+  createMessage(sessionId, startIndex + 1, "assistant", `Fake Agent: follow-up "${sanitizePrompt(input.prompt)}"`),
 ];
 
 const pushMessages = (eventStore: EventStore | undefined, startIndex: number, messages: SessionMessage[]) => {
@@ -53,7 +60,7 @@ const pushMessages = (eventStore: EventStore | undefined, startIndex: number, me
   }
 };
 
-const createProcess = (sessionId: string): SpawnedProcess => {
+const createProcess = (sessionId: string, exitDelayMs: number): SpawnedProcess => {
   let timeout: NodeJS.Timeout | null = null;
   const stdin = new PassThrough();
   let done = false;
@@ -62,7 +69,7 @@ const createProcess = (sessionId: string): SpawnedProcess => {
     timeout = setTimeout(() => {
       done = true;
       resolve({ code: 0, signal: null });
-    }, EXIT_DELAY_MS);
+    }, exitDelayMs);
   });
 
   return {
@@ -101,7 +108,7 @@ export const createFakeAgent = (): AgentService => {
 
     return {
       sessionId,
-      process: createProcess(sessionId),
+      process: createProcess(sessionId, resolveExitDelayMs(input.prompt)),
     };
   };
 
@@ -126,7 +133,7 @@ export const createFakeAgent = (): AgentService => {
     pushMessages(eventStore, startIndex, newMessages);
 
     return {
-      process: createProcess(input.sessionId),
+      process: createProcess(input.sessionId, resolveExitDelayMs(input.prompt)),
     };
   };
 

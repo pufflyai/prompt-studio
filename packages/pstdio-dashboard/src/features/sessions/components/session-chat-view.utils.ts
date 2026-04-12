@@ -40,6 +40,7 @@ export const resolveNewSessionWorkspaceId = (input: {
 };
 
 const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
+const INTERRUPTIBLE_STATUSES = new Set(["in_progress", "awaiting_input"]);
 
 // Detects when a session transitions from a terminal state to in_progress
 // while the stream is not already active (external resume by hook/CLI/API).
@@ -51,3 +52,6 @@ export const shouldReconnectForExternalResume = (
   if (!prevStatus || isStreaming) return false;
   return TERMINAL_STATUSES.has(prevStatus) && currentStatus === "in_progress";
 };
+
+export const canInterruptSessionStatus = (status: string | null) =>
+  Boolean(status && INTERRUPTIBLE_STATUSES.has(status));

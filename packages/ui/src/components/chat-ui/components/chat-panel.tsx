@@ -22,6 +22,7 @@ import {
 interface ChatPanelProps {
   messages: SessionMessage[];
   streaming?: boolean;
+  interruptible?: boolean;
   emptyStateTitle: string;
   emptyStateDescription: string;
   emptyStateContent?: ReactNode;
@@ -29,6 +30,7 @@ interface ChatPanelProps {
   chatInputPlaceholder: string;
   chatInputDefaultValue?: string;
   onSubmitMessage?: (text: string, attachments: string[]) => void;
+  onInterruptMessage?: () => void;
   onChatInputChange?: (text: string) => void;
   actions?: ReactNode;
   repoMenu?: ReactNode;
@@ -56,6 +58,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
   const {
     messages,
     streaming = false,
+    interruptible = false,
     emptyStateTitle,
     emptyStateDescription,
     emptyStateContent,
@@ -63,6 +66,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     chatInputPlaceholder,
     chatInputDefaultValue = "",
     onSubmitMessage,
+    onInterruptMessage,
     onChatInputChange,
     actions,
     repoMenu,
@@ -192,7 +196,9 @@ export const ChatPanel = (props: ChatPanelProps) => {
           placeholder={chatInputPlaceholder}
           defaultState={createSerializedPromptState(chatInputDefaultValue)}
           streaming={streaming}
+          interruptible={interruptible}
           onSubmit={onSubmitMessage}
+          onInterrupt={onInterruptMessage}
           onChange={onChatInputChange}
           actions={actions}
           attachedResources={attachedResources}

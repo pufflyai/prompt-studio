@@ -43,6 +43,7 @@ It loads project sessions, groups them by date in the left rail, and renders the
 3. Follow-up prompts must be sent from the chat input for the selected session.
 4. Approval prompts must support approve and deny actions.
 5. The action menu must support downloading the selected session and archiving it.
+6. The chat composer must switch its send button into a stop action while the selected session is interruptible.
 
 ### UX Requirements
 
@@ -53,6 +54,7 @@ It loads project sessions, groups them by date in the left rail, and renders the
 - After sending a follow-up, focus stays in the chat composer.
 - Draft chat input text should persist per session, including the new-session composer.
 - The chat composer should stop growing after a maximum height and become scrollable.
+- The send button should become a stop control only for `in_progress` and `awaiting_input` sessions.
 
 ### Operational Requirements
 
@@ -72,6 +74,8 @@ It loads project sessions, groups them by date in the left rail, and renders the
 9. The "new session" button currently clears the selection; it does not create a session by itself.
 10. Preserve unsent chat drafts independently for each session and for the new-session state while switching layouts.
 11. Keep the chat input area scrollable after it reaches its max height so messages stay visible.
+12. When the selected session status is `in_progress` or `awaiting_input`, replace the composer send button with a stop action that cancels the session in place.
+13. After a successful interrupt, keep the current session route selected and let session status refresh update the indicators to `cancelled`.
 
 ## Interface
 
@@ -88,6 +92,7 @@ It loads project sessions, groups them by date in the left rail, and renders the
 | ------ | -------- |
 | Select session | Opens that session in the chat view. |
 | Send follow-up | Calls the follow-up mutation for the current session. |
+| Interrupt active session | Reuses the composer send button to cancel `in_progress` and `awaiting_input` sessions without leaving the chat route. |
 | Approve / deny | Resolves the current approval request. |
 | Download | Exports the current session as JSON. |
 | Archive | Archives the selected session and returns to the list state. |
@@ -97,6 +102,7 @@ It loads project sessions, groups them by date in the left rail, and renders the
 - The shipped panel is centered on continuing existing sessions.
 - There is no dashboard-native flow yet that persists a brand new session from the empty state.
 - Approval handling only appears when the session stream exposes a pending tool request.
+- Composer interruption is gated strictly to `in_progress` and `awaiting_input` sessions.
 
 ## Errors
 
@@ -107,6 +113,6 @@ It loads project sessions, groups them by date in the left rail, and renders the
 
 ## Verification & Evidence
 
-- **Commands to run**: `sed -n '1,260p' packages/pstdio-dashboard/src/features/sessions/pages/sessions-panel.tsx`
-- **Expected evidence**: Session selection, follow-up messaging, approval handling, download, and archive actions are all present, while new-session creation is not.
-- **Where to find artifacts**: `packages/pstdio-dashboard/src/features/sessions/`
+- **Commands to run**: `bun test packages/pstdio-dashboard/src/features/sessions/components/session-chat-view*.test.ts`, `bun run --cwd packages/e2e src/scripts/run-playwright.ts src/ui/sessions.spec.ts`
+- **Expected evidence**: The composer send button becomes stop for `in_progress` and `awaiting_input` sessions, issues a cancel status update in place, and returns to normal send behavior after interruption.
+- **Where to find artifacts**: `.pstdio/tickets/PS-9/artifacts/`

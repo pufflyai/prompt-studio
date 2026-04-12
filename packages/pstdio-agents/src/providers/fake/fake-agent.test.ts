@@ -60,4 +60,28 @@ describe("createFakeAgent", () => {
 
     resumeStore.close();
   });
+
+  test("keeps hold-open prompts active without exposing the marker in messages", async () => {
+    const eventStore = createEventStore();
+    const agent = createFakeAgent();
+
+    const result = await agent.startSession({
+      prompt: "Interrupt active session [fake-agent:hold-open]",
+      eventStore,
+    });
+
+    const exit = await Promise.race([
+      result.process!.onExit.then(() => "exited"),
+      new Promise((resolve) => setTimeout(() => resolve("pending"), 100)),
+    ]);
+
+    expect(exit).toBe("pending");
+
+    const messages = await agent.getMessages(result.sessionId);
+    expect(messages[0]?.parts).toEqual([{ type: "text", text: "Interrupt active session" }]);
+    expect(messages[1]?.parts).toEqual([{ type: "text", text: 'Fake Agent: completed "Interrupt active session"' }]);
+
+    eventStore.close();
+    result.process?.kill();
+  });
 });

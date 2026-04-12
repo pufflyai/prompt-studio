@@ -10,6 +10,7 @@ interface ChatInputProps {
   onSubmit?: (text: string, attachments: string[]) => void;
   onInterrupt?: () => void;
   streaming?: boolean;
+  interruptible?: boolean;
   attachedResources?: string[];
   onClearAttachments?: () => void;
   isDisabled?: boolean;
@@ -25,6 +26,7 @@ export const ChatInput = (props: ChatInputProps) => {
     onSubmit = () => {},
     onInterrupt,
     streaming = false,
+    interruptible = false,
     attachedResources = [],
     onClearAttachments,
     isDisabled = false,
@@ -80,10 +82,12 @@ export const ChatInput = (props: ChatInputProps) => {
     }
   };
 
+  const isInterruptMode = streaming || interruptible;
+
   const handleSend = () => {
     if (isDisabled) return;
 
-    if (streaming) {
+    if (isInterruptMode) {
       onInterrupt?.();
       return;
     }
@@ -98,7 +102,7 @@ export const ChatInput = (props: ChatInputProps) => {
     onClearAttachments?.();
   };
 
-  const canInterrupt = streaming && Boolean(onInterrupt);
+  const canInterrupt = isInterruptMode && Boolean(onInterrupt);
 
   const placeholderNode = placeholder ? (
     <Text textStyle="label/M/regular" color="fg.subtle" pointerEvents="none" position="absolute" top="0">
@@ -157,9 +161,9 @@ export const ChatInput = (props: ChatInputProps) => {
           <SendButton
             canInterrupt={canInterrupt}
             title={canInterrupt ? "Stop Response" : "Message Sending"}
-            shortcut={streaming ? undefined : "Enter"}
+            shortcut={isInterruptMode ? undefined : "Enter"}
             onClick={handleSend}
-            disabled={(streaming && !canInterrupt) || (!streaming && !text.trim()) || isDisabled}
+            disabled={(isInterruptMode && !canInterrupt) || (!isInterruptMode && !text.trim()) || isDisabled}
           />
         </HStack>
       </Flex>

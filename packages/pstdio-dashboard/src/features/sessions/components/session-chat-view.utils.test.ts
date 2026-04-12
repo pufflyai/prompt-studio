@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import { createPendingFollowUpState } from "./session-chat-state";
 import {
+  canInterruptSessionStatus,
   countCompletedEditActions,
   resolveNewSessionWorkspaceId,
   shouldReconnectForExternalResume,
@@ -57,6 +58,26 @@ describe("session chat view utils", () => {
 
     it("returns false when staying in the same terminal status", () => {
       expect(shouldReconnectForExternalResume("failed", "failed", false)).toBe(false);
+    });
+  });
+
+  describe("canInterruptSessionStatus", () => {
+    it("returns true for in_progress sessions", () => {
+      expect(canInterruptSessionStatus("in_progress")).toBe(true);
+    });
+
+    it("returns true for awaiting_input sessions", () => {
+      expect(canInterruptSessionStatus("awaiting_input")).toBe(true);
+    });
+
+    it("returns false for terminal sessions", () => {
+      expect(canInterruptSessionStatus("completed")).toBe(false);
+      expect(canInterruptSessionStatus("failed")).toBe(false);
+      expect(canInterruptSessionStatus("cancelled")).toBe(false);
+    });
+
+    it("returns false when status is missing", () => {
+      expect(canInterruptSessionStatus(null)).toBe(false);
     });
   });
 

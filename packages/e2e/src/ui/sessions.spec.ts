@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
+const HOLD_OPEN_MARKER = "[fake-agent:hold-open]";
 
 const bypassOnboarding = async (page: import("@playwright/test").Page) => {
   await page.addInitScript(() => {
@@ -29,12 +30,13 @@ const createSessionViaApi = async (
   request: import("@playwright/test").APIRequestContext,
   projectId: string,
   title: string,
+  prompt = title,
 ) => {
   const res = await request.post(`${apiBase}/v1/sessions`, {
     data: {
       project_id: projectId,
       title,
-      prompt: title,
+      prompt,
       agent: "fake",
     },
   });
@@ -44,6 +46,17 @@ const createSessionViaApi = async (
 
 const archiveSessionViaApi = async (request: import("@playwright/test").APIRequestContext, sessionId: string) => {
   const res = await request.post(`${apiBase}/v1/sessions/${sessionId}/archive`);
+  expect(res.ok()).toBe(true);
+};
+
+const updateSessionStatusViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  sessionId: string,
+  status: "in_progress" | "awaiting_input" | "completed" | "failed" | "cancelled",
+) => {
+  const res = await request.patch(`${apiBase}/v1/sessions/${sessionId}/status`, {
+    data: { status },
+  });
   expect(res.ok()).toBe(true);
 };
 
@@ -154,6 +167,61 @@ test.describe("Sessions page", () => {
 
     await page.getByRole("button", { name: "Session actions" }).click();
     await expect(page.getByText("Archive session")).toBeVisible();
+  });
+
+  test("interrupts an active session from the chat composer", async ({ page, request }) => {
+    await bypassOnboarding(page);
+
+    const session = await createSessionViaApi(
+      request,
+      projectId,
+      "Interrupt active session",
+      `Interrupt active session ${HOLD_OPEN_MARKER}`,
+    );
+
+    let stopRequestCount = 0;
+    let stopRequestStatus: string | null = null;
+
+    await page.route(`${apiBase}/v1/sessions/${session.id}/status`, async (route) => {
+      if (route.request().method() === "PATCH") {
+        stopRequestCount += 1;
+        const body = route.request().postDataJSON() as { status?: string };
+        stopRequestStatus = body.status ?? null;
+      }
+
+      await route.continue();
+    });
+
+    await page.goto(`/projects/${projectId}/sessions/${session.id}`);
+
+    const sendButton = page.getByTestId("send-message-button");
+    await expect(sendButton).toHaveAttribute("title", "Stop Response");
+
+    await sendButton.dblclick();
+
+    await expect
+      .poll(() => ({ stopRequestCount, stopRequestStatus }))
+      .toEqual({ stopRequestCount: 1, stopRequestStatus: "cancelled" });
+    await expect(sendButton).toHaveAttribute("title", "Message Sending");
+    await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/sessions/${session.id}$`));
+  });
+
+  test("shows interrupt mode without a working indicator for awaiting_input sessions", async ({ page, request }) => {
+    await bypassOnboarding(page);
+
+    const session = await createSessionViaApi(
+      request,
+      projectId,
+      "Awaiting input session",
+      `Awaiting input session ${HOLD_OPEN_MARKER}`,
+    );
+    await updateSessionStatusViaApi(request, session.id, "awaiting_input");
+
+    await page.goto(`/projects/${projectId}/sessions/${session.id}`);
+
+    const sendButton = page.getByTestId("send-message-button");
+    await expect(sendButton).toHaveAttribute("title", "Stop Response");
+    await expect(page.getByText("Working...")).toHaveCount(0);
   });
 
   test("shows only the 6 most recent sessions in the chat dropdown and navigates to the sessions page", async ({

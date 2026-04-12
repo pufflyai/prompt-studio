@@ -1,5 +1,6 @@
 import { HStack, Stack, Text } from "@chakra-ui/react";
 import { HorizontalMenuStack, PanelLayout } from "@pstdio/ui";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { Archive } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -9,6 +10,7 @@ import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin
 import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
 import { SessionChatView } from "../components/session-chat-view";
 import { SessionsSidebar } from "../components/sessions-sidebar";
+import { getSession } from "../data/api";
 import { useArchiveSession } from "../hooks/use-archive-session";
 import { useProjectSessions } from "../hooks/use-project-sessions";
 import { getVisibleSessions } from "../utils/visible-sessions";
@@ -20,6 +22,11 @@ export const SessionsPanel = () => {
   const selectedSessionId = typeof sessionId === "string" ? sessionId : null;
 
   const { data: sessions = [] } = useProjectSessions(projectId);
+  const { data: selectedSessionSnapshot } = useQuery({
+    queryKey: ["session", selectedSessionId],
+    queryFn: () => getSession(selectedSessionId!),
+    enabled: Boolean(selectedSessionId),
+  });
   const visibleSessions = getVisibleSessions(sessions);
   const archiveSession = useArchiveSession();
   const selectedSession = visibleSessions.find((item) => item.id === selectedSessionId) ?? null;
@@ -90,7 +97,11 @@ export const SessionsPanel = () => {
 
         <Stack flex="1" minH="0" px="sm" pb="sm" align="flex-start">
           <Stack flex="1" minH="0" w="full" maxW="52rem">
-            <SessionChatView sessionId={selectedSessionId} onSessionCreated={handleSelectSession} />
+            <SessionChatView
+              sessionId={selectedSessionId}
+              sessionStatus={selectedSessionSnapshot?.status ?? selectedSession?.status ?? null}
+              onSessionCreated={handleSelectSession}
+            />
           </Stack>
         </Stack>
       </Stack>
