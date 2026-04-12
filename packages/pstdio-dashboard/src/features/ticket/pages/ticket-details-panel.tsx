@@ -19,6 +19,7 @@ import {
 } from "@/features/ticket-list/hooks/use-project-tickets";
 import { useAttemptStatusMap } from "@/features/workspaces/hooks/use-attempt-status-map";
 import { useWorkspaceSessions } from "@/features/workspaces/hooks/use-workspace-sessions";
+import { resolveWorkspaceSelection } from "@/features/workspaces/utils/workspace-selection";
 import { TicketDetailSidebar } from "../components/ticket-detail-sidebar";
 import { TicketHeader } from "../components/ticket-header";
 import { TicketSidebar } from "../components/ticket-sidebar";
@@ -63,6 +64,7 @@ export const TicketDetailsPanel = () => {
   const projectSettingsStore = useProjectSettingsStoreApi();
   const setSessionModalState = useProjectSettingsStore((state) => state.setSessionModalState);
   const setSelectedSessionId = useProjectSettingsStore((state) => state.setSelectedSessionId);
+  const sessionModalState = useProjectSettingsStore((state) => state.sessionModalState);
 
   const { data: project } = useProject(projectId);
   const { data: allTickets, isLoading: isTicketsLoading } = useProjectTickets(projectId);
@@ -171,9 +173,28 @@ export const TicketDetailsPanel = () => {
   const handleSelectWorkspace = (workspaceShorthand: string) => {
     if (!projectId) return;
 
+    const workspace = workspaces.find((item) => item.shorthand === workspaceShorthand);
+    const workspaceSessionsList = workspace ? (sessionsByWorkspaceId.get(workspace.id) ?? []) : [];
+    const selection = resolveWorkspaceSelection({
+      sessions: workspaceSessionsList,
+    });
+
     navigate({
       to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
       params: { projectId, ticketShorthand: ticket.shorthand, workspaceShorthand },
+      search: selection.search,
+    });
+
+    if (selection.shouldClearSelection) {
+      setSelectedSessionId(null);
+      return;
+    }
+
+    openTicketSessionBubble({
+      sessionId: selection.sessionIdToOpen,
+      sessionModalState,
+      setSessionModalState,
+      setSelectedSessionId,
     });
   };
 

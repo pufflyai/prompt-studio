@@ -2,7 +2,7 @@ import { Flex, Stack, Text } from "@chakra-ui/react";
 import { Breadcrumb, HorizontalMenuStack, PanelLayout } from "@pstdio/ui";
 import { Link, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { KanbanSquare } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
 import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin-header-actions";
@@ -27,6 +27,8 @@ import type { WorkspaceListItem } from "../components/workspace-list-panel";
 import { useAttemptStatusMap } from "../hooks/use-attempt-status-map";
 import { useWorkspaceSessions } from "../hooks/use-workspace-sessions";
 import { resolveActiveWorkspaceSessionId } from "../utils/selected-workspace-session";
+import { resolveWorkspaceSelection } from "../utils/workspace-selection";
+import { resolveWorkspacePageAutoOpenSession } from "./workspace-page-auto-open-session";
 import { resolveWorkspacePageSessionSearch } from "./workspace-page-session-search";
 
 const buildWorkspaceListItems = (
@@ -236,6 +238,7 @@ export const WorkspacePage = () => {
   const projectSettingsStore = useProjectSettingsStoreApi();
   const setSessionModalState = useProjectSettingsStore((state) => state.setSessionModalState);
   const setSelectedSessionId = useProjectSettingsStore((state) => state.setSelectedSessionId);
+  const lastAutoOpenedRouteKeyRef = useRef<string | null>(null);
 
   const { data: project } = useProject(projectId);
   const { data: allTickets = [] } = useProjectTickets(projectId);
@@ -276,6 +279,38 @@ export const WorkspacePage = () => {
     });
   }, [activeSessionId, navigate, projectId, sessionId, ticketShorthand, workspaceSessions.isReady, workspaceShorthand]);
 
+  useEffect(() => {
+    const autoOpenRouteKey = sessionId
+      ? null
+      : `${projectId ?? ""}:${ticketShorthand ?? ""}:${workspaceShorthand ?? ""}`;
+    const sessionIdToOpen = resolveWorkspacePageAutoOpenSession({
+      isWorkspaceSessionsReady: workspaceSessions.isReady,
+      requestedSessionId: sessionId,
+      activeSessionId,
+      hasAutoOpenedSession: autoOpenRouteKey === lastAutoOpenedRouteKeyRef.current,
+    });
+    if (!sessionIdToOpen) return;
+
+    lastAutoOpenedRouteKeyRef.current = autoOpenRouteKey;
+
+    openTicketSessionBubble({
+      sessionId: sessionIdToOpen,
+      sessionModalState: projectSettingsStore.getState().sessionModalState,
+      setSessionModalState,
+      setSelectedSessionId,
+    });
+  }, [
+    activeSessionId,
+    projectId,
+    projectSettingsStore,
+    sessionId,
+    setSelectedSessionId,
+    setSessionModalState,
+    ticketShorthand,
+    workspaceSessions.isReady,
+    workspaceShorthand,
+  ]);
+
   const pluginActionTrigger = usePluginActionTrigger({
     projectId,
     targetType: "workspace",
@@ -302,12 +337,26 @@ export const WorkspacePage = () => {
 
     const nextWorkspace = workspaces.find((workspace) => workspace.shorthand === nextWorkspaceShorthand);
     const nextWorkspaceSessions = nextWorkspace ? (sessionsByWorkspaceId.get(nextWorkspace.id) ?? []) : [];
-    const nextSessionId = resolveActiveWorkspaceSessionId(nextWorkspaceSessions, undefined);
+    const selection = resolveWorkspaceSelection({
+      sessions: nextWorkspaceSessions,
+    });
 
     navigate({
       to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
       params: { projectId, ticketShorthand, workspaceShorthand: nextWorkspaceShorthand },
-      search: nextSessionId ? { sessionId: nextSessionId } : {},
+      search: selection.search,
+    });
+
+    if (selection.shouldClearSelection) {
+      setSelectedSessionId(null);
+      return;
+    }
+
+    openTicketSessionBubble({
+      sessionId: selection.sessionIdToOpen,
+      sessionModalState: projectSettingsStore.getState().sessionModalState,
+      setSessionModalState,
+      setSelectedSessionId,
     });
   };
 
