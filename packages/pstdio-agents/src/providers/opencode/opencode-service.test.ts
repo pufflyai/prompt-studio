@@ -29,7 +29,37 @@ afterEach(() => {
 describe("request timeouts", () => {
   const noopServerStore = { read: async () => null, write: async () => {}, clear: async () => {} };
 
-  test("GET timeout retries through withServerUrl attach path", async () => {
+  test("POST timeout on cached URL does not retry the request", async () => {
+    let postCalls = 0;
+    const service = createOpencodeService({
+      startServer: async () => "http://127.0.0.1:4900",
+      serverStore: { read: async () => "http://127.0.0.1:4900", write: async () => {}, clear: async () => {} },
+      isPortOpen: async () => true,
+      pingServer: async () => true,
+      fetcher: async (input, init) => {
+        const url = String(input);
+        const method = init?.method ?? "GET";
+
+        if (method === "POST" && url.includes("/session/session-1/message")) {
+          postCalls++;
+          throw new DOMException("The operation was aborted", "AbortError");
+        }
+
+        throw new Error(`Unexpected: ${method} ${url}`);
+      },
+    });
+
+    const { messageComplete } = service.sendSessionMessage({
+      sessionId: "session-1",
+      prompt: "hello",
+      cwd: "/repo",
+    });
+
+    await expect(messageComplete).rejects.toBeInstanceOf(DOMException);
+    expect(postCalls).toBe(1);
+  });
+
+  test("connection failure on cached URL retries with a fresh server", async () => {
     let getCalls = 0;
     const service = createOpencodeService({
       startServer: async () => "http://127.0.0.1:4900",
@@ -43,7 +73,7 @@ describe("request timeouts", () => {
         if (method === "GET" && url.includes("/session/")) {
           getCalls++;
           if (getCalls <= 1) {
-            throw new DOMException("The operation was aborted", "AbortError");
+            throw new TypeError("fetch failed");
           }
           return new Response(JSON.stringify([]));
         }
@@ -52,7 +82,6 @@ describe("request timeouts", () => {
       },
     });
 
-    // First call fails (AbortError), withServerUrl retries with fresh server
     const messages = await service.getSessionMessages("session-1", "/repo");
     expect(messages).toEqual([]);
     expect(getCalls).toBe(2);

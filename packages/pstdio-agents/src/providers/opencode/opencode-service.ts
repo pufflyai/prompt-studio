@@ -95,6 +95,29 @@ const POST_TIMEOUT_MS = 300_000;
 export const isTransportTimeout = (error: unknown) =>
   error instanceof DOMException && (error.name === "AbortError" || error.name === "TimeoutError");
 
+// True when the error looks like the cached server URL is unreachable
+// (connection refused, DNS failure, socket reset). These are safe to retry
+// after rediscovering the server. Transport timeouts and HTTP-level errors
+// are NOT connection errors — retrying them risks duplicating non-idempotent
+// POSTs that may already be in flight on the server.
+const isConnectionError = (error: unknown) => {
+  if (isTransportTimeout(error)) return false;
+  if (!(error instanceof Error)) return false;
+
+  const message = error.message.toLowerCase();
+  if (message.includes("fetch failed")) return true;
+  if (message.includes("econnrefused")) return true;
+  if (message.includes("econnreset")) return true;
+
+  const cause = (error as { cause?: unknown }).cause;
+  if (cause && typeof cause === "object") {
+    const code = (cause as { code?: unknown }).code;
+    if (code === "ECONNREFUSED" || code === "ECONNRESET" || code === "ENOTFOUND") return true;
+  }
+
+  return false;
+};
+
 const requestJson = async <T>(
   fetcher: OpencodeFetcher,
   url: string,
@@ -408,6 +431,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
       return await action(attachInfo.url);
     } catch (error) {
       if (attachInfo.started) throw error;
+      if (!isConnectionError(error)) throw error;
 
       await deps.serverStore.clear();
       cachedServerUrl = null;
