@@ -231,6 +231,7 @@
     "selectSession": "Sélectionnez une session dans la barre latérale ou démarrez-en une nouvelle.",
     "followUpPlaceholder": "Envoyer un message de suivi...",
     "downloadSessionJson": "Télécharger le JSON de la session",
+    "stopSession": "Arrêter la session",
     "archiveSession": "Archiver la session",
     "sessionActions": "Actions de session"
   }

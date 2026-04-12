@@ -1,17 +1,18 @@
 import { HStack, Stack, Text } from "@chakra-ui/react";
 import { HorizontalMenuStack, PanelLayout } from "@pstdio/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { Archive } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
-import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
 import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin-header-actions";
 import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
 import { SessionChatView } from "../components/session-chat-view";
 import { SessionsSidebar } from "../components/sessions-sidebar";
 import { useArchiveSession } from "../hooks/use-archive-session";
 import { useProjectSessions } from "../hooks/use-project-sessions";
+import { useSession } from "../hooks/use-session";
+import { useStopSession } from "../hooks/use-stop-session";
 import { getVisibleSessions } from "../utils/visible-sessions";
+import { buildSessionOverflowActions } from "./sessions-panel-actions";
 
 export const SessionsPanel = () => {
   const { t } = useTranslation("projects");
@@ -22,7 +23,11 @@ export const SessionsPanel = () => {
   const { data: sessions = [] } = useProjectSessions(projectId);
   const visibleSessions = getVisibleSessions(sessions);
   const archiveSession = useArchiveSession();
+  const stopSession = useStopSession();
+  const { data: selectedSessionDetails } = useSession(selectedSessionId);
   const selectedSession = visibleSessions.find((item) => item.id === selectedSessionId) ?? null;
+  const selectedSessionStatus = selectedSessionDetails?.status ?? null;
+  const isSelectedSessionArchived = selectedSessionDetails?.archived ?? null;
 
   const pluginActionTrigger = usePluginActionTrigger({
     projectId,
@@ -41,20 +46,22 @@ export const SessionsPanel = () => {
     navigate({ to: `/projects/${projectId}/sessions` });
   };
 
-  const defaultOverflowActions: HeaderActionItem[] = selectedSessionId
-    ? [
-        {
-          key: "archive-session",
-          label: t("sessions.archiveSession"),
-          kind: "default",
-          icon: Archive,
-          onClick: () => {
-            archiveSession.mutate(selectedSessionId);
-            navigate({ to: `/projects/${projectId}/sessions` });
-          },
-        },
-      ]
-    : [];
+  const defaultOverflowActions = buildSessionOverflowActions({
+    selectedSessionId,
+    selectedSessionStatus,
+    isSelectedSessionArchived,
+    labels: {
+      stopSession: t("sessions.stopSession"),
+      archiveSession: t("sessions.archiveSession"),
+    },
+    onStopSession: (nextSessionId) => {
+      stopSession.mutate(nextSessionId);
+    },
+    onArchiveSession: (nextSessionId) => {
+      archiveSession.mutate(nextSessionId);
+      navigate({ to: `/projects/${projectId}/sessions` });
+    },
+  });
 
   const sidebar = (
     <SessionsSidebar

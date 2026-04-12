@@ -226,6 +226,7 @@
     "selectSession": "사이드바에서 세션을 선택하거나 새 세션을 시작하세요.",
     "followUpPlaceholder": "후속 메시지 보내기...",
     "downloadSessionJson": "세션 JSON 다운로드",
+    "stopSession": "세션 중지",
     "archiveSession": "세션 보관",
     "sessionActions": "세션 작업"
   }

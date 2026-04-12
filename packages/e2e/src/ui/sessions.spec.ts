@@ -47,6 +47,23 @@ const archiveSessionViaApi = async (request: import("@playwright/test").APIReque
   expect(res.ok()).toBe(true);
 };
 
+const updateSessionStatusViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  sessionId: string,
+  status: "in_progress" | "awaiting_input" | "completed" | "failed" | "cancelled",
+) => {
+  const res = await request.patch(`${apiBase}/v1/sessions/${sessionId}/status`, {
+    data: { status },
+  });
+  expect(res.ok()).toBe(true);
+};
+
+const getSessionViaApi = async (request: import("@playwright/test").APIRequestContext, sessionId: string) => {
+  const res = await request.get(`${apiBase}/v1/sessions/${sessionId}`);
+  expect(res.ok()).toBe(true);
+  return (await res.json()) as { id: string; status: string; archived: boolean };
+};
+
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
   const res = await request.get(`${apiBase}/v1/projects`);
   expect(res.ok()).toBe(true);
@@ -144,16 +161,48 @@ test.describe("Sessions page", () => {
     await expect(header.first()).toBeVisible();
   });
 
-  test("shows action menu with archive option", async ({ page, request }) => {
+  test("shows stop action for active sessions and cancels the session", async ({ page, request }) => {
     await bypassOnboarding(page);
 
-    await createSessionViaApi(request, projectId, "Action menu test");
+    const session = await createSessionViaApi(request, projectId, "Action menu test");
+
+    await expect
+      .poll(async () => {
+        const next = await getSessionViaApi(request, session.id);
+        return next.status;
+      })
+      .toBe("completed");
+
+    await updateSessionStatusViaApi(request, session.id, "awaiting_input");
 
     await page.goto(`/projects/${projectId}/sessions`);
-    await page.getByText("Action menu test").click();
+    await page.getByRole("option", { name: "Action menu test" }).click();
+
+    const stopResponsePromise = page.waitForResponse(
+      (response) =>
+        response.url().includes(`/v1/sessions/${session.id}/status`) && response.request().method() === "PATCH",
+    );
 
     await page.getByRole("button", { name: "Session actions" }).click();
+    await expect(page.getByText("Stop session")).toBeVisible();
     await expect(page.getByText("Archive session")).toBeVisible();
+
+    await page.getByText("Stop session").click();
+
+    const stopResponse = await stopResponsePromise;
+    expect(stopResponse.ok()).toBe(true);
+    expect(stopResponse.request().postDataJSON()).toEqual({ status: "cancelled" });
+
+    await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/sessions/${session.id}$`));
+    await expect
+      .poll(async () => {
+        const next = await getSessionViaApi(request, session.id);
+        return next.status;
+      })
+      .toBe("cancelled");
+
+    await page.getByRole("button", { name: "Session actions" }).click();
+    await expect(page.getByText("Stop session")).toHaveCount(0);
   });
 
   test("shows only the 6 most recent sessions in the chat dropdown and navigates to the sessions page", async ({

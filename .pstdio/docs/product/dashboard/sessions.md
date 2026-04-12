@@ -42,7 +42,7 @@ It loads project sessions, groups them by date in the left rail, and renders the
 2. The selected session must stream live updates into the chat view.
 3. Follow-up prompts must be sent from the chat input for the selected session.
 4. Approval prompts must support approve and deny actions.
-5. The action menu must support downloading the selected session and archiving it.
+5. The action menu must support downloading the selected session, stopping active sessions, and archiving it.
 
 ### UX Requirements
 
@@ -90,6 +90,7 @@ It loads project sessions, groups them by date in the left rail, and renders the
 | Send follow-up | Calls the follow-up mutation for the current session. |
 | Approve / deny | Resolves the current approval request. |
 | Download | Exports the current session as JSON. |
+| Stop | Shown only for `in_progress` or `awaiting_input`; patches status to `cancelled` and stays on the current session route. |
 | Archive | Archives the selected session and returns to the list state. |
 
 ## Rules & Constraints
@@ -97,6 +98,7 @@ It loads project sessions, groups them by date in the left rail, and renders the
 - The shipped panel is centered on continuing existing sessions.
 - There is no dashboard-native flow yet that persists a brand new session from the empty state.
 - Approval handling only appears when the session stream exposes a pending tool request.
+- Stop is hidden for terminal sessions (`completed`, `failed`, `cancelled`).
 
 ## Errors
 
@@ -107,6 +109,6 @@ It loads project sessions, groups them by date in the left rail, and renders the
 
 ## Verification & Evidence
 
-- **Commands to run**: `sed -n '1,260p' packages/pstdio-dashboard/src/features/sessions/pages/sessions-panel.tsx`
-- **Expected evidence**: Session selection, follow-up messaging, approval handling, download, and archive actions are all present, while new-session creation is not.
+- **Commands to run**: `sed -n '1,260p' packages/pstdio-dashboard/src/features/sessions/pages/sessions-panel.tsx`, `sed -n '1,220p' packages/pstdio-dashboard/src/features/sessions/pages/sessions-panel-actions.ts`
+- **Expected evidence**: Session selection, follow-up messaging, approval handling, download/archive actions, and active-session stop action are present, while new-session creation is not.
 - **Where to find artifacts**: `packages/pstdio-dashboard/src/features/sessions/`

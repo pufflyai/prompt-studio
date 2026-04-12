@@ -226,6 +226,7 @@
     "selectSession": "サイドバーからセッションを選択するか、新しいセッションを開始してください。",
     "followUpPlaceholder": "フォローアップメッセージを送信...",
     "downloadSessionJson": "セッションJSONをダウンロード",
+    "stopSession": "セッションを停止",
     "archiveSession": "セッションをアーカイブ",
     "sessionActions": "セッション操作"
   }
