@@ -118,7 +118,12 @@ export type AgentModel = {
   id: string;
 };
 
-export type AgentCapability = "SessionFork" | "ContextUsage" | "Approvals";
+export type AgentCapability = "SessionFork" | "ContextUsage" | "Approvals" | "SessionReattach";
+
+export type SessionReattachInput = {
+  sessionId: string;
+  cwd?: string;
+};
 
 // --- Session Management ---
 
@@ -225,6 +230,7 @@ export type AgentService = {
     eventStore: EventStore,
     approvalService?: ApprovalService,
   ): Promise<ResumeResult>;
+  reattachSession?(input: SessionReattachInput, eventStore: EventStore): Promise<ResumeResult>;
   getMessages(sessionId: string, input?: SessionMessagesInput): Promise<SessionMessage[]>;
 
   // session management

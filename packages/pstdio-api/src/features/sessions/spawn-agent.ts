@@ -198,6 +198,32 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
   return result;
 };
 
+type ReattachInput = {
+  sessionId: string;
+  agentSessionId: string;
+  agentId: string;
+  cwd?: string;
+};
+
+// Reattaches to an existing opencode session that was orphaned (e.g. by a server restart)
+export const reattachAgentSession = async (input: ReattachInput, deps: SpawnDeps) => {
+  const agent = deps.agentRegistry.get(input.agentId as AgentId);
+  if (!agent?.reattachSession) throw new Error(`Agent does not support reattach: ${input.agentId}`);
+
+  const entry = deps.sessionService.store.create(input.sessionId, (request: ApprovalRequest) => {
+    entry.eventStore.push({ op: "add", path: "/approval_request", value: request });
+  });
+
+  const result = await agent.reattachSession({ sessionId: input.agentSessionId, cwd: input.cwd }, entry.eventStore);
+
+  if (result.process) {
+    deps.sessionService.store.setProcess(input.sessionId, result.process);
+    trackProcessLifecycle(input.sessionId, result.process, entry.eventStore.subscribe(), deps);
+  }
+
+  return result;
+};
+
 const trackProcessLifecycle = (
   sessionId: string,
   process: Pick<SpawnedProcess, "kill" | "onExit" | "timeoutStrategy">,

@@ -8,7 +8,7 @@ Session status has one authoritative path: DB → SSE sync → UI badges. The se
 graph TD
     subgraph "pstdio-api"
         BOOT["Server boot"] --> SWEEP["resolveOrphanedSessions()"]
-        SWEEP -- "query agent → completed / failed" --> UPDATE
+        SWEEP -- "reattach or disconnected" --> UPDATE
         CREATE["create / follow-up"] --> UPDATE["sessionsService.updateStatus()"]
         EXIT["trackProcessExit"] --> UPDATE
         UPDATE --> DB[(DB)]
@@ -58,13 +58,15 @@ Components on this path: `SessionChatView` (messages and streaming indicator onl
 ```
 create / follow-up ──► in_progress
                            │
-              ┌────────────┼────────────┬────────────┐
-              ▼            ▼            ▼            ▼
-       awaiting_input  completed     failed      cancelled
-              │
-              ▼
-        in_progress (on approval)
+              ┌────────────┼────────────┬────────────┬────────────┐
+              ▼            ▼            ▼            ▼            ▼
+       awaiting_input  completed     failed      cancelled   disconnected
+              │                                                    │
+              ▼                                                    ▼
+        in_progress (on approval)                         in_progress (on follow-up)
 ```
+
+`disconnected` means the server lost the live process handle (timeout or restart) and could not reattach. The agent session still exists on the provider side; a follow-up sent by the user spawns a fresh resume and transitions the session back to `in_progress`.
 
 ### Who writes status
 
@@ -75,8 +77,10 @@ create / follow-up ──► in_progress
 | Approval granted       | `in_progress`          | `approveSessionHandler`                   |
 | Process exit code 0    | `completed`            | `trackProcessExit`                        |
 | Process exit code != 0 | `failed`               | `trackProcessExit`                        |
+| Process activity timeout | `disconnected`       | `trackProcessExit`                        |
 | User stop              | `cancelled`            | `stopSessionHandler`                      |
-| Stale recovery         | `completed` / `failed` | `resolveOrphanedSessions` (startup sweep) |
+| Stale recovery (reattach) | stays `in_progress` | `resolveOrphanedSessions` (startup sweep) |
+| Stale recovery (no reattach) | `disconnected`   | `resolveOrphanedSessions` (startup sweep) |
 
 ### Multi-path status updates
 
@@ -126,16 +130,19 @@ For each session:
      no (process handle lost)
      │
      ▼
-  Query agent: agent.getMessages(agent_session_id)
+  Agent advertises SessionReattach
+  and session has agent_session_id?
      │
-     ├── has messages ──► "completed"
-     └── no messages / unreachable ──► "failed"
+     ├── yes ──► agent.reattachSession() → re-subscribe to the agent's
+     │            message stream; session stays "in_progress" and
+     │            transitions naturally via trackProcessLifecycle.
      │
-     ▼
-  Update DB + emit sync event
+     └── no / reattach throws ──► "disconnected"
 ```
 
-The agent is the external source of truth that survives server restarts. If it has messages, the session completed. If not (or if unreachable), it failed.
+Reattach is agent-specific. OpenCode supports it: the opencode server is a long-lived process holding the canonical message history, so the pstdio server can re-poll `getSessionMessages` and exit the poll loop when the trailing assistant message has `info.time.completed` set. Claude Code does not — the child process dies with the pstdio server and there is nothing to reattach to.
+
+A session in `disconnected` is not a dead end. The agent session still exists on the provider; a user follow-up spawns a fresh `resumeSession` and returns the session to `in_progress`.
 
 ### Structure
 
@@ -157,4 +164,4 @@ Each feature owns its startup logic. `createApp` makes one call. New tasks are o
 2. **Status writes always go through `sessionsService.updateStatus()` + `eventBus.emit()`.** Both calls are required — the DB update alone is invisible to clients until the next full sync.
 3. **Event stores are ephemeral.** Any logic that depends on an active `SessionStore` entry must handle the case where the entry is gone.
 4. **Stale recovery runs on startup.** Orphaned `in_progress` sessions are resolved proactively when the server boots, not lazily when a client opens a stream.
-5. **The agent is the recovery authority.** When local state is lost, query the agent to determine the session outcome.
+5. **Reattach before disconnecting.** If the agent advertises `SessionReattach` and the session has an `agent_session_id`, `resolveOrphanedSessions` re-subscribes to the agent's live state. Only fall back to `disconnected` when reattach is unavailable or fails.

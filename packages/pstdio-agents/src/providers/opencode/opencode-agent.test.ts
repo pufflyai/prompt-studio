@@ -47,7 +47,7 @@ describe("createOpencodeAgent", () => {
   test("reports capabilities", () => {
     const a = agent();
 
-    expect(a.capabilities()).toEqual(["SessionFork", "ContextUsage"]);
+    expect(a.capabilities()).toEqual(["SessionFork", "ContextUsage", "SessionReattach"]);
   });
 });
 
@@ -387,5 +387,78 @@ describe("resumeSession", () => {
       errorType: "permission",
       message: "OpenCode session.prompt failed: HTTP 403 permission denied",
     });
+  });
+});
+
+// --- reattachSession ---
+
+describe("reattachSession", () => {
+  test("polls until trailing assistant message has time.completed", async () => {
+    let getCalls = 0;
+    const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+
+      if (method === "GET" && url.match(/\/session\/[^/]+\/message/)) {
+        getCalls += 1;
+        // First two responses: turn in flight (no time.completed on tail)
+        // Third response: completed
+        const completed = getCalls >= 3;
+        const messages = [
+          {
+            info: { id: "m-user", role: "user", time: { created: 1, completed: 2 } },
+            parts: [{ type: "text", text: "hi" }],
+          },
+          {
+            info: {
+              id: "m-asst",
+              role: "assistant",
+              time: completed ? { created: 3, completed: 4 } : { created: 3 },
+            },
+            parts: [{ type: "text", text: completed ? "done" : "working..." }],
+          },
+        ];
+        return new Response(JSON.stringify(messages));
+      }
+
+      return new Response("{}", { status: 404 });
+    };
+
+    const a = createOpencodeAgent(agentDefaults(), { ...serviceOverrides(), fetcher });
+    const eventStore = createEventStore();
+
+    const result = await a.reattachSession!({ sessionId: "oc-1", cwd: "/test" }, eventStore);
+    expect(result.process).toBeDefined();
+    expect(result.process!.timeoutStrategy).toBe("provider");
+
+    const exit = await result.process!.onExit;
+    expect(exit.code).toBe(0);
+
+    const history = eventStore.getHistory();
+    const statusPatches = history.filter((p: JsonPatch) => p.path === "/status");
+    expect(statusPatches.at(-1)?.value).toBe("completed");
+
+    const messagePatches = history.filter((p: JsonPatch) => p.path === "/messages");
+    const last = messagePatches.at(-1)?.value as SessionMessage[];
+    expect(last.at(-1)?.parts[0]).toMatchObject({ type: "text", text: "done" });
+  });
+
+  test("exits immediately when no trailing assistant message", async () => {
+    const fetcher = async () => new Response(JSON.stringify([]));
+    const a = createOpencodeAgent(agentDefaults(), { ...serviceOverrides(), fetcher });
+    const eventStore = createEventStore();
+
+    const result = await a.reattachSession!({ sessionId: "oc-1", cwd: "/test" }, eventStore);
+    const exit = await result.process!.onExit;
+    expect(exit.code).toBe(0);
+
+    const history = eventStore.getHistory();
+    const statusPatches = history.filter((p: JsonPatch) => p.path === "/status");
+    expect(statusPatches.at(-1)?.value).toBe("completed");
+  });
+
+  test("advertises SessionReattach capability", () => {
+    const a = agent();
+    expect(a.capabilities()).toContain("SessionReattach");
   });
 });

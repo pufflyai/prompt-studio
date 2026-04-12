@@ -237,6 +237,110 @@ describe("resolveOrphanedSessions resolution", () => {
     expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "disconnected");
   });
 
+  test("reattaches orphan when agent advertises SessionReattach", async () => {
+    const staleSession = {
+      id: "session-reattach",
+      agent: "opencode",
+      agent_session_id: "oc-xyz",
+      cwd: "/work",
+      project_id: "p1",
+    };
+    const reattachSession = mock(async () => ({
+      process: {
+        sessionId: "oc-xyz",
+        stdin: { write: () => {}, end: () => {} } as unknown,
+        kill: () => {},
+        onExit: new Promise(() => {}),
+        timeoutStrategy: "provider" as const,
+      },
+    }));
+    const transitionStatus = mock(async () => ({ ...staleSession, status: "disconnected" }));
+    const storeCreate = mock(() => ({
+      eventStore: {
+        push: () => {},
+        subscribe: () => ({ [Symbol.asyncIterator]: () => ({ next: async () => ({ done: true }) }) }),
+      },
+    }));
+
+    const deps = {
+      repoService: {},
+      agentRegistry: {
+        get: () => ({
+          reattachSession,
+          capabilities: () => ["SessionReattach"],
+        }),
+      },
+      eventBus: { emit: () => {} },
+      workspaceSessionService: { getWorkspaceBySessionId: async () => null },
+      sessionService: {
+        store: {
+          get: () => undefined,
+          create: storeCreate,
+          setProcess: () => {},
+          remove: () => {},
+        },
+        listByStatus: async () => [staleSession],
+        transitionStatus,
+      },
+      db: {},
+    } as unknown as Parameters<typeof resolveOrphanedSessions>[0];
+
+    await resolveOrphanedSessions(deps);
+
+    expect(reattachSession).toHaveBeenCalledTimes(1);
+    expect(reattachSession).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionId: "oc-xyz", cwd: "/work" }),
+      expect.anything(),
+    );
+    expect(transitionStatus).not.toHaveBeenCalled();
+  });
+
+  test("falls back to disconnected when reattach throws", async () => {
+    const staleSession = {
+      id: "session-reattach-fail",
+      agent: "opencode",
+      agent_session_id: "oc-err",
+      cwd: "/work",
+      project_id: "p1",
+    };
+    const transitionStatus = mock(async () => ({ ...staleSession, status: "disconnected" }));
+    const storeCreate = mock(() => ({
+      eventStore: {
+        push: () => {},
+        subscribe: () => ({ [Symbol.asyncIterator]: () => ({ next: async () => ({ done: true }) }) }),
+      },
+    }));
+
+    const deps = {
+      repoService: {},
+      agentRegistry: {
+        get: () => ({
+          reattachSession: async () => {
+            throw new Error("opencode unreachable");
+          },
+          capabilities: () => ["SessionReattach"],
+        }),
+      },
+      eventBus: { emit: () => {} },
+      workspaceSessionService: { getWorkspaceBySessionId: async () => null },
+      sessionService: {
+        store: {
+          get: () => undefined,
+          create: storeCreate,
+          setProcess: () => {},
+          remove: () => {},
+        },
+        listByStatus: async () => [staleSession],
+        transitionStatus,
+      },
+      db: {},
+    } as unknown as Parameters<typeof resolveOrphanedSessions>[0];
+
+    await resolveOrphanedSessions(deps);
+
+    expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "disconnected");
+  });
+
   test("message lookup failure does not imply failed", async () => {
     const staleSession = {
       id: "session-fetch-error",
