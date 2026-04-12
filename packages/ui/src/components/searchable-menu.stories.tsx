@@ -1,6 +1,8 @@
-import { Box, Button, HStack, Text } from "@chakra-ui/react";
+import { Box, Button } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { FolderGit2, GitBranch, GitCommitHorizontal } from "lucide-react";
+import { FolderGit2, GitBranch } from "lucide-react";
+import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import { MenuItem } from "./menu-item";
 import { SearchableMenu } from "./searchable-menu";
 
@@ -13,6 +15,18 @@ const branchItems = Array.from({ length: 18 }, (_, index) => {
     searchText: `origin/${branchName}`,
     icon: GitBranch,
     isSelected: branchName === "main",
+  };
+});
+
+const repositoryItems = Array.from({ length: 12 }, (_, index) => {
+  const repoName = index === 0 ? "prompt-studio" : `repo-browser-${index}`;
+
+  return {
+    id: repoName,
+    label: repoName,
+    searchText: `/repos/${repoName}`,
+    icon: FolderGit2,
+    isSelected: false,
   };
 });
 
@@ -41,19 +55,84 @@ export const BranchSelector: Story = {
       trigger={<Button variant="outline">Select branch</Button>}
       items={branchItems}
       searchPlaceholder="Search branches…"
-      header={
-        <HStack justify="space-between" alignItems="center" px="sm" py="xs">
-          <HStack gap="xs" color="fg.muted">
-            <FolderGit2 size={14} />
-            <Text textStyle="label/XS/medium">prompt-studio</Text>
-          </HStack>
-          <GitCommitHorizontal size={14} />
-        </HStack>
-      }
       emptyState={<MenuItem primaryLabel="No branches found" leftIcon={GitBranch} isDisabled />}
-      renderItem={(item) => (
-        <MenuItem id={item.id} primaryLabel={item.label} leftIcon={item.icon} isSelected={item.isSelected} />
-      )}
+    />
+  ),
+};
+
+export const SwitchableLists: Story = {
+  render: () => {
+    const [selectedBranch, setSelectedBranch] = useState("main");
+    const [selectedRepository, setSelectedRepository] = useState("prompt-studio");
+    const repositoryLabel = repositoryItems.find((item) => item.id === selectedRepository)?.label ?? selectedRepository;
+
+    return (
+      <SearchableMenu
+        trigger={<Button variant="outline">Switchable menu</Button>}
+        items={branchItems.map((item) => ({
+          ...item,
+          isSelected: item.id === selectedBranch,
+          onSelect: () => setSelectedBranch(item.id),
+        }))}
+        searchPlaceholder="Search branches…"
+        portalled={false}
+        emptyState={<MenuItem primaryLabel="No branches found" leftIcon={GitBranch} isDisabled />}
+        parentList={{
+          items: repositoryItems.map((item) => ({
+            ...item,
+            isSelected: item.id === selectedRepository,
+          })),
+          selectedLabel: repositoryLabel,
+          selectedIcon: FolderGit2,
+          ariaLabel: "Toggle list",
+          showSearch: true,
+          searchPlaceholder: "Search repositories…",
+          emptyState: <MenuItem primaryLabel="No repositories found" leftIcon={FolderGit2} isDisabled />,
+          onSelect: (item) => setSelectedRepository(item.id),
+        }}
+      />
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await userEvent.click(canvas.getByRole("button", { name: "Switchable menu" }));
+
+    const searchInput = canvas.getByLabelText("Search branches…");
+    await userEvent.type(searchInput, "searchable-menu-1");
+    await expect(canvas.getByText("feature/searchable-menu-1")).toBeVisible();
+
+    await userEvent.click(canvas.getByRole("button", { name: "Toggle list" }));
+
+    const repositorySearchInput = canvas.getByLabelText("Search repositories…");
+    await expect(repositorySearchInput).toHaveValue("");
+    await userEvent.type(repositorySearchInput, "repo-browser-1");
+    await expect(canvas.getByText("repo-browser-1")).toBeVisible();
+
+    await userEvent.click(canvas.getByRole("option", { name: "repo-browser-1" }));
+
+    // Menu stays open showing branches after parent selection
+    const nextSearchInput = canvas.getByLabelText("Search branches…");
+    await expect(nextSearchInput).toHaveValue("");
+  },
+};
+
+export const DisabledParentList: Story = {
+  render: () => (
+    <SearchableMenu
+      trigger={<Button variant="outline">Single repo</Button>}
+      items={branchItems}
+      searchPlaceholder="Search branches…"
+      portalled={false}
+      emptyState={<MenuItem primaryLabel="No branches found" leftIcon={GitBranch} isDisabled />}
+      parentList={{
+        items: [{ id: "prompt-studio", label: "prompt-studio", icon: FolderGit2 }],
+        selectedLabel: "prompt-studio",
+        selectedIcon: FolderGit2,
+        ariaLabel: "Toggle list",
+        disabled: true,
+        emptyState: <MenuItem primaryLabel="No repositories found" leftIcon={FolderGit2} isDisabled />,
+      }}
     />
   ),
 };

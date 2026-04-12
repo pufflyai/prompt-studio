@@ -1,7 +1,6 @@
-import { Box, Button, HStack, Menu, Text } from "@chakra-ui/react";
-import { MenuItem, Tooltip } from "@pstdio/ui";
-import { ChevronDown, Cpu, Repeat, TerminalIcon } from "lucide-react";
-import { useState } from "react";
+import { Box, Button, Text } from "@chakra-ui/react";
+import { MenuItem, SearchableMenu, type SearchableMenuItem, Tooltip } from "@pstdio/ui";
+import { ChevronDown, Cpu, TerminalIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export interface WorkspacePanelMenuOption {
@@ -13,6 +12,8 @@ export interface WorkspacePanelMenuOption {
 interface AgentMenuOption extends WorkspacePanelMenuOption {
   disabled?: boolean;
 }
+
+type ProjectsTranslate = (key: string) => string;
 
 interface WorkspaceAgentMenuProps {
   agentOptions: AgentMenuOption[];
@@ -35,6 +36,54 @@ const getSelectedLabel = (
 ) => {
   if (!value) return selectLabel;
   return options.find((o) => o.value === value)?.label ?? fallback;
+};
+
+const buildAgentMenuItems = (
+  agentOptions: AgentMenuOption[],
+  selectedAgent: string,
+  isAgentsLoading: boolean,
+  t: ProjectsTranslate,
+): SearchableMenuItem[] => {
+  if (isAgentsLoading) {
+    return [{ id: "agent-loading", label: t("chatInput.agent.loading"), icon: TerminalIcon, isDisabled: true }];
+  }
+
+  if (agentOptions.length === 0) {
+    return [{ id: "agent-none-available", label: t("chatInput.agent.unknown"), icon: TerminalIcon, isDisabled: true }];
+  }
+
+  return agentOptions.map((option) => ({
+    id: option.value,
+    label: option.label,
+    searchText: option.value,
+    icon: option.icon ?? TerminalIcon,
+    isSelected: option.value === selectedAgent,
+    isDisabled: option.disabled,
+  }));
+};
+
+const buildModelMenuItems = (
+  modelOptions: WorkspacePanelMenuOption[],
+  selectedModel: string,
+  isModelsLoading: boolean,
+  onSelectModel: (model: string) => void,
+  t: ProjectsTranslate,
+): SearchableMenuItem[] => {
+  if (isModelsLoading) {
+    return [{ id: "model-loading", label: t("chatInput.model.loading"), icon: Cpu, isDisabled: true }];
+  }
+
+  if (modelOptions.length === 0) {
+    return [{ id: "model-none-available", label: t("chatInput.model.noneAvailable"), icon: Cpu, isDisabled: true }];
+  }
+
+  return modelOptions.map((option) => ({
+    id: option.value,
+    label: option.label,
+    searchText: option.value,
+    isSelected: option.value === selectedModel,
+    onSelect: () => onSelectModel(option.value),
+  }));
 };
 
 export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
@@ -60,21 +109,12 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
     : getSelectedLabel(modelOptions, selectedModel, t("chatInput.model.selectLabel"), t("chatInput.model.none"));
   const isSwitchDisabled = isDisabled || isAgentSwitchDisabled || agentOptions.length <= 1;
   const isMenuDisabled = isDisabled || (agentOptions.length === 0 && modelOptions.length === 0);
-  const defaultMenuContent = modelOptions.length > 0 ? "models" : "agents";
-  const [menuContent, setMenuContent] = useState<"models" | "agents">(defaultMenuContent);
-  const [open, setOpen] = useState(false);
-  const isShowingAgents = menuContent === "agents";
-
-  const handleOpenChange = (details: { open: boolean }) => {
-    setOpen(details.open);
-    if (details.open) {
-      setMenuContent(defaultMenuContent);
-    }
-  };
+  const agentMenuItems = buildAgentMenuItems(agentOptions, selectedAgent, isAgentsLoading, t);
+  const modelMenuItems = buildModelMenuItems(modelOptions, selectedModel, isModelsLoading, onSelectModel, t);
 
   return (
-    <Menu.Root lazyMount={false} open={open} onOpenChange={handleOpenChange} closeOnSelect={false}>
-      <Menu.Trigger asChild>
+    <SearchableMenu
+      trigger={
         <Box>
           <Tooltip content={isMenuDisabled ? t("chatInput.model.noneAvailable") : t("chatInput.model.selectLabel")}>
             <Button
@@ -91,89 +131,28 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
             </Button>
           </Tooltip>
         </Box>
-      </Menu.Trigger>
-      <Menu.Positioner>
-        <Menu.Content minW="260px" bg="bg" p="0">
-          <HStack justify="space-between" alignItems="center" px="sm" py="xs" gap="xs">
-            <HStack gap="xs" minW="0" color="fg.muted">
-              <TerminalIcon size={16} />
-              <Text textStyle="label/XS/medium" lineClamp={1}>
-                {selectedAgentLabel}
-              </Text>
-            </HStack>
-            <Tooltip content={t("chatInput.agent.selectLabel")}>
-              <Button
-                variant="ghost"
-                size="xs"
-                minW="1.5rem"
-                h="1.5rem"
-                px="1"
-                aria-label={t("chatInput.agent.selectLabel")}
-                disabled={isSwitchDisabled}
-                onMouseDown={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                }}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  setMenuContent((current) => (current === "models" ? "agents" : "models"));
-                }}
-              >
-                <Repeat size={14} />
-              </Button>
-            </Tooltip>
-          </HStack>
-          <Menu.Separator margin="0" />
-          <Box
-            maxH="18rem"
-            overflowY="auto"
-            py="1"
-            data-testid={isShowingAgents ? "workspace-agent-options" : "workspace-agent-model-options"}
-          >
-            {isShowingAgents ? (
-              isAgentsLoading ? (
-                <MenuItem primaryLabel={t("chatInput.agent.loading")} leftIcon={TerminalIcon} isDisabled />
-              ) : agentOptions.length > 0 ? (
-                agentOptions.map((option) => (
-                  <MenuItem
-                    key={option.value}
-                    id={option.value}
-                    primaryLabel={option.label}
-                    leftIcon={option.icon ?? TerminalIcon}
-                    isSelected={option.value === selectedAgent}
-                    isDisabled={option.disabled}
-                    onClick={() => {
-                      if (option.disabled) return;
-                      onSelectAgent(option.value);
-                      setMenuContent("models");
-                    }}
-                  />
-                ))
-              ) : (
-                <MenuItem primaryLabel={t("chatInput.agent.unknown")} leftIcon={TerminalIcon} isDisabled />
-              )
-            ) : isModelsLoading ? (
-              <MenuItem primaryLabel={t("chatInput.model.loading")} leftIcon={Cpu} isDisabled />
-            ) : modelOptions.length > 0 ? (
-              modelOptions.map((option) => (
-                <MenuItem
-                  key={option.value}
-                  id={option.value}
-                  primaryLabel={option.label}
-                  isSelected={option.value === selectedModel}
-                  onClick={() => {
-                    onSelectModel(option.value);
-                    setOpen(false);
-                  }}
-                />
-              ))
-            ) : (
-              <MenuItem primaryLabel={t("chatInput.model.noneAvailable")} leftIcon={Cpu} isDisabled />
-            )}
-          </Box>
-        </Menu.Content>
-      </Menu.Positioner>
-    </Menu.Root>
+      }
+      items={modelMenuItems}
+      showSearch={modelOptions.length > 5}
+      width="260px"
+      portalled={false}
+      searchPlaceholder={t("chatInput.model.searchPlaceholder")}
+      contentTestId="workspace-agent-model-options"
+      emptyState={<MenuItem primaryLabel={t("chatInput.model.noneAvailable")} leftIcon={Cpu} isDisabled />}
+      parentList={{
+        items: agentMenuItems,
+        selectedLabel: selectedAgentLabel,
+        selectedIcon: TerminalIcon,
+        ariaLabel: t("chatInput.agent.selectLabel"),
+        disabled: isSwitchDisabled,
+        showSearch: false,
+        contentTestId: "workspace-agent-options",
+        emptyState: <MenuItem primaryLabel={t("chatInput.agent.unknown")} leftIcon={TerminalIcon} isDisabled />,
+        onSelect: (item) => {
+          if (agentOptions.find((o) => o.value === item.id)?.disabled) return;
+          onSelectAgent(item.id);
+        },
+      }}
+    />
   );
 };

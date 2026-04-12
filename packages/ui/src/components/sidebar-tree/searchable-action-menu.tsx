@@ -10,8 +10,12 @@ interface SearchableActionMenuProps {
 export const SearchableActionMenu = (props: SearchableActionMenuProps) => {
   const { action } = props;
   const items = (action.menuItems ?? []).map((item) => ({
-    ...item,
+    id: item.id,
+    label: item.label,
     searchText: [item.label, item.description].filter(Boolean).join(" "),
+    tooltipLabel: item.description,
+    variant: "compact" as const,
+    onSelect: () => item.onAction?.(),
   }));
 
   return (
@@ -24,15 +28,6 @@ export const SearchableActionMenu = (props: SearchableActionMenuProps) => {
       items={items}
       searchPlaceholder={action.searchPlaceholder ?? "Search…"}
       emptyState={<MenuItem primaryLabel={action.emptyMenuLabel ?? "No results found"} isDisabled variant="compact" />}
-      renderItem={(item) => (
-        <MenuItem
-          id={item.id}
-          primaryLabel={item.label}
-          tooltipLabel={item.description}
-          variant="compact"
-          onClick={() => item.onAction?.()}
-        />
-      )}
       onFocusOutside={(event) => event.preventDefault()}
     />
   );

@@ -59,6 +59,7 @@
     },
     "model": {
       "selectLabel": "Select model",
+      "searchPlaceholder": "Search models…",
       "none": "No models",
       "noneAvailable": "No models available",
       "loading": "Loading models..."

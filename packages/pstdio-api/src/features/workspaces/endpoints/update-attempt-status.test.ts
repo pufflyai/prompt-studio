@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
+import { createFakeAgent } from "pstdio-agents";
 import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
 
@@ -11,6 +12,7 @@ let appDeps: Awaited<ReturnType<typeof createApp>>["deps"];
 let tempRoot: string;
 let projectId: string;
 let repoDir: string;
+const repoRoot = join(import.meta.dirname, "../../../../../..");
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-attempt-status-test-"));
@@ -19,6 +21,7 @@ beforeAll(async () => {
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
+    agents: [createFakeAgent()],
   });
   app = created.app;
   appDeps = created.deps;
@@ -30,6 +33,13 @@ beforeAll(async () => {
   });
   const project = await projectRes.json();
   projectId = project.id;
+
+  const agentRes = await app.request("/v1/agents", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ agent_id: "fake" }),
+  });
+  expect(agentRes.status).toBe(201);
 
   // Register repo so hooks can be discovered
   mkdirSync(repoDir, { recursive: true });
@@ -328,5 +338,53 @@ export default { hooks: {
     const fired = await waitForPath(outputPath);
     expect(fired).toBe(true);
     expect(readFileSync(outputPath, "utf-8").trim()).toBe(`${reviewSession.id}|${originalSession.id}`);
+  });
+});
+
+describe("PATCH /v1/workspaces/:id/attempt-status with starter review lifecycle", () => {
+  test("starts a fix session when review changes are requested without an original session", async () => {
+    writePlugin(
+      "code-review-lifecycle.ts",
+      readFileSync(join(repoRoot, ".pstdio", "plugins", "code-review-lifecycle.ts"), "utf-8"),
+    );
+
+    const workspace = await createWorkspace();
+    const existingSessionIds = new Set((await appDeps.sessionService.list(projectId)).map((session) => session.id));
+    const reviewSession = await appDeps.sessionService.create({
+      project_id: projectId,
+      title: "Manual review",
+      agent: "fake",
+      cwd: process.cwd(),
+    });
+    existingSessionIds.add(reviewSession.id);
+
+    const res = await app.request(`/v1/workspaces/${workspace.id}/attempt-status`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status: "changes-requested", session_id: reviewSession.id }),
+    });
+
+    expect(res.status).toBe(200);
+
+    await appDeps.sessionService.transitionStatus(reviewSession.id, "completed");
+
+    let fixSession:
+      | {
+          id: string;
+          title: string;
+          original_session_id: string | null;
+        }
+      | undefined;
+
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const sessions = await appDeps.sessionService.list(projectId);
+      fixSession = sessions.find((session) => !existingSessionIds.has(session.id));
+      if (fixSession) break;
+      await Bun.sleep(25);
+    }
+
+    expect(fixSession).toBeDefined();
+    expect(fixSession?.title).toBe(`Fix changes requested: ${workspace.ticket.shorthand}`);
+    expect(fixSession?.original_session_id).toBe(reviewSession.id);
   });
 });

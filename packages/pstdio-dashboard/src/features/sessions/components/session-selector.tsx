@@ -2,7 +2,7 @@ import { Box, Button, Menu, Text } from "@chakra-ui/react";
 import type { SessionCompletionStatus } from "@pstdio/ui";
 import { MenuItem, resolveSessionIndicatorColor, resolveSessionIndicatorIcon, SessionIndicator } from "@pstdio/ui";
 import { Link, useParams } from "@tanstack/react-router";
-import { ChevronDown } from "lucide-react";
+import { ArrowUpRight, ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Session } from "../types";
 import { getRecentSessions } from "../utils/recent-sessions";
@@ -58,13 +58,17 @@ export const SessionSelector = (props: SessionSelectorProps) => {
               <MenuItem primaryLabel={t("sessions.noSessionsYet")} isDisabled />
             )}
           </Box>
-          <Box borderTopWidth="1px" px="1" py="1">
-            {viewMorePath ? (
-              <Button variant="ghost" size="xs" width="full" justifyContent="flex-start" asChild>
-                <Link to={viewMorePath}>{t("chatInput.session.viewMore")}</Link>
-              </Button>
-            ) : null}
-          </Box>
+          <Menu.Separator />
+          {viewMorePath ? (
+            <Link to={viewMorePath}>
+              <MenuItem
+                rightIcon={ArrowUpRight}
+                primaryLabel={t("chatInput.session.viewMore")}
+                variant="compact"
+                width="full"
+              ></MenuItem>
+            </Link>
+          ) : null}
         </Menu.Content>
       </Menu.Positioner>
     </Menu.Root>

@@ -20,7 +20,7 @@ export const ItemSection = (props: ItemSectionProps) => {
       <Flex>
         <Collapsible.Trigger
           _hover={{
-            background: "bg.muted",
+            background: "bg.hover",
           }}
           borderRadius={"xs"}
           padding="sm"
