@@ -12,7 +12,10 @@ export interface ProjectSettingsSnapshot {
   lastNonSessionsPath: string | null;
   chatDraftsBySession: Record<string, string>;
   createTicketDraft: string;
+  pendingWorkspaceSessionWorkspaceId: string | null;
 }
+
+export type PersistedProjectSettingsSnapshot = Omit<ProjectSettingsSnapshot, "pendingWorkspaceSessionWorkspaceId">;
 
 export interface ProjectSettingsState extends ProjectSettingsSnapshot {
   setLastSelectedAgent: (agent: CodingAgent) => void;
@@ -21,6 +24,7 @@ export interface ProjectSettingsState extends ProjectSettingsSnapshot {
   setLastSelectedBranch: (branch: string) => void;
   setSessionModalState: (state: SessionModalState) => void;
   setSelectedSessionId: (sessionId: string | null) => void;
+  setPendingWorkspaceSessionWorkspaceId: (workspaceId: string | null) => void;
   setLastNonSessionsPath: (path: string | null) => void;
   setSessionDraft: (sessionId: string | null, draft: string) => void;
   clearSessionDraft: (sessionId: string | null) => void;

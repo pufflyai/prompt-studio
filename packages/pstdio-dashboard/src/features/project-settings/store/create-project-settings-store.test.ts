@@ -181,6 +181,54 @@ describe("createProjectSettingsStore selectedSessionId", () => {
     const store = createProjectSettingsStore({ initialState: { selectedSessionId: "session-456" } });
     expect(store.getState().selectedSessionId).toBe("session-456");
   });
+
+  it("clears pending workspace draft when selecting a session", () => {
+    const store = createProjectSettingsStore({
+      initialState: {
+        pendingWorkspaceSessionWorkspaceId: "workspace-1",
+      },
+    });
+
+    store.getState().setSelectedSessionId("session-123");
+
+    expect(store.getState().pendingWorkspaceSessionWorkspaceId).toBeNull();
+  });
+
+  it("clears pending workspace draft when switching to generic new session", () => {
+    const store = createProjectSettingsStore({
+      initialState: {
+        pendingWorkspaceSessionWorkspaceId: "workspace-1",
+      },
+    });
+
+    store.getState().setSelectedSessionId(null);
+
+    expect(store.getState().pendingWorkspaceSessionWorkspaceId).toBeNull();
+  });
+});
+
+describe("createProjectSettingsStore pendingWorkspaceSessionWorkspaceId", () => {
+  it("defaults to null", () => {
+    const store = createProjectSettingsStore();
+    expect(store.getState().pendingWorkspaceSessionWorkspaceId).toBeNull();
+  });
+
+  it("sets a pending workspace session draft", () => {
+    const store = createProjectSettingsStore();
+
+    store.getState().setPendingWorkspaceSessionWorkspaceId("workspace-1");
+
+    expect(store.getState().pendingWorkspaceSessionWorkspaceId).toBe("workspace-1");
+  });
+
+  it("does not persist pending workspace session draft for a project store", () => {
+    const store = createProjectSettingsStore({ projectId: "proj-workspace-draft" });
+
+    store.getState().setPendingWorkspaceSessionWorkspaceId("workspace-1");
+
+    const rehydratedStore = createProjectSettingsStore({ projectId: "proj-workspace-draft" });
+    expect(rehydratedStore.getState().pendingWorkspaceSessionWorkspaceId).toBeNull();
+  });
 });
 
 describe("createProjectSettingsStore lastNonSessionsPath", () => {
@@ -306,6 +354,7 @@ describe("createProjectSettingsStore reset", () => {
         sessionModalState: "attached",
         chatDraftsBySession: { "session-1": "Draft" },
         createTicketDraft: "Draft ticket",
+        pendingWorkspaceSessionWorkspaceId: "workspace-1",
       },
     });
 
@@ -321,6 +370,7 @@ describe("createProjectSettingsStore reset", () => {
     expect(state.lastNonSessionsPath).toBeNull();
     expect(state.chatDraftsBySession).toEqual({});
     expect(state.createTicketDraft).toBe("");
+    expect(state.pendingWorkspaceSessionWorkspaceId).toBeNull();
   });
 });
 
