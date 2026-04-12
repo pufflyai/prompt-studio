@@ -13,10 +13,18 @@ const stripTemplateSuffix = (filename: string) => {
 export const scaffoldBundledPlugins = async (repoPath: string, bundledPluginsDir: string) => {
   const pluginsDir = join(repoPath, ".pstdio", "plugins");
 
+  console.error(`[CI-DEBUG]     pluginsDir=${pluginsDir} bundledPluginsDir=${bundledPluginsDir}`);
+  const startDiscover = Date.now();
+  const discovered = discoverPluginFiles(pluginsDir);
+  console.error(`[CI-DEBUG]     discoverPluginFiles → ${discovered.length} files in ${Date.now() - startDiscover}ms`);
+
+  const startScaffold = Date.now();
+  console.error(`[CI-DEBUG]     >>> scaffoldBundledFiles`);
   await scaffoldBundledFiles(pluginsDir, {
     bundledSourceDir: bundledPluginsDir,
     embeddedPrefix: EMBEDDED_PLUGINS_PREFIX,
     transformName: stripTemplateSuffix,
-    allowExistingTarget: discoverPluginFiles(pluginsDir).length === 0,
+    allowExistingTarget: discovered.length === 0,
   });
+  console.error(`[CI-DEBUG]     <<< scaffoldBundledFiles OK ${Date.now() - startScaffold}ms`);
 };
