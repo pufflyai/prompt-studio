@@ -172,23 +172,33 @@ type TemplateWithContent = Template & { content: string }
 ## Skill
 
 ```ts
+type SkillFile = {
+  path: string
+  content: string
+  encoding: "utf8"
+}
+
 type Skill = {
   id: string
   project_id: string
   name: string
   description: string
-  file_id: string
+  files: SkillFile[]
   created_at: string
   updated_at: string
   deleted_at: string | null
 }
 
 type SkillWithContent = Skill & {
-  content: string
   bundled_version: string
   installed_agents: string[]
 }
 ```
+
+Notes:
+
+- `files` is an ordered file-tree payload relative to the skill root.
+- `SKILL.md` is the required entrypoint file for valid skills.
 
 ## Agent
 

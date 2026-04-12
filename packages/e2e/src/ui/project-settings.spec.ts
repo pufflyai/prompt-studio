@@ -249,6 +249,47 @@ test.describe("Project settings", () => {
     await expect(page.getByRole("button", { name: "Cancel", exact: true })).toBeDisabled();
     await expect(page.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
   });
+});
+
+test.describe("Project settings — skills", () => {
+  test("renders multi-file skill tree and switches content between sibling files", async ({ page, request }) => {
+    const project = await createProjectViaApi(request, `Multi File Skills ${Date.now()}`);
+    const skills = await listSkillsViaApi(request, project.id);
+
+    let multiFileSkill: { name: string; files: { path: string; content: string }[] } | null = null;
+    for (const skill of skills) {
+      const details = await getSkillViaApi(request, project.id, skill.name);
+      if (details.files.length > 1) {
+        multiFileSkill = { name: skill.name, files: details.files };
+        break;
+      }
+    }
+    expect(multiFileSkill, "expected at least one bundled skill with sibling files").not.toBeNull();
+
+    const sibling = multiFileSkill!.files.find((file) => file.path !== "SKILL.md")!;
+    const siblingSnippet = sibling.content
+      .replace(/^---[\s\S]*?---\s*/, "")
+      .split("\n")
+      .map((line) => line.trim().replace(/^#+\s*/, ""))
+      .find((line) => line.length > 0)!;
+    expect(siblingSnippet).toBeDefined();
+
+    await bypassOnboarding(page);
+    await page.goto(`/projects/${project.id}/settings`);
+    await page.getByText("Skills", { exact: true }).click();
+    await page.getByText(multiFileSkill!.name, { exact: true }).click();
+
+    const fileTree = page.getByTestId("project-skill-file-tree");
+    await expect(fileTree).toBeVisible();
+    await expect(fileTree.getByText("SKILL.md", { exact: true })).toBeVisible();
+
+    const siblingLeafName = sibling.path.split("/").pop()!;
+    const siblingNode = fileTree.getByText(siblingLeafName, { exact: true });
+    await expect(siblingNode).toBeVisible();
+    await siblingNode.click();
+
+    await expect(page.getByTestId("project-skill-content")).toContainText(siblingSnippet);
+  });
 
   test("shows installed skills and selected skill details", async ({ page, request }) => {
     const project = await createProjectViaApi(request, `Skills Settings ${Date.now()}`);

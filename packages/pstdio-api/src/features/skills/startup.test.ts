@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -158,6 +158,189 @@ describe("ensureSkillsInstalled", () => {
     expect(update).toHaveBeenCalledWith("project-legacy-no-agents", "legacy-skill-no-agents", {
       files: [{ path: "SKILL.md", content: "# legacy no agents", encoding: "utf8" }],
     });
+  });
+
+  test("skips local install for empty file trees", async () => {
+    const repoPathWithEmptySkill = join(tempRoot, "repo-empty-skill");
+    const depsMock = {
+      projectService: { list: mock(async () => [{ id: "project-empty" }]) },
+      agentConfigService: { list: mock(async () => [{ agent_id: "claude-code" }]) },
+      repoService: { listByProject: mock(async () => [{ path: repoPathWithEmptySkill }]) },
+      skillService: {
+        list: mock(async () => [
+          {
+            id: "skill-empty",
+            project_id: "project-empty",
+            name: "empty-skill",
+            description: "empty",
+            files: [],
+            legacy_file_id: null,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            deleted_at: null,
+          },
+        ]),
+        update: mock(async () => null),
+      },
+      fileService: { get: mock(async () => null) },
+    } as unknown as RouteDeps;
+
+    await ensureSkillsInstalled(depsMock);
+    expect(existsSync(join(repoPathWithEmptySkill, ".claude", "skills", "empty-skill"))).toBe(false);
+  });
+});
+
+describe("ensureSkillsInstalled — syncs stale single-file skills with bundled tree", () => {
+  test("syncs single-file skill to multi-file bundled when versions match", async () => {
+    const bundledMulti = bundledSkills.find((s) => s.files.length > 1);
+    if (!bundledMulti) throw new Error("Test fixture: no multi-file bundled skill available");
+
+    const repoPathSync = join(tempRoot, "repo-sync");
+    const skillDir = join(repoPathSync, ".claude", "skills", bundledMulti.name);
+    mkdirSync(skillDir, { recursive: true });
+    writeFileSync(join(skillDir, "SKILL.md"), "stale", "utf8");
+
+    const update = mock(async () => null);
+    const depsMock = {
+      projectService: { list: mock(async () => [{ id: "project-sync" }]) },
+      agentConfigService: { list: mock(async () => [{ agent_id: "claude-code" }]) },
+      repoService: { listByProject: mock(async () => [{ path: repoPathSync }]) },
+      skillService: {
+        list: mock(async () => [
+          {
+            id: "skill-sync",
+            project_id: "project-sync",
+            name: bundledMulti.name,
+            description: bundledMulti.description,
+            files: [
+              {
+                path: "SKILL.md",
+                content: `---\nname: ${bundledMulti.name}\nmetadata:\n  - version: ${bundledMulti.version}\n---\n\n# stale single-file copy`,
+                encoding: "utf8" as const,
+              },
+            ],
+            legacy_file_id: null,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            deleted_at: null,
+          },
+        ]),
+        update,
+      },
+      fileService: { get: mock(async () => null) },
+    } as unknown as RouteDeps;
+
+    await ensureSkillsInstalled(depsMock);
+
+    expect(update).toHaveBeenCalledWith("project-sync", bundledMulti.name, { files: bundledMulti.files });
+    for (const file of bundledMulti.files) {
+      expect(existsSync(join(skillDir, file.path))).toBe(true);
+    }
+  });
+
+  test("skips sync when stored skill version differs from bundled", async () => {
+    const bundledMulti = bundledSkills.find((s) => s.files.length > 1);
+    if (!bundledMulti) throw new Error("Test fixture: no multi-file bundled skill available");
+
+    const update = mock(async () => null);
+    const depsMock = {
+      projectService: { list: mock(async () => [{ id: "project-skip-version" }]) },
+      agentConfigService: { list: mock(async () => []) },
+      repoService: { listByProject: mock(async () => []) },
+      skillService: {
+        list: mock(async () => [
+          {
+            id: "skill-skip-version",
+            project_id: "project-skip-version",
+            name: bundledMulti.name,
+            description: "",
+            files: [
+              {
+                path: "SKILL.md",
+                content: `---\nname: ${bundledMulti.name}\nmetadata:\n  - version: 99.0.0\n---\n\n# user customized`,
+                encoding: "utf8" as const,
+              },
+            ],
+            legacy_file_id: null,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            deleted_at: null,
+          },
+        ]),
+        update,
+      },
+      fileService: { get: mock(async () => null) },
+    } as unknown as RouteDeps;
+
+    await ensureSkillsInstalled(depsMock);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  test("skips sync when stored skill already has all bundled files", async () => {
+    const bundledMulti = bundledSkills.find((s) => s.files.length > 1);
+    if (!bundledMulti) throw new Error("Test fixture: no multi-file bundled skill available");
+
+    const update = mock(async () => null);
+    const depsMock = {
+      projectService: { list: mock(async () => [{ id: "project-already-synced" }]) },
+      agentConfigService: { list: mock(async () => []) },
+      repoService: { listByProject: mock(async () => []) },
+      skillService: {
+        list: mock(async () => [
+          {
+            id: "skill-already-synced",
+            project_id: "project-already-synced",
+            name: bundledMulti.name,
+            description: bundledMulti.description,
+            files: bundledMulti.files,
+            legacy_file_id: null,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            deleted_at: null,
+          },
+        ]),
+        update,
+      },
+      fileService: { get: mock(async () => null) },
+    } as unknown as RouteDeps;
+
+    await ensureSkillsInstalled(depsMock);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  test("skips sync when no matching bundled skill exists", async () => {
+    const update = mock(async () => null);
+    const depsMock = {
+      projectService: { list: mock(async () => [{ id: "project-custom" }]) },
+      agentConfigService: { list: mock(async () => []) },
+      repoService: { listByProject: mock(async () => []) },
+      skillService: {
+        list: mock(async () => [
+          {
+            id: "skill-custom",
+            project_id: "project-custom",
+            name: "custom-user-skill",
+            description: "user owned",
+            files: [
+              {
+                path: "SKILL.md",
+                content: "---\nmetadata:\n  - version: 1.0.0\n---\n# custom",
+                encoding: "utf8" as const,
+              },
+            ],
+            legacy_file_id: null,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            deleted_at: null,
+          },
+        ]),
+        update,
+      },
+      fileService: { get: mock(async () => null) },
+    } as unknown as RouteDeps;
+
+    await ensureSkillsInstalled(depsMock);
+    expect(update).not.toHaveBeenCalled();
   });
 
   test("skips local install for empty file trees", async () => {
