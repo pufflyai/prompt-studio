@@ -1,8 +1,9 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { homedir as defaultHomedir } from "node:os";
-import { join } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { findAgent } from "pstdio-agents";
+import type { SkillFile } from "pstdio-api-contracts";
 import { setupInstalledAgents } from "../agents/setup-installed-agents";
 import type { RouteDeps } from "../deps";
 
@@ -11,11 +12,36 @@ type InstallSkillOptions = {
   overwrite?: boolean;
 };
 
+type PathOps = {
+  isAbsolute: typeof isAbsolute;
+  relative: typeof relative;
+  resolve: typeof resolve;
+};
+
+export const resolveSafeSkillFilePath = (
+  skillDir: string,
+  filePath: string,
+  pathOps: PathOps = { isAbsolute, relative, resolve },
+) => {
+  if (pathOps.isAbsolute(filePath)) {
+    throw new Error(`Invalid skill file path: ${filePath}`);
+  }
+
+  const skillRoot = pathOps.resolve(skillDir);
+  const resolved = pathOps.resolve(skillRoot, filePath);
+  const rel = pathOps.relative(skillRoot, resolved);
+  if (rel === "" || (!rel.startsWith("..") && !pathOps.isAbsolute(rel))) {
+    return resolved;
+  }
+
+  throw new Error(`Invalid skill file path: ${filePath}`);
+};
+
 export const installSkillToRepo = (
   repoPath: string,
   agentId: string,
   skillName: string,
-  content: string,
+  files: SkillFile[],
   options?: InstallSkillOptions,
 ) => {
   const agent = findAgent(agentId);
@@ -29,8 +55,21 @@ export const installSkillToRepo = (
   const globalDir = join(homedir, agent.globalSkillsDir, skillName);
   if (existsSync(globalDir) && !hasLocalCopy) return;
 
+  const resolvedFiles = files.map((file) => ({
+    ...file,
+    resolvedPath: resolveSafeSkillFilePath(dir, file.path),
+  }));
+
+  if (hasLocalCopy && options?.overwrite) {
+    rmSync(dir, { recursive: true, force: true });
+  }
+
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, "SKILL.md"), content, "utf8");
+
+  for (const file of resolvedFiles) {
+    mkdirSync(dirname(file.resolvedPath), { recursive: true });
+    writeFileSync(file.resolvedPath, file.content, "utf8");
+  }
 };
 
 const resolveTargetAgents = async (deps: Pick<RouteDeps, "agentConfigService" | "agentRegistry" | "eventBus">) => {
@@ -47,12 +86,27 @@ export const installProjectSkillsToRepo = async (
   const [skills, agents] = await Promise.all([deps.skillService.list(input.projectId), resolveTargetAgents(deps)]);
 
   for (const skill of skills) {
-    const file = await deps.fileService.get(skill.file_id);
-    if (!file) continue;
+    const files =
+      skill.files.length > 0
+        ? skill.files
+        : "legacy_file_id" in skill && skill.legacy_file_id
+          ? await deps.fileService.get(skill.legacy_file_id).then(async (file) =>
+              file
+                ? [
+                    {
+                      path: "SKILL.md",
+                      content: await readFile(file.storage_path, "utf8"),
+                      encoding: "utf8" as const,
+                    },
+                  ]
+                : [],
+            )
+          : [];
 
-    const content = await readFile(file.storage_path, "utf8");
+    if (files.length === 0) continue;
+
     for (const agent of agents) {
-      installSkillToRepo(input.repoPath, agent.agent_id, skill.name, content);
+      installSkillToRepo(input.repoPath, agent.agent_id, skill.name, files);
     }
   }
 };

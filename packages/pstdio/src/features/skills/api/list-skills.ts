@@ -4,7 +4,7 @@ export const listSkills = async (projectId: string) => apiClient().skills.list(p
 
 export const getSkill = async (projectId: string, name: string) => apiClient().skills.get(projectId, name);
 
-export const listSkillsWithContent = async (projectId: string) => {
+export const listSkillsWithFiles = async (projectId: string) => {
   const skills = await listSkills(projectId);
   const results = [];
 

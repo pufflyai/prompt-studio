@@ -17,7 +17,13 @@ describe("SkillService", () => {
   });
 
   test("storage methods are accessible", async () => {
-    const projectSkills = [{ name: "my-skill", path: "/skills/my-skill" }];
+    const projectSkills = [
+      {
+        name: "my-skill",
+        description: "My skill",
+        files: [{ path: "SKILL.md", content: "# my skill", encoding: "utf8" as const }],
+      },
+    ];
     const listProjectSkills = mock(async () => projectSkills);
     const service = createSkillService({
       skillsDBService: { list: mock(async () => []) },

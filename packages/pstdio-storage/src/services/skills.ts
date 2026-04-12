@@ -1,12 +1,18 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir as defaultHomedir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { findAgent, type KnownAgent } from "pstdio-agents";
+
+type SkillFile = {
+  path: string;
+  content: string;
+  encoding: "utf8";
+};
 
 type Skill = {
   name: string;
   description: string;
-  path: string;
+  files: SkillFile[];
 };
 
 type SkillsServiceOptions = {
@@ -37,19 +43,49 @@ const parseFrontmatter = (content: string) => {
 const readSkillsFromDir = (skillsDir: string): Skill[] => {
   if (!existsSync(skillsDir)) return [];
 
+  const readSkillFiles = (rootPath: string, baseRoot = rootPath): SkillFile[] => {
+    const entries = readdirSync(rootPath, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
+    const files: SkillFile[] = [];
+
+    for (const entry of entries) {
+      const entryPath = join(rootPath, entry.name);
+
+      if (entry.isDirectory()) {
+        files.push(...readSkillFiles(entryPath, baseRoot));
+        continue;
+      }
+
+      if (!entry.isFile()) continue;
+
+      files.push({
+        path: relative(baseRoot, entryPath).replaceAll("\\", "/"),
+        content: readFileSync(entryPath, "utf8"),
+        encoding: "utf8",
+      });
+    }
+
+    return files.sort((a, b) => {
+      if (a.path === "SKILL.md") return -1;
+      if (b.path === "SKILL.md") return 1;
+      return a.path.localeCompare(b.path);
+    });
+  };
+
   return readdirSync(skillsDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => {
-      const skillMdPath = join(skillsDir, entry.name, "SKILL.md");
+      const skillRoot = join(skillsDir, entry.name);
+      const skillMdPath = join(skillRoot, "SKILL.md");
       if (!existsSync(skillMdPath)) return null;
 
-      const content = readFileSync(skillMdPath, "utf8");
-      const frontmatter = parseFrontmatter(content);
+      const files = readSkillFiles(skillRoot);
+      const skillFile = files.find((file) => file.path === "SKILL.md");
+      const frontmatter = parseFrontmatter(skillFile?.content ?? "");
 
       return {
         name: frontmatter.name || entry.name,
         description: frontmatter.description,
-        path: join(skillsDir, entry.name),
+        files,
       };
     })
     .filter((skill): skill is Skill => skill !== null);

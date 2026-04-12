@@ -43,6 +43,13 @@
       "when": 1774968085595,
       "tag": "0005_rich_komodo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1775000000000,
+      "tag": "0006_mighty_karnak",
+      "breakpoints": true
     }
   ]
 }

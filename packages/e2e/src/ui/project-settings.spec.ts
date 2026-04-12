@@ -43,7 +43,11 @@ const getSkillViaApi = async (
 ) => {
   const res = await request.get(`${apiBase}/v1/projects/${projectId}/skills/${encodeURIComponent(name)}`);
   expect(res.ok()).toBe(true);
-  return (await res.json()) as { name: string; description: string; content: string };
+  return (await res.json()) as {
+    name: string;
+    description: string;
+    files: { path: string; content: string; encoding: "utf8" }[];
+  };
 };
 
 const closeSessionBubble = async (page: import("@playwright/test").Page, projectId: string) => {
@@ -252,7 +256,7 @@ test.describe("Project settings", () => {
     expect(skills.length).toBeGreaterThan(0);
     const selectedSkill = skills[0];
     const selectedSkillDetails = await getSkillViaApi(request, project.id, selectedSkill.name);
-    const expectedContentSnippet = selectedSkillDetails.content
+    const expectedContentSnippet = (selectedSkillDetails.files.find((file) => file.path === "SKILL.md")?.content ?? "")
       .replace(/^---[\s\S]*?---\s*/, "")
       .split("\n")
       .map((line) => line.trim())

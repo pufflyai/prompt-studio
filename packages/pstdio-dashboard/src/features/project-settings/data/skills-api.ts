@@ -5,13 +5,12 @@ export type ProjectSkill = {
   project_id: string;
   name: string;
   description: string;
-  file_id: string;
+  files: { path: string; content: string; encoding: "utf8" }[];
   created_at: string;
   updated_at: string;
 };
 
-export type ProjectSkillWithContent = ProjectSkill & {
-  content: string;
+export type ProjectSkillDetails = ProjectSkill & {
   bundled_version: string;
   installed_agents: string[];
 };
@@ -20,9 +19,9 @@ export const getProjectSkills = async (projectId: string) =>
   apiRequest<ProjectSkill[]>(`/v1/projects/${projectId}/skills`);
 
 export const getProjectSkill = async (projectId: string, name: string) =>
-  apiRequest<ProjectSkillWithContent>(`/v1/projects/${projectId}/skills/${encodeURIComponent(name)}`);
+  apiRequest<ProjectSkillDetails>(`/v1/projects/${projectId}/skills/${encodeURIComponent(name)}`);
 
 export const updateProjectSkill = async (projectId: string, name: string) =>
-  apiRequest<ProjectSkillWithContent>(`/v1/projects/${projectId}/skills/${encodeURIComponent(name)}/update`, {
+  apiRequest<ProjectSkillDetails>(`/v1/projects/${projectId}/skills/${encodeURIComponent(name)}/update`, {
     method: "POST",
   });

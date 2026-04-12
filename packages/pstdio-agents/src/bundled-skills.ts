@@ -1,8 +1,14 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 
 const SKILLS_DIR = join(import.meta.dirname, "../files/skills");
-const SKILL_FILE_SUFFIX = "/SKILL.md";
+const SKILLS_MARKER = "/files/skills/";
+
+export type SkillFile = {
+  path: string;
+  content: string;
+  encoding: "utf8";
+};
 
 const parseFrontmatter = (content: string) => {
   const match = content.match(/^---\n([\s\S]*?)\n---/);
@@ -31,7 +37,7 @@ export type BundledSkill = {
   name: string;
   description: string;
   version: string;
-  content: string;
+  files: SkillFile[];
 };
 
 type EmbeddedFile = Blob & { name: string };
@@ -41,37 +47,98 @@ const getEmbeddedFiles = () => {
   return Array.isArray(files) ? (files as EmbeddedFile[]) : [];
 };
 
-const resolveEmbeddedSkillName = (fileName: string) => {
-  if (!fileName.endsWith(SKILL_FILE_SUFFIX)) return null;
-  const marker = "/files/skills/";
-  const markerIndex = fileName.indexOf(marker);
+const normalizeRelativePath = (path: string) => path.replaceAll("\\", "/");
+
+const sortSkillFiles = (files: SkillFile[]) => {
+  return files.sort((a, b) => {
+    if (a.path === "SKILL.md") return -1;
+    if (b.path === "SKILL.md") return 1;
+    return a.path.localeCompare(b.path);
+  });
+};
+
+const resolveEmbeddedSkillFile = (fileName: string) => {
+  const markerIndex = fileName.indexOf(SKILLS_MARKER);
   if (markerIndex < 0) return null;
 
-  const relativePath = fileName.slice(markerIndex + marker.length, -SKILL_FILE_SUFFIX.length);
-  const [skillName] = relativePath.split("/");
-  return skillName || null;
+  const fullRelativePath = fileName.slice(markerIndex + SKILLS_MARKER.length);
+  const [skillName, ...pathParts] = fullRelativePath.split("/");
+  if (!skillName || pathParts.length === 0) return null;
+
+  return {
+    skillName,
+    path: normalizeRelativePath(pathParts.join("/")),
+  };
 };
 
 const loadEmbeddedSkills = async () => {
   const embeddedFiles = getEmbeddedFiles();
-  const files = embeddedFiles
+  const entries = embeddedFiles
     .map((file) => {
-      const skillName = resolveEmbeddedSkillName(file.name);
-      if (!skillName) return null;
-      return { skillName, file };
+      const skillFile = resolveEmbeddedSkillFile(file.name);
+      if (!skillFile) return null;
+      return { ...skillFile, file };
     })
     .filter((entry) => entry !== null)
-    .sort((a, b) => a.skillName.localeCompare(b.skillName));
+    .sort((a, b) => a.skillName.localeCompare(b.skillName) || a.path.localeCompare(b.path));
 
-  if (files.length === 0) return null;
+  if (entries.length === 0) return null;
 
-  return Promise.all(
-    files.map(async ({ skillName, file }) => {
-      const content = await file.text();
-      const { name, description, version } = parseFrontmatter(content);
-      return { name: name || skillName, description, version, content };
-    }),
-  );
+  const grouped = new Map<string, SkillFile[]>();
+
+  for (const entry of entries) {
+    const content = await entry.file.text();
+    const file: SkillFile = { path: entry.path, content, encoding: "utf8" };
+    const existing = grouped.get(entry.skillName);
+    if (existing) {
+      existing.push(file);
+      continue;
+    }
+
+    grouped.set(entry.skillName, [file]);
+  }
+
+  const skills: BundledSkill[] = [];
+
+  for (const [skillName, files] of grouped) {
+    const sortedFiles = sortSkillFiles(files);
+    const skillFile = sortedFiles.find((file) => file.path === "SKILL.md");
+    if (!skillFile) continue;
+
+    const { name, description, version } = parseFrontmatter(skillFile.content);
+    skills.push({
+      name: name || skillName,
+      description,
+      version,
+      files: sortedFiles,
+    });
+  }
+
+  return skills.sort((a, b) => a.name.localeCompare(b.name));
+};
+
+const readSkillTree = (rootPath: string, baseRoot = rootPath) => {
+  const entries = readdirSync(rootPath, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
+  const files: SkillFile[] = [];
+
+  for (const entry of entries) {
+    const entryPath = join(rootPath, entry.name);
+
+    if (entry.isDirectory()) {
+      files.push(...readSkillTree(entryPath, baseRoot));
+      continue;
+    }
+
+    if (!entry.isFile()) continue;
+
+    files.push({
+      path: normalizeRelativePath(relative(baseRoot, entryPath)),
+      content: readFileSync(entryPath, "utf8"),
+      encoding: "utf8",
+    });
+  }
+
+  return sortSkillFiles(files);
 };
 
 const loadFilesystemSkills = () => {
@@ -79,11 +146,17 @@ const loadFilesystemSkills = () => {
     .filter((entry) => entry.isDirectory())
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  return entries.map((entry) => {
-    const content = readFileSync(join(SKILLS_DIR, entry.name, "SKILL.md"), "utf8");
-    const { name, description, version } = parseFrontmatter(content);
-    return { name: name || entry.name, description, version, content };
-  });
+  return entries
+    .map((entry) => {
+      const skillRoot = join(SKILLS_DIR, entry.name);
+      const files = readSkillTree(skillRoot);
+      const skillFile = files.find((file) => file.path === "SKILL.md");
+      if (!skillFile) return null;
+
+      const { name, description, version } = parseFrontmatter(skillFile.content);
+      return { name: name || entry.name, description, version, files };
+    })
+    .filter((skill): skill is BundledSkill => skill !== null);
 };
 
 export const getBundledSkills = async () => {

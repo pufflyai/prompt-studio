@@ -1,6 +1,7 @@
-import { writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
-import { getBundledSkills } from "pstdio-agents";
+import { findAgent, getBundledSkills } from "pstdio-agents";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { notFoundResponseSchema, skillWithContentResponseSchema } from "../dto";
@@ -46,13 +47,9 @@ export const updateSkillHandler = (deps: RouteDeps): AppRouteHandler<typeof upda
       return c.json({ error: `No bundled version found for: ${name}` }, 404);
     }
 
-    const file = await deps.fileService.get(skill.file_id);
-    if (file) {
-      await writeFile(file.storage_path, bundledSkill.content, "utf8");
-    }
-
     await deps.skillService.update(projectId, name, {
       description: bundledSkill.description,
+      files: bundledSkill.files,
     });
 
     const [repos, agents] = await Promise.all([
@@ -62,15 +59,32 @@ export const updateSkillHandler = (deps: RouteDeps): AppRouteHandler<typeof upda
 
     for (const repo of repos) {
       for (const agent of agents) {
-        installSkillToRepo(repo.path, agent.agent_id, name, bundledSkill.content, { overwrite: true });
+        installSkillToRepo(repo.path, agent.agent_id, name, bundledSkill.files, { overwrite: true });
       }
     }
 
     const updated = await deps.skillService.getByName(projectId, name);
-    const installed_agents = agents.map((a) => a.agent_id);
+    const installed_agents = agents
+      .filter((agent) => {
+        const knownAgent = findAgent(agent.agent_id);
+        if (!knownAgent) return false;
+        return repos.some((repo) => existsSync(join(repo.path, knownAgent.skillsDir, name, "SKILL.md")));
+      })
+      .map((agent) => agent.agent_id);
 
     return c.json(
-      { ...updated!, content: bundledSkill.content, bundled_version: bundledSkill.version, installed_agents },
+      {
+        id: updated!.id,
+        project_id: updated!.project_id,
+        name: updated!.name,
+        description: updated!.description,
+        files: updated!.files,
+        created_at: updated!.created_at,
+        updated_at: updated!.updated_at,
+        deleted_at: updated!.deleted_at,
+        bundled_version: bundledSkill.version,
+        installed_agents,
+      },
       200,
     );
   };

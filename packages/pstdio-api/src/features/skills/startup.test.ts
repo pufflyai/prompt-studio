@@ -1,5 +1,5 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -84,5 +84,111 @@ describe("ensureSkillsInstalled", () => {
 
     // Should NOT overwrite
     expect(readFileSync(skillPath, "utf8")).toBe(customContent);
+  });
+
+  test("hydrates legacy file-based skills before installation", async () => {
+    const legacyFilePath = join(tempRoot, "legacy-skill.md");
+    writeFileSync(legacyFilePath, "# legacy skill", "utf8");
+
+    const update = mock(async () => null);
+    const depsMock = {
+      projectService: { list: mock(async () => [{ id: "project-legacy" }]) },
+      agentConfigService: { list: mock(async () => [{ agent_id: "claude-code" }]) },
+      repoService: { listByProject: mock(async () => []) },
+      skillService: {
+        list: mock(async () => [
+          {
+            id: "skill-1",
+            project_id: "project-legacy",
+            name: "legacy-skill",
+            description: "legacy",
+            files: [],
+            legacy_file_id: "file-legacy",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            deleted_at: null,
+          },
+        ]),
+        update,
+      },
+      fileService: {
+        get: mock(async () => ({ storage_path: legacyFilePath })),
+      },
+    } as unknown as RouteDeps;
+
+    await ensureSkillsInstalled(depsMock);
+
+    expect(update).toHaveBeenCalledWith("project-legacy", "legacy-skill", {
+      files: [{ path: "SKILL.md", content: "# legacy skill", encoding: "utf8" }],
+    });
+  });
+
+  test("hydrates legacy skills even when no agents are configured", async () => {
+    const legacyFilePath = join(tempRoot, "legacy-skill-no-agents.md");
+    writeFileSync(legacyFilePath, "# legacy no agents", "utf8");
+
+    const update = mock(async () => null);
+    const depsMock = {
+      projectService: { list: mock(async () => [{ id: "project-legacy-no-agents" }]) },
+      agentConfigService: { list: mock(async () => []) },
+      repoService: { listByProject: mock(async () => []) },
+      skillService: {
+        list: mock(async () => [
+          {
+            id: "skill-2",
+            project_id: "project-legacy-no-agents",
+            name: "legacy-skill-no-agents",
+            description: "legacy",
+            files: [],
+            legacy_file_id: "file-legacy-2",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            deleted_at: null,
+          },
+        ]),
+        update,
+      },
+      fileService: {
+        get: mock(async () => ({ storage_path: legacyFilePath })),
+      },
+    } as unknown as RouteDeps;
+
+    await ensureSkillsInstalled(depsMock);
+
+    expect(update).toHaveBeenCalledWith("project-legacy-no-agents", "legacy-skill-no-agents", {
+      files: [{ path: "SKILL.md", content: "# legacy no agents", encoding: "utf8" }],
+    });
+  });
+
+  test("skips local install for empty file trees", async () => {
+    const repoPathWithEmptySkill = join(tempRoot, "repo-empty-skill");
+    const depsMock = {
+      projectService: { list: mock(async () => [{ id: "project-empty" }]) },
+      agentConfigService: { list: mock(async () => [{ agent_id: "claude-code" }]) },
+      repoService: { listByProject: mock(async () => [{ path: repoPathWithEmptySkill }]) },
+      skillService: {
+        list: mock(async () => [
+          {
+            id: "skill-empty",
+            project_id: "project-empty",
+            name: "empty-skill",
+            description: "empty",
+            files: [],
+            legacy_file_id: null,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            deleted_at: null,
+          },
+        ]),
+        update: mock(async () => null),
+      },
+      fileService: {
+        get: mock(async () => null),
+      },
+    } as unknown as RouteDeps;
+
+    await ensureSkillsInstalled(depsMock);
+
+    expect(existsSync(join(repoPathWithEmptySkill, ".claude", "skills", "empty-skill"))).toBe(false);
   });
 });

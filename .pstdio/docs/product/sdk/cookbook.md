@@ -31,6 +31,15 @@ The current plugin set expects these prompt templates to exist in `ctx.prompts`:
 - `code-review`
 - `fix-changes-requested`
 
+## Skill File Tree Format
+
+Skill APIs now return a file tree instead of a single content blob.
+
+- `skill.files` is an ordered array of `{ path, content, encoding }` entries.
+- `path` is relative to the skill root and may include nested folders (for example `references/cli-reference.md`).
+- `SKILL.md` is the required entrypoint for a skill.
+- Installers reject absolute paths and path traversal (`..`) to keep writes inside the skill directory.
+
 ## Hook Name Mapping
 
 The SDK hook name is the camel-cased filesystem hook name:

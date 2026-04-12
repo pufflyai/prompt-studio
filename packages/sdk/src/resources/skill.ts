@@ -1,1 +1,1 @@
-export type { Skill, SkillWithContent } from "pstdio-api-contracts";
+export type { Skill, SkillFile, SkillWithContent } from "pstdio-api-contracts";

@@ -314,9 +314,8 @@ export const skills = pgTable("skills", {
     .references(() => projects.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   description: text("description").notNull().default(""),
-  file_id: text("file_id")
-    .notNull()
-    .references(() => files.id),
+  file_id: text("file_id").references(() => files.id, { onDelete: "set null" }),
+  files_json: text("files_json").notNull().default("[]"),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
   deleted_at: text("deleted_at"),

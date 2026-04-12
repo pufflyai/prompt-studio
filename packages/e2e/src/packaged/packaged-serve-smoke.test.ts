@@ -151,8 +151,13 @@ describe("packaged pstdio — self-hosted serve", () => {
         const skillsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/skills`);
         expect(skillsRes.status).toBe(200);
 
-        const skills = (await skillsRes.json()) as { name: string }[];
+        const skills = (await skillsRes.json()) as {
+          name: string;
+          files: { path: string; content: string; encoding: "utf8" }[];
+        }[];
         expect(skills.length).toBeGreaterThan(0);
+        const multiFileSkill = skills.find((skill) => skill.files.length > 1);
+        expect(multiFileSkill).toBeDefined();
 
         const repoPath = join(tempRoot, "repo");
         mkdirSync(repoPath, { recursive: true });

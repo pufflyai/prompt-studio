@@ -3,7 +3,7 @@ export type { AgentAvailabilityType, AgentConfig, AgentInfo, AgentModel } from "
 export type { FileRecord } from "./file";
 export type { Project } from "./project";
 export type { Session, SessionStatus } from "./session";
-export type { Skill, SkillWithContent } from "./skill";
+export type { Skill, SkillFile, SkillWithContent } from "./skill";
 export type { AttemptStatus, Status } from "./status";
 export type { Tag, TagOption } from "./tag";
 export type { Template, TemplateType, TemplateWithContent } from "./template";

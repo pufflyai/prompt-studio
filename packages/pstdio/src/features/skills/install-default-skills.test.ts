@@ -13,17 +13,28 @@ const SKILL_FIXTURES = [
   {
     name: "create-ticket",
     description: "Create a ticket",
-    content: "---\nname: create-ticket\n---\nCreate ticket skill",
+    files: [
+      { path: "SKILL.md", content: "---\nname: create-ticket\n---\nCreate ticket skill", encoding: "utf8" as const },
+      { path: "templates/example.md", content: "# example", encoding: "utf8" as const },
+    ],
   },
   {
     name: "refine-ticket",
     description: "Refine a ticket",
-    content: "---\nname: refine-ticket\n---\nRefine ticket skill",
+    files: [
+      { path: "SKILL.md", content: "---\nname: refine-ticket\n---\nRefine ticket skill", encoding: "utf8" as const },
+    ],
   },
   {
     name: "implement-ticket",
     description: "Implement a ticket",
-    content: "---\nname: implement-ticket\n---\nImplement ticket skill",
+    files: [
+      {
+        path: "SKILL.md",
+        content: "---\nname: implement-ticket\n---\nImplement ticket skill",
+        encoding: "utf8" as const,
+      },
+    ],
   },
 ];
 
@@ -34,8 +45,7 @@ const toApiSkill = (s: (typeof SKILL_FIXTURES)[number]) => ({
   project_id: TEST_PROJECT_ID,
   name: s.name,
   description: s.description,
-  file_id: `file-${s.name}`,
-  content: s.content,
+  files: s.files,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
 });
@@ -131,6 +141,7 @@ describe("installDefaultSkills", () => {
     for (const skill of SKILL_NAMES) {
       expect(existsSync(join(root, ".claude", "skills", skill, "SKILL.md"))).toBe(true);
     }
+    expect(existsSync(join(root, ".claude", "skills", "create-ticket", "templates", "example.md"))).toBe(true);
     expect(existsSync(join(root, ".opencode", "skills"))).toBe(false);
   });
 
