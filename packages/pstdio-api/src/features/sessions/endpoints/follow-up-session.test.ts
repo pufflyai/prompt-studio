@@ -136,6 +136,83 @@ describe("POST /v1/sessions/:id/follow-up (opencode)", () => {
     expect(body).toContain("OpenCode: second prompt");
   });
 
+  test("follow-up from disconnected session is accepted", async () => {
+    const projectRes = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Disconnected Follow-up Project" }),
+    });
+    expect(projectRes.status).toBe(201);
+    const project = await projectRes.json();
+
+    const createRes = await app.request("/v1/sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        project_id: project.id,
+        title: "Will disconnect",
+        prompt: "first prompt",
+        agent: "opencode",
+      }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json();
+    await waitForSessionStatus(created.id, "completed");
+
+    // Simulate disconnected state (as would happen after server restart)
+    await app.request(`/v1/sessions/${created.id}/status`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status: "disconnected" }),
+    });
+
+    const followUpRes = await app.request(`/v1/sessions/${created.id}/follow-up`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prompt: "continue after disconnect" }),
+    });
+    expect(followUpRes.status).toBe(200);
+
+    const followUpBody = await followUpRes.json();
+    expect(followUpBody.status).toBe("in_progress");
+
+    await waitForSessionStatus(created.id, "completed");
+  });
+
+  test("follow-up from in_progress session is rejected", async () => {
+    const projectRes = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "In-Progress Reject Project" }),
+    });
+    expect(projectRes.status).toBe(201);
+    const project = await projectRes.json();
+
+    const createRes = await app.request("/v1/sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        project_id: project.id,
+        title: "Will stay in_progress",
+        prompt: "first prompt",
+        agent: "opencode",
+      }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json();
+
+    // Session starts in_progress — try follow-up immediately
+    const followUpRes = await app.request(`/v1/sessions/${created.id}/follow-up`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prompt: "should be rejected" }),
+    });
+    expect(followUpRes.status).toBe(409);
+
+    // Let it complete so it doesn't hang
+    await waitForSessionStatus(created.id, "completed");
+  });
+
   test("follow-up marks session as failed when opencode server returns an error", async () => {
     const failFetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);

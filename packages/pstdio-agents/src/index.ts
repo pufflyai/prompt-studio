@@ -43,6 +43,7 @@ export type {
   StepFinishPart,
   StepStartPart,
   TextPart,
+  TimeoutStrategy,
   TokenUsagePart,
   ToolPart,
   ToolPartActionType,

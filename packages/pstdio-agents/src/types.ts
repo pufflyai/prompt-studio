@@ -174,11 +174,14 @@ export type EventStore = {
 
 // --- Spawned Process ---
 
+export type TimeoutStrategy = "activity" | "provider";
+
 export type SpawnedProcess = {
   sessionId: string;
   stdin: import("node:stream").Writable;
   kill(): void;
   onExit: Promise<{ code: number | null; signal: string | null }>;
+  timeoutStrategy?: TimeoutStrategy;
 };
 
 export type ResumeResult = {

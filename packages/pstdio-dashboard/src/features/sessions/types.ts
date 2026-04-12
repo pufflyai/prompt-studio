@@ -1,4 +1,4 @@
-export type SessionStatus = "in_progress" | "awaiting_input" | "completed" | "failed" | "cancelled";
+export type SessionStatus = "in_progress" | "awaiting_input" | "completed" | "failed" | "cancelled" | "disconnected";
 
 export interface Session {
   id: string;

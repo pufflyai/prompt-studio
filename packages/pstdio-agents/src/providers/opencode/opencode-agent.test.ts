@@ -173,6 +173,67 @@ describe("getMessages", () => {
   });
 });
 
+// --- timeoutStrategy ---
+
+describe("timeoutStrategy", () => {
+  test("startSession returns process with provider timeout strategy", async () => {
+    const sessionMessages: Record<string, MockMessage[]> = {};
+    const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+
+      if (method === "POST" && url.includes("/session?")) {
+        const id = `oc-${crypto.randomUUID().slice(0, 8)}`;
+        sessionMessages[id] = [];
+        return new Response(JSON.stringify({ id }));
+      }
+
+      if (method === "POST" && url.match(/\/session\/[^/]+\/message/)) {
+        return new Response(JSON.stringify({ info: {}, parts: [] }));
+      }
+
+      if (method === "GET" && url.match(/\/session\/[^/]+\/message/)) {
+        return new Response(JSON.stringify([]));
+      }
+
+      return new Response("{}", { status: 404 });
+    };
+
+    const a = createOpencodeAgent(agentDefaults(), { ...serviceOverrides(), fetcher });
+    const eventStore = createEventStore();
+
+    const result = await a.startSession({ prompt: "hello", cwd: "/test", eventStore });
+
+    expect(result.process).toBeDefined();
+    expect(result.process!.timeoutStrategy).toBe("provider");
+  });
+
+  test("resumeSession returns process with provider timeout strategy", async () => {
+    const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+
+      if (method === "POST" && url.includes("/message")) {
+        return new Response(JSON.stringify({ info: {}, parts: [] }));
+      }
+
+      if (method === "GET" && url.includes("/message")) {
+        return new Response(JSON.stringify([]));
+      }
+
+      return new Response("{}", { status: 404 });
+    };
+
+    const a = createOpencodeAgent(agentDefaults(), { ...serviceOverrides(), fetcher });
+    const eventStore = createEventStore();
+
+    const result = await a.resumeSession({ sessionId: "oc-1", prompt: "follow-up", cwd: "/test" }, eventStore);
+
+    expect(result.process).toBeDefined();
+    expect(result.process!.timeoutStrategy).toBe("provider");
+  });
+});
+
 // --- resumeSession ---
 
 describe("resumeSession", () => {
@@ -261,6 +322,37 @@ describe("resumeSession", () => {
     });
 
     expect(hasConversationError).toBe(true);
+  });
+
+  test("POST timeout transitions to disconnected, not completed or failed", async () => {
+    const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+
+      if (method === "POST" && url.includes("/message")) {
+        throw new DOMException("The operation was aborted", "AbortError");
+      }
+
+      if (method === "GET" && url.includes("/message")) {
+        return new Response(JSON.stringify([]));
+      }
+
+      return new Response("{}", { status: 404 });
+    };
+
+    const a = createOpencodeAgent(agentDefaults(), { ...serviceOverrides(), fetcher });
+    const eventStore = createEventStore();
+
+    const result = await a.resumeSession({ sessionId: "oc-1", prompt: "will timeout", cwd: "/test" }, eventStore);
+
+    const exit = await result.process!.onExit;
+    expect(exit.code).toBeNull();
+    expect(exit.signal).toBe("TIMEOUT");
+
+    const history = eventStore.getHistory();
+    const statusPatches = history.filter((p: JsonPatch) => p.path === "/status");
+    const finalStatus = statusPatches[statusPatches.length - 1]?.value;
+    expect(finalStatus).toBe("disconnected");
   });
 
   test("appends normalized error message when message POST fails", async () => {

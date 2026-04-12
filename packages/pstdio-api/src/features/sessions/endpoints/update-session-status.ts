@@ -20,7 +20,7 @@ export const updateSessionStatusRoute = createRoute({
         "application/json": {
           schema: z
             .object({
-              status: z.enum(["in_progress", "awaiting_input", "completed", "failed", "cancelled"]),
+              status: z.enum(["in_progress", "awaiting_input", "completed", "failed", "cancelled", "disconnected"]),
             })
             .strict(),
         },

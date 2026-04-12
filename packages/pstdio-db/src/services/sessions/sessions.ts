@@ -3,7 +3,7 @@ import type { DbClient } from "../../db/connection.pglite";
 import { sessions } from "../../db/schemas.pg";
 
 type SessionRecord = typeof sessions.$inferSelect;
-type SessionStatus = "in_progress" | "awaiting_input" | "completed" | "failed" | "cancelled";
+type SessionStatus = "in_progress" | "awaiting_input" | "completed" | "failed" | "cancelled" | "disconnected";
 
 type CreateInput = {
   project_id: string;

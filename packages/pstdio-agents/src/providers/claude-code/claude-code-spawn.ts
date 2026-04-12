@@ -332,6 +332,7 @@ export const spawnClaudeCodeSession = async (input: SessionStartInput, deps: Spa
       stdin: child.stdin,
       kill: child.kill,
       onExit,
+      timeoutStrategy: "activity",
     } satisfies SpawnedProcess,
   };
 };
@@ -369,5 +370,6 @@ export const spawnClaudeCodeMessage = async (
     stdin: child.stdin,
     kill: child.kill,
     onExit,
+    timeoutStrategy: "activity",
   } satisfies SpawnedProcess;
 };

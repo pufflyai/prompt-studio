@@ -17,7 +17,7 @@ import type {
 } from "../../types";
 import { normalizeErrorPart } from "../normalized-error";
 import { normalizeOpencodeMessage } from "./opencode-normalizer";
-import { createOpencodeService } from "./opencode-service";
+import { createOpencodeService, isTransportTimeout } from "./opencode-service";
 
 // --- Dependency injection ---
 
@@ -152,6 +152,7 @@ export const createOpencodeAgent = (
     let latestMessages: SessionMessage[] = [];
     let done = false;
     let failed = false;
+    let timedOut = false;
     let failureMessage = "";
 
     messageComplete
@@ -160,8 +161,12 @@ export const createOpencodeAgent = (
       })
       .catch((error: unknown) => {
         done = true;
-        failed = true;
-        failureMessage = toErrorMessage(error);
+        if (isTransportTimeout(error)) {
+          timedOut = true;
+        } else {
+          failed = true;
+          failureMessage = toErrorMessage(error);
+        }
       });
 
     while (!done) {
@@ -205,6 +210,11 @@ export const createOpencodeAgent = (
       eventStore.push({ op: "replace", path: "/messages", value: nextMessages });
     }
 
+    if (timedOut) {
+      eventStore.push({ op: "replace", path: "/status", value: "disconnected" });
+      return { code: null as number | null, signal: "TIMEOUT" as string | null };
+    }
+
     const status = failed ? "failed" : "completed";
     eventStore.push({ op: "replace", path: "/status", value: status });
 
@@ -228,6 +238,7 @@ export const createOpencodeAgent = (
         stdin: new PassThrough(),
         kill: () => {},
         onExit,
+        timeoutStrategy: "provider" as const,
       },
     };
   };
@@ -244,6 +255,7 @@ export const createOpencodeAgent = (
         stdin: new PassThrough(),
         kill: () => {},
         onExit,
+        timeoutStrategy: "provider" as const,
       },
     };
   };

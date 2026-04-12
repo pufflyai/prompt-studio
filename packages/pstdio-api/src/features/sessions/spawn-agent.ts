@@ -133,7 +133,7 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
 
   if (result.process) {
     deps.sessionService.store.setProcess(input.sessionId, result.process);
-    trackProcessExit(input.sessionId, result.process, entry.eventStore.subscribe(), deps);
+    trackProcessLifecycle(input.sessionId, result.process, entry.eventStore.subscribe(), deps);
   }
 
   return result;
@@ -184,7 +184,7 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
 
   if (result.process) {
     deps.sessionService.store.setProcess(input.sessionId, result.process);
-    trackProcessExit(input.sessionId, result.process, entry.eventStore.subscribe(), deps);
+    trackProcessLifecycle(input.sessionId, result.process, entry.eventStore.subscribe(), deps);
   } else {
     sessionLogger.warn(
       {
@@ -198,13 +198,23 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
   return result;
 };
 
-const trackProcessExit = (
+const trackProcessLifecycle = (
   sessionId: string,
-  process: Pick<SpawnedProcess, "kill" | "onExit">,
+  process: Pick<SpawnedProcess, "kill" | "onExit" | "timeoutStrategy">,
   activity: AsyncIterable<unknown>,
   deps: SpawnDeps,
 ) => {
-  withProcessExitTimeout(sessionId, process, activity, deps.processExitTimeoutMs ?? DEFAULT_PROCESS_EXIT_TIMEOUT_MS)
+  const exitPromise =
+    process.timeoutStrategy === "provider"
+      ? process.onExit
+      : withProcessExitTimeout(
+          sessionId,
+          process,
+          activity,
+          deps.processExitTimeoutMs ?? DEFAULT_PROCESS_EXIT_TIMEOUT_MS,
+        );
+
+  exitPromise
     .then(async ({ code, signal }) => {
       const entry = deps.sessionService.store.get(sessionId);
       if (entry) {
@@ -229,7 +239,7 @@ const trackProcessExit = (
         );
       }
 
-      const status = code === 0 ? "completed" : "failed";
+      const status = signal === "TIMEOUT" ? "disconnected" : code === 0 ? "completed" : "failed";
       if (status === "failed") {
         sessionLogger.error(
           {

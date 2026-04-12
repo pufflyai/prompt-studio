@@ -2,7 +2,7 @@ import type { createSessionsDBService } from "pstdio-db";
 import { createSessionStore } from "../features/sessions/session-store";
 import type { EventBus } from "../features/sync/event-bus";
 
-type SessionStatus = "in_progress" | "awaiting_input" | "completed" | "failed" | "cancelled";
+type SessionStatus = "in_progress" | "awaiting_input" | "completed" | "failed" | "cancelled" | "disconnected";
 
 type SessionRecord = { id: string; project_id: string; status: string; original_session_id?: string | null };
 

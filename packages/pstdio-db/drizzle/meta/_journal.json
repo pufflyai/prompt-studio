@@ -50,6 +50,13 @@
       "when": 1775000000000,
       "tag": "0006_mighty_karnak",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776012096175,
+      "tag": "0007_add_disconnected_status",
+      "breakpoints": true
     }
   ]
 }

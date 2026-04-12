@@ -1,6 +1,13 @@
 import { z } from "zod";
 
-export const sessionStatusSchema = z.enum(["in_progress", "awaiting_input", "completed", "failed", "cancelled"]);
+export const sessionStatusSchema = z.enum([
+  "in_progress",
+  "awaiting_input",
+  "completed",
+  "failed",
+  "cancelled",
+  "disconnected",
+]);
 
 export const sessionSchema = z.object({
   id: z.string(),

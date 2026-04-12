@@ -89,15 +89,24 @@ const toOpencodeModelInput = (model?: string | null) => {
   return { providerID, modelID } satisfies OpencodeModelInput;
 };
 
+const GET_TIMEOUT_MS = 15_000;
+const POST_TIMEOUT_MS = 300_000;
+
+export const isTransportTimeout = (error: unknown) =>
+  error instanceof DOMException && (error.name === "AbortError" || error.name === "TimeoutError");
+
 const requestJson = async <T>(
   fetcher: OpencodeFetcher,
   url: string,
   options: { method: string; headers: Record<string, string>; body?: unknown },
 ) => {
+  const timeoutMs = options.method === "GET" ? GET_TIMEOUT_MS : POST_TIMEOUT_MS;
+
   const response = await fetcher(url, {
     method: options.method,
     headers: options.headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   const text = await response.text();

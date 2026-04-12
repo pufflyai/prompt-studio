@@ -12,6 +12,7 @@ export const sessionStatusEnum = pgEnum("session_status", [
   "completed",
   "failed",
   "cancelled",
+  "disconnected",
 ]);
 
 export const projects = pgTable("projects", {
