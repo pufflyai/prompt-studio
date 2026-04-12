@@ -28,11 +28,20 @@ export interface MarkdownEditorProps {
   defaultState: string;
   isEditable?: boolean;
   placeholder?: string;
+  scrollable?: boolean;
   onChange?: (value: string) => void;
 }
 
 export function MarkdownEditor(props: MarkdownEditorProps) {
-  const { autoFocus = false, debug = false, defaultState = "", isEditable = false, placeholder, onChange } = props;
+  const {
+    autoFocus = false,
+    debug = false,
+    defaultState = "",
+    isEditable = false,
+    placeholder,
+    scrollable = true,
+    onChange,
+  } = props;
   const { frontmatter, body } = splitFrontmatter(defaultState);
   const shouldTrackChanges = isEditable && Boolean(onChange);
   const editorContainerRef = useRef<HTMLDivElement>(null);
@@ -60,7 +69,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
       justifyContent="space-between"
       width="100%"
       maxWidth="100%"
-      height="100%"
+      height={scrollable ? "100%" : "auto"}
       position="relative"
       direction="column"
       overflow="visible"
@@ -74,7 +83,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
         <ImportCodeBlocksPlugin />
         <EquationPlugin />
         <RichTextPlugin
-          contentEditable={<ContentEditable fullWidth={false} padding="sm" />}
+          contentEditable={<ContentEditable fullWidth={false} padding="sm" scrollable={scrollable} />}
           placeholder={
             placeholder ? (
               <Flex

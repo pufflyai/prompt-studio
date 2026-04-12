@@ -15,7 +15,7 @@ export const DashboardHeader = (props: DashboardHeaderProps) => {
   const openSidebar = useSidebarStore(sidebarStorageKey, (s) => s.openSidebar);
 
   return (
-    <HStack gap="sm" width="100%" h="41px" px="4" py="3" borderBottomWidth="1px" borderColor="border.muted">
+    <HStack gap="sm" width="100%" h="41px" px="xs" py="xs" borderBottomWidth="1px" borderColor="border.muted">
       {!sidebarOpen ? (
         <IconButton variant="ghost" size="xs" aria-label="Show sidebar" onClick={openSidebar}>
           <PanelLeftOpen size={16} />

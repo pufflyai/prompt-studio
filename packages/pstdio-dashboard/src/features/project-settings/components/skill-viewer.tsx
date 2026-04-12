@@ -1,8 +1,10 @@
 import { Badge, Box, Button, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
+import { type SidebarNavigateEvent, SidebarTree } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { useEffect, useMemo, useState } from "react";
 import type { ProjectSkillDetails } from "../data/skills-api";
 import { useProjectSkill, useUpdateProjectSkill } from "../hooks/use-skills";
+import { buildSkillFileTree, collectFolderIds } from "../utils/build-skill-file-tree";
 import { parseSkillVersion } from "../utils/parse-skill-version";
 
 interface SkillViewerProps {
@@ -12,13 +14,7 @@ interface SkillViewerProps {
 
 type SkillFile = ProjectSkillDetails["files"][number];
 
-const sortSkillFiles = (files: SkillFile[]) => {
-  return [...files].sort((a, b) => {
-    if (a.path === "SKILL.md") return -1;
-    if (b.path === "SKILL.md") return 1;
-    return a.path.localeCompare(b.path);
-  });
-};
+const CONTENT_MAX_WIDTH = "720px";
 
 const getDefaultFilePath = (files: SkillFile[]) => {
   return files.find((file) => file.path === "SKILL.md")?.path ?? files[0]?.path ?? "";
@@ -32,85 +28,99 @@ export const SkillViewerContent = (props: {
   onUpdate: () => void;
 }) => {
   const { skill, isUpdating, onUpdate } = props;
-  const files = useMemo(() => sortSkillFiles(skill.files), [skill.files]);
-  const [selectedPath, setSelectedPath] = useState(getDefaultFilePath(files));
+  const treeNodes = useMemo(() => buildSkillFileTree(skill.files), [skill.files]);
+  const initialExpanded = useMemo(() => collectFolderIds(treeNodes), [treeNodes]);
+  const [expandedNodes, setExpandedNodes] = useState<string[]>(initialExpanded);
+  const [selectedPath, setSelectedPath] = useState(getDefaultFilePath(skill.files));
 
   useEffect(() => {
-    setSelectedPath(getDefaultFilePath(files));
-  }, [files]);
+    setExpandedNodes(initialExpanded);
+  }, [initialExpanded]);
 
-  const selectedFile = files.find((file) => file.path === selectedPath) ?? files[0];
-  const skillFile = files.find((file) => file.path === "SKILL.md");
+  useEffect(() => {
+    setSelectedPath(getDefaultFilePath(skill.files));
+  }, [skill.files]);
+
+  const sections = useMemo(() => [{ id: "files", nodes: treeNodes, collapsible: false }], [treeNodes]);
+
+  const selectedFile = skill.files.find((file) => file.path === selectedPath) ?? skill.files[0];
+  const skillFile = skill.files.find((file) => file.path === "SKILL.md");
   const currentVersion = parseSkillVersion(skillFile?.content ?? "");
   const hasUpdate = skill.bundled_version && currentVersion !== skill.bundled_version;
 
+  const handleNavigate = (event: SidebarNavigateEvent) => {
+    setSelectedPath(event.nodeId);
+  };
+
+  const handleToggleNode = (nodeId: string) => {
+    setExpandedNodes((prev) => (prev.includes(nodeId) ? prev.filter((id) => id !== nodeId) : [...prev, nodeId]));
+  };
+
   return (
-    <Stack height="100%" gap="0">
-      <Flex padding="md" borderBottomWidth="1px" justifyContent="center">
-        <Stack gap="xs" width="100%" maxWidth="900px">
-          <Flex alignItems="center" gap="sm">
-            <Text textStyle="heading/S" data-testid="project-skill-name">
-              {skill.name}
-            </Text>
-            {currentVersion && (
-              <Badge size="sm" data-testid="project-skill-version">
-                v{currentVersion}
-              </Badge>
-            )}
-            {hasUpdate && (
-              <Button
-                size="xs"
-                variant="outline"
-                loading={isUpdating}
-                onClick={onUpdate}
-                data-testid="project-skill-update-button"
-              >
-                Update to v{skill.bundled_version}
-              </Button>
-            )}
-          </Flex>
-          <Text textStyle="paragraph/S/regular" color="fg.muted" data-testid="project-skill-description">
-            {skill.description}
-          </Text>
-          {skill.installed_agents.length > 0 ? (
-            <Flex gap="xs" data-testid="project-skill-installed-agents">
-              {skill.installed_agents.map((agentId) => (
-                <Badge key={agentId} size="sm" colorPalette="green">
-                  {agentId}
+    <Flex alignItems="flex-start" data-testid="project-skill-content">
+      <Box
+        position="sticky"
+        top="0"
+        alignSelf="stretch"
+        width="280px"
+        minW="220px"
+        maxHeight="100vh"
+        borderRightWidth="1px"
+        padding="sm"
+        overflow="auto"
+        data-testid="project-skill-file-tree"
+      >
+        <SidebarTree
+          sections={sections}
+          expandedSections={["files"]}
+          expandedNodes={expandedNodes}
+          activeNodeId={selectedFile?.path}
+          onToggleSection={() => {}}
+          onToggleNode={handleToggleNode}
+          onNavigate={handleNavigate}
+        />
+      </Box>
+      <Flex flex="1" justifyContent="center">
+        <Stack width="100%" maxWidth={CONTENT_MAX_WIDTH} padding="md" gap="md">
+          <Stack gap="xs">
+            <Flex alignItems="center" gap="sm">
+              <Text textStyle="heading/S" data-testid="project-skill-name">
+                {skill.name}
+              </Text>
+              {currentVersion && (
+                <Badge size="sm" data-testid="project-skill-version">
+                  v{currentVersion}
                 </Badge>
-              ))}
+              )}
+              {hasUpdate && (
+                <Button
+                  size="xs"
+                  variant="outline"
+                  loading={isUpdating}
+                  onClick={onUpdate}
+                  data-testid="project-skill-update-button"
+                >
+                  Update to v{skill.bundled_version}
+                </Button>
+              )}
             </Flex>
-          ) : (
-            <Text textStyle="paragraph/XS/regular" color="fg.muted" data-testid="project-skill-not-installed">
-              Not installed locally
+            <Text textStyle="paragraph/S/regular" color="fg.muted" data-testid="project-skill-description">
+              {skill.description}
             </Text>
-          )}
-        </Stack>
-      </Flex>
-      <Flex flex="1" minH="0" data-testid="project-skill-content">
-        <Stack
-          width="280px"
-          minW="220px"
-          borderRightWidth="1px"
-          padding="sm"
-          gap="2xs"
-          overflow="auto"
-          data-testid="project-skill-file-tree"
-        >
-          {files.map((file) => (
-            <Button
-              key={file.path}
-              size="xs"
-              justifyContent="flex-start"
-              variant={selectedFile?.path === file.path ? "subtle" : "ghost"}
-              onClick={() => setSelectedPath(file.path)}
-              data-testid={`project-skill-file-${file.path.replaceAll("/", "-")}`}
-            >
-              {file.path}
-            </Button>
-          ))}
-        </Stack>
-        <Stack flex="1" minH="0" padding="sm" overflow="auto">
+            {skill.installed_agents.length > 0 ? (
+              <Flex gap="xs" data-testid="project-skill-installed-agents">
+                {skill.installed_agents.map((agentId) => (
+                  <Badge key={agentId} size="sm" colorPalette="green">
+                    {agentId}
+                  </Badge>
+                ))}
+              </Flex>
+            ) : (
+              <Text textStyle="paragraph/XS/regular" color="fg.muted" data-testid="project-skill-not-installed">
+                Not installed locally
+              </Text>
+            )}
+          </Stack>
           {!selectedFile && (
             <Text textStyle="paragraph/S/regular" color="fg.muted">
               No skill content.
@@ -118,9 +128,10 @@ export const SkillViewerContent = (props: {
           )}
           {selectedFile && isMarkdown(selectedFile.path) && (
             <MarkdownEditor
-              key={selectedFile.path}
+              key={`${skill.id}:${selectedFile.path}`}
               defaultState={selectedFile.content}
               isEditable={false}
+              scrollable={false}
               placeholder="No content."
             />
           )}
@@ -141,7 +152,7 @@ export const SkillViewerContent = (props: {
           )}
         </Stack>
       </Flex>
-    </Stack>
+    </Flex>
   );
 };
 

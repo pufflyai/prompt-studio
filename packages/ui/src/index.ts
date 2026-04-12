@@ -99,6 +99,7 @@ export {
   applyThemePreference,
   type ThemePreference,
 } from "./utils/apply-theme-preference";
+export { getFileTypeIcon } from "./utils/get-file-type-icon";
 export {
   getInitialThemePreference,
   ThemePreferenceProvider,

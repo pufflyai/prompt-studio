@@ -10,7 +10,7 @@ type SkillFile = {
 
 type SkillRow = typeof skills.$inferSelect;
 
-type SkillRecord = Omit<SkillRow, "files_json"> & {
+type SkillRecord = Omit<SkillRow, "files_json" | "file_id"> & {
   files: SkillFile[];
   legacy_file_id: string | null;
 };
