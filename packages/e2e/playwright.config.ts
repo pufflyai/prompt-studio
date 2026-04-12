@@ -49,13 +49,12 @@ export default defineConfig({
       },
     },
     {
-      command: `bun run --cwd ../../packages/pstdio pstdio -- --api-port ${apiPort} --dashboard-port ${dashboardPort} --no-open-browser`,
+      command: `bun run --cwd ../../packages/pstdio-dashboard dev -- --port ${dashboardPort}`,
       port: dashboardPort,
       reuseExistingServer: false,
       timeout: 30_000,
       env: {
-        PSTDIO_DISABLE_EMBED_MANIFEST: "1",
-        PSTDIO_DISABLE_API_AUTO_START: "1",
+        VITE_API_BASE_URL: `http://localhost:${apiPort}`,
         HOME: resolvedHomePath,
       },
     },

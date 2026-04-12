@@ -108,6 +108,13 @@ export const ArtifactsOnly: Story = {
   },
 };
 
+export const ChangesOnly: Story = {
+  args: {
+    diffs: sampleDiffs,
+    artifacts: [],
+  },
+};
+
 export const ArtifactsOnlyEdgeCases: Story = {
   args: {
     diffs: [],

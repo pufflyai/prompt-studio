@@ -7,6 +7,67 @@ import { expect, test } from "@playwright/test";
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 
+const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string, agentId = "opencode") => {
+  await page.addInitScript(
+    ({ currentProjectId, currentAgentId }: { currentProjectId: string; currentAgentId: string }) => {
+      localStorage.setItem("onboarding-complete", "true");
+      localStorage.setItem("selected-agent", currentAgentId);
+      localStorage.setItem(
+        `pstdio-project-settings/projects/${currentProjectId}/values`,
+        JSON.stringify({
+          state: {
+            lastSelectedAgent: currentAgentId,
+            lastSelectedModels: [],
+            lastSelectedRepo: "",
+            lastSelectedBranches: [],
+            sessionModalState: "closed",
+            selectedSessionId: null,
+          },
+          version: 0,
+        }),
+      );
+    },
+    { currentProjectId: projectId, currentAgentId: agentId },
+  );
+};
+
+const readSyncInitEvent = async () => {
+  const controller = new AbortController();
+  const response = await fetch(`${apiBase}/v1/sync/stream`, { signal: controller.signal });
+  expect(response.ok).toBe(true);
+  expect(response.body).not.toBeNull();
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split("\n\n");
+      buffer = parts.pop() ?? "";
+
+      for (const part of parts) {
+        const lines = part.split("\n");
+        const event = lines.find((line) => line.startsWith("event: "))?.slice(7);
+        const data = lines.find((line) => line.startsWith("data: "))?.slice(6);
+        if (event === "init" && data) {
+          return JSON.parse(data) as {
+            tables: Record<string, Array<{ id: string; [key: string]: unknown }>>;
+            seq: number;
+          };
+        }
+      }
+    }
+  } finally {
+    controller.abort();
+  }
+
+  throw new Error("Failed to read sync init event.");
+};
+
 const createGitRepo = () => {
   const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-e2e-ws-diff-"));
   execSync("git init -b main", { cwd: repoRoot, stdio: "pipe" });
@@ -239,5 +300,73 @@ test.describe("Workspace diff", () => {
     const widgetFile = diff.files.find((file) => file.filePath === "widget.tsx");
     expect(widgetFile).toBeDefined();
     expect(widgetFile!.change).toBe("added");
+  });
+
+  test("checks tab shows workspace artifacts without ticket_files links", async ({ page, request }) => {
+    const repoRoot = createGitRepo();
+    repoDirs.push(repoRoot);
+    const repo = await registerRepoViaApi(request, projectId, "artifact-repo", repoRoot);
+    const ticket = await createTicketViaApi(request, projectId, "# Artifact workspace test");
+    const attempt = await createAttemptViaApi(request, ticket.id, repo.id);
+    const syncInit = await readSyncInitEvent();
+    const timestamp = "2026-04-12T00:00:00.000Z";
+    const artifactFileId = "artifact-file-1";
+
+    await page.route("**/v1/sync/stream**", async (route) => {
+      const payload = {
+        ...syncInit,
+        tables: {
+          ...syncInit.tables,
+          files: [
+            ...(syncInit.tables.files ?? []),
+            {
+              id: artifactFileId,
+              project_id: projectId,
+              file_name: "validation.log",
+              file_kind: "artifact",
+              storage_path: `/tmp/${artifactFileId}`,
+              mime_type: "text/plain",
+              size_bytes: 22,
+              hash: null,
+              created_at: timestamp,
+              updated_at: timestamp,
+            },
+          ],
+          workspace_artifacts: [
+            ...(syncInit.tables.workspace_artifacts ?? []),
+            {
+              id: "artifact-row-1",
+              ticket_id: ticket.id,
+              file_id: artifactFileId,
+              file_name: "validation.log",
+              file_kind: "artifact",
+              relative_path: `artifacts/${ticket.shorthand}/validation.log`,
+              mime_type: "text/plain",
+              size_bytes: 22,
+              created_at: timestamp,
+            },
+          ],
+        },
+      };
+
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: `event: init\ndata: ${JSON.stringify(payload)}\n\n`,
+      });
+    });
+    await page.route(`**/v1/tickets/${ticket.id}/files/${artifactFileId}/content`, async (route) => {
+      await route.fulfill({ status: 200, contentType: "text/plain", body: "validation output\nall good" });
+    });
+
+    await bypassOnboarding(page, projectId);
+    await page.goto(
+      `/projects/${projectId}/tickets/${ticket.shorthand}/workspaces/${attempt.workspace.workspace_shorthand}`,
+    );
+    await page.getByTestId("workspace-tab-checks").click();
+
+    await expect(page.getByText(`artifacts/${ticket.shorthand}/validation`)).toBeVisible();
+    await expect(page.getByText("validation output")).toBeVisible();
+    await expect(page.getByTestId("checks-panel-empty")).toHaveCount(0);
   });
 });

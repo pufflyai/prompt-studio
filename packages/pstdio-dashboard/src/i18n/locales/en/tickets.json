@@ -157,6 +157,7 @@
     },
     "artifacts": {
       "label": "Artifacts",
+      "contentError": "Unable to load this artifact right now.",
       "empty": {
         "title": "No artifacts yet",
         "description": "Workspace artifacts will appear here once generated."

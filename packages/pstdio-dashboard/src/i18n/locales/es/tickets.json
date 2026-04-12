@@ -187,6 +187,26 @@
     "start": "Iniciar",
     "title": "Crear intento"
   },
+  "workspacePanel": {
+    "tabs": {
+      "changes": "Cambios",
+      "checks": "Verificaciones"
+    },
+    "artifacts": {
+      "label": "Artefactos",
+      "contentError": "No se puede cargar este artefacto en este momento.",
+      "empty": {
+        "title": "Aún no hay artefactos",
+        "description": "Los artefactos del espacio de trabajo aparecerán aquí una vez generados."
+      }
+    },
+    "diffs": {
+      "empty": {
+        "title": "Aún no hay diferencias",
+        "description": "Los cambios en este espacio de trabajo aparecerán aquí cuando se modifiquen archivos."
+      }
+    }
+  },
   "diff": {
     "collapseAll": "Contraer todas las diferencias",
     "errorLoadingDiff": "Error al cargar la diferencia: {{error}}",

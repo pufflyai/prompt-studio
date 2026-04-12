@@ -22,6 +22,27 @@ const toArtifact = (row: SyncedRow): ApiWorkspaceArtifact => ({
   created_at: row.created_at as string,
 });
 
+export const buildTicketFileData = (params: {
+  ticketId: string;
+  ticketFiles: SyncedRow[] | undefined;
+  allFiles: SyncedRow[] | undefined;
+  allArtifacts: SyncedRow[] | undefined;
+}) => {
+  const { ticketId, ticketFiles, allFiles, allArtifacts } = params;
+  const fileIds = new Set(
+    (ticketFiles ?? [])
+      .filter((ticketFile) => (ticketFile.ticket_id as string) === ticketId)
+      .map((ticketFile) => ticketFile.file_id as string),
+  );
+
+  const files = (allFiles ?? []).filter((file) => fileIds.has(file.id)).map(toFilePreview);
+  const artifacts = (allArtifacts ?? [])
+    .filter((artifact) => (artifact.ticket_id as string) === ticketId)
+    .map(toArtifact);
+
+  return { files, artifacts };
+};
+
 export const useTicketFiles = (ticketId: string | null | undefined) => {
   const { data: rawTicketFiles, isLoading } = useLiveQuery(
     (q) =>
@@ -35,20 +56,22 @@ export const useTicketFiles = (ticketId: string | null | undefined) => {
   );
   const ticketFiles = asSyncedRows(rawTicketFiles);
 
-  const fileIds = new Set((ticketFiles ?? []).map((tf) => tf.file_id as string));
-
   const { data: rawFiles } = useLiveQuery((q) => q.from({ f: getCollection("files") }).select(({ f }) => ({ ...f })));
   const allFiles = asSyncedRows(rawFiles);
 
-  const { data: rawArtifacts } = useLiveQuery((q) =>
-    q.from({ a: getCollection("workspace_artifacts") }).select(({ a }) => ({ ...a })),
+  const { data: rawArtifacts } = useLiveQuery(
+    (q) =>
+      ticketId
+        ? q
+            .from({ a: getCollection("workspace_artifacts") })
+            .where(({ a }) => eq(a.ticket_id, ticketId))
+            .select(({ a }) => ({ ...a }))
+        : undefined,
+    [ticketId],
   );
   const allArtifacts = asSyncedRows(rawArtifacts);
 
-  const files = (allFiles ?? []).filter((f) => fileIds.has(f.id)).map(toFilePreview);
-  const artifacts = (allArtifacts ?? []).filter((a) => fileIds.has(a.file_id as string)).map(toArtifact);
-
-  const data = ticketId ? { files, artifacts } : undefined;
+  const data = ticketId ? buildTicketFileData({ ticketId, ticketFiles, allFiles, allArtifacts }) : undefined;
 
   return { data, isLoading };
 };

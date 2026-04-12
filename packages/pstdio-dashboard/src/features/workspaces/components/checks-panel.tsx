@@ -19,7 +19,7 @@ export const ChecksPanel = (props: ChecksPanelProps) => {
 
   const effectiveId = resolveSelectedArtifact(artifacts, selectedId);
   const selectedArtifact = artifacts.find((a) => a.id === effectiveId);
-  const { data: content, isLoading } = useArtifactContent(ticketId, selectedArtifact?.file_id ?? null);
+  const { data: content, isLoading, error } = useArtifactContent(ticketId, selectedArtifact?.file_id ?? null);
 
   if (artifacts.length === 0) {
     return (
@@ -62,6 +62,10 @@ export const ChecksPanel = (props: ChecksPanelProps) => {
           <Flex justify="center" align="center" h="full">
             <Spinner size="sm" />
           </Flex>
+        ) : error ? (
+          <Text color="fg.error" textStyle="paragraph/S/regular" data-testid="checks-panel-content-error">
+            {t("workspacePanel.artifacts.contentError")}
+          </Text>
         ) : (
           <Text as="pre" textStyle="paragraph/S/regular" whiteSpace="pre-wrap" wordBreak="break-word">
             {content}

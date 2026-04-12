@@ -187,6 +187,26 @@
     "start": "Start",
     "title": "Create Attempt"
   },
+  "workspacePanel": {
+    "tabs": {
+      "changes": "Changes",
+      "checks": "Checks"
+    },
+    "artifacts": {
+      "label": "Artifacts",
+      "contentError": "Unable to load this artifact right now.",
+      "empty": {
+        "title": "No artifacts yet",
+        "description": "Workspace artifacts will appear here once generated."
+      }
+    },
+    "diffs": {
+      "empty": {
+        "title": "No diffs yet",
+        "description": "Changes in this workspace will appear here once files are modified."
+      }
+    }
+  },
   "diff": {
     "collapseAll": "Collapse all diffs",
     "errorLoadingDiff": "Failed to load diff: {{error}}",

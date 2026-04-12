@@ -150,6 +150,26 @@
       "placeholder": "Saisir l'URL..."
     }
   },
+  "workspacePanel": {
+    "tabs": {
+      "changes": "Modifications",
+      "checks": "Vérifications"
+    },
+    "artifacts": {
+      "label": "Artifacts",
+      "contentError": "Impossible de charger cet artefact pour le moment.",
+      "empty": {
+        "title": "Pas encore d'artefacts",
+        "description": "Les artefacts de l'espace de travail apparaîtront ici une fois générés."
+      }
+    },
+    "diffs": {
+      "empty": {
+        "title": "Pas encore de diffs",
+        "description": "Les changements de cet espace de travail apparaîtront ici une fois les fichiers modifiés."
+      }
+    }
+  },
   "diff": {
     "viewModes": {
       "inline": "Vue en ligne",

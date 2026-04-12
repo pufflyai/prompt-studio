@@ -163,6 +163,26 @@
       "manualUrlHint": "尚未检测到 URL。您可以在上方工具栏中手动输入 URL。"
     }
   },
+  "workspacePanel": {
+    "tabs": {
+      "changes": "变更",
+      "checks": "检查"
+    },
+    "artifacts": {
+      "label": "产物",
+      "contentError": "当前无法加载此产物。",
+      "empty": {
+        "title": "还没有产物",
+        "description": "工作区产物生成后会显示在这里。"
+      }
+    },
+    "diffs": {
+      "empty": {
+        "title": "还没有差异",
+        "description": "此工作区中的文件被修改后，变更会显示在这里。"
+      }
+    }
+  },
   "diff": {
     "viewModes": {
       "inline": "内联视图",
