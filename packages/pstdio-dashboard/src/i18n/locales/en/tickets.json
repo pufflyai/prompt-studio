@@ -150,6 +150,25 @@
       "placeholder": "Enter URL..."
     }
   },
+  "workspacePanel": {
+    "tabs": {
+      "changes": "Changes",
+      "checks": "Checks"
+    },
+    "artifacts": {
+      "label": "Artifacts",
+      "empty": {
+        "title": "No artifacts yet",
+        "description": "Workspace artifacts will appear here once generated."
+      }
+    },
+    "diffs": {
+      "empty": {
+        "title": "No diffs yet",
+        "description": "Changes in this workspace will appear here once files are modified."
+      }
+    }
+  },
   "diff": {
     "viewModes": {
       "inline": "Inline view",

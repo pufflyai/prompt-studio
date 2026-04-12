@@ -20,9 +20,12 @@ Each ticket card resolves its latest attempt and shows addition/deletion totals 
 
 Shows attempt count and latest diff totals. Clicking opens the latest workspace when attempts exist.
 
-### 3) Workspace page right panel (full file-by-file diff)
+### 3) Workspace page right panel (Checks + Changes tabs)
 
-The selected attempt is resolved from route params. The panel fetches full diff data (files, totals, raw diff text) and renders artifacts at the top with file-by-file diffs below.
+The selected attempt is resolved from route params. The right panel exposes two tabs:
+
+- `Changes`: full file-by-file diff rendering for the selected attempt.
+- `Checks`: ticket artifact browsing and artifact content rendering.
 
 ## End-to-End Flow
 
@@ -97,9 +100,9 @@ API file diff objects are transformed into UI diff types. Rename paths fall back
 ### Panel Layout
 
 - Workspace panel remains visible even when there are no diffs
-- Artifacts section shown at top when present
-- Empty state is shown when there are no diffs
-- Diff drawer shown below artifacts when diffs exist
+- Tab strip is always visible with `Changes` and `Checks`
+- `Changes` tab shows the existing diff drawer flow, including the no-diff empty state
+- `Checks` tab shows artifact list + selected artifact content
 
 ### File Cards
 
@@ -111,9 +114,22 @@ One card per changed file, expanded by default:
 - Addition/deletion counts shown as a badge
 - Body renders a read-only inline Monaco diff editor
 
-## Artifact Section
+## Checks Tab
 
-Artifacts come from `GET /v1/tickets/:ticketId/files` in `pstdio-api`. They are listed per ticket (not per attempt). Displayed as compact rows with the file extension stripped from the label.
+Artifacts come from `GET /v1/tickets/:ticketId/files` in `pstdio-api`. They are listed per ticket (not per attempt), with file extension stripped from the display label.
+
+Artifact content is fetched from `GET /v1/tickets/:ticketId/files/:fileId/content` when an item is selected.
+
+Selection behavior:
+
+- First artifact is selected by default
+- If the current selection disappears after refresh, selection resets to the first artifact
+- If there are no artifacts, the tab shows an artifact empty state
+
+Loading behavior:
+
+- While content is loading, show a spinner in the content pane
+- Once loaded, render content as preformatted text
 
 ## Errors and Empty States
 
@@ -126,13 +142,16 @@ Artifacts come from `GET /v1/tickets/:ticketId/files` in `pstdio-api`. They are 
 ### UI behavior
 
 - No workspace selected: diff query disabled
-- No files: panel shows an empty state
-- Artifacts but no files: artifacts remain visible above the empty state
+- No files: `Changes` tab shows an empty state
+- No artifacts: `Checks` tab shows an empty state
+- Artifacts but no files: users can still inspect artifacts in `Checks`
 
 ## Verification
 
 1. Open a ticket with at least one attempt
 2. Navigate to the workspace route for that attempt
-3. Confirm the right panel shows artifact rows (if any) and one diff card per changed file
-4. Edit files in the attempt worktree and wait up to 5 seconds
-5. Confirm totals and file contents refresh automatically
+3. Open `Changes` and confirm one diff card per changed file (or empty state when none)
+4. Open `Checks` and confirm artifact list appears (or empty state when none)
+5. Select an artifact and confirm file content renders
+6. Edit files in the attempt worktree and wait up to 5 seconds
+7. Confirm diff totals and file contents refresh automatically

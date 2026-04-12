@@ -68,6 +68,9 @@ const edgeCaseArtifacts: ApiWorkspaceArtifact[] = [
 const meta = {
   title: "Workspaces/WorkspaceDiffPanel",
   component: WorkspaceDiffPanel,
+  args: {
+    ticketId: "ticket-1",
+  },
   decorators: [
     (Story: StoryFn) => (
       <Flex height="75vh" border="1px solid" borderColor="border.muted" borderRadius="md" overflow="hidden">

@@ -98,6 +98,7 @@ interface WorkspacePageContentProps {
   selectedWorkspaceLabel: string;
   selectedWorkspace: WorkspaceListItem | null;
   sessionsByWorkspaceId: ReturnType<typeof useWorkspaceSessions>["sessionsByWorkspaceId"];
+  ticketId: string;
   diffs: ReturnType<typeof transformFileDiffs>;
   artifacts: ApiWorkspaceArtifact[];
   attempts: NonNullable<ReturnType<typeof useProjectTickets>["data"]>[number]["attempts"];
@@ -120,6 +121,7 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
     projectId,
     ticketShorthand,
     ticket,
+    ticketId,
     attemptStatusMap,
     selectedWorkspaceLabel,
     selectedWorkspace,
@@ -205,7 +207,7 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
         </HorizontalMenuStack>
 
         <Flex flex="1" minH="0">
-          <WorkspaceDiffPanel diffs={diffs} artifacts={artifacts} />
+          <WorkspaceDiffPanel ticketId={ticketId} diffs={diffs} artifacts={artifacts} />
         </Flex>
 
         {isCreateModalOpen ? (
@@ -417,6 +419,7 @@ export const WorkspacePage = () => {
       projectId={projectId}
       ticketShorthand={ticketShorthand}
       ticket={ticket}
+      ticketId={ticket.id}
       attemptStatusMap={attemptStatusMap}
       selectedWorkspaceLabel={selectedWorkspaceLabel}
       selectedWorkspace={selectedWorkspace}
