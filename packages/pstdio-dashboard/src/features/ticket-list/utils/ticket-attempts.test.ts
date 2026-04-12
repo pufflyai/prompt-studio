@@ -61,6 +61,7 @@ describe("toSessionIndicatorStatus", () => {
     expect(toSessionIndicatorStatus("completed")).toBe("completed");
     expect(toSessionIndicatorStatus("failed")).toBe("failed");
     expect(toSessionIndicatorStatus("cancelled")).toBe("failed");
+    expect(toSessionIndicatorStatus("disconnected")).toBe("disconnected");
   });
 
   it("does not derive status from workspace state when session status is unavailable", () => {

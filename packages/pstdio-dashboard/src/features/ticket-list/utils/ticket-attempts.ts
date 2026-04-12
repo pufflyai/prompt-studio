@@ -31,5 +31,7 @@ export const buildLatestAttemptsByTicketId = (tickets: Ticket[]) => {
 
 export const toSessionIndicatorStatus = (sessionStatus: TicketAttempt["sessionStatus"]) => {
   if (sessionStatus === "cancelled") return "failed";
-  return sessionStatus ?? undefined;
+  if (sessionStatus === "disconnected") return "disconnected";
+  if (sessionStatus === null) return undefined;
+  return sessionStatus;
 };

@@ -1,4 +1,3 @@
-import { Text } from "@chakra-ui/react";
 import {
   resolveSessionIndicatorColor,
   resolveSessionIndicatorIcon,
@@ -8,17 +7,16 @@ import {
   type SidebarNode,
   type SidebarSection,
 } from "@pstdio/ui";
-import { Circle, FileCode, FileImage, FileJson, FileSpreadsheet, FileText, GitBranch, Plus } from "lucide-react";
+import { FileCode, FileImage, FileJson, FileSpreadsheet, FileText, Plus } from "lucide-react";
 import { createElement } from "react";
 import { ProjectMenu } from "@/features/project/components/project-menu";
 import { ProjectSidebarFooter } from "@/features/project/components/project-sidebar";
 import type { TicketAttempt } from "@/features/ticket-list/types";
-import type { AttemptStatusMapEntry } from "@/features/workspaces/hooks/attempt-status-map";
 import type { WorkspaceSessionEntry } from "@/features/workspaces/hooks/use-workspace-sessions";
-import { getAttemptLabelFromWorkspaceShorthand } from "@/features/workspaces/utils/workspace-shorthand";
 import { type SelectableTicketFile, TICKET_CONTENT_ITEM_ID } from "../utils/ticket-file-selection";
-import { buildWorkspaceStatusIndicatorTooltip } from "../utils/workspace-status-indicator";
 import { resolveTicketSidebarActiveNodeIds } from "./ticket-sidebar-selection";
+import { buildWorkspacesSection } from "./ticket-sidebar-workspaces";
+import type { WorkspaceDiffTotals } from "./workspace-diff-total";
 
 const TICKET_SIDEBAR_STORAGE_KEY = "ticket-sidebar";
 
@@ -29,7 +27,8 @@ interface TicketSidebarProps {
   files: SelectableTicketFile[];
   selectedFileId: string;
   workspaces: TicketAttempt[];
-  attemptStatusMap?: Map<string, AttemptStatusMapEntry>;
+  attemptStatusMap?: Map<string, { name: string; color: string; description?: string | null }>;
+  diffTotalsByWorkspaceId?: Map<string, WorkspaceDiffTotals>;
   sessionsByWorkspaceId: Map<string, WorkspaceSessionEntry[]>;
   selectedWorkspaceId?: string | null;
   activeSessionId?: string | null;
@@ -69,41 +68,6 @@ const buildFilesSection = (files: SelectableTicketFile[]): SidebarSection => {
   ];
 
   return { id: "files", label: "Files", nodes };
-};
-
-const buildWorkspacesSection = (
-  workspaces: TicketAttempt[],
-  attemptStatusMap: Map<string, AttemptStatusMapEntry>,
-): SidebarSection => {
-  const nodes: SidebarNode[] = workspaces.map((workspace) => {
-    const attemptStatus = workspace.attemptStatusId ? attemptStatusMap.get(workspace.attemptStatusId) : undefined;
-
-    return {
-      id: `workspace:${workspace.id}`,
-      label: getAttemptLabelFromWorkspaceShorthand(workspace.shorthand),
-      icon: <GitBranch size={14} />,
-      indicator: attemptStatus
-        ? {
-            icon: <Circle size={8} fill="currentColor" />,
-            color: `var(--chakra-colors-${attemptStatus.color}-solid)`,
-            tooltip: buildWorkspaceStatusIndicatorTooltip(attemptStatus),
-          }
-        : undefined,
-      isNavigable: true,
-      navigationIntent: { id: "select-workspace", payload: { workspaceShorthand: workspace.shorthand } },
-    };
-  });
-
-  return {
-    id: "workspaces",
-    label: "Workspaces",
-    nodes,
-    emptyState: (
-      <Text textStyle="paragraph/S/regular" color="fg.muted" px="3" py="4" textAlign="center">
-        No workspaces yet
-      </Text>
-    ),
-  };
 };
 
 const buildSessionsSection = (
@@ -147,6 +111,7 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
     selectedFileId,
     workspaces,
     attemptStatusMap = new Map(),
+    diffTotalsByWorkspaceId = new Map(),
     sessionsByWorkspaceId,
     selectedWorkspaceId,
     activeSessionId = null,
@@ -161,7 +126,7 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
 
   const sections: SidebarSection[] = [
     buildFilesSection(files),
-    buildWorkspacesSection(workspaces, attemptStatusMap),
+    buildWorkspacesSection(workspaces, attemptStatusMap, diffTotalsByWorkspaceId),
     ...(selectedWorkspace
       ? [
           buildSessionsSection(

@@ -17,6 +17,7 @@ import {
   useUpdateProjectTicket,
   useUpdateProjectTicketTags,
 } from "@/features/ticket-list/hooks/use-project-tickets";
+import { useTicketAttemptDiffs } from "@/features/ticket-list/hooks/use-ticket-attempt-diffs";
 import { useAttemptStatusMap } from "@/features/workspaces/hooks/use-attempt-status-map";
 import { useWorkspaceSessions } from "@/features/workspaces/hooks/use-workspace-sessions";
 import { resolveWorkspaceSelection } from "@/features/workspaces/utils/workspace-selection";
@@ -36,6 +37,7 @@ import {
   resolveSelectedTicketFile,
   TICKET_CONTENT_ITEM_ID,
 } from "../utils/ticket-file-selection";
+import { buildTicketDetailsDiffInputs } from "./ticket-details-panel-diff-inputs";
 
 const TicketDetailsStatusMessage = (props: { message: string }) => {
   const { message } = props;
@@ -70,6 +72,39 @@ const buildWorkspaceRoute = (projectId: string, ticketShorthand: string, workspa
   params: { projectId, ticketShorthand, workspaceShorthand },
 });
 
+const buildTicketOverflowActions = (input: {
+  isArchived: boolean;
+  projectId?: string;
+  isUpdatePending: boolean;
+  isDeletePending: boolean;
+  translate: (key: string) => string;
+  onArchiveToggle: () => void;
+  onDelete: () => void;
+}) => {
+  const { isArchived, projectId, isUpdatePending, isDeletePending, translate, onArchiveToggle, onDelete } = input;
+
+  return [
+    {
+      key: "archive-ticket",
+      label: translate(
+        isArchived ? "projects:ticketPanel.options.unarchiveTicket" : "projects:ticketPanel.options.archiveTicket",
+      ),
+      kind: "default",
+      icon: Archive,
+      isDisabled: isUpdatePending,
+      onClick: onArchiveToggle,
+    },
+    {
+      key: "delete-ticket",
+      label: translate("projects:ticketPanel.options.deleteTicket"),
+      kind: "default",
+      icon: Trash2,
+      isDisabled: !projectId || isDeletePending,
+      onClick: onDelete,
+    },
+  ] satisfies HeaderActionItem[];
+};
+
 export const TicketDetailsPanel = () => {
   const { projectId, ticketShorthand, selectedFileId } = useParams({ strict: false });
   const navigate = useNavigate();
@@ -78,13 +113,11 @@ export const TicketDetailsPanel = () => {
   const setSessionModalState = useProjectSettingsStore((state) => state.setSessionModalState);
   const setSelectedSessionId = useProjectSettingsStore((state) => state.setSelectedSessionId);
   const sessionModalState = useProjectSettingsStore((state) => state.sessionModalState);
-
   const { data: project } = useProject(projectId);
   const { data: allTickets, isLoading: isTicketsLoading } = useProjectTickets(projectId);
   const updateTicket = useUpdateProjectTicket(projectId);
   const updateTicketTags = useUpdateProjectTicketTags(projectId);
   const deleteTicket = useDeleteProjectTicket(projectId);
-
   const allProjectTickets = allTickets ?? [];
   const ticketState = resolveTicketDetailsState({ tickets: allTickets, ticketShorthand, isTicketsLoading });
   const ticket = ticketState.ticket;
@@ -95,6 +128,7 @@ export const TicketDetailsPanel = () => {
   const selectedFile = resolveSelectedTicketFile(selectableFiles, selectedFileId);
   const ticketContent = useTicketContent(ticket?.id, selectedFile.id);
   const workspaces = ticket?.attempts ?? [];
+  const workspaceDiffs = useTicketAttemptDiffs(buildTicketDetailsDiffInputs(workspaces));
   const attemptStatusMap = useAttemptStatusMap(projectId);
   const workspaceSessions = useWorkspaceSessions(workspaces.map((w) => w.id));
   const sessionsByWorkspaceId = workspaceSessions.sessionsByWorkspaceId;
@@ -203,26 +237,15 @@ export const TicketDetailsPanel = () => {
     });
   };
 
-  const defaultOverflowActions: HeaderActionItem[] = [
-    {
-      key: "archive-ticket",
-      label: t(
-        ticket.archived ? "projects:ticketPanel.options.unarchiveTicket" : "projects:ticketPanel.options.archiveTicket",
-      ),
-      kind: "default",
-      icon: Archive,
-      isDisabled: updateTicket.isPending,
-      onClick: () => updateTicket.mutate({ ticketId: ticket.id, archived: !ticket.archived }),
-    },
-    {
-      key: "delete-ticket",
-      label: t("projects:ticketPanel.options.deleteTicket"),
-      kind: "default",
-      icon: Trash2,
-      isDisabled: !projectId || deleteTicket.isPending,
-      onClick: () => setDeleteOpen(true),
-    },
-  ];
+  const defaultOverflowActions = buildTicketOverflowActions({
+    isArchived: Boolean(ticket.archived),
+    projectId,
+    isUpdatePending: updateTicket.isPending,
+    isDeletePending: deleteTicket.isPending,
+    translate: t,
+    onArchiveToggle: () => updateTicket.mutate({ ticketId: ticket.id, archived: !ticket.archived }),
+    onDelete: () => setDeleteOpen(true),
+  });
 
   const breadcrumbs = buildTicketBreadcrumbs({
     ticketShorthand: ticket.shorthand,
@@ -238,6 +261,7 @@ export const TicketDetailsPanel = () => {
       selectedFileId={selectedFile.id}
       workspaces={workspaces}
       attemptStatusMap={attemptStatusMap}
+      diffTotalsByWorkspaceId={workspaceDiffs.diffTotalsByWorkspaceId}
       sessionsByWorkspaceId={sessionsByWorkspaceId}
       onSelectFile={handleSelectFile}
       onSelectWorkspace={handleSelectWorkspace}
