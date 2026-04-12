@@ -1,7 +1,59 @@
-Review the changes in this worktree. Focus on correctness, regressions, and missing tests. Summarize findings with file references.
-Write the review to .pstdio/tickets/{{ticket}}/review.md in the ticket folder.
-If the review passes: 
-    1. mark the workspace attempt status as "reviewed".
+Review the changes in the current for ticket: {{ticket}}.
 
-If the review fails:
-    1. mark the workspace attempt status as "changes-requested".
+Focus on:
+
+* Identify gaps in the implementation.
+* Identify logic errors, edge cases, or incorrect assumptions.
+* Detect any behavior that may have been unintentionally broken.
+* Highlight missing tests, insufficient coverage, or outdated tests.
+
+### Expectations
+
+* Reference specific **files and lines** where issues are found.
+* Clearly distinguish between:
+  * Critical issues (must fix)
+  * Minor issues (should fix)
+  * Suggestions (optional improvements)
+
+### Output
+
+Write the review to:
+
+```
+.pstdio/tickets/{{ticket}}/review.md
+```
+
+Structure the review as:
+
+```
+# Review Summary
+
+## Status
+PASS | FAIL
+
+## Findings
+
+### Critical Issues
+- [file:line] Description
+
+### Minor Issues
+- [file:line] Description
+
+### Suggestions
+- [file:line] Description
+
+## Test Coverage
+- Missing tests:
+- Weak coverage areas:
+
+## Conclusion
+Short summary of overall quality and readiness
+```
+
+### Final Action
+
+If **no critical or minor issues** are found:
+  1. mark the workspace attempt status as "reviewed".
+
+If **any critical or minor issues** are found:
+  1. mark the workspace attempt status as "changes-requested".

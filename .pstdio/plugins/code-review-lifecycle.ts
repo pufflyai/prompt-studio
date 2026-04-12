@@ -3,7 +3,7 @@ import {
   definePlugin,
   followupSession,
   // runCommand,
-  setWorkspaceAttemptStatus,
+  // setWorkspaceAttemptStatus,
 } from "@pstdio/sdk/plugins";
 
 export default definePlugin({
@@ -57,11 +57,16 @@ export default definePlugin({
       // session so review feedback is addressed.
       // ────────────────────────────────────────────────────────
       if (ctx.toStatus === "changes-requested") {
-        await setWorkspaceAttemptStatus(ctx, {
-          workspaceId: ctx.workspace.id,
-          sessionId: ctx.sessionId,
-          statusName: "wip",
-        });
+        if (!ctx.originalSessionId) {
+          await createSession(ctx, {
+            workspace_id: ctx.workspace.id,
+            title: `Fix changes requested: ${ctx.ticket.shorthand}`,
+            template: "fix-changes-requested",
+            vars: { ticket: ctx.ticket.shorthand },
+            original_session_id: ctx.sessionId,
+          });
+          return;
+        }
 
         await followupSession(ctx, {
           sessionId: ctx.originalSessionId,

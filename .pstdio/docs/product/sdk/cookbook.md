@@ -69,7 +69,12 @@ The SDK hook name is the camel-cased filesystem hook name:
 The current setup uses ticket actions for the three common ticket flows: implement, refine, and break into sub-tickets.
 
 ```ts
-import { createAttempt, createSession, definePlugin, renderPrompt } from "@pstdio/sdk/plugins";
+import {
+  createAttempt,
+  createSession,
+  definePlugin,
+  renderPrompt,
+} from "@pstdio/sdk/plugins";
 
 export default definePlugin({
   actions: [
@@ -81,7 +86,9 @@ export default definePlugin({
       async trigger(ctx) {
         await createAttempt(ctx, {
           ticketId: ctx.target.shorthand,
-          prompt: renderPrompt(ctx.prompts["implement-ticket"], { ticket_id: ctx.target.shorthand }),
+          prompt: renderPrompt(ctx.prompts["implement-ticket"], {
+            ticket_id: ctx.target.shorthand,
+          }),
         });
       },
     },
@@ -93,7 +100,9 @@ export default definePlugin({
       async trigger(ctx) {
         await createSession(ctx, {
           title: `Refine ticket: ${ctx.target.shorthand}`,
-          prompt: renderPrompt(ctx.prompts["refine-ticket"], { ticket_id: ctx.target.shorthand }),
+          prompt: renderPrompt(ctx.prompts["refine-ticket"], {
+            ticket_id: ctx.target.shorthand,
+          }),
         });
       },
     },
@@ -105,7 +114,9 @@ export default definePlugin({
       async trigger(ctx) {
         await createSession(ctx, {
           title: `Break into sub-tickets: ${ctx.target.shorthand}`,
-          prompt: renderPrompt(ctx.prompts["create-sub-tickets"], { ticket_id: ctx.target.shorthand }),
+          prompt: renderPrompt(ctx.prompts["create-sub-tickets"], {
+            ticket_id: ctx.target.shorthand,
+          }),
         });
       },
     },
@@ -135,7 +146,10 @@ export default definePlugin({
         await createSession(ctx, {
           workspace_id: ctx.target.id,
           title: `Code review: ${ticketId ?? "ticket"}`,
-          prompt: renderPrompt(ctx.prompts["code-review"], ticketId ? { ticket: ticketId } : {}),
+          prompt: renderPrompt(
+            ctx.prompts["code-review"],
+            ticketId ? { ticket: ticketId } : {},
+          ),
         });
       },
     },
@@ -167,7 +181,10 @@ export default definePlugin({
       if (!ctx.ticket) return;
 
       if (ctx.ticket.status_name !== "review") {
-        await setTicketStatus(ctx, { ticket: ctx.ticket.shorthand, status: "wip" });
+        await setTicketStatus(ctx, {
+          ticket: ctx.ticket.shorthand,
+          status: "wip",
+        });
       }
 
       if (ctx.workspace && !ctx.workspace.attempt_status_name) {
@@ -182,7 +199,11 @@ export default definePlugin({
     async preAttemptStatusChange(ctx) {
       if (ctx.toStatus !== "review-ready" || !ctx.worktreePath) return;
 
-      const validation = await runCommand(ctx.worktreePath, ["bun", "run", "validate"]);
+      const validation = await runCommand(ctx.worktreePath, [
+        "bun",
+        "run",
+        "validate",
+      ]);
       if (validation.exitCode === 0) return;
 
       const output = [validation.stdout, validation.stderr].join("\n").trim();
@@ -222,7 +243,10 @@ export default definePlugin({
       }
 
       if (ctx.toStatus === "blocked") {
-        await setTicketStatus(ctx, { ticket: ctx.ticket.shorthand, status: "blocked" });
+        await setTicketStatus(ctx, {
+          ticket: ctx.ticket.shorthand,
+          status: "blocked",
+        });
       }
 
       if (ctx.toStatus === "reviewed") {
@@ -242,7 +266,12 @@ export default definePlugin({
 The current worktree setup uses `bootstrapWorktree(...)` instead of reimplementing the copy logic in every plugin. It copies `.pstdio/config.json`, mirrors `.claude`, `.opencode`, and `.agents`, and pulls the ticket into `.pstdio/tickets/<shorthand>/` when a ticket ref is available.
 
 ```ts
-import { bootstrapWorktree, definePlugin, removeAllWorktreesForTicket, runCommand } from "@pstdio/sdk/plugins";
+import {
+  bootstrapWorktree,
+  definePlugin,
+  removeAllWorktreesForTicket,
+  runCommand,
+} from "@pstdio/sdk/plugins";
 
 export default definePlugin({
   hooks: {
