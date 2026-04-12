@@ -28,6 +28,7 @@ import { useTicketContent } from "../hooks/use-ticket-content";
 import { useTicketFiles } from "../hooks/use-ticket-files";
 import { openTicketSessionBubble } from "../utils/open-ticket-session-bubble";
 import { resolveParentTicketReference } from "../utils/resolve-parent-ticket-reference";
+import { formatTicketBreadcrumbLabel } from "../utils/ticket-breadcrumb";
 import { isTicketContentReady } from "../utils/ticket-content-ready";
 import { resolveTicketDetailsState } from "../utils/ticket-details-state";
 import {
@@ -48,14 +49,26 @@ const TicketDetailsStatusMessage = (props: { message: string }) => {
   );
 };
 
-const buildTicketBreadcrumbs = (ticketShorthand: string, parentShorthand: string | null, projectId: string) => {
+const buildTicketBreadcrumbs = (input: {
+  ticketShorthand: string;
+  ticketTitle: string;
+  parentShorthand: string | null;
+  parentTitle: string | null;
+  projectId: string;
+}) => {
+  const { ticketShorthand, ticketTitle, parentShorthand, parentTitle, projectId } = input;
   const ticketUrl = `/projects/${projectId}/tickets/${ticketShorthand}`;
-  const breadcrumbs = [{ title: ticketShorthand, url: ticketUrl }];
+  const breadcrumbs = [{ title: formatTicketBreadcrumbLabel(ticketShorthand, ticketTitle), url: ticketUrl }];
   if (!parentShorthand) return breadcrumbs;
 
   const parentUrl = `/projects/${projectId}/tickets/${parentShorthand}`;
-  return [{ title: parentShorthand, url: parentUrl }, ...breadcrumbs];
+  return [{ title: formatTicketBreadcrumbLabel(parentShorthand, parentTitle), url: parentUrl }, ...breadcrumbs];
 };
+
+const buildWorkspaceRoute = (projectId: string, ticketShorthand: string, workspaceShorthand: string) => ({
+  to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand" as const,
+  params: { projectId, ticketShorthand, workspaceShorthand },
+});
 
 export const TicketDetailsPanel = () => {
   const { projectId, ticketShorthand, selectedFileId } = useParams({ strict: false });
@@ -83,20 +96,18 @@ export const TicketDetailsPanel = () => {
   const ticketContent = useTicketContent(ticket?.id, selectedFile.id);
   const workspaces = ticket?.attempts ?? [];
   const attemptStatusMap = useAttemptStatusMap(projectId);
-  const workspaceIds = workspaces.map((w) => w.id);
-  const workspaceSessions = useWorkspaceSessions(workspaceIds);
+  const workspaceSessions = useWorkspaceSessions(workspaces.map((w) => w.id));
   const sessionsByWorkspaceId = workspaceSessions.sessionsByWorkspaceId;
   const content = ticketContent.data ?? "";
   const isContentReady = isTicketContentReady(ticketContent.data, ticketContent.isLoading);
-  const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(true);
-  const [isDeleteOpen, setDeleteOpen] = useState(false);
+  const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(true),
+    [isDeleteOpen, setDeleteOpen] = useState(false);
 
   const pluginActionTrigger = usePluginActionTrigger({
     projectId,
     targetType: "ticket",
     onSuccess: async (result) => {
       if (!result.session_id) return;
-
       openTicketSessionBubble({
         sessionId: result.session_id,
         sessionModalState: projectSettingsStore.getState().sessionModalState,
@@ -112,15 +123,12 @@ export const TicketDetailsPanel = () => {
     content,
     onSave: async (id, nextContent) => {
       ticketContent.setOptimisticContent(nextContent);
-
       if (id === TICKET_CONTENT_ITEM_ID) {
         await updateTicket.mutateAsync({ ticketId, content: nextContent });
         return;
       }
-
       const attachment = selectableFiles.find((file) => file.id === id);
       if (!attachment) return;
-
       await uploadTicketFile(
         ticketId,
         new File([nextContent], attachment.fileName, {
@@ -135,18 +143,13 @@ export const TicketDetailsPanel = () => {
     navigate({ to: "/projects/$projectId/tickets", params: { projectId } });
   };
 
-  if (ticketState.state === "loading") {
+  if (ticketState.state === "loading")
     return <TicketDetailsStatusMessage message={t("tickets:ticketDetail.loadingContent")} />;
-  }
-
-  if (!ticket) {
-    return <TicketDetailsStatusMessage message={t("tickets:ticketDetail.ticketNotFound")} />;
-  }
+  if (!ticket) return <TicketDetailsStatusMessage message={t("tickets:ticketDetail.ticketNotFound")} />;
 
   const handleSelectTicket = (id: string) => {
     const target = allProjectTickets.find((item) => item.id === id);
     if (!target) return;
-
     navigate({
       to: "/projects/$projectId/tickets/$ticketShorthand",
       params: { projectId, ticketShorthand: target.shorthand },
@@ -155,7 +158,6 @@ export const TicketDetailsPanel = () => {
 
   const handleSelectFile = async (fileId: string) => {
     await autosave.flushPending();
-
     if (fileId === TICKET_CONTENT_ITEM_ID) {
       navigate({
         to: "/projects/$projectId/tickets/$ticketShorthand",
@@ -172,24 +174,19 @@ export const TicketDetailsPanel = () => {
 
   const handleSelectWorkspace = (workspaceShorthand: string) => {
     if (!projectId) return;
-
     const workspace = workspaces.find((item) => item.shorthand === workspaceShorthand);
     const workspaceSessionsList = workspace ? (sessionsByWorkspaceId.get(workspace.id) ?? []) : [];
     const selection = resolveWorkspaceSelection({
       sessions: workspaceSessionsList,
     });
-
     navigate({
-      to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
-      params: { projectId, ticketShorthand: ticket.shorthand, workspaceShorthand },
+      ...buildWorkspaceRoute(projectId, ticket.shorthand, workspaceShorthand),
       search: selection.search,
     });
-
     if (selection.shouldClearSelection) {
       setSelectedSessionId(null);
       return;
     }
-
     openTicketSessionBubble({
       sessionId: selection.sessionIdToOpen,
       sessionModalState,
@@ -200,10 +197,8 @@ export const TicketDetailsPanel = () => {
 
   const handleSelectWorkspaceSession = (workspaceShorthand: string, sessionId: string) => {
     if (!projectId) return;
-
     navigate({
-      to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
-      params: { projectId, ticketShorthand: ticket.shorthand, workspaceShorthand },
+      ...buildWorkspaceRoute(projectId, ticket.shorthand, workspaceShorthand),
       search: sessionId ? { sessionId } : {},
     });
   };
@@ -229,7 +224,13 @@ export const TicketDetailsPanel = () => {
     },
   ];
 
-  const breadcrumbs = buildTicketBreadcrumbs(ticket.shorthand, parentReference.shorthand, projectId);
+  const breadcrumbs = buildTicketBreadcrumbs({
+    ticketShorthand: ticket.shorthand,
+    ticketTitle: ticket.title,
+    parentShorthand: parentReference.shorthand,
+    parentTitle: parentReference.ticket?.title ?? null,
+    projectId,
+  });
 
   const sidebar = (
     <TicketSidebar

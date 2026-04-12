@@ -15,12 +15,14 @@ import { useTicketAttemptDiff } from "@/features/ticket/hooks/use-ticket-attempt
 import { useTicketFiles } from "@/features/ticket/hooks/use-ticket-files";
 import { buildImplementTicketPrompt } from "@/features/ticket/utils/build-prompts";
 import { openTicketSessionBubble } from "@/features/ticket/utils/open-ticket-session-bubble";
+import { formatTicketBreadcrumbLabel } from "@/features/ticket/utils/ticket-breadcrumb";
 import { buildSelectableTicketFiles } from "@/features/ticket/utils/ticket-file-selection";
 import type { ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
 import { useCreateTicketAttempt } from "@/features/ticket-list/hooks/use-create-ticket-attempt";
 import { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
 import { isSessionSettled } from "@/features/ticket-list/utils/ticket-attempts";
 import { transformFileDiffs } from "@/features/workspaces/utils/transform-diff";
+import { getAttemptLabelFromWorkspaceShorthand } from "@/features/workspaces/utils/workspace-shorthand";
 import { logMutationError } from "@/lib/error-handlers";
 import { WorkspaceDiffPanel } from "../components/workspace-diff-panel";
 import type { WorkspaceListItem } from "../components/workspace-list-panel";
@@ -178,11 +180,11 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
                   url: projectId ? `/projects/${projectId}/tickets` : undefined,
                 },
                 {
-                  title: ticket.shorthand,
+                  title: formatTicketBreadcrumbLabel(ticket.shorthand, ticket.title),
                   url: projectId && ticketShorthand ? `/projects/${projectId}/tickets/${ticketShorthand}` : undefined,
                 },
                 {
-                  title: selectedWorkspaceLabel,
+                  title: getAttemptLabelFromWorkspaceShorthand(selectedWorkspaceLabel),
                   url:
                     projectId && ticketShorthand && selectedWorkspaceLabel
                       ? `/projects/${projectId}/tickets/${ticketShorthand}/workspaces/${selectedWorkspaceLabel}`

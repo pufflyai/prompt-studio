@@ -15,6 +15,7 @@ import { ProjectSidebarFooter } from "@/features/project/components/project-side
 import type { TicketAttempt } from "@/features/ticket-list/types";
 import type { AttemptStatusMapEntry } from "@/features/workspaces/hooks/attempt-status-map";
 import type { WorkspaceSessionEntry } from "@/features/workspaces/hooks/use-workspace-sessions";
+import { getAttemptLabelFromWorkspaceShorthand } from "@/features/workspaces/utils/workspace-shorthand";
 import { type SelectableTicketFile, TICKET_CONTENT_ITEM_ID } from "../utils/ticket-file-selection";
 import { buildWorkspaceStatusIndicatorTooltip } from "../utils/workspace-status-indicator";
 import { resolveTicketSidebarActiveNodeIds } from "./ticket-sidebar-selection";
@@ -79,7 +80,7 @@ const buildWorkspacesSection = (
 
     return {
       id: `workspace:${workspace.id}`,
-      label: workspace.shorthand,
+      label: getAttemptLabelFromWorkspaceShorthand(workspace.shorthand),
       icon: <GitBranch size={14} />,
       indicator: attemptStatus
         ? {
