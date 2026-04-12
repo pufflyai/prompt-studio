@@ -22,9 +22,13 @@ export const SidebarNodeContent = (props: SidebarNodeContentProps) => {
       ) : null}
       <Stack gap="0" minW="0" flex="1">
         <HStack gap="1" minW="0">
-          <Text textStyle="paragraph/S/regular" color={isDisabled ? "fg.muted" : "fg"} truncate>
-            {node.label}
-          </Text>
+          {node.labelElement ? (
+            <Box minW="0">{node.labelElement}</Box>
+          ) : (
+            <Text textStyle="paragraph/S/regular" color={isDisabled ? "fg.muted" : "fg"} truncate>
+              {node.label}
+            </Text>
+          )}
           {node.indicator ? (
             <Tooltip content={node.indicator.tooltip} disabled={!node.indicator.tooltip} openDelay={300}>
               <Box color={node.indicator.color ?? "fg.muted"} flexShrink={0}>

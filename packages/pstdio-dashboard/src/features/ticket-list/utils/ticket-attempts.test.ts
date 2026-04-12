@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { Ticket, TicketAttempt } from "@/features/ticket-list/types";
-import { buildLatestAttemptsByTicketId, toSessionIndicatorStatus } from "./ticket-attempts";
+import { buildLatestAttemptsByTicketId, findLatestAttempt, toSessionIndicatorStatus } from "./ticket-attempts";
 
 const makeAttempt = (overrides: Partial<TicketAttempt>): TicketAttempt => ({
   id: "workspace-1",
@@ -51,6 +51,19 @@ describe("buildLatestAttemptsByTicketId", () => {
   it("ignores tickets without attempts", () => {
     const attemptsByTicket = buildLatestAttemptsByTicketId([makeTicket({ id: "ticket-1", attempts: [] })]);
     expect(attemptsByTicket.has("ticket-1")).toBe(false);
+  });
+});
+
+describe("findLatestAttempt", () => {
+  it("returns null for an empty attempt list", () => {
+    expect(findLatestAttempt([])).toBeNull();
+  });
+
+  it("returns the newest attempt by updatedAt", () => {
+    const older = makeAttempt({ id: "workspace-older", updatedAt: "2026-03-13T09:00:00.000Z" });
+    const newer = makeAttempt({ id: "workspace-newer", updatedAt: "2026-03-13T12:00:00.000Z" });
+
+    expect(findLatestAttempt([older, newer])?.id).toBe("workspace-newer");
   });
 });
 

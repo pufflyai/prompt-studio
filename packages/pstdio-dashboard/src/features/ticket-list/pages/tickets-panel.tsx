@@ -5,8 +5,6 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ProjectSidebar } from "@/features/project/components/project-sidebar";
 import { useProject } from "@/features/project/hooks/use-project";
-import { useProjectSettingsStore } from "@/features/project-settings/store";
-import { openTicketSessionBubble } from "@/features/ticket/utils/open-ticket-session-bubble";
 import { useCreateProjectTicket } from "@/features/ticket-list/hooks/use-create-project-ticket";
 import {
   useProjectTickets,
@@ -29,15 +27,12 @@ import { getVisibleTickets } from "../utils/ticket-visibility";
 export const TicketsPanel = () => {
   const { projectId } = useParams({ strict: false });
   const { data: project, isLoading: isProjectLoading } = useProject(projectId);
-  const { data: tickets, sessionsByWorkspace, isLoading: isTicketsLoading } = useProjectTickets(projectId);
+  const { data: tickets, isLoading: isTicketsLoading } = useProjectTickets(projectId);
   const updateTicketStatus = useUpdateProjectTicketStatus(projectId);
   const updateTicket = useUpdateProjectTicket(projectId);
   const createTicket = useCreateProjectTicket(projectId);
   const navigate = useNavigate();
 
-  const sessionModalState = useProjectSettingsStore((s) => s.sessionModalState);
-  const setSessionModalState = useProjectSettingsStore((s) => s.setSessionModalState);
-  const setSelectedSessionId = useProjectSettingsStore((s) => s.setSelectedSessionId);
   const { t } = useTranslation("tickets");
   const [settings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -79,15 +74,6 @@ export const TicketsPanel = () => {
   const closeCreateModal = () => {
     setCreateModalOpen(false);
     setCreateModalStatus(null);
-  };
-
-  const handleOpenSessionBubble = (sessionId: string | null) => {
-    return openTicketSessionBubble({
-      sessionId,
-      sessionModalState,
-      setSessionModalState,
-      setSelectedSessionId,
-    });
   };
 
   const handleMoveTicket = (ticketId: string, status: TicketStatus) => {
@@ -192,10 +178,8 @@ export const TicketsPanel = () => {
               badgeContext={badgeContext}
               latestAttemptsByTicketId={latestAttemptsByTicketId}
               diffTotalsByWorkspaceId={diffTotalsByWorkspaceId}
-              sessionsByWorkspace={sessionsByWorkspace}
               onMoveTicket={handleMoveTicket}
               onSelectTicket={(ticket) => navigateToTicket(ticket.shorthand)}
-              onOpenSessionBubble={handleOpenSessionBubble}
               onOpenTicketWorkspace={(ticket, workspaceShorthand) =>
                 handleOpenTicketWorkspace(ticket.shorthand, workspaceShorthand)
               }

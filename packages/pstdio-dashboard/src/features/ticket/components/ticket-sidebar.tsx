@@ -7,17 +7,18 @@ import {
   type SidebarNavigateEvent,
   type SidebarNode,
   type SidebarSection,
+  WorkspaceBadge,
 } from "@pstdio/ui";
-import { Circle, FileCode, FileImage, FileJson, FileSpreadsheet, FileText, GitBranch, Plus } from "lucide-react";
+import { FileCode, FileImage, FileJson, FileSpreadsheet, FileText, Plus } from "lucide-react";
 import { createElement } from "react";
 import { ProjectMenu } from "@/features/project/components/project-menu";
 import { ProjectSidebarFooter } from "@/features/project/components/project-sidebar";
 import type { TicketAttempt } from "@/features/ticket-list/types";
+import { findLatestAttempt, toSessionIndicatorStatus } from "@/features/ticket-list/utils/ticket-attempts";
 import type { AttemptStatusMapEntry } from "@/features/workspaces/hooks/attempt-status-map";
 import type { WorkspaceSessionEntry } from "@/features/workspaces/hooks/use-workspace-sessions";
 import { getAttemptLabelFromWorkspaceShorthand } from "@/features/workspaces/utils/workspace-shorthand";
 import { type SelectableTicketFile, TICKET_CONTENT_ITEM_ID } from "../utils/ticket-file-selection";
-import { buildWorkspaceStatusIndicatorTooltip } from "../utils/workspace-status-indicator";
 import { resolveTicketSidebarActiveNodeIds } from "./ticket-sidebar-selection";
 
 const TICKET_SIDEBAR_STORAGE_KEY = "ticket-sidebar";
@@ -75,20 +76,25 @@ const buildWorkspacesSection = (
   workspaces: TicketAttempt[],
   attemptStatusMap: Map<string, AttemptStatusMapEntry>,
 ): SidebarSection => {
-  const nodes: SidebarNode[] = workspaces.map((workspace) => {
+  const latestWorkspace = findLatestAttempt(workspaces);
+  const sortedWorkspaces = latestWorkspace
+    ? [latestWorkspace, ...workspaces.filter((workspace) => workspace.id !== latestWorkspace.id)]
+    : workspaces;
+
+  const nodes: SidebarNode[] = sortedWorkspaces.map((workspace) => {
     const attemptStatus = workspace.attemptStatusId ? attemptStatusMap.get(workspace.attemptStatusId) : undefined;
 
     return {
       id: `workspace:${workspace.id}`,
       label: getAttemptLabelFromWorkspaceShorthand(workspace.shorthand),
-      icon: <GitBranch size={14} />,
-      indicator: attemptStatus
-        ? {
-            icon: <Circle size={8} fill="currentColor" />,
-            color: `var(--chakra-colors-${attemptStatus.color}-solid)`,
-            tooltip: buildWorkspaceStatusIndicatorTooltip(attemptStatus),
-          }
-        : undefined,
+      labelElement: (
+        <WorkspaceBadge
+          workspaceType={workspace.worktreePath ? "worktree" : "current_branch"}
+          shorthand={getAttemptLabelFromWorkspaceShorthand(workspace.shorthand)}
+          sessionStatus={toSessionIndicatorStatus(workspace.sessionStatus)}
+          attemptStatus={attemptStatus}
+        />
+      ),
       isNavigable: true,
       navigationIntent: { id: "select-workspace", payload: { workspaceShorthand: workspace.shorthand } },
     };

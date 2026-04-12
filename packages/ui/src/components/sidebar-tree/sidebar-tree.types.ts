@@ -32,6 +32,7 @@ export interface SidebarAction {
 export interface SidebarNode {
   id: string;
   label: string;
+  labelElement?: ReactNode;
   description?: string;
   icon?: ReactNode;
   iconColor?: IconProps["color"];

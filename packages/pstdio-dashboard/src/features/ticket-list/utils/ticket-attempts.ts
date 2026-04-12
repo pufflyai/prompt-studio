@@ -5,7 +5,7 @@ const SETTLED_STATUSES = new Set<SessionStatus>(["completed", "failed", "cancell
 
 export const isSessionSettled = (status: SessionStatus | null) => status !== null && SETTLED_STATUSES.has(status);
 
-const findLatestAttempt = (attempts: TicketAttempt[]) => {
+export const findLatestAttempt = (attempts: TicketAttempt[]) => {
   let latestAttempt = attempts[0] ?? null;
 
   for (const attempt of attempts) {

@@ -2,7 +2,6 @@ import { TicketBoard, type TicketBoardColumn, type TicketBoardColumnAction, type
 import { Archive } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import type { SyncedRow } from "@/features/sync/collections";
 import type { Ticket, TicketAttempt, TicketColumnAction, TicketStatus } from "@/features/ticket-list/types";
 
 import type { BadgeContext, DisplayProperty, TicketGroup } from "../types";
@@ -16,10 +15,8 @@ interface TicketsBoardViewProps {
   badgeContext: BadgeContext;
   latestAttemptsByTicketId?: Map<string, TicketAttempt>;
   diffTotalsByWorkspaceId?: Map<string, { additions: number; deletions: number }>;
-  sessionsByWorkspace?: Map<string, SyncedRow>;
   onMoveTicket?: (ticketId: string, nextStatus: TicketStatus) => void;
   onSelectTicket?: (ticket: Ticket) => void;
-  onOpenSessionBubble?: (sessionId: string | null) => void;
   onOpenTicketWorkspace?: (ticket: Ticket, workspaceShorthand: string) => void;
   onCreateStart?: (status: TicketStatus) => void;
   onColumnAction?: (status: TicketStatus, action: TicketColumnAction) => Promise<void> | void;
@@ -33,10 +30,8 @@ export const TicketsBoardView = (props: TicketsBoardViewProps) => {
     badgeContext,
     latestAttemptsByTicketId = new Map(),
     diffTotalsByWorkspaceId = new Map(),
-    sessionsByWorkspace = new Map(),
     onMoveTicket,
     onSelectTicket,
-    onOpenSessionBubble,
     onOpenTicketWorkspace,
     onCreateStart,
     onColumnAction,
@@ -54,8 +49,12 @@ export const TicketsBoardView = (props: TicketsBoardViewProps) => {
   const toBoardItem = (ticket: Ticket, ticketsById: Map<string, Ticket>): TicketBoardItem => {
     const latestAttempt = latestAttemptsByTicketId.get(ticket.id);
     const diffTotals = latestAttempt ? diffTotalsByWorkspaceId.get(latestAttempt.id) : undefined;
-    const sessionId = latestAttempt ? ((sessionsByWorkspace.get(latestAttempt.id)?.id as string) ?? null) : null;
     const workspaceShorthand = latestAttempt?.shorthand ?? "";
+    const openWorkspace = workspaceShorthand ? () => onOpenTicketWorkspace?.(ticket, workspaceShorthand) : undefined;
+    const workspaceOptions = (ticket.attempts ?? [])
+      .filter((attempt) => attempt.id !== latestAttempt?.id)
+      .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
+      .map((attempt) => ({ id: attempt.shorthand, label: attempt.shorthand }));
 
     return {
       id: ticket.id,
@@ -64,13 +63,20 @@ export const TicketsBoardView = (props: TicketsBoardViewProps) => {
         parentPath: buildParentPath(ticket, ticketsById),
         title: ticket.title || t("boardView.emptyTicket"),
         badges: buildTicketBadges(ticket, displayProperties, badgeContext),
-        sessionIndicatorLabel: latestAttempt?.shorthand,
-        sessionIndicatorStatus: latestAttempt ? toSessionIndicatorStatus(latestAttempt.sessionStatus) : undefined,
-        diffAdditions: diffTotals?.additions,
-        diffDeletions: diffTotals?.deletions,
-        onSessionIndicatorClick: sessionId ? () => onOpenSessionBubble?.(sessionId) : undefined,
-        onDiffBadgeClick:
-          diffTotals && workspaceShorthand ? () => onOpenTicketWorkspace?.(ticket, workspaceShorthand) : undefined,
+        workspaceBadge: latestAttempt
+          ? {
+              workspaceType: latestAttempt.worktreePath ? "worktree" : "current_branch",
+              shorthand: (ticket.attempts?.length ?? 0) > 1 ? latestAttempt.shorthand : undefined,
+              sessionStatus: toSessionIndicatorStatus(latestAttempt.sessionStatus),
+              diffAdditions: diffTotals?.additions,
+              diffDeletions: diffTotals?.deletions,
+              hasMultipleWorkspaces: (ticket.attempts?.length ?? 0) > 1,
+              workspaceOptions,
+              onClick: openWorkspace,
+              onWorkspaceOptionSelect: (selectedWorkspaceShorthand: string) =>
+                onOpenTicketWorkspace?.(ticket, selectedWorkspaceShorthand),
+            }
+          : undefined,
         onClick: undefined,
       },
     };
