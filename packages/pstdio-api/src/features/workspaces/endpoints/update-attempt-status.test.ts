@@ -1,14 +1,17 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createFakeAgent } from "pstdio-agents";
 import { createApp } from "../../../app";
+import { waitForPath } from "../../../test-utils/wait-for-path";
+import { waitForSyncEvent } from "../../../test-utils/wait-for-sync-event";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
 let appDeps: Awaited<ReturnType<typeof createApp>>["deps"];
+let eventBus: Awaited<ReturnType<typeof createApp>>["eventBus"];
 let tempRoot: string;
 let projectId: string;
 let repoDir: string;
@@ -25,6 +28,7 @@ beforeAll(async () => {
   });
   app = created.app;
   appDeps = created.deps;
+  eventBus = created.eventBus;
 
   const projectRes = await app.request("/v1/projects", {
     method: "POST",
@@ -90,16 +94,6 @@ const writePlugin = (fileName: string, code: string) => {
   mkdirSync(pluginsDir, { recursive: true });
   writeFileSync(join(pluginsDir, fileName), code);
   appDeps.pluginService.invalidate(projectId);
-};
-
-const waitForPath = async (path: string, timeoutMs = 1_000) => {
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < timeoutMs) {
-    if (existsSync(path)) return true;
-    await new Promise((resolve) => setTimeout(resolve, 25));
-  }
-
-  return false;
 };
 
 describe("PATCH /v1/workspaces/:id/attempt-status", () => {
@@ -363,25 +357,25 @@ describe("PATCH /v1/workspaces/:id/attempt-status with starter review lifecycle"
 
     expect(res.status).toBe(200);
 
+    const fixSessionCreated = waitForSyncEvent(
+      eventBus,
+      (event) =>
+        event.table === "sessions" &&
+        event.op === "set" &&
+        !existingSessionIds.has((event.data as { id: string }).id) &&
+        (event.data as { project_id: string }).project_id === projectId,
+      1_000,
+    );
+
     await appDeps.sessionService.transitionStatus(reviewSession.id, "completed");
 
-    let fixSession:
-      | {
-          id: string;
-          title: string;
-          original_session_id: string | null;
-        }
-      | undefined;
+    const fixSession = (await fixSessionCreated).data as {
+      id: string;
+      title: string;
+      original_session_id: string | null;
+    };
 
-    for (let attempt = 0; attempt < 40; attempt += 1) {
-      const sessions = await appDeps.sessionService.list(projectId);
-      fixSession = sessions.find((session) => !existingSessionIds.has(session.id));
-      if (fixSession) break;
-      await Bun.sleep(25);
-    }
-
-    expect(fixSession).toBeDefined();
-    expect(fixSession?.title).toBe(`Fix changes requested: ${workspace.ticket.shorthand}`);
-    expect(fixSession?.original_session_id).toBe(reviewSession.id);
+    expect(fixSession.title).toBe(`Fix changes requested: ${workspace.ticket.shorthand}`);
+    expect(fixSession.original_session_id).toBe(reviewSession.id);
   });
 });

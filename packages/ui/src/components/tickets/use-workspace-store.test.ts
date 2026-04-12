@@ -1,22 +1,11 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-
+import { installMockLocalStorage } from "@/test-utils/local-storage";
 import { createTicketsWorkspaceStore } from "./use-workspace-store";
 
 const STORAGE_KEY = "workspace-test";
 
 beforeEach(() => {
-  const storage = new Map<string, string>();
-
-  globalThis.localStorage = {
-    getItem: (key: string) => storage.get(key) ?? null,
-    setItem: (key: string, value: string) => storage.set(key, value),
-    removeItem: (key: string) => storage.delete(key),
-    clear: () => storage.clear(),
-    get length() {
-      return storage.size;
-    },
-    key: (index: number) => [...storage.keys()][index] ?? null,
-  };
+  installMockLocalStorage();
 });
 
 describe("createTicketsWorkspaceStore", () => {

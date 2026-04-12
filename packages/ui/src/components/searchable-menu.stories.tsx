@@ -4,9 +4,9 @@ import { FolderGit2, GitBranch } from "lucide-react";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { MenuItem } from "./menu-item";
-import { SearchableMenu } from "./searchable-menu";
+import { SearchableMenu, type SearchableMenuItem } from "./searchable-menu";
 
-const branchItems = Array.from({ length: 18 }, (_, index) => {
+const branchItems: SearchableMenuItem[] = Array.from({ length: 18 }, (_, index) => {
   const branchName = index === 0 ? "main" : `feature/searchable-menu-${index}`;
 
   return {
@@ -18,7 +18,7 @@ const branchItems = Array.from({ length: 18 }, (_, index) => {
   };
 });
 
-const repositoryItems = Array.from({ length: 12 }, (_, index) => {
+const repositoryItems: SearchableMenuItem[] = Array.from({ length: 12 }, (_, index) => {
   const repoName = index === 0 ? "prompt-studio" : `repo-browser-${index}`;
 
   return {
@@ -58,6 +58,17 @@ export const BranchSelector: Story = {
       emptyState={<MenuItem primaryLabel="No branches found" leftIcon={GitBranch} isDisabled />}
     />
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await userEvent.click(canvas.getByRole("button", { name: "Select branch" }));
+
+    const searchInput = canvas.getByLabelText("Search branches…");
+    await userEvent.type(searchInput, "origin/main");
+
+    await expect(canvas.getByRole("option", { name: "main" })).toBeVisible();
+    await expect(canvas.queryByRole("option", { name: "feature/searchable-menu-1" })).not.toBeInTheDocument();
+  },
 };
 
 export const SwitchableLists: Story = {

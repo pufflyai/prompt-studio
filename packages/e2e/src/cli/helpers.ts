@@ -17,10 +17,17 @@ export const createGitRepo = () => {
 
 export const createTempDir = () => mkdtempSync(join(tmpdir(), "pstdio-e2e-"));
 
+const createPstdioEnv = (env: Record<string, string>) => ({
+  ...process.env,
+  PSTDIO_DISABLE_EMBED_MANIFEST: "1",
+  PSTDIO_DISABLE_API_AUTO_START: "1",
+  ...env,
+});
+
 export const runPstdio = (args: string, cwd: string, env: Record<string, string>, timeout = TEST_TIMEOUT) =>
   execSync(`bun run ${PSTDIO_CLI} ${args}`, {
     cwd,
-    env: { ...process.env, PSTDIO_DISABLE_EMBED_MANIFEST: "1", PSTDIO_DISABLE_API_AUTO_START: "1", ...env },
+    env: createPstdioEnv(env),
     encoding: "utf8",
     timeout,
   });
@@ -29,7 +36,7 @@ export const runPstdioSafe = (args: string, cwd: string, env: Record<string, str
   try {
     const stdout = execSync(`bun run ${PSTDIO_CLI} ${args}`, {
       cwd,
-      env: { ...process.env, PSTDIO_DISABLE_EMBED_MANIFEST: "1", PSTDIO_DISABLE_API_AUTO_START: "1", ...env },
+      env: createPstdioEnv(env),
       encoding: "utf8",
       timeout,
     });
@@ -42,6 +49,32 @@ export const runPstdioSafe = (args: string, cwd: string, env: Record<string, str
       exitCode: err.status ?? 1,
     };
   }
+};
+
+export const createCliRunner = (apiUrl: string) => {
+  const env = { PSTDIO_API_URL: apiUrl };
+
+  return {
+    run: (args: string, cwd: string, timeout = TEST_TIMEOUT) => runPstdio(args, cwd, env, timeout),
+    runSafe: (args: string, cwd: string, timeout = TEST_TIMEOUT) => runPstdioSafe(args, cwd, env, timeout),
+  };
+};
+
+export const createInitializedRepo = (input: {
+  name: string;
+  dirs: string[];
+  run: (args: string, cwd: string) => string;
+  withInitialCommit?: boolean;
+}) => {
+  const repo = createGitRepo();
+  input.dirs.push(repo);
+
+  if (input.withInitialCommit) {
+    execSync("git commit --allow-empty -m init", { cwd: repo, stdio: "pipe" });
+  }
+
+  input.run(`projects create ${input.name}`, repo);
+  return repo;
 };
 
 export const createProjectViaApi = async (apiUrl: string, name: string) => {

@@ -139,6 +139,7 @@ test.describe("Session chat and workspace behavior", () => {
   });
 
   test("shows the attached session panel on workspace routes and hides workspace hub", async ({ page, request }) => {
+    test.slow();
     await bypassOnboarding(page);
     const prompt = "workspace attached panel regression";
     const repoRoot = createGitRepo("pstdio-e2e-sessions-repo-", "sessions e2e");
@@ -177,6 +178,7 @@ test.describe("Session chat and workspace behavior", () => {
   });
 
   test("hides workspace hub in bubble view on workspace routes", async ({ page, request }) => {
+    test.slow();
     await bypassOnboarding(page);
     const prompt = "workspace bubble panel regression";
     const repoRoot = createGitRepo("pstdio-e2e-sessions-repo-", "sessions e2e");

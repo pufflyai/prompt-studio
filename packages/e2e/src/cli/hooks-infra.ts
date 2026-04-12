@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { createGitRepo, runPstdio, runPstdioSafe } from "./helpers";
+import { createCliRunner, createGitRepo, createInitializedRepo as createRepoWithProject } from "./helpers";
 import type { ApiInstance } from "./start-api";
 
 export type HookTestContext = {
@@ -9,11 +9,9 @@ export type HookTestContext = {
   dirs: string[];
 };
 
-export const createRun = (ctx: HookTestContext) => (args: string, cwd: string) =>
-  runPstdio(args, cwd, { PSTDIO_API_URL: ctx.api.url });
+export const createRun = (ctx: HookTestContext) => createCliRunner(ctx.api.url).run;
 
-export const createRunSafe = (ctx: HookTestContext) => (args: string, cwd: string) =>
-  runPstdioSafe(args, cwd, { PSTDIO_API_URL: ctx.api.url });
+export const createRunSafe = (ctx: HookTestContext) => createCliRunner(ctx.api.url).runSafe;
 
 export const writePlugin = (repo: string, fileName: string, code: string) => {
   const pluginsDir = join(repo, ".pstdio", "plugins");
@@ -22,11 +20,12 @@ export const writePlugin = (repo: string, fileName: string, code: string) => {
 };
 
 export const createInitializedRepo = (ctx: HookTestContext, name: string) => {
-  const repo = createGitRepo();
-  ctx.dirs.push(repo);
-  execSync("git commit --allow-empty -m init", { cwd: repo, stdio: "pipe" });
-  createRun(ctx)(`projects create ${name}`, repo);
-  return repo;
+  return createRepoWithProject({
+    name,
+    dirs: ctx.dirs,
+    run: createRun(ctx),
+    withInitialCommit: true,
+  });
 };
 
 export const getProjectId = (repo: string) => {

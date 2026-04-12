@@ -1,11 +1,4 @@
-import { rmSync } from "node:fs";
 import { expect, test } from "@playwright/test";
-import {
-  createAttemptWithSessionViaApi,
-  createGitRepo,
-  createTicketViaApi,
-  registerRepoViaApi,
-} from "./helpers/workspace-session-attempt";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
@@ -69,7 +62,6 @@ const getSessionBubble = (page: import("@playwright/test").Page) =>
 
 test.describe("Sessions page", () => {
   let projectId: string;
-  const repoDirs: string[] = [];
 
   test.beforeEach(async ({ request }) => {
     test.setTimeout(10_000);
@@ -77,13 +69,6 @@ test.describe("Sessions page", () => {
     await configureAgent(request, "fake");
     const project = await createProjectViaApi(request, "Sessions Test Project");
     projectId = project.id;
-  });
-
-  test.afterEach(() => {
-    for (const dir of repoDirs) {
-      rmSync(dir, { recursive: true, force: true });
-    }
-    repoDirs.length = 0;
   });
 
   test("shows empty state when no sessions exist", async ({ page }) => {
@@ -169,105 +154,6 @@ test.describe("Sessions page", () => {
 
     await page.getByRole("button", { name: "Session actions" }).click();
     await expect(page.getByText("Archive session")).toBeVisible();
-  });
-
-  test("submits a message from the sessions page and creates a session", async ({ page }) => {
-    await bypassOnboarding(page);
-    const prompt = "Session page new message";
-
-    await page.goto(`/projects/${projectId}/sessions`);
-
-    const contentEditor = page.locator("[data-testid='content-editable']").first();
-    await contentEditor.fill(prompt);
-    await page.locator("[data-testid='send-message-button']").click();
-
-    await page.waitForURL(new RegExp(`/projects/${projectId}/sessions/[^/]+$`));
-    await expect(page.getByText(prompt).first()).toBeVisible();
-    await expect(page.getByText(`Fake Agent: completed "${prompt}"`).first()).toBeVisible();
-  });
-
-  test("shows conversation messages when navigating to a completed session", async ({ page, request }) => {
-    await bypassOnboarding(page);
-    const prompt = "Hydration test message";
-
-    const session = await createSessionViaApi(request, projectId, prompt);
-
-    // Wait for the fake agent to complete and persist messages
-    await page.waitForTimeout(200);
-
-    await page.goto(`/projects/${projectId}/sessions/${session.id}`);
-
-    await expect(page.getByText(prompt).first()).toBeVisible();
-    await expect(page.getByText(`Fake Agent: completed "${prompt}"`).first()).toBeVisible();
-  });
-
-  test("preserves conversation messages after page reload", async ({ page, request }) => {
-    await bypassOnboarding(page);
-    const prompt = "Reload persistence test";
-
-    const session = await createSessionViaApi(request, projectId, prompt);
-    await page.waitForTimeout(200);
-
-    await page.goto(`/projects/${projectId}/sessions/${session.id}`);
-    await expect(page.getByText(`Fake Agent: completed "${prompt}"`).first()).toBeVisible();
-
-    await page.reload();
-
-    await expect(page.getByText(prompt).first()).toBeVisible();
-    await expect(page.getByText(`Fake Agent: completed "${prompt}"`).first()).toBeVisible();
-  });
-
-  test("keeps chat input focus while typing in a new session", async ({ page }) => {
-    await bypassOnboarding(page);
-
-    await page.goto(`/projects/${projectId}/sessions`);
-
-    const contentEditor = page.locator("[data-testid='content-editable']").first();
-
-    await contentEditor.click();
-    await page.keyboard.type("a");
-    await expect(contentEditor).toContainText("a");
-
-    await page.keyboard.type("bc");
-    await expect(contentEditor).toContainText("abc");
-  });
-
-  test("shows the attached session panel on workspace routes and hides workspace hub", async ({ page, request }) => {
-    await bypassOnboarding(page);
-    const prompt = "workspace attached panel regression";
-    const repoRoot = createGitRepo("pstdio-e2e-sessions-repo-", "sessions e2e");
-    repoDirs.push(repoRoot);
-    const repo = await registerRepoViaApi(request, apiBase, projectId, "sessions-workspace-repo", repoRoot);
-    const ticket = await createTicketViaApi(
-      request,
-      apiBase,
-      projectId,
-      "# Workspace panel ticket\n\nValidate hub visibility",
-    );
-    const attempt = await createAttemptWithSessionViaApi(request, apiBase, ticket.id, repo.id, prompt);
-
-    await page.addInitScript(
-      ({ id, sessionId }: { id: string; sessionId: string }) => {
-        localStorage.setItem(
-          `pstdio-project-settings/projects/${id}/values`,
-          JSON.stringify({ state: { sessionModalState: "attached", selectedSessionId: sessionId }, version: 0 }),
-        );
-      },
-      { id: projectId, sessionId: attempt.session.id },
-    );
-    await page.goto(`/projects/${projectId}/tickets`);
-
-    await expect(page.locator("[data-testid='session-attached-panel']")).toBeVisible();
-    await expect(page.locator("[data-testid='session-attached-panel']").getByText(prompt).first()).toBeVisible();
-    await expect(page.locator("[data-testid='session-attached-panel']").getByText("Review changes")).toBeVisible();
-
-    await page.goto(
-      `/projects/${projectId}/tickets/${ticket.shorthand}/workspaces/${attempt.workspace.workspace_shorthand}`,
-    );
-
-    await expect(page.locator("[data-testid='session-attached-panel']")).toBeVisible();
-    await expect(page.locator("[data-testid='session-attached-panel']").getByText(prompt).first()).toBeVisible();
-    await expect(page.locator("[data-testid='session-attached-panel']").getByText("Review changes")).toHaveCount(0);
   });
 
   test("shows only the 6 most recent sessions in the chat dropdown and navigates to the sessions page", async ({

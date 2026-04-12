@@ -7,18 +7,21 @@ import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { AgentService, EventStore, JsonPatch, SessionMessageInput, SessionStartInput } from "pstdio-agents";
 import { createFakeAgent } from "pstdio-agents";
 import { createApp } from "../../../app";
+import { waitForSyncEvent } from "../../../test-utils/wait-for-sync-event";
 import type { AppBindings } from "../../../types";
+import type { EventBus } from "../../sync/event-bus";
 
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
 let close: () => Promise<void>;
+let eventBus: EventBus;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-stream-test-"));
 
   const fakeAgent = createFakeAgent();
 
-  ({ app, close } = await createApp({
+  ({ app, close, eventBus } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
@@ -31,15 +34,16 @@ afterAll(async () => {
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
-const waitForSessionStatus = async (sessionId: string, expectedStatus: string) => {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
-    const res = await app.request(`/v1/sessions/${sessionId}`);
-    const body = await res.json();
-    if (body.status === expectedStatus) return body;
-    await Bun.sleep(50);
-  }
-  throw new Error(`Session ${sessionId} did not reach status ${expectedStatus}`);
-};
+const waitForSessionStatus = (bus: EventBus, sessionId: string, expectedStatus: string) =>
+  waitForSyncEvent(
+    bus,
+    (event) =>
+      event.table === "sessions" &&
+      event.op === "set" &&
+      (event.data as { id: string; status: string }).id === sessionId &&
+      (event.data as { id: string; status: string }).status === expectedStatus,
+    2_500,
+  );
 
 interface SSEEvent {
   event: string;
@@ -299,7 +303,7 @@ describe("GET /v1/sessions/:id/stream", () => {
     expect(createRes.status).toBe(201);
     const session = await createRes.json();
 
-    await waitForSessionStatus(session.id, "completed");
+    await waitForSessionStatus(eventBus, session.id, "completed");
 
     const streamRes = await app.request(`/v1/sessions/${session.id}/stream`);
     expect(streamRes.status).toBe(200);
@@ -327,7 +331,7 @@ describe("GET /v1/sessions/:id/stream", () => {
       }),
     });
     const session = await createRes.json();
-    await waitForSessionStatus(session.id, "completed");
+    await waitForSessionStatus(eventBus, session.id, "completed");
 
     // Force to failed
     await app.request(`/v1/sessions/${session.id}/status`, {
@@ -343,7 +347,11 @@ describe("GET /v1/sessions/:id/stream", () => {
 
   test("emits heartbeat events while session is in progress", async () => {
     const heartbeatRoot = mkdtempSync(join(tmpdir(), "pstdio-api-stream-heartbeat-test-"));
-    const { app: heartbeatApp, close: closeHeartbeatApp } = await createApp({
+    const {
+      app: heartbeatApp,
+      close: closeHeartbeatApp,
+      eventBus: heartbeatEventBus,
+    } = await createApp({
       dbPath: ":memory:",
       storagePath: join(heartbeatRoot, "storage"),
       filesRoot: "",
@@ -379,17 +387,7 @@ describe("GET /v1/sessions/:id/stream", () => {
     expect(events.map((event) => event.event)).toContain("ready");
     expect(events.map((event) => event.event)).toContain("heartbeat");
 
-    let finished = false;
-    for (let attempt = 0; attempt < 50; attempt += 1) {
-      const res = await heartbeatApp.request(`/v1/sessions/${session.id}`);
-      const body = await res.json();
-      if (body.status === "completed") {
-        finished = true;
-        break;
-      }
-      await Bun.sleep(50);
-    }
-    expect(finished).toBe(true);
+    await expect(waitForSessionStatus(heartbeatEventBus, session.id, "completed")).resolves.toBeDefined();
 
     await closeHeartbeatApp();
     rmSync(heartbeatRoot, { recursive: true, force: true });
@@ -412,7 +410,11 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
       },
     ];
 
-    const { app: replayApp, close: closeReplayApp } = await createApp({
+    const {
+      app: replayApp,
+      close: closeReplayApp,
+      eventBus: replayEventBus,
+    } = await createApp({
       dbPath: ":memory:",
       storagePath: join(replayRoot, "storage"),
       filesRoot: "",
@@ -471,17 +473,7 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
       path: "/messages/2",
     });
 
-    let completed = false;
-    for (let attempt = 0; attempt < 50; attempt += 1) {
-      const res = await replayApp.request(`/v1/sessions/${session.id}`);
-      const body = await res.json();
-      if (body.status === "completed") {
-        completed = true;
-        break;
-      }
-      await Bun.sleep(50);
-    }
-    expect(completed).toBe(true);
+    await expect(waitForSessionStatus(replayEventBus, session.id, "completed")).resolves.toBeDefined();
 
     await closeReplayApp();
     rmSync(replayRoot, { recursive: true, force: true });
@@ -489,7 +481,11 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
 
   test("shifts overlapping live indexed patches after the initial snapshot", async () => {
     const overlapRoot = mkdtempSync(join(tmpdir(), "pstdio-api-stream-overlap-test-"));
-    const { app: overlapApp, close: closeOverlapApp } = await createApp({
+    const {
+      app: overlapApp,
+      close: closeOverlapApp,
+      eventBus: overlapEventBus,
+    } = await createApp({
       dbPath: ":memory:",
       storagePath: join(overlapRoot, "storage"),
       filesRoot: "",
@@ -514,14 +510,7 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
       }),
     });
     const session = await createRes.json();
-    for (let attempt = 0; attempt < 50; attempt += 1) {
-      const statusRes = await overlapApp.request(`/v1/sessions/${session.id}`);
-      const statusBody = await statusRes.json();
-      if (statusBody.status === "completed") {
-        break;
-      }
-      await Bun.sleep(50);
-    }
+    await waitForSessionStatus(overlapEventBus, session.id, "completed");
 
     const followUpRes = await overlapApp.request(`/v1/sessions/${session.id}/follow-up`, {
       method: "POST",
