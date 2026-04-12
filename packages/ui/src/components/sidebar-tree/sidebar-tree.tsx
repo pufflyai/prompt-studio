@@ -15,7 +15,7 @@ interface SidebarTreeProps {
   sections: SidebarSection[];
   expandedSections: string[];
   expandedNodes: string[];
-  activeNodeId?: string | null;
+  activeNodeId?: string | string[] | null;
   linkComponent?: SidebarLinkComponent;
   onNavigate?: (event: SidebarNavigateEvent) => void;
   onToggleSection: (sectionId: string) => void;
@@ -33,7 +33,7 @@ interface SidebarNodeRowProps {
   node: SidebarNode;
   level: number;
   expandedNodes: string[];
-  activeNodeId?: string | null;
+  activeNodeId?: string | string[] | null;
   linkComponent?: SidebarLinkComponent;
   onNavigate?: (event: SidebarNavigateEvent) => void;
   onToggleNode: (nodeId: string) => void;
@@ -153,7 +153,7 @@ const SidebarNodeRow = (props: SidebarNodeRowProps) => {
   const hasChildren = (node.children?.length ?? 0) > 0;
   const expanded = hasChildren && isExpanded(node.id, expandedNodes);
   const isNavigable = node.isNavigable || node.navigationIntent !== undefined;
-  const isActive = activeNodeId === node.id;
+  const isActive = Array.isArray(activeNodeId) ? activeNodeId.includes(node.id) : activeNodeId === node.id;
   const isDisabled = node.disabled === true;
   const paddingLeft = level > 0 ? `calc(var(--chakra-spacing-1) + ${level} * var(--chakra-spacing-3))` : undefined;
   const canLink = Boolean(LinkComponent && node.href && isNavigable && !hasChildren && !isDisabled);

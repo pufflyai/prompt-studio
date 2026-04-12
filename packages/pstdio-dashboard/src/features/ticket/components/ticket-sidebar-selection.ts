@@ -1,20 +1,20 @@
-interface ResolveTicketSidebarActiveNodeIdInput {
+interface ResolveTicketSidebarActiveNodeIdsInput {
   selectedFileId: string;
   selectedWorkspaceId: string | null | undefined;
   activeSessionId: string | null;
   workspaceSessionIds: Set<string>;
 }
 
-export const resolveTicketSidebarActiveNodeId = (input: ResolveTicketSidebarActiveNodeIdInput) => {
+export const resolveTicketSidebarActiveNodeIds = (input: ResolveTicketSidebarActiveNodeIdsInput) => {
   const { selectedFileId, selectedWorkspaceId, activeSessionId, workspaceSessionIds } = input;
 
-  if (activeSessionId && workspaceSessionIds.has(activeSessionId)) {
-    return `session:${activeSessionId}`;
-  }
-
   if (selectedWorkspaceId) {
-    return `workspace:${selectedWorkspaceId}`;
+    const ids = [`workspace:${selectedWorkspaceId}`];
+    if (activeSessionId && workspaceSessionIds.has(activeSessionId)) {
+      ids.push(`session:${activeSessionId}`);
+    }
+    return ids;
   }
 
-  return `file:${selectedFileId}`;
+  return [`file:${selectedFileId}`];
 };

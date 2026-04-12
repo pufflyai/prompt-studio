@@ -17,7 +17,7 @@ import type { AttemptStatusMapEntry } from "@/features/workspaces/hooks/attempt-
 import type { WorkspaceSessionEntry } from "@/features/workspaces/hooks/use-workspace-sessions";
 import { type SelectableTicketFile, TICKET_CONTENT_ITEM_ID } from "../utils/ticket-file-selection";
 import { buildWorkspaceStatusIndicatorTooltip } from "../utils/workspace-status-indicator";
-import { resolveTicketSidebarActiveNodeId } from "./ticket-sidebar-selection";
+import { resolveTicketSidebarActiveNodeIds } from "./ticket-sidebar-selection";
 
 const TICKET_SIDEBAR_STORAGE_KEY = "ticket-sidebar";
 
@@ -143,7 +143,7 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
     ...(selectedWorkspace ? [buildSessionsSection(sessions, selectedWorkspace.shorthand)] : []),
   ];
 
-  const activeNodeId = resolveTicketSidebarActiveNodeId({
+  const activeNodeIds = resolveTicketSidebarActiveNodeIds({
     selectedFileId,
     selectedWorkspaceId,
     activeSessionId,
@@ -173,7 +173,7 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
     <Sidebar
       storageKey={TICKET_SIDEBAR_STORAGE_KEY}
       sections={sections}
-      activeNodeId={activeNodeId}
+      activeNodeId={activeNodeIds}
       defaultExpandedSections={["files", "workspaces", "sessions"]}
       header={<ProjectMenu />}
       footer={<ProjectSidebarFooter />}

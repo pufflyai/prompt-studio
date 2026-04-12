@@ -4,7 +4,7 @@ import type { SidebarLinkComponent, SidebarNavigateEvent, SidebarSection } from 
 export interface SidebarProps {
   storageKey: string;
   sections: SidebarSection[];
-  activeNodeId?: string | null;
+  activeNodeId?: string | string[] | null;
   header?: ReactNode;
   footer?: ReactNode;
   width?: string | number;
