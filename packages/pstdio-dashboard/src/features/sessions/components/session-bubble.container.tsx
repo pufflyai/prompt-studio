@@ -69,6 +69,7 @@ export const SessionBubbleContainer = () => {
         sessionId={selectedSessionId}
         newSessionWorkspaceId={isWorkspaceRoute ? (pendingWorkspaceSessionWorkspaceId ?? undefined) : undefined}
         onSessionCreated={setSelectedSessionId}
+        showWorkspaceHub={!isWorkspaceRoute}
       />
     </BubblePanel>
   );

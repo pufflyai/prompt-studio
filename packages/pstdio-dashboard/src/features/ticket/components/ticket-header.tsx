@@ -2,11 +2,11 @@ import { Flex } from "@chakra-ui/react";
 import type { BreadcrumbItem } from "@pstdio/ui";
 import { Breadcrumb, HorizontalMenuStack } from "@pstdio/ui";
 import { Link } from "@tanstack/react-router";
-import { KanbanSquare } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ActionDescriptor } from "@/features/plugin-actions/api";
 import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
 import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin-header-actions";
+import { TicketsBreadcrumbTitle } from "@/features/project/components/tickets-breadcrumb-title";
 
 interface TicketHeaderProps {
   breadcrumbItems: BreadcrumbItem[];
@@ -28,14 +28,9 @@ export const TicketHeader = (props: TicketHeaderProps) => {
     onNavigateBack,
     onPluginAction,
   } = props;
-  const { t } = useTranslation(["tickets", "projects"]);
+  const { t } = useTranslation("projects");
   const ticketListBreadcrumb: BreadcrumbItem = {
-    title: (
-      <Flex as="span" align="center" gap="2xs">
-        <KanbanSquare size={14} />
-        {t("projects:sidebar.tickets")}
-      </Flex>
-    ),
+    title: <TicketsBreadcrumbTitle />,
     onClick: onNavigateBack,
   };
   const items = [ticketListBreadcrumb, ...breadcrumbItems];
