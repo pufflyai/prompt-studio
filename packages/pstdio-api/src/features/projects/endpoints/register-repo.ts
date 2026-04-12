@@ -92,39 +92,59 @@ const emitProjectRepoLink = async (
   if (link) deps.eventBus.emit("project_repos", "set", link);
 };
 
+const debugTime = async <T>(label: string, fn: () => Promise<T> | T): Promise<T> => {
+  const start = Date.now();
+  console.log(`[CI-DEBUG] >>> ${label}`);
+  try {
+    const result = await fn();
+    console.log(`[CI-DEBUG] <<< ${label} OK ${Date.now() - start}ms`);
+    return result;
+  } catch (error) {
+    console.log(`[CI-DEBUG] <<< ${label} THROW ${Date.now() - start}ms ${(error as Error)?.message}`);
+    throw error;
+  }
+};
+
 export const registerRepoHandler = (deps: RouteDeps): AppRouteHandler<typeof registerRepoRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const { name, path } = c.req.valid("json");
 
-    const project = await deps.projectService.get(id);
+    console.log(`[CI-DEBUG] === registerRepoHandler start project=${id} path=${path}`);
+
+    const project = await debugTime("projectService.get", () => deps.projectService.get(id));
     if (!project) {
       return c.json({ error: "Project not found" }, 404);
     }
 
     const pstdioPath = join(path, ".pstdio");
     const configPath = join(pstdioPath, "config.json");
-    const relinkState = await resolveRelinkState(deps, {
-      configPath,
-      projectId: id,
-    });
+    const relinkState = await debugTime("resolveRelinkState", () =>
+      resolveRelinkState(deps, { configPath, projectId: id }),
+    );
     if (relinkState.linkedProjectError) {
       return c.json({ error: relinkState.linkedProjectError }, 409);
     }
 
-    const repo = await deps.repoService.registerForProject(id, { name, path });
+    const repo = await debugTime("repoService.registerForProject", () =>
+      deps.repoService.registerForProject(id, { name, path }),
+    );
 
     if (relinkState.isRelinking) {
-      await rm(join(pstdioPath, "tickets"), { recursive: true, force: true });
+      await debugTime("rm tickets", () => rm(join(pstdioPath, "tickets"), { recursive: true, force: true }));
     }
 
-    await bootstrapProjectRepo(path, id, deps.filesRoot);
-    deps.pluginService.invalidate(id);
+    await debugTime("bootstrapProjectRepo", () => bootstrapProjectRepo(path, id, deps.filesRoot));
+    await debugTime("pluginService.invalidate", () => deps.pluginService.invalidate(id));
 
-    deps.eventBus.emit("repos", "set", repo);
-    await emitProjectRepoLink(deps, { projectId: id, repoId: repo.id });
+    await debugTime("emit repos", () => deps.eventBus.emit("repos", "set", repo));
+    await debugTime("emitProjectRepoLink", () => emitProjectRepoLink(deps, { projectId: id, repoId: repo.id }));
 
-    await installProjectSkillsToRepo(deps, { projectId: id, repoPath: repo.path });
+    await debugTime("installProjectSkillsToRepo", () =>
+      installProjectSkillsToRepo(deps, { projectId: id, repoPath: repo.path }),
+    );
+
+    console.log(`[CI-DEBUG] === registerRepoHandler end project=${id}`);
 
     return c.json(repo, 201);
   };
