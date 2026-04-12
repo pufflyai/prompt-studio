@@ -1,30 +1,23 @@
-import { Flex, Stack, Text } from "@chakra-ui/react";
-import { Breadcrumb, HorizontalMenuStack, PanelLayout } from "@pstdio/ui";
-import { Link, useNavigate, useParams } from "@tanstack/react-router";
-import { KanbanSquare } from "lucide-react";
+import { Stack, Text } from "@chakra-ui/react";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
-import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin-header-actions";
 import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
 import { useProject } from "@/features/project/hooks/use-project";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/features/project-settings/store";
-import { CreateWorkspaceModal } from "@/features/ticket/components/create-workspace-modal";
-import { TicketSidebar } from "@/features/ticket/components/ticket-sidebar";
 import { useTicketAttemptDiff } from "@/features/ticket/hooks/use-ticket-attempt-diff";
 import { useTicketFiles } from "@/features/ticket/hooks/use-ticket-files";
 import { buildImplementTicketPrompt } from "@/features/ticket/utils/build-prompts";
 import { openTicketSessionBubble } from "@/features/ticket/utils/open-ticket-session-bubble";
 import { buildSelectableTicketFiles } from "@/features/ticket/utils/ticket-file-selection";
-import type { ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
 import { useCreateTicketAttempt } from "@/features/ticket-list/hooks/use-create-ticket-attempt";
 import { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
 import { isSessionSettled } from "@/features/ticket-list/utils/ticket-attempts";
 import { transformFileDiffs } from "@/features/workspaces/utils/transform-diff";
 import { logMutationError } from "@/lib/error-handlers";
-import { WorkspaceDiffPanel } from "../components/workspace-diff-panel";
 import type { WorkspaceListItem } from "../components/workspace-list-panel";
+import { WorkspacePageContent } from "../components/workspace-page-content";
 import { useAttemptStatusMap } from "../hooks/use-attempt-status-map";
+import { useArchiveWorkspace, useDeleteWorkspace } from "../hooks/use-workspace-mutations";
 import { useWorkspaceSessions } from "../hooks/use-workspace-sessions";
 
 const buildWorkspaceListItems = (
@@ -85,147 +78,11 @@ const runWorkspaceAttempt = async (input: {
   }
 };
 
-interface WorkspacePageContentProps {
-  projectId: string | undefined;
-  ticketShorthand: string | undefined;
-  ticket: NonNullable<ReturnType<typeof useProjectTickets>["data"]>[number];
-  attemptStatusMap: ReturnType<typeof useAttemptStatusMap>;
-  selectedWorkspaceLabel: string;
-  selectedWorkspace: WorkspaceListItem | null;
-  sessionsByWorkspaceId: ReturnType<typeof useWorkspaceSessions>;
-  diffs: ReturnType<typeof transformFileDiffs>;
-  artifacts: ApiWorkspaceArtifact[];
-  attempts: NonNullable<ReturnType<typeof useProjectTickets>["data"]>[number]["attempts"];
-  selectableFiles: ReturnType<typeof buildSelectableTicketFiles>;
-  createAttemptIsPending: boolean;
-  selectWorkspace: (workspaceShorthand: string) => void;
-  selectSession: (workspaceShorthand: string, sessionId: string) => void;
-  selectFile: (fileId: string) => void;
-  isCreateModalOpen: boolean;
-  closeCreateModal: () => void;
-  runAttempt: () => Promise<boolean>;
-  pluginActions: ReturnType<typeof usePluginActionTrigger>["pluginActions"];
-  pluginActionTrigger: ReturnType<typeof usePluginActionTrigger>;
-}
-
-const WorkspacePageContent = (props: WorkspacePageContentProps) => {
-  const {
-    projectId,
-    ticketShorthand,
-    ticket,
-    attemptStatusMap,
-    selectedWorkspaceLabel,
-    selectedWorkspace,
-    sessionsByWorkspaceId,
-    diffs,
-    artifacts,
-    attempts,
-    selectableFiles,
-    createAttemptIsPending,
-    selectWorkspace,
-    selectSession,
-    selectFile,
-    isCreateModalOpen,
-    closeCreateModal,
-    runAttempt,
-    pluginActions,
-    pluginActionTrigger,
-  } = props;
-  const { t } = useTranslation("projects");
-
-  const sidebar = (
-    <TicketSidebar
-      files={selectableFiles}
-      selectedFileId=""
-      workspaces={attempts}
-      attemptStatusMap={attemptStatusMap}
-      sessionsByWorkspaceId={sessionsByWorkspaceId}
-      selectedWorkspaceId={selectedWorkspace?.id}
-      onSelectFile={selectFile}
-      onSelectWorkspace={selectWorkspace}
-      onSelectSession={selectSession}
-    />
-  );
-
-  return (
-    <PanelLayout sidebar={sidebar}>
-      <Stack flex="1" gap="0" minH="0">
-        <HorizontalMenuStack>
-          <Flex align="center" gap="sm">
-            <Breadcrumb
-              separator="/"
-              separatorGap="xs"
-              linkComponent={Link}
-              items={[
-                {
-                  title: (
-                    <Flex as="span" align="center" gap="2xs">
-                      <KanbanSquare size={14} />
-                      {t("sidebar.tickets")}
-                    </Flex>
-                  ),
-                  url: projectId ? `/projects/${projectId}/tickets` : undefined,
-                },
-                {
-                  title: ticket.shorthand,
-                  url: projectId && ticketShorthand ? `/projects/${projectId}/tickets/${ticketShorthand}` : undefined,
-                },
-                {
-                  title: selectedWorkspaceLabel,
-                  url:
-                    projectId && ticketShorthand && selectedWorkspaceLabel
-                      ? `/projects/${projectId}/tickets/${ticketShorthand}/workspaces/${selectedWorkspaceLabel}`
-                      : undefined,
-                },
-              ]}
-            />
-          </Flex>
-
-          <PluginHeaderActions
-            pluginActions={pluginActions}
-            onPluginAction={(actionKey) => {
-              if (!selectedWorkspace) return;
-              void pluginActionTrigger.trigger(actionKey, selectedWorkspace.id);
-            }}
-            pendingActionKey={pluginActionTrigger.pendingActionKey}
-            isExecuting={pluginActionTrigger.isExecuting}
-            overflowLabel="Workspace actions"
-          />
-        </HorizontalMenuStack>
-
-        <Flex flex="1" minH="0">
-          <WorkspaceDiffPanel diffs={diffs} artifacts={artifacts} />
-        </Flex>
-
-        {isCreateModalOpen ? (
-          <CreateWorkspaceModal
-            open={isCreateModalOpen}
-            attemptCount={attempts.length}
-            isSubmitting={createAttemptIsPending}
-            onClose={closeCreateModal}
-            onConfirm={runAttempt}
-          />
-        ) : null}
-
-        {pluginActionTrigger.activeParamAction && projectId ? (
-          <ActionParamsDialog
-            open
-            action={pluginActionTrigger.activeParamAction}
-            projectId={projectId}
-            isSubmitting={pluginActionTrigger.isExecuting}
-            onClose={pluginActionTrigger.cancelParams}
-            onSubmit={(params) => pluginActionTrigger.submitWithParams(params)}
-          />
-        ) : null}
-      </Stack>
-    </PanelLayout>
-  );
-};
-
 export const WorkspacePage = () => {
   const { projectId, ticketShorthand, workspaceShorthand } = useParams({ strict: false });
   const navigate = useNavigate();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const projectSettingsStore = useProjectSettingsStoreApi();
   const setSessionModalState = useProjectSettingsStore((state) => state.setSessionModalState);
   const setSelectedSessionId = useProjectSettingsStore((state) => state.setSelectedSessionId);
@@ -236,6 +93,8 @@ export const WorkspacePage = () => {
   const attempts = ticket?.attempts ?? [];
   const attemptStatusMap = useAttemptStatusMap(projectId);
   const createAttempt = useCreateTicketAttempt(projectId);
+  const archiveWorkspace = useArchiveWorkspace(projectId);
+  const deleteWorkspace = useDeleteWorkspace(projectId);
   const lastSelectedAgent = useProjectSettingsStore((state) => state.lastSelectedAgent);
   const lastSelectedModels = useProjectSettingsStore((state) => state.lastSelectedModels);
   const lastSelectedBranches = useProjectSettingsStore((state) => state.lastSelectedBranches);
@@ -309,6 +168,38 @@ export const WorkspacePage = () => {
     });
   };
 
+  const handleArchiveWorkspace = async () => {
+    if (!selectedWorkspace) return;
+
+    try {
+      await archiveWorkspace.mutateAsync({ workspaceId: selectedWorkspace.id });
+    } catch (error) {
+      logMutationError("archive workspace", error);
+    }
+  };
+
+  const handleDeleteWorkspace = async () => {
+    if (!selectedWorkspace || !projectId || !ticketShorthand) return;
+
+    try {
+      await deleteWorkspace.mutateAsync({ workspaceId: selectedWorkspace.id });
+      setIsDeleteOpen(false);
+      await navigate({
+        to: "/projects/$projectId/tickets/$ticketShorthand",
+        params: { projectId, ticketShorthand },
+      });
+    } catch (error) {
+      logMutationError("delete workspace", error);
+    }
+  };
+
+  const pendingActionKey = archiveWorkspace.isPending
+    ? "archive-workspace"
+    : deleteWorkspace.isPending
+      ? "delete-workspace"
+      : pluginActionTrigger.pendingActionKey;
+  const isExecutingActions = pluginActionTrigger.isExecuting || archiveWorkspace.isPending || deleteWorkspace.isPending;
+
   if (!ticket) {
     return (
       <Stack gap="lg" height="100%" p="sm">
@@ -339,6 +230,13 @@ export const WorkspacePage = () => {
       isCreateModalOpen={isCreateModalOpen}
       closeCreateModal={() => setIsCreateModalOpen(false)}
       runAttempt={handleRunAttempt}
+      archiveWorkspace={handleArchiveWorkspace}
+      deleteWorkspace={handleDeleteWorkspace}
+      isDeleteOpen={isDeleteOpen}
+      openDeleteModal={() => setIsDeleteOpen(true)}
+      closeDeleteModal={() => setIsDeleteOpen(false)}
+      pendingActionKey={pendingActionKey}
+      isExecutingActions={isExecutingActions}
       pluginActions={selectedWorkspace ? pluginActionTrigger.pluginActions : []}
       pluginActionTrigger={pluginActionTrigger}
     />
