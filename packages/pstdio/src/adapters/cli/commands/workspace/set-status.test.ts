@@ -34,7 +34,7 @@ describe("workspaces set-status", () => {
   test("updates attempt status with explicit workspace", async () => {
     const log = mock();
     const updateAttemptStatus = mock(async () => ({}) as never);
-    const handler = createHandler({ ...baseDeps, updateAttemptStatus, log });
+    const handler = createHandler({ ...baseDeps, env: () => ({}), updateAttemptStatus, log });
 
     await handler({ workspace: "PS-1_A1", status: "review-ready", _: [], $0: "" } as never);
 

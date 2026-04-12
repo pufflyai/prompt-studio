@@ -8,7 +8,7 @@ import {
   type SidebarNode,
   type SidebarSection,
 } from "@pstdio/ui";
-import { Circle, FileCode, FileImage, FileJson, FileSpreadsheet, FileText, GitBranch } from "lucide-react";
+import { Circle, FileCode, FileImage, FileJson, FileSpreadsheet, FileText, GitBranch, Plus } from "lucide-react";
 import { createElement } from "react";
 import { ProjectMenu } from "@/features/project/components/project-menu";
 import { ProjectSidebarFooter } from "@/features/project/components/project-sidebar";
@@ -35,6 +35,7 @@ interface TicketSidebarProps {
   onSelectFile: (fileId: string) => void;
   onSelectWorkspace: (workspaceShorthand: string) => void;
   onSelectSession: (workspaceShorthand: string, sessionId: string) => void;
+  onCreateWorkspaceSessionDraft?: (workspaceId: string) => void;
 }
 
 const getFileIcon = (fileName: string) => {
@@ -104,7 +105,12 @@ const buildWorkspacesSection = (
   };
 };
 
-const buildSessionsSection = (sessions: WorkspaceSessionEntry[], workspaceShorthand: string): SidebarSection => {
+const buildSessionsSection = (
+  sessions: WorkspaceSessionEntry[],
+  workspaceId: string,
+  workspaceShorthand: string,
+  onCreateWorkspaceSessionDraft?: (workspaceId: string) => void,
+): SidebarSection => {
   const nodes: SidebarNode[] = sessions.map((session) => ({
     id: `session:${session.id}`,
     label: session.title,
@@ -117,7 +123,21 @@ const buildSessionsSection = (sessions: WorkspaceSessionEntry[], workspaceShorth
     },
   }));
 
-  return { id: "sessions", label: "Sessions", nodes };
+  return {
+    id: "sessions",
+    label: "Sessions",
+    actions: onCreateWorkspaceSessionDraft
+      ? [
+          {
+            id: "new-session",
+            label: "New session",
+            icon: <Plus size={14} />,
+            onAction: () => onCreateWorkspaceSessionDraft(workspaceId),
+          },
+        ]
+      : undefined,
+    nodes,
+  };
 };
 
 export const TicketSidebar = (props: TicketSidebarProps) => {
@@ -132,6 +152,7 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
     onSelectFile,
     onSelectWorkspace,
     onSelectSession,
+    onCreateWorkspaceSessionDraft,
   } = props;
 
   const selectedWorkspace = selectedWorkspaceId ? workspaces.find((w) => w.id === selectedWorkspaceId) : null;
@@ -140,7 +161,16 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
   const sections: SidebarSection[] = [
     buildFilesSection(files),
     buildWorkspacesSection(workspaces, attemptStatusMap),
-    ...(selectedWorkspace ? [buildSessionsSection(sessions, selectedWorkspace.shorthand)] : []),
+    ...(selectedWorkspace
+      ? [
+          buildSessionsSection(
+            sessions,
+            selectedWorkspace.id,
+            selectedWorkspace.shorthand,
+            onCreateWorkspaceSessionDraft,
+          ),
+        ]
+      : []),
   ];
 
   const activeNodeIds = resolveTicketSidebarActiveNodeIds({

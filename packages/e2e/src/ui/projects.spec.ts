@@ -46,7 +46,9 @@ const resolveFolderPickerWorkspacePath = () => {
 
   while (true) {
     if (existsSync(join(currentPath, ".git"))) {
-      return join(dirname(currentPath), "pstdio-e2e-picker-workspace");
+      const repoParentPath = dirname(currentPath);
+      const visibleParentPath = basename(repoParentPath).startsWith(".") ? dirname(repoParentPath) : repoParentPath;
+      return join(visibleParentPath, "pstdio-e2e-picker-workspace");
     }
 
     const parentPath = dirname(currentPath);

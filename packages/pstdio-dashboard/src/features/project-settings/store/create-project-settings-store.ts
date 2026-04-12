@@ -2,7 +2,12 @@ import { createStore } from "zustand";
 import { createJSONStorage, devtools, persist, subscribeWithSelector } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { getStoredAgent } from "@/features/agents/agent-storage";
-import type { ProjectSettingsSnapshot, ProjectSettingsState, ProjectSettingsStoreOptions } from "./types";
+import type {
+  PersistedProjectSettingsSnapshot,
+  ProjectSettingsSnapshot,
+  ProjectSettingsState,
+  ProjectSettingsStoreOptions,
+} from "./types";
 
 const DEFAULT_AGENT = "opencode";
 const STORE_NAME = "pstdio-project-settings";
@@ -17,17 +22,18 @@ const prependUnique = (arr: string[], value: string, max: number) => {
   return [value, ...filtered].slice(0, max);
 };
 
-const getPersistedSnapshot = (state: ProjectSettingsState) => ({
-  lastSelectedAgent: state.lastSelectedAgent,
-  lastSelectedModels: state.lastSelectedModels,
-  lastSelectedRepo: state.lastSelectedRepo,
-  lastSelectedBranches: state.lastSelectedBranches,
-  sessionModalState: state.sessionModalState,
-  selectedSessionId: state.selectedSessionId,
-  lastNonSessionsPath: state.lastNonSessionsPath,
-  chatDraftsBySession: state.chatDraftsBySession,
-  createTicketDraft: state.createTicketDraft,
-});
+const getPersistedSnapshot = (state: ProjectSettingsState) =>
+  ({
+    lastSelectedAgent: state.lastSelectedAgent,
+    lastSelectedModels: state.lastSelectedModels,
+    lastSelectedRepo: state.lastSelectedRepo,
+    lastSelectedBranches: state.lastSelectedBranches,
+    sessionModalState: state.sessionModalState,
+    selectedSessionId: state.selectedSessionId,
+    lastNonSessionsPath: state.lastNonSessionsPath,
+    chatDraftsBySession: state.chatDraftsBySession,
+    createTicketDraft: state.createTicketDraft,
+  }) satisfies PersistedProjectSettingsSnapshot;
 
 export const getDefaultProjectSettingsSnapshot = () =>
   ({
@@ -40,12 +46,13 @@ export const getDefaultProjectSettingsSnapshot = () =>
     lastNonSessionsPath: null,
     chatDraftsBySession: {},
     createTicketDraft: "",
+    pendingWorkspaceSessionWorkspaceId: null,
   }) satisfies ProjectSettingsSnapshot;
 
 export const createProjectSettingsStore = (options?: ProjectSettingsStoreOptions) => {
   const { projectId, initialState } = options ?? {};
   const storeName = getStoreName(projectId);
-  const storage = createJSONStorage<ProjectSettingsSnapshot>(() => globalThis.localStorage);
+  const storage = createJSONStorage<PersistedProjectSettingsSnapshot>(() => globalThis.localStorage);
   const initialSnapshot = {
     ...getDefaultProjectSettingsSnapshot(),
     ...initialState,
@@ -105,9 +112,18 @@ export const createProjectSettingsStore = (options?: ProjectSettingsStoreOptions
               set(
                 (state) => {
                   state.selectedSessionId = sessionId;
+                  state.pendingWorkspaceSessionWorkspaceId = null;
                 },
                 false,
                 actionName("setSelectedSessionId"),
+              ),
+            setPendingWorkspaceSessionWorkspaceId: (workspaceId) =>
+              set(
+                (state) => {
+                  state.pendingWorkspaceSessionWorkspaceId = workspaceId;
+                },
+                false,
+                actionName("setPendingWorkspaceSessionWorkspaceId"),
               ),
             setLastNonSessionsPath: (path) =>
               set(
@@ -166,7 +182,7 @@ export const createProjectSettingsStore = (options?: ProjectSettingsStoreOptions
         partialize: getPersistedSnapshot,
         merge: (persistedState, currentState) => ({
           ...currentState,
-          ...(persistedState as Partial<ProjectSettingsSnapshot>),
+          ...(persistedState as Partial<PersistedProjectSettingsSnapshot>),
         }),
       },
     ),

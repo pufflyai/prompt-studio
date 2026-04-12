@@ -1,10 +1,10 @@
-import { HStack, IconButton, Text } from "@chakra-ui/react";
+import { Box, HStack, IconButton, Text } from "@chakra-ui/react";
 import { useSidebarStore } from "@pstdio/ui";
 import { PanelLeftOpen } from "lucide-react";
 import type { ReactNode } from "react";
 
 interface DashboardHeaderProps {
-  title: string;
+  title: ReactNode;
   sidebarStorageKey: string;
   children?: ReactNode;
 }
@@ -21,9 +21,13 @@ export const DashboardHeader = (props: DashboardHeaderProps) => {
           <PanelLeftOpen size={16} />
         </IconButton>
       ) : null}
-      <Text textStyle="label/M/medium" flexShrink={0}>
-        {title}
-      </Text>
+      {typeof title === "string" ? (
+        <Text textStyle="label/M/medium" flexShrink={0}>
+          {title}
+        </Text>
+      ) : (
+        <Box flexShrink={0}>{title}</Box>
+      )}
       {children}
     </HStack>
   );

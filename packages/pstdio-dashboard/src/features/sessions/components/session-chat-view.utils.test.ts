@@ -3,6 +3,7 @@ import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import { createPendingFollowUpState } from "./session-chat-state";
 import {
   countCompletedEditActions,
+  resolveNewSessionWorkspaceId,
   shouldReconnectForExternalResume,
   shouldResetPendingFollowUpForSession,
 } from "./session-chat-view.utils";
@@ -71,5 +72,47 @@ describe("session chat view utils", () => {
     expect(shouldResetPendingFollowUpForSession(pending, "session-2")).toBe(true);
     expect(shouldResetPendingFollowUpForSession(pending, null)).toBe(true);
     expect(shouldResetPendingFollowUpForSession(null, "session-2")).toBe(false);
+  });
+
+  describe("resolveNewSessionWorkspaceId", () => {
+    it("returns the current workspace id for a new workspace-scoped draft", () => {
+      expect(
+        resolveNewSessionWorkspaceId({
+          sessionId: null,
+          workspaceId: undefined,
+          newSessionWorkspaceId: "workspace-1",
+        }),
+      ).toBe("workspace-1");
+    });
+
+    it("prefers the explicit workspace id for existing sessions", () => {
+      expect(
+        resolveNewSessionWorkspaceId({
+          sessionId: "session-1",
+          workspaceId: "workspace-2",
+          newSessionWorkspaceId: "workspace-1",
+        }),
+      ).toBe("workspace-2");
+    });
+
+    it("returns undefined for generic new sessions", () => {
+      expect(
+        resolveNewSessionWorkspaceId({
+          sessionId: null,
+          workspaceId: undefined,
+          newSessionWorkspaceId: undefined,
+        }),
+      ).toBeUndefined();
+    });
+
+    it("does not reuse a pending workspace when caller does not provide workspace context", () => {
+      expect(
+        resolveNewSessionWorkspaceId({
+          sessionId: null,
+          workspaceId: undefined,
+          newSessionWorkspaceId: undefined,
+        }),
+      ).toBeUndefined();
+    });
   });
 });

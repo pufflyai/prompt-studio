@@ -19,6 +19,7 @@ import {
   type PendingFollowUpState,
   shouldShowPendingFollowUp,
 } from "./session-chat-state";
+import { resolveNewSessionWorkspaceId } from "./session-chat-view.utils";
 import { submitSessionMessage } from "./session-chat-view-actions";
 import {
   useEditActionNotifier,
@@ -32,6 +33,7 @@ import { SessionChatApprovalPromptPanel, SessionChatWorkspaceHubPanel } from "./
 interface SessionChatViewProps {
   sessionId: string | null;
   workspaceId?: string;
+  newSessionWorkspaceId?: string;
   onSessionCreated?: (sessionId: string) => void;
   onEditAction?: () => void;
   showWorkspaceHub?: boolean;
@@ -39,7 +41,14 @@ interface SessionChatViewProps {
 
 export const SessionChatView = (props: SessionChatViewProps) => {
   const { t } = useTranslation(["projects", "tickets"]);
-  const { sessionId, workspaceId, onSessionCreated, onEditAction, showWorkspaceHub = true } = props;
+  const {
+    sessionId,
+    workspaceId,
+    newSessionWorkspaceId,
+    onSessionCreated,
+    onEditAction,
+    showWorkspaceHub = true,
+  } = props;
   const { projectId } = useParams({ strict: false });
 
   const sessionAgent = useSessionAgent(sessionId);
@@ -98,6 +107,11 @@ export const SessionChatView = (props: SessionChatViewProps) => {
   const effectiveStreaming = isStreaming || isWorkspaceInitializing;
   const emptyStateTitle = sessionId ? t("chatInput.session.notFoundTitle") : t("sessions.nextBuildTitle");
   const emptyStateDescription = sessionId ? t("chatInput.session.notFoundDescription") : "";
+  const effectiveWorkspaceId = resolveNewSessionWorkspaceId({
+    sessionId,
+    workspaceId,
+    newSessionWorkspaceId,
+  });
 
   return (
     <ChatPanel
@@ -115,7 +129,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
           projectId,
           agent,
           model,
-          workspaceId,
+          workspaceId: effectiveWorkspaceId,
           text,
           messages,
           pendingIdRef,

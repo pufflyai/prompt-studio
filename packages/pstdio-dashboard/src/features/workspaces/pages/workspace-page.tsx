@@ -30,6 +30,7 @@ import { resolveActiveWorkspaceSessionId } from "../utils/selected-workspace-ses
 import { resolveWorkspaceSelection } from "../utils/workspace-selection";
 import { resolveWorkspacePageAutoOpenSession } from "./workspace-page-auto-open-session";
 import { resolveWorkspacePageSessionSearch } from "./workspace-page-session-search";
+import { useWorkspaceSessionDraft } from "./use-workspace-session-draft";
 
 const buildWorkspaceListItems = (
   attempts: NonNullable<ReturnType<typeof useProjectTickets>["data"]>[number]["attempts"],
@@ -105,6 +106,7 @@ interface WorkspacePageContentProps {
   activeSessionId: string | null;
   selectWorkspace: (workspaceShorthand: string) => void;
   selectSession: (workspaceShorthand: string, sessionId: string) => void;
+  createWorkspaceSessionDraft: (workspaceId: string) => void;
   selectFile: (fileId: string) => void;
   isCreateModalOpen: boolean;
   closeCreateModal: () => void;
@@ -130,6 +132,7 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
     activeSessionId,
     selectWorkspace,
     selectSession,
+    createWorkspaceSessionDraft,
     selectFile,
     isCreateModalOpen,
     closeCreateModal,
@@ -151,6 +154,7 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
       onSelectFile={selectFile}
       onSelectWorkspace={selectWorkspace}
       onSelectSession={selectSession}
+      onCreateWorkspaceSessionDraft={createWorkspaceSessionDraft}
     />
   );
 
@@ -331,7 +335,7 @@ export const WorkspacePage = () => {
   const ticketFiles = useTicketFiles(ticket?.id);
   const selectableFiles = buildSelectableTicketFiles(ticketFiles.data);
   const artifacts = ticketFiles.data?.artifacts ?? [];
-
+  const handleCreateWorkspaceSessionDraft = useWorkspaceSessionDraft(selectedWorkspace?.id ?? null);
   const handleSelectWorkspace = (nextWorkspaceShorthand: string) => {
     if (!projectId || !ticketShorthand) return;
 
@@ -376,7 +380,6 @@ export const WorkspacePage = () => {
       setSelectedSessionId,
     });
   };
-
   const handleSelectFile = () => {
     if (!projectId || !ticketShorthand) return;
     navigate({
@@ -426,6 +429,7 @@ export const WorkspacePage = () => {
       activeSessionId={activeSessionId}
       selectWorkspace={handleSelectWorkspace}
       selectSession={handleSelectSession}
+      createWorkspaceSessionDraft={handleCreateWorkspaceSessionDraft}
       selectFile={handleSelectFile}
       isCreateModalOpen={isCreateModalOpen}
       closeCreateModal={() => setIsCreateModalOpen(false)}

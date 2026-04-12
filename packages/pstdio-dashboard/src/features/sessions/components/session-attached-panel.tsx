@@ -14,6 +14,7 @@ export const SessionAttachedPanel = () => {
   const setSessionModalState = useProjectSettingsStore((s) => s.setSessionModalState);
   const selectedSessionId = useProjectSettingsStore((s) => s.selectedSessionId);
   const setSelectedSessionId = useProjectSettingsStore((s) => s.setSelectedSessionId);
+  const pendingWorkspaceSessionWorkspaceId = useProjectSettingsStore((s) => s.pendingWorkspaceSessionWorkspaceId);
   const isWorkspaceRoute = typeof workspaceShorthand === "string" && workspaceShorthand.length > 0;
 
   const { data: sessions = [] } = useProjectSessions(projectId);
@@ -56,6 +57,7 @@ export const SessionAttachedPanel = () => {
       <Flex flex="1" minH={0} direction="column">
         <SessionChatView
           sessionId={selectedSessionId}
+          newSessionWorkspaceId={isWorkspaceRoute ? (pendingWorkspaceSessionWorkspaceId ?? undefined) : undefined}
           onSessionCreated={setSelectedSessionId}
           showWorkspaceHub={!isWorkspaceRoute}
         />

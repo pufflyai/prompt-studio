@@ -27,6 +27,18 @@ export const shouldResetPendingFollowUpForSession = (
   sessionId: string | null,
 ) => Boolean(pendingFollowUp?.sessionId && pendingFollowUp.sessionId !== sessionId);
 
+export const resolveNewSessionWorkspaceId = (input: {
+  sessionId: string | null;
+  workspaceId?: string;
+  newSessionWorkspaceId?: string;
+}) => {
+  if (input.sessionId) {
+    return input.workspaceId;
+  }
+
+  return input.newSessionWorkspaceId;
+};
+
 const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
 
 // Detects when a session transitions from a terminal state to in_progress
