@@ -1,29 +1,20 @@
-import { Archive, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
 import { logMutationError } from "@/lib/error-handlers";
 
-interface BuildWorkspaceDefaultOverflowActionsInput {
+interface BuildWorkspaceDeleteOverflowActionInput {
   t: (key: string) => string;
   hasSelectedWorkspace: boolean;
   isMutationPending: boolean;
-  onArchiveWorkspace: () => void;
   onDeleteWorkspace: () => void;
 }
 
-export const buildWorkspaceDefaultOverflowActions = (
-  input: BuildWorkspaceDefaultOverflowActionsInput,
+export const buildWorkspaceDeleteOverflowAction = (
+  input: BuildWorkspaceDeleteOverflowActionInput,
 ): HeaderActionItem[] => {
-  const { t, hasSelectedWorkspace, isMutationPending, onArchiveWorkspace, onDeleteWorkspace } = input;
+  const { t, hasSelectedWorkspace, isMutationPending, onDeleteWorkspace } = input;
 
   return [
-    {
-      key: "archive-workspace",
-      label: t("workspacePanel.options.archiveWorkspace"),
-      kind: "default",
-      icon: Archive,
-      isDisabled: !hasSelectedWorkspace || isMutationPending,
-      onClick: onArchiveWorkspace,
-    },
     {
       key: "delete-workspace",
       label: t("workspacePanel.options.deleteWorkspace"),
@@ -33,24 +24,6 @@ export const buildWorkspaceDefaultOverflowActions = (
       onClick: onDeleteWorkspace,
     },
   ];
-};
-
-interface WorkspaceArchiveFlowInput {
-  selectedWorkspaceId: string | null;
-  archiveWorkspace: (workspaceId: string) => Promise<void>;
-  navigateToTicket: () => Promise<void>;
-}
-
-export const runWorkspaceArchiveFlow = async (input: WorkspaceArchiveFlowInput) => {
-  const { selectedWorkspaceId, archiveWorkspace, navigateToTicket } = input;
-  if (!selectedWorkspaceId) return;
-
-  try {
-    await archiveWorkspace(selectedWorkspaceId);
-    await navigateToTicket();
-  } catch (error) {
-    logMutationError("archive workspace", error);
-  }
 };
 
 interface WorkspaceDeleteFlowInput {

@@ -179,7 +179,6 @@
   "workspacePanel": {
     "options": {
       "workspace": "Ouvrir les options de l’espace de travail",
-      "archiveWorkspace": "Archiver l’espace de travail",
       "deleteWorkspace": "Supprimer l’espace de travail"
     },
     "deleteConfirmation": {

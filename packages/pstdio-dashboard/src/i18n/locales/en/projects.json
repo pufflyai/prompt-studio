@@ -180,7 +180,6 @@
   "workspacePanel": {
     "options": {
       "workspace": "Open workspace options",
-      "archiveWorkspace": "Archive workspace",
       "deleteWorkspace": "Delete workspace"
     },
     "deleteConfirmation": {

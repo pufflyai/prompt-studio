@@ -179,7 +179,6 @@
   "workspacePanel": {
     "options": {
       "workspace": "開啟工作區選項",
-      "archiveWorkspace": "封存工作區",
       "deleteWorkspace": "刪除工作區"
     },
     "deleteConfirmation": {

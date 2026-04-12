@@ -179,7 +179,6 @@
   "workspacePanel": {
     "options": {
       "workspace": "워크스페이스 옵션 열기",
-      "archiveWorkspace": "워크스페이스 보관",
       "deleteWorkspace": "워크스페이스 삭제"
     },
     "deleteConfirmation": {

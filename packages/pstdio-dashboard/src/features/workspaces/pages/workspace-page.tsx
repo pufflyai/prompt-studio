@@ -25,16 +25,12 @@ import { logMutationError } from "@/lib/error-handlers";
 import { WorkspaceDiffPanel } from "../components/workspace-diff-panel";
 import type { WorkspaceListItem } from "../components/workspace-list-panel";
 import { useAttemptStatusMap } from "../hooks/use-attempt-status-map";
-import { useArchiveWorkspace, useDeleteWorkspace } from "../hooks/use-workspace-actions";
+import { useDeleteWorkspace } from "../hooks/use-workspace-actions";
 import { useWorkspaceSessions } from "../hooks/use-workspace-sessions";
 import { resolveActiveWorkspaceSessionId } from "../utils/selected-workspace-session";
 import { resolveWorkspaceSelection } from "../utils/workspace-selection";
 import { useWorkspaceSessionDraft } from "./use-workspace-session-draft";
-import {
-  buildWorkspaceDefaultOverflowActions,
-  runWorkspaceArchiveFlow,
-  runWorkspaceDeleteFlow,
-} from "./workspace-page-actions";
+import { buildWorkspaceDeleteOverflowAction, runWorkspaceDeleteFlow } from "./workspace-page-actions";
 import { resolveWorkspacePageAutoOpenSession } from "./workspace-page-auto-open-session";
 import { resolveWorkspacePageSessionSearch } from "./workspace-page-session-search";
 
@@ -132,12 +128,10 @@ interface WorkspacePageContentProps {
   runAttempt: () => Promise<boolean>;
   pluginActions: ReturnType<typeof usePluginActionTrigger>["pluginActions"];
   pluginActionTrigger: ReturnType<typeof usePluginActionTrigger>;
-  archiveWorkspaceIsPending: boolean;
   deleteWorkspaceIsPending: boolean;
   isDeleteOpen: boolean;
   openDeleteModal: () => void;
   closeDeleteModal: () => void;
-  archiveWorkspace: () => Promise<void>;
   deleteWorkspace: () => Promise<void>;
 }
 
@@ -165,21 +159,18 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
     runAttempt,
     pluginActions,
     pluginActionTrigger,
-    archiveWorkspaceIsPending,
     deleteWorkspaceIsPending,
     isDeleteOpen,
     openDeleteModal,
     closeDeleteModal,
-    archiveWorkspace,
     deleteWorkspace,
   } = props;
   const { t } = useTranslation("projects");
 
-  const defaultOverflowActions = buildWorkspaceDefaultOverflowActions({
+  const defaultOverflowActions = buildWorkspaceDeleteOverflowAction({
     t,
     hasSelectedWorkspace: Boolean(selectedWorkspace),
-    isMutationPending: archiveWorkspaceIsPending || deleteWorkspaceIsPending,
-    onArchiveWorkspace: () => void archiveWorkspace(),
+    isMutationPending: deleteWorkspaceIsPending,
     onDeleteWorkspace: openDeleteModal,
   });
 
@@ -241,7 +232,7 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
               void pluginActionTrigger.trigger(actionKey, selectedWorkspace.id);
             }}
             pendingActionKey={pluginActionTrigger.pendingActionKey}
-            isExecuting={pluginActionTrigger.isExecuting || archiveWorkspaceIsPending || deleteWorkspaceIsPending}
+            isExecuting={pluginActionTrigger.isExecuting || deleteWorkspaceIsPending}
             overflowLabel={t("workspacePanel.options.workspace")}
           />
         </HorizontalMenuStack>
@@ -302,7 +293,6 @@ export const WorkspacePage = () => {
   const attempts = ticket?.attempts ?? [];
   const attemptStatusMap = useAttemptStatusMap(projectId);
   const createAttempt = useCreateTicketAttempt(projectId);
-  const archiveWorkspace = useArchiveWorkspace();
   const deleteWorkspace = useDeleteWorkspace();
   const lastSelectedAgent = useProjectSettingsStore((state) => state.lastSelectedAgent);
   const lastSelectedModels = useProjectSettingsStore((state) => state.lastSelectedModels);
@@ -450,16 +440,6 @@ export const WorkspacePage = () => {
     });
   };
 
-  const handleArchiveWorkspace = async () => {
-    await runWorkspaceArchiveFlow({
-      selectedWorkspaceId: selectedWorkspace?.id ?? null,
-      archiveWorkspace: async (workspaceId) => {
-        await archiveWorkspace.mutateAsync({ workspaceId });
-      },
-      navigateToTicket: () => navigateToTicketDetails(navigate, projectId, ticketShorthand),
-    });
-  };
-
   const handleDeleteWorkspace = async () => {
     await runWorkspaceDeleteFlow({
       selectedWorkspaceId: selectedWorkspace?.id ?? null,
@@ -504,12 +484,10 @@ export const WorkspacePage = () => {
       runAttempt={handleRunAttempt}
       pluginActions={selectedWorkspace ? pluginActionTrigger.pluginActions : []}
       pluginActionTrigger={pluginActionTrigger}
-      archiveWorkspaceIsPending={archiveWorkspace.isPending}
       deleteWorkspaceIsPending={deleteWorkspace.isPending}
       isDeleteOpen={isDeleteOpen}
       openDeleteModal={() => setDeleteOpen(true)}
       closeDeleteModal={() => setDeleteOpen(false)}
-      archiveWorkspace={handleArchiveWorkspace}
       deleteWorkspace={handleDeleteWorkspace}
     />
   );

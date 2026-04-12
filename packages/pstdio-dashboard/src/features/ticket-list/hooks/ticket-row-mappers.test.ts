@@ -106,4 +106,46 @@ describe("toTicketFromRow", () => {
 
     expect(ticket.attempts.map((a) => a.shorthand)).toEqual(["PS-1_A1", "PS-1_A2", "PS-1_A3"]);
   });
+
+  it("hides archived workspaces from attempts", () => {
+    const workspacesByTicket = new Map<string, SyncedRow[]>([
+      [
+        "ticket-1",
+        [
+          {
+            id: "workspace-1",
+            name: "PS-1_A1",
+            attempt_status_id: null,
+            workspace_shorthand: "PS-1_A1",
+            updated_at: "2026-03-15T12:00:00.000Z",
+            worktree_path: null,
+            archived: false,
+          },
+          {
+            id: "workspace-2",
+            name: "PS-1_A2",
+            attempt_status_id: null,
+            workspace_shorthand: "PS-1_A2",
+            updated_at: "2026-03-15T13:00:00.000Z",
+            worktree_path: null,
+            archived: true,
+          },
+        ],
+      ],
+    ]);
+
+    const ticket = toTicketFromRow(
+      baseTicketRow,
+      new Map([["status-1", "In Progress"]]),
+      new Map([["status-1", "orange"]]),
+      "Unassigned",
+      "gray",
+      new Map(),
+      workspacesByTicket,
+      new Map(),
+      new Map(),
+    );
+
+    expect(ticket.attempts.map((attempt) => attempt.id)).toEqual(["workspace-1"]);
+  });
 });

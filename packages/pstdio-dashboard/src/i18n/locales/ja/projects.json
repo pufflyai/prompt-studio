@@ -179,7 +179,6 @@
   "workspacePanel": {
     "options": {
       "workspace": "ワークスペースオプションを開く",
-      "archiveWorkspace": "ワークスペースをアーカイブ",
       "deleteWorkspace": "ワークスペースを削除"
     },
     "deleteConfirmation": {
