@@ -5,7 +5,7 @@ interface ResolveWorkspaceSelectionInput {
 }
 
 interface WorkspaceSelection {
-  search: { sessionId: string } | {};
+  search: { sessionId?: string };
   sessionIdToOpen: string | null;
   shouldClearSelection: boolean;
 }

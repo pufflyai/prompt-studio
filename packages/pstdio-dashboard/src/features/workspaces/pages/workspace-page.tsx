@@ -28,9 +28,9 @@ import { useAttemptStatusMap } from "../hooks/use-attempt-status-map";
 import { useWorkspaceSessions } from "../hooks/use-workspace-sessions";
 import { resolveActiveWorkspaceSessionId } from "../utils/selected-workspace-session";
 import { resolveWorkspaceSelection } from "../utils/workspace-selection";
+import { useWorkspaceSessionDraft } from "./use-workspace-session-draft";
 import { resolveWorkspacePageAutoOpenSession } from "./workspace-page-auto-open-session";
 import { resolveWorkspacePageSessionSearch } from "./workspace-page-session-search";
-import { useWorkspaceSessionDraft } from "./use-workspace-session-draft";
 
 const buildWorkspaceListItems = (
   attempts: NonNullable<ReturnType<typeof useProjectTickets>["data"]>[number]["attempts"],
