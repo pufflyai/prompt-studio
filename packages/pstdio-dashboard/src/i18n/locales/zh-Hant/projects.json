@@ -176,6 +176,19 @@
       "emptyValue": "-"
     }
   },
+  "workspacePanel": {
+    "options": {
+      "workspace": "開啟工作區選項",
+      "archiveWorkspace": "封存工作區",
+      "deleteWorkspace": "刪除工作區"
+    },
+    "deleteConfirmation": {
+      "workspace": {
+        "headline": "刪除工作區？",
+        "notification": "此操作會刪除工作區，並將其從工單中移除。"
+      }
+    }
+  },
   "createProjectSession": {
     "errors": {
       "missingProjectId": "建立工作階段需要專案 ID。"

@@ -1,5 +1,5 @@
 import { Flex, Stack, Text } from "@chakra-ui/react";
-import { Breadcrumb, HorizontalMenuStack, PanelLayout } from "@pstdio/ui";
+import { Breadcrumb, DeleteConfirmationModal, HorizontalMenuStack, PanelLayout } from "@pstdio/ui";
 import { Link, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { KanbanSquare } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -25,10 +25,16 @@ import { logMutationError } from "@/lib/error-handlers";
 import { WorkspaceDiffPanel } from "../components/workspace-diff-panel";
 import type { WorkspaceListItem } from "../components/workspace-list-panel";
 import { useAttemptStatusMap } from "../hooks/use-attempt-status-map";
+import { useArchiveWorkspace, useDeleteWorkspace } from "../hooks/use-workspace-actions";
 import { useWorkspaceSessions } from "../hooks/use-workspace-sessions";
 import { resolveActiveWorkspaceSessionId } from "../utils/selected-workspace-session";
 import { resolveWorkspaceSelection } from "../utils/workspace-selection";
 import { useWorkspaceSessionDraft } from "./use-workspace-session-draft";
+import {
+  buildWorkspaceDefaultOverflowActions,
+  runWorkspaceArchiveFlow,
+  runWorkspaceDeleteFlow,
+} from "./workspace-page-actions";
 import { resolveWorkspacePageAutoOpenSession } from "./workspace-page-auto-open-session";
 import { resolveWorkspacePageSessionSearch } from "./workspace-page-session-search";
 
@@ -90,6 +96,19 @@ const runWorkspaceAttempt = async (input: {
   }
 };
 
+const navigateToTicketDetails = async (
+  navigate: ReturnType<typeof useNavigate>,
+  projectId: string | undefined,
+  ticketShorthand: string | undefined,
+) => {
+  if (!projectId || !ticketShorthand) return;
+
+  await navigate({
+    to: "/projects/$projectId/tickets/$ticketShorthand",
+    params: { projectId, ticketShorthand },
+  });
+};
+
 interface WorkspacePageContentProps {
   projectId: string | undefined;
   ticketShorthand: string | undefined;
@@ -113,6 +132,13 @@ interface WorkspacePageContentProps {
   runAttempt: () => Promise<boolean>;
   pluginActions: ReturnType<typeof usePluginActionTrigger>["pluginActions"];
   pluginActionTrigger: ReturnType<typeof usePluginActionTrigger>;
+  archiveWorkspaceIsPending: boolean;
+  deleteWorkspaceIsPending: boolean;
+  isDeleteOpen: boolean;
+  openDeleteModal: () => void;
+  closeDeleteModal: () => void;
+  archiveWorkspace: () => Promise<void>;
+  deleteWorkspace: () => Promise<void>;
 }
 
 const WorkspacePageContent = (props: WorkspacePageContentProps) => {
@@ -139,8 +165,23 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
     runAttempt,
     pluginActions,
     pluginActionTrigger,
+    archiveWorkspaceIsPending,
+    deleteWorkspaceIsPending,
+    isDeleteOpen,
+    openDeleteModal,
+    closeDeleteModal,
+    archiveWorkspace,
+    deleteWorkspace,
   } = props;
   const { t } = useTranslation("projects");
+
+  const defaultOverflowActions = buildWorkspaceDefaultOverflowActions({
+    t,
+    hasSelectedWorkspace: Boolean(selectedWorkspace),
+    isMutationPending: archiveWorkspaceIsPending || deleteWorkspaceIsPending,
+    onArchiveWorkspace: () => void archiveWorkspace(),
+    onDeleteWorkspace: openDeleteModal,
+  });
 
   const sidebar = (
     <TicketSidebar
@@ -194,13 +235,14 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
 
           <PluginHeaderActions
             pluginActions={pluginActions}
+            defaultOverflowActions={defaultOverflowActions}
             onPluginAction={(actionKey) => {
               if (!selectedWorkspace) return;
               void pluginActionTrigger.trigger(actionKey, selectedWorkspace.id);
             }}
             pendingActionKey={pluginActionTrigger.pendingActionKey}
-            isExecuting={pluginActionTrigger.isExecuting}
-            overflowLabel="Workspace actions"
+            isExecuting={pluginActionTrigger.isExecuting || archiveWorkspaceIsPending || deleteWorkspaceIsPending}
+            overflowLabel={t("workspacePanel.options.workspace")}
           />
         </HorizontalMenuStack>
 
@@ -228,6 +270,15 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
             onSubmit={(params) => pluginActionTrigger.submitWithParams(params)}
           />
         ) : null}
+
+        <DeleteConfirmationModal
+          open={isDeleteOpen}
+          onClose={closeDeleteModal}
+          onDelete={deleteWorkspace}
+          headline={t("workspacePanel.deleteConfirmation.workspace.headline")}
+          notificationText={t("workspacePanel.deleteConfirmation.workspace.notification")}
+          buttonText={t("workspacePanel.options.deleteWorkspace")}
+        />
       </Stack>
     </PanelLayout>
   );
@@ -239,6 +290,7 @@ export const WorkspacePage = () => {
   const sessionId = typeof search.sessionId === "string" ? search.sessionId : undefined;
   const navigate = useNavigate();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isDeleteOpen, setDeleteOpen] = useState(false);
   const projectSettingsStore = useProjectSettingsStoreApi();
   const setSessionModalState = useProjectSettingsStore((state) => state.setSessionModalState);
   const setSelectedSessionId = useProjectSettingsStore((state) => state.setSelectedSessionId);
@@ -250,12 +302,13 @@ export const WorkspacePage = () => {
   const attempts = ticket?.attempts ?? [];
   const attemptStatusMap = useAttemptStatusMap(projectId);
   const createAttempt = useCreateTicketAttempt(projectId);
+  const archiveWorkspace = useArchiveWorkspace();
+  const deleteWorkspace = useDeleteWorkspace();
   const lastSelectedAgent = useProjectSettingsStore((state) => state.lastSelectedAgent);
   const lastSelectedModels = useProjectSettingsStore((state) => state.lastSelectedModels);
   const lastSelectedBranches = useProjectSettingsStore((state) => state.lastSelectedBranches);
   const lastSelectedRepo = useProjectSettingsStore((state) => state.lastSelectedRepo);
   const workspaces = buildWorkspaceListItems(attempts, attemptStatusMap);
-
   const workspaceIds = workspaces.map((workspace) => workspace.id);
   const workspaceSessions = useWorkspaceSessions(workspaceIds);
   const sessionsByWorkspaceId = workspaceSessions.sessionsByWorkspaceId;
@@ -265,7 +318,6 @@ export const WorkspacePage = () => {
   const selectedAttempt = attempts.find((attempt) => attempt.shorthand === workspaceShorthand) ?? null;
   const selectedWorkspaceLabel = selectedWorkspace?.shorthand ?? workspaceShorthand ?? "";
   const sessionSettled = isSessionSettled(selectedAttempt?.sessionStatus ?? null);
-
   useEffect(() => {
     if (!projectId || !ticketShorthand || !workspaceShorthand) return;
     const normalizedSearch = resolveWorkspacePageSessionSearch({
@@ -381,11 +433,7 @@ export const WorkspacePage = () => {
     });
   };
   const handleSelectFile = () => {
-    if (!projectId || !ticketShorthand) return;
-    navigate({
-      to: "/projects/$projectId/tickets/$ticketShorthand",
-      params: { projectId, ticketShorthand },
-    });
+    void navigateToTicketDetails(navigate, projectId, ticketShorthand);
   };
 
   const handleRunAttempt = async () => {
@@ -402,6 +450,26 @@ export const WorkspacePage = () => {
     });
   };
 
+  const handleArchiveWorkspace = async () => {
+    await runWorkspaceArchiveFlow({
+      selectedWorkspaceId: selectedWorkspace?.id ?? null,
+      archiveWorkspace: async (workspaceId) => {
+        await archiveWorkspace.mutateAsync({ workspaceId });
+      },
+      navigateToTicket: () => navigateToTicketDetails(navigate, projectId, ticketShorthand),
+    });
+  };
+
+  const handleDeleteWorkspace = async () => {
+    await runWorkspaceDeleteFlow({
+      selectedWorkspaceId: selectedWorkspace?.id ?? null,
+      deleteWorkspace: async (workspaceId) => {
+        await deleteWorkspace.mutateAsync({ workspaceId });
+      },
+      closeDeleteModal: () => setDeleteOpen(false),
+      navigateToTicket: () => navigateToTicketDetails(navigate, projectId, ticketShorthand),
+    });
+  };
   if (!ticket) {
     return (
       <Stack gap="lg" height="100%" p="sm">
@@ -436,6 +504,13 @@ export const WorkspacePage = () => {
       runAttempt={handleRunAttempt}
       pluginActions={selectedWorkspace ? pluginActionTrigger.pluginActions : []}
       pluginActionTrigger={pluginActionTrigger}
+      archiveWorkspaceIsPending={archiveWorkspace.isPending}
+      deleteWorkspaceIsPending={deleteWorkspace.isPending}
+      isDeleteOpen={isDeleteOpen}
+      openDeleteModal={() => setDeleteOpen(true)}
+      closeDeleteModal={() => setDeleteOpen(false)}
+      archiveWorkspace={handleArchiveWorkspace}
+      deleteWorkspace={handleDeleteWorkspace}
     />
   );
 };

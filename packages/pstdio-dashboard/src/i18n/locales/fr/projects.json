@@ -176,6 +176,19 @@
       "emptyValue": "-"
     }
   },
+  "workspacePanel": {
+    "options": {
+      "workspace": "Ouvrir les options de l’espace de travail",
+      "archiveWorkspace": "Archiver l’espace de travail",
+      "deleteWorkspace": "Supprimer l’espace de travail"
+    },
+    "deleteConfirmation": {
+      "workspace": {
+        "headline": "Supprimer l’espace de travail ?",
+        "notification": "Cette action supprime l’espace de travail et le retire du ticket."
+      }
+    }
+  },
   "createProjectSession": {
     "errors": {
       "missingProjectId": "L'identifiant du projet est requis pour créer une session."

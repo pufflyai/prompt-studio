@@ -176,6 +176,19 @@
       "emptyValue": "-"
     }
   },
+  "workspacePanel": {
+    "options": {
+      "workspace": "워크스페이스 옵션 열기",
+      "archiveWorkspace": "워크스페이스 보관",
+      "deleteWorkspace": "워크스페이스 삭제"
+    },
+    "deleteConfirmation": {
+      "workspace": {
+        "headline": "워크스페이스를 삭제하시겠습니까?",
+        "notification": "이 작업은 워크스페이스를 삭제하고 티켓에서 제거합니다."
+      }
+    }
+  },
   "createProjectSession": {
     "errors": {
       "missingProjectId": "세션을 만들려면 프로젝트 ID가 필요합니다."

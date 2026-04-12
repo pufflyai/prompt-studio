@@ -176,6 +176,19 @@
       "emptyValue": "-"
     }
   },
+  "workspacePanel": {
+    "options": {
+      "workspace": "打开工作区选项",
+      "archiveWorkspace": "归档工作区",
+      "deleteWorkspace": "删除工作区"
+    },
+    "deleteConfirmation": {
+      "workspace": {
+        "headline": "删除工作区？",
+        "notification": "此操作会删除工作区并将其从工单中移除。"
+      }
+    }
+  },
   "createProjectSession": {
     "errors": {
       "missingProjectId": "创建会话需要项目 ID。"

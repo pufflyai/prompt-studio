@@ -177,6 +177,19 @@
       "emptyValue": "-"
     }
   },
+  "workspacePanel": {
+    "options": {
+      "workspace": "Open workspace options",
+      "archiveWorkspace": "Archive workspace",
+      "deleteWorkspace": "Delete workspace"
+    },
+    "deleteConfirmation": {
+      "workspace": {
+        "headline": "Delete workspace?",
+        "notification": "This deletes the workspace and removes it from the ticket."
+      }
+    }
+  },
   "createProjectSession": {
     "errors": {
       "missingProjectId": "Project id is required to create a session."
