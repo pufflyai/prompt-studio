@@ -94,13 +94,13 @@ const emitProjectRepoLink = async (
 
 const debugTime = async <T>(label: string, fn: () => Promise<T> | T): Promise<T> => {
   const start = Date.now();
-  console.log(`[CI-DEBUG] >>> ${label}`);
+  console.error(`[CI-DEBUG] >>> ${label}`);
   try {
     const result = await fn();
-    console.log(`[CI-DEBUG] <<< ${label} OK ${Date.now() - start}ms`);
+    console.error(`[CI-DEBUG] <<< ${label} OK ${Date.now() - start}ms`);
     return result;
   } catch (error) {
-    console.log(`[CI-DEBUG] <<< ${label} THROW ${Date.now() - start}ms ${(error as Error)?.message}`);
+    console.error(`[CI-DEBUG] <<< ${label} THROW ${Date.now() - start}ms ${(error as Error)?.message}`);
     throw error;
   }
 };
@@ -110,7 +110,7 @@ export const registerRepoHandler = (deps: RouteDeps): AppRouteHandler<typeof reg
     const { id } = c.req.valid("param");
     const { name, path } = c.req.valid("json");
 
-    console.log(`[CI-DEBUG] === registerRepoHandler start project=${id} path=${path}`);
+    console.error(`[CI-DEBUG] === registerRepoHandler start project=${id} path=${path}`);
 
     const project = await debugTime("projectService.get", () => deps.projectService.get(id));
     if (!project) {
@@ -144,7 +144,7 @@ export const registerRepoHandler = (deps: RouteDeps): AppRouteHandler<typeof reg
       installProjectSkillsToRepo(deps, { projectId: id, repoPath: repo.path }),
     );
 
-    console.log(`[CI-DEBUG] === registerRepoHandler end project=${id}`);
+    console.error(`[CI-DEBUG] === registerRepoHandler end project=${id}`);
 
     return c.json(repo, 201);
   };
