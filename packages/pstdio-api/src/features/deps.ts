@@ -13,7 +13,6 @@ import type { createTemplateService } from "../services/template-service";
 import type { createTicketService } from "../services/ticket-service";
 import type { createWorkspaceService } from "../services/workspace-service";
 import type { createWorkspaceSessionService } from "../services/workspace-session-service";
-import type { createPostHookStore } from "./hooks/post-hook-store";
 import type { createPluginService } from "./plugins/plugin-service";
 import type { EventBus } from "./sync/event-bus";
 
@@ -42,6 +41,5 @@ export interface RouteDeps {
   skillService: ReturnType<typeof createSkillService>;
   fileService: ReturnType<typeof createFileService>;
   syncService: ReturnType<typeof createSyncService>;
-  postHookStore: ReturnType<typeof createPostHookStore>;
   pluginService: ReturnType<typeof createPluginService>;
 }

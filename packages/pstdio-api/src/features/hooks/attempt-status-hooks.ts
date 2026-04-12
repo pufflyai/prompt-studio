@@ -1,6 +1,5 @@
 import type { createPluginService } from "../plugins/plugin-service";
 import { withHookSessionClient } from "./hook-client";
-import type { createPostHookStore } from "./post-hook-store";
 
 type AttemptStatusHookDeps = {
   pluginService: ReturnType<typeof createPluginService>;
@@ -50,31 +49,6 @@ export const firePreAttemptStatusHook = async (
   }
 
   return { rejected: false, stderr: "", stdout: "" };
-};
-
-export const deliverPostAttemptStatusHook = async (
-  deps: AttemptStatusHookDeps,
-  store: ReturnType<typeof createPostHookStore>,
-  sessionId: string,
-) => {
-  const entry = store.consume(sessionId);
-  if (!entry) return null;
-
-  const runtime = await deps.pluginService.getForProject(entry.projectId);
-
-  const hookContext = {
-    projectId: entry.projectId,
-    fromStatus: entry.fromStatus,
-    toStatus: entry.toStatus,
-    ...entry.payload,
-  };
-
-  const ctx = {
-    ...hookContext,
-    client: withHookSessionClient(runtime.client, hookContext),
-  };
-
-  await runtime.hooks.firePost("postAttemptStatusChange", ctx as never);
 };
 
 export const firePostAttemptStatusHook = async (deps: AttemptStatusHookDeps, context: PostHookContext) => {

@@ -28,7 +28,6 @@ import { createAgentRoutes } from "./features/agents/routes";
 import { createAttemptStatusRoutes } from "./features/attempt-statuses/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
-import { createPostHookStore } from "./features/hooks/post-hook-store";
 import { fireSessionResumeHook, fireSessionStartHook, fireSessionStatusHook } from "./features/hooks/session-hooks";
 import { fireTicketHook, fireTicketHookAsync } from "./features/hooks/ticket-hooks";
 import { createPluginService } from "./features/plugins/plugin-service";
@@ -98,7 +97,6 @@ export const createApp = async (options: AppOptions) => {
   const skillsStorageService = createSkillsStorageService();
 
   // --- infrastructure ---
-  const postHookStore = createPostHookStore();
   const eventBus = new EventBus();
   const agentRegistry = createAgentRegistry(resolveDefaultAgents(options?.agents));
 
@@ -155,7 +153,6 @@ export const createApp = async (options: AppOptions) => {
     attemptStatusesService: attemptStatusService,
     statusService,
     ticketService,
-    postHookStore,
     pluginService,
   };
 
@@ -188,7 +185,6 @@ export const createApp = async (options: AppOptions) => {
     skillService,
     fileService,
     syncService,
-    postHookStore,
     pluginService,
   };
 

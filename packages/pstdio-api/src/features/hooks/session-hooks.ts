@@ -5,9 +5,7 @@ import type { createTicketService } from "../../services/ticket-service";
 import type { createWorkspaceSessionService } from "../../services/workspace-session-service";
 import type { createPluginService } from "../plugins/plugin-service";
 import { parseTicketShorthand } from "../workspaces/parse-ticket-shorthand";
-import { deliverPostAttemptStatusHook } from "./attempt-status-hooks";
 import { withHookSessionClient } from "./hook-client";
-import type { createPostHookStore } from "./post-hook-store";
 
 type SessionStatus = "in_progress" | "awaiting_input" | "completed" | "failed" | "cancelled";
 
@@ -30,7 +28,6 @@ export type SessionHookDeps = {
   attemptStatusesService?: ReturnType<typeof createAttemptStatusService>;
   statusService?: ReturnType<typeof createStatusService>;
   ticketService?: ReturnType<typeof createTicketService>;
-  postHookStore?: ReturnType<typeof createPostHookStore>;
   pluginService: ReturnType<typeof createPluginService>;
 };
 
@@ -118,7 +115,6 @@ const resolveSessionHookContext = async (deps: SessionHookDeps, session: Session
   };
 };
 
-const SESSION_TERMINAL_STATUSES = new Set(["completed", "failed"]);
 const WORKSPACE_READY_TIMEOUT_MS = 5_000;
 const WORKSPACE_READY_POLL_MS = 25;
 
@@ -149,17 +145,14 @@ const fireSessionHook = (deps: SessionHookDeps, hookName: string, session: Sessi
     const runtime = await deps.pluginService.getForProject(session.project_id);
     const hookClient = withHookSessionClient(runtime.client, ctx);
     await runtime.hooks.firePost(hookName as never, { ...ctx, client: hookClient } as never);
-
-    if (deps.postHookStore && SESSION_TERMINAL_STATUSES.has(session.status)) {
-      await deliverPostAttemptStatusHook(deps, deps.postHookStore, session.id).catch(() => {});
-    }
   })().catch(() => {});
 };
 
 export const fireSessionStatusHook = (deps: SessionHookDeps, session: SessionRecord) => {
   const hookName = STATUS_TO_HOOK[session.status as SessionStatus];
-  if (!hookName) return;
-  fireSessionHook(deps, hookName, session);
+  if (hookName) {
+    fireSessionHook(deps, hookName, session);
+  }
 };
 
 export const fireSessionStartHook = (deps: SessionHookDeps, session: SessionRecord) => {

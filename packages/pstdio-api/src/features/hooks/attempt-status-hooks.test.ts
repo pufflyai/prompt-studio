@@ -4,8 +4,7 @@ import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createPluginService } from "../plugins/plugin-service";
-import { deliverPostAttemptStatusHook, firePreAttemptStatusHook } from "./attempt-status-hooks";
-import { createPostHookStore } from "./post-hook-store";
+import { firePreAttemptStatusHook } from "./attempt-status-hooks";
 
 let repoDir: string;
 
@@ -93,37 +92,5 @@ describe("firePreAttemptStatusHook", () => {
 
     // Context should include fromStatus, toStatus, and payload fields
     // (verified by the non-rejection — if it threw, it would reject)
-  });
-});
-
-describe("deliverPostAttemptStatusHook", () => {
-  test("fires queued post-hook and consumes entry", async () => {
-    writePlugin(
-      "post-handler.ts",
-      `
-      import { writeFileSync } from "node:fs";
-      export default { hooks: { postAttemptStatusChange() { writeFileSync("${join(repoDir, "hook-fired")}", "yes"); } } };
-      `,
-    );
-
-    const deps = makeDeps();
-    const store = createPostHookStore();
-    store.queue("sess_1", {
-      hookName: "post-attempt-status-blocked",
-      statusChangeId: "sc_1",
-      fromStatus: "wip",
-      toStatus: "blocked",
-      projectId: "proj-1",
-      payload: { ticket: "PS-1" },
-    });
-
-    await deliverPostAttemptStatusHook(deps, store, "sess_1");
-    expect(store.get("sess_1")).toBeUndefined();
-  });
-
-  test("returns null when no post-hook is queued", async () => {
-    const store = createPostHookStore();
-    const result = await deliverPostAttemptStatusHook(makeDeps(), store, "sess_1");
-    expect(result).toBeNull();
   });
 });

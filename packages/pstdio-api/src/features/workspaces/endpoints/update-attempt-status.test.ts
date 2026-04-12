@@ -297,12 +297,12 @@ export default { hooks: {
     expect(postContext.workspace.attempt_status_name).toBe("review-ready");
   });
 
-  test("includes original_session_id in deferred post-hook context", async () => {
+  test("includes original_session_id in post-hook context", async () => {
     const workspace = await createWorkspace();
-    const outputPath = join(repoDir, `post-deferred-${Date.now()}.txt`);
+    const outputPath = join(repoDir, `post-immediate-${Date.now()}.txt`);
 
     writePlugin(
-      "deferred-check.ts",
+      "post-check.ts",
       `import { writeFileSync } from "node:fs";
 export default { hooks: {
   postAttemptStatusChange(ctx) {
@@ -331,9 +331,6 @@ export default { hooks: {
     });
 
     expect(res.status).toBe(200);
-    expect(existsSync(outputPath)).toBe(false);
-
-    await appDeps.sessionService.transitionStatus(reviewSession.id, "completed");
 
     const fired = await waitForPath(outputPath);
     expect(fired).toBe(true);

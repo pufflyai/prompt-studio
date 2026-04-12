@@ -1,5 +1,11 @@
 import { rmSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import {
+  createAttemptWithSessionViaApi,
+  createGitRepo,
+  createTicketViaApi,
+  registerRepoViaApi,
+} from "./helpers/workspace-session-attempt";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;

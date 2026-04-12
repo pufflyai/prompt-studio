@@ -129,48 +129,6 @@ const buildHookPayload = async (
   };
 };
 
-const queueOrFirePostHook = (
-  deps: RouteDeps,
-  {
-    fromStatusName,
-    payload,
-    projectId,
-    sessionId,
-    status,
-    statusChangeId,
-  }: {
-    fromStatusName: string | null;
-    payload: Record<string, unknown>;
-    projectId: string;
-    sessionId?: string;
-    status: string;
-    statusChangeId: string;
-  },
-) => {
-  const postHookPayload = { ...payload, statusChangeId };
-
-  if (sessionId) {
-    deps.postHookStore.queue(sessionId, {
-      hookName: `post-attempt-status-${status}`,
-      statusChangeId,
-      projectId,
-      fromStatus: fromStatusName ?? "",
-      toStatus: status,
-      payload: postHookPayload,
-    });
-    return;
-  }
-
-  void firePostAttemptStatusHook(
-    { pluginService: deps.pluginService },
-    {
-      projectId,
-      toStatus: status,
-      payload: postHookPayload,
-    },
-  ).catch(() => {});
-};
-
 export const updateAttemptStatusHandler = (deps: RouteDeps): AppRouteHandler<typeof updateAttemptStatusRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
@@ -209,14 +167,14 @@ export const updateAttemptStatusHandler = (deps: RouteDeps): AppRouteHandler<typ
       sessionId,
     });
 
-    queueOrFirePostHook(deps, {
-      fromStatusName,
-      payload: postHookPayload,
-      projectId: workspace.project_id,
-      sessionId,
-      status,
-      statusChangeId,
-    });
+    void firePostAttemptStatusHook(
+      { pluginService: deps.pluginService },
+      {
+        projectId: workspace.project_id,
+        toStatus: status,
+        payload: { ...postHookPayload, statusChangeId },
+      },
+    ).catch(() => {});
 
     return c.json(
       {
