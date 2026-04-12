@@ -1,11 +1,11 @@
 import { Box, Button, Menu, Text } from "@chakra-ui/react";
-import type { SessionCompletionStatus } from "@pstdio/ui";
 import { MenuItem, resolveSessionIndicatorColor, resolveSessionIndicatorIcon, SessionIndicator } from "@pstdio/ui";
 import { Link, useParams } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Session } from "../types";
 import { getRecentSessions } from "../utils/recent-sessions";
+import { toSessionIndicatorStatus } from "../utils/session-indicator-status";
 import { getSessionsRoutePath } from "../utils/sessions-route";
 
 const SESSION_DROPDOWN_LIMIT = 6;
@@ -30,7 +30,7 @@ export const SessionSelector = (props: SessionSelectorProps) => {
     <Menu.Root>
       <Menu.Trigger asChild>
         <Button variant="ghost" size="sm" px="2" maxW="10rem">
-          <SessionIndicator status={selectedSession?.status as SessionCompletionStatus} />
+          <SessionIndicator status={toSessionIndicatorStatus(selectedSession?.status ?? null)} />
           <Text textStyle="label/XS/medium" color="fg" lineClamp={1} ml="2xs" textAlign="left">
             {label}
           </Text>
@@ -47,8 +47,8 @@ export const SessionSelector = (props: SessionSelectorProps) => {
                   id={session.id}
                   primaryLabel={session.title}
                   tooltipLabel={session.title}
-                  leftIcon={resolveSessionIndicatorIcon(session.status as SessionCompletionStatus)}
-                  leftIconColor={resolveSessionIndicatorColor(session.status as SessionCompletionStatus)}
+                  leftIcon={resolveSessionIndicatorIcon(toSessionIndicatorStatus(session.status))}
+                  leftIconColor={resolveSessionIndicatorColor(toSessionIndicatorStatus(session.status))}
                   variant="compact"
                   isSelected={session.id === selectedSessionId}
                   onClick={() => onSelectSession(session.id)}

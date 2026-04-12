@@ -2,7 +2,6 @@ import { HStack, IconButton } from "@chakra-ui/react";
 import {
   resolveSessionIndicatorColor,
   resolveSessionIndicatorIcon,
-  type SessionCompletionStatus,
   Sidebar,
   type SidebarNavigateEvent,
   type SidebarSection,
@@ -12,13 +11,14 @@ import { PenBox } from "lucide-react";
 import { createElement } from "react";
 import { useTranslation } from "react-i18next";
 import { BackToDashboard } from "@/features/project/components/back-to-dashboard";
-import type { Session } from "../types";
+import type { Session, SessionStatus } from "../types";
 import { groupSessionsByDate } from "../utils/group-sessions";
+import { toSessionIndicatorStatus } from "../utils/session-indicator-status";
 
 const SESSIONS_SIDEBAR_STORAGE_KEY = "sessions-sidebar";
 
-const sessionIcon = (status: string) =>
-  createElement(resolveSessionIndicatorIcon(status as SessionCompletionStatus), { size: 14 });
+const sessionIcon = (status: SessionStatus) =>
+  createElement(resolveSessionIndicatorIcon(toSessionIndicatorStatus(status)), { size: 14 });
 
 interface SessionsSidebarProps {
   sessions: Session[];
@@ -38,7 +38,7 @@ const buildSections = (sessions: Session[]): SidebarSection[] => {
       id: session.id,
       label: session.title,
       icon: sessionIcon(session.status),
-      iconColor: resolveSessionIndicatorColor(session.status as SessionCompletionStatus),
+      iconColor: resolveSessionIndicatorColor(toSessionIndicatorStatus(session.status)),
       isNavigable: true,
       navigationIntent: { id: "select-session", payload: session.id },
     })),

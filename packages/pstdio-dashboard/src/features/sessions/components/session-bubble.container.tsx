@@ -5,6 +5,7 @@ import { MessageCircle, PenBox } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useProjectSettingsStore } from "@/features/project-settings/store";
 import { useProjectSessions } from "../hooks/use-project-sessions";
+import { useStopSession } from "../hooks/use-stop-session";
 import { SessionChatView } from "./session-chat-view";
 import { SessionSelector } from "./session-selector";
 
@@ -17,6 +18,7 @@ export const SessionBubbleContainer = () => {
   const setSelectedSessionId = useProjectSettingsStore((s) => s.setSelectedSessionId);
 
   const { data: sessions = [] } = useProjectSessions(projectId);
+  const stopSession = useStopSession();
 
   if (sessionModalState === "closed") {
     return (
@@ -63,7 +65,13 @@ export const SessionBubbleContainer = () => {
         </>
       }
     >
-      <SessionChatView sessionId={selectedSessionId} onSessionCreated={setSelectedSessionId} />
+      <SessionChatView
+        sessionId={selectedSessionId}
+        isStopPending={stopSession.isPending}
+        hasRequestedStop={stopSession.hasRequestedStop}
+        requestStopSession={stopSession.requestStopSession}
+        onSessionCreated={setSelectedSessionId}
+      />
     </BubblePanel>
   );
 };

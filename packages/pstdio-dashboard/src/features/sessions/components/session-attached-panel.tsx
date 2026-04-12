@@ -5,6 +5,7 @@ import { Minimize2, PenBox } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useProjectSettingsStore } from "@/features/project-settings/store";
 import { useProjectSessions } from "../hooks/use-project-sessions";
+import { useStopSession } from "../hooks/use-stop-session";
 import { SessionChatView } from "./session-chat-view";
 import { SessionSelector } from "./session-selector";
 
@@ -17,6 +18,7 @@ export const SessionAttachedPanel = () => {
   const isWorkspaceRoute = typeof workspaceShorthand === "string" && workspaceShorthand.length > 0;
 
   const { data: sessions = [] } = useProjectSessions(projectId);
+  const stopSession = useStopSession();
 
   return (
     <AttachedPanel
@@ -56,6 +58,9 @@ export const SessionAttachedPanel = () => {
       <Flex flex="1" minH={0} direction="column">
         <SessionChatView
           sessionId={selectedSessionId}
+          isStopPending={stopSession.isPending}
+          hasRequestedStop={stopSession.hasRequestedStop}
+          requestStopSession={stopSession.requestStopSession}
           onSessionCreated={setSelectedSessionId}
           showWorkspaceHub={!isWorkspaceRoute}
         />

@@ -28,9 +28,13 @@ import {
   useSyncPendingFollowUp,
 } from "./session-chat-view-hooks";
 import { SessionChatApprovalPromptPanel, SessionChatWorkspaceHubPanel } from "./session-chat-view-panels";
+import { getSessionInterruptHandler } from "./session-chat-view-stop";
 
 interface SessionChatViewProps {
   sessionId: string | null;
+  isStopPending: boolean;
+  hasRequestedStop: (sessionId: string) => boolean;
+  requestStopSession: (sessionId: string) => void;
   workspaceId?: string;
   onSessionCreated?: (sessionId: string) => void;
   onEditAction?: () => void;
@@ -39,7 +43,16 @@ interface SessionChatViewProps {
 
 export const SessionChatView = (props: SessionChatViewProps) => {
   const { t } = useTranslation(["projects", "tickets"]);
-  const { sessionId, workspaceId, onSessionCreated, onEditAction, showWorkspaceHub = true } = props;
+  const {
+    sessionId,
+    isStopPending,
+    hasRequestedStop,
+    requestStopSession,
+    workspaceId,
+    onSessionCreated,
+    onEditAction,
+    showWorkspaceHub = true,
+  } = props;
   const { projectId } = useParams({ strict: false });
 
   const sessionAgent = useSessionAgent(sessionId);
@@ -64,6 +77,15 @@ export const SessionChatView = (props: SessionChatViewProps) => {
   const isWorkspaceInitializing = sessionWorkspace?.initializing ?? false;
 
   const sessionStatus = useSessionStatus(sessionId);
+  const onInterrupt = getSessionInterruptHandler({
+    sessionId,
+    sessionStatus,
+    isStopPending,
+    hasRequestedStop: sessionId ? hasRequestedStop(sessionId) : false,
+    onStopSession: (nextSessionId) => {
+      requestStopSession(nextSessionId);
+    },
+  });
 
   useResetEditCountOnSessionChange(sessionId, editCountRef);
   useReconnectWhenWorkspaceReady(isWorkspaceInitializing, reconnect);
@@ -129,6 +151,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
         })
       }
       onChatInputChange={(text: string) => setSessionDraft(sessionId, text)}
+      onInterrupt={onInterrupt}
       workspaceHub={workspaceHub ? <SessionChatWorkspaceHubPanel {...workspaceHub} /> : undefined}
       repoMenu={
         <Flex

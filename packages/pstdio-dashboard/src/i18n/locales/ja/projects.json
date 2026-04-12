@@ -227,6 +227,7 @@
     "followUpPlaceholder": "フォローアップメッセージを送信...",
     "downloadSessionJson": "セッションJSONをダウンロード",
     "archiveSession": "セッションをアーカイブ",
+    "stopSession": "セッションを停止",
     "sessionActions": "セッション操作"
   }
 }

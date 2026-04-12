@@ -227,6 +227,7 @@
     "followUpPlaceholder": "후속 메시지 보내기...",
     "downloadSessionJson": "세션 JSON 다운로드",
     "archiveSession": "세션 보관",
+    "stopSession": "세션 중지",
     "sessionActions": "세션 작업"
   }
 }

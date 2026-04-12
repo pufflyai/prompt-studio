@@ -232,6 +232,7 @@
     "followUpPlaceholder": "Envoyer un message de suivi...",
     "downloadSessionJson": "Télécharger le JSON de la session",
     "archiveSession": "Archiver la session",
+    "stopSession": "Arrêter la session",
     "sessionActions": "Actions de session"
   }
 }

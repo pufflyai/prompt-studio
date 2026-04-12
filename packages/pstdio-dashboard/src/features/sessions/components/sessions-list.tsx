@@ -1,10 +1,10 @@
 import { Menu, Skeleton, Stack, Text } from "@chakra-ui/react";
-import type { SessionCompletionStatus } from "@pstdio/ui";
 import { MenuItem, resolveSessionIndicatorColor, resolveSessionIndicatorIcon } from "@pstdio/ui";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { Session } from "../types";
 import { groupSessionsByDate } from "../utils/group-sessions";
+import { toSessionIndicatorStatus } from "../utils/session-indicator-status";
 
 interface SessionsListProps {
   sessions: Session[];
@@ -59,8 +59,8 @@ export const SessionsList = (props: SessionsListProps) => {
                 tooltipLabel={session.title}
                 variant="compact"
                 isSelected={session.id === selectedSessionId}
-                leftIcon={resolveSessionIndicatorIcon(session.status as SessionCompletionStatus)}
-                leftIconColor={resolveSessionIndicatorColor(session.status as SessionCompletionStatus)}
+                leftIcon={resolveSessionIndicatorIcon(toSessionIndicatorStatus(session.status))}
+                leftIconColor={resolveSessionIndicatorColor(toSessionIndicatorStatus(session.status))}
                 onClick={() => onSelectSession(session.id)}
               >
                 {projectId ? <Link to={`/projects/${projectId}/sessions/${session.id}`} /> : undefined}

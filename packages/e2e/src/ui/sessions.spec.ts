@@ -54,6 +54,36 @@ const archiveSessionViaApi = async (request: import("@playwright/test").APIReque
   expect(res.ok()).toBe(true);
 };
 
+const waitForSessionStatus = async (
+  request: import("@playwright/test").APIRequestContext,
+  sessionId: string,
+  status: "in_progress" | "awaiting_input" | "completed" | "failed" | "cancelled",
+  timeout = 10_000,
+) => {
+  await expect
+    .poll(
+      async () => {
+        const response = await request.get(`${apiBase}/v1/sessions/${sessionId}`);
+        expect(response.ok()).toBe(true);
+        const session = (await response.json()) as { status: string };
+        return session.status;
+      },
+      { timeout, intervals: [200, 400, 800, 1_200] },
+    )
+    .toBe(status);
+};
+
+const setSessionStatusViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  sessionId: string,
+  status: "in_progress" | "awaiting_input" | "completed" | "failed" | "cancelled",
+) => {
+  const res = await request.patch(`${apiBase}/v1/sessions/${sessionId}/status`, {
+    data: { status },
+  });
+  expect(res.ok()).toBe(true);
+};
+
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
   const res = await request.get(`${apiBase}/v1/projects`);
   expect(res.ok()).toBe(true);
@@ -169,6 +199,44 @@ test.describe("Sessions page", () => {
 
     await page.getByRole("button", { name: "Session actions" }).click();
     await expect(page.getByText("Archive session")).toBeVisible();
+  });
+
+  test("hides stop action for completed sessions", async ({ page, request }) => {
+    await bypassOnboarding(page);
+
+    const session = await createSessionViaApi(request, projectId, "Stop session action test");
+    await waitForSessionStatus(request, session.id, "completed");
+
+    await page.goto(`/projects/${projectId}/sessions/${session.id}`);
+
+    await page.getByRole("button", { name: "Session actions" }).click();
+    const sessionActionsMenu = page.getByRole("menu", { name: "Session actions" });
+    await expect(sessionActionsMenu.getByText("Stop session")).toHaveCount(0);
+    await expect(sessionActionsMenu.getByText("Archive session")).toBeVisible();
+  });
+
+  test("stops an active session without leaving the session route", async ({ page, request }) => {
+    await bypassOnboarding(page);
+
+    const session = await createSessionViaApi(request, projectId, "Stop session positive path");
+    await waitForSessionStatus(request, session.id, "completed");
+    await setSessionStatusViaApi(request, session.id, "awaiting_input");
+
+    await page.goto(`/projects/${projectId}/sessions/${session.id}`);
+
+    await page.getByRole("button", { name: "Session actions" }).click();
+    const sessionActionsMenu = page.getByRole("menu", { name: "Session actions" });
+    const stopSessionAction = sessionActionsMenu.getByText("Stop session");
+    await expect(stopSessionAction).toBeVisible();
+    await stopSessionAction.click();
+
+    await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/sessions/${session.id}$`));
+    await waitForSessionStatus(request, session.id, "cancelled");
+
+    await page.getByRole("button", { name: "Session actions" }).click();
+    const updatedSessionActionsMenu = page.getByRole("menu", { name: "Session actions" });
+    await expect(updatedSessionActionsMenu.getByText("Stop session")).toHaveCount(0);
+    await expect(updatedSessionActionsMenu.getByText("Archive session")).toBeVisible();
   });
 
   test("submits a message from the sessions page and creates a session", async ({ page }) => {

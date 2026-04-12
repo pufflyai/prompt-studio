@@ -232,6 +232,7 @@
     "followUpPlaceholder": "Enviar un mensaje de seguimiento...",
     "downloadSessionJson": "Descargar JSON de la sesión",
     "archiveSession": "Archivar sesión",
+    "stopSession": "Detener sesión",
     "sessionActions": "Acciones de sesión"
   }
 }

@@ -227,6 +227,7 @@
     "followUpPlaceholder": "发送后续消息...",
     "downloadSessionJson": "下载会话 JSON",
     "archiveSession": "归档会话",
+    "stopSession": "停止会话",
     "sessionActions": "会话操作"
   }
 }

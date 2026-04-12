@@ -1,17 +1,17 @@
 import { HStack, Stack, Text } from "@chakra-ui/react";
 import { HorizontalMenuStack, PanelLayout } from "@pstdio/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { Archive } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
-import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
 import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin-header-actions";
 import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
 import { SessionChatView } from "../components/session-chat-view";
 import { SessionsSidebar } from "../components/sessions-sidebar";
 import { useArchiveSession } from "../hooks/use-archive-session";
 import { useProjectSessions } from "../hooks/use-project-sessions";
+import { useStopSession } from "../hooks/use-stop-session";
 import { getVisibleSessions } from "../utils/visible-sessions";
+import { buildSessionOverflowActions } from "./sessions-panel-actions";
 
 export const SessionsPanel = () => {
   const { t } = useTranslation("projects");
@@ -22,6 +22,7 @@ export const SessionsPanel = () => {
   const { data: sessions = [] } = useProjectSessions(projectId);
   const visibleSessions = getVisibleSessions(sessions);
   const archiveSession = useArchiveSession();
+  const stopSession = useStopSession();
   const selectedSession = visibleSessions.find((item) => item.id === selectedSessionId) ?? null;
 
   const pluginActionTrigger = usePluginActionTrigger({
@@ -41,20 +42,22 @@ export const SessionsPanel = () => {
     navigate({ to: `/projects/${projectId}/sessions` });
   };
 
-  const defaultOverflowActions: HeaderActionItem[] = selectedSessionId
-    ? [
-        {
-          key: "archive-session",
-          label: t("sessions.archiveSession"),
-          kind: "default",
-          icon: Archive,
-          onClick: () => {
-            archiveSession.mutate(selectedSessionId);
-            navigate({ to: `/projects/${projectId}/sessions` });
-          },
-        },
-      ]
-    : [];
+  const defaultOverflowActions = buildSessionOverflowActions({
+    selectedSessionId,
+    selectedSessionStatus: selectedSession?.status ?? null,
+    isStopPending: stopSession.isPending,
+    hasRequestedStop: selectedSessionId ? stopSession.hasRequestedStop(selectedSessionId) : false,
+    t,
+    onStopSession: () => {
+      if (!selectedSessionId) return;
+      stopSession.requestStopSession(selectedSessionId);
+    },
+    onArchiveSession: () => {
+      if (!selectedSessionId) return;
+      archiveSession.mutate(selectedSessionId);
+      navigate({ to: `/projects/${projectId}/sessions` });
+    },
+  });
 
   const sidebar = (
     <SessionsSidebar
@@ -90,7 +93,13 @@ export const SessionsPanel = () => {
 
         <Stack flex="1" minH="0" px="sm" pb="sm" align="flex-start">
           <Stack flex="1" minH="0" w="full" maxW="52rem">
-            <SessionChatView sessionId={selectedSessionId} onSessionCreated={handleSelectSession} />
+            <SessionChatView
+              sessionId={selectedSessionId}
+              isStopPending={stopSession.isPending}
+              hasRequestedStop={stopSession.hasRequestedStop}
+              requestStopSession={stopSession.requestStopSession}
+              onSessionCreated={handleSelectSession}
+            />
           </Stack>
         </Stack>
       </Stack>

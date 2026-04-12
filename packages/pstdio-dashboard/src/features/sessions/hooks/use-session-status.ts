@@ -1,4 +1,5 @@
 import { asSyncedRows, eq, getCollection, useLiveQuery } from "@/features/sync/collections";
+import type { SessionStatus } from "../types";
 
 export const useSessionStatus = (sessionId: string | null) => {
   const { data: rawRows } = useLiveQuery(
@@ -13,5 +14,5 @@ export const useSessionStatus = (sessionId: string | null) => {
   );
   const rows = asSyncedRows(rawRows);
 
-  return rows?.[0] ? ((rows[0].status as string) ?? null) : null;
+  return rows?.[0] ? ((rows[0].status as SessionStatus) ?? null) : null;
 };

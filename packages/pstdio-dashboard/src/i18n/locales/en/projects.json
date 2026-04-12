@@ -251,6 +251,7 @@
     "downloadSessionJson": "Download session JSON",
     "copyAgentSessionId": "Copy agent session ID",
     "archiveSession": "Archive session",
+    "stopSession": "Stop session",
     "sessionActions": "Session actions"
   }
 }

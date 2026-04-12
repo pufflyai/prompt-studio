@@ -227,6 +227,7 @@
     "followUpPlaceholder": "傳送後續訊息...",
     "downloadSessionJson": "下載工作階段 JSON",
     "archiveSession": "封存工作階段",
+    "stopSession": "停止工作階段",
     "sessionActions": "工作階段操作"
   }
 }
