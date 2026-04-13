@@ -14,6 +14,13 @@ export const stripFileExtension = (fileName: string) => {
   return lastDot > 0 ? fileName.slice(0, lastDot) : fileName;
 };
 
+const IMAGE_FILE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "svg", "webp", "avif", "bmp", "ico"]);
+
+export const isImageFileName = (fileName: string) => {
+  const extension = fileName.split(".").pop()?.toLowerCase() ?? "";
+  return IMAGE_FILE_EXTENSIONS.has(extension);
+};
+
 export const buildSelectableTicketFiles = (data: ApiTicketFilesResponse | undefined) => {
   const fileEntries: SelectableTicketFile[] = [];
   const seenFileIds = new Set<string>();

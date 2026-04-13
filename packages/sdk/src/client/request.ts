@@ -21,9 +21,34 @@ export type RequestOptions = {
 
 export type RequestFn = <T>(path: string, options?: RequestOptions) => Promise<T>;
 
+type ZodIssue = { path?: unknown; message?: unknown };
+
+const formatZodIssues = (issues: ZodIssue[]) =>
+  issues
+    .map((issue) => {
+      const path = Array.isArray(issue.path) ? issue.path.filter((part) => part !== "").join(".") : "";
+      const message = typeof issue.message === "string" ? issue.message : JSON.stringify(issue);
+      return path ? `${path}: ${message}` : message;
+    })
+    .join("; ");
+
+const stringifyErrorField = (error: unknown): string => {
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object") {
+    const issues = (error as { issues?: unknown }).issues;
+    if (Array.isArray(issues)) return formatZodIssues(issues as ZodIssue[]);
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return String(error);
+    }
+  }
+  return String(error);
+};
+
 const readErrorMessage = (errorBody: unknown, status: number) => {
   if (errorBody && typeof errorBody === "object" && errorBody !== null && "error" in errorBody) {
-    const message = String((errorBody as { error: string }).error);
+    const message = stringifyErrorField((errorBody as { error: unknown }).error);
     const hookOutput =
       "hook_output" in errorBody && typeof errorBody.hook_output === "string" ? errorBody.hook_output.trim() : "";
 

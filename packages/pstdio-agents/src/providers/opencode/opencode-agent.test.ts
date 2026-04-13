@@ -324,7 +324,51 @@ describe("resumeSession", () => {
     expect(hasConversationError).toBe(true);
   });
 
-  test("POST timeout transitions to disconnected, not completed or failed", async () => {
+  test("POST timeout still completes when polling observes turn finished on server", async () => {
+    // Regression for the bug where treating the POST /message HTTP lifetime as
+    // the source of turn liveness caused long-running turns to be marked as
+    // disconnected. POST is only an enqueue step; turn completion must come
+    // from polling the server's session state.
+    let getCalls = 0;
+    const buildSessionMessagesResponse = () => {
+      getCalls += 1;
+      // Call 1 = baseline fetch (1 prior user message).
+      // Calls 2+ = after POST timed out, the server still accepted the turn
+      // and eventually marks the assistant message complete.
+      if (getCalls === 1) {
+        return new Response(
+          JSON.stringify([
+            {
+              info: { id: "u0", role: "user", time: { created: 1, completed: 2 } },
+              parts: [{ type: "text", text: "prior" }],
+            },
+          ]),
+        );
+      }
+
+      const completed = getCalls >= 3;
+      return new Response(
+        JSON.stringify([
+          {
+            info: { id: "u0", role: "user", time: { created: 1, completed: 2 } },
+            parts: [{ type: "text", text: "prior" }],
+          },
+          {
+            info: { id: "u1", role: "user", time: { created: 3, completed: 4 } },
+            parts: [{ type: "text", text: "will timeout" }],
+          },
+          {
+            info: {
+              id: "a1",
+              role: "assistant",
+              time: completed ? { created: 5, completed: 6 } : { created: 5 },
+            },
+            parts: [{ type: "text", text: completed ? "done" : "working..." }],
+          },
+        ]),
+      );
+    };
+
     const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       const method = init?.method ?? "GET";
@@ -333,8 +377,8 @@ describe("resumeSession", () => {
         throw new DOMException("The operation was aborted", "AbortError");
       }
 
-      if (method === "GET" && url.includes("/message")) {
-        return new Response(JSON.stringify([]));
+      if (method === "GET" && url.match(/\/session\/[^/]+\/message/)) {
+        return buildSessionMessagesResponse();
       }
 
       return new Response("{}", { status: 404 });
@@ -346,13 +390,78 @@ describe("resumeSession", () => {
     const result = await a.resumeSession({ sessionId: "oc-1", prompt: "will timeout", cwd: "/test" }, eventStore);
 
     const exit = await result.process!.onExit;
-    expect(exit.code).toBeNull();
-    expect(exit.signal).toBe("TIMEOUT");
+    expect(exit.code).toBe(0);
 
     const history = eventStore.getHistory();
     const statusPatches = history.filter((p: JsonPatch) => p.path === "/status");
-    const finalStatus = statusPatches[statusPatches.length - 1]?.value;
-    expect(finalStatus).toBe("disconnected");
+    expect(statusPatches.at(-1)?.value).toBe("completed");
+
+    const messagePatches = history.filter((p: JsonPatch) => p.path === "/messages");
+    const last = messagePatches.at(-1)?.value as SessionMessage[];
+    expect(last.at(-1)?.parts[0]).toMatchObject({ type: "text", text: "done" });
+  });
+
+  test("disconnects when the trailing assistant turn stays stale", async () => {
+    const staleCreatedAt = Date.now() - 31 * 60 * 1000;
+    let getCalls = 0;
+    const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+
+      if (method === "POST" && url.includes("/message")) {
+        return new Response(JSON.stringify({ info: {}, parts: [] }));
+      }
+
+      if (method === "GET" && url.match(/\/session\/[^/]+\/message/)) {
+        getCalls += 1;
+
+        if (getCalls === 1) {
+          return new Response(
+            JSON.stringify([
+              {
+                info: { id: "u0", role: "user", time: { created: 1, completed: 2 } },
+                parts: [{ type: "text", text: "prior" }],
+              },
+            ]),
+          );
+        }
+
+        return new Response(
+          JSON.stringify([
+            {
+              info: { id: "u0", role: "user", time: { created: 1, completed: 2 } },
+              parts: [{ type: "text", text: "prior" }],
+            },
+            {
+              info: { id: "u1", role: "user", time: { created: 3, completed: 4 } },
+              parts: [{ type: "text", text: "run validate" }],
+            },
+            {
+              info: {
+                id: "a1",
+                role: "assistant",
+                time: { created: staleCreatedAt },
+              },
+              parts: [{ type: "step-start", snapshot: "Running validate" }],
+            },
+          ]),
+        );
+      }
+
+      return new Response("{}", { status: 404 });
+    };
+
+    const a = createOpencodeAgent(agentDefaults(), { ...serviceOverrides(), fetcher });
+    const eventStore = createEventStore();
+
+    const result = await a.resumeSession({ sessionId: "oc-1", prompt: "run validate", cwd: "/test" }, eventStore);
+
+    const exit = await result.process!.onExit;
+    expect(exit).toEqual({ code: null, signal: "TIMEOUT" });
+
+    const history = eventStore.getHistory();
+    const statusPatches = history.filter((p: JsonPatch) => p.path === "/status");
+    expect(statusPatches.at(-1)?.value).toBe("disconnected");
   });
 
   test("appends normalized error message when message POST fails", async () => {
@@ -455,6 +564,39 @@ describe("reattachSession", () => {
     const history = eventStore.getHistory();
     const statusPatches = history.filter((p: JsonPatch) => p.path === "/status");
     expect(statusPatches.at(-1)?.value).toBe("completed");
+  });
+
+  test("disconnects stale in-flight sessions during reattach", async () => {
+    const staleCreatedAt = Date.now() - 31 * 60 * 1000;
+    const fetcher = async () =>
+      new Response(
+        JSON.stringify([
+          {
+            info: { id: "m-user", role: "user", time: { created: 1, completed: 2 } },
+            parts: [{ type: "text", text: "hi" }],
+          },
+          {
+            info: {
+              id: "m-asst",
+              role: "assistant",
+              time: { created: staleCreatedAt },
+            },
+            parts: [{ type: "step-start", snapshot: "Still running" }],
+          },
+        ]),
+      );
+
+    const a = createOpencodeAgent(agentDefaults(), { ...serviceOverrides(), fetcher });
+    const eventStore = createEventStore();
+
+    const result = await a.reattachSession!({ sessionId: "oc-1", cwd: "/test" }, eventStore);
+    const exit = await result.process!.onExit;
+
+    expect(exit).toEqual({ code: null, signal: "TIMEOUT" });
+
+    const history = eventStore.getHistory();
+    const statusPatches = history.filter((p: JsonPatch) => p.path === "/status");
+    expect(statusPatches.at(-1)?.value).toBe("disconnected");
   });
 
   test("advertises SessionReattach capability", () => {

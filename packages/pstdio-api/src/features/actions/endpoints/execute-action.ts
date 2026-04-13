@@ -43,14 +43,14 @@ export const executeActionRoute = createRoute({
   },
 });
 
-const resolveTarget = async (deps: RouteDeps, targetType: TargetType, targetId: string) => {
+const resolveTarget = async (deps: RouteDeps, projectId: string, targetType: TargetType, targetId: string) => {
   if (targetType === "ticket") {
-    return deps.ticketService.get(targetId);
+    return (await deps.ticketService.get(targetId)) ?? deps.ticketService.getByShorthand(projectId, targetId);
   }
   if (targetType === "session") {
     return deps.sessionService.get(targetId);
   }
-  return deps.workspaceService.get(targetId);
+  return (await deps.workspaceService.get(targetId)) ?? deps.workspaceService.getByShorthand(projectId, targetId);
 };
 
 const resolvePrompts = async (deps: RouteDeps, projectId: string) => {
@@ -85,7 +85,7 @@ export const executeActionHandler = (deps: RouteDeps): AppRouteHandler<typeof ex
       return c.json({ error: "Action not found" }, 404);
     }
 
-    const target = await resolveTarget(deps, target_type, target_id);
+    const target = await resolveTarget(deps, projectId, target_type, target_id);
     const prompts = await resolvePrompts(deps, projectId);
 
     const ctx = {
@@ -94,7 +94,7 @@ export const executeActionHandler = (deps: RouteDeps): AppRouteHandler<typeof ex
       prompts,
       params: paramValues ?? {},
       targetType: target_type,
-      targetId: target_id,
+      targetId: target?.id ?? target_id,
       target,
     } as ActionTriggerContext;
 

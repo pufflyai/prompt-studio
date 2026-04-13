@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { ApiTicketFilesResponse } from "@/features/ticket-list/data/api";
 import {
   buildSelectableTicketFiles,
+  isImageFileName,
   resolveSelectedTicketFile,
   stripFileExtension,
   TICKET_CONTENT_FILE_NAME,
@@ -17,6 +18,19 @@ const buildFilesResponse = (overrides: Partial<ApiTicketFilesResponse> = {}): Ap
 describe("stripFileExtension", () => {
   test("omits only the final extension", () => {
     expect(stripFileExtension("brief.v2.md")).toBe("brief.v2");
+  });
+});
+
+describe("isImageFileName", () => {
+  test("recognizes common image extensions case-insensitively", () => {
+    expect(isImageFileName("diagram.PNG")).toBe(true);
+    expect(isImageFileName("photo.jpeg")).toBe(true);
+    expect(isImageFileName("icon.svg")).toBe(true);
+  });
+
+  test("returns false for non-image files", () => {
+    expect(isImageFileName("notes.md")).toBe(false);
+    expect(isImageFileName("README")).toBe(false);
   });
 });
 

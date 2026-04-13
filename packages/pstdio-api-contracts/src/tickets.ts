@@ -47,6 +47,7 @@ export const updateTicketInputSchema = z.object({
   file_id: z.string().optional(),
   parent_id: z.string().optional(),
   status_id: z.string().optional(),
+  blocked_reason: z.string().nullable().optional(),
   draft: z.boolean().optional(),
   archived: z.boolean().optional(),
   tag_ids: z.array(z.string()).optional(),

@@ -1,7 +1,7 @@
 import { HStack, Stack, Text } from "@chakra-ui/react";
-import { HorizontalMenuStack, PanelLayout } from "@pstdio/ui";
+import { HorizontalMenuStack, PanelLayout, toaster } from "@pstdio/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { Archive } from "lucide-react";
+import { Archive, Copy } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
 import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
@@ -41,8 +41,28 @@ export const SessionsPanel = () => {
     navigate({ to: `/projects/${projectId}/sessions` });
   };
 
+  const agentSessionId = selectedSession?.agentSessionId ?? null;
+
   const defaultOverflowActions: HeaderActionItem[] = selectedSessionId
     ? [
+        ...(agentSessionId
+          ? [
+              {
+                key: "copy-agent-session-id",
+                label: t("sessions.copyAgentSessionId"),
+                kind: "default" as const,
+                icon: Copy,
+                onClick: async () => {
+                  await navigator.clipboard.writeText(agentSessionId);
+                  toaster.create({
+                    type: "success",
+                    title: t("sessions.copyAgentSessionId"),
+                    description: agentSessionId,
+                  });
+                },
+              },
+            ]
+          : []),
         {
           key: "archive-session",
           label: t("sessions.archiveSession"),

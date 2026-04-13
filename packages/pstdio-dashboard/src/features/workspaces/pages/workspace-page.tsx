@@ -20,7 +20,6 @@ import { buildSelectableTicketFiles } from "@/features/ticket/utils/ticket-file-
 import type { ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
 import { useCreateTicketAttempt } from "@/features/ticket-list/hooks/use-create-ticket-attempt";
 import { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
-import { isSessionSettled } from "@/features/ticket-list/utils/ticket-attempts";
 import { transformFileDiffs } from "@/features/workspaces/utils/transform-diff";
 import { getAttemptLabelFromWorkspaceShorthand } from "@/features/workspaces/utils/workspace-shorthand";
 import { logMutationError } from "@/lib/error-handlers";
@@ -307,9 +306,7 @@ export const WorkspacePage = () => {
   const selectedWorkspace = workspaces.find((workspace) => workspace.shorthand === workspaceShorthand) ?? null;
   const selectedWorkspaceSessions = selectedWorkspace ? (sessionsByWorkspaceId.get(selectedWorkspace.id) ?? []) : [];
   const activeSessionId = resolveActiveWorkspaceSessionId(selectedWorkspaceSessions, sessionId);
-  const selectedAttempt = attempts.find((attempt) => attempt.shorthand === workspaceShorthand) ?? null;
   const selectedWorkspaceLabel = selectedWorkspace?.shorthand ?? workspaceShorthand ?? "";
-  const sessionSettled = isSessionSettled(selectedAttempt?.sessionStatus ?? null);
   useEffect(() => {
     if (!projectId || !ticketShorthand || !workspaceShorthand) return;
     const normalizedSearch = resolveWorkspacePageSessionSearch({
@@ -373,7 +370,7 @@ export const WorkspacePage = () => {
     },
   });
 
-  const { data: diffData } = useTicketAttemptDiff(selectedWorkspace?.id, { enabled: sessionSettled });
+  const { data: diffData } = useTicketAttemptDiff(selectedWorkspace?.id);
   const diffs = diffData?.files ? transformFileDiffs(diffData.files) : [];
 
   const ticketFiles = useTicketFiles(ticket?.id);

@@ -1,5 +1,5 @@
 import { CodeNode } from "@lexical/code";
-import { LinkNode } from "@lexical/link";
+import { AutoLinkNode, LinkNode } from "@lexical/link";
 import { ListItemNode, ListNode } from "@lexical/list";
 import { TRANSFORMERS } from "@lexical/markdown";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
@@ -16,6 +16,7 @@ import { TRANSFORMERS_EXTENDED } from "./transformers/markdown-transformers";
 export const editorNodes: Array<Klass<LexicalNode>> = [
   QuoteNode,
   LinkNode,
+  AutoLinkNode,
   DataTableNode,
   HeadingNode,
   ListNode,

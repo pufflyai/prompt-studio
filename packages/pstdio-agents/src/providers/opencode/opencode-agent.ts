@@ -16,10 +16,9 @@ import type {
   SessionReattachInput,
   SessionStartInput,
 } from "../../types";
-import { normalizeErrorPart } from "../normalized-error";
 import { normalizeOpencodeMessage } from "./opencode-normalizer";
-import { createOpencodeService, isTransportTimeout } from "./opencode-service";
-import type { OpencodeSessionMessage } from "./opencode-types";
+import { createOpencodeService } from "./opencode-service";
+import { pollOpencodeMessages, pollOpencodeUntilIdle } from "./opencode-session-poller";
 
 // --- Dependency injection ---
 
@@ -100,18 +99,6 @@ const runOpencodeCommand = (args: readonly string[]) => {
   return result.stdout!.trim();
 };
 
-const toErrorMessage = (error: unknown) => {
-  if (error instanceof Error && error.message.trim().length > 0) {
-    return error.message;
-  }
-
-  if (typeof error === "string" && error.trim().length > 0) {
-    return error;
-  }
-
-  return "OpenCode session failed.";
-};
-
 // --- Factory ---
 
 const defaultDeps: OpencodeAgentDeps = {
@@ -144,83 +131,13 @@ export const createOpencodeAgent = (
     return messages.map(normalizeOpencodeMessage);
   };
 
-  const pollMessages = async (
-    sessionId: string,
-    cwd: string | undefined,
-    eventStore: EventStore,
-    messageComplete: Promise<void>,
-  ) => {
-    let lastSnapshot = "";
-    let latestMessages: SessionMessage[] = [];
-    let done = false;
-    let failed = false;
-    let timedOut = false;
-    let failureMessage = "";
-
-    messageComplete
-      .then(() => {
-        done = true;
-      })
-      .catch((error: unknown) => {
-        done = true;
-        if (isTransportTimeout(error)) {
-          timedOut = true;
-        } else {
-          failed = true;
-          failureMessage = toErrorMessage(error);
-        }
-      });
-
-    while (!done) {
-      await new Promise((r) => setTimeout(r, 1000));
-
-      try {
-        const messages = await opencode.getSessionMessages(sessionId, cwd);
-        const normalized = messages.map(normalizeOpencodeMessage);
-        const snapshot = JSON.stringify(normalized);
-
-        if (snapshot !== lastSnapshot) {
-          eventStore.push({ op: "replace", path: "/messages", value: normalized });
-          lastSnapshot = snapshot;
-          latestMessages = normalized;
-        }
-      } catch {
-        // Ignore transient fetch errors
-      }
-    }
-
-    // Final fetch after prompt completes
+  const fetchBaselineCount = async (sessionId: string, cwd: string | undefined) => {
     try {
-      const messages = await opencode.getSessionMessages(sessionId, cwd);
-      const normalized = messages.map(normalizeOpencodeMessage);
-      eventStore.push({ op: "replace", path: "/messages", value: normalized });
-      latestMessages = normalized;
+      const existing = await opencode.getSessionMessages(sessionId, cwd);
+      return existing.length;
     } catch {
-      // Ignore
+      return 0;
     }
-
-    if (failed) {
-      const failurePart = normalizeErrorPart({ message: failureMessage });
-      const normalizedFailureMessage: SessionMessage = {
-        id: `opencode-error-${sessionId}-${latestMessages.length}`,
-        role: "system",
-        parts: [failurePart],
-        index: latestMessages.length,
-      };
-
-      const nextMessages = [...latestMessages, normalizedFailureMessage];
-      eventStore.push({ op: "replace", path: "/messages", value: nextMessages });
-    }
-
-    if (timedOut) {
-      eventStore.push({ op: "replace", path: "/status", value: "disconnected" });
-      return { code: null as number | null, signal: "TIMEOUT" as string | null };
-    }
-
-    const status = failed ? "failed" : "completed";
-    eventStore.push({ op: "replace", path: "/status", value: status });
-
-    return { code: failed ? 1 : (0 as number | null), signal: null as string | null };
   };
 
   const startSession = async (input: SessionStartInput) => {
@@ -231,7 +148,14 @@ export const createOpencodeAgent = (
     }
 
     const cwd = input.cwd ?? undefined;
-    const onExit = pollMessages(sessionId, cwd, input.eventStore, messageComplete);
+    const onExit = pollOpencodeMessages({
+      loadMessages: opencode.getSessionMessages,
+      sessionId,
+      cwd,
+      eventStore: input.eventStore,
+      baselineCount: 0,
+      messageComplete,
+    });
 
     return {
       sessionId,
@@ -245,42 +169,14 @@ export const createOpencodeAgent = (
     };
   };
 
-  const isTurnInFlight = (rawMessages: OpencodeSessionMessage[]) => {
-    const tail = rawMessages.at(-1);
-    if (!tail || !("info" in tail) || tail.info?.role !== "assistant") return false;
-    return tail.info?.time?.completed === undefined;
-  };
-
-  const pollUntilIdle = async (sessionId: string, cwd: string | undefined, eventStore: EventStore) => {
-    let lastSnapshot = "";
-
-    while (true) {
-      let raw: OpencodeSessionMessage[] = [];
-      try {
-        raw = await opencode.getSessionMessages(sessionId, cwd);
-      } catch {
-        // Transient fetch error — keep looping
-      }
-
-      const normalized = raw.map(normalizeOpencodeMessage);
-      const snapshot = JSON.stringify(normalized);
-      if (snapshot !== lastSnapshot) {
-        eventStore.push({ op: "replace", path: "/messages", value: normalized });
-        lastSnapshot = snapshot;
-      }
-
-      if (!isTurnInFlight(raw)) break;
-
-      await new Promise((r) => setTimeout(r, 1000));
-    }
-
-    eventStore.push({ op: "replace", path: "/status", value: "completed" });
-    return { code: 0 as number | null, signal: null as string | null };
-  };
-
   const reattachSession = async (input: SessionReattachInput, eventStore: EventStore) => {
     const cwd = input.cwd ?? undefined;
-    const onExit = pollUntilIdle(input.sessionId, cwd, eventStore);
+    const onExit = pollOpencodeUntilIdle({
+      loadMessages: opencode.getSessionMessages,
+      sessionId: input.sessionId,
+      cwd,
+      eventStore,
+    });
 
     return {
       process: {
@@ -294,10 +190,18 @@ export const createOpencodeAgent = (
   };
 
   const resumeSession = async (input: SessionMessageInput, eventStore: EventStore) => {
-    const { messageComplete } = opencode.sendSessionMessage(input);
-
     const cwd = input.cwd ?? undefined;
-    const onExit = pollMessages(input.sessionId, cwd, eventStore, messageComplete);
+    const baselineCount = await fetchBaselineCount(input.sessionId, cwd);
+
+    const { messageComplete } = opencode.sendSessionMessage(input);
+    const onExit = pollOpencodeMessages({
+      loadMessages: opencode.getSessionMessages,
+      sessionId: input.sessionId,
+      cwd,
+      eventStore,
+      baselineCount,
+      messageComplete,
+    });
 
     return {
       process: {

@@ -1,3 +1,4 @@
+import { $createAutoLinkNode, $isAutoLinkNode, AutoLinkNode } from "@lexical/link";
 import type { ElementTransformer, TextMatchTransformer } from "@lexical/markdown";
 import { $createTextNode, TextNode } from "lexical";
 import { $createDataTableNode, $isDataTableNode, type RowData } from "../nodes/DataTableNode";
@@ -120,4 +121,29 @@ export const UNDERLINE_U_TAG: TextMatchTransformer = {
   type: "text-match",
 };
 
-export const TRANSFORMERS_EXTENDED = [TABLE, HR, UNDERLINE_INS_TAG, UNDERLINE_U_TAG];
+const BARE_URL_REGEXP = /https?:\/\/[^\s<>"']*[^\s<>"'.,:;"')\]}]/;
+
+export const BARE_URL: TextMatchTransformer = {
+  dependencies: [AutoLinkNode],
+  export: (node, exportChildren) => {
+    if (!$isAutoLinkNode(node)) {
+      return null;
+    }
+
+    return exportChildren(node);
+  },
+  regExp: BARE_URL_REGEXP,
+  importRegExp: BARE_URL_REGEXP,
+  replace: (textNode, match) => {
+    const href = match[0];
+    const autoLinkNode = $createAutoLinkNode(href);
+    const linkTextNode = $createTextNode(href);
+
+    linkTextNode.setFormat(textNode.getFormat());
+    autoLinkNode.append(linkTextNode);
+    textNode.replace(autoLinkNode);
+  },
+  type: "text-match",
+};
+
+export const TRANSFORMERS_EXTENDED = [TABLE, HR, UNDERLINE_INS_TAG, UNDERLINE_U_TAG, BARE_URL];

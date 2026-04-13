@@ -2,12 +2,21 @@ import { useEffect, useState } from "react";
 import { getProjectTicketContent, getTicketFileContent } from "@/features/ticket-list/data/api";
 import { TICKET_CONTENT_ITEM_ID } from "../utils/ticket-file-selection";
 
-export const useTicketContent = (ticketId: string | null | undefined, selectedFileId: string) => {
+interface UseTicketContentOptions {
+  enabled?: boolean;
+}
+
+export const useTicketContent = (
+  ticketId: string | null | undefined,
+  selectedFileId: string,
+  options: UseTicketContentOptions = {},
+) => {
+  const { enabled = true } = options;
   const [data, setData] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (!ticketId) {
+    if (!ticketId || !enabled) {
       setData(undefined);
       setIsLoading(false);
       return;
@@ -44,7 +53,7 @@ export const useTicketContent = (ticketId: string | null | undefined, selectedFi
     return () => {
       controller.abort();
     };
-  }, [ticketId, selectedFileId]);
+  }, [ticketId, selectedFileId, enabled]);
 
   const setOptimisticContent = (nextContent: string) => {
     setData(nextContent);

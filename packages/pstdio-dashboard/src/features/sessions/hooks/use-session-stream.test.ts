@@ -7,6 +7,7 @@ import {
   getCachedSessionEntry,
   updateCachedSessionEntry,
 } from "./session-stream-cache";
+import { getSessionStreamReconnectDelayMs, resolveRecoveredStreamMessages } from "./session-stream-recovery";
 
 const originalFetch = globalThis.fetch;
 
@@ -168,5 +169,37 @@ describe("session stream cache", () => {
 
     const hydrated = await fetchSessionConversationMessages("s_1");
     expect(hydrated).toBeNull();
+  });
+});
+
+describe("session stream recovery", () => {
+  it("prefers hydrated conversation after a dropped stream when it contains newer messages", () => {
+    const recovered = resolveRecoveredStreamMessages([message("m1")], [message("m1"), message("m2")]);
+
+    expect(recovered).toEqual([message("m1"), message("m2")]);
+  });
+
+  it("keeps current messages when hydration is not newer", () => {
+    const currentMessages = [message("m1"), message("m2")];
+
+    expect(resolveRecoveredStreamMessages(currentMessages, [message("m1")])).toEqual(currentMessages);
+    expect(resolveRecoveredStreamMessages(currentMessages, null)).toEqual(currentMessages);
+  });
+
+  it("prefers hydrated conversation when the message count is unchanged but content is newer", () => {
+    const currentMessages = [
+      message("m1"),
+      { ...message("m2"), parts: [{ type: "step-start" as const, snapshot: "Running" }] },
+    ];
+    const hydratedMessages = [message("m1"), message("m2")];
+
+    expect(resolveRecoveredStreamMessages(currentMessages, hydratedMessages)).toEqual(hydratedMessages);
+  });
+
+  it("backs off reconnect attempts and caps the delay", () => {
+    expect(getSessionStreamReconnectDelayMs(0)).toBe(1_000);
+    expect(getSessionStreamReconnectDelayMs(1)).toBe(2_000);
+    expect(getSessionStreamReconnectDelayMs(2)).toBe(4_000);
+    expect(getSessionStreamReconnectDelayMs(5)).toBe(5_000);
   });
 });

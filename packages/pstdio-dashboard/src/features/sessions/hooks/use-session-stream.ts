@@ -9,6 +9,7 @@ import {
   type JsonPatch,
   updateCachedSessionEntry,
 } from "./session-stream-cache";
+import { getSessionStreamReconnectDelayMs, resolveRecoveredStreamMessages } from "./session-stream-recovery";
 
 export {
   applyMessagePatch,
@@ -39,12 +40,26 @@ export const useSessionStream = (sessionId: string | null) => {
   const [connectionAttempt, setConnectionAttempt] = useState(0);
 
   const messagesRef = useRef<SessionMessage[]>([]);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectRetryCountRef = useRef(0);
+  const reconnectSessionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!sessionId) {
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      reconnectRetryCountRef.current = 0;
+      reconnectSessionIdRef.current = null;
       setState({ messages: [], isStreaming: false, approvalRequest: null });
       messagesRef.current = [];
       return;
+    }
+
+    if (reconnectSessionIdRef.current !== sessionId) {
+      reconnectSessionIdRef.current = sessionId;
+      reconnectRetryCountRef.current = 0;
     }
 
     const cached = getCachedSessionEntry(sessionId);
@@ -61,19 +76,20 @@ export const useSessionStream = (sessionId: string | null) => {
 
     let isStreaming = false;
     let isDisposed = false;
+    let hasEnded = false;
 
     void fetchSessionConversationMessages(sessionId).then((hydrated) => {
       if (!hydrated || isDisposed) return;
 
       // The conversation API fetches directly from the agent and is the
       // most complete source. Always apply it — but during an active
-      // stream, only use it if it has more messages than what the stream
-      // has replayed so far, to avoid overwriting live patches.
-      if (isStreaming && hydrated.length <= messagesRef.current.length) return;
+      // stream, only use it when it changes the replayed snapshot.
+      const nextMessages = isStreaming ? resolveRecoveredStreamMessages(messagesRef.current, hydrated) : hydrated;
+      if (nextMessages === messagesRef.current) return;
 
-      messagesRef.current = hydrated;
-      updateCachedSessionEntry(sessionId, { messages: hydrated });
-      setState((prev) => ({ ...prev, messages: hydrated }));
+      messagesRef.current = nextMessages;
+      updateCachedSessionEntry(sessionId, { messages: nextMessages });
+      setState((prev) => ({ ...prev, messages: nextMessages }));
     });
 
     const url = buildApiUrl(`/v1/sessions/${sessionId}/stream?attempt=${connectionAttempt}`);
@@ -81,11 +97,13 @@ export const useSessionStream = (sessionId: string | null) => {
 
     source.addEventListener("ready", () => {
       isStreaming = true;
+      reconnectRetryCountRef.current = 0;
       setState((prev) => ({ ...prev, isStreaming: true }));
     });
 
     source.addEventListener("patch", (event) => {
       isStreaming = true;
+      reconnectRetryCountRef.current = 0;
       const patch = JSON.parse(event.data) as JsonPatch;
       messagesRef.current = applyMessagePatch(messagesRef.current, patch);
       updateCachedSessionEntry(sessionId, { messages: messagesRef.current });
@@ -98,6 +116,7 @@ export const useSessionStream = (sessionId: string | null) => {
     });
 
     source.addEventListener("end", () => {
+      hasEnded = true;
       const cachedMessages = getCachedSessionEntry(sessionId).messages;
       const finalMessages = resolveStreamEndMessages(messagesRef.current, cachedMessages);
 
@@ -112,17 +131,54 @@ export const useSessionStream = (sessionId: string | null) => {
     });
 
     source.onerror = () => {
-      setState((prev) => ({ ...prev, isStreaming: false }));
+      if (isDisposed || hasEnded) {
+        return;
+      }
+
+      setState((prev) => ({ ...prev, isStreaming: false, approvalRequest: null }));
       source.close();
+
+      void fetchSessionConversationMessages(sessionId).then((hydrated) => {
+        if (isDisposed || hasEnded) return;
+
+        const recoveredMessages = resolveRecoveredStreamMessages(messagesRef.current, hydrated);
+        if (recoveredMessages === messagesRef.current) return;
+
+        messagesRef.current = recoveredMessages;
+        updateCachedSessionEntry(sessionId, { messages: recoveredMessages });
+        setState((prev) => ({ ...prev, messages: recoveredMessages }));
+      });
+
+      if (reconnectTimerRef.current) {
+        return;
+      }
+
+      const retryDelayMs = getSessionStreamReconnectDelayMs(reconnectRetryCountRef.current);
+      reconnectRetryCountRef.current += 1;
+      reconnectTimerRef.current = setTimeout(() => {
+        reconnectTimerRef.current = null;
+        if (!isDisposed && !hasEnded) {
+          setConnectionAttempt((attempt) => attempt + 1);
+        }
+      }, retryDelayMs);
     };
 
     return () => {
       isDisposed = true;
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
       source.close();
     };
   }, [sessionId, connectionAttempt]);
 
   const reconnect = () => {
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    reconnectRetryCountRef.current = 0;
     setConnectionAttempt((attempt) => attempt + 1);
   };
 

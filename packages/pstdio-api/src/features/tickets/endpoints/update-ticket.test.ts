@@ -107,6 +107,21 @@ describe("PATCH /v1/tickets/:id", () => {
     expect(await fileRes.text()).toBe(updatedContent);
   });
 
+  test("updates blocked_reason when provided in the body", async () => {
+    const created = await createTicket({ content: "# Blocked ticket" });
+
+    const { app } = context;
+    const res = await app.request(`/v1/tickets/${created.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ blocked_reason: "waiting on upstream" }),
+    });
+
+    expect(res.status).toBe(200);
+    const ticket = await res.json();
+    expect(ticket.blocked_reason).toBe("waiting on upstream");
+  });
+
   test("archives linked workspaces and workspace sessions when ticket is archived", async () => {
     const created = await createTicket({ content: "# Ticket title\n\nTicket body" });
     const workspace = await createWorkspace(created);

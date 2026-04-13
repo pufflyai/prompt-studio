@@ -117,6 +117,55 @@ describe("createRequest", () => {
     }
   });
 
+  it("formats zod validation errors instead of stringifying the object", async () => {
+    const request = createRequest({
+      baseUrl: "http://test:1234",
+      fetch: mockFetchFn(() =>
+        Promise.resolve(
+          jsonResponse(
+            {
+              success: false,
+              error: {
+                name: "ZodError",
+                issues: [
+                  { code: "invalid_type", path: ["body", "display_title"], message: "Expected string, received null" },
+                  { code: "unrecognized_keys", path: [], message: "Unrecognized key: 'foo'" },
+                ],
+              },
+            },
+            400,
+          ),
+        ),
+      ),
+    });
+
+    try {
+      await request("/v1/tickets/bad", { method: "PATCH", body: {} });
+      expect.unreachable("should have thrown");
+    } catch (err) {
+      expect(err).toBeInstanceOf(PstdioApiError);
+      const message = (err as PstdioApiError).message;
+      expect(message).not.toContain("[object Object]");
+      expect(message).toContain("Expected string, received null");
+      expect(message).toContain("body.display_title");
+    }
+  });
+
+  it("falls back to JSON when the error field is a non-zod object", async () => {
+    const request = createRequest({
+      baseUrl: "http://test:1234",
+      fetch: mockFetchFn(() => Promise.resolve(jsonResponse({ error: { code: "EBUSY", detail: "locked" } }, 409))),
+    });
+
+    try {
+      await request("/v1/whatever");
+      expect.unreachable("should have thrown");
+    } catch (err) {
+      expect((err as PstdioApiError).message).not.toContain("[object Object]");
+      expect((err as PstdioApiError).message).toContain("EBUSY");
+    }
+  });
+
   it("returns undefined for 204 responses", async () => {
     const request = createRequest({
       baseUrl: "http://test:1234",

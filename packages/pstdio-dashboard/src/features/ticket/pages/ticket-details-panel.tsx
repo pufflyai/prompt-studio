@@ -22,6 +22,7 @@ import { useWorkspaceSessions } from "@/features/workspaces/hooks/use-workspace-
 import { resolveWorkspaceSelection } from "@/features/workspaces/utils/workspace-selection";
 import { TicketDetailSidebar } from "../components/ticket-detail-sidebar";
 import { TicketHeader } from "../components/ticket-header";
+import { TicketImagePreview } from "../components/ticket-image-preview";
 import { TicketSidebar } from "../components/ticket-sidebar";
 import { useContentAutosave } from "../hooks/use-content-autosave";
 import { useTicketContent } from "../hooks/use-ticket-content";
@@ -33,6 +34,7 @@ import { isTicketContentReady } from "../utils/ticket-content-ready";
 import { resolveTicketDetailsState } from "../utils/ticket-details-state";
 import {
   buildSelectableTicketFiles,
+  isImageFileName,
   resolveSelectedTicketFile,
   TICKET_CONTENT_ITEM_ID,
 } from "../utils/ticket-file-selection";
@@ -70,6 +72,39 @@ const buildWorkspaceRoute = (projectId: string, ticketShorthand: string, workspa
   params: { projectId, ticketShorthand, workspaceShorthand },
 });
 
+interface BuildOverflowActionsInput {
+  ticket: { id: string; archived?: boolean };
+  projectId: string | undefined;
+  updateTicket: { isPending: boolean; mutate: (input: { ticketId: string; archived: boolean }) => void };
+  deleteTicket: { isPending: boolean };
+  onDeleteOpen: () => void;
+  t: (key: string) => string;
+}
+
+const buildTicketOverflowActions = (input: BuildOverflowActionsInput): HeaderActionItem[] => {
+  const { ticket, projectId, updateTicket, deleteTicket, onDeleteOpen, t } = input;
+  return [
+    {
+      key: "archive-ticket",
+      label: t(
+        ticket.archived ? "projects:ticketPanel.options.unarchiveTicket" : "projects:ticketPanel.options.archiveTicket",
+      ),
+      kind: "default",
+      icon: Archive,
+      isDisabled: updateTicket.isPending,
+      onClick: () => updateTicket.mutate({ ticketId: ticket.id, archived: !ticket.archived }),
+    },
+    {
+      key: "delete-ticket",
+      label: t("projects:ticketPanel.options.deleteTicket"),
+      kind: "default",
+      icon: Trash2,
+      isDisabled: !projectId || deleteTicket.isPending,
+      onClick: onDeleteOpen,
+    },
+  ];
+};
+
 export const TicketDetailsPanel = () => {
   const { projectId, ticketShorthand, selectedFileId } = useParams({ strict: false });
   const navigate = useNavigate();
@@ -93,7 +128,8 @@ export const TicketDetailsPanel = () => {
   const ticketFiles = useTicketFiles(ticket?.id);
   const selectableFiles = buildSelectableTicketFiles(ticketFiles.data);
   const selectedFile = resolveSelectedTicketFile(selectableFiles, selectedFileId);
-  const ticketContent = useTicketContent(ticket?.id, selectedFile.id);
+  const isImageFile = isImageFileName(selectedFile.fileName);
+  const ticketContent = useTicketContent(ticket?.id, selectedFile.id, { enabled: !isImageFile });
   const workspaces = ticket?.attempts ?? [];
   const attemptStatusMap = useAttemptStatusMap(projectId);
   const workspaceSessions = useWorkspaceSessions(workspaces.map((w) => w.id));
@@ -146,7 +182,6 @@ export const TicketDetailsPanel = () => {
   if (ticketState.state === "loading")
     return <TicketDetailsStatusMessage message={t("tickets:ticketDetail.loadingContent")} />;
   if (!ticket) return <TicketDetailsStatusMessage message={t("tickets:ticketDetail.ticketNotFound")} />;
-
   const handleSelectTicket = (id: string) => {
     const target = allProjectTickets.find((item) => item.id === id);
     if (!target) return;
@@ -155,7 +190,6 @@ export const TicketDetailsPanel = () => {
       params: { projectId, ticketShorthand: target.shorthand },
     });
   };
-
   const handleSelectFile = async (fileId: string) => {
     await autosave.flushPending();
     if (fileId === TICKET_CONTENT_ITEM_ID) {
@@ -165,7 +199,6 @@ export const TicketDetailsPanel = () => {
       });
       return;
     }
-
     navigate({
       to: "/projects/$projectId/tickets/$ticketShorthand/files/$selectedFileId",
       params: { projectId, ticketShorthand: ticket.shorthand, selectedFileId: fileId },
@@ -203,26 +236,14 @@ export const TicketDetailsPanel = () => {
     });
   };
 
-  const defaultOverflowActions: HeaderActionItem[] = [
-    {
-      key: "archive-ticket",
-      label: t(
-        ticket.archived ? "projects:ticketPanel.options.unarchiveTicket" : "projects:ticketPanel.options.archiveTicket",
-      ),
-      kind: "default",
-      icon: Archive,
-      isDisabled: updateTicket.isPending,
-      onClick: () => updateTicket.mutate({ ticketId: ticket.id, archived: !ticket.archived }),
-    },
-    {
-      key: "delete-ticket",
-      label: t("projects:ticketPanel.options.deleteTicket"),
-      kind: "default",
-      icon: Trash2,
-      isDisabled: !projectId || deleteTicket.isPending,
-      onClick: () => setDeleteOpen(true),
-    },
-  ];
+  const defaultOverflowActions = buildTicketOverflowActions({
+    ticket,
+    projectId,
+    updateTicket,
+    deleteTicket,
+    onDeleteOpen: () => setDeleteOpen(true),
+    t,
+  });
 
   const breadcrumbs = buildTicketBreadcrumbs({
     ticketShorthand: ticket.shorthand,
@@ -260,7 +281,9 @@ export const TicketDetailsPanel = () => {
 
         <Flex flex="1" minH="0" overflow="hidden">
           <Stack flex="1" minW="0">
-            {isContentReady ? (
+            {isImageFile ? (
+              <TicketImagePreview ticketId={ticketId} fileId={selectedFile.id} fileName={selectedFile.fileName} />
+            ) : isContentReady ? (
               <MarkdownEditor
                 key={autosave.editorKey}
                 defaultState={autosave.initialContent}

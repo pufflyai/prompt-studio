@@ -75,6 +75,15 @@ beforeAll(async () => {
           },
         },
         {
+          key: "capture-shorthand",
+          label: "Capture shorthand",
+          targetType: "ticket",
+          placement: "primary",
+          async trigger(ctx) {
+            return { session_id: String(ctx.target.shorthand) };
+          },
+        },
+        {
           key: "legacy-run-attempt",
           label: "Legacy run attempt",
           targetType: "ticket",
@@ -249,6 +258,26 @@ describe("POST /v1/projects/:projectId/actions/:actionKey/execute", () => {
     const result = await res.json();
     expect(result.status).toBe("success");
     expect(result.session_id).toBeUndefined();
+  });
+
+  test("resolves ticket target by shorthand and exposes ctx.target.shorthand", async () => {
+    const ticketRes = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId, user_prompt: "shorthand target" }),
+    });
+    const ticket = await ticketRes.json();
+
+    const res = await app.request(`/v1/projects/${projectId}/actions/test-actions%2Fcapture-shorthand/execute`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ target_type: "ticket", target_id: ticket.shorthand }),
+    });
+
+    expect(res.status).toBe(200);
+    const result = await res.json();
+    expect(result.status).toBe("success");
+    expect(result.session_id).toBe(ticket.shorthand);
   });
 
   test("executes legacy actions that render project prompt templates from ctx.prompts", async () => {

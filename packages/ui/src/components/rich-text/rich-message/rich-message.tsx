@@ -2,9 +2,10 @@ import "../theme/rich-text-theme.css";
 
 import { Flex } from "@chakra-ui/react";
 import { CodeNode } from "@lexical/code";
-import { LinkNode } from "@lexical/link";
+import { AutoLinkNode, LinkNode } from "@lexical/link";
 import { ListItemNode, ListNode } from "@lexical/list";
 import { $convertFromMarkdownString, $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
+import { ClickableLinkPlugin } from "@lexical/react/LexicalClickableLinkPlugin";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HorizontalRulePlugin } from "@lexical/react/LexicalHorizontalRulePlugin";
@@ -55,6 +56,7 @@ export function RichMessage(props: RichMessageProps) {
     nodes: [
       QuoteNode,
       LinkNode,
+      AutoLinkNode,
       DataTableNode,
       HeadingNode,
       ListNode,
@@ -93,6 +95,7 @@ export function RichMessage(props: RichMessageProps) {
           }}
         />
         <LinkPlugin />
+        <ClickableLinkPlugin newTab />
         <ListPlugin />
         <HorizontalRulePlugin />
         <ImportCodeBlocksPlugin />
