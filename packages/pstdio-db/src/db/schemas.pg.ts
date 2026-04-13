@@ -1,4 +1,14 @@
-import { boolean, customType, integer, pgEnum, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  customType,
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  primaryKey,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 
 const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
   dataType() {
@@ -248,6 +258,36 @@ export const workspace_sessions = pgTable(
     created_at: text("created_at").notNull(),
   },
   (table) => [uniqueIndex("workspace_sessions_ws_session_idx").on(table.workspace_id, table.session_id)],
+);
+
+export const activity_events = pgTable(
+  "activity_events",
+  {
+    id: text("id").primaryKey(),
+    project_id: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    resource_type: text("resource_type").notNull(),
+    resource_id: text("resource_id").notNull(),
+    event_type: text("event_type").notNull(),
+    actor_type: text("actor_type").notNull(),
+    actor_id: text("actor_id"),
+    source: text("source").notNull(),
+    summary: text("summary").notNull(),
+    payload_json: jsonb("payload_json").$type<Record<string, unknown>>().notNull().default({}),
+    created_at: text("created_at").notNull(),
+    updated_at: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("activity_events_project_created_id_idx").on(table.project_id, table.created_at, table.id),
+    uniqueIndex("activity_events_resource_created_id_idx").on(
+      table.project_id,
+      table.resource_type,
+      table.resource_id,
+      table.created_at,
+      table.id,
+    ),
+  ],
 );
 
 export const files = pgTable("files", {

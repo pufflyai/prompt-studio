@@ -1,1 +1,1 @@
-ALTER TYPE "public"."session_status" ADD VALUE 'disconnected';
+ALTER TYPE "public"."session_status" ADD VALUE IF NOT EXISTS 'disconnected';

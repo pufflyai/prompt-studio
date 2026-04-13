@@ -1,6 +1,7 @@
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import {
+  activity_events,
   sessions,
   ticket_tag_options,
   ticket_tags,
@@ -12,6 +13,7 @@ import {
 } from "./schemas.pg";
 
 export const ticketSelectSchema = createSelectSchema(tickets);
+export const activityEventSelectSchema = createSelectSchema(activity_events);
 
 export const sessionSelectSchema = createSelectSchema(sessions, {
   status: z.enum(["in_progress", "awaiting_input", "completed", "failed", "cancelled", "disconnected"]),

@@ -89,3 +89,22 @@ const deps = { sessionService, ticketService, ... };
 ## EventBus
 
 Domain services own event emission. When a mutation succeeds, the domain service calls `deps.eventBus.emit(table, op, data)`. Routes should not emit events directly -- if you find yourself calling `eventBus.emit` in a route handler, the logic belongs in a domain service.
+
+## Activity Events DB Service
+
+`pstdio-db` exposes `createActivityEventsDBService(db)` for durable audit-style activity history.
+
+- Table: `activity_events`
+- Write API: `create({ projectId, resourceType, resourceId, eventType, actorType, actorId?, source, summary, payloadJson })`
+- Read APIs:
+  - `listByProject(projectId, options)`
+  - `listByResource(projectId, resourceType, resourceId, options)`
+- Filters: `resourceType`, `eventType`, `startsAt`, `endsAt`
+- Ordering: deterministic reverse chronological ordering by `(created_at DESC, id DESC)`
+- Pagination: cursor-based, where cursor encodes the last seen `{ createdAt, id }`
+
+Event taxonomy currently supports:
+
+- Resource types: `ticket`, `workspace`, `session`
+- Actor types: `user`, `agent`, `system`
+- Sources: `ui`, `api`, `hook`, `system`, `agent`

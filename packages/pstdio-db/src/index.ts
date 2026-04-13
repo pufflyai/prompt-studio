@@ -5,7 +5,20 @@ export { resolveDbPath } from "./db/paths";
 
 export * from "./db/schemas.pg";
 export * from "./db/schemas.zod";
-
+export type {
+  ActivityActorType,
+  ActivityEventInsert,
+  ActivityEventListOptions,
+  ActivityEventRecord,
+  ActivityResourceType,
+  ActivitySource,
+} from "./services/activity-events/activity-events";
+export {
+  ACTIVITY_ACTOR_TYPES,
+  ACTIVITY_RESOURCE_TYPES,
+  ACTIVITY_SOURCES,
+  createActivityEventsDBService,
+} from "./services/activity-events/activity-events";
 export { createAgentConfigsDBService } from "./services/agent-configs/agent-configs";
 export { createAttemptStatusesDBService } from "./services/attempt-statuses/attempt-statuses";
 export type { ValidColor } from "./services/colors";
