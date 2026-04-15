@@ -801,6 +801,29 @@
     "enterDescription": "輸入描述...",
     "repoSelector": "儲存庫選擇器"
   },
+  "workspaceDiffPanel": {
+    "tabs": {
+      "checks": "檢查",
+      "changes": "變更"
+    },
+    "checks": {
+      "loading": "正在載入檢查輸出...",
+      "empty": {
+        "title": "尚無檢查",
+        "description": "執行驗證後，檢查產物會顯示在這裡。"
+      },
+      "noContent": {
+        "title": "沒有可用內容",
+        "description": "此產物為空或無法載入。"
+      }
+    },
+    "changes": {
+      "empty": {
+        "title": "尚無差異",
+        "description": "此工作區中的檔案修改後，變更會顯示在這裡。"
+      }
+    }
+  },
   "breakIntoSubTicketsModal": {
     "title": "拆分為子工單",
     "description": "啟動代理工作階段，將 {{ticketShorthand}} 拆分為具體的子工單。",

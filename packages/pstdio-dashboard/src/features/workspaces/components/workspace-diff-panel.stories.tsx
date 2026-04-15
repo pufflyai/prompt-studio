@@ -86,13 +86,23 @@ type Story = StoryObj<typeof meta>;
 
 export const WithDiffs: Story = {
   args: {
+    ticketId: "ticket-1",
     diffs: sampleDiffs,
     artifacts: sampleArtifacts,
   },
 };
 
+export const DiffsOnly: Story = {
+  args: {
+    ticketId: "ticket-1",
+    diffs: sampleDiffs,
+    artifacts: [],
+  },
+};
+
 export const Empty: Story = {
   args: {
+    ticketId: "ticket-1",
     diffs: [],
     artifacts: [],
   },
@@ -100,6 +110,7 @@ export const Empty: Story = {
 
 export const ArtifactsOnly: Story = {
   args: {
+    ticketId: "ticket-1",
     diffs: [],
     artifacts: sampleArtifacts,
   },
@@ -107,6 +118,7 @@ export const ArtifactsOnly: Story = {
 
 export const ArtifactsOnlyEdgeCases: Story = {
   args: {
+    ticketId: "ticket-1",
     diffs: [],
     artifacts: edgeCaseArtifacts,
   },

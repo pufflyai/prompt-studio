@@ -801,6 +801,29 @@
     "enterDescription": "설명을 입력하세요...",
     "repoSelector": "저장소 선택기"
   },
+  "workspaceDiffPanel": {
+    "tabs": {
+      "checks": "검사",
+      "changes": "변경사항"
+    },
+    "checks": {
+      "loading": "검사 출력을 불러오는 중...",
+      "empty": {
+        "title": "검사가 아직 없습니다",
+        "description": "검증 실행 후 검사 아티팩트가 여기에 표시됩니다."
+      },
+      "noContent": {
+        "title": "사용 가능한 콘텐츠가 없습니다",
+        "description": "이 아티팩트는 비어 있거나 불러올 수 없습니다."
+      }
+    },
+    "changes": {
+      "empty": {
+        "title": "아직 diff가 없습니다",
+        "description": "이 워크스페이스의 파일이 수정되면 변경사항이 여기에 표시됩니다."
+      }
+    }
+  },
   "breakIntoSubTicketsModal": {
     "title": "하위 티켓으로 분할",
     "description": "{{ticketShorthand}}을(를) 구체적인 하위 티켓으로 분할하는 에이전트 세션을 시작합니다.",

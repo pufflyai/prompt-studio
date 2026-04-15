@@ -770,6 +770,29 @@
     "enterDescription": "Ingresa una descripción...",
     "repoSelector": "Selector de repositorio"
   },
+  "workspaceDiffPanel": {
+    "tabs": {
+      "checks": "Verificaciones",
+      "changes": "Cambios"
+    },
+    "checks": {
+      "loading": "Cargando salida de verificaciones...",
+      "empty": {
+        "title": "Aún no hay verificaciones",
+        "description": "Los artefactos de verificación aparecerán aquí después de ejecutar la validación."
+      },
+      "noContent": {
+        "title": "No hay contenido disponible",
+        "description": "Este artefacto está vacío o no se pudo cargar."
+      }
+    },
+    "changes": {
+      "empty": {
+        "title": "Aún no hay diffs",
+        "description": "Los cambios en este espacio de trabajo aparecerán aquí una vez que se modifiquen archivos."
+      }
+    }
+  },
   "breakIntoSubTicketsModal": {
     "title": "Dividir en subtareas",
     "description": "Iniciar una sesión de agente para dividir {{ticketShorthand}} en subtareas concretas.",

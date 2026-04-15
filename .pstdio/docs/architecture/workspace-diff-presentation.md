@@ -20,9 +20,12 @@ Each ticket card resolves its latest attempt and shows addition/deletion totals 
 
 Shows attempt count and latest diff totals. Clicking opens the latest workspace when attempts exist.
 
-### 3) Workspace page right panel (full file-by-file diff)
+### 3) Workspace page main panel (checks + full file-by-file diff)
 
-The selected attempt is resolved from route params. The panel fetches full diff data (files, totals, raw diff text) and renders artifacts at the top with file-by-file diffs below.
+The selected attempt is resolved from route params. The main panel renders tabbed content:
+
+- **Checks**: workspace artifacts list + selected artifact file content
+- **Changes**: file-by-file diffs and the existing diff empty state
 
 ## End-to-End Flow
 
@@ -96,10 +99,10 @@ API file diff objects are transformed into UI diff types. Rename paths fall back
 
 ### Panel Layout
 
-- Workspace panel remains visible even when there are no diffs
-- Artifacts section shown at top when present
-- Empty state is shown when there are no diffs
-- Diff drawer shown below artifacts when diffs exist
+- Workspace main panel remains visible even when there are no diffs
+- Panel has two tabs: `Checks` and `Changes`
+- `Checks` tab renders artifact list on the left and selected artifact content on the right
+- `Changes` tab keeps the existing diff drawer and empty-state behavior
 
 ### File Cards
 
@@ -113,7 +116,9 @@ One card per changed file, expanded by default:
 
 ## Artifact Section
 
-Artifacts come from `GET /v1/tickets/:ticketId/files` in `pstdio-api`. They are listed per ticket (not per attempt). Displayed as compact rows with the file extension stripped from the label.
+Artifacts come from `GET /v1/tickets/:ticketId/files` in `pstdio-api`. They are listed per ticket (not per attempt), with file extensions stripped from labels.
+
+When a user selects an artifact in `Checks`, the dashboard loads content via `GET /v1/tickets/:ticketId/files/:fileId/content` and renders the response body in the content pane.
 
 ## Errors and Empty States
 
@@ -126,13 +131,16 @@ Artifacts come from `GET /v1/tickets/:ticketId/files` in `pstdio-api`. They are 
 ### UI behavior
 
 - No workspace selected: diff query disabled
-- No files: panel shows an empty state
-- Artifacts but no files: artifacts remain visible above the empty state
+- `Changes` with no files: panel shows the existing diff empty state
+- `Checks` with no artifacts: panel shows a checks empty state
+- `Checks` with artifacts: first artifact is selected by default; selection resets to first when current selection is removed
+- Artifact content pane shows loading text while fetch is in-flight, then content (or an empty-content state)
 
 ## Verification
 
 1. Open a ticket with at least one attempt
 2. Navigate to the workspace route for that attempt
-3. Confirm the right panel shows artifact rows (if any) and one diff card per changed file
-4. Edit files in the attempt worktree and wait up to 5 seconds
-5. Confirm totals and file contents refresh automatically
+3. Open the `Checks` tab and confirm artifact list/content rendering for the selected ticket
+4. Open the `Changes` tab and confirm one diff card per changed file (or the existing empty state)
+5. Edit files in the attempt worktree and wait up to 5 seconds
+6. Confirm totals and file contents refresh automatically

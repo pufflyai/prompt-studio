@@ -804,6 +804,29 @@
     "enterDescription": "Enter description...",
     "repoSelector": "Repo selector"
   },
+  "workspaceDiffPanel": {
+    "tabs": {
+      "checks": "Checks",
+      "changes": "Changes"
+    },
+    "checks": {
+      "loading": "Loading check output...",
+      "empty": {
+        "title": "No checks yet",
+        "description": "Check artifacts will appear here after validation runs."
+      },
+      "noContent": {
+        "title": "No content available",
+        "description": "This artifact is empty or could not be loaded."
+      }
+    },
+    "changes": {
+      "empty": {
+        "title": "No diffs yet",
+        "description": "Changes in this workspace will appear here once files are modified."
+      }
+    }
+  },
   "breakIntoSubTicketsModal": {
     "title": "Break into sub-tickets",
     "description": "Start an agent session to break {{ticketShorthand}} into concrete sub-tickets.",

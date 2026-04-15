@@ -801,6 +801,29 @@
     "enterDescription": "説明を入力...",
     "repoSelector": "リポジトリ選択"
   },
+  "workspaceDiffPanel": {
+    "tabs": {
+      "checks": "チェック",
+      "changes": "変更"
+    },
+    "checks": {
+      "loading": "チェック出力を読み込み中...",
+      "empty": {
+        "title": "チェックはまだありません",
+        "description": "検証実行後、チェック成果物がここに表示されます。"
+      },
+      "noContent": {
+        "title": "利用可能な内容がありません",
+        "description": "この成果物は空か、読み込めませんでした。"
+      }
+    },
+    "changes": {
+      "empty": {
+        "title": "差分はまだありません",
+        "description": "このワークスペースでファイルが変更されると、ここに差分が表示されます。"
+      }
+    }
+  },
   "breakIntoSubTicketsModal": {
     "title": "サブチケットに分割",
     "description": "{{ticketShorthand}}を具体的なサブチケットに分割するエージェントセッションを開始します。",

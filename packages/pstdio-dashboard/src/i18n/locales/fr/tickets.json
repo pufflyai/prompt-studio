@@ -770,6 +770,29 @@
     "enterDescription": "Entrez une description...",
     "repoSelector": "Sélecteur de dépôt"
   },
+  "workspaceDiffPanel": {
+    "tabs": {
+      "checks": "Vérifications",
+      "changes": "Modifications"
+    },
+    "checks": {
+      "loading": "Chargement de la sortie des vérifications...",
+      "empty": {
+        "title": "Aucune vérification pour le moment",
+        "description": "Les artefacts de vérification apparaîtront ici après l'exécution de la validation."
+      },
+      "noContent": {
+        "title": "Aucun contenu disponible",
+        "description": "Cet artefact est vide ou n'a pas pu être chargé."
+      }
+    },
+    "changes": {
+      "empty": {
+        "title": "Aucun diff pour le moment",
+        "description": "Les modifications de cet espace de travail apparaîtront ici une fois les fichiers modifiés."
+      }
+    }
+  },
   "breakIntoSubTicketsModal": {
     "title": "Découper en sous-tâches",
     "description": "Démarrer une session d'agent pour découper {{ticketShorthand}} en sous-tâches concrètes.",

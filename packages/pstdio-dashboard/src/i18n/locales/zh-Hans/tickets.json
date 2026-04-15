@@ -770,6 +770,29 @@
     "enterDescription": "输入描述...",
     "repoSelector": "仓库选择器"
   },
+  "workspaceDiffPanel": {
+    "tabs": {
+      "checks": "检查",
+      "changes": "变更"
+    },
+    "checks": {
+      "loading": "正在加载检查输出...",
+      "empty": {
+        "title": "暂无检查",
+        "description": "运行验证后，检查产物会显示在这里。"
+      },
+      "noContent": {
+        "title": "无可用内容",
+        "description": "此产物为空或无法加载。"
+      }
+    },
+    "changes": {
+      "empty": {
+        "title": "暂无差异",
+        "description": "此工作区中的文件修改后，变更会显示在这里。"
+      }
+    }
+  },
   "breakIntoSubTicketsModal": {
     "title": "拆分为子工单",
     "description": "启动代理会话，将 {{ticketShorthand}} 拆分为具体的子工单。",
