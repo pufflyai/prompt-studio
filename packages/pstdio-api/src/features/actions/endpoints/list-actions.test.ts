@@ -150,10 +150,9 @@ describe("GET /v1/projects/:projectId/actions", () => {
     expect(res.status).toBe(200);
 
     const actions = (await res.json()) as Array<{ key: string }>;
-    const actionKeys = actions.map((action) => action.key);
+    const actionKeys = actions.map((action) => action.key).sort();
 
-    expect(actionKeys).toContain("workspace-actions/run-review");
-    expect(actionKeys).toContain("workspace-actions/open-worktree-in-vscode");
+    expect(actionKeys).toEqual(["workspace-actions/open-worktree-in-vscode", "workspace-actions/run-review"]);
 
     await close6();
     rmSync(tempRoot6, { recursive: true, force: true });

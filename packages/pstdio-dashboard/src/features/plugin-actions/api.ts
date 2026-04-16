@@ -27,7 +27,9 @@ export type ExecuteActionInput = {
   params?: Record<string, ActionParamValue>;
 };
 
-export type ActionResult = { status: "success"; session_id?: string } | { status: "error"; message: string };
+export type ActionResult =
+  | { status: "success"; session_id?: string; message?: string }
+  | { status: "error"; message: string };
 
 export const listActions = (projectId: string, targetType?: string) => {
   const query = targetType ? `?targetType=${targetType}` : "";

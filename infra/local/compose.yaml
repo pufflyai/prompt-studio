@@ -1,0 +1,84 @@
+services:
+  prompt-studio:
+    build:
+      context: ../..
+      dockerfile: infra/local/Dockerfile
+    init: true
+    working_dir: ${HOST_WORKTREE:?HOST_WORKTREE is required}
+    environment:
+      DISABLE_AUTOUPDATER: "1"
+      PSTDIO_API_URL: http://localhost:19841
+      PSTDIO_API_PORT: "19841"
+      PSTDIO_DASHBOARD_HOST: 0.0.0.0
+      PSTDIO_DASHBOARD_PORT: "5173"
+      VITE_API_BASE_URL: /
+    command:
+      - bash
+      - -lc
+      - |
+        set -e
+        PROJECT_ROOT=/workspace/project
+        PSTDIO_BIN=/root/.local/bin/pstdio
+
+        bun install --frozen-lockfile
+        bun run pstdio:local:add-dev --install-dir /root/.local/bin --api-url http://localhost:19841
+
+        bun run dev &
+        child=$$!
+
+        trap 'kill "$$child" 2>/dev/null || true' INT TERM EXIT
+
+        until curl -fsS http://localhost:19841/healthz >/dev/null; do
+          sleep 1
+        done
+
+        mkdir -p "$$PROJECT_ROOT"
+        cd "$$PROJECT_ROOT"
+
+        git init
+
+
+
+        "$$PSTDIO_BIN" projects create "$$(basename "$$PROJECT_ROOT")"
+
+        wait "$$child"
+    ports:
+      - 127.0.0.1::5173
+      - 127.0.0.1::19841
+    volumes:
+      - type: bind
+        source: ${HOST_WORKTREE:?HOST_WORKTREE is required}
+        target: ${HOST_WORKTREE:?HOST_WORKTREE is required}
+      - type: bind
+        source: ${HOST_GIT_COMMON_DIR:?HOST_GIT_COMMON_DIR is required}
+        target: ${HOST_GIT_COMMON_DIR:?HOST_GIT_COMMON_DIR is required}
+      - type: volume
+        source: workspace-node-modules
+        target: ${HOST_WORKTREE:?HOST_WORKTREE is required}/node_modules
+      - type: volume
+        source: bun-cache
+        target: /root/.bun/install/cache
+      - type: volume
+        source: pstdio-dev-state
+        target: /root/.pstdio-dev
+      - type: volume
+        source: docker-project
+        target: /workspace/project
+      - type: volume
+        source: opencode-config
+        target: /root/.config/opencode
+      - type: volume
+        source: opencode-data
+        target: /root/.local/share/opencode
+      - type: volume
+        source: claude-config
+        target: /root/.claude
+
+volumes:
+  workspace-node-modules:
+  bun-cache:
+  pstdio-dev-state:
+  docker-project:
+  opencode-config:
+  opencode-data:
+  claude-config:

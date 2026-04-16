@@ -81,6 +81,30 @@ test("runApi spawns bun start in the api workspace", () => {
   expect(unrefCalled()).toBe(true);
 });
 
+test("runApi finds the api workspace relative to the source CLI entry when cwd is outside the repo", () => {
+  const base = mkdtempSync(join(tmpdir(), "pstdio-api-run-cli-entry-"));
+  const outsideBase = mkdtempSync(join(tmpdir(), "pstdio-api-run-cli-entry-outside-"));
+  const apiRoot = writeApiPackage(base);
+  const cliEntry = join(base, "packages", "pstdio", "src", "index.ts");
+  const startDir = join(outsideBase, "cwd");
+  mkdirSync(join(base, "packages", "pstdio", "src"), { recursive: true });
+  mkdirSync(startDir, { recursive: true });
+  writeFileSync(cliEntry, "// cli entry");
+
+  const { calls, spawner } = createSpawnRecorder();
+  const env = { PSTDIO_DISABLE_API_AUTO_START: "0" } as NodeJS.ProcessEnv;
+
+  runApi(startDir, { spawner, env, bundledCliPath: cliEntry });
+
+  expect(calls).toEqual([
+    {
+      command: "bun",
+      args: ["run", "start"],
+      options: { cwd: apiRoot, stdio: "ignore", detached: true, env: withWorkspaceRuntimeEnv(env, apiRoot) },
+    },
+  ]);
+});
+
 test("runApi keeps child attached when detached is false", () => {
   const base = mkdtempSync(join(tmpdir(), "pstdio-api-attached-"));
   const apiRoot = writeApiPackage(base);

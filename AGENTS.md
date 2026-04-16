@@ -26,6 +26,8 @@ Follow this loop **every time**:
 
 ### 1. Red — Write the test first
 
+(skip if no valid test is applicable)
+
 - Write the smallest test that proves the behavior.
 - Confirm the test fails for the right reason.
 
@@ -122,5 +124,7 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 This project uses `pstdio` to manage tickets and documentation.
 
 Run `pstdio --help` to learn more.
+
+When asked to edit `plugins` do not update the templates in `pstdio/files`.
 
 ---

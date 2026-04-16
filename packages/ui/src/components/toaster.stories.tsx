@@ -5,6 +5,15 @@ import { Toaster, toaster } from "./toaster";
 
 type StoryFn = () => ReactNode;
 
+const longErrorOutput = `#1 [internal] load local bake definitions
+#15 exporting to image
+Image pstdio-ps-46-a2-prompt-studio Built
+Container pstdio-ps-46-a2-prompt-studio-1 Creating
+Error response from daemon: invalid volume specification:
+'/host_mnt/Users/au-re/.pstdio-dev/workspaces/PS-46_A2/infra/local:.:rw'
+invalid mount config for type "bind": invalid mount path: '.'
+mount path must be absolute`;
+
 const meta = {
   title: "Components/Toaster",
   component: Toaster,
@@ -53,6 +62,14 @@ export const Variants = {
       });
     };
 
+    const handleLongError = () => {
+      toaster.create({
+        type: "error",
+        title: "Run project failed",
+        description: longErrorOutput,
+      });
+    };
+
     return (
       <Stack gap="md">
         <Text textStyle="paragraph/S/regular" color="fg.muted">
@@ -70,6 +87,9 @@ export const Variants = {
           </Button>
           <Button size="sm" variant="ghost" onClick={handleLoading}>
             Loading
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleLongError}>
+            Long error
           </Button>
         </HStack>
         <Toaster />

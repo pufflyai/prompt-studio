@@ -14,8 +14,10 @@ import { dirname, join } from "node:path";
 
 const BIN_NAME = "pstdio";
 const CLI_ENTRY = "packages/pstdio/src/index.ts";
-const MANAGED_MARKER = "// managed-by=pstdio-local-checkout";
-const REPO_MARKER = "// repo-root=";
+const MANAGED_MARKER = "# managed-by=pstdio-local-checkout";
+const LEGACY_MANAGED_MARKER = "// managed-by=pstdio-local-checkout";
+const REPO_MARKER = "# repo-root=";
+const LEGACY_REPO_MARKER = "// repo-root=";
 const BACKUP_SUFFIX = ".pstdio-local-backup";
 
 type LocalPstdioInput = {
@@ -67,45 +69,39 @@ const resolveExistingCommandPath = (pathEnv: string | undefined) => {
 
 const getBackupPath = (destination: string) => `${destination}${BACKUP_SUFFIX}`;
 
+const quoteShellValue = (value: string) => `'${value.replaceAll("'", `'\\''`)}'`;
+
 const createWrapper = (repoRoot: string, mode: NonNullable<InstallLocalPstdioInput["mode"]>) => {
   const cliPath = join(repoRoot, CLI_ENTRY);
-  const envBlock =
+  const envLines =
     mode.type === "dev-server"
-      ? `,
-  env: {
-    ...process.env,
-    PSTDIO_API_URL: ${JSON.stringify(mode.apiUrl)},
-    PSTDIO_DISABLE_API_AUTO_START: "1",
-    PSTDIO_DISABLE_EMBED_MANIFEST: "1",
-  }`
-      : "";
+      ? [
+          `export PSTDIO_API_URL=${quoteShellValue(mode.apiUrl)}`,
+          "export PSTDIO_DISABLE_API_AUTO_START='1'",
+          "export PSTDIO_DISABLE_EMBED_MANIFEST='1'",
+        ]
+      : [];
 
-  return `#!/usr/bin/env node
+  return `#!/bin/sh
 ${MANAGED_MARKER}
 ${REPO_MARKER}${repoRoot}
-const { spawnSync } = require("node:child_process");
-
-const result = spawnSync("bun", [${JSON.stringify(cliPath)}, ...process.argv.slice(2)], {
-  stdio: "inherit"${envBlock}
-});
-
-if (result.error) {
-  process.stderr.write(\`pstdio: \${result.error.message}\\n\`);
-  process.exit(1);
-}
-
-process.exit(result.status ?? 1);
+${envLines.join("\n")}
+exec bun ${quoteShellValue(cliPath)} "$@"
 `;
 };
 
 const readManagedRepoRoot = (path: string) => {
   const content = readFileSync(path, "utf8");
-  if (!content.includes(MANAGED_MARKER)) return null;
+  if (!content.includes(MANAGED_MARKER) && !content.includes(LEGACY_MANAGED_MARKER)) return null;
 
-  const repoLine = content.split("\n").find((line) => line.startsWith(REPO_MARKER));
+  const repoLine = content
+    .split("\n")
+    .find((line) => line.startsWith(REPO_MARKER) || line.startsWith(LEGACY_REPO_MARKER));
 
   if (!repoLine) return null;
-  return repoLine.slice(REPO_MARKER.length);
+  return repoLine.startsWith(REPO_MARKER)
+    ? repoLine.slice(REPO_MARKER.length)
+    : repoLine.slice(LEGACY_REPO_MARKER.length);
 };
 
 export const resolveLocalPstdioInstallDir = (pathEnv?: string) => {
