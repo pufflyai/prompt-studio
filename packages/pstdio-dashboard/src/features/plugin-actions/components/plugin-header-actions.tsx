@@ -8,36 +8,45 @@ interface PluginHeaderActionsProps {
   pluginActions?: ActionDescriptor[];
   defaultOverflowActions?: HeaderActionItem[];
   onPluginAction: (actionKey: string) => void;
-  pendingActionKey?: string | null;
-  isExecuting?: boolean;
+  pendingActionKeys?: string[];
   overflowLabel?: string;
 }
 
-const renderActionButton = (
-  action: HeaderActionItem,
-  variant: "primary" | "outline",
-  pendingActionKey: string | null,
-  isExecuting: boolean,
-) => (
-  <Button
-    key={action.key}
-    size="sm"
-    variant={variant}
-    onClick={action.onClick}
-    disabled={action.isDisabled || (isExecuting && pendingActionKey !== action.key)}
-    loading={pendingActionKey === action.key}
-  >
-    {action.label}
-  </Button>
-);
+export const getHeaderActionState = (action: HeaderActionItem, pendingActionKeys: string[] = []) => {
+  const isPending = pendingActionKeys.includes(action.key);
+
+  return {
+    isDisabled: Boolean(action.isDisabled || isPending),
+    isPending,
+  };
+};
+
+export const isOverflowMenuDisabled = (actions: HeaderActionItem[], pendingActionKeys: string[] = []) =>
+  actions.length > 0 && actions.every((action) => getHeaderActionState(action, pendingActionKeys).isDisabled);
+
+const renderActionButton = (action: HeaderActionItem, variant: "primary" | "outline", pendingActionKeys: string[]) => {
+  const state = getHeaderActionState(action, pendingActionKeys);
+
+  return (
+    <Button
+      key={action.key}
+      size="sm"
+      variant={variant}
+      onClick={action.onClick}
+      disabled={state.isDisabled}
+      loading={state.isPending}
+    >
+      {action.label}
+    </Button>
+  );
+};
 
 export const PluginHeaderActions = (props: PluginHeaderActionsProps) => {
   const {
     pluginActions,
     defaultOverflowActions = [],
     onPluginAction,
-    pendingActionKey = null,
-    isExecuting = false,
+    pendingActionKeys = [],
     overflowLabel = "More actions",
   } = props;
 
@@ -53,27 +62,36 @@ export const PluginHeaderActions = (props: PluginHeaderActionsProps) => {
 
   return (
     <Flex align="center" gap="xs">
-      {groups.primary.map((action) => renderActionButton(action, "primary", pendingActionKey, isExecuting))}
-      {groups.secondary.map((action) => renderActionButton(action, "outline", pendingActionKey, isExecuting))}
+      {groups.primary.map((action) => renderActionButton(action, "primary", pendingActionKeys))}
+      {groups.secondary.map((action) => renderActionButton(action, "outline", pendingActionKeys))}
 
       {groups.overflow.length > 0 ? (
         <Menu.Root>
           <Menu.Trigger asChild>
-            <IconButton size="sm" variant="ghost" aria-label={overflowLabel} disabled={isExecuting}>
+            <IconButton
+              size="sm"
+              variant="ghost"
+              aria-label={overflowLabel}
+              disabled={isOverflowMenuDisabled(groups.overflow, pendingActionKeys)}
+            >
               <Icon as={MoreHorizontal} boxSize="18px" />
             </IconButton>
           </Menu.Trigger>
           <Menu.Positioner>
             <Menu.Content minW="220px" bg="bg">
-              {groups.overflow.map((action) => (
-                <MenuItem
-                  key={action.key}
-                  primaryLabel={action.label}
-                  leftIcon={action.icon ?? null}
-                  isDisabled={action.isDisabled || isExecuting}
-                  onClick={action.onClick}
-                />
-              ))}
+              {groups.overflow.map((action) => {
+                const state = getHeaderActionState(action, pendingActionKeys);
+
+                return (
+                  <MenuItem
+                    key={action.key}
+                    primaryLabel={action.label}
+                    leftIcon={action.icon ?? null}
+                    isDisabled={state.isDisabled}
+                    onClick={action.onClick}
+                  />
+                );
+              })}
             </Menu.Content>
           </Menu.Positioner>
         </Menu.Root>

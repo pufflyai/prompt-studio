@@ -12,22 +12,14 @@ interface TicketHeaderProps {
   breadcrumbItems: BreadcrumbItem[];
   pluginActions?: ActionDescriptor[];
   defaultOverflowActions?: HeaderActionItem[];
-  pendingActionKey?: string | null;
-  isExecuting?: boolean;
+  pendingActionKeys?: string[];
   onNavigateBack: () => void;
   onPluginAction: (actionKey: string) => void;
 }
 
 export const TicketHeader = (props: TicketHeaderProps) => {
-  const {
-    breadcrumbItems,
-    pluginActions,
-    defaultOverflowActions,
-    pendingActionKey,
-    isExecuting = false,
-    onNavigateBack,
-    onPluginAction,
-  } = props;
+  const { breadcrumbItems, pluginActions, defaultOverflowActions, pendingActionKeys, onNavigateBack, onPluginAction } =
+    props;
   const { t } = useTranslation("projects");
   const ticketListBreadcrumb: BreadcrumbItem = {
     title: <TicketsBreadcrumbTitle />,
@@ -45,8 +37,7 @@ export const TicketHeader = (props: TicketHeaderProps) => {
         pluginActions={pluginActions}
         defaultOverflowActions={defaultOverflowActions}
         onPluginAction={onPluginAction}
-        pendingActionKey={pendingActionKey}
-        isExecuting={isExecuting}
+        pendingActionKeys={pendingActionKeys}
         overflowLabel={t("projects:ticketPanel.options.ticket")}
       />
     </HorizontalMenuStack>

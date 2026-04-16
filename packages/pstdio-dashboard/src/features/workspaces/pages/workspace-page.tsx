@@ -232,8 +232,7 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
               if (!selectedWorkspace) return;
               void pluginActionTrigger.trigger(actionKey, selectedWorkspace.id);
             }}
-            pendingActionKey={pluginActionTrigger.pendingActionKey}
-            isExecuting={pluginActionTrigger.isExecuting || deleteWorkspaceIsPending}
+            pendingActionKeys={pluginActionTrigger.pendingActionKeys}
             overflowLabel={t("workspacePanel.options.workspace")}
           />
         </HorizontalMenuStack>
@@ -257,7 +256,7 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
             open
             action={pluginActionTrigger.activeParamAction}
             projectId={projectId}
-            isSubmitting={pluginActionTrigger.isExecuting}
+            isSubmitting={pluginActionTrigger.activeParamActionIsPending}
             onClose={pluginActionTrigger.cancelParams}
             onSubmit={(params) => pluginActionTrigger.submitWithParams(params)}
           />

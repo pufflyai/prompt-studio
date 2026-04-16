@@ -36,6 +36,7 @@ services:
         cd "$$PROJECT_ROOT"
 
         git init
+        git -c user.email=dev@local -c user.name=pstdio commit --allow-empty -m "init"
 
         "$$PSTDIO_BIN" projects create "$$(basename "$$PROJECT_ROOT")"
 

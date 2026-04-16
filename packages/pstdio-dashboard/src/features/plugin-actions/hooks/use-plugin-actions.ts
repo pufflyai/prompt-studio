@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ActionDescriptor, type ExecuteActionInput, executeAction, listActions } from "../api";
 
 export const usePluginActions = (projectId: string | undefined, targetType?: string) =>
@@ -11,15 +11,15 @@ export const usePluginActions = (projectId: string | undefined, targetType?: str
 export const useExecutePluginAction = (projectId: string | undefined) => {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async ({ actionKey, input }: { actionKey: string; input: ExecuteActionInput }) => {
-      if (!projectId) throw new Error("Project id is required to execute actions.");
-      return executeAction(projectId, actionKey, input);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["plugin-actions", projectId] });
-    },
-  });
+  return async ({ actionKey, input }: { actionKey: string; input: ExecuteActionInput }) => {
+    if (!projectId) throw new Error("Project id is required to execute actions.");
+
+    const result = await executeAction(projectId, actionKey, input);
+
+    await queryClient.invalidateQueries({ queryKey: ["plugin-actions", projectId] });
+
+    return result;
+  };
 };
 
 export const filterActionsByPlacement = (actions: ActionDescriptor[] | undefined, placement: string) =>
