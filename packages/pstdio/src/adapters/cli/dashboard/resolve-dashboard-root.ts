@@ -31,6 +31,9 @@ export const resolveDashboardRoot = (startDir: string, bundledCliPath?: string) 
 
   const cliPath = bundledCliPath ?? resolveCliEntryPath();
   if (cliPath) {
+    const sourceWorkspaceRoot = resolveWorkspaceDashboardDist(dirname(resolve(cliPath)));
+    if (sourceWorkspaceRoot) return sourceWorkspaceRoot;
+
     const bundled = join(dirname(resolve(cliPath)), "dashboard");
     if (existsSync(join(bundled, "index.html"))) return bundled;
   }

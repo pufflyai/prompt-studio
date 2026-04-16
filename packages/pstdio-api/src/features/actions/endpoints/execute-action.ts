@@ -13,7 +13,7 @@ const executeActionInputSchema = z.object({
 });
 
 const actionResultSchema = z.discriminatedUnion("status", [
-  z.object({ status: z.literal("success"), session_id: z.string().optional() }),
+  z.object({ status: z.literal("success"), session_id: z.string().optional(), message: z.string().optional() }),
   z.object({ status: z.literal("error"), message: z.string() }),
 ]);
 
@@ -101,8 +101,17 @@ export const executeActionHandler = (deps: RouteDeps): AppRouteHandler<typeof ex
     try {
       const result = await action.trigger(ctx);
       const sessionId = result?.session_id;
+      const resultRecord = result as Record<string, unknown> | undefined;
+      const message = typeof resultRecord?.message === "string" ? resultRecord.message : undefined;
 
-      return c.json({ status: "success" as const, ...(sessionId ? { session_id: sessionId } : {}) }, 200);
+      return c.json(
+        {
+          status: "success" as const,
+          ...(sessionId ? { session_id: sessionId } : {}),
+          ...(message ? { message } : {}),
+        },
+        200,
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : "Action execution failed";
       return c.json({ status: "error" as const, message }, 200);
