@@ -26,8 +26,6 @@ Follow this loop **every time**:
 
 ### 1. Red — Write the test first
 
-(skip if no valid test is applicable)
-
 - Write the smallest test that proves the behavior.
 - Confirm the test fails for the right reason.
 

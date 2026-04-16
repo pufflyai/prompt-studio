@@ -39,10 +39,6 @@ export const usePluginActionTrigger = (input: UsePluginActionTriggerInput) => {
         return false;
       }
 
-      if (result.message) {
-        toaster.create({ type: "success", title: action.label, description: result.message });
-      }
-
       await onSuccess?.(result);
       return true;
     } finally {

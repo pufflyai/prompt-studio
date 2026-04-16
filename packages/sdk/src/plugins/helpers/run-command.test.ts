@@ -32,14 +32,4 @@ describe("runCommand", () => {
 
     expect(result.exitCode).toBe(42);
   });
-
-  it("accepts a custom env", async () => {
-    const result = await runCommand("/tmp", ["/bin/sh", "-c", 'printf "%s" "$PSTDIO_RUN_COMMAND_TEST"'], {
-      env: { PSTDIO_RUN_COMMAND_TEST: "custom-env" },
-    });
-
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).toBe("custom-env");
-    expect(result.stderr).toBe("");
-  });
 });

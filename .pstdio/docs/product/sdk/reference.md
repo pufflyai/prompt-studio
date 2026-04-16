@@ -324,8 +324,7 @@ Best-effort removes every worktree attached to the resolved ticket and returns t
 
 ### `runCommand(cwd, command, options?)`
 
-Runs a command, captures `stdout` and `stderr` by default, and returns `{ exitCode, stdout, stderr }`. Supports
-`{ env?, quiet? }` options.
+Runs a command, captures `stdout` and `stderr` by default, and returns `{ exitCode, stdout, stderr }`.
 
 ### `setTicketStatus(ctx, { ticket, status })`
 

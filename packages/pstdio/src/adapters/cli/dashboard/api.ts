@@ -149,8 +149,7 @@ export const runApi = (startDir: string, options: ApiLaunchOptions = {}) => {
   }
 
   // Path 2: workspace mode — spawn `bun run start` in pstdio-api
-  const cliPath = bundledCliPath ?? resolveCliEntryPath();
-  const apiRoot = resolveApiRoot(startDir) ?? (cliPath ? resolveApiRoot(dirname(resolve(cliPath))) : null);
+  const apiRoot = resolveApiRoot(startDir);
 
   if (apiRoot) {
     const { command, args, options: spawnOptions } = buildApiStartCommand(apiRoot, stdio, detached);
@@ -167,6 +166,7 @@ export const runApi = (startDir: string, options: ApiLaunchOptions = {}) => {
   }
 
   // Path 3: bundled mode — spawn `node dist/api/server.js`
+  const cliPath = bundledCliPath ?? resolveCliEntryPath();
   const bundledEntry = cliPath ? resolveBundledApiEntry(cliPath) : null;
 
   if (bundledEntry) {
