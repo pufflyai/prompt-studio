@@ -1,13 +1,16 @@
 import { execSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { TEST_TIMEOUT } from "../cli/timeouts";
 
 const REPO_ROOT = join(import.meta.dirname, "../../../..");
 export const PACKAGED_BINARY_PATH = join(REPO_ROOT, "dist/pstdio");
+const EXTRACTED_FILES_ROOT = join(tmpdir(), "pstdio-files");
 
 export const buildBinary = () => {
   console.log("Compiling pstdio binary for local platform…");
+  rmSync(EXTRACTED_FILES_ROOT, { recursive: true, force: true });
   execSync("bun run scripts/build-compile.ts", {
     cwd: REPO_ROOT,
     stdio: "inherit",

@@ -367,9 +367,10 @@ Equivalent intent to `pstdio tickets update --status <name>`.
 
 Equivalent intent to `pstdio workspaces set-status`. When `ctx.workspace` already matches, it uses that object directly instead of listing workspaces first.
 
-### `runCommand(cwd, command, { quiet? })`
+### `runCommand(cwd, command, { env?, quiet? })`
 
-Runs a command and captures `{ exitCode, stdout, stderr }` with trimmed output.
+Runs a command and captures `{ exitCode, stdout, stderr }` with trimmed output. Pass `env` to override the spawned
+process environment.
 
 ```ts
 const validation = await runCommand(ctx.worktreePath, ["bun", "run", "validate"]);

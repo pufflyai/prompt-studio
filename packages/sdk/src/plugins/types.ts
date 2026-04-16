@@ -64,7 +64,7 @@ export type ActionTriggerContext<TTargetType extends TargetType = TargetType> = 
       }
     : never);
 
-export type ActionTriggerResult = { session_id?: string };
+export type ActionTriggerResult = { session_id?: string; message?: string };
 type ActionTrigger<TTargetType extends TargetType = TargetType> =
   | ((ctx: ActionTriggerContext<TTargetType>) => void)
   | ((ctx: ActionTriggerContext<TTargetType>) => ActionTriggerResult)

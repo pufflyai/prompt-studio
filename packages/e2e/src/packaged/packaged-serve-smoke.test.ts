@@ -44,11 +44,17 @@ const waitForFile = async (filePath: string, timeoutMs = 10_000) => {
   throw new Error(`Expected file to exist within ${timeoutMs}ms: ${filePath}`);
 };
 
-const waitForActionKeys = async (baseUrl: string, projectId: string, expectedKeys: string[], timeoutMs = 10_000) => {
+const waitForActionKeys = async (
+  baseUrl: string,
+  projectId: string,
+  expectedKeys: string[],
+  targetType: "ticket" | "workspace" = "ticket",
+  timeoutMs = 10_000,
+) => {
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {
-    const res = await fetch(`${baseUrl}/v1/projects/${projectId}/actions?targetType=ticket`);
+    const res = await fetch(`${baseUrl}/v1/projects/${projectId}/actions?targetType=${targetType}`);
     if (res.ok) {
       const actions = (await res.json()) as { key: string }[];
       const keys = actions.map((action) => action.key);
@@ -176,6 +182,17 @@ describe("packaged pstdio — self-hosted serve", () => {
 
         const actionKeys = await waitForActionKeys(started.baseUrl, project.id, ["ticket-actions/run-attempt"]);
         expect(actionKeys).toContain("ticket-actions/run-attempt");
+
+        const workspaceActionKeys = await waitForActionKeys(
+          started.baseUrl,
+          project.id,
+          ["workspace-actions/run-review"],
+          "workspace",
+        );
+        expect(workspaceActionKeys.sort()).toEqual([
+          "workspace-actions/open-worktree-in-vscode",
+          "workspace-actions/run-review",
+        ]);
       } finally {
         if (child) {
           await stopProcess(child);
