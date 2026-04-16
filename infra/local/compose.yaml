@@ -37,8 +37,6 @@ services:
 
         git init
 
-
-
         "$$PSTDIO_BIN" projects create "$$(basename "$$PROJECT_ROOT")"
 
         wait "$$child"
