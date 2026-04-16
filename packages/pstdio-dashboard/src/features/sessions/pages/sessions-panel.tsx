@@ -101,8 +101,7 @@ export const SessionsPanel = () => {
                 if (!selectedSessionId) return;
                 void pluginActionTrigger.trigger(actionKey, selectedSessionId);
               }}
-              pendingActionKey={pluginActionTrigger.pendingActionKey}
-              isExecuting={pluginActionTrigger.isExecuting}
+              pendingActionKeys={pluginActionTrigger.pendingActionKeys}
               overflowLabel={t("sessions.sessionActions")}
             />
           </HStack>
@@ -120,7 +119,7 @@ export const SessionsPanel = () => {
           open
           action={pluginActionTrigger.activeParamAction}
           projectId={projectId}
-          isSubmitting={pluginActionTrigger.isExecuting}
+          isSubmitting={pluginActionTrigger.activeParamActionIsPending}
           onClose={pluginActionTrigger.cancelParams}
           onSubmit={(params) => pluginActionTrigger.submitWithParams(params)}
         />

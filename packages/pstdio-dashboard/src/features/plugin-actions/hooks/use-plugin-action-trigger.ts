@@ -1,5 +1,5 @@
 import { toaster } from "@pstdio/ui";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { ActionDescriptor, ActionParamValue, ActionResult } from "../api";
 import { useExecutePluginAction, usePluginActions } from "./use-plugin-actions";
 
@@ -14,22 +14,52 @@ type ActiveParamRequest = {
   targetId: string;
 };
 
+export const addPendingActionKey = (pendingActionKeys: string[], actionKey: string) =>
+  pendingActionKeys.includes(actionKey) ? pendingActionKeys : [...pendingActionKeys, actionKey];
+
+export const removePendingActionKey = (pendingActionKeys: string[], actionKey: string) =>
+  pendingActionKeys.filter((key) => key !== actionKey);
+
 export const usePluginActionTrigger = (input: UsePluginActionTriggerInput) => {
   const { projectId, targetType, onSuccess } = input;
   const { data: pluginActions } = usePluginActions(projectId, targetType);
   const executePluginAction = useExecutePluginAction(projectId);
   const [activeParamRequest, setActiveParamRequest] = useState<ActiveParamRequest | null>(null);
-  const [pendingActionKey, setPendingActionKey] = useState<string | null>(null);
+  const [pendingActionKeys, setPendingActionKeys] = useState<string[]>([]);
+  const pendingActionKeysRef = useRef<string[]>([]);
+
+  const replacePendingActionKeys = (nextPendingActionKeys: string[]) => {
+    pendingActionKeysRef.current = nextPendingActionKeys;
+    setPendingActionKeys(nextPendingActionKeys);
+  };
+
+  const markActionPending = (actionKey: string) => {
+    const nextPendingActionKeys = addPendingActionKey(pendingActionKeysRef.current, actionKey);
+    if (nextPendingActionKeys === pendingActionKeysRef.current) {
+      return false;
+    }
+
+    replacePendingActionKeys(nextPendingActionKeys);
+    return true;
+  };
+
+  const clearPendingAction = (actionKey: string) => {
+    replacePendingActionKeys(removePendingActionKey(pendingActionKeysRef.current, actionKey));
+  };
+
+  const isActionPending = (actionKey: string) => pendingActionKeysRef.current.includes(actionKey);
 
   const runAction = async (
     action: ActionDescriptor,
     targetId: string,
     params: Record<string, ActionParamValue> | undefined = undefined,
   ) => {
-    setPendingActionKey(action.key);
+    if (!markActionPending(action.key)) {
+      return false;
+    }
 
     try {
-      const result = await executePluginAction.mutateAsync({
+      const result = await executePluginAction({
         actionKey: action.key,
         input: { target_type: targetType, target_id: targetId, ...(params ? { params } : {}) },
       });
@@ -46,13 +76,14 @@ export const usePluginActionTrigger = (input: UsePluginActionTriggerInput) => {
       await onSuccess?.(result);
       return true;
     } finally {
-      setPendingActionKey(null);
+      clearPendingAction(action.key);
     }
   };
 
   const trigger = async (actionKey: string, targetId: string) => {
     const action = pluginActions?.find((item) => item.key === actionKey);
     if (!action) return;
+    if (isActionPending(action.key)) return;
 
     if (action.params?.length) {
       setActiveParamRequest({ action, targetId });
@@ -82,7 +113,9 @@ export const usePluginActionTrigger = (input: UsePluginActionTriggerInput) => {
     trigger,
     submitWithParams,
     cancelParams,
-    pendingActionKey,
-    isExecuting: executePluginAction.isPending,
+    pendingActionKeys,
+    isActionPending,
+    activeParamActionIsPending: activeParamRequest ? isActionPending(activeParamRequest.action.key) : false,
+    isExecuting: pendingActionKeys.length > 0,
   };
 };

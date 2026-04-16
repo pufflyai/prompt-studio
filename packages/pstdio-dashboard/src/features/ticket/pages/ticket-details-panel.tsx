@@ -273,8 +273,7 @@ export const TicketDetailsPanel = () => {
           breadcrumbItems={breadcrumbs}
           pluginActions={pluginActionTrigger.pluginActions}
           defaultOverflowActions={defaultOverflowActions}
-          pendingActionKey={pluginActionTrigger.pendingActionKey}
-          isExecuting={pluginActionTrigger.isExecuting}
+          pendingActionKeys={pluginActionTrigger.pendingActionKeys}
           onNavigateBack={navigateBack}
           onPluginAction={(actionKey) => void pluginActionTrigger.trigger(actionKey, ticket.id)}
         />
@@ -312,7 +311,7 @@ export const TicketDetailsPanel = () => {
           open
           action={pluginActionTrigger.activeParamAction}
           projectId={projectId}
-          isSubmitting={pluginActionTrigger.isExecuting}
+          isSubmitting={pluginActionTrigger.activeParamActionIsPending}
           onClose={pluginActionTrigger.cancelParams}
           onSubmit={(params) => pluginActionTrigger.submitWithParams(params)}
         />

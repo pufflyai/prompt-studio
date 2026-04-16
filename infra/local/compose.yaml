@@ -18,10 +18,10 @@ services:
       - |
         set -e
         PROJECT_ROOT=/workspace/project
-        PSTDIO_BIN=/root/.local/bin/pstdio
+        PSTDIO_BIN=/usr/local/bin/pstdio
 
         bun install --frozen-lockfile
-        bun run pstdio:local:add-dev --install-dir /root/.local/bin --api-url http://localhost:19841
+        bun run pstdio:local:add-dev --install-dir /usr/local/bin --api-url http://localhost:19841
 
         bun run dev &
         child=$$!
@@ -36,6 +36,7 @@ services:
         cd "$$PROJECT_ROOT"
 
         git init
+        git -c user.email=dev@local -c user.name=pstdio commit --allow-empty -m "init"
 
         "$$PSTDIO_BIN" projects create "$$(basename "$$PROJECT_ROOT")"
 
