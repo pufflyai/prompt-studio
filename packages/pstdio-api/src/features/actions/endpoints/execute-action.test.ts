@@ -75,6 +75,15 @@ beforeAll(async () => {
           },
         },
         {
+          key: "returns-message",
+          label: "Returns message",
+          targetType: "ticket",
+          placement: "primary",
+          async trigger() {
+            return { message: "Action completed." };
+          },
+        },
+        {
           key: "capture-shorthand",
           label: "Capture shorthand",
           targetType: "ticket",
@@ -233,6 +242,24 @@ describe("POST /v1/projects/:projectId/actions/:actionKey/execute", () => {
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ status: "success", session_id: "explicit-session-123" });
+  });
+
+  test("returns message when action explicitly provides one", async () => {
+    const ticketRes = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId, user_prompt: "message return" }),
+    });
+    const ticket = await ticketRes.json();
+
+    const res = await app.request(`/v1/projects/${projectId}/actions/test-actions%2Freturns-message/execute`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ target_type: "ticket", target_id: ticket.id }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status: "success", message: "Action completed." });
   });
 
   test("does not return session_id when action returns unrelated data", async () => {

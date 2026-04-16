@@ -42,4 +42,14 @@ describe("runCommand", () => {
     expect(result.stdout).toBe("custom-env");
     expect(result.stderr).toBe("");
   });
+
+  it("preserves process environment when custom env overrides are provided", async () => {
+    const result = await runCommand("/tmp", ["sh", "-c", 'printf "%s|%s" "$PSTDIO_RUN_COMMAND_TEST" "$PATH"'], {
+      env: { PSTDIO_RUN_COMMAND_TEST: "custom-env" },
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.startsWith("custom-env|")).toBeTrue();
+    expect(result.stdout.slice("custom-env|".length).length).toBeGreaterThan(0);
+  });
 });

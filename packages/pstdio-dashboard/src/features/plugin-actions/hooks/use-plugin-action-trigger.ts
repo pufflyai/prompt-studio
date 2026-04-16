@@ -14,6 +14,18 @@ type ActiveParamRequest = {
   targetId: string;
 };
 
+export const getPluginActionToastPayload = (actionLabel: string, result: ActionResult) => {
+  if (result.status === "error") {
+    return { type: "error", title: actionLabel, description: result.message } as const;
+  }
+
+  if (!result.message) {
+    return null;
+  }
+
+  return { type: "success", title: actionLabel, description: result.message } as const;
+};
+
 export const usePluginActionTrigger = (input: UsePluginActionTriggerInput) => {
   const { projectId, targetType, onSuccess } = input;
   const { data: pluginActions } = usePluginActions(projectId, targetType);
@@ -34,13 +46,13 @@ export const usePluginActionTrigger = (input: UsePluginActionTriggerInput) => {
         input: { target_type: targetType, target_id: targetId, ...(params ? { params } : {}) },
       });
 
-      if (result.status === "error") {
-        toaster.create({ type: "error", title: action.label, description: result.message });
-        return false;
+      const toastPayload = getPluginActionToastPayload(action.label, result);
+      if (toastPayload) {
+        toaster.create(toastPayload);
       }
 
-      if (result.message) {
-        toaster.create({ type: "success", title: action.label, description: result.message });
+      if (result.status === "error") {
+        return false;
       }
 
       await onSuccess?.(result);

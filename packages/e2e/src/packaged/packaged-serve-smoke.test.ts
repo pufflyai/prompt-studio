@@ -191,6 +191,7 @@ describe("packaged pstdio — self-hosted serve", () => {
         );
         expect(workspaceActionKeys.sort()).toEqual([
           "workspace-actions/open-worktree-in-vscode",
+          "workspace-actions/run-project",
           "workspace-actions/run-review",
         ]);
       } finally {

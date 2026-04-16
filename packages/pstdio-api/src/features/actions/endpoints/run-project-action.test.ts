@@ -39,7 +39,10 @@ beforeAll(async () => {
 
   writeFileSync(
     join(pluginsDir, "workspace-actions.ts"),
-    readFileSync(join(repoRoot, ".pstdio", "plugins", "workspace-actions.ts"), "utf8"),
+    readFileSync(
+      join(repoRoot, "packages", "pstdio", "files", "plugins", "pstdio", "workspace-actions.ts.txt"),
+      "utf8",
+    ),
   );
   writeFileSync(join(composeDir, "compose.yaml"), "services:\n  prompt-studio:\n    image: oven/bun:1.3.10\n");
 

@@ -184,7 +184,7 @@ export default definePlugin({
 
           return {
             message: `Project is starting at ${projectUrl}. API is available at ${apiUrl}.`,
-          } as never;
+          };
         } finally {
           cleanup();
         }

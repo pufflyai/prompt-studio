@@ -84,12 +84,123 @@ const readChangesetFiles = async () => {
   return Object.fromEntries(contents);
 };
 
-export const collectChangesetValidationIssues = async (changesetFiles?: Record<string, string>) => {
-  const files = changesetFiles ?? (await readChangesetFiles());
+const readGitStdout = async (command: string[]) => {
+  const proc = Bun.spawn(command, {
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "ignore",
+  });
 
-  return Object.entries(files)
+  const output = proc.stdout ? await new Response(proc.stdout).text() : "";
+  const exitCode = await proc.exited;
+  if (exitCode !== 0) {
+    return null;
+  }
+
+  return output.trim();
+};
+
+const parseStatusPath = (line: string) => {
+  const statusAndPath = line.slice(3);
+  const renameParts = statusAndPath.split(" -> ");
+  return (renameParts.at(-1) ?? statusAndPath).trim();
+};
+
+const readChangedFiles = async () => {
+  const files = new Set<string>();
+
+  const statusOutput = await readGitStdout(["git", "status", "--porcelain"]);
+  if (statusOutput) {
+    for (const line of statusOutput.split("\n")) {
+      if (!line.trim()) {
+        continue;
+      }
+
+      files.add(parseStatusPath(line));
+    }
+  }
+
+  const baseRef = await readGitStdout(["git", "merge-base", "HEAD", "origin/main"]);
+
+  if (baseRef) {
+    const committedDiff = await readGitStdout(["git", "diff", "--name-only", `${baseRef}...HEAD`]);
+    if (committedDiff) {
+      for (const path of committedDiff.split("\n")) {
+        if (path.trim()) {
+          files.add(path.trim());
+        }
+      }
+    }
+  }
+
+  return [...files].sort();
+};
+
+const parseReleasedPackages = (content: string) => {
+  const normalizedContent = content.replaceAll("\r\n", "\n");
+  const lines = normalizedContent.split("\n");
+  const closingDelimiterIndex = lines.indexOf("---", 1);
+  if (closingDelimiterIndex === -1) {
+    return [];
+  }
+
+  return lines
+    .slice(1, closingDelimiterIndex)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => line.match(/^"([^"]+)": (patch|minor|major)$/)?.[1])
+    .filter((pkg): pkg is string => Boolean(pkg));
+};
+
+const isSdkRuntimeChange = (path: string) => {
+  if (!path.startsWith("packages/sdk/")) {
+    return false;
+  }
+
+  if (path.endsWith(".md")) {
+    return false;
+  }
+
+  if (/\.(test|spec)\.[cm]?[jt]sx?$/.test(path) || path.includes("/__tests__/")) {
+    return false;
+  }
+
+  return path.startsWith("packages/sdk/src/") || path === "packages/sdk/package.json";
+};
+
+export const collectChangesetValidationIssues = async (
+  changesetFiles?: Record<string, string>,
+  changedFiles?: string[],
+) => {
+  const files = changesetFiles ?? (await readChangesetFiles());
+  const changed = changedFiles ?? (await readChangedFiles());
+
+  const issues = Object.entries(files)
     .sort(([leftPath], [rightPath]) => leftPath.localeCompare(rightPath))
     .flatMap(([filePath, content]) => validateChangesetFile(filePath, content));
+
+  const changedSdkFiles = changed.filter((path) => isSdkRuntimeChange(path));
+  if (changedSdkFiles.length === 0) {
+    return issues;
+  }
+
+  const releasedPackages = new Set(
+    Object.values(files)
+      .flatMap((content) => parseReleasedPackages(content))
+      .sort(),
+  );
+
+  if (!releasedPackages.has("@pstdio/sdk")) {
+    return [
+      ...issues,
+      {
+        filePath: changesetDirectory,
+        message: "changes to packages/sdk/** require an @pstdio/sdk changeset entry",
+      },
+    ];
+  }
+
+  return issues;
 };
 
 const main = async () => {
