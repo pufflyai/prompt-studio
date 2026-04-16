@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
@@ -41,13 +42,36 @@ const configureAgent = async (request: import("@playwright/test").APIRequestCont
   expect(res.ok()).toBe(true);
 };
 
+const resolveVisibleParentPath = (path: string) => {
+  const visibleSegments: string[] = [];
+
+  for (const segment of splitPath(path)) {
+    if (segment.startsWith(".")) {
+      break;
+    }
+
+    visibleSegments.push(segment);
+  }
+
+  if (visibleSegments.length === 0) {
+    return "/";
+  }
+
+  return `/${visibleSegments.join("/")}`;
+};
+
 const resolveFolderPickerWorkspacePath = () => {
   let currentPath = process.cwd();
 
   while (true) {
     if (existsSync(join(currentPath, ".git"))) {
       const repoParentPath = dirname(currentPath);
-      const visibleParentPath = basename(repoParentPath).startsWith(".") ? dirname(repoParentPath) : repoParentPath;
+      const visibleParentPath = resolveVisibleParentPath(repoParentPath);
+
+      if (visibleParentPath === "/") {
+        return join(tmpdir(), "pstdio-e2e-picker-workspace");
+      }
+
       return join(visibleParentPath, "pstdio-e2e-picker-workspace");
     }
 
@@ -202,6 +226,14 @@ test.describe("Project list", () => {
 
     await page.waitForURL(`**${resolveProjectDefaultPath(project.id)}`);
     expect(page.url()).toContain(resolveProjectDefaultPath(project.id));
+  });
+});
+
+test.describe("Folder picker path resolution", () => {
+  test("uses a path without hidden segments", () => {
+    const visiblePath = resolveVisibleParentPath("/Users/au-re/.pstdio-dev/workspaces");
+
+    expect(visiblePath).toBe("/Users/au-re");
   });
 });
 
