@@ -36,6 +36,8 @@ export const DiffCard = (props: DiffCardProps) => {
       bg="bg"
       width="100%"
       maxW="100%"
+      transition="border-color 0.14s ease"
+      _hover={{ borderColor: "border.accent" }}
     >
       <Grid
         templateColumns="auto minmax(0, 1fr) auto"
@@ -46,6 +48,8 @@ export const DiffCard = (props: DiffCardProps) => {
         borderBottom={isExpanded ? "1px solid" : "none"}
         borderColor="border.muted"
         cursor="pointer"
+        transition="background 0.14s ease"
+        _hover={{ bg: "bg.subtle" }}
         onClick={() => setIsExpanded(!isExpanded)}
         gap="sm"
       >

@@ -37,7 +37,10 @@ interface TicketSidebarProps {
   onSelectWorkspace: (workspaceShorthand: string) => void;
   onSelectSession: (workspaceShorthand: string, sessionId: string) => void;
   onCreateWorkspaceSessionDraft?: (workspaceId: string) => void;
+  onSelectPlanning?: () => void;
 }
+
+const PLANNING_ITEM_ID = "planning";
 
 const getFileIcon = (fileName: string) => {
   const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
@@ -50,8 +53,18 @@ const getFileIcon = (fileName: string) => {
   return <FileText size={14} />;
 };
 
-const buildFilesSection = (files: SelectableTicketFile[]): SidebarSection => {
+const buildFilesSection = (files: SelectableTicketFile[], includePlanningLink: boolean): SidebarSection => {
   const nodes: SidebarNode[] = [
+    ...(includePlanningLink
+      ? [
+          {
+            id: PLANNING_ITEM_ID,
+            label: "<- Planning",
+            isNavigable: true,
+            navigationIntent: { id: "select-planning" },
+          } satisfies SidebarNode,
+        ]
+      : []),
     {
       id: `file:${TICKET_CONTENT_ITEM_ID}`,
       label: "Ticket",
@@ -154,13 +167,14 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
     onSelectWorkspace,
     onSelectSession,
     onCreateWorkspaceSessionDraft,
+    onSelectPlanning,
   } = props;
 
   const selectedWorkspace = selectedWorkspaceId ? workspaces.find((w) => w.id === selectedWorkspaceId) : null;
   const sessions = selectedWorkspaceId ? (sessionsByWorkspaceId.get(selectedWorkspaceId) ?? []) : [];
 
   const sections: SidebarSection[] = [
-    buildFilesSection(files),
+    buildFilesSection(files, Boolean(onSelectPlanning)),
     buildWorkspacesSection(workspaces, attemptStatusMap),
     ...(selectedWorkspace
       ? [
@@ -187,6 +201,10 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
 
     if (intent.id === "select-file") {
       onSelectFile(intent.payload as string);
+    }
+
+    if (intent.id === "select-planning") {
+      onSelectPlanning?.();
     }
 
     if (intent.id === "select-workspace") {

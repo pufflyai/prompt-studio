@@ -1,4 +1,4 @@
-import { Button, Flex, Icon, IconButton, Menu } from "@chakra-ui/react";
+import { Button, Flex, Icon, IconButton, Menu, Skeleton } from "@chakra-ui/react";
 import { MenuItem } from "@pstdio/ui";
 import { MoreHorizontal } from "lucide-react";
 import type { ActionDescriptor } from "../api";
@@ -10,6 +10,7 @@ interface PluginHeaderActionsProps {
   onPluginAction: (actionKey: string) => void;
   pendingActionKeys?: string[];
   overflowLabel?: string;
+  isLoading?: boolean;
 }
 
 export const getHeaderActionState = (action: HeaderActionItem, pendingActionKeys: string[] = []) => {
@@ -48,7 +49,18 @@ export const PluginHeaderActions = (props: PluginHeaderActionsProps) => {
     onPluginAction,
     pendingActionKeys = [],
     overflowLabel = "More actions",
+    isLoading = false,
   } = props;
+
+  if (isLoading) {
+    return (
+      <Flex align="center" gap="xs">
+        <Skeleton height="32px" width="82px" borderRadius="sm" />
+        <Skeleton height="32px" width="82px" borderRadius="sm" />
+        <Skeleton height="32px" width="32px" borderRadius="sm" />
+      </Flex>
+    );
+  }
 
   const groups = buildHeaderActionGroups({
     pluginActions,
