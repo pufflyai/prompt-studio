@@ -10,6 +10,29 @@ import type {
 } from "../../types";
 
 const EXIT_DELAY_MS = 50;
+const QUESTION_PROMPT_TRIGGER = "__fake_question_prompt__";
+
+const createQuestionToolPart = () => ({
+  type: "tool" as const,
+  tool: "question",
+  actionType: "execute" as const,
+  status: "completed" as const,
+  state: {
+    status: "completed",
+    input: {
+      tool: "question",
+      questions: [
+        {
+          id: "language",
+          type: "single_choice",
+          question: "Which language do you want to use?",
+          options: ["TypeScript", "Python", "Go"],
+          required: true,
+        },
+      ],
+    },
+  },
+});
 
 type FakeSession = {
   id: string;
@@ -31,10 +54,21 @@ const createMessage = (
   index,
 });
 
-const buildStartMessages = (sessionId: string, input: SessionStartInput) => [
-  createMessage(sessionId, 0, "user", input.prompt),
-  createMessage(sessionId, 1, "assistant", `Fake Agent: completed "${input.prompt}"`),
-];
+const createQuestionMessage = (sessionId: string, index: number): SessionMessage => ({
+  id: `${sessionId}-msg-${index}`,
+  role: "assistant",
+  parts: [createQuestionToolPart()],
+  index,
+});
+
+const buildStartMessages = (sessionId: string, input: SessionStartInput) => {
+  const userMessage = createMessage(sessionId, 0, "user", input.prompt);
+  if (input.prompt.includes(QUESTION_PROMPT_TRIGGER)) {
+    return [userMessage, createQuestionMessage(sessionId, 1)];
+  }
+
+  return [userMessage, createMessage(sessionId, 1, "assistant", `Fake Agent: completed "${input.prompt}"`)];
+};
 
 const buildResumeMessages = (sessionId: string, input: SessionMessageInput, startIndex: number) => [
   createMessage(sessionId, startIndex, "user", input.prompt),

@@ -60,4 +60,42 @@ describe("createFakeAgent", () => {
 
     resumeStore.close();
   });
+
+  test("emits a question tool part for the question trigger prompt", async () => {
+    const eventStore = createEventStore();
+    const agent = createFakeAgent();
+
+    const result = await agent.startSession({
+      prompt: "Please ask me a language __fake_question_prompt__",
+      eventStore,
+    });
+    await result.process!.onExit;
+
+    const messages = await agent.getMessages(result.sessionId);
+    expect(messages).toHaveLength(2);
+    expect(messages[1]).toMatchObject({
+      role: "assistant",
+      parts: [
+        {
+          type: "tool",
+          tool: "question",
+          actionType: "execute",
+          status: "completed",
+          state: {
+            input: {
+              questions: [
+                {
+                  id: "language",
+                  question: "Which language do you want to use?",
+                  required: true,
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+
+    eventStore.close();
+  });
 });
