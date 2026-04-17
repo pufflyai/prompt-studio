@@ -131,6 +131,70 @@ describe("loadPluginRuntime", () => {
     expect(runtime.plugins).toEqual([]);
   });
 
+  test("loads plugin schedules into the registry", async () => {
+    const repoPath = createTempDir();
+    const pluginsDir = join(repoPath, ".pstdio", "plugins");
+    mkdirSync(pluginsDir, { recursive: true });
+
+    writeFileSync(
+      join(pluginsDir, "schedule-plugin.ts"),
+      `export default {
+        schedules: [{
+          name: "daily-sync",
+          cron: "0 9 * * *",
+          trigger: async () => {},
+        }],
+      };`,
+    );
+
+    const runtime = await loadPluginRuntime({ repoPath, client: stubClient });
+
+    const schedules = runtime.schedules.list();
+    expect(schedules).toHaveLength(1);
+    expect(schedules[0].compositeKey).toBe("schedule-plugin/daily-sync");
+
+    const entry = runtime.schedules.get("schedule-plugin/daily-sync");
+    expect(entry).toBeDefined();
+  });
+
+  test("rejects plugin with invalid 6-field cron expression", async () => {
+    const repoPath = createTempDir();
+    const pluginsDir = join(repoPath, ".pstdio", "plugins");
+    mkdirSync(pluginsDir, { recursive: true });
+
+    writeFileSync(
+      join(pluginsDir, "bad-cron.ts"),
+      `export default {
+        schedules: [{
+          name: "sync",
+          cron: "0 0 9 * * *",
+          trigger: async () => {},
+        }],
+      };`,
+    );
+
+    expect(loadPluginRuntime({ repoPath, client: stubClient })).rejects.toThrow(/must be a 5-field/);
+  });
+
+  test("rejects plugin with out-of-range cron field", async () => {
+    const repoPath = createTempDir();
+    const pluginsDir = join(repoPath, ".pstdio", "plugins");
+    mkdirSync(pluginsDir, { recursive: true });
+
+    writeFileSync(
+      join(pluginsDir, "bad-range.ts"),
+      `export default {
+        schedules: [{
+          name: "sync",
+          cron: "60 9 * * *",
+          trigger: async () => {},
+        }],
+      };`,
+    );
+
+    expect(loadPluginRuntime({ repoPath, client: stubClient })).rejects.toThrow(/sync.*bad-range/);
+  });
+
   test("post hooks fire without rejection", async () => {
     const repoPath = createTempDir();
     const pluginsDir = join(repoPath, ".pstdio", "plugins");

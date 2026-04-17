@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { PstdioClient } from "@pstdio/sdk/client";
-import { createPluginRuntimeStore } from "./store";
+import { createPluginRuntimeStore, type ScheduleChangeEvent } from "./store";
 
 let tempDirs: string[] = [];
 
@@ -88,6 +88,56 @@ describe("createPluginRuntimeStore", () => {
 
     await store.getForProject("project-1");
     expect(resolveCount).toBe(3);
+  });
+
+  test("notifies onScheduleChange when project with schedules is loaded", async () => {
+    const repoPath = createTempDir();
+    const pluginsDir = join(repoPath, ".pstdio", "plugins");
+    mkdirSync(pluginsDir, { recursive: true });
+
+    writeFileSync(
+      join(pluginsDir, "scheduled.ts"),
+      `export default {
+        schedules: [{
+          name: "daily-sync",
+          cron: "0 9 * * *",
+          trigger: async () => {},
+        }],
+      };`,
+    );
+
+    const events: ScheduleChangeEvent[] = [];
+
+    const store = createPluginRuntimeStore({
+      resolveRepoPath: async () => repoPath,
+      createClient: stubClient,
+      onScheduleChange: (event) => events.push(event),
+    });
+
+    await store.getForProject("project-1");
+
+    expect(events).toHaveLength(1);
+    expect(events[0]!.projectId).toBe("project-1");
+    expect(events[0]!.entries).toHaveLength(1);
+    expect(events[0]!.entries[0]!.compositeKey).toBe("scheduled/daily-sync");
+  });
+
+  test("notifies onScheduleChange with empty entries on invalidate", async () => {
+    const repoPath = createTempDir();
+    const events: ScheduleChangeEvent[] = [];
+
+    const store = createPluginRuntimeStore({
+      resolveRepoPath: async () => repoPath,
+      createClient: stubClient,
+      onScheduleChange: (event) => events.push(event),
+    });
+
+    await store.getForProject("project-1");
+    store.invalidate("project-1");
+
+    const invalidateEvent = events.find((e) => e.entries.length === 0);
+    expect(invalidateEvent).toBeDefined();
+    expect(invalidateEvent!.projectId).toBe("project-1");
   });
 
   test("loads plugins from resolved repo path", async () => {

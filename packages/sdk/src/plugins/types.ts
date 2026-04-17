@@ -1,4 +1,5 @@
 import type { PstdioClient } from "../client/client";
+import type { HookClient } from "../hooks/base";
 import type { Session } from "../resources/session";
 import type { TicketListItem } from "../resources/ticket";
 import type { WorkspaceListItem } from "../resources/workspace";
@@ -93,8 +94,30 @@ export type ActionDefinition = ActionDescriptor & {
   trigger: ActionTrigger;
 };
 
+// -- Schedule definitions -----------------------------------------------------
+
+export type ScheduledTriggerContext = {
+  client: HookClient;
+  projectId: string;
+  prompts: Record<string, string>;
+  trigger: {
+    type: "schedule";
+    scheduleName: string;
+    scheduledFor: string;
+    runId: string;
+  };
+};
+
+export type ScheduleDefinition = {
+  name: string;
+  cron: string;
+  timeoutMs?: number;
+  trigger: (ctx: ScheduledTriggerContext) => Promise<void> | void;
+};
+
 export type PluginDefinition = {
   key?: string;
   actions?: ActionInput[];
   hooks?: PluginHooks;
+  schedules?: ScheduleDefinition[];
 };

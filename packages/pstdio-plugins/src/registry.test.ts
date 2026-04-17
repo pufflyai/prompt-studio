@@ -134,4 +134,76 @@ describe("createPluginRegistry", () => {
       ).toThrow("Duplicate action key");
     });
   });
+
+  describe("getSchedules", () => {
+    test("returns empty array when no plugins have schedules", () => {
+      const registry = createPluginRegistry([makePlugin("no-schedules")]);
+      expect(registry.getSchedules()).toEqual([]);
+    });
+
+    test("returns namespaced schedule entries", () => {
+      const registry = createPluginRegistry([
+        makePlugin("my-plugin", {
+          schedules: [{ name: "daily-sync", cron: "0 9 * * *", trigger: async () => {} }],
+        }),
+      ]);
+
+      const schedules = registry.getSchedules();
+      expect(schedules).toHaveLength(1);
+      expect(schedules[0]!.compositeKey).toBe("my-plugin/daily-sync");
+      expect(schedules[0]!.pluginIdentity).toBe("my-plugin");
+      expect(schedules[0]!.scheduleName).toBe("daily-sync");
+      expect(schedules[0]!.cron).toBe("0 9 * * *");
+    });
+
+    test("collects schedules from multiple plugins", () => {
+      const registry = createPluginRegistry([
+        makePlugin("a", {
+          schedules: [{ name: "sync", cron: "0 9 * * *", trigger: async () => {} }],
+        }),
+        makePlugin("b", {
+          schedules: [{ name: "cleanup", cron: "0 0 * * *", trigger: async () => {} }],
+        }),
+      ]);
+
+      const schedules = registry.getSchedules();
+      expect(schedules).toHaveLength(2);
+    });
+  });
+
+  describe("getSchedule", () => {
+    test("returns schedule entry by composite key", () => {
+      const trigger = async () => {};
+      const registry = createPluginRegistry([
+        makePlugin("my-plugin", {
+          schedules: [{ name: "sync", cron: "0 9 * * *", trigger }],
+        }),
+      ]);
+
+      const entry = registry.getSchedule("my-plugin/sync");
+      expect(entry).toBeDefined();
+      expect(entry!.trigger).toBe(trigger);
+      expect(entry!.pluginIdentity).toBe("my-plugin");
+    });
+
+    test("returns undefined for unknown key", () => {
+      const registry = createPluginRegistry([]);
+      expect(registry.getSchedule("nope")).toBeUndefined();
+    });
+  });
+
+  describe("duplicate schedule keys", () => {
+    test("throws on duplicate composite key across plugins", () => {
+      expect(() =>
+        createPluginRegistry([
+          makePlugin("a", {
+            schedules: [{ name: "sync", cron: "0 9 * * *", trigger: async () => {} }],
+          }),
+          makePlugin("a", {
+            schedules: [{ name: "sync", cron: "0 18 * * *", trigger: async () => {} }],
+          }),
+        ]),
+      ).toThrow('Duplicate schedule key "a/sync"');
+    });
+  });
 });

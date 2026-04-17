@@ -77,4 +77,78 @@ describe("createPluginService", () => {
     expect(result.rejected).toBe(false);
     expect(runtime.actions.list()).toEqual([]);
   });
+
+  test("scheduler is null when PSTDIO_PLUGIN_SCHEDULER_ENABLED is not set", () => {
+    const original = process.env.PSTDIO_PLUGIN_SCHEDULER_ENABLED;
+    try {
+      delete process.env.PSTDIO_PLUGIN_SCHEDULER_ENABLED;
+
+      const service = createPluginService({
+        repoService: { listByProject: async () => [] },
+        filesRoot: "",
+        storageRoot: createTempRepo(),
+        ensureWorkspace: noopWorkspace,
+      });
+
+      expect(service.scheduler).toBeNull();
+    } finally {
+      process.env.PSTDIO_PLUGIN_SCHEDULER_ENABLED = original;
+    }
+  });
+
+  test("scheduler is created when PSTDIO_PLUGIN_SCHEDULER_ENABLED is true", () => {
+    const original = process.env.PSTDIO_PLUGIN_SCHEDULER_ENABLED;
+    try {
+      process.env.PSTDIO_PLUGIN_SCHEDULER_ENABLED = "true";
+
+      const service = createPluginService({
+        repoService: { listByProject: async () => [] },
+        filesRoot: "",
+        storageRoot: createTempRepo(),
+        ensureWorkspace: noopWorkspace,
+      });
+
+      expect(service.scheduler).toBeDefined();
+      expect(service.scheduler).not.toBeNull();
+
+      service.scheduler?.stop();
+    } finally {
+      process.env.PSTDIO_PLUGIN_SCHEDULER_ENABLED = original;
+    }
+  });
+
+  test("invalid schedule config in one project does not block another project", async () => {
+    const goodRepo = createTempRepo();
+    const goodPluginsDir = join(goodRepo, ".pstdio", "plugins");
+    mkdirSync(goodPluginsDir, { recursive: true });
+    writeFileSync(
+      join(goodPluginsDir, "valid.ts"),
+      `export default { schedules: [{ name: "sync", cron: "0 9 * * *", trigger: async () => {} }] };`,
+    );
+
+    const badRepo = createTempRepo();
+    const badPluginsDir = join(badRepo, ".pstdio", "plugins");
+    mkdirSync(badPluginsDir, { recursive: true });
+    writeFileSync(
+      join(badPluginsDir, "invalid.ts"),
+      `export default { schedules: [{ name: "broken", cron: "bad cron", trigger: async () => {} }] };`,
+    );
+
+    const repos: Record<string, string> = { good: goodRepo, bad: badRepo };
+
+    const service = makePluginService({
+      listByProject: async (projectId) => {
+        const path = repos[projectId];
+        return path ? [{ path }] : [];
+      },
+    });
+
+    // Bad project fails its own load
+    await expect(service.getForProject("bad")).rejects.toThrow(/broken.*invalid/);
+
+    // Good project still loads successfully
+    const goodRuntime = await service.getForProject("good");
+    expect(goodRuntime.schedules.list()).toHaveLength(1);
+    expect(goodRuntime.schedules.list()[0]!.compositeKey).toBe("valid/sync");
+  });
 });

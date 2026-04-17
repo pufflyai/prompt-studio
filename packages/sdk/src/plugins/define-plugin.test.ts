@@ -114,4 +114,90 @@ describe("definePlugin", () => {
       }),
     ).toThrow('Action "refine" is missing trigger(ctx)');
   });
+
+  it("accepts a plugin with schedules", () => {
+    const plugin = definePlugin({
+      key: "scheduled",
+      schedules: [
+        {
+          name: "daily-sync",
+          cron: "0 9 * * *",
+          trigger: async () => {},
+        },
+      ],
+    });
+
+    expect(plugin.schedules).toHaveLength(1);
+    expect(plugin.schedules![0]!.name).toBe("daily-sync");
+  });
+
+  it("accepts a plugin with actions, hooks, and schedules", () => {
+    const plugin = definePlugin({
+      key: "full-with-schedules",
+      actions: [{ key: "run", label: "Run", targetType: "ticket", placement: "primary", trigger }],
+      hooks: { postSessionStart() {} },
+      schedules: [{ name: "nightly", cron: "0 0 * * *", trigger: async () => {} }],
+    });
+
+    expect(plugin.actions).toHaveLength(1);
+    expect(plugin.hooks?.postSessionStart).toBeDefined();
+    expect(plugin.schedules).toHaveLength(1);
+  });
+
+  it("throws when a schedule has an empty name", () => {
+    expect(() =>
+      definePlugin({
+        key: "bad-schedule",
+        schedules: [{ name: "", cron: "0 9 * * *", trigger: async () => {} }],
+      }),
+    ).toThrow("Schedule name must be a non-empty string");
+  });
+
+  it("throws when a schedule trigger is not a function", () => {
+    expect(() =>
+      definePlugin({
+        key: "bad-trigger",
+        schedules: [{ name: "sync", cron: "0 9 * * *", trigger: "not-a-fn" } as never],
+      }),
+    ).toThrow('Schedule "sync" is missing trigger(ctx)');
+  });
+
+  it("throws when schedule names are not unique within a plugin", () => {
+    expect(() =>
+      definePlugin({
+        key: "dup-schedules",
+        schedules: [
+          { name: "sync", cron: "0 9 * * *", trigger: async () => {} },
+          { name: "sync", cron: "0 18 * * *", trigger: async () => {} },
+        ],
+      }),
+    ).toThrow('Duplicate schedule name "sync"');
+  });
+
+  it("throws when timeoutMs is not a positive number", () => {
+    expect(() =>
+      definePlugin({
+        key: "bad-timeout",
+        schedules: [{ name: "sync", cron: "0 9 * * *", trigger: async () => {}, timeoutMs: -1 }],
+      }),
+    ).toThrow('Schedule "sync" timeoutMs must be a positive finite number');
+  });
+
+  it("throws when timeoutMs is Infinity", () => {
+    expect(() =>
+      definePlugin({
+        key: "inf-timeout",
+        schedules: [{ name: "sync", cron: "0 9 * * *", trigger: async () => {}, timeoutMs: Infinity }],
+      }),
+    ).toThrow('Schedule "sync" timeoutMs must be a positive finite number');
+  });
+
+  it("accepts valid timeoutMs", () => {
+    const plugin = definePlugin({
+      key: "good-timeout",
+      schedules: [{ name: "sync", cron: "0 9 * * *", trigger: async () => {}, timeoutMs: 30000 }],
+    });
+
+    expect(plugin.schedules![0]!.timeoutMs).toBe(30000);
+  });
 });

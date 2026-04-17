@@ -4,6 +4,7 @@ The SDK plugin system provides project-local extensions for:
 
 - dashboard actions (button/menu actions on tickets, workspaces, sessions)
 - lifecycle hooks (ticket/session/worktree/attempt events)
+- scheduled handlers (recurring automation on cron schedules)
 
 Plugins use file-based implicit identity, modeled after OpenCode plugin ergonomics.
 
@@ -61,6 +62,7 @@ export default definePlugin({
 type PluginDefinition = {
   actions?: ActionDefinition[]; // UI actions + trigger handlers
   hooks?: PluginHooks; // lifecycle hooks
+  schedules?: ScheduleDefinition[]; // recurring cron-based handlers
 };
 ```
 
@@ -229,6 +231,94 @@ hooks: {
 | ------------------------- | ----------------------------- | -------- | ---------------------------- |
 | `preAttemptStatusChange`  | Before attempt status changes | Yes      | `AttemptStatusChangeContext`  |
 | `postAttemptStatusChange` | After attempt status changes  | No       | `AttemptStatusChangeContext`  |
+
+## Scheduled Handlers
+
+Scheduled handlers run recurring automation on cron schedules without manual action clicks or external cron wrappers.
+
+### Defining a Schedule
+
+```ts
+import { definePlugin } from "@pstdio/sdk/plugins";
+
+export default definePlugin({
+  schedules: [
+    {
+      name: "daily-cleanup",
+      cron: "0 9 * * *", // 09:00 UTC daily
+      async trigger(ctx) {
+        // ctx.client is a HookClient (same as hook contexts)
+        await ctx.client.session.followup({
+          session_id: "...",
+          message: "Run daily cleanup",
+        });
+      },
+    },
+  ],
+});
+```
+
+### Schedule Definition
+
+```ts
+type ScheduleDefinition = {
+  name: string; // unique within plugin
+  cron: string; // 5-field cron expression
+  timeoutMs?: number; // per-run timeout (default: 5 minutes)
+  trigger: (ctx: ScheduledTriggerContext) => Promise<void> | void;
+};
+
+type ScheduledTriggerContext = {
+  client: HookClient; // same as hook contexts, not plain PstdioClient
+  projectId: string;
+  prompts: Record<string, string>;
+  trigger: {
+    type: "schedule";
+    scheduleName: string;
+    scheduledFor: string; // ISO UTC minute boundary
+    runId: string;
+  };
+};
+```
+
+### v1 Runtime Contract
+
+- **Cadence format:** 5-field cron expressions only (`minute hour day-of-month month day-of-week`). 6-field quartz expressions are rejected. Day-of-week uses 0-7 where both 0 and 7 represent Sunday (POSIX convention).
+- **Precision:** minute-level scheduler evaluation.
+- **Time semantics:** UTC only in v1. Timezone support and DST are out of scope.
+- **Execution model:** best-effort on one explicitly enabled API instance.
+- **Downtime behavior:** missed runs are skipped, never replayed.
+- **Overlap behavior:** if a prior run for the same `{projectId, pluginIdentity, scheduleName}` key is still active, the next tick is skipped and logged with `outcome = "skipped_overlap"`.
+- **Isolation behavior:** schedule handler failures and timeouts do not crash the scheduler loop or affect unrelated schedules.
+- **Multi-project blast radius:** invalid schedule config fails plugin load for that project only; other projects continue.
+- **Reload behavior:** when a project's plugin cache is invalidated, existing in-flight schedule runs complete naturally. The replaced registry stops scheduling new ticks for old entries. No in-flight run is aborted by reload.
+- **Shutdown behavior:** on scheduler stop, no new ticks fire. In-flight runs are awaited up to their per-run timeout; still-running handlers past the timeout are abandoned with `outcome = "timed_out"`.
+
+### Idempotency Guidance
+
+Scheduled handlers should be idempotent. The v1 runtime provides best-effort execution — handlers may run zero or one time per scheduled tick. Design handlers to be safe when:
+
+- A scheduled tick is missed (API downtime)
+- A handler runs but the result is not observed (handler timeout)
+- A handler runs more than once in edge cases (multi-replica deployment)
+
+### Deployment: Single-Replica Enablement
+
+The scheduler is gated by the `PSTDIO_PLUGIN_SCHEDULER_ENABLED` environment variable. Set it to `"true"` on exactly one API instance:
+
+```sh
+PSTDIO_PLUGIN_SCHEDULER_ENABLED=true
+```
+
+When enabled on multiple replicas, duplicate runs may occur. Distributed coordination (leader election, leases) is out of scope for v1.
+
+### Namespaced Schedule Keys
+
+Schedule keys are namespaced by plugin identity, mirroring the action key format:
+
+- `<pluginIdentity>/<scheduleName>`
+
+For example, `sync-plugin/daily-sync`. Duplicate composite keys across a project's plugin set fail plugin load.
 
 ### Hook Contexts
 

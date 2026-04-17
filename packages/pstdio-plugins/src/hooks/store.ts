@@ -3,6 +3,7 @@ import { existsSync, watch } from "node:fs";
 import { join } from "node:path";
 import type { PstdioClient } from "@pstdio/sdk/client";
 import { createPluginRegistry } from "../registry";
+import type { ResolvedSchedule } from "../types";
 import { createHookDispatcher } from "./dispatcher";
 import { loadPluginRuntime, type PluginRuntime } from "./runtime";
 
@@ -22,13 +23,23 @@ const createEmptyRuntime = (client: PstdioClient): PluginRuntime => {
       list: (targetType) => registry.getActions(targetType),
       get: (namespacedKey) => registry.getAction(namespacedKey),
     },
+    schedules: {
+      list: () => registry.getSchedules(),
+      get: (compositeKey) => registry.getSchedule(compositeKey),
+    },
   };
+};
+
+export type ScheduleChangeEvent = {
+  projectId: string;
+  entries: ResolvedSchedule[];
 };
 
 export const createPluginRuntimeStore = (input: {
   resolveRepoPath(projectId: string): Promise<string | null>;
   createClient(): PstdioClient;
   ensureWorkspace?: (pstdioDir: string) => Promise<void>;
+  onScheduleChange?: (event: ScheduleChangeEvent) => void;
 }) => {
   const cache = new Map<string, PluginRuntime>();
   const watchers = new Map<string, FSWatcher>();
@@ -46,6 +57,8 @@ export const createPluginRuntimeStore = (input: {
       if (watchers.get(projectId) !== watcher) return;
       cache.delete(projectId);
       stopWatching(projectId);
+      // Notify that this project's schedules are cleared (will reload on next access)
+      input.onScheduleChange?.({ projectId, entries: [] });
     });
 
     watcher.on("error", () => {
@@ -78,12 +91,20 @@ export const createPluginRuntimeStore = (input: {
 
       const runtime = await loadForProject(projectId);
       cache.set(projectId, runtime);
+
+      // Notify scheduler of new schedule entries
+      const scheduleEntries = runtime.schedules.list();
+      if (scheduleEntries.length > 0) {
+        input.onScheduleChange?.({ projectId, entries: scheduleEntries });
+      }
+
       return runtime;
     },
 
     invalidate(projectId: string) {
       cache.delete(projectId);
       stopWatching(projectId);
+      input.onScheduleChange?.({ projectId, entries: [] });
     },
 
     dispose() {

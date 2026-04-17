@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { validateCronExpression } from "./cron";
 import { derivePluginIdentity, discoverPluginFiles } from "./discovery";
 import type { LoadedPlugin, PluginDefinition } from "./types";
 
@@ -75,6 +76,11 @@ export const loadPlugins = async (pluginsDir: string) => {
     const existing = identitySources.get(identity);
     if (existing) {
       throw new Error(`Duplicate plugin identity "${identity}" from files: ${existing}, ${filePath}`);
+    }
+
+    // Deep cron validation at load-time
+    for (const schedule of (definition as PluginDefinition).schedules ?? []) {
+      validateCronExpression(schedule.cron, identity, schedule.name);
     }
 
     identitySources.set(identity, filePath);
