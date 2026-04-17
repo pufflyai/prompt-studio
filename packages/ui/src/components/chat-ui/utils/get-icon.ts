@@ -73,6 +73,17 @@ export const toolTypeToIconName = (type?: string): IconName => {
     case "fs":
     case "file":
       return "file";
+    case "Write":
+    case "NotebookEdit":
+      return "write_file";
+    case "Edit":
+      return "patch";
+    case "Task":
+      return "terminal";
+    case "WebFetch":
+      return "browser";
+    case "WebSearch":
+      return "search";
     default:
       return DEFAULT_TOOL_ICON;
   }

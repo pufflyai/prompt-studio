@@ -1,103 +1,22 @@
 import type { ToolPart } from "../agent-types";
 import type { Block, Item, TitleSegment } from "../components/timeline";
 import { basenameSafe, buildDiffTitleSegments, buildFileDiffPreviews, extractDiffFilePaths } from "../utils/diff";
-import { toolTypeToIconName } from "../utils/get-icon";
+import {
+  buildBaseTitle,
+  buildFileLinkSegment,
+  buildIndicator,
+  getInputObject,
+  getObjectValue,
+  getOutputObject,
+  getOutputText,
+  getStateObject,
+  getStringValue,
+  prependErrorBlock,
+} from "./renderer-helpers";
+import { renderAgent, renderTask } from "./renderers/agent-tools";
+import { renderWebFetch, renderWebSearch } from "./renderers/network-tools";
+import { renderEdit, renderNotebookEdit, renderWrite } from "./renderers/write-tools";
 import type { ToolRenderer, ToolRenderersMap } from "./types";
-
-const TOOL_LABELS: Record<string, string> = {
-  apply_patch: "Apply patch",
-  read: "Read file",
-  bash: "Run",
-  grep: "Search files",
-  glob: "Find files",
-  skill: "Load skill",
-};
-
-const STATE_LABELS: Record<string, string> = {
-  pending: "queued",
-  error: "failed",
-  "output-error": "failed",
-  "input-streaming": "running",
-  "input-available": "queued",
-};
-
-const normalizeToolType = (value: string) => value.replace(/^tool-/, "");
-
-const toTitleCase = (value: string) => {
-  return value
-    .split(" ")
-    .filter((token) => token.length > 0)
-    .map((token) => token[0].toUpperCase() + token.slice(1))
-    .join(" ");
-};
-
-const getToolType = (invocation: ToolPart) => normalizeToolType(invocation.tool ?? "tool");
-
-const getToolLabel = (value: string) => {
-  const normalized = normalizeToolType(value);
-  return TOOL_LABELS[normalized] ?? toTitleCase(normalized.replace(/_/g, " "));
-};
-
-const getStateLabel = (state?: unknown) => {
-  if (!state || typeof state !== "string") return null;
-  if (STATE_LABELS[state]) return STATE_LABELS[state];
-  if (state.includes("stream")) return "running";
-  return null;
-};
-
-const isErrorState = (state?: string) => state === "error" || state === "output-error";
-
-const buildIndicator = (invocation: ToolPart) => {
-  if (isErrorState(invocation.state?.status)) {
-    return { type: "icon", icon: "danger" } as const;
-  }
-
-  return { type: "icon", icon: toolTypeToIconName(getToolType(invocation)) } as const;
-};
-
-const buildBaseTitle = (invocation: ToolPart, detail?: string, labelOverride?: string) => {
-  const label = labelOverride ?? getToolLabel(invocation.tool ?? "tool");
-  const title: TitleSegment[] = [{ kind: "text", text: label, bold: true }];
-
-  if (detail) {
-    title.push({ kind: "text", text: detail, muted: true });
-  }
-
-  const stateLabel = getStateLabel(invocation.state?.status);
-  if (stateLabel) {
-    title.push({ kind: "text", text: stateLabel, muted: true });
-  }
-
-  return title;
-};
-
-const getInputObject = (invocation: ToolPart) => {
-  const input = invocation.state?.input;
-  if (!input || typeof input !== "object" || Array.isArray(input)) return null;
-  return input as Record<string, unknown>;
-};
-
-const getOutputObject = (invocation: ToolPart) => {
-  const output = invocation.state?.output;
-  if (!output || typeof output !== "object" || Array.isArray(output)) return null;
-  return output as Record<string, unknown>;
-};
-
-const getStringValue = (value: unknown) => {
-  if (typeof value === "string" && value.trim().length > 0) return value;
-  return null;
-};
-
-const getObjectValue = (value: unknown) => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  return value as Record<string, unknown>;
-};
-
-const getStateObject = (invocation: ToolPart, key: string) => {
-  const state = getObjectValue(invocation.state);
-  if (!state) return null;
-  return getObjectValue(state[key]);
-};
 
 const normalizeFilePath = (value: string) => value.replace(/\\/g, "/").replace(/^\/+/, "");
 
@@ -197,17 +116,6 @@ const getApplyPatchMetadataReferences = (files: ApplyPatchMetadataFile[]) => {
   return Array.from(new Set(files.map((file) => file.filePath)));
 };
 
-const getOutputText = (invocation: ToolPart) => {
-  const outputObject = getOutputObject(invocation);
-
-  return (
-    getStringValue(invocation.state?.output) ??
-    getStringValue(outputObject?.returnDisplay) ??
-    getStringValue(outputObject?.preview) ??
-    getStringValue(outputObject?.stdout)
-  );
-};
-
 const parseSkillContentBlock = (value: string) => {
   const match = value.match(/<skill_content(?:\s+name="([^"]+)")?>([\s\S]*?)<\/skill_content>/);
   if (!match) return null;
@@ -227,20 +135,6 @@ const getSkillName = (invocation: ToolPart) => {
     getStringValue(input?.skill_name) ??
     undefined
   );
-};
-
-const buildFileLinkSegment = (filePath: string): TitleSegment => {
-  return {
-    kind: "link",
-    text: basenameSafe(filePath),
-    filePath,
-  };
-};
-
-const prependErrorBlock = (invocation: ToolPart, blocks: Block[]): Block[] => {
-  if (!isErrorState(invocation.state?.status) || !invocation.state?.errorText) return blocks;
-  const errorBlock: Block = { type: "comment", text: invocation.state.errorText };
-  return [errorBlock, ...blocks];
 };
 
 const renderApplyPatch: ToolRenderer = (invocation) => {
@@ -416,5 +310,12 @@ export const createDefaultToolRenderers = () => {
     grep: renderGrep,
     glob: renderGlob,
     skill: renderSkill,
+    Write: renderWrite,
+    Edit: renderEdit,
+    NotebookEdit: renderNotebookEdit,
+    Agent: renderAgent,
+    Task: renderTask,
+    WebFetch: renderWebFetch,
+    WebSearch: renderWebSearch,
   } satisfies ToolRenderersMap;
 };
