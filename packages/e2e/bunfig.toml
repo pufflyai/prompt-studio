@@ -1,2 +1,3 @@
 [test]
 timeout = 30000
+preload = ["./src/scripts/prime-bun-cache-preload.ts"]

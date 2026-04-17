@@ -245,7 +245,7 @@ export default { hooks: { postAttemptStatusChange(ctx) { if (ctx.toStatus === "r
     TEST_TIMEOUT,
   );
 
-  test.skip(
+  test(
     "surfaces validation details when a pre-hook plugin follows up the active session",
     async () => {
       const repo = createInitializedRepo(ctx, "pre-attempt-follow-up-message");

@@ -326,7 +326,7 @@ describe("pstdio tickets pull", () => {
   );
 });
 
-describe.skip("pstdio tickets update", () => {
+describe("pstdio tickets update", () => {
   test(
     "fails for nonexistent ticket",
     () => {
@@ -340,7 +340,7 @@ describe.skip("pstdio tickets update", () => {
   );
 });
 
-describe.skip("pstdio tickets full flow", () => {
+describe("pstdio tickets full flow", () => {
   test(
     "write → save → list → update lifecycle",
     () => {

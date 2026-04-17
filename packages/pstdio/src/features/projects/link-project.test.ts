@@ -67,8 +67,7 @@ describe("linkProject", () => {
     expect(linkProject(root, "missing")).rejects.toThrow("Project not found: missing");
   });
 
-  // Tracked in PS-20 while the suite-order-dependent API client refresh issue is investigated.
-  test.skip("refreshes the API client when fetch mocks change between tests", async () => {
+  test("refreshes the API client when fetch mocks change between tests", async () => {
     const staleFetch = mock(() =>
       Promise.resolve(
         new Response(
