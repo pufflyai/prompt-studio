@@ -19,6 +19,7 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: 0,
+  maxFailures: process.env.CI ? 1 : 0,
   outputDir: `test-results/${runId}`,
   reporter: [["html", { open: "never", outputFolder: `playwright-report/${runId}` }], ["list"]],
   use: {
