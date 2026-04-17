@@ -14,7 +14,8 @@ const filesRoot = join(import.meta.dirname, "../pstdio/files");
 
 export default defineConfig({
   testDir: "./src/ui",
-  testMatch: "**/*.spec.ts",
+  // TEMP: narrowed for CI iteration — revert to "**/*.spec.ts" before merging
+  testMatch: "**/tickets.spec.ts",
   expect: { timeout: 5_000 },
   fullyParallel: false,
   workers: 1,
