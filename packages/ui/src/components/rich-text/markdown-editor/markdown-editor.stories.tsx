@@ -51,6 +51,14 @@ ReferenceLink token examples:
 
 ---
 
+# Checklists
+
+- [ ] Unchecked todo item
+- [x] Completed todo item
+- [ ] Another pending task
+
+---
+
 # Nested Lists
 
 - Fruits

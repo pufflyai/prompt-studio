@@ -1,7 +1,7 @@
 import { CodeNode } from "@lexical/code";
 import { AutoLinkNode, LinkNode } from "@lexical/link";
 import { ListItemNode, ListNode } from "@lexical/list";
-import { TRANSFORMERS } from "@lexical/markdown";
+import { CHECK_LIST, TRANSFORMERS } from "@lexical/markdown";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import type { Klass, LexicalNode } from "lexical";
 import { REFERENCE_LINK_TRANSFORMER, ReferenceLinkNode } from "../markdown-editor/plugins/ReferenceLinkPlugin";
@@ -29,6 +29,7 @@ export const editorNodes: Array<Klass<LexicalNode>> = [
 ];
 
 export const editorTransformers = [
+  CHECK_LIST,
   ...TRANSFORMERS,
   ...TRANSFORMERS_EXTENDED,
   EQUATION_INLINE,

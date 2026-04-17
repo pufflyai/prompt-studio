@@ -273,6 +273,9 @@ export const TicketDetailsPanel = () => {
       onSelectFile={handleSelectFile}
       onSelectWorkspace={handleSelectWorkspace}
       onSelectSession={handleSelectWorkspaceSession}
+      onSelectPlanning={() => {
+        void navigateBack();
+      }}
     />
   );
 

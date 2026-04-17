@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { CodeNode } from "@lexical/code";
 import { $isAutoLinkNode, AutoLinkNode, LinkNode } from "@lexical/link";
-import { ListItemNode, ListNode } from "@lexical/list";
-import { $convertFromMarkdownString, $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
+import { $isListItemNode, $isListNode, ListItemNode, ListNode } from "@lexical/list";
+import { $convertFromMarkdownString, $convertToMarkdownString, CHECK_LIST, TRANSFORMERS } from "@lexical/markdown";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { $getRoot, $isElementNode, createEditor } from "lexical";
 import { ReferenceLinkNode } from "../../markdown-editor/plugins/ReferenceLinkPlugin";
@@ -15,6 +15,7 @@ import { HRNode } from "../plugins/HorizontalRulePlugin/HorizontalRuleNode";
 import { TRANSFORMERS_EXTENDED } from "./markdown-transformers";
 
 const editorTransformers = [
+  CHECK_LIST,
   ...TRANSFORMERS,
   ...TRANSFORMERS_EXTENDED,
   EQUATION_INLINE,
@@ -70,5 +71,55 @@ describe("markdown transformers", () => {
     expect(importedLinkType).toBe("autolink");
     expect(importedLinkUrl).toBe("https://github.com/OneFinSE/enfidem2-project/pull/1463");
     expect(exportedMarkdown).toBe(markdown);
+  });
+
+  test("round-trips unchecked and checked checklist items", () => {
+    const editor = createHeadlessEditor();
+    const markdown = "- [ ] todo\n- [x] done";
+    let exportedMarkdown = "";
+
+    editor.update(
+      () => {
+        $convertFromMarkdownString(markdown, editorTransformers, undefined, false);
+      },
+      { discrete: true },
+    );
+
+    editor.read(() => {
+      const root = $getRoot();
+      exportedMarkdown = $convertToMarkdownString(editorTransformers, root);
+    });
+
+    expect(exportedMarkdown).toBe(markdown);
+  });
+
+  test("imports checklist items as check list nodes", () => {
+    const editor = createHeadlessEditor();
+    const markdown = "- [ ] unchecked\n- [x] checked";
+    let listType = "";
+    let firstItemChecked = false;
+    let secondItemChecked = false;
+
+    editor.update(
+      () => {
+        $convertFromMarkdownString(markdown, editorTransformers, undefined, false);
+      },
+      { discrete: true },
+    );
+
+    editor.read(() => {
+      const root = $getRoot();
+      const listNode = root.getFirstChild();
+      if ($isListNode(listNode)) {
+        listType = listNode.getListType();
+        const children = listNode.getChildren();
+        if ($isListItemNode(children[0])) firstItemChecked = children[0].getChecked();
+        if ($isListItemNode(children[1])) secondItemChecked = children[1].getChecked();
+      }
+    });
+
+    expect(listType).toBe("check");
+    expect(firstItemChecked).toBe(false);
+    expect(secondItemChecked).toBe(true);
   });
 });

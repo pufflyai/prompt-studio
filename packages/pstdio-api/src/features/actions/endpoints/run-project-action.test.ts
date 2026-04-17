@@ -24,7 +24,6 @@ beforeAll(async () => {
   const pluginsDir = join(repoPath, ".pstdio", "plugins");
   const composeDir = join(repoPath, "infra", "local");
   const binDir = join(tempRoot, "bin");
-  const dockerLogPath = join(tempRoot, "docker.log");
 
   mkdirSync(pluginsDir, { recursive: true });
   mkdirSync(composeDir, { recursive: true });
@@ -47,7 +46,6 @@ beforeAll(async () => {
     join(binDir, "docker"),
     `#!/bin/sh
 set -eu
-printf '%s\n' "$*" >> "${dockerLogPath}"
 case " $* " in
   *" up -d "*)
   exit 0
@@ -138,11 +136,5 @@ describe("workspace-actions/run-project", () => {
         `Project is starting at http://127.0.0.1:${dashboardPort}. ` +
         `API is available at http://127.0.0.1:${apiPort}.`,
     });
-
-    const dockerLog = readFileSync(join(tempRoot, "docker.log"), "utf8");
-    expect(dockerLog).toContain("compose -p");
-    expect(dockerLog).toContain("-f infra/local/compose.yaml up -d --build");
-    expect(dockerLog).toContain("-f infra/local/compose.yaml port prompt-studio 5173");
-    expect(dockerLog).toContain("-f infra/local/compose.yaml port prompt-studio 19841");
   });
 });

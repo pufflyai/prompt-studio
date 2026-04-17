@@ -22,7 +22,8 @@ export const removePendingActionKey = (pendingActionKeys: string[], actionKey: s
 
 export const usePluginActionTrigger = (input: UsePluginActionTriggerInput) => {
   const { projectId, targetType, onSuccess } = input;
-  const { data: pluginActions } = usePluginActions(projectId, targetType);
+  const pluginActionsQuery = usePluginActions(projectId, targetType);
+  const pluginActions = pluginActionsQuery.data;
   const executePluginAction = useExecutePluginAction(projectId);
   const [activeParamRequest, setActiveParamRequest] = useState<ActiveParamRequest | null>(null);
   const [pendingActionKeys, setPendingActionKeys] = useState<string[]>([]);
@@ -109,6 +110,7 @@ export const usePluginActionTrigger = (input: UsePluginActionTriggerInput) => {
 
   return {
     pluginActions,
+    isActionsLoading: pluginActionsQuery.isPending || (pluginActionsQuery.isFetching && !pluginActions),
     activeParamAction: activeParamRequest?.action ?? null,
     trigger,
     submitWithParams,

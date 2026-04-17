@@ -70,6 +70,7 @@ export const WorkspaceSessionsWithCreateAction: Story = {
         onSelectWorkspace={() => undefined}
         onSelectSession={() => undefined}
         onCreateWorkspaceSessionDraft={() => undefined}
+        onSelectPlanning={() => undefined}
       />
     </Box>
   ),
