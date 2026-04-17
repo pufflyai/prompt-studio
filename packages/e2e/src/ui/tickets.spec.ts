@@ -126,8 +126,7 @@ const submitCreateTicketModal = async (
   dialog: import("@playwright/test").Locator,
 ) => {
   const createResponse = page.waitForResponse(
-    (response) =>
-      response.request().method() === "POST" && new URL(response.url()).pathname === "/v1/tickets",
+    (response) => response.request().method() === "POST" && new URL(response.url()).pathname === "/v1/tickets",
   );
   await dialog.getByRole("button", { name: "Create ticket", exact: true }).click();
   const response = await createResponse;
