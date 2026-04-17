@@ -2,7 +2,7 @@ import type { EventStore, SessionMessage } from "../../types";
 import { normalizeErrorPart } from "../normalized-error";
 import { normalizeOpencodeMessage } from "./opencode-normalizer";
 import { isTransportTimeout } from "./opencode-service";
-import { isTurnInFlight, isTurnStale, resolveInFlightTurnProgressAt } from "./opencode-turn-state";
+import { isTurnCompleted, isTurnInFlight, isTurnStale, resolveInFlightTurnProgressAt } from "./opencode-turn-state";
 import type { OpencodeSessionMessage } from "./opencode-types";
 
 interface PostState {
@@ -59,10 +59,17 @@ const disconnectStaleTurn = (eventStore: EventStore) => {
   return { code: null as number | null, signal: "TIMEOUT" as string | null };
 };
 
-const shouldStopPolling = (input: { turnVisible: boolean; inFlight: boolean; postState: PostState }) => {
-  const { turnVisible, inFlight, postState } = input;
-  if (turnVisible && !inFlight) return true;
+const shouldStopPolling = (input: {
+  turnVisible: boolean;
+  inFlight: boolean;
+  turnCompleted: boolean;
+  postState: PostState;
+}) => {
+  const { turnVisible, inFlight, turnCompleted, postState } = input;
+  // The assistant finished its turn (completed timestamp or question asked).
+  if (turnVisible && turnCompleted) return true;
   if (postState.failed && !turnVisible) return true;
+  // POST succeeded with no visible effect and nothing in flight.
   return postState.settled && !postState.timedOut && !postState.failed && !inFlight && !turnVisible;
 };
 
@@ -160,6 +167,7 @@ export const pollOpencodeMessages = async (input: {
 
     const now = Date.now();
     const inFlight = isTurnInFlight(lastObserved);
+    const turnCompleted = isTurnCompleted(lastObserved);
     const turnVisible = lastObserved.length > baselineCount;
     lastInFlightProgressAt = resolveInFlightTurnProgressAt({
       rawMessages: lastObserved,
@@ -172,7 +180,7 @@ export const pollOpencodeMessages = async (input: {
       return disconnectStaleTurn(eventStore);
     }
 
-    if (shouldStopPolling({ turnVisible, inFlight, postState })) {
+    if (shouldStopPolling({ turnVisible, inFlight, turnCompleted, postState })) {
       break;
     }
 
