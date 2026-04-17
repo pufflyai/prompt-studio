@@ -18,8 +18,17 @@ const sanitizeComposeProjectPart = (value: string) =>
 
 const resolveComposeProjectName = (workspaceShorthand: string, workspaceId: string) => {
   const shorthand = sanitizeComposeProjectPart(workspaceShorthand);
-  const fallback = sanitizeComposeProjectPart(workspaceId).slice(0, 12);
-  return `pstdio-${shorthand || fallback || "workspace"}`;
+  const workspace = sanitizeComposeProjectPart(workspaceId);
+
+  if (!workspace) {
+    return `pstdio-${shorthand || "workspace"}`;
+  }
+
+  if (!shorthand) {
+    return `pstdio-${workspace}`;
+  }
+
+  return `pstdio-${shorthand}-${workspace}`;
 };
 
 const resolveGitCommonDir = async (worktreePath: string) => {

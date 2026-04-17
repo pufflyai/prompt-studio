@@ -33,13 +33,33 @@ describe("runCommand", () => {
     expect(result.exitCode).toBe(42);
   });
 
-  it("accepts a custom env", async () => {
-    const result = await runCommand("/tmp", ["/bin/sh", "-c", 'printf "%s" "$PSTDIO_RUN_COMMAND_TEST"'], {
+  it("merges custom env with process env", async () => {
+    const result = await runCommand("/tmp", ["sh", "-c", 'printf "%s" "$PSTDIO_RUN_COMMAND_TEST"'], {
       env: { PSTDIO_RUN_COMMAND_TEST: "custom-env" },
     });
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toBe("custom-env");
+    expect(result.stderr).toBe("");
+  });
+
+  it("preserves process env values when custom env is partial", async () => {
+    const key = "PSTDIO_RUN_COMMAND_INHERITED";
+    const previousValue = process.env[key];
+    process.env[key] = "inherited-env";
+
+    const result = await runCommand("/tmp", ["sh", "-c", 'printf "%s" "$PSTDIO_RUN_COMMAND_INHERITED"'], {
+      env: { PSTDIO_RUN_COMMAND_TEST: "custom-env" },
+    });
+
+    if (previousValue === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = previousValue;
+    }
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe("inherited-env");
     expect(result.stderr).toBe("");
   });
 });

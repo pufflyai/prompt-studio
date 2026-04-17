@@ -17,6 +17,8 @@ let close: () => Promise<void>;
 let tempRoot: string;
 let projectId: string;
 let workspaceId: string;
+let ticketShorthand: string;
+let dockerLogPath: string;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-run-project-action-"));
@@ -24,7 +26,7 @@ beforeAll(async () => {
   const pluginsDir = join(repoPath, ".pstdio", "plugins");
   const composeDir = join(repoPath, "infra", "local");
   const binDir = join(tempRoot, "bin");
-  const dockerLogPath = join(tempRoot, "docker.log");
+  dockerLogPath = join(tempRoot, "docker.log");
 
   mkdirSync(pluginsDir, { recursive: true });
   mkdirSync(composeDir, { recursive: true });
@@ -96,6 +98,7 @@ exit 1
     body: JSON.stringify({ project_id: projectId, user_prompt: "run project target" }),
   });
   const ticket = await ticketRes.json();
+  ticketShorthand = ticket.shorthand;
 
   const workspaceRes = await app.request("/v1/workspaces", {
     method: "POST",
@@ -144,5 +147,90 @@ describe("workspace-actions/run-project", () => {
     expect(dockerLog).toContain("-f infra/local/compose.yaml up -d --build");
     expect(dockerLog).toContain("-f infra/local/compose.yaml port prompt-studio 5173");
     expect(dockerLog).toContain("-f infra/local/compose.yaml port prompt-studio 19841");
+  });
+
+  test("uses distinct compose project names for workspaces with the same shorthand", async () => {
+    const secondRepoPath = join(tempRoot, "repo-second");
+    const secondPluginsDir = join(secondRepoPath, ".pstdio", "plugins");
+    const secondComposeDir = join(secondRepoPath, "infra", "local");
+
+    mkdirSync(secondPluginsDir, { recursive: true });
+    mkdirSync(secondComposeDir, { recursive: true });
+    execSync("git init", { cwd: secondRepoPath, stdio: "ignore" });
+    execSync('git config user.email "test@test.com"', { cwd: secondRepoPath, stdio: "ignore" });
+    execSync('git config user.name "Test"', { cwd: secondRepoPath, stdio: "ignore" });
+    writeFileSync(join(secondRepoPath, "README.md"), "run project action second repo\n");
+    execSync("git add README.md", { cwd: secondRepoPath, stdio: "ignore" });
+    execSync('git commit -m "init"', { cwd: secondRepoPath, stdio: "ignore" });
+    writeFileSync(
+      join(secondPluginsDir, "workspace-actions.ts"),
+      readFileSync(join(repoRoot, ".pstdio", "plugins", "workspace-actions.ts"), "utf8"),
+    );
+    writeFileSync(join(secondComposeDir, "compose.yaml"), "services:\n  prompt-studio:\n    image: oven/bun:1.3.10\n");
+
+    const secondProjectRes = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Run project action second project" }),
+    });
+    const secondProject = await secondProjectRes.json();
+
+    const secondRepoRes = await app.request(`/v1/projects/${secondProject.id}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "test-repo-second", path: secondRepoPath }),
+    });
+    expect(secondRepoRes.ok).toBeTrue();
+
+    const secondTicketRes = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: secondProject.id, user_prompt: "run project target second" }),
+    });
+    const secondTicket = await secondTicketRes.json();
+
+    const secondWorkspaceRes = await app.request("/v1/workspaces", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        project_id: secondProject.id,
+        ticket_id: secondTicket.id,
+        ticket_shorthand: ticketShorthand,
+        worktree_path: secondRepoPath,
+      }),
+    });
+    const secondWorkspace = await secondWorkspaceRes.json();
+
+    writeFileSync(dockerLogPath, "");
+
+    const firstRunRes = await app.request(`/v1/projects/${projectId}/actions/workspace-actions%2Frun-project/execute`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ target_type: "workspace", target_id: workspaceId }),
+    });
+    expect(firstRunRes.status).toBe(200);
+
+    const secondRunRes = await app.request(
+      `/v1/projects/${secondProject.id}/actions/workspace-actions%2Frun-project/execute`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ target_type: "workspace", target_id: secondWorkspace.id }),
+      },
+    );
+    expect(secondRunRes.status).toBe(200);
+
+    const dockerLog = readFileSync(dockerLogPath, "utf8");
+    const composeProjectNames = Array.from(
+      new Set(
+        dockerLog
+          .split(/\r?\n/)
+          .map((line) => line.match(/compose -p ([^\s]+)/)?.[1])
+          .filter((name): name is string => Boolean(name)),
+      ),
+    );
+
+    expect(composeProjectNames.length).toBe(2);
+    expect(composeProjectNames[0]).not.toBe(composeProjectNames[1]);
   });
 });
