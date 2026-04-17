@@ -50,8 +50,11 @@ jobs:
       - name: Install Playwright browsers
         run: bun run --cwd packages/e2e playwright install --with-deps chromium
 
-      - name: Test monorepo
-        run: bun run test
+      - name: Test monorepo (non-e2e)
+        run: bunx lerna run test --ignore e2e
+
+      - name: Test e2e (streamed)
+        run: bun run --cwd packages/e2e test
 
   build_docker:
     needs: test_and_build
