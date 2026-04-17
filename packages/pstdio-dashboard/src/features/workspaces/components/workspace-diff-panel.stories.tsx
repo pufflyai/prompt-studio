@@ -48,6 +48,7 @@ const sampleArtifacts: ApiWorkspaceArtifact[] = [
     mime_type: "text/plain",
     size_bytes: 128,
     created_at: "2026-04-09T00:00:00.000Z",
+    updated_at: "2026-04-09T00:00:00.000Z",
   },
 ];
 
@@ -61,6 +62,7 @@ const edgeCaseArtifacts: ApiWorkspaceArtifact[] = [
     mime_type: "text/plain",
     size_bytes: 88,
     created_at: "2026-04-09T00:00:00.000Z",
+    updated_at: "2026-04-09T00:00:00.000Z",
   },
   {
     id: "artifact-3",
@@ -71,6 +73,7 @@ const edgeCaseArtifacts: ApiWorkspaceArtifact[] = [
     mime_type: "text/plain",
     size_bytes: 32,
     created_at: "2026-04-09T00:00:00.000Z",
+    updated_at: "2026-04-09T00:00:00.000Z",
   },
   {
     id: "artifact-4",
@@ -81,6 +84,7 @@ const edgeCaseArtifacts: ApiWorkspaceArtifact[] = [
     mime_type: "application/gzip",
     size_bytes: 512,
     created_at: "2026-04-09T00:00:00.000Z",
+    updated_at: "2026-04-09T00:00:00.000Z",
   },
 ];
 
@@ -105,41 +109,56 @@ type Story = StoryObj<typeof meta>;
 
 export const WithDiffs: Story = {
   args: {
+    ticketId: "ticket-1",
     diffs: sampleDiffs,
     artifacts: sampleArtifacts,
     changedFiles: sampleChangedFiles,
+    activeTab: "changes",
+    onTabChange: () => undefined,
   },
 };
 
 export const Empty: Story = {
   args: {
+    ticketId: "ticket-1",
     diffs: [],
     artifacts: [],
     changedFiles: [],
+    activeTab: "changes",
+    onTabChange: () => undefined,
   },
 };
 
 export const ArtifactsOnly: Story = {
   args: {
+    ticketId: "ticket-1",
     diffs: [],
     artifacts: sampleArtifacts,
     changedFiles: [],
+    activeTab: "checks",
+    onTabChange: () => undefined,
   },
 };
 
 export const ArtifactsOnlyEdgeCases: Story = {
   args: {
+    ticketId: "ticket-1",
     diffs: [],
     artifacts: edgeCaseArtifacts,
     changedFiles: [],
+    activeTab: "checks",
+    onTabChange: () => undefined,
   },
 };
 
 export const Loading: Story = {
   args: {
+    ticketId: "ticket-1",
     diffs: [],
     artifacts: [],
     changedFiles: [],
+    activeTab: "changes",
+    onTabChange: () => undefined,
     loading: true,
   },
 };

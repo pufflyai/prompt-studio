@@ -830,5 +830,17 @@
     "nextAttempt": "Configure the next workspace attempt from the latest state.",
     "cancel": "Cancel",
     "runAttempt": "Run Attempt"
+  },
+  "workspaceDiffPanel": {
+    "tabs": {
+      "changes": "Changes",
+      "checks": "Checks"
+    },
+    "checks": {
+      "title": "Artifacts",
+      "loading": "Loading artifact content...",
+      "emptyTitle": "No checks yet",
+      "emptyDescription": "Validation artifacts will appear here after they are saved."
+    }
   }
 }

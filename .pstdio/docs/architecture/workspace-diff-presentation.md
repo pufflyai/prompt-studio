@@ -20,9 +20,14 @@ Each ticket card resolves its latest attempt and shows addition/deletion totals 
 
 Shows attempt count and latest diff totals. Clicking opens the latest workspace when attempts exist.
 
-### 3) Workspace page right panel (full file-by-file diff)
+### 3) Workspace page right panel (`Changes` + `Checks`)
 
-The selected attempt is resolved from route params. The panel fetches full diff data (files, totals, raw diff text) and renders artifacts at the top with file-by-file diffs below.
+The selected attempt is resolved from route params. The main panel has two tabs in this fixed order:
+
+- `Changes` — file-by-file diff tree and diff drawer
+- `Checks` — ticket artifact list and artifact content viewer
+
+Tab state is URL-backed (`?tab=changes|checks`) and preserved alongside workspace session search state.
 
 ## End-to-End Flow
 
@@ -96,10 +101,10 @@ API file diff objects are transformed into UI diff types. Rename paths fall back
 
 ### Panel Layout
 
-- Workspace panel remains visible even when there are no diffs
-- Artifacts section shown at top when present
-- Empty state is shown when there are no diffs
-- Diff drawer shown below artifacts when diffs exist
+- `Changes` and `Checks` are line-style tabs with icons (`Changes` first, `Checks` second)
+- `Changes` preserves the existing diff tree, diff drawer, and empty-state behavior
+- `Checks` uses a two-column layout: artifact menu on the left and content viewer on the right
+- `Checks` artifact rows include file/status icons inferred from artifact path/name
 
 ### File Cards
 
@@ -111,9 +116,24 @@ One card per changed file, expanded by default:
 - Addition/deletion counts shown as a badge
 - Body renders a read-only inline Monaco diff editor
 
-## Artifact Section
+## Artifact Source Of Truth
 
-Artifacts come from `GET /v1/tickets/:ticketId/files` in `pstdio-api`. They are listed per ticket (not per attempt). Displayed as compact rows with the file extension stripped from the label.
+Artifacts are DB-backed and synced through `workspace_artifacts` joined with `files` metadata. The dashboard does not read `.pstdio/tickets/<ticket>/artifacts/` directly from the worktree filesystem.
+
+Artifact content is loaded through the existing ticket file content endpoint:
+
+- `GET /v1/tickets/:ticketId/files/:fileId/content`
+
+When a selected artifact's linked file metadata (`updated_at`) changes in synced state, the content query is refreshed so re-saved artifact content updates in place.
+
+## Artifact Persistence Flow
+
+`pstdio tickets save --id <ticket>` uploads files from:
+
+- `.pstdio/tickets/<ticket>/files/` as regular ticket attachments
+- `.pstdio/tickets/<ticket>/artifacts/` as artifact uploads with `relative_path`
+
+`POST /v1/tickets/:id/files` accepts optional `relative_path` and upserts `workspace_artifacts` by `ticket_id + relative_path`. Re-uploading the same artifact path updates the existing record instead of creating duplicates.
 
 ## Errors and Empty States
 
@@ -133,6 +153,6 @@ Artifacts come from `GET /v1/tickets/:ticketId/files` in `pstdio-api`. They are 
 
 1. Open a ticket with at least one attempt
 2. Navigate to the workspace route for that attempt
-3. Confirm the right panel shows artifact rows (if any) and one diff card per changed file
-4. Edit files in the attempt worktree and wait up to 5 seconds
-5. Confirm totals and file contents refresh automatically
+3. Confirm the right panel defaults to `Changes` and URL contains `tab=changes`
+4. Switch to `Checks` and confirm artifact rows render from synced DB state
+5. Re-save an artifact via `pstdio tickets save --id <ticket>` and confirm selected artifact content refreshes without a filesystem scan

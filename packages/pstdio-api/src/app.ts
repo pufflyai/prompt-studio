@@ -14,6 +14,7 @@ import {
   createTagsDBService,
   createTemplatesDBService,
   createTicketsDBService,
+  createWorkspaceArtifactsDBService,
   createWorkspaceSessionsDBService,
   createWorkspacesDBService,
 } from "pstdio-db";
@@ -55,6 +56,7 @@ import { createSyncService } from "./services/sync-service";
 import { createTagService } from "./services/tag-service";
 import { createTemplateService } from "./services/template-service";
 import { createTicketService } from "./services/ticket-service";
+import { createWorkspaceArtifactService } from "./services/workspace-artifact-service";
 import { createWorkspaceService } from "./services/workspace-service";
 import { createWorkspaceSessionService } from "./services/workspace-session-service";
 import { runStartupTasks } from "./startup";
@@ -83,6 +85,7 @@ export const createApp = async (options: AppOptions) => {
   const sessionsDBService = createSessionsDBService(db);
   const ticketsDBService = createTicketsDBService(db);
   const workspacesDBService = createWorkspacesDBService(db);
+  const workspaceArtifactsDBService = createWorkspaceArtifactsDBService(db);
   const workspaceSessionsDBService = createWorkspaceSessionsDBService(db);
   const statusesDBService = createStatusesDBService(db);
   const attemptStatusesDBService = createAttemptStatusesDBService(db);
@@ -113,6 +116,7 @@ export const createApp = async (options: AppOptions) => {
   const syncService = createSyncService({ db, eventBus });
 
   const workspaceSessionService = createWorkspaceSessionService({ workspaceSessionsDBService });
+  const workspaceArtifactService = createWorkspaceArtifactService({ workspaceArtifactsDBService });
   const workspaceService = createWorkspaceService({ workspacesDb: workspacesDBService, eventBus });
   const pluginClientFetch = Object.assign(
     (input: RequestInfo | URL, init?: RequestInit) => {
@@ -176,6 +180,7 @@ export const createApp = async (options: AppOptions) => {
     sessionService,
     ticketService,
     workspaceService,
+    workspaceArtifactService,
     workspaceSessionService,
     statusService,
     tagService,

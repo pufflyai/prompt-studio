@@ -4,6 +4,7 @@ import { TICKET_CONTENT_ITEM_ID } from "../utils/ticket-file-selection";
 
 interface UseTicketContentOptions {
   enabled?: boolean;
+  refreshKey?: string;
 }
 
 export const useTicketContent = (
@@ -11,7 +12,8 @@ export const useTicketContent = (
   selectedFileId: string,
   options: UseTicketContentOptions = {},
 ) => {
-  const { enabled = true } = options;
+  const { enabled = true, refreshKey } = options;
+  const refreshToken = refreshKey ?? selectedFileId;
   const [data, setData] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -21,6 +23,8 @@ export const useTicketContent = (
       setIsLoading(false);
       return;
     }
+
+    if (!refreshToken) return;
 
     const controller = new AbortController();
     setIsLoading(true);
@@ -53,7 +57,7 @@ export const useTicketContent = (
     return () => {
       controller.abort();
     };
-  }, [ticketId, selectedFileId, enabled]);
+  }, [enabled, refreshToken, selectedFileId, ticketId]);
 
   const setOptimisticContent = (nextContent: string) => {
     setData(nextContent);

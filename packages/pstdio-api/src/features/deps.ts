@@ -11,6 +11,7 @@ import type { createSyncService } from "../services/sync-service";
 import type { createTagService } from "../services/tag-service";
 import type { createTemplateService } from "../services/template-service";
 import type { createTicketService } from "../services/ticket-service";
+import type { createWorkspaceArtifactService } from "../services/workspace-artifact-service";
 import type { createWorkspaceService } from "../services/workspace-service";
 import type { createWorkspaceSessionService } from "../services/workspace-session-service";
 import type { createPluginService } from "./plugins/plugin-service";
@@ -32,6 +33,7 @@ export interface RouteDeps {
   sessionService: ReturnType<typeof createSessionService>;
   ticketService: ReturnType<typeof createTicketService>;
   workspaceService: ReturnType<typeof createWorkspaceService>;
+  workspaceArtifactService: ReturnType<typeof createWorkspaceArtifactService>;
   workspaceSessionService: ReturnType<typeof createWorkspaceSessionService>;
   statusService: ReturnType<typeof createStatusService>;
   tagService: ReturnType<typeof createTagService>;

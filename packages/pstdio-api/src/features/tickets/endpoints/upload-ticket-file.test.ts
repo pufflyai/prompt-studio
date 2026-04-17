@@ -102,4 +102,89 @@ describe("POST /v1/tickets/:id/files", () => {
     expect(contentRes.status).toBe(200);
     expect(await contentRes.text()).toBe("second");
   });
+
+  test("creates workspace artifact records when relative_path is provided", async () => {
+    const { app, deps } = context;
+    const ticket = await createTicket();
+
+    const uploadRes = await app.request(`/v1/tickets/${ticket.id}/files`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        file_name: "validate.log",
+        relative_path: "artifacts/validate.log",
+        content_base64: Buffer.from("first run", "utf8").toString("base64"),
+        mime_type: "text/plain",
+      }),
+    });
+
+    expect(uploadRes.status).toBe(201);
+    const uploaded = await uploadRes.json();
+
+    const state = (await deps.syncService.getFullState()) as {
+      files: Array<{ id: string; file_kind: string }>;
+      workspace_artifacts: Array<{ id: string; ticket_id: string; file_id: string; relative_path: string }>;
+    };
+
+    const ticketArtifacts = state.workspace_artifacts.filter((artifact) => artifact.ticket_id === ticket.id);
+    expect(ticketArtifacts).toHaveLength(1);
+    expect(ticketArtifacts[0]).toEqual(
+      expect.objectContaining({
+        ticket_id: ticket.id,
+        file_id: uploaded.id,
+        relative_path: "artifacts/validate.log",
+      }),
+    );
+    expect(state.files.find((file) => file.id === uploaded.id)?.file_kind).toBe("artifact");
+  });
+
+  test("re-uploading the same relative_path updates existing workspace artifact", async () => {
+    const { app, deps, eventBus } = context;
+    const ticket = await createTicket();
+
+    const firstUploadRes = await app.request(`/v1/tickets/${ticket.id}/files`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        file_name: "validate.log",
+        relative_path: "artifacts/validate.log",
+        content_base64: Buffer.from("first run", "utf8").toString("base64"),
+      }),
+    });
+    expect(firstUploadRes.status).toBe(201);
+    const firstUploaded = await firstUploadRes.json();
+
+    const baselineSeq = eventBus.seq;
+    const secondUploadRes = await app.request(`/v1/tickets/${ticket.id}/files`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        file_name: "new-name.log",
+        relative_path: "artifacts/validate.log",
+        content_base64: Buffer.from("second run", "utf8").toString("base64"),
+      }),
+    });
+    expect(secondUploadRes.status).toBe(200);
+
+    const state = (await deps.syncService.getFullState()) as {
+      files: Array<{ id: string; file_name: string }>;
+      workspace_artifacts: Array<{ id: string; ticket_id: string; file_id: string; relative_path: string }>;
+    };
+
+    const ticketArtifacts = state.workspace_artifacts.filter((artifact) => artifact.ticket_id === ticket.id);
+    expect(ticketArtifacts).toHaveLength(1);
+    const artifact = ticketArtifacts[0];
+    expect(artifact.ticket_id).toBe(ticket.id);
+    expect(artifact.relative_path).toBe("artifacts/validate.log");
+    expect(artifact.file_id).toBe(firstUploaded.id);
+    expect(state.files.find((file) => file.id === artifact.file_id)).toBeDefined();
+
+    const events = eventBus.getSince(baselineSeq);
+    const artifactEvent = events.find((event) => event.table === "workspace_artifacts" && event.op === "set");
+    expect(artifactEvent).toBeDefined();
+
+    const contentRes = await app.request(`/v1/tickets/${ticket.id}/files/${artifact.file_id}/content`);
+    expect(contentRes.status).toBe(200);
+    expect(await contentRes.text()).toBe("second run");
+  });
 });

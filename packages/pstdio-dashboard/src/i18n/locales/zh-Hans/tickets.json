@@ -827,5 +827,17 @@
       "repoNotInProject": "仓库不在任何项目中",
       "failedToCreateWorkspace": "创建工作区失败"
     }
+  },
+  "workspaceDiffPanel": {
+    "tabs": {
+      "changes": "变更",
+      "checks": "检查"
+    },
+    "checks": {
+      "title": "工件",
+      "loading": "正在加载工件内容...",
+      "emptyTitle": "暂无检查结果",
+      "emptyDescription": "验证工件在保存后会显示在这里。"
+    }
   }
 }

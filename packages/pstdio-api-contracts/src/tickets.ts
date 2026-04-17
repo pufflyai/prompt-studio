@@ -55,6 +55,7 @@ export const updateTicketInputSchema = z.object({
 
 export const uploadTicketFileInputSchema = z.object({
   file_name: z.string().min(1),
+  relative_path: z.string().min(1).optional(),
   content_base64: z.string(),
   mime_type: z.string().optional(),
 });

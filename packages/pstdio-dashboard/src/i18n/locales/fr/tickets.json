@@ -827,5 +827,17 @@
       "repoNotInProject": "Le dépôt n'est dans aucun projet",
       "failedToCreateWorkspace": "Échec de la création de l'espace de travail"
     }
+  },
+  "workspaceDiffPanel": {
+    "tabs": {
+      "changes": "Modifications",
+      "checks": "Vérifications"
+    },
+    "checks": {
+      "title": "Artefacts",
+      "loading": "Chargement du contenu de l'artefact...",
+      "emptyTitle": "Aucune vérification pour le moment",
+      "emptyDescription": "Les artefacts de validation apparaîtront ici après leur enregistrement."
+    }
   }
 }

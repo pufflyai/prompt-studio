@@ -20,6 +20,7 @@ import { Settings } from "@/features/settings/pages/settings-index";
 import { TicketDetailsPanel } from "@/features/ticket/pages/ticket-details-panel";
 import { TicketsPanel } from "@/features/ticket-list/pages/tickets-panel";
 import { WorkspacePage } from "@/features/workspaces/pages/workspace-page";
+import { validateWorkspaceRouteSearch } from "@/features/workspaces/pages/workspace-route-search";
 
 const requireOnboardingComplete = () => {
   if (!isOnboardingComplete()) {
@@ -138,9 +139,7 @@ const projectSessionRoute = createRoute({
 const projectTicketWorkspaceRoute = createRoute({
   getParentRoute: () => projectRoute,
   path: "tickets/$ticketShorthand/workspaces/$workspaceShorthand",
-  validateSearch: (search: Record<string, unknown>) => ({
-    sessionId: typeof search.sessionId === "string" ? search.sessionId : undefined,
-  }),
+  validateSearch: validateWorkspaceRouteSearch,
   component: WorkspacePage,
 });
 

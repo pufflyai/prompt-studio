@@ -19,5 +19,6 @@ export { createStatusesDBService } from "./services/statuses/statuses";
 export { createTagsDBService } from "./services/tags/tags";
 export { createTemplatesDBService } from "./services/templates/templates";
 export { createTicketsDBService } from "./services/tickets/tickets";
+export { createWorkspaceArtifactsDBService } from "./services/workspace-artifacts/workspace-artifacts";
 export { createWorkspaceSessionsDBService } from "./services/workspace-sessions/workspace-sessions";
 export { createWorkspacesDBService } from "./services/workspaces/workspaces";

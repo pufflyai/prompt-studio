@@ -1,10 +1,13 @@
+import { basename } from "node:path";
 import type { Arguments, Argv } from "yargs";
 import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 import { updateTicket as defaultUpdateTicket } from "@/features/tickets/api/update-ticket";
 import { uploadTicketFile as defaultUploadTicketFile } from "@/features/tickets/api/upload-ticket-file";
 import { extractDisplayTitle } from "@/features/tickets/display-title";
 import {
+  listTicketArtifacts,
   listTicketFiles,
+  readTicketArtifact,
   readTicketAttachment,
   readTicketFile,
   writeTicketFile,
@@ -65,6 +68,21 @@ const uploadLocalTicketFiles = async (deps: Deps, root: string, shorthand: strin
   return localFiles.length;
 };
 
+const uploadLocalTicketArtifacts = async (deps: Deps, root: string, shorthand: string, ticketId: string) => {
+  const localArtifacts = listTicketArtifacts(root, shorthand);
+
+  for (const relativePath of localArtifacts) {
+    const data = readTicketArtifact(root, shorthand, relativePath);
+    await deps.uploadTicketFile(ticketId, {
+      file_name: basename(relativePath),
+      relative_path: relativePath,
+      content_base64: data.toString("base64"),
+    });
+  }
+
+  return localArtifacts.length;
+};
+
 const markLocalTicketAsSaved = (content: string) =>
   applyFrontmatterValues(["---", "draft: false", "---"].join("\n"), content);
 
@@ -106,7 +124,9 @@ export const createHandler =
       status_id: statusId,
     });
 
-    const uploadedCount = await uploadLocalTicketFiles(deps, root, argv.id, ticket.id);
+    const uploadedCount =
+      (await uploadLocalTicketFiles(deps, root, argv.id, ticket.id)) +
+      (await uploadLocalTicketArtifacts(deps, root, argv.id, ticket.id));
     writeTicketFile(root, argv.id, markLocalTicketAsSaved(content));
 
     deps.log(`Saved ticket ${argv.id}`);

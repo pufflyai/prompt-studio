@@ -41,6 +41,7 @@ export type ApiWorkspaceArtifact = {
   mime_type: string | null;
   size_bytes: number;
   created_at: string;
+  updated_at: string;
 };
 
 export type ApiTicketFilesResponse = {

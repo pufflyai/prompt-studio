@@ -248,6 +248,24 @@ describe("tickets save", () => {
     expect(log).toHaveBeenCalledWith("Uploaded 1 ticket files");
   });
 
+  test("uploads local artifacts with relative_path", async () => {
+    mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-1", "artifacts", "checks"), { recursive: true });
+    writeFileSync(join(tmpBase, ".pstdio", "tickets", "PS-1", "artifacts", "checks", "validate.log"), "artifact");
+
+    const uploadTicketFile = mock(async () => makeUploadResponse());
+    const handler = createHandler({ ...baseDeps, uploadTicketFile, log: mock() });
+
+    await handler({ id: "PS-1", _: [], $0: "" } as never);
+
+    expect(uploadTicketFile).toHaveBeenCalledWith(
+      "t-1",
+      expect.objectContaining({
+        file_name: "validate.log",
+        relative_path: "checks/validate.log",
+      }),
+    );
+  });
+
   test("fails when only a legacy ticket directory exists", async () => {
     rmSync(join(tmpBase, ".pstdio", "tickets", "PS-1"), { recursive: true, force: true });
     mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-1_legacy-title"), { recursive: true });

@@ -827,5 +827,17 @@
     "nextAttempt": "從最新狀態設定下一次工作區嘗試。",
     "cancel": "取消",
     "runAttempt": "執行嘗試"
+  },
+  "workspaceDiffPanel": {
+    "tabs": {
+      "changes": "變更",
+      "checks": "檢查"
+    },
+    "checks": {
+      "title": "成品",
+      "loading": "正在載入成品內容...",
+      "emptyTitle": "目前尚無檢查結果",
+      "emptyDescription": "驗證成品在儲存後會顯示於此。"
+    }
   }
 }

@@ -3,6 +3,7 @@ import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 const TICKETS_DIR = join(".pstdio", "tickets");
 const TICKET_FILES_DIR = "files";
+const TICKET_ARTIFACTS_DIR = "artifacts";
 
 export const resolveTicketDir = (root: string, shorthand: string) => {
   const ticketsBase = join(root, TICKETS_DIR);
@@ -21,6 +22,11 @@ const ticketFilesDir = (root: string, shorthand: string) => {
   return dir ? join(dir, TICKET_FILES_DIR) : null;
 };
 
+const ticketArtifactsDir = (root: string, shorthand: string) => {
+  const dir = resolveTicketDir(root, shorthand);
+  return dir ? join(dir, TICKET_ARTIFACTS_DIR) : null;
+};
+
 const toRelativeFilePath = (baseDir: string, absolutePath: string) => {
   const rel = relative(baseDir, absolutePath);
   return rel.split("\\").join("/");
@@ -35,6 +41,20 @@ const resolveTicketAttachmentPath = (root: string, shorthand: string, fileName: 
 
   if (isAbsolute(rel) || rel.startsWith("..")) {
     throw new Error(`Ticket file path resolves outside ticket files directory: ${fileName}`);
+  }
+
+  return targetPath;
+};
+
+const resolveTicketArtifactPath = (root: string, shorthand: string, relativePath: string) => {
+  const baseDir = ticketArtifactsDir(root, shorthand);
+  if (!baseDir) throw new Error(`Ticket directory not found for ${shorthand}`);
+
+  const targetPath = resolve(baseDir, relativePath);
+  const rel = relative(baseDir, targetPath);
+
+  if (isAbsolute(rel) || rel.startsWith("..")) {
+    throw new Error(`Ticket artifact path resolves outside ticket artifacts directory: ${relativePath}`);
   }
 
   return targetPath;
@@ -96,6 +116,21 @@ export const listTicketFiles = (root: string, shorthand: string) => {
 
 export const readTicketAttachment = (root: string, shorthand: string, fileName: string) => {
   const filePath = resolveTicketAttachmentPath(root, shorthand, fileName);
+  return readFileSync(filePath);
+};
+
+export const listTicketArtifacts = (root: string, shorthand: string) => {
+  const baseDir = ticketArtifactsDir(root, shorthand);
+  if (!baseDir || !existsSync(baseDir)) return [];
+
+  const files: string[] = [];
+  walkFiles(baseDir, baseDir, files);
+  files.sort();
+  return files;
+};
+
+export const readTicketArtifact = (root: string, shorthand: string, relativePath: string) => {
+  const filePath = resolveTicketArtifactPath(root, shorthand, relativePath);
   return readFileSync(filePath);
 };
 

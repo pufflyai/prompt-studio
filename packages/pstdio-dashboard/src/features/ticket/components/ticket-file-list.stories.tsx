@@ -72,6 +72,7 @@ const filesData: ApiTicketFilesResponse = {
       mime_type: "text/plain",
       size_bytes: 300,
       created_at: "2026-02-20T10:00:00.000Z",
+      updated_at: "2026-02-20T10:00:00.000Z",
     },
   ],
 };

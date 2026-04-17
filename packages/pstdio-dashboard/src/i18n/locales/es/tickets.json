@@ -827,5 +827,17 @@
       "repoNotInProject": "El repositorio no está en ningún proyecto",
       "failedToCreateWorkspace": "Error al crear espacio de trabajo"
     }
+  },
+  "workspaceDiffPanel": {
+    "tabs": {
+      "changes": "Cambios",
+      "checks": "Verificaciones"
+    },
+    "checks": {
+      "title": "Artefactos",
+      "loading": "Cargando contenido del artefacto...",
+      "emptyTitle": "Aún no hay verificaciones",
+      "emptyDescription": "Los artefactos de validación aparecerán aquí después de guardarse."
+    }
   }
 }
