@@ -1,17 +1,24 @@
 import { Box, HStack, Stack } from "@chakra-ui/react";
+import { useEffect, useMemo } from "react";
 
 import { EmptyState } from "@/components/empty-state";
 
 import { DisplayMenu } from "./display-menu";
 import { FilterMenu } from "./filter-menu";
+import { type BadgeOptions, createTicketBadges } from "./ticket-badges";
 import {
   TicketBoard,
   type TicketBoardColumn,
   type TicketBoardColumnAction,
   type TicketBoardGroup,
 } from "./ticket-board";
-import type { TicketCardBadge } from "./ticket-card";
-import { countFilterValues, filterTickets, groupTickets, orderTickets } from "./ticket-grouping";
+import {
+  countFilterValues,
+  filterTickets,
+  groupTickets,
+  orderTickets,
+  type TicketColumnGroup,
+} from "./ticket-grouping";
 import { TicketList, type TicketListItem } from "./ticket-list";
 import {
   DEFAULT_DISPLAY_PROPERTY_OPTIONS,
@@ -35,6 +42,57 @@ interface BoardColumnConfig {
   actions?: TicketBoardColumnAction[];
 }
 
+interface ListDragPermissions {
+  draggableItemIds: Set<string>;
+  dropTargetGroupIds: Set<string>;
+}
+
+const getListDragState = (params: {
+  columnGrouping: GroupingField;
+  grouped: TicketColumnGroup[];
+  onMoveTicket?: (ticketId: string, targetColumnId: string) => void;
+  getBoardColumnConfig?: (groupKey: string) => BoardColumnConfig;
+}) => {
+  const { columnGrouping, grouped, onMoveTicket, getBoardColumnConfig } = params;
+
+  const permissions: ListDragPermissions =
+    columnGrouping === "none"
+      ? { draggableItemIds: new Set<string>(), dropTargetGroupIds: new Set<string>() }
+      : buildListDragPermissions(grouped, getBoardColumnConfig);
+
+  const enabled =
+    columnGrouping !== "none" &&
+    !!onMoveTicket &&
+    permissions.draggableItemIds.size > 0 &&
+    permissions.dropTargetGroupIds.size > 0;
+
+  return { permissions, enabled };
+};
+
+export const buildListDragPermissions = (
+  grouped: TicketColumnGroup[],
+  getBoardColumnConfig?: (groupKey: string) => BoardColumnConfig,
+): ListDragPermissions => {
+  const draggableItemIds = new Set<string>();
+  const dropTargetGroupIds = new Set<string>();
+
+  for (const column of grouped) {
+    const config = getBoardColumnConfig?.(column.key) ?? {};
+
+    if (config.canDragOut) {
+      for (const ticket of column.tickets) {
+        draggableItemIds.add(ticket.id);
+      }
+    }
+
+    if (config.canDragIn) {
+      dropTargetGroupIds.add(`group::${column.key}`);
+    }
+  }
+
+  return { draggableItemIds, dropTargetGroupIds };
+};
+
 interface TicketsWorkspaceProps<TTicket extends WorkspaceTicket = WorkspaceTicket> {
   tickets: TTicket[];
   storageKey: string;
@@ -49,6 +107,7 @@ interface TicketsWorkspaceProps<TTicket extends WorkspaceTicket = WorkspaceTicke
   onTicketClick?: (ticket: TTicket) => void;
   onMoveTicket?: (ticketId: string, targetColumnId: string) => void;
   onMoveToGroup?: (ticketId: string, targetGroupKey: string) => void;
+  onReorderTicket?: (ticketId: string, columnId: string, newIndex: number) => void;
   onCreateTicket?: (columnId: string) => void;
   onColumnAction?: (columnId: string, actionId: string) => Promise<void> | void;
   getBoardColumnConfig?: (groupKey: string) => BoardColumnConfig;
@@ -86,38 +145,66 @@ const collectCategoryOptions = (tickets: WorkspaceTicket[], category: FilterCate
 const buildDefaultFilterCategories = (tickets: WorkspaceTicket[]): WorkspaceFilterCategory[] => {
   return [
     { id: "status", label: "Status", options: collectCategoryOptions(tickets, "status") },
-    { id: "assignee", label: "Assignee", options: collectCategoryOptions(tickets, "assignee") },
     { id: "labels", label: "Labels", options: collectCategoryOptions(tickets, "labels") },
   ];
 };
 
-const toBadges = (ticket: WorkspaceTicket, displayProperties: DisplayProperty[]): TicketCardBadge[] => {
-  const badges: TicketCardBadge[] = [];
-  const includes = (property: DisplayProperty) => displayProperties.includes(property);
+const useWorkspaceSanitization = (params: {
+  sanitize: (options: {
+    allowedDisplayProperties: DisplayProperty[];
+    allowedFilterCategories: FilterCategory[];
+    allowedGroupingFields: GroupingField[];
+    defaultColumnGrouping: GroupingField;
+    defaultRowGrouping: GroupingField;
+  }) => void;
+  displayProperties: DisplayProperty[];
+  filterCategories: FilterCategory[];
+  groupingFields: GroupingField[];
+}) => {
+  const { sanitize, displayProperties, filterCategories, groupingFields } = params;
 
-  if (includes("status") && ticket.status) {
-    badges.push({ id: `status:${ticket.status}`, label: ticket.status, color: ticket.statusColor ?? "gray" });
-  }
+  const defaultColumnGrouping = groupingFields.find((field) => field !== "none") ?? groupingFields[0] ?? "none";
+  const defaultRowGrouping = groupingFields.includes("none") ? "none" : (groupingFields[0] ?? "none");
 
-  if (includes("assignee") && ticket.assignee) {
-    badges.push({ id: `assignee:${ticket.assignee}`, label: ticket.assignee, color: "blue" });
-  }
-
-  if (includes("updated") && ticket.updatedAt) {
-    badges.push({
-      id: `updated:${ticket.updatedAt}`,
-      label: new Date(ticket.updatedAt).toLocaleDateString(),
-      color: "gray",
+  useEffect(() => {
+    sanitize({
+      allowedDisplayProperties: displayProperties,
+      allowedFilterCategories: filterCategories,
+      allowedGroupingFields: groupingFields,
+      defaultColumnGrouping,
+      defaultRowGrouping,
     });
-  }
+  }, [sanitize, displayProperties, filterCategories, groupingFields, defaultColumnGrouping, defaultRowGrouping]);
+};
 
-  if (includes("labels")) {
-    for (const [index, label] of (ticket.labels ?? []).entries()) {
-      badges.push({ id: `label:${label}:${index}`, label, color: "purple" });
-    }
-  }
+const useWorkspaceOptionState = (params: {
+  tickets: WorkspaceTicket[];
+  filterCategories?: WorkspaceFilterCategory[];
+  displayPropertyOptions: WorkspaceOption<DisplayProperty>[];
+  groupingOptions: WorkspaceOption<GroupingField>[];
+}) => {
+  const { tickets, filterCategories, displayPropertyOptions, groupingOptions } = params;
 
-  return badges;
+  const categoryOptions = useMemo(
+    () => filterCategories ?? buildDefaultFilterCategories(tickets),
+    [filterCategories, tickets],
+  );
+
+  const enabledFilterCategoryIds = useMemo(() => categoryOptions.map((category) => category.id), [categoryOptions]);
+  const enabledFilterCategoryIdSet = useMemo(() => new Set(enabledFilterCategoryIds), [enabledFilterCategoryIds]);
+  const enabledDisplayProperties = useMemo(
+    () => displayPropertyOptions.map((option) => option.value),
+    [displayPropertyOptions],
+  );
+  const enabledGroupingFields = useMemo(() => groupingOptions.map((option) => option.value), [groupingOptions]);
+
+  return {
+    categoryOptions,
+    enabledFilterCategoryIds,
+    enabledFilterCategoryIdSet,
+    enabledDisplayProperties,
+    enabledGroupingFields,
+  };
 };
 
 export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: TicketsWorkspaceProps<TTicket>) => {
@@ -135,6 +222,7 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
     onTicketClick,
     onMoveTicket,
     onMoveToGroup,
+    onReorderTicket,
     onCreateTicket,
     onColumnAction,
     getBoardColumnConfig,
@@ -148,23 +236,55 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
   const setOrderingField = useTicketsWorkspaceStore(storageKey, (state) => state.setOrderingField);
   const toggleSortDirection = useTicketsWorkspaceStore(storageKey, (state) => state.toggleSortDirection);
   const toggleDisplayProperty = useTicketsWorkspaceStore(storageKey, (state) => state.toggleDisplayProperty);
+  const sanitize = useTicketsWorkspaceStore(storageKey, (state) => state.sanitize);
   const toggleFilterValue = useTicketsWorkspaceStore(storageKey, (state) => state.toggleFilterValue);
   const clearFilter = useTicketsWorkspaceStore(storageKey, (state) => state.clearFilter);
   const clearAllFilters = useTicketsWorkspaceStore(storageKey, (state) => state.clearAllFilters);
-
   const visibleTickets = filterTickets(tickets, filters) as TTicket[];
 
-  const categoryOptions = filterCategories ?? buildDefaultFilterCategories(tickets);
+  const {
+    categoryOptions,
+    enabledFilterCategoryIds,
+    enabledFilterCategoryIdSet,
+    enabledDisplayProperties,
+    enabledGroupingFields,
+  } = useWorkspaceOptionState({ tickets, filterCategories, displayPropertyOptions, groupingOptions });
+
+  useWorkspaceSanitization({
+    sanitize,
+    displayProperties: enabledDisplayProperties,
+    filterCategories: enabledFilterCategoryIds,
+    groupingFields: enabledGroupingFields,
+  });
 
   const countsByCategory = Object.fromEntries(
     categoryOptions.map((category) => [category.id, countFilterValues(tickets, category.id)]),
   );
 
   const knownColumnKeys =
-    knownColumnKeysProp ??
-    (settings.columnGrouping !== "none"
-      ? categoryOptions.find((c) => c.id === settings.columnGrouping)?.options.map((o) => o.value)
-      : undefined);
+    settings.columnGrouping === "none"
+      ? undefined
+      : (knownColumnKeysProp ??
+        categoryOptions.find((c) => c.id === settings.columnGrouping)?.options.map((o) => o.value));
+
+  const statusColorMap = (() => {
+    if (!getBoardColumnConfig || settings.columnGrouping !== "status") return undefined;
+    const keys = knownColumnKeys ?? categoryOptions.find((c) => c.id === "status")?.options.map((o) => o.value) ?? [];
+    const map: Record<string, string> = {};
+    for (const key of keys) {
+      const color = getBoardColumnConfig(key).color;
+      if (color) map[key] = color;
+    }
+    return Object.keys(map).length > 0 ? map : undefined;
+  })();
+
+  const handleLabelClick = (label: string) => toggleFilterValue("labels", label);
+  const badgeOptions: BadgeOptions = {
+    displayProperties: settings.displayProperties,
+    statusColorMap,
+    canFilterLabels: enabledFilterCategoryIdSet.has("labels"),
+    onLabelClick: handleLabelClick,
+  };
 
   const grouped = groupTickets(visibleTickets, {
     columnGrouping: settings.columnGrouping,
@@ -172,11 +292,18 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
     knownColumnKeys,
   });
 
+  const listDragState = getListDragState({
+    columnGrouping: settings.columnGrouping,
+    grouped,
+    onMoveTicket,
+    getBoardColumnConfig,
+  });
+
   const toListItem = (ticket: TTicket): TicketListItem => ({
     id: ticket.id,
     ticketId: settings.displayProperties.includes("id") ? ticket.ticketId : "",
     title: ticket.title,
-    badges: toBadges(ticket, settings.displayProperties),
+    badges: createTicketBadges(ticket, badgeOptions),
     onClick: () => onTicketClick?.(ticket),
   });
 
@@ -212,7 +339,7 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
         ticketId: settings.displayProperties.includes("id") ? ticket.ticketId : "",
         parentPath: ticket.parentPath,
         title: ticket.title,
-        badges: toBadges(ticket, settings.displayProperties),
+        badges: createTicketBadges(ticket, badgeOptions),
         onClick: () => onTicketClick?.(ticket as TTicket),
       },
     }));
@@ -276,6 +403,7 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
               selectedItemId={selectedTicketId}
               onMoveItem={onMoveTicket}
               onMoveToGroup={onMoveToGroup}
+              onReorderItem={onReorderTicket}
               onCreateStart={onCreateTicket}
               onColumnAction={onColumnAction}
             />
@@ -290,7 +418,14 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
           )}
         </Box>
       ) : listItems.length > 0 ? (
-        <TicketList items={listItems} selectedItemId={selectedTicketId} />
+        <TicketList
+          items={listItems}
+          selectedItemId={selectedTicketId}
+          draggable={listDragState.enabled}
+          draggableItemIds={listDragState.permissions.draggableItemIds}
+          dropTargetGroupIds={listDragState.permissions.dropTargetGroupIds}
+          onMoveItem={onMoveTicket}
+        />
       ) : (
         <EmptyState title={emptyTitle} description={emptyDescription} borderWidth="1px" borderRadius="md" />
       )}

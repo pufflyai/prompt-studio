@@ -211,6 +211,7 @@ export const TicketsPanel = () => {
               groups={groups}
               displayProperties={settings.displayProperties}
               badgeContext={badgeContext}
+              onMoveTicket={handleMoveTicket}
               onSelectTicket={(ticket) => navigateToTicket(ticket.shorthand)}
             />
           )}

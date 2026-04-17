@@ -2,7 +2,22 @@ import { useStore } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
 
-import { DEFAULT_WORKSPACE_SETTINGS, type FilterCategory, type FilterState, type WorkspaceSettings } from "./types";
+import {
+  DEFAULT_WORKSPACE_SETTINGS,
+  type DisplayProperty,
+  type FilterCategory,
+  type FilterState,
+  type GroupingField,
+  type WorkspaceSettings,
+} from "./types";
+
+interface WorkspaceSanitizationOptions {
+  allowedDisplayProperties: DisplayProperty[];
+  allowedFilterCategories: FilterCategory[];
+  allowedGroupingFields: GroupingField[];
+  defaultColumnGrouping: GroupingField;
+  defaultRowGrouping: GroupingField;
+}
 
 interface WorkspaceSnapshot {
   settings: WorkspaceSettings;
@@ -17,6 +32,7 @@ interface WorkspaceState extends WorkspaceSnapshot {
   setOrderingField: (field: WorkspaceSettings["ordering"]["field"]) => void;
   toggleSortDirection: () => void;
   toggleDisplayProperty: (property: WorkspaceSettings["displayProperties"][number]) => void;
+  sanitize: (options: WorkspaceSanitizationOptions) => void;
   setFilter: (category: FilterCategory, values: string[]) => void;
   toggleFilterValue: (category: FilterCategory, value: string) => void;
   clearFilter: (category: FilterCategory) => void;
@@ -46,6 +62,73 @@ const createNoopStorage = () => ({
 
 const toggleValue = (values: string[], value: string) =>
   values.includes(value) ? values.filter((entry) => entry !== value) : [...values, value];
+
+const areArraysEqual = (left: string[], right: string[]) =>
+  left.length === right.length && left.every((value, index) => value === right[index]);
+
+const areFiltersEqual = (left: FilterState, right: FilterState) => {
+  const leftEntries = Object.entries(left);
+  const rightEntries = Object.entries(right);
+
+  if (leftEntries.length !== rightEntries.length) {
+    return false;
+  }
+
+  for (const [key, values] of leftEntries) {
+    const otherValues = right[key as FilterCategory] ?? [];
+    if (!areArraysEqual(values ?? [], otherValues)) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+const areSettingsEqual = (left: WorkspaceSettings, right: WorkspaceSettings) => {
+  if (left.viewMode !== right.viewMode) return false;
+  if (left.columnGrouping !== right.columnGrouping) return false;
+  if (left.rowGrouping !== right.rowGrouping) return false;
+  if (left.ordering.field !== right.ordering.field) return false;
+  if (left.ordering.direction !== right.ordering.direction) return false;
+
+  return areArraysEqual(left.displayProperties, right.displayProperties);
+};
+
+const sanitizeSnapshot = (snapshot: WorkspaceSnapshot, options: WorkspaceSanitizationOptions) => {
+  const allowedDisplayProperties = new Set(options.allowedDisplayProperties);
+  const allowedFilterCategories = new Set(options.allowedFilterCategories);
+  const allowedGroupingFields = new Set(options.allowedGroupingFields);
+
+  const displayProperties = snapshot.settings.displayProperties.filter((value) => allowedDisplayProperties.has(value));
+
+  const filters = Object.fromEntries(
+    Object.entries(snapshot.filters).filter(([key, values]) => {
+      if (!allowedFilterCategories.has(key as FilterCategory)) {
+        return false;
+      }
+
+      return Array.isArray(values) && values.length > 0;
+    }),
+  ) as FilterState;
+
+  const columnGrouping = allowedGroupingFields.has(snapshot.settings.columnGrouping)
+    ? snapshot.settings.columnGrouping
+    : options.defaultColumnGrouping;
+
+  const rowGrouping = allowedGroupingFields.has(snapshot.settings.rowGrouping)
+    ? snapshot.settings.rowGrouping
+    : options.defaultRowGrouping;
+
+  return {
+    settings: {
+      ...snapshot.settings,
+      columnGrouping,
+      rowGrouping,
+      displayProperties,
+    },
+    filters,
+  };
+};
 
 export const createTicketsWorkspaceStore = (options: CreateTicketsWorkspaceStoreOptions) => {
   const { storageKey, initialState } = options;
@@ -112,6 +195,28 @@ export const createTicketsWorkspaceStore = (options: CreateTicketsWorkspaceStore
                 ...state.settings,
                 displayProperties,
               },
+            };
+          }),
+        sanitize: (options) =>
+          set((state) => {
+            const nextSnapshot = sanitizeSnapshot(
+              {
+                settings: state.settings,
+                filters: state.filters,
+              },
+              options,
+            );
+
+            if (
+              areSettingsEqual(state.settings, nextSnapshot.settings) &&
+              areFiltersEqual(state.filters, nextSnapshot.filters)
+            ) {
+              return state;
+            }
+
+            return {
+              ...state,
+              ...nextSnapshot,
             };
           }),
         setFilter: (category, values) =>

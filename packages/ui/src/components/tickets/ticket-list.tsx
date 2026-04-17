@@ -1,4 +1,4 @@
-import { Badge, Box, HStack, Icon, Text, Wrap } from "@chakra-ui/react";
+import { Box, HStack } from "@chakra-ui/react";
 import {
   type ColumnDef,
   type ExpandedState,
@@ -8,10 +8,10 @@ import {
   type Row,
   useReactTable,
 } from "@tanstack/react-table";
-import { ChevronRight } from "lucide-react";
-import { type ComponentType, type ReactNode, useEffect, useState } from "react";
+import { type ComponentType, type DragEvent, type ReactNode, useEffect, useState } from "react";
 
 import type { TicketCardBadge } from "./ticket-card";
+import { TicketCell } from "./ticket-list-cell";
 
 export interface TicketListItem {
   id: string;
@@ -29,7 +29,11 @@ export interface TicketListItem {
 interface TicketListProps {
   items: TicketListItem[];
   selectedItemId?: string | null;
+  draggable?: boolean;
+  draggableItemIds?: Set<string>;
+  dropTargetGroupIds?: Set<string>;
   onItemClick?: (item: TicketListItem) => void;
+  onMoveItem?: (itemId: string, targetGroupKey: string) => void;
 }
 
 const columns: ColumnDef<TicketListItem, unknown>[] = [
@@ -40,10 +44,57 @@ const columns: ColumnDef<TicketListItem, unknown>[] = [
   },
 ];
 
+// Column group IDs are "group::<columnKey>", extract just the column key
+export const extractColumnKey = (groupId: string) => groupId.replace(/^group::/, "");
+
+export const isGroupRowId = (rowId: string) => rowId.startsWith("group::");
+
+interface RowDragStateInput {
+  rowId: string;
+  rowDepth: number;
+  draggable: boolean;
+  hasMoveHandler: boolean;
+  draggableItemIds?: Set<string>;
+  dropTargetGroupIds?: Set<string>;
+}
+
+interface RowDragState {
+  isGroupRow: boolean;
+  isTopLevelGroupRow: boolean;
+  isDraggableRow: boolean;
+  isDropTargetRow: boolean;
+}
+
+export const classifyRowDragState = (input: RowDragStateInput): RowDragState => {
+  const { rowId, rowDepth, draggable, hasMoveHandler, draggableItemIds, dropTargetGroupIds } = input;
+
+  const isGroupRow = isGroupRowId(rowId);
+  const isTopLevelGroupRow = isGroupRow && rowDepth === 0;
+
+  const isItemDraggable = draggableItemIds ? draggableItemIds.has(rowId) : true;
+  const isGroupDropTarget = dropTargetGroupIds ? dropTargetGroupIds.has(rowId) : true;
+
+  return {
+    isGroupRow,
+    isTopLevelGroupRow,
+    isDraggableRow: draggable && !isGroupRow && isItemDraggable,
+    isDropTargetRow: draggable && hasMoveHandler && isTopLevelGroupRow && isGroupDropTarget,
+  };
+};
+
 export const TicketList = (props: TicketListProps) => {
-  const { items, selectedItemId = null, onItemClick } = props;
+  const {
+    items,
+    selectedItemId = null,
+    draggable = false,
+    draggableItemIds,
+    dropTargetGroupIds,
+    onItemClick,
+    onMoveItem,
+  } = props;
 
   const [expanded, setExpanded] = useState<ExpandedState>(() => getDefaultExpandedState(items));
+  const [activeDropTarget, setActiveDropTarget] = useState<string | null>(null);
 
   useEffect(() => {
     setExpanded((previous) => mergeExpandedState(previous, items));
@@ -60,133 +111,141 @@ export const TicketList = (props: TicketListProps) => {
     getRowId: (row) => row.id,
   });
 
+  const handleDragStart = (itemId: string) => (event: DragEvent<HTMLDivElement>) => {
+    event.dataTransfer.setData("text/plain", itemId);
+    event.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (groupId: string) => (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setActiveDropTarget(groupId);
+  };
+
+  const handleDragLeave = (event: DragEvent<HTMLDivElement>) => {
+    if (event.currentTarget.contains(event.relatedTarget as Node)) return;
+    setActiveDropTarget(null);
+  };
+
+  const handleDrop = (groupId: string) => (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setActiveDropTarget(null);
+    const itemId = event.dataTransfer.getData("text/plain");
+    if (!itemId) return;
+    onMoveItem?.(itemId, extractColumnKey(groupId));
+  };
+
+  const handleDragEnd = () => {
+    setActiveDropTarget(null);
+  };
+
   return (
     <Box>
-      {table.getRowModel().rows.map((row) => {
-        const item = row.original;
-        const isSelected = item.id === selectedItemId;
-        const canExpand = row.getCanExpand();
-
-        return (
-          <HStack
-            key={row.id}
-            paddingX="sm"
-            paddingY="xs"
-            gap="sm"
-            cursor="pointer"
-            borderBottomWidth="1px"
-            borderColor="border.muted"
-            background={isSelected ? "bg.active" : "transparent"}
-            _hover={{ background: isSelected ? "bg.active" : "bg.hover" }}
-            onClick={() => {
-              if (canExpand) {
-                row.toggleExpanded();
-              } else {
-                item.onClick?.();
-                onItemClick?.(item);
-              }
-            }}
-            data-selected={isSelected ? "true" : undefined}
-          >
-            {flexRender(row.getVisibleCells()[0].column.columnDef.cell, row.getVisibleCells()[0].getContext())}
-          </HStack>
-        );
-      })}
+      {table.getRowModel().rows.map((row) => (
+        <TicketListRow
+          key={row.id}
+          row={row}
+          selectedItemId={selectedItemId}
+          draggable={draggable}
+          draggableItemIds={draggableItemIds}
+          dropTargetGroupIds={dropTargetGroupIds}
+          activeDropTarget={activeDropTarget}
+          onItemClick={onItemClick}
+          onMoveItem={onMoveItem}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onDragEnd={handleDragEnd}
+        />
+      ))}
     </Box>
   );
 };
 
-interface TicketCellProps {
+interface TicketListRowProps {
   row: Row<TicketListItem>;
+  selectedItemId: string | null;
+  draggable: boolean;
+  draggableItemIds?: Set<string>;
+  dropTargetGroupIds?: Set<string>;
+  activeDropTarget: string | null;
+  onItemClick?: (item: TicketListItem) => void;
+  onMoveItem?: (itemId: string, targetGroupKey: string) => void;
+  onDragStart: (itemId: string) => (event: DragEvent<HTMLDivElement>) => void;
+  onDragOver: (groupId: string) => (event: DragEvent<HTMLDivElement>) => void;
+  onDragLeave: (event: DragEvent<HTMLDivElement>) => void;
+  onDrop: (groupId: string) => (event: DragEvent<HTMLDivElement>) => void;
+  onDragEnd: () => void;
 }
 
-const TicketCell = (props: TicketCellProps) => {
-  const { row } = props;
+const TicketListRow = (props: TicketListRowProps) => {
+  const {
+    row,
+    selectedItemId,
+    draggable,
+    draggableItemIds,
+    dropTargetGroupIds,
+    activeDropTarget,
+    onItemClick,
+    onMoveItem,
+    onDragStart,
+    onDragOver,
+    onDragLeave,
+    onDrop,
+    onDragEnd,
+  } = props;
+
   const item = row.original;
-  const depth = row.depth;
-  const hasTicketId = item.ticketId.trim().length > 0;
+  const isSelected = item.id === selectedItemId;
+  const canExpand = row.getCanExpand();
+  const { isTopLevelGroupRow, isDraggableRow, isDropTargetRow } = classifyRowDragState({
+    rowId: item.id,
+    rowDepth: row.depth,
+    draggable,
+    hasMoveHandler: !!onMoveItem,
+    draggableItemIds,
+    dropTargetGroupIds,
+  });
+
+  const rowBackground = activeDropTarget === item.id ? "bg.subtle" : isSelected ? "bg.active" : "transparent";
 
   return (
-    <HStack gap="2xs" flex="1" paddingLeft={depth > 0 ? `${depth * 24}px` : undefined}>
-      {row.getCanExpand() ? <ExpandToggle row={row} /> : depth > 0 ? <TreeConnector /> : null}
+    <HStack
+      paddingX="sm"
+      paddingY="xs"
+      gap="sm"
+      cursor={isDraggableRow ? "grab" : "pointer"}
+      borderBottomWidth="1px"
+      borderColor="border.muted"
+      background={rowBackground}
+      _hover={{ background: isSelected ? "bg.active" : "bg.hover" }}
+      transition="background 150ms ease"
+      onClick={() => {
+        if (isTopLevelGroupRow && canExpand) {
+          row.toggleExpanded();
+          return;
+        }
 
-      {item.statusIcon && (
-        <Icon as={item.statusIcon} boxSize="16px" color={item.statusColor ?? "fg.muted"} flexShrink={0} />
-      )}
+        if (isTopLevelGroupRow) {
+          return;
+        }
 
-      {hasTicketId ? (
-        <Text textStyle="label/S/regular" color="fg.muted" flexShrink={0} minW="70px">
-          {item.ticketId}
-        </Text>
-      ) : null}
-
-      <Text textStyle="label/S/regular" flex="1" truncate>
-        {item.title}
-      </Text>
-
-      {item.badges && item.badges.length > 0 && (
-        <Wrap gap="2xs" flexShrink={0}>
-          {item.badges.map((badge, index) => (
-            <Badge
-              key={badge.id ?? `${badge.label}-${index}`}
-              variant="subtle"
-              colorPalette={badge.color ?? "gray"}
-              textStyle="label/XS/medium"
-            >
-              {badge.label}
-            </Badge>
-          ))}
-        </Wrap>
-      )}
-
-      {item.assigneeIcon && <Box flexShrink={0}>{item.assigneeIcon}</Box>}
-
-      {item.date && (
-        <Text textStyle="label/XS/regular" color="fg.muted" flexShrink={0}>
-          {item.date}
-        </Text>
-      )}
+        item.onClick?.();
+        onItemClick?.(item);
+      }}
+      data-selected={isSelected ? "true" : undefined}
+      draggable={isDraggableRow}
+      onDragStart={isDraggableRow ? onDragStart(item.id) : undefined}
+      onDragEnd={isDraggableRow ? onDragEnd : undefined}
+      onDragOver={isDropTargetRow ? onDragOver(item.id) : undefined}
+      onDragLeave={isDropTargetRow ? onDragLeave : undefined}
+      onDrop={isDropTargetRow ? onDrop(item.id) : undefined}
+    >
+      {flexRender(row.getVisibleCells()[0].column.columnDef.cell, row.getVisibleCells()[0].getContext())}
     </HStack>
   );
 };
-
-interface ExpandToggleProps {
-  row: Row<TicketListItem>;
-}
-
-const ExpandToggle = (props: ExpandToggleProps) => {
-  const { row } = props;
-  const isExpanded = row.getIsExpanded();
-
-  return (
-    <Box
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-      flexShrink={0}
-      width="16px"
-      height="16px"
-      data-expanded={isExpanded ? "true" : undefined}
-      aria-label={isExpanded ? "Collapse group" : "Expand group"}
-    >
-      <ChevronRight
-        size={14}
-        style={{
-          color: "var(--chakra-colors-fg-muted)",
-          transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-          transition: "transform 0.15s ease",
-        }}
-      />
-    </Box>
-  );
-};
-
-const TreeConnector = () => (
-  <Box width="16px" height="16px" position="relative" flexShrink={0}>
-    <Box position="absolute" left="7px" top="0" bottom="50%" borderLeftWidth="1px" borderColor="border.muted" />
-    <Box position="absolute" left="7px" top="50%" width="8px" borderBottomWidth="1px" borderColor="border.muted" />
-  </Box>
-);
 
 function getDefaultExpandedState(items: TicketListItem[]) {
   const expandedState: ExpandedState = {};

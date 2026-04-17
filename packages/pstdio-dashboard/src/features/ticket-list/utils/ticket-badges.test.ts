@@ -51,7 +51,7 @@ describe("buildTicketBadges", () => {
     expect(typeof badges[3]?.label).toBe("string");
   });
 
-  it("keeps duplicate tag labels distinct by id for mixed single/multi-select tags", () => {
+  it("includes tag name with option label and keeps duplicate options distinct by id", () => {
     const displayProperties: DisplayProperty[] = ["tags"];
     const ticket = makeTicket({ tagIds: ["severity-bug", "type-bug"] });
 
@@ -70,8 +70,8 @@ describe("buildTicketBadges", () => {
     const badges = buildTicketBadges(ticket, displayProperties, context);
 
     expect(badges).toEqual([
-      { id: "tag:severity-bug", label: "bug", color: "red" },
-      { id: "tag:type-bug", label: "bug", color: "orange" },
+      { id: "tag:severity-bug", label: "severity: bug", color: "red" },
+      { id: "tag:type-bug", label: "type: bug", color: "orange" },
     ]);
   });
 });

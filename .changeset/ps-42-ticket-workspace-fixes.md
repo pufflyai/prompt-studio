@@ -3,4 +3,4 @@
 "@pstdio/ui": patch
 ---
 
-Fix ticket workspace board/list behavior by preserving manual column order, stabilizing list expansion toggles, and hardening tag badge identity for repeated labels.
+Fix ticket workspace: reliable chevron toggle, badge color sync after drag, clickable label filters, list mode drag-and-drop, single-column no-grouping view, hidden sub-grouping when ungrouped, within-column manual reordering, and remove assignee from defaults.

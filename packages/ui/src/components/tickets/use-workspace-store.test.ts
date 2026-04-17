@@ -95,4 +95,83 @@ describe("createTicketsWorkspaceStore", () => {
     expect(secondStore.getState().settings.columnGrouping).toBe("assignee");
     expect(secondStore.getState().filters.status).toEqual(["todo"]);
   });
+
+  it("sanitizes hidden assignee filters and display settings", () => {
+    const store = createTicketsWorkspaceStore({
+      storageKey: STORAGE_KEY,
+      initialState: {
+        settings: {
+          viewMode: "board",
+          columnGrouping: "assignee",
+          rowGrouping: "assignee",
+          ordering: { field: "manual", direction: "asc" },
+          displayProperties: ["labels", "assignee", "status"],
+        },
+        filters: {
+          status: ["todo"],
+          assignee: ["alex"],
+        },
+      },
+    });
+
+    store.getState().sanitize({
+      allowedDisplayProperties: ["id", "status", "labels", "updated"],
+      allowedFilterCategories: ["status", "labels"],
+      allowedGroupingFields: ["status", "none"],
+      defaultColumnGrouping: "status",
+      defaultRowGrouping: "none",
+    });
+
+    expect(store.getState().settings.columnGrouping).toBe("status");
+    expect(store.getState().settings.rowGrouping).toBe("none");
+    expect(store.getState().settings.displayProperties).toEqual(["labels", "status"]);
+    expect(store.getState().filters).toEqual({ status: ["todo"] });
+  });
+
+  it("keeps assignee state when assignee remains an allowed option", () => {
+    const store = createTicketsWorkspaceStore({
+      storageKey: STORAGE_KEY,
+      initialState: {
+        settings: {
+          viewMode: "board",
+          columnGrouping: "assignee",
+          rowGrouping: "none",
+          ordering: { field: "manual", direction: "asc" },
+          displayProperties: ["assignee", "labels"],
+        },
+        filters: {
+          assignee: ["alex"],
+        },
+      },
+    });
+
+    store.getState().sanitize({
+      allowedDisplayProperties: ["assignee", "labels"],
+      allowedFilterCategories: ["assignee", "status", "labels"],
+      allowedGroupingFields: ["assignee", "status", "none"],
+      defaultColumnGrouping: "status",
+      defaultRowGrouping: "none",
+    });
+
+    expect(store.getState().settings.columnGrouping).toBe("assignee");
+    expect(store.getState().settings.displayProperties).toEqual(["assignee", "labels"]);
+    expect(store.getState().filters.assignee).toEqual(["alex"]);
+  });
+
+  it("does not create new state objects when sanitize makes no changes", () => {
+    const store = createTicketsWorkspaceStore({ storageKey: STORAGE_KEY });
+    const beforeSettings = store.getState().settings;
+    const beforeFilters = store.getState().filters;
+
+    store.getState().sanitize({
+      allowedDisplayProperties: ["labels"],
+      allowedFilterCategories: ["status", "labels"],
+      allowedGroupingFields: ["status", "none"],
+      defaultColumnGrouping: "status",
+      defaultRowGrouping: "none",
+    });
+
+    expect(store.getState().settings).toBe(beforeSettings);
+    expect(store.getState().filters).toBe(beforeFilters);
+  });
 });

@@ -1,5 +1,5 @@
 import { Badge, HStack, Stack, Text, Wrap } from "@chakra-ui/react";
-import type { DragEventHandler } from "react";
+import type { DragEventHandler, KeyboardEvent, MouseEvent } from "react";
 import type { WorkspaceBadgeProps } from "@/components/workspace-badge";
 import { WorkspaceBadge } from "@/components/workspace-badge";
 
@@ -7,6 +7,7 @@ export interface TicketCardBadge {
   id?: string;
   label: string;
   color?: string;
+  onClick?: () => void;
 }
 
 interface TicketCardProps {
@@ -85,6 +86,29 @@ export const TicketCard = (props: TicketCardProps) => {
               variant="subtle"
               colorPalette={badge.color ?? "gray"}
               textStyle="label/XS/medium"
+              cursor={badge.onClick ? "pointer" : undefined}
+              _hover={badge.onClick ? { opacity: 0.8 } : undefined}
+              role={badge.onClick ? "button" : undefined}
+              tabIndex={badge.onClick ? 0 : undefined}
+              onClick={
+                badge.onClick
+                  ? (event: MouseEvent) => {
+                      event.stopPropagation();
+                      badge.onClick?.();
+                    }
+                  : undefined
+              }
+              onKeyDown={
+                badge.onClick
+                  ? (event: KeyboardEvent) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        badge.onClick?.();
+                      }
+                    }
+                  : undefined
+              }
             >
               {badge.label}
             </Badge>
