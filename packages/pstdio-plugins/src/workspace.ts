@@ -28,12 +28,6 @@ export const detectRuntime = (): "bun" | "npm" => {
 const isInstalled = (pstdioDir: string) => existsSync(join(pstdioDir, "node_modules", "@pstdio", "sdk"));
 
 export const ensurePluginWorkspace = async (pstdioDir: string) => {
-  // Escape hatch for environments (e.g. slow CI networks) where the blocking
-  // `bun install` on the request path is unacceptable. When set, plugins that
-  // need @pstdio/sdk simply fail to import and are silently skipped by the
-  // loader; projects with no third-party deps still work.
-  if (process.env.PSTDIO_SKIP_PLUGIN_INSTALL === "1") return;
-
   const existing = readPackageJson(pstdioDir);
   if (existing?.dependencies?.["@pstdio/sdk"] && isInstalled(pstdioDir)) return;
 

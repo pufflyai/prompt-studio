@@ -120,10 +120,6 @@ const createTicketViaApi = async (
 };
 
 test.describe("Ticket plugin actions", () => {
-  // Requires plugin runtime to load a user-authored plugin, which is disabled on
-  // CI via PSTDIO_SKIP_PLUGIN_INSTALL (see playwright.config.ts).
-  test.skip(!!process.env.CI, "requires plugin runtime to be loaded");
-
   let projectId: string;
   const repoDirs: string[] = [];
 

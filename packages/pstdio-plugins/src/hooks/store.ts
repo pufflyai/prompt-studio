@@ -57,13 +57,6 @@ export const createPluginRuntimeStore = (input: {
   };
 
   const loadForProject = async (projectId: string): Promise<PluginRuntime> => {
-    // Escape hatch: when set, plugins are never loaded. The loader's dynamic
-    // import + Bun.build fallback can stall on CI filesystems even when the
-    // SDK install is skipped, blocking hook-firing request paths.
-    if (process.env.PSTDIO_SKIP_PLUGIN_INSTALL === "1") {
-      return createEmptyRuntime(input.createClient());
-    }
-
     const repoPath = await input.resolveRepoPath(projectId);
     if (!repoPath) return createEmptyRuntime(input.createClient());
 
