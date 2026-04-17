@@ -189,10 +189,7 @@ describe("packaged pstdio — self-hosted serve", () => {
           ["workspace-actions/run-review"],
           "workspace",
         );
-        expect(workspaceActionKeys.sort()).toEqual([
-          "workspace-actions/open-worktree-in-vscode",
-          "workspace-actions/run-review",
-        ]);
+        expect(workspaceActionKeys.sort()).toEqual(["workspace-actions/run-review"]);
       } finally {
         if (child) {
           await stopProcess(child);

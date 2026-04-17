@@ -52,32 +52,24 @@ services:
         source: ${HOST_GIT_COMMON_DIR:?HOST_GIT_COMMON_DIR is required}
         target: ${HOST_GIT_COMMON_DIR:?HOST_GIT_COMMON_DIR is required}
       - type: volume
-        source: workspace-node-modules
         target: ${HOST_WORKTREE:?HOST_WORKTREE is required}/node_modules
       - type: volume
         source: bun-cache
         target: /root/.bun/install/cache
       - type: volume
-        source: pstdio-dev-state
         target: /root/.pstdio-dev
       - type: volume
-        source: docker-project
         target: /workspace/project
       - type: volume
         source: opencode-config
         target: /root/.config/opencode
       - type: volume
-        source: opencode-data
         target: /root/.local/share/opencode
       - type: volume
         source: claude-config
         target: /root/.claude
 
 volumes:
-  workspace-node-modules:
   bun-cache:
-  pstdio-dev-state:
-  docker-project:
   opencode-config:
-  opencode-data:
   claude-config:
