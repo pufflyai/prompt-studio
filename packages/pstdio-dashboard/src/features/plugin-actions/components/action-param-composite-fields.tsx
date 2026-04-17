@@ -160,11 +160,13 @@ export const RepoParamField = (props: RepoParamFieldProps) => {
   const { param, projectId, onChange, isDisabled } = props;
   const { t } = useTranslation("projects");
   const lastSelectedRepo = useProjectSettingsStore((state) => state.lastSelectedRepo);
-  const lastSelectedBranches = useProjectSettingsStore((state) => state.lastSelectedBranches);
   const setLastSelectedRepo = useProjectSettingsStore((state) => state.setLastSelectedRepo);
   const setLastSelectedBranch = useProjectSettingsStore((state) => state.setLastSelectedBranch);
   const [selectedRepoId, setSelectedRepoId] = useState(lastSelectedRepo);
-  const [selectedBranch, setSelectedBranch] = useState(lastSelectedBranches[0] ?? "");
+  // Start empty so the auto-resolve effect below picks the current branch of
+  // the active repo. Seeding from the persisted history would surface a stale
+  // branch (possibly from a different repo) in the selector before resolution.
+  const [selectedBranch, setSelectedBranch] = useState("");
   const [hasUserSelectedBranch, setHasUserSelectedBranch] = useState(false);
   const { data: repositories = [], isLoading: isRepositoriesLoading } = useProjectRepositories(projectId);
 

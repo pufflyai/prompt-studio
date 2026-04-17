@@ -6,6 +6,7 @@ export { getWorktreeDiff, getWorktreeDiffSummary } from "./diff";
 export { GitError, git } from "./git";
 export { mergeWorktree } from "./merge";
 export { rebaseOntoTarget } from "./rebase";
+export { resolveLatestBase } from "./resolve-base";
 export { runSetup, runSetupScript } from "./setup";
 export { getWorktreeStatus } from "./status";
 export type {

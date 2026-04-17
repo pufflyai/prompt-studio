@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { copyFile, mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { createWorktree } from "pstdio-wt";
+import { createWorktree, resolveLatestBase } from "pstdio-wt";
 import type { RouteDeps } from "../../deps";
 import { withHookSessionClient } from "../../hooks/hook-client";
 
@@ -77,6 +77,7 @@ export const resolveWorkspaceGitMetadata = async (
 
   const branch = `workspace/${input.workspaceShorthand}`;
   const worktreePath = join(resolveWorkspacesRoot(), input.workspaceShorthand);
+  const base = await resolveLatestBase(input.repoPath, input.base);
 
   const runtime = await deps.pluginService.getForProject(input.projectId);
   const hookContext = {
@@ -86,7 +87,7 @@ export const resolveWorkspaceGitMetadata = async (
     branch,
     workspace: input.workspaceShorthand,
     ticket: input.ticketShorthand,
-    base: input.base,
+    base,
   };
 
   const ctx = { ...hookContext, client: withHookSessionClient(runtime.client, hookContext) };
@@ -99,7 +100,7 @@ export const resolveWorkspaceGitMetadata = async (
     repoRoot: input.repoPath,
     branch,
     path: worktreePath,
-    base: input.base,
+    base,
   });
 
   await copyPstdioConfig(input.repoPath, worktreePath);
