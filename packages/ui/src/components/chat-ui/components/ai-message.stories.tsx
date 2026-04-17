@@ -58,3 +58,25 @@ const MessagePreview = () => {
 export const UserAndAssistant: Story = {
   render: () => <MessagePreview />,
 };
+
+const longCodeBlockMarkdown = `Here is a code snippet:
+
+\`\`\`typescript
+const veryLongVariableName = calculateSomethingVeryComplexFromMultipleSources(sourceAlpha, sourceBeta, sourceGamma, sourceDelta, sourceEpsilon, sourceZeta, sourceEta, sourceTheta);
+\`\`\`
+
+And some text after the code block to make sure wrapping still works for normal paragraphs.`;
+
+export const LongCodeBlockOverflow: Story = {
+  render: () => (
+    <Box maxW="480px" w="full" borderWidth="1px" borderRadius="md" bg="bg" p="md">
+      <Stack gap="sm">
+        <ChatMessage.Root from="assistant">
+          <ChatMessage.Content from="assistant">
+            <Response height="auto">{longCodeBlockMarkdown}</Response>
+          </ChatMessage.Content>
+        </ChatMessage.Root>
+      </Stack>
+    </Box>
+  ),
+};
