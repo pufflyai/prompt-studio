@@ -120,8 +120,9 @@ const createTicketViaApi = async (
 };
 
 test.describe("Ticket plugin actions", () => {
-  // TEMP: skip on CI to isolate cascade cause — re-enable once root cause is fixed
-  test.skip(!!process.env.CI, "temporarily disabled on CI to diagnose e2e cascade");
+  // Requires plugin runtime to load a user-authored plugin, which is disabled on
+  // CI via PSTDIO_SKIP_PLUGIN_INSTALL (see playwright.config.ts).
+  test.skip(!!process.env.CI, "requires plugin runtime to be loaded");
 
   let projectId: string;
   const repoDirs: string[] = [];
