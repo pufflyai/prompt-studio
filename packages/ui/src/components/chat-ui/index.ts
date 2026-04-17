@@ -10,6 +10,7 @@ export { ChatMessage } from "./components/ai-message";
 export { ApprovalPrompt } from "./components/approval-prompt";
 export type { AutoScrollProps } from "./components/auto-scroll";
 export { AutoScroll } from "./components/auto-scroll";
+export type { ChatInputQuestionPrompt } from "./components/chat-input";
 export { ChatInput } from "./components/chat-input";
 export { ChatPanel } from "./components/chat-panel";
 export { ChatSkeleton } from "./components/chat-skeleton";

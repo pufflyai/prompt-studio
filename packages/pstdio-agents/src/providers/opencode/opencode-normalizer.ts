@@ -41,8 +41,8 @@ const resolveRole = (role: string) => {
 // --- Tool classification ---
 
 const READ_TOOLS = new Set(["glob", "read", "grep", "search"]);
-const WRITE_TOOLS = new Set(["write", "edit", "patch", "notebook_edit"]);
-const EXECUTE_TOOLS = new Set(["bash", "task", "shell"]);
+const WRITE_TOOLS = new Set(["write", "edit", "patch", "notebook_edit", "todowrite"]);
+const EXECUTE_TOOLS = new Set(["bash", "task", "shell", "question"]);
 const NETWORK_TOOLS = new Set(["web_fetch", "web_search", "fetch"]);
 
 const classifyToolAction = (toolName: string): ToolPartActionType => {
