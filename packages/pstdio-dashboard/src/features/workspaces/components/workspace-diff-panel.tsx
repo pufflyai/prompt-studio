@@ -1,13 +1,13 @@
-import { Box, Button, Flex, Skeleton, Stack } from "@chakra-ui/react";
+import { Box, Button, Flex, Skeleton, Stack, Tabs } from "@chakra-ui/react";
 import { type Diff, DiffDrawer, EmptyState } from "@pstdio/ui";
-import { GitCompareArrows, ListTree, ShieldCheck } from "lucide-react";
+import { FileDiffIcon, ListTree, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
-import type { WorkspacePageTab } from "@/features/workspaces/pages/workspace-page-tab";
-import type { ChangedFilesViewMode } from "../utils/build-changed-files-tree";
+import { normalizeWorkspacePageTab, type WorkspacePageTab } from "@/features/workspaces/pages/workspace-page-tab";
+import { type ChangedFilesViewMode, collectChangedFilePaths } from "../utils/build-changed-files-tree";
 import { WorkspaceChecksPanel } from "./workspace-checks-panel";
-import { ChangedFilesPanel, ResizableLeftPanel, resolveSelectedDiffPath } from "./workspace-diff-panel-changed-files";
+import { FileListPanel, ResizableLeftPanel, resolveSelectedPath } from "./workspace-file-list-panel";
 
 interface WorkspaceDiffPanelProps {
   ticketId: string;
@@ -42,48 +42,6 @@ const WorkspaceDiffPanelLoading = () => (
   </Flex>
 );
 
-interface WorkspacePanelTabsProps {
-  activeTab: WorkspacePageTab;
-  onTabChange: (tab: WorkspacePageTab) => void;
-}
-
-const WorkspacePanelTabs = (props: WorkspacePanelTabsProps) => {
-  const { activeTab, onTabChange } = props;
-  const { t } = useTranslation("tickets");
-
-  return (
-    <Flex h="41px" minH="41px" align="flex-end" px="sm" borderBottomWidth="1px" bg="bg">
-      <Button
-        size="sm"
-        variant="ghost"
-        borderRadius="0"
-        borderBottomWidth="2px"
-        borderColor={activeTab === "changes" ? "border.default" : "transparent"}
-        color={activeTab === "changes" ? "foreground.primary" : "foreground.secondary"}
-        gap="2xs"
-        onClick={() => onTabChange("changes")}
-      >
-        <GitCompareArrows size={14} />
-        {t("workspaceDiffPanel.tabs.changes")}
-      </Button>
-
-      <Button
-        size="sm"
-        variant="ghost"
-        borderRadius="0"
-        borderBottomWidth="2px"
-        borderColor={activeTab === "checks" ? "border.default" : "transparent"}
-        color={activeTab === "checks" ? "foreground.primary" : "foreground.secondary"}
-        gap="2xs"
-        onClick={() => onTabChange("checks")}
-      >
-        <ShieldCheck size={14} />
-        {t("workspaceDiffPanel.tabs.checks")}
-      </Button>
-    </Flex>
-  );
-};
-
 interface WorkspaceDiffHeaderProps {
   hasChangedFiles: boolean;
   onToggleTreePanel: () => void;
@@ -107,74 +65,83 @@ const WorkspaceDiffHeader = (props: WorkspaceDiffHeaderProps) => {
 
 export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
   const { ticketId, diffs, artifacts, changedFiles, activeTab, onTabChange, loading = false } = props;
+  const { t } = useTranslation("tickets");
   const [isTreePanelOpen, setTreePanelOpen] = useState(true);
   const [viewMode, setViewMode] = useState<ChangedFilesViewMode>("nested");
   const [searchQuery, setSearchQuery] = useState("");
   const diffPaths = useMemo(() => diffs.map((diff) => diff.newPath ?? diff.oldPath ?? "unknown"), [diffs]);
+  const changedFilePaths = useMemo(() => collectChangedFilePaths(changedFiles), [changedFiles]);
   const [selectedDiffPath, setSelectedDiffPath] = useState<string | null>(() =>
-    resolveSelectedDiffPath(diffPaths, changedFiles),
+    resolveSelectedPath(diffPaths, changedFilePaths),
   );
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-  const filteredChangedFiles = useMemo(() => {
-    if (!normalizedSearchQuery) return changedFiles;
+  const filteredChangedFilePaths = useMemo(() => {
+    if (!normalizedSearchQuery) return changedFilePaths;
 
-    return changedFiles.filter((file) =>
-      (file.newPath ?? file.oldPath ?? file.filePath).toLowerCase().includes(normalizedSearchQuery),
-    );
-  }, [changedFiles, normalizedSearchQuery]);
+    return changedFilePaths.filter((path) => path.toLowerCase().includes(normalizedSearchQuery));
+  }, [changedFilePaths, normalizedSearchQuery]);
   const filteredDiffs = useMemo(() => {
     if (!normalizedSearchQuery) return diffs;
 
     return diffs.filter((diff) => (diff.newPath ?? diff.oldPath ?? "").toLowerCase().includes(normalizedSearchQuery));
   }, [diffs, normalizedSearchQuery]);
+  const filteredDiffPaths = useMemo(
+    () => filteredDiffs.map((diff) => diff.newPath ?? diff.oldPath ?? "unknown"),
+    [filteredDiffs],
+  );
   const hasDiffs = filteredDiffs.length > 0;
   const hasChangedFiles = changedFiles.length > 0;
 
   useEffect(() => {
-    if (selectedDiffPath) {
-      const pathStillExists = filteredDiffs.some(
-        (diff) => (diff.newPath ?? diff.oldPath ?? "unknown") === selectedDiffPath,
-      );
-      if (pathStillExists) return;
-    }
+    if (selectedDiffPath && filteredDiffPaths.includes(selectedDiffPath)) return;
 
-    setSelectedDiffPath(
-      resolveSelectedDiffPath(
-        filteredDiffs.map((diff) => diff.newPath ?? diff.oldPath ?? "unknown"),
-        filteredChangedFiles,
-      ),
-    );
-  }, [filteredChangedFiles, filteredDiffs, selectedDiffPath]);
+    setSelectedDiffPath(resolveSelectedPath(filteredDiffPaths, filteredChangedFilePaths));
+  }, [filteredChangedFilePaths, filteredDiffPaths, selectedDiffPath]);
 
   if (loading) {
     return <WorkspaceDiffPanelLoading />;
   }
 
-  const resolvedSelectedDiffPath =
-    selectedDiffPath ??
-    resolveSelectedDiffPath(
-      filteredDiffs.map((diff) => diff.newPath ?? diff.oldPath ?? "unknown"),
-      filteredChangedFiles,
-    );
+  const resolvedSelectedDiffPath = selectedDiffPath ?? resolveSelectedPath(filteredDiffPaths, filteredChangedFilePaths);
   const handleSelectDiffPath = (path: string) => {
     setSelectedDiffPath(path);
   };
 
   return (
     <Flex h="full" minH="0" minW="0" flex="1" bg="bg.subtle" gap="0" data-testid="workspace-diff-panel">
-      <Stack h="full" minH="0" minW="0" flex="1" bg="bg.subtle" gap="0">
-        <WorkspacePanelTabs activeTab={activeTab} onTabChange={onTabChange} />
+      <Tabs.Root
+        value={activeTab}
+        onValueChange={(details) => onTabChange(normalizeWorkspacePageTab(details.value))}
+        variant="enclosed"
+        display="flex"
+        flexDirection="column"
+        h="full"
+        minH="0"
+        minW="0"
+        flex="1"
+        bg="bg.subtle"
+        size="sm"
+      >
+        <Tabs.List h="41px" minH="41px" bg="bg.subtle" borderBottomWidth="1px" borderRadius={0} px="xs" py="1px">
+          <Tabs.Trigger value="changes" gap="2xs">
+            <FileDiffIcon size={14} />
+            {t("workspaceDiffPanel.tabs.changes")}
+          </Tabs.Trigger>
+          <Tabs.Trigger value="checks" gap="2xs">
+            <ShieldCheck size={14} />
+            {t("workspaceDiffPanel.tabs.checks")}
+          </Tabs.Trigger>
+        </Tabs.List>
 
-        {activeTab === "checks" ? (
-          <WorkspaceChecksPanel ticketId={ticketId} artifacts={artifacts} />
-        ) : (
+        <Tabs.Content value="changes" flex="1" minH="0" minW="0" p="0" display="flex">
           <Flex flex="1" minH="0" minW="0" bg="bg.subtle" gap="0">
             {hasChangedFiles && isTreePanelOpen ? (
               <ResizableLeftPanel>
-                <ChangedFilesPanel
-                  changedFiles={filteredChangedFiles}
-                  selectedDiffPath={resolvedSelectedDiffPath}
-                  onSelectDiffPath={handleSelectDiffPath}
+                <FileListPanel
+                  title="Changed files"
+                  paths={filteredChangedFilePaths}
+                  selectedPath={resolvedSelectedDiffPath}
+                  onSelectPath={handleSelectDiffPath}
                   viewMode={viewMode}
                   onViewModeChange={setViewMode}
                   searchQuery={searchQuery}
@@ -205,8 +172,12 @@ export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
               )}
             </Stack>
           </Flex>
-        )}
-      </Stack>
+        </Tabs.Content>
+
+        <Tabs.Content value="checks" flex="1" minH="0" minW="0" p="0" display="flex">
+          <WorkspaceChecksPanel ticketId={ticketId} artifacts={artifacts} />
+        </Tabs.Content>
+      </Tabs.Root>
     </Flex>
   );
 };

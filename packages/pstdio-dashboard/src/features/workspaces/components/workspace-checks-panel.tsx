@@ -1,19 +1,23 @@
-import { Box, Button, Flex, Icon, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Box, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
 import { EmptyState, ScrollArea } from "@pstdio/ui";
 import { AlertCircle, CheckCircle2, FileCode2, FileText, FlaskConical, TerminalSquare } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTicketContent } from "@/features/ticket/hooks/use-ticket-content";
 import type { ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
+import type { ChangedFilesViewMode } from "../utils/build-changed-files-tree";
 import { buildWorkspaceChecksContentRequest } from "./workspace-checks-content-request";
+import { type FileIconInfo, FileListPanel, ResizableLeftPanel } from "./workspace-file-list-panel";
 
 interface WorkspaceChecksPanelProps {
   ticketId: string;
   artifacts: ApiWorkspaceArtifact[];
 }
 
-const resolveArtifactStatusIcon = (relativePath: string) => {
-  const lower = relativePath.toLowerCase();
+const stripArtifactPrefix = (relativePath: string) => relativePath.replace(/^artifacts\//, "");
+
+const resolveArtifactFileIcon = (path: string): FileIconInfo => {
+  const lower = path.toLowerCase();
   if (lower.includes("fail") || lower.includes("error")) return { icon: AlertCircle, color: "fg.error" };
   if (lower.includes("pass") || lower.includes("ok") || lower.includes("success")) {
     return { icon: CheckCircle2, color: "fg.success" };
@@ -28,25 +32,36 @@ const resolveArtifactStatusIcon = (relativePath: string) => {
   return { icon: FileText, color: "fg.subtle" };
 };
 
-const formatArtifactRowLabel = (relativePath: string) => relativePath.replace(/^artifacts\//, "");
-
 export const WorkspaceChecksPanel = (props: WorkspaceChecksPanelProps) => {
   const { ticketId, artifacts } = props;
   const { t } = useTranslation("tickets");
-  const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(artifacts[0]?.id ?? null);
+  const [viewMode, setViewMode] = useState<ChangedFilesViewMode>("nested");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedPath, setSelectedPath] = useState<string | null>(() =>
+    artifacts[0] ? stripArtifactPrefix(artifacts[0].relative_path) : null,
+  );
+
+  const artifactByDisplayPath = useMemo(() => {
+    const map = new Map<string, ApiWorkspaceArtifact>();
+    artifacts.forEach((artifact) => {
+      map.set(stripArtifactPrefix(artifact.relative_path), artifact);
+    });
+    return map;
+  }, [artifacts]);
+
+  const allPaths = useMemo(() => Array.from(artifactByDisplayPath.keys()), [artifactByDisplayPath]);
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const filteredPaths = useMemo(() => {
+    if (!normalizedSearchQuery) return allPaths;
+    return allPaths.filter((path) => path.toLowerCase().includes(normalizedSearchQuery));
+  }, [allPaths, normalizedSearchQuery]);
 
   useEffect(() => {
-    if (artifacts.length === 0) {
-      setSelectedArtifactId(null);
-      return;
-    }
+    if (selectedPath && artifactByDisplayPath.has(selectedPath)) return;
+    setSelectedPath(filteredPaths[0] ?? allPaths[0] ?? null);
+  }, [allPaths, artifactByDisplayPath, filteredPaths, selectedPath]);
 
-    const stillExists = artifacts.some((artifact) => artifact.id === selectedArtifactId);
-    if (!stillExists) {
-      setSelectedArtifactId(artifacts[0]?.id ?? null);
-    }
-  }, [artifacts, selectedArtifactId]);
-
+  const selectedArtifactId = selectedPath ? (artifactByDisplayPath.get(selectedPath)?.id ?? null) : null;
   const { selectedArtifact, refreshKey } = buildWorkspaceChecksContentRequest(artifacts, selectedArtifactId);
   const artifactContent = useTicketContent(ticketId, selectedArtifact?.file_id ?? "", {
     enabled: Boolean(selectedArtifact),
@@ -65,45 +80,25 @@ export const WorkspaceChecksPanel = (props: WorkspaceChecksPanelProps) => {
   }
 
   return (
-    <Flex flex="1" minH="0" bg="bg.subtle" borderTopWidth="1px">
-      <Stack w="18rem" minW="18rem" h="full" gap="0" borderRightWidth="1px" bg="bg">
-        <Flex h="41px" minH="41px" align="center" px="sm" borderBottomWidth="1px">
-          <Text textStyle="label/S/medium" color="foreground.secondary">
-            {t("workspaceDiffPanel.checks.title")}
-          </Text>
-        </Flex>
-
-        <ScrollArea flex="1" minH="0" contentProps={{ p: "xs" }}>
-          <Stack gap="2xs">
-            {artifacts.map((artifact) => {
-              const icon = resolveArtifactStatusIcon(artifact.relative_path);
-              const isActive = artifact.id === selectedArtifact?.id;
-              return (
-                <Button
-                  key={artifact.id}
-                  size="sm"
-                  variant="ghost"
-                  justifyContent="flex-start"
-                  borderRadius="xs"
-                  bg={isActive ? "bg.active" : "transparent"}
-                  _hover={{ bg: isActive ? "bg.active" : "bg.hover" }}
-                  onClick={() => setSelectedArtifactId(artifact.id)}
-                >
-                  <Icon as={icon.icon} boxSize="14px" color={icon.color} />
-                  <Text truncate minW="0" textStyle="paragraph/XS/regular">
-                    {formatArtifactRowLabel(artifact.relative_path)}
-                  </Text>
-                </Button>
-              );
-            })}
-          </Stack>
-        </ScrollArea>
-      </Stack>
+    <Flex flex="1" minH="0" bg="bg.subtle">
+      <ResizableLeftPanel>
+        <FileListPanel
+          title={t("workspaceDiffPanel.checks.title")}
+          paths={filteredPaths}
+          selectedPath={selectedPath}
+          onSelectPath={setSelectedPath}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          searchQuery={searchQuery}
+          onSearchQueryChange={setSearchQuery}
+          resolveFileIcon={resolveArtifactFileIcon}
+        />
+      </ResizableLeftPanel>
 
       <Stack flex="1" minH="0" gap="0" bg="bg">
         <Flex h="41px" minH="41px" align="center" px="sm" borderBottomWidth="1px">
           <Text textStyle="label/S/medium" color="foreground.secondary" truncate>
-            {selectedArtifact ? formatArtifactRowLabel(selectedArtifact.relative_path) : ""}
+            {selectedArtifact ? stripArtifactPrefix(selectedArtifact.relative_path) : ""}
           </Text>
         </Flex>
 

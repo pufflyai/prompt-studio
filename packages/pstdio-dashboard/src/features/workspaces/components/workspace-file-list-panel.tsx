@@ -12,14 +12,12 @@ import {
   TreeView,
 } from "@chakra-ui/react";
 import { EmptyState, ScrollArea } from "@pstdio/ui";
-import { ChevronDown, ChevronRight, FileText, Folder, List, ListTree } from "lucide-react";
+import { ChevronDown, ChevronRight, FileText, Folder, List, ListTree, type LucideIcon } from "lucide-react";
 import { type ReactNode, type PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from "react";
-import type { ApiFileDiff } from "@/features/ticket-list/data/api/types";
 import {
   buildChangedFilesTree,
   type ChangedFilesViewMode,
   type ChangedFileTreeNode,
-  collectChangedFilePaths,
 } from "../utils/build-changed-files-tree";
 
 const clampPanelWidth = (width: number, min: number, max: number) => Math.min(Math.max(width, min), max);
@@ -79,7 +77,7 @@ export const ResizableLeftPanel = (props: { children: ReactNode }) => {
     >
       <Box
         role="separator"
-        aria-label="Resize changed files panel"
+        aria-label="Resize file list panel"
         aria-orientation="vertical"
         position="absolute"
         top="0"
@@ -120,62 +118,70 @@ const getPathDepth = (nodeId: string) => {
   return Math.max(depth, 0);
 };
 
-export const resolveSelectedDiffPath = (diffPaths: string[], changedFiles: ApiFileDiff[]) => {
-  const firstDiffPath = diffPaths[0] ?? null;
-  if (firstDiffPath) return firstDiffPath;
+export const resolveSelectedPath = (preferredPaths: string[], fallbackPaths: string[]) => {
+  const firstPath = preferredPaths[0] ?? null;
+  if (firstPath) return firstPath;
 
-  return collectChangedFilePaths(changedFiles)[0] ?? null;
+  return fallbackPaths[0] ?? null;
 };
 
-interface ChangedFilesPanelProps {
-  changedFiles: ApiFileDiff[];
-  selectedDiffPath: string | null;
-  onSelectDiffPath: (path: string) => void;
+export interface FileIconInfo {
+  icon: LucideIcon;
+  color: string;
+}
+
+interface FileListPanelProps {
+  title: string;
+  paths: string[];
+  selectedPath: string | null;
+  onSelectPath: (path: string) => void;
   viewMode: ChangedFilesViewMode;
   onViewModeChange: (mode: ChangedFilesViewMode) => void;
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
+  resolveFileIcon?: (path: string) => FileIconInfo;
+  emptyTitle?: string;
 }
 
-export const ChangedFilesPanel = (props: ChangedFilesPanelProps) => {
+export const FileListPanel = (props: FileListPanelProps) => {
   const {
-    changedFiles,
-    selectedDiffPath,
-    onSelectDiffPath,
+    title,
+    paths,
+    selectedPath,
+    onSelectPath,
     viewMode,
     onViewModeChange,
     searchQuery,
     onSearchQueryChange,
+    resolveFileIcon,
+    emptyTitle = "No matching files",
   } = props;
-  const changedFilePaths = useMemo(() => collectChangedFilePaths(changedFiles), [changedFiles]);
-  const changedFileTree = useMemo(
-    () => buildChangedFilesTree(changedFilePaths, viewMode),
-    [changedFilePaths, viewMode],
-  );
+  const fileTree = useMemo(() => buildChangedFilesTree(paths, viewMode), [paths, viewMode]);
   const expandedFolders = useMemo(
-    () => (viewMode === "nested" ? collectExpandedFolderIds(changedFileTree) : []),
-    [changedFileTree, viewMode],
+    () => (viewMode === "nested" ? collectExpandedFolderIds(fileTree) : []),
+    [fileTree, viewMode],
   );
   const collection = useMemo(
     () =>
       createTreeCollection<ChangedFileTreeNode>({
-        rootNode: { id: "__root__", name: "root", type: "folder", children: changedFileTree },
+        rootNode: { id: "__root__", name: "root", type: "folder", children: fileTree },
         nodeToValue: (node) => node.id,
         nodeToString: (node) => node.name,
         nodeToChildren: (node) => node.children ?? [],
       }),
-    [changedFileTree],
+    [fileTree],
   );
+
   return (
-    <Stack h="full" minH="0" gap="0">
+    <Stack h="full" minH="0" minW="0" w="full" gap="0" overflow="hidden">
       <Flex h="41px" minH="41px" align="center" justify="space-between" px="sm" borderBottomWidth="1px">
         <Text textStyle="label/S/medium" color="foreground.secondary" truncate>
-          Changed files ({changedFilePaths.length})
+          {title} ({paths.length})
         </Text>
 
         <Menu.Root>
           <Menu.Trigger asChild>
-            <IconButton aria-label="Changed files view mode" variant="ghost" size="sm">
+            <IconButton aria-label="File list view mode" variant="ghost" size="sm">
               {viewMode === "nested" ? <ListTree size={14} /> : <List size={14} />}
             </IconButton>
           </Menu.Trigger>
@@ -207,10 +213,22 @@ export const ChangedFilesPanel = (props: ChangedFilesPanelProps) => {
         />
       </Stack>
 
-      <ScrollArea flex="1" minH="0" contentProps={{ p: "xs" }}>
-        {changedFilePaths.length > 0 ? (
-          <TreeView.Root collection={collection} aria-label="Changed files" defaultExpandedValue={expandedFolders}>
-            <TreeView.Tree>
+      <ScrollArea
+        flex="1"
+        minH="0"
+        minW="0"
+        viewportProps={{ style: { overflowX: "hidden" } }}
+        contentProps={{ p: "xs", w: "full", style: { minWidth: 0 } }}
+      >
+        {paths.length > 0 ? (
+          <TreeView.Root
+            collection={collection}
+            aria-label={title}
+            defaultExpandedValue={expandedFolders}
+            w="full"
+            minW="0"
+          >
+            <TreeView.Tree w="full" minW="0">
               <TreeView.Node
                 render={({ node, nodeState }) => {
                   const depth = viewMode === "nested" ? getPathDepth(node.id) : 0;
@@ -224,10 +242,18 @@ export const ChangedFilesPanel = (props: ChangedFilesPanelProps) => {
                         pl={`calc(var(--chakra-spacing-2) + ${depth} * var(--chakra-spacing-4))`}
                         borderRadius="xs"
                         cursor="pointer"
+                        w="full"
+                        minW="0"
+                        overflow="hidden"
                         _hover={{ bg: "bg.hover" }}
                       >
-                        <Icon as={nodeState.expanded ? ChevronDown : ChevronRight} boxSize="14px" color="fg.muted" />
-                        <Icon as={Folder} boxSize="14px" color="fg.muted" />
+                        <Icon
+                          as={nodeState.expanded ? ChevronDown : ChevronRight}
+                          boxSize="14px"
+                          color="fg.muted"
+                          flexShrink={0}
+                        />
+                        <Icon as={Folder} boxSize="14px" color="fg.muted" flexShrink={0} />
                         <TreeView.BranchText textStyle="paragraph/XS/medium" truncate minW="0">
                           {node.name}
                         </TreeView.BranchText>
@@ -236,7 +262,8 @@ export const ChangedFilesPanel = (props: ChangedFilesPanelProps) => {
                   }
 
                   const filePath = node.id.replace(/^file:/, "");
-                  const isSelected = selectedDiffPath === filePath;
+                  const isSelected = selectedPath === filePath;
+                  const fileIcon = resolveFileIcon?.(filePath) ?? { icon: FileText, color: "fg.subtle" };
 
                   return (
                     <TreeView.Item
@@ -246,11 +273,14 @@ export const ChangedFilesPanel = (props: ChangedFilesPanelProps) => {
                       pl={`calc(var(--chakra-spacing-2) + ${depth} * var(--chakra-spacing-4))`}
                       borderRadius="xs"
                       cursor="pointer"
+                      w="full"
+                      minW="0"
+                      overflow="hidden"
                       bg={isSelected ? "bg.active" : "transparent"}
                       _hover={{ bg: isSelected ? "bg.active" : "bg.hover" }}
-                      onClick={() => onSelectDiffPath(filePath)}
+                      onClick={() => onSelectPath(filePath)}
                     >
-                      <Icon as={FileText} boxSize="14px" color="fg.subtle" flexShrink={0} />
+                      <Icon as={fileIcon.icon} boxSize="14px" color={fileIcon.color} flexShrink={0} />
                       <TreeView.ItemText textStyle="paragraph/XS/regular" truncate minW="0">
                         {node.name}
                       </TreeView.ItemText>
@@ -262,7 +292,7 @@ export const ChangedFilesPanel = (props: ChangedFilesPanelProps) => {
           </TreeView.Root>
         ) : (
           <Box px="xs" py="xs">
-            <EmptyState title="No matching files" size="sm" textAlign="left" alignItems="flex-start" />
+            <EmptyState title={emptyTitle} size="sm" textAlign="left" alignItems="flex-start" />
           </Box>
         )}
       </ScrollArea>
