@@ -2,84 +2,49 @@ import "./FloatingTextFormatToolbarPlugin.css";
 
 import { IconButton, Stack, Text } from "@chakra-ui/react";
 import {
-  $isListNode,
+  INSERT_CHECK_LIST_COMMAND,
   INSERT_ORDERED_LIST_COMMAND,
   INSERT_UNORDERED_LIST_COMMAND,
   REMOVE_LIST_COMMAND,
 } from "@lexical/list";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { $createHeadingNode, $isHeadingNode, type HeadingTagType } from "@lexical/rich-text";
+import { $createHeadingNode, type HeadingTagType } from "@lexical/rich-text";
 import { $setBlocksType } from "@lexical/selection";
-import { $findMatchingParent, mergeRegister } from "@lexical/utils";
+import { mergeRegister } from "@lexical/utils";
 import {
   $createParagraphNode,
   $getSelection,
   $isRangeSelection,
-  $isRootOrShadowRoot,
   CLICK_COMMAND,
   COMMAND_PRIORITY_CRITICAL,
   COMMAND_PRIORITY_HIGH,
   FORMAT_TEXT_COMMAND,
   type LexicalEditor,
-  type LexicalNode,
   SELECTION_CHANGE_COMMAND,
 } from "lexical";
-import { List, ListOrdered } from "lucide-react";
+import { List, ListOrdered, ListTodo } from "lucide-react";
 import type React from "react";
 import { type Dispatch, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Tooltip } from "../../../../tooltip";
 import { setFloatingElemPos } from "../LinkEditorPlugin/utils/setFloatingElemPos";
+import { type BlockType, resolveBlockTypeFromAnchor } from "./resolve-block-type";
 
 // Increase the vertical gap (negative places it below the selection) to avoid overlap
 const GAP = -4;
 
-const blockTypeToBlockName = {
-  bullet: "Bulleted List",
-  check: "Check List",
-  code: "Code Block",
-  h1: "Heading 1",
-  h2: "Heading 2",
-  h3: "Heading 3",
-  h4: "Heading 4",
-  h5: "Heading 5",
-  h6: "Heading 6",
-  number: "Numbered List",
-  paragraph: "Normal",
-  quote: "Quote",
-};
-
-const toKnownBlockType = (type: string) => {
-  return type in blockTypeToBlockName ? (type as keyof typeof blockTypeToBlockName) : null;
-};
-
-const findSelectionElement = (anchorNode: LexicalNode) => {
-  const rootMatch =
-    anchorNode.getKey() === "root"
-      ? anchorNode
-      : $findMatchingParent(anchorNode, (node) => {
-          const parent = node.getParent();
-          return parent !== null && $isRootOrShadowRoot(parent);
-        });
-
-  return rootMatch ?? anchorNode.getTopLevelElementOrThrow();
-};
-
-const resolveBlockTypeFromAnchor = (anchorNode: LexicalNode) => {
-  const element = findSelectionElement(anchorNode);
-
-  if ($isListNode(element)) {
-    return element.getListType() as keyof typeof blockTypeToBlockName;
-  }
-
-  const parentList = $findMatchingParent(anchorNode, (node) => $isListNode(node));
-  if (parentList !== null && $isListNode(parentList)) {
-    return parentList.getListType() as keyof typeof blockTypeToBlockName;
-  }
-
-  const type = $isHeadingNode(element) ? element.getTag() : element.getType();
-  return toKnownBlockType(type);
-};
+function ToolbarSeparator() {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        height: "1rem",
+        margin: "0 0.25rem",
+        borderLeft: "1px solid var(--chakra-colors-border-muted)",
+      }}
+    />
+  );
+}
 
 function FloatingTextToolbar({
   editor,
@@ -93,41 +58,31 @@ function FloatingTextToolbar({
   setIsToolbarActive: Dispatch<boolean>;
 }): React.JSX.Element {
   const editorRef = useRef<HTMLDivElement | null>(null);
-  const [blockType, setBlockType] = useState<keyof typeof blockTypeToBlockName>("paragraph");
+  const [blockType, setBlockType] = useState<BlockType>("paragraph");
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
   const [isUnderline, setIsUnderline] = useState(false);
   const updateFloatingToolbarRef = useRef<() => boolean | undefined>(() => undefined);
 
   const formatHeading = (headingSize: HeadingTagType) => {
-    if (blockType !== headingSize) {
-      editor.update(() => {
-        const selection = $getSelection();
-        $setBlocksType(selection, () => $createHeadingNode(headingSize));
-      });
-      return;
-    }
-
     editor.update(() => {
       const selection = $getSelection();
-      $setBlocksType(selection, () => $createParagraphNode());
+      const factory = blockType === headingSize ? $createParagraphNode : () => $createHeadingNode(headingSize);
+      $setBlocksType(selection, factory);
     });
   };
 
-  const formatBulletList = () => {
-    if (blockType !== "bullet") {
-      editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined);
-    } else {
+  const formatList = (type: "bullet" | "number" | "check") => {
+    if (blockType === type) {
       editor.dispatchCommand(REMOVE_LIST_COMMAND, undefined);
+      return;
     }
-  };
-
-  const formatNumberedList = () => {
-    if (blockType !== "number") {
-      editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined);
-    } else {
-      editor.dispatchCommand(REMOVE_LIST_COMMAND, undefined);
-    }
+    const command = {
+      bullet: INSERT_UNORDERED_LIST_COMMAND,
+      number: INSERT_ORDERED_LIST_COMMAND,
+      check: INSERT_CHECK_LIST_COMMAND,
+    }[type];
+    editor.dispatchCommand(command, undefined);
   };
 
   const updateToolbar = () => {
@@ -288,16 +243,7 @@ function FloatingTextToolbar({
           </IconButton>
         </Tooltip>
 
-        {/* Separator */}
-        <Stack as="span" height="1rem" mx="0.5">
-          <span
-            style={{
-              borderLeft: "1px solid",
-              height: "100%",
-              borderColor: "var(--chakra-colors-border-muted)",
-            }}
-          />
-        </Stack>
+        <ToolbarSeparator />
 
         {/* Heading buttons */}
         <Tooltip content="Heading 1">
@@ -346,16 +292,7 @@ function FloatingTextToolbar({
           </IconButton>
         </Tooltip>
 
-        {/* Separator */}
-        <Stack as="span" height="1rem" mx="0.5">
-          <span
-            style={{
-              borderLeft: "1px solid",
-              height: "100%",
-              borderColor: "var(--chakra-colors-border-muted)",
-            }}
-          />
-        </Stack>
+        <ToolbarSeparator />
 
         {/* List buttons */}
         <Tooltip content="Bulleted List">
@@ -364,7 +301,7 @@ function FloatingTextToolbar({
             variant="ghost"
             aria-label="Bulleted List"
             size="xs"
-            onClick={formatBulletList}
+            onClick={() => formatList("bullet")}
           >
             <List size={14} />
           </IconButton>
@@ -375,9 +312,20 @@ function FloatingTextToolbar({
             variant="ghost"
             aria-label="Numbered List"
             size="xs"
-            onClick={formatNumberedList}
+            onClick={() => formatList("number")}
           >
             <ListOrdered size={14} />
+          </IconButton>
+        </Tooltip>
+        <Tooltip content="Check List">
+          <IconButton
+            data-active={blockType === "check" || undefined}
+            variant="ghost"
+            aria-label="Check List"
+            size="xs"
+            onClick={() => formatList("check")}
+          >
+            <ListTodo size={14} />
           </IconButton>
         </Tooltip>
       </Stack>
@@ -385,7 +333,12 @@ function FloatingTextToolbar({
   );
 }
 
-function useFloatingTextToolbar(editor: LexicalEditor, anchorElem: HTMLElement): React.JSX.Element | null {
+export function FloatingTextFormatToolbarPlugin({
+  anchorElem = document.body,
+}: {
+  anchorElem?: HTMLElement;
+}): React.JSX.Element | null {
+  const [editor] = useLexicalComposerContext();
   const [isToolbarActive, setIsToolbarActive] = useState(false);
 
   return createPortal(
@@ -397,13 +350,4 @@ function useFloatingTextToolbar(editor: LexicalEditor, anchorElem: HTMLElement):
     />,
     anchorElem,
   );
-}
-
-export function FloatingTextFormatToolbarPlugin({
-  anchorElem = document.body,
-}: {
-  anchorElem?: HTMLElement;
-}): React.JSX.Element | null {
-  const [editor] = useLexicalComposerContext();
-  return useFloatingTextToolbar(editor, anchorElem);
 }

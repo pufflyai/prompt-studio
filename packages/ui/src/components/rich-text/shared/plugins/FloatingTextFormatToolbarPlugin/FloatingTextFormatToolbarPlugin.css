@@ -5,6 +5,7 @@
   left: 0;
   z-index: 1000;
   opacity: 0;
+  pointer-events: none;
   background-color: var(--chakra-colors-bg);
   border-radius: 8px;
   border: 1px solid var(--chakra-colors-border-muted);
@@ -17,6 +18,7 @@
 
 .floating-text-format-toolbar.active {
   opacity: 1;
+  pointer-events: auto;
 }
 
 /* Style for active buttons in the floating toolbar */
