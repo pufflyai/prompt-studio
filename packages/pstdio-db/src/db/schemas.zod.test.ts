@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
 import {
+  activityEventSelectSchema,
   createTicketBodySchema,
   sessionApiSchema,
   ticketApiSchema,
@@ -182,6 +183,24 @@ describe("schemas.zod", () => {
       room: "doc-room",
       offset: "0",
       handle: "handle-1",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("validates activity event payloads", () => {
+    const result = activityEventSelectSchema.safeParse({
+      id: "event-1",
+      project_id: "project-1",
+      resource_type: "ticket",
+      resource_id: "PS-38",
+      event_type: "status_changed",
+      actor_type: "user",
+      actor_id: "user-1",
+      source: "ui",
+      summary: "Moved to in progress",
+      payload_json: { from: "todo", to: "in_progress" },
+      created_at: "2026-01-01T00:00:00.000Z",
     });
 
     expect(result.success).toBe(true);

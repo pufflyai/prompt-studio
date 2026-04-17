@@ -5,7 +5,7 @@ export { resolveDbPath } from "./db/paths";
 
 export * from "./db/schemas.pg";
 export * from "./db/schemas.zod";
-
+export { createActivityEventsDBService } from "./services/activity-events/activity-events";
 export { createAgentConfigsDBService } from "./services/agent-configs/agent-configs";
 export { createAttemptStatusesDBService } from "./services/attempt-statuses/attempt-statuses";
 export type { ValidColor } from "./services/colors";

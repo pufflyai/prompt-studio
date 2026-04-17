@@ -89,3 +89,13 @@ const deps = { sessionService, ticketService, ... };
 ## EventBus
 
 Domain services own event emission. When a mutation succeeds, the domain service calls `deps.eventBus.emit(table, op, data)`. Routes should not emit events directly -- if you find yourself calling `eventBus.emit` in a route handler, the logic belongs in a domain service.
+
+## Activity Events DB Service
+
+`createActivityEventsDBService(db)` is the durable activity log storage for ticket/workspace/session timelines.
+
+- Table: `activity_events`
+- Ordering: deterministic reverse chronology `created_at DESC, id DESC`
+- Pagination: cursor-based, where cursor encodes `{ createdAt, id }`
+- Supported filters: `resource_type`, `event_type`, and `created_at` range (`fromCreatedAt`, `toCreatedAt`)
+- Payload policy: `payload_json` stores concise structured deltas (status/tag/etc), not full markdown bodies

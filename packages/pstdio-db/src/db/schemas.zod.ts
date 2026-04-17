@@ -1,6 +1,7 @@
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import {
+  activity_events,
   sessions,
   ticket_tag_options,
   ticket_tags,
@@ -20,6 +21,12 @@ export const sessionSelectSchema = createSelectSchema(sessions, {
 export const ticketTagSelectSchema = createSelectSchema(ticket_tags);
 export const ticketTagOptionSelectSchema = createSelectSchema(ticket_tag_options);
 export const workspaceSelectSchema = createSelectSchema(workspaces);
+export const activityEventSelectSchema = createSelectSchema(activity_events, {
+  resource_type: z.enum(["ticket", "workspace", "session"]),
+  actor_type: z.enum(["user", "agent", "system"]),
+  source: z.enum(["ui", "api", "hook", "system", "agent"]),
+  payload_json: z.record(z.string(), z.unknown()),
+});
 
 export const ticketAttemptSchema = z.object({
   id: z.string(),

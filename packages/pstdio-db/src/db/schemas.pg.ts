@@ -1,4 +1,15 @@
-import { boolean, customType, integer, pgEnum, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  customType,
+  index,
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  primaryKey,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 
 const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
   dataType() {
@@ -14,6 +25,10 @@ export const sessionStatusEnum = pgEnum("session_status", [
   "cancelled",
   "disconnected",
 ]);
+
+export const activityResourceTypeEnum = pgEnum("activity_resource_type", ["ticket", "workspace", "session"]);
+export const activityActorTypeEnum = pgEnum("activity_actor_type", ["user", "agent", "system"]);
+export const activitySourceEnum = pgEnum("activity_source", ["ui", "api", "hook", "system", "agent"]);
 
 export const projects = pgTable("projects", {
   id: text("id").primaryKey(),
@@ -290,6 +305,35 @@ export const workspace_artifacts = pgTable(
     created_at: text("created_at").notNull(),
   },
   (table) => [uniqueIndex("workspace_artifacts_ticket_path_idx").on(table.ticket_id, table.relative_path)],
+);
+
+export const activity_events = pgTable(
+  "activity_events",
+  {
+    id: text("id").primaryKey(),
+    project_id: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    resource_type: activityResourceTypeEnum("resource_type").notNull(),
+    resource_id: text("resource_id").notNull(),
+    event_type: text("event_type").notNull(),
+    actor_type: activityActorTypeEnum("actor_type").notNull(),
+    actor_id: text("actor_id"),
+    source: activitySourceEnum("source").notNull(),
+    summary: text("summary").notNull(),
+    payload_json: jsonb("payload_json").$type<Record<string, unknown>>().notNull().default({}),
+    created_at: text("created_at").notNull(),
+  },
+  (table) => [
+    index("activity_events_project_created_id_idx").on(table.project_id, table.created_at, table.id),
+    index("activity_events_resource_created_id_idx").on(
+      table.project_id,
+      table.resource_type,
+      table.resource_id,
+      table.created_at,
+      table.id,
+    ),
+  ],
 );
 
 export const templates = pgTable("templates", {
