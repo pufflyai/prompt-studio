@@ -42,4 +42,20 @@ describe("runCommand", () => {
     expect(result.stdout).toBe("custom-env");
     expect(result.stderr).toBe("");
   });
+
+  it("picks up runtime changes to process.env", async () => {
+    const key = "PSTDIO_RUN_COMMAND_RUNTIME_TEST";
+    const previous = process.env[key];
+    process.env[key] = "runtime-value";
+
+    try {
+      const result = await runCommand("/tmp", ["/bin/sh", "-c", `printf "%s" "$${key}"`]);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toBe("runtime-value");
+    } finally {
+      if (previous === undefined) delete process.env[key];
+      else process.env[key] = previous;
+    }
+  });
 });

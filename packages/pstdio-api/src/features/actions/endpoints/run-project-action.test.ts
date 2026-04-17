@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { execSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -41,6 +41,15 @@ beforeAll(async () => {
     readFileSync(join(repoRoot, ".pstdio", "plugins", "workspace-actions.ts"), "utf8"),
   );
   writeFileSync(join(composeDir, "compose.yaml"), "services:\n  prompt-studio:\n    image: oven/bun:1.3.10\n");
+
+  const pstdioDir = join(repoPath, ".pstdio");
+  const sdkLinkDir = join(pstdioDir, "node_modules", "@pstdio");
+  mkdirSync(sdkLinkDir, { recursive: true });
+  symlinkSync(join(repoRoot, "packages", "sdk"), join(sdkLinkDir, "sdk"), "dir");
+  writeFileSync(
+    join(pstdioDir, "package.json"),
+    `${JSON.stringify({ private: true, type: "module", dependencies: { "@pstdio/sdk": "workspace:*" } }, null, 2)}\n`,
+  );
 
   writeFileSync(
     join(binDir, "docker"),

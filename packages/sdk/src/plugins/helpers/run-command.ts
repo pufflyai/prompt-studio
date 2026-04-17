@@ -11,7 +11,7 @@ export const runCommand = async (cwd: string, command: string[], options: Comman
   try {
     proc = Bun.spawn([cmd, ...args], {
       cwd,
-      env: options.env,
+      env: options.env ?? { ...process.env },
       stdin: "ignore",
       stdout: stdio,
       stderr: stdio,
