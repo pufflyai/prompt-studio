@@ -19,6 +19,8 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: 0,
+  // TEMP: stop after first failure on CI so the error dump isn't cut off by the job timeout
+  maxFailures: process.env.CI ? 1 : 0,
   outputDir: `test-results/${runId}`,
   reporter: [["html", { open: "never", outputFolder: `playwright-report/${runId}` }], ["list"]],
   use: {
