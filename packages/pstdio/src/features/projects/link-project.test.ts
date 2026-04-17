@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { apiClient } from "@/features/api-client";
+import { apiClient, resetApiClient } from "@/features/api-client";
 import { mockFetchSequence } from "@/test-utils/mock-fetch";
 import { linkProject } from "./link-project";
 
@@ -64,10 +64,15 @@ describe("linkProject", () => {
     mockFetchSequence([{ status: 404, body: { error: "Not found" } }]);
     const root = setup("link-404");
 
-    expect(linkProject(root, "missing")).rejects.toThrow("Project not found: missing");
+    await expect(linkProject(root, "missing")).rejects.toThrow("Project not found: missing");
   });
 
   test("refreshes the API client when fetch mocks change between tests", async () => {
+    // Explicit reset: the test relies on apiClient() creating a fresh instance that
+    // captures staleFetch. In a full-suite run the singleton can be left cached by
+    // an earlier file whose tests don't reset it.
+    resetApiClient();
+
     const staleFetch = mock(() =>
       Promise.resolve(
         new Response(
