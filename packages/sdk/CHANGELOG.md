@@ -1,5 +1,14 @@
 # @pstdio/sdk
 
+## 0.2.1
+
+### Patch Changes
+
+- 013310f: Fix OpenCode session timeout and restart recovery: separate provider-managed lifecycle from activity-managed lifecycle and add disconnected session status
+- c9a2e69: Fix `pstdio tickets save` failing with opaque `[object Object]` errors when the ticket had a `blocked_reason` frontmatter field, and surface zod validation errors in the SDK client instead of stringifying them.
+- 3a77d88: Support multi-file bundled skills end-to-end across install paths, API responses, and dashboard skill viewing.
+- b01f555: Add `pstdio plugins list` and `pstdio plugins register` commands.
+
 ## 0.2.0
 
 ### Minor Changes

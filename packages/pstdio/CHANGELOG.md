@@ -1,5 +1,63 @@
 # pstdio
 
+## 0.7.0
+
+### Minor Changes
+
+- 013310f: Fix OpenCode session timeout and restart recovery: separate provider-managed lifecycle from activity-managed lifecycle and add disconnected session status
+- b01f555: Show plugin actions in ticket, session, and workspace headers.
+
+### Patch Changes
+
+- b01f555: Set selected text in dark mode to use `fg.inverted` for better contrast on accent highlights.
+- b01f555: Refresh the orange theme palette for clearer warning states.
+- 36cbefa: Add durable activity-events database schema and query service with cursor pagination.
+- f95b332: Strip non-letter characters from project shorthands
+- e100c9b: Add built-in workspace archive/delete actions with API-backed mutations and delete confirmation.
+- b01f555: Fix legacy plugin ticket actions and cover required action params in e2e.
+- 48e08db: Show the tickets list header as a breadcrumb with the shared Tickets icon label.
+- e242254: Deprecate the post-hook queue: `postAttemptStatusChange` now fires immediately on transition instead of being deferred until the session reaches a terminal state.
+- b1e3fda: Add empty placeholder in ticket sidebar when workspace list is empty.
+- b01f555: Use the shared primary button style for dashboard call-to-action buttons.
+- b01f555: Restore semantic sidebar icon colors for session status rows.
+- 3dd7a83: Fix attempt creation so the worktree starts from the freshest commit on the chosen branch and the branch sent in the request matches what the branch selector displays.
+- c9a2e69: Resolve plugin action targets by shorthand so `ctx.target` is populated when a ticket or workspace shorthand is passed as `target_id`.
+- c9a2e69: Fix `pstdio tickets save` failing with opaque `[object Object]` errors when the ticket had a `blocked_reason` frontmatter field, and surface zod validation errors in the SDK client instead of stringifying them.
+- c9a2e69: Recover stale OpenCode sessions and reconnect dropped session streams.
+- b01f555: Hide the attached session panel workspace hub while viewing workspace routes.
+- e11371e: Add deferred workspace-scoped session drafts from the ticket sidebar sessions section.
+- b01f555: Add a bundled workspace plugin action to open the workspace worktree in VS Code.
+- b01f555: Extract reusable bubble and attached panel shells into @pstdio/ui and keep the attached panel mounted across layout-story navigation.
+- e242254: Improve shared searchable menus for parent-child list switching and clearer browser headers.
+- f95b332: Persist new ticket modal content across dashboard refreshes.
+- 2fd38e9: Hide the session workspace hub in bubble view while on workspace routes.
+- 3a77d88: Support multi-file bundled skills end-to-end across install paths, API responses, and dashboard skill viewing.
+- 62d3854: Highlight both the workspace and its active session in the ticket sidebar
+- e242254: Use the compact menu item styling for the session selector footer.
+- b01f555: Add `pstdio plugins list` and `pstdio plugins register` commands.
+- 3dd7a83: Allow dashboard actions to run independently while other actions are in flight.
+- 62d3854: Auto-select and persist workspace session selection in ticket workspace navigation
+- b01f555: Preserve the current session panel layout when switching sessions from ticket and workspace navigation.
+- f21a710: Improve workspace diff loading, file navigation, and sidebar planning navigation cues
+- c9a2e69: Source OpenCode turn liveness from server polling instead of the POST /message HTTP lifetime, so long-running turns no longer get marked disconnected when the POST request times out.
+- c9a2e69: Fix bare URLs rendering as clickable links in rich messages.
+- e242254: Clarify the default code review template structure and review criteria.
+- 8678885: Reuse the shared file list panel for workspace checks so artifacts get the same tree/search/view-mode controls as the diff view.
+- 8678885: Add workspace Changes/Checks tabs with DB-backed artifact persistence and refresh behavior.
+- 1bd5113: Improve ticket and workspace breadcrumbs with ticket titles and short attempt labels
+- a4b7665: Remove the "Open in VS Code" action from the bundled workspace-actions plugin template.
+- c9a2e69: Show workspace diff regardless of session status — previously the diff panel was hidden until the workspace's latest attempt session reached a settled state.
+- 3a77d88: Render the project settings skill viewer with a file tree (icons + folders) and move the skill title and description above the editor so they align with its width. On startup, also auto-sync existing project skills that still hold a single SKILL.md file with the latest bundled multi-file skill (when the SKILL.md content is unchanged), and reinstall them to repos.
+- 013310f: Reattach orphaned OpenCode sessions on server restart instead of marking them disconnected
+- 3dd7a83: Fix local checkout CLI startup when `pstdio` is launched outside the repo root.
+- b01f555: Make attached session panels resizable in the dashboard and shared UI shell.
+- fb19526: Open selected sessions when the panel is closed while preserving attached mode
+- 2eaa0b3: Replace ticket workspace/session indicators with a unified workspace badge, including attempt-status tooltip support and sidebar/board integration.
+- 3dd7a83: Fix local workspace docker runs and improve long error toasts.
+- b01f555: Add a workspace diff-panel empty state when no file changes are available.
+- b01f555: Adjust dark active background color to better match the shared theme.
+- b01f555: Move the version entry from the shared sidebar project menu into the dashboard Help menu.
+
 ## 0.6.1
 
 ### Patch Changes
