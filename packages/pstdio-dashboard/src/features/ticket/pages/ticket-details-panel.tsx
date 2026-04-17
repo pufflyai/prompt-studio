@@ -17,6 +17,10 @@ import {
   useUpdateProjectTicket,
   useUpdateProjectTicketTags,
 } from "@/features/ticket-list/hooks/use-project-tickets";
+import {
+  shouldFetchTicketAttemptDiff,
+  useTicketAttemptDiffs,
+} from "@/features/ticket-list/hooks/use-ticket-attempt-diffs";
 import { useAttemptStatusMap } from "@/features/workspaces/hooks/use-attempt-status-map";
 import { useWorkspaceSessions } from "@/features/workspaces/hooks/use-workspace-sessions";
 import { resolveWorkspaceSelection } from "@/features/workspaces/utils/workspace-selection";
@@ -131,6 +135,11 @@ export const TicketDetailsPanel = () => {
   const isImageFile = isImageFileName(selectedFile.fileName);
   const ticketContent = useTicketContent(ticket?.id, selectedFile.id, { enabled: !isImageFile });
   const workspaces = ticket?.attempts ?? [];
+  const attemptDiffInputs = workspaces.map((attempt) => ({
+    workspaceId: attempt.id,
+    shouldFetch: shouldFetchTicketAttemptDiff(attempt),
+  }));
+  const { diffTotalsByWorkspaceId } = useTicketAttemptDiffs(attemptDiffInputs);
   const attemptStatusMap = useAttemptStatusMap(projectId);
   const workspaceSessions = useWorkspaceSessions(workspaces.map((w) => w.id));
   const sessionsByWorkspaceId = workspaceSessions.sessionsByWorkspaceId;
@@ -259,6 +268,7 @@ export const TicketDetailsPanel = () => {
       selectedFileId={selectedFile.id}
       workspaces={workspaces}
       attemptStatusMap={attemptStatusMap}
+      diffTotalsByWorkspaceId={diffTotalsByWorkspaceId}
       sessionsByWorkspaceId={sessionsByWorkspaceId}
       onSelectFile={handleSelectFile}
       onSelectWorkspace={handleSelectWorkspace}

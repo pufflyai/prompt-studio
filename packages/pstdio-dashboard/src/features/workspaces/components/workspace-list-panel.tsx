@@ -1,8 +1,16 @@
 import { Flex, IconButton, Menu, Stack, Text } from "@chakra-ui/react";
 import type { SessionCompletionStatus } from "@pstdio/ui";
-import { MenuItem, resolveSessionIndicatorColor, resolveSessionIndicatorIcon, Tooltip } from "@pstdio/ui";
-import { ChevronRight, Circle, Plus } from "lucide-react";
+import {
+  MenuItem,
+  resolveSessionIndicatorColor,
+  resolveSessionIndicatorIcon,
+  Tooltip,
+  WorkspaceBadge,
+} from "@pstdio/ui";
+import { ChevronRight, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toSessionIndicatorStatus } from "@/features/ticket-list/utils/ticket-attempts";
+import { getAttemptLabelFromWorkspaceShorthand } from "@/features/workspaces/utils/workspace-shorthand";
 import type { WorkspaceSessionEntry } from "../hooks/use-workspace-sessions";
 
 interface WorkspaceListItem {
@@ -18,6 +26,7 @@ interface WorkspaceListItem {
 
 interface WorkspaceListPanelProps {
   workspaces: WorkspaceListItem[];
+  diffTotalsByWorkspaceId?: Map<string, { additions: number; deletions: number }>;
   sessionsByWorkspaceId: Map<string, WorkspaceSessionEntry[]>;
   activeSessionId: string | null;
   onSelectSession: (workspaceShorthand: string, sessionId: string) => void;
@@ -27,9 +36,22 @@ interface WorkspaceListPanelProps {
 
 export type { WorkspaceListItem };
 
+const getLatestWorkspaceSessionStatus = (sessions: WorkspaceSessionEntry[]) => {
+  return toSessionIndicatorStatus(
+    (sessions.at(-1)?.status as SessionCompletionStatus | "cancelled" | null | undefined) ?? null,
+  );
+};
+
 export const WorkspaceListPanel = (props: WorkspaceListPanelProps) => {
-  const { workspaces, sessionsByWorkspaceId, activeSessionId, onSelectSession, onCreateAttempt, onCreateSession } =
-    props;
+  const {
+    workspaces,
+    diffTotalsByWorkspaceId = new Map(),
+    sessionsByWorkspaceId,
+    activeSessionId,
+    onSelectSession,
+    onCreateAttempt,
+    onCreateSession,
+  } = props;
 
   const [expandedWorkspaces, setExpandedWorkspaces] = useState<Set<string>>(() => new Set(workspaces.map((w) => w.id)));
 
@@ -90,18 +112,19 @@ export const WorkspaceListPanel = (props: WorkspaceListPanelProps) => {
                     size={12}
                     style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)", transition: "120ms" }}
                   />
-                  <Text textStyle="label/XS/medium" color="foreground.secondary" flex="1">
-                    {workspace.shorthand}
-                  </Text>
-                  {workspace.attemptStatusName ? (
-                    <Tooltip content={workspace.attemptStatusName}>
-                      <Circle
-                        size={8}
-                        fill="currentColor"
-                        color={`var(--chakra-colors-${workspace.attemptStatusColor}-solid)`}
-                      />
-                    </Tooltip>
-                  ) : null}
+                  <WorkspaceBadge
+                    workspaceType={workspace.worktreePath ? "worktree" : "current_branch"}
+                    shorthand={getAttemptLabelFromWorkspaceShorthand(workspace.shorthand)}
+                    attemptStatus={
+                      workspace.attemptStatusName && workspace.attemptStatusColor
+                        ? { name: workspace.attemptStatusName, color: workspace.attemptStatusColor }
+                        : undefined
+                    }
+                    sessionStatus={getLatestWorkspaceSessionStatus(sessions)}
+                    showLeadingSessionIndicator={false}
+                    diffAdditions={diffTotalsByWorkspaceId.get(workspace.id)?.additions}
+                    diffDeletions={diffTotalsByWorkspaceId.get(workspace.id)?.deletions}
+                  />
                   {onCreateSession ? (
                     <Tooltip content="New workspace session">
                       <IconButton

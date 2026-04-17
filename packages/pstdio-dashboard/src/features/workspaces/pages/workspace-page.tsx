@@ -20,6 +20,10 @@ import { buildSelectableTicketFiles } from "@/features/ticket/utils/ticket-file-
 import type { ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
 import { useCreateTicketAttempt } from "@/features/ticket-list/hooks/use-create-ticket-attempt";
 import { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
+import {
+  shouldFetchTicketAttemptDiff,
+  useTicketAttemptDiffs,
+} from "@/features/ticket-list/hooks/use-ticket-attempt-diffs";
 import { transformFileDiffs } from "@/features/workspaces/utils/transform-diff";
 import { getAttemptLabelFromWorkspaceShorthand } from "@/features/workspaces/utils/workspace-shorthand";
 import { logMutationError } from "@/lib/error-handlers";
@@ -111,6 +115,7 @@ interface WorkspacePageContentProps {
   ticketShorthand: string | undefined;
   ticket: NonNullable<ReturnType<typeof useProjectTickets>["data"]>[number];
   attemptStatusMap: ReturnType<typeof useAttemptStatusMap>;
+  diffTotalsByWorkspaceId: Map<string, { additions: number; deletions: number }>;
   selectedWorkspaceLabel: string;
   selectedWorkspace: WorkspaceListItem | null;
   sessionsByWorkspaceId: ReturnType<typeof useWorkspaceSessions>["sessionsByWorkspaceId"];
@@ -142,6 +147,7 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
     ticketShorthand,
     ticket,
     attemptStatusMap,
+    diffTotalsByWorkspaceId,
     selectedWorkspaceLabel,
     selectedWorkspace,
     sessionsByWorkspaceId,
@@ -181,6 +187,7 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
       selectedFileId=""
       workspaces={attempts}
       attemptStatusMap={attemptStatusMap}
+      diffTotalsByWorkspaceId={diffTotalsByWorkspaceId}
       sessionsByWorkspaceId={sessionsByWorkspaceId}
       selectedWorkspaceId={selectedWorkspace?.id}
       activeSessionId={activeSessionId}
@@ -298,6 +305,11 @@ export const WorkspacePage = () => {
   const lastSelectedModels = useProjectSettingsStore((state) => state.lastSelectedModels);
   const lastSelectedBranches = useProjectSettingsStore((state) => state.lastSelectedBranches);
   const lastSelectedRepo = useProjectSettingsStore((state) => state.lastSelectedRepo);
+  const attemptDiffInputs = attempts.map((attempt) => ({
+    workspaceId: attempt.id,
+    shouldFetch: shouldFetchTicketAttemptDiff(attempt),
+  }));
+  const { diffTotalsByWorkspaceId } = useTicketAttemptDiffs(attemptDiffInputs);
   const workspaces = buildWorkspaceListItems(attempts, attemptStatusMap);
   const workspaceIds = workspaces.map((workspace) => workspace.id);
   const workspaceSessions = useWorkspaceSessions(workspaceIds);
@@ -464,6 +476,7 @@ export const WorkspacePage = () => {
       ticketShorthand={ticketShorthand}
       ticket={ticket}
       attemptStatusMap={attemptStatusMap}
+      diffTotalsByWorkspaceId={diffTotalsByWorkspaceId}
       selectedWorkspaceLabel={selectedWorkspaceLabel}
       selectedWorkspace={selectedWorkspace}
       sessionsByWorkspaceId={sessionsByWorkspaceId}

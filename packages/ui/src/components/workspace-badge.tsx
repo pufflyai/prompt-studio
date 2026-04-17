@@ -34,6 +34,7 @@ export interface WorkspaceBadgeProps {
   shorthand?: string;
   attemptStatus?: WorkspaceAttemptStatus;
   sessionStatus?: SessionCompletionStatus;
+  showLeadingSessionIndicator?: boolean;
   diffAdditions?: number;
   diffDeletions?: number;
   hasMultipleWorkspaces?: boolean;
@@ -83,47 +84,11 @@ const handleBadgeClick = (event: MouseEvent<HTMLSpanElement>, onClick: (() => vo
   onClick?.();
 };
 
-const WorkspaceTypeIndicator = (props: {
-  workspaceType: WorkspaceBadgeProps["workspaceType"];
-  initializing: boolean;
-}) => {
-  const { workspaceType, initializing } = props;
-  const WorkspaceTypeIcon = resolveWorkspaceIcon(workspaceType);
-
-  return (
-    <HStack as="span" gap="3xs" alignItems="center" color="fg.muted" flexShrink={0}>
-      <Icon
-        as={WorkspaceTypeIcon}
-        boxSize="12px"
-        aria-label={workspaceType === "worktree" ? "Worktree" : "Current branch"}
-      />
-      {initializing ? <Spinner size="xs" color="fg.muted" /> : null}
-    </HStack>
-  );
-};
-
-const WorkspaceStatusIndicator = (props: {
-  attemptStatus?: WorkspaceAttemptStatus;
+const LeadingSessionIndicator = (props: {
   sessionStatus?: SessionCompletionStatus;
   onSessionIndicatorClick?: () => void;
 }) => {
-  const { attemptStatus, sessionStatus, onSessionIndicatorClick } = props;
-
-  if (attemptStatus) {
-    return (
-      <Tooltip content={buildAttemptStatusTooltip(attemptStatus)}>
-        <Box
-          as="span"
-          boxSize="8px"
-          borderRadius="full"
-          backgroundColor={resolveAttemptStatusColor(attemptStatus.color)}
-          flexShrink={0}
-          aria-label={`Attempt status ${attemptStatus.name}`}
-          data-testid="workspace-attempt-status"
-        />
-      </Tooltip>
-    );
-  }
+  const { sessionStatus, onSessionIndicatorClick } = props;
 
   if (!sessionStatus) {
     return null;
@@ -137,8 +102,55 @@ const WorkspaceStatusIndicator = (props: {
         status={sessionStatus}
         boxSize="12px"
         ariaLabel={sessionTooltip}
-        cursor={onSessionIndicatorClick ? "pointer" : "default"}
+        cursor="pointer"
         onClick={onSessionIndicatorClick ? (event) => handleIconClick(event, onSessionIndicatorClick) : undefined}
+      />
+    </Tooltip>
+  );
+};
+
+const WorkspaceTypeIndicator = (props: {
+  workspaceType: WorkspaceBadgeProps["workspaceType"];
+  initializing: boolean;
+  shorthand?: string;
+}) => {
+  const { workspaceType, initializing, shorthand } = props;
+  const WorkspaceTypeIcon = resolveWorkspaceIcon(workspaceType);
+
+  return (
+    <HStack as="span" gap="0" alignItems="center" color="fg.muted" flexShrink={0}>
+      <Icon
+        as={WorkspaceTypeIcon}
+        boxSize="12px"
+        aria-label={workspaceType === "worktree" ? "Worktree" : "Current branch"}
+      />
+      {initializing ? <Spinner size="xs" color="fg.muted" /> : null}
+      {shorthand ? (
+        <Text as="span" textStyle="label/XS/regular" color="fg.muted" flexShrink={0}>
+          {shorthand}
+        </Text>
+      ) : null}
+    </HStack>
+  );
+};
+
+const WorkspaceAttemptStatusIndicator = (props: { attemptStatus?: WorkspaceAttemptStatus }) => {
+  const { attemptStatus } = props;
+
+  if (!attemptStatus) {
+    return null;
+  }
+
+  return (
+    <Tooltip content={buildAttemptStatusTooltip(attemptStatus)}>
+      <Box
+        as="span"
+        boxSize="8px"
+        borderRadius="full"
+        backgroundColor={resolveAttemptStatusColor(attemptStatus.color)}
+        flexShrink={0}
+        aria-label={`Attempt status ${attemptStatus.name}`}
+        data-testid="workspace-attempt-status"
       />
     </Tooltip>
   );
@@ -182,6 +194,7 @@ export const WorkspaceBadge = (props: WorkspaceBadgeProps) => {
     shorthand,
     attemptStatus,
     sessionStatus,
+    showLeadingSessionIndicator = true,
     diffAdditions,
     diffDeletions,
     hasMultipleWorkspaces = false,
@@ -189,7 +202,6 @@ export const WorkspaceBadge = (props: WorkspaceBadgeProps) => {
     onDropdownClick,
     onSessionIndicatorClick,
   } = props;
-  const isInteractive = Boolean(onClick || onDropdownClick || onSessionIndicatorClick);
 
   return (
     <HStack
@@ -201,25 +213,17 @@ export const WorkspaceBadge = (props: WorkspaceBadgeProps) => {
       px="2px"
       py="1px"
       borderRadius="xs"
-      cursor={isInteractive ? "pointer" : "default"}
+      cursor="pointer"
       transition="background-color 0.2s ease-in-out"
-      _hover={isInteractive ? { backgroundColor: "var(--chakra-colors-neutral-100)" } : undefined}
+      _hover={{ backgroundColor: "bg.hover" }}
       onClick={onClick ? (event) => handleBadgeClick(event, onClick) : undefined}
       data-testid="workspace-badge"
     >
-      <WorkspaceTypeIndicator workspaceType={workspaceType} initializing={initializing} />
-
-      {shorthand ? (
-        <Text as="span" textStyle="label/XS/regular" color="fg.muted" flexShrink={0}>
-          {shorthand}
-        </Text>
+      {showLeadingSessionIndicator ? (
+        <LeadingSessionIndicator sessionStatus={sessionStatus} onSessionIndicatorClick={onSessionIndicatorClick} />
       ) : null}
-
-      <WorkspaceStatusIndicator
-        attemptStatus={attemptStatus}
-        sessionStatus={sessionStatus}
-        onSessionIndicatorClick={onSessionIndicatorClick}
-      />
+      <WorkspaceTypeIndicator workspaceType={workspaceType} initializing={initializing} shorthand={shorthand} />
+      <WorkspaceAttemptStatusIndicator attemptStatus={attemptStatus} />
       <WorkspaceDiffTotals diffAdditions={diffAdditions} diffDeletions={diffDeletions} />
       <WorkspaceDropdownTrigger hasMultipleWorkspaces={hasMultipleWorkspaces} onDropdownClick={onDropdownClick} />
     </HStack>

@@ -32,6 +32,7 @@ interface TicketSidebarProps {
   selectedFileId: string;
   workspaces: TicketAttempt[];
   attemptStatusMap?: Map<string, AttemptStatusMapEntry>;
+  diffTotalsByWorkspaceId?: Map<string, { additions: number; deletions: number }>;
   sessionsByWorkspaceId: Map<string, WorkspaceSessionEntry[]>;
   selectedWorkspaceId?: string | null;
   activeSessionId?: string | null;
@@ -76,12 +77,14 @@ const buildFilesSection = (files: SelectableTicketFile[]): SidebarSection => {
 const buildWorkspacesSection = (
   workspaces: TicketAttempt[],
   attemptStatusMap: Map<string, AttemptStatusMapEntry>,
+  diffTotalsByWorkspaceId: Map<string, { additions: number; deletions: number }>,
   sessionsByWorkspaceId: Map<string, WorkspaceSessionEntry[]>,
 ): SidebarSection => {
   const sortedWorkspaces = sortWorkspacesByLatestSession(workspaces, sessionsByWorkspaceId);
 
   const nodes: SidebarNode[] = sortedWorkspaces.map((workspace) => {
     const attemptStatus = workspace.attemptStatusId ? attemptStatusMap.get(workspace.attemptStatusId) : undefined;
+    const diffTotals = diffTotalsByWorkspaceId.get(workspace.id);
 
     return {
       id: `workspace:${workspace.id}`,
@@ -91,6 +94,9 @@ const buildWorkspacesSection = (
           shorthand={getAttemptLabelFromWorkspaceShorthand(workspace.shorthand)}
           attemptStatus={attemptStatus}
           sessionStatus={toSessionIndicatorStatus(workspace.sessionStatus)}
+          showLeadingSessionIndicator={false}
+          diffAdditions={diffTotals?.additions}
+          diffDeletions={diffTotals?.deletions}
         />
       ),
       isNavigable: true,
@@ -151,6 +157,7 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
     selectedFileId,
     workspaces,
     attemptStatusMap = new Map(),
+    diffTotalsByWorkspaceId = new Map(),
     sessionsByWorkspaceId,
     selectedWorkspaceId,
     activeSessionId = null,
@@ -165,7 +172,7 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
 
   const sections: SidebarSection[] = [
     buildFilesSection(files),
-    buildWorkspacesSection(workspaces, attemptStatusMap, sessionsByWorkspaceId),
+    buildWorkspacesSection(workspaces, attemptStatusMap, diffTotalsByWorkspaceId, sessionsByWorkspaceId),
     ...(selectedWorkspace
       ? [
           buildSessionsSection(
