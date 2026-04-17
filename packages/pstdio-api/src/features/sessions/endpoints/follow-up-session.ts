@@ -5,6 +5,7 @@ import { composeSummary } from "../compose-summary";
 import { followUpBodySchema, notFoundResponseSchema, sessionResponseSchema } from "../dto";
 import { getSessionMessages } from "../get-session-messages";
 import { resolvePrompt } from "../resolve-prompt";
+import { resolvePromptAttachments } from "../session-attachments";
 import { resumeAgentSession, spawnAgentSession } from "../spawn-agent";
 
 export const followUpSessionRoute = createRoute({
@@ -30,6 +31,10 @@ export const followUpSessionRoute = createRoute({
     },
     409: {
       description: "Session is currently in progress.",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+    400: {
+      description: "Invalid follow-up request.",
       content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
   },
@@ -84,6 +89,16 @@ export const followUpSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof 
 
     const prompt = await buildFollowUpPrompt(input, session.project_id!, deps);
 
+    let attachments: Awaited<ReturnType<typeof resolvePromptAttachments>>;
+    try {
+      attachments = await resolvePromptAttachments(
+        { projectId: session.project_id!, attachments: input.attachments },
+        deps,
+      );
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : "Invalid image attachments." }, 400);
+    }
+
     await deps.sessionService.resume(session.id);
 
     const cwd = session.cwd!;
@@ -94,7 +109,7 @@ export const followUpSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof 
     if (switchingAgent) {
       await deps.sessionService.update(session.id, { agent: agentId, agent_session_id: null });
 
-      spawnAgentSession({ sessionId: session.id, agentId, prompt, model: input.model, cwd }, deps);
+      spawnAgentSession({ sessionId: session.id, agentId, prompt, attachments, model: input.model, cwd }, deps);
     } else if (session.agent_session_id) {
       resumeAgentSession(
         {
@@ -102,13 +117,14 @@ export const followUpSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof 
           agentSessionId: session.agent_session_id,
           agentId,
           prompt,
+          attachments,
           model: input.model,
           cwd,
         },
         deps,
       );
     } else {
-      spawnAgentSession({ sessionId: session.id, agentId, prompt, model: input.model, cwd }, deps);
+      spawnAgentSession({ sessionId: session.id, agentId, prompt, attachments, model: input.model, cwd }, deps);
     }
 
     const result = await deps.sessionService.get(session.id);

@@ -83,8 +83,18 @@ export type SessionMessage = {
   };
 };
 
+export type SessionPromptAttachment = {
+  id: string;
+  filename: string;
+  mimeType: string;
+  byteSize: number;
+  data: string;
+  url: string;
+};
+
 export type SessionStartInput = {
   prompt: string;
+  attachments?: SessionPromptAttachment[];
   title?: string;
   model?: string | null;
   cwd?: string;
@@ -100,6 +110,7 @@ export type SessionStartResult = {
 export type SessionMessageInput = {
   sessionId: string;
   prompt: string;
+  attachments?: SessionPromptAttachment[];
   model?: string | null;
   cwd?: string;
   env?: NodeJS.ProcessEnv;

@@ -73,15 +73,24 @@ export const useSyncPendingFollowUp = (input: {
   messages: SessionMessage[];
   pendingFollowUp: PendingFollowUpState | null;
   sessionId: string | null;
+  sessionStatus: string | null;
+  clearDraftAttachments: () => void;
   setPendingFollowUp: (value: PendingFollowUpState | null) => void;
 }) => {
-  const { messages, pendingFollowUp, sessionId, setPendingFollowUp } = input;
+  const { messages, pendingFollowUp, sessionId, sessionStatus, clearDraftAttachments, setPendingFollowUp } = input;
 
   useEffect(() => {
-    if (shouldClearPendingFollowUp(pendingFollowUp, messages)) {
+    if (shouldClearPendingFollowUp(pendingFollowUp, messages) && sessionStatus === "completed") {
+      clearDraftAttachments();
       setPendingFollowUp(null);
     }
-  }, [messages, pendingFollowUp, setPendingFollowUp]);
+  }, [messages, pendingFollowUp, sessionStatus, clearDraftAttachments, setPendingFollowUp]);
+
+  useEffect(() => {
+    if (pendingFollowUp && sessionStatus === "failed") {
+      setPendingFollowUp(null);
+    }
+  }, [pendingFollowUp, sessionStatus, setPendingFollowUp]);
 
   useEffect(() => {
     if (shouldResetPendingFollowUpForSession(pendingFollowUp, sessionId)) {

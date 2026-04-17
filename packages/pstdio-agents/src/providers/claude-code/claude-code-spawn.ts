@@ -57,11 +57,51 @@ export const buildSpawnArgs = (input: SessionMessageInput) => {
 
 // --- User message formatting ---
 
-const formatUserMessage = (content: string) =>
-  `${JSON.stringify({ type: "user", message: { role: "user", content } })}\n`;
+const buildClaudeUserContent = (input: {
+  prompt: string;
+  attachments?: {
+    mimeType: string;
+    data: string;
+  }[];
+}) => {
+  const attachments = input.attachments ?? [];
+  if (attachments.length === 0) {
+    return input.prompt;
+  }
 
-const sendUserMessage = (stdin: Writable, content: string, options?: { keepOpen?: boolean }) => {
-  stdin.write(formatUserMessage(content));
+  return [
+    { type: "text", text: input.prompt },
+    ...attachments.map((attachment) => ({
+      type: "image",
+      source: {
+        type: "base64",
+        media_type: attachment.mimeType,
+        data: attachment.data,
+      },
+    })),
+  ];
+};
+
+const formatUserMessage = (input: {
+  prompt: string;
+  attachments?: {
+    mimeType: string;
+    data: string;
+  }[];
+}) => `${JSON.stringify({ type: "user", message: { role: "user", content: buildClaudeUserContent(input) } })}\n`;
+
+const sendUserMessage = (
+  stdin: Writable,
+  input: {
+    prompt: string;
+    attachments?: {
+      mimeType: string;
+      data: string;
+    }[];
+  },
+  options?: { keepOpen?: boolean },
+) => {
+  stdin.write(formatUserMessage(input));
 
   if (!options?.keepOpen) {
     stdin.end();
@@ -303,7 +343,7 @@ export const spawnClaudeCodeSession = async (input: SessionStartInput, deps: Spa
   const args = buildStartSessionArgs(input);
   const child = deps.spawnProcess(args, { cwd: input.cwd, env: input.env });
 
-  sendUserMessage(child.stdin, input.prompt);
+  sendUserMessage(child.stdin, { prompt: input.prompt, attachments: input.attachments });
 
   const events = createRawEventStream(child.stdout, child.stdin);
   const { sessionId, remainingEvents } = await extractSessionId(events);
@@ -315,7 +355,15 @@ export const spawnClaudeCodeSession = async (input: SessionStartInput, deps: Spa
   const userMessage: SessionMessage = {
     id: `user-${Date.now()}`,
     role: "user",
-    parts: [{ type: "text", text: input.prompt }],
+    parts: [
+      { type: "text", text: input.prompt },
+      ...(input.attachments ?? []).map((attachment) => ({
+        type: "file" as const,
+        mediaType: attachment.mimeType,
+        filename: attachment.filename,
+        url: attachment.url,
+      })),
+    ],
   };
 
   const pipelineDone = runPipelineFromEvents(remainingEvents, input.eventStore, {
@@ -347,12 +395,20 @@ export const spawnClaudeCodeMessage = async (
   const child = deps.spawnProcess(args, { cwd: input.cwd, env: input.env });
 
   // Claude resume can stall until it sees EOF from stdin in our spawned process.
-  sendUserMessage(child.stdin, input.prompt);
+  sendUserMessage(child.stdin, { prompt: input.prompt, attachments: input.attachments });
 
   const userMessage: SessionMessage = {
     id: `user-${Date.now()}`,
     role: "user",
-    parts: [{ type: "text", text: input.prompt }],
+    parts: [
+      { type: "text", text: input.prompt },
+      ...(input.attachments ?? []).map((attachment) => ({
+        type: "file" as const,
+        mediaType: attachment.mimeType,
+        filename: attachment.filename,
+        url: attachment.url,
+      })),
+    ],
   };
 
   const events = createRawEventStream(child.stdout, child.stdin, approvalService);

@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
@@ -41,25 +42,7 @@ const configureAgent = async (request: import("@playwright/test").APIRequestCont
   expect(res.ok()).toBe(true);
 };
 
-const resolveFolderPickerWorkspacePath = () => {
-  let currentPath = process.cwd();
-
-  while (true) {
-    if (existsSync(join(currentPath, ".git"))) {
-      const repoParentPath = dirname(currentPath);
-      const visibleParentPath = basename(repoParentPath).startsWith(".") ? dirname(repoParentPath) : repoParentPath;
-      return join(visibleParentPath, "pstdio-e2e-picker-workspace");
-    }
-
-    const parentPath = dirname(currentPath);
-
-    if (parentPath === currentPath) {
-      return join(process.cwd(), "pstdio-e2e-picker-workspace");
-    }
-
-    currentPath = parentPath;
-  }
-};
+const resolveFolderPickerWorkspacePath = () => join(homedir(), "pstdio-e2e-picker-workspace");
 
 const createTempGitRepo = () => {
   const pickerWorkspacePath = resolveFolderPickerWorkspacePath();

@@ -204,6 +204,63 @@ describe("resumeAgentSession", () => {
     const resumeInput = firstCall?.[0] as { env?: Record<string, string> } | undefined;
     expect(resumeInput?.env?.PSTDIO_SESSION_ID).toBe("s_42");
   });
+
+  test("passes prompt attachments to resumed agent sessions", async () => {
+    const { agent, resumeSession } = buildAgent();
+    const storeEntries = new Map<string, unknown>();
+    const sessionService = {
+      update: async () => null,
+      transitionStatus: async () => null,
+      store: {
+        create: mock((id: string) => {
+          const entry = createStoreEntry();
+          storeEntries.set(id, entry);
+          return entry;
+        }),
+        get: mock((id: string) => storeEntries.get(id) ?? null),
+        setProcess: mock(() => {}),
+        remove: mock(() => {}),
+      },
+    };
+
+    await resumeAgentSession(
+      {
+        sessionId: "s_1",
+        agentSessionId: "agent_1",
+        agentId: "claude-code",
+        prompt: "continue",
+        attachments: [
+          {
+            id: "a-1",
+            filename: "shot.png",
+            mimeType: "image/png",
+            byteSize: 128,
+            data: "ZmFrZQ==",
+            url: "/v1/sessions/attachments/a-1/content",
+          },
+        ],
+      },
+      {
+        agentRegistry: {
+          get: () => agent,
+          list: () => [],
+          checkAll: () => ({
+            "claude-code": { type: "INSTALLED" },
+            opencode: { type: "INSTALLED" },
+            fake: { type: "INSTALLED" },
+          }),
+        },
+        sessionService,
+        eventBus: {
+          emit: () => {},
+        },
+      } as unknown as Parameters<typeof resumeAgentSession>[1],
+    );
+
+    const firstCall = resumeSession.mock.calls[0];
+    const resumeInput = firstCall?.[0] as { attachments?: unknown[] } | undefined;
+    expect(resumeInput?.attachments).toHaveLength(1);
+  });
 });
 
 describe("spawnAgentSession", () => {
@@ -339,5 +396,76 @@ describe("spawnAgentSession", () => {
     const firstCall = startSession.mock.calls[0];
     const startInput = firstCall?.[0] as { env?: Record<string, string> } | undefined;
     expect(startInput?.env?.PSTDIO_SESSION_ID).toBe("session_99");
+  });
+
+  test("passes prompt attachments to started agent sessions", async () => {
+    const startSession = mock(async (_input: unknown) => ({ sessionId: "agent_session_1" }));
+
+    const agent = {
+      id: "claude-code",
+      name: "Claude Code",
+      capabilities: () => [],
+      checkAvailability: () => ({ type: "NOT_FOUND" }),
+      listModels: () => [],
+      startSession,
+      resumeSession: async () => ({}),
+      getMessages: async () => [],
+      listSessions: async () => [],
+      exportSession: async () => ({ session: { id: "s1", title: "title" }, messages: [] }),
+      launchSession: async () => ({}),
+    } as unknown as AgentService;
+
+    await spawnAgentSession(
+      {
+        sessionId: "session_1",
+        agentId: "claude-code",
+        prompt: "hello",
+        attachments: [
+          {
+            id: "a-1",
+            filename: "shot.png",
+            mimeType: "image/png",
+            byteSize: 128,
+            data: "ZmFrZQ==",
+            url: "/v1/sessions/attachments/a-1/content",
+          },
+        ],
+      },
+      {
+        agentRegistry: {
+          get: () => agent,
+          list: () => [],
+          checkAll: () => ({
+            "claude-code": { type: "INSTALLED" },
+            opencode: { type: "INSTALLED" },
+            fake: { type: "INSTALLED" },
+          }),
+        },
+        eventBus: {
+          emit: () => {},
+        },
+        fileService: {
+          get: async () => null,
+          upload: async () => ({ id: "file_1" }),
+          update: async () => null,
+        },
+        sessionService: {
+          update: async () => null,
+          transitionStatus: async () => null,
+          store: {
+            create: mock(() => ({
+              ...createStoreEntry(),
+            })),
+            get: mock(() => null),
+            setProcess: mock(() => {}),
+            remove: mock(() => {}),
+          },
+        },
+      } as unknown as Parameters<typeof spawnAgentSession>[1],
+    );
+
+    const firstCall = startSession.mock.calls[0];
+    const startInput = firstCall?.[0] as { attachments?: unknown[] } | undefined;
+    expect(startInput?.attachments).toHaveLength(1);
   });
 });

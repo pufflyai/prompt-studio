@@ -14,6 +14,7 @@ import { useSessionStatus } from "../hooks/use-session-status";
 import { useSessionStream } from "../hooks/use-session-stream";
 import { useSessionWorkspace } from "../hooks/use-session-workspace";
 import { buildSessionWorkspaceHubPanelModel } from "../utils/workspace-hub";
+import { type SessionChatDraftAttachment, useSessionChatAttachments } from "./session-chat-attachments";
 import {
   mergeMessagesWithPendingFollowUp,
   type PendingFollowUpState,
@@ -68,6 +69,8 @@ export const SessionChatView = (props: SessionChatViewProps) => {
   const createSession = useCreateProjectSession();
   const followUp = useFollowUpSession();
   const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUpState | null>(null);
+  const { draftAttachments, attachmentActions, attachmentList, clearAllDraftAttachments } =
+    useSessionChatAttachments(projectId);
   const pendingIdRef = useRef(0);
   const editCountRef = useRef(0);
   const isWorkspaceInitializing = sessionWorkspace?.initializing ?? false;
@@ -82,6 +85,8 @@ export const SessionChatView = (props: SessionChatViewProps) => {
     messages,
     pendingFollowUp,
     sessionId,
+    sessionStatus,
+    clearDraftAttachments: clearAllDraftAttachments,
     setPendingFollowUp,
   });
 
@@ -131,6 +136,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
           model,
           workspaceId: effectiveWorkspaceId,
           text,
+          attachments: draftAttachments.map((attachment: SessionChatDraftAttachment) => attachment.upload),
           messages,
           pendingIdRef,
           clearSessionDraft,
@@ -142,6 +148,10 @@ export const SessionChatView = (props: SessionChatViewProps) => {
           onSessionCreated,
         })
       }
+      actions={attachmentActions}
+      attachmentList={attachmentList}
+      attachedResources={draftAttachments.map((attachment: SessionChatDraftAttachment) => attachment.upload.file_name)}
+      onClearAttachments={clearAllDraftAttachments}
       onChatInputChange={(text: string) => setSessionDraft(sessionId, text)}
       workspaceHub={workspaceHub ? <SessionChatWorkspaceHubPanel {...workspaceHub} /> : undefined}
       repoMenu={

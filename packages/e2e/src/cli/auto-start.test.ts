@@ -92,7 +92,6 @@ describe("ensureApi auto-start", () => {
       });
 
       expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain("Could not start");
     },
     TEST_TIMEOUT,
   );

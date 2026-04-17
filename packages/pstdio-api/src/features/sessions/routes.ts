@@ -6,11 +6,16 @@ import { archiveSessionHandler, archiveSessionRoute } from "./endpoints/archive-
 import { createSessionHandler, createSessionRoute } from "./endpoints/create-session";
 import { followUpSessionHandler, followUpSessionRoute } from "./endpoints/follow-up-session";
 import { getSessionHandler, getSessionRoute } from "./endpoints/get-session";
+import {
+  getSessionAttachmentContentHandler,
+  getSessionAttachmentContentRoute,
+} from "./endpoints/get-session-attachment-content";
 import { getSessionConversationHandler, getSessionConversationRoute } from "./endpoints/get-session-conversation";
 import { listSessionsHandler, listSessionsRoute } from "./endpoints/list-sessions";
 import { resolveSessionIdHandler, resolveSessionIdRoute } from "./endpoints/resolve-session-id";
 import { streamSessionHandler } from "./endpoints/stream-session";
 import { updateSessionStatusHandler, updateSessionStatusRoute } from "./endpoints/update-session-status";
+import { uploadSessionAttachmentHandler, uploadSessionAttachmentRoute } from "./endpoints/upload-session-attachment";
 
 export const createSessionRoutes = (deps: RouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
@@ -24,6 +29,8 @@ export const createSessionRoutes = (deps: RouteDeps) => {
   routes.openapi(archiveSessionRoute, archiveSessionHandler(deps));
   routes.openapi(followUpSessionRoute, followUpSessionHandler(deps));
   routes.openapi(approveSessionRoute, approveSessionHandler(deps));
+  routes.openapi(uploadSessionAttachmentRoute, uploadSessionAttachmentHandler(deps));
+  routes.openapi(getSessionAttachmentContentRoute, getSessionAttachmentContentHandler(deps));
 
   // SSE stream endpoint (not OpenAPI — raw Hono handler)
   routes.get("/sessions/:id/stream", streamSessionHandler(deps));

@@ -66,33 +66,50 @@ const resolveToolStatus = (status?: string): ToolPartStatus => {
 
 // --- Part normalization ---
 
+const normalizeTextLikePart = (part: OpencodeSessionMessagePart, type: "text" | "reasoning") => {
+  if (typeof part.text !== "string" || part.text.trim().length === 0) return null;
+  return { type, text: part.text };
+};
+
+const normalizeToolPart = (part: OpencodeSessionMessagePart) => ({
+  type: "tool" as const,
+  tool: part.tool ?? "unknown",
+  callId: part.callID,
+  actionType: classifyToolAction(part.tool ?? ""),
+  status: resolveToolStatus(part.state?.status),
+  state: part.state
+    ? {
+        status: part.state.status,
+        input: part.state.input,
+        output: part.state.output,
+        errorText: part.state.errorText,
+        metadata: part.state.metadata,
+      }
+    : undefined,
+});
+
+const normalizeImagePart = (part: OpencodeSessionMessagePart) => {
+  const mediaType = part.mimeType ?? part.mime ?? "image/png";
+  const url = part.url ?? (part.data ? `data:${mediaType};base64,${part.data}` : "");
+  if (!url) return null;
+  return {
+    type: "file" as const,
+    mediaType,
+    filename: part.filename,
+    url,
+  };
+};
+
 const normalizePart = (part: OpencodeSessionMessagePart): SessionMessagePart | null => {
   switch (part.type) {
     case "text":
-      if (typeof part.text !== "string" || part.text.trim().length === 0) return null;
-      return { type: "text", text: part.text };
+      return normalizeTextLikePart(part, "text");
 
     case "reasoning":
-      if (typeof part.text !== "string" || part.text.trim().length === 0) return null;
-      return { type: "reasoning", text: part.text };
+      return normalizeTextLikePart(part, "reasoning");
 
     case "tool":
-      return {
-        type: "tool",
-        tool: part.tool ?? "unknown",
-        callId: part.callID,
-        actionType: classifyToolAction(part.tool ?? ""),
-        status: resolveToolStatus(part.state?.status),
-        state: part.state
-          ? {
-              status: part.state.status,
-              input: part.state.input,
-              output: part.state.output,
-              errorText: part.state.errorText,
-              metadata: part.state.metadata,
-            }
-          : undefined,
-      };
+      return normalizeToolPart(part);
 
     case "step-start":
       return { type: "step-start", snapshot: part.snapshot };
@@ -114,6 +131,11 @@ const normalizePart = (part: OpencodeSessionMessagePart): SessionMessagePart | n
         errorType: part.errorType,
         message: typeof part.message === "string" ? part.message : part.text,
       });
+
+    case "image":
+    case "file": {
+      return normalizeImagePart(part);
+    }
 
     default:
       if (typeof part.text === "string" && part.text.trim().length > 0) {

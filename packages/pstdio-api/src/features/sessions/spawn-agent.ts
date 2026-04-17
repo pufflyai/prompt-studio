@@ -7,6 +7,14 @@ type SpawnInput = {
   sessionId: string;
   agentId: string;
   prompt: string;
+  attachments?: {
+    id: string;
+    filename: string;
+    mimeType: string;
+    byteSize: number;
+    data: string;
+    url: string;
+  }[];
   title?: string;
   model?: string;
   cwd?: string;
@@ -120,6 +128,7 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
 
   const result = await agent.startSession({
     prompt: input.prompt,
+    attachments: input.attachments,
     title: input.title,
     model: input.model,
     cwd: input.cwd,
@@ -144,6 +153,14 @@ type ResumeInput = {
   agentSessionId: string;
   agentId: string;
   prompt: string;
+  attachments?: {
+    id: string;
+    filename: string;
+    mimeType: string;
+    byteSize: number;
+    data: string;
+    url: string;
+  }[];
   model?: string;
   cwd?: string;
   messageOffset?: number;
@@ -173,6 +190,7 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
     {
       sessionId: input.agentSessionId,
       prompt: input.prompt,
+      attachments: input.attachments,
       model: input.model,
       cwd: input.cwd,
       env: { PSTDIO_SESSION_ID: input.sessionId },

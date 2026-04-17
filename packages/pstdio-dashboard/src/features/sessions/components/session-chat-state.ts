@@ -1,7 +1,10 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
+import type { SessionAttachmentRef } from "../session-attachment-ref";
 
 export type PendingFollowUpState = {
   prompt: string;
+  attachments: SessionAttachmentRef[];
+  projectId?: string;
   messageCount: number;
   userMessageId: string;
   assistantMessageId: string;
@@ -10,12 +13,16 @@ export type PendingFollowUpState = {
 
 export const createPendingFollowUpState = (input: {
   prompt: string;
+  attachments?: SessionAttachmentRef[];
+  projectId?: string;
   messageCount: number;
   pendingId: string;
   sessionId?: string | null;
 }): PendingFollowUpState => {
   return {
     prompt: input.prompt,
+    attachments: input.attachments ?? [],
+    projectId: input.projectId,
     messageCount: input.messageCount,
     userMessageId: `${input.pendingId}-user`,
     assistantMessageId: `${input.pendingId}-assistant`,
@@ -34,11 +41,21 @@ export const assignPendingFollowUpSession = (
 };
 
 export const createOptimisticFollowUpMessages = (pending: PendingFollowUpState): SessionMessage[] => {
+  const projectQuery = pending.projectId ? `?project_id=${encodeURIComponent(pending.projectId)}` : "";
+
   return [
     {
       id: pending.userMessageId,
       role: "user",
-      parts: [{ type: "text", text: pending.prompt }],
+      parts: [
+        { type: "text", text: pending.prompt },
+        ...pending.attachments.map((attachment) => ({
+          type: "file" as const,
+          mediaType: attachment.mime_type,
+          filename: attachment.file_name,
+          url: `/v1/sessions/attachments/${attachment.id}/content${projectQuery}`,
+        })),
+      ],
     },
     {
       id: pending.assistantMessageId,

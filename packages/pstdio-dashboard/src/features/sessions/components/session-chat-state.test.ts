@@ -19,6 +19,7 @@ describe("session chat optimistic state", () => {
   it("builds optimistic user and loading messages", () => {
     const pending = createPendingFollowUpState({
       prompt: "Follow up on the API",
+      attachments: [{ id: "a-1", file_name: "shot.png", mime_type: "image/png", size_bytes: 12 }],
       messageCount: 2,
       pendingId: "pending-1",
     });
@@ -29,7 +30,15 @@ describe("session chat optimistic state", () => {
       {
         id: "pending-1-user",
         role: "user",
-        parts: [{ type: "text", text: "Follow up on the API" }],
+        parts: [
+          { type: "text", text: "Follow up on the API" },
+          {
+            type: "file",
+            mediaType: "image/png",
+            filename: "shot.png",
+            url: "/v1/sessions/attachments/a-1/content",
+          },
+        ],
       },
       {
         id: "pending-1-assistant",

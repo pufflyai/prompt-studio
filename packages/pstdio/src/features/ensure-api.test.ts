@@ -46,10 +46,26 @@ describe("ensureApi", () => {
     expect(waitUrl).toBe("http://localhost:4000/healthz");
   });
 
-  it("throws when api fails to start and runApi returns null", async () => {
+  it("waits for an already-booting api when auto-start is disabled", async () => {
+    let waited = false;
     const deps: EnsureApiDeps = {
       isHealthy: async () => false,
-      waitForHealthy: async () => {},
+      waitForHealthy: async () => {
+        waited = true;
+      },
+      runApi: () => null,
+    };
+
+    await ensureApi("http://localhost:3000", deps);
+    expect(waited).toBe(true);
+  });
+
+  it("throws when api fails to start and never becomes healthy", async () => {
+    const deps: EnsureApiDeps = {
+      isHealthy: async () => false,
+      waitForHealthy: async () => {
+        throw new Error("timeout");
+      },
       runApi: () => null,
     };
 

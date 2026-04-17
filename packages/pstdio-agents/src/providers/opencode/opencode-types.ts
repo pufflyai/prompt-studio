@@ -1,6 +1,11 @@
 export type OpencodeSessionMessagePart = {
   type: string;
   text?: string;
+  mime?: string;
+  mimeType?: string;
+  filename?: string;
+  url?: string;
+  data?: string;
   tool?: string;
   callID?: string;
   state?: {

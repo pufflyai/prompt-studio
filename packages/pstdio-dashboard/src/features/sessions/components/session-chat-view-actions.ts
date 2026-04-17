@@ -1,6 +1,7 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import type { Dispatch, SetStateAction } from "react";
 import { apiRequest } from "@/lib/api";
+import type { SessionAttachmentRef } from "../session-attachment-ref";
 import {
   assignPendingFollowUpSession,
   createPendingFollowUpState,
@@ -9,7 +10,14 @@ import {
 
 export type CreateSessionMutation = {
   mutate: (
-    input: { projectId: string; prompt: string; agent: string; model: string | undefined; workspaceId?: string },
+    input: {
+      projectId: string;
+      prompt: string;
+      attachments?: SessionAttachmentRef[];
+      agent: string;
+      model: string | undefined;
+      workspaceId?: string;
+    },
     options: {
       onSuccess: (result: { sessionId: string }) => void;
       onError: () => void;
@@ -19,7 +27,13 @@ export type CreateSessionMutation = {
 
 export type FollowUpMutation = {
   mutate: (
-    input: { sessionId: string; prompt: string; agent?: string; model?: string },
+    input: {
+      sessionId: string;
+      prompt: string;
+      attachments?: SessionAttachmentRef[];
+      agent?: string;
+      model?: string;
+    },
     options: {
       onSuccess: () => void;
       onError: () => void;
@@ -53,6 +67,7 @@ const submitNewSessionMessage = (input: {
   model: string | undefined;
   workspaceId?: string;
   text: string;
+  attachments: SessionAttachmentRef[];
   messages: SessionMessage[];
   pendingId: string;
   clearSessionDraft: (sessionId: string | null) => void;
@@ -70,6 +85,8 @@ const submitNewSessionMessage = (input: {
 
   const pending = createPendingFollowUpState({
     prompt: input.text,
+    attachments: input.attachments,
+    projectId: input.projectId,
     messageCount: input.messages.length,
     pendingId: input.pendingId,
   });
@@ -79,6 +96,7 @@ const submitNewSessionMessage = (input: {
     {
       projectId: input.projectId,
       prompt: input.text,
+      attachments: input.attachments,
       agent: input.agent,
       model: input.model,
       workspaceId: input.workspaceId,
@@ -99,7 +117,9 @@ const submitFollowUpMessage = (input: {
   sessionId: string;
   agent: string | null;
   model: string | undefined;
+  projectId: string | undefined;
   text: string;
+  attachments: SessionAttachmentRef[];
   messages: SessionMessage[];
   pendingId: string;
   clearSessionDraft: (sessionId: string | null) => void;
@@ -113,6 +133,8 @@ const submitFollowUpMessage = (input: {
   input.setPendingFollowUp(
     createPendingFollowUpState({
       prompt: input.text,
+      attachments: input.attachments,
+      projectId: input.projectId,
       messageCount: input.messages.length,
       pendingId: input.pendingId,
       sessionId: input.sessionId,
@@ -120,9 +142,17 @@ const submitFollowUpMessage = (input: {
   );
 
   input.followUp.mutate(
-    { sessionId: input.sessionId, prompt: input.text, agent: input.agent ?? undefined, model: input.model },
     {
-      onSuccess: input.reconnect,
+      sessionId: input.sessionId,
+      prompt: input.text,
+      attachments: input.attachments,
+      agent: input.agent ?? undefined,
+      model: input.model,
+    },
+    {
+      onSuccess: () => {
+        input.reconnect();
+      },
       onError: () => input.setPendingFollowUp(null),
     },
   );
@@ -135,6 +165,7 @@ export const submitSessionMessage = (input: {
   model: string | undefined;
   workspaceId?: string;
   text: string;
+  attachments: SessionAttachmentRef[];
   messages: SessionMessage[];
   pendingIdRef: { current: number };
   clearSessionDraft: (sessionId: string | null) => void;
@@ -155,6 +186,7 @@ export const submitSessionMessage = (input: {
       model: input.model,
       workspaceId: input.workspaceId,
       text: input.text,
+      attachments: input.attachments,
       messages: input.messages,
       pendingId,
       clearSessionDraft: input.clearSessionDraft,
@@ -170,7 +202,9 @@ export const submitSessionMessage = (input: {
     sessionId: input.sessionId,
     agent: input.agent,
     model: input.model,
+    projectId: input.projectId,
     text: input.text,
+    attachments: input.attachments,
     messages: input.messages,
     pendingId,
     clearSessionDraft: input.clearSessionDraft,

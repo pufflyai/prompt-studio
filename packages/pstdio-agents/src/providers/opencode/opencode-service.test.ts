@@ -170,3 +170,35 @@ test("createOpencodeService stores discovered server url under ~/.pstdio", async
   const storedServerUrl = readFileSync(storePath, "utf8").trim();
   expect(storedServerUrl).toBe("http://127.0.0.1:4900");
 });
+
+test("sendSessionMessage appends file parts after text", async () => {
+  let postedBody: { parts?: Array<{ type: string; mime?: string; url?: string }> } | undefined;
+  const service = createOpencodeService({
+    startServer: async () => "http://127.0.0.1:4900",
+    serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
+    isPortOpen: async () => false,
+    pingServer: async () => false,
+    fetcher: async (input, init) => {
+      const url = String(input);
+      if ((init?.method ?? "GET") === "POST" && url.includes("/session/session-1/message?")) {
+        postedBody = JSON.parse(String(init?.body));
+        return new Response(JSON.stringify({ info: {}, parts: [] }));
+      }
+
+      throw new Error(`Unexpected request URL: ${url}`);
+    },
+  });
+
+  const { messageComplete } = service.sendSessionMessage({
+    sessionId: "session-1",
+    prompt: "describe this",
+    attachments: [{ mimeType: "image/png", data: "ZmFrZQ==" }],
+    cwd: customHome,
+  });
+
+  await messageComplete;
+  expect(postedBody?.parts?.[0]?.type).toBe("text");
+  expect(postedBody?.parts?.[1]?.type).toBe("file");
+  expect(postedBody?.parts?.[1]?.mime).toBe("image/png");
+  expect(postedBody?.parts?.[1]?.url).toBe("data:image/png;base64,ZmFrZQ==");
+});

@@ -140,6 +140,60 @@ describe("spawnClaudeCodeSession", () => {
 
     expect(spawnOptions[0]?.env?.PSTDIO_SESSION_ID).toBe("s_123");
   });
+
+  test("encodes image attachments as Claude image content blocks", async () => {
+    const writes: string[] = [];
+    const stdout = new PassThrough();
+    const stdin = new Writable({
+      write(chunk, _encoding, callback) {
+        writes.push(String(chunk));
+        callback();
+      },
+    });
+
+    const deps: SpawnDeps = {
+      spawnProcess: () => {
+        queueMicrotask(() => {
+          stdout.write(`${JSON.stringify({ type: "system", session_id: "session-abc" })}\n`);
+          stdout.end();
+        });
+
+        return {
+          stdin,
+          stdout,
+          stderr: new PassThrough(),
+          kill: () => {},
+          onExit: Promise.resolve({ code: 0, signal: null }),
+        };
+      },
+    };
+
+    await spawnClaudeCodeSession(
+      {
+        prompt: "Check this screenshot",
+        attachments: [
+          {
+            id: "a-1",
+            filename: "shot.png",
+            mimeType: "image/png",
+            byteSize: 16,
+            data: "ZmFrZQ==",
+            url: "/v1/sessions/attachments/a-1/content",
+          },
+        ],
+      },
+      deps,
+    );
+
+    const payload = JSON.parse(writes.join("")) as {
+      message?: { content?: Array<{ type: string }> };
+    };
+    const content = payload.message?.content;
+
+    expect(Array.isArray(content)).toBe(true);
+    expect(content?.[0]?.type).toBe("text");
+    expect(content?.[1]?.type).toBe("image");
+  });
 });
 
 describe("spawnClaudeCodeMessage (resume)", () => {

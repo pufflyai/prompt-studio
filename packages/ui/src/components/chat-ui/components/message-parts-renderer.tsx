@@ -126,6 +126,26 @@ export function MessagePartsRenderer(props: MessagePartsProps) {
           </Box>,
         );
         break;
+      case "file":
+        nodes.push(
+          <Box key={key} py="2xs">
+            {part.mediaType?.startsWith("image/") ? (
+              <Box
+                as="img"
+                src={part.url}
+                alt={part.filename ?? "Attached image"}
+                maxH="14rem"
+                maxW="20rem"
+                borderRadius="xs"
+                borderWidth="1px"
+                borderColor="border.muted"
+              />
+            ) : (
+              <Text fontSize="sm">{part.filename ?? part.url}</Text>
+            )}
+          </Box>,
+        );
+        break;
       case "alert":
         nodes.push(
           <Box key={key} width="full">

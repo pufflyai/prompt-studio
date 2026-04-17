@@ -24,20 +24,31 @@ const createMessage = (
   index: number,
   role: SessionMessage["role"],
   text: string,
+  attachments?: SessionStartInput["attachments"],
 ): SessionMessage => ({
   id: `${sessionId}-msg-${index}`,
   role,
-  parts: [{ type: "text", text }],
+  parts: [
+    { type: "text", text },
+    ...(role === "user"
+      ? (attachments ?? []).map((attachment) => ({
+          type: "file" as const,
+          mediaType: attachment.mimeType,
+          filename: attachment.filename,
+          url: attachment.url,
+        }))
+      : []),
+  ],
   index,
 });
 
 const buildStartMessages = (sessionId: string, input: SessionStartInput) => [
-  createMessage(sessionId, 0, "user", input.prompt),
+  createMessage(sessionId, 0, "user", input.prompt, input.attachments),
   createMessage(sessionId, 1, "assistant", `Fake Agent: completed "${input.prompt}"`),
 ];
 
 const buildResumeMessages = (sessionId: string, input: SessionMessageInput, startIndex: number) => [
-  createMessage(sessionId, startIndex, "user", input.prompt),
+  createMessage(sessionId, startIndex, "user", input.prompt, input.attachments),
   createMessage(sessionId, startIndex + 1, "assistant", `Fake Agent: follow-up "${input.prompt}"`),
 ];
 

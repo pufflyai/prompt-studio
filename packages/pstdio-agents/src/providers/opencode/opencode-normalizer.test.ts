@@ -324,6 +324,31 @@ describe("normalizeOpencodeMessage tool and patch parts", () => {
       expect(result.parts).toEqual([]);
     });
   });
+
+  describe("file/image compatibility", () => {
+    test("normalizes file parts with mime alias into chat file parts", () => {
+      const result = normalizeOpencodeMessage(
+        contentMsg("user", [
+          {
+            type: "file",
+            mime: "image/png",
+            url: "data:image/png;base64,ZmFrZQ==",
+            filename: "shot.png",
+          },
+        ]),
+        0,
+      );
+
+      expect(result.parts).toEqual([
+        {
+          type: "file",
+          mediaType: "image/png",
+          filename: "shot.png",
+          url: "data:image/png;base64,ZmFrZQ==",
+        },
+      ]);
+    });
+  });
 });
 
 describe("normalizeOpencodeMessage metadata", () => {

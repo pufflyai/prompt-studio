@@ -38,7 +38,12 @@ export const ensureApi = async (apiUrl: string, deps: EnsureApiDeps = defaultDep
   });
 
   if (!result) {
-    throw new Error("Could not start the pstdio API. Start it manually or check your installation.");
+    try {
+      await deps.waitForHealthy({ url: healthUrl, timeoutMs: 3_000 });
+      return;
+    } catch {
+      throw new Error("Could not start the pstdio API. Start it manually or check your installation.");
+    }
   }
 
   await deps.waitForHealthy({ url: healthUrl });
