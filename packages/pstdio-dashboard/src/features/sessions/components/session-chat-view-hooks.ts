@@ -1,5 +1,6 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import { useEffect, useRef } from "react";
+import type { SessionStatus } from "../types";
 import { type PendingFollowUpState, shouldClearPendingFollowUp } from "./session-chat-state";
 import {
   countCompletedEditActions,
@@ -53,11 +54,11 @@ export const useEditActionNotifier = (
 };
 
 export const useReconnectOnExternalResume = (
-  sessionStatus: string | null,
+  sessionStatus: SessionStatus | null,
   isStreaming: boolean,
   reconnect: () => void,
 ) => {
-  const prevStatusRef = useRef<string | null>(null);
+  const prevStatusRef = useRef<SessionStatus | null>(null);
 
   useEffect(() => {
     const prevStatus = prevStatusRef.current;

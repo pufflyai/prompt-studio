@@ -88,6 +88,7 @@ It loads project sessions, groups them by date in the left rail, and renders the
 | ------ | -------- |
 | Select session | Opens that session in the chat view. |
 | Send follow-up | Calls the follow-up mutation for the current session. |
+| Stop / Interrupt | When the selected session is `in_progress` or `awaiting_input`, the chat composer send button switches to a stop control. Clicking it issues `PATCH /v1/sessions/:id/status` with `{ status: "cancelled" }`. The user stays on the same session route; status updates via realtime/query refresh. |
 | Approve / deny | Resolves the current approval request. |
 | Download | Exports the current session as JSON. |
 | Archive | Archives the selected session and returns to the list state. |
@@ -97,6 +98,7 @@ It loads project sessions, groups them by date in the left rail, and renders the
 - The shipped panel is centered on continuing existing sessions.
 - There is no dashboard-native flow yet that persists a brand new session from the empty state.
 - Approval handling only appears when the session stream exposes a pending tool request.
+- The composer stop control only appears for sessions with status `in_progress` or `awaiting_input`. Terminal sessions (`completed`, `failed`, `cancelled`) show the normal send button.
 
 ## Errors
 
@@ -110,3 +112,5 @@ It loads project sessions, groups them by date in the left rail, and renders the
 - **Commands to run**: `sed -n '1,260p' packages/pstdio-dashboard/src/features/sessions/pages/sessions-panel.tsx`
 - **Expected evidence**: Session selection, follow-up messaging, approval handling, download, and archive actions are all present, while new-session creation is not.
 - **Where to find artifacts**: `packages/pstdio-dashboard/src/features/sessions/`
+- **Interrupt hook**: `packages/pstdio-dashboard/src/features/sessions/hooks/use-stop-session.ts`
+- **Interrupt gating**: `canInterruptSession()` in `packages/pstdio-dashboard/src/features/sessions/components/session-chat-view.utils.ts`

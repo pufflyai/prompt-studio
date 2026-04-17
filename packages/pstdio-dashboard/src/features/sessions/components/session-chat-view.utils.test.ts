@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import { createPendingFollowUpState } from "./session-chat-state";
 import {
+  canInterruptSession,
   countCompletedEditActions,
   resolveNewSessionWorkspaceId,
   shouldReconnectForExternalResume,
@@ -72,6 +73,36 @@ describe("session chat view utils", () => {
     expect(shouldResetPendingFollowUpForSession(pending, "session-2")).toBe(true);
     expect(shouldResetPendingFollowUpForSession(pending, null)).toBe(true);
     expect(shouldResetPendingFollowUpForSession(null, "session-2")).toBe(false);
+  });
+
+  describe("canInterruptSession", () => {
+    it("returns true for in_progress sessions", () => {
+      expect(canInterruptSession("in_progress", "session-1")).toBe(true);
+    });
+
+    it("returns true for awaiting_input sessions", () => {
+      expect(canInterruptSession("awaiting_input", "session-1")).toBe(true);
+    });
+
+    it("returns false for completed sessions", () => {
+      expect(canInterruptSession("completed", "session-1")).toBe(false);
+    });
+
+    it("returns false for failed sessions", () => {
+      expect(canInterruptSession("failed", "session-1")).toBe(false);
+    });
+
+    it("returns false for cancelled sessions", () => {
+      expect(canInterruptSession("cancelled", "session-1")).toBe(false);
+    });
+
+    it("returns false when sessionId is null", () => {
+      expect(canInterruptSession("in_progress", null)).toBe(false);
+    });
+
+    it("returns false when sessionStatus is null", () => {
+      expect(canInterruptSession(null, "session-1")).toBe(false);
+    });
   });
 
   describe("resolveNewSessionWorkspaceId", () => {

@@ -47,6 +47,25 @@ const archiveSessionViaApi = async (request: import("@playwright/test").APIReque
   expect(res.ok()).toBe(true);
 };
 
+const updateSessionStatusViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  sessionId: string,
+  status: string,
+) => {
+  const res = await request.patch(`${apiBase}/v1/sessions/${sessionId}/status`, {
+    data: { status },
+  });
+  expect(res.ok()).toBe(true);
+};
+
+const waitForCancelledStatusPatch = (page: import("@playwright/test").Page, sessionId: string) =>
+  page.waitForRequest(
+    (request) =>
+      request.method() === "PATCH" &&
+      request.url().endsWith(`/v1/sessions/${sessionId}/status`) &&
+      request.postDataJSON()?.status === "cancelled",
+  );
+
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
   const res = await request.get(`${apiBase}/v1/projects`);
   expect(res.ok()).toBe(true);
@@ -154,6 +173,83 @@ test.describe("Sessions page", () => {
 
     await page.getByRole("button", { name: "Session actions" }).click();
     await expect(page.getByText("Archive session")).toBeVisible();
+  });
+
+  test("shows stop button for in_progress session, cancels on click, and issues PATCH", async ({ page, request }) => {
+    await bypassOnboarding(page);
+
+    const session = await createSessionViaApi(request, projectId, "Stop button test");
+
+    // Wait for fake agent to complete, then force back to in_progress before navigating
+    await expect(async () => {
+      const res = await request.get(`${apiBase}/v1/sessions/${session.id}`);
+      const data = (await res.json()) as { status: string };
+      expect(data.status).toBe("completed");
+    }).toPass({ timeout: 5_000 });
+    await updateSessionStatusViaApi(request, session.id, "in_progress");
+
+    // Navigate after status is set so the initial sync snapshot includes in_progress
+    await page.goto(`/projects/${projectId}/sessions/${session.id}`);
+
+    const sendButton = page.getByTestId("send-message-button");
+    await expect(sendButton).toHaveAttribute("title", "Stop Response", { timeout: 5_000 });
+
+    const cancelledStatusPatch = waitForCancelledStatusPatch(page, session.id);
+    await sendButton.click({ force: true });
+    await cancelledStatusPatch;
+
+    await expect(sendButton).toHaveAttribute("title", "Message Sending", { timeout: 5_000 });
+
+    const res = await request.get(`${apiBase}/v1/sessions/${session.id}`);
+    const data = (await res.json()) as { status: string };
+    expect(data.status).toBe("cancelled");
+  });
+
+  test("shows stop button for awaiting_input session and cancels on click", async ({ page, request }) => {
+    await bypassOnboarding(page);
+
+    const session = await createSessionViaApi(request, projectId, "Awaiting input test");
+
+    await expect(async () => {
+      const res = await request.get(`${apiBase}/v1/sessions/${session.id}`);
+      const data = (await res.json()) as { status: string };
+      expect(data.status).toBe("completed");
+    }).toPass({ timeout: 5_000 });
+    await updateSessionStatusViaApi(request, session.id, "awaiting_input");
+
+    await page.goto(`/projects/${projectId}/sessions/${session.id}`);
+
+    const sendButton = page.getByTestId("send-message-button");
+    await expect(sendButton).toHaveAttribute("title", "Stop Response", { timeout: 5_000 });
+
+    const cancelledStatusPatch = waitForCancelledStatusPatch(page, session.id);
+    await sendButton.click({ force: true });
+    await cancelledStatusPatch;
+
+    await expect(sendButton).toHaveAttribute("title", "Message Sending", { timeout: 5_000 });
+
+    const res = await request.get(`${apiBase}/v1/sessions/${session.id}`);
+    const data = (await res.json()) as { status: string };
+    expect(data.status).toBe("cancelled");
+  });
+
+  test("does not show stop button for completed sessions", async ({ page, request }) => {
+    await bypassOnboarding(page);
+
+    const session = await createSessionViaApi(request, projectId, "Completed session test");
+
+    // Wait for the fake agent to complete the session
+    await expect(async () => {
+      const res = await request.get(`${apiBase}/v1/sessions/${session.id}`);
+      const data = (await res.json()) as { status: string };
+      expect(data.status).toBe("completed");
+    }).toPass({ timeout: 5_000 });
+
+    await page.goto(`/projects/${projectId}/sessions/${session.id}`);
+
+    const sendButton = page.getByTestId("send-message-button");
+    await expect(sendButton).toBeVisible();
+    await expect(sendButton).toHaveAttribute("title", "Message Sending");
   });
 
   test("shows only the 6 most recent sessions in the chat dropdown and navigates to the sessions page", async ({

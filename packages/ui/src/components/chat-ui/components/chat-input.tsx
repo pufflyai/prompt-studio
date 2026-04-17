@@ -2,6 +2,7 @@ import { Box, Flex, HStack, Spacer, Text } from "@chakra-ui/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/scroll-area";
 import { getTextFromSerializedEditorState, PromptEditor } from "../../rich-text";
+import { resolveSendAction } from "./chat-input.utils";
 import { SendButton } from "./send-button";
 
 interface ChatInputProps {
@@ -80,25 +81,27 @@ export const ChatInput = (props: ChatInputProps) => {
     }
   };
 
-  const handleSend = () => {
-    if (isDisabled) return;
+  const canInterrupt = Boolean(onInterrupt);
+  const hasText = Boolean(text.trim());
+  const sendAction = resolveSendAction({
+    isDisabled,
+    canInterrupt,
+    streaming,
+    hasText,
+  });
 
-    if (streaming) {
+  const handleSend = () => {
+    if (sendAction === "blocked") return;
+
+    if (sendAction === "interrupt") {
       onInterrupt?.();
       return;
     }
 
-    const trimmed = text.trim();
-    if (!trimmed) return;
-
-    onSubmit(trimmed, attachedResources);
-
+    onSubmit(text.trim(), attachedResources);
     resetEditor(true);
-
     onClearAttachments?.();
   };
-
-  const canInterrupt = streaming && Boolean(onInterrupt);
 
   const placeholderNode = placeholder ? (
     <Text textStyle="label/M/regular" color="fg.subtle" pointerEvents="none" position="absolute" top="0">
@@ -157,9 +160,9 @@ export const ChatInput = (props: ChatInputProps) => {
           <SendButton
             canInterrupt={canInterrupt}
             title={canInterrupt ? "Stop Response" : "Message Sending"}
-            shortcut={streaming ? undefined : "Enter"}
+            shortcut={canInterrupt || streaming ? undefined : "Enter"}
             onClick={handleSend}
-            disabled={(streaming && !canInterrupt) || (!streaming && !text.trim()) || isDisabled}
+            disabled={sendAction === "blocked"}
           />
         </HStack>
       </Flex>

@@ -1,4 +1,5 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
+import type { SessionStatus } from "../types";
 import type { PendingFollowUpState } from "./session-chat-state";
 
 const EDIT_ACTION_TYPES = new Set(["write", "execute"]);
@@ -39,13 +40,18 @@ export const resolveNewSessionWorkspaceId = (input: {
   return input.newSessionWorkspaceId;
 };
 
-const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
+const ACTIVE_STATUSES = new Set<SessionStatus>(["in_progress", "awaiting_input"]);
+
+export const canInterruptSession = (sessionStatus: SessionStatus | null, sessionId: string | null) =>
+  Boolean(sessionId && sessionStatus && ACTIVE_STATUSES.has(sessionStatus));
+
+const TERMINAL_STATUSES = new Set<SessionStatus>(["completed", "failed", "cancelled"]);
 
 // Detects when a session transitions from a terminal state to in_progress
 // while the stream is not already active (external resume by hook/CLI/API).
 export const shouldReconnectForExternalResume = (
-  prevStatus: string | null,
-  currentStatus: string | null,
+  prevStatus: SessionStatus | null,
+  currentStatus: SessionStatus | null,
   isStreaming: boolean,
 ) => {
   if (!prevStatus || isStreaming) return false;

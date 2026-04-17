@@ -13,13 +13,14 @@ import { useSessionAgent } from "../hooks/use-session-agent";
 import { useSessionStatus } from "../hooks/use-session-status";
 import { useSessionStream } from "../hooks/use-session-stream";
 import { useSessionWorkspace } from "../hooks/use-session-workspace";
+import { useStopSession } from "../hooks/use-stop-session";
 import { buildSessionWorkspaceHubPanelModel } from "../utils/workspace-hub";
 import {
   mergeMessagesWithPendingFollowUp,
   type PendingFollowUpState,
   shouldShowPendingFollowUp,
 } from "./session-chat-state";
-import { resolveNewSessionWorkspaceId } from "./session-chat-view.utils";
+import { canInterruptSession, resolveNewSessionWorkspaceId } from "./session-chat-view.utils";
 import { submitSessionMessage } from "./session-chat-view-actions";
 import {
   useEditActionNotifier,
@@ -67,6 +68,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
   const { data: workspaceDiffSummary } = useTicketAttemptDiffSummary(showWorkspaceHub ? sessionWorkspace?.id : null);
   const createSession = useCreateProjectSession();
   const followUp = useFollowUpSession();
+  const stopSession = useStopSession();
   const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUpState | null>(null);
   const pendingIdRef = useRef(0);
   const editCountRef = useRef(0);
@@ -104,6 +106,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
     changesLabel: (count) => t("tickets:diff.filesChanged", { count }),
   });
   const loadingContent = sessionId ? <ChatSkeleton /> : undefined;
+  const canInterrupt = canInterruptSession(sessionStatus, sessionId);
   const effectiveStreaming = isStreaming || isWorkspaceInitializing;
   const emptyStateTitle = sessionId ? t("chatInput.session.notFoundTitle") : t("sessions.nextBuildTitle");
   const emptyStateDescription = sessionId ? t("chatInput.session.notFoundDescription") : "";
@@ -117,6 +120,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
     <ChatPanel
       messages={displayedMessages}
       streaming={effectiveStreaming}
+      onInterruptMessage={canInterrupt ? () => stopSession.mutate(sessionId!) : undefined}
       workspaceInitializing={isWorkspaceInitializing}
       emptyStateTitle={emptyStateTitle}
       emptyStateDescription={emptyStateDescription}

@@ -29,6 +29,7 @@ interface ChatPanelProps {
   chatInputPlaceholder: string;
   chatInputDefaultValue?: string;
   onSubmitMessage?: (text: string, attachments: string[]) => void;
+  onInterruptMessage?: () => void;
   onChatInputChange?: (text: string) => void;
   actions?: ReactNode;
   repoMenu?: ReactNode;
@@ -63,6 +64,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     chatInputPlaceholder,
     chatInputDefaultValue = "",
     onSubmitMessage,
+    onInterruptMessage,
     onChatInputChange,
     actions,
     repoMenu,
@@ -193,6 +195,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
           defaultState={createSerializedPromptState(chatInputDefaultValue)}
           streaming={streaming}
           onSubmit={onSubmitMessage}
+          onInterrupt={onInterruptMessage}
           onChange={onChatInputChange}
           actions={actions}
           attachedResources={attachedResources}
