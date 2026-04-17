@@ -11,6 +11,7 @@ const storagePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-storage-"));
 const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-home-"));
 const resolvedHomePath = process.env.E2E_HOME ?? homePath;
 const filesRoot = join(import.meta.dirname, "../pstdio/files");
+const bunCacheDir = process.env.E2E_BUN_CACHE_DIR ?? join(tmpdir(), "pstdio-e2e-bun-cache");
 
 export default defineConfig({
   testDir: "./src/ui",
@@ -21,6 +22,7 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   outputDir: `test-results/${runId}`,
+  globalSetup: "./src/scripts/global-setup.ts",
   reporter: [["html", { open: "never", outputFolder: `playwright-report/${runId}` }], ["list"]],
   use: {
     baseURL: `http://localhost:${dashboardPort}`,
@@ -47,6 +49,7 @@ export default defineConfig({
         PSTDIO_AGENTS: agentEnv,
         HOME: resolvedHomePath,
         PSTDIO_WORKSPACES_DIR: join(resolvedHomePath, ".pstdio", "workspaces"),
+        BUN_INSTALL_CACHE_DIR: bunCacheDir,
       },
     },
     {
@@ -57,6 +60,7 @@ export default defineConfig({
       env: {
         PSTDIO_DISABLE_EMBED_MANIFEST: "1",
         PSTDIO_DISABLE_API_AUTO_START: "1",
+        BUN_INSTALL_CACHE_DIR: bunCacheDir,
         HOME: resolvedHomePath,
       },
     },

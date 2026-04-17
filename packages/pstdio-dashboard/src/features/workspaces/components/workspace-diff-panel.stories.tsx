@@ -2,8 +2,27 @@ import { Box, Flex } from "@chakra-ui/react";
 import type { Diff } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
 import type { ReactNode } from "react";
-import type { ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
+import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
 import { WorkspaceDiffPanel } from "./workspace-diff-panel";
+
+const sampleChangedFiles: ApiFileDiff[] = [
+  {
+    filePath: "src/workspace.ts",
+    change: "modified",
+    additions: 1,
+    deletions: 1,
+    oldContent: "export const panel = 'before';\n",
+    newContent: "export const panel = 'after';\n",
+  },
+  {
+    filePath: "src/features/sidebar.tsx",
+    change: "added",
+    additions: 42,
+    deletions: 0,
+    oldContent: "",
+    newContent: "export const Sidebar = () => null;\n",
+  },
+];
 
 type StoryFn = () => ReactNode;
 
@@ -88,6 +107,7 @@ export const WithDiffs: Story = {
   args: {
     diffs: sampleDiffs,
     artifacts: sampleArtifacts,
+    changedFiles: sampleChangedFiles,
   },
 };
 
@@ -95,6 +115,7 @@ export const Empty: Story = {
   args: {
     diffs: [],
     artifacts: [],
+    changedFiles: [],
   },
 };
 
@@ -102,6 +123,7 @@ export const ArtifactsOnly: Story = {
   args: {
     diffs: [],
     artifacts: sampleArtifacts,
+    changedFiles: [],
   },
 };
 
@@ -109,5 +131,15 @@ export const ArtifactsOnlyEdgeCases: Story = {
   args: {
     diffs: [],
     artifacts: edgeCaseArtifacts,
+    changedFiles: [],
+  },
+};
+
+export const Loading: Story = {
+  args: {
+    diffs: [],
+    artifacts: [],
+    changedFiles: [],
+    loading: true,
   },
 };

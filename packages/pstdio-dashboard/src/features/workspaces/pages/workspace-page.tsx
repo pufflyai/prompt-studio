@@ -17,7 +17,7 @@ import { buildImplementTicketPrompt } from "@/features/ticket/utils/build-prompt
 import { openTicketSessionBubble } from "@/features/ticket/utils/open-ticket-session-bubble";
 import { formatTicketBreadcrumbLabel } from "@/features/ticket/utils/ticket-breadcrumb";
 import { buildSelectableTicketFiles } from "@/features/ticket/utils/ticket-file-selection";
-import type { ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
+import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
 import { useCreateTicketAttempt } from "@/features/ticket-list/hooks/use-create-ticket-attempt";
 import { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
 import { transformFileDiffs } from "@/features/workspaces/utils/transform-diff";
@@ -116,6 +116,8 @@ interface WorkspacePageContentProps {
   sessionsByWorkspaceId: ReturnType<typeof useWorkspaceSessions>["sessionsByWorkspaceId"];
   diffs: ReturnType<typeof transformFileDiffs>;
   artifacts: ApiWorkspaceArtifact[];
+  changedFiles: ApiFileDiff[];
+  isDiffLoading: boolean;
   attempts: NonNullable<ReturnType<typeof useProjectTickets>["data"]>[number]["attempts"];
   selectableFiles: ReturnType<typeof buildSelectableTicketFiles>;
   createAttemptIsPending: boolean;
@@ -124,10 +126,12 @@ interface WorkspacePageContentProps {
   selectSession: (workspaceShorthand: string, sessionId: string) => void;
   createWorkspaceSessionDraft: (workspaceId: string) => void;
   selectFile: (fileId: string) => void;
+  selectPlanning: () => void;
   isCreateModalOpen: boolean;
   closeCreateModal: () => void;
   runAttempt: () => Promise<boolean>;
   pluginActions: ReturnType<typeof usePluginActionTrigger>["pluginActions"];
+  pluginActionsLoading: boolean;
   pluginActionTrigger: ReturnType<typeof usePluginActionTrigger>;
   deleteWorkspaceIsPending: boolean;
   isDeleteOpen: boolean;
@@ -147,6 +151,8 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
     sessionsByWorkspaceId,
     diffs,
     artifacts,
+    changedFiles,
+    isDiffLoading,
     attempts,
     selectableFiles,
     createAttemptIsPending,
@@ -155,10 +161,12 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
     selectSession,
     createWorkspaceSessionDraft,
     selectFile,
+    selectPlanning,
     isCreateModalOpen,
     closeCreateModal,
     runAttempt,
     pluginActions,
+    pluginActionsLoading,
     pluginActionTrigger,
     deleteWorkspaceIsPending,
     isDeleteOpen,
@@ -188,6 +196,7 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
       onSelectWorkspace={selectWorkspace}
       onSelectSession={selectSession}
       onCreateWorkspaceSessionDraft={createWorkspaceSessionDraft}
+      onSelectPlanning={selectPlanning}
     />
   );
 
@@ -234,11 +243,12 @@ const WorkspacePageContent = (props: WorkspacePageContentProps) => {
             }}
             pendingActionKeys={pluginActionTrigger.pendingActionKeys}
             overflowLabel={t("workspacePanel.options.workspace")}
+            isLoading={pluginActionsLoading}
           />
         </HorizontalMenuStack>
 
         <Flex flex="1" minH="0">
-          <WorkspaceDiffPanel diffs={diffs} artifacts={artifacts} />
+          <WorkspaceDiffPanel diffs={diffs} artifacts={artifacts} changedFiles={changedFiles} loading={isDiffLoading} />
         </Flex>
 
         {isCreateModalOpen ? (
@@ -369,7 +379,10 @@ export const WorkspacePage = () => {
     },
   });
 
-  const { data: diffData } = useTicketAttemptDiff(selectedWorkspace?.id);
+  const diffQuery = useTicketAttemptDiff(selectedWorkspace?.id);
+  const diffData = diffQuery.data;
+  const isDiffLoading = Boolean(selectedWorkspace) && (diffQuery.isPending || (diffQuery.isFetching && !diffData));
+  const changedFiles = diffData?.files ?? [];
   const diffs = diffData?.files ? transformFileDiffs(diffData.files) : [];
 
   const ticketFiles = useTicketFiles(ticket?.id);
@@ -469,6 +482,8 @@ export const WorkspacePage = () => {
       sessionsByWorkspaceId={sessionsByWorkspaceId}
       diffs={diffs}
       artifacts={artifacts}
+      changedFiles={changedFiles}
+      isDiffLoading={isDiffLoading}
       attempts={attempts}
       selectableFiles={selectableFiles}
       createAttemptIsPending={createAttempt.isPending}
@@ -477,10 +492,14 @@ export const WorkspacePage = () => {
       selectSession={handleSelectSession}
       createWorkspaceSessionDraft={handleCreateWorkspaceSessionDraft}
       selectFile={handleSelectFile}
+      selectPlanning={() => {
+        void navigate({ to: "/projects/$projectId/tickets", params: { projectId } });
+      }}
       isCreateModalOpen={isCreateModalOpen}
       closeCreateModal={() => setIsCreateModalOpen(false)}
       runAttempt={handleRunAttempt}
       pluginActions={selectedWorkspace ? pluginActionTrigger.pluginActions : []}
+      pluginActionsLoading={selectedWorkspace ? pluginActionTrigger.isActionsLoading : false}
       pluginActionTrigger={pluginActionTrigger}
       deleteWorkspaceIsPending={deleteWorkspace.isPending}
       isDeleteOpen={isDeleteOpen}

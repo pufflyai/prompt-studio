@@ -37,7 +37,10 @@ interface TicketSidebarProps {
   onSelectWorkspace: (workspaceShorthand: string) => void;
   onSelectSession: (workspaceShorthand: string, sessionId: string) => void;
   onCreateWorkspaceSessionDraft?: (workspaceId: string) => void;
+  onSelectPlanning?: () => void;
 }
+
+const PLANNING_ITEM_ID = "planning";
 
 const getFileIcon = (fileName: string) => {
   const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
@@ -49,6 +52,18 @@ const getFileIcon = (fileName: string) => {
   if (["png", "jpg", "jpeg", "gif", "svg", "webp"].includes(ext)) return <FileImage size={14} />;
   return <FileText size={14} />;
 };
+
+const buildPlanningSection = (): SidebarSection => ({
+  id: "planning",
+  nodes: [
+    {
+      id: PLANNING_ITEM_ID,
+      label: "<- Planning",
+      isNavigable: true,
+      navigationIntent: { id: "select-planning" },
+    },
+  ],
+});
 
 const buildFilesSection = (files: SelectableTicketFile[]): SidebarSection => {
   const nodes: SidebarNode[] = [
@@ -154,12 +169,14 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
     onSelectWorkspace,
     onSelectSession,
     onCreateWorkspaceSessionDraft,
+    onSelectPlanning,
   } = props;
 
   const selectedWorkspace = selectedWorkspaceId ? workspaces.find((w) => w.id === selectedWorkspaceId) : null;
   const sessions = selectedWorkspaceId ? (sessionsByWorkspaceId.get(selectedWorkspaceId) ?? []) : [];
 
   const sections: SidebarSection[] = [
+    ...(onSelectPlanning ? [buildPlanningSection()] : []),
     buildFilesSection(files),
     buildWorkspacesSection(workspaces, attemptStatusMap),
     ...(selectedWorkspace
@@ -187,6 +204,10 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
 
     if (intent.id === "select-file") {
       onSelectFile(intent.payload as string);
+    }
+
+    if (intent.id === "select-planning") {
+      onSelectPlanning?.();
     }
 
     if (intent.id === "select-workspace") {

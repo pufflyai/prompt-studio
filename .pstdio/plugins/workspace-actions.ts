@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -8,6 +8,8 @@ const localComposePath = join("infra", "local", "compose.yaml");
 const localProjectService = "prompt-studio";
 const localDashboardPort = "5173";
 const localApiPort = "19841";
+const storybookPackagePath = join("packages", "ui");
+const storybookUrl = "http://localhost:6006";
 const composeEnvTempPrefix = "pstdio-compose-env-";
 
 const sanitizeComposeProjectPart = (value: string) =>
@@ -123,6 +125,36 @@ export default definePlugin({
       },
     },
     {
+      key: "run-storybook",
+      label: "Run Storybook",
+      targetType: "workspace",
+      placement: "overflow",
+      trigger(ctx) {
+        if (!ctx.target.worktree_path) {
+          throw new Error("Workspace has no worktree path");
+        }
+
+        const uiPath = join(ctx.target.worktree_path, storybookPackagePath);
+        if (!existsSync(uiPath)) {
+          throw new Error(`Workspace is missing ${storybookPackagePath}`);
+        }
+
+        const proc = spawn("bun", ["run", "storybook"], {
+          cwd: uiPath,
+          detached: true,
+          stdio: "ignore",
+        });
+
+        if (!proc.pid) {
+          throw new Error("Failed to start Storybook. Ensure `bun` is installed and available in PATH.");
+        }
+
+        proc.unref();
+
+        return { message: `Storybook is starting at ${storybookUrl}` } as never;
+      },
+    },
+    {
       key: "open-worktree-in-vscode",
       label: "Open in VS Code",
       targetType: "workspace",
@@ -160,7 +192,13 @@ export default definePlugin({
         try {
           const runProject = await runCommand(
             ctx.target.worktree_path,
-            createComposeCommand(composeProjectName, envFilePath, ["up", "-d", "--build"]),
+            createComposeCommand(composeProjectName, envFilePath, [
+              "up",
+              "-d",
+              "--build",
+              "--force-recreate",
+              "--renew-anon-volumes",
+            ]),
           );
 
           if (runProject.exitCode !== 0) {
