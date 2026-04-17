@@ -96,7 +96,8 @@ const mergeToolRenderers = (overrides?: ToolRenderersMap) => {
 
 const getRenderer = (invocation: ToolPart, toolRenderers: ToolRenderersMap) => {
   const rawTool = invocation.tool ?? "tool";
-  return toolRenderers[rawTool] ?? toolRenderers[normalizeToolType(rawTool)];
+  const normalized = normalizeToolType(rawTool).toLowerCase();
+  return toolRenderers[rawTool] ?? toolRenderers[normalized];
 };
 
 const renderInvocation = (

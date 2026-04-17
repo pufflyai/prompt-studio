@@ -55,12 +55,15 @@ export const toolTypeToIconName = (type?: string): IconName => {
   const normalized = type.replace(/^tool-/, "");
   if (isToolIconName(normalized)) return normalized;
 
-  switch (normalized) {
+  const lower = normalized.toLowerCase();
+  switch (lower) {
     case "read":
       return "file";
     case "bash":
       return "terminal";
     case "apply_patch":
+      return "patch";
+    case "edit":
       return "patch";
     case "grep":
       return "search";
@@ -70,6 +73,8 @@ export const toolTypeToIconName = (type?: string): IconName => {
       return "search";
     case "browser":
       return "browser";
+    case "todowrite":
+      return "terminal";
     case "fs":
     case "file":
       return "file";
