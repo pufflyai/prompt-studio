@@ -9,6 +9,7 @@ import {
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
+const QUESTION_PROMPT_TRIGGER = "__fake_question_prompt__";
 
 const bypassOnboarding = async (page: import("@playwright/test").Page) => {
   await page.addInitScript(() => {
@@ -121,6 +122,39 @@ test.describe("Session chat and workspace behavior", () => {
 
     await expect(page.getByText(prompt).first()).toBeVisible();
     await expect(page.getByText(`Fake Agent: completed "${prompt}"`).first()).toBeVisible();
+  });
+
+  test("clicking a question answer resumes the conversation", async ({ page, request }) => {
+    await bypassOnboarding(page);
+    const prompt = `Question follow-up test ${QUESTION_PROMPT_TRIGGER}`;
+    const session = await createSessionViaApi(request, projectId, prompt);
+    await page.waitForTimeout(200);
+
+    await page.goto(`/projects/${projectId}/sessions/${session.id}`);
+
+    const answerButton = page.getByRole("button", { name: "TypeScript" });
+    const sendButton = page.locator("[data-testid='send-message-button']");
+
+    await expect(page.getByText("Which language do you want to use?").first()).toBeVisible();
+    await expect(answerButton).toBeVisible();
+    await expect(sendButton).toBeDisabled();
+
+    await answerButton.click();
+    await expect(sendButton).toBeEnabled();
+
+    const followUpRequestPromise = page.waitForRequest(
+      (request) => request.method() === "POST" && request.url().endsWith(`/v1/sessions/${session.id}/follow-up`),
+    );
+    await sendButton.click();
+    const followUpRequest = await followUpRequestPromise;
+    expect(followUpRequest.postDataJSON()).toMatchObject({
+      prompt: "Which language do you want to use?: TypeScript",
+    });
+
+    await expect(page.getByText("Which language do you want to use?: TypeScript").first()).toBeVisible();
+    await expect(
+      page.getByText('Fake Agent: follow-up "Which language do you want to use?: TypeScript"').first(),
+    ).toBeVisible();
   });
 
   test("keeps chat input focus while typing in a new session", async ({ page }) => {
