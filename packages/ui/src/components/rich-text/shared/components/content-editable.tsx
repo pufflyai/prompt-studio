@@ -36,7 +36,11 @@ export function ContentEditable({
     </Flex>
   );
 
-  if (!scrollable) return editor;
+  // Rich messages skip the ScrollArea — the parent RichMessage container
+  // has overflow: hidden, and the chat panel handles vertical scrolling.
+  // The ScrollArea's internal min-width: fit-content (from @zag-js) would
+  // otherwise cause code blocks to expand the conversation width.
+  if (!scrollable || isRichMessage) return editor;
 
   return (
     <ScrollArea
