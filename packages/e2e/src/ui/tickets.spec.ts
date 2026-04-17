@@ -116,6 +116,25 @@ const createTemplateViaApi = async (
   return (await res.json()) as { id: string; name: string; template_type: string };
 };
 
+// A failed POST leaves the modal open with the typed text still visible, so later UI
+// assertions can false-pass while the API poll hangs. Waiting on the response surfaces
+// the real status and guarantees the server has committed before we query; waiting on
+// the dialog to close disambiguates text assertions that would otherwise match both the
+// editor (still in the DOM) and the newly-rendered board card.
+const submitCreateTicketModal = async (
+  page: import("@playwright/test").Page,
+  dialog: import("@playwright/test").Locator,
+) => {
+  const createResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" && new URL(response.url()).pathname === "/v1/tickets",
+  );
+  await dialog.getByRole("button", { name: "Create ticket", exact: true }).click();
+  const response = await createResponse;
+  expect(response.ok()).toBe(true);
+  await expect(dialog).not.toBeVisible();
+};
+
 test.describe("Ticket list", () => {
   let projectId: string;
 
@@ -172,7 +191,7 @@ test.describe("Ticket list", () => {
     const contentEditor = dialog.getByRole("textbox").first();
     await contentEditor.click();
     await contentEditor.fill("New E2E Ticket");
-    await dialog.getByRole("button", { name: "Create ticket", exact: true }).click();
+    await submitCreateTicketModal(page, dialog);
 
     // Verify ticket appears on the board
     await expect(page.getByText("New E2E Ticket")).toBeVisible();
@@ -210,7 +229,7 @@ test.describe("Ticket list", () => {
     await dialog.getByRole("button", { name: tagName, exact: true }).click();
     await page.getByRole("option", { name: optionName, exact: true }).click();
 
-    await dialog.getByRole("button", { name: "Create ticket", exact: true }).click();
+    await submitCreateTicketModal(page, dialog);
 
     await expect(page.getByText("Tagged modal ticket")).toBeVisible();
 
@@ -259,7 +278,7 @@ test.describe("Ticket list editing and filtering", () => {
     const contentEditor = dialog.getByRole("textbox").first();
     await contentEditor.click();
     await contentEditor.fill("Original display title");
-    await dialog.getByRole("button", { name: "Create ticket", exact: true }).click();
+    await submitCreateTicketModal(page, dialog);
 
     await expect(page.getByText("Original display title")).toBeVisible();
 
@@ -309,7 +328,7 @@ test.describe("Ticket list editing and filtering", () => {
     const contentEditor = dialog.getByRole("textbox").first();
     await contentEditor.click();
     await contentEditor.fill("Original content title");
-    await dialog.getByRole("button", { name: "Create ticket", exact: true }).click();
+    await submitCreateTicketModal(page, dialog);
 
     const listTickets = async () => {
       const res = await request.get(`${apiBase}/v1/tickets?project_id=${projectId}`);
@@ -453,7 +472,7 @@ test.describe("Ticket list additional coverage", () => {
     await dialog.getByRole("button", { name: "type", exact: true }).click();
     await page.getByRole("option", { name: optionName, exact: true }).click();
 
-    await dialog.getByRole("button", { name: "Create ticket", exact: true }).click();
+    await submitCreateTicketModal(page, dialog);
 
     await expect(page.getByText("Ticket with tag")).toBeVisible();
 
