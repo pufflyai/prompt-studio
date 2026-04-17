@@ -1,5 +1,5 @@
 import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
@@ -11,7 +11,7 @@ const storagePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-storage-"));
 const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-home-"));
 const resolvedHomePath = process.env.E2E_HOME ?? homePath;
 const filesRoot = join(import.meta.dirname, "../pstdio/files");
-const bunCacheDir = process.env.E2E_BUN_CACHE_DIR ?? join(tmpdir(), "pstdio-e2e-bun-cache");
+const bunCacheDir = process.env.E2E_BUN_CACHE_DIR ?? join(homedir(), ".bun", "install", "cache");
 
 export default defineConfig({
   testDir: "./src/ui",
@@ -20,6 +20,7 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: 0,
+  maxFailures: process.env.CI ? 1 : 0,
   outputDir: `test-results/${runId}`,
   globalSetup: "./src/scripts/global-setup.ts",
   reporter: [["html", { open: "never", outputFolder: `playwright-report/${runId}` }], ["list"]],
