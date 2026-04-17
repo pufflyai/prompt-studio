@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { type ComponentProps, useState } from "react";
 import { AttachmentList } from "./attachment-list";
-import { ChatInput } from "./chat-input";
+import { ChatInput, type ChatInputQuestionPrompt } from "./chat-input";
 
 const meta: Meta<typeof ChatInput> = {
   title: "Chat UI/Chat Input",
@@ -109,6 +109,82 @@ export const WithAttachments: Story = {
       console.log("Submitted text:", text);
       console.log("Submitted attachments:", attachments);
       alert(`Submitted: ${text}${attachments.length > 0 ? ` with ${attachments.length} attachments` : ""}`);
+    },
+  },
+};
+
+const singleChoiceQuestionPrompt: ChatInputQuestionPrompt = {
+  questions: [
+    {
+      id: "language",
+      question: "Which language do you want to use?",
+      options: [{ label: "TypeScript" }, { label: "Python" }, { label: "Go" }],
+      multiple: false,
+      required: true,
+    },
+  ],
+};
+
+const multiChoiceQuestionPrompt: ChatInputQuestionPrompt = {
+  questions: [
+    {
+      id: "focus",
+      question: "What should the plan prioritize?",
+      options: [
+        { label: "Performance", description: "runtime and build time" },
+        { label: "Reliability", description: "tests and retries" },
+        { label: "Maintainability", description: "readability and structure" },
+      ],
+      multiple: true,
+      required: true,
+    },
+  ],
+};
+
+const customQuestionPrompt: ChatInputQuestionPrompt = {
+  questions: [
+    {
+      id: "constraints",
+      question: "Select constraints and add custom notes if needed.",
+      options: [{ label: "No backend changes" }, { label: "Keep API stable" }, { label: "Ship today" }],
+      multiple: true,
+      allowCustomAnswer: true,
+    },
+  ],
+};
+
+export const QuestionSingleChoice: Story = {
+  args: {
+    defaultState: initialState,
+    placeholder: "Add context if needed...",
+    questionPrompt: singleChoiceQuestionPrompt,
+    onSubmit: (text: string) => {
+      console.log("Submitted response:", text);
+      alert(`Submitted response: ${text}`);
+    },
+  },
+};
+
+export const QuestionMultipleChoice: Story = {
+  args: {
+    defaultState: initialState,
+    placeholder: "Optional details...",
+    questionPrompt: multiChoiceQuestionPrompt,
+    onSubmit: (text: string) => {
+      console.log("Submitted response:", text);
+      alert(`Submitted response: ${text}`);
+    },
+  },
+};
+
+export const QuestionWithCustomAnswer: Story = {
+  args: {
+    defaultState: initialState,
+    placeholder: "Add a custom answer...",
+    questionPrompt: customQuestionPrompt,
+    onSubmit: (text: string) => {
+      console.log("Submitted response:", text);
+      alert(`Submitted response: ${text}`);
     },
   },
 };

@@ -3,6 +3,7 @@ import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import { createPendingFollowUpState } from "./session-chat-state";
 import {
   countCompletedEditActions,
+  getActiveQuestionPrompt,
   resolveNewSessionWorkspaceId,
   shouldReconnectForExternalResume,
   shouldResetPendingFollowUpForSession,
@@ -113,6 +114,179 @@ describe("session chat view utils", () => {
           newSessionWorkspaceId: undefined,
         }),
       ).toBeUndefined();
+    });
+  });
+
+  describe("getActiveQuestionPrompt", () => {
+    it("returns parsed question payload from the latest question tool part", () => {
+      const messages: SessionMessage[] = [
+        message("assistant-1", [
+          {
+            type: "tool",
+            tool: "question",
+            state: {
+              input: {
+                tool: "question",
+                questions: [
+                  {
+                    id: "language",
+                    type: "single_choice",
+                    question: "Which language do you want to use?",
+                    options: ["TypeScript", "Go", "Rust"],
+                    required: true,
+                  },
+                ],
+              },
+            },
+          },
+        ]),
+      ];
+
+      expect(getActiveQuestionPrompt(messages)).toEqual({
+        questions: [
+          {
+            id: "language",
+            question: "Which language do you want to use?",
+            options: [
+              { label: "TypeScript", description: undefined },
+              { label: "Go", description: undefined },
+              { label: "Rust", description: undefined },
+            ],
+            multiple: false,
+            required: true,
+            allowCustomAnswer: false,
+          },
+        ],
+      });
+    });
+
+    it("returns undefined once a later user message exists", () => {
+      const messages: SessionMessage[] = [
+        message("assistant-1", [
+          {
+            type: "tool",
+            tool: "question",
+            state: {
+              input: {
+                questions: [
+                  {
+                    question: "Pick one",
+                    options: [{ label: "One", description: "" }],
+                    multiple: false,
+                  },
+                ],
+              },
+            },
+          },
+        ]),
+        {
+          id: "user-2",
+          role: "user",
+          parts: [{ type: "text", text: "One" }],
+        },
+      ];
+
+      expect(getActiveQuestionPrompt(messages)).toBeUndefined();
+    });
+
+    it("supports multi-choice and custom-answer payloads", () => {
+      const messages: SessionMessage[] = [
+        message("assistant-1", [
+          {
+            type: "tool",
+            tool: "question",
+            state: {
+              input: {
+                questions: [
+                  {
+                    id: "framework",
+                    question: "Choose frameworks",
+                    options: [
+                      { label: "React", description: "UI" },
+                      { label: "Vue", description: "UI" },
+                    ],
+                    multiple: true,
+                    custom: true,
+                  },
+                ],
+              },
+            },
+          },
+        ]),
+      ];
+
+      expect(getActiveQuestionPrompt(messages)).toEqual({
+        questions: [
+          {
+            id: "framework",
+            question: "Choose frameworks",
+            options: [
+              { label: "React", description: "UI" },
+              { label: "Vue", description: "UI" },
+            ],
+            multiple: true,
+            required: false,
+            allowCustomAnswer: true,
+          },
+        ],
+      });
+    });
+
+    it("falls back to the latest usable question payload when a newer one is malformed", () => {
+      const messages: SessionMessage[] = [
+        message("assistant-1", [
+          {
+            type: "tool",
+            tool: "question",
+            state: {
+              input: {
+                questions: [
+                  {
+                    id: "valid",
+                    question: "Choose one",
+                    options: [{ label: "A" }, { label: "B" }],
+                    multiple: false,
+                  },
+                ],
+              },
+            },
+          },
+        ]),
+        message("assistant-2", [
+          {
+            type: "tool",
+            tool: "question",
+            state: {
+              input: {
+                questions: [
+                  {
+                    id: "broken",
+                    question: "Broken question",
+                    options: [],
+                    multiple: false,
+                  },
+                ],
+              },
+            },
+          },
+        ]),
+      ];
+
+      expect(getActiveQuestionPrompt(messages)).toEqual({
+        questions: [
+          {
+            id: "valid",
+            question: "Choose one",
+            options: [
+              { label: "A", description: undefined },
+              { label: "B", description: undefined },
+            ],
+            multiple: false,
+            required: false,
+            allowCustomAnswer: false,
+          },
+        ],
+      });
     });
   });
 });

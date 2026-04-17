@@ -6,7 +6,7 @@ import { createSerializedPromptState } from "../utils/editor-state";
 import { ChatPrimitives } from "./ai-conversation";
 import { ChatMessage } from "./ai-message";
 import { AutoScroll } from "./auto-scroll";
-import { ChatInput } from "./chat-input";
+import { ChatInput, type ChatInputQuestionPrompt } from "./chat-input";
 import {
   isStickyUserMessageCollapsible,
   STICKY_USER_MESSAGE_COLLAPSED_MAX_HEIGHT,
@@ -39,6 +39,7 @@ interface ChatPanelProps {
   workspaceHub?: ReactNode;
   workspaceInitializing?: boolean;
   inputDisabled?: boolean;
+  chatInputQuestionPrompt?: ChatInputQuestionPrompt;
 }
 
 const renderMessage = (message: SessionMessage, streaming: boolean) => {
@@ -73,6 +74,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     workspaceHub,
     workspaceInitializing = false,
     inputDisabled = false,
+    chatInputQuestionPrompt,
   } = props;
 
   const merged = mergeReasoningToolOnlyMessages(messages);
@@ -200,6 +202,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
           attachmentList={attachmentList}
           isDisabled={inputDisabled}
           attachedToTop={hasWorkspaceHub}
+          questionPrompt={chatInputQuestionPrompt}
         />
       </Stack>
       <Flex p="2xs" justifyContent="flex-end">

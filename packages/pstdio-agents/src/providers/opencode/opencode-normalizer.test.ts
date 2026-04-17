@@ -177,9 +177,11 @@ describe("normalizeOpencodeMessage tool and patch parts", () => {
       { tool: "edit", expected: "write" },
       { tool: "patch", expected: "write" },
       { tool: "notebook_edit", expected: "write" },
+      { tool: "todowrite", expected: "write" },
       { tool: "bash", expected: "execute" },
       { tool: "task", expected: "execute" },
       { tool: "shell", expected: "execute" },
+      { tool: "question", expected: "execute" },
       { tool: "web_fetch", expected: "network" },
       { tool: "web_search", expected: "network" },
       { tool: "fetch", expected: "network" },
@@ -198,6 +200,105 @@ describe("normalizeOpencodeMessage tool and patch parts", () => {
       const result = normalizeOpencodeMessage(contentMsg("assistant", [{ type: "tool", tool: "Bash" }]), 0);
 
       expect(result.parts[0]).toMatchObject({ actionType: "execute" });
+    });
+
+    test("preserves structured question input payload", () => {
+      const questionInput = {
+        tool: "question",
+        questions: [
+          {
+            id: "language",
+            type: "single_choice",
+            question: "Which language do you want to use?",
+            options: ["JavaScript", "Python", "Go"],
+            required: true,
+          },
+        ],
+      };
+
+      const result = normalizeOpencodeMessage(
+        contentMsg("assistant", [
+          {
+            type: "tool",
+            tool: "question",
+            state: {
+              status: "completed",
+              input: questionInput,
+              output: ["Python"],
+            },
+          },
+        ]),
+        0,
+      );
+
+      expect(result.parts[0]).toMatchObject({
+        type: "tool",
+        tool: "question",
+        actionType: "execute",
+        state: {
+          input: questionInput,
+          output: ["Python"],
+        },
+      });
+    });
+
+    test("preserves structured todowrite payload for object variant", () => {
+      const todos = [
+        { content: "Wire API", status: "in_progress", priority: "high" },
+        { content: "Run validate", status: "pending", priority: "medium" },
+      ];
+
+      const result = normalizeOpencodeMessage(
+        contentMsg("assistant", [
+          {
+            type: "tool",
+            tool: "todowrite",
+            state: {
+              status: "completed",
+              input: { todos },
+              output: todos,
+            },
+          },
+        ]),
+        0,
+      );
+
+      expect(result.parts[0]).toMatchObject({
+        type: "tool",
+        tool: "todowrite",
+        actionType: "write",
+        state: {
+          input: { todos },
+          output: todos,
+        },
+      });
+    });
+
+    test("preserves structured todowrite payload for array variant", () => {
+      const todos = [{ content: "Ship", status: "pending", priority: "low" }];
+
+      const result = normalizeOpencodeMessage(
+        contentMsg("assistant", [
+          {
+            type: "tool",
+            tool: "todowrite",
+            state: {
+              status: "completed",
+              input: todos,
+            },
+          },
+        ]),
+        0,
+      );
+
+      expect(result.parts[0]).toMatchObject({
+        type: "tool",
+        tool: "todowrite",
+        actionType: "write",
+        state: {
+          input: todos,
+        },
+      });
     });
   });
 
