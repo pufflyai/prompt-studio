@@ -15,6 +15,7 @@ import {
 } from "@/features/ticket-list/hooks/use-project-tickets";
 import { useTicketAttemptDiffs } from "@/features/ticket-list/hooks/use-ticket-attempt-diffs";
 import type { TicketColumnAction, TicketStatus } from "@/features/ticket-list/types";
+import { useAttemptStatusMap } from "@/features/workspaces/hooks/use-attempt-status-map";
 
 import { CreateTicketModal, type CreateTicketModalPayload } from "../components/create-ticket-modal";
 import { TicketsBoardView } from "../components/tickets-board-view";
@@ -30,6 +31,7 @@ export const TicketsPanel = () => {
   const { projectId } = useParams({ strict: false });
   const { data: project, isLoading: isProjectLoading } = useProject(projectId);
   const { data: tickets, sessionsByWorkspace, isLoading: isTicketsLoading } = useProjectTickets(projectId);
+  const attemptStatusMap = useAttemptStatusMap(projectId);
   const updateTicketStatus = useUpdateProjectTicketStatus(projectId);
   const updateTicket = useUpdateProjectTicket(projectId);
   const createTicket = useCreateProjectTicket(projectId);
@@ -192,6 +194,7 @@ export const TicketsPanel = () => {
               badgeContext={badgeContext}
               latestAttemptsByTicketId={latestAttemptsByTicketId}
               diffTotalsByWorkspaceId={diffTotalsByWorkspaceId}
+              attemptStatusMap={attemptStatusMap}
               sessionsByWorkspace={sessionsByWorkspace}
               onMoveTicket={handleMoveTicket}
               onSelectTicket={(ticket) => navigateToTicket(ticket.shorthand)}

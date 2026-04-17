@@ -22,9 +22,15 @@ export const SidebarNodeContent = (props: SidebarNodeContentProps) => {
       ) : null}
       <Stack gap="0" minW="0" flex="1">
         <HStack gap="1" minW="0">
-          <Text textStyle="paragraph/S/regular" color={isDisabled ? "fg.muted" : "fg"} truncate>
-            {node.label}
-          </Text>
+          {typeof node.label === "string" ? (
+            <Text textStyle="paragraph/S/regular" color={isDisabled ? "fg.muted" : "fg"} truncate>
+              {node.label}
+            </Text>
+          ) : (
+            <Box minW="0" maxW="full" overflow="hidden">
+              {node.label}
+            </Box>
+          )}
           {node.indicator ? (
             <Tooltip content={node.indicator.tooltip} disabled={!node.indicator.tooltip} openDelay={300}>
               <Box color={node.indicator.color ?? "fg.muted"} flexShrink={0}>
@@ -42,9 +48,15 @@ export const SidebarNodeContent = (props: SidebarNodeContentProps) => {
           ) : null}
         </HStack>
         {node.description ? (
-          <Text textStyle="paragraph/XS/regular" color="fg.muted" truncate>
-            {node.description}
-          </Text>
+          typeof node.description === "string" ? (
+            <Text textStyle="paragraph/XS/regular" color="fg.muted" truncate>
+              {node.description}
+            </Text>
+          ) : (
+            <Box minW="0" maxW="full" overflow="hidden">
+              {node.description}
+            </Box>
+          )
         ) : null}
       </Stack>
     </HStack>

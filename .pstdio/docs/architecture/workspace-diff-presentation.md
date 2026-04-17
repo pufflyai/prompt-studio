@@ -14,7 +14,7 @@ Covers the workspace screen and diff summary badges:
 
 ### 1) Ticket board cards (summary only)
 
-Each ticket card resolves its latest attempt and shows addition/deletion totals via a diff badge. Clicking the badge opens the workspace page for that attempt.
+Each ticket card resolves its latest attempt and shows addition/deletion totals inside the workspace badge. Clicking the workspace badge opens the workspace page for that attempt.
 
 ### 2) Ticket details header button (summary only)
 

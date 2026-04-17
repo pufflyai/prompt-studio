@@ -61,8 +61,11 @@ export const WithParentAndStatus: Story = {
   args: {
     ticketId: "TK0005",
     parentPath: ["PROJ", "Sprint 3"],
-    sessionIndicatorLabel: "A0012",
-    sessionIndicatorStatus: "completed",
+    workspaceBadge: {
+      workspaceType: "worktree",
+      shorthand: "A1",
+      sessionStatus: "completed",
+    },
     title: "Create API endpoint for user preferences",
     badges: [
       { label: "backend", color: "blue" },
@@ -116,22 +119,31 @@ export const NoBadges: Story = {
 export const WithDiffBadge: Story = {
   args: {
     title: "Implement ticket card workspace shortcut",
-    diffAdditions: 12,
-    diffDeletions: 4,
+    workspaceBadge: {
+      workspaceType: "worktree",
+      shorthand: "A2",
+      diffAdditions: 12,
+      diffDeletions: 4,
+      sessionStatus: "in_progress",
+    },
   },
 };
 
 export const WithSessionIndicator: Story = {
   args: {
     title: "Implement ticket card workspace shortcut",
-    sessionIndicatorLabel: "A0054",
+    workspaceBadge: {
+      workspaceType: "worktree",
+      shorthand: "A5",
+      sessionStatus: "awaiting_input",
+    },
   },
 };
 
 export const WithoutSessionIndicator: Story = {
   args: {
     title: "Implement ticket card workspace shortcut",
-    sessionIndicatorLabel: undefined,
+    workspaceBadge: undefined,
   },
 };
 

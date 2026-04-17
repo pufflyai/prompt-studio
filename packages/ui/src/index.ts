@@ -94,6 +94,8 @@ export type {
 export { useTicketsWorkspaceStore } from "./components/tickets/use-workspace-store";
 export { Toaster, toaster } from "./components/toaster";
 export { Tooltip } from "./components/tooltip";
+export type { WorkspaceBadgeProps } from "./components/workspace-badge";
+export { WorkspaceBadge } from "./components/workspace-badge";
 export { psTheme } from "./theme";
 export {
   applyThemePreference,

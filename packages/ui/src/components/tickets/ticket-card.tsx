@@ -1,9 +1,7 @@
 import { Badge, HStack, Stack, Text, Wrap } from "@chakra-ui/react";
-import { GitBranchIcon } from "lucide-react";
-import type { DragEventHandler, MouseEvent } from "react";
-import { DiffBubble } from "@/components/diff-bubble";
-import { Tooltip } from "@/components/tooltip";
-import { type SessionCompletionStatus, SessionIndicator } from "../session-indicator";
+import type { DragEventHandler } from "react";
+import type { WorkspaceBadgeProps } from "@/components/workspace-badge";
+import { WorkspaceBadge } from "@/components/workspace-badge";
 
 export interface TicketCardBadge {
   label: string;
@@ -13,49 +11,29 @@ export interface TicketCardBadge {
 interface TicketCardProps {
   ticketId: string;
   parentPath?: string[];
-  sessionIndicatorLabel?: string;
-  sessionIndicatorStatus?: SessionCompletionStatus;
   title: string;
   badges?: TicketCardBadge[];
-  diffAdditions?: number;
-  diffDeletions?: number;
+  workspaceBadge?: WorkspaceBadgeProps;
   isSelected?: boolean;
   draggable?: boolean;
   onDragStart?: DragEventHandler<HTMLDivElement>;
   onDragEnd?: DragEventHandler<HTMLDivElement>;
   onClick?: () => void;
-  onDiffBadgeClick?: () => void;
-  onSessionIndicatorClick?: () => void;
 }
 
 export const TicketCard = (props: TicketCardProps) => {
   const {
     ticketId,
     parentPath = [],
-    sessionIndicatorLabel,
-    sessionIndicatorStatus,
     title,
     badges = [],
-    diffAdditions,
-    diffDeletions,
+    workspaceBadge,
     isSelected = false,
     draggable,
     onDragStart,
     onDragEnd,
     onClick,
-    onDiffBadgeClick,
-    onSessionIndicatorClick,
   } = props;
-
-  const handleDiffBadgeClick = (event: MouseEvent<HTMLSpanElement>) => {
-    event.stopPropagation();
-    onDiffBadgeClick?.();
-  };
-
-  const handleSessionIndicatorClick = (event: MouseEvent<SVGSVGElement>) => {
-    event.stopPropagation();
-    onSessionIndicatorClick?.();
-  };
 
   return (
     <Stack
@@ -77,7 +55,7 @@ export const TicketCard = (props: TicketCardProps) => {
       onClick={onClick}
       data-selected={isSelected ? "true" : undefined}
     >
-      <HStack justifyContent={"space-between"} gap="2xs" flexWrap="wrap">
+      <HStack gap="2xs" flexWrap="wrap" alignItems="center">
         <HStack gap="2xs" flexShrink={0}>
           <Text textStyle="label/S/regular" flexShrink={0}>
             {parentPath.length > 0 && (
@@ -87,29 +65,8 @@ export const TicketCard = (props: TicketCardProps) => {
             )}
             {ticketId}
           </Text>
-          {sessionIndicatorLabel ? (
-            <Tooltip content={`Session ${sessionIndicatorLabel}`}>
-              <SessionIndicator
-                status={sessionIndicatorStatus}
-                boxSize="12px"
-                aria-label={`Session ${sessionIndicatorLabel}`}
-                cursor={onSessionIndicatorClick ? "pointer" : "default"}
-                onClick={onSessionIndicatorClick ? handleSessionIndicatorClick : undefined}
-              />
-            </Tooltip>
-          ) : null}
+          {workspaceBadge ? <WorkspaceBadge {...workspaceBadge} /> : null}
         </HStack>
-        {typeof diffAdditions === "number" && typeof diffDeletions === "number" ? (
-          <DiffBubble
-            additions={diffAdditions}
-            deletions={diffDeletions}
-            variant="ghost"
-            size="small"
-            label={<GitBranchIcon size="12" />}
-            onClick={handleDiffBadgeClick}
-            data-testid="ticket-diff-badge"
-          />
-        ) : null}
       </HStack>
 
       <HStack align="start" gap="2xs" flexWrap="wrap" minW="0">
