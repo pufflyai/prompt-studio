@@ -17,6 +17,7 @@ describe("installSkillsForAgent security", () => {
     const root = mkdtempSync(join(tmpdir(), "install-default-skills-security-"));
 
     try {
+      resetApiClient();
       globalThis.fetch = mock((input: string | URL | Request) => {
         const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
         const path = new URL(url).pathname;
