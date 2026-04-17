@@ -85,7 +85,19 @@ export const groupTickets = (tickets: WorkspaceTicket[], options: GroupingOption
     groupedByColumn.set(key, [...(groupedByColumn.get(key) ?? []), ticket]);
   }
 
-  const columnEntries = [...groupedByColumn.entries()].sort(([left], [right]) => compareGroupKey(left, right));
+  const columnEntries = (() => {
+    if (!knownColumnKeys || knownColumnKeys.length === 0) {
+      return [...groupedByColumn.entries()].sort(([left], [right]) => compareGroupKey(left, right));
+    }
+
+    const orderedEntries = knownColumnKeys.map((key) => [key, groupedByColumn.get(key) ?? []] as const);
+    const knownKeys = new Set(knownColumnKeys);
+    const unknownEntries = [...groupedByColumn.entries()]
+      .filter(([key]) => !knownKeys.has(key))
+      .sort(([left], [right]) => compareGroupKey(left, right));
+
+    return [...orderedEntries, ...unknownEntries];
+  })();
 
   return columnEntries.map(([columnKey, columnTickets]) => {
     if (rowGrouping === "none") {

@@ -4,6 +4,7 @@ import type { WorkspaceBadgeProps } from "@/components/workspace-badge";
 import { WorkspaceBadge } from "@/components/workspace-badge";
 
 export interface TicketCardBadge {
+  id?: string;
   label: string;
   color?: string;
 }
@@ -78,8 +79,13 @@ export const TicketCard = (props: TicketCardProps) => {
 
       {badges.length > 0 && (
         <Wrap gap="2xs">
-          {badges.map((badge) => (
-            <Badge key={badge.label} variant="subtle" colorPalette={badge.color ?? "gray"} textStyle="label/XS/medium">
+          {badges.map((badge, index) => (
+            <Badge
+              key={badge.id ?? `${badge.label}-${index}`}
+              variant="subtle"
+              colorPalette={badge.color ?? "gray"}
+              textStyle="label/XS/medium"
+            >
               {badge.label}
             </Badge>
           ))}

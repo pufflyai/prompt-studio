@@ -2,6 +2,7 @@ import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { CircleAlert, CircleCheck, CircleDashed, CircleDot, CircleX, Signal, User } from "lucide-react";
 import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 
 import { TicketList, type TicketListItem } from "./ticket-list";
 
@@ -207,5 +208,75 @@ export const DeepNesting: Story = {
         ],
       },
     ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const parentTitle = canvas.getByText("Top-level parent");
+    const initialToggle = canvas.getAllByLabelText("Collapse group")[0];
+
+    await expect(initialToggle).toHaveAttribute("data-expanded", "true");
+
+    await userEvent.click(parentTitle);
+    await expect(canvas.queryByText("Child task")).not.toBeInTheDocument();
+    await expect(canvas.getAllByLabelText("Expand group")[0]).not.toHaveAttribute("data-expanded");
+
+    await userEvent.click(parentTitle);
+    await expect(canvas.getByText("Child task")).toBeInTheDocument();
+    await expect(canvas.getAllByLabelText("Collapse group")[0]).toHaveAttribute("data-expanded", "true");
+  },
+};
+
+const RefreshableListWrapper = () => {
+  const [items, setItems] = useState<TicketListItem[]>([
+    {
+      id: "parent",
+      ticketId: "NEST-1",
+      title: "Refresh parent",
+      statusIcon: CircleDashed,
+      children: [
+        {
+          id: "child",
+          ticketId: "NEST-2",
+          title: "Refresh child",
+          statusIcon: CircleCheck,
+        },
+      ],
+    },
+  ]);
+
+  const refresh = () => {
+    setItems((previous) =>
+      previous.map((item) => ({
+        ...item,
+        title: `${item.title} (updated)`,
+        children: item.children?.map((child) => ({
+          ...child,
+          title: `${child.title} (updated)`,
+        })),
+      })),
+    );
+  };
+
+  return (
+    <>
+      <button type="button" onClick={refresh}>
+        Refresh items
+      </button>
+      <TicketList items={items} />
+    </>
+  );
+};
+
+export const PreservesCollapseOnRefresh: Story = {
+  render: () => <RefreshableListWrapper />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await userEvent.click(canvas.getByText("Refresh parent"));
+    await expect(canvas.queryByText("Refresh child")).not.toBeInTheDocument();
+
+    await userEvent.click(canvas.getByRole("button", { name: "Refresh items" }));
+    await expect(canvas.queryByText("Refresh child (updated)")).not.toBeInTheDocument();
+    await expect(canvas.getAllByLabelText("Expand group")[0]).toBeInTheDocument();
   },
 };

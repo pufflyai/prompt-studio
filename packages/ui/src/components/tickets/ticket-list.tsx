@@ -9,7 +9,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { ChevronRight } from "lucide-react";
-import { type ComponentType, type ReactNode, useState } from "react";
+import { type ComponentType, type ReactNode, useEffect, useState } from "react";
 
 import type { TicketCardBadge } from "./ticket-card";
 
@@ -43,7 +43,11 @@ const columns: ColumnDef<TicketListItem, unknown>[] = [
 export const TicketList = (props: TicketListProps) => {
   const { items, selectedItemId = null, onItemClick } = props;
 
-  const [expanded, setExpanded] = useState<ExpandedState>(true);
+  const [expanded, setExpanded] = useState<ExpandedState>(() => getDefaultExpandedState(items));
+
+  useEffect(() => {
+    setExpanded((previous) => mergeExpandedState(previous, items));
+  }, [items]);
 
   const table = useReactTable({
     data: items,
@@ -100,18 +104,21 @@ const TicketCell = (props: TicketCellProps) => {
   const { row } = props;
   const item = row.original;
   const depth = row.depth;
+  const hasTicketId = item.ticketId.trim().length > 0;
 
   return (
-    <HStack gap="sm" flex="1" paddingLeft={depth > 0 ? `${depth * 24}px` : undefined}>
+    <HStack gap="2xs" flex="1" paddingLeft={depth > 0 ? `${depth * 24}px` : undefined}>
       {row.getCanExpand() ? <ExpandToggle row={row} /> : depth > 0 ? <TreeConnector /> : null}
 
       {item.statusIcon && (
         <Icon as={item.statusIcon} boxSize="16px" color={item.statusColor ?? "fg.muted"} flexShrink={0} />
       )}
 
-      <Text textStyle="label/S/regular" color="fg.muted" flexShrink={0} minW="70px">
-        {item.ticketId}
-      </Text>
+      {hasTicketId ? (
+        <Text textStyle="label/S/regular" color="fg.muted" flexShrink={0} minW="70px">
+          {item.ticketId}
+        </Text>
+      ) : null}
 
       <Text textStyle="label/S/regular" flex="1" truncate>
         {item.title}
@@ -119,8 +126,13 @@ const TicketCell = (props: TicketCellProps) => {
 
       {item.badges && item.badges.length > 0 && (
         <Wrap gap="2xs" flexShrink={0}>
-          {item.badges.map((badge) => (
-            <Badge key={badge.label} variant="subtle" colorPalette={badge.color ?? "gray"} textStyle="label/XS/medium">
+          {item.badges.map((badge, index) => (
+            <Badge
+              key={badge.id ?? `${badge.label}-${index}`}
+              variant="subtle"
+              colorPalette={badge.color ?? "gray"}
+              textStyle="label/XS/medium"
+            >
               {badge.label}
             </Badge>
           ))}
@@ -175,3 +187,43 @@ const TreeConnector = () => (
     <Box position="absolute" left="7px" top="50%" width="8px" borderBottomWidth="1px" borderColor="border.muted" />
   </Box>
 );
+
+function getDefaultExpandedState(items: TicketListItem[]) {
+  const expandedState: ExpandedState = {};
+
+  const visit = (entries: TicketListItem[]) => {
+    for (const item of entries) {
+      if (!item.children || item.children.length === 0) {
+        continue;
+      }
+
+      expandedState[item.id] = true;
+      visit(item.children);
+    }
+  };
+
+  visit(items);
+  return expandedState;
+}
+
+function mergeExpandedState(previous: ExpandedState, items: TicketListItem[]) {
+  if (previous === true) {
+    return getDefaultExpandedState(items);
+  }
+
+  const nextState: ExpandedState = {};
+
+  const visit = (entries: TicketListItem[]) => {
+    for (const item of entries) {
+      if (!item.children || item.children.length === 0) {
+        continue;
+      }
+
+      nextState[item.id] = previous[item.id] ?? true;
+      visit(item.children);
+    }
+  };
+
+  visit(items);
+  return nextState;
+}

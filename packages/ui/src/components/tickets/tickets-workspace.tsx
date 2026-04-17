@@ -96,20 +96,24 @@ const toBadges = (ticket: WorkspaceTicket, displayProperties: DisplayProperty[])
   const includes = (property: DisplayProperty) => displayProperties.includes(property);
 
   if (includes("status") && ticket.status) {
-    badges.push({ label: ticket.status, color: ticket.statusColor ?? "gray" });
+    badges.push({ id: `status:${ticket.status}`, label: ticket.status, color: ticket.statusColor ?? "gray" });
   }
 
   if (includes("assignee") && ticket.assignee) {
-    badges.push({ label: ticket.assignee, color: "blue" });
+    badges.push({ id: `assignee:${ticket.assignee}`, label: ticket.assignee, color: "blue" });
   }
 
   if (includes("updated") && ticket.updatedAt) {
-    badges.push({ label: new Date(ticket.updatedAt).toLocaleDateString(), color: "gray" });
+    badges.push({
+      id: `updated:${ticket.updatedAt}`,
+      label: new Date(ticket.updatedAt).toLocaleDateString(),
+      color: "gray",
+    });
   }
 
   if (includes("labels")) {
-    for (const label of ticket.labels ?? []) {
-      badges.push({ label, color: "purple" });
+    for (const [index, label] of (ticket.labels ?? []).entries()) {
+      badges.push({ id: `label:${label}:${index}`, label, color: "purple" });
     }
   }
 

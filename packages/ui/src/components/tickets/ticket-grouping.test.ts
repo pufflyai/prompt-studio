@@ -50,7 +50,7 @@ describe("groupTickets", () => {
     expect(groups[1]?.rows[1]?.key).toBe("Unassigned");
   });
 
-  it("preserves empty columns for known keys", () => {
+  it("preserves empty columns and known key order", () => {
     const groups = groupTickets(tickets, {
       columnGrouping: "status",
       rowGrouping: "none",
@@ -58,8 +58,50 @@ describe("groupTickets", () => {
     });
 
     expect(groups.length).toBe(3);
-    expect(groups.map((g) => g.key)).toEqual(["done", "in_progress", "todo"]);
-    expect(groups[0]?.tickets.length).toBe(0);
+    expect(groups.map((g) => g.key)).toEqual(["todo", "in_progress", "done"]);
+    expect(groups[2]?.tickets.length).toBe(0);
+  });
+
+  it("appends unknown runtime keys after known keys", () => {
+    const mixedTickets: WorkspaceTicket[] = [
+      {
+        id: "10",
+        ticketId: "PS-10",
+        title: "Blocked item",
+        status: "blocked",
+        assignee: "Alice",
+        labels: [],
+        updatedAt: "2026-03-10T00:00:00.000Z",
+      },
+      {
+        id: "11",
+        ticketId: "PS-11",
+        title: "Done item",
+        status: "done",
+        assignee: "Bob",
+        labels: [],
+        updatedAt: "2026-03-10T00:00:00.000Z",
+      },
+      {
+        id: "12",
+        ticketId: "PS-12",
+        title: "In progress item",
+        status: "in_progress",
+        assignee: "Sam",
+        labels: [],
+        updatedAt: "2026-03-10T00:00:00.000Z",
+      },
+    ];
+
+    const groups = groupTickets(mixedTickets, {
+      columnGrouping: "status",
+      rowGrouping: "none",
+      knownColumnKeys: ["todo", "in_progress"],
+    });
+
+    expect(groups.map((group) => group.key)).toEqual(["todo", "in_progress", "blocked", "done"]);
+    expect(groups[2]?.tickets.map((ticket) => ticket.ticketId)).toEqual(["PS-10"]);
+    expect(groups[3]?.tickets.map((ticket) => ticket.ticketId)).toEqual(["PS-11"]);
   });
 });
 
