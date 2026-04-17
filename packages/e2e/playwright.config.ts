@@ -20,7 +20,6 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: 0,
-  maxFailures: process.env.CI ? 1 : 0,
   outputDir: `test-results/${runId}`,
   globalSetup: "./src/scripts/global-setup.ts",
   reporter: [["html", { open: "never", outputFolder: `playwright-report/${runId}` }], ["list"]],
