@@ -31,10 +31,14 @@ export const ScrollArea = React.forwardRef<HTMLDivElement, ScrollAreaProps>(func
     ...rest
   } = props;
 
+  const mergedContentProps = showHorizontalScrollbar
+    ? contentProps
+    : { ...contentProps, style: { minWidth: 0, ...contentProps?.style } };
+
   return (
     <ChakraScrollArea.Root ref={ref} {...rest}>
       <ChakraScrollArea.Viewport {...viewportProps} ref={viewportRef}>
-        <ChakraScrollArea.Content {...contentProps} ref={contentRef}>
+        <ChakraScrollArea.Content {...mergedContentProps} ref={contentRef}>
           {children}
         </ChakraScrollArea.Content>
       </ChakraScrollArea.Viewport>

@@ -1,5 +1,6 @@
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createSession, definePlugin, runCommand } from "@pstdio/sdk/plugins";
@@ -9,8 +10,24 @@ const localProjectService = "prompt-studio";
 const localDashboardPort = "5173";
 const localApiPort = "19841";
 const storybookPackagePath = join("packages", "ui");
-const storybookUrl = "http://localhost:6006";
 const composeEnvTempPrefix = "pstdio-compose-env-";
+
+const findFreePort = () =>
+  new Promise<number>((resolveFreePort, rejectFreePort) => {
+    const server = createServer();
+    server.unref();
+    server.on("error", rejectFreePort);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      if (typeof address === "object" && address && "port" in address) {
+        const { port } = address;
+        server.close(() => resolveFreePort(port));
+        return;
+      }
+      server.close();
+      rejectFreePort(new Error("Failed to allocate a free port."));
+    });
+  });
 
 const sanitizeComposeProjectPart = (value: string) =>
   value
@@ -129,7 +146,7 @@ export default definePlugin({
       label: "Run Storybook",
       targetType: "workspace",
       placement: "overflow",
-      trigger(ctx) {
+      async trigger(ctx) {
         if (!ctx.target.worktree_path) {
           throw new Error("Workspace has no worktree path");
         }
@@ -139,7 +156,9 @@ export default definePlugin({
           throw new Error(`Workspace is missing ${storybookPackagePath}`);
         }
 
-        const proc = spawn("bun", ["run", "storybook"], {
+        const port = await findFreePort();
+
+        const proc = spawn("bun", ["x", "storybook", "dev", "-p", String(port), "--ci"], {
           cwd: uiPath,
           detached: true,
           stdio: "ignore",
@@ -151,7 +170,7 @@ export default definePlugin({
 
         proc.unref();
 
-        return { message: `Storybook is starting at ${storybookUrl}` } as never;
+        return { message: `Storybook is starting at http://localhost:${port}` } as never;
       },
     },
     {
