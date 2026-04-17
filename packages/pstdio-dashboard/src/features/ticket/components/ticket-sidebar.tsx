@@ -53,18 +53,20 @@ const getFileIcon = (fileName: string) => {
   return <FileText size={14} />;
 };
 
-const buildFilesSection = (files: SelectableTicketFile[], includePlanningLink: boolean): SidebarSection => {
+const buildPlanningSection = (): SidebarSection => ({
+  id: "planning",
+  nodes: [
+    {
+      id: PLANNING_ITEM_ID,
+      label: "<- Planning",
+      isNavigable: true,
+      navigationIntent: { id: "select-planning" },
+    },
+  ],
+});
+
+const buildFilesSection = (files: SelectableTicketFile[]): SidebarSection => {
   const nodes: SidebarNode[] = [
-    ...(includePlanningLink
-      ? [
-          {
-            id: PLANNING_ITEM_ID,
-            label: "<- Planning",
-            isNavigable: true,
-            navigationIntent: { id: "select-planning" },
-          } satisfies SidebarNode,
-        ]
-      : []),
     {
       id: `file:${TICKET_CONTENT_ITEM_ID}`,
       label: "Ticket",
@@ -174,7 +176,8 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
   const sessions = selectedWorkspaceId ? (sessionsByWorkspaceId.get(selectedWorkspaceId) ?? []) : [];
 
   const sections: SidebarSection[] = [
-    buildFilesSection(files, Boolean(onSelectPlanning)),
+    ...(onSelectPlanning ? [buildPlanningSection()] : []),
+    buildFilesSection(files),
     buildWorkspacesSection(workspaces, attemptStatusMap),
     ...(selectedWorkspace
       ? [

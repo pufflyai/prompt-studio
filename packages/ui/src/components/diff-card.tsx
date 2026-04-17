@@ -1,6 +1,5 @@
 import { Box, Grid, IconButton, Text } from "@chakra-ui/react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { useState } from "react";
 import { DiffBubble } from "@/components/diff-bubble";
 import { DiffEditor } from "./diff-editor";
 
@@ -16,11 +15,13 @@ export interface Diff {
 
 interface DiffCardProps {
   diff: Diff;
+  isSelected?: boolean;
+  isExpanded?: boolean;
+  onToggleExpanded?: () => void;
 }
 
 export const DiffCard = (props: DiffCardProps) => {
-  const { diff } = props;
-  const [isExpanded, setIsExpanded] = useState(true);
+  const { diff, isSelected = false, isExpanded = true, onToggleExpanded } = props;
 
   const filePath = diff.newPath || diff.oldPath || "unknown";
 
@@ -30,10 +31,10 @@ export const DiffCard = (props: DiffCardProps) => {
   return (
     <Box
       border="1px solid"
-      borderColor="border.muted"
+      borderColor={isSelected ? "border.accent" : "border.muted"}
       borderRadius="xs"
       overflow="hidden"
-      bg="bg"
+      bg={isSelected ? "bg.active" : "bg"}
       width="100%"
       maxW="100%"
       transition="border-color 0.14s ease"
@@ -49,8 +50,8 @@ export const DiffCard = (props: DiffCardProps) => {
         borderColor="border.muted"
         cursor="pointer"
         transition="background 0.14s ease"
-        _hover={{ bg: "bg.subtle" }}
-        onClick={() => setIsExpanded(!isExpanded)}
+        _hover={{ bg: isSelected ? "bg.active" : "bg.subtle" }}
+        onClick={() => onToggleExpanded?.()}
         gap="sm"
       >
         <IconButton
@@ -59,7 +60,7 @@ export const DiffCard = (props: DiffCardProps) => {
           size="2xs"
           onClick={(event) => {
             event.stopPropagation();
-            setIsExpanded(!isExpanded);
+            onToggleExpanded?.();
           }}
           flexShrink={0}
         >

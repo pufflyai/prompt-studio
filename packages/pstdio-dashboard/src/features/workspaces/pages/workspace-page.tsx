@@ -493,7 +493,7 @@ export const WorkspacePage = () => {
       createWorkspaceSessionDraft={handleCreateWorkspaceSessionDraft}
       selectFile={handleSelectFile}
       selectPlanning={() => {
-        void navigateToTicketDetails(navigate, projectId, ticketShorthand);
+        void navigate({ to: "/projects/$projectId/tickets", params: { projectId } });
       }}
       isCreateModalOpen={isCreateModalOpen}
       closeCreateModal={() => setIsCreateModalOpen(false)}
