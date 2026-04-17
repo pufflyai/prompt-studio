@@ -10,7 +10,7 @@ export const ChatRichContent = (props: ChatRichContentProps) => {
   const { children, ...rest } = props;
 
   return (
-    <Box {...rest}>
+    <Box {...rest} wordBreak="break-word">
       <RichMessage defaultState={children} fullWidth />
     </Box>
   );
