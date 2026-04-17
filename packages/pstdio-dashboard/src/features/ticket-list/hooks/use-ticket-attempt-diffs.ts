@@ -1,14 +1,20 @@
 import { useQueries } from "@tanstack/react-query";
 import { getTicketAttemptDiffSummary } from "@/features/ticket-list/data/api";
+import type { TicketAttempt } from "@/features/ticket-list/types";
 
 interface AttemptDiffInput {
   workspaceId: string;
-  settled: boolean;
+  shouldFetch: boolean;
 }
 
+export const shouldFetchTicketAttemptDiff = (attempt: Pick<TicketAttempt, "attemptStatusId" | "sessionStatus">) => {
+  return attempt.sessionStatus !== null || attempt.attemptStatusId !== null;
+};
+
 export const useTicketAttemptDiffs = (attempts: AttemptDiffInput[]) => {
-  const settled = attempts.filter((a) => a.settled);
-  const uniqueIds = [...new Set(settled.map((a) => a.workspaceId))];
+  const uniqueIds = [
+    ...new Set(attempts.filter((attempt) => attempt.shouldFetch).map((attempt) => attempt.workspaceId)),
+  ];
 
   const queries = useQueries({
     queries: uniqueIds.map((workspaceId) => ({

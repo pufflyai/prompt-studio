@@ -11,6 +11,23 @@ interface WorkspaceAttemptStatus {
   description?: string | null;
 }
 
+const ATTEMPT_STATUS_COLOR_ALIASES: Record<string, string> = {
+  amber: "yellow",
+};
+
+const CHAKRA_COLOR_PALETTES = new Set([
+  "gray",
+  "red",
+  "orange",
+  "yellow",
+  "green",
+  "teal",
+  "blue",
+  "cyan",
+  "purple",
+  "pink",
+]);
+
 export interface WorkspaceBadgeProps {
   workspaceType: "worktree" | "current_branch";
   initializing?: boolean;
@@ -38,7 +55,12 @@ const resolveAttemptStatusColor = (color: string) => {
     return color;
   }
 
-  return `var(--chakra-colors-${color}-solid)`;
+  const resolvedColor = ATTEMPT_STATUS_COLOR_ALIASES[color] ?? color;
+  if (CHAKRA_COLOR_PALETTES.has(resolvedColor)) {
+    return `var(--chakra-colors-${resolvedColor}-500)`;
+  }
+
+  return resolvedColor;
 };
 
 const buildAttemptStatusTooltip = (attemptStatus: WorkspaceAttemptStatus | undefined) => {
@@ -94,9 +116,10 @@ const WorkspaceStatusIndicator = (props: {
           as="span"
           boxSize="8px"
           borderRadius="full"
-          background={resolveAttemptStatusColor(attemptStatus.color)}
+          backgroundColor={resolveAttemptStatusColor(attemptStatus.color)}
           flexShrink={0}
           aria-label={`Attempt status ${attemptStatus.name}`}
+          data-testid="workspace-attempt-status"
         />
       </Tooltip>
     );
@@ -166,6 +189,7 @@ export const WorkspaceBadge = (props: WorkspaceBadgeProps) => {
     onDropdownClick,
     onSessionIndicatorClick,
   } = props;
+  const isInteractive = Boolean(onClick || onDropdownClick || onSessionIndicatorClick);
 
   return (
     <HStack
@@ -174,7 +198,12 @@ export const WorkspaceBadge = (props: WorkspaceBadgeProps) => {
       gap="2xs"
       alignItems="center"
       minW="0"
-      cursor={onClick ? "pointer" : "default"}
+      px="2px"
+      py="1px"
+      borderRadius="xs"
+      cursor={isInteractive ? "pointer" : "default"}
+      transition="background-color 0.2s ease-in-out"
+      _hover={isInteractive ? { backgroundColor: "var(--chakra-colors-neutral-100)" } : undefined}
       onClick={onClick ? (event) => handleBadgeClick(event, onClick) : undefined}
       data-testid="workspace-badge"
     >

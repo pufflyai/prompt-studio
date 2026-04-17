@@ -22,8 +22,9 @@ import { TicketsBoardView } from "../components/tickets-board-view";
 import { TicketsHeader } from "../components/tickets-header";
 import { TicketsListView } from "../components/tickets-list-view";
 import { uploadTicketFile } from "../data/api/files";
+import { shouldFetchTicketAttemptDiff } from "../hooks/use-ticket-attempt-diffs";
 import { type BadgeContext, DEFAULT_DISPLAY_SETTINGS, type DisplaySettings } from "../types";
-import { buildLatestAttemptsByTicketId, isSessionSettled } from "../utils/ticket-attempts";
+import { buildLatestAttemptsByTicketId } from "../utils/ticket-attempts";
 import { groupTickets, orderTickets } from "../utils/ticket-grouping";
 import { getVisibleTickets } from "../utils/ticket-visibility";
 
@@ -51,7 +52,7 @@ export const TicketsPanel = () => {
   const latestAttemptsByTicketId = buildLatestAttemptsByTicketId(allTickets);
   const attemptDiffInputs = [...latestAttemptsByTicketId.values()].map((attempt) => ({
     workspaceId: attempt.id,
-    settled: isSessionSettled(attempt.sessionStatus),
+    shouldFetch: shouldFetchTicketAttemptDiff(attempt),
   }));
   const { diffTotalsByWorkspaceId } = useTicketAttemptDiffs(attemptDiffInputs);
 

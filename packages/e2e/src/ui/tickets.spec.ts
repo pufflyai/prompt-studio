@@ -69,6 +69,36 @@ const registerRepoViaApi = async (
   return (await res.json()) as { id: string; name: string; path: string };
 };
 
+const createAttemptViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  ticketId: string,
+  repoId: string,
+) => {
+  const res = await request.post(`${apiBase}/v1/tickets/${ticketId}/attempts`, {
+    data: { repo_id: repoId, mode: "worktree", start_session: false },
+  });
+  expect(res.ok()).toBe(true);
+  return (await res.json()) as {
+    workspace: {
+      id: string;
+      workspace_shorthand: string;
+      worktree_path: string;
+    };
+  };
+};
+
+const updateWorkspaceAttemptStatusViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  workspaceId: string,
+  status: string,
+) => {
+  const res = await request.patch(`${apiBase}/v1/workspaces/${workspaceId}/attempt-status`, {
+    data: { status },
+  });
+  expect(res.ok()).toBe(true);
+  return res.json();
+};
+
 const getTicketStatuses = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
   const res = await request.get(`${apiBase}/v1/projects/${projectId}/ticket-statuses`);
   expect(res.ok()).toBe(true);
@@ -366,11 +396,19 @@ test.describe("Ticket list editing and filtering", () => {
 
 test.describe("Ticket list additional coverage", () => {
   let projectId: string;
+  const repoDirs: string[] = [];
 
   test.beforeEach(async ({ request }) => {
     await deleteAllProjects(request);
     const project = await createProjectViaApi(request, "Ticket Test Project");
     projectId = project.id;
+  });
+
+  test.afterEach(() => {
+    for (const dir of repoDirs) {
+      rmSync(dir, { recursive: true, force: true });
+    }
+    repoDirs.length = 0;
   });
 
   test("shows ticket shorthand on cards", async ({ page, request }) => {
@@ -512,6 +550,33 @@ test.describe("Ticket list additional coverage", () => {
     const allTickets = (await listRes.json()) as { id: string; tag_ids: string[] }[];
     const updatedTicket = allTickets.find((t) => t.id === ticket.id);
     expect(updatedTicket?.tag_ids).toHaveLength(1);
+  });
+
+  test("shows attempt status, diffs, and hover affordance on workspace badge", async ({ page, request }) => {
+    const statuses = await getTicketStatuses(request, projectId);
+    const backlog = statuses.find((s) => s.name === "backlog")!;
+    const repoRoot = createGitRepo();
+    repoDirs.push(repoRoot);
+    const repo = await registerRepoViaApi(request, projectId, "badge-repo", repoRoot);
+    const ticket = await createTicketViaApi(request, projectId, "Workspace badge regression", backlog.id);
+    const attempt = await createAttemptViaApi(request, ticket.id, repo.id);
+
+    writeFileSync(join(attempt.workspace.worktree_path, "feature.ts"), 'export const badge = "ready";\n');
+    await updateWorkspaceAttemptStatusViaApi(request, attempt.workspace.id, "review-ready");
+
+    await bypassOnboarding(page, projectId);
+    await page.goto(`/projects/${projectId}/tickets`);
+
+    await expect(page.getByText("Workspace badge regression")).toBeVisible();
+
+    const workspaceBadge = page.getByTestId("workspace-badge").first();
+    const attemptStatusIndicator = page.getByLabel("Attempt status review-ready").first();
+    await expect(workspaceBadge).toBeVisible();
+    await expect(attemptStatusIndicator).toBeVisible();
+    await expect.poll(() => workspaceBadge.textContent()).toMatch(/\+\d+/);
+    await expect.poll(() => workspaceBadge.textContent()).toMatch(/-\d+/);
+
+    await expect.poll(() => workspaceBadge.evaluate((node) => getComputedStyle(node).cursor)).toBe("pointer");
   });
 });
 

@@ -54,6 +54,7 @@ export const TicketCard = (props: TicketCardProps) => {
       onDragEnd={onDragEnd}
       onClick={onClick}
       data-selected={isSelected ? "true" : undefined}
+      data-testid="ticket-card"
     >
       <HStack gap="2xs" flexWrap="wrap" alignItems="center">
         <HStack gap="2xs" flexShrink={0}>
