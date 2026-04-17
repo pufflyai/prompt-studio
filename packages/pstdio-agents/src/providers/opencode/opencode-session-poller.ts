@@ -2,7 +2,7 @@ import type { EventStore, SessionMessage } from "../../types";
 import { normalizeErrorPart } from "../normalized-error";
 import { normalizeOpencodeMessage } from "./opencode-normalizer";
 import { isTransportTimeout } from "./opencode-service";
-import { isTurnInFlight, isTurnStale, resolveInFlightTurnProgressAt } from "./opencode-turn-state";
+import { isTurnCompleted, isTurnInFlight, isTurnStale, resolveInFlightTurnProgressAt } from "./opencode-turn-state";
 import type { OpencodeSessionMessage } from "./opencode-types";
 
 interface PostState {
@@ -82,24 +82,17 @@ const cancelTurn = (eventStore: EventStore) => {
   return { code: null as number | null, signal: "SIGTERM" as string | null };
 };
 
-const getMessageRole = (message: OpencodeSessionMessage) => {
-  if ("role" in message && message.role) return message.role;
-  if ("info" in message && message.info?.role) return message.info.role;
-  return null;
-};
-
-const hasCurrentTurnAssistant = (messages: OpencodeSessionMessage[], baselineCount: number) =>
-  messages.slice(baselineCount).some((message) => getMessageRole(message) === "assistant");
-
 const shouldStopPolling = (input: {
   turnVisible: boolean;
-  turnHasAssistant: boolean;
   inFlight: boolean;
+  turnCompleted: boolean;
   postState: PostState;
 }) => {
-  const { turnVisible, turnHasAssistant, inFlight, postState } = input;
-  if (turnVisible && turnHasAssistant && !inFlight) return true;
+  const { turnVisible, inFlight, turnCompleted, postState } = input;
+  // The assistant finished its turn (completed timestamp or question asked).
+  if (turnVisible && turnCompleted) return true;
   if (postState.failed && !turnVisible) return true;
+  // POST succeeded with no visible effect and nothing in flight.
   return postState.settled && !postState.timedOut && !postState.failed && !inFlight && !turnVisible;
 };
 
@@ -206,8 +199,8 @@ export const pollOpencodeMessages = async (input: {
 
     const now = Date.now();
     const inFlight = isTurnInFlight(lastObserved);
+    const turnCompleted = isTurnCompleted(lastObserved);
     const turnVisible = lastObserved.length > baselineCount;
-    const turnHasAssistant = hasCurrentTurnAssistant(lastObserved, baselineCount);
     lastInFlightProgressAt = resolveInFlightTurnProgressAt({
       rawMessages: lastObserved,
       lastProgressAt: lastInFlightProgressAt,
@@ -219,7 +212,7 @@ export const pollOpencodeMessages = async (input: {
       return disconnectStaleTurn(eventStore);
     }
 
-    if (shouldStopPolling({ turnVisible, turnHasAssistant, inFlight, postState })) {
+    if (shouldStopPolling({ turnVisible, inFlight, turnCompleted, postState })) {
       break;
     }
 
