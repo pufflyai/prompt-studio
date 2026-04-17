@@ -65,9 +65,11 @@ export type { SwitchProps } from "./components/switch";
 export { Switch } from "./components/switch";
 export { DisplayMenu } from "./components/tickets/display-menu";
 export { FilterMenu } from "./components/tickets/filter-menu";
+export { getIconComponent } from "./components/tickets/tag-icons";
 export type {
   TicketBoardColumn,
   TicketBoardColumnAction,
+  TicketBoardGroup,
   TicketBoardItem,
 } from "./components/tickets/ticket-board";
 export { TicketBoard } from "./components/tickets/ticket-board";

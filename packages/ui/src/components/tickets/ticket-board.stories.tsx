@@ -145,3 +145,99 @@ const Wrapper = () => {
 export const Default: Story = {
   render: () => <Wrapper />,
 };
+
+const columnsWithIcons: TicketBoardColumn[] = [
+  {
+    id: "bug",
+    label: "Bugs",
+    color: "red",
+    icon: "bug",
+    canDragIn: true,
+    canDragOut: true,
+    canCreate: false,
+    actions: [],
+    items: [
+      {
+        id: "t1",
+        cardProps: {
+          ticketId: "PRJ-1",
+          title: "Fix crash",
+          badges: [{ id: "p1", label: "high", color: "red", icon: "flag" }],
+        },
+      },
+    ],
+  },
+  {
+    id: "feature",
+    label: "Features",
+    color: "blue",
+    icon: "sparkles",
+    canDragIn: true,
+    canDragOut: true,
+    canCreate: false,
+    actions: [],
+    items: [
+      {
+        id: "t2",
+        cardProps: {
+          ticketId: "PRJ-2",
+          title: "Add search",
+          badges: [{ id: "p2", label: "enhancement", color: "blue", icon: "sparkles" }],
+        },
+      },
+    ],
+    groups: [
+      {
+        key: "docs",
+        label: "Documentation",
+        icon: "book-open",
+        color: "green",
+        items: [{ id: "t3", cardProps: { ticketId: "PRJ-3", title: "Write guides" } }],
+      },
+    ],
+  },
+];
+
+export const GroupHeaderWithIcon: Story = {
+  render: () => <TicketBoard columns={columnsWithIcons} onMoveItem={() => {}} />,
+};
+
+const ReorderWrapper = () => {
+  const [columns, setColumns] = useState<TicketBoardColumn[]>([
+    {
+      id: "todo",
+      label: "Todo",
+      color: "gray",
+      canDragIn: true,
+      canDragOut: true,
+      canCreate: false,
+      actions: [],
+      items: [
+        { id: "r1", cardProps: { ticketId: "PRJ-1", title: "First task" } },
+        { id: "r2", cardProps: { ticketId: "PRJ-2", title: "Second task" } },
+        { id: "r3", cardProps: { ticketId: "PRJ-3", title: "Third task" } },
+      ],
+    },
+  ]);
+
+  const handleReorder = (itemId: string, columnId: string, targetIndex: number) => {
+    setColumns((prev) =>
+      prev.map((col) => {
+        if (col.id !== columnId) return col;
+        const items = [...col.items];
+        const fromIndex = items.findIndex((i) => i.id === itemId);
+        if (fromIndex < 0) return col;
+        const [item] = items.splice(fromIndex, 1);
+        const adjustedIndex = targetIndex > fromIndex ? targetIndex - 1 : targetIndex;
+        items.splice(adjustedIndex, 0, item!);
+        return { ...col, items };
+      }),
+    );
+  };
+
+  return <TicketBoard columns={columns} onMoveItem={() => {}} onReorderItem={handleReorder} />;
+};
+
+export const WithinColumnReorder: Story = {
+  render: () => <ReorderWrapper />,
+};

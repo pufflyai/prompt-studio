@@ -80,3 +80,51 @@ export const SelectFilter: Story = {
     await expect(canvas.getByTestId("filters-value")).toHaveTextContent('"status":["todo"]');
   },
 };
+
+const categoriesWithIcons: WorkspaceFilterCategory[] = [
+  {
+    id: "labels",
+    label: "Labels",
+    options: [
+      { value: "bug", label: "Bug", color: "red", icon: "bug" },
+      { value: "feature", label: "Feature", color: "blue", icon: "sparkles" },
+      { value: "docs", label: "Docs", color: "green", icon: "book-open" },
+      { value: "security", label: "Security", color: "orange", icon: "shield" },
+    ],
+  },
+];
+
+const FilterMenuWithIconsWrapper = () => {
+  const [filters, setFilters] = useState<FilterState>({});
+
+  return (
+    <Box p="lg">
+      <FilterMenu
+        categories={categoriesWithIcons}
+        filters={filters}
+        countsByCategory={{ labels: { bug: 3, feature: 5, docs: 2, security: 1 } }}
+        onToggleFilterValue={(category, value) => {
+          setFilters((current) => {
+            const values = current[category] ?? [];
+            const nextValues = values.includes(value) ? values.filter((e) => e !== value) : [...values, value];
+            const next = { ...current, [category]: nextValues };
+            if (nextValues.length === 0) delete next[category];
+            return next;
+          });
+        }}
+        onClearFilter={(category) => {
+          setFilters((current) => {
+            const next = { ...current };
+            delete next[category];
+            return next;
+          });
+        }}
+        onClearAll={() => setFilters({})}
+      />
+    </Box>
+  );
+};
+
+export const FilterMenuWithIcons: Story = {
+  render: () => <FilterMenuWithIconsWrapper />,
+};

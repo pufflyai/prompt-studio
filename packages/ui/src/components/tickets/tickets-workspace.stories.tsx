@@ -261,3 +261,77 @@ export const EmptyColumnPersists: Story = {
     await expect(canvas.getByTestId("board-column-done")).toBeInTheDocument();
   },
 };
+
+export const NoGroupingSingleColumn: Story = {
+  render: () => <WorkspaceWrapper />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    // Switch to no grouping via display settings
+    await userEvent.click(canvas.getByLabelText("Display settings"));
+    await userEvent.click(within(document.body).getByText("No grouping"));
+
+    // Should show a single "All" column
+    await expect(canvas.getByTestId("board-column-All")).toBeInTheDocument();
+  },
+};
+
+export const SubGroupingHiddenWhenNoGrouping: Story = {
+  render: () => <WorkspaceWrapper />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await userEvent.click(canvas.getByLabelText("Display settings"));
+
+    // Sub-grouping should be visible when grouping is active
+    await expect(within(document.body).getByText("Sub-grouping")).toBeInTheDocument();
+
+    // Switch to no grouping
+    await userEvent.click(within(document.body).getByText("No grouping"));
+
+    // Sub-grouping should be hidden
+    await expect(within(document.body).queryByText("Sub-grouping")).not.toBeInTheDocument();
+  },
+};
+
+export const BadgeColorUpdatesAfterDrag: Story = {
+  render: () => <WorkspaceWrapper />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    // Enable status display property
+    await userEvent.click(canvas.getByLabelText("Display settings"));
+    await userEvent.click(within(document.body).getByText("Status"));
+
+    // Drag "Write docs" (done/green) to "todo" (gray) column
+    dragCard(canvas, "Write docs", "board-column-todo");
+
+    // The card should now be in the todo column with gray status badge
+    const todoColumn = canvas.getByTestId("board-column-todo");
+    await expect(within(todoColumn).getByText("Write docs")).toBeInTheDocument();
+  },
+};
+
+export const ChevronDirectClick: Story = {
+  render: () => <WorkspaceWrapper />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await switchToListView(canvas);
+
+    // Find the "Todo" group header
+    const todoGroup = canvas.getByText(/^Todo \(\d+\)$/);
+    await expect(canvas.getByText("Set up API authentication")).toBeInTheDocument();
+
+    // Find the chevron toggle within the group row
+    const todoRow = todoGroup.closest("[data-selected]")?.parentElement ?? todoGroup.parentElement!;
+    const chevronToggle = todoRow.querySelector("[role='button']")!;
+
+    // Click chevron directly — should collapse
+    await userEvent.click(chevronToggle);
+    await expect(canvas.queryByText("Set up API authentication")).not.toBeInTheDocument();
+
+    // Click again — should expand
+    await userEvent.click(chevronToggle);
+    await expect(canvas.getByText("Set up API authentication")).toBeInTheDocument();
+  },
+};

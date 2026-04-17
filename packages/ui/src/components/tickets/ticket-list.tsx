@@ -9,7 +9,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { ChevronRight } from "lucide-react";
-import { type ComponentType, type ReactNode, useState } from "react";
+import { type ComponentType, type MouseEvent, type ReactNode, useState } from "react";
 
 import type { TicketCardBadge } from "./ticket-card";
 
@@ -109,9 +109,11 @@ const TicketCell = (props: TicketCellProps) => {
         <Icon as={item.statusIcon} boxSize="16px" color={item.statusColor ?? "fg.muted"} flexShrink={0} />
       )}
 
-      <Text textStyle="label/S/regular" color="fg.muted" flexShrink={0} minW="70px">
-        {item.ticketId}
-      </Text>
+      {item.ticketId && (
+        <Text textStyle="label/S/regular" color="fg.muted" flexShrink={0} minW="70px">
+          {item.ticketId}
+        </Text>
+      )}
 
       <Text textStyle="label/S/regular" flex="1" truncate>
         {item.title}
@@ -119,8 +121,13 @@ const TicketCell = (props: TicketCellProps) => {
 
       {item.badges && item.badges.length > 0 && (
         <Wrap gap="2xs" flexShrink={0}>
-          {item.badges.map((badge) => (
-            <Badge key={badge.label} variant="subtle" colorPalette={badge.color ?? "gray"} textStyle="label/XS/medium">
+          {item.badges.map((badge, index) => (
+            <Badge
+              key={badge.id ?? index}
+              variant="subtle"
+              colorPalette={badge.color ?? "gray"}
+              textStyle="label/XS/medium"
+            >
               {badge.label}
             </Badge>
           ))}
@@ -154,8 +161,15 @@ const ExpandToggle = (props: ExpandToggleProps) => {
       flexShrink={0}
       width="16px"
       height="16px"
+      cursor="pointer"
       data-expanded={isExpanded ? "true" : undefined}
       aria-label={isExpanded ? "Collapse group" : "Expand group"}
+      role="button"
+      tabIndex={0}
+      onClick={(event: MouseEvent<HTMLDivElement>) => {
+        event.stopPropagation();
+        row.toggleExpanded();
+      }}
     >
       <ChevronRight
         size={14}

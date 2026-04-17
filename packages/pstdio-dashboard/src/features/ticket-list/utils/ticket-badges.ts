@@ -21,7 +21,7 @@ const builders: Record<DisplayProperty, BadgeBuilder> = {
     return ticket.tagIds
       .map((id) => context.tagMap.get(id))
       .filter((tag): tag is NonNullable<typeof tag> => Boolean(tag))
-      .map((tag) => ({ label: tag.name, color: tag.color }));
+      .map((tag) => ({ label: tag.name, color: tag.color, icon: tag.icon }));
   },
 
   updatedAt: (ticket) => [{ label: new Date(ticket.updatedAt).toLocaleDateString() }],

@@ -33,6 +33,8 @@ export interface WorkspaceOption<TValue extends string> {
 export interface WorkspaceFilterOption {
   value: string;
   label: string;
+  color?: string;
+  icon?: string | null;
 }
 
 export interface WorkspaceFilterCategory {
@@ -67,7 +69,6 @@ export const DEFAULT_WORKSPACE_SETTINGS: WorkspaceSettings = {
 
 export const DEFAULT_GROUPING_OPTIONS: WorkspaceOption<GroupingField>[] = [
   { value: "status", label: "Status" },
-  { value: "assignee", label: "Assignee" },
   { value: "none", label: "No grouping" },
 ];
 
@@ -81,7 +82,6 @@ export const DEFAULT_ORDERING_OPTIONS: WorkspaceOption<OrderingField>[] = [
 export const DEFAULT_DISPLAY_PROPERTY_OPTIONS: WorkspaceOption<DisplayProperty>[] = [
   { value: "id", label: "ID" },
   { value: "status", label: "Status" },
-  { value: "assignee", label: "Assignee" },
   { value: "labels", label: "Labels" },
   { value: "updated", label: "Updated" },
 ];

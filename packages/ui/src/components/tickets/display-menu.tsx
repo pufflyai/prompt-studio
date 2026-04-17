@@ -135,12 +135,14 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
                 }}
               />
 
-              <Dropdown
-                label="Sub-grouping"
-                value={settings.rowGrouping}
-                options={groupingOptions.filter((o) => o.value === "none" || o.value !== settings.columnGrouping)}
-                onSelect={onRowGroupingChange}
-              />
+              {settings.columnGrouping !== "none" && (
+                <Dropdown
+                  label="Sub-grouping"
+                  value={settings.rowGrouping}
+                  options={groupingOptions.filter((o) => o.value === "none" || o.value !== settings.columnGrouping)}
+                  onSelect={onRowGroupingChange}
+                />
+              )}
 
               <Stack gap="2xs">
                 <SectionLabel>Ordering</SectionLabel>

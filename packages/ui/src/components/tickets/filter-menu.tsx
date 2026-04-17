@@ -1,9 +1,10 @@
 import { Badge, Box, Button, HStack, Icon, IconButton, Popover, Portal, Stack, Text } from "@chakra-ui/react";
-import { Filter } from "lucide-react";
+import { Circle, Filter } from "lucide-react";
 import { useState } from "react";
 
 import { Checkbox } from "@/components/checkbox";
 
+import { getIconComponent } from "./tag-icons";
 import type { FilterState, WorkspaceFilterCategory } from "./types";
 
 interface FilterMenuProps {
@@ -89,7 +90,16 @@ export const FilterMenu = (props: FilterMenuProps) => {
                               onCheckedChange={() => onToggleFilterValue(activeCategory.id, option.value)}
                             >
                               <HStack gap="2xs" justifyContent="space-between" width="full">
-                                <Text textStyle="label/S/regular">{option.label}</Text>
+                                <HStack gap="2xs">
+                                  {(option.icon || option.color) && (
+                                    <Icon
+                                      as={option.icon ? getIconComponent(option.icon) : Circle}
+                                      boxSize="14px"
+                                      color={`${option.color ?? "gray"}.500`}
+                                    />
+                                  )}
+                                  <Text textStyle="label/S/regular">{option.label}</Text>
+                                </HStack>
                                 <Text textStyle="label/XS/regular" color="fg.muted">
                                   {count}
                                 </Text>

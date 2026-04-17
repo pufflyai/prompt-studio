@@ -129,7 +129,7 @@ export interface TicketGroup {
   columnActions: TicketColumnAction[];
 }
 
-export type TagEntry = { id: string; name: string; color: TicketStatusColor; tagName: string };
+export type TagEntry = { id: string; name: string; color: TicketStatusColor; tagName: string; icon: string | null };
 
 export interface BadgeContext {
   statusOptions: { name: string; color: TicketStatusColor }[];

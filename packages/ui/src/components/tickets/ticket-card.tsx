@@ -1,11 +1,14 @@
-import { Badge, HStack, Stack, Text, Wrap } from "@chakra-ui/react";
+import { Badge, HStack, Icon, Stack, Text, Wrap } from "@chakra-ui/react";
 import type { DragEventHandler } from "react";
 import type { WorkspaceBadgeProps } from "@/components/workspace-badge";
 import { WorkspaceBadge } from "@/components/workspace-badge";
+import { getIconComponent } from "./tag-icons";
 
 export interface TicketCardBadge {
+  id?: string;
   label: string;
   color?: string;
+  icon?: string | null;
 }
 
 interface TicketCardProps {
@@ -78,11 +81,20 @@ export const TicketCard = (props: TicketCardProps) => {
 
       {badges.length > 0 && (
         <Wrap gap="2xs">
-          {badges.map((badge) => (
-            <Badge key={badge.label} variant="subtle" colorPalette={badge.color ?? "gray"} textStyle="label/XS/medium">
-              {badge.label}
-            </Badge>
-          ))}
+          {badges.map((badge, index) => {
+            const BadgeIcon = badge.icon ? getIconComponent(badge.icon) : null;
+            return (
+              <Badge
+                key={badge.id ?? index}
+                variant="subtle"
+                colorPalette={badge.color ?? "gray"}
+                textStyle="label/XS/medium"
+              >
+                {BadgeIcon && <Icon as={BadgeIcon} boxSize="12px" />}
+                {badge.label}
+              </Badge>
+            );
+          })}
         </Wrap>
       )}
     </Stack>

@@ -63,7 +63,7 @@ export const TicketsPanel = () => {
 
   const tagDefs = project?.ticketTags ?? [];
   const tagEntries = tagDefs.flatMap((t) =>
-    t.options.map((o) => ({ id: o.id, name: o.name, color: o.color, tagName: t.name })),
+    t.options.map((o) => ({ id: o.id, name: o.name, color: o.color, tagName: t.name, icon: o.icon })),
   );
   const badgeContext: BadgeContext = {
     statusOptions: statusOptions.map((s) => ({ name: s.name, color: s.color })),

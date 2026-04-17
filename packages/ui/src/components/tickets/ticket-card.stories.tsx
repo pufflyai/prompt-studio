@@ -154,3 +154,15 @@ export const Draggable: Story = {
     badges: [{ label: "todo", color: "gray" }],
   },
 };
+
+export const BadgeWithIcons: Story = {
+  args: {
+    title: "Badges with tag icons",
+    badges: [
+      { id: "tag-1", label: "Bug", color: "red", icon: "bug" },
+      { id: "tag-2", label: "Enhancement", color: "blue", icon: "sparkles" },
+      { id: "tag-3", label: "Docs", color: "green", icon: "book-open" },
+      { label: "No icon", color: "gray" },
+    ],
+  },
+};

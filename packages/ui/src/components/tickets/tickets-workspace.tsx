@@ -86,21 +86,24 @@ const collectCategoryOptions = (tickets: WorkspaceTicket[], category: FilterCate
 const buildDefaultFilterCategories = (tickets: WorkspaceTicket[]): WorkspaceFilterCategory[] => {
   return [
     { id: "status", label: "Status", options: collectCategoryOptions(tickets, "status") },
-    { id: "assignee", label: "Assignee", options: collectCategoryOptions(tickets, "assignee") },
     { id: "labels", label: "Labels", options: collectCategoryOptions(tickets, "labels") },
   ];
 };
 
-const toBadges = (ticket: WorkspaceTicket, displayProperties: DisplayProperty[]): TicketCardBadge[] => {
+interface BadgeOptions {
+  statusColor?: string;
+}
+
+const toBadges = (
+  ticket: WorkspaceTicket,
+  displayProperties: DisplayProperty[],
+  options?: BadgeOptions,
+): TicketCardBadge[] => {
   const badges: TicketCardBadge[] = [];
   const includes = (property: DisplayProperty) => displayProperties.includes(property);
 
   if (includes("status") && ticket.status) {
-    badges.push({ label: ticket.status, color: ticket.statusColor ?? "gray" });
-  }
-
-  if (includes("assignee") && ticket.assignee) {
-    badges.push({ label: ticket.assignee, color: "blue" });
+    badges.push({ label: ticket.status, color: options?.statusColor ?? ticket.statusColor ?? "gray" });
   }
 
   if (includes("updated") && ticket.updatedAt) {
@@ -157,10 +160,10 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
   );
 
   const knownColumnKeys =
-    knownColumnKeysProp ??
-    (settings.columnGrouping !== "none"
-      ? categoryOptions.find((c) => c.id === settings.columnGrouping)?.options.map((o) => o.value)
-      : undefined);
+    settings.columnGrouping === "none"
+      ? undefined
+      : (knownColumnKeysProp ??
+        categoryOptions.find((c) => c.id === settings.columnGrouping)?.options.map((o) => o.value));
 
   const grouped = groupTickets(visibleTickets, {
     columnGrouping: settings.columnGrouping,
@@ -201,14 +204,14 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
           return toGroupListItem(group);
         });
 
-  const toBoardItems = (tickets: WorkspaceTicket[]) =>
+  const toBoardItems = (tickets: WorkspaceTicket[], badgeOptions?: BadgeOptions) =>
     tickets.map((ticket) => ({
       id: ticket.id,
       cardProps: {
         ticketId: settings.displayProperties.includes("id") ? ticket.ticketId : "",
         parentPath: ticket.parentPath,
         title: ticket.title,
-        badges: toBadges(ticket, settings.displayProperties),
+        badges: toBadges(ticket, settings.displayProperties, badgeOptions),
         onClick: () => onTicketClick?.(ticket as TTicket),
       },
     }));
@@ -216,13 +219,14 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
   const boardColumns: TicketBoardColumn[] = grouped.map((column) => {
     const columnConfig = getBoardColumnConfig?.(column.key) ?? {};
     const orderedTickets = orderTickets(column.tickets, settings.ordering);
+    const badgeOptions: BadgeOptions = { statusColor: columnConfig.color };
 
     const groups: TicketBoardGroup[] | undefined =
       column.rows.length > 0
         ? column.rows.map((row) => ({
             key: row.key,
             label: toTitleCase(row.label),
-            items: toBoardItems(orderTickets(row.tickets, settings.ordering)),
+            items: toBoardItems(orderTickets(row.tickets, settings.ordering), badgeOptions),
           }))
         : undefined;
 
@@ -234,7 +238,7 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
       canDragOut: columnConfig.canDragOut ?? false,
       canCreate: columnConfig.canCreate ?? false,
       actions: columnConfig.actions ?? [],
-      items: toBoardItems(orderedTickets),
+      items: toBoardItems(orderedTickets, badgeOptions),
       groups,
     } satisfies TicketBoardColumn;
   });
