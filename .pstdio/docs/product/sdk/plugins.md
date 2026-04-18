@@ -290,6 +290,89 @@ hooks: {
 
 Note: some related SDK list endpoints (for example workspace list items) currently expose `ticket_shorthand` rather than `ticket_id`, so filtering by shorthand can still be required in some plugin logic.
 
+## Schedules
+
+Schedules enable time-based automation using cron expressions. Scheduled handlers run on a recurring schedule using `bun.cron`, independent of user actions or UI navigation.
+
+### Defining Schedules
+
+```ts
+export default definePlugin({
+  schedules: [
+    {
+      name: "daily-reminder",
+      cron: "0 9 * * *",
+      timeoutSeconds: 60,
+      async trigger(ctx) {
+        console.log(`Scheduled run at ${ctx.scheduledFor} for ${ctx.projectId}`);
+      },
+    },
+  ],
+});
+```
+
+### Schedule Definition
+
+```ts
+type ScheduleDefinition = {
+  name: string; // unique name within the plugin
+  cron: string; // 5-field cron expression (UTC timezone)
+  timeoutSeconds?: number; // maximum run duration (default: 60s)
+  trigger: (ctx: ScheduledTriggerContext) => void | Promise<void>;
+};
+```
+
+### Trigger Context
+
+```ts
+type ScheduledTriggerContext = {
+  type: "schedule";
+  scheduleName: string;
+  scheduledFor: string; // ISO 8601 UTC timestamp
+  runId: string;
+  client: PstdioClient;
+  projectId: string;
+};
+```
+
+### Runtime Behavior
+
+- **UTC timezone** — All cron expressions are evaluated in UTC.
+- **Overlap handling** — If a previous run is still active when the next tick fires, the new run is skipped with a `skipped_overlap` log.
+- **Timeout** — Runs past `timeoutSeconds` are abandoned with `timed_out` outcome.
+- **Independent of UI** — Scheduled handlers run for every loaded project, regardless of which project is currently opened.
+- **Graceful shutdown** — On shutdown, in-flight runs are awaited up to their configured timeout.
+
+### Cron Format
+
+The scheduler accepts standard 5-field cron format (minute, hour, day-of-month, month, day-of-week):
+
+| Field        | Valid values             |
+| ----------- | --------------------- |
+| minute      | 0-59                 |
+| hour        | 0-23                 |
+| day        | 1-31                 |
+| month      | 1-12                 |
+| weekday    | 0-6 (0 = Sunday)     |
+
+Wildcards (`*`), ranges (`1-5`), lists (`1,3,5`), and step values (`*/15`) are supported.
+
+Examples:
+- `0 9 * * *` — Daily at 9:00 UTC
+- `*/5 * * * *` — Every 5 minutes
+- `0 9 * * 1-5` — Weekdays at 9:00 UTC
+
+### Failure Isolation
+
+One handler's failure does not crash the scheduler or affect other handlers. Failures are logged with `handler_error`.
+
+### Usage Notes
+
+1. Schedules are validated at plugin load time. Invalid cron expressions cause load failure with a clear error.
+2. A local example schedule plugin is available at `.pstdio/plugins/scheduled-demo.ts`.
+3. Scheduled handlers can use `ctx.client.sessions.followup(...)` to post follow-ups to existing sessions.
+4. Known issue: cron validation logic is currently duplicated between SDK and plugin loader validation (`/known-issues/duplicate_cron_validation`).
+
 ## Built-in Plugin Helpers
 
 `@pstdio/sdk/plugins` includes helper functions that mirror common CLI helper workflows.

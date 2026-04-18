@@ -8,6 +8,13 @@ import type { LoadedPlugin, PluginDefinition } from "./types";
 const isValidPluginShape = (value: unknown): value is PluginDefinition =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+const isValidCron = (cron: string): boolean => {
+  const parts = cron.trim().split(/\s+/);
+  if (parts.length !== 5) return false;
+  const pattern = /^(\*|(\d+(-\d+)?(,\d+(-\d+)?)*)|\d+\/\d+)$/;
+  return parts.every((p) => pattern.test(p));
+};
+
 const isCompiledBinary = () => {
   const embeddedFiles = (Bun as Record<string, unknown>).embeddedFiles;
   return Array.isArray(embeddedFiles) && embeddedFiles.length > 0;
@@ -69,6 +76,14 @@ export const loadPlugins = async (pluginsDir: string) => {
 
     if (!isValidPluginShape(definition)) {
       throw new Error(`Plugin file ${filePath}: default export is not a valid plugin definition`);
+    }
+
+    for (const schedule of definition.schedules ?? []) {
+      if (!isValidCron(schedule.cron)) {
+        throw new Error(
+          `Invalid cron expression "${schedule.cron}" in schedule "${schedule.name}" in plugin definition from ${filePath}`,
+        );
+      }
     }
 
     const identity = derivePluginIdentity(pluginsDir, filePath);

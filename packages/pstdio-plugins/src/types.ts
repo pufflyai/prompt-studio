@@ -1,4 +1,9 @@
-import type { ActionDefinition, ActionDescriptor, PluginDefinition } from "@pstdio/sdk/plugins";
+import type {
+  ActionDefinition,
+  ActionDescriptor,
+  PluginDefinition,
+  ScheduledTriggerContext,
+} from "@pstdio/sdk/plugins";
 
 export type { ActionDefinition, ActionDescriptor, PluginDefinition };
 
@@ -13,4 +18,15 @@ export type ResolvedAction = {
   pluginIdentity: string;
   descriptor: ActionDescriptor;
   trigger: ActionDefinition["trigger"];
+};
+
+export type ScheduledTrigger = (ctx: ScheduledTriggerContext) => void | Promise<void>;
+
+export type ResolvedSchedule = {
+  namespacedKey: string;
+  pluginIdentity: string;
+  scheduleName: string;
+  cron: string;
+  timeoutSeconds: number;
+  trigger: ScheduledTrigger;
 };

@@ -273,6 +273,7 @@ export const createApp = async (options: AppOptions) => {
   const close = async () => {
     startupAbort.abort();
     await startupDone;
+    await pluginService.dispose();
     await closeDb();
   };
 

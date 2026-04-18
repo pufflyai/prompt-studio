@@ -37,7 +37,7 @@ export const registerPluginsHandler = (deps: RouteDeps): AppRouteHandler<typeof 
 
     const repos = await deps.repoService.listByProject(projectId);
     await Promise.all(repos.map((repo) => ensureProjectRepoScaffolding(repo.path, deps.filesRoot)));
-    deps.pluginService.invalidate(projectId);
+    await deps.pluginService.invalidate(projectId);
 
     return c.json(await getRegisteredPlugins(deps, projectId), 200);
   };

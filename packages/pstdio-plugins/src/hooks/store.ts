@@ -6,13 +6,14 @@ import { createPluginRegistry } from "../registry";
 import { createHookDispatcher } from "./dispatcher";
 import { loadPluginRuntime, type PluginRuntime } from "./runtime";
 
-const createEmptyRuntime = (client: PstdioClient): PluginRuntime => {
+const createEmptyRuntime = (client: PstdioClient, projectId: string): PluginRuntime => {
   const registry = createPluginRegistry([]);
   const dispatcher = createHookDispatcher();
 
   return {
     repoPath: null,
     client,
+    projectId,
     plugins: [],
     hooks: {
       firePre: (hookName, ctx) => dispatcher.firePreHook(hookName, ctx),
@@ -22,6 +23,12 @@ const createEmptyRuntime = (client: PstdioClient): PluginRuntime => {
       list: (targetType) => registry.getActions(targetType),
       get: (namespacedKey) => registry.getAction(namespacedKey),
     },
+    schedules: {
+      list: () => [],
+      get: () => undefined,
+    },
+    startScheduler() {},
+    stopScheduler: async () => {},
   };
 };
 
@@ -42,8 +49,14 @@ export const createPluginRuntimeStore = (input: {
     stopWatching(projectId);
     if (!existsSync(pluginsDir)) return;
 
-    const watcher = watch(pluginsDir, { recursive: true }, () => {
+    const watcher = watch(pluginsDir, { recursive: true }, async () => {
       if (watchers.get(projectId) !== watcher) return;
+
+      const cached = cache.get(projectId);
+      if (cached) {
+        await cached.stopScheduler();
+      }
+
       cache.delete(projectId);
       stopWatching(projectId);
     });
@@ -58,15 +71,17 @@ export const createPluginRuntimeStore = (input: {
 
   const loadForProject = async (projectId: string): Promise<PluginRuntime> => {
     const repoPath = await input.resolveRepoPath(projectId);
-    if (!repoPath) return createEmptyRuntime(input.createClient());
+    if (!repoPath) return createEmptyRuntime(input.createClient(), projectId);
 
     const pluginsDir = join(repoPath, ".pstdio", "plugins");
     const runtime = await loadPluginRuntime({
       repoPath,
       client: input.createClient(),
+      projectId,
       ensureWorkspace: input.ensureWorkspace,
     });
 
+    runtime.startScheduler();
     watchPluginsDir(projectId, pluginsDir);
     return runtime;
   };
@@ -81,13 +96,19 @@ export const createPluginRuntimeStore = (input: {
       return runtime;
     },
 
-    invalidate(projectId: string) {
+    async invalidate(projectId: string) {
+      const cached = cache.get(projectId);
+      if (cached) {
+        await cached.stopScheduler();
+      }
+
       cache.delete(projectId);
       stopWatching(projectId);
     },
 
-    dispose() {
-      for (const [projectId] of watchers) {
+    async dispose() {
+      for (const [projectId, runtime] of cache) {
+        await runtime.stopScheduler();
         stopWatching(projectId);
       }
       cache.clear();

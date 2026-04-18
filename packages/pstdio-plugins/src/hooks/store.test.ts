@@ -65,7 +65,7 @@ describe("createPluginRuntimeStore", () => {
     });
 
     await store.getForProject("project-1");
-    store.invalidate("project-1");
+    await store.invalidate("project-1");
     await store.getForProject("project-1");
     expect(resolveCount).toBe(2);
   });
@@ -84,7 +84,7 @@ describe("createPluginRuntimeStore", () => {
 
     await store.getForProject("project-1");
     await store.getForProject("project-2");
-    store.dispose();
+    await store.dispose();
 
     await store.getForProject("project-1");
     expect(resolveCount).toBe(3);

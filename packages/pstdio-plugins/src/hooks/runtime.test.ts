@@ -22,11 +22,13 @@ afterEach(() => {
   tempDirs = [];
 });
 
+const TEST_PROJECT_ID = "test-project";
+
 describe("loadPluginRuntime", () => {
   test("returns runtime with empty hooks and actions when no plugins exist", async () => {
     const repoPath = createTempDir();
 
-    const runtime = await loadPluginRuntime({ repoPath, client: stubClient });
+    const runtime = await loadPluginRuntime({ repoPath, client: stubClient, projectId: TEST_PROJECT_ID });
 
     expect(runtime.repoPath).toBe(repoPath);
     expect(runtime.client).toBe(stubClient);
@@ -48,7 +50,7 @@ describe("loadPluginRuntime", () => {
       };`,
     );
 
-    const runtime = await loadPluginRuntime({ repoPath, client: stubClient });
+    const runtime = await loadPluginRuntime({ repoPath, client: stubClient, projectId: TEST_PROJECT_ID });
 
     const result = await runtime.hooks.firePre("preTicketCreation", {} as never);
     expect(result.rejected).toBe(true);
@@ -73,7 +75,7 @@ describe("loadPluginRuntime", () => {
       };`,
     );
 
-    const runtime = await loadPluginRuntime({ repoPath, client: stubClient });
+    const runtime = await loadPluginRuntime({ repoPath, client: stubClient, projectId: TEST_PROJECT_ID });
 
     const actions = runtime.actions.list();
     expect(actions).toHaveLength(1);
@@ -90,6 +92,7 @@ describe("loadPluginRuntime", () => {
     await loadPluginRuntime({
       repoPath,
       client: stubClient,
+      projectId: TEST_PROJECT_ID,
       ensureWorkspace: async (dir) => {
         calls.push(dir);
       },
@@ -116,7 +119,7 @@ describe("loadPluginRuntime", () => {
       };`,
     );
 
-    const runtime = await loadPluginRuntime({ repoPath, client: stubClient });
+    const runtime = await loadPluginRuntime({ repoPath, client: stubClient, projectId: TEST_PROJECT_ID });
 
     expect(runtime.plugins).toHaveLength(1);
     expect(runtime.plugins[0].identity).toBe("my-plugin");
@@ -126,7 +129,7 @@ describe("loadPluginRuntime", () => {
   test("returns empty plugins list when no plugins exist", async () => {
     const repoPath = createTempDir();
 
-    const runtime = await loadPluginRuntime({ repoPath, client: stubClient });
+    const runtime = await loadPluginRuntime({ repoPath, client: stubClient, projectId: TEST_PROJECT_ID });
 
     expect(runtime.plugins).toEqual([]);
   });
@@ -145,7 +148,7 @@ describe("loadPluginRuntime", () => {
       };`,
     );
 
-    const runtime = await loadPluginRuntime({ repoPath, client: stubClient });
+    const runtime = await loadPluginRuntime({ repoPath, client: stubClient, projectId: TEST_PROJECT_ID });
 
     // Should not throw
     await runtime.hooks.firePost("postTicketCreation", {} as never);

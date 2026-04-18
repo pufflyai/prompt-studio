@@ -22,8 +22,8 @@ const resolveProjectPluginWorkspacePath = async (deps: PluginServiceDeps, projec
   return workspacePath;
 };
 
-export const createPluginService = (deps: PluginServiceDeps) =>
-  createPluginRuntimeStore({
+export const createPluginService = (deps: PluginServiceDeps) => {
+  return createPluginRuntimeStore({
     resolveRepoPath: async (projectId) => {
       const repos = await deps.repoService.listByProject(projectId);
       if (repos[0]?.path) return repos[0].path;
@@ -33,3 +33,4 @@ export const createPluginService = (deps: PluginServiceDeps) =>
     createClient: () => createClient(deps.clientOptions),
     ensureWorkspace: deps.ensureWorkspace ?? ensurePluginWorkspace,
   });
+};

@@ -23,10 +23,11 @@ type Deps = {
   log: (msg: string) => void;
 };
 
-const createDispatchForRepo = async (repoRoot: string): Promise<HookDispatch> => {
+const createDispatchForRepo = async (repoRoot: string, projectId: string): Promise<HookDispatch> => {
   const runtime = await loadPluginRuntime({
     repoPath: repoRoot,
     client: {} as PstdioClient,
+    projectId,
   });
   return {
     firePreHook: (hookName, ctx) => runtime.hooks.firePre(hookName as never, ctx as never),
@@ -48,7 +49,7 @@ const parseTicketShorthand = (workspaceShorthand: string) => {
 
 export const deleteWorkspaceWithWorktree = async (input: DeleteWorkspaceInput, deps: Deps = defaultDeps) => {
   const { repoRoot, projectId, workspaceShorthand } = input;
-  const dispatch = deps.dispatch ?? (await createDispatchForRepo(repoRoot));
+  const dispatch = deps.dispatch ?? (await createDispatchForRepo(repoRoot, projectId));
 
   const workspace = await deps.getWorkspace(projectId, workspaceShorthand);
   if (!workspace) throw new Error(`Workspace not found: ${workspaceShorthand}`);

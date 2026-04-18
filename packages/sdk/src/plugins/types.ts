@@ -93,8 +93,31 @@ export type ActionDefinition = ActionDescriptor & {
   trigger: ActionTrigger;
 };
 
+export type ScheduleDefinition = {
+  name: string;
+  cron: string;
+  timeoutSeconds?: number;
+};
+
+export type ScheduledTriggerContext = {
+  type: "schedule";
+  scheduleName: string;
+  scheduledFor: string;
+  runId: string;
+  client: PstdioClient;
+  projectId: string;
+};
+
+type ScheduledTrigger = (ctx: ScheduledTriggerContext) => void | Promise<void>;
+
 export type PluginDefinition = {
   key?: string;
   actions?: ActionInput[];
   hooks?: PluginHooks;
+  schedules?: {
+    name: string;
+    cron: string;
+    timeoutSeconds?: number;
+    trigger: ScheduledTrigger;
+  }[];
 };
