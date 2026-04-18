@@ -2,8 +2,9 @@ import { Box, Spinner, Text } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { AlertMessage } from "@/components/alert";
 import { RichMessage } from "@/components/rich-text";
-import type { AlertPart, ErrorPart, SessionMessage, SessionMessagePart, ToolPart } from "../agent-types";
+import type { AlertPart, ErrorPart, FilePart, SessionMessage, SessionMessagePart, ToolPart } from "../agent-types";
 import { Response } from "./ai-response";
+import { ImageThumbnail } from "./image-thumbnail";
 import { ToolInvocationTimeline, type ToolInvocationTimelineProps } from "./tool-invocation-timeline";
 
 type ToolInvocationTimelineComponent = (props: ToolInvocationTimelineProps) => ReactNode;
@@ -62,6 +63,27 @@ const collectToolInvocations = (parts: SessionMessagePart[], startIndex: number)
   }
 
   return { invocations, nextIndex: lookahead - 1 };
+};
+
+const isImageFilePart = (part: SessionMessagePart): part is FilePart => {
+  if (part.type !== "file") return false;
+  const filePart = part as FilePart;
+  if (!filePart.mediaType) return false;
+  return filePart.mediaType.startsWith("image/");
+};
+
+const collectConsecutiveImages = (parts: SessionMessagePart[], startIndex: number) => {
+  const images: FilePart[] = [];
+  let lookahead = startIndex;
+
+  while (lookahead < parts.length) {
+    const nextPart = parts[lookahead];
+    if (!isImageFilePart(nextPart)) break;
+    images.push(nextPart);
+    lookahead += 1;
+  }
+
+  return { images, nextIndex: lookahead - 1 };
 };
 
 export function MessagePartsRenderer(props: MessagePartsProps) {
@@ -142,6 +164,18 @@ export function MessagePartsRenderer(props: MessagePartsProps) {
           </Box>,
         );
         break;
+      case "file": {
+        const { images, nextIndex } = collectConsecutiveImages(parts, partIndex);
+        partIndex = nextIndex;
+        nodes.push(
+          <Box key={key} display="flex" gap="2" flexWrap="wrap" alignItems="center">
+            {images.map((img, imgIdx) => (
+              <ImageThumbnail key={`${key}-${imgIdx}`} file={img} />
+            ))}
+          </Box>,
+        );
+        break;
+      }
       default:
         nodes.push(null);
     }

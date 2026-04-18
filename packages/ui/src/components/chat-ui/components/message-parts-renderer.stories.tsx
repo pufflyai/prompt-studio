@@ -107,3 +107,106 @@ export const ErrorParts: Story = {
     </Stack>
   ),
 };
+
+export const SingleImageAttachment: Story = {
+  render: () => (
+    <MessagePreview
+      message={{
+        id: "single-image",
+        role: "user",
+        parts: [
+          {
+            type: "file",
+            mediaType: "image/png",
+            filename: "screenshot.png",
+            url: "https://placehold.co/200x200/png",
+          },
+        ],
+      }}
+    />
+  ),
+};
+
+export const MultipleImageAttachments: Story = {
+  render: () => (
+    <MessagePreview
+      message={{
+        id: "multiple-images",
+        role: "user",
+        parts: [
+          {
+            type: "file",
+            mediaType: "image/jpeg",
+            filename: "photo1.jpg",
+            url: "https://placehold.co/150x150/FF5733/white?text=Image1",
+          },
+          {
+            type: "file",
+            mediaType: "image/jpeg",
+            filename: "photo2.jpg",
+            url: "https://placehold.co/150x150/33FF57/white?text=Image2",
+          },
+          {
+            type: "file",
+            mediaType: "image/gif",
+            filename: "animated.gif",
+            url: "https://placehold.co/150x150/3357FF/white?text=Image3",
+          },
+        ],
+      }}
+    />
+  ),
+};
+
+export const MixedTextAndImageParts: Story = {
+  render: () => (
+    <MessagePreview
+      message={{
+        id: "mixed-text-image",
+        role: "user",
+        parts: [
+          { type: "text", text: "Here are the screenshots I mentioned:" },
+          {
+            type: "file",
+            mediaType: "image/png",
+            filename: "error-screen.png",
+            url: "https://placehold.co/120x120/FF0000/white?text=Error",
+          },
+          {
+            type: "file",
+            mediaType: "image/png",
+            filename: "logs.png",
+            url: "https://placehold.co/120x120/00FF00/white?text=Logs",
+          },
+          { type: "text", text: "Let me know if you need more details." },
+        ],
+      }}
+    />
+  ),
+};
+
+export const ImageWithTextBetween: Story = {
+  render: () => (
+    <MessagePreview
+      message={{
+        id: "image-text-interleaved",
+        role: "assistant",
+        parts: [
+          {
+            type: "file",
+            mediaType: "image/png",
+            filename: "preview.png",
+            url: "https://placehold.co/100x100/666666/white?text=Preview",
+          },
+          { type: "text", text: "Here's the updated preview. The changes are highlighted in green." },
+          {
+            type: "file",
+            mediaType: "image/jpeg",
+            filename: "diff.jpg",
+            url: "https://placehold.co/100x100/666666/white?text=Diff",
+          },
+        ],
+      }}
+    />
+  ),
+};
