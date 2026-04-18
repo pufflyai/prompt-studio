@@ -1,9 +1,10 @@
-import { Box, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Box, Flex, Image, Spinner, Stack, Text } from "@chakra-ui/react";
 import { EmptyState, ScrollArea } from "@pstdio/ui";
 import { AlertCircle, CheckCircle2, FileCode2, FileText, FlaskConical, TerminalSquare } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTicketContent } from "@/features/ticket/hooks/use-ticket-content";
+import { isImageFileName } from "@/features/ticket/utils/ticket-file-selection";
 import type { ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
 import type { ChangedFilesViewMode } from "../utils/build-changed-files-tree";
 import { buildWorkspaceChecksContentRequest } from "./workspace-checks-content-request";
@@ -92,6 +93,8 @@ export const WorkspaceChecksPanel = (props: WorkspaceChecksPanelProps) => {
           searchQuery={searchQuery}
           onSearchQueryChange={setSearchQuery}
           resolveFileIcon={resolveArtifactFileIcon}
+          showHeader={false}
+          showFilter={false}
         />
       </ResizableLeftPanel>
 
@@ -102,18 +105,37 @@ export const WorkspaceChecksPanel = (props: WorkspaceChecksPanelProps) => {
           </Text>
         </Flex>
 
-        <ScrollArea flex="1" minH="0" contentProps={{ p: "sm" }}>
-          {artifactContent.isLoading ? (
-            <Flex align="center" gap="xs" color="foreground.secondary">
-              <Spinner size="sm" />
-              <Text>{t("workspaceDiffPanel.checks.loading")}</Text>
-            </Flex>
-          ) : (
-            <Box as="pre" whiteSpace="pre-wrap" wordBreak="break-word" fontFamily="mono" fontSize="sm" lineHeight="1.5">
-              {artifactContent.data ?? ""}
-            </Box>
-          )}
-        </ScrollArea>
+        {selectedArtifact && isImageFileName(selectedArtifact.relative_path) ? (
+          <Box flex="1" minH="0" overflow="auto" p="md" display="flex" alignItems="center" justifyContent="center">
+            <Image
+              src={`/v1/tickets/${ticketId}/files/${selectedArtifact.file_id}/content`}
+              alt={stripArtifactPrefix(selectedArtifact.relative_path)}
+              maxW="100%"
+              maxH="100%"
+              objectFit="contain"
+            />
+          </Box>
+        ) : (
+          <ScrollArea flex="1" minH="0" contentProps={{ p: "sm" }}>
+            {artifactContent.isLoading ? (
+              <Flex align="center" gap="xs" color="foreground.secondary">
+                <Spinner size="sm" />
+                <Text>{t("workspaceDiffPanel.checks.loading")}</Text>
+              </Flex>
+            ) : (
+              <Box
+                as="pre"
+                whiteSpace="pre-wrap"
+                wordBreak="break-word"
+                fontFamily="mono"
+                fontSize="sm"
+                lineHeight="1.5"
+              >
+                {artifactContent.data ?? ""}
+              </Box>
+            )}
+          </ScrollArea>
+        )}
       </Stack>
     </Flex>
   );
