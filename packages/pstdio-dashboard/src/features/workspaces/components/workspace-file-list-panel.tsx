@@ -141,6 +141,8 @@ interface FileListPanelProps {
   onSearchQueryChange: (value: string) => void;
   resolveFileIcon?: (path: string) => FileIconInfo;
   emptyTitle?: string;
+  showHeader?: boolean;
+  showFilter?: boolean;
 }
 
 export const FileListPanel = (props: FileListPanelProps) => {
@@ -155,6 +157,8 @@ export const FileListPanel = (props: FileListPanelProps) => {
     onSearchQueryChange,
     resolveFileIcon,
     emptyTitle = "No matching files",
+    showHeader = true,
+    showFilter = true,
   } = props;
   const fileTree = useMemo(() => buildChangedFilesTree(paths, viewMode), [paths, viewMode]);
   const expandedFolders = useMemo(
@@ -174,44 +178,48 @@ export const FileListPanel = (props: FileListPanelProps) => {
 
   return (
     <Stack h="full" minH="0" minW="0" w="full" gap="0" overflow="hidden">
-      <Flex h="41px" minH="41px" align="center" justify="space-between" px="sm" borderBottomWidth="1px">
-        <Text textStyle="label/S/medium" color="foreground.secondary" truncate>
-          {title} ({paths.length})
-        </Text>
+      {showHeader && (
+        <Flex h="41px" minH="41px" align="center" justify="space-between" px="sm" borderBottomWidth="1px">
+          <Text textStyle="label/S/medium" color="foreground.secondary" truncate>
+            {title} ({paths.length})
+          </Text>
 
-        <Menu.Root>
-          <Menu.Trigger asChild>
-            <IconButton aria-label="File list view mode" variant="ghost" size="sm">
-              {viewMode === "nested" ? <ListTree size={14} /> : <List size={14} />}
-            </IconButton>
-          </Menu.Trigger>
-          <Menu.Positioner>
-            <Menu.Content minW="160px" bg="bg">
-              <Menu.Item value="nested" onClick={() => onViewModeChange("nested")}>
-                <HStack gap="2xs">
-                  <ListTree size={14} />
-                  <Text>Nested</Text>
-                </HStack>
-              </Menu.Item>
-              <Menu.Item value="flat" onClick={() => onViewModeChange("flat")}>
-                <HStack gap="2xs">
-                  <List size={14} />
-                  <Text>Flat</Text>
-                </HStack>
-              </Menu.Item>
-            </Menu.Content>
-          </Menu.Positioner>
-        </Menu.Root>
-      </Flex>
+          <Menu.Root>
+            <Menu.Trigger asChild>
+              <IconButton aria-label="File list view mode" variant="ghost" size="sm">
+                {viewMode === "nested" ? <ListTree size={14} /> : <List size={14} />}
+              </IconButton>
+            </Menu.Trigger>
+            <Menu.Positioner>
+              <Menu.Content minW="160px" bg="bg">
+                <Menu.Item value="nested" onClick={() => onViewModeChange("nested")}>
+                  <HStack gap="2xs">
+                    <ListTree size={14} />
+                    <Text>Nested</Text>
+                  </HStack>
+                </Menu.Item>
+                <Menu.Item value="flat" onClick={() => onViewModeChange("flat")}>
+                  <HStack gap="2xs">
+                    <List size={14} />
+                    <Text>Flat</Text>
+                  </HStack>
+                </Menu.Item>
+              </Menu.Content>
+            </Menu.Positioner>
+          </Menu.Root>
+        </Flex>
+      )}
 
-      <Stack gap="xs" px="sm" py="sm" borderBottomWidth="1px">
-        <Input
-          size="sm"
-          placeholder="Filter files"
-          value={searchQuery}
-          onChange={(event) => onSearchQueryChange(event.target.value)}
-        />
-      </Stack>
+      {showFilter && (
+        <Stack gap="xs" px="sm" py="sm" borderBottomWidth="1px">
+          <Input
+            size="sm"
+            placeholder="Filter files"
+            value={searchQuery}
+            onChange={(event) => onSearchQueryChange(event.target.value)}
+          />
+        </Stack>
+      )}
 
       <ScrollArea
         flex="1"
@@ -265,6 +273,11 @@ export const FileListPanel = (props: FileListPanelProps) => {
                   const isSelected = selectedPath === filePath;
                   const fileIcon = resolveFileIcon?.(filePath) ?? { icon: FileText, color: "fg.subtle" };
 
+                  const lastSlashIndex = filePath.lastIndexOf("/");
+                  const fileName = lastSlashIndex >= 0 ? filePath.slice(lastSlashIndex + 1) : filePath;
+                  const dirPath = lastSlashIndex >= 0 ? filePath.slice(0, lastSlashIndex) : "";
+                  const useFlatDisplay = viewMode === "flat" && dirPath;
+
                   return (
                     <TreeView.Item
                       gap="2xs"
@@ -282,7 +295,18 @@ export const FileListPanel = (props: FileListPanelProps) => {
                     >
                       <Icon as={fileIcon.icon} boxSize="14px" color={fileIcon.color} flexShrink={0} />
                       <TreeView.ItemText textStyle="paragraph/XS/regular" truncate minW="0">
-                        {node.name}
+                        {useFlatDisplay ? (
+                          <HStack gap="xs">
+                            <Text as="span" color="fg.default">
+                              {fileName}
+                            </Text>
+                            <Text as="span" color="fg.muted">
+                              {dirPath}
+                            </Text>
+                          </HStack>
+                        ) : (
+                          node.name
+                        )}
                       </TreeView.ItemText>
                     </TreeView.Item>
                   );
