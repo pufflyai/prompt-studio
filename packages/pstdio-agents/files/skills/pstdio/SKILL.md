@@ -2,7 +2,7 @@
 name: pstdio
 description: Guidance for pstdio, a CLI tool for managing project workflows. Covers setup, configuration (.pstdio/config.json), agent configuration, CLI reference, and troubleshooting. Use for "setting up pstdio", "configuring agents", "how does pstdio work", "what commands are available", or general pstdio questions.
 metadata:
-  - version: 0.0.2
+  - version: 0.0.3
 ---
 
 # pstdio
@@ -29,7 +29,7 @@ This skill covers pstdio itself. For task-specific workflows, defer to the dedic
 - **create-proposal** — Writing proposals
 - **create-sub-tickets** — Breaking tickets into sub-tickets
 - **refine-ticket** — Refining ticket content
-- **write-pstdio-hook** — Writing or editing lifecycle hooks
+- **create-pstdio-plugin** — Creating or editing plugin files (hooks + cron schedules)
 
 For command-specific options, run `pstdio <command> --help`.
 For the full command and troubleshooting reference, see [references/cli-reference.md](references/cli-reference.md).
@@ -173,22 +173,15 @@ export default definePlugin({
 });
 ```
 
-Example shell hook (git-level):
-
-```sh
-#!/bin/sh
-
-# .pstdio/plugins/pre-commit
-bun run validate
-```
-
 Current behavior to keep in mind:
 
 - Lifecycle hooks use SDK plugins in `.pstdio/plugins/` — TypeScript/JavaScript modules loaded via `import()`.
 - Git-level hooks (commit, merge, rebase) are shell scripts in `.pstdio/plugins/`, executed with `sh <script-path>`.
 - `pstdio hooks create` fails instead of overwriting an existing hook file.
 - Hooks time out after 60 seconds.
-- Use `.pstdio/docs/product/cli/hooks.md` for the detailed CLI and lifecycle reference.
+- Use `pstdio hooks --help` and `pstdio hooks list` for detailed hook command and lifecycle guidance.
+
+For creating or editing plugin files (including cron/scheduled plugins), use the **create-pstdio-plugin** skill.
 
 ## References
 
