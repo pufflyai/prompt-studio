@@ -290,6 +290,10 @@
           "link": "/lessons-learned/no_bun_eventsource"
         },
         {
+          "text": "Bun 1.3.12 --compile Broken on macOS arm64",
+          "link": "/lessons-learned/bun_1_3_12_compile_broken_macos_arm64"
+        },
+        {
           "text": "PGlite WAL Corruption",
           "link": "/lessons-learned/pglite_wal_corruption"
         },
