@@ -153,4 +153,104 @@ describe("loadPluginRuntime", () => {
     // Should not throw
     await runtime.hooks.firePost("postTicketCreation", {} as never);
   });
+
+  test("loads plugin schedules into the runtime", async () => {
+    const repoPath = createTempDir();
+    const pluginsDir = join(repoPath, ".pstdio", "plugins");
+    mkdirSync(pluginsDir, { recursive: true });
+
+    writeFileSync(
+      join(pluginsDir, "scheduled-plugin.ts"),
+      `export default {
+        schedules: [{
+          name: "daily-check",
+          cron: "0 9 * * *",
+          timeoutSeconds: 30,
+          trigger() {},
+        }],
+      };`,
+    );
+
+    const runtime = await loadPluginRuntime({ repoPath, client: stubClient, projectId: TEST_PROJECT_ID });
+
+    const schedules = runtime.schedules.list();
+    expect(schedules).toHaveLength(1);
+    expect(schedules[0].namespacedKey).toBe("scheduled-plugin/daily-check");
+    expect(schedules[0].cron).toBe("0 9 * * *");
+    expect(schedules[0].timeoutSeconds).toBe(30);
+  });
+
+  test("schedules.get returns specific schedule by namespaced key", async () => {
+    const repoPath = createTempDir();
+    const pluginsDir = join(repoPath, ".pstdio", "plugins");
+    mkdirSync(pluginsDir, { recursive: true });
+
+    writeFileSync(
+      join(pluginsDir, "sched-plugin.ts"),
+      `export default {
+        schedules: [{
+          name: "hourly-sync",
+          cron: "0 * * * *",
+          trigger() {},
+        }],
+      };`,
+    );
+
+    const runtime = await loadPluginRuntime({ repoPath, client: stubClient, projectId: TEST_PROJECT_ID });
+
+    const schedule = runtime.schedules.get("sched-plugin/hourly-sync");
+    expect(schedule).toBeDefined();
+    expect(schedule!.scheduleName).toBe("hourly-sync");
+    expect(schedule!.timeoutSeconds).toBe(60);
+  });
+
+  test("schedules.get returns undefined for unknown key", async () => {
+    const repoPath = createTempDir();
+    const runtime = await loadPluginRuntime({ repoPath, client: stubClient, projectId: TEST_PROJECT_ID });
+
+    expect(runtime.schedules.get("unknown/key")).toBeUndefined();
+  });
+
+  test("returns empty schedules when no plugins define schedules", async () => {
+    const repoPath = createTempDir();
+    const runtime = await loadPluginRuntime({ repoPath, client: stubClient, projectId: TEST_PROJECT_ID });
+
+    expect(runtime.schedules.list()).toEqual([]);
+  });
+
+  test("startScheduler is a no-op when no schedules exist", async () => {
+    const repoPath = createTempDir();
+    const runtime = await loadPluginRuntime({ repoPath, client: stubClient, projectId: TEST_PROJECT_ID });
+
+    // Should not throw
+    runtime.startScheduler();
+    await runtime.stopScheduler();
+  });
+
+  test("stopScheduler resolves immediately when no runs are active", async () => {
+    const repoPath = createTempDir();
+    const pluginsDir = join(repoPath, ".pstdio", "plugins");
+    mkdirSync(pluginsDir, { recursive: true });
+
+    writeFileSync(
+      join(pluginsDir, "stop-test.ts"),
+      `export default {
+        schedules: [{
+          name: "every-min",
+          cron: "* * * * *",
+          trigger() {},
+        }],
+      };`,
+    );
+
+    const runtime = await loadPluginRuntime({ repoPath, client: stubClient, projectId: TEST_PROJECT_ID });
+    runtime.startScheduler();
+
+    const start = Date.now();
+    await runtime.stopScheduler();
+    const elapsed = Date.now() - start;
+
+    // Should resolve near-instantly, not wait for the full 5s drain timeout
+    expect(elapsed).toBeLessThan(500);
+  });
 });

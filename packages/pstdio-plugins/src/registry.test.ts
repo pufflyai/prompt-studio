@@ -134,4 +134,73 @@ describe("createPluginRegistry", () => {
       ).toThrow("Duplicate action key");
     });
   });
+
+  describe("getSchedules", () => {
+    test("returns empty array when no plugins have schedules", () => {
+      const registry = createPluginRegistry([makePlugin("no-schedules")]);
+      expect(registry.getSchedules()).toEqual([]);
+    });
+
+    test("returns namespaced schedules from plugins", () => {
+      const trigger = () => {};
+      const registry = createPluginRegistry([
+        makePlugin("my-plugin", {
+          schedules: [{ name: "daily", cron: "0 9 * * *", timeoutSeconds: 30, trigger }],
+        }),
+      ]);
+
+      const schedules = registry.getSchedules();
+      expect(schedules).toHaveLength(1);
+      expect(schedules[0].namespacedKey).toBe("my-plugin/daily");
+      expect(schedules[0].scheduleName).toBe("daily");
+      expect(schedules[0].cron).toBe("0 9 * * *");
+      expect(schedules[0].timeoutSeconds).toBe(30);
+      expect(schedules[0].trigger).toBe(trigger);
+    });
+
+    test("defaults timeoutSeconds to 60", () => {
+      const registry = createPluginRegistry([
+        makePlugin("p", {
+          schedules: [{ name: "s", cron: "* * * * *", trigger: () => {} }],
+        }),
+      ]);
+
+      expect(registry.getSchedules()[0].timeoutSeconds).toBe(60);
+    });
+  });
+
+  describe("getSchedule", () => {
+    test("returns schedule by namespaced key", () => {
+      const trigger = () => {};
+      const registry = createPluginRegistry([
+        makePlugin("p", {
+          schedules: [{ name: "hourly", cron: "0 * * * *", trigger }],
+        }),
+      ]);
+
+      const schedule = registry.getSchedule("p/hourly");
+      expect(schedule).toBeDefined();
+      expect(schedule!.trigger).toBe(trigger);
+    });
+
+    test("returns undefined for unknown key", () => {
+      const registry = createPluginRegistry([]);
+      expect(registry.getSchedule("nope")).toBeUndefined();
+    });
+  });
+
+  describe("duplicate schedule keys", () => {
+    test("throws on duplicate namespaced schedule keys", () => {
+      expect(() =>
+        createPluginRegistry([
+          makePlugin("a", {
+            schedules: [{ name: "run", cron: "* * * * *", trigger: () => {} }],
+          }),
+          makePlugin("a", {
+            schedules: [{ name: "run", cron: "0 * * * *", trigger: () => {} }],
+          }),
+        ]),
+      ).toThrow("Duplicate schedule key");
+    });
+  });
 });

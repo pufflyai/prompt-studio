@@ -6,6 +6,7 @@ import type { PstdioClient } from "@pstdio/sdk/client";
 import { createPluginRuntimeStore } from "./store";
 
 let tempDirs: string[] = [];
+let stores: ReturnType<typeof createPluginRuntimeStore>[] = [];
 
 const createTempDir = () => {
   const dir = mkdtempSync(join(tmpdir(), "pstdio-store-test-"));
@@ -15,7 +16,18 @@ const createTempDir = () => {
 
 const stubClient = () => ({}) as PstdioClient;
 
-afterEach(() => {
+const createTrackedStore = (...args: Parameters<typeof createPluginRuntimeStore>) => {
+  const store = createPluginRuntimeStore(...args);
+  stores.push(store);
+  return store;
+};
+
+afterEach(async () => {
+  for (const store of stores) {
+    await store.dispose();
+  }
+  stores = [];
+
   for (const dir of tempDirs) {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -24,7 +36,7 @@ afterEach(() => {
 
 describe("createPluginRuntimeStore", () => {
   test("returns empty runtime when repo path resolves to null", async () => {
-    const store = createPluginRuntimeStore({
+    const store = createTrackedStore({
       resolveRepoPath: async () => null,
       createClient: stubClient,
     });
@@ -38,7 +50,7 @@ describe("createPluginRuntimeStore", () => {
     const repoPath = createTempDir();
     let resolveCount = 0;
 
-    const store = createPluginRuntimeStore({
+    const store = createTrackedStore({
       resolveRepoPath: async () => {
         resolveCount++;
         return repoPath;
@@ -56,7 +68,7 @@ describe("createPluginRuntimeStore", () => {
     const repoPath = createTempDir();
     let resolveCount = 0;
 
-    const store = createPluginRuntimeStore({
+    const store = createTrackedStore({
       resolveRepoPath: async () => {
         resolveCount++;
         return repoPath;
@@ -74,7 +86,7 @@ describe("createPluginRuntimeStore", () => {
     const repoPath = createTempDir();
     let resolveCount = 0;
 
-    const store = createPluginRuntimeStore({
+    const store = createTrackedStore({
       resolveRepoPath: async () => {
         resolveCount++;
         return repoPath;
@@ -104,7 +116,7 @@ describe("createPluginRuntimeStore", () => {
       };`,
     );
 
-    const store = createPluginRuntimeStore({
+    const store = createTrackedStore({
       resolveRepoPath: async () => repoPath,
       createClient: stubClient,
     });
