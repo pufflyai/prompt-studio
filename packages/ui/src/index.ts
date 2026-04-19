@@ -71,7 +71,7 @@ export type {
   TicketBoardItem,
 } from "./components/tickets/ticket-board";
 export { TicketBoard } from "./components/tickets/ticket-board";
-export type { TicketCardBadge } from "./components/tickets/ticket-card";
+export type { TicketCardBadge, TicketCardTagBadge } from "./components/tickets/ticket-card";
 export { TicketCard } from "./components/tickets/ticket-card";
 export type { TicketListItem } from "./components/tickets/ticket-list";
 export { TicketList } from "./components/tickets/ticket-list";
@@ -89,6 +89,9 @@ export type {
   WorkspaceOption,
   WorkspaceOrdering,
   WorkspaceSettings,
+  WorkspaceTag,
+  WorkspaceTagDefinition,
+  WorkspaceTagOption,
   WorkspaceTicket,
 } from "./components/tickets/types";
 export { useTicketsWorkspaceStore } from "./components/tickets/use-workspace-store";

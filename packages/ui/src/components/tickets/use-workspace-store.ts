@@ -2,7 +2,14 @@ import { useStore } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
 
-import { DEFAULT_WORKSPACE_SETTINGS, type FilterCategory, type FilterState, type WorkspaceSettings } from "./types";
+import {
+  DEFAULT_WORKSPACE_SETTINGS,
+  type DisplayProperty,
+  type FilterCategory,
+  type FilterState,
+  type WorkspaceSettings,
+} from "./types";
+import { omitFilterCategory } from "./workspace-helpers";
 
 interface WorkspaceSnapshot {
   settings: WorkspaceSettings;
@@ -126,22 +133,18 @@ export const createTicketsWorkspaceStore = (options: CreateTicketsWorkspaceStore
           set((state) => {
             const currentValues = state.filters[category] ?? [];
             const nextValues = toggleValue(currentValues, value);
-            const nextFilters = { ...state.filters, [category]: nextValues };
-
-            if (nextValues.length === 0) {
-              delete nextFilters[category];
-            }
+            const nextFilters =
+              nextValues.length === 0
+                ? omitFilterCategory(state.filters, category)
+                : { ...state.filters, [category]: nextValues };
 
             return { ...state, filters: nextFilters };
           }),
         clearFilter: (category) =>
           set((state) => {
-            const nextFilters = { ...state.filters };
-            delete nextFilters[category];
-
             return {
               ...state,
-              filters: nextFilters,
+              filters: omitFilterCategory(state.filters, category),
             };
           }),
         clearAllFilters: () => set((state) => ({ ...state, filters: {} })),
@@ -149,6 +152,27 @@ export const createTicketsWorkspaceStore = (options: CreateTicketsWorkspaceStore
       }),
       {
         name: toStorageName(storageKey),
+        version: 1,
+        migrate: (persisted, version) => {
+          if (version === 0) {
+            const state = persisted as WorkspaceSnapshot;
+            // Remove legacy "labels" filter category
+            const filters = { ...state.filters };
+            delete (filters as Record<string, unknown>).labels;
+
+            // Remove legacy "labels" display property
+            const displayProperties = state.settings.displayProperties.filter(
+              (p) => p !== ("labels" as DisplayProperty),
+            );
+
+            return {
+              ...state,
+              settings: { ...state.settings, displayProperties },
+              filters,
+            };
+          }
+          return persisted as WorkspaceSnapshot;
+        },
         storage: createJSONStorage(() => {
           if (typeof globalThis.localStorage === "undefined") {
             return createNoopStorage();

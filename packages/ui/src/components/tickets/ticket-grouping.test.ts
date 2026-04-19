@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
 import { countFilterValues, filterTickets, groupTickets, orderTickets } from "./ticket-grouping";
-import type { WorkspaceTicket } from "./types";
+import type { WorkspaceTagDefinition, WorkspaceTicket } from "./types";
 
 const tickets: WorkspaceTicket[] = [
   {
@@ -10,7 +10,7 @@ const tickets: WorkspaceTicket[] = [
     title: "Alpha",
     status: "todo",
     assignee: "Alice",
-    labels: ["frontend"],
+    tags: [{ name: "component", value: "frontend" }],
     updatedAt: "2026-03-10T00:00:00.000Z",
   },
   {
@@ -19,7 +19,10 @@ const tickets: WorkspaceTicket[] = [
     title: "Beta",
     status: "in_progress",
     assignee: "Bob",
-    labels: ["backend", "api"],
+    tags: [
+      { name: "component", value: "backend" },
+      { name: "priority", value: "high" },
+    ],
     updatedAt: "2026-03-11T00:00:00.000Z",
   },
   {
@@ -28,7 +31,7 @@ const tickets: WorkspaceTicket[] = [
     title: "Gamma",
     status: "todo",
     assignee: null,
-    labels: [],
+    tags: [],
     updatedAt: "2026-03-12T00:00:00.000Z",
   },
 ];
@@ -61,6 +64,15 @@ describe("groupTickets", () => {
     expect(groups.map((g) => g.key)).toEqual(["done", "in_progress", "todo"]);
     expect(groups[0]?.tickets.length).toBe(0);
   });
+
+  it("groups by tag field", () => {
+    const groups = groupTickets(tickets, { columnGrouping: "tag:component", rowGrouping: "none" });
+
+    expect(groups.map((g) => g.key)).toEqual(["backend", "frontend", "No component"]);
+    expect(groups[0]?.tickets.length).toBe(1);
+    expect(groups[1]?.tickets.length).toBe(1);
+    expect(groups[2]?.tickets.length).toBe(1);
+  });
 });
 
 describe("orderTickets", () => {
@@ -74,6 +86,62 @@ describe("orderTickets", () => {
     const ordered = orderTickets(tickets, { field: "updated", direction: "desc" });
 
     expect(ordered.map((ticket) => ticket.ticketId)).toEqual(["PS-3", "PS-2", "PS-1"]);
+  });
+
+  it("orders by tag field using lexical fallback without definitions", () => {
+    const ordered = orderTickets(tickets, { field: "tag:component", direction: "asc" });
+
+    expect(ordered.map((ticket) => ticket.ticketId)).toEqual(["PS-3", "PS-2", "PS-1"]);
+  });
+
+  it("orders by tag field using predefined definition order", () => {
+    const tagDefs: WorkspaceTagDefinition[] = [
+      {
+        name: "priority",
+        label: "Priority",
+        options: [
+          { value: "high", label: "High" },
+          { value: "medium", label: "Medium" },
+          { value: "low", label: "Low" },
+        ],
+      },
+    ];
+
+    const priorityTickets: WorkspaceTicket[] = [
+      { id: "a", ticketId: "PS-A", title: "A", tags: [{ name: "priority", value: "low" }] },
+      { id: "b", ticketId: "PS-B", title: "B", tags: [{ name: "priority", value: "high" }] },
+      { id: "c", ticketId: "PS-C", title: "C", tags: [{ name: "priority", value: "medium" }] },
+      { id: "d", ticketId: "PS-D", title: "D", tags: [] },
+    ];
+
+    const ordered = orderTickets(priorityTickets, { field: "tag:priority", direction: "asc" }, tagDefs);
+
+    // high (0) → medium (1) → low (2) → untagged (last)
+    expect(ordered.map((t) => t.ticketId)).toEqual(["PS-B", "PS-C", "PS-A", "PS-D"]);
+  });
+
+  it("places unknown tag values after defined options", () => {
+    const tagDefs: WorkspaceTagDefinition[] = [
+      {
+        name: "priority",
+        label: "Priority",
+        options: [
+          { value: "high", label: "High" },
+          { value: "medium", label: "Medium" },
+          { value: "low", label: "Low" },
+        ],
+      },
+    ];
+
+    const priorityTickets: WorkspaceTicket[] = [
+      { id: "a", ticketId: "PS-A", title: "A", tags: [{ name: "priority", value: "high" }] },
+      { id: "b", ticketId: "PS-B", title: "B", tags: [{ name: "priority", value: "urgent" }] },
+      { id: "c", ticketId: "PS-C", title: "C", tags: [{ name: "priority", value: "medium" }] },
+    ];
+
+    const ordered = orderTickets(priorityTickets, { field: "tag:priority", direction: "asc" }, tagDefs);
+
+    expect(ordered.map((t) => t.ticketId)).toEqual(["PS-A", "PS-C", "PS-B"]);
   });
 });
 
@@ -90,13 +158,19 @@ describe("filterTickets", () => {
     expect(filtered.map((ticket) => ticket.ticketId)).toEqual(["PS-1", "PS-3"]);
   });
 
-  it("applies multiple categories", () => {
+  it("applies multiple categories including tag", () => {
     const filtered = filterTickets(tickets, {
       status: ["todo"],
-      labels: ["frontend"],
+      "tag:component": ["frontend"],
     });
 
     expect(filtered.map((ticket) => ticket.ticketId)).toEqual(["PS-1"]);
+  });
+
+  it("filters by tag category", () => {
+    const filtered = filterTickets(tickets, { "tag:component": ["backend"] });
+
+    expect(filtered.map((ticket) => ticket.ticketId)).toEqual(["PS-2"]);
   });
 });
 
@@ -106,5 +180,12 @@ describe("countFilterValues", () => {
 
     expect(counts.todo).toBe(2);
     expect(counts.in_progress).toBe(1);
+  });
+
+  it("counts values by tag category", () => {
+    const counts = countFilterValues(tickets, "tag:component");
+
+    expect(counts.frontend).toBe(1);
+    expect(counts.backend).toBe(1);
   });
 });

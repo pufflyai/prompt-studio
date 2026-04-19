@@ -2,10 +2,20 @@ import { Badge, HStack, Stack, Text, Wrap } from "@chakra-ui/react";
 import type { DragEventHandler } from "react";
 import type { WorkspaceBadgeProps } from "@/components/workspace-badge";
 import { WorkspaceBadge } from "@/components/workspace-badge";
+import { TagBadge } from "./tag-badge";
+import type { WorkspaceTagOption } from "./types";
 
 export interface TicketCardBadge {
   label: string;
   color?: string;
+}
+
+export interface TicketCardTagBadge {
+  tagName: string;
+  label: string;
+  value: string | null;
+  color?: string;
+  options: WorkspaceTagOption[];
 }
 
 interface TicketCardProps {
@@ -13,12 +23,14 @@ interface TicketCardProps {
   parentPath?: string[];
   title: string;
   badges?: TicketCardBadge[];
+  tagBadges?: TicketCardTagBadge[];
   workspaceBadge?: WorkspaceBadgeProps;
   isSelected?: boolean;
   draggable?: boolean;
   onDragStart?: DragEventHandler<HTMLDivElement>;
   onDragEnd?: DragEventHandler<HTMLDivElement>;
   onClick?: () => void;
+  onTagChange?: (tagName: string, newValue: string) => void;
 }
 
 export const TicketCard = (props: TicketCardProps) => {
@@ -27,13 +39,17 @@ export const TicketCard = (props: TicketCardProps) => {
     parentPath = [],
     title,
     badges = [],
+    tagBadges = [],
     workspaceBadge,
     isSelected = false,
     draggable,
     onDragStart,
     onDragEnd,
     onClick,
+    onTagChange,
   } = props;
+
+  const hasBadges = badges.length > 0 || tagBadges.length > 0;
 
   return (
     <Stack
@@ -76,12 +92,22 @@ export const TicketCard = (props: TicketCardProps) => {
         </Text>
       </HStack>
 
-      {badges.length > 0 && (
+      {hasBadges && (
         <Wrap gap="2xs">
           {badges.map((badge) => (
             <Badge key={badge.label} variant="subtle" colorPalette={badge.color ?? "gray"} textStyle="label/XS/medium">
               {badge.label}
             </Badge>
+          ))}
+          {tagBadges.map((tag) => (
+            <TagBadge
+              key={tag.tagName}
+              value={tag.value}
+              label={tag.label}
+              color={tag.value ? tag.color : "gray"}
+              options={tag.options}
+              onValueChange={onTagChange ? (newValue) => onTagChange(tag.tagName, newValue) : undefined}
+            />
           ))}
         </Wrap>
       )}

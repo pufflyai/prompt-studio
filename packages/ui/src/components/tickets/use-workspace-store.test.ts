@@ -95,4 +95,32 @@ describe("createTicketsWorkspaceStore", () => {
     expect(secondStore.getState().settings.columnGrouping).toBe("assignee");
     expect(secondStore.getState().filters.status).toEqual(["todo"]);
   });
+
+  it("migrates legacy labels filter and display property from v0", () => {
+    const legacyState = {
+      state: {
+        settings: {
+          viewMode: "board",
+          columnGrouping: "status",
+          rowGrouping: "none",
+          ordering: { field: "manual", direction: "asc" },
+          displayProperties: ["labels", "status"],
+        },
+        filters: {
+          status: ["todo"],
+          labels: ["frontend"],
+        },
+      },
+      version: 0,
+    };
+
+    globalThis.localStorage.setItem(`pstdio/ui/tickets-workspace/${STORAGE_KEY}`, JSON.stringify(legacyState));
+
+    const store = createTicketsWorkspaceStore({ storageKey: STORAGE_KEY });
+
+    expect(store.getState().filters).not.toHaveProperty("labels");
+    expect(store.getState().filters.status).toEqual(["todo"]);
+    expect(store.getState().settings.displayProperties).not.toContain("labels");
+    expect(store.getState().settings.displayProperties).toContain("status");
+  });
 });

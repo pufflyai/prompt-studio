@@ -3,7 +3,29 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { expect, fireEvent, userEvent, within } from "storybook/test";
 import { TicketsWorkspace } from "./tickets-workspace";
-import type { WorkspaceTicket } from "./types";
+import type { WorkspaceTagDefinition, WorkspaceTicket } from "./types";
+
+const tagDefinitions: WorkspaceTagDefinition[] = [
+  {
+    name: "component",
+    label: "Component",
+    options: [
+      { value: "backend", label: "Backend", color: "blue" },
+      { value: "frontend", label: "Frontend", color: "purple" },
+      { value: "devops", label: "DevOps", color: "orange" },
+      { value: "docs", label: "Docs", color: "cyan" },
+    ],
+  },
+  {
+    name: "priority",
+    label: "Priority",
+    options: [
+      { value: "high", label: "High", color: "red" },
+      { value: "medium", label: "Medium", color: "yellow" },
+      { value: "low", label: "Low", color: "green" },
+    ],
+  },
+];
 
 const tickets: WorkspaceTicket[] = [
   {
@@ -13,7 +35,10 @@ const tickets: WorkspaceTicket[] = [
     status: "todo",
     statusColor: "gray",
     assignee: "Alex",
-    labels: ["backend", "auth"],
+    tags: [
+      { name: "component", value: "backend" },
+      { name: "priority", value: "high" },
+    ],
     updatedAt: "2026-03-15T12:00:00.000Z",
   },
   {
@@ -23,7 +48,10 @@ const tickets: WorkspaceTicket[] = [
     status: "in_progress",
     statusColor: "blue",
     assignee: "Sam",
-    labels: ["frontend"],
+    tags: [
+      { name: "component", value: "frontend" },
+      { name: "priority", value: "medium" },
+    ],
     updatedAt: "2026-03-16T12:00:00.000Z",
   },
   {
@@ -33,7 +61,7 @@ const tickets: WorkspaceTicket[] = [
     status: "done",
     statusColor: "green",
     assignee: "Taylor",
-    labels: ["docs"],
+    tags: [{ name: "component", value: "docs" }],
     updatedAt: "2026-03-17T12:00:00.000Z",
   },
   {
@@ -43,7 +71,10 @@ const tickets: WorkspaceTicket[] = [
     status: "todo",
     statusColor: "gray",
     assignee: "Sam",
-    labels: ["backend", "database"],
+    tags: [
+      { name: "component", value: "backend" },
+      { name: "priority", value: "medium" },
+    ],
     updatedAt: "2026-03-14T10:00:00.000Z",
   },
   {
@@ -53,7 +84,10 @@ const tickets: WorkspaceTicket[] = [
     status: "in_progress",
     statusColor: "blue",
     assignee: "Alex",
-    labels: ["frontend", "search"],
+    tags: [
+      { name: "component", value: "frontend" },
+      { name: "priority", value: "high" },
+    ],
     updatedAt: "2026-03-18T08:00:00.000Z",
   },
   {
@@ -63,7 +97,7 @@ const tickets: WorkspaceTicket[] = [
     status: "done",
     statusColor: "green",
     assignee: "Jordan",
-    labels: ["devops"],
+    tags: [{ name: "component", value: "devops" }],
     updatedAt: "2026-03-13T14:00:00.000Z",
   },
   {
@@ -73,7 +107,10 @@ const tickets: WorkspaceTicket[] = [
     status: "todo",
     statusColor: "gray",
     assignee: "Jordan",
-    labels: ["backend", "observability"],
+    tags: [
+      { name: "component", value: "backend" },
+      { name: "priority", value: "low" },
+    ],
     updatedAt: "2026-03-12T09:00:00.000Z",
   },
   {
@@ -83,7 +120,10 @@ const tickets: WorkspaceTicket[] = [
     status: "in_progress",
     statusColor: "blue",
     assignee: "Taylor",
-    labels: ["frontend", "ux"],
+    tags: [
+      { name: "component", value: "frontend" },
+      { name: "priority", value: "high" },
+    ],
     updatedAt: "2026-03-19T11:00:00.000Z",
   },
   {
@@ -93,7 +133,10 @@ const tickets: WorkspaceTicket[] = [
     status: "todo",
     statusColor: "gray",
     assignee: "Alex",
-    labels: ["backend", "security"],
+    tags: [
+      { name: "component", value: "backend" },
+      { name: "priority", value: "medium" },
+    ],
     updatedAt: "2026-03-11T16:00:00.000Z",
   },
   {
@@ -103,7 +146,10 @@ const tickets: WorkspaceTicket[] = [
     status: "done",
     statusColor: "green",
     assignee: "Sam",
-    labels: ["frontend", "ux"],
+    tags: [
+      { name: "component", value: "frontend" },
+      { name: "priority", value: "low" },
+    ],
     updatedAt: "2026-03-10T13:00:00.000Z",
   },
 ];
@@ -133,16 +179,32 @@ const WorkspaceWrapper = (props: { listOnly?: boolean }) => {
     );
   };
 
+  const handleTagChange = (ticketId: string, tagName: string, newValue: string) => {
+    setWorkspaceTickets((current) =>
+      current.map((ticket) => {
+        if (ticket.id !== ticketId) return ticket;
+        const existing = ticket.tags ?? [];
+        const hasTag = existing.some((tag) => tag.name === tagName);
+        const tags = hasTag
+          ? existing.map((tag) => (tag.name === tagName ? { ...tag, value: newValue } : tag))
+          : [...existing, { name: tagName, value: newValue }];
+        return { ...ticket, tags };
+      }),
+    );
+  };
+
   return (
     <Box p="sm" height="560px">
       <TicketsWorkspace
         tickets={props.listOnly ? [] : workspaceTickets}
         storageKey="storybook-workspace"
+        tagDefinitions={tagDefinitions}
         knownColumnKeys={["todo", "in_progress", "done"]}
         selectedTicketId={selectedTicketId}
         onTicketClick={(ticket) => setSelectedTicketId(ticket.id)}
         onMoveTicket={handleMoveTicket}
         onMoveToGroup={handleMoveToGroup}
+        onTagChange={handleTagChange}
         getBoardColumnConfig={(groupKey) => ({
           color: groupKey === "done" ? "green" : groupKey === "in_progress" ? "blue" : "gray",
           canDragIn: true,
@@ -245,6 +307,41 @@ const dragCard = (canvas: ReturnType<typeof within>, title: string, targetTestId
   fireEvent.dragOver(target, { dataTransfer });
   fireEvent.drop(target, { dataTransfer });
   fireEvent.dragEnd(card, { dataTransfer });
+};
+
+const enableTagDisplay = async (canvas: ReturnType<typeof within>, tagLabel: string) => {
+  await userEvent.click(canvas.getByLabelText("Display settings"));
+  await userEvent.click(within(document.body).getByText(tagLabel));
+};
+
+export const InlineTagEdit: Story = {
+  render: () => <WorkspaceWrapper />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    // Enable Component tag display
+    await enableTagDisplay(canvas, "Component");
+
+    // "Set up API authentication" in the "todo" column has component=backend
+    const todoColumn = canvas.getByTestId("board-column-todo");
+    const backendBadge = within(todoColumn).getAllByText("Backend")[0]!;
+
+    // Click the badge to open the dropdown
+    await userEvent.click(backendBadge);
+
+    // Select "Frontend" from the dropdown
+    const menuItems = within(document.body).getAllByText("Frontend");
+    const dropdownItem = menuItems[menuItems.length - 1]!;
+    await userEvent.click(dropdownItem);
+
+    // The badge should now read "Frontend"
+    const card = canvas.getByText("Set up API authentication").closest("[data-testid='ticket-card']");
+    if (!(card instanceof HTMLElement)) {
+      throw new Error("Expected ticket card element to exist");
+    }
+    await expect(within(card).getByText("Frontend")).toBeInTheDocument();
+    await expect(within(card).queryByText("Backend")).not.toBeInTheDocument();
+  },
 };
 
 export const EmptyColumnPersists: Story = {

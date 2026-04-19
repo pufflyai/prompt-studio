@@ -1,4 +1,13 @@
-import type { FilterCategory, FilterState, GroupingField, WorkspaceOrdering, WorkspaceTicket } from "./types";
+import {
+  type FilterCategory,
+  type FilterState,
+  type GroupingField,
+  isTagKey,
+  toTagName,
+  type WorkspaceOrdering,
+  type WorkspaceTagDefinition,
+  type WorkspaceTicket,
+} from "./types";
 
 interface GroupingOptions {
   columnGrouping: GroupingField;
@@ -19,7 +28,7 @@ interface TicketColumnGroup {
   rows: TicketRowGroup[];
 }
 
-const FALLBACK_LABELS: Record<Exclude<GroupingField, "none">, string> = {
+const FALLBACK_LABELS: Record<string, string> = {
   status: "No status",
   assignee: "Unassigned",
 };
@@ -32,16 +41,29 @@ const normalize = (value: string | null | undefined, fallback: string) => {
   return value;
 };
 
+const getTagValue = (ticket: WorkspaceTicket, tagName: string) =>
+  ticket.tags?.find((tag) => tag.name === tagName)?.value ?? null;
+
 const getGroupingValue = (ticket: WorkspaceTicket, grouping: GroupingField) => {
   if (grouping === "none") {
     return "All";
   }
 
   if (grouping === "status") {
-    return normalize(ticket.status, FALLBACK_LABELS.status);
+    return normalize(ticket.status, FALLBACK_LABELS.status!);
   }
 
-  return normalize(ticket.assignee, FALLBACK_LABELS.assignee);
+  if (grouping === "assignee") {
+    return normalize(ticket.assignee, FALLBACK_LABELS.assignee!);
+  }
+
+  if (isTagKey(grouping)) {
+    const tagName = toTagName(grouping);
+    const fallback = FALLBACK_LABELS[grouping] ?? `No ${tagName}`;
+    return normalize(getTagValue(ticket, tagName), fallback);
+  }
+
+  return "All";
 };
 
 const compareGroupKey = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
@@ -49,7 +71,11 @@ const compareGroupKey = (a: string, b: string) => a.localeCompare(b, undefined, 
 const orderByDirection = (value: number, direction: WorkspaceOrdering["direction"]) =>
   direction === "asc" ? value : value * -1;
 
-export const orderTickets = (tickets: WorkspaceTicket[], ordering: WorkspaceOrdering) => {
+export const orderTickets = (
+  tickets: WorkspaceTicket[],
+  ordering: WorkspaceOrdering,
+  tagDefinitions: WorkspaceTagDefinition[] = [],
+) => {
   if (ordering.field === "manual") {
     return tickets;
   }
@@ -63,6 +89,33 @@ export const orderTickets = (tickets: WorkspaceTicket[], ordering: WorkspaceOrde
 
     if (ordering.field === "title") {
       return orderByDirection(a.title.localeCompare(b.title), ordering.direction);
+    }
+
+    if (isTagKey(ordering.field)) {
+      const tagName = toTagName(ordering.field);
+      const def = tagDefinitions.find((d) => d.name === tagName);
+      const leftVal = getTagValue(a, tagName);
+      const rightVal = getTagValue(b, tagName);
+
+      if (def) {
+        const toOptionIndex = (value: string | null) => {
+          if (value === null) {
+            return def.options.length;
+          }
+
+          const index = def.options.findIndex((o) => o.value === value);
+          return index === -1 ? def.options.length + 1 : index;
+        };
+
+        const leftIndex = toOptionIndex(leftVal);
+        const rightIndex = toOptionIndex(rightVal);
+        return orderByDirection(leftIndex - rightIndex, ordering.direction);
+      }
+
+      return orderByDirection(
+        (leftVal ?? "").localeCompare(rightVal ?? "", undefined, { numeric: true }),
+        ordering.direction,
+      );
     }
 
     return orderByDirection(a.ticketId.localeCompare(b.ticketId, undefined, { numeric: true }), ordering.direction);
@@ -121,16 +174,22 @@ export const groupTickets = (tickets: WorkspaceTicket[], options: GroupingOption
   });
 };
 
-const getTicketFilterValues = (ticket: WorkspaceTicket, category: FilterCategory) => {
-  if (category === "labels") {
-    return ticket.labels ?? [];
-  }
-
+const getTicketFilterValues = (ticket: WorkspaceTicket, category: FilterCategory): string[] => {
   if (category === "status") {
-    return [normalize(ticket.status, FALLBACK_LABELS.status)];
+    return [normalize(ticket.status, FALLBACK_LABELS.status!)];
   }
 
-  return [normalize(ticket.assignee, FALLBACK_LABELS.assignee)];
+  if (category === "assignee") {
+    return [normalize(ticket.assignee, FALLBACK_LABELS.assignee!)];
+  }
+
+  if (isTagKey(category)) {
+    const tagName = toTagName(category);
+    const value = getTagValue(ticket, tagName);
+    return value ? [value] : [];
+  }
+
+  return [];
 };
 
 export const filterTickets = (tickets: WorkspaceTicket[], filters: FilterState) => {

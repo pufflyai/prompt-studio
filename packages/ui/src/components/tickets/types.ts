@@ -1,14 +1,14 @@
 export type ViewMode = "board" | "list";
 
-export type GroupingField = "status" | "assignee" | "none";
+export type GroupingField = "status" | "assignee" | "none" | `tag:${string}`;
 
-export type OrderingField = "manual" | "updated" | "title" | "ticketId";
+export type OrderingField = "manual" | "updated" | "title" | "ticketId" | `tag:${string}`;
 
 export type SortDirection = "asc" | "desc";
 
-export type DisplayProperty = "id" | "status" | "assignee" | "labels" | "updated";
+export type DisplayProperty = "id" | "status" | "assignee" | "updated" | `tag:${string}`;
 
-export type FilterCategory = "status" | "assignee" | "labels";
+export type FilterCategory = "status" | "assignee" | `tag:${string}`;
 
 export interface WorkspaceOrdering {
   field: OrderingField;
@@ -41,6 +41,23 @@ export interface WorkspaceFilterCategory {
   options: WorkspaceFilterOption[];
 }
 
+export interface WorkspaceTagOption {
+  value: string;
+  label: string;
+  color?: string;
+}
+
+export interface WorkspaceTagDefinition {
+  name: string;
+  label: string;
+  options: WorkspaceTagOption[];
+}
+
+export interface WorkspaceTag {
+  name: string;
+  value: string;
+}
+
 export interface WorkspaceTicket {
   id: string;
   ticketId: string;
@@ -48,7 +65,7 @@ export interface WorkspaceTicket {
   status?: string | null;
   statusColor?: string;
   assignee?: string | null;
-  labels?: string[];
+  tags?: WorkspaceTag[];
   updatedAt?: string | null;
   parentPath?: string[];
   isSubIssue?: boolean;
@@ -62,7 +79,7 @@ export const DEFAULT_WORKSPACE_SETTINGS: WorkspaceSettings = {
     field: "manual",
     direction: "asc",
   },
-  displayProperties: ["labels"],
+  displayProperties: [],
 };
 
 export const DEFAULT_GROUPING_OPTIONS: WorkspaceOption<GroupingField>[] = [
@@ -82,6 +99,9 @@ export const DEFAULT_DISPLAY_PROPERTY_OPTIONS: WorkspaceOption<DisplayProperty>[
   { value: "id", label: "ID" },
   { value: "status", label: "Status" },
   { value: "assignee", label: "Assignee" },
-  { value: "labels", label: "Labels" },
   { value: "updated", label: "Updated" },
 ];
+
+export const isTagKey = (key: string): key is `tag:${string}` => key.startsWith("tag:");
+
+export const toTagName = (key: `tag:${string}`) => key.slice(4);

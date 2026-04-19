@@ -4,6 +4,7 @@ import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { FilterMenu } from "./filter-menu";
 import type { FilterState, WorkspaceFilterCategory } from "./types";
+import { omitFilterCategory } from "./workspace-helpers";
 
 const categories: WorkspaceFilterCategory[] = [
   {
@@ -42,21 +43,13 @@ const Wrapper = () => {
           setFilters((current) => {
             const values = current[category] ?? [];
             const nextValues = values.includes(value) ? values.filter((entry) => entry !== value) : [...values, value];
-            const next = { ...current, [category]: nextValues };
-
-            if (nextValues.length === 0) {
-              delete next[category];
-            }
-
-            return next;
+            return nextValues.length === 0
+              ? omitFilterCategory(current, category)
+              : { ...current, [category]: nextValues };
           });
         }}
         onClearFilter={(category) => {
-          setFilters((current) => {
-            const next = { ...current };
-            delete next[category];
-            return next;
-          });
+          setFilters((current) => omitFilterCategory(current, category));
         }}
         onClearAll={() => setFilters({})}
       />

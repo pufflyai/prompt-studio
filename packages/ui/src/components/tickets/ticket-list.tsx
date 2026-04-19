@@ -10,8 +10,8 @@ import {
 } from "@tanstack/react-table";
 import { ChevronRight } from "lucide-react";
 import { type ComponentType, type ReactNode, useState } from "react";
-
-import type { TicketCardBadge } from "./ticket-card";
+import { TagBadge } from "./tag-badge";
+import type { TicketCardBadge, TicketCardTagBadge } from "./ticket-card";
 
 export interface TicketListItem {
   id: string;
@@ -20,10 +20,12 @@ export interface TicketListItem {
   statusIcon?: ComponentType<{ size?: number | string }>;
   statusColor?: string;
   badges?: TicketCardBadge[];
+  tagBadges?: TicketCardTagBadge[];
   date?: string;
   assigneeIcon?: ReactNode;
   children?: TicketListItem[];
   onClick?: () => void;
+  onTagChange?: (tagName: string, newValue: string) => void;
 }
 
 interface TicketListProps {
@@ -117,12 +119,22 @@ const TicketCell = (props: TicketCellProps) => {
         {item.title}
       </Text>
 
-      {item.badges && item.badges.length > 0 && (
+      {((item.badges && item.badges.length > 0) || (item.tagBadges && item.tagBadges.length > 0)) && (
         <Wrap gap="2xs" flexShrink={0}>
-          {item.badges.map((badge) => (
+          {item.badges?.map((badge) => (
             <Badge key={badge.label} variant="subtle" colorPalette={badge.color ?? "gray"} textStyle="label/XS/medium">
               {badge.label}
             </Badge>
+          ))}
+          {item.tagBadges?.map((tag) => (
+            <TagBadge
+              key={tag.tagName}
+              value={tag.value}
+              label={tag.label}
+              color={tag.value ? tag.color : "gray"}
+              options={tag.options}
+              onValueChange={item.onTagChange ? (newValue) => item.onTagChange!(tag.tagName, newValue) : undefined}
+            />
           ))}
         </Wrap>
       )}

@@ -10,7 +10,6 @@ import {
   type TicketBoardColumnAction,
   type TicketBoardGroup,
 } from "./ticket-board";
-import type { TicketCardBadge } from "./ticket-card";
 import { countFilterValues, filterTickets, groupTickets, orderTickets } from "./ticket-grouping";
 import { TicketList, type TicketListItem } from "./ticket-list";
 import {
@@ -18,14 +17,15 @@ import {
   DEFAULT_GROUPING_OPTIONS,
   DEFAULT_ORDERING_OPTIONS,
   type DisplayProperty,
-  type FilterCategory,
   type GroupingField,
   type OrderingField,
   type WorkspaceFilterCategory,
   type WorkspaceOption,
+  type WorkspaceTagDefinition,
   type WorkspaceTicket,
 } from "./types";
 import { useTicketsWorkspaceStore } from "./use-workspace-store";
+import { buildDefaultFilterCategories, buildTagOptions, toBadges, toTagBadges, toTitleCase } from "./workspace-helpers";
 
 interface BoardColumnConfig {
   color?: string;
@@ -38,6 +38,7 @@ interface BoardColumnConfig {
 interface TicketsWorkspaceProps<TTicket extends WorkspaceTicket = WorkspaceTicket> {
   tickets: TTicket[];
   storageKey: string;
+  tagDefinitions?: WorkspaceTagDefinition[];
   selectedTicketId?: string | null;
   groupingOptions?: WorkspaceOption<GroupingField>[];
   orderingOptions?: WorkspaceOption<OrderingField>[];
@@ -47,6 +48,7 @@ interface TicketsWorkspaceProps<TTicket extends WorkspaceTicket = WorkspaceTicke
   emptyTitle?: string;
   emptyDescription?: string;
   onTicketClick?: (ticket: TTicket) => void;
+  onTagChange?: (ticketId: string, tagName: string, newValue: string) => void;
   onMoveTicket?: (ticketId: string, targetColumnId: string) => void;
   onMoveToGroup?: (ticketId: string, targetGroupKey: string) => void;
   onCreateTicket?: (columnId: string) => void;
@@ -54,87 +56,36 @@ interface TicketsWorkspaceProps<TTicket extends WorkspaceTicket = WorkspaceTicke
   getBoardColumnConfig?: (groupKey: string) => BoardColumnConfig;
 }
 
-const toTitleCase = (value: string) =>
-  value
-    .replaceAll("_", " ")
-    .split(" ")
-    .filter((chunk) => chunk.length > 0)
-    .map((chunk) => chunk[0]!.toUpperCase() + chunk.slice(1))
-    .join(" ");
-
-const filterValueGetters: Record<FilterCategory, (ticket: WorkspaceTicket) => string[]> = {
-  status: (ticket) => (ticket.status ? [ticket.status] : []),
-  assignee: (ticket) => (ticket.assignee ? [ticket.assignee] : []),
-  labels: (ticket) => ticket.labels ?? [],
-};
-
-const collectCategoryOptions = (tickets: WorkspaceTicket[], category: FilterCategory) => {
-  const values = new Set<string>();
-
-  for (const ticket of tickets) {
-    const ticketValues = filterValueGetters[category](ticket);
-    for (const value of ticketValues) {
-      values.add(value);
-    }
-  }
-
-  return [...values]
-    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-    .map((value) => ({ value, label: toTitleCase(value) }));
-};
-
-const buildDefaultFilterCategories = (tickets: WorkspaceTicket[]): WorkspaceFilterCategory[] => {
-  return [
-    { id: "status", label: "Status", options: collectCategoryOptions(tickets, "status") },
-    { id: "assignee", label: "Assignee", options: collectCategoryOptions(tickets, "assignee") },
-    { id: "labels", label: "Labels", options: collectCategoryOptions(tickets, "labels") },
-  ];
-};
-
-const toBadges = (ticket: WorkspaceTicket, displayProperties: DisplayProperty[]): TicketCardBadge[] => {
-  const badges: TicketCardBadge[] = [];
-  const includes = (property: DisplayProperty) => displayProperties.includes(property);
-
-  if (includes("status") && ticket.status) {
-    badges.push({ label: ticket.status, color: ticket.statusColor ?? "gray" });
-  }
-
-  if (includes("assignee") && ticket.assignee) {
-    badges.push({ label: ticket.assignee, color: "blue" });
-  }
-
-  if (includes("updated") && ticket.updatedAt) {
-    badges.push({ label: new Date(ticket.updatedAt).toLocaleDateString(), color: "gray" });
-  }
-
-  if (includes("labels")) {
-    for (const label of ticket.labels ?? []) {
-      badges.push({ label, color: "purple" });
-    }
-  }
-
-  return badges;
-};
-
 export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: TicketsWorkspaceProps<TTicket>) => {
   const {
     tickets,
     storageKey,
+    tagDefinitions = [],
     selectedTicketId = null,
-    groupingOptions = DEFAULT_GROUPING_OPTIONS,
-    orderingOptions = DEFAULT_ORDERING_OPTIONS,
-    displayPropertyOptions = DEFAULT_DISPLAY_PROPERTY_OPTIONS,
+    groupingOptions: groupingOptionsProp,
+    orderingOptions: orderingOptionsProp,
+    displayPropertyOptions: displayPropertyOptionsProp,
     filterCategories,
     knownColumnKeys: knownColumnKeysProp,
     emptyTitle = "No tickets found",
     emptyDescription = "Try changing filters or display settings.",
     onTicketClick,
+    onTagChange,
     onMoveTicket,
     onMoveToGroup,
     onCreateTicket,
     onColumnAction,
     getBoardColumnConfig,
   } = props;
+
+  const tagOptions = buildTagOptions(tagDefinitions);
+
+  const groupingOptions = groupingOptionsProp ?? [...DEFAULT_GROUPING_OPTIONS, ...tagOptions.grouping];
+  const orderingOptions = orderingOptionsProp ?? [...DEFAULT_ORDERING_OPTIONS, ...tagOptions.ordering];
+  const displayPropertyOptions = displayPropertyOptionsProp ?? [
+    ...DEFAULT_DISPLAY_PROPERTY_OPTIONS,
+    ...tagOptions.display,
+  ];
 
   const settings = useTicketsWorkspaceStore(storageKey, (state) => state.settings);
   const filters = useTicketsWorkspaceStore(storageKey, (state) => state.filters);
@@ -150,7 +101,7 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
 
   const visibleTickets = filterTickets(tickets, filters) as TTicket[];
 
-  const categoryOptions = filterCategories ?? buildDefaultFilterCategories(tickets);
+  const categoryOptions = filterCategories ?? buildDefaultFilterCategories(tickets, tagDefinitions);
 
   const countsByCategory = Object.fromEntries(
     categoryOptions.map((category) => [category.id, countFilterValues(tickets, category.id)]),
@@ -173,19 +124,23 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
     ticketId: settings.displayProperties.includes("id") ? ticket.ticketId : "",
     title: ticket.title,
     badges: toBadges(ticket, settings.displayProperties),
+    tagBadges: toTagBadges(ticket, settings.displayProperties, tagDefinitions),
     onClick: () => onTicketClick?.(ticket),
+    onTagChange: onTagChange ? (tagName, newValue) => onTagChange(ticket.id, tagName, newValue) : undefined,
   });
 
   const toGroupListItem = (group: { key: string; label: string; tickets: WorkspaceTicket[] }): TicketListItem => ({
     id: `group::${group.key}`,
     ticketId: "",
     title: `${toTitleCase(group.label)} (${group.tickets.length})`,
-    children: orderTickets(group.tickets, settings.ordering).map((ticket) => toListItem(ticket as TTicket)),
+    children: orderTickets(group.tickets, settings.ordering, tagDefinitions).map((ticket) =>
+      toListItem(ticket as TTicket),
+    ),
   });
 
   const listItems: TicketListItem[] =
     settings.columnGrouping === "none"
-      ? orderTickets(visibleTickets, settings.ordering).map((ticket) => toListItem(ticket as TTicket))
+      ? orderTickets(visibleTickets, settings.ordering, tagDefinitions).map((ticket) => toListItem(ticket as TTicket))
       : grouped.map((group) => {
           if (group.rows.length > 0) {
             return {
@@ -209,20 +164,24 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
         parentPath: ticket.parentPath,
         title: ticket.title,
         badges: toBadges(ticket, settings.displayProperties),
+        tagBadges: toTagBadges(ticket, settings.displayProperties, tagDefinitions),
         onClick: () => onTicketClick?.(ticket as TTicket),
+        onTagChange: onTagChange
+          ? (tagName: string, newValue: string) => onTagChange(ticket.id, tagName, newValue)
+          : undefined,
       },
     }));
 
   const boardColumns: TicketBoardColumn[] = grouped.map((column) => {
     const columnConfig = getBoardColumnConfig?.(column.key) ?? {};
-    const orderedTickets = orderTickets(column.tickets, settings.ordering);
+    const orderedTickets = orderTickets(column.tickets, settings.ordering, tagDefinitions);
 
     const groups: TicketBoardGroup[] | undefined =
       column.rows.length > 0
         ? column.rows.map((row) => ({
             key: row.key,
             label: toTitleCase(row.label),
-            items: toBoardItems(orderTickets(row.tickets, settings.ordering)),
+            items: toBoardItems(orderTickets(row.tickets, settings.ordering, tagDefinitions)),
           }))
         : undefined;
 
