@@ -88,4 +88,22 @@ describe("loadPlugins", () => {
     const result = await loadPlugins(dir);
     expect(result[0]!.identity).toBe("actions/review");
   });
+
+  test("fails when a schedule has an invalid cron expression", async () => {
+    const dir = createTempDir();
+    writeFileSync(
+      join(dir, "bad-schedule.ts"),
+      `export default {
+        schedules: [{
+          name: "broken",
+          cron: "0 0 0 * * *",
+          handler() {},
+        }],
+      };`,
+    );
+
+    await expect(loadPlugins(dir)).rejects.toThrow(
+      'Plugin "bad-schedule" schedule "broken" has invalid cron expression: "0 0 0 * * *"',
+    );
+  });
 });

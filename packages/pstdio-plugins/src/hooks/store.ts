@@ -22,6 +22,11 @@ const createEmptyRuntime = (client: PstdioClient): PluginRuntime => {
       list: (targetType) => registry.getActions(targetType),
       get: (namespacedKey) => registry.getAction(namespacedKey),
     },
+    schedules: {
+      list: () => registry.getSchedules(),
+      get: (key) => registry.getSchedule(key),
+      trigger: async () => {},
+    },
   };
 };
 

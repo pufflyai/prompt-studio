@@ -8,7 +8,16 @@ const assertActionTriggers = (plugin: PluginDefinition) => {
   }
 };
 
+const assertScheduleHandlers = (plugin: PluginDefinition) => {
+  for (const schedule of plugin.schedules ?? []) {
+    if (typeof schedule.handler !== "function") {
+      throw new Error(`Schedule "${schedule.name}" is missing handler(ctx)`);
+    }
+  }
+};
+
 export const definePlugin = (plugin: PluginDefinition): PluginDefinition => {
   assertActionTriggers(plugin);
+  assertScheduleHandlers(plugin);
   return plugin;
 };

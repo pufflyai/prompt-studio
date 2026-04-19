@@ -114,4 +114,37 @@ describe("definePlugin", () => {
       }),
     ).toThrow('Action "refine" is missing trigger(ctx)');
   });
+
+  it("accepts schedules with handler", () => {
+    const plugin = definePlugin({
+      key: "scheduled",
+      schedules: [
+        {
+          name: "daily-summary",
+          cron: "0 9 * * *",
+          handler(ctx) {
+            expect(ctx.trigger.type).toBe("schedule");
+            void ctx.projectId;
+          },
+        },
+      ],
+    });
+
+    expect(plugin.schedules).toHaveLength(1);
+    expect(plugin.schedules?.[0]?.name).toBe("daily-summary");
+  });
+
+  it("throws when a schedule is missing handler", () => {
+    expect(() =>
+      definePlugin({
+        key: "bad-schedule",
+        schedules: [
+          {
+            name: "missing",
+            cron: "* * * * *",
+          } as never,
+        ],
+      }),
+    ).toThrow('Schedule "missing" is missing handler(ctx)');
+  });
 });

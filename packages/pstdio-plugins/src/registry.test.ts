@@ -134,4 +134,56 @@ describe("createPluginRegistry", () => {
       ).toThrow("Duplicate action key");
     });
   });
+
+  describe("schedules", () => {
+    test("returns namespaced schedules", () => {
+      const registry = createPluginRegistry([
+        makePlugin("scheduled", {
+          schedules: [
+            {
+              name: "daily",
+              cron: "0 9 * * *",
+              handler() {},
+            },
+          ],
+        }),
+      ]);
+
+      const schedules = registry.getSchedules();
+      expect(schedules).toHaveLength(1);
+      expect(schedules[0]?.key).toBe("scheduled/daily");
+      expect(schedules[0]?.timeoutMs).toBe(30_000);
+    });
+
+    test("throws on duplicate namespaced schedule keys", () => {
+      expect(() =>
+        createPluginRegistry([
+          makePlugin("scheduled", {
+            schedules: [{ name: "daily", cron: "0 9 * * *", handler() {} }],
+          }),
+          makePlugin("scheduled", {
+            schedules: [{ name: "daily", cron: "0 10 * * *", handler() {} }],
+          }),
+        ]),
+      ).toThrow("Duplicate schedule key");
+    });
+
+    test("throws when schedule timeout is zero or negative", () => {
+      expect(() =>
+        createPluginRegistry([
+          makePlugin("scheduled", {
+            schedules: [{ name: "zero", cron: "* * * * *", timeoutMs: 0, handler() {} }],
+          }),
+        ]),
+      ).toThrow('Schedule "scheduled/zero" must define timeoutMs > 0');
+
+      expect(() =>
+        createPluginRegistry([
+          makePlugin("scheduled", {
+            schedules: [{ name: "negative", cron: "* * * * *", timeoutMs: -10, handler() {} }],
+          }),
+        ]),
+      ).toThrow('Schedule "scheduled/negative" must define timeoutMs > 0');
+    });
+  });
 });

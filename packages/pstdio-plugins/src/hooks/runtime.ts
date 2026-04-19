@@ -3,7 +3,7 @@ import type { PstdioClient } from "@pstdio/sdk/client";
 import type { PostPluginHooks, PrePluginHooks } from "@pstdio/sdk/plugins";
 import { loadPlugins } from "../loader";
 import { createPluginRegistry } from "../registry";
-import type { ActionDescriptor, ResolvedAction } from "../types";
+import type { ActionDescriptor, ResolvedAction, ResolvedSchedule, ScheduleTriggerInput } from "../types";
 import { createHookDispatcher, type HookHandler, type PreHookResult } from "./dispatcher";
 
 export type HookRuntime = {
@@ -30,6 +30,11 @@ export type PluginRuntime = {
   actions: {
     list(targetType?: string): ActionDescriptor[];
     get(namespacedKey: string): ResolvedAction | undefined;
+  };
+  schedules: {
+    list(): ResolvedSchedule[];
+    get(key: string): ResolvedSchedule | undefined;
+    trigger(input: ScheduleTriggerInput): Promise<void>;
   };
 };
 
@@ -69,6 +74,22 @@ export const loadPluginRuntime = async (input: {
     actions: {
       list: (targetType) => registry.getActions(targetType),
       get: (namespacedKey) => registry.getAction(namespacedKey),
+    },
+    schedules: {
+      list: () => registry.getSchedules(),
+      get: (key) => registry.getSchedule(key),
+      trigger: async (input) => {
+        const triggerContext = {
+          client,
+          projectId: input.projectId,
+          trigger: { type: "schedule" as const },
+          scheduleName: input.schedule.scheduleName,
+          scheduledFor: input.scheduledFor,
+          runId: input.runId,
+        };
+
+        await input.schedule.handler(triggerContext);
+      },
     },
   };
 };

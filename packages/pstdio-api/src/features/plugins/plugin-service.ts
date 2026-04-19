@@ -4,13 +4,20 @@ import { type ClientOptions, createClient } from "@pstdio/sdk/client";
 import { ensurePluginWorkspace } from "pstdio-plugins";
 import { createPluginRuntimeStore } from "pstdio-plugins/hooks";
 import { scaffoldBundledPlugins } from "../projects/scaffold-bundled-plugins";
+import { createScheduler } from "./plugin-scheduler";
+
+const SCHEDULE_TICK_MS = 60_000;
+const SCHEDULE_WATERMARK_FILE = "plugin-schedule-watermarks.json";
 
 type PluginServiceDeps = {
   repoService: { listByProject: (projectId: string) => Promise<{ path: string }[]> };
+  listProjectIds: () => Promise<string[]>;
   filesRoot: string;
   storageRoot: string;
   ensureWorkspace?: (pstdioDir: string) => Promise<void>;
   clientOptions?: ClientOptions;
+  schedulerTickMs?: number;
+  now?: () => Date;
 };
 
 const resolveProjectPluginWorkspacePath = async (deps: PluginServiceDeps, projectId: string) => {
@@ -22,8 +29,8 @@ const resolveProjectPluginWorkspacePath = async (deps: PluginServiceDeps, projec
   return workspacePath;
 };
 
-export const createPluginService = (deps: PluginServiceDeps) =>
-  createPluginRuntimeStore({
+export const createPluginService = (deps: PluginServiceDeps) => {
+  const runtimeStore = createPluginRuntimeStore({
     resolveRepoPath: async (projectId) => {
       const repos = await deps.repoService.listByProject(projectId);
       if (repos[0]?.path) return repos[0].path;
@@ -33,3 +40,20 @@ export const createPluginService = (deps: PluginServiceDeps) =>
     createClient: () => createClient(deps.clientOptions),
     ensureWorkspace: deps.ensureWorkspace ?? ensurePluginWorkspace,
   });
+
+  const scheduler = createScheduler({
+    runtimeStore,
+    listProjectIds: deps.listProjectIds,
+    tickIntervalMs: deps.schedulerTickMs ?? SCHEDULE_TICK_MS,
+    now: () => deps.now?.() ?? new Date(),
+    watermarkPath: join(deps.storageRoot, SCHEDULE_WATERMARK_FILE),
+  });
+
+  return {
+    ...runtimeStore,
+    async dispose() {
+      await scheduler.dispose();
+      runtimeStore.dispose();
+    },
+  };
+};

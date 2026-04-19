@@ -46,6 +46,8 @@ export type {
   PluginDefinition,
   RepoActionParam,
   RepoParamValue,
+  ScheduleDefinition,
+  ScheduledTriggerContext,
   SelectActionParam,
   TargetType,
   TemplateSelectActionParam,

@@ -32,6 +32,7 @@ describe("createPluginRuntimeStore", () => {
     const runtime = await store.getForProject("project-1");
     expect(runtime.repoPath).toBeNull();
     expect(runtime.actions.list()).toEqual([]);
+    expect(runtime.schedules.list()).toEqual([]);
   });
 
   test("caches runtime per project", async () => {

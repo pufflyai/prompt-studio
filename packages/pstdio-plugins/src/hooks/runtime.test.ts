@@ -150,4 +150,45 @@ describe("loadPluginRuntime", () => {
     // Should not throw
     await runtime.hooks.firePost("postTicketCreation", {} as never);
   });
+
+  test("loads plugin schedules and triggers with schedule context", async () => {
+    const repoPath = createTempDir();
+    const pluginsDir = join(repoPath, ".pstdio", "plugins");
+    mkdirSync(pluginsDir, { recursive: true });
+
+    writeFileSync(
+      join(pluginsDir, "schedule-plugin.ts"),
+      `const calls = [];
+      export { calls };
+      export default {
+        schedules: [{
+          name: "heartbeat",
+          cron: "* * * * *",
+          handler(ctx) {
+            calls.push(ctx);
+          },
+        }],
+      };`,
+    );
+
+    const runtime = await loadPluginRuntime({ repoPath, client: stubClient });
+    const schedule = runtime.schedules.get("schedule-plugin/heartbeat");
+    expect(schedule).toBeDefined();
+
+    await runtime.schedules.trigger({
+      schedule: schedule!,
+      projectId: "project-1",
+      runId: "run-1",
+      scheduledFor: "2026-04-20T09:00:00.000Z",
+    });
+
+    const pluginModule = await import(join(pluginsDir, "schedule-plugin.ts"));
+    const calls = pluginModule.calls as Record<string, unknown>[];
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.trigger).toEqual({ type: "schedule" });
+    expect(calls[0]?.scheduleName).toBe("heartbeat");
+    expect(calls[0]?.scheduledFor).toBe("2026-04-20T09:00:00.000Z");
+    expect(calls[0]?.runId).toBe("run-1");
+    expect(calls[0]?.projectId).toBe("project-1");
+  });
 });

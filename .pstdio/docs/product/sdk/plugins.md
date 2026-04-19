@@ -61,6 +61,7 @@ export default definePlugin({
 type PluginDefinition = {
   actions?: ActionDefinition[]; // UI actions + trigger handlers
   hooks?: PluginHooks; // lifecycle hooks
+  schedules?: ScheduleDefinition[]; // recurring automation
 };
 ```
 
@@ -117,6 +118,38 @@ New projects get a set of default plugins scaffolded to `.pstdio/plugins/`. Thes
 - **ticket-archive-cleanup** — removes all workspaces for a ticket when it is archived.
 - **session-ticket-sync** — moves ticket and workspace attempt status to `wip` when a session starts.
 - **attempt-status-automation** — orchestrates review workflows by creating review sessions, handling change requests, and transitioning ticket status based on attempt status.
+- **scheduled-heartbeat** — demonstrates scheduled execution with a minute-level heartbeat log.
+
+## Schedules
+
+Schedules run recurring handlers without a manual action click:
+
+```ts
+type ScheduleDefinition = {
+  name: string;
+  cron: string; // 5-field cron, UTC
+  timeoutMs?: number; // defaults to 30000
+  handler: (ctx: ScheduledTriggerContext) => void | Promise<void>;
+};
+```
+
+```ts
+type ScheduledTriggerContext = {
+  client: PstdioClient;
+  projectId: string;
+  trigger: { type: "schedule" };
+  scheduleName: string;
+  scheduledFor: string; // ISO UTC minute
+  runId: string;
+};
+```
+
+Runtime behavior:
+
+- cron expressions are validated at plugin load time via `Bun.cron.parse`
+- schedules are evaluated every 60s in UTC
+- one active run per `{projectId}/{pluginIdentity}/{scheduleName}` (overlap is skipped)
+- startup performs one catch-up run for the most recent missed tick per schedule
 
 ## Actions
 

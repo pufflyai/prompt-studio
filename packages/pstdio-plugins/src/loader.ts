@@ -48,6 +48,23 @@ const importPluginModule = async (filePath: string) => {
   }
 };
 
+const assertValidSchedules = (pluginIdentity: string, definition: PluginDefinition) => {
+  for (const schedule of definition.schedules ?? []) {
+    let parsed: Date | null;
+    try {
+      parsed = Bun.cron.parse(schedule.cron);
+    } catch {
+      parsed = null;
+    }
+
+    if (parsed !== null) continue;
+
+    throw new Error(
+      `Plugin "${pluginIdentity}" schedule "${schedule.name}" has invalid cron expression: "${schedule.cron}"`,
+    );
+  }
+};
+
 export const loadPlugins = async (pluginsDir: string) => {
   const files = discoverPluginFiles(pluginsDir);
   if (files.length === 0) return [];
@@ -78,6 +95,7 @@ export const loadPlugins = async (pluginsDir: string) => {
     }
 
     identitySources.set(identity, filePath);
+    assertValidSchedules(identity, definition);
     plugins.push({ identity, filePath, definition });
   }
 
