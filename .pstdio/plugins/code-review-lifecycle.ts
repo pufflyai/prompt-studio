@@ -2,7 +2,7 @@ import {
   createSession,
   definePlugin,
   followupSession,
-  // runCommand,
+  runCommand,
   // setWorkspaceAttemptStatus,
 } from "@pstdio/sdk/plugins";
 
@@ -40,13 +40,19 @@ export default definePlugin({
       if (!ctx.ticket) return;
 
       // ────────────────────────────────────────────────────────
-      // Start a review session when attempt moves to review-ready
+      // Persist ticket edits and artifacts from the worktree, then
+      // start a review session when attempt moves to review-ready.
       // ────────────────────────────────────────────────────────
       if (ctx.toStatus === "review-ready") {
+        if (ctx.worktreePath) {
+          // TODO: CHANGE WITH THE SAVE TICKET SDK COMMAND ONCE AVAILABLE
+          await runCommand(ctx.worktreePath, ["pstdio", "tickets", "save", "--id", ctx.ticket.shorthand]);
+        }
+
         await createSession(ctx, {
           workspace_id: ctx.workspace.id,
           title: `Code review: ${ctx.ticket.shorthand}`,
-          template: "code-review",
+          template: "review-code",
           vars: { ticket: ctx.ticket.shorthand },
           original_session_id: ctx.sessionId,
         });

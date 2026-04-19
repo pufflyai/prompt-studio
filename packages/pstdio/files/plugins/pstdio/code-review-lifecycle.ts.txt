@@ -3,6 +3,7 @@ import {
   definePlugin,
   followupSession,
   runCommand,
+  saveTicket,
   setWorkspaceAttemptStatus,
 } from "@pstdio/sdk/plugins";
 
@@ -38,13 +39,18 @@ export default definePlugin({
       if (!ctx.ticket) return;
 
       // ────────────────────────────────────────────────────────
-      // Start a review session when attempt moves to review-ready
+      // Persist ticket edits and artifacts from the worktree, then
+      // start a review session when attempt moves to review-ready.
       // ────────────────────────────────────────────────────────
       if (ctx.toStatus === "review-ready") {
+        if (ctx.worktreePath) {
+          await saveTicket(ctx, { rootPath: ctx.worktreePath, ticketId: ctx.ticket.shorthand });
+        }
+
         await createSession(ctx, {
           workspace_id: ctx.workspace.id,
           title: `Code review: ${ctx.ticket.shorthand}`,
-          template: "code-review",
+          template: "review-code",
           vars: { ticket: ctx.ticket.shorthand },
           original_session_id: ctx.sessionId,
         });

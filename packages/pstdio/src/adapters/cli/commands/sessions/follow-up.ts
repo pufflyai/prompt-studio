@@ -1,6 +1,6 @@
 import type { Arguments, Argv } from "yargs";
 import { followUpSession as defaultFollowUp } from "@/features/sessions/api/follow-up-session";
-import { parseVars } from "./parse-vars";
+import { parseVars } from "../parse-vars";
 
 export const command = "follow-up";
 export const describe = "Send a follow-up prompt to an existing session";

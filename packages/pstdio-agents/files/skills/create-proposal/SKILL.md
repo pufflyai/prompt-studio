@@ -12,10 +12,10 @@ metadata:
 3. Update the proposal with concrete, testable statements.
 4. Identify touch points throughout the project and track them in the proposal sections.
 5. Track missing information with [MISSING INFORMATION] tags in the ticket.
-6. (OPTIONAL) If the change affects a public surface (API, SDK, CLI), run `pstdio templates write --name "cookbook" --target "<shorthand>"` to scaffold `cookbook.md`.
-7. (OPTIONAL) If implementing the change requires knowledge of an API, DB schema, etc., encode this in a `contracts.md` or `schemas.md` file in the ticket folder.
-8. (OPTIONAL) For complex tickets requiring deep understanding of the system, track relevant additional information in a `research.md` file in the ticket folder.
-9. (OPTIONAL) For decisions with lasting architectural impact or important tradeoffs, run `pstdio templates write --name "adr" --target "<shorthand>"` to scaffold `adr.md`.
+6. (OPTIONAL) If the change affects a public surface (API, SDK, CLI), run `pstdio templates write --name "cookbook" --target ".pstdio/tickets/<shorthand>/cookbook.md"` to scaffold `cookbook.md`.
+7. (OPTIONAL) If implementing the change requires knowledge of an API, run `pstdio templates write --name "contracts" --target ".pstdio/tickets/<shorthand>/contracts.md"` to scaffold `contracts.md`. If it requires knowledge of a DB or data schema, run `pstdio templates write --name "schemas" --target ".pstdio/tickets/<shorthand>/schemas.md"` and document relevant schemas there.
+8. (OPTIONAL) For proposals using external systems, libraries or requiring deep understanding of the system, run `pstdio templates write --name "research" --target ".pstdio/tickets/<shorthand>/research.md"` and document your research there.
+9. (OPTIONAL) For decisions with lasting architectural impact or important tradeoffs, run `pstdio templates write --name "adr" --target ".pstdio/tickets/<shorthand>/adr.md"` to scaffold `adr.md`.
 10. Run `pstdio tickets save --id "<shorthand>"` to persist the proposal.
 
 ## Output Locations

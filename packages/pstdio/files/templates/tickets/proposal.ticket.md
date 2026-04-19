@@ -13,8 +13,6 @@ blocked_reason: ""
 
 [1–3 sentences describing the change and the user-visible outcome.]
 
-[This proposal is maintained inside a ticket artifact and should stay implementation-ready.]
-
 ## Why
 
 [Problem/opportunity + motivation. What’s broken/missing today? Why now?]
@@ -45,7 +43,7 @@ blocked_reason: ""
 
 ## Change Touch Points
 
-- [Exact paths, systems, or components touched]
+- [Product-level surfaces affected — features, user flows, screens, integrations, or capabilities. Not code files or paths.]
 
 ## Assumptions
 

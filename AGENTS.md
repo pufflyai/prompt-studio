@@ -123,7 +123,9 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 
 # Project Planning and Documentation (pstdio)
 
-This project uses `pstdio` to manage tickets and documentation.
+This project uses `pstdio` to manage tickets.
+
+After editing tickets, make sure to save them using `pstdio tickets save --id PS-XXX`
 
 Run `pstdio --help` to learn more.
 

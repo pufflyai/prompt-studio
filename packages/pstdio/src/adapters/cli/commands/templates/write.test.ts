@@ -16,47 +16,35 @@ afterEach(() => {
   rmSync(tmpBase, { recursive: true, force: true });
 });
 
-describe("templates write", () => {
+const makeDeps = (content: string) => ({
+  cwd: () => tmpBase,
+  findGitRoot: () => tmpBase,
+  readConfig: () => ({ project_id: "proj-1" }),
+  getTemplate: async () =>
+    ({
+      id: "tpl-1",
+      name: "tpl",
+      template_type: "document",
+      is_default: true,
+      content,
+    }) as never,
+});
+
+describe("templates write --ticket", () => {
   test("writes ticket template to shorthand ticket directory", async () => {
     mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-1"), { recursive: true });
 
-    const handler = createHandler({
-      cwd: () => tmpBase,
-      findGitRoot: () => tmpBase,
-      readConfig: () => ({ project_id: "proj-1" }),
-      getTemplate: async () =>
-        ({
-          id: "tpl-1",
-          name: "ticket",
-          template_type: "ticket",
-          is_default: true,
-          content: "# {{TICKET_ID}}",
-        }) as never,
-    });
+    const handler = createHandler(makeDeps("# {{TICKET_ID}}"));
 
-    await handler({ name: "ticket", target: "PS-1", _: [], $0: "" } as never);
+    await handler({ name: "ticket", ticket: "PS-1", _: [], $0: "" } as never);
 
     expect(readFileSync(join(tmpBase, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8")).toBe("# PS-1");
   });
 
-  test("throws when only a legacy ticket directory exists", async () => {
-    mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-2_old-title"), { recursive: true });
+  test("throws when ticket directory does not exist", async () => {
+    const handler = createHandler(makeDeps("# Updated"));
 
-    const handler = createHandler({
-      cwd: () => tmpBase,
-      findGitRoot: () => tmpBase,
-      readConfig: () => ({ project_id: "proj-1" }),
-      getTemplate: async () =>
-        ({
-          id: "tpl-1",
-          name: "ticket",
-          template_type: "ticket",
-          is_default: true,
-          content: "# Updated",
-        }) as never,
-    });
-
-    await expect(handler({ name: "ticket", target: "PS-2", _: [], $0: "" } as never)).rejects.toThrow(
+    await expect(handler({ name: "ticket", ticket: "PS-2", _: [], $0: "" } as never)).rejects.toThrow(
       "Ticket not found: PS-2",
     );
   });
@@ -66,69 +54,112 @@ describe("templates write", () => {
     mkdirSync(ticketDir, { recursive: true });
     writeFileSync(join(ticketDir, "ticket.md"), "# My important feature\n\nSome content");
 
-    const handler = createHandler({
-      cwd: () => tmpBase,
-      findGitRoot: () => tmpBase,
-      readConfig: () => ({ project_id: "proj-1" }),
-      getTemplate: async () =>
-        ({
-          id: "tpl-1",
-          name: "ticket",
-          template_type: "ticket",
-          is_default: true,
-          content: "# {{TICKET_TITLE}}\n\n## Details",
-        }) as never,
-    });
+    const handler = createHandler(makeDeps("# {{TICKET_TITLE}}\n\n## Details"));
 
-    await handler({ name: "ticket", target: "PS-4", _: [], $0: "" } as never);
+    await handler({ name: "ticket", ticket: "PS-4", _: [], $0: "" } as never);
 
-    const result = readFileSync(join(ticketDir, "ticket.md"), "utf8");
-    expect(result).toBe("# My important feature\n\n## Details");
+    expect(readFileSync(join(ticketDir, "ticket.md"), "utf8")).toBe("# My important feature\n\n## Details");
   });
 
   test("falls back to shorthand when no existing ticket content", async () => {
     mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-5"), { recursive: true });
 
-    const handler = createHandler({
-      cwd: () => tmpBase,
-      findGitRoot: () => tmpBase,
-      readConfig: () => ({ project_id: "proj-1" }),
-      getTemplate: async () =>
-        ({
-          id: "tpl-1",
-          name: "ticket",
-          template_type: "ticket",
-          is_default: true,
-          content: "# {{TICKET_TITLE}}",
-        }) as never,
-    });
+    const handler = createHandler(makeDeps("# {{TICKET_TITLE}}"));
 
-    await handler({ name: "ticket", target: "PS-5", _: [], $0: "" } as never);
+    await handler({ name: "ticket", ticket: "PS-5", _: [], $0: "" } as never);
 
     expect(readFileSync(join(tmpBase, ".pstdio", "tickets", "PS-5", "ticket.md"), "utf8")).toBe("# PS-5");
   });
+});
 
-  test("writes to exact shorthand directory even when legacy directories are present", async () => {
-    mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-3"), { recursive: true });
-    mkdirSync(join(tmpBase, ".pstdio", "tickets", "PS-3_old-title"), { recursive: true });
+describe("templates write --target", () => {
+  test("writes template to path relative to cwd, overwriting existing file", async () => {
+    const docsDir = join(tmpBase, "docs");
+    mkdirSync(docsDir, { recursive: true });
+    writeFileSync(join(docsDir, "notes.md"), "previous content");
 
-    const handler = createHandler({
-      cwd: () => tmpBase,
-      findGitRoot: () => tmpBase,
-      readConfig: () => ({ project_id: "proj-1" }),
-      getTemplate: async () =>
-        ({
-          id: "tpl-1",
-          name: "ticket",
-          template_type: "ticket",
-          is_default: true,
-          content: "# Updated",
-        }) as never,
-    });
+    const handler = createHandler(makeDeps("# Replaced"));
 
-    await handler({ name: "ticket", target: "PS-3", _: [], $0: "" } as never);
+    await handler({ name: "tpl", target: "docs/notes.md", _: [], $0: "" } as never);
 
-    expect(readFileSync(join(tmpBase, ".pstdio", "tickets", "PS-3", "ticket.md"), "utf8")).toBe("# Updated");
-    expect(existsSync(join(tmpBase, ".pstdio", "tickets", "PS-3_old-title"))).toBe(true);
+    expect(readFileSync(join(docsDir, "notes.md"), "utf8")).toBe("# Replaced");
+  });
+
+  test("creates parent directories for nested target", async () => {
+    const handler = createHandler(makeDeps("hello"));
+
+    await handler({ name: "tpl", target: "a/b/c/new.md", _: [], $0: "" } as never);
+
+    expect(readFileSync(join(tmpBase, "a", "b", "c", "new.md"), "utf8")).toBe("hello");
+  });
+
+  test("writes to non-md target", async () => {
+    const handler = createHandler(makeDeps("raw text"));
+
+    await handler({ name: "tpl", target: "out/plain.txt", _: [], $0: "" } as never);
+
+    expect(readFileSync(join(tmpBase, "out", "plain.txt"), "utf8")).toBe("raw text");
+  });
+
+  test("fills placeholders from --var entries", async () => {
+    const handler = createHandler(makeDeps("hi {{NAME}} / {{ROLE}}"));
+
+    await handler({
+      name: "tpl",
+      target: "greeting.md",
+      var: ["NAME=Ada", "ROLE=admin"],
+      _: [],
+      $0: "",
+    } as never);
+
+    expect(readFileSync(join(tmpBase, "greeting.md"), "utf8")).toBe("hi Ada / admin");
+  });
+
+  test("rejects invalid --var format", async () => {
+    const handler = createHandler(makeDeps("x"));
+
+    await expect(handler({ name: "tpl", target: "x.md", var: ["NO_EQUALS"], _: [], $0: "" } as never)).rejects.toThrow(
+      /Invalid --var/,
+    );
+  });
+
+  test("does not perform ticket title preservation", async () => {
+    const filePath = join(tmpBase, "existing.md");
+    writeFileSync(filePath, "# Old title\n\nbody");
+
+    const handler = createHandler(makeDeps("# {{TICKET_TITLE}}"));
+
+    await handler({ name: "tpl", target: "existing.md", _: [], $0: "" } as never);
+
+    expect(readFileSync(filePath, "utf8")).toBe("# ");
+  });
+
+  test("absolute target path is written as-is", async () => {
+    const absDir = join(tmpBase, "abs");
+    mkdirSync(absDir, { recursive: true });
+    const absPath = join(absDir, "file.md");
+
+    const handler = createHandler(makeDeps("absolute"));
+
+    await handler({ name: "tpl", target: absPath, _: [], $0: "" } as never);
+
+    expect(readFileSync(absPath, "utf8")).toBe("absolute");
+    expect(existsSync(absPath)).toBe(true);
+  });
+});
+
+describe("templates write argument validation", () => {
+  test("throws when neither --target nor --ticket is provided", async () => {
+    const handler = createHandler(makeDeps("x"));
+
+    await expect(handler({ name: "tpl", _: [], $0: "" } as never)).rejects.toThrow(/one of --target or --ticket/);
+  });
+
+  test("throws when both --target and --ticket are provided", async () => {
+    const handler = createHandler(makeDeps("x"));
+
+    await expect(handler({ name: "tpl", target: "x.md", ticket: "PS-1", _: [], $0: "" } as never)).rejects.toThrow(
+      /mutually exclusive/,
+    );
   });
 });

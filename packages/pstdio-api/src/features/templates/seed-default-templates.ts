@@ -17,23 +17,32 @@ interface BundledTemplate {
 
 const BUNDLED_TEMPLATES: BundledTemplate[] = [
   // documents
-  { name: "prd", folder: "documents", file_name: "prd-template.md", is_default: true },
-  { name: "adr", folder: "documents", file_name: "adr-template.md", is_default: false },
-  { name: "changelog-entry", folder: "documents", file_name: "changelog-entry.md", is_default: false },
-  { name: "cookbook", folder: "documents", file_name: "cookbook-template.md", is_default: false },
-  { name: "lessons-learned", folder: "documents", file_name: "lessons-learned-template.md", is_default: false },
-  { name: "review-me", folder: "documents", file_name: "review-me-template.md", is_default: false },
+  { name: "prd", folder: "documents", file_name: "prd.template.md", is_default: true },
+  { name: "adr", folder: "documents", file_name: "adr.template.md", is_default: false },
+  { name: "changelog-entry", folder: "documents", file_name: "changelog-entry.template.md", is_default: false },
+  { name: "cookbook", folder: "documents", file_name: "cookbook.template.md", is_default: false },
+  { name: "lessons-learned", folder: "documents", file_name: "lessons-learned.template.md", is_default: false },
+  { name: "code-review", folder: "documents", file_name: "code-review.template.md", is_default: false },
+  {
+    name: "architecture-overview",
+    folder: "documents",
+    file_name: "architecture-overview.template.md",
+    is_default: false,
+  },
+  { name: "contracts", folder: "documents", file_name: "contracts.template.md", is_default: false },
+  { name: "research", folder: "documents", file_name: "research.template.md", is_default: false },
+  { name: "schemas", folder: "documents", file_name: "schemas.template.md", is_default: false },
   // prompts
-  { name: "commit-message", folder: "prompts", file_name: "commit-message.txt", is_default: true },
-  { name: "create-sub-tickets", folder: "prompts", file_name: "create-sub-tickets.txt", is_default: false },
-  { name: "implement-ticket", folder: "prompts", file_name: "implement-ticket.txt", is_default: false },
-  { name: "refine-ticket", folder: "prompts", file_name: "refine-ticket.txt", is_default: false },
-  { name: "squash-message", folder: "prompts", file_name: "squash-message.txt", is_default: false },
-  { name: "fix-changes-requested", folder: "prompts", file_name: "fix-changes-requested.txt", is_default: false },
-  { name: "code-review", folder: "prompts", file_name: "code-review.txt", is_default: false },
+  { name: "commit-message", folder: "prompts", file_name: "commit-message.prompt.md", is_default: true },
+  { name: "create-sub-tickets", folder: "prompts", file_name: "create-sub-tickets.prompt.md", is_default: false },
+  { name: "implement-ticket", folder: "prompts", file_name: "implement-ticket.prompt.md", is_default: false },
+  { name: "refine-ticket", folder: "prompts", file_name: "refine-ticket.prompt.md", is_default: false },
+  { name: "squash-message", folder: "prompts", file_name: "squash-message.prompt.md", is_default: false },
+  { name: "fix-changes-requested", folder: "prompts", file_name: "fix-changes-requested.prompt.md", is_default: false },
+  { name: "review-code", folder: "prompts", file_name: "review-code.prompt.md", is_default: false },
   // tickets
-  { name: "ticket", folder: "tickets", file_name: "ticket-template.md", is_default: true },
-  { name: "proposal", folder: "tickets", file_name: "proposal-template.md", is_default: false },
+  { name: "ticket", folder: "tickets", file_name: "ticket.md", is_default: true },
+  { name: "proposal", folder: "tickets", file_name: "proposal.ticket.md", is_default: false },
 ];
 
 const templatePath = (template: BundledTemplate) => `${template.folder}/${template.file_name}`;

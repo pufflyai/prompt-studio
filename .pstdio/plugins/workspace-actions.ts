@@ -134,7 +134,7 @@ export default definePlugin({
           title: `Code review: ${ticketId ?? "ticket"}`,
           agent: agent?.agent,
           model: agent?.model,
-          template: "code-review",
+          template: "review-code",
           vars: { ticket: ticketId },
         });
 

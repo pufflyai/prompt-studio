@@ -45,24 +45,3 @@ blocked_reason: ""
 ## Documentation
 
 [Describe documentation updates required or state "No documentation updates required."]
-
-## Steps
-
-- [ ] Red - [Add/expand tests in `path/to/test` for specific cases.]
-- [ ] Green - [Implement minimal code to satisfy the tests.]
-- [ ] Refactor - [Simplify, remove legacy code, improve structure.]
-- [ ] Docs - [Update docs if needed.]
-- [ ] Validation - [Run required commands and capture artifacts.]
-
-## Acceptance
-
-- [ ] [Outcome 1 pass/fail condition]
-- [ ] [Outcome 2 pass/fail condition]
-- [ ] [Outcome 3 pass/fail condition]
-- ...
-
-## Evidence
-
-[Point to artifacts under `.pstdio/tickets/<ticket-id>_<slug>/artifacts/`. The artifacts must include a way to recreate the outputs (e.g. commands used).]
-
-- [build outputs, test outputs, screenshots, traces, curl responses]

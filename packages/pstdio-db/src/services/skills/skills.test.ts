@@ -29,7 +29,7 @@ describe("skillsService", () => {
   test("create and list skill files", async () => {
     const created = await svc.create({
       project_id: projectId,
-      name: "write-pstdio-hook",
+      name: "create-pstdio-plugin",
       description: "Hook helpers",
       files: [
         { path: "SKILL.md", content: "# skill", encoding: "utf8" },
@@ -48,12 +48,12 @@ describe("skillsService", () => {
   test("update replaces files and description", async () => {
     await svc.create({
       project_id: projectId,
-      name: "write-pstdio-hook",
+      name: "create-pstdio-plugin",
       description: "Hook helpers",
       files: [{ path: "SKILL.md", content: "# skill", encoding: "utf8" }],
     });
 
-    const updated = await svc.update(projectId, "write-pstdio-hook", {
+    const updated = await svc.update(projectId, "create-pstdio-plugin", {
       description: "Updated hook helpers",
       files: [{ path: "SKILL.md", content: "# updated", encoding: "utf8" }],
     });
@@ -66,12 +66,12 @@ describe("skillsService", () => {
   test("remove soft deletes the skill", async () => {
     await svc.create({
       project_id: projectId,
-      name: "write-pstdio-hook",
+      name: "create-pstdio-plugin",
       description: "Hook helpers",
       files: [{ path: "SKILL.md", content: "# skill", encoding: "utf8" }],
     });
 
-    const removed = await svc.remove(projectId, "write-pstdio-hook");
+    const removed = await svc.remove(projectId, "create-pstdio-plugin");
     expect(removed).toBe(true);
 
     const listed = await svc.list(projectId);

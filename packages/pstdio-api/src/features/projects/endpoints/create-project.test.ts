@@ -9,21 +9,25 @@ import type { AppBindings } from "../../../types";
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
 const TEMPLATE_FILES = [
-  "documents/prd-template.md",
-  "documents/adr-template.md",
-  "documents/changelog-entry.md",
-  "documents/cookbook-template.md",
-  "documents/lessons-learned-template.md",
-  "documents/review-me-template.md",
-  "prompts/commit-message.txt",
-  "prompts/create-sub-tickets.txt",
-  "prompts/implement-ticket.txt",
-  "prompts/refine-ticket.txt",
-  "prompts/squash-message.txt",
-  "prompts/fix-changes-requested.txt",
-  "prompts/code-review.txt",
-  "tickets/ticket-template.md",
-  "tickets/proposal-template.md",
+  "documents/prd.template.md",
+  "documents/adr.template.md",
+  "documents/changelog-entry.template.md",
+  "documents/cookbook.template.md",
+  "documents/lessons-learned.template.md",
+  "documents/code-review.template.md",
+  "documents/architecture-overview.template.md",
+  "documents/contracts.template.md",
+  "documents/research.template.md",
+  "documents/schemas.template.md",
+  "prompts/commit-message.prompt.md",
+  "prompts/create-sub-tickets.prompt.md",
+  "prompts/implement-ticket.prompt.md",
+  "prompts/refine-ticket.prompt.md",
+  "prompts/squash-message.prompt.md",
+  "prompts/fix-changes-requested.prompt.md",
+  "prompts/review-code.prompt.md",
+  "tickets/ticket.md",
+  "tickets/proposal.ticket.md",
 ];
 
 const makeEmbeddedTemplateFile = (fileName: string, content: string) => {
@@ -89,7 +93,7 @@ describe("POST /v1/projects", () => {
       expect(ticketRes.status).toBe(200);
 
       const ticketTemplate = (await ticketRes.json()) as { content: string };
-      expect(ticketTemplate.content).toBe("# embedded:tickets/ticket-template.md\n");
+      expect(ticketTemplate.content).toBe("# embedded:tickets/ticket.md\n");
     } finally {
       runtime.embeddedFiles = originalEmbeddedFiles;
     }

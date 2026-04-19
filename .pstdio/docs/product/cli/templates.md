@@ -17,7 +17,7 @@ The `pstdio templates` command group manages project-scoped templates and writes
 | `pstdio templates create` | Create a template from file or stdin. |
 | `pstdio templates update` | Update content and/or default status for a template. |
 | `pstdio templates delete` | Delete a template. |
-| `pstdio templates write` | Materialize a template into `.pstdio/docs/...` or `.pstdio/tickets/...`. |
+| `pstdio templates write` | Render a template into a file path or ticket. |
 
 ## Detailed Behavior
 
@@ -70,14 +70,15 @@ pstdio templates delete --name <name>
 ### Usage
 
 ```sh
-pstdio templates write --name <template-name> --target <target>
+pstdio templates write --name <template-name> (--target <path> | --ticket <shorthand>) [--var KEY=value ...]
 ```
 
-### Target Rules
+### Modes
 
-- `docs/<path>` writes `.pstdio/docs/<path>.md` and updates `.pstdio/docs/navigation.json`.
-- `<ticket-shorthand>` writes `.pstdio/tickets/<ticket-shorthand>/ticket.md`.
-- Ticket templates cannot target docs paths.
+- `--target <path>` renders the template to a file path relative to the current directory (absolute paths are accepted). Parent directories are created. Any existing file at that path is overwritten.
+- `--ticket <shorthand>` renders the template to `.pstdio/tickets/<shorthand>/ticket.md` and preserves the existing H1 title via the `TICKET_TITLE` placeholder.
+- `--target` and `--ticket` are mutually exclusive. Exactly one is required.
+- `--var KEY=value` (repeatable) supplies template placeholders. Ticket-specific placeholders (`TICKET_ID`, `TICKET_TITLE`) are only populated in `--ticket` mode.
 
 ## Errors
 
@@ -85,8 +86,10 @@ pstdio templates write --name <template-name> --target <target>
 | ----- | ----- |
 | `Invalid type: <type>. Must be 'prompt', 'ticket', or 'document'.` | Invalid `--type` on create. |
 | `Template not found: <name>` | Missing template on write. |
-| `Ticket templates cannot target docs. Use a docs template instead.` | Ticket template used with `docs/<path>` target. |
-| `Ticket not found: <shorthand>` | Ticket target path does not exist locally. |
+| `Ticket not found: <shorthand>` | `--ticket` shorthand has no local ticket directory. |
+| `--target and --ticket are mutually exclusive.` | Both flags supplied to `write`. |
+| `Exactly one of --target or --ticket is required.` | Neither flag supplied to `write`. |
+| `Invalid --var format: "<entry>". Expected key=value.` | `--var` entry missing `=`. |
 
 ## Verification & Evidence
 

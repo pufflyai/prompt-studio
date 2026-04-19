@@ -7,6 +7,7 @@ export { followupSession } from "./followup-session";
 export { getAttemptsForTicket } from "./get-attempts-for-ticket";
 export { removeAllWorktreesForTicket } from "./remove-all-worktrees-for-ticket";
 export { runCommand } from "./run-command";
+export { type SaveTicketInput, type SaveTicketResult, saveTicket } from "./save-ticket";
 export { setTicketStatus } from "./set-ticket-status";
 export { setWorkspaceAttemptStatus } from "./set-workspace-attempt-status";
 export { type PullTicketsInput, type PullTicketsResult, pullTickets } from "./ticket-pull";

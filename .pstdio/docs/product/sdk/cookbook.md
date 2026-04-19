@@ -28,7 +28,7 @@ The current plugin set expects these prompt templates to exist in `ctx.prompts`:
 - `implement-ticket`
 - `refine-ticket`
 - `create-sub-tickets`
-- `code-review`
+- `review-code`
 - `fix-changes-requested`
 
 ## Hook Name Mapping
@@ -128,7 +128,7 @@ Use this pattern when the action should resolve prompt variables first and then 
 
 ## Recipe: Workspace Review Action
 
-The workspace action uses the shared `code-review` template and binds the selected workspace automatically.
+The workspace action uses the shared `review-code` prompt and binds the selected workspace automatically.
 
 ```ts
 import { createSession, definePlugin, renderPrompt } from "@pstdio/sdk/plugins";
@@ -147,7 +147,7 @@ export default definePlugin({
           workspace_id: ctx.target.id,
           title: `Code review: ${ticketId ?? "ticket"}`,
           prompt: renderPrompt(
-            ctx.prompts["code-review"],
+            ctx.prompts["review-code"],
             ticketId ? { ticket: ticketId } : {},
           ),
         });
@@ -162,7 +162,7 @@ export default definePlugin({
 The current lifecycle setup is split across two plugins:
 
 - `ticket-lifecycle.ts` moves the ticket to `wip` when work resumes, initializes attempt status, mirrors `blocked`, and moves the ticket to `review` once every attempt is `reviewed`.
-- `code-review-lifecycle.ts` blocks `review-ready` if validation fails, starts a review session from the `code-review` template, and follows up the original session with `fix-changes-requested`.
+- `code-review-lifecycle.ts` blocks `review-ready` if validation fails, starts a review session from the `review-code` prompt, and follows up the original session with `fix-changes-requested`.
 
 ```ts
 import {
@@ -222,7 +222,7 @@ export default definePlugin({
         await createSession(ctx, {
           workspace_id: ctx.workspace.id,
           title: `Code review: ${ctx.ticket.shorthand}`,
-          template: "code-review",
+          template: "review-code",
           vars: { ticket: ctx.ticket.shorthand },
           original_session_id: ctx.sessionId,
         });

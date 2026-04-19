@@ -2,7 +2,7 @@
 name: pstdio
 description: Guidance for pstdio, a CLI tool for managing project workflows. Covers setup, configuration (.pstdio/config.json), agent configuration, CLI reference, and troubleshooting. Use for "setting up pstdio", "configuring agents", "how does pstdio work", "what commands are available", or general pstdio questions.
 metadata:
-  - version: 0.0.2
+  - version: 0.0.3
 ---
 
 # pstdio
@@ -29,7 +29,7 @@ This skill covers pstdio itself. For task-specific workflows, defer to the dedic
 - **create-proposal** — Writing proposals
 - **create-sub-tickets** — Breaking tickets into sub-tickets
 - **refine-ticket** — Refining ticket content
-- **write-pstdio-hook** — Writing or editing lifecycle hooks
+- **create-pstdio-plugin** — Writing or editing plugins (hooks that react to lifecycle events, actions that expose user-triggered commands)
 
 For command-specific options, run `pstdio <command> --help`.
 For the full command and troubleshooting reference, see [references/cli-reference.md](references/cli-reference.md).
@@ -74,9 +74,6 @@ Conversations between users and agents, tracked in the database. Sessions can be
 │       ├── ticket.md     # Ticket content (YAML frontmatter + markdown)
 │       ├── artifacts/    # Agent-generated artifacts (tests, builds, logs)
 │       └── files/        # Supporting files (research, screenshots)
-├── docs/                 # Project documentation
-│   ├── navigation.json   # Sidebar structure
-│   └── /**/*.md          # Documentation pages
 ├── templates/            # Project-level template overrides
 ├── skills/               # Project-level skill overrides
 └── prompts/              # Project-level prompt template overrides
@@ -139,23 +136,19 @@ pstdio agents install-skills <id> # Reinstall bundled skills (missing only, neve
 
 Available agents: `claude-code`, `opencode`.
 
-## Creating Hooks
+## Plugins
 
-Hooks are defined via SDK plugins in `.pstdio/plugins/`. Use `definePlugin` from `@pstdio/sdk/plugins` to create TypeScript/JavaScript plugins that respond to lifecycle events. Git-level hooks (commit, merge, rebase) are shell scripts also stored in `.pstdio/plugins/`. You can also create and edit hooks through the dashboard at `Project Settings > Hooks`.
+Plugins live in `.pstdio/plugins/` and subscribe to lifecycle hooks. Each plugin is a TypeScript (or JavaScript) module with a default export built from `definePlugin` (imported from `@pstdio/sdk/plugins`). See the **create-pstdio-plugin** skill for the full authoring guide.
 
-Use `pstdio hooks list` to see the supported hook names and whether each one is already installed. Current hook names:
+Plugins are auto-discovered from `.pstdio/plugins/` at runtime. `pstdio plugins list` shows loaded plugins for the current project. `pstdio plugins register` force-registers the directory if a cached process needs to pick up changes.
 
-- **Worktree**: `pre-worktree-create`, `post-worktree-create`, `pre-commit`, `post-commit`, `pre-rebase`, `post-rebase`, `pre-merge`, `post-merge`, `pre-worktree-remove`, `post-worktree-remove`, `on-conflict`
-- **Session**: `post-session-start`, `post-session-success`, `post-session-fail`, `post-session-resume`, `post-session-await-input`
-- **Ticket**: `pre-ticket-creation`, `post-ticket-creation`, `pre-ticket-status-change`, `post-ticket-status-change`, `pre-ticket-archive`, `post-ticket-archive`, `pre-ticket-deletion`, `post-ticket-deletion`
+Available hooks (by category, in SDK camelCase):
 
-Recommended workflow:
-
-1. Run `pstdio hooks list` to pick the correct hook name and confirm whether a hook already exists.
-2. Create a plugin file in `.pstdio/plugins/` using `definePlugin`. For git-level hooks (commit, merge, rebase), use `pstdio hooks create <hook-name>` to scaffold a shell script.
-3. Plugin hooks receive a typed context object (`ctx`) with all event data. Shell hooks receive env vars such as `PSTDIO_HOOK`, `PSTDIO_REPO_PATH`, and `PSTDIO_PROJECT_ID`.
-4. For blocking hooks (`pre-*`), return `{ reject: true, reason: "..." }` from plugins, or `exit 1` from shell scripts, to abort the parent operation.
-5. Test shell hooks manually with `pstdio hooks run <hook-name> [--worktree-path <path>]` before relying on them in normal workflows.
+- **Worktree**: `preWorktreeCreate`, `postWorktreeCreate`, `preWorktreeRemove`, `postWorktreeRemove`
+- **Commit / Rebase / Merge**: `preCommit`, `postCommit`, `preRebase`, `postRebase`, `preMerge`, `postMerge`, `onConflict`
+- **Session**: `postSessionStart`, `postSessionSuccess`, `postSessionFail`, `postSessionResume`, `postSessionAwaitInput`
+- **Ticket**: `preTicketCreation`, `postTicketCreation`, `preTicketStatusChange`, `postTicketStatusChange`, `preTicketArchive`, `postTicketArchive`, `preTicketDeletion`, `postTicketDeletion`
+- **Attempt status**: `preAttemptStatusChange`, `postAttemptStatusChange`
 
 Example plugin:
 
@@ -167,28 +160,16 @@ export default definePlugin({
   hooks: {
     async postSessionStart(ctx) {
       if (!ctx.ticket) return;
-      await setTicketStatus(ctx, { ticket: ctx.ticket.shorthand, status: "wip" });
+      await setTicketStatus(ctx, {
+        ticket: ctx.ticket.shorthand,
+        status: "wip",
+      });
     },
   },
 });
 ```
 
-Example shell hook (git-level):
-
-```sh
-#!/bin/sh
-
-# .pstdio/plugins/pre-commit
-bun run validate
-```
-
-Current behavior to keep in mind:
-
-- Lifecycle hooks use SDK plugins in `.pstdio/plugins/` — TypeScript/JavaScript modules loaded via `import()`.
-- Git-level hooks (commit, merge, rebase) are shell scripts in `.pstdio/plugins/`, executed with `sh <script-path>`.
-- `pstdio hooks create` fails instead of overwriting an existing hook file.
-- Hooks time out after 60 seconds.
-- Use `.pstdio/docs/product/cli/hooks.md` for the detailed CLI and lifecycle reference.
+Pre-hooks can reject the parent operation by returning `{ reject: true, reason: "..." }`. Post-hooks return `void`.
 
 ## References
 

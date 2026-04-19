@@ -30,7 +30,7 @@ The old template docs mixed real behavior with unsupported ideas such as global 
 Current bundled templates seeded at project creation:
 
 - Ticket templates: `ticket` (default), `proposal`
-- Document templates: `prd` (default), `adr`, `cookbook`, `review-me`, `lessons-learned`
+- Document templates: `prd` (default), `adr`, `architecture-overview`, `cookbook`, `code-review`, `lessons-learned`, `changelog-entry`, `contracts`, `schemas`, `research`
 
 Current bundled skills are installed through agent setup and skill-install flows into agent skill directories in the repo or global agent config. Skill content is stored in the project database and can be edited by users. The installed copies in agent directories are derived from the DB-stored version.
 
@@ -40,9 +40,9 @@ Current bundled skills are installed through agent setup and skill-install flows
 
 1. Project creation must seed the bundled ticket and document templates.
 2. `templates list`, `create`, `update`, and `delete` must manage project-scoped template records through the API.
-3. `templates write` must support two targets:
-   - `docs/<path>` for document templates
-   - `<ticket-shorthand>` for ticket templates
+3. `templates write` must support two modes:
+   - `--target <path>` renders the template to an arbitrary file path (overwriting any existing file).
+   - `--ticket <shorthand>` renders the template to `.pstdio/tickets/<shorthand>/ticket.md` and preserves its existing H1 title.
 4. Agent setup and install flows must install bundled skills into the configured agent's skills directory.
 5. Updating a skill to the latest bundled version must propagate the updated content to all agent directories in all linked repos.
 6. On server startup, missing skills must be auto-installed for all configured agents in all linked repos. Existing skills must not be overwritten.
@@ -52,7 +52,6 @@ Current bundled skills are installed through agent setup and skill-install flows
 ### UX Requirements
 
 - Template commands should make the template type visible.
-- Docs scaffolding should update `navigation.json` automatically when writing a doc target.
 
 ### Operational Requirements
 
@@ -64,8 +63,8 @@ Current bundled skills are installed through agent setup and skill-install flows
 
 1. `projects create` seeds bundled ticket and document templates for the project.
 2. `templates create` and `templates update` manage project template content by type (`prompt`, `ticket`, `document`).
-3. `templates write --name prd --target docs/<path>` writes `.pstdio/docs/<path>.md` and adds the page to navigation.
-4. `templates write --name <ticket-template> --target <ticket-shorthand>` rewrites that ticket's `ticket.md`.
+3. `templates write --name <name> --target <path>` renders a template to an arbitrary file path relative to the current directory (overwriting any existing file).
+4. `templates write --name <ticket-template> --ticket <ticket-shorthand>` rewrites that ticket's `ticket.md` and preserves its existing H1 title.
 5. `agents setup` and `agents install-skills` install bundled skills into the chosen agent directory.
 6. Updating a skill via the dashboard writes the bundled content to DB file storage and to all agent directories (`.claude/skills/`, `.opencode/skills/`) in linked repos.
 7. On API startup, `ensureSkillsInstalled` checks every project/repo/agent combination and installs any missing skill from DB storage. Skills already present on disk are left untouched to preserve user edits.
@@ -76,11 +75,16 @@ Current bundled skills are installed through agent setup and skill-install flows
 
 | Name              | Default | Purpose                                               |
 | ----------------- | ------- | ----------------------------------------------------- |
-| `prd`             | yes     | Product behavior, goals, interface, and verification. |
-| `adr`             | no      | Architectural decisions and tradeoffs.                |
-| `cookbook`        | no      | Practical how-to guidance.                            |
-| `review-me`       | no      | Review context and checklist.                         |
-| `lessons-learned` | no      | Resolved incident or bug postmortems.                 |
+| `prd`                   | yes     | Product behavior, goals, interface, and verification.  |
+| `adr`                   | no      | Architectural decisions and tradeoffs.                 |
+| `architecture-overview` | no      | Technical design, components, contracts, and rollout.  |
+| `cookbook`              | no      | Practical how-to guidance.                             |
+| `code-review`           | no      | Code review output artifact produced by `review-code`. |
+| `lessons-learned`       | no      | Resolved incident or bug postmortems.                  |
+| `changelog-entry`       | no      | Release changelog entry.                               |
+| `contracts`             | no      | API / SDK / IPC contract shapes for a ticket.          |
+| `schemas`               | no      | DB and data schema notes for a ticket.                 |
+| `research`              | no      | Investigation notes and findings for a ticket.         |
 
 ### Template CLI Surface
 
@@ -90,11 +94,11 @@ Current bundled skills are installed through agent setup and skill-install flows
 | `pstdio templates create` | Create a project template from file or stdin. |
 | `pstdio templates update` | Update template content or default status.    |
 | `pstdio templates delete` | Delete a project template.                    |
-| `pstdio templates write`  | Materialize a template into docs or a ticket. |
+| `pstdio templates write`  | Render a template into a file path (`--target`) or a ticket (`--ticket`). |
 
 ## Rules & Constraints
 
-- `templates write` rejects ticket templates for `docs/...` targets.
+- `templates write` requires exactly one of `--target <path>` or `--ticket <shorthand>`.
 - The dashboard can read template assets but does not yet support editing them.
 - Bundled prompt templates still exist for internal prompt rendering, but project-scoped prompt customization is not yet a documented end-user workflow.
 
@@ -102,6 +106,8 @@ Current bundled skills are installed through agent setup and skill-install flows
 
 | Error                                                               | Cause                                                                    |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `Ticket templates cannot target docs. Use a docs template instead.` | A ticket template was written to a docs target.                          |
 | `Template not found: <name>`                                        | The requested project template does not exist.                           |
+| `Ticket not found: <shorthand>`                                     | `--ticket` shorthand has no local ticket directory.                      |
+| `Exactly one of --target or --ticket is required.`                  | `templates write` invoked without `--target` or `--ticket`.              |
+| `--target and --ticket are mutually exclusive.`                     | Both `--target` and `--ticket` supplied to `templates write`.            |
 | `Not inside a pstdio project. Run 'pstdio projects create' first.`  | A project-scoped template command was run without linked project config. |

@@ -166,14 +166,14 @@ describe("pstdio templates delete", () => {
 
 describe("pstdio templates write", () => {
   test(
-    "writes a ticket template to an existing ticket directory",
+    "writes a ticket template to an existing ticket directory with --ticket",
     () => {
       const repo = createInitializedRepo("tpl-write-ticket");
 
       const ticketDir = join(repo, ".pstdio", "tickets", "TP-1");
       mkdirSync(ticketDir, { recursive: true });
 
-      const output = run("templates write --name ticket --target TP-1", repo);
+      const output = run("templates write --name ticket --ticket TP-1", repo);
       expect(output).toContain('Wrote template "ticket" to .pstdio/tickets/TP-1/ticket.md');
 
       const ticketFile = join(ticketDir, "ticket.md");
@@ -186,11 +186,24 @@ describe("pstdio templates write", () => {
   );
 
   test(
-    "fails when ticket directory does not exist",
+    "writes a template to an arbitrary path with --target",
+    () => {
+      const repo = createInitializedRepo("tpl-write-target");
+
+      run("templates write --name cookbook --target scratch/cookbook.md", repo);
+
+      const out = join(repo, "scratch", "cookbook.md");
+      expect(existsSync(out)).toBe(true);
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
+    "fails when ticket shorthand does not exist",
     () => {
       const repo = createInitializedRepo("tpl-write-noticket");
 
-      const result = runSafe("templates write --name ticket --target MISSING-1", repo);
+      const result = runSafe("templates write --name ticket --ticket MISSING-1", repo);
       expect(result.exitCode).not.toBe(0);
       expect(result.stderr).toContain("Ticket not found");
     },
@@ -202,7 +215,7 @@ describe("pstdio templates write", () => {
     () => {
       const repo = createInitializedRepo("tpl-write-notpl");
 
-      const result = runSafe("templates write --name nonexistent --target docs/test", repo);
+      const result = runSafe("templates write --name nonexistent --target docs/test.md", repo);
       expect(result.exitCode).not.toBe(0);
       expect(result.stderr).toContain("Template not found");
     },

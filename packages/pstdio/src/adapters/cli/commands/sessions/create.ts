@@ -1,7 +1,7 @@
 import type { Arguments, Argv } from "yargs";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { createSession as defaultCreateSession } from "@/features/sessions/api/create-session";
-import { parseVars } from "./parse-vars";
+import { parseVars } from "../parse-vars";
 
 export const command = "create";
 export const describe = "Create a new session and launch an agent";

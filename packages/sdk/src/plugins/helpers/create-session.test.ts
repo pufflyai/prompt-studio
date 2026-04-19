@@ -70,7 +70,7 @@ describe("createSession", () => {
 
     const result = await createSession(ctx, {
       title: "Code review: PS-2",
-      template: "code-review",
+      template: "review-code",
       vars: { ticket: "PS-2" },
       workspace_id: "ws-2",
     });
@@ -80,7 +80,7 @@ describe("createSession", () => {
       {
         project_id: "proj-1",
         title: "Code review: PS-2",
-        template: "code-review",
+        template: "review-code",
         vars: { ticket: "PS-2" },
         workspace_id: "ws-2",
       },

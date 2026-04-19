@@ -1,14 +1,15 @@
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import type { Arguments, Argv } from "yargs";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { getTemplate } from "@/features/templates/api/get-template";
 import { replacePlaceholders } from "@/features/templates/replace-placeholders";
 import { extractRawTitle } from "@/features/tickets/display-title";
 import { readTicketFile, resolveTicketDir } from "@/features/tickets/local-ticket";
+import { parseVars } from "../parse-vars";
 
 export const command = "write";
-export const describe = "Write a template to a ticket";
+export const describe = "Write a template to a file or ticket";
 
 export const builder = (yargs: Argv) =>
   yargs
@@ -19,11 +20,19 @@ export const builder = (yargs: Argv) =>
     })
     .option("target", {
       type: "string",
-      demandOption: true,
-      describe: "Target ticket shorthand",
+      describe: "Destination path, relative to the current directory (overwrites any existing file)",
+    })
+    .option("ticket", {
+      type: "string",
+      describe: "Ticket shorthand; writes to .pstdio/tickets/<shorthand>/ticket.md and preserves the existing title",
+    })
+    .option("var", {
+      type: "string",
+      array: true,
+      describe: "Template variable in key=value format (repeatable)",
     });
 
-type WriteArgs = { name: string; target: string };
+type WriteArgs = { name: string; target?: string; ticket?: string; var?: string[] };
 
 type Deps = {
   cwd: () => string;
@@ -59,9 +68,27 @@ const writeTicketTemplate = (
   console.log(`Wrote template "${templateName}" to .pstdio/tickets/${shorthand}/ticket.md`);
 };
 
+const writeToPath = (
+  cwd: string,
+  target: string,
+  templateName: string,
+  templateContent: string,
+  placeholders: Record<string, string>,
+) => {
+  const absolutePath = isAbsolute(target) ? target : resolve(cwd, target);
+  mkdirSync(dirname(absolutePath), { recursive: true });
+  writeFileSync(absolutePath, replacePlaceholders(templateContent, placeholders));
+
+  const displayPath = isAbsolute(target) ? absolutePath : relative(cwd, absolutePath);
+  console.log(`Wrote template "${templateName}" to ${displayPath}`);
+};
+
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<WriteArgs>) => {
+    if (argv.target && argv.ticket) throw new Error("--target and --ticket are mutually exclusive.");
+    if (!argv.target && !argv.ticket) throw new Error("Exactly one of --target or --ticket is required.");
+
     const root = deps.findGitRoot(deps.cwd());
     if (!root) throw new Error("Not inside a git repository.");
 
@@ -75,9 +102,15 @@ export const createHandler =
       CREATED_AT: new Date().toISOString(),
       USER_PROMPT: "",
       PARENT_ID: "",
+      ...(parseVars(argv.var) ?? {}),
     };
 
-    writeTicketTemplate(root, argv.target, argv.name, template.content, placeholders);
+    if (argv.ticket) {
+      writeTicketTemplate(root, argv.ticket, argv.name, template.content, placeholders);
+      return;
+    }
+
+    writeToPath(deps.cwd(), argv.target!, argv.name, template.content, placeholders);
   };
 
 export const handler = createHandler();
