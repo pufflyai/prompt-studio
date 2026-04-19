@@ -2,7 +2,7 @@ This Project is a Bun + TypeScript monorepo using workspaces (Lerna + Nx cache),
 
 ## Prerequisites
 
-- Bun `>=1.3.10`
+- Bun `>=1.3.12`
 - Docker (for remote/sync setup)
 
 ## Install

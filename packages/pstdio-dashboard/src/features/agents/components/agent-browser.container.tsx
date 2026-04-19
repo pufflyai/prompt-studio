@@ -73,9 +73,10 @@ export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
       const preferred = lastSelectedModels.find((m) => models.some((model) => model.id === m));
       const next = preferred ?? models[0].id;
       setSelectedModel(next);
+      setLastSelectedModel(next);
       onModelChange?.(next);
     }
-  }, [isModelsPending, models, selectedAgent, selectedModel, lastSelectedModels, onModelChange]);
+  }, [isModelsPending, models, selectedAgent, selectedModel, lastSelectedModels, setLastSelectedModel, onModelChange]);
 
   const handleSelectAgent = (agent: string) => {
     const codingAgent = agent as CodingAgent;
