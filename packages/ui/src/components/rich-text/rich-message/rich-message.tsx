@@ -22,6 +22,7 @@ import { CodeBlockNode } from "../shared/plugins/CodePlugin/CodeNode";
 import { EquationNode } from "../shared/plugins/EquationPlugin/EquationNode";
 import { EQUATION_INLINE, EQUATION_MULTILINE, EquationPlugin } from "../shared/plugins/EquationPlugin/EquationPlugin";
 import { HRNode } from "../shared/plugins/HorizontalRulePlugin/HorizontalRuleNode";
+import { MermaidNode } from "../shared/plugins/MermaidPlugin/MermaidNode";
 import StateUpdatePlugin from "../shared/plugins/StateUpdatePlugin";
 import ToggleEditablePlugin from "../shared/plugins/ToggleEditablePlugin";
 import { TreeViewPlugin } from "../shared/plugins/TreeViewPlugin/TreeViewPlugin";
@@ -63,6 +64,7 @@ export function RichMessage(props: RichMessageProps) {
       ListItemNode,
       CodeNode,
       CodeBlockNode,
+      MermaidNode,
       EquationNode,
       HRNode,
       ReferenceLinkNode,

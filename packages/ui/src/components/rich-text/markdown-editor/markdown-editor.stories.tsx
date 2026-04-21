@@ -126,6 +126,26 @@ print(list(fib(10)))
 \`\`\`
 `;
 
+const mermaidMessage = `
+# Mermaid Diagram
+
+\`\`\`mermaid
+flowchart TD
+  A[Start] --> B{Valid?}
+  B -->|Yes| C[Render SVG]
+  B -->|No| D[Show Error]
+\`\`\`
+`;
+
+const invalidMermaidMessage = `
+# Broken Mermaid
+
+\`\`\`mermaid
+flowchart TD
+  A -->
+\`\`\`
+`;
+
 const meta: Meta<typeof MarkdownEditor> = {
   title: "Editors/Markdown Editor",
   component: MarkdownEditor,
@@ -170,5 +190,26 @@ export const EmptyWithPlaceholder: Story = {
   args: {
     defaultState: "",
     placeholder: "Start writing Markdown...",
+  },
+};
+
+export const MermaidPreviewAndEdit: Story = {
+  args: {
+    defaultState: mermaidMessage,
+    isEditable: true,
+  },
+};
+
+export const MermaidSyntaxError: Story = {
+  args: {
+    defaultState: invalidMermaidMessage,
+    isEditable: true,
+  },
+};
+
+export const MermaidReadOnly: Story = {
+  args: {
+    defaultState: mermaidMessage,
+    isEditable: false,
   },
 };
