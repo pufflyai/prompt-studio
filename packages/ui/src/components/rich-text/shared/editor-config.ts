@@ -11,6 +11,7 @@ import { CodeBlockNode } from "./plugins/CodePlugin/CodeNode";
 import { EquationNode } from "./plugins/EquationPlugin/EquationNode";
 import { EQUATION_INLINE, EQUATION_MULTILINE } from "./plugins/EquationPlugin/EquationPlugin";
 import { HRNode } from "./plugins/HorizontalRulePlugin/HorizontalRuleNode";
+import { MermaidNode } from "./plugins/MermaidPlugin/MermaidNode";
 import { TRANSFORMERS_EXTENDED } from "./transformers/markdown-transformers";
 
 export const editorNodes: Array<Klass<LexicalNode>> = [
@@ -23,6 +24,7 @@ export const editorNodes: Array<Klass<LexicalNode>> = [
   ListItemNode,
   CodeNode,
   CodeBlockNode,
+  MermaidNode,
   EquationNode,
   HRNode,
   ReferenceLinkNode,

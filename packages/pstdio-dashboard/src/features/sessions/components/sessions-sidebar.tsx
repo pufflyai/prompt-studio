@@ -4,6 +4,7 @@ import {
   resolveSessionIndicatorIcon,
   type SessionCompletionStatus,
   Sidebar,
+  type SidebarActionMenuItem,
   type SidebarNavigateEvent,
   type SidebarSection,
   Tooltip,
@@ -25,9 +26,13 @@ interface SessionsSidebarProps {
   selectedSessionId: string | null;
   onSelectSession: (sessionId: string) => void;
   onCreateSession: () => void;
+  resolveContextMenuItems?: (session: Session) => SidebarActionMenuItem[];
 }
 
-const buildSections = (sessions: Session[]): SidebarSection[] => {
+const buildSections = (
+  sessions: Session[],
+  resolveContextMenuItems?: (session: Session) => SidebarActionMenuItem[],
+): SidebarSection[] => {
   const groups = groupSessionsByDate(sessions);
 
   return groups.map((group) => ({
@@ -39,6 +44,7 @@ const buildSections = (sessions: Session[]): SidebarSection[] => {
       label: session.title,
       icon: sessionIcon(session.status),
       iconColor: resolveSessionIndicatorColor(session.status as SessionCompletionStatus),
+      contextMenuItems: resolveContextMenuItems?.(session),
       isNavigable: true,
       navigationIntent: { id: "select-session", payload: session.id },
     })),
@@ -46,10 +52,10 @@ const buildSections = (sessions: Session[]): SidebarSection[] => {
 };
 
 export const SessionsSidebar = (props: SessionsSidebarProps) => {
-  const { sessions, selectedSessionId, onSelectSession, onCreateSession } = props;
+  const { sessions, selectedSessionId, onSelectSession, onCreateSession, resolveContextMenuItems } = props;
   const { t } = useTranslation("projects");
 
-  const sections = buildSections(sessions);
+  const sections = buildSections(sessions, resolveContextMenuItems);
 
   const handleNavigate = (event: SidebarNavigateEvent) => {
     const intent = event.intent;

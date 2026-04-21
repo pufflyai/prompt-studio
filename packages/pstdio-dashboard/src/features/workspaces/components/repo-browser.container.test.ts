@@ -1,6 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import type { RepoBranch } from "@/features/project/types";
-import { resolveBranchSelection, resolveBranchState } from "./repo-browser.container";
+import {
+  resolveBranchSelection,
+  resolveBranchSelectorDisabledState,
+  resolveBranchState,
+  resolveLockedBranch,
+} from "./repo-browser.container";
 
 const createBranch = (name: string, options?: { isCurrent?: boolean; isRemote?: boolean }): RepoBranch => ({
   name,
@@ -56,6 +61,7 @@ describe("resolveBranchState", () => {
 
     const nextState = resolveBranchState({
       isLocked: false,
+      isSessionContext: false,
       isBranchesPending: false,
       selectedRepositoryId: "repo-1",
       branches,
@@ -69,5 +75,71 @@ describe("resolveBranchState", () => {
       hasUserSelectedBranch: false,
       shouldPersistBranch: true,
     });
+  });
+
+  it("returns null when the selector is locked in sessions", () => {
+    const branches = [createBranch("main", { isCurrent: true })];
+
+    const nextState = resolveBranchState({
+      isLocked: true,
+      isSessionContext: true,
+      isBranchesPending: false,
+      selectedRepositoryId: "repo-1",
+      branches,
+      currentBranch: "main",
+      selectedBranch: "main",
+      hasUserSelectedBranch: false,
+    });
+
+    expect(nextState).toBeNull();
+  });
+
+  it("resolves the current branch in session context without persisting it", () => {
+    const branches = [createBranch("main", { isCurrent: true }), createBranch("feature/old")];
+
+    const nextState = resolveBranchState({
+      isLocked: false,
+      isSessionContext: true,
+      isBranchesPending: false,
+      selectedRepositoryId: "repo-1",
+      branches,
+      currentBranch: "main",
+      selectedBranch: "feature/old",
+      hasUserSelectedBranch: false,
+    });
+
+    expect(nextState).toEqual({
+      selectedBranch: "main",
+      hasUserSelectedBranch: false,
+      shouldPersistBranch: false,
+    });
+  });
+});
+
+describe("resolveBranchSelectorDisabledState", () => {
+  it("disables branch selection in session context", () => {
+    expect(resolveBranchSelectorDisabledState({ isSessionContext: true, isDisabled: false, isLocked: false })).toBe(
+      true,
+    );
+  });
+
+  it("keeps branch selection enabled outside sessions when not otherwise disabled", () => {
+    expect(resolveBranchSelectorDisabledState({ isSessionContext: false, isDisabled: false, isLocked: false })).toBe(
+      false,
+    );
+  });
+});
+
+describe("resolveLockedBranch", () => {
+  it("prefers the session workspace branch when available", () => {
+    expect(resolveLockedBranch({ sessionWorkspaceBranch: "workspace/PS-70_A1", workspaceBranch: "main" })).toBe(
+      "workspace/PS-70_A1",
+    );
+  });
+
+  it("falls back to the explicit workspace branch for new workspace sessions", () => {
+    expect(resolveLockedBranch({ sessionWorkspaceBranch: null, workspaceBranch: "workspace/PS-70_A1" })).toBe(
+      "workspace/PS-70_A1",
+    );
   });
 });

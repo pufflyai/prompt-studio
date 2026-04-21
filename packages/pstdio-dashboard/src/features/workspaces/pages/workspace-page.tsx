@@ -1,15 +1,27 @@
 import { Stack, Text } from "@chakra-ui/react";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
+import {
+  buildResourceContextMenuActions,
+  toSidebarContextMenuItems,
+} from "@/features/plugin-actions/hooks/use-resource-context-menu";
 import { useProject } from "@/features/project/hooks/use-project";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/features/project-settings/store";
+import { useArchiveSession } from "@/features/sessions/hooks/use-archive-session";
+import { buildSessionOverflowActions } from "@/features/sessions/session-actions";
 import { useTicketAttemptDiff } from "@/features/ticket/hooks/use-ticket-attempt-diff";
 import { useTicketFiles } from "@/features/ticket/hooks/use-ticket-files";
+import { buildTicketOverflowActions } from "@/features/ticket/pages/ticket-details-actions";
 import { openTicketSessionBubble } from "@/features/ticket/utils/open-ticket-session-bubble";
 import { buildSelectableTicketFiles } from "@/features/ticket/utils/ticket-file-selection";
 import { useCreateTicketAttempt } from "@/features/ticket-list/hooks/use-create-ticket-attempt";
-import { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
+import {
+  useDeleteProjectTicket,
+  useProjectTickets,
+  useUpdateProjectTicket,
+} from "@/features/ticket-list/hooks/use-project-tickets";
 import {
   shouldFetchTicketAttemptDiff,
   useTicketAttemptDiffs,
@@ -42,6 +54,7 @@ const WorkspacePageTicketNotFound = () => (
   </Stack>
 );
 
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: This page coordinates route state, multiple action triggers, and modal flows for the workspace surface.
 export const WorkspacePage = () => {
   const { projectId, ticketShorthand, workspaceShorthand } = useParams({ strict: false });
   const search = useSearch({ strict: false });
@@ -49,8 +62,10 @@ export const WorkspacePage = () => {
   const requestedTab = typeof search.tab === "string" ? search.tab : undefined;
   const activeTab = normalizeWorkspacePageTab(search.tab);
   const navigate = useNavigate();
+  const { t } = useTranslation(["projects", "tickets"]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDeleteOpen, setDeleteOpen] = useState(false);
+  const [isTicketDeleteOpen, setTicketDeleteOpen] = useState(false);
   const projectSettingsStore = useProjectSettingsStoreApi();
   const setSessionModalState = useProjectSettingsStore((state) => state.setSessionModalState);
   const setSelectedSessionId = useProjectSettingsStore((state) => state.setSelectedSessionId);
@@ -62,6 +77,9 @@ export const WorkspacePage = () => {
   const attemptStatusMap = useAttemptStatusMap(projectId);
   const createAttempt = useCreateTicketAttempt(projectId);
   const deleteWorkspace = useDeleteWorkspace();
+  const updateTicket = useUpdateProjectTicket(projectId);
+  const deleteTicket = useDeleteProjectTicket(projectId);
+  const archiveSession = useArchiveSession();
   const lastSelectedAgent = useProjectSettingsStore((state) => state.lastSelectedAgent);
   const lastSelectedModels = useProjectSettingsStore((state) => state.lastSelectedModels);
   const lastSelectedBranches = useProjectSettingsStore((state) => state.lastSelectedBranches);
@@ -124,6 +142,34 @@ export const WorkspacePage = () => {
   const pluginActionTrigger = usePluginActionTrigger({
     projectId,
     targetType: "workspace",
+    onSuccess: async (result) => {
+      if (!result.session_id) return;
+      openTicketSessionBubble({
+        sessionId: result.session_id,
+        sessionModalState: projectSettingsStore.getState().sessionModalState,
+        setSessionModalState,
+        setSelectedSessionId,
+      });
+    },
+  });
+
+  const ticketActionTrigger = usePluginActionTrigger({
+    projectId,
+    targetType: "ticket",
+    onSuccess: async (result) => {
+      if (!result.session_id) return;
+      openTicketSessionBubble({
+        sessionId: result.session_id,
+        sessionModalState: projectSettingsStore.getState().sessionModalState,
+        setSessionModalState,
+        setSelectedSessionId,
+      });
+    },
+  });
+
+  const sessionActionTrigger = usePluginActionTrigger({
+    projectId,
+    targetType: "session",
     onSuccess: async (result) => {
       if (!result.session_id) return;
       openTicketSessionBubble({
@@ -250,6 +296,47 @@ export const WorkspacePage = () => {
       pluginActions={selectedWorkspace ? pluginActionTrigger.pluginActions : []}
       pluginActionsLoading={selectedWorkspace ? pluginActionTrigger.isActionsLoading : false}
       pluginActionTrigger={pluginActionTrigger}
+      resolveTicketContextMenuItems={() =>
+        toSidebarContextMenuItems(
+          buildResourceContextMenuActions({
+            pluginActions: ticketActionTrigger.pluginActions,
+            defaultOverflowActions: buildTicketOverflowActions({
+              ticket,
+              projectId,
+              updateTicket,
+              deleteTicket,
+              onDeleteOpen: () => setTicketDeleteOpen(true),
+              t,
+            }),
+            pendingActionKeys: ticketActionTrigger.pendingActionKeys,
+            onPluginAction: (actionKey) => void ticketActionTrigger.trigger(actionKey, ticket.id),
+          }),
+        )
+      }
+      resolveSessionContextMenuItems={(session) =>
+        toSidebarContextMenuItems(
+          buildResourceContextMenuActions({
+            pluginActions: sessionActionTrigger.pluginActions,
+            defaultOverflowActions: buildSessionOverflowActions({
+              sessionId: session.id,
+              agentSessionId: session.agentSessionId,
+              onArchive: () => archiveSession.mutate(session.id),
+              t,
+            }),
+            pendingActionKeys: sessionActionTrigger.pendingActionKeys,
+            onPluginAction: (actionKey) => void sessionActionTrigger.trigger(actionKey, session.id),
+          }),
+        )
+      }
+      ticketActionTrigger={ticketActionTrigger}
+      sessionActionTrigger={sessionActionTrigger}
+      isTicketDeleteOpen={isTicketDeleteOpen}
+      closeTicketDeleteModal={() => setTicketDeleteOpen(false)}
+      deleteTicket={async () => {
+        await deleteTicket.mutateAsync({ ticketId: ticket.id });
+        setTicketDeleteOpen(false);
+        navigateToProjectTickets(navigate, projectId);
+      }}
       deleteWorkspaceIsPending={deleteWorkspace.isPending}
       isDeleteOpen={isDeleteOpen}
       openDeleteModal={() => setDeleteOpen(true)}

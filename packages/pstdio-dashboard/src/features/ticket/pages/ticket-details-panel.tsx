@@ -2,14 +2,18 @@ import { Flex, Stack, Text } from "@chakra-ui/react";
 import { DeleteConfirmationModal, PanelLayout } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { Archive, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
-import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
 import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
+import {
+  buildResourceContextMenuActions,
+  toSidebarContextMenuItems,
+} from "@/features/plugin-actions/hooks/use-resource-context-menu";
 import { useProject } from "@/features/project/hooks/use-project";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/features/project-settings/store";
+import { useArchiveSession } from "@/features/sessions/hooks/use-archive-session";
+import { buildSessionOverflowActions } from "@/features/sessions/session-actions";
 import { uploadTicketFile } from "@/features/ticket-list/data/api";
 import {
   useDeleteProjectTicket,
@@ -22,7 +26,9 @@ import {
   useTicketAttemptDiffs,
 } from "@/features/ticket-list/hooks/use-ticket-attempt-diffs";
 import { useAttemptStatusMap } from "@/features/workspaces/hooks/use-attempt-status-map";
+import { useDeleteWorkspace } from "@/features/workspaces/hooks/use-workspace-actions";
 import { useWorkspaceSessions } from "@/features/workspaces/hooks/use-workspace-sessions";
+import { buildWorkspaceDeleteOverflowAction } from "@/features/workspaces/pages/workspace-page-actions";
 import { resolveWorkspaceSelection } from "@/features/workspaces/utils/workspace-selection";
 import { TicketDetailSidebar } from "../components/ticket-detail-sidebar";
 import { TicketHeader } from "../components/ticket-header";
@@ -33,7 +39,6 @@ import { useTicketContent } from "../hooks/use-ticket-content";
 import { useTicketFiles } from "../hooks/use-ticket-files";
 import { openTicketSessionBubble } from "../utils/open-ticket-session-bubble";
 import { resolveParentTicketReference } from "../utils/resolve-parent-ticket-reference";
-import { formatTicketBreadcrumbLabel } from "../utils/ticket-breadcrumb";
 import { isTicketContentReady } from "../utils/ticket-content-ready";
 import { resolveTicketDetailsState } from "../utils/ticket-details-state";
 import {
@@ -42,6 +47,7 @@ import {
   resolveSelectedTicketFile,
   TICKET_CONTENT_ITEM_ID,
 } from "../utils/ticket-file-selection";
+import { buildTicketBreadcrumbs, buildTicketOverflowActions, buildWorkspaceRoute } from "./ticket-details-actions";
 
 const TicketDetailsStatusMessage = (props: { message: string }) => {
   const { message } = props;
@@ -55,60 +61,7 @@ const TicketDetailsStatusMessage = (props: { message: string }) => {
   );
 };
 
-const buildTicketBreadcrumbs = (input: {
-  ticketShorthand: string;
-  ticketTitle: string;
-  parentShorthand: string | null;
-  parentTitle: string | null;
-  projectId: string;
-}) => {
-  const { ticketShorthand, ticketTitle, parentShorthand, parentTitle, projectId } = input;
-  const ticketUrl = `/projects/${projectId}/tickets/${ticketShorthand}`;
-  const breadcrumbs = [{ title: formatTicketBreadcrumbLabel(ticketShorthand, ticketTitle), url: ticketUrl }];
-  if (!parentShorthand) return breadcrumbs;
-
-  const parentUrl = `/projects/${projectId}/tickets/${parentShorthand}`;
-  return [{ title: formatTicketBreadcrumbLabel(parentShorthand, parentTitle), url: parentUrl }, ...breadcrumbs];
-};
-
-const buildWorkspaceRoute = (projectId: string, ticketShorthand: string, workspaceShorthand: string) => ({
-  to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand" as const,
-  params: { projectId, ticketShorthand, workspaceShorthand },
-});
-
-interface BuildOverflowActionsInput {
-  ticket: { id: string; archived?: boolean };
-  projectId: string | undefined;
-  updateTicket: { isPending: boolean; mutate: (input: { ticketId: string; archived: boolean }) => void };
-  deleteTicket: { isPending: boolean };
-  onDeleteOpen: () => void;
-  t: (key: string) => string;
-}
-
-const buildTicketOverflowActions = (input: BuildOverflowActionsInput): HeaderActionItem[] => {
-  const { ticket, projectId, updateTicket, deleteTicket, onDeleteOpen, t } = input;
-  return [
-    {
-      key: "archive-ticket",
-      label: t(
-        ticket.archived ? "projects:ticketPanel.options.unarchiveTicket" : "projects:ticketPanel.options.archiveTicket",
-      ),
-      kind: "default",
-      icon: Archive,
-      isDisabled: updateTicket.isPending,
-      onClick: () => updateTicket.mutate({ ticketId: ticket.id, archived: !ticket.archived }),
-    },
-    {
-      key: "delete-ticket",
-      label: t("projects:ticketPanel.options.deleteTicket"),
-      kind: "default",
-      icon: Trash2,
-      isDisabled: !projectId || deleteTicket.isPending,
-      onClick: onDeleteOpen,
-    },
-  ];
-};
-
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: This panel orchestrates route state, editor autosave, and resource actions in one place.
 export const TicketDetailsPanel = () => {
   const { projectId, ticketShorthand, selectedFileId } = useParams({ strict: false });
   const navigate = useNavigate();
@@ -123,6 +76,8 @@ export const TicketDetailsPanel = () => {
   const updateTicket = useUpdateProjectTicket(projectId);
   const updateTicketTags = useUpdateProjectTicketTags(projectId);
   const deleteTicket = useDeleteProjectTicket(projectId);
+  const deleteWorkspace = useDeleteWorkspace();
+  const archiveSession = useArchiveSession();
 
   const allProjectTickets = allTickets ?? [];
   const ticketState = resolveTicketDetailsState({ tickets: allTickets, ticketShorthand, isTicketsLoading });
@@ -146,11 +101,40 @@ export const TicketDetailsPanel = () => {
   const content = ticketContent.data ?? "";
   const isContentReady = isTicketContentReady(ticketContent.data, ticketContent.isLoading);
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(true),
-    [isDeleteOpen, setDeleteOpen] = useState(false);
+    [isDeleteOpen, setDeleteOpen] = useState(false),
+    [workspaceToDeleteId, setWorkspaceToDeleteId] = useState<string | null>(null);
 
   const pluginActionTrigger = usePluginActionTrigger({
     projectId,
     targetType: "ticket",
+    onSuccess: async (result) => {
+      if (!result.session_id) return;
+      openTicketSessionBubble({
+        sessionId: result.session_id,
+        sessionModalState: projectSettingsStore.getState().sessionModalState,
+        setSessionModalState,
+        setSelectedSessionId,
+      });
+    },
+  });
+
+  const workspaceActionTrigger = usePluginActionTrigger({
+    projectId,
+    targetType: "workspace",
+    onSuccess: async (result) => {
+      if (!result.session_id) return;
+      openTicketSessionBubble({
+        sessionId: result.session_id,
+        sessionModalState: projectSettingsStore.getState().sessionModalState,
+        setSessionModalState,
+        setSelectedSessionId,
+      });
+    },
+  });
+
+  const sessionActionTrigger = usePluginActionTrigger({
+    projectId,
+    targetType: "session",
     onSuccess: async (result) => {
       if (!result.session_id) return;
       openTicketSessionBubble({
@@ -276,6 +260,48 @@ export const TicketDetailsPanel = () => {
       onSelectPlanning={() => {
         void navigateBack();
       }}
+      resolveTicketContextMenuItems={() =>
+        toSidebarContextMenuItems(
+          buildResourceContextMenuActions({
+            pluginActions: pluginActionTrigger.pluginActions,
+            defaultOverflowActions,
+            pendingActionKeys: pluginActionTrigger.pendingActionKeys,
+            onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, ticket.id),
+          }),
+        )
+      }
+      resolveWorkspaceContextMenuItems={(workspace) =>
+        toSidebarContextMenuItems(
+          buildResourceContextMenuActions({
+            pluginActions: workspaceActionTrigger.pluginActions,
+            defaultOverflowActions: buildWorkspaceDeleteOverflowAction({
+              t,
+              hasSelectedWorkspace: true,
+              isMutationPending: deleteWorkspace.isPending,
+              onDeleteWorkspace: () => setWorkspaceToDeleteId(workspace.id),
+            }),
+            pendingActionKeys: workspaceActionTrigger.pendingActionKeys,
+            onPluginAction: (actionKey) => void workspaceActionTrigger.trigger(actionKey, workspace.id),
+          }),
+        )
+      }
+      resolveSessionContextMenuItems={(session) =>
+        toSidebarContextMenuItems(
+          buildResourceContextMenuActions({
+            pluginActions: sessionActionTrigger.pluginActions,
+            defaultOverflowActions: buildSessionOverflowActions({
+              sessionId: session.id,
+              agentSessionId: session.agentSessionId,
+              onArchive: () => {
+                archiveSession.mutate(session.id);
+              },
+              t,
+            }),
+            pendingActionKeys: sessionActionTrigger.pendingActionKeys,
+            onPluginAction: (actionKey) => void sessionActionTrigger.trigger(actionKey, session.id),
+          }),
+        )
+      }
     />
   );
 
@@ -330,6 +356,28 @@ export const TicketDetailsPanel = () => {
         />
       ) : null}
 
+      {workspaceActionTrigger.activeParamAction && projectId ? (
+        <ActionParamsDialog
+          open
+          action={workspaceActionTrigger.activeParamAction}
+          projectId={projectId}
+          isSubmitting={workspaceActionTrigger.activeParamActionIsPending}
+          onClose={workspaceActionTrigger.cancelParams}
+          onSubmit={(params) => workspaceActionTrigger.submitWithParams(params)}
+        />
+      ) : null}
+
+      {sessionActionTrigger.activeParamAction && projectId ? (
+        <ActionParamsDialog
+          open
+          action={sessionActionTrigger.activeParamAction}
+          projectId={projectId}
+          isSubmitting={sessionActionTrigger.activeParamActionIsPending}
+          onClose={sessionActionTrigger.cancelParams}
+          onSubmit={(params) => sessionActionTrigger.submitWithParams(params)}
+        />
+      ) : null}
+
       <DeleteConfirmationModal
         open={isDeleteOpen}
         onClose={() => setDeleteOpen(false)}
@@ -341,6 +389,19 @@ export const TicketDetailsPanel = () => {
         headline={t("projects:ticketPanel.deleteConfirmation.ticket.headline")}
         notificationText={t("projects:ticketPanel.deleteConfirmation.ticket.notification")}
         buttonText={t("projects:ticketPanel.options.deleteTicket")}
+      />
+
+      <DeleteConfirmationModal
+        open={Boolean(workspaceToDeleteId)}
+        onClose={() => setWorkspaceToDeleteId(null)}
+        onDelete={async () => {
+          if (!workspaceToDeleteId) return;
+          await deleteWorkspace.mutateAsync({ workspaceId: workspaceToDeleteId });
+          setWorkspaceToDeleteId(null);
+        }}
+        headline={t("workspacePanel.deleteConfirmation.workspace.headline")}
+        notificationText={t("workspacePanel.deleteConfirmation.workspace.notification")}
+        buttonText={t("workspacePanel.options.deleteWorkspace")}
       />
     </PanelLayout>
   );

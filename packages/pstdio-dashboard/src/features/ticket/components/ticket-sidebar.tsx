@@ -4,6 +4,7 @@ import {
   resolveSessionIndicatorIcon,
   type SessionCompletionStatus,
   Sidebar,
+  type SidebarActionMenuItem,
   type SidebarNavigateEvent,
   type SidebarNode,
   type SidebarSection,
@@ -41,6 +42,9 @@ interface TicketSidebarProps {
   onSelectSession: (workspaceShorthand: string, sessionId: string) => void;
   onCreateWorkspaceSessionDraft?: (workspaceId: string) => void;
   onSelectPlanning?: () => void;
+  resolveTicketContextMenuItems?: () => SidebarActionMenuItem[];
+  resolveWorkspaceContextMenuItems?: (workspace: TicketAttempt) => SidebarActionMenuItem[];
+  resolveSessionContextMenuItems?: (session: WorkspaceSessionEntry) => SidebarActionMenuItem[];
 }
 
 const PLANNING_ITEM_ID = "planning";
@@ -68,12 +72,16 @@ const buildPlanningSection = (): SidebarSection => ({
   ],
 });
 
-const buildFilesSection = (files: SelectableTicketFile[]): SidebarSection => {
+const buildFilesSection = (
+  files: SelectableTicketFile[],
+  resolveTicketContextMenuItems?: () => SidebarActionMenuItem[],
+): SidebarSection => {
   const nodes: SidebarNode[] = [
     {
       id: `file:${TICKET_CONTENT_ITEM_ID}`,
       label: "Ticket",
       icon: <FileText size={14} />,
+      contextMenuItems: resolveTicketContextMenuItems?.(),
       isNavigable: true,
       navigationIntent: { id: "select-file", payload: TICKET_CONTENT_ITEM_ID },
     },
@@ -94,6 +102,7 @@ const buildWorkspacesSection = (
   attemptStatusMap: Map<string, AttemptStatusMapEntry>,
   diffTotalsByWorkspaceId: Map<string, { additions: number; deletions: number }>,
   sessionsByWorkspaceId: Map<string, WorkspaceSessionEntry[]>,
+  resolveWorkspaceContextMenuItems?: (workspace: TicketAttempt) => SidebarActionMenuItem[],
 ): SidebarSection => {
   const sortedWorkspaces = sortWorkspacesByLatestSession(workspaces, sessionsByWorkspaceId);
 
@@ -115,6 +124,7 @@ const buildWorkspacesSection = (
         />
       ),
       isNavigable: true,
+      contextMenuItems: resolveWorkspaceContextMenuItems?.(workspace),
       navigationIntent: { id: "select-workspace", payload: { workspaceShorthand: workspace.shorthand } },
     };
   });
@@ -136,12 +146,14 @@ const buildSessionsSection = (
   workspaceId: string,
   workspaceShorthand: string,
   onCreateWorkspaceSessionDraft?: (workspaceId: string) => void,
+  resolveSessionContextMenuItems?: (session: WorkspaceSessionEntry) => SidebarActionMenuItem[],
 ): SidebarSection => {
   const nodes: SidebarNode[] = sessions.map((session) => ({
     id: `session:${session.id}`,
     label: session.title,
     icon: sessionIcon(session.status),
     iconColor: resolveSessionIndicatorColor(session.status as SessionCompletionStatus),
+    contextMenuItems: resolveSessionContextMenuItems?.(session),
     isNavigable: true,
     navigationIntent: {
       id: "select-session",
@@ -181,6 +193,9 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
     onSelectSession,
     onCreateWorkspaceSessionDraft,
     onSelectPlanning,
+    resolveTicketContextMenuItems,
+    resolveWorkspaceContextMenuItems,
+    resolveSessionContextMenuItems,
   } = props;
 
   const selectedWorkspace = selectedWorkspaceId ? workspaces.find((w) => w.id === selectedWorkspaceId) : null;
@@ -188,8 +203,14 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
 
   const sections: SidebarSection[] = [
     ...(onSelectPlanning ? [buildPlanningSection()] : []),
-    buildFilesSection(files),
-    buildWorkspacesSection(workspaces, attemptStatusMap, diffTotalsByWorkspaceId, sessionsByWorkspaceId),
+    buildFilesSection(files, resolveTicketContextMenuItems),
+    buildWorkspacesSection(
+      workspaces,
+      attemptStatusMap,
+      diffTotalsByWorkspaceId,
+      sessionsByWorkspaceId,
+      resolveWorkspaceContextMenuItems,
+    ),
     ...(selectedWorkspace
       ? [
           buildSessionsSection(
@@ -197,6 +218,7 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
             selectedWorkspace.id,
             selectedWorkspace.shorthand,
             onCreateWorkspaceSessionDraft,
+            resolveSessionContextMenuItems,
           ),
         ]
       : []),

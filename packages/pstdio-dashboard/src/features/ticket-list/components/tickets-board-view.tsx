@@ -1,8 +1,8 @@
 import {
+  type ResourceContextAction,
   TicketBoard,
   type TicketBoardColumn,
   type TicketBoardColumnAction,
-  type TicketBoardItem,
   type WorkspaceBadgeProps,
 } from "@pstdio/ui";
 import { Archive } from "lucide-react";
@@ -65,6 +65,7 @@ interface TicketsBoardViewProps {
   onCreateStart?: (status: TicketStatus) => void;
   onColumnAction?: (status: TicketStatus, action: TicketColumnAction) => Promise<void> | void;
   selectedTicketId?: string | null;
+  resolveContextMenuActions?: (ticket: Ticket) => ResourceContextAction[];
 }
 
 export const TicketsBoardView = (props: TicketsBoardViewProps) => {
@@ -83,6 +84,7 @@ export const TicketsBoardView = (props: TicketsBoardViewProps) => {
     onCreateStart,
     onColumnAction,
     selectedTicketId = null,
+    resolveContextMenuActions,
   } = props;
   const { t } = useTranslation("tickets");
 
@@ -93,13 +95,14 @@ export const TicketsBoardView = (props: TicketsBoardViewProps) => {
   const toColumnActions = (actions: TicketColumnAction[]): TicketBoardColumnAction[] =>
     actions.map((action) => ({ id: action, ...COLUMN_ACTION_MAP[action] }));
 
-  const toBoardItem = (ticket: Ticket, ticketsById: Map<string, Ticket>): TicketBoardItem => {
+  const toBoardItem = (ticket: Ticket, ticketsById: Map<string, Ticket>) => {
     const latestAttempt = latestAttemptsByTicketId.get(ticket.id);
     const diffTotals = latestAttempt ? diffTotalsByWorkspaceId.get(latestAttempt.id) : undefined;
     const sessionId = latestAttempt ? ((sessionsByWorkspace.get(latestAttempt.id)?.id as string) ?? null) : null;
 
     return {
       id: ticket.id,
+      contextMenuActions: resolveContextMenuActions?.(ticket),
       cardProps: {
         ticketId: ticket.shorthand,
         parentPath: buildParentPath(ticket, ticketsById),
@@ -114,7 +117,7 @@ export const TicketsBoardView = (props: TicketsBoardViewProps) => {
           onOpenSessionBubble,
           onOpenTicketWorkspace,
         }),
-        onClick: undefined,
+        onClick: () => onSelectTicket?.(ticket),
       },
     };
   };
@@ -127,11 +130,7 @@ export const TicketsBoardView = (props: TicketsBoardViewProps) => {
   }
 
   const columns: TicketBoardColumn[] = groups.map((group) => {
-    const items = group.tickets.map((ticket) => {
-      const item = toBoardItem(ticket, ticketsById);
-      item.cardProps.onClick = () => onSelectTicket?.(ticket);
-      return item;
-    });
+    const items = group.tickets.map((ticket) => toBoardItem(ticket, ticketsById));
 
     return {
       id: group.id,

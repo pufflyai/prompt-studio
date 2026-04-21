@@ -3,6 +3,8 @@ import { ChevronRight, MoreHorizontal, Plus } from "lucide-react";
 import { type ComponentProps, type ComponentType, type DragEvent, useState } from "react";
 
 import { MenuItem } from "@/components/menu-item";
+import type { ResourceContextAction } from "@/components/resource-context-menu";
+import { ResourceContextMenu } from "@/components/resource-context-menu";
 import { ScrollArea } from "@/components/scroll-area";
 import { Tooltip } from "@/components/tooltip";
 
@@ -13,6 +15,7 @@ type TicketCardProps = ComponentProps<typeof TicketCard>;
 export interface TicketBoardItem {
   id: string;
   cardProps: Omit<TicketCardProps, "draggable" | "onDragStart" | "onDragEnd" | "isSelected">;
+  contextMenuActions?: ResourceContextAction[];
 }
 
 export interface TicketBoardColumnAction {
@@ -159,14 +162,17 @@ export const TicketBoard = (props: TicketBoardProps) => {
                   );
                 })
               : column.items.map((item) => (
-                  <TicketCard
-                    key={item.id}
-                    {...item.cardProps}
-                    isSelected={item.id === selectedItemId}
-                    draggable={column.canDragOut}
-                    onDragStart={column.canDragOut ? handleDragStart(item.id) : undefined}
-                    onDragEnd={column.canDragOut ? handleDragEnd : undefined}
-                  />
+                  <ResourceContextMenu key={item.id} actions={item.contextMenuActions ?? []}>
+                    <Box>
+                      <TicketCard
+                        {...item.cardProps}
+                        isSelected={item.id === selectedItemId}
+                        draggable={column.canDragOut}
+                        onDragStart={column.canDragOut ? handleDragStart(item.id) : undefined}
+                        onDragEnd={column.canDragOut ? handleDragEnd : undefined}
+                      />
+                    </Box>
+                  </ResourceContextMenu>
                 ))}
           </ScrollArea>
         </Stack>
@@ -247,14 +253,17 @@ const GroupSection = (props: GroupSectionProps) => {
       {expanded && (
         <Stack gap="sm" pt="xs">
           {group.items.map((item) => (
-            <TicketCard
-              key={item.id}
-              {...item.cardProps}
-              isSelected={item.id === selectedItemId}
-              draggable={canDragOut}
-              onDragStart={canDragOut ? onDragStart(item.id) : undefined}
-              onDragEnd={canDragOut ? onDragEnd : undefined}
-            />
+            <ResourceContextMenu key={item.id} actions={item.contextMenuActions ?? []}>
+              <Box>
+                <TicketCard
+                  {...item.cardProps}
+                  isSelected={item.id === selectedItemId}
+                  draggable={canDragOut}
+                  onDragStart={canDragOut ? onDragStart(item.id) : undefined}
+                  onDragEnd={canDragOut ? onDragEnd : undefined}
+                />
+              </Box>
+            </ResourceContextMenu>
           ))}
         </Stack>
       )}

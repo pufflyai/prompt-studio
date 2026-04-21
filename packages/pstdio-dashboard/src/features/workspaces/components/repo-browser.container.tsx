@@ -6,10 +6,13 @@ import { useRepoBranches } from "@/features/project/hooks/use-repo-branches";
 import type { RepoBranch } from "@/features/project/types";
 import { useProjectSettingsStore } from "@/features/project-settings/store";
 import { useSessionWorkspace } from "@/features/sessions/hooks/use-session-workspace";
+import { useWorkspace } from "@/features/workspaces/hooks/use-workspace";
 import { RepoBrowser } from "./repo-browser";
 
 interface RepoBrowserContainerProps {
   sessionId?: string | null;
+  workspaceId?: string | null;
+  isSessionContext?: boolean;
   isDisabled?: boolean;
   onRepoChange?: (repoId: string) => void;
   onBranchChange?: (branch: string) => void;
@@ -24,6 +27,7 @@ interface ResolveBranchSelectionOptions {
 
 interface ResolveBranchStateOptions {
   isLocked: boolean;
+  isSessionContext: boolean;
   isBranchesPending: boolean;
   selectedRepositoryId: string;
   branches: RepoBranch[];
@@ -36,6 +40,17 @@ interface BranchState {
   selectedBranch: string;
   hasUserSelectedBranch: boolean;
   shouldPersistBranch: boolean;
+}
+
+interface ResolveBranchSelectorDisabledStateOptions {
+  isSessionContext: boolean;
+  isDisabled: boolean;
+  isLocked: boolean;
+}
+
+interface ResolveLockedBranchOptions {
+  sessionWorkspaceBranch?: string | null;
+  workspaceBranch?: string | null;
 }
 
 const getBranchLabel = (branch: RepoBranch, currentBranchTag: string, remoteBranchTag: string) => {
@@ -66,6 +81,7 @@ export const resolveBranchSelection = (options: ResolveBranchSelectionOptions) =
 export const resolveBranchState = (options: ResolveBranchStateOptions) => {
   const {
     isLocked,
+    isSessionContext,
     isBranchesPending,
     selectedRepositoryId,
     branches,
@@ -94,19 +110,38 @@ export const resolveBranchState = (options: ResolveBranchStateOptions) => {
 
   return {
     selectedBranch: nextSelectedBranch,
-    hasUserSelectedBranch: hasUserSelectedBranch && hasSelection,
-    shouldPersistBranch: nextSelectedBranch !== selectedBranch && nextSelectedBranch.length > 0,
+    hasUserSelectedBranch: isSessionContext ? false : hasUserSelectedBranch && hasSelection,
+    shouldPersistBranch: !isSessionContext && nextSelectedBranch !== selectedBranch && nextSelectedBranch.length > 0,
   } satisfies BranchState;
 };
 
+export const resolveBranchSelectorDisabledState = (options: ResolveBranchSelectorDisabledStateOptions) => {
+  const { isDisabled, isSessionContext, isLocked } = options;
+  return isDisabled || isSessionContext || isLocked;
+};
+
+export const resolveLockedBranch = (options: ResolveLockedBranchOptions) => {
+  const { sessionWorkspaceBranch, workspaceBranch } = options;
+  return sessionWorkspaceBranch ?? workspaceBranch ?? null;
+};
+
 export const RepoBrowserContainer = (props: RepoBrowserContainerProps) => {
-  const { sessionId, isDisabled = false, onRepoChange, onBranchChange } = props;
+  const { sessionId, workspaceId, isSessionContext = false, isDisabled = false, onRepoChange, onBranchChange } = props;
   const { t } = useTranslation("projects");
   const { projectId } = useParams({ strict: false });
 
   const workspace = useSessionWorkspace(sessionId ?? null);
-  const lockedBranch = workspace?.branch ?? null;
+  const explicitWorkspace = useWorkspace(workspaceId ?? null);
+  const lockedBranch = resolveLockedBranch({
+    sessionWorkspaceBranch: workspace?.branch ?? null,
+    workspaceBranch: explicitWorkspace?.branch ?? null,
+  });
   const isLocked = lockedBranch != null;
+  const isBranchSelectionDisabled = resolveBranchSelectorDisabledState({
+    isSessionContext,
+    isDisabled,
+    isLocked,
+  });
 
   const lastSelectedRepo = useProjectSettingsStore((s) => s.lastSelectedRepo);
   const setLastSelectedRepo = useProjectSettingsStore((s) => s.setLastSelectedRepo);
@@ -159,6 +194,7 @@ export const RepoBrowserContainer = (props: RepoBrowserContainerProps) => {
   useEffect(() => {
     const nextState = resolveBranchState({
       isLocked,
+      isSessionContext,
       isBranchesPending,
       selectedRepositoryId,
       branches,
@@ -185,6 +221,7 @@ export const RepoBrowserContainer = (props: RepoBrowserContainerProps) => {
     hasUserSelectedBranch,
     isBranchesPending,
     isLocked,
+    isSessionContext,
     selectedBranch,
     selectedRepositoryId,
     onBranchChange,
@@ -199,6 +236,8 @@ export const RepoBrowserContainer = (props: RepoBrowserContainerProps) => {
   };
 
   const handleSelectBranch = (branch: string) => {
+    if (isBranchSelectionDisabled) return;
+
     setHasUserSelectedBranch(true);
     setSelectedBranch(branch);
     setLastSelectedBranch(branch);
@@ -217,9 +256,9 @@ export const RepoBrowserContainer = (props: RepoBrowserContainerProps) => {
         label: getBranchLabel(branch, t("chatInput.branch.tags.current"), t("chatInput.branch.tags.remote")),
         value: branch.name,
       }))}
-      selectedBranch={isLocked ? (lockedBranch ?? "") : selectedBranch}
+      selectedBranch={lockedBranch ?? selectedBranch}
       onSelectBranch={handleSelectBranch}
-      isDisabled={isDisabled || isLocked}
+      isDisabled={isBranchSelectionDisabled}
       isReposLoading={isRepositoriesPending}
       isBranchesLoading={isLoadingBranches}
     />

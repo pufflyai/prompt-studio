@@ -1,14 +1,20 @@
 import { Stack, Text } from "@chakra-ui/react";
-import { PanelLayout } from "@pstdio/ui";
+import { DeleteConfirmationModal, PanelLayout } from "@pstdio/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
+import { Archive, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
+import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
+import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
+import { buildResourceContextMenuActions } from "@/features/plugin-actions/hooks/use-resource-context-menu";
 import { ProjectSidebar } from "@/features/project/components/project-sidebar";
 import { useProject } from "@/features/project/hooks/use-project";
 import { useProjectSettingsStore } from "@/features/project-settings/store";
 import { openTicketSessionBubble } from "@/features/ticket/utils/open-ticket-session-bubble";
 import { useCreateProjectTicket } from "@/features/ticket-list/hooks/use-create-project-ticket";
 import {
+  useDeleteProjectTicket,
   useProjectTickets,
   useUpdateProjectTicket,
   useUpdateProjectTicketStatus,
@@ -28,6 +34,39 @@ import { buildLatestAttemptsByTicketId } from "../utils/ticket-attempts";
 import { groupTickets, orderTickets } from "../utils/ticket-grouping";
 import { getVisibleTickets } from "../utils/ticket-visibility";
 
+const buildTicketOverflowActions = (input: {
+  ticketId: string;
+  archived: boolean;
+  projectId: string | undefined;
+  updateTicket: { isPending: boolean; mutate: (payload: { ticketId: string; archived: boolean }) => void };
+  deleteTicket: { isPending: boolean };
+  onDeleteOpen: () => void;
+  t: (key: string) => string;
+}): HeaderActionItem[] => {
+  const { ticketId, archived, projectId, updateTicket, deleteTicket, onDeleteOpen, t } = input;
+
+  return [
+    {
+      key: "archive-ticket",
+      label: t(
+        archived ? "projects:ticketPanel.options.unarchiveTicket" : "projects:ticketPanel.options.archiveTicket",
+      ),
+      kind: "default",
+      icon: Archive,
+      isDisabled: updateTicket.isPending,
+      onClick: () => updateTicket.mutate({ ticketId, archived: !archived }),
+    },
+    {
+      key: "delete-ticket",
+      label: t("projects:ticketPanel.options.deleteTicket"),
+      kind: "default",
+      icon: Trash2,
+      isDisabled: !projectId || deleteTicket.isPending,
+      onClick: onDeleteOpen,
+    },
+  ];
+};
+
 export const TicketsPanel = () => {
   const { projectId } = useParams({ strict: false });
   const { data: project, isLoading: isProjectLoading } = useProject(projectId);
@@ -35,16 +74,18 @@ export const TicketsPanel = () => {
   const attemptStatusMap = useAttemptStatusMap(projectId);
   const updateTicketStatus = useUpdateProjectTicketStatus(projectId);
   const updateTicket = useUpdateProjectTicket(projectId);
+  const deleteTicket = useDeleteProjectTicket(projectId);
   const createTicket = useCreateProjectTicket(projectId);
   const navigate = useNavigate();
 
   const sessionModalState = useProjectSettingsStore((s) => s.sessionModalState);
   const setSessionModalState = useProjectSettingsStore((s) => s.setSessionModalState);
   const setSelectedSessionId = useProjectSettingsStore((s) => s.setSelectedSessionId);
-  const { t } = useTranslation("tickets");
+  const { t } = useTranslation(["tickets", "projects"]);
   const [settings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createModalStatus, setCreateModalStatus] = useState<TicketStatus | null>(null);
+  const [deleteTicketId, setDeleteTicketId] = useState<string | null>(null);
 
   const isLoading = isProjectLoading || isTicketsLoading;
   const statusOptions = project?.ticketStatusOptions ?? [];
@@ -92,6 +133,15 @@ export const TicketsPanel = () => {
       setSelectedSessionId,
     });
   };
+
+  const pluginActionTrigger = usePluginActionTrigger({
+    projectId,
+    targetType: "ticket",
+    onSuccess: async (result) => {
+      if (!result.session_id) return;
+      await handleOpenSessionBubble(result.session_id);
+    },
+  });
 
   const handleMoveTicket = (ticketId: string, status: TicketStatus) => {
     const targetStatus = statusOptions.find((col) => col.id === status || col.name === status);
@@ -161,6 +211,22 @@ export const TicketsPanel = () => {
     });
   };
 
+  const buildContextMenuActions = (ticketId: string, archived: boolean) =>
+    buildResourceContextMenuActions({
+      pluginActions: pluginActionTrigger.pluginActions,
+      defaultOverflowActions: buildTicketOverflowActions({
+        ticketId,
+        archived,
+        projectId,
+        updateTicket,
+        deleteTicket,
+        onDeleteOpen: () => setDeleteTicketId(ticketId),
+        t,
+      }),
+      pendingActionKeys: pluginActionTrigger.pendingActionKeys,
+      onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, ticketId),
+    });
+
   const handleOpenTicketWorkspace = (ticketShorthand: string, workspaceShorthand: string) => {
     if (!projectId || !workspaceShorthand) return;
 
@@ -203,6 +269,7 @@ export const TicketsPanel = () => {
               onOpenTicketWorkspace={(ticket, workspaceShorthand) =>
                 handleOpenTicketWorkspace(ticket.shorthand, workspaceShorthand)
               }
+              resolveContextMenuActions={(ticket) => buildContextMenuActions(ticket.id, Boolean(ticket.archived))}
               onCreateStart={(status) => openCreateModal(status)}
               onColumnAction={handleColumnAction}
             />
@@ -212,6 +279,7 @@ export const TicketsPanel = () => {
               displayProperties={settings.displayProperties}
               badgeContext={badgeContext}
               onSelectTicket={(ticket) => navigateToTicket(ticket.shorthand)}
+              resolveContextMenuActions={(ticket) => buildContextMenuActions(ticket.id, Boolean(ticket.archived))}
             />
           )}
         </Stack>
@@ -226,6 +294,30 @@ export const TicketsPanel = () => {
           tags={tagDefs}
           projectName={project?.name}
           statusOptions={statusOptions}
+        />
+
+        {pluginActionTrigger.activeParamAction && projectId ? (
+          <ActionParamsDialog
+            open
+            action={pluginActionTrigger.activeParamAction}
+            projectId={projectId}
+            isSubmitting={pluginActionTrigger.activeParamActionIsPending}
+            onClose={pluginActionTrigger.cancelParams}
+            onSubmit={(params) => pluginActionTrigger.submitWithParams(params)}
+          />
+        ) : null}
+
+        <DeleteConfirmationModal
+          open={Boolean(deleteTicketId)}
+          onClose={() => setDeleteTicketId(null)}
+          onDelete={async () => {
+            if (!deleteTicketId) return;
+            await deleteTicket.mutateAsync({ ticketId: deleteTicketId });
+            setDeleteTicketId(null);
+          }}
+          headline={t("projects:ticketPanel.deleteConfirmation.ticket.headline")}
+          notificationText={t("projects:ticketPanel.deleteConfirmation.ticket.notification")}
+          buttonText={t("projects:ticketPanel.options.deleteTicket")}
         />
       </Stack>
     </PanelLayout>
