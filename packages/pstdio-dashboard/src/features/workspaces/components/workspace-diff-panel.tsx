@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
 import { normalizeWorkspacePageTab, type WorkspacePageTab } from "@/features/workspaces/pages/workspace-page-tab";
 import { type ChangedFilesViewMode, collectChangedFilePaths } from "../utils/build-changed-files-tree";
+import { sortDiffs } from "../utils/sort-diffs";
 import { WorkspaceChecksPanel } from "./workspace-checks-panel";
 import { FileListPanel, ResizableLeftPanel, resolveSelectedPath } from "./workspace-file-list-panel";
 
@@ -18,6 +19,19 @@ interface WorkspaceDiffPanelProps {
   onTabChange: (tab: WorkspacePageTab) => void;
   loading?: boolean;
 }
+
+export const buildFilteredDiffs = (input: {
+  diffs: Diff[];
+  normalizedSearchQuery: string;
+  viewMode: ChangedFilesViewMode;
+}) => {
+  const { diffs, normalizedSearchQuery, viewMode } = input;
+  const matchingDiffs = normalizedSearchQuery
+    ? diffs.filter((diff) => (diff.newPath ?? diff.oldPath ?? "").toLowerCase().includes(normalizedSearchQuery))
+    : diffs;
+
+  return sortDiffs(matchingDiffs, viewMode);
+};
 
 const WorkspaceDiffPanelLoading = () => (
   <Flex h="full" minH="0" minW="0" flex="1" bg="bg.subtle" gap="0">
@@ -81,10 +95,8 @@ export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
     return changedFilePaths.filter((path) => path.toLowerCase().includes(normalizedSearchQuery));
   }, [changedFilePaths, normalizedSearchQuery]);
   const filteredDiffs = useMemo(() => {
-    if (!normalizedSearchQuery) return diffs;
-
-    return diffs.filter((diff) => (diff.newPath ?? diff.oldPath ?? "").toLowerCase().includes(normalizedSearchQuery));
-  }, [diffs, normalizedSearchQuery]);
+    return buildFilteredDiffs({ diffs, normalizedSearchQuery, viewMode });
+  }, [diffs, normalizedSearchQuery, viewMode]);
   const filteredDiffPaths = useMemo(
     () => filteredDiffs.map((diff) => diff.newPath ?? diff.oldPath ?? "unknown"),
     [filteredDiffs],
