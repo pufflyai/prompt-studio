@@ -82,7 +82,6 @@ export const createHandler =
         shorthand: ticket.shorthand,
         created_at: ticket.created_at,
         draft: false,
-        status_name: argv.status ?? null,
         parent_id: null,
         user_prompt: null,
         depends_on: null,

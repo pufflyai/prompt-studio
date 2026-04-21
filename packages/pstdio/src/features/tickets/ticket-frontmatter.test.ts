@@ -10,7 +10,6 @@ const baseFields = {
   shorthand: "PS-1",
   created_at: "2026-03-04T00:00:00.000Z",
   draft: null,
-  status_name: null,
   parent_id: null,
   user_prompt: null,
   depends_on: null,
@@ -25,7 +24,6 @@ describe("buildTicketFrontmatter", () => {
       shorthand: "PS-12",
       created_at: "2026-03-04T00:00:00.000Z",
       draft: true,
-      status_name: "backlog",
       parent_id: "PS-5",
       user_prompt: "Build the feature",
       depends_on: "PS-3,PS-4",
@@ -41,7 +39,6 @@ describe("buildTicketFrontmatter", () => {
         'user_prompt: "Build the feature"',
         'created: "2026-03-04T00:00:00.000Z"',
         "draft: true",
-        'status: "backlog"',
         'parent_id: "PS-5"',
         'depends_on: "PS-3,PS-4"',
         'parallelizable: "yes"',
@@ -106,7 +103,6 @@ describe("parseFrontmatter", () => {
     const content = [
       "---",
       'ticket_id: "PS-12"',
-      'status: "wip"',
       'priority: "P1"',
       'parent_id: "PS-5"',
       'depends_on: "PS-3,PS-4"',
@@ -121,7 +117,6 @@ describe("parseFrontmatter", () => {
     expect(result).toEqual({
       blocked_reason: "waiting on API",
       parent_id: "PS-5",
-      status: "wip",
     });
   });
 
@@ -135,34 +130,37 @@ describe("parseFrontmatter", () => {
   });
 
   test("ignores fields with empty values", () => {
-    const content = '---\nstatus: ""\n---\n\n# Ticket';
+    const content = '---\nparent_id: ""\n---\n\n# Ticket';
     expect(parseFrontmatter(content)).toEqual({});
   });
 
   test("strips quotes from values", () => {
-    const content = "---\nstatus: backlog\n---\n\n# Ticket";
-    expect(parseFrontmatter(content)).toEqual({ status: "backlog" });
+    const content = "---\nparent_id: PS-1\n---\n\n# Ticket";
+    expect(parseFrontmatter(content)).toEqual({ parent_id: "PS-1" });
   });
 });
 
 describe("applyFrontmatterValues", () => {
   test("applies generated values over template frontmatter and preserves custom keys", () => {
-    const frontmatter = [
+    const frontmatter = ["---", 'ticket_id: "PS-5"', 'created: "2026-03-04T00:00:00.000Z"', "draft: true", "---"].join(
+      "\n",
+    );
+    const content = [
       "---",
-      'ticket_id: "PS-5"',
-      'created: "2026-03-04T00:00:00.000Z"',
-      "draft: true",
+      'ticket_id: "OLD-1"',
+      'parallelizable: "[no|yes]"',
       'status: "wip"',
       "---",
+      "",
+      "# Ticket",
     ].join("\n");
-    const content = ["---", 'ticket_id: "OLD-1"', 'parallelizable: "[no|yes]"', "---", "", "# Ticket"].join("\n");
 
     const result = applyFrontmatterValues(frontmatter, content);
 
     expect(result).toContain('ticket_id: "PS-5"');
     expect(result).toContain('created: "2026-03-04T00:00:00.000Z"');
     expect(result).toContain("draft: true");
-    expect(result).toContain('status: "wip"');
+    expect(result).not.toContain('status: "wip"');
     expect(result).toContain('parallelizable: "[no|yes]"');
   });
 
