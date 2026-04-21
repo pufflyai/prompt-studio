@@ -10,6 +10,8 @@ import {
 } from "@tanstack/react-table";
 import { ChevronRight } from "lucide-react";
 import { type ComponentType, type ReactNode, useState } from "react";
+import type { ResourceContextAction } from "../resource-context-menu";
+import { ResourceContextMenu } from "../resource-context-menu";
 import { TagBadge } from "./tag-badge";
 import type { TicketCardBadge, TicketCardTagBadge } from "./ticket-card";
 
@@ -26,6 +28,7 @@ export interface TicketListItem {
   children?: TicketListItem[];
   onClick?: () => void;
   onTagChange?: (tagName: string, newValue: string) => void;
+  contextMenuActions?: ResourceContextAction[];
 }
 
 interface TicketListProps {
@@ -66,28 +69,29 @@ export const TicketList = (props: TicketListProps) => {
         const canExpand = row.getCanExpand();
 
         return (
-          <HStack
-            key={row.id}
-            paddingX="sm"
-            paddingY="xs"
-            gap="sm"
-            cursor="pointer"
-            borderBottomWidth="1px"
-            borderColor="border.muted"
-            background={isSelected ? "bg.active" : "transparent"}
-            _hover={{ background: isSelected ? "bg.active" : "bg.hover" }}
-            onClick={() => {
-              if (canExpand) {
-                row.toggleExpanded();
-              } else {
-                item.onClick?.();
-                onItemClick?.(item);
-              }
-            }}
-            data-selected={isSelected ? "true" : undefined}
-          >
-            {flexRender(row.getVisibleCells()[0].column.columnDef.cell, row.getVisibleCells()[0].getContext())}
-          </HStack>
+          <ResourceContextMenu key={row.id} actions={item.contextMenuActions ?? []}>
+            <HStack
+              paddingX="sm"
+              paddingY="xs"
+              gap="sm"
+              cursor="pointer"
+              borderBottomWidth="1px"
+              borderColor="border.muted"
+              background={isSelected ? "bg.active" : "transparent"}
+              _hover={{ background: isSelected ? "bg.active" : "bg.hover" }}
+              onClick={() => {
+                if (canExpand) {
+                  row.toggleExpanded();
+                } else {
+                  item.onClick?.();
+                  onItemClick?.(item);
+                }
+              }}
+              data-selected={isSelected ? "true" : undefined}
+            >
+              {flexRender(row.getVisibleCells()[0].column.columnDef.cell, row.getVisibleCells()[0].getContext())}
+            </HStack>
+          </ResourceContextMenu>
         );
       })}
     </Box>

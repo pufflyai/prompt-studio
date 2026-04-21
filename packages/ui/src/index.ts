@@ -37,6 +37,8 @@ export type {
 export { OpenSourceNoticesScreen } from "./components/open-source-notices-screen";
 export type { PropertiesProps, PropertyItem } from "./components/properties";
 export { Properties } from "./components/properties";
+export type { ResourceContextAction } from "./components/resource-context-menu";
+export { ResourceContextMenu } from "./components/resource-context-menu";
 export { ScrollArea } from "./components/scroll-area";
 export type { SearchableMenuItem, SearchableMenuParentList } from "./components/searchable-menu";
 export { SearchableMenu } from "./components/searchable-menu";

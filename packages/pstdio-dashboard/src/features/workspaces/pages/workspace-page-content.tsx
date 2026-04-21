@@ -6,6 +6,10 @@ import { useTranslation } from "react-i18next";
 import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
 import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin-header-actions";
 import type { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
+import {
+  buildResourceContextMenuActions,
+  toSidebarContextMenuItems,
+} from "@/features/plugin-actions/hooks/use-resource-context-menu";
 import { CreateWorkspaceModal } from "@/features/ticket/components/create-workspace-modal";
 import { TicketSidebar } from "@/features/ticket/components/ticket-sidebar";
 import { formatTicketBreadcrumbLabel } from "@/features/ticket/utils/ticket-breadcrumb";
@@ -119,6 +123,24 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
       onSelectSession={selectSession}
       onCreateWorkspaceSessionDraft={createWorkspaceSessionDraft}
       onSelectPlanning={selectPlanning}
+      resolveWorkspaceContextMenuItems={(workspace) =>
+        toSidebarContextMenuItems(
+          buildResourceContextMenuActions({
+            pluginActions,
+            defaultOverflowActions: buildWorkspaceDeleteOverflowAction({
+              t,
+              hasSelectedWorkspace: true,
+              isMutationPending: deleteWorkspaceIsPending,
+              onDeleteWorkspace: () => {
+                selectWorkspace(workspace.shorthand);
+                openDeleteModal();
+              },
+            }),
+            pendingActionKeys: pluginActionTrigger.pendingActionKeys,
+            onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, workspace.id),
+          }),
+        )
+      }
     />
   );
 

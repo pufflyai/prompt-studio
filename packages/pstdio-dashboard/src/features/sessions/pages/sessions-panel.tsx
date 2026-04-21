@@ -7,6 +7,10 @@ import { ActionParamsDialog } from "@/features/plugin-actions/components/action-
 import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
 import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin-header-actions";
 import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
+import {
+  buildResourceContextMenuActions,
+  toSidebarContextMenuItems,
+} from "@/features/plugin-actions/hooks/use-resource-context-menu";
 import { SessionChatView } from "../components/session-chat-view";
 import { SessionsSidebar } from "../components/sessions-sidebar";
 import { useArchiveSession } from "../hooks/use-archive-session";
@@ -43,37 +47,45 @@ export const SessionsPanel = () => {
 
   const agentSessionId = selectedSession?.agentSessionId ?? null;
 
-  const defaultOverflowActions: HeaderActionItem[] = selectedSessionId
-    ? [
-        ...(agentSessionId
-          ? [
-              {
-                key: "copy-agent-session-id",
-                label: t("sessions.copyAgentSessionId"),
-                kind: "default" as const,
-                icon: Copy,
-                onClick: async () => {
-                  await navigator.clipboard.writeText(agentSessionId);
-                  toaster.create({
-                    type: "success",
-                    title: t("sessions.copyAgentSessionId"),
-                    description: agentSessionId,
-                  });
-                },
+  const buildSessionOverflowActions = (session: { id: string; agentSessionId?: string | null }): HeaderActionItem[] => {
+    const sessionAgentId = session.agentSessionId ?? null;
+
+    return [
+      ...(sessionAgentId
+        ? [
+            {
+              key: "copy-agent-session-id",
+              label: t("sessions.copyAgentSessionId"),
+              kind: "default" as const,
+              icon: Copy,
+              onClick: async () => {
+                await navigator.clipboard.writeText(sessionAgentId);
+                toaster.create({
+                  type: "success",
+                  title: t("sessions.copyAgentSessionId"),
+                  description: sessionAgentId,
+                });
               },
-            ]
-          : []),
-        {
-          key: "archive-session",
-          label: t("sessions.archiveSession"),
-          kind: "default",
-          icon: Archive,
-          onClick: () => {
-            archiveSession.mutate(selectedSessionId);
+            },
+          ]
+        : []),
+      {
+        key: "archive-session",
+        label: t("sessions.archiveSession"),
+        kind: "default",
+        icon: Archive,
+        onClick: () => {
+          archiveSession.mutate(session.id);
+          if (session.id === selectedSessionId) {
             navigate({ to: `/projects/${projectId}/sessions` });
-          },
+          }
         },
-      ]
+      },
+    ];
+  };
+
+  const defaultOverflowActions: HeaderActionItem[] = selectedSessionId
+    ? buildSessionOverflowActions({ id: selectedSessionId, agentSessionId })
     : [];
 
   const sidebar = (
@@ -82,6 +94,16 @@ export const SessionsPanel = () => {
       selectedSessionId={selectedSessionId}
       onSelectSession={handleSelectSession}
       onCreateSession={handleCreateSession}
+      resolveContextMenuItems={(session) =>
+        toSidebarContextMenuItems(
+          buildResourceContextMenuActions({
+            pluginActions: pluginActionTrigger.pluginActions,
+            defaultOverflowActions: buildSessionOverflowActions(session),
+            pendingActionKeys: pluginActionTrigger.pendingActionKeys,
+            onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, session.id),
+          }),
+        )
+      }
     />
   );
 

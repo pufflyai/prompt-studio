@@ -4,6 +4,7 @@ import {
   resolveSessionIndicatorIcon,
   type SessionCompletionStatus,
   Sidebar,
+  type SidebarActionMenuItem,
   type SidebarNavigateEvent,
   type SidebarNode,
   type SidebarSection,
@@ -41,6 +42,7 @@ interface TicketSidebarProps {
   onSelectSession: (workspaceShorthand: string, sessionId: string) => void;
   onCreateWorkspaceSessionDraft?: (workspaceId: string) => void;
   onSelectPlanning?: () => void;
+  resolveWorkspaceContextMenuItems?: (workspace: TicketAttempt) => SidebarActionMenuItem[];
 }
 
 const PLANNING_ITEM_ID = "planning";
@@ -94,6 +96,7 @@ const buildWorkspacesSection = (
   attemptStatusMap: Map<string, AttemptStatusMapEntry>,
   diffTotalsByWorkspaceId: Map<string, { additions: number; deletions: number }>,
   sessionsByWorkspaceId: Map<string, WorkspaceSessionEntry[]>,
+  resolveWorkspaceContextMenuItems?: (workspace: TicketAttempt) => SidebarActionMenuItem[],
 ): SidebarSection => {
   const sortedWorkspaces = sortWorkspacesByLatestSession(workspaces, sessionsByWorkspaceId);
 
@@ -115,6 +118,7 @@ const buildWorkspacesSection = (
         />
       ),
       isNavigable: true,
+      contextMenuItems: resolveWorkspaceContextMenuItems?.(workspace),
       navigationIntent: { id: "select-workspace", payload: { workspaceShorthand: workspace.shorthand } },
     };
   });
@@ -181,6 +185,7 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
     onSelectSession,
     onCreateWorkspaceSessionDraft,
     onSelectPlanning,
+    resolveWorkspaceContextMenuItems,
   } = props;
 
   const selectedWorkspace = selectedWorkspaceId ? workspaces.find((w) => w.id === selectedWorkspaceId) : null;
@@ -189,7 +194,13 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
   const sections: SidebarSection[] = [
     ...(onSelectPlanning ? [buildPlanningSection()] : []),
     buildFilesSection(files),
-    buildWorkspacesSection(workspaces, attemptStatusMap, diffTotalsByWorkspaceId, sessionsByWorkspaceId),
+    buildWorkspacesSection(
+      workspaces,
+      attemptStatusMap,
+      diffTotalsByWorkspaceId,
+      sessionsByWorkspaceId,
+      resolveWorkspaceContextMenuItems,
+    ),
     ...(selectedWorkspace
       ? [
           buildSessionsSection(

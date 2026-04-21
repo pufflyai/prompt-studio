@@ -15,7 +15,8 @@ export interface SidebarActionMenuItem {
   id: string;
   label: string;
   description?: string;
-  icon?: ReactNode;
+  icon?: ReactNode | ComponentType<{ size?: number | string }>;
+  disabled?: boolean;
   onAction?: () => void;
 }
 
@@ -45,6 +46,7 @@ export interface SidebarNode {
   /** URL for the node. When provided with a linkComponent, the row renders as an anchor for cmd+click support. */
   href?: string;
   navigationIntent?: SidebarNavigationIntent;
+  contextMenuItems?: SidebarActionMenuItem[];
   actions?: SidebarAction[];
   children?: SidebarNode[];
 }

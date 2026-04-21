@@ -1,5 +1,7 @@
-import { Box, HStack, IconButton, Menu, Stack, Text } from "@chakra-ui/react";
+import { Box, HStack, Icon, IconButton, Menu, Stack, Text } from "@chakra-ui/react";
 import { ChevronRight } from "lucide-react";
+import { isValidElement } from "react";
+import { ResourceContextMenu } from "../resource-context-menu";
 import { Tooltip } from "../tooltip";
 import { SearchableActionMenu } from "./searchable-action-menu";
 import { SidebarNodeContent } from "./sidebar-node-content";
@@ -40,6 +42,13 @@ interface SidebarNodeRowProps {
 }
 
 const isExpanded = (id: string, values: string[]) => values.includes(id);
+
+const renderSidebarMenuItemIcon = (icon: unknown) => {
+  if (!icon) return null;
+  if (isValidElement(icon)) return <Box mr="2">{icon}</Box>;
+
+  return <Icon as={icon as never} boxSize="14px" mr="2" />;
+};
 
 const handleSidebarNodeClick = ({
   sectionId,
@@ -90,8 +99,8 @@ const SidebarActionButton = (props: { action: SidebarAction; sectionId: string; 
           <Menu.Content minW="160px" bg="bg">
             {action.menuItems.map((item) => (
               <Tooltip key={item.id} content={item.description} disabled={!item.description} openDelay={300}>
-                <Menu.Item value={item.id} onClick={() => item.onAction?.()}>
-                  {item.icon ? <Box mr="2">{item.icon}</Box> : null}
+                <Menu.Item value={item.id} disabled={item.disabled} onClick={() => item.onAction?.()}>
+                  {renderSidebarMenuItemIcon(item.icon)}
                   {item.label}
                 </Menu.Item>
               </Tooltip>
@@ -188,21 +197,31 @@ const SidebarNodeRow = (props: SidebarNodeRowProps) => {
     overflow: "hidden" as const,
   };
 
+  const contextMenuActions = (node.contextMenuItems ?? []).map((item) => ({
+    key: item.id,
+    label: item.label,
+    icon: item.icon,
+    isDisabled: item.disabled,
+    onClick: () => item.onAction?.(),
+  }));
+
   return (
     <Stack gap="1px" w="full" minW="0" maxW="full">
-      {canLink && LinkComponent && node.href ? (
-        <LinkComponent to={node.href}>
+      <ResourceContextMenu actions={contextMenuActions} contentMinWidth="180px">
+        {canLink && LinkComponent && node.href ? (
+          <LinkComponent to={node.href}>
+            <HStack {...rowStyles} onClick={handleClick}>
+              <SidebarNodeContent node={node} expanded={expanded} hasChildren={hasChildren} isDisabled={isDisabled} />
+              <SidebarRowActions sectionId={sectionId} nodeId={node.id} actions={node.actions ?? []} />
+            </HStack>
+          </LinkComponent>
+        ) : (
           <HStack {...rowStyles} onClick={handleClick}>
             <SidebarNodeContent node={node} expanded={expanded} hasChildren={hasChildren} isDisabled={isDisabled} />
             <SidebarRowActions sectionId={sectionId} nodeId={node.id} actions={node.actions ?? []} />
           </HStack>
-        </LinkComponent>
-      ) : (
-        <HStack {...rowStyles} onClick={handleClick}>
-          <SidebarNodeContent node={node} expanded={expanded} hasChildren={hasChildren} isDisabled={isDisabled} />
-          <SidebarRowActions sectionId={sectionId} nodeId={node.id} actions={node.actions ?? []} />
-        </HStack>
-      )}
+        )}
+      </ResourceContextMenu>
 
       {expanded
         ? node.children?.map((childNode) => (
