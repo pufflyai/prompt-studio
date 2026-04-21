@@ -159,7 +159,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
           <Box flexShrink="0">
             <AgentBrowserContainer sessionId={sessionId} />
           </Box>
-          <RepoBrowserContainer sessionId={sessionId} />
+          <RepoBrowserContainer sessionId={sessionId} workspaceId={effectiveWorkspaceId} isSessionContext />
         </Flex>
       }
       approvalPrompt={<SessionChatApprovalPromptPanel sessionId={sessionId} approvalRequest={approvalRequest} />}

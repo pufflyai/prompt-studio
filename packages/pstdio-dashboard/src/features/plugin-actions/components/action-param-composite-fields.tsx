@@ -211,6 +211,7 @@ export const RepoParamField = (props: RepoParamFieldProps) => {
   useEffect(() => {
     const nextState = resolveBranchState({
       isLocked: false,
+      isSessionContext: false,
       isBranchesPending: isBranchesLoading,
       selectedRepositoryId: selectedRepoId,
       branches,
