@@ -128,7 +128,7 @@ export default function MermaidComponent(props: MermaidComponentProps) {
           <NumberInput.Root
             size="xs"
             width="64px"
-            value={String(zoom)}
+            defaultValue={"100"}
             min={MIN_ZOOM}
             max={MAX_ZOOM}
             step={ZOOM_STEP}
