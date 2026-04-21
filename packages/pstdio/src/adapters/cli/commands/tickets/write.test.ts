@@ -144,14 +144,14 @@ describe("tickets write", () => {
     expect(content).toContain("Input: Some description");
   });
 
-  test("preserves template frontmatter including user_prompt and strips status", async () => {
+  test("preserves template frontmatter including user_prompt", async () => {
     makeConfig();
     const templateContent = [
       "---",
       'ticket_id: "{{TICKET_ID}}"',
+      'status: "wip"',
       'user_prompt: "{{USER_PROMPT}}"',
       'created: "{{CREATED_AT}}"',
-      'status: "{{STATUS}}"',
       "---",
       "",
       "# {{TICKET_TITLE}}",
@@ -181,7 +181,7 @@ describe("tickets write", () => {
 
     const content = readTicketFile(tmpBase, "PS-5");
     expect(content).toContain('user_prompt: "Build the thing"');
-    expect(content).not.toContain("status:");
+    expect(content).not.toContain('status: "wip"');
     expect(content).toContain("# With template FM");
   });
 

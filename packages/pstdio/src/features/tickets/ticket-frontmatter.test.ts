@@ -148,8 +148,8 @@ describe("applyFrontmatterValues", () => {
     const content = [
       "---",
       'ticket_id: "OLD-1"',
+      'status: "legacy"',
       'parallelizable: "[no|yes]"',
-      'status: "wip"',
       "---",
       "",
       "# Ticket",
@@ -160,8 +160,8 @@ describe("applyFrontmatterValues", () => {
     expect(result).toContain('ticket_id: "PS-5"');
     expect(result).toContain('created: "2026-03-04T00:00:00.000Z"');
     expect(result).toContain("draft: true");
-    expect(result).not.toContain('status: "wip"');
     expect(result).toContain('parallelizable: "[no|yes]"');
+    expect(result).not.toContain('status: "legacy"');
   });
 
   test("creates frontmatter when content has none", () => {

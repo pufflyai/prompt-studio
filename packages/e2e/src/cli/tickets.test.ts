@@ -162,6 +162,44 @@ describe("pstdio tickets write", () => {
   );
 
   test(
+    "merges generated frontmatter values with template frontmatter",
+    () => {
+      const repo = createInitializedRepo("tk-write-frontmatter");
+
+      const templateFile = join(repo, "ticket-template.md");
+      writeFileSync(
+        templateFile,
+        [
+          "---",
+          'ticket_id: "OLD-1"',
+          'user_prompt: "{{USER_PROMPT}}"',
+          'parallelizable: "[no|yes]"',
+          "---",
+          "",
+          "# {{TICKET_TITLE}}",
+        ].join("\n"),
+      );
+      run(`templates create --name custom-ticket --type ticket --file ${templateFile}`, repo);
+
+      const output = run(
+        'tickets write --title "Templated frontmatter" --template custom-ticket --user-prompt "Build the thing"',
+        repo,
+      );
+      const shorthand = output.match(/Created ticket (\S+) \(draft\)/)![1];
+
+      const ticketFile = join(findTicketDir(repo, shorthand), "ticket.md");
+      const content = readFileSync(ticketFile, "utf8");
+
+      expect(content).toContain(`ticket_id: "${shorthand}"`);
+      expect(content).not.toContain('ticket_id: "OLD-1"');
+      expect(content).toContain('user_prompt: "Build the thing"');
+      expect(content).toContain('parallelizable: "[no|yes]"');
+      expect(content).toContain("# Templated frontmatter");
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
     "fails with nonexistent template",
     () => {
       const repo = createInitializedRepo("tk-write-badtpl");
@@ -225,6 +263,30 @@ describe("pstdio tickets save", () => {
       const listOutput = run(`tickets list --parent-id ${parentShorthand}`, repo);
       expect(listOutput).toContain(childShorthand);
       expect(listOutput).toContain("child-ticket");
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
+    "ignores legacy status in frontmatter when saving without --status",
+    () => {
+      const repo = createInitializedRepo("tk-save-legacy-status");
+
+      const writeOutput = run('tickets write --title "Legacy status"', repo);
+      const shorthand = writeOutput.match(/Created ticket (\S+)/)![1];
+
+      const ticketFile = join(findTicketDir(repo, shorthand), "ticket.md");
+      const content = readFileSync(ticketFile, "utf8");
+      writeFileSync(ticketFile, content.replace("---\n", '---\nstatus: "wip"\n'));
+
+      const saveOutput = run(`tickets save --id ${shorthand}`, repo);
+      expect(saveOutput).toContain(`Saved ticket ${shorthand}`);
+
+      const savedContent = readFileSync(ticketFile, "utf8");
+      expect(savedContent).not.toContain('status: "wip"');
+
+      const filtered = run("tickets list --status wip", repo);
+      expect(filtered).toContain("No tickets found");
     },
     TEST_TIMEOUT,
   );

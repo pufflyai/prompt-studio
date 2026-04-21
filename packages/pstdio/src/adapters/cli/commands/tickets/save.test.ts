@@ -209,10 +209,10 @@ describe("tickets save", () => {
     expect(updateTicket).toHaveBeenCalledWith("t-1", expect.objectContaining({ status_id: "s-backlog" }));
   });
 
-  test("strips legacy status from local frontmatter after save", async () => {
+  test("updates local frontmatter draft flag after save", async () => {
     writeFileSync(
       join(tmpBase, ".pstdio", "tickets", "PS-1", "ticket.md"),
-      '---\nticket_id: "PS-1"\nstatus: "wip"\ndraft: true\n---\n\n# Updated content',
+      '---\nstatus: "wip"\ndraft: true\n---\n\n# Updated content',
     );
 
     const handler = createHandler({ ...baseDeps, log: mock() });
@@ -220,8 +220,8 @@ describe("tickets save", () => {
     await handler({ id: "PS-1", _: [], $0: "" } as never);
 
     const savedContent = readFileSync(join(tmpBase, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8");
-    expect(savedContent).not.toContain('status: "wip"');
     expect(savedContent).toContain("draft: false");
+    expect(savedContent).not.toContain('status: "wip"');
   });
 
   test("uploads local ticket files and logs upload count", async () => {

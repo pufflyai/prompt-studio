@@ -98,6 +98,8 @@ const frontmatterKey = (line: string) => {
   return line.slice(0, colonIndex).trim();
 };
 
+const DISALLOWED_FRONTMATTER_KEYS = new Set(["status"]);
+
 export const applyFrontmatterValues = (frontmatter: string, content: string) => {
   if (findFrontmatterClosingIndex(content) === -1) {
     return applyFrontmatter(frontmatter, content);
@@ -108,11 +110,16 @@ export const applyFrontmatterValues = (frontmatter: string, content: string) => 
   for (const line of frontmatterLines(frontmatter)) {
     const key = frontmatterKey(line);
     if (!key) continue;
+    if (DISALLOWED_FRONTMATTER_KEYS.has(key)) continue;
     overrides.set(key, line);
     overrideOrder.push(key);
   }
 
-  const existing = frontmatterLines(content);
+  const existing = frontmatterLines(content).filter((line) => {
+    const key = frontmatterKey(line);
+    if (!key) return true;
+    return !DISALLOWED_FRONTMATTER_KEYS.has(key);
+  });
   const merged = existing.map((line) => {
     const key = frontmatterKey(line);
     if (!key) return line;
@@ -120,15 +127,12 @@ export const applyFrontmatterValues = (frontmatter: string, content: string) => 
     return overrides.get(key)!;
   });
 
-  const mergedWithoutStatus = merged.filter((line) => frontmatterKey(line) !== "status");
-
   for (const key of overrideOrder) {
-    if (key === "status") continue;
     if (existing.some((line) => frontmatterKey(line) === key)) continue;
     const line = overrides.get(key);
-    if (line) mergedWithoutStatus.push(line);
+    if (line) merged.push(line);
   }
 
-  const mergedFrontmatter = ["---", ...mergedWithoutStatus, "---"].join("\n");
+  const mergedFrontmatter = ["---", ...merged, "---"].join("\n");
   return applyFrontmatter(mergedFrontmatter, content);
 };

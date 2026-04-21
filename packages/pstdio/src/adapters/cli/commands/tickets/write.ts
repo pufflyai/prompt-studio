@@ -57,7 +57,6 @@ const renderTemplate = (templateContent: string, shorthand: string, argv: Argume
     INPUT: argv["user-prompt"] ?? "",
     PARENT_ID: argv["parent-id"] ?? "",
     USER_PROMPT: argv["user-prompt"] ?? "",
-    STATUS: argv.status ?? "backlog",
   });
 
 export const createHandler =
