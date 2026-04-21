@@ -1,7 +1,6 @@
 import { HStack, Stack, Text } from "@chakra-ui/react";
-import { HorizontalMenuStack, PanelLayout, toaster } from "@pstdio/ui";
+import { HorizontalMenuStack, PanelLayout } from "@pstdio/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { Archive, Copy } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
 import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
@@ -15,6 +14,7 @@ import { SessionChatView } from "../components/session-chat-view";
 import { SessionsSidebar } from "../components/sessions-sidebar";
 import { useArchiveSession } from "../hooks/use-archive-session";
 import { useProjectSessions } from "../hooks/use-project-sessions";
+import { buildSessionOverflowActions } from "../session-actions";
 import { getVisibleSessions } from "../utils/visible-sessions";
 
 export const SessionsPanel = () => {
@@ -47,45 +47,16 @@ export const SessionsPanel = () => {
 
   const agentSessionId = selectedSession?.agentSessionId ?? null;
 
-  const buildSessionOverflowActions = (session: { id: string; agentSessionId?: string | null }): HeaderActionItem[] => {
-    const sessionAgentId = session.agentSessionId ?? null;
-
-    return [
-      ...(sessionAgentId
-        ? [
-            {
-              key: "copy-agent-session-id",
-              label: t("sessions.copyAgentSessionId"),
-              kind: "default" as const,
-              icon: Copy,
-              onClick: async () => {
-                await navigator.clipboard.writeText(sessionAgentId);
-                toaster.create({
-                  type: "success",
-                  title: t("sessions.copyAgentSessionId"),
-                  description: sessionAgentId,
-                });
-              },
-            },
-          ]
-        : []),
-      {
-        key: "archive-session",
-        label: t("sessions.archiveSession"),
-        kind: "default",
-        icon: Archive,
-        onClick: () => {
-          archiveSession.mutate(session.id);
-          if (session.id === selectedSessionId) {
-            navigate({ to: `/projects/${projectId}/sessions` });
-          }
-        },
-      },
-    ];
-  };
-
   const defaultOverflowActions: HeaderActionItem[] = selectedSessionId
-    ? buildSessionOverflowActions({ id: selectedSessionId, agentSessionId })
+    ? buildSessionOverflowActions({
+        sessionId: selectedSessionId,
+        agentSessionId,
+        onArchive: () => {
+          archiveSession.mutate(selectedSessionId);
+          navigate({ to: `/projects/${projectId}/sessions` });
+        },
+        t,
+      })
     : [];
 
   const sidebar = (
@@ -98,7 +69,17 @@ export const SessionsPanel = () => {
         toSidebarContextMenuItems(
           buildResourceContextMenuActions({
             pluginActions: pluginActionTrigger.pluginActions,
-            defaultOverflowActions: buildSessionOverflowActions(session),
+            defaultOverflowActions: buildSessionOverflowActions({
+              sessionId: session.id,
+              agentSessionId: session.agentSessionId,
+              onArchive: () => {
+                archiveSession.mutate(session.id);
+                if (session.id === selectedSessionId) {
+                  navigate({ to: `/projects/${projectId}/sessions` });
+                }
+              },
+              t,
+            }),
             pendingActionKeys: pluginActionTrigger.pendingActionKeys,
             onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, session.id),
           }),

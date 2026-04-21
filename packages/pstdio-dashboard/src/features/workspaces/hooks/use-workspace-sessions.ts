@@ -5,6 +5,7 @@ export interface WorkspaceSessionEntry {
   title: string;
   status: string;
   agent: string | null;
+  agentSessionId?: string | null;
   createdAt: string;
 }
 
@@ -36,6 +37,7 @@ export const useWorkspaceSessions = (workspaceIds: string[]) => {
       title: (session.title as string) ?? "Session",
       status: (session.status as string) ?? "unknown",
       agent: (session.agent as string) ?? null,
+      agentSessionId: (session.agent_session_id as string) ?? null,
       createdAt: (link.created_at as string) ?? "",
     };
 

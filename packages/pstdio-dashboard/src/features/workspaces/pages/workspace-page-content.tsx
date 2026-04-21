@@ -52,9 +52,19 @@ interface WorkspacePageContentProps {
   isCreateModalOpen: boolean;
   closeCreateModal: () => void;
   runAttempt: () => Promise<boolean>;
+  resolveTicketContextMenuItems: () => ReturnType<typeof toSidebarContextMenuItems>;
+  resolveSessionContextMenuItems: (session: {
+    id: string;
+    agentSessionId?: string | null;
+  }) => ReturnType<typeof toSidebarContextMenuItems>;
   pluginActions: ReturnType<typeof usePluginActionTrigger>["pluginActions"];
   pluginActionsLoading: boolean;
   pluginActionTrigger: ReturnType<typeof usePluginActionTrigger>;
+  ticketActionTrigger: ReturnType<typeof usePluginActionTrigger>;
+  sessionActionTrigger: ReturnType<typeof usePluginActionTrigger>;
+  isTicketDeleteOpen: boolean;
+  closeTicketDeleteModal: () => void;
+  deleteTicket: () => Promise<void>;
   deleteWorkspaceIsPending: boolean;
   isDeleteOpen: boolean;
   openDeleteModal: () => void;
@@ -90,9 +100,16 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
     isCreateModalOpen,
     closeCreateModal,
     runAttempt,
+    resolveTicketContextMenuItems,
+    resolveSessionContextMenuItems,
     pluginActions,
     pluginActionsLoading,
     pluginActionTrigger,
+    ticketActionTrigger,
+    sessionActionTrigger,
+    isTicketDeleteOpen,
+    closeTicketDeleteModal,
+    deleteTicket,
     deleteWorkspaceIsPending,
     isDeleteOpen,
     openDeleteModal,
@@ -123,6 +140,7 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
       onSelectSession={selectSession}
       onCreateWorkspaceSessionDraft={createWorkspaceSessionDraft}
       onSelectPlanning={selectPlanning}
+      resolveTicketContextMenuItems={resolveTicketContextMenuItems}
       resolveWorkspaceContextMenuItems={(workspace) =>
         toSidebarContextMenuItems(
           buildResourceContextMenuActions({
@@ -141,6 +159,7 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
           }),
         )
       }
+      resolveSessionContextMenuItems={resolveSessionContextMenuItems}
     />
   );
 
@@ -223,6 +242,37 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
             onSubmit={(params) => pluginActionTrigger.submitWithParams(params)}
           />
         ) : null}
+
+        {ticketActionTrigger.activeParamAction && projectId ? (
+          <ActionParamsDialog
+            open
+            action={ticketActionTrigger.activeParamAction}
+            projectId={projectId}
+            isSubmitting={ticketActionTrigger.activeParamActionIsPending}
+            onClose={ticketActionTrigger.cancelParams}
+            onSubmit={(params) => ticketActionTrigger.submitWithParams(params)}
+          />
+        ) : null}
+
+        {sessionActionTrigger.activeParamAction && projectId ? (
+          <ActionParamsDialog
+            open
+            action={sessionActionTrigger.activeParamAction}
+            projectId={projectId}
+            isSubmitting={sessionActionTrigger.activeParamActionIsPending}
+            onClose={sessionActionTrigger.cancelParams}
+            onSubmit={(params) => sessionActionTrigger.submitWithParams(params)}
+          />
+        ) : null}
+
+        <DeleteConfirmationModal
+          open={isTicketDeleteOpen}
+          onClose={closeTicketDeleteModal}
+          onDelete={deleteTicket}
+          headline={t("projects:ticketPanel.deleteConfirmation.ticket.headline")}
+          notificationText={t("projects:ticketPanel.deleteConfirmation.ticket.notification")}
+          buttonText={t("projects:ticketPanel.options.deleteTicket")}
+        />
 
         <DeleteConfirmationModal
           open={isDeleteOpen}

@@ -12,6 +12,8 @@ import {
 } from "@/features/plugin-actions/hooks/use-resource-context-menu";
 import { useProject } from "@/features/project/hooks/use-project";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/features/project-settings/store";
+import { useArchiveSession } from "@/features/sessions/hooks/use-archive-session";
+import { buildSessionOverflowActions } from "@/features/sessions/session-actions";
 import { uploadTicketFile } from "@/features/ticket-list/data/api";
 import {
   useDeleteProjectTicket,
@@ -75,6 +77,7 @@ export const TicketDetailsPanel = () => {
   const updateTicketTags = useUpdateProjectTicketTags(projectId);
   const deleteTicket = useDeleteProjectTicket(projectId);
   const deleteWorkspace = useDeleteWorkspace();
+  const archiveSession = useArchiveSession();
 
   const allProjectTickets = allTickets ?? [];
   const ticketState = resolveTicketDetailsState({ tickets: allTickets, ticketShorthand, isTicketsLoading });
@@ -118,6 +121,20 @@ export const TicketDetailsPanel = () => {
   const workspaceActionTrigger = usePluginActionTrigger({
     projectId,
     targetType: "workspace",
+    onSuccess: async (result) => {
+      if (!result.session_id) return;
+      openTicketSessionBubble({
+        sessionId: result.session_id,
+        sessionModalState: projectSettingsStore.getState().sessionModalState,
+        setSessionModalState,
+        setSelectedSessionId,
+      });
+    },
+  });
+
+  const sessionActionTrigger = usePluginActionTrigger({
+    projectId,
+    targetType: "session",
     onSuccess: async (result) => {
       if (!result.session_id) return;
       openTicketSessionBubble({
@@ -243,6 +260,16 @@ export const TicketDetailsPanel = () => {
       onSelectPlanning={() => {
         void navigateBack();
       }}
+      resolveTicketContextMenuItems={() =>
+        toSidebarContextMenuItems(
+          buildResourceContextMenuActions({
+            pluginActions: pluginActionTrigger.pluginActions,
+            defaultOverflowActions,
+            pendingActionKeys: pluginActionTrigger.pendingActionKeys,
+            onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, ticket.id),
+          }),
+        )
+      }
       resolveWorkspaceContextMenuItems={(workspace) =>
         toSidebarContextMenuItems(
           buildResourceContextMenuActions({
@@ -255,6 +282,23 @@ export const TicketDetailsPanel = () => {
             }),
             pendingActionKeys: workspaceActionTrigger.pendingActionKeys,
             onPluginAction: (actionKey) => void workspaceActionTrigger.trigger(actionKey, workspace.id),
+          }),
+        )
+      }
+      resolveSessionContextMenuItems={(session) =>
+        toSidebarContextMenuItems(
+          buildResourceContextMenuActions({
+            pluginActions: sessionActionTrigger.pluginActions,
+            defaultOverflowActions: buildSessionOverflowActions({
+              sessionId: session.id,
+              agentSessionId: session.agentSessionId,
+              onArchive: () => {
+                archiveSession.mutate(session.id);
+              },
+              t,
+            }),
+            pendingActionKeys: sessionActionTrigger.pendingActionKeys,
+            onPluginAction: (actionKey) => void sessionActionTrigger.trigger(actionKey, session.id),
           }),
         )
       }
@@ -320,6 +364,17 @@ export const TicketDetailsPanel = () => {
           isSubmitting={workspaceActionTrigger.activeParamActionIsPending}
           onClose={workspaceActionTrigger.cancelParams}
           onSubmit={(params) => workspaceActionTrigger.submitWithParams(params)}
+        />
+      ) : null}
+
+      {sessionActionTrigger.activeParamAction && projectId ? (
+        <ActionParamsDialog
+          open
+          action={sessionActionTrigger.activeParamAction}
+          projectId={projectId}
+          isSubmitting={sessionActionTrigger.activeParamActionIsPending}
+          onClose={sessionActionTrigger.cancelParams}
+          onSubmit={(params) => sessionActionTrigger.submitWithParams(params)}
         />
       ) : null}
 
