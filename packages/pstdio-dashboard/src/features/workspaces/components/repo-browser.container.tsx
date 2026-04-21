@@ -38,6 +38,11 @@ interface BranchState {
   shouldPersistBranch: boolean;
 }
 
+interface ResolveBranchSelectorLockedStateOptions {
+  sessionId?: string | null;
+  lockedBranch?: string | null;
+}
+
 const getBranchLabel = (branch: RepoBranch, currentBranchTag: string, remoteBranchTag: string) => {
   if (branch.isCurrent) {
     return `${branch.name} (${currentBranchTag})`;
@@ -99,6 +104,11 @@ export const resolveBranchState = (options: ResolveBranchStateOptions) => {
   } satisfies BranchState;
 };
 
+export const resolveBranchSelectorLockedState = (options: ResolveBranchSelectorLockedStateOptions) => {
+  const { sessionId, lockedBranch } = options;
+  return lockedBranch != null || sessionId != null;
+};
+
 export const RepoBrowserContainer = (props: RepoBrowserContainerProps) => {
   const { sessionId, isDisabled = false, onRepoChange, onBranchChange } = props;
   const { t } = useTranslation("projects");
@@ -106,7 +116,10 @@ export const RepoBrowserContainer = (props: RepoBrowserContainerProps) => {
 
   const workspace = useSessionWorkspace(sessionId ?? null);
   const lockedBranch = workspace?.branch ?? null;
-  const isLocked = lockedBranch != null;
+  const isLocked = resolveBranchSelectorLockedState({
+    sessionId,
+    lockedBranch,
+  });
 
   const lastSelectedRepo = useProjectSettingsStore((s) => s.lastSelectedRepo);
   const setLastSelectedRepo = useProjectSettingsStore((s) => s.setLastSelectedRepo);

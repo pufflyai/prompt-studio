@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { RepoBranch } from "@/features/project/types";
-import { resolveBranchSelection, resolveBranchState } from "./repo-browser.container";
+import { resolveBranchSelection, resolveBranchSelectorLockedState, resolveBranchState } from "./repo-browser.container";
 
 const createBranch = (name: string, options?: { isCurrent?: boolean; isRemote?: boolean }): RepoBranch => ({
   name,
@@ -69,5 +69,31 @@ describe("resolveBranchState", () => {
       hasUserSelectedBranch: false,
       shouldPersistBranch: true,
     });
+  });
+
+  it("returns null when the selector is locked in sessions", () => {
+    const branches = [createBranch("main", { isCurrent: true })];
+
+    const nextState = resolveBranchState({
+      isLocked: true,
+      isBranchesPending: false,
+      selectedRepositoryId: "repo-1",
+      branches,
+      currentBranch: "main",
+      selectedBranch: "main",
+      hasUserSelectedBranch: false,
+    });
+
+    expect(nextState).toBeNull();
+  });
+});
+
+describe("resolveBranchSelectorLockedState", () => {
+  it("locks branch selection when a session id is present", () => {
+    expect(resolveBranchSelectorLockedState({ sessionId: "session-1", lockedBranch: null })).toBe(true);
+  });
+
+  it("keeps branch selection unlocked outside sessions without a locked branch", () => {
+    expect(resolveBranchSelectorLockedState({ sessionId: null, lockedBranch: null })).toBe(false);
   });
 });

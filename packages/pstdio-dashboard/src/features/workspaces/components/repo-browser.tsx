@@ -177,7 +177,7 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
               <Text textStyle="label/XS/medium" color="fg" ml="2xs">
                 {selectedBranchLabel}
               </Text>
-              <ChevronDown size={14} />
+              {!isMenuDisabled ? <ChevronDown size={14} /> : null}
             </Button>
           </Tooltip>
         </Box>
