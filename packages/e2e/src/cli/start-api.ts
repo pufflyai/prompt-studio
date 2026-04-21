@@ -44,7 +44,11 @@ export type ApiInstance = {
   stop: () => void;
 };
 
-export const startApi = async (): Promise<ApiInstance> => {
+interface StartApiOptions {
+  eventBusBufferSize?: number;
+}
+
+export const startApi = async (options: StartApiOptions = {}): Promise<ApiInstance> => {
   const port = await getFreePort();
   const storagePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-storage-"));
   const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-home-"));
@@ -55,6 +59,8 @@ export const startApi = async (): Promise<ApiInstance> => {
       ...process.env,
       PORT: String(port),
       PSTDIO_DB_PATH: ":memory:",
+      PSTDIO_EVENT_BUS_BUFFER_SIZE:
+        options.eventBusBufferSize !== undefined ? String(options.eventBusBufferSize) : undefined,
       PSTDIO_STORAGE_PATH: storagePath,
       PSTDIO_AGENTS: "fake",
       HOME: homePath,

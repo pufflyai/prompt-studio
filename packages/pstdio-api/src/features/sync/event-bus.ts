@@ -47,4 +47,8 @@ export class EventBus {
   getSince(seq: number) {
     return this.buffer.filter((e) => e.seq > seq);
   }
+
+  minSeq() {
+    return this.buffer.length > 0 ? this.buffer[0].seq : null;
+  }
 }

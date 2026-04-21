@@ -36,10 +36,22 @@ export const streamHandler = (deps: StreamDeps) => {
       let snapshotSeq: number;
 
       if (since !== null) {
-        const missed = deps.eventBus.getSince(since);
-        snapshotSeq = missed.length > 0 ? missed[missed.length - 1].seq : since;
-        for (const event of missed) {
-          await stream.writeSSE(formatSSE(event));
+        const minSeq = deps.eventBus.minSeq();
+        const gapDetected = minSeq === null || since < minSeq;
+
+        if (gapDetected) {
+          snapshotSeq = deps.eventBus.seq;
+          const tables = await deps.syncService.getFullState();
+          await stream.writeSSE({
+            data: JSON.stringify({ tables, seq: snapshotSeq }),
+            event: "init",
+          });
+        } else {
+          const missed = deps.eventBus.getSince(since);
+          snapshotSeq = missed.length > 0 ? missed[missed.length - 1].seq : since;
+          for (const event of missed) {
+            await stream.writeSSE(formatSSE(event));
+          }
         }
       } else {
         // Capture seq before reading so events emitted during the read are replayed

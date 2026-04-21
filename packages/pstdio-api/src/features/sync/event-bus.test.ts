@@ -77,6 +77,12 @@ describe("EventBus", () => {
     const all = bus.getSince(0);
     expect(all).toHaveLength(3);
     expect(all[0].seq).toBe(2);
+    expect(bus.minSeq()).toBe(2);
+  });
+
+  it("returns null min seq when buffer is empty", () => {
+    const bus = new EventBus();
+    expect(bus.minSeq()).toBeNull();
   });
 
   it("supports multiple subscribers", () => {

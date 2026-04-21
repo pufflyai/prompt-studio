@@ -15,8 +15,7 @@ const bunCacheDir = process.env.E2E_BUN_CACHE_DIR ?? join(tmpdir(), "pstdio-e2e-
 
 export default defineConfig({
   testDir: "./src/ui",
-  // TEMP: narrowed for CI iteration — revert to "**/*.spec.ts" before merging
-  testMatch: "**/tickets.spec.ts",
+  testMatch: "**/*.spec.ts",
   expect: { timeout: 5_000 },
   fullyParallel: false,
   workers: 1,
@@ -44,6 +43,7 @@ export default defineConfig({
       env: {
         PORT: String(apiPort),
         PSTDIO_DB_PATH: ":memory:",
+        PSTDIO_EVENT_BUS_BUFFER_SIZE: "5",
         PSTDIO_STORAGE_PATH: storagePath,
         PSTDIO_FILES_ROOT: filesRoot,
         PSTDIO_AGENTS: agentEnv,

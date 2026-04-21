@@ -69,7 +69,15 @@ interface AppOptions {
   filesRoot: string;
   apiToken?: string;
   agents?: AgentService[];
+  eventBusBufferSize?: number;
 }
+
+const resolveEventBusBufferSize = (value: string | undefined) => {
+  if (!value) return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 1) return undefined;
+  return Math.floor(parsed);
+};
 
 export const createApp = async (options: AppOptions) => {
   const { db, close: closeDb } = await createDb({ path: options?.dbPath ?? process.env.PSTDIO_DB_PATH });
@@ -100,7 +108,9 @@ export const createApp = async (options: AppOptions) => {
   const skillsStorageService = createSkillsStorageService();
 
   // --- infrastructure ---
-  const eventBus = new EventBus();
+  const eventBus = new EventBus({
+    bufferSize: options.eventBusBufferSize ?? resolveEventBusBufferSize(process.env.PSTDIO_EVENT_BUS_BUFFER_SIZE),
+  });
   const agentRegistry = createAgentRegistry(resolveDefaultAgents(options?.agents));
 
   // --- domain services ---

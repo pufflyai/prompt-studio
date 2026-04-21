@@ -131,4 +131,36 @@ describe("stream bootstrap race condition", () => {
     expect(setData.table).toBe("sessions");
     expect(setData.data.status).toBe("completed");
   });
+
+  test("falls back to init when reconnect since value was evicted from buffer", async () => {
+    const eventBus = new EventBus({ bufferSize: 5 });
+
+    const syncService = {
+      getFullState: async () => ({
+        projects: [{ id: "p1", name: "stale-reconnect-project" }],
+      }),
+      emitCascadeDeletes: async () => {},
+    } as Parameters<typeof streamHandler>[0]["syncService"];
+
+    const app = new Hono();
+    app.get("/stream", streamHandler({ eventBus, syncService }));
+
+    const firstConnection = await app.request("/stream");
+    const firstSse = createSSEReader(firstConnection);
+    const [init] = await firstSse.readEvents(1);
+    firstSse.close();
+
+    const firstSeq = (init.data as { seq: number }).seq;
+
+    for (let index = 0; index < 10; index += 1) {
+      eventBus.emit("sessions", "set", { id: `session-${index}` });
+    }
+
+    const reconnect = await app.request(`/stream?since=${firstSeq}`);
+    const reconnectSse = createSSEReader(reconnect);
+    const [firstReconnectEvent] = await reconnectSse.readEvents(1);
+    reconnectSse.close();
+
+    expect(firstReconnectEvent.event).toBe("init");
+  });
 });
