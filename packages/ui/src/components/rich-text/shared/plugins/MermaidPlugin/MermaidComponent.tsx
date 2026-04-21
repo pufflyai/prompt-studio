@@ -1,9 +1,9 @@
-import { Box, Button, Flex, Text, Textarea } from "@chakra-ui/react";
+import { Box, Button, Flex, NumberInput, Text, Textarea } from "@chakra-ui/react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useLexicalEditable } from "@lexical/react/useLexicalEditable";
 import { $getNodeByKey } from "lexical";
 import mermaid from "mermaid";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { $isMermaidNode } from "./MermaidNode";
 
 let mermaidInitialized = false;
@@ -30,6 +30,14 @@ function formatErrorMessage(error: unknown) {
   return error.message;
 }
 
+const MIN_ZOOM = 0;
+const MAX_ZOOM = 2;
+const ZOOM_STEP = 0.1;
+
+function clampZoom(value: number) {
+  return Number(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value)).toFixed(2));
+}
+
 interface MermaidComponentProps {
   code: string;
   nodeKey: string;
@@ -45,6 +53,10 @@ export default function MermaidComponent(props: MermaidComponentProps) {
   const [svgMarkup, setSvgMarkup] = useState("");
   const [renderError, setRenderError] = useState("");
   const [isRendering, setIsRendering] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef({ pointerId: -1, x: 0, y: 0 });
   const renderId = useId().replaceAll(":", "-");
 
   useEffect(() => {
@@ -95,6 +107,7 @@ export default function MermaidComponent(props: MermaidComponentProps) {
     });
 
     setPreviewCode(draftCode);
+    resetView();
     setIsEditing(false);
   };
 
@@ -103,10 +116,38 @@ export default function MermaidComponent(props: MermaidComponentProps) {
     setIsEditing(false);
   };
 
+  const resetView = () => {
+    setZoom(1);
+    setOffset({ x: 0, y: 0 });
+  };
+
   return (
     <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" overflow="hidden" width="100%">
-      <Flex justifyContent="space-between" alignItems="center" paddingX="sm" paddingY="xs" bg="bg.subtle">
-        <Text textStyle="label/S/medium">Mermaid</Text>
+      <Flex justifyContent="flex-end" alignItems="center" gap="xs" paddingX="sm" paddingY="xs" bg="bg.muted">
+        {!isEditing && !renderError && !isRendering ? (
+          <NumberInput.Root
+            size="xs"
+            width="64px"
+            value={String(zoom)}
+            min={MIN_ZOOM}
+            max={MAX_ZOOM}
+            step={ZOOM_STEP}
+            formatOptions={{
+              style: "percent",
+            }}
+            onValueChange={({ valueAsNumber }) => {
+              if (Number.isNaN(valueAsNumber)) {
+                return;
+              }
+
+              setZoom(clampZoom(valueAsNumber));
+            }}
+          >
+            <NumberInput.Control />
+            <NumberInput.Input aria-label="Zoom percentage" />
+          </NumberInput.Root>
+        ) : null}
+
         {isEditable ? (
           isEditing ? (
             <Flex gap="xs">
@@ -138,12 +179,7 @@ export default function MermaidComponent(props: MermaidComponentProps) {
           />
         </Box>
       ) : (
-        <Box
-          padding="sm"
-          background="bg.muted"
-          cursor={isEditable ? "pointer" : "default"}
-          onClick={isEditable ? () => setIsEditing(true) : undefined}
-        >
+        <Box paddingX="sm" paddingBottom="sm" background="bg.muted">
           {isRendering ? <Text color="fg.muted">Rendering diagram...</Text> : null}
           {renderError ? (
             <Box>
@@ -159,11 +195,65 @@ export default function MermaidComponent(props: MermaidComponentProps) {
             </Box>
           ) : (
             <Box
-              as="img"
-              alt="Mermaid diagram"
-              src={`data:image/svg+xml;utf8,${encodeURIComponent(svgMarkup)}`}
-              maxWidth="100%"
-            />
+              borderRadius="sm"
+              overflow="hidden"
+              minHeight="160px"
+              onWheel={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+              }}
+            >
+              <Box
+                transform={`translate(${offset.x}px, ${offset.y}px) scale(${zoom})`}
+                transformOrigin="top left"
+                cursor={isPanning ? "grabbing" : "grab"}
+                touchAction="none"
+                onPointerDown={(event) => {
+                  panStartRef.current = {
+                    pointerId: event.pointerId,
+                    x: event.clientX - offset.x,
+                    y: event.clientY - offset.y,
+                  };
+                  setIsPanning(true);
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                }}
+                onPointerMove={(event) => {
+                  if (!isPanning || panStartRef.current.pointerId !== event.pointerId) {
+                    return;
+                  }
+
+                  setOffset({
+                    x: event.clientX - panStartRef.current.x,
+                    y: event.clientY - panStartRef.current.y,
+                  });
+                }}
+                onPointerUp={(event) => {
+                  if (panStartRef.current.pointerId !== event.pointerId) {
+                    return;
+                  }
+
+                  setIsPanning(false);
+                  event.currentTarget.releasePointerCapture(event.pointerId);
+                }}
+                onPointerCancel={() => {
+                  setIsPanning(false);
+                }}
+                css={{
+                  "& img": {
+                    display: "block",
+                    width: "100%",
+                    height: "auto",
+                    userSelect: "none",
+                  },
+                }}
+              >
+                <img
+                  alt="Mermaid diagram"
+                  src={`data:image/svg+xml;utf8,${encodeURIComponent(svgMarkup)}`}
+                  draggable={false}
+                />
+              </Box>
+            </Box>
           )}
         </Box>
       )}
