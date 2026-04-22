@@ -25,7 +25,14 @@ import {
   type WorkspaceTicket,
 } from "./types";
 import { useTicketsWorkspaceStore } from "./use-workspace-store";
-import { buildDefaultFilterCategories, buildTagOptions, toBadges, toTagBadges, toTitleCase } from "./workspace-helpers";
+import {
+  buildDefaultFilterCategories,
+  buildTagOptions,
+  resolveKnownColumnKeys,
+  toBadges,
+  toTagBadges,
+  toTitleCase,
+} from "./workspace-helpers";
 
 interface BoardColumnConfig {
   color?: string;
@@ -107,11 +114,7 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
     categoryOptions.map((category) => [category.id, countFilterValues(tickets, category.id)]),
   );
 
-  const knownColumnKeys =
-    knownColumnKeysProp ??
-    (settings.columnGrouping !== "none"
-      ? categoryOptions.find((c) => c.id === settings.columnGrouping)?.options.map((o) => o.value)
-      : undefined);
+  const knownColumnKeys = resolveKnownColumnKeys(settings.columnGrouping, knownColumnKeysProp, categoryOptions);
 
   const grouped = groupTickets(visibleTickets, {
     columnGrouping: settings.columnGrouping,
