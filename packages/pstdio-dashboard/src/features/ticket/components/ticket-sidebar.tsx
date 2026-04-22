@@ -41,6 +41,7 @@ interface TicketSidebarProps {
   onSelectWorkspace: (workspaceShorthand: string) => void;
   onSelectSession: (workspaceShorthand: string, sessionId: string) => void;
   onCreateWorkspaceSessionDraft?: (workspaceId: string) => void;
+  onCreateWorkspace?: () => void;
   onSelectPlanning?: () => void;
   resolveTicketContextMenuItems?: () => SidebarActionMenuItem[];
   resolveWorkspaceContextMenuItems?: (workspace: TicketAttempt) => SidebarActionMenuItem[];
@@ -97,11 +98,12 @@ const buildFilesSection = (
   return { id: "files", label: "Files", nodes };
 };
 
-const buildWorkspacesSection = (
+export const buildWorkspacesSection = (
   workspaces: TicketAttempt[],
   attemptStatusMap: Map<string, AttemptStatusMapEntry>,
   diffTotalsByWorkspaceId: Map<string, { additions: number; deletions: number }>,
   sessionsByWorkspaceId: Map<string, WorkspaceSessionEntry[]>,
+  onCreateWorkspace?: () => void,
   resolveWorkspaceContextMenuItems?: (workspace: TicketAttempt) => SidebarActionMenuItem[],
 ): SidebarSection => {
   const sortedWorkspaces = sortWorkspacesByLatestSession(workspaces, sessionsByWorkspaceId);
@@ -132,6 +134,16 @@ const buildWorkspacesSection = (
   return {
     id: "workspaces",
     label: "Workspaces",
+    actions: onCreateWorkspace
+      ? [
+          {
+            id: "new-workspace",
+            label: "New workspace",
+            icon: <Plus size={14} />,
+            onAction: onCreateWorkspace,
+          },
+        ]
+      : undefined,
     nodes,
     emptyState: (
       <Text textStyle="paragraph/S/regular" color="fg.muted" px="3" py="4" textAlign="center">
@@ -192,6 +204,7 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
     onSelectWorkspace,
     onSelectSession,
     onCreateWorkspaceSessionDraft,
+    onCreateWorkspace,
     onSelectPlanning,
     resolveTicketContextMenuItems,
     resolveWorkspaceContextMenuItems,
@@ -209,6 +222,7 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
       attemptStatusMap,
       diffTotalsByWorkspaceId,
       sessionsByWorkspaceId,
+      onCreateWorkspace,
       resolveWorkspaceContextMenuItems,
     ),
     ...(selectedWorkspace

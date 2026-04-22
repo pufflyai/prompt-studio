@@ -15,6 +15,7 @@ import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/features/
 import { useArchiveSession } from "@/features/sessions/hooks/use-archive-session";
 import { buildSessionOverflowActions } from "@/features/sessions/session-actions";
 import { uploadTicketFile } from "@/features/ticket-list/data/api";
+import { useCreateTicketAttempt } from "@/features/ticket-list/hooks/use-create-ticket-attempt";
 import {
   useDeleteProjectTicket,
   useProjectTickets,
@@ -29,7 +30,9 @@ import { useAttemptStatusMap } from "@/features/workspaces/hooks/use-attempt-sta
 import { useDeleteWorkspace } from "@/features/workspaces/hooks/use-workspace-actions";
 import { useWorkspaceSessions } from "@/features/workspaces/hooks/use-workspace-sessions";
 import { buildWorkspaceDeleteOverflowAction } from "@/features/workspaces/pages/workspace-page-actions";
+import { navigateToCreatedWorkspace, runWorkspaceCreation } from "@/features/workspaces/pages/workspace-page-helpers";
 import { resolveWorkspaceSelection } from "@/features/workspaces/utils/workspace-selection";
+import { CreateWorkspaceModal } from "../components/create-workspace-modal";
 import { TicketDetailSidebar } from "../components/ticket-detail-sidebar";
 import { TicketHeader } from "../components/ticket-header";
 import { TicketImagePreview } from "../components/ticket-image-preview";
@@ -73,6 +76,7 @@ export const TicketDetailsPanel = () => {
 
   const { data: project } = useProject(projectId);
   const { data: allTickets, isLoading: isTicketsLoading } = useProjectTickets(projectId);
+  const createAttempt = useCreateTicketAttempt(projectId);
   const updateTicket = useUpdateProjectTicket(projectId);
   const updateTicketTags = useUpdateProjectTicketTags(projectId);
   const deleteTicket = useDeleteProjectTicket(projectId);
@@ -101,8 +105,13 @@ export const TicketDetailsPanel = () => {
   const content = ticketContent.data ?? "";
   const isContentReady = isTicketContentReady(ticketContent.data, ticketContent.isLoading);
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(true),
+    [isCreateWorkspaceOpen, setCreateWorkspaceOpen] = useState(false),
     [isDeleteOpen, setDeleteOpen] = useState(false),
     [workspaceToDeleteId, setWorkspaceToDeleteId] = useState<string | null>(null);
+  const lastSelectedAgent = useProjectSettingsStore((state) => state.lastSelectedAgent);
+  const lastSelectedModels = useProjectSettingsStore((state) => state.lastSelectedModels);
+  const lastSelectedBranches = useProjectSettingsStore((state) => state.lastSelectedBranches);
+  const lastSelectedRepo = useProjectSettingsStore((state) => state.lastSelectedRepo);
 
   const pluginActionTrigger = usePluginActionTrigger({
     projectId,
@@ -229,6 +238,28 @@ export const TicketDetailsPanel = () => {
     });
   };
 
+  const handleCreateEmptyWorkspace = () =>
+    runWorkspaceCreation({
+      ticket,
+      projectId,
+      project,
+      createAttempt,
+      lastSelectedAgent,
+      lastSelectedModels,
+      lastSelectedBranches,
+      lastSelectedRepo,
+      startSession: false,
+      onSuccess: (result) => {
+        navigateToCreatedWorkspace({
+          navigate,
+          setSelectedSessionId,
+          projectId,
+          ticketShorthand: ticket.shorthand,
+          workspaceShorthand: result.workspaceShorthand,
+        });
+      },
+    });
+
   const defaultOverflowActions = buildTicketOverflowActions({
     ticket,
     projectId,
@@ -257,6 +288,7 @@ export const TicketDetailsPanel = () => {
       onSelectFile={handleSelectFile}
       onSelectWorkspace={handleSelectWorkspace}
       onSelectSession={handleSelectWorkspaceSession}
+      onCreateWorkspace={() => setCreateWorkspaceOpen(true)}
       onSelectPlanning={() => {
         void navigateBack();
       }}
@@ -344,6 +376,21 @@ export const TicketDetailsPanel = () => {
           />
         </Flex>
       </Stack>
+
+      {isCreateWorkspaceOpen ? (
+        <CreateWorkspaceModal
+          open={isCreateWorkspaceOpen}
+          attemptCount={workspaces.length}
+          showAgentSelector={false}
+          isSubmitting={createAttempt.isPending}
+          confirmLabel={t("tickets:createWorkspaceModal.createWorkspace", { defaultValue: "Create workspace" })}
+          description={t("tickets:createWorkspaceModal.createWorkspaceDescription", {
+            defaultValue: "Create a workspace now and start a session later.",
+          })}
+          onClose={() => setCreateWorkspaceOpen(false)}
+          onConfirm={handleCreateEmptyWorkspace}
+        />
+      ) : null}
 
       {pluginActionTrigger.activeParamAction && projectId ? (
         <ActionParamsDialog

@@ -45,6 +45,7 @@ export interface WorkspaceTagOption {
   value: string;
   label: string;
   color?: string;
+  icon?: string | null;
 }
 
 export interface WorkspaceTagDefinition {
@@ -98,7 +99,6 @@ export const DEFAULT_ORDERING_OPTIONS: WorkspaceOption<OrderingField>[] = [
 export const DEFAULT_DISPLAY_PROPERTY_OPTIONS: WorkspaceOption<DisplayProperty>[] = [
   { value: "id", label: "ID" },
   { value: "status", label: "Status" },
-  { value: "assignee", label: "Assignee" },
   { value: "updated", label: "Updated" },
 ];
 

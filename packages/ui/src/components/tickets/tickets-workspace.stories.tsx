@@ -1,28 +1,29 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { expect, fireEvent, userEvent, within } from "storybook/test";
 import { TicketsWorkspace } from "./tickets-workspace";
-import type { WorkspaceTagDefinition, WorkspaceTicket } from "./types";
+import type { GroupingField, WorkspaceTagDefinition, WorkspaceTicket } from "./types";
+import { useTicketsWorkspaceStore } from "./use-workspace-store";
 
 const tagDefinitions: WorkspaceTagDefinition[] = [
   {
     name: "component",
     label: "Component",
     options: [
-      { value: "backend", label: "Backend", color: "blue" },
-      { value: "frontend", label: "Frontend", color: "purple" },
-      { value: "devops", label: "DevOps", color: "orange" },
-      { value: "docs", label: "Docs", color: "cyan" },
+      { value: "backend", label: "Backend", color: "blue", icon: "wrench" },
+      { value: "frontend", label: "Frontend", color: "purple", icon: "sparkles" },
+      { value: "devops", label: "DevOps", color: "orange", icon: "gauge" },
+      { value: "docs", label: "Docs", color: "cyan", icon: "book-open" },
     ],
   },
   {
     name: "priority",
     label: "Priority",
     options: [
-      { value: "high", label: "High", color: "red" },
-      { value: "medium", label: "Medium", color: "yellow" },
-      { value: "low", label: "Low", color: "green" },
+      { value: "high", label: "High", color: "red", icon: "alert-triangle" },
+      { value: "medium", label: "Medium", color: "yellow", icon: "alert-triangle" },
+      { value: "low", label: "Low", color: "green", icon: "flag" },
     ],
   },
 ];
@@ -163,19 +164,64 @@ export default meta;
 
 type Story = StoryObj;
 
-const WorkspaceWrapper = (props: { listOnly?: boolean }) => {
+const STORYBOOK_STORAGE_KEY = "storybook-workspace";
+
+const applyGroupingValue = (ticket: WorkspaceTicket, grouping: GroupingField, value: string) => {
+  if (grouping === "none") {
+    return ticket;
+  }
+
+  if (grouping === "status") {
+    return { ...ticket, status: value };
+  }
+
+  if (grouping === "assignee") {
+    return { ...ticket, assignee: value };
+  }
+
+  const tagName = grouping.slice(4);
+  const tags = ticket.tags ?? [];
+  const nextTags = tags.some((tag) => tag.name === tagName)
+    ? tags.map((tag) => (tag.name === tagName ? { ...tag, value } : tag))
+    : [...tags, { name: tagName, value }];
+
+  return { ...ticket, tags: nextTags };
+};
+
+const WorkspaceWrapper = (props: {
+  listOnly?: boolean;
+  columnGrouping?: GroupingField;
+  rowGrouping?: GroupingField;
+}) => {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [workspaceTickets, setWorkspaceTickets] = useState(tickets);
+  const settings = useTicketsWorkspaceStore(STORYBOOK_STORAGE_KEY, (state) => state.settings);
+  const reset = useTicketsWorkspaceStore(STORYBOOK_STORAGE_KEY, (state) => state.reset);
+  const setColumnGrouping = useTicketsWorkspaceStore(STORYBOOK_STORAGE_KEY, (state) => state.setColumnGrouping);
+  const setRowGrouping = useTicketsWorkspaceStore(STORYBOOK_STORAGE_KEY, (state) => state.setRowGrouping);
+
+  useEffect(() => {
+    reset();
+    setColumnGrouping(props.columnGrouping ?? "status");
+    setRowGrouping(props.rowGrouping ?? "none");
+  }, [props.columnGrouping, props.rowGrouping, reset, setColumnGrouping, setRowGrouping]);
 
   const handleMoveTicket = (ticketId: string, targetColumnId: string) => {
     setWorkspaceTickets((current) =>
-      current.map((ticket) => (ticket.id === ticketId ? { ...ticket, status: targetColumnId } : ticket)),
+      current.map((ticket) =>
+        ticket.id === ticketId ? applyGroupingValue(ticket, settings.columnGrouping, targetColumnId) : ticket,
+      ),
     );
   };
 
-  const handleMoveToGroup = (ticketId: string, targetGroupKey: string) => {
+  const handleMoveToGroup = (ticketId: string, targetGroupKey: string, context?: { rowGrouping: GroupingField }) => {
+    const rowGrouping = context?.rowGrouping ?? settings.rowGrouping;
+    if (rowGrouping === "none") return;
+
     setWorkspaceTickets((current) =>
-      current.map((ticket) => (ticket.id === ticketId ? { ...ticket, assignee: targetGroupKey } : ticket)),
+      current.map((ticket) =>
+        ticket.id === ticketId ? applyGroupingValue(ticket, rowGrouping, targetGroupKey) : ticket,
+      ),
     );
   };
 
@@ -197,7 +243,7 @@ const WorkspaceWrapper = (props: { listOnly?: boolean }) => {
     <Box p="sm" height="560px">
       <TicketsWorkspace
         tickets={props.listOnly ? [] : workspaceTickets}
-        storageKey="storybook-workspace"
+        storageKey={STORYBOOK_STORAGE_KEY}
         tagDefinitions={tagDefinitions}
         knownColumnKeys={["todo", "in_progress", "done"]}
         selectedTicketId={selectedTicketId}
@@ -249,7 +295,7 @@ export const ListGroupCollapse: Story = {
     await expect(canvas.getByText("Set up API authentication")).toBeInTheDocument();
 
     // Click the "Todo" group to collapse — find its toggle icon
-    const todoGroup = canvas.getByText(/^Todo \(\d+\)$/);
+    const todoGroup = canvas.getByText("Todo");
     const todoRow = todoGroup.closest("[data-selected]")?.parentElement ?? todoGroup.parentElement!;
     const todoToggle = todoRow.querySelector("[data-expanded]")!;
 
@@ -268,7 +314,7 @@ export const ListGroupCollapse: Story = {
     await expect(canvas.getByText("Build ticket list interactions")).toBeInTheDocument();
 
     // Click again to re-expand
-    await userEvent.click(canvas.getByText(/^Todo \(\d+\)$/));
+    await userEvent.click(canvas.getByText("Todo"));
     await expect(canvas.getByText("Set up API authentication")).toBeInTheDocument();
   },
 };
@@ -302,6 +348,21 @@ export const DragAndDrop: Story = {
 const dragCard = (canvas: ReturnType<typeof within>, title: string, targetTestId: string) => {
   const card = canvas.getByText(title).closest("[draggable]")!;
   const target = canvas.getByTestId(targetTestId);
+  const dataTransfer = new DataTransfer();
+  fireEvent.dragStart(card, { dataTransfer });
+  fireEvent.dragOver(target, { dataTransfer });
+  fireEvent.drop(target, { dataTransfer });
+  fireEvent.dragEnd(card, { dataTransfer });
+};
+
+const dragCardToGroup = (canvas: ReturnType<typeof within>, title: string, columnId: string, groupKey: string) => {
+  const card = canvas.getByText(title).closest("[draggable]")!;
+  const target = document.querySelector(`[data-column-id="${columnId}"][data-group-key="${groupKey}"]`);
+
+  if (!(target instanceof HTMLElement)) {
+    throw new Error(`Expected group ${columnId}::${groupKey} to exist`);
+  }
+
   const dataTransfer = new DataTransfer();
   fireEvent.dragStart(card, { dataTransfer });
   fireEvent.dragOver(target, { dataTransfer });
@@ -356,5 +417,29 @@ export const EmptyColumnPersists: Story = {
 
     // The "done" column should still exist, just empty
     await expect(canvas.getByTestId("board-column-done")).toBeInTheDocument();
+  },
+};
+
+export const SubgroupDragAndDrop: Story = {
+  render: () => <WorkspaceWrapper columnGrouping="assignee" rowGrouping="status" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const ticketTitle = "Build ticket list interactions";
+
+    dragCardToGroup(canvas, ticketTitle, "Alex", "in_progress");
+    await expect(within(canvas.getByTestId("board-column-Alex")).getByText(ticketTitle)).toBeInTheDocument();
+    await expect(within(canvas.getByTestId("board-column-Sam")).queryByText(ticketTitle)).not.toBeInTheDocument();
+
+    dragCardToGroup(canvas, ticketTitle, "Alex", "todo");
+
+    const alexInProgressGroup = document.querySelector('[data-column-id="Alex"][data-group-key="in_progress"]');
+    const alexTodoGroup = document.querySelector('[data-column-id="Alex"][data-group-key="todo"]');
+
+    if (!(alexInProgressGroup instanceof HTMLElement) || !(alexTodoGroup instanceof HTMLElement)) {
+      throw new Error("Expected Alex subgroup containers to exist");
+    }
+
+    await expect(within(alexInProgressGroup).queryByText(ticketTitle)).not.toBeInTheDocument();
+    await expect(within(alexTodoGroup).getByText(ticketTitle)).toBeInTheDocument();
   },
 };

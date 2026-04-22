@@ -1,4 +1,4 @@
-import { Flex, Stack } from "@chakra-ui/react";
+import { Button, Flex, Stack } from "@chakra-ui/react";
 import { Breadcrumb, DeleteConfirmationModal, HorizontalMenuStack, PanelLayout } from "@pstdio/ui";
 import { Link } from "@tanstack/react-router";
 import { KanbanSquare } from "lucide-react";
@@ -49,9 +49,16 @@ interface WorkspacePageContentProps {
   createWorkspaceSessionDraft: (workspaceId: string) => void;
   selectFile: (fileId: string) => void;
   selectPlanning: () => void;
-  isCreateModalOpen: boolean;
-  closeCreateModal: () => void;
+  createWorkspace: () => void;
+  openRunAttempt: () => void;
+  isRunAttemptModalOpen: boolean;
+  closeRunAttemptModal: () => void;
+  isCreateWorkspaceModalOpen: boolean;
+  closeCreateWorkspaceModal: () => void;
+  createWorkspaceLabel: string;
+  createWorkspaceDescription: string;
   runAttempt: () => Promise<boolean>;
+  createEmptyWorkspace: () => Promise<boolean>;
   resolveTicketContextMenuItems: () => ReturnType<typeof toSidebarContextMenuItems>;
   resolveSessionContextMenuItems: (session: {
     id: string;
@@ -71,6 +78,59 @@ interface WorkspacePageContentProps {
   closeDeleteModal: () => void;
   deleteWorkspace: () => Promise<void>;
 }
+
+const WorkspaceCreationModals = (props: {
+  attemptsCount: number;
+  isSubmitting: boolean;
+  isRunAttemptModalOpen: boolean;
+  closeRunAttemptModal: () => void;
+  runAttempt: () => Promise<boolean>;
+  isCreateWorkspaceModalOpen: boolean;
+  closeCreateWorkspaceModal: () => void;
+  createWorkspaceLabel: string;
+  createWorkspaceDescription: string;
+  createEmptyWorkspace: () => Promise<boolean>;
+}) => {
+  const {
+    attemptsCount,
+    isSubmitting,
+    isRunAttemptModalOpen,
+    closeRunAttemptModal,
+    runAttempt,
+    isCreateWorkspaceModalOpen,
+    closeCreateWorkspaceModal,
+    createWorkspaceLabel,
+    createWorkspaceDescription,
+    createEmptyWorkspace,
+  } = props;
+
+  return (
+    <>
+      {isRunAttemptModalOpen ? (
+        <CreateWorkspaceModal
+          open={isRunAttemptModalOpen}
+          attemptCount={attemptsCount}
+          isSubmitting={isSubmitting}
+          onClose={closeRunAttemptModal}
+          onConfirm={runAttempt}
+        />
+      ) : null}
+
+      {isCreateWorkspaceModalOpen ? (
+        <CreateWorkspaceModal
+          open={isCreateWorkspaceModalOpen}
+          attemptCount={attemptsCount}
+          showAgentSelector={false}
+          isSubmitting={isSubmitting}
+          confirmLabel={createWorkspaceLabel}
+          description={createWorkspaceDescription}
+          onClose={closeCreateWorkspaceModal}
+          onConfirm={createEmptyWorkspace}
+        />
+      ) : null}
+    </>
+  );
+};
 
 export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
   const {
@@ -97,9 +157,16 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
     createWorkspaceSessionDraft,
     selectFile,
     selectPlanning,
-    isCreateModalOpen,
-    closeCreateModal,
+    createWorkspace,
+    openRunAttempt,
+    isRunAttemptModalOpen,
+    closeRunAttemptModal,
+    isCreateWorkspaceModalOpen,
+    closeCreateWorkspaceModal,
+    createWorkspaceLabel,
+    createWorkspaceDescription,
     runAttempt,
+    createEmptyWorkspace,
     resolveTicketContextMenuItems,
     resolveSessionContextMenuItems,
     pluginActions,
@@ -138,6 +205,7 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
       onSelectFile={selectFile}
       onSelectWorkspace={selectWorkspace}
       onSelectSession={selectSession}
+      onCreateWorkspace={createWorkspace}
       onCreateWorkspaceSessionDraft={createWorkspaceSessionDraft}
       onSelectPlanning={selectPlanning}
       resolveTicketContextMenuItems={resolveTicketContextMenuItems}
@@ -197,6 +265,10 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
             />
           </Flex>
 
+          <Button size="sm" variant="outline" onClick={openRunAttempt}>
+            {t("tickets:createWorkspaceModal.runAttempt", { defaultValue: "Run Attempt" })}
+          </Button>
+
           <PluginHeaderActions
             pluginActions={pluginActions}
             defaultOverflowActions={defaultOverflowActions}
@@ -222,15 +294,18 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
           />
         </Flex>
 
-        {isCreateModalOpen ? (
-          <CreateWorkspaceModal
-            open={isCreateModalOpen}
-            attemptCount={attempts.length}
-            isSubmitting={createAttemptIsPending}
-            onClose={closeCreateModal}
-            onConfirm={runAttempt}
-          />
-        ) : null}
+        <WorkspaceCreationModals
+          attemptsCount={attempts.length}
+          isSubmitting={createAttemptIsPending}
+          isRunAttemptModalOpen={isRunAttemptModalOpen}
+          closeRunAttemptModal={closeRunAttemptModal}
+          runAttempt={runAttempt}
+          isCreateWorkspaceModalOpen={isCreateWorkspaceModalOpen}
+          closeCreateWorkspaceModal={closeCreateWorkspaceModal}
+          createWorkspaceLabel={createWorkspaceLabel}
+          createWorkspaceDescription={createWorkspaceDescription}
+          createEmptyWorkspace={createEmptyWorkspace}
+        />
 
         {pluginActionTrigger.activeParamAction && projectId ? (
           <ActionParamsDialog
