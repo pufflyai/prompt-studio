@@ -6,6 +6,7 @@ import { RepoBrowserContainer } from "@/features/workspaces/components/repo-brow
 interface CreateWorkspaceModalProps {
   open: boolean;
   attemptCount: number;
+  showAgentSelector?: boolean;
   isSubmitting?: boolean;
   isDisabled?: boolean;
   confirmLabel?: string;
@@ -34,6 +35,7 @@ export const CreateWorkspaceModal = (props: CreateWorkspaceModalProps) => {
   const {
     open,
     attemptCount,
+    showAgentSelector = true,
     isSubmitting = false,
     isDisabled = false,
     confirmLabel,
@@ -67,7 +69,7 @@ export const CreateWorkspaceModal = (props: CreateWorkspaceModalProps) => {
               </Text>
 
               <HStack justify="space-between" align="center" wrap="wrap">
-                <AgentBrowserContainer isDisabled={isSubmitting} />
+                {showAgentSelector ? <AgentBrowserContainer isDisabled={isSubmitting} /> : null}
                 <RepoBrowserContainer isDisabled={isSubmitting} />
               </HStack>
             </Stack>

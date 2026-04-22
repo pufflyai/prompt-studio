@@ -120,6 +120,7 @@ const WorkspaceCreationModals = (props: {
         <CreateWorkspaceModal
           open={isCreateWorkspaceModalOpen}
           attemptCount={attemptsCount}
+          showAgentSelector={false}
           isSubmitting={isSubmitting}
           confirmLabel={createWorkspaceLabel}
           description={createWorkspaceDescription}

@@ -381,6 +381,7 @@ export const TicketDetailsPanel = () => {
         <CreateWorkspaceModal
           open={isCreateWorkspaceOpen}
           attemptCount={workspaces.length}
+          showAgentSelector={false}
           isSubmitting={createAttempt.isPending}
           confirmLabel={t("tickets:createWorkspaceModal.createWorkspace", { defaultValue: "Create workspace" })}
           description={t("tickets:createWorkspaceModal.createWorkspaceDescription", {
