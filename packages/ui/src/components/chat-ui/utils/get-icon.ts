@@ -52,7 +52,11 @@ export const getIconComponent = (name: IconName): LucideIcon => {
 export const toolTypeToIconName = (type?: string): IconName => {
   if (!type) return DEFAULT_TOOL_ICON;
 
-  const normalized = type.replace(/^tool-/, "");
+  const normalized = type
+    .replace(/^tool-/, "")
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .replace(/[\s-]+/g, "_")
+    .toLowerCase();
   if (isToolIconName(normalized)) return normalized;
 
   switch (normalized) {
@@ -60,12 +64,16 @@ export const toolTypeToIconName = (type?: string): IconName => {
       return "file";
     case "bash":
       return "terminal";
+    case "edit":
+      return "write_file";
     case "apply_patch":
       return "patch";
     case "grep":
       return "search";
     case "glob":
       return "file";
+    case "todo_write":
+      return "ls";
     case "search":
       return "search";
     case "browser":

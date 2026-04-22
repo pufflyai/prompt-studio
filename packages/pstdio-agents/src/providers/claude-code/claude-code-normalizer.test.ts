@@ -137,6 +137,37 @@ describe("normalizeClaudeCodeMessages", () => {
     expect(result[0].parts[0]).toMatchObject({ type: "tool", status: "completed" });
   });
 
+  test("preserves tool input and metadata when tool results arrive", () => {
+    const result = normalizeClaudeCodeMessages([
+      entry("a1", "assistant", [
+        {
+          type: "tool_use",
+          id: "call-1",
+          name: "Edit",
+          input: { file_path: "ticket.md", old_string: "before", new_string: "after" },
+        },
+      ]),
+      {
+        ...entry("a2", "assistant", [
+          { type: "tool_result", tool_use_id: "call-1", content: "updated", is_error: false },
+        ]),
+        toolUseResult: { structuredPatch: { filePath: "ticket.md" } },
+      },
+    ]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].parts[0]).toMatchObject({
+      type: "tool",
+      tool: "Edit",
+      status: "completed",
+      state: {
+        input: { file_path: "ticket.md", old_string: "before", new_string: "after" },
+        output: "updated",
+        metadata: { structuredPatch: { filePath: "ticket.md" } },
+      },
+    });
+  });
+
   test("classifies tool actions correctly", () => {
     const tools = [
       { name: "Read", expected: "read" },

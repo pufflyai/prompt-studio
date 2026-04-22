@@ -31,11 +31,18 @@ const resolveRole = (entry: ClaudeCodeTranscriptEntry): SessionMessageRole => {
   return "assistant";
 };
 
+const getToolResultMetadata = (entry: ClaudeCodeTranscriptEntry) => {
+  const metadata = entry.toolUseResult;
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return undefined;
+  return metadata;
+};
+
 const transcriptBlockToMessage = (
   block: ClaudeCodeContentBlock,
   id: string,
   role: SessionMessageRole,
   toolMap: Map<string, string>,
+  metadata?: Record<string, unknown>,
 ): SessionMessage | null => {
   if (block.type === "text") {
     if (!block.text.trim()) return null;
@@ -77,7 +84,11 @@ const transcriptBlockToMessage = (
           callId: block.tool_use_id,
           actionType: classifyToolAction(tool),
           status: isError ? "failed" : "completed",
-          state: { output: block.content, errorText: isError ? "Tool execution failed" : undefined },
+          state: {
+            output: block.content,
+            errorText: isError ? "Tool execution failed" : undefined,
+            metadata,
+          },
         },
       ],
     };
@@ -89,6 +100,7 @@ const transcriptBlockToMessage = (
 const toTranscriptMessages = (entry: ClaudeCodeTranscriptEntry, toolMap: Map<string, string>) => {
   const role = resolveRole(entry);
   const content = entry.message.content;
+  const metadata = getToolResultMetadata(entry);
 
   if (typeof content === "string") {
     if (!content.trim()) return [];
@@ -99,10 +111,40 @@ const toTranscriptMessages = (entry: ClaudeCodeTranscriptEntry, toolMap: Map<str
 
   const messages: SessionMessage[] = [];
   for (let i = 0; i < content.length; i++) {
-    const msg = transcriptBlockToMessage(content[i], `${entry.uuid}-${i}`, role, toolMap);
+    const msg = transcriptBlockToMessage(content[i], `${entry.uuid}-${i}`, role, toolMap, metadata);
     if (msg) messages.push(msg);
   }
   return messages;
+};
+
+const mergeToolState = (existing: SessionMessage, next: SessionMessage) => {
+  const existingPart = existing.parts[0];
+  const nextPart = next.parts[0];
+
+  if (existingPart?.type !== "tool" || nextPart?.type !== "tool") return next;
+
+  return {
+    ...next,
+    parts: [
+      {
+        ...existingPart,
+        ...nextPart,
+        state: {
+          ...existingPart.state,
+          ...nextPart.state,
+          input: existingPart.state?.input ?? nextPart.state?.input,
+          metadata: {
+            ...(typeof existingPart.state?.metadata === "object" && existingPart.state?.metadata
+              ? (existingPart.state.metadata as Record<string, unknown>)
+              : {}),
+            ...(typeof nextPart.state?.metadata === "object" && nextPart.state?.metadata
+              ? (nextPart.state.metadata as Record<string, unknown>)
+              : {}),
+          },
+        },
+      },
+    ],
+  } satisfies SessionMessage;
 };
 
 const pushTranscriptMessage = (messages: SessionMessage[], message: SessionMessage, toolCalls: Map<string, number>) => {
@@ -113,7 +155,7 @@ const pushTranscriptMessage = (messages: SessionMessage[], message: SessionMessa
     const existingIndex = toolCalls.get(firstPart.callId);
 
     if (existingIndex !== undefined) {
-      messages[existingIndex] = message;
+      messages[existingIndex] = mergeToolState(messages[existingIndex], message);
       return;
     }
   }

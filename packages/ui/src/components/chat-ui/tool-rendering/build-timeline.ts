@@ -2,6 +2,7 @@ import type { ToolPart } from "../agent-types";
 import type { Block, TitleSegment } from "../components/timeline";
 import { toolTypeToIconName } from "../utils/get-icon";
 import { createDefaultToolRenderers } from "./default-renderers";
+import { normalizeToolType } from "./shared";
 import type { ToolRenderersMap, ToolTimelineBuilderOptions } from "./types";
 
 const STATE_LABELS: Record<string, string> = {
@@ -11,8 +12,6 @@ const STATE_LABELS: Record<string, string> = {
   "input-streaming": "running",
   "input-available": "queued",
 };
-
-const normalizeToolType = (value: string) => value.replace(/^tool-/, "");
 
 const toTitleCase = (value: string) => {
   return value
@@ -96,7 +95,8 @@ const mergeToolRenderers = (overrides?: ToolRenderersMap) => {
 
 const getRenderer = (invocation: ToolPart, toolRenderers: ToolRenderersMap) => {
   const rawTool = invocation.tool ?? "tool";
-  return toolRenderers[rawTool] ?? toolRenderers[normalizeToolType(rawTool)];
+  const normalizedTool = normalizeToolType(rawTool);
+  return toolRenderers[rawTool] ?? toolRenderers[normalizedTool];
 };
 
 const renderInvocation = (
