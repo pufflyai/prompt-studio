@@ -123,7 +123,7 @@ describe("tickets pull", () => {
     const content = readFileSync(ticketPath, "utf8");
     expect(content).toStartWith("---\n");
     expect(content).toContain("ticket_id:");
-    expect(content).toContain('status: "wip"');
+    expect(content).not.toContain("status:");
     expect(content).toContain('parent_id: "PS-0"');
     expect(content).toContain("# Ticket from DB");
   });
@@ -183,6 +183,28 @@ describe("tickets pull", () => {
       "Local file already exists:",
     );
     expect(existsSync(ticketDir)).toBe(true);
+  });
+
+  test("strips legacy status frontmatter when overwriting with --force", async () => {
+    const ticketDir = join(tmpBase, ".pstdio", "tickets", "PS-1");
+    mkdirSync(ticketDir, { recursive: true });
+    writeFileSync(join(ticketDir, "ticket.md"), '---\nticket_id: "PS-1"\nstatus: "backlog"\n---\n\n# Old body');
+
+    const handler = createHandler({
+      ...baseDeps(),
+      resolveTicketByShorthand: async () => makeListItem({ status_name: "wip" }) as never,
+      getTicket: async () => makeTicket() as never,
+      listTicketFiles: async () => [],
+      getTicketFileContent: async () => Buffer.from("# Ticket from DB", "utf8"),
+      log: () => {},
+    });
+
+    await handler({ id: "PS-1", force: true, _: [], $0: "" } as never);
+
+    const ticketContent = readFileSync(join(ticketDir, "ticket.md"), "utf8");
+    expect(ticketContent).not.toContain("status:");
+    expect(ticketContent).toContain('ticket_id: "PS-1"');
+    expect(ticketContent).toContain("# Ticket from DB");
   });
 
   test("pulls all non-archived tickets when --id is omitted", async () => {

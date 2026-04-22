@@ -67,7 +67,7 @@ describe("tickets write", () => {
     expect(content).toContain("# My ticket");
   });
 
-  test("includes status and parent_id in frontmatter when provided", async () => {
+  test("includes parent_id but not status in frontmatter when status is provided", async () => {
     makeConfig();
     const handler = createHandler({
       ...baseDeps,
@@ -78,7 +78,7 @@ describe("tickets write", () => {
     await handler({ title: "With meta", status: "wip", "parent-id": "PS-1", _: [], $0: "" } as never);
 
     const content = readTicketFile(tmpBase, "PS-4");
-    expect(content).toContain('status: "wip"');
+    expect(content).not.toContain("status:");
     expect(content).toContain('parent_id: "PS-1"');
   });
 
@@ -151,7 +151,6 @@ describe("tickets write", () => {
       'ticket_id: "{{TICKET_ID}}"',
       'user_prompt: "{{USER_PROMPT}}"',
       'created: "{{CREATED_AT}}"',
-      'status: "{{STATUS}}"',
       "---",
       "",
       "# {{TICKET_TITLE}}",
@@ -181,7 +180,7 @@ describe("tickets write", () => {
 
     const content = readTicketFile(tmpBase, "PS-5");
     expect(content).toContain('user_prompt: "Build the thing"');
-    expect(content).toContain('status: "wip"');
+    expect(content).not.toContain("status:");
     expect(content).toContain("# With template FM");
   });
 

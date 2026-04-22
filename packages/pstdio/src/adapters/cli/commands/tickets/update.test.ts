@@ -81,7 +81,7 @@ describe("tickets update", () => {
     );
   });
 
-  test("updates local ticket file frontmatter when status changes", async () => {
+  test("does not rewrite local ticket frontmatter when status changes", async () => {
     const ticketDir = join(tmpBase, ".pstdio", "tickets", "PS-1");
     mkdirSync(ticketDir, { recursive: true });
     writeFileSync(join(ticketDir, "ticket.md"), '---\nticket_id: "PS-1"\nstatus: "backlog"\n---\n\n# My Ticket');
@@ -99,8 +99,7 @@ describe("tickets update", () => {
     await handler({ id: "PS-1", status: "review", _: [], $0: "" } as never);
 
     const content = readFileSync(join(ticketDir, "ticket.md"), "utf8");
-    expect(content).toContain('status: "review"');
-    expect(content).not.toContain('status: "backlog"');
+    expect(content).toContain('status: "backlog"');
     expect(content).toContain("# My Ticket");
   });
 

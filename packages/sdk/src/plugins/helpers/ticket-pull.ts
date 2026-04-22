@@ -22,7 +22,6 @@ type FrontmatterFields = {
   shorthand: string;
   created_at: string;
   draft: boolean | null;
-  status_name: string | null;
   parent_id: string | null;
   user_prompt: string | null;
   depends_on: string | null;
@@ -45,7 +44,6 @@ const buildTicketFrontmatter = (fields: FrontmatterFields) => {
   lines.push(`created: ${q(fields.created_at)}`);
   if (fields.draft !== null) lines.push(`draft: ${fields.draft}`);
 
-  if (fields.status_name) lines.push(`status: ${q(fields.status_name)}`);
   if (fields.parent_id) lines.push(`parent_id: ${q(fields.parent_id)}`);
   if (fields.depends_on) lines.push(`depends_on: ${q(fields.depends_on)}`);
   if (fields.parallelizable) lines.push(`parallelizable: ${q(fields.parallelizable)}`);
@@ -195,7 +193,6 @@ const pullSingleTicket = async (
     shorthand: ticketListItem.shorthand,
     created_at: ticket.created_at,
     draft: ticket.draft,
-    status_name: ticketListItem.status_name,
     parent_id: parentId,
     user_prompt: ticket.user_prompt ?? null,
     depends_on: ticket.depends_on,

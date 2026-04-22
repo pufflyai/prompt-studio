@@ -86,7 +86,7 @@ describe("saveTicket", () => {
     });
   });
 
-  it("applies status from frontmatter via ctx.client.statuses", async () => {
+  it("ignores frontmatter status when input.status is omitted", async () => {
     const root = makeTempRoot();
     writeLocalTicket(root, "PS-1", '---\nstatus: "wip"\n---\n\n# T');
 
@@ -95,10 +95,11 @@ describe("saveTicket", () => {
     await saveTicket(ctx, { rootPath: root, ticketId: "PS-1" });
 
     const update = calls.find((call) => call.method === "tickets.update");
-    expect(update?.args[1]).toMatchObject({ status_id: "s-wip" });
+    expect(update?.args[1]).not.toMatchObject({ status_id: expect.anything() });
+    expect(calls.some((call) => call.method === "statuses.list")).toBe(false);
   });
 
-  it("input.status overrides frontmatter status", async () => {
+  it("updates status only when input.status is provided", async () => {
     const root = makeTempRoot();
     writeLocalTicket(root, "PS-1", '---\nstatus: "wip"\n---\n\n# T');
 
@@ -108,6 +109,7 @@ describe("saveTicket", () => {
 
     const update = calls.find((call) => call.method === "tickets.update");
     expect(update?.args[1]).toMatchObject({ status_id: "s-backlog" });
+    expect(calls.some((call) => call.method === "statuses.list")).toBe(true);
   });
 
   it("resolves tag ids via ctx.client.tags", async () => {
@@ -143,7 +145,7 @@ describe("saveTicket", () => {
 
   it("rewrites local file with draft: false", async () => {
     const root = makeTempRoot();
-    writeLocalTicket(root, "PS-1", "---\ndraft: true\n---\n\n# T");
+    writeLocalTicket(root, "PS-1", '---\ndraft: true\nstatus: "wip"\nparent_id: "PS-2"\n---\n\n# T');
 
     const { ctx } = makeCtx();
 
@@ -152,6 +154,8 @@ describe("saveTicket", () => {
     const written = readFileSync(join(root, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8");
     expect(written).toContain("draft: false");
     expect(written).not.toContain("draft: true");
+    expect(written).not.toContain("status:");
+    expect(written).toContain('parent_id: "PS-2"');
   });
 
   it("throws when local ticket file is missing", async () => {

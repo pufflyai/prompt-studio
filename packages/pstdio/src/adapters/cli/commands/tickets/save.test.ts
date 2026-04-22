@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createHandler } from "./save";
 
@@ -148,20 +148,21 @@ describe("tickets save", () => {
     await expect(handler({ id: "PS-999", _: [], $0: "" } as never)).rejects.toThrow("Local ticket not found");
   });
 
-  test("strips frontmatter before uploading and extracts metadata", async () => {
+  test("ignores frontmatter status when --status is omitted", async () => {
     writeFileSync(
       join(tmpBase, ".pstdio", "tickets", "PS-1", "ticket.md"),
       '---\nstatus: "wip"\n---\n\n# Updated content',
     );
 
     const uploadTicketFile = mock(async () => makeUploadResponse());
+    const resolveStatusId = mock(async (_pid: string, _name: string) => "s-wip");
     const updateTicket = mock(
       async () =>
         ({
           id: "t-1",
           shorthand: "PS-1",
           project_id: "proj-1",
-          status_id: "s-wip",
+          status_id: null,
           display_title: "updated-content",
           file_id: "file-1",
           draft: false,
@@ -170,7 +171,7 @@ describe("tickets save", () => {
         }) as never,
     );
 
-    const handler = createHandler({ ...baseDeps, uploadTicketFile, updateTicket, log: mock() });
+    const handler = createHandler({ ...baseDeps, uploadTicketFile, updateTicket, resolveStatusId, log: mock() });
 
     await handler({ id: "PS-1", _: [], $0: "" } as never);
 
@@ -179,13 +180,9 @@ describe("tickets save", () => {
       content_base64: Buffer.from("# Updated content").toString("base64"),
       mime_type: "text/markdown",
     });
-    expect(updateTicket).toHaveBeenCalledWith(
-      "t-1",
-      expect.objectContaining({
-        display_title: "updated-content",
-        status_id: "s-wip",
-      }),
-    );
+    expect(updateTicket).toHaveBeenCalledWith("t-1", expect.objectContaining({ display_title: "updated-content" }));
+    expect(updateTicket).toHaveBeenCalledWith("t-1", expect.not.objectContaining({ status_id: expect.anything() }));
+    expect(resolveStatusId).not.toHaveBeenCalled();
   });
 
   test("CLI --status flag overrides frontmatter status and strips frontmatter from upload", async () => {
@@ -220,6 +217,23 @@ describe("tickets save", () => {
       mime_type: "text/markdown",
     });
     expect(updateTicket).toHaveBeenCalledWith("t-1", expect.objectContaining({ status_id: "s-backlog" }));
+  });
+
+  test("removes legacy status from local frontmatter after save", async () => {
+    writeFileSync(
+      join(tmpBase, ".pstdio", "tickets", "PS-1", "ticket.md"),
+      '---\nticket_id: "PS-1"\ncreated: "2026-01-01"\nstatus: "wip"\nparallelizable: "yes"\n---\n\n# Updated content',
+    );
+
+    const handler = createHandler({ ...baseDeps, log: mock() });
+
+    await handler({ id: "PS-1", _: [], $0: "" } as never);
+
+    const saved = readFileSync(join(tmpBase, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8");
+    expect(saved).not.toContain("status:");
+    expect(saved).toContain('ticket_id: "PS-1"');
+    expect(saved).toContain('created: "2026-01-01"');
+    expect(saved).toContain('parallelizable: "yes"');
   });
 
   test("uploads local ticket files and logs upload count", async () => {

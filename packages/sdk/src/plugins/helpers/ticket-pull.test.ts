@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pullTickets } from "./ticket-pull";
@@ -67,7 +67,7 @@ describe("pullTickets", () => {
     const ticketFilePath = join(root, ".pstdio", "tickets", "PS-1", "ticket.md");
     expect(existsSync(ticketFilePath)).toBe(true);
     expect(readFileSync(ticketFilePath, "utf8")).toContain('ticket_id: "PS-1"');
-    expect(readFileSync(ticketFilePath, "utf8")).toContain('status: "wip"');
+    expect(readFileSync(ticketFilePath, "utf8")).not.toContain("status:");
     expect(readFileSync(ticketFilePath, "utf8")).toContain("# Ticket body");
 
     const attachmentPath = join(root, ".pstdio", "tickets", "PS-1", "files", "notes.txt");
@@ -126,5 +126,51 @@ describe("pullTickets", () => {
 
     expect(result).toEqual({ pulledTicketShorthands: ["PS-1"], downloadedFileCount: 0 });
     expect(listCalls).toEqual([["proj-1", { archived: false }]]);
+  });
+
+  it("strips legacy status frontmatter when overwriting with force", async () => {
+    const root = makeTempRoot();
+    const ticketDir = join(root, ".pstdio", "tickets", "PS-1");
+    mkdirSync(ticketDir, { recursive: true });
+    writeFileSync(join(ticketDir, "ticket.md"), '---\nticket_id: "PS-1"\nstatus: "backlog"\n---\n\n# Old body');
+
+    const ctx = {
+      projectId: "proj-1",
+      client: {
+        tickets: {
+          list: async () => [
+            {
+              id: "ticket-1",
+              shorthand: "PS-1",
+              status_name: "wip",
+              tag_names: [],
+              archived: false,
+            },
+          ],
+          get: async () => ({
+            id: "ticket-1",
+            shorthand: "PS-1",
+            created_at: "2026-01-01T00:00:00.000Z",
+            draft: false,
+            parent_id: null,
+            user_prompt: null,
+            depends_on: null,
+            parallelizable: null,
+            blocked_reason: null,
+            file_id: null,
+            content: "# Ticket body\n",
+          }),
+          listFiles: async () => [],
+          getFileContent: async () => new Uint8Array(),
+        },
+      },
+    } as never;
+
+    await pullTickets(ctx, { rootPath: root, ticketId: "PS-1", force: true });
+
+    const content = readFileSync(join(ticketDir, "ticket.md"), "utf8");
+    expect(content).not.toContain("status:");
+    expect(content).toContain('ticket_id: "PS-1"');
+    expect(content).toContain("# Ticket body");
   });
 });

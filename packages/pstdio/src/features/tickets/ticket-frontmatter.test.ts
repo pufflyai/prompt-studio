@@ -10,7 +10,6 @@ const baseFields = {
   shorthand: "PS-1",
   created_at: "2026-03-04T00:00:00.000Z",
   draft: null,
-  status_name: null,
   parent_id: null,
   user_prompt: null,
   depends_on: null,
@@ -25,7 +24,6 @@ describe("buildTicketFrontmatter", () => {
       shorthand: "PS-12",
       created_at: "2026-03-04T00:00:00.000Z",
       draft: true,
-      status_name: "backlog",
       parent_id: "PS-5",
       user_prompt: "Build the feature",
       depends_on: "PS-3,PS-4",
@@ -41,7 +39,6 @@ describe("buildTicketFrontmatter", () => {
         'user_prompt: "Build the feature"',
         'created: "2026-03-04T00:00:00.000Z"',
         "draft: true",
-        'status: "backlog"',
         'parent_id: "PS-5"',
         'depends_on: "PS-3,PS-4"',
         'parallelizable: "yes"',
@@ -84,15 +81,15 @@ describe("applyFrontmatter", () => {
   });
 
   test("replaces existing frontmatter", () => {
-    const content = '---\nticket_id: "PS-1"\nstatus: "old"\n---\n\n# My Ticket\n\nBody text';
-    const result = applyFrontmatter('---\nticket_id: "PS-1"\nstatus: "new"\n---', content);
-    expect(result).toBe('---\nticket_id: "PS-1"\nstatus: "new"\n---\n\n# My Ticket\n\nBody text');
+    const content = '---\nticket_id: "PS-1"\ncreated: "2026-01-01"\n---\n\n# My Ticket\n\nBody text';
+    const result = applyFrontmatter('---\nticket_id: "PS-1"\ncreated: "2026-02-01"\n---', content);
+    expect(result).toBe('---\nticket_id: "PS-1"\ncreated: "2026-02-01"\n---\n\n# My Ticket\n\nBody text');
   });
 
   test("handles content that is only frontmatter", () => {
     const content = '---\nticket_id: "PS-1"\n---';
-    const result = applyFrontmatter('---\nticket_id: "PS-1"\nstatus: "wip"\n---', content);
-    expect(result).toBe('---\nticket_id: "PS-1"\nstatus: "wip"\n---');
+    const result = applyFrontmatter('---\nticket_id: "PS-1"\ndraft: true\n---', content);
+    expect(result).toBe('---\nticket_id: "PS-1"\ndraft: true\n---');
   });
 
   test("handles empty content", () => {
@@ -106,7 +103,6 @@ describe("parseFrontmatter", () => {
     const content = [
       "---",
       'ticket_id: "PS-12"',
-      'status: "wip"',
       'priority: "P1"',
       'parent_id: "PS-5"',
       'depends_on: "PS-3,PS-4"',
@@ -121,7 +117,6 @@ describe("parseFrontmatter", () => {
     expect(result).toEqual({
       blocked_reason: "waiting on API",
       parent_id: "PS-5",
-      status: "wip",
     });
   });
 
@@ -135,35 +130,38 @@ describe("parseFrontmatter", () => {
   });
 
   test("ignores fields with empty values", () => {
-    const content = '---\nstatus: ""\n---\n\n# Ticket';
+    const content = '---\nparent_id: ""\n---\n\n# Ticket';
     expect(parseFrontmatter(content)).toEqual({});
   });
 
   test("strips quotes from values", () => {
-    const content = "---\nstatus: backlog\n---\n\n# Ticket";
-    expect(parseFrontmatter(content)).toEqual({ status: "backlog" });
+    const content = "---\nparent_id: PS-2\n---\n\n# Ticket";
+    expect(parseFrontmatter(content)).toEqual({ parent_id: "PS-2" });
   });
 });
 
 describe("applyFrontmatterValues", () => {
   test("applies generated values over template frontmatter and preserves custom keys", () => {
-    const frontmatter = [
+    const frontmatter = ["---", 'ticket_id: "PS-5"', 'created: "2026-03-04T00:00:00.000Z"', "draft: true", "---"].join(
+      "\n",
+    );
+    const content = [
       "---",
-      'ticket_id: "PS-5"',
-      'created: "2026-03-04T00:00:00.000Z"',
-      "draft: true",
-      'status: "wip"',
+      'ticket_id: "OLD-1"',
+      'parallelizable: "[no|yes]"',
+      'status: "legacy"',
       "---",
+      "",
+      "# Ticket",
     ].join("\n");
-    const content = ["---", 'ticket_id: "OLD-1"', 'parallelizable: "[no|yes]"', "---", "", "# Ticket"].join("\n");
 
     const result = applyFrontmatterValues(frontmatter, content);
 
     expect(result).toContain('ticket_id: "PS-5"');
     expect(result).toContain('created: "2026-03-04T00:00:00.000Z"');
     expect(result).toContain("draft: true");
-    expect(result).toContain('status: "wip"');
     expect(result).toContain('parallelizable: "[no|yes]"');
+    expect(result).not.toContain('status: "legacy"');
   });
 
   test("creates frontmatter when content has none", () => {

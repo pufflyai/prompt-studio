@@ -20,9 +20,9 @@ const TICKETS_DIR = join(".pstdio", "tickets");
 const TICKET_FILES_DIR = "files";
 const TICKET_ARTIFACTS_DIR = "artifacts";
 const MAX_DISPLAY_TITLE_LENGTH = 50;
-const ACTIONABLE_FRONTMATTER_KEYS = ["blocked_reason", "parent_id", "status"] as const;
+const ACTIONABLE_FRONTMATTER_KEYS = ["blocked_reason", "parent_id"] as const;
 
-type ParsedFrontmatter = { blocked_reason?: string; parent_id?: string; status?: string };
+type ParsedFrontmatter = { blocked_reason?: string; parent_id?: string };
 
 const resolveTicketDir = (rootPath: string, shorthand: string) => {
   const exactDir = join(rootPath, TICKETS_DIR, shorthand);
@@ -164,13 +164,16 @@ const applyFrontmatterValues = (frontmatter: string, content: string) => {
   }
 
   const existing = frontmatterLines(content);
-  const merged = existing.map((line) => {
+  const merged = existing.flatMap((line) => {
     const key = frontmatterKey(line);
-    if (!key || !overrides.has(key)) return line;
-    return overrides.get(key)!;
+    if (!key) return [line];
+    if (key === "status") return [];
+    if (!overrides.has(key)) return [line];
+    return [overrides.get(key)!];
   });
 
   for (const key of overrideOrder) {
+    if (key === "status") continue;
     if (existing.some((line) => frontmatterKey(line) === key)) continue;
     const line = overrides.get(key);
     if (line) merged.push(line);
@@ -243,7 +246,7 @@ export const saveTicket = async (ctx: PluginHelperContext, input: SaveTicketInpu
   if (content === null) throw new Error(`Local ticket not found: .pstdio/tickets/${shorthand}/ticket.md`);
 
   const frontmatter = parseFrontmatter(content);
-  const statusName = input.status ?? frontmatter.status;
+  const statusName = input.status;
   const statusId = statusName ? await resolveStatusId(ctx, statusName) : undefined;
   const tagIds = input.tags?.length ? await resolveTagIds(ctx, input.tags) : undefined;
 
@@ -261,7 +264,7 @@ export const saveTicket = async (ctx: PluginHelperContext, input: SaveTicketInpu
     draft: false,
     parent_id: frontmatter.parent_id,
     tag_ids: tagIds,
-    status_id: statusId,
+    ...(statusId ? { status_id: statusId } : {}),
   });
 
   let uploadedFileCount = 0;

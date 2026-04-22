@@ -102,7 +102,7 @@ export const createHandler =
 
     const frontmatter = parseFrontmatter(content);
 
-    const statusName = argv.status ?? frontmatter.status;
+    const statusName = argv.status;
     const tagIds = argv.tag?.length ? await deps.resolveTagIds(projectId, argv.tag) : undefined;
     const statusId = statusName ? await deps.resolveStatusId(projectId, statusName) : undefined;
 
@@ -114,15 +114,17 @@ export const createHandler =
       mime_type: "text/markdown",
     });
 
-    await deps.updateTicket(ticket.id, {
+    const updates = {
       blocked_reason: frontmatter.blocked_reason,
       file_id: uploaded.id,
       display_title: extractDisplayTitle(bodyContent),
       draft: false,
       parent_id: frontmatter.parent_id,
       tag_ids: tagIds,
-      status_id: statusId,
-    });
+      ...(statusId ? { status_id: statusId } : {}),
+    };
+
+    await deps.updateTicket(ticket.id, updates);
 
     const uploadedCount =
       (await uploadLocalTicketFiles(deps, root, argv.id, ticket.id)) +

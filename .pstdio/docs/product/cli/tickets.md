@@ -120,7 +120,7 @@ Each ticket lives in its own directory under `.pstdio/tickets/`:
 
 YAML frontmatter in `ticket.md` is a local convention only. The server stores the ticket body without frontmatter.
 
-- **On save**: strip frontmatter from `ticket.md` before uploading. Actionable fields (`status`) are extracted and sent as ticket properties.
+- **On save**: strip frontmatter from `ticket.md` before uploading. Actionable fields (`blocked_reason`, `parent_id`) are extracted and sent as ticket properties.
 - **On pull**: build frontmatter from the ticket's database fields and prepend it to the downloaded body content.
 - **On write/create**: write frontmatter to the local file. Upload the body content without frontmatter.
 
@@ -137,7 +137,6 @@ Templates contain placeholder tokens that are automatically replaced when a tick
 | `{{CREATED_AT}}`   | ISO 8601 timestamp at creation time.                  | Auto-generated       |
 | `{{USER_PROMPT}}`  | Value of `--user-prompt`, or empty string if omitted. | `--user-prompt` flag |
 | `{{PARENT_ID}}`    | Value of `--parent-id`, or empty string if omitted.   | `--parent-id` flag   |
-| `{{STATUS}}`       | Value of `--status`, or `"backlog"` if omitted.       | `--status` flag      |
 
 Additional template variables can be passed as flags and are matched by name.
 
@@ -167,7 +166,7 @@ pstdio tickets write --title <title> --template <template-name> --tag <tag>... [
 1. Must be run inside a linked project (`.pstdio/config.json` must exist).
 2. Create a ticket in the database with `draft=true`. Assign the status from `--status` if provided, otherwise assign the project's default status.
 3. Create the ticket directory at `.pstdio/tickets/<shorthand>/`.
-4. If `--template` is provided, fetch the template from the API and populate `ticket.md` with the template content after replacing all placeholders (`{{TICKET_ID}}`, `{{TICKET_TITLE}}`, `{{CREATED_AT}}`, `{{USER_PROMPT}}`, `{{PARENT_ID}}`, `{{STATUS}}`).
+4. If `--template` is provided, fetch the template from the API and populate `ticket.md` with the template content after replacing all placeholders (`{{TICKET_ID}}`, `{{TICKET_TITLE}}`, `{{CREATED_AT}}`, `{{USER_PROMPT}}`, `{{PARENT_ID}}`).
 5. If no `--template`, write a minimal `ticket.md` with the title.
 6. If `--tag` values are provided, assign matching tags to the ticket. Tags must already exist in the project.
 
@@ -289,15 +288,15 @@ pstdio tickets save --id <ticket-shorthand> [--status <status>] [--tag <tag>...]
 
 1. Must be run inside a linked project.
 2. Read `ticket.md` from `.pstdio/tickets/<ticket-shorthand>/`.
-3. Parse YAML frontmatter from `ticket.md` and extract actionable fields (`status`).
+3. Parse YAML frontmatter from `ticket.md` and extract actionable fields (`blocked_reason`, `parent_id`).
 4. Strip frontmatter from `ticket.md` and upload the body content (without frontmatter) as the ticket file. Apply extracted frontmatter fields as ticket properties.
 5. Set `draft=false` to publish the ticket.
-6. Resolve the ticket status: use `--status` flag if provided, otherwise use `status` from frontmatter. Look up the status by name and assign its ID.
+6. Resolve the ticket status only from `--status` when provided. Look up the status by name and assign its ID.
 7. If `.pstdio/tickets/<ticket-shorthand>/files/` exists, upload every file under it and associate it with the ticket.
 8. If `.pstdio/tickets/<ticket-shorthand>/artifacts/` exists, upload every file under it and associate it with the ticket.
 9. If `--tag` values are provided, update the tag assignments.
 
-CLI flags always override frontmatter values. When neither a flag nor a frontmatter value is present, the field is left unchanged in the database.
+Status updates are explicit-only: frontmatter `status` is ignored. When `--status` is omitted, the existing database status is left unchanged.
 
 ### Output
 

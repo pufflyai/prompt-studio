@@ -2,7 +2,6 @@ type FrontmatterFields = {
   shorthand: string;
   created_at: string;
   draft: boolean | null;
-  status_name: string | null;
   parent_id: string | null;
   user_prompt: string | null;
   depends_on: string | null;
@@ -22,7 +21,6 @@ export const buildTicketFrontmatter = (fields: FrontmatterFields) => {
   lines.push(`created: ${q(fields.created_at)}`);
   if (fields.draft !== null) lines.push(`draft: ${fields.draft}`);
 
-  if (fields.status_name) lines.push(`status: ${q(fields.status_name)}`);
   if (fields.parent_id) lines.push(`parent_id: ${q(fields.parent_id)}`);
   if (fields.depends_on) lines.push(`depends_on: ${q(fields.depends_on)}`);
   if (fields.parallelizable) lines.push(`parallelizable: ${q(fields.parallelizable)}`);
@@ -43,10 +41,9 @@ export const stripFrontmatter = (content: string) => {
 type ParsedFrontmatter = {
   blocked_reason?: string;
   parent_id?: string;
-  status?: string;
 };
 
-const ACTIONABLE_FIELDS = ["blocked_reason", "parent_id", "status"] as const;
+const ACTIONABLE_FIELDS = ["blocked_reason", "parent_id"] as const;
 
 export const parseFrontmatter = (content: string): ParsedFrontmatter => {
   if (!content.startsWith("---")) return {};
@@ -116,14 +113,16 @@ export const applyFrontmatterValues = (frontmatter: string, content: string) => 
   }
 
   const existing = frontmatterLines(content);
-  const merged = existing.map((line) => {
+  const merged = existing.flatMap((line) => {
     const key = frontmatterKey(line);
-    if (!key) return line;
-    if (!overrides.has(key)) return line;
-    return overrides.get(key)!;
+    if (!key) return [line];
+    if (key === "status") return [];
+    if (!overrides.has(key)) return [line];
+    return [overrides.get(key)!];
   });
 
   for (const key of overrideOrder) {
+    if (key === "status") continue;
     if (existing.some((line) => frontmatterKey(line) === key)) continue;
     const line = overrides.get(key);
     if (line) merged.push(line);
