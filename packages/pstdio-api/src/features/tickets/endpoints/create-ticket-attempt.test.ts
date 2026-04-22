@@ -141,6 +141,7 @@ describe("POST /v1/tickets/:id/attempts", () => {
     expect(attempt.mode).toBe("worktree");
     expect(attempt.session).toBeNull();
     expect(attempt.workspace.branch).toBe(`workspace/${attempt.workspace.workspace_shorthand}`);
+    expect(await context.deps.workspaceSessionService.listByWorkspace(attempt.workspace.id)).toEqual([]);
   });
 });
 
@@ -245,6 +246,26 @@ export default { hooks: { postWorktreeCreate() { writeFileSync("${markerPath}", 
     expect(attempt.session).not.toBeNull();
 
     await waitForFile(markerPath);
+
+    hookCtx.cleanup();
+  });
+
+  test("surfaces preWorktreeCreate failures for workspace-only creation", async () => {
+    const { hookCtx, repo, ticket } = await setupHookTest(
+      "pre-create-reject-repo",
+      "pre-create-reject.ts",
+      `export default { hooks: { preWorktreeCreate() { return { reject: true, reason: "workspace guard failed" }; } } };`,
+    );
+
+    const attemptRes = await hookCtx.app.request(`/v1/tickets/${ticket.id}/attempts`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ repo_id: repo.id, mode: "worktree", start_session: false }),
+    });
+
+    expect(attemptRes.status).toBe(500);
+    const body = await attemptRes.json();
+    expect(body.error).toBe("Internal server error");
 
     hookCtx.cleanup();
   });

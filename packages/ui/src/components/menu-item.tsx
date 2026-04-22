@@ -12,7 +12,7 @@ import {
 import { Tooltip } from "./tooltip";
 
 type ChakraMenuItemProps = ComponentProps<typeof ChakraMenuItem>;
-type MenuItemIcon = ComponentProps<typeof Icon>["as"];
+type MenuItemIcon = ComponentProps<typeof Icon>["as"] | ReactNode;
 type MenuItemIconColor = IconProps["color"];
 type MenuItemTagColor = ComponentProps<typeof Badge>["colorPalette"];
 type MenuItemTagVariant = ComponentProps<typeof Badge>["variant"];
@@ -94,13 +94,30 @@ const MenuItemContent = (props: MenuItemContentProps) => {
     onRightIconClick();
   };
 
+  const renderIcon = (icon: MenuItemIcon | null | undefined, size: string, color: MenuItemIconColor) => {
+    if (!icon) return null;
+    if (isValidElement(icon)) {
+      return (
+        <Flex alignItems="center" justifyContent="center" boxSize={size} color={color}>
+          {icon}
+        </Flex>
+      );
+    }
+
+    if (typeof icon !== "function" && (typeof icon !== "object" || icon === null)) {
+      return icon;
+    }
+
+    return <Icon as={icon as ComponentProps<typeof Icon>["as"]} boxSize={size} color={color} />;
+  };
+
   return (
     <>
       <Flex justifyContent="space-between" alignItems="center" gap="xs" flex="1">
         <Tooltip positioning={{ placement: "right" }} content={tooltipLabel} disabled={!tooltipLabel}>
           <Stack gap="2xs">
             <Flex alignItems="flex-start" gap="xs" flex="1">
-              {leftIcon ? <Icon as={leftIcon} boxSize={leftIconSize} color={leftIconColor} /> : null}
+              {renderIcon(leftIcon, leftIconSize, leftIconColor)}
               <Text lineClamp={1} textOverflow="ellipsis" textStyle={variantStyles.primaryTextStyle}>
                 {primaryLabel}
               </Text>
@@ -132,7 +149,7 @@ const MenuItemContent = (props: MenuItemContentProps) => {
                 onMouseDown={handleRightIconMouseDown}
                 onClick={handleRightIconClick}
               >
-                <Icon as={rightIcon} boxSize={rightIconSize} color={rightIconColor} />
+                {renderIcon(rightIcon, rightIconSize, rightIconColor)}
               </Flex>
             </Tooltip>
           ) : null}

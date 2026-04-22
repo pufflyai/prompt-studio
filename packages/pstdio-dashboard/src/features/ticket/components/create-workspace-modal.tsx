@@ -8,21 +8,43 @@ interface CreateWorkspaceModalProps {
   attemptCount: number;
   isSubmitting?: boolean;
   isDisabled?: boolean;
+  confirmLabel?: string;
+  description?: string;
   onClose: () => void;
   onConfirm: () => Promise<boolean> | boolean;
 }
 
+export const runCreateWorkspaceModalConfirm = async (input: {
+  isSubmitting: boolean;
+  isDisabled: boolean;
+  onConfirm: () => Promise<boolean> | boolean;
+  onClose: () => void;
+}) => {
+  if (input.isSubmitting || input.isDisabled) return false;
+
+  const started = await input.onConfirm();
+  if (started) {
+    input.onClose();
+  }
+
+  return started;
+};
+
 export const CreateWorkspaceModal = (props: CreateWorkspaceModalProps) => {
-  const { open, attemptCount, isSubmitting = false, isDisabled = false, onClose, onConfirm } = props;
+  const {
+    open,
+    attemptCount,
+    isSubmitting = false,
+    isDisabled = false,
+    confirmLabel,
+    description,
+    onClose,
+    onConfirm,
+  } = props;
   const { t } = useTranslation("tickets");
 
   const handleConfirm = async () => {
-    if (isSubmitting || isDisabled) return;
-
-    const started = await onConfirm();
-    if (started) {
-      onClose();
-    }
+    await runCreateWorkspaceModalConfirm({ isSubmitting, isDisabled, onConfirm, onClose });
   };
 
   return (
@@ -40,7 +62,8 @@ export const CreateWorkspaceModal = (props: CreateWorkspaceModalProps) => {
           <Dialog.Body>
             <Stack gap="sm">
               <Text textStyle="paragraph/S/regular" color="foreground.secondary">
-                {attemptCount === 0 ? t("createWorkspaceModal.firstAttempt") : t("createWorkspaceModal.nextAttempt")}
+                {description ??
+                  (attemptCount === 0 ? t("createWorkspaceModal.firstAttempt") : t("createWorkspaceModal.nextAttempt"))}
               </Text>
 
               <HStack justify="space-between" align="center" wrap="wrap">
@@ -56,7 +79,7 @@ export const CreateWorkspaceModal = (props: CreateWorkspaceModalProps) => {
                 {t("createWorkspaceModal.cancel")}
               </Button>
               <Button size="sm" variant="primary" onClick={handleConfirm} loading={isSubmitting} disabled={isDisabled}>
-                {t("createWorkspaceModal.runAttempt")}
+                {confirmLabel ?? t("createWorkspaceModal.runAttempt")}
               </Button>
             </Stack>
           </Dialog.Footer>

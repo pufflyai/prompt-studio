@@ -67,8 +67,14 @@ function FloatingTextToolbar({
   const formatHeading = (headingSize: HeadingTagType) => {
     editor.update(() => {
       const selection = $getSelection();
-      const factory = blockType === headingSize ? $createParagraphNode : () => $createHeadingNode(headingSize);
-      $setBlocksType(selection, factory);
+      if (!$isRangeSelection(selection)) return;
+
+      if (blockType === headingSize) {
+        $setBlocksType(selection, $createParagraphNode);
+        return;
+      }
+
+      $setBlocksType(selection, () => $createHeadingNode(headingSize));
     });
   };
 

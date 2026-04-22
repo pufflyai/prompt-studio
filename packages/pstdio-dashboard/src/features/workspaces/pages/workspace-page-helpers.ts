@@ -2,8 +2,8 @@ import type { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import type { useProject } from "@/features/project/hooks/use-project";
 import { buildImplementTicketPrompt } from "@/features/ticket/utils/build-prompts";
+import type { CreateTicketAttemptResult } from "@/features/ticket-list/data/api";
 import type { useCreateTicketAttempt } from "@/features/ticket-list/hooks/use-create-ticket-attempt";
-import type { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
 import { logMutationError } from "@/lib/error-handlers";
 import type { WorkspaceListItem } from "../components/workspace-list-panel";
 import type { useAttemptStatusMap } from "../hooks/use-attempt-status-map";
@@ -12,8 +12,21 @@ import { runWorkspaceDeleteFlow } from "./workspace-page-actions";
 import { resolveWorkspacePageSessionSearch } from "./workspace-page-session-search";
 import type { WorkspacePageTab } from "./workspace-page-tab";
 
+type WorkspaceCreationTicket = {
+  id: string;
+  shorthand: string;
+};
+
 export const buildWorkspaceListItems = (
-  attempts: NonNullable<ReturnType<typeof useProjectTickets>["data"]>[number]["attempts"],
+  attempts: {
+    id: string;
+    label: string;
+    shorthand: string;
+    updatedAt: string;
+    worktreePath?: string | null;
+    setupError?: string | null;
+    attemptStatusId?: string | null;
+  }[],
   attemptStatusMap: ReturnType<typeof useAttemptStatusMap>,
 ): WorkspaceListItem[] =>
   attempts.map((attempt) => {
@@ -24,15 +37,15 @@ export const buildWorkspaceListItems = (
       label: attempt.label,
       shorthand: attempt.shorthand,
       updatedAt: attempt.updatedAt,
-      worktreePath: attempt.worktreePath,
-      setupError: attempt.setupError,
+      worktreePath: attempt.worktreePath ?? null,
+      setupError: attempt.setupError ?? null,
       attemptStatusName: status?.name,
       attemptStatusColor: status?.color,
     };
   });
 
 export const runWorkspaceAttempt = async (input: {
-  ticket: NonNullable<ReturnType<typeof useProjectTickets>["data"]>[number] | null;
+  ticket: WorkspaceCreationTicket | null;
   projectId: string | undefined;
   project: ReturnType<typeof useProject>["data"];
   createAttempt: ReturnType<typeof useCreateTicketAttempt>;
@@ -40,14 +53,60 @@ export const runWorkspaceAttempt = async (input: {
   lastSelectedModels: string[];
   lastSelectedBranches: string[];
   lastSelectedRepo: string;
-  onSuccess: (workspaceShorthand: string) => void;
+  onSuccess: (result: CreateTicketAttemptResult) => void;
+}) => {
+  return runWorkspaceCreation({ ...input, startSession: true });
+};
+
+export const navigateToCreatedWorkspace = (input: {
+  navigate: ReturnType<typeof useNavigate>;
+  setSelectedSessionId: (sessionId: string | null) => void;
+  projectId: string | undefined;
+  ticketShorthand: string | undefined;
+  workspaceShorthand: string;
+  tab?: WorkspacePageTab;
+}) => {
+  const { navigate, setSelectedSessionId, projectId, ticketShorthand, workspaceShorthand, tab } = input;
+  if (!projectId || !ticketShorthand) return;
+
+  setSelectedSessionId(null);
+  void navigate({
+    to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
+    params: { projectId, ticketShorthand, workspaceShorthand },
+    search: tab ? { tab } : {},
+  });
+};
+
+export const createWorkspacePageCreationActions = (input: {
+  openRunAttemptModal: () => void;
+  openCreateWorkspaceModal: () => void;
+  runAttempt: () => Promise<boolean>;
+  createEmptyWorkspace: () => Promise<boolean>;
+}) => ({
+  openRunAttempt: input.openRunAttemptModal,
+  openCreateWorkspace: input.openCreateWorkspaceModal,
+  runAttempt: input.runAttempt,
+  createEmptyWorkspace: input.createEmptyWorkspace,
+});
+
+export const runWorkspaceCreation = async (input: {
+  ticket: WorkspaceCreationTicket | null;
+  projectId: string | undefined;
+  project: ReturnType<typeof useProject>["data"];
+  createAttempt: ReturnType<typeof useCreateTicketAttempt>;
+  lastSelectedAgent: string | null;
+  lastSelectedModels: string[];
+  lastSelectedBranches: string[];
+  lastSelectedRepo: string;
+  startSession: boolean;
+  onSuccess: (result: CreateTicketAttemptResult) => void;
 }) => {
   const { ticket, projectId, project, createAttempt, lastSelectedAgent, lastSelectedModels, lastSelectedBranches } =
     input;
 
   if (!ticket || !projectId || createAttempt.isPending) return false;
 
-  const prompt = buildImplementTicketPrompt(ticket.shorthand);
+  const prompt = input.startSession ? buildImplementTicketPrompt(ticket.shorthand) : null;
   const repoId = input.lastSelectedRepo || project?.repositories[0]?.id || null;
   const branch = lastSelectedBranches[0]?.trim() ? lastSelectedBranches[0] : null;
   const model = lastSelectedModels[0]?.trim() ? lastSelectedModels[0] : null;
@@ -60,12 +119,13 @@ export const runWorkspaceAttempt = async (input: {
       branch,
       model,
       prompt,
+      startSession: input.startSession,
     });
 
-    input.onSuccess(result.workspaceShorthand);
+    input.onSuccess(result);
     return true;
   } catch (error) {
-    logMutationError("run attempt", error);
+    logMutationError(input.startSession ? "run attempt" : "create workspace", error);
     return false;
   }
 };

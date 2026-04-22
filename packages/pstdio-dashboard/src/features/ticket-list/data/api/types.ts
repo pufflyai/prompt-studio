@@ -127,11 +127,12 @@ export type CreateTicketAttemptInput = {
   mode?: TicketAttemptMode;
   model?: string | null;
   prompt?: string | null;
+  startSession?: boolean;
 };
 
 export type CreateTicketAttemptResult = {
   ticketId: string;
-  sessionId: string;
+  sessionId: string | null;
   workspaceId: string;
   workspaceShorthand: string;
 };
