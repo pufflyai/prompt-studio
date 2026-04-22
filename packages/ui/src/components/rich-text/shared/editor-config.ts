@@ -1,4 +1,4 @@
-import { CodeNode } from "@lexical/code";
+import { CodeHighlightNode, CodeNode } from "@lexical/code";
 import { AutoLinkNode, LinkNode } from "@lexical/link";
 import { ListItemNode, ListNode } from "@lexical/list";
 import { CHECK_LIST, TRANSFORMERS } from "@lexical/markdown";
@@ -7,7 +7,6 @@ import type { Klass, LexicalNode } from "lexical";
 import { REFERENCE_LINK_TRANSFORMER, ReferenceLinkNode } from "../markdown-editor/plugins/ReferenceLinkPlugin";
 import theme from "../theme/rich-text-theme";
 import { DataTableNode } from "./nodes/DataTableNode";
-import { CodeBlockNode } from "./plugins/CodePlugin/CodeNode";
 import { EquationNode } from "./plugins/EquationPlugin/EquationNode";
 import { EQUATION_INLINE, EQUATION_MULTILINE } from "./plugins/EquationPlugin/EquationPlugin";
 import { HRNode } from "./plugins/HorizontalRulePlugin/HorizontalRuleNode";
@@ -23,7 +22,7 @@ export const editorNodes: Array<Klass<LexicalNode>> = [
   ListNode,
   ListItemNode,
   CodeNode,
-  CodeBlockNode,
+  CodeHighlightNode,
   MermaidNode,
   EquationNode,
   HRNode,

@@ -16,7 +16,9 @@ import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from "y-protoc
 import * as Y from "yjs";
 import { ContentEditable } from "../shared/components/content-editable";
 import { editorNodes, editorTheme } from "../shared/editor-config";
+import { CodeBlockActionsPlugin } from "../shared/plugins/CodePlugin/CodeBlockActionsPlugin";
 import { ImportCodeBlocksPlugin } from "../shared/plugins/CodePlugin/CodeBlockPlugin";
+import { CodeHighlightingPlugin } from "../shared/plugins/CodePlugin/CodeHighlightingPlugin";
 import { EquationPlugin } from "../shared/plugins/EquationPlugin/EquationPlugin";
 import { FloatingTextFormatToolbarPlugin } from "../shared/plugins/FloatingTextFormatToolbarPlugin";
 import { AwarenessCursorsCSS } from "./awareness-cursors";
@@ -150,7 +152,9 @@ function EditorPane({ label, roomId, userName, userColor, provider, doc }: Edito
             <LinkPlugin />
             <ListPlugin />
             <HorizontalRulePlugin />
+            <CodeHighlightingPlugin />
             <ImportCodeBlocksPlugin />
+            <CodeBlockActionsPlugin anchorElem={toolbarAnchor} />
             <EquationPlugin />
             <RichTextPlugin
               contentEditable={<ContentEditable fullWidth />}

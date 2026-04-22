@@ -1,0 +1,8 @@
+.code-block-actions {
+  z-index: 1001;
+  opacity: 0.95;
+}
+
+.code-block-actions button {
+  box-shadow: var(--chakra-shadows-sm);
+}
