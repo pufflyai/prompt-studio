@@ -130,6 +130,7 @@ export const TicketBoard = (props: TicketBoardProps) => {
                   return (
                     <GroupSection
                       key={group.key}
+                      columnId={column.id}
                       group={group}
                       selectedItemId={selectedItemId}
                       canDragIn={column.canDragIn}
@@ -188,6 +189,7 @@ interface ColumnHeaderProps {
 }
 
 interface GroupSectionProps {
+  columnId: string;
   group: TicketBoardGroup;
   selectedItemId: string | null;
   canDragIn: boolean;
@@ -202,6 +204,7 @@ interface GroupSectionProps {
 
 const GroupSection = (props: GroupSectionProps) => {
   const {
+    columnId,
     group,
     selectedItemId,
     canDragIn,
@@ -217,6 +220,8 @@ const GroupSection = (props: GroupSectionProps) => {
 
   return (
     <Stack
+      data-column-id={columnId}
+      data-group-key={group.key}
       gap="0"
       borderRadius="sm"
       background={isDropTarget ? "bg.subtle" : "transparent"}

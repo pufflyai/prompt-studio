@@ -45,6 +45,7 @@ export interface WorkspaceTagOption {
   value: string;
   label: string;
   color?: string;
+  icon?: string | null;
 }
 
 export interface WorkspaceTagDefinition {

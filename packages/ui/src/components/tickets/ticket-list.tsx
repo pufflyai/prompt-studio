@@ -19,6 +19,7 @@ export interface TicketListItem {
   id: string;
   ticketId: string;
   title: string;
+  countBadge?: number;
   statusIcon?: ComponentType<{ size?: number | string }>;
   statusColor?: string;
   badges?: TicketCardBadge[];
@@ -106,22 +107,31 @@ const TicketCell = (props: TicketCellProps) => {
   const { row } = props;
   const item = row.original;
   const depth = row.depth;
+  const hasTicketId = item.ticketId.trim().length > 0;
 
   return (
-    <HStack gap="sm" flex="1" paddingLeft={depth > 0 ? `${depth * 24}px` : undefined}>
+    <HStack gap="xs" flex="1" paddingLeft={depth > 0 ? `${depth * 24}px` : undefined}>
       {row.getCanExpand() ? <ExpandToggle row={row} /> : depth > 0 ? <TreeConnector /> : null}
 
       {item.statusIcon && (
         <Icon as={item.statusIcon} boxSize="16px" color={item.statusColor ?? "fg.muted"} flexShrink={0} />
       )}
 
-      <Text textStyle="label/S/regular" color="fg.muted" flexShrink={0} minW="70px">
-        {item.ticketId}
-      </Text>
+      {hasTicketId && (
+        <Text textStyle="label/S/regular" color="fg.muted" flexShrink={0} minW="70px">
+          {item.ticketId}
+        </Text>
+      )}
 
       <Text textStyle="label/S/regular" flex="1" truncate>
         {item.title}
       </Text>
+
+      {typeof item.countBadge === "number" && (
+        <Badge variant="subtle" colorPalette="gray" size="sm" flexShrink={0}>
+          {item.countBadge}
+        </Badge>
+      )}
 
       {((item.badges && item.badges.length > 0) || (item.tagBadges && item.tagBadges.length > 0)) && (
         <Wrap gap="2xs" flexShrink={0}>
@@ -173,13 +183,12 @@ const ExpandToggle = (props: ExpandToggleProps) => {
       data-expanded={isExpanded ? "true" : undefined}
       aria-label={isExpanded ? "Collapse group" : "Expand group"}
     >
-      <ChevronRight
-        size={14}
-        style={{
-          color: "var(--chakra-colors-fg-muted)",
-          transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-          transition: "transform 0.15s ease",
-        }}
+      <Icon
+        as={ChevronRight}
+        boxSize="14px"
+        color="fg.muted"
+        transform={isExpanded ? "rotate(90deg)" : "rotate(0deg)"}
+        transition="transform 0.15s ease"
       />
     </Box>
   );
