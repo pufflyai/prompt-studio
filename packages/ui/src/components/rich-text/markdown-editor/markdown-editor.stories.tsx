@@ -213,3 +213,25 @@ export const MermaidReadOnly: Story = {
     isEditable: false,
   },
 };
+
+export const EditableCodeBlocks: Story = {
+  args: {
+    defaultState: "# Editable code\n\n```ts\nconst greeting = 'hello';\n```",
+    isEditable: true,
+  },
+};
+
+export const CodeBlockAtCursor: Story = {
+  args: {
+    defaultState: "Place the cursor in this paragraph and use the floating toolbar to insert a code block.",
+    isEditable: true,
+  },
+};
+
+export const CodeBlockCopyAction: Story = {
+  args: {
+    defaultState:
+      "# Copy action\n\nClick the copy button on the code block below to test clipboard feedback.\n\n```ts\nconst data = { id: 1, name: 'test' };\nconsole.log(JSON.stringify(data, null, 2));\n```",
+    isEditable: false,
+  },
+};

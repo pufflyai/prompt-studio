@@ -1,6 +1,5 @@
 import "./FloatingTextFormatToolbarPlugin.css";
 
-import { IconButton, Stack, Text } from "@chakra-ui/react";
 import {
   INSERT_CHECK_LIST_COMMAND,
   INSERT_ORDERED_LIST_COMMAND,
@@ -18,33 +17,20 @@ import {
   CLICK_COMMAND,
   COMMAND_PRIORITY_CRITICAL,
   COMMAND_PRIORITY_HIGH,
-  FORMAT_TEXT_COMMAND,
+  isSelectionCapturedInDecoratorInput,
   type LexicalEditor,
   SELECTION_CHANGE_COMMAND,
 } from "lexical";
-import { List, ListOrdered, ListTodo } from "lucide-react";
 import type React from "react";
 import { type Dispatch, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Tooltip } from "../../../../tooltip";
+import { insertCodeBlockFromSelection } from "../CodePlugin/code-block-utils";
 import { setFloatingElemPos } from "../LinkEditorPlugin/utils/setFloatingElemPos";
+import { FloatingTextToolbarControls } from "./floating-text-toolbar-controls";
 import { type BlockType, resolveBlockTypeFromAnchor } from "./resolve-block-type";
 
 // Increase the vertical gap (negative places it below the selection) to avoid overlap
 const GAP = -4;
-
-function ToolbarSeparator() {
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        height: "1rem",
-        margin: "0 0.25rem",
-        borderLeft: "1px solid var(--chakra-colors-border-muted)",
-      }}
-    />
-  );
-}
 
 function FloatingTextToolbar({
   editor,
@@ -63,6 +49,10 @@ function FloatingTextToolbar({
   const [isItalic, setIsItalic] = useState(false);
   const [isUnderline, setIsUnderline] = useState(false);
   const updateFloatingToolbarRef = useRef<() => boolean | undefined>(() => undefined);
+
+  const preserveSelection = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+  };
 
   const formatHeading = (headingSize: HeadingTagType) => {
     editor.update(() => {
@@ -83,6 +73,12 @@ function FloatingTextToolbar({
       check: INSERT_CHECK_LIST_COMMAND,
     }[type];
     editor.dispatchCommand(command, undefined);
+  };
+
+  const formatCodeBlock = () => {
+    editor.update(() => {
+      insertCodeBlockFromSelection();
+    });
   };
 
   const updateToolbar = () => {
@@ -114,9 +110,9 @@ function FloatingTextToolbar({
     if (
       selection !== null &&
       $isRangeSelection(selection) &&
-      !selection.isCollapsed() &&
       nativeSelection !== null &&
-      !nativeSelection.isCollapsed &&
+      nativeSelection.anchorNode !== null &&
+      !isSelectionCapturedInDecoratorInput(nativeSelection.anchorNode) &&
       rootElement?.contains(nativeSelection.anchorNode) &&
       editor.isEditable()
     ) {
@@ -195,140 +191,17 @@ function FloatingTextToolbar({
 
   return (
     <div ref={editorRef} className={`floating-text-format-toolbar ${isToolbarActive ? "active" : ""}`}>
-      <Stack direction="row" gap="0.5" alignItems="center">
-        {/* Text formatting buttons */}
-        <Tooltip content="Bold">
-          <IconButton
-            data-active={isBold || undefined}
-            onClick={() => {
-              editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold");
-            }}
-            variant="ghost"
-            aria-label="Bold"
-            size="xs"
-          >
-            <Text fontWeight="bold" fontSize=".75rem">
-              B
-            </Text>
-          </IconButton>
-        </Tooltip>
-        <Tooltip content="Italic">
-          <IconButton
-            data-active={isItalic || undefined}
-            onClick={() => {
-              editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic");
-            }}
-            variant="ghost"
-            aria-label="Italic"
-            size="xs"
-          >
-            <Text fontStyle="italic" fontSize=".75rem">
-              I
-            </Text>
-          </IconButton>
-        </Tooltip>
-        <Tooltip content="Underline">
-          <IconButton
-            data-active={isUnderline || undefined}
-            onClick={() => {
-              editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline");
-            }}
-            variant="ghost"
-            aria-label="Underline"
-            size="xs"
-          >
-            <Text textDecoration="underline" fontSize=".75rem">
-              U
-            </Text>
-          </IconButton>
-        </Tooltip>
-
-        <ToolbarSeparator />
-
-        {/* Heading buttons */}
-        <Tooltip content="Heading 1">
-          <IconButton
-            data-active={blockType === "h1" || undefined}
-            variant="ghost"
-            aria-label="Heading 1"
-            size="xs"
-            onClick={() => {
-              formatHeading("h1");
-            }}
-          >
-            <Text fontWeight="thin" fontSize=".8rem">
-              H1
-            </Text>
-          </IconButton>
-        </Tooltip>
-        <Tooltip content="Heading 2">
-          <IconButton
-            data-active={blockType === "h2" || undefined}
-            variant="ghost"
-            aria-label="Heading 2"
-            size="xs"
-            onClick={() => {
-              formatHeading("h2");
-            }}
-          >
-            <Text fontWeight="thin" fontSize=".8rem">
-              H2
-            </Text>
-          </IconButton>
-        </Tooltip>
-        <Tooltip content="Heading 3">
-          <IconButton
-            data-active={blockType === "h3" || undefined}
-            variant="ghost"
-            aria-label="Heading 3"
-            size="xs"
-            onClick={() => {
-              formatHeading("h3");
-            }}
-          >
-            <Text fontWeight="thin" fontSize=".8rem">
-              H3
-            </Text>
-          </IconButton>
-        </Tooltip>
-
-        <ToolbarSeparator />
-
-        {/* List buttons */}
-        <Tooltip content="Bulleted List">
-          <IconButton
-            data-active={blockType === "bullet" || undefined}
-            variant="ghost"
-            aria-label="Bulleted List"
-            size="xs"
-            onClick={() => formatList("bullet")}
-          >
-            <List size={14} />
-          </IconButton>
-        </Tooltip>
-        <Tooltip content="Numbered List">
-          <IconButton
-            data-active={blockType === "number" || undefined}
-            variant="ghost"
-            aria-label="Numbered List"
-            size="xs"
-            onClick={() => formatList("number")}
-          >
-            <ListOrdered size={14} />
-          </IconButton>
-        </Tooltip>
-        <Tooltip content="Check List">
-          <IconButton
-            data-active={blockType === "check" || undefined}
-            variant="ghost"
-            aria-label="Check List"
-            size="xs"
-            onClick={() => formatList("check")}
-          >
-            <ListTodo size={14} />
-          </IconButton>
-        </Tooltip>
-      </Stack>
+      <FloatingTextToolbarControls
+        blockType={blockType}
+        editor={editor}
+        formatCodeBlock={formatCodeBlock}
+        formatHeading={formatHeading}
+        formatList={formatList}
+        isBold={isBold}
+        isItalic={isItalic}
+        isUnderline={isUnderline}
+        preserveSelection={preserveSelection}
+      />
     </div>
   );
 }

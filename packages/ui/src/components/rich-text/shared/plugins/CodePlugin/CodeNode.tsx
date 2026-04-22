@@ -1,7 +1,6 @@
-import { Box } from "@chakra-ui/react";
-import { DecoratorNode, type SerializedLexicalNode } from "lexical";
+import { $applyNodeReplacement, DecoratorNode, type LexicalNode, type SerializedLexicalNode } from "lexical";
 import type { ReactNode } from "react";
-import { DefaultRichTextCodeEditor } from "../../components/default-rich-text-components";
+import { CodeBlockComponent } from "./CodeBlockComponent";
 
 export interface SerializedCodeBlockNode extends SerializedLexicalNode {
   type: "codeblock";
@@ -55,17 +54,29 @@ export class CodeBlockNode extends DecoratorNode<ReactNode> {
     return `\`\`\`${this.__language}\n${this.__code}\n\`\`\``;
   }
 
-  decorate() {
-    return (
-      <Box borderRadius="md" overflow="hidden">
-        <DefaultRichTextCodeEditor
-          language={this.__language || "plaintext"}
-          defaultCode={this.__code}
-          isEditable={false}
-          showLineNumbers
-          disableScroll
-        />
-      </Box>
-    );
+  getCode() {
+    return this.__code;
   }
+
+  setCode(code: string) {
+    const writable = this.getWritable();
+    writable.__code = code;
+  }
+
+  getLanguage() {
+    return this.__language;
+  }
+
+  decorate() {
+    return <CodeBlockComponent language={this.__language || "plaintext"} code={this.__code} nodeKey={this.__key} />;
+  }
+}
+
+export function $createCodeBlockNode(language = "plaintext", code = "") {
+  const codeBlockNode = new CodeBlockNode(language, code);
+  return $applyNodeReplacement(codeBlockNode);
+}
+
+export function $isCodeBlockNode(node: LexicalNode | null | undefined): node is CodeBlockNode {
+  return node instanceof CodeBlockNode;
 }

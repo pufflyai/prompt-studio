@@ -12,16 +12,28 @@ const formatValue = (value: unknown) => {
 };
 
 export const DefaultRichTextCodeEditor = (props: CodeEditorProps) => {
-  const { defaultCode = "", isEditable = false, showLineNumbers = false, disableScroll = false } = props;
+  const {
+    defaultCode = "",
+    isEditable = false,
+    showLineNumbers = false,
+    disableScroll = false,
+    onChange,
+    textareaRef,
+  } = props;
 
   if (isEditable) {
     return (
       <Textarea
-        defaultValue={defaultCode}
+        ref={textareaRef}
+        value={defaultCode}
+        onChange={(event) => onChange?.(event.target.value)}
         fontFamily="mono"
         fontSize={scaledSmallFontSize}
         resize="vertical"
         minHeight="100%"
+        borderRadius={0}
+        borderWidth={0}
+        spellCheck={false}
       />
     );
   }
@@ -36,6 +48,7 @@ export const DefaultRichTextCodeEditor = (props: CodeEditorProps) => {
       fontFamily="mono"
       fontSize={scaledSmallFontSize}
       lineHeight="1.5"
+      overflowX="auto"
       overflowY={disableScroll ? "hidden" : "auto"}
       background="bg.muted"
       borderRadius="md"

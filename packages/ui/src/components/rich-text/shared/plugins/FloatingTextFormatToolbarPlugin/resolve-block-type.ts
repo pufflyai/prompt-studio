@@ -21,6 +21,10 @@ export const blockTypeToBlockName = {
 export type BlockType = keyof typeof blockTypeToBlockName;
 
 const toKnownBlockType = (type: string) => {
+  if (type === "codeblock") {
+    return "code";
+  }
+
   return type in blockTypeToBlockName ? (type as BlockType) : null;
 };
 

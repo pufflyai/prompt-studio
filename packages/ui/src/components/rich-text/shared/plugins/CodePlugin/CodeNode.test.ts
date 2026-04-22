@@ -4,19 +4,16 @@ import { LinkNode } from "@lexical/link";
 import { ListItemNode, ListNode } from "@lexical/list";
 import { $convertFromMarkdownString, $convertToMarkdownString } from "@lexical/markdown";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
-import { $getRoot, $nodesOfType, createEditor } from "lexical";
+import { $createParagraphNode, $createTextNode, $getRoot, createEditor } from "lexical";
 import { editorTransformers } from "../../editor-config";
 import { MermaidNode } from "../MermaidPlugin/MermaidNode";
-import { CodeBlockNode } from "./CodeNode";
+import { $isCodeBlockNode, CodeBlockNode } from "./CodeNode";
+import { insertCodeBlockFromSelection, replaceImportedCodeBlocks } from "./code-block-utils";
 
 function createHeadlessEditor() {
   return createEditor({
     nodes: [QuoteNode, LinkNode, HeadingNode, ListNode, ListItemNode, CodeNode, CodeBlockNode, MermaidNode],
   });
-}
-
-function isMermaidLanguage(language: string) {
-  return language.trim().toLowerCase() === "mermaid";
 }
 
 // Replicates the real editor flow: import markdown → ImportCodeBlocksPlugin converts
@@ -35,12 +32,7 @@ function markdownRoundtrip(markdown: string) {
   // Mimic ImportCodeBlocksPlugin: replace CodeNode with CodeBlockNode
   editor.update(
     () => {
-      const codeNodes = $nodesOfType(CodeNode);
-      for (const n of codeNodes) {
-        const lang = n.getLanguage() ?? "plaintext";
-        const code = n.getTextContent();
-        n.replace(isMermaidLanguage(lang) ? new MermaidNode(code) : new CodeBlockNode(lang, code));
-      }
+      replaceImportedCodeBlocks();
     },
     { discrete: true },
   );
@@ -65,12 +57,7 @@ function markdownToTopLevelNodeTypes(markdown: string) {
 
   editor.update(
     () => {
-      const codeNodes = $nodesOfType(CodeNode);
-      for (const n of codeNodes) {
-        const lang = n.getLanguage() ?? "plaintext";
-        const code = n.getTextContent();
-        n.replace(isMermaidLanguage(lang) ? new MermaidNode(code) : new CodeBlockNode(lang, code));
-      }
+      replaceImportedCodeBlocks();
     },
     { discrete: true },
   );
@@ -84,6 +71,16 @@ function markdownToTopLevelNodeTypes(markdown: string) {
   });
 
   return nodeTypes;
+}
+
+function exportEditorMarkdown(editor: ReturnType<typeof createHeadlessEditor>) {
+  let result = "";
+
+  editor.read(() => {
+    result = $convertToMarkdownString(editorTransformers);
+  });
+
+  return result;
 }
 
 describe("CodeBlockNode markdown roundtrip", () => {
@@ -142,5 +139,74 @@ describe("CodeBlockNode markdown roundtrip", () => {
     expect(nodeTypes).toContain("mermaid");
     expect(nodeTypes).not.toContain("code");
     expect(nodeTypes).not.toContain("codeblock");
+  });
+
+  test("exports inline edits made to a code block", () => {
+    const editor = createHeadlessEditor();
+
+    editor.update(
+      () => {
+        $convertFromMarkdownString("```ts\nconsole.log('before')\n```", editorTransformers, undefined, false);
+      },
+      { discrete: true },
+    );
+
+    editor.update(
+      () => {
+        replaceImportedCodeBlocks();
+        const codeBlockNode = $getRoot().getFirstChild();
+
+        if ($isCodeBlockNode(codeBlockNode)) {
+          codeBlockNode.setCode("console.log('after')");
+        }
+      },
+      { discrete: true },
+    );
+
+    const markdown = exportEditorMarkdown(editor);
+
+    expect(markdown).toContain("console.log('after')");
+    expect(markdown).not.toContain("console.log('before')");
+  });
+
+  test("inserts a code block from the current text selection", () => {
+    const editor = createHeadlessEditor();
+
+    editor.update(
+      () => {
+        const paragraph = $createParagraphNode();
+        const text = $createTextNode("const answer = 42;");
+
+        paragraph.append(text);
+        $getRoot().append(paragraph);
+        text.select(0, text.getTextContentSize());
+        insertCodeBlockFromSelection();
+      },
+      { discrete: true },
+    );
+
+    const markdown = exportEditorMarkdown(editor);
+
+    expect(markdown).toContain("```plaintext");
+    expect(markdown).toContain("const answer = 42;");
+  });
+
+  test("inserts an empty code block at a collapsed selection", () => {
+    const editor = createHeadlessEditor();
+
+    editor.update(
+      () => {
+        const paragraph = $createParagraphNode();
+        const text = $createTextNode("hello");
+
+        paragraph.append(text);
+        $getRoot().append(paragraph);
+        text.selectEnd();
+        insertCodeBlockFromSelection();
+      },
+      { discrete: true },
+    );
+
+    expect(exportEditorMarkdown(editor)).toContain("```plaintext\n\n```");
   });
 });

@@ -1,3 +1,5 @@
+import type { RefObject } from "react";
+
 export type RowData = Record<string, unknown>;
 
 export interface DataTableProps {
@@ -14,4 +16,6 @@ export interface CodeEditorProps {
   isEditable?: boolean;
   showLineNumbers?: boolean;
   disableScroll?: boolean;
+  onChange?: (value: string) => void;
+  textareaRef?: RefObject<HTMLTextAreaElement | null>;
 }
