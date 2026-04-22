@@ -66,9 +66,10 @@ describe("pullTickets", () => {
 
     const ticketFilePath = join(root, ".pstdio", "tickets", "PS-1", "ticket.md");
     expect(existsSync(ticketFilePath)).toBe(true);
-    expect(readFileSync(ticketFilePath, "utf8")).toContain('ticket_id: "PS-1"');
-    expect(readFileSync(ticketFilePath, "utf8")).toContain('status: "wip"');
-    expect(readFileSync(ticketFilePath, "utf8")).toContain("# Ticket body");
+    const ticketContent = readFileSync(ticketFilePath, "utf8");
+    expect(ticketContent).toContain('ticket_id: "PS-1"');
+    expect(ticketContent).not.toContain("status:");
+    expect(ticketContent).toContain("# Ticket body");
 
     const attachmentPath = join(root, ".pstdio", "tickets", "PS-1", "files", "notes.txt");
     expect(readFileSync(attachmentPath, "utf8")).toBe("attachment-body");

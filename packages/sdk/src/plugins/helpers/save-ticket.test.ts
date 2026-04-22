@@ -86,7 +86,7 @@ describe("saveTicket", () => {
     });
   });
 
-  it("applies status from frontmatter via ctx.client.statuses", async () => {
+  it("ignores status in frontmatter — only explicit input.status updates DB status", async () => {
     const root = makeTempRoot();
     writeLocalTicket(root, "PS-1", '---\nstatus: "wip"\n---\n\n# T');
 
@@ -95,10 +95,11 @@ describe("saveTicket", () => {
     await saveTicket(ctx, { rootPath: root, ticketId: "PS-1" });
 
     const update = calls.find((call) => call.method === "tickets.update");
-    expect(update?.args[1]).toMatchObject({ status_id: "s-wip" });
+    expect(update?.args[1]).toMatchObject({ status_id: undefined });
+    expect(calls.find((call) => call.method === "statuses.list")).toBeUndefined();
   });
 
-  it("input.status overrides frontmatter status", async () => {
+  it("applies status from explicit input.status flag", async () => {
     const root = makeTempRoot();
     writeLocalTicket(root, "PS-1", '---\nstatus: "wip"\n---\n\n# T');
 
@@ -152,6 +153,20 @@ describe("saveTicket", () => {
     const written = readFileSync(join(root, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8");
     expect(written).toContain("draft: false");
     expect(written).not.toContain("draft: true");
+  });
+
+  it("strips legacy status from local frontmatter on save", async () => {
+    const root = makeTempRoot();
+    writeLocalTicket(root, "PS-1", '---\ndraft: true\nstatus: "backlog"\ntags: ["bug"]\n---\n\n# T');
+
+    const { ctx } = makeCtx();
+
+    await saveTicket(ctx, { rootPath: root, ticketId: "PS-1" });
+
+    const written = readFileSync(join(root, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8");
+    expect(written).not.toContain("status:");
+    expect(written).toContain("draft: false");
+    expect(written).toContain('tags: ["bug"]');
   });
 
   it("throws when local ticket file is missing", async () => {

@@ -20,9 +20,9 @@ const TICKETS_DIR = join(".pstdio", "tickets");
 const TICKET_FILES_DIR = "files";
 const TICKET_ARTIFACTS_DIR = "artifacts";
 const MAX_DISPLAY_TITLE_LENGTH = 50;
-const ACTIONABLE_FRONTMATTER_KEYS = ["blocked_reason", "parent_id", "status"] as const;
+const ACTIONABLE_FRONTMATTER_KEYS = ["blocked_reason", "parent_id"] as const;
 
-type ParsedFrontmatter = { blocked_reason?: string; parent_id?: string; status?: string };
+type ParsedFrontmatter = { blocked_reason?: string; parent_id?: string };
 
 const resolveTicketDir = (rootPath: string, shorthand: string) => {
   const exactDir = join(rootPath, TICKETS_DIR, shorthand);
@@ -151,6 +151,8 @@ const applyFrontmatter = (frontmatter: string, content: string) => {
   return `${frontmatter}\n\n${body}`;
 };
 
+const DISALLOWED_FRONTMATTER_KEYS = new Set(["status"]);
+
 const applyFrontmatterValues = (frontmatter: string, content: string) => {
   if (findFrontmatterClosingIndex(content) === -1) return applyFrontmatter(frontmatter, content);
 
@@ -159,11 +161,16 @@ const applyFrontmatterValues = (frontmatter: string, content: string) => {
   for (const line of frontmatterLines(frontmatter)) {
     const key = frontmatterKey(line);
     if (!key) continue;
+    if (DISALLOWED_FRONTMATTER_KEYS.has(key)) continue;
     overrides.set(key, line);
     overrideOrder.push(key);
   }
 
-  const existing = frontmatterLines(content);
+  const existing = frontmatterLines(content).filter((line) => {
+    const key = frontmatterKey(line);
+    if (!key) return true;
+    return !DISALLOWED_FRONTMATTER_KEYS.has(key);
+  });
   const merged = existing.map((line) => {
     const key = frontmatterKey(line);
     if (!key || !overrides.has(key)) return line;
@@ -243,7 +250,7 @@ export const saveTicket = async (ctx: PluginHelperContext, input: SaveTicketInpu
   if (content === null) throw new Error(`Local ticket not found: .pstdio/tickets/${shorthand}/ticket.md`);
 
   const frontmatter = parseFrontmatter(content);
-  const statusName = input.status ?? frontmatter.status;
+  const statusName = input.status;
   const statusId = statusName ? await resolveStatusId(ctx, statusName) : undefined;
   const tagIds = input.tags?.length ? await resolveTagIds(ctx, input.tags) : undefined;
 
