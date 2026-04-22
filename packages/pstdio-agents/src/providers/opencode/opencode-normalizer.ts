@@ -143,7 +143,8 @@ export const normalizeOpencodeMessage = (message: OpencodeSessionMessage, index:
 
   const normalizedParts = parts.map(normalizePart).filter((p): p is SessionMessagePart => p !== null);
 
-  if (normalizedParts.length === 0) {
+  const hasErrorPart = normalizedParts.some((p) => p.type === "error");
+  if (!hasErrorPart) {
     const infoError = getInfoError(message);
     if (infoError) normalizedParts.push(infoError);
   }

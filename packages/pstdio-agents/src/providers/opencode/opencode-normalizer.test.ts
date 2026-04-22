@@ -427,4 +427,40 @@ describe("normalizeOpencodeMessage error parts", () => {
 
     expect(result.parts).toEqual([{ type: "error", errorType: "other" }]);
   });
+
+  test("appends info.error even when message has other parts", () => {
+    const result = normalizeOpencodeMessage(
+      partsMsg([{ type: "text", text: "partial response" }], {
+        role: "assistant",
+        id: "msg-err",
+        error: {
+          name: "service_unavailable_error",
+          data: { message: "Our servers are currently overloaded. Please try again later." },
+        },
+      }),
+      0,
+    );
+
+    expect(result.parts).toHaveLength(2);
+    expect(result.parts[0]).toMatchObject({ type: "text", text: "partial response" });
+    expect(result.parts[1]).toMatchObject({
+      type: "error",
+      errorType: "other",
+      message: "Our servers are currently overloaded. Please try again later.",
+    });
+  });
+
+  test("does not duplicate error when parts already contain an error part", () => {
+    const result = normalizeOpencodeMessage(
+      partsMsg([{ type: "error", errorType: "other", message: "Server overloaded" } as OpencodeSessionMessagePart], {
+        role: "assistant",
+        id: "msg-err",
+        error: { name: "service_unavailable_error", data: { message: "Server overloaded" } },
+      }),
+      0,
+    );
+
+    const errorParts = result.parts.filter((p) => p.type === "error");
+    expect(errorParts).toHaveLength(1);
+  });
 });

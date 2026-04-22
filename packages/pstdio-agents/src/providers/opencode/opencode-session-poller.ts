@@ -24,6 +24,8 @@ type SessionMessagesLoader = (sessionId: string, cwd?: string) => Promise<Openco
 const OPENCODE_POLL_INTERVAL_MS = 1_000;
 const OPENCODE_STALE_TURN_TIMEOUT_MS = 30 * 60 * 1_000;
 
+const hasErrorParts = (messages: SessionMessage[]) => messages.some((m) => m.parts.some((p) => p.type === "error"));
+
 const toErrorMessage = (error: unknown) => {
   if (error instanceof Error && error.message.trim().length > 0) {
     return error.message;
@@ -188,6 +190,11 @@ export const pollOpencodeMessages = async (input: {
     });
   }
 
+  if (hasErrorParts(latestMessages.slice(baselineCount))) {
+    eventStore.push({ op: "replace", path: "/status", value: "failed" });
+    return { code: 1 as number | null, signal: null as string | null };
+  }
+
   eventStore.push({ op: "replace", path: "/status", value: "completed" });
   return { code: 0 as number | null, signal: null as string | null };
 };
@@ -235,6 +242,12 @@ export const pollOpencodeUntilIdle = async (input: {
     }
 
     await new Promise((resolve) => setTimeout(resolve, OPENCODE_POLL_INTERVAL_MS));
+  }
+
+  const trailing = latestMessages.at(-1);
+  if (trailing && hasErrorParts([trailing])) {
+    eventStore.push({ op: "replace", path: "/status", value: "failed" });
+    return { code: 1 as number | null, signal: null as string | null };
   }
 
   eventStore.push({ op: "replace", path: "/status", value: "completed" });
