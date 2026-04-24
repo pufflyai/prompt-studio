@@ -12,7 +12,7 @@ export const Footer = (props: FooterProps) => {
 
   return (
     <Flex as="footer" id="footer" justifyContent="center" position="relative" direction="column" zIndex="1">
-      <Flex bg="white" pb="2rem" px={horizontalPadding}>
+      <Flex bg="bg" color="fg" pb="2rem" px={horizontalPadding}>
         <Stack gap="2.5rem" direction={["column", "row"]} justifyContent="space-between" width="100%" flexWrap="wrap">
           <LinkGroup items={links} />
           <Flex mt={["2.5rem", "2.5rem", "0"]} gap="2rem" alignSelf="flex-end" flexWrap="wrap">

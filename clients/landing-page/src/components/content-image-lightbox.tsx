@@ -35,7 +35,9 @@ export const ContentImageLightbox = (props: ContentImageLightboxProps) => {
 
   return (
     <>
-      <Box onClickCapture={handleClickCapture}>{children}</Box>
+      <Box onClickCapture={handleClickCapture} css={{ "& img": { cursor: "pointer" } }}>
+        {children}
+      </Box>
 
       <Dialog.Root
         lazyMount

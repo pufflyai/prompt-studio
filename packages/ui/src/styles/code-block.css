@@ -1,0 +1,97 @@
+/* -----------------------------------------------------------------------------
+   Code block + inline code styles shared between rendered Markdown
+   (`.markdown`) and the Lexical rich-text editor (`.rich-text`).
+   Keep visual rules here so both surfaces render code the same way.
+   ----------------------------------------------------------------------------- */
+
+.markdown pre,
+.rich-text__code {
+  background-color: var(--chakra-colors-bg-muted, #f5f5f5);
+  color: var(--chakra-colors-fg, #22252c);
+  font-family: var(--chakra-fonts-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+  display: block;
+  line-height: 1.53;
+  font-size: calc(13px * var(--rich-text-font-scale, 1));
+  margin: 0;
+  margin-top: var(--chakra-spacing-md, 1rem);
+  margin-bottom: var(--chakra-spacing-md, 1rem);
+  overflow-x: auto;
+  tab-size: 2;
+  position: relative;
+}
+
+.markdown pre {
+  background-color: var(--chakra-colors-blacks-900, #0a0d15);
+  border-radius: var(--chakra-radii-sm, 0.5rem);
+  color: var(--chakra-colors-blacks-50, #ffffff);
+  padding: 0.5rem;
+}
+
+.rich-text__code {
+  padding: 8px 8px 8px 52px;
+}
+
+.rich-text__code::before {
+  content: attr(data-gutter);
+  position: absolute;
+  background-color: var(--chakra-colors-bg-subtle);
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-right: 1px solid var(--chakra-colors-border);
+  padding: 8px;
+  color: var(--chakra-colors-fg-muted);
+  white-space: pre-wrap;
+  text-align: right;
+  min-width: 25px;
+}
+
+.markdown pre code {
+  background: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.markdown :not(pre) > code,
+.rich-text__textCode {
+  background-color: var(--chakra-colors-bg-code, #ffffff);
+  padding: 1px 0.25rem;
+  font-family: var(--chakra-fonts-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+  font-size: 0.94em;
+}
+
+/* Prism-style token colors (used by both lexical syntax highlighter and
+   any Markdown renderer that emits `.token*` classes). */
+.rich-text__tokenComment,
+.markdown .token.comment {
+  color: var(--chakra-colors-gray-500);
+}
+.rich-text__tokenPunctuation,
+.markdown .token.punctuation {
+  color: var(--chakra-colors-gray-400);
+}
+.rich-text__tokenProperty,
+.markdown .token.property {
+  color: var(--chakra-colors-purple-600);
+}
+.rich-text__tokenSelector,
+.markdown .token.selector {
+  color: var(--chakra-colors-green-600);
+}
+.rich-text__tokenOperator,
+.markdown .token.operator {
+  color: var(--chakra-colors-orange-600);
+}
+.rich-text__tokenAttr,
+.markdown .token.attr {
+  color: var(--chakra-colors-blue-600);
+}
+.rich-text__tokenVariable,
+.markdown .token.variable {
+  color: var(--chakra-colors-yellow-600);
+}
+.rich-text__tokenFunction,
+.markdown .token.function {
+  color: var(--chakra-colors-pink-600);
+}

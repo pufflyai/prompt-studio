@@ -1,3 +1,5 @@
+@import "../../../styles/markdown.css";
+
 /* -----------------------------------------------------------------------------
    Rich Text styles (Chakra UI v3 semantic tokens & variable names)
    ----------------------------------------------------------------------------- */
@@ -75,14 +77,6 @@
   vertical-align: super;
 }
 
-/* Inline code */
-.rich-text__textCode {
-  background-color: var(--chakra-colors-bg-code);
-  padding: 1px 0.25rem;
-  font-family: var(--chakra-fonts-mono);
-  font-size: 0.94em;
-}
-
 /* Links (use semantic blue) */
 .rich-text__link {
   color: var(--chakra-colors-blue-600);
@@ -91,36 +85,6 @@
 }
 .rich-text__link:hover {
   text-decoration: underline;
-}
-
-/* Code block with gutter line numbers */
-.rich-text__code {
-  background-color: var(--chakra-colors-bg-muted);
-  font-family: var(--chakra-fonts-mono);
-  display: block;
-  padding: 8px 8px 8px 52px;
-  line-height: 1.53;
-  font-size: calc(13px * var(--rich-text-font-scale));
-  margin: 0;
-  margin-top: var(--chakra-spacing-md, 1rem);
-  margin-bottom: var(--chakra-spacing-md, 1rem);
-  overflow-x: auto;
-  position: relative;
-  tab-size: 2;
-}
-.rich-text__code::before {
-  content: attr(data-gutter);
-  position: absolute;
-  background-color: var(--chakra-colors-bg-subtle);
-  left: 0;
-  top: 0;
-  bottom: 0;
-  border-right: 1px solid var(--chakra-colors-border);
-  padding: 8px;
-  color: var(--chakra-colors-fg-muted);
-  white-space: pre-wrap;
-  text-align: right;
-  min-width: 25px;
 }
 
 /* Tables */
@@ -342,6 +306,10 @@ ol.rich-text__ol5 {
 /* Ensure <li> actually renders a marker and gets spacing */
 li.rich-text__listItem {
   display: list-item;
+  font-family: var(--chakra-fonts-body);
+  font-size: calc(var(--chakra-font-sizes-md) * var(--rich-text-font-scale));
+  line-height: 171%;
+  letter-spacing: 0.14px;
   list-style-position: outside;
   padding-inline-start: var(--chakra-spacing-1, 0.25rem);
 }
@@ -351,6 +319,10 @@ li.rich-text__listItem {
    in the ::before hit area. */
 li.rich-text__listItemUnchecked,
 li.rich-text__listItemChecked {
+  font-family: var(--chakra-fonts-body);
+  font-size: calc(var(--chakra-font-sizes-md) * var(--rich-text-font-scale));
+  line-height: 171%;
+  letter-spacing: 0.14px;
   position: relative;
   list-style-type: none;
   padding-left: 26px;
@@ -418,34 +390,6 @@ li.rich-text__nestedListItem {
 .rich-text__nestedListItem::before,
 .rich-text__nestedListItem::after {
   display: none;
-}
-
-/* -----------------------------------------------------------------------------
-   Tokens for code highlighting
-   ----------------------------------------------------------------------------- */
-.rich-text__tokenComment {
-  color: var(--chakra-colors-gray-500);
-}
-.rich-text__tokenPunctuation {
-  color: var(--chakra-colors-gray-400);
-}
-.rich-text__tokenProperty {
-  color: var(--chakra-colors-purple-600);
-}
-.rich-text__tokenSelector {
-  color: var(--chakra-colors-green-600);
-}
-.rich-text__tokenOperator {
-  color: var(--chakra-colors-orange-600);
-}
-.rich-text__tokenAttr {
-  color: var(--chakra-colors-blue-600);
-}
-.rich-text__tokenVariable {
-  color: var(--chakra-colors-yellow-600);
-}
-.rich-text__tokenFunction {
-  color: var(--chakra-colors-pink-600);
 }
 
 /* -----------------------------------------------------------------------------

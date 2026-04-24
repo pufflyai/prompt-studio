@@ -1,0 +1,174 @@
+@import "./code-block.css";
+
+/* Rendered Markdown should match the rich-text editor theme. */
+.markdown {
+  --rich-text-font-scale: 1;
+  --rich-text-list-indent: 1.5rem;
+  color: var(--chakra-colors-fg);
+  font-family: var(--chakra-fonts-body);
+  font-size: calc(1rem * var(--rich-text-font-scale));
+}
+
+.markdown :where(h1, h2, h3, h4, h5, h6, p, ul, ol, blockquote, pre, table, hr):first-child {
+  margin-top: 0;
+}
+
+.markdown h1 {
+  color: var(--chakra-colors-fg);
+  font-family: var(--chakra-fonts-body);
+  font-size: calc(var(--chakra-font-sizes-4xl) * var(--rich-text-font-scale));
+  font-weight: var(--chakra-font-weights-medium);
+  line-height: 120%;
+  margin-top: 2.5rem;
+  margin-bottom: var(--chakra-spacing-md, 1rem);
+}
+
+.markdown h2 {
+  color: var(--chakra-colors-fg);
+  font-family: var(--chakra-fonts-body);
+  font-size: calc(var(--chakra-font-sizes-3xl) * var(--rich-text-font-scale));
+  font-weight: var(--chakra-font-weights-medium);
+  line-height: 120%;
+  margin-top: var(--chakra-spacing-lg, 1.5rem);
+  margin-bottom: var(--chakra-spacing-md, 1rem);
+}
+
+.markdown h3 {
+  color: var(--chakra-colors-fg);
+  font-family: var(--chakra-fonts-body);
+  font-size: calc(var(--chakra-font-sizes-lg) * var(--rich-text-font-scale));
+  font-weight: var(--chakra-font-weights-medium);
+  line-height: 100%;
+  margin-top: var(--chakra-spacing-lg, 1.5rem);
+  margin-bottom: var(--chakra-spacing-md, 1rem);
+}
+
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  color: var(--chakra-colors-fg);
+  font-family: var(--chakra-fonts-body);
+  font-size: calc(var(--chakra-font-sizes-md) * var(--rich-text-font-scale));
+  font-weight: var(--chakra-font-weights-medium);
+  line-height: 120%;
+  margin-top: var(--chakra-spacing-md, 1rem);
+  margin-bottom: var(--chakra-spacing-2, 0.5rem);
+}
+
+.markdown p {
+  font-family: var(--chakra-fonts-body);
+  font-size: calc(var(--chakra-font-sizes-md) * var(--rich-text-font-scale));
+  line-height: 171%;
+  letter-spacing: 0.14px;
+  margin: 0;
+  margin-top: var(--chakra-spacing-3, 0.75rem);
+  margin-bottom: var(--chakra-spacing-3, 0.75rem);
+}
+
+.markdown :where(ul, ol) {
+  list-style-position: outside;
+  padding-inline-start: var(--rich-text-list-indent);
+  margin-top: var(--chakra-spacing-3, 0.75rem);
+  margin-bottom: var(--chakra-spacing-3, 0.75rem);
+}
+
+.markdown ul {
+  list-style-type: disc;
+}
+
+.markdown ol {
+  list-style-type: decimal;
+}
+
+.markdown li {
+  display: list-item;
+  font-family: var(--chakra-fonts-body);
+  font-size: calc(var(--chakra-font-sizes-md) * var(--rich-text-font-scale));
+  line-height: 171%;
+  letter-spacing: 0.14px;
+  padding-inline-start: var(--chakra-spacing-1, 0.25rem);
+}
+
+.markdown li > :where(ul, ol) {
+  padding-inline-start: var(--rich-text-list-indent);
+}
+
+.markdown a {
+  color: var(--chakra-colors-blue-600);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.markdown a:hover {
+  text-decoration: underline;
+}
+
+.markdown strong {
+  font-weight: bold;
+}
+
+.markdown em {
+  font-style: italic;
+}
+
+.markdown blockquote {
+  color: var(--chakra-colors-fg-muted);
+  border-left: 4px solid var(--chakra-colors-border);
+  font-size: calc(15px * var(--rich-text-font-scale));
+  margin: 0;
+  margin-top: var(--chakra-spacing-xl, 1.5rem);
+  margin-left: var(--chakra-spacing-sm, 0.75rem);
+  margin-bottom: var(--chakra-spacing-xl, 1.5rem);
+  padding-left: 16px;
+}
+
+.markdown blockquote > :first-child {
+  margin-top: 0;
+}
+
+.markdown blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  color: var(--chakra-colors-fg);
+  display: block;
+  font-size: calc(var(--chakra-font-sizes-sm) * var(--rich-text-font-scale));
+  line-height: 21px;
+  margin-top: var(--chakra-spacing-md, 1rem);
+  margin-bottom: var(--chakra-spacing-md, 1rem);
+  max-width: 100%;
+  overflow-x: auto;
+  table-layout: fixed;
+  width: max-content;
+}
+
+.markdown :where(th, td) {
+  border: 1px solid var(--chakra-colors-border);
+  padding: 6px 8px;
+  text-align: start;
+  vertical-align: top;
+}
+
+.markdown th {
+  background-color: var(--chakra-colors-bg-muted);
+  font-weight: normal;
+}
+
+.markdown img {
+  cursor: pointer;
+  display: block;
+  height: auto;
+  margin-top: var(--chakra-spacing-md, 1rem);
+  margin-bottom: var(--chakra-spacing-md, 1rem);
+  max-width: 100%;
+}
+
+.markdown hr {
+  border: 0;
+  border-top: 1px solid var(--chakra-colors-border);
+  margin-top: var(--chakra-spacing-xl, 1.5rem);
+  margin-bottom: var(--chakra-spacing-xl, 1.5rem);
+}

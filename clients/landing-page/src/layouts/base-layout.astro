@@ -1,4 +1,5 @@
 ---
+import "@pstdio/ui/style.css";
 import { siteMetadata } from "../config/site-metadata";
 
 interface Props {
@@ -25,13 +26,64 @@ const jsonLd = {
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
   image: bannerUrl,
 };
+
+const themeBootstrapScript = `
+(() => {
+  const storageKey = "theme-preference";
+  const root = document.documentElement;
+  const stored = window.localStorage.getItem(storageKey);
+  const prefersDark =
+    typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  let theme = prefersDark ? "dark" : "light";
+
+  if (stored === "dark" || stored === "light") {
+    theme = stored;
+  }
+
+  const opposite = theme === "dark" ? "light" : "dark";
+
+  root.classList.remove(opposite);
+  root.classList.add(theme);
+  root.setAttribute("data-theme", theme);
+  root.style.colorScheme = theme;
+})();
+`;
+
+const themeCriticalStyles = `
+.theme-toggle__icon {
+  align-items: center;
+  display: inline-flex;
+  height: 18px;
+  justify-content: center;
+  line-height: 0;
+  width: 18px;
+}
+
+.theme-toggle__icon--sun {
+  display: none;
+}
+
+html.dark .theme-toggle__icon--moon,
+html[data-theme="dark"] .theme-toggle__icon--moon {
+  display: none;
+}
+
+html.dark .theme-toggle__icon--sun,
+html[data-theme="dark"] .theme-toggle__icon--sun {
+  display: inline-flex;
+}
+`;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" style="height:auto;min-height:100%;overflow:auto;">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+
+    <script is:inline set:html={themeBootstrapScript} />
+    <style is:inline set:html={themeCriticalStyles} />
 
     <title>{title}</title>
     <meta name="description" content={description} />
@@ -57,7 +109,7 @@ const jsonLd = {
 
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   </head>
-  <body style="margin:0;overflow:auto;">
+  <body style="margin:0;height:auto;min-height:100%;overflow:visible;">
     <slot />
   </body>
 </html>

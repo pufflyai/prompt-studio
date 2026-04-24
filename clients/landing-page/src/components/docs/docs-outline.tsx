@@ -1,6 +1,6 @@
 import { Box, Collapsible, HStack, Icon, Stack, Text, useEnvironmentContext } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
-import { ChevronDown, ChevronRight, FileText } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 interface DocHeading {
@@ -29,7 +29,7 @@ interface HeadingElementsMatch {
 }
 
 const HEADING_REGEX = /^(#{1,3})\s+(.+)$/gm;
-const HEADING_SELECTOR = ".rich-text__h1, .rich-text__h2, .rich-text__h3";
+const HEADING_SELECTOR = "main h1, main h2, main h3, .rich-text__h1, .rich-text__h2, .rich-text__h3";
 
 const slugifyHeading = (value: string) => {
   return value
@@ -74,7 +74,11 @@ const matchHeadingElements = (headings: DocHeading[], doc: Document) => {
         continue;
       }
 
-      if (!element.classList.contains(`rich-text__h${heading.level}`)) {
+      const elementTagName = element.tagName.toLowerCase();
+      const hasMatchingLevel =
+        elementTagName === `h${heading.level}` || element.classList.contains(`rich-text__h${heading.level}`);
+
+      if (!hasMatchingLevel) {
         continue;
       }
 
@@ -189,7 +193,6 @@ export const DocsOutline = (props: DocsOutlineProps) => {
         <Collapsible.Root open={isMobileOpen} onOpenChange={(details) => setIsMobileOpen(details.open)}>
           <Collapsible.Trigger width="full" display="flex" alignItems="center" justifyContent="space-between">
             <HStack>
-              <Icon as={FileText} color="fg.subtle" />
               <Text textStyle="sm" fontWeight="medium" color="fg">
                 {title}
               </Text>
@@ -226,9 +229,8 @@ export const DocsOutline = (props: DocsOutlineProps) => {
         </Collapsible.Root>
       </Box>
 
-      <ScrollArea hideBelow="md" top="6" width="xs" position="sticky" maxH="calc(100vh - 3rem)">
+      <ScrollArea hideBelow="md" width="full" maxH="calc(100vh - 3rem)">
         <HStack mb="4">
-          <Icon as={FileText} color="fg.subtle" />
           <Text fontWeight="medium" textStyle="sm">
             {title}
           </Text>

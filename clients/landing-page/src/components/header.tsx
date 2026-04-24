@@ -1,13 +1,38 @@
-import { Flex, Text } from "@chakra-ui/react";
+import { Flex, IconButton, Text } from "@chakra-ui/react";
+import { useThemePreference } from "@pstdio/ui";
+import { Moon, Sun } from "lucide-react";
 import { TextLogo } from "./text-logo";
 
 interface HeaderProps {
-  activeSection?: "blog";
+  activeSection?: "blog" | "docs";
 }
+
+const ThemeToggle = () => {
+  const { toggleThemePreference } = useThemePreference();
+
+  return (
+    <IconButton
+      aria-label="Toggle theme"
+      variant="ghost"
+      size="sm"
+      color="fg.muted"
+      onClick={toggleThemePreference}
+      _hover={{ color: "fg" }}
+    >
+      <span className="theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true">
+        <Moon size={18} />
+      </span>
+      <span className="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true">
+        <Sun size={18} />
+      </span>
+    </IconButton>
+  );
+};
 
 export const Header = (props: HeaderProps) => {
   const { activeSection } = props;
   const isBlogActive = activeSection === "blog";
+  const isDocsActive = activeSection === "docs";
 
   return (
     <Flex
@@ -36,6 +61,19 @@ export const Header = (props: HeaderProps) => {
             Blog
           </Text>
         </a>
+        <a href="/docs/">
+          <Text
+            textStyle="paragraph/L/regular"
+            fontWeight="500"
+            color={isDocsActive ? "fg" : "fg.muted"}
+            textDecoration={isDocsActive ? "underline" : "none"}
+            textUnderlineOffset="0.2em"
+            _hover={{ color: "fg", textDecoration: "underline" }}
+          >
+            Docs
+          </Text>
+        </a>
+        <ThemeToggle />
       </Flex>
     </Flex>
   );

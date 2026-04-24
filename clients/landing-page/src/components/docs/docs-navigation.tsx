@@ -1,10 +1,12 @@
-import { Box, Button, Flex, HStack, Menu, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, Menu, Stack, Text } from "@chakra-ui/react";
 import { ItemSection, MenuItem, ScrollArea } from "@pstdio/ui";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { normalizeDocsPath } from "./docs-menu";
 
 export interface DocsSidebarItem {
   text: string;
   link?: string;
+  description?: string;
   items?: DocsSidebarItem[];
 }
 
@@ -22,7 +24,6 @@ interface DocsSidebarEntryProps {
 }
 
 interface DocsSidebarProps {
-  title: string;
   emptyMessage?: string;
   menuItems: DocsSidebarItem[];
   activeLink: string;
@@ -45,11 +46,13 @@ const DocsSidebarEntry = (props: DocsSidebarEntryProps) => {
   const children = item.items ?? [];
 
   if (children.length === 0 && item.link) {
+    const isSelected = normalizeDocsPath(item.link) === normalizeDocsPath(activeLink);
+
     return (
       <Menu.Root>
         <MenuItem
           primaryLabel={item.text}
-          isSelected={item.link === activeLink}
+          isSelected={isSelected}
           variant="compact"
           onClick={() => onSelectLink(item.link!)}
         />
@@ -96,39 +99,44 @@ const DocsPaginationLink = (props: DocsPaginationLinkProps) => {
       textAlign={isPrevious ? "start" : "end"}
       justifyContent={isPrevious ? "flex-start" : "flex-end"}
       flex="1"
+      width="full"
+      minW="0"
+      overflow="hidden"
+      whiteSpace="normal"
     >
       <a href={item.href}>
-        {isPrevious ? <ChevronLeft size={16} /> : null}
-        <Stack gap="0" alignItems={isPrevious ? "flex-start" : "flex-end"}>
+        {isPrevious ? <ChevronLeft size={16} style={{ flexShrink: 0 }} /> : null}
+        <Stack gap="0" alignItems={isPrevious ? "flex-start" : "flex-end"} flex="1" minW="0" overflow="hidden">
           <Text textStyle="sm" color="fg.muted" fontWeight="normal">
             {isPrevious ? "Previous" : "Next"}
           </Text>
-          <Text textStyle="sm" fontWeight="medium">
+          <Text textStyle="sm" fontWeight="medium" lineClamp={1} maxW="full" textOverflow="ellipsis">
             {item.title}
           </Text>
           {item.description ? (
-            <Text textStyle="xs" color="fg.subtle" fontWeight="normal">
+            <Text
+              textStyle="xs"
+              color="fg.subtle"
+              fontWeight="normal"
+              lineClamp={2}
+              maxW="full"
+              textOverflow="ellipsis"
+            >
               {item.description}
             </Text>
           ) : null}
         </Stack>
-        {isPrevious ? null : <ChevronRight size={16} />}
+        {isPrevious ? null : <ChevronRight size={16} style={{ flexShrink: 0 }} />}
       </a>
     </Button>
   );
 };
 
 export const DocsSidebar = (props: DocsSidebarProps) => {
-  const { title, emptyMessage, menuItems, activeLink, onSelectLink, shouldStartOpen } = props;
+  const { emptyMessage, menuItems, activeLink, onSelectLink, shouldStartOpen } = props;
 
   return (
-    <Stack borderRightWidth="1px" width="64" gap="0" minH="0">
-      <Flex height="49px" p="xs" borderBottomWidth="1px" alignItems="center">
-        <Text textStyle="label/L/medium" color="fg.muted">
-          {title}
-        </Text>
-      </Flex>
-
+    <Stack width="full" gap="0" minH="0">
       <ScrollArea flex="1" minH="0" contentProps={{ p: "2xs", spaceY: "2xs" }}>
         {menuItems.length === 0 ? (
           <Text textStyle="paragraph/S/regular" color="fg.muted" p="xs">
@@ -158,9 +166,13 @@ export const DocsPagination = (props: DocsPaginationProps) => {
   }
 
   return (
-    <HStack justify="space-between" gap="4">
-      <Box flex="1">{previous ? <DocsPaginationLink item={previous} direction="prev" /> : null}</Box>
-      <Box flex="1">{next ? <DocsPaginationLink item={next} direction="next" /> : null}</Box>
-    </HStack>
+    <Flex width="full" justifyContent="space-between" alignItems="stretch" gap="4" minW="0">
+      <Box flex="1" minW="0">
+        {previous ? <DocsPaginationLink item={previous} direction="prev" /> : null}
+      </Box>
+      <Box flex="1" minW="0">
+        {next ? <DocsPaginationLink item={next} direction="next" /> : null}
+      </Box>
+    </Flex>
   );
 };

@@ -1,18 +1,46 @@
 ---
+import { DocsHomePage } from "../../components/docs/docs-home-page";
+import {
+  buildDocsMenuItems,
+  docsOverviewEntry,
+  getDocsPagination,
+  normalizeDocsPath,
+  sortDocs,
+} from "../../components/docs/docs-menu";
 import type { DocsPageMeta } from "../../components/docs/docs-page-shell";
+import { buildDocsSearchItems, extractDocsOutlineItems } from "../../components/docs/docs-search";
+import BaseLayout from "../../layouts/base-layout.astro";
 
 interface DocsModule {
   frontmatter: DocsPageMeta;
   url: string;
+  rawContent?: () => string;
 }
 
-const docModules = import.meta.glob<DocsModule>("./*.md", { eager: true });
+const docModules = import.meta.glob<DocsModule>("./**/*.md", { eager: true });
 
-const firstDoc = Object.values(docModules)
-  .map((mod) => ({ url: mod.url!, order: mod.frontmatter.order }))
-  .sort((a, b) => a.order - b.order)[0];
+const allDocs = sortDocs([
+  docsOverviewEntry,
+  ...Object.values(docModules).map((mod) => ({
+    title: mod.frontmatter.title,
+    description: mod.frontmatter.description,
+    section: mod.frontmatter.section,
+    category: mod.frontmatter.category,
+    categoryOrder: mod.frontmatter.categoryOrder,
+    order: mod.frontmatter.order,
+    url: mod.url!,
+    outline: extractDocsOutlineItems(typeof mod.rawContent === "function" ? mod.rawContent() : "", mod.url!),
+  })),
+]);
 
-if (firstDoc) {
-  return Astro.redirect(firstDoc.url);
-}
+const menuItems = buildDocsMenuItems(allDocs);
+const searchItems = buildDocsSearchItems(allDocs);
+const { next } = getDocsPagination(allDocs, normalizeDocsPath(Astro.url.pathname));
 ---
+
+<BaseLayout
+  title="Docs | Prompt Studio"
+  description="Learn how to plan work, launch coding agents, and review local agent attempts with Prompt Studio."
+>
+  <DocsHomePage client:load menuItems={menuItems} searchItems={searchItems} next={next} />
+</BaseLayout>
