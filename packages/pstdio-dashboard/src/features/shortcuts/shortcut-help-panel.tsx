@@ -1,13 +1,7 @@
-import { Button, CloseButton, Dialog, Flex, Stack, Text } from "@chakra-ui/react";
+import { CloseButton, Dialog, Flex, Menu, Stack, Text } from "@chakra-ui/react";
+import { ScrollArea } from "@pstdio/ui";
 import { ShortcutKbd } from "./shortcut-kbd";
 import { SHORTCUT_DEFINITIONS } from "./shortcut-registry";
-
-const scopeLabel = {
-  global: "Global dashboard",
-  ticket: "Ticket contexts",
-  workspace: "Workspace contexts",
-  overlay: "Overlay contexts",
-} as const;
 
 export const ShortcutHelpPanel = (props: { open: boolean; onClose: () => void }) => {
   const { open, onClose } = props;
@@ -20,46 +14,50 @@ export const ShortcutHelpPanel = (props: { open: boolean; onClose: () => void })
           <Dialog.Header>
             <Stack gap="2xs" flex="1">
               <Text textStyle="heading/S">Keyboard Shortcuts</Text>
-              <Text textStyle="paragraph/S/regular" color="fg.muted">
-                Sequential shortcuts: press the first key, then the second.
-              </Text>
             </Stack>
             <Dialog.CloseTrigger>
               <CloseButton size="sm" />
             </Dialog.CloseTrigger>
           </Dialog.Header>
           <Dialog.Body>
-            <Stack gap="xs">
-              {SHORTCUT_DEFINITIONS.map((shortcut) => (
-                <Flex
-                  key={shortcut.id}
-                  align="center"
-                  justify="space-between"
-                  gap="sm"
-                  px="sm"
-                  py="xs"
-                  borderWidth="1px"
-                  borderColor="border.muted"
-                  borderRadius="md"
+            <ScrollArea maxH="24rem" showHorizontalScrollbar={false} contentProps={{ pr: "2xs" }}>
+              <Menu.Root open closeOnSelect={false}>
+                <Menu.Content
+                  position="static"
+                  minW="full"
+                  bg="transparent"
+                  boxShadow="none"
+                  borderWidth="0"
+                  p="0"
+                  gap="0"
                 >
-                  <Stack gap="2xs" minW="0">
-                    <Text textStyle="label/M/medium">{shortcut.actionLabel}</Text>
-                    <Text textStyle="label/XS/regular" color="fg.muted">
-                      {scopeLabel[shortcut.scope]}
-                    </Text>
-                  </Stack>
-                  <Flex align="center" justify="flex-end" textAlign="right">
-                    <ShortcutKbd binding={shortcut.binding} />
-                  </Flex>
-                </Flex>
-              ))}
-            </Stack>
+                  {SHORTCUT_DEFINITIONS.map((shortcut) => (
+                    <Menu.Item
+                      key={shortcut.id}
+                      value={shortcut.id}
+                      cursor="default"
+                      bg="bg.menu-item.default"
+                      _hover={{ bg: "bg.menu-item.hover" }}
+                      _highlighted={{ bg: "bg.menu-item.hover" }}
+                      _focusVisible={{ bg: "bg.menu-item.focus" }}
+                      px="sm"
+                      py="xs"
+                      minH="2rem"
+                    >
+                      <Flex justifyContent="space-between" alignItems="center" gap="xs" flex="1">
+                        <Text lineClamp={1} textOverflow="ellipsis" textStyle="label/M/regular">
+                          {shortcut.actionLabel}
+                        </Text>
+                        <Flex justifyContent="flex-end" alignItems="center" gap="xs" color="fg.menu-item.default">
+                          <ShortcutKbd binding={shortcut.binding} />
+                        </Flex>
+                      </Flex>
+                    </Menu.Item>
+                  ))}
+                </Menu.Content>
+              </Menu.Root>
+            </ScrollArea>
           </Dialog.Body>
-          <Dialog.Footer>
-            <Button size="sm" variant="outline" onClick={onClose}>
-              Close
-            </Button>
-          </Dialog.Footer>
         </Dialog.Content>
       </Dialog.Positioner>
     </Dialog.Root>

@@ -28,22 +28,6 @@ export const shouldLoadTicketsForShortcuts = (activeScopes: string[], projectId?
   return activeScopes.includes("global");
 };
 
-export const resolveLatestWorkspaceDestination = (
-  visibleTickets: Array<{ shorthand: string; attempts?: Array<{ shorthand: string; updatedAt: string }> }>,
-) => {
-  const latestWorkspace = visibleTickets
-    .flatMap((ticket) =>
-      (ticket.attempts ?? []).map((attempt) => ({
-        ticketShorthand: ticket.shorthand,
-        workspaceShorthand: attempt.shorthand,
-        updatedAt: attempt.updatedAt,
-      })),
-    )
-    .sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())[0];
-
-  return latestWorkspace ?? null;
-};
-
 export const registerShortcutBindings = (input: {
   hotkeyManager: ReturnType<typeof getHotkeyManager>;
   sequenceManager: ReturnType<typeof getSequenceManager>;
@@ -129,10 +113,6 @@ export const registerShortcutBindings = (input: {
   };
 
   const unregisterHotkeys = [
-    hotkeyManager.register(getHotkeyBinding("command-launcher"), () => {}, {
-      enabled: false,
-      ignoreInputs: true,
-    }),
     hotkeyManager.register(getHotkeyBinding("close-overlay"), () => setIsHelpOpen(false), {
       enabled: isHelpOpen,
       ignoreInputs: false,
@@ -174,27 +154,6 @@ export const registerShortcutBindings = (input: {
       getSequenceBinding("goto-ticket-list"),
       () => {
         navigate({ to: "/projects/$projectId/tickets", params: { projectId } });
-      },
-      { enabled: activeScopes.includes("global"), ignoreInputs: true, timeout: 500 },
-    ),
-    sequenceManager.register(
-      getSequenceBinding("goto-workspaces"),
-      () => {
-        const latestWorkspace = resolveLatestWorkspaceDestination(visibleTickets);
-
-        if (!latestWorkspace) {
-          navigate({ to: "/projects/$projectId/tickets", params: { projectId } });
-          return;
-        }
-
-        navigate({
-          to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
-          params: {
-            projectId,
-            ticketShorthand: latestWorkspace.ticketShorthand,
-            workspaceShorthand: latestWorkspace.workspaceShorthand,
-          },
-        });
       },
       { enabled: activeScopes.includes("global"), ignoreInputs: true, timeout: 500 },
     ),

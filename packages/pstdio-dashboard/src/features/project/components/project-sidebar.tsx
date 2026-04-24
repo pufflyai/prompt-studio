@@ -12,27 +12,19 @@ import type { LucideIcon } from "lucide-react";
 import { ArrowUpRight, BookOpen, CircleHelp, KanbanSquare, MessageCircle, SettingsIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSystemInfo } from "@/features/project/hooks/use-project";
-import { useProjectSettingsStore } from "@/features/project-settings/store";
 import { ShortcutKbd } from "@/features/shortcuts/shortcut-kbd";
-import { resolveLatestWorkspaceDestination, useOpenShortcutHelp } from "@/features/shortcuts/shortcut-provider";
+import { useOpenShortcutHelp } from "@/features/shortcuts/shortcut-provider";
 import {
   getShortcutDefinition,
   type ShortcutBinding,
   type ShortcutDefinition,
 } from "@/features/shortcuts/shortcut-registry";
-import { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
 import { ProjectMenu } from "./project-menu";
 
 export const PROJECT_SIDEBAR_STORAGE_KEY = "project-sidebar";
 const GITHUB_DOCS_URL = "https://github.com/pufflyai/prompt-studio";
 const DISCORD_URL = "https://discord.gg/3RxwUEk8fW";
-export const SIDEBAR_HELP_SHORTCUT_IDS = [
-  "open-shortcut-help",
-  "create-ticket",
-  "create-session",
-  "goto-ticket-list",
-  "goto-workspaces",
-] as const;
+export const SIDEBAR_HELP_SHORTCUT_IDS = ["open-shortcut-help"] as const;
 
 export const getSidebarHelpShortcutDefinitions = () => {
   return SIDEBAR_HELP_SHORTCUT_IDS.map((shortcutId) => {
@@ -169,25 +161,17 @@ export const ProjectSidebar = () => {
 export const ProjectSidebarFooter = () => {
   const { projectId } = useParams({ strict: false });
   const { location } = useRouterState();
-  const navigate = useNavigate();
   const { data: systemInfo } = useSystemInfo();
-  const { data: tickets } = useProjectTickets(projectId);
   const { t } = useTranslation(["projects", "common"]);
   const openShortcutHelp = useOpenShortcutHelp();
   const versionLabel = systemInfo ? `v${systemInfo.version}` : t("common:menu.loadingVersion");
-  const requestCreateTicket = useProjectSettingsStore((state) => state.requestCreateTicket);
-  const setSelectedSessionId = useProjectSettingsStore((state) => state.setSelectedSessionId);
-  const setSessionModalState = useProjectSettingsStore((state) => state.setSessionModalState);
-  const [helpShortcut, createTicketShortcut, createSessionShortcut, gotoTicketsShortcut, gotoWorkspacesShortcut] =
-    getSidebarHelpShortcutDefinitions();
+  const [helpShortcut] = getSidebarHelpShortcutDefinitions();
 
   const isPathActive = (href: string) => {
     return location.pathname === href || location.pathname.startsWith(`${href}/`);
   };
 
   const settingsPath = projectId ? `/projects/${projectId}/settings` : null;
-  const ticketsPath = projectId ? `/projects/${projectId}/tickets` : null;
-  const sessionsPath = projectId ? `/projects/${projectId}/sessions` : null;
 
   const handleCopyVersion = async () => {
     if (!systemInfo) {
@@ -195,55 +179,6 @@ export const ProjectSidebarFooter = () => {
     }
 
     await copyVersionToClipboard(versionLabel, t("common:menu.versionCopied"));
-  };
-
-  const handleCreateTicket = () => {
-    if (!projectId) return;
-
-    requestCreateTicket();
-
-    if (!ticketsPath || isPathActive(ticketsPath)) {
-      return;
-    }
-
-    navigate({ to: ticketsPath });
-  };
-
-  const handleCreateSession = () => {
-    if (!projectId || !sessionsPath) return;
-
-    setSelectedSessionId(null);
-
-    if (isPathActive(sessionsPath)) {
-      navigate({ to: sessionsPath });
-      return;
-    }
-
-    setSessionModalState("bubble");
-  };
-
-  const handleGotoTickets = () => {
-    if (!ticketsPath) return;
-    navigate({ to: ticketsPath });
-  };
-
-  const handleGotoWorkspaces = () => {
-    if (!ticketsPath) return;
-
-    const latestWorkspace = resolveLatestWorkspaceDestination(tickets ?? []);
-    if (!latestWorkspace) {
-      navigate({ to: ticketsPath });
-      return;
-    }
-
-    navigate({
-      to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
-      params: {
-        projectId,
-        ticketShorthand: latestWorkspace.ticketShorthand,
-        workspaceShorthand: latestWorkspace.workspaceShorthand,
-      },
-    });
   };
 
   const shortcutActions = [
@@ -254,38 +189,6 @@ export const ProjectSidebarFooter = () => {
       binding: helpShortcut.binding,
       leftIcon: CircleHelp,
       isDisabled: false,
-    },
-    {
-      id: createTicketShortcut.id,
-      onClick: handleCreateTicket,
-      isDisabled: !projectId,
-      primaryLabel: createTicketShortcut.actionLabel,
-      binding: createTicketShortcut.binding,
-      leftIcon: KanbanSquare,
-    },
-    {
-      id: createSessionShortcut.id,
-      onClick: handleCreateSession,
-      isDisabled: !projectId,
-      primaryLabel: createSessionShortcut.actionLabel,
-      binding: createSessionShortcut.binding,
-      leftIcon: MessageCircle,
-    },
-    {
-      id: gotoTicketsShortcut.id,
-      onClick: handleGotoTickets,
-      isDisabled: !projectId,
-      primaryLabel: gotoTicketsShortcut.actionLabel,
-      binding: gotoTicketsShortcut.binding,
-      leftIcon: KanbanSquare,
-    },
-    {
-      id: gotoWorkspacesShortcut.id,
-      onClick: handleGotoWorkspaces,
-      isDisabled: !projectId,
-      primaryLabel: gotoWorkspacesShortcut.actionLabel,
-      binding: gotoWorkspacesShortcut.binding,
-      leftIcon: KanbanSquare,
     },
   ] as const;
 

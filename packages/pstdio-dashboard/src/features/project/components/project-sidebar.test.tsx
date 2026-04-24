@@ -9,6 +9,10 @@ import {
 } from "./project-sidebar";
 
 describe("project-sidebar shortcuts", () => {
+  it("only exposes keyboard shortcuts in the help menu shortcut section", () => {
+    expect(SIDEBAR_HELP_SHORTCUT_IDS).toEqual(["open-shortcut-help"]);
+  });
+
   it("maps help menu shortcuts from the shared registry", () => {
     const shortcutIds = SIDEBAR_HELP_SHORTCUT_IDS;
     const definitions = getSidebarHelpShortcutDefinitions();

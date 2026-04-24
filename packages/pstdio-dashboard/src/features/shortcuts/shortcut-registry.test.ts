@@ -8,17 +8,15 @@ import {
 
 describe("shortcut-registry", () => {
   it("includes the PS-79 v1 shortcuts", () => {
-    expect(getShortcutDefinition("command-launcher")?.binding).toBe("Mod+K");
     expect(getShortcutDefinition("close-overlay")?.binding).toBe("Escape");
     expect(getShortcutDefinition("create-ticket")?.binding).toBe("C");
     expect(getShortcutDefinition("create-session")?.binding).toBe("S");
     expect(getShortcutDefinition("goto-ticket-list")?.binding).toEqual(["G", "T"]);
-    expect(getShortcutDefinition("goto-workspaces")?.binding).toEqual(["G", "W"]);
     expect(getShortcutDefinition("nav-previous")?.binding).toBe("[");
     expect(getShortcutDefinition("nav-next")?.binding).toBe("]");
-    expect(getShortcutDefinition("open-shortcut-help")?.binding).toBe("?");
+    expect(getShortcutDefinition("open-shortcut-help")?.binding).toBe("Shift+/");
     expect(getShortcutDefinition("open-shortcut-help")?.actionLabel).toBe("Keyboard shortcuts");
-    expect(SHORTCUT_DEFINITIONS).toHaveLength(9);
+    expect(SHORTCUT_DEFINITIONS).toHaveLength(7);
   });
 
   it("resolves active scopes for ticket and workspace routes", () => {

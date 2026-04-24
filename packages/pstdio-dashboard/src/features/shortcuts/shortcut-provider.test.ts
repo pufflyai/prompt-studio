@@ -26,32 +26,6 @@ const createSequenceManager = () => {
 };
 
 describe("registerShortcutBindings - creation and sequence flows", () => {
-  it("keeps command-launcher reserved without an active handler", () => {
-    const hotkeyManager = createHotkeyManager();
-    const sequenceManager = createSequenceManager();
-
-    registerShortcutBindings({
-      hotkeyManager: hotkeyManager as never,
-      sequenceManager: sequenceManager as never,
-      projectId: "project-1",
-      pathname: "/projects/project-1/tickets",
-      activeScopes: ["global"],
-      isHelpOpen: false,
-      requestCreateTicket: () => {},
-      setSelectedSessionId: () => {},
-      setSessionModalState: () => {},
-      setIsHelpOpen: () => {},
-      navigate: (() => {}) as never,
-      currentTicket: null,
-      currentTicketIndex: -1,
-      currentWorkspaceIndex: -1,
-      visibleTickets: [],
-      workspaceShorthand: undefined,
-    });
-
-    expect(hotkeyManager.handlers.get("Mod+K")?.options).toEqual({ enabled: false, ignoreInputs: true });
-  });
-
   it("opens create ticket flow and navigates to tickets", () => {
     const hotkeyManager = createHotkeyManager();
     const sequenceManager = createSequenceManager();
@@ -116,7 +90,7 @@ describe("registerShortcutBindings - creation and sequence flows", () => {
     expect(setSessionModalState).not.toHaveBeenCalled();
   });
 
-  it("navigates with G then T and G then W sequences", () => {
+  it("navigates with G then T sequence", () => {
     const hotkeyManager = createHotkeyManager();
     const sequenceManager = createSequenceManager();
     const navigate = mock(() => {});
@@ -136,25 +110,15 @@ describe("registerShortcutBindings - creation and sequence flows", () => {
       currentTicket: null,
       currentTicketIndex: -1,
       currentWorkspaceIndex: -1,
-      visibleTickets: [
-        {
-          shorthand: "PS-1",
-          attempts: [{ shorthand: "PS-1_1", updatedAt: "2026-01-01T00:00:00.000Z" }],
-        },
-      ],
+      visibleTickets: [],
       workspaceShorthand: undefined,
     });
 
     sequenceManager.handlers.get("G,T")?.handler();
-    sequenceManager.handlers.get("G,W")?.handler();
 
-    expect(navigate).toHaveBeenNthCalledWith(1, {
+    expect(navigate).toHaveBeenCalledWith({
       to: "/projects/$projectId/tickets",
       params: { projectId: "project-1" },
-    });
-    expect(navigate).toHaveBeenNthCalledWith(2, {
-      to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
-      params: { projectId: "project-1", ticketShorthand: "PS-1", workspaceShorthand: "PS-1_1" },
     });
   });
 });
@@ -226,7 +190,7 @@ describe("registerShortcutBindings - overlay and sibling navigation", () => {
     });
   });
 
-  it("opens help on ? and ignores editable targets", () => {
+  it("opens help on Shift+/ and ignores editable targets", () => {
     const hotkeyManager = createHotkeyManager();
     const sequenceManager = createSequenceManager();
     const setIsHelpOpen = mock(() => {});
@@ -250,8 +214,10 @@ describe("registerShortcutBindings - overlay and sibling navigation", () => {
       workspaceShorthand: undefined,
     });
 
-    hotkeyManager.handlers.get("?")?.handler({ target: { tagName: "INPUT", type: "text" } as unknown as EventTarget });
-    hotkeyManager.handlers.get("?")?.handler({ target: { tagName: "BUTTON" } as unknown as EventTarget });
+    hotkeyManager.handlers
+      .get("Shift+/")
+      ?.handler({ target: { tagName: "INPUT", type: "text" } as unknown as EventTarget });
+    hotkeyManager.handlers.get("Shift+/")?.handler({ target: { tagName: "BUTTON" } as unknown as EventTarget });
 
     expect(setIsHelpOpen).toHaveBeenCalledTimes(1);
     expect(setIsHelpOpen).toHaveBeenCalledWith(true);
