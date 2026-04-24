@@ -1,4 +1,3 @@
-import { Stack, Text } from "@chakra-ui/react";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -38,25 +37,16 @@ import { resolveWorkspacePageAutoOpenSession } from "./workspace-page-auto-open-
 import { WorkspacePageContent } from "./workspace-page-content";
 import {
   buildWorkspaceListItems,
-  createWorkspacePageCreationActions,
   navigateToCreatedWorkspace,
   navigateToProjectTickets,
   navigateToTicketDetails,
   navigateToWorkspaceTab,
   runDeleteWorkspaceFlow,
-  runWorkspaceAttempt,
   runWorkspaceCreation,
   useWorkspaceSessionSearchNormalization,
 } from "./workspace-page-helpers";
 import { normalizeWorkspacePageTab } from "./workspace-page-tab";
-
-const WorkspacePageTicketNotFound = () => (
-  <Stack gap="lg" height="100%" p="sm">
-    <Text textStyle="paragraph/S/regular" color="foreground.secondary">
-      Ticket not found.
-    </Text>
-  </Stack>
-);
+import { WorkspacePageTicketNotFound } from "./workspace-page-ticket-not-found";
 
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: This page coordinates route state, multiple action triggers, and modal flows for the workspace surface.
 export const WorkspacePage = () => {
@@ -67,7 +57,6 @@ export const WorkspacePage = () => {
   const activeTab = normalizeWorkspacePageTab(search.tab);
   const navigate = useNavigate();
   const { t } = useTranslation(["projects", "tickets"]);
-  const [isRunAttemptModalOpen, setIsRunAttemptModalOpen] = useState(false);
   const [isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] = useState(false);
   const [isDeleteOpen, setDeleteOpen] = useState(false);
   const [isTicketDeleteOpen, setTicketDeleteOpen] = useState(false);
@@ -86,8 +75,6 @@ export const WorkspacePage = () => {
   const updateTicket = useUpdateProjectTicket(projectId);
   const deleteTicket = useDeleteProjectTicket(projectId);
   const archiveSession = useArchiveSession();
-  const lastSelectedAgent = useProjectSettingsStore((state) => state.lastSelectedAgent);
-  const lastSelectedModels = useProjectSettingsStore((state) => state.lastSelectedModels);
   const lastSelectedBranches = useProjectSettingsStore((state) => state.lastSelectedBranches);
   const lastSelectedRepo = useProjectSettingsStore((state) => state.lastSelectedRepo);
   const attemptDiffInputs = attempts.map((attempt) => ({
@@ -253,19 +240,6 @@ export const WorkspacePage = () => {
 
   const handleSelectFile = () => void navigateToTicketDetails(navigate, projectId, ticketShorthand);
 
-  const handleRunAttempt = () =>
-    runWorkspaceAttempt({
-      ticket,
-      projectId,
-      project,
-      createAttempt,
-      lastSelectedAgent,
-      lastSelectedModels,
-      lastSelectedBranches,
-      lastSelectedRepo,
-      onSuccess: (result) => handleSelectWorkspace(result.workspaceShorthand),
-    });
-
   const handleCreateWorkspace = () => setIsCreateWorkspaceModalOpen(true);
 
   const handleCreateEmptyWorkspace = () =>
@@ -274,11 +248,8 @@ export const WorkspacePage = () => {
       projectId,
       project,
       createAttempt,
-      lastSelectedAgent,
-      lastSelectedModels,
       lastSelectedBranches,
       lastSelectedRepo,
-      startSession: false,
       onSuccess: (result) => {
         navigateToCreatedWorkspace({
           navigate,
@@ -300,15 +271,7 @@ export const WorkspacePage = () => {
       ticketShorthand,
       closeDeleteModal: () => setDeleteOpen(false),
     });
-  const creationActions = createWorkspacePageCreationActions({
-    openRunAttemptModal: () => setIsRunAttemptModalOpen(true),
-    openCreateWorkspaceModal: handleCreateWorkspace,
-    runAttempt: handleRunAttempt,
-    createEmptyWorkspace: handleCreateEmptyWorkspace,
-  });
-  if (!ticket) {
-    return <WorkspacePageTicketNotFound />;
-  }
+  if (!ticket) return <WorkspacePageTicketNotFound />;
 
   return (
     <WorkspacePageContent
@@ -340,17 +303,13 @@ export const WorkspacePage = () => {
       selectFile={handleSelectFile}
       selectSubTicket={handleSelectSubTicket}
       selectPlanning={() => navigateToProjectTickets(navigate, projectId)}
-      openRunAttempt={creationActions.openRunAttempt}
-      isRunAttemptModalOpen={isRunAttemptModalOpen}
-      closeRunAttemptModal={() => setIsRunAttemptModalOpen(false)}
       isCreateWorkspaceModalOpen={isCreateWorkspaceModalOpen}
       closeCreateWorkspaceModal={() => setIsCreateWorkspaceModalOpen(false)}
       createWorkspaceLabel={t("tickets:createWorkspaceModal.createWorkspace", { defaultValue: "Create workspace" })}
       createWorkspaceDescription={t("tickets:createWorkspaceModal.createWorkspaceDescription", {
         defaultValue: "Create a workspace now and start a session later.",
       })}
-      runAttempt={creationActions.runAttempt}
-      createEmptyWorkspace={creationActions.createEmptyWorkspace}
+      createEmptyWorkspace={handleCreateEmptyWorkspace}
       pluginActions={selectedWorkspace ? pluginActionTrigger.pluginActions : []}
       pluginActionsLoading={selectedWorkspace ? pluginActionTrigger.isActionsLoading : false}
       pluginActionTrigger={pluginActionTrigger}
@@ -400,7 +359,7 @@ export const WorkspacePage = () => {
       openDeleteModal={() => setDeleteOpen(true)}
       closeDeleteModal={() => setDeleteOpen(false)}
       deleteWorkspace={handleDeleteWorkspace}
-      createWorkspace={creationActions.openCreateWorkspace}
+      createWorkspace={handleCreateWorkspace}
     />
   );
 };

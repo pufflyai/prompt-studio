@@ -110,8 +110,6 @@ export const TicketDetailsPanel = () => {
     [isCreateWorkspaceOpen, setCreateWorkspaceOpen] = useState(false),
     [isDeleteOpen, setDeleteOpen] = useState(false),
     [workspaceToDeleteId, setWorkspaceToDeleteId] = useState<string | null>(null);
-  const lastSelectedAgent = useProjectSettingsStore((state) => state.lastSelectedAgent);
-  const lastSelectedModels = useProjectSettingsStore((state) => state.lastSelectedModels);
   const lastSelectedBranches = useProjectSettingsStore((state) => state.lastSelectedBranches);
   const lastSelectedRepo = useProjectSettingsStore((state) => state.lastSelectedRepo);
 
@@ -254,11 +252,8 @@ export const TicketDetailsPanel = () => {
       projectId,
       project,
       createAttempt,
-      lastSelectedAgent,
-      lastSelectedModels,
       lastSelectedBranches,
       lastSelectedRepo,
-      startSession: false,
       onSuccess: (result) => {
         navigateToCreatedWorkspace({
           navigate,

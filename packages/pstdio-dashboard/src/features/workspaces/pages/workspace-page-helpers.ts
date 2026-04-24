@@ -1,7 +1,6 @@
 import type { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import type { useProject } from "@/features/project/hooks/use-project";
-import { buildImplementTicketPrompt } from "@/features/ticket/utils/build-prompts";
 import type { CreateTicketAttemptResult } from "@/features/ticket-list/data/api";
 import type { useCreateTicketAttempt } from "@/features/ticket-list/hooks/use-create-ticket-attempt";
 import { logMutationError } from "@/lib/error-handlers";
@@ -44,20 +43,6 @@ export const buildWorkspaceListItems = (
     };
   });
 
-export const runWorkspaceAttempt = async (input: {
-  ticket: WorkspaceCreationTicket | null;
-  projectId: string | undefined;
-  project: ReturnType<typeof useProject>["data"];
-  createAttempt: ReturnType<typeof useCreateTicketAttempt>;
-  lastSelectedAgent: string | null;
-  lastSelectedModels: string[];
-  lastSelectedBranches: string[];
-  lastSelectedRepo: string;
-  onSuccess: (result: CreateTicketAttemptResult) => void;
-}) => {
-  return runWorkspaceCreation({ ...input, startSession: true });
-};
-
 export const navigateToCreatedWorkspace = (input: {
   navigate: ReturnType<typeof useNavigate>;
   setSelectedSessionId: (sessionId: string | null) => void;
@@ -77,55 +62,35 @@ export const navigateToCreatedWorkspace = (input: {
   });
 };
 
-export const createWorkspacePageCreationActions = (input: {
-  openRunAttemptModal: () => void;
-  openCreateWorkspaceModal: () => void;
-  runAttempt: () => Promise<boolean>;
-  createEmptyWorkspace: () => Promise<boolean>;
-}) => ({
-  openRunAttempt: input.openRunAttemptModal,
-  openCreateWorkspace: input.openCreateWorkspaceModal,
-  runAttempt: input.runAttempt,
-  createEmptyWorkspace: input.createEmptyWorkspace,
-});
-
 export const runWorkspaceCreation = async (input: {
   ticket: WorkspaceCreationTicket | null;
   projectId: string | undefined;
   project: ReturnType<typeof useProject>["data"];
   createAttempt: ReturnType<typeof useCreateTicketAttempt>;
-  lastSelectedAgent: string | null;
-  lastSelectedModels: string[];
   lastSelectedBranches: string[];
   lastSelectedRepo: string;
-  startSession: boolean;
   onSuccess: (result: CreateTicketAttemptResult) => void;
 }) => {
-  const { ticket, projectId, project, createAttempt, lastSelectedAgent, lastSelectedModels, lastSelectedBranches } =
-    input;
+  const { ticket, projectId, project, createAttempt, lastSelectedBranches } = input;
 
   if (!ticket || !projectId || createAttempt.isPending) return false;
 
-  const prompt = input.startSession ? buildImplementTicketPrompt(ticket.shorthand) : null;
   const repoId = input.lastSelectedRepo || project?.repositories[0]?.id || null;
   const branch = lastSelectedBranches[0]?.trim() ? lastSelectedBranches[0] : null;
-  const model = lastSelectedModels[0]?.trim() ? lastSelectedModels[0] : null;
 
   try {
     const result = await createAttempt.mutateAsync({
       ticketId: ticket.id,
-      agent: lastSelectedAgent,
       repoId,
       branch,
-      model,
-      prompt,
-      startSession: input.startSession,
+      prompt: null,
+      startSession: false,
     });
 
     input.onSuccess(result);
     return true;
   } catch (error) {
-    logMutationError(input.startSession ? "run attempt" : "create workspace", error);
+    logMutationError("create workspace", error);
     return false;
   }
 };

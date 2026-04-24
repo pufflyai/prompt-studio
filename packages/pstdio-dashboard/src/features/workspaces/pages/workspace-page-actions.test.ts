@@ -2,7 +2,7 @@ import { describe, expect, it, mock } from "bun:test";
 import type { ActionDescriptor } from "@/features/plugin-actions/api";
 import { buildHeaderActionGroups } from "@/features/plugin-actions/components/header-action-groups";
 import { buildWorkspaceDeleteOverflowAction, runWorkspaceDeleteFlow } from "./workspace-page-actions";
-import { navigateToCreatedWorkspace, runWorkspaceAttempt, runWorkspaceCreation } from "./workspace-page-helpers";
+import { navigateToCreatedWorkspace, runWorkspaceCreation } from "./workspace-page-helpers";
 
 const t = (key: string) => key;
 
@@ -113,59 +113,19 @@ describe("workspace-page-actions", () => {
         isPending: false,
         mutateAsync,
       } as never,
-      lastSelectedAgent: "opencode",
-      lastSelectedModels: ["gpt-5.4"],
       lastSelectedBranches: ["feature/test"],
       lastSelectedRepo: "repo-2",
-      startSession: false,
       onSuccess: () => {},
     });
 
     expect(started).toBe(true);
     expect(mutateAsync).toHaveBeenCalledWith({
       ticketId: "ticket-1",
-      agent: "opencode",
       repoId: "repo-2",
       branch: "feature/test",
-      model: "gpt-5.4",
       prompt: null,
       startSession: false,
     });
-  });
-
-  it("keeps run attempt behavior by starting a session with the implement prompt", async () => {
-    const onSuccess = mock(() => {});
-    const mutateAsync = mock(async () => ({ workspaceShorthand: "PS-72_A4", sessionId: "session-1" }));
-
-    const started = await runWorkspaceAttempt({
-      ticket: {
-        id: "ticket-1",
-        shorthand: "PS-72",
-      },
-      projectId: "project-1",
-      project: {
-        repositories: [{ id: "repo-1" }],
-      } as never,
-      createAttempt: {
-        isPending: false,
-        mutateAsync,
-      } as never,
-      lastSelectedAgent: "opencode",
-      lastSelectedModels: ["gpt-5.4"],
-      lastSelectedBranches: ["feature/test"],
-      lastSelectedRepo: "repo-2",
-      onSuccess,
-    });
-
-    expect(started).toBe(true);
-    expect(mutateAsync).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ticketId: "ticket-1",
-        startSession: true,
-        prompt: expect.stringContaining("PS-72"),
-      }),
-    );
-    expect(onSuccess).toHaveBeenCalledWith({ workspaceShorthand: "PS-72_A4", sessionId: "session-1" });
   });
 
   it("navigates to a created workspace and clears the selected session", () => {
