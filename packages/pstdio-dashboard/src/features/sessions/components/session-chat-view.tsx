@@ -13,13 +13,14 @@ import { useSessionAgent } from "../hooks/use-session-agent";
 import { useSessionStatus } from "../hooks/use-session-status";
 import { useSessionStream } from "../hooks/use-session-stream";
 import { useSessionWorkspace } from "../hooks/use-session-workspace";
+import { useStopSession } from "../hooks/use-stop-session";
 import { buildSessionWorkspaceHubPanelModel } from "../utils/workspace-hub";
 import {
   mergeMessagesWithPendingFollowUp,
   type PendingFollowUpState,
   shouldShowPendingFollowUp,
 } from "./session-chat-state";
-import { resolveNewSessionWorkspaceId } from "./session-chat-view.utils";
+import { isSessionInterruptible, resolveNewSessionWorkspaceId } from "./session-chat-view.utils";
 import { submitSessionMessage } from "./session-chat-view-actions";
 import {
   useEditActionNotifier,
@@ -67,6 +68,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
   const { data: workspaceDiffSummary } = useTicketAttemptDiffSummary(showWorkspaceHub ? sessionWorkspace?.id : null);
   const createSession = useCreateProjectSession();
   const followUp = useFollowUpSession();
+  const stopSession = useStopSession();
   const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUpState | null>(null);
   const pendingIdRef = useRef(0);
   const editCountRef = useRef(0);
@@ -104,7 +106,9 @@ export const SessionChatView = (props: SessionChatViewProps) => {
     changesLabel: (count) => t("tickets:diff.filesChanged", { count }),
   });
   const loadingContent = sessionId ? <ChatSkeleton /> : undefined;
-  const effectiveStreaming = isStreaming || isWorkspaceInitializing;
+  const canInterruptSession = Boolean(sessionId) && isSessionInterruptible(sessionStatus);
+  const statusAllowsStreaming = sessionStatus == null || canInterruptSession;
+  const effectiveStreaming = isWorkspaceInitializing || (isStreaming && statusAllowsStreaming) || canInterruptSession;
   const emptyStateTitle = sessionId ? t("chatInput.session.notFoundTitle") : t("sessions.nextBuildTitle");
   const emptyStateDescription = sessionId ? t("chatInput.session.notFoundDescription") : "";
   const effectiveWorkspaceId = resolveNewSessionWorkspaceId({
@@ -141,6 +145,9 @@ export const SessionChatView = (props: SessionChatViewProps) => {
           reconnect,
           onSessionCreated,
         })
+      }
+      onInterrupt={
+        sessionId && canInterruptSession && !stopSession.isPending ? () => stopSession.mutate(sessionId) : undefined
       }
       onChatInputChange={(text: string) => setSessionDraft(sessionId, text)}
       workspaceHub={workspaceHub ? <SessionChatWorkspaceHubPanel {...workspaceHub} /> : undefined}

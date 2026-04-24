@@ -2,6 +2,11 @@ import { Box, Flex, HStack, Spacer, Text } from "@chakra-ui/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/scroll-area";
 import { getTextFromSerializedEditorState, PromptEditor } from "../../rich-text";
+import {
+  type ChatInputAction,
+  resolveChatInputButtonAction,
+  resolveChatInputKeyboardAction,
+} from "./chat-input-actions";
 import { SendButton } from "./send-button";
 
 interface ChatInputProps {
@@ -80,14 +85,11 @@ export const ChatInput = (props: ChatInputProps) => {
     }
   };
 
-  const handleSend = () => {
-    if (isDisabled) return;
+  const canInterrupt = streaming && Boolean(onInterrupt);
+  const actionState = { canInterrupt, isDisabled, streaming, text };
+  const buttonAction = resolveChatInputButtonAction(actionState);
 
-    if (streaming) {
-      onInterrupt?.();
-      return;
-    }
-
+  const submitMessage = () => {
     const trimmed = text.trim();
     if (!trimmed) return;
 
@@ -98,7 +100,24 @@ export const ChatInput = (props: ChatInputProps) => {
     onClearAttachments?.();
   };
 
-  const canInterrupt = streaming && Boolean(onInterrupt);
+  const runAction = (action: ChatInputAction) => {
+    if (action === "interrupt") {
+      onInterrupt?.();
+      return;
+    }
+
+    if (action === "submit") {
+      submitMessage();
+    }
+  };
+
+  const handleKeyboardSubmit = () => {
+    runAction(resolveChatInputKeyboardAction(actionState));
+  };
+
+  const handleButtonClick = () => {
+    runAction(buttonAction);
+  };
 
   const placeholderNode = placeholder ? (
     <Text textStyle="label/M/regular" color="fg.subtle" pointerEvents="none" position="absolute" top="0">
@@ -148,7 +167,7 @@ export const ChatInput = (props: ChatInputProps) => {
               setText(t);
               onChange?.(t);
             }}
-            onSubmit={handleSend}
+            onSubmit={handleKeyboardSubmit}
           />
         </ScrollArea>
         <HStack gap="1" mt="md">
@@ -158,8 +177,8 @@ export const ChatInput = (props: ChatInputProps) => {
             canInterrupt={canInterrupt}
             title={canInterrupt ? "Stop Response" : "Message Sending"}
             shortcut={streaming ? undefined : "Enter"}
-            onClick={handleSend}
-            disabled={(streaming && !canInterrupt) || (!streaming && !text.trim()) || isDisabled}
+            onClick={handleButtonClick}
+            disabled={buttonAction === "none"}
           />
         </HStack>
       </Flex>

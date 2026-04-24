@@ -234,6 +234,48 @@ describe("timeoutStrategy", () => {
   });
 });
 
+// --- cancellation ---
+
+describe("cancellation", () => {
+  test("process kill aborts the running opencode session", async () => {
+    let abortCalls = 0;
+    const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+
+      if (method === "POST" && url.includes("/session?")) {
+        return new Response(JSON.stringify({ id: "oc-1" }));
+      }
+
+      if (method === "POST" && url.includes("/session/oc-1/message")) {
+        return new Promise<Response>(() => {});
+      }
+
+      if (method === "POST" && url.includes("/session/oc-1/abort")) {
+        abortCalls += 1;
+        return new Response("true");
+      }
+
+      if (method === "GET" && url.includes("/session/oc-1/message")) {
+        return new Response(JSON.stringify([]));
+      }
+
+      return new Response("{}", { status: 404 });
+    };
+
+    const a = createOpencodeAgent(agentDefaults(), { ...serviceOverrides(), fetcher });
+    const eventStore = createEventStore();
+
+    const result = await a.startSession({ prompt: "hello", cwd: "/test", eventStore });
+    result.process!.kill();
+
+    const exit = await Promise.race([result.process!.onExit, Bun.sleep(100).then(() => "timeout" as const)]);
+
+    expect(exit).toEqual({ code: null, signal: "SIGTERM" });
+    expect(abortCalls).toBe(1);
+  });
+});
+
 // --- resumeSession ---
 
 describe("resumeSession", () => {

@@ -44,7 +44,10 @@ export const updateSessionStatusHandler = (deps: RouteDeps): AppRouteHandler<typ
     const { id } = c.req.valid("param");
     const { status } = c.req.valid("json");
 
-    const updated = await deps.sessionService.transitionStatus(id, status);
+    const updated =
+      status === "cancelled"
+        ? await deps.sessionService.cancel(id)
+        : await deps.sessionService.transitionStatus(id, status);
     if (!updated) {
       return c.json({ error: `Session not found: ${id}` }, 404);
     }
