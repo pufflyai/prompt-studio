@@ -7,6 +7,7 @@ import { CLI_VERSION } from "./features/cli-version";
 import { ensureApi } from "./features/ensure-api";
 import { createCliCommandTracker } from "./features/logging/cli-command-log";
 import { resolveCliSessionId } from "./features/sessions/resolve-cli-session-id";
+import { shouldBypassApiBootstrap } from "./features/should-bypass-api-bootstrap";
 import { shouldLoadEmbedManifest } from "./features/should-load-embed-manifest";
 
 if (shouldLoadEmbedManifest()) {
@@ -59,7 +60,7 @@ const cli = yargs(rawArgs)
     commandTracker.logStart();
 
     const topLevelCommand = argv._[0];
-    if (topLevelCommand === "close" || topLevelCommand === "serve") return;
+    if (shouldBypassApiBootstrap(topLevelCommand)) return;
 
     applyApiPortFromArgs(argv);
     await ensureApi(resolveApiUrl(argv));
