@@ -49,10 +49,10 @@ Plugins are auto-discovered from `.pstdio/plugins/` at runtime — `register` is
 
 ```bash
 pstdio tickets write --title "<title>" [--user-prompt "<desc>"] [--template <name>] [--status <s>] [--tag <t>] [--parent-id <id>]
-pstdio tickets create --content "<title>" [--status <s>] [--tag <t>]
+pstdio tickets create --content "<title>" [--status <s>] [--tag <t>] [--parent-id <id>]
 pstdio tickets list [--status <s>] [--tag <t>] [--parent-id <id>] [--archived] [--draft]
 pstdio tickets pull [--id <id>] [--force]                 # Pull one or all non-archived tickets
-pstdio tickets update --id <id> [--status <s>] [--tag <t>]
+pstdio tickets update --id <id> [--status <s>] [--tag <t>] [--parent-id <id>] [--no-parent-id]
 pstdio tickets save --id <id> [--status <s>] [--tag <t>]
 pstdio tickets view [field] --id <id> [--project-id <id>] # View ticket (or a single field)
 pstdio tickets implement --id <id>                        # Set wip + launch agent

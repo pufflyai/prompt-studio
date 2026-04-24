@@ -191,7 +191,7 @@ Created ticket PS-12 (draft) at .pstdio/tickets/PS-12/ticket.md
 ### Usage
 
 ```sh
-pstdio tickets create --content <content> [--project-id <project-id>] [--status <status>] [--tag <tag>...]
+pstdio tickets create --content <content> [--project-id <project-id>] [--status <status>] [--tag <tag>...] [--parent-id <parent-id>]
 ```
 
 ### Flags
@@ -202,6 +202,7 @@ pstdio tickets create --content <content> [--project-id <project-id>] [--status 
 | `--project-id` | `string`   | no       | Target project. Defaults to the current project from `.pstdio/config.json`.       |
 | `--status`     | `string`   | no       | Status name to assign. Defaults to the project's default status.                  |
 | `--tag`        | `string[]` | no       | One or more tags to assign. Repeatable.                                           |
+| `--parent-id`  | `string`   | no       | Parent ticket shorthand or raw ticket ID.                                         |
 
 ### Behavior
 
@@ -209,7 +210,8 @@ pstdio tickets create --content <content> [--project-id <project-id>] [--status 
 2. Create a ticket in the database with `draft=false`. Assign the status from `--status` if provided, otherwise assign the project's default status.
 3. Upload the ticket content (without frontmatter) as a file to the database, set `ticket.file_id` to that file, and treat that file body as the ticket's canonical content.
 4. If `--tag` values are provided, assign matching tags to the ticket.
-5. If running inside a linked project (`.pstdio/config.json` exists), write a local `ticket.md` with YAML frontmatter and the ticket title. See [Frontmatter Fields](#frontmatter-fields) for the frontmatter format. If not inside a linked project, no local file is written.
+5. If `--parent-id` is provided, resolve it to a canonical ticket ID and set `parent_id` on the created ticket.
+6. If running inside a linked project (`.pstdio/config.json` exists), write a local `ticket.md` with YAML frontmatter and the ticket title. See [Frontmatter Fields](#frontmatter-fields) for the frontmatter format. If not inside a linked project, no local file is written.
 
 ### Output
 
@@ -223,6 +225,7 @@ Created ticket PS-13
 - `"Project not found: <project-id>"`: the given project ID does not exist.
 - `"Status not found: <status>"`: the given status name does not exist in the project.
 - `"Tag not found: <tag>"`: the given tag does not exist in the project.
+- `"Parent ticket not found: <parent-id>"`: the given parent ticket shorthand or ID does not resolve.
 
 ---
 
@@ -632,7 +635,7 @@ No tickets found.
 ### Usage
 
 ```sh
-pstdio tickets update --id <ticket-shorthand> [--project-id <project-id>] [--status <status>] [--tag <tag>...]
+pstdio tickets update --id <ticket-shorthand> [--project-id <project-id>] [--status <status>] [--tag <tag>...] [--parent-id <parent-id>] [--no-parent-id]
 ```
 
 ### Flags
@@ -643,13 +646,18 @@ pstdio tickets update --id <ticket-shorthand> [--project-id <project-id>] [--sta
 | `--project-id` | `string`   | no       | Target project. Defaults to the current project from `.pstdio/config.json`.   |
 | `--status`     | `string`   | no       | New status name for the ticket. Must match an existing status in the project. |
 | `--tag`        | `string[]` | no       | Replace current tags with the given set. Repeatable.                          |
+| `--parent-id`  | `string`   | no       | Parent ticket shorthand or raw ticket ID.                                     |
+| `--no-parent-id` | `boolean` | no      | Clear `parent_id` on the ticket. Cannot be used with `--parent-id`.          |
 
 ### Behavior
 
 1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
-2. Update ticket properties in the database. Only `--status` and `--tag` are supported — content and files are updated via `tickets save`.
+2. Update ticket properties in the database. `--status`, `--tag`, and parent changes are supported — content and files are updated via `tickets save`.
 3. If `--status` is provided, look up the status by name and assign its ID.
 4. If `--tag` is provided, replace the current tag assignments with the new set.
+5. If `--parent-id` is provided, resolve it to a canonical ticket ID and set `parent_id`.
+6. If `--no-parent-id` is provided, set `parent_id` to `null`.
+7. If both `--parent-id` and `--no-parent-id` are provided, fail with a validation error.
 
 ### Output
 
@@ -664,6 +672,8 @@ Updated ticket PS-12
 - `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
 - `"Status not found: <status>"`: the given status name does not exist in the project.
 - `"Tag not found: <tag>"`: the given tag does not exist in the project.
+- `"Parent ticket not found: <parent-id>"`: the given parent ticket shorthand or ID does not resolve.
+- `"Cannot combine --parent-id with --no-parent-id"`: mutually exclusive parent flags were used together.
 
 ---
 

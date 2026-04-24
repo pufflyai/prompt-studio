@@ -50,6 +50,7 @@ const baseDeps = {
     return id;
   },
   resolveTagIds: async () => [] as string[],
+  resolveParentTicketId: async (_projectId: string, value: string) => value,
   writeTicketFile: mock(() => "/work/repo/.pstdio/tickets/PS-1/ticket.md"),
   log: mock(),
 };
@@ -204,6 +205,67 @@ describe("tickets create", () => {
 
     await expect(handler({ content: "Fail", _: [], $0: "" } as never)).rejects.toThrow(
       "No project specified. Provide --project-id or run inside a linked project.",
+    );
+  });
+
+  test("passes parent_id when --parent-id is a shorthand", async () => {
+    const createTicket = mock(async () => makeTicketResponse({ id: "t-2", shorthand: "PS-2" }));
+
+    const handler = createHandler({
+      ...baseDeps,
+      createTicket,
+      resolveParentTicketId: async () => "ticket-uuid-1",
+      log: mock(),
+    });
+
+    await handler({ content: "Child ticket", "parent-id": "PS-1", _: [], $0: "" } as never);
+
+    expect(createTicket).toHaveBeenCalledWith(expect.objectContaining({ parent_id: "ticket-uuid-1" }));
+  });
+
+  test("passes parent_id when --parent-id is a UUID", async () => {
+    const createTicket = mock(async () => makeTicketResponse({ id: "t-2", shorthand: "PS-2" }));
+    const parentId = "11111111-1111-4111-8111-111111111111";
+
+    const handler = createHandler({
+      ...baseDeps,
+      createTicket,
+      resolveParentTicketId: async () => parentId,
+      log: mock(),
+    });
+
+    await handler({ content: "Child ticket", "parent-id": parentId, _: [], $0: "" } as never);
+
+    expect(createTicket).toHaveBeenCalledWith(expect.objectContaining({ parent_id: parentId }));
+  });
+
+  test("writes parent_id in local frontmatter when --parent-id is provided", async () => {
+    const writeTicketFile = mock((_root: string, _shorthand: string, _content: string) => "");
+
+    const handler = createHandler({
+      ...baseDeps,
+      writeTicketFile,
+      resolveParentTicketId: async () => "ticket-uuid-1",
+      log: mock(),
+    });
+
+    await handler({ content: "Child ticket", "parent-id": "PS-1", _: [], $0: "" } as never);
+
+    const content = writeTicketFile.mock.calls[0][2];
+    expect(content).toContain('parent_id: "PS-1"');
+  });
+
+  test("throws when parent ticket is not found", async () => {
+    const handler = createHandler({
+      ...baseDeps,
+      resolveParentTicketId: async () => {
+        throw new Error("Parent ticket not found: PS-999");
+      },
+      log: mock(),
+    });
+
+    await expect(handler({ content: "Fail", "parent-id": "PS-999", _: [], $0: "" } as never)).rejects.toThrow(
+      "Parent ticket not found: PS-999",
     );
   });
 });

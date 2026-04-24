@@ -57,7 +57,7 @@ pstdio tickets write --title "<title>" [--user-prompt "<prompt>"] [--template <t
 Use this when you already have canonical ticket content and want to skip the local draft/edit loop.
 
 ```bash
-pstdio tickets create --content "<content>"  [--status <status>] [--tag <tag>]
+pstdio tickets create --content "<content>" [--status <status>] [--tag <tag>] [--parent-id <shorthand|id>]
 ```
 
 ### List Tickets (`tickets list`)
@@ -73,7 +73,7 @@ pstdio tickets list [--status <status>] [--tag <tag>] [--archived] [--draft] [--
 Use this during ticket creation/refinement when no implementation attempt status exists yet (for example, marking a newly created ticket as `blocked` because of dependencies).
 
 ```bash
-pstdio tickets update --id "<shorthand>" [--status <status>] [--tag <tag>]
+pstdio tickets update --id "<shorthand>" [--status <status>] [--tag <tag>] [--parent-id <shorthand|id>] [--no-parent-id]
 ```
 
 ### Save Ticket Changes (`tickets save`)

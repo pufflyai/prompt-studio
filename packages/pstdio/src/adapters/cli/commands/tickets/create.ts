@@ -5,6 +5,7 @@ import { createTicket as defaultCreateTicket } from "@/features/tickets/api/crea
 import { updateTicket as defaultUpdateTicket } from "@/features/tickets/api/update-ticket";
 import { uploadTicketFile as defaultUploadTicketFile } from "@/features/tickets/api/upload-ticket-file";
 import { writeTicketFile as defaultWriteTicketFile } from "@/features/tickets/local-ticket";
+import { resolveParentTicketId as defaultResolveParentTicketId } from "@/features/tickets/resolve-parent-ticket-id";
 import { resolveStatusId as defaultResolveStatusId } from "@/features/tickets/resolve-status-id";
 import { resolveTagIds as defaultResolveTagIds } from "@/features/tickets/resolve-tag-ids";
 import { applyFrontmatterValues, buildTicketFrontmatter } from "@/features/tickets/ticket-frontmatter";
@@ -17,12 +18,14 @@ export const builder = (yargs: Argv) =>
     .option("content", { type: "string", demandOption: true, describe: "Ticket content (title)" })
     .option("project-id", { type: "string", describe: "Project ID" })
     .option("status", { type: "string", describe: "Status name to assign" })
+    .option("parent-id", { type: "string", describe: "Parent ticket shorthand or id" })
     .option("tag", { type: "array", string: true, describe: "Tags to assign" });
 
 type CreateArgs = {
   content: string;
   "project-id"?: string;
   status?: string;
+  "parent-id"?: string;
   tag?: string[];
 };
 
@@ -34,6 +37,7 @@ type Deps = {
   updateTicket: typeof defaultUpdateTicket;
   uploadTicketFile: typeof defaultUploadTicketFile;
   resolveStatusId: typeof defaultResolveStatusId;
+  resolveParentTicketId: typeof defaultResolveParentTicketId;
   resolveTagIds: typeof defaultResolveTagIds;
   writeTicketFile: typeof defaultWriteTicketFile;
   log: (msg: string) => void;
@@ -47,6 +51,7 @@ const defaultDeps: Deps = {
   updateTicket: defaultUpdateTicket,
   uploadTicketFile: defaultUploadTicketFile,
   resolveStatusId: defaultResolveStatusId,
+  resolveParentTicketId: defaultResolveParentTicketId,
   resolveTagIds: defaultResolveTagIds,
   writeTicketFile: defaultWriteTicketFile,
   log: console.log,
@@ -58,6 +63,7 @@ export const createHandler =
     const { root, projectId } = deps.resolveProjectId(deps.cwd(), argv["project-id"]);
     const tagIds = argv.tag?.length ? await deps.resolveTagIds(projectId, argv.tag) : undefined;
     const statusId = argv.status ? await deps.resolveStatusId(projectId, argv.status) : undefined;
+    const parentId = argv["parent-id"] ? await deps.resolveParentTicketId(projectId, argv["parent-id"]) : undefined;
 
     const ticket = await deps.createTicket({
       project_id: projectId,
@@ -65,6 +71,7 @@ export const createHandler =
       draft: false,
       tag_ids: tagIds,
       status_id: statusId,
+      parent_id: parentId,
     });
 
     const ticketContent = `# ${argv.content}\n`;
@@ -83,7 +90,7 @@ export const createHandler =
         created_at: ticket.created_at,
         draft: false,
         status_name: argv.status ?? null,
-        parent_id: null,
+        parent_id: argv["parent-id"] ?? null,
         user_prompt: null,
         depends_on: null,
         parallelizable: null,
