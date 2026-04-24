@@ -95,6 +95,8 @@ export const toTicket = (
         shorthand: st.shorthand,
         title: st.title,
         statusId: st.status_id,
+        status: statusById.get(st.status_id ?? "") ?? fallbackStatusName,
+        statusColor: colorById.get(st.status_id ?? "") ?? fallbackColor,
       }))
     : [],
 });

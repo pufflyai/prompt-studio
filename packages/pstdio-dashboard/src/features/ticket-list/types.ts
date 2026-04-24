@@ -46,6 +46,8 @@ export interface TicketSubTicket {
   shorthand: string;
   title: string;
   statusId: string | null;
+  status?: TicketStatus;
+  statusColor?: TicketStatusColor;
 }
 
 export interface Ticket {

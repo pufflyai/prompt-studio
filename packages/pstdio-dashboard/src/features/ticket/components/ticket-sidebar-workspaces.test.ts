@@ -85,7 +85,14 @@ describe("buildSubTicketsSection", () => {
   test("builds selectable child ticket nodes with shorthand payload", () => {
     const section = buildSubTicketsSection(
       [
-        { id: "ticket-2", shorthand: "PS-34", title: "First child", statusId: null },
+        {
+          id: "ticket-2",
+          shorthand: "PS-34",
+          title: "First child",
+          statusId: null,
+          status: "In Progress",
+          statusColor: "yellow",
+        },
         { id: "ticket-3", shorthand: "PS-35", title: "Second child", statusId: null },
       ],
       "Sub-tickets",
@@ -102,6 +109,10 @@ describe("buildSubTicketsSection", () => {
       label: "PS-34 First child",
       isNavigable: true,
       navigationIntent: { id: "select-sub-ticket", payload: { ticketShorthand: "PS-34" } },
+    });
+    expect(section?.nodes[0]?.indicator).toMatchObject({
+      color: "yellow.400",
+      tooltip: "In Progress",
     });
   });
 
