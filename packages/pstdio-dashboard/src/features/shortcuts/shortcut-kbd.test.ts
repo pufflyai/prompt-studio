@@ -11,7 +11,7 @@ describe("shortcut-kbd", () => {
   });
 
   it("shows modifier labels for the shortcut help binding", () => {
-    expect(getShortcutDisplayTokens("Mod+/", "mac")).toEqual([["Cmd", "/"]]);
+    expect(getShortcutDisplayTokens("Mod+Shift+H", "mac")).toEqual([["Cmd", "Shift", "H"]]);
   });
 
   it("falls back to windows labels for unknown platforms", () => {

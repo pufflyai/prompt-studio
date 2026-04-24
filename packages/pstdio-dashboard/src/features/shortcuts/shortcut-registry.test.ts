@@ -14,7 +14,7 @@ describe("shortcut-registry", () => {
     expect(getShortcutDefinition("goto-ticket-list")?.binding).toEqual(["G", "T"]);
     expect(getShortcutDefinition("nav-previous")?.binding).toBe("[");
     expect(getShortcutDefinition("nav-next")?.binding).toBe("]");
-    expect(getShortcutDefinition("open-shortcut-help")?.binding).toBe("Mod+/");
+    expect(getShortcutDefinition("open-shortcut-help")?.binding).toBe("Mod+Shift+H");
     expect(getShortcutDefinition("open-shortcut-help")?.actionLabel).toBe("Keyboard shortcuts");
     expect(SHORTCUT_DEFINITIONS).toHaveLength(7);
   });

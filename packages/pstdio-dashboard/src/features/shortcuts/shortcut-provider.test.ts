@@ -190,7 +190,7 @@ describe("registerShortcutBindings - overlay and sibling navigation", () => {
     });
   });
 
-  it("opens help on Mod+/ and ignores editable targets", () => {
+  it("opens help on Mod+Shift+H and ignores editable targets", () => {
     const hotkeyManager = createHotkeyManager();
     const sequenceManager = createSequenceManager();
     const setIsHelpOpen = mock(() => {});
@@ -225,10 +225,10 @@ describe("registerShortcutBindings - overlay and sibling navigation", () => {
     });
 
     hotkeyManager.handlers
-      .get("Mod+/")
+      .get("Mod+Shift+H")
       ?.handler({ target: { tagName: "INPUT", type: "text" } as unknown as EventTarget });
-    hotkeyManager.handlers.get("Mod+/")?.handler({ target: nestedTextNodeInsideEditable });
-    hotkeyManager.handlers.get("Mod+/")?.handler({ target: { tagName: "BUTTON" } as unknown as EventTarget });
+    hotkeyManager.handlers.get("Mod+Shift+H")?.handler({ target: nestedTextNodeInsideEditable });
+    hotkeyManager.handlers.get("Mod+Shift+H")?.handler({ target: { tagName: "BUTTON" } as unknown as EventTarget });
 
     expect(setIsHelpOpen).toHaveBeenCalledTimes(1);
     expect(setIsHelpOpen).toHaveBeenCalledWith(true);
