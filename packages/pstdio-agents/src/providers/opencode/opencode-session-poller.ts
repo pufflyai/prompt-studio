@@ -82,9 +82,23 @@ const cancelTurn = (eventStore: EventStore) => {
   return { code: null as number | null, signal: "SIGTERM" as string | null };
 };
 
-const shouldStopPolling = (input: { turnVisible: boolean; inFlight: boolean; postState: PostState }) => {
-  const { turnVisible, inFlight, postState } = input;
-  if (turnVisible && !inFlight) return true;
+const getMessageRole = (message: OpencodeSessionMessage) => {
+  if ("role" in message && message.role) return message.role;
+  if ("info" in message && message.info?.role) return message.info.role;
+  return null;
+};
+
+const hasCurrentTurnAssistant = (messages: OpencodeSessionMessage[], baselineCount: number) =>
+  messages.slice(baselineCount).some((message) => getMessageRole(message) === "assistant");
+
+const shouldStopPolling = (input: {
+  turnVisible: boolean;
+  turnHasAssistant: boolean;
+  inFlight: boolean;
+  postState: PostState;
+}) => {
+  const { turnVisible, turnHasAssistant, inFlight, postState } = input;
+  if (turnVisible && turnHasAssistant && !inFlight) return true;
   if (postState.failed && !turnVisible) return true;
   return postState.settled && !postState.timedOut && !postState.failed && !inFlight && !turnVisible;
 };
@@ -193,6 +207,7 @@ export const pollOpencodeMessages = async (input: {
     const now = Date.now();
     const inFlight = isTurnInFlight(lastObserved);
     const turnVisible = lastObserved.length > baselineCount;
+    const turnHasAssistant = hasCurrentTurnAssistant(lastObserved, baselineCount);
     lastInFlightProgressAt = resolveInFlightTurnProgressAt({
       rawMessages: lastObserved,
       lastProgressAt: lastInFlightProgressAt,
@@ -204,7 +219,7 @@ export const pollOpencodeMessages = async (input: {
       return disconnectStaleTurn(eventStore);
     }
 
-    if (shouldStopPolling({ turnVisible, inFlight, postState })) {
+    if (shouldStopPolling({ turnVisible, turnHasAssistant, inFlight, postState })) {
       break;
     }
 

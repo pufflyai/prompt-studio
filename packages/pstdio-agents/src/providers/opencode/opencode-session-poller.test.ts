@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { EventStore, JsonPatch } from "../../types";
+import type { EventStore, JsonPatch, SessionMessage } from "../../types";
 import { pollOpencodeMessages, pollOpencodeUntilIdle } from "./opencode-session-poller";
 import type { OpencodeSessionMessage } from "./opencode-types";
 
@@ -102,6 +102,35 @@ describe("pollOpencodeMessages", () => {
       messageComplete: Promise.resolve(),
     });
 
+    expect(lastStatusPatch(eventStore)?.value).toBe("completed");
+    expect(result.code).toBe(0);
+  });
+
+  test("waits for the follow-up assistant message after the user message appears", async () => {
+    const initialAssistant = completedAssistantMessage([{ type: "text", text: "initial response" }]);
+    const followUpUser: OpencodeSessionMessage = { role: "user", content: [{ type: "text", text: "retry" }] };
+    const followUpReply = completedAssistantMessage([{ type: "text", text: "success" }]);
+    const eventStore = createEventStore();
+    let getCalls = 0;
+
+    const result = await pollOpencodeMessages({
+      loadMessages: async () => {
+        getCalls += 1;
+        if (getCalls === 1) return [userMessage, initialAssistant, followUpUser];
+        return [userMessage, initialAssistant, followUpUser, followUpReply];
+      },
+      sessionId: "test-session",
+      cwd: "/tmp",
+      eventStore,
+      baselineCount: 2,
+      messageComplete: Promise.resolve(),
+    });
+
+    const messagePatches = eventStore.patches.filter((patch) => patch.path === "/messages");
+    const finalMessages = messagePatches.at(-1)?.value as SessionMessage[];
+
+    expect(getCalls).toBeGreaterThan(1);
+    expect(finalMessages.at(-1)).toMatchObject({ parts: [{ type: "text", text: "success" }] });
     expect(lastStatusPatch(eventStore)?.value).toBe("completed");
     expect(result.code).toBe(0);
   });

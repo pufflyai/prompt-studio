@@ -18,6 +18,8 @@ const baseDeps = {
   findGitRoot: () => "/repo" as string | null,
   readConfig: () => ({ project_id: "proj-1" }) as { project_id: string } | null,
   createWorkspaceForTicket: mock(async () => mockWorkspace) as never,
+  createWorkspaceForExistingWorktree: mock(async () => mockWorkspace) as never,
+  resolveCurrentBranch: () => "workspace/PS-1_A1",
 };
 
 describe("workspaces create", () => {
@@ -47,6 +49,51 @@ describe("workspaces create", () => {
       ticketShorthand: "PS-1",
       base: "main",
     });
+  });
+
+  test("links an existing worktree when worktree path is provided", async () => {
+    const createWorkspaceForTicket = mock(async () => mockWorkspace) as never;
+    const createWorkspaceForExistingWorktree = mock(async () => mockWorkspace) as never;
+
+    const handler = createHandler({ ...baseDeps, createWorkspaceForTicket, createWorkspaceForExistingWorktree });
+    await handler({ id: "PS-1", target: "worktree", worktreePath: ".", _: [], $0: "" } as never);
+
+    expect(createWorkspaceForTicket).not.toHaveBeenCalled();
+    expect(createWorkspaceForExistingWorktree).toHaveBeenCalledWith({
+      projectId: "proj-1",
+      ticketShorthand: "PS-1",
+      branch: "workspace/PS-1_A1",
+      worktreePath: "/repo",
+    });
+  });
+
+  test("uses explicit branch when linking an existing worktree", async () => {
+    const createWorkspaceForExistingWorktree = mock(async () => mockWorkspace) as never;
+
+    const handler = createHandler({ ...baseDeps, createWorkspaceForExistingWorktree });
+    await handler({
+      id: "PS-1",
+      target: "worktree",
+      branch: "workspace/manual",
+      worktreePath: "/linked",
+      _: [],
+      $0: "",
+    } as never);
+
+    expect(createWorkspaceForExistingWorktree).toHaveBeenCalledWith({
+      projectId: "proj-1",
+      ticketShorthand: "PS-1",
+      branch: "workspace/manual",
+      worktreePath: "/repo",
+    });
+  });
+
+  test("throws when base is provided with an existing worktree", async () => {
+    const handler = createHandler(baseDeps);
+
+    await expect(
+      handler({ id: "PS-1", target: "worktree", base: "main", worktreePath: ".", _: [], $0: "" } as never),
+    ).rejects.toThrow("Cannot use --base when linking an existing worktree.");
   });
 
   test("throws on invalid target", async () => {
