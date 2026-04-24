@@ -1,12 +1,90 @@
 import { describe, expect, it } from "bun:test";
 import {
+  buildQuestionAnswerValues,
   buildQuestionResponse,
   type ChatInputQuestionPrompt,
   getQuestionPromptSignature,
   hasMissingRequiredQuestionAnswer,
-} from "./chat-input";
+} from "./chat-input-question-prompt";
 
 describe("chat input question helpers", () => {
+  it("builds OpenCode answer values in question order", () => {
+    const prompt: ChatInputQuestionPrompt = {
+      questions: [
+        {
+          id: "weather",
+          question: "What's the weather like?",
+          options: [{ label: "Hot" }, { label: "Nice" }],
+        },
+        {
+          id: "notes",
+          question: "Anything else?",
+          options: [],
+          allowCustomAnswer: true,
+        },
+      ],
+    };
+
+    expect(
+      buildQuestionAnswerValues(
+        prompt,
+        {
+          weather: ["Nice"],
+        },
+        { notes: "Light breeze" },
+      ),
+    ).toEqual([["Nice"], ["Light breeze"]]);
+  });
+
+  it("builds structured response for separate custom answers in a multi-step form", () => {
+    const prompt: ChatInputQuestionPrompt = {
+      questions: [
+        {
+          id: "goal",
+          question: "What should be built?",
+          options: [],
+          required: true,
+          allowCustomAnswer: true,
+        },
+        {
+          id: "constraints",
+          question: "What constraints matter?",
+          options: [],
+          required: true,
+          allowCustomAnswer: true,
+        },
+      ],
+    };
+
+    expect(buildQuestionResponse(prompt, {}, { goal: "A CLI workflow", constraints: "Keep package APIs stable" })).toBe(
+      ["What should be built?: A CLI workflow", "What constraints matter?: Keep package APIs stable"].join("\n"),
+    );
+  });
+
+  it("requires each required custom-answer question to have its own answer", () => {
+    const prompt: ChatInputQuestionPrompt = {
+      questions: [
+        {
+          id: "first",
+          question: "First step?",
+          options: [],
+          required: true,
+          allowCustomAnswer: true,
+        },
+        {
+          id: "second",
+          question: "Second step?",
+          options: [],
+          required: true,
+          allowCustomAnswer: true,
+        },
+      ],
+    };
+
+    expect(hasMissingRequiredQuestionAnswer(prompt, {}, { first: "Start here" })).toBe(true);
+    expect(hasMissingRequiredQuestionAnswer(prompt, {}, { first: "Start here", second: "Then continue" })).toBe(false);
+  });
+
   it("supports required custom answer with text only", () => {
     const prompt: ChatInputQuestionPrompt = {
       questions: [
@@ -97,8 +175,8 @@ describe("chat input question helpers", () => {
 
     expect(response).toBe(
       [
-        "Which language do you want to use? (custom): Use Elixir for a prototype",
-        "What should the plan prioritize? (custom): Use Elixir for a prototype",
+        "Which language do you want to use?: Use Elixir for a prototype",
+        "What should the plan prioritize?: Use Elixir for a prototype",
       ].join("\n"),
     );
   });

@@ -104,6 +104,7 @@ export const followUpSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof 
           prompt,
           model: input.model,
           cwd,
+          questionResponse: input.question_response,
         },
         deps,
       );

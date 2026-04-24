@@ -132,14 +132,14 @@ test.describe("Session chat and workspace behavior", () => {
 
     await page.goto(`/projects/${projectId}/sessions/${session.id}`);
 
-    const answerButton = page.getByRole("button", { name: "TypeScript" });
+    const answerOption = page.getByText("TypeScript", { exact: true });
     const sendButton = page.locator("[data-testid='send-message-button']");
 
     await expect(page.getByText("Which language do you want to use?").first()).toBeVisible();
-    await expect(answerButton).toBeVisible();
+    await expect(answerOption).toBeVisible();
     await expect(sendButton).toBeDisabled();
 
-    await answerButton.click();
+    await answerOption.click();
     await expect(sendButton).toBeEnabled();
 
     const followUpRequestPromise = page.waitForRequest(

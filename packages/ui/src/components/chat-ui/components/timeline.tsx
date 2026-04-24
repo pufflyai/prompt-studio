@@ -7,6 +7,7 @@ import { DiffEditor } from "@/components/diff-editor";
 import { ResourceBadge } from "@/components/resource-badge";
 import type { IconName } from "../utils/get-icon";
 import { getIconComponent } from "../utils/get-icon";
+import { QuestionFormBlockView, TodoListBlockView } from "./timeline-tool-blocks";
 
 export const Timeline = ChakraTimeline;
 
@@ -42,12 +43,33 @@ export type TitleSegment =
       variant?: "default" | "bubble";
     };
 
+export type TodoListBlockItem = {
+  label: string;
+  checked: boolean;
+};
+
+export type QuestionFormBlockOption = {
+  label: string;
+  description?: string;
+};
+
+export type QuestionFormBlockQuestion = {
+  id?: string;
+  question: string;
+  options: QuestionFormBlockOption[];
+  multiple: boolean;
+  required: boolean;
+  allowCustomAnswer: boolean;
+};
+
 export type Block =
   | { type: "comment"; text: string; reactions?: { clap?: number } }
   | { type: "code"; language: string; code: string; editable?: boolean }
   | { type: "diff"; language?: string; original: string; modified: string; sideBySide?: boolean }
   | { type: "input"; placeholder?: string }
   | { type: "text"; text: string }
+  | { type: "todo-list"; items: TodoListBlockItem[] }
+  | { type: "question-form"; questions: QuestionFormBlockQuestion[] }
   | { type: "references"; references: string[] }
   | { type: "component"; render: (ctx: { onOpenFile?: (filePath: string) => void }) => ReactNode };
 
@@ -288,6 +310,10 @@ function BlockView({ b, onOpenFile }: { b: Block; onOpenFile?: (filePath: string
           </Card.Body>
         </Card.Root>
       );
+    case "todo-list":
+      return <TodoListBlockView items={b.items} />;
+    case "question-form":
+      return <QuestionFormBlockView questions={b.questions} />;
     case "references":
       return (
         <Stack mt="xs" gap="xs" flexDir="row" flexWrap="wrap">

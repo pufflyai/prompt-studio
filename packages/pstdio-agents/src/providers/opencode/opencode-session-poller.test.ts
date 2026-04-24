@@ -1,69 +1,17 @@
 import { describe, expect, it } from "bun:test";
 import { createEventStore } from "../../services/event-store";
 import type { JsonPatch, SessionMessage } from "../../types";
+import { pollOpencodeQuestionReply } from "./opencode-question-reply-poller";
 import { pollOpencodeMessages, pollOpencodeUntilIdle } from "./opencode-session-poller";
-import type { OpencodeSessionMessage, OpencodeSessionMessagePart } from "./opencode-types";
-
-const userMessage = (text: string): OpencodeSessionMessage => ({
-  role: "user",
-  content: [{ type: "text", text }],
-});
-
-const assistantMessage = (
-  parts: OpencodeSessionMessagePart[],
-  input?: {
-    time?: { created?: number; completed?: number };
-    error?: { name?: string; data?: { message?: string } };
-  },
-): OpencodeSessionMessage => ({
-  info: {
-    role: "assistant",
-    time: { created: input?.time?.created ?? Date.now(), ...input?.time },
-    error: input?.error,
-  },
-  parts,
-});
-
-const completedAssistant = (text: string, error?: { name?: string; data?: { message?: string } }) =>
-  assistantMessage([{ type: "text", text }], { time: { created: Date.now(), completed: Date.now() }, error });
-
-const inFlightAssistant = (text: string) => assistantMessage([{ type: "text", text }], { time: { created: Date.now() } });
-
-const questionAssistant = () =>
-  assistantMessage(
-    [
-      { type: "text", text: "Let me ask you something." },
-      {
-        type: "tool",
-        tool: "question",
-        state: {
-          status: "completed",
-          input: { questions: [{ id: "q1", question: "Which?", options: ["A", "B"] }] },
-        },
-      },
-    ],
-    { time: { created: Date.now() } },
-  );
-
-const createMessageTimeline = () => {
-  let messages: OpencodeSessionMessage[] = [];
-  const loader = async () => [...messages];
-  const set = (next: OpencodeSessionMessage[]) => {
-    messages = next;
-  };
-  return { loader, set };
-};
-
-const collectPatches = (eventStore: ReturnType<typeof createEventStore>) => {
-  const patches: JsonPatch[] = [];
-  const sub = eventStore.subscribe();
-  const reader = (async () => {
-    for await (const patch of sub) {
-      patches.push(patch);
-    }
-  })();
-  return { patches, done: reader };
-};
+import {
+  collectPatches,
+  completedAssistant,
+  createMessageTimeline,
+  inFlightAssistant,
+  questionAssistant,
+  tick,
+  userMessage,
+} from "./opencode-session-poller.test-helpers";
 
 const lastStatusPatch = (eventStore: ReturnType<typeof createEventStore>) =>
   eventStore
@@ -75,8 +23,6 @@ const errorInfo = {
   name: "service_unavailable_error",
   data: { message: "Our servers are currently overloaded." },
 };
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 1_100));
 
 describe("pollOpencodeMessages", () => {
   it("marks session as failed when current turn has an error", async () => {
@@ -260,6 +206,93 @@ describe("pollOpencodeMessages", () => {
     await tick();
 
     expect((await poll).code).toBe(0);
+    eventStore.close();
+  });
+});
+
+describe("pollOpencodeQuestionReply", () => {
+  it("waits for the assistant continuation after the question answer is accepted", async () => {
+    const { loader, set } = createMessageTimeline();
+    const eventStore = createEventStore();
+    const user = userMessage("ask me");
+    const questionMessage = {
+      info: { id: "msg-question", role: "assistant", time: { created: Date.now() } },
+      parts: [
+        {
+          type: "tool",
+          tool: "question",
+          callID: "call-question",
+          state: {
+            status: "running",
+            input: { questions: [{ question: "Weather?", options: [{ label: "Nice" }] }] },
+          },
+        },
+      ],
+    };
+    const answeredQuestionMessage = {
+      info: { id: "msg-question", role: "assistant", time: { created: Date.now(), completed: Date.now() } },
+      parts: [
+        {
+          type: "tool",
+          tool: "question",
+          callID: "call-question",
+          state: {
+            status: "completed",
+            input: { questions: [{ question: "Weather?", options: [{ label: "Nice" }] }] },
+            output: "User has answered your questions.",
+            metadata: { answers: [["Nice"]] },
+          },
+        },
+      ],
+    };
+    const continuationStarted = {
+      info: { id: "msg-continuation", role: "assistant", time: { created: Date.now() } },
+      parts: [{ type: "step-start", snapshot: "abc" }],
+    };
+    const continuationCompleted = {
+      info: { id: "msg-continuation", role: "assistant", time: { created: Date.now(), completed: Date.now() } },
+      parts: [
+        { type: "step-start", snapshot: "abc" },
+        { type: "text", text: "Got it - Nice." },
+        { type: "step-finish", snapshot: "abc" },
+      ],
+    };
+
+    set([user, questionMessage]);
+
+    let resolvePost: () => void;
+    const messageComplete = new Promise<void>((resolve) => {
+      resolvePost = resolve;
+    });
+    const poll = pollOpencodeQuestionReply({
+      loadMessages: loader,
+      sessionId: "s1",
+      cwd: undefined,
+      eventStore,
+      questionTool: { messageID: "msg-question", callID: "call-question" },
+      messageComplete,
+    });
+
+    await Bun.sleep(50);
+    set([user, answeredQuestionMessage]);
+    resolvePost!();
+    await Bun.sleep(50);
+    set([user, answeredQuestionMessage, continuationStarted]);
+    await tick();
+
+    expect(lastStatusPatch(eventStore)).toBeUndefined();
+
+    set([user, answeredQuestionMessage, continuationCompleted]);
+    await tick();
+    await tick();
+
+    const result = await poll;
+    const messagePatches = eventStore.getHistory().filter((patch) => patch.path === "/messages");
+    const finalMessages = messagePatches.at(-1)?.value as SessionMessage[];
+
+    expect(result.code).toBe(0);
+    expect(finalMessages.at(-1)?.parts).toContainEqual({ type: "text", text: "Got it - Nice." });
+    expect(lastStatusPatch(eventStore)?.value).toBe("completed");
     eventStore.close();
   });
 });

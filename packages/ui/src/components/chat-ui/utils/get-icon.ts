@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle,
+  CircleQuestionMark,
   DotIcon,
   File,
   FileDiff,
@@ -9,12 +10,14 @@ import {
   FileText,
   FileUp,
   Globe,
+  ListTodo,
   ListTree,
   Move,
   Search,
   Terminal,
   Trash2,
 } from "lucide-react";
+import { normalizeToolName } from "./tool-name";
 
 const toolIconMap = {
   shell: Terminal,
@@ -34,6 +37,8 @@ const iconMap = {
   search: Search,
   browser: Globe,
   file: File,
+  question: CircleQuestionMark,
+  todo: ListTodo,
   terminal: Terminal,
   ...toolIconMap,
 } as const satisfies Record<string, LucideIcon>;
@@ -52,8 +57,10 @@ export const getIconComponent = (name: IconName): LucideIcon => {
 export const toolTypeToIconName = (type?: string): IconName => {
   if (!type) return DEFAULT_TOOL_ICON;
 
-  const normalized = type.replace(/^tool-/, "");
+  const normalized = normalizeToolName(type);
   if (isToolIconName(normalized)) return normalized;
+
+  const compact = normalized.replace(/_/g, "");
 
   switch (normalized) {
     case "read":
@@ -69,16 +76,18 @@ export const toolTypeToIconName = (type?: string): IconName => {
     case "glob":
       return "file";
     case "todowrite":
-      return "ls";
+      return "todo";
     case "search":
       return "search";
     case "browser":
       return "browser";
+    case "question":
+      return "question";
     case "fs":
     case "file":
       return "file";
     default:
-      return DEFAULT_TOOL_ICON;
+      return compact === "todowrite" || compact === "todo" ? "todo" : DEFAULT_TOOL_ICON;
   }
 };
 

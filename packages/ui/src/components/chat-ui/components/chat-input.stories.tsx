@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { type ComponentProps, useState } from "react";
 import { AttachmentList } from "./attachment-list";
-import { ChatInput, type ChatInputQuestionPrompt } from "./chat-input";
+import { ChatInput } from "./chat-input";
+import type { ChatInputQuestionPrompt } from "./chat-input-question-prompt";
 
 const meta: Meta<typeof ChatInput> = {
   title: "Chat UI/Chat Input",
@@ -153,6 +154,43 @@ const customQuestionPrompt: ChatInputQuestionPrompt = {
   ],
 };
 
+const freeformQuestionPrompt: ChatInputQuestionPrompt = {
+  questions: [
+    {
+      id: "details",
+      question: "What should I know before continuing?",
+      options: [],
+      required: true,
+      allowCustomAnswer: true,
+    },
+  ],
+};
+
+const multiStepQuestionPrompt: ChatInputQuestionPrompt = {
+  questions: [
+    {
+      id: "goal",
+      question: "What should be built?",
+      options: [],
+      required: true,
+      allowCustomAnswer: true,
+    },
+    {
+      id: "constraints",
+      question: "Select constraints.",
+      options: [{ label: "Keep API stable" }, { label: "No backend changes" }, { label: "Add tests" }],
+      multiple: true,
+      required: true,
+    },
+    {
+      id: "notes",
+      question: "Anything else?",
+      options: [],
+      allowCustomAnswer: true,
+    },
+  ],
+};
+
 export const QuestionSingleChoice: Story = {
   args: {
     defaultState: initialState,
@@ -182,6 +220,29 @@ export const QuestionWithCustomAnswer: Story = {
     defaultState: initialState,
     placeholder: "Add a custom answer...",
     questionPrompt: customQuestionPrompt,
+    onSubmit: (text: string) => {
+      console.log("Submitted response:", text);
+      alert(`Submitted response: ${text}`);
+    },
+  },
+};
+
+export const QuestionFreeform: Story = {
+  args: {
+    defaultState: initialState,
+    placeholder: "Answer the question...",
+    questionPrompt: freeformQuestionPrompt,
+    onSubmit: (text: string) => {
+      console.log("Submitted response:", text);
+      alert(`Submitted response: ${text}`);
+    },
+  },
+};
+
+export const QuestionMultiStep: Story = {
+  args: {
+    defaultState: initialState,
+    questionPrompt: multiStepQuestionPrompt,
     onSubmit: (text: string) => {
       console.log("Submitted response:", text);
       alert(`Submitted response: ${text}`);

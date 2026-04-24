@@ -43,6 +43,25 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === "object" && value !== null;
 };
 
+const parseJsonObjectText = (value: string) => {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return isRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const toQuestionPromptRecord = (value: unknown) => {
+  if (isRecord(value)) return value;
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    return parseJsonObjectText(value);
+  }
+
+  return null;
+};
+
 const toQuestionOption = (value: unknown) => {
   if (typeof value === "string") {
     return { label: value, description: undefined };
@@ -60,17 +79,19 @@ const toQuestion = (value: unknown, index: number) => {
   const options = Array.isArray(value.options)
     ? value.options.map(toQuestionOption).filter((option) => option !== null)
     : [];
-  if (options.length === 0) return null;
 
   const type = typeof value.type === "string" ? value.type : undefined;
-  const multiple = typeof value.multiple === "boolean" ? value.multiple : type === "multiple_choice";
+  const multiple =
+    typeof value.multiple === "boolean" ? value.multiple : type === "multiple_choice" || type === "multi_choice";
   const required = typeof value.required === "boolean" ? value.required : false;
   const allowCustomAnswer =
     typeof value.custom === "boolean"
       ? value.custom
       : typeof value.allowCustomAnswer === "boolean"
         ? value.allowCustomAnswer
-        : false;
+        : type === "freeform" || type === "text";
+
+  if (options.length === 0 && !allowCustomAnswer) return null;
 
   return {
     id: typeof value.id === "string" ? value.id : `question-${index}`,
@@ -83,9 +104,10 @@ const toQuestion = (value: unknown, index: number) => {
 };
 
 const parseQuestionPrompt = (value: unknown): ChatInputQuestionPrompt | undefined => {
-  if (!isRecord(value) || !Array.isArray(value.questions)) return undefined;
+  const record = toQuestionPromptRecord(value);
+  if (!record || !Array.isArray(record.questions)) return undefined;
 
-  const questions = value.questions.map(toQuestion).filter((question) => question !== null);
+  const questions = record.questions.map(toQuestion).filter((question) => question !== null);
   if (questions.length === 0) return undefined;
 
   return { questions };

@@ -1,6 +1,7 @@
 ---
 "pstdio": patch
 "@pstdio/ui": patch
+"@pstdio/sdk": patch
 ---
 
-Handle OpenCode question/todowrite tool normalization and render question prompts directly in chat input.
+Handle OpenCode question/todowrite UI support and make plugin command execution honor local PATH.

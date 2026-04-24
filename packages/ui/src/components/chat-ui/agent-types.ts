@@ -110,6 +110,11 @@ export type SessionMessageInput = {
   model?: string | null;
   cwd?: string;
   messageOffset?: number;
+  questionResponse?: QuestionResponse;
+};
+
+export type QuestionResponse = {
+  answers: string[][];
 };
 
 export type SessionMessagesInput = {

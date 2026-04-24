@@ -104,6 +104,11 @@ export type SessionMessageInput = {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
   messageOffset?: number;
+  questionResponse?: QuestionResponse;
+};
+
+export type QuestionResponse = {
+  answers: string[][];
 };
 
 export type SessionMessagesInput = {

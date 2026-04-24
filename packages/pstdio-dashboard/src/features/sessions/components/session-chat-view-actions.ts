@@ -1,4 +1,4 @@
-import type { SessionMessage } from "@pstdio/ui/chat-ui";
+import type { ChatInputQuestionResponse, SessionMessage } from "@pstdio/ui/chat-ui";
 import type { Dispatch, SetStateAction } from "react";
 import { apiRequest } from "@/lib/api";
 import {
@@ -19,7 +19,13 @@ export type CreateSessionMutation = {
 
 export type FollowUpMutation = {
   mutate: (
-    input: { sessionId: string; prompt: string; agent?: string; model?: string },
+    input: {
+      sessionId: string;
+      prompt: string;
+      agent?: string;
+      model?: string;
+      questionResponse?: ChatInputQuestionResponse;
+    },
     options: {
       onSuccess: () => void;
       onError: () => void;
@@ -102,6 +108,7 @@ const submitFollowUpMessage = (input: {
   text: string;
   messages: SessionMessage[];
   pendingId: string;
+  questionResponse?: ChatInputQuestionResponse;
   clearSessionDraft: (sessionId: string | null) => void;
   setChatDraft: Dispatch<SetStateAction<string>>;
   setPendingFollowUp: Dispatch<SetStateAction<PendingFollowUpState | null>>;
@@ -111,16 +118,24 @@ const submitFollowUpMessage = (input: {
   input.clearSessionDraft(input.sessionId);
   input.setChatDraft("");
   input.setPendingFollowUp(
-    createPendingFollowUpState({
-      prompt: input.text,
-      messageCount: input.messages.length,
-      pendingId: input.pendingId,
-      sessionId: input.sessionId,
-    }),
+    input.questionResponse
+      ? null
+      : createPendingFollowUpState({
+          prompt: input.text,
+          messageCount: input.messages.length,
+          pendingId: input.pendingId,
+          sessionId: input.sessionId,
+        }),
   );
 
   input.followUp.mutate(
-    { sessionId: input.sessionId, prompt: input.text, agent: input.agent ?? undefined, model: input.model },
+    {
+      sessionId: input.sessionId,
+      prompt: input.text,
+      agent: input.agent ?? undefined,
+      model: input.model,
+      questionResponse: input.questionResponse,
+    },
     {
       onSuccess: input.reconnect,
       onError: () => input.setPendingFollowUp(null),
@@ -135,6 +150,7 @@ export const submitSessionMessage = (input: {
   model: string | undefined;
   workspaceId?: string;
   text: string;
+  questionResponse?: ChatInputQuestionResponse;
   messages: SessionMessage[];
   pendingIdRef: { current: number };
   clearSessionDraft: (sessionId: string | null) => void;
@@ -171,6 +187,7 @@ export const submitSessionMessage = (input: {
     agent: input.agent,
     model: input.model,
     text: input.text,
+    questionResponse: input.questionResponse,
     messages: input.messages,
     pendingId,
     clearSessionDraft: input.clearSessionDraft,

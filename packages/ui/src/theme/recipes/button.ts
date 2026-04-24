@@ -99,6 +99,12 @@ export const buttonRecipe = defineRecipe({
       },
     },
     size: {
+      xs: {
+        _icon: {
+          width: "0.875rem",
+          height: "0.875rem",
+        },
+      },
       "2xl": {
         px: "1.5rem",
         h: "3.5rem",

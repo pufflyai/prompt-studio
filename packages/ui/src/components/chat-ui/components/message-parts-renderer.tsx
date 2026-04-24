@@ -11,6 +11,7 @@ type ToolInvocationTimelineComponent = (props: ToolInvocationTimelineProps) => R
 export interface MessagePartsProps {
   message: SessionMessage;
   streaming?: boolean;
+  hideQuestionForms?: boolean;
   onOpenFile?: (filePath: string) => void;
   toolInvocationTimeline?: ToolInvocationTimelineComponent;
 }
@@ -65,7 +66,7 @@ const collectToolInvocations = (parts: SessionMessagePart[], startIndex: number)
 };
 
 export function MessagePartsRenderer(props: MessagePartsProps) {
-  const { message, onOpenFile, toolInvocationTimeline } = props;
+  const { message, hideQuestionForms = false, onOpenFile, toolInvocationTimeline } = props;
   const RenderToolInvocationTimeline = toolInvocationTimeline ?? ToolInvocationTimeline;
   const parts = message.parts ?? [];
   const nodes: ReactNode[] = [];
@@ -104,7 +105,12 @@ export function MessagePartsRenderer(props: MessagePartsProps) {
         partIndex = nextIndex;
         nodes.push(
           <Box key={key} width="full">
-            <RenderToolInvocationTimeline invocations={invocations} labeledBlocks onOpenFile={onOpenFile} />
+            <RenderToolInvocationTimeline
+              invocations={invocations}
+              labeledBlocks
+              hideQuestionForms={hideQuestionForms}
+              onOpenFile={onOpenFile}
+            />
           </Box>,
         );
         break;

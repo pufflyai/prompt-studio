@@ -66,7 +66,13 @@ describe("buildTimelineDocFromInvocations", () => {
     expect(item?.title).toContainEqual({ kind: "text", text: "Update todos", bold: true });
     expect(item?.blocks).toContainEqual(
       expect.objectContaining({
-        type: "component",
+        type: "todo-list",
+        items: expect.arrayContaining([
+          expect.objectContaining({
+            label: "Run validate and verify packages",
+            checked: false,
+          }),
+        ]),
       }),
     );
     expect(item?.blocks).not.toContainEqual(expect.objectContaining({ type: "code", language: "json" }));

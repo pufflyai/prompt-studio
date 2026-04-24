@@ -21,11 +21,14 @@ let workspaceId: string;
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-run-project-action-"));
   const repoPath = join(tempRoot, "repo");
-  const pluginsDir = join(repoPath, ".pstdio", "plugins");
+  const pstdioDir = join(repoPath, ".pstdio");
+  const pluginsDir = join(pstdioDir, "plugins");
+  const pluginSdkScopeDir = join(pstdioDir, "node_modules", "@pstdio");
   const composeDir = join(repoPath, "infra", "local");
   const binDir = join(tempRoot, "bin");
 
   mkdirSync(pluginsDir, { recursive: true });
+  mkdirSync(pluginSdkScopeDir, { recursive: true });
   mkdirSync(composeDir, { recursive: true });
   mkdirSync(binDir, { recursive: true });
 
@@ -35,21 +38,25 @@ beforeAll(async () => {
   writeFileSync(join(repoPath, "README.md"), "run project action test\n");
   execSync("git add README.md", { cwd: repoPath, stdio: "ignore" });
   execSync('git commit -m "init"', { cwd: repoPath, stdio: "ignore" });
+  writeFileSync(
+    join(pstdioDir, "package.json"),
+    `${JSON.stringify(
+      {
+        private: true,
+        type: "module",
+        dependencies: { "@pstdio/sdk": "workspace:*" },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  symlinkSync(join(repoRoot, "packages", "sdk"), join(pluginSdkScopeDir, "sdk"), "dir");
 
   writeFileSync(
     join(pluginsDir, "workspace-actions.ts"),
     readFileSync(join(repoRoot, ".pstdio", "plugins", "workspace-actions.ts"), "utf8"),
   );
   writeFileSync(join(composeDir, "compose.yaml"), "services:\n  prompt-studio:\n    image: oven/bun:1.3.10\n");
-
-  const pstdioDir = join(repoPath, ".pstdio");
-  const sdkLinkDir = join(pstdioDir, "node_modules", "@pstdio");
-  mkdirSync(sdkLinkDir, { recursive: true });
-  symlinkSync(join(repoRoot, "packages", "sdk"), join(sdkLinkDir, "sdk"), "dir");
-  writeFileSync(
-    join(pstdioDir, "package.json"),
-    `${JSON.stringify({ private: true, type: "module", dependencies: { "@pstdio/sdk": "workspace:*" } }, null, 2)}\n`,
-  );
 
   writeFileSync(
     join(binDir, "docker"),

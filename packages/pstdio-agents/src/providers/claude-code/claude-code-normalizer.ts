@@ -6,7 +6,7 @@ import type { ClaudeCodeContentBlock, ClaudeCodeTranscriptEntry } from "./claude
 // --- Tool classification ---
 
 const READ_TOOLS = new Set(["Read", "Glob", "Grep"]);
-const WRITE_TOOLS = new Set(["Write", "Edit", "NotebookEdit"]);
+const WRITE_TOOLS = new Set(["Write", "Edit", "NotebookEdit", "TodoWrite"]);
 const EXECUTE_TOOLS = new Set(["Bash", "Task"]);
 const NETWORK_TOOLS = new Set(["WebFetch", "WebSearch"]);
 
@@ -16,6 +16,34 @@ const classifyToolAction = (toolName: string): ToolPartActionType => {
   if (EXECUTE_TOOLS.has(toolName)) return "execute";
   if (NETWORK_TOOLS.has(toolName)) return "network";
   return "other";
+};
+
+export const mergeToolResultMessage = (previous: SessionMessage, message: SessionMessage): SessionMessage => {
+  const previousPart = previous.parts[0];
+  const nextPart = message.parts[0];
+
+  if (previousPart?.type !== "tool" || nextPart?.type !== "tool") return message;
+
+  const previousState = previousPart.state;
+  const nextState = nextPart.state;
+  const state =
+    previousState || nextState
+      ? {
+          ...previousState,
+          ...nextState,
+          input: nextState?.input ?? previousState?.input,
+        }
+      : undefined;
+
+  return {
+    ...message,
+    parts: [
+      {
+        ...nextPart,
+        state,
+      },
+    ],
+  };
 };
 
 // --- Batch normalizer (transcript reading) ---
@@ -119,7 +147,7 @@ const pushTranscriptMessage = (messages: SessionMessage[], message: SessionMessa
     const existingIndex = toolCalls.get(firstPart.callId);
 
     if (existingIndex !== undefined) {
-      messages[existingIndex] = message;
+      messages[existingIndex] = mergeToolResultMessage(messages[existingIndex], message);
       return;
     }
   }

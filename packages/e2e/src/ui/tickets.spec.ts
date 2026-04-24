@@ -491,13 +491,13 @@ test.describe("Ticket list additional coverage", () => {
 
     await page.goto(`/projects/${projectId}/sessions/${session.id}`);
 
-    const answerButton = page.getByRole("button", { name: "TypeScript" });
+    const answerOption = page.getByText("TypeScript", { exact: true });
     const sendButton = page.locator("[data-testid='send-message-button']");
 
     await expect(page.getByText("Which language do you want to use?").first()).toBeVisible();
     await expect(sendButton).toBeDisabled();
 
-    await answerButton.click();
+    await answerOption.click();
     await expect(sendButton).toBeEnabled();
 
     const followUpRequestPromise = page.waitForRequest(
@@ -635,7 +635,7 @@ test.describe("Ticket list additional coverage", () => {
     await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets`);
 
-    await expect(page.getByText("Workspace badge regression")).toBeVisible();
+    await expect(page.getByText(ticket.shorthand, { exact: true })).toBeVisible({ timeout: 15_000 });
 
     const workspaceBadge = page.getByTestId("workspace-badge").first();
     const attemptStatusIndicator = page.getByLabel("Attempt status review-ready").first();

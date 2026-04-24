@@ -338,4 +338,53 @@ describe("spawnClaudeCodeMessage (resume)", () => {
     // Should have tool_use (pending) replaced by tool_result (completed)
     expect(toolPatches.length).toBeGreaterThanOrEqual(1);
   });
+
+  test("preserves streamed TodoWrite input when the tool result replaces the pending tool", async () => {
+    const todos = [
+      { content: "Pick the component", status: "completed" },
+      { content: "Wire the form", status: "in_progress" },
+    ];
+    const lines = [
+      JSON.stringify({
+        type: "content_block_start",
+        content_block: { type: "tool_use", id: "call-1", name: "TodoWrite", input: { todos } },
+      }),
+      JSON.stringify({
+        type: "content_block_start",
+        content_block: { type: "tool_result", tool_use_id: "call-1", content: "Todos updated", is_error: false },
+      }),
+    ];
+
+    const deps = createMockSpawnDeps(lines);
+    const eventStore = createEventStore();
+
+    const process = await spawnClaudeCodeMessage(
+      { sessionId: "session-abc", prompt: "Update todos", messageOffset: 0 },
+      eventStore,
+      undefined,
+      deps,
+    );
+
+    await process.onExit;
+
+    const toolPatch = eventStore
+      .getHistory()
+      .filter((patch) => patch.op === "replace")
+      .find((patch) => {
+        const message = patch.value as { parts?: Array<{ type: string; tool?: string }> };
+        return message.parts?.[0]?.type === "tool" && message.parts[0].tool === "TodoWrite";
+      });
+
+    expect(toolPatch?.value).toMatchObject({
+      parts: [
+        {
+          type: "tool",
+          tool: "TodoWrite",
+          actionType: "write",
+          status: "completed",
+          state: { input: { todos }, output: "Todos updated" },
+        },
+      ],
+    });
+  });
 });

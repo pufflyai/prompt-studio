@@ -137,10 +137,34 @@ describe("normalizeClaudeCodeMessages", () => {
     expect(result[0].parts[0]).toMatchObject({ type: "tool", status: "completed" });
   });
 
+  test("preserves tool input when replacing a completed TodoWrite result", () => {
+    const todos = [
+      { content: "Pick the component", status: "completed" },
+      { content: "Wire the form", status: "in_progress" },
+    ];
+
+    const result = normalizeClaudeCodeMessages([
+      entry("a1", "assistant", [{ type: "tool_use", id: "call-1", name: "TodoWrite", input: { todos } }]),
+      entry("a2", "assistant", [
+        { type: "tool_result", tool_use_id: "call-1", content: "Todos updated", is_error: false },
+      ]),
+    ]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].parts[0]).toMatchObject({
+      type: "tool",
+      tool: "TodoWrite",
+      actionType: "write",
+      status: "completed",
+      state: { input: { todos }, output: "Todos updated" },
+    });
+  });
+
   test("classifies tool actions correctly", () => {
     const tools = [
       { name: "Read", expected: "read" },
       { name: "Write", expected: "write" },
+      { name: "TodoWrite", expected: "write" },
       { name: "Bash", expected: "execute" },
       { name: "WebFetch", expected: "network" },
       { name: "Agent", expected: "other" },

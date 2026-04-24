@@ -30,6 +30,7 @@ export type {
   LaunchResult,
   LoadingPart,
   PatchPart,
+  QuestionResponse,
   RawLogEvent,
   ReasoningPart,
   ResumeResult,

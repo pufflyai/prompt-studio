@@ -10,7 +10,7 @@ import type {
   SessionStartInput,
   SpawnedProcess,
 } from "../../types";
-import { normalizeClaudeCodeStream } from "./claude-code-normalizer";
+import { mergeToolResultMessage, normalizeClaudeCodeStream } from "./claude-code-normalizer";
 
 // --- Env ---
 
@@ -175,8 +175,9 @@ export const createMessageAccumulator = (eventStore: EventStore, options: Accumu
       const existingIdx = toolCalls.get(firstPart.callId);
 
       if (existingIdx !== undefined) {
-        messages[existingIdx] = message;
-        eventStore.push({ op: "replace", path: toPath(existingIdx), value: message });
+        const merged = mergeToolResultMessage(messages[existingIdx], message);
+        messages[existingIdx] = merged;
+        eventStore.push({ op: "replace", path: toPath(existingIdx), value: merged });
         return;
       }
     }

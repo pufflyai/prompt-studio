@@ -37,6 +37,8 @@ export type {
 export { OpenSourceNoticesScreen } from "./components/open-source-notices-screen";
 export type { PropertiesProps, PropertyItem } from "./components/properties";
 export { Properties } from "./components/properties";
+export type { RadioProps } from "./components/radio";
+export { Radio, RadioGroup } from "./components/radio";
 export type { ResourceContextAction } from "./components/resource-context-menu";
 export { ResourceContextMenu } from "./components/resource-context-menu";
 export { ScrollArea } from "./components/scroll-area";

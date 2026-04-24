@@ -17,6 +17,7 @@ import type {
   SessionStartInput,
 } from "../../types";
 import { normalizeOpencodeMessage } from "./opencode-normalizer";
+import { pollOpencodeQuestionReply } from "./opencode-question-reply-poller";
 import { createOpencodeService } from "./opencode-service";
 import { pollOpencodeMessages, pollOpencodeUntilIdle } from "./opencode-session-poller";
 
@@ -218,6 +219,35 @@ export const createOpencodeAgent = (
 
   const resumeSession = async (input: SessionMessageInput, eventStore: EventStore) => {
     const cwd = input.cwd ?? undefined;
+
+    if (input.questionResponse) {
+      const pendingQuestions = await opencode.listPendingQuestions(cwd);
+      const pendingQuestion = pendingQuestions.find((question) => question.sessionID === input.sessionId);
+      const messageComplete = pendingQuestion
+        ? opencode.replyQuestion(pendingQuestion.id, input.questionResponse.answers, cwd)
+        : Promise.reject(new Error("OpenCode pending question request not found."));
+      const abortController = new AbortController();
+      const onExit = pollOpencodeQuestionReply({
+        loadMessages: opencode.getSessionMessages,
+        sessionId: input.sessionId,
+        cwd,
+        eventStore,
+        questionTool: pendingQuestion?.tool,
+        messageComplete,
+        abortSignal: abortController.signal,
+      });
+      const process = createOpencodeProcess({
+        sessionId: input.sessionId,
+        abortController,
+        abortSession: () => opencode.abortSession(input.sessionId, cwd),
+        onExit,
+      });
+
+      return {
+        process,
+      };
+    }
+
     const baselineCount = await fetchBaselineCount(input.sessionId, cwd);
 
     const { messageComplete } = opencode.sendSessionMessage(input);

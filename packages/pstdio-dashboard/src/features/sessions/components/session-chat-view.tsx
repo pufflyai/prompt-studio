@@ -20,7 +20,11 @@ import {
   type PendingFollowUpState,
   shouldShowPendingFollowUp,
 } from "./session-chat-state";
-import { getActiveQuestionPrompt, isSessionInterruptible, resolveNewSessionWorkspaceId } from "./session-chat-view.utils";
+import {
+  getActiveQuestionPrompt,
+  isSessionInterruptible,
+  resolveNewSessionWorkspaceId,
+} from "./session-chat-view.utils";
 import { submitSessionMessage } from "./session-chat-view-actions";
 import {
   useEditActionNotifier,
@@ -129,7 +133,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
       chatInputPlaceholder={t("sessions.followUpPlaceholder")}
       chatInputDefaultValue={chatDraft}
       chatInputQuestionPrompt={activeQuestionPrompt}
-      onSubmitMessage={(text: string) =>
+      onSubmitMessage={(text: string, _attachments, questionResponse) =>
         submitSessionMessage({
           sessionId,
           projectId,
@@ -137,6 +141,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
           model,
           workspaceId: effectiveWorkspaceId,
           text,
+          questionResponse,
           messages,
           pendingIdRef,
           clearSessionDraft,

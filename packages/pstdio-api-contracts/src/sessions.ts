@@ -38,12 +38,17 @@ export const createSessionInputSchema = z.object({
   original_session_id: z.string().optional(),
 });
 
+export const questionResponseSchema = z.object({
+  answers: z.array(z.array(z.string())),
+});
+
 export const followUpInputSchema = z.object({
   prompt: z.string().min(1).optional(),
   template: z.string().min(1).optional(),
   vars: z.record(z.string(), z.string()).optional(),
   agent: z.string().optional(),
   model: z.string().optional(),
+  question_response: questionResponseSchema.optional(),
   summary_from_session_id: z.string().optional(),
   summary_format: z.enum(["brief", "detailed"]).default("brief").optional(),
   summary_role: z.enum(["assistant", "all"]).default("assistant").optional(),

@@ -4290,8 +4290,8 @@
               "px": "2.5",
               "gap": "1",
               "_icon": {
-                "width": "4",
-                "height": "4"
+                "width": "0.875rem",
+                "height": "0.875rem"
               }
             },
             "sm": {

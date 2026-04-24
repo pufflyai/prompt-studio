@@ -28,6 +28,7 @@ const buttonVariants: ButtonVariantOption[] = [
 ];
 
 const buttonSizes: ButtonSizeOption[] = [
+  { label: "Extra Small", helper: "Compact inline controls.", size: "xs" },
   { label: "Small", helper: "Dense toolbars and tables.", size: "sm" },
   { label: "Medium", helper: "Default buttons across the app.", size: "md" },
   { label: "Large", helper: "Primary CTAs in dialogs.", size: "lg" },
@@ -115,14 +116,14 @@ export const Sizes = {
               Secondary
             </Button>
             <Button size={size.size} variant="ghost">
-              <Icon as={Download} boxSize="16px" />
+              <Icon as={Download} />
               Export
             </Button>
             <IconButton size={size.size} variant="ghost" aria-label="Settings">
-              <Icon as={Settings} boxSize="16px" />
+              <Icon as={Settings} />
             </IconButton>
             <IconButton size={size.size} variant="outline" aria-label="Delete">
-              <Icon as={Trash2} boxSize="16px" />
+              <Icon as={Trash2} />
             </IconButton>
           </HStack>
         </HStack>

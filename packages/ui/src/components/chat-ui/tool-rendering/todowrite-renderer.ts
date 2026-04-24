@@ -3,9 +3,8 @@ import type { Block, Item, TitleSegment } from "../components/timeline";
 import type { ToolRenderer } from "./types";
 
 type TodoItem = {
-  content: string;
-  status?: string;
-  priority?: string;
+  label: string;
+  checked: boolean;
 };
 
 type TodowriteRendererDependencies = {
@@ -28,35 +27,32 @@ const parseTodoItem = (value: unknown): TodoItem | null => {
   const todo = getObjectValue(value);
   if (!todo) return null;
 
-  const content = getStringValue(todo.content);
+  const content = getStringValue(todo.content) ?? getStringValue(todo.title);
   if (!content) return null;
+  const status = getStringValue(todo.status);
 
   return {
-    content,
-    status: getStringValue(todo.status) ?? undefined,
-    priority: getStringValue(todo.priority) ?? undefined,
+    label: content,
+    checked: status === "completed",
   };
 };
 
 const parseTodoItems = (value: unknown) => {
-  if (!value) return [];
+  if (!value) return { items: [], explicit: false };
 
   const listSource = (() => {
     if (Array.isArray(value)) return value;
     const objectValue = getObjectValue(value);
-    if (!objectValue || !Array.isArray(objectValue.todos)) return [];
+    if (!objectValue || !Array.isArray(objectValue.todos)) return null;
     return objectValue.todos;
   })();
 
-  return listSource.map(parseTodoItem).filter((todo): todo is TodoItem => todo !== null);
-};
+  if (!listSource) return { items: [], explicit: false };
 
-const formatTodoItem = (todo: TodoItem) => {
-  const statusToken = todo.status === "completed" ? "x" : " ";
-  const meta = [todo.status, todo.priority].filter((value): value is string => Boolean(value));
-  if (meta.length === 0) return `- [${statusToken}] ${todo.content}`;
-
-  return `- [${statusToken}] ${todo.content} (${meta.join(" · ")})`;
+  return {
+    items: listSource.map(parseTodoItem).filter((todo): todo is TodoItem => todo !== null),
+    explicit: true,
+  };
 };
 
 export const createTodowriteRenderer = (deps: TodowriteRendererDependencies): ToolRenderer => {
@@ -65,18 +61,27 @@ export const createTodowriteRenderer = (deps: TodowriteRendererDependencies): To
   return (invocation) => {
     const inputTodos = parseTodoItems(invocation.state?.input);
     const outputTodos = parseTodoItems(invocation.state?.output);
-    const todos = outputTodos.length > 0 ? outputTodos : inputTodos;
-    if (todos.length === 0) return null;
+    const todoState = outputTodos.explicit ? outputTodos : inputTodos;
+    if (!todoState.explicit) return null;
+
+    const todos = todoState.items;
+    const countLabel = `${todos.length} item${todos.length === 1 ? "" : "s"}`;
+    const title = buildBaseTitle(invocation, countLabel, "Update todos");
+
+    if (todos.length === 0) {
+      return {
+        indicator: buildIndicator(invocation),
+        title,
+        blocks: prependErrorBlock(invocation, [{ type: "comment", text: "No todos" }]),
+      } satisfies Item;
+    }
 
     const blocks: Block[] = [
       {
-        type: "code",
-        language: "markdown",
-        code: todos.map(formatTodoItem).join("\n"),
+        type: "todo-list",
+        items: todos,
       },
     ];
-
-    const title = buildBaseTitle(invocation, `${todos.length} item${todos.length === 1 ? "" : "s"}`, "Update todos");
 
     return {
       indicator: buildIndicator(invocation),

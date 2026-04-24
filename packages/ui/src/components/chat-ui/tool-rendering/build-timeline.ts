@@ -1,8 +1,8 @@
 import type { ToolPart } from "../agent-types";
 import type { Block, TitleSegment } from "../components/timeline";
 import { toolTypeToIconName } from "../utils/get-icon";
+import { getToolNameLookupKeys, normalizeToolName } from "../utils/tool-name";
 import { createDefaultToolRenderers } from "./default-renderers";
-import { normalizeToolType } from "./shared";
 import type { ToolRenderersMap, ToolTimelineBuilderOptions } from "./types";
 
 const STATE_LABELS: Record<string, string> = {
@@ -22,7 +22,7 @@ const toTitleCase = (value: string) => {
 };
 
 const getToolLabel = (tool?: string) => {
-  const normalized = normalizeToolType(tool ?? "tool").replace(/_/g, " ");
+  const normalized = normalizeToolName(tool ?? "tool").replace(/_/g, " ");
   return toTitleCase(normalized);
 };
 
@@ -95,7 +95,12 @@ const mergeToolRenderers = (overrides?: ToolRenderersMap) => {
 
 const getRenderer = (invocation: ToolPart, toolRenderers: ToolRenderersMap) => {
   const rawTool = invocation.tool ?? "tool";
-  return toolRenderers[rawTool] ?? toolRenderers[normalizeToolType(rawTool)];
+  for (const key of getToolNameLookupKeys(rawTool)) {
+    const renderer = toolRenderers[key];
+    if (renderer) return renderer;
+  }
+
+  return undefined;
 };
 
 const renderInvocation = (

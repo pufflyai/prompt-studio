@@ -1,4 +1,4 @@
-import type { AgentId, ApprovalRequest, SpawnedProcess } from "pstdio-agents";
+import type { AgentId, ApprovalRequest, QuestionResponse, SpawnedProcess } from "pstdio-agents";
 import { sessionLogger } from "../../lib/logger";
 import type { RouteDeps } from "../deps";
 import { persistSessionMessages } from "./session-messages";
@@ -154,6 +154,7 @@ type ResumeInput = {
   model?: string;
   cwd?: string;
   messageOffset?: number;
+  questionResponse?: QuestionResponse;
 };
 
 // Resumes an existing agent session with a follow-up prompt
@@ -184,6 +185,7 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
       cwd: input.cwd,
       env: { PSTDIO_SESSION_ID: input.sessionId },
       messageOffset,
+      questionResponse: input.questionResponse,
     },
     entry.eventStore,
     entry.approvalService,

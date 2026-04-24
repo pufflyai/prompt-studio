@@ -6,7 +6,8 @@ import { createSerializedPromptState } from "../utils/editor-state";
 import { ChatPrimitives } from "./ai-conversation";
 import { ChatMessage } from "./ai-message";
 import { AutoScroll } from "./auto-scroll";
-import { ChatInput, type ChatInputQuestionPrompt } from "./chat-input";
+import { ChatInput } from "./chat-input";
+import type { ChatInputQuestionPrompt, ChatInputQuestionResponse } from "./chat-input-question-prompt";
 import {
   isStickyUserMessageCollapsible,
   STICKY_USER_MESSAGE_COLLAPSED_MAX_HEIGHT,
@@ -28,7 +29,7 @@ interface ChatPanelProps {
   loadingContent?: ReactNode;
   chatInputPlaceholder: string;
   chatInputDefaultValue?: string;
-  onSubmitMessage?: (text: string, attachments: string[]) => void;
+  onSubmitMessage?: (text: string, attachments: string[], questionResponse?: ChatInputQuestionResponse) => void;
   onInterrupt?: () => void;
   onChatInputChange?: (text: string) => void;
   actions?: ReactNode;
@@ -43,12 +44,12 @@ interface ChatPanelProps {
   chatInputQuestionPrompt?: ChatInputQuestionPrompt;
 }
 
-const renderMessage = (message: SessionMessage, streaming: boolean) => {
+const renderMessage = (message: SessionMessage, streaming: boolean, hideQuestionForms = false) => {
   const from = getMessageOrigin(message.role);
   return (
     <ChatMessage.Root key={message.id} from={from}>
       <ChatMessage.Content from={from}>
-        <MessagePartsRenderer message={message} streaming={streaming} />
+        <MessagePartsRenderer message={message} streaming={streaming} hideQuestionForms={hideQuestionForms} />
       </ChatMessage.Content>
     </ChatMessage.Root>
   );
@@ -86,6 +87,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
   const [expandedStickyMessageIds, setExpandedStickyMessageIds] = useState(() => new Set<string>());
   const emptyContent = streaming ? (loadingContent ?? emptyStateContent) : emptyStateContent;
   const hasWorkspaceHub = Boolean(workspaceHub);
+  const hideActiveQuestionForms = Boolean(chatInputQuestionPrompt);
   const showThinkingIndicator = streaming && hasMessages && !workspaceInitializing;
 
   const toggleStickyMessageExpanded = (messageId: string) => {
@@ -108,10 +110,13 @@ export const ChatPanel = (props: ChatPanelProps) => {
         <ChatPrimitives.Viewport>
           {hasMessages ? (
             <Stack gap="sm">
-              {leadingResponses.map((message) => renderMessage(message, streaming))}
-              {groups.map((group) => {
+              {leadingResponses.map((message) =>
+                renderMessage(message, streaming, groups.length > 0 || hideActiveQuestionForms),
+              )}
+              {groups.map((group, groupIndex) => {
                 const isCollapsible = isStickyUserMessageCollapsible(group.userMessage);
                 const isExpanded = expandedStickyMessageIds.has(group.userMessage.id);
+                const hideQuestionForms = groupIndex < groups.length - 1 || hideActiveQuestionForms;
 
                 return (
                   <Box key={group.userMessage.id}>
@@ -164,7 +169,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
                         </Flex>
                       )}
                     </Box>
-                    {group.responses.map((message) => renderMessage(message, streaming))}
+                    {group.responses.map((message) => renderMessage(message, streaming, hideQuestionForms))}
                   </Box>
                 );
               })}

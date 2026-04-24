@@ -112,3 +112,51 @@ export const ClaudeCodeTools: Story = {
     </Box>
   ),
 };
+
+const questionAndTodoInvocations: ToolPart[] = [
+  {
+    type: "tool",
+    tool: "question",
+    state: {
+      input: {
+        questions: [
+          {
+            id: "implementation",
+            question: "Which implementation path should be used?",
+            options: [
+              { label: "Keep it simple", description: "Use the smallest working change." },
+              { label: "Refactor first", description: "Clean up the surface before adding behavior." },
+            ],
+            required: true,
+          },
+          {
+            id: "notes",
+            type: "freeform",
+            question: "Additional constraints",
+          },
+        ],
+      },
+    },
+  },
+  {
+    type: "tool",
+    tool: "TodoWrite",
+    state: {
+      status: "completed",
+      input: {
+        todos: [
+          { content: "Render question form", status: "completed" },
+          { content: "Simplify todo list", status: "in_progress" },
+        ],
+      },
+    },
+  },
+];
+
+export const QuestionAndTodoWrite: Story = {
+  render: () => (
+    <Box maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" p="md">
+      <ToolInvocationTimeline invocations={questionAndTodoInvocations} />
+    </Box>
+  ),
+};
