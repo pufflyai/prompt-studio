@@ -11,7 +11,7 @@ import pgliteDataPath from "../../node_modules/@electric-sql/pglite/dist/pglite.
 // @ts-expect-error Bun file import
 import pgliteWasmPath from "../../node_modules/@electric-sql/pglite/dist/pglite.wasm" with { type: "file" };
 import { ensureDbDirectory, resolveDbPath } from "./paths";
-import * as schema from "./schemas.pg";
+import * as schema from "./schema";
 
 type EmbeddedFile = Blob & { name: string };
 // Bun's embedded file objects are runtime-specific; narrowing the contract keeps extraction testable

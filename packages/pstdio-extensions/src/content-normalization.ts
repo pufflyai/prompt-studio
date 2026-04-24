@@ -8,6 +8,7 @@ import type {
 import { isPackageAssetDescriptor } from "./asset-validation";
 import { createErrorDiagnostic } from "./diagnostics";
 import type { LoadedExtensionSource } from "./loader";
+import { PackageAssetError, resolvePackageAssetPath } from "./package-assets";
 
 type ContentRuntime = {
   templateTypes: RuntimeTemplateType[];
@@ -17,6 +18,41 @@ type ContentRuntime = {
   diagnostics: ExtensionDiagnostic[];
 };
 
+const packageAssetDiagnostic = (
+  source: LoadedExtensionSource,
+  key: string,
+  kind: "Template" | "Skill",
+  error: string,
+) =>
+  createErrorDiagnostic({
+    code: "invalid_package_asset",
+    message: `${kind} "${source.definition.id}.${key}" ${error}`,
+    extensionId: source.definition.id,
+    sourcePath: source.sourcePath,
+  });
+
+const validatePackageAsset = (
+  source: LoadedExtensionSource,
+  key: string,
+  kind: "Template" | "Skill",
+  value: unknown,
+) => {
+  if (!isPackageAssetDescriptor(value)) {
+    return packageAssetDiagnostic(source, key, kind, "must use packageAsset(...)");
+  }
+
+  try {
+    resolvePackageAssetPath(value, { sourcePath: source.sourcePath });
+    return null;
+  } catch (error) {
+    if (error instanceof PackageAssetError) {
+      return packageAssetDiagnostic(source, key, kind, error.message);
+    }
+
+    throw error;
+  }
+};
+
 export const registerTemplates = (source: LoadedExtensionSource, runtime: ContentRuntime) => {
   const extensionId = source.definition.id;
   for (const [key, templateType] of Object.entries(source.definition.templateTypes ?? {})) {
@@ -24,15 +60,9 @@ export const registerTemplates = (source: LoadedExtensionSource, runtime: Conten
   }
 
   for (const [key, template] of Object.entries(source.definition.templates ?? {})) {
-    if (!isPackageAssetDescriptor(template.source)) {
-      runtime.diagnostics.push(
-        createErrorDiagnostic({
-          code: "invalid_package_asset",
-          message: `Template "${extensionId}.${key}" must use packageAsset(...)`,
-          extensionId,
-          sourcePath: source.sourcePath,
-        }),
-      );
+    const diagnostic = validatePackageAsset(source, key, "Template", template.source);
+    if (diagnostic) {
+      runtime.diagnostics.push(diagnostic);
       continue;
     }
 
@@ -52,15 +82,9 @@ export const registerTemplates = (source: LoadedExtensionSource, runtime: Conten
 export const registerSkills = (source: LoadedExtensionSource, runtime: ContentRuntime) => {
   const extensionId = source.definition.id;
   for (const [key, skill] of Object.entries(source.definition.skills ?? {})) {
-    if (!isPackageAssetDescriptor(skill.source)) {
-      runtime.diagnostics.push(
-        createErrorDiagnostic({
-          code: "invalid_package_asset",
-          message: `Skill "${extensionId}.${key}" must use packageAsset(...)`,
-          extensionId,
-          sourcePath: source.sourcePath,
-        }),
-      );
+    const diagnostic = validatePackageAsset(source, key, "Skill", skill.source);
+    if (diagnostic) {
+      runtime.diagnostics.push(diagnostic);
       continue;
     }
 

@@ -245,12 +245,23 @@ export type EventHandlerDefinition<TPayload = Record<string, unknown>> = {
 };
 
 export type ExtensionStorageCollection = {
-  list(): Promise<unknown[]>;
+  list(): Promise<{ id: string; value: unknown }[]>;
+  get(id: string): Promise<unknown | null>;
   put(id: string, value: unknown): Promise<void>;
+  delete(id: string): Promise<void>;
+};
+
+export type ExtensionTemplatePreferencesApi = {
+  isEnabled(templateKey: string): Promise<boolean>;
+  setEnabled(templateKey: string, enabled: boolean): Promise<void>;
 };
 
 export type ExtensionStorageApi = {
+  get(key: string): Promise<unknown | null>;
+  set(key: string, value: unknown): Promise<void>;
+  delete(key: string): Promise<void>;
   collection(name: string): ExtensionStorageCollection;
+  templatePreferences: ExtensionTemplatePreferencesApi;
 };
 
 export type ExtensionFilesApi = {

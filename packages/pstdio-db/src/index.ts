@@ -2,7 +2,7 @@ export { and, eq, sql } from "drizzle-orm";
 export type { DbClient } from "./db/connection.pglite";
 export { createDb } from "./db/connection.pglite";
 export { resolveDbPath } from "./db/paths";
-
+export * from "./db/schemas.extensions.pg";
 export * from "./db/schemas.pg";
 export * from "./db/schemas.zod";
 export { createActivityEventsDBService } from "./services/activity-events/activity-events";
@@ -10,6 +10,11 @@ export { createAgentConfigsDBService } from "./services/agent-configs/agent-conf
 export { createAttemptStatusesDBService } from "./services/attempt-statuses/attempt-statuses";
 export type { ValidColor } from "./services/colors";
 export { isValidColor, VALID_COLORS } from "./services/colors";
+export {
+  createExtensionInstancesDBService,
+  createExtensionStorageDBService,
+  createExtensionTemplatePreferencesDBService,
+} from "./services/extensions/extensions";
 export { createFilesDBService } from "./services/files/files";
 export { createProjectsDBService } from "./services/projects/projects";
 export { createReposDBService } from "./services/repos/repos";
