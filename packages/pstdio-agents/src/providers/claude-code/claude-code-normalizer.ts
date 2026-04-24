@@ -215,7 +215,16 @@ const handleContentBlockStart = (parsed: Record<string, unknown>, ctx: StreamCon
     return {
       id: `stream-tool-${ctx.index}`,
       role: "assistant",
-      parts: [{ type: "tool", tool, callId, actionType: classifyToolAction(tool), status: "pending" }],
+      parts: [
+        {
+          type: "tool",
+          tool,
+          callId,
+          actionType: classifyToolAction(tool),
+          status: "pending",
+          state: { input: block.input },
+        },
+      ],
       index: ctx.index,
     };
   }
@@ -284,6 +293,7 @@ const contentBlockToMessage = (block: ClaudeCodeContentBlock, ctx: StreamContext
           callId: block.id,
           actionType: classifyToolAction(block.name),
           status: "pending",
+          state: { input: block.input },
         },
       ],
       index: ctx.index,

@@ -240,14 +240,61 @@ describe("normalizeClaudeCodeStream", () => {
 
   test("handles content_block_start tool_use", async () => {
     const events: RawLogEvent[] = [
-      stdout({ type: "content_block_start", content_block: { type: "tool_use", name: "Edit", id: "call-1" } }),
+      stdout({
+        type: "content_block_start",
+        content_block: {
+          type: "tool_use",
+          name: "Edit",
+          id: "call-1",
+          input: { file_path: "/tmp/ticket.md", old_string: "before", new_string: "after" },
+        },
+      }),
     ];
     const result = await collect(normalizeClaudeCodeStream(toAsync(events)));
 
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({
       role: "assistant",
-      parts: [{ type: "tool", tool: "Edit", callId: "call-1", actionType: "write", status: "pending" }],
+      parts: [
+        {
+          type: "tool",
+          tool: "Edit",
+          callId: "call-1",
+          actionType: "write",
+          status: "pending",
+          state: { input: { file_path: "/tmp/ticket.md", old_string: "before", new_string: "after" } },
+        },
+      ],
+    });
+  });
+
+  test("preserves pending Bash input for queued command rendering", async () => {
+    const events: RawLogEvent[] = [
+      stdout({
+        type: "assistant",
+        message: {
+          content: [
+            {
+              type: "tool_use",
+              name: "Bash",
+              id: "call-1",
+              input: { command: "git status", description: "Shows repo status" },
+            },
+          ],
+        },
+      }),
+    ];
+    const result = await collect(normalizeClaudeCodeStream(toAsync(events)));
+
+    expect(result[0]).toMatchObject({
+      parts: [
+        {
+          type: "tool",
+          tool: "Bash",
+          status: "pending",
+          state: { input: { command: "git status", description: "Shows repo status" } },
+        },
+      ],
     });
   });
 
