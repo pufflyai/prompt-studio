@@ -30,6 +30,7 @@ import { createPortal } from "react-dom";
 import { Tooltip } from "../../../../tooltip";
 import { setFloatingElemPos } from "../LinkEditorPlugin/utils/setFloatingElemPos";
 import { type BlockType, resolveBlockTypeFromAnchor } from "./resolve-block-type";
+import { shouldShowFloatingToolbar } from "./should-show-floating-toolbar";
 
 // Increase the vertical gap (negative places it below the selection) to avoid overlap
 const GAP = -4;
@@ -132,15 +133,22 @@ function FloatingTextToolbar({
     }
 
     const rootElement = editor.getRootElement();
+    const hasNativeSelection = nativeSelection !== null;
+    const hasNativeRange = hasNativeSelection && nativeSelection.rangeCount > 0;
+    const isAnchorInsideEditor = Boolean(rootElement?.contains(hasNativeSelection ? nativeSelection.anchorNode : null));
 
     // Show floating toolbar when selection is inside the editor
     if (
-      selection !== null &&
-      $isRangeSelection(selection) &&
-      nativeSelection !== null &&
-      nativeSelection.rangeCount > 0 &&
-      rootElement?.contains(nativeSelection.anchorNode) &&
-      editor.isEditable()
+      shouldShowFloatingToolbar({
+        hasSelection: selection !== null,
+        isRangeSelection: $isRangeSelection(selection),
+        isCollapsed: $isRangeSelection(selection) ? selection.isCollapsed() : false,
+        hasNativeSelection,
+        hasNativeRange,
+        isAnchorInsideEditor,
+        isEditorEditable: editor.isEditable(),
+      }) &&
+      nativeSelection
     ) {
       const domRect: DOMRect | undefined = nativeSelection.getRangeAt(0).getBoundingClientRect();
 
