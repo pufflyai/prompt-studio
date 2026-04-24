@@ -42,6 +42,7 @@ import { useTicketContent } from "../hooks/use-ticket-content";
 import { useTicketFiles } from "../hooks/use-ticket-files";
 import { openTicketSessionBubble } from "../utils/open-ticket-session-bubble";
 import { resolveParentTicketReference } from "../utils/resolve-parent-ticket-reference";
+import { resolveSidebarSubTickets } from "../utils/sidebar-sub-tickets";
 import { isTicketContentReady } from "../utils/ticket-content-ready";
 import { resolveTicketDetailsState } from "../utils/ticket-details-state";
 import {
@@ -88,6 +89,7 @@ export const TicketDetailsPanel = () => {
   const ticket = ticketState.ticket;
   const parentReference = resolveParentTicketReference(allProjectTickets, ticket?.parentId);
   const ticketId = ticket?.id ?? "";
+  const sidebarSubTickets = ticket ? resolveSidebarSubTickets(allProjectTickets, ticket.id, ticket.shorthand) : [];
   const ticketFiles = useTicketFiles(ticket?.id);
   const selectableFiles = buildSelectableTicketFiles(ticketFiles.data);
   const selectedFile = resolveSelectedTicketFile(selectableFiles, selectedFileId);
@@ -288,7 +290,7 @@ export const TicketDetailsPanel = () => {
   const sidebar = (
     <TicketSidebar
       files={selectableFiles}
-      subTickets={ticket.subTickets}
+      subTickets={sidebarSubTickets}
       knownSubTicketIds={allProjectTickets.map((projectTicket) => projectTicket.id)}
       selectedFileId={selectedFile.id}
       workspaces={workspaces}

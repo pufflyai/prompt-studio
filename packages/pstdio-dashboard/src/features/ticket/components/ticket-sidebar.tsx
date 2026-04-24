@@ -11,7 +11,7 @@ import {
   WorkspaceBadge,
 } from "@pstdio/ui";
 import { FileCode, FileImage, FileJson, FileSpreadsheet, FileText, Plus } from "lucide-react";
-import { createElement } from "react";
+import { createElement, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ProjectMenu } from "@/features/project/components/project-menu";
 import { ProjectSidebarFooter } from "@/features/project/components/project-sidebar";
@@ -47,6 +47,8 @@ interface TicketSidebarProps {
   onCreateWorkspaceSessionDraft?: (workspaceId: string) => void;
   onCreateWorkspace?: () => void;
   onSelectPlanning?: () => void;
+  header?: ReactNode;
+  footer?: ReactNode;
   resolveTicketContextMenuItems?: () => SidebarActionMenuItem[];
   resolveWorkspaceContextMenuItems?: (workspace: TicketAttempt) => SidebarActionMenuItem[];
   resolveSessionContextMenuItems?: (session: WorkspaceSessionEntry) => SidebarActionMenuItem[];
@@ -116,6 +118,7 @@ export const buildSubTicketsSection = (
   const hasKnownTickets = knownTicketIdSet.size > 0;
 
   const nodes: SidebarNode[] = subTickets.map((subTicket) => {
+    const label = subTicket.shorthand ? `${subTicket.shorthand} ${subTicket.title}` : subTicket.title;
     const canSelect =
       Boolean(onSelectSubTicket) &&
       subTicket.shorthand.length > 0 &&
@@ -123,8 +126,7 @@ export const buildSubTicketsSection = (
 
     return {
       id: `sub-ticket:${subTicket.id}`,
-      label: subTicket.shorthand,
-      description: subTicket.title,
+      label,
       isNavigable: canSelect,
       disabled: !canSelect,
       navigationIntent: canSelect
@@ -136,6 +138,7 @@ export const buildSubTicketsSection = (
   return {
     id: "sub-tickets",
     label,
+    collapsible: false,
     nodes,
   };
 };
@@ -288,6 +291,8 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
     onCreateWorkspaceSessionDraft,
     onCreateWorkspace,
     onSelectPlanning,
+    header = <ProjectMenu />,
+    footer = <ProjectSidebarFooter />,
     resolveTicketContextMenuItems,
     resolveWorkspaceContextMenuItems,
     resolveSessionContextMenuItems,
@@ -351,8 +356,8 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
       sections={sections}
       activeNodeId={activeNodeIds}
       defaultExpandedSections={["files", "sub-tickets", "workspaces", "sessions"]}
-      header={<ProjectMenu />}
-      footer={<ProjectSidebarFooter />}
+      header={header}
+      footer={footer}
       onNavigate={handleNavigate}
       closable={false}
       width="240px"

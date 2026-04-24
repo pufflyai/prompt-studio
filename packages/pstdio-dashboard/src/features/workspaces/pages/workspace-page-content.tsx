@@ -16,6 +16,7 @@ import { formatTicketBreadcrumbLabel } from "@/features/ticket/utils/ticket-brea
 import type { buildSelectableTicketFiles } from "@/features/ticket/utils/ticket-file-selection";
 import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
 import type { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
+import type { TicketSubTicket } from "@/features/ticket-list/types";
 import type { transformFileDiffs } from "@/features/workspaces/utils/transform-diff";
 import { getAttemptLabelFromWorkspaceShorthand } from "@/features/workspaces/utils/workspace-shorthand";
 import { WorkspaceDiffPanel } from "../components/workspace-diff-panel";
@@ -29,6 +30,7 @@ interface WorkspacePageContentProps {
   projectId: string | undefined;
   ticketShorthand: string | undefined;
   ticket: NonNullable<ReturnType<typeof useProjectTickets>["data"]>[number];
+  sidebarSubTickets: TicketSubTicket[];
   knownTicketIds: string[];
   attemptStatusMap: ReturnType<typeof useAttemptStatusMap>;
   diffTotalsByWorkspaceId: Map<string, { additions: number; deletions: number }>;
@@ -158,6 +160,7 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
     projectId,
     ticketShorthand,
     ticket,
+    sidebarSubTickets,
     knownTicketIds,
     attemptStatusMap,
     diffTotalsByWorkspaceId,
@@ -218,7 +221,7 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
   const sidebar = (
     <TicketSidebar
       files={selectableFiles}
-      subTickets={ticket.subTickets}
+      subTickets={sidebarSubTickets}
       knownSubTicketIds={knownTicketIds}
       selectedFileId=""
       workspaces={attempts}

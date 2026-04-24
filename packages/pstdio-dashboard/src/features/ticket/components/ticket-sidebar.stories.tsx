@@ -51,6 +51,10 @@ const meta: Meta<typeof TicketSidebar> = {
   title: "Ticket/TicketSidebar",
   component: TicketSidebar,
   parameters: { layout: "padded" },
+  args: {
+    header: null,
+    footer: null,
+  },
 };
 
 export default meta;
@@ -58,9 +62,10 @@ export default meta;
 type Story = StoryObj<typeof TicketSidebar>;
 
 export const WorkspaceSessionsWithCreateAction: Story = {
-  render: () => (
+  render: (args) => (
     <Box maxW="260px">
       <TicketSidebar
+        {...args}
         files={[]}
         selectedFileId="ticket"
         workspaces={workspaces}
@@ -77,9 +82,10 @@ export const WorkspaceSessionsWithCreateAction: Story = {
 };
 
 export const WithSubTickets: Story = {
-  render: () => (
+  render: (args) => (
     <Box maxW="260px">
       <TicketSidebar
+        {...args}
         files={[]}
         subTickets={[
           { id: "ticket-2", shorthand: "PS-13", title: "Set up retries", statusId: null },
@@ -102,9 +108,10 @@ export const WithSubTickets: Story = {
 };
 
 export const WithoutSubTickets: Story = {
-  render: () => (
+  render: (args) => (
     <Box maxW="260px">
       <TicketSidebar
+        {...args}
         files={[]}
         subTickets={[]}
         knownSubTicketIds={[]}

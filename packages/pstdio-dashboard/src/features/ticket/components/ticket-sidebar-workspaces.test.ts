@@ -99,10 +99,10 @@ describe("buildSubTicketsSection", () => {
     expect(section?.nodes).toHaveLength(2);
     expect(section?.nodes[0]).toMatchObject({
       id: "sub-ticket:ticket-2",
+      label: "PS-34 First child",
       isNavigable: true,
       navigationIntent: { id: "select-sub-ticket", payload: { ticketShorthand: "PS-34" } },
     });
-    expect(section?.nodes[0]?.description).toBe("First child");
   });
 
   test("disables unresolved child tickets", () => {
@@ -143,6 +143,20 @@ describe("buildSubTicketsSection", () => {
       isNavigable: false,
     });
     expect(section?.nodes[0]?.navigationIntent).toBeUndefined();
+  });
+
+  test("falls back to the title when shorthand is missing", () => {
+    const section = buildSubTicketsSection(
+      [{ id: "ticket-2", shorthand: "", title: "Child without shorthand", statusId: null }],
+      "Sub-tickets",
+      ["ticket-2"],
+      mock(() => {}),
+    );
+
+    expect(section).toMatchObject({
+      collapsible: false,
+      nodes: [{ id: "sub-ticket:ticket-2", label: "Child without shorthand", disabled: true, isNavigable: false }],
+    });
   });
 });
 

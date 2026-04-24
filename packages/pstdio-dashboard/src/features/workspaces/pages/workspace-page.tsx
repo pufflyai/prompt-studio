@@ -15,6 +15,7 @@ import { useTicketAttemptDiff } from "@/features/ticket/hooks/use-ticket-attempt
 import { useTicketFiles } from "@/features/ticket/hooks/use-ticket-files";
 import { buildTicketOverflowActions } from "@/features/ticket/pages/ticket-details-actions";
 import { openTicketSessionBubble } from "@/features/ticket/utils/open-ticket-session-bubble";
+import { resolveSidebarSubTickets } from "@/features/ticket/utils/sidebar-sub-tickets";
 import { buildSelectableTicketFiles } from "@/features/ticket/utils/ticket-file-selection";
 import { useCreateTicketAttempt } from "@/features/ticket-list/hooks/use-create-ticket-attempt";
 import {
@@ -77,6 +78,7 @@ export const WorkspacePage = () => {
   const { data: project } = useProject(projectId);
   const { data: allTickets = [] } = useProjectTickets(projectId);
   const ticket = allTickets.find((item) => item.shorthand === ticketShorthand) ?? null;
+  const sidebarSubTickets = ticket ? resolveSidebarSubTickets(allTickets, ticket.id, ticket.shorthand) : [];
   const attempts = ticket?.attempts ?? [];
   const attemptStatusMap = useAttemptStatusMap(projectId);
   const createAttempt = useCreateTicketAttempt(projectId);
@@ -313,6 +315,7 @@ export const WorkspacePage = () => {
       projectId={projectId}
       ticketShorthand={ticketShorthand}
       ticket={ticket}
+      sidebarSubTickets={sidebarSubTickets}
       knownTicketIds={allTickets.map((projectTicket) => projectTicket.id)}
       attemptStatusMap={attemptStatusMap}
       diffTotalsByWorkspaceId={diffTotalsByWorkspaceId}
