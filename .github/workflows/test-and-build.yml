@@ -50,10 +50,25 @@ jobs:
       - name: Install Playwright browsers
         run: bun run --cwd packages/e2e playwright install --with-deps chromium
 
+      - name: Pre-warm bun install cache for plugin workspaces
+        env:
+          BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+        run: |
+          mkdir -p "$BUN_INSTALL_CACHE_DIR"
+          PRIME_DIR=$(mktemp -d)
+          echo '{"private":true,"type":"module","dependencies":{"@pstdio/sdk":"latest"}}' > "$PRIME_DIR/package.json"
+          (cd "$PRIME_DIR" && bun install)
+
       - name: Test monorepo (non-e2e)
+        env:
+          BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+          E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
         run: bunx lerna run test --ignore e2e
 
       - name: Test e2e (streamed)
+        env:
+          BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+          E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
         run: bun run --cwd packages/e2e test
 
   build_docker:

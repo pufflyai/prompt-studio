@@ -275,7 +275,10 @@ export const createScheduler = (input: SchedulerInput) => {
       });
   };
 
+  // unref so a leaked scheduler (e.g. a test that forgot to call dispose)
+  // doesn't keep the event loop alive and prevent `bun test` from exiting.
   const interval = setInterval(kickTick, input.tickIntervalMs);
+  interval.unref?.();
   kickTick();
 
   return {

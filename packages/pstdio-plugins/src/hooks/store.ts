@@ -36,6 +36,7 @@ export const createPluginRuntimeStore = (input: {
   ensureWorkspace?: (pstdioDir: string) => Promise<void>;
 }) => {
   const cache = new Map<string, PluginRuntime>();
+  const loading = new Map<string, Promise<PluginRuntime>>();
   const watchers = new Map<string, FSWatcher>();
 
   const stopWatching = (projectId: string) => {
@@ -58,6 +59,9 @@ export const createPluginRuntimeStore = (input: {
       stopWatching(projectId);
     });
 
+    // Leaked watchers shouldn't keep the event loop alive (same reason as
+    // the scheduler interval: tests that forget to dispose would hang CI).
+    watcher.unref?.();
     watchers.set(projectId, watcher);
   };
 
@@ -81,17 +85,35 @@ export const createPluginRuntimeStore = (input: {
       const cached = cache.get(projectId);
       if (cached) return cached;
 
-      const runtime = await loadForProject(projectId);
-      cache.set(projectId, runtime);
-      return runtime;
+      const pending = loading.get(projectId);
+      if (pending) return pending;
+
+      const load = loadForProject(projectId)
+        .then((runtime) => {
+          if (loading.get(projectId) === load) {
+            cache.set(projectId, runtime);
+          }
+
+          return runtime;
+        })
+        .finally(() => {
+          if (loading.get(projectId) === load) {
+            loading.delete(projectId);
+          }
+        });
+
+      loading.set(projectId, load);
+      return load;
     },
 
     invalidate(projectId: string) {
+      loading.delete(projectId);
       cache.delete(projectId);
       stopWatching(projectId);
     },
 
     dispose() {
+      loading.clear();
       for (const [projectId] of watchers) {
         stopWatching(projectId);
       }

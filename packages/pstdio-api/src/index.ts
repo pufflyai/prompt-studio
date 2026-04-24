@@ -1,6 +1,9 @@
 import { createApp } from "./app";
 
-const { app, close } = await createApp({ filesRoot: process.env.PSTDIO_FILES_ROOT ?? "" });
+const { app, close } = await createApp({
+  filesRoot: process.env.PSTDIO_FILES_ROOT ?? "",
+  schedulerTickMs: 60_000,
+});
 
 const shutdown = async () => {
   await close();
