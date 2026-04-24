@@ -102,7 +102,7 @@ export const createHandler =
 
     const frontmatter = parseFrontmatter(content);
 
-    const statusName = argv.status ?? frontmatter.status;
+    const statusName = argv.status;
     const tagIds = argv.tag?.length ? await deps.resolveTagIds(projectId, argv.tag) : undefined;
     const statusId = statusName ? await deps.resolveStatusId(projectId, statusName) : undefined;
 

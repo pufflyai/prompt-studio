@@ -22,7 +22,6 @@ export const buildTicketFrontmatter = (fields: FrontmatterFields) => {
   lines.push(`created: ${q(fields.created_at)}`);
   if (fields.draft !== null) lines.push(`draft: ${fields.draft}`);
 
-  if (fields.status_name) lines.push(`status: ${q(fields.status_name)}`);
   if (fields.parent_id) lines.push(`parent_id: ${q(fields.parent_id)}`);
   if (fields.depends_on) lines.push(`depends_on: ${q(fields.depends_on)}`);
   if (fields.parallelizable) lines.push(`parallelizable: ${q(fields.parallelizable)}`);
@@ -43,10 +42,10 @@ export const stripFrontmatter = (content: string) => {
 type ParsedFrontmatter = {
   blocked_reason?: string;
   parent_id?: string;
-  status?: string;
 };
 
-const ACTIONABLE_FIELDS = ["blocked_reason", "parent_id", "status"] as const;
+const ACTIONABLE_FIELDS = ["blocked_reason", "parent_id"] as const;
+const OMITTED_FRONTMATTER_KEYS = new Set(["status"]);
 
 export const parseFrontmatter = (content: string): ParsedFrontmatter => {
   if (!content.startsWith("---")) return {};
@@ -110,12 +109,16 @@ export const applyFrontmatterValues = (frontmatter: string, content: string) => 
   const overrideOrder: string[] = [];
   for (const line of frontmatterLines(frontmatter)) {
     const key = frontmatterKey(line);
-    if (!key) continue;
+    if (!key || OMITTED_FRONTMATTER_KEYS.has(key)) continue;
     overrides.set(key, line);
     overrideOrder.push(key);
   }
 
-  const existing = frontmatterLines(content);
+  const existing = frontmatterLines(content).filter((line) => {
+    const key = frontmatterKey(line);
+    return key ? !OMITTED_FRONTMATTER_KEYS.has(key) : true;
+  });
+
   const merged = existing.map((line) => {
     const key = frontmatterKey(line);
     if (!key) return line;

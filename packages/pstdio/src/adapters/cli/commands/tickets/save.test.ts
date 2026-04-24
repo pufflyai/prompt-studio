@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createHandler } from "./save";
 
@@ -161,7 +161,7 @@ describe("tickets save", () => {
           id: "t-1",
           shorthand: "PS-1",
           project_id: "proj-1",
-          status_id: "s-wip",
+          status_id: null,
           display_title: "updated-content",
           file_id: "file-1",
           draft: false,
@@ -183,9 +183,12 @@ describe("tickets save", () => {
       "t-1",
       expect.objectContaining({
         display_title: "updated-content",
-        status_id: "s-wip",
+        status_id: undefined,
       }),
     );
+
+    const rewritten = readFileSync(join(tmpBase, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8");
+    expect(rewritten).not.toContain("status:");
   });
 
   test("CLI --status flag overrides frontmatter status and strips frontmatter from upload", async () => {
