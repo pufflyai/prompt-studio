@@ -40,7 +40,11 @@ export default defineConfig({
         plugins: [["babel-plugin-react-compiler"]],
       },
     }),
-    dts({ tsconfigPath: "./tsconfig.json", afterDiagnostic: () => {} }),
+    dts({
+      tsconfigPath: "./tsconfig.json",
+      exclude: ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/*.stories.tsx"],
+      afterDiagnostic: () => {},
+    }),
     svgr(),
     externalizeDeps(),
   ],

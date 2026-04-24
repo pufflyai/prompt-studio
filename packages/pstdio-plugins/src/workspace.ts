@@ -1,6 +1,9 @@
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
 
 const GITIGNORE_ENTRIES = ["node_modules", "package.json", "package-lock.json", "bun.lock"].join("\n");
 
@@ -44,12 +47,14 @@ export const ensurePluginWorkspace = async (pstdioDir: string) => {
 
   const runtime = detectRuntime();
   try {
+    // Async so we don't block the event loop: on CI, a cold `bun install` can
+    // take 30s+ and a blocking call prevents `bun test` from finishing between
+    // test files when the scheduler triggers an install mid-run.
     if (runtime === "bun") {
-      execFileSync("bun", ["install"], { cwd: pstdioDir, stdio: "ignore" });
+      await execFileAsync("bun", ["install"], { cwd: pstdioDir });
     } else {
-      execFileSync("npm", ["install", "--ignore-scripts", "--no-audit", "--fund=false"], {
+      await execFileAsync("npm", ["install", "--ignore-scripts", "--no-audit", "--fund=false"], {
         cwd: pstdioDir,
-        stdio: "ignore",
       });
     }
   } catch {

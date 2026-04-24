@@ -26,19 +26,18 @@ export const createTicketAttempt = async (input: CreateTicketAttemptInput) => {
   if (input.prompt !== undefined) {
     body.prompt = input.prompt;
   }
+  if (input.startSession !== undefined) {
+    body.start_session = input.startSession;
+  }
 
   const response = await apiRequest<ApiCreateTicketAttemptResponse>(`/v1/tickets/${input.ticketId}/attempts`, {
     method: "POST",
     body,
   });
 
-  if (!response.session) {
-    throw new Error("Ticket attempt did not start a session.");
-  }
-
   return {
     ticketId: response.ticket.id,
-    sessionId: response.session.id,
+    sessionId: response.session?.id ?? null,
     workspaceId: response.workspace.id,
     workspaceShorthand: response.workspace.workspace_shorthand,
   } satisfies CreateTicketAttemptResult;

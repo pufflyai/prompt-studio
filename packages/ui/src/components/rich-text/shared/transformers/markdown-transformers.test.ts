@@ -8,7 +8,6 @@ import { $getRoot, $isElementNode, createEditor } from "lexical";
 import { ReferenceLinkNode } from "../../markdown-editor/plugins/ReferenceLinkPlugin";
 import { REFERENCE_LINK_TRANSFORMER } from "../../markdown-editor/plugins/ReferenceLinkPlugin/ReferenceLinkTransformer";
 import { DataTableNode } from "../nodes/DataTableNode";
-import { CodeBlockNode } from "../plugins/CodePlugin/CodeNode";
 import { EquationNode } from "../plugins/EquationPlugin/EquationNode";
 import { EQUATION_INLINE, EQUATION_MULTILINE } from "../plugins/EquationPlugin/EquationPlugin";
 import { HRNode } from "../plugins/HorizontalRulePlugin/HorizontalRuleNode";
@@ -34,7 +33,6 @@ function createHeadlessEditor() {
       ListNode,
       ListItemNode,
       CodeNode,
-      CodeBlockNode,
       EquationNode,
       HRNode,
       ReferenceLinkNode,
@@ -113,8 +111,8 @@ describe("markdown transformers", () => {
       if ($isListNode(listNode)) {
         listType = listNode.getListType();
         const children = listNode.getChildren();
-        if ($isListItemNode(children[0])) firstItemChecked = children[0].getChecked();
-        if ($isListItemNode(children[1])) secondItemChecked = children[1].getChecked();
+        if ($isListItemNode(children[0])) firstItemChecked = children[0].getChecked() ?? false;
+        if ($isListItemNode(children[1])) secondItemChecked = children[1].getChecked() ?? false;
       }
     });
 

@@ -6,7 +6,6 @@ import { createPluginRuntimeStore } from "pstdio-plugins/hooks";
 import { scaffoldBundledPlugins } from "../projects/scaffold-bundled-plugins";
 import { createScheduler } from "./plugin-scheduler";
 
-const SCHEDULE_TICK_MS = 60_000;
 const SCHEDULE_WATERMARK_FILE = "plugin-schedule-watermarks.json";
 
 type PluginServiceDeps = {
@@ -16,6 +15,10 @@ type PluginServiceDeps = {
   storageRoot: string;
   ensureWorkspace?: (pstdioDir: string) => Promise<void>;
   clientOptions?: ClientOptions;
+  // Opt-in: the scheduler only starts when `schedulerTickMs` is provided.
+  // Tests that don't exercise scheduling should leave this undefined so the
+  // leaked-service pattern (many test files create an app, never dispose)
+  // doesn't spawn background intervals, file watchers, and cron parsing.
   schedulerTickMs?: number;
   now?: () => Date;
 };
@@ -41,18 +44,21 @@ export const createPluginService = (deps: PluginServiceDeps) => {
     ensureWorkspace: deps.ensureWorkspace ?? ensurePluginWorkspace,
   });
 
-  const scheduler = createScheduler({
-    runtimeStore,
-    listProjectIds: deps.listProjectIds,
-    tickIntervalMs: deps.schedulerTickMs ?? SCHEDULE_TICK_MS,
-    now: () => deps.now?.() ?? new Date(),
-    watermarkPath: join(deps.storageRoot, SCHEDULE_WATERMARK_FILE),
-  });
+  const scheduler =
+    deps.schedulerTickMs !== undefined
+      ? createScheduler({
+          runtimeStore,
+          listProjectIds: deps.listProjectIds,
+          tickIntervalMs: deps.schedulerTickMs,
+          now: () => deps.now?.() ?? new Date(),
+          watermarkPath: join(deps.storageRoot, SCHEDULE_WATERMARK_FILE),
+        })
+      : null;
 
   return {
     ...runtimeStore,
     async dispose() {
-      await scheduler.dispose();
+      await scheduler?.dispose();
       runtimeStore.dispose();
     },
   };

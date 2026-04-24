@@ -7,20 +7,16 @@ import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { $getRoot, $nodesOfType, createEditor } from "lexical";
 import { editorTransformers } from "../../editor-config";
 import { MermaidNode } from "../MermaidPlugin/MermaidNode";
-import { CodeBlockNode } from "./CodeNode";
+import { replaceCodeNodeWithMermaidNode } from "./CodeBlockPlugin";
 
 function createHeadlessEditor() {
   return createEditor({
-    nodes: [QuoteNode, LinkNode, HeadingNode, ListNode, ListItemNode, CodeNode, CodeBlockNode, MermaidNode],
+    nodes: [QuoteNode, LinkNode, HeadingNode, ListNode, ListItemNode, CodeNode, MermaidNode],
   });
 }
 
-function isMermaidLanguage(language: string) {
-  return language.trim().toLowerCase() === "mermaid";
-}
-
 // Replicates the real editor flow: import markdown → ImportCodeBlocksPlugin converts
-// CodeNode to CodeBlockNode → export back to markdown
+// mermaid CodeNode blocks to MermaidNode → export back to markdown
 function markdownRoundtrip(markdown: string) {
   const editor = createHeadlessEditor();
   let result = "";
@@ -32,14 +28,12 @@ function markdownRoundtrip(markdown: string) {
     { discrete: true },
   );
 
-  // Mimic ImportCodeBlocksPlugin: replace CodeNode with CodeBlockNode
+  // Mimic ImportCodeBlocksPlugin
   editor.update(
     () => {
       const codeNodes = $nodesOfType(CodeNode);
       for (const n of codeNodes) {
-        const lang = n.getLanguage() ?? "plaintext";
-        const code = n.getTextContent();
-        n.replace(isMermaidLanguage(lang) ? new MermaidNode(code) : new CodeBlockNode(lang, code));
+        replaceCodeNodeWithMermaidNode(n);
       }
     },
     { discrete: true },
@@ -67,9 +61,7 @@ function markdownToTopLevelNodeTypes(markdown: string) {
     () => {
       const codeNodes = $nodesOfType(CodeNode);
       for (const n of codeNodes) {
-        const lang = n.getLanguage() ?? "plaintext";
-        const code = n.getTextContent();
-        n.replace(isMermaidLanguage(lang) ? new MermaidNode(code) : new CodeBlockNode(lang, code));
+        replaceCodeNodeWithMermaidNode(n);
       }
     },
     { discrete: true },
@@ -86,7 +78,7 @@ function markdownToTopLevelNodeTypes(markdown: string) {
   return nodeTypes;
 }
 
-describe("CodeBlockNode markdown roundtrip", () => {
+describe("CodeNode markdown roundtrip", () => {
   test("preserves fenced code blocks", () => {
     const markdown = "```ts\nconsole.log('hello');\n```";
     const result = markdownRoundtrip(markdown);
@@ -132,7 +124,6 @@ describe("CodeBlockNode markdown roundtrip", () => {
 
     expect(nodeTypes).toContain("mermaid");
     expect(nodeTypes).not.toContain("code");
-    expect(nodeTypes).not.toContain("codeblock");
   });
 
   test("converts mermaid markdown blocks with mixed-case language", () => {
@@ -141,6 +132,13 @@ describe("CodeBlockNode markdown roundtrip", () => {
 
     expect(nodeTypes).toContain("mermaid");
     expect(nodeTypes).not.toContain("code");
-    expect(nodeTypes).not.toContain("codeblock");
+  });
+
+  test("keeps non-mermaid markdown blocks as Lexical code nodes", () => {
+    const markdown = "```ts\nconsole.log('hello')\n```";
+    const nodeTypes = markdownToTopLevelNodeTypes(markdown);
+
+    expect(nodeTypes).toContain("code");
+    expect(nodeTypes).not.toContain("mermaid");
   });
 });

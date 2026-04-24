@@ -118,6 +118,24 @@ export const buildTagOptions = (tagDefinitions: WorkspaceTagDefinition[]) => ({
   ),
 });
 
+export const resolveKnownColumnKeys = (
+  columnGrouping: GroupingField,
+  knownColumnKeys: string[] | undefined,
+  categories: WorkspaceFilterCategory[],
+) => {
+  if (columnGrouping === "none") {
+    return undefined;
+  }
+
+  if (columnGrouping === "status") {
+    if (knownColumnKeys) {
+      return knownColumnKeys;
+    }
+  }
+
+  return categories.find((category) => category.id === columnGrouping)?.options.map((option) => option.value);
+};
+
 export const omitFilterCategory = (filters: FilterState, category: FilterCategory): FilterState => {
   const next = { ...filters } as Record<string, string[] | undefined>;
   delete next[category];

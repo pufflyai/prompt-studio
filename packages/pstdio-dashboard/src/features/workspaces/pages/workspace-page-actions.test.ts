@@ -2,6 +2,7 @@ import { describe, expect, it, mock } from "bun:test";
 import type { ActionDescriptor } from "@/features/plugin-actions/api";
 import { buildHeaderActionGroups } from "@/features/plugin-actions/components/header-action-groups";
 import { buildWorkspaceDeleteOverflowAction, runWorkspaceDeleteFlow } from "./workspace-page-actions";
+import { navigateToCreatedWorkspace, runWorkspaceAttempt, runWorkspaceCreation } from "./workspace-page-helpers";
 
 const t = (key: string) => key;
 
@@ -94,5 +95,97 @@ describe("workspace-page-actions", () => {
     ).rejects.toThrow("delete failed");
 
     expect(events).toEqual(["delete"]);
+  });
+
+  it("creates a workspace without starting a session", async () => {
+    const mutateAsync = mock(async () => ({ workspaceShorthand: "PS-72_A3", sessionId: null }));
+
+    const started = await runWorkspaceCreation({
+      ticket: {
+        id: "ticket-1",
+        shorthand: "PS-72",
+      } as never,
+      projectId: "project-1",
+      project: {
+        repositories: [{ id: "repo-1" }],
+      } as never,
+      createAttempt: {
+        isPending: false,
+        mutateAsync,
+      } as never,
+      lastSelectedAgent: "opencode",
+      lastSelectedModels: ["gpt-5.4"],
+      lastSelectedBranches: ["feature/test"],
+      lastSelectedRepo: "repo-2",
+      startSession: false,
+      onSuccess: () => {},
+    });
+
+    expect(started).toBe(true);
+    expect(mutateAsync).toHaveBeenCalledWith({
+      ticketId: "ticket-1",
+      agent: "opencode",
+      repoId: "repo-2",
+      branch: "feature/test",
+      model: "gpt-5.4",
+      prompt: null,
+      startSession: false,
+    });
+  });
+
+  it("keeps run attempt behavior by starting a session with the implement prompt", async () => {
+    const onSuccess = mock(() => {});
+    const mutateAsync = mock(async () => ({ workspaceShorthand: "PS-72_A4", sessionId: "session-1" }));
+
+    const started = await runWorkspaceAttempt({
+      ticket: {
+        id: "ticket-1",
+        shorthand: "PS-72",
+      },
+      projectId: "project-1",
+      project: {
+        repositories: [{ id: "repo-1" }],
+      } as never,
+      createAttempt: {
+        isPending: false,
+        mutateAsync,
+      } as never,
+      lastSelectedAgent: "opencode",
+      lastSelectedModels: ["gpt-5.4"],
+      lastSelectedBranches: ["feature/test"],
+      lastSelectedRepo: "repo-2",
+      onSuccess,
+    });
+
+    expect(started).toBe(true);
+    expect(mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ticketId: "ticket-1",
+        startSession: true,
+        prompt: expect.stringContaining("PS-72"),
+      }),
+    );
+    expect(onSuccess).toHaveBeenCalledWith({ workspaceShorthand: "PS-72_A4", sessionId: "session-1" });
+  });
+
+  it("navigates to a created workspace and clears the selected session", () => {
+    const navigate = mock(() => {});
+    const setSelectedSessionId = mock(() => {});
+
+    navigateToCreatedWorkspace({
+      navigate: navigate as never,
+      setSelectedSessionId,
+      projectId: "project-1",
+      ticketShorthand: "PS-72",
+      workspaceShorthand: "PS-72_A5",
+      tab: "checks",
+    });
+
+    expect(setSelectedSessionId).toHaveBeenCalledWith(null);
+    expect(navigate).toHaveBeenCalledWith({
+      to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
+      params: { projectId: "project-1", ticketShorthand: "PS-72", workspaceShorthand: "PS-72_A5" },
+      search: { tab: "checks" },
+    });
   });
 });

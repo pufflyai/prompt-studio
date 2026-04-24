@@ -53,6 +53,33 @@ describe("createPluginRuntimeStore", () => {
     expect(resolveCount).toBe(1);
   });
 
+  test("shares concurrent loads for the same project", async () => {
+    const repoPath = createTempDir();
+    const loadStarted = Promise.withResolvers<void>();
+    const unblockLoad = Promise.withResolvers<void>();
+    let resolveCount = 0;
+
+    const store = createPluginRuntimeStore({
+      resolveRepoPath: async () => {
+        resolveCount++;
+        loadStarted.resolve();
+        await unblockLoad.promise;
+        return repoPath;
+      },
+      createClient: stubClient,
+    });
+
+    const firstLoad = store.getForProject("project-1");
+    await loadStarted.promise;
+    const secondLoad = store.getForProject("project-1");
+
+    unblockLoad.resolve();
+    const [first, second] = await Promise.all([firstLoad, secondLoad]);
+
+    expect(first).toBe(second);
+    expect(resolveCount).toBe(1);
+  });
+
   test("invalidate clears the cache for a project", async () => {
     const repoPath = createTempDir();
     let resolveCount = 0;

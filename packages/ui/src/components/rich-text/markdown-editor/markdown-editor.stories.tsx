@@ -146,6 +146,18 @@ flowchart TD
 \`\`\`
 `;
 
+const editableCodeBlockMessage = `
+# Code Authoring
+
+Click into the code block below to edit it inline, use the floating toolbar to insert another code block from a cursor position, and use the copy button on the block chrome.
+
+\`\`\`ts
+export function greet(name: string) {
+  return \`Hello, \${name}\`;
+}
+\`\`\`
+`;
+
 const meta: Meta<typeof MarkdownEditor> = {
   title: "Editors/Markdown Editor",
   component: MarkdownEditor,
@@ -211,5 +223,12 @@ export const MermaidReadOnly: Story = {
   args: {
     defaultState: mermaidMessage,
     isEditable: false,
+  },
+};
+
+export const EditableCodeBlocks: Story = {
+  args: {
+    defaultState: editableCodeBlockMessage,
+    isEditable: true,
   },
 };

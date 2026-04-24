@@ -108,20 +108,25 @@ describe("createPluginService", () => {
   test("runs schedules for all projects without opening them in the UI", async () => {
     const repoA = createTempRepo();
     const repoB = createTempRepo();
+    const sigilKey = `__runsScheduledPluginTest_${crypto.randomUUID().replace(/-/g, "")}`;
+    (globalThis as Record<string, unknown>)[sigilKey] = new Set<string>();
 
+    // The handler pushes into a `globalThis` sigil rather than a shared module
+    // array: on Linux the plugin loader falls back to Bun.build, so each
+    // `import(...)` returns a freshly-bundled module with its own closure
+    // state. All bundles share the same `globalThis`; that's the one
+    // object we can read from both the scheduler's handler and the test.
     const createScheduledPlugin = (repoPath: string) => {
       const pluginsDir = join(repoPath, ".pstdio", "plugins");
       mkdirSync(pluginsDir, { recursive: true });
       writeFileSync(
         join(pluginsDir, "scheduled.ts"),
-        `const runs = [];
-        export { runs };
-        export default {
+        `export default {
           schedules: [{
             name: "heartbeat",
             cron: "* * * * *",
             handler(ctx) {
-              runs.push(ctx.projectId);
+              (globalThis)[${JSON.stringify(sigilKey)}].add(ctx.projectId);
             },
           }],
         };`,
@@ -148,18 +153,9 @@ describe("createPluginService", () => {
     });
     services.push(service);
 
-    await waitFor(async () => {
-      const runtimeA = await service.getForProject("project-a");
-      const runtimeB = await service.getForProject("project-b");
-      const scheduleA = runtimeA.schedules.get("scheduled/heartbeat");
-      const scheduleB = runtimeB.schedules.get("scheduled/heartbeat");
-      return scheduleA !== undefined && scheduleB !== undefined;
-    });
-
-    await waitFor(async () => {
-      const moduleA = await import(join(repoA, ".pstdio", "plugins", "scheduled.ts"));
-      const moduleB = await import(join(repoB, ".pstdio", "plugins", "scheduled.ts"));
-      return moduleA.runs.length > 0 && moduleB.runs.length > 0;
+    await waitFor(() => {
+      const runs = (globalThis as Record<string, unknown>)[sigilKey] as Set<string>;
+      return runs.has("project-a") && runs.has("project-b");
     }, 5_000);
   });
 });

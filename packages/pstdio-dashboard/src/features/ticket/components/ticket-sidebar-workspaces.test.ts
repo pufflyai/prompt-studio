@@ -1,6 +1,7 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import type { TicketAttempt } from "@/features/ticket-list/types";
 import type { WorkspaceSessionEntry } from "@/features/workspaces/hooks/use-workspace-sessions";
+import { buildWorkspacesSection } from "./ticket-sidebar";
 import { sortWorkspacesByLatestSession } from "./ticket-sidebar-workspaces";
 
 const buildWorkspace = (overrides: Partial<TicketAttempt>): TicketAttempt => ({
@@ -49,5 +50,21 @@ describe("sortWorkspacesByLatestSession", () => {
       "workspace-2",
       "workspace-1",
     ]);
+  });
+});
+
+describe("buildWorkspacesSection", () => {
+  test("adds a create action when workspace creation is available", () => {
+    const onCreateWorkspace = mock(() => {});
+
+    const section = buildWorkspacesSection([], new Map(), new Map(), new Map(), onCreateWorkspace);
+
+    expect(section.actions).toHaveLength(1);
+    expect(section.actions?.[0]?.id).toBe("new-workspace");
+    expect(section.actions?.[0]?.label).toBe("New workspace");
+
+    section.actions?.[0]?.onAction?.({ sectionId: "workspaces" });
+
+    expect(onCreateWorkspace).toHaveBeenCalled();
   });
 });

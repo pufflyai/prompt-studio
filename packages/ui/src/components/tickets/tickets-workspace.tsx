@@ -25,7 +25,14 @@ import {
   type WorkspaceTicket,
 } from "./types";
 import { useTicketsWorkspaceStore } from "./use-workspace-store";
-import { buildDefaultFilterCategories, buildTagOptions, toBadges, toTagBadges, toTitleCase } from "./workspace-helpers";
+import {
+  buildDefaultFilterCategories,
+  buildTagOptions,
+  resolveKnownColumnKeys,
+  toBadges,
+  toTagBadges,
+  toTitleCase,
+} from "./workspace-helpers";
 
 interface BoardColumnConfig {
   color?: string;
@@ -49,8 +56,8 @@ interface TicketsWorkspaceProps<TTicket extends WorkspaceTicket = WorkspaceTicke
   emptyDescription?: string;
   onTicketClick?: (ticket: TTicket) => void;
   onTagChange?: (ticketId: string, tagName: string, newValue: string) => void;
-  onMoveTicket?: (ticketId: string, targetColumnId: string) => void;
-  onMoveToGroup?: (ticketId: string, targetGroupKey: string) => void;
+  onMoveTicket?: (ticketId: string, targetColumnId: string, context?: { columnGrouping: GroupingField }) => void;
+  onMoveToGroup?: (ticketId: string, targetGroupKey: string, context?: { rowGrouping: GroupingField }) => void;
   onCreateTicket?: (columnId: string) => void;
   onColumnAction?: (columnId: string, actionId: string) => Promise<void> | void;
   getBoardColumnConfig?: (groupKey: string) => BoardColumnConfig;
@@ -107,11 +114,7 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
     categoryOptions.map((category) => [category.id, countFilterValues(tickets, category.id)]),
   );
 
-  const knownColumnKeys =
-    knownColumnKeysProp ??
-    (settings.columnGrouping !== "none"
-      ? categoryOptions.find((c) => c.id === settings.columnGrouping)?.options.map((o) => o.value)
-      : undefined);
+  const knownColumnKeys = resolveKnownColumnKeys(settings.columnGrouping, knownColumnKeysProp, categoryOptions);
 
   const grouped = groupTickets(visibleTickets, {
     columnGrouping: settings.columnGrouping,
@@ -132,7 +135,8 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
   const toGroupListItem = (group: { key: string; label: string; tickets: WorkspaceTicket[] }): TicketListItem => ({
     id: `group::${group.key}`,
     ticketId: "",
-    title: `${toTitleCase(group.label)} (${group.tickets.length})`,
+    title: toTitleCase(group.label),
+    countBadge: group.tickets.length,
     children: orderTickets(group.tickets, settings.ordering, tagDefinitions).map((ticket) =>
       toListItem(ticket as TTicket),
     ),
@@ -146,7 +150,8 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
             return {
               id: `group::${group.key}`,
               ticketId: "",
-              title: `${toTitleCase(group.label)} (${group.tickets.length})`,
+              title: toTitleCase(group.label),
+              countBadge: group.tickets.length,
               children: group.rows.map((row) => ({
                 ...toGroupListItem(row),
                 id: `group::${group.key}::${row.key}`,
@@ -229,8 +234,12 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
             <TicketBoard
               columns={boardColumns}
               selectedItemId={selectedTicketId}
-              onMoveItem={onMoveTicket}
-              onMoveToGroup={onMoveToGroup}
+              onMoveItem={(ticketId, targetColumnId) =>
+                onMoveTicket?.(ticketId, targetColumnId, { columnGrouping: settings.columnGrouping })
+              }
+              onMoveToGroup={(ticketId, targetGroupKey) =>
+                onMoveToGroup?.(ticketId, targetGroupKey, { rowGrouping: settings.rowGrouping })
+              }
               onCreateStart={onCreateTicket}
               onColumnAction={onColumnAction}
             />

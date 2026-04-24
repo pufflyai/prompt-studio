@@ -1,7 +1,7 @@
 import "../theme/rich-text-theme.css";
 
 import { Flex } from "@chakra-ui/react";
-import { CodeNode } from "@lexical/code";
+import { CodeHighlightNode, CodeNode } from "@lexical/code";
 import { AutoLinkNode, LinkNode } from "@lexical/link";
 import { ListItemNode, ListNode } from "@lexical/list";
 import { $convertFromMarkdownString, $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
@@ -18,7 +18,7 @@ import { $getRoot } from "lexical";
 import { ContentEditable } from "../shared/components/content-editable";
 import { DataTableNode } from "../shared/nodes/DataTableNode";
 import { ImportCodeBlocksPlugin } from "../shared/plugins/CodePlugin/CodeBlockPlugin";
-import { CodeBlockNode } from "../shared/plugins/CodePlugin/CodeNode";
+import { CodeHighlightingPlugin } from "../shared/plugins/CodePlugin/CodeHighlightingPlugin";
 import { EquationNode } from "../shared/plugins/EquationPlugin/EquationNode";
 import { EQUATION_INLINE, EQUATION_MULTILINE, EquationPlugin } from "../shared/plugins/EquationPlugin/EquationPlugin";
 import { HRNode } from "../shared/plugins/HorizontalRulePlugin/HorizontalRuleNode";
@@ -63,7 +63,7 @@ export function RichMessage(props: RichMessageProps) {
       ListNode,
       ListItemNode,
       CodeNode,
-      CodeBlockNode,
+      CodeHighlightNode,
       MermaidNode,
       EquationNode,
       HRNode,
@@ -100,6 +100,7 @@ export function RichMessage(props: RichMessageProps) {
         <ClickableLinkPlugin newTab />
         <ListPlugin />
         <HorizontalRulePlugin />
+        <CodeHighlightingPlugin />
         <ImportCodeBlocksPlugin />
         <EquationPlugin />
         <RichTextPlugin

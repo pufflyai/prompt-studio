@@ -15,7 +15,9 @@ import { WebsocketProvider } from "y-websocket";
 import * as Y from "yjs";
 import { ContentEditable } from "../shared/components/content-editable";
 import { editorNodes, editorTheme } from "../shared/editor-config";
+import { CodeBlockActionsPlugin } from "../shared/plugins/CodePlugin/CodeBlockActionsPlugin";
 import { ImportCodeBlocksPlugin } from "../shared/plugins/CodePlugin/CodeBlockPlugin";
+import { CodeHighlightingPlugin } from "../shared/plugins/CodePlugin/CodeHighlightingPlugin";
 import { EquationPlugin } from "../shared/plugins/EquationPlugin/EquationPlugin";
 import { FloatingTextFormatToolbarPlugin } from "../shared/plugins/FloatingTextFormatToolbarPlugin";
 import { AwarenessCursorsCSS } from "./awareness-cursors";
@@ -97,7 +99,9 @@ export function CollaborativeMarkdownEditor(props: CollaborativeMarkdownEditorPr
           <LinkPlugin />
           <ListPlugin />
           <HorizontalRulePlugin />
+          <CodeHighlightingPlugin />
           <ImportCodeBlocksPlugin />
+          <CodeBlockActionsPlugin anchorElem={floatingToolbarAnchorElem} />
           <EquationPlugin />
           <RichTextPlugin
             contentEditable={<ContentEditable fullWidth={false} />}
