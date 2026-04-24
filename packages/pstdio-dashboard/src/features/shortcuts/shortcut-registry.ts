@@ -63,6 +63,7 @@ type EditableTarget = {
   tagName?: string | null;
   type?: string | null;
   isContentEditable?: boolean;
+  parentElement?: EditableTarget | null;
 };
 
 const NON_TEXT_INPUT_TYPES = new Set([
@@ -84,11 +85,18 @@ export const isEditableEventTarget = (target: EventTarget | EditableTarget | nul
   }
 
   const editableTarget = target as EditableTarget;
-  if (editableTarget.isContentEditable) {
+  const candidate =
+    editableTarget.parentElement && !editableTarget.tagName ? editableTarget.parentElement : editableTarget;
+
+  if (!candidate) {
+    return false;
+  }
+
+  if (candidate.isContentEditable) {
     return true;
   }
 
-  const tagName = editableTarget.tagName?.toUpperCase();
+  const tagName = candidate.tagName?.toUpperCase();
   if (tagName === "TEXTAREA" || tagName === "SELECT") {
     return true;
   }
@@ -97,6 +105,6 @@ export const isEditableEventTarget = (target: EventTarget | EditableTarget | nul
     return false;
   }
 
-  const type = editableTarget.type?.toLowerCase() ?? "text";
+  const type = candidate.type?.toLowerCase() ?? "text";
   return !NON_TEXT_INPUT_TYPES.has(type);
 };

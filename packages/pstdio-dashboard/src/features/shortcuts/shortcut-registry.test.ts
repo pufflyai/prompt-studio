@@ -36,9 +36,15 @@ describe("shortcut-registry", () => {
   });
 
   it("identifies editable event targets", () => {
+    const textNodeInsideEditable = {
+      nodeType: 3,
+      parentElement: { isContentEditable: true },
+    } as unknown as EventTarget;
+
     expect(isEditableEventTarget({ tagName: "INPUT", type: "text" })).toBe(true);
     expect(isEditableEventTarget({ tagName: "TEXTAREA" })).toBe(true);
     expect(isEditableEventTarget({ isContentEditable: true })).toBe(true);
+    expect(isEditableEventTarget(textNodeInsideEditable)).toBe(true);
     expect(isEditableEventTarget({ tagName: "INPUT", type: "button" })).toBe(false);
     expect(isEditableEventTarget({ tagName: "DIV", isContentEditable: false })).toBe(false);
   });
