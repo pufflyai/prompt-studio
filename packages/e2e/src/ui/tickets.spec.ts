@@ -635,7 +635,7 @@ test.describe("Ticket list additional coverage", () => {
     await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets`);
 
-    await expect(page.getByText(ticket.shorthand, { exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(ticket.shorthand)).toBeVisible();
 
     const workspaceBadge = page.getByTestId("workspace-badge").first();
     const attemptStatusIndicator = page.getByLabel("Attempt status review-ready").first();

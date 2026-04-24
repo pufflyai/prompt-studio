@@ -14,7 +14,8 @@
     "test:coverage": "bun test --coverage"
   },
   "dependencies": {
-    "@pstdio/sdk": "workspace:*"
+    "@pstdio/sdk": "workspace:*",
+    "pstdio-db": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",

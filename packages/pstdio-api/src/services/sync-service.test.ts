@@ -1,6 +1,14 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import type { DbClient } from "pstdio-db";
-import { createAgentConfigsDBService, createDb, createProjectsDBService, createStatusesDBService } from "pstdio-db";
+import {
+  createAgentConfigsDBService,
+  createDb,
+  createExtensionInstancesDBService,
+  createExtensionStorageDBService,
+  createExtensionTemplatePreferencesDBService,
+  createProjectsDBService,
+  createStatusesDBService,
+} from "pstdio-db";
 import { EventBus } from "../features/sync/event-bus";
 import { createSyncService, SYNCED_TABLES } from "./sync-service";
 
@@ -62,6 +70,34 @@ describe("createSyncService", () => {
       expect(state.ticket_tag_options).toHaveLength(10);
       expect(state.agent_configs).toHaveLength(1);
       expect((state.agent_configs[0] as Record<string, unknown>).agent_id).toBe("claude-code");
+    });
+
+    test("includes extension storage tables", async () => {
+      await setup();
+      const syncService = createSyncService({ db, eventBus });
+      const project = await createProjectsDBService(db).create({ name: "extension-sync" });
+      const instances = createExtensionInstancesDBService(db);
+      const storage = createExtensionStorageDBService(db);
+      const preferences = createExtensionTemplatePreferencesDBService(db);
+
+      await instances.create({
+        project_id: project.id,
+        extension_id: "local.templates",
+        display_name: "Templates",
+        source_kind: "local",
+        local_path: ".pstdio/extensions/local.templates",
+      });
+      const scope = { project_id: project.id, extension_id: "local.templates", scope_type: "project", scope_id: "" };
+      await storage.set(scope, "setup", { complete: true });
+      await storage.collection(scope, "statuses").put("backlog", { label: "Backlog" });
+      await preferences.setEnabled(project.id, "local.templates", "defaultTicket", false);
+
+      const state = await syncService.getFullState();
+
+      expect(state.extension_instances).toHaveLength(1);
+      expect(state.extension_kv).toHaveLength(1);
+      expect(state.extension_collection_items).toHaveLength(1);
+      expect(state.extension_template_preferences).toHaveLength(1);
     });
 
     test("excludes soft-deleted rows", async () => {
@@ -127,6 +163,39 @@ describe("createSyncService", () => {
       // The project delete should be last
       expect(events[events.length - 1].table).toBe("projects");
       expect(events[events.length - 1].data).toEqual({ id: project.id });
+    });
+
+    test("emits extension storage deletes before a project delete", async () => {
+      await setup();
+      const syncService = createSyncService({ db, eventBus });
+      const project = await createProjectsDBService(db).create({ name: "extension-cascade" });
+      const instances = createExtensionInstancesDBService(db);
+      const storage = createExtensionStorageDBService(db);
+      const preferences = createExtensionTemplatePreferencesDBService(db);
+
+      await instances.create({
+        project_id: project.id,
+        extension_id: "local.templates",
+        display_name: "Templates",
+        source_kind: "local",
+        local_path: ".pstdio/extensions/local.templates",
+      });
+      const scope = { project_id: project.id, extension_id: "local.templates", scope_type: "project", scope_id: "" };
+      await storage.set(scope, "setup", { complete: true });
+      await storage.collection(scope, "statuses").put("backlog", { label: "Backlog" });
+      await preferences.setEnabled(project.id, "local.templates", "defaultTicket", false);
+
+      const events: { table: string; op: string; data: unknown }[] = [];
+      eventBus.subscribe((e) => events.push(e));
+
+      await syncService.emitCascadeDeletes("projects", project.id);
+
+      const tables = events.map((event) => event.table);
+      expect(tables).toContain("extension_kv");
+      expect(tables).toContain("extension_collection_items");
+      expect(tables).toContain("extension_template_preferences");
+      expect(tables).toContain("extension_instances");
+      expect(events[events.length - 1].table).toBe("projects");
     });
 
     test("does nothing for a non-existent row", async () => {
