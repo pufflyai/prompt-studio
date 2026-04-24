@@ -2,7 +2,6 @@
 ticket_id: "{{TICKET_ID}}"
 user_prompt: "{{USER_PROMPT}}"
 created: "{{CREATED_AT}}"
-status: "{{STATUS}}"
 parent_id: "{{PARENT_ID}}"
 depends_on: []
 parallelizable: "[no|yes]"

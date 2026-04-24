@@ -45,6 +45,18 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     return updated;
   };
 
+  const cancel = async (id: string) => {
+    const entry = store.get(id);
+    entry?.process?.kill();
+
+    const updated = await transitionStatus(id, "cancelled");
+    if (updated) {
+      entry?.eventStore.push({ op: "replace", path: "/status", value: "cancelled" });
+    }
+
+    return updated;
+  };
+
   const create = async (input: Parameters<typeof raw.create>[0], options: CreateSessionOptions = {}) => {
     const session = await raw.create(input);
     deps.eventBus.emit("sessions", "set", session);
@@ -93,6 +105,7 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     create,
     update,
     transitionStatus,
+    cancel,
     archive,
     resume,
     store,

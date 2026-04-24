@@ -1,6 +1,6 @@
 import type { Session } from "../types";
 
-interface SessionDto {
+export interface SessionDto extends Record<string, unknown> {
   id: string;
   project_id: string | null;
   agent_session_id: string | null;

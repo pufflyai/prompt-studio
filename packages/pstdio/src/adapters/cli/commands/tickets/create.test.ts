@@ -164,7 +164,7 @@ describe("tickets create", () => {
     expect(createTicket).toHaveBeenCalledWith(expect.objectContaining({ status_id: "s-wip" }));
   });
 
-  test("includes status in frontmatter when --status is provided", async () => {
+  test("does not persist status in frontmatter when --status is provided", async () => {
     const writeTicketFile = mock((_root: string, _shorthand: string, _content: string) => "");
 
     const handler = createHandler({
@@ -179,7 +179,7 @@ describe("tickets create", () => {
     await handler({ content: "Status ticket", status: "wip", _: [], $0: "" } as never);
 
     const content = writeTicketFile.mock.calls[0][2];
-    expect(content).toContain('status: "wip"');
+    expect(content).not.toContain("status:");
   });
 
   test("throws when status not found", async () => {

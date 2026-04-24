@@ -26,6 +26,22 @@ const OPENCODE_STALE_TURN_TIMEOUT_MS = 30 * 60 * 1_000;
 
 const hasErrorParts = (messages: SessionMessage[]) => messages.some((m) => m.parts.some((p) => p.type === "error"));
 
+const waitForNextPoll = (abortSignal?: AbortSignal) =>
+  new Promise<void>((resolve) => {
+    if (abortSignal?.aborted) {
+      resolve();
+      return;
+    }
+
+    const finish = () => {
+      clearTimeout(timeout);
+      abortSignal?.removeEventListener("abort", finish);
+      resolve();
+    };
+    const timeout = setTimeout(finish, OPENCODE_POLL_INTERVAL_MS);
+    abortSignal?.addEventListener("abort", finish, { once: true });
+  });
+
 const toErrorMessage = (error: unknown) => {
   if (error instanceof Error && error.message.trim().length > 0) {
     return error.message;
@@ -59,6 +75,11 @@ const trackPostState = (messageComplete: Promise<void>): PostState => {
 const disconnectStaleTurn = (eventStore: EventStore) => {
   eventStore.push({ op: "replace", path: "/status", value: "disconnected" });
   return { code: null as number | null, signal: "TIMEOUT" as string | null };
+};
+
+const cancelTurn = (eventStore: EventStore) => {
+  eventStore.push({ op: "replace", path: "/status", value: "cancelled" });
+  return { code: null as number | null, signal: "SIGTERM" as string | null };
 };
 
 const shouldStopPolling = (input: { turnVisible: boolean; inFlight: boolean; postState: PostState }) => {
@@ -138,8 +159,9 @@ export const pollOpencodeMessages = async (input: {
   eventStore: EventStore;
   baselineCount: number;
   messageComplete: Promise<void>;
+  abortSignal?: AbortSignal;
 }) => {
-  const { loadMessages, sessionId, cwd, eventStore, baselineCount, messageComplete } = input;
+  const { loadMessages, sessionId, cwd, eventStore, baselineCount, messageComplete, abortSignal } = input;
   let lastSnapshot = "";
   let latestMessages: SessionMessage[] = [];
   let lastObserved: OpencodeSessionMessage[] = [];
@@ -147,6 +169,10 @@ export const pollOpencodeMessages = async (input: {
   const postState = trackPostState(messageComplete);
 
   while (true) {
+    if (abortSignal?.aborted) {
+      return cancelTurn(eventStore);
+    }
+
     const snapshot = await readSessionSnapshot({
       loadMessages,
       sessionId,
@@ -159,6 +185,10 @@ export const pollOpencodeMessages = async (input: {
     lastObserved = snapshot.lastObserved;
     lastSnapshot = snapshot.lastSnapshot;
     latestMessages = snapshot.latestMessages;
+
+    if (abortSignal?.aborted) {
+      return cancelTurn(eventStore);
+    }
 
     const now = Date.now();
     const inFlight = isTurnInFlight(lastObserved);
@@ -178,7 +208,7 @@ export const pollOpencodeMessages = async (input: {
       break;
     }
 
-    await new Promise((resolve) => setTimeout(resolve, OPENCODE_POLL_INTERVAL_MS));
+    await waitForNextPoll(abortSignal);
   }
 
   if (postState.failed) {
@@ -204,14 +234,19 @@ export const pollOpencodeUntilIdle = async (input: {
   sessionId: string;
   cwd: string | undefined;
   eventStore: EventStore;
+  abortSignal?: AbortSignal;
 }) => {
-  const { loadMessages, sessionId, cwd, eventStore } = input;
+  const { loadMessages, sessionId, cwd, eventStore, abortSignal } = input;
   let lastSnapshot = "";
   let latestMessages: SessionMessage[] = [];
   let lastObserved: OpencodeSessionMessage[] = [];
   let lastInFlightProgressAt: number | null = null;
 
   while (true) {
+    if (abortSignal?.aborted) {
+      return cancelTurn(eventStore);
+    }
+
     const snapshot = await readSessionSnapshot({
       loadMessages,
       sessionId,
@@ -224,6 +259,10 @@ export const pollOpencodeUntilIdle = async (input: {
     lastObserved = snapshot.lastObserved;
     lastSnapshot = snapshot.lastSnapshot;
     latestMessages = snapshot.latestMessages;
+
+    if (abortSignal?.aborted) {
+      return cancelTurn(eventStore);
+    }
 
     const now = Date.now();
     lastInFlightProgressAt = resolveInFlightTurnProgressAt({
@@ -241,7 +280,7 @@ export const pollOpencodeUntilIdle = async (input: {
       break;
     }
 
-    await new Promise((resolve) => setTimeout(resolve, OPENCODE_POLL_INTERVAL_MS));
+    await waitForNextPoll(abortSignal);
   }
 
   const trailing = latestMessages.at(-1);

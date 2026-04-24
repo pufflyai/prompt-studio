@@ -41,7 +41,6 @@ describe("buildTicketFrontmatter", () => {
         'user_prompt: "Build the feature"',
         'created: "2026-03-04T00:00:00.000Z"',
         "draft: true",
-        'status: "backlog"',
         'parent_id: "PS-5"',
         'depends_on: "PS-3,PS-4"',
         'parallelizable: "yes"',
@@ -121,7 +120,6 @@ describe("parseFrontmatter", () => {
     expect(result).toEqual({
       blocked_reason: "waiting on API",
       parent_id: "PS-5",
-      status: "wip",
     });
   });
 
@@ -139,9 +137,9 @@ describe("parseFrontmatter", () => {
     expect(parseFrontmatter(content)).toEqual({});
   });
 
-  test("strips quotes from values", () => {
+  test("still parses non-status actionable fields", () => {
     const content = "---\nstatus: backlog\n---\n\n# Ticket";
-    expect(parseFrontmatter(content)).toEqual({ status: "backlog" });
+    expect(parseFrontmatter(content)).toEqual({});
   });
 });
 
@@ -162,7 +160,7 @@ describe("applyFrontmatterValues", () => {
     expect(result).toContain('ticket_id: "PS-5"');
     expect(result).toContain('created: "2026-03-04T00:00:00.000Z"');
     expect(result).toContain("draft: true");
-    expect(result).toContain('status: "wip"');
+    expect(result).not.toContain('status: "wip"');
     expect(result).toContain('parallelizable: "[no|yes]"');
   });
 

@@ -17,6 +17,13 @@ type SpawnDeps = Pick<RouteDeps, "agentRegistry" | "eventBus" | "fileService" | 
 };
 
 const DEFAULT_PROCESS_EXIT_TIMEOUT_MS = 10 * 60 * 1000;
+type TrackedExitStatus = "disconnected" | "cancelled" | "completed" | "failed";
+
+const resolveExitStatus = (exit: { code: number | null; signal: string | null }): TrackedExitStatus => {
+  if (exit.signal === "TIMEOUT") return "disconnected";
+  if (exit.signal === "SIGTERM" || exit.signal === "SIGINT") return "cancelled";
+  return exit.code === 0 ? "completed" : "failed";
+};
 
 const withProcessExitTimeout = (
   sessionId: string,
@@ -265,7 +272,13 @@ const trackProcessLifecycle = (
         );
       }
 
-      const status = signal === "TIMEOUT" ? "disconnected" : code === 0 ? "completed" : "failed";
+      const current = await deps.sessionService.get(sessionId);
+      if (current?.status === "cancelled") {
+        deps.sessionService.store.remove(sessionId);
+        return;
+      }
+
+      const status = resolveExitStatus({ code, signal });
       if (status === "failed") {
         sessionLogger.error(
           {

@@ -170,3 +170,26 @@ test("createOpencodeService stores discovered server url under ~/.pstdio", async
   const storedServerUrl = readFileSync(storePath, "utf8").trim();
   expect(storedServerUrl).toBe("http://127.0.0.1:4900");
 });
+
+test("abortSession posts to the opencode abort endpoint", async () => {
+  const requests: Array<{ url: string; method: string }> = [];
+  const service = createOpencodeService({
+    startServer: async () => "http://127.0.0.1:4900",
+    serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
+    isPortOpen: async () => false,
+    pingServer: async () => false,
+    fetcher: async (input, init) => {
+      requests.push({ url: String(input), method: init?.method ?? "GET" });
+      return new Response("true");
+    },
+  });
+
+  await service.abortSession("session-1", "/repo");
+
+  expect(requests).toHaveLength(1);
+  expect(requests[0]?.method).toBe("POST");
+
+  const url = new URL(requests[0]!.url);
+  expect(url.pathname).toBe("/session/session-1/abort");
+  expect(url.searchParams.get("directory")).toBe("/repo");
+});

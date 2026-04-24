@@ -123,7 +123,7 @@ describe("tickets pull", () => {
     const content = readFileSync(ticketPath, "utf8");
     expect(content).toStartWith("---\n");
     expect(content).toContain("ticket_id:");
-    expect(content).toContain('status: "wip"');
+    expect(content).not.toContain("status:");
     expect(content).toContain('parent_id: "PS-0"');
     expect(content).toContain("# Ticket from DB");
   });

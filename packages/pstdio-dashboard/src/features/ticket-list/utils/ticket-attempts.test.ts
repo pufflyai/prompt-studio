@@ -60,7 +60,7 @@ describe("toSessionIndicatorStatus", () => {
     expect(toSessionIndicatorStatus("awaiting_input")).toBe("awaiting_input");
     expect(toSessionIndicatorStatus("completed")).toBe("completed");
     expect(toSessionIndicatorStatus("failed")).toBe("failed");
-    expect(toSessionIndicatorStatus("cancelled")).toBe("failed");
+    expect(toSessionIndicatorStatus("cancelled")).toBe("cancelled");
   });
 
   it("does not derive status from workspace state when session status is unavailable", () => {

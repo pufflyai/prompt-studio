@@ -58,11 +58,12 @@ interface LocalizedChatPanelProps {
   emptyStateTitleKey: string;
   loadingContent?: ReactNode;
   messages: SessionMessage[];
+  onInterrupt?: () => void;
   streaming: boolean;
 }
 
 const LocalizedChatPanel = (props: LocalizedChatPanelProps) => {
-  const { emptyStateDescriptionKey, emptyStateTitleKey, loadingContent, messages, streaming } = props;
+  const { emptyStateDescriptionKey, emptyStateTitleKey, loadingContent, messages, onInterrupt, streaming } = props;
   const { t } = useTranslation("projects");
 
   return (
@@ -74,6 +75,7 @@ const LocalizedChatPanel = (props: LocalizedChatPanelProps) => {
         emptyStateDescription={emptyStateDescriptionKey ? t(emptyStateDescriptionKey) : ""}
         chatInputPlaceholder={t("sessions.followUpPlaceholder")}
         loadingContent={loadingContent}
+        onInterrupt={onInterrupt}
       />
     </Box>
   );
@@ -95,6 +97,18 @@ export const WithPendingFollowUp: Story = {
     <LocalizedChatPanel
       messages={pendingFollowUp}
       streaming
+      emptyStateTitleKey="sessions.noSessionSelected"
+      emptyStateDescriptionKey="sessions.selectSession"
+    />
+  ),
+};
+
+export const ActiveSession: Story = {
+  render: () => (
+    <LocalizedChatPanel
+      messages={mockMessages}
+      streaming
+      onInterrupt={() => console.log("Stop session")}
       emptyStateTitleKey="sessions.noSessionSelected"
       emptyStateDescriptionKey="sessions.selectSession"
     />
