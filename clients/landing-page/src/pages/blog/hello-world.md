@@ -19,6 +19,8 @@ npm i -g pstdio@latest
 
 > Prompt Studio is currently in alpha: expect breaking changes before it reaches beta. Any breaking updates will be announced on the blog.
 
+![Prompt Studio screenshot](/images/blog/screenshot-pst.png)
+
 ## What is Prompt Studio?
 
 Lately, my time to code has been limited. That forced me to think very carefully about how to get more done with less hands-on time. Coding agents help but only up to a point. Once you start running multiple agents in parallel, things get messy:
@@ -35,8 +37,6 @@ It helps you manage fleets of agents (coding or otherwise) by:
 - aligning them with how you work
 - giving you visibility into what they produce
 - making it easier to guide, review, and iterate on their output
-
-![Prompt Studio screenshot](/images/blog/screenshot-pst.png)
 
 ## Why build another tool?
 
@@ -87,6 +87,16 @@ Prompt Studio integrates with the harnesses you already rely on:
 More are coming soon.
 
 > You’ll need one of these installed locally to use Prompt Studio.
+
+## Try it
+
+Once the CLI is installed, run:
+
+```bash
+pstdio
+```
+
+If you hit a bug or want to suggest an extension, the repo is on [GitHub](https://github.com/pufflyai/prompt-studio) — issues and PRs welcome. You can also join the conversation on [Discord](https://discord.gg/3RxwUEk8fW).
 
 ## What’s next
 
