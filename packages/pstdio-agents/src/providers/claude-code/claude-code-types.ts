@@ -11,4 +11,5 @@ export type ClaudeCodeTranscriptEntry = {
     role: string;
     content: string | ClaudeCodeContentBlock[];
   };
+  toolUseResult?: unknown;
 };
