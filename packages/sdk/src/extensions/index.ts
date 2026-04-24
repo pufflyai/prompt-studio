@@ -1,3 +1,4 @@
+export type { ArtifactFile, ArtifactMountApi } from "./artifact-types";
 export { defineEvent, defineExtension, defineResource, defineSlot } from "./define-extension";
 export { packageAsset } from "./package-asset";
 export { params } from "./params";
@@ -37,6 +38,7 @@ export type {
   ExtensionSourceKind,
   ExtensionStorageApi,
   ExtensionStorageCollection,
+  ExtensionTemplatePreferencesApi,
   HarnessDetectionResult,
   HarnessParam,
   HarnessProviderDefinition,
