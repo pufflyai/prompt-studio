@@ -42,6 +42,7 @@ const menuItemVariantStyles = {
 interface MenuItemContentProps {
   primaryLabel: string;
   secondaryLabel?: string;
+  shortcutLabel?: ReactNode;
   tooltipLabel?: ReactNode;
   leftIcon?: MenuItemIcon | null;
   rightIcon?: MenuItemIcon | null;
@@ -63,6 +64,7 @@ const MenuItemContent = (props: MenuItemContentProps) => {
     primaryLabel,
     tooltipLabel,
     secondaryLabel,
+    shortcutLabel,
     leftIcon,
     rightIcon,
     leftIconColor,
@@ -135,7 +137,8 @@ const MenuItemContent = (props: MenuItemContentProps) => {
             )}
           </Stack>
         </Tooltip>
-        <Flex justifyContent="flex-end" color="fg.menu-item.default">
+        <Flex justifyContent="flex-end" alignItems="center" gap="xs" color="fg.menu-item.default">
+          {shortcutLabel ? <Flex alignItems="center">{shortcutLabel}</Flex> : null}
           {rightIcon ? (
             <Tooltip positioning={{ placement: "right" }} content={rightTooltipLabel} disabled={!rightTooltipLabel}>
               <Flex
@@ -184,6 +187,7 @@ export interface MenuItemProps {
   isSelected?: boolean;
   primaryLabel: string;
   secondaryLabel?: string;
+  shortcutLabel?: ReactNode;
   tooltipLabel?: ReactNode;
   leftIcon?: MenuItemIcon | null;
   rightIcon?: MenuItemIcon | null;
@@ -215,6 +219,7 @@ export const MenuItem = (props: MenuItemProps) => {
     primaryLabel,
     tooltipLabel,
     secondaryLabel,
+    shortcutLabel,
     leftIcon = null,
     rightIcon,
     leftIconColor = "fg.menu-item.default",
@@ -244,6 +249,7 @@ export const MenuItem = (props: MenuItemProps) => {
   const contentProps: MenuItemContentProps = {
     primaryLabel,
     secondaryLabel,
+    shortcutLabel,
     tooltipLabel,
     leftIcon,
     rightIcon,

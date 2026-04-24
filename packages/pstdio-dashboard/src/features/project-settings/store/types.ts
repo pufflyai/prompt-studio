@@ -13,9 +13,14 @@ export interface ProjectSettingsSnapshot {
   chatDraftsBySession: Record<string, string>;
   createTicketDraft: string;
   pendingWorkspaceSessionWorkspaceId: string | null;
+  createTicketRequestKey: number;
+  lastHandledCreateTicketRequestKey: number;
 }
 
-export type PersistedProjectSettingsSnapshot = Omit<ProjectSettingsSnapshot, "pendingWorkspaceSessionWorkspaceId">;
+export type PersistedProjectSettingsSnapshot = Omit<
+  ProjectSettingsSnapshot,
+  "pendingWorkspaceSessionWorkspaceId" | "createTicketRequestKey" | "lastHandledCreateTicketRequestKey"
+>;
 
 export interface ProjectSettingsState extends ProjectSettingsSnapshot {
   setLastSelectedAgent: (agent: CodingAgent) => void;
@@ -30,6 +35,8 @@ export interface ProjectSettingsState extends ProjectSettingsSnapshot {
   clearSessionDraft: (sessionId: string | null) => void;
   setCreateTicketDraft: (draft: string) => void;
   clearCreateTicketDraft: () => void;
+  requestCreateTicket: () => void;
+  acknowledgeCreateTicketRequest: (requestKey: number) => void;
   reset: () => void;
 }
 

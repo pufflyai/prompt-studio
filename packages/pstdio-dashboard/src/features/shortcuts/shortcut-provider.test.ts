@@ -1,0 +1,273 @@
+import { describe, expect, it, mock } from "bun:test";
+import { registerShortcutBindings, shouldLoadTicketsForShortcuts } from "./shortcut-provider";
+
+const createHotkeyManager = () => {
+  const handlers = new Map<string, { handler: (event: { target?: EventTarget | null }) => void; options: unknown }>();
+
+  return {
+    handlers,
+    register: (binding: string, handler: (event: { target?: EventTarget | null }) => void, options: unknown) => {
+      handlers.set(binding, { handler, options });
+      return { unregister: mock(() => {}) };
+    },
+  };
+};
+
+const createSequenceManager = () => {
+  const handlers = new Map<string, { handler: () => void; options: unknown }>();
+
+  return {
+    handlers,
+    register: (binding: string[], handler: () => void, options: unknown) => {
+      handlers.set(binding.join(","), { handler, options });
+      return { unregister: mock(() => {}) };
+    },
+  };
+};
+
+describe("registerShortcutBindings - creation and sequence flows", () => {
+  it("keeps command-launcher reserved without an active handler", () => {
+    const hotkeyManager = createHotkeyManager();
+    const sequenceManager = createSequenceManager();
+
+    registerShortcutBindings({
+      hotkeyManager: hotkeyManager as never,
+      sequenceManager: sequenceManager as never,
+      projectId: "project-1",
+      pathname: "/projects/project-1/tickets",
+      activeScopes: ["global"],
+      isHelpOpen: false,
+      requestCreateTicket: () => {},
+      setSelectedSessionId: () => {},
+      setSessionModalState: () => {},
+      setIsHelpOpen: () => {},
+      navigate: (() => {}) as never,
+      currentTicket: null,
+      currentTicketIndex: -1,
+      currentWorkspaceIndex: -1,
+      visibleTickets: [],
+      workspaceShorthand: undefined,
+    });
+
+    expect(hotkeyManager.handlers.get("Mod+K")?.options).toEqual({ enabled: false, ignoreInputs: true });
+  });
+
+  it("opens create ticket flow and navigates to tickets", () => {
+    const hotkeyManager = createHotkeyManager();
+    const sequenceManager = createSequenceManager();
+    const requestCreateTicket = mock(() => {});
+    const navigate = mock(() => {});
+
+    registerShortcutBindings({
+      hotkeyManager: hotkeyManager as never,
+      sequenceManager: sequenceManager as never,
+      projectId: "project-1",
+      pathname: "/projects/project-1/settings",
+      activeScopes: ["global"],
+      isHelpOpen: false,
+      requestCreateTicket,
+      setSelectedSessionId: () => {},
+      setSessionModalState: () => {},
+      setIsHelpOpen: () => {},
+      navigate: navigate as never,
+      currentTicket: null,
+      currentTicketIndex: -1,
+      currentWorkspaceIndex: -1,
+      visibleTickets: [],
+      workspaceShorthand: undefined,
+    });
+
+    hotkeyManager.handlers.get("C")?.handler({ target: null });
+
+    expect(requestCreateTicket).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith({ to: "/projects/$projectId/tickets", params: { projectId: "project-1" } });
+  });
+
+  it("opens create session flow and keeps users in sessions route", () => {
+    const hotkeyManager = createHotkeyManager();
+    const sequenceManager = createSequenceManager();
+    const setSelectedSessionId = mock(() => {});
+    const setSessionModalState = mock(() => {});
+    const navigate = mock(() => {});
+
+    registerShortcutBindings({
+      hotkeyManager: hotkeyManager as never,
+      sequenceManager: sequenceManager as never,
+      projectId: "project-1",
+      pathname: "/projects/project-1/sessions/abc",
+      activeScopes: ["global"],
+      isHelpOpen: false,
+      requestCreateTicket: () => {},
+      setSelectedSessionId,
+      setSessionModalState,
+      setIsHelpOpen: () => {},
+      navigate: navigate as never,
+      currentTicket: null,
+      currentTicketIndex: -1,
+      currentWorkspaceIndex: -1,
+      visibleTickets: [],
+      workspaceShorthand: undefined,
+    });
+
+    hotkeyManager.handlers.get("S")?.handler({ target: null });
+
+    expect(setSelectedSessionId).toHaveBeenCalledWith(null);
+    expect(navigate).toHaveBeenCalledWith({ to: "/projects/$projectId/sessions", params: { projectId: "project-1" } });
+    expect(setSessionModalState).not.toHaveBeenCalled();
+  });
+
+  it("navigates with G then T and G then W sequences", () => {
+    const hotkeyManager = createHotkeyManager();
+    const sequenceManager = createSequenceManager();
+    const navigate = mock(() => {});
+
+    registerShortcutBindings({
+      hotkeyManager: hotkeyManager as never,
+      sequenceManager: sequenceManager as never,
+      projectId: "project-1",
+      pathname: "/projects/project-1/settings",
+      activeScopes: ["global"],
+      isHelpOpen: false,
+      requestCreateTicket: () => {},
+      setSelectedSessionId: () => {},
+      setSessionModalState: () => {},
+      setIsHelpOpen: () => {},
+      navigate: navigate as never,
+      currentTicket: null,
+      currentTicketIndex: -1,
+      currentWorkspaceIndex: -1,
+      visibleTickets: [
+        {
+          shorthand: "PS-1",
+          attempts: [{ shorthand: "PS-1_1", updatedAt: "2026-01-01T00:00:00.000Z" }],
+        },
+      ],
+      workspaceShorthand: undefined,
+    });
+
+    sequenceManager.handlers.get("G,T")?.handler();
+    sequenceManager.handlers.get("G,W")?.handler();
+
+    expect(navigate).toHaveBeenNthCalledWith(1, {
+      to: "/projects/$projectId/tickets",
+      params: { projectId: "project-1" },
+    });
+    expect(navigate).toHaveBeenNthCalledWith(2, {
+      to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
+      params: { projectId: "project-1", ticketShorthand: "PS-1", workspaceShorthand: "PS-1_1" },
+    });
+  });
+});
+
+describe("registerShortcutBindings - overlay and sibling navigation", () => {
+  it("closes help overlay on Escape when overlay is active", () => {
+    const hotkeyManager = createHotkeyManager();
+    const sequenceManager = createSequenceManager();
+    const setIsHelpOpen = mock(() => {});
+
+    registerShortcutBindings({
+      hotkeyManager: hotkeyManager as never,
+      sequenceManager: sequenceManager as never,
+      projectId: "project-1",
+      pathname: "/projects/project-1/tickets",
+      activeScopes: ["global"],
+      isHelpOpen: true,
+      requestCreateTicket: () => {},
+      setSelectedSessionId: () => {},
+      setSessionModalState: () => {},
+      setIsHelpOpen,
+      navigate: (() => {}) as never,
+      currentTicket: null,
+      currentTicketIndex: -1,
+      currentWorkspaceIndex: -1,
+      visibleTickets: [],
+      workspaceShorthand: undefined,
+    });
+
+    hotkeyManager.handlers.get("Escape")?.handler({ target: null });
+
+    expect(setIsHelpOpen).toHaveBeenCalledWith(false);
+  });
+
+  it("navigates sibling tickets with [ and ]", () => {
+    const hotkeyManager = createHotkeyManager();
+    const sequenceManager = createSequenceManager();
+    const navigate = mock(() => {});
+
+    registerShortcutBindings({
+      hotkeyManager: hotkeyManager as never,
+      sequenceManager: sequenceManager as never,
+      projectId: "project-1",
+      pathname: "/projects/project-1/tickets/PS-2",
+      activeScopes: ["global", "ticket"],
+      isHelpOpen: false,
+      requestCreateTicket: () => {},
+      setSelectedSessionId: () => {},
+      setSessionModalState: () => {},
+      setIsHelpOpen: () => {},
+      navigate: navigate as never,
+      currentTicket: { shorthand: "PS-2", attempts: [] },
+      currentTicketIndex: 1,
+      currentWorkspaceIndex: -1,
+      visibleTickets: [{ shorthand: "PS-1" }, { shorthand: "PS-2" }, { shorthand: "PS-3" }],
+      workspaceShorthand: undefined,
+    });
+
+    hotkeyManager.handlers.get("[")?.handler({ target: null });
+    hotkeyManager.handlers.get("]")?.handler({ target: null });
+
+    expect(navigate).toHaveBeenNthCalledWith(1, {
+      to: "/projects/$projectId/tickets/$ticketShorthand",
+      params: { projectId: "project-1", ticketShorthand: "PS-1" },
+    });
+    expect(navigate).toHaveBeenNthCalledWith(2, {
+      to: "/projects/$projectId/tickets/$ticketShorthand",
+      params: { projectId: "project-1", ticketShorthand: "PS-3" },
+    });
+  });
+
+  it("opens help on ? and ignores editable targets", () => {
+    const hotkeyManager = createHotkeyManager();
+    const sequenceManager = createSequenceManager();
+    const setIsHelpOpen = mock(() => {});
+
+    registerShortcutBindings({
+      hotkeyManager: hotkeyManager as never,
+      sequenceManager: sequenceManager as never,
+      projectId: "project-1",
+      pathname: "/projects/project-1/tickets",
+      activeScopes: ["global"],
+      isHelpOpen: false,
+      requestCreateTicket: () => {},
+      setSelectedSessionId: () => {},
+      setSessionModalState: () => {},
+      setIsHelpOpen,
+      navigate: (() => {}) as never,
+      currentTicket: null,
+      currentTicketIndex: -1,
+      currentWorkspaceIndex: -1,
+      visibleTickets: [],
+      workspaceShorthand: undefined,
+    });
+
+    hotkeyManager.handlers.get("?")?.handler({ target: { tagName: "INPUT", type: "text" } as unknown as EventTarget });
+    hotkeyManager.handlers.get("?")?.handler({ target: { tagName: "BUTTON" } as unknown as EventTarget });
+
+    expect(setIsHelpOpen).toHaveBeenCalledTimes(1);
+    expect(setIsHelpOpen).toHaveBeenCalledWith(true);
+  });
+});
+
+describe("shouldLoadTicketsForShortcuts", () => {
+  it("loads ticket data for global project routes", () => {
+    expect(shouldLoadTicketsForShortcuts(["global"], "project-1")).toBe(true);
+  });
+
+  it("does not load ticket data without project context", () => {
+    expect(shouldLoadTicketsForShortcuts(["global"], undefined)).toBe(false);
+  });
+
+  it("does not load ticket data when scope is inactive", () => {
+    expect(shouldLoadTicketsForShortcuts([], "project-1")).toBe(false);
+  });
+});

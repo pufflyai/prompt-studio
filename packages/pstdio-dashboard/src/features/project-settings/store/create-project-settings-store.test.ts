@@ -20,6 +20,8 @@ describe("createProjectSettingsStore defaults", () => {
     expect(state.lastNonSessionsPath).toBeNull();
     expect(state.chatDraftsBySession).toEqual({});
     expect(state.createTicketDraft).toBe("");
+    expect(state.createTicketRequestKey).toBe(0);
+    expect(state.lastHandledCreateTicketRequestKey).toBe(0);
   });
 
   it("accepts initial hydration", () => {
@@ -323,6 +325,37 @@ describe("createProjectSettingsStore chatDraftsBySession", () => {
 
     expect(store.getState().createTicketDraft).toBe("");
   });
+
+  it("increments the create ticket request key", () => {
+    const store = createProjectSettingsStore();
+
+    store.getState().requestCreateTicket();
+    store.getState().requestCreateTicket();
+
+    expect(store.getState().createTicketRequestKey).toBe(2);
+  });
+
+  it("acknowledges handled create ticket request key", () => {
+    const store = createProjectSettingsStore();
+
+    store.getState().requestCreateTicket();
+    store.getState().requestCreateTicket();
+    store.getState().acknowledgeCreateTicketRequest(2);
+
+    expect(store.getState().lastHandledCreateTicketRequestKey).toBe(2);
+  });
+
+  it("does not decrease handled create ticket request key", () => {
+    const store = createProjectSettingsStore({
+      initialState: {
+        lastHandledCreateTicketRequestKey: 3,
+      },
+    });
+
+    store.getState().acknowledgeCreateTicketRequest(1);
+
+    expect(store.getState().lastHandledCreateTicketRequestKey).toBe(3);
+  });
 });
 
 describe("createProjectSettingsStore reset", () => {
@@ -352,6 +385,8 @@ describe("createProjectSettingsStore reset", () => {
     expect(state.lastNonSessionsPath).toBeNull();
     expect(state.chatDraftsBySession).toEqual({});
     expect(state.createTicketDraft).toBe("");
+    expect(state.createTicketRequestKey).toBe(0);
+    expect(state.lastHandledCreateTicketRequestKey).toBe(0);
     expect(state.pendingWorkspaceSessionWorkspaceId).toBeNull();
   });
 });

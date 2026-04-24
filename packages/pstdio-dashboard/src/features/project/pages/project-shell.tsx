@@ -7,6 +7,7 @@ import { ProjectSettingsProvider, useProjectSettingsStore } from "@/features/pro
 import { SessionAttachedPanel } from "@/features/sessions/components/session-attached-panel";
 import { SessionBubbleContainer } from "@/features/sessions/components/session-bubble.container";
 import { isSessionsRoutePath } from "@/features/sessions/utils/sessions-route";
+import { ShortcutProvider } from "@/features/shortcuts/shortcut-provider";
 import { useProject } from "../hooks/use-project";
 
 const ProjectShellContent = () => {
@@ -51,7 +52,9 @@ export const ProjectShell = () => {
 
   return (
     <ProjectSettingsProvider projectId={projectId}>
-      <ProjectShellContent />
+      <ShortcutProvider>
+        <ProjectShellContent />
+      </ShortcutProvider>
     </ProjectSettingsProvider>
   );
 };

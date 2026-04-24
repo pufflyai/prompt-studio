@@ -33,6 +33,7 @@ import { type BadgeContext, DEFAULT_DISPLAY_SETTINGS, type DisplaySettings } fro
 import { buildLatestAttemptsByTicketId } from "../utils/ticket-attempts";
 import { groupTickets, orderTickets } from "../utils/ticket-grouping";
 import { getVisibleTickets } from "../utils/ticket-visibility";
+import { useCreateTicketShortcut } from "./use-create-ticket-shortcut";
 
 const buildTicketOverflowActions = (input: {
   ticketId: string;
@@ -67,6 +68,29 @@ const buildTicketOverflowActions = (input: {
   ];
 };
 
+const navigateToTicketDetails = (
+  navigate: ReturnType<typeof useNavigate>,
+  projectId: string,
+  ticketShorthand: string,
+) => {
+  navigate({
+    to: "/projects/$projectId/tickets/$ticketShorthand",
+    params: { projectId, ticketShorthand },
+  });
+};
+
+const navigateToTicketWorkspace = (
+  navigate: ReturnType<typeof useNavigate>,
+  projectId: string,
+  ticketShorthand: string,
+  workspaceShorthand: string,
+) => {
+  navigate({
+    to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
+    params: { projectId, ticketShorthand, workspaceShorthand },
+  });
+};
+
 export const TicketsPanel = () => {
   const { projectId } = useParams({ strict: false });
   const { data: project, isLoading: isProjectLoading } = useProject(projectId);
@@ -77,16 +101,17 @@ export const TicketsPanel = () => {
   const deleteTicket = useDeleteProjectTicket(projectId);
   const createTicket = useCreateProjectTicket(projectId);
   const navigate = useNavigate();
-
   const sessionModalState = useProjectSettingsStore((s) => s.sessionModalState);
   const setSessionModalState = useProjectSettingsStore((s) => s.setSessionModalState);
   const setSelectedSessionId = useProjectSettingsStore((s) => s.setSelectedSessionId);
+  const createTicketRequestKey = useProjectSettingsStore((s) => s.createTicketRequestKey);
+  const lastHandledCreateTicketRequestKey = useProjectSettingsStore((s) => s.lastHandledCreateTicketRequestKey);
+  const acknowledgeCreateTicketRequest = useProjectSettingsStore((s) => s.acknowledgeCreateTicketRequest);
   const { t } = useTranslation(["tickets", "projects"]);
   const [settings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createModalStatus, setCreateModalStatus] = useState<TicketStatus | null>(null);
   const [deleteTicketId, setDeleteTicketId] = useState<string | null>(null);
-
   const isLoading = isProjectLoading || isTicketsLoading;
   const statusOptions = project?.ticketStatusOptions ?? [];
   const allTickets = getVisibleTickets(tickets ?? []);
@@ -119,6 +144,16 @@ export const TicketsPanel = () => {
     setCreateModalStatus(status ?? firstCreatableStatus);
     setCreateModalOpen(true);
   };
+
+  useCreateTicketShortcut({
+    projectId,
+    createTicketRequestKey,
+    lastHandledCreateTicketRequestKey,
+    firstCreatableStatus,
+    setCreateModalStatus,
+    setCreateModalOpen,
+    acknowledgeCreateTicketRequest,
+  });
 
   const closeCreateModal = () => {
     setCreateModalOpen(false);
@@ -204,13 +239,6 @@ export const TicketsPanel = () => {
     }
   };
 
-  const navigateToTicket = (shorthand: string) => {
-    navigate({
-      to: "/projects/$projectId/tickets/$ticketShorthand",
-      params: { projectId: projectId!, ticketShorthand: shorthand },
-    });
-  };
-
   const buildContextMenuActions = (ticketId: string, archived: boolean) =>
     buildResourceContextMenuActions({
       pluginActions: pluginActionTrigger.pluginActions,
@@ -226,15 +254,6 @@ export const TicketsPanel = () => {
       pendingActionKeys: pluginActionTrigger.pendingActionKeys,
       onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, ticketId),
     });
-
-  const handleOpenTicketWorkspace = (ticketShorthand: string, workspaceShorthand: string) => {
-    if (!projectId || !workspaceShorthand) return;
-
-    navigate({
-      to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
-      params: { projectId, ticketShorthand, workspaceShorthand },
-    });
-  };
 
   if (isLoading) {
     return (
@@ -264,10 +283,12 @@ export const TicketsPanel = () => {
               attemptStatusMap={attemptStatusMap}
               sessionsByWorkspace={sessionsByWorkspace}
               onMoveTicket={handleMoveTicket}
-              onSelectTicket={(ticket) => navigateToTicket(ticket.shorthand)}
+              onSelectTicket={(ticket) => projectId && navigateToTicketDetails(navigate, projectId, ticket.shorthand)}
               onOpenSessionBubble={handleOpenSessionBubble}
               onOpenTicketWorkspace={(ticket, workspaceShorthand) =>
-                handleOpenTicketWorkspace(ticket.shorthand, workspaceShorthand)
+                projectId &&
+                workspaceShorthand &&
+                navigateToTicketWorkspace(navigate, projectId, ticket.shorthand, workspaceShorthand)
               }
               resolveContextMenuActions={(ticket) => buildContextMenuActions(ticket.id, Boolean(ticket.archived))}
               onCreateStart={(status) => openCreateModal(status)}
@@ -278,7 +299,7 @@ export const TicketsPanel = () => {
               groups={groups}
               displayProperties={settings.displayProperties}
               badgeContext={badgeContext}
-              onSelectTicket={(ticket) => navigateToTicket(ticket.shorthand)}
+              onSelectTicket={(ticket) => projectId && navigateToTicketDetails(navigate, projectId, ticket.shorthand)}
               resolveContextMenuActions={(ticket) => buildContextMenuActions(ticket.id, Boolean(ticket.archived))}
             />
           )}

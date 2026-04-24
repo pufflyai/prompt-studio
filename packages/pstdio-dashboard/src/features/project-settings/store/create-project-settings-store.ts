@@ -47,6 +47,8 @@ export const getDefaultProjectSettingsSnapshot = () =>
     chatDraftsBySession: {},
     createTicketDraft: "",
     pendingWorkspaceSessionWorkspaceId: null,
+    createTicketRequestKey: 0,
+    lastHandledCreateTicketRequestKey: 0,
   }) satisfies ProjectSettingsSnapshot;
 
 export const createProjectSettingsStore = (options?: ProjectSettingsStoreOptions) => {
@@ -170,6 +172,25 @@ export const createProjectSettingsStore = (options?: ProjectSettingsStoreOptions
                 },
                 false,
                 actionName("clearCreateTicketDraft"),
+              ),
+            requestCreateTicket: () =>
+              set(
+                (state) => {
+                  state.createTicketRequestKey += 1;
+                },
+                false,
+                actionName("requestCreateTicket"),
+              ),
+            acknowledgeCreateTicketRequest: (requestKey) =>
+              set(
+                (state) => {
+                  state.lastHandledCreateTicketRequestKey = Math.max(
+                    state.lastHandledCreateTicketRequestKey,
+                    requestKey,
+                  );
+                },
+                false,
+                actionName("acknowledgeCreateTicketRequest"),
               ),
             reset: () => set(getDefaultProjectSettingsSnapshot(), false, actionName("reset")),
           })),
