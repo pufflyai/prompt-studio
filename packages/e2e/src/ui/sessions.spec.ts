@@ -42,9 +42,27 @@ const createSessionViaApi = async (
   return (await res.json()) as { id: string };
 };
 
+const getSessionViaApi = async (request: import("@playwright/test").APIRequestContext, sessionId: string) => {
+  const res = await request.get(`${apiBase}/v1/sessions/${sessionId}`);
+  expect(res.ok()).toBe(true);
+  return (await res.json()) as { id: string; status: string };
+};
+
 const archiveSessionViaApi = async (request: import("@playwright/test").APIRequestContext, sessionId: string) => {
   const res = await request.post(`${apiBase}/v1/sessions/${sessionId}/archive`);
   expect(res.ok()).toBe(true);
+};
+
+const updateSessionStatusViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  sessionId: string,
+  status: string,
+) => {
+  const res = await request.patch(`${apiBase}/v1/sessions/${sessionId}/status`, {
+    data: { status },
+  });
+  expect(res.ok()).toBe(true);
+  return (await res.json()) as { id: string; status: string };
 };
 
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
@@ -154,6 +172,40 @@ test.describe("Sessions page", () => {
 
     await page.getByRole("button", { name: "Session actions" }).click();
     await expect(page.getByText("Archive session")).toBeVisible();
+  });
+
+  test("stops an active session from the chat composer", async ({ page, request }) => {
+    await bypassOnboarding(page);
+
+    const session = await createSessionViaApi(request, projectId, "Interruptible session");
+    await expect.poll(async () => (await getSessionViaApi(request, session.id)).status).toBe("completed");
+    await updateSessionStatusViaApi(request, session.id, "in_progress");
+
+    await page.goto(`/projects/${projectId}/sessions/${session.id}`);
+
+    const stopFromEnter = page
+      .waitForRequest((req) => req.url().endsWith(`/v1/sessions/${session.id}/status`) && req.method() === "PATCH", {
+        timeout: 500,
+      })
+      .then(() => true)
+      .catch(() => false);
+    const contentEditor = page.locator("[data-testid='content-editable'][contenteditable='true']").last();
+    await contentEditor.fill("Enter should not stop");
+    await contentEditor.press("Enter");
+
+    expect(await stopFromEnter).toBe(false);
+    await expect(page.getByRole("button", { name: "Stop Response" })).toBeVisible();
+
+    const stopResponse = page.waitForResponse(
+      (res) => res.url().endsWith(`/v1/sessions/${session.id}/status`) && res.request().method() === "PATCH",
+    );
+    await page.getByRole("button", { name: "Stop Response" }).click();
+    const res = await stopResponse;
+
+    expect(page.url()).toContain(`/projects/${projectId}/sessions/${session.id}`);
+    expect((await res.json()) as { status: string }).toMatchObject({ status: "cancelled" });
+    await expect(page.getByRole("button", { name: "Stop Response" })).toHaveCount(0);
+    await expect.poll(async () => (await getSessionViaApi(request, session.id)).status).toBe("cancelled");
   });
 
   test("shows only the 6 most recent sessions in the chat dropdown and navigates to the sessions page", async ({

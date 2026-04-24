@@ -106,6 +106,29 @@ const defaultDeps: OpencodeAgentDeps = {
   getModelsOutput: readOpencodeModels,
 };
 
+const createOpencodeProcess = (input: {
+  sessionId: string;
+  abortController: AbortController;
+  abortSession: () => Promise<void>;
+  onExit: Promise<{ code: number | null; signal: string | null }>;
+}) => {
+  const { sessionId, abortController, abortSession, onExit } = input;
+
+  return {
+    sessionId,
+    stdin: new PassThrough(),
+    kill: () => {
+      if (abortController.signal.aborted) return;
+      void abortSession().catch((error) => {
+        console.error(`[opencode] failed to abort session ${sessionId}`, error);
+      });
+      abortController.abort();
+    },
+    onExit,
+    timeoutStrategy: "provider" as const,
+  };
+};
+
 export const createOpencodeAgent = (
   overrides: Partial<OpencodeAgentDeps> = {},
   serviceOverrides: Parameters<typeof createOpencodeService>[0] = {},
@@ -148,6 +171,7 @@ export const createOpencodeAgent = (
     }
 
     const cwd = input.cwd ?? undefined;
+    const abortController = new AbortController();
     const onExit = pollOpencodeMessages({
       loadMessages: opencode.getSessionMessages,
       sessionId,
@@ -155,37 +179,40 @@ export const createOpencodeAgent = (
       eventStore: input.eventStore,
       baselineCount: 0,
       messageComplete,
+      abortSignal: abortController.signal,
+    });
+    const process = createOpencodeProcess({
+      sessionId,
+      abortController,
+      abortSession: () => opencode.abortSession(sessionId, cwd),
+      onExit,
     });
 
     return {
       sessionId,
-      process: {
-        sessionId,
-        stdin: new PassThrough(),
-        kill: () => {},
-        onExit,
-        timeoutStrategy: "provider" as const,
-      },
+      process,
     };
   };
 
   const reattachSession = async (input: SessionReattachInput, eventStore: EventStore) => {
     const cwd = input.cwd ?? undefined;
+    const abortController = new AbortController();
     const onExit = pollOpencodeUntilIdle({
       loadMessages: opencode.getSessionMessages,
       sessionId: input.sessionId,
       cwd,
       eventStore,
+      abortSignal: abortController.signal,
+    });
+    const process = createOpencodeProcess({
+      sessionId: input.sessionId,
+      abortController,
+      abortSession: () => opencode.abortSession(input.sessionId, cwd),
+      onExit,
     });
 
     return {
-      process: {
-        sessionId: input.sessionId,
-        stdin: new PassThrough(),
-        kill: () => {},
-        onExit,
-        timeoutStrategy: "provider" as const,
-      },
+      process,
     };
   };
 
@@ -194,6 +221,7 @@ export const createOpencodeAgent = (
     const baselineCount = await fetchBaselineCount(input.sessionId, cwd);
 
     const { messageComplete } = opencode.sendSessionMessage(input);
+    const abortController = new AbortController();
     const onExit = pollOpencodeMessages({
       loadMessages: opencode.getSessionMessages,
       sessionId: input.sessionId,
@@ -201,16 +229,17 @@ export const createOpencodeAgent = (
       eventStore,
       baselineCount,
       messageComplete,
+      abortSignal: abortController.signal,
+    });
+    const process = createOpencodeProcess({
+      sessionId: input.sessionId,
+      abortController,
+      abortSession: () => opencode.abortSession(input.sessionId, cwd),
+      onExit,
     });
 
     return {
-      process: {
-        sessionId: input.sessionId,
-        stdin: new PassThrough(),
-        kill: () => {},
-        onExit,
-        timeoutStrategy: "provider" as const,
-      },
+      process,
     };
   };
 

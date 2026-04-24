@@ -138,7 +138,13 @@ const sidebarSections: SidebarSection[] = [
   },
 ];
 
-const sessionStatuses: SessionCompletionStatus[] = ["in_progress", "awaiting_input", "completed", "failed"];
+const sessionStatuses: SessionCompletionStatus[] = [
+  "in_progress",
+  "awaiting_input",
+  "completed",
+  "failed",
+  "cancelled",
+];
 
 const coloredSessionSections: SidebarSection[] = [
   {

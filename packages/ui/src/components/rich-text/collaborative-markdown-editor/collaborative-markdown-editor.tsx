@@ -9,6 +9,7 @@ import { HorizontalRulePlugin } from "@lexical/react/LexicalHorizontalRulePlugin
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
+import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
 import type { Provider } from "@lexical/yjs";
 import { useEffect, useRef, useState } from "react";
 import { WebsocketProvider } from "y-websocket";
@@ -98,6 +99,7 @@ export function CollaborativeMarkdownEditor(props: CollaborativeMarkdownEditorPr
           />
           <LinkPlugin />
           <ListPlugin />
+          <TabIndentationPlugin maxIndent={7} />
           <HorizontalRulePlugin />
           <CodeHighlightingPlugin />
           <ImportCodeBlocksPlugin />

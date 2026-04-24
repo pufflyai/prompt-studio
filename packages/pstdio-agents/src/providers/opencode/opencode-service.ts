@@ -539,5 +539,23 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
     return withServerUrl(fetchMessages);
   };
 
-  return { startSession, sendSessionMessage, getSessionMessages };
+  const abortSession = async (sessionId: string, cwd?: string) => {
+    const directory = cwd?.trim() || process.cwd();
+
+    const abortRunningSession = async (baseUrl: string) => {
+      const headers = buildHeaders(directory);
+      const url = buildRequestUrl(baseUrl, `/session/${sessionId}/abort`, directory);
+
+      const { response, text } = await requestJson<boolean>(deps.fetcher, url, {
+        method: "POST",
+        headers,
+      });
+
+      requireResponseOk(response, text, "OpenCode session.abort failed");
+    };
+
+    return withServerUrl(abortRunningSession);
+  };
+
+  return { startSession, sendSessionMessage, getSessionMessages, abortSession };
 };

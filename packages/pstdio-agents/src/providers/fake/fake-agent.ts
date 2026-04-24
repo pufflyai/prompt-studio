@@ -57,8 +57,10 @@ const createProcess = (sessionId: string): SpawnedProcess => {
   let timeout: NodeJS.Timeout | null = null;
   const stdin = new PassThrough();
   let done = false;
+  let resolveExit!: (value: { code: number | null; signal: string | null }) => void;
 
   const onExit = new Promise<{ code: number | null; signal: string | null }>((resolve) => {
+    resolveExit = resolve;
     timeout = setTimeout(() => {
       done = true;
       resolve({ code: 0, signal: null });
@@ -73,6 +75,7 @@ const createProcess = (sessionId: string): SpawnedProcess => {
       done = true;
       if (timeout) clearTimeout(timeout);
       stdin.end();
+      resolveExit({ code: null, signal: "SIGTERM" });
     },
     onExit,
   };

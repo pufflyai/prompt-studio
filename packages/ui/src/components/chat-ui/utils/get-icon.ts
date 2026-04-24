@@ -60,12 +60,16 @@ export const toolTypeToIconName = (type?: string): IconName => {
       return "file";
     case "bash":
       return "terminal";
+    case "edit":
+      return "write_file";
     case "apply_patch":
       return "patch";
     case "grep":
       return "search";
     case "glob":
       return "file";
+    case "todowrite":
+      return "ls";
     case "search":
       return "search";
     case "browser":

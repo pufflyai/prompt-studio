@@ -36,6 +36,7 @@ const transcriptBlockToMessage = (
   id: string,
   role: SessionMessageRole,
   toolMap: Map<string, string>,
+  toolUseResult?: unknown,
 ): SessionMessage | null => {
   if (block.type === "text") {
     if (!block.text.trim()) return null;
@@ -67,6 +68,11 @@ const transcriptBlockToMessage = (
   if (block.type === "tool_result") {
     const tool = toolMap.get(block.tool_use_id) ?? "unknown";
     const isError = block.is_error === true;
+    const output =
+      toolUseResult && typeof toolUseResult === "object" && !Array.isArray(toolUseResult)
+        ? { ...toolUseResult, returnDisplay: block.content }
+        : block.content;
+
     return {
       id,
       role: "assistant",
@@ -77,7 +83,7 @@ const transcriptBlockToMessage = (
           callId: block.tool_use_id,
           actionType: classifyToolAction(tool),
           status: isError ? "failed" : "completed",
-          state: { output: block.content, errorText: isError ? "Tool execution failed" : undefined },
+          state: { output, errorText: isError ? "Tool execution failed" : undefined },
         },
       ],
     };
@@ -99,7 +105,7 @@ const toTranscriptMessages = (entry: ClaudeCodeTranscriptEntry, toolMap: Map<str
 
   const messages: SessionMessage[] = [];
   for (let i = 0; i < content.length; i++) {
-    const msg = transcriptBlockToMessage(content[i], `${entry.uuid}-${i}`, role, toolMap);
+    const msg = transcriptBlockToMessage(content[i], `${entry.uuid}-${i}`, role, toolMap, entry.toolUseResult);
     if (msg) messages.push(msg);
   }
   return messages;
@@ -209,7 +215,16 @@ const handleContentBlockStart = (parsed: Record<string, unknown>, ctx: StreamCon
     return {
       id: `stream-tool-${ctx.index}`,
       role: "assistant",
-      parts: [{ type: "tool", tool, callId, actionType: classifyToolAction(tool), status: "pending" }],
+      parts: [
+        {
+          type: "tool",
+          tool,
+          callId,
+          actionType: classifyToolAction(tool),
+          status: "pending",
+          state: { input: block.input },
+        },
+      ],
       index: ctx.index,
     };
   }
@@ -278,6 +293,7 @@ const contentBlockToMessage = (block: ClaudeCodeContentBlock, ctx: StreamContext
           callId: block.id,
           actionType: classifyToolAction(block.name),
           status: "pending",
+          state: { input: block.input },
         },
       ],
       index: ctx.index,

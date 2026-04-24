@@ -43,6 +43,7 @@ It loads project sessions, groups them by date in the left rail, and renders the
 3. Follow-up prompts must be sent from the chat input for the selected session.
 4. Approval prompts must support approve and deny actions.
 5. The action menu must support downloading the selected session and archiving it.
+6. Active sessions must be cancellable from the chat composer stop button.
 
 ### UX Requirements
 
@@ -51,6 +52,7 @@ It loads project sessions, groups them by date in the left rail, and renders the
 - Session grouping should be date-based for quick scanning.
 - Follow-up submissions should appear immediately with a temporary "Thinking..." assistant placeholder.
 - After sending a follow-up, focus stays in the chat composer.
+- For running or awaiting-input sessions, the composer send button becomes the stop action.
 - Draft chat input text should persist per session, including the new-session composer.
 - The chat composer should stop growing after a maximum height and become scrollable.
 
@@ -69,9 +71,10 @@ It loads project sessions, groups them by date in the left rail, and renders the
 6. Keep the chat composer focused after a follow-up submit.
 7. Clear the optimistic follow-up placeholder when stream history advances or the follow-up fails.
 8. If the stream exposes a pending approval request, render approve and deny controls above the chat input.
-9. The "new session" button currently clears the selection; it does not create a session by itself.
-10. Preserve unsent chat drafts independently for each session and for the new-session state while switching layouts.
-11. Keep the chat input area scrollable after it reaches its max height so messages stay visible.
+9. If the selected session is running or awaiting input, use the chat composer stop action to abort the active provider session and mark it cancelled.
+10. The "new session" button currently clears the selection; it does not create a session by itself.
+11. Preserve unsent chat drafts independently for each session and for the new-session state while switching layouts.
+12. Keep the chat input area scrollable after it reaches its max height so messages stay visible.
 
 ## Interface
 
@@ -88,6 +91,7 @@ It loads project sessions, groups them by date in the left rail, and renders the
 | ------ | -------- |
 | Select session | Opens that session in the chat view. |
 | Send follow-up | Calls the follow-up mutation for the current session. |
+| Stop session | Aborts the active provider session, marks the session as cancelled, and keeps the user on the chat route. |
 | Approve / deny | Resolves the current approval request. |
 | Download | Exports the current session as JSON. |
 | Archive | Archives the selected session and returns to the list state. |

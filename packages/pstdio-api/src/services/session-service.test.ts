@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { PassThrough } from "node:stream";
 import { createSessionService } from "./session-service";
 
 const buildDeps = () => {
@@ -101,6 +102,28 @@ describe("SessionService", () => {
 
       expect(emitted).toHaveLength(0);
       expect(mocks.onSessionStatusChanged).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("cancel", () => {
+    test("kills active process and transitions the session to cancelled", async () => {
+      const { deps, mocks } = buildDeps();
+      const service = createSessionService(deps);
+      const kill = mock(() => {});
+
+      service.store.create("s1", () => {});
+      service.store.setProcess("s1", {
+        sessionId: "agent_1",
+        stdin: new PassThrough(),
+        kill,
+        onExit: new Promise(() => {}),
+      });
+
+      const result = await service.cancel("s1");
+
+      expect(kill).toHaveBeenCalledTimes(1);
+      expect(mocks.updateStatus).toHaveBeenCalledWith("s1", "cancelled");
+      expect(result).toMatchObject({ id: "s1", status: "cancelled" });
     });
   });
 

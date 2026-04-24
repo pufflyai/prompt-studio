@@ -257,6 +257,7 @@ describe("spawnAgentSession", () => {
           update: async () => null,
         },
         sessionService: {
+          get: mock(async () => ({ id: "session_1", project_id: "project_1", status: "in_progress" })),
           update: async () => null,
           transitionStatus,
           store: {
@@ -277,6 +278,81 @@ describe("spawnAgentSession", () => {
     }
 
     expect(transitionStatus).toHaveBeenCalledWith("session_1", "completed");
+  });
+
+  test("does not overwrite a cancelled session when the process exits later", async () => {
+    const startSession = mock(async () => ({
+      sessionId: "agent_session_1",
+      process: {
+        onExit: Promise.resolve({ code: 0, signal: null }),
+      },
+    }));
+
+    const agent = {
+      id: "claude-code",
+      name: "Claude Code",
+      capabilities: () => [],
+      checkAvailability: () => ({ type: "NOT_FOUND" }),
+      listModels: () => [],
+      startSession,
+      resumeSession: async () => ({}),
+      getMessages: async () => [],
+      listSessions: async () => [],
+      exportSession: async () => ({ session: { id: "s1", title: "title" }, messages: [] }),
+      launchSession: async () => ({}),
+    } as unknown as AgentService;
+
+    const transitionStatus = mock(async () => ({ id: "session_1", project_id: "project_1", status: "completed" }));
+    const remove = mock(() => {});
+
+    await spawnAgentSession(
+      {
+        sessionId: "session_1",
+        agentId: "claude-code",
+        prompt: "hello",
+        cwd: "/repo",
+      },
+      {
+        agentRegistry: {
+          get: () => agent,
+          list: () => [],
+          checkAll: () => ({
+            "claude-code": { type: "INSTALLED" },
+            opencode: { type: "INSTALLED" },
+            fake: { type: "INSTALLED" },
+          }),
+        },
+        eventBus: {
+          emit: () => {},
+        },
+        fileService: {
+          get: async () => null,
+          upload: async () => ({ id: "file_1" }),
+          update: async () => null,
+        },
+        sessionService: {
+          get: mock(async () => ({ id: "session_1", project_id: "project_1", status: "cancelled" })),
+          update: async () => null,
+          transitionStatus,
+          store: {
+            create: mock(() => ({
+              ...createStoreEntry(),
+            })),
+            get: mock(() => null),
+            setProcess: mock(() => {}),
+            remove,
+          },
+        },
+      } as unknown as Parameters<typeof spawnAgentSession>[1],
+    );
+
+    for (let index = 0; index < 20; index += 1) {
+      if (remove.mock.calls.length > 0) break;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    expect(remove).toHaveBeenCalledWith("session_1");
+    expect(transitionStatus).not.toHaveBeenCalled();
   });
 
   test("passes PSTDIO_SESSION_ID to started agent sessions", async () => {
@@ -321,6 +397,7 @@ describe("spawnAgentSession", () => {
           update: async () => null,
         },
         sessionService: {
+          get: mock(async () => ({ id: "session_99", project_id: "project_1", status: "in_progress" })),
           update: async () => null,
           transitionStatus: async () => null,
           store: {

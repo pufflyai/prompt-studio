@@ -289,15 +289,15 @@ pstdio tickets save --id <ticket-shorthand> [--status <status>] [--tag <tag>...]
 
 1. Must be run inside a linked project.
 2. Read `ticket.md` from `.pstdio/tickets/<ticket-shorthand>/`.
-3. Parse YAML frontmatter from `ticket.md` and extract actionable fields (`status`).
+3. Parse YAML frontmatter from `ticket.md` and extract actionable fields such as `parent_id` and `blocked_reason`.
 4. Strip frontmatter from `ticket.md` and upload the body content (without frontmatter) as the ticket file. Apply extracted frontmatter fields as ticket properties.
 5. Set `draft=false` to publish the ticket.
-6. Resolve the ticket status: use `--status` flag if provided, otherwise use `status` from frontmatter. Look up the status by name and assign its ID.
+6. Resolve the ticket status only when `--status` is provided. Look up the status by name and assign its ID.
 7. If `.pstdio/tickets/<ticket-shorthand>/files/` exists, upload every file under it and associate it with the ticket.
 8. If `.pstdio/tickets/<ticket-shorthand>/artifacts/` exists, upload every file under it and associate it with the ticket.
 9. If `--tag` values are provided, update the tag assignments.
 
-CLI flags always override frontmatter values. When neither a flag nor a frontmatter value is present, the field is left unchanged in the database.
+`--status` is an explicit status change. If it is omitted, the existing database status is preserved.
 
 ### Output
 

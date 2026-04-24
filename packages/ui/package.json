@@ -93,6 +93,7 @@
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.1.1",
     "babel-plugin-react-compiler": "^1.0.0",
+    "pstdio-agents": "workspace:*",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "storybook": "^10.1.9",

@@ -7,7 +7,7 @@ export const useSessionStatus = (sessionId: string | null) => {
         ? q
             .from({ s: getCollection("sessions") })
             .where(({ s }) => eq(s.id, sessionId))
-            .select(({ s }) => ({ status: s.status }))
+            .select(({ s }) => ({ ...s }))
         : undefined,
     [sessionId],
   );

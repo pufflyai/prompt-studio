@@ -48,7 +48,6 @@ type PullTicketOpts = {
   root: string;
   ticketId: string;
   shorthand: string;
-  statusName: string | null;
   tagNames: string[];
   force: boolean;
 };
@@ -67,7 +66,7 @@ const resolveParentFrontmatterValue = async (deps: Deps, parentId: string | null
   return parentTicket.shorthand;
 };
 
-const pullSingleTicket = async ({ deps, root, ticketId, shorthand, statusName, tagNames, force }: PullTicketOpts) => {
+const pullSingleTicket = async ({ deps, root, ticketId, shorthand, tagNames, force }: PullTicketOpts) => {
   const ticket = await deps.getTicket(ticketId);
   if (!ticket) throw new Error(`Ticket not found: ${shorthand}`);
   const parentId = await resolveParentFrontmatterValue(deps, ticket.parent_id);
@@ -76,7 +75,7 @@ const pullSingleTicket = async ({ deps, root, ticketId, shorthand, statusName, t
     shorthand,
     created_at: ticket.created_at,
     draft: ticket.draft,
-    status_name: statusName,
+    status_name: null,
     parent_id: parentId,
     user_prompt: ticket.user_prompt ?? null,
     depends_on: ticket.depends_on,
@@ -121,7 +120,6 @@ export const createHandler =
         root,
         ticketId: ticketListItem.id,
         shorthand: argv.id,
-        statusName: ticketListItem.status_name,
         tagNames: ticketListItem.tag_names ?? [],
         force: argv.force,
       });
@@ -141,7 +139,6 @@ export const createHandler =
         root,
         ticketId: ticket.id,
         shorthand: ticket.shorthand,
-        statusName: ticket.status_name,
         tagNames: ticket.tag_names ?? [],
         force: argv.force,
       });

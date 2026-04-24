@@ -3,6 +3,7 @@ import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import { createPendingFollowUpState } from "./session-chat-state";
 import {
   countCompletedEditActions,
+  isSessionInterruptible,
   resolveNewSessionWorkspaceId,
   shouldReconnectForExternalResume,
   shouldResetPendingFollowUpForSession,
@@ -57,6 +58,21 @@ describe("session chat view utils", () => {
 
     it("returns false when staying in the same terminal status", () => {
       expect(shouldReconnectForExternalResume("failed", "failed", false)).toBe(false);
+    });
+  });
+
+  describe("isSessionInterruptible", () => {
+    it("returns true for active session statuses", () => {
+      expect(isSessionInterruptible("in_progress")).toBe(true);
+      expect(isSessionInterruptible("awaiting_input")).toBe(true);
+    });
+
+    it("returns false for terminal and missing statuses", () => {
+      expect(isSessionInterruptible("completed")).toBe(false);
+      expect(isSessionInterruptible("failed")).toBe(false);
+      expect(isSessionInterruptible("cancelled")).toBe(false);
+      expect(isSessionInterruptible("disconnected")).toBe(false);
+      expect(isSessionInterruptible(null)).toBe(false);
     });
   });
 
