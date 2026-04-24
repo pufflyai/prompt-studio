@@ -10,7 +10,13 @@ import {
   type TicketBoardColumnAction,
   type TicketBoardGroup,
 } from "./ticket-board";
-import { countFilterValues, filterTickets, groupTickets, orderTickets } from "./ticket-grouping";
+import {
+  countFilterValues,
+  filterTickets,
+  groupTickets,
+  orderTickets,
+  type TicketColumnGroup,
+} from "./ticket-grouping";
 import { TicketList, type TicketListItem } from "./ticket-list";
 import {
   DEFAULT_DISPLAY_PROPERTY_OPTIONS,
@@ -21,6 +27,7 @@ import {
   type OrderingField,
   type WorkspaceFilterCategory,
   type WorkspaceOption,
+  type WorkspaceSettings,
   type WorkspaceTagDefinition,
   type WorkspaceTicket,
 } from "./types";
@@ -29,6 +36,7 @@ import {
   buildDefaultFilterCategories,
   buildTagOptions,
   resolveKnownColumnKeys,
+  resolveListDropTargetColumnKey,
   toBadges,
   toTagBadges,
   toTitleCase,
@@ -56,12 +64,134 @@ interface TicketsWorkspaceProps<TTicket extends WorkspaceTicket = WorkspaceTicke
   emptyDescription?: string;
   onTicketClick?: (ticket: TTicket) => void;
   onTagChange?: (ticketId: string, tagName: string, newValue: string) => void;
-  onMoveTicket?: (ticketId: string, targetColumnId: string, context?: { columnGrouping: GroupingField }) => void;
-  onMoveToGroup?: (ticketId: string, targetGroupKey: string, context?: { rowGrouping: GroupingField }) => void;
+  onMoveTicket?: (
+    ticketId: string,
+    targetColumnId: string,
+    context?: { columnGrouping: GroupingField; beforeTicketId?: string },
+  ) => void;
+  onMoveToGroup?: (
+    ticketId: string,
+    targetGroupKey: string,
+    context?: { rowGrouping: GroupingField; beforeTicketId?: string },
+  ) => void;
   onCreateTicket?: (columnId: string) => void;
   onColumnAction?: (columnId: string, actionId: string) => Promise<void> | void;
   getBoardColumnConfig?: (groupKey: string) => BoardColumnConfig;
 }
+
+interface BuildListItemsInput<TTicket extends WorkspaceTicket> {
+  settings: WorkspaceSettings;
+  visibleTickets: TTicket[];
+  grouped: TicketColumnGroup[];
+  tagDefinitions: WorkspaceTagDefinition[];
+  onTicketClick?: (ticket: TTicket) => void;
+  onTagChange?: (ticketId: string, tagName: string, newValue: string) => void;
+  onMoveTicket?: (
+    ticketId: string,
+    targetColumnId: string,
+    context?: { columnGrouping: GroupingField; beforeTicketId?: string },
+  ) => void;
+  onMoveToGroup?: (
+    ticketId: string,
+    targetGroupKey: string,
+    context?: { rowGrouping: GroupingField; beforeTicketId?: string },
+  ) => void;
+}
+
+const buildListItems = <TTicket extends WorkspaceTicket>(input: BuildListItemsInput<TTicket>): TicketListItem[] => {
+  const { settings, visibleTickets, grouped, tagDefinitions, onTicketClick, onTagChange, onMoveTicket, onMoveToGroup } =
+    input;
+
+  const toListItem = (ticket: TTicket, placement?: { columnKey?: string; rowKey?: string }): TicketListItem => ({
+    id: ticket.id,
+    ticketId: settings.displayProperties.includes("id") ? ticket.ticketId : "",
+    title: ticket.title,
+    badges: toBadges(ticket, settings.displayProperties),
+    tagBadges: toTagBadges(ticket, settings.displayProperties, tagDefinitions),
+    onClick: () => onTicketClick?.(ticket),
+    onTagChange: onTagChange ? (tagName, newValue) => onTagChange(ticket.id, tagName, newValue) : undefined,
+    draggable: Boolean(onMoveTicket),
+    onDropTicket:
+      settings.ordering.field === "manual" && onMoveTicket
+        ? (draggedTicketId) => {
+            const targetColumnKey = resolveListDropTargetColumnKey(settings.columnGrouping, placement);
+            if (!targetColumnKey) {
+              return;
+            }
+
+            onMoveTicket(draggedTicketId, targetColumnKey, {
+              columnGrouping: settings.columnGrouping,
+              beforeTicketId: ticket.id,
+            });
+
+            if (settings.rowGrouping !== "none" && onMoveToGroup && placement.rowKey) {
+              onMoveToGroup(draggedTicketId, placement.rowKey, {
+                rowGrouping: settings.rowGrouping,
+                beforeTicketId: ticket.id,
+              });
+            }
+          }
+        : undefined,
+  });
+
+  const toGroupListItem = (
+    group: { key: string; label: string; tickets: WorkspaceTicket[] },
+    parent?: { columnKey: string },
+  ): TicketListItem => ({
+    id: parent ? `group::${parent.columnKey}::${group.key}` : `group::${group.key}`,
+    ticketId: "",
+    title: toTitleCase(group.label),
+    countBadge: group.tickets.length,
+    onDropTicket:
+      onMoveTicket && settings.columnGrouping !== "none"
+        ? (draggedTicketId) => {
+            const columnKey = parent?.columnKey ?? group.key;
+            onMoveTicket(draggedTicketId, columnKey, {
+              columnGrouping: settings.columnGrouping,
+            });
+
+            if (settings.rowGrouping !== "none" && onMoveToGroup && parent) {
+              onMoveToGroup(draggedTicketId, group.key, {
+                rowGrouping: settings.rowGrouping,
+              });
+            }
+          }
+        : undefined,
+    children: orderTickets(group.tickets, settings.ordering, tagDefinitions).map((ticket) =>
+      toListItem(ticket as TTicket, {
+        columnKey: parent?.columnKey ?? group.key,
+        rowKey: parent ? group.key : undefined,
+      }),
+    ),
+  });
+
+  if (settings.columnGrouping === "none") {
+    return orderTickets(visibleTickets, settings.ordering, tagDefinitions).map((ticket) =>
+      toListItem(ticket as TTicket),
+    );
+  }
+
+  return grouped.map((group) => {
+    if (group.rows.length > 0) {
+      return {
+        id: `group::${group.key}`,
+        ticketId: "",
+        title: toTitleCase(group.label),
+        countBadge: group.tickets.length,
+        onDropTicket: onMoveTicket
+          ? (draggedTicketId: string) => {
+              onMoveTicket(draggedTicketId, group.key, {
+                columnGrouping: settings.columnGrouping,
+              });
+            }
+          : undefined,
+        children: group.rows.map((row) => toGroupListItem(row, { columnKey: group.key })),
+      } satisfies TicketListItem;
+    }
+
+    return toGroupListItem(group);
+  });
+};
 
 export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: TicketsWorkspaceProps<TTicket>) => {
   const {
@@ -114,7 +244,12 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
     categoryOptions.map((category) => [category.id, countFilterValues(tickets, category.id)]),
   );
 
-  const knownColumnKeys = resolveKnownColumnKeys(settings.columnGrouping, knownColumnKeysProp, categoryOptions);
+  const knownColumnKeys = resolveKnownColumnKeys(
+    settings.columnGrouping,
+    knownColumnKeysProp,
+    categoryOptions,
+    filters,
+  );
 
   const grouped = groupTickets(visibleTickets, {
     columnGrouping: settings.columnGrouping,
@@ -122,44 +257,16 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
     knownColumnKeys,
   });
 
-  const toListItem = (ticket: TTicket): TicketListItem => ({
-    id: ticket.id,
-    ticketId: settings.displayProperties.includes("id") ? ticket.ticketId : "",
-    title: ticket.title,
-    badges: toBadges(ticket, settings.displayProperties),
-    tagBadges: toTagBadges(ticket, settings.displayProperties, tagDefinitions),
-    onClick: () => onTicketClick?.(ticket),
-    onTagChange: onTagChange ? (tagName, newValue) => onTagChange(ticket.id, tagName, newValue) : undefined,
+  const listItems = buildListItems({
+    settings,
+    visibleTickets,
+    grouped,
+    tagDefinitions,
+    onTicketClick,
+    onTagChange,
+    onMoveTicket,
+    onMoveToGroup,
   });
-
-  const toGroupListItem = (group: { key: string; label: string; tickets: WorkspaceTicket[] }): TicketListItem => ({
-    id: `group::${group.key}`,
-    ticketId: "",
-    title: toTitleCase(group.label),
-    countBadge: group.tickets.length,
-    children: orderTickets(group.tickets, settings.ordering, tagDefinitions).map((ticket) =>
-      toListItem(ticket as TTicket),
-    ),
-  });
-
-  const listItems: TicketListItem[] =
-    settings.columnGrouping === "none"
-      ? orderTickets(visibleTickets, settings.ordering, tagDefinitions).map((ticket) => toListItem(ticket as TTicket))
-      : grouped.map((group) => {
-          if (group.rows.length > 0) {
-            return {
-              id: `group::${group.key}`,
-              ticketId: "",
-              title: toTitleCase(group.label),
-              countBadge: group.tickets.length,
-              children: group.rows.map((row) => ({
-                ...toGroupListItem(row),
-                id: `group::${group.key}::${row.key}`,
-              })),
-            };
-          }
-          return toGroupListItem(group);
-        });
 
   const toBoardItems = (tickets: WorkspaceTicket[]) =>
     tickets.map((ticket) => ({
@@ -234,11 +341,17 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
             <TicketBoard
               columns={boardColumns}
               selectedItemId={selectedTicketId}
-              onMoveItem={(ticketId, targetColumnId) =>
-                onMoveTicket?.(ticketId, targetColumnId, { columnGrouping: settings.columnGrouping })
+              onMoveItem={(ticketId, targetColumnId, context) =>
+                onMoveTicket?.(ticketId, targetColumnId, {
+                  columnGrouping: settings.columnGrouping,
+                  beforeTicketId: context?.beforeItemId,
+                })
               }
-              onMoveToGroup={(ticketId, targetGroupKey) =>
-                onMoveToGroup?.(ticketId, targetGroupKey, { rowGrouping: settings.rowGrouping })
+              onMoveToGroup={(ticketId, targetGroupKey, context) =>
+                onMoveToGroup?.(ticketId, targetGroupKey, {
+                  rowGrouping: settings.rowGrouping,
+                  beforeTicketId: context?.beforeItemId,
+                })
               }
               onCreateStart={onCreateTicket}
               onColumnAction={onColumnAction}

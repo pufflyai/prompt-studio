@@ -118,13 +118,44 @@ export const buildTagOptions = (tagDefinitions: WorkspaceTagDefinition[]) => ({
   ),
 });
 
+export const orderGroupingOptions = <TValue extends string>(options: WorkspaceOption<TValue>[]) => {
+  const noGrouping = options.find((option) => option.value === "none");
+  if (!noGrouping) {
+    return options;
+  }
+
+  return [noGrouping, ...options.filter((option) => option.value !== "none")];
+};
+
+export const resolveSubGroupingOptions = (options: WorkspaceOption<GroupingField>[], columnGrouping: GroupingField) => {
+  if (columnGrouping === "none") {
+    return options.filter((option) => option.value === "none");
+  }
+
+  return options.filter((option) => option.value === "none" || option.value !== columnGrouping);
+};
+
+export const resolveListDropTargetColumnKey = (columnGrouping: GroupingField, placement?: { columnKey?: string }) => {
+  if (columnGrouping === "none") {
+    return "all";
+  }
+
+  return placement?.columnKey;
+};
+
 export const resolveKnownColumnKeys = (
   columnGrouping: GroupingField,
   knownColumnKeys: string[] | undefined,
   categories: WorkspaceFilterCategory[],
+  filters?: FilterState,
 ) => {
   if (columnGrouping === "none") {
     return undefined;
+  }
+
+  const activeValues = filters?.[columnGrouping];
+  if (activeValues && activeValues.length > 0) {
+    return activeValues;
   }
 
   if (columnGrouping === "status") {

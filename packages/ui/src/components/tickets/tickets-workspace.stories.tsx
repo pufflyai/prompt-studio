@@ -188,6 +188,33 @@ const applyGroupingValue = (ticket: WorkspaceTicket, grouping: GroupingField, va
   return { ...ticket, tags: nextTags };
 };
 
+const reorderTickets = (items: WorkspaceTicket[], ticketId: string, beforeTicketId?: string) => {
+  const currentIndex = items.findIndex((ticket) => ticket.id === ticketId);
+  if (currentIndex === -1) {
+    return items;
+  }
+
+  const next = [...items];
+  const [moved] = next.splice(currentIndex, 1);
+  if (!moved) {
+    return items;
+  }
+
+  if (!beforeTicketId) {
+    next.push(moved);
+    return next;
+  }
+
+  const beforeIndex = next.findIndex((ticket) => ticket.id === beforeTicketId);
+  if (beforeIndex === -1) {
+    next.push(moved);
+    return next;
+  }
+
+  next.splice(beforeIndex, 0, moved);
+  return next;
+};
+
 const WorkspaceWrapper = (props: {
   listOnly?: boolean;
   columnGrouping?: GroupingField;
@@ -206,23 +233,35 @@ const WorkspaceWrapper = (props: {
     setRowGrouping(props.rowGrouping ?? "none");
   }, [props.columnGrouping, props.rowGrouping, reset, setColumnGrouping, setRowGrouping]);
 
-  const handleMoveTicket = (ticketId: string, targetColumnId: string) => {
-    setWorkspaceTickets((current) =>
-      current.map((ticket) =>
+  const handleMoveTicket = (
+    ticketId: string,
+    targetColumnId: string,
+    context?: { columnGrouping: GroupingField; beforeTicketId?: string },
+  ) => {
+    setWorkspaceTickets((current) => {
+      const regrouped = current.map((ticket) =>
         ticket.id === ticketId ? applyGroupingValue(ticket, settings.columnGrouping, targetColumnId) : ticket,
-      ),
-    );
+      );
+
+      return reorderTickets(regrouped, ticketId, context?.beforeTicketId);
+    });
   };
 
-  const handleMoveToGroup = (ticketId: string, targetGroupKey: string, context?: { rowGrouping: GroupingField }) => {
+  const handleMoveToGroup = (
+    ticketId: string,
+    targetGroupKey: string,
+    context?: { rowGrouping: GroupingField; beforeTicketId?: string },
+  ) => {
     const rowGrouping = context?.rowGrouping ?? settings.rowGrouping;
     if (rowGrouping === "none") return;
 
-    setWorkspaceTickets((current) =>
-      current.map((ticket) =>
+    setWorkspaceTickets((current) => {
+      const regrouped = current.map((ticket) =>
         ticket.id === ticketId ? applyGroupingValue(ticket, rowGrouping, targetGroupKey) : ticket,
-      ),
-    );
+      );
+
+      return reorderTickets(regrouped, ticketId, context?.beforeTicketId);
+    });
   };
 
   const handleTagChange = (ticketId: string, tagName: string, newValue: string) => {

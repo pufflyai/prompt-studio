@@ -45,8 +45,8 @@ export interface TicketBoardColumn {
 interface TicketBoardProps {
   columns: TicketBoardColumn[];
   selectedItemId?: string | null;
-  onMoveItem?: (itemId: string, targetColumnId: string) => void;
-  onMoveToGroup?: (itemId: string, targetGroupKey: string) => void;
+  onMoveItem?: (itemId: string, targetColumnId: string, context?: { beforeItemId?: string }) => void;
+  onMoveToGroup?: (itemId: string, targetGroupKey: string, context?: { beforeItemId?: string }) => void;
   onCreateStart?: (columnId: string) => void;
   onColumnAction?: (columnId: string, actionId: string) => Promise<void> | void;
 }
@@ -149,22 +149,45 @@ export const TicketBoard = (props: TicketBoardProps) => {
                         if (event.currentTarget.contains(event.relatedTarget as Node)) return;
                         setActiveGroup(null);
                       }}
-                      onGroupDrop={(event) => {
+                      onGroupDrop={(event, beforeItemId) => {
                         event.preventDefault();
                         event.stopPropagation();
                         setActiveGroup(null);
                         setActiveColumn(null);
                         const itemId = event.dataTransfer.getData("text/plain");
                         if (!itemId) return;
-                        onMoveItem?.(itemId, column.id);
-                        onMoveToGroup?.(itemId, group.key);
+                        onMoveItem?.(itemId, column.id, { beforeItemId });
+                        onMoveToGroup?.(itemId, group.key, { beforeItemId });
                       }}
                     />
                   );
                 })
               : column.items.map((item) => (
                   <ResourceContextMenu key={item.id} actions={item.contextMenuActions ?? []}>
-                    <Box>
+                    <Box
+                      onDragOver={
+                        column.canDragIn
+                          ? (event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              event.dataTransfer.dropEffect = "move";
+                              setActiveColumn(column.id);
+                            }
+                          : undefined
+                      }
+                      onDrop={
+                        column.canDragIn
+                          ? (event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              setActiveColumn(null);
+                              const itemId = event.dataTransfer.getData("text/plain");
+                              if (!itemId || itemId === item.id) return;
+                              onMoveItem?.(itemId, column.id, { beforeItemId: item.id });
+                            }
+                          : undefined
+                      }
+                    >
                       <TicketCard
                         {...item.cardProps}
                         isSelected={item.id === selectedItemId}
@@ -199,7 +222,7 @@ interface GroupSectionProps {
   onDragEnd: () => void;
   onGroupDragOver: (event: DragEvent<HTMLDivElement>) => void;
   onGroupDragLeave: (event: DragEvent<HTMLDivElement>) => void;
-  onGroupDrop: (event: DragEvent<HTMLDivElement>) => void;
+  onGroupDrop: (event: DragEvent<HTMLDivElement>, beforeItemId?: string) => void;
 }
 
 const GroupSection = (props: GroupSectionProps) => {
@@ -259,7 +282,28 @@ const GroupSection = (props: GroupSectionProps) => {
         <Stack gap="sm" pt="xs">
           {group.items.map((item) => (
             <ResourceContextMenu key={item.id} actions={item.contextMenuActions ?? []}>
-              <Box>
+              <Box
+                onDragOver={
+                  canDragIn
+                    ? (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        event.dataTransfer.dropEffect = "move";
+                      }
+                    : undefined
+                }
+                onDrop={
+                  canDragIn
+                    ? (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const itemId = event.dataTransfer.getData("text/plain");
+                        if (!itemId || itemId === item.id) return;
+                        onGroupDrop(event, item.id);
+                      }
+                    : undefined
+                }
+              >
                 <TicketCard
                   {...item.cardProps}
                   isSelected={item.id === selectedItemId}

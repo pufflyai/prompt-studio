@@ -12,8 +12,10 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { ArrowDownUp, ChevronDown, KanbanSquare, List, Settings2 } from "lucide-react";
+import { Fragment } from "react";
 
 import type { DisplayProperty, GroupingField, OrderingField, WorkspaceOption, WorkspaceSettings } from "./types";
+import { orderGroupingOptions, resolveSubGroupingOptions } from "./workspace-helpers";
 
 interface DisplayMenuProps {
   settings: WorkspaceSettings;
@@ -40,7 +42,9 @@ const Dropdown = <T extends string>(props: {
   options: WorkspaceOption<T>[];
   onSelect: (value: T) => void;
 }) => {
-  const selectedLabel = props.options.find((option) => option.value === props.value)?.label ?? props.label;
+  const orderedOptions = orderGroupingOptions(props.options);
+  const selectedLabel = orderedOptions.find((option) => option.value === props.value)?.label ?? props.label;
+  const hasNoGrouping = orderedOptions[0]?.value === "none";
 
   return (
     <Stack gap="2xs">
@@ -54,10 +58,13 @@ const Dropdown = <T extends string>(props: {
         </Menu.Trigger>
         <Menu.Positioner>
           <Menu.Content minW="260px" bg="bg">
-            {props.options.map((option) => (
-              <Menu.Item key={option.value} value={option.value} onClick={() => props.onSelect(option.value)}>
-                <Text textStyle="label/S/regular">{option.label}</Text>
-              </Menu.Item>
+            {orderedOptions.map((option, index) => (
+              <Fragment key={option.value}>
+                {hasNoGrouping && index === 1 ? <Menu.Separator /> : null}
+                <Menu.Item value={option.value} onClick={() => props.onSelect(option.value)}>
+                  <Text textStyle="label/S/regular">{option.label}</Text>
+                </Menu.Item>
+              </Fragment>
             ))}
           </Menu.Content>
         </Menu.Positioner>
@@ -138,7 +145,7 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
               <Dropdown
                 label="Sub-grouping"
                 value={settings.rowGrouping}
-                options={groupingOptions.filter((o) => o.value === "none" || o.value !== settings.columnGrouping)}
+                options={resolveSubGroupingOptions(groupingOptions, settings.columnGrouping)}
                 onSelect={onRowGroupingChange}
               />
 

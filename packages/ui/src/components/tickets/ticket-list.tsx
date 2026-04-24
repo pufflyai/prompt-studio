@@ -30,6 +30,8 @@ export interface TicketListItem {
   onClick?: () => void;
   onTagChange?: (tagName: string, newValue: string) => void;
   contextMenuActions?: ResourceContextAction[];
+  draggable?: boolean;
+  onDropTicket?: (ticketId: string) => void;
 }
 
 interface TicketListProps {
@@ -37,6 +39,16 @@ interface TicketListProps {
   selectedItemId?: string | null;
   onItemClick?: (item: TicketListItem) => void;
 }
+
+const INDENT_STEP_PX = 12;
+
+export const getTicketListIndentation = (depth: number) => {
+  if (depth <= 0) {
+    return undefined;
+  }
+
+  return `${depth * INDENT_STEP_PX}px`;
+};
 
 const columns: ColumnDef<TicketListItem, unknown>[] = [
   {
@@ -89,6 +101,36 @@ export const TicketList = (props: TicketListProps) => {
                 }
               }}
               data-selected={isSelected ? "true" : undefined}
+              draggable={item.draggable}
+              onDragStart={(event) => {
+                if (!item.draggable) {
+                  return;
+                }
+
+                event.dataTransfer.setData("text/plain", item.id);
+                event.dataTransfer.effectAllowed = "move";
+              }}
+              onDragOver={(event) => {
+                if (!item.onDropTicket) {
+                  return;
+                }
+
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+              }}
+              onDrop={(event) => {
+                if (!item.onDropTicket) {
+                  return;
+                }
+
+                event.preventDefault();
+                const ticketId = event.dataTransfer.getData("text/plain");
+                if (!ticketId || ticketId === item.id) {
+                  return;
+                }
+
+                item.onDropTicket(ticketId);
+              }}
             >
               {flexRender(row.getVisibleCells()[0].column.columnDef.cell, row.getVisibleCells()[0].getContext())}
             </HStack>
@@ -110,7 +152,7 @@ const TicketCell = (props: TicketCellProps) => {
   const hasTicketId = item.ticketId.trim().length > 0;
 
   return (
-    <HStack gap="xs" flex="1" paddingLeft={depth > 0 ? `${depth * 24}px` : undefined}>
+    <HStack gap="xs" flex="1" paddingLeft={getTicketListIndentation(depth)}>
       {row.getCanExpand() ? <ExpandToggle row={row} /> : depth > 0 ? <TreeConnector /> : null}
 
       {item.statusIcon && (
