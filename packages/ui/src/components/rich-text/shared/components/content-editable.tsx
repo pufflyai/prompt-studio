@@ -1,4 +1,4 @@
-import { chakra, Flex } from "@chakra-ui/react";
+import { Box, chakra } from "@chakra-ui/react";
 import { ContentEditable as LexicalContentEditable } from "@lexical/react/LexicalContentEditable";
 import { ScrollArea } from "@/components/scroll-area";
 
@@ -20,19 +20,20 @@ export function ContentEditable({
   scrollable = true,
 }: ContentEditableProps) {
   const editor = (
-    <Flex ref={onRef} width="100%" minH="100%" padding={padding} justifyContent={fullWidth ? "flex-start" : "center"}>
+    <Box ref={onRef} width="100%" minH="100%" padding={padding}>
       <StyledEditable
         data-testid="content-editable"
         height="fit-content"
         minH="100%"
         width="100%"
         maxWidth={fullWidth ? "100%" : "720px"}
+        marginInline={fullWidth ? "0" : "auto"}
         textStyle="paragraph/M/regular"
         fontSize="calc(var(--chakra-font-sizes-md) * var(--rich-text-font-scale))"
         position="relative"
         outline="none"
       />
-    </Flex>
+    </Box>
   );
 
   if (!scrollable) return editor;

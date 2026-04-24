@@ -4,6 +4,7 @@ import { AuthorTag } from "./author-tag";
 interface BlogPostHighlightProps {
   date: string;
   title: string;
+  description: string;
   image?: string;
   author: {
     name: string;
@@ -13,7 +14,7 @@ interface BlogPostHighlightProps {
 }
 
 export const BlogPostHighlight = (props: BlogPostHighlightProps) => {
-  const { title, image, date, author } = props;
+  const { title, description, image, date, author } = props;
 
   return (
     <Stack role="group" gap={["2", "2", "20"]} direction={["column", "column", "row"]} cursor="pointer">
@@ -39,8 +40,11 @@ export const BlogPostHighlight = (props: BlogPostHighlightProps) => {
       </Flex>
       <Stack gap="4" mt="2">
         <Text textStyle="label/L/medium/uppercase">Latest</Text>
-        <Text textStyle="heading/display/M" fontWeight="semibold">
+        <Text textStyle="heading/display/S" fontWeight="semibold">
           {title}
+        </Text>
+        <Text color="fg.muted" textStyle="paragraph/L/regular">
+          {description}
         </Text>
         <Text mb="3" mt="1" textStyle="label/L/regular">
           {formatDate(date)}

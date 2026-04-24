@@ -1,5 +1,7 @@
 import { addClassNamesToElement } from "@lexical/utils";
 import {
+  type DOMConversionMap,
+  type DOMConversionOutput,
   type DOMExportOutput,
   type EditorConfig,
   type LexicalEditor,
@@ -79,6 +81,20 @@ export class ReferenceNode extends TextNode {
     return { element: el };
   }
 
+  static importDOM(): DOMConversionMap | null {
+    return {
+      span: (domNode: HTMLElement) => {
+        if (!domNode.hasAttribute("data-reference-id") || !domNode.hasAttribute("data-name")) {
+          return null;
+        }
+        return {
+          conversion: $convertReferenceElement,
+          priority: 1,
+        };
+      },
+    };
+  }
+
   static importJSON(serializedNode: SerializedReferenceNode): ReferenceNode {
     const node = new ReferenceNode(serializedNode.referenceId, serializedNode.name);
     return node;
@@ -96,6 +112,13 @@ export class ReferenceNode extends TextNode {
   getTextContent(): string {
     return `#${this.__name}`;
   }
+}
+
+function $convertReferenceElement(domNode: HTMLElement): DOMConversionOutput | null {
+  const referenceId = domNode.getAttribute("data-reference-id");
+  const name = domNode.getAttribute("data-name");
+  if (!referenceId || !name) return null;
+  return { node: $createReferenceNode(referenceId, name) };
 }
 
 export function $createReferenceNode(referenceId: string, name: string): ReferenceNode {

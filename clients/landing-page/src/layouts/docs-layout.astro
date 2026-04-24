@@ -84,28 +84,32 @@ const activeLink = currentUrl;
   .docs-content :global(h1) {
     font-size: 2rem;
     font-weight: 700;
-    margin-top: 1.25rem;
-    margin-bottom: 1rem;
+    margin-top: 3.25rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .docs-content :global(h1:first-of-type) {
+    margin-top: 0;
   }
 
   .docs-content :global(h2) {
     font-size: 1.5rem;
     font-weight: 600;
-    margin-top: 1rem;
+    margin-top: 2.25rem;
     margin-bottom: 0.75rem;
   }
 
   .docs-content :global(h3) {
     font-size: 1.25rem;
     font-weight: 600;
-    margin-top: 0.75rem;
+    margin-top: 1.75rem;
     margin-bottom: 0.5rem;
   }
 
   .docs-content :global(h4) {
     font-size: 1.125rem;
     font-weight: 600;
-    margin-top: 0.5rem;
+    margin-top: 1.5rem;
     margin-bottom: 0.5rem;
   }
 
@@ -117,7 +121,9 @@ const activeLink = currentUrl;
 
   .docs-content :global(ul),
   .docs-content :global(ol) {
-    padding-left: 1.5rem;
+    --markdown-list-indent: 1.5rem;
+    list-style-position: outside;
+    padding-inline-start: var(--markdown-list-indent);
     margin-top: 0.5rem;
     margin-bottom: 0.5rem;
     line-height: 2;
@@ -132,8 +138,14 @@ const activeLink = currentUrl;
   }
 
   .docs-content :global(li) {
-    padding-left: 1rem;
+    display: list-item;
+    padding-inline-start: 0.25rem;
     padding-bottom: 0.5rem;
+  }
+
+  .docs-content :global(ul :where(ul, ol)),
+  .docs-content :global(ol :where(ul, ol)) {
+    padding-inline-start: var(--markdown-list-indent);
   }
 
   .docs-content :global(a) {
@@ -169,12 +181,13 @@ const activeLink = currentUrl;
     width: 100%;
     max-width: 100%;
     object-fit: cover;
+    cursor: zoom-in;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
   }
 
   .docs-content :global(blockquote) {
     border-left: 3px solid #e2e8f0;
-    padding-left: 1rem;
+    padding: 0.75rem 0 0.75rem 1rem;
     margin-top: 1rem;
     margin-bottom: 1rem;
     font-style: italic;

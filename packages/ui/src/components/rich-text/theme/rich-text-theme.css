@@ -11,6 +11,7 @@
 
 .rich-text {
   --rich-text-font-scale: 1;
+  --rich-text-list-indent: 1.5rem;
   font-size: calc(1rem * var(--rich-text-font-scale));
 }
 
@@ -29,9 +30,9 @@
 
 .rich-text__quote {
   margin: 0;
-  margin-top: var(--chakra-spacing-3, 0.75rem);
-  margin-left: var(--chakra-spacing-3, 0.75rem);
-  margin-bottom: var(--chakra-spacing-3, 0.75rem);
+  margin-top: var(--chakra-spacing-xl, 1.5rem);
+  margin-left: var(--chakra-spacing-sm, 0.75rem);
+  margin-bottom: var(--chakra-spacing-xl, 1.5rem);
   font-size: calc(15px * var(--rich-text-font-scale));
   color: var(--chakra-colors-fg-muted);
   border-left: 4px solid var(--chakra-colors-border);
@@ -101,8 +102,8 @@
   line-height: 1.53;
   font-size: calc(13px * var(--rich-text-font-scale));
   margin: 0;
-  margin-top: 8px;
-  margin-bottom: 8px;
+  margin-top: var(--chakra-spacing-md, 1rem);
+  margin-bottom: var(--chakra-spacing-md, 1rem);
   overflow-x: auto;
   position: relative;
   tab-size: 2;
@@ -302,22 +303,17 @@
    LISTS — markers restored, base indent added, nested indentation fixed
    ----------------------------------------------------------------------------- */
 
-/* Base list styling + indent (applies to your rich-text UL/OL variants) */
+/* Base list styling + indent */
 ul.rich-text__ul,
+ul.rich-text__checklist,
 ol.rich-text__ol,
 ol.rich-text__ol1,
 ol.rich-text__ol2,
 ol.rich-text__ol3,
 ol.rich-text__ol4,
 ol.rich-text__ol5 {
-  /* Base indent size (customize as needed) */
-  --rt-indent: var(--chakra-spacing-sm, 0.5rem);
-  /* Nesting level (auto-incremented below) */
-  --rt-level: 1;
-
-  /* Show markers and keep them outside for clean alignment */
   list-style-position: outside;
-  padding-inline-start: calc(var(--rt-indent) * var(--rt-level));
+  padding-inline-start: var(--rich-text-list-indent);
   margin-top: var(--chakra-spacing-3, 0.75rem);
   margin-bottom: var(--chakra-spacing-3, 0.75rem);
 }
@@ -347,7 +343,7 @@ ol.rich-text__ol5 {
 li.rich-text__listItem {
   display: list-item;
   list-style-position: outside;
-  margin-inline: var(--chakra-spacing-1, 0.25rem);
+  padding-inline-start: var(--chakra-spacing-1, 0.25rem);
 }
 
 /* Checklist items — styled to match the Chakra UI Checkbox component.
@@ -402,22 +398,22 @@ li.rich-text__listItemChecked::after {
   mask-position: center;
 }
 
-/* Nested lists: auto-increment level and indent further.
-   Works even when nested lists don't carry your custom classes. */
+/* Nested lists keep a consistent offset from their parent list item. */
 ul.rich-text__ul :where(ul, ol),
+ul.rich-text__checklist :where(ul, ol),
 ol.rich-text__ol :where(ul, ol),
 ol.rich-text__ol1 :where(ul, ol),
 ol.rich-text__ol2 :where(ul, ol),
 ol.rich-text__ol3 :where(ul, ol),
 ol.rich-text__ol4 :where(ul, ol),
 ol.rich-text__ol5 :where(ul, ol) {
-  --rt-level: calc(var(--rt-level) + 1);
-  padding-inline-start: calc(var(--rt-indent) * var(--rt-level));
+  padding-inline-start: var(--rich-text-list-indent);
 }
 
-/* Nested list items should inherit the marker style */
-.rich-text__nestedListItem {
-  list-style-type: inherit;
+/* Lexical uses wrapper list items for nested lists; those should not render their own marker. */
+li.rich-text__nestedListItem {
+  list-style-type: none;
+  padding-inline-start: 0;
 }
 .rich-text__nestedListItem::before,
 .rich-text__nestedListItem::after {
@@ -680,12 +676,16 @@ ol.rich-text__ol5 :where(ul, ol) {
    ----------------------------------------------------------------------------- */
 .rich-text__h1 {
   font-family: var(--chakra-fonts-body);
-  font-size: calc(var(--chakra-font-sizes-3xl) * var(--rich-text-font-scale));
+  font-size: calc(var(--chakra-font-sizes-4xl) * var(--rich-text-font-scale));
   font-weight: var(--chakra-font-weights-medium);
   line-height: 120%;
   color: var(--chakra-colors-fg);
-  margin-top: var(--chakra-spacing-5, 1.5rem);
-  margin-bottom: var(--chakra-spacing-4, 1rem);
+  margin-top: 2.5rem;
+  margin-bottom: var(--chakra-spacing-md, 1rem);
+}
+
+.rich-text__h1:first-of-type {
+  margin-top: 0;
 }
 
 .rich-text__h1_2 {
@@ -700,12 +700,12 @@ ol.rich-text__ol5 :where(ul, ol) {
 
 .rich-text__h2 {
   font-family: var(--chakra-fonts-body);
-  font-size: calc(var(--chakra-font-sizes-2xl) * var(--rich-text-font-scale));
+  font-size: calc(var(--chakra-font-sizes-3xl) * var(--rich-text-font-scale));
   font-weight: var(--chakra-font-weights-medium);
   line-height: 120%;
   color: var(--chakra-colors-fg, var(--chakra-colors-fg));
-  margin-top: var(--chakra-spacing-4, 1rem);
-  margin-bottom: var(--chakra-spacing-3, 0.75rem);
+  margin-top: var(--chakra-spacing-lg, 1.5rem);
+  margin-bottom: var(--chakra-spacing-md, 1rem);
 }
 
 .rich-text__h2_2 {
@@ -724,8 +724,8 @@ ol.rich-text__ol5 :where(ul, ol) {
   font-weight: var(--chakra-font-weights-medium);
   line-height: 100%;
   color: var(--chakra-colors-fg, var(--chakra-colors-fg));
-  margin-top: var(--chakra-spacing-4, 1rem);
-  margin-bottom: var(--chakra-spacing-3, 0.75rem);
+  margin-top: var(--chakra-spacing-lg, 1.5rem);
+  margin-bottom: var(--chakra-spacing-md, 1rem);
 }
 
 .rich-text__h3_2 {
@@ -753,6 +753,34 @@ ol.rich-text__ol5 :where(ul, ol) {
 
 .rich-text__p:only-child {
   margin-bottom: 0;
+}
+
+.rich-text[data-rich-message="true"] .rich-text__quote {
+  margin-top: var(--chakra-spacing-3, 0.75rem);
+  margin-left: var(--chakra-spacing-3, 0.75rem);
+  margin-bottom: var(--chakra-spacing-3, 0.75rem);
+}
+
+.rich-text[data-rich-message="true"] .rich-text__code {
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.rich-text[data-rich-message="true"] .rich-text__h1 {
+  font-size: calc(var(--chakra-font-sizes-3xl) * var(--rich-text-font-scale));
+  margin-top: var(--chakra-spacing-5, 1.5rem);
+  margin-bottom: var(--chakra-spacing-4, 1rem);
+}
+
+.rich-text[data-rich-message="true"] .rich-text__h2 {
+  font-size: calc(var(--chakra-font-sizes-2xl) * var(--rich-text-font-scale));
+  margin-top: var(--chakra-spacing-4, 1rem);
+  margin-bottom: var(--chakra-spacing-3, 0.75rem);
+}
+
+.rich-text[data-rich-message="true"] .rich-text__h3 {
+  margin-top: var(--chakra-spacing-4, 1rem);
+  margin-bottom: var(--chakra-spacing-3, 0.75rem);
 }
 
 .rich-text__p2 {

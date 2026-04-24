@@ -43,20 +43,25 @@ const title = frontmatter?.title ?? "";
   .markdown-content :global(h1) {
     font-size: 2rem;
     font-weight: 700;
-    margin-bottom: 1.5rem;
+    margin-top: 3.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .markdown-content :global(h1:first-of-type) {
+    margin-top: 0;
   }
 
   .markdown-content :global(h2) {
     font-size: 1.5rem;
     font-weight: 600;
-    margin-top: 2rem;
+    margin-top: 2.75rem;
     margin-bottom: 1rem;
   }
 
   .markdown-content :global(h3) {
     font-size: 1.25rem;
     font-weight: 600;
-    margin-top: 1.5rem;
+    margin-top: 2.25rem;
     margin-bottom: 0.75rem;
   }
 
@@ -65,18 +70,54 @@ const title = frontmatter?.title ?? "";
     line-height: 1.7;
   }
 
-  .markdown-content :global(ul) {
-    padding-left: 1.5rem;
+  .markdown-content :global(ul),
+  .markdown-content :global(ol) {
+    --markdown-list-indent: 1.5rem;
+    list-style-position: outside;
+    padding-inline-start: var(--markdown-list-indent);
     margin-bottom: 1rem;
   }
 
+  .markdown-content :global(ol) {
+    list-style-type: decimal;
+  }
+
+  .markdown-content :global(ul) {
+    list-style-type: disc;
+  }
+
   .markdown-content :global(li) {
+    display: list-item;
+    padding-inline-start: 0.25rem;
     margin-bottom: 0.5rem;
     line-height: 1.7;
   }
 
+  .markdown-content :global(ul :where(ul, ol)),
+  .markdown-content :global(ol :where(ul, ol)) {
+    padding-inline-start: var(--markdown-list-indent);
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
   .markdown-content :global(a) {
     text-decoration: underline;
+  }
+
+  .markdown-content :global(blockquote) {
+    border-left: 3px solid #e2e8f0;
+    padding: 0.75rem 0 0.75rem 1rem;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+    font-style: italic;
+  }
+
+  .markdown-content :global(blockquote > :first-child) {
+    margin-top: 0;
+  }
+
+  .markdown-content :global(blockquote > :last-child) {
+    margin-bottom: 0;
   }
 
   .markdown-content :global(em) {

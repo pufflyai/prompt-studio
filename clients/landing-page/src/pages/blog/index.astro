@@ -19,10 +19,5 @@ const sortedPosts = Object.values(postModules)
 ---
 
 <BaseLayout title="Blog | Prompt Studio" description="Guides, tips, and updates from the Prompt Studio team.">
-  <BlogListPage
-    client:load
-    headline="Blog"
-    description="Guides, tips, and updates from the Prompt Studio team."
-    posts={sortedPosts}
-  />
+  <BlogListPage client:load headline="Blog" posts={sortedPosts} />
 </BaseLayout>

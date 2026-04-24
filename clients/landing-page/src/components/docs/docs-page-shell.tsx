@@ -1,5 +1,6 @@
 import { Box, Container, Flex, Stack, Text } from "@chakra-ui/react";
 import type { ReactNode } from "react";
+import { ContentImageLightbox } from "../content-image-lightbox";
 import Footer from "../footer";
 import Header from "../header";
 import { RootProvider } from "../root-provider";
@@ -62,7 +63,7 @@ const DocsPageShellContent = (props: DocsPageShellProps) => {
                   </Text>
                 )}
 
-                <Box>{children}</Box>
+                <ContentImageLightbox>{children}</ContentImageLightbox>
 
                 <Box pt="4" borderTopWidth="1px">
                   <DocsPagination previous={previous} next={next} />

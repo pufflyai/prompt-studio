@@ -1,34 +1,95 @@
 ---
 layout: ../../layouts/blog-layout.astro
-title: Hello World
-description: Welcome to the Prompt Studio blog. We share guides, tips, and updates on AI-driven development workflows.
-released: "2025-03-21"
+title: Welcome to Prompt Studio!
+description: Prompt Studio, is an agent orchestration framework you can extend to fit the way you work.
+released: "2026-04-24"
 category: Announcements
 image: /images/banner.png
 author:
-  name: Prompt Studio
-  role: Team
+  name: Aurélien Franky
+  role: Founder
+  avatar: /images/blog/authors/aure.jpg
 ---
 
-# Welcome to the Prompt Studio Blog
-
-We're excited to launch the Prompt Studio blog! This is where we'll share guides, tips, and updates about AI-driven development workflows.
-
-## What to expect
-
-Here's what you can look forward to:
-
-- **Guides** on getting the most out of AI coding agents
-- **Tips & tricks** for prompt engineering and task delegation
-- **Updates** on new features and improvements
-- **Deep dives** into agentic coding workflows
-
-## Getting started
-
-If you haven't already, install Prompt Studio:
+To install or upgrade Prompt Studio run:
 
 ```bash
 npm i -g pstdio@latest
 ```
 
-Stay tuned for more posts!
+> Prompt Studio is currently in alpha: expect breaking changes before it reaches beta. Any breaking updates will be announced on the blog.
+
+## What is Prompt Studio?
+
+Lately, my time to code has been limited. That forced me to think very carefully about how to get more done with less hands-on time. Coding agents help but only up to a point. Once you start running multiple agents in parallel, things get messy:
+
+- errors compound
+- context drifts
+- outputs diverge from your intent
+- reviewing everything becomes tricky
+
+**Prompt Studio exists to solve that.**
+
+It helps you manage fleets of agents (coding or otherwise) by:
+
+- aligning them with how you work
+- giving you visibility into what they produce
+- making it easier to guide, review, and iterate on their output
+
+![Prompt Studio screenshot](/images/blog/screenshot-pst.png)
+
+## Why build another tool?
+
+There are already tools in this space, like Conductor or Vibe Kanban.
+
+And chances are, if you’ve been working with agents for a while, **you’ve probably built something yourself to fill the gaps**.
+
+So why build another one?
+
+Because none of the existing tools quite fit the way I wanted to work.
+
+We’re still early in figuring out what a good “agentic workflow” looks like. The problem is that most tools:
+
+- bake in strong opinions about how you should work
+- optimize for a fixed workflow
+- make experimentation harder instead of easier
+
+That’s a tough trade-off: **the more a tool tries to help, the more it risks getting in your way.**
+
+## App or Framework?
+
+Prompt Studio takes a different approach: instead of being a fully opinionated app, it’s **a framework you (or your coding agent) can build on top of**.
+
+Every project can have its own extensions:
+
+- a custom panel tailored to that codebase
+- custom actions in the ui or cli
+- project-specific automations
+- extensions that reflect your workflow
+
+These are some of the extensions I’ve built for myself on top of Prompt Studio:
+
+- open vscode in a specific worktree
+- trigger an automated review when an agent finishes an implementation
+- add a custom button to open a pull request on GitHub
+- launch Storybook directly from the workspace
+- automatically capture a screenshot after frontend changes
+
+These help me with my particular workflow, but it would make no sense for these to be part of the core platform.
+
+## Work with the harnesses you love
+
+Prompt Studio integrates with the harnesses you already rely on:
+
+- Claude Code
+- Open Code
+
+More are coming soon.
+
+> You’ll need one of these installed locally to use Prompt Studio.
+
+## What’s next
+
+In the next post, I’ll walk through how the SDK and CLI work and how you can start shaping Prompt Studio to match your workflow.
+
+Stay tuned!

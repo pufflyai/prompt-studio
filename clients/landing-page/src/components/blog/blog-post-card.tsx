@@ -6,6 +6,7 @@ interface BlogPostCardProps {
   category: string;
   date: string;
   title: string;
+  description: string;
   image?: string;
   author: {
     name: string;
@@ -15,7 +16,7 @@ interface BlogPostCardProps {
 }
 
 export const BlogPostCard = (props: BlogPostCardProps) => {
-  const { title, image, date, category, author, link } = props;
+  const { title, description, image, date, category, author, link } = props;
 
   return (
     <a href={link}>
@@ -43,6 +44,9 @@ export const BlogPostCard = (props: BlogPostCardProps) => {
         <Stack gap="4" paddingX="2">
           <Text textStyle="label/L/medium/uppercase">{category}</Text>
           <Text textStyle="heading/L">{title}</Text>
+          <Text color="fg.muted" textStyle="paragraph/M/regular">
+            {description}
+          </Text>
           <Text mb="1" textStyle="label/L/regular">
             {formatDate(date)}
           </Text>

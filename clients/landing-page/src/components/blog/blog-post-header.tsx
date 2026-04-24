@@ -1,6 +1,7 @@
-import { Button, Container, Flex, Image, Stack, Text } from "@chakra-ui/react";
+import { Button, Container, Flex, Stack, Text } from "@chakra-ui/react";
 import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
+import { ContentImageLightbox } from "../content-image-lightbox";
 import Footer from "../footer";
 import Header from "../header";
 import { RootProvider } from "../root-provider";
@@ -8,33 +9,26 @@ import { AuthorTag } from "./author-tag";
 
 interface BlogPostShellProps {
   title: string;
-  description?: string;
   released: string;
   category: string;
-  image?: string;
   author: {
     name: string;
     role: string;
     avatar?: string;
   };
+  readingTimeMinutes: number;
   children: ReactNode;
 }
 
-function _readingTime(text: string) {
-  const wpm = 225;
-  const words = text.trim().split(/\s+/).length;
-  return Math.ceil(words / wpm);
-}
-
 const BlogPostShellContent = (props: BlogPostShellProps) => {
-  const { title, description, released, category, image, author, children } = props;
+  const { title, released, category, author, readingTimeMinutes, children } = props;
 
   return (
     <Flex direction="column" minHeight="100vh">
-      <Header />
+      <Header activeSection="blog" />
       <Flex as="main" flex="1" direction="column" alignItems="center" mb={["2rem", "4rem", "8rem"]}>
         <Container maxW="4xl" px={["1.5rem", "3.75rem"]} width="100%">
-          <Stack gap="1.8rem">
+          <Stack gap="sm" mb="2rem">
             <a href="/blog/">
               <Button fontWeight="regular" marginLeft="-1rem" variant="ghost" size="2xl">
                 <ArrowLeft size={16} />
@@ -44,22 +38,19 @@ const BlogPostShellContent = (props: BlogPostShellProps) => {
 
             {title && <Text textStyle="heading/display/L">{title}</Text>}
 
-            <Text textStyle="label/L/medium/uppercase">{formatDate(released)}</Text>
+            <Flex alignItems="center" gap="2" flexWrap="wrap">
+              <Text textStyle="label/L/medium/uppercase">{formatDate(released)}</Text>
+              <Text color="fg.muted" textStyle="label/L/medium/uppercase">
+                -
+              </Text>
+              <Text textStyle="label/L/medium/uppercase">{formatReadingTime(readingTimeMinutes)}</Text>
+            </Flex>
 
             <AuthorTag name={author.name} role={author.role} avatar={author.avatar} />
-
-            {description && <Text textStyle="label/L/regular">{description}</Text>}
-
-            {image && (
-              <Flex overflow="hidden" borderRadius="xl" minHeight={["12rem", "24rem"]}>
-                <Image flex="1" borderRadius="md" width="100%" objectFit="cover" src={image} alt={title} />
-              </Flex>
-            )}
-
-            <Container paddingX="0" maxW="90ch">
-              {children}
-            </Container>
           </Stack>
+          <Container padding="0" margin="0" maxW="720px">
+            <ContentImageLightbox>{children}</ContentImageLightbox>
+          </Container>
         </Container>
       </Flex>
       <Footer
@@ -88,4 +79,8 @@ function formatDate(date: string) {
     month: "short",
     day: "numeric",
   });
+}
+
+function formatReadingTime(minutes: number) {
+  return `${minutes} min read`;
 }

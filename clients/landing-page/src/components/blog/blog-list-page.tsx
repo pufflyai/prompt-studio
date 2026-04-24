@@ -20,22 +20,20 @@ export interface BlogPostMeta {
 
 interface BlogListPageProps {
   headline: string;
-  description: string;
   posts: (BlogPostMeta & { slug: string })[];
 }
 
 const BlogListContent = (props: BlogListPageProps) => {
-  const { headline, description, posts } = props;
+  const { headline, posts } = props;
   const [firstPost, ...remainingPosts] = posts;
 
   return (
     <Flex direction="column" minHeight="100vh">
-      <Header />
+      <Header activeSection="blog" />
       <Flex as="main" flex="1" direction="column" alignItems="center">
         <Container maxW="6xl" px={["1.5rem", "3.75rem"]} width="100%">
           <Stack pt={["2rem", "2rem", "4.375rem"]} gap="2rem">
             <Text textStyle="heading/display/L">{headline}</Text>
-            <Text textStyle="paragraph/XL/regular">{description}</Text>
           </Stack>
 
           {firstPost && (
@@ -43,6 +41,7 @@ const BlogListContent = (props: BlogListPageProps) => {
               <a href={firstPost.slug}>
                 <BlogPostHighlight
                   title={firstPost.title}
+                  description={firstPost.description}
                   image={firstPost.image}
                   date={firstPost.released}
                   author={firstPost.author}
@@ -51,31 +50,34 @@ const BlogListContent = (props: BlogListPageProps) => {
             </Flex>
           )}
 
-          <Grid
-            pt={["2.5rem", "2.5rem", "4.375rem"]}
-            pb="6rem"
-            gridTemplateColumns={[
-              "repeat(1, minmax(0px, 1fr))",
-              "repeat(1, minmax(0px, 1fr))",
-              "repeat(2, minmax(0px, 1fr))",
-              "repeat(2, minmax(0px, 1fr))",
-              "repeat(3, minmax(0px, 1fr))",
-            ]}
-            gap={12}
-            alignItems="start"
-          >
-            {remainingPosts.map((post) => (
-              <BlogPostCard
-                key={post.slug}
-                link={post.slug}
-                category={post.category}
-                image={post.image}
-                title={post.title}
-                date={post.released}
-                author={post.author}
-              />
-            ))}
-          </Grid>
+          {remainingPosts.length > 0 && (
+            <Grid
+              pt={["2.5rem", "2.5rem", "4.375rem"]}
+              pb="6rem"
+              gridTemplateColumns={[
+                "repeat(1, minmax(0px, 1fr))",
+                "repeat(1, minmax(0px, 1fr))",
+                "repeat(2, minmax(0px, 1fr))",
+                "repeat(2, minmax(0px, 1fr))",
+                "repeat(3, minmax(0px, 1fr))",
+              ]}
+              gap={12}
+              alignItems="start"
+            >
+              {remainingPosts.map((post) => (
+                <BlogPostCard
+                  key={post.slug}
+                  link={post.slug}
+                  category={post.category}
+                  image={post.image}
+                  title={post.title}
+                  description={post.description}
+                  date={post.released}
+                  author={post.author}
+                />
+              ))}
+            </Grid>
+          )}
         </Container>
       </Flex>
       <Footer
