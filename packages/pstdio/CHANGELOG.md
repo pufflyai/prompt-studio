@@ -1,5 +1,48 @@
 # pstdio
 
+## 0.8.0
+
+### Minor Changes
+
+- f86d12b: Add Mermaid block preview and inline editing support in rich text markdown editors.
+- 115d70c: Add bundled `architecture-overview`, `contracts`, `research`, and `schemas` document templates for proposal scaffolding.
+- 115d70c: `pstdio templates write` now accepts `--target <path>` to render a template to an arbitrary file path (relative to the current directory, parent dirs auto-created, existing files overwritten), and `--ticket <shorthand>` for the previous ticket-scoped behavior (writes `.pstdio/tickets/<shorthand>/ticket.md` and preserves the existing H1 title). Exactly one of the two flags is required. A repeatable `--var KEY=value` flag passes additional placeholders to the template. Breaking: callers that previously used `--target <ticket-shorthand>` must switch to `--ticket <shorthand>`.
+
+  Added bundled document templates `contracts`, `schemas`, and `research` for ticket-scoped API/schema/investigation notes, and updated the `create-proposal` skill to scaffold them with `pstdio templates write --target .pstdio/tickets/<shorthand>/<file>.md`.
+
+- 73e707e: Improve markdown editor code block authoring with inline editing, block insertion, and copy actions.
+- 7676e4b: Allow dashboard users to stop active sessions from the chat composer.
+- e6b9f1e: Add first-class scheduled plugin handlers with cron validation, runtime execution, and bundled schedule examples.
+- 115d70c: Rename bundled template files to `name.[template|prompt].md`, split the code-review prompt into a `review-code` prompt plus a new `code-review` document template, and remove the legacy `review-me` document template.
+- 000bdcb: Replace labels with tags system and add inline tag editing via badge dropdowns
+
+### Patch Changes
+
+- d9c5cd4: Add a sidebar action to create empty workspaces without starting a session and preserve workspace-only hook coverage
+- ed09ec7: Add right-click resource context menus for ticket cards, workspace items, and session items using shared header action composition so default and plugin actions stay consistent with dialog, pending, and disabled behavior.
+- 115d70c: Add `saveTicket` SDK plugin helper that persists a local ticket file, its attachments, and artifacts via the client, mirroring `pstdio tickets save`. Use it from plugin hooks or actions to upload ticket edits from a worktree. The bundled code-review lifecycle plugin template now calls `saveTicket` on review-ready transitions so ticket edits and generated artifacts are persisted before the review session starts.
+- 2228ec9: Disable branch switching in session repo menus to prevent misleading branch state and stale workspace defaults
+- 70aac27: Remove hard-coded run attempt button from the workspace header.
+- 554e738: Fix wrong LLM being used on submit when the agent browser auto-picks a model after an agent switch
+- 115d70c: Fix bundled agent skill docs: replace references to the non-existent `pstdio hooks` CLI with the real `pstdio plugins` command group, drop the fictional shell-hook runtime in favor of SDK plugin guidance, rename `write-pstdio-hook` → `create-pstdio-plugin` and extend it to cover both hooks and actions, and clean up the CLI reference (remove `projects startup-script`, `workspaces startup-log`, `docs init`, `workspaces delete --force`; add `agents install-plugins` and the full set of `tickets` subcommands).
+- ab2c414: Keep OpenCode follow-up sessions in progress until the assistant response appears.
+- beaa04e: Fix CI hangs from scheduled plugin startup during tests.
+- 54f69cb: Fix the dashboard shortcut help menu and keyboard shortcut panel behavior
+- ab3b73c: Fallback stale sync reconnects to a full init payload so dashboard ticket data stays complete after inactivity.
+- e6de23c: Display OpenCode API errors (e.g. server overloaded) in the conversation and mark the session as failed.
+- 7b61d53: Stop persisting ticket status in local ticket frontmatter.
+- d9c5cd4: Hide the agent selector in create-workspace dialogs while keeping it available for run-attempt flows.
+- e9ac4d5: Align diff drawer ordering with file tree sorting
+- ab2c414: Support linking an existing worktree when creating a workspace from the CLI.
+- 582bcae: Tune rich text spacing across the editor and blog
+- c12f747: Fix runCommand to inherit runtime process.env updates when no env option is passed, so plugins picking up PATH mutations see them.
+- 59f53b4: Move agent setup from onboarding into project creation with a second agent-selection step and block new project creation when no installed agents are available.
+- 808e50b: Fix Claude Code tool timeline rendering so existing tool renderers resolve reliably and Edit and TodoWrite render with structured output.
+- 948be5a: Fix ticket workspace grouping columns and trim default display fields.
+- d0abed3: Fix markdown editors so nested list items render correctly from markdown and can be indented with Tab.
+- 54f69cb: Add a centralized dashboard shortcut registry with project-level handlers, shortcut help, and shared menu shortcut labels
+- 95e20be: Fix markdown bubble menu visibility so it only appears for non-collapsed text range selections.
+
 ## 0.7.0
 
 ### Minor Changes

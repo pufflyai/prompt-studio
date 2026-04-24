@@ -1,5 +1,25 @@
 # @pstdio/ui
 
+## 0.5.0
+
+### Minor Changes
+
+- f86d12b: Add Mermaid block preview and inline editing support in rich text markdown editors.
+- 73e707e: Improve markdown editor code block authoring with inline editing, block insertion, and copy actions.
+- 7676e4b: Allow dashboard users to stop active sessions from the chat composer.
+- 000bdcb: Replace labels with tags system and add inline tag editing via badge dropdowns
+
+### Patch Changes
+
+- d9c5cd4: Add a sidebar action to create empty workspaces without starting a session and preserve workspace-only hook coverage
+- ed09ec7: Add right-click resource context menus for ticket cards, workspace items, and session items using shared header action composition so default and plugin actions stay consistent with dialog, pending, and disabled behavior.
+- 582bcae: Tune rich text spacing across the editor and blog
+- 808e50b: Fix Claude Code tool timeline rendering so existing tool renderers resolve reliably and Edit and TodoWrite render with structured output.
+- 948be5a: Fix ticket workspace grouping columns and trim default display fields.
+- d0abed3: Fix markdown editors so nested list items render correctly from markdown and can be indented with Tab.
+- 54f69cb: Add a centralized dashboard shortcut registry with project-level handlers, shortcut help, and shared menu shortcut labels
+- 95e20be: Fix markdown bubble menu visibility so it only appears for non-collapsed text range selections.
+
 ## 0.4.0
 
 ### Minor Changes
