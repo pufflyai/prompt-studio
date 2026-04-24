@@ -10,8 +10,8 @@ describe("shortcut-kbd", () => {
     expect(getShortcutDisplayTokens("Mod+K", "windows")).toEqual([["Ctrl", "K"]]);
   });
 
-  it("shows shifted slash for the shortcut help binding", () => {
-    expect(getShortcutDisplayTokens("Shift+/", "mac")).toEqual([["Shift", "/"]]);
+  it("shows modifier labels for the shortcut help binding", () => {
+    expect(getShortcutDisplayTokens("Mod+/", "mac")).toEqual([["Cmd", "/"]]);
   });
 
   it("falls back to windows labels for unknown platforms", () => {

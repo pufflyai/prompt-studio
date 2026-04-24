@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Fix shortcut handling so typing `/` in contenteditable chat inputs no longer opens keyboard shortcut help.
+Move the shortcut help binding off `Shift+/` so slash typing still works on international keyboards.

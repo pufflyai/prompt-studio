@@ -280,3 +280,62 @@ test.describe("Session chat and workspace behavior", () => {
     await page.waitForURL(`**/projects/${projectId}/sessions`);
   });
 });
+
+test.describe("Session chat keyboard shortcuts", () => {
+  let projectId: string;
+
+  test.beforeEach(async ({ request }) => {
+    test.setTimeout(10_000);
+    await deleteAllProjects(request);
+    await configureAgent(request, "fake");
+    const project = await createProjectViaApi(request, "Sessions Chat Shortcut Test Project");
+    projectId = project.id;
+  });
+
+  test("does not open shortcut help on Shift+7 in the chat composer", async ({ page }) => {
+    await bypassOnboarding(page);
+
+    await page.goto(`/projects/${projectId}/sessions`);
+
+    const contentEditor = page.locator("[data-testid='content-editable'][contenteditable='true']").first();
+    const client = await page.context().newCDPSession(page);
+
+    await contentEditor.click();
+    await client.send("Input.dispatchKeyEvent", {
+      type: "rawKeyDown",
+      key: "Shift",
+      code: "ShiftLeft",
+      windowsVirtualKeyCode: 16,
+      nativeVirtualKeyCode: 16,
+      modifiers: 8,
+    });
+    await client.send("Input.dispatchKeyEvent", {
+      type: "keyDown",
+      key: "/",
+      code: "Digit7",
+      text: "/",
+      unmodifiedText: "7",
+      windowsVirtualKeyCode: 55,
+      nativeVirtualKeyCode: 55,
+      modifiers: 8,
+    });
+    await client.send("Input.dispatchKeyEvent", {
+      type: "keyUp",
+      key: "/",
+      code: "Digit7",
+      windowsVirtualKeyCode: 55,
+      nativeVirtualKeyCode: 55,
+      modifiers: 8,
+    });
+    await client.send("Input.dispatchKeyEvent", {
+      type: "keyUp",
+      key: "Shift",
+      code: "ShiftLeft",
+      windowsVirtualKeyCode: 16,
+      nativeVirtualKeyCode: 16,
+      modifiers: 0,
+    });
+
+    await expect(page.getByText("Keyboard Shortcuts")).toHaveCount(0);
+  });
+});

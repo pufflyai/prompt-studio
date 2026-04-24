@@ -27,7 +27,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   {
     id: "open-shortcut-help",
     actionLabel: "Keyboard shortcuts",
-    binding: "Shift+/",
+    binding: "Mod+/",
     scope: "global",
     whenNotTyping: true,
   },

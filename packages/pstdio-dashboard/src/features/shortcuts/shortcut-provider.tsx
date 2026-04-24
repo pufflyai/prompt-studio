@@ -144,7 +144,7 @@ export const registerShortcutBindings = (input: {
       },
       {
         enabled: activeScopes.includes("global"),
-        ignoreInputs: false,
+        ignoreInputs: true,
       },
     ),
   ];
