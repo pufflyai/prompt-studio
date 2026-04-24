@@ -84,27 +84,25 @@ export const isEditableEventTarget = (target: EventTarget | EditableTarget | nul
     return false;
   }
 
-  const editableTarget = target as EditableTarget;
-  const candidate =
-    editableTarget.parentElement && !editableTarget.tagName ? editableTarget.parentElement : editableTarget;
+  let candidate: EditableTarget | null | undefined = target as EditableTarget;
 
-  if (!candidate) {
-    return false;
+  while (candidate) {
+    if (candidate.isContentEditable) {
+      return true;
+    }
+
+    const tagName = candidate.tagName?.toUpperCase();
+    if (tagName === "TEXTAREA" || tagName === "SELECT") {
+      return true;
+    }
+
+    if (tagName === "INPUT") {
+      const type = candidate.type?.toLowerCase() ?? "text";
+      return !NON_TEXT_INPUT_TYPES.has(type);
+    }
+
+    candidate = candidate.parentElement;
   }
 
-  if (candidate.isContentEditable) {
-    return true;
-  }
-
-  const tagName = candidate.tagName?.toUpperCase();
-  if (tagName === "TEXTAREA" || tagName === "SELECT") {
-    return true;
-  }
-
-  if (tagName !== "INPUT") {
-    return false;
-  }
-
-  const type = candidate.type?.toLowerCase() ?? "text";
-  return !NON_TEXT_INPUT_TYPES.has(type);
+  return false;
 };

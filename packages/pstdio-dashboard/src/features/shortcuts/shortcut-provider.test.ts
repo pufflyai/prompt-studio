@@ -194,6 +194,16 @@ describe("registerShortcutBindings - overlay and sibling navigation", () => {
     const hotkeyManager = createHotkeyManager();
     const sequenceManager = createSequenceManager();
     const setIsHelpOpen = mock(() => {});
+    const nestedTextNodeInsideEditable = {
+      nodeType: 3,
+      parentElement: {
+        tagName: "SPAN",
+        parentElement: {
+          tagName: "DIV",
+          isContentEditable: true,
+        },
+      },
+    } as unknown as EventTarget;
 
     registerShortcutBindings({
       hotkeyManager: hotkeyManager as never,
@@ -217,6 +227,7 @@ describe("registerShortcutBindings - overlay and sibling navigation", () => {
     hotkeyManager.handlers
       .get("Shift+/")
       ?.handler({ target: { tagName: "INPUT", type: "text" } as unknown as EventTarget });
+    hotkeyManager.handlers.get("Shift+/")?.handler({ target: nestedTextNodeInsideEditable });
     hotkeyManager.handlers.get("Shift+/")?.handler({ target: { tagName: "BUTTON" } as unknown as EventTarget });
 
     expect(setIsHelpOpen).toHaveBeenCalledTimes(1);
