@@ -1,7 +1,8 @@
 import { describe, expect, mock, test } from "bun:test";
+import type { SidebarNavigateEvent } from "@pstdio/ui";
 import type { TicketAttempt } from "@/features/ticket-list/types";
 import type { WorkspaceSessionEntry } from "@/features/workspaces/hooks/use-workspace-sessions";
-import { buildWorkspacesSection } from "./ticket-sidebar";
+import { buildSubTicketsSection, buildWorkspacesSection, handleTicketSidebarNavigate } from "./ticket-sidebar";
 import { sortWorkspacesByLatestSession } from "./ticket-sidebar-workspaces";
 
 const buildWorkspace = (overrides: Partial<TicketAttempt>): TicketAttempt => ({
@@ -66,5 +67,104 @@ describe("buildWorkspacesSection", () => {
     section.actions?.[0]?.onAction?.({ sectionId: "workspaces" });
 
     expect(onCreateWorkspace).toHaveBeenCalled();
+  });
+});
+
+describe("buildSubTicketsSection", () => {
+  test("returns null when the ticket has no sub-tickets", () => {
+    expect(
+      buildSubTicketsSection(
+        [],
+        "Sub-tickets",
+        [],
+        mock(() => {}),
+      ),
+    ).toBeNull();
+  });
+
+  test("builds selectable child ticket nodes with shorthand payload", () => {
+    const section = buildSubTicketsSection(
+      [
+        { id: "ticket-2", shorthand: "PS-34", title: "First child", statusId: null },
+        { id: "ticket-3", shorthand: "PS-35", title: "Second child", statusId: null },
+      ],
+      "Sub-tickets",
+      ["ticket-2", "ticket-3"],
+      mock(() => {}),
+    );
+
+    expect(section).not.toBeNull();
+    expect(section?.id).toBe("sub-tickets");
+    expect(section?.label).toBe("Sub-tickets");
+    expect(section?.nodes).toHaveLength(2);
+    expect(section?.nodes[0]).toMatchObject({
+      id: "sub-ticket:ticket-2",
+      isNavigable: true,
+      navigationIntent: { id: "select-sub-ticket", payload: { ticketShorthand: "PS-34" } },
+    });
+    expect(section?.nodes[0]?.description).toBe("First child");
+  });
+
+  test("disables unresolved child tickets", () => {
+    const section = buildSubTicketsSection(
+      [
+        { id: "ticket-2", shorthand: "PS-34", title: "First child", statusId: null },
+        { id: "ticket-3", shorthand: "PS-35", title: "Second child", statusId: null },
+      ],
+      "Sub-tickets",
+      ["ticket-2"],
+      mock(() => {}),
+    );
+
+    expect(section?.nodes[0]).toMatchObject({
+      id: "sub-ticket:ticket-2",
+      disabled: false,
+      isNavigable: true,
+      navigationIntent: { id: "select-sub-ticket", payload: { ticketShorthand: "PS-34" } },
+    });
+    expect(section?.nodes[1]).toMatchObject({
+      id: "sub-ticket:ticket-3",
+      disabled: true,
+      isNavigable: false,
+    });
+    expect(section?.nodes[1]?.navigationIntent).toBeUndefined();
+  });
+
+  test("disables child tickets when no handler is provided", () => {
+    const section = buildSubTicketsSection(
+      [{ id: "ticket-2", shorthand: "PS-34", title: "First child", statusId: null }],
+      "Sub-tickets",
+      ["ticket-2"],
+    );
+
+    expect(section?.nodes[0]).toMatchObject({
+      id: "sub-ticket:ticket-2",
+      disabled: true,
+      isNavigable: false,
+    });
+    expect(section?.nodes[0]?.navigationIntent).toBeUndefined();
+  });
+});
+
+describe("handleTicketSidebarNavigate", () => {
+  test("dispatches sub-ticket navigation intent", () => {
+    const onSelectSubTicket = mock(() => {});
+
+    handleTicketSidebarNavigate(
+      {
+        sectionId: "sub-tickets",
+        nodeId: "sub-ticket:ticket-2",
+        node: { id: "sub-ticket:ticket-2", label: "PS-34" },
+        intent: { id: "select-sub-ticket", payload: { ticketShorthand: "PS-34" } },
+      } satisfies SidebarNavigateEvent,
+      {
+        onSelectFile: mock(() => {}),
+        onSelectSubTicket,
+        onSelectWorkspace: mock(() => {}),
+        onSelectSession: mock(() => {}),
+      },
+    );
+
+    expect(onSelectSubTicket).toHaveBeenCalledWith("PS-34");
   });
 });

@@ -239,6 +239,16 @@ export const WorkspacePage = () => {
       setSelectedSessionId,
     });
   };
+
+  const handleSelectSubTicket = (nextTicketShorthand: string) => {
+    if (!projectId) return;
+
+    navigate({
+      to: "/projects/$projectId/tickets/$ticketShorthand",
+      params: { projectId, ticketShorthand: nextTicketShorthand },
+    });
+  };
+
   const handleSelectFile = () => void navigateToTicketDetails(navigate, projectId, ticketShorthand);
 
   const handleRunAttempt = () =>
@@ -303,6 +313,7 @@ export const WorkspacePage = () => {
       projectId={projectId}
       ticketShorthand={ticketShorthand}
       ticket={ticket}
+      knownTicketIds={allTickets.map((projectTicket) => projectTicket.id)}
       attemptStatusMap={attemptStatusMap}
       diffTotalsByWorkspaceId={diffTotalsByWorkspaceId}
       selectedWorkspaceLabel={selectedWorkspaceLabel}
@@ -324,6 +335,7 @@ export const WorkspacePage = () => {
       }
       createWorkspaceSessionDraft={handleCreateWorkspaceSessionDraft}
       selectFile={handleSelectFile}
+      selectSubTicket={handleSelectSubTicket}
       selectPlanning={() => navigateToProjectTickets(navigate, projectId)}
       openRunAttempt={creationActions.openRunAttempt}
       isRunAttemptModalOpen={isRunAttemptModalOpen}

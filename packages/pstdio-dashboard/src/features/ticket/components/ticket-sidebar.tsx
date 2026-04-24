@@ -12,9 +12,10 @@ import {
 } from "@pstdio/ui";
 import { FileCode, FileImage, FileJson, FileSpreadsheet, FileText, Plus } from "lucide-react";
 import { createElement } from "react";
+import { useTranslation } from "react-i18next";
 import { ProjectMenu } from "@/features/project/components/project-menu";
 import { ProjectSidebarFooter } from "@/features/project/components/project-sidebar";
-import type { TicketAttempt } from "@/features/ticket-list/types";
+import type { TicketAttempt, TicketSubTicket } from "@/features/ticket-list/types";
 import { toSessionIndicatorStatus } from "@/features/ticket-list/utils/ticket-attempts";
 import type { AttemptStatusMapEntry } from "@/features/workspaces/hooks/attempt-status-map";
 import type { WorkspaceSessionEntry } from "@/features/workspaces/hooks/use-workspace-sessions";
@@ -30,6 +31,8 @@ const sessionIcon = (status: string) =>
 
 interface TicketSidebarProps {
   files: SelectableTicketFile[];
+  subTickets?: TicketSubTicket[];
+  knownSubTicketIds?: string[];
   selectedFileId: string;
   workspaces: TicketAttempt[];
   attemptStatusMap?: Map<string, AttemptStatusMapEntry>;
@@ -38,6 +41,7 @@ interface TicketSidebarProps {
   selectedWorkspaceId?: string | null;
   activeSessionId?: string | null;
   onSelectFile: (fileId: string) => void;
+  onSelectSubTicket?: (ticketShorthand: string) => void;
   onSelectWorkspace: (workspaceShorthand: string) => void;
   onSelectSession: (workspaceShorthand: string, sessionId: string) => void;
   onCreateWorkspaceSessionDraft?: (workspaceId: string) => void;
@@ -96,6 +100,81 @@ const buildFilesSection = (
   ];
 
   return { id: "files", label: "Files", nodes };
+};
+
+export const buildSubTicketsSection = (
+  subTickets: TicketSubTicket[],
+  label: string,
+  knownSubTicketIds: string[] = [],
+  onSelectSubTicket?: (ticketShorthand: string) => void,
+): SidebarSection | null => {
+  if (subTickets.length === 0) {
+    return null;
+  }
+
+  const knownTicketIdSet = new Set(knownSubTicketIds);
+  const hasKnownTickets = knownTicketIdSet.size > 0;
+
+  const nodes: SidebarNode[] = subTickets.map((subTicket) => {
+    const canSelect =
+      Boolean(onSelectSubTicket) &&
+      subTicket.shorthand.length > 0 &&
+      (!hasKnownTickets || knownTicketIdSet.has(subTicket.id));
+
+    return {
+      id: `sub-ticket:${subTicket.id}`,
+      label: subTicket.shorthand,
+      description: subTicket.title,
+      isNavigable: canSelect,
+      disabled: !canSelect,
+      navigationIntent: canSelect
+        ? { id: "select-sub-ticket", payload: { ticketShorthand: subTicket.shorthand } }
+        : undefined,
+    };
+  });
+
+  return {
+    id: "sub-tickets",
+    label,
+    nodes,
+  };
+};
+
+export const handleTicketSidebarNavigate = (
+  event: SidebarNavigateEvent,
+  handlers: {
+    onSelectFile: (fileId: string) => void;
+    onSelectPlanning?: () => void;
+    onSelectSubTicket?: (ticketShorthand: string) => void;
+    onSelectWorkspace: (workspaceShorthand: string) => void;
+    onSelectSession: (workspaceShorthand: string, sessionId: string) => void;
+  },
+) => {
+  const intent = event.intent;
+  if (!intent) return;
+
+  if (intent.id === "select-file") {
+    handlers.onSelectFile(intent.payload as string);
+  }
+
+  if (intent.id === "select-planning") {
+    handlers.onSelectPlanning?.();
+  }
+
+  if (intent.id === "select-workspace") {
+    const { workspaceShorthand } = intent.payload as { workspaceShorthand: string };
+    handlers.onSelectWorkspace(workspaceShorthand);
+  }
+
+  if (intent.id === "select-sub-ticket") {
+    const { ticketShorthand } = intent.payload as { ticketShorthand: string };
+    handlers.onSelectSubTicket?.(ticketShorthand);
+  }
+
+  if (intent.id === "select-session") {
+    const { workspaceShorthand, sessionId } = intent.payload as { workspaceShorthand: string; sessionId: string };
+    handlers.onSelectSession(workspaceShorthand, sessionId);
+  }
 };
 
 export const buildWorkspacesSection = (
@@ -193,6 +272,8 @@ const buildSessionsSection = (
 export const TicketSidebar = (props: TicketSidebarProps) => {
   const {
     files,
+    subTickets = [],
+    knownSubTicketIds = [],
     selectedFileId,
     workspaces,
     attemptStatusMap = new Map(),
@@ -201,6 +282,7 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
     selectedWorkspaceId,
     activeSessionId = null,
     onSelectFile,
+    onSelectSubTicket,
     onSelectWorkspace,
     onSelectSession,
     onCreateWorkspaceSessionDraft,
@@ -210,13 +292,21 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
     resolveWorkspaceContextMenuItems,
     resolveSessionContextMenuItems,
   } = props;
+  const { t } = useTranslation("tickets");
 
   const selectedWorkspace = selectedWorkspaceId ? workspaces.find((w) => w.id === selectedWorkspaceId) : null;
   const sessions = selectedWorkspaceId ? (sessionsByWorkspaceId.get(selectedWorkspaceId) ?? []) : [];
+  const subTicketsSection = buildSubTicketsSection(
+    subTickets,
+    t("ticketDetail.subTickets"),
+    knownSubTicketIds,
+    onSelectSubTicket,
+  );
 
   const sections: SidebarSection[] = [
     ...(onSelectPlanning ? [buildPlanningSection()] : []),
     buildFilesSection(files, resolveTicketContextMenuItems),
+    ...(subTicketsSection ? [subTicketsSection] : []),
     buildWorkspacesSection(
       workspaces,
       attemptStatusMap,
@@ -246,26 +336,13 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
   });
 
   const handleNavigate = (event: SidebarNavigateEvent) => {
-    const intent = event.intent;
-    if (!intent) return;
-
-    if (intent.id === "select-file") {
-      onSelectFile(intent.payload as string);
-    }
-
-    if (intent.id === "select-planning") {
-      onSelectPlanning?.();
-    }
-
-    if (intent.id === "select-workspace") {
-      const { workspaceShorthand } = intent.payload as { workspaceShorthand: string };
-      onSelectWorkspace(workspaceShorthand);
-    }
-
-    if (intent.id === "select-session") {
-      const { workspaceShorthand, sessionId } = intent.payload as { workspaceShorthand: string; sessionId: string };
-      onSelectSession(workspaceShorthand, sessionId);
-    }
+    handleTicketSidebarNavigate(event, {
+      onSelectFile,
+      onSelectPlanning,
+      onSelectSubTicket,
+      onSelectWorkspace,
+      onSelectSession,
+    });
   };
 
   return (
@@ -273,7 +350,7 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
       storageKey={TICKET_SIDEBAR_STORAGE_KEY}
       sections={sections}
       activeNodeId={activeNodeIds}
-      defaultExpandedSections={["files", "workspaces", "sessions"]}
+      defaultExpandedSections={["files", "sub-tickets", "workspaces", "sessions"]}
       header={<ProjectMenu />}
       footer={<ProjectSidebarFooter />}
       onNavigate={handleNavigate}

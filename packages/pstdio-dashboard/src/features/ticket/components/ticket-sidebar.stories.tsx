@@ -75,3 +75,50 @@ export const WorkspaceSessionsWithCreateAction: Story = {
     </Box>
   ),
 };
+
+export const WithSubTickets: Story = {
+  render: () => (
+    <Box maxW="260px">
+      <TicketSidebar
+        files={[]}
+        subTickets={[
+          { id: "ticket-2", shorthand: "PS-13", title: "Set up retries", statusId: null },
+          { id: "ticket-3", shorthand: "PS-14", title: "Add smoke checks", statusId: null },
+        ]}
+        knownSubTicketIds={["ticket-2", "ticket-3"]}
+        selectedFileId="ticket"
+        workspaces={workspaces}
+        sessionsByWorkspaceId={sessionsByWorkspaceId}
+        selectedWorkspaceId="workspace-1"
+        onSelectFile={() => undefined}
+        onSelectSubTicket={() => undefined}
+        onSelectWorkspace={() => undefined}
+        onSelectSession={() => undefined}
+        onCreateWorkspaceSessionDraft={() => undefined}
+        onSelectPlanning={() => undefined}
+      />
+    </Box>
+  ),
+};
+
+export const WithoutSubTickets: Story = {
+  render: () => (
+    <Box maxW="260px">
+      <TicketSidebar
+        files={[]}
+        subTickets={[]}
+        knownSubTicketIds={[]}
+        selectedFileId="ticket"
+        workspaces={workspaces}
+        sessionsByWorkspaceId={sessionsByWorkspaceId}
+        selectedWorkspaceId="workspace-1"
+        onSelectFile={() => undefined}
+        onSelectSubTicket={() => undefined}
+        onSelectWorkspace={() => undefined}
+        onSelectSession={() => undefined}
+        onCreateWorkspaceSessionDraft={() => undefined}
+        onSelectPlanning={() => undefined}
+      />
+    </Box>
+  ),
+};
