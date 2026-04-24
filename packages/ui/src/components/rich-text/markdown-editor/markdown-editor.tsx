@@ -12,6 +12,7 @@ import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
+import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
 import { $getRoot } from "lexical";
 import { useEffect, useRef, useState } from "react";
 import { ContentEditable } from "../shared/components/content-editable";
@@ -23,7 +24,7 @@ import { EquationPlugin } from "../shared/plugins/EquationPlugin/EquationPlugin"
 import { FloatingTextFormatToolbarPlugin } from "../shared/plugins/FloatingTextFormatToolbarPlugin";
 import ToggleEditablePlugin from "../shared/plugins/ToggleEditablePlugin";
 import { TreeViewPlugin } from "../shared/plugins/TreeViewPlugin/TreeViewPlugin";
-import { splitFrontmatter } from "../utils/markdown";
+import { normalizeMarkdownListIndentation, splitFrontmatter } from "../utils/markdown";
 
 export interface MarkdownEditorProps {
   autoFocus?: boolean;
@@ -58,7 +59,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
     namespace: "MARKDOWN_EDITOR",
     nodes: editorNodes,
     editorState: () => {
-      return $convertFromMarkdownString(body, editorTransformers, undefined, false);
+      return $convertFromMarkdownString(normalizeMarkdownListIndentation(body), editorTransformers, undefined, false);
     },
     onError: (error: Error) => console.error(error),
     editable: isEditable,
@@ -82,6 +83,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
         <HistoryPlugin />
         <LinkPlugin />
         <ListPlugin />
+        {isEditable ? <TabIndentationPlugin maxIndent={7} /> : null}
         <CheckListPlugin />
         <HorizontalRulePlugin />
         <CodeHighlightingPlugin />

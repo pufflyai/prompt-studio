@@ -13,6 +13,7 @@ import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
+import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { $getRoot } from "lexical";
 import { ContentEditable } from "../shared/components/content-editable";
@@ -28,7 +29,7 @@ import ToggleEditablePlugin from "../shared/plugins/ToggleEditablePlugin";
 import { TreeViewPlugin } from "../shared/plugins/TreeViewPlugin/TreeViewPlugin";
 import { TRANSFORMERS_EXTENDED } from "../shared/transformers/markdown-transformers";
 import theme from "../theme/rich-text-theme";
-import { splitFrontmatter } from "../utils/markdown";
+import { normalizeMarkdownListIndentation, splitFrontmatter } from "../utils/markdown";
 import { REFERENCE_LINK_TRANSFORMER, ReferenceLinkNode } from "./plugins/ReferenceLinkPlugin";
 
 export interface RichMessageProps {
@@ -70,7 +71,7 @@ export function RichMessage(props: RichMessageProps) {
       ReferenceLinkNode,
     ],
     editorState: () => {
-      return $convertFromMarkdownString(body, transformers, undefined, false);
+      return $convertFromMarkdownString(normalizeMarkdownListIndentation(body), transformers, undefined, false);
     },
     onError: (error: Error) => console.error(error),
     editable: isEditable,
@@ -93,12 +94,13 @@ export function RichMessage(props: RichMessageProps) {
         <StateUpdatePlugin
           value={body}
           onUpdate={(value: string) => {
-            $convertFromMarkdownString(value, transformers, undefined, false);
+            $convertFromMarkdownString(normalizeMarkdownListIndentation(value), transformers, undefined, false);
           }}
         />
         <LinkPlugin />
         <ClickableLinkPlugin newTab />
         <ListPlugin />
+        {isEditable ? <TabIndentationPlugin maxIndent={7} /> : null}
         <HorizontalRulePlugin />
         <CodeHighlightingPlugin />
         <ImportCodeBlocksPlugin />
