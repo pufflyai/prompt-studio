@@ -184,10 +184,9 @@ test.describe("Sessions page", () => {
     await page.goto(`/projects/${projectId}/sessions/${session.id}`);
 
     const stopFromEnter = page
-      .waitForResponse(
-        (res) => res.url().endsWith(`/v1/sessions/${session.id}/status`) && res.request().method() === "PATCH",
-        { timeout: 500 },
-      )
+      .waitForRequest((req) => req.url().endsWith(`/v1/sessions/${session.id}/status`) && req.method() === "PATCH", {
+        timeout: 500,
+      })
       .then(() => true)
       .catch(() => false);
     const contentEditor = page.locator("[data-testid='content-editable'][contenteditable='true']").last();

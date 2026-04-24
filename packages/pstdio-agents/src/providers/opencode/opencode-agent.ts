@@ -119,7 +119,9 @@ const createOpencodeProcess = (input: {
     stdin: new PassThrough(),
     kill: () => {
       if (abortController.signal.aborted) return;
-      void abortSession().catch(() => {});
+      void abortSession().catch((error) => {
+        console.error(`[opencode] failed to abort session ${sessionId}`, error);
+      });
       abortController.abort();
     },
     onExit,
