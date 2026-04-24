@@ -110,7 +110,14 @@
       }
     },
     "actions": {
+      "next": "Next",
+      "back": "Back",
       "create": "Create project"
+    },
+    "agents": {
+      "title": "Select agents",
+      "description": "Choose which agents to enable for this project.",
+      "selectAtLeastOne": "Select at least one agent."
     },
     "folderPicker": {
       "title": "Select repository",
@@ -249,7 +256,16 @@
     "noProjectsDescription": "Create your first project to get started.",
     "noSearchResults": "No projects match your search.",
     "createFirstProject": "Create your first project",
-    "settingsAriaLabel": "Settings"
+    "settingsAriaLabel": "Settings",
+    "noAgentsBanner": {
+      "title": "No coding agents available",
+      "description": "Project creation is disabled until at least one agent is installed. Add an agent in Settings > Agents using setup or manual add, then return here to create a project."
+    },
+    "agentLoadErrorBanner": {
+      "title": "Unable to load agent availability",
+      "description": "We couldn't check installed agents right now. Retry to continue project creation.",
+      "retry": "Retry"
+    }
   },
   "sessions": {
     "title": "Sessions",

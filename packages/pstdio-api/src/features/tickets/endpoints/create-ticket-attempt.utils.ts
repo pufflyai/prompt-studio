@@ -79,7 +79,7 @@ const startAttemptSession = async (
     requestedPrompt: string | undefined;
   },
 ) => {
-  const agentId = await resolveAgentId(deps, input.requestedAgent);
+  const agentId = await resolveAgentId(deps, input.requestedAgent, input.ticket.project_id);
   if (!agentId) return null;
 
   const title = input.ticket.display_title ?? input.ticket.shorthand;

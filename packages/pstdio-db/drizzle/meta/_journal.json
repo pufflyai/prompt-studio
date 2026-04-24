@@ -64,6 +64,13 @@
       "when": 1776370000000,
       "tag": "0008_activity_events",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1777019900000,
+      "tag": "0009_project_selected_agents",
+      "breakpoints": true
     }
   ]
 }

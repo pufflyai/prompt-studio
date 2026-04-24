@@ -109,7 +109,14 @@
       }
     },
     "actions": {
+      "next": "Suivant",
+      "back": "Retour",
       "create": "Créer un projet"
+    },
+    "agents": {
+      "title": "Sélectionner les agents",
+      "description": "Choisissez les agents à activer pour ce projet.",
+      "selectAtLeastOne": "Sélectionnez au moins un agent."
     },
     "folderPicker": {
       "title": "Sélectionner un dépôt",
@@ -232,7 +239,16 @@
     "noProjectsYet": "Aucun projet pour le moment",
     "noProjectsDescription": "Créez votre premier projet pour commencer.",
     "createFirstProject": "Créer votre premier projet",
-    "settingsAriaLabel": "Paramètres"
+    "settingsAriaLabel": "Paramètres",
+    "noAgentsBanner": {
+      "title": "Aucun agent de code disponible",
+      "description": "La création de projet est désactivée jusqu'à ce qu'au moins un agent soit installé. Ajoutez un agent dans Paramètres > Agents via la configuration automatique ou l'ajout manuel, puis revenez ici pour créer un projet."
+    },
+    "agentLoadErrorBanner": {
+      "title": "Impossible de charger la disponibilité des agents",
+      "description": "Nous n'avons pas pu vérifier les agents installés pour le moment. Réessayez pour continuer la création du projet.",
+      "retry": "Réessayer"
+    }
   },
   "sessions": {
     "title": "Sessions",

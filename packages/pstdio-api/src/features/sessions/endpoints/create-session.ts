@@ -1,6 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
+import { isAgentEnabledForProject, parseProjectSelectedAgents } from "../../projects/selected-agents";
 import { createSessionBodySchema, sessionResponseSchema } from "../dto";
 import { resolvePrompt } from "../resolve-prompt";
 import { resolveSessionCwd } from "../resolve-session-cwd";
@@ -33,14 +34,28 @@ export const createSessionRoute = createRoute({
   },
 });
 
-const resolveCreateSessionAgent = async (inputAgent: string | undefined, deps: RouteDeps) => {
+const resolveCreateSessionAgent = async (
+  inputAgent: string | undefined,
+  deps: RouteDeps,
+  project: Awaited<ReturnType<RouteDeps["projectService"]["get"]>>,
+): Promise<{ type: "error"; error: string } | { type: "ok"; agentId: string | undefined }> => {
   if (inputAgent) {
-    return inputAgent;
+    if (project && !isAgentEnabledForProject(project, inputAgent)) {
+      return { type: "error", error: `Agent '${inputAgent}' is not enabled for this project.` };
+    }
+
+    return { type: "ok", agentId: inputAgent };
   }
 
   const configuredAgents = await deps.agentConfigService.list();
-  const defaultAgent = configuredAgents.find((config) => config.is_default);
-  return defaultAgent?.agent_id;
+  const selectedAgents = project ? parseProjectSelectedAgents(project) : [];
+  const availableConfiguredAgents =
+    selectedAgents.length === 0
+      ? configuredAgents
+      : configuredAgents.filter((config) => selectedAgents.includes(config.agent_id));
+  const defaultAgent = availableConfiguredAgents.find((config) => config.is_default) ?? availableConfiguredAgents[0];
+
+  return { type: "ok", agentId: defaultAgent?.agent_id };
 };
 
 export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof createSessionRoute> => {
@@ -64,7 +79,13 @@ export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
     }
 
     const cwd = await resolveSessionCwd(deps, input.project_id, resolvedWorkspaceId);
-    const agentId = await resolveCreateSessionAgent(input.agent, deps);
+    const resolvedAgent = await resolveCreateSessionAgent(input.agent, deps, project);
+
+    if (resolvedAgent.type === "error") {
+      return c.json({ error: resolvedAgent.error }, 400);
+    }
+
+    const { agentId } = resolvedAgent;
 
     if (!agentId) {
       return c.json({ error: "No agent configured. Set a default agent with 'pstdio agents setup' first." }, 400);

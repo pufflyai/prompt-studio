@@ -22,6 +22,7 @@ export const createProject = async (input: CreateProjectInput) => {
     method: "POST",
     body: {
       name: input.name,
+      agents: input.agents,
     },
   });
 

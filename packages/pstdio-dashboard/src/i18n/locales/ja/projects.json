@@ -109,7 +109,14 @@
       }
     },
     "actions": {
+      "next": "次へ",
+      "back": "戻る",
       "create": "プロジェクトを作成"
+    },
+    "agents": {
+      "title": "エージェントを選択",
+      "description": "このプロジェクトで使用するエージェントを選択してください。",
+      "selectAtLeastOne": "少なくとも1つのエージェントを選択してください。"
     },
     "folderPicker": {
       "title": "リポジトリを選択",
@@ -227,7 +234,16 @@
     "noProjectsYet": "まだプロジェクトがありません",
     "noProjectsDescription": "最初のプロジェクトを作成して始めましょう。",
     "createFirstProject": "最初のプロジェクトを作成",
-    "settingsAriaLabel": "設定"
+    "settingsAriaLabel": "設定",
+    "noAgentsBanner": {
+      "title": "利用可能なコーディングエージェントがありません",
+      "description": "少なくとも1つのエージェントがインストールされるまで、プロジェクト作成は無効です。設定 > Agents でセットアップまたは手動追加を行ってから、ここに戻ってプロジェクトを作成してください。"
+    },
+    "agentLoadErrorBanner": {
+      "title": "エージェントの利用可否を読み込めませんでした",
+      "description": "現在、インストール済みエージェントを確認できませんでした。再試行してプロジェクト作成を続けてください。",
+      "retry": "再試行"
+    }
   },
   "sessions": {
     "title": "セッション",

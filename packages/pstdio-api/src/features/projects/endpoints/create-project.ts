@@ -26,8 +26,8 @@ export const createProjectRoute = createRoute({
 
 export const createProjectHandler = (deps: RouteDeps): AppRouteHandler<typeof createProjectRoute> => {
   return async (c) => {
-    const { name } = c.req.valid("json");
-    const project = await deps.projectService.create({ name });
+    const { name, agents } = c.req.valid("json");
+    const project = await deps.projectService.create({ name, selectedAgents: agents });
 
     try {
       const templates = await seedDefaultTemplates(deps, project.id);

@@ -6,4 +6,5 @@ export type CreateProjectRepositoryInput = {
 export type CreateProjectInput = {
   name: string;
   repositories: CreateProjectRepositoryInput[];
+  agents: string[];
 };

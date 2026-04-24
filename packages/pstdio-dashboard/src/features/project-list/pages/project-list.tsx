@@ -4,20 +4,57 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { Folder, Settings } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useAgents } from "@/features/agents/hooks/use-agents";
+import type { AgentInfo } from "@/features/agents/types";
 import { resolveProjectDefaultPath } from "@/features/project/utils/project-default-path";
 import { CreateProjectDialog } from "../components/create-project-dialog";
 import type { CreateProjectInput } from "../data/api";
 import { useCreateProject, useProjectList } from "../hooks/use-project-list";
 
+type AgentAvailabilityStateInput = {
+  agentInfo: AgentInfo[];
+  isAgentsLoading: boolean;
+  isAgentsError: boolean;
+};
+
+export const resolveProjectCreationAvailability = (input: AgentAvailabilityStateInput) => {
+  const availableAgents = input.agentInfo.filter((agent) => agent.availability.type === "INSTALLED");
+  const hasAvailableAgents = availableAgents.length > 0;
+  const showNoAgentsBanner = !input.isAgentsLoading && !input.isAgentsError && !hasAvailableAgents;
+  const showAgentErrorBanner = input.isAgentsError;
+  const isCreateProjectBlocked = input.isAgentsLoading || showAgentErrorBanner || showNoAgentsBanner;
+
+  return {
+    availableAgents,
+    showNoAgentsBanner,
+    showAgentErrorBanner,
+    isCreateProjectBlocked,
+  };
+};
+
 export const ProjectList = () => {
   const { data, isLoading } = useProjectList();
+  const {
+    data: agentInfo = [],
+    isLoading: isAgentsLoading,
+    isError: isAgentsError,
+    refetch: refetchAgents,
+  } = useAgents();
   const createProject = useCreateProject();
   const [isDialogOpen, setDialogOpen] = useState(false);
   const navigate = useNavigate();
   const projects = data ?? [];
   const { t } = useTranslation("projects");
+  const { availableAgents, showNoAgentsBanner, showAgentErrorBanner, isCreateProjectBlocked } =
+    resolveProjectCreationAvailability({ agentInfo, isAgentsLoading, isAgentsError });
 
-  const handleOpenDialog = () => setDialogOpen(true);
+  const handleOpenDialog = () => {
+    if (isCreateProjectBlocked) {
+      return;
+    }
+
+    setDialogOpen(true);
+  };
   const handleCloseDialog = () => setDialogOpen(false);
 
   const handleCreateProject = async (input: CreateProjectInput) => {
@@ -45,6 +82,35 @@ export const ProjectList = () => {
   return (
     <Container>
       <Stack gap="lg" padding="lg">
+        {showNoAgentsBanner ? (
+          <Stack borderWidth="1px" borderColor="orange.300" bg="orange.50" borderRadius="md" p="sm" gap="2xs">
+            <Text textStyle="label/M/medium" color="orange.900">
+              {t("list.noAgentsBanner.title")}
+            </Text>
+            <Text textStyle="paragraph/S/regular" color="orange.800">
+              {t("list.noAgentsBanner.description")}
+            </Text>
+          </Stack>
+        ) : null}
+
+        {showAgentErrorBanner ? (
+          <Stack borderWidth="1px" borderColor="red.300" bg="red.50" borderRadius="md" p="sm" gap="xs">
+            <Stack gap="2xs">
+              <Text textStyle="label/M/medium" color="red.900">
+                {t("list.agentLoadErrorBanner.title")}
+              </Text>
+              <Text textStyle="paragraph/S/regular" color="red.800">
+                {t("list.agentLoadErrorBanner.description")}
+              </Text>
+            </Stack>
+            <Stack direction="row" justifyContent="flex-end">
+              <Button size="xs" variant="outline" onClick={() => void refetchAgents()}>
+                {t("list.agentLoadErrorBanner.retry")}
+              </Button>
+            </Stack>
+          </Stack>
+        ) : null}
+
         <Stack gap="2xs">
           <Stack direction="row" alignItems="center" justifyContent="space-between">
             <Text textStyle="heading/M">{t("list.title")}</Text>
@@ -54,7 +120,7 @@ export const ProjectList = () => {
                   <Settings size={18} />
                 </Link>
               </IconButton>
-              <Button size="sm" variant="primary" onClick={handleOpenDialog}>
+              <Button size="sm" variant="primary" onClick={handleOpenDialog} disabled={isCreateProjectBlocked}>
                 {t("list.createProject")}
               </Button>
             </Stack>
@@ -70,7 +136,7 @@ export const ProjectList = () => {
           </Text>
         ) : projects.length === 0 ? (
           <EmptyState title={t("list.noProjectsYet")} description={t("list.noProjectsDescription")}>
-            <Button size="sm" variant="outline" onClick={handleOpenDialog}>
+            <Button size="sm" variant="outline" onClick={handleOpenDialog} disabled={isCreateProjectBlocked}>
               {t("list.createFirstProject")}
             </Button>
           </EmptyState>
@@ -97,6 +163,7 @@ export const ProjectList = () => {
         open={isDialogOpen}
         onClose={handleCloseDialog}
         onCreate={handleCreateProject}
+        availableAgents={availableAgents.map((agent) => ({ id: agent.id, name: agent.name }))}
         isSubmitting={createProject.isPending}
       />
     </Container>

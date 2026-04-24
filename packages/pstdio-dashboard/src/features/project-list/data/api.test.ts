@@ -27,12 +27,13 @@ describe("createProject", () => {
   it("removes the created project when repo registration fails", async () => {
     (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY] = { apiBaseUrl: "http://localhost:19840" };
 
-    const calls: Array<{ method: string; url: string }> = [];
+    const calls: Array<{ method: string; url: string; body?: string }> = [];
     const fetchMock = Object.assign(
       async (input: URL | RequestInfo, init?: RequestInit | BunFetchRequestInit) => {
         const method = init?.method ?? "GET";
         const url = toUrl(input);
-        calls.push({ method, url });
+        const body = typeof init?.body === "string" ? init.body : undefined;
+        calls.push({ method, url, body });
 
         if (method === "POST" && url.endsWith("/v1/projects")) {
           return new Response(
@@ -68,13 +69,22 @@ describe("createProject", () => {
       createProject({
         name: "Prompt Studio",
         repositories: [{ path: "/repos/prompt-studio", displayName: null }],
+        agents: ["opencode"],
       }),
     ).rejects.toThrow("Repo is already linked to project project-x");
 
     expect(calls).toEqual([
-      { method: "POST", url: "http://localhost:19840/v1/projects" },
-      { method: "POST", url: "http://localhost:19840/v1/projects/project-1/repos" },
-      { method: "DELETE", url: "http://localhost:19840/v1/projects/project-1" },
+      {
+        method: "POST",
+        url: "http://localhost:19840/v1/projects",
+        body: JSON.stringify({ name: "Prompt Studio", agents: ["opencode"] }),
+      },
+      {
+        method: "POST",
+        url: "http://localhost:19840/v1/projects/project-1/repos",
+        body: JSON.stringify({ name: "prompt-studio", path: "/repos/prompt-studio" }),
+      },
+      { method: "DELETE", url: "http://localhost:19840/v1/projects/project-1", body: undefined },
     ]);
   });
 });

@@ -9,8 +9,6 @@ import {
   useParams,
 } from "@tanstack/react-router";
 import { Layout } from "@/components/layout";
-import { isOnboardingComplete } from "@/features/agents/agent-storage";
-import { Onboarding } from "@/features/onboarding/pages/onboarding";
 import { ProjectShell } from "@/features/project/pages/project-shell";
 import { resolveProjectDefaultPath } from "@/features/project/utils/project-default-path";
 import { ProjectList } from "@/features/project-list/pages/project-list";
@@ -21,12 +19,6 @@ import { TicketDetailsPanel } from "@/features/ticket/pages/ticket-details-panel
 import { TicketsPanel } from "@/features/ticket-list/pages/tickets-panel";
 import { WorkspacePage } from "@/features/workspaces/pages/workspace-page";
 import { validateWorkspaceRouteSearch } from "@/features/workspaces/pages/workspace-route-search";
-
-const requireOnboardingComplete = () => {
-  if (!isOnboardingComplete()) {
-    throw redirect({ to: "/onboarding" });
-  }
-};
 
 export const AppLayout = () => {
   return <Layout />;
@@ -54,7 +46,6 @@ const ProjectIndexRedirect = () => {
 const projectsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "projects",
-  beforeLoad: requireOnboardingComplete,
   component: Outlet,
 });
 
@@ -64,19 +55,13 @@ const settingsRoute = createRoute({
   validateSearch: (search) => ({
     panel: typeof search.panel === "string" ? search.panel : undefined,
   }),
-  beforeLoad: requireOnboardingComplete,
   component: Settings,
 });
 
 const onboardingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "onboarding",
-  beforeLoad: () => {
-    if (isOnboardingComplete()) {
-      throw redirect({ to: "/projects" });
-    }
-  },
-  component: Onboarding,
+  component: () => <Navigate to="/projects" />,
 });
 
 const projectsIndexRoute = createRoute({

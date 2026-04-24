@@ -17,6 +17,7 @@ export const createProjectInputSchema = z.object({
     .refine((name) => /[a-zA-Z]/.test(name), {
       message: "Project name must contain at least one letter",
     }),
+  agents: z.array(z.string().min(1)).min(1).optional(),
 });
 
 export type Project = z.infer<typeof projectSchema>;

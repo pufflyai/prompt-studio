@@ -53,7 +53,7 @@ describe("POST /v1/projects", () => {
     const res = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Test Project" }),
+      body: JSON.stringify({ name: "Test Project", agents: ["opencode"] }),
     });
 
     expect(res.status).toBe(201);
@@ -61,6 +61,7 @@ describe("POST /v1/projects", () => {
     const body = await res.json();
     expect(body.name).toBe("Test Project");
     expect(body.id).toBeDefined();
+    expect(body.selected_agents).toBe('["opencode"]');
   });
 
   test("returns 400 when request body contains unknown keys", async () => {

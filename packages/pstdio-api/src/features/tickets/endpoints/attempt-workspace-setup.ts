@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { createWorktree, resolveLatestBase } from "pstdio-wt";
 import type { RouteDeps } from "../../deps";
 import { withHookSessionClient } from "../../hooks/hook-client";
+import { isAgentEnabledForProject, parseProjectSelectedAgents } from "../../projects/selected-agents";
 
 type AttemptMode = "worktree" | "current_branch";
 type WorkspaceRecord = Awaited<ReturnType<RouteDeps["workspaceService"]["create"]>>;
@@ -225,12 +226,29 @@ export const resolvePrompt = async (
 };
 
 export const resolveAgentId = async (
-  deps: Pick<RouteDeps, "agentConfigService">,
+  deps: {
+    agentConfigService: Pick<RouteDeps["agentConfigService"], "list">;
+    projectService: {
+      get: (projectId: string) => Promise<{ selected_agents?: string | null } | null>;
+    };
+  },
   requestedAgent: string | undefined,
+  projectId: string,
 ) => {
-  if (requestedAgent?.trim()) return requestedAgent.trim();
+  const project = await deps.projectService.get(projectId);
+
+  if (requestedAgent?.trim()) {
+    const normalizedAgent = requestedAgent.trim();
+    if (project && !isAgentEnabledForProject(project, normalizedAgent)) {
+      return null;
+    }
+    return normalizedAgent;
+  }
 
   const configs = await deps.agentConfigService.list();
-  const defaultConfig = configs.find((config) => config.is_default) ?? configs[0];
+  const selectedAgents = project ? parseProjectSelectedAgents(project) : [];
+  const availableConfigs =
+    selectedAgents.length === 0 ? configs : configs.filter((config) => selectedAgents.includes(config.agent_id));
+  const defaultConfig = availableConfigs.find((config) => config.is_default) ?? availableConfigs[0];
   return defaultConfig?.agent_id ?? null;
 };

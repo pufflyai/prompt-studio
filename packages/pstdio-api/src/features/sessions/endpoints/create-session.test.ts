@@ -98,6 +98,69 @@ describe("POST /v1/sessions", () => {
     expect(session.agent).toBe("fake");
   });
 
+  test("returns 400 when requested agent is not enabled for the project", async () => {
+    const projectRes = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Project Scoped Agent", agents: ["opencode"] }),
+    });
+    expect(projectRes.status).toBe(201);
+    const project = await projectRes.json();
+
+    const createRes = await app.request("/v1/sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        project_id: project.id,
+        title: "Scoped Agent Session",
+        prompt: "Run task",
+        agent: "fake",
+      }),
+    });
+
+    expect(createRes.status).toBe(400);
+    expect(await createRes.json()).toEqual({ error: "Agent 'fake' is not enabled for this project." });
+  });
+
+  test("uses the project's enabled agent when global default is outside project selection", async () => {
+    const projectRes = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Project Enabled Agent", agents: ["fake"] }),
+    });
+    expect(projectRes.status).toBe(201);
+    const project = await projectRes.json();
+
+    const setupDefaultRes = await app.request("/v1/agents", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ agent_id: "opencode" }),
+    });
+    expect(setupDefaultRes.status).toBe(201);
+
+    const setupEnabledRes = await app.request("/v1/agents", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ agent_id: "fake" }),
+    });
+    expect(setupEnabledRes.status).toBe(201);
+
+    const createRes = await app.request("/v1/sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        project_id: project.id,
+        title: "Project enabled agent session",
+        prompt: "run fake flow",
+      }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json();
+
+    const session = await waitForSessionStatus(created.id, "completed");
+    expect(session.agent).toBe("fake");
+  });
+
   test("returns 201 and marks session failed when agent cannot start", async () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
@@ -133,7 +196,9 @@ describe("POST /v1/sessions", () => {
 
     expect(status).toBe("failed");
   });
+});
 
+describe("POST /v1/sessions - lifecycle", () => {
   test("completes sessions and persists messages when fake agent is enabled", async () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",

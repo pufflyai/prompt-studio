@@ -16,6 +16,31 @@ const bypassOnboarding = async (page: import("@playwright/test").Page) => {
   });
 };
 
+const availableAgentsResponse = [
+  { id: "opencode", name: "OpenCode", availability: { type: "INSTALLED" as const } },
+  { id: "claude-code", name: "Claude Code", availability: { type: "INSTALLED" as const } },
+];
+
+const mockAvailableAgents = async (page: Page) => {
+  await page.route("**/v1/agents/info", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(availableAgentsResponse),
+    });
+  });
+};
+
+const mockNoAvailableAgents = async (page: Page) => {
+  await page.route("**/v1/agents/info", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([]),
+    });
+  });
+};
+
 const createProjectViaApi = async (request: import("@playwright/test").APIRequestContext, name: string) => {
   const res = await request.post(`${apiBase}/v1/projects`, {
     data: { name },
@@ -85,11 +110,7 @@ const getCommonPrefixLength = (left: string[], right: string[]) => {
   return index;
 };
 
-const getCreateProjectDialog = (page: Page) =>
-  page
-    .getByRole("dialog")
-    .filter({ has: page.getByRole("button", { name: "Browse for repository" }) })
-    .first();
+const getCreateProjectDialog = (page: Page) => page.getByRole("dialog").first();
 
 const getFolderPickerDialog = (page: Page) =>
   page
@@ -176,6 +197,7 @@ test.describe("Project list", () => {
 
   test("shows empty state when no projects exist", async ({ page }) => {
     await bypassOnboarding(page);
+    await mockAvailableAgents(page);
     await page.goto("/projects");
 
     await expect(page.getByText("No projects yet")).toBeVisible();
@@ -184,6 +206,7 @@ test.describe("Project list", () => {
 
   test("lists projects seeded via API", async ({ page, request }) => {
     await bypassOnboarding(page);
+    await mockAvailableAgents(page);
 
     await createProjectViaApi(request, "Alpha Project");
     await createProjectViaApi(request, "Beta Project");
@@ -197,6 +220,7 @@ test.describe("Project list", () => {
 
   test("navigates to project default path on click", async ({ page, request }) => {
     await bypassOnboarding(page);
+    await mockAvailableAgents(page);
 
     const project = await createProjectViaApi(request, "Nav Test Project");
 
@@ -205,6 +229,16 @@ test.describe("Project list", () => {
 
     await page.waitForURL(`**${resolveProjectDefaultPath(project.id)}`);
     expect(page.url()).toContain(resolveProjectDefaultPath(project.id));
+  });
+
+  test("shows no-agent warning and blocks project creation when no agents are available", async ({ page }) => {
+    await bypassOnboarding(page);
+    await mockNoAvailableAgents(page);
+    await page.goto("/projects");
+
+    await expect(page.getByText("No coding agents available")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Create project" }).first()).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Create your first project" })).toBeDisabled();
   });
 });
 
@@ -229,6 +263,7 @@ test.describe("Project creation", () => {
     const repoName = basename(repoPath);
 
     await bypassOnboarding(page);
+    await mockAvailableAgents(page);
     await page.goto("/projects");
 
     await page.getByRole("button", { name: "Create project" }).first().click();
@@ -249,6 +284,7 @@ test.describe("Project creation", () => {
     const repoName = basename(repoPath);
 
     await bypassOnboarding(page);
+    await mockAvailableAgents(page);
     await page.goto("/projects");
 
     // open dialog via header button
@@ -265,6 +301,12 @@ test.describe("Project creation", () => {
     const createProjectDialog = getCreateProjectDialog(page);
     await expect(createProjectDialog.getByText(repoName, { exact: true })).toBeVisible();
 
+    await createProjectDialog.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(createProjectDialog.getByText("Select agents")).toBeVisible();
+
+    const selectedAgents = createProjectDialog.getByRole("checkbox", { checked: true });
+    await expect(selectedAgents).toHaveCount(2);
+
     // submit via the dialog footer button
     const createProjectDone = page.waitForResponse(
       (response) =>
@@ -280,16 +322,41 @@ test.describe("Project creation", () => {
     expect(page.url()).toContain(resolveProjectDefaultPath(createdProject.id));
   });
 
+  test("requires at least one agent on step two", async ({ page }) => {
+    const repoPath = createTempGitRepo();
+    tempRepoPaths.push(repoPath);
+
+    await bypassOnboarding(page);
+    await mockAvailableAgents(page);
+    await page.goto("/projects");
+
+    await page.getByRole("button", { name: "Create project" }).first().click();
+    await page.getByPlaceholder("Project name").fill("Agent Validation Project");
+    await selectRepoFromFolderPicker(page, repoPath);
+
+    const createProjectDialog = getCreateProjectDialog(page);
+    await createProjectDialog.getByRole("button", { name: "Next", exact: true }).click();
+
+    const checkboxes = createProjectDialog.getByRole("checkbox");
+    await checkboxes.nth(0).uncheck();
+    await checkboxes.nth(1).uncheck();
+    await createProjectDialog.getByRole("button", { name: "Create project", exact: true }).click();
+
+    await expect(createProjectDialog.getByText("Select at least one agent.")).toBeVisible();
+  });
+
   test("creates templates when creating a project via the dialog", async ({ page, request }) => {
     const repoPath = createTempGitRepo();
     tempRepoPaths.push(repoPath);
 
     await bypassOnboarding(page);
+    await mockAvailableAgents(page);
     await page.goto("/projects");
 
     await page.getByRole("button", { name: "Create project" }).first().click();
     await page.getByPlaceholder("Project name").fill("Templates Project");
     await selectRepoFromFolderPicker(page, repoPath);
+    await getCreateProjectDialog(page).getByRole("button", { name: "Next", exact: true }).click();
 
     const createProjectDone = page.waitForResponse(
       (response) =>
@@ -314,15 +381,32 @@ test.describe("Project creation", () => {
 
   test("shows validation errors when submitting empty form", async ({ page }) => {
     await bypassOnboarding(page);
+    await mockAvailableAgents(page);
     await page.goto("/projects");
 
     await page.getByRole("button", { name: "Create project" }).first().click();
 
-    // click create without filling anything
-    await getCreateProjectDialog(page).getByRole("button", { name: "Create project", exact: true }).click();
+    // click next without filling anything
+    await getCreateProjectDialog(page).getByRole("button", { name: "Next", exact: true }).click();
 
     await expect(page.getByText("Project name is required.")).toBeVisible();
     await expect(page.getByText("Select at least one repository.")).toBeVisible();
+  });
+});
+
+test.describe("Project creation integration", () => {
+  const tempRepoPaths: string[] = [];
+
+  test.beforeEach(async ({ request }) => {
+    test.setTimeout(projectCreationTimeoutMs);
+    await deleteAllProjects(request);
+  });
+
+  test.afterEach(async () => {
+    for (const repoPath of tempRepoPaths) {
+      await removeTempRepo(repoPath);
+    }
+    tempRepoPaths.length = 0;
   });
 
   test("can create project from empty state CTA", async ({ page }) => {
@@ -330,6 +414,7 @@ test.describe("Project creation", () => {
     tempRepoPaths.push(repoPath);
 
     await bypassOnboarding(page);
+    await mockAvailableAgents(page);
     await page.goto("/projects");
 
     // click the empty-state CTA
@@ -341,6 +426,7 @@ test.describe("Project creation", () => {
     // fill and submit
     await page.getByPlaceholder("Project name").fill("CTA Project");
     await selectRepoFromFolderPicker(page, repoPath);
+    await getCreateProjectDialog(page).getByRole("button", { name: "Next", exact: true }).click();
     const createProjectDone = page.waitForResponse(
       (response) =>
         response.url().endsWith("/v1/projects") && response.request().method() === "POST" && response.status() === 201,
@@ -366,11 +452,13 @@ test.describe("Project creation", () => {
     await configureAgent(request, "opencode");
 
     await bypassOnboarding(page);
+    await mockAvailableAgents(page);
     await page.goto("/projects");
 
     await page.getByRole("button", { name: "Create project" }).first().click();
     await page.getByPlaceholder("Project name").fill("Skills Project");
     await selectRepoFromFolderPicker(page, repoPath);
+    await getCreateProjectDialog(page).getByRole("button", { name: "Next", exact: true }).click();
     const createProjectDone = page.waitForResponse(
       (response) =>
         response.url().endsWith("/v1/projects") && response.request().method() === "POST" && response.status() === 201,
@@ -403,11 +491,13 @@ test.describe("Project creation", () => {
     tempRepoPaths.push(repoPath);
 
     await bypassOnboarding(page);
+    await mockAvailableAgents(page);
     await page.goto("/projects");
 
     await page.getByRole("button", { name: "Create project" }).first().click();
     await page.getByPlaceholder("Project name").fill("Hook Project");
     await selectRepoFromFolderPicker(page, repoPath);
+    await getCreateProjectDialog(page).getByRole("button", { name: "Next", exact: true }).click();
 
     const createProjectDone = page.waitForResponse(
       (response) =>

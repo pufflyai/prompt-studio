@@ -109,7 +109,14 @@
       }
     },
     "actions": {
+      "next": "下一步",
+      "back": "返回",
       "create": "建立專案"
+    },
+    "agents": {
+      "title": "選擇代理",
+      "description": "選擇要在此專案中啟用的代理。",
+      "selectAtLeastOne": "請至少選擇一個代理。"
     },
     "folderPicker": {
       "title": "選擇儲存庫",
@@ -227,7 +234,16 @@
     "noProjectsYet": "尚無專案",
     "noProjectsDescription": "建立您的第一個專案以開始使用。",
     "createFirstProject": "建立您的第一個專案",
-    "settingsAriaLabel": "設定"
+    "settingsAriaLabel": "設定",
+    "noAgentsBanner": {
+      "title": "沒有可用的程式代理",
+      "description": "在至少安裝一個代理之前，專案建立將被停用。請前往 設定 > Agents 使用自動設定或手動新增，然後回到此處建立專案。"
+    },
+    "agentLoadErrorBanner": {
+      "title": "無法載入代理可用性",
+      "description": "目前無法檢查已安裝的代理。請重試後再繼續建立專案。",
+      "retry": "重試"
+    }
   },
   "sessions": {
     "title": "工作階段",
