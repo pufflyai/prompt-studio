@@ -11,7 +11,7 @@ import * as templatesCommand from "./templates";
 import * as ticketsCommand from "./tickets";
 import * as workspaceCommand from "./workspace";
 
-export const topLevelCommandModules = [
+const staticTopLevelCommandModules = [
   agentsCommand,
   closeCommand,
   extensionsCommand,
@@ -25,3 +25,10 @@ export const topLevelCommandModules = [
   ticketsCommand,
   workspaceCommand,
 ];
+
+export const topLevelCommandModules = [...staticTopLevelCommandModules];
+
+export const topLevelStaticCommandNames = staticTopLevelCommandModules.map((commandModule) => {
+  const [name] = commandModule.command.split(" ");
+  return name;
+});
