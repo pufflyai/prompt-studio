@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ActionInput, PluginDefinition } from "@pstdio/sdk/plugins";
+import type { ActionInput, CommandInput, PluginDefinition } from "@pstdio/sdk/plugins";
 import { createPluginRegistry } from "./registry";
 import type { LoadedPlugin } from "./types";
 
@@ -20,6 +20,16 @@ const makeAction = (overrides: Record<string, unknown> = {}): ActionInput =>
     trigger() {},
     ...overrides,
   }) as ActionInput;
+
+const makeCommand = (overrides: Record<string, unknown> = {}): CommandInput =>
+  ({
+    key: "default",
+    path: "lab default",
+    description: "Default",
+    targetType: "project",
+    run() {},
+    ...overrides,
+  }) as CommandInput;
 
 describe("createPluginRegistry", () => {
   describe("getActions", () => {
@@ -93,6 +103,56 @@ describe("createPluginRegistry", () => {
     });
   });
 
+  describe("getCommands", () => {
+    test("returns namespaced command descriptors", () => {
+      const registry = createPluginRegistry([
+        makePlugin("my-plugin", {
+          commands: [makeCommand({ key: "hello", path: "lab hello", description: "Hello" })],
+        }),
+      ]);
+
+      const commands = registry.getCommands();
+      expect(commands).toHaveLength(1);
+      expect(commands[0]!.key).toBe("my-plugin/hello");
+      expect(commands[0]!.path).toBe("lab hello");
+    });
+
+    test("filters command descriptors by target type", () => {
+      const registry = createPluginRegistry([
+        makePlugin("my-plugin", {
+          commands: [
+            makeCommand({ key: "project", targetType: "project", path: "lab project" }),
+            makeCommand({ key: "ticket", targetType: "ticket", path: "lab ticket" }),
+          ],
+        }),
+      ]);
+
+      const projectCommands = registry.getCommands("project");
+      expect(projectCommands).toHaveLength(1);
+      expect(projectCommands[0]?.key).toBe("my-plugin/project");
+    });
+  });
+
+  describe("getCommand", () => {
+    test("returns resolved command by namespaced key", () => {
+      const run = () => undefined;
+      const registry = createPluginRegistry([
+        makePlugin("my-plugin", {
+          commands: [makeCommand({ key: "hello", run })],
+        }),
+      ]);
+
+      const command = registry.getCommand("my-plugin/hello");
+      expect(command).toBeDefined();
+      expect(command?.run).toBe(run);
+    });
+
+    test("returns undefined for unknown command key", () => {
+      const registry = createPluginRegistry([]);
+      expect(registry.getCommand("missing")).toBeUndefined();
+    });
+  });
+
   describe("getHookHandlers", () => {
     test("returns handlers from multiple plugins for same hook", () => {
       const h1 = () => {};
@@ -132,6 +192,21 @@ describe("createPluginRegistry", () => {
           makePlugin("a", { actions: [makeAction({ key: "run", label: "Run 2" })] }),
         ]),
       ).toThrow("Duplicate action key");
+    });
+  });
+
+  describe("duplicate command keys", () => {
+    test("throws on duplicate namespaced command keys across plugins", () => {
+      expect(() =>
+        createPluginRegistry([
+          makePlugin("a", {
+            commands: [makeCommand({ key: "run", path: "lab run" })],
+          }),
+          makePlugin("a", {
+            commands: [makeCommand({ key: "run", path: "lab run-again" })],
+          }),
+        ]),
+      ).toThrow("Duplicate command key");
     });
   });
 

@@ -1,3 +1,4 @@
+import type { CreateSessionInput } from "pstdio-api-contracts";
 import type { PstdioClient } from "../client/client";
 import type { Session } from "../resources/session";
 import type { TicketListItem } from "../resources/ticket";
@@ -6,6 +7,7 @@ import type { PluginHooks } from "./hooks";
 
 export type TargetType = "ticket" | "workspace" | "session";
 export type ActionPlacement = "primary" | "secondary" | "overflow";
+export type CommandTargetType = "project" | "ticket" | "workspace";
 
 // -- Action param definitions ------------------------------------------------
 
@@ -93,6 +95,104 @@ export type ActionDefinition = ActionDescriptor & {
   trigger: ActionTrigger;
 };
 
+// -- Command definitions ------------------------------------------------------
+
+type CommandParamBase = {
+  key: string;
+  label: string;
+  description?: string;
+  required?: boolean;
+};
+
+export type TextCommandParam = CommandParamBase & {
+  type: "text";
+  defaultValue?: string;
+};
+
+export type BooleanCommandParam = CommandParamBase & {
+  type: "boolean";
+  defaultValue?: boolean;
+};
+
+export type NumberCommandParam = CommandParamBase & {
+  type: "number";
+  defaultValue?: number;
+};
+
+export type SelectCommandParam = CommandParamBase & {
+  type: "select";
+  options: { value: string; label: string }[];
+  defaultValue?: string;
+};
+
+export type CommandParamDef = TextCommandParam | BooleanCommandParam | NumberCommandParam | SelectCommandParam;
+
+export type CommandParamValue = string | boolean | number;
+
+export type CommandTargetMap = {
+  project: { id: string };
+  ticket: TicketListItem;
+  workspace: WorkspaceListItem;
+};
+
+export type CommandStorage = {
+  get<T = unknown>(key: string): Promise<T | undefined>;
+  set(key: string, value: unknown): Promise<void>;
+};
+
+export type CommandRunResult = {
+  message?: string;
+};
+
+export type CommandRunContext<TTargetType extends CommandTargetType = CommandTargetType> = {
+  client: PstdioClient;
+  projectId: string;
+  targetType: TTargetType;
+  target: CommandTargetMap[TTargetType];
+  params: Record<string, CommandParamValue>;
+  storage: CommandStorage;
+  sessions: {
+    create(input: CreateSessionInput): Promise<Session>;
+  };
+  commands: {
+    run(
+      commandKey: string,
+      input?: {
+        params?: Record<string, CommandParamValue>;
+        target?: CommandTargetMap[TTargetType];
+      },
+    ): Promise<CommandRunResult | undefined>;
+  };
+};
+
+type CommandHandler<TTargetType extends CommandTargetType = CommandTargetType> =
+  | ((ctx: CommandRunContext<TTargetType>) => undefined)
+  | ((ctx: CommandRunContext<TTargetType>) => CommandRunResult)
+  | ((ctx: CommandRunContext<TTargetType>) => Promise<CommandRunResult | undefined>);
+
+export type CommandInput = {
+  [K in CommandTargetType]: {
+    key: string;
+    path: string;
+    description: string;
+    targetType: K;
+    params?: CommandParamDef[];
+    run: CommandHandler<K>;
+  };
+}[CommandTargetType];
+
+export type CommandDescriptor = {
+  key: string;
+  path: string;
+  description: string;
+  targetType: CommandTargetType;
+  params?: CommandParamDef[];
+};
+
+export type CommandDefinition = CommandDescriptor & {
+  run: CommandHandler;
+};
+
 export type ScheduledTriggerContext = {
   client: PstdioClient;
   projectId: string;
@@ -114,6 +214,7 @@ export type ScheduleDefinition = {
 export type PluginDefinition = {
   key?: string;
   actions?: ActionInput[];
+  commands?: CommandInput[];
   hooks?: PluginHooks;
   schedules?: ScheduleDefinition[];
 };

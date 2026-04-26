@@ -1,5 +1,12 @@
 import type { HookHandler } from "./hooks/dispatcher";
-import type { ActionDescriptor, LoadedPlugin, ResolvedAction, ResolvedSchedule } from "./types";
+import type {
+  ActionDescriptor,
+  CommandDescriptor,
+  LoadedPlugin,
+  ResolvedAction,
+  ResolvedCommand,
+  ResolvedSchedule,
+} from "./types";
 
 type HookHandlerEntry = {
   pluginIdentity: string;
@@ -20,6 +27,24 @@ const registerActions = (plugin: LoadedPlugin, actions: Map<string, ResolvedActi
       pluginIdentity: plugin.identity,
       descriptor: { ...descriptor, key: namespacedKey },
       trigger: trigger as ResolvedAction["trigger"],
+    });
+  }
+};
+
+const registerCommands = (plugin: LoadedPlugin, commands: Map<string, ResolvedCommand>) => {
+  for (const command of plugin.definition.commands ?? []) {
+    const namespacedKey = `${plugin.identity}/${command.key}`;
+
+    if (commands.has(namespacedKey)) {
+      throw new Error(`Duplicate command key "${namespacedKey}"`);
+    }
+
+    const { run, ...descriptor } = command;
+    commands.set(namespacedKey, {
+      namespacedKey,
+      pluginIdentity: plugin.identity,
+      descriptor: { ...descriptor, key: namespacedKey } as CommandDescriptor,
+      run,
     });
   }
 };
@@ -69,11 +94,13 @@ const registerSchedules = (plugin: LoadedPlugin, schedules: Map<string, Resolved
 
 export const createPluginRegistry = (plugins: LoadedPlugin[]) => {
   const actions = new Map<string, ResolvedAction>();
+  const commands = new Map<string, ResolvedCommand>();
   const schedules = new Map<string, ResolvedSchedule>();
   const hookHandlers = new Map<string, HookHandlerEntry[]>();
 
   for (const plugin of plugins) {
     registerActions(plugin, actions);
+    registerCommands(plugin, commands);
     registerHookHandlers(plugin, hookHandlers);
     registerSchedules(plugin, schedules);
   }
@@ -87,6 +114,16 @@ export const createPluginRegistry = (plugins: LoadedPlugin[]) => {
 
     getAction(namespacedKey: string) {
       return actions.get(namespacedKey);
+    },
+
+    getCommands(targetType?: string): CommandDescriptor[] {
+      const all = [...commands.values()].map((command) => command.descriptor);
+      if (!targetType) return all;
+      return all.filter((command) => command.targetType === targetType);
+    },
+
+    getCommand(namespacedKey: string) {
+      return commands.get(namespacedKey);
     },
 
     getHookHandlers(hookName: string) {

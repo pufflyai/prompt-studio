@@ -23,7 +23,7 @@ afterEach(() => {
 });
 
 describe("loadPluginRuntime", () => {
-  test("returns runtime with empty hooks and actions when no plugins exist", async () => {
+  test("returns runtime with empty hooks, actions, and commands when no plugins exist", async () => {
     const repoPath = createTempDir();
 
     const runtime = await loadPluginRuntime({ repoPath, client: stubClient });
@@ -32,6 +32,8 @@ describe("loadPluginRuntime", () => {
     expect(runtime.client).toBe(stubClient);
     expect(runtime.actions.list()).toEqual([]);
     expect(runtime.actions.get("anything")).toBeUndefined();
+    expect(runtime.commands.list()).toEqual([]);
+    expect(runtime.commands.get("anything")).toBeUndefined();
   });
 
   test("loads plugin hooks and makes them fireable", async () => {
@@ -80,6 +82,34 @@ describe("loadPluginRuntime", () => {
     expect(actions[0].key).toBe("action-plugin/do-thing");
 
     const resolved = runtime.actions.get("action-plugin/do-thing");
+    expect(resolved).toBeDefined();
+  });
+
+  test("loads plugin commands into the registry", async () => {
+    const repoPath = createTempDir();
+    const pluginsDir = join(repoPath, ".pstdio", "plugins");
+    mkdirSync(pluginsDir, { recursive: true });
+
+    writeFileSync(
+      join(pluginsDir, "command-plugin.ts"),
+      `export default {
+        commands: [{
+          key: "hello",
+          path: "lab hello",
+          description: "Say hello",
+          targetType: "project",
+          run() {},
+        }],
+      };`,
+    );
+
+    const runtime = await loadPluginRuntime({ repoPath, client: stubClient });
+
+    const commands = runtime.commands.list();
+    expect(commands).toHaveLength(1);
+    expect(commands[0]?.key).toBe("command-plugin/hello");
+
+    const resolved = runtime.commands.get("command-plugin/hello");
     expect(resolved).toBeDefined();
   });
 

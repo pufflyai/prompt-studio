@@ -2,6 +2,7 @@ import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { topLevelCommandModules } from "./adapters/cli/commands";
 import * as dashboardCommand from "./adapters/cli/commands/dashboard";
+import { registerExtensionCommands } from "./adapters/cli/extensions/register-extension-commands";
 import { API_URL } from "./features/api-url";
 import { CLI_VERSION } from "./features/cli-version";
 import { ensureApi } from "./features/ensure-api";
@@ -70,6 +71,8 @@ for (const mod of topLevelCommandModules) {
   // biome-ignore lint/suspicious/noExplicitAny: yargs CommandModule union requires cast
   cli.command(mod as any);
 }
+
+await registerExtensionCommands(cli);
 
 cli
   .parseAsync()

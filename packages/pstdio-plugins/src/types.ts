@@ -1,6 +1,14 @@
-import type { ActionDefinition, ActionDescriptor, PluginDefinition, ScheduleDefinition } from "@pstdio/sdk/plugins";
+import type {
+  ActionDefinition,
+  ActionDescriptor,
+  CommandDefinition,
+  CommandDescriptor,
+  CommandInput,
+  PluginDefinition,
+  ScheduleDefinition,
+} from "@pstdio/sdk/plugins";
 
-export type { ActionDefinition, ActionDescriptor, PluginDefinition };
+export type { ActionDefinition, ActionDescriptor, CommandDefinition, CommandDescriptor, PluginDefinition };
 
 export type LoadedPlugin = {
   identity: string;
@@ -13,6 +21,13 @@ export type ResolvedAction = {
   pluginIdentity: string;
   descriptor: ActionDescriptor;
   trigger: ActionDefinition["trigger"];
+};
+
+export type ResolvedCommand = {
+  namespacedKey: string;
+  pluginIdentity: string;
+  descriptor: CommandDescriptor;
+  run: CommandInput["run"];
 };
 
 export type ResolvedSchedule = {

@@ -115,6 +115,42 @@ describe("definePlugin", () => {
     ).toThrow('Action "refine" is missing trigger(ctx)');
   });
 
+  it("accepts commands with run handlers", () => {
+    const plugin = definePlugin({
+      key: "with-commands",
+      commands: [
+        {
+          key: "hello",
+          path: "lab hello",
+          description: "Say hello",
+          targetType: "project",
+          run(ctx) {
+            expect(ctx.targetType).toBe("project");
+          },
+        },
+      ],
+    });
+
+    expect(plugin.commands).toHaveLength(1);
+    expect(plugin.commands?.[0]?.key).toBe("hello");
+  });
+
+  it("throws when a command is missing run", () => {
+    expect(() =>
+      definePlugin({
+        key: "missing-run",
+        commands: [
+          {
+            key: "bad-command",
+            path: "lab bad",
+            description: "Missing run",
+            targetType: "project",
+          } as never,
+        ],
+      }),
+    ).toThrow('Command "bad-command" is missing run(ctx)');
+  });
+
   it("accepts schedules with handler", () => {
     const plugin = definePlugin({
       key: "scheduled",
