@@ -16,7 +16,7 @@ const createEmptyRuntime = (client: PstdioClient): PluginRuntime => {
     plugins: [],
     hooks: {
       firePre: (hookName, ctx) => dispatcher.firePreHook(hookName, ctx),
-      firePost: (hookName, ctx) => dispatcher.firePostHook(hookName, ctx),
+      firePost: (hookName, ctx, onError) => dispatcher.firePostHook(hookName, ctx, onError),
     },
     actions: {
       list: (targetType) => registry.getActions(targetType),

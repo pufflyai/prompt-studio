@@ -1,10 +1,11 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { apiLogger } from "../../lib/logger";
 import { createPluginService } from "../plugins/plugin-service";
-import { firePreAttemptStatusHook } from "./attempt-status-hooks";
+import { firePostAttemptStatusHook, firePreAttemptStatusHook } from "./attempt-status-hooks";
 
 let repoDir: string;
 
@@ -93,5 +94,30 @@ describe("firePreAttemptStatusHook", () => {
 
     // Context should include fromStatus, toStatus, and payload fields
     // (verified by the non-rejection — if it threw, it would reject)
+  });
+});
+
+describe("firePostAttemptStatusHook", () => {
+  test("does not reject when post-hook throws and logs the failure", async () => {
+    const errorSpy = spyOn(apiLogger, "error").mockImplementation(() => {});
+    writePlugin(
+      "post-fail.ts",
+      `export default { hooks: { postAttemptStatusChange() { throw new Error("post attempt failed"); } } };`,
+    );
+
+    await expect(
+      firePostAttemptStatusHook(makeDeps(), {
+        projectId: "proj-1",
+        toStatus: "review-ready",
+        payload: { workspaceId: "ws-1" },
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ event: "hooks.post_attempt_status_change.failed", error: "post attempt failed" }),
+      "post attempt failed",
+    );
+
+    errorSpy.mockRestore();
   });
 });

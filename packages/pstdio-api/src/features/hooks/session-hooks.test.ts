@@ -1,4 +1,5 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
+import { apiLogger } from "../../lib/logger";
 import type { SessionHookDeps } from "./session-hooks";
 import { fireSessionResumeHook, fireSessionStartHook, fireSessionStatusHook } from "./session-hooks";
 
@@ -224,6 +225,35 @@ describe("fireSessionStartHook", () => {
     expect(ctx.workspace).toBeUndefined();
     expect(ctx.workspaceId).toBeUndefined();
     expect(ctx.ticket).toBeUndefined();
+  });
+
+  test("logs dispatch failures instead of swallowing them", async () => {
+    const errorSpy = spyOn(apiLogger, "error").mockImplementation(() => {});
+    const deps: SessionHookDeps = {
+      reposService: { listByProject: async () => [] } as never,
+      workspaceSessionsService: { getWorkspaceBySessionId: async () => null } as never,
+      pluginService: {
+        getForProject: async () => ({
+          hooks: {
+            firePre: async () => ({ rejected: false }),
+            firePost: async () => {
+              throw new Error("session hook dispatch failed");
+            },
+          },
+          client: {},
+        }),
+      } as never,
+    };
+
+    fireSessionStartHook(deps, { ...sessionBase, status: "in_progress" });
+    await Bun.sleep(10);
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ event: "hooks.session_post.dispatch_failed", error: "session hook dispatch failed" }),
+      "session hook dispatch failed",
+    );
+
+    errorSpy.mockRestore();
   });
 });
 

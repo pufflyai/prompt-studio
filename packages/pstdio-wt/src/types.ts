@@ -42,7 +42,7 @@ export type StagingPolicy = "all" | "tracked" | "none";
 
 export type HookDispatch = {
   firePreHook(hookName: string, ctx: unknown): Promise<{ rejected: boolean; reason?: string }>;
-  firePostHook(hookName: string, ctx: unknown): Promise<void>;
+  firePostHook(hookName: string, ctx: unknown, onError?: (message: string) => void): Promise<void>;
 };
 
 export type BranchInfo = {

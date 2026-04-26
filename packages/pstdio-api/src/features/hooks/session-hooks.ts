@@ -1,3 +1,4 @@
+import { apiLogger } from "../../lib/logger";
 import type { createAttemptStatusService } from "../../services/attempt-status-service";
 import type { createRepoService } from "../../services/repo-service";
 import type { createStatusService } from "../../services/status-service";
@@ -144,8 +145,30 @@ const fireSessionHook = (deps: SessionHookDeps, hookName: string, session: Sessi
 
     const runtime = await deps.pluginService.getForProject(session.project_id);
     const hookClient = withHookSessionClient(runtime.client, ctx);
-    await runtime.hooks.firePost(hookName as never, { ...ctx, client: hookClient } as never);
-  })().catch(() => {});
+    await runtime.hooks.firePost(hookName as never, { ...ctx, client: hookClient } as never, (message) => {
+      apiLogger.error(
+        {
+          event: "hooks.session_post.failed",
+          projectId: session.project_id,
+          sessionId: session.id,
+          hookName,
+          error: message,
+        },
+        message,
+      );
+    });
+  })().catch((error) => {
+    apiLogger.error(
+      {
+        event: "hooks.session_post.dispatch_failed",
+        projectId: session.project_id,
+        sessionId: session.id,
+        hookName,
+        error: error instanceof Error ? error.message : String(error),
+      },
+      error instanceof Error ? error.message : String(error),
+    );
+  });
 };
 
 export const fireSessionStatusHook = (deps: SessionHookDeps, session: SessionRecord) => {

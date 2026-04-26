@@ -118,6 +118,7 @@ describe("commitChanges", () => {
         worktreePath: wtPath,
         commitMessage: "with hook",
       }),
+      expect.any(Function),
     );
   });
 
@@ -152,6 +153,7 @@ describe("commitChanges", () => {
         stagePolicy: "all",
         commitSha: expect.stringMatching(/^[0-9a-f]{40}$/),
       }),
+      expect.any(Function),
     );
   });
 
@@ -161,7 +163,9 @@ describe("commitChanges", () => {
 
     const dispatch: HookDispatch = {
       firePreHook: mock(() => Promise.resolve({ rejected: false })),
-      firePostHook: mock(() => Promise.reject(new Error("post hook failed"))),
+      firePostHook: mock(async (_hookName, _ctx, onError) => {
+        onError?.("post hook failed");
+      }),
     };
     const log = mock();
 

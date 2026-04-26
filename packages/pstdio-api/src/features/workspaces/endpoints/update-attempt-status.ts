@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { createRoute, z } from "@hono/zod-openapi";
 import { updateAttemptStatusResponseSchema } from "pstdio-api-contracts";
+import { apiLogger } from "../../../lib/logger";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { firePostAttemptStatusHook, firePreAttemptStatusHook } from "../../hooks/attempt-status-hooks";
@@ -174,7 +175,18 @@ export const updateAttemptStatusHandler = (deps: RouteDeps): AppRouteHandler<typ
         toStatus: status,
         payload: { ...postHookPayload, statusChangeId },
       },
-    ).catch(() => {});
+    ).catch((error) => {
+      apiLogger.error(
+        {
+          event: "hooks.post_attempt_status_change.dispatch_failed",
+          projectId: workspace.project_id,
+          workspaceId: workspace.id,
+          toStatus: status,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        error instanceof Error ? error.message : String(error),
+      );
+    });
 
     return c.json(
       {

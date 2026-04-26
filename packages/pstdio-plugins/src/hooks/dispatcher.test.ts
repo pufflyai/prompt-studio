@@ -122,7 +122,7 @@ describe("createHookDispatcher", () => {
       expect(results).toContain(2);
     });
 
-    test("swallows handler errors without throwing", async () => {
+    test("does not reject when a post-hook handler fails after all handlers settle", async () => {
       const dispatcher = createHookDispatcher();
       let secondRan = false;
 
@@ -133,8 +133,23 @@ describe("createHookDispatcher", () => {
         secondRan = true;
       });
 
-      await dispatcher.firePostHook("postSessionFail", {});
+      await expect(dispatcher.firePostHook("postSessionFail", {})).resolves.toBeUndefined();
       expect(secondRan).toBe(true);
+    });
+
+    test("reports post-hook failures to the optional error callback", async () => {
+      const dispatcher = createHookDispatcher();
+      const errors: string[] = [];
+
+      dispatcher.register("postSessionFail", () => {
+        throw new Error("handler failed");
+      });
+
+      await dispatcher.firePostHook("postSessionFail", {}, (message) => {
+        errors.push(message);
+      });
+
+      expect(errors).toEqual(["handler failed"]);
     });
 
     test("passes context to handlers", async () => {

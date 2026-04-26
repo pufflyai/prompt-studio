@@ -45,8 +45,7 @@ export const mergeWorktree = async (opts: {
     }
   } catch (err) {
     if (dispatch) {
-      void dispatch.firePostHook("onConflict", { ...ctx, operation: "merge" as const }).catch((error) => {
-        const message = error instanceof Error ? error.message : String(error);
+      void dispatch.firePostHook("onConflict", { ...ctx, operation: "merge" as const }, (message) => {
         log(`onConflict hook failed during merge: ${message}`);
       });
     }
@@ -59,8 +58,7 @@ export const mergeWorktree = async (opts: {
   const sha = await git(opts.repoRoot, ["rev-parse", "HEAD"]);
 
   if (dispatch) {
-    void dispatch.firePostHook("postMerge", { ...ctx, commitSha: sha }).catch((error) => {
-      const message = error instanceof Error ? error.message : String(error);
+    void dispatch.firePostHook("postMerge", { ...ctx, commitSha: sha }, (message) => {
       log(`postMerge hook failed: ${message}`);
     });
   }

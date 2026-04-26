@@ -1,6 +1,7 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { apiLogger } from "../../../lib/logger";
 import type { TicketsTestContext } from "./tickets-test-harness";
 import { createTicketsTestContext } from "./tickets-test-harness";
 
@@ -247,6 +248,31 @@ export default { hooks: { postWorktreeCreate() { writeFileSync("${markerPath}", 
 
     await waitForFile(markerPath);
 
+    hookCtx.cleanup();
+  });
+
+  test("postWorktreeCreate failures do not block workspace creation and are logged", async () => {
+    const errorSpy = spyOn(apiLogger, "error").mockImplementation(() => {});
+    const { hookCtx, repo, ticket } = await setupHookTest(
+      "post-create-hook-fail-repo",
+      "post-create-fail.ts",
+      `export default { hooks: { postWorktreeCreate() { throw new Error("post worktree create failed"); } } };`,
+    );
+
+    const attemptRes = await hookCtx.app.request(`/v1/tickets/${ticket.id}/attempts`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ repo_id: repo.id, mode: "worktree", start_session: false }),
+    });
+
+    expect(attemptRes.status).toBe(201);
+    await Bun.sleep(10);
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ event: "hooks.post_worktree_create.failed", error: "post worktree create failed" }),
+      "post worktree create failed",
+    );
+
+    errorSpy.mockRestore();
     hookCtx.cleanup();
   });
 

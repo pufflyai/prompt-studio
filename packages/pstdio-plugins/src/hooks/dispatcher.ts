@@ -4,6 +4,7 @@ import type { HookResponse } from "@pstdio/sdk/plugins";
 export type HookHandler = (ctx: unknown) => HookResponse | void | Promise<HookResponse | void>;
 
 export type PreHookResult = { rejected: boolean; reason?: string; data?: Record<string, unknown> };
+type PostHookErrorHandler = (message: string) => void;
 
 export const createHookDispatcher = () => {
   const handlers = new Map<string, HookHandler[]>();
@@ -39,12 +40,20 @@ export const createHookDispatcher = () => {
       return merged ? { rejected: false, data: merged } : { rejected: false };
     },
 
-    async firePostHook(hookName: string, ctx: unknown): Promise<void> {
-      await Promise.allSettled(
+    async firePostHook(hookName: string, ctx: unknown, onError?: PostHookErrorHandler): Promise<void> {
+      const results = await Promise.allSettled(
         getHandlers(hookName).map(async (handler) => {
           await handler(ctx);
         }),
       );
+
+      const errors = results
+        .filter((result): result is PromiseRejectedResult => result.status === "rejected")
+        .map((result) => (result.reason instanceof Error ? result.reason.message : String(result.reason)));
+
+      for (const error of errors) {
+        onError?.(error);
+      }
     },
   };
 };

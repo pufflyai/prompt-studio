@@ -6,7 +6,7 @@ import { getWorkspace as defaultGetWorkspace } from "./api/get-workspace";
 
 type HookDispatch = {
   firePreHook(hookName: string, ctx: unknown): Promise<{ rejected: boolean; reason?: string }>;
-  firePostHook(hookName: string, ctx: unknown): Promise<void>;
+  firePostHook(hookName: string, ctx: unknown, onError?: (message: string) => void): Promise<void>;
 };
 
 type DeleteWorkspaceInput = {
@@ -20,17 +20,21 @@ type Deps = {
   deleteWorkspace: typeof defaultDeleteWorkspaceApi;
   removeWorktreeAndBranch: (opts: { repoRoot: string; path: string; branch: string; force?: boolean }) => Promise<void>;
   dispatch?: HookDispatch;
+  loadPluginRuntime: typeof loadPluginRuntime;
   log: (msg: string) => void;
 };
 
-const createDispatchForRepo = async (repoRoot: string): Promise<HookDispatch> => {
-  const runtime = await loadPluginRuntime({
+const createDispatchForRepo = async (
+  repoRoot: string,
+  deps: Pick<Deps, "loadPluginRuntime">,
+): Promise<HookDispatch> => {
+  const runtime = await deps.loadPluginRuntime({
     repoPath: repoRoot,
     client: {} as PstdioClient,
   });
   return {
     firePreHook: (hookName, ctx) => runtime.hooks.firePre(hookName as never, ctx as never),
-    firePostHook: (hookName, ctx) => runtime.hooks.firePost(hookName as never, ctx as never),
+    firePostHook: (hookName, ctx, onError) => runtime.hooks.firePost(hookName as never, ctx as never, onError),
   };
 };
 
@@ -38,6 +42,7 @@ const defaultDeps: Deps = {
   getWorkspace: defaultGetWorkspace,
   deleteWorkspace: defaultDeleteWorkspaceApi,
   removeWorktreeAndBranch: defaultRemoveWorktreeAndBranch,
+  loadPluginRuntime,
   log: console.log,
 };
 
@@ -48,7 +53,7 @@ const parseTicketShorthand = (workspaceShorthand: string) => {
 
 export const deleteWorkspaceWithWorktree = async (input: DeleteWorkspaceInput, deps: Deps = defaultDeps) => {
   const { repoRoot, projectId, workspaceShorthand } = input;
-  const dispatch = deps.dispatch ?? (await createDispatchForRepo(repoRoot));
+  const dispatch = deps.dispatch ?? (await createDispatchForRepo(repoRoot, deps));
 
   const workspace = await deps.getWorkspace(projectId, workspaceShorthand);
   if (!workspace) throw new Error(`Workspace not found: ${workspaceShorthand}`);
@@ -88,8 +93,7 @@ export const deleteWorkspaceWithWorktree = async (input: DeleteWorkspaceInput, d
   }
 
   if (dispatch) {
-    void dispatch.firePostHook("postWorktreeRemove", { ...payload, worktree_path: null }).catch((error) => {
-      const message = error instanceof Error ? error.message : String(error);
+    void dispatch.firePostHook("postWorktreeRemove", { ...payload, worktree_path: null }, (message) => {
       deps.log(`postWorktreeRemove hook failed: ${message}`);
     });
   }

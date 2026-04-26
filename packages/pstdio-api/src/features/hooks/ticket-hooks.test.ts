@@ -1,10 +1,11 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { apiLogger } from "../../lib/logger";
 import { createPluginService } from "../plugins/plugin-service";
-import { fireTicketHook } from "./ticket-hooks";
+import { fireTicketHook, fireTicketHookAsync } from "./ticket-hooks";
 
 let repoDir: string;
 
@@ -63,5 +64,37 @@ describe("fireTicketHook", () => {
     });
 
     expect(result.rejected).toBe(false);
+  });
+
+  test("async post-hook logs dispatch failures instead of swallowing them", async () => {
+    const errorSpy = spyOn(apiLogger, "error").mockImplementation(() => {});
+
+    fireTicketHookAsync(
+      {
+        pluginService: {
+          getForProject: async () => ({
+            hooks: {
+              firePre: async () => ({ rejected: false }),
+              firePost: async () => {
+                throw new Error("ticket hook dispatch failed");
+              },
+            },
+            client: {},
+          }),
+        } as never,
+      },
+      "postTicketCreation",
+      "proj-1",
+      { ticketId: "t1" },
+    );
+
+    await Bun.sleep(10);
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ event: "hooks.ticket_post.dispatch_failed", error: "ticket hook dispatch failed" }),
+      "ticket hook dispatch failed",
+    );
+
+    errorSpy.mockRestore();
   });
 });

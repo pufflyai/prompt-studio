@@ -151,6 +151,33 @@ describe("loadPluginRuntime", () => {
     await runtime.hooks.firePost("postTicketCreation", {} as never);
   });
 
+  test("post hooks report handler failures through the optional error callback", async () => {
+    const repoPath = createTempDir();
+    const pluginsDir = join(repoPath, ".pstdio", "plugins");
+    mkdirSync(pluginsDir, { recursive: true });
+    const errors: string[] = [];
+
+    writeFileSync(
+      join(pluginsDir, "post-plugin.ts"),
+      `export default {
+        hooks: {
+          postTicketCreation: () => {
+            throw new Error("post hook failed");
+          },
+        },
+      };`,
+    );
+
+    const runtime = await loadPluginRuntime({ repoPath, client: stubClient });
+
+    await expect(
+      runtime.hooks.firePost("postTicketCreation", {} as never, (message) => {
+        errors.push(message);
+      }),
+    ).resolves.toBeUndefined();
+    expect(errors).toEqual(["post hook failed"]);
+  });
+
   test("loads plugin schedules and triggers with schedule context", async () => {
     const repoPath = createTempDir();
     const pluginsDir = join(repoPath, ".pstdio", "plugins");

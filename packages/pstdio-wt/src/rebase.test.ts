@@ -155,6 +155,7 @@ describe("rebaseOntoTarget", () => {
         target: "main",
         operation: "rebase",
       }),
+      expect.any(Function),
     );
   });
 
@@ -181,6 +182,7 @@ describe("rebaseOntoTarget", () => {
         branch: "task/rebase-post",
         target: "main",
       }),
+      expect.any(Function),
     );
   });
 
@@ -190,9 +192,8 @@ describe("rebaseOntoTarget", () => {
 
     const dispatch: HookDispatch = {
       firePreHook: mock(() => Promise.resolve({ rejected: false })),
-      firePostHook: mock((hookName) => {
-        if (hookName === "postRebase") return Promise.reject(new Error("post rebase hook failed"));
-        return Promise.resolve();
+      firePostHook: mock(async (hookName, _ctx, onError) => {
+        if (hookName === "postRebase") onError?.("post rebase hook failed");
       }),
     };
     const log = mock();
@@ -218,9 +219,8 @@ describe("rebaseOntoTarget", () => {
 
     const dispatch: HookDispatch = {
       firePreHook: mock(() => Promise.resolve({ rejected: false })),
-      firePostHook: mock((hookName) => {
-        if (hookName === "onConflict") return Promise.reject(new Error("rebase conflict hook failed"));
-        return Promise.resolve();
+      firePostHook: mock(async (hookName, _ctx, onError) => {
+        if (hookName === "onConflict") onError?.("rebase conflict hook failed");
       }),
     };
     const log = mock();
@@ -268,10 +268,14 @@ describe("rebaseOntoTarget", () => {
       target: "main",
     });
 
-    expect(dispatch.firePostHook).toHaveBeenCalledWith("postRebase", {
-      repoPath: repo.dir,
-      branch: "task/rebase-payload",
-      target: "main",
-    });
+    expect(dispatch.firePostHook).toHaveBeenCalledWith(
+      "postRebase",
+      {
+        repoPath: repo.dir,
+        branch: "task/rebase-payload",
+        target: "main",
+      },
+      expect.any(Function),
+    );
   });
 });

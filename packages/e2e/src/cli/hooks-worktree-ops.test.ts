@@ -29,8 +29,18 @@ const createDispatchForRepo = async (repo: string) => {
   });
   return {
     firePreHook: (hookName: string, ctx: unknown) => runtime.hooks.firePre(hookName as never, ctx as never),
-    firePostHook: (hookName: string, ctx: unknown) => runtime.hooks.firePost(hookName as never, ctx as never),
+    firePostHook: (hookName: string, ctx: unknown, onError?: (message: string) => void) =>
+      runtime.hooks.firePost(hookName as never, ctx as never, onError),
   };
+};
+
+const waitForCondition = async (predicate: () => boolean, timeoutMs = 1000) => {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (predicate()) return;
+    await Bun.sleep(10);
+  }
+  throw new Error("Condition not met before timeout");
 };
 
 describe("commit hooks", () => {
@@ -85,6 +95,27 @@ export default { hooks: { postCommit(ctx) { writeFileSync("${markerFile}", ctx.c
 
       const result = await commitChanges({ worktreePath: repo, message: "no hooks" });
       expect(result.sha).toBeTruthy();
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
+    "post-commit hook failures are logged",
+    async () => {
+      const repo = createRepoForWorktreeOps(ctx);
+      writePlugin(
+        repo,
+        "post-commit-fail.ts",
+        `export default { hooks: { postCommit() { throw new Error("post commit failed"); } } };`,
+      );
+      const dispatch = await createDispatchForRepo(repo);
+      const logs: string[] = [];
+      writeFileSync(join(repo, "change.txt"), "new content");
+
+      await commitChanges({ worktreePath: repo, message: "test commit", dispatch, log: (msg) => logs.push(msg) });
+      await waitForCondition(() => logs.length > 0);
+
+      expect(logs).toContainEqual(expect.stringContaining("postCommit hook failed: post commit failed"));
     },
     TEST_TIMEOUT,
   );
@@ -150,6 +181,27 @@ export default { hooks: { postMerge(ctx) { writeFileSync("${markerFile}", ctx.ta
       expect(await waitForPath(markerFile)).toBe(true);
       const marker = readFileSync(markerFile, "utf8").trim();
       expect(marker).toBe("master");
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
+    "post-merge hook failures are logged",
+    async () => {
+      const repo = createRepoForWorktreeOps(ctx);
+      createBranchWithCommit(repo, "feat-merge-post-fail", "feat.txt", "feature");
+      writePlugin(
+        repo,
+        "post-merge-fail.ts",
+        `export default { hooks: { postMerge() { throw new Error("post merge failed"); } } };`,
+      );
+      const dispatch = await createDispatchForRepo(repo);
+      const logs: string[] = [];
+
+      await mergeWorktree({ repoRoot: repo, branch: "feat-merge-post-fail", dispatch, log: (msg) => logs.push(msg) });
+      await waitForCondition(() => logs.length > 0);
+
+      expect(logs).toContainEqual(expect.stringContaining("postMerge hook failed: post merge failed"));
     },
     TEST_TIMEOUT,
   );
@@ -261,6 +313,35 @@ export default { hooks: { preRebase() { writeFileSync("${join(repo, "pre-rebase-
       const result = await rebaseOntoTarget({ repoRoot: repo, branch: "feat-rebase-noop", dispatch });
       expect(result.upToDate).toBe(true);
       expect(existsSync(join(repo, "pre-rebase-noop.txt"))).toBe(false);
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
+    "post-rebase hook failures are logged",
+    async () => {
+      const repo = createRepoForWorktreeOps(ctx);
+      createWorktreeBranchWithCommit(ctx, repo, "feat-rebase-post-fail", "feat.txt", "feature");
+      createConflictOnMain(repo, "other.txt", "main change");
+      writePlugin(
+        repo,
+        "post-rebase-fail.ts",
+        `export default { hooks: { postRebase() { throw new Error("post rebase failed"); } } };`,
+      );
+      const dispatch = await createDispatchForRepo(repo);
+      const logs: string[] = [];
+
+      const result = await rebaseOntoTarget({
+        repoRoot: repo,
+        branch: "feat-rebase-post-fail",
+        dispatch,
+        log: (msg) => logs.push(msg),
+      });
+      expect(result.rebased).toBe(true);
+
+      await waitForCondition(() => logs.length > 0);
+
+      expect(logs).toContainEqual(expect.stringContaining("postRebase hook failed: post rebase failed"));
     },
     TEST_TIMEOUT,
   );

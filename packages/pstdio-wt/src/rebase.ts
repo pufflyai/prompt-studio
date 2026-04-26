@@ -46,8 +46,7 @@ export const rebaseOntoTarget = async (opts: {
       // may fail if rebase didn't start
     }
     if (dispatch) {
-      void dispatch.firePostHook("onConflict", { ...ctx, operation: "rebase" as const }).catch((error) => {
-        const message = error instanceof Error ? error.message : String(error);
+      void dispatch.firePostHook("onConflict", { ...ctx, operation: "rebase" as const }, (message) => {
         log(`onConflict hook failed during rebase: ${message}`);
       });
     }
@@ -58,8 +57,7 @@ export const rebaseOntoTarget = async (opts: {
   }
 
   if (dispatch) {
-    void dispatch.firePostHook("postRebase", ctx).catch((error) => {
-      const message = error instanceof Error ? error.message : String(error);
+    void dispatch.firePostHook("postRebase", ctx, (message) => {
       log(`postRebase hook failed: ${message}`);
     });
   }

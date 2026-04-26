@@ -1,6 +1,8 @@
 import { describe, expect, mock, test } from "bun:test";
 import { homedir } from "node:os";
 import type { Workspace } from "@pstdio/sdk/resources";
+import type { loadPluginRuntime as loadPluginRuntimeFn, PluginRuntime } from "pstdio-plugins/hooks";
+import { createHookDispatcher } from "pstdio-plugins/hooks";
 import { deleteWorkspaceWithWorktree } from "./delete-workspace";
 
 const flushMicrotasks = async () => Promise.resolve();
@@ -20,10 +22,33 @@ const makeWorkspace = (shorthand: string): Workspace => ({
   deleted_at: null,
 });
 
+const makeRuntimeMock = (overrides?: Partial<PluginRuntime["hooks"]>): PluginRuntime => ({
+  repoPath: "/repo",
+  client: {} as PluginRuntime["client"],
+  plugins: [],
+  hooks: {
+    firePre: async () => ({ rejected: false }),
+    firePost: async () => {},
+    ...overrides,
+  },
+  actions: {
+    list: () => [],
+    get: () => undefined,
+  },
+  schedules: {
+    list: () => [],
+    get: () => undefined,
+    trigger: async () => {},
+  },
+});
+
+const loadPluginRuntimeMock = mock<typeof loadPluginRuntimeFn>(async () => makeRuntimeMock());
+
 const baseDeps = {
   getWorkspace: async () => makeWorkspace("PS-1_A1"),
   deleteWorkspace: async () => {},
   removeWorktreeAndBranch: async () => {},
+  loadPluginRuntime: loadPluginRuntimeMock,
   log: () => {},
 };
 
@@ -78,15 +103,17 @@ describe("deleteWorkspaceWithWorktree", () => {
     expect(firePostHook).toHaveBeenCalledWith(
       "postWorktreeRemove",
       expect.objectContaining({ workspace: "PS-1_A1", worktree_path: null }),
+      expect.any(Function),
     );
   });
 
   test("logs post-hook errors instead of swallowing them", async () => {
-    const firePostHook = mock(async () => {
+    const dispatch = createHookDispatcher();
+    const log = mock();
+
+    dispatch.register("postWorktreeRemove", () => {
       throw new Error("post-hook failed");
     });
-    const dispatch = { firePreHook: async () => ({ rejected: false }), firePostHook };
-    const log = mock();
 
     await deleteWorkspaceWithWorktree(
       { repoRoot: "/repo", projectId: "proj-1", workspaceShorthand: "PS-1_A1" },
@@ -98,5 +125,27 @@ describe("deleteWorkspaceWithWorktree", () => {
     expect(log).toHaveBeenCalledWith("Deleted workspace PS-1_A1");
     expect(log).toHaveBeenCalledWith(expect.stringContaining("postWorktreeRemove hook failed"));
     expect(log).toHaveBeenCalledWith(expect.stringContaining("post-hook failed"));
+  });
+
+  test("logs post-hook errors through the default runtime-backed dispatch", async () => {
+    const log = mock();
+    loadPluginRuntimeMock.mockImplementationOnce(async () =>
+      makeRuntimeMock({
+        firePre: async () => ({ rejected: false }),
+        firePost: async (_hookName: string, _ctx: unknown, onError?: (message: string) => void) => {
+          onError?.("runtime post-hook failed");
+        },
+      }),
+    );
+
+    await deleteWorkspaceWithWorktree(
+      { repoRoot: "/repo", projectId: "proj-1", workspaceShorthand: "PS-1_A1" },
+      { ...baseDeps, log },
+    );
+
+    await flushMicrotasks();
+
+    expect(log).toHaveBeenCalledWith("Deleted workspace PS-1_A1");
+    expect(log).toHaveBeenCalledWith("postWorktreeRemove hook failed: runtime post-hook failed");
   });
 });

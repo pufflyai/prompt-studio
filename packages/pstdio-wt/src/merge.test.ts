@@ -123,6 +123,7 @@ describe("mergeWorktree", () => {
         branch: "task/hook-post",
         target: "main",
       }),
+      expect.any(Function),
     );
   });
 
@@ -151,6 +152,7 @@ describe("mergeWorktree", () => {
         target: "main",
         operation: "merge",
       }),
+      expect.any(Function),
     );
   });
 
@@ -160,9 +162,8 @@ describe("mergeWorktree", () => {
 
     const dispatch: HookDispatch = {
       firePreHook: mock(() => Promise.resolve({ rejected: false })),
-      firePostHook: mock((hookName) => {
-        if (hookName === "postMerge") return Promise.reject(new Error("post merge hook failed"));
-        return Promise.resolve();
+      firePostHook: mock(async (hookName, _ctx, onError) => {
+        if (hookName === "postMerge") onError?.("post merge hook failed");
       }),
     };
     const log = mock();
@@ -184,9 +185,8 @@ describe("mergeWorktree", () => {
 
     const dispatch: HookDispatch = {
       firePreHook: mock(() => Promise.resolve({ rejected: false })),
-      firePostHook: mock((hookName) => {
-        if (hookName === "onConflict") return Promise.reject(new Error("conflict hook failed"));
-        return Promise.resolve();
+      firePostHook: mock(async (hookName, _ctx, onError) => {
+        if (hookName === "onConflict") onError?.("conflict hook failed");
       }),
     };
     const log = mock();
@@ -241,6 +241,7 @@ describe("mergeWorktree", () => {
         squash: false,
         commitSha: expect.stringMatching(/^[0-9a-f]{40}$/),
       }),
+      expect.any(Function),
     );
   });
 });

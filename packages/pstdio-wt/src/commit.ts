@@ -40,8 +40,7 @@ export const commitChanges = async (opts: {
   const sha = await git(cwd, ["rev-parse", "HEAD"]);
 
   if (dispatch) {
-    void dispatch.firePostHook("postCommit", { ...ctx, commitSha: sha }).catch((error) => {
-      const message = error instanceof Error ? error.message : String(error);
+    void dispatch.firePostHook("postCommit", { ...ctx, commitSha: sha }, (message) => {
       log(`postCommit hook failed: ${message}`);
     });
   }

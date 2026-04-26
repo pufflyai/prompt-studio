@@ -1,10 +1,11 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createFakeAgent } from "pstdio-agents";
 import { createApp } from "../../../app";
+import { apiLogger } from "../../../lib/logger";
 import { waitForPath } from "../../../test-utils/wait-for-path";
 import { waitForSyncEvent } from "../../../test-utils/wait-for-sync-event";
 import type { AppBindings } from "../../../types";
@@ -236,6 +237,35 @@ export default { hooks: { postAttemptStatusChange(ctx) { writeFileSync("${output
     const fired = await waitForPath(outputPath);
     expect(fired).toBe(true);
     expect(readFileSync(outputPath, "utf-8").trim()).toBe(body.status_change_id);
+  });
+
+  test("does not fail the request when post-hook throws and logs the failure", async () => {
+    const errorSpy = spyOn(apiLogger, "error").mockImplementation(() => {});
+    const workspace = await createWorkspace();
+
+    writePlugin(
+      "post-throw.ts",
+      `export default { hooks: { postAttemptStatusChange() { throw new Error("attempt status hook failed"); } } };`,
+    );
+
+    const res = await app.request(`/v1/workspaces/${workspace.id}/attempt-status`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status: "review-ready" }),
+    });
+
+    expect(res.status).toBe(200);
+    await Bun.sleep(10);
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "hooks.post_attempt_status_change.failed",
+        error: "attempt status hook failed",
+      }),
+      "attempt status hook failed",
+    );
+
+    errorSpy.mockRestore();
   });
 
   test("includes rich ticket and workspace objects in attempt-status hook context", async () => {

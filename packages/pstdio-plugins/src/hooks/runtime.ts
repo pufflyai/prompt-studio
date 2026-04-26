@@ -14,6 +14,7 @@ export type HookRuntime = {
   firePost<K extends keyof PostPluginHooks>(
     hookName: K,
     ctx: Parameters<NonNullable<PostPluginHooks[K]>>[0],
+    onError?: (message: string) => void,
   ): Promise<void>;
 };
 
@@ -69,7 +70,7 @@ export const loadPluginRuntime = async (input: {
     plugins: plugins.map((p) => ({ identity: p.identity, filePath: p.filePath })),
     hooks: {
       firePre: (hookName, ctx) => dispatcher.firePreHook(hookName, ctx),
-      firePost: (hookName, ctx) => dispatcher.firePostHook(hookName, ctx),
+      firePost: (hookName, ctx, onError) => dispatcher.firePostHook(hookName, ctx, onError),
     },
     actions: {
       list: (targetType) => registry.getActions(targetType),

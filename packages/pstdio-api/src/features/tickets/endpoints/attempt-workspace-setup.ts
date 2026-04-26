@@ -3,6 +3,7 @@ import { copyFile, mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { createWorktree, resolveLatestBase } from "pstdio-wt";
+import { apiLogger } from "../../../lib/logger";
 import type { RouteDeps } from "../../deps";
 import { withHookSessionClient } from "../../hooks/hook-client";
 import { isAgentEnabledForProject, parseProjectSelectedAgents } from "../../projects/selected-agents";
@@ -55,7 +56,17 @@ const runPostCreateHook = async (
   };
 
   const ctx = { ...hookContext, client: withHookSessionClient(runtime.client, hookContext) };
-  await runtime.hooks.firePost("postWorktreeCreate", ctx as never);
+  await runtime.hooks.firePost("postWorktreeCreate", ctx as never, (message) => {
+    apiLogger.error(
+      {
+        event: "hooks.post_worktree_create.failed",
+        projectId: input.projectId,
+        workspaceId: input.workspaceId,
+        error: message,
+      },
+      message,
+    );
+  });
 
   return { logFileId: input.existingStartupLogFileId, exitCode: 0, stderr: "" };
 };

@@ -1,3 +1,4 @@
+import { apiLogger } from "../../lib/logger";
 import type { createPluginService } from "../plugins/plugin-service";
 import { withHookSessionClient } from "./hook-client";
 
@@ -65,5 +66,15 @@ export const firePostAttemptStatusHook = async (deps: AttemptStatusHookDeps, con
     client: withHookSessionClient(runtime.client, hookContext),
   };
 
-  await runtime.hooks.firePost("postAttemptStatusChange", ctx as never);
+  await runtime.hooks.firePost("postAttemptStatusChange", ctx as never, (message) => {
+    apiLogger.error(
+      {
+        event: "hooks.post_attempt_status_change.failed",
+        projectId: context.projectId,
+        toStatus: context.toStatus,
+        error: message,
+      },
+      message,
+    );
+  });
 };

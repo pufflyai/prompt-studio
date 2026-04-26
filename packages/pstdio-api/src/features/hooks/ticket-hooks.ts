@@ -1,3 +1,4 @@
+import { apiLogger } from "../../lib/logger";
 import type { createPluginService } from "../plugins/plugin-service";
 import { withHookSessionClient } from "./hook-client";
 
@@ -39,6 +40,18 @@ export const fireTicketHookAsync = (
     const runtime = await deps.pluginService.getForProject(projectId);
     const hookContext = { projectId, ...payload };
     const ctx = { ...hookContext, client: withHookSessionClient(runtime.client, hookContext) };
-    await runtime.hooks.firePost(hookName as never, ctx as never);
-  })().catch(() => {});
+    await runtime.hooks.firePost(hookName as never, ctx as never, (message) => {
+      apiLogger.error({ event: "hooks.ticket_post.failed", projectId, hookName, error: message }, message);
+    });
+  })().catch((error) => {
+    apiLogger.error(
+      {
+        event: "hooks.ticket_post.dispatch_failed",
+        projectId,
+        hookName,
+        error: error instanceof Error ? error.message : String(error),
+      },
+      error instanceof Error ? error.message : String(error),
+    );
+  });
 };
