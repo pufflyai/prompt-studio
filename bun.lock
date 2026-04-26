@@ -86,6 +86,7 @@
     "packages/pstdio-agents": {
       "name": "pstdio-agents",
       "dependencies": {
+        "pstdio-api-contracts": "workspace:*",
         "zod": "^4.3.6",
       },
       "devDependencies": {

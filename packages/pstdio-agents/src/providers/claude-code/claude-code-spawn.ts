@@ -7,10 +7,12 @@ import type {
   RawLogEvent,
   SessionMessage,
   SessionMessageInput,
+  SessionPromptAttachment,
   SessionStartInput,
   SpawnedProcess,
 } from "../../types";
 import { mergeToolResultMessage, normalizeClaudeCodeStream } from "./claude-code-normalizer";
+import type { ClaudeCodeContentBlock } from "./claude-code-types";
 
 // --- Env ---
 
@@ -57,11 +59,39 @@ export const buildSpawnArgs = (input: SessionMessageInput) => {
 
 // --- User message formatting ---
 
-const formatUserMessage = (content: string) =>
-  `${JSON.stringify({ type: "user", message: { role: "user", content } })}\n`;
+const toClaudeContentBlocks = (prompt: string, attachments?: SessionPromptAttachment[]) => {
+  const content: ClaudeCodeContentBlock[] = [{ type: "text", text: prompt }];
 
-const sendUserMessage = (stdin: Writable, content: string, options?: { keepOpen?: boolean }) => {
-  stdin.write(formatUserMessage(content));
+  for (const attachment of attachments ?? []) {
+    if (!attachment.data_base64) {
+      continue;
+    }
+
+    content.push({
+      type: "image",
+      source: {
+        type: "base64",
+        media_type: attachment.mime_type,
+        data: attachment.data_base64,
+      },
+    });
+  }
+
+  return content;
+};
+
+const formatUserMessage = (content: string, attachments?: SessionPromptAttachment[]) => {
+  const payloadContent = attachments && attachments.length > 0 ? toClaudeContentBlocks(content, attachments) : content;
+  return `${JSON.stringify({ type: "user", message: { role: "user", content: payloadContent } })}\n`;
+};
+
+const sendUserMessage = (
+  stdin: Writable,
+  content: string,
+  attachments?: SessionPromptAttachment[],
+  options?: { keepOpen?: boolean },
+) => {
+  stdin.write(formatUserMessage(content, attachments));
 
   if (!options?.keepOpen) {
     stdin.end();
@@ -304,7 +334,7 @@ export const spawnClaudeCodeSession = async (input: SessionStartInput, deps: Spa
   const args = buildStartSessionArgs(input);
   const child = deps.spawnProcess(args, { cwd: input.cwd, env: input.env });
 
-  sendUserMessage(child.stdin, input.prompt);
+  sendUserMessage(child.stdin, input.prompt, input.attachments);
 
   const events = createRawEventStream(child.stdout, child.stdin);
   const { sessionId, remainingEvents } = await extractSessionId(events);
@@ -316,7 +346,16 @@ export const spawnClaudeCodeSession = async (input: SessionStartInput, deps: Spa
   const userMessage: SessionMessage = {
     id: `user-${Date.now()}`,
     role: "user",
-    parts: [{ type: "text", text: input.prompt }],
+    parts: [
+      { type: "text", text: input.prompt },
+      ...(input.attachments ?? []).map((attachment) => ({
+        type: "attachment" as const,
+        id: attachment.id,
+        fileName: attachment.file_name,
+        mimeType: attachment.mime_type,
+        sizeBytes: attachment.size_bytes,
+      })),
+    ],
   };
 
   const pipelineDone = runPipelineFromEvents(remainingEvents, input.eventStore, {
@@ -348,12 +387,21 @@ export const spawnClaudeCodeMessage = async (
   const child = deps.spawnProcess(args, { cwd: input.cwd, env: input.env });
 
   // Claude resume can stall until it sees EOF from stdin in our spawned process.
-  sendUserMessage(child.stdin, input.prompt);
+  sendUserMessage(child.stdin, input.prompt, input.attachments);
 
   const userMessage: SessionMessage = {
     id: `user-${Date.now()}`,
     role: "user",
-    parts: [{ type: "text", text: input.prompt }],
+    parts: [
+      { type: "text", text: input.prompt },
+      ...(input.attachments ?? []).map((attachment) => ({
+        type: "attachment" as const,
+        id: attachment.id,
+        fileName: attachment.file_name,
+        mimeType: attachment.mime_type,
+        sizeBytes: attachment.size_bytes,
+      })),
+    ],
   };
 
   const events = createRawEventStream(child.stdout, child.stdin, approvalService);

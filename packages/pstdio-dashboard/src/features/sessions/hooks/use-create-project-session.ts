@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
+import type { SessionPromptAttachment } from "../types";
 
 interface CreateProjectSessionInput {
   projectId: string;
@@ -7,6 +8,7 @@ interface CreateProjectSessionInput {
   agent: string;
   model?: string;
   workspaceId?: string;
+  attachments?: SessionPromptAttachment[];
 }
 
 export const useCreateProjectSession = () =>
@@ -21,6 +23,7 @@ export const useCreateProjectSession = () =>
           agent: input.agent,
           model: input.model,
           workspace_id: input.workspaceId,
+          attachments: input.attachments,
         },
       });
 

@@ -1,8 +1,18 @@
+import type { SessionPromptAttachment as SessionPromptAttachmentContract } from "pstdio-api-contracts";
+
 export type AgentId = "opencode" | "claude-code" | "fake";
 
 export type SessionMessageRole = "user" | "assistant" | "tool" | "system" | "developer";
 
 export type TextPart = { type: "text"; text: string };
+
+export type AttachmentPart = {
+  type: "attachment";
+  id: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+};
 
 export type ReasoningPart = { type: "reasoning"; text: string };
 
@@ -57,6 +67,7 @@ export type TokenUsagePart = {
 
 export type SessionMessagePart =
   | TextPart
+  | AttachmentPart
   | ReasoningPart
   | ToolPart
   | StepStartPart
@@ -85,6 +96,7 @@ export type SessionMessage = {
 
 export type SessionStartInput = {
   prompt: string;
+  attachments?: SessionPromptAttachment[];
   title?: string;
   model?: string | null;
   cwd?: string;
@@ -100,6 +112,7 @@ export type SessionStartResult = {
 export type SessionMessageInput = {
   sessionId: string;
   prompt: string;
+  attachments?: SessionPromptAttachment[];
   model?: string | null;
   cwd?: string;
   env?: NodeJS.ProcessEnv;
@@ -109,6 +122,10 @@ export type SessionMessageInput = {
 
 export type QuestionResponse = {
   answers: string[][];
+};
+
+export type SessionPromptAttachment = SessionPromptAttachmentContract & {
+  data_base64?: string;
 };
 
 export type SessionMessagesInput = {

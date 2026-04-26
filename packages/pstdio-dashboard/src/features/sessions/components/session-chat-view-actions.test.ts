@@ -19,6 +19,7 @@ describe("submitSessionMessage", () => {
       agent: "opencode",
       model: undefined,
       text: "What's the weather like?: Nice",
+      attachments: [],
       questionResponse: { answers: [["Nice"]] },
       messages: [],
       pendingIdRef: { current: 0 },
@@ -46,8 +47,54 @@ describe("submitSessionMessage", () => {
         agent: "opencode",
         model: undefined,
         questionResponse: { answers: [["Nice"]] },
+        attachments: [],
       },
     ]);
     expect(pendingUpdates).toEqual([null]);
+  });
+
+  test("passes attachments to follow-up and keeps optimistic pending state", () => {
+    const followUpInputs: Array<Parameters<FollowUpMutation["mutate"]>[0]> = [];
+    let pendingFollowUp: PendingFollowUpState | null = null;
+    const setPendingFollowUp: Dispatch<SetStateAction<PendingFollowUpState | null>> = (value) => {
+      pendingFollowUp = typeof value === "function" ? value(pendingFollowUp) : value;
+    };
+
+    const attachments = [
+      {
+        id: "file_1",
+        file_name: "screen.png",
+        mime_type: "image/png",
+        size_bytes: 123,
+      },
+    ];
+
+    submitSessionMessage({
+      sessionId: "session-1",
+      projectId: "project-1",
+      agent: "claude-code",
+      model: undefined,
+      text: "Check this",
+      attachments,
+      messages: [],
+      pendingIdRef: { current: 0 },
+      clearSessionDraft: () => {},
+      setChatDraft: () => {},
+      setPendingFollowUp,
+      createSession: {
+        mutate: () => {
+          throw new Error("createSession should not be called");
+        },
+      },
+      followUp: {
+        mutate: (input) => {
+          followUpInputs.push(input);
+        },
+      },
+      reconnect: () => {},
+    });
+
+    expect(followUpInputs[0]?.attachments).toEqual(attachments);
+    expect(pendingFollowUp).not.toBeNull();
   });
 });

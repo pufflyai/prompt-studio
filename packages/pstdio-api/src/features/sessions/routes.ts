@@ -11,6 +11,7 @@ import { listSessionsHandler, listSessionsRoute } from "./endpoints/list-session
 import { resolveSessionIdHandler, resolveSessionIdRoute } from "./endpoints/resolve-session-id";
 import { streamSessionHandler } from "./endpoints/stream-session";
 import { updateSessionStatusHandler, updateSessionStatusRoute } from "./endpoints/update-session-status";
+import { uploadSessionAttachmentHandler, uploadSessionAttachmentRoute } from "./endpoints/upload-session-attachment";
 
 export const createSessionRoutes = (deps: RouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
@@ -19,6 +20,7 @@ export const createSessionRoutes = (deps: RouteDeps) => {
   routes.openapi(listSessionsRoute, listSessionsHandler(deps));
   routes.openapi(resolveSessionIdRoute, resolveSessionIdHandler(deps));
   routes.openapi(getSessionRoute, getSessionHandler(deps));
+  routes.openapi(uploadSessionAttachmentRoute, uploadSessionAttachmentHandler(deps));
   routes.openapi(getSessionConversationRoute, getSessionConversationHandler(deps));
   routes.openapi(updateSessionStatusRoute, updateSessionStatusHandler(deps));
   routes.openapi(archiveSessionRoute, archiveSessionHandler(deps));

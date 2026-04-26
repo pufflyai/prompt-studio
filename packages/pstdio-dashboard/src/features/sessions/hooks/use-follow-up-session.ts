@@ -1,6 +1,7 @@
 import type { ChatInputQuestionResponse } from "@pstdio/ui/chat-ui";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
+import type { SessionPromptAttachment } from "../types";
 
 interface FollowUpInput {
   sessionId: string;
@@ -8,6 +9,7 @@ interface FollowUpInput {
   agent?: string;
   model?: string;
   questionResponse?: ChatInputQuestionResponse;
+  attachments?: SessionPromptAttachment[];
 }
 
 export const useFollowUpSession = () =>
@@ -20,6 +22,7 @@ export const useFollowUpSession = () =>
           agent: input.agent,
           model: input.model,
           question_response: input.questionResponse,
+          attachments: input.attachments,
         },
       });
     },

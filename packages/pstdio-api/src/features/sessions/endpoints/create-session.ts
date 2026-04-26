@@ -4,6 +4,7 @@ import type { RouteDeps } from "../../deps";
 import { isAgentEnabledForProject, parseProjectSelectedAgents } from "../../projects/selected-agents";
 import { createSessionBodySchema, sessionResponseSchema } from "../dto";
 import { resolvePrompt } from "../resolve-prompt";
+import { resolveSessionAttachments } from "../resolve-session-attachments";
 import { resolveSessionCwd } from "../resolve-session-cwd";
 import { spawnAgentSession } from "../spawn-agent";
 
@@ -93,6 +94,14 @@ export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
 
     const prompt = await resolvePrompt(input, input.project_id, deps);
 
+    let attachments: Awaited<ReturnType<typeof resolveSessionAttachments>> = [];
+    try {
+      attachments = await resolveSessionAttachments(input.attachments, input.project_id, deps);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to resolve attachments";
+      return c.json({ error: message }, 400);
+    }
+
     const session = await deps.sessionService.create({
       project_id: input.project_id,
       title: input.title,
@@ -111,6 +120,7 @@ export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
         sessionId: session.id,
         agentId,
         prompt,
+        attachments,
         title: input.title,
         model: input.model,
         cwd,

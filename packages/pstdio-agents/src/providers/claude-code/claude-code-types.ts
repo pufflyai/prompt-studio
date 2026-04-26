@@ -1,5 +1,6 @@
 export type ClaudeCodeContentBlock =
   | { type: "text"; text: string }
+  | { type: "image"; source: { type: "base64"; media_type: string; data: string } }
   | { type: "thinking"; thinking: string }
   | { type: "tool_use"; id: string; name: string; input: unknown }
   | { type: "tool_result"; tool_use_id: string; content: unknown; is_error?: boolean };

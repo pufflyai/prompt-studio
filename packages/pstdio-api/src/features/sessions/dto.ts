@@ -4,6 +4,7 @@ import {
   createSessionInputSchema,
   followUpInputSchema,
   sessionConversationResponseSchema,
+  sessionPromptAttachmentSchema,
   sessionSchema,
 } from "pstdio-api-contracts";
 
@@ -30,3 +31,14 @@ export const followUpBodySchema = followUpInputSchema
 
 export const approveBodySchema = approvalInputSchema.strict();
 export const notFoundResponseSchema = z.object({ error: z.string() });
+
+export const uploadSessionAttachmentBodySchema = z
+  .object({
+    project_id: z.string().min(1),
+    file_name: z.string().min(1),
+    content_base64: z.string().min(1),
+    mime_type: z.string().min(1),
+  })
+  .strict();
+
+export const sessionPromptAttachmentResponseSchema = sessionPromptAttachmentSchema;

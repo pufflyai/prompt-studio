@@ -140,6 +140,61 @@ describe("spawnClaudeCodeSession", () => {
 
     expect(spawnOptions[0]?.env?.PSTDIO_SESSION_ID).toBe("s_123");
   });
+
+  test("sends multimodal user content when attachments are provided", async () => {
+    const stdout = new PassThrough();
+    let stdinPayload = "";
+    const stdin = new Writable({
+      write(chunk, _encoding, callback) {
+        stdinPayload += String(chunk);
+        callback();
+      },
+    });
+
+    const deps: SpawnDeps = {
+      spawnProcess: () => {
+        queueMicrotask(() => {
+          stdout.write(`${JSON.stringify({ type: "system", session_id: "session-abc" })}\n`);
+          stdout.end();
+        });
+
+        return {
+          stdin,
+          stdout,
+          stderr: new PassThrough(),
+          kill: () => {},
+          onExit: Promise.resolve({ code: 0, signal: null }),
+        };
+      },
+    };
+
+    await spawnClaudeCodeSession(
+      {
+        prompt: "Describe this image",
+        attachments: [
+          {
+            id: "file_1",
+            file_name: "screen.png",
+            mime_type: "image/png",
+            size_bytes: 123,
+            data_base64: "ZmFrZQ==",
+          },
+        ],
+      },
+      deps,
+    );
+
+    const line = stdinPayload.trim().split("\n")[0];
+    const payload = JSON.parse(line) as { message: { content: unknown[] } };
+    expect(Array.isArray(payload.message.content)).toBe(true);
+    expect(payload.message.content).toEqual([
+      { type: "text", text: "Describe this image" },
+      {
+        type: "image",
+        source: { type: "base64", media_type: "image/png", data: "ZmFrZQ==" },
+      },
+    ]);
+  });
 });
 
 describe("spawnClaudeCodeMessage (resume)", () => {

@@ -1,6 +1,7 @@
 import type { ChatInputQuestionResponse, SessionMessage } from "@pstdio/ui/chat-ui";
 import type { Dispatch, SetStateAction } from "react";
 import { apiRequest } from "@/lib/api";
+import type { SessionPromptAttachment } from "../types";
 import {
   assignPendingFollowUpSession,
   createPendingFollowUpState,
@@ -9,7 +10,14 @@ import {
 
 export type CreateSessionMutation = {
   mutate: (
-    input: { projectId: string; prompt: string; agent: string; model: string | undefined; workspaceId?: string },
+    input: {
+      projectId: string;
+      prompt: string;
+      agent: string;
+      model: string | undefined;
+      workspaceId?: string;
+      attachments?: SessionPromptAttachment[];
+    },
     options: {
       onSuccess: (result: { sessionId: string }) => void;
       onError: () => void;
@@ -25,6 +33,7 @@ export type FollowUpMutation = {
       agent?: string;
       model?: string;
       questionResponse?: ChatInputQuestionResponse;
+      attachments?: SessionPromptAttachment[];
     },
     options: {
       onSuccess: () => void;
@@ -59,6 +68,7 @@ const submitNewSessionMessage = (input: {
   model: string | undefined;
   workspaceId?: string;
   text: string;
+  attachments: SessionPromptAttachment[];
   messages: SessionMessage[];
   pendingId: string;
   clearSessionDraft: (sessionId: string | null) => void;
@@ -88,6 +98,7 @@ const submitNewSessionMessage = (input: {
       agent: input.agent,
       model: input.model,
       workspaceId: input.workspaceId,
+      attachments: input.attachments,
     },
     {
       onSuccess: ({ sessionId }) => {
@@ -106,6 +117,7 @@ const submitFollowUpMessage = (input: {
   agent: string | null;
   model: string | undefined;
   text: string;
+  attachments: SessionPromptAttachment[];
   messages: SessionMessage[];
   pendingId: string;
   questionResponse?: ChatInputQuestionResponse;
@@ -135,6 +147,7 @@ const submitFollowUpMessage = (input: {
       agent: input.agent ?? undefined,
       model: input.model,
       questionResponse: input.questionResponse,
+      attachments: input.attachments,
     },
     {
       onSuccess: input.reconnect,
@@ -150,6 +163,7 @@ export const submitSessionMessage = (input: {
   model: string | undefined;
   workspaceId?: string;
   text: string;
+  attachments: SessionPromptAttachment[];
   questionResponse?: ChatInputQuestionResponse;
   messages: SessionMessage[];
   pendingIdRef: { current: number };
@@ -171,6 +185,7 @@ export const submitSessionMessage = (input: {
       model: input.model,
       workspaceId: input.workspaceId,
       text: input.text,
+      attachments: input.attachments,
       messages: input.messages,
       pendingId,
       clearSessionDraft: input.clearSessionDraft,
@@ -187,6 +202,7 @@ export const submitSessionMessage = (input: {
     agent: input.agent,
     model: input.model,
     text: input.text,
+    attachments: input.attachments,
     questionResponse: input.questionResponse,
     messages: input.messages,
     pendingId,

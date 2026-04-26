@@ -11,3 +11,10 @@ export interface Session {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface SessionPromptAttachment {
+  id: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+}

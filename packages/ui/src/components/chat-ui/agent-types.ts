@@ -4,6 +4,14 @@ export type SessionMessageRole = "user" | "assistant" | "tool" | "system" | "dev
 
 export type TextPart = { type: "text"; text: string };
 
+export type AttachmentPart = {
+  type: "attachment";
+  id: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+};
+
 export type ReasoningPart = { type: "reasoning"; text: string };
 
 export type ToolPartActionType = "read" | "write" | "execute" | "network" | "other";
@@ -64,6 +72,7 @@ export type AlertPart = {
 
 export type SessionMessagePart =
   | TextPart
+  | AttachmentPart
   | ReasoningPart
   | ToolPart
   | StepStartPart

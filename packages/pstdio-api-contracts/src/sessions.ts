@@ -26,6 +26,13 @@ export const sessionSchema = z.object({
   updated_at: z.string(),
 });
 
+export const sessionPromptAttachmentSchema = z.object({
+  id: z.string().min(1),
+  file_name: z.string().min(1),
+  mime_type: z.string().min(1),
+  size_bytes: z.number().int().nonnegative(),
+});
+
 export const createSessionInputSchema = z.object({
   project_id: z.string().min(1),
   title: z.string().min(1),
@@ -36,6 +43,7 @@ export const createSessionInputSchema = z.object({
   workspace_id: z.string().optional(),
   model: z.string().optional(),
   original_session_id: z.string().optional(),
+  attachments: z.array(sessionPromptAttachmentSchema).optional(),
 });
 
 export const questionResponseSchema = z.object({
@@ -49,6 +57,7 @@ export const followUpInputSchema = z.object({
   agent: z.string().optional(),
   model: z.string().optional(),
   question_response: questionResponseSchema.optional(),
+  attachments: z.array(sessionPromptAttachmentSchema).optional(),
   summary_from_session_id: z.string().optional(),
   summary_format: z.enum(["brief", "detailed"]).default("brief").optional(),
   summary_role: z.enum(["assistant", "all"]).default("assistant").optional(),
@@ -79,6 +88,7 @@ export type Session = z.infer<typeof sessionSchema>;
 export type ResolveSessionIdInput = z.infer<typeof resolveSessionIdInputSchema>;
 export type ResolveSessionIdResponse = z.infer<typeof resolveSessionIdResponseSchema>;
 export type CreateSessionInput = z.infer<typeof createSessionInputSchema>;
+export type SessionPromptAttachment = z.infer<typeof sessionPromptAttachmentSchema>;
 export type FollowUpInput = z.infer<typeof followUpInputSchema>;
 export type ApprovalInput = z.infer<typeof approvalInputSchema>;
 export type SessionConversationResponse = z.infer<typeof sessionConversationResponseSchema>;

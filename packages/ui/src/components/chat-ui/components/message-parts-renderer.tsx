@@ -25,6 +25,12 @@ const formatTokenCount = (count: number) => {
   return String(count);
 };
 
+const formatBytes = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 const getErrorMessage = (part: ErrorPart) => {
   if (part.message && part.message.trim().length > 0) {
     return part.message;
@@ -81,6 +87,15 @@ export function MessagePartsRenderer(props: MessagePartsProps) {
           <div key={key}>
             <Response>{part.text}</Response>
           </div>,
+        );
+        break;
+      case "attachment":
+        nodes.push(
+          <Box key={key} py="1" width="full">
+            <Text fontSize="xs" color="fg.subtle">
+              Attachment: {part.fileName} ({part.mimeType}, {formatBytes(part.sizeBytes)})
+            </Text>
+          </Box>,
         );
         break;
       case "reasoning":
