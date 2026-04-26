@@ -113,7 +113,27 @@ const parseQuestionPrompt = (value: unknown): ChatInputQuestionPrompt | undefine
   return { questions };
 };
 
-export const getActiveQuestionPrompt = (messages: SessionMessage[]) => {
+const hasQuestionResponsePayload = (part: Extract<SessionMessage["parts"][number], { type: "tool" }>) => {
+  const output = part.state?.output;
+  if (typeof output === "string" && output.trim().length > 0) return true;
+  if (Array.isArray(output) && output.length > 0) return true;
+  if (isRecord(output) && Object.keys(output).length > 0) return true;
+  if (output !== undefined && output !== null && typeof output !== "string") return true;
+
+  const metadata = part.state?.metadata;
+  if (!isRecord(metadata)) return false;
+  const answers = metadata.answers;
+  if (typeof answers === "string") return answers.trim().length > 0;
+  if (Array.isArray(answers)) return answers.length > 0;
+  return answers !== undefined && answers !== null;
+};
+
+const isQuestionPartAwaitingResponse = (part: SessionMessage["parts"][number]) => {
+  if (part.type !== "tool" || part.tool.toLowerCase() !== "question") return false;
+  return !hasQuestionResponsePayload(part);
+};
+
+const getActiveQuestionPromptEntry = (messages: SessionMessage[]) => {
   let lastUserMessageIndex = -1;
 
   for (let index = messages.length - 1; index >= 0; index -= 1) {
@@ -128,15 +148,52 @@ export const getActiveQuestionPrompt = (messages: SessionMessage[]) => {
 
     for (let partIndex = message.parts.length - 1; partIndex >= 0; partIndex -= 1) {
       const part = message.parts[partIndex];
-      if (part.type !== "tool" || part.tool.toLowerCase() !== "question") continue;
+      if (part.type !== "tool") continue;
+      if (!isQuestionPartAwaitingResponse(part)) continue;
 
       const parsed = parseQuestionPrompt(part.state?.input);
-      if (parsed) return parsed;
+      if (parsed) {
+        return {
+          questionPrompt: parsed,
+          signature: JSON.stringify({
+            messageId: message.id,
+            partIndex,
+            callId: part.callId ?? "",
+            questionPrompt: parsed,
+          }),
+        };
+      }
     }
   }
 
   return undefined;
 };
+
+export const getActiveQuestionPrompt = (messages: SessionMessage[]) => {
+  return getActiveQuestionPromptEntry(messages)?.questionPrompt;
+};
+
+export const getActiveQuestionPromptSignature = (questionPrompt: ChatInputQuestionPrompt | undefined) => {
+  if (!questionPrompt) return "";
+  return JSON.stringify(questionPrompt);
+};
+
+export const getVisibleActiveQuestionPromptState = (
+  messages: SessionMessage[],
+  suppressedQuestionPromptSignature: string,
+) => {
+  const entry = getActiveQuestionPromptEntry(messages);
+  if (!entry) return { questionPrompt: undefined, signature: "" };
+
+  if (entry.signature === suppressedQuestionPromptSignature) {
+    return { questionPrompt: undefined, signature: "" };
+  }
+
+  return entry;
+};
+
+export const getVisibleActiveQuestionPrompt = (messages: SessionMessage[], suppressedQuestionPromptSignature: string) =>
+  getVisibleActiveQuestionPromptState(messages, suppressedQuestionPromptSignature).questionPrompt;
 
 const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
 const INTERRUPTIBLE_STATUSES = new Set(["in_progress", "awaiting_input"]);

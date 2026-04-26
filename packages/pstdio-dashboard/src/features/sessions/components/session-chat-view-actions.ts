@@ -114,6 +114,7 @@ const submitFollowUpMessage = (input: {
   setPendingFollowUp: Dispatch<SetStateAction<PendingFollowUpState | null>>;
   followUp: FollowUpMutation;
   reconnect: () => void;
+  onQuestionResponseError?: () => void;
 }) => {
   input.clearSessionDraft(input.sessionId);
   input.setChatDraft("");
@@ -138,7 +139,10 @@ const submitFollowUpMessage = (input: {
     },
     {
       onSuccess: input.reconnect,
-      onError: () => input.setPendingFollowUp(null),
+      onError: () => {
+        input.setPendingFollowUp(null);
+        input.onQuestionResponseError?.();
+      },
     },
   );
 };
@@ -159,6 +163,7 @@ export const submitSessionMessage = (input: {
   createSession: CreateSessionMutation;
   followUp: FollowUpMutation;
   reconnect: () => void;
+  onQuestionResponseError?: () => void;
   onSessionCreated?: (sessionId: string) => void;
 }) => {
   const pendingId = `pending-${input.pendingIdRef.current}`;
@@ -195,6 +200,7 @@ export const submitSessionMessage = (input: {
     setPendingFollowUp: input.setPendingFollowUp,
     followUp: input.followUp,
     reconnect: input.reconnect,
+    onQuestionResponseError: input.onQuestionResponseError,
   });
 };
 

@@ -233,6 +233,7 @@ export const createOpencodeAgent = (
         cwd,
         eventStore,
         questionTool: pendingQuestion?.tool,
+        questionResponse: input.questionResponse,
         messageComplete,
         abortSignal: abortController.signal,
       });

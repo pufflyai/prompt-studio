@@ -125,7 +125,7 @@ export const createQuestionRenderer = (deps: QuestionRendererDependencies): Tool
   const { buildBaseTitle, buildIndicator, prependErrorBlock } = deps;
 
   return (invocation) => {
-    const responseText = getResponseText(invocation.state?.output);
+    const responseText = getResponseText(invocation.state?.output) ?? getResponseText(invocation.state?.metadata);
     const block = parseQuestionBlock(invocation.state?.input);
     if (!responseText && !block) return null;
 

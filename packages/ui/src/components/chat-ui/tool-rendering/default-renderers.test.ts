@@ -187,6 +187,28 @@ describe("question renderer", () => {
     expect(item.blocks).toEqual([]);
   });
 
+  it("hides question forms when submitted answers are stored in metadata", () => {
+    const item = renderInvocation({
+      type: "tool",
+      tool: "question",
+      state: {
+        input: {
+          questions: [
+            {
+              id: "language",
+              question: "Which language do you want to use?",
+              options: ["TypeScript", "Python"],
+            },
+          ],
+        },
+        output: "",
+        metadata: { answers: [["TypeScript"]] },
+      },
+    });
+
+    expect(item.blocks).toEqual([]);
+  });
+
   it("renders case-insensitive Question tool payloads with the question icon", () => {
     const item = renderInvocation({
       type: "tool",

@@ -4,6 +4,7 @@ import { createPendingFollowUpState } from "./session-chat-state";
 import {
   countCompletedEditActions,
   getActiveQuestionPrompt,
+  getVisibleActiveQuestionPromptState,
   isSessionInterruptible,
   resolveNewSessionWorkspaceId,
   shouldReconnectForExternalResume,
@@ -246,7 +247,154 @@ describe("getActiveQuestionPrompt", () => {
 
     expect(getActiveQuestionPrompt(messages)).toBeUndefined();
   });
+});
 
+describe("getActiveQuestionPrompt question lifecycle", () => {
+  it("suppresses a locally submitted question prompt until a new question message appears", () => {
+    const firstMessages: SessionMessage[] = [
+      message("assistant-1", [
+        {
+          type: "tool",
+          tool: "question",
+          state: {
+            status: "queued",
+            input: {
+              questions: [
+                {
+                  id: "language",
+                  question: "Which language do you want to use?",
+                  options: ["TypeScript", "Go"],
+                },
+              ],
+            },
+          },
+        },
+      ]),
+    ];
+    const firstState = getVisibleActiveQuestionPromptState(firstMessages, "");
+    const secondMessages: SessionMessage[] = [
+      message("assistant-2", [
+        {
+          type: "tool",
+          tool: "question",
+          state: {
+            status: "queued",
+            input: {
+              questions: [
+                {
+                  id: "language",
+                  question: "Which language do you want to use?",
+                  options: ["TypeScript", "Go"],
+                },
+              ],
+            },
+          },
+        },
+      ]),
+    ];
+
+    expect(getVisibleActiveQuestionPromptState(firstMessages, firstState.signature).questionPrompt).toBeUndefined();
+    expect(
+      getVisibleActiveQuestionPromptState(secondMessages, firstState.signature).questionPrompt?.questions[0]?.id,
+    ).toBe("language");
+  });
+
+  it("does not return a question prompt after the question tool has completed", () => {
+    const messages: SessionMessage[] = [
+      message("assistant-1", [
+        {
+          type: "tool",
+          tool: "question",
+          status: "completed",
+          state: {
+            status: "completed",
+            output: "User has answered your questions.",
+            input: {
+              questions: [
+                {
+                  id: "language",
+                  question: "Which language do you want to use?",
+                  options: ["TypeScript", "Go"],
+                },
+              ],
+            },
+          },
+        },
+      ]),
+    ];
+
+    expect(getActiveQuestionPrompt(messages)).toBeUndefined();
+  });
+
+  it("keeps a completed question prompt visible until a response payload is present", () => {
+    const messages: SessionMessage[] = [
+      message("assistant-1", [
+        {
+          type: "tool",
+          tool: "question",
+          status: "completed",
+          state: {
+            status: "completed",
+            input: {
+              questions: [
+                {
+                  id: "language",
+                  question: "Which language do you want to use?",
+                  options: ["TypeScript", "Go"],
+                },
+              ],
+            },
+          },
+        },
+      ]),
+    ];
+
+    expect(getActiveQuestionPrompt(messages)).toEqual({
+      questions: [
+        {
+          id: "language",
+          question: "Which language do you want to use?",
+          options: [
+            { label: "TypeScript", description: undefined },
+            { label: "Go", description: undefined },
+          ],
+          multiple: false,
+          required: false,
+          allowCustomAnswer: false,
+        },
+      ],
+    });
+  });
+
+  it("keeps completed question prompt visible when output is empty text", () => {
+    const messages: SessionMessage[] = [
+      message("assistant-1", [
+        {
+          type: "tool",
+          tool: "question",
+          status: "completed",
+          state: {
+            status: "completed",
+            output: "",
+            input: {
+              questions: [
+                {
+                  id: "language",
+                  question: "Which language do you want to use?",
+                  options: ["TypeScript", "Go"],
+                },
+              ],
+            },
+          },
+        },
+      ]),
+    ];
+
+    expect(getActiveQuestionPrompt(messages)?.questions[0]?.id).toBe("language");
+  });
+});
+
+describe("getActiveQuestionPrompt question payload variants", () => {
   it("supports multi-choice and custom-answer payloads", () => {
     const messages: SessionMessage[] = [
       message("assistant-1", [

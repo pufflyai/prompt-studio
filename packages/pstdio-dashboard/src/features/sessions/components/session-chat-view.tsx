@@ -21,7 +21,7 @@ import {
   shouldShowPendingFollowUp,
 } from "./session-chat-state";
 import {
-  getActiveQuestionPrompt,
+  getVisibleActiveQuestionPromptState,
   isSessionInterruptible,
   resolveNewSessionWorkspaceId,
 } from "./session-chat-view.utils";
@@ -74,6 +74,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
   const followUp = useFollowUpSession();
   const stopSession = useStopSession();
   const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUpState | null>(null);
+  const [submittedQuestionPromptSignature, setSubmittedQuestionPromptSignature] = useState("");
   const pendingIdRef = useRef(0);
   const editCountRef = useRef(0);
   const isWorkspaceInitializing = sessionWorkspace?.initializing ?? false;
@@ -99,7 +100,11 @@ export const SessionChatView = (props: SessionChatViewProps) => {
     messages,
     shouldShowPendingFollowUp(pendingFollowUp, sessionId) ? pendingFollowUp : null,
   );
-  const activeQuestionPrompt = useMemo(() => getActiveQuestionPrompt(displayedMessages), [displayedMessages]);
+  const activeQuestionPromptState = useMemo(
+    () => getVisibleActiveQuestionPromptState(displayedMessages, submittedQuestionPromptSignature),
+    [displayedMessages, submittedQuestionPromptSignature],
+  );
+  const { questionPrompt: activeQuestionPrompt, signature: activeQuestionPromptSignature } = activeQuestionPromptState;
   const workspaceHub = buildSessionWorkspaceHubPanelModel({
     showWorkspaceHub,
     isWorkspaceInitializing,
@@ -133,8 +138,12 @@ export const SessionChatView = (props: SessionChatViewProps) => {
       chatInputPlaceholder={t("sessions.followUpPlaceholder")}
       chatInputDefaultValue={chatDraft}
       chatInputQuestionPrompt={activeQuestionPrompt}
-      onSubmitMessage={(text: string, _attachments, questionResponse) =>
-        submitSessionMessage({
+      onSubmitMessage={(text: string, _attachments, questionResponse) => {
+        if (questionResponse && activeQuestionPromptSignature) {
+          setSubmittedQuestionPromptSignature(activeQuestionPromptSignature);
+        }
+
+        return submitSessionMessage({
           sessionId,
           projectId,
           agent,
@@ -150,9 +159,10 @@ export const SessionChatView = (props: SessionChatViewProps) => {
           createSession,
           followUp,
           reconnect,
+          onQuestionResponseError: () => setSubmittedQuestionPromptSignature(""),
           onSessionCreated,
-        })
-      }
+        });
+      }}
       onInterrupt={
         sessionId && canInterruptSession && !stopSession.isPending ? () => stopSession.mutate(sessionId) : undefined
       }

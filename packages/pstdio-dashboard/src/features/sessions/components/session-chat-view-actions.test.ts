@@ -50,4 +50,38 @@ describe("submitSessionMessage", () => {
     ]);
     expect(pendingUpdates).toEqual([null]);
   });
+
+  test("restores question prompt suppression when a question response follow-up fails", () => {
+    let restoredQuestionPrompt = false;
+
+    submitSessionMessage({
+      sessionId: "session-1",
+      projectId: "project-1",
+      agent: "opencode",
+      model: undefined,
+      text: "What's the weather like?: Nice",
+      questionResponse: { answers: [["Nice"]] },
+      messages: [],
+      pendingIdRef: { current: 0 },
+      clearSessionDraft: () => {},
+      setChatDraft: () => {},
+      setPendingFollowUp: () => {},
+      createSession: {
+        mutate: () => {
+          throw new Error("createSession should not be called");
+        },
+      },
+      followUp: {
+        mutate: (_input, options) => {
+          options.onError();
+        },
+      },
+      reconnect: () => {},
+      onQuestionResponseError: () => {
+        restoredQuestionPrompt = true;
+      },
+    });
+
+    expect(restoredQuestionPrompt).toBe(true);
+  });
 });

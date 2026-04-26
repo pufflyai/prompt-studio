@@ -124,8 +124,9 @@ const buildListItems = <TTicket extends WorkspaceTicket>(input: BuildListItemsIn
               beforeTicketId: ticket.id,
             });
 
-            if (settings.rowGrouping !== "none" && onMoveToGroup && placement.rowKey) {
-              onMoveToGroup(draggedTicketId, placement.rowKey, {
+            const rowKey = placement?.rowKey;
+            if (settings.rowGrouping !== "none" && onMoveToGroup && rowKey) {
+              onMoveToGroup(draggedTicketId, rowKey, {
                 rowGrouping: settings.rowGrouping,
                 beforeTicketId: ticket.id,
               });
