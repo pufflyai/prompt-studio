@@ -1,0 +1,10 @@
+!.pstdio/
+!.pstdio/**
+!.claude/
+!.claude/**
+!.opencode/
+!.opencode/**
+!.agents/
+!.agents/**
+!dist/
+!dist/**
