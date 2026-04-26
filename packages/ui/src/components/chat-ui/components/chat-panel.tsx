@@ -1,6 +1,6 @@
 import { Box, Button, Flex, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
 import { MessageCircleIcon } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useState, type WheelEvent } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { createSerializedPromptState } from "../utils/editor-state";
 import { ChatPrimitives } from "./ai-conversation";
@@ -11,6 +11,8 @@ import type { ChatInputQuestionPrompt, ChatInputQuestionResponse } from "./chat-
 import {
   isStickyUserMessageCollapsible,
   STICKY_USER_MESSAGE_COLLAPSED_MAX_HEIGHT,
+  STICKY_USER_MESSAGE_EXPANDED_MAX_HEIGHT,
+  shouldStopStickyUserMessageWheel,
 } from "./chat-panel-sticky-user-message";
 import { MessagePartsRenderer } from "./message-parts-renderer";
 import {
@@ -44,6 +46,49 @@ interface ChatPanelProps {
   chatInputQuestionPrompt?: ChatInputQuestionPrompt;
 }
 
+interface StickyMessageToggleProps {
+  label: string;
+  onClick: () => void;
+}
+
+interface StickyMessageGroupProps {
+  group: {
+    userMessage: SessionMessage;
+    responses: SessionMessage[];
+  };
+  streaming: boolean;
+  hideQuestionForms: boolean;
+  isExpanded: boolean;
+  onToggleStickyMessage: (messageId: string) => void;
+}
+
+const StickyMessageToggle = (props: StickyMessageToggleProps) => {
+  const { label, onClick } = props;
+
+  return (
+    <Flex
+      position="absolute"
+      bottom="0"
+      left="0"
+      right="0"
+      justifyContent="flex-end"
+      alignItems="flex-end"
+      px="xs"
+      pb="xs"
+      pt="lg"
+      bgGradient="to-t"
+      gradientFrom="bg.subtle"
+      gradientTo="transparent"
+      borderBottomRadius="xs"
+      pointerEvents="none"
+    >
+      <Button size="2xs" variant="solid" pointerEvents="auto" onClick={onClick}>
+        {label}
+      </Button>
+    </Flex>
+  );
+};
+
 const renderMessage = (message: SessionMessage, streaming: boolean, hideQuestionForms = false) => {
   const from = getMessageOrigin(message.role);
   return (
@@ -52,6 +97,69 @@ const renderMessage = (message: SessionMessage, streaming: boolean, hideQuestion
         <MessagePartsRenderer message={message} streaming={streaming} hideQuestionForms={hideQuestionForms} />
       </ChatMessage.Content>
     </ChatMessage.Root>
+  );
+};
+
+const handleExpandedStickyMessageWheel = (event: WheelEvent<HTMLElement>) => {
+  if (shouldStopStickyUserMessageWheel(event.currentTarget, event.deltaY)) {
+    event.stopPropagation();
+  }
+};
+
+const getStickyMessageMaxHeight = (isCollapsible: boolean, isExpanded: boolean) => {
+  if (!isCollapsible) return undefined;
+  if (isExpanded) return STICKY_USER_MESSAGE_EXPANDED_MAX_HEIGHT;
+
+  return STICKY_USER_MESSAGE_COLLAPSED_MAX_HEIGHT;
+};
+
+const getStickyMessageBodyMaxHeight = (isExpandedCollapsible: boolean) => {
+  if (!isExpandedCollapsible) return undefined;
+
+  return STICKY_USER_MESSAGE_EXPANDED_MAX_HEIGHT;
+};
+
+const StickyMessageGroup = (props: StickyMessageGroupProps) => {
+  const { group, streaming, hideQuestionForms, isExpanded, onToggleStickyMessage } = props;
+  const isCollapsible = isStickyUserMessageCollapsible(group.userMessage);
+  const isExpandedCollapsible = isCollapsible && isExpanded;
+  const stickyMessageMaxHeight = getStickyMessageMaxHeight(isCollapsible, isExpanded);
+  const toggleStickyMessage = () => onToggleStickyMessage(group.userMessage.id);
+
+  return (
+    <Box>
+      <Box position="sticky" top="0" zIndex={1}>
+        <ChatMessage.Root from="user">
+          <ChatMessage.Content
+            from="user"
+            maxH={stickyMessageMaxHeight}
+            overflow="hidden"
+            p={isCollapsible ? "0" : undefined}
+            position={isCollapsible ? "relative" : undefined}
+          >
+            <Box
+              data-sticky-user-message-content={isCollapsible ? (isExpanded ? "expanded" : "collapsed") : undefined}
+              display="flex"
+              flexDirection="column"
+              gap="sm"
+              maxH={getStickyMessageBodyMaxHeight(isExpandedCollapsible)}
+              minH="0"
+              overflowY={isExpandedCollapsible ? "auto" : "visible"}
+              px={isCollapsible ? "xs" : undefined}
+              py={isCollapsible ? "xs" : undefined}
+              pb={isExpandedCollapsible ? "3rem" : undefined}
+              onWheel={isExpandedCollapsible ? handleExpandedStickyMessageWheel : undefined}
+            >
+              <MessagePartsRenderer message={group.userMessage} streaming={streaming} />
+            </Box>
+            {isCollapsible && (
+              <StickyMessageToggle label={isExpanded ? "Show less" : "Show more"} onClick={toggleStickyMessage} />
+            )}
+          </ChatMessage.Content>
+        </ChatMessage.Root>
+      </Box>
+      {group.responses.map((message) => renderMessage(message, streaming, hideQuestionForms))}
+    </Box>
   );
 };
 
@@ -113,66 +221,16 @@ export const ChatPanel = (props: ChatPanelProps) => {
               {leadingResponses.map((message) =>
                 renderMessage(message, streaming, groups.length > 0 || hideActiveQuestionForms),
               )}
-              {groups.map((group, groupIndex) => {
-                const isCollapsible = isStickyUserMessageCollapsible(group.userMessage);
-                const isExpanded = expandedStickyMessageIds.has(group.userMessage.id);
-                const hideQuestionForms = groupIndex < groups.length - 1 || hideActiveQuestionForms;
-
-                return (
-                  <Box key={group.userMessage.id}>
-                    <Box position="sticky" top="0" zIndex={1}>
-                      <Box position="relative">
-                        <ChatMessage.Root from="user">
-                          <ChatMessage.Content
-                            from="user"
-                            maxH={isCollapsible && !isExpanded ? STICKY_USER_MESSAGE_COLLAPSED_MAX_HEIGHT : undefined}
-                            overflowY="hidden"
-                          >
-                            <MessagePartsRenderer message={group.userMessage} streaming={streaming} />
-                          </ChatMessage.Content>
-                        </ChatMessage.Root>
-                        {isCollapsible && !isExpanded && (
-                          <Flex
-                            position="absolute"
-                            bottom="0"
-                            left="0"
-                            right="0"
-                            justifyContent="flex-end"
-                            alignItems="flex-end"
-                            px="xs"
-                            pb="xs"
-                            pt="lg"
-                            bgGradient="to-t"
-                            gradientFrom="bg.subtle"
-                            gradientTo="transparent"
-                            borderBottomRadius="xs"
-                          >
-                            <Button
-                              size="2xs"
-                              variant="solid"
-                              onClick={() => toggleStickyMessageExpanded(group.userMessage.id)}
-                            >
-                              Show more
-                            </Button>
-                          </Flex>
-                        )}
-                      </Box>
-                      {isCollapsible && isExpanded && (
-                        <Flex justifyContent="flex-end" mt="2xs" mb="sm">
-                          <Button
-                            size="2xs"
-                            variant="ghost"
-                            onClick={() => toggleStickyMessageExpanded(group.userMessage.id)}
-                          >
-                            Show less
-                          </Button>
-                        </Flex>
-                      )}
-                    </Box>
-                    {group.responses.map((message) => renderMessage(message, streaming, hideQuestionForms))}
-                  </Box>
-                );
-              })}
+              {groups.map((group, groupIndex) => (
+                <StickyMessageGroup
+                  key={group.userMessage.id}
+                  group={group}
+                  streaming={streaming}
+                  hideQuestionForms={groupIndex < groups.length - 1 || hideActiveQuestionForms}
+                  isExpanded={expandedStickyMessageIds.has(group.userMessage.id)}
+                  onToggleStickyMessage={toggleStickyMessageExpanded}
+                />
+              ))}
             </Stack>
           ) : (
             (emptyContent ?? (
