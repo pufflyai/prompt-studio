@@ -65,7 +65,7 @@ pstdio tickets archive --id <id>                          # Archive ticket
 pstdio tickets delete --id <id>                           # Delete ticket
 ```
 
-`tickets view` accepts an optional positional field (`status`, `title`, `tags`, `shorthand`) to print only that value.
+`tickets view` accepts an optional positional field (`status`, `title`, `tags`, `shorthand`, `parent-ticket`, `sub-tickets`) to print only that value.
 
 `tickets update-when-attempt-status` is the safe way to transition a ticket once every attempt has reached a given attempt status — use it from hooks or agents instead of direct `tickets update --status`.
 
