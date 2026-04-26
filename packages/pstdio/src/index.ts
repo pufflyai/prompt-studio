@@ -73,8 +73,22 @@ const resolveCommandPathFromRawArgs = (args: string[]) => {
 };
 
 const resolveTopLevelCommandFromRawArgs = (args: string[]) => {
-  for (const arg of args) {
-    if (!arg.startsWith("-")) return arg;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--") return args[index + 1] ?? null;
+
+    if (arg.startsWith("--")) {
+      const equalsIndex = arg.indexOf("=");
+      const optionName = equalsIndex >= 0 ? arg.slice(0, equalsIndex) : arg;
+      if (globalOptionsWithValues.has(optionName) && equalsIndex < 0) {
+        index += 1;
+      }
+      continue;
+    }
+
+    if (arg.startsWith("-")) continue;
+
+    return arg;
   }
 
   return null;

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -210,6 +210,56 @@ describe("runtime-backed extension command routing", () => {
     expect(stderr).toContain("pstdio extensions check");
     expect(stderr).not.toContain("Unknown arguments");
     expect(stdout).toBe("");
+  });
+
+  test("does not load extension runtime for static commands with leading global options", () => {
+    const cases = [
+      { option: "--api-port", value: "5555" },
+      { option: "--dashboard-port", value: "7777" },
+    ];
+
+    for (const { option, value } of cases) {
+      const projectRoot = createProject();
+      const sideEffectFile = `import-side-effect-${option.slice(2)}.txt`;
+
+      writeExtension(
+        projectRoot,
+        "extension-lab",
+        `import { writeFileSync } from "node:fs";
+writeFileSync("${sideEffectFile}", "loaded\n");
+
+export default {
+  id: "extension-lab",
+  name: "Extension Lab",
+  commands: {
+    inspect: {
+      title: "Inspect",
+      cli: {
+        path: "extension-lab inspect",
+        description: "Inspect extension lab",
+      },
+      run() {},
+    },
+  },
+};`,
+      );
+
+      const output = Bun.spawnSync({
+        cmd: ["bun", cliEntrypoint, option, value, "extensions", "--help"],
+        cwd: projectRoot,
+        env: { ...process.env, PSTDIO_DISABLE_EMBED_MANIFEST: "1" },
+        stderr: "pipe",
+        stdout: "pipe",
+      });
+
+      const stdout = new TextDecoder().decode(output.stdout);
+      const stderr = new TextDecoder().decode(output.stderr);
+
+      expect(output.exitCode).toBe(0);
+      expect(stdout).toContain("Inspect local v2 extensions");
+      expect(stderr).toBe("");
+      expect(existsSync(join(projectRoot, sideEffectFile))).toBe(false);
+    }
   });
 
   test("shows extension-aware error for unsupported single-segment extension paths", () => {
