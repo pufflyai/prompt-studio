@@ -1,6 +1,6 @@
 import { Stack } from "@chakra-ui/react";
 import type { ReactNode } from "react";
-import { Fragment, useCallback } from "react";
+import { Fragment } from "react";
 import type { ResourceBadgeProps } from "@/components/resource-badge";
 import { ResourceBadge } from "@/components/resource-badge";
 
@@ -33,27 +33,13 @@ const DEFAULT_TONE: NonNullable<ResourceBadgeProps["tone"]> = "neutral";
 export const AttachmentList = (props: AttachmentListProps) => {
   const { attachments = [], onSelect, onRemove, renderBadge, size = DEFAULT_SIZE, tone = DEFAULT_TONE } = props;
 
-  const handleSelect = useCallback(
-    (attachment: string) => {
-      onSelect?.(attachment);
-    },
-    [onSelect],
-  );
-
-  const handleRemove = useCallback(
-    (attachment: string) => {
-      onRemove?.(attachment);
-    },
-    [onRemove],
-  );
-
   if (attachments.length === 0) return null;
 
   return (
     <Stack marginBottom="sm" gap="1" flexDir="row" flexWrap="wrap">
       {attachments.map((attachment) => {
-        const select = onSelect ? () => handleSelect(attachment) : undefined;
-        const remove = onRemove ? () => handleRemove(attachment) : undefined;
+        const select = onSelect ? () => onSelect(attachment) : undefined;
+        const remove = onRemove ? () => onRemove(attachment) : undefined;
 
         if (renderBadge) {
           const rendered = renderBadge({ attachmentId: attachment, onSelect: select, onRemove: remove, size, tone });

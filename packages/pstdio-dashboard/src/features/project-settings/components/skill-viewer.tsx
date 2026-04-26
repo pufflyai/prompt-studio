@@ -1,7 +1,7 @@
 import { Badge, Box, Button, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
 import { type SidebarNavigateEvent, SidebarTree } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { ProjectSkillDetails } from "../data/skills-api";
 import { useProjectSkill, useUpdateProjectSkill } from "../hooks/use-skills";
 import { buildSkillFileTree, collectFolderIds } from "../utils/build-skill-file-tree";
@@ -28,8 +28,8 @@ export const SkillViewerContent = (props: {
   onUpdate: () => void;
 }) => {
   const { skill, isUpdating, onUpdate } = props;
-  const treeNodes = useMemo(() => buildSkillFileTree(skill.files), [skill.files]);
-  const initialExpanded = useMemo(() => collectFolderIds(treeNodes), [treeNodes]);
+  const treeNodes = buildSkillFileTree(skill.files);
+  const initialExpanded = collectFolderIds(treeNodes);
   const [expandedNodes, setExpandedNodes] = useState<string[]>(initialExpanded);
   const [selectedPath, setSelectedPath] = useState(getDefaultFilePath(skill.files));
 
@@ -41,7 +41,7 @@ export const SkillViewerContent = (props: {
     setSelectedPath(getDefaultFilePath(skill.files));
   }, [skill.files]);
 
-  const sections = useMemo(() => [{ id: "files", nodes: treeNodes, collapsible: false }], [treeNodes]);
+  const sections = [{ id: "files", nodes: treeNodes, collapsible: false }];
 
   const selectedFile = skill.files.find((file) => file.path === selectedPath) ?? skill.files[0];
   const skillFile = skill.files.find((file) => file.path === "SKILL.md");

@@ -17,7 +17,7 @@ import {
   SELECTION_CHANGE_COMMAND,
 } from "lexical";
 import type React from "react";
-import { type Dispatch, useCallback, useEffect, useRef, useState } from "react";
+import { type Dispatch, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { getSelectedNode } from "./utils/getSelectedNode";
 import { setFloatingElemPos } from "./utils/setFloatingElemPos";
@@ -40,11 +40,12 @@ function LinkEditor({
 }): React.JSX.Element {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const updateLinkEditorRef = useRef<() => boolean>(() => true);
   const [linkUrl, setLinkUrl] = useState("");
   const [editedLinkUrl, setEditedLinkUrl] = useState("https://");
   const [lastSelection, setLastSelection] = useState<BaseSelection | null>(null);
 
-  const $updateLinkEditor = useCallback(() => {
+  updateLinkEditorRef.current = () => {
     const selection = $getSelection();
     if ($isRangeSelection(selection)) {
       const node = getSelectedNode(selection);
@@ -93,14 +94,14 @@ function LinkEditor({
     }
 
     return true;
-  }, [anchorElem, editor, setIsLinkEditMode, isLinkEditMode, linkUrl]);
+  };
 
   useEffect(() => {
     const scrollerElem = anchorElem.parentElement;
 
     const update = () => {
       editor.getEditorState().read(() => {
-        $updateLinkEditor();
+        updateLinkEditorRef.current();
       });
     };
 
@@ -117,20 +118,20 @@ function LinkEditor({
         scrollerElem.removeEventListener("scroll", update);
       }
     };
-  }, [anchorElem.parentElement, editor, $updateLinkEditor]);
+  }, [anchorElem.parentElement, editor]);
 
   useEffect(() => {
     return mergeRegister(
       editor.registerUpdateListener(({ editorState }) => {
         editorState.read(() => {
-          $updateLinkEditor();
+          updateLinkEditorRef.current();
         });
       }),
 
       editor.registerCommand(
         SELECTION_CHANGE_COMMAND,
         () => {
-          $updateLinkEditor();
+          updateLinkEditorRef.current();
           return true;
         },
         COMMAND_PRIORITY_LOW,
@@ -147,13 +148,13 @@ function LinkEditor({
         COMMAND_PRIORITY_HIGH,
       ),
     );
-  }, [editor, $updateLinkEditor, setIsLink, isLink]);
+  }, [editor, setIsLink, isLink]);
 
   useEffect(() => {
     editor.getEditorState().read(() => {
-      $updateLinkEditor();
+      updateLinkEditorRef.current();
     });
-  }, [editor, $updateLinkEditor]);
+  }, [editor]);
 
   useEffect(() => {
     if (isLinkEditMode && inputRef.current) {

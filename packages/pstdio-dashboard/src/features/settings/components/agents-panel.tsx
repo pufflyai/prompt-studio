@@ -1,6 +1,6 @@
 import { Box, Button, HStack, Spinner, Stack, Table, Text } from "@chakra-ui/react";
 import { Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { AgentConfig, AgentInfo } from "@/features/agents/types";
 import { AddAgentManuallyDialog, SUPPORTED_AGENT_IDS, type SupportedAgentId } from "./add-agent-manually-dialog";
@@ -60,8 +60,8 @@ export const AgentsPanel = (props: AgentsPanelProps) => {
   const { agents, configs, isLoading, isMutating, isAdding, onToggle, onSetDefault, onManualAdd } = props;
   const [isManualAddOpen, setIsManualAddOpen] = useState(false);
 
-  const rows = useMemo(() => toAgentRows(agents, configs), [agents, configs]);
-  const existingAgentIds = useMemo(() => configs.map((c) => c.agent_id), [configs]);
+  const rows = toAgentRows(agents, configs);
+  const existingAgentIds = configs.map((c) => c.agent_id);
   const allAgentsConnected = SUPPORTED_AGENT_IDS.every((id) => existingAgentIds.includes(id));
 
   return (

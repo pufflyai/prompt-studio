@@ -13,7 +13,7 @@ import {
 } from "@chakra-ui/react";
 import { EmptyState, ScrollArea } from "@pstdio/ui";
 import { ChevronDown, ChevronRight, FileText, Folder, List, ListTree, type LucideIcon } from "lucide-react";
-import { type ReactNode, type PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 import {
   buildChangedFilesTree,
   type ChangedFilesViewMode,
@@ -160,21 +160,14 @@ export const FileListPanel = (props: FileListPanelProps) => {
     showHeader = true,
     showFilter = true,
   } = props;
-  const fileTree = useMemo(() => buildChangedFilesTree(paths, viewMode), [paths, viewMode]);
-  const expandedFolders = useMemo(
-    () => (viewMode === "nested" ? collectExpandedFolderIds(fileTree) : []),
-    [fileTree, viewMode],
-  );
-  const collection = useMemo(
-    () =>
-      createTreeCollection<ChangedFileTreeNode>({
-        rootNode: { id: "__root__", name: "root", type: "folder", children: fileTree },
-        nodeToValue: (node) => node.id,
-        nodeToString: (node) => node.name,
-        nodeToChildren: (node) => node.children ?? [],
-      }),
-    [fileTree],
-  );
+  const fileTree = buildChangedFilesTree(paths, viewMode);
+  const expandedFolders = viewMode === "nested" ? collectExpandedFolderIds(fileTree) : [];
+  const collection = createTreeCollection<ChangedFileTreeNode>({
+    rootNode: { id: "__root__", name: "root", type: "folder", children: fileTree },
+    nodeToValue: (node) => node.id,
+    nodeToString: (node) => node.name,
+    nodeToChildren: (node) => node.children ?? [],
+  });
 
   return (
     <Stack h="full" minH="0" minW="0" w="full" gap="0" overflow="hidden">

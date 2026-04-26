@@ -1,7 +1,7 @@
 import { Box, Flex, Image, Spinner, Stack, Text } from "@chakra-ui/react";
 import { EmptyState, ScrollArea } from "@pstdio/ui";
 import { AlertCircle, CheckCircle2, FileCode2, FileText, FlaskConical, TerminalSquare } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTicketContent } from "@/features/ticket/hooks/use-ticket-content";
 import { isImageFileName } from "@/features/ticket/utils/ticket-file-selection";
@@ -42,20 +42,16 @@ export const WorkspaceChecksPanel = (props: WorkspaceChecksPanelProps) => {
     artifacts[0] ? stripArtifactPrefix(artifacts[0].relative_path) : null,
   );
 
-  const artifactByDisplayPath = useMemo(() => {
-    const map = new Map<string, ApiWorkspaceArtifact>();
-    artifacts.forEach((artifact) => {
-      map.set(stripArtifactPrefix(artifact.relative_path), artifact);
-    });
-    return map;
-  }, [artifacts]);
+  const artifactByDisplayPath = new Map<string, ApiWorkspaceArtifact>();
+  artifacts.forEach((artifact) => {
+    artifactByDisplayPath.set(stripArtifactPrefix(artifact.relative_path), artifact);
+  });
 
-  const allPaths = useMemo(() => Array.from(artifactByDisplayPath.keys()), [artifactByDisplayPath]);
+  const allPaths = Array.from(artifactByDisplayPath.keys());
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-  const filteredPaths = useMemo(() => {
-    if (!normalizedSearchQuery) return allPaths;
-    return allPaths.filter((path) => path.toLowerCase().includes(normalizedSearchQuery));
-  }, [allPaths, normalizedSearchQuery]);
+  const filteredPaths = !normalizedSearchQuery
+    ? allPaths
+    : allPaths.filter((path) => path.toLowerCase().includes(normalizedSearchQuery));
 
   useEffect(() => {
     if (selectedPath && artifactByDisplayPath.has(selectedPath)) return;

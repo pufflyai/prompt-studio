@@ -1,7 +1,7 @@
 import { Box, Flex } from "@chakra-ui/react";
 import { ChatPanel, ChatSkeleton } from "@pstdio/ui/chat-ui";
 import { useParams } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/features/project-settings/store";
@@ -100,9 +100,9 @@ export const SessionChatView = (props: SessionChatViewProps) => {
     messages,
     shouldShowPendingFollowUp(pendingFollowUp, sessionId) ? pendingFollowUp : null,
   );
-  const activeQuestionPromptState = useMemo(
-    () => getVisibleActiveQuestionPromptState(displayedMessages, submittedQuestionPromptSignature),
-    [displayedMessages, submittedQuestionPromptSignature],
+  const activeQuestionPromptState = getVisibleActiveQuestionPromptState(
+    displayedMessages,
+    submittedQuestionPromptSignature,
   );
   const { questionPrompt: activeQuestionPrompt, signature: activeQuestionPromptSignature } = activeQuestionPromptState;
   const workspaceHub = buildSessionWorkspaceHubPanelModel({

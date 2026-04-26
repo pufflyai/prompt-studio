@@ -1,7 +1,7 @@
 import { Box, Button, Flex, Skeleton, Stack, Tabs } from "@chakra-ui/react";
 import { type Diff, DiffDrawer, EmptyState } from "@pstdio/ui";
 import { FileDiffIcon, ListTree, ShieldCheck } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
 import { normalizeWorkspacePageTab, type WorkspacePageTab } from "@/features/workspaces/pages/workspace-page-tab";
@@ -83,24 +83,17 @@ export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
   const [isTreePanelOpen, setTreePanelOpen] = useState(true);
   const [viewMode, setViewMode] = useState<ChangedFilesViewMode>("nested");
   const [searchQuery, setSearchQuery] = useState("");
-  const diffPaths = useMemo(() => diffs.map((diff) => diff.newPath ?? diff.oldPath ?? "unknown"), [diffs]);
-  const changedFilePaths = useMemo(() => collectChangedFilePaths(changedFiles), [changedFiles]);
+  const diffPaths = diffs.map((diff) => diff.newPath ?? diff.oldPath ?? "unknown");
+  const changedFilePaths = collectChangedFilePaths(changedFiles);
   const [selectedDiffPath, setSelectedDiffPath] = useState<string | null>(() =>
     resolveSelectedPath(diffPaths, changedFilePaths),
   );
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-  const filteredChangedFilePaths = useMemo(() => {
-    if (!normalizedSearchQuery) return changedFilePaths;
-
-    return changedFilePaths.filter((path) => path.toLowerCase().includes(normalizedSearchQuery));
-  }, [changedFilePaths, normalizedSearchQuery]);
-  const filteredDiffs = useMemo(() => {
-    return buildFilteredDiffs({ diffs, normalizedSearchQuery, viewMode });
-  }, [diffs, normalizedSearchQuery, viewMode]);
-  const filteredDiffPaths = useMemo(
-    () => filteredDiffs.map((diff) => diff.newPath ?? diff.oldPath ?? "unknown"),
-    [filteredDiffs],
-  );
+  const filteredChangedFilePaths = !normalizedSearchQuery
+    ? changedFilePaths
+    : changedFilePaths.filter((path) => path.toLowerCase().includes(normalizedSearchQuery));
+  const filteredDiffs = buildFilteredDiffs({ diffs, normalizedSearchQuery, viewMode });
+  const filteredDiffPaths = filteredDiffs.map((diff) => diff.newPath ?? diff.oldPath ?? "unknown");
   const hasDiffs = filteredDiffs.length > 0;
   const hasChangedFiles = changedFiles.length > 0;
 

@@ -11,7 +11,7 @@ import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import type { Provider } from "@lexical/yjs";
 import type { Meta, StoryObj } from "@storybook/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from "y-protocols/awareness";
 import * as Y from "yjs";
 import { ContentEditable } from "../shared/components/content-editable";
@@ -178,7 +178,7 @@ function EditorPane({ label, roomId, userName, userColor, provider, doc }: Edito
 function SplitViewDemo() {
   const roomId = "demo-room";
 
-  const { docA, docB, providerA, providerB } = useMemo(() => {
+  const [{ docA, docB, providerA, providerB }] = useState(() => {
     const docA = new Y.Doc();
     const docB = new Y.Doc();
 
@@ -190,7 +190,7 @@ function SplitViewDemo() {
     bridgeAwareness(providerA.awareness, providerB.awareness);
 
     return { docA, docB, providerA, providerB };
-  }, []);
+  });
 
   return (
     <Flex gap="4" h="500px">
