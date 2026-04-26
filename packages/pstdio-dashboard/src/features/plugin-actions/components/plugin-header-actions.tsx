@@ -25,18 +25,18 @@ export const getHeaderActionState = (action: HeaderActionItem, pendingActionKeys
 export const isOverflowMenuDisabled = (actions: HeaderActionItem[], pendingActionKeys: string[] = []) =>
   actions.length > 0 && actions.every((action) => getHeaderActionState(action, pendingActionKeys).isDisabled);
 
-const renderActionButton = (action: HeaderActionItem, variant: "primary" | "outline", pendingActionKeys: string[]) => {
+interface ActionButtonProps {
+  action: HeaderActionItem;
+  variant: "primary" | "outline";
+  pendingActionKeys: string[];
+}
+
+const ActionButton = (props: ActionButtonProps) => {
+  const { action, variant, pendingActionKeys } = props;
   const state = getHeaderActionState(action, pendingActionKeys);
 
   return (
-    <Button
-      key={action.key}
-      size="sm"
-      variant={variant}
-      onClick={action.onClick}
-      disabled={state.isDisabled}
-      loading={state.isPending}
-    >
+    <Button size="sm" variant={variant} onClick={action.onClick} disabled={state.isDisabled} loading={state.isPending}>
       {action.label}
     </Button>
   );
@@ -74,8 +74,12 @@ export const PluginHeaderActions = (props: PluginHeaderActionsProps) => {
 
   return (
     <Flex align="center" gap="xs">
-      {groups.primary.map((action) => renderActionButton(action, "primary", pendingActionKeys))}
-      {groups.secondary.map((action) => renderActionButton(action, "outline", pendingActionKeys))}
+      {groups.primary.map((action) => (
+        <ActionButton key={action.key} action={action} variant="primary" pendingActionKeys={pendingActionKeys} />
+      ))}
+      {groups.secondary.map((action) => (
+        <ActionButton key={action.key} action={action} variant="outline" pendingActionKeys={pendingActionKeys} />
+      ))}
 
       {groups.overflow.length > 0 ? (
         <Menu.Root>

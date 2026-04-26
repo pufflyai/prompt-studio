@@ -62,6 +62,12 @@ interface StickyMessageGroupProps {
   onToggleStickyMessage: (messageId: string) => void;
 }
 
+interface MessageRowProps {
+  message: SessionMessage;
+  streaming: boolean;
+  hideQuestionForms?: boolean;
+}
+
 const StickyMessageToggle = (props: StickyMessageToggleProps) => {
   const { label, onClick } = props;
 
@@ -89,10 +95,12 @@ const StickyMessageToggle = (props: StickyMessageToggleProps) => {
   );
 };
 
-const renderMessage = (message: SessionMessage, streaming: boolean, hideQuestionForms = false) => {
+const MessageRow = (props: MessageRowProps) => {
+  const { message, streaming, hideQuestionForms = false } = props;
   const from = getMessageOrigin(message.role);
+
   return (
-    <ChatMessage.Root key={message.id} from={from}>
+    <ChatMessage.Root from={from}>
       <ChatMessage.Content from={from}>
         <MessagePartsRenderer message={message} streaming={streaming} hideQuestionForms={hideQuestionForms} />
       </ChatMessage.Content>
@@ -158,7 +166,9 @@ const StickyMessageGroup = (props: StickyMessageGroupProps) => {
           </ChatMessage.Content>
         </ChatMessage.Root>
       </Box>
-      {group.responses.map((message) => renderMessage(message, streaming, hideQuestionForms))}
+      {group.responses.map((message) => (
+        <MessageRow key={message.id} message={message} streaming={streaming} hideQuestionForms={hideQuestionForms} />
+      ))}
     </Box>
   );
 };
@@ -218,9 +228,14 @@ export const ChatPanel = (props: ChatPanelProps) => {
         <ChatPrimitives.Viewport>
           {hasMessages ? (
             <Stack gap="sm">
-              {leadingResponses.map((message) =>
-                renderMessage(message, streaming, groups.length > 0 || hideActiveQuestionForms),
-              )}
+              {leadingResponses.map((message) => (
+                <MessageRow
+                  key={message.id}
+                  message={message}
+                  streaming={streaming}
+                  hideQuestionForms={groups.length > 0 || hideActiveQuestionForms}
+                />
+              ))}
               {groups.map((group, groupIndex) => (
                 <StickyMessageGroup
                   key={group.userMessage.id}

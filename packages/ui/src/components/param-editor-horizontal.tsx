@@ -15,113 +15,115 @@ export interface ParamEditorHorizontalProps {
   fullWidth?: boolean; // This option doesn't do anything in horizontal mode
 }
 
+interface ParamEditorHorizontalFieldProps {
+  param: Param;
+  defaultValues: ParamValueMap;
+  onChange: (id: string, value: ParamValue) => void;
+  readOnly?: boolean;
+}
+
 const resolveDefaultValue = <T,>(defaultValues: ParamValueMap, paramId: string, fallback: T) => {
   return defaultValues[paramId] === undefined ? fallback : (defaultValues[paramId] as T);
+};
+
+const ParamEditorHorizontalField = (props: ParamEditorHorizontalFieldProps) => {
+  const { param, defaultValues, onChange, readOnly } = props;
+
+  switch (param.type) {
+    case "number":
+      return (
+        <NumberInput
+          hideLabel
+          hideSlider
+          readOnly={readOnly}
+          id={param.id}
+          name={param.name}
+          description={param.description || ""}
+          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
+          min={param.min}
+          max={param.max}
+          step={param.step}
+          onChange={onChange}
+          tooltipPlacement="top"
+        />
+      );
+    case "text":
+      return (
+        <HorizontalTextInput
+          hideLabel
+          readOnly={readOnly}
+          id={param.id}
+          name={param.name}
+          description={param.description || ""}
+          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
+          onChange={onChange}
+          tooltipPlacement="top"
+        />
+      );
+    case "selection":
+      return (
+        <SelectionInput
+          hideLabel
+          readOnly={readOnly}
+          id={param.id}
+          name={param.name}
+          description={param.description || ""}
+          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
+          options={param.options}
+          onChange={onChange}
+          multiSelect={param.multiSelect}
+          tooltipPlacement="top"
+          placeholder={param.placeholder}
+        />
+      );
+    case "date":
+      return (
+        <DateInput
+          hideLabel
+          readOnly={readOnly}
+          id={param.id}
+          name={param.name}
+          description={param.description || ""}
+          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
+          min={param.min}
+          max={param.max}
+          onChange={onChange}
+          tooltipPlacement="top"
+        />
+      );
+    case "color":
+      return (
+        <ColorInput
+          hideLabel
+          readOnly={readOnly}
+          id={param.id}
+          name={param.name}
+          description={param.description || ""}
+          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
+          onChange={onChange}
+          tooltipPlacement="top"
+        />
+      );
+    default:
+      return null;
+  }
 };
 
 export const ParamEditorHorizontal = (props: ParamEditorHorizontalProps) => {
   const { params = [], groups = [], defaultValues, onChange, readOnly } = props;
 
-  const renderNumberParam = (param: Extract<Param, { type: "number" }>) => (
-    <NumberInput
-      hideLabel
-      hideSlider
-      readOnly={readOnly}
-      id={param.id}
-      key={param.id}
-      name={param.name}
-      description={param.description || ""}
-      defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-      min={param.min}
-      max={param.max}
-      step={param.step}
-      onChange={onChange}
-      tooltipPlacement="top"
-    />
-  );
-
-  const renderTextParam = (param: Extract<Param, { type: "text" }>) => (
-    <HorizontalTextInput
-      hideLabel
-      readOnly={readOnly}
-      id={param.id}
-      key={param.id}
-      name={param.name}
-      description={param.description || ""}
-      defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-      onChange={onChange}
-      tooltipPlacement="top"
-    />
-  );
-
-  const renderSelectionParam = (param: Extract<Param, { type: "selection" }>) => (
-    <SelectionInput
-      hideLabel
-      readOnly={readOnly}
-      id={param.id}
-      key={param.id}
-      name={param.name}
-      description={param.description || ""}
-      defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-      options={param.options}
-      onChange={onChange}
-      multiSelect={param.multiSelect}
-      tooltipPlacement="top"
-      placeholder={param.placeholder}
-    />
-  );
-
-  const renderDateParam = (param: Extract<Param, { type: "date" }>) => (
-    <DateInput
-      hideLabel
-      readOnly={readOnly}
-      id={param.id}
-      key={param.id}
-      name={param.name}
-      description={param.description || ""}
-      defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-      min={param.min}
-      max={param.max}
-      onChange={onChange}
-      tooltipPlacement="top"
-    />
-  );
-
-  const renderColorParam = (param: Extract<Param, { type: "color" }>) => (
-    <ColorInput
-      hideLabel
-      readOnly={readOnly}
-      id={param.id}
-      key={param.id}
-      name={param.name}
-      description={param.description || ""}
-      defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-      onChange={onChange}
-      tooltipPlacement="top"
-    />
-  );
-
-  const renderParam = (param: Param) => {
-    switch (param.type) {
-      case "number":
-        return renderNumberParam(param);
-      case "text":
-        return renderTextParam(param);
-      case "selection":
-        return renderSelectionParam(param);
-      case "date":
-        return renderDateParam(param);
-      case "color":
-        return renderColorParam(param);
-      default:
-        return null;
-    }
-  };
-
   return (
     <Stack direction="row" flex="1" maxW="full" gap="sm" flexWrap="wrap">
       {/* Render standalone params */}
-      {params.map(renderParam)}
+      {params.map((param) => (
+        <ParamEditorHorizontalField
+          key={param.id}
+          param={param}
+          defaultValues={defaultValues}
+          onChange={onChange}
+          readOnly={readOnly}
+        />
+      ))}
 
       {/* Render grouped params */}
       {groups.map((group) => (
@@ -129,7 +131,17 @@ export const ParamEditorHorizontal = (props: ParamEditorHorizontalProps) => {
           <Text fontSize="sm" fontWeight="medium" color="fg.muted">
             {group.title}
           </Text>
-          <HStack gap="xs">{group.params.map(renderParam)}</HStack>
+          <HStack gap="xs">
+            {group.params.map((param) => (
+              <ParamEditorHorizontalField
+                key={param.id}
+                param={param}
+                defaultValues={defaultValues}
+                onChange={onChange}
+                readOnly={readOnly}
+              />
+            ))}
+          </HStack>
         </VStack>
       ))}
     </Stack>

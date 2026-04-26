@@ -15,8 +15,94 @@ interface InputGroupComponentProps {
   fullWidth?: boolean;
 }
 
+interface InputGroupFieldProps {
+  param: Param;
+  defaultValues: ParamValueMap;
+  onChange: (id: string, value: ParamValue) => void;
+  readOnly?: boolean;
+  fullWidth: boolean;
+}
+
 const resolveDefaultValue = <T,>(defaultValues: ParamValueMap, paramId: string, fallback: T) => {
   return defaultValues[paramId] === undefined ? fallback : (defaultValues[paramId] as T);
+};
+
+const InputGroupField = (props: InputGroupFieldProps) => {
+  const { param, defaultValues, onChange, readOnly, fullWidth } = props;
+
+  switch (param.type) {
+    case "number":
+      return (
+        <NumberInput
+          readOnly={readOnly}
+          id={param.id}
+          name={param.name}
+          description={param.description || ""}
+          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
+          min={param.min}
+          max={param.max}
+          step={param.step}
+          onChange={onChange}
+          fullWidth={fullWidth}
+        />
+      );
+    case "text":
+      return (
+        <TextInput
+          readOnly={readOnly}
+          id={param.id}
+          name={param.name}
+          description={param.description || ""}
+          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
+          singleLine={param.singleLine}
+          onChange={onChange}
+          fullWidth={fullWidth}
+        />
+      );
+    case "selection":
+      return (
+        <SelectionInput
+          readOnly={readOnly}
+          id={param.id}
+          name={param.name}
+          description={param.description || ""}
+          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
+          options={param.options}
+          onChange={onChange}
+          multiSelect={param.multiSelect}
+          placeholder={param.placeholder}
+          fullWidth={fullWidth}
+        />
+      );
+    case "date":
+      return (
+        <DateInput
+          readOnly={readOnly}
+          id={param.id}
+          name={param.name}
+          description={param.description || ""}
+          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
+          min={param.min}
+          max={param.max}
+          onChange={onChange}
+          fullWidth={fullWidth}
+        />
+      );
+    case "color":
+      return (
+        <ColorInput
+          readOnly={readOnly}
+          id={param.id}
+          name={param.name}
+          description={param.description || ""}
+          defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
+          onChange={onChange}
+          fullWidth={fullWidth}
+        />
+      );
+    default:
+      return null;
+  }
 };
 
 export const InputGroupComponent = (props: InputGroupComponentProps) => {
@@ -24,97 +110,6 @@ export const InputGroupComponent = (props: InputGroupComponentProps) => {
   const { open, onToggle } = useDisclosure({
     defaultOpen: !group.defaultCollapsed,
   });
-
-  const renderNumberParam = (param: Extract<Param, { type: "number" }>) => (
-    <NumberInput
-      readOnly={readOnly}
-      id={param.id}
-      key={param.id}
-      name={param.name}
-      description={param.description || ""}
-      defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-      min={param.min}
-      max={param.max}
-      step={param.step}
-      onChange={onChange}
-      fullWidth={fullWidth}
-    />
-  );
-
-  const renderTextParam = (param: Extract<Param, { type: "text" }>) => (
-    <TextInput
-      readOnly={readOnly}
-      id={param.id}
-      key={param.id}
-      name={param.name}
-      description={param.description || ""}
-      defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-      singleLine={param.singleLine}
-      onChange={onChange}
-      fullWidth={fullWidth}
-    />
-  );
-
-  const renderSelectionParam = (param: Extract<Param, { type: "selection" }>) => (
-    <SelectionInput
-      readOnly={readOnly}
-      id={param.id}
-      key={param.id}
-      name={param.name}
-      description={param.description || ""}
-      defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-      options={param.options}
-      onChange={onChange}
-      multiSelect={param.multiSelect}
-      placeholder={param.placeholder}
-      fullWidth={fullWidth}
-    />
-  );
-
-  const renderDateParam = (param: Extract<Param, { type: "date" }>) => (
-    <DateInput
-      readOnly={readOnly}
-      id={param.id}
-      key={param.id}
-      name={param.name}
-      description={param.description || ""}
-      defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-      min={param.min}
-      max={param.max}
-      onChange={onChange}
-      fullWidth={fullWidth}
-    />
-  );
-
-  const renderColorParam = (param: Extract<Param, { type: "color" }>) => (
-    <ColorInput
-      readOnly={readOnly}
-      id={param.id}
-      key={param.id}
-      name={param.name}
-      description={param.description || ""}
-      defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-      onChange={onChange}
-      fullWidth={fullWidth}
-    />
-  );
-
-  const renderParam = (param: Param) => {
-    switch (param.type) {
-      case "number":
-        return renderNumberParam(param);
-      case "text":
-        return renderTextParam(param);
-      case "selection":
-        return renderSelectionParam(param);
-      case "date":
-        return renderDateParam(param);
-      case "color":
-        return renderColorParam(param);
-      default:
-        return null;
-    }
-  };
 
   return (
     <Box>
@@ -137,7 +132,18 @@ export const InputGroupComponent = (props: InputGroupComponentProps) => {
 
       <Collapsible.Root open={group.collapsible ? open : true}>
         <Collapsible.Content>
-          <Stack gap="md">{group.params.map(renderParam)}</Stack>
+          <Stack gap="md">
+            {group.params.map((param) => (
+              <InputGroupField
+                key={param.id}
+                param={param}
+                defaultValues={defaultValues}
+                onChange={onChange}
+                readOnly={readOnly}
+                fullWidth={fullWidth}
+              />
+            ))}
+          </Stack>
         </Collapsible.Content>
       </Collapsible.Root>
     </Box>

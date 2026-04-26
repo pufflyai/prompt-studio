@@ -59,6 +59,31 @@ interface MenuItemContentProps {
   variant: MenuItemVariant;
 }
 
+interface MenuItemIconRendererProps {
+  icon: MenuItemIcon | null | undefined;
+  size: string;
+  color: MenuItemIconColor;
+}
+
+const MenuItemIconRenderer = (props: MenuItemIconRendererProps) => {
+  const { icon, size, color } = props;
+
+  if (!icon) return null;
+  if (isValidElement(icon)) {
+    return (
+      <Flex alignItems="center" justifyContent="center" boxSize={size} color={color}>
+        {icon}
+      </Flex>
+    );
+  }
+
+  if (typeof icon !== "function" && (typeof icon !== "object" || icon === null)) {
+    return icon;
+  }
+
+  return <Icon as={icon as ComponentProps<typeof Icon>["as"]} boxSize={size} color={color} />;
+};
+
 const MenuItemContent = (props: MenuItemContentProps) => {
   const {
     primaryLabel,
@@ -96,30 +121,13 @@ const MenuItemContent = (props: MenuItemContentProps) => {
     onRightIconClick();
   };
 
-  const renderIcon = (icon: MenuItemIcon | null | undefined, size: string, color: MenuItemIconColor) => {
-    if (!icon) return null;
-    if (isValidElement(icon)) {
-      return (
-        <Flex alignItems="center" justifyContent="center" boxSize={size} color={color}>
-          {icon}
-        </Flex>
-      );
-    }
-
-    if (typeof icon !== "function" && (typeof icon !== "object" || icon === null)) {
-      return icon;
-    }
-
-    return <Icon as={icon as ComponentProps<typeof Icon>["as"]} boxSize={size} color={color} />;
-  };
-
   return (
     <>
       <Flex justifyContent="space-between" alignItems="center" gap="xs" flex="1">
         <Tooltip positioning={{ placement: "right" }} content={tooltipLabel} disabled={!tooltipLabel}>
           <Stack gap="2xs">
             <Flex alignItems="flex-start" gap="xs" flex="1">
-              {renderIcon(leftIcon, leftIconSize, leftIconColor)}
+              <MenuItemIconRenderer icon={leftIcon} size={leftIconSize} color={leftIconColor} />
               <Text lineClamp={1} textOverflow="ellipsis" textStyle={variantStyles.primaryTextStyle}>
                 {primaryLabel}
               </Text>
@@ -152,7 +160,7 @@ const MenuItemContent = (props: MenuItemContentProps) => {
                 onMouseDown={handleRightIconMouseDown}
                 onClick={handleRightIconClick}
               >
-                {renderIcon(rightIcon, rightIconSize, rightIconColor)}
+                <MenuItemIconRenderer icon={rightIcon} size={rightIconSize} color={rightIconColor} />
               </Flex>
             </Tooltip>
           ) : null}

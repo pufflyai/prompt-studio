@@ -41,14 +41,16 @@ interface SidebarNodeRowProps {
   onToggleNode: (nodeId: string) => void;
 }
 
-const isExpanded = (id: string, values: string[]) => values.includes(id);
+const SidebarMenuItemIcon = (props: { icon: unknown }) => {
+  const { icon } = props;
 
-const renderSidebarMenuItemIcon = (icon: unknown) => {
   if (!icon) return null;
   if (isValidElement(icon)) return <Box mr="2">{icon}</Box>;
 
   return <Icon as={icon as never} boxSize="14px" mr="2" />;
 };
+
+const isExpanded = (id: string, values: string[]) => values.includes(id);
 
 const handleSidebarNodeClick = ({
   sectionId,
@@ -100,7 +102,7 @@ const SidebarActionButton = (props: { action: SidebarAction; sectionId: string; 
             {action.menuItems.map((item) => (
               <Tooltip key={item.id} content={item.description} disabled={!item.description} openDelay={300}>
                 <Menu.Item value={item.id} disabled={item.disabled} onClick={() => item.onAction?.()}>
-                  {renderSidebarMenuItemIcon(item.icon)}
+                  <SidebarMenuItemIcon icon={item.icon} />
                   {item.label}
                 </Menu.Item>
               </Tooltip>
