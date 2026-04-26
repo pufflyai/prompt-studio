@@ -39,6 +39,16 @@ describe("POST /v1/tickets", () => {
     expect(ticket.shorthand).toBe("TP-1");
     expect(ticket.display_title).toBe("First ticket");
     expect(ticket.draft).toBe(false);
+
+    const activityRes = await app.request(`/v1/tickets/${ticket.id}/activity`);
+    expect(activityRes.status).toBe(200);
+    const activity = (await activityRes.json()) as {
+      events: Array<{ event_type: string; resource_id: string }>;
+      next_cursor: string | null;
+    };
+    expect(activity.events).toHaveLength(1);
+    expect(activity.events[0]).toMatchObject({ event_type: "ticket_created", resource_id: ticket.id });
+    expect(activity.next_cursor).toBeNull();
   });
 
   test("creates a draft ticket", async () => {

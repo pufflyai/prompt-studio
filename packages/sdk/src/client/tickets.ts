@@ -1,6 +1,9 @@
 import type {
   CreateTicketAttemptInput,
   CreateTicketInput,
+  ListProjectActivityForTicketsInput,
+  ListTicketActivityInput,
+  ListTicketActivityResponse,
   ListTicketsInput,
   TicketAttemptResponse,
   UpdateTicketInput,
@@ -18,6 +21,11 @@ export type TicketClient = {
   update(ticketId: string, input: UpdateTicketInput): Promise<Ticket>;
   delete(ticketId: string): Promise<void>;
   createAttempt(ticketId: string, input: CreateTicketAttemptInput): Promise<TicketAttemptResponse>;
+  listActivity(ticketId: string, input?: ListTicketActivityInput): Promise<ListTicketActivityResponse>;
+  listProjectActivity(
+    projectId: string,
+    input?: ListProjectActivityForTicketsInput,
+  ): Promise<ListTicketActivityResponse>;
   updateWhenAttemptStatus(
     ticketId: string,
     input: UpdateWhenAttemptStatusInput,
@@ -62,6 +70,26 @@ const buildTicketsQuery = (projectId: string, input: ListTicketsInput = {}) => {
   return params.toString();
 };
 
+const buildActivityQuery = (
+  input: {
+    event_type?: string;
+    from?: string;
+    to?: string;
+    cursor?: string;
+    limit?: number;
+    resource_type?: "ticket" | "workspace" | "session";
+  } = {},
+) => {
+  const params = new URLSearchParams();
+  if (input.resource_type) params.append("resource_type", input.resource_type);
+  if (input.event_type) params.append("event_type", input.event_type);
+  if (input.from) params.append("from", input.from);
+  if (input.to) params.append("to", input.to);
+  if (input.cursor) params.append("cursor", input.cursor);
+  if (input.limit !== undefined) params.append("limit", String(input.limit));
+  return params.toString();
+};
+
 export const createTicketClient = (request: RequestFn, options: ClientOptions = {}): TicketClient => ({
   list: (projectId, input) => request(`/v1/tickets?${buildTicketsQuery(projectId, input)}`),
   get: (ticketId) => request(`/v1/tickets/${ticketId}`),
@@ -69,6 +97,14 @@ export const createTicketClient = (request: RequestFn, options: ClientOptions = 
   update: (ticketId, input) => request(`/v1/tickets/${ticketId}`, { method: "PATCH", body: input }),
   delete: (ticketId) => request(`/v1/tickets/${ticketId}`, { method: "DELETE" }),
   createAttempt: (ticketId, input) => request(`/v1/tickets/${ticketId}/attempts`, { method: "POST", body: input }),
+  listActivity: (ticketId, input) => {
+    const query = buildActivityQuery(input);
+    return request(`/v1/tickets/${ticketId}/activity${query ? `?${query}` : ""}`);
+  },
+  listProjectActivity: (projectId, input) => {
+    const query = buildActivityQuery(input);
+    return request(`/v1/projects/${projectId}/activity${query ? `?${query}` : ""}`);
+  },
   updateWhenAttemptStatus: (ticketId, input) =>
     request(`/v1/tickets/${ticketId}/update-when-attempt-status`, { method: "POST", body: input }),
   listFiles: (ticketId) => request(`/v1/tickets/${ticketId}/files`),

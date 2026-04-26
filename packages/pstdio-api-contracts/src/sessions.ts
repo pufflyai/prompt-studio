@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { listActivityInputSchema, listActivityResponseSchema } from "./activity";
 
 export const sessionStatusSchema = z.enum([
   "in_progress",
@@ -74,6 +75,9 @@ export const resolveSessionIdResponseSchema = z.object({
   session_id: z.string().nullable(),
 });
 
+export const listSessionActivityInputSchema = listActivityInputSchema;
+export const listSessionActivityResponseSchema = listActivityResponseSchema;
+
 export type SessionStatus = z.infer<typeof sessionStatusSchema>;
 export type Session = z.infer<typeof sessionSchema>;
 export type ResolveSessionIdInput = z.infer<typeof resolveSessionIdInputSchema>;
@@ -82,3 +86,5 @@ export type CreateSessionInput = z.infer<typeof createSessionInputSchema>;
 export type FollowUpInput = z.infer<typeof followUpInputSchema>;
 export type ApprovalInput = z.infer<typeof approvalInputSchema>;
 export type SessionConversationResponse = z.infer<typeof sessionConversationResponseSchema>;
+export type ListSessionActivityInput = z.infer<typeof listSessionActivityInputSchema>;
+export type ListSessionActivityResponse = z.infer<typeof listSessionActivityResponseSchema>;

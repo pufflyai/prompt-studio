@@ -62,3 +62,53 @@ See [Service Layer](./service-layer.md) for the three-tier architecture (DB serv
 2. **Endpoints live under `features/<domain>/endpoints/`.** One file per endpoint, co-located with its test.
 3. **Zod schemas define the contract.** Request and response shapes are validated at the boundary.
 4. **The dashboard reuses the same endpoints.** If the CLI needs a new capability, add an API endpoint — the dashboard will use it too.
+
+## Activity Endpoints
+
+Activity endpoints return mutation events in deterministic order: `(created_at desc, id desc)`.
+
+### Endpoints
+
+| Method | Path                      | Description                                     |
+| ------ | ------------------------- | ----------------------------------------------- |
+| GET    | /v1/projects/{id}/activity   | Project-wide activity stream with optional filters |
+| GET    | /v1/tickets/{id}/activity    | Ticket activity history                         |
+| GET    | /v1/workspaces/{id}/activity | Workspace activity history                      |
+| GET    | /v1/sessions/{id}/activity   | Session activity history                        |
+
+### Query Parameters
+
+- `cursor` — pagination cursor from the previous response.
+- `resource_type` — project endpoint only (`ticket`, `workspace`, `session`).
+- `event_type` — filter to a single event type.
+- `from` / `to` — ISO timestamps used as inclusive `created_at` bounds.
+- `limit` — page size (clamped to `1..200`, defaults to `50`).
+
+### Response Shape
+
+```json
+{
+  "events": [
+    {
+      "id": "evt_123",
+      "project_id": "proj_1",
+      "resource_type": "ticket",
+      "resource_id": "ticket_1",
+      "event_type": "ticket_updated",
+      "actor_type": "system",
+      "actor_id": null,
+      "source": "api",
+      "summary": "Updated ticket PS-1",
+      "payload_json": {},
+      "created_at": "2026-04-26T00:00:00.000Z"
+    }
+  ],
+  "next_cursor": "base64url-encoded-cursor-or-null"
+}
+```
+
+### Event Taxonomy (v1)
+
+- Ticket: `ticket_created`, `ticket_updated`, `ticket_attempt_created`, `ticket_attempt_status_updated`
+- Workspace: `workspace_attempt_status_updated`, `workspace_archived`
+- Session: `session_created`, `session_status_updated`, `session_archived`

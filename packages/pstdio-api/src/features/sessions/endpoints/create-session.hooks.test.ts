@@ -74,6 +74,9 @@ describe("createSessionHandler hooks", () => {
           startSession: async () => ({ sessionId: "agent-session-1" }),
         }),
       },
+      activityEventsService: {
+        create: async () => ({}),
+      },
     } as unknown as Parameters<typeof createSessionHandler>[0];
 
     const handler = createSessionHandler(deps);
@@ -137,6 +140,9 @@ describe("createSessionHandler hooks", () => {
       agentRegistry: {
         get: () => null,
       },
+      activityEventsService: {
+        create: async () => ({}),
+      },
     } as unknown as Parameters<typeof createSessionHandler>[0];
 
     const handler = createSessionHandler(deps);
@@ -199,6 +205,9 @@ describe("createSessionHandler hooks", () => {
       },
       agentRegistry: {
         get: () => null,
+      },
+      activityEventsService: {
+        create: async () => ({}),
       },
     } as unknown as Parameters<typeof createSessionHandler>[0];
 

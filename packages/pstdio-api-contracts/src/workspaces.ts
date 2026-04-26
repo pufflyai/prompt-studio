@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { listActivityInputSchema, listActivityResponseSchema } from "./activity";
 
 export const workspaceSchema = z.object({
   id: z.string(),
@@ -45,9 +46,14 @@ export const removeWorktreeResponseSchema = z.object({
   removed: z.boolean(),
 });
 
+export const listWorkspaceActivityInputSchema = listActivityInputSchema;
+export const listWorkspaceActivityResponseSchema = listActivityResponseSchema;
+
 export type Workspace = z.infer<typeof workspaceSchema>;
 export type WorkspaceListItem = z.infer<typeof workspaceListItemSchema>;
 export type CreateWorkspaceInput = z.infer<typeof createWorkspaceInputSchema>;
 export type UpdateAttemptStatusInput = z.infer<typeof updateAttemptStatusInputSchema>;
 export type UpdateAttemptStatusResponse = z.infer<typeof updateAttemptStatusResponseSchema>;
 export type RemoveWorktreeResponse = z.infer<typeof removeWorktreeResponseSchema>;
+export type ListWorkspaceActivityInput = z.infer<typeof listWorkspaceActivityInputSchema>;
+export type ListWorkspaceActivityResponse = z.infer<typeof listWorkspaceActivityResponseSchema>;

@@ -1,5 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
+import { buildDiff, emitActivityEvent } from "../../activity/activity-events";
 import type { RouteDeps } from "../../deps";
 import { fireTicketHook, fireTicketHookAsync } from "../../hooks/ticket-hooks";
 import { archiveWorkspaceCascade } from "../../workspaces/archive-workspace-cascade";
@@ -53,6 +54,24 @@ const replaceTagAssignments = async (deps: RouteDeps, ticketId: string, tagIds: 
 
   const newAssignments = await deps.ticketService.listTagAssignments(ticketId);
   for (const row of newAssignments) deps.eventBus.emit("ticket_tag_assignments", "set", row);
+};
+
+const normalizeTagIds = (tagIds: string[]) => [...new Set(tagIds)].sort();
+
+const areTagSetsEqual = (left: string[], right: string[]) => {
+  const normalizedLeft = normalizeTagIds(left);
+  const normalizedRight = normalizeTagIds(right);
+  if (normalizedLeft.length !== normalizedRight.length) {
+    return false;
+  }
+
+  for (let index = 0; index < normalizedLeft.length; index += 1) {
+    if (normalizedLeft[index] !== normalizedRight[index]) {
+      return false;
+    }
+  }
+
+  return true;
 };
 
 type TicketRecord = NonNullable<Awaited<ReturnType<RouteDeps["ticketService"]["get"]>>>;
@@ -168,22 +187,66 @@ const finalizeUpdatedTicket = async (input: {
   ticketId: string;
   projectId: string;
   updated: TicketRecord;
+  existing: TicketRecord;
   tagIds: string[] | undefined;
+  previousTagIds?: string[];
   statusChanging: boolean;
   archiving: boolean;
   statusContext?: StatusContext;
 }) => {
-  const { deps, ticketId, projectId, updated, tagIds, statusChanging, archiving, statusContext } = input;
+  const {
+    deps,
+    ticketId,
+    projectId,
+    updated,
+    existing,
+    tagIds,
+    previousTagIds,
+    statusChanging,
+    archiving,
+    statusContext,
+  } = input;
 
   if (archiving) {
     await archiveTicketWorkspaces(deps, ticketId);
   }
 
-  if (tagIds) {
+  const tagIdsChanged =
+    tagIds !== undefined && previousTagIds !== undefined && !areTagSetsEqual(previousTagIds, tagIds);
+
+  if (tagIdsChanged) {
     await replaceTagAssignments(deps, ticketId, tagIds);
   }
 
   deps.eventBus.emit("tickets", "set", updated);
+  const payload: Record<string, unknown> = {};
+
+  if (statusChanging) {
+    payload.status = buildDiff(statusContext?.fromStatusName ?? null, statusContext?.toStatusName ?? null);
+  }
+
+  if (tagIdsChanged) {
+    payload.tag_ids = buildDiff(previousTagIds ?? [], tagIds);
+  }
+
+  if (existing.display_title !== updated.display_title) {
+    payload.display_title = buildDiff(existing.display_title, updated.display_title);
+  }
+
+  if (existing.archived !== updated.archived) {
+    payload.archived = buildDiff(existing.archived, updated.archived);
+  }
+
+  if (Object.keys(payload).length > 0) {
+    await emitActivityEvent(deps, {
+      projectId,
+      resourceType: "ticket",
+      resourceId: updated.id,
+      eventType: "ticket_updated",
+      summary: `Updated ticket ${updated.shorthand}`,
+      payload,
+    });
+  }
 
   if (!statusChanging && !archiving) {
     return;
@@ -262,6 +325,9 @@ export const updateTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof upd
     }
 
     const nextInput = await buildTicketUpdateInput(deps, id, existing, input, content);
+    const previousTagIds = tag_ids
+      ? (await deps.ticketService.getTagOptionAssignments(existing.id)).map((tag) => tag.id)
+      : undefined;
 
     const updated = await deps.ticketService.update(id, nextInput);
 
@@ -274,7 +340,9 @@ export const updateTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof upd
       ticketId: id,
       projectId: existing.project_id,
       updated,
+      existing,
       tagIds: tag_ids,
+      previousTagIds,
       statusChanging,
       archiving,
       statusContext,

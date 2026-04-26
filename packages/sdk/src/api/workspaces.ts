@@ -1,5 +1,7 @@
 export type {
   CreateWorkspaceInput,
+  ListWorkspaceActivityInput,
+  ListWorkspaceActivityResponse,
   RemoveWorktreeResponse,
   UpdateAttemptStatusInput,
   UpdateAttemptStatusResponse,

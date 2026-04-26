@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { listActivityInputSchema, listActivityResponseSchema, listProjectActivityInputSchema } from "./activity";
 
 export const ticketSchema = z.object({
   id: z.string(),
@@ -83,6 +84,10 @@ export const updateWhenAttemptStatusResponseSchema = z.object({
   updated: z.boolean(),
 });
 
+export const listTicketActivityInputSchema = listActivityInputSchema;
+export const listProjectActivityForTicketsInputSchema = listProjectActivityInputSchema;
+export const listTicketActivityResponseSchema = listActivityResponseSchema;
+
 export type Ticket = z.infer<typeof ticketSchema>;
 export type TicketDetail = z.infer<typeof ticketDetailSchema>;
 export type TicketListItem = z.infer<typeof ticketListItemSchema>;
@@ -93,3 +98,6 @@ export type TicketAttemptMode = z.infer<typeof ticketAttemptModeSchema>;
 export type CreateTicketAttemptInput = z.infer<typeof createTicketAttemptInputSchema>;
 export type UpdateWhenAttemptStatusInput = z.infer<typeof updateWhenAttemptStatusInputSchema>;
 export type UpdateWhenAttemptStatusResponse = z.infer<typeof updateWhenAttemptStatusResponseSchema>;
+export type ListTicketActivityInput = z.infer<typeof listTicketActivityInputSchema>;
+export type ListProjectActivityForTicketsInput = z.infer<typeof listProjectActivityForTicketsInputSchema>;
+export type ListTicketActivityResponse = z.infer<typeof listTicketActivityResponseSchema>;

@@ -1,6 +1,9 @@
 export type {
   CreateTicketAttemptInput,
   CreateTicketInput,
+  ListProjectActivityForTicketsInput,
+  ListTicketActivityInput,
+  ListTicketActivityResponse,
   TicketAttemptMode,
   UpdateTicketInput,
   UpdateWhenAttemptStatusInput,

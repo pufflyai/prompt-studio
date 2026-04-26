@@ -1,5 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
+import { emitActivityEvent } from "../../activity/activity-events";
 import type { RouteDeps } from "../../deps";
 import { isAgentEnabledForProject, parseProjectSelectedAgents } from "../../projects/selected-agents";
 import { createSessionBodySchema, sessionResponseSchema } from "../dto";
@@ -105,6 +106,18 @@ export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
       const link = await deps.workspaceSessionService.link(resolvedWorkspaceId, session.id);
       deps.eventBus.emit("workspace_sessions", "set", link);
     }
+
+    await emitActivityEvent(deps, {
+      projectId: input.project_id,
+      resourceType: "session",
+      resourceId: session.id,
+      eventType: "session_created",
+      summary: `Created session ${session.title}`,
+      payload: {
+        status: session.status,
+        workspace_id: resolvedWorkspaceId ?? null,
+      },
+    });
 
     spawnAgentSession(
       {

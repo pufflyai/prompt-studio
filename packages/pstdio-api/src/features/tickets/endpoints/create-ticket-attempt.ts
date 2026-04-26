@@ -1,5 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
+import { emitActivityEvent } from "../../activity/activity-events";
 import type { RouteDeps } from "../../deps";
 import { createTicketAttemptBodySchema, notFoundResponseSchema, ticketAttemptResponseSchema } from "../dto";
 import {
@@ -93,6 +94,19 @@ export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typ
       worktreeMode,
       started: sessionStart.started,
       model: input.model ?? undefined,
+    });
+
+    await emitActivityEvent(deps, {
+      projectId: context.ticket.project_id,
+      resourceType: "ticket",
+      resourceId: context.ticket.id,
+      eventType: "ticket_attempt_created",
+      summary: `Created attempt for ${context.ticket.shorthand}`,
+      payload: {
+        mode: context.mode,
+        workspace_id: workspaceWithGitMetadata.id,
+        session_id: sessionStart.started?.session.id ?? null,
+      },
     });
 
     return c.json(

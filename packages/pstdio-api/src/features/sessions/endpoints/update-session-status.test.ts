@@ -125,6 +125,14 @@ describe("PATCH /v1/sessions/:id/status", () => {
       expect(cancelRes.status).toBe(200);
       expect(await cancelRes.json()).toMatchObject({ id: session.id, status: "cancelled" });
 
+      const activityRes = await handle.app.request(`/v1/sessions/${session.id}/activity`);
+      expect(activityRes.status).toBe(200);
+      const activity = (await activityRes.json()) as {
+        events: Array<{ event_type: string; payload_json: { to_status?: string } }>;
+      };
+      expect(activity.events[0].event_type).toBe("session_status_updated");
+      expect(activity.events[0].payload_json.to_status).toBe("cancelled");
+
       await waitForCall(kill);
       const storeRemoved = waitForSessionStoreRemoval(handle.deps.sessionService, session.id);
       resolveExit({ code: 0, signal: null });
@@ -133,6 +141,61 @@ describe("PATCH /v1/sessions/:id/status", () => {
       const finalRes = await handle.app.request(`/v1/sessions/${session.id}`);
       expect(finalRes.status).toBe(200);
       expect(await finalRes.json()).toMatchObject({ id: session.id, status: "cancelled" });
+    } finally {
+      await handle.close();
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("does not emit duplicate activity when status is unchanged", async () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-update-session-status-noop-test-"));
+    const handle = await createApp({
+      dbPath: ":memory:",
+      storagePath: join(tempRoot, "storage"),
+      filesRoot: "",
+      agents: [],
+    });
+
+    try {
+      const projectRes = await handle.app.request("/v1/projects", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "No-op Status Project" }),
+      });
+      expect(projectRes.status).toBe(201);
+      const project = await projectRes.json();
+
+      const session = await handle.deps.sessionService.create({
+        project_id: project.id,
+        title: "No-op Session",
+        agent: "fake",
+      });
+
+      const firstStatusRes = await handle.app.request(`/v1/sessions/${session.id}/status`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: "awaiting_input" }),
+      });
+      expect(firstStatusRes.status).toBe(200);
+
+      const secondStatusRes = await handle.app.request(`/v1/sessions/${session.id}/status`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: "awaiting_input" }),
+      });
+      expect(secondStatusRes.status).toBe(200);
+
+      const activityRes = await handle.app.request(
+        `/v1/sessions/${session.id}/activity?event_type=session_status_updated`,
+      );
+      expect(activityRes.status).toBe(200);
+      const activity = (await activityRes.json()) as {
+        events: Array<{ event_type: string; payload_json?: { to_status?: string } }>;
+      };
+      const awaitingInputEvents = activity.events.filter(
+        (event) => event.event_type === "session_status_updated" && event.payload_json?.to_status === "awaiting_input",
+      );
+      expect(awaitingInputEvents).toHaveLength(1);
     } finally {
       await handle.close();
       rmSync(tempRoot, { recursive: true, force: true });

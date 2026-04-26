@@ -1,5 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
+import { buildDiff, emitActivityEvent } from "../../activity/activity-events";
 import type { RouteDeps } from "../../deps";
 import { notFoundResponseSchema } from "../dto";
 
@@ -71,7 +72,26 @@ export const updateWhenAttemptStatusHandler = (
       return c.json({ updated: false }, 200);
     }
 
+    const previousTicketStatus = ticket.status_id
+      ? (ticketStatuses.find((s) => s.id === ticket.status_id)?.name ?? null)
+      : null;
+    if (previousTicketStatus === set_status) {
+      return c.json({ updated: false }, 200);
+    }
+
     await deps.ticketService.update(ticket.id, { status_id: targetTicketStatus.id });
+    await emitActivityEvent(deps, {
+      projectId: ticket.project_id,
+      resourceType: "ticket",
+      resourceId: ticket.id,
+      eventType: "ticket_attempt_status_updated",
+      summary: `Updated ticket ${ticket.shorthand} from attempt statuses`,
+      payload: {
+        required_attempt_status: all_attempts_status,
+        to_status: set_status,
+        status: buildDiff(previousTicketStatus, set_status),
+      },
+    });
     return c.json({ updated: true }, 200);
   };
 };
