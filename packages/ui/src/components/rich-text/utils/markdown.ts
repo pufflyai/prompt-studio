@@ -9,6 +9,11 @@ interface ActiveListIndent {
   sourceIndentWidth: number;
 }
 
+interface MarkdownListState {
+  isInCodeFence: boolean;
+  activeListIndents: ActiveListIndent[];
+}
+
 function getExpandedIndentWidth(indent: string) {
   let width = 0;
 
@@ -19,75 +24,81 @@ function getExpandedIndentWidth(indent: string) {
   return width;
 }
 
+function findParentIndent(activeListIndents: ActiveListIndent[], sourceIndentWidth: number) {
+  return [...activeListIndents].reverse().find((indent) => indent.sourceIndentWidth < sourceIndentWidth);
+}
+
 function toNormalizedIndent(indent: string, normalizedWidth: number, sourceWidth: number) {
   if (normalizedWidth === sourceWidth && !indent.includes("\t")) return indent;
   return " ".repeat(normalizedWidth);
 }
 
+function normalizeIndentedContinuation(line: string, activeListIndents: ActiveListIndent[]) {
+  const indentedLineMatch = line.match(INDENTED_LINE_PATTERN);
+  if (!indentedLineMatch) {
+    if (line.trim() !== "") {
+      activeListIndents.length = 0;
+    }
+
+    return line;
+  }
+
+  const sourceIndentWidth = getExpandedIndentWidth(indentedLineMatch[1]);
+  const parentLevel = findParentIndent(activeListIndents, sourceIndentWidth);
+  if (!parentLevel) return line;
+
+  const normalizedIndentWidth = sourceIndentWidth + (parentLevel.normalizedIndentWidth - parentLevel.sourceIndentWidth);
+  const normalizedIndent = toNormalizedIndent(indentedLineMatch[1], normalizedIndentWidth, sourceIndentWidth);
+
+  if (normalizedIndent === indentedLineMatch[1]) return line;
+
+  return `${normalizedIndent}${line.slice(indentedLineMatch[1].length)}`;
+}
+
+function normalizeListItem(line: string, match: RegExpMatchArray, activeListIndents: ActiveListIndent[]) {
+  const sourceIndentWidth = getExpandedIndentWidth(match[1]);
+
+  while (activeListIndents.length && activeListIndents.at(-1)!.sourceIndentWidth > sourceIndentWidth) {
+    activeListIndents.pop();
+  }
+
+  const currentLevel = activeListIndents.at(-1);
+  if (currentLevel?.sourceIndentWidth === sourceIndentWidth) {
+    return `${toNormalizedIndent(match[1], currentLevel.normalizedIndentWidth, sourceIndentWidth)}${line.slice(match[1].length)}`;
+  }
+
+  const parentLevel = activeListIndents.at(-1);
+  const indentStep = sourceIndentWidth - (parentLevel?.sourceIndentWidth ?? 0);
+  let normalizedIndentWidth = sourceIndentWidth;
+
+  if (parentLevel && indentStep === 2 && !match[1].includes("\t")) {
+    normalizedIndentWidth = parentLevel.normalizedIndentWidth + 4;
+  }
+
+  activeListIndents.push({ normalizedIndentWidth, sourceIndentWidth });
+
+  return `${toNormalizedIndent(match[1], normalizedIndentWidth, sourceIndentWidth)}${line.slice(match[1].length)}`;
+}
+
+function normalizeMarkdownLine(line: string, state: MarkdownListState) {
+  if (FENCE_PATTERN.test(line.trimStart())) {
+    state.isInCodeFence = !state.isInCodeFence;
+    return line;
+  }
+
+  if (state.isInCodeFence) return line;
+
+  const match = line.match(LIST_ITEM_PATTERN);
+  if (!match) return normalizeIndentedContinuation(line, state.activeListIndents);
+
+  return normalizeListItem(line, match, state.activeListIndents);
+}
+
 export function normalizeMarkdownListIndentation(content: string) {
   const lines = content.split("\n");
-  let isInCodeFence = false;
-  const activeListIndents: ActiveListIndent[] = [];
+  const state: MarkdownListState = { isInCodeFence: false, activeListIndents: [] };
 
-  return lines
-    .map((line) => {
-      if (FENCE_PATTERN.test(line.trimStart())) {
-        isInCodeFence = !isInCodeFence;
-        return line;
-      }
-
-      if (isInCodeFence) return line;
-
-      const match = line.match(LIST_ITEM_PATTERN);
-      if (!match) {
-        const indentedLineMatch = line.match(INDENTED_LINE_PATTERN);
-        if (!indentedLineMatch) {
-          if (line.trim() !== "") {
-            activeListIndents.length = 0;
-          }
-
-          return line;
-        }
-
-        const sourceIndentWidth = getExpandedIndentWidth(indentedLineMatch[1]);
-        const parentLevel = [...activeListIndents]
-          .reverse()
-          .find((indent) => indent.sourceIndentWidth < sourceIndentWidth);
-
-        if (!parentLevel) return line;
-
-        const normalizedIndentWidth =
-          sourceIndentWidth + (parentLevel.normalizedIndentWidth - parentLevel.sourceIndentWidth);
-        const normalizedIndent = toNormalizedIndent(indentedLineMatch[1], normalizedIndentWidth, sourceIndentWidth);
-
-        if (normalizedIndent === indentedLineMatch[1]) return line;
-
-        return `${normalizedIndent}${line.slice(indentedLineMatch[1].length)}`;
-      }
-
-      const sourceIndentWidth = getExpandedIndentWidth(match[1]);
-
-      while (activeListIndents.length && activeListIndents.at(-1)!.sourceIndentWidth > sourceIndentWidth) {
-        activeListIndents.pop();
-      }
-
-      const currentLevel = activeListIndents.at(-1);
-      if (currentLevel?.sourceIndentWidth === sourceIndentWidth) {
-        return `${toNormalizedIndent(match[1], currentLevel.normalizedIndentWidth, sourceIndentWidth)}${line.slice(match[1].length)}`;
-      }
-
-      const parentLevel = activeListIndents.at(-1);
-      const indentStep = sourceIndentWidth - (parentLevel?.sourceIndentWidth ?? 0);
-      const normalizedIndentWidth =
-        parentLevel && indentStep === 2 && !match[1].includes("\t")
-          ? (parentLevel?.normalizedIndentWidth ?? 0) + 4
-          : sourceIndentWidth;
-
-      activeListIndents.push({ normalizedIndentWidth, sourceIndentWidth });
-
-      return `${toNormalizedIndent(match[1], normalizedIndentWidth, sourceIndentWidth)}${line.slice(match[1].length)}`;
-    })
-    .join("\n");
+  return lines.map((line) => normalizeMarkdownLine(line, state)).join("\n");
 }
 
 export function splitFrontmatter(content: string) {

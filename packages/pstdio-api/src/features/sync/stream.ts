@@ -33,36 +33,44 @@ export const streamHandler = (deps: StreamDeps) => {
         cleanup();
       });
 
-      let snapshotSeq: number;
+      let snapshotSeq = 0;
 
-      if (since !== null) {
-        const minSeq = deps.eventBus.minSeq();
-        const gapDetected = minSeq === null || since < minSeq;
-
-        if (gapDetected) {
-          snapshotSeq = deps.eventBus.seq;
-          const tables = await deps.syncService.getFullState();
-          await stream.writeSSE({
-            data: JSON.stringify({ tables, seq: snapshotSeq }),
-            event: "init",
-          });
-        } else {
-          const missed = deps.eventBus.getSince(since);
-          snapshotSeq = missed.length > 0 ? missed[missed.length - 1].seq : since;
-          for (const event of missed) {
-            await stream.writeSSE(formatSSE(event));
-          }
-        }
-      } else {
+      const writeSnapshot = async () => {
         // Capture seq before reading so events emitted during the read are replayed
         snapshotSeq = deps.eventBus.seq;
         const tables = await deps.syncService.getFullState();
-
         await stream.writeSSE({
           data: JSON.stringify({ tables, seq: snapshotSeq }),
           event: "init",
         });
-      }
+      };
+
+      const writeMissedEvents = async (sinceSeq: number) => {
+        const missed = deps.eventBus.getSince(sinceSeq);
+        snapshotSeq = missed.length > 0 ? missed[missed.length - 1].seq : sinceSeq;
+        for (const event of missed) {
+          await stream.writeSSE(formatSSE(event));
+        }
+      };
+
+      const writeInitialEvents = async () => {
+        if (since === null) {
+          await writeSnapshot();
+          return;
+        }
+
+        const minSeq = deps.eventBus.minSeq();
+        const gapDetected = minSeq === null || since < minSeq;
+
+        if (gapDetected) {
+          await writeSnapshot();
+          return;
+        }
+
+        await writeMissedEvents(since);
+      };
+
+      await writeInitialEvents();
 
       // Drain buffered events that arrived after the snapshot boundary
       const pendingEvents = buffer.filter((e) => e.seq > snapshotSeq);

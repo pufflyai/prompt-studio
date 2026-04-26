@@ -5,6 +5,8 @@ import {
   disconnectStaleTurn,
   hasErrorParts,
   OPENCODE_STALE_TURN_TIMEOUT_MS,
+  type PollSnapshot,
+  type PostState,
   readSessionSnapshot,
   type SessionMessagesLoader,
   trackPostState,
@@ -17,6 +19,30 @@ type QuestionToolRef = { messageID?: string; callID?: string };
 type QuestionResponse = { answers: string[][] };
 
 const OPENCODE_QUESTION_REPLY_IDLE_GRACE_MS = 10_000;
+
+interface QuestionReplyPollState {
+  lastSnapshot: string;
+  latestMessages: SessionMessage[];
+  lastObserved: OpencodeSessionMessage[];
+  lastProgressAt: number | null;
+  terminalSnapshot: string | null;
+  settledIdleSince: number | null;
+}
+
+interface QuestionReplyPollSignals {
+  questionTerminal: boolean;
+  inFlight: boolean;
+  settledWithNoTurnInFlight: boolean;
+}
+
+const createQuestionReplyPollState = () => ({
+  lastSnapshot: "",
+  latestMessages: [],
+  lastObserved: [],
+  lastProgressAt: null,
+  terminalSnapshot: null,
+  settledIdleSince: null,
+});
 
 const getRawMessageParts = (message: OpencodeSessionMessage) => {
   if ("parts" in message && Array.isArray(message.parts)) return message.parts;
@@ -101,6 +127,89 @@ const markQuestionToolAnswered = (input: {
   return changed ? nextMessages : messages;
 };
 
+const applyQuestionReplySnapshot = (state: QuestionReplyPollState, snapshot: PollSnapshot) => {
+  state.lastObserved = snapshot.lastObserved;
+  state.lastSnapshot = snapshot.lastSnapshot;
+  state.latestMessages = snapshot.latestMessages;
+};
+
+const trackQuestionReplyProgress = (state: QuestionReplyPollState, snapshotChanged: boolean, now: number) => {
+  if (state.lastProgressAt === null || snapshotChanged) {
+    state.lastProgressAt = now;
+  }
+};
+
+const getQuestionReplyPollSignals = (input: {
+  lastObserved: OpencodeSessionMessage[];
+  questionTool: QuestionToolRef | undefined;
+  postState: PostState;
+}) => {
+  const { lastObserved, questionTool, postState } = input;
+  const replyState = getQuestionReplyState(lastObserved, questionTool);
+  const inFlight = isTurnInFlight(lastObserved);
+
+  return {
+    questionTerminal: isTerminalQuestionStatus(replyState?.status),
+    inFlight,
+    settledWithNoTurnInFlight: postState.settled && !postState.timedOut && !postState.failed && !inFlight,
+  } satisfies QuestionReplyPollSignals;
+};
+
+const isQuietAfterTerminalSnapshot = (
+  state: QuestionReplyPollState,
+  signals: QuestionReplyPollSignals,
+  snapshotChanged: boolean,
+) =>
+  signals.questionTerminal &&
+  !signals.inFlight &&
+  state.terminalSnapshot !== null &&
+  state.terminalSnapshot === state.lastSnapshot &&
+  !snapshotChanged;
+
+const isQuietAfterSettledIdleSnapshot = (input: {
+  state: QuestionReplyPollState;
+  signals: QuestionReplyPollSignals;
+  snapshotChanged: boolean;
+  now: number;
+}) => {
+  const { state, signals, snapshotChanged, now } = input;
+  return (
+    signals.settledWithNoTurnInFlight &&
+    state.settledIdleSince !== null &&
+    !snapshotChanged &&
+    now - state.settledIdleSince >= OPENCODE_QUESTION_REPLY_IDLE_GRACE_MS
+  );
+};
+
+const shouldStopQuestionReplyPolling = (input: {
+  state: QuestionReplyPollState;
+  signals: QuestionReplyPollSignals;
+  snapshotChanged: boolean;
+  now: number;
+}) => {
+  const { state, signals, snapshotChanged, now } = input;
+  if (isQuietAfterTerminalSnapshot(state, signals, snapshotChanged)) return true;
+
+  return isQuietAfterSettledIdleSnapshot({ state, signals, snapshotChanged, now });
+};
+
+const updateQuestionReplyIdleMarkers = (input: {
+  state: QuestionReplyPollState;
+  signals: QuestionReplyPollSignals;
+  snapshotChanged: boolean;
+  now: number;
+}) => {
+  const { state, signals, snapshotChanged, now } = input;
+  state.terminalSnapshot = signals.questionTerminal && !signals.inFlight ? state.lastSnapshot : null;
+
+  if (!signals.settledWithNoTurnInFlight) {
+    state.settledIdleSince = null;
+    return;
+  }
+
+  state.settledIdleSince = snapshotChanged || state.settledIdleSince === null ? now : state.settledIdleSince;
+};
+
 export const pollOpencodeQuestionReply = async (input: {
   loadMessages: SessionMessagesLoader;
   sessionId: string;
@@ -113,12 +222,7 @@ export const pollOpencodeQuestionReply = async (input: {
 }) => {
   const { loadMessages, sessionId, cwd, eventStore, questionTool, questionResponse, messageComplete, abortSignal } =
     input;
-  let lastSnapshot = "";
-  let latestMessages: SessionMessage[] = [];
-  let lastObserved: OpencodeSessionMessage[] = [];
-  let lastProgressAt: number | null = null;
-  let terminalSnapshot: string | null = null;
-  let settledIdleSince: number | null = null;
+  const state: QuestionReplyPollState = createQuestionReplyPollState();
   const postState = trackPostState(messageComplete);
 
   while (true) {
@@ -131,93 +235,59 @@ export const pollOpencodeQuestionReply = async (input: {
       sessionId,
       cwd,
       eventStore,
-      lastObserved,
-      lastSnapshot,
-      latestMessages,
+      lastObserved: state.lastObserved,
+      lastSnapshot: state.lastSnapshot,
+      latestMessages: state.latestMessages,
     });
-    lastObserved = snapshot.lastObserved;
-    lastSnapshot = snapshot.lastSnapshot;
-    latestMessages = snapshot.latestMessages;
+    applyQuestionReplySnapshot(state, snapshot);
 
     if (abortSignal?.aborted) {
       return cancelTurn(eventStore);
     }
 
     const now = Date.now();
-    if (lastProgressAt === null || snapshot.snapshotChanged) {
-      lastProgressAt = now;
-    }
+    trackQuestionReplyProgress(state, snapshot.snapshotChanged, now);
 
-    const replyState = getQuestionReplyState(lastObserved, questionTool);
-    const questionTerminal = isTerminalQuestionStatus(replyState?.status);
-    const inFlight = isTurnInFlight(lastObserved);
-    const quietAfterTerminalSnapshot =
-      questionTerminal &&
-      !inFlight &&
-      terminalSnapshot !== null &&
-      terminalSnapshot === lastSnapshot &&
-      !snapshot.snapshotChanged;
-
-    if (quietAfterTerminalSnapshot) {
+    const signals = getQuestionReplyPollSignals({ lastObserved: state.lastObserved, questionTool, postState });
+    if (shouldStopQuestionReplyPolling({ state, signals, snapshotChanged: snapshot.snapshotChanged, now })) {
       break;
     }
 
-    const settledWithNoTurnInFlight = postState.settled && !postState.timedOut && !postState.failed && !inFlight;
-    const quietAfterSettledIdleSnapshot =
-      settledWithNoTurnInFlight &&
-      settledIdleSince !== null &&
-      !snapshot.snapshotChanged &&
-      now - settledIdleSince >= OPENCODE_QUESTION_REPLY_IDLE_GRACE_MS;
-
-    if (quietAfterSettledIdleSnapshot) {
-      break;
-    }
-
-    if (questionTerminal && !inFlight) {
-      terminalSnapshot = lastSnapshot;
-    } else {
-      terminalSnapshot = null;
-    }
-
-    if (settledWithNoTurnInFlight) {
-      settledIdleSince = snapshot.snapshotChanged || settledIdleSince === null ? now : settledIdleSince;
-    } else {
-      settledIdleSince = null;
-    }
+    updateQuestionReplyIdleMarkers({ state, signals, snapshotChanged: snapshot.snapshotChanged, now });
 
     if (postState.failed) {
       return appendFailureMessage({
         sessionId,
-        latestMessages,
+        latestMessages: state.latestMessages,
         eventStore,
         failureMessage: postState.failureMessage,
       });
     }
 
-    if (isTurnStale(lastProgressAt, now, OPENCODE_STALE_TURN_TIMEOUT_MS)) {
+    if (isTurnStale(state.lastProgressAt, now, OPENCODE_STALE_TURN_TIMEOUT_MS)) {
       return disconnectStaleTurn(eventStore);
     }
 
     await waitForNextPoll(abortSignal);
   }
 
-  const replyState = getQuestionReplyState(lastObserved, questionTool);
-  if (postState.failed || isFailedQuestionStatus(replyState?.status) || hasErrorParts(latestMessages)) {
-    if (postState.failed) {
-      return appendFailureMessage({
-        sessionId,
-        latestMessages,
-        eventStore,
-        failureMessage: postState.failureMessage,
-      });
-    }
+  const replyState = getQuestionReplyState(state.lastObserved, questionTool);
+  if (postState.failed) {
+    return appendFailureMessage({
+      sessionId,
+      latestMessages: state.latestMessages,
+      eventStore,
+      failureMessage: postState.failureMessage,
+    });
+  }
 
+  if (isFailedQuestionStatus(replyState?.status) || hasErrorParts(state.latestMessages)) {
     eventStore.push({ op: "replace", path: "/status", value: "failed" });
     return { code: 1 as number | null, signal: null as string | null };
   }
 
-  const answeredMessages = markQuestionToolAnswered({ messages: latestMessages, questionTool, questionResponse });
-  if (answeredMessages !== latestMessages) {
+  const answeredMessages = markQuestionToolAnswered({ messages: state.latestMessages, questionTool, questionResponse });
+  if (answeredMessages !== state.latestMessages) {
     eventStore.push({ op: "replace", path: "/messages", value: answeredMessages });
   }
 
