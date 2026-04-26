@@ -31,10 +31,10 @@ describe("createExtensionInstancesDBService", () => {
 
     const created = await service.create({
       project_id: projectId,
-      extension_id: "local.review",
+      extension_id: "project.review",
       display_name: "Review",
       source_kind: "local",
-      local_path: ".pstdio/extensions/local.review",
+      local_path: ".pstdio/extensions/project.review",
       config_json: { severity: "high" },
     });
 
@@ -42,15 +42,15 @@ describe("createExtensionInstancesDBService", () => {
     expect(created.config_json).toEqual({ severity: "high" });
     expect(await service.list(projectId)).toHaveLength(1);
 
-    const updated = await service.update(projectId, "local.review", {
+    const updated = await service.update(projectId, "project.review", {
       display_name: "Review v2",
       config_json: { severity: "low" },
     });
     expect(updated?.display_name).toBe("Review v2");
     expect(updated?.config_json).toEqual({ severity: "low" });
 
-    expect((await service.disable(projectId, "local.review"))?.enabled).toBe(false);
-    expect((await service.enable(projectId, "local.review"))?.enabled).toBe(true);
+    expect((await service.disable(projectId, "project.review"))?.enabled).toBe(false);
+    expect((await service.enable(projectId, "project.review"))?.enabled).toBe(true);
   });
 
   test("keeps one instance per project and extension id", async () => {
@@ -58,19 +58,19 @@ describe("createExtensionInstancesDBService", () => {
 
     await service.create({
       project_id: projectId,
-      extension_id: "local.review",
+      extension_id: "project.review",
       display_name: "Review",
       source_kind: "local",
-      local_path: ".pstdio/extensions/local.review",
+      local_path: ".pstdio/extensions/project.review",
     });
 
     await expect(
       service.create({
         project_id: projectId,
-        extension_id: "local.review",
+        extension_id: "project.review",
         display_name: "Review again",
         source_kind: "local",
-        local_path: ".pstdio/extensions/local.review",
+        local_path: ".pstdio/extensions/project.review",
       }),
     ).rejects.toThrow();
   });
@@ -81,13 +81,13 @@ describe("createExtensionStorageDBService", () => {
     const storage = createExtensionStorageDBService(db);
     const scope = {
       project_id: projectId,
-      extension_id: "local.review",
+      extension_id: "project.review",
       scope_type: "ticket",
       scope_id: "PS-86",
     };
 
     await storage.set(scope, "lastRun", { status: "passed" });
-    await storage.set({ ...scope, extension_id: "local.other" }, "lastRun", { status: "ignored" });
+    await storage.set({ ...scope, extension_id: "project.other" }, "lastRun", { status: "ignored" });
 
     expect(await storage.get(scope, "lastRun")).toEqual({ status: "passed" });
 
@@ -111,19 +111,19 @@ describe("createExtensionStorageDBService", () => {
   test("survives instance disable and cascades when a project is deleted", async () => {
     const instances = createExtensionInstancesDBService(db);
     const storage = createExtensionStorageDBService(db);
-    const scope = { project_id: projectId, extension_id: "local.review", scope_type: "project", scope_id: "" };
+    const scope = { project_id: projectId, extension_id: "project.review", scope_type: "project", scope_id: "" };
 
     await instances.create({
       project_id: projectId,
-      extension_id: "local.review",
+      extension_id: "project.review",
       display_name: "Review",
       source_kind: "local",
-      local_path: ".pstdio/extensions/local.review",
+      local_path: ".pstdio/extensions/project.review",
     });
     await storage.set(scope, "enabledState", { value: true });
     await storage.collection(scope, "runs").put("latest", { id: "latest" });
 
-    await instances.disable(projectId, "local.review");
+    await instances.disable(projectId, "project.review");
     expect(await storage.get(scope, "enabledState")).toEqual({ value: true });
 
     await createProjectsDBService(db).hardDelete(projectId);
@@ -139,12 +139,12 @@ describe("createExtensionTemplatePreferencesDBService", () => {
   test("defaults missing preferences to enabled and stores disablement", async () => {
     const preferences = createExtensionTemplatePreferencesDBService(db);
 
-    expect(await preferences.isEnabled(projectId, "local.templates", "defaultTicket")).toBe(true);
+    expect(await preferences.isEnabled(projectId, "project.templates", "defaultTicket")).toBe(true);
 
-    await preferences.setEnabled(projectId, "local.templates", "defaultTicket", false);
-    expect(await preferences.isEnabled(projectId, "local.templates", "defaultTicket")).toBe(false);
+    await preferences.setEnabled(projectId, "project.templates", "defaultTicket", false);
+    expect(await preferences.isEnabled(projectId, "project.templates", "defaultTicket")).toBe(false);
 
-    await preferences.setEnabled(projectId, "local.templates", "defaultTicket", true);
-    expect(await preferences.isEnabled(projectId, "local.templates", "defaultTicket")).toBe(true);
+    await preferences.setEnabled(projectId, "project.templates", "defaultTicket", true);
+    expect(await preferences.isEnabled(projectId, "project.templates", "defaultTicket")).toBe(true);
   });
 });

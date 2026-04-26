@@ -82,15 +82,15 @@ describe("createSyncService", () => {
 
       await instances.create({
         project_id: project.id,
-        extension_id: "local.templates",
+        extension_id: "project.templates",
         display_name: "Templates",
         source_kind: "local",
-        local_path: ".pstdio/extensions/local.templates",
+        local_path: ".pstdio/extensions/project.templates",
       });
-      const scope = { project_id: project.id, extension_id: "local.templates", scope_type: "project", scope_id: "" };
+      const scope = { project_id: project.id, extension_id: "project.templates", scope_type: "project", scope_id: "" };
       await storage.set(scope, "setup", { complete: true });
       await storage.collection(scope, "statuses").put("backlog", { label: "Backlog" });
-      await preferences.setEnabled(project.id, "local.templates", "defaultTicket", false);
+      await preferences.setEnabled(project.id, "project.templates", "defaultTicket", false);
 
       const state = await syncService.getFullState();
 
@@ -175,15 +175,15 @@ describe("createSyncService", () => {
 
       await instances.create({
         project_id: project.id,
-        extension_id: "local.templates",
+        extension_id: "project.templates",
         display_name: "Templates",
         source_kind: "local",
-        local_path: ".pstdio/extensions/local.templates",
+        local_path: ".pstdio/extensions/project.templates",
       });
-      const scope = { project_id: project.id, extension_id: "local.templates", scope_type: "project", scope_id: "" };
+      const scope = { project_id: project.id, extension_id: "project.templates", scope_type: "project", scope_id: "" };
       await storage.set(scope, "setup", { complete: true });
       await storage.collection(scope, "statuses").put("backlog", { label: "Backlog" });
-      await preferences.setEnabled(project.id, "local.templates", "defaultTicket", false);
+      await preferences.setEnabled(project.id, "project.templates", "defaultTicket", false);
 
       const events: { table: string; op: string; data: unknown }[] = [];
       eventBus.subscribe((e) => events.push(e));

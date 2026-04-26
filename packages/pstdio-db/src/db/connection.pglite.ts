@@ -80,25 +80,18 @@ const resolvePgliteOptions = async () => {
 
 export const createDb = async (options?: { path?: string }) => {
   const dbPath = resolveDbPath(options?.path);
-  console.log("[createDb] dbPath:", dbPath);
 
   ensureDbDirectory(dbPath);
-  console.log("[createDb] ensured db directory");
 
   const pgliteOpts = await resolvePgliteOptions();
-  console.log("[createDb] pglite options resolved, keys:", Object.keys(pgliteOpts));
 
   const pglite = dbPath === ":memory:" ? new PGlite(pgliteOpts) : new PGlite(dbPath, pgliteOpts);
-  console.log("[createDb] PGlite constructor called, waiting for ready...");
   await pglite.waitReady;
-  console.log("[createDb] PGlite ready");
 
   const db = drizzle(pglite, { schema });
   const migrationsFolder = await resolveMigrationsFolder();
-  console.log("[createDb] migrations folder:", migrationsFolder);
   if (fs.existsSync(migrationsFolder)) {
     await migrate(db, { migrationsFolder });
-    console.log("[createDb] migrations applied");
   }
 
   let closed = false;

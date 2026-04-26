@@ -1,4 +1,6 @@
-import { loadExtensionRuntime } from "pstdio-extensions";
+import { createClient } from "@pstdio/sdk/client";
+import { createDb } from "pstdio-db";
+import { loadExtensionRuntime, runExtensionCommand } from "pstdio-extensions";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { topLevelCommandModules, topLevelStaticCommandNames } from "./adapters/cli/commands";
@@ -7,6 +9,7 @@ import {
   createExtensionCommandRegistry,
   formatUnavailableExtensionCommandMessage,
 } from "./adapters/cli/commands/extension-command-modules";
+import { createExtensionCommandSessions } from "./adapters/cli/commands/extension-command-sessions";
 import { API_URL } from "./features/api-url";
 import { CLI_VERSION } from "./features/cli-version";
 import { findGitRoot, readConfig } from "./features/config/config";
@@ -104,19 +107,51 @@ const shouldShowUnavailableExtensionMessage = (
   reason: "duplicate_extension_path" | "static_command_collision" | "unsupported_extension_path",
 ) => reason !== "static_command_collision";
 
-const resolveProjectRoot = () => {
+const resolveProjectContext = () => {
   const root = findGitRoot(process.cwd());
   if (!root) return null;
-  if (!readConfig(root)) return null;
-  return root;
+  const config = readConfig(root);
+  if (!config) return null;
+  return { root, config };
 };
 
-const projectRoot = resolveProjectRoot();
+const projectContext = resolveProjectContext();
+const projectRoot = projectContext?.root ?? null;
 const shouldLoadExtensionRuntime = projectRoot ? shouldLoadExtensionRuntimeForArgs(rawArgs) : false;
 const extensionRuntime = shouldLoadExtensionRuntime && projectRoot ? await loadExtensionRuntime({ projectRoot }) : null;
+let extensionCommandArgv: Record<string, unknown> = {};
 const extensionCommands = createExtensionCommandRegistry({
   cli: extensionRuntime?.cli ?? [],
   staticTopLevelCommands: topLevelStaticCommandNames,
+  runCommand: async ({ commandId, params }) => {
+    if (!extensionRuntime || !projectContext) {
+      throw new Error("Extension command execution requires a Prompt Studio project.");
+    }
+
+    const connection = await createDb();
+    try {
+      const apiUrl = resolveApiUrl(extensionCommandArgv);
+      const client = createClient({ baseUrl: apiUrl, token: process.env.PSTDIO_API_TOKEN });
+
+      return await runExtensionCommand({
+        commands: extensionRuntime.commands,
+        db: connection.db,
+        projectId: projectContext.config.project_id,
+        commandId,
+        params,
+        sessions: createExtensionCommandSessions({
+          projectId: projectContext.config.project_id,
+          ensureApi: async () => {
+            applyApiPortFromArgs(extensionCommandArgv);
+            await ensureApi(apiUrl);
+          },
+          createSession: (input) => client.sessions.create(input),
+        }),
+      });
+    } finally {
+      await connection.close();
+    }
+  },
 });
 
 const commandTracker = createCliCommandTracker({
@@ -149,6 +184,7 @@ const cli = yargs(rawArgs)
     process.exit(1);
   })
   .middleware(async (argv) => {
+    extensionCommandArgv = argv;
     commandTracker.captureArgv(argv);
     commandTracker.logStart();
 
@@ -160,6 +196,7 @@ const cli = yargs(rawArgs)
 
     const topLevelCommand = argv._[0];
     if (shouldBypassApiBootstrap(topLevelCommand)) return;
+    if (shouldLoadExtensionRuntime) return;
 
     applyApiPortFromArgs(argv);
     await ensureApi(resolveApiUrl(argv));

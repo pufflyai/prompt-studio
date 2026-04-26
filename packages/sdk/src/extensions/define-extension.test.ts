@@ -9,7 +9,7 @@ describe("defineExtension", () => {
     const source = packageAsset("../templates/default-ticket.md", import.meta.url);
 
     const extension = defineExtension({
-      id: "local.review",
+      id: "project.review",
       name: "Review",
       resources: { workspace: workspaceResource },
       slots: { workspaceHeader },
@@ -52,7 +52,7 @@ describe("defineExtension", () => {
       initialSetup: async () => {},
     });
 
-    expect(extension.id).toBe("local.review");
+    expect(extension.id).toBe("project.review");
     expect(extension.commands.runReview.params?.harness.type).toBe("harness");
     expect(extension.commands.runReview.menus?.[0]?.slot).toBe("workspace.header.primary");
     expect(extension.templates.defaultTicket.source).toEqual({
@@ -65,7 +65,7 @@ describe("defineExtension", () => {
   test("rejects command definitions without handlers", () => {
     expect(() =>
       defineExtension({
-        id: "local.broken",
+        id: "project.broken",
         name: "Broken",
         commands: {
           run: {

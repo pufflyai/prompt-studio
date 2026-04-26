@@ -1,8 +1,8 @@
 import { defineExtension } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
-  id: "local.wrapper",
-  name: "Local Wrapper",
+  id: "project.wrapper",
+  name: "Project Wrapper",
   commands: {
     refresh: {
       title: "Refresh wrapped package",

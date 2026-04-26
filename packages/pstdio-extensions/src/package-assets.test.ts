@@ -34,11 +34,11 @@ describe("package asset resolution", () => {
     writeFileSync(join(templatesDir, "default-ticket.md"), "Default ticket body");
     writeExtension(
       projectRoot,
-      "local.templates",
+      "project.templates",
       `import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
 
       export default defineExtension({
-        id: "local.templates",
+        id: "project.templates",
         name: "Templates",
         templates: {
           defaultTicket: {
@@ -53,7 +53,7 @@ describe("package asset resolution", () => {
     const runtime = await loadExtensionRuntime({ projectRoot });
 
     expect(runtime.diagnostics).toEqual([]);
-    expect(runtime.templates[0]?.id).toBe("local.templates.defaultTicket");
+    expect(runtime.templates[0]?.id).toBe("project.templates.defaultTicket");
     await expect(
       readPackageAssetText(runtime.templates[0].source, { sourcePath: runtime.extensions[0].sourcePath }),
     ).resolves.toBe("Default ticket body");
@@ -63,11 +63,11 @@ describe("package asset resolution", () => {
     const projectRoot = createProject();
     writeExtension(
       projectRoot,
-      "local.templates",
+      "project.templates",
       `import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
 
       export default defineExtension({
-        id: "local.templates",
+        id: "project.templates",
         name: "Templates",
         templates: {
           missing: {
@@ -94,11 +94,11 @@ describe("package asset resolution", () => {
     const projectRoot = createProject();
     writeExtension(
       projectRoot,
-      "local.templates",
+      "project.templates",
       `import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
 
       export default defineExtension({
-        id: "local.templates",
+        id: "project.templates",
         name: "Templates",
         templates: {
           unsafe: {

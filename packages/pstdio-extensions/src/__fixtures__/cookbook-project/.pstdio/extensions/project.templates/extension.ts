@@ -1,7 +1,7 @@
 import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
-  id: "local.templates",
+  id: "project.templates",
   name: "Templates",
   templateTypes: {
     ticket: {

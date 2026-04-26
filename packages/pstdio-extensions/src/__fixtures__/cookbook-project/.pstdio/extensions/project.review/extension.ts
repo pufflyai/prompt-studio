@@ -1,7 +1,7 @@
 import { defineExtension, params } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
-  id: "local.review",
+  id: "project.review",
   name: "Review",
   commands: {
     runReview: {

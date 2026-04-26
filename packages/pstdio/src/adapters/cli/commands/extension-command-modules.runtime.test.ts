@@ -18,6 +18,13 @@ const createYargs = () =>
       throw new Error(msg);
     });
 
+const createCliEnv = (overrides: NodeJS.ProcessEnv = {}) => {
+  const env = { ...process.env, ...overrides };
+  delete env.FORCE_COLOR;
+  delete env.NO_COLOR;
+  return env;
+};
+
 const applyBuilder = async (commandModule: CommandModule, cli: Argv) => {
   const { builder } = commandModule;
   if (!builder) return cli;
@@ -132,7 +139,7 @@ describe("runtime-backed extension command routing", () => {
     const output = Bun.spawnSync({
       cmd: ["bun", cliEntrypoint, "extension-lab", "inspect"],
       cwd: projectRoot,
-      env: { ...process.env, PSTDIO_DISABLE_EMBED_MANIFEST: "1" },
+      env: createCliEnv({ PSTDIO_DISABLE_EMBED_MANIFEST: "1" }),
       stderr: "pipe",
       stdout: "pipe",
     });
@@ -193,7 +200,7 @@ describe("runtime-backed extension command routing", () => {
     const output = Bun.spawnSync({
       cmd: ["bun", cliEntrypoint, "--api-port", "5555", "extension-lab", "inspect"],
       cwd: projectRoot,
-      env: { ...process.env, PSTDIO_DISABLE_EMBED_MANIFEST: "1" },
+      env: createCliEnv({ PSTDIO_DISABLE_EMBED_MANIFEST: "1" }),
       stderr: "pipe",
       stdout: "pipe",
     });
@@ -247,7 +254,7 @@ export default {
       const output = Bun.spawnSync({
         cmd: ["bun", cliEntrypoint, option, value, "extensions", "--help"],
         cwd: projectRoot,
-        env: { ...process.env, PSTDIO_DISABLE_EMBED_MANIFEST: "1" },
+        env: createCliEnv({ PSTDIO_DISABLE_EMBED_MANIFEST: "1" }),
         stderr: "pipe",
         stdout: "pipe",
       });
@@ -286,7 +293,7 @@ export default {
     const output = Bun.spawnSync({
       cmd: ["bun", cliEntrypoint, "extension-lab"],
       cwd: projectRoot,
-      env: { ...process.env, PSTDIO_DISABLE_EMBED_MANIFEST: "1" },
+      env: createCliEnv({ PSTDIO_DISABLE_EMBED_MANIFEST: "1" }),
       stderr: "pipe",
       stdout: "pipe",
     });

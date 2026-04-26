@@ -1,7 +1,7 @@
 import { defineExtension, packageAsset, params } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
-  id: "local.extension-lab",
+  id: "project.extension-lab",
   name: "Extension Lab",
   version: "0.1.0",
   artifactMounts: {
@@ -13,7 +13,7 @@ export default defineExtension({
   templateTypes: {
     ticket: {
       label: "Ticket",
-      description: "Ticket templates used by the local extension lab.",
+      description: "Ticket templates used by the project extension lab.",
     },
   },
   templates: {
@@ -43,10 +43,28 @@ export default defineExtension({
       },
       cli: {
         path: "extension-lab inspect",
-        description: "Inspect the local extension lab setup",
+        description: "Inspect the project extension lab setup",
+        options: {
+          note: {
+            type: "string",
+            description: "Optional note for the inspection result.",
+          },
+        },
         examples: ["pstdio extension-lab inspect"],
       },
-      async run() {},
+      async run(ctx) {
+        await ctx.storage.set("lastInspect", {
+          projectId: ctx.projectId,
+          target: ctx.target,
+          note: ctx.params.note ?? null,
+        });
+
+        return {
+          projectId: ctx.projectId,
+          targetType: ctx.target.type,
+          note: ctx.params.note ?? null,
+        };
+      },
     },
   },
 });

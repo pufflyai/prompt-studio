@@ -97,22 +97,22 @@ describe("extensions check formatting", () => {
         ...emptyRuntime,
         extensions: [
           {
-            id: "local.review",
-            displayName: "Local Review",
+            id: "project.review",
+            displayName: "Project Review",
             sourceKind: "local",
-            sourcePath: "/repo/.pstdio/extensions/local.review/extension.ts",
-            definition: { id: "local.review", name: "Local Review" },
+            sourcePath: "/repo/.pstdio/extensions/project.review/extension.ts",
+            definition: { id: "project.review", name: "Project Review" },
           },
         ],
         commands: [
           {
-            id: "local.review.run",
+            id: "project.review.run",
             key: "run",
-            extensionId: "local.review",
+            extensionId: "project.review",
             title: "Run",
             run: async () => {},
             menus: [],
-            sourcePath: "/repo/.pstdio/extensions/local.review/extension.ts",
+            sourcePath: "/repo/.pstdio/extensions/project.review/extension.ts",
           },
         ],
         cli: [
@@ -120,18 +120,18 @@ describe("extensions check formatting", () => {
             path: "workspace review",
             pathSegments: ["workspace", "review"],
             examples: [],
-            commandId: "local.review.run",
-            extensionId: "local.review",
+            commandId: "project.review.run",
+            extensionId: "project.review",
           },
         ],
         artifactMounts: [
           {
-            id: "local.review.tickets",
+            id: "project.review.tickets",
             key: "tickets",
-            extensionId: "local.review",
+            extensionId: "project.review",
             path: ".pstdio/tickets",
             label: "Tickets",
-            sourcePath: "/repo/.pstdio/extensions/local.review/extension.ts",
+            sourcePath: "/repo/.pstdio/extensions/project.review/extension.ts",
           },
         ],
         diagnostics: [
@@ -139,22 +139,22 @@ describe("extensions check formatting", () => {
             severity: "error",
             code: "duplicate_cli_path",
             message: 'CLI path "workspace review" is already provided',
-            extensionId: "local.review",
-            sourcePath: "/repo/.pstdio/extensions/local.review/extension.ts",
-            related: [{ commandId: "local.review.run", path: "workspace review", sourcePath: "/repo/one.ts" }],
+            extensionId: "project.review",
+            sourcePath: "/repo/.pstdio/extensions/project.review/extension.ts",
+            related: [{ commandId: "project.review.run", path: "workspace review", sourcePath: "/repo/one.ts" }],
           },
         ],
       },
     });
 
-    expect(output).toContain("local.review");
-    expect(output).toContain("/repo/.pstdio/extensions/local.review/extension.ts");
-    expect(output).toContain("local.review.run");
+    expect(output).toContain("project.review");
+    expect(output).toContain("/repo/.pstdio/extensions/project.review/extension.ts");
+    expect(output).toContain("project.review.run");
     expect(output).toContain("workspace review");
     expect(output).toContain(".pstdio/tickets");
     expect(output).toContain("[error] duplicate_cli_path");
     expect(output).toContain("related:");
-    expect(output).toContain("command=local.review.run");
+    expect(output).toContain("command=project.review.run");
   });
 
   test("sets exit code to 1 when runtime reports error diagnostics", async () => {
@@ -202,12 +202,12 @@ describe("extensions check formatting", () => {
           {
             severity: "error",
             code: "duplicate_extension_id",
-            message: 'Extension id "local.duplicates" is already provided',
-            extensionId: "local.duplicates",
+            message: 'Extension id "project.duplicates" is already provided',
+            extensionId: "project.duplicates",
             sourcePath: "/repo/.pstdio/extensions/b/extension.ts",
             related: [
               {
-                extensionId: "local.duplicates",
+                extensionId: "project.duplicates",
                 sourcePath: "/repo/.pstdio/extensions/a/extension.ts",
               },
             ],
@@ -216,15 +216,15 @@ describe("extensions check formatting", () => {
             severity: "error",
             code: "duplicate_cli_path",
             message: 'CLI path "tickets pull" is already provided',
-            extensionId: "local.duplicates",
+            extensionId: "project.duplicates",
             sourcePath: "/repo/.pstdio/extensions/b/extension.ts",
-            related: [{ commandId: "local.duplicates.run", path: "tickets pull" }],
+            related: [{ commandId: "project.duplicates.run", path: "tickets pull" }],
           },
           {
             severity: "error",
             code: "unsafe_artifact_mount_path",
             message: 'Artifact mount "unsafe" must stay under .pstdio',
-            extensionId: "local.duplicates",
+            extensionId: "project.duplicates",
             sourcePath: "/repo/.pstdio/extensions/a/extension.ts",
             related: [{ path: "../secrets" }],
           },
@@ -237,7 +237,7 @@ describe("extensions check formatting", () => {
     expect(output).toContain("[error] duplicate_cli_path");
     expect(output).toContain("[error] unsafe_artifact_mount_path");
     expect(output).toContain("source=/repo/.pstdio/extensions/a/extension.ts");
-    expect(output).toContain("extension=local.duplicates");
+    expect(output).toContain("extension=project.duplicates");
     expect(output).toContain("path=../secrets");
   });
 });
@@ -260,10 +260,10 @@ describe("extensions check runtime integration", () => {
     const projectRoot = createProject();
     writeExtension(
       projectRoot,
-      "local.review",
+      "project.review",
       `export default {
-        id: "local.review",
-        name: "Local Review",
+        id: "project.review",
+        name: "Project Review",
         commands: {
           run: {
             title: "Run",
@@ -281,9 +281,9 @@ describe("extensions check runtime integration", () => {
     await handler(argv());
 
     const output = log.mock.calls[0]?.[0] as string;
-    expect(output).toContain("local.review");
-    expect(output).toContain(`${projectRoot}/.pstdio/extensions/local.review/extension.ts`);
-    expect(output).toContain("local.review.run");
+    expect(output).toContain("project.review");
+    expect(output).toContain(`${projectRoot}/.pstdio/extensions/project.review/extension.ts`);
+    expect(output).toContain("project.review.run");
     expect(output).toContain("workspace review");
     expect(output).toContain(".pstdio/tickets");
     expect(output).toContain("No diagnostics.");
@@ -297,7 +297,7 @@ describe("extensions check runtime integration", () => {
       projectRoot,
       "duplicate-a",
       `export default {
-        id: "local.duplicates",
+        id: "project.duplicates",
         name: "Duplicates A",
         commands: {
           run: {
@@ -315,7 +315,7 @@ describe("extensions check runtime integration", () => {
       projectRoot,
       "duplicate-b",
       `export default {
-        id: "local.duplicates",
+        id: "project.duplicates",
         name: "Duplicates B",
         commands: {
           run: {

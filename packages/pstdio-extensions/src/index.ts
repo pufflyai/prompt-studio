@@ -1,4 +1,5 @@
 export { createArtifactMount } from "./artifact-mount";
+export { runExtensionCommand } from "./command-runner";
 export { discoverExtensionFiles, localExtensionsDir } from "./discovery";
 export { type LoadedExtensionSource, loadExtensionSources } from "./loader";
 export { normalizeExtensionSources } from "./normalize";

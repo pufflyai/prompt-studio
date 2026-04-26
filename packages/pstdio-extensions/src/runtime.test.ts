@@ -41,7 +41,7 @@ describe("loadExtensionRuntime", () => {
     const source = `import { defineExtension, params } from "@pstdio/sdk/extensions";
 
       export default defineExtension({
-        id: "local.example",
+        id: "project.example",
         name: "Example",
         commands: {
           runReview: {
@@ -68,9 +68,9 @@ describe("loadExtensionRuntime", () => {
       const runtime = await loadExtensionRuntime({ projectRoot });
 
       expect(runtime.diagnostics).toEqual([]);
-      expect(runtime.extensions[0]?.id).toBe("local.example");
+      expect(runtime.extensions[0]?.id).toBe("project.example");
       expect(runtime.extensions[0]?.sourceKind).toBe("local");
-      expect(runtime.commands[0]?.id).toBe("local.example.runReview");
+      expect(runtime.commands[0]?.id).toBe("project.example.runReview");
       expect(runtime.commands[0]?.cli?.pathSegments).toEqual(["workspaces", "review"]);
       expect(runtime.artifactMounts[0]?.path).toBe(".pstdio/tickets");
     }
@@ -98,7 +98,7 @@ describe("loadExtensionRuntime", () => {
   test("reports duplicate providers and excludes unsafe artifact mounts", async () => {
     const projectRoot = createProject();
     const first = `export default {
-      id: "local.duplicates",
+      id: "project.duplicates",
       name: "Duplicates A",
       commands: {
         run: {
@@ -113,7 +113,7 @@ describe("loadExtensionRuntime", () => {
       },
     };`;
     const second = `export default {
-      id: "local.duplicates",
+      id: "project.duplicates",
       name: "Duplicates B",
       commands: {
         run: {
@@ -138,7 +138,7 @@ describe("loadExtensionRuntime", () => {
     expect(diagnosticCodes(runtime)).toContain("duplicate_artifact_mount");
     expect(runtime.artifactMounts).toHaveLength(1);
     expect(runtime.diagnostics.find((diagnostic) => diagnostic.code === "duplicate_cli_path")?.related).toEqual(
-      expect.arrayContaining([expect.objectContaining({ commandId: "local.duplicates.run", path: "tickets pull" })]),
+      expect.arrayContaining([expect.objectContaining({ commandId: "project.duplicates.run", path: "tickets pull" })]),
     );
   });
 
@@ -148,7 +148,7 @@ describe("loadExtensionRuntime", () => {
       projectRoot,
       "templates",
       `export default {
-        id: "local.templates",
+        id: "project.templates",
         name: "Templates",
         templateTypes: {
           ticket: { label: "Ticket" },

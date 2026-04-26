@@ -169,6 +169,7 @@ export type CommandRunContext = {
   projectId: string;
   target: ResourceRef;
   params: Record<string, ParamValue>;
+  storage: ExtensionStorageApi;
   sessions: ExtensionSessionsApi;
   commands: ExtensionCommandsApi;
 };

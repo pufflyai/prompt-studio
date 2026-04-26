@@ -1,5 +1,5 @@
 import type { RuntimeCliContribution } from "@pstdio/sdk/extensions";
-import type { CommandModule } from "yargs";
+import type { ArgumentsCamelCase, CommandModule } from "yargs";
 
 type ExtensionCommandIssueReason =
   | "duplicate_extension_path"
@@ -23,6 +23,11 @@ export type ExtensionCommandRegistry = {
   unavailableByPath: Map<string, ExtensionCommandIssue>;
 };
 
+type RunExtensionCommandFromCli = (input: {
+  commandId: string;
+  params: Record<string, unknown>;
+}) => Promise<unknown> | unknown;
+
 const formatUnavailableReason = (reason: ExtensionCommandIssueReason) => {
   if (reason === "duplicate_extension_path") return "it is defined by multiple extensions";
   if (reason === "unsupported_extension_path") return "its path format is not supported";
@@ -34,6 +39,26 @@ const formatLeafExample = (example: string) => {
   if (normalized.startsWith("$0 ")) return normalized;
   if (normalized.startsWith("pstdio ")) return normalized;
   return `$0 ${normalized}`;
+};
+
+const mapCliParams = (contribution: RuntimeCliContribution, argv: ArgumentsCamelCase) => {
+  const params: Record<string, unknown> = {};
+
+  for (const optionName of Object.keys(contribution.options ?? {})) {
+    const value = argv[optionName];
+    if (value !== undefined) {
+      params[optionName] = value;
+    }
+  }
+
+  return params;
+};
+
+const writeCommandResult = (result: unknown) => {
+  if (result === undefined || result === null) return;
+
+  const output = typeof result === "string" ? result : JSON.stringify(result, null, 2);
+  process.stdout.write(output.endsWith("\n") ? output : `${output}\n`);
 };
 
 const toCommandIssue = (input: {
@@ -68,7 +93,10 @@ const createNamespaceHelp = (namespace: string, contributions: ExtensionNamespac
   return lines.join("\n");
 };
 
-const createLeafCommandModule = (contribution: ExtensionNamespaceContribution): CommandModule => ({
+const createLeafCommandModule = (
+  contribution: ExtensionNamespaceContribution,
+  runCommand?: RunExtensionCommandFromCli,
+): CommandModule => ({
   command: contribution.subpath,
   describe: contribution.description ?? `Extension command: ${contribution.commandId}`,
   builder: (yargs) => {
@@ -91,7 +119,16 @@ const createLeafCommandModule = (contribution: ExtensionNamespaceContribution): 
 
     return next;
   },
-  handler: () => {
+  handler: async (argv) => {
+    if (runCommand) {
+      const result = await runCommand({
+        commandId: contribution.commandId,
+        params: mapCliParams(contribution, argv),
+      });
+      writeCommandResult(result);
+      return;
+    }
+
     throw new Error(
       `Extension command "${contribution.path}" is available from "${contribution.extensionId}" but command execution is not enabled yet.`,
     );
@@ -101,6 +138,7 @@ const createLeafCommandModule = (contribution: ExtensionNamespaceContribution): 
 const createNamespaceCommandModule = (
   namespace: string,
   contributions: ExtensionNamespaceContribution[],
+  runCommand?: RunExtensionCommandFromCli,
 ): CommandModule => {
   let currentArgv: { showHelp: () => void } | null = null;
 
@@ -112,7 +150,7 @@ const createNamespaceCommandModule = (
       let next = yargs;
 
       for (const contribution of contributions) {
-        next = next.command(createLeafCommandModule(contribution));
+        next = next.command(createLeafCommandModule(contribution, runCommand));
       }
 
       return next.epilogue(createNamespaceHelp(namespace, contributions));
@@ -126,6 +164,7 @@ const createNamespaceCommandModule = (
 export const createExtensionCommandRegistry = (input: {
   cli: RuntimeCliContribution[];
   staticTopLevelCommands: string[];
+  runCommand?: RunExtensionCommandFromCli;
 }): ExtensionCommandRegistry => {
   const staticTopLevelCommands = new Set(input.staticTopLevelCommands);
   const unavailableByPath = new Map<string, ExtensionCommandIssue>();
@@ -200,6 +239,7 @@ export const createExtensionCommandRegistry = (input: {
       createNamespaceCommandModule(
         namespace,
         [...contributions].sort((left, right) => left.path.localeCompare(right.path)),
+        input.runCommand,
       ),
     );
 

@@ -22,7 +22,7 @@ describe("createExtensionStorageContext", () => {
     const storage = createExtensionStorageContext({
       db,
       projectId,
-      extensionId: "local.templates",
+      extensionId: "project.templates",
       scope: { type: "project", id: "" },
     });
 
