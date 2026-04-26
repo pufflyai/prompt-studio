@@ -79,9 +79,12 @@ const resolveSubTicketsField = async (
   projectId: string,
   ticket: NonNullable<Awaited<ReturnType<Deps["getTicket"]>>>,
 ) => {
-  const childrenById = await deps.listTickets({ project_id: projectId, parent_id: ticket.id });
-  const childrenByShorthand = await deps.listTickets({ project_id: projectId, parent_id: ticket.shorthand });
-  const children = [...new Map([...childrenById, ...childrenByShorthand].map((child) => [child.id, child])).values()];
+  const childGroups = await Promise.all(
+    [ticket.id, ticket.shorthand].flatMap((parentId) =>
+      [false, true].map((draft) => deps.listTickets({ project_id: projectId, parent_id: parentId, draft })),
+    ),
+  );
+  const children = [...new Map(childGroups.flat().map((child) => [child.id, child])).values()];
   if (children.length === 0) return null;
   return children
     .map((child) => child.shorthand)

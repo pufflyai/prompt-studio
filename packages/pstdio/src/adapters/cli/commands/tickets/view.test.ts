@@ -156,6 +156,30 @@ describe("tickets view", () => {
 });
 
 describe("tickets view relationship fields", () => {
+  test("keeps relationship fields out of ticket summary", async () => {
+    const log = mock();
+    const childTicket = makeTicket({ id: "t-2", shorthand: "PS-2", parent_id: "ticket-parent-id" });
+    const handler = createHandler({
+      cwd: () => "/work/repo",
+      resolveProjectId: () => ({ projectId: "proj-1", root: "/work/repo" }),
+      resolveTicketByShorthand: async () => makeListItem({ id: "t-2", shorthand: "PS-2" }) as never,
+      getTicket: async () => childTicket as never,
+      listTickets: async () => [makeListItem({ id: "t-3", shorthand: "PS-3" })] as never,
+      log,
+    } as never);
+
+    await handler({ id: "PS-2", _: [], $0: "" } as never);
+
+    expect(log.mock.calls.map((call) => call[0])).toEqual([
+      "Shorthand:   PS-2",
+      "Title:       Fix login bug",
+      "Status:      backlog",
+      "Tags:        bug",
+      "Created:     2026-01-15T10:00:00Z",
+      "Updated:     2026-01-20T14:30:00Z",
+    ]);
+  });
+
   test("outputs parent shorthand when field is 'parent-ticket'", async () => {
     const log = mock();
     const childTicket = makeTicket({ id: "t-2", shorthand: "PS-2", parent_id: "ticket-parent-id" });
@@ -224,57 +248,34 @@ describe("tickets view relationship fields", () => {
     expect(log).toHaveBeenCalledWith("");
   });
 
-  test("outputs sorted, deduplicated child shorthands when field is 'sub-tickets'", async () => {
+  test("outputs sorted, deduplicated draft and non-draft child shorthands when field is 'sub-tickets'", async () => {
     const log = mock();
-    const listTickets = mock(async ({ parent_id }: { parent_id?: string }) => {
-      if (parent_id === "t-1") {
+    const listTickets = mock(async ({ parent_id, draft }: { parent_id?: string; draft?: boolean }) => {
+      if (parent_id === "t-1" && draft === false) {
         return [
           makeListItem({ id: "t-3", shorthand: "PS-3" }),
           makeListItem({ id: "t-2", shorthand: "PS-2" }),
         ] as never;
       }
 
-      if (parent_id === "PS-1") {
+      if (parent_id === "t-1" && draft === true) {
+        return [makeListItem({ id: "t-5", shorthand: "PS-5", draft: true })] as never;
+      }
+
+      if (parent_id === "PS-1" && draft === false) {
         return [
           makeListItem({ id: "t-2", shorthand: "PS-2" }),
           makeListItem({ id: "t-4", shorthand: "PS-4" }),
         ] as never;
       }
 
-      return [] as never;
-    });
-
-    const handler = createHandler({
-      cwd: () => "/work/repo",
-      resolveProjectId: () => ({ projectId: "proj-1", root: "/work/repo" }),
-      resolveTicketByShorthand: async () => makeListItem({ id: "t-1", shorthand: "PS-1" }) as never,
-      getTicket: async () => makeTicket({ id: "t-1", shorthand: "PS-1" }) as never,
-      listTickets,
-      log,
-    } as never);
-
-    await handler({ id: "PS-1", field: "sub-tickets", _: [], $0: "" } as never);
-
-    expect(log).toHaveBeenCalledTimes(1);
-    expect(log).toHaveBeenCalledWith("PS-2, PS-3, PS-4");
-    expect(listTickets).toHaveBeenCalledWith({ project_id: "proj-1", parent_id: "t-1" });
-    expect(listTickets).toHaveBeenCalledWith({ project_id: "proj-1", parent_id: "PS-1" });
-  });
-
-  test("sorts sub-tickets by numeric shorthand value", async () => {
-    const log = mock();
-    const listTickets = mock(async ({ parent_id }: { parent_id?: string }) => {
-      if (parent_id === "t-1") {
+      if (parent_id === "PS-1" && draft === true) {
         return [
-          makeListItem({ id: "t-10", shorthand: "PS-10" }),
-          makeListItem({ id: "t-2", shorthand: "PS-2" }),
+          makeListItem({ id: "t-10", shorthand: "PS-10", draft: true }),
+          makeListItem({ id: "t-6", shorthand: "PS-6", draft: true }),
         ] as never;
       }
 
-      if (parent_id === "PS-1") {
-        return [makeListItem({ id: "t-3", shorthand: "PS-3" })] as never;
-      }
-
       return [] as never;
     });
 
@@ -290,7 +291,11 @@ describe("tickets view relationship fields", () => {
     await handler({ id: "PS-1", field: "sub-tickets", _: [], $0: "" } as never);
 
     expect(log).toHaveBeenCalledTimes(1);
-    expect(log).toHaveBeenCalledWith("PS-2, PS-3, PS-10");
+    expect(log).toHaveBeenCalledWith("PS-2, PS-3, PS-4, PS-5, PS-6, PS-10");
+    expect(listTickets).toHaveBeenCalledWith({ project_id: "proj-1", parent_id: "t-1", draft: false });
+    expect(listTickets).toHaveBeenCalledWith({ project_id: "proj-1", parent_id: "t-1", draft: true });
+    expect(listTickets).toHaveBeenCalledWith({ project_id: "proj-1", parent_id: "PS-1", draft: false });
+    expect(listTickets).toHaveBeenCalledWith({ project_id: "proj-1", parent_id: "PS-1", draft: true });
   });
 
   test("outputs empty string when field is 'sub-tickets' and no children exist", async () => {
@@ -309,8 +314,10 @@ describe("tickets view relationship fields", () => {
 
     expect(log).toHaveBeenCalledTimes(1);
     expect(log).toHaveBeenCalledWith("");
-    expect(listTickets).toHaveBeenCalledWith({ project_id: "proj-1", parent_id: "t-5" });
-    expect(listTickets).toHaveBeenCalledWith({ project_id: "proj-1", parent_id: "PS-5" });
+    expect(listTickets).toHaveBeenCalledWith({ project_id: "proj-1", parent_id: "t-5", draft: false });
+    expect(listTickets).toHaveBeenCalledWith({ project_id: "proj-1", parent_id: "t-5", draft: true });
+    expect(listTickets).toHaveBeenCalledWith({ project_id: "proj-1", parent_id: "PS-5", draft: false });
+    expect(listTickets).toHaveBeenCalledWith({ project_id: "proj-1", parent_id: "PS-5", draft: true });
   });
 
   test("includes parent and sub-ticket fields in unknown field error", async () => {
