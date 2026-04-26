@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 import { ProjectMenu } from "@/features/project/components/project-menu";
 import { ProjectSidebarFooter } from "@/features/project/components/project-sidebar";
 import type { TicketAttempt, TicketSubTicket } from "@/features/ticket-list/types";
+import { resolveTicketStatusForeground } from "@/features/ticket-list/utils/status-color";
 import { toSessionIndicatorStatus } from "@/features/ticket-list/utils/ticket-attempts";
 import type { AttemptStatusMapEntry } from "@/features/workspaces/hooks/attempt-status-map";
 import type { WorkspaceSessionEntry } from "@/features/workspaces/hooks/use-workspace-sessions";
@@ -66,22 +67,6 @@ const getFileIcon = (fileName: string) => {
   if (["png", "jpg", "jpeg", "gif", "svg", "webp"].includes(ext)) return <FileImage size={14} />;
   return <FileText size={14} />;
 };
-
-const STATUS_INDICATOR_COLOR_BY_STATUS: Record<string, string> = {
-  gray: "gray.400",
-  red: "red.400",
-  orange: "orange.400",
-  yellow: "yellow.400",
-  green: "green.400",
-  teal: "teal.400",
-  blue: "blue.400",
-  cyan: "cyan.400",
-  purple: "purple.400",
-  pink: "pink.400",
-};
-
-const resolveStatusIndicatorColor = (statusColor?: string) =>
-  STATUS_INDICATOR_COLOR_BY_STATUS[statusColor ?? "gray"] ?? "gray.400";
 
 const buildPlanningSection = (): SidebarSection => ({
   id: "planning",
@@ -145,7 +130,7 @@ export const buildSubTicketsSection = (
       label,
       indicator: {
         icon: <Circle size={10} fill="currentColor" />,
-        color: resolveStatusIndicatorColor(subTicket.statusColor),
+        color: resolveTicketStatusForeground(subTicket.statusColor),
         tooltip: subTicket.status,
       },
       isNavigable: canSelect,
@@ -159,7 +144,6 @@ export const buildSubTicketsSection = (
   return {
     id: "sub-tickets",
     label,
-    collapsible: false,
     nodes,
   };
 };

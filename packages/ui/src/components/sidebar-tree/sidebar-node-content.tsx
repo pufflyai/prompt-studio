@@ -20,6 +20,13 @@ export const SidebarNodeContent = (props: SidebarNodeContentProps) => {
           {node.icon}
         </Box>
       ) : null}
+      {node.indicator ? (
+        <Tooltip content={node.indicator.tooltip} disabled={!node.indicator.tooltip} openDelay={300}>
+          <Box color={node.indicator.color ?? "fg.muted"} flexShrink={0}>
+            {node.indicator.icon}
+          </Box>
+        </Tooltip>
+      ) : null}
       <Stack gap="0" minW="0" flex="1">
         <HStack gap="1" minW="0">
           {typeof node.label === "string" ? (
@@ -31,13 +38,6 @@ export const SidebarNodeContent = (props: SidebarNodeContentProps) => {
               {node.label}
             </Box>
           )}
-          {node.indicator ? (
-            <Tooltip content={node.indicator.tooltip} disabled={!node.indicator.tooltip} openDelay={300}>
-              <Box color={node.indicator.color ?? "fg.muted"} flexShrink={0}>
-                {node.indicator.icon}
-              </Box>
-            </Tooltip>
-          ) : null}
           {hasChildren ? (
             <Box color="fg.muted" flexShrink={0}>
               <ChevronRight

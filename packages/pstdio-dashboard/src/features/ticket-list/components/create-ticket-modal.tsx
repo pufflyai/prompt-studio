@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useProjectSettingsStore } from "@/features/project-settings/store";
 import { SingleTagSelector } from "@/features/ticket/components/single-tag-selector";
 import type { TicketStatus, TicketStatusOption, TicketTag } from "@/features/ticket-list/types";
+import { resolveTicketStatusForeground } from "@/features/ticket-list/utils/status-color";
 
 interface CreateTicketModalProps {
   open: boolean;
@@ -30,19 +31,6 @@ export interface CreateTicketModalPayload {
 }
 
 export type { CreateTicketModalProps };
-
-const STATUS_COLOR_MAP: Record<string, string> = {
-  gray: "gray.400",
-  red: "red.400",
-  orange: "orange.400",
-  yellow: "yellow.400",
-  green: "green.400",
-  teal: "teal.400",
-  blue: "blue.400",
-  cyan: "cyan.400",
-  purple: "purple.400",
-  pink: "pink.400",
-};
 
 export const CreateTicketModal = (props: CreateTicketModalProps) => {
   const {
@@ -109,7 +97,7 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
 
   const statusOption = statusOptions.find((s) => s.name === targetStatus);
   const statusLabel = statusOption?.name ?? targetStatus ?? t("createTicketModal.noStatus");
-  const statusColor = STATUS_COLOR_MAP[statusOption?.color ?? "gray"] ?? "gray.400";
+  const statusColor = resolveTicketStatusForeground(statusOption?.color);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;

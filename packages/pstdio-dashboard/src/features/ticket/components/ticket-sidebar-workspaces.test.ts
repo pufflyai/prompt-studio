@@ -111,7 +111,7 @@ describe("buildSubTicketsSection", () => {
       navigationIntent: { id: "select-sub-ticket", payload: { ticketShorthand: "PS-34" } },
     });
     expect(section?.nodes[0]?.indicator).toMatchObject({
-      color: "yellow.400",
+      color: "yellow.fg",
       tooltip: "In Progress",
     });
   });
@@ -165,9 +165,19 @@ describe("buildSubTicketsSection", () => {
     );
 
     expect(section).toMatchObject({
-      collapsible: false,
       nodes: [{ id: "sub-ticket:ticket-2", label: "Child without shorthand", disabled: true, isNavigable: false }],
     });
+  });
+
+  test("keeps the sub-ticket section collapsible", () => {
+    const section = buildSubTicketsSection(
+      [{ id: "ticket-2", shorthand: "PS-34", title: "First child", statusId: null }],
+      "Sub-tickets",
+      ["ticket-2"],
+      mock(() => {}),
+    );
+
+    expect(section?.collapsible).not.toBe(false);
   });
 });
 
