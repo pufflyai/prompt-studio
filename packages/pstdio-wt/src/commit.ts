@@ -7,11 +7,13 @@ export const commitChanges = async (opts: {
   stage?: StagingPolicy;
   repoPath?: string;
   dispatch?: HookDispatch;
+  log?: (msg: string) => void;
 }): Promise<CommitResult> => {
   const cwd = opts.worktreePath;
   const policy = opts.stage ?? "all";
   const repoPath = opts.repoPath ?? opts.worktreePath;
   const dispatch = opts.dispatch;
+  const log = opts.log ?? console.log;
 
   const ctx = {
     repoPath,
@@ -38,7 +40,10 @@ export const commitChanges = async (opts: {
   const sha = await git(cwd, ["rev-parse", "HEAD"]);
 
   if (dispatch) {
-    void dispatch.firePostHook("postCommit", { ...ctx, commitSha: sha }).catch(() => {});
+    void dispatch.firePostHook("postCommit", { ...ctx, commitSha: sha }).catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      log(`postCommit hook failed: ${message}`);
+    });
   }
 
   return { sha, message: opts.message };

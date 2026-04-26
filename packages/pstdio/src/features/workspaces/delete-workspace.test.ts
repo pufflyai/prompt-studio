@@ -3,6 +3,8 @@ import { homedir } from "node:os";
 import type { Workspace } from "@pstdio/sdk/resources";
 import { deleteWorkspaceWithWorktree } from "./delete-workspace";
 
+const flushMicrotasks = async () => Promise.resolve();
+
 const makeWorkspace = (shorthand: string): Workspace => ({
   id: "ws-1",
   project_id: "proj-1",
@@ -77,5 +79,24 @@ describe("deleteWorkspaceWithWorktree", () => {
       "postWorktreeRemove",
       expect.objectContaining({ workspace: "PS-1_A1", worktree_path: null }),
     );
+  });
+
+  test("logs post-hook errors instead of swallowing them", async () => {
+    const firePostHook = mock(async () => {
+      throw new Error("post-hook failed");
+    });
+    const dispatch = { firePreHook: async () => ({ rejected: false }), firePostHook };
+    const log = mock();
+
+    await deleteWorkspaceWithWorktree(
+      { repoRoot: "/repo", projectId: "proj-1", workspaceShorthand: "PS-1_A1" },
+      { ...baseDeps, dispatch, log },
+    );
+
+    await flushMicrotasks();
+
+    expect(log).toHaveBeenCalledWith("Deleted workspace PS-1_A1");
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("postWorktreeRemove hook failed"));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("post-hook failed"));
   });
 });

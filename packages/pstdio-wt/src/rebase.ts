@@ -7,9 +7,11 @@ export const rebaseOntoTarget = async (opts: {
   branch: string;
   target?: string;
   dispatch?: HookDispatch;
+  log?: (msg: string) => void;
 }): Promise<RebaseResult> => {
   const target = opts.target ?? (await git(opts.repoRoot, ["symbolic-ref", "--short", "HEAD"]));
   const dispatch = opts.dispatch;
+  const log = opts.log ?? console.log;
 
   const mergeBase = await git(opts.repoRoot, ["merge-base", target, opts.branch]);
   const targetSha = await git(opts.repoRoot, ["rev-parse", target]);
@@ -44,7 +46,10 @@ export const rebaseOntoTarget = async (opts: {
       // may fail if rebase didn't start
     }
     if (dispatch) {
-      void dispatch.firePostHook("onConflict", { ...ctx, operation: "rebase" as const }).catch(() => {});
+      void dispatch.firePostHook("onConflict", { ...ctx, operation: "rebase" as const }).catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        log(`onConflict hook failed during rebase: ${message}`);
+      });
     }
     if (err instanceof GitError) {
       throw new Error(`Rebase of ${opts.branch} onto ${target} failed: ${err.stderr}`);
@@ -53,7 +58,10 @@ export const rebaseOntoTarget = async (opts: {
   }
 
   if (dispatch) {
-    void dispatch.firePostHook("postRebase", ctx).catch(() => {});
+    void dispatch.firePostHook("postRebase", ctx).catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      log(`postRebase hook failed: ${message}`);
+    });
   }
 
   return { rebased: true, upToDate: false };

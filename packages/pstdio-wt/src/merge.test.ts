@@ -154,6 +154,60 @@ describe("mergeWorktree", () => {
     );
   });
 
+  test("logs post-merge hook failures", async () => {
+    const wtPath = join(repo.dir, "wt-merge");
+    await createWorktree({ repoRoot: repo.dir, branch: "task/hook-post-log", path: wtPath });
+
+    const dispatch: HookDispatch = {
+      firePreHook: mock(() => Promise.resolve({ rejected: false })),
+      firePostHook: mock((hookName) => {
+        if (hookName === "postMerge") return Promise.reject(new Error("post merge hook failed"));
+        return Promise.resolve();
+      }),
+    };
+    const log = mock();
+
+    await Bun.write(join(wtPath, "feature.txt"), "feature");
+    await commitChanges({ worktreePath: wtPath, message: "add feature" });
+
+    await mergeWorktree({ repoRoot: repo.dir, branch: "task/hook-post-log", target: "main", dispatch, log });
+
+    await Promise.resolve();
+
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("postMerge hook failed"));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("post merge hook failed"));
+  });
+
+  test("logs on-conflict hook failures during merge", async () => {
+    const wtPath = join(repo.dir, "wt-merge");
+    await createWorktree({ repoRoot: repo.dir, branch: "task/conflict-log", path: wtPath });
+
+    const dispatch: HookDispatch = {
+      firePreHook: mock(() => Promise.resolve({ rejected: false })),
+      firePostHook: mock((hookName) => {
+        if (hookName === "onConflict") return Promise.reject(new Error("conflict hook failed"));
+        return Promise.resolve();
+      }),
+    };
+    const log = mock();
+
+    await Bun.write(join(wtPath, "feature.txt"), "feature");
+    await commitChanges({ worktreePath: wtPath, message: "branch commit" });
+
+    await Bun.write(join(repo.dir, "main-change.txt"), "main change");
+    await git(repo.dir, ["add", "."]);
+    await git(repo.dir, ["commit", "-m", "main commit"]);
+
+    await expect(
+      mergeWorktree({ repoRoot: repo.dir, branch: "task/conflict-log", target: "main", dispatch, log }),
+    ).rejects.toThrow();
+
+    await Promise.resolve();
+
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("onConflict hook failed during merge"));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("conflict hook failed"));
+  });
+
   test("dispatch ctx contains expected fields", async () => {
     const wtPath = join(repo.dir, "wt-merge");
     await createWorktree({ repoRoot: repo.dir, branch: "task/merge-payload", path: wtPath });

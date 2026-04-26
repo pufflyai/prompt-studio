@@ -8,10 +8,12 @@ export const mergeWorktree = async (opts: {
   squash?: boolean;
   message?: string;
   dispatch?: HookDispatch;
+  log?: (msg: string) => void;
 }): Promise<MergeResult> => {
   const target = opts.target ?? (await getCurrentBranch(opts.repoRoot));
   const shouldSquash = opts.squash ?? false;
   const dispatch = opts.dispatch;
+  const log = opts.log ?? console.log;
 
   const ctx = {
     repoPath: opts.repoRoot,
@@ -43,7 +45,10 @@ export const mergeWorktree = async (opts: {
     }
   } catch (err) {
     if (dispatch) {
-      void dispatch.firePostHook("onConflict", { ...ctx, operation: "merge" as const }).catch(() => {});
+      void dispatch.firePostHook("onConflict", { ...ctx, operation: "merge" as const }).catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        log(`onConflict hook failed during merge: ${message}`);
+      });
     }
     if (err instanceof GitError) {
       throw new Error(`Merge of ${opts.branch} into ${target} failed: ${err.stderr}`);
@@ -54,7 +59,10 @@ export const mergeWorktree = async (opts: {
   const sha = await git(opts.repoRoot, ["rev-parse", "HEAD"]);
 
   if (dispatch) {
-    void dispatch.firePostHook("postMerge", { ...ctx, commitSha: sha }).catch(() => {});
+    void dispatch.firePostHook("postMerge", { ...ctx, commitSha: sha }).catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      log(`postMerge hook failed: ${message}`);
+    });
   }
 
   return { merged: true, target, sha };

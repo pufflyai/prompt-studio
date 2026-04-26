@@ -184,6 +184,64 @@ describe("rebaseOntoTarget", () => {
     );
   });
 
+  test("logs post-rebase hook failures", async () => {
+    const wtPath = join(repo.dir, "wt-rebase");
+    await createWorktree({ repoRoot: repo.dir, branch: "task/rebase-post-log", path: wtPath });
+
+    const dispatch: HookDispatch = {
+      firePreHook: mock(() => Promise.resolve({ rejected: false })),
+      firePostHook: mock((hookName) => {
+        if (hookName === "postRebase") return Promise.reject(new Error("post rebase hook failed"));
+        return Promise.resolve();
+      }),
+    };
+    const log = mock();
+
+    await Bun.write(join(wtPath, "feature.txt"), "feature");
+    await commitChanges({ worktreePath: wtPath, message: "branch commit" });
+
+    await Bun.write(join(repo.dir, "main-change.txt"), "main change");
+    await git(repo.dir, ["add", "."]);
+    await git(repo.dir, ["commit", "-m", "main commit"]);
+
+    await rebaseOntoTarget({ repoRoot: repo.dir, branch: "task/rebase-post-log", target: "main", dispatch, log });
+
+    await Promise.resolve();
+
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("postRebase hook failed"));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("post rebase hook failed"));
+  });
+
+  test("logs on-conflict hook failures during rebase", async () => {
+    const wtPath = join(repo.dir, "wt-rebase");
+    await createWorktree({ repoRoot: repo.dir, branch: "task/rebase-conflict-log", path: wtPath });
+
+    const dispatch: HookDispatch = {
+      firePreHook: mock(() => Promise.resolve({ rejected: false })),
+      firePostHook: mock((hookName) => {
+        if (hookName === "onConflict") return Promise.reject(new Error("rebase conflict hook failed"));
+        return Promise.resolve();
+      }),
+    };
+    const log = mock();
+
+    await Bun.write(join(wtPath, "README.md"), "branch version");
+    await commitChanges({ worktreePath: wtPath, message: "branch change" });
+
+    await Bun.write(join(repo.dir, "README.md"), "main version");
+    await git(repo.dir, ["add", "."]);
+    await git(repo.dir, ["commit", "-m", "main change"]);
+
+    await expect(
+      rebaseOntoTarget({ repoRoot: repo.dir, branch: "task/rebase-conflict-log", target: "main", dispatch, log }),
+    ).rejects.toThrow();
+
+    await Promise.resolve();
+
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("onConflict hook failed during rebase"));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("rebase conflict hook failed"));
+  });
+
   test("dispatch ctx contains expected fields", async () => {
     const wtPath = join(repo.dir, "wt-rebase");
     await createWorktree({ repoRoot: repo.dir, branch: "task/rebase-payload", path: wtPath });

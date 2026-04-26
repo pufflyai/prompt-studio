@@ -88,7 +88,10 @@ export const deleteWorkspaceWithWorktree = async (input: DeleteWorkspaceInput, d
   }
 
   if (dispatch) {
-    void dispatch.firePostHook("postWorktreeRemove", { ...payload, worktree_path: null }).catch(() => {});
+    void dispatch.firePostHook("postWorktreeRemove", { ...payload, worktree_path: null }).catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      deps.log(`postWorktreeRemove hook failed: ${message}`);
+    });
   }
 
   deps.log(`Deleted workspace ${workspaceShorthand}`);

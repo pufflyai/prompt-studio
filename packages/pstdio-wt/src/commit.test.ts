@@ -154,4 +154,23 @@ describe("commitChanges", () => {
       }),
     );
   });
+
+  test("logs post-commit hook failures", async () => {
+    const wtPath = join(repo.dir, "wt-commit");
+    await createWorktree({ repoRoot: repo.dir, branch: "task/hook-post-log", path: wtPath });
+
+    const dispatch: HookDispatch = {
+      firePreHook: mock(() => Promise.resolve({ rejected: false })),
+      firePostHook: mock(() => Promise.reject(new Error("post hook failed"))),
+    };
+    const log = mock();
+
+    await Bun.write(join(wtPath, "file.txt"), "content");
+    await commitChanges({ worktreePath: wtPath, message: "with hook", repoPath: repo.dir, dispatch, log });
+
+    await Promise.resolve();
+
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("postCommit hook failed"));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("post hook failed"));
+  });
 });
