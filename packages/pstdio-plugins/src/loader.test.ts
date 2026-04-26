@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadPlugins } from "./loader";
@@ -105,5 +105,43 @@ describe("loadPlugins", () => {
     await expect(loadPlugins(dir)).rejects.toThrow(
       'Plugin "bad-schedule" schedule "broken" has invalid cron expression: "0 0 0 * * *"',
     );
+  });
+
+  test("reloads edited plugin modules in the same process", async () => {
+    const dir = createTempDir();
+    const filePath = join(dir, "reloaded.ts");
+
+    writeFileSync(
+      filePath,
+      `export default {
+        schedules: [{
+          name: "v1",
+          cron: "* * * * *",
+          handler() {},
+        }],
+      };`,
+    );
+
+    const first = await loadPlugins(dir);
+    expect(first[0]?.definition.schedules?.[0]?.name).toBe("v1");
+
+    writeFileSync(
+      filePath,
+      `export default {
+        schedules: [{
+          name: "v2",
+          cron: "0 0 * * *",
+          handler() {},
+        }],
+      };`,
+    );
+    const nextMtime = new Date(statSync(filePath).mtimeMs + 5_000);
+    utimesSync(filePath, nextMtime, nextMtime);
+
+    const second = await loadPlugins(dir);
+    expect(second[0]?.definition.schedules?.[0]?.name).toBe("v2");
+
+    const third = await loadPlugins(dir);
+    expect(third[0]?.definition.schedules?.[0]?.name).toBe("v2");
   });
 });

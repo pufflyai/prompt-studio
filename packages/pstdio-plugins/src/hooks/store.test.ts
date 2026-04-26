@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, renameSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { PstdioClient } from "@pstdio/sdk/client";
@@ -14,6 +14,21 @@ const createTempDir = () => {
 };
 
 const stubClient = () => ({}) as PstdioClient;
+
+const waitFor = async (assertion: () => Promise<void>) => {
+  const timeoutAt = Date.now() + 2_000;
+
+  while (Date.now() < timeoutAt) {
+    try {
+      await assertion();
+      return;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+  }
+
+  await assertion();
+};
 
 afterEach(() => {
   for (const dir of tempDirs) {
@@ -140,5 +155,57 @@ describe("createPluginRuntimeStore", () => {
     const runtime = await store.getForProject("project-1");
     const result = await runtime.hooks.firePre("preTicketCreation", {} as never);
     expect(result.rejected).toBe(true);
+  });
+
+  test("reloads runtime after watched plugin file edits", async () => {
+    const repoPath = createTempDir();
+    const pluginsDir = join(repoPath, ".pstdio", "plugins");
+    mkdirSync(pluginsDir, { recursive: true });
+    const filePath = join(pluginsDir, "foo.ts");
+
+    writeFileSync(
+      filePath,
+      `export default {
+        schedules: [{
+          name: "v1",
+          cron: "* * * * *",
+          handler() {},
+        }],
+      };`,
+    );
+
+    const store = createPluginRuntimeStore({
+      resolveRepoPath: async () => repoPath,
+      createClient: stubClient,
+    });
+
+    const first = await store.getForProject("project-1");
+    expect(first.schedules.list().map((schedule) => schedule.scheduleName)).toEqual(["v1"]);
+
+    const pendingPath = join(repoPath, "foo.next.ts");
+    writeFileSync(
+      pendingPath,
+      `export default {
+        schedules: [{
+          name: "v2",
+          cron: "0 0 * * *",
+          handler() {},
+        }],
+      };`,
+    );
+    renameSync(pendingPath, filePath);
+    const nextMtime = new Date(statSync(filePath).mtimeMs + 5_000);
+    utimesSync(filePath, nextMtime, nextMtime);
+
+    await waitFor(async () => {
+      const second = await store.getForProject("project-1");
+      expect(second.schedules.list().map((schedule) => schedule.scheduleName)).toEqual(["v2"]);
+    });
+
+    store.invalidate("project-1");
+    const third = await store.getForProject("project-1");
+    expect(third.schedules.list().map((schedule) => schedule.scheduleName)).toEqual(["v2"]);
+
+    store.dispose();
   });
 });
