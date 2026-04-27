@@ -11,7 +11,7 @@ The dashboard tickets panel is a status-grouped board for browsing, moving, crea
 
 ## Problem
 
-The legacy tickets PRD described display controls and alternate views that are not currently exposed in the shipped dashboard.
+Earlier tickets requirements described display controls and alternate views that are not currently exposed in the shipped dashboard.
 
 ## Goals
 
@@ -52,7 +52,7 @@ Ticket-card behavior and data-source rules are specified in `/product/dashboard/
 
 - Ticket statuses and tags come from the current project.
 - Ticket templates shown in the create modal come from project template assets with type `ticket`.
-- Template-based ticket creation reuses the last selected agent/model from project settings to create the refine session.
+- Template-based ticket creation reuses the last selected harness/model from project settings to create the refine session.
 
 ## Behavior
 
@@ -83,7 +83,7 @@ Ticket-card behavior and data-source rules are specified in `/product/dashboard/
 
 - The shipped UI currently uses the default display settings only: board view, grouping by status, and ordering `manual`.
 - Archived tickets are hidden instead of toggleable.
-- Implementation automation is configured through hooks, not through status metadata.
+- Implementation automation is configured through extension commands and events, not through status metadata.
 
 ## Errors
 

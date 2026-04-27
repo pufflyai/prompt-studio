@@ -2,30 +2,31 @@
 
 This page lists the current runtime APIs and key public types exported by `@pstdio/sdk` and its public subpaths.
 
-`@pstdio/sdk/api`, `@pstdio/sdk/resources`, and `@pstdio/sdk/hooks` are type-only entrypoints. They do not export runtime methods.
+`@pstdio/sdk/api` and `@pstdio/sdk/resources` are type-only entrypoints. They do not export runtime methods.
+
+## Extension Package Boundary
+
+`@pstdio/sdk` is generic platform substrate. It must not import from extension packages or export extension-specific contracts/clients. Extension packages may use the SDK and may publish their own contract or SDK subpaths, such as `@pstdio/pstdio-ext-planner/contract`.
+
+When an API surface is owned by an extension workflow, document the typed helpers under that extension package instead of adding them to this SDK reference.
 
 ## `@pstdio/sdk`
 
-The root export is a curated convenience surface.
-
-### `createClient(options?: ClientOptions)`
-
-Re-export of the main SDK client factory from `@pstdio/sdk/client`.
-
-### `new PstdioApiError(message: string, status: number)`
-
-Re-export of the SDK HTTP error class from `@pstdio/sdk/client`.
+The package currently publishes subpath exports only. Import from the specific entrypoint you need.
 
 ### Root Notes
 
-- Shared API, resource, and hook types are also available from the root entrypoint.
-- `definePlugin(...)`, plugin runtime helpers, `renderPrompt(...)`, `createRequest(...)`, `RequestFn`, and `ActionTargetMap` are not exported from the root. Import them from their dedicated subpaths.
+- Use `@pstdio/sdk/client` for the HTTP client.
+- Use `@pstdio/sdk/api` and `@pstdio/sdk/resources` for type-only imports.
+- Use `@pstdio/sdk/extensions` and `@pstdio/sdk/prompts` for their dedicated runtime helpers.
 
 ## `@pstdio/sdk/client`
 
 ### `createClient(options?: ClientOptions)`
 
-Creates a fully wired `PstdioClient` with `projects`, `tickets`, `workspaces`, `sessions`, `statuses`, `tags`, `templates`, `skills`, `agents`, and `actions`.
+Creates a fully wired `PstdioClient` with core API domain groups such as `projects`, `tickets`, `workspaces`, `sessions`, `statuses`, `tags`, `templates`, `skills`, `harnesses`, and `actions`.
+
+Extension-specific clients do not belong in `@pstdio/sdk/client`; they belong to the owning extension package SDK.
 
 ### `createRequest(options: ClientOptions)`
 
@@ -217,25 +218,25 @@ Lists skills installed for a project.
 
 Fetches a skill together with its content and installation metadata.
 
-### `client.agents.list()`
+### `client.harnesses.list()`
 
-Lists configured agents.
+Lists configured harness providers.
 
-### `client.agents.info()`
+### `client.harnesses.info()`
 
-Lists known agent definitions and their availability.
+Lists known harness provider definitions and their availability.
 
-### `client.agents.setup(input: SetupAgentInput)`
+### `client.harnesses.setup(input: SetupHarnessInput)`
 
-Creates initial configuration for an agent.
+Creates initial configuration for a harness provider.
 
-### `client.agents.update(agentId: string, input: UpdateAgentInput)`
+### `client.harnesses.update(harnessId: string, input: UpdateHarnessInput)`
 
-Updates an agent configuration.
+Updates a harness provider configuration.
 
-### `client.agents.delete(agentId: string)`
+### `client.harnesses.delete(harnessId: string)`
 
-Deletes an agent configuration.
+Deletes a harness provider configuration.
 
 ### `client.actions.list(projectId: string, targetType?: TargetType)`
 
@@ -245,107 +246,39 @@ Lists registered UI actions for a project, optionally filtered to a target type.
 
 Executes a registered action for the provided target within a project.
 
-## `@pstdio/sdk/plugins`
+## `@pstdio/sdk/extensions`
 
-`@pstdio/sdk/plugins` includes everything needed for project-local plugins.
+Generic v2 extension authoring primitives and runtime types.
 
-### `definePlugin(plugin: PluginDefinition)`
+### `defineExtension(extension: ExtensionDefinition)`
 
-Validates a plugin definition and returns it unchanged.
+Validates and returns an extension definition.
 
-### Key Types
+### `defineSlot(slot: SlotDefinition)`
 
-- `type ActionDefinition`
-- `type ActionDescriptor`
-- `type ActionPlacement`
-- `type ActionTargetMap`
-- `type ActionTriggerContext`
-- `type HookResponse`
-- `type PluginDefinition`
-- `type PluginHooks`
-- `type PostHookReturn`
-- `type PreHookReturn`
-- `type PullTicketsInput`
-- `type PullTicketsResult`
-- `type TargetType`
+Returns a generic slot definition owned by the surface that renders it.
 
-### Helper Context Contract
+### `defineEvent(event: EventDefinition)`
 
-All runtime helpers that accept `ctx` only depend on:
+Returns a generic event definition.
 
-```ts
-{
-  client: PstdioClient;
-  projectId: string;
-}
-```
+### `defineResource(resource: ResourceDefinition)`
 
-You pass the full `ctx` object as the first parameter, but the helper itself only requires `ctx.client` and `ctx.projectId`.
+Returns a generic resource definition.
 
-When `ctx` already carries the matching rich ticket or workspace object, helpers reuse that object before falling back to project-wide list lookups.
+### `packageAsset(sourcePath: string, baseUrl: string | URL)`
 
-`runCommand(...)` is the exception because it does not take `ctx`.
+Creates a package asset descriptor for read-only extension assets.
 
-### `createAttempt(ctx, input)`
+### `params`
 
-Resolves `input.ticketId` by id or shorthand, creates a ticket attempt, and forces `start_session: true`. Returns `null` when the ticket cannot be resolved.
+Factory helpers for generic command parameter definitions.
 
-### `createSession(ctx, input)`
+### Boundary Notes
 
-Creates a session and fills `project_id` from `ctx.projectId`.
-
-### `followupSession(ctx, { sessionId?, ...input })`
-
-Sends a follow-up to an existing session. Uses the explicit `sessionId` when provided, otherwise falls back to a session action target, `ctx.originalSessionId`, or `ctx.sessionId`.
-
-### `createWorkspace(ctx, input)`
-
-Resolves `input.ticketId` by id or shorthand, creates a workspace-only attempt, and forces `start_session: false`. Returns `null` when the ticket cannot be resolved.
-
-### `findTicketByRef(ctx, { ticketId? })`
-
-Looks up a ticket by id or shorthand within the current project. Reuses `ctx.ticket` or a ticket action target when one already matches.
-
-### `findWorkspaceByRef(ctx, { workspaceId? })`
-
-Looks up a workspace by id or workspace shorthand within the current project. Reuses `ctx.workspace` or a workspace action target when one already matches.
-
-### `workspacesForTicket(ctx, { ticketId? })`
-
-Lists workspaces whose `ticket_shorthand` matches the resolved ticket.
-
-### `getAttemptsForTicket(ctx, { ticketId? })`
-
-Alias of `workspacesForTicket(ctx, { ticketId? })`.
-
-### `removeAllWorktreesForTicket(ctx, { ticketId? })`
-
-Best-effort removes every worktree attached to the resolved ticket and returns the number removed.
-
-### `runCommand(cwd, command, options?)`
-
-Runs a command, captures `stdout` and `stderr` by default, and returns `{ exitCode, stdout, stderr }`. Supports
-`{ env?, quiet? }` options.
-
-### `setTicketStatus(ctx, { ticket, status })`
-
-Resolves the ticket and status name, updates the ticket, and returns `true` when both are found.
-
-### `setWorkspaceAttemptStatus(ctx, { workspaceId?, statusName, sessionId? })`
-
-Resolves the workspace, updates its attempt status, and returns `true` when the workspace is found. When `ctx.workspace` already matches, it uses that object directly instead of listing workspaces first.
-
-### `updateTicketWhenAllAttemptsMatch(ctx, { ticketId?, allAttemptsStatus, setStatus })`
-
-Uses the server-side `update-when-attempt-status` endpoint and returns the `updated` flag.
-
-### `pullTickets(ctx, { rootPath, ticketId?, force?, log? })`
-
-Pulls one ticket or all non-archived tickets into `.pstdio/tickets/...`, writes frontmatter, and downloads attachments.
-
-### `bootstrapWorktree(ctx, { repoPath, worktreePath, ticketId? })`
-
-Copies `.pstdio/config.json`, mirrors `.claude`, `.opencode`, and `.agents`, and optionally pulls the ticket into the worktree.
+- Generic extension primitives live here.
+- Workflow-specific slots, events, planner ticket-management contracts, and typed clients live in the owning extension package.
+- Planner integrations should import planner helpers from `@pstdio/pstdio-ext-planner/contract` or `@pstdio/pstdio-ext-planner/sdk`, not from `@pstdio/sdk/extensions`.
 
 ## `@pstdio/sdk/prompts`
 
@@ -359,5 +292,3 @@ Renders a prompt template with Mustache.
   Request and response types for client calls.
 - `@pstdio/sdk/resources`
   API resource shapes such as `Ticket`, `Session`, `Workspace`, and `Project`.
-- `@pstdio/sdk/hooks`
-  Hook context types such as `TicketContext`, `SessionHookContext`, `WorktreeContext`, and `AttemptStatusChangeContext`.

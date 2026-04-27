@@ -11,7 +11,7 @@ The ticket detail panel is the dashboard workspace for reading and editing one t
 
 ## Problem
 
-The old ticket detail PRD described broader editing behavior than the current UI actually exposes. The current doc should match the shipped panel.
+Earlier ticket detail requirements described broader editing behavior than the current UI actually exposes. This doc matches the shipped panel.
 
 ## Goals
 
@@ -61,7 +61,7 @@ The panel lives at `/projects/:projectId/tickets/:ticketShorthand`. It loads the
 ### Run Attempt Flow
 
 1. When no attempts exist, the header shows `Run attempt` and opens the create-workspace modal.
-2. Confirming run attempt calls `POST /v1/tickets/:ticket_id/attempts` with agent/repo/branch/model context.
+2. Confirming run attempt calls `POST /v1/tickets/:ticket_id/attempts` with harness/repo/branch/model context.
 3. On success, the modal closes and table-sync updates make the new attempt/session visible without manual refresh.
 4. On failure, the modal stays open and a toast is shown via `createAttemptDialog.error`.
 5. When attempts exist, the header button opens the latest workspace directly (`View workspace` behavior).

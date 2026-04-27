@@ -1,97 +1,75 @@
 # Control and Execution Planes
 
-pstdio intentionally splits orchestration from Git execution into two planes:
+Prompt Studio separates API-owned project state from repo-local execution.
 
-- **Control plane (API-managed):** session lifecycle, ticket/workspace records, status transitions, hook configuration read/write, and all database/storage-backed project state.
-- **Execution plane (repo-hosted):** Git operations and plugin hooks execute wherever the repository/worktree actually exists.
+- **Control plane (API-managed):** project records, tickets, statuses, sessions, workspace metadata, extension storage, activity, sync, and stateful extension command execution.
+- **Execution plane (repo-hosted):** Git operations, harness processes, and repo-context artifact IO that must run where the repository exists.
 
-This split explains why local projects still run Git commands on the developer machine even though lifecycle state is tracked through the API. The split does not permit client-side DB access: the API service remains the only database owner.
+This split does not permit client-side DB access. `pstdio-api` remains the only database owner.
 
-## Current architecture
+## Architecture
 
-```
-                  Control plane (always API)
+```txt
+                  Control plane (API owner)
 ┌───────────┐      HTTP/SSE      ┌───────────────┐
 │  Clients  │ ─────────────────► │   pstdio-api  │
 └─────┬─────┘                    └───────┬───────┘
       │                                  │
-      │                                  │ owns lifecycle + metadata
+      │                                  │ owns state + metadata
       │                                  ▼
       │                            ┌──────────────┐
       │                            │  pstdio-db   │
       │                            └──────────────┘
       │
-      │ execution request (merge/delete/commit/rebase/hook)
+      │ repo-local operation
       ▼
 ┌────────────────────────────────────────────────────────────┐
-│ Execution plane (where repo/worktree is mounted)          │
+│ Execution plane (where repo/workspace is mounted)          │
 │ - local mode: developer machine                            │
-│ - remote mode (future): server workspace VM/container      │
+│ - remote mode: server workspace VM/container               │
 └────────────────────────────────────────────────────────────┘
 ```
 
-## What runs in each plane
+## Ownership
 
-| Concern                                                         | Plane             | Current owner                                   |
-| --------------------------------------------------------------- | ----------------- | ----------------------------------------------- |
-| Session state changes (`in_progress`, `completed`, etc.)        | Control           | API                                             |
-| Ticket/workspace/session record persistence                     | Control           | API + DB                                        |
-| Extension storage, templates, skills, activity, sync state      | Control           | API + DB/storage                                |
-| Hook configuration read/write                                   | Control           | API                                             |
-| Worktree Git operations (`merge`, `delete`, `commit`, `rebase`) | Execution         | CLI + `pstdio-wt` in local mode                 |
-| Plugin hook execution                                           | Execution         | Same environment that executes lifecycle action |
-| `on-agent-ready` completion-triggered hook                      | Control-triggered | API-managed completion flow                     |
+| Concern | Plane | Owner |
+| --- | --- | --- |
+| Session state | Control | API |
+| Ticket/status/tag state | Control | API services behind extension contracts |
+| Workspace metadata | Control | API |
+| Extension command execution that persists state | Control | API + `pstdio-extensions` |
+| Extension storage, templates, skills, activity, sync | Control | API + DB/storage |
+| Git operations | Execution | CLI or remote workspace runner |
+| Repo-context artifact reads/writes | Execution | Artifact mount owner, path-normalized by kernel |
+| Harness process start/send/stop | Execution | Harness provider extension |
 
-## Why the split exists
+## Local Mode
 
-### Local mode (today)
+In local mode, repositories and workspaces live on the developer machine. Git and artifact operations execute locally, then report persisted state through API services.
 
-In local mode, the repository and worktrees live on the developer machine. Lifecycle operations that manipulate those Git objects therefore execute locally through the CLI and `pstdio-wt`.
+Rules:
 
-- API remains the source of truth for metadata/state.
-- API remains the only DB connection owner.
-- API does not own local Git command execution.
-- Hook execution follows the local lifecycle action environment.
+1. Local code may read and write repo-context artifacts through approved mounts.
+2. Local code must not open the DB or construct DB services.
+3. Any metadata, status, activity, sync, file-storage, session, workspace, or extension-storage mutation calls the API.
 
-See also: `architecture/worktrees.md` and `architecture/local-and-remote.md`.
+## Remote Mode
 
-### Remote mode (future)
+In remote mode, the execution plane moves to a server-side workspace environment. The control plane stays the same: API services still own state and business rules.
 
-In remote mode, the same lifecycle operations run where the remote workspaces live (server-side VM/container). The execution plane moves to the server environment, while control plane responsibilities stay API-managed.
+The same extension contracts apply in both modes. Only the execution location changes.
 
-- Hook execution moves with the lifecycle action to server-side.
-- API still owns record/state orchestration.
+## Extension Events and Commands
 
-See also: `architecture/local-and-remote.md`.
+Lifecycle customization is modeled with extension commands and extension events.
 
-## Hook locality rule
-
-Hook execution is co-located with lifecycle execution:
-
-1. If lifecycle action runs locally, hook runs locally.
-2. If lifecycle action runs server-side, hook runs server-side.
-
-This keeps hook behavior aligned with filesystem and Git context (working tree, branch, repo-local scripts).
-
-## `on-agent-ready` nuance
-
-`on-agent-ready` is tied to session completion logic, which is currently API-managed. That means its trigger point is determined by API session lifecycle semantics, even when other Git lifecycle actions execute locally.
-
-See `architecture/sessions.md` for completion behavior.
-
-## Alternative: API-only hook execution model
-
-A stricter model is possible: route all hook execution through the API only. That would require moving local lifecycle operations behind API execution/proxying so hook execution always occurs in the API-controlled runtime.
-
-Tradeoff summary:
-
-- **Pros:** single execution authority, simpler audit boundary.
-- **Cons:** additional proxying/infrastructure for local repos, tighter coupling between local filesystem operations and API runtime.
+- Commands are the executable primitive for CLI, UI, automation, and event handlers.
+- Events are facts emitted by the kernel or by the extension that owns a workflow.
+- Blocking behavior belongs in command validation or explicit policy checks.
 
 ## Rules
 
-1. **Control plane is always API-mediated.** Lifecycle state and records must be persisted through API flows.
-2. **Execution plane follows repo locality.** Git commands run where the repo/worktree is present.
-3. **Hooks run with lifecycle actions.** Hook runtime matches lifecycle execution runtime.
-4. **`on-agent-ready` is lifecycle-completion based.** Its trigger remains part of API-managed session completion.
-5. **Execution-plane code reports state through the API.** Local Git or artifact work may happen outside the API process, but any metadata, status, activity, sync, or storage mutation must call the API instead of opening the DB.
+1. **Control plane is always API-mediated.** Durable project state must be persisted through API flows.
+2. **Execution plane follows repo locality.** Git and repo-context artifact work run where the repo exists.
+3. **Stateful extension commands run through API execution.** CLI metadata can be local, but persisted behavior is API-owned.
+4. **Extension contracts own workflow semantics.** Ticket, planner, workspace, template, skill, and harness behavior is not hard-coded into the SDK.

@@ -19,7 +19,7 @@ Manage active workspaces for a project.
 This PRD describes the currently implemented CLI behavior, which is single-repo workspace management.
 
 Multi-repo behavior is tracked separately in draft form:
-`./workspaces-multi-repo-draft.md`.
+`./proposals/workspaces-multi-repo.md`.
 
 ---
 
@@ -67,9 +67,8 @@ pstdio workspaces create --id <ticket-shorthand> [--base <ref>] [--target worktr
 4. Creates a workspace via API and receives an allocated workspace shorthand (`<ticket>_A<n>`).
 5. Creates a local git worktree from the current repo root at `~/.pstdio/workspaces/<workspace-shorthand>/` on branch `workspace/<workspace-shorthand>`.
 6. Prints the created workspace shorthand and path.
-7. Backend runs the `postWorktreeCreate` plugin hook (if a plugin registers it in `.pstdio/plugins/`) inside the created worktree directory.
-8. If hook output exists, backend saves it as the workspace startup log.
-9. If the hook fails, workspace creation still succeeds.
+7. Workspace lifecycle behavior is exposed through extension commands and events. Workspace page composition belongs to the workspace shell extension.
+8. Startup logs and other persisted workspace metadata are saved through API-owned services.
 
 ### Output
 
@@ -190,10 +189,10 @@ pstdio workspaces delete --id <workspace-shorthand>
 1. Must run inside a git repository.
 2. Must run inside a linked pstdio project.
 3. Resolves workspace by shorthand.
-4. Runs `preWorktreeRemove` plugin hook if registered (blocking — rejection aborts deletion).
+4. Performs API-owned validation before deletion.
 5. Soft-deletes workspace metadata via API.
 6. Removes local worktree and workspace branch (force).
-7. Runs `post-remove` hook if exists (non-blocking).
+7. Emits workspace lifecycle activity/events through API-owned services.
 8. Prints completion message.
 
 ### Output

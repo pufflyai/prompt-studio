@@ -5,9 +5,9 @@ Prompt Studio is a local-first project management tool for AI-driven development
 ## What it does
 
 - **Projects** — organize work into isolated projects, each with its own configuration, tickets, and documentation.
-- **Agents** — define and manage AI coding agents that operate on your codebase.
-- **Tickets** — track tasks with statuses, tags, and templates, all stored as local files.
-- **Sessions** — capture agent work sessions with full history.
+- **Harnesses** — connect AI coding tools that operate on your codebase.
+- **Tickets** — track tasks with statuses, tags, templates, and repo-context artifacts.
+- **Sessions** — capture harness work sessions with full history.
 - **Documentation** — write and browse project docs from the CLI or dashboard.
 
 ## Quick start

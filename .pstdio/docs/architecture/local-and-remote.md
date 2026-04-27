@@ -1,10 +1,10 @@
 # Local and Remote Projects
 
-Each pstdio project is either **local** or **remote** — never both. The mode is set at creation time and determines where the API runs, where data lives, how workspaces are provisioned, and where agents run. A developer can have local and remote projects simultaneously, but a single project operates in exactly one mode.
+Each pstdio project is either **local** or **remote** — never both. The mode is set at creation time and determines where the API runs, where data lives, how workspaces are provisioned, and where harness providers run. A developer can have local and remote projects simultaneously, but a single project operates in exactly one mode.
 
 ## Local Projects
 
-A local project runs on the developer's machine. The API service, database, workspaces, and agent sessions are all local, but the DB is still owned by the API process only.
+A local project runs on the developer's machine. The API service, database, workspaces, and harness sessions are all local, but the DB is still owned by the API process only.
 
 ```
 Developer Machine
@@ -21,7 +21,7 @@ Developer Machine
 - **`repos.path`** points to the local clone on this machine. Used for worktree creation.
 - **`repos.remote`** stores the git remote URL (canonical identifier). Used to match repos across machines and for future cloud provisioning.
 - **Workspace creation** runs `git worktree add` against the local clone.
-- **Agent sessions** run locally (e.g. Claude Code subprocess).
+- **Harness sessions** run locally, for example through a Claude Code provider subprocess.
 
 ### Local Data Layout
 
@@ -45,7 +45,7 @@ Cloud
 ├── PostgreSQL DB (shared)
 └── Workspace VMs / Containers
     ├── Cloned repos (from remote URLs)
-    └── Agent sessions (cloud-hosted)
+    └── Harness sessions (cloud-hosted)
 
 Developer Machine
 ├── pstdio CLI / dashboard / future clients (talk to cloud API)
@@ -57,7 +57,7 @@ Developer Machine
 - **`repos.remote`** is the source of truth. Cloud workspace provisioners clone repos from `remote`.
 - **`repos.path`** is per-machine. Each developer's CLI stores its own local path for the repo. This enables local operations like `swap` and `merge` even when the workspace was created in the cloud.
 - **Workspace creation** happens server-side: spin up a VM/container, clone repos from `remote`, create branches.
-- **Agent sessions** run in the cloud workspace environment.
+- **Harness sessions** run in the cloud workspace environment.
 
 ## What Stays the Same
 

@@ -37,7 +37,7 @@
 │  ├─ merge.ts ────── ff-only or squash merge          │
 │  ├─ rebase.ts ───── rebase onto target               │
 │  ├─ status.ts ───── dirty / conflicts / ahead-behind │
-│  ├─ hooks.ts ────── lifecycle hook resolution + exec  │
+│  ├─ events.ts ───── lifecycle event/activity helpers  │
 │  ├─ setup.ts ────── run scripts inside a worktree    │
 │  ├─ default-branch.ts ── detect main/master          │
 │  └─ copy-ignored.ts ─── copy node_modules etc.       │
@@ -68,20 +68,19 @@ The CLI modules handle the **application logic** (API calls, DB records, user pr
     │               │               │               │              │
     ▼               ▼               ▼               ▼              ▼
 ┌────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌────────┐
-│ create │───▶│  agent   │───▶│  commit  │───▶│  merge   │───▶│ remove │
+│ create │───▶│ harness  │───▶│  commit  │───▶│  merge   │───▶│ remove │
 │Worktree│    │  works   │    │ Changes  │    │Worktree  │    │Worktree│
 └────────┘    └──────────┘    └──────────┘    └──────────┘    └────────┘
   ▲     │                      ▲     │         ▲     │        ▲     │
-  │     │                      │     │         │     │        │     │
- pre   post                   pre   post      pre   post     pre   post
-create create                commit commit   merge  merge   remove remove
-                                              │
-                                           on-conflict
+  │                            │              │              │
+  │                            │              │              │
+workspace                   activity       activity       activity
+events                      events         events         events
 ```
 
-### Hooks
+### Extension Events
 
-Hooks run automatically at each lifecycle stage. All hooks are SDK plugins in `.pstdio/plugins/` defined via `definePlugin`. `pre-*` hooks are blocking (non-zero exit or rejection aborts the operation). `post-*` hooks are non-blocking. See `.pstdio/docs/product/cli/hooks.md` for the full reference.
+Workspace lifecycle facts are exposed through extension events and activity records. Blocking behavior belongs in explicit command validation or policy checks before a Git operation starts.
 
 ## Key design choices
 

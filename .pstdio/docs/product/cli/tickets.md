@@ -29,13 +29,13 @@ Ticket payload fields have distinct meanings and must not be treated as intercha
 
 | Field         | Meaning                                                                                                |
 | ------------- | ------------------------------------------------------------------------------------------------------ |
-| `user_prompt` | The user's prompt text for tasking an agent. It is instruction context, not the canonical ticket body. |
+| `user_prompt` | The user's prompt text for tasking a harness provider. It is instruction context, not the canonical ticket body. |
 | `file_id`     | Reference to the canonical ticket content file stored in the `files` table.                            |
 | `content`     | The actual ticket body text stored in the file referenced by `file_id`.                                |
 
 Rules:
 
-1. `user_prompt` is only for agent tasking context (for example, `tickets write --user-prompt ...` or API `user_prompt`).
+1. `user_prompt` is only for harness tasking context (for example, `tickets write --user-prompt ...` or API `user_prompt`).
 2. Ticket body content is read from and written to the file referenced by `file_id`.
 3. Anywhere this PRD says "ticket content", it means the body stored in `file_id`.
 
@@ -159,7 +159,7 @@ pstdio tickets write --title <title> --template <template-name> --tag <tag>... [
 | `--template`    | `string`   | no       | Name of a template to use for the ticket body.                                  |
 | `--tag`         | `string[]` | no       | One or more tags to assign. Repeatable.                                         |
 | `--status`      | `string`   | no       | Status name to assign. Defaults to the project's default status.                |
-| `--user-prompt` | `string`   | no       | Agent-tasking prompt from the user. Replaces `{{USER_PROMPT}}` in the template. |
+| `--user-prompt` | `string`   | no       | Harness-tasking prompt from the user. Replaces `{{USER_PROMPT}}` in the template. |
 | `--parent-id`   | `string`   | no       | Parent ticket shorthand. Replaces `{{PARENT_ID}}` in the template.              |
 
 ### Behavior
@@ -696,13 +696,13 @@ pstdio tickets implement --id <ticket-shorthand> [--project-id <project-id>]
 
 1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
 2. Move the ticket status to `wip`.
-3. Launch the default configured agent to work on the ticket.
+3. Launch the default configured harness provider to work on the ticket.
 
 ### Output
 
 ```text
 Ticket PS-12 moved to wip
-Launching agent...
+Launching harness...
 ```
 
 ### Errors
@@ -710,7 +710,7 @@ Launching agent...
 - `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
 - `"Project not found: <project-id>"`: the given project ID does not exist.
 - `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
-- `"No agent configured. Run 'pstdio agents setup' first."`: no default agent is set up.
+- `"No harness configured. Run 'pstdio harnesses setup' first."`: no default harness provider is configured.
 
 ---
 

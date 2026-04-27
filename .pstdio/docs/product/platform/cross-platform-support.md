@@ -14,9 +14,9 @@ pstdio currently assumes a Unix environment (macOS / Linux). It should run corre
 
 Several parts of the codebase use Unix-specific APIs and conventions that fail or behave incorrectly on Windows:
 
-- Plugin hooks are loaded via `import()`, but any spawned processes may rely on Unix-specific tools.
+- Extension commands, harness providers, and artifact operations may spawn processes or touch paths that rely on Unix-specific tools.
 - Home directory resolution relies on `process.env.HOME`, which is undefined on Windows.
-- Agent binary detection uses the `which` command, unavailable on Windows.
+- Harness binary detection can use the `which` command, unavailable on Windows.
 - Path construction hardcodes forward-slash separators in places.
 - Signal handling uses `SIGTERM`, which Windows does not support in the same way.
 
@@ -24,25 +24,25 @@ Several CLI commands produce incorrect paths or crash on Windows.
 
 ## Goals
 
-- pstdio CLI, API server, and hooks run correctly on Windows, macOS, and Linux.
+- pstdio CLI, API server, extension commands, and harness providers run correctly on Windows, macOS, and Linux.
 - Existing Unix users experience no regressions.
-- Hook authoring remains simple — users should not need platform-specific boilerplate.
+- Extension authoring remains simple — users should not need platform-specific boilerplate.
 
 ## Non-Goals
 
 - Native Windows installer or MSI packaging.
-- PowerShell-native hook authoring (hooks are SDK plugins loaded via `import()`).
+- PowerShell-native extension authoring.
 - Windows-specific UI shell integration (e.g. Explorer context menus).
 
 ## Overview
 
 The changes fall into five areas, ordered by severity.
 
-### 1. Hook Execution
+### 1. Extension and Harness Execution
 
-**Current behavior:** hooks are SDK plugins (TypeScript/JavaScript modules) loaded via `import()`. This works cross-platform since Bun handles module loading on all platforms.
+**Target behavior:** extensions are TypeScript/JavaScript modules loaded by the extension runtime. Harness providers and command handlers must avoid Unix-only assumptions unless they explicitly guard them.
 
-**Remaining concern:** plugin hooks that spawn child processes (e.g. `Bun.spawn(["sh", ...])`) may use Unix-specific commands. Plugin authors should use cross-platform alternatives or guard platform-specific invocations.
+**Remaining concern:** extension commands or harness providers that spawn child processes (for example `Bun.spawn(["sh", ...])`) may use Unix-specific commands. Extension authors should use cross-platform alternatives or guard platform-specific invocations.
 
 ### 2. Home Directory Resolution
 
@@ -52,19 +52,19 @@ The changes fall into five areas, ordered by severity.
 
 **Affected locations:**
 
-- `packages/pstdio-agents/src/providers/claude-code/claude-code.ts` — session log paths
+- Claude Code harness provider package — session log paths
 - `packages/pstdio-api/src/features/tickets/endpoints/create-ticket-attempt.ts` — workspace base path
 - Any other location that reads `HOME` for filesystem paths
 
 ### 3. Binary Detection
 
-**Current behavior:** `spawnSync("which", [binary])` is used to check if agent binaries are installed.
+**Current behavior:** `spawnSync("which", [binary])` is used in some provider setup paths to check if binaries are installed.
 
 **Required behavior:** use `spawnSync("where", [binary])` on Windows, or use a cross-platform helper.
 
 **Affected locations:**
 
-- `packages/pstdio/src/adapters/cli/commands/agents/list.ts`
+- harness provider detection and setup paths
 
 ### 4. Path Separator Handling
 
@@ -74,7 +74,7 @@ The changes fall into five areas, ordered by severity.
 
 **Affected locations:**
 
-- `packages/pstdio-agents/src/providers/claude-code/claude-code.ts` — path sanitization regex
+- Claude Code harness provider package — path sanitization regex
 
 ### 5. Signal Handling
 
@@ -94,7 +94,7 @@ The changes fall into five areas, ordered by severity.
 ### Functional Requirements
 
 1. `pstdio` CLI commands execute without errors on Windows, macOS, and Linux.
-2. Plugin hooks (TypeScript/JavaScript modules) load and execute correctly on all three platforms.
+2. Extension modules and harness providers load and execute correctly on all three platforms.
 4. All filesystem path construction uses `path.join()` or `path.resolve()` — no hardcoded separators.
 5. Home directory is resolved via `os.homedir()` in all production code paths.
 6. The API server shuts down gracefully on all platforms.
@@ -110,12 +110,12 @@ The changes fall into five areas, ordered by severity.
 
 ## Known Issues
 
-- **No known hook-specific issues.** Hooks are SDK plugins loaded via `import()`, which works cross-platform.
+- Extension commands and harness providers still need an audit for Unix-only shell assumptions.
 
 ## Risks & Open Questions
 
 - **Bun on Windows maturity.** Bun's Windows support is still evolving. Some Bun APIs (e.g. `Bun.spawn`, signal handling) may behave differently. Verify against the Bun version pinned in the project.
-- **File permissions.** Unix file modes have no direct Windows equivalent. Plugin modules loaded via `import()` do not require executable permission.
+- **File permissions.** Unix file modes have no direct Windows equivalent. Extension modules loaded via `import()` do not require executable permission.
 
 ## Rollout Plan
 

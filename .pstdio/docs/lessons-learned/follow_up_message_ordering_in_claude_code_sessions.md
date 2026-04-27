@@ -17,10 +17,10 @@ Claude Code's `createMessageAccumulator` tracks an `indexOffset` so follow-up pa
 On persist, `buildMessagesFromPatches` merged these patches with `initialMessages` from the prior session file:
 
 ```typescript
-// initialMessages = [userA, agentA, agentB]
+// initialMessages = [userA, providerA, providerB]
 // patch: { op: "add", path: "/messages/0", value: userB }
 messages.splice(0, 0, userB);
-// Result: [userB, userA, agentA, agentB] — wrong order
+// Result: [userB, userA, providerA, providerB] — wrong order
 ```
 
 `splice(0, 0, msg)` inserted at position 0, pushing originals back.
@@ -50,4 +50,4 @@ const resolveMessagePatchIndexOffset = (patches, initialCount) => {
 
 ## Key insight
 
-Claude Code and OpenCode use fundamentally different EventStore patching strategies. Claude Code emits incremental offset-based patches (`add /messages/N`), while OpenCode replaces the full array atomically. Any code that processes patches must account for the offset-based pattern, especially when merging with prior persisted messages. See the "Message patching strategies" section in the agents architecture doc.
+Claude Code and OpenCode use fundamentally different EventStore patching strategies. Claude Code emits incremental offset-based patches (`add /messages/N`), while OpenCode replaces the full array atomically. Any code that processes patches must account for the offset-based pattern, especially when merging with prior persisted messages. See the "Message patching strategies" section in the harnesses architecture doc.

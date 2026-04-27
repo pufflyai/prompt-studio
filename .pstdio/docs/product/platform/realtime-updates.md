@@ -67,7 +67,7 @@ Heartbeats carry the latest sequence id to keep the connection warm.
 - `projects`
 - `repos`
 - `project_repos`
-- `agent_configs`
+- `harness_configs`
 - `ticket_statuses`
 - `tickets`
 - `ticket_tags`

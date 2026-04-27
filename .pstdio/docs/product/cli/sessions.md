@@ -14,17 +14,17 @@ This PRD documents session lifecycle commands, including create, list, view, fol
 
 ## Purpose
 
-Manage agent sessions from the terminal. Sessions track the lifecycle of a conversation between a user prompt and a coding agent, optionally anchored to a workspace.
+Manage harness sessions from the terminal. Sessions track the lifecycle of a conversation between a user prompt and an AI coding tool, optionally anchored to a workspace.
 Sessions can be archived directly (`sessions archive`) or indirectly when linked workspaces are archived by workspace or ticket flows.
 
 ---
 
 ## Terminology
 
-- **Session**: a DB record tracking a single agent conversation — prompt, status, agent type, and cached messages.
+- **Session**: a DB record tracking a single harness conversation — prompt, status, harness provider, and cached messages.
 - **Session ID**: pstdio's internal identifier for the session (`session.id`).
-- **Agent Session ID**: the external agent's own session/thread ID (e.g. Claude Code session, OpenCode thread).
-- **Workspace**: the execution environment where the agent operates. An instantiation of the project's repo configuration. A session optionally belongs to a workspace.
+- **Harness Session ID**: the external provider's own session/thread ID, such as a Claude Code session or OpenCode thread.
+- **Workspace**: the execution environment where the harness provider operates. An instantiation of the project's repo configuration. A session optionally belongs to a workspace.
 
 ---
 
@@ -34,11 +34,11 @@ Sessions can be archived directly (`sessions archive`) or indirectly when linked
 | ---------------------------- | ------------------------------------------------ |
 | `pstdio sessions view`      | Show session summary.                            |
 | `pstdio sessions list`      | List sessions for the current project.           |
-| `pstdio sessions create`    | Start a new project session and launch an agent. |
+| `pstdio sessions create`    | Start a new project session and launch a harness. |
 | `pstdio sessions follow-up` | Send a follow-up prompt to an existing session.  |
 | `pstdio sessions stream`    | Tail live session output in the terminal.        |
-| `pstdio sessions approve`   | Approve a pending agent tool permission request. |
-| `pstdio sessions deny`      | Deny a pending agent tool permission request.    |
+| `pstdio sessions approve`   | Approve a pending tool permission request.       |
+| `pstdio sessions deny`      | Deny a pending tool permission request.          |
 | `pstdio sessions stop`      | Gracefully stop a running session.               |
 | `pstdio sessions archive`   | Soft-delete a session.                           |
 
@@ -76,7 +76,7 @@ pstdio sessions view --id <session-id>
 ```text
 Session:     s_abc123
 Status:      completed
-Agent:       claude-code
+Harness:     claude-code
 Workspace:   PS-12_A1
 Ticket:      PS-12
 Branch:      workspace/PS-12_A1
@@ -101,7 +101,7 @@ When the session is `in_progress`, the `Finished` line is omitted.
 ### Usage
 
 ```sh
-pstdio sessions list [--project-id <project-id>] [--status <status>] [--agent <agent>] [--workspace-id <workspace-id>] [--archived]
+pstdio sessions list [--project-id <project-id>] [--status <status>] [--harness <harness>] [--workspace-id <workspace-id>] [--archived]
 ```
 
 ### Flags
@@ -110,7 +110,7 @@ pstdio sessions list [--project-id <project-id>] [--status <status>] [--agent <a
 | ---------------- | --------- | -------- | ----------------------------------------------------------------------------------------------- |
 | `--project-id`   | `string`  | no       | Target project. Defaults to the current project from `.pstdio/config.json`.                     |
 | `--status`       | `string`  | no       | Filter by session status (`in_progress`, `awaiting_input`, `completed`, `failed`, `cancelled`). |
-| `--agent`        | `string`  | no       | Filter by agent type (`claude-code`, `opencode`).                                               |
+| `--harness`      | `string`  | no       | Filter by harness provider (`claude-code`, `opencode`).                                         |
 | `--workspace-id` | `string`  | no       | Filter by workspace ID or shorthand.                                                            |
 | `--archived`     | `boolean` | no       | Include archived sessions. Excluded by default.                                                 |
 
@@ -124,7 +124,7 @@ pstdio sessions list [--project-id <project-id>] [--status <status>] [--agent <a
 ### Output
 
 ```text
-ID           Status        Agent         Workspace   Ticket   Started
+ID           Status        Harness       Workspace   Ticket   Started
 s_abc123     completed     claude-code   PS-12_A1    PS-12    2026-03-05T10:00:00Z
 s_def456     in_progress   opencode      PS-13_A1    PS-13    2026-03-05T11:30:00Z
 s_ghi789     failed        claude-code   -           -        2026-03-05T12:00:00Z
@@ -148,19 +148,19 @@ No sessions found.
 ### Usage
 
 ```sh
-pstdio sessions create --prompt <prompt> [--title <title>] [--workspace-id <workspace-id>] [--project-id <project-id>] [--agent <agent>] [--model <model>]
+pstdio sessions create --prompt <prompt> [--title <title>] [--workspace-id <workspace-id>] [--project-id <project-id>] [--harness <harness>] [--model <model>]
 ```
 
 ### Flags
 
 | Flag             | Type     | Required | Description                                                                                                     |
 | ---------------- | -------- | -------- | --------------------------------------------------------------------------------------------------------------- |
-| `--prompt`       | `string` | yes      | The initial prompt to send to the agent.                                                                        |
+| `--prompt`       | `string` | yes      | The initial prompt to send to the harness provider.                                                             |
 | `--title`        | `string` | no       | Session title. When omitted, derived from the first ~50 characters of `--prompt`.                               |
 | `--workspace-id` | `string` | no       | Workspace ID or shorthand to attach the session to (e.g. `PS-12_A1`).                                          |
 | `--project-id`   | `string` | no       | Target project. Defaults to the current project from `.pstdio/config.json`.                                     |
-| `--agent`        | `string` | no       | Agent to use (`claude-code`, `opencode`). Defaults to the global default agent from `agent_configs.is_default`. |
-| `--model`        | `string` | no       | Model override for the agent (e.g. `claude-haiku-4-5-20251001`).                                                |
+| `--harness`      | `string` | no       | Harness provider to use (`claude-code`, `opencode`). Defaults to the global default harness provider.           |
+| `--model`        | `string` | no       | Model override for the harness provider (e.g. `claude-haiku-4-5-20251001`).                                     |
 
 ### Behavior
 
@@ -169,14 +169,14 @@ pstdio sessions create --prompt <prompt> [--title <title>] [--workspace-id <work
 1. Resolve the workspace from `--workspace-id`.
 2. Verify the workspace has no active session (i.e. `session_id` is null or the linked session is not `in_progress`).
 3. Call `POST /api/sessions` with the workspace ID and provided parameters.
-4. The API creates the session with status `in_progress`, links it to the workspace (`workspaces.session_id`), and starts the agent in the workspace root directory (`~/.pstdio/workspaces/<shorthand>/`).
+4. The API creates the session with status `in_progress`, links it to the workspace, and starts the harness provider in the workspace root directory (`~/.pstdio/workspaces/<shorthand>/`).
 5. Print the session ID and workspace info.
 
 **Without `--workspace-id`:**
 
 1. Resolve the project from `--project-id` or `.pstdio/config.json`.
 2. Call `POST /api/sessions` with the provided parameters.
-3. The API creates the session with status `in_progress` and starts the agent at the project root.
+3. The API creates the session with status `in_progress` and starts the harness provider at the project root.
 4. Print the session ID.
 
 ### Output
@@ -186,7 +186,7 @@ With a workspace:
 ```text
 Created session s_abc123
 Workspace: PS-12_A1
-Agent:     claude-code
+Harness:   claude-code
 Status:    in_progress
 ```
 
@@ -194,7 +194,7 @@ Without a workspace:
 
 ```text
 Created session s_abc123
-Agent:     claude-code
+Harness:   claude-code
 Status:    in_progress
 ```
 
@@ -204,7 +204,7 @@ Status:    in_progress
 - `"Project not found: <project-id>"`: the given project ID does not exist.
 - `"Workspace not found: <workspace-id>"`: the given workspace does not exist.
 - `"Workspace already has an active session: <session-id>"`: the workspace is already running a session.
-- `"No agent configured. Set a default agent with 'pstdio agents setup' first."`: no default agent in `agent_configs` and none specified via `--agent`.
+- `"No harness configured. Set a default harness with 'pstdio harnesses setup' first."`: no default harness provider is configured and none was specified.
 
 ---
 
@@ -213,7 +213,7 @@ Status:    in_progress
 ### Usage
 
 ```sh
-pstdio sessions follow-up --id <session-id> --prompt <prompt> [--agent <agent>] [--model <model>]
+pstdio sessions follow-up --id <session-id> --prompt <prompt> [--harness <harness>] [--model <model>]
 ```
 
 ### Flags
@@ -222,22 +222,22 @@ pstdio sessions follow-up --id <session-id> --prompt <prompt> [--agent <agent>] 
 | ---------- | -------- | -------- | -------------------------------------------------------------------- |
 | `--id`     | `string` | yes      | The session ID to continue.                                          |
 | `--prompt` | `string` | yes      | The follow-up prompt.                                                |
-| `--agent`  | `string` | no       | Switch agent for this follow-up. Clears previous `agent_session_id`. |
-| `--model`  | `string` | no       | Model override for the agent.                                        |
+| `--harness` | `string` | no       | Switch harness provider for this follow-up. Clears previous `harness_session_id`. |
+| `--model`   | `string` | no       | Model override for the harness provider.                                      |
 
 ### Behavior
 
 1. Call `POST /api/sessions/:session_id/follow-up` with the provided parameters.
-2. The API sets the session back to `in_progress` and sends the prompt to the agent.
-3. The agent runs in the session's workspace root directory if a workspace is linked, otherwise at the project root.
-4. If `--agent` differs from the current session agent, the API clears the previous `agent_session_id` and starts a new agent session.
+2. The API sets the session back to `in_progress` and sends the prompt to the harness provider.
+3. The harness provider runs in the session's workspace root directory if a workspace is linked, otherwise at the project root.
+4. If `--harness` differs from the current session harness, the API clears the previous `harness_session_id` and starts a new harness session.
 5. Print confirmation.
 
 ### Output
 
 ```text
 Follow-up sent to session s_abc123
-Agent:  claude-code
+Harness: claude-code
 Status: in_progress
 ```
 
@@ -266,7 +266,7 @@ pstdio sessions stream --id <session-id>
 
 1. Connect to `GET /api/sessions/:session_id/stream` via SSE.
 2. Wait for the `ready` event (`{ sessionId }`).
-3. Stream incoming `patch` events to the terminal, rendering agent output as it arrives.
+3. Stream incoming `patch` events to the terminal, rendering provider output as it arrives.
 4. If an `approval_request` event arrives, print the request details and note that approval must be handled via `pstdio sessions approve --id <session-id>`.
 5. When the server sends an `end` event, print the session's final status and exit.
 6. On connection error, print the error and exit with code `1`.
@@ -277,7 +277,7 @@ pstdio sessions stream --id <session-id>
 | ------------------ | ------------------------------------------------- | --------------------------------- |
 | `ready`            | `{ sessionId }`                                   | Connection established.           |
 | `patch`            | `{ op, path, value }`                             | JSON patch for message updates.   |
-| `approval_request` | `{ id, toolName, toolInput, toolUseId }`          | Agent requests tool permission.   |
+| `approval_request` | `{ id, toolName, toolInput, toolUseId }`          | Provider requests tool permission. |
 | `heartbeat`        | `{}`                                              | Keep-alive.                       |
 | `end`              | `{ status }`                                      | Session finished, stream closing. |
 
@@ -286,7 +286,7 @@ pstdio sessions stream --id <session-id>
 ```text
 Streaming session s_abc123...
 
-[agent output streamed in real-time]
+[provider output streamed in real-time]
 
 Session s_abc123 completed.
 ```
@@ -296,7 +296,7 @@ When the session requires approval:
 ```text
 Streaming session s_abc123...
 
-[agent output]
+[provider output]
 
 ⏸ Awaiting approval — use 'pstdio sessions approve --id s_abc123' to continue.
 ```
@@ -333,7 +333,7 @@ pstdio sessions approve --id <session-id>
 1. Fetch the session from the database.
 2. Verify the session status is `awaiting_input`.
 3. Send `POST /api/sessions/:session_id/approve` with `{ decision: "approve" }`.
-4. The API forwards the approval to the agent and sets the session back to `in_progress`.
+4. The API forwards the approval to the harness provider and sets the session back to `in_progress`.
 
 ### Output
 
@@ -368,7 +368,7 @@ pstdio sessions deny --id <session-id>
 1. Fetch the session from the database.
 2. Verify the session status is `awaiting_input`.
 3. Send `POST /api/sessions/:session_id/approve` with `{ decision: "deny" }`.
-4. The API forwards the denial to the agent and sets the session back to `in_progress`.
+4. The API forwards the denial to the harness provider and sets the session back to `in_progress`.
 
 ### Output
 
@@ -403,8 +403,8 @@ pstdio sessions stop --id <session-id>
 1. Fetch the session from the database.
 2. Verify the session status is `in_progress` or `awaiting_input`.
 3. Send `POST /api/sessions/:session_id/stop`.
-4. The API sends a graceful shutdown signal to the agent process.
-5. If the agent does not exit within 30 seconds, the API force-kills the process.
+4. The API sends a graceful shutdown signal to the provider process.
+5. If the provider process does not exit within 30 seconds, the API force-kills the process.
 6. The session status is set to `cancelled`.
 
 ### Output
@@ -457,7 +457,7 @@ Archived session s_abc123
 
 | Table        | Description                                                                                                  |
 | ------------ | ------------------------------------------------------------------------------------------------------------ |
-| `sessions`   | Session lifecycle metadata (`status`, `agent`, `agent_session_id`, `archived`).                              |
+| `sessions`   | Session lifecycle metadata (`status`, `harness`, `harness_session_id`, `archived`).                           |
 | `workspaces` | Workspace links to session via `session_id`. Updated by `sessions create` when `--workspace-id` is provided. |
 
 ---

@@ -8,7 +8,7 @@ Remove vitest from the monorepo. Use `bun test` as the single test runner for al
 
 The monorepo used two test frameworks:
 
-- **bun test** — 7 packages (pstdio, pstdio-api, pstdio-db, pstdio-wt, pstdio-storage, pstdio-agents, landing-page)
+- **bun test** — workspace package test suites
 - **vitest** — 2 packages (ui, pstdio-dashboard)
 
 The vitest usage was minimal:

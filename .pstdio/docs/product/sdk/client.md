@@ -1,6 +1,8 @@
 # Client
 
-The SDK client provides typed methods for every pstdio API endpoint.
+The SDK client provides typed methods for core pstdio API endpoints.
+
+Extension-specific clients do not belong in `@pstdio/sdk/client`. Extensions may use the SDK request helpers and publish their own typed clients from the owning extension package, such as `@pstdio/pstdio-ext-planner/sdk`.
 
 ## Creating a Client
 
@@ -36,7 +38,7 @@ client.statuses; // Status CRUD
 client.tags; // Tag and tag option CRUD
 client.templates; // Template CRUD
 client.skills; // Skill listing (read-only)
-client.agents; // Agent configuration
+client.harnesses; // Harness provider configuration
 client.actions; // Action listing and execution
 ```
 
@@ -63,7 +65,7 @@ await client.tickets.delete(ticketId);
 
 // Attempts
 const attempt = await client.tickets.createAttempt(ticketId, {
-  agent: "claude-code",
+  harness: "claude-code",
   mode: "worktree",
   start_session: true,
 });
@@ -86,7 +88,7 @@ const created = await client.sessions.create(projectId, {
   project_id: projectId,
   title: "Fix the bug",
   prompt: "Please fix the login page",
-  agent: "claude-code",
+  harness: "claude-code",
 });
 
 await client.sessions.followUp(sessionId, { prompt: "Also fix the logout" });
@@ -149,12 +151,12 @@ const skills = await client.skills.list(projectId);
 const skill = await client.skills.get(projectId, skillId);
 ```
 
-## Agents
+## Harnesses
 
 ```ts
-const agents = await client.agents.list();
-const info = await client.agents.info();
-await client.agents.setup({ agent_id: "claude-code" });
+const harnesses = await client.harnesses.list();
+const info = await client.harnesses.info();
+await client.harnesses.setup({ harness_id: "claude-code" });
 ```
 
 ## Error Handling

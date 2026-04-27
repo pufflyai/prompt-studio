@@ -14,7 +14,7 @@ This PRD documents project lifecycle commands for create, link, list, unlink, an
 
 ## Purpose
 
-Manage pstdio projects. A project groups repos, docs, tickets, and agent configurations under a single ID.
+Manage pstdio projects. A project groups repos, docs, tickets, and harness provider configurations under a single ID.
 
 ---
 
@@ -49,7 +49,7 @@ pstdio projects create [name]
 4. Reuses the existing `repos` row if one matches by `remote` (preferred) or `path`, otherwise inserts a new one, then links it via `project_repos`.
 5. Writes `.pstdio/config.json` with the project ID.
 6. Scaffolds starter docs at `.pstdio/docs/`.
-7. Installs default skills for each configured agent.
+7. Installs default skills for each configured harness provider.
 
 ### Output
 
@@ -86,7 +86,7 @@ pstdio projects link --project-id <project-id>
 4. When re-linking from one project ID to another, removes local `.pstdio/tickets/`.
 5. Writes `.pstdio/config.json`.
 6. If `.pstdio/docs/` does not exist locally, pull persisted docs. If no remote docs exist, scaffold starter docs instead.
-7. Install default skills for each configured agent.
+7. Install default skills for each configured harness provider.
 
 ### Output
 
@@ -489,6 +489,6 @@ Both `create` and `link` write the following local files and directories:
 | `.pstdio/config.json`          | Project configuration with `project_id`.    |
 | `.pstdio/docs/navigation.json` | Documentation navigation tree.              |
 | `.pstdio/docs/index.md`        | Starter documentation page.                 |
-| `.<agent>/skills/`             | Bundled pstdio skills per configured agent. |
+| `.<provider>/skills/`          | Bundled pstdio skills per configured harness provider. |
 
 During `link`, when the existing `.pstdio/config.json` points to a different project ID, the local `.pstdio/tickets/` directory is removed before the new config is written.

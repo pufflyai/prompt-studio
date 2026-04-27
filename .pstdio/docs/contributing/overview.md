@@ -142,7 +142,7 @@ The E2E config automatically starts:
 - API on a dynamically selected free localhost port
 - Dashboard on a dynamically selected free localhost port
 
-Agent-specific e2e behavior, including `E2E_AGENTS` and when real Claude or OpenCode sessions are started, is documented in [Tests](/contributing/tests).
+Harness-specific e2e behavior, including `E2E_HARNESSES` and when real Claude or OpenCode sessions are started, is documented in [Tests](/contributing/tests).
 
 ### E2E Tests (Electric + Postgres)
 

@@ -11,8 +11,8 @@
           "text": "CLI",
           "items": [
             {
-              "text": "Agents",
-              "link": "/product/cli/agents"
+              "text": "Harnesses",
+              "link": "/product/cli/harnesses"
             },
             {
               "text": "Feedback and Help",
@@ -55,53 +55,25 @@
               "link": "/product/cli/update"
             },
             {
-              "text": "Attempt Status Session Correlation (Draft)",
-              "link": "/product/cli/proposals/attempt-status-session-correlation"
-            },
-            {
-              "text": "Origin Session Tracking Contract (Draft)",
-              "link": "/product/cli/proposals/origin-session-tracking-contract"
-            },
-            {
               "text": "Workspaces Multi-Repo (Draft)",
-              "link": "/product/cli/workspaces-multi-repo-draft"
+              "link": "/product/cli/proposals/workspaces-multi-repo"
             }
           ]
         },
         {
-          "text": "Hooks",
+          "text": "Extensions",
           "items": [
             {
-              "text": "Reference",
-              "link": "/product/hooks/index"
+              "text": "Overview",
+              "link": "/product/extensions/index"
             },
             {
-              "text": "Events and Blocking",
-              "link": "/product/hooks/events"
-            },
-            {
-              "text": "Interface and Environment",
-              "link": "/product/hooks/interface"
-            },
-            {
-              "text": "Payload Schemas",
-              "link": "/product/hooks/payloads"
-            },
-            {
-              "text": "Attempt Status",
-              "link": "/product/hooks/attempt-status"
-            },
-            {
-              "text": "Attempt Status Hooks (Draft)",
-              "link": "/product/hooks/attempt-status-hooks-draft"
-            },
-            {
-              "text": "Hook Lifecycle Logging (Draft)",
-              "link": "/product/hooks/lifecycle-logging"
+              "text": "Planner",
+              "link": "/product/extensions/planner"
             },
             {
               "text": "Cookbook",
-              "link": "/product/hooks/cookbook"
+              "link": "/product/extensions/cookbook"
             }
           ]
         },
@@ -171,12 +143,12 @@
               "link": "/product/sdk/resources"
             },
             {
-              "text": "Plugins",
-              "link": "/product/sdk/plugins"
+              "text": "Extensions",
+              "link": "/product/sdk/extensions"
             },
             {
-              "text": "Cookbook",
-              "link": "/product/sdk/cookbook"
+              "text": "Extension Cookbook",
+              "link": "/product/extensions/cookbook"
             }
           ]
         },
@@ -203,12 +175,12 @@
           "link": "/architecture/api"
         },
         {
-          "text": "Agents",
-          "link": "/architecture/agents"
+          "text": "Harnesses",
+          "link": "/architecture/harnesses"
         },
         {
-          "text": "Hook Runtime Boundaries (Draft)",
-          "link": "/architecture/hooks-runtime-boundaries"
+          "text": "Extension Runtime Boundaries",
+          "link": "/architecture/extension-runtime-boundaries"
         },
         {
           "text": "Control and Execution Planes",
@@ -256,14 +228,6 @@
             {
               "text": "0001 Unified Bun Test",
               "link": "/adrs/0001-unified-bun-test"
-            },
-            {
-              "text": "0002 Dry Run Flag",
-              "link": "/adrs/0002-dry-run-flag"
-            },
-            {
-              "text": "0003 Replace Dry Run With Fake Agent",
-              "link": "/adrs/0003-replace-dry-run-with-fake-agent"
             }
           ]
         }
@@ -316,14 +280,6 @@
         {
           "text": "SSE Race in Project Creation",
           "link": "/lessons-learned/sse_race_in_project_creation"
-        },
-        {
-          "text": "Session Hooks Across Status Paths",
-          "link": "/lessons-learned/session_status_hooks_missing_on_secondary_paths"
-        },
-        {
-          "text": "Attempt Status Session Correlation",
-          "link": "/lessons-learned/attempt_status_session_correlation_in_concurrent_sessions"
         },
         {
           "text": "Follow-up Message Ordering in Claude Code Sessions",

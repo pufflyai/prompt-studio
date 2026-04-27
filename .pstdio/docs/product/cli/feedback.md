@@ -27,22 +27,22 @@ User invokes a command group without a subcommand.
 ### Behavior
 
 - Show group help text instead of throwing an error.
-- Applies to command groups such as `agents` and `projects`.
+- Applies to command groups such as `harnesses` and `projects`.
 - Does not apply to leaf commands that have no subcommands (for example, `close`).
 
 ### Example
 
 ```text
-$ pstdio agents
+$ pstdio harnesses
 
-pstdio agents [command]
+pstdio harnesses [command]
 
-Manage coding agents
+Manage harness providers
 
 Commands:
-  pstdio agents list    List configured agents and their status
-  pstdio agents setup   Set up agents for this project
-  pstdio agents remove  Remove agents from project configuration
+  pstdio harnesses list    List harness providers and availability
+  pstdio harnesses setup   Set up a harness provider
+  pstdio harnesses remove  Remove harness provider configuration
 ```
 
 ---
@@ -69,7 +69,7 @@ pstdio [command]
 
 Commands:
   pstdio                     Start API and dashboard, then open in browser
-  pstdio agents [command]    Manage coding agents
+  pstdio harnesses [command] Manage harness providers
   pstdio projects [command]  Manage projects
   ...
 ```

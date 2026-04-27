@@ -58,7 +58,7 @@ It loads project sessions, groups them by date in the left rail, and renders the
 
 ### Operational Requirements
 
-- The streaming view depends on the live session stream hook.
+- The streaming view depends on the live session stream client.
 - The panel should prefer fully loaded session details when available for downloads.
 
 ## Behavior

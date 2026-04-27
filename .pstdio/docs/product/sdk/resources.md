@@ -2,7 +2,7 @@
 
 The SDK exports TypeScript types for every platform entity. These match the API response shapes exactly (snake_case field names, same nullability).
 
-Import from `@pstdio/sdk/resources` or `@pstdio/sdk`.
+Import from `@pstdio/sdk/resources`.
 
 ## Project
 
@@ -87,8 +87,8 @@ type Session = {
   created: string | null
   last_request_started: string | null
   last_request_ended: string | null
-  agent: string | null
-  agent_session_id: string | null
+  harness: string | null
+  harness_session_id: string | null
   session_file_id: string | null
   original_session_id: string | null
   cwd: string | null
@@ -191,7 +191,7 @@ type Skill = {
 
 type SkillWithContent = Skill & {
   bundled_version: string
-  installed_agents: string[]
+  installed_harnesses: string[]
 }
 ```
 
@@ -200,19 +200,19 @@ Notes:
 - `files` is an ordered file-tree payload relative to the skill root.
 - `SKILL.md` is the required entrypoint file for valid skills.
 
-## Agent
+## Harness
 
 ```ts
-type AgentConfig = {
+type HarnessConfig = {
   id: string
-  agent_id: string
+  harness_id: string
   is_default: boolean
   config: string
   created_at: string
   updated_at: string
 }
 
-type AgentInfo = {
+type HarnessInfo = {
   id: string
   name: string
   availability: { type: "INSTALLED" | "NOT_FOUND" }

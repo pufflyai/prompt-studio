@@ -1,6 +1,6 @@
 # Projects
 
-A project is the top-level container in pstdio. It groups repos, tickets, docs, templates, workspaces, and agent configurations under a single ID.
+A project is the top-level container in pstdio. It groups repos, tickets, docs, templates, workspaces, and harness provider configurations under a single ID.
 
 ## Data Model
 
@@ -61,7 +61,7 @@ CLI                              API                         DB
 3. **Write local config** — `.pstdio/config.json` is written with the `project_id`.
 4. **Scaffold docs** — starter docs are created at `.pstdio/docs/`.
 5. **Seed templates** — bundled templates are uploaded to the project.
-6. **Install skills** — default skills are installed for each configured agent.
+6. **Install skills** — default skills are installed for each configured harness provider.
 
 ## Linking Additional Repos
 

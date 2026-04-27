@@ -78,6 +78,7 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 - If you modify **any package**, include a changeset for **`pstdio`** only; include **`@pstdio/ui`** or **`@pstdio/sdk`** only when those packages themselves change.
 - Run `bun changeset`, choose the semver bump (`patch`, `minor`, `major`), and write a **one-line changelog summary**.
 - **Do not manually edit `package.json` versions**.
+- No major bumps while we are in alpha
 
 ❌ Not allowed:
 

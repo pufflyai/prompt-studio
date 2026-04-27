@@ -17,7 +17,7 @@ DB Services    Storage Services
 
 ### DB Services (`*DBService`)
 
-Pure data-access functions. Each takes a `DbClient` and returns an object of query methods. No business logic, no events, no hooks.
+Pure data-access functions. Each takes a `DbClient` and returns an object of query methods. No business logic, no events, no extension command execution.
 
 - Package: `pstdio-db`
 - Naming: `create<Entity>DBService(db)` (e.g., `createSessionsDBService`, `createTicketsDBService`)
@@ -37,7 +37,7 @@ Pure filesystem operations — no database, no DB services.
 Orchestration layer. Each wraps one or more DB/storage services and adds:
 
 - EventBus emission on mutations
-- Lifecycle hooks (pre/post)
+- Activity and extension event emission where the domain owns the fact being recorded
 - Cross-entity coordination
 
 - Package: `pstdio-api/src/services/`
@@ -48,7 +48,7 @@ Orchestration layer. Each wraps one or more DB/storage services and adds:
 
 1. **Routes receive only domain services** via `RouteDeps`. Routes never import from `pstdio-db` or `pstdio-storage` directly.
 2. **Domain services compose from DB/storage services + infrastructure.** They are constructed in `app.ts` and injected into `RouteDeps`.
-3. **DB and storage services are stateless.** They don't know about events, hooks, or other services.
+3. **DB and storage services are stateless.** They don't know about events, extension commands, or other services.
 4. **Routes never access `db` directly.** All queries go through a domain service.
 5. **Clients never access DB or storage services.** CLI, dashboard, SDK consumers, future TUI, and extension command adapters call HTTP/SDK methods. They must not import `pstdio-db`, construct `*DBService`, or open the database.
 6. **The API process owns the database connection.** `app.ts` is the composition root that opens the DB, wires DB services, and closes the connection. This preserves the single local DB owner required by PGlite and keeps business rules in one process.
@@ -88,7 +88,9 @@ const deps = { sessionService, ticketService, ... };
 4. **app.ts** -- construct DB service, then domain service, add to `deps`.
 5. **Route handlers** -- use `deps.<entity>Service.*` methods.
 
-If a new client capability needs data, add or extend an API endpoint and expose it through `@pstdio/sdk` where practical. Do not add client-side DB access as a shortcut.
+If a new client capability needs data, add or extend an API endpoint. Expose core platform capabilities through `@pstdio/sdk` where practical. Expose extension-owned capabilities through the owning extension package contract or SDK, such as `@pstdio/pstdio-ext-planner/contract`; do not add extension-specific clients to `@pstdio/sdk` as a shortcut.
+
+Do not add client-side DB access as a shortcut.
 
 ## EventBus
 

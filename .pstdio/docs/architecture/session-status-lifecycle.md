@@ -47,11 +47,11 @@ The session chat view reads messages from a per-session SSE stream:
 
 1. Client opens `EventSource` to `/v1/sessions/:id/stream`.
 2. Server sends `patch` events (JSON patches for messages) and `approval_request` events.
-3. `useSessionStream` hook maintains local state for messages and streaming indicator.
+3. The session stream client helper maintains local state for messages and streaming indicator.
 
 Components on this path: `SessionChatView` (messages and streaming indicator only).
 
-`useSessionStream` does not expose session status. All visible status badges come from the DB sync path.
+The session stream helper does not expose session status. All visible status badges come from the DB sync path.
 
 ## Status transitions
 
@@ -66,7 +66,7 @@ create / follow-up ──► in_progress
         in_progress (on approval)                         in_progress (on follow-up)
 ```
 
-`disconnected` means the server lost the live process handle (timeout or restart) and could not reattach. The agent session still exists on the provider side; a follow-up sent by the user spawns a fresh resume and transitions the session back to `in_progress`.
+`disconnected` means the server lost the live process handle (timeout or restart) and could not reattach. The harness session still exists on the provider side; a follow-up sent by the user spawns a fresh resume and transitions the session back to `in_progress`.
 
 ### Who writes status
 
@@ -88,14 +88,12 @@ Session status can change through multiple paths, but each transition must run o
 
 1. Persist the new status in `sessions` (`sessionsService.updateStatus`).
 2. Emit sync event (`eventBus.emit("sessions", "set", updated)`).
-3. Fire the session lifecycle hook for that transition when `project_id` exists:
-   - `fireSessionStatusHook` for status hooks (`completed`, `failed`, `awaiting_input`)
-   - `fireSessionResumeHook` for resume transitions back to `in_progress`
+3. Record activity and emit extension-visible session events for the transition when `project_id` exists.
 
 Current paths that must follow this contract:
 
 - `PATCH /v1/sessions/:id/status` (`updateSessionStatusHandler`)
-- Agent process exit (`trackProcessExit`)
+- Harness provider process exit (`trackProcessExit`)
 - Startup orphan recovery (`resolveOrphanedSessions`)
 - Session create spawn failure fallback (`createSessionHandler` catch path)
 - Session follow-up transition to `in_progress` (`followUpSessionHandler`)
@@ -110,7 +108,7 @@ Event stores and process handles are **ephemeral** — they live in the `Session
 
 1. All `SessionStore` entries are lost.
 2. `trackProcessExit` callbacks never fire for sessions that were running.
-3. The DB retains `in_progress` for sessions whose agents already finished.
+3. The DB retains `in_progress` for sessions whose harness providers already finished.
 4. Badges on tickets stay stuck at `in_progress` permanently.
 
 ### The fix — startup sweep
@@ -130,19 +128,19 @@ For each session:
      no (process handle lost)
      │
      ▼
-  Agent advertises SessionReattach
-  and session has agent_session_id?
+  Harness provider advertises SessionReattach
+  and session has harness_session_id?
      │
-     ├── yes ──► agent.reattachSession() → re-subscribe to the agent's
+     ├── yes ──► provider reattach → re-subscribe to the provider's
      │            message stream; session stays "in_progress" and
      │            transitions naturally via trackProcessLifecycle.
      │
      └── no / reattach throws ──► "disconnected"
 ```
 
-Reattach is agent-specific. OpenCode supports it: the opencode server is a long-lived process holding the canonical message history, so the pstdio server can re-poll `getSessionMessages` and exit the poll loop when the trailing assistant message has `info.time.completed` set. Claude Code does not — the child process dies with the pstdio server and there is nothing to reattach to.
+Reattach is provider-specific. OpenCode supports it: the opencode server is a long-lived process holding the canonical message history, so the pstdio server can re-poll `getSessionMessages` and exit the poll loop when the trailing assistant message has `info.time.completed` set. Claude Code does not — the child process dies with the pstdio server and there is nothing to reattach to.
 
-A session in `disconnected` is not a dead end. The agent session still exists on the provider; a user follow-up spawns a fresh `resumeSession` and returns the session to `in_progress`.
+A session in `disconnected` is not a dead end. The harness session still exists on the provider; a user follow-up spawns a fresh resume and returns the session to `in_progress`.
 
 ### Structure
 
@@ -160,8 +158,8 @@ Each feature owns its startup logic. `createApp` makes one call. New tasks are o
 
 ## Rules
 
-1. **Badges always read from DB sync (Path 1).** Never from the session stream hook.
+1. **Badges always read from DB sync (Path 1).** Never from transient stream state.
 2. **Status writes always go through `sessionsService.updateStatus()` + `eventBus.emit()`.** Both calls are required — the DB update alone is invisible to clients until the next full sync.
 3. **Event stores are ephemeral.** Any logic that depends on an active `SessionStore` entry must handle the case where the entry is gone.
 4. **Stale recovery runs on startup.** Orphaned `in_progress` sessions are resolved proactively when the server boots, not lazily when a client opens a stream.
-5. **Reattach before disconnecting.** If the agent advertises `SessionReattach` and the session has an `agent_session_id`, `resolveOrphanedSessions` re-subscribes to the agent's live state. Only fall back to `disconnected` when reattach is unavailable or fails.
+5. **Reattach before disconnecting.** If the harness provider advertises `SessionReattach` and the session has a `harness_session_id`, `resolveOrphanedSessions` re-subscribes to the provider's live state. Only fall back to `disconnected` when reattach is unavailable or fails.

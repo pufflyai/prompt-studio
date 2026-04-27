@@ -4,7 +4,7 @@ The pstdio API (`pstdio-api`) is the single gateway between clients and the data
 
 ## Why a central API
 
-- **One source of truth.** The API owns the database connection, storage services, domain services, events, hooks, and sync emission. No client talks to the DB directly.
+- **One source of truth.** The API owns the database connection, storage services, domain services, extension command execution, activity, and sync emission. No client talks to the DB directly.
 - **Single DB connection.** The local PGlite database is process-local and must be opened by one long-lived API service, not by each client command or UI.
 - **Shared across clients.** The CLI, dashboard, and future clients hit the same endpoints, so behavior stays consistent.
 - **Decoupled clients.** Clients only depend on HTTP. Swapping the database, adding caching, or changing storage is invisible to them.
@@ -26,7 +26,7 @@ The pstdio API (`pstdio-api`) is the single gateway between clients and the data
           ┌───────────┼───────────┐
           ▼           ▼           ▼
     ┌──────────┐ ┌─────────┐ ┌────────┐
-    │ pstdio-db│ │ storage │ │ agents │
+    │ pstdio-db│ │ storage │ │harness │
     └──────────┘ └─────────┘ └────────┘
 ```
 
