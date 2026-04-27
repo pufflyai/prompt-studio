@@ -1,21 +1,23 @@
 # Local and Remote Projects
 
-Each pstdio project is either **local** or **remote** — never both. The mode is set at creation time and determines where data lives, how workspaces are provisioned, and where agents run. A developer can have local and remote projects simultaneously, but a single project operates in exactly one mode.
+Each pstdio project is either **local** or **remote** — never both. The mode is set at creation time and determines where the API runs, where data lives, how workspaces are provisioned, and where agents run. A developer can have local and remote projects simultaneously, but a single project operates in exactly one mode.
 
 ## Local Projects
 
-A local project runs entirely on the developer's machine. The database, workspaces, and agent sessions are all local.
+A local project runs on the developer's machine. The API service, database, workspaces, and agent sessions are all local, but the DB is still owned by the API process only.
 
 ```
 Developer Machine
 ├── pstdio CLI
+├── Dashboard / future clients
 ├── pstdio API (local server)
 ├── PGlite DB (~/.pstdio/data/)
 ├── Repo clones
 └── Workspaces (~/.pstdio/workspaces/*)
 ```
 
-- **DB is local-only.** The PGlite database lives on the developer's machine. It is not shared or synced.
+- **DB is local-only and API-owned.** The PGlite database lives on the developer's machine. It is not shared or synced, and clients do not open it directly.
+- **Clients use HTTP.** The CLI, dashboard, future TUI, SDK consumers, and extension command adapters talk to the local API server for project state and business logic.
 - **`repos.path`** points to the local clone on this machine. Used for worktree creation.
 - **`repos.remote`** stores the git remote URL (canonical identifier). Used to match repos across machines and for future cloud provisioning.
 - **Workspace creation** runs `git worktree add` against the local clone.
@@ -46,11 +48,12 @@ Cloud
     └── Agent sessions (cloud-hosted)
 
 Developer Machine
-├── pstdio CLI (talks to cloud API)
+├── pstdio CLI / dashboard / future clients (talk to cloud API)
 ├── Local repo clones (optional, for swap/merge)
 ```
 
 - **DB is shared.** All team members see the same projects, tickets, sessions, and workspaces.
+- **API remains the DB boundary.** Clients still use HTTP/SDK; they never connect to PostgreSQL directly.
 - **`repos.remote`** is the source of truth. Cloud workspace provisioners clone repos from `remote`.
 - **`repos.path`** is per-machine. Each developer's CLI stores its own local path for the repo. This enables local operations like `swap` and `merge` even when the workspace was created in the cloud.
 - **Workspace creation** happens server-side: spin up a VM/container, clone repos from `remote`, create branches.

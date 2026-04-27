@@ -44,6 +44,8 @@ features/
 
 Features are **imported by adapters**, never the other way around. A feature must never import from `adapters/`.
 
+CLI features are client-side helpers. They may resolve local config, read repo-context artifact files, and call API client functions, but they must not import `pstdio-db`, construct DB services, or duplicate API domain logic.
+
 ## Adapters
 
 An adapter translates between an external interface and the features it needs. Each adapter is specific to a delivery mechanism.
@@ -74,6 +76,7 @@ An adapter file:
 
 1. **Features never import from adapters.** The dependency arrow always points inward: adapter -> feature.
 2. **Adapters are thin.** Parsing input, calling features, formatting output. No business logic.
-3. **Features are testable in isolation.** They accept plain arguments and return plain values. Adapter-specific types (Yargs `Arguments`, React props) stay in the adapter.
-4. **One adapter directory per delivery mechanism.** If a new interface is added (e.g. a REST adapter, a WebSocket adapter), it gets its own directory under `adapters/`.
-5. **No duplicated domain logic in adapters.** If multiple adapters need the same logic (e.g. resolving a project ID, looking up a status by name), extract it to a feature function.
+3. **Features are API-mediated for project state.** Durable project state is read/written by calling the API. Client features must not access the database or API-internal services directly.
+4. **Features are testable in isolation.** They accept plain arguments and return plain values. Adapter-specific types (Yargs `Arguments`, React props) stay in the adapter.
+5. **One adapter directory per delivery mechanism.** If a new interface is added (e.g. a TUI adapter), it gets its own directory under `adapters/`.
+6. **No duplicated domain logic in adapters.** If multiple adapters need the same logic (e.g. resolving a project ID, looking up a status by name), extract client-only logic to a feature function. If it touches persisted project state, implement it in an API domain service and call it through an endpoint.

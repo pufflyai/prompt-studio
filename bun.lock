@@ -106,6 +106,7 @@
         "pstdio-agents": "workspace:*",
         "pstdio-api-contracts": "workspace:*",
         "pstdio-db": "workspace:*",
+        "pstdio-extensions": "workspace:*",
         "pstdio-logging": "workspace:*",
         "pstdio-plugins": "workspace:*",
         "pstdio-storage": "workspace:*",

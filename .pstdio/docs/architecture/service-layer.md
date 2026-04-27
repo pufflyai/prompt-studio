@@ -1,6 +1,6 @@
 # Service Layer
 
-The API uses a three-tier service architecture. Each tier has a clear responsibility and a naming convention that makes the layer obvious at a glance.
+The API uses a three-tier service architecture. Each tier has a clear responsibility and a naming convention that makes the layer obvious at a glance. These services are API-internal: clients do not construct them or import the DB package.
 
 ## Tiers
 
@@ -50,6 +50,8 @@ Orchestration layer. Each wraps one or more DB/storage services and adds:
 2. **Domain services compose from DB/storage services + infrastructure.** They are constructed in `app.ts` and injected into `RouteDeps`.
 3. **DB and storage services are stateless.** They don't know about events, hooks, or other services.
 4. **Routes never access `db` directly.** All queries go through a domain service.
+5. **Clients never access DB or storage services.** CLI, dashboard, SDK consumers, future TUI, and extension command adapters call HTTP/SDK methods. They must not import `pstdio-db`, construct `*DBService`, or open the database.
+6. **The API process owns the database connection.** `app.ts` is the composition root that opens the DB, wires DB services, and closes the connection. This preserves the single local DB owner required by PGlite and keeps business rules in one process.
 
 ## RouteDeps
 
@@ -85,6 +87,8 @@ const deps = { sessionService, ticketService, ... };
 3. **RouteDeps** -- add the domain service type to `features/deps.ts`.
 4. **app.ts** -- construct DB service, then domain service, add to `deps`.
 5. **Route handlers** -- use `deps.<entity>Service.*` methods.
+
+If a new client capability needs data, add or extend an API endpoint and expose it through `@pstdio/sdk` where practical. Do not add client-side DB access as a shortcut.
 
 ## EventBus
 

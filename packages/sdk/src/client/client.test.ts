@@ -31,6 +31,7 @@ describe("createClient", () => {
     expect(client.skills).toBeDefined();
     expect(client.agents).toBeDefined();
     expect(client.actions).toBeDefined();
+    expect(client.extensionCommands).toBeDefined();
   });
 
   it("client.projects.list calls GET /v1/projects", async () => {
@@ -179,5 +180,29 @@ describe("createClient", () => {
     expect(calls[0]!.url).toBe("http://test:1234/v1/projects/proj-1/templates/adr");
     expect(calls[0]!.method).toBe("PUT");
     expect(JSON.parse(calls[0]!.body!)).toEqual({ content: "# Updated", is_default: true });
+  });
+
+  it("client.extensionCommands.execute calls POST /v1/projects/:id/extension-commands/:commandId/execute", async () => {
+    const calls: { url: string; method: string; body?: string }[] = [];
+    const fetchFn = ((url: string, init?: RequestInit) => {
+      calls.push({
+        url: String(url),
+        method: init?.method ?? "GET",
+        body: init?.body as string | undefined,
+      });
+      return Promise.resolve(jsonResponse({ result: { ok: true } }));
+    }) as unknown as typeof fetch;
+    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+
+    await expect(
+      client.extensionCommands.execute("proj-1", "project.extension-lab.inspect", { params: { id: 1 } }),
+    ).resolves.toEqual({ ok: true });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toBe(
+      "http://test:1234/v1/projects/proj-1/extension-commands/project.extension-lab.inspect/execute",
+    );
+    expect(calls[0]!.method).toBe("POST");
+    expect(JSON.parse(calls[0]!.body!)).toEqual({ params: { id: 1 } });
   });
 });

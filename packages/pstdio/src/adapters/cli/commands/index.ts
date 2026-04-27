@@ -1,3 +1,4 @@
+import type { CommandModule } from "yargs";
 import * as agentsCommand from "./agents";
 import * as closeCommand from "./close";
 import * as extensionsCommand from "./extensions";
@@ -24,11 +25,12 @@ const staticTopLevelCommandModules = [
   templatesCommand,
   ticketsCommand,
   workspaceCommand,
-];
+] as CommandModule[];
 
 export const topLevelCommandModules = [...staticTopLevelCommandModules];
 
 export const topLevelStaticCommandNames = staticTopLevelCommandModules.map((commandModule) => {
-  const [name] = commandModule.command.split(" ");
+  const command = Array.isArray(commandModule.command) ? commandModule.command[0] : commandModule.command;
+  const [name] = command.split(" ");
   return name;
 });

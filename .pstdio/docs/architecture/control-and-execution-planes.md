@@ -2,17 +2,17 @@
 
 pstdio intentionally splits orchestration from Git execution into two planes:
 
-- **Control plane (API-managed):** session lifecycle, ticket/workspace records, status transitions, and hook configuration read/write.
+- **Control plane (API-managed):** session lifecycle, ticket/workspace records, status transitions, hook configuration read/write, and all database/storage-backed project state.
 - **Execution plane (repo-hosted):** Git operations and plugin hooks execute wherever the repository/worktree actually exists.
 
-This split explains why local projects still run Git commands on the developer machine even though lifecycle state is tracked through the API.
+This split explains why local projects still run Git commands on the developer machine even though lifecycle state is tracked through the API. The split does not permit client-side DB access: the API service remains the only database owner.
 
 ## Current architecture
 
 ```
                   Control plane (always API)
 ┌───────────┐      HTTP/SSE      ┌───────────────┐
-│    CLI    │ ─────────────────► │   pstdio-api  │
+│  Clients  │ ─────────────────► │   pstdio-api  │
 └─────┬─────┘                    └───────┬───────┘
       │                                  │
       │                                  │ owns lifecycle + metadata
@@ -36,6 +36,7 @@ This split explains why local projects still run Git commands on the developer m
 | --------------------------------------------------------------- | ----------------- | ----------------------------------------------- |
 | Session state changes (`in_progress`, `completed`, etc.)        | Control           | API                                             |
 | Ticket/workspace/session record persistence                     | Control           | API + DB                                        |
+| Extension storage, templates, skills, activity, sync state      | Control           | API + DB/storage                                |
 | Hook configuration read/write                                   | Control           | API                                             |
 | Worktree Git operations (`merge`, `delete`, `commit`, `rebase`) | Execution         | CLI + `pstdio-wt` in local mode                 |
 | Plugin hook execution                                           | Execution         | Same environment that executes lifecycle action |
@@ -48,6 +49,7 @@ This split explains why local projects still run Git commands on the developer m
 In local mode, the repository and worktrees live on the developer machine. Lifecycle operations that manipulate those Git objects therefore execute locally through the CLI and `pstdio-wt`.
 
 - API remains the source of truth for metadata/state.
+- API remains the only DB connection owner.
 - API does not own local Git command execution.
 - Hook execution follows the local lifecycle action environment.
 
@@ -92,3 +94,4 @@ Tradeoff summary:
 2. **Execution plane follows repo locality.** Git commands run where the repo/worktree is present.
 3. **Hooks run with lifecycle actions.** Hook runtime matches lifecycle execution runtime.
 4. **`on-agent-ready` is lifecycle-completion based.** Its trigger remains part of API-managed session completion.
+5. **Execution-plane code reports state through the API.** Local Git or artifact work may happen outside the API process, but any metadata, status, activity, sync, or storage mutation must call the API instead of opening the DB.

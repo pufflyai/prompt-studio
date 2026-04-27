@@ -84,19 +84,21 @@ describe("createExtensionCommandRegistry", () => {
     expect(registry.commandModules).toHaveLength(0);
   });
 
-  test("marks static path collisions as unavailable", () => {
+  test("keeps extension paths under static namespaces available for router merging", () => {
     const registry = createExtensionCommandRegistry({
       cli: [createContribution({ path: "tickets sync", pathSegments: ["tickets", "sync"] })],
       staticTopLevelCommands: ["tickets"],
     });
 
-    const issue = registry.unavailableByPath.get("tickets sync");
-    expect(issue).toBeDefined();
-    expect(issue?.reason).toBe("static_command_collision");
+    expect(registry.unavailableByPath.get("tickets sync")).toBeUndefined();
     expect(registry.commandModules).toHaveLength(0);
+    expect(registry.contributionsByNamespace.get("tickets")?.map((contribution) => contribution.subpath)).toEqual([
+      "sync",
+    ]);
+    expect(registry.availableByPath.get("tickets sync")?.commandId).toBe("extension-lab.inspect");
   });
 
-  test("marks duplicate static path collisions as static command collisions", () => {
+  test("marks duplicate extension paths under static namespaces as unavailable", () => {
     const registry = createExtensionCommandRegistry({
       cli: [
         createContribution({
@@ -117,9 +119,26 @@ describe("createExtensionCommandRegistry", () => {
 
     const issue = registry.unavailableByPath.get("extensions check");
     expect(issue).toBeDefined();
-    expect(issue?.reason).toBe("static_command_collision");
+    expect(issue?.reason).toBe("duplicate_extension_path");
     expect(issue?.extensionIds).toEqual(["extension-a", "extension-b"]);
     expect(registry.commandModules).toHaveLength(0);
+  });
+
+  test("formats top-level help metadata for extension commands", () => {
+    const registry = createExtensionCommandRegistry({
+      cli: [
+        createContribution({
+          description: "Inspect extension runtime state",
+          examples: ["pstdio extension-lab inspect --json"],
+        }),
+      ],
+      staticTopLevelCommands: ["extensions"],
+    });
+
+    expect(registry.topLevelHelp).toContain("extension-lab inspect");
+    expect(registry.topLevelHelp).toContain("id: extension-lab.inspect");
+    expect(registry.topLevelHelp).toContain("extension: extension-lab");
+    expect(registry.topLevelHelp).toContain("example: pstdio extension-lab inspect --json");
   });
 
   test("marks single-segment extension paths as unavailable", () => {
@@ -149,7 +168,7 @@ describe("formatUnavailableExtensionCommandMessage", () => {
       path: "extension-lab inspect",
       extensionIds: ["extension-lab"],
       commandIds: ["extension-lab.inspect"],
-      reason: "static_command_collision",
+      reason: "duplicate_extension_path",
     });
 
     expect(message).toContain('Extension command "extension-lab inspect" is unavailable');

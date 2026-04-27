@@ -1,5 +1,6 @@
 export type { ActionResult, ExecuteActionInput } from "./actions";
 export type { SetupAgentInput, SetupAvailableAgentsInput, UpdateAgentInput } from "./agents";
+export type { ExecuteExtensionCommandInput, ExecuteExtensionCommandResponse } from "./extension-commands";
 export type { CreateProjectInput, RegisterRepoInput } from "./projects";
 export type {
   ApprovalInput,

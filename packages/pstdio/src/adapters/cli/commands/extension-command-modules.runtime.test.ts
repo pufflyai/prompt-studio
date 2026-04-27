@@ -96,7 +96,9 @@ describe("runtime-backed extension command routing", () => {
     expect(help).toContain("example: pstdio extension-lab inspect --json");
     expect(help).not.toContain("pstdio pstdio");
   });
+});
 
+describe("runtime-backed extension command routing errors", () => {
   test("shows extension-aware error for duplicate extension paths", () => {
     const projectRoot = createProject();
     writeExtension(
@@ -218,7 +220,9 @@ describe("runtime-backed extension command routing", () => {
     expect(stderr).not.toContain("Unknown arguments");
     expect(stdout).toBe("");
   });
+});
 
+describe("runtime-backed extension command routing bootstrap", () => {
   test("does not load extension runtime for static commands with leading global options", () => {
     const cases = [
       { option: "--api-port", value: "5555" },
@@ -263,7 +267,7 @@ export default {
       const stderr = new TextDecoder().decode(output.stderr);
 
       expect(output.exitCode).toBe(0);
-      expect(stdout).toContain("Inspect local v2 extensions");
+      expect(stdout).toContain("Inspect local extensions");
       expect(stderr).toBe("");
       expect(existsSync(join(projectRoot, sideEffectFile))).toBe(false);
     }

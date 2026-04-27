@@ -1,15 +1,20 @@
 import { createClient } from "@pstdio/sdk/client";
-import { createDb } from "pstdio-db";
-import { loadExtensionRuntime, runExtensionCommand } from "pstdio-extensions";
-import yargs from "yargs";
+import { loadExtensionRuntime } from "pstdio-extensions";
+import yargs, { type CommandModule } from "yargs";
 import { hideBin } from "yargs/helpers";
 import { topLevelCommandModules, topLevelStaticCommandNames } from "./adapters/cli/commands";
 import * as dashboardCommand from "./adapters/cli/commands/dashboard";
 import {
+  findExtensionCommandHint,
+  formatMissingExtensionCommandMessage,
+  staticCommandPathsInExtensionNamespaces,
+  staticExtensionCommandNamespaces,
+} from "./adapters/cli/commands/extension-command-hints";
+import {
   createExtensionCommandRegistry,
   formatUnavailableExtensionCommandMessage,
+  mergeExtensionCommandsIntoStaticModules,
 } from "./adapters/cli/commands/extension-command-modules";
-import { createExtensionCommandSessions } from "./adapters/cli/commands/extension-command-sessions";
 import { API_URL } from "./features/api-url";
 import { CLI_VERSION } from "./features/cli-version";
 import { findGitRoot, readConfig } from "./features/config/config";
@@ -46,6 +51,18 @@ const applyApiPortFromArgs = (argv: Record<string, unknown>) => {
 const rawArgs = hideBin(process.argv);
 
 const globalOptionsWithValues = new Set(["--api-port", "--dashboard-port"]);
+const optionsWithoutValues = new Set(["--help", "-h", "--version"]);
+
+const optionName = (arg: string) => {
+  const equalsIndex = arg.indexOf("=");
+  return equalsIndex >= 0 ? arg.slice(0, equalsIndex) : arg;
+};
+
+const optionHasInlineValue = (arg: string) => arg.includes("=");
+const nextTokenIsValue = (args: string[], index: number) => {
+  const next = args[index + 1];
+  return typeof next === "string" && next !== "--" && !next.startsWith("-");
+};
 
 const resolveCommandPathFromRawArgs = (args: string[]) => {
   const pathSegments: string[] = [];
@@ -53,15 +70,16 @@ const resolveCommandPathFromRawArgs = (args: string[]) => {
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === "--") {
-      const remaining = args.slice(index + 1);
-      pathSegments.push(...remaining);
       break;
     }
 
     if (arg.startsWith("--")) {
-      const equalsIndex = arg.indexOf("=");
-      const optionName = equalsIndex >= 0 ? arg.slice(0, equalsIndex) : arg;
-      if (globalOptionsWithValues.has(optionName) && equalsIndex < 0) {
+      const name = optionName(arg);
+      const canConsumeValue =
+        !optionHasInlineValue(arg) &&
+        !optionsWithoutValues.has(name) &&
+        (globalOptionsWithValues.has(name) || pathSegments.length > 0);
+      if (canConsumeValue && nextTokenIsValue(args, index)) {
         index += 1;
       }
       continue;
@@ -81,9 +99,8 @@ const resolveTopLevelCommandFromRawArgs = (args: string[]) => {
     if (arg === "--") return args[index + 1] ?? null;
 
     if (arg.startsWith("--")) {
-      const equalsIndex = arg.indexOf("=");
-      const optionName = equalsIndex >= 0 ? arg.slice(0, equalsIndex) : arg;
-      if (globalOptionsWithValues.has(optionName) && equalsIndex < 0) {
+      const name = optionName(arg);
+      if (globalOptionsWithValues.has(name) && !optionHasInlineValue(arg)) {
         index += 1;
       }
       continue;
@@ -99,13 +116,19 @@ const resolveTopLevelCommandFromRawArgs = (args: string[]) => {
 
 const shouldLoadExtensionRuntimeForArgs = (args: string[]) => {
   const command = resolveTopLevelCommandFromRawArgs(args);
-  if (!command) return false;
-  return !topLevelStaticCommandNames.includes(command);
-};
+  const commandPath = resolveCommandPathFromRawArgs(args);
+  const asksForHelp = args.includes("--help") || args.includes("-h");
 
-const shouldShowUnavailableExtensionMessage = (
-  reason: "duplicate_extension_path" | "static_command_collision" | "unsupported_extension_path",
-) => reason !== "static_command_collision";
+  if (!command) return asksForHelp;
+  if (!topLevelStaticCommandNames.includes(command)) return true;
+  if (asksForHelp && staticExtensionCommandNamespaces.has(command) && commandPath === command) return true;
+  if (findExtensionCommandHint(commandPath)) return true;
+  if (staticExtensionCommandNamespaces.has(command) && commandPath.split(" ").length > 1) {
+    return !staticCommandPathsInExtensionNamespaces.has(commandPath);
+  }
+
+  return false;
+};
 
 const resolveProjectContext = () => {
   const root = findGitRoot(process.cwd());
@@ -118,7 +141,11 @@ const resolveProjectContext = () => {
 const projectContext = resolveProjectContext();
 const projectRoot = projectContext?.root ?? null;
 const shouldLoadExtensionRuntime = projectRoot ? shouldLoadExtensionRuntimeForArgs(rawArgs) : false;
-const extensionRuntime = shouldLoadExtensionRuntime && projectRoot ? await loadExtensionRuntime({ projectRoot }) : null;
+
+const loadedExtensionRuntime =
+  shouldLoadExtensionRuntime && projectRoot ? await loadExtensionRuntime({ projectRoot }) : null;
+const extensionRuntime = loadedExtensionRuntime;
+const disabledExtensionIds = new Set<string>();
 let extensionCommandArgv: Record<string, unknown> = {};
 const extensionCommands = createExtensionCommandRegistry({
   cli: extensionRuntime?.cli ?? [],
@@ -128,31 +155,28 @@ const extensionCommands = createExtensionCommandRegistry({
       throw new Error("Extension command execution requires a Prompt Studio project.");
     }
 
-    const connection = await createDb();
-    try {
-      const apiUrl = resolveApiUrl(extensionCommandArgv);
-      const client = createClient({ baseUrl: apiUrl, token: process.env.PSTDIO_API_TOKEN });
+    const apiUrl = resolveApiUrl(extensionCommandArgv);
+    applyApiPortFromArgs(extensionCommandArgv);
+    await ensureApi(apiUrl);
 
-      return await runExtensionCommand({
-        commands: extensionRuntime.commands,
-        db: connection.db,
-        projectId: projectContext.config.project_id,
-        commandId,
-        params,
-        sessions: createExtensionCommandSessions({
-          projectId: projectContext.config.project_id,
-          ensureApi: async () => {
-            applyApiPortFromArgs(extensionCommandArgv);
-            await ensureApi(apiUrl);
-          },
-          createSession: (input) => client.sessions.create(input),
-        }),
-      });
-    } finally {
-      await connection.close();
-    }
+    const client = createClient({ baseUrl: apiUrl, token: process.env.PSTDIO_API_TOKEN });
+    return client.extensionCommands.execute(projectContext.config.project_id, commandId, { params });
   },
 });
+
+const resolveMissingExtensionCommandMessage = (commandPath: string) => {
+  const hint = findExtensionCommandHint(commandPath);
+  if (!hint) return null;
+  if (extensionCommands.availableByPath.has(commandPath)) return null;
+
+  const disabled = disabledExtensionIds.has(hint.extensionId);
+  if (!disabled && staticCommandPathsInExtensionNamespaces.has(commandPath)) return null;
+
+  return formatMissingExtensionCommandMessage({
+    hint,
+    disabled,
+  });
+};
 
 const commandTracker = createCliCommandTracker({
   rawArgs,
@@ -166,10 +190,17 @@ const cli = yargs(rawArgs)
   .fail((msg, err, yargs) => {
     const commandPath = resolveCommandPathFromRawArgs(rawArgs);
     const unavailable = extensionCommands.unavailableByPath.get(commandPath);
-    if (unavailable && shouldShowUnavailableExtensionMessage(unavailable.reason)) {
+    if (unavailable) {
       const message = formatUnavailableExtensionCommandMessage(unavailable);
       commandTracker.logFailure(message);
       process.stderr.write(`Error: ${message}\n`);
+      process.exit(1);
+    }
+
+    const missingExtensionCommand = resolveMissingExtensionCommandMessage(commandPath);
+    if (missingExtensionCommand) {
+      commandTracker.logFailure(missingExtensionCommand);
+      process.stderr.write(`Error: ${missingExtensionCommand}\n`);
       process.exit(1);
     }
 
@@ -188,27 +219,40 @@ const cli = yargs(rawArgs)
     commandTracker.captureArgv(argv);
     commandTracker.logStart();
 
-    const commandPath = argv._.map((value) => String(value)).join(" ");
+    const commandPath = resolveCommandPathFromRawArgs(rawArgs);
     const unavailable = extensionCommands.unavailableByPath.get(commandPath);
-    if (unavailable && shouldShowUnavailableExtensionMessage(unavailable.reason)) {
+    if (unavailable) {
       throw new Error(formatUnavailableExtensionCommandMessage(unavailable));
+    }
+
+    const missingExtensionCommand = resolveMissingExtensionCommandMessage(commandPath);
+    if (missingExtensionCommand) {
+      throw new Error(missingExtensionCommand);
     }
 
     const topLevelCommand = argv._[0];
     if (shouldBypassApiBootstrap(topLevelCommand)) return;
-    if (shouldLoadExtensionRuntime) return;
+    if (shouldLoadExtensionRuntime) {
+      const asksForHelp = rawArgs.includes("--help") || rawArgs.includes("-h");
+      if (asksForHelp || extensionCommands.availableByPath.has(commandPath)) return;
+      if (!staticCommandPathsInExtensionNamespaces.has(commandPath)) return;
+    }
 
     applyApiPortFromArgs(argv);
     await ensureApi(resolveApiUrl(argv));
   })
   .command(dashboardCommand);
 
-for (const mod of topLevelCommandModules) {
-  // biome-ignore lint/suspicious/noExplicitAny: yargs CommandModule union requires cast
-  cli.command(mod as any);
+const commandModules = mergeExtensionCommandsIntoStaticModules({
+  staticCommandModules: topLevelCommandModules as unknown as CommandModule[],
+  registry: extensionCommands,
+});
+
+if (extensionCommands.topLevelHelp) {
+  cli.epilogue(extensionCommands.topLevelHelp);
 }
 
-for (const mod of extensionCommands.commandModules) {
+for (const mod of commandModules) {
   // biome-ignore lint/suspicious/noExplicitAny: yargs CommandModule union requires cast
   cli.command(mod as any);
 }
