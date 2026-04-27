@@ -61,6 +61,7 @@ const closeSessionBubble = async (page: import("@playwright/test").Page, project
 
 const navigateToTemplate = async (page: import("@playwright/test").Page, projectId: string, templateName: string) => {
   await bypassOnboarding(page);
+  await closeSessionBubble(page, projectId);
   await page.goto(`/projects/${projectId}/settings`);
   await page.getByText("Templates", { exact: true }).click();
   await page.getByText("Prompts", { exact: true }).click();

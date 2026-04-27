@@ -90,15 +90,15 @@ const mockApi = (
   globalThis.fetch = mock((input: string | URL | Request, init?: RequestInit) => {
     const { path, method } = getRequestDetails(input, init);
 
-    if (path === "/v1/agents" && method === "GET") {
+    if (path === "/v1/harnesses" && method === "GET") {
       return jsonResponse(agents);
     }
 
-    if (path === "/v1/agents/info") {
+    if (path === "/v1/harnesses/info") {
       return jsonResponse(options?.availableAgents ?? []);
     }
 
-    if (path === "/v1/agents/setup-available" && method === "POST") {
+    if (path === "/v1/harnesses/setup-available" && method === "POST") {
       return jsonResponse(options?.setupAvailableAgentsResponse ?? [], 201);
     }
 

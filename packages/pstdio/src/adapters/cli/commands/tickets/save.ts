@@ -1,24 +1,9 @@
-import { basename } from "node:path";
 import type { Arguments, Argv } from "yargs";
+import { pushPlannerTicket as defaultPushPlannerTicket } from "@/features/planner/api/push-ticket";
 import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
-import { updateTicket as defaultUpdateTicket } from "@/features/tickets/api/update-ticket";
-import { uploadTicketFile as defaultUploadTicketFile } from "@/features/tickets/api/upload-ticket-file";
-import { extractDisplayTitle } from "@/features/tickets/display-title";
-import {
-  listTicketArtifacts,
-  listTicketFiles,
-  readTicketArtifact,
-  readTicketAttachment,
-  readTicketFile,
-  writeTicketFile,
-} from "@/features/tickets/local-ticket";
-import { resolveStatusId as defaultResolveStatusId } from "@/features/tickets/resolve-status-id";
-import { resolveTagIds as defaultResolveTagIds } from "@/features/tickets/resolve-tag-ids";
-import { resolveTicketByShorthand as defaultResolveTicketByShorthand } from "@/features/tickets/resolve-ticket-by-shorthand";
-import { applyFrontmatterValues, parseFrontmatter, stripFrontmatter } from "@/features/tickets/ticket-frontmatter";
 
 export const command = "save";
-export const describe = "Save local ticket content and files to the database";
+export const describe = "Save local ticket content and files to the configured ticket source";
 
 export const builder = (yargs: Argv) =>
   yargs
@@ -35,56 +20,16 @@ type SaveArgs = {
 type Deps = {
   cwd: () => string;
   resolveProjectId: typeof defaultResolveProjectId;
-  resolveTicketByShorthand: typeof defaultResolveTicketByShorthand;
-  updateTicket: typeof defaultUpdateTicket;
-  uploadTicketFile: typeof defaultUploadTicketFile;
-  resolveStatusId: typeof defaultResolveStatusId;
-  resolveTagIds: typeof defaultResolveTagIds;
+  pushTicket: typeof defaultPushPlannerTicket;
   log: (msg: string) => void;
 };
 
 const defaultDeps: Deps = {
   cwd: () => process.cwd(),
   resolveProjectId: defaultResolveProjectId,
-  resolveTicketByShorthand: defaultResolveTicketByShorthand,
-  updateTicket: defaultUpdateTicket,
-  uploadTicketFile: defaultUploadTicketFile,
-  resolveStatusId: defaultResolveStatusId,
-  resolveTagIds: defaultResolveTagIds,
+  pushTicket: defaultPushPlannerTicket,
   log: console.log,
 };
-
-const uploadLocalTicketFiles = async (deps: Deps, root: string, shorthand: string, ticketId: string) => {
-  const localFiles = listTicketFiles(root, shorthand);
-
-  for (const fileName of localFiles) {
-    const data = readTicketAttachment(root, shorthand, fileName);
-    await deps.uploadTicketFile(ticketId, {
-      file_name: fileName,
-      content_base64: data.toString("base64"),
-    });
-  }
-
-  return localFiles.length;
-};
-
-const uploadLocalTicketArtifacts = async (deps: Deps, root: string, shorthand: string, ticketId: string) => {
-  const localArtifacts = listTicketArtifacts(root, shorthand);
-
-  for (const relativePath of localArtifacts) {
-    const data = readTicketArtifact(root, shorthand, relativePath);
-    await deps.uploadTicketFile(ticketId, {
-      file_name: basename(relativePath),
-      relative_path: relativePath,
-      content_base64: data.toString("base64"),
-    });
-  }
-
-  return localArtifacts.length;
-};
-
-const markLocalTicketAsSaved = (content: string) =>
-  applyFrontmatterValues(["---", "draft: false", "---"].join("\n"), content);
 
 export const createHandler =
   (deps: Deps = defaultDeps) =>
@@ -92,45 +37,16 @@ export const createHandler =
     const { root, projectId } = deps.resolveProjectId(deps.cwd());
     if (!root) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
 
-    const content = readTicketFile(root, argv.id);
-    if (content === null) {
-      throw new Error(`Local ticket not found: .pstdio/tickets/${argv.id}/ticket.md`);
+    const result = await deps.pushTicket(projectId, {
+      ticket_id: argv.id,
+      repo_path: root,
+      status: argv.status,
+      tags: argv.tag,
+    });
+
+    for (const message of result.messages) {
+      deps.log(message);
     }
-
-    const ticket = await deps.resolveTicketByShorthand(projectId, argv.id);
-    if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
-
-    const frontmatter = parseFrontmatter(content);
-
-    const statusName = argv.status;
-    const tagIds = argv.tag?.length ? await deps.resolveTagIds(projectId, argv.tag) : undefined;
-    const statusId = statusName ? await deps.resolveStatusId(projectId, statusName) : undefined;
-
-    const bodyContent = stripFrontmatter(content).replace(/^\n+/, "");
-    const contentBase64 = Buffer.from(bodyContent).toString("base64");
-    const uploaded = await deps.uploadTicketFile(ticket.id, {
-      file_name: "ticket.md",
-      content_base64: contentBase64,
-      mime_type: "text/markdown",
-    });
-
-    await deps.updateTicket(ticket.id, {
-      blocked_reason: frontmatter.blocked_reason,
-      file_id: uploaded.id,
-      display_title: extractDisplayTitle(bodyContent),
-      draft: false,
-      parent_id: frontmatter.parent_id,
-      tag_ids: tagIds,
-      status_id: statusId,
-    });
-
-    const uploadedCount =
-      (await uploadLocalTicketFiles(deps, root, argv.id, ticket.id)) +
-      (await uploadLocalTicketArtifacts(deps, root, argv.id, ticket.id));
-    writeTicketFile(root, argv.id, markLocalTicketAsSaved(content));
-
-    deps.log(`Saved ticket ${argv.id}`);
-    if (uploadedCount > 0) deps.log(`Uploaded ${uploadedCount} ticket files`);
   };
 
 export const handler = createHandler();

@@ -42,7 +42,7 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
 };
 
 const ensureModelAvailable = async (request: import("@playwright/test").APIRequestContext) => {
-  const response = await request.get(`${apiBase}/v1/agents/opencode/models`);
+  const response = await request.get(`${apiBase}/v1/harnesses/opencode/models`);
   expect(response.ok()).toBe(true);
 
   const models = (await response.json()) as Array<{ id: string }>;
@@ -50,8 +50,8 @@ const ensureModelAvailable = async (request: import("@playwright/test").APIReque
 };
 
 const configureOpencodeAgent = async (request: import("@playwright/test").APIRequestContext) => {
-  const response = await request.post(`${apiBase}/v1/agents`, {
-    data: { agent_id: "opencode" },
+  const response = await request.post(`${apiBase}/v1/harnesses`, {
+    data: { harness_id: "opencode" },
   });
   expect(response.ok()).toBe(true);
 };

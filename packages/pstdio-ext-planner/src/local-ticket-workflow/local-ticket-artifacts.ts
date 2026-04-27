@@ -1,0 +1,149 @@
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+
+const TICKETS_DIR = join(".pstdio", "tickets");
+const TICKET_FILES_DIR = "files";
+const TICKET_ARTIFACTS_DIR = "artifacts";
+
+const toRelativeFilePath = (baseDir: string, absolutePath: string) => {
+  const rel = relative(baseDir, absolutePath);
+  return rel.split("\\").join("/");
+};
+
+export const resolveTicketDir = (root: string, shorthand: string) => {
+  const ticketsBase = join(root, TICKETS_DIR);
+  const exactDir = join(ticketsBase, shorthand);
+  if (!existsSync(exactDir)) return null;
+
+  if (!statSync(exactDir).isDirectory()) {
+    throw new Error(`Invalid ticket path for ${shorthand}: .pstdio/tickets/${shorthand} is not a directory.`);
+  }
+
+  return exactDir;
+};
+
+const ticketFilesDir = (root: string, shorthand: string) => {
+  const dir = resolveTicketDir(root, shorthand);
+  return dir ? join(dir, TICKET_FILES_DIR) : null;
+};
+
+const ticketArtifactsDir = (root: string, shorthand: string) => {
+  const dir = resolveTicketDir(root, shorthand);
+  return dir ? join(dir, TICKET_ARTIFACTS_DIR) : null;
+};
+
+const resolveContainedPath = (baseDir: string, requestedPath: string, kind: string) => {
+  const targetPath = resolve(baseDir, requestedPath);
+  const rel = relative(baseDir, targetPath);
+
+  if (isAbsolute(rel) || rel.startsWith("..")) {
+    throw new Error(`Ticket ${kind} path resolves outside ticket ${kind} directory: ${requestedPath}`);
+  }
+
+  return targetPath;
+};
+
+const resolveTicketAttachmentPath = (root: string, shorthand: string, fileName: string) => {
+  const baseDir = ticketFilesDir(root, shorthand);
+  if (!baseDir) throw new Error(`Ticket directory not found for ${shorthand}`);
+  return resolveContainedPath(baseDir, fileName, "file");
+};
+
+const resolveTicketArtifactPath = (root: string, shorthand: string, relativePath: string) => {
+  const baseDir = ticketArtifactsDir(root, shorthand);
+  if (!baseDir) throw new Error(`Ticket directory not found for ${shorthand}`);
+  return resolveContainedPath(baseDir, relativePath, "artifact");
+};
+
+export const writeTicketFile = (root: string, shorthand: string, content: string, overwrite = true) => {
+  const existingDir = resolveTicketDir(root, shorthand);
+  const dir = existingDir ?? join(root, TICKETS_DIR, shorthand);
+  const filePath = join(dir, "ticket.md");
+
+  if (!overwrite && existsSync(filePath)) {
+    throw new Error(`Local file already exists: ${toRelativeFilePath(root, filePath)}. Use --force to overwrite.`);
+  }
+
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(filePath, content);
+  return filePath;
+};
+
+export const readTicketFile = (root: string, shorthand: string) => {
+  const dir = resolveTicketDir(root, shorthand);
+  if (!dir) return null;
+  const filePath = join(dir, "ticket.md");
+  if (!existsSync(filePath)) return null;
+  return readFileSync(filePath, "utf8");
+};
+
+const walkFiles = (rootDir: string, currentDir: string, files: string[]) => {
+  const entries = readdirSync(currentDir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = join(currentDir, entry.name);
+
+    if (entry.isDirectory()) {
+      walkFiles(rootDir, fullPath, files);
+      continue;
+    }
+
+    if (!entry.isFile()) continue;
+    files.push(toRelativeFilePath(rootDir, fullPath));
+  }
+};
+
+export const listTicketFiles = (root: string, shorthand: string) => {
+  const baseDir = ticketFilesDir(root, shorthand);
+  if (!baseDir || !existsSync(baseDir)) return [];
+
+  const files: string[] = [];
+  walkFiles(baseDir, baseDir, files);
+  files.sort();
+  return files;
+};
+
+export const readTicketAttachment = (root: string, shorthand: string, fileName: string) => {
+  const filePath = resolveTicketAttachmentPath(root, shorthand, fileName);
+  return readFileSync(filePath);
+};
+
+export const listTicketArtifacts = (root: string, shorthand: string) => {
+  const baseDir = ticketArtifactsDir(root, shorthand);
+  if (!baseDir || !existsSync(baseDir)) return [];
+
+  const files: string[] = [];
+  walkFiles(baseDir, baseDir, files);
+  files.sort();
+  return files;
+};
+
+export const readTicketArtifact = (root: string, shorthand: string, relativePath: string) => {
+  const filePath = resolveTicketArtifactPath(root, shorthand, relativePath);
+  return readFileSync(filePath);
+};
+
+export const removeTicketDir = (root: string, shorthand: string) => {
+  const dir = resolveTicketDir(root, shorthand);
+  if (!dir) return false;
+  rmSync(dir, { recursive: true });
+  return true;
+};
+
+export const writeTicketAttachment = (
+  root: string,
+  shorthand: string,
+  fileName: string,
+  content: Buffer,
+  overwrite = false,
+) => {
+  const filePath = resolveTicketAttachmentPath(root, shorthand, fileName);
+
+  if (!overwrite && existsSync(filePath)) {
+    throw new Error(`Local file already exists: ${toRelativeFilePath(root, filePath)}. Use --force to overwrite.`);
+  }
+
+  mkdirSync(dirname(filePath), { recursive: true });
+  writeFileSync(filePath, content);
+  return filePath;
+};

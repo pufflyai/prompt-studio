@@ -10,10 +10,11 @@
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
-    "test": "bun test --silent",
+    "test": "bun test --silent --max-concurrency=1",
     "test:coverage": "bun test --coverage"
   },
   "dependencies": {
+    "@pstdio/pstdio-ext-planner": "workspace:*",
     "@pstdio/sdk": "workspace:*",
     "pstdio-db": "workspace:*"
   },

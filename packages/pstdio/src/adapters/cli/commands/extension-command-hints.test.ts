@@ -7,7 +7,7 @@ import {
 
 describe("extension command hints", () => {
   test("maps familiar first-party CLI paths to canonical providers", () => {
-    expect(findExtensionCommandHint("tickets pull")?.extensionId).toBe("pstdio.tickets");
+    expect(findExtensionCommandHint("tickets pull")?.extensionId).toBe("pstdio.planner");
     expect(hintedExtensionCommandNamespaces.has("tickets")).toBe(true);
   });
 
@@ -18,8 +18,8 @@ describe("extension command hints", () => {
     const message = formatMissingExtensionCommandMessage({ hint, disabled: true });
 
     expect(message).toContain('Command "tickets pull" is unavailable because no enabled extension provides it.');
-    expect(message).toContain('It is normally provided by "pstdio.tickets".');
-    expect(message).toContain('Extension "pstdio.tickets" is disabled for this project.');
+    expect(message).toContain('It is normally provided by "pstdio.planner".');
+    expect(message).toContain('Extension "pstdio.planner" is disabled for this project.');
     expect(message).toContain("pstdio extensions check");
   });
 });

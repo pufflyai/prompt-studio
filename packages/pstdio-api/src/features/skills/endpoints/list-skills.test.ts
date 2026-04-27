@@ -94,10 +94,10 @@ describe("POST /v1/projects/:id/skills/:name/update — repo propagation", () =>
     const repoPath = join(tempRoot, "repo");
 
     // Configure an agent
-    await app.request("/v1/agents", {
+    await app.request("/v1/harnesses", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "claude-code" }),
+      body: JSON.stringify({ harness_id: "claude-code" }),
     });
 
     // Register the repo for the project
@@ -140,10 +140,10 @@ describe("GET /v1/projects/:id/skills/:name — installed_agents", () => {
     const project = await projectRes.json();
     const isolatedRepoPath = join(tempRoot, "repo-installed-agents");
 
-    await app.request("/v1/agents", {
+    await app.request("/v1/harnesses", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "claude-code" }),
+      body: JSON.stringify({ harness_id: "claude-code" }),
     });
 
     await app.request(`/v1/projects/${project.id}/repos`, {
@@ -175,10 +175,10 @@ describe("POST /v1/projects/:id/skills/:name/update — installed_agents", () =>
     });
     const project = await projectRes.json();
 
-    await app.request("/v1/agents", {
+    await app.request("/v1/harnesses", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "claude-code" }),
+      body: JSON.stringify({ harness_id: "claude-code" }),
     });
 
     const res = await app.request(`/v1/projects/${project.id}/skills/${skill.name}/update`, {
@@ -202,10 +202,10 @@ describe("POST /v1/projects/:id/skills/:name/update — installed_agents", () =>
     const isolatedRepoPath = join(tempRoot, "repo-global-only");
     const globalSkillDir = join(homedir(), ".claude", "skills", skill.name);
 
-    await app.request("/v1/agents", {
+    await app.request("/v1/harnesses", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "claude-code" }),
+      body: JSON.stringify({ harness_id: "claude-code" }),
     });
 
     await app.request(`/v1/projects/${project.id}/repos`, {

@@ -41,6 +41,8 @@
     "@pstdio/cli-win-arm64": "0.8.0"
   },
   "devDependencies": {
+    "@pstdio/pstdio-ext-planner": "workspace:*",
+    "@pstdio/sdk": "workspace:*",
     "@types/bun": "latest",
     "@types/mustache": "^4.2.6",
     "@types/node": "^24.3.0",
@@ -54,7 +56,6 @@
     "pstdio-logging": "workspace:*",
     "pstdio-plugins": "workspace:*",
     "pstdio-wt": "workspace:*",
-    "@pstdio/sdk": "workspace:*",
     "typescript": "6.0.2"
   }
 }

@@ -23,7 +23,7 @@ const waitForSessionStatus = async (sessionId: string, expectedStatus: string) =
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-create-session-test-"));
-  process.env.PSTDIO_AGENTS = "fake";
+  process.env.PSTDIO_AGENTS = "fake,opencode";
   ({ app } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
@@ -62,7 +62,7 @@ describe("POST /v1/sessions", () => {
 
     expect(createRes.status).toBe(400);
     expect(await createRes.json()).toEqual({
-      error: "No agent configured. Set a default agent with 'pstdio agents setup' first.",
+      error: "No harness configured. Set a default harness with 'pstdio harnesses setup' first.",
     });
   });
 
@@ -75,10 +75,10 @@ describe("POST /v1/sessions", () => {
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
 
-    const setupAgentRes = await app.request("/v1/agents", {
+    const setupAgentRes = await app.request("/v1/harnesses", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "fake" }),
+      body: JSON.stringify({ harness_id: "fake" }),
     });
     expect(setupAgentRes.status).toBe(201);
 
@@ -131,17 +131,17 @@ describe("POST /v1/sessions", () => {
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
 
-    const setupDefaultRes = await app.request("/v1/agents", {
+    const setupDefaultRes = await app.request("/v1/harnesses", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "opencode" }),
+      body: JSON.stringify({ harness_id: "opencode" }),
     });
     expect(setupDefaultRes.status).toBe(201);
 
-    const setupEnabledRes = await app.request("/v1/agents", {
+    const setupEnabledRes = await app.request("/v1/harnesses", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "fake" }),
+      body: JSON.stringify({ harness_id: "fake" }),
     });
     expect(setupEnabledRes.status).toBe(201);
 

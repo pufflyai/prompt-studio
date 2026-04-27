@@ -8,7 +8,7 @@ import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 let api: ApiInstance;
 
 beforeAll(async () => {
-  api = await startApi();
+  api = await startApi({ agents: "fake,claude-code,opencode" });
 }, SETUP_TIMEOUT);
 
 afterAll(() => {
@@ -56,12 +56,12 @@ describe("pstdio projects link", () => {
   );
 
   test(
-    "installs skills for configured agents",
+    "installs skills for configured harness providers",
     async () => {
       const repo = createGitRepo();
       dirs.push(repo);
 
-      run("agents setup claude-code", repo);
+      run("harnesses setup claude-code", repo);
 
       const project = await createProjectViaApi(api.url, "link-skills-test");
       const output = run(`projects link --project-id ${project.id}`, repo);

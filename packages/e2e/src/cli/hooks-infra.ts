@@ -42,10 +42,10 @@ export const registerRepo = async (ctx: HookTestContext, projectId: string, repo
 };
 
 export const configureAgent = async (ctx: HookTestContext, agentId = "fake") => {
-  await fetch(`${ctx.api.url}/v1/agents`, {
+  await fetch(`${ctx.api.url}/v1/harnesses`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ agent_id: agentId }),
+    body: JSON.stringify({ harness_id: agentId }),
   });
 };
 

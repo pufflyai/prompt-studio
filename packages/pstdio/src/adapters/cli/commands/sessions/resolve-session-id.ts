@@ -2,19 +2,19 @@ import type { Arguments, Argv } from "yargs";
 import { resolveSessionId as defaultResolveSessionId } from "@/features/sessions/api/resolve-session-id";
 
 export const command = "resolve-session-id";
-export const describe = "Resolve a pstdio session ID from an external agent session ID";
+export const describe = "Resolve a pstdio session ID from an external harness session ID";
 
 export const builder = (yargs: Argv) =>
   yargs
-    .option("agent", {
+    .option("harness", {
       type: "string",
       demandOption: true,
-      describe: "External agent ID",
+      describe: "External harness ID",
     })
     .option("agent-session-id", {
       type: "string",
       demandOption: true,
-      describe: "External agent session ID",
+      describe: "External harness session ID",
     })
     .option("cwd", {
       type: "string",
@@ -27,7 +27,7 @@ export const builder = (yargs: Argv) =>
     });
 
 export type ResolveSessionIdArgs = {
-  agent: string;
+  harness: string;
   "agent-session-id": string;
   cwd?: string;
   json: boolean;
@@ -47,7 +47,7 @@ export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<ResolveSessionIdArgs>) => {
     const resolved = await deps.resolveSessionId({
-      agent: argv.agent,
+      harness: argv.harness,
       agent_session_id: argv["agent-session-id"],
       cwd: argv.cwd,
     });

@@ -14,7 +14,7 @@ let api: ApiInstance;
 
 beforeAll(async () => {
   buildBinary();
-  api = await startApi();
+  api = await startApi({ agents: "fake,claude-code,opencode" });
 }, BUILD_TIMEOUT + SETUP_TIMEOUT);
 
 afterAll(() => {
@@ -189,10 +189,10 @@ describe("packaged pstdio — project lifecycle", () => {
     () => {
       const repo = createInitializedRepo("pkg-opencode-plugin");
 
-      run("agents install-plugins opencode", repo);
+      run("harnesses setup opencode", repo);
       expect(existsSync(join(repo, ".opencode", "plugins", "pstdio-session-bridge.js"))).toBe(true);
 
-      const secondRun = run("agents install-plugins opencode", repo);
+      const secondRun = run("harnesses setup opencode", repo);
       expect(secondRun).toContain("All plugin artifacts already installed.");
     },
     TEST_TIMEOUT,

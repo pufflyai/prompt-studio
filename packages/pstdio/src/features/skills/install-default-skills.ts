@@ -2,7 +2,6 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir as defaultHomedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { findAgent } from "pstdio-agents";
-import { listAgents } from "@/features/agents/api/list-agents";
 import { API_URL } from "@/features/api-url";
 import { listSkillsWithFiles } from "./api/list-skills";
 
@@ -26,23 +25,23 @@ type AgentConfig = {
 };
 
 const listAvailableAgents = async (baseUrl: string) => {
-  const res = await fetch(`${baseUrl}/v1/agents/info`);
+  const res = await fetch(`${baseUrl}/v1/harnesses/info`);
   if (!res.ok) {
-    throw new Error(`Failed to list agent info: ${res.status}`);
+    throw new Error(`Failed to list harness info: ${res.status}`);
   }
 
   return (await res.json()) as { id: string; availability: { type: "INSTALLED" | "NOT_FOUND" } }[];
 };
 
 const setupAvailableAgents = async (baseUrl: string, defaultAgentId: string) => {
-  const res = await fetch(`${baseUrl}/v1/agents/setup-available`, {
+  const res = await fetch(`${baseUrl}/v1/harnesses/setup-available`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ default_agent_id: defaultAgentId }),
+    body: JSON.stringify({ default_harness_id: defaultAgentId }),
   });
 
   if (!res.ok) {
-    throw new Error(`Failed to set up available agents: ${res.status}`);
+    throw new Error(`Failed to set up available harnesses: ${res.status}`);
   }
 
   return (await res.json()) as AgentConfig[];
@@ -74,7 +73,12 @@ export const resolveSafeSkillFilePath = (
 };
 
 const resolveConfiguredAgents = async (baseUrl: string) => {
-  const configured = await listAgents();
+  const configuredResponse = await fetch(`${baseUrl}/v1/harnesses`);
+  if (!configuredResponse.ok) {
+    throw new Error(`Failed to list harnesses: ${configuredResponse.status}`);
+  }
+
+  const configured = (await configuredResponse.json()) as AgentConfig[];
   if (configured.length > 0) return configured;
 
   const available = await listAvailableAgents(baseUrl);

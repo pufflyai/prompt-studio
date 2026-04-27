@@ -34,9 +34,9 @@ const writeExtension = (projectRoot: string, extensionDir: string, source: strin
 const writeTicketsExtension = (projectRoot: string) => {
   writeExtension(
     projectRoot,
-    "pstdio.tickets",
+    "project.tickets",
     `export default {
-      id: "pstdio.tickets",
+      id: "project.tickets",
       name: "Tickets",
       commands: {
         pullTickets: {
@@ -164,8 +164,8 @@ describe("runtime-backed extension command routing for static namespaces", () =>
 
     expect(output.exitCode).toBe(0);
     expect(stdout).toContain("Pull tickets into .pstdio/tickets");
-    expect(stdout).toContain("id: pstdio.tickets.pullTickets");
-    expect(stdout).toContain("extension: pstdio.tickets");
+    expect(stdout).toContain("id: project.tickets.pullTickets");
+    expect(stdout).toContain("extension: project.tickets");
     expect(stdout).toContain("example: pstdio tickets pull --id PS-1");
     expect(stderr).toBe("");
   });
@@ -190,8 +190,8 @@ describe("runtime-backed extension command routing for static namespaces", () =>
 
     expect(output.exitCode).toBe(0);
     expect(stdout).toContain("Ticket shorthand");
-    expect(stdout).toContain("id: pstdio.tickets.pullTickets");
-    expect(stdout).toContain("extension: pstdio.tickets");
+    expect(stdout).toContain("id: project.tickets.pullTickets");
+    expect(stdout).toContain("extension: project.tickets");
     expect(stdout).toContain("example: pstdio tickets pull --id PS-1");
     expect(stderr).toBe("");
   });
@@ -268,7 +268,7 @@ describe("runtime-backed extension command routing for static namespaces", () =>
       return jsonResponse(
         {
           error:
-            'Command "tickets pull" is unavailable because no enabled extension provides it. It is normally provided by "pstdio.tickets". Extension "pstdio.tickets" is disabled for this project. Run "pstdio extensions check" for details.',
+            'Command "tickets pull" is unavailable because no enabled extension provides it. It is normally provided by "pstdio.planner". Extension "pstdio.planner" is disabled for this project. Run "pstdio extensions check" for details.',
         },
         { status: 400 },
       );
@@ -287,8 +287,8 @@ describe("runtime-backed extension command routing for static namespaces", () =>
 
     expect(output.exitCode).toBe(1);
     expect(output.stderr).toContain('Command "tickets pull" is unavailable because no enabled extension provides it.');
-    expect(output.stderr).toContain('It is normally provided by "pstdio.tickets".');
-    expect(output.stderr).toContain('Extension "pstdio.tickets" is disabled for this project.');
+    expect(output.stderr).toContain('It is normally provided by "pstdio.planner".');
+    expect(output.stderr).toContain('Extension "pstdio.planner" is disabled for this project.');
     expect(output.stderr).toContain("pstdio extensions check");
     expect(output.stderr).not.toContain("Unknown argument");
     expect(output.stdout).toBe("");

@@ -6,7 +6,7 @@ type SessionRecord = Awaited<ReturnType<RouteDeps["sessionService"]["listByAgent
 
 const resolveSessionIdBodySchema = z
   .object({
-    agent: z.string().min(1),
+    harness: z.string().min(1),
     agent_session_id: z.string().min(1),
     cwd: z.string().min(1).optional(),
   })
@@ -51,7 +51,7 @@ const resolveSessionIdMatch = (sessions: SessionRecord[], cwd: string | undefine
 export const resolveSessionIdRoute = createRoute({
   method: "post",
   path: "/sessions/resolve-session-id",
-  description: "Resolve a pstdio session ID from external agent session identity.",
+  description: "Resolve a pstdio session ID from external harness session identity.",
   tags: ["Sessions"],
   request: {
     query: z.object({}).strict(),
@@ -79,7 +79,7 @@ export const resolveSessionIdHandler = (deps: RouteDeps): AppRouteHandler<typeof
   return async (c) => {
     const input = c.req.valid("json");
 
-    const matches = await deps.sessionService.listByAgentSession(input.agent, input.agent_session_id);
+    const matches = await deps.sessionService.listByAgentSession(input.harness, input.agent_session_id);
     const resolved = resolveSessionIdMatch(matches, input.cwd);
 
     if (resolved.error) {

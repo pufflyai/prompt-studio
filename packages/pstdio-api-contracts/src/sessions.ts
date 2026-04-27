@@ -65,7 +65,7 @@ export const sessionConversationResponseSchema = z.object({
 });
 
 export const resolveSessionIdInputSchema = z.object({
-  agent: z.string(),
+  harness: z.string(),
   agent_session_id: z.string(),
   cwd: z.string().optional(),
 });

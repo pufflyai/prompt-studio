@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import type { AgentId, SessionMessage } from "pstdio-agents";
 import type { RouteDeps } from "../deps";
+import { toAgentId } from "../harnesses/harness-ids";
 import { buildMessagesFromPatches } from "./session-messages";
 
 export const getSessionMessages = async (sessionId: string, deps: RouteDeps): Promise<SessionMessage[]> => {
@@ -32,7 +33,7 @@ const getPersistedMessages = async (sessionFileId: string, deps: RouteDeps) => {
 };
 
 const getAgentMessages = async (agentId: string, agentSessionId: string, cwd: string | null, deps: RouteDeps) => {
-  const agent = deps.agentRegistry.get(agentId as AgentId);
+  const agent = deps.agentRegistry.get(toAgentId(agentId) as AgentId);
   if (!agent) return null;
 
   return agent.getMessages(agentSessionId, cwd ? { cwd } : undefined);

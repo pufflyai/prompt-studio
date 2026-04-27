@@ -88,7 +88,10 @@ export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
     const { agentId } = resolvedAgent;
 
     if (!agentId) {
-      return c.json({ error: "No agent configured. Set a default agent with 'pstdio agents setup' first." }, 400);
+      return c.json(
+        { error: "No harness configured. Set a default harness with 'pstdio harnesses setup' first." },
+        400,
+      );
     }
 
     const prompt = await resolvePrompt(input, input.project_id, deps);

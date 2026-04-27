@@ -22,7 +22,7 @@ const availableAgentsResponse = [
 ];
 
 const mockAvailableAgents = async (page: Page) => {
-  await page.route("**/v1/agents/info", async (route) => {
+  await page.route("**/v1/harnesses/info", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -32,7 +32,7 @@ const mockAvailableAgents = async (page: Page) => {
 };
 
 const mockNoAvailableAgents = async (page: Page) => {
-  await page.route("**/v1/agents/info", async (route) => {
+  await page.route("**/v1/harnesses/info", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -60,8 +60,8 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
 };
 
 const configureAgent = async (request: import("@playwright/test").APIRequestContext, agentId: string) => {
-  const res = await request.post(`${apiBase}/v1/agents`, {
-    data: { agent_id: agentId },
+  const res = await request.post(`${apiBase}/v1/harnesses`, {
+    data: { harness_id: agentId },
   });
   expect(res.ok()).toBe(true);
 };

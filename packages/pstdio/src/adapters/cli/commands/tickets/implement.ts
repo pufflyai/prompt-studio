@@ -38,7 +38,7 @@ const defaultLaunchAgent = async (ticketId: string, root: string, title: string 
   const agents = registry.list();
   const agent = agents[0];
 
-  if (!agent) throw new Error("No agent configured. Run 'pstdio agents setup' first.");
+  if (!agent) throw new Error("No harness provider configured. Run 'pstdio harnesses setup' first.");
 
   await implement(agent, ticketId, root, { title: title ?? undefined, prompt });
 };

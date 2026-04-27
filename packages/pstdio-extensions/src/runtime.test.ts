@@ -29,10 +29,10 @@ afterEach(() => {
 });
 
 describe("loadExtensionRuntime", () => {
-  test("returns an empty runtime when the local extensions directory is missing", async () => {
+  test("returns the first-party runtime when the local extensions directory is missing", async () => {
     const runtime = await loadExtensionRuntime({ projectRoot: createProject() });
 
-    expect(runtime.extensions).toEqual([]);
+    expect(runtime.extensions.map((extension) => extension.id)).toEqual(["pstdio.planner"]);
     expect(runtime.commands).toEqual([]);
     expect(runtime.diagnostics).toEqual([]);
   });
@@ -68,8 +68,9 @@ describe("loadExtensionRuntime", () => {
       const runtime = await loadExtensionRuntime({ projectRoot });
 
       expect(runtime.diagnostics).toEqual([]);
-      expect(runtime.extensions[0]?.id).toBe("project.example");
-      expect(runtime.extensions[0]?.sourceKind).toBe("local");
+      const extension = runtime.extensions.find((candidate) => candidate.id === "project.example");
+      expect(extension?.id).toBe("project.example");
+      expect(extension?.sourceKind).toBe("local");
       expect(runtime.commands[0]?.id).toBe("project.example.runReview");
       expect(runtime.commands[0]?.cli?.pathSegments).toEqual(["workspaces", "review"]);
       expect(runtime.artifactMounts[0]?.path).toBe(".pstdio/tickets");
@@ -92,7 +93,7 @@ describe("loadExtensionRuntime", () => {
 
     expect(diagnosticCodes(runtime)).toContain("invalid_export");
     expect(diagnosticCodes(runtime)).toContain("invalid_extension_id");
-    expect(runtime.extensions).toEqual([]);
+    expect(runtime.extensions.map((extension) => extension.id)).toEqual(["pstdio.planner"]);
   });
 
   test("reports duplicate providers and excludes unsafe artifact mounts", async () => {

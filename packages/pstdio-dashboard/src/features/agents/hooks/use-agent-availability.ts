@@ -10,23 +10,30 @@ type AgentAvailability = {
 export const useAgentAvailability = (agent: CodingAgent) =>
   useQuery({
     queryKey: ["agent-availability", agent],
-    queryFn: () => apiRequest<AgentAvailability>(`/v1/agents/availability?agent=${encodeURIComponent(agent)}`),
+    queryFn: async () => {
+      const harnesses = await apiRequest<Array<{ id: string; availability: AgentAvailability }>>("/v1/harnesses/info");
+      return (
+        harnesses.find((harness) => harness.id === agent || harness.id.endsWith(`.${agent}`))?.availability ?? {
+          type: "NOT_FOUND",
+        }
+      );
+    },
   });
 
 export const useRunAgentSetup = () =>
   useMutation({
     mutationFn: (agent: CodingAgent) =>
-      apiRequest<AgentConfig>("/v1/agents", {
+      apiRequest<AgentConfig>("/v1/harnesses", {
         method: "POST",
-        body: { agent_id: agent },
+        body: { harness_id: agent },
       }),
   });
 
 export const useSetupAvailableAgents = () =>
   useMutation({
     mutationFn: (defaultAgentId: string) =>
-      apiRequest<AgentConfig[]>("/v1/agents/setup-available", {
+      apiRequest<AgentConfig[]>("/v1/harnesses/setup-available", {
         method: "POST",
-        body: { default_agent_id: defaultAgentId },
+        body: { default_harness_id: defaultAgentId },
       }),
   });

@@ -97,10 +97,10 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
   test("installs bundled skills to repo for configured agents", async () => {
     const project = await createProject("Skill Install Project");
 
-    await app.request("/v1/agents", {
+    await app.request("/v1/harnesses", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "claude-code" }),
+      body: JSON.stringify({ harness_id: "claude-code" }),
     });
 
     const repoPath = join(tempRoot, "skill-repo");
@@ -118,10 +118,10 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
   test("preserves existing repo-local skill customizations", async () => {
     const project = await createProject("Skill Customization Project");
 
-    await app.request("/v1/agents", {
+    await app.request("/v1/harnesses", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "claude-code" }),
+      body: JSON.stringify({ harness_id: "claude-code" }),
     });
 
     const repoPath = join(tempRoot, "custom-skill-repo");
@@ -166,7 +166,7 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
       expect(existsSync(skillsDir)).toBe(true);
       expect(readdirSync(skillsDir).length).toBeGreaterThan(0);
 
-      const agentsRes = await handle.app.request("/v1/agents");
+      const agentsRes = await handle.app.request("/v1/harnesses");
       expect(agentsRes.status).toBe(200);
       expect(await agentsRes.json()).toEqual([
         expect.objectContaining({

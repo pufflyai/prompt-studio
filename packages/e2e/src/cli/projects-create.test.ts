@@ -9,7 +9,7 @@ import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 let api: ApiInstance;
 
 beforeAll(async () => {
-  api = await startApi();
+  api = await startApi({ agents: "fake,claude-code,opencode" });
 }, SETUP_TIMEOUT);
 
 afterAll(() => {
@@ -33,8 +33,8 @@ describe("pstdio projects create", () => {
       const repo = createGitRepo();
       dirs.push(repo);
 
-      // Configure an agent so skills get installed
-      run("agents setup claude-code", repo);
+      // Configure a harness provider so skills get installed
+      run("harnesses setup claude-code", repo);
 
       const output = run("projects create my-project", repo);
 

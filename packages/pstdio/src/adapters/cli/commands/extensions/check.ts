@@ -107,6 +107,11 @@ export const formatExtensionsCheckOutput = (input: { projectRoot: string; runtim
       runtime.artifactMounts.map((mount) => `${mount.path} (${mount.id})`),
       "No artifact mounts registered.",
     ),
+    formatList(
+      "Registered harness providers",
+      runtime.harnesses.map((harness) => `${harness.id} (${harness.label})`),
+      "No harness providers registered.",
+    ),
     formatDiagnostics(runtime.diagnostics),
   ];
 

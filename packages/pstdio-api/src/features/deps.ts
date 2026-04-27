@@ -2,7 +2,9 @@ import type { AgentRegistry } from "pstdio-agents";
 import type { createAgentConfigService } from "../services/agent-config-service";
 import type { createAttemptStatusService } from "../services/attempt-status-service";
 import type { createExtensionCommandService } from "../services/extension-command-service";
+import type { createExtensionInstanceService } from "../services/extension-instance-service";
 import type { createFileService } from "../services/file-service";
+import type { createPlannerService } from "../services/planner-service";
 import type { createProjectService } from "../services/project-service";
 import type { createRepoService } from "../services/repo-service";
 import type { createSessionService } from "../services/session-service";
@@ -41,9 +43,11 @@ export interface RouteDeps {
   templateService: ReturnType<typeof createTemplateService>;
   attemptStatusService: ReturnType<typeof createAttemptStatusService>;
   agentConfigService: ReturnType<typeof createAgentConfigService>;
+  extensionInstanceService: ReturnType<typeof createExtensionInstanceService>;
   skillService: ReturnType<typeof createSkillService>;
   fileService: ReturnType<typeof createFileService>;
   syncService: ReturnType<typeof createSyncService>;
   pluginService: ReturnType<typeof createPluginService>;
+  plannerService: ReturnType<typeof createPlannerService>;
   extensionCommandService: ReturnType<typeof createExtensionCommandService>;
 }

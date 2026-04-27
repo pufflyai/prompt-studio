@@ -7,7 +7,7 @@ This package is the public integration surface for:
 - calling the Prompt Studio HTTP API
 - importing shared request and resource types
 - rendering prompt templates
-- authoring Prompt Studio plugins, actions, and lifecycle hooks
+- authoring Prompt Studio extensions with generic platform primitives
 
 The package is ESM-only and is published through subpath exports. Import from the entrypoint you need, not from `@pstdio/sdk` directly.
 
@@ -24,9 +24,8 @@ bun add @pstdio/sdk
 | `@pstdio/sdk/client`    | Runtime HTTP client for Prompt Studio                     |
 | `@pstdio/sdk/api`       | Request and response payload types                        |
 | `@pstdio/sdk/resources` | Shared resource/entity types                              |
-| `@pstdio/sdk/plugins`   | Plugin definition types, hook types, and helper utilities |
+| `@pstdio/sdk/extensions` | Generic extension authoring primitives and runtime types |
 | `@pstdio/sdk/prompts`   | Prompt rendering helpers                                  |
-| `@pstdio/sdk/hooks`     | Hook context and hook client types                        |
 
 Example:
 
@@ -34,10 +33,15 @@ Example:
 import { createClient, PstdioApiError } from "@pstdio/sdk/client";
 import type { CreateTicketInput } from "@pstdio/sdk/api";
 import type { TicketDetail } from "@pstdio/sdk/resources";
-import { createSession, definePlugin } from "@pstdio/sdk/plugins";
+import { defineExtension } from "@pstdio/sdk/extensions";
 import { renderPrompt } from "@pstdio/sdk/prompts";
-import type { AttemptStatusChangeContext } from "@pstdio/sdk/hooks";
 ```
+
+## Extension Package Boundary
+
+`@pstdio/sdk` is platform substrate only. It must stay workflow-agnostic: no imports from extension packages, no bundled extension-specific code, and no extension-owned contracts or clients such as planner, tickets, workspace shell tabs, templates, skills, or harness implementations.
+
+Extensions can depend on `@pstdio/sdk` for generic primitives, runtime types, request helpers, and core clients. Extension-specific contracts and helper SDKs belong to the package that owns that workflow. For example, planner ticket-management contracts and helpers should come from `@pstdio/pstdio-ext-planner/contract` or `@pstdio/pstdio-ext-planner/sdk`, not from `@pstdio/sdk`.
 
 ## HTTP Client
 
@@ -71,7 +75,6 @@ The request layer throws `PstdioApiError` for non-2xx responses.
 
 - `error.message`: API error message
 - `error.status`: HTTP status code
-- when the API returns `hook_output`, it is appended to `message`
 
 ```ts
 import { PstdioApiError, createClient } from "@pstdio/sdk/client";
@@ -104,7 +107,7 @@ try {
 | `tags`       | `list`, `create`, `update`, `delete`, `createOption`, `updateOption`, `deleteOption`                                                               |
 | `templates`  | `list`, `get`, `create`, `update`, `delete`                                                                                                        |
 | `skills`     | `list`, `get`, `update`                                                                                                                            |
-| `agents`     | `list`, `info`, `models`, `setup`, `setupAvailable`, `update`, `delete`                                                                            |
+| `harnesses`  | `list`, `info`, `models`, `setup`, `setupAvailable`, `update`, `delete`                                                                            |
 | `actions`    | `list`, `execute`                                                                                                                                  |
 
 Notes:
@@ -136,12 +139,12 @@ Use `import type` for this entrypoint. It does not expose runtime helpers.
 
 ## Resource Types
 
-`@pstdio/sdk/resources` re-exports the shared Prompt Studio entities used across the API and plugin system.
+`@pstdio/sdk/resources` re-exports the shared Prompt Studio entities used across the API and extension system.
 
 Common exports include `Project`, `Repo`, `Ticket`, `TicketDetail`, `TicketListItem`, `TicketFile`, `Workspace`,
 `WorkspaceListItem`, `Session`, `SessionStatus`, `Status`, `AttemptStatus`, `Tag`, `TagOption`, `Template`,
-`TemplateWithContent`, `TemplateType`, `Skill`, `SkillWithContent`, `AgentConfig`, `AgentInfo`, `AgentModel`,
-`AgentAvailabilityType`, and `FileRecord`.
+`TemplateWithContent`, `TemplateType`, `Skill`, `SkillWithContent`, `HarnessConfig`, `HarnessInfo`, `HarnessModel`,
+`HarnessAvailabilityType`, and `FileRecord`.
 
 ```ts
 import type {
@@ -150,6 +153,20 @@ import type {
   WorkspaceListItem,
 } from "@pstdio/sdk/resources";
 ```
+
+## Extensions
+
+`@pstdio/sdk/extensions` exposes generic v2 extension authoring primitives:
+
+- `defineExtension`
+- `defineSlot`
+- `defineEvent`
+- `defineResource`
+- `packageAsset`
+- `params`
+- runtime and context types for commands, storage, resources, slots, events, templates, skills, and harness providers
+
+Keep workflow-specific contracts in the extension package that owns them. For example, planner integrations should import planner ticket-management contracts and helpers from `@pstdio/pstdio-ext-planner/contract` or `@pstdio/pstdio-ext-planner/sdk`.
 
 ## Prompt Rendering
 
@@ -165,178 +182,34 @@ const prompt = renderPrompt("Implement ticket {{ticket}}", {
 
 Use this when a session prompt or action prompt is stored as a reusable template with variables.
 
-## Plugins
+## Extension Commands
 
-Prompt Studio plugins export a default `definePlugin(...)` result from a TypeScript or JavaScript module.
-
-Plugins can provide:
-
-- `actions`: user-triggered actions attached to tickets, workspaces, or sessions
-- `hooks`: lifecycle handlers that run before or after Prompt Studio events
-
-### Action example
+Extensions export a default `defineExtension(...)` result from a TypeScript or JavaScript module.
 
 ```ts
-import { createSession, definePlugin } from "@pstdio/sdk/plugins";
+import { defineExtension, params } from "@pstdio/sdk/extensions";
 
-export default definePlugin({
-  actions: [
-    {
-      key: "refine-ticket",
-      label: "Refine ticket",
-      targetType: "ticket",
-      placement: "overflow",
-      params: [
-        {
-          key: "context",
-          label: "Additional context",
-          type: "longtext",
-          required: false,
-        },
-      ],
-      async trigger(ctx) {
-        const context = ctx.params.context as string | undefined;
-
-        const parts = [`Refine ticket: ${ctx.target.shorthand}`];
-        if (context) parts.push(`Additional context:\n${context}`);
-
-        await createSession(ctx, {
-          title: `Refine ticket: ${ctx.target.shorthand}`,
-          prompt: parts.join("\n\n"),
+export default defineExtension({
+  id: "project.review",
+  name: "Review",
+  commands: {
+    runReview: {
+      title: "Run review",
+      params: {
+        notes: params.longtext({ label: "Notes" }),
+      },
+      async run(ctx) {
+        await ctx.activity.record({
+          eventType: "review.started",
+          summary: "Review started",
         });
       },
-    },
-  ],
-});
-```
-
-### Hook example
-
-```ts
-import { definePlugin, runCommand } from "@pstdio/sdk/plugins";
-
-export default definePlugin({
-  hooks: {
-    async preAttemptStatusChange(ctx) {
-      if (ctx.toStatus !== "review-ready") return;
-      if (!ctx.worktreePath) return;
-
-      const validation = await runCommand(ctx.worktreePath, [
-        "bun",
-        "run",
-        "validate",
-      ]);
-      if (validation.exitCode === 0) return;
-
-      const output = [validation.stdout, validation.stderr]
-        .filter(Boolean)
-        .join("\n\n");
-
-      return {
-        reject: true,
-        reason: output || "bun run validate failed",
-      };
     },
   },
 });
 ```
 
-### Plugin types
-
-The plugin entrypoint exports the core types used by plugin authors, including `PluginDefinition`, `PluginHooks`,
-`PrePluginHooks`, `PostPluginHooks`, `HookResponse`, `PreHookReturn`, `PostHookReturn`, `ActionDefinition`,
-`ActionDescriptor`, `ActionInput`, `ActionTriggerContext`, `ActionParamDef`, `TargetType`, and `ActionPlacement`.
-
-Action parameter definitions support `text`, `longtext`, `select`, `template-select`, `agent`, and `repo`.
-Action targets support `ticket`, `workspace`, and `session`. Action placement supports `primary`, `secondary`,
-and `overflow`.
-
-`definePlugin()` is intentionally small. Today it mainly validates that every declared action has a `trigger(ctx)` function and then returns the plugin definition unchanged.
-
-### Lifecycle hooks
-
-Pre hooks may return `{ reject, reason, data }` to stop an operation. Post hooks return `void`.
-
-Available pre hooks:
-
-- `preTicketCreation`
-- `preTicketStatusChange`
-- `preTicketArchive`
-- `preTicketDeletion`
-- `preWorktreeCreate`
-- `preWorktreeRemove`
-- `preCommit`
-- `preRebase`
-- `preMerge`
-- `preAttemptStatusChange`
-
-Available post hooks:
-
-- `postTicketCreation`
-- `postTicketStatusChange`
-- `postTicketArchive`
-- `postTicketDeletion`
-- `postSessionStart`
-- `postSessionSuccess`
-- `postSessionFail`
-- `postSessionResume`
-- `postSessionAwaitInput`
-- `postWorktreeCreate`
-- `postWorktreeRemove`
-- `postCommit`
-- `postRebase`
-- `postMerge`
-- `onConflict`
-- `postAttemptStatusChange`
-
-### Plugin helpers
-
-`@pstdio/sdk/plugins` also exports helper functions for common workflow automation:
-
-| Helper                             | Purpose                                                                                      |
-| ---------------------------------- | -------------------------------------------------------------------------------------------- |
-| `createAttempt`                    | Create a ticket attempt and start a session                                                  |
-| `createWorkspace`                  | Create a ticket attempt without starting a session                                           |
-| `createSession`                    | Create a session using `ctx.projectId` automatically                                         |
-| `followupSession`                  | Send a follow-up message using an explicit or contextual session id                          |
-| `findTicketByRef`                  | Resolve a ticket by id or shorthand                                                          |
-| `findWorkspaceByRef`               | Resolve a workspace by id or shorthand                                                       |
-| `getAttemptsForTicket`             | List workspaces for a ticket                                                                 |
-| `workspacesForTicket`              | List workspaces for a ticket                                                                 |
-| `setTicketStatus`                  | Resolve a status by name and update the ticket                                               |
-| `setWorkspaceAttemptStatus`        | Update a workspace attempt status by name                                                    |
-| `updateTicketWhenAllAttemptsMatch` | Update a ticket when all attempts share a target attempt status                              |
-| `removeAllWorktreesForTicket`      | Remove every worktree currently attached to a ticket                                         |
-| `bootstrapWorktree`                | Copy Prompt Studio and agent metadata into a worktree and optionally pull the ticket locally |
-| `pullTickets`                      | Write ticket markdown and attachments into `.pstdio/tickets/...`                             |
-| `runCommand`                       | Run a command array in a working directory and capture `stdout`, `stderr`, and `exitCode`    |
-
-These helpers accept action or hook context and resolve project-scoped ids for you where possible.
-
-## Hook Context Types
-
-`@pstdio/sdk/hooks` exposes the shared context types used by hooks and hook runtimes:
-
-`BaseHookContext`, `HookClient`, `HookPayload`, `SessionFollowupInput`, `AttemptStatusChangeContext`,
-`SessionHookContext`, `TicketContext`, `TicketCreationContext`, `TicketStatusChangeContext`, `WorktreeContext`,
-and `WorktreeCreateContext`.
-
-Import from this entrypoint when you want to annotate hook code explicitly:
-
-```ts
-import type {
-  SessionHookContext,
-  TicketStatusChangeContext,
-} from "@pstdio/sdk/hooks";
-
-const logStatusChange = (ctx: TicketStatusChangeContext) => {
-  console.log(ctx.shorthand, ctx.fromStatus, ctx.toStatus);
-};
-
-const onSessionStart = async (ctx: SessionHookContext) => {
-  console.log(ctx.sessionId, ctx.sessionStatus);
-};
-```
+Workflow-specific helpers live in the owning extension package. Planner ticket management, for example, belongs to `@pstdio/pstdio-ext-planner`, not to `@pstdio/sdk`.
 
 ## Package Development
 

@@ -45,6 +45,7 @@ export type ApiInstance = {
 };
 
 interface StartApiOptions {
+  agents?: string;
   eventBusBufferSize?: number;
 }
 
@@ -52,9 +53,10 @@ export const startApi = async (options: StartApiOptions = {}): Promise<ApiInstan
   const port = await getFreePort();
   const storagePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-storage-"));
   const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-home-"));
+  const apiRoot = join(import.meta.dirname, "../../../pstdio-api");
 
-  const child = spawn("bun", ["run", "../../packages/pstdio-api/src/server.ts"], {
-    cwd: join(import.meta.dirname, "../.."),
+  const child = spawn("bun", ["run", "src/server.ts"], {
+    cwd: apiRoot,
     env: {
       ...process.env,
       PORT: String(port),
@@ -62,7 +64,7 @@ export const startApi = async (options: StartApiOptions = {}): Promise<ApiInstan
       PSTDIO_EVENT_BUS_BUFFER_SIZE:
         options.eventBusBufferSize !== undefined ? String(options.eventBusBufferSize) : undefined,
       PSTDIO_STORAGE_PATH: storagePath,
-      PSTDIO_AGENTS: "fake",
+      PSTDIO_AGENTS: options.agents ?? "fake",
       HOME: homePath,
       PSTDIO_WORKSPACES_DIR: join(homePath, ".pstdio", "workspaces"),
     },

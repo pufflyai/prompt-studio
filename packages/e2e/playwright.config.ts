@@ -6,7 +6,7 @@ import { defineConfig, devices } from "@playwright/test";
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const dashboardPort = Number(process.env.E2E_DASHBOARD_PORT ?? "5174");
 const runId = process.env.E2E_RUN_ID ?? `${Date.now()}-${process.pid}`;
-const agentEnv = process.env.E2E_AGENTS ?? "fake";
+const agentEnv = process.env.E2E_AGENTS ?? "fake,opencode,claude-code";
 const storagePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-storage-"));
 const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-home-"));
 const resolvedHomePath = process.env.E2E_HOME ?? homePath;

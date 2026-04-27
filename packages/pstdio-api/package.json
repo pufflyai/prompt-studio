@@ -23,6 +23,7 @@
     "drizzle-orm": "^0.45.1",
     "hono": "^4.10.7",
     "mustache": "^4.2.0",
+    "@pstdio/pstdio-ext-planner": "workspace:*",
     "@pstdio/sdk": "workspace:*",
     "pstdio-api-contracts": "workspace:*",
     "pstdio-agents": "workspace:*",

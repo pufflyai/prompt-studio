@@ -29,9 +29,11 @@ describe("createClient", () => {
     expect(client.tags).toBeDefined();
     expect(client.templates).toBeDefined();
     expect(client.skills).toBeDefined();
-    expect(client.agents).toBeDefined();
+    expect(client.harnesses).toBeDefined();
     expect(client.actions).toBeDefined();
     expect(client.extensionCommands).toBeDefined();
+    expect("agents" in client).toBe(false);
+    expect("planner" in client).toBe(false);
   });
 
   it("client.projects.list calls GET /v1/projects", async () => {
@@ -204,5 +206,28 @@ describe("createClient", () => {
     );
     expect(calls[0]!.method).toBe("POST");
     expect(JSON.parse(calls[0]!.body!)).toEqual({ params: { id: 1 } });
+  });
+
+  it("client.harnesses.models calls GET /v1/harnesses/:id/models", async () => {
+    const { fetchFn, calls } = trackingFetch();
+    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+
+    await client.harnesses.models("pstdio.harness.opencode");
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toBe("http://test:1234/v1/harnesses/pstdio.harness.opencode/models");
+    expect(calls[0]!.method).toBe("GET");
+  });
+
+  it("client.harnesses.setupAvailable calls POST /v1/harnesses/setup-available", async () => {
+    const { fetchFn, calls } = trackingFetch();
+    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+
+    await client.harnesses.setupAvailable({ default_harness_id: "pstdio.harness.opencode" });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toBe("http://test:1234/v1/harnesses/setup-available");
+    expect(calls[0]!.method).toBe("POST");
+    expect(JSON.parse(calls[0]!.body!)).toEqual({ default_harness_id: "pstdio.harness.opencode" });
   });
 });

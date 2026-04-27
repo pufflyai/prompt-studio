@@ -26,21 +26,21 @@ export const useAgentConfigs = () => {
 export const useEnableAgent = () =>
   useMutation({
     mutationFn: ({ agentId, binary }: { agentId: string; binary?: string }) =>
-      apiRequest<AgentConfig>("/v1/agents", {
+      apiRequest<AgentConfig>("/v1/harnesses", {
         method: "POST",
-        body: binary ? { agent_id: agentId, binary } : { agent_id: agentId },
+        body: binary ? { harness_id: agentId, binary } : { harness_id: agentId },
       }),
   });
 
 export const useDisableAgent = () =>
   useMutation({
-    mutationFn: (agentId: string) => apiRequest<void>(`/v1/agents/${agentId}`, { method: "DELETE" }),
+    mutationFn: (agentId: string) => apiRequest<void>(`/v1/harnesses/${agentId}`, { method: "DELETE" }),
   });
 
 export const useSetDefaultAgent = () =>
   useMutation({
     mutationFn: (agentId: string) =>
-      apiRequest<AgentConfig>(`/v1/agents/${agentId}`, {
+      apiRequest<AgentConfig>(`/v1/harnesses/${agentId}`, {
         method: "PATCH",
         body: { is_default: true },
       }),

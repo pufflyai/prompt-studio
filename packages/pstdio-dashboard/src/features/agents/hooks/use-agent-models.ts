@@ -5,6 +5,6 @@ import type { AgentModel } from "../types";
 export const useAgentModels = (agentId: string, options?: { enabled?: boolean }) =>
   useQuery({
     queryKey: ["agent-models", agentId],
-    queryFn: () => apiRequest<AgentModel[]>(`/v1/agents/${agentId}/models`),
+    queryFn: () => apiRequest<AgentModel[]>(`/v1/harnesses/${agentId}/models`),
     enabled: options?.enabled ?? true,
   });

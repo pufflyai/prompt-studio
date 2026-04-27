@@ -54,8 +54,10 @@ describe("package asset resolution", () => {
 
     expect(runtime.diagnostics).toEqual([]);
     expect(runtime.templates[0]?.id).toBe("project.templates.defaultTicket");
+    const extension = runtime.extensions.find((item) => item.id === "project.templates");
+    expect(extension).toBeDefined();
     await expect(
-      readPackageAssetText(runtime.templates[0].source, { sourcePath: runtime.extensions[0].sourcePath }),
+      readPackageAssetText(runtime.templates[0].source, { sourcePath: extension!.sourcePath }),
     ).resolves.toBe("Default ticket body");
   });
 

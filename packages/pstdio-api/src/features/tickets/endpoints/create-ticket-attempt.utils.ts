@@ -272,7 +272,7 @@ export const startOptionalAttemptSession = async (
   });
 
   if (!started) {
-    return { error: { status: 400 as const, message: "No agent configured for ticket attempts." } };
+    return { error: { status: 400 as const, message: "No harness configured for ticket attempts." } };
   }
 
   return { started };

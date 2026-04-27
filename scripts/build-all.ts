@@ -1,6 +1,7 @@
-import { mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { $ } from "bun";
+import { collectFiles } from "./embed-files";
 
 // Ensure we run from the repo root regardless of where the script is invoked
 process.chdir(join(import.meta.dirname, ".."));
@@ -23,23 +24,6 @@ const TARGETS = [
   { target: "bun-windows-arm64", pkg: "cli-win-arm64", bin: "pstdio.exe" },
 ];
 
-const collectFiles = (dir: string): string[] => {
-  const files: string[] = [];
-
-  for (const entry of readdirSync(dir)) {
-    if (entry.startsWith(".")) continue;
-    const fullPath = join(dir, entry);
-
-    if (statSync(fullPath).isDirectory()) {
-      files.push(...collectFiles(fullPath));
-    } else {
-      files.push(fullPath);
-    }
-  }
-
-  return files;
-};
-
 // 1. Build all packages
 console.log("Building packages...");
 await $`bun run --filter pstdio-dashboard build`;
@@ -48,7 +32,7 @@ await $`bun run --filter pstdio-api build`;
 // 2. Collect files for embedding (dashboard assets + bundled files + PGlite + drizzle)
 console.log("Collecting files to embed...");
 const distFiles = collectFiles(DASHBOARD_DIST);
-const cliFiles = collectFiles(CLI_FILES);
+const cliFiles = collectFiles(CLI_FILES, { excludeTestFiles: true });
 const agentFiles = collectFiles(AGENT_FILES);
 const drizzleFiles = collectFiles(DRIZZLE_DIR);
 const allFiles = [...distFiles, ...cliFiles, ...agentFiles, ...drizzleFiles];

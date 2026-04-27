@@ -26,13 +26,15 @@ import {
   resolveStorageRoot,
 } from "pstdio-storage";
 import { createActionRoutes } from "./features/actions/routes";
-import { createAgentRoutes } from "./features/agents/routes";
 import { createAttemptStatusRoutes } from "./features/attempt-statuses/routes";
+import type { RouteDeps } from "./features/deps";
 import { createExtensionCommandRoutes } from "./features/extension-commands/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
+import { createHarnessRoutes } from "./features/harnesses/routes";
 import { createHealthRoutes } from "./features/health/routes";
 import { fireSessionResumeHook, fireSessionStartHook, fireSessionStatusHook } from "./features/hooks/session-hooks";
 import { fireTicketHook, fireTicketHookAsync } from "./features/hooks/ticket-hooks";
+import { createPlannerRoutes } from "./features/planner/routes";
 import { createPluginService } from "./features/plugins/plugin-service";
 import { createPluginRoutes } from "./features/plugins/routes";
 import { createProjectRoutes } from "./features/projects/routes";
@@ -49,7 +51,9 @@ import { apiLogger } from "./lib/logger";
 import { createAgentConfigService } from "./services/agent-config-service";
 import { createAttemptStatusService } from "./services/attempt-status-service";
 import { createExtensionCommandService } from "./services/extension-command-service";
+import { createExtensionInstanceService } from "./services/extension-instance-service";
 import { createFileService } from "./services/file-service";
+import { createPlannerService } from "./services/planner-service";
 import { createProjectService } from "./services/project-service";
 import { createRepoService } from "./services/repo-service";
 import { createSessionService } from "./services/session-service";
@@ -84,6 +88,26 @@ const resolveEventBusBufferSize = (value: string | undefined) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 1) return undefined;
   return Math.floor(parsed);
+};
+
+const registerRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps) => {
+  app.route("/", createHealthRoutes(deps));
+  app.route("/v1", createProjectRoutes(deps));
+  app.route("/v1", createFilesystemRoutes(deps));
+  app.route("/v1", createActionRoutes(deps));
+  app.route("/v1", createExtensionCommandRoutes(deps));
+  app.route("/v1", createHarnessRoutes(deps));
+  app.route("/v1", createPluginRoutes(deps));
+  app.route("/v1", createPlannerRoutes(deps));
+  app.route("/v1", createSkillRoutes(deps));
+  app.route("/v1", createTemplateRoutes(deps));
+  app.route("/v1", createTicketRoutes(deps));
+  app.route("/v1", createStatusRoutes(deps));
+  app.route("/v1", createAttemptStatusRoutes(deps));
+  app.route("/v1", createSessionRoutes(deps));
+  app.route("/v1", createWorkspaceRoutes(deps));
+  app.route("/v1", createTagRoutes(deps));
+  app.route("/v1", createSyncRoutes(deps));
 };
 
 export const createApp = async (options: AppOptions) => {
@@ -129,6 +153,7 @@ export const createApp = async (options: AppOptions) => {
   const templateService = createTemplateService({ templatesDBService });
   const attemptStatusService = createAttemptStatusService({ attemptStatusesDBService });
   const agentConfigService = createAgentConfigService({ agentConfigsDBService });
+  const extensionInstanceService = createExtensionInstanceService({ extensionInstancesDBService });
   const skillService = createSkillService({ skillsDBService, skillsStorageService });
   const fileService = createFileService({ filesDBService, filesStorageService });
   const syncService = createSyncService({ db, eventBus });
@@ -202,6 +227,21 @@ export const createApp = async (options: AppOptions) => {
     workspaceSessionService,
   });
 
+  const plannerService = createPlannerService({
+    eventBus,
+    extensionInstancesDBService,
+    fileService,
+    pluginService,
+    repoService,
+    sessionService,
+    statusService,
+    tagService,
+    ticketService,
+    workspaceArtifactService,
+    workspaceService,
+    workspaceSessionService,
+  });
+
   // --- ONLY DOMAIN SERVICES ARE PASSED TO ROUTES ---
   const deps = {
     filesRoot: options.filesRoot,
@@ -221,10 +261,12 @@ export const createApp = async (options: AppOptions) => {
     templateService,
     attemptStatusService,
     agentConfigService,
+    extensionInstanceService,
     skillService,
     fileService,
     syncService,
     pluginService,
+    plannerService,
     extensionCommandService,
   };
 
@@ -266,22 +308,7 @@ export const createApp = async (options: AppOptions) => {
     });
   }
 
-  app.route("/", createHealthRoutes(deps));
-  app.route("/v1", createProjectRoutes(deps));
-  app.route("/v1", createFilesystemRoutes(deps));
-  app.route("/v1", createActionRoutes(deps));
-  app.route("/v1", createExtensionCommandRoutes(deps));
-  app.route("/v1", createPluginRoutes(deps));
-  app.route("/v1", createAgentRoutes(deps));
-  app.route("/v1", createSkillRoutes(deps));
-  app.route("/v1", createTemplateRoutes(deps));
-  app.route("/v1", createTicketRoutes(deps));
-  app.route("/v1", createStatusRoutes(deps));
-  app.route("/v1", createAttemptStatusRoutes(deps));
-  app.route("/v1", createSessionRoutes(deps));
-  app.route("/v1", createWorkspaceRoutes(deps));
-  app.route("/v1", createTagRoutes(deps));
-  app.route("/v1", createSyncRoutes(deps));
+  registerRoutes(app, deps);
 
   app.onError((err, c) => {
     const entry = {

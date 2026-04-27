@@ -34,9 +34,9 @@ const writeExtension = (projectRoot: string, extensionDir: string, source: strin
 const writeTicketsExtension = (projectRoot: string) => {
   writeExtension(
     projectRoot,
-    "pstdio.tickets",
+    "project.tickets",
     `export default {
-      id: "pstdio.tickets",
+      id: "project.tickets",
       name: "Tickets",
       commands: {
         pullTickets: {
@@ -162,7 +162,7 @@ describe("extension command CLI routing regressions", () => {
       return jsonResponse(
         {
           error:
-            'Command "tickets pull" is unavailable because no enabled extension provides it. It is normally provided by "pstdio.tickets". Extension "pstdio.tickets" is disabled for this project.',
+            'Command "tickets pull" is unavailable because no enabled extension provides it. It is normally provided by "pstdio.planner". Extension "pstdio.planner" is disabled for this project.',
         },
         { status: 400 },
       );
@@ -181,8 +181,8 @@ describe("extension command CLI routing regressions", () => {
 
     expect(output.exitCode).toBe(1);
     expect(output.stderr).toContain('Command "tickets pull" is unavailable because no enabled extension provides it.');
-    expect(output.stderr).toContain('It is normally provided by "pstdio.tickets".');
-    expect(output.stderr).toContain('Extension "pstdio.tickets" is disabled for this project.');
+    expect(output.stderr).toContain('It is normally provided by "pstdio.planner".');
+    expect(output.stderr).toContain('Extension "pstdio.planner" is disabled for this project.');
     expect(output.stderr).not.toContain("PS-1");
     expect(output.stdout).toBe("");
     expect(requestBody).toEqual({ params: { id: "PS-1" } });

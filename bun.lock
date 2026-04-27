@@ -57,6 +57,7 @@
         "yargs": "^18.0.0",
       },
       "devDependencies": {
+        "@pstdio/pstdio-ext-planner": "workspace:*",
         "@pstdio/sdk": "workspace:*",
         "@types/bun": "latest",
         "@types/mustache": "^4.2.6",
@@ -99,6 +100,7 @@
       "dependencies": {
         "@hono/swagger-ui": "^0.5.2",
         "@hono/zod-openapi": "^1.1.5",
+        "@pstdio/pstdio-ext-planner": "workspace:*",
         "@pstdio/sdk": "workspace:*",
         "drizzle-orm": "^0.45.1",
         "hono": "^4.10.7",
@@ -211,9 +213,20 @@
         "typescript": "6.0.2",
       },
     },
+    "packages/pstdio-ext-planner": {
+      "name": "@pstdio/pstdio-ext-planner",
+      "dependencies": {
+        "@pstdio/sdk": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "6.0.2",
+      },
+    },
     "packages/pstdio-extensions": {
       "name": "pstdio-extensions",
       "dependencies": {
+        "@pstdio/pstdio-ext-planner": "workspace:*",
         "@pstdio/sdk": "workspace:*",
         "pstdio-db": "workspace:*",
       },
@@ -1069,6 +1082,8 @@
     "@pstdio/landing-page": ["@pstdio/landing-page@workspace:clients/landing-page"],
 
     "@pstdio/prompt-utils": ["@pstdio/prompt-utils@0.1.4", "", { "dependencies": { "common-tags": "^1.8.2", "json-stable-stringify": "^1.3.0", "nanoid": "^5.1.5" } }, "sha512-mNlrb/8I2k6f9/bqOR53nIfNLZ+bYaL64aDiXhUE8EnaarBJvVcJJFDJkD/gF7MwxQgkQXLH6YUsqeVEjs66rQ=="],
+
+    "@pstdio/pstdio-ext-planner": ["@pstdio/pstdio-ext-planner@workspace:packages/pstdio-ext-planner"],
 
     "@pstdio/sdk": ["@pstdio/sdk@workspace:packages/sdk"],
 
@@ -3686,6 +3701,8 @@
 
     "@oxc-resolver/binding-wasm32-wasi/@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.1.4", "", { "dependencies": { "@tybys/wasm-util": "^0.10.1" }, "peerDependencies": { "@emnapi/core": "^1.7.1", "@emnapi/runtime": "^1.7.1" } }, "sha512-3NQNNgA1YSlJb/kMH1ildASP9HW7/7kYnRI2szWJaofaS1hWmbGI4H+d3+22aGzXXN9IJ+n+GiFVcGipJP18ow=="],
 
+    "@pstdio/pstdio-ext-planner/@types/bun": ["@types/bun@1.3.13", "", { "dependencies": { "bun-types": "1.3.13" } }, "sha512-9fqXWk5YIHGGnUau9TEi+qdlTYDAnOj+xLCmSTwXfAIqXr2x4tytJb43E9uCvt09zJURKXwAtkoH4nLQfzeTXw=="],
+
     "@pstdio/sdk/@types/bun": ["@types/bun@1.3.13", "", { "dependencies": { "bun-types": "1.3.13" } }, "sha512-9fqXWk5YIHGGnUau9TEi+qdlTYDAnOj+xLCmSTwXfAIqXr2x4tytJb43E9uCvt09zJURKXwAtkoH4nLQfzeTXw=="],
 
     "@rushstack/node-core-library/fs-extra": ["fs-extra@11.3.4", "", { "dependencies": { "graceful-fs": "^4.2.0", "jsonfile": "^6.0.1", "universalify": "^2.0.0" } }, "sha512-CTXd6rk/M3/ULNQj8FBqBWHYBVYybQ3VPBw0xGKFe3tuH7ytT6ACnvzpIQ3UZtB8yvUKC2cXn1a+x+5EVQLovA=="],
@@ -4245,6 +4262,8 @@
     "@oxc-resolver/binding-wasm32-wasi/@napi-rs/wasm-runtime/@emnapi/runtime": ["@emnapi/runtime@1.10.0", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-ewvYlk86xUoGI0zQRNq/mC+16R1QeDlKQy21Ki3oSYXNgLb45GV1P6A0M+/s6nyCuNDqe5VpaY84BzXGwVbwFA=="],
 
     "@oxc-resolver/binding-wasm32-wasi/@napi-rs/wasm-runtime/@tybys/wasm-util": ["@tybys/wasm-util@0.10.1", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg=="],
+
+    "@pstdio/pstdio-ext-planner/@types/bun/bun-types": ["bun-types@1.3.13", "", { "dependencies": { "@types/node": "*" } }, "sha512-QXKeHLlOLqQX9LgYaHJfzdBaV21T63HhFJnvuRCcjZiaUDpbs5ED1MgxbMra71CsryN/1dAoXuJJJwIv/2drVA=="],
 
     "@pstdio/sdk/@types/bun/bun-types": ["bun-types@1.3.13", "", { "dependencies": { "@types/node": "*" } }, "sha512-QXKeHLlOLqQX9LgYaHJfzdBaV21T63HhFJnvuRCcjZiaUDpbs5ED1MgxbMra71CsryN/1dAoXuJJJwIv/2drVA=="],
 

@@ -22,7 +22,7 @@ const createMappedSession = async (input: {
   const session = await deps.sessionService.create({
     project_id: projectId,
     title: `session-${crypto.randomUUID().slice(0, 8)}`,
-    agent: input.agent ?? "opencode",
+    agent: input.agent ?? "pstdio.harness.opencode",
     cwd: input.cwd,
   });
 
@@ -61,7 +61,7 @@ describe("POST /v1/sessions/resolve-session-id", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        agent: "opencode",
+        harness: "pstdio.harness.opencode",
         agent_session_id: agentSessionId,
       }),
     });
@@ -76,7 +76,7 @@ describe("POST /v1/sessions/resolve-session-id", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        agent: "opencode",
+        harness: "pstdio.harness.opencode",
         agent_session_id: makeAgentSessionId("missing"),
       }),
     });
@@ -103,7 +103,7 @@ describe("POST /v1/sessions/resolve-session-id", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        agent: "opencode",
+        harness: "pstdio.harness.opencode",
         agent_session_id: agentSessionId,
       }),
     });
@@ -122,7 +122,7 @@ describe("POST /v1/sessions/resolve-session-id", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        agent: "opencode",
+        harness: "pstdio.harness.opencode",
         agent_session_id: agentSessionId,
         cwd: "/repo/b",
       }),
@@ -142,7 +142,7 @@ describe("POST /v1/sessions/resolve-session-id", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        agent: "opencode",
+        harness: "pstdio.harness.opencode",
         agent_session_id: agentSessionId,
       }),
     });
@@ -161,7 +161,7 @@ describe("POST /v1/sessions/resolve-session-id", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        agent: "opencode",
+        harness: "pstdio.harness.opencode",
         agent_session_id: agentSessionId,
         cwd: "/repo/same",
       }),
@@ -170,5 +170,18 @@ describe("POST /v1/sessions/resolve-session-id", () => {
     expect(res.status).toBe(409);
     const body = await res.json();
     expect(body).toEqual({ error: "Ambiguous session match" });
+  });
+
+  test("does not accept the legacy agent request field", async () => {
+    const res = await app.request("/v1/sessions/resolve-session-id", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        agent: "opencode",
+        agent_session_id: makeAgentSessionId("legacy-agent"),
+      }),
+    });
+
+    expect(res.status).toBe(400);
   });
 });

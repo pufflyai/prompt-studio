@@ -95,18 +95,18 @@ Conversations between users and agents, tracked in the database. Sessions can be
    pstdio projects link --project-id <id>
    ```
 
-3. **Configure an agent**
+3. **Configure a harness**
 
    ```bash
-   pstdio agents setup claude-code
+   pstdio harnesses setup pstdio.harness.claude-code
    ```
 
-   Installs bundled skills to the agent's skills directory (e.g. `.claude/skills/`).
+   The first configured harness becomes the default for new sessions.
 
 4. **Verify setup**
    ```bash
    pstdio projects list
-   pstdio agents list
+   pstdio harnesses list
    ```
 
 ## Configuration
@@ -122,19 +122,19 @@ Conversations between users and agents, tracked in the database. Sessions can be
 }
 ```
 
-### Agent Configuration
+### Harness Configuration
 
-Stored in the database. The first configured agent becomes the default.
+Stored in the database. The first configured harness becomes the default.
 
 ```bash
-pstdio agents list                # Show agents with status (configured, installed, default)
-pstdio agents setup <agent-id>    # Configure agent, install skills
-pstdio agents update <agent-id>   # Update config (--default, --binary, --skills-dir)
-pstdio agents remove <agent-id>   # Remove agent (--delete-skills to also remove skill files)
-pstdio agents install-skills <id> # Reinstall bundled skills (missing only, never overwrites)
+pstdio harnesses list                 # Show harnesses with status
+pstdio harnesses setup <harness-id>   # Configure a harness
+pstdio harnesses update <harness-id>  # Update config (--default, --binary, --skills-dir)
+pstdio harnesses remove <harness-id>  # Remove harness config
+pstdio harnesses start --prompt "..." # Start a harness-backed session
 ```
 
-Available agents: `claude-code`, `opencode`.
+Available first-party harnesses: `pstdio.harness.claude-code`, `pstdio.harness.opencode`.
 
 ## Plugins
 

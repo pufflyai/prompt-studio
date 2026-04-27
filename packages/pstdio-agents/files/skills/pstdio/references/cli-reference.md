@@ -25,15 +25,16 @@ pstdio projects repos [--project-id <id>]  # List linked repos
 pstdio projects delete <project-id>        # Delete a project
 ```
 
-## Agents
+## Harnesses
 
 ```bash
-pstdio agents list                                  # List agents with status
-pstdio agents setup <agent-id> [--global-skills] [--global-plugins]
-pstdio agents update <agent-id> [--default] [--binary <path>] [--skills-dir <path>]
-pstdio agents remove <agent-id> [--delete-skills]   # Remove agent config
-pstdio agents install-skills <agent-id> [--global-skills]   # Reinstall missing skills
-pstdio agents install-plugins <agent-id> [--global-plugins] # Reinstall missing plugins
+pstdio harnesses list
+pstdio harnesses setup <harness-id>
+pstdio harnesses update <harness-id> [--default] [--binary <path>] [--skills-dir <path>]
+pstdio harnesses remove <harness-id>
+pstdio harnesses start --prompt "..." [--harness <harness-id>]
+pstdio harnesses send --id <session-id> --prompt "..."
+pstdio harnesses stop --id <session-id>
 ```
 
 ## Plugins
@@ -142,10 +143,10 @@ pstdio [--api-port <n>] [--dashboard-port <n>]       # Launch dashboard + open b
 ## Troubleshooting
 
 - **"Project not found"**: Run `pstdio projects list` to verify the project exists, then `pstdio projects link --project-id <id>`.
-- **Skills not installed**: Run `pstdio agents install-skills <agent-id>` to reinstall missing skills.
-- **Plugins not loaded**: Run `pstdio plugins list` to verify discovery; `pstdio agents install-plugins <agent-id>` reinstalls bundled plugins, `pstdio plugins register` re-registers them.
+- **Harness not configured**: Run `pstdio harnesses list`, then `pstdio harnesses setup <harness-id>`.
+- **Plugins not loaded**: Run `pstdio plugins list` to verify discovery; `pstdio plugins register` re-registers them.
 - **Config missing**: Check that `.pstdio/config.json` exists at the git root. Create with `pstdio projects create` or `pstdio projects link`.
 - **API not reachable**: Run `pstdio serve` to start the API manually, or check if it is already running on the expected port. Check runtime logs in `~/.pstdio/logs.jsonl` (or your configured log path).
 - **Error logs**: Startup failures and runtime errors are emitted through the shared logger stream (`stdout` and the configured JSONL target).
-- **Agent not found**: Run `pstdio agents list` to check availability. Ensure the agent binary is installed and on your PATH.
+- **Harness not found**: Run `pstdio harnesses list` to check availability. Ensure the provider binary is installed and on your PATH.
 - **Workspace issues**: Run `pstdio workspaces list` to see active workspaces. `pstdio workspaces delete --id <ws-id>` force-removes a stuck worktree.

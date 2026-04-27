@@ -4,8 +4,8 @@ export type ExtensionCommandHint = {
 };
 
 const firstPartyCommandHints: ExtensionCommandHint[] = [
-  { path: "tickets pull", extensionId: "pstdio.tickets" },
-  { path: "tickets push", extensionId: "pstdio.tickets" },
+  { path: "tickets pull", extensionId: "pstdio.planner" },
+  { path: "tickets push", extensionId: "pstdio.planner" },
 ];
 
 export const hintedExtensionCommandNamespaces = new Set(

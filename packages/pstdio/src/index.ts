@@ -130,6 +130,18 @@ const shouldLoadExtensionRuntimeForArgs = (args: string[]) => {
   return false;
 };
 
+const formatRemovedAgentCommandMessage = (commandPath: string) => {
+  if (commandPath.split(" ")[0] !== "agents") return null;
+
+  return [
+    "pstdio agents is no longer available.",
+    "Use pstdio harnesses for provider setup and execution.",
+    commandPath === "agents setup"
+      ? "Run `pstdio harnesses setup <harness-id>` instead."
+      : "Run `pstdio harnesses --help` for the available harness commands.",
+  ].join("\n");
+};
+
 const resolveProjectContext = () => {
   const root = findGitRoot(process.cwd());
   if (!root) return null;
@@ -189,6 +201,13 @@ const cli = yargs(rawArgs)
   .strict()
   .fail((msg, err, yargs) => {
     const commandPath = resolveCommandPathFromRawArgs(rawArgs);
+    const removedAgentCommand = formatRemovedAgentCommandMessage(commandPath);
+    if (removedAgentCommand) {
+      commandTracker.logFailure(removedAgentCommand);
+      process.stderr.write(`Error: ${removedAgentCommand}\n`);
+      process.exit(1);
+    }
+
     const unavailable = extensionCommands.unavailableByPath.get(commandPath);
     if (unavailable) {
       const message = formatUnavailableExtensionCommandMessage(unavailable);
@@ -220,6 +239,11 @@ const cli = yargs(rawArgs)
     commandTracker.logStart();
 
     const commandPath = resolveCommandPathFromRawArgs(rawArgs);
+    const removedAgentCommand = formatRemovedAgentCommandMessage(commandPath);
+    if (removedAgentCommand) {
+      throw new Error(removedAgentCommand);
+    }
+
     const unavailable = extensionCommands.unavailableByPath.get(commandPath);
     if (unavailable) {
       throw new Error(formatUnavailableExtensionCommandMessage(unavailable));

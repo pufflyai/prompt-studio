@@ -85,6 +85,7 @@ describe("extensions check formatting", () => {
     expect(output).toContain("No command ids registered.");
     expect(output).toContain("No CLI paths registered.");
     expect(output).toContain("No artifact mounts registered.");
+    expect(output).toContain("No harness providers registered.");
     expect(output).toContain("No diagnostics.");
     expect(loadExtensionRuntime).toHaveBeenCalledWith({ projectRoot: "/repo" });
     expect(setExitCode).not.toHaveBeenCalled();
@@ -134,6 +135,15 @@ describe("extensions check formatting", () => {
             sourcePath: "/repo/.pstdio/extensions/project.review/extension.ts",
           },
         ],
+        harnesses: [
+          {
+            id: "project.review.fake",
+            key: "fake",
+            extensionId: "project.review",
+            label: "Fake Harness",
+            start: async () => ({ runId: "run-1" }),
+          },
+        ],
         diagnostics: [
           {
             severity: "error",
@@ -152,6 +162,8 @@ describe("extensions check formatting", () => {
     expect(output).toContain("project.review.run");
     expect(output).toContain("workspace review");
     expect(output).toContain(".pstdio/tickets");
+    expect(output).toContain("project.review.fake");
+    expect(output).toContain("Fake Harness");
     expect(output).toContain("[error] duplicate_cli_path");
     expect(output).toContain("related:");
     expect(output).toContain("command=project.review.run");
@@ -251,7 +263,7 @@ describe("extensions check runtime integration", () => {
 
     const output = log.mock.calls[0]?.[0] as string;
     expect(output).toContain(`Project root: ${projectRoot}`);
-    expect(output).toContain("No extensions loaded.");
+    expect(output).toContain("pstdio.planner");
     expect(output).toContain("No diagnostics.");
     expect(setExitCode).not.toHaveBeenCalled();
   });
@@ -274,6 +286,14 @@ describe("extensions check runtime integration", () => {
         artifactMounts: {
           tickets: { path: ".pstdio/tickets", label: "Tickets" },
         },
+        harnesses: {
+          fake: {
+            label: "Fake Harness",
+            async start() {
+              return { runId: "fake" };
+            },
+          },
+        },
       };`,
     );
     const { handler, log, setExitCode } = createRuntimeBackedHandler(projectRoot);
@@ -286,6 +306,7 @@ describe("extensions check runtime integration", () => {
     expect(output).toContain("project.review.run");
     expect(output).toContain("workspace review");
     expect(output).toContain(".pstdio/tickets");
+    expect(output).toContain("project.review.fake");
     expect(output).toContain("No diagnostics.");
     expect(setExitCode).not.toHaveBeenCalled();
   });

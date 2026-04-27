@@ -1,6 +1,6 @@
 import { type ActionClient, createActionClient } from "./actions";
-import { type AgentClient, createAgentClient } from "./agents";
 import { createExtensionCommandClient, type ExtensionCommandClient } from "./extension-commands";
+import { createHarnessClient, type HarnessClient } from "./harnesses";
 import { createProjectClient, type ProjectClient } from "./projects";
 import type { ClientOptions } from "./request";
 import { createRequest } from "./request";
@@ -21,7 +21,7 @@ export type PstdioClient = {
   tags: TagClient;
   templates: TemplateClient;
   skills: SkillClient;
-  agents: AgentClient;
+  harnesses: HarnessClient;
   actions: ActionClient;
   extensionCommands: ExtensionCommandClient;
 };
@@ -37,7 +37,7 @@ export const createClient = (options: ClientOptions = {}): PstdioClient => {
     tags: createTagClient(request),
     templates: createTemplateClient(request),
     skills: createSkillClient(request),
-    agents: createAgentClient(request),
+    harnesses: createHarnessClient(request),
     actions: createActionClient(request),
     extensionCommands: createExtensionCommandClient(request),
   };

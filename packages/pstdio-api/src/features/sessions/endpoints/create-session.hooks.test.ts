@@ -149,7 +149,7 @@ describe("createSessionHandler hooks", () => {
 
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
-      error: "No agent configured. Set a default agent with 'pstdio agents setup' first.",
+      error: "No harness configured. Set a default harness with 'pstdio harnesses setup' first.",
     });
     expect(sessionCreate).not.toHaveBeenCalled();
   });

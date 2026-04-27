@@ -30,15 +30,15 @@ const runPstdioCaptured = (args: string, env: Record<string, string>) => {
 
 describe("cli help and feedback", () => {
   test(
-    "shows agents help when subcommand is missing",
+    "shows harnesses help when subcommand is missing",
     () => {
-      const result = runPstdioCaptured("agents", { PSTDIO_API_URL: api.url });
+      const result = runPstdioCaptured("harnesses", { PSTDIO_API_URL: api.url });
       const { output } = result;
 
       expect(result.exitCode).toBe(0);
-      expect(output).toContain("pstdio agents [command]");
-      expect(output).toContain("Manage coding agents");
-      expect(output).toContain("pstdio agents list");
+      expect(output).toContain("pstdio harnesses [command]");
+      expect(output).toContain("Manage and run harness providers");
+      expect(output).toContain("pstdio harnesses list");
     },
     TEST_TIMEOUT,
   );
@@ -67,7 +67,7 @@ describe("cli help and feedback", () => {
       expect(result.exitCode).not.toBe(0);
       expect(result.stderr).toContain("Unknown argument: foo");
       expect(result.stderr).toContain("pstdio");
-      expect(result.stderr).toContain("pstdio agents [command]");
+      expect(result.stderr).toContain("pstdio harnesses [command]");
       expect(result.stderr).toContain("pstdio projects [command]");
     },
     TEST_TIMEOUT,

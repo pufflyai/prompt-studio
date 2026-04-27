@@ -12,16 +12,17 @@ describe("cookbook fixture extensions", () => {
     expect(runtime.extensions.map((extension) => extension.id).sort()).toEqual([
       "project.review",
       "project.templates",
+      "project.tickets",
       "project.wrapper",
       "pstdio.harness.opencode",
-      "pstdio.tickets",
+      "pstdio.planner",
     ]);
 
     expect(runtime.commands.map((command) => command.id).sort()).toEqual([
       "project.review.runReview",
+      "project.tickets.pullTickets",
+      "project.tickets.pushTickets",
       "project.wrapper.refresh",
-      "pstdio.tickets.pullTickets",
-      "pstdio.tickets.pushTickets",
     ]);
     expect(runtime.cli.map((cli) => cli.path).sort()).toEqual(["tickets pull", "tickets push", "workspaces review"]);
     expect(runtime.artifactMounts.map((mount) => mount.path)).toEqual([".pstdio/tickets"]);

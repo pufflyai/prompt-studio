@@ -19,10 +19,10 @@ describe("sessions resolve-session-id", () => {
     const deps = makeDeps();
     const handler = createHandler(deps);
 
-    await handler(argv({ agent: "opencode", "agent-session-id": "oc-1", cwd: "/repo/a", json: true }));
+    await handler(argv({ harness: "pstdio.harness.opencode", "agent-session-id": "oc-1", cwd: "/repo/a", json: true }));
 
     expect(deps.resolveSessionId).toHaveBeenCalledWith({
-      agent: "opencode",
+      harness: "pstdio.harness.opencode",
       agent_session_id: "oc-1",
       cwd: "/repo/a",
     });
@@ -41,7 +41,7 @@ describe("sessions resolve-session-id", () => {
     const deps = makeDeps();
     const handler = createHandler(deps);
 
-    await handler(argv({ agent: "opencode", "agent-session-id": "oc-2" }));
+    await handler(argv({ harness: "pstdio.harness.opencode", "agent-session-id": "oc-2" }));
 
     expect(deps.log).toHaveBeenCalledWith("sess-123");
   });
@@ -50,7 +50,7 @@ describe("sessions resolve-session-id", () => {
     const deps = makeDeps({ resolveSessionId: mock(async () => ({ session_id: null })) });
     const handler = createHandler(deps);
 
-    await handler(argv({ agent: "opencode", "agent-session-id": "oc-3" }));
+    await handler(argv({ harness: "pstdio.harness.opencode", "agent-session-id": "oc-3" }));
 
     expect(deps.log).toHaveBeenCalledWith("No matching session found.");
   });

@@ -5,6 +5,7 @@ import { streamSSE } from "hono/streaming";
 import type { AgentId, EventStore, JsonPatch, SessionMessage } from "pstdio-agents";
 import type { AppBindings } from "../../../types";
 import type { RouteDeps } from "../../deps";
+import { toAgentId } from "../../harnesses/harness-ids";
 import { buildMessagesFromPatches, resolveMessagePatchIndexOffset } from "../session-messages";
 
 const SESSION_STREAM_HEARTBEAT_MS = 1000;
@@ -37,7 +38,7 @@ const replayPersistedMessages = async (sessionFileId: string, deps: RouteDeps, s
 };
 
 const fetchAgentMessages = async (session: SessionRecord, deps: RouteDeps) => {
-  const agent = deps.agentRegistry.get(session.agent as AgentId);
+  const agent = deps.agentRegistry.get(toAgentId(session.agent) as AgentId);
   if (!agent) return null;
 
   const cwd = session.cwd;

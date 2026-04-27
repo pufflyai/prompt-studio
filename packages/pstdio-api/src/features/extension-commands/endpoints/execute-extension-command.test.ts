@@ -117,10 +117,10 @@ const createProjectWithSessionExtension = async () => {
   });
   closeFns.push(close);
 
-  await app.request("/v1/agents", {
+  await app.request("/v1/harnesses", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ agent_id: "fake" }),
+    body: JSON.stringify({ harness_id: "fake" }),
   });
 
   const projectResponse = await app.request("/v1/projects", {

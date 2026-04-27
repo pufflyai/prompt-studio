@@ -1,6 +1,7 @@
 import type { AgentId } from "pstdio-agents";
 import { sessionLogger } from "../../lib/logger";
 import type { RouteDeps } from "../deps";
+import { toAgentId } from "../harnesses/harness-ids";
 import { reattachAgentSession } from "./spawn-agent";
 
 type Deps = Pick<RouteDeps, "sessionService" | "agentRegistry" | "eventBus" | "fileService">;
@@ -14,7 +15,8 @@ export const resolveOrphanedSessions = async (deps: Deps, signal?: AbortSignal) 
 
     if (deps.sessionService.store.get(session.id)) continue;
 
-    const agent = session.agent ? deps.agentRegistry.get(session.agent as AgentId) : null;
+    const agentId = session.agent ? toAgentId(session.agent) : null;
+    const agent = agentId ? deps.agentRegistry.get(agentId as AgentId) : null;
     const canReattach =
       agent?.reattachSession && agent.capabilities().includes("SessionReattach") && session.agent_session_id;
 
@@ -28,7 +30,7 @@ export const resolveOrphanedSessions = async (deps: Deps, signal?: AbortSignal) 
         {
           sessionId: session.id,
           agentSessionId: session.agent_session_id!,
-          agentId: session.agent!,
+          agentId: agentId!,
           cwd: session.cwd ?? undefined,
         },
         deps,

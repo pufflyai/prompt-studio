@@ -1,7 +1,7 @@
 import type { CommandModule } from "yargs";
-import * as agentsCommand from "./agents";
 import * as closeCommand from "./close";
 import * as extensionsCommand from "./extensions";
+import * as harnessesCommand from "./harnesses";
 import * as pluginsCommand from "./plugins";
 import * as projectsCommand from "./projects";
 import * as serveCommand from "./serve";
@@ -13,9 +13,9 @@ import * as ticketsCommand from "./tickets";
 import * as workspaceCommand from "./workspace";
 
 const staticTopLevelCommandModules = [
-  agentsCommand,
   closeCommand,
   extensionsCommand,
+  harnessesCommand,
   pluginsCommand,
   projectsCommand,
   serveCommand,

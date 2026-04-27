@@ -135,7 +135,7 @@ const createSessionFromExtensionCommand = async (
   const workspaceId = await resolveWorkspaceId(deps, projectId, findWorkspaceAnchor(sessionInput.anchors));
   const agentId = await resolveDefaultAgentId(deps, project);
   if (!agentId) {
-    throw new Error("No agent configured. Set a default agent with 'pstdio agents setup' first.");
+    throw new Error("No harness configured. Set a default harness with 'pstdio harnesses setup' first.");
   }
 
   const cwd = await resolveSessionCwd(deps, projectId, workspaceId);

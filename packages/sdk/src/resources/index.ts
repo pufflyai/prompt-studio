@@ -1,6 +1,6 @@
 export type { Repo } from "pstdio-api-contracts";
-export type { AgentAvailabilityType, AgentConfig, AgentInfo, AgentModel } from "./agent";
 export type { FileRecord } from "./file";
+export type { HarnessAvailabilityType, HarnessConfig, HarnessInfo, HarnessModel } from "./harness";
 export type { Project } from "./project";
 export type { Session, SessionStatus } from "./session";
 export type { Skill, SkillFile, SkillWithContent } from "./skill";
