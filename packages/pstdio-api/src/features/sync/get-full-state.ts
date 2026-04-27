@@ -1,6 +1,7 @@
 import { isNull } from "drizzle-orm";
 import type { DbClient } from "pstdio-db";
 import {
+  activity_events,
   agent_configs,
   files,
   project_repos,
@@ -25,6 +26,7 @@ const tableMap = {
   repos,
   project_repos,
   agent_configs,
+  activity_events,
   ticket_statuses,
   tickets,
   ticket_tags,

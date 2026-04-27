@@ -26,9 +26,18 @@ export const sessionStatusEnum = pgEnum("session_status", [
   "disconnected",
 ]);
 
-export const activityResourceTypeEnum = pgEnum("activity_resource_type", ["ticket", "workspace", "session"]);
 export const activityActorTypeEnum = pgEnum("activity_actor_type", ["user", "agent", "system"]);
 export const activitySourceEnum = pgEnum("activity_source", ["ui", "api", "hook", "system", "agent"]);
+
+export type ActivityResourceRef = {
+  type: string;
+  id: string;
+  projectId?: string;
+  label?: string;
+  extensionId?: string;
+  role?: "primary" | "context" | "source" | "result";
+  metadata?: Record<string, unknown>;
+};
 
 export const projects = pgTable("projects", {
   id: text("id").primaryKey(),
@@ -315,8 +324,11 @@ export const activity_events = pgTable(
     project_id: text("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
-    resource_type: activityResourceTypeEnum("resource_type").notNull(),
+    resource_type: text("resource_type").notNull(),
     resource_id: text("resource_id").notNull(),
+    target_ref_json: jsonb("target_ref_json").$type<ActivityResourceRef>().notNull(),
+    related_refs_json: jsonb("related_refs_json").$type<ActivityResourceRef[]>().notNull().default([]),
+    source_extension_id: text("source_extension_id"),
     event_type: text("event_type").notNull(),
     actor_type: activityActorTypeEnum("actor_type").notNull(),
     actor_id: text("actor_id"),

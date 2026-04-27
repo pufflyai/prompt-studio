@@ -165,6 +165,18 @@ export type ExtensionCommandsApi = {
   run(commandId: string, input?: Record<string, unknown>): Promise<unknown>;
 };
 
+export type ActivityRecordInput = {
+  eventType: string;
+  summary: string;
+  target?: ResourceRef;
+  related?: ResourceRef[];
+  metadata?: Record<string, unknown>;
+};
+
+export type ExtensionActivityApi = {
+  record(input: ActivityRecordInput): Promise<unknown>;
+};
+
 export type CommandRunContext = {
   projectId: string;
   target: ResourceRef;
@@ -172,6 +184,7 @@ export type CommandRunContext = {
   storage: ExtensionStorageApi;
   sessions: ExtensionSessionsApi;
   commands: ExtensionCommandsApi;
+  activity: ExtensionActivityApi;
 };
 
 export type CommandHandler = (ctx: CommandRunContext) => void | Promise<void> | unknown | Promise<unknown>;

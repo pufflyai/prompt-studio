@@ -15,6 +15,36 @@ let close: () => Promise<void>;
 let service: ReturnType<typeof createActivityEventsDBService>;
 let projectId: string;
 
+type ActivityEventInsert = typeof activity_events.$inferInsert;
+
+const activityRow = (
+  input: Pick<ActivityEventInsert, "id" | "created_at"> & Partial<ActivityEventInsert>,
+): ActivityEventInsert => {
+  const resourceType = input.resource_type ?? "ticket";
+  const resourceId = input.resource_id ?? "PS-1";
+  const rowProjectId = input.project_id ?? projectId;
+
+  return {
+    project_id: rowProjectId,
+    resource_type: resourceType,
+    resource_id: resourceId,
+    target_ref_json: {
+      type: resourceType,
+      id: resourceId,
+      projectId: rowProjectId,
+    },
+    related_refs_json: [],
+    source_extension_id: null,
+    event_type: "updated",
+    actor_type: "user",
+    actor_id: null,
+    source: "ui",
+    summary: input.id,
+    payload_json: {},
+    ...input,
+  };
+};
+
 beforeEach(async () => {
   const conn = await createDb({ path: ":memory:" });
   db = conn.db;
@@ -100,45 +130,31 @@ describe("activity events service", () => {
     const now = "2026-04-17T12:00:00.000Z";
 
     await db.insert(activity_events).values([
-      {
+      activityRow({
         id: "event-1",
-        project_id: projectId,
-        resource_type: "ticket",
         resource_id: "PS-1",
         event_type: "created",
         actor_type: "system",
-        actor_id: null,
         source: "system",
         summary: "Created",
-        payload_json: {},
         created_at: "2026-04-17T11:00:00.000Z",
-      },
-      {
+      }),
+      activityRow({
         id: "event-2",
-        project_id: projectId,
-        resource_type: "ticket",
         resource_id: "PS-2",
-        event_type: "updated",
-        actor_type: "user",
-        actor_id: null,
         source: "api",
         summary: "Updated",
-        payload_json: {},
         created_at: now,
-      },
-      {
+      }),
+      activityRow({
         id: "event-3",
-        project_id: projectId,
-        resource_type: "ticket",
         resource_id: "PS-3",
-        event_type: "updated",
         actor_type: "agent",
         actor_id: "agent-1",
         source: "agent",
         summary: "Updated",
-        payload_json: {},
         created_at: "2026-04-17T13:00:00.000Z",
-      },
+      }),
     ]);
 
     const filtered = await service.listByProject({
@@ -156,45 +172,21 @@ describe("activity events service", () => {
 describe("activity events service pagination", () => {
   test("orders by created_at desc with id tie-breaker and paginates by cursor", async () => {
     await db.insert(activity_events).values([
-      {
+      activityRow({
         id: "a",
-        project_id: projectId,
-        resource_type: "ticket",
-        resource_id: "PS-1",
-        event_type: "updated",
-        actor_type: "user",
-        actor_id: null,
-        source: "ui",
         summary: "A",
-        payload_json: {},
         created_at: "2026-04-17T10:00:00.000Z",
-      },
-      {
+      }),
+      activityRow({
         id: "b",
-        project_id: projectId,
-        resource_type: "ticket",
-        resource_id: "PS-1",
-        event_type: "updated",
-        actor_type: "user",
-        actor_id: null,
-        source: "ui",
         summary: "B",
-        payload_json: {},
         created_at: "2026-04-17T10:00:00.000Z",
-      },
-      {
+      }),
+      activityRow({
         id: "c",
-        project_id: projectId,
-        resource_type: "ticket",
-        resource_id: "PS-1",
-        event_type: "updated",
-        actor_type: "user",
-        actor_id: null,
-        source: "ui",
         summary: "C",
-        payload_json: {},
         created_at: "2026-04-17T11:00:00.000Z",
-      },
+      }),
     ]);
 
     const firstPage = await service.listByProject({ projectId, limit: 2 });
@@ -212,32 +204,16 @@ describe("activity events service pagination", () => {
 
   test("ignores malformed cursors", async () => {
     await db.insert(activity_events).values([
-      {
+      activityRow({
         id: "event-a",
-        project_id: projectId,
-        resource_type: "ticket",
-        resource_id: "PS-1",
-        event_type: "updated",
-        actor_type: "user",
-        actor_id: null,
-        source: "ui",
         summary: "A",
-        payload_json: {},
         created_at: "2026-04-17T10:00:00.000Z",
-      },
-      {
+      }),
+      activityRow({
         id: "event-b",
-        project_id: projectId,
-        resource_type: "ticket",
-        resource_id: "PS-1",
-        event_type: "updated",
-        actor_type: "user",
-        actor_id: null,
-        source: "ui",
         summary: "B",
-        payload_json: {},
         created_at: "2026-04-17T11:00:00.000Z",
-      },
+      }),
     ]);
 
     const listed = await service.listByProject({
@@ -251,32 +227,16 @@ describe("activity events service pagination", () => {
 
   test("clamps limit to a minimum of one", async () => {
     await db.insert(activity_events).values([
-      {
+      activityRow({
         id: "l1",
-        project_id: projectId,
-        resource_type: "ticket",
-        resource_id: "PS-1",
-        event_type: "updated",
-        actor_type: "user",
-        actor_id: null,
-        source: "ui",
         summary: "L1",
-        payload_json: {},
         created_at: "2026-04-17T10:00:00.000Z",
-      },
-      {
+      }),
+      activityRow({
         id: "l2",
-        project_id: projectId,
-        resource_type: "ticket",
-        resource_id: "PS-1",
-        event_type: "updated",
-        actor_type: "user",
-        actor_id: null,
-        source: "ui",
         summary: "L2",
-        payload_json: {},
         created_at: "2026-04-17T11:00:00.000Z",
-      },
+      }),
     ]);
 
     const listed = await service.listByProject({

@@ -13,6 +13,7 @@ export type {
   RuntimeTemplateType,
 } from "./runtime-types";
 export type {
+  ActivityRecordInput,
   ActivityRendererContribution,
   ArtifactMountDefinition,
   BooleanParam,
@@ -23,6 +24,7 @@ export type {
   CommandRunContext,
   EventDefinition,
   EventHandlerDefinition,
+  ExtensionActivityApi,
   ExtensionCommandsApi,
   ExtensionDefinition,
   ExtensionDiagnostic,

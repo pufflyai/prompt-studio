@@ -7,6 +7,7 @@ const SYNCED_TABLES = [
   "repos",
   "project_repos",
   "agent_configs",
+  "activity_events",
   "extension_instances",
   "extension_kv",
   "extension_collection_items",

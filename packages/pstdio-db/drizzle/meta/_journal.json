@@ -78,6 +78,13 @@
       "when": 1777022000000,
       "tag": "0010_extension_storage",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1777240000000,
+      "tag": "0011_activity_resource_refs",
+      "breakpoints": true
     }
   ]
 }

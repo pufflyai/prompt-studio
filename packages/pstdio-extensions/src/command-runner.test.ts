@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { RuntimeCommandRecord } from "@pstdio/sdk/extensions";
-import { createDb, createExtensionStorageDBService, createProjectsDBService } from "pstdio-db";
+import {
+  createActivityEventsDBService,
+  createDb,
+  createExtensionStorageDBService,
+  createProjectsDBService,
+} from "pstdio-db";
 import { runExtensionCommand } from "./command-runner";
 
 let close: () => Promise<void>;
@@ -128,6 +133,41 @@ describe("runExtensionCommand", () => {
         metadata: { source: "command" },
       },
     ]);
+  });
+
+  test("lets commands record activity for extension-owned targets", async () => {
+    const target = { type: "project.lab.task", id: "task-1", projectId, label: "Task 1", extensionId: "project.lab" };
+    const command = createCommand({
+      target: "project.lab.task",
+      run: async (ctx) => {
+        await ctx.activity.record({
+          eventType: "task.inspected",
+          summary: "Task inspected",
+          related: [{ type: "project", id: ctx.projectId, projectId: ctx.projectId }],
+          metadata: { command: "inspect" },
+        });
+      },
+    });
+
+    await runExtensionCommand({
+      commands: [command],
+      db,
+      projectId,
+      commandId: command.id,
+      target,
+    });
+
+    const activity = await createActivityEventsDBService(db).listByResource({
+      projectId,
+      resourceType: "project.lab.task",
+      resourceId: "task-1",
+    });
+
+    expect(activity.events).toHaveLength(1);
+    expect(activity.events[0].target_ref_json).toEqual(target);
+    expect(activity.events[0].related_refs_json).toEqual([{ type: "project", id: projectId, projectId }]);
+    expect(activity.events[0].source_extension_id).toBe("project.lab");
+    expect(activity.events[0].payload_json).toEqual({ command: "inspect" });
   });
 
   test("rejects prompt sessions when no session adapter is provided", async () => {

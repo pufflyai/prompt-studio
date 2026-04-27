@@ -1,4 +1,5 @@
 import {
+  activity_events,
   agent_configs,
   type DbClient,
   eq,
@@ -73,6 +74,9 @@ const projectDependents = async (db: DbClient, projectId: string, bus: EventBus)
   // Templates (cascade-delete via project_id)
   const tmpl = await db.select().from(templates).where(eq(templates.project_id, projectId));
   for (const row of tmpl) bus.emit("templates", "delete", { id: row.id });
+
+  const activityEvents = await db.select().from(activity_events).where(eq(activity_events.project_id, projectId));
+  for (const row of activityEvents) bus.emit("activity_events", "delete", { id: row.id });
 };
 
 type SupportedTable =
@@ -86,6 +90,7 @@ type SupportedTable =
   | "workspaces"
   | "files"
   | "templates"
+  | "activity_events"
   | "project_repos"
   | "ticket_statuses"
   | "ticket_tag_assignments"
@@ -104,6 +109,7 @@ const tableRefs = {
   workspaces,
   files,
   templates,
+  activity_events,
   project_repos,
   ticket_statuses,
   ticket_tag_assignments,

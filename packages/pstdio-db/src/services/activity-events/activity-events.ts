@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, lt, lte, or } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { activity_events } from "../../db/schemas.pg";
+import { type ActivityResourceRef, activity_events } from "../../db/schemas.pg";
 
 export const ACTIVITY_RESOURCE_TYPES = ["ticket", "workspace", "session"] as const;
 export const ACTIVITY_ACTOR_TYPES = ["user", "agent", "system"] as const;
@@ -8,7 +8,7 @@ export const ACTIVITY_EVENT_SOURCES = ["ui", "api", "hook", "system", "agent"] a
 
 type ActivityEventRecord = typeof activity_events.$inferSelect;
 
-type ResourceType = (typeof ACTIVITY_RESOURCE_TYPES)[number];
+type ResourceType = string;
 type ActorType = (typeof ACTIVITY_ACTOR_TYPES)[number];
 type EventSource = (typeof ACTIVITY_EVENT_SOURCES)[number];
 
@@ -17,17 +17,31 @@ type CursorPayload = {
   id: string;
 };
 
-type CreateInput = {
+type CreateBaseInput = {
   projectId: string;
-  resourceType: ResourceType;
-  resourceId: string;
   eventType: string;
   actorType: ActorType;
   actorId?: string;
   source: EventSource;
   summary: string;
-  payloadJson: Record<string, unknown>;
+  payloadJson?: Record<string, unknown>;
+  related?: ActivityResourceRef[];
+  sourceExtensionId?: string;
 };
+
+type CreateLegacyResourceInput = CreateBaseInput & {
+  resourceType: ResourceType;
+  resourceId: string;
+  target?: undefined;
+};
+
+type CreateResourceRefInput = CreateBaseInput & {
+  target: ActivityResourceRef;
+  resourceType?: undefined;
+  resourceId?: undefined;
+};
+
+type CreateInput = CreateLegacyResourceInput | CreateResourceRefInput;
 
 type ListInput = {
   projectId: string;
@@ -65,19 +79,40 @@ const resolveLimit = (value?: number) => {
   return Math.max(1, Math.min(Math.trunc(value), 200));
 };
 
+const hasTargetRef = (input: CreateInput): input is CreateResourceRefInput => Boolean(input.target);
+
+const resolveTargetRef = (input: CreateInput): ActivityResourceRef => {
+  if (hasTargetRef(input)) {
+    return {
+      ...input.target,
+      projectId: input.target.projectId ?? input.projectId,
+    };
+  }
+
+  return {
+    type: input.resourceType,
+    id: input.resourceId,
+    projectId: input.projectId,
+  };
+};
+
 export const createActivityEventsDBService = (db: DbClient) => {
   const create = async (input: CreateInput) => {
+    const target = resolveTargetRef(input);
     const record: ActivityEventRecord = {
       id: crypto.randomUUID(),
       project_id: input.projectId,
-      resource_type: input.resourceType,
-      resource_id: input.resourceId,
+      resource_type: target.type,
+      resource_id: target.id,
+      target_ref_json: target,
+      related_refs_json: input.related ?? [],
+      source_extension_id: input.sourceExtensionId ?? target.extensionId ?? null,
       event_type: input.eventType,
       actor_type: input.actorType,
       actor_id: input.actorId ?? null,
       source: input.source,
       summary: input.summary,
-      payload_json: input.payloadJson,
+      payload_json: input.payloadJson ?? {},
       created_at: nowTimestamp(),
     };
 

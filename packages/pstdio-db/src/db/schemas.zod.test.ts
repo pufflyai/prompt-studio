@@ -194,6 +194,13 @@ describe("schemas.zod", () => {
       project_id: "project-1",
       resource_type: "ticket",
       resource_id: "PS-38",
+      target_ref_json: {
+        type: "ticket",
+        id: "PS-38",
+        projectId: "project-1",
+      },
+      related_refs_json: [],
+      source_extension_id: null,
       event_type: "status_changed",
       actor_type: "user",
       actor_id: "user-1",

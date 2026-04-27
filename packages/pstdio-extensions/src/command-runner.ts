@@ -1,5 +1,12 @@
-import type { ExtensionSessionsApi, ParamValue, ResourceRef, RuntimeCommandRecord } from "@pstdio/sdk/extensions";
-import { createSessionsDBService, type DbClient } from "pstdio-db";
+import type {
+  ActivityRecordInput,
+  ExtensionActivityApi,
+  ExtensionSessionsApi,
+  ParamValue,
+  ResourceRef,
+  RuntimeCommandRecord,
+} from "@pstdio/sdk/extensions";
+import { createActivityEventsDBService, createSessionsDBService, type DbClient } from "pstdio-db";
 import { createExtensionStorageContext } from "./storage-context";
 
 type RunExtensionCommandInput = {
@@ -10,6 +17,7 @@ type RunExtensionCommandInput = {
   params?: Record<string, unknown>;
   target?: ResourceRef;
   sessions?: ExtensionSessionsApi;
+  activity?: ExtensionActivityApi;
   commandStack?: string[];
 };
 
@@ -71,6 +79,49 @@ const createCommandSessionsApi = (input: RunExtensionCommandInput): ExtensionSes
   };
 };
 
+const createDefaultActivityApi = (
+  db: DbClient,
+  projectId: string,
+  extensionId: string,
+  target: ResourceRef,
+): ExtensionActivityApi => {
+  const activityEvents = createActivityEventsDBService(db);
+
+  return {
+    record: (activityInput: ActivityRecordInput) =>
+      activityEvents.create({
+        projectId,
+        target: activityInput.target ?? target,
+        related: activityInput.related,
+        sourceExtensionId: extensionId,
+        eventType: activityInput.eventType,
+        actorType: "system",
+        source: "hook",
+        summary: activityInput.summary,
+        payloadJson: activityInput.metadata ?? {},
+      }),
+  };
+};
+
+const createCommandActivityApi = (
+  input: RunExtensionCommandInput,
+  command: RuntimeCommandRecord,
+  target: ResourceRef,
+): ExtensionActivityApi => {
+  const defaultActivity = createDefaultActivityApi(input.db, input.projectId, command.extensionId, target);
+
+  return {
+    record: (activityInput) => {
+      if (!input.activity) return defaultActivity.record(activityInput);
+
+      return input.activity.record({
+        ...activityInput,
+        target: activityInput.target ?? target,
+      });
+    },
+  };
+};
+
 const formatErrorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 export const runExtensionCommand = async (input: RunExtensionCommandInput): Promise<unknown> => {
@@ -87,6 +138,7 @@ export const runExtensionCommand = async (input: RunExtensionCommandInput): Prom
   const nextCommandStack = [...commandStack, command.id];
   const target = input.target ?? createDefaultTarget(command, input.projectId);
   const sessions = createCommandSessionsApi(input);
+  const activity = createCommandActivityApi(input, command, target);
 
   try {
     return await command.run({
@@ -101,6 +153,7 @@ export const runExtensionCommand = async (input: RunExtensionCommandInput): Prom
       sessions: {
         create: (sessionInput) => sessions.create(sessionInput),
       },
+      activity,
       commands: {
         run: (commandId, params) =>
           runExtensionCommand({

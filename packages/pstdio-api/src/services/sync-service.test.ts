@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import type { DbClient } from "pstdio-db";
 import {
+  createActivityEventsDBService,
   createAgentConfigsDBService,
   createDb,
   createExtensionInstancesDBService,
@@ -98,6 +99,36 @@ describe("createSyncService", () => {
       expect(state.extension_kv).toHaveLength(1);
       expect(state.extension_collection_items).toHaveLength(1);
       expect(state.extension_template_preferences).toHaveLength(1);
+    });
+
+    test("includes extension-owned activity events", async () => {
+      await setup();
+      const syncService = createSyncService({ db, eventBus });
+      const project = await createProjectsDBService(db).create({ name: "activity-sync" });
+      const activity = createActivityEventsDBService(db);
+
+      await activity.create({
+        projectId: project.id,
+        target: {
+          type: "project.lab.task",
+          id: "task-1",
+          projectId: project.id,
+          label: "Task 1",
+          extensionId: "project.lab",
+        },
+        sourceExtensionId: "project.lab",
+        eventType: "task.reviewed",
+        actorType: "system",
+        source: "hook",
+        summary: "Task reviewed",
+        payloadJson: {},
+      });
+
+      const state = await syncService.getFullState();
+
+      expect(state.activity_events).toHaveLength(1);
+      expect((state.activity_events[0] as Record<string, unknown>).resource_type).toBe("project.lab.task");
+      expect((state.activity_events[0] as Record<string, unknown>).source_extension_id).toBe("project.lab");
     });
 
     test("excludes soft-deleted rows", async () => {

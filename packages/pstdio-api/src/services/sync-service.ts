@@ -1,5 +1,6 @@
 import { isNull } from "drizzle-orm";
 import {
+  activity_events,
   agent_configs,
   attempt_statuses,
   type DbClient,
@@ -33,6 +34,7 @@ const tableMap = {
   repos,
   project_repos,
   agent_configs,
+  activity_events,
   extension_instances,
   extension_kv,
   extension_collection_items,
@@ -160,6 +162,11 @@ const emitProjectDependents = async (db: DbClient, projectId: string, bus: Event
   );
   emitDeleteRows(bus, "files", await db.select().from(files).where(eq(files.project_id, projectId)));
   emitDeleteRows(bus, "templates", await db.select().from(templates).where(eq(templates.project_id, projectId)));
+  emitDeleteRows(
+    bus,
+    "activity_events",
+    await db.select().from(activity_events).where(eq(activity_events.project_id, projectId)),
+  );
   await emitExtensionDependents(db, projectId, bus);
 };
 

@@ -21,8 +21,22 @@ export const sessionSelectSchema = createSelectSchema(sessions, {
 export const ticketTagSelectSchema = createSelectSchema(ticket_tags);
 export const ticketTagOptionSelectSchema = createSelectSchema(ticket_tag_options);
 export const workspaceSelectSchema = createSelectSchema(workspaces);
+
+const activityResourceRefSchema = z.object({
+  type: z.string(),
+  id: z.string(),
+  projectId: z.string().optional(),
+  label: z.string().optional(),
+  extensionId: z.string().optional(),
+  role: z.enum(["primary", "context", "source", "result"]).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
 export const activityEventSelectSchema = createSelectSchema(activity_events, {
-  resource_type: z.enum(["ticket", "workspace", "session"]),
+  resource_type: z.string(),
+  target_ref_json: activityResourceRefSchema,
+  related_refs_json: z.array(activityResourceRefSchema),
+  source_extension_id: z.string().nullable(),
   actor_type: z.enum(["user", "agent", "system"]),
   source: z.enum(["ui", "api", "hook", "system", "agent"]),
   payload_json: z.record(z.string(), z.unknown()),
