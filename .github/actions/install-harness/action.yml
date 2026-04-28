@@ -1,0 +1,92 @@
+name: Install harness
+description: Install claude-code or opencode via a selected method
+
+inputs:
+  harness:
+    description: claude-code or opencode
+    required: true
+  install-method:
+    description: npm-global, bun-global, native-installer, pwsh-installer, brew
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install via npm global
+      if: ${{ inputs.install-method == 'npm-global' }}
+      shell: bash
+      run: |
+        if [ "${{ inputs.harness }}" = "claude-code" ]; then
+          npm install -g @anthropic-ai/claude-code
+        elif [ "${{ inputs.harness }}" = "opencode" ]; then
+          npm install -g opencode-ai
+        else
+          echo "Unsupported harness: ${{ inputs.harness }}" >&2
+          exit 1
+        fi
+
+    - name: Install via bun global
+      if: ${{ inputs.install-method == 'bun-global' }}
+      shell: bash
+      run: |
+        if [ "${{ inputs.harness }}" = "claude-code" ]; then
+          bun install -g @anthropic-ai/claude-code
+        elif [ "${{ inputs.harness }}" = "opencode" ]; then
+          bun install -g opencode-ai
+        else
+          echo "Unsupported harness: ${{ inputs.harness }}" >&2
+          exit 1
+        fi
+
+    - name: Install Claude Code via PowerShell installer
+      if: ${{ inputs.harness == 'claude-code' && inputs.install-method == 'pwsh-installer' }}
+      shell: pwsh
+      run: irm https://claude.ai/install.ps1 | iex
+
+    - name: Install via native installer (unix)
+      if: ${{ inputs.install-method == 'native-installer' && runner.os != 'Windows' }}
+      shell: bash
+      run: |
+        if [ "${{ inputs.harness }}" = "claude-code" ]; then
+          curl -fsSL https://claude.ai/install.sh | bash
+        elif [ "${{ inputs.harness }}" = "opencode" ]; then
+          curl -fsSL https://opencode.ai/install | bash
+        else
+          echo "Unsupported harness: ${{ inputs.harness }}" >&2
+          exit 1
+        fi
+
+    - name: Install via brew
+      if: ${{ inputs.install-method == 'brew' }}
+      shell: bash
+      run: |
+        if [ "${{ inputs.harness }}" = "claude-code" ]; then
+          brew install --cask claude-code
+        elif [ "${{ inputs.harness }}" = "opencode" ]; then
+          brew install anomalyco/tap/opencode
+        else
+          echo "Unsupported harness: ${{ inputs.harness }}" >&2
+          exit 1
+        fi
+
+    - name: Add global bins to PATH (unix)
+      if: ${{ runner.os != 'Windows' }}
+      shell: bash
+      run: |
+        echo "$(npm bin -g)" >> "$GITHUB_PATH"
+        echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
+
+    - name: Add global bins to PATH (windows)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      run: |
+        $npmBin = npm bin -g
+        $npmBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        "$env:USERPROFILE\.bun\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - name: Validate unsupported combinations are blocked
+      if: ${{ inputs.harness == 'opencode' && inputs.install-method == 'pwsh-installer' }}
+      shell: bash
+      run: |
+        echo "opencode + pwsh-installer is intentionally unsupported" >&2
+        exit 1

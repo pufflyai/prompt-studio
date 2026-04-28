@@ -14,7 +14,14 @@ permissions:
   id-token: write
 
 jobs:
+  cross-platform:
+    uses: ./.github/workflows/cross-platform-matrix.yml
+    with:
+      os-filter: all
+      harness-filter: all
+
   release:
+    needs: cross-platform
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
