@@ -51,7 +51,17 @@ runs:
         if [ "${{ inputs.harness }}" = "claude-code" ]; then
           curl -fsSL https://claude.ai/install.sh | bash
         elif [ "${{ inputs.harness }}" = "opencode" ]; then
-          curl -fsSL https://opencode.ai/install | bash
+          for attempt in 1 2 3; do
+            if curl -fsSL https://opencode.ai/install | bash; then
+              break
+            fi
+
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+
+            sleep 5
+          done
         else
           echo "Unsupported harness: ${{ inputs.harness }}" >&2
           exit 1
@@ -64,7 +74,17 @@ runs:
         if [ "${{ inputs.harness }}" = "claude-code" ]; then
           brew install --cask claude-code
         elif [ "${{ inputs.harness }}" = "opencode" ]; then
-          brew install anomalyco/tap/opencode
+          for attempt in 1 2 3; do
+            if brew install anomalyco/tap/opencode; then
+              break
+            fi
+
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+
+            sleep 10
+          done
         else
           echo "Unsupported harness: ${{ inputs.harness }}" >&2
           exit 1
@@ -76,6 +96,7 @@ runs:
       run: |
         echo "$(npm bin -g)" >> "$GITHUB_PATH"
         echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
     - name: Add global bins to PATH (windows)
       if: ${{ runner.os == 'Windows' }}

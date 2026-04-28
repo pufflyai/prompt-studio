@@ -8,7 +8,7 @@ import type { JsonPatch, SessionMessage } from "pstdio-agents";
 const HARNESS = process.env.PSTDIO_HARNESS_UNDER_TEST;
 const INSTALL_METHOD = process.env.PSTDIO_INSTALL_METHOD ?? "unknown";
 const TEST_TIMEOUT_MS = 45_000;
-const OUTPUT_WAIT_MS = 10_000;
+const OUTPUT_WAIT_MS = 30_000;
 
 const createCandidatePort = () => 43_000 + Math.floor(Math.random() * 200);
 
