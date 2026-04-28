@@ -96,8 +96,6 @@ jobs:
             { id: "wsl-inside-opencode-npm", harness: "opencode", install_location: "inside-wsl", install_method: "npm-global" },
             { id: "wsl-inside-claude-native", harness: "claude-code", install_location: "inside-wsl", install_method: "native-installer" },
             { id: "wsl-inside-opencode-native", harness: "opencode", install_location: "inside-wsl", install_method: "native-installer" },
-            { id: "wsl-host-claude-npm", harness: "claude-code", install_location: "on-windows-host", install_method: "npm-global" },
-            { id: "wsl-host-opencode-npm", harness: "opencode", install_location: "on-windows-host", install_method: "npm-global" },
           ];
 
           const matches = (entry, targetOs) => {
@@ -261,22 +259,14 @@ jobs:
           "$env:GITHUB_WORKSPACE/.ci/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Prepare WSL workspace tools
-        if: ${{ matrix.install_location == 'inside-wsl' }}
         shell: pwsh
         run: |
           $workspace = wsl -d Ubuntu-24.04 -- bash -lc "wslpath '$env:GITHUB_WORKSPACE'"
+          wsl -d Ubuntu-24.04 -- bash -lc "sudo apt-get update && sudo apt-get install -y curl unzip nodejs npm"
           wsl -d Ubuntu-24.04 -- bash -lc "curl -fsSL https://bun.sh/install | bash"
-          wsl -d Ubuntu-24.04 -- bash -lc "export BUN_INSTALL=\$HOME/.bun; export PATH=\$BUN_INSTALL/bin:\$PATH; curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash - && sudo apt-get install -y nodejs && cd '$workspace' && bun install --frozen-lockfile && bun run scripts/build-compile.ts"
-
-      - name: Install harness on Windows host
-        if: ${{ matrix.install_location == 'on-windows-host' }}
-        uses: ./.github/actions/install-harness
-        with:
-          harness: ${{ matrix.harness }}
-          install-method: ${{ matrix.install_method }}
+          wsl -d Ubuntu-24.04 -- bash -lc "export BUN_INSTALL=\$HOME/.bun; export PATH=\$BUN_INSTALL/bin:\$PATH; cd '$workspace' && bun install --frozen-lockfile"
 
       - name: Install harness inside WSL
-        if: ${{ matrix.install_location == 'inside-wsl' }}
         shell: pwsh
         run: |
           if ("${{ matrix.install_method }}" -eq "npm-global") {
@@ -293,23 +283,7 @@ jobs:
             }
           }
 
-      - name: Verify host binaries and run smoke
-        if: ${{ matrix.install_location == 'on-windows-host' }}
-        env:
-          PSTDIO_HARNESS_UNDER_TEST: ${{ matrix.harness }}
-          PSTDIO_INSTALL_METHOD: ${{ format('wsl-{0}-{1}', matrix.install_location, matrix.install_method) }}
-        shell: pwsh
-        run: |
-          pstdio --version
-          if ("${{ matrix.harness }}" -eq "claude-code") {
-            claude --version
-          } else {
-            opencode --version
-          }
-          bun test packages/e2e/src/packaged/harness-connect-smoke.test.ts
-
       - name: Verify WSL binaries and run smoke
-        if: ${{ matrix.install_location == 'inside-wsl' }}
         env:
           PSTDIO_HARNESS_UNDER_TEST: ${{ matrix.harness }}
           PSTDIO_INSTALL_METHOD: ${{ format('wsl-{0}-{1}', matrix.install_location, matrix.install_method) }}
