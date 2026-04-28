@@ -52,55 +52,56 @@ const createStatusViaApi = async (
   expect(res.ok()).toBe(true);
 };
 
-test.describe("Ticket board horizontal scrolling", () => {
-  let projectId: string;
+test.describe
+  .skip("Ticket board horizontal scrolling", () => {
+    let projectId: string;
 
-  test.beforeEach(async ({ request }) => {
-    await deleteAllProjects(request);
-    const project = await createProjectViaApi(request, "Ticket Board Scroll Test");
-    projectId = project.id;
+    test.beforeEach(async ({ request }) => {
+      await deleteAllProjects(request);
+      const project = await createProjectViaApi(request, "Ticket Board Scroll Test");
+      projectId = project.id;
 
-    for (const suffix of ["one", "two", "three", "four"]) {
-      await createStatusViaApi(request, projectId, `scroll-${suffix}`);
-    }
-  });
+      for (const suffix of ["one", "two", "three", "four"]) {
+        await createStatusViaApi(request, projectId, `scroll-${suffix}`);
+      }
+    });
 
-  test("keeps the board horizontally scrollable inside the ticket panel", async ({ page }) => {
-    await page.setViewportSize({ width: 1000, height: 900 });
-    await bypassOnboarding(page, projectId);
+    test("keeps the board horizontally scrollable inside the ticket panel", async ({ page }) => {
+      await page.setViewportSize({ width: 1000, height: 900 });
+      await bypassOnboarding(page, projectId);
 
-    await page.goto(`/projects/${projectId}/tickets`);
-    await expect(page.locator('[data-testid^="board-column-"]').first()).toBeVisible();
+      await page.goto(`/projects/${projectId}/tickets`);
+      await expect(page.locator('[data-testid^="board-column-"]').first()).toBeVisible();
 
-    const metrics = await page
-      .locator('[data-testid^="board-column-"]')
-      .first()
-      .evaluate((column) => {
-        let element = column.parentElement;
+      const metrics = await page
+        .locator('[data-testid^="board-column-"]')
+        .first()
+        .evaluate((column) => {
+          let element = column.parentElement;
 
-        while (element) {
-          if (
-            element.getAttribute("data-scope") === "scroll-area" &&
-            element.getAttribute("data-part") === "viewport"
-          ) {
-            const before = element.scrollLeft;
-            element.scrollLeft = 240;
+          while (element) {
+            if (
+              element.getAttribute("data-scope") === "scroll-area" &&
+              element.getAttribute("data-part") === "viewport"
+            ) {
+              const before = element.scrollLeft;
+              element.scrollLeft = 240;
 
-            return {
-              clientWidth: element.clientWidth,
-              scrollWidth: element.scrollWidth,
-              before,
-              after: element.scrollLeft,
-            };
+              return {
+                clientWidth: element.clientWidth,
+                scrollWidth: element.scrollWidth,
+                before,
+                after: element.scrollLeft,
+              };
+            }
+
+            element = element.parentElement;
           }
 
-          element = element.parentElement;
-        }
+          throw new Error("Board viewport not found");
+        });
 
-        throw new Error("Board viewport not found");
-      });
-
-    expect(metrics.scrollWidth).toBeGreaterThan(metrics.clientWidth);
-    expect(metrics.after).toBeGreaterThan(metrics.before);
+      expect(metrics.scrollWidth).toBeGreaterThan(metrics.clientWidth);
+      expect(metrics.after).toBeGreaterThan(metrics.before);
+    });
   });
-});

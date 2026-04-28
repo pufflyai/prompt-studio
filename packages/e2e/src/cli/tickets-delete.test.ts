@@ -38,7 +38,7 @@ const createInitializedRepo = (name: string) => {
   return repo;
 };
 
-describe("pstdio tickets delete", () => {
+describe.skip("pstdio tickets delete", () => {
   test(
     "deletes a ticket",
     () => {

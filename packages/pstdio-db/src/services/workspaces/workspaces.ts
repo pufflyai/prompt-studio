@@ -1,31 +1,30 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { attempt_statuses, ticket_workspaces, tickets, workspaces } from "../../db/schemas.pg";
+import { type ActivityResourceRef, attempt_statuses, workspaces } from "../../db/schemas.pg";
 
 type WorkspaceRecord = typeof workspaces.$inferSelect;
 
 type CreateInput = {
   project_id: string;
-  ticket_id: string;
-  ticket_shorthand: string;
+  name?: string;
+  anchors?: ActivityResourceRef[];
   branch?: string;
   worktree_path?: string;
 };
 
 const nowTimestamp = () => new Date().toISOString();
 
-const nextWorkspaceShorthand = (ticketShorthand: string, existingCount: number) =>
-  `${ticketShorthand}_A${existingCount + 1}`;
+const nextWorkspaceShorthand = (existingCount: number) => `WS-${existingCount + 1}`;
 
 export const createWorkspacesDBService = (db: DbClient) => {
   const create = async (input: CreateInput) => {
     // Count all workspaces ever created for this ticket (including deleted) to avoid shorthand reuse
     const [countResult] = await db
       .select({ count: sql<number>`count(*)::int` })
-      .from(ticket_workspaces)
-      .where(eq(ticket_workspaces.ticket_id, input.ticket_id));
+      .from(workspaces)
+      .where(eq(workspaces.project_id, input.project_id));
 
-    const shorthand = nextWorkspaceShorthand(input.ticket_shorthand, countResult.count);
+    const shorthand = input.name ?? nextWorkspaceShorthand(countResult.count);
     const timestamp = nowTimestamp();
 
     const record: WorkspaceRecord = {
@@ -37,6 +36,7 @@ export const createWorkspacesDBService = (db: DbClient) => {
       attempt_status_id: null,
       archived: false,
       workspace_shorthand: shorthand,
+      anchors_json: input.anchors ?? [],
       initializing: false,
       setup_error: null,
       startup_log_file_id: null,
@@ -47,15 +47,6 @@ export const createWorkspacesDBService = (db: DbClient) => {
 
     await db.insert(workspaces).values(record);
 
-    const linkRecord = {
-      id: crypto.randomUUID(),
-      ticket_id: input.ticket_id,
-      workspace_id: record.id,
-      created_at: timestamp,
-    };
-
-    await db.insert(ticket_workspaces).values(linkRecord);
-
     return record;
   };
 
@@ -63,12 +54,9 @@ export const createWorkspacesDBService = (db: DbClient) => {
     const rows = await db
       .select({
         workspace: workspaces,
-        ticket_shorthand: tickets.shorthand,
         attempt_status_name: attempt_statuses.name,
       })
       .from(workspaces)
-      .innerJoin(ticket_workspaces, eq(workspaces.id, ticket_workspaces.workspace_id))
-      .innerJoin(tickets, eq(ticket_workspaces.ticket_id, tickets.id))
       .leftJoin(attempt_statuses, eq(workspaces.attempt_status_id, attempt_statuses.id))
       .where(
         and(
@@ -81,7 +69,7 @@ export const createWorkspacesDBService = (db: DbClient) => {
 
     return rows.map((r) => ({
       ...r.workspace,
-      ticket_shorthand: r.ticket_shorthand,
+      ticket_shorthand: null,
       attempt_status_name: r.attempt_status_name,
     }));
   };
@@ -166,35 +154,11 @@ export const createWorkspacesDBService = (db: DbClient) => {
     return updated ?? null;
   };
 
-  const listByTicketId = async (ticketId: string) => {
-    const rows = await db
-      .select({ workspace: workspaces })
-      .from(workspaces)
-      .innerJoin(ticket_workspaces, eq(workspaces.id, ticket_workspaces.workspace_id))
-      .where(
-        and(
-          eq(ticket_workspaces.ticket_id, ticketId),
-          eq(workspaces.archived, false),
-          sql`${workspaces.deleted_at} is null`,
-        ),
-      )
-      .orderBy(workspaces.created_at);
-
-    return rows.map((r) => r.workspace);
-  };
-
-  const getTicketWorkspaceLink = async (workspaceId: string) => {
-    const [link] = await db.select().from(ticket_workspaces).where(eq(ticket_workspaces.workspace_id, workspaceId));
-    return link ?? null;
-  };
-
   return {
     create,
     get,
     list,
-    listByTicketId,
     getByShorthand,
-    getTicketWorkspaceLink,
     softDelete,
     archive,
     updateAttemptStatusId,

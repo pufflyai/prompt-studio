@@ -138,30 +138,36 @@ export const createExtensionStorageDBService = (db: DbClient) => {
     const [existing] = await db.select().from(extension_kv).where(kvWhere(scope, key));
 
     if (existing) {
+      const updated = { ...existing, value_json: value, updated_at: timestamp };
       await db
         .update(extension_kv)
         .set({ value_json: value, updated_at: timestamp })
         .where(eq(extension_kv.id, existing.id));
-      return;
+      return updated;
     }
 
-    await db.insert(extension_kv).values({
+    const record: typeof extension_kv.$inferSelect = {
       ...scope,
       id: crypto.randomUUID(),
       key,
       value_json: value,
       created_at: timestamp,
       updated_at: timestamp,
-    });
+    };
+
+    await db.insert(extension_kv).values(record);
+    return record;
   };
 
   const deleteKey = async (scope: ExtensionStorageScope, key: string) => {
+    const [existing] = await db.select().from(extension_kv).where(kvWhere(scope, key));
     await db.delete(extension_kv).where(kvWhere(scope, key));
+    return existing ?? null;
   };
 
   const collection = (scope: ExtensionStorageScope, collectionName: string) => {
-    const list = async () => {
-      const rows = await db
+    const listRecords = async () =>
+      db
         .select()
         .from(extension_collection_items)
         .where(
@@ -175,6 +181,8 @@ export const createExtensionStorageDBService = (db: DbClient) => {
         )
         .orderBy(extension_collection_items.item_id);
 
+    const list = async () => {
+      const rows = await listRecords();
       return rows.map((row) => ({ id: row.item_id, value: row.value_json }));
     };
 
@@ -194,14 +202,15 @@ export const createExtensionStorageDBService = (db: DbClient) => {
         .where(collectionWhere(scope, collectionName, itemId));
 
       if (existing) {
+        const updated = { ...existing, value_json: value, updated_at: timestamp };
         await db
           .update(extension_collection_items)
           .set({ value_json: value, updated_at: timestamp })
           .where(eq(extension_collection_items.id, existing.id));
-        return;
+        return updated;
       }
 
-      await db.insert(extension_collection_items).values({
+      const record: typeof extension_collection_items.$inferSelect = {
         ...scope,
         id: crypto.randomUUID(),
         collection: collectionName,
@@ -209,14 +218,22 @@ export const createExtensionStorageDBService = (db: DbClient) => {
         value_json: value,
         created_at: timestamp,
         updated_at: timestamp,
-      });
+      };
+
+      await db.insert(extension_collection_items).values(record);
+      return record;
     };
 
     const deleteItem = async (itemId: string) => {
+      const [existing] = await db
+        .select()
+        .from(extension_collection_items)
+        .where(collectionWhere(scope, collectionName, itemId));
       await db.delete(extension_collection_items).where(collectionWhere(scope, collectionName, itemId));
+      return existing ?? null;
     };
 
-    return { list, get, put, delete: deleteItem };
+    return { list, listRecords, get, put, delete: deleteItem };
   };
 
   return { get, set, delete: deleteKey, collection };

@@ -2,6 +2,13 @@ import { describe, expect, test } from "bun:test";
 import type { SessionHookDeps } from "./session-hooks";
 import { fireSessionResumeHook, fireSessionStartHook, fireSessionStatusHook } from "./session-hooks";
 
+const ticketRef = {
+  type: "pstdio.planner.ticket",
+  id: "ticket-1",
+  label: "PS-1",
+  extensionId: "pstdio.planner",
+};
+
 const baseWorkspace = {
   id: "ws-1",
   project_id: "proj-1",
@@ -15,28 +22,12 @@ const baseWorkspace = {
   created_at: "2026-01-01T00:00:00.000Z",
   updated_at: "2026-01-01T00:00:00.000Z",
   deleted_at: null,
+  anchors_json: [ticketRef],
   initializing: false,
   setup_error: null,
 };
 
-const baseTicket = {
-  id: "ticket-1",
-  shorthand: "PS-1",
-  project_id: "proj-1",
-  status_id: "status-wip",
-  display_title: "Implement feature",
-  user_prompt: "Do the thing",
-  file_id: "file-1",
-  parent_id: null,
-  parallelizable: null,
-  blocked_reason: null,
-  depends_on: null,
-  draft: false,
-  archived: false,
-  deleted_at: null,
-  created_at: "2026-01-01T00:00:00.000Z",
-  updated_at: "2026-01-01T00:00:00.000Z",
-};
+const baseTicket = { id: ticketRef.id, shorthand: ticketRef.label, resource_ref: ticketRef };
 
 type CapturedCall = {
   hookName: string;
@@ -54,9 +45,7 @@ const createDeferred = <T>() => {
 const makeDeps = (input?: {
   workspace?: Record<string, unknown> | null;
   getWorkspaceBySessionId?: () => Promise<Record<string, unknown> | null>;
-  ticket?: Record<string, unknown> | null;
   attemptStatuses?: Array<{ id: string; name: string }>;
-  statuses?: Array<{ id: string; name: string }>;
 }) => {
   const pending: Array<{ resolve: (value: CapturedCall) => void }> = [];
   const calls: CapturedCall[] = [];
@@ -68,9 +57,7 @@ const makeDeps = (input?: {
   };
 
   const workspace = input?.workspace ?? null;
-  const ticket = input?.ticket ?? null;
   const attemptStatuses = input?.attemptStatuses ?? [];
-  const statuses = input?.statuses ?? [];
 
   const deps: SessionHookDeps = {
     reposService: { listByProject: async () => [] } as never,
@@ -79,12 +66,6 @@ const makeDeps = (input?: {
     } as never,
     attemptStatusesService: {
       list: async () => attemptStatuses,
-    } as never,
-    ticketService: {
-      getByShorthand: async () => ticket,
-    } as never,
-    statusService: {
-      list: async () => statuses,
     } as never,
     pluginService: {
       getForProject: async () => ({
@@ -113,9 +94,7 @@ describe("fireSessionStatusHook", () => {
   test("includes workspace and ticket objects for postSessionSuccess", async () => {
     const { deps, nextCall } = makeDeps({
       workspace: baseWorkspace,
-      ticket: baseTicket,
       attemptStatuses: [{ id: "attempt-review-ready", name: "review-ready" }],
-      statuses: [{ id: "status-wip", name: "wip" }],
     });
 
     const call = nextCall();
@@ -129,12 +108,12 @@ describe("fireSessionStatusHook", () => {
       attempt_status_name: "review-ready",
     });
     expect(ctx.workspaceId).toBe("ws-1");
-    expect(ctx.ticket).toEqual({ ...baseTicket, status_name: "wip" });
+    expect(ctx.ticket).toEqual(baseTicket);
     expect(ctx.attemptStatus).toBe("review-ready");
   });
 
   test("includes workspace and ticket objects for postSessionFail", async () => {
-    const { deps, nextCall } = makeDeps({ workspace: baseWorkspace, ticket: baseTicket });
+    const { deps, nextCall } = makeDeps({ workspace: baseWorkspace });
 
     const call = nextCall();
     fireSessionStatusHook(deps, { ...sessionBase, status: "failed" });
@@ -146,11 +125,11 @@ describe("fireSessionStatusHook", () => {
       ticket_shorthand: "PS-1",
       attempt_status_name: null,
     });
-    expect(ctx.ticket).toEqual({ ...baseTicket, status_name: null });
+    expect(ctx.ticket).toEqual(baseTicket);
   });
 
   test("includes workspace and ticket objects for postSessionAwaitInput", async () => {
-    const { deps, nextCall } = makeDeps({ workspace: baseWorkspace, ticket: baseTicket });
+    const { deps, nextCall } = makeDeps({ workspace: baseWorkspace });
 
     const call = nextCall();
     fireSessionStatusHook(deps, { ...sessionBase, status: "awaiting_input" });
@@ -162,7 +141,7 @@ describe("fireSessionStatusHook", () => {
       ticket_shorthand: "PS-1",
       attempt_status_name: null,
     });
-    expect(ctx.ticket).toEqual({ ...baseTicket, status_name: null });
+    expect(ctx.ticket).toEqual(baseTicket);
   });
 
   test("does not fire for in_progress", async () => {
@@ -177,7 +156,7 @@ describe("fireSessionStatusHook", () => {
 
 describe("fireSessionStartHook", () => {
   test("includes workspace and ticket objects when available", async () => {
-    const { deps, nextCall } = makeDeps({ workspace: baseWorkspace, ticket: baseTicket });
+    const { deps, nextCall } = makeDeps({ workspace: baseWorkspace });
 
     const call = nextCall();
     fireSessionStartHook(deps, { ...sessionBase, status: "in_progress" });
@@ -189,14 +168,13 @@ describe("fireSessionStartHook", () => {
       ticket_shorthand: "PS-1",
       attempt_status_name: null,
     });
-    expect(ctx.ticket).toEqual({ ...baseTicket, status_name: null });
+    expect(ctx.ticket).toEqual(baseTicket);
   });
 
   test("waits for linked workspace setup to finish before firing", async () => {
     let workspace = { ...baseWorkspace, initializing: true };
     const { deps, calls, nextCall } = makeDeps({
       getWorkspaceBySessionId: async () => workspace,
-      ticket: baseTicket,
     });
 
     const call = nextCall();
@@ -229,7 +207,7 @@ describe("fireSessionStartHook", () => {
 
 describe("fireSessionResumeHook", () => {
   test("includes workspace and ticket objects when available", async () => {
-    const { deps, nextCall } = makeDeps({ workspace: baseWorkspace, ticket: baseTicket });
+    const { deps, nextCall } = makeDeps({ workspace: baseWorkspace });
 
     const call = nextCall();
     fireSessionResumeHook(deps, {
@@ -244,14 +222,13 @@ describe("fireSessionResumeHook", () => {
       ticket_shorthand: "PS-1",
       attempt_status_name: null,
     });
-    expect(ctx.ticket).toEqual({ ...baseTicket, status_name: null });
+    expect(ctx.ticket).toEqual(baseTicket);
   });
 
   test("waits for linked workspace setup to finish before firing", async () => {
     let workspace = { ...baseWorkspace, initializing: true };
     const { deps, calls, nextCall } = makeDeps({
       getWorkspaceBySessionId: async () => workspace,
-      ticket: baseTicket,
     });
 
     const call = nextCall();

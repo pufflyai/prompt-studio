@@ -20,6 +20,14 @@ import {
 import { toTicketStatusOption, toTicketTag } from "@/features/ticket-list/data/api/mappers";
 import type { Ticket, TicketStatus, TicketStatusColor } from "@/features/ticket-list/types";
 import { buildSessionsByWorkspace } from "@/features/ticket-list/utils/sessions-by-workspace";
+import {
+  buildPlannerTagIdsByTicket,
+  buildWorkspacesByPlannerTicket,
+  plannerCollectionRows,
+  toPlannerStatusRows,
+  toPlannerTagRows,
+  toPlannerTicketRows,
+} from "./planner-extension-rows";
 import { toTicketFromRow } from "./ticket-row-mappers";
 
 const DEFAULT_STATUS_COLOR: TicketStatusColor = "gray";
@@ -38,41 +46,6 @@ const buildStatusMetadata = (rawStatuses: SyncedRow[] | undefined) => {
   };
 };
 
-const buildTagIdsByTicket = (rawTagAssignments: SyncedRow[] | undefined, ticketIds: Set<string>) => {
-  const tagIdsByTicket = new Map<string, string[]>();
-
-  for (const assignment of rawTagAssignments ?? []) {
-    if (!ticketIds.has(assignment.ticket_id as string)) continue;
-    const ticketId = assignment.ticket_id as string;
-    const existing = tagIdsByTicket.get(ticketId) ?? [];
-    existing.push(assignment.ticket_tag_option_id as string);
-    tagIdsByTicket.set(ticketId, existing);
-  }
-
-  return tagIdsByTicket;
-};
-
-const buildWorkspacesByTicket = (
-  rawTicketWorkspaces: SyncedRow[] | undefined,
-  rawWorkspaces: SyncedRow[] | undefined,
-) => {
-  const workspaceById = new Map((rawWorkspaces ?? []).map((workspace) => [workspace.id, workspace]));
-  const workspacesByTicket = new Map<string, SyncedRow[]>();
-
-  for (const ticketWorkspace of rawTicketWorkspaces ?? []) {
-    const workspaceId = ticketWorkspace.workspace_id as string;
-    const workspace = workspaceById.get(workspaceId);
-    if (!workspace) continue;
-
-    const ticketId = ticketWorkspace.ticket_id as string;
-    const existing = workspacesByTicket.get(ticketId) ?? [];
-    existing.push(workspace);
-    workspacesByTicket.set(ticketId, existing);
-  }
-
-  return workspacesByTicket;
-};
-
 const buildSubTicketsByParent = (rawTickets: SyncedRow[]) => {
   const subTicketsByParent = new Map<string, SyncedRow[]>();
 
@@ -89,36 +62,17 @@ const buildSubTicketsByParent = (rawTickets: SyncedRow[]) => {
 };
 
 export const useProjectTickets = (projectId: string | undefined) => {
-  const { data: rawTicketsData, isLoading } = useLiveQuery(
+  const { data: rawPlannerItemsData, isLoading } = useLiveQuery(
     (q) =>
       projectId
         ? q
-            .from({ t: getCollection("tickets") })
-            .where(({ t }) => eq(t.project_id, projectId))
-            .select(({ t }) => ({ ...t }))
+            .from({ item: getCollection("extension_collection_items") })
+            .where(({ item }) => eq(item.project_id, projectId))
+            .select(({ item }) => ({ ...item }))
         : undefined,
     [projectId],
   );
-  const rawTickets = asSyncedRows(rawTicketsData);
-
-  const { data: rawStatusesData } = useLiveQuery(
-    (q) =>
-      projectId
-        ? q
-            .from({ s: getCollection("ticket_statuses") })
-            .where(({ s }) => eq(s.project_id, projectId))
-            .select(({ s }) => ({ ...s }))
-        : undefined,
-    [projectId],
-  );
-
-  const { data: rawTagAssignmentsData } = useLiveQuery((q) =>
-    q.from({ ta: getCollection("ticket_tag_assignments") }).select(({ ta }) => ({ ...ta })),
-  );
-
-  const { data: rawTicketWorkspacesData } = useLiveQuery((q) =>
-    q.from({ tw: getCollection("ticket_workspaces") }).select(({ tw }) => ({ ...tw })),
-  );
+  const rawPlannerItems = asSyncedRows(rawPlannerItemsData);
 
   const { data: rawWorkspacesData } = useLiveQuery(
     (q) =>
@@ -146,20 +100,18 @@ export const useProjectTickets = (projectId: string | undefined) => {
     q.from({ ws: getCollection("workspace_sessions") }).select(({ ws }) => ({ ...ws })),
   );
 
-  if (!rawTickets || !projectId) return { data: undefined, isLoading };
+  if (!rawPlannerItems || !projectId) return { data: undefined, isLoading };
 
-  const rawStatuses = asSyncedRows(rawStatusesData);
-  const rawTagAssignments = asSyncedRows(rawTagAssignmentsData);
-  const rawTicketWorkspaces = asSyncedRows(rawTicketWorkspacesData);
+  const rawTickets = toPlannerTicketRows(plannerCollectionRows(rawPlannerItems, "tickets", projectId));
+  const rawStatuses = toPlannerStatusRows(plannerCollectionRows(rawPlannerItems, "statuses", projectId));
   const rawWorkspaces = asSyncedRows(rawWorkspacesData);
   const rawSessions = asSyncedRows(rawSessionsData);
   const rawWorkspaceSessions = asSyncedRows(rawWorkspaceSessionsData);
 
   const statusMetadata = buildStatusMetadata(rawStatuses);
 
-  const ticketIds = new Set(rawTickets.map((t) => t.id));
-  const tagIdsByTicket = buildTagIdsByTicket(rawTagAssignments, ticketIds);
-  const workspacesByTicket = buildWorkspacesByTicket(rawTicketWorkspaces, rawWorkspaces);
+  const tagIdsByTicket = buildPlannerTagIdsByTicket(rawTickets);
+  const workspacesByTicket = buildWorkspacesByPlannerTicket(rawWorkspaces);
   const sessionsByWorkspace = buildSessionsByWorkspace(rawWorkspaceSessions, rawSessions);
   const subTicketsByParent = buildSubTicketsByParent(rawTickets);
 
@@ -181,19 +133,20 @@ export const useProjectTickets = (projectId: string | undefined) => {
 };
 
 export const useProjectTicketStatuses = (projectId: string | undefined) => {
-  const { data: rawStatusesData, isLoading } = useLiveQuery(
+  const { data: rawPlannerItemsData, isLoading } = useLiveQuery(
     (q) =>
       projectId
         ? q
-            .from({ s: getCollection("ticket_statuses") })
-            .where(({ s }) => eq(s.project_id, projectId))
-            .select(({ s }) => ({ ...s }))
+            .from({ item: getCollection("extension_collection_items") })
+            .where(({ item }) => eq(item.project_id, projectId))
+            .select(({ item }) => ({ ...item }))
         : undefined,
     [projectId],
   );
-  const rawStatuses = asSyncedRows(rawStatusesData);
+  const rawPlannerItems = asSyncedRows(rawPlannerItemsData);
+  const rawStatuses = toPlannerStatusRows(plannerCollectionRows(rawPlannerItems, "statuses", projectId));
 
-  const data = rawStatuses
+  const data = rawPlannerItems
     ? [...rawStatuses]
         .sort((a, b) => (a.sort_order as number) - (b.sort_order as number))
         .map((s) => toTicketStatusOption(s as unknown as StatusResponse))
@@ -203,40 +156,29 @@ export const useProjectTicketStatuses = (projectId: string | undefined) => {
 };
 
 export const useProjectTicketTags = (projectId: string | undefined) => {
-  const { data: rawTagsData, isLoading } = useLiveQuery(
+  const { data: rawPlannerItemsData, isLoading } = useLiveQuery(
     (q) =>
       projectId
         ? q
-            .from({ t: getCollection("ticket_tags") })
-            .where(({ t }) => eq(t.project_id, projectId))
-            .select(({ t }) => ({ ...t }))
+            .from({ item: getCollection("extension_collection_items") })
+            .where(({ item }) => eq(item.project_id, projectId))
+            .select(({ item }) => ({ ...item }))
         : undefined,
     [projectId],
   );
-  const rawTags = asSyncedRows(rawTagsData);
-
-  const { data: rawOptionsData } = useLiveQuery((q) =>
-    q.from({ o: getCollection("ticket_tag_options") }).select(({ o }) => ({ ...o })),
+  const rawPlannerItems = asSyncedRows(rawPlannerItemsData);
+  const rawTags = toPlannerTagRows(
+    plannerCollectionRows(rawPlannerItems, "tags", projectId),
+    plannerCollectionRows(rawPlannerItems, "tag_options", projectId),
   );
-  const rawOptions = asSyncedRows(rawOptionsData);
 
-  const data = rawTags?.map((t) => {
-    const tagOptions = (rawOptions ?? [])
-      .filter((o) => o.tag_id === t.id && !o.deleted_at)
-      .sort((a, b) => (a.sort_order as number) - (b.sort_order as number));
-
-    return toTicketTag({
-      ...t,
-      options: tagOptions.map((o) => ({
-        id: o.id as string,
-        name: o.name as string,
-        color: o.color as string,
-        sort_order: o.sort_order as number,
-        icon: (o.icon as string) ?? null,
-        description: (o.description as string) ?? null,
-      })),
-    } as unknown as TagResponse);
-  });
+  const data = rawPlannerItems
+    ? rawTags.map((t) => {
+        return toTicketTag({
+          ...t,
+        } as unknown as TagResponse);
+      })
+    : undefined;
 
   return { data, isLoading };
 };

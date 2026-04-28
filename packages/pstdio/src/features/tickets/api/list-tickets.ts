@@ -1,4 +1,4 @@
-import { apiClient } from "@/features/api-client";
+import { listPlannerTickets } from "@/features/planner/api/planner-tickets";
 
 type ListTicketsParams = {
   project_id: string;
@@ -10,12 +10,4 @@ type ListTicketsParams = {
   shorthand?: string;
 };
 
-export const listTickets = async (params: ListTicketsParams) =>
-  apiClient().tickets.list(params.project_id, {
-    status: params.status,
-    tag: params.tag,
-    archived: params.archived,
-    draft: params.draft,
-    parent_id: params.parent_id,
-    shorthand: params.shorthand,
-  });
+export const listTickets = async (params: ListTicketsParams) => listPlannerTickets(params);

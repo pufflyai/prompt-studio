@@ -56,7 +56,7 @@ export const createHandler =
     const listItem = await deps.resolveTicketByShorthand(projectId, argv.id);
     if (!listItem) throw new Error(`Ticket not found: ${argv.id}`);
 
-    const ticket = await deps.getTicket(listItem.id);
+    const ticket = await deps.getTicket(listItem.id, projectId);
     if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
     if (argv.field) {

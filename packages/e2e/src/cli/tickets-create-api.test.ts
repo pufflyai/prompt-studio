@@ -1,4 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { cleanupDirs, createGitRepo, runPstdio } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
@@ -28,82 +30,79 @@ const createInitializedRepo = (name: string) => {
   return repo;
 };
 
-const getProjectId = async (name: string) => {
-  const res = await fetch(`${api.url}/v1/projects`);
-  const projects = (await res.json()) as { id: string; name: string }[];
-  const project = projects.find((p) => p.name === name);
-  if (!project) throw new Error(`Project not found: ${name}`);
-  return project.id;
+const readProjectId = (repo: string) => {
+  const configPath = join(repo, ".pstdio", "config.json");
+  return (JSON.parse(readFileSync(configPath, "utf8")) as { project_id: string }).project_id;
 };
 
-describe("ticket creation via API with content field", () => {
-  test(
-    "sets display_title and file_id when content is provided",
-    async () => {
-      createInitializedRepo("tk-api-content");
-      const projectId = await getProjectId("tk-api-content");
+const createPlannerTicket = async (
+  projectId: string,
+  input: { shorthand: string; content: string; title?: string },
+) => {
+  const res = await fetch(
+    `${api.url}/v1/projects/${projectId}/extension-commands/pstdio.planner.createTicket/execute`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ params: input }),
+    },
+  );
 
-      const res = await fetch(`${api.url}/v1/tickets`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          project_id: projectId,
-          content: "# Build login page\n\nImplement OAuth flow.",
-        }),
+  if (res.status !== 200) {
+    throw new Error(`Planner ticket create failed: ${res.status} ${await res.text()}`);
+  }
+
+  return (await res.json()) as { result: { id: string; shorthand: string; title: string; content: string } };
+};
+
+const listPlannerTickets = async (projectId: string) => {
+  const res = await fetch(`${api.url}/v1/projects/${projectId}/extensions/pstdio.planner/collections/tickets`);
+  expect(res.status).toBe(200);
+  const body = (await res.json()) as {
+    items: Array<{ item_id: string; value_json: { shorthand: string; displayTitle?: string } }>;
+  };
+  return body.items;
+};
+
+describe("planner-owned ticket storage", () => {
+  test(
+    "creates tickets through the planner extension command and exposes collection rows",
+    async () => {
+      const repo = createInitializedRepo("planner-ticket-storage");
+      const projectId = readProjectId(repo);
+
+      const created = await createPlannerTicket(projectId, {
+        shorthand: "PS-1",
+        title: "Build login page",
+        content: "# Build login page\n\nImplement OAuth flow.",
       });
 
-      expect(res.status).toBe(201);
-      const ticket = (await res.json()) as {
-        id: string;
-        shorthand: string;
-        display_title: string | null;
-        file_id: string | null;
-      };
+      expect(created.result.shorthand).toBe("PS-1");
 
-      expect(ticket.display_title).toBe("Build login page");
-      expect(ticket.file_id).not.toBeNull();
+      const rows = await listPlannerTickets(projectId);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].item_id).toBe(created.result.id);
+      expect(rows[0].value_json.displayTitle).toBe("Build login page");
     },
     TEST_TIMEOUT,
   );
 
   test(
-    "ticket created with content is visible via CLI list with display_title",
+    "pulls planner-owned ticket content into local artifacts",
     async () => {
-      const repo = createInitializedRepo("tk-api-visible");
-      const projectId = await getProjectId("tk-api-visible");
+      const repo = createInitializedRepo("planner-ticket-pull");
+      const projectId = readProjectId(repo);
 
-      await fetch(`${api.url}/v1/tickets`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          project_id: projectId,
-          content: "# Visible ticket\n\nDetails.",
-        }),
+      await createPlannerTicket(projectId, {
+        shorthand: "PS-2",
+        content: "# Downloadable ticket\n\nWith body.",
       });
 
-      const output = run("tickets list", repo);
-      expect(output).toContain("Visible ticket");
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "ticket file content is downloadable after creation with content",
-    async () => {
-      createInitializedRepo("tk-api-download");
-      const projectId = await getProjectId("tk-api-download");
-
-      const content = "# Downloadable ticket\n\nWith body.";
-      const res = await fetch(`${api.url}/v1/tickets`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ project_id: projectId, content }),
-      });
-
-      const ticket = (await res.json()) as { id: string; file_id: string };
-      const fileRes = await fetch(`${api.url}/v1/tickets/${ticket.id}/files/${ticket.file_id}/content`);
-      expect(fileRes.status).toBe(200);
-      expect(await fileRes.text()).toBe(content);
+      const output = run("tickets pull --ticket_id PS-2", repo);
+      expect(output).toContain("Pulled ticket PS-2");
+      expect(readFileSync(join(repo, ".pstdio", "tickets", "PS-2", "ticket.md"), "utf8")).toContain(
+        "# Downloadable ticket",
+      );
     },
     TEST_TIMEOUT,
   );

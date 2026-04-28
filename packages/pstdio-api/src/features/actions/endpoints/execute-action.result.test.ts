@@ -10,7 +10,6 @@ let app: OpenAPIHono<AppBindings>;
 let close: () => Promise<void>;
 let tempRoot: string;
 let projectId: string;
-let ticketId: string;
 let workspaceId: string;
 
 beforeAll(async () => {
@@ -36,19 +35,10 @@ beforeAll(async () => {
         {
           key: "start-session",
           label: "Start session",
-          targetType: "ticket",
+          targetType: "workspace",
           placement: "overflow",
           async trigger() {
             return { session_id: "session-from-action" };
-          },
-        },
-        {
-          key: "start-attempt",
-          label: "Start attempt",
-          targetType: "ticket",
-          placement: "primary",
-          async trigger() {
-            return { session_id: "session-from-attempt" };
           },
         },
       ],
@@ -76,21 +66,13 @@ beforeAll(async () => {
   });
   expect(repoRes.ok).toBeTrue();
 
-  const ticketRes = await app.request("/v1/tickets", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, user_prompt: "test action target" }),
-  });
-  const ticket = await ticketRes.json();
-  ticketId = ticket.id;
-
   const workspaceRes = await app.request("/v1/workspaces", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticket.shorthand,
+      name: "WS-RESULT",
+      anchors: [{ type: "pstdio.planner.ticket", id: "PS-1", label: "PS-1", extensionId: "pstdio.planner" }],
       worktree_path: join(tempRoot, "workspace-1"),
     }),
   });
@@ -115,25 +97,14 @@ describe("POST /v1/projects/:projectId/actions/:actionKey/execute result handlin
     expect(await res.json()).toEqual({ status: "success" });
   });
 
-  test("returns session_id when an action returns a created session", async () => {
+  test("returns session_id when an action returns a session", async () => {
     const res = await app.request(`/v1/projects/${projectId}/actions/result-actions%2Fstart-session/execute`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ target_type: "ticket", target_id: ticketId }),
+      body: JSON.stringify({ target_type: "workspace", target_id: workspaceId }),
     });
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ status: "success", session_id: "session-from-action" });
-  });
-
-  test("returns session_id from attempt responses that include a session", async () => {
-    const res = await app.request(`/v1/projects/${projectId}/actions/result-actions%2Fstart-attempt/execute`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ target_type: "ticket", target_id: ticketId }),
-    });
-
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ status: "success", session_id: "session-from-attempt" });
   });
 });

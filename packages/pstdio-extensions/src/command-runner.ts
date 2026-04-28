@@ -1,6 +1,7 @@
 import type {
   ActivityRecordInput,
   ExtensionActivityApi,
+  ExtensionReposApi,
   ExtensionSessionsApi,
   ParamValue,
   ResourceRef,
@@ -12,10 +13,14 @@ import { createExtensionStorageContext } from "./storage-context";
 type RunExtensionCommandInput = {
   commands: RuntimeCommandRecord[];
   db: DbClient;
+  eventBus?: {
+    emit(table: string, op: "set" | "delete", data: unknown): void;
+  };
   projectId: string;
   commandId: string;
   params?: Record<string, unknown>;
   target?: ResourceRef;
+  repos?: ExtensionReposApi;
   sessions?: ExtensionSessionsApi;
   activity?: ExtensionActivityApi;
   commandStack?: string[];
@@ -79,17 +84,28 @@ const createCommandSessionsApi = (input: RunExtensionCommandInput): ExtensionSes
   };
 };
 
+const createDefaultReposApi = (): ExtensionReposApi => ({
+  list: async () => [],
+  getDefault: async () => {
+    throw new Error("Extension command repository access requires a repo adapter.");
+  },
+  resolvePath: async () => {
+    throw new Error("Extension command repository access requires a repo adapter.");
+  },
+});
+
 const createDefaultActivityApi = (
   db: DbClient,
   projectId: string,
   extensionId: string,
   target: ResourceRef,
+  eventBus?: RunExtensionCommandInput["eventBus"],
 ): ExtensionActivityApi => {
   const activityEvents = createActivityEventsDBService(db);
 
   return {
-    record: (activityInput: ActivityRecordInput) =>
-      activityEvents.create({
+    record: async (activityInput: ActivityRecordInput) => {
+      const record = await activityEvents.create({
         projectId,
         target: activityInput.target ?? target,
         related: activityInput.related,
@@ -99,7 +115,10 @@ const createDefaultActivityApi = (
         source: "hook",
         summary: activityInput.summary,
         payloadJson: activityInput.metadata ?? {},
-      }),
+      });
+      eventBus?.emit("activity_events", "set", record);
+      return record;
+    },
   };
 };
 
@@ -108,7 +127,13 @@ const createCommandActivityApi = (
   command: RuntimeCommandRecord,
   target: ResourceRef,
 ): ExtensionActivityApi => {
-  const defaultActivity = createDefaultActivityApi(input.db, input.projectId, command.extensionId, target);
+  const defaultActivity = createDefaultActivityApi(
+    input.db,
+    input.projectId,
+    command.extensionId,
+    target,
+    input.eventBus,
+  );
 
   return {
     record: (activityInput) => {
@@ -137,6 +162,7 @@ export const runExtensionCommand = async (input: RunExtensionCommandInput): Prom
 
   const nextCommandStack = [...commandStack, command.id];
   const target = input.target ?? createDefaultTarget(command, input.projectId);
+  const repos = input.repos ?? createDefaultReposApi();
   const sessions = createCommandSessionsApi(input);
   const activity = createCommandActivityApi(input, command, target);
 
@@ -149,7 +175,9 @@ export const runExtensionCommand = async (input: RunExtensionCommandInput): Prom
         db: input.db,
         projectId: input.projectId,
         extensionId: command.extensionId,
+        eventBus: input.eventBus,
       }),
+      repos,
       sessions: {
         create: (sessionInput) => sessions.create(sessionInput),
       },

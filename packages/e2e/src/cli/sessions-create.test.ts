@@ -47,13 +47,19 @@ describe("pstdio sessions create --workspace-id", () => {
     async () => {
       const repo = createInitializedRepo("session-ws-shorthand");
 
-      const ticketOutput = run('tickets create --content "Session workspace ticket"', repo, FLOW_TIMEOUT);
-      const ticketShorthand = ticketOutput.match(/Created ticket (\S+)/)![1];
-
-      const workspaceOutput = run(`workspaces create --id ${ticketShorthand}`, repo, FLOW_TIMEOUT);
-      expect(workspaceOutput).toContain("Created workspace");
-
       const projectId = readProjectId(repo);
+      const createWorkspaceRes = await fetch(`${api.url}/v1/workspaces`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          project_id: projectId,
+          name: "SESSION-WS-A1",
+          branch: "workspace/SESSION-WS-A1",
+          worktree_path: repo,
+        }),
+      });
+      expect(createWorkspaceRes.status).toBe(201);
+
       const workspacesRes = await fetch(`${api.url}/v1/workspaces?project_id=${encodeURIComponent(projectId)}`);
       const workspaces = (await workspacesRes.json()) as Array<{ id: string; workspace_shorthand: string }>;
       expect(workspaces.length).toBe(1);

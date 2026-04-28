@@ -26,9 +26,11 @@ describe("planner SDK client", () => {
     await client.pullTickets("proj-1", { ticket_id: "PS-1", force: true });
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]!.url).toBe("http://test:1234/v1/projects/proj-1/planner/tickets/pull");
+    expect(calls[0]!.url).toBe(
+      "http://test:1234/v1/projects/proj-1/extension-commands/pstdio.planner.pullTickets/execute",
+    );
     expect(calls[0]!.method).toBe("POST");
-    expect(JSON.parse(calls[0]!.body!)).toEqual({ ticket_id: "PS-1", force: true });
+    expect(JSON.parse(calls[0]!.body!)).toEqual({ params: { ticket_id: "PS-1", force: true } });
   });
 
   test("pushes tickets through the planner API boundary", async () => {
@@ -38,8 +40,10 @@ describe("planner SDK client", () => {
     await client.pushTicket("proj-1", { ticket_id: "PS-1", status: "wip", tags: ["bug"] });
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]!.url).toBe("http://test:1234/v1/projects/proj-1/planner/tickets/push");
+    expect(calls[0]!.url).toBe(
+      "http://test:1234/v1/projects/proj-1/extension-commands/pstdio.planner.pushTicket/execute",
+    );
     expect(calls[0]!.method).toBe("POST");
-    expect(JSON.parse(calls[0]!.body!)).toEqual({ ticket_id: "PS-1", status: "wip", tags: ["bug"] });
+    expect(JSON.parse(calls[0]!.body!)).toEqual({ params: { ticket_id: "PS-1", status: "wip", tags: ["bug"] } });
   });
 });

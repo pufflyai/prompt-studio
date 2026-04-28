@@ -39,20 +39,20 @@ const writeTicketsExtension = (projectRoot: string) => {
       id: "project.tickets",
       name: "Tickets",
       commands: {
-        pullTickets: {
-          title: "Pull tickets",
+        syncTickets: {
+          title: "Sync tickets",
           target: "project",
           cli: {
-            path: "tickets pull",
-            description: "Pull tickets into .pstdio/tickets",
+            path: "tickets sync",
+            description: "Sync tickets into .pstdio/tickets",
             options: {
               id: { type: "string", description: "Ticket shorthand" },
               force: { type: "boolean", description: "Overwrite local files" },
             },
-            examples: ["pstdio tickets pull --id PS-1"],
+            examples: ["pstdio tickets sync --id PS-1"],
           },
           run() {
-            return "extension pull";
+            return "extension sync";
           },
         },
       },
@@ -163,10 +163,10 @@ describe("runtime-backed extension command routing for static namespaces", () =>
     const stderr = new TextDecoder().decode(output.stderr);
 
     expect(output.exitCode).toBe(0);
-    expect(stdout).toContain("Pull tickets into .pstdio/tickets");
-    expect(stdout).toContain("id: project.tickets.pullTickets");
+    expect(stdout).toContain("Sync tickets into .pstdio/tickets");
+    expect(stdout).toContain("id: project.tickets.syncTickets");
     expect(stdout).toContain("extension: project.tickets");
-    expect(stdout).toContain("example: pstdio tickets pull --id PS-1");
+    expect(stdout).toContain("example: pstdio tickets sync --id PS-1");
     expect(stderr).toBe("");
   });
 
@@ -175,7 +175,7 @@ describe("runtime-backed extension command routing for static namespaces", () =>
     writeTicketsExtension(projectRoot);
 
     const output = Bun.spawnSync({
-      cmd: ["bun", cliEntrypoint, "tickets", "pull", "--help"],
+      cmd: ["bun", cliEntrypoint, "tickets", "sync", "--help"],
       cwd: projectRoot,
       env: createCliEnv({
         PSTDIO_DISABLE_API_AUTO_START: "1",
@@ -190,9 +190,9 @@ describe("runtime-backed extension command routing for static namespaces", () =>
 
     expect(output.exitCode).toBe(0);
     expect(stdout).toContain("Ticket shorthand");
-    expect(stdout).toContain("id: project.tickets.pullTickets");
+    expect(stdout).toContain("id: project.tickets.syncTickets");
     expect(stdout).toContain("extension: project.tickets");
-    expect(stdout).toContain("example: pstdio tickets pull --id PS-1");
+    expect(stdout).toContain("example: pstdio tickets sync --id PS-1");
     expect(stderr).toBe("");
   });
 
@@ -258,7 +258,6 @@ describe("runtime-backed extension command routing for static namespaces", () =>
 
   test("shows missing-provider recovery when a hinted first-party command is disabled", async () => {
     const projectRoot = createProject();
-    writeTicketsExtension(projectRoot);
     const apiUrl = createApiServer((request) => {
       const url = new URL(request.url);
       if (url.pathname === "/healthz") {

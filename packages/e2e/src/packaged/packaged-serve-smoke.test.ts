@@ -48,7 +48,7 @@ const waitForActionKeys = async (
   baseUrl: string,
   projectId: string,
   expectedKeys: string[],
-  targetType: "ticket" | "workspace" = "ticket",
+  targetType: "workspace",
   timeoutMs = 10_000,
 ) => {
   const deadline = Date.now() + timeoutMs;
@@ -125,6 +125,41 @@ const stopProcess = async (child: ChildProcess) => {
   }
 };
 
+const expectPlannerTicketCommandStorage = async (baseUrl: string, projectId: string) => {
+  const createPlannerTicketRes = await fetch(
+    `${baseUrl}/v1/projects/${projectId}/extension-commands/pstdio.planner.createTicket/execute`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        params: {
+          shorthand: "PS-1",
+          title: "Packaged planner ticket",
+          content: "# Packaged planner ticket\n\nCreated through the packaged planner command.",
+        },
+      }),
+    },
+  );
+  expect(createPlannerTicketRes.status).toBe(200);
+
+  const plannerTicketsRes = await fetch(
+    `${baseUrl}/v1/projects/${projectId}/extensions/pstdio.planner/collections/tickets`,
+  );
+  expect(plannerTicketsRes.status).toBe(200);
+  const plannerTickets = (await plannerTicketsRes.json()) as {
+    items: { item_id: string; value_json: { shorthand?: string; displayTitle?: string | null } }[];
+  };
+  expect(plannerTickets.items).toContainEqual(
+    expect.objectContaining({
+      item_id: "PS-1",
+      value_json: expect.objectContaining({
+        shorthand: "PS-1",
+        displayTitle: "Packaged planner ticket",
+      }),
+    }),
+  );
+};
+
 beforeAll(() => {
   buildBinary();
 }, BUILD_TIMEOUT);
@@ -190,8 +225,7 @@ describe("packaged pstdio — self-hosted serve", () => {
         expect(existsSync(pluginsDir)).toBe(true);
         expect(readdirSync(pluginsDir).length).toBeGreaterThan(0);
 
-        const actionKeys = await waitForActionKeys(started.baseUrl, project.id, ["ticket-actions/run-attempt"]);
-        expect(actionKeys).toContain("ticket-actions/run-attempt");
+        await expectPlannerTicketCommandStorage(started.baseUrl, project.id);
 
         const workspaceActionKeys = await waitForActionKeys(
           started.baseUrl,
@@ -303,7 +337,7 @@ describe("packaged pstdio — self-hosted serve", () => {
             "    {",
             '      key: "ts-action",',
             '      label: "TS action",',
-            '      targetType: "ticket",',
+            '      targetType: "workspace",',
             '      placement: "primary",',
             "      async trigger() {},",
             "    },",
@@ -321,7 +355,7 @@ describe("packaged pstdio — self-hosted serve", () => {
             "    {",
             '      key: "js-action",',
             '      label: "JS action",',
-            '      targetType: "ticket",',
+            '      targetType: "workspace",',
             '      placement: "secondary",',
             "      async trigger() {},",
             "    },",
@@ -332,13 +366,14 @@ describe("packaged pstdio — self-hosted serve", () => {
           "utf8",
         );
 
-        const actionKeys = await waitForActionKeys(started.baseUrl, project.id, [
-          "ticket-actions/run-attempt",
-          "project-ts/ts-action",
-          "project-js/js-action",
-        ]);
+        const actionKeys = await waitForActionKeys(
+          started.baseUrl,
+          project.id,
+          ["workspace-actions/run-review", "project-ts/ts-action", "project-js/js-action"],
+          "workspace",
+        );
 
-        expect(actionKeys).toContain("ticket-actions/run-attempt");
+        expect(actionKeys).toContain("workspace-actions/run-review");
         expect(actionKeys).toContain("project-ts/ts-action");
         expect(actionKeys).toContain("project-js/js-action");
       } finally {

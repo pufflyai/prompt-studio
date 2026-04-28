@@ -185,7 +185,7 @@ test.describe("Session chat and workspace behavior", () => {
       projectId,
       "# Workspace panel ticket\n\nValidate hub visibility",
     );
-    const attempt = await createAttemptWithSessionViaApi(request, apiBase, ticket.id, repo.id, prompt);
+    const attempt = await createAttemptWithSessionViaApi(request, apiBase, projectId, ticket.id, repo.id, prompt);
 
     await page.addInitScript(
       ({ id, sessionId }: { id: string; sessionId: string }) => {
@@ -224,7 +224,7 @@ test.describe("Session chat and workspace behavior", () => {
       projectId,
       "# Workspace bubble ticket\n\nValidate hub visibility",
     );
-    const attempt = await createAttemptWithSessionViaApi(request, apiBase, ticket.id, repo.id, prompt);
+    const attempt = await createAttemptWithSessionViaApi(request, apiBase, projectId, ticket.id, repo.id, prompt);
 
     await page.addInitScript(
       ({ id, sessionId }: { id: string; sessionId: string }) => {

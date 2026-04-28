@@ -4,6 +4,9 @@ type ExtensionStorageContextInput = {
   db: DbClient;
   projectId: string;
   extensionId: string;
+  eventBus?: {
+    emit(table: string, op: "set" | "delete", data: unknown): void;
+  };
   scope?: {
     type: string;
     id: string;
@@ -38,9 +41,30 @@ export const createExtensionStorageContext = (input: ExtensionStorageContextInpu
 
   return {
     get: (key) => storage.get(scope, key),
-    set: (key, value) => storage.set(scope, key, value),
-    delete: (key) => storage.delete(scope, key),
-    collection: (name) => storage.collection(scope, name),
+    set: async (key, value) => {
+      const record = await storage.set(scope, key, value);
+      input.eventBus?.emit("extension_kv", "set", record);
+    },
+    delete: async (key) => {
+      const record = await storage.delete(scope, key);
+      if (record) input.eventBus?.emit("extension_kv", "delete", { id: record.id });
+    },
+    collection: (name) => {
+      const collection = storage.collection(scope, name);
+
+      return {
+        list: collection.list,
+        get: collection.get,
+        put: async (id, value) => {
+          const record = await collection.put(id, value);
+          input.eventBus?.emit("extension_collection_items", "set", record);
+        },
+        delete: async (id) => {
+          const record = await collection.delete(id);
+          if (record) input.eventBus?.emit("extension_collection_items", "delete", { id: record.id });
+        },
+      };
+    },
     templatePreferences: {
       isEnabled: (templateKey) => preferences.isEnabled(input.projectId, input.extensionId, templateKey),
       setEnabled: async (templateKey, enabled) => {

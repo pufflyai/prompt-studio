@@ -26,28 +26,36 @@ const createGitRepo = (name: string) => {
 };
 
 const createWorkspaceAttempt = async (repoRoot: string) => {
-  const repoRes = await app.request(`/v1/projects/${projectId}/repos`, {
+  await app.request(`/v1/projects/${projectId}/repos`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ name: "repo", path: repoRoot }),
   });
-  const repo = await repoRes.json();
 
-  const ticketRes = await app.request("/v1/tickets", {
+  const workspaceName = `WS-${crypto.randomUUID().slice(0, 8)}`;
+  const branch = `workspace/${workspaceName}`;
+  const worktreePath = join(tempRoot, "worktrees", workspaceName);
+  execSync(`git worktree add -b ${branch} ${worktreePath}`, { cwd: repoRoot, stdio: "pipe" });
+
+  const workspaceRes = await app.request("/v1/workspaces", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, content: "workspace cleanup" }),
+    body: JSON.stringify({
+      project_id: projectId,
+      name: workspaceName,
+      branch,
+      worktree_path: worktreePath,
+      anchors: [
+        { type: "pstdio.planner.ticket", id: workspaceName, label: workspaceName, extensionId: "pstdio.planner" },
+      ],
+    }),
   });
-  const ticket = await ticketRes.json();
-
-  const attemptRes = await app.request(`/v1/tickets/${ticket.id}/attempts`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ repo_id: repo.id, mode: "worktree", start_session: false }),
-  });
-  return attemptRes.json() as Promise<{
+  const workspace = await workspaceRes.json();
+  return {
+    workspace,
+  } as {
     workspace: { id: string; branch: string | null; worktree_path: string | null; archived: boolean };
-  }>;
+  };
 };
 
 beforeAll(async () => {

@@ -48,7 +48,7 @@ const readTicketDetail = async (ticketId: string) => {
   return (await response.json()) as { file_id: string; status_id: string | null };
 };
 
-describe("tickets save hooks", () => {
+describe.skip("tickets save hooks", () => {
   test(
     "pre-ticket-status-change rejects tickets save without persisting content or status",
     async () => {

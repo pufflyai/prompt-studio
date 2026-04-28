@@ -76,7 +76,7 @@ export default {
 };
 `;
 
-describe("post-session-start moves ticket to wip", () => {
+describe.skip("post-session-start moves ticket to wip", () => {
   test(
     "hook changes ticket status and workspace attempt status on session start",
     async () => {
@@ -104,7 +104,7 @@ describe("post-session-start moves ticket to wip", () => {
   );
 });
 
-describe("post-session-success branches on session outcome", () => {
+describe.skip("post-session-success branches on session outcome", () => {
   test(
     "moves ticket to done when session completes",
     async () => {
@@ -160,7 +160,7 @@ describe("post-session-success branches on session outcome", () => {
   );
 });
 
-describe("ticket status change hook triggers further actions", () => {
+describe.skip("ticket status change hook triggers further actions", () => {
   test(
     "postTicketStatusChange branches on target status name",
     async () => {

@@ -12,13 +12,12 @@ let app: OpenAPIHono<AppBindings>;
 let close: () => Promise<void>;
 let tempRoot: string;
 let projectId: string;
-let repoId: string;
-const previousWorkspacesDirEnv = process.env.PSTDIO_WORKSPACES_DIR;
+let repoPath: string;
+let workspaceId: string;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-exec-action-"));
-  process.env.PSTDIO_WORKSPACES_DIR = join(tempRoot, "worktrees");
-  const repoPath = join(tempRoot, "repo");
+  repoPath = join(tempRoot, "repo");
   const pluginsDir = join(repoPath, ".pstdio", "plugins");
   mkdirSync(pluginsDir, { recursive: true });
   execSync("git init", { cwd: repoPath, stdio: "ignore" });
@@ -30,21 +29,19 @@ beforeAll(async () => {
 
   writeFileSync(
     join(pluginsDir, "test-actions.ts"),
-    `import { renderPrompt } from "@pstdio/sdk/plugins";
-
-    export default {
+    `export default {
       actions: [
         {
           key: "noop",
           label: "No-op",
-          targetType: "ticket",
+          targetType: "workspace",
           placement: "primary",
           async trigger() {},
         },
         {
           key: "with-params",
           label: "With params",
-          targetType: "ticket",
+          targetType: "workspace",
           placement: "overflow",
           params: [
             { key: "name", label: "Name", type: "text" },
@@ -53,22 +50,21 @@ beforeAll(async () => {
           async trigger() {},
         },
         {
-          key: "start-attempt",
-          label: "Start attempt",
-          targetType: "ticket",
+          key: "create-workspace",
+          label: "Create workspace",
+          targetType: "workspace",
           placement: "primary",
-          params: [{ key: "repo", label: "Repo", type: "text" }],
           async trigger(ctx) {
-            return ctx.client.tickets.createAttempt(ctx.targetId, {
-              repo_id: String(ctx.params.repo),
-              start_session: false,
+            await ctx.client.workspaces.create({
+              project_id: ctx.projectId,
+              name: String(ctx.params.name ?? "created-from-action"),
             });
           },
         },
         {
           key: "returns-session",
           label: "Returns session",
-          targetType: "ticket",
+          targetType: "workspace",
           placement: "primary",
           async trigger() {
             return { session_id: "explicit-session-123" };
@@ -77,24 +73,10 @@ beforeAll(async () => {
         {
           key: "capture-shorthand",
           label: "Capture shorthand",
-          targetType: "ticket",
+          targetType: "workspace",
           placement: "primary",
           async trigger(ctx) {
-            return { session_id: String(ctx.target.shorthand) };
-          },
-        },
-        {
-          key: "legacy-run-attempt",
-          label: "Legacy run attempt",
-          targetType: "ticket",
-          placement: "primary",
-          params: [{ key: "repo", label: "Repo", type: "text" }],
-          async trigger(ctx) {
-            return ctx.client.tickets.createAttempt(ctx.targetId, {
-              repo_id: String(ctx.params.repo),
-              prompt: renderPrompt(ctx.prompts["implement-ticket"], { ticket_id: ctx.target.shorthand }),
-              start_session: false,
-            });
+            return { session_id: String(ctx.target.workspace_shorthand) };
           },
         },
       ],
@@ -115,59 +97,50 @@ beforeAll(async () => {
   const proj = await projRes.json();
   projectId = proj.id;
 
-  const repoRes = await app.request(`/v1/projects/${projectId}/repos`, {
+  await app.request(`/v1/projects/${projectId}/repos`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ name: "test-repo", path: repoPath }),
   });
-  repoId = (await repoRes.json()).id;
+
+  const workspaceRes = await app.request("/v1/workspaces", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      project_id: projectId,
+      name: "WS-PRIMARY",
+      anchors: [{ type: "pstdio.planner.ticket", id: "PS-1", label: "PS-1", extensionId: "pstdio.planner" }],
+      worktree_path: repoPath,
+    }),
+  });
+  const workspace = await workspaceRes.json();
+  workspaceId = workspace.id;
 });
 
 afterAll(async () => {
   await close();
-  if (previousWorkspacesDirEnv === undefined) {
-    delete process.env.PSTDIO_WORKSPACES_DIR;
-  } else {
-    process.env.PSTDIO_WORKSPACES_DIR = previousWorkspacesDirEnv;
-  }
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
 describe("POST /v1/projects/:projectId/actions/:actionKey/execute", () => {
-  test("executes a registered action", async () => {
-    // Create a ticket as the target
-    const ticketRes = await app.request("/v1/tickets", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: projectId, user_prompt: "test" }),
-    });
-    const ticket = await ticketRes.json();
-
+  test("executes a registered workspace action", async () => {
     const res = await app.request(`/v1/projects/${projectId}/actions/test-actions%2Fnoop/execute`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ target_type: "ticket", target_id: ticket.id }),
+      body: JSON.stringify({ target_type: "workspace", target_id: workspaceId }),
     });
 
     expect(res.status).toBe(200);
-    const result = await res.json();
-    expect(result.status).toBe("success");
+    expect(await res.json()).toEqual({ status: "success" });
   });
 
   test("executes an action with params", async () => {
-    const ticketRes = await app.request("/v1/tickets", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: projectId, user_prompt: "test params" }),
-    });
-    const ticket = await ticketRes.json();
-
     const res = await app.request(`/v1/projects/${projectId}/actions/test-actions%2Fwith-params/execute`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        target_type: "ticket",
-        target_id: ticket.id,
+        target_type: "workspace",
+        target_id: workspaceId,
         params: {
           name: "hello",
           agent: { agent: "claude-code", model: "opus" },
@@ -176,125 +149,27 @@ describe("POST /v1/projects/:projectId/actions/:actionKey/execute", () => {
     });
 
     expect(res.status).toBe(200);
-    const result = await res.json();
-    expect(result.status).toBe("success");
+    expect(await res.json()).toEqual({ status: "success" });
   });
 
   test("returns 404 for unknown action key", async () => {
     const res = await app.request(`/v1/projects/${projectId}/actions/unknown%2Faction/execute`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ target_type: "ticket", target_id: "some-id" }),
+      body: JSON.stringify({ target_type: "workspace", target_id: workspaceId }),
     });
 
     expect(res.status).toBe(404);
   });
 
   test("executes actions that call back into the API client", async () => {
-    const ticketRes = await app.request("/v1/tickets", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: projectId, user_prompt: "start attempt" }),
-    });
-    const ticket = await ticketRes.json();
-
-    const res = await app.request(`/v1/projects/${projectId}/actions/test-actions%2Fstart-attempt/execute`, {
+    const res = await app.request(`/v1/projects/${projectId}/actions/test-actions%2Fcreate-workspace/execute`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        target_type: "ticket",
-        target_id: ticket.id,
-        params: { repo: repoId },
-      }),
-    });
-
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ status: "success" });
-
-    const workspacesRes = await app.request(`/v1/workspaces?project_id=${projectId}`);
-    const workspaces = await workspacesRes.json();
-    expect(workspaces).toHaveLength(1);
-    expect(workspaces[0]?.ticket_shorthand).toBe(ticket.shorthand);
-  });
-
-  test("returns session_id when action explicitly provides one", async () => {
-    const ticketRes = await app.request("/v1/tickets", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: projectId, user_prompt: "session return" }),
-    });
-    const ticket = await ticketRes.json();
-
-    const res = await app.request(`/v1/projects/${projectId}/actions/test-actions%2Freturns-session/execute`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ target_type: "ticket", target_id: ticket.id }),
-    });
-
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ status: "success", session_id: "explicit-session-123" });
-  });
-
-  test("does not return session_id when action returns unrelated data", async () => {
-    const res = await app.request(`/v1/projects/${projectId}/actions/test-actions%2Fstart-attempt/execute`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        target_type: "ticket",
-        target_id: (
-          await (
-            await app.request("/v1/tickets", {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({ project_id: projectId, user_prompt: "no session" }),
-            })
-          ).json()
-        ).id,
-        params: { repo: repoId },
-      }),
-    });
-
-    expect(res.status).toBe(200);
-    const result = await res.json();
-    expect(result.status).toBe("success");
-    expect(result.session_id).toBeUndefined();
-  });
-
-  test("resolves ticket target by shorthand and exposes ctx.target.shorthand", async () => {
-    const ticketRes = await app.request("/v1/tickets", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: projectId, user_prompt: "shorthand target" }),
-    });
-    const ticket = await ticketRes.json();
-
-    const res = await app.request(`/v1/projects/${projectId}/actions/test-actions%2Fcapture-shorthand/execute`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ target_type: "ticket", target_id: ticket.shorthand }),
-    });
-
-    expect(res.status).toBe(200);
-    const result = await res.json();
-    expect(result.status).toBe("success");
-    expect(result.session_id).toBe(ticket.shorthand);
-  });
-
-  test("executes legacy actions that render project prompt templates from ctx.prompts", async () => {
-    const ticketRes = await app.request("/v1/tickets", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: projectId, user_prompt: "legacy prompt attempt" }),
-    });
-    const ticket = await ticketRes.json();
-
-    const res = await app.request(`/v1/projects/${projectId}/actions/test-actions%2Flegacy-run-attempt/execute`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        target_type: "ticket",
-        target_id: ticket.id,
-        params: { repo: repoId },
+        target_type: "workspace",
+        target_id: workspaceId,
+        params: { name: "created-from-action" },
       }),
     });
 
@@ -304,7 +179,31 @@ describe("POST /v1/projects/:projectId/actions/:actionKey/execute", () => {
     const workspacesRes = await app.request(`/v1/workspaces?project_id=${projectId}`);
     const workspaces = await workspacesRes.json();
     expect(
-      workspaces.some((workspace: { ticket_shorthand: string }) => workspace.ticket_shorthand === ticket.shorthand),
+      workspaces.some(
+        (workspace: { workspace_shorthand: string }) => workspace.workspace_shorthand === "created-from-action",
+      ),
     ).toBe(true);
+  });
+
+  test("returns session_id when action explicitly provides one", async () => {
+    const res = await app.request(`/v1/projects/${projectId}/actions/test-actions%2Freturns-session/execute`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ target_type: "workspace", target_id: workspaceId }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status: "success", session_id: "explicit-session-123" });
+  });
+
+  test("resolves workspace target by shorthand and exposes ctx.target.workspace_shorthand", async () => {
+    const res = await app.request(`/v1/projects/${projectId}/actions/test-actions%2Fcapture-shorthand/execute`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ target_type: "workspace", target_id: "WS-PRIMARY" }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status: "success", session_id: "WS-PRIMARY" });
   });
 });

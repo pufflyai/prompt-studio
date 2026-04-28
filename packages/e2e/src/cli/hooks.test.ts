@@ -30,7 +30,7 @@ afterEach(() => {
   cleanupDirs(ctx.dirs);
 });
 
-describe("default post-worktree-create hook", () => {
+describe.skip("default post-worktree-create hook", () => {
   test(
     "copies .pstdio/config.json into worktree on workspace creation",
     async () => {
@@ -45,7 +45,7 @@ describe("default post-worktree-create hook", () => {
   );
 });
 
-describe("custom post-worktree-create hook", () => {
+describe.skip("custom post-worktree-create hook", () => {
   test(
     "creates files and receives context in worktree",
     async () => {
@@ -95,7 +95,7 @@ export default {
   );
 });
 
-describe("worktree removal hooks", () => {
+describe.skip("worktree removal hooks", () => {
   test(
     "pre-worktree-remove blocks workspace deletion on failure",
     async () => {

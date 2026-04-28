@@ -1,4 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { ReadableStreamDefaultReader } from "node:stream/web";
 import { cleanupDirs, createGitRepo, runPstdio } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
@@ -65,6 +67,23 @@ const createSseReader = (response: Response) => {
 
 let api: ApiInstance;
 const dirs: string[] = [];
+
+const readProjectId = (repo: string) => {
+  const configPath = join(repo, ".pstdio", "config.json");
+  return (JSON.parse(readFileSync(configPath, "utf8")) as { project_id: string }).project_id;
+};
+
+const createPlannerTicket = async (projectId: string, shorthand: string, content: string) => {
+  const res = await fetch(
+    `${api.url}/v1/projects/${projectId}/extension-commands/pstdio.planner.createTicket/execute`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ params: { shorthand, content } }),
+    },
+  );
+  expect(res.status).toBe(200);
+};
 
 beforeAll(async () => {
   api = await startApi();
@@ -137,12 +156,13 @@ describe("realtime sync stream", () => {
   );
 
   test(
-    "streams ticket creation to connected clients",
+    "streams planner ticket collection changes to connected clients",
     async () => {
       const repo = createGitRepo();
       dirs.push(repo);
 
       runPstdio("projects create realtime-ticket-project", repo, { PSTDIO_API_URL: api.url });
+      const projectId = readProjectId(repo);
 
       const response = await fetch(`${api.url}/v1/sync/stream`);
       expect(response.ok).toBe(true);
@@ -151,7 +171,7 @@ describe("realtime sync stream", () => {
       const initEvent = await sse.readEvent();
       expect(initEvent?.event).toBe("init");
 
-      runPstdio('tickets create --content "Realtime ticket test"', repo, { PSTDIO_API_URL: api.url });
+      await createPlannerTicket(projectId, "PS-1", "# Realtime ticket test");
 
       let ticketEvent: SseEvent | null = null;
       for (let i = 0; i < 20; i += 1) {
@@ -159,8 +179,15 @@ describe("realtime sync stream", () => {
         if (!event) break;
         if (event.event !== "sync:set") continue;
 
-        const data = event.data as { table: string; data: { display_title?: string } };
-        if (data.table === "tickets" && data.data.display_title === "Realtime ticket test") {
+        const data = event.data as {
+          table: string;
+          data: { collection?: string; value_json?: { shorthand?: string } };
+        };
+        if (
+          data.table === "extension_collection_items" &&
+          data.data.collection === "tickets" &&
+          data.data.value_json?.shorthand === "PS-1"
+        ) {
           ticketEvent = event;
           break;
         }
@@ -174,12 +201,13 @@ describe("realtime sync stream", () => {
   );
 
   test(
-    "ticket update in one client is reflected in another",
+    "planner ticket collection changes are reflected in multiple clients",
     async () => {
       const repo = createGitRepo();
       dirs.push(repo);
 
       runPstdio("projects create cross-client-project", repo, { PSTDIO_API_URL: api.url });
+      const projectId = readProjectId(repo);
 
       // Open two SSE connections (simulating two client instances)
       const [responseA, responseB] = await Promise.all([
@@ -194,8 +222,7 @@ describe("realtime sync stream", () => {
       await sseA.readEvent();
       await sseB.readEvent();
 
-      // Create a ticket (both clients should see it)
-      runPstdio('tickets create --content "Cross client ticket"', repo, { PSTDIO_API_URL: api.url });
+      await createPlannerTicket(projectId, "PS-2", "# Cross client ticket");
 
       const findTicketEvent = async (sse: ReturnType<typeof createSseReader>) => {
         for (let i = 0; i < 20; i += 1) {
@@ -203,8 +230,15 @@ describe("realtime sync stream", () => {
           if (!event) break;
           if (event.event !== "sync:set") continue;
 
-          const data = event.data as { table: string; data: { display_title?: string } };
-          if (data.table === "tickets" && data.data.display_title === "Cross client ticket") {
+          const data = event.data as {
+            table: string;
+            data: { collection?: string; value_json?: { shorthand?: string } };
+          };
+          if (
+            data.table === "extension_collection_items" &&
+            data.data.collection === "tickets" &&
+            data.data.value_json?.shorthand === "PS-2"
+          ) {
             return event;
           }
         }

@@ -1,4 +1,5 @@
 import { type ClientOptions, createRequest, type RequestFn } from "@pstdio/sdk/client";
+import { PLANNER_EXTENSION_ID } from "../contract";
 
 export type PullPlannerTicketsInput = {
   ticket_id?: string;
@@ -30,11 +31,19 @@ export type PlannerClient = {
   pushTicket(projectId: string, input: PushPlannerTicketInput): Promise<PushPlannerTicketResponse>;
 };
 
+const plannerCommand = (key: string) => `${PLANNER_EXTENSION_ID}.${key}`;
+
 export const createPlannerClientFromRequest = (request: RequestFn): PlannerClient => ({
   pullTickets: (projectId, input) =>
-    request(`/v1/projects/${projectId}/planner/tickets/pull`, { method: "POST", body: input }),
+    request(`/v1/projects/${projectId}/extension-commands/${plannerCommand("pullTickets")}/execute`, {
+      method: "POST",
+      body: { params: input },
+    }).then((response) => (response as { result: PullPlannerTicketsResponse }).result),
   pushTicket: (projectId, input) =>
-    request(`/v1/projects/${projectId}/planner/tickets/push`, { method: "POST", body: input }),
+    request(`/v1/projects/${projectId}/extension-commands/${plannerCommand("pushTicket")}/execute`, {
+      method: "POST",
+      body: { params: input },
+    }).then((response) => (response as { result: PushPlannerTicketResponse }).result),
 });
 
 export const createPlannerClient = (options: ClientOptions = {}) =>

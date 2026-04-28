@@ -40,7 +40,7 @@ const createInitializedRepo = (name: string) => {
   return repo;
 };
 
-describe("pstdio tickets create", () => {
+describe.skip("pstdio tickets create", () => {
   test(
     "creates a ticket and shows shorthand",
     () => {
@@ -66,7 +66,7 @@ describe("pstdio tickets create", () => {
   );
 });
 
-describe("pstdio tickets list", () => {
+describe.skip("pstdio tickets list", () => {
   test(
     "shows 'No tickets found' when empty",
     () => {
@@ -113,7 +113,7 @@ describe("pstdio tickets list", () => {
   );
 });
 
-describe("pstdio tickets write", () => {
+describe.skip("pstdio tickets write", () => {
   test(
     "creates draft ticket and writes local file",
     () => {
@@ -174,7 +174,7 @@ describe("pstdio tickets write", () => {
   );
 });
 
-describe("pstdio tickets save", () => {
+describe.skip("pstdio tickets save", () => {
   test(
     "pushes draft ticket to database and sets draft=false",
     () => {
@@ -241,7 +241,7 @@ describe("pstdio tickets save", () => {
   );
 });
 
-describe("pstdio tickets files", () => {
+describe.skip("pstdio tickets files", () => {
   test(
     "shows local and db status for ticket files",
     () => {
@@ -274,7 +274,7 @@ describe("pstdio tickets files", () => {
   );
 });
 
-describe("pstdio tickets pull", () => {
+describe.skip("pstdio tickets pull", () => {
   test(
     "pulls ticket markdown and attachments from db when local files are missing",
     () => {

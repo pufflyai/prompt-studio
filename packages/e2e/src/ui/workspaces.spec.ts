@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -46,18 +46,6 @@ const registerRepoViaApi = async (
   return (await res.json()) as { id: string };
 };
 
-const createTicketViaApi = async (
-  request: import("@playwright/test").APIRequestContext,
-  projectId: string,
-  content: string,
-) => {
-  const res = await request.post(`${apiBase}/v1/tickets`, {
-    data: { project_id: projectId, content },
-  });
-  expect(res.ok()).toBe(true);
-  return (await res.json()) as { id: string; shorthand: string };
-};
-
 type Workspace = {
   id: string;
   workspace_shorthand: string;
@@ -71,14 +59,35 @@ type AttemptResponse = {
 
 const createAttemptViaApi = async (
   request: import("@playwright/test").APIRequestContext,
-  ticketId: string,
-  repoId: string,
+  projectId: string,
+  repoRoot: string,
+  ticketShorthand: string,
 ) => {
-  const res = await request.post(`${apiBase}/v1/tickets/${ticketId}/attempts`, {
-    data: { repo_id: repoId, mode: "worktree", start_session: false },
+  const workspaceName = `${ticketShorthand}_A1`;
+  const branch = `workspace/${workspaceName}`;
+  const worktreePath = join(tmpdir(), `pstdio-e2e-ws-worktree-${crypto.randomUUID()}`);
+  execFileSync("git", ["worktree", "add", "-b", branch, worktreePath, "main"], { cwd: repoRoot, stdio: "pipe" });
+
+  const res = await request.post(`${apiBase}/v1/workspaces`, {
+    data: {
+      project_id: projectId,
+      name: workspaceName,
+      branch,
+      worktree_path: worktreePath,
+      anchors: [
+        {
+          type: "pstdio.planner.ticket",
+          id: ticketShorthand,
+          projectId,
+          label: ticketShorthand,
+          extensionId: "pstdio.planner",
+          role: "primary",
+        },
+      ],
+    },
   });
   expect(res.ok()).toBe(true);
-  return (await res.json()) as AttemptResponse;
+  return { workspace: (await res.json()) as Workspace } satisfies AttemptResponse;
 };
 
 type DiffResponse = {
@@ -98,7 +107,7 @@ test.describe("Workspace diff", () => {
   });
 
   test.afterEach(() => {
-    for (const dir of repoDirs) {
+    for (const dir of [...repoDirs].reverse()) {
       rmSync(dir, { recursive: true, force: true });
     }
     repoDirs.length = 0;
@@ -107,9 +116,9 @@ test.describe("Workspace diff", () => {
   test("current mode (default) — returns empty diff when no uncommitted changes", async ({ request }) => {
     const repoRoot = createGitRepo();
     repoDirs.push(repoRoot);
-    const repo = await registerRepoViaApi(request, projectId, "clean-repo", repoRoot);
-    const ticket = await createTicketViaApi(request, projectId, "# Clean workspace test");
-    const attempt = await createAttemptViaApi(request, ticket.id, repo.id);
+    await registerRepoViaApi(request, projectId, "clean-repo", repoRoot);
+    const attempt = await createAttemptViaApi(request, projectId, repoRoot, "PS-1");
+    repoDirs.push(attempt.workspace.worktree_path);
 
     // Commit a change — should NOT appear in current mode (only uncommitted)
     const wtPath = attempt.workspace.worktree_path;
@@ -129,9 +138,9 @@ test.describe("Workspace diff", () => {
   test("current mode — shows only uncommitted changes", async ({ request }) => {
     const repoRoot = createGitRepo();
     repoDirs.push(repoRoot);
-    const repo = await registerRepoViaApi(request, projectId, "current-dirty-repo", repoRoot);
-    const ticket = await createTicketViaApi(request, projectId, "# Current mode dirty test");
-    const attempt = await createAttemptViaApi(request, ticket.id, repo.id);
+    await registerRepoViaApi(request, projectId, "current-dirty-repo", repoRoot);
+    const attempt = await createAttemptViaApi(request, projectId, repoRoot, "PS-2");
+    repoDirs.push(attempt.workspace.worktree_path);
 
     const wtPath = attempt.workspace.worktree_path;
 
@@ -154,9 +163,9 @@ test.describe("Workspace diff", () => {
   test("fork_point mode — returns all changes since branch diverged", async ({ request }) => {
     const repoRoot = createGitRepo();
     repoDirs.push(repoRoot);
-    const repo = await registerRepoViaApi(request, projectId, "fork-repo", repoRoot);
-    const ticket = await createTicketViaApi(request, projectId, "# Fork point test");
-    const attempt = await createAttemptViaApi(request, ticket.id, repo.id);
+    await registerRepoViaApi(request, projectId, "fork-repo", repoRoot);
+    const attempt = await createAttemptViaApi(request, projectId, repoRoot, "PS-3");
+    repoDirs.push(attempt.workspace.worktree_path);
 
     const wtPath = attempt.workspace.worktree_path;
     writeFileSync(join(wtPath, "feature.ts"), 'export const greet = () => "hello";\n');
@@ -181,9 +190,9 @@ test.describe("Workspace diff", () => {
   test("fork_point mode keeps diff after squash merge when workspace remains", async ({ request }) => {
     const repoRoot = createGitRepo();
     repoDirs.push(repoRoot);
-    const repo = await registerRepoViaApi(request, projectId, "ui-diff-repo", repoRoot);
-    const ticket = await createTicketViaApi(request, projectId, "# Merge diff retention test");
-    const attempt = await createAttemptViaApi(request, ticket.id, repo.id);
+    await registerRepoViaApi(request, projectId, "ui-diff-repo", repoRoot);
+    const attempt = await createAttemptViaApi(request, projectId, repoRoot, "PS-4");
+    repoDirs.push(attempt.workspace.worktree_path);
 
     // Commit a file on the workspace branch
     const wtPath = attempt.workspace.worktree_path;
@@ -212,9 +221,9 @@ test.describe("Workspace diff", () => {
   test("fork_point mode keeps diff after fast-forward merge when workspace remains", async ({ request }) => {
     const repoRoot = createGitRepo();
     repoDirs.push(repoRoot);
-    const repo = await registerRepoViaApi(request, projectId, "ui-diff-ff-repo", repoRoot);
-    const ticket = await createTicketViaApi(request, projectId, "# Fast-forward merge diff retention test");
-    const attempt = await createAttemptViaApi(request, ticket.id, repo.id);
+    await registerRepoViaApi(request, projectId, "ui-diff-ff-repo", repoRoot);
+    const attempt = await createAttemptViaApi(request, projectId, repoRoot, "PS-5");
+    repoDirs.push(attempt.workspace.worktree_path);
 
     const wtPath = attempt.workspace.worktree_path;
     writeFileSync(join(wtPath, "widget.tsx"), "export const Widget = () => <div>Widget</div>;\n");

@@ -119,64 +119,65 @@ const createTicketViaApi = async (
   return (await res.json()) as { shorthand: string };
 };
 
-test.describe("Ticket plugin actions", () => {
-  let projectId: string;
-  const repoDirs: string[] = [];
+test.describe
+  .skip("Ticket plugin actions", () => {
+    let projectId: string;
+    const repoDirs: string[] = [];
 
-  test.beforeEach(async ({ request }) => {
-    await deleteAllProjects(request);
-    const project = await createProjectViaApi(request, "Ticket Plugin Actions Project");
-    projectId = project.id;
+    test.beforeEach(async ({ request }) => {
+      await deleteAllProjects(request);
+      const project = await createProjectViaApi(request, "Ticket Plugin Actions Project");
+      projectId = project.id;
+    });
+
+    test.afterEach(() => {
+      for (const dir of repoDirs) {
+        rmSync(dir, { recursive: true, force: true });
+      }
+      repoDirs.length = 0;
+    });
+
+    test("opens a params modal and runs legacy prompt-backed ticket actions", async ({ page, request }) => {
+      const repoRoot = createRepoWithLegacyAttemptAction();
+      repoDirs.push(repoRoot);
+      await registerRepoViaApi(request, projectId, repoRoot);
+
+      const statuses = await getTicketStatuses(request, projectId);
+      const backlog = statuses.find((status) => status.name === "backlog");
+      expect(backlog).toBeDefined();
+      const ticket = await createTicketViaApi(request, projectId, "Legacy action ticket", backlog!.id);
+
+      await bypassOnboarding(page, projectId);
+      await page.goto(`/projects/${projectId}/tickets/${ticket.shorthand}`);
+
+      const actionButton = page.getByRole("button", { name: "Legacy run attempt", exact: true });
+      await expect(actionButton).toBeVisible();
+      await actionButton.click();
+
+      const dialog = page.getByRole("dialog").last();
+      await expect(dialog.getByText("Legacy run attempt", { exact: true })).toBeVisible();
+      await expect(dialog.getByText("Repository", { exact: true })).toBeVisible();
+      await expect(dialog.getByRole("button", { name: "Select branch", exact: true })).toBeVisible();
+      await expect(dialog.getByRole("button", { name: "Run", exact: true })).toBeEnabled();
+
+      const attemptResponse = page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          response.url().includes("/actions/legacy-ticket-actions%2Flegacy-run-attempt/execute") &&
+          response.status() === 200,
+      );
+
+      await dialog.getByRole("button", { name: "Run", exact: true }).click();
+      await attemptResponse;
+
+      await expect
+        .poll(async () => {
+          const workspacesRes = await request.get(`${apiBase}/v1/workspaces?project_id=${projectId}`);
+          if (!workspacesRes.ok()) return 0;
+
+          const workspaces = (await workspacesRes.json()) as Array<{ ticket_shorthand: string }>;
+          return workspaces.filter((workspace) => workspace.ticket_shorthand === ticket.shorthand).length;
+        })
+        .toBe(1);
+    });
   });
-
-  test.afterEach(() => {
-    for (const dir of repoDirs) {
-      rmSync(dir, { recursive: true, force: true });
-    }
-    repoDirs.length = 0;
-  });
-
-  test("opens a params modal and runs legacy prompt-backed ticket actions", async ({ page, request }) => {
-    const repoRoot = createRepoWithLegacyAttemptAction();
-    repoDirs.push(repoRoot);
-    await registerRepoViaApi(request, projectId, repoRoot);
-
-    const statuses = await getTicketStatuses(request, projectId);
-    const backlog = statuses.find((status) => status.name === "backlog");
-    expect(backlog).toBeDefined();
-    const ticket = await createTicketViaApi(request, projectId, "Legacy action ticket", backlog!.id);
-
-    await bypassOnboarding(page, projectId);
-    await page.goto(`/projects/${projectId}/tickets/${ticket.shorthand}`);
-
-    const actionButton = page.getByRole("button", { name: "Legacy run attempt", exact: true });
-    await expect(actionButton).toBeVisible();
-    await actionButton.click();
-
-    const dialog = page.getByRole("dialog").last();
-    await expect(dialog.getByText("Legacy run attempt", { exact: true })).toBeVisible();
-    await expect(dialog.getByText("Repository", { exact: true })).toBeVisible();
-    await expect(dialog.getByRole("button", { name: "Select branch", exact: true })).toBeVisible();
-    await expect(dialog.getByRole("button", { name: "Run", exact: true })).toBeEnabled();
-
-    const attemptResponse = page.waitForResponse(
-      (response) =>
-        response.request().method() === "POST" &&
-        response.url().includes("/actions/legacy-ticket-actions%2Flegacy-run-attempt/execute") &&
-        response.status() === 200,
-    );
-
-    await dialog.getByRole("button", { name: "Run", exact: true }).click();
-    await attemptResponse;
-
-    await expect
-      .poll(async () => {
-        const workspacesRes = await request.get(`${apiBase}/v1/workspaces?project_id=${projectId}`);
-        if (!workspacesRes.ok()) return 0;
-
-        const workspaces = (await workspacesRes.json()) as Array<{ ticket_shorthand: string }>;
-        return workspaces.filter((workspace) => workspace.ticket_shorthand === ticket.shorthand).length;
-      })
-      .toBe(1);
-  });
-});

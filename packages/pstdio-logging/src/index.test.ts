@@ -193,4 +193,37 @@ describe("createLogger", () => {
       rmSync(tempRoot, { recursive: true, force: true });
     }
   });
+
+  test("can omit stdout while keeping the file sink", async () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-logging-file-only-test-"));
+    const logPath = join(tempRoot, "logs.jsonl");
+    const writes: string[] = [];
+    const originalWrite = process.stdout.write;
+
+    try {
+      process.env.PSTDIO_LOG_PATH = logPath;
+      delete process.env.PSTDIO_LOG_TARGETS;
+
+      (process.stdout as { write: typeof process.stdout.write }).write = ((chunk: string | Uint8Array) => {
+        writes.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8"));
+        return true;
+      }) as typeof process.stdout.write;
+
+      const logger = createLogger({
+        includeStdout: false,
+        level: "error",
+        service: "pstdio-test",
+        sync: true,
+      });
+      logger.error({ event: "test.file-only" }, "file only");
+
+      const entries = readJsonLines(logPath);
+      expect(entries).toHaveLength(1);
+      expect(entries[0]?.event).toBe("test.file-only");
+      expect(writes).toEqual([]);
+    } finally {
+      (process.stdout as { write: typeof process.stdout.write }).write = originalWrite;
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
 });

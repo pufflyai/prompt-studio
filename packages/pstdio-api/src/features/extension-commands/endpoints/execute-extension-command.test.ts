@@ -41,6 +41,45 @@ const writeStorageExtension = (repoPath: string) => {
   );
 };
 
+const writeTicketStorageExtension = (repoPath: string) => {
+  const dir = join(repoPath, ".pstdio", "extensions", "ticket-storage");
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(
+    join(dir, "extension.ts"),
+    `export default {
+      id: "project.ticket-storage",
+      name: "Ticket Storage",
+      commands: {
+        createTicket: {
+          title: "Create ticket",
+          target: "project",
+          async run(ctx) {
+            const ticket = {
+              id: "PS-1",
+              shorthand: "PS-1",
+              title: ctx.params.title,
+            };
+
+            await ctx.storage.collection("tickets").put(ticket.id, ticket);
+            await ctx.activity.record({
+              eventType: "ticket.created",
+              summary: "Ticket created",
+              target: {
+                type: "project.ticket-storage.ticket",
+                id: ticket.id,
+                projectId: ctx.projectId,
+                extensionId: "project.ticket-storage",
+              },
+            });
+
+            return ticket;
+          },
+        },
+      },
+    };`,
+  );
+};
+
 const writeSessionExtension = (repoPath: string) => {
   const dir = join(repoPath, ".pstdio", "extensions", "extension-lab");
   mkdirSync(dir, { recursive: true });
@@ -99,6 +138,41 @@ const createProjectWithExtension = async () => {
   });
 
   return { app, projectId: project.id } as { app: OpenAPIHono<AppBindings>; projectId: string };
+};
+
+const createProjectWithTicketStorageExtension = async () => {
+  const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-extension-command-ticket-storage-test-"));
+  tempDirs.push(tempRoot);
+
+  const repoPath = join(tempRoot, "repo");
+  mkdirSync(repoPath, { recursive: true });
+  writeTicketStorageExtension(repoPath);
+
+  const { app, close, deps } = await createApp({
+    dbPath: ":memory:",
+    storagePath: join(tempRoot, "storage"),
+    filesRoot: "",
+  });
+  closeFns.push(close);
+
+  const projectResponse = await app.request("/v1/projects", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name: "Extension Ticket Storage Project" }),
+  });
+  const project = await projectResponse.json();
+
+  await app.request(`/v1/projects/${project.id}/repos`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name: "repo", path: repoPath }),
+  });
+
+  return { app, deps, projectId: project.id } as {
+    app: OpenAPIHono<AppBindings>;
+    deps: Awaited<ReturnType<typeof createApp>>["deps"];
+    projectId: string;
+  };
 };
 
 const createProjectWithSessionExtension = async () => {
@@ -220,5 +294,57 @@ describe("POST /v1/projects/:projectId/extension-commands/:commandId/execute", (
     );
 
     await waitForSessionStatus(app, body.result.sessionId, "completed");
+  });
+
+  test("persists extension-owned ticket mutations to generic sync and activity state", async () => {
+    const { app, deps, projectId } = await createProjectWithTicketStorageExtension();
+    const events: { table: string; op: string; data: unknown }[] = [];
+    deps.eventBus.subscribe((event) => events.push(event));
+
+    const response = await app.request(
+      `/v1/projects/${projectId}/extension-commands/project.ticket-storage.createTicket/execute`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ params: { title: "Planner-owned ticket" } }),
+      },
+    );
+
+    expect(response.status).toBe(200);
+
+    const state = await deps.syncService.getFullState();
+    expect(state.extension_collection_items).toContainEqual(
+      expect.objectContaining({
+        extension_id: "project.ticket-storage",
+        collection: "tickets",
+        item_id: "PS-1",
+        value_json: {
+          id: "PS-1",
+          shorthand: "PS-1",
+          title: "Planner-owned ticket",
+        },
+      }),
+    );
+    expect(state.activity_events).toContainEqual(
+      expect.objectContaining({
+        source_extension_id: "project.ticket-storage",
+        resource_type: "project.ticket-storage.ticket",
+        resource_id: "PS-1",
+      }),
+    );
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        table: "extension_collection_items",
+        op: "set",
+        data: expect.objectContaining({ item_id: "PS-1" }),
+      }),
+    );
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        table: "activity_events",
+        op: "set",
+        data: expect.objectContaining({ resource_id: "PS-1" }),
+      }),
+    );
   });
 });

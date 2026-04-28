@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import type { ExtensionSessionsApi, ResourceRef } from "@pstdio/sdk/extensions";
 import type { AgentRegistry } from "pstdio-agents";
 import type { createExtensionInstancesDBService, DbClient } from "pstdio-db";
@@ -175,6 +176,22 @@ const createExtensionCommandSessions = (deps: ExtensionCommandServiceDeps, proje
   return sessions;
 };
 
+const createExtensionCommandRepos = (deps: ExtensionCommandServiceDeps, projectId: string) => ({
+  list: () => deps.repoService.listByProject(projectId),
+  getDefault: async () => {
+    const [repo] = await deps.repoService.listByProject(projectId);
+    if (!repo) {
+      throw new Error("Extension command repository access requires a linked project repository.");
+    }
+    return repo;
+  },
+  resolvePath: async (repoId: string, relativePath: string) => {
+    const repo = await deps.repoService.get(repoId);
+    if (!repo) throw new Error(`Repository not found: ${repoId}`);
+    return join(repo.path, relativePath);
+  },
+});
+
 export const createExtensionCommandService = (deps: ExtensionCommandServiceDeps) => {
   const loadProjectRuntime = async (projectId: string) => {
     const [repo] = await deps.repoService.listByProject(projectId);
@@ -210,10 +227,12 @@ export const createExtensionCommandService = (deps: ExtensionCommandServiceDeps)
     return runExtensionCommand({
       commands: filteredRuntime.commands,
       db: deps.db,
+      eventBus: deps.eventBus,
       projectId: input.projectId,
       commandId: input.commandId,
       params: input.params,
       target: input.target,
+      repos: createExtensionCommandRepos(deps, input.projectId),
       sessions: createExtensionCommandSessions(deps, input.projectId),
     });
   };

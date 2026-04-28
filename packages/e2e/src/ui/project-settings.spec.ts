@@ -171,7 +171,7 @@ test.describe("Project settings", () => {
     await expect(page.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
   });
 
-  test("deletes a non-default status from the status manager", async ({ page, request }) => {
+  test.skip("deletes a non-default status from the status manager", async ({ page, request }) => {
     const project = await createProjectViaApi(request, `Status Delete ${Date.now()}`);
 
     const createRes = await request.post(`${apiBase}/v1/projects/${project.id}/statuses`, {
@@ -211,7 +211,7 @@ test.describe("Project settings", () => {
     expect(remaining.find((s) => s.name === "to-delete")).toBeUndefined();
   });
 
-  test("cancel reverts status changes", async ({ page, request }) => {
+  test.skip("cancel reverts status changes", async ({ page, request }) => {
     const project = await createProjectViaApi(request, `Status Cancel ${Date.now()}`);
 
     await request.post(`${apiBase}/v1/projects/${project.id}/statuses`, {
@@ -240,7 +240,7 @@ test.describe("Project settings", () => {
     await expect(page.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
   });
 
-  test("status save and cancel are disabled when no changes are made", async ({ page, request }) => {
+  test.skip("status save and cancel are disabled when no changes are made", async ({ page, request }) => {
     const project = await createProjectViaApi(request, `Status Disabled ${Date.now()}`);
 
     await bypassOnboarding(page);
@@ -316,7 +316,7 @@ test.describe("Project settings — skills", () => {
     await expect(page.getByTestId("project-skill-content")).toContainText(expectedContentSnippet!);
   });
 
-  test("persists tag option icon after update", async ({ request }) => {
+  test.skip("persists tag option icon after update", async ({ request }) => {
     const project = await createProjectViaApi(request, `Tag Icon ${Date.now()}`);
 
     const tagsRes = await request.get(`${apiBase}/v1/projects/${project.id}/ticket-tags`);

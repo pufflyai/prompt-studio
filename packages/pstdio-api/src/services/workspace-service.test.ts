@@ -47,7 +47,10 @@ describe("WorkspaceService", () => {
       const { deps, workspacesDb, emitted } = buildDeps();
       const service = createWorkspaceService(deps);
 
-      const input = { project_id: "p1", ticket_id: "t1", ticket_shorthand: "T-1" };
+      const input = {
+        project_id: "p1",
+        anchors: [{ type: "pstdio.planner.ticket", id: "t1", label: "T-1", extensionId: "pstdio.planner" }],
+      };
       const result = await service.create(input);
 
       expect(result).toMatchObject({ id: "ws_1" });

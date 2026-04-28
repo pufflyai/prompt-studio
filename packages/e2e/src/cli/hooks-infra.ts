@@ -56,20 +56,48 @@ type WorkspaceRecord = {
   worktree_path: string | null;
 };
 
+const createAnchoredWorkspace = async (ctx: HookTestContext, projectId: string, repo: string, name: string) => {
+  const workspaceName = `${name
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .toUpperCase()
+    .slice(0, 16)}-A1`;
+  const branch = `workspace/${workspaceName}`;
+  execSync(`git checkout -B ${branch}`, { cwd: repo, stdio: "pipe" });
+
+  const res = await fetch(`${ctx.api.url}/v1/workspaces`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      project_id: projectId,
+      name: workspaceName,
+      branch,
+      worktree_path: repo,
+      anchors: [
+        {
+          type: "pstdio.planner.ticket",
+          id: `${workspaceName}:ticket`,
+          projectId,
+          label: workspaceName,
+          extensionId: "pstdio.planner",
+          role: "primary",
+        },
+      ],
+    }),
+  });
+
+  if (res.status !== 201) {
+    throw new Error(`Failed to create workspace: ${res.status} ${await res.text()}`);
+  }
+
+  return (await res.json()) as WorkspaceRecord;
+};
+
 export const createWorkspaceInRepo = async (ctx: HookTestContext, repo: string) => {
-  const run = createRun(ctx);
-  const createTicketOutput = run('tickets create --content "Hook test ticket"', repo);
-  const ticketShorthand = createTicketOutput.match(/Created ticket (\S+)/)![1];
-
-  run(`workspaces create --id ${ticketShorthand}`, repo);
-
   const configPath = join(repo, ".pstdio", "config.json");
   const config = JSON.parse(readFileSync(configPath, "utf8")) as { project_id: string };
+  const workspace = await createAnchoredWorkspace(ctx, config.project_id, repo, "hook-test");
 
-  const workspacesRes = await fetch(`${ctx.api.url}/v1/workspaces?project_id=${encodeURIComponent(config.project_id)}`);
-  const workspaces = (await workspacesRes.json()) as WorkspaceRecord[];
-
-  return { workspace: workspaces[0], ticketShorthand };
+  return { workspace, ticketShorthand: workspace.workspace_shorthand };
 };
 
 export const createTicketViaApi = async (ctx: HookTestContext, projectId: string, prompt = "test ticket") => {
@@ -81,11 +109,17 @@ export const createTicketViaApi = async (ctx: HookTestContext, projectId: string
   return { res, ticket: (await res.json()) as { id: string; shorthand: string; status_id: string | null } };
 };
 
-export const createSessionViaApi = async (ctx: HookTestContext, projectId: string) => {
+export const createSessionViaApi = async (ctx: HookTestContext, projectId: string, workspaceId?: string) => {
   const res = await fetch(`${ctx.api.url}/v1/sessions`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, title: "test", prompt: "test", agent: "fake" }),
+    body: JSON.stringify({
+      project_id: projectId,
+      title: "test",
+      prompt: "test",
+      agent: "fake",
+      workspace_id: workspaceId,
+    }),
   });
   return { res, session: (await res.json()) as { id: string } };
 };
@@ -103,24 +137,20 @@ export const createAttemptWithSession = async (ctx: HookTestContext, repo: strin
   await registerRepo(ctx, projectId, repo, name);
   await configureAgent(ctx);
 
-  const run = createRun(ctx);
-  const createTicketOutput = run('tickets create --content "lifecycle test"', repo);
-  const ticketShorthand = createTicketOutput.match(/Created ticket (\S+)/)![1];
-
-  const ticketRes = await fetch(`${ctx.api.url}/v1/tickets?project_id=${encodeURIComponent(projectId)}`);
-  const tickets = (await ticketRes.json()) as Array<{ id: string; shorthand: string }>;
-  const ticket = tickets.find((t) => t.shorthand === ticketShorthand)!;
-
-  const attemptRes = await fetch(`${ctx.api.url}/v1/tickets/${ticket.id}/attempts`, {
+  const workspace = await createAnchoredWorkspace(ctx, projectId, repo, name);
+  const attemptRes = await fetch(`${ctx.api.url}/v1/sessions`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ start_session: true }),
+    body: JSON.stringify({
+      project_id: projectId,
+      title: "lifecycle test",
+      prompt: "lifecycle test",
+      agent: "fake",
+      workspace_id: workspace.id,
+    }),
   });
-
-  const attempt = (await attemptRes.json()) as {
-    workspace: { id: string; worktree_path: string | null; workspace_shorthand: string };
-    session: { id: string } | null;
-  };
+  const session = (await attemptRes.json()) as { id: string };
+  const attempt = { workspace, session };
 
   return { attempt, projectId, attemptRes };
 };

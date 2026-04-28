@@ -8,7 +8,6 @@ import {
   createExtensionStorageDBService,
   createExtensionTemplatePreferencesDBService,
   createProjectsDBService,
-  createStatusesDBService,
 } from "pstdio-db";
 import { EventBus } from "../features/sync/event-bus";
 import { createSyncService, SYNCED_TABLES } from "./sync-service";
@@ -41,6 +40,17 @@ describe("createSyncService", () => {
       }
     });
 
+    test("does not sync legacy ticket-owned tables", () => {
+      expect(SYNCED_TABLES).not.toContain("ticket_statuses");
+      expect(SYNCED_TABLES).not.toContain("tickets");
+      expect(SYNCED_TABLES).not.toContain("ticket_tags");
+      expect(SYNCED_TABLES).not.toContain("ticket_tag_options");
+      expect(SYNCED_TABLES).not.toContain("ticket_tag_assignments");
+      expect(SYNCED_TABLES).not.toContain("ticket_files");
+      expect(SYNCED_TABLES).not.toContain("ticket_workspaces");
+      expect(SYNCED_TABLES).not.toContain("workspace_artifacts");
+    });
+
     test("returns empty arrays for fresh database", async () => {
       await setup();
       const syncService = createSyncService({ db, eventBus });
@@ -65,10 +75,7 @@ describe("createSyncService", () => {
 
       expect(state.projects).toHaveLength(1);
       expect((state.projects[0] as Record<string, unknown>).name).toBe("test-project");
-      expect(state.ticket_statuses).toHaveLength(6);
       expect(state.attempt_statuses).toHaveLength(5);
-      expect(state.ticket_tags).toHaveLength(3);
-      expect(state.ticket_tag_options).toHaveLength(10);
       expect(state.agent_configs).toHaveLength(1);
       expect((state.agent_configs[0] as Record<string, unknown>).agent_id).toBe("claude-code");
     });
@@ -136,19 +143,12 @@ describe("createSyncService", () => {
       const syncService = createSyncService({ db, eventBus });
 
       const projectsService = createProjectsDBService(db);
-      const statusesService = createStatusesDBService(db);
-
       const project = await projectsService.create({ name: "soft-delete-test" });
-      const statuses = await statusesService.list(project.id);
-      const statusToDelete = statuses.find((s) => !s.is_default)!;
-
-      await statusesService.remove(statusToDelete.id);
+      await projectsService.remove(project.id);
 
       const state = await syncService.getFullState();
-      const syncedStatuses = state.ticket_statuses as { id: string }[];
 
-      expect(syncedStatuses.find((s) => s.id === statusToDelete.id)).toBeUndefined();
-      expect(syncedStatuses).toHaveLength(statuses.length - 1);
+      expect((state.projects as { id: string }[]).find((row) => row.id === project.id)).toBeUndefined();
     });
   });
 
@@ -183,12 +183,8 @@ describe("createSyncService", () => {
 
       await syncService.emitCascadeDeletes("projects", project.id);
 
-      // Should emit deletes for dependents (statuses, tags, tag_options) plus the project itself
       const tables = events.map((e) => e.table);
-      expect(tables).toContain("ticket_statuses");
       expect(tables).toContain("attempt_statuses");
-      expect(tables).toContain("ticket_tags");
-      expect(tables).toContain("ticket_tag_options");
       expect(tables).toContain("projects");
 
       // The project delete should be last

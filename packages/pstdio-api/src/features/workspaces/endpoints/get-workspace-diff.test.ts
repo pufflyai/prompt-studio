@@ -72,31 +72,30 @@ const createGitRepo = (name: string) => {
 const createWorkspaceWithDiff = async (repoName: string) => {
   const repoRoot = createGitRepo(repoName);
 
-  const repoRes = await app.request(`/v1/projects/${projectId}/repos`, {
+  await app.request(`/v1/projects/${projectId}/repos`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ name: repoName, path: repoRoot }),
   });
-  const repo = await repoRes.json();
 
-  const ticketRes = await app.request("/v1/tickets", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, content: `# ${repoName} ticket` }),
-  });
-  const ticket = await ticketRes.json();
+  const workspaceName = `WS-${repoName}`;
+  const branch = `workspace/${workspaceName}`;
+  const worktreePath = join(tempRoot, "worktrees", workspaceName);
+  execSync(`git worktree add -b ${branch} ${worktreePath}`, { cwd: repoRoot, stdio: "pipe" });
 
-  const attemptRes = await app.request(`/v1/tickets/${ticket.id}/attempts`, {
+  const workspaceRes = await app.request("/v1/workspaces", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      repo_id: repo.id,
-      mode: "worktree",
-      start_session: false,
+      project_id: projectId,
+      name: workspaceName,
+      branch,
+      worktree_path: worktreePath,
+      anchors: [{ type: "pstdio.planner.ticket", id: repoName, label: repoName, extensionId: "pstdio.planner" }],
     }),
   });
-  const attempt = await attemptRes.json();
-  return { workspace: attempt.workspace, repoRoot };
+  const workspace = await workspaceRes.json();
+  return { workspace, repoRoot };
 };
 
 describe("GET /v1/workspaces/:id/diff", () => {

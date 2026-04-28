@@ -37,6 +37,7 @@ type ResolveLogPathInput = {
 type CreateLoggerInput = ResolveLogPathInput & {
   base?: Record<string, unknown>;
   component?: string;
+  includeStdout?: boolean;
   level?: string;
   service: string;
   sync?: boolean;
@@ -173,7 +174,8 @@ const resolveSupplementalTargets = (input: CreateLoggerInput): ResolvedTarget[] 
 
 const resolveTargets = (input: CreateLoggerInput): ResolvedTarget[] => {
   const supplementalTargets = resolveSupplementalTargets(input).filter((target) => target.type !== "stdout");
-  return [{ type: "stdout" as const }, ...supplementalTargets];
+  const stdoutTargets = input.includeStdout === false ? [] : [{ type: "stdout" as const }];
+  return [...stdoutTargets, ...supplementalTargets];
 };
 
 const createStreams = (targets: ReturnType<typeof resolveTargets>) =>

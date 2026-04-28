@@ -31,31 +31,6 @@ const writeExtension = (projectRoot: string, extensionDir: string, source: strin
   writeFileSync(join(dir, "extension.ts"), source);
 };
 
-const writeTicketsExtension = (projectRoot: string) => {
-  writeExtension(
-    projectRoot,
-    "project.tickets",
-    `export default {
-      id: "project.tickets",
-      name: "Tickets",
-      commands: {
-        pullTickets: {
-          title: "Pull tickets",
-          cli: {
-            path: "tickets pull",
-            options: {
-              id: { type: "string", description: "Ticket shorthand" },
-            },
-          },
-          run() {
-            return "extension pull";
-          },
-        },
-      },
-    };`,
-  );
-};
-
 const jsonResponse = (body: unknown, init: ResponseInit = {}) => {
   const { headers: _headers, ...rest } = init;
   return Response.json(body, { ...rest, headers: { connection: "close" } });
@@ -150,7 +125,6 @@ describe("extension command CLI routing regressions", () => {
 
   test("matches disabled-extension recovery hints when command options have values", async () => {
     const projectRoot = createProject();
-    writeTicketsExtension(projectRoot);
     let requestBody: unknown;
     const apiUrl = createApiServer(async (request) => {
       const url = new URL(request.url);
@@ -169,7 +143,7 @@ describe("extension command CLI routing regressions", () => {
     });
 
     const output = await runCli({
-      cmd: ["bun", cliEntrypoint, "tickets", "pull", "--id", "PS-1"],
+      cmd: ["bun", cliEntrypoint, "tickets", "pull", "--ticket_id", "PS-1"],
       cwd: projectRoot,
       env: createCliEnv({
         PSTDIO_API_URL: apiUrl,
@@ -185,6 +159,6 @@ describe("extension command CLI routing regressions", () => {
     expect(output.stderr).toContain('Extension "pstdio.planner" is disabled for this project.');
     expect(output.stderr).not.toContain("PS-1");
     expect(output.stdout).toBe("");
-    expect(requestBody).toEqual({ params: { id: "PS-1" } });
+    expect(requestBody).toEqual({ params: { ticket_id: "PS-1" } });
   });
 });

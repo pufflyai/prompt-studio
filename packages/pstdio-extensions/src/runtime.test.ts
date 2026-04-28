@@ -22,6 +22,7 @@ const diagnosticCodes = (runtime: Awaited<ReturnType<typeof loadExtensionRuntime
   runtime.diagnostics.map((diagnostic) => diagnostic.code);
 
 const firstPartyExtensionIds = ["pstdio.harness.claude-code", "pstdio.harness.opencode", "pstdio.planner"];
+const firstPartyCommandIds = ["pstdio.planner.createTicket", "pstdio.planner.pullTickets", "pstdio.planner.pushTicket"];
 
 afterEach(() => {
   for (const dir of tempDirs) {
@@ -35,7 +36,7 @@ describe("loadExtensionRuntime", () => {
     const runtime = await loadExtensionRuntime({ projectRoot: createProject() });
 
     expect(runtime.extensions.map((extension) => extension.id).sort()).toEqual(firstPartyExtensionIds);
-    expect(runtime.commands).toEqual([]);
+    expect(runtime.commands.map((command) => command.id).sort()).toEqual(firstPartyCommandIds);
     expect(runtime.diagnostics).toEqual([]);
   });
 
@@ -73,8 +74,8 @@ describe("loadExtensionRuntime", () => {
       const extension = runtime.extensions.find((candidate) => candidate.id === "project.example");
       expect(extension?.id).toBe("project.example");
       expect(extension?.sourceKind).toBe("local");
-      expect(runtime.commands[0]?.id).toBe("project.example.runReview");
-      expect(runtime.commands[0]?.cli?.pathSegments).toEqual(["workspaces", "review"]);
+      const command = runtime.commands.find((candidate) => candidate.id === "project.example.runReview");
+      expect(command?.cli?.pathSegments).toEqual(["workspaces", "review"]);
       expect(runtime.artifactMounts[0]?.path).toBe(".pstdio/tickets");
     }
   });
@@ -106,7 +107,7 @@ describe("loadExtensionRuntime", () => {
       commands: {
         run: {
           title: "Run",
-          cli: { path: "tickets pull" },
+          cli: { path: "workspaces inspect" },
           run() {},
         },
       },
@@ -121,7 +122,7 @@ describe("loadExtensionRuntime", () => {
       commands: {
         run: {
           title: "Run again",
-          cli: { path: "tickets pull" },
+          cli: { path: "workspaces inspect" },
           run() {},
         },
       },
@@ -141,7 +142,9 @@ describe("loadExtensionRuntime", () => {
     expect(diagnosticCodes(runtime)).toContain("duplicate_artifact_mount");
     expect(runtime.artifactMounts).toHaveLength(1);
     expect(runtime.diagnostics.find((diagnostic) => diagnostic.code === "duplicate_cli_path")?.related).toEqual(
-      expect.arrayContaining([expect.objectContaining({ commandId: "project.duplicates.run", path: "tickets pull" })]),
+      expect.arrayContaining([
+        expect.objectContaining({ commandId: "project.duplicates.run", path: "workspaces inspect" }),
+      ]),
     );
   });
 

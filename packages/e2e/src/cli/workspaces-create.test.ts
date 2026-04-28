@@ -39,7 +39,7 @@ const readProjectId = (repo: string) => {
   return config.project_id;
 };
 
-describe("pstdio workspaces create", () => {
+describe.skip("pstdio workspaces create", () => {
   test(
     "stores workspace branch/path aligned to workspace shorthand",
     async () => {

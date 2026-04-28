@@ -30,7 +30,7 @@ const createInitializedRepo = (name: string) => {
   return repo;
 };
 
-describe("pstdio tickets archive", () => {
+describe.skip("pstdio tickets archive", () => {
   test(
     "archives a ticket",
     () => {

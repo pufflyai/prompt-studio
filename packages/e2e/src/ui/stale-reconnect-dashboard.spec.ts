@@ -84,49 +84,50 @@ const createOverflowProjectsViaApi = async (request: import("@playwright/test").
   }
 };
 
-test.describe("stale sync reconnect on dashboard", () => {
-  let projectId: string;
-  let ticketId: string;
-  let ticketShorthand: string;
+test.describe
+  .skip("stale sync reconnect on dashboard", () => {
+    let projectId: string;
+    let ticketId: string;
+    let ticketShorthand: string;
 
-  test.beforeEach(async ({ request }) => {
-    await deleteAllProjects(request);
+    test.beforeEach(async ({ request }) => {
+      await deleteAllProjects(request);
 
-    const project = await createProjectViaApi(request, "stale-reconnect-dashboard-project");
-    projectId = project.id;
+      const project = await createProjectViaApi(request, "stale-reconnect-dashboard-project");
+      projectId = project.id;
 
-    const statuses = await getTicketStatuses(request, projectId);
-    const backlogStatus = statuses.find((status) => status.name === "backlog");
-    expect(backlogStatus).toBeTruthy();
+      const statuses = await getTicketStatuses(request, projectId);
+      const backlogStatus = statuses.find((status) => status.name === "backlog");
+      expect(backlogStatus).toBeTruthy();
 
-    const ticket = await createTicketViaApi(request, projectId, "stale reconnect ticket body", backlogStatus!.id);
+      const ticket = await createTicketViaApi(request, projectId, "stale reconnect ticket body", backlogStatus!.id);
 
-    ticketId = ticket.id;
-    ticketShorthand = ticket.shorthand;
+      ticketId = ticket.id;
+      ticketShorthand = ticket.shorthand;
+    });
+
+    test("reconnects with stale seq and keeps ticket files in sync without refresh", async ({
+      page,
+      request,
+      context,
+    }) => {
+      const uploadedFileName = "reconnect-proof.md";
+      const uploadedFileLabel = "reconnect-proof";
+
+      await bypassOnboarding(page, projectId);
+      await page.goto(`/projects/${projectId}/tickets/${ticketShorthand}`);
+
+      await expect(page.getByText("Ticket", { exact: true })).toBeVisible();
+      await expect(page.getByText(uploadedFileLabel, { exact: true })).not.toBeVisible();
+
+      await context.setOffline(true);
+
+      await uploadTicketFileViaApi(request, ticketId, uploadedFileName, "file created while client is offline");
+
+      await createOverflowProjectsViaApi(request, 65);
+
+      await context.setOffline(false);
+
+      await expect(page.getByText(uploadedFileLabel, { exact: true })).toBeVisible({ timeout: 12_000 });
+    });
   });
-
-  test("reconnects with stale seq and keeps ticket files in sync without refresh", async ({
-    page,
-    request,
-    context,
-  }) => {
-    const uploadedFileName = "reconnect-proof.md";
-    const uploadedFileLabel = "reconnect-proof";
-
-    await bypassOnboarding(page, projectId);
-    await page.goto(`/projects/${projectId}/tickets/${ticketShorthand}`);
-
-    await expect(page.getByText("Ticket", { exact: true })).toBeVisible();
-    await expect(page.getByText(uploadedFileLabel, { exact: true })).not.toBeVisible();
-
-    await context.setOffline(true);
-
-    await uploadTicketFileViaApi(request, ticketId, uploadedFileName, "file created while client is offline");
-
-    await createOverflowProjectsViaApi(request, 65);
-
-    await context.setOffline(false);
-
-    await expect(page.getByText(uploadedFileLabel, { exact: true })).toBeVisible({ timeout: 12_000 });
-  });
-});

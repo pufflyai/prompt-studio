@@ -1,6 +1,6 @@
 import { afterAll, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
-import { createStatusesDBService } from "../statuses/statuses";
+import { createAttemptStatusesDBService } from "../attempt-statuses/attempt-statuses";
 import { createProjectsDBService } from "./projects";
 
 let close: () => Promise<void>;
@@ -42,21 +42,20 @@ test("projects service supports basic CRUD", async () => {
   expect(await projects.get(created.id)).toBeNull();
 });
 
-test("projects seed statuses with correct column controls", async () => {
+test("projects seed attempt statuses", async () => {
   const { db, close: close2 } = await createDb({ path: ":memory:" });
   const projectsService = createProjectsDBService(db);
   const seededProject = await projectsService.create({ name: "Seeded" });
-  const statusesService = createStatusesDBService(db);
+  const statusesService = createAttemptStatusesDBService(db);
   const seededStatuses = await statusesService.list(seededProject.id);
 
-  expect(seededStatuses.length).toBe(6);
+  expect(seededStatuses.length).toBe(5);
 
-  const backlog = seededStatuses.find((status) => status.name === "backlog");
-  const done = seededStatuses.find((status) => status.name === "done");
+  const wip = seededStatuses.find((status) => status.name === "wip");
+  const reviewReady = seededStatuses.find((status) => status.name === "review-ready");
 
-  expect(backlog?.can_create).toBe(true);
-  expect(done?.can_create).toBe(false);
-  expect(done?.column_actions).toBe(JSON.stringify(["archive_all"]));
+  expect(wip?.is_default).toBe(true);
+  expect(reviewReady?.sort_order).toBeGreaterThan(wip?.sort_order ?? 0);
 
   await close2();
 });

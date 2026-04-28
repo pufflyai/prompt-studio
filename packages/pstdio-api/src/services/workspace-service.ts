@@ -13,8 +13,6 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
   const get = raw.get;
   const getByShorthand = raw.getByShorthand;
   const list = raw.list;
-  const listByTicketId = raw.listByTicketId;
-  const getTicketWorkspaceLink = raw.getTicketWorkspaceLink;
 
   // --- mutations (orchestrated) ---
   const create = async (input: Parameters<typeof raw.create>[0]) => {
@@ -53,8 +51,6 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     get,
     getByShorthand,
     list,
-    listByTicketId,
-    getTicketWorkspaceLink,
     create,
     archive,
     softDelete,

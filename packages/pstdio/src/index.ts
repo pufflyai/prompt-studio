@@ -19,6 +19,7 @@ import { API_URL } from "./features/api-url";
 import { CLI_VERSION } from "./features/cli-version";
 import { findGitRoot, readConfig } from "./features/config/config";
 import { ensureApi } from "./features/ensure-api";
+import { formatCliErrorMessage } from "./features/errors/cli-error-message";
 import { createCliCommandTracker } from "./features/logging/cli-command-log";
 import { resolveCliSessionId } from "./features/sessions/resolve-cli-session-id";
 import { shouldBypassApiBootstrap } from "./features/should-bypass-api-bootstrap";
@@ -225,7 +226,7 @@ const cli = yargs(rawArgs)
 
     commandTracker.logFailure(err ?? msg);
     if (err) {
-      process.stderr.write(`Error: ${err.message}\n`);
+      process.stderr.write(`Error: ${formatCliErrorMessage(err)}\n`);
       process.exit(1);
     }
     process.stderr.write(`${msg}\n\n`);
@@ -288,7 +289,7 @@ cli
   })
   .catch((error: unknown) => {
     commandTracker.logFailure(error);
-    const message = error instanceof Error ? error.message : String(error);
+    const message = formatCliErrorMessage(error);
     process.stderr.write(`Error: ${message}\n`);
     process.exit(1);
   });

@@ -16,6 +16,7 @@ let tempRoot: string;
 let projectId: string;
 let repoDir: string;
 const repoRoot = join(import.meta.dirname, "../../../../../..");
+let ticketSequence = 0;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-attempt-status-test-"));
@@ -65,18 +66,24 @@ const createAttemptStatus = async (name: string) => {
 };
 
 const createWorkspace = async () => {
-  const ticketRes = await app.request("/v1/tickets", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, user_prompt: "test" }),
-  });
-  expect(ticketRes.status).toBe(201);
-  const ticket = (await ticketRes.json()) as { id: string; shorthand: string };
+  ticketSequence += 1;
+  const ticket = { id: `ticket-${ticketSequence}`, shorthand: `PS-${ticketSequence}` };
 
   const wsRes = await app.request("/v1/workspaces", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, ticket_id: ticket.id, ticket_shorthand: ticket.shorthand }),
+    body: JSON.stringify({
+      project_id: projectId,
+      name: `${ticket.shorthand}_A1`,
+      anchors: [
+        {
+          type: "pstdio.planner.ticket",
+          id: ticket.id,
+          label: ticket.shorthand,
+          extensionId: "pstdio.planner",
+        },
+      ],
+    }),
   });
   expect(wsRes.status).toBe(201);
   const workspace = (await wsRes.json()) as { id: string; workspace_shorthand: string };
@@ -259,7 +266,7 @@ export default { hooks: {
     expect(preFired).toBe(true);
     expect(postFired).toBe(true);
     const preContext = JSON.parse(readFileSync(preOutputPath, "utf-8")) as {
-      ticket: { id: string; shorthand: string; status_name: string | null };
+      ticket: { id: string; shorthand: string; resource_ref: { id: string; label: string } };
       workspace: {
         id: string;
         workspace_shorthand: string;
@@ -271,7 +278,7 @@ export default { hooks: {
 
     expect(preContext.ticket.id).toBe(workspace.ticket.id);
     expect(preContext.ticket.shorthand).toBe(workspace.ticket.shorthand);
-    expect(preContext.ticket.status_name).toBe("backlog");
+    expect(preContext.ticket.resource_ref.id).toBe(workspace.ticket.id);
     expect(preContext.workspace.id).toBe(workspace.id);
     expect(preContext.workspace.workspace_shorthand).toBe(workspace.workspace_shorthand);
     expect(preContext.workspace.ticket_shorthand).toBe(workspace.ticket.shorthand);
@@ -279,7 +286,7 @@ export default { hooks: {
 
     expect(postContext.ticket.id).toBe(workspace.ticket.id);
     expect(postContext.ticket.shorthand).toBe(workspace.ticket.shorthand);
-    expect(postContext.ticket.status_name).toBe("backlog");
+    expect(postContext.ticket.resource_ref.id).toBe(workspace.ticket.id);
     expect(postContext.workspace.id).toBe(workspace.id);
     expect(postContext.workspace.workspace_shorthand).toBe(workspace.workspace_shorthand);
     expect(postContext.workspace.ticket_shorthand).toBe(workspace.ticket.shorthand);

@@ -1,7 +1,5 @@
 import type { createAttemptStatusService } from "../../services/attempt-status-service";
 import type { createRepoService } from "../../services/repo-service";
-import type { createStatusService } from "../../services/status-service";
-import type { createTicketService } from "../../services/ticket-service";
 import type { createWorkspaceSessionService } from "../../services/workspace-session-service";
 import type { createPluginService } from "../plugins/plugin-service";
 import { parseTicketShorthand } from "../workspaces/parse-ticket-shorthand";
@@ -26,8 +24,6 @@ export type SessionHookDeps = {
   reposService: ReturnType<typeof createRepoService>;
   workspaceSessionsService: ReturnType<typeof createWorkspaceSessionService>;
   attemptStatusesService?: ReturnType<typeof createAttemptStatusService>;
-  statusService?: ReturnType<typeof createStatusService>;
-  ticketService?: ReturnType<typeof createTicketService>;
   pluginService: ReturnType<typeof createPluginService>;
 };
 
@@ -41,16 +37,6 @@ const resolveAttemptStatusName = async (
   return statuses.find((s) => s.id === attemptStatusId)?.name;
 };
 
-const resolveTicketStatusName = async (
-  deps: { statusService: ReturnType<typeof createStatusService> },
-  projectId: string,
-  statusId: string | null,
-) => {
-  if (!statusId) return null;
-  const statuses = await deps.statusService.list(projectId);
-  return statuses.find((s) => s.id === statusId)?.name ?? null;
-};
-
 const resolveSessionHookContext = async (deps: SessionHookDeps, session: SessionRecord) => {
   const base = {
     projectId: session.project_id,
@@ -62,27 +48,12 @@ const resolveSessionHookContext = async (deps: SessionHookDeps, session: Session
   const workspace = await deps.workspaceSessionsService.getWorkspaceBySessionId(session.id);
   if (!workspace) return base;
 
+  const ticketAnchor =
+    workspace.anchors_json.find(
+      (anchor) => anchor.type === "pstdio.planner.ticket" || (anchor.type === "ticket" && anchor.extensionId),
+    ) ?? null;
   const ticketShorthand =
-    parseTicketShorthand(workspace.workspace_shorthand) ??
-    (workspace as { ticket_shorthand?: string }).ticket_shorthand;
-
-  const ticket =
-    deps.ticketService && ticketShorthand
-      ? await deps.ticketService.getByShorthand(session.project_id, ticketShorthand)
-      : null;
-
-  let ticketStatusName: string | null = null;
-  if (deps.statusService && ticket?.status_id) {
-    try {
-      ticketStatusName = await resolveTicketStatusName(
-        { statusService: deps.statusService },
-        session.project_id,
-        ticket.status_id,
-      );
-    } catch {
-      // best-effort
-    }
-  }
+    ticketAnchor?.label ?? ticketAnchor?.id ?? parseTicketShorthand(workspace.workspace_shorthand);
 
   let attemptStatus: string | undefined;
   if (deps.attemptStatusesService && workspace.attempt_status_id) {
@@ -110,7 +81,13 @@ const resolveSessionHookContext = async (deps: SessionHookDeps, session: Session
     workspaceId: workspace.id,
     worktreePath: workspace.worktree_path ?? undefined,
     branch: workspace.branch ?? undefined,
-    ticket: ticket ? { ...ticket, status_name: ticketStatusName } : undefined,
+    ticket: ticketAnchor
+      ? {
+          id: ticketAnchor.id,
+          shorthand: ticketShorthandForWorkspace,
+          resource_ref: ticketAnchor,
+        }
+      : undefined,
     ...(attemptStatus !== undefined && { attemptStatus }),
   };
 };

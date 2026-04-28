@@ -8,17 +8,20 @@ import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
+let appDeps: Awaited<ReturnType<typeof createApp>>["deps"];
 let tempRoot: string;
 let storagePath: string;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-remove-project-test-"));
   storagePath = join(tempRoot, "storage");
-  ({ app } = await createApp({
+  const created = await createApp({
     dbPath: ":memory:",
     storagePath,
     filesRoot: "",
-  }));
+  });
+  app = created.app;
+  appDeps = created.deps;
 });
 
 afterAll(() => {
@@ -32,15 +35,6 @@ const createProject = async (name: string) => {
     body: JSON.stringify({ name }),
   });
   return res.json() as Promise<{ id: string; name: string; shorthand: string }>;
-};
-
-const createTicket = async (projectId: string) => {
-  const res = await app.request("/v1/tickets", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, content: "test ticket" }),
-  });
-  return res.json() as Promise<{ id: string; shorthand: string }>;
 };
 
 describe("DELETE /v1/projects/:id", () => {
@@ -88,15 +82,13 @@ describe("DELETE /v1/projects/:id", () => {
 
   test("removes project storage directory on disk", async () => {
     const project = await createProject("file-cleanup");
-    const ticket = await createTicket(project.id);
 
-    await app.request(`/v1/tickets/${ticket.id}/files`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        file_name: "test.txt",
-        content_base64: Buffer.from("hello").toString("base64"),
-      }),
+    await appDeps.fileService.upload({
+      project_id: project.id,
+      file_name: "test.txt",
+      file_kind: "attachment",
+      data: Buffer.from("hello"),
+      mime_type: "text/plain",
     });
 
     const projectDir = join(storagePath, project.id);
@@ -109,7 +101,6 @@ describe("DELETE /v1/projects/:id", () => {
 
   test("removes worktree directories on disk", async () => {
     const project = await createProject("worktree-cleanup");
-    const ticket = await createTicket(project.id);
 
     const worktreePath = join(tempRoot, "worktrees", "test-worktree");
     mkdirSync(worktreePath, { recursive: true });
@@ -120,8 +111,8 @@ describe("DELETE /v1/projects/:id", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         project_id: project.id,
-        ticket_id: ticket.id,
-        ticket_shorthand: ticket.shorthand,
+        name: "WS-CLEANUP",
+        anchors: [{ type: "pstdio.planner.ticket", id: "PS-1", label: "PS-1", extensionId: "pstdio.planner" }],
         worktree_path: worktreePath,
       }),
     });

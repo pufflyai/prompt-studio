@@ -63,15 +63,6 @@ const resolveFromStatusName = async (deps: RouteDeps, attemptStatusId: string | 
   return fromStatus?.name ?? null;
 };
 
-const resolveTicketStatusName = async (deps: RouteDeps, projectId: string, statusId: string | null) => {
-  if (!statusId) {
-    return null;
-  }
-
-  const statuses = await deps.statusService.list(projectId);
-  return statuses.find((status) => status.id === statusId)?.name ?? null;
-};
-
 const resolveTransitionSession = async (deps: RouteDeps, projectId: string, sessionId?: string) => {
   if (!sessionId) {
     return undefined;
@@ -85,14 +76,10 @@ const resolveTransitionSession = async (deps: RouteDeps, projectId: string, sess
   return session;
 };
 
-const resolveWorkspaceTicket = async (deps: RouteDeps, workspaceId: string) => {
-  const ticketLink = await deps.workspaceService.getTicketWorkspaceLink(workspaceId);
-  if (!ticketLink) {
-    return null;
-  }
-
-  return deps.ticketService.get(ticketLink.ticket_id);
-};
+const resolveTicketAnchor = (workspace: NonNullable<Awaited<ReturnType<RouteDeps["workspaceService"]["get"]>>>) =>
+  workspace.anchors_json.find(
+    (anchor) => anchor.type === "pstdio.planner.ticket" || (anchor.type === "ticket" && anchor.extensionId),
+  ) ?? null;
 
 const buildHookPayload = async (
   deps: RouteDeps,
@@ -102,15 +89,11 @@ const buildHookPayload = async (
     sessionId?: string;
   },
 ) => {
-  const [ticket, session] = await Promise.all([
-    resolveWorkspaceTicket(deps, input.workspace.id),
-    resolveTransitionSession(deps, input.workspace.project_id, input.sessionId),
-  ]);
-  const ticketStatusName = ticket
-    ? await resolveTicketStatusName(deps, input.workspace.project_id, ticket.status_id)
-    : null;
+  const ticketAnchor = resolveTicketAnchor(input.workspace);
+  const session = await resolveTransitionSession(deps, input.workspace.project_id, input.sessionId);
   const ticketShorthand =
-    ticket?.shorthand ??
+    ticketAnchor?.label ??
+    ticketAnchor?.id ??
     parseTicketShorthand(input.workspace.workspace_shorthand) ??
     input.workspace.workspace_shorthand;
 
@@ -121,7 +104,13 @@ const buildHookPayload = async (
       attempt_status_name: input.attemptStatusName,
     },
     workspaceId: input.workspace.id,
-    ticket: ticket ? { ...ticket, status_name: ticketStatusName } : undefined,
+    ticket: ticketAnchor
+      ? {
+          id: ticketAnchor.id,
+          shorthand: ticketShorthand,
+          resource_ref: ticketAnchor,
+        }
+      : undefined,
     worktreePath: input.workspace.worktree_path ?? undefined,
     branch: input.workspace.branch ?? undefined,
     ...(input.sessionId && { sessionId: input.sessionId }),

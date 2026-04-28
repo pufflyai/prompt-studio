@@ -105,7 +105,7 @@ describe("plugin actions via API", () => {
   );
 
   test(
-    "executes a plugin action for a ticket target",
+    "executes a plugin action for a workspace target",
     async () => {
       const { repo, projectId } = await setupProjectWithRepo("plugin-exec");
       await configureAgent(ctx);
@@ -118,7 +118,7 @@ describe("plugin actions via API", () => {
             {
               key: "noop",
               label: "No-op action",
-              targetType: "ticket",
+              targetType: "workspace",
               placement: "overflow",
               async trigger() {},
             },
@@ -126,18 +126,18 @@ describe("plugin actions via API", () => {
         };`,
       );
 
-      const ticketRes = await fetch(`${api.url}/v1/tickets`, {
+      const workspaceRes = await fetch(`${api.url}/v1/workspaces`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ project_id: projectId, user_prompt: "plugin exec test" }),
+        body: JSON.stringify({ project_id: projectId, name: "PLUGIN-A1" }),
       });
-      const ticket = (await ticketRes.json()) as { id: string };
+      const workspace = (await workspaceRes.json()) as { id: string };
 
       const actionKey = encodeURIComponent("exec-action/noop");
       const res = await fetch(`${api.url}/v1/projects/${projectId}/actions/${actionKey}/execute`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ target_type: "ticket", target_id: ticket.id }),
+        body: JSON.stringify({ target_type: "workspace", target_id: workspace.id }),
       });
 
       expect(res.status).toBe(200);
@@ -156,7 +156,7 @@ describe("plugin actions via API", () => {
       const res = await fetch(`${api.url}/v1/projects/${projectId}/actions/${actionKey}/execute`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ target_type: "ticket", target_id: "fake-id" }),
+        body: JSON.stringify({ target_type: "workspace", target_id: "fake-id" }),
       });
 
       expect(res.status).toBe(404);

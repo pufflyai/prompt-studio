@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+const resourceRefSchema = z.object({
+  type: z.string(),
+  id: z.string(),
+  projectId: z.string().optional(),
+  label: z.string().optional(),
+  extensionId: z.string().optional(),
+  role: z.enum(["primary", "context", "source", "result"]).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
 export const workspaceSchema = z.object({
   id: z.string(),
   project_id: z.string(),
@@ -9,6 +19,7 @@ export const workspaceSchema = z.object({
   attempt_status_id: z.string().nullable(),
   archived: z.boolean(),
   workspace_shorthand: z.string(),
+  anchors_json: z.array(resourceRefSchema),
   startup_log_file_id: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
@@ -16,14 +27,14 @@ export const workspaceSchema = z.object({
 });
 
 export const workspaceListItemSchema = workspaceSchema.extend({
-  ticket_shorthand: z.string(),
+  ticket_shorthand: z.string().nullable(),
   attempt_status_name: z.string().nullable(),
 });
 
 export const createWorkspaceInputSchema = z.object({
   project_id: z.string().min(1),
-  ticket_id: z.string().min(1),
-  ticket_shorthand: z.string().min(1),
+  name: z.string().optional(),
+  anchors: z.array(resourceRefSchema).optional(),
   branch: z.string().optional(),
   worktree_path: z.string().optional(),
 });

@@ -1,16 +1,19 @@
 import { readFileSync } from "node:fs";
 import { createRoute, z } from "@hono/zod-openapi";
-import type { ActionTriggerContext, TargetType } from "@pstdio/sdk/plugins";
+import type { ActionTriggerContext } from "@pstdio/sdk/plugins";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 
 const actionParamValueSchema = z.union([z.string(), z.record(z.string(), z.string())]);
+const actionTargetTypeSchema = z.enum(["workspace", "session"]);
 
 const executeActionInputSchema = z.object({
-  target_type: z.enum(["ticket", "workspace", "session"]),
+  target_type: actionTargetTypeSchema,
   target_id: z.string(),
   params: z.record(z.string(), actionParamValueSchema).optional(),
 });
+
+type ActionTargetType = z.infer<typeof actionTargetTypeSchema>;
 
 const actionResultSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("success"), session_id: z.string().optional(), message: z.string().optional() }),
@@ -43,10 +46,7 @@ export const executeActionRoute = createRoute({
   },
 });
 
-const resolveTarget = async (deps: RouteDeps, projectId: string, targetType: TargetType, targetId: string) => {
-  if (targetType === "ticket") {
-    return (await deps.ticketService.get(targetId)) ?? deps.ticketService.getByShorthand(projectId, targetId);
-  }
+const resolveTarget = async (deps: RouteDeps, projectId: string, targetType: ActionTargetType, targetId: string) => {
   if (targetType === "session") {
     return deps.sessionService.get(targetId);
   }

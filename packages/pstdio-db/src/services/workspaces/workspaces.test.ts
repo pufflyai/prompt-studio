@@ -3,15 +3,13 @@ import type { DbClient } from "../../db/connection.pglite";
 import { createDb } from "../../db/connection.pglite";
 import { createAttemptStatusesDBService } from "../attempt-statuses/attempt-statuses";
 import { createProjectsDBService } from "../projects/projects";
-import { createTicketsDBService } from "../tickets/tickets";
 import { createWorkspacesDBService } from "./workspaces";
 
 let close: () => Promise<void>;
 let db: DbClient;
 let workspacesService: ReturnType<typeof createWorkspacesDBService>;
 let projectId: string;
-let ticketId: string;
-let ticketShorthand: string;
+let ticketAnchor: { type: string; id: string; label: string; extensionId: string };
 
 const setup = async () => {
   const result = await createDb({ path: ":memory:" });
@@ -22,10 +20,7 @@ const setup = async () => {
   const project = await projectsService.create({ name: "prompt-studio" });
   projectId = project.id;
 
-  const ticketsService = createTicketsDBService(result.db);
-  const ticket = await ticketsService.create({ project_id: projectId, display_title: "Test ticket" });
-  ticketId = ticket.id;
-  ticketShorthand = ticket.shorthand;
+  ticketAnchor = { type: "pstdio.planner.ticket", id: "ticket-1", label: "PS-1", extensionId: "pstdio.planner" };
 
   workspacesService = createWorkspacesDBService(result.db);
 };
@@ -40,8 +35,8 @@ describe("createWorkspacesDBService", () => {
 
     const ws = await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
+      name: "PS-1_A1",
+      anchors: [ticketAnchor],
       branch: "workspace/PS-1_A1",
       worktree_path: "/repo/.pstdio/workspaces/PS-1_A1",
     });
@@ -52,38 +47,35 @@ describe("createWorkspacesDBService", () => {
     expect(ws.archived).toBe(false);
   });
 
-  test("increments shorthand for multiple workspaces on same ticket", async () => {
+  test("increments fallback shorthand for multiple workspaces", async () => {
     await setup();
 
     const ws1 = await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
     });
     const ws2 = await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
     });
 
-    expect(ws1.workspace_shorthand).toBe("PS-1_A1");
-    expect(ws2.workspace_shorthand).toBe("PS-1_A2");
+    expect(ws1.workspace_shorthand).toBe("WS-1");
+    expect(ws2.workspace_shorthand).toBe("WS-2");
   });
 
-  test("lists active workspaces with ticket shorthand", async () => {
+  test("lists active workspaces with generic anchors", async () => {
     await setup();
 
     await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
+      name: "PS-1_A1",
+      anchors: [ticketAnchor],
     });
 
     const list = await workspacesService.list(projectId);
 
     expect(list.length).toBe(1);
     expect(list[0].workspace_shorthand).toBe("PS-1_A1");
-    expect(list[0].ticket_shorthand).toBe("PS-1");
+    expect(list[0].ticket_shorthand).toBeNull();
+    expect(list[0].anchors_json).toEqual([ticketAnchor]);
   });
 
   test("getByShorthand returns workspace or null", async () => {
@@ -91,8 +83,8 @@ describe("createWorkspacesDBService", () => {
 
     await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
+      name: "PS-1_A1",
+      anchors: [ticketAnchor],
     });
 
     const found = await workspacesService.getByShorthand(projectId, "PS-1_A1");
@@ -108,8 +100,8 @@ describe("createWorkspacesDBService", () => {
 
     const ws = await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
+      name: "PS-1_A1",
+      anchors: [ticketAnchor],
     });
 
     await workspacesService.softDelete(ws.id);
@@ -126,8 +118,8 @@ describe("createWorkspacesDBService", () => {
 
     const ws = await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
+      name: "PS-1_A1",
+      anchors: [ticketAnchor],
     });
 
     const archived = await workspacesService.archive(ws.id);
@@ -143,23 +135,19 @@ describe("createWorkspacesDBService", () => {
     expect(found!.archived).toBe(true);
   });
 
-  test("deleted workspaces count toward shorthand sequence", async () => {
+  test("deleted workspaces count toward fallback shorthand sequence", async () => {
     await setup();
 
     const ws1 = await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
     });
     await workspacesService.softDelete(ws1.id);
 
     const ws2 = await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
     });
 
-    expect(ws2.workspace_shorthand).toBe("PS-1_A2");
+    expect(ws2.workspace_shorthand).toBe("WS-2");
   });
 
   test("updateAttemptStatusId sets attempt status on workspace", async () => {
@@ -167,8 +155,8 @@ describe("createWorkspacesDBService", () => {
 
     const ws = await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
+      name: "PS-1_A1",
+      anchors: [ticketAnchor],
     });
 
     const attemptStatusesService = createAttemptStatusesDBService(db);
@@ -186,8 +174,8 @@ describe("createWorkspacesDBService", () => {
 
     const ws = await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
+      name: "PS-1_A1",
+      anchors: [ticketAnchor],
     });
 
     await workspacesService.updateGitMetadata(ws.id, {

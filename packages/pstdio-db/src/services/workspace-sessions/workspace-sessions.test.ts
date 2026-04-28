@@ -3,7 +3,6 @@ import type { DbClient } from "../../db/connection.pglite";
 import { createDb } from "../../db/connection.pglite";
 import { createProjectsDBService } from "../projects/projects";
 import { createSessionsDBService } from "../sessions/sessions";
-import { createTicketsDBService } from "../tickets/tickets";
 import { createWorkspacesDBService } from "../workspaces/workspaces";
 import { createWorkspaceSessionsDBService } from "./workspace-sessions";
 
@@ -13,8 +12,7 @@ let workspacesService: ReturnType<typeof createWorkspacesDBService>;
 let sessionsService: ReturnType<typeof createSessionsDBService>;
 let workspaceSessionsService: ReturnType<typeof createWorkspaceSessionsDBService>;
 let projectId: string;
-let ticketId: string;
-let ticketShorthand: string;
+let ticketAnchor: { type: string; id: string; label: string; extensionId: string };
 
 const setup = async () => {
   const result = await createDb({ path: ":memory:" });
@@ -25,10 +23,7 @@ const setup = async () => {
   const project = await projectsService.create({ name: "test-project" });
   projectId = project.id;
 
-  const ticketsService = createTicketsDBService(db);
-  const ticket = await ticketsService.create({ project_id: projectId, display_title: "Test ticket" });
-  ticketId = ticket.id;
-  ticketShorthand = ticket.shorthand;
+  ticketAnchor = { type: "pstdio.planner.ticket", id: "ticket-1", label: "PS-1", extensionId: "pstdio.planner" };
 
   workspacesService = createWorkspacesDBService(db);
   sessionsService = createSessionsDBService(db);
@@ -45,8 +40,8 @@ describe("createWorkspaceSessionsDBService", () => {
 
     const ws = await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
+      name: "PS-1_A1",
+      anchors: [ticketAnchor],
     });
     const session = await sessionsService.create({ project_id: projectId, title: "Session 1", agent: "claude-code" });
 
@@ -63,8 +58,8 @@ describe("createWorkspaceSessionsDBService", () => {
 
     const ws = await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
+      name: "PS-1_A1",
+      anchors: [ticketAnchor],
     });
     const session = await sessionsService.create({ project_id: projectId, title: "Session 1", agent: "claude-code" });
     await workspaceSessionsService.link(ws.id, session.id);
@@ -88,8 +83,8 @@ describe("createWorkspaceSessionsDBService", () => {
 
     const ws = await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
+      name: "PS-1_A1",
+      anchors: [ticketAnchor],
     });
     const s1 = await sessionsService.create({ project_id: projectId, title: "Session 1", agent: "claude-code" });
     const s2 = await sessionsService.create({ project_id: projectId, title: "Session 2", agent: "claude-code" });
@@ -107,8 +102,8 @@ describe("createWorkspaceSessionsDBService", () => {
 
     const ws = await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
+      name: "PS-1_A1",
+      anchors: [ticketAnchor],
     });
     const s1 = await sessionsService.create({ project_id: projectId, title: "Implement", agent: "claude-code" });
     const s2 = await sessionsService.create({ project_id: projectId, title: "Review", agent: "claude-code" });
@@ -125,8 +120,8 @@ describe("createWorkspaceSessionsDBService", () => {
 
     const ws = await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
+      name: "PS-1_A1",
+      anchors: [ticketAnchor],
     });
     const session = await sessionsService.create({ project_id: projectId, title: "Session 1", agent: "claude-code" });
 

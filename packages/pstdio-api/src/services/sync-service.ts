@@ -16,14 +16,6 @@ import {
   sessions,
   sql,
   templates,
-  ticket_files,
-  ticket_statuses,
-  ticket_tag_assignments,
-  ticket_tag_options,
-  ticket_tags,
-  ticket_workspaces,
-  tickets,
-  workspace_artifacts,
   workspace_sessions,
   workspaces,
 } from "pstdio-db";
@@ -39,18 +31,10 @@ const tableMap = {
   extension_kv,
   extension_collection_items,
   extension_template_preferences,
-  ticket_statuses,
   attempt_statuses,
-  tickets,
-  ticket_tags,
-  ticket_tag_options,
-  ticket_tag_assignments,
   sessions,
   workspaces,
-  ticket_workspaces,
   files,
-  ticket_files,
-  workspace_artifacts,
   workspace_sessions,
   templates,
 } as const;
@@ -71,45 +55,6 @@ type RowWithId = { id: string };
 
 const emitDeleteRows = (bus: EventBus, table: string, rows: RowWithId[]) => {
   for (const row of rows) bus.emit(table, "delete", { id: row.id });
-};
-
-const emitTicketDependents = async (db: DbClient, projectTickets: RowWithId[], bus: EventBus) => {
-  for (const ticket of projectTickets) {
-    emitDeleteRows(
-      bus,
-      "ticket_tag_assignments",
-      await db.select().from(ticket_tag_assignments).where(eq(ticket_tag_assignments.ticket_id, ticket.id)),
-    );
-    emitDeleteRows(
-      bus,
-      "ticket_workspaces",
-      await db.select().from(ticket_workspaces).where(eq(ticket_workspaces.ticket_id, ticket.id)),
-    );
-    emitDeleteRows(
-      bus,
-      "ticket_files",
-      await db.select().from(ticket_files).where(eq(ticket_files.ticket_id, ticket.id)),
-    );
-    emitDeleteRows(
-      bus,
-      "workspace_artifacts",
-      await db.select().from(workspace_artifacts).where(eq(workspace_artifacts.ticket_id, ticket.id)),
-    );
-  }
-};
-
-const emitTagDependents = async (db: DbClient, projectId: string, bus: EventBus) => {
-  const tags = await db.select().from(ticket_tags).where(eq(ticket_tags.project_id, projectId));
-
-  for (const tag of tags) {
-    emitDeleteRows(
-      bus,
-      "ticket_tag_options",
-      await db.select().from(ticket_tag_options).where(eq(ticket_tag_options.tag_id, tag.id)),
-    );
-  }
-
-  emitDeleteRows(bus, "ticket_tags", tags);
 };
 
 const emitExtensionDependents = async (db: DbClient, projectId: string, bus: EventBus) => {
@@ -140,21 +85,20 @@ const emitExtensionDependents = async (db: DbClient, projectId: string, bus: Eve
 
 // Emit cascade deletes for all project dependents (children first, parent last)
 const emitProjectDependents = async (db: DbClient, projectId: string, bus: EventBus) => {
-  const projectTickets = await db.select().from(tickets).where(eq(tickets.project_id, projectId));
-  await emitTicketDependents(db, projectTickets, bus);
-  emitDeleteRows(bus, "tickets", projectTickets);
-  await emitTagDependents(db, projectId, bus);
-  emitDeleteRows(
-    bus,
-    "ticket_statuses",
-    await db.select().from(ticket_statuses).where(eq(ticket_statuses.project_id, projectId)),
-  );
   emitDeleteRows(
     bus,
     "attempt_statuses",
     await db.select().from(attempt_statuses).where(eq(attempt_statuses.project_id, projectId)),
   );
-  emitDeleteRows(bus, "workspaces", await db.select().from(workspaces).where(eq(workspaces.project_id, projectId)));
+  const projectWorkspaces = await db.select().from(workspaces).where(eq(workspaces.project_id, projectId));
+  for (const workspace of projectWorkspaces) {
+    emitDeleteRows(
+      bus,
+      "workspace_sessions",
+      await db.select().from(workspace_sessions).where(eq(workspace_sessions.workspace_id, workspace.id)),
+    );
+  }
+  emitDeleteRows(bus, "workspaces", projectWorkspaces);
   emitDeleteRows(
     bus,
     "project_repos",

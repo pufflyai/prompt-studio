@@ -6,16 +6,13 @@ import {
   createAttemptStatusesDBService,
   createDb,
   createExtensionInstancesDBService,
+  createExtensionStorageDBService,
   createFilesDBService,
   createProjectsDBService,
   createReposDBService,
   createSessionsDBService,
   createSkillsDBService,
-  createStatusesDBService,
-  createTagsDBService,
   createTemplatesDBService,
-  createTicketsDBService,
-  createWorkspaceArtifactsDBService,
   createWorkspaceSessionsDBService,
   createWorkspacesDBService,
 } from "pstdio-db";
@@ -29,42 +26,34 @@ import { createActionRoutes } from "./features/actions/routes";
 import { createAttemptStatusRoutes } from "./features/attempt-statuses/routes";
 import type { RouteDeps } from "./features/deps";
 import { createExtensionCommandRoutes } from "./features/extension-commands/routes";
+import { createExtensionRoutes } from "./features/extensions/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHarnessRoutes } from "./features/harnesses/routes";
 import { createHealthRoutes } from "./features/health/routes";
 import { fireSessionResumeHook, fireSessionStartHook, fireSessionStatusHook } from "./features/hooks/session-hooks";
-import { fireTicketHook, fireTicketHookAsync } from "./features/hooks/ticket-hooks";
-import { createPlannerRoutes } from "./features/planner/routes";
 import { createPluginService } from "./features/plugins/plugin-service";
 import { createPluginRoutes } from "./features/plugins/routes";
 import { createProjectRoutes } from "./features/projects/routes";
 import { createSessionRoutes } from "./features/sessions/routes";
 import { createSkillRoutes } from "./features/skills/routes";
-import { createStatusRoutes } from "./features/statuses/routes";
 import { EventBus } from "./features/sync/event-bus";
 import { createSyncRoutes } from "./features/sync/routes";
-import { createTagRoutes } from "./features/tags/routes";
 import { createTemplateRoutes } from "./features/templates/routes";
-import { createTicketRoutes } from "./features/tickets/routes";
 import { createWorkspaceRoutes } from "./features/workspaces/routes";
 import { apiLogger } from "./lib/logger";
 import { createAgentConfigService } from "./services/agent-config-service";
 import { createAttemptStatusService } from "./services/attempt-status-service";
 import { createExtensionCommandService } from "./services/extension-command-service";
 import { createExtensionInstanceService } from "./services/extension-instance-service";
+import { createExtensionStorageService } from "./services/extension-storage-service";
 import { createFileService } from "./services/file-service";
 import { createHarnessProviderService } from "./services/harness-provider-service";
-import { createPlannerService } from "./services/planner-service";
 import { createProjectService } from "./services/project-service";
 import { createRepoService } from "./services/repo-service";
 import { createSessionService } from "./services/session-service";
 import { createSkillService } from "./services/skill-service";
-import { createStatusService } from "./services/status-service";
 import { createSyncService } from "./services/sync-service";
-import { createTagService } from "./services/tag-service";
 import { createTemplateService } from "./services/template-service";
-import { createTicketService } from "./services/ticket-service";
-import { createWorkspaceArtifactService } from "./services/workspace-artifact-service";
 import { createWorkspaceService } from "./services/workspace-service";
 import { createWorkspaceSessionService } from "./services/workspace-session-service";
 import { runStartupTasks } from "./startup";
@@ -97,17 +86,14 @@ const registerRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps) => {
   app.route("/v1", createFilesystemRoutes(deps));
   app.route("/v1", createActionRoutes(deps));
   app.route("/v1", createExtensionCommandRoutes(deps));
+  app.route("/v1", createExtensionRoutes(deps));
   app.route("/v1", createHarnessRoutes(deps));
   app.route("/v1", createPluginRoutes(deps));
-  app.route("/v1", createPlannerRoutes(deps));
   app.route("/v1", createSkillRoutes(deps));
   app.route("/v1", createTemplateRoutes(deps));
-  app.route("/v1", createTicketRoutes(deps));
-  app.route("/v1", createStatusRoutes(deps));
   app.route("/v1", createAttemptStatusRoutes(deps));
   app.route("/v1", createSessionRoutes(deps));
   app.route("/v1", createWorkspaceRoutes(deps));
-  app.route("/v1", createTagRoutes(deps));
   app.route("/v1", createSyncRoutes(deps));
 };
 
@@ -123,18 +109,15 @@ export const createApp = async (options: AppOptions) => {
   const projectsDBService = createProjectsDBService(db);
   const reposDBService = createReposDBService(db);
   const sessionsDBService = createSessionsDBService(db);
-  const ticketsDBService = createTicketsDBService(db);
   const workspacesDBService = createWorkspacesDBService(db);
-  const workspaceArtifactsDBService = createWorkspaceArtifactsDBService(db);
   const workspaceSessionsDBService = createWorkspaceSessionsDBService(db);
-  const statusesDBService = createStatusesDBService(db);
   const attemptStatusesDBService = createAttemptStatusesDBService(db);
-  const tagsDBService = createTagsDBService(db);
   const agentConfigsDBService = createAgentConfigsDBService(db);
   const skillsDBService = createSkillsDBService(db);
   const templatesDBService = createTemplatesDBService(db);
   const filesDBService = createFilesDBService(db);
   const extensionInstancesDBService = createExtensionInstancesDBService(db);
+  const extensionStorageDBService = createExtensionStorageDBService(db);
 
   // --- storage services ---
   const filesStorageService = createFilesStorageService(storageRoot);
@@ -149,12 +132,11 @@ export const createApp = async (options: AppOptions) => {
   // --- domain services ---
   const projectService = createProjectService({ projectsDBService });
   const repoService = createRepoService({ reposDBService });
-  const statusService = createStatusService({ statusesDBService });
-  const tagService = createTagService({ tagsDBService });
   const templateService = createTemplateService({ templatesDBService });
   const attemptStatusService = createAttemptStatusService({ attemptStatusesDBService });
   const agentConfigService = createAgentConfigService({ agentConfigsDBService });
   const extensionInstanceService = createExtensionInstanceService({ extensionInstancesDBService });
+  const extensionStorageService = createExtensionStorageService({ eventBus, extensionStorageDBService });
   const skillService = createSkillService({ skillsDBService, skillsStorageService });
   const fileService = createFileService({ filesDBService, filesStorageService });
   const syncService = createSyncService({ db, eventBus });
@@ -166,7 +148,6 @@ export const createApp = async (options: AppOptions) => {
   });
 
   const workspaceSessionService = createWorkspaceSessionService({ workspaceSessionsDBService });
-  const workspaceArtifactService = createWorkspaceArtifactService({ workspaceArtifactsDBService });
   const workspaceService = createWorkspaceService({ workspacesDb: workspacesDBService, eventBus });
   const pluginClientFetch = Object.assign(
     (input: RequestInfo | URL, init?: RequestInit) => {
@@ -189,26 +170,10 @@ export const createApp = async (options: AppOptions) => {
     schedulerTickMs: options.schedulerTickMs,
   });
 
-  const ticketHookDeps = { pluginService };
-
-  const ticketService = createTicketService({
-    ticketsDb: ticketsDBService,
-    eventBus,
-    onPreTicketDeletion: async (projectId, payload) => {
-      const result = await fireTicketHook(ticketHookDeps, "preTicketDeletion", projectId, payload);
-      return { rejected: result.rejected, error: result.stderr };
-    },
-    onPostTicketDeletion: (projectId, payload) => {
-      fireTicketHookAsync(ticketHookDeps, "postTicketDeletion", projectId, payload);
-    },
-  });
-
   const sessionHookDeps = {
     reposService: repoService,
     workspaceSessionsService: workspaceSessionService,
     attemptStatusesService: attemptStatusService,
-    statusService,
-    ticketService,
     pluginService,
   };
 
@@ -234,21 +199,6 @@ export const createApp = async (options: AppOptions) => {
     workspaceSessionService,
   });
 
-  const plannerService = createPlannerService({
-    eventBus,
-    extensionInstancesDBService,
-    fileService,
-    pluginService,
-    repoService,
-    sessionService,
-    statusService,
-    tagService,
-    ticketService,
-    workspaceArtifactService,
-    workspaceService,
-    workspaceSessionService,
-  });
-
   // --- ONLY DOMAIN SERVICES ARE PASSED TO ROUTES ---
   const deps = {
     filesRoot: options.filesRoot,
@@ -259,22 +209,18 @@ export const createApp = async (options: AppOptions) => {
     projectService,
     repoService,
     sessionService,
-    ticketService,
     workspaceService,
-    workspaceArtifactService,
     workspaceSessionService,
-    statusService,
-    tagService,
     templateService,
     attemptStatusService,
     agentConfigService,
     extensionInstanceService,
+    extensionStorageService,
     skillService,
     fileService,
     harnessProviderService,
     syncService,
     pluginService,
-    plannerService,
     extensionCommandService,
   };
 

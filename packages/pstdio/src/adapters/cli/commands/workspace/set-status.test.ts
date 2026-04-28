@@ -10,6 +10,7 @@ const makeWorkspace = (overrides: Partial<Workspace> = {}): Workspace => ({
   branch: "workspace/PS-1_A1",
   worktree_path: "/wt/PS-1_A1",
   attempt_status_id: null,
+  anchors_json: [],
   archived: false,
   workspace_shorthand: "PS-1_A1",
   startup_log_file_id: null,

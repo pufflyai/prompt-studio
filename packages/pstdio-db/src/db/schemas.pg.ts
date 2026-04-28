@@ -83,28 +83,6 @@ export const agent_configs = pgTable(
   (table) => [uniqueIndex("agent_configs_agent_id_idx").on(table.agent_id)],
 );
 
-export const ticket_statuses = pgTable(
-  "ticket_statuses",
-  {
-    id: text("id").primaryKey(),
-    project_id: text("project_id")
-      .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    color: text("color").notNull(),
-    sort_order: integer("sort_order").notNull(),
-    is_default: boolean("is_default").notNull(),
-    can_drag_out: boolean("can_drag_out").notNull(),
-    can_drag_in: boolean("can_drag_in").notNull(),
-    can_create: boolean("can_create").notNull(),
-    column_actions: text("column_actions").notNull().default("[]"),
-    created_at: text("created_at").notNull(),
-    updated_at: text("updated_at").notNull(),
-    deleted_at: text("deleted_at"),
-  },
-  (table) => [uniqueIndex("ticket_statuses_project_name_idx").on(table.project_id, table.name)],
-);
-
 export const attempt_statuses = pgTable(
   "attempt_statuses",
   {
@@ -121,83 +99,6 @@ export const attempt_statuses = pgTable(
     deleted_at: text("deleted_at"),
   },
   (table) => [uniqueIndex("attempt_statuses_project_name_idx").on(table.project_id, table.name)],
-);
-
-export const tickets = pgTable(
-  "tickets",
-  {
-    id: text("id").primaryKey(),
-    shorthand: text("shorthand").notNull(),
-    project_id: text("project_id")
-      .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
-    status_id: text("status_id").references(() => ticket_statuses.id, {
-      onDelete: "set null",
-    }),
-    display_title: text("display_title"),
-    user_prompt: text("user_prompt"),
-    file_id: text("file_id").references(() => files.id, { onDelete: "set null" }),
-    parallelizable: text("parallelizable"),
-    parent_id: text("parent_id"),
-    blocked_reason: text("blocked_reason"),
-    depends_on: text("depends_on"),
-    archived: boolean("archived").notNull().default(false),
-    draft: boolean("draft").notNull().default(false),
-    deleted_at: text("deleted_at"),
-    created_at: text("created_at").notNull(),
-    updated_at: text("updated_at").notNull(),
-  },
-  (table) => [uniqueIndex("tickets_project_shorthand_idx").on(table.project_id, table.shorthand)],
-);
-
-export const ticket_tags = pgTable(
-  "ticket_tags",
-  {
-    id: text("id").primaryKey(),
-    project_id: text("project_id")
-      .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    type: text("type").notNull().default("single_select"),
-    created_at: text("created_at").notNull(),
-    updated_at: text("updated_at").notNull(),
-    deleted_at: text("deleted_at"),
-  },
-  (table) => [uniqueIndex("ticket_tags_project_name_idx").on(table.project_id, table.name)],
-);
-
-export const ticket_tag_options = pgTable(
-  "ticket_tag_options",
-  {
-    id: text("id").primaryKey(),
-    tag_id: text("tag_id")
-      .notNull()
-      .references(() => ticket_tags.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    color: text("color").notNull(),
-    icon: text("icon"),
-    description: text("description"),
-    sort_order: integer("sort_order").notNull(),
-    created_at: text("created_at").notNull(),
-    updated_at: text("updated_at").notNull(),
-    deleted_at: text("deleted_at"),
-  },
-  (table) => [uniqueIndex("ticket_tag_options_tag_name_idx").on(table.tag_id, table.name)],
-);
-
-export const ticket_tag_assignments = pgTable(
-  "ticket_tag_assignments",
-  {
-    id: text("id").primaryKey(),
-    ticket_id: text("ticket_id")
-      .notNull()
-      .references(() => tickets.id, { onDelete: "cascade" }),
-    ticket_tag_option_id: text("ticket_tag_option_id")
-      .notNull()
-      .references(() => ticket_tag_options.id, { onDelete: "cascade" }),
-    created_at: text("created_at").notNull(),
-  },
-  (table) => [uniqueIndex("ticket_tag_assignments_ticket_option_idx").on(table.ticket_id, table.ticket_tag_option_id)],
 );
 
 export const sessions = pgTable("sessions", {
@@ -230,6 +131,7 @@ export const workspaces = pgTable(
     attempt_status_id: text("attempt_status_id").references(() => attempt_statuses.id, { onDelete: "set null" }),
     archived: boolean("archived").notNull().default(false),
     workspace_shorthand: text("workspace_shorthand").notNull(),
+    anchors_json: jsonb("anchors_json").$type<ActivityResourceRef[]>().notNull().default([]),
     initializing: boolean("initializing").notNull().default(false),
     setup_error: text("setup_error"),
     startup_log_file_id: text("startup_log_file_id").references(() => files.id, { onDelete: "set null" }),
@@ -239,24 +141,6 @@ export const workspaces = pgTable(
   },
   (table) => [
     uniqueIndex("workspaces_project_workspace_shorthand_idx").on(table.project_id, table.workspace_shorthand),
-  ],
-);
-
-export const ticket_workspaces = pgTable(
-  "ticket_workspaces",
-  {
-    id: text("id").primaryKey(),
-    ticket_id: text("ticket_id")
-      .notNull()
-      .references(() => tickets.id, { onDelete: "cascade" }),
-    workspace_id: text("workspace_id")
-      .notNull()
-      .references(() => workspaces.id, { onDelete: "cascade" }),
-    created_at: text("created_at").notNull(),
-  },
-  (table) => [
-    uniqueIndex("ticket_workspaces_ticket_workspace_idx").on(table.ticket_id, table.workspace_id),
-    uniqueIndex("ticket_workspaces_workspace_idx").on(table.workspace_id),
   ],
 );
 
@@ -289,33 +173,6 @@ export const files = pgTable("files", {
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
 });
-
-export const ticket_files = pgTable("ticket_files", {
-  id: text("id").primaryKey(),
-  ticket_id: text("ticket_id")
-    .notNull()
-    .references(() => tickets.id, { onDelete: "cascade" }),
-  file_id: text("file_id")
-    .notNull()
-    .references(() => files.id, { onDelete: "cascade" }),
-  created_at: text("created_at").notNull(),
-});
-
-export const workspace_artifacts = pgTable(
-  "workspace_artifacts",
-  {
-    id: text("id").primaryKey(),
-    ticket_id: text("ticket_id")
-      .notNull()
-      .references(() => tickets.id, { onDelete: "cascade" }),
-    file_id: text("file_id")
-      .notNull()
-      .references(() => files.id, { onDelete: "cascade" }),
-    relative_path: text("relative_path").notNull(),
-    created_at: text("created_at").notNull(),
-  },
-  (table) => [uniqueIndex("workspace_artifacts_ticket_path_idx").on(table.ticket_id, table.relative_path)],
-);
 
 export const activity_events = pgTable(
   "activity_events",

@@ -94,7 +94,7 @@ export const createCliCommandTracker = (input: TrackerInput) => {
       return resolvedLogger;
     }
 
-    resolvedLogger = createLogger({ component: "cli", service: "pstdio", sync: true });
+    resolvedLogger = createLogger({ component: "cli", includeStdout: false, service: "pstdio", sync: true });
     return resolvedLogger;
   };
 

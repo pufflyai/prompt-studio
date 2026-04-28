@@ -104,20 +104,13 @@ exit 1
   });
   expect(repoRes.ok).toBeTrue();
 
-  const ticketRes = await app.request("/v1/tickets", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, user_prompt: "run project target" }),
-  });
-  const ticket = await ticketRes.json();
-
   const workspaceRes = await app.request("/v1/workspaces", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       project_id: projectId,
-      ticket_id: ticket.id,
-      ticket_shorthand: ticket.shorthand,
+      name: "WS-RUN-PROJECT",
+      anchors: [{ type: "pstdio.planner.ticket", id: "PS-1", label: "PS-1", extensionId: "pstdio.planner" }],
       worktree_path: repoPath,
     }),
   });
