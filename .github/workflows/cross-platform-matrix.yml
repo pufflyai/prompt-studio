@@ -35,227 +35,114 @@ on:
         default: all
 
 jobs:
+  prepare-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      native: ${{ steps.prepare.outputs.native }}
+      wsl: ${{ steps.prepare.outputs.wsl }}
+    steps:
+      - name: Prepare filtered matrices
+        id: prepare
+        env:
+          OS_FILTER: ${{ inputs['os-filter'] }}
+          HARNESS_FILTER: ${{ inputs['harness-filter'] }}
+        shell: bash
+        run: |
+          node <<'EOF' >> "$GITHUB_OUTPUT"
+          const osFilter = process.env.OS_FILTER ?? "all";
+          const harnessFilter = process.env.HARNESS_FILTER ?? "all";
+
+          const native = [
+            { id: "ubuntu-x64-claude-npm", os_filter: "ubuntu", runner: "ubuntu-latest", harness: "claude-code", install_method: "npm-global" },
+            { id: "ubuntu-x64-claude-bun", os_filter: "ubuntu", runner: "ubuntu-latest", harness: "claude-code", install_method: "bun-global" },
+            { id: "ubuntu-x64-claude-native", os_filter: "ubuntu", runner: "ubuntu-latest", harness: "claude-code", install_method: "native-installer" },
+            { id: "ubuntu-x64-opencode-npm", os_filter: "ubuntu", runner: "ubuntu-latest", harness: "opencode", install_method: "npm-global" },
+            { id: "ubuntu-x64-opencode-bun", os_filter: "ubuntu", runner: "ubuntu-latest", harness: "opencode", install_method: "bun-global" },
+            { id: "ubuntu-x64-opencode-native", os_filter: "ubuntu", runner: "ubuntu-latest", harness: "opencode", install_method: "native-installer" },
+            { id: "ubuntu-arm64-claude-npm", os_filter: "ubuntu", runner: "ubuntu-24.04-arm", harness: "claude-code", install_method: "npm-global" },
+            { id: "ubuntu-arm64-claude-bun", os_filter: "ubuntu", runner: "ubuntu-24.04-arm", harness: "claude-code", install_method: "bun-global" },
+            { id: "ubuntu-arm64-claude-native", os_filter: "ubuntu", runner: "ubuntu-24.04-arm", harness: "claude-code", install_method: "native-installer" },
+            { id: "ubuntu-arm64-opencode-npm", os_filter: "ubuntu", runner: "ubuntu-24.04-arm", harness: "opencode", install_method: "npm-global" },
+            { id: "ubuntu-arm64-opencode-bun", os_filter: "ubuntu", runner: "ubuntu-24.04-arm", harness: "opencode", install_method: "bun-global" },
+            { id: "ubuntu-arm64-opencode-native", os_filter: "ubuntu", runner: "ubuntu-24.04-arm", harness: "opencode", install_method: "native-installer" },
+            { id: "macos-arm64-claude-npm", os_filter: "macos", runner: "macos-latest", harness: "claude-code", install_method: "npm-global" },
+            { id: "macos-arm64-claude-bun", os_filter: "macos", runner: "macos-latest", harness: "claude-code", install_method: "bun-global" },
+            { id: "macos-arm64-claude-native", os_filter: "macos", runner: "macos-latest", harness: "claude-code", install_method: "native-installer" },
+            { id: "macos-arm64-claude-brew", os_filter: "macos", runner: "macos-latest", harness: "claude-code", install_method: "brew" },
+            { id: "macos-arm64-opencode-npm", os_filter: "macos", runner: "macos-latest", harness: "opencode", install_method: "npm-global" },
+            { id: "macos-arm64-opencode-bun", os_filter: "macos", runner: "macos-latest", harness: "opencode", install_method: "bun-global" },
+            { id: "macos-arm64-opencode-native", os_filter: "macos", runner: "macos-latest", harness: "opencode", install_method: "native-installer" },
+            { id: "macos-arm64-opencode-brew", os_filter: "macos", runner: "macos-latest", harness: "opencode", install_method: "brew" },
+            { id: "macos-x64-claude-npm", os_filter: "macos", runner: "macos-15-intel", harness: "claude-code", install_method: "npm-global" },
+            { id: "macos-x64-claude-bun", os_filter: "macos", runner: "macos-15-intel", harness: "claude-code", install_method: "bun-global" },
+            { id: "macos-x64-claude-native", os_filter: "macos", runner: "macos-15-intel", harness: "claude-code", install_method: "native-installer" },
+            { id: "macos-x64-claude-brew", os_filter: "macos", runner: "macos-15-intel", harness: "claude-code", install_method: "brew" },
+            { id: "macos-x64-opencode-npm", os_filter: "macos", runner: "macos-15-intel", harness: "opencode", install_method: "npm-global" },
+            { id: "macos-x64-opencode-bun", os_filter: "macos", runner: "macos-15-intel", harness: "opencode", install_method: "bun-global" },
+            { id: "macos-x64-opencode-native", os_filter: "macos", runner: "macos-15-intel", harness: "opencode", install_method: "native-installer" },
+            { id: "macos-x64-opencode-brew", os_filter: "macos", runner: "macos-15-intel", harness: "opencode", install_method: "brew" },
+            { id: "windows-x64-claude-npm", os_filter: "windows", runner: "windows-latest", harness: "claude-code", install_method: "npm-global" },
+            { id: "windows-x64-claude-bun", os_filter: "windows", runner: "windows-latest", harness: "claude-code", install_method: "bun-global" },
+            { id: "windows-x64-claude-pwsh", os_filter: "windows", runner: "windows-latest", harness: "claude-code", install_method: "pwsh-installer" },
+            { id: "windows-x64-opencode-npm", os_filter: "windows", runner: "windows-latest", harness: "opencode", install_method: "npm-global" },
+            { id: "windows-x64-opencode-bun", os_filter: "windows", runner: "windows-latest", harness: "opencode", install_method: "bun-global" },
+            { id: "windows-arm64-claude-npm", os_filter: "windows", runner: "windows-11-arm", harness: "claude-code", install_method: "npm-global" },
+            { id: "windows-arm64-claude-bun", os_filter: "windows", runner: "windows-11-arm", harness: "claude-code", install_method: "bun-global" },
+            { id: "windows-arm64-claude-pwsh", os_filter: "windows", runner: "windows-11-arm", harness: "claude-code", install_method: "pwsh-installer" },
+            { id: "windows-arm64-opencode-npm", os_filter: "windows", runner: "windows-11-arm", harness: "opencode", install_method: "npm-global" },
+            { id: "windows-arm64-opencode-bun", os_filter: "windows", runner: "windows-11-arm", harness: "opencode", install_method: "bun-global" },
+          ];
+
+          const wsl = [
+            { id: "wsl-inside-claude-npm", harness: "claude-code", install_location: "inside-wsl", install_method: "npm-global" },
+            { id: "wsl-inside-opencode-npm", harness: "opencode", install_location: "inside-wsl", install_method: "npm-global" },
+            { id: "wsl-inside-claude-native", harness: "claude-code", install_location: "inside-wsl", install_method: "native-installer" },
+            { id: "wsl-inside-opencode-native", harness: "opencode", install_location: "inside-wsl", install_method: "native-installer" },
+            { id: "wsl-host-claude-npm", harness: "claude-code", install_location: "on-windows-host", install_method: "npm-global" },
+            { id: "wsl-host-opencode-npm", harness: "opencode", install_location: "on-windows-host", install_method: "npm-global" },
+            { id: "wsl-host-claude-pwsh", harness: "claude-code", install_location: "on-windows-host", install_method: "pwsh-installer" },
+          ];
+
+          const matches = (entry, targetOs) => {
+            const osOk = osFilter === 'all' || osFilter === targetOs || entry.os_filter === osFilter;
+            const harnessOk = harnessFilter === 'all' || entry.harness === harnessFilter;
+            return osOk && harnessOk;
+          };
+
+          const filteredNative = native.filter((entry) => matches(entry, entry.os_filter));
+          const filteredWsl = wsl.filter((entry) => matches(entry, 'wsl'));
+
+          process.stdout.write(`native=${JSON.stringify(filteredNative)}\n`);
+          process.stdout.write(`wsl=${JSON.stringify(filteredWsl)}\n`);
+          EOF
+
   cross-platform:
+    needs: prepare-matrix
+    if: ${{ fromJson(needs.prepare-matrix.outputs.native)[0] != null }}
     name: ${{ matrix.id }}
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - id: ubuntu-x64-claude-npm
-            os_filter: ubuntu
-            runner: ubuntu-latest
-            harness: claude-code
-            install_method: npm-global
-          - id: ubuntu-x64-claude-bun
-            os_filter: ubuntu
-            runner: ubuntu-latest
-            harness: claude-code
-            install_method: bun-global
-          - id: ubuntu-x64-claude-native
-            os_filter: ubuntu
-            runner: ubuntu-latest
-            harness: claude-code
-            install_method: native-installer
-          - id: ubuntu-x64-opencode-npm
-            os_filter: ubuntu
-            runner: ubuntu-latest
-            harness: opencode
-            install_method: npm-global
-          - id: ubuntu-x64-opencode-bun
-            os_filter: ubuntu
-            runner: ubuntu-latest
-            harness: opencode
-            install_method: bun-global
-          - id: ubuntu-x64-opencode-native
-            os_filter: ubuntu
-            runner: ubuntu-latest
-            harness: opencode
-            install_method: native-installer
-          - id: ubuntu-arm64-claude-npm
-            os_filter: ubuntu
-            runner: ubuntu-24.04-arm
-            harness: claude-code
-            install_method: npm-global
-          - id: ubuntu-arm64-claude-bun
-            os_filter: ubuntu
-            runner: ubuntu-24.04-arm
-            harness: claude-code
-            install_method: bun-global
-          - id: ubuntu-arm64-claude-native
-            os_filter: ubuntu
-            runner: ubuntu-24.04-arm
-            harness: claude-code
-            install_method: native-installer
-          - id: ubuntu-arm64-opencode-npm
-            os_filter: ubuntu
-            runner: ubuntu-24.04-arm
-            harness: opencode
-            install_method: npm-global
-          - id: ubuntu-arm64-opencode-bun
-            os_filter: ubuntu
-            runner: ubuntu-24.04-arm
-            harness: opencode
-            install_method: bun-global
-          - id: ubuntu-arm64-opencode-native
-            os_filter: ubuntu
-            runner: ubuntu-24.04-arm
-            harness: opencode
-            install_method: native-installer
-          - id: macos-arm64-claude-npm
-            os_filter: macos
-            runner: macos-latest
-            harness: claude-code
-            install_method: npm-global
-          - id: macos-arm64-claude-bun
-            os_filter: macos
-            runner: macos-latest
-            harness: claude-code
-            install_method: bun-global
-          - id: macos-arm64-claude-native
-            os_filter: macos
-            runner: macos-latest
-            harness: claude-code
-            install_method: native-installer
-          - id: macos-arm64-claude-brew
-            os_filter: macos
-            runner: macos-latest
-            harness: claude-code
-            install_method: brew
-          - id: macos-arm64-opencode-npm
-            os_filter: macos
-            runner: macos-latest
-            harness: opencode
-            install_method: npm-global
-          - id: macos-arm64-opencode-bun
-            os_filter: macos
-            runner: macos-latest
-            harness: opencode
-            install_method: bun-global
-          - id: macos-arm64-opencode-native
-            os_filter: macos
-            runner: macos-latest
-            harness: opencode
-            install_method: native-installer
-          - id: macos-arm64-opencode-brew
-            os_filter: macos
-            runner: macos-latest
-            harness: opencode
-            install_method: brew
-          - id: macos-x64-claude-npm
-            os_filter: macos
-            runner: macos-15-intel
-            harness: claude-code
-            install_method: npm-global
-          - id: macos-x64-claude-bun
-            os_filter: macos
-            runner: macos-15-intel
-            harness: claude-code
-            install_method: bun-global
-          - id: macos-x64-claude-native
-            os_filter: macos
-            runner: macos-15-intel
-            harness: claude-code
-            install_method: native-installer
-          - id: macos-x64-claude-brew
-            os_filter: macos
-            runner: macos-15-intel
-            harness: claude-code
-            install_method: brew
-          - id: macos-x64-opencode-npm
-            os_filter: macos
-            runner: macos-15-intel
-            harness: opencode
-            install_method: npm-global
-          - id: macos-x64-opencode-bun
-            os_filter: macos
-            runner: macos-15-intel
-            harness: opencode
-            install_method: bun-global
-          - id: macos-x64-opencode-native
-            os_filter: macos
-            runner: macos-15-intel
-            harness: opencode
-            install_method: native-installer
-          - id: macos-x64-opencode-brew
-            os_filter: macos
-            runner: macos-15-intel
-            harness: opencode
-            install_method: brew
-          - id: windows-x64-claude-npm
-            os_filter: windows
-            runner: windows-latest
-            harness: claude-code
-            install_method: npm-global
-          - id: windows-x64-claude-bun
-            os_filter: windows
-            runner: windows-latest
-            harness: claude-code
-            install_method: bun-global
-          - id: windows-x64-claude-pwsh
-            os_filter: windows
-            runner: windows-latest
-            harness: claude-code
-            install_method: pwsh-installer
-          - id: windows-x64-opencode-npm
-            os_filter: windows
-            runner: windows-latest
-            harness: opencode
-            install_method: npm-global
-          - id: windows-x64-opencode-bun
-            os_filter: windows
-            runner: windows-latest
-            harness: opencode
-            install_method: bun-global
-          - id: windows-arm64-claude-npm
-            os_filter: windows
-            runner: windows-11-arm
-            harness: claude-code
-            install_method: npm-global
-          - id: windows-arm64-claude-bun
-            os_filter: windows
-            runner: windows-11-arm
-            harness: claude-code
-            install_method: bun-global
-          - id: windows-arm64-claude-pwsh
-            os_filter: windows
-            runner: windows-11-arm
-            harness: claude-code
-            install_method: pwsh-installer
-          - id: windows-arm64-opencode-npm
-            os_filter: windows
-            runner: windows-11-arm
-            harness: opencode
-            install_method: npm-global
-          - id: windows-arm64-opencode-bun
-            os_filter: windows
-            runner: windows-11-arm
-            harness: opencode
-            install_method: bun-global
+        include: ${{ fromJson(needs.prepare-matrix.outputs.native) }}
     steps:
       - uses: actions/checkout@v5
-        if: ${{ (inputs['os-filter'] == 'all' || inputs['os-filter'] == matrix.os_filter) && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
       - uses: ./.github/actions/setup-bun-pstdio
-        if: ${{ (inputs['os-filter'] == 'all' || inputs['os-filter'] == matrix.os_filter) && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
 
       - name: Build monorepo
-        if: ${{ (inputs['os-filter'] == 'all' || inputs['os-filter'] == matrix.os_filter) && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
         run: bun run build
 
       - name: Build platform packages
-        if: ${{ (inputs['os-filter'] == 'all' || inputs['os-filter'] == matrix.os_filter) && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
         run: bun run scripts/build-all.ts
 
       - name: Scaffold platform packages
-        if: ${{ (inputs['os-filter'] == 'all' || inputs['os-filter'] == matrix.os_filter) && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
         run: bun run scripts/scaffold-platform-packages.ts
 
       - name: Verify packaged binaries
-        if: ${{ (inputs['os-filter'] == 'all' || inputs['os-filter'] == matrix.os_filter) && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
         run: bun run scripts/verify-packages.ts
 
       - name: Add pstdio binary to PATH (non-Windows)
-        if: ${{ runner.os != 'Windows' && (inputs['os-filter'] == 'all' || inputs['os-filter'] == matrix.os_filter) && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
+        if: ${{ runner.os != 'Windows' }}
         shell: bash
         run: |
           mkdir -p .ci/bin
@@ -264,7 +151,7 @@ jobs:
           echo "$GITHUB_WORKSPACE/.ci/bin" >> "$GITHUB_PATH"
 
       - name: Add pstdio binary to PATH (Windows)
-        if: ${{ runner.os == 'Windows' && (inputs['os-filter'] == 'all' || inputs['os-filter'] == matrix.os_filter) && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
+        if: ${{ runner.os == 'Windows' }}
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path .ci/bin | Out-Null
@@ -273,14 +160,13 @@ jobs:
           "$env:GITHUB_WORKSPACE/.ci/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Install harness
-        if: ${{ (inputs['os-filter'] == 'all' || inputs['os-filter'] == matrix.os_filter) && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
         uses: ./.github/actions/install-harness
         with:
           harness: ${{ matrix.harness }}
           install-method: ${{ matrix.install_method }}
 
       - name: Verify pstdio and harness binaries (non-Windows)
-        if: ${{ runner.os != 'Windows' && (inputs['os-filter'] == 'all' || inputs['os-filter'] == matrix.os_filter) && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
+        if: ${{ runner.os != 'Windows' }}
         shell: bash
         run: |
           pstdio --version
@@ -291,7 +177,7 @@ jobs:
           fi
 
       - name: Verify pstdio and harness binaries (Windows)
-        if: ${{ runner.os == 'Windows' && (inputs['os-filter'] == 'all' || inputs['os-filter'] == matrix.os_filter) && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
+        if: ${{ runner.os == 'Windows' }}
         shell: pwsh
         run: |
           pstdio --version
@@ -302,75 +188,40 @@ jobs:
           }
 
       - name: Run harness connection smoke test
-        if: ${{ (inputs['os-filter'] == 'all' || inputs['os-filter'] == matrix.os_filter) && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
         env:
           PSTDIO_HARNESS_UNDER_TEST: ${{ matrix.harness }}
           PSTDIO_INSTALL_METHOD: ${{ matrix.install_method }}
         run: bun test packages/e2e/src/packaged/harness-connect-smoke.test.ts
 
   cross-platform-wsl:
+    needs: prepare-matrix
+    if: ${{ fromJson(needs.prepare-matrix.outputs.wsl)[0] != null }}
     name: ${{ matrix.id }}
     runs-on: windows-2025
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - id: wsl-inside-claude-npm
-            harness: claude-code
-            install_location: inside-wsl
-            install_method: npm-global
-          - id: wsl-inside-opencode-npm
-            harness: opencode
-            install_location: inside-wsl
-            install_method: npm-global
-          - id: wsl-inside-claude-native
-            harness: claude-code
-            install_location: inside-wsl
-            install_method: native-installer
-          - id: wsl-inside-opencode-native
-            harness: opencode
-            install_location: inside-wsl
-            install_method: native-installer
-          - id: wsl-host-claude-npm
-            harness: claude-code
-            install_location: on-windows-host
-            install_method: npm-global
-          - id: wsl-host-opencode-npm
-            harness: opencode
-            install_location: on-windows-host
-            install_method: npm-global
-          - id: wsl-host-claude-pwsh
-            harness: claude-code
-            install_location: on-windows-host
-            install_method: pwsh-installer
+        include: ${{ fromJson(needs.prepare-matrix.outputs.wsl) }}
     steps:
       - uses: actions/checkout@v5
-        if: ${{ (inputs['os-filter'] == 'all' || inputs['os-filter'] == 'wsl') && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
       - uses: ./.github/actions/setup-bun-pstdio
-        if: ${{ (inputs['os-filter'] == 'all' || inputs['os-filter'] == 'wsl') && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
       - uses: Vampire/setup-wsl@v7
-        if: ${{ (inputs['os-filter'] == 'all' || inputs['os-filter'] == 'wsl') && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
         with:
           distribution: Ubuntu-24.04
 
       - name: Build monorepo
-        if: ${{ (inputs['os-filter'] == 'all' || inputs['os-filter'] == 'wsl') && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
         run: bun run build
 
       - name: Build platform packages
-        if: ${{ (inputs['os-filter'] == 'all' || inputs['os-filter'] == 'wsl') && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
         run: bun run scripts/build-all.ts
 
       - name: Scaffold platform packages
-        if: ${{ (inputs['os-filter'] == 'all' || inputs['os-filter'] == 'wsl') && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
         run: bun run scripts/scaffold-platform-packages.ts
 
       - name: Verify packaged binaries
-        if: ${{ (inputs['os-filter'] == 'all' || inputs['os-filter'] == 'wsl') && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
         run: bun run scripts/verify-packages.ts
 
       - name: Add pstdio binary to PATH on host
-        if: ${{ (inputs['os-filter'] == 'all' || inputs['os-filter'] == 'wsl') && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path .ci/bin | Out-Null
@@ -379,7 +230,7 @@ jobs:
           "$env:GITHUB_WORKSPACE/.ci/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Prepare WSL workspace tools
-        if: ${{ matrix.install_location == 'inside-wsl' && (inputs['os-filter'] == 'all' || inputs['os-filter'] == 'wsl') && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
+        if: ${{ matrix.install_location == 'inside-wsl' }}
         shell: pwsh
         run: |
           $workspace = wsl -d Ubuntu-24.04 -- bash -lc "wslpath '$env:GITHUB_WORKSPACE'"
@@ -387,14 +238,14 @@ jobs:
           wsl -d Ubuntu-24.04 -- bash -lc "export BUN_INSTALL=\$HOME/.bun; export PATH=\$BUN_INSTALL/bin:\$PATH; curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash - && sudo apt-get install -y nodejs && cd '$workspace' && bun install --frozen-lockfile && bun run scripts/build-compile.ts"
 
       - name: Install harness on Windows host
-        if: ${{ matrix.install_location == 'on-windows-host' && (inputs['os-filter'] == 'all' || inputs['os-filter'] == 'wsl') && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
+        if: ${{ matrix.install_location == 'on-windows-host' }}
         uses: ./.github/actions/install-harness
         with:
           harness: ${{ matrix.harness }}
           install-method: ${{ matrix.install_method }}
 
       - name: Install harness inside WSL
-        if: ${{ matrix.install_location == 'inside-wsl' && (inputs['os-filter'] == 'all' || inputs['os-filter'] == 'wsl') && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
+        if: ${{ matrix.install_location == 'inside-wsl' }}
         shell: pwsh
         run: |
           if ("${{ matrix.install_method }}" -eq "npm-global") {
@@ -412,7 +263,7 @@ jobs:
           }
 
       - name: Verify host binaries and run smoke
-        if: ${{ matrix.install_location == 'on-windows-host' && (inputs['os-filter'] == 'all' || inputs['os-filter'] == 'wsl') && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
+        if: ${{ matrix.install_location == 'on-windows-host' }}
         env:
           PSTDIO_HARNESS_UNDER_TEST: ${{ matrix.harness }}
           PSTDIO_INSTALL_METHOD: ${{ format('wsl-{0}-{1}', matrix.install_location, matrix.install_method) }}
@@ -427,7 +278,7 @@ jobs:
           bun test packages/e2e/src/packaged/harness-connect-smoke.test.ts
 
       - name: Verify WSL binaries and run smoke
-        if: ${{ matrix.install_location == 'inside-wsl' && (inputs['os-filter'] == 'all' || inputs['os-filter'] == 'wsl') && (inputs['harness-filter'] == 'all' || inputs['harness-filter'] == matrix.harness) }}
+        if: ${{ matrix.install_location == 'inside-wsl' }}
         env:
           PSTDIO_HARNESS_UNDER_TEST: ${{ matrix.harness }}
           PSTDIO_INSTALL_METHOD: ${{ format('wsl-{0}-{1}', matrix.install_location, matrix.install_method) }}
