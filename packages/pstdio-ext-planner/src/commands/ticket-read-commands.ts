@@ -65,6 +65,8 @@ export const ticketReadCommands = {
       description: "View planner-owned ticket details.",
       options: {
         id: { type: "string", required: true, description: "Ticket shorthand." },
+      },
+      positionals: {
         field: { type: "string", description: "Single field to output: status, title, tags, shorthand." },
       },
     },

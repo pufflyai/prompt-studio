@@ -244,3 +244,54 @@ describe("createClient", () => {
     expect(JSON.parse(calls[0]!.body!)).toEqual({ default_harness_id: "pstdio.harness.opencode" });
   });
 });
+
+describe("registry clients", () => {
+  it("client.templates.list can filter by type", async () => {
+    const { fetchFn, calls } = trackingFetch();
+    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+
+    await client.templates.list("proj-1", { type: "ticket" });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toBe("http://test:1234/v1/projects/proj-1/templates?type=ticket");
+  });
+
+  it("client.templates.copy and default preferences use registry endpoints", async () => {
+    const { fetchFn, calls } = trackingFetch();
+    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+
+    await client.templates.copy("proj-1", "extension.template", { name: "template-copy" });
+    await client.templates.disable("proj-1", "extension.template");
+    await client.templates.enable("proj-1", "extension.template");
+
+    expect(calls).toHaveLength(3);
+    expect(calls[0]!.url).toBe("http://test:1234/v1/projects/proj-1/templates/extension.template/copy");
+    expect(calls[0]!.method).toBe("POST");
+    expect(JSON.parse(calls[0]!.body!)).toEqual({ name: "template-copy" });
+    expect(calls[1]!.url).toBe("http://test:1234/v1/projects/proj-1/templates/extension.template/disable");
+    expect(calls[1]!.method).toBe("POST");
+    expect(calls[2]!.url).toBe("http://test:1234/v1/projects/proj-1/templates/extension.template/enable");
+    expect(calls[2]!.method).toBe("POST");
+  });
+
+  it("client.skills.edit and default preferences use registry endpoints", async () => {
+    const { fetchFn, calls } = trackingFetch();
+    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+
+    await client.skills.edit("proj-1", "project.extension.skill", {
+      description: "Edited",
+      files: [{ path: "SKILL.md", content: "# Edited", encoding: "utf8" }],
+    });
+    await client.skills.copy("proj-1", "project.extension.skill");
+    await client.skills.disable("proj-1", "project.extension.skill");
+    await client.skills.enable("proj-1", "project.extension.skill");
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      "PUT http://test:1234/v1/projects/proj-1/skills/project.extension.skill",
+      "POST http://test:1234/v1/projects/proj-1/skills/project.extension.skill/copy",
+      "POST http://test:1234/v1/projects/proj-1/skills/project.extension.skill/disable",
+      "POST http://test:1234/v1/projects/proj-1/skills/project.extension.skill/enable",
+    ]);
+    expect(JSON.parse(calls[1]!.body!)).toEqual({});
+  });
+});

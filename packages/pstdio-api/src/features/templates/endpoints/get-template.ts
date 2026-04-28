@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
@@ -33,15 +32,12 @@ export const getTemplateRoute = createRoute({
 export const getTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof getTemplateRoute> => {
   return async (c) => {
     const { projectId, name } = c.req.valid("param");
-    const template = await deps.templateService.getByName(projectId, name);
+    const template = await deps.templateRegistryService.get(projectId, name);
 
     if (!template) {
       return c.json({ error: `Template not found: ${name}` }, 404);
     }
 
-    const file = await deps.fileService.get(template.file_id);
-    const content = file ? readFileSync(file.storage_path, "utf8") : "";
-
-    return c.json({ ...template, content }, 200);
+    return c.json(template, 200);
   };
 };

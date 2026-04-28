@@ -26,6 +26,12 @@ export interface ProjectTemplateAsset {
   fileId: string;
   content: string;
   isDefault: boolean;
+  sourceKind?: string;
+  readOnly?: boolean;
+  title?: string;
+  description?: string;
+  originExtensionId?: string;
+  originTemplateKey?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -4,6 +4,7 @@ import {
   extension_collection_items,
   extension_instances,
   extension_kv,
+  extension_skill_preferences,
   extension_template_preferences,
 } from "../../db/schemas.extensions.pg";
 
@@ -59,6 +60,13 @@ const templatePreferenceWhere = (projectId: string, extensionId: string, templat
     eq(extension_template_preferences.project_id, projectId),
     eq(extension_template_preferences.extension_id, extensionId),
     eq(extension_template_preferences.template_key, templateKey),
+  );
+
+const skillPreferenceWhere = (projectId: string, extensionId: string, skillKey: string) =>
+  and(
+    eq(extension_skill_preferences.project_id, projectId),
+    eq(extension_skill_preferences.extension_id, extensionId),
+    eq(extension_skill_preferences.skill_key, skillKey),
   );
 
 export const createExtensionInstancesDBService = (db: DbClient) => {
@@ -273,6 +281,46 @@ export const createExtensionTemplatePreferencesDBService = (db: DbClient) => {
     };
 
     await db.insert(extension_template_preferences).values(record);
+    return record;
+  };
+
+  return { get, isEnabled, setEnabled };
+};
+
+export const createExtensionSkillPreferencesDBService = (db: DbClient) => {
+  const get = async (projectId: string, extensionId: string, skillKey: string) => {
+    const [preference] = await db
+      .select()
+      .from(extension_skill_preferences)
+      .where(skillPreferenceWhere(projectId, extensionId, skillKey));
+    return preference ?? null;
+  };
+
+  const isEnabled = async (projectId: string, extensionId: string, skillKey: string) =>
+    (await get(projectId, extensionId, skillKey))?.enabled ?? true;
+
+  const setEnabled = async (projectId: string, extensionId: string, skillKey: string, enabled: boolean) => {
+    const timestamp = nowTimestamp();
+    const existing = await get(projectId, extensionId, skillKey);
+
+    if (existing) {
+      await db
+        .update(extension_skill_preferences)
+        .set({ enabled, updated_at: timestamp })
+        .where(eq(extension_skill_preferences.id, existing.id));
+      return { ...existing, enabled, updated_at: timestamp };
+    }
+
+    const record: typeof extension_skill_preferences.$inferSelect = {
+      id: crypto.randomUUID(),
+      project_id: projectId,
+      extension_id: extensionId,
+      skill_key: skillKey,
+      enabled,
+      updated_at: timestamp,
+    };
+
+    await db.insert(extension_skill_preferences).values(record);
     return record;
   };
 

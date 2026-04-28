@@ -4,13 +4,24 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "../../../app";
-import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
 let close: () => Promise<void>;
 let tempRoot: string;
 let projectId: string;
+
+const writeExtension = (repoPath: string, extensionId: string, source: string) => {
+  const extensionDir = join(repoPath, ".pstdio", "extensions", extensionId);
+  mkdirSync(extensionDir, { recursive: true });
+  writeFileSync(join(extensionDir, "extension.ts"), source);
+};
+
+const writePlugin = (repoPath: string, fileName: string, source: string) => {
+  const pluginsDir = join(repoPath, ".pstdio", "plugins");
+  mkdirSync(pluginsDir, { recursive: true });
+  writeFileSync(join(pluginsDir, fileName), source);
+};
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-actions-test-"));
@@ -44,23 +55,29 @@ afterAll(async () => {
 });
 
 describe("GET /v1/projects/:projectId/actions", () => {
-  test("returns empty array when no plugins have actions", async () => {
+  test("returns empty array when no extension commands have menus", async () => {
     const res = await app.request(`/v1/projects/${projectId}/actions`);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual([]);
   });
 
-  test("returns actions from plugins", async () => {
+  test("returns actions from extension command menus", async () => {
     const tempRoot2 = mkdtempSync(join(tmpdir(), "pstdio-api-actions-test2-"));
     const repoPath2 = join(tempRoot2, "repo");
-    const pluginsDir = join(repoPath2, ".pstdio", "plugins");
-    mkdirSync(pluginsDir, { recursive: true });
-    writeFileSync(
-      join(pluginsDir, "my-actions.ts"),
+    writeExtension(
+      repoPath2,
+      "project-actions",
       `export default {
-        actions: [
-          { key: "do-thing", label: "Do thing", targetType: "ticket", placement: "primary", trigger() {} },
-        ],
+        id: "project.actions",
+        name: "Project Actions",
+        commands: {
+          doThing: {
+            title: "Do thing",
+            target: "ticket",
+            menus: [{ slot: "ticket.header.primary" }],
+            run() {},
+          },
+        },
       };`,
     );
 
@@ -89,7 +106,7 @@ describe("GET /v1/projects/:projectId/actions", () => {
     const actions = await res.json();
     expect(actions).toHaveLength(1);
     expect(actions[0]).toEqual({
-      key: "my-actions/do-thing",
+      key: "project.actions.doThing",
       label: "Do thing",
       targetType: "ticket",
       placement: "primary",
@@ -99,13 +116,23 @@ describe("GET /v1/projects/:projectId/actions", () => {
     rmSync(tempRoot2, { recursive: true, force: true });
   });
 
-  test("returns bundled starter ticket actions when project has no linked repo", async () => {
+  test("ignores legacy plugin action files", async () => {
     const tempRoot5 = mkdtempSync(join(tmpdir(), "pstdio-api-actions-test5-"));
+    const repoPath5 = join(tempRoot5, "repo");
+    writePlugin(
+      repoPath5,
+      "ticket-actions.ts",
+      `export default {
+        actions: [
+          { key: "run-attempt", label: "Run attempt", targetType: "ticket", placement: "primary", trigger() {} },
+        ],
+      };`,
+    );
 
     const { app: app5, close: close5 } = await createApp({
       dbPath: ":memory:",
       storagePath: join(tempRoot5, "storage"),
-      filesRoot: resolveTestFilesRoot(),
+      filesRoot: "",
     });
 
     const projRes = await app5.request("/v1/projects", {
@@ -115,28 +142,27 @@ describe("GET /v1/projects/:projectId/actions", () => {
     });
     const proj = await projRes.json();
 
+    await app5.request(`/v1/projects/${proj.id}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "test-repo", path: repoPath5 }),
+    });
+
     const res = await app5.request(`/v1/projects/${proj.id}/actions?targetType=ticket`);
     expect(res.status).toBe(200);
-
-    const actions = (await res.json()) as Array<{ key: string; placement: string }>;
-    const actionKeys = actions.map((action) => action.key);
-
-    expect(actionKeys).toContain("ticket-actions/run-attempt");
-    expect(actionKeys).toContain("ticket-actions/refine-ticket");
-    expect(actionKeys).toContain("ticket-actions/break-into-sub-tickets");
-    expect(actions.find((action) => action.key === "ticket-actions/run-attempt")?.placement).toBe("primary");
+    expect(await res.json()).toEqual([]);
 
     await close5();
     rmSync(tempRoot5, { recursive: true, force: true });
   });
 
-  test("returns bundled starter workspace actions when project has no linked repo", async () => {
+  test("returns no action buttons for first-party commands without menus", async () => {
     const tempRoot6 = mkdtempSync(join(tmpdir(), "pstdio-api-actions-test6-"));
 
     const { app: app6, close: close6 } = await createApp({
       dbPath: ":memory:",
       storagePath: join(tempRoot6, "storage"),
-      filesRoot: resolveTestFilesRoot(),
+      filesRoot: "",
     });
 
     const projRes = await app6.request("/v1/projects", {
@@ -148,11 +174,7 @@ describe("GET /v1/projects/:projectId/actions", () => {
 
     const res = await app6.request(`/v1/projects/${proj.id}/actions?targetType=workspace`);
     expect(res.status).toBe(200);
-
-    const actions = (await res.json()) as Array<{ key: string }>;
-    const actionKeys = actions.map((action) => action.key).sort();
-
-    expect(actionKeys).toEqual(["workspace-actions/run-review"]);
+    expect(await res.json()).toEqual([]);
 
     await close6();
     rmSync(tempRoot6, { recursive: true, force: true });
@@ -161,15 +183,26 @@ describe("GET /v1/projects/:projectId/actions", () => {
   test("filters actions by targetType query param", async () => {
     const tempRoot3 = mkdtempSync(join(tmpdir(), "pstdio-api-actions-test3-"));
     const repoPath3 = join(tempRoot3, "repo");
-    const pluginsDir = join(repoPath3, ".pstdio", "plugins");
-    mkdirSync(pluginsDir, { recursive: true });
-    writeFileSync(
-      join(pluginsDir, "multi-actions.ts"),
+    writeExtension(
+      repoPath3,
+      "multi-actions",
       `export default {
-        actions: [
-          { key: "ticket-action", label: "Ticket action", targetType: "ticket", placement: "primary", trigger() {} },
-          { key: "workspace-action", label: "Workspace action", targetType: "workspace", placement: "secondary", trigger() {} },
-        ],
+        id: "project.multi-actions",
+        name: "Multi Actions",
+        commands: {
+          ticketAction: {
+            title: "Ticket action",
+            target: "ticket",
+            menus: [{ slot: "ticket.header.primary" }],
+            run() {},
+          },
+          workspaceAction: {
+            title: "Workspace action",
+            target: "workspace",
+            menus: [{ slot: "workspace.header.secondary" }],
+            run() {},
+          },
+        },
       };`,
     );
 
@@ -195,12 +228,12 @@ describe("GET /v1/projects/:projectId/actions", () => {
     const ticketRes = await app3.request(`/v1/projects/${proj.id}/actions?targetType=ticket`);
     const ticketActions = await ticketRes.json();
     expect(ticketActions).toHaveLength(1);
-    expect(ticketActions[0].key).toBe("multi-actions/ticket-action");
+    expect(ticketActions[0].key).toBe("project.multi-actions.ticketAction");
 
     const wsRes = await app3.request(`/v1/projects/${proj.id}/actions?targetType=workspace`);
     const wsActions = await wsRes.json();
     expect(wsActions).toHaveLength(1);
-    expect(wsActions[0].key).toBe("multi-actions/workspace-action");
+    expect(wsActions[0].key).toBe("project.multi-actions.workspaceAction");
 
     await close3();
     rmSync(tempRoot3, { recursive: true, force: true });
@@ -209,24 +242,25 @@ describe("GET /v1/projects/:projectId/actions", () => {
   test("returns actions with params schema", async () => {
     const tempRoot4 = mkdtempSync(join(tmpdir(), "pstdio-api-actions-test4-"));
     const repoPath4 = join(tempRoot4, "repo");
-    const pluginsDir = join(repoPath4, ".pstdio", "plugins");
-    mkdirSync(pluginsDir, { recursive: true });
-    writeFileSync(
-      join(pluginsDir, "param-actions.ts"),
+    writeExtension(
+      repoPath4,
+      "param-actions",
       `export default {
-        actions: [
-          {
-            key: "with-params",
-            label: "With params",
-            targetType: "ticket",
-            placement: "overflow",
-            params: [
-              { key: "name", label: "Name", type: "text" },
-              { key: "agent", label: "Agent", type: "agent" },
-            ],
-            trigger() {},
+        id: "project.param-actions",
+        name: "Param Actions",
+        commands: {
+          withParams: {
+            title: "With params",
+            target: "ticket",
+            menus: [{ slot: "ticket.header.overflow" }],
+            params: {
+              name: { label: "Name", type: "text" },
+              harness: { label: "Harness", type: "harness" },
+              template: { label: "Template", type: "template", templateType: "ticket", required: false },
+            },
+            run() {},
           },
-        ],
+        },
       };`,
     );
 
@@ -256,7 +290,8 @@ describe("GET /v1/projects/:projectId/actions", () => {
     expect(actions).toHaveLength(1);
     expect(actions[0].params).toEqual([
       { key: "name", label: "Name", type: "text" },
-      { key: "agent", label: "Agent", type: "agent" },
+      { key: "harness", label: "Harness", type: "agent" },
+      { key: "template", label: "Template", type: "template-select", required: false, templateType: "ticket" },
     ]);
 
     await close4();

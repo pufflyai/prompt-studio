@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { type ChildProcess, spawn } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildBinary } from "./packaged-helpers";
@@ -33,17 +33,6 @@ const waitForReady = async (baseUrl: string, timeoutMs = 10_000) => {
   throw new Error(`Packaged API did not become ready within ${timeoutMs}ms`);
 };
 
-const waitForFile = async (filePath: string, timeoutMs = 10_000) => {
-  const deadline = Date.now() + timeoutMs;
-
-  while (Date.now() < deadline) {
-    if (existsSync(filePath)) return;
-    await new Promise((resolve) => setTimeout(resolve, 200));
-  }
-
-  throw new Error(`Expected file to exist within ${timeoutMs}ms: ${filePath}`);
-};
-
 const waitForActionKeys = async (
   baseUrl: string,
   projectId: string,
@@ -68,6 +57,35 @@ const waitForActionKeys = async (
   }
 
   throw new Error(`Expected actions to be available within ${timeoutMs}ms: ${expectedKeys.join(", ")}`);
+};
+
+const writeWorkspaceActionExtension = (
+  repoPath: string,
+  extensionDirName: string,
+  extensionId: string,
+  commandKey: string,
+) => {
+  const extensionDir = join(repoPath, ".pstdio", "extensions", extensionDirName);
+  mkdirSync(extensionDir, { recursive: true });
+  writeFileSync(
+    join(extensionDir, "extension.ts"),
+    [
+      "export default {",
+      `  id: ${JSON.stringify(extensionId)},`,
+      `  name: ${JSON.stringify(extensionId)},`,
+      "  commands: {",
+      `    ${commandKey}: {`,
+      `      title: ${JSON.stringify(commandKey)},`,
+      '      target: "workspace",',
+      '      menus: [{ slot: "workspace.header.secondary" }],',
+      "      async run() {},",
+      "    },",
+      "  },",
+      "};",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
 };
 
 const startPackagedServe = async (tempRoot: string) => {
@@ -221,19 +239,17 @@ describe("packaged pstdio — self-hosted serve", () => {
         expect(repoRes.status).toBe(201);
 
         expect(existsSync(join(repoPath, ".pstdio", "config.json"))).toBe(true);
-        const pluginsDir = join(repoPath, ".pstdio", "plugins");
-        expect(existsSync(pluginsDir)).toBe(true);
-        expect(readdirSync(pluginsDir).length).toBeGreaterThan(0);
 
         await expectPlannerTicketCommandStorage(started.baseUrl, project.id);
 
+        writeWorkspaceActionExtension(repoPath, "workspace-actions", "project.workspace-actions", "runReview");
         const workspaceActionKeys = await waitForActionKeys(
           started.baseUrl,
           project.id,
-          ["workspace-actions/run-review"],
+          ["project.workspace-actions.runReview"],
           "workspace",
         );
-        expect(workspaceActionKeys.sort()).toEqual(["workspace-actions/run-review"]);
+        expect(workspaceActionKeys.sort()).toEqual(["project.workspace-actions.runReview"]);
       } finally {
         if (child) {
           await stopProcess(child);
@@ -245,7 +261,7 @@ describe("packaged pstdio — self-hosted serve", () => {
   );
 
   test(
-    "restores starter plugins for already-linked repos on packaged server restart",
+    "loads project extension command actions after packaged server restart",
     async () => {
       const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-restart-"));
       let child: ChildProcess | null = null;
@@ -272,10 +288,7 @@ describe("packaged pstdio — self-hosted serve", () => {
         });
         expect(repoRes.status).toBe(201);
 
-        const pluginsDir = join(repoPath, ".pstdio", "plugins");
-        const ticketActionsPath = join(pluginsDir, "ticket-actions.ts");
-        rmSync(pluginsDir, { recursive: true, force: true });
-        expect(existsSync(ticketActionsPath)).toBe(false);
+        writeWorkspaceActionExtension(repoPath, "restart-actions", "project.restart-actions", "review");
 
         await stopProcess(child);
         child = null;
@@ -286,8 +299,13 @@ describe("packaged pstdio — self-hosted serve", () => {
         const projectsRes = await fetch(`${started.baseUrl}/v1/projects`);
         expect(projectsRes.status).toBe(200);
 
-        await waitForFile(ticketActionsPath);
-        expect(readdirSync(pluginsDir).length).toBeGreaterThan(0);
+        const actionKeys = await waitForActionKeys(
+          started.baseUrl,
+          project.id,
+          ["project.restart-actions.review"],
+          "workspace",
+        );
+        expect(actionKeys).toContain("project.restart-actions.review");
       } finally {
         if (child) {
           await stopProcess(child);
@@ -299,7 +317,7 @@ describe("packaged pstdio — self-hosted serve", () => {
   );
 
   test(
-    "loads custom TypeScript and JavaScript project plugins in packaged mode",
+    "loads custom project extension actions in packaged mode",
     async () => {
       const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-project-plugins-"));
       let child: ChildProcess | null = null;
@@ -326,56 +344,18 @@ describe("packaged pstdio — self-hosted serve", () => {
         });
         expect(repoRes.status).toBe(201);
 
-        const pluginsDir = join(repoPath, ".pstdio", "plugins");
-        writeFileSync(
-          join(pluginsDir, "project-ts.ts"),
-          [
-            'import { definePlugin } from "@pstdio/sdk/plugins";',
-            "",
-            "export default definePlugin({",
-            "  actions: [",
-            "    {",
-            '      key: "ts-action",',
-            '      label: "TS action",',
-            '      targetType: "workspace",',
-            '      placement: "primary",',
-            "      async trigger() {},",
-            "    },",
-            "  ],",
-            "});",
-            "",
-          ].join("\n"),
-          "utf8",
-        );
-        writeFileSync(
-          join(pluginsDir, "project-js.js"),
-          [
-            "export default {",
-            "  actions: [",
-            "    {",
-            '      key: "js-action",',
-            '      label: "JS action",',
-            '      targetType: "workspace",',
-            '      placement: "secondary",',
-            "      async trigger() {},",
-            "    },",
-            "  ],",
-            "};",
-            "",
-          ].join("\n"),
-          "utf8",
-        );
+        writeWorkspaceActionExtension(repoPath, "project-alpha", "project.alpha-actions", "reviewAlpha");
+        writeWorkspaceActionExtension(repoPath, "project-beta", "project.beta-actions", "reviewBeta");
 
         const actionKeys = await waitForActionKeys(
           started.baseUrl,
           project.id,
-          ["workspace-actions/run-review", "project-ts/ts-action", "project-js/js-action"],
+          ["project.alpha-actions.reviewAlpha", "project.beta-actions.reviewBeta"],
           "workspace",
         );
 
-        expect(actionKeys).toContain("workspace-actions/run-review");
-        expect(actionKeys).toContain("project-ts/ts-action");
-        expect(actionKeys).toContain("project-js/js-action");
+        expect(actionKeys).toContain("project.alpha-actions.reviewAlpha");
+        expect(actionKeys).toContain("project.beta-actions.reviewBeta");
       } finally {
         if (child) {
           await stopProcess(child);

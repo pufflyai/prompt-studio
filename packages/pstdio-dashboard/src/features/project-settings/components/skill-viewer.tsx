@@ -1,9 +1,15 @@
 import { Badge, Box, Button, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
-import { type SidebarNavigateEvent, SidebarTree } from "@pstdio/ui";
+import { type SidebarNavigateEvent, SidebarTree, toaster } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
+import { Copy as CopyIcon, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { ProjectSkillDetails } from "../data/skills-api";
-import { useProjectSkill, useUpdateProjectSkill } from "../hooks/use-skills";
+import {
+  useCopyProjectSkill,
+  useDisableProjectSkillDefault,
+  useProjectSkill,
+  useUpdateProjectSkill,
+} from "../hooks/use-skills";
 import { buildSkillFileTree, collectFolderIds } from "../utils/build-skill-file-tree";
 import { parseSkillVersion } from "../utils/parse-skill-version";
 
@@ -26,8 +32,12 @@ export const SkillViewerContent = (props: {
   skill: ProjectSkillDetails;
   isUpdating: boolean;
   onUpdate: () => void;
+  isCopying?: boolean;
+  isDisabling?: boolean;
+  onCopy?: () => void;
+  onDisable?: () => void;
 }) => {
-  const { skill, isUpdating, onUpdate } = props;
+  const { skill, isUpdating, onUpdate, isCopying, isDisabling, onCopy, onDisable } = props;
   const treeNodes = buildSkillFileTree(skill.files);
   const initialExpanded = collectFolderIds(treeNodes);
   const [expandedNodes, setExpandedNodes] = useState<string[]>(initialExpanded);
@@ -46,7 +56,8 @@ export const SkillViewerContent = (props: {
   const selectedFile = skill.files.find((file) => file.path === selectedPath) ?? skill.files[0];
   const skillFile = skill.files.find((file) => file.path === "SKILL.md");
   const currentVersion = parseSkillVersion(skillFile?.content ?? "");
-  const hasUpdate = skill.bundled_version && currentVersion !== skill.bundled_version;
+  const hasUpdate = !skill.read_only && skill.bundled_version && currentVersion !== skill.bundled_version;
+  const canManageDefault = Boolean(skill.read_only && onCopy && onDisable);
 
   const handleNavigate = (event: SidebarNavigateEvent) => {
     setSelectedPath(event.nodeId);
@@ -102,6 +113,18 @@ export const SkillViewerContent = (props: {
                 >
                   Update to v{skill.bundled_version}
                 </Button>
+              )}
+              {canManageDefault && (
+                <>
+                  <Button size="xs" variant="outline" loading={isCopying} onClick={onCopy}>
+                    <CopyIcon size={14} />
+                    Copy
+                  </Button>
+                  <Button size="xs" variant="ghost" colorPalette="red" loading={isDisabling} onClick={onDisable}>
+                    <EyeOff size={14} />
+                    Disable
+                  </Button>
+                </>
               )}
             </Flex>
             <Text textStyle="paragraph/S/regular" color="fg.muted" data-testid="project-skill-description">
@@ -160,6 +183,28 @@ export const SkillViewer = (props: SkillViewerProps) => {
   const { projectId, skillName } = props;
   const { data: skill, isLoading, error } = useProjectSkill(projectId, skillName);
   const updateSkill = useUpdateProjectSkill(projectId, skillName);
+  const copySkill = useCopyProjectSkill(projectId, skillName);
+  const disableSkill = useDisableProjectSkillDefault(projectId, skillName);
+
+  const handleCopy = async () => {
+    try {
+      await copySkill.mutateAsync();
+      toaster.create({ type: "success", title: "Skill copied" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to copy skill.";
+      toaster.create({ type: "error", title: "Copy failed", description: message });
+    }
+  };
+
+  const handleDisable = async () => {
+    try {
+      await disableSkill.mutateAsync();
+      toaster.create({ type: "success", title: "Skill disabled" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to disable skill.";
+      toaster.create({ type: "error", title: "Disable failed", description: message });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -189,5 +234,15 @@ export const SkillViewer = (props: SkillViewerProps) => {
     );
   }
 
-  return <SkillViewerContent skill={skill} isUpdating={updateSkill.isPending} onUpdate={() => updateSkill.mutate()} />;
+  return (
+    <SkillViewerContent
+      skill={skill}
+      isUpdating={updateSkill.isPending}
+      isCopying={copySkill.isPending}
+      isDisabling={disableSkill.isPending}
+      onUpdate={() => updateSkill.mutate()}
+      onCopy={handleCopy}
+      onDisable={handleDisable}
+    />
+  );
 };

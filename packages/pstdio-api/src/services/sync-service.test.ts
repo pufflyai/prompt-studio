@@ -5,6 +5,7 @@ import {
   createAgentConfigsDBService,
   createDb,
   createExtensionInstancesDBService,
+  createExtensionSkillPreferencesDBService,
   createExtensionStorageDBService,
   createExtensionTemplatePreferencesDBService,
   createProjectsDBService,
@@ -86,7 +87,8 @@ describe("createSyncService", () => {
       const project = await createProjectsDBService(db).create({ name: "extension-sync" });
       const instances = createExtensionInstancesDBService(db);
       const storage = createExtensionStorageDBService(db);
-      const preferences = createExtensionTemplatePreferencesDBService(db);
+      const templatePreferences = createExtensionTemplatePreferencesDBService(db);
+      const skillPreferences = createExtensionSkillPreferencesDBService(db);
 
       await instances.create({
         project_id: project.id,
@@ -98,7 +100,8 @@ describe("createSyncService", () => {
       const scope = { project_id: project.id, extension_id: "project.templates", scope_type: "project", scope_id: "" };
       await storage.set(scope, "setup", { complete: true });
       await storage.collection(scope, "statuses").put("backlog", { label: "Backlog" });
-      await preferences.setEnabled(project.id, "project.templates", "defaultTicket", false);
+      await templatePreferences.setEnabled(project.id, "project.templates", "defaultTicket", false);
+      await skillPreferences.setEnabled(project.id, "project.templates", "labSkill", false);
 
       const state = await syncService.getFullState();
 
@@ -106,6 +109,7 @@ describe("createSyncService", () => {
       expect(state.extension_kv).toHaveLength(1);
       expect(state.extension_collection_items).toHaveLength(1);
       expect(state.extension_template_preferences).toHaveLength(1);
+      expect(state.extension_skill_preferences).toHaveLength(1);
     });
 
     test("includes extension-owned activity events", async () => {
@@ -198,7 +202,8 @@ describe("createSyncService", () => {
       const project = await createProjectsDBService(db).create({ name: "extension-cascade" });
       const instances = createExtensionInstancesDBService(db);
       const storage = createExtensionStorageDBService(db);
-      const preferences = createExtensionTemplatePreferencesDBService(db);
+      const templatePreferences = createExtensionTemplatePreferencesDBService(db);
+      const skillPreferences = createExtensionSkillPreferencesDBService(db);
 
       await instances.create({
         project_id: project.id,
@@ -210,7 +215,8 @@ describe("createSyncService", () => {
       const scope = { project_id: project.id, extension_id: "project.templates", scope_type: "project", scope_id: "" };
       await storage.set(scope, "setup", { complete: true });
       await storage.collection(scope, "statuses").put("backlog", { label: "Backlog" });
-      await preferences.setEnabled(project.id, "project.templates", "defaultTicket", false);
+      await templatePreferences.setEnabled(project.id, "project.templates", "defaultTicket", false);
+      await skillPreferences.setEnabled(project.id, "project.templates", "labSkill", false);
 
       const events: { table: string; op: string; data: unknown }[] = [];
       eventBus.subscribe((e) => events.push(e));
@@ -221,6 +227,7 @@ describe("createSyncService", () => {
       expect(tables).toContain("extension_kv");
       expect(tables).toContain("extension_collection_items");
       expect(tables).toContain("extension_template_preferences");
+      expect(tables).toContain("extension_skill_preferences");
       expect(tables).toContain("extension_instances");
       expect(events[events.length - 1].table).toBe("projects");
     });

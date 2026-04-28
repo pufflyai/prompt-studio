@@ -2,6 +2,8 @@ import type {
   ArtifactMountDefinition,
   CliContribution,
   CommandDefinition,
+  EventDefinition,
+  EventHandlerDefinition,
   ExtensionDefinition,
   ExtensionSourceKind,
   HarnessProviderDefinition,
@@ -34,6 +36,15 @@ export type RuntimeCommandRecord = Omit<CommandDefinition, "cli" | "menus" | "pa
   params?: ParamSchema;
   menus: NonNullable<CommandDefinition["menus"]>;
   cli?: RuntimeCliContribution;
+  sourcePath: string;
+};
+
+export type RuntimeEventHandler = Omit<EventHandlerDefinition, "event"> & {
+  id: string;
+  key: string;
+  extensionId: string;
+  event: EventDefinition | string;
+  eventId: string;
   sourcePath: string;
 };
 

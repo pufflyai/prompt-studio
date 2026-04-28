@@ -47,11 +47,12 @@ const formatLeafExample = (example: string) => {
 
 const mapCliParams = (contribution: RuntimeCliContribution, argv: ArgumentsCamelCase) => {
   const params: Record<string, unknown> = { __cli: true };
+  const paramNames = [...Object.keys(contribution.options ?? {}), ...Object.keys(contribution.positionals ?? {})];
 
-  for (const optionName of Object.keys(contribution.options ?? {})) {
-    const value = argv[optionName];
+  for (const paramName of paramNames) {
+    const value = argv[paramName];
     if (value !== undefined) {
-      params[optionName] = value;
+      params[paramName] = value;
     }
   }
 
@@ -120,14 +121,31 @@ const createLeafHelp = (contribution: ExtensionNamespaceContribution) =>
     ...contribution.examples.map((example) => `  example: ${example}`),
   ].join("\n");
 
+const createLeafCommandPattern = (contribution: ExtensionNamespaceContribution) =>
+  [
+    contribution.subpath,
+    ...Object.entries(contribution.positionals ?? {}).map(([name, positional]) =>
+      positional.required ? `<${name}>` : `[${name}]`,
+    ),
+  ].join(" ");
+
 const createLeafCommandModule = (
   contribution: ExtensionNamespaceContribution,
   runCommand?: RunExtensionCommandFromCli,
 ): CommandModule => ({
-  command: contribution.subpath,
+  command: createLeafCommandPattern(contribution),
   describe: contribution.hidden ? false : (contribution.description ?? `Extension command: ${contribution.commandId}`),
   builder: (yargs) => {
     let next = yargs;
+
+    for (const [paramName, positional] of Object.entries(contribution.positionals ?? {})) {
+      next = next.positional(paramName, {
+        type: positional.type,
+        describe: positional.description,
+        demandOption: positional.required,
+        default: positional.defaultValue,
+      });
+    }
 
     if (contribution.options) {
       for (const [optionName, option] of Object.entries(contribution.options)) {

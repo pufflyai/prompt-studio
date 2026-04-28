@@ -60,6 +60,6 @@ export const createTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof c
 
     deps.eventBus.emit("templates", "set", template);
 
-    return c.json(template, 201);
+    return c.json({ ...template, source_kind: "project", read_only: false }, 201);
   };
 };

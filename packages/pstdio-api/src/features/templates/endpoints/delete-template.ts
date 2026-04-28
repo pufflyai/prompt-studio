@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
-import { notFoundResponseSchema } from "../dto";
+import { badRequestResponseSchema, notFoundResponseSchema } from "../dto";
 
 export const deleteTemplateRoute = createRoute({
   method: "delete",
@@ -29,6 +29,10 @@ export const deleteTemplateRoute = createRoute({
       description: "Template not found.",
       content: { "application/json": { schema: notFoundResponseSchema } },
     },
+    400: {
+      description: "Template cannot be deleted.",
+      content: { "application/json": { schema: badRequestResponseSchema } },
+    },
   },
 });
 
@@ -48,6 +52,14 @@ export const deleteTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof d
     const removed = await deps.templateService.remove(projectId, name);
 
     if (!removed) {
+      const extensionDefault = await deps.templateRegistryService.findExtensionDefault(projectId, name);
+      if (extensionDefault) {
+        return c.json(
+          { error: "Extension templates are read-only. Disable the template instead of deleting it." },
+          400,
+        );
+      }
+
       return c.json({ error: `Template not found: ${name}` }, 404);
     }
 

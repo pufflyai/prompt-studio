@@ -66,6 +66,7 @@ const filterDisabledExtensions = (runtime: ExtensionRuntime, disabledExtensionId
     extensions: runtime.extensions.filter((extension) => isEnabled(extension.id)),
     commands: runtime.commands.filter((command) => isEnabled(command.extensionId)),
     cli: runtime.cli.filter((contribution) => isEnabled(contribution.extensionId)),
+    events: runtime.events.filter((event) => isEnabled(event.extensionId)),
     artifactMounts: runtime.artifactMounts.filter((mount) => isEnabled(mount.extensionId)),
     templateTypes: runtime.templateTypes.filter((templateType) => isEnabled(templateType.extensionId)),
     templates: runtime.templates.filter((template) => isEnabled(template.extensionId)),

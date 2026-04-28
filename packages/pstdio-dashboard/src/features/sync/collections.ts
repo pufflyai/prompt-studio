@@ -12,12 +12,14 @@ const SYNCED_TABLES = [
   "extension_kv",
   "extension_collection_items",
   "extension_template_preferences",
+  "extension_skill_preferences",
   "attempt_statuses",
   "sessions",
   "workspaces",
   "files",
   "workspace_sessions",
   "templates",
+  "skills",
 ] as const;
 
 export type SyncedTable = (typeof SYNCED_TABLES)[number];

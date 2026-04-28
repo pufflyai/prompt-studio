@@ -1,1 +1,1 @@
-export type { CreateTemplateInput, UpdateTemplateInput } from "pstdio-api-contracts";
+export type { CopyTemplateInput, CreateTemplateInput, UpdateTemplateInput } from "pstdio-api-contracts";

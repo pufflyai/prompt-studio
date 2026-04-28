@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanupDirs, createGitRepo, createProjectViaApi } from "./helpers";
-import { configureAgent, type HookTestContext, writePlugin } from "./hooks-infra";
+import type { HookTestContext } from "./hooks-infra";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 
@@ -39,20 +39,38 @@ const setupProjectWithRepo = async (name: string) => {
   return { repo, projectId: project.id };
 };
 
-describe("plugin actions via API", () => {
-  test(
-    "lists actions registered by plugins",
-    async () => {
-      const { repo, projectId } = await setupProjectWithRepo("plugin-actions");
+const writeExtension = (repo: string, extensionId: string, source: string) => {
+  const extensionDir = join(repo, ".pstdio", "extensions", extensionId);
+  mkdirSync(extensionDir, { recursive: true });
+  writeFileSync(join(extensionDir, "extension.ts"), source);
+};
 
-      writePlugin(
+describe("extension command actions via API", () => {
+  test(
+    "lists actions registered by extension command menus",
+    async () => {
+      const { repo, projectId } = await setupProjectWithRepo("extension-actions");
+
+      writeExtension(
         repo,
-        "custom-actions.ts",
+        "custom-actions",
         `export default {
-          actions: [
-            { key: "greet", label: "Greet", targetType: "ticket", placement: "primary", trigger() {} },
-            { key: "review", label: "Review", targetType: "workspace", placement: "secondary", trigger() {} },
-          ],
+          id: "project.custom-actions",
+          name: "Custom Actions",
+          commands: {
+            greet: {
+              title: "Greet",
+              target: "ticket",
+              menus: [{ slot: "ticket.header.primary" }],
+              run() {},
+            },
+            review: {
+              title: "Review",
+              target: "workspace",
+              menus: [{ slot: "workspace.header.secondary" }],
+              run() {},
+            },
+          },
         };`,
       );
 
@@ -62,13 +80,13 @@ describe("plugin actions via API", () => {
       const actions = await res.json();
       expect(actions).toHaveLength(2);
 
-      const greet = actions.find((a: { key: string }) => a.key === "custom-actions/greet");
+      const greet = actions.find((a: { key: string }) => a.key === "project.custom-actions.greet");
       expect(greet).toBeDefined();
       expect(greet.label).toBe("Greet");
       expect(greet.targetType).toBe("ticket");
       expect(greet.placement).toBe("primary");
 
-      const review = actions.find((a: { key: string }) => a.key === "custom-actions/review");
+      const review = actions.find((a: { key: string }) => a.key === "project.custom-actions.review");
       expect(review).toBeDefined();
       expect(review.targetType).toBe("workspace");
     },
@@ -78,51 +96,63 @@ describe("plugin actions via API", () => {
   test(
     "filters actions by targetType",
     async () => {
-      const { repo, projectId } = await setupProjectWithRepo("plugin-filter");
+      const { repo, projectId } = await setupProjectWithRepo("extension-filter");
 
-      writePlugin(
+      writeExtension(
         repo,
-        "multi-target.ts",
+        "multi-target",
         `export default {
-          actions: [
-            { key: "t-action", label: "Ticket action", targetType: "ticket", placement: "primary", trigger() {} },
-            { key: "w-action", label: "Workspace action", targetType: "workspace", placement: "secondary", trigger() {} },
-          ],
+          id: "project.multi-target",
+          name: "Multi Target",
+          commands: {
+            ticketAction: {
+              title: "Ticket action",
+              target: "ticket",
+              menus: [{ slot: "ticket.header.primary" }],
+              run() {},
+            },
+            workspaceAction: {
+              title: "Workspace action",
+              target: "workspace",
+              menus: [{ slot: "workspace.header.secondary" }],
+              run() {},
+            },
+          },
         };`,
       );
 
       const ticketRes = await fetch(`${api.url}/v1/projects/${projectId}/actions?targetType=ticket`);
       const ticketActions = await ticketRes.json();
       expect(ticketActions).toHaveLength(1);
-      expect(ticketActions[0].key).toBe("multi-target/t-action");
+      expect(ticketActions[0].key).toBe("project.multi-target.ticketAction");
 
       const wsRes = await fetch(`${api.url}/v1/projects/${projectId}/actions?targetType=workspace`);
       const wsActions = await wsRes.json();
       expect(wsActions).toHaveLength(1);
-      expect(wsActions[0].key).toBe("multi-target/w-action");
+      expect(wsActions[0].key).toBe("project.multi-target.workspaceAction");
     },
     TEST_TIMEOUT,
   );
 
   test(
-    "executes a plugin action for a workspace target",
+    "executes an extension command action for a workspace target",
     async () => {
-      const { repo, projectId } = await setupProjectWithRepo("plugin-exec");
-      await configureAgent(ctx);
+      const { repo, projectId } = await setupProjectWithRepo("extension-exec");
 
-      writePlugin(
+      writeExtension(
         repo,
-        "exec-action.ts",
+        "exec-action",
         `export default {
-          actions: [
-            {
-              key: "noop",
-              label: "No-op action",
-              targetType: "workspace",
-              placement: "overflow",
-              async trigger() {},
+          id: "project.exec-action",
+          name: "Exec Action",
+          commands: {
+            noop: {
+              title: "No-op action",
+              target: "workspace",
+              menus: [{ slot: "workspace.header.overflow" }],
+              async run() {},
             },
-          ],
+          },
         };`,
       );
 
@@ -133,7 +163,7 @@ describe("plugin actions via API", () => {
       });
       const workspace = (await workspaceRes.json()) as { id: string };
 
-      const actionKey = encodeURIComponent("exec-action/noop");
+      const actionKey = encodeURIComponent("project.exec-action.noop");
       const res = await fetch(`${api.url}/v1/projects/${projectId}/actions/${actionKey}/execute`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -165,9 +195,9 @@ describe("plugin actions via API", () => {
   );
 
   test(
-    "returns empty actions for project with no plugins",
+    "returns empty actions for project with no extension command menus",
     async () => {
-      const { projectId } = await setupProjectWithRepo("plugin-empty");
+      const { projectId } = await setupProjectWithRepo("extension-empty");
 
       const res = await fetch(`${api.url}/v1/projects/${projectId}/actions`);
       expect(res.status).toBe(200);

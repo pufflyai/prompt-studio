@@ -143,6 +143,7 @@ export type CliContribution = {
   path: string;
   description?: string;
   options?: Record<string, CliOption>;
+  positionals?: Record<string, CliOption>;
   examples?: string[];
   hidden?: boolean;
 };
@@ -307,12 +308,18 @@ export type ExtensionTemplatePreferencesApi = {
   setEnabled(templateKey: string, enabled: boolean): Promise<void>;
 };
 
+export type ExtensionSkillPreferencesApi = {
+  isEnabled(skillKey: string): Promise<boolean>;
+  setEnabled(skillKey: string, enabled: boolean): Promise<void>;
+};
+
 export type ExtensionStorageApi = {
   get(key: string): Promise<unknown | null>;
   set(key: string, value: unknown): Promise<void>;
   delete(key: string): Promise<void>;
   collection(name: string): ExtensionStorageCollection;
   templatePreferences: ExtensionTemplatePreferencesApi;
+  skillPreferences: ExtensionSkillPreferencesApi;
 };
 
 export type ExtensionFilesApi = {

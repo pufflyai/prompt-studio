@@ -68,6 +68,31 @@ describe("createExtensionCommandRegistry", () => {
     }).toThrowError(/command execution is not enabled yet/);
   });
 
+  test("maps extension command positionals into CLI params", async () => {
+    const calls: Array<{ params: Record<string, unknown> }> = [];
+    const registry = createExtensionCommandRegistry({
+      cli: [
+        createContribution({
+          options: { id: { type: "string", required: true } },
+          positionals: { field: { type: "string", description: "Field to print" } },
+        }),
+      ],
+      staticTopLevelCommands: [],
+      runCommand: (input) => {
+        calls.push({ params: input.params });
+      },
+    });
+
+    const cli = createYargs();
+    for (const commandModule of registry.commandModules) {
+      cli.command(commandModule as never);
+    }
+
+    await cli.parseAsync(["extension-lab", "inspect", "title", "--id", "PS-1"]);
+
+    expect(calls[0]?.params).toEqual({ __cli: true, field: "title", id: "PS-1" });
+  });
+
   test("marks duplicate extension paths as unavailable", () => {
     const registry = createExtensionCommandRegistry({
       cli: [

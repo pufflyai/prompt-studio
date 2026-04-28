@@ -1,9 +1,15 @@
 import { Button, Flex, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
 import { DeleteConfirmationModal, toaster } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
-import { Trash2 } from "lucide-react";
+import { Copy as CopyIcon, EyeOff, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useDeleteProjectTemplate, useProjectTemplate, useUpdateProjectTemplate } from "../hooks/use-templates";
+import {
+  useCopyProjectTemplate,
+  useDeleteProjectTemplate,
+  useDisableProjectTemplateDefault,
+  useProjectTemplate,
+  useUpdateProjectTemplate,
+} from "../hooks/use-templates";
 import {
   clearTemplateDraft,
   isTemplateEditorEmpty,
@@ -22,6 +28,8 @@ export const TemplateEditor = (props: TemplateEditorProps) => {
   const { data: template, isLoading } = useProjectTemplate(projectId, templateName);
   const updateTemplate = useUpdateProjectTemplate(projectId);
   const deleteTemplate = useDeleteProjectTemplate(projectId);
+  const copyTemplate = useCopyProjectTemplate(projectId);
+  const disableTemplate = useDisableProjectTemplateDefault(projectId);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [savedContent, setSavedContent] = useState("");
   const [draftContent, setDraftContent] = useState(() => loadTemplateDraft(undefined, projectId, templateName) ?? "");
@@ -32,7 +40,7 @@ export const TemplateEditor = (props: TemplateEditorProps) => {
     if (!template) return;
 
     hasEditorInitialized.current = false;
-    const localDraft = loadTemplateDraft(undefined, projectId, templateName);
+    const localDraft = template.readOnly ? null : loadTemplateDraft(undefined, projectId, templateName);
     setSavedContent(template.content);
     setDraftContent(localDraft ?? template.content);
   }, [projectId, templateName, template]);
@@ -56,10 +64,13 @@ export const TemplateEditor = (props: TemplateEditorProps) => {
   }
 
   const isDirty = draftContent !== savedContent;
-  const isSaveDisabled = !isDirty || isTemplateEditorEmpty(draftContent) || updateTemplate.isPending;
-  const isCancelDisabled = !isDirty || updateTemplate.isPending;
+  const isReadOnly = Boolean(template.readOnly);
+  const isSaveDisabled = isReadOnly || !isDirty || isTemplateEditorEmpty(draftContent) || updateTemplate.isPending;
+  const isCancelDisabled = isReadOnly || !isDirty || updateTemplate.isPending;
 
   const handleContentChange = (value: string) => {
+    if (isReadOnly) return;
+
     // Lexical re-serializes markdown on init, which may differ from the original.
     // Treat the first onChange as the baseline when no draft exists.
     if (!hasEditorInitialized.current) {
@@ -96,6 +107,28 @@ export const TemplateEditor = (props: TemplateEditorProps) => {
     }
   };
 
+  const handleCopy = async () => {
+    try {
+      await copyTemplate.mutateAsync(templateName);
+      clearTemplateDraft(undefined, projectId, templateName);
+      toaster.create({ type: "success", title: "Template copied" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to copy template.";
+      toaster.create({ type: "error", title: "Copy failed", description: message });
+    }
+  };
+
+  const handleDisable = async () => {
+    try {
+      await disableTemplate.mutateAsync(templateName);
+      toaster.create({ type: "success", title: "Template disabled" });
+      onDeleted();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to disable template.";
+      toaster.create({ type: "error", title: "Disable failed", description: message });
+    }
+  };
+
   const handleDelete = async () => {
     try {
       await deleteTemplate.mutateAsync(templateName);
@@ -108,7 +141,9 @@ export const TemplateEditor = (props: TemplateEditorProps) => {
     }
   };
 
-  const editorInitialContent = loadTemplateDraft(undefined, projectId, templateName) ?? template.content;
+  const editorInitialContent = isReadOnly
+    ? template.content
+    : (loadTemplateDraft(undefined, projectId, templateName) ?? template.content);
 
   return (
     <>
@@ -116,28 +151,49 @@ export const TemplateEditor = (props: TemplateEditorProps) => {
         <Flex padding="md" borderBottomWidth="1px" alignItems="center" justifyContent="space-between">
           <Text textStyle="heading/S">{template.name}</Text>
           <HStack gap="sm">
-            <Button size="sm" variant="ghost" onClick={handleCancel} disabled={isCancelDisabled}>
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={handleSave}
-              loading={updateTemplate.isPending}
-              disabled={isSaveDisabled}
-            >
-              Save
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              colorPalette="red"
-              onClick={() => setIsDeleteOpen(true)}
-              disabled={deleteTemplate.isPending}
-              aria-label="Delete template"
-            >
-              <Trash2 size={16} />
-            </Button>
+            {isReadOnly ? (
+              <>
+                <Button size="sm" variant="outline" onClick={handleCopy} loading={copyTemplate.isPending}>
+                  <CopyIcon size={16} />
+                  Copy
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleDisable}
+                  loading={disableTemplate.isPending}
+                  colorPalette="red"
+                >
+                  <EyeOff size={16} />
+                  Disable
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button size="sm" variant="ghost" onClick={handleCancel} disabled={isCancelDisabled}>
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={handleSave}
+                  loading={updateTemplate.isPending}
+                  disabled={isSaveDisabled}
+                >
+                  Save
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  colorPalette="red"
+                  onClick={() => setIsDeleteOpen(true)}
+                  disabled={deleteTemplate.isPending}
+                  aria-label="Delete template"
+                >
+                  <Trash2 size={16} />
+                </Button>
+              </>
+            )}
           </HStack>
         </Flex>
 
@@ -145,7 +201,7 @@ export const TemplateEditor = (props: TemplateEditorProps) => {
           <MarkdownEditor
             key={`${template.id}-${editorKey}`}
             defaultState={editorInitialContent}
-            isEditable
+            isEditable={!isReadOnly}
             placeholder="Enter template content..."
             onChange={handleContentChange}
           />

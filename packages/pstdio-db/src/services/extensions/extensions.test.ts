@@ -4,6 +4,7 @@ import { createDb, extension_collection_items, extension_kv } from "../../index"
 import { createProjectsDBService } from "../projects/projects";
 import {
   createExtensionInstancesDBService,
+  createExtensionSkillPreferencesDBService,
   createExtensionStorageDBService,
   createExtensionTemplatePreferencesDBService,
 } from "./extensions";
@@ -146,5 +147,19 @@ describe("createExtensionTemplatePreferencesDBService", () => {
 
     await preferences.setEnabled(projectId, "project.templates", "defaultTicket", true);
     expect(await preferences.isEnabled(projectId, "project.templates", "defaultTicket")).toBe(true);
+  });
+});
+
+describe("createExtensionSkillPreferencesDBService", () => {
+  test("defaults missing preferences to enabled and stores disablement", async () => {
+    const preferences = createExtensionSkillPreferencesDBService(db);
+
+    expect(await preferences.isEnabled(projectId, "project.skills", "labSkill")).toBe(true);
+
+    await preferences.setEnabled(projectId, "project.skills", "labSkill", false);
+    expect(await preferences.isEnabled(projectId, "project.skills", "labSkill")).toBe(false);
+
+    await preferences.setEnabled(projectId, "project.skills", "labSkill", true);
+    expect(await preferences.isEnabled(projectId, "project.skills", "labSkill")).toBe(true);
   });
 });

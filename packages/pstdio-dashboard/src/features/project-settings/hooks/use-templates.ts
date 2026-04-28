@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  copyProjectTemplate,
   createProjectTemplate,
   deleteProjectTemplate,
+  disableProjectTemplateDefault,
   getProjectTemplate,
   updateProjectTemplate,
 } from "@/features/project/data/api";
@@ -14,8 +16,9 @@ export const useProjectTemplate = (projectId: string | undefined, name: string |
     enabled: Boolean(projectId && name),
   });
 
-export const useCreateProjectTemplate = (projectId: string | undefined) =>
-  useMutation({
+export const useCreateProjectTemplate = (projectId: string | undefined) => {
+  const queryClient = useQueryClient();
+  return useMutation({
     mutationFn: async (input: {
       name: string;
       templateType: ProjectTemplateAssetType;
@@ -25,7 +28,11 @@ export const useCreateProjectTemplate = (projectId: string | undefined) =>
       if (!projectId) throw new Error("Project id is required.");
       return createProjectTemplate(projectId, input);
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-template-assets", projectId] });
+    },
   });
+};
 
 export const useUpdateProjectTemplate = (projectId: string | undefined) => {
   const queryClient = useQueryClient();
@@ -39,14 +46,49 @@ export const useUpdateProjectTemplate = (projectId: string | undefined) => {
     },
     onSuccess: (name) => {
       queryClient.invalidateQueries({ queryKey: ["project-template", projectId, name] });
+      queryClient.invalidateQueries({ queryKey: ["project-template-assets", projectId] });
     },
   });
 };
 
-export const useDeleteProjectTemplate = (projectId: string | undefined) =>
-  useMutation({
+export const useDeleteProjectTemplate = (projectId: string | undefined) => {
+  const queryClient = useQueryClient();
+  return useMutation({
     mutationFn: async (name: string) => {
       if (!projectId) throw new Error("Project id is required.");
       await deleteProjectTemplate(projectId, name);
     },
+    onSuccess: (_result, name) => {
+      queryClient.invalidateQueries({ queryKey: ["project-template", projectId, name] });
+      queryClient.invalidateQueries({ queryKey: ["project-template-assets", projectId] });
+    },
   });
+};
+
+export const useCopyProjectTemplate = (projectId: string | undefined) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (name: string) => {
+      if (!projectId) throw new Error("Project id is required.");
+      return copyProjectTemplate(projectId, name);
+    },
+    onSuccess: (template) => {
+      queryClient.invalidateQueries({ queryKey: ["project-template", projectId, template.name] });
+      queryClient.invalidateQueries({ queryKey: ["project-template-assets", projectId] });
+    },
+  });
+};
+
+export const useDisableProjectTemplateDefault = (projectId: string | undefined) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (name: string) => {
+      if (!projectId) throw new Error("Project id is required.");
+      return disableProjectTemplateDefault(projectId, name);
+    },
+    onSuccess: (_template, name) => {
+      queryClient.invalidateQueries({ queryKey: ["project-template", projectId, name] });
+      queryClient.invalidateQueries({ queryKey: ["project-template-assets", projectId] });
+    },
+  });
+};

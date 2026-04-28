@@ -36,6 +36,10 @@ const createContext = (root: string): CommandRunContext => {
         isEnabled: async () => true,
         setEnabled: async () => undefined,
       },
+      skillPreferences: {
+        isEnabled: async () => true,
+        setEnabled: async () => undefined,
+      },
       collection: (name) => {
         const existing = collections.get(name);
         if (existing) return existing;

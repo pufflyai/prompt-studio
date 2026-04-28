@@ -13,6 +13,7 @@ const emptyRuntime = {
   extensions: [],
   commands: [],
   cli: [],
+  events: [],
   artifactMounts: [],
   templateTypes: [],
   templates: [],
@@ -84,6 +85,7 @@ describe("extensions check formatting", () => {
     expect(output).toContain("No extensions loaded.");
     expect(output).toContain("No command ids registered.");
     expect(output).toContain("No CLI paths registered.");
+    expect(output).toContain("No event handlers registered.");
     expect(output).toContain("No artifact mounts registered.");
     expect(output).toContain("No harness providers registered.");
     expect(output).toContain("No diagnostics.");
@@ -125,6 +127,17 @@ describe("extensions check formatting", () => {
             extensionId: "project.review",
           },
         ],
+        events: [
+          {
+            id: "project.review.reviewCompleted",
+            key: "reviewCompleted",
+            extensionId: "project.review",
+            event: "project.review.completed",
+            eventId: "project.review.completed",
+            sourcePath: "/repo/.pstdio/extensions/project.review/extension.ts",
+            handler: async () => {},
+          },
+        ],
         artifactMounts: [
           {
             id: "project.review.tickets",
@@ -161,6 +174,7 @@ describe("extensions check formatting", () => {
     expect(output).toContain("/repo/.pstdio/extensions/project.review/extension.ts");
     expect(output).toContain("project.review.run");
     expect(output).toContain("workspace review");
+    expect(output).toContain("project.review.completed");
     expect(output).toContain(".pstdio/tickets");
     expect(output).toContain("project.review.fake");
     expect(output).toContain("Fake Harness");

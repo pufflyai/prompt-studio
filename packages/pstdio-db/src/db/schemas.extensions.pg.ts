@@ -100,3 +100,21 @@ export const extension_template_preferences = pgTable(
     index("extension_template_preferences_project_idx").on(table.project_id),
   ],
 );
+
+export const extension_skill_preferences = pgTable(
+  "extension_skill_preferences",
+  {
+    id: text("id").primaryKey(),
+    project_id: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    extension_id: text("extension_id").notNull(),
+    skill_key: text("skill_key").notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+    updated_at: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("extension_skill_preferences_key_idx").on(table.project_id, table.extension_id, table.skill_key),
+    index("extension_skill_preferences_project_idx").on(table.project_id),
+  ],
+);

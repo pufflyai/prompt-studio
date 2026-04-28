@@ -5,6 +5,7 @@ import type {
   RuntimeArtifactMount,
   RuntimeCliContribution,
   RuntimeCommandRecord,
+  RuntimeEventHandler,
   RuntimeHarnessProvider,
   RuntimeSkill,
   RuntimeTemplate,
@@ -19,6 +20,7 @@ type RuntimeAccumulator = {
   extensions: NormalizedExtension[];
   commands: RuntimeCommandRecord[];
   cli: RuntimeCliContribution[];
+  events: RuntimeEventHandler[];
   artifactMounts: RuntimeArtifactMount[];
   templateTypes: RuntimeTemplateType[];
   templates: RuntimeTemplate[];
@@ -120,6 +122,7 @@ const normalizeCommandCli = (
     extensionId,
     description: typeof cli.description === "string" ? cli.description : undefined,
     options: normalizeCliOptions(cli.options),
+    positionals: normalizeCliOptions(cli.positionals),
     hidden: typeof cli.hidden === "boolean" ? cli.hidden : undefined,
   };
 
@@ -198,6 +201,32 @@ const registerCommands = (
   }
 };
 
+const resolveEventId = (event: unknown) => {
+  if (typeof event === "string" && event.length > 0) return event;
+  if (isRecord(event) && typeof event.id === "string" && event.id.length > 0) return event.id;
+  return null;
+};
+
+const registerEvents = (source: LoadedExtensionSource, runtime: RuntimeAccumulator) => {
+  for (const [key, eventHandler] of Object.entries(source.definition.events ?? {})) {
+    if (!isRecord(eventHandler) || typeof eventHandler.handler !== "function") continue;
+
+    const eventId = resolveEventId(eventHandler.event);
+    if (!eventId) continue;
+
+    const extensionId = source.definition.id;
+    runtime.events.push({
+      ...eventHandler,
+      id: `${extensionId}.${key}`,
+      key,
+      extensionId,
+      event: eventHandler.event as RuntimeEventHandler["event"],
+      eventId,
+      sourcePath: source.sourcePath,
+    });
+  }
+};
+
 const registerArtifactMounts = (
   source: LoadedExtensionSource,
   runtime: RuntimeAccumulator,
@@ -259,6 +288,7 @@ export const normalizeExtensionSources = (
     extensions: [],
     commands: [],
     cli: [],
+    events: [],
     artifactMounts: [],
     templateTypes: [],
     templates: [],
@@ -276,6 +306,7 @@ export const normalizeExtensionSources = (
 
     registerExtension(source, runtime, extensionSources);
     registerCommands(source, runtime, commandOwners, cliOwners);
+    registerEvents(source, runtime);
     registerArtifactMounts(source, runtime, mountOwners);
     registerTemplates(source, runtime);
     registerSkills(source, runtime);

@@ -1,5 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getProjectSkill, getProjectSkills, updateProjectSkill } from "../data/skills-api";
+import {
+  copyProjectSkill,
+  disableProjectSkillDefault,
+  getProjectSkill,
+  getProjectSkills,
+  updateProjectSkill,
+} from "../data/skills-api";
 
 export const useProjectSkills = (projectId: string | undefined) =>
   useQuery({
@@ -22,6 +28,37 @@ export const useUpdateProjectSkill = (projectId: string | undefined, skillName: 
     mutationFn: () => updateProjectSkill(projectId!, skillName!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project-skill", projectId, skillName] });
+      queryClient.invalidateQueries({ queryKey: ["project-skills", projectId] });
+    },
+  });
+};
+
+export const useCopyProjectSkill = (projectId: string | undefined, skillName: string | undefined) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      if (!projectId || !skillName) throw new Error("Project id and skill name are required.");
+      return copyProjectSkill(projectId, skillName);
+    },
+    onSuccess: (skill) => {
+      queryClient.invalidateQueries({ queryKey: ["project-skill", projectId, skill.name] });
+      queryClient.invalidateQueries({ queryKey: ["project-skills", projectId] });
+    },
+  });
+};
+
+export const useDisableProjectSkillDefault = (projectId: string | undefined, skillName: string | undefined) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      if (!projectId || !skillName) throw new Error("Project id and skill name are required.");
+      return disableProjectSkillDefault(projectId, skillName);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-skill", projectId, skillName] });
+      queryClient.invalidateQueries({ queryKey: ["project-skills", projectId] });
     },
   });
 };

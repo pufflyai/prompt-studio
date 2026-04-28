@@ -18,6 +18,12 @@ const writeExtension = (projectRoot: string, extensionDir: string, source: strin
   writeFileSync(join(dir, "extension.ts"), source);
 };
 
+const writePlugin = (projectRoot: string, fileName: string, source: string) => {
+  const dir = join(projectRoot, ".pstdio", "plugins");
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, fileName), source);
+};
+
 const diagnosticCodes = (runtime: Awaited<ReturnType<typeof loadExtensionRuntime>>) =>
   runtime.diagnostics.map((diagnostic) => diagnostic.code);
 
@@ -203,5 +209,38 @@ describe("loadExtensionRuntime", () => {
 
     expect(diagnosticCodes(runtime)).toContain("invalid_package_asset");
     expect(runtime.templates).toEqual([]);
+  });
+
+  test("ignores old plugin source when loading v2 extensions", async () => {
+    const projectRoot = createProject();
+    writePlugin(
+      projectRoot,
+      "workspace-actions.ts",
+      `export default {
+        actions: [
+          {
+            key: "run-review",
+            label: "Run review",
+            targetType: "workspace",
+            placement: "secondary",
+            params: [
+              { key: "note", label: "Note", type: "text", required: true },
+            ],
+            async trigger() {},
+          },
+        ],
+        hooks: {
+          async postSessionSuccess() {},
+          async preTicketArchive() {},
+        },
+      };`,
+    );
+
+    const runtime = await loadExtensionRuntime({ projectRoot });
+
+    expect(runtime.diagnostics).toEqual([]);
+    expect(runtime.extensions.map((extension) => extension.id).sort()).toEqual(firstPartyExtensionIds);
+    expect(runtime.commands.map((command) => command.id)).not.toContain("project.plugin.workspace-actions.run-review");
+    expect(runtime.events.map((event) => event.eventId)).not.toContain("legacy.plugin.postSessionSuccess");
   });
 });

@@ -92,6 +92,13 @@
       "when": 1777330000000,
       "tag": "0012_planner_owned_ticket_storage",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1777380000000,
+      "tag": "0013_extension_skill_preferences",
+      "breakpoints": true
     }
   ]
 }

@@ -12,6 +12,7 @@ export type { ValidColor } from "./services/colors";
 export { isValidColor, VALID_COLORS } from "./services/colors";
 export {
   createExtensionInstancesDBService,
+  createExtensionSkillPreferencesDBService,
   createExtensionStorageDBService,
   createExtensionTemplatePreferencesDBService,
 } from "./services/extensions/extensions";

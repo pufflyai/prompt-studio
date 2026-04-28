@@ -5,7 +5,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "../../../app";
-import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
@@ -18,8 +17,8 @@ let workspaceId: string;
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-exec-action-"));
   repoPath = join(tempRoot, "repo");
-  const pluginsDir = join(repoPath, ".pstdio", "plugins");
-  mkdirSync(pluginsDir, { recursive: true });
+  const extensionDir = join(repoPath, ".pstdio", "extensions", "test-actions");
+  mkdirSync(extensionDir, { recursive: true });
   execSync("git init", { cwd: repoPath, stdio: "ignore" });
   execSync('git config user.email "test@test.com"', { cwd: repoPath, stdio: "ignore" });
   execSync('git config user.name "Test"', { cwd: repoPath, stdio: "ignore" });
@@ -28,65 +27,67 @@ beforeAll(async () => {
   execSync('git commit -m "init"', { cwd: repoPath, stdio: "ignore" });
 
   writeFileSync(
-    join(pluginsDir, "test-actions.ts"),
+    join(extensionDir, "extension.ts"),
     `export default {
-      actions: [
-        {
-          key: "noop",
-          label: "No-op",
-          targetType: "workspace",
-          placement: "primary",
-          async trigger() {},
+      id: "project.test-actions",
+      name: "Test Actions",
+      commands: {
+        noop: {
+          title: "No-op",
+          target: "workspace",
+          menus: [{ slot: "workspace.header.primary" }],
+          async run() {},
         },
-        {
-          key: "with-params",
-          label: "With params",
-          targetType: "workspace",
-          placement: "overflow",
-          params: [
-            { key: "name", label: "Name", type: "text" },
-            { key: "agent", label: "Agent", type: "agent" },
-          ],
-          async trigger() {},
+        withParams: {
+          title: "With params",
+          target: "workspace",
+          menus: [{ slot: "workspace.header.overflow" }],
+          params: {
+            name: { label: "Name", type: "text" },
+            harness: { label: "Harness", type: "harness" },
+          },
+          async run() {},
         },
-        {
-          key: "create-workspace",
-          label: "Create workspace",
-          targetType: "workspace",
-          placement: "primary",
-          async trigger(ctx) {
-            await ctx.client.workspaces.create({
-              project_id: ctx.projectId,
-              name: String(ctx.params.name ?? "created-from-action"),
+        writeStorage: {
+          title: "Write storage",
+          target: "workspace",
+          menus: [{ slot: "workspace.header.primary" }],
+          params: {
+            name: { label: "Name", type: "text" },
+          },
+          async run(ctx) {
+            await ctx.storage.collection("runs").put(ctx.target.id, {
+              name: ctx.params.name,
+              target: ctx.target,
             });
           },
         },
-        {
-          key: "returns-session",
-          label: "Returns session",
-          targetType: "workspace",
-          placement: "primary",
-          async trigger() {
+        returnsSession: {
+          title: "Returns session",
+          target: "workspace",
+          menus: [{ slot: "workspace.header.primary" }],
+          async run() {
             return { session_id: "explicit-session-123" };
           },
         },
-        {
-          key: "capture-shorthand",
-          label: "Capture shorthand",
-          targetType: "workspace",
-          placement: "primary",
-          async trigger(ctx) {
-            return { session_id: String(ctx.target.workspace_shorthand) };
+        captureTarget: {
+          title: "Capture target",
+          target: "workspace",
+          menus: [{ slot: "workspace.header.primary" }],
+          async run(ctx) {
+            return {
+              session_id: String(ctx.target.metadata?.workspaceShorthand),
+            };
           },
         },
-      ],
+      },
     };`,
   );
 
   ({ app, close } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
-    filesRoot: resolveTestFilesRoot(),
+    filesRoot: "",
   }));
 
   const projRes = await app.request("/v1/projects", {
@@ -123,8 +124,8 @@ afterAll(async () => {
 });
 
 describe("POST /v1/projects/:projectId/actions/:actionKey/execute", () => {
-  test("executes a registered workspace action", async () => {
-    const res = await app.request(`/v1/projects/${projectId}/actions/test-actions%2Fnoop/execute`, {
+  test("executes a registered workspace extension command action", async () => {
+    const res = await app.request(`/v1/projects/${projectId}/actions/project.test-actions.noop/execute`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ target_type: "workspace", target_id: workspaceId }),
@@ -135,7 +136,7 @@ describe("POST /v1/projects/:projectId/actions/:actionKey/execute", () => {
   });
 
   test("executes an action with params", async () => {
-    const res = await app.request(`/v1/projects/${projectId}/actions/test-actions%2Fwith-params/execute`, {
+    const res = await app.request(`/v1/projects/${projectId}/actions/project.test-actions.withParams/execute`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -143,7 +144,7 @@ describe("POST /v1/projects/:projectId/actions/:actionKey/execute", () => {
         target_id: workspaceId,
         params: {
           name: "hello",
-          agent: { agent: "claude-code", model: "opus" },
+          harness: { agent: "claude-code", model: "opus" },
         },
       }),
     });
@@ -153,7 +154,7 @@ describe("POST /v1/projects/:projectId/actions/:actionKey/execute", () => {
   });
 
   test("returns 404 for unknown action key", async () => {
-    const res = await app.request(`/v1/projects/${projectId}/actions/unknown%2Faction/execute`, {
+    const res = await app.request(`/v1/projects/${projectId}/actions/project.test-actions.unknown/execute`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ target_type: "workspace", target_id: workspaceId }),
@@ -162,8 +163,8 @@ describe("POST /v1/projects/:projectId/actions/:actionKey/execute", () => {
     expect(res.status).toBe(404);
   });
 
-  test("executes actions that call back into the API client", async () => {
-    const res = await app.request(`/v1/projects/${projectId}/actions/test-actions%2Fcreate-workspace/execute`, {
+  test("executes actions through the extension command storage context", async () => {
+    const res = await app.request(`/v1/projects/${projectId}/actions/project.test-actions.writeStorage/execute`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -176,17 +177,23 @@ describe("POST /v1/projects/:projectId/actions/:actionKey/execute", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ status: "success" });
 
-    const workspacesRes = await app.request(`/v1/workspaces?project_id=${projectId}`);
-    const workspaces = await workspacesRes.json();
-    expect(
-      workspaces.some(
-        (workspace: { workspace_shorthand: string }) => workspace.workspace_shorthand === "created-from-action",
-      ),
-    ).toBe(true);
+    const collectionRes = await app.request(
+      `/v1/projects/${projectId}/extensions/project.test-actions/collections/runs`,
+    );
+    const collection = await collectionRes.json();
+    expect(collection.items).toEqual([
+      expect.objectContaining({
+        item_id: workspaceId,
+        value_json: expect.objectContaining({
+          name: "created-from-action",
+          target: expect.objectContaining({ id: workspaceId, type: "workspace" }),
+        }),
+      }),
+    ]);
   });
 
   test("returns session_id when action explicitly provides one", async () => {
-    const res = await app.request(`/v1/projects/${projectId}/actions/test-actions%2Freturns-session/execute`, {
+    const res = await app.request(`/v1/projects/${projectId}/actions/project.test-actions.returnsSession/execute`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ target_type: "workspace", target_id: workspaceId }),
@@ -197,7 +204,7 @@ describe("POST /v1/projects/:projectId/actions/:actionKey/execute", () => {
   });
 
   test("resolves workspace target by shorthand and exposes ctx.target.workspace_shorthand", async () => {
-    const res = await app.request(`/v1/projects/${projectId}/actions/test-actions%2Fcapture-shorthand/execute`, {
+    const res = await app.request(`/v1/projects/${projectId}/actions/project.test-actions.captureTarget/execute`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ target_type: "workspace", target_id: "WS-PRIMARY" }),

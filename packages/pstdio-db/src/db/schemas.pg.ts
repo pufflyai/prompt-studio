@@ -217,6 +217,8 @@ export const templates = pgTable("templates", {
     .notNull()
     .references(() => files.id),
   is_default: boolean("is_default").notNull().default(false),
+  origin_extension_id: text("origin_extension_id"),
+  origin_template_key: text("origin_template_key"),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
   deleted_at: text("deleted_at"),
@@ -231,6 +233,8 @@ export const skills = pgTable("skills", {
   description: text("description").notNull().default(""),
   file_id: text("file_id").references(() => files.id, { onDelete: "set null" }),
   files_json: text("files_json").notNull().default("[]"),
+  origin_extension_id: text("origin_extension_id"),
+  origin_skill_key: text("origin_skill_key"),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
   deleted_at: text("deleted_at"),

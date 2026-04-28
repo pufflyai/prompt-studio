@@ -136,35 +136,35 @@ export const getRepoBranches = async (repoId: string): Promise<RepoBranch[]> => 
 
 export const getProjectTemplateAssets = async (projectId: string): Promise<ProjectTemplateAsset[]> => {
   const templates = await apiRequest<TemplateResponse[]>(`/v1/projects/${projectId}/templates`);
-  return templates.map((t) => ({
+  return templates.map(toProjectTemplateAsset(projectId, ""));
+};
+
+const toProjectTemplateAsset =
+  (projectId: string, content: string) =>
+  (t: TemplateResponse): ProjectTemplateAsset => ({
     id: t.id,
     projectId: t.project_id ?? projectId,
     name: t.name,
     templateType: t.template_type as ProjectTemplateAsset["templateType"],
     fileId: t.file_id,
-    content: "",
+    content,
     isDefault: t.is_default,
+    sourceKind: t.source_kind ?? undefined,
+    readOnly: t.read_only ?? undefined,
+    title: t.title ?? undefined,
+    description: t.description ?? undefined,
+    originExtensionId: t.origin_extension_id ?? undefined,
+    originTemplateKey: t.origin_template_key ?? undefined,
     createdAt: t.created_at,
     updatedAt: t.updated_at,
-  }));
-};
+  });
 
 export const getProjectTemplate = async (projectId: string, name: string) => {
   const t = await apiRequest<TemplateResponse & { content: string }>(
     `/v1/projects/${projectId}/templates/${encodeURIComponent(name)}`,
   );
 
-  return {
-    id: t.id,
-    projectId: t.project_id ?? projectId,
-    name: t.name,
-    templateType: t.template_type as ProjectTemplateAssetType,
-    fileId: t.file_id,
-    content: t.content,
-    isDefault: t.is_default,
-    createdAt: t.created_at,
-    updatedAt: t.updated_at,
-  } satisfies ProjectTemplateAsset;
+  return toProjectTemplateAsset(projectId, t.content)(t);
 };
 
 export const createProjectTemplate = async (
@@ -181,17 +181,30 @@ export const createProjectTemplate = async (
     },
   });
 
-  return {
-    id: created.id,
-    projectId: created.project_id ?? projectId,
-    name: created.name,
-    templateType: created.template_type as ProjectTemplateAssetType,
-    fileId: created.file_id,
-    content: input.content ?? "",
-    isDefault: created.is_default,
-    createdAt: created.created_at,
-    updatedAt: created.updated_at,
-  } satisfies ProjectTemplateAsset;
+  return toProjectTemplateAsset(projectId, input.content ?? "")(created);
+};
+
+export const copyProjectTemplate = async (projectId: string, name: string) => {
+  const copied = await apiRequest<TemplateResponse>(
+    `/v1/projects/${projectId}/templates/${encodeURIComponent(name)}/copy`,
+    {
+      method: "POST",
+      body: {},
+    },
+  );
+
+  return toProjectTemplateAsset(projectId, "")(copied);
+};
+
+export const disableProjectTemplateDefault = async (projectId: string, name: string) => {
+  const template = await apiRequest<TemplateResponse>(
+    `/v1/projects/${projectId}/templates/${encodeURIComponent(name)}/disable`,
+    {
+      method: "POST",
+    },
+  );
+
+  return toProjectTemplateAsset(projectId, "")(template);
 };
 
 export const updateProjectTemplate = async (

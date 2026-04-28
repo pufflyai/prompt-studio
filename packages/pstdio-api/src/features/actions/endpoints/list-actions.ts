@@ -24,7 +24,7 @@ const actionDescriptorSchema = z.object({
 export const listActionsRoute = createRoute({
   method: "get",
   path: "/projects/{projectId}/actions",
-  description: "List all plugin actions for a project.",
+  description: "List extension command actions for a project.",
   tags: ["Actions"],
   request: {
     query: z.object({ targetType: z.string().optional() }).strict(),
@@ -42,8 +42,7 @@ export const listActionsHandler = (deps: RouteDeps): AppRouteHandler<typeof list
   return async (c) => {
     const { projectId } = c.req.valid("param");
     const { targetType } = c.req.valid("query");
-    const runtime = await deps.pluginService.getForProject(projectId);
-    const actions = runtime.actions.list(targetType);
+    const actions = await deps.extensionActionService.list(projectId, { targetType });
     return c.json(actions, 200);
   };
 };

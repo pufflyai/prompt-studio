@@ -100,7 +100,6 @@
       "dependencies": {
         "@hono/swagger-ui": "^0.5.2",
         "@hono/zod-openapi": "^1.1.5",
-        "@pstdio/pstdio-ext-planner": "workspace:*",
         "@pstdio/sdk": "workspace:*",
         "drizzle-orm": "^0.45.1",
         "hono": "^4.10.7",
@@ -265,6 +264,7 @@
         "@pstdio/pstdio-ext-planner": "workspace:*",
         "@pstdio/sdk": "workspace:*",
         "pstdio-db": "workspace:*",
+        "pstdio-plugins": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "latest",

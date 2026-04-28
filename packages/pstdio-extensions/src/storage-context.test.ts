@@ -18,7 +18,7 @@ afterEach(async () => {
 });
 
 describe("createExtensionStorageContext", () => {
-  test("exposes KV, collection, and template preference helpers", async () => {
+  test("exposes KV, collection, template preference, and skill preference helpers", async () => {
     const storage = createExtensionStorageContext({
       db,
       projectId,
@@ -42,6 +42,10 @@ describe("createExtensionStorageContext", () => {
     expect(await storage.templatePreferences.isEnabled("defaultTicket")).toBe(true);
     await storage.templatePreferences.setEnabled("defaultTicket", false);
     expect(await storage.templatePreferences.isEnabled("defaultTicket")).toBe(false);
+
+    expect(await storage.skillPreferences.isEnabled("labSkill")).toBe(true);
+    await storage.skillPreferences.setEnabled("labSkill", false);
+    expect(await storage.skillPreferences.isEnabled("labSkill")).toBe(false);
 
     await storage.delete("lastSetup");
     await statuses.delete("ready");

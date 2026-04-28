@@ -1,4 +1,9 @@
-import { createExtensionStorageDBService, createExtensionTemplatePreferencesDBService, type DbClient } from "pstdio-db";
+import {
+  createExtensionSkillPreferencesDBService,
+  createExtensionStorageDBService,
+  createExtensionTemplatePreferencesDBService,
+  type DbClient,
+} from "pstdio-db";
 
 type ExtensionStorageContextInput = {
   db: DbClient;
@@ -27,11 +32,16 @@ type ExtensionStorageApi = {
     isEnabled(templateKey: string): Promise<boolean>;
     setEnabled(templateKey: string, enabled: boolean): Promise<void>;
   };
+  skillPreferences: {
+    isEnabled(skillKey: string): Promise<boolean>;
+    setEnabled(skillKey: string, enabled: boolean): Promise<void>;
+  };
 };
 
 export const createExtensionStorageContext = (input: ExtensionStorageContextInput) => {
   const storage = createExtensionStorageDBService(input.db);
-  const preferences = createExtensionTemplatePreferencesDBService(input.db);
+  const templatePreferences = createExtensionTemplatePreferencesDBService(input.db);
+  const skillPreferences = createExtensionSkillPreferencesDBService(input.db);
   const scope = {
     project_id: input.projectId,
     extension_id: input.extensionId,
@@ -66,9 +76,17 @@ export const createExtensionStorageContext = (input: ExtensionStorageContextInpu
       };
     },
     templatePreferences: {
-      isEnabled: (templateKey) => preferences.isEnabled(input.projectId, input.extensionId, templateKey),
+      isEnabled: (templateKey) => templatePreferences.isEnabled(input.projectId, input.extensionId, templateKey),
       setEnabled: async (templateKey, enabled) => {
-        await preferences.setEnabled(input.projectId, input.extensionId, templateKey, enabled);
+        const record = await templatePreferences.setEnabled(input.projectId, input.extensionId, templateKey, enabled);
+        input.eventBus?.emit("extension_template_preferences", "set", record);
+      },
+    },
+    skillPreferences: {
+      isEnabled: (skillKey) => skillPreferences.isEnabled(input.projectId, input.extensionId, skillKey),
+      setEnabled: async (skillKey, enabled) => {
+        const record = await skillPreferences.setEnabled(input.projectId, input.extensionId, skillKey, enabled);
+        input.eventBus?.emit("extension_skill_preferences", "set", record);
       },
     },
   } satisfies ExtensionStorageApi;

@@ -9,7 +9,11 @@ export const listTemplatesRoute = createRoute({
   description: "List all templates for a project.",
   tags: ["Templates"],
   request: {
-    query: z.object({}).strict(),
+    query: z
+      .object({
+        type: z.string().optional().openapi({ description: "Filter templates by type" }),
+      })
+      .strict(),
     params: z
       .object({
         projectId: z.string().openapi({ description: "Project ID" }),
@@ -27,7 +31,8 @@ export const listTemplatesRoute = createRoute({
 export const listTemplatesHandler = (deps: RouteDeps): AppRouteHandler<typeof listTemplatesRoute> => {
   return async (c) => {
     const { projectId } = c.req.valid("param");
-    const templates = await deps.templateService.list(projectId);
+    const { type } = c.req.valid("query");
+    const templates = await deps.templateRegistryService.list(projectId, { type });
     return c.json(templates, 200);
   };
 };

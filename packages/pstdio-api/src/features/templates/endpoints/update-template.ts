@@ -48,6 +48,11 @@ export const updateTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof u
 
     const existing = await deps.templateService.getByName(projectId, name);
     if (!existing) {
+      const extensionDefault = await deps.templateRegistryService.findExtensionDefault(projectId, name);
+      if (extensionDefault) {
+        return c.json({ error: "Extension templates are read-only. Copy the template before editing it." }, 400);
+      }
+
       return c.json({ error: `Template not found: ${name}` }, 404);
     }
 
@@ -94,6 +99,6 @@ export const updateTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof u
 
     deps.eventBus.emit("templates", "set", updated);
 
-    return c.json(updated, 200);
+    return c.json({ ...updated, source_kind: "project" as const, read_only: false }, 200);
   };
 };

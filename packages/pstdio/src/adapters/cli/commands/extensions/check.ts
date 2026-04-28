@@ -103,6 +103,11 @@ export const formatExtensionsCheckOutput = (input: { projectRoot: string; runtim
       "No CLI paths registered.",
     ),
     formatList(
+      "Registered event handlers",
+      runtime.events.map((event) => `${event.eventId} (${event.id})`),
+      "No event handlers registered.",
+    ),
+    formatList(
       "Registered artifact mounts",
       runtime.artifactMounts.map((mount) => `${mount.path} (${mount.id})`),
       "No artifact mounts registered.",

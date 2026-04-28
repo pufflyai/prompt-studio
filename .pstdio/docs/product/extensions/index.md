@@ -82,27 +82,27 @@ Extension command handlers that mutate project state execute through the API com
 
 Existing workflow capabilities move into first-party extension packages. They remain supported behavior, but their contracts, SDK helpers, commands, views, and event ownership live with the extension that owns the workflow.
 
-| Extension | Responsibility |
-| --- | --- |
-| `@pstdio/pstdio-ext-planner` | Internal ticket management, local ticket artifacts, the built-in local ticket workflow, planner diagnostics, and planner contracts |
-| `pstdio-ext-workspace-shell` | Workspace page shell and workspace slots |
-| `pstdio-ext-workspace-changes` | Workspace change presentation |
-| `pstdio-ext-workspace-checks` | Check/status surfaces |
-| `pstdio-ext-workspace-review` | Review flows |
-| Harness extension packages | Executable detection, start, send, and stop behavior |
+| Extension                      | Responsibility                                                                                                                     |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `@pstdio/pstdio-ext-planner`   | Internal ticket management, local ticket artifacts, the built-in local ticket workflow, planner diagnostics, and planner contracts |
+| `pstdio-ext-workspace-shell`   | Workspace page shell and workspace slots                                                                                           |
+| `pstdio-ext-workspace-changes` | Workspace change presentation                                                                                                      |
+| `pstdio-ext-workspace-checks`  | Check/status surfaces                                                                                                              |
+| `pstdio-ext-workspace-review`  | Review flows                                                                                                                       |
+| Harness extension packages     | Executable detection, start, send, and stop behavior                                                                               |
 
 See [Planner Extension](./planner.md) for the planner-owned ticket management boundary.
 
 ## Capability Ownership
 
-| Capability | Extension Owner |
-| --- | --- |
-| Ticket resources, ticket files, statuses, labels, ticket templates, and internal ticket sync | `@pstdio/pstdio-ext-planner` |
-| Workspace page layout and workspace-level slots | `pstdio-ext-workspace-shell` |
-| Workspace diff and change presentation | `pstdio-ext-workspace-changes` |
-| Check/status surfaces for workspaces | `pstdio-ext-workspace-checks` |
-| Review commands and review UI | `pstdio-ext-workspace-review` |
-| Executable AI coding tool integration | Harness extension packages |
+| Capability                                                                                   | Extension Owner                |
+| -------------------------------------------------------------------------------------------- | ------------------------------ |
+| Ticket resources, ticket files, statuses, labels, ticket templates, and internal ticket sync | `@pstdio/pstdio-ext-planner`   |
+| Workspace page layout and workspace-level slots                                              | `pstdio-ext-workspace-shell`   |
+| Workspace diff and change presentation                                                       | `pstdio-ext-workspace-changes` |
+| Check/status surfaces for workspaces                                                         | `pstdio-ext-workspace-checks`  |
+| Review commands and review UI                                                                | `pstdio-ext-workspace-review`  |
+| Executable AI coding tool integration                                                        | Harness extension packages     |
 
 Moving a capability into an extension changes ownership and package boundaries. It does not remove the product behavior.
 

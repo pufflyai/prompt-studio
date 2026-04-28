@@ -15,33 +15,33 @@ let workspaceId: string;
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-exec-action-result-"));
   const repoPath = join(tempRoot, "repo");
-  const pluginsDir = join(repoPath, ".pstdio", "plugins");
-  mkdirSync(pluginsDir, { recursive: true });
+  const extensionDir = join(repoPath, ".pstdio", "extensions", "result-actions");
+  mkdirSync(extensionDir, { recursive: true });
   writeFileSync(
-    join(pluginsDir, "result-actions.ts"),
+    join(extensionDir, "extension.ts"),
     `export default {
-      actions: [
-        {
-          key: "workspace-review",
-          label: "Workspace review",
-          targetType: "workspace",
-          placement: "secondary",
-          async trigger(ctx) {
-            if (!ctx.target || ctx.targetType !== "workspace") {
+      id: "project.result-actions",
+      name: "Result Actions",
+      commands: {
+        workspaceReview: {
+          title: "Workspace review",
+          target: "workspace",
+          menus: [{ slot: "workspace.header.secondary" }],
+          async run(ctx) {
+            if (!ctx.target || ctx.target.type !== "workspace") {
               throw new Error("Missing workspace target");
             }
           },
         },
-        {
-          key: "start-session",
-          label: "Start session",
-          targetType: "workspace",
-          placement: "overflow",
-          async trigger() {
+        startSession: {
+          title: "Start session",
+          target: "workspace",
+          menus: [{ slot: "workspace.header.overflow" }],
+          async run() {
             return { session_id: "session-from-action" };
           },
         },
-      ],
+      },
     };`,
   );
 
@@ -87,7 +87,7 @@ afterAll(async () => {
 
 describe("POST /v1/projects/:projectId/actions/:actionKey/execute result handling", () => {
   test("executes workspace actions with a resolved workspace target", async () => {
-    const res = await app.request(`/v1/projects/${projectId}/actions/result-actions%2Fworkspace-review/execute`, {
+    const res = await app.request(`/v1/projects/${projectId}/actions/project.result-actions.workspaceReview/execute`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ target_type: "workspace", target_id: workspaceId }),
@@ -98,7 +98,7 @@ describe("POST /v1/projects/:projectId/actions/:actionKey/execute result handlin
   });
 
   test("returns session_id when an action returns a session", async () => {
-    const res = await app.request(`/v1/projects/${projectId}/actions/result-actions%2Fstart-session/execute`, {
+    const res = await app.request(`/v1/projects/${projectId}/actions/project.result-actions.startSession/execute`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ target_type: "workspace", target_id: workspaceId }),

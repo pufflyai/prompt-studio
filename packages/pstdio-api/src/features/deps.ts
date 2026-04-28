@@ -1,6 +1,7 @@
 import type { AgentRegistry } from "pstdio-agents";
 import type { createAgentConfigService } from "../services/agent-config-service";
 import type { createAttemptStatusService } from "../services/attempt-status-service";
+import type { createExtensionActionService } from "../services/extension-action-service";
 import type { createExtensionCommandService } from "../services/extension-command-service";
 import type { createExtensionInstanceService } from "../services/extension-instance-service";
 import type { createExtensionSetupService } from "../services/extension-setup-service";
@@ -10,8 +11,10 @@ import type { createHarnessProviderService } from "../services/harness-provider-
 import type { createProjectService } from "../services/project-service";
 import type { createRepoService } from "../services/repo-service";
 import type { createSessionService } from "../services/session-service";
+import type { createSkillRegistryService } from "../services/skill-registry-service";
 import type { createSkillService } from "../services/skill-service";
 import type { createSyncService } from "../services/sync-service";
+import type { createTemplateRegistryService } from "../services/template-registry-service";
 import type { createTemplateService } from "../services/template-service";
 import type { createWorkspaceService } from "../services/workspace-service";
 import type { createWorkspaceSessionService } from "../services/workspace-session-service";
@@ -35,14 +38,17 @@ export interface RouteDeps {
   workspaceService: ReturnType<typeof createWorkspaceService>;
   workspaceSessionService: ReturnType<typeof createWorkspaceSessionService>;
   templateService: ReturnType<typeof createTemplateService>;
+  templateRegistryService: ReturnType<typeof createTemplateRegistryService>;
   attemptStatusService: ReturnType<typeof createAttemptStatusService>;
   agentConfigService: ReturnType<typeof createAgentConfigService>;
   extensionInstanceService: ReturnType<typeof createExtensionInstanceService>;
   extensionStorageService: ReturnType<typeof createExtensionStorageService>;
   skillService: ReturnType<typeof createSkillService>;
+  skillRegistryService: ReturnType<typeof createSkillRegistryService>;
   fileService: ReturnType<typeof createFileService>;
   harnessProviderService: ReturnType<typeof createHarnessProviderService>;
   syncService: ReturnType<typeof createSyncService>;
+  extensionActionService: ReturnType<typeof createExtensionActionService>;
   pluginService: ReturnType<typeof createPluginService>;
   extensionCommandService: ReturnType<typeof createExtensionCommandService>;
   extensionSetupService: ReturnType<typeof createExtensionSetupService>;

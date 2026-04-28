@@ -146,6 +146,7 @@ describe("planner-owned ticket storage", () => {
       const viewOutput = run("tickets view --id PTCS-1", repo);
       expect(viewOutput).toContain("Shorthand:   PTCS-1");
       expect(viewOutput).toContain("Title:       Planner CLI surface");
+      expect(run("tickets view title --id PTCS-1", repo).trim()).toBe("Planner CLI surface");
 
       const ticketPath = join(repo, ".pstdio", "tickets", "PTCS-1", "ticket.md");
       const edited = `${readFileSync(ticketPath, "utf8")}\nSaved body from real CLI.\n`;

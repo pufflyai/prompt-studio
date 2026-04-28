@@ -1,19 +1,22 @@
-import { readFileSync } from "node:fs";
 import { createRoute, z } from "@hono/zod-openapi";
-import type { ActionTriggerContext } from "@pstdio/sdk/plugins";
+import { ExtensionActionNotFoundError } from "../../../services/extension-action-service";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 
-const actionParamValueSchema = z.union([z.string(), z.record(z.string(), z.string())]);
-const actionTargetTypeSchema = z.enum(["workspace", "session"]);
+const actionParamValueSchema = z.union([
+  z.string(),
+  z.boolean(),
+  z.number(),
+  z.record(z.string(), z.unknown()),
+  z.null(),
+]);
+const actionTargetTypeSchema = z.string().min(1);
 
 const executeActionInputSchema = z.object({
   target_type: actionTargetTypeSchema,
   target_id: z.string(),
   params: z.record(z.string(), actionParamValueSchema).optional(),
 });
-
-type ActionTargetType = z.infer<typeof actionTargetTypeSchema>;
 
 const actionResultSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("success"), session_id: z.string().optional(), message: z.string().optional() }),
@@ -23,13 +26,13 @@ const actionResultSchema = z.discriminatedUnion("status", [
 export const executeActionRoute = createRoute({
   method: "post",
   path: "/projects/{projectId}/actions/{actionKey}/execute",
-  description: "Execute a plugin action.",
+  description: "Execute an extension command action.",
   tags: ["Actions"],
   request: {
     params: z
       .object({
         projectId: z.string().openapi({ description: "Project ID" }),
-        actionKey: z.string().openapi({ description: "Namespaced action key (e.g. plugin/action)" }),
+        actionKey: z.string().openapi({ description: "Extension command action key" }),
       })
       .strict(),
     body: { content: { "application/json": { schema: executeActionInputSchema } } },
@@ -46,62 +49,21 @@ export const executeActionRoute = createRoute({
   },
 });
 
-const resolveTarget = async (deps: RouteDeps, projectId: string, targetType: ActionTargetType, targetId: string) => {
-  if (targetType === "session") {
-    return deps.sessionService.get(targetId);
-  }
-  return (await deps.workspaceService.get(targetId)) ?? deps.workspaceService.getByShorthand(projectId, targetId);
-};
-
-const resolvePrompts = async (deps: RouteDeps, projectId: string) => {
-  const templates = await deps.templateService.list(projectId);
-  const promptTemplates = templates.filter((template) => template.template_type === "prompt");
-
-  const promptEntries = await Promise.all(
-    promptTemplates.map(async (template) => {
-      const file = await deps.fileService.get(template.file_id);
-      if (!file) return null;
-
-      try {
-        return [template.name, readFileSync(file.storage_path, "utf8")] as const;
-      } catch {
-        return null;
-      }
-    }),
-  );
-
-  return Object.fromEntries(promptEntries.filter((entry) => entry !== null));
-};
-
 export const executeActionHandler = (deps: RouteDeps): AppRouteHandler<typeof executeActionRoute> => {
   return async (c) => {
     const { projectId, actionKey } = c.req.valid("param");
     const { target_type, target_id, params: paramValues } = c.req.valid("json");
 
-    const runtime = await deps.pluginService.getForProject(projectId);
-    const action = runtime.actions.get(actionKey);
-
-    if (!action) {
-      return c.json({ error: "Action not found" }, 404);
-    }
-
-    const target = await resolveTarget(deps, projectId, target_type, target_id);
-    const prompts = await resolvePrompts(deps, projectId);
-
-    const ctx = {
-      client: runtime.client,
-      projectId,
-      prompts,
-      params: paramValues ?? {},
-      targetType: target_type,
-      targetId: target?.id ?? target_id,
-      target,
-    } as ActionTriggerContext;
-
     try {
-      const result = await action.trigger(ctx);
-      const sessionId = result?.session_id;
-      const resultRecord = result as Record<string, unknown> | undefined;
+      const result = await deps.extensionActionService.execute({
+        projectId,
+        actionKey,
+        targetType: target_type,
+        targetId: target_id,
+        params: paramValues,
+      });
+      const resultRecord = result && typeof result === "object" ? (result as Record<string, unknown>) : undefined;
+      const sessionId = typeof resultRecord?.session_id === "string" ? resultRecord.session_id : undefined;
       const message = typeof resultRecord?.message === "string" ? resultRecord.message : undefined;
 
       return c.json(
@@ -113,6 +75,10 @@ export const executeActionHandler = (deps: RouteDeps): AppRouteHandler<typeof ex
         200,
       );
     } catch (err) {
+      if (err instanceof ExtensionActionNotFoundError) {
+        return c.json({ error: "Action not found" }, 404);
+      }
+
       const message = err instanceof Error ? err.message : "Action execution failed";
       return c.json({ status: "error" as const, message }, 200);
     }

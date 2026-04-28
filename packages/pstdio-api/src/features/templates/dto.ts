@@ -1,5 +1,6 @@
 import { z } from "@hono/zod-openapi";
 import {
+  copyTemplateInputSchema,
   createTemplateInputSchema,
   templateSchema,
   templateWithContentSchema,
@@ -9,6 +10,7 @@ import {
 export const templateResponseSchema = templateSchema;
 export const templateWithContentResponseSchema = templateWithContentSchema;
 export const createTemplateBodySchema = createTemplateInputSchema.strict();
+export const copyTemplateBodySchema = copyTemplateInputSchema.strict();
 export const updateTemplateBodySchema = updateTemplateInputSchema.strict();
 
 export const notFoundResponseSchema = z.object({ error: z.string() });

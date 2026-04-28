@@ -44,6 +44,7 @@ import { createWorkspaceRoutes } from "./features/workspaces/routes";
 import { apiLogger } from "./lib/logger";
 import { createAgentConfigService } from "./services/agent-config-service";
 import { createAttemptStatusService } from "./services/attempt-status-service";
+import { createExtensionActionService } from "./services/extension-action-service";
 import { createExtensionCommandService } from "./services/extension-command-service";
 import { createExtensionInstanceService } from "./services/extension-instance-service";
 import { createExtensionSetupService } from "./services/extension-setup-service";
@@ -53,8 +54,10 @@ import { createHarnessProviderService } from "./services/harness-provider-servic
 import { createProjectService } from "./services/project-service";
 import { createRepoService } from "./services/repo-service";
 import { createSessionService } from "./services/session-service";
+import { createSkillRegistryService } from "./services/skill-registry-service";
 import { createSkillService } from "./services/skill-service";
 import { createSyncService } from "./services/sync-service";
+import { createTemplateRegistryService } from "./services/template-registry-service";
 import { createTemplateService } from "./services/template-service";
 import { createWorkspaceService } from "./services/workspace-service";
 import { createWorkspaceSessionService } from "./services/workspace-session-service";
@@ -142,6 +145,24 @@ export const createApp = async (options: AppOptions) => {
   const extensionStorageService = createExtensionStorageService({ eventBus, extensionStorageDBService });
   const skillService = createSkillService({ skillsDBService, skillsStorageService });
   const fileService = createFileService({ filesDBService, filesStorageService });
+  const templateRegistryService = createTemplateRegistryService({
+    db,
+    eventBus,
+    extensionInstancesDBService,
+    fileService,
+    filesRoot: options.filesRoot,
+    repoService,
+    templateService,
+  });
+  const skillRegistryService = createSkillRegistryService({
+    agentConfigService,
+    db,
+    eventBus,
+    extensionInstancesDBService,
+    filesRoot: options.filesRoot,
+    repoService,
+    skillService,
+  });
   const syncService = createSyncService({ db, eventBus });
   const harnessProviderService = createHarnessProviderService({
     db,
@@ -203,6 +224,14 @@ export const createApp = async (options: AppOptions) => {
     workspaceSessionService,
   });
   const extensionSetupService = createExtensionSetupService({ db, eventBus });
+  const extensionActionService = createExtensionActionService({
+    extensionCommandService,
+    extensionInstanceService,
+    filesRoot: options.filesRoot,
+    repoService,
+    sessionService,
+    workspaceService,
+  });
 
   // --- ONLY DOMAIN SERVICES ARE PASSED TO ROUTES ---
   const deps = {
@@ -217,14 +246,17 @@ export const createApp = async (options: AppOptions) => {
     workspaceService,
     workspaceSessionService,
     templateService,
+    templateRegistryService,
     attemptStatusService,
     agentConfigService,
     extensionInstanceService,
     extensionStorageService,
     skillService,
+    skillRegistryService,
     fileService,
     harnessProviderService,
     syncService,
+    extensionActionService,
     pluginService,
     extensionCommandService,
     extensionSetupService,

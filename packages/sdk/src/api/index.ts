@@ -16,9 +16,10 @@ export type {
   ResolveSessionIdResponse,
   SessionConversationResponse,
 } from "./sessions";
+export type { CopySkillInput, UpdateSkillInput } from "./skills";
 export type { CreateAttemptStatusInput, CreateStatusInput } from "./statuses";
 export type { CreateTagInput, CreateTagOptionInput, UpdateTagInput, UpdateTagOptionInput } from "./tags";
-export type { CreateTemplateInput, UpdateTemplateInput } from "./templates";
+export type { CopyTemplateInput, CreateTemplateInput, UpdateTemplateInput } from "./templates";
 export type {
   CreateWorkspaceInput,
   RemoveWorktreeResponse,

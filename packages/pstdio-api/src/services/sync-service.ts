@@ -8,12 +8,14 @@ import {
   extension_collection_items,
   extension_instances,
   extension_kv,
+  extension_skill_preferences,
   extension_template_preferences,
   files,
   project_repos,
   projects,
   repos,
   sessions,
+  skills,
   sql,
   templates,
   workspace_sessions,
@@ -31,12 +33,14 @@ const tableMap = {
   extension_kv,
   extension_collection_items,
   extension_template_preferences,
+  extension_skill_preferences,
   attempt_statuses,
   sessions,
   workspaces,
   files,
   workspace_sessions,
   templates,
+  skills,
 } as const;
 
 export const SYNCED_TABLES = Object.keys(tableMap) as (keyof typeof tableMap)[];
@@ -78,6 +82,11 @@ const emitExtensionDependents = async (db: DbClient, projectId: string, bus: Eve
   );
   emitDeleteRows(
     bus,
+    "extension_skill_preferences",
+    await db.select().from(extension_skill_preferences).where(eq(extension_skill_preferences.project_id, projectId)),
+  );
+  emitDeleteRows(
+    bus,
     "extension_instances",
     await db.select().from(extension_instances).where(eq(extension_instances.project_id, projectId)),
   );
@@ -106,6 +115,7 @@ const emitProjectDependents = async (db: DbClient, projectId: string, bus: Event
   );
   emitDeleteRows(bus, "files", await db.select().from(files).where(eq(files.project_id, projectId)));
   emitDeleteRows(bus, "templates", await db.select().from(templates).where(eq(templates.project_id, projectId)));
+  emitDeleteRows(bus, "skills", await db.select().from(skills).where(eq(skills.project_id, projectId)));
   emitDeleteRows(
     bus,
     "activity_events",
