@@ -261,11 +261,11 @@ jobs:
       - name: Prepare WSL workspace tools
         shell: pwsh
         run: |
-          $workspace = wsl -d Ubuntu-24.04 -- bash -lc "wslpath '$env:GITHUB_WORKSPACE'"
+          $workspace = (wsl -d Ubuntu-24.04 -- bash -lc "wslpath '$env:GITHUB_WORKSPACE'").Trim()
           wsl -d Ubuntu-24.04 -- bash -lc "sudo apt-get update"
           wsl -d Ubuntu-24.04 -- bash -lc "sudo apt-get install -y curl unzip nodejs npm"
           wsl -d Ubuntu-24.04 -- bash -lc "curl -fsSL https://bun.sh/install | bash"
-          wsl -d Ubuntu-24.04 -- bash -lc "export BUN_INSTALL=\$HOME/.bun; export PATH=\$BUN_INSTALL/bin:\$PATH; cd '$workspace' && bun install --frozen-lockfile"
+          wsl -d Ubuntu-24.04 --cd "$workspace" -- bash -lc "export BUN_INSTALL=\$HOME/.bun; export PATH=\$BUN_INSTALL/bin:\$PATH; bun install --frozen-lockfile"
 
       - name: Install harness inside WSL
         shell: pwsh
