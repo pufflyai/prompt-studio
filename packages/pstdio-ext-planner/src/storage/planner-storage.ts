@@ -1,5 +1,6 @@
 import type { CommandRunContext, ExtensionStorageCollection } from "@pstdio/sdk/extensions";
 import type {
+  PlannerTicketCreateInput,
   PlannerTicketFileRecord,
   PlannerTicketRecord,
   PlannerTicketUpdateInput,
@@ -42,7 +43,7 @@ const asStoredTagOption = (value: unknown) => value as StoredTagOption;
 
 const ticketFileId = (ticketId: string) => `${ticketId}:ticket`;
 
-const toPlannerTicket = (ticket: StoredTicket): PlannerTicketRecord => ({
+const toPlannerTicket = (ticket: StoredTicket, tagNameById = new Map<string, string>()): PlannerTicketRecord => ({
   id: ticket.id,
   projectId: ticket.projectId,
   shorthand: ticket.shorthand,
@@ -54,7 +55,7 @@ const toPlannerTicket = (ticket: StoredTicket): PlannerTicketRecord => ({
   dependsOn: ticket.dependsOn,
   parallelizable: ticket.parallelizable,
   blockedReason: ticket.blockedReason,
-  tagNames: ticket.tagNames,
+  tagNames: ticket.tagNames.map((tagId) => tagNameById.get(tagId) ?? tagId),
 });
 
 const toPlannerFile = (file: StoredTicketFile): PlannerTicketFileRecord => ({
@@ -81,7 +82,14 @@ export const createPlannerStorage = (ctx: CommandRunContext) => {
     return ticket;
   };
 
-  const createTicket = async (input: { shorthand: string; content: string; title?: string }) => {
+  const getTagNameById = async () =>
+    new Map((await listValues(tagOptions, asStoredTagOption)).map((option) => [option.id, option.name]));
+
+  const createTicket = async (input: PlannerTicketCreateInput) => {
+    if (await tickets.get(input.shorthand)) {
+      throw new Error(`Ticket already exists: ${input.shorthand}`);
+    }
+
     const timestamp = nowTimestamp();
     const ticket: StoredTicket = {
       id: input.shorthand,
@@ -89,18 +97,18 @@ export const createPlannerStorage = (ctx: CommandRunContext) => {
       shorthand: input.shorthand,
       createdAt: timestamp,
       updatedAt: timestamp,
-      draft: false,
+      draft: input.draft ?? false,
       archived: false,
       fileId: ticketFileId(input.shorthand),
-      parentId: null,
-      userPrompt: null,
+      parentId: input.parentId ?? null,
+      userPrompt: input.userPrompt ?? null,
       dependsOn: null,
       parallelizable: null,
       blockedReason: null,
-      tagNames: [],
+      tagNames: input.tagIds ?? [],
       content: input.content,
       displayTitle: input.title ?? null,
-      statusId: null,
+      statusId: input.statusId ?? null,
       files: [],
     };
 
@@ -110,7 +118,7 @@ export const createPlannerStorage = (ctx: CommandRunContext) => {
 
   const getByShorthand = async (shorthand: string) => {
     const ticket = await getStoredTicket(tickets, shorthand);
-    return ticket ? toPlannerTicket(ticket) : null;
+    return ticket ? toPlannerTicket(ticket, await getTagNameById()) : null;
   };
 
   const uploadFile = async (ticketId: string, input: PlannerTicketUploadInput) => {
@@ -145,26 +153,30 @@ export const createPlannerStorage = (ctx: CommandRunContext) => {
       content: input.content ?? ticket.content,
       displayTitle: input.displayTitle === undefined ? ticket.displayTitle : input.displayTitle,
       draft: input.draft ?? ticket.draft,
+      archived: input.archived ?? ticket.archived,
       fileId: input.fileId === undefined ? ticket.fileId : input.fileId,
       parentId: input.parentId === undefined ? ticket.parentId : input.parentId,
+      userPrompt: input.userPrompt === undefined ? ticket.userPrompt : input.userPrompt,
       statusId: input.statusId === undefined ? ticket.statusId : input.statusId,
       tagNames: input.tagIds ?? ticket.tagNames,
       updatedAt: nowTimestamp(),
     });
 
-    return toPlannerTicket(updated);
+    return toPlannerTicket(updated, await getTagNameById());
   };
 
   const provider = {
     get: async (ticketId) => {
       const ticket = await getStoredTicket(tickets, ticketId);
-      return ticket ? toPlannerTicket(ticket) : null;
+      return ticket ? toPlannerTicket(ticket, await getTagNameById()) : null;
     },
     getByShorthand,
-    list: async (input) =>
-      (await listValues(tickets, asStoredTicket))
+    list: async (input) => {
+      const tagNameById = await getTagNameById();
+      return (await listValues(tickets, asStoredTicket))
         .filter((ticket) => ticket.archived === (input.archived ?? false))
-        .map(toPlannerTicket),
+        .map((ticket) => toPlannerTicket(ticket, tagNameById));
+    },
     listFiles: async (ticketId) => {
       const ticket = await getStoredTicket(tickets, ticketId);
       return ticket?.files.map(toPlannerFile) ?? [];
@@ -180,6 +192,12 @@ export const createPlannerStorage = (ctx: CommandRunContext) => {
     },
     uploadFile,
     update,
+    delete: async (ticketId) => {
+      const ticket = await getStoredTicket(tickets, ticketId);
+      if (!ticket) return false;
+      await tickets.delete(ticketId);
+      return true;
+    },
     resolveStatusId: async (statusName) => {
       const status = (await listValues(statuses, asStoredStatus)).find((candidate) => candidate.name === statusName);
       if (!status) throw new Error(`Status not found: ${statusName}`);

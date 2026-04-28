@@ -52,13 +52,26 @@ export type PlannerTicketUploadInput = {
   mimeType?: string | null;
 };
 
+export type PlannerTicketCreateInput = {
+  shorthand: string;
+  content: string;
+  title?: string;
+  draft?: boolean;
+  parentId?: string | null;
+  userPrompt?: string | null;
+  statusId?: string | null;
+  tagIds?: string[];
+};
+
 export type PlannerTicketUpdateInput = {
   blockedReason?: string | null;
   content?: string;
   fileId?: string | null;
   displayTitle?: string | null;
   draft?: boolean;
+  archived?: boolean;
   parentId?: string | null;
+  userPrompt?: string | null;
   statusId?: string | null;
   tagIds?: string[];
 };
@@ -71,6 +84,7 @@ export type PlannerTicketProviderApi = {
   readFileContent(ticketId: string, fileId: string): Promise<Buffer>;
   uploadFile(ticketId: string, input: PlannerTicketUploadInput): Promise<PlannerTicketFileRecord>;
   update(ticketId: string, input: PlannerTicketUpdateInput): Promise<PlannerTicketRecord | null>;
+  delete(ticketId: string): Promise<boolean>;
   resolveStatusId(statusName: string): Promise<string>;
   resolveTagIds(tagNames: string[]): Promise<string[]>;
 };

@@ -43,7 +43,7 @@ export const createHandler =
     const ticket = await deps.resolveTicketByShorthand(projectId, argv.id);
     if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
-    await deps.deleteTicket(ticket.id);
+    await deps.deleteTicket(projectId, ticket.id);
 
     if (root) {
       deps.removeTicketDir(root, argv.id);

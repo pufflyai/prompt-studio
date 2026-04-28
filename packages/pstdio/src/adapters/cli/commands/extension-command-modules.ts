@@ -203,8 +203,10 @@ const applyBuilder = (commandModule: CommandModule, yargs: Argv): Argv => {
 
 export const mergeExtensionCommandsIntoStaticModules = (input: {
   staticCommandModules: CommandModule[];
+  staticCommandPaths?: Set<string>;
   registry: ExtensionCommandRegistry;
 }) => {
+  const staticCommandPaths = input.staticCommandPaths ?? new Set<string>();
   const staticNamespaces = new Set(input.staticCommandModules.map(topLevelCommandName));
   const mergedStaticModules = input.staticCommandModules.map((commandModule) => {
     const namespace = topLevelCommandName(commandModule);
@@ -215,7 +217,7 @@ export const mergeExtensionCommandsIntoStaticModules = (input: {
       ...commandModule,
       builder: (yargs: Argv) => {
         let next = applyBuilder(commandModule, yargs);
-        for (const contribution of contributions) {
+        for (const contribution of contributions.filter((candidate) => !staticCommandPaths.has(candidate.path))) {
           next = next.command(createLeafCommandModule(contribution, input.registry.runCommand));
         }
         return next.epilogue(createNamespaceHelp(namespace, contributions));

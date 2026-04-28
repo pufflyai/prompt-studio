@@ -1,3 +1,3 @@
-import { apiClient } from "@/features/api-client";
+import { listPlannerTags } from "@/features/planner/api/planner-tickets";
 
-export const listTicketTags = async (projectId: string) => apiClient().tags.list(projectId);
+export const listTicketTags = async (projectId: string) => listPlannerTags(projectId);

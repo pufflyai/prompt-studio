@@ -52,7 +52,7 @@ export const createHandler =
     const ticket = await deps.resolveTicketByShorthand(projectId, argv.id);
     if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
-    const result = await deps.updateWhenAttemptStatus(ticket.id, {
+    const result = await deps.updateWhenAttemptStatus(projectId, ticket.id, {
       all_attempts_status: argv["all-attempts-status"],
       set_status: argv["set-status"],
     });

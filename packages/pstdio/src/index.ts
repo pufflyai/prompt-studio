@@ -270,6 +270,7 @@ const cli = yargs(rawArgs)
 
 const commandModules = mergeExtensionCommandsIntoStaticModules({
   staticCommandModules: topLevelCommandModules as unknown as CommandModule[],
+  staticCommandPaths: staticCommandPathsInExtensionNamespaces,
   registry: extensionCommands,
 });
 

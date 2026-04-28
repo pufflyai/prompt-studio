@@ -22,7 +22,7 @@ export const createResolveParentTicketId =
       throw new Error(`Parent ticket not found: ${value}`);
     }
 
-    const ticket = await deps.getTicket(value);
+    const ticket = await deps.getTicket(value, projectId);
     if (ticket) return ticket.id;
 
     throw new Error(`Parent ticket not found: ${value}`);

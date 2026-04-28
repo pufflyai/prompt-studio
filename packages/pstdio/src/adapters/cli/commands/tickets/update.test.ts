@@ -47,7 +47,7 @@ describe("tickets update", () => {
 
     await handler({ id: "PS-1", status: "wip", _: [], $0: "" } as never);
 
-    expect(updateTicket).toHaveBeenCalledWith("t-1", { status_id: "s-wip" });
+    expect(updateTicket).toHaveBeenCalledWith("proj-1", "t-1", { status_id: "s-wip" });
     expect(log).toHaveBeenCalledWith("Updated ticket PS-1");
   });
 
@@ -142,7 +142,7 @@ describe("tickets update", () => {
 
     await handler({ id: "PS-1", "parent-id": "PS-2", _: [], $0: "" } as never);
 
-    expect(updateTicket).toHaveBeenCalledWith("t-1", { parent_id: "ticket-uuid-1" });
+    expect(updateTicket).toHaveBeenCalledWith("proj-1", "t-1", { parent_id: "ticket-uuid-1" });
   });
 
   test("passes parent_id when --parent-id is a UUID", async () => {
@@ -161,7 +161,7 @@ describe("tickets update", () => {
 
     await handler({ id: "PS-1", "parent-id": parentId, _: [], $0: "" } as never);
 
-    expect(updateTicket).toHaveBeenCalledWith("t-1", { parent_id: parentId });
+    expect(updateTicket).toHaveBeenCalledWith("proj-1", "t-1", { parent_id: parentId });
   });
 
   test("clears parent_id when --no-parent-id is set", async () => {
@@ -179,7 +179,7 @@ describe("tickets update", () => {
 
     await handler({ id: "PS-1", "no-parent-id": true, _: [], $0: "" } as never);
 
-    expect(updateTicket).toHaveBeenCalledWith("t-1", { parent_id: null });
+    expect(updateTicket).toHaveBeenCalledWith("proj-1", "t-1", { parent_id: null });
   });
 
   test("throws when both --parent-id and --no-parent-id are provided", async () => {
@@ -242,7 +242,7 @@ describe("tickets update", () => {
 
     await handler(argv as never);
 
-    expect(updateTicket).toHaveBeenCalledWith("t-1", { parent_id: null });
+    expect(updateTicket).toHaveBeenCalledWith("proj-1", "t-1", { parent_id: null });
   });
 
   test("throws when parsed from --parent-id and --no-parent-id", async () => {

@@ -82,7 +82,7 @@ export const createHandler =
       updates.parent_id = await deps.resolveParentTicketId(projectId, parsedParent);
     }
 
-    await deps.updateTicket(ticket.id, updates);
+    await deps.updateTicket(projectId, ticket.id, updates);
 
     deps.log(`Updated ticket ${argv.id}`);
   };

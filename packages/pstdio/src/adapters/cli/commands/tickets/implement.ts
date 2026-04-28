@@ -65,7 +65,7 @@ export const createHandler =
     const statuses = await deps.listTicketStatuses(projectId);
     const wipStatus = statuses.find((s) => s.name === "wip");
     if (wipStatus) {
-      await deps.updateTicket(ticket.id, { status_id: wipStatus.id });
+      await deps.updateTicket(projectId, ticket.id, { status_id: wipStatus.id });
     }
 
     deps.log(`Ticket ${argv.id} moved to wip`);

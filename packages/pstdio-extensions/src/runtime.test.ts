@@ -22,7 +22,16 @@ const diagnosticCodes = (runtime: Awaited<ReturnType<typeof loadExtensionRuntime
   runtime.diagnostics.map((diagnostic) => diagnostic.code);
 
 const firstPartyExtensionIds = ["pstdio.harness.claude-code", "pstdio.harness.opencode", "pstdio.planner"];
-const firstPartyCommandIds = ["pstdio.planner.createTicket", "pstdio.planner.pullTickets", "pstdio.planner.pushTicket"];
+const firstPartyCommandIds = [
+  "pstdio.planner.archiveTicket",
+  "pstdio.planner.createTicket",
+  "pstdio.planner.deleteTicket",
+  "pstdio.planner.pullTickets",
+  "pstdio.planner.pushTicket",
+  "pstdio.planner.saveTicket",
+  "pstdio.planner.updateTicket",
+  "pstdio.planner.uploadTicketFile",
+];
 
 afterEach(() => {
   for (const dir of tempDirs) {

@@ -44,7 +44,7 @@ export const createHandler =
       throw new Error(`Ticket already archived: ${argv.id}`);
     }
 
-    await deps.updateTicket(ticket.id, { archived: true });
+    await deps.updateTicket(projectId, ticket.id, { archived: true });
 
     deps.log(`Archived ticket ${argv.id}`);
   };

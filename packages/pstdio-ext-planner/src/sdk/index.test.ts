@@ -46,4 +46,60 @@ describe("planner SDK client", () => {
     expect(calls[0]!.method).toBe("POST");
     expect(JSON.parse(calls[0]!.body!)).toEqual({ params: { ticket_id: "PS-1", status: "wip", tags: ["bug"] } });
   });
+
+  test("creates tickets through the planner command boundary", async () => {
+    const { fetchFn, calls } = trackingFetch();
+    const client = createPlannerClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+
+    await client.createTicket("proj-1", {
+      shorthand: "PS-1",
+      content: "# Ticket\n",
+      title: "Ticket",
+      draft: false,
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toBe(
+      "http://test:1234/v1/projects/proj-1/extension-commands/pstdio.planner.createTicket/execute",
+    );
+    expect(calls[0]!.method).toBe("POST");
+    expect(JSON.parse(calls[0]!.body!)).toEqual({
+      params: {
+        shorthand: "PS-1",
+        content: "# Ticket\n",
+        title: "Ticket",
+        draft: false,
+      },
+    });
+  });
+
+  test("updates tickets through the planner command boundary", async () => {
+    const { fetchFn, calls } = trackingFetch();
+    const client = createPlannerClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+
+    await client.updateTicket("proj-1", { ticket_id: "PS-1", status_id: "status-1", tag_ids: ["bug"] });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toBe(
+      "http://test:1234/v1/projects/proj-1/extension-commands/pstdio.planner.updateTicket/execute",
+    );
+    expect(calls[0]!.method).toBe("POST");
+    expect(JSON.parse(calls[0]!.body!)).toEqual({
+      params: { ticket_id: "PS-1", status_id: "status-1", tag_ids: ["bug"] },
+    });
+  });
+
+  test("deletes tickets through the planner command boundary", async () => {
+    const { fetchFn, calls } = trackingFetch();
+    const client = createPlannerClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+
+    await client.deleteTicket("proj-1", { ticket_id: "PS-1" });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toBe(
+      "http://test:1234/v1/projects/proj-1/extension-commands/pstdio.planner.deleteTicket/execute",
+    );
+    expect(calls[0]!.method).toBe("POST");
+    expect(JSON.parse(calls[0]!.body!)).toEqual({ params: { ticket_id: "PS-1" } });
+  });
 });

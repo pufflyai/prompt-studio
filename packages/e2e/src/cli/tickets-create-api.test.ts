@@ -66,6 +66,28 @@ const listPlannerTickets = async (projectId: string) => {
 
 describe("planner-owned ticket storage", () => {
   test(
+    "creates tickets through the real CLI into planner storage and local artifacts",
+    async () => {
+      const repo = createInitializedRepo("planner-ticket-cli-create");
+      const projectId = readProjectId(repo);
+
+      const output = run('tickets create --content "CLI-created planner ticket"', repo);
+      const shorthand = output.match(/Created ticket (\S+)/)?.[1];
+
+      expect(shorthand).toBe("PTCC-1");
+      expect(readFileSync(join(repo, ".pstdio", "tickets", shorthand!, "ticket.md"), "utf8")).toContain(
+        "# CLI-created planner ticket",
+      );
+
+      const rows = await listPlannerTickets(projectId);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].item_id).toBe(shorthand);
+      expect(rows[0].value_json.displayTitle).toBe("CLI-created planner ticket");
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
     "creates tickets through the planner extension command and exposes collection rows",
     async () => {
       const repo = createInitializedRepo("planner-ticket-storage");

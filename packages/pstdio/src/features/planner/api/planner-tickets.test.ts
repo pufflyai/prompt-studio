@@ -30,6 +30,9 @@ describe("planner ticket API", () => {
       if (path.endsWith("/collections/statuses")) {
         return { items: [{ item_id: "todo", value_json: { id: "todo", name: "Todo" } }] } as T;
       }
+      if (path.endsWith("/collections/tag_options")) {
+        return { items: [{ item_id: "tag-bug", value_json: { id: "bug", name: "bug" } }] } as T;
+      }
 
       return { items: [{ item_id: "PS-1", value_json: ticketValue }] } as T;
     };
@@ -40,6 +43,7 @@ describe("planner ticket API", () => {
     expect(paths).toEqual([
       "/v1/projects/proj-1/extensions/pstdio.planner/collections/tickets",
       "/v1/projects/proj-1/extensions/pstdio.planner/collections/statuses",
+      "/v1/projects/proj-1/extensions/pstdio.planner/collections/tag_options",
     ]);
     expect(tickets).toHaveLength(1);
     expect(tickets[0]).toMatchObject({

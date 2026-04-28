@@ -88,7 +88,7 @@ export const createHandler =
       depends_on: null,
       parallelizable: null,
       blocked_reason: null,
-      tag_names: [],
+      tag_names: argv.tag ?? [],
     });
 
     let bodyContent: string;

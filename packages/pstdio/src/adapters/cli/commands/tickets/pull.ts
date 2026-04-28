@@ -7,11 +7,16 @@ export const describe = "Pull ticket content and files from the configured ticke
 
 export const builder = (yargs: Argv) =>
   yargs
-    .option("id", { type: "string", describe: "Ticket shorthand (e.g. PS-12). Omit to pull all non-archived tickets" })
+    .option("id", {
+      type: "string",
+      alias: "ticket_id",
+      describe: "Ticket shorthand (e.g. PS-12). Omit to pull all non-archived tickets",
+    })
     .option("force", { type: "boolean", default: false, describe: "Overwrite existing local files" });
 
 type PullArgs = {
   id?: string;
+  ticket_id?: string;
   force: boolean;
 };
 
@@ -36,7 +41,7 @@ export const createHandler =
     if (!root) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
 
     const result = await deps.pullTickets(projectId, {
-      ticket_id: argv.id,
+      ticket_id: argv.id ?? argv.ticket_id,
       force: argv.force,
       repo_path: root,
     });

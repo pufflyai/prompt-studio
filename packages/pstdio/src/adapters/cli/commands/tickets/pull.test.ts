@@ -41,6 +41,19 @@ describe("tickets pull", () => {
     });
   });
 
+  test("accepts the planner command ticket_id flag alias", async () => {
+    const deps = baseDeps();
+    const handler = createHandler(deps);
+
+    await handler({ ticket_id: "PS-2", force: false, _: [], $0: "" } as never);
+
+    expect(deps.pullTickets).toHaveBeenCalledWith("proj-1", {
+      ticket_id: "PS-2",
+      force: false,
+      repo_path: "/repo",
+    });
+  });
+
   test("throws when run outside a pstdio project", async () => {
     const deps = {
       ...baseDeps(),

@@ -71,7 +71,7 @@ describe("tickets implement", () => {
 
     await handler({ id: "PS-1", _: [], $0: "" } as never);
 
-    expect(updateTicket).toHaveBeenCalledWith("t-1", { status_id: "s-wip" });
+    expect(updateTicket).toHaveBeenCalledWith("proj-1", "t-1", { status_id: "s-wip" });
     expect(log).toHaveBeenCalledWith("Ticket PS-1 moved to wip");
     expect(log).toHaveBeenCalledWith("Launching agent...");
     expect(launchAgent).toHaveBeenCalledTimes(1);

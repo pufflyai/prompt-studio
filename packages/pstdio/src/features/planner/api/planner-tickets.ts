@@ -1,5 +1,5 @@
 import { createRequest, type RequestFn } from "@pstdio/sdk/client";
-import type { TicketDetail, TicketListItem } from "@pstdio/sdk/resources";
+import type { FileRecord, Status, Tag, TicketDetail, TicketListItem } from "@pstdio/sdk/resources";
 import { API_URL } from "@/features/api-url";
 
 type ListPlannerTicketsParams = {
@@ -39,11 +39,32 @@ type StoredTicket = {
   content?: string;
   displayTitle?: string | null;
   statusId?: string | null;
+  files?: unknown;
 };
 
 type StoredStatus = {
   id?: string;
   name?: string;
+  color?: string;
+  sortOrder?: number;
+  isDefault?: boolean;
+};
+
+type StoredTagOption = {
+  id?: string;
+  name?: string;
+  color?: string;
+  icon?: string | null;
+  description?: string | null;
+  sortOrder?: number;
+};
+
+type StoredFile = {
+  id?: string;
+  fileName?: string;
+  mimeType?: string | null;
+  contentBase64?: string;
+  relativePath?: string;
 };
 
 const PLANNER_EXTENSION_ID = "pstdio.planner";
@@ -92,9 +113,73 @@ const toStatusNameById = (rows: ExtensionCollectionRow[]) => {
   return new Map(entries);
 };
 
-const toTicketListItem = (ticket: StoredTicket, statusNameById: Map<string, string>) => {
+const toTagNameById = (rows: ExtensionCollectionRow[]) => {
+  const entries: [string, string][] = [];
+
+  for (const row of rows) {
+    const option = asRecord(row.value_json) as StoredTagOption;
+    const id = asString(option.id, row.item_id);
+    const name = asString(option.name);
+    if (id && name) entries.push([id, name]);
+  }
+
+  return new Map(entries);
+};
+
+const toPlannerStatus = (projectId: string, row: ExtensionCollectionRow, index: number): Status => {
+  const status = asRecord(row.value_json) as StoredStatus;
+  const timestamp = new Date(0).toISOString();
+
+  return {
+    id: asString(status.id, row.item_id),
+    project_id: projectId,
+    name: asString(status.name, row.item_id),
+    color: asString(status.color, "gray"),
+    sort_order: typeof status.sortOrder === "number" ? status.sortOrder : index + 1,
+    is_default: asBoolean(status.isDefault),
+    can_create: true,
+    can_drag_in: true,
+    can_drag_out: true,
+    column_actions: [],
+    created_at: timestamp,
+    updated_at: timestamp,
+    deleted_at: null,
+  } satisfies Status;
+};
+
+const toPlannerTag = (projectId: string, rows: ExtensionCollectionRow[]): Tag => {
+  const timestamp = new Date(0).toISOString();
+
+  return {
+    id: "planner-tags",
+    project_id: projectId,
+    name: "Tags",
+    type: "multi_select",
+    options: rows.map((row, index) => {
+      const option = asRecord(row.value_json) as StoredTagOption;
+      return {
+        id: asString(option.id, row.item_id),
+        name: asString(option.name, row.item_id),
+        color: asString(option.color, "gray"),
+        icon: (option.icon as string | null | undefined) ?? null,
+        description: (option.description as string | null | undefined) ?? null,
+        sort_order: typeof option.sortOrder === "number" ? option.sortOrder : index + 1,
+      };
+    }),
+    created_at: timestamp,
+    updated_at: timestamp,
+    deleted_at: null,
+  } satisfies Tag;
+};
+
+const toTicketListItem = (
+  ticket: StoredTicket,
+  statusNameById: Map<string, string>,
+  tagNameById: Map<string, string>,
+) => {
   const id = asString(ticket.id, asString(ticket.shorthand));
   const statusId = (ticket.statusId as string | null | undefined) ?? null;
+  const tagIds = tagNamesOf(ticket);
 
   return {
     id,
@@ -114,8 +199,8 @@ const toTicketListItem = (ticket: StoredTicket, statusNameById: Map<string, stri
     created_at: asString(ticket.createdAt),
     updated_at: asString(ticket.updatedAt, asString(ticket.createdAt)),
     status_name: statusId ? (statusNameById.get(statusId) ?? statusId) : null,
-    tag_ids: tagNamesOf(ticket),
-    tag_names: tagNamesOf(ticket),
+    tag_ids: tagIds,
+    tag_names: tagIds.map((tagId) => tagNameById.get(tagId) ?? tagId),
   } satisfies TicketListItem;
 };
 
@@ -143,6 +228,28 @@ const toTicketDetail = (ticket: StoredTicket) => {
   } satisfies TicketDetail;
 };
 
+const fileRowsOf = (ticket: StoredTicket) =>
+  Array.isArray(ticket.files)
+    ? ticket.files.map((value) => asRecord(value) as StoredFile).filter((file) => asString(file.fileName).length > 0)
+    : [];
+
+const toFileRecord = (projectId: string, ticket: StoredTicket, file: StoredFile): FileRecord => {
+  const timestamp = asString(ticket.updatedAt, asString(ticket.createdAt, new Date(0).toISOString()));
+
+  return {
+    id: asString(file.id, asString(file.fileName)),
+    project_id: projectId,
+    file_name: asString(file.relativePath, asString(file.fileName)),
+    file_kind: "ticket_file",
+    storage_path: `planner://${asString(ticket.id, asString(ticket.shorthand))}/${asString(file.id, asString(file.fileName))}`,
+    mime_type: (file.mimeType as string | null | undefined) ?? null,
+    size_bytes: asString(file.contentBase64).length,
+    hash: null,
+    created_at: timestamp,
+    updated_at: timestamp,
+  } satisfies FileRecord;
+};
+
 const matchesFilters = (ticket: TicketListItem, params: ListPlannerTicketsParams) => {
   if (ticket.archived !== (params.archived ?? false)) return false;
   if (params.draft !== undefined && ticket.draft !== params.draft) return false;
@@ -158,15 +265,17 @@ export const createPlannerTicketApi = (request: RequestFn = createPlannerRequest
     request<ExtensionCollectionResponse>(collectionPath(projectId, collection));
 
   const list = async (params: ListPlannerTicketsParams) => {
-    const [ticketRows, statusRows] = await Promise.all([
+    const [ticketRows, statusRows, tagOptionRows] = await Promise.all([
       listCollection(params.project_id, "tickets"),
       listCollection(params.project_id, "statuses"),
+      listCollection(params.project_id, "tag_options"),
     ]);
     const statusNameById = toStatusNameById(statusRows.items);
+    const tagNameById = toTagNameById(tagOptionRows.items);
 
     return ticketRows.items
       .map(toStoredTicket)
-      .map((ticket) => toTicketListItem(ticket, statusNameById))
+      .map((ticket) => toTicketListItem(ticket, statusNameById, tagNameById))
       .filter((ticket) => matchesFilters(ticket, params));
   };
 
@@ -178,9 +287,31 @@ export const createPlannerTicketApi = (request: RequestFn = createPlannerRequest
     return ticket ? toTicketDetail(ticket) : null;
   };
 
-  return { list, get };
+  const listStatuses = async (projectId: string) => {
+    const rows = await listCollection(projectId, "statuses");
+    return rows.items.map((row, index) => toPlannerStatus(projectId, row, index));
+  };
+
+  const listTags = async (projectId: string) => {
+    const rows = await listCollection(projectId, "tag_options");
+    return [toPlannerTag(projectId, rows.items)];
+  };
+
+  const listFiles = async (projectId: string, ticketId: string) => {
+    const ticketRows = await listCollection(projectId, "tickets");
+    const ticket = ticketRows.items
+      .map(toStoredTicket)
+      .find((item) => item.id === ticketId || item.shorthand === ticketId);
+    return ticket ? fileRowsOf(ticket).map((file) => toFileRecord(projectId, ticket, file)) : [];
+  };
+
+  return { list, get, listStatuses, listTags, listFiles };
 };
 
 export const listPlannerTickets = (params: ListPlannerTicketsParams) => createPlannerTicketApi().list(params);
 export const getPlannerTicket = (projectId: string, ticketId: string) =>
   createPlannerTicketApi().get(projectId, ticketId);
+export const listPlannerStatuses = (projectId: string) => createPlannerTicketApi().listStatuses(projectId);
+export const listPlannerTags = (projectId: string) => createPlannerTicketApi().listTags(projectId);
+export const listPlannerTicketFiles = (projectId: string, ticketId: string) =>
+  createPlannerTicketApi().listFiles(projectId, ticketId);

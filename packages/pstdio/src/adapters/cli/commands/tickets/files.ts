@@ -81,7 +81,7 @@ export const createHandler =
     const ticket = await deps.resolveTicketByShorthand(projectId, argv.id);
     if (!ticket) throw new Error(`Ticket not found: ${argv.id}`);
 
-    const dbFiles = await deps.listTicketFiles(ticket.id);
+    const dbFiles = await deps.listTicketFiles(ticket.id, projectId);
     const localFiles = root ? listLocalTicketFiles(root, argv.id) : [];
     const ticketDir = root ? resolveTicketDir(root, argv.id) : null;
     const ticketDirRelative = ticketDir && root ? ticketDir.replace(`${root}/`, "") : null;

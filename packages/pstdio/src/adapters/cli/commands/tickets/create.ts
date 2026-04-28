@@ -2,8 +2,6 @@ import type { Arguments, Argv } from "yargs";
 import { readConfig } from "@/features/config/config";
 import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 import { createTicket as defaultCreateTicket } from "@/features/tickets/api/create-ticket";
-import { updateTicket as defaultUpdateTicket } from "@/features/tickets/api/update-ticket";
-import { uploadTicketFile as defaultUploadTicketFile } from "@/features/tickets/api/upload-ticket-file";
 import { writeTicketFile as defaultWriteTicketFile } from "@/features/tickets/local-ticket";
 import { resolveParentTicketId as defaultResolveParentTicketId } from "@/features/tickets/resolve-parent-ticket-id";
 import { resolveStatusId as defaultResolveStatusId } from "@/features/tickets/resolve-status-id";
@@ -34,8 +32,6 @@ type Deps = {
   resolveProjectId: typeof defaultResolveProjectId;
   readConfig: typeof readConfig;
   createTicket: typeof defaultCreateTicket;
-  updateTicket: typeof defaultUpdateTicket;
-  uploadTicketFile: typeof defaultUploadTicketFile;
   resolveStatusId: typeof defaultResolveStatusId;
   resolveParentTicketId: typeof defaultResolveParentTicketId;
   resolveTagIds: typeof defaultResolveTagIds;
@@ -48,8 +44,6 @@ const defaultDeps: Deps = {
   resolveProjectId: defaultResolveProjectId,
   readConfig,
   createTicket: defaultCreateTicket,
-  updateTicket: defaultUpdateTicket,
-  uploadTicketFile: defaultUploadTicketFile,
   resolveStatusId: defaultResolveStatusId,
   resolveParentTicketId: defaultResolveParentTicketId,
   resolveTagIds: defaultResolveTagIds,
@@ -64,24 +58,16 @@ export const createHandler =
     const tagIds = argv.tag?.length ? await deps.resolveTagIds(projectId, argv.tag) : undefined;
     const statusId = argv.status ? await deps.resolveStatusId(projectId, argv.status) : undefined;
     const parentId = argv["parent-id"] ? await deps.resolveParentTicketId(projectId, argv["parent-id"]) : undefined;
+    const ticketContent = `# ${argv.content}\n`;
 
     const ticket = await deps.createTicket({
       project_id: projectId,
-      content: argv.content,
+      content: ticketContent,
       draft: false,
       tag_ids: tagIds,
       status_id: statusId,
       parent_id: parentId,
     });
-
-    const ticketContent = `# ${argv.content}\n`;
-    const contentBase64 = Buffer.from(ticketContent).toString("base64");
-    const uploaded = await deps.uploadTicketFile(ticket.id, {
-      file_name: "ticket.md",
-      content_base64: contentBase64,
-      mime_type: "text/markdown",
-    });
-    await deps.updateTicket(ticket.id, { file_id: uploaded.id });
 
     const isLocalProject = root && deps.readConfig(root);
     if (isLocalProject) {
@@ -95,7 +81,7 @@ export const createHandler =
         depends_on: null,
         parallelizable: null,
         blocked_reason: null,
-        tag_names: [],
+        tag_names: argv.tag ?? [],
       });
       const content = applyFrontmatterValues(frontmatter, ticketContent);
       deps.writeTicketFile(root, ticket.shorthand, content);

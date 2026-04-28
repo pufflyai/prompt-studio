@@ -170,6 +170,33 @@ describe("runtime-backed extension command routing for static namespaces", () =>
     expect(stderr).toBe("");
   });
 
+  test("does not duplicate built-in commands when planner metadata shares static ticket paths", () => {
+    const projectRoot = createProject();
+
+    const output = Bun.spawnSync({
+      cmd: ["bun", cliEntrypoint, "tickets", "--help"],
+      cwd: projectRoot,
+      env: createCliEnv({
+        PSTDIO_DISABLE_API_AUTO_START: "1",
+        PSTDIO_DISABLE_EMBED_MANIFEST: "1",
+      }),
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    const stdout = new TextDecoder().decode(output.stdout);
+    const stderr = new TextDecoder().decode(output.stderr);
+    const updateCommandRows = stdout
+      .split("\n")
+      .filter((line) => line.trimStart().startsWith("pstdio tickets update "))
+      .filter((line) => !line.includes("update-when-attempt-status"));
+
+    expect(output.exitCode).toBe(0);
+    expect(updateCommandRows).toHaveLength(1);
+    expect(stdout).toContain("id: pstdio.planner.updateTicket");
+    expect(stderr).toBe("");
+  });
+
   test("prints command-level provider metadata for extension commands in static namespaces", () => {
     const projectRoot = createProject();
     writeTicketsExtension(projectRoot);

@@ -159,6 +159,12 @@ describe("extension command CLI routing regressions", () => {
     expect(output.stderr).toContain('Extension "pstdio.planner" is disabled for this project.');
     expect(output.stderr).not.toContain("PS-1");
     expect(output.stdout).toBe("");
-    expect(requestBody).toEqual({ params: { ticket_id: "PS-1" } });
+    expect(requestBody).toEqual({
+      params: {
+        force: false,
+        repo_path: expect.stringContaining(projectRoot),
+        ticket_id: "PS-1",
+      },
+    });
   });
 });

@@ -58,4 +58,18 @@ describe("createPlannerStorage", () => {
 
     await expect(storage.provider.resolveTagIds(["missing"])).rejects.toThrow("Tag option not found: missing");
   });
+
+  test("exposes stored tag ids as tag names through the workflow provider", async () => {
+    const ctx = createContext();
+    await ctx.storage.collection("tag_options").put("tag-1", { id: "tag-1", name: "bug" });
+    const storage = createPlannerStorage(ctx);
+
+    await storage.createTicket({
+      shorthand: "PS-1",
+      content: "# Tagged ticket",
+      tagIds: ["tag-1"],
+    });
+
+    await expect(storage.provider.getByShorthand("PS-1")).resolves.toMatchObject({ tagNames: ["bug"] });
+  });
 });

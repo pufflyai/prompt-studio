@@ -23,26 +23,11 @@ const makeTicketResponse = (
     updated_at: "2026-03-04T00:00:00.000Z",
   }) as never;
 
-const makeUploadResponse = () => ({
-  id: "file-1",
-  project_id: "proj-1",
-  file_name: "ticket.md",
-  file_kind: "ticket_file",
-  storage_path: "/tmp/file",
-  mime_type: "text/markdown",
-  size_bytes: 0,
-  hash: null,
-  created_at: "2026-03-04T00:00:00.000Z",
-  updated_at: "2026-03-04T00:00:00.000Z",
-});
-
 const baseDeps = {
   cwd: () => "/work/repo",
   resolveProjectId: () => ({ projectId: "proj-1", root: "/work/repo" }),
   readConfig: (_root: string) => ({ project_id: "proj-1" }) as { project_id: string } | null,
   createTicket: mock(async () => makeTicketResponse()),
-  updateTicket: mock(async () => makeTicketResponse()),
-  uploadTicketFile: mock(async () => makeUploadResponse()),
   resolveStatusId: async (_pid: string, name: string) => {
     const statuses: Record<string, string> = { backlog: "s-backlog", wip: "s-wip" };
     const id = statuses[name];
@@ -70,25 +55,18 @@ describe("tickets create", () => {
     expect(createTicket).toHaveBeenCalledWith(expect.objectContaining({ draft: false }));
   });
 
-  test("uploads content as file and updates ticket with file_id", async () => {
-    const uploadTicketFile = mock(async () => makeUploadResponse());
-    const updateTicket = mock(async () => makeTicketResponse());
+  test("sends markdown ticket content to planner create", async () => {
+    const createTicket = mock(async () => makeTicketResponse());
 
     const handler = createHandler({
       ...baseDeps,
-      uploadTicketFile,
-      updateTicket,
+      createTicket,
       log: mock(),
     });
 
     await handler({ content: "New ticket", _: [], $0: "" } as never);
 
-    expect(uploadTicketFile).toHaveBeenCalledWith("t-1", {
-      file_name: "ticket.md",
-      content_base64: Buffer.from("# New ticket\n").toString("base64"),
-      mime_type: "text/markdown",
-    });
-    expect(updateTicket).toHaveBeenCalledWith("t-1", { file_id: "file-1" });
+    expect(createTicket).toHaveBeenCalledWith(expect.objectContaining({ content: "# New ticket\n" }));
   });
 
   test("writes local file with frontmatter when in a pstdio project", async () => {

@@ -1,5 +1,7 @@
 export type { TicketFile } from "@pstdio/sdk/resources";
 
-import { apiClient } from "@/features/api-client";
+import { listPlannerTicketFiles } from "@/features/planner/api/planner-tickets";
+import { resolveProjectId } from "@/features/projects/resolve-project-id";
 
-export const listTicketFiles = async (ticketId: string) => apiClient().tickets.listFiles(ticketId);
+export const listTicketFiles = async (ticketId: string, projectId = resolveProjectId(process.cwd()).projectId) =>
+  listPlannerTicketFiles(projectId, ticketId);
