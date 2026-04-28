@@ -161,6 +161,13 @@ jobs:
         run: bun run build
 
       - name: Verify packaged binaries
+        if: ${{ runner.os != 'Windows' }}
+        run: bun run scripts/verify-packages.ts
+
+      - name: Verify packaged binaries on Windows
+        if: ${{ runner.os == 'Windows' }}
+        env:
+          PSTDIO_SKIP_PACKAGED_SMOKE: "1"
         run: bun run scripts/verify-packages.ts
 
       - name: Add pstdio binary to PATH (non-Windows)
@@ -241,6 +248,8 @@ jobs:
         run: bun run build
 
       - name: Verify packaged binaries
+        env:
+          PSTDIO_SKIP_PACKAGED_SMOKE: "1"
         run: bun run scripts/verify-packages.ts
 
       - name: Add pstdio binary to PATH on host

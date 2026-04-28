@@ -3,12 +3,10 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { buildBinary } from "./packaged-helpers";
+import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 
 const BUILD_TIMEOUT = 180_000;
 const SMOKE_TEST_TIMEOUT = 30_000;
-const REPO_ROOT = join(import.meta.dirname, "../../../..");
-const BINARY_PATH = join(REPO_ROOT, "dist/pstdio");
 const createCandidatePort = () => 42_000 + Math.floor(Math.random() * 200);
 
 const waitForReady = async (baseUrl: string, timeoutMs = 10_000) => {
@@ -79,7 +77,7 @@ const startPackagedServe = async (tempRoot: string) => {
     const baseUrl = `http://localhost:${port}`;
     const storagePath = join(tempRoot, "storage");
     const dbPath = join(tempRoot, "db.sqlite");
-    const child = spawn(BINARY_PATH, ["serve", "--port", String(port)], {
+    const child = spawn(PACKAGED_BINARY_PATH, ["serve", "--port", String(port)], {
       // Run outside the repo root so runtime file access cannot rely on local workspace paths.
       cwd: tempRoot,
       env: {
