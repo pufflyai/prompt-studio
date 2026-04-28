@@ -31,6 +31,7 @@ runs:
       run: |
         if [ "${{ inputs.harness }}" = "claude-code" ]; then
           bun install -g @anthropic-ai/claude-code
+          node "$HOME/.bun/install/global/node_modules/@anthropic-ai/claude-code/install.cjs"
         elif [ "${{ inputs.harness }}" = "opencode" ]; then
           bun install -g opencode-ai
         else
