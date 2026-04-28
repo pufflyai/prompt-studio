@@ -38,7 +38,6 @@ jobs:
   cross-platform:
     name: ${{ matrix.id }}
     runs-on: ${{ matrix.runner }}
-    if: ${{ (inputs.os-filter == 'all' || inputs.os-filter == matrix.os_filter) && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
     strategy:
       fail-fast: false
       matrix:
@@ -235,19 +234,24 @@ jobs:
             install_method: bun-global
     steps:
       - uses: actions/checkout@v5
+        if: ${{ (inputs.os-filter == 'all' || inputs.os-filter == matrix.os_filter) && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
       - uses: ./.github/actions/setup-bun-pstdio
+        if: ${{ (inputs.os-filter == 'all' || inputs.os-filter == matrix.os_filter) && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
 
       - name: Build platform packages
+        if: ${{ (inputs.os-filter == 'all' || inputs.os-filter == matrix.os_filter) && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
         run: bun run scripts/build-all.ts
 
       - name: Scaffold platform packages
+        if: ${{ (inputs.os-filter == 'all' || inputs.os-filter == matrix.os_filter) && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
         run: bun run scripts/scaffold-platform-packages.ts
 
       - name: Verify packaged binaries
+        if: ${{ (inputs.os-filter == 'all' || inputs.os-filter == matrix.os_filter) && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
         run: bun run scripts/verify-packages.ts
 
       - name: Add pstdio binary to PATH (non-Windows)
-        if: ${{ runner.os != 'Windows' }}
+        if: ${{ runner.os != 'Windows' && (inputs.os-filter == 'all' || inputs.os-filter == matrix.os_filter) && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
         shell: bash
         run: |
           mkdir -p .ci/bin
@@ -256,7 +260,7 @@ jobs:
           echo "$GITHUB_WORKSPACE/.ci/bin" >> "$GITHUB_PATH"
 
       - name: Add pstdio binary to PATH (Windows)
-        if: ${{ runner.os == 'Windows' }}
+        if: ${{ runner.os == 'Windows' && (inputs.os-filter == 'all' || inputs.os-filter == matrix.os_filter) && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path .ci/bin | Out-Null
@@ -265,13 +269,14 @@ jobs:
           "$env:GITHUB_WORKSPACE/.ci/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Install harness
+        if: ${{ (inputs.os-filter == 'all' || inputs.os-filter == matrix.os_filter) && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
         uses: ./.github/actions/install-harness
         with:
           harness: ${{ matrix.harness }}
           install-method: ${{ matrix.install_method }}
 
       - name: Verify pstdio and harness binaries (non-Windows)
-        if: ${{ runner.os != 'Windows' }}
+        if: ${{ runner.os != 'Windows' && (inputs.os-filter == 'all' || inputs.os-filter == matrix.os_filter) && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
         shell: bash
         run: |
           pstdio --version
@@ -282,7 +287,7 @@ jobs:
           fi
 
       - name: Verify pstdio and harness binaries (Windows)
-        if: ${{ runner.os == 'Windows' }}
+        if: ${{ runner.os == 'Windows' && (inputs.os-filter == 'all' || inputs.os-filter == matrix.os_filter) && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
         shell: pwsh
         run: |
           pstdio --version
@@ -293,6 +298,7 @@ jobs:
           }
 
       - name: Run harness connection smoke test
+        if: ${{ (inputs.os-filter == 'all' || inputs.os-filter == matrix.os_filter) && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
         env:
           PSTDIO_HARNESS_UNDER_TEST: ${{ matrix.harness }}
           PSTDIO_INSTALL_METHOD: ${{ matrix.install_method }}
@@ -301,7 +307,6 @@ jobs:
   cross-platform-wsl:
     name: ${{ matrix.id }}
     runs-on: windows-2025
-    if: ${{ (inputs.os-filter == 'all' || inputs.os-filter == 'wsl') && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
     strategy:
       fail-fast: false
       matrix:
@@ -336,21 +341,28 @@ jobs:
             install_method: pwsh-installer
     steps:
       - uses: actions/checkout@v5
+        if: ${{ (inputs.os-filter == 'all' || inputs.os-filter == 'wsl') && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
       - uses: ./.github/actions/setup-bun-pstdio
+        if: ${{ (inputs.os-filter == 'all' || inputs.os-filter == 'wsl') && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
       - uses: Vampire/setup-wsl@v7
+        if: ${{ (inputs.os-filter == 'all' || inputs.os-filter == 'wsl') && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
         with:
           distribution: Ubuntu-24.04
 
       - name: Build platform packages
+        if: ${{ (inputs.os-filter == 'all' || inputs.os-filter == 'wsl') && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
         run: bun run scripts/build-all.ts
 
       - name: Scaffold platform packages
+        if: ${{ (inputs.os-filter == 'all' || inputs.os-filter == 'wsl') && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
         run: bun run scripts/scaffold-platform-packages.ts
 
       - name: Verify packaged binaries
+        if: ${{ (inputs.os-filter == 'all' || inputs.os-filter == 'wsl') && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
         run: bun run scripts/verify-packages.ts
 
       - name: Add pstdio binary to PATH on host
+        if: ${{ (inputs.os-filter == 'all' || inputs.os-filter == 'wsl') && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path .ci/bin | Out-Null
@@ -359,7 +371,7 @@ jobs:
           "$env:GITHUB_WORKSPACE/.ci/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Prepare WSL workspace tools
-        if: ${{ matrix.install_location == 'inside-wsl' }}
+        if: ${{ matrix.install_location == 'inside-wsl' && (inputs.os-filter == 'all' || inputs.os-filter == 'wsl') && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
         shell: pwsh
         run: |
           $workspace = wsl -d Ubuntu-24.04 -- bash -lc "wslpath '$env:GITHUB_WORKSPACE'"
@@ -367,14 +379,14 @@ jobs:
           wsl -d Ubuntu-24.04 -- bash -lc "export BUN_INSTALL=\$HOME/.bun; export PATH=\$BUN_INSTALL/bin:\$PATH; curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash - && sudo apt-get install -y nodejs && cd '$workspace' && bun install --frozen-lockfile && bun run scripts/build-compile.ts"
 
       - name: Install harness on Windows host
-        if: ${{ matrix.install_location == 'on-windows-host' }}
+        if: ${{ matrix.install_location == 'on-windows-host' && (inputs.os-filter == 'all' || inputs.os-filter == 'wsl') && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
         uses: ./.github/actions/install-harness
         with:
           harness: ${{ matrix.harness }}
           install-method: ${{ matrix.install_method }}
 
       - name: Install harness inside WSL
-        if: ${{ matrix.install_location == 'inside-wsl' }}
+        if: ${{ matrix.install_location == 'inside-wsl' && (inputs.os-filter == 'all' || inputs.os-filter == 'wsl') && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
         shell: pwsh
         run: |
           if ("${{ matrix.install_method }}" -eq "npm-global") {
@@ -392,7 +404,7 @@ jobs:
           }
 
       - name: Verify host binaries and run smoke
-        if: ${{ matrix.install_location == 'on-windows-host' }}
+        if: ${{ matrix.install_location == 'on-windows-host' && (inputs.os-filter == 'all' || inputs.os-filter == 'wsl') && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
         env:
           PSTDIO_HARNESS_UNDER_TEST: ${{ matrix.harness }}
           PSTDIO_INSTALL_METHOD: ${{ format('wsl-{0}-{1}', matrix.install_location, matrix.install_method) }}
@@ -407,7 +419,7 @@ jobs:
           bun test packages/e2e/src/packaged/harness-connect-smoke.test.ts
 
       - name: Verify WSL binaries and run smoke
-        if: ${{ matrix.install_location == 'inside-wsl' }}
+        if: ${{ matrix.install_location == 'inside-wsl' && (inputs.os-filter == 'all' || inputs.os-filter == 'wsl') && (inputs.harness-filter == 'all' || inputs.harness-filter == matrix.harness) }}
         env:
           PSTDIO_HARNESS_UNDER_TEST: ${{ matrix.harness }}
           PSTDIO_INSTALL_METHOD: ${{ format('wsl-{0}-{1}', matrix.install_location, matrix.install_method) }}
