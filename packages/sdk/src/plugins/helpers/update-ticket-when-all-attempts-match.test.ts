@@ -3,18 +3,25 @@ import { updateTicketWhenAllAttemptsMatch } from "./update-ticket-when-all-attem
 
 describe("updateTicketWhenAllAttemptsMatch", () => {
   it("updates ticket when all attempts match a target attempt status", async () => {
-    const calls: { ticketId: string; input: { all_attempts_status: string; set_status: string } }[] = [];
+    const calls: unknown[] = [];
 
     const ctx = {
       projectId: "proj-1",
       client: {
-        tickets: {
-          list: async () => [{ id: "ticket-1", shorthand: "PS-1" }],
-          updateWhenAttemptStatus: async (
-            ticketId: string,
-            input: { all_attempts_status: string; set_status: string },
-          ) => {
-            calls.push({ ticketId, input });
+        extensions: {
+          listCollection: async () => [
+            {
+              item_id: "ticket-1",
+              project_id: "proj-1",
+              value_json: { id: "ticket-1", shorthand: "PS-1" },
+              created_at: "created",
+              updated_at: "updated",
+            },
+          ],
+        },
+        extensionCommands: {
+          execute: async (_projectId: string, commandId: string, input: unknown) => {
+            calls.push({ commandId, input });
             return { updated: true };
           },
         },
@@ -30,8 +37,14 @@ describe("updateTicketWhenAllAttemptsMatch", () => {
     expect(updated).toBe(true);
     expect(calls).toEqual([
       {
-        ticketId: "ticket-1",
-        input: { all_attempts_status: "reviewed", set_status: "review" },
+        commandId: "pstdio.planner.updateTicketWhenAttemptStatus",
+        input: {
+          params: {
+            ticket_id: "ticket-1",
+            all_attempts_status: "reviewed",
+            set_status: "review",
+          },
+        },
       },
     ]);
   });

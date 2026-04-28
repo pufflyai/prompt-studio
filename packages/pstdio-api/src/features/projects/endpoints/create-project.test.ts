@@ -100,6 +100,29 @@ describe("POST /v1/projects", () => {
     }
   });
 
+  test("runs built-in extension initial setup for project-owned planner metadata", async () => {
+    const createRes = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Planner Metadata Project" }),
+    });
+    expect(createRes.status).toBe(201);
+
+    const project = (await createRes.json()) as { id: string };
+    const statusesRes = await app.request(`/v1/projects/${project.id}/extensions/pstdio.planner/collections/statuses`);
+    expect(statusesRes.status).toBe(200);
+
+    const statuses = (await statusesRes.json()) as {
+      items: Array<{ value_json: { name: string; sortOrder: number } }>;
+    };
+    expect(
+      statuses.items
+        .map((item) => item.value_json)
+        .sort((left, right) => left.sortOrder - right.sortOrder)
+        .map((status) => status.name),
+    ).toEqual(["backlog", "ready", "wip", "blocked", "review", "done"]);
+  });
+
   test("rolls back the project when seeding fails", async () => {
     const storagePath = join(tempRoot, "storage");
     const projectName = "Rollback Project";

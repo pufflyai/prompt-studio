@@ -41,6 +41,7 @@ export type PlannerTicketRecord = {
 
 export type PlannerTicketFileRecord = {
   id: string;
+  fileId: string;
   fileName: string;
   mimeType: string | null;
 };

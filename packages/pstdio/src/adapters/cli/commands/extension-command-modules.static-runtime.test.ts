@@ -346,7 +346,7 @@ export default {
     );
 
     const output = Bun.spawnSync({
-      cmd: ["bun", cliEntrypoint, "tickets", "list", "--help"],
+      cmd: ["bun", cliEntrypoint, "workspaces", "list", "--help"],
       cwd: projectRoot,
       env: createCliEnv({
         PSTDIO_DISABLE_API_AUTO_START: "1",
@@ -360,7 +360,7 @@ export default {
     const stderr = new TextDecoder().decode(output.stderr);
 
     expect(output.exitCode).toBe(0);
-    expect(stdout).toContain("List tickets");
+    expect(stdout).toContain("List active workspaces");
     expect(stderr).toBe("");
     expect(existsSync(join(projectRoot, sideEffectFile))).toBe(false);
   });

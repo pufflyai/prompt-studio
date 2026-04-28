@@ -1,12 +1,16 @@
 import { defineExtension } from "@pstdio/sdk/extensions";
 import { plannerCommands } from "./commands";
 import { PLANNER_EXTENSION_ID } from "./contract";
+import { seedDefaultPlannerMetadata } from "./storage/default-metadata";
 
 export default defineExtension({
   id: PLANNER_EXTENSION_ID,
   name: "Planner",
   version: "0.1.0",
   commands: plannerCommands,
+  initialSetup: async (ctx) => {
+    await seedDefaultPlannerMetadata(ctx.storage);
+  },
 });
 
 export type {

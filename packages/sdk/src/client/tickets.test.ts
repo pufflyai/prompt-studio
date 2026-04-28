@@ -9,7 +9,7 @@ describe("ticket client extensions", () => {
     const calls: { url: string; method: string }[] = [];
     const fetchFn = ((url: string, init?: RequestInit) => {
       calls.push({ url: String(url), method: init?.method ?? "GET" });
-      return Promise.resolve(jsonResponse([]));
+      return Promise.resolve(jsonResponse({ items: [] }));
     }) as unknown as typeof fetch;
 
     const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
@@ -26,12 +26,10 @@ describe("ticket client extensions", () => {
 
     expect(calls).toHaveLength(1);
     expect(calls[0]!.method).toBe("GET");
-    expect(calls[0]!.url).toBe(
-      "http://test:1234/v1/tickets?project_id=proj-1&status=wip&tag=bug&tag=urgent&archived=false&draft=true&parent_id=PS-1&shorthand=PS-2&search=hello",
-    );
+    expect(calls[0]!.url).toBe("http://test:1234/v1/projects/proj-1/extensions/pstdio.planner/collections/tickets");
   });
 
-  it("downloads ticket file content as bytes", async () => {
+  it("does not call legacy ticket file routes", async () => {
     const calls: { url: string; method: string; auth?: string | null }[] = [];
     const fetchFn = ((url: string, init?: RequestInit) => {
       calls.push({
@@ -44,14 +42,10 @@ describe("ticket client extensions", () => {
 
     const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn, token: "secret" });
 
-    const result = await client.tickets.getFileContent("ticket-1", "file-1");
+    await expect(client.tickets.getFileContent("ticket-1", "file-1")).rejects.toThrow(
+      "client.tickets.getFileContent requires planner/generic APIs",
+    );
 
-    expect(Array.from(result)).toEqual([1, 2, 3]);
-    expect(calls).toHaveLength(1);
-    expect(calls[0]).toEqual({
-      url: "http://test:1234/v1/tickets/ticket-1/files/file-1/content",
-      method: "GET",
-      auth: "Bearer secret",
-    });
+    expect(calls).toHaveLength(0);
   });
 });

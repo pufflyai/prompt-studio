@@ -66,9 +66,21 @@ const createSSEReader = (response: Response) => {
     return events;
   };
 
+  const readEventsUntil = async (matches: (event: SSEEvent) => boolean, maxEvents: number) => {
+    const events: SSEEvent[] = [];
+
+    while (events.length < maxEvents && !events.some(matches)) {
+      const next = await readEvents(1);
+      if (next.length === 0) break;
+      events.push(...next);
+    }
+
+    return events;
+  };
+
   const close = () => reader.cancel();
 
-  return { readEvents, close };
+  return { readEvents, readEventsUntil, close };
 };
 
 describe("GET /v1/sync/stream", () => {
@@ -104,7 +116,10 @@ describe("GET /v1/sync/stream", () => {
       body: JSON.stringify({ name: "sync-test-project" }),
     });
 
-    const allEvents = await sse.readEvents(2);
+    const allEvents = await sse.readEventsUntil(
+      (event) => event.event === "sync:set" && (event.data as { table: string }).table === "projects",
+      25,
+    );
     sse.close();
 
     expect(allEvents[0].event).toBe("init");

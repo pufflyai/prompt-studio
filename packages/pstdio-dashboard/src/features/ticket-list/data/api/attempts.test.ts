@@ -40,25 +40,39 @@ describe("createTicketAttempt", () => {
   });
 
   it("accepts workspace-only responses without a session", async () => {
-    const fetchMock = mock(
-      async () =>
-        new Response(
+    const fetchMock = mock(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.endsWith("/v1/projects/project-1/extensions/pstdio.planner/collections/tickets")) {
+        return new Response(
           JSON.stringify({
-            mode: "worktree",
-            ticket: { id: "ticket-1" },
-            workspace: {
-              id: "workspace-1",
-              workspace_shorthand: "PS-72_A1",
-            },
-            session: null,
+            items: [
+              {
+                item_id: "ticket-1",
+                value_json: {
+                  id: "ticket-1",
+                  shorthand: "PS-72",
+                  displayTitle: "Ticket title",
+                  content: "# Ticket title\n",
+                },
+              },
+            ],
           }),
           { status: 200 },
-        ),
-    );
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          id: "workspace-1",
+          workspace_shorthand: "PS-72_A1",
+        }),
+        { status: 201 },
+      );
+    });
 
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-    await expect(createTicketAttempt({ ticketId: "ticket-1", startSession: false })).resolves.toEqual({
+    await expect(createTicketAttempt("project-1", { ticketId: "ticket-1", startSession: false })).resolves.toEqual({
       ticketId: "ticket-1",
       sessionId: null,
       workspaceId: "workspace-1",
@@ -66,10 +80,10 @@ describe("createTicketAttempt", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:19840/v1/tickets/ticket-1/attempts",
+      "http://localhost:19840/v1/workspaces",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ mode: "worktree", start_session: false }),
+        body: expect.stringContaining('"type":"pstdio.planner.ticket"'),
       }),
     );
   });

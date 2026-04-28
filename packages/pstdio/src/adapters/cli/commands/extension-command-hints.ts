@@ -4,8 +4,22 @@ export type ExtensionCommandHint = {
 };
 
 const firstPartyCommandHints: ExtensionCommandHint[] = [
+  { path: "tickets archive", extensionId: "pstdio.planner" },
+  { path: "tickets create", extensionId: "pstdio.planner" },
+  { path: "tickets delete", extensionId: "pstdio.planner" },
+  { path: "tickets files", extensionId: "pstdio.planner" },
+  { path: "tickets implement", extensionId: "pstdio.planner" },
+  { path: "tickets list", extensionId: "pstdio.planner" },
   { path: "tickets pull", extensionId: "pstdio.planner" },
   { path: "tickets push", extensionId: "pstdio.planner" },
+  { path: "tickets save", extensionId: "pstdio.planner" },
+  { path: "tickets update", extensionId: "pstdio.planner" },
+  { path: "tickets update-when-attempt-status", extensionId: "pstdio.planner" },
+  { path: "tickets view", extensionId: "pstdio.planner" },
+  { path: "tickets workspaces", extensionId: "pstdio.planner" },
+  { path: "tickets worktrees list", extensionId: "pstdio.planner" },
+  { path: "tickets worktrees remove-all", extensionId: "pstdio.planner" },
+  { path: "tickets write", extensionId: "pstdio.planner" },
 ];
 
 export const hintedExtensionCommandNamespaces = new Set(
@@ -15,22 +29,6 @@ export const hintedExtensionCommandNamespaces = new Set(
 );
 
 export const staticCommandPathsInExtensionNamespaces = new Set([
-  "tickets archive",
-  "tickets create",
-  "tickets delete",
-  "tickets files",
-  "tickets implement",
-  "tickets list",
-  "tickets pull",
-  "tickets save",
-  "tickets update",
-  "tickets update-when-attempt-status",
-  "tickets view",
-  "tickets workspaces",
-  "tickets worktrees",
-  "tickets worktrees list",
-  "tickets worktrees remove-all",
-  "tickets write",
   "workspaces create",
   "workspaces delete",
   "workspaces list",
@@ -40,7 +38,7 @@ export const staticCommandPathsInExtensionNamespaces = new Set([
 ]);
 
 export const staticExtensionCommandNamespaces = new Set(
-  [...staticCommandPathsInExtensionNamespaces]
+  [...staticCommandPathsInExtensionNamespaces, ...firstPartyCommandHints.map((hint) => hint.path)]
     .map((path) => path.split(" ")[0])
     .filter((namespace): namespace is string => Boolean(namespace)),
 );

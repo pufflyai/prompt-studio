@@ -140,30 +140,24 @@ export const buildWorkspacesByPlannerTicket = (rawWorkspaces: SyncedRow[] | unde
   return workspacesByTicket;
 };
 
-const sizeFromBase64 = (contentBase64: string) => {
-  const normalized = contentBase64.trim();
-  if (!normalized) return 0;
-  const padding = normalized.endsWith("==") ? 2 : normalized.endsWith("=") ? 1 : 0;
-  return Math.max(0, Math.floor((normalized.length * 3) / 4) - padding);
-};
-
-export const toPlannerTicketFiles = (ticketItem: SyncedRow | undefined) => {
+export const toPlannerTicketFiles = (ticketItem: SyncedRow | undefined, rawFiles: SyncedRow[] | undefined = []) => {
   const ticket = asRecord(ticketItem?.value_json);
   const storedFiles = Array.isArray(ticket.files) ? ticket.files.map(asRecord) : [];
+  const fileRowsById = new Map((rawFiles ?? []).map((file) => [asString(file.id), file]));
 
   const files: TicketFilePreview[] = [];
   const artifacts: ApiWorkspaceArtifact[] = [];
 
   for (const file of storedFiles) {
-    const id = asString(file.id);
+    const id = asString(file.fileId, asString(file.id));
+    const fileRow = fileRowsById.get(id);
     const fileName = asString(file.fileName, id);
-    const contentBase64 = asString(file.contentBase64);
     const base = {
       id,
       file_name: fileName,
       file_kind: asString(file.fileKind, "attachment"),
       mime_type: (file.mimeType as string | null | undefined) ?? null,
-      size_bytes: sizeFromBase64(contentBase64),
+      size_bytes: asNumber(fileRow?.size_bytes, 0),
       created_at: asString(ticketItem?.created_at),
     };
 
@@ -171,6 +165,7 @@ export const toPlannerTicketFiles = (ticketItem: SyncedRow | undefined) => {
     if (typeof relativePath === "string") {
       artifacts.push({
         ...base,
+        id: asString(file.id, id),
         file_id: id,
         relative_path: relativePath,
         updated_at: asString(ticketItem?.updated_at),

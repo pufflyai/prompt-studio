@@ -74,6 +74,7 @@ export type ApiTicketAttemptDiff = {
 
 export type CreateProjectTicketInput = {
   projectId: string;
+  title?: string | null;
   content?: string | null;
   tagIds?: string[];
   dependsOn?: string | null;

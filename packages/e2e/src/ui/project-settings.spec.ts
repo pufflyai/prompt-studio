@@ -18,6 +18,65 @@ const createProjectViaApi = async (request: import("@playwright/test").APIReques
   return (await res.json()) as { id: string; name: string };
 };
 
+const executePlannerCommand = async (
+  request: import("@playwright/test").APIRequestContext,
+  projectId: string,
+  commandId: string,
+  params: Record<string, unknown>,
+) => {
+  const res = await request.post(
+    `${apiBase}/v1/projects/${projectId}/extension-commands/pstdio.planner.${commandId}/execute`,
+    { data: { params } },
+  );
+  expect(res.ok()).toBe(true);
+  return res;
+};
+
+const listPlannerStatuses = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
+  const res = await request.get(`${apiBase}/v1/projects/${projectId}/extensions/pstdio.planner/collections/statuses`);
+  expect(res.ok()).toBe(true);
+  const body = (await res.json()) as {
+    items: Array<{ item_id: string; value_json: { id?: string; name?: string } }>;
+  };
+  return body.items.map((item) => ({
+    id: item.value_json.id ?? item.item_id,
+    name: item.value_json.name ?? item.item_id,
+  }));
+};
+
+const listPlannerTags = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
+  const [tagsRes, optionsRes] = await Promise.all([
+    request.get(`${apiBase}/v1/projects/${projectId}/extensions/pstdio.planner/collections/tags`),
+    request.get(`${apiBase}/v1/projects/${projectId}/extensions/pstdio.planner/collections/tag_options`),
+  ]);
+  expect(tagsRes.ok()).toBe(true);
+  expect(optionsRes.ok()).toBe(true);
+  const tagBody = (await tagsRes.json()) as {
+    items: Array<{ item_id: string; value_json: { id?: string; name?: string } }>;
+  };
+  const optionBody = (await optionsRes.json()) as {
+    items: Array<{
+      item_id: string;
+      value_json: { id?: string; tagId?: string; name?: string; icon?: string | null; color?: string };
+    }>;
+  };
+  const options = optionBody.items.map((item) => ({
+    id: item.value_json.id ?? item.item_id,
+    tagId: item.value_json.tagId ?? "",
+    name: item.value_json.name ?? item.item_id,
+    icon: item.value_json.icon ?? null,
+    color: item.value_json.color ?? "gray",
+  }));
+  return tagBody.items.map((item) => {
+    const id = item.value_json.id ?? item.item_id;
+    return {
+      id,
+      name: item.value_json.name ?? item.item_id,
+      options: options.filter((option) => option.tagId === id),
+    };
+  });
+};
+
 const createTemplateViaApi = async (
   request: import("@playwright/test").APIRequestContext,
   projectId: string,
@@ -174,11 +233,12 @@ test.describe("Project settings", () => {
   test.skip("deletes a non-default status from the status manager", async ({ page, request }) => {
     const project = await createProjectViaApi(request, `Status Delete ${Date.now()}`);
 
-    const createRes = await request.post(`${apiBase}/v1/projects/${project.id}/statuses`, {
-      data: { name: "to-delete", color: "pink" },
+    const createRes = await executePlannerCommand(request, project.id, "createStatus", {
+      name: "to-delete",
+      color: "pink",
     });
-    expect(createRes.ok()).toBe(true);
-    const created = (await createRes.json()) as { id: string; name: string };
+    const created = ((await createRes.json()) as { result: { id: string; name: string } }).result;
+    expect(created.id).toBeTruthy();
 
     await bypassOnboarding(page);
     await closeSessionBubble(page, project.id);
@@ -198,24 +258,23 @@ test.describe("Project settings", () => {
 
     const deleteResponse = page.waitForResponse(
       (response) =>
-        response.url().includes(`/v1/projects/${project.id}/statuses/${created.id}`) &&
-        response.request().method() === "DELETE" &&
+        response.url().includes(`/v1/projects/${project.id}/extension-commands/pstdio.planner.deleteStatus/execute`) &&
+        response.request().method() === "POST" &&
         response.status() === 200,
     );
     await saveButton.click();
     await deleteResponse;
 
-    const listRes = await request.get(`${apiBase}/v1/projects/${project.id}/statuses`);
-    expect(listRes.ok()).toBe(true);
-    const remaining = (await listRes.json()) as Array<{ name: string }>;
+    const remaining = await listPlannerStatuses(request, project.id);
     expect(remaining.find((s) => s.name === "to-delete")).toBeUndefined();
   });
 
   test.skip("cancel reverts status changes", async ({ page, request }) => {
     const project = await createProjectViaApi(request, `Status Cancel ${Date.now()}`);
 
-    await request.post(`${apiBase}/v1/projects/${project.id}/statuses`, {
-      data: { name: "temp-status", color: "pink" },
+    await executePlannerCommand(request, project.id, "createStatus", {
+      name: "temp-status",
+      color: "pink",
     });
 
     await bypassOnboarding(page);
@@ -319,39 +378,30 @@ test.describe("Project settings — skills", () => {
   test.skip("persists tag option icon after update", async ({ request }) => {
     const project = await createProjectViaApi(request, `Tag Icon ${Date.now()}`);
 
-    const tagsRes = await request.get(`${apiBase}/v1/projects/${project.id}/ticket-tags`);
-    const tags = (await tagsRes.json()) as {
-      id: string;
-      name: string;
-      options: { id: string; name: string; icon: string | null; color: string }[];
-    }[];
+    const tags = await listPlannerTags(request, project.id);
     const label = tags.find((t) => t.name === "label")!;
     const bugOption = label.options.find((o) => o.name === "bug")!;
 
-    const updateRes = await request.put(
-      `${apiBase}/v1/projects/${project.id}/ticket-tags/${label.id}/options/${bugOption.id}`,
-      { data: { icon: "star" } },
-    );
-    expect(updateRes.ok()).toBe(true);
-    const updated = (await updateRes.json()) as { icon: string | null };
+    const updateRes = await executePlannerCommand(request, project.id, "updateTagOption", {
+      option_id: bugOption.id,
+      icon: "star",
+    });
+    const updated = ((await updateRes.json()) as { result: { icon: string | null } }).result;
     expect(updated.icon).toBe("star");
 
     // Verify icon persists when fetching again
-    const tagsAfter = await request.get(`${apiBase}/v1/projects/${project.id}/ticket-tags`);
-    const tagsData = (await tagsAfter.json()) as typeof tags;
+    const tagsData = await listPlannerTags(request, project.id);
     const labelAfter = tagsData.find((t) => t.name === "label")!;
     const bugAfter = labelAfter.options.find((o) => o.name === "bug")!;
     expect(bugAfter.icon).toBe("star");
 
     // Update color without touching icon — icon should remain
-    const colorRes = await request.put(
-      `${apiBase}/v1/projects/${project.id}/ticket-tags/${label.id}/options/${bugOption.id}`,
-      { data: { color: "green" } },
-    );
-    expect(colorRes.ok()).toBe(true);
+    await executePlannerCommand(request, project.id, "updateTagOption", {
+      option_id: bugOption.id,
+      color: "green",
+    });
 
-    const tagsAfterColor = await request.get(`${apiBase}/v1/projects/${project.id}/ticket-tags`);
-    const tagsColorData = (await tagsAfterColor.json()) as typeof tags;
+    const tagsColorData = await listPlannerTags(request, project.id);
     const bugAfterColor = tagsColorData.find((t) => t.name === "label")!.options.find((o) => o.name === "bug")!;
     expect(bugAfterColor.icon).toBe("star");
     expect(bugAfterColor.color).toBe("green");

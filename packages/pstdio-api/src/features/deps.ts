@@ -3,6 +3,7 @@ import type { createAgentConfigService } from "../services/agent-config-service"
 import type { createAttemptStatusService } from "../services/attempt-status-service";
 import type { createExtensionCommandService } from "../services/extension-command-service";
 import type { createExtensionInstanceService } from "../services/extension-instance-service";
+import type { createExtensionSetupService } from "../services/extension-setup-service";
 import type { createExtensionStorageService } from "../services/extension-storage-service";
 import type { createFileService } from "../services/file-service";
 import type { createHarnessProviderService } from "../services/harness-provider-service";
@@ -44,4 +45,5 @@ export interface RouteDeps {
   syncService: ReturnType<typeof createSyncService>;
   pluginService: ReturnType<typeof createPluginService>;
   extensionCommandService: ReturnType<typeof createExtensionCommandService>;
+  extensionSetupService: ReturnType<typeof createExtensionSetupService>;
 }

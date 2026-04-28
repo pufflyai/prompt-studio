@@ -1,5 +1,6 @@
 import { type ActionClient, createActionClient } from "./actions";
 import { createExtensionCommandClient, type ExtensionCommandClient } from "./extension-commands";
+import { createExtensionClient, type ExtensionClient } from "./extensions";
 import { createHarnessClient, type HarnessClient } from "./harnesses";
 import { createProjectClient, type ProjectClient } from "./projects";
 import type { ClientOptions } from "./request";
@@ -24,13 +25,14 @@ export type PstdioClient = {
   harnesses: HarnessClient;
   actions: ActionClient;
   extensionCommands: ExtensionCommandClient;
+  extensions: ExtensionClient;
 };
 
 export const createClient = (options: ClientOptions = {}): PstdioClient => {
   const request = createRequest(options);
   return {
     projects: createProjectClient(request),
-    tickets: createTicketClient(request, options),
+    tickets: createTicketClient(request),
     workspaces: createWorkspaceClient(request),
     sessions: createSessionClient(request),
     statuses: createStatusClient(request),
@@ -40,5 +42,6 @@ export const createClient = (options: ClientOptions = {}): PstdioClient => {
     harnesses: createHarnessClient(request),
     actions: createActionClient(request),
     extensionCommands: createExtensionCommandClient(request),
+    extensions: createExtensionClient(request),
   };
 };

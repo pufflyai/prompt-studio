@@ -13,8 +13,12 @@ const ticketCommandSources = () =>
     }));
 
 describe("tickets planner boundary", () => {
-  test("ticket commands do not import planner implementations directly", () => {
-    for (const { fileName, source } of ticketCommandSources()) {
+  test("static ticket command tree only owns the namespace shell", () => {
+    const sources = ticketCommandSources();
+
+    expect(sources.map(({ fileName }) => fileName).sort()).toEqual(["index.ts"]);
+
+    for (const { fileName, source } of sources) {
       expect(source, fileName).not.toContain("pstdio-ext-planner");
     }
   });

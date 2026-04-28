@@ -27,39 +27,38 @@ const mockWorkspace = {
   updated_at: "2026-03-05T00:00:00.000Z",
 };
 
-const mockTicketAttempt = {
-  mode: "worktree" as const,
-  ticket: {
-    id: "t-1",
-    shorthand: "PS-1",
-    display_title: "Test",
-  },
-  workspace: mockWorkspace,
-  session: null,
-};
-
 const baseDeps = {
-  listTickets: async () => [mockTicket] as never,
-  createTicketAttempt: async () => mockTicketAttempt as never,
+  listPlannerTickets: async () => [mockTicket] as never,
+  createWorkspace: async () => mockWorkspace as never,
   log: mock() as (...args: unknown[]) => void,
 };
 
 describe("createWorkspaceForTicket", () => {
-  test("creates workspace via ticket-attempt API with start_session=false", async () => {
+  test("creates workspace linked to the planner ticket", async () => {
     const log = mock();
-    const createTicketAttempt = mock(async () => mockTicketAttempt) as never;
+    const createWorkspace = mock(async () => mockWorkspace) as never;
 
     const result = await createWorkspaceForTicket(
       { projectId: "proj-1", repoRoot: "/repo", ticketShorthand: "PS-1" },
-      { ...baseDeps, createTicketAttempt, log },
+      { ...baseDeps, createWorkspace, log },
     );
 
-    expect(createTicketAttempt).toHaveBeenCalledTimes(1);
-    expect(createTicketAttempt).toHaveBeenCalledWith("t-1", {
-      mode: "worktree",
-      start_session: false,
-      base: "HEAD",
-      repo_path: "/repo",
+    expect(createWorkspace).toHaveBeenCalledTimes(1);
+    expect(createWorkspace).toHaveBeenCalledWith({
+      project_id: "proj-1",
+      name: "PS-1",
+      branch: "workspace/PS-1",
+      anchors: [
+        {
+          type: "pstdio.planner.ticket",
+          id: "t-1",
+          projectId: "proj-1",
+          label: "PS-1",
+          extensionId: "pstdio.planner",
+          role: "primary",
+          metadata: { base: "HEAD", repoRoot: "/repo" },
+        },
+      ],
     });
     expect(log).toHaveBeenCalledWith("Created workspace PS-1_A1 for PS-1 at /tmp/pstdio/workspaces/PS-1_A1");
     expect(result).toEqual(mockWorkspace as never);
@@ -69,24 +68,23 @@ describe("createWorkspaceForTicket", () => {
     await expect(
       createWorkspaceForTicket(
         { projectId: "proj-1", repoRoot: "/repo", ticketShorthand: "PS-99" },
-        { ...baseDeps, listTickets: async () => [] as never },
+        { ...baseDeps, listPlannerTickets: async () => [] as never },
       ),
     ).rejects.toThrow("Ticket not found: PS-99");
   });
 
   test("uses base ref when provided", async () => {
-    const createTicketAttempt = mock(async () => mockTicketAttempt) as never;
+    const createWorkspace = mock(async () => mockWorkspace) as never;
 
     await createWorkspaceForTicket(
       { projectId: "proj-1", repoRoot: "/repo", ticketShorthand: "PS-1", base: "main" },
-      { ...baseDeps, createTicketAttempt },
+      { ...baseDeps, createWorkspace },
     );
 
-    expect(createTicketAttempt).toHaveBeenCalledWith("t-1", {
-      mode: "worktree",
-      start_session: false,
-      base: "main",
-      repo_path: "/repo",
-    });
+    expect(createWorkspace).toHaveBeenCalledWith(
+      expect.objectContaining({
+        anchors: [expect.objectContaining({ metadata: { base: "main", repoRoot: "/repo" } })],
+      }),
+    );
   });
 });

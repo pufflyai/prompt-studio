@@ -135,6 +135,32 @@ describe("runExtensionCommand", () => {
     ]);
   });
 
+  test("passes the provided template adapter to commands", async () => {
+    const command = createCommand({
+      run: async (ctx) => ctx.templates.get("ticket"),
+    });
+
+    const result = await runExtensionCommand({
+      commands: [command],
+      db,
+      projectId,
+      commandId: command.id,
+      templates: {
+        get: async (name: string) => ({
+          name,
+          templateType: "ticket",
+          content: "# {{TICKET_TITLE}}",
+        }),
+      },
+    });
+
+    expect(result).toEqual({
+      name: "ticket",
+      templateType: "ticket",
+      content: "# {{TICKET_TITLE}}",
+    });
+  });
+
   test("lets commands record activity for extension-owned targets", async () => {
     const target = { type: "project.lab.task", id: "task-1", projectId, label: "Task 1", extensionId: "project.lab" };
     const command = createCommand({

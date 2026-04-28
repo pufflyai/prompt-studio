@@ -195,6 +195,7 @@ describe("extension command execution from the real CLI", () => {
     );
     expect(requestBody).toEqual({
       params: {
+        __cli: true,
         note: "hello",
         count: 2,
         verbose: true,

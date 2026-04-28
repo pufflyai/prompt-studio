@@ -6,11 +6,13 @@ import { useTranslation } from "react-i18next";
 import { useTicketContent } from "@/features/ticket/hooks/use-ticket-content";
 import { isImageFileName } from "@/features/ticket/utils/ticket-file-selection";
 import type { ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
+import { buildApiUrl } from "@/lib/api";
 import type { ChangedFilesViewMode } from "../utils/build-changed-files-tree";
 import { buildWorkspaceChecksContentRequest } from "./workspace-checks-content-request";
 import { type FileIconInfo, FileListPanel, ResizableLeftPanel } from "./workspace-file-list-panel";
 
 interface WorkspaceChecksPanelProps {
+  projectId: string | undefined;
   ticketId: string;
   artifacts: ApiWorkspaceArtifact[];
 }
@@ -34,7 +36,7 @@ const resolveArtifactFileIcon = (path: string): FileIconInfo => {
 };
 
 export const WorkspaceChecksPanel = (props: WorkspaceChecksPanelProps) => {
-  const { ticketId, artifacts } = props;
+  const { projectId, ticketId, artifacts } = props;
   const { t } = useTranslation("tickets");
   const [viewMode, setViewMode] = useState<ChangedFilesViewMode>("nested");
   const [searchQuery, setSearchQuery] = useState("");
@@ -60,7 +62,7 @@ export const WorkspaceChecksPanel = (props: WorkspaceChecksPanelProps) => {
 
   const selectedArtifactId = selectedPath ? (artifactByDisplayPath.get(selectedPath)?.id ?? null) : null;
   const { selectedArtifact, refreshKey } = buildWorkspaceChecksContentRequest(artifacts, selectedArtifactId);
-  const artifactContent = useTicketContent(ticketId, selectedArtifact?.file_id ?? "", {
+  const artifactContent = useTicketContent(projectId, ticketId, selectedArtifact?.file_id ?? "", {
     enabled: Boolean(selectedArtifact),
     refreshKey,
   });
@@ -104,7 +106,7 @@ export const WorkspaceChecksPanel = (props: WorkspaceChecksPanelProps) => {
         {selectedArtifact && isImageFileName(selectedArtifact.relative_path) ? (
           <Box flex="1" minH="0" overflow="auto" p="md" display="flex" alignItems="center" justifyContent="center">
             <Image
-              src={`/v1/tickets/${ticketId}/files/${selectedArtifact.file_id}/content`}
+              src={buildApiUrl(`/v1/files/${selectedArtifact.file_id}/content`)}
               alt={stripArtifactPrefix(selectedArtifact.relative_path)}
               maxW="100%"
               maxH="100%"

@@ -43,10 +43,30 @@ const createProjectViaApi = async (request: import("@playwright/test").APIReques
   return (await res.json()) as { id: string; name: string };
 };
 
-const getTicketStatuses = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
-  const res = await request.get(`${apiBase}/v1/projects/${projectId}/ticket-statuses`);
+const executePlannerCommand = async (
+  request: import("@playwright/test").APIRequestContext,
+  projectId: string,
+  commandId: string,
+  params: Record<string, unknown>,
+) => {
+  const res = await request.post(
+    `${apiBase}/v1/projects/${projectId}/extension-commands/pstdio.planner.${commandId}/execute`,
+    { data: { params } },
+  );
   expect(res.ok()).toBe(true);
-  return (await res.json()) as { id: string; name: string }[];
+  return res;
+};
+
+const getTicketStatuses = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
+  const res = await request.get(`${apiBase}/v1/projects/${projectId}/extensions/pstdio.planner/collections/statuses`);
+  expect(res.ok()).toBe(true);
+  const body = (await res.json()) as {
+    items: Array<{ item_id: string; value_json: { id?: string; name?: string } }>;
+  };
+  return body.items.map((item) => ({
+    id: item.value_json.id ?? item.item_id,
+    name: item.value_json.name ?? item.item_id,
+  }));
 };
 
 const createTicketViaApi = async (
@@ -55,27 +75,26 @@ const createTicketViaApi = async (
   content: string,
   statusId: string,
 ) => {
-  const res = await request.post(`${apiBase}/v1/tickets`, {
-    data: { project_id: projectId, content, status_id: statusId },
+  const res = await executePlannerCommand(request, projectId, "createTicket", {
+    content,
+    status_id: statusId,
   });
-  expect(res.ok()).toBe(true);
-
-  return (await res.json()) as { id: string; shorthand: string };
+  const body = (await res.json()) as { result: { id: string; shorthand: string } };
+  return body.result;
 };
 
 const uploadTicketFileViaApi = async (
   request: import("@playwright/test").APIRequestContext,
+  projectId: string,
   ticketId: string,
   fileName: string,
   content: string,
 ) => {
-  const res = await request.post(`${apiBase}/v1/tickets/${ticketId}/files`, {
-    data: {
-      file_name: fileName,
-      content_base64: Buffer.from(content).toString("base64"),
-    },
+  await executePlannerCommand(request, projectId, "uploadTicketFile", {
+    ticket_id: ticketId,
+    file_name: fileName,
+    content_base64: Buffer.from(content).toString("base64"),
   });
-  expect(res.ok()).toBe(true);
 };
 
 const createOverflowProjectsViaApi = async (request: import("@playwright/test").APIRequestContext, count: number) => {
@@ -122,7 +141,13 @@ test.describe
 
       await context.setOffline(true);
 
-      await uploadTicketFileViaApi(request, ticketId, uploadedFileName, "file created while client is offline");
+      await uploadTicketFileViaApi(
+        request,
+        projectId,
+        ticketId,
+        uploadedFileName,
+        "file created while client is offline",
+      );
 
       await createOverflowProjectsViaApi(request, 65);
 

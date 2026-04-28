@@ -9,10 +9,12 @@ import {
   createRun,
   createSessionViaApi,
   createTicketViaApi,
+  deletePlannerTicket,
   getAlternateStatusId,
   getProjectId,
   type HookTestContext,
   registerRepo,
+  updatePlannerTicket,
   updateSessionStatus,
   waitFor,
   waitForJsonFile,
@@ -55,17 +57,9 @@ describe.skip("worktree creation hooks", () => {
 
       const run = createRun(ctx);
       const createTicketOutput = run('tickets create --content "hook block test"', repo);
-      const ticketShorthand = createTicketOutput.match(/Created ticket (\S+)/)![1];
+      expect(createTicketOutput).toContain("Created ticket");
 
-      const ticketRes = await fetch(`${api.url}/v1/tickets?project_id=${encodeURIComponent(projectId)}`);
-      const tickets = (await ticketRes.json()) as Array<{ id: string; shorthand: string }>;
-      const ticket = tickets.find((t) => t.shorthand === ticketShorthand)!;
-
-      const attemptRes = await fetch(`${api.url}/v1/tickets/${ticket.id}/attempts`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ start_session: false }),
-      });
+      const { res: attemptRes } = await createSessionViaApi(ctx, projectId);
       expect(attemptRes.status).toBe(500);
     },
     TEST_TIMEOUT,
@@ -130,7 +124,7 @@ export default { hooks: { postTicketCreation(ctx) { writeFileSync("${payloadFile
       );
       const { ticket } = await createTicketViaApi(ctx, projectId);
 
-      const deleteRes = await fetch(`${api.url}/v1/tickets/${ticket.id}`, { method: "DELETE" });
+      const deleteRes = await deletePlannerTicket(ctx, projectId, ticket.id);
       expect(deleteRes.status).toBe(403);
     },
     TEST_TIMEOUT,
@@ -154,7 +148,7 @@ export default { hooks: { postTicketDeletion(ctx) { writeFileSync("${markerFile}
       );
 
       const { ticket } = await createTicketViaApi(ctx, projectId);
-      const deleteRes = await fetch(`${api.url}/v1/tickets/${ticket.id}`, { method: "DELETE" });
+      const deleteRes = await deletePlannerTicket(ctx, projectId, ticket.id);
       expect(deleteRes.status).toBe(200);
 
       expect(await waitForPath(markerFile)).toBe(true);
@@ -176,11 +170,7 @@ export default { hooks: { postTicketDeletion(ctx) { writeFileSync("${markerFile}
       );
       const { ticket } = await createTicketViaApi(ctx, projectId);
 
-      const archiveRes = await fetch(`${api.url}/v1/tickets/${ticket.id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ archived: true }),
-      });
+      const archiveRes = await updatePlannerTicket(ctx, projectId, ticket.id, { archived: true });
       expect(archiveRes.status).toBe(403);
     },
     TEST_TIMEOUT,
@@ -204,11 +194,7 @@ export default { hooks: { postTicketArchive(ctx) { writeFileSync("${markerFile}"
       );
       const { ticket } = await createTicketViaApi(ctx, projectId);
 
-      await fetch(`${api.url}/v1/tickets/${ticket.id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ archived: true }),
-      });
+      await updatePlannerTicket(ctx, projectId, ticket.id, { archived: true });
 
       expect(await waitForPath(markerFile)).toBe(true);
     },
@@ -230,11 +216,7 @@ export default { hooks: { postTicketArchive(ctx) { writeFileSync("${markerFile}"
       const { ticket } = await createTicketViaApi(ctx, projectId);
       const newStatusId = await getAlternateStatusId(ctx, projectId, ticket.status_id ?? null);
 
-      const res = await fetch(`${api.url}/v1/tickets/${ticket.id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ status_id: newStatusId }),
-      });
+      const res = await updatePlannerTicket(ctx, projectId, ticket.id, { status_id: newStatusId });
       expect(res.status).toBe(403);
     },
     TEST_TIMEOUT,
@@ -259,11 +241,7 @@ export default { hooks: { postTicketStatusChange(ctx) { writeFileSync("${payload
       const { ticket } = await createTicketViaApi(ctx, projectId);
       const newStatusId = await getAlternateStatusId(ctx, projectId, ticket.status_id ?? null);
 
-      await fetch(`${api.url}/v1/tickets/${ticket.id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ status_id: newStatusId }),
-      });
+      await updatePlannerTicket(ctx, projectId, ticket.id, { status_id: newStatusId });
 
       const payload = await waitForJsonFile<{
         shorthand: string;

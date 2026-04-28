@@ -28,7 +28,7 @@ const mockWorkspace = {
 };
 
 const baseDeps = {
-  listTickets: async () => [mockTicket] as never,
+  listPlannerTickets: async () => [mockTicket] as never,
   createWorkspace: async () => mockWorkspace as never,
   log: mock() as (...args: unknown[]) => void,
 };
@@ -50,8 +50,17 @@ describe("createWorkspaceForExistingWorktree", () => {
 
     expect(createWorkspace).toHaveBeenCalledWith({
       project_id: "proj-1",
-      ticket_id: "t-1",
-      ticket_shorthand: "PS-1",
+      name: "PS-1",
+      anchors: [
+        {
+          type: "pstdio.planner.ticket",
+          id: "t-1",
+          projectId: "proj-1",
+          label: "PS-1",
+          extensionId: "pstdio.planner",
+          role: "primary",
+        },
+      ],
       branch: "workspace/PS-1_A1",
       worktree_path: "/tmp/pstdio/workspaces/PS-1_A1",
     });
@@ -68,7 +77,7 @@ describe("createWorkspaceForExistingWorktree", () => {
           ticketShorthand: "PS-99",
           worktreePath: "/tmp/pstdio/workspaces/PS-99_A1",
         },
-        { ...baseDeps, listTickets: async () => [] as never },
+        { ...baseDeps, listPlannerTickets: async () => [] as never },
       ),
     ).rejects.toThrow("Ticket not found: PS-99");
   });

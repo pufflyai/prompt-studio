@@ -140,7 +140,7 @@ describe("createRequest", () => {
     });
 
     try {
-      await request("/v1/tickets/bad", { method: "PATCH", body: {} });
+      await request("/v1/bad-request", { method: "PATCH", body: {} });
       expect.unreachable("should have thrown");
     } catch (err) {
       expect(err).toBeInstanceOf(PstdioApiError);

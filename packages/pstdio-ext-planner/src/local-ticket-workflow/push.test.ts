@@ -47,7 +47,12 @@ const buildContext = (projectRoot: string, overrides: Partial<PlannerTicketWorkf
       list: mock(async () => []),
       listFiles: mock(async () => []),
       readFileContent: mock(async () => Buffer.from("")),
-      uploadFile: mock(async () => ({ id: "uploaded-file", fileName: "ticket.md", mimeType: "text/markdown" })),
+      uploadFile: mock(async () => ({
+        id: "uploaded-file",
+        fileId: "generic-file-1",
+        fileName: "ticket.md",
+        mimeType: "text/markdown",
+      })),
       update: mock(async () => null),
       delete: mock(async () => false),
       resolveStatusId: mock(async () => "status-1"),

@@ -179,12 +179,46 @@ export type ExtensionActivityApi = {
   record(input: ActivityRecordInput): Promise<unknown>;
 };
 
+export type ExtensionProjectApi = {
+  get(): Promise<unknown>;
+};
+
+export type ExtensionCommandFilesApi = {
+  upload(input: {
+    fileName: string;
+    fileKind: string;
+    contentBase64: string;
+    mimeType?: string | null;
+  }): Promise<unknown>;
+  readContent(fileId: string): Promise<Uint8Array>;
+  delete(fileId: string): Promise<boolean>;
+};
+
+export type ExtensionCommandTemplate = {
+  name: string;
+  content: string;
+  templateType?: string;
+};
+
+export type ExtensionCommandTemplatesApi = {
+  get(name: string): Promise<ExtensionCommandTemplate | null>;
+};
+
+export type ExtensionWorkspacesApi = {
+  list(): Promise<unknown[]>;
+  removeWorktree(workspaceId: string): Promise<unknown>;
+};
+
 export type CommandRunContext = {
   projectId: string;
   target: ResourceRef;
   params: Record<string, ParamValue>;
+  project: ExtensionProjectApi;
   storage: ExtensionStorageApi;
+  files: ExtensionCommandFilesApi;
+  templates: ExtensionCommandTemplatesApi;
   repos: ExtensionReposApi;
+  workspaces: ExtensionWorkspacesApi;
   sessions: ExtensionSessionsApi;
   commands: ExtensionCommandsApi;
   activity: ExtensionActivityApi;

@@ -4,36 +4,42 @@ import { createProjectTicket } from "./tickets";
 
 const originalFetch = globalThis.fetch;
 
-const statusesResponse = [
-  {
-    id: "status-backlog",
-    name: "Backlog",
-    color: "gray",
-    sort_order: 0,
-    is_default: true,
-  },
-];
+const statusesResponse = {
+  items: [
+    {
+      id: "row-status-backlog",
+      project_id: "project-1",
+      item_id: "status-backlog",
+      value_json: {
+        id: "status-backlog",
+        name: "Backlog",
+        color: "gray",
+        sortOrder: 0,
+        isDefault: true,
+      },
+      created_at: "2026-03-19T00:00:00.000Z",
+      updated_at: "2026-03-19T00:00:00.000Z",
+    },
+  ],
+};
 
 const ticketResponse = {
   id: "ticket-1",
+  projectId: "project-1",
   shorthand: "PS-1",
-  project_id: "project-1",
-  status_id: "status-backlog",
-  status_name: "Backlog",
-  display_title: "Create a tagged ticket",
-  user_prompt: null,
-  file_id: null,
-  parent_id: null,
+  statusId: "status-backlog",
+  displayTitle: "Create a tagged ticket",
+  userPrompt: null,
+  fileId: null,
+  parentId: null,
   parallelizable: null,
-  blocked_reason: null,
-  depends_on: null,
+  blockedReason: null,
+  dependsOn: null,
   draft: false,
   archived: false,
-  deleted_at: null,
-  created_at: "2026-03-19T00:00:00.000Z",
-  updated_at: "2026-03-19T00:00:00.000Z",
-  tag_ids: ["tag-bug"],
-  tag_names: ["bug"],
+  createdAt: "2026-03-19T00:00:00.000Z",
+  updatedAt: "2026-03-19T00:00:00.000Z",
+  tagNames: ["tag-bug"],
 };
 
 describe("createProjectTicket", () => {
@@ -44,11 +50,11 @@ describe("createProjectTicket", () => {
   it("sends tag_ids when tagIds are provided", async () => {
     const fetchMock = mock(async (input: RequestInfo | URL, _init?: RequestInit) => {
       const url = typeof input === "string" ? input : input.toString();
-      if (url.endsWith("/v1/projects/project-1/ticket-statuses")) {
+      if (url.endsWith("/v1/projects/project-1/extensions/pstdio.planner/collections/statuses")) {
         return new Response(JSON.stringify(statusesResponse), { status: 200 });
       }
 
-      return new Response(JSON.stringify(ticketResponse), { status: 200 });
+      return new Response(JSON.stringify({ result: ticketResponse }), { status: 200 });
     });
 
     globalThis.fetch = fetchMock as unknown as typeof fetch;
@@ -61,16 +67,15 @@ describe("createProjectTicket", () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
-      "http://localhost:19840/v1/tickets",
+      "http://localhost:19840/v1/projects/project-1/extension-commands/pstdio.planner.createTicket/execute",
       expect.objectContaining({ method: "POST" }),
     );
 
     expect(fetchMock.mock.calls[1]?.[1]).toBeDefined();
     const requestInit = fetchMock.mock.calls[1]?.[1] as unknown as RequestInit;
     const payload = JSON.parse(String(requestInit.body));
-    expect(payload).toEqual(
+    expect(payload.params).toEqual(
       expect.objectContaining({
-        project_id: "project-1",
         content: "Create a tagged ticket",
         tag_ids: ["tag-bug"],
       }),

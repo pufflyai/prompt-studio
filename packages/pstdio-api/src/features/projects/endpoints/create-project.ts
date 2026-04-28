@@ -32,6 +32,7 @@ export const createProjectHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
     try {
       const templates = await seedDefaultTemplates(deps, project.id);
       await seedDefaultSkills(deps, project.id);
+      await deps.extensionSetupService.runFirstPartyInitialSetup(project.id);
 
       deps.eventBus.emit("projects", "set", project);
       for (const template of templates) deps.eventBus.emit("templates", "set", template);

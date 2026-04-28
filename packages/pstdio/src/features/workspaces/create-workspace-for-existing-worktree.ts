@@ -1,5 +1,5 @@
+import { listPlannerTickets as defaultListPlannerTickets } from "@/features/planner/api/planner-tickets";
 import { createWorkspace as defaultCreateWorkspace } from "@/features/workspaces/api/create-workspace";
-import { listTickets as defaultListTickets } from "../tickets/api/list-tickets";
 
 type CreateWorkspaceForExistingWorktreeInput = {
   projectId: string;
@@ -9,13 +9,13 @@ type CreateWorkspaceForExistingWorktreeInput = {
 };
 
 type Deps = {
-  listTickets: typeof defaultListTickets;
+  listPlannerTickets: typeof defaultListPlannerTickets;
   createWorkspace: typeof defaultCreateWorkspace;
   log: (msg: string) => void;
 };
 
 const defaultDeps: Deps = {
-  listTickets: defaultListTickets,
+  listPlannerTickets: defaultListPlannerTickets,
   createWorkspace: defaultCreateWorkspace,
   log: console.log,
 };
@@ -24,14 +24,23 @@ export const createWorkspaceForExistingWorktree = async (
   input: CreateWorkspaceForExistingWorktreeInput,
   deps: Deps = defaultDeps,
 ) => {
-  const tickets = await deps.listTickets({ project_id: input.projectId, shorthand: input.ticketShorthand });
+  const tickets = await deps.listPlannerTickets({ project_id: input.projectId, shorthand: input.ticketShorthand });
   if (tickets.length === 0) throw new Error(`Ticket not found: ${input.ticketShorthand}`);
 
   const ticket = tickets[0];
   const workspace = await deps.createWorkspace({
     project_id: input.projectId,
-    ticket_id: ticket.id,
-    ticket_shorthand: ticket.shorthand,
+    name: ticket.shorthand,
+    anchors: [
+      {
+        type: "pstdio.planner.ticket",
+        id: ticket.id,
+        projectId: input.projectId,
+        label: ticket.shorthand,
+        extensionId: "pstdio.planner",
+        role: "primary",
+      },
+    ],
     branch: input.branch,
     worktree_path: input.worktreePath,
   });

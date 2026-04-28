@@ -6,10 +6,12 @@ import {
   createInitializedRepo,
   createRun,
   createRunSafe,
+  executePlannerCommand,
   getAlternateStatusId,
   getProjectId,
   getStatusName,
   type HookTestContext,
+  readPlannerTicketContent,
   writePlugin,
 } from "./hooks-infra";
 import { type ApiInstance, startApi } from "./start-api";
@@ -32,20 +34,14 @@ afterEach(() => {
 });
 
 const createTicket = async (projectId: string) => {
-  const response = await fetch(`${api.url}/v1/tickets`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, content: "# Original title\n\nOriginal body." }),
+  const response = await executePlannerCommand(ctx, projectId, "createTicket", {
+    content: "# Original title\n\nOriginal body.",
+    title: "Original title",
   });
 
-  expect(response.status).toBe(201);
-  return (await response.json()) as { id: string; shorthand: string; status_id: string | null };
-};
-
-const readTicketDetail = async (ticketId: string) => {
-  const response = await fetch(`${api.url}/v1/tickets/${ticketId}`);
   expect(response.status).toBe(200);
-  return (await response.json()) as { file_id: string; status_id: string | null };
+  const body = (await response.json()) as { result: { id: string; shorthand: string; statusId: string | null } };
+  return { id: body.result.id, shorthand: body.result.shorthand, status_id: body.result.statusId };
 };
 
 describe.skip("tickets save hooks", () => {
@@ -83,12 +79,8 @@ describe.skip("tickets save hooks", () => {
       expect(result.exitCode).not.toBe(0);
       expect(result.stderr).toContain("rejected");
 
-      const detail = await readTicketDetail(ticket.id);
-      expect(detail.status_id).toBe(ticket.status_id);
-
-      const contentResponse = await fetch(`${api.url}/v1/tickets/${ticket.id}/files/${detail.file_id}/content`);
-      expect(contentResponse.status).toBe(200);
-      expect(await contentResponse.text()).toBe("# Original title\n\nOriginal body.");
+      const content = await readPlannerTicketContent(ctx, projectId, ticket.id);
+      expect(content).toBe("# Original title\n\nOriginal body.");
     },
     TEST_TIMEOUT,
   );

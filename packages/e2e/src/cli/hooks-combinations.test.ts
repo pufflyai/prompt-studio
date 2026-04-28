@@ -5,13 +5,16 @@ import { cleanupDirs } from "./helpers";
 import {
   createAttemptWithSession,
   createInitializedRepo,
+  createTicketViaApi,
   getAttemptStatusName,
   getProjectId,
   getStatusId,
   getStatusName,
   getWorkspace,
   type HookTestContext,
+  listPlannerTickets,
   registerRepo,
+  updatePlannerTicket,
   updateSessionStatus,
   wait,
   writePlugin,
@@ -42,15 +45,17 @@ import { mkdirSync } from "node:fs";
 const API = "${api.url}";
 
 const findTicketId = async (projectId, shorthand) => {
-  const res = await fetch(API + "/v1/tickets?project_id=" + encodeURIComponent(projectId) + "&shorthand=" + encodeURIComponent(shorthand));
-  const tickets = await res.json();
-  return tickets[0]?.id;
+  const res = await fetch(API + "/v1/projects/" + projectId + "/extensions/pstdio.planner/collections/tickets");
+  const body = await res.json();
+  const row = body.items.find(item => item.value_json.shorthand === shorthand || item.value_json.id === shorthand);
+  return row?.value_json.id ?? row?.item_id;
 };
 
 const findStatusId = async (projectId, name) => {
-  const res = await fetch(API + "/v1/projects/" + projectId + "/statuses");
-  const statuses = await res.json();
-  return statuses.find(s => s.name === name)?.id;
+  const res = await fetch(API + "/v1/projects/" + projectId + "/extensions/pstdio.planner/collections/statuses");
+  const body = await res.json();
+  const row = body.items.find(item => item.value_json.name === name);
+  return row?.value_json.id ?? row?.item_id;
 };
 
 export default {
@@ -61,10 +66,10 @@ export default {
     async ${hookName}(ctx) {
       const ticketId = await findTicketId(ctx.projectId, ctx.ticket.shorthand);
       const statusId = await findStatusId(ctx.projectId, "${ticketStatus}");
-      await fetch(API + "/v1/tickets/" + ticketId, {
-        method: "PATCH",
+      await fetch(API + "/v1/projects/" + ctx.projectId + "/extension-commands/pstdio.planner.updateTicket/execute", {
+        method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ status_id: statusId }),
+        body: JSON.stringify({ params: { id: ticketId, status_id: statusId } }),
       });
       await fetch(API + "/v1/workspaces/" + ctx.workspaceId + "/attempt-status", {
         method: "PATCH",
@@ -89,9 +94,7 @@ describe.skip("post-session-start moves ticket to wip", () => {
       await wait(3000);
 
       // Verify ticket moved to wip
-      const tickets = (await (
-        await fetch(`${api.url}/v1/tickets?project_id=${encodeURIComponent(projectId)}`)
-      ).json()) as Array<{ id: string; status_id: string | null }>;
+      const tickets = await listPlannerTickets(ctx, projectId);
       const statusName = tickets[0].status_id ? await getStatusName(ctx, projectId, tickets[0].status_id) : null;
       expect(statusName).toBe("wip");
 
@@ -119,9 +122,7 @@ describe.skip("post-session-success branches on session outcome", () => {
       await updateSessionStatus(ctx, attempt.session!.id, "completed");
       await wait(3000);
 
-      const tickets = (await (
-        await fetch(`${api.url}/v1/tickets?project_id=${encodeURIComponent(projectId)}`)
-      ).json()) as Array<{ id: string; status_id: string | null }>;
+      const tickets = await listPlannerTickets(ctx, projectId);
       const statusName = tickets[0].status_id ? await getStatusName(ctx, projectId, tickets[0].status_id) : null;
       expect(statusName).toBe("done");
 
@@ -146,9 +147,7 @@ describe.skip("post-session-success branches on session outcome", () => {
       await updateSessionStatus(ctx, attempt.session!.id, "failed");
       await wait(3000);
 
-      const tickets = (await (
-        await fetch(`${api.url}/v1/tickets?project_id=${encodeURIComponent(projectId)}`)
-      ).json()) as Array<{ id: string; status_id: string | null }>;
+      const tickets = await listPlannerTickets(ctx, projectId);
       const statusName = tickets[0].status_id ? await getStatusName(ctx, projectId, tickets[0].status_id) : null;
       expect(statusName).toBe("blocked");
 
@@ -190,20 +189,11 @@ export default {
       );
 
       // Create a ticket
-      const ticketRes = await fetch(`${api.url}/v1/tickets`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ project_id: projectId, user_prompt: "branch test" }),
-      });
-      const ticket = (await ticketRes.json()) as { id: string };
+      const { ticket } = await createTicketViaApi(ctx, projectId, "branch test");
 
       // Move to wip
       const wipId = await getStatusId(ctx, projectId, "wip");
-      await fetch(`${api.url}/v1/tickets/${ticket.id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ status_id: wipId }),
-      });
+      await updatePlannerTicket(ctx, projectId, ticket.id, { status_id: wipId });
       await wait(1500);
 
       expect(existsSync(join(repo, "status-action.txt"))).toBe(true);
@@ -211,11 +201,7 @@ export default {
 
       // Move to done
       const doneId = await getStatusId(ctx, projectId, "done");
-      await fetch(`${api.url}/v1/tickets/${ticket.id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ status_id: doneId }),
-      });
+      await updatePlannerTicket(ctx, projectId, ticket.id, { status_id: doneId });
       await wait(1500);
 
       expect(readFileSync(join(repo, "status-action.txt"), "utf8").trim()).toBe("moved-to-done");

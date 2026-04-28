@@ -7,12 +7,15 @@ const jsonResponse = (body: unknown, status = 200) =>
 const trackingFetch = () => {
   const calls: { url: string; method: string; body?: string }[] = [];
   const fetchFn = ((url: string, init?: RequestInit) => {
+    const urlString = String(url);
     calls.push({
-      url: String(url),
+      url: urlString,
       method: init?.method ?? "GET",
       body: init?.body as string | undefined,
     });
-    return Promise.resolve(jsonResponse([]));
+    return Promise.resolve(
+      jsonResponse(urlString.includes("/extensions/pstdio.planner/collections/") ? { items: [] } : []),
+    );
   }) as unknown as typeof fetch;
   return { fetchFn, calls };
 };
@@ -47,44 +50,51 @@ describe("createClient", () => {
     expect(calls[0]!.method).toBe("GET");
   });
 
-  it("client.tickets.list calls GET /v1/tickets?project_id=:id", async () => {
+  it("client.tickets.list calls planner ticket collection", async () => {
     const { fetchFn, calls } = trackingFetch();
     const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
 
     await client.tickets.list("proj-1");
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]!.url).toBe("http://test:1234/v1/tickets?project_id=proj-1");
+    expect(calls[0]!.url).toBe("http://test:1234/v1/projects/proj-1/extensions/pstdio.planner/collections/tickets");
   });
 
-  it("client.tickets.create calls POST /v1/tickets", async () => {
+  it("client.tickets.create executes planner createTicket", async () => {
     const { fetchFn, calls } = trackingFetch();
     const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
 
     await client.tickets.create({ project_id: "proj-1", content: "hello" });
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]!.url).toBe("http://test:1234/v1/tickets");
+    expect(calls[0]!.url).toBe(
+      "http://test:1234/v1/projects/proj-1/extension-commands/pstdio.planner.createTicket/execute",
+    );
     expect(calls[0]!.method).toBe("POST");
-    expect(JSON.parse(calls[0]!.body!)).toEqual({ project_id: "proj-1", content: "hello" });
+    expect(JSON.parse(calls[0]!.body!)).toEqual({
+      params: {
+        content: "hello",
+        draft: false,
+        parent_id: null,
+        status_id: null,
+        tag_ids: undefined,
+        user_prompt: null,
+      },
+    });
   });
 
-  it("client.tickets.updateWhenAttemptStatus calls POST /v1/tickets/:id/update-when-attempt-status", async () => {
+  it("client.tickets.updateWhenAttemptStatus requires planner project context", async () => {
     const { fetchFn, calls } = trackingFetch();
     const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
 
-    await client.tickets.updateWhenAttemptStatus("ticket-1", {
-      all_attempts_status: "reviewed",
-      set_status: "review",
-    });
+    await expect(
+      client.tickets.updateWhenAttemptStatus("ticket-1", {
+        all_attempts_status: "reviewed",
+        set_status: "review",
+      }),
+    ).rejects.toThrow("client.tickets.updateWhenAttemptStatus requires planner/generic APIs");
 
-    expect(calls).toHaveLength(1);
-    expect(calls[0]!.url).toBe("http://test:1234/v1/tickets/ticket-1/update-when-attempt-status");
-    expect(calls[0]!.method).toBe("POST");
-    expect(JSON.parse(calls[0]!.body!)).toEqual({
-      all_attempts_status: "reviewed",
-      set_status: "review",
-    });
+    expect(calls).toHaveLength(0);
   });
 
   it("client.sessions.list calls GET /v1/sessions?project_id=:id", async () => {
@@ -130,14 +140,14 @@ describe("createClient", () => {
     expect(calls[0]!.method).toBe("POST");
   });
 
-  it("client.statuses.list calls GET /v1/projects/:id/statuses", async () => {
+  it("client.statuses.list calls planner status collection", async () => {
     const { fetchFn, calls } = trackingFetch();
     const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
 
     await client.statuses.list("proj-1");
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]!.url).toBe("http://test:1234/v1/projects/proj-1/statuses");
+    expect(calls[0]!.url).toBe("http://test:1234/v1/projects/proj-1/extensions/pstdio.planner/collections/statuses");
   });
 
   it("client.projects.listPlugins calls GET /v1/projects/:id/plugins", async () => {
@@ -162,14 +172,17 @@ describe("createClient", () => {
     expect(calls[0]!.method).toBe("POST");
   });
 
-  it("client.tags.list calls GET /v1/projects/:id/ticket-tags", async () => {
+  it("client.tags.list calls planner tag collections", async () => {
     const { fetchFn, calls } = trackingFetch();
     const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
 
     await client.tags.list("proj-1");
 
-    expect(calls).toHaveLength(1);
-    expect(calls[0]!.url).toBe("http://test:1234/v1/projects/proj-1/ticket-tags");
+    expect(calls).toHaveLength(2);
+    expect(calls.map((call) => call.url)).toEqual([
+      "http://test:1234/v1/projects/proj-1/extensions/pstdio.planner/collections/tags",
+      "http://test:1234/v1/projects/proj-1/extensions/pstdio.planner/collections/tag_options",
+    ]);
   });
 
   it("client.templates.update calls PUT /v1/projects/:id/templates/:name", async () => {

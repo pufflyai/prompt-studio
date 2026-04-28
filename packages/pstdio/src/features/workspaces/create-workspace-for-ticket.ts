@@ -1,5 +1,5 @@
-import { createTicketAttempt as defaultCreateTicketAttempt } from "@/features/tickets/api/create-ticket-attempt";
-import { listTickets as defaultListTickets } from "@/features/tickets/api/list-tickets";
+import { listPlannerTickets as defaultListPlannerTickets } from "@/features/planner/api/planner-tickets";
+import { createWorkspace as defaultCreateWorkspace } from "./api/create-workspace";
 
 type CreateWorkspaceForTicketInput = {
   projectId: string;
@@ -9,14 +9,14 @@ type CreateWorkspaceForTicketInput = {
 };
 
 type Deps = {
-  listTickets: typeof defaultListTickets;
-  createTicketAttempt: typeof defaultCreateTicketAttempt;
+  listPlannerTickets: typeof defaultListPlannerTickets;
+  createWorkspace: typeof defaultCreateWorkspace;
   log: (msg: string) => void;
 };
 
 const defaultDeps: Deps = {
-  listTickets: defaultListTickets,
-  createTicketAttempt: defaultCreateTicketAttempt,
+  listPlannerTickets: defaultListPlannerTickets,
+  createWorkspace: defaultCreateWorkspace,
   log: console.log,
 };
 
@@ -24,15 +24,25 @@ export const createWorkspaceForTicket = async (input: CreateWorkspaceForTicketIn
   const { projectId, repoRoot, ticketShorthand, base } = input;
   const baseRef = base ?? "HEAD";
 
-  const tickets = await deps.listTickets({ project_id: projectId, shorthand: ticketShorthand });
+  const tickets = await deps.listPlannerTickets({ project_id: projectId, shorthand: ticketShorthand });
   if (tickets.length === 0) throw new Error(`Ticket not found: ${ticketShorthand}`);
   const ticket = tickets[0];
 
-  const { workspace } = await deps.createTicketAttempt(ticket.id, {
-    mode: "worktree",
-    start_session: false,
-    base: baseRef,
-    repo_path: repoRoot,
+  const workspace = await deps.createWorkspace({
+    project_id: projectId,
+    name: ticket.shorthand,
+    branch: `workspace/${ticket.shorthand}`,
+    anchors: [
+      {
+        type: "pstdio.planner.ticket",
+        id: ticket.id,
+        projectId,
+        label: ticket.shorthand,
+        extensionId: "pstdio.planner",
+        role: "primary",
+        metadata: { base: baseRef, repoRoot },
+      },
+    ],
   });
 
   const shorthand = workspace.workspace_shorthand;

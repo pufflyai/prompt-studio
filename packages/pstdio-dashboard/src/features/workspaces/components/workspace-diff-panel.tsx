@@ -11,6 +11,7 @@ import { WorkspaceChecksPanel } from "./workspace-checks-panel";
 import { FileListPanel, ResizableLeftPanel, resolveSelectedPath } from "./workspace-file-list-panel";
 
 interface WorkspaceDiffPanelProps {
+  projectId: string | undefined;
   ticketId: string;
   diffs: Diff[];
   artifacts: ApiWorkspaceArtifact[];
@@ -78,7 +79,7 @@ const WorkspaceDiffHeader = (props: WorkspaceDiffHeaderProps) => {
 };
 
 export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
-  const { ticketId, diffs, artifacts, changedFiles, activeTab, onTabChange, loading = false } = props;
+  const { projectId, ticketId, diffs, artifacts, changedFiles, activeTab, onTabChange, loading = false } = props;
   const { t } = useTranslation("tickets");
   const [isTreePanelOpen, setTreePanelOpen] = useState(true);
   const [viewMode, setViewMode] = useState<ChangedFilesViewMode>("nested");
@@ -180,7 +181,7 @@ export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
         </Tabs.Content>
 
         <Tabs.Content value="checks" flex="1" minH="0" minW="0" p="0" display="flex">
-          <WorkspaceChecksPanel ticketId={ticketId} artifacts={artifacts} />
+          <WorkspaceChecksPanel projectId={projectId} ticketId={ticketId} artifacts={artifacts} />
         </Tabs.Content>
       </Tabs.Root>
     </Flex>

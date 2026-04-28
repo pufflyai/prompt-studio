@@ -3,22 +3,34 @@ import { createAttempt } from "./create-attempt";
 
 describe("createAttempt", () => {
   it("creates a ticket attempt with a session for a ticket shorthand", async () => {
-    const calls: { ticketId: string; input: { prompt?: string; start_session?: boolean } }[] = [];
-    const attempt = {
-      mode: "worktree",
-      ticket: { id: "ticket-1" },
-      workspace: { id: "ws-1" },
-      session: null,
-    } as never;
+    const calls: unknown[] = [];
+    const workspace = { id: "ws-1" } as never;
+    const session = { id: "session-1" } as never;
 
     const ctx = {
       projectId: "proj-1",
       client: {
-        tickets: {
-          list: async () => [{ id: "ticket-1", shorthand: "PS-1" }],
-          createAttempt: async (ticketId: string, input: { prompt?: string; start_session?: boolean }) => {
-            calls.push({ ticketId, input });
-            return attempt;
+        extensions: {
+          listCollection: async () => [
+            {
+              item_id: "ticket-1",
+              project_id: "proj-1",
+              value_json: { id: "ticket-1", shorthand: "PS-1" },
+              created_at: "created",
+              updated_at: "updated",
+            },
+          ],
+        },
+        workspaces: {
+          create: async (input: unknown) => {
+            calls.push({ method: "workspaces.create", input });
+            return workspace;
+          },
+        },
+        sessions: {
+          create: async (input: unknown) => {
+            calls.push({ method: "sessions.create", input });
+            return session;
           },
         },
       },
@@ -26,11 +38,31 @@ describe("createAttempt", () => {
 
     const result = await createAttempt(ctx, { ticketId: "PS-1", prompt: "Run implementation" });
 
-    expect(result).toBe(attempt);
+    expect(result).toEqual({ ticket: expect.objectContaining({ id: "ticket-1" }), workspace, session });
     expect(calls).toEqual([
       {
-        ticketId: "ticket-1",
-        input: { prompt: "Run implementation", start_session: true },
+        method: "workspaces.create",
+        input: {
+          project_id: "proj-1",
+          anchors: [
+            {
+              type: "pstdio.planner.ticket",
+              id: "ticket-1",
+              label: "PS-1",
+              extensionId: "pstdio.planner",
+              role: "primary",
+            },
+          ],
+        },
+      },
+      {
+        method: "sessions.create",
+        input: {
+          project_id: "proj-1",
+          title: "PS-1",
+          prompt: "Run implementation",
+          workspace_id: "ws-1",
+        },
       },
     ]);
   });

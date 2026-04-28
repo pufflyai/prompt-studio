@@ -1,5 +1,6 @@
 import type { PluginHelperContext } from "./context";
 import { findTicketByRef } from "./find-ticket-by-ref";
+import { executePlannerCommand, listPlannerStatuses } from "./planner";
 
 type TicketStatusUpdateInput = {
   ticket: string;
@@ -9,13 +10,13 @@ type TicketStatusUpdateInput = {
 export const setTicketStatus = async (ctx: PluginHelperContext, input: TicketStatusUpdateInput) => {
   const [ticket, statuses] = await Promise.all([
     findTicketByRef(ctx, { ticketId: input.ticket }),
-    ctx.client.statuses.list(ctx.projectId),
+    listPlannerStatuses(ctx),
   ]);
   if (!ticket) return false;
 
   const status = statuses.find((candidate) => candidate.name === input.status);
   if (!status) return false;
 
-  await ctx.client.tickets.update(ticket.id, { status_id: status.id });
+  await executePlannerCommand(ctx, "pstdio.planner.updateTicket", { ticket_id: ticket.id, status_id: status.id });
   return true;
 };

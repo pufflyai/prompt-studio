@@ -27,6 +27,7 @@ import { createAttemptStatusRoutes } from "./features/attempt-statuses/routes";
 import type { RouteDeps } from "./features/deps";
 import { createExtensionCommandRoutes } from "./features/extension-commands/routes";
 import { createExtensionRoutes } from "./features/extensions/routes";
+import { createFileRoutes } from "./features/files/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHarnessRoutes } from "./features/harnesses/routes";
 import { createHealthRoutes } from "./features/health/routes";
@@ -45,6 +46,7 @@ import { createAgentConfigService } from "./services/agent-config-service";
 import { createAttemptStatusService } from "./services/attempt-status-service";
 import { createExtensionCommandService } from "./services/extension-command-service";
 import { createExtensionInstanceService } from "./services/extension-instance-service";
+import { createExtensionSetupService } from "./services/extension-setup-service";
 import { createExtensionStorageService } from "./services/extension-storage-service";
 import { createFileService } from "./services/file-service";
 import { createHarnessProviderService } from "./services/harness-provider-service";
@@ -87,6 +89,7 @@ const registerRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps) => {
   app.route("/v1", createActionRoutes(deps));
   app.route("/v1", createExtensionCommandRoutes(deps));
   app.route("/v1", createExtensionRoutes(deps));
+  app.route("/v1", createFileRoutes(deps));
   app.route("/v1", createHarnessRoutes(deps));
   app.route("/v1", createPluginRoutes(deps));
   app.route("/v1", createSkillRoutes(deps));
@@ -195,9 +198,11 @@ export const createApp = async (options: AppOptions) => {
     projectService,
     repoService,
     sessionService,
+    templateService,
     workspaceService,
     workspaceSessionService,
   });
+  const extensionSetupService = createExtensionSetupService({ db, eventBus });
 
   // --- ONLY DOMAIN SERVICES ARE PASSED TO ROUTES ---
   const deps = {
@@ -222,6 +227,7 @@ export const createApp = async (options: AppOptions) => {
     syncService,
     pluginService,
     extensionCommandService,
+    extensionSetupService,
   };
 
   app.use("*", cors());

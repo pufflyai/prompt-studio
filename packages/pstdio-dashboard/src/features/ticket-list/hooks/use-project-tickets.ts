@@ -215,7 +215,7 @@ export const useUpdateProjectTicketTags = (projectId: string | undefined) =>
   useMutation({
     mutationFn: async ({ ticketId, tagIds }: { ticketId: string; tagIds: string[] }) => {
       if (!projectId) throw new Error("Project id is required to update ticket tags.");
-      await updateProjectTicketTags(ticketId, tagIds);
+      await updateProjectTicketTags(projectId, ticketId, tagIds);
     },
   });
 

@@ -3,22 +3,27 @@ import { createWorkspace } from "./create-workspace";
 
 describe("createWorkspace", () => {
   it("creates a workspace without starting a session", async () => {
-    const calls: { ticketId: string; input: { mode?: string; start_session?: boolean; base?: string } }[] = [];
-    const attempt = {
-      mode: "worktree",
-      ticket: { id: "ticket-1" },
-      workspace: { id: "ws-1" },
-      session: null,
-    } as never;
+    const calls: unknown[] = [];
+    const workspace = { id: "ws-1" } as never;
 
     const ctx = {
       projectId: "proj-1",
       client: {
-        tickets: {
-          list: async () => [{ id: "ticket-1", shorthand: "PS-1" }],
-          createAttempt: async (ticketId: string, input: { mode?: string; start_session?: boolean; base?: string }) => {
-            calls.push({ ticketId, input });
-            return attempt;
+        extensions: {
+          listCollection: async () => [
+            {
+              item_id: "ticket-1",
+              project_id: "proj-1",
+              value_json: { id: "ticket-1", shorthand: "PS-1" },
+              created_at: "created",
+              updated_at: "updated",
+            },
+          ],
+        },
+        workspaces: {
+          create: async (input: unknown) => {
+            calls.push(input);
+            return workspace;
           },
         },
       },
@@ -30,11 +35,19 @@ describe("createWorkspace", () => {
       base: "main",
     });
 
-    expect(result).toBe(attempt);
+    expect(result).toBe(workspace);
     expect(calls).toEqual([
       {
-        ticketId: "ticket-1",
-        input: { mode: "worktree", base: "main", start_session: false },
+        project_id: "proj-1",
+        anchors: [
+          {
+            type: "pstdio.planner.ticket",
+            id: "ticket-1",
+            label: "PS-1",
+            extensionId: "pstdio.planner",
+            role: "primary",
+          },
+        ],
       },
     ]);
   });

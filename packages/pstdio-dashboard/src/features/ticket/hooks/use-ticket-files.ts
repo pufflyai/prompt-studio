@@ -12,11 +12,16 @@ export const useTicketFiles = (ticketId: string | null | undefined) => {
         : undefined,
     [ticketId],
   );
+  const { data: rawFilesData } = useLiveQuery(
+    (q) => (ticketId ? q.from({ file: getCollection("files") }).select(({ file }) => ({ ...file })) : undefined),
+    [ticketId],
+  );
   const plannerItems = asSyncedRows(rawPlannerItems);
+  const rawFiles = asSyncedRows(rawFilesData);
   const ticketItem = plannerCollectionRows(plannerItems, "tickets", undefined).find(
     (item) => item.item_id === ticketId,
   );
-  const { files, artifacts } = toPlannerTicketFiles(ticketItem);
+  const { files, artifacts } = toPlannerTicketFiles(ticketItem, rawFiles);
 
   const data = ticketId ? { files, artifacts } : undefined;
 

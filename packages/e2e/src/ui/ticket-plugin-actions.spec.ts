@@ -48,7 +48,7 @@ const createRepoWithLegacyAttemptAction = () => {
   mkdirSync(pluginsDir, { recursive: true });
   writeFileSync(
     join(pluginsDir, "legacy-ticket-actions.ts"),
-    `import { definePlugin, renderPrompt } from "@pstdio/sdk/plugins";
+    `import { createAttempt, definePlugin, renderPrompt } from "@pstdio/sdk/plugins";
 
 export default definePlugin({
   actions: [
@@ -61,11 +61,11 @@ export default definePlugin({
       async trigger(ctx) {
         const repo = ctx.params.repo as { repo: string; branch: string } | undefined;
 
-        return ctx.client.tickets.createAttempt(ctx.targetId, {
+        return createAttempt(ctx, {
+          ticketId: ctx.targetId,
           repo_id: repo?.repo,
           branch: repo?.branch,
           prompt: renderPrompt(ctx.prompts["implement-ticket"], { ticket_id: ctx.target.shorthand }),
-          start_session: false,
         });
       },
     },
@@ -101,9 +101,15 @@ const registerRepoViaApi = async (
 };
 
 const getTicketStatuses = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
-  const res = await request.get(`${apiBase}/v1/projects/${projectId}/ticket-statuses`);
+  const res = await request.get(`${apiBase}/v1/projects/${projectId}/extensions/pstdio.planner/collections/statuses`);
   expect(res.ok()).toBe(true);
-  return (await res.json()) as { id: string; name: string }[];
+  const body = (await res.json()) as {
+    items: Array<{ item_id: string; value_json: { id?: string; name?: string } }>;
+  };
+  return body.items.map((item) => ({
+    id: item.value_json.id ?? item.item_id,
+    name: item.value_json.name ?? item.item_id,
+  }));
 };
 
 const createTicketViaApi = async (
@@ -112,11 +118,15 @@ const createTicketViaApi = async (
   content: string,
   statusId: string,
 ) => {
-  const res = await request.post(`${apiBase}/v1/tickets`, {
-    data: { project_id: projectId, content, status_id: statusId },
-  });
+  const res = await request.post(
+    `${apiBase}/v1/projects/${projectId}/extension-commands/pstdio.planner.createTicket/execute`,
+    {
+      data: { params: { content, status_id: statusId } },
+    },
+  );
   expect(res.ok()).toBe(true);
-  return (await res.json()) as { shorthand: string };
+  const body = (await res.json()) as { result: { shorthand: string } };
+  return body.result;
 };
 
 test.describe

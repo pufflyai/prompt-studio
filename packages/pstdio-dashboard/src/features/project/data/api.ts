@@ -1,4 +1,4 @@
-import type { ProjectResponse, StatusResponse, TagResponse, TemplateResponse } from "pstdio-api/dto";
+import type { ProjectResponse, TemplateResponse } from "pstdio-api/dto";
 import type {
   Project,
   ProjectRepository,
@@ -6,7 +6,7 @@ import type {
   ProjectTemplateAssetType,
   RepoBranch,
 } from "@/features/project/types";
-import { buildTicketStatusCatalog, toTicketTag } from "@/features/ticket-list/data/api";
+import { getProjectTicketStatuses, getProjectTicketTags } from "@/features/ticket-list/data/api";
 import { apiRequest, readRuntimeConfig } from "@/lib/api";
 
 export type ApiSystemInfo = {
@@ -52,15 +52,10 @@ export const getProject = async (projectId: string) => {
     return null;
   }
 
-  const fetchTicketStatuses = async (projectId: string) => {
-    const statuses = await apiRequest<StatusResponse[]>(`/v1/projects/${projectId}/ticket-statuses`);
-    return buildTicketStatusCatalog(statuses);
-  };
-
   const [statusCatalog, repositories, ticketTags] = await Promise.all([
-    fetchTicketStatuses(projectId),
+    getProjectTicketStatuses(projectId),
     apiRequest<ApiRepo[]>(`/v1/projects/${projectId}/repos`),
-    apiRequest<TagResponse[]>(`/v1/projects/${projectId}/ticket-tags`),
+    getProjectTicketTags(projectId),
   ]);
 
   return {
@@ -69,10 +64,10 @@ export const getProject = async (projectId: string) => {
     status: DEFAULT_PROJECT_STATUS,
     owner: DEFAULT_OWNER,
     updatedAt: project.updated_at,
-    ticketStatuses: statusCatalog.names,
-    ticketStatusOptions: statusCatalog.options,
+    ticketStatuses: statusCatalog.map((status) => status.name),
+    ticketStatusOptions: statusCatalog,
     repositories: repositories.map(toProjectRepository),
-    ticketTags: ticketTags.map(toTicketTag),
+    ticketTags,
   } satisfies Project;
 };
 

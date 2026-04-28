@@ -7,12 +7,13 @@ import type {
   PlannerTicketUploadInput,
   PlannerTicketWorkflowContext,
 } from "../contract";
+import { seedDefaultPlannerMetadata } from "./default-metadata";
 
 type StoredTicketFile = {
   id: string;
   fileName: string;
   mimeType: string | null;
-  contentBase64: string;
+  fileId: string;
   relativePath?: string;
 };
 
@@ -28,17 +29,45 @@ type StoredTicket = PlannerTicketRecord & {
 type StoredStatus = {
   id: string;
   name: string;
+  color: string;
+  sortOrder: number;
+  isDefault: boolean;
+  canDragOut: boolean;
+  canDragIn: boolean;
+  canCreate: boolean;
+  columnActions: string[];
+};
+
+type StoredTag = {
+  id: string;
+  name: string;
+  type: "single_select" | "multi_select";
 };
 
 type StoredTagOption = {
   id: string;
+  tagId: string;
   name: string;
+  color: string;
+  icon: string | null;
+  description: string | null;
+  sortOrder: number;
+};
+
+export type PlannerTicketDetailRecord = PlannerTicketRecord & {
+  archived: boolean;
+  content: string;
+  displayTitle: string | null;
+  statusId: string | null;
+  statusName: string | null;
+  updatedAt: string;
 };
 
 const nowTimestamp = () => new Date().toISOString();
 
 const asStoredTicket = (value: unknown) => value as StoredTicket;
 const asStoredStatus = (value: unknown) => value as StoredStatus;
+const asStoredTag = (value: unknown) => value as StoredTag;
 const asStoredTagOption = (value: unknown) => value as StoredTagOption;
 
 const ticketFileId = (ticketId: string) => `${ticketId}:ticket`;
@@ -60,8 +89,23 @@ const toPlannerTicket = (ticket: StoredTicket, tagNameById = new Map<string, str
 
 const toPlannerFile = (file: StoredTicketFile): PlannerTicketFileRecord => ({
   id: file.id,
+  fileId: file.fileId,
   fileName: file.fileName,
   mimeType: file.mimeType,
+});
+
+const toPlannerTicketDetail = (
+  ticket: StoredTicket,
+  tagNameById = new Map<string, string>(),
+  statusNameById = new Map<string, string>(),
+): PlannerTicketDetailRecord => ({
+  ...toPlannerTicket(ticket, tagNameById),
+  archived: ticket.archived,
+  content: ticket.content,
+  displayTitle: ticket.displayTitle,
+  statusId: ticket.statusId,
+  statusName: ticket.statusId ? (statusNameById.get(ticket.statusId) ?? ticket.statusId) : null,
+  updatedAt: ticket.updatedAt,
 });
 
 const listValues = async <TValue>(collection: ExtensionStorageCollection, convert: (value: unknown) => TValue) =>
@@ -75,6 +119,7 @@ const getStoredTicket = async (tickets: ExtensionStorageCollection, ticketId: st
 export const createPlannerStorage = (ctx: CommandRunContext) => {
   const tickets = ctx.storage.collection("tickets");
   const statuses = ctx.storage.collection("statuses");
+  const tags = ctx.storage.collection("tags");
   const tagOptions = ctx.storage.collection("tag_options");
 
   const putTicket = async (ticket: StoredTicket) => {
@@ -82,8 +127,15 @@ export const createPlannerStorage = (ctx: CommandRunContext) => {
     return ticket;
   };
 
-  const getTagNameById = async () =>
-    new Map((await listValues(tagOptions, asStoredTagOption)).map((option) => [option.id, option.name]));
+  const getTagNameById = async () => {
+    await seedDefaultPlannerMetadata(ctx.storage);
+    return new Map((await listValues(tagOptions, asStoredTagOption)).map((option) => [option.id, option.name]));
+  };
+
+  const getStatusNameById = async () => {
+    await seedDefaultPlannerMetadata(ctx.storage);
+    return new Map((await listValues(statuses, asStoredStatus)).map((status) => [status.id, status.name]));
+  };
 
   const createTicket = async (input: PlannerTicketCreateInput) => {
     if (await tickets.get(input.shorthand)) {
@@ -128,11 +180,20 @@ export const createPlannerStorage = (ctx: CommandRunContext) => {
     const existing = ticket.files.find((file) =>
       input.relativePath ? file.relativePath === input.relativePath : file.fileName === input.fileName,
     );
+    const uploaded = await ctx.files.upload({
+      fileName: input.fileName,
+      fileKind: "planner-ticket-file",
+      contentBase64: input.content.toString("base64"),
+      mimeType: input.mimeType ?? null,
+    });
+    const fileId = typeof uploaded === "object" && uploaded && "id" in uploaded ? String(uploaded.id) : undefined;
+    if (!fileId) throw new Error("Planner ticket file upload did not return a file id.");
+
     const nextFile: StoredTicketFile = {
       id: existing?.id ?? crypto.randomUUID(),
       fileName: input.fileName,
       mimeType: input.mimeType ?? null,
-      contentBase64: input.content.toString("base64"),
+      fileId,
       relativePath: input.relativePath,
     };
     const files = existing
@@ -188,7 +249,7 @@ export const createPlannerStorage = (ctx: CommandRunContext) => {
 
       const file = ticket.files.find((candidate) => candidate.id === fileId);
       if (!file) throw new Error(`Ticket file not found: ${fileId}`);
-      return Buffer.from(file.contentBase64, "base64");
+      return Buffer.from(await ctx.files.readContent(file.fileId));
     },
     uploadFile,
     update,
@@ -199,11 +260,13 @@ export const createPlannerStorage = (ctx: CommandRunContext) => {
       return true;
     },
     resolveStatusId: async (statusName) => {
+      await seedDefaultPlannerMetadata(ctx.storage);
       const status = (await listValues(statuses, asStoredStatus)).find((candidate) => candidate.name === statusName);
       if (!status) throw new Error(`Status not found: ${statusName}`);
       return status.id;
     },
     resolveTagIds: async (tagNames) => {
+      await seedDefaultPlannerMetadata(ctx.storage);
       const options = await listValues(tagOptions, asStoredTagOption);
       return tagNames.map((tagName) => {
         const option = options.find((candidate) => candidate.name === tagName);
@@ -213,7 +276,38 @@ export const createPlannerStorage = (ctx: CommandRunContext) => {
     },
   } satisfies PlannerTicketWorkflowContext["tickets"];
 
-  return { createTicket, provider };
+  const listStatuses = async () => {
+    await seedDefaultPlannerMetadata(ctx.storage);
+    return (await listValues(statuses, asStoredStatus)).sort((a, b) => a.sortOrder - b.sortOrder);
+  };
+
+  const listTags = async () => {
+    await seedDefaultPlannerMetadata(ctx.storage);
+    const optionRows = await listValues(tagOptions, asStoredTagOption);
+    return (await listValues(tags, asStoredTag)).map((tag) => ({
+      ...tag,
+      options: optionRows.filter((option) => option.tagId === tag.id).sort((a, b) => a.sortOrder - b.sortOrder),
+    }));
+  };
+
+  const listDetails = async (input: { archived?: boolean; draft?: boolean } = {}) => {
+    await seedDefaultPlannerMetadata(ctx.storage);
+    const [tagNameById, statusNameById] = await Promise.all([getTagNameById(), getStatusNameById()]);
+    return (await listValues(tickets, asStoredTicket))
+      .filter((ticket) => ticket.archived === (input.archived ?? false))
+      .filter((ticket) => (input.draft === undefined ? true : ticket.draft === input.draft))
+      .map((ticket) => toPlannerTicketDetail(ticket, tagNameById, statusNameById));
+  };
+
+  const getDetails = async (ticketId: string) => {
+    const ticket = await getStoredTicket(tickets, ticketId);
+    if (!ticket) return null;
+    await seedDefaultPlannerMetadata(ctx.storage);
+    const [tagNameById, statusNameById] = await Promise.all([getTagNameById(), getStatusNameById()]);
+    return toPlannerTicketDetail(ticket, tagNameById, statusNameById);
+  };
+
+  return { createTicket, getDetails, listDetails, listStatuses, listTags, provider };
 };
 
 export const createPlannerWorkflowContext = (ctx: CommandRunContext, projectRoot: string) =>

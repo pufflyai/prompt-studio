@@ -1,8 +1,12 @@
 import type {
   ActivityRecordInput,
   ExtensionActivityApi,
+  ExtensionCommandFilesApi,
+  ExtensionCommandTemplatesApi,
+  ExtensionProjectApi,
   ExtensionReposApi,
   ExtensionSessionsApi,
+  ExtensionWorkspacesApi,
   ParamValue,
   ResourceRef,
   RuntimeCommandRecord,
@@ -20,7 +24,11 @@ type RunExtensionCommandInput = {
   commandId: string;
   params?: Record<string, unknown>;
   target?: ResourceRef;
+  project?: ExtensionProjectApi;
+  files?: ExtensionCommandFilesApi;
+  templates?: ExtensionCommandTemplatesApi;
   repos?: ExtensionReposApi;
+  workspaces?: ExtensionWorkspacesApi;
   sessions?: ExtensionSessionsApi;
   activity?: ExtensionActivityApi;
   commandStack?: string[];
@@ -94,6 +102,39 @@ const createDefaultReposApi = (): ExtensionReposApi => ({
   },
 });
 
+const createDefaultProjectApi = (projectId: string): ExtensionProjectApi => ({
+  get: async () => ({
+    id: projectId,
+    name: projectId,
+    shorthand: projectId,
+  }),
+});
+
+const createDefaultFilesApi = (): ExtensionCommandFilesApi => ({
+  upload: async () => {
+    throw new Error("Extension command file access requires a file adapter.");
+  },
+  readContent: async () => {
+    throw new Error("Extension command file access requires a file adapter.");
+  },
+  delete: async () => {
+    throw new Error("Extension command file access requires a file adapter.");
+  },
+});
+
+const createDefaultTemplatesApi = (): ExtensionCommandTemplatesApi => ({
+  get: async () => {
+    throw new Error("Extension command template access requires a template adapter.");
+  },
+});
+
+const createDefaultWorkspacesApi = (): ExtensionWorkspacesApi => ({
+  list: async () => [],
+  removeWorktree: async () => {
+    throw new Error("Extension command workspace mutation requires a workspace adapter.");
+  },
+});
+
 const createDefaultActivityApi = (
   db: DbClient,
   projectId: string,
@@ -162,7 +203,11 @@ export const runExtensionCommand = async (input: RunExtensionCommandInput): Prom
 
   const nextCommandStack = [...commandStack, command.id];
   const target = input.target ?? createDefaultTarget(command, input.projectId);
+  const project = input.project ?? createDefaultProjectApi(input.projectId);
+  const files = input.files ?? createDefaultFilesApi();
+  const templates = input.templates ?? createDefaultTemplatesApi();
   const repos = input.repos ?? createDefaultReposApi();
+  const workspaces = input.workspaces ?? createDefaultWorkspacesApi();
   const sessions = createCommandSessionsApi(input);
   const activity = createCommandActivityApi(input, command, target);
 
@@ -171,13 +216,17 @@ export const runExtensionCommand = async (input: RunExtensionCommandInput): Prom
       projectId: input.projectId,
       target,
       params: normalizeParams(input.params),
+      project,
       storage: createExtensionStorageContext({
         db: input.db,
         projectId: input.projectId,
         extensionId: command.extensionId,
         eventBus: input.eventBus,
       }),
+      files,
+      templates,
       repos,
+      workspaces,
       sessions: {
         create: (sessionInput) => sessions.create(sessionInput),
       },

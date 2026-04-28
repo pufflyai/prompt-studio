@@ -1,6 +1,7 @@
 export type { ActionClient } from "./actions";
 export { createClient, type PstdioClient } from "./client";
 export type { ExtensionCommandClient } from "./extension-commands";
+export type { ExtensionClient, ExtensionCollectionRow } from "./extensions";
 export type { HarnessClient } from "./harnesses";
 export type { ProjectClient } from "./projects";
 export { type ClientOptions, createRequest, PstdioApiError, type RequestFn } from "./request";

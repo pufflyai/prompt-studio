@@ -54,28 +54,34 @@ describe("planner extension collection rows", () => {
   });
 
   test("maps planner stored files into previews and artifacts", () => {
-    const result = toPlannerTicketFiles({
-      id: "row-1",
-      created_at: "created",
-      updated_at: "updated",
-      value_json: {
-        files: [
-          { id: "file-1", fileName: "note.txt", mimeType: "text/plain", contentBase64: "aGVsbG8=" },
-          {
-            id: "artifact-1",
-            fileName: "report.md",
-            mimeType: "text/markdown",
-            contentBase64: "b2s=",
-            relativePath: "reports/report.md",
-          },
-        ],
+    const result = toPlannerTicketFiles(
+      {
+        id: "row-1",
+        created_at: "created",
+        updated_at: "updated",
+        value_json: {
+          files: [
+            { id: "attachment-1", fileId: "file-1", fileName: "note.txt", mimeType: "text/plain" },
+            {
+              id: "artifact-1",
+              fileId: "file-2",
+              fileName: "report.md",
+              mimeType: "text/markdown",
+              relativePath: "reports/report.md",
+            },
+          ],
+        },
       },
-    });
+      [
+        { id: "file-1", size_bytes: 5 },
+        { id: "file-2", size_bytes: 2 },
+      ],
+    );
 
     expect(result.files[0]).toMatchObject({ id: "file-1", file_name: "note.txt", size_bytes: 5 });
     expect(result.artifacts[0]).toMatchObject({
       id: "artifact-1",
-      file_id: "artifact-1",
+      file_id: "file-2",
       relative_path: "reports/report.md",
       size_bytes: 2,
     });

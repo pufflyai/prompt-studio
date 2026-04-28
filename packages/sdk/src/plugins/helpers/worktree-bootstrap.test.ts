@@ -21,12 +21,10 @@ describe("bootstrapWorktree", () => {
   const helperCtx = {
     projectId: "proj-1",
     client: {
-      tickets: {
-        list: async () => [],
-        get: async () => {
+      extensionCommands: {
+        execute: async () => {
           throw new Error("not used");
         },
-        listFiles: async () => [],
       },
     },
   } as never;
@@ -86,41 +84,33 @@ describe("bootstrapWorktree", () => {
 
   it("pulls the ticket into the worktree using sdk client when ticketId is provided", async () => {
     const { repoPath, worktreePath } = makeDirs();
-    const ticketGetCalls: string[] = [];
-    const ticketListCalls: string[] = [];
+    const calls: unknown[] = [];
     const ctx = {
       projectId: "proj-1",
       client: {
-        tickets: {
-          list: async (_projectId: string, filters?: { shorthand?: string }) => {
-            ticketListCalls.push(filters?.shorthand ?? "");
-            return [{ id: "ticket-1", shorthand: "PS-12", status_name: "open", tag_names: [] }];
-          },
-          get: async (ticketId: string) => {
-            ticketGetCalls.push(ticketId);
+        extensionCommands: {
+          execute: async (_projectId: string, commandId: string, input: unknown) => {
+            calls.push({ commandId, input });
+            mkdirSync(join(worktreePath, ".pstdio", "tickets", "PS-12"), { recursive: true });
+            writeFileSync(join(worktreePath, ".pstdio", "tickets", "PS-12", "ticket.md"), 'ticket_id: "PS-12"');
             return {
-              id: "ticket-1",
-              shorthand: "PS-12",
-              content: "Pulled ticket content",
-              created_at: "2026-01-01T00:00:00Z",
-              draft: false,
-              parent_id: null,
-              user_prompt: null,
-              depends_on: null,
-              parallelizable: null,
-              blocked_reason: null,
-              file_id: null,
+              pulled_ticket_shorthands: ["PS-12"],
+              downloaded_file_count: 0,
+              messages: ["Pulled ticket PS-12"],
             };
           },
-          listFiles: async () => [],
         },
       },
     } as never;
 
     await bootstrapWorktree(ctx, { repoPath, worktreePath, ticketId: "ticket-1" });
 
-    expect(ticketGetCalls).toEqual(["ticket-1", "ticket-1"]);
-    expect(ticketListCalls).toEqual(["PS-12"]);
+    expect(calls).toEqual([
+      {
+        commandId: "pstdio.planner.pullTickets",
+        input: { params: { ticket_id: "ticket-1", repo_path: worktreePath, force: false } },
+      },
+    ]);
     expect(readFileSync(join(worktreePath, ".pstdio", "tickets", "PS-12", "ticket.md"), "utf-8")).toContain(
       'ticket_id: "PS-12"',
     );

@@ -46,7 +46,7 @@ const formatLeafExample = (example: string) => {
 };
 
 const mapCliParams = (contribution: RuntimeCliContribution, argv: ArgumentsCamelCase) => {
-  const params: Record<string, unknown> = {};
+  const params: Record<string, unknown> = { __cli: true };
 
   for (const optionName of Object.keys(contribution.options ?? {})) {
     const value = argv[optionName];

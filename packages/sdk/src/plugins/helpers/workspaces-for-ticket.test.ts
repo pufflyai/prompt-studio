@@ -6,14 +6,34 @@ describe("workspacesForTicket", () => {
     const ctx = {
       projectId: "proj-1",
       client: {
-        tickets: {
-          list: async () => [{ id: "ticket-1", shorthand: "PS-1" }],
+        extensions: {
+          listCollection: async () => [
+            {
+              item_id: "ticket-1",
+              project_id: "proj-1",
+              value_json: { id: "ticket-1", shorthand: "PS-1" },
+              created_at: "created",
+              updated_at: "updated",
+            },
+          ],
         },
         workspaces: {
           list: async () => [
-            { id: "ws-1", ticket_shorthand: "PS-1", workspace_shorthand: "PS-1_A1" },
-            { id: "ws-2", ticket_shorthand: "PS-2", workspace_shorthand: "PS-2_A1" },
-            { id: "ws-3", ticket_shorthand: "PS-1", workspace_shorthand: "PS-1_A2" },
+            {
+              id: "ws-1",
+              workspace_shorthand: "PS-1_A1",
+              anchors_json: [{ type: "pstdio.planner.ticket", id: "ticket-1", label: "PS-1" }],
+            },
+            {
+              id: "ws-2",
+              workspace_shorthand: "PS-2_A1",
+              anchors_json: [{ type: "pstdio.planner.ticket", id: "ticket-2", label: "PS-2" }],
+            },
+            {
+              id: "ws-3",
+              workspace_shorthand: "PS-1_A2",
+              anchors_json: [{ type: "pstdio.planner.ticket", id: "ticket-1", label: "PS-1" }],
+            },
           ],
         },
       },
@@ -28,11 +48,25 @@ describe("workspacesForTicket", () => {
     const ctx = {
       projectId: "proj-1",
       client: {
-        tickets: {
-          list: async () => [{ id: "ticket-1", shorthand: "PS-1" }],
+        extensions: {
+          listCollection: async () => [
+            {
+              item_id: "ticket-1",
+              project_id: "proj-1",
+              value_json: { id: "ticket-1", shorthand: "PS-1" },
+              created_at: "created",
+              updated_at: "updated",
+            },
+          ],
         },
         workspaces: {
-          list: async () => [{ id: "ws-1", ticket_shorthand: "PS-1", workspace_shorthand: "PS-1_A1" }],
+          list: async () => [
+            {
+              id: "ws-1",
+              workspace_shorthand: "PS-1_A1",
+              anchors_json: [{ type: "pstdio.planner.ticket", id: "ticket-1", label: "PS-1" }],
+            },
+          ],
         },
       },
     } as never;

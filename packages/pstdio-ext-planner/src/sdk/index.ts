@@ -48,6 +48,7 @@ export type PlannerTicketCommandResult = {
 
 export type PlannerTicketFileCommandResult = {
   id: string;
+  fileId: string;
   fileName: string;
   mimeType: string | null;
 };

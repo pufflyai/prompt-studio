@@ -284,6 +284,7 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
 
         <Flex flex="1" minH="0">
           <WorkspaceDiffPanel
+            projectId={projectId}
             ticketId={ticket.id}
             diffs={diffs}
             artifacts={artifacts}

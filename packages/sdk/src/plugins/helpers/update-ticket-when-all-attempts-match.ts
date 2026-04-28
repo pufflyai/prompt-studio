@@ -1,5 +1,6 @@
 import type { PluginHelperContext, TicketRef } from "./context";
 import { findTicketByRef } from "./find-ticket-by-ref";
+import { executePlannerCommand } from "./planner";
 
 type TicketAttemptStatusTransitionInput = TicketRef & {
   allAttemptsStatus: string;
@@ -14,10 +15,11 @@ export const updateTicketWhenAllAttemptsMatch = async (
   const ticketId = ticket?.id;
   if (!ticketId) return false;
 
-  const result = await ctx.client.tickets.updateWhenAttemptStatus(ticketId, {
+  const result = (await executePlannerCommand(ctx, "pstdio.planner.updateTicketWhenAttemptStatus", {
+    ticket_id: ticketId,
     all_attempts_status: input.allAttemptsStatus,
     set_status: input.setStatus,
-  });
+  })) as { updated: boolean };
 
   return result.updated;
 };

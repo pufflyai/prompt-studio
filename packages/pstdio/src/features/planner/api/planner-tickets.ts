@@ -52,6 +52,7 @@ type StoredStatus = {
 
 type StoredTagOption = {
   id?: string;
+  tagId?: string;
   name?: string;
   color?: string;
   icon?: string | null;
@@ -59,11 +60,17 @@ type StoredTagOption = {
   sortOrder?: number;
 };
 
+type StoredTag = {
+  id?: string;
+  name?: string;
+  type?: string;
+};
+
 type StoredFile = {
   id?: string;
+  fileId?: string;
   fileName?: string;
   mimeType?: string | null;
-  contentBase64?: string;
   relativePath?: string;
 };
 
@@ -147,29 +154,37 @@ const toPlannerStatus = (projectId: string, row: ExtensionCollectionRow, index: 
   } satisfies Status;
 };
 
-const toPlannerTag = (projectId: string, rows: ExtensionCollectionRow[]): Tag => {
+const toPlannerTags = (projectId: string, tagRows: ExtensionCollectionRow[], optionRows: ExtensionCollectionRow[]) => {
   const timestamp = new Date(0).toISOString();
-
-  return {
-    id: "planner-tags",
-    project_id: projectId,
-    name: "Tags",
-    type: "multi_select",
-    options: rows.map((row, index) => {
-      const option = asRecord(row.value_json) as StoredTagOption;
-      return {
+  const options = optionRows.map((row, index) => {
+    const option = asRecord(row.value_json) as StoredTagOption;
+    return {
+      tagId: asString(option.tagId),
+      option: {
         id: asString(option.id, row.item_id),
         name: asString(option.name, row.item_id),
         color: asString(option.color, "gray"),
         icon: (option.icon as string | null | undefined) ?? null,
         description: (option.description as string | null | undefined) ?? null,
         sort_order: typeof option.sortOrder === "number" ? option.sortOrder : index + 1,
-      };
-    }),
-    created_at: timestamp,
-    updated_at: timestamp,
-    deleted_at: null,
-  } satisfies Tag;
+      },
+    };
+  });
+
+  return tagRows.map((row) => {
+    const tag = asRecord(row.value_json) as StoredTag;
+    const id = asString(tag.id, row.item_id);
+    return {
+      id,
+      project_id: projectId,
+      name: asString(tag.name, id),
+      type: asString(tag.type, "single_select"),
+      options: options.filter((candidate) => candidate.tagId === id).map((candidate) => candidate.option),
+      created_at: timestamp,
+      updated_at: timestamp,
+      deleted_at: null,
+    } satisfies Tag;
+  });
 };
 
 const toTicketListItem = (
@@ -237,13 +252,13 @@ const toFileRecord = (projectId: string, ticket: StoredTicket, file: StoredFile)
   const timestamp = asString(ticket.updatedAt, asString(ticket.createdAt, new Date(0).toISOString()));
 
   return {
-    id: asString(file.id, asString(file.fileName)),
+    id: asString(file.fileId, asString(file.id, asString(file.fileName))),
     project_id: projectId,
     file_name: asString(file.relativePath, asString(file.fileName)),
     file_kind: "ticket_file",
-    storage_path: `planner://${asString(ticket.id, asString(ticket.shorthand))}/${asString(file.id, asString(file.fileName))}`,
+    storage_path: `files://${asString(file.fileId, asString(file.id, asString(file.fileName)))}`,
     mime_type: (file.mimeType as string | null | undefined) ?? null,
-    size_bytes: asString(file.contentBase64).length,
+    size_bytes: 0,
     hash: null,
     created_at: timestamp,
     updated_at: timestamp,
@@ -293,8 +308,11 @@ export const createPlannerTicketApi = (request: RequestFn = createPlannerRequest
   };
 
   const listTags = async (projectId: string) => {
-    const rows = await listCollection(projectId, "tag_options");
-    return [toPlannerTag(projectId, rows.items)];
+    const [tagRows, optionRows] = await Promise.all([
+      listCollection(projectId, "tags"),
+      listCollection(projectId, "tag_options"),
+    ]);
+    return toPlannerTags(projectId, tagRows.items, optionRows.items);
   };
 
   const listFiles = async (projectId: string, ticketId: string) => {

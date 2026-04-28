@@ -5,6 +5,6 @@ export const useCreateTicketAttempt = (projectId: string | undefined) =>
   useMutation({
     mutationFn: async (input: CreateTicketAttemptInput) => {
       if (!projectId) throw new Error("Project id is required to create ticket attempts.");
-      return createTicketAttempt(input);
+      return createTicketAttempt(projectId, input);
     },
   });

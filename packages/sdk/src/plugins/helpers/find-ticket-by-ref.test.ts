@@ -11,8 +11,15 @@ describe("findTicketByRef", () => {
     const ctx = {
       projectId: "proj-1",
       client: {
-        tickets: {
-          list: async () => tickets,
+        extensions: {
+          listCollection: async () =>
+            tickets.map((ticket) => ({
+              item_id: ticket.id,
+              project_id: "proj-1",
+              value_json: { id: ticket.id, shorthand: ticket.shorthand },
+              created_at: "created",
+              updated_at: "updated",
+            })),
         },
       },
     } as never;
@@ -33,8 +40,8 @@ describe("findTicketByRef", () => {
       projectId: "proj-1",
       ticket,
       client: {
-        tickets: {
-          list: async () => {
+        extensions: {
+          listCollection: async () => {
             throw new Error("should not list tickets");
           },
         },

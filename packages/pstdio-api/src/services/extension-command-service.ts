@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ExtensionSessionsApi, ResourceRef } from "@pstdio/sdk/extensions";
 import type { AgentRegistry } from "pstdio-agents";
@@ -7,11 +8,13 @@ import { isAgentEnabledForProject, parseProjectSelectedAgents } from "../feature
 import { resolveSessionCwd } from "../features/sessions/resolve-session-cwd";
 import { spawnAgentSession } from "../features/sessions/spawn-agent";
 import type { EventBus } from "../features/sync/event-bus";
+import { cleanupWorkspaceWorktree } from "../features/workspaces/worktree-cleanup";
 import type { createAgentConfigService } from "./agent-config-service";
 import type { createFileService } from "./file-service";
 import type { createProjectService } from "./project-service";
 import type { createRepoService } from "./repo-service";
 import type { createSessionService } from "./session-service";
+import type { createTemplateService } from "./template-service";
 import type { createWorkspaceService } from "./workspace-service";
 import type { createWorkspaceSessionService } from "./workspace-session-service";
 
@@ -26,6 +29,7 @@ type ExtensionCommandServiceDeps = {
   projectService: Pick<ReturnType<typeof createProjectService>, "get">;
   repoService: ReturnType<typeof createRepoService>;
   sessionService: ReturnType<typeof createSessionService>;
+  templateService: ReturnType<typeof createTemplateService>;
   workspaceService: ReturnType<typeof createWorkspaceService>;
   workspaceSessionService: Pick<ReturnType<typeof createWorkspaceSessionService>, "link">;
 };
@@ -192,6 +196,62 @@ const createExtensionCommandRepos = (deps: ExtensionCommandServiceDeps, projectI
   },
 });
 
+const createExtensionCommandProject = (deps: ExtensionCommandServiceDeps, projectId: string) => ({
+  get: async () => {
+    const project = await deps.projectService.get(projectId);
+    if (!project) throw new Error(`Project not found: ${projectId}`);
+    return project;
+  },
+});
+
+const createExtensionCommandFiles = (deps: ExtensionCommandServiceDeps, projectId: string) => ({
+  upload: async (input: { fileName: string; fileKind: string; contentBase64: string; mimeType?: string | null }) => {
+    const file = await deps.fileService.upload({
+      project_id: projectId,
+      file_name: input.fileName,
+      file_kind: input.fileKind,
+      data: Buffer.from(input.contentBase64, "base64"),
+      mime_type: input.mimeType ?? null,
+    });
+    deps.eventBus.emit("files", "set", file);
+    return file;
+  },
+  readContent: async (fileId: string) => {
+    const file = await deps.fileService.get(fileId);
+    if (!file) throw new Error(`File not found: ${fileId}`);
+    return readFileSync(file.storage_path);
+  },
+  delete: async (fileId: string) => {
+    const removed = await deps.fileService.remove(fileId);
+    if (removed) deps.eventBus.emit("files", "delete", { id: fileId });
+    return removed;
+  },
+});
+
+const createExtensionCommandTemplates = (deps: ExtensionCommandServiceDeps, projectId: string) => ({
+  get: async (name: string) => {
+    const template = await deps.templateService.getByName(projectId, name);
+    if (!template) return null;
+
+    const file = await deps.fileService.get(template.file_id);
+    return {
+      name: template.name,
+      templateType: template.template_type,
+      content: file ? readFileSync(file.storage_path, "utf8") : "",
+    };
+  },
+});
+
+const createExtensionCommandWorkspaces = (deps: ExtensionCommandServiceDeps, projectId: string) => ({
+  list: () => deps.workspaceService.list(projectId),
+  removeWorktree: async (workspaceId: string) => {
+    const workspace = await deps.workspaceService.get(workspaceId);
+    if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`);
+    const removed = await cleanupWorkspaceWorktree(deps, workspace);
+    return { removed };
+  },
+});
+
 export const createExtensionCommandService = (deps: ExtensionCommandServiceDeps) => {
   const loadProjectRuntime = async (projectId: string) => {
     const [repo] = await deps.repoService.listByProject(projectId);
@@ -232,7 +292,11 @@ export const createExtensionCommandService = (deps: ExtensionCommandServiceDeps)
       commandId: input.commandId,
       params: input.params,
       target: input.target,
+      project: createExtensionCommandProject(deps, input.projectId),
+      files: createExtensionCommandFiles(deps, input.projectId),
+      templates: createExtensionCommandTemplates(deps, input.projectId),
       repos: createExtensionCommandRepos(deps, input.projectId),
+      workspaces: createExtensionCommandWorkspaces(deps, input.projectId),
       sessions: createExtensionCommandSessions(deps, input.projectId),
     });
   };

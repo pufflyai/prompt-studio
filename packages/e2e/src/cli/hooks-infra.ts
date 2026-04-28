@@ -56,6 +56,39 @@ type WorkspaceRecord = {
   worktree_path: string | null;
 };
 
+type PlannerTicketRow = {
+  id?: string;
+  shorthand?: string;
+  statusId?: string | null;
+  archived?: boolean;
+  content?: string;
+};
+
+const plannerCommandUrl = (ctx: HookTestContext, projectId: string, commandId: string) =>
+  `${ctx.api.url}/v1/projects/${projectId}/extension-commands/pstdio.planner.${commandId}/execute`;
+
+export const executePlannerCommand = async (
+  ctx: HookTestContext,
+  projectId: string,
+  commandId: string,
+  params: Record<string, unknown>,
+) =>
+  fetch(plannerCommandUrl(ctx, projectId, commandId), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ params }),
+  });
+
+const listPlannerCollection = async <TValue>(ctx: HookTestContext, projectId: string, collection: string) => {
+  const res = await fetch(
+    `${ctx.api.url}/v1/projects/${projectId}/extensions/pstdio.planner/collections/${collection}`,
+  );
+  const body = (await res.json()) as {
+    items: Array<{ item_id: string; value_json: TValue }>;
+  };
+  return body.items;
+};
+
 const createAnchoredWorkspace = async (ctx: HookTestContext, projectId: string, repo: string, name: string) => {
   const workspaceName = `${name
     .replace(/[^a-zA-Z0-9]+/g, "-")
@@ -101,12 +134,16 @@ export const createWorkspaceInRepo = async (ctx: HookTestContext, repo: string) 
 };
 
 export const createTicketViaApi = async (ctx: HookTestContext, projectId: string, prompt = "test ticket") => {
-  const res = await fetch(`${ctx.api.url}/v1/tickets`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, user_prompt: prompt }),
+  const res = await executePlannerCommand(ctx, projectId, "createTicket", {
+    content: `# ${prompt}\n`,
+    title: prompt,
+    user_prompt: prompt,
   });
-  return { res, ticket: (await res.json()) as { id: string; shorthand: string; status_id: string | null } };
+  const body = (await res.json()) as { result: { id: string; shorthand: string; statusId: string | null } };
+  return {
+    res,
+    ticket: { id: body.result.id, shorthand: body.result.shorthand, status_id: body.result.statusId },
+  };
 };
 
 export const createSessionViaApi = async (ctx: HookTestContext, projectId: string, workspaceId?: string) => {
@@ -156,24 +193,67 @@ export const createAttemptWithSession = async (ctx: HookTestContext, repo: strin
 };
 
 export const getAlternateStatusId = async (ctx: HookTestContext, projectId: string, currentStatusId: string | null) => {
-  const res = await fetch(`${ctx.api.url}/v1/projects/${projectId}/statuses`);
-  const statuses = (await res.json()) as Array<{ id: string; name: string }>;
+  const statuses = await listPlannerStatuses(ctx, projectId);
   const other = statuses.find((s) => s.id !== currentStatusId);
   if (other) return other.id;
 
-  // No alternate exists — create one
-  const createRes = await fetch(`${ctx.api.url}/v1/projects/${projectId}/statuses`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name: "hook-test-status", color: "#000000" }),
+  const createRes = await executePlannerCommand(ctx, projectId, "createStatus", {
+    name: "hook-test-status",
+    color: "gray",
   });
-  const created = (await createRes.json()) as { id: string };
-  return created.id;
+  const created = (await createRes.json()) as { result: { id: string } };
+  return created.result.id;
 };
 
-export const getTicket = async (ctx: HookTestContext, ticketId: string) => {
-  const res = await fetch(`${ctx.api.url}/v1/tickets/${ticketId}`);
-  return (await res.json()) as { id: string; status_id: string | null; archived: boolean };
+export const listPlannerStatuses = async (ctx: HookTestContext, projectId: string) => {
+  const items = await listPlannerCollection<{ id?: string; name?: string }>(ctx, projectId, "statuses");
+  return items.map((item) => ({
+    id: item.value_json.id ?? item.item_id,
+    name: item.value_json.name ?? item.item_id,
+  }));
+};
+
+export const listPlannerTickets = async (ctx: HookTestContext, projectId: string) =>
+  (await listPlannerCollection<PlannerTicketRow>(ctx, projectId, "tickets")).map((item) => ({
+    id: item.value_json.id ?? item.item_id,
+    shorthand: item.value_json.shorthand ?? item.item_id,
+    status_id: item.value_json.statusId ?? null,
+    archived: item.value_json.archived ?? false,
+    content: item.value_json.content ?? "",
+  }));
+
+export const updatePlannerTicket = async (
+  ctx: HookTestContext,
+  projectId: string,
+  ticketId: string,
+  params: Record<string, unknown>,
+) => executePlannerCommand(ctx, projectId, "updateTicket", { id: ticketId, ...params });
+
+export const deletePlannerTicket = async (ctx: HookTestContext, projectId: string, ticketId: string) =>
+  executePlannerCommand(ctx, projectId, "deleteTicket", { id: ticketId });
+
+export const uploadPlannerTicketFile = async (
+  ctx: HookTestContext,
+  projectId: string,
+  ticketId: string,
+  fileName: string,
+  content: string,
+) =>
+  executePlannerCommand(ctx, projectId, "uploadTicketFile", {
+    ticket_id: ticketId,
+    file_name: fileName,
+    content_base64: Buffer.from(content).toString("base64"),
+  });
+
+export const readPlannerTicketContent = async (ctx: HookTestContext, projectId: string, ticketId: string) =>
+  (await listPlannerTickets(ctx, projectId)).find((ticket) => ticket.id === ticketId || ticket.shorthand === ticketId)
+    ?.content ?? "";
+
+export const getTicket = async (ctx: HookTestContext, projectId: string, ticketId: string) => {
+  const ticket = (await listPlannerTickets(ctx, projectId)).find(
+    (candidate) => candidate.id === ticketId || candidate.shorthand === ticketId,
+  );
+  return ticket ?? { id: ticketId, shorthand: ticketId, status_id: null, archived: false, content: "" };
 };
 
 export const getWorkspace = async (ctx: HookTestContext, projectId: string, workspaceId: string) => {
@@ -187,8 +267,7 @@ export const getWorkspace = async (ctx: HookTestContext, projectId: string, work
 };
 
 export const getStatusName = async (ctx: HookTestContext, projectId: string, statusId: string) => {
-  const res = await fetch(`${ctx.api.url}/v1/projects/${projectId}/statuses`);
-  const statuses = (await res.json()) as Array<{ id: string; name: string }>;
+  const statuses = await listPlannerStatuses(ctx, projectId);
   return statuses.find((s) => s.id === statusId)?.name ?? null;
 };
 
@@ -199,8 +278,7 @@ export const getAttemptStatusName = async (ctx: HookTestContext, projectId: stri
 };
 
 export const getStatusId = async (ctx: HookTestContext, projectId: string, name: string) => {
-  const res = await fetch(`${ctx.api.url}/v1/projects/${projectId}/statuses`);
-  const statuses = (await res.json()) as Array<{ id: string; name: string }>;
+  const statuses = await listPlannerStatuses(ctx, projectId);
   return statuses.find((s) => s.name === name)?.id ?? null;
 };
 

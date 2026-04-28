@@ -1,14 +1,8 @@
 import type { PluginHelperContext, TicketRef } from "./context";
-import { resolveTicketShorthand } from "./find-ticket-by-ref";
+import { workspacesForTicket } from "./workspaces-for-ticket";
 
 export const removeAllWorktreesForTicket = async (ctx: PluginHelperContext, input: TicketRef) => {
-  const ticketShorthand = await resolveTicketShorthand(ctx, input);
-  if (!ticketShorthand) return 0;
-
-  const workspaces = await ctx.client.workspaces.list(ctx.projectId);
-  const ticketWorkspaces = workspaces.filter(
-    (workspace) => workspace.ticket_shorthand === ticketShorthand && workspace.worktree_path,
-  );
+  const ticketWorkspaces = (await workspacesForTicket(ctx, input)).filter((workspace) => workspace.worktree_path);
 
   let removed = 0;
   for (const workspace of ticketWorkspaces) {

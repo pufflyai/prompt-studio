@@ -1,5 +1,6 @@
 import type { AttemptStatus, CreateAttemptStatusInput, CreateStatusInput } from "pstdio-api-contracts";
 import type { Status } from "../resources";
+import { executePlannerCommand, listPlannerCollection, toPlannerStatus, toPlannerStatusFromValue } from "./planner";
 import type { RequestFn } from "./request";
 
 export type StatusClient = {
@@ -19,13 +20,23 @@ export type StatusClient = {
 };
 
 export const createStatusClient = (request: RequestFn): StatusClient => ({
-  list: (projectId) => request(`/v1/projects/${projectId}/statuses`),
-  create: (projectId, input) => request(`/v1/projects/${projectId}/statuses`, { method: "POST", body: input }),
-  update: (projectId, statusId, input) =>
-    request(`/v1/projects/${projectId}/statuses/${statusId}`, { method: "PATCH", body: input }),
-  setDefault: (projectId, statusId) =>
-    request(`/v1/projects/${projectId}/statuses/${statusId}/set-default`, { method: "PATCH" }),
-  delete: (projectId, statusId) => request(`/v1/projects/${projectId}/statuses/${statusId}`, { method: "DELETE" }),
+  list: async (projectId) =>
+    (await listPlannerCollection(request, projectId, "statuses")).map((row, index) =>
+      toPlannerStatus(projectId, row, index),
+    ),
+  create: async (projectId, input) =>
+    toPlannerStatusFromValue(projectId, await executePlannerCommand(request, projectId, "createStatus", input)),
+  update: async (projectId, statusId, input) =>
+    toPlannerStatusFromValue(
+      projectId,
+      await executePlannerCommand(request, projectId, "updateStatus", { status_id: statusId, ...input }),
+    ),
+  setDefault: async (projectId, statusId) => {
+    await executePlannerCommand(request, projectId, "setDefaultStatus", { status_id: statusId });
+  },
+  delete: async (projectId, statusId) => {
+    await executePlannerCommand(request, projectId, "deleteStatus", { status_id: statusId });
+  },
   listAttemptStatuses: (projectId) => request(`/v1/projects/${projectId}/attempt-statuses`),
   createAttemptStatus: (projectId, input) =>
     request(`/v1/projects/${projectId}/attempt-statuses`, { method: "POST", body: input }),

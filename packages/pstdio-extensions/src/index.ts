@@ -5,4 +5,5 @@ export { type LoadedExtensionSource, loadExtensionSources } from "./loader";
 export { normalizeExtensionSources } from "./normalize";
 export { readPackageAssetBytes, readPackageAssetText, resolvePackageAssetPath } from "./package-assets";
 export { type LoadExtensionRuntimeInput, loadExtensionRuntime } from "./runtime";
+export { runExtensionInitialSetup } from "./setup-runner";
 export { createExtensionStorageContext } from "./storage-context";

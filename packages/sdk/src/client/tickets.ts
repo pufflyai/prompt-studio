@@ -1,15 +1,68 @@
-import type {
-  CreateTicketAttemptInput,
-  CreateTicketInput,
-  ListTicketsInput,
-  TicketAttemptResponse,
-  UpdateTicketInput,
-  UpdateWhenAttemptStatusInput,
-  UpdateWhenAttemptStatusResponse,
-  UploadTicketFileInput,
-} from "../api/tickets";
-import type { Ticket, TicketDetail, TicketFile, TicketListItem } from "../resources";
-import { type ClientOptions, PstdioApiError, type RequestFn } from "./request";
+import type { Ticket, TicketDetail, TicketFile, TicketListItem, Workspace } from "../resources";
+import { executePlannerCommand, listPlannerCollection, toPlannerTicketListItem } from "./planner";
+import type { RequestFn } from "./request";
+
+export type ListTicketsInput = {
+  status?: string;
+  tag?: string | string[];
+  archived?: boolean;
+  draft?: boolean;
+  parent_id?: string;
+  shorthand?: string;
+  search?: string;
+};
+
+export type CreateTicketInput = {
+  project_id: string;
+  content?: string;
+  draft?: boolean;
+  parent_id?: string | null;
+  status_id?: string | null;
+  tag_ids?: string[];
+  user_prompt?: string | null;
+};
+
+export type UpdateTicketInput = {
+  content?: string;
+  display_title?: string | null;
+  draft?: boolean;
+  archived?: boolean;
+  parent_id?: string | null;
+  status_id?: string | null;
+  tag_ids?: string[];
+  user_prompt?: string | null;
+};
+
+export type CreateTicketAttemptInput = {
+  repo_id?: string;
+  branch?: string;
+  prompt?: string;
+  agent?: string;
+  model?: string;
+  start_session?: boolean;
+};
+
+export type TicketAttemptResponse = {
+  mode: "worktree" | "current_branch";
+  ticket: Ticket;
+  workspace: Workspace;
+  session: { id: string; workspace_id: string; title: string; created_at: string; updated_at: string } | null;
+};
+
+export type UpdateWhenAttemptStatusInput = {
+  all_attempts_status: string;
+  set_status: string;
+};
+
+export type UpdateWhenAttemptStatusResponse = {
+  updated: boolean;
+};
+
+export type UploadTicketFileInput = {
+  file_name: string;
+  content_base64: string;
+  mime_type?: string | null;
+};
 
 export type TicketClient = {
   list(projectId: string, input?: ListTicketsInput): Promise<TicketListItem[]>;
@@ -28,67 +81,44 @@ export type TicketClient = {
   deleteFile(ticketId: string, fileId: string): Promise<void>;
 };
 
-const resolveBaseUrl = (options: ClientOptions) =>
-  options.baseUrl ??
-  (typeof process !== "undefined" ? process.env.PSTDIO_API_URL : undefined) ??
-  "http://localhost:19840";
-
-const readErrorMessage = async (response: Response) => {
-  const errorBody: unknown = await response.json().catch(() => null);
-  if (errorBody && typeof errorBody === "object" && errorBody !== null && "error" in errorBody) {
-    return String((errorBody as { error: string }).error);
-  }
-
-  return `Request failed: ${response.status}`;
+const unsupported = (method: string) => {
+  throw new Error(`client.tickets.${method} requires planner/generic APIs with a project id.`);
 };
 
-const buildTicketsQuery = (projectId: string, input: ListTicketsInput = {}) => {
-  const params = new URLSearchParams({ project_id: projectId });
-
-  if (input.status) params.append("status", input.status);
-
-  if (Array.isArray(input.tag)) {
-    for (const tag of input.tag) params.append("tag", tag);
-  } else if (input.tag) {
-    params.append("tag", input.tag);
-  }
-
-  if (input.archived !== undefined) params.append("archived", String(input.archived));
-  if (input.draft !== undefined) params.append("draft", String(input.draft));
-  if (input.parent_id) params.append("parent_id", input.parent_id);
-  if (input.shorthand) params.append("shorthand", input.shorthand);
-  if (input.search) params.append("search", input.search);
-
-  return params.toString();
-};
-
-export const createTicketClient = (request: RequestFn, options: ClientOptions = {}): TicketClient => ({
-  list: (projectId, input) => request(`/v1/tickets?${buildTicketsQuery(projectId, input)}`),
-  get: (ticketId) => request(`/v1/tickets/${ticketId}`),
-  create: (input) => request("/v1/tickets", { method: "POST", body: input }),
-  update: (ticketId, input) => request(`/v1/tickets/${ticketId}`, { method: "PATCH", body: input }),
-  delete: (ticketId) => request(`/v1/tickets/${ticketId}`, { method: "DELETE" }),
-  createAttempt: (ticketId, input) => request(`/v1/tickets/${ticketId}/attempts`, { method: "POST", body: input }),
-  updateWhenAttemptStatus: (ticketId, input) =>
-    request(`/v1/tickets/${ticketId}/update-when-attempt-status`, { method: "POST", body: input }),
-  listFiles: (ticketId) => request(`/v1/tickets/${ticketId}/files`),
-  getFileContent: async (ticketId, fileId) => {
-    const baseUrl = resolveBaseUrl(options);
-    const fetchFn = options.fetch ?? globalThis.fetch;
-    const headers: Record<string, string> = {};
-    if (options.token) headers.authorization = `Bearer ${options.token}`;
-
-    const response = await fetchFn(
-      `${baseUrl}/v1/tickets/${encodeURIComponent(ticketId)}/files/${encodeURIComponent(fileId)}/content`,
-      { headers },
-    );
-
-    if (!response.ok) {
-      throw new PstdioApiError(await readErrorMessage(response), response.status);
-    }
-
-    return new Uint8Array(await response.arrayBuffer());
+export const createTicketClient = (request: RequestFn): TicketClient => ({
+  list: async (projectId, input = {}) => {
+    const rows = (await listPlannerCollection(request, projectId, "tickets")).map(toPlannerTicketListItem);
+    return rows
+      .filter((ticket) => (input.archived === undefined ? true : ticket.archived === input.archived))
+      .filter((ticket) => (input.draft === undefined ? true : ticket.draft === input.draft))
+      .filter((ticket) => (input.shorthand ? ticket.shorthand === input.shorthand : true))
+      .filter((ticket) => (input.parent_id ? ticket.parent_id === input.parent_id : true));
   },
-  uploadFile: (ticketId, input) => request(`/v1/tickets/${ticketId}/files`, { method: "POST", body: input }),
-  deleteFile: (ticketId, fileId) => request(`/v1/tickets/${ticketId}/files/${fileId}`, { method: "DELETE" }),
+  get: async () => unsupported("get"),
+  create: async (input) => {
+    const result = await executePlannerCommand(request, input.project_id, "createTicket", {
+      content: input.content ?? "",
+      draft: input.draft ?? false,
+      parent_id: input.parent_id ?? null,
+      status_id: input.status_id ?? null,
+      tag_ids: input.tag_ids,
+      user_prompt: input.user_prompt ?? null,
+    });
+    return toPlannerTicketListItem({
+      id: "",
+      project_id: input.project_id,
+      item_id: "",
+      value_json: result,
+      created_at: "",
+      updated_at: "",
+    });
+  },
+  update: async () => unsupported("update"),
+  delete: async () => unsupported("delete"),
+  createAttempt: async () => unsupported("createAttempt"),
+  updateWhenAttemptStatus: async () => unsupported("updateWhenAttemptStatus"),
+  listFiles: async () => unsupported("listFiles"),
+  getFileContent: async () => unsupported("getFileContent"),
+  uploadFile: async () => unsupported("uploadFile"),
+  deleteFile: async () => unsupported("deleteFile"),
 });

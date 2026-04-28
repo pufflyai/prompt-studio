@@ -128,4 +128,37 @@ describe("planner-owned ticket storage", () => {
     },
     TEST_TIMEOUT,
   );
+
+  test(
+    "lists, views, saves, and updates planner-owned tickets through the real CLI",
+    async () => {
+      const repo = createInitializedRepo("planner-ticket-cli-surface");
+      const projectId = readProjectId(repo);
+
+      const output = run('tickets create --content "Planner CLI surface"', repo);
+      const shorthand = output.match(/Created ticket (\S+)/)?.[1];
+      expect(shorthand).toBe("PTCS-1");
+
+      const listOutput = run("tickets list", repo);
+      expect(listOutput).toContain("PTCS-1");
+      expect(listOutput).toContain("Planner CLI surface");
+
+      const viewOutput = run("tickets view --id PTCS-1", repo);
+      expect(viewOutput).toContain("Shorthand:   PTCS-1");
+      expect(viewOutput).toContain("Title:       Planner CLI surface");
+
+      const ticketPath = join(repo, ".pstdio", "tickets", "PTCS-1", "ticket.md");
+      const edited = `${readFileSync(ticketPath, "utf8")}\nSaved body from real CLI.\n`;
+      await Bun.write(ticketPath, edited);
+
+      expect(run("tickets save --id PTCS-1", repo)).toContain("Saved ticket PTCS-1");
+      expect(run("tickets update --id PTCS-1 --no-parent-id", repo)).toContain("Updated ticket PTCS-1");
+
+      const rows = await listPlannerTickets(projectId);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].item_id).toBe("PTCS-1");
+      expect(JSON.stringify(rows[0].value_json)).toContain("Saved body from real CLI");
+    },
+    TEST_TIMEOUT,
+  );
 });

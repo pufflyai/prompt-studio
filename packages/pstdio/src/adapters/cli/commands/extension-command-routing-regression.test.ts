@@ -161,8 +161,7 @@ describe("extension command CLI routing regressions", () => {
     expect(output.stdout).toBe("");
     expect(requestBody).toEqual({
       params: {
-        force: false,
-        repo_path: expect.stringContaining(projectRoot),
+        __cli: true,
         ticket_id: "PS-1",
       },
     });
