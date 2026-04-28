@@ -1,3 +1,5 @@
+import type { HarnessProviderDefinition, WorkspaceTypeProviderDefinition } from "./provider-types";
+
 export type ExtensionSourceKind = "local" | "package";
 export type ExtensionDiagnosticSeverity = "error" | "warning";
 
@@ -300,40 +302,6 @@ export type ExtensionSetupContext = {
 export type ExtensionSetup = (ctx: ExtensionSetupContext) => void | Promise<void>;
 export type ExtensionMigration = (ctx: ExtensionSetupContext, fromVersion: string) => void | Promise<void>;
 
-export type HarnessDetectionResult = {
-  available: boolean;
-  reason?: string;
-};
-
-export type HarnessRun = {
-  runId: string;
-  onExit?: Promise<{ code: number | null; signal: string | null }>;
-};
-
-export type HarnessProviderDefinition = {
-  id?: string;
-  label: string;
-  detect?(ctx: ExtensionSetupContext): Promise<HarnessDetectionResult>;
-  start(
-    ctx: ExtensionSetupContext,
-    input: { workspacePath: string; sessionId: string; prompt?: string },
-  ): Promise<HarnessRun>;
-  send?(ctx: ExtensionSetupContext, input: { runId: string; message: string }): Promise<void>;
-  stop?(ctx: ExtensionSetupContext, input: { runId: string }): Promise<void>;
-};
-
-export type WorkspaceTypeProviderDefinition = {
-  id?: string;
-  label: string;
-  create(ctx: ExtensionSetupContext, input: Record<string, unknown>): Promise<Record<string, unknown>>;
-  resolve(
-    ctx: ExtensionSetupContext,
-    workspace: Record<string, unknown>,
-  ): Promise<{ rootPath: string; displayPath?: string }>;
-  archive?(ctx: ExtensionSetupContext, workspace: Record<string, unknown>): Promise<void>;
-  delete?(ctx: ExtensionSetupContext, workspace: Record<string, unknown>): Promise<void>;
-};
-
 export type ExtensionDefinition = {
   id: string;
   name: string;
@@ -356,3 +324,24 @@ export type ExtensionDefinition = {
   initialSetup?: ExtensionSetup;
   migrate?: ExtensionMigration;
 };
+
+export type {
+  HarnessApprovalRequest,
+  HarnessApprovalResponse,
+  HarnessApprovalService,
+  HarnessDetectionResult,
+  HarnessEventStore,
+  HarnessJsonPatch,
+  HarnessModel,
+  HarnessProviderDefinition,
+  HarnessQuestionResponse,
+  HarnessResumeResult,
+  HarnessRun,
+  HarnessSessionMessageInput,
+  HarnessSessionMessagesInput,
+  HarnessSessionReattachInput,
+  HarnessSessionStartInput,
+  HarnessSessionStartResult,
+  HarnessSpawnedProcess,
+  WorkspaceTypeProviderDefinition,
+} from "./provider-types";

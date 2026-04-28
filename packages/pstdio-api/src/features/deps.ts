@@ -4,6 +4,7 @@ import type { createAttemptStatusService } from "../services/attempt-status-serv
 import type { createExtensionCommandService } from "../services/extension-command-service";
 import type { createExtensionInstanceService } from "../services/extension-instance-service";
 import type { createFileService } from "../services/file-service";
+import type { createHarnessProviderService } from "../services/harness-provider-service";
 import type { createPlannerService } from "../services/planner-service";
 import type { createProjectService } from "../services/project-service";
 import type { createRepoService } from "../services/repo-service";
@@ -46,6 +47,7 @@ export interface RouteDeps {
   extensionInstanceService: ReturnType<typeof createExtensionInstanceService>;
   skillService: ReturnType<typeof createSkillService>;
   fileService: ReturnType<typeof createFileService>;
+  harnessProviderService: ReturnType<typeof createHarnessProviderService>;
   syncService: ReturnType<typeof createSyncService>;
   pluginService: ReturnType<typeof createPluginService>;
   plannerService: ReturnType<typeof createPlannerService>;

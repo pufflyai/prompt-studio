@@ -1,7 +1,13 @@
-import type { AgentId, ApprovalRequest, QuestionResponse, SpawnedProcess } from "pstdio-agents";
-import { sessionLogger } from "../../lib/logger";
+import type { ExtensionSetupContext, RuntimeHarnessProvider } from "@pstdio/sdk/extensions";
+import type { AgentId, QuestionResponse, SessionMessage } from "pstdio-agents";
 import type { RouteDeps } from "../deps";
-import { persistSessionMessages } from "./session-messages";
+import {
+  type ProviderSpawnDeps,
+  reattachProviderSession,
+  resumeProviderSession,
+  type SessionProvider,
+  spawnProviderSession,
+} from "./session-provider-runner";
 
 type SpawnInput = {
   sessionId: string;
@@ -12,138 +18,13 @@ type SpawnInput = {
   cwd?: string;
 };
 
-type SpawnDeps = Pick<RouteDeps, "agentRegistry" | "eventBus" | "fileService" | "sessionService"> & {
-  processExitTimeoutMs?: number;
-};
+type SpawnDeps = ProviderSpawnDeps & Pick<RouteDeps, "agentRegistry">;
 
-const DEFAULT_PROCESS_EXIT_TIMEOUT_MS = 10 * 60 * 1000;
-type TrackedExitStatus = "disconnected" | "cancelled" | "completed" | "failed";
-
-const resolveExitStatus = (exit: { code: number | null; signal: string | null }): TrackedExitStatus => {
-  if (exit.signal === "TIMEOUT") return "disconnected";
-  if (exit.signal === "SIGTERM" || exit.signal === "SIGINT") return "cancelled";
-  return exit.code === 0 ? "completed" : "failed";
-};
-
-const withProcessExitTimeout = (
-  sessionId: string,
-  process: Pick<SpawnedProcess, "kill" | "onExit">,
-  activity: AsyncIterable<unknown>,
-  timeoutMs: number,
-) =>
-  new Promise<{ code: number | null; signal: string | null }>((resolve, reject) => {
-    let settled = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const activityIterator = activity[Symbol.asyncIterator]();
-
-    const settle = (result: { code: number | null; signal: string | null }) => {
-      if (settled) return;
-      settled = true;
-      if (timer) {
-        clearTimeout(timer);
-      }
-      void activityIterator.return?.();
-      resolve(result);
-    };
-
-    const killProcess = () => {
-      sessionLogger.error(
-        {
-          event: "session.process.timeout",
-          session_id: sessionId,
-          timeout_ms: timeoutMs,
-        },
-        "Agent process timed out without new events; killing process",
-      );
-
-      try {
-        process.kill();
-      } catch (error) {
-        sessionLogger.error(
-          {
-            err: error,
-            event: "session.process.kill.error",
-            session_id: sessionId,
-          },
-          "Failed to kill timed out agent process",
-        );
-      }
-
-      settle({ code: null, signal: "SIGKILL" });
-    };
-
-    const resetTimer = () => {
-      if (timer) {
-        clearTimeout(timer);
-      }
-
-      timer = setTimeout(() => {
-        killProcess();
-      }, timeoutMs);
-    };
-
-    resetTimer();
-
-    void (async () => {
-      try {
-        while (!settled) {
-          const { done } = await activityIterator.next();
-          if (done || settled) break;
-          resetTimer();
-        }
-      } catch (error) {
-        if (!settled) {
-          sessionLogger.error(
-            {
-              err: error,
-              event: "session.activity_watcher.error",
-              session_id: sessionId,
-            },
-            "Session activity watcher failed",
-          );
-        }
-      }
-    })();
-
-    process.onExit.then(settle).catch((error) => {
-      if (settled) return;
-      settled = true;
-      if (timer) {
-        clearTimeout(timer);
-      }
-      void activityIterator.return?.();
-      reject(error);
-    });
-  });
-
-// Spawns a new agent session and tracks the process lifecycle
 export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
   const agent = deps.agentRegistry.get(input.agentId as AgentId);
   if (!agent) throw new Error(`Agent not found: ${input.agentId}`);
 
-  const entry = deps.sessionService.store.create(input.sessionId, (request: ApprovalRequest) => {
-    entry.eventStore.push({ op: "add", path: "/approval_request", value: request });
-  });
-
-  const result = await agent.startSession({
-    prompt: input.prompt,
-    title: input.title,
-    model: input.model,
-    cwd: input.cwd,
-    env: { PSTDIO_SESSION_ID: input.sessionId },
-    eventStore: entry.eventStore,
-  });
-
-  if (result.sessionId) {
-    await deps.sessionService.update(input.sessionId, { agent_session_id: result.sessionId });
-  }
-
-  if (result.process) {
-    deps.sessionService.store.setProcess(input.sessionId, result.process);
-    trackProcessLifecycle(input.sessionId, result.process, entry.eventStore.subscribe(), deps);
-  }
-
-  return result;
+  return spawnProviderSession({ ...input, provider: agent }, deps);
 };
 
 type ResumeInput = {
@@ -157,54 +38,11 @@ type ResumeInput = {
   questionResponse?: QuestionResponse;
 };
 
-// Resumes an existing agent session with a follow-up prompt
 export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) => {
   const agent = deps.agentRegistry.get(input.agentId as AgentId);
   if (!agent) throw new Error(`Agent not found: ${input.agentId}`);
 
-  const entry = deps.sessionService.store.create(input.sessionId, (request: ApprovalRequest) => {
-    entry.eventStore.push({ op: "add", path: "/approval_request", value: request });
-  });
-
-  // Resume streams emit index-based message patches, so we align indices with existing history.
-  let messageOffset = input.messageOffset;
-  if (messageOffset === undefined) {
-    try {
-      const messages = await agent.getMessages(input.agentSessionId, input.cwd ? { cwd: input.cwd } : undefined);
-      messageOffset = messages.length;
-    } catch {
-      messageOffset = 0;
-    }
-  }
-
-  const result = await agent.resumeSession(
-    {
-      sessionId: input.agentSessionId,
-      prompt: input.prompt,
-      model: input.model,
-      cwd: input.cwd,
-      env: { PSTDIO_SESSION_ID: input.sessionId },
-      messageOffset,
-      questionResponse: input.questionResponse,
-    },
-    entry.eventStore,
-    entry.approvalService,
-  );
-
-  if (result.process) {
-    deps.sessionService.store.setProcess(input.sessionId, result.process);
-    trackProcessLifecycle(input.sessionId, result.process, entry.eventStore.subscribe(), deps);
-  } else {
-    sessionLogger.warn(
-      {
-        event: "session.resume.no_process",
-        session_id: input.sessionId,
-      },
-      "Resume returned no process; session status remains in_progress",
-    );
-  }
-
-  return result;
+  return resumeProviderSession({ ...input, provider: agent }, deps);
 };
 
 type ReattachInput = {
@@ -214,95 +52,57 @@ type ReattachInput = {
   cwd?: string;
 };
 
-// Reattaches to an existing opencode session that was orphaned (e.g. by a server restart)
 export const reattachAgentSession = async (input: ReattachInput, deps: SpawnDeps) => {
   const agent = deps.agentRegistry.get(input.agentId as AgentId);
   if (!agent?.reattachSession) throw new Error(`Agent does not support reattach: ${input.agentId}`);
 
-  const entry = deps.sessionService.store.create(input.sessionId, (request: ApprovalRequest) => {
-    entry.eventStore.push({ op: "add", path: "/approval_request", value: request });
-  });
-
-  const result = await agent.reattachSession({ sessionId: input.agentSessionId, cwd: input.cwd }, entry.eventStore);
-
-  if (result.process) {
-    deps.sessionService.store.setProcess(input.sessionId, result.process);
-    trackProcessLifecycle(input.sessionId, result.process, entry.eventStore.subscribe(), deps);
-  }
-
-  return result;
+  return reattachProviderSession({ ...input, providerId: input.agentId, provider: agent }, deps);
 };
 
-const trackProcessLifecycle = (
-  sessionId: string,
-  process: Pick<SpawnedProcess, "kill" | "onExit" | "timeoutStrategy">,
-  activity: AsyncIterable<unknown>,
-  deps: SpawnDeps,
-) => {
-  const exitPromise =
-    process.timeoutStrategy === "provider"
-      ? process.onExit
-      : withProcessExitTimeout(
-          sessionId,
-          process,
-          activity,
-          deps.processExitTimeoutMs ?? DEFAULT_PROCESS_EXIT_TIMEOUT_MS,
-        );
+const createHarnessSessionProvider = (provider: RuntimeHarnessProvider, context: ExtensionSetupContext) =>
+  ({
+    startSession(input) {
+      if (!provider.startSession) throw new Error(`Harness does not support session start: ${provider.id}`);
+      return provider.startSession(context, input);
+    },
+    resumeSession(input, eventStore, approvalService) {
+      if (!provider.resumeSession) throw new Error(`Harness does not support session resume: ${provider.id}`);
+      return provider.resumeSession(context, input, eventStore, approvalService);
+    },
+    reattachSession: provider.reattachSession
+      ? (input, eventStore) => provider.reattachSession!(context, input, eventStore)
+      : undefined,
+    getMessages(sessionId, input) {
+      return (provider.getMessages?.(context, sessionId, input) ?? Promise.resolve([])) as Promise<SessionMessage[]>;
+    },
+  }) satisfies SessionProvider;
 
-  exitPromise
-    .then(async ({ code, signal }) => {
-      const entry = deps.sessionService.store.get(sessionId);
-      if (entry) {
-        const patches = entry.eventStore.getHistory();
-        await persistSessionMessages(sessionId, patches, deps).catch((err) => {
-          sessionLogger.error(
-            {
-              err,
-              event: "session.messages.persist.error",
-              session_id: sessionId,
-            },
-            "Failed to persist session messages on process exit",
-          );
-        });
-      } else {
-        sessionLogger.warn(
-          {
-            event: "session.store.missing_on_exit",
-            session_id: sessionId,
-          },
-          "No store entry found on process exit; messages were not persisted",
-        );
-      }
+export const spawnHarnessProviderSession = async (
+  input: Omit<SpawnInput, "agentId"> & {
+    provider: RuntimeHarnessProvider;
+    context: ExtensionSetupContext;
+  },
+  deps: ProviderSpawnDeps,
+) =>
+  spawnProviderSession(
+    {
+      ...input,
+      provider: createHarnessSessionProvider(input.provider, input.context),
+    },
+    deps,
+  );
 
-      const current = await deps.sessionService.get(sessionId);
-      if (current?.status === "cancelled") {
-        deps.sessionService.store.remove(sessionId);
-        return;
-      }
-
-      const status = resolveExitStatus({ code, signal });
-      if (status === "failed") {
-        sessionLogger.error(
-          {
-            code,
-            event: "session.process.exit.failed",
-            session_id: sessionId,
-            signal,
-          },
-          "Agent process exited with failure",
-        );
-      }
-      await deps.sessionService.transitionStatus(sessionId, status);
-      deps.sessionService.store.remove(sessionId);
-    })
-    .catch((err) => {
-      sessionLogger.error(
-        {
-          err,
-          event: "session.process.exit_tracking.error",
-          session_id: sessionId,
-        },
-        "Process exit tracking failed",
-      );
-    });
-};
+export const resumeHarnessProviderSession = async (
+  input: Omit<ResumeInput, "agentId"> & {
+    provider: RuntimeHarnessProvider;
+    context: ExtensionSetupContext;
+  },
+  deps: ProviderSpawnDeps,
+) =>
+  resumeProviderSession(
+    {
+      ...input,
+      provider: createHarnessSessionProvider(input.provider, input.context),
+    },
+    deps,
+  );

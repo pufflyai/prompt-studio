@@ -53,6 +53,7 @@ import { createAttemptStatusService } from "./services/attempt-status-service";
 import { createExtensionCommandService } from "./services/extension-command-service";
 import { createExtensionInstanceService } from "./services/extension-instance-service";
 import { createFileService } from "./services/file-service";
+import { createHarnessProviderService } from "./services/harness-provider-service";
 import { createPlannerService } from "./services/planner-service";
 import { createProjectService } from "./services/project-service";
 import { createRepoService } from "./services/repo-service";
@@ -157,6 +158,12 @@ export const createApp = async (options: AppOptions) => {
   const skillService = createSkillService({ skillsDBService, skillsStorageService });
   const fileService = createFileService({ filesDBService, filesStorageService });
   const syncService = createSyncService({ db, eventBus });
+  const harnessProviderService = createHarnessProviderService({
+    db,
+    extensionInstancesDBService,
+    filesRoot: options.filesRoot,
+    repoService,
+  });
 
   const workspaceSessionService = createWorkspaceSessionService({ workspaceSessionsDBService });
   const workspaceArtifactService = createWorkspaceArtifactService({ workspaceArtifactsDBService });
@@ -264,6 +271,7 @@ export const createApp = async (options: AppOptions) => {
     extensionInstanceService,
     skillService,
     fileService,
+    harnessProviderService,
     syncService,
     pluginService,
     plannerService,

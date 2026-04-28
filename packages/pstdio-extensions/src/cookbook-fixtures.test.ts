@@ -14,6 +14,7 @@ describe("cookbook fixture extensions", () => {
       "project.templates",
       "project.tickets",
       "project.wrapper",
+      "pstdio.harness.claude-code",
       "pstdio.harness.opencode",
       "pstdio.planner",
     ]);
@@ -28,6 +29,9 @@ describe("cookbook fixture extensions", () => {
     expect(runtime.artifactMounts.map((mount) => mount.path)).toEqual([".pstdio/tickets"]);
     expect(runtime.templateTypes[0]?.id).toBe("project.templates.ticket");
     expect(runtime.templates[0]?.source.kind).toBe("package-asset");
-    expect(runtime.harnesses[0]?.id).toBe("pstdio.harness.opencode");
+    expect(runtime.harnesses.map((harness) => harness.id).sort()).toEqual([
+      "pstdio.harness.claude-code",
+      "pstdio.harness.opencode",
+    ]);
   });
 });

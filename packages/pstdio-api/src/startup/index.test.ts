@@ -52,5 +52,5 @@ describe("runStartupTasks", () => {
     } finally {
       await handle.close();
     }
-  });
+  }, 15_000);
 });

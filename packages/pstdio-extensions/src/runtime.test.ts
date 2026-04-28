@@ -21,6 +21,8 @@ const writeExtension = (projectRoot: string, extensionDir: string, source: strin
 const diagnosticCodes = (runtime: Awaited<ReturnType<typeof loadExtensionRuntime>>) =>
   runtime.diagnostics.map((diagnostic) => diagnostic.code);
 
+const firstPartyExtensionIds = ["pstdio.harness.claude-code", "pstdio.harness.opencode", "pstdio.planner"];
+
 afterEach(() => {
   for (const dir of tempDirs) {
     rmSync(dir, { recursive: true, force: true });
@@ -32,7 +34,7 @@ describe("loadExtensionRuntime", () => {
   test("returns the first-party runtime when the local extensions directory is missing", async () => {
     const runtime = await loadExtensionRuntime({ projectRoot: createProject() });
 
-    expect(runtime.extensions.map((extension) => extension.id)).toEqual(["pstdio.planner"]);
+    expect(runtime.extensions.map((extension) => extension.id).sort()).toEqual(firstPartyExtensionIds);
     expect(runtime.commands).toEqual([]);
     expect(runtime.diagnostics).toEqual([]);
   });
@@ -93,7 +95,7 @@ describe("loadExtensionRuntime", () => {
 
     expect(diagnosticCodes(runtime)).toContain("invalid_export");
     expect(diagnosticCodes(runtime)).toContain("invalid_extension_id");
-    expect(runtime.extensions.map((extension) => extension.id)).toEqual(["pstdio.planner"]);
+    expect(runtime.extensions.map((extension) => extension.id).sort()).toEqual(firstPartyExtensionIds);
   });
 
   test("reports duplicate providers and excludes unsafe artifact mounts", async () => {

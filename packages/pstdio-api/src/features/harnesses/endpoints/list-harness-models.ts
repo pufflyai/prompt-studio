@@ -1,5 +1,4 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import type { AgentId } from "pstdio-agents";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { harnessModelsListResponseSchema, notFoundResponseSchema } from "../dto";
@@ -17,7 +16,7 @@ export const listHarnessModelsRoute = createRoute({
   description: "List available models for a specific harness provider.",
   tags: ["Harnesses"],
   request: {
-    query: z.object({}).strict(),
+    query: z.object({ project_id: z.string().optional() }).strict(),
     params: harnessIdParamSchema,
   },
   responses: {
@@ -33,15 +32,17 @@ export const listHarnessModelsRoute = createRoute({
 });
 
 export const listHarnessModelsHandler = (deps: RouteDeps): AppRouteHandler<typeof listHarnessModelsRoute> => {
-  return (c) => {
+  return async (c) => {
     const { harnessId } = c.req.valid("param");
-    const agentId = toAgentId(harnessId);
-    const agent = deps.agentRegistry.get(agentId as AgentId);
+    const { project_id } = c.req.valid("query");
+    const resolvedHarnessId = toHarnessId(toAgentId(harnessId));
+    const resolved = await deps.harnessProviderService.resolve(resolvedHarnessId, project_id);
 
-    if (!agent) {
-      return c.json({ error: `Harness not found: ${toHarnessId(agentId)}` }, 404);
+    if (!resolved) {
+      return c.json({ error: `Harness not found: ${resolvedHarnessId}` }, 404);
     }
 
-    return c.json(agent.listModels(), 200);
+    const models = await resolved.provider.listModels?.(resolved.context);
+    return c.json(models ?? [], 200);
   };
 };

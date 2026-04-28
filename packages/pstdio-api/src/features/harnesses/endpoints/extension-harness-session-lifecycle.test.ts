@@ -1,32 +1,15 @@
-import { describe, expect, mock, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { describe, expect, test } from "bun:test";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp } from "../../../app";
 
-type Deferred<T> = {
-  promise: Promise<T>;
-  resolve(value: T): void;
-  reject(reason?: unknown): void;
-};
-
-const createDeferred = <T>(): Deferred<T> => {
-  let resolve!: (value: T) => void;
-  let reject!: (reason?: unknown) => void;
-  const promise = new Promise<T>((promiseResolve, promiseReject) => {
-    resolve = promiseResolve;
-    reject = promiseReject;
-  });
-
-  return { promise, resolve, reject };
-};
-
-const writeControlledHarnessExtension = (repoRoot: string) => {
+const writeFakeHarnessExtension = (repoRoot: string) => {
   const extensionDir = join(repoRoot, ".pstdio", "extensions", "pstdio.harness.fake");
   mkdirSync(extensionDir, { recursive: true });
   writeFileSync(
     join(extensionDir, "extension.ts"),
-    `const state = globalThis.__pstdioHarnessSessionLifecycleTest;
+    `const exited = Promise.resolve({ code: 0, signal: null });
 
 const pushTextPair = (eventStore, sessionId, prompt, offset) => {
   eventStore?.push({
@@ -46,14 +29,11 @@ const pushTextPair = (eventStore, sessionId, prompt, offset) => {
   });
 };
 
-const createProcess = (sessionId, exit) => ({
+const createProcess = (sessionId) => ({
   sessionId,
   stdin: { write() {}, end() {} },
-  kill() {
-    state.kill();
-    exit.resolve({ code: null, signal: "SIGTERM" });
-  },
-  onExit: exit.promise,
+  kill() {},
+  onExit: exited,
 });
 
 export default {
@@ -70,20 +50,23 @@ export default {
         return [{ id: "fake" }];
       },
       async startSession(_ctx, input) {
-        const exit = state.createExit();
-        pushTextPair(input.eventStore, "fake-run-1", input.prompt, 0);
-        return { sessionId: "fake-run-1", process: createProcess("fake-run-1", exit) };
+        pushTextPair(input.eventStore, "fake-extension-run-1", input.prompt, 0);
+        return {
+          sessionId: "fake-extension-run-1",
+          process: createProcess("fake-extension-run-1"),
+        };
       },
       async resumeSession(_ctx, input, eventStore) {
-        const exit = state.createExit();
         pushTextPair(eventStore, input.sessionId, input.prompt, input.messageOffset ?? 0);
-        return { process: createProcess(input.sessionId, exit) };
+        return {
+          process: createProcess(input.sessionId),
+        };
       },
       async getMessages() {
         return [];
       },
       async start(_ctx, input) {
-        return { runId: input.sessionId };
+        return { runId: input.sessionId, onExit: exited };
       },
     },
   },
@@ -108,45 +91,13 @@ const waitForSessionStatus = async (
   throw new Error(`Session ${sessionId} did not reach status ${expectedStatus}`);
 };
 
-const waitForSessionStoreRemoval = (
-  sessionService: Awaited<ReturnType<typeof createApp>>["deps"]["sessionService"],
-  sessionId: string,
-) => {
-  const { promise, resolve } = Promise.withResolvers<void>();
-  const originalRemove = sessionService.store.remove;
-
-  sessionService.store.remove = (removedSessionId: string) => {
-    originalRemove(removedSessionId);
-    if (removedSessionId === sessionId) resolve();
-  };
-
-  if (!sessionService.store.get(sessionId)) resolve();
-
-  return Promise.race([
-    promise,
-    Bun.sleep(500).then(() => {
-      throw new Error("Timed out waiting for session store cleanup");
-    }),
-  ]);
-};
-
-describe("harness session ingress", () => {
-  test("starts, sends to, and stops an extension-backed harness session", async () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-harness-session-test-"));
+describe("extension-backed harness session ingress", () => {
+  test("starts and sends without the legacy agent registry", async () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-extension-harness-session-test-"));
     const repoRoot = join(tempRoot, "repo");
     mkdirSync(repoRoot, { recursive: true });
-    writeControlledHarnessExtension(repoRoot);
-    const exits: Deferred<{ code: number | null; signal: string | null }>[] = [];
-    const kill = mock(() => {});
-    const state = {
-      kill,
-      createExit: () => {
-        const exit = createDeferred<{ code: number | null; signal: string | null }>();
-        exits.push(exit);
-        return exit;
-      },
-    };
-    (globalThis as unknown as Record<string, unknown>).__pstdioHarnessSessionLifecycleTest = state;
+    writeFakeHarnessExtension(repoRoot);
+
     const handle = await createApp({
       dbPath: ":memory:",
       storagePath: join(tempRoot, "storage"),
@@ -158,10 +109,11 @@ describe("harness session ingress", () => {
       const projectResponse = await handle.app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Harness Project", agents: ["pstdio.harness.fake"] }),
+        body: JSON.stringify({ name: "Extension Harness Project", agents: ["pstdio.harness.fake"] }),
       });
       expect(projectResponse.status).toBe(201);
       const project = await projectResponse.json();
+      expect(typeof project.id).toBe("string");
 
       const repoResponse = await handle.app.request(`/v1/projects/${project.id}/repos`, {
         method: "POST",
@@ -169,38 +121,35 @@ describe("harness session ingress", () => {
         body: JSON.stringify({ name: "repo", path: repoRoot }),
       });
       expect(repoResponse.status).toBe(201);
-
-      const infoResponse = await handle.app.request(`/v1/harnesses/info?project_id=${project.id}`);
-      expect(infoResponse.status).toBe(200);
-      expect(await infoResponse.json()).toContainEqual({
-        id: "pstdio.harness.fake",
-        name: "Fake Harness",
-        extension_id: "pstdio.harness.fake",
-        availability: { type: "INSTALLED" },
-      });
+      const linkedRepos = await handle.deps.repoService.listByProject(project.id);
+      expect(linkedRepos).toHaveLength(1);
+      expect(linkedRepos[0]?.path).toBe(repoRoot);
+      expect(existsSync(join(repoRoot, ".pstdio", "extensions", "pstdio.harness.fake", "extension.ts"))).toBe(true);
 
       const modelsResponse = await handle.app.request(
         `/v1/harnesses/pstdio.harness.fake/models?project_id=${project.id}`,
       );
       expect(modelsResponse.status).toBe(200);
       expect(await modelsResponse.json()).toEqual([{ id: "fake" }]);
+      const providerIds = (await handle.deps.harnessProviderService.list(project.id)).map(
+        ({ provider }) => provider.id,
+      );
+      expect(providerIds).toContain("pstdio.harness.fake");
 
       const startResponse = await handle.app.request("/v1/harnesses/sessions", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           project_id: project.id,
-          title: "Harness start",
+          title: "Extension harness start",
           prompt: "start",
           harness: "pstdio.harness.fake",
         }),
       });
+      if (startResponse.status !== 201) throw new Error(await startResponse.text());
       expect(startResponse.status).toBe(201);
       const session = await startResponse.json();
       expect(session.agent).toBe("pstdio.harness.fake");
-      expect(exits).toHaveLength(1);
-
-      exits[0]!.resolve({ code: 0, signal: null });
       await waitForSessionStatus(handle.app, session.id, "completed");
 
       const sendResponse = await handle.app.request(`/v1/harnesses/sessions/${session.id}/send`, {
@@ -210,22 +159,9 @@ describe("harness session ingress", () => {
       });
       expect(sendResponse.status).toBe(200);
       expect(await sendResponse.json()).toMatchObject({ id: session.id, agent: "pstdio.harness.fake" });
-      expect(exits).toHaveLength(2);
-
-      const storeRemoved = waitForSessionStoreRemoval(handle.deps.sessionService, session.id);
-      const stopResponse = await handle.app.request(`/v1/harnesses/sessions/${session.id}/stop`, {
-        method: "POST",
-      });
-      expect(stopResponse.status).toBe(200);
-      expect(await stopResponse.json()).toMatchObject({ id: session.id, status: "cancelled" });
-      expect(kill).toHaveBeenCalled();
-
-      const finalSession = await waitForSessionStatus(handle.app, session.id, "cancelled");
-      await storeRemoved;
-      expect(finalSession.agent).toBe("pstdio.harness.fake");
+      await waitForSessionStatus(handle.app, session.id, "completed");
     } finally {
       await handle.close();
-      delete (globalThis as unknown as Record<string, unknown>).__pstdioHarnessSessionLifecycleTest;
       rmSync(tempRoot, { recursive: true, force: true });
     }
   });

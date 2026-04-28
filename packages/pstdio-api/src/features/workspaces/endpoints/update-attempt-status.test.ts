@@ -38,12 +38,7 @@ beforeAll(async () => {
   const project = await projectRes.json();
   projectId = project.id;
 
-  const agentRes = await app.request("/v1/harnesses", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ harness_id: "fake" }),
-  });
-  expect(agentRes.status).toBe(201);
+  await appDeps.agentConfigService.upsert("fake");
 
   // Register repo so hooks can be discovered
   mkdirSync(repoDir, { recursive: true });

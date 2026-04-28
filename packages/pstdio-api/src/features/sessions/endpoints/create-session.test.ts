@@ -7,6 +7,7 @@ import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
+let appDeps: Awaited<ReturnType<typeof createApp>>["deps"];
 let tempRoot: string;
 const previousAgentsEnv = process.env.PSTDIO_AGENTS;
 
@@ -24,11 +25,13 @@ const waitForSessionStatus = async (sessionId: string, expectedStatus: string) =
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-create-session-test-"));
   process.env.PSTDIO_AGENTS = "fake,opencode";
-  ({ app } = await createApp({
+  const created = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
-  }));
+  });
+  app = created.app;
+  appDeps = created.deps;
 });
 
 afterAll(() => {
@@ -75,12 +78,7 @@ describe("POST /v1/sessions", () => {
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
 
-    const setupAgentRes = await app.request("/v1/harnesses", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ harness_id: "fake" }),
-    });
-    expect(setupAgentRes.status).toBe(201);
+    await appDeps.agentConfigService.upsert("fake");
 
     const createRes = await app.request("/v1/sessions", {
       method: "POST",
@@ -131,19 +129,8 @@ describe("POST /v1/sessions", () => {
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
 
-    const setupDefaultRes = await app.request("/v1/harnesses", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ harness_id: "opencode" }),
-    });
-    expect(setupDefaultRes.status).toBe(201);
-
-    const setupEnabledRes = await app.request("/v1/harnesses", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ harness_id: "fake" }),
-    });
-    expect(setupEnabledRes.status).toBe(201);
+    await appDeps.agentConfigService.upsert("opencode");
+    await appDeps.agentConfigService.upsert("fake");
 
     const createRes = await app.request("/v1/sessions", {
       method: "POST",

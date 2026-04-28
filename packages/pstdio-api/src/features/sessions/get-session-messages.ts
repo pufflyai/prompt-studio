@@ -16,9 +16,13 @@ export const getSessionMessages = async (sessionId: string, deps: RouteDeps): Pr
   }
 
   if (session.agent && session.agent_session_id) {
-    const agentMessages = await getAgentMessages(session.agent, session.agent_session_id, session.cwd, deps).catch(
-      () => null,
-    );
+    const agentMessages = await getProviderMessages(
+      session.agent,
+      session.agent_session_id,
+      session.cwd,
+      session.project_id,
+      deps,
+    ).catch(() => null);
     return agentMessages ?? persistedMessages;
   }
 
@@ -32,7 +36,29 @@ const getPersistedMessages = async (sessionFileId: string, deps: RouteDeps) => {
   return JSON.parse(readFileSync(file.storage_path, "utf-8")) as SessionMessage[];
 };
 
-const getAgentMessages = async (agentId: string, agentSessionId: string, cwd: string | null, deps: RouteDeps) => {
+const getProviderMessages = async (
+  agentId: string,
+  agentSessionId: string,
+  cwd: string | null,
+  projectId: string | null,
+  deps: RouteDeps,
+) => {
+  const resolved = await deps.harnessProviderService.resolve(agentId, projectId ?? undefined);
+  if (resolved?.provider.getMessages) {
+    const messages = (await resolved.provider.getMessages(
+      resolved.context,
+      agentSessionId,
+      cwd ? { cwd } : undefined,
+    )) as SessionMessage[];
+    if (messages.length > 0) return messages;
+
+    return (await getLegacyAgentMessages(agentId, agentSessionId, cwd, deps)) ?? messages;
+  }
+
+  return getLegacyAgentMessages(agentId, agentSessionId, cwd, deps);
+};
+
+const getLegacyAgentMessages = async (agentId: string, agentSessionId: string, cwd: string | null, deps: RouteDeps) => {
   const agent = deps.agentRegistry.get(toAgentId(agentId) as AgentId);
   if (!agent) return null;
 

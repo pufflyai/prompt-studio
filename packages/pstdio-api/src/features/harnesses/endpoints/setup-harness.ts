@@ -1,5 +1,4 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import type { AgentId } from "pstdio-agents";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { harnessConfigResponseSchema, notFoundResponseSchema, setupHarnessBodySchema } from "../dto";
@@ -32,8 +31,10 @@ export const setupHarnessHandler = (deps: RouteDeps): AppRouteHandler<typeof set
   return async (c) => {
     const { harness_id, binary } = c.req.valid("json");
     const agentId = toAgentId(harness_id);
-    if (!deps.agentRegistry.get(agentId as AgentId)) {
-      return c.json({ error: `Harness not found: ${toHarnessId(agentId)}` }, 404);
+    const harnessId = toHarnessId(agentId);
+    const resolved = await deps.harnessProviderService.resolve(harnessId);
+    if (!resolved) {
+      return c.json({ error: `Harness not found: ${harnessId}` }, 404);
     }
 
     const createdOrExisting = await deps.agentConfigService.upsert(agentId);

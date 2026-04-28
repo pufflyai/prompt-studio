@@ -2,7 +2,6 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { harnessInfoListResponseSchema } from "../dto";
-import { toHarnessId } from "../harness-ids";
 
 export const listHarnessInfoRoute = createRoute({
   method: "get",
@@ -10,7 +9,7 @@ export const listHarnessInfoRoute = createRoute({
   description: "List known harness providers with availability status.",
   tags: ["Harnesses"],
   request: {
-    query: z.object({}).strict(),
+    query: z.object({ project_id: z.string().optional() }).strict(),
   },
   responses: {
     200: {
@@ -21,16 +20,20 @@ export const listHarnessInfoRoute = createRoute({
 });
 
 export const listHarnessInfoHandler = (deps: RouteDeps): AppRouteHandler<typeof listHarnessInfoRoute> => {
-  return (c) => {
-    const harnesses = deps.agentRegistry.list().map((agent) => {
-      const id = toHarnessId(agent.id);
-      return {
-        id,
-        name: agent.name,
-        extension_id: id,
-        availability: agent.checkAvailability(),
-      };
-    });
+  return async (c) => {
+    const { project_id } = c.req.valid("query");
+    const providers = await deps.harnessProviderService.list(project_id);
+    const harnesses = await Promise.all(
+      providers.map(async (resolved) => {
+        const availability = await deps.harnessProviderService.detect(resolved);
+        return {
+          id: resolved.provider.id,
+          name: resolved.provider.label,
+          extension_id: resolved.provider.extensionId,
+          availability,
+        };
+      }),
+    );
 
     return c.json(harnesses, 200);
   };

@@ -109,7 +109,7 @@ const createProjectWithSessionExtension = async () => {
   mkdirSync(repoPath, { recursive: true });
   writeSessionExtension(repoPath);
 
-  const { app, close } = await createApp({
+  const { app, close, deps } = await createApp({
     agents: [createFakeAgent()],
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
@@ -117,11 +117,7 @@ const createProjectWithSessionExtension = async () => {
   });
   closeFns.push(close);
 
-  await app.request("/v1/harnesses", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ harness_id: "fake" }),
-  });
+  await deps.agentConfigService.upsert("fake");
 
   const projectResponse = await app.request("/v1/projects", {
     method: "POST",

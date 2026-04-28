@@ -38,6 +38,15 @@ const replayPersistedMessages = async (sessionFileId: string, deps: RouteDeps, s
 };
 
 const fetchAgentMessages = async (session: SessionRecord, deps: RouteDeps) => {
+  const resolved = await deps.harnessProviderService.resolve(session.agent, session.project_id);
+  if (resolved?.provider.getMessages) {
+    const cwd = session.cwd;
+    return resolved.provider
+      .getMessages(resolved.context, session.agent_session_id, cwd ? { cwd } : undefined)
+      .then((messages) => messages as SessionMessage[])
+      .catch(() => null);
+  }
+
   const agent = deps.agentRegistry.get(toAgentId(session.agent) as AgentId);
   if (!agent) return null;
 

@@ -1,18 +1,18 @@
-import type { AgentId } from "pstdio-agents";
 import type { CreateHarnessSessionInput, SendHarnessSessionInput } from "pstdio-api-contracts";
+import type { ResolvedHarnessProvider } from "../../services/harness-provider-service";
 import type { RouteDeps } from "../deps";
 import { isAgentEnabledForProject, parseProjectSelectedAgents } from "../projects/selected-agents";
 import { composeSummary } from "../sessions/compose-summary";
 import { getSessionMessages } from "../sessions/get-session-messages";
 import { resolvePrompt } from "../sessions/resolve-prompt";
 import { resolveSessionCwd } from "../sessions/resolve-session-cwd";
-import { resumeAgentSession, spawnAgentSession } from "../sessions/spawn-agent";
+import { resumeHarnessProviderSession, spawnHarnessProviderSession } from "../sessions/spawn-agent";
 import { toAgentId, toHarnessId } from "./harness-ids";
 
 type ProjectRecord = Awaited<ReturnType<RouteDeps["projectService"]["get"]>>;
 
 type HarnessResolution =
-  | { type: "ok"; harnessId: string; agentId: string }
+  | ({ type: "ok"; harnessId: string } & ResolvedHarnessProvider)
   | { type: "error"; status: 400 | 404; error: string };
 
 const isHarnessEnabledForProject = (project: ProjectRecord, agentId: string, harnessId: string) => {
@@ -22,7 +22,11 @@ const isHarnessEnabledForProject = (project: ProjectRecord, agentId: string, har
   return isAgentEnabledForProject(project, agentId) || selectedAgents.includes(harnessId);
 };
 
-const resolveRequestedHarness = (harness: string, deps: RouteDeps, project: ProjectRecord): HarnessResolution => {
+const resolveRequestedHarness = async (
+  harness: string,
+  deps: RouteDeps,
+  project: ProjectRecord,
+): Promise<HarnessResolution> => {
   const agentId = toAgentId(harness);
   const harnessId = toHarnessId(agentId);
 
@@ -30,11 +34,12 @@ const resolveRequestedHarness = (harness: string, deps: RouteDeps, project: Proj
     return { type: "error", status: 400, error: `Harness '${harnessId}' is not enabled for this project.` };
   }
 
-  if (!deps.agentRegistry.get(agentId as AgentId)) {
+  const resolved = await deps.harnessProviderService.resolve(harnessId, project?.id);
+  if (!resolved) {
     return { type: "error", status: 404, error: `Harness not found: ${harnessId}` };
   }
 
-  return { type: "ok", harnessId, agentId };
+  return { type: "ok", harnessId, ...resolved };
 };
 
 const resolveDefaultHarness = async (deps: RouteDeps, project: ProjectRecord): Promise<HarnessResolution> => {
@@ -107,10 +112,11 @@ export const startHarnessSession = async (input: CreateHarnessSessionInput, deps
     deps.eventBus.emit("workspace_sessions", "set", link);
   }
 
-  spawnAgentSession(
+  spawnHarnessProviderSession(
     {
       sessionId: session.id,
-      agentId: harness.agentId,
+      provider: harness.provider,
+      context: harness.context,
       prompt,
       title: input.title,
       model: input.model,
@@ -169,13 +175,24 @@ export const sendHarnessSession = async (sessionId: string, input: SendHarnessSe
   const switchingHarness = currentHarnessId !== harness.harnessId;
   if (switchingHarness) {
     await deps.sessionService.update(session.id, { agent: harness.harnessId, agent_session_id: null });
-    spawnAgentSession({ sessionId: session.id, agentId: harness.agentId, prompt, model: input.model, cwd }, deps);
+    spawnHarnessProviderSession(
+      {
+        sessionId: session.id,
+        provider: harness.provider,
+        context: harness.context,
+        prompt,
+        model: input.model,
+        cwd,
+      },
+      deps,
+    );
   } else if (session.agent_session_id) {
-    resumeAgentSession(
+    resumeHarnessProviderSession(
       {
         sessionId: session.id,
         agentSessionId: session.agent_session_id,
-        agentId: harness.agentId,
+        provider: harness.provider,
+        context: harness.context,
         prompt,
         model: input.model,
         cwd,
@@ -184,7 +201,17 @@ export const sendHarnessSession = async (sessionId: string, input: SendHarnessSe
       deps,
     );
   } else {
-    spawnAgentSession({ sessionId: session.id, agentId: harness.agentId, prompt, model: input.model, cwd }, deps);
+    spawnHarnessProviderSession(
+      {
+        sessionId: session.id,
+        provider: harness.provider,
+        context: harness.context,
+        prompt,
+        model: input.model,
+        cwd,
+      },
+      deps,
+    );
   }
 
   const result = await deps.sessionService.get(session.id);

@@ -11,7 +11,7 @@ const storagePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-storage-"));
 const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-home-"));
 const resolvedHomePath = process.env.E2E_HOME ?? homePath;
 const filesRoot = join(import.meta.dirname, "../pstdio/files");
-const bunCacheDir = process.env.E2E_BUN_CACHE_DIR ?? join(tmpdir(), "pstdio-e2e-bun-cache");
+const bunCacheDir = process.env.E2E_BUN_CACHE_DIR ?? mkdtempSync(join(tmpdir(), "pstdio-e2e-bun-cache-"));
 
 export default defineConfig({
   testDir: "./src/ui",

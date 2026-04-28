@@ -165,6 +165,16 @@ describe("packaged pstdio — self-hosted serve", () => {
         const multiFileSkill = skills.find((skill) => skill.files.length > 1);
         expect(multiFileSkill).toBeDefined();
 
+        const harnessInfoRes = await fetch(`${started.baseUrl}/v1/harnesses/info`);
+        expect(harnessInfoRes.status).toBe(200);
+
+        const harnessInfo = (await harnessInfoRes.json()) as { id: string }[];
+        expect(harnessInfo.map((harness) => harness.id).sort()).toEqual([
+          "pstdio.harness.claude-code",
+          "pstdio.harness.fake",
+          "pstdio.harness.opencode",
+        ]);
+
         const repoPath = join(tempRoot, "repo");
         mkdirSync(repoPath, { recursive: true });
 

@@ -29,13 +29,22 @@ export const setupAvailableHarnessesHandler = (
   return async (c) => {
     const { default_harness_id } = c.req.valid("json");
     const defaultAgentId = toAgentId(default_harness_id);
-    const installedAgents = deps.agentRegistry.list().filter((agent) => agent.checkAvailability().type === "INSTALLED");
+    const providers = await deps.harnessProviderService.list();
+    const availability = await Promise.all(
+      providers.map(async (provider) => ({
+        provider,
+        availability: await deps.harnessProviderService.detect(provider),
+      })),
+    );
+    const installedProviders = availability
+      .filter((entry) => entry.availability.type === "INSTALLED")
+      .map((entry) => entry.provider.provider);
 
-    for (const agent of installedAgents) {
-      await deps.agentConfigService.upsert(agent.id);
+    for (const provider of installedProviders) {
+      await deps.agentConfigService.upsert(toAgentId(provider.id));
     }
 
-    if (installedAgents.some((agent) => agent.id === defaultAgentId)) {
+    if (installedProviders.some((provider) => toAgentId(provider.id) === defaultAgentId)) {
       await deps.agentConfigService.update(defaultAgentId, { is_default: true });
     }
 
