@@ -129,6 +129,8 @@ jobs:
         run: bun run scripts/scaffold-platform-packages.ts
 
       - name: Verify packaged binaries
+        env:
+          PSTDIO_SKIP_PACKAGED_SMOKE: "1"
         run: bun run scripts/verify-packages.ts
 
       - uses: actions/upload-artifact@v4

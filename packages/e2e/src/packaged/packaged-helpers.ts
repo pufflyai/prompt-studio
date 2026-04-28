@@ -5,7 +5,8 @@ import { join } from "node:path";
 import { TEST_TIMEOUT } from "../cli/timeouts";
 
 const REPO_ROOT = join(import.meta.dirname, "../../../..");
-export const PACKAGED_BINARY_PATH = join(REPO_ROOT, "dist/pstdio");
+const packagedBinaryName = process.platform === "win32" ? "pstdio.exe" : "pstdio";
+export const PACKAGED_BINARY_PATH = join(REPO_ROOT, "dist", packagedBinaryName);
 const EXTRACTED_FILES_ROOT = join(tmpdir(), "pstdio-files");
 
 export const buildBinary = () => {

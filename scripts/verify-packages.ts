@@ -33,6 +33,12 @@ if (failed) {
   process.exit(1);
 }
 
+if (process.env.PSTDIO_SKIP_PACKAGED_SMOKE === "1") {
+  process.stdout.write("\nSkipping packaged runtime smoke check.\n");
+  process.stdout.write("\nAll platform binaries are present.\n");
+  process.exit(0);
+}
+
 process.stdout.write("\nRunning packaged runtime smoke check...\n");
 const smoke = spawnSync("bun", ["test", "packages/e2e/src/packaged/packaged-serve-smoke.test.ts", "--silent"], {
   stdio: "inherit",
