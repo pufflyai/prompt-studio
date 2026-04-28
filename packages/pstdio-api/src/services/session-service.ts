@@ -82,7 +82,13 @@ export const createSessionService = (deps: SessionServiceDeps) => {
   };
 
   const resume = async (id: string) => {
-    const updated = await raw.updateStatus(id, "in_progress");
+    const statusUpdated = await raw.updateStatus(id, "in_progress");
+    const updated = statusUpdated
+      ? await raw.update(id, {
+          last_request_started: new Date().toISOString(),
+          last_request_ended: null,
+        })
+      : null;
     if (!updated) return null;
 
     deps.eventBus.emit("sessions", "set", updated);

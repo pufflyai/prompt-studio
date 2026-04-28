@@ -94,7 +94,10 @@ export const followUpSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof 
     if (switchingAgent) {
       await deps.sessionService.update(session.id, { agent: agentId, agent_session_id: null });
 
-      spawnAgentSession({ sessionId: session.id, agentId, prompt, model: input.model, cwd }, deps);
+      spawnAgentSession(
+        { sessionId: session.id, agentId, prompt, model: input.model, cwd, projectId: session.project_id! },
+        deps,
+      );
     } else if (session.agent_session_id) {
       resumeAgentSession(
         {
@@ -105,11 +108,15 @@ export const followUpSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof 
           model: input.model,
           cwd,
           questionResponse: input.question_response,
+          projectId: session.project_id!,
         },
         deps,
       );
     } else {
-      spawnAgentSession({ sessionId: session.id, agentId, prompt, model: input.model, cwd }, deps);
+      spawnAgentSession(
+        { sessionId: session.id, agentId, prompt, model: input.model, cwd, projectId: session.project_id! },
+        deps,
+      );
     }
 
     const result = await deps.sessionService.get(session.id);

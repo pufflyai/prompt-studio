@@ -151,7 +151,6 @@ describe("harness session ingress", () => {
       dbPath: ":memory:",
       storagePath: join(tempRoot, "storage"),
       filesRoot: "",
-      agents: [],
     });
 
     try {

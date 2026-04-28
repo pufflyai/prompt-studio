@@ -3,12 +3,20 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import { createFakeAgent } from "pstdio-agents";
+import { createFakeHarnessProvider, FAKE_HARNESS_EXTENSION_ID } from "@pstdio/pstdio-ext-harness-fake";
+import type { RuntimeHarnessProvider } from "@pstdio/sdk/extensions";
 import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
 
 let tempDirs: string[] = [];
 let closeFns: Array<() => Promise<void>> = [];
+
+const asRuntimeFakeProvider = (): RuntimeHarnessProvider => ({
+  ...createFakeHarnessProvider(),
+  id: FAKE_HARNESS_EXTENSION_ID,
+  key: "fake",
+  extensionId: FAKE_HARNESS_EXTENSION_ID,
+});
 
 const writeStorageExtension = (repoPath: string) => {
   const dir = join(repoPath, ".pstdio", "extensions", "extension-lab");
@@ -184,10 +192,10 @@ const createProjectWithSessionExtension = async () => {
   writeSessionExtension(repoPath);
 
   const { app, close, deps } = await createApp({
-    agents: [createFakeAgent()],
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
+    harnessProviders: [asRuntimeFakeProvider()],
   });
   closeFns.push(close);
 

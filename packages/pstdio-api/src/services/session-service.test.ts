@@ -36,7 +36,12 @@ const buildDeps = () => {
     get: mock(async () => null),
     list: mock(async () => []),
     listByStatus: mock(async () => []),
-    update: mock(async () => null),
+    update: mock(async (id: string, input: Record<string, unknown>) => ({
+      id,
+      project_id: "project_1",
+      status: "in_progress",
+      ...input,
+    })),
   };
 
   return {
@@ -186,7 +191,11 @@ describe("SessionService", () => {
 
       expect(result).toMatchObject({ id: "s1", status: "in_progress" });
       expect(mocks.updateStatus).toHaveBeenCalledWith("s1", "in_progress");
-      expect(emitted).toContainEqual(["sessions", "set", { id: "s1", project_id: "project_1", status: "in_progress" }]);
+      expect(emitted).toContainEqual([
+        "sessions",
+        "set",
+        expect.objectContaining({ id: "s1", project_id: "project_1", status: "in_progress" }),
+      ]);
       expect(mocks.onSessionResumed).toHaveBeenCalledWith({
         id: "s1",
         project_id: "project_1",

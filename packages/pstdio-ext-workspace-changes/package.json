@@ -1,0 +1,32 @@
+{
+  "name": "@pstdio/pstdio-ext-workspace-changes",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./contract": "./src/contract/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "bun run typecheck && biome check .",
+    "format": "biome check --write .",
+    "test": "bun test --silent",
+    "test:coverage": "bun test --coverage"
+  },
+  "dependencies": {
+    "@chakra-ui/react": "3.32.0",
+    "@pstdio/sdk": "workspace:*",
+    "@pstdio/ui": "workspace:*",
+    "@tanstack/react-query": "^5.90.21",
+    "lucide-react": "^0.556.0",
+    "pstdio-api-contracts": "workspace:*",
+    "react": "19.2.4",
+    "react-i18next": "^16.5.4"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "19.2.3",
+    "typescript": "6.0.2"
+  }
+}

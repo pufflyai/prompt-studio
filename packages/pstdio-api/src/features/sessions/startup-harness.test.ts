@@ -10,7 +10,7 @@ describe("resolveOrphanedSessions harness identities", () => {
       cwd: "/work",
       project_id: "p1",
     };
-    const reattachSession = mock(async () => ({
+    const reattachSession = mock(async (_input: unknown, _eventStore: unknown) => ({
       process: {
         sessionId: "oc-xyz",
         stdin: { write: () => {}, end: () => {} } as unknown,
@@ -19,9 +19,11 @@ describe("resolveOrphanedSessions harness identities", () => {
         timeoutStrategy: "provider" as const,
       },
     }));
-    const registryGet = mock(() => ({
-      reattachSession,
-      capabilities: () => ["SessionReattach"],
+    const resolve = mock(async () => ({
+      provider: {
+        reattachSession: (_ctx: unknown, input: unknown, eventStore: unknown) => reattachSession(input, eventStore),
+      },
+      context: {},
     }));
     const storeCreate = mock(() => ({
       eventStore: {
@@ -31,7 +33,7 @@ describe("resolveOrphanedSessions harness identities", () => {
     }));
 
     const deps = {
-      agentRegistry: { get: registryGet },
+      harnessProviderService: { resolve },
       eventBus: { emit: () => {} },
       sessionService: {
         store: {
@@ -47,8 +49,8 @@ describe("resolveOrphanedSessions harness identities", () => {
 
     await resolveOrphanedSessions(deps);
 
-    expect(registryGet).toHaveBeenCalledTimes(2);
-    expect(registryGet).toHaveBeenCalledWith("opencode");
+    expect(resolve).toHaveBeenCalledTimes(2);
+    expect(resolve).toHaveBeenCalledWith("pstdio.harness.opencode", "p1");
     expect(reattachSession).toHaveBeenCalledWith(
       expect.objectContaining({ sessionId: "oc-xyz", cwd: "/work" }),
       expect.anything(),

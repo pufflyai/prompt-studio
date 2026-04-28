@@ -18,6 +18,7 @@
     "@pstdio/pstdio-ext-harness-fake": "workspace:*",
     "@pstdio/pstdio-ext-harness-opencode": "workspace:*",
     "@pstdio/pstdio-ext-planner": "workspace:*",
+    "@pstdio/pstdio-ext-workspace-changes": "workspace:*",
     "@pstdio/sdk": "workspace:*",
     "pstdio-db": "workspace:*"
   },

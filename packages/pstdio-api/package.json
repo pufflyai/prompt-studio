@@ -34,6 +34,8 @@
     "pstdio-wt": "workspace:*"
   },
   "devDependencies": {
+    "@pstdio/pstdio-ext-harness-fake": "workspace:*",
+    "@pstdio/pstdio-ext-harness-opencode": "workspace:*",
     "@types/bun": "latest",
     "@types/mustache": "^4.2.6",
     "typescript": "6.0.2"

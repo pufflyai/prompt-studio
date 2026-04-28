@@ -72,7 +72,9 @@ export const installSkillToRepo = (
   }
 };
 
-const resolveTargetAgents = async (deps: Pick<RouteDeps, "agentConfigService" | "agentRegistry" | "eventBus">) => {
+const resolveTargetAgents = async (
+  deps: Pick<RouteDeps, "agentConfigService" | "harnessProviderService" | "eventBus">,
+) => {
   const configured = await deps.agentConfigService.list();
   if (configured.length > 0) return configured;
 
@@ -80,7 +82,7 @@ const resolveTargetAgents = async (deps: Pick<RouteDeps, "agentConfigService" | 
 };
 
 export const installProjectSkillsToRepo = async (
-  deps: Pick<RouteDeps, "skillService" | "agentConfigService" | "fileService" | "agentRegistry" | "eventBus">,
+  deps: Pick<RouteDeps, "skillService" | "agentConfigService" | "fileService" | "harnessProviderService" | "eventBus">,
   input: { projectId: string; repoPath: string },
 ) => {
   const [skills, agents] = await Promise.all([deps.skillService.list(input.projectId), resolveTargetAgents(deps)]);

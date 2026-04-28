@@ -1,32 +1,61 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import {
-  type ClaudeCodeTranscriptEntry,
-  normalizeClaudeCodeMessages,
-  type SessionMessage,
-  type ToolPart,
-} from "pstdio-agents";
+import type { ToolPart } from "../agent-types";
 import { buildTimelineDocFromInvocations } from "./build-timeline";
 
-const transcriptPath = resolve(
-  import.meta.dir,
-  "../../../../../pstdio-agents/src/providers/claude-code/mocks/tool-calls-transcript.jsonl",
-);
-
-const loadTranscriptEntries = () => {
-  const source = readFileSync(transcriptPath, "utf8");
-
-  return source
-    .split(/\r?\n/)
-    .filter((line) => line.trim().length > 0)
-    .map((line) => JSON.parse(line) as ClaudeCodeTranscriptEntry);
-};
-
 const getToolInvocations = () => {
-  const messages = normalizeClaudeCodeMessages(loadTranscriptEntries()) as SessionMessage[];
-
-  return messages.flatMap((message) => message.parts).filter((part): part is ToolPart => part.type === "tool");
+  return [
+    {
+      type: "tool",
+      tool: "Read",
+      state: {
+        status: "completed",
+        input: { file_path: "/tmp/ticket.md" },
+      },
+    },
+    {
+      type: "tool",
+      tool: "Edit",
+      state: {
+        status: "completed",
+        input: {
+          file_path: "/tmp/ticket.md",
+          old_string: "Today, hooks embed prompt text directly in shell scripts:",
+          new_string: "post-attempt-status-changes-requested",
+        },
+      },
+    },
+    {
+      type: "tool",
+      tool: "Bash",
+      state: {
+        status: "completed",
+        input: { command: "bun test" },
+        output: "ok",
+      },
+    },
+    {
+      type: "tool",
+      tool: "TodoWrite",
+      state: {
+        status: "completed",
+        input: {
+          todos: [
+            { content: "Run validate and verify packages", status: "in_progress" },
+            { content: "Update docs", status: "completed" },
+          ],
+        },
+      },
+    },
+    {
+      type: "tool",
+      tool: "Skill",
+      state: {
+        status: "completed",
+        input: { skill: "plugin-creator" },
+        output: "# Skill loaded",
+      },
+    },
+  ] satisfies ToolPart[];
 };
 
 describe("buildTimelineDocFromInvocations", () => {

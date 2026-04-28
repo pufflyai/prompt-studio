@@ -14,17 +14,16 @@ import { CreateWorkspaceModal } from "@/features/ticket/components/create-worksp
 import { TicketSidebar } from "@/features/ticket/components/ticket-sidebar";
 import { formatTicketBreadcrumbLabel } from "@/features/ticket/utils/ticket-breadcrumb";
 import type { buildSelectableTicketFiles } from "@/features/ticket/utils/ticket-file-selection";
-import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
+import type { ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
 import type { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
 import type { TicketSubTicket } from "@/features/ticket-list/types";
-import type { transformFileDiffs } from "@/features/workspaces/utils/transform-diff";
 import { getAttemptLabelFromWorkspaceShorthand } from "@/features/workspaces/utils/workspace-shorthand";
-import { WorkspaceDiffPanel } from "../components/workspace-diff-panel";
 import type { WorkspaceListItem } from "../components/workspace-list-panel";
 import type { useAttemptStatusMap } from "../hooks/use-attempt-status-map";
 import type { useWorkspaceSessions } from "../hooks/use-workspace-sessions";
 import { buildWorkspaceDeleteOverflowAction } from "./workspace-page-actions";
 import type { WorkspacePageTab } from "./workspace-page-tab";
+import { WorkspaceShellTabs } from "./workspace-shell-tabs";
 
 interface WorkspacePageContentProps {
   projectId: string | undefined;
@@ -37,10 +36,7 @@ interface WorkspacePageContentProps {
   selectedWorkspaceLabel: string;
   selectedWorkspace: WorkspaceListItem | null;
   sessionsByWorkspaceId: ReturnType<typeof useWorkspaceSessions>["sessionsByWorkspaceId"];
-  diffs: ReturnType<typeof transformFileDiffs>;
   artifacts: ApiWorkspaceArtifact[];
-  changedFiles: ApiFileDiff[];
-  isDiffLoading: boolean;
   attempts: NonNullable<ReturnType<typeof useProjectTickets>["data"]>[number]["attempts"];
   selectableFiles: ReturnType<typeof buildSelectableTicketFiles>;
   createAttemptIsPending: boolean;
@@ -147,10 +143,7 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
     selectedWorkspaceLabel,
     selectedWorkspace,
     sessionsByWorkspaceId,
-    diffs,
     artifacts,
-    changedFiles,
-    isDiffLoading,
     attempts,
     selectableFiles,
     createAttemptIsPending,
@@ -283,14 +276,12 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
         </HorizontalMenuStack>
 
         <Flex flex="1" minH="0">
-          <WorkspaceDiffPanel
+          <WorkspaceShellTabs
             projectId={projectId}
             ticketId={ticket.id}
-            diffs={diffs}
+            workspaceId={selectedWorkspace?.id ?? null}
             artifacts={artifacts}
-            changedFiles={changedFiles}
-            loading={isDiffLoading}
-            activeTab={selectedTab}
+            selectedTab={selectedTab}
             onTabChange={selectTab}
           />
         </Flex>

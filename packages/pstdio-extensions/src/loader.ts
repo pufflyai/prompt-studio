@@ -2,6 +2,7 @@ import claudeCodeHarnessExtension, { CLAUDE_CODE_HARNESS_PACKAGE_NAME } from "@p
 import fakeHarnessExtension, { FAKE_HARNESS_PACKAGE_NAME } from "@pstdio/pstdio-ext-harness-fake";
 import opencodeHarnessExtension, { OPENCODE_HARNESS_PACKAGE_NAME } from "@pstdio/pstdio-ext-harness-opencode";
 import plannerExtension, { PLANNER_EXTENSION_PACKAGE_NAME } from "@pstdio/pstdio-ext-planner";
+import workspaceChangesExtension, { WORKSPACE_CHANGES_PACKAGE_NAME } from "@pstdio/pstdio-ext-workspace-changes";
 import type { ExtensionDefinition, ExtensionDiagnostic, ExtensionSourceKind } from "@pstdio/sdk/extensions";
 import { createErrorDiagnostic } from "./diagnostics";
 import { discoverExtensionFiles } from "./discovery";
@@ -29,6 +30,11 @@ const getFirstPartyPackageSources = () => [
     sourcePath: PLANNER_EXTENSION_PACKAGE_NAME,
     sourceKind: "package" as const,
     definition: plannerExtension,
+  },
+  {
+    sourcePath: WORKSPACE_CHANGES_PACKAGE_NAME,
+    sourceKind: "package" as const,
+    definition: workspaceChangesExtension,
   },
   {
     sourcePath: CLAUDE_CODE_HARNESS_PACKAGE_NAME,

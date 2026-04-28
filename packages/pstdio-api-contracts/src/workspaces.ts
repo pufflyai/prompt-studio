@@ -56,9 +56,37 @@ export const removeWorktreeResponseSchema = z.object({
   removed: z.boolean(),
 });
 
+export const workspaceFileDiffSchema = z.object({
+  filePath: z.string(),
+  change: z.enum(["added", "deleted", "modified", "renamed", "copied", "permissionChange"]),
+  additions: z.number(),
+  deletions: z.number(),
+  oldContent: z.string(),
+  newContent: z.string(),
+  oldPath: z.string().optional(),
+  newPath: z.string().optional(),
+});
+
+export const workspaceDiffResponseSchema = z.object({
+  workspace_id: z.string(),
+  base_ref: z.string(),
+  head_ref: z.string(),
+  files: z.array(workspaceFileDiffSchema),
+  totals: z.object({
+    additions: z.number(),
+    deletions: z.number(),
+    file_count: z.number(),
+  }),
+});
+
+export const workspaceDiffModeSchema = z.enum(["current", "fork_point"]);
+
 export type Workspace = z.infer<typeof workspaceSchema>;
 export type WorkspaceListItem = z.infer<typeof workspaceListItemSchema>;
 export type CreateWorkspaceInput = z.infer<typeof createWorkspaceInputSchema>;
 export type UpdateAttemptStatusInput = z.infer<typeof updateAttemptStatusInputSchema>;
 export type UpdateAttemptStatusResponse = z.infer<typeof updateAttemptStatusResponseSchema>;
 export type RemoveWorktreeResponse = z.infer<typeof removeWorktreeResponseSchema>;
+export type WorkspaceFileDiff = z.infer<typeof workspaceFileDiffSchema>;
+export type WorkspaceDiffResponse = z.infer<typeof workspaceDiffResponseSchema>;
+export type WorkspaceDiffMode = z.infer<typeof workspaceDiffModeSchema>;

@@ -1,4 +1,10 @@
 import { Box, Flex, Image, Spinner, Stack, Text } from "@chakra-ui/react";
+import {
+  type ChangedFilesViewMode,
+  type FileIconInfo,
+  FileListPanel,
+  ResizableLeftPanel,
+} from "@pstdio/pstdio-ext-workspace-changes";
 import { EmptyState, ScrollArea } from "@pstdio/ui";
 import { AlertCircle, CheckCircle2, FileCode2, FileText, FlaskConical, TerminalSquare } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -7,9 +13,7 @@ import { useTicketContent } from "@/features/ticket/hooks/use-ticket-content";
 import { isImageFileName } from "@/features/ticket/utils/ticket-file-selection";
 import type { ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
 import { buildApiUrl } from "@/lib/api";
-import type { ChangedFilesViewMode } from "../utils/build-changed-files-tree";
 import { buildWorkspaceChecksContentRequest } from "./workspace-checks-content-request";
-import { type FileIconInfo, FileListPanel, ResizableLeftPanel } from "./workspace-file-list-panel";
 
 interface WorkspaceChecksPanelProps {
   projectId: string | undefined;

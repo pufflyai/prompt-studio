@@ -3,20 +3,21 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
-import type { AgentService } from "pstdio-agents";
+import type { RuntimeHarnessProvider } from "@pstdio/sdk/extensions";
 import { createApp } from "../../../app";
 
-const createCancellableAgent = (
+const createCancellableProvider = (
   kill: ReturnType<typeof mock>,
   onExit: Promise<{ code: number | null; signal: string | null }>,
 ) =>
   ({
-    id: "fake",
-    name: "Cancellable Agent",
-    capabilities: () => [],
-    checkAvailability: () => ({ type: "INSTALLED" }),
+    id: "pstdio.harness.fake",
+    key: "fake",
+    extensionId: "pstdio.harness.fake",
+    label: "Cancellable Harness",
+    start: async () => ({ runId: "agent-session-1" }),
     listModels: () => [],
-    startSession: async () => ({
+    startSession: async (_ctx: unknown, _input: unknown) => ({
       sessionId: "agent-session-1",
       process: {
         sessionId: "agent-session-1",
@@ -27,10 +28,7 @@ const createCancellableAgent = (
     }),
     resumeSession: async () => ({}),
     getMessages: async () => [],
-    listSessions: async () => [],
-    exportSession: async () => ({ session: { id: "agent-session-1", title: "Session" }, messages: [] }),
-    launchSession: async () => ({}),
-  }) as unknown as AgentService;
+  }) satisfies RuntimeHarnessProvider;
 
 const waitForCall = async (fn: ReturnType<typeof mock>) => {
   for (let index = 0; index < 20; index += 1) {
@@ -91,7 +89,7 @@ describe("PATCH /v1/sessions/:id/status", () => {
       dbPath: ":memory:",
       storagePath: join(tempRoot, "storage"),
       filesRoot: "",
-      agents: [createCancellableAgent(kill, onExit)],
+      harnessProviders: [createCancellableProvider(kill, onExit)],
     });
 
     try {

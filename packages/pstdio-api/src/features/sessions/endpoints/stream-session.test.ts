@@ -4,8 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import type { AgentService, EventStore, JsonPatch, SessionMessageInput, SessionStartInput } from "pstdio-agents";
-import { createFakeAgent } from "pstdio-agents";
+import { createFakeHarnessProvider, FAKE_HARNESS_EXTENSION_ID } from "@pstdio/pstdio-ext-harness-fake";
+import type {
+  HarnessEventStore,
+  HarnessSessionMessageInput,
+  HarnessSessionStartInput,
+  RuntimeHarnessProvider,
+} from "@pstdio/sdk/extensions";
+import type { JsonPatch } from "pstdio-agents";
 import { createApp } from "../../../app";
 import { waitForSyncEvent } from "../../../test-utils/wait-for-sync-event";
 import type { AppBindings } from "../../../types";
@@ -16,16 +22,21 @@ let tempRoot: string;
 let close: () => Promise<void>;
 let eventBus: EventBus;
 
+const asRuntimeFakeProvider = (provider: ReturnType<typeof createFakeHarnessProvider>): RuntimeHarnessProvider => ({
+  ...provider,
+  id: FAKE_HARNESS_EXTENSION_ID,
+  key: "fake",
+  extensionId: FAKE_HARNESS_EXTENSION_ID,
+});
+
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-stream-test-"));
-
-  const fakeAgent = createFakeAgent();
 
   ({ app, close, eventBus } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
-    agents: [fakeAgent],
+    harnessProviders: [asRuntimeFakeProvider(createFakeHarnessProvider())],
   }));
 });
 
@@ -94,7 +105,7 @@ const createSSEReader = (response: Response) => {
   return { readEvents, close };
 };
 
-const createSlowFakeAgent = (exitDelayMs: number): AgentService => {
+const createSlowFakeProvider = (exitDelayMs: number): RuntimeHarnessProvider => {
   const createProcess = (sessionId: string) => ({
     sessionId,
     stdin: new PassThrough(),
@@ -104,42 +115,34 @@ const createSlowFakeAgent = (exitDelayMs: number): AgentService => {
     }),
   });
 
-  const startSession = async (_input: SessionStartInput) => {
+  const startSession = async (_ctx: unknown, _input: HarnessSessionStartInput) => {
     const sessionId = `slow-${crypto.randomUUID()}`;
     return { sessionId, process: createProcess(sessionId) };
   };
 
-  const resumeSession = async (input: SessionMessageInput) => ({ process: createProcess(input.sessionId) });
+  const resumeSession = async (_ctx: unknown, input: HarnessSessionMessageInput) => ({
+    process: createProcess(input.sessionId),
+  });
 
   return {
-    id: "fake",
-    name: "Slow Fake Agent",
-    capabilities: () => [],
-    checkAvailability: () => ({ type: "INSTALLED" }),
+    id: FAKE_HARNESS_EXTENSION_ID,
+    key: "fake",
+    extensionId: FAKE_HARNESS_EXTENSION_ID,
+    label: "Slow Fake Harness",
+    start: async () => ({ runId: "fake" }),
     listModels: () => [],
     startSession,
     resumeSession,
     getMessages: async () => [],
-    listSessions: async () => [],
-    exportSession: async (sessionId) => ({
-      session: {
-        id: sessionId,
-        title: "Slow Fake Session",
-        directory: process.cwd(),
-        updatedAt: new Date().toISOString(),
-      },
-      messages: [],
-    }),
-    launchSession: async () => ({}),
   };
 };
 
-const createHistoryReplayAgent = (input: {
+const createHistoryReplayProvider = (input: {
   initialPatches: JsonPatch[];
   livePatch: JsonPatch;
   liveDelayMs: number;
   exitDelayMs: number;
-}): AgentService => {
+}): RuntimeHarnessProvider => {
   const createProcess = (sessionId: string) => ({
     sessionId,
     stdin: new PassThrough(),
@@ -149,7 +152,7 @@ const createHistoryReplayAgent = (input: {
     }),
   });
 
-  const startSession = async (sessionInput: SessionStartInput) => {
+  const startSession = async (_ctx: unknown, sessionInput: HarnessSessionStartInput) => {
     const sessionId = `history-${crypto.randomUUID()}`;
 
     for (const patch of input.initialPatches) {
@@ -163,34 +166,24 @@ const createHistoryReplayAgent = (input: {
     return { sessionId, process: createProcess(sessionId) };
   };
 
-  const resumeSession = async (sessionInput: SessionMessageInput) => ({
+  const resumeSession = async (_ctx: unknown, sessionInput: HarnessSessionMessageInput) => ({
     process: createProcess(sessionInput.sessionId),
   });
 
   return {
-    id: "fake",
-    name: "History Replay Agent",
-    capabilities: () => [],
-    checkAvailability: () => ({ type: "INSTALLED" }),
+    id: FAKE_HARNESS_EXTENSION_ID,
+    key: "fake",
+    extensionId: FAKE_HARNESS_EXTENSION_ID,
+    label: "History Replay Harness",
+    start: async () => ({ runId: "fake" }),
     listModels: () => [],
     startSession,
     resumeSession,
     getMessages: async () => [],
-    listSessions: async () => [],
-    exportSession: async (sessionId) => ({
-      session: {
-        id: sessionId,
-        title: "History Replay Session",
-        directory: process.cwd(),
-        updatedAt: new Date().toISOString(),
-      },
-      messages: [],
-    }),
-    launchSession: async () => ({}),
   };
 };
 
-const createResumeOverlapAgent = (): AgentService => {
+const createResumeOverlapProvider = (): RuntimeHarnessProvider => {
   const createProcess = (sessionId: string, exitDelayMs: number) => ({
     sessionId,
     stdin: new PassThrough(),
@@ -200,7 +193,7 @@ const createResumeOverlapAgent = (): AgentService => {
     }),
   });
 
-  const startSession = async (input: SessionStartInput) => {
+  const startSession = async (_ctx: unknown, input: HarnessSessionStartInput) => {
     const sessionId = `resume-overlap-${crypto.randomUUID()}`;
 
     input.eventStore?.push({
@@ -217,7 +210,7 @@ const createResumeOverlapAgent = (): AgentService => {
     return { sessionId, process: createProcess(sessionId, 50) };
   };
 
-  const resumeSession = async (input: SessionMessageInput, eventStore: EventStore) => {
+  const resumeSession = async (_ctx: unknown, input: HarnessSessionMessageInput, eventStore: HarnessEventStore) => {
     eventStore.push({
       op: "add",
       path: "/messages/0",
@@ -236,27 +229,17 @@ const createResumeOverlapAgent = (): AgentService => {
   };
 
   return {
-    id: "fake",
-    name: "Resume Overlap Agent",
-    capabilities: () => [],
-    checkAvailability: () => ({ type: "INSTALLED" }),
+    id: FAKE_HARNESS_EXTENSION_ID,
+    key: "fake",
+    extensionId: FAKE_HARNESS_EXTENSION_ID,
+    label: "Resume Overlap Harness",
+    start: async () => ({ runId: "fake" }),
     listModels: () => [],
     startSession,
     resumeSession,
     getMessages: async () => {
       throw new Error("message lookup failed");
     },
-    listSessions: async () => [],
-    exportSession: async (sessionId) => ({
-      session: {
-        id: sessionId,
-        title: "Resume Overlap Session",
-        directory: process.cwd(),
-        updatedAt: new Date().toISOString(),
-      },
-      messages: [],
-    }),
-    launchSession: async () => ({}),
   };
 };
 
@@ -355,7 +338,7 @@ describe("GET /v1/sessions/:id/stream", () => {
       dbPath: ":memory:",
       storagePath: join(heartbeatRoot, "storage"),
       filesRoot: "",
-      agents: [createSlowFakeAgent(1200)],
+      harnessProviders: [createSlowFakeProvider(1200)],
     });
 
     const projectRes = await heartbeatApp.request("/v1/projects", {
@@ -418,16 +401,16 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
       dbPath: ":memory:",
       storagePath: join(replayRoot, "storage"),
       filesRoot: "",
-      agents: [
-        createHistoryReplayAgent({
+      harnessProviders: [
+        createHistoryReplayProvider({
           initialPatches,
           livePatch: {
             op: "add",
             path: "/messages/2",
             value: { id: "m3", role: "assistant", parts: [{ type: "text", text: "LIVE" }] },
           },
-          liveDelayMs: 50,
-          exitDelayMs: 300,
+          liveDelayMs: 750,
+          exitDelayMs: 1500,
         }),
       ],
     });
@@ -455,19 +438,23 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
     expect(streamRes.status).toBe(200);
 
     const sse = createSSEReader(streamRes);
-    const events = await sse.readEvents(3);
+    const events = await sse.readEvents(4);
+    while (events.filter((event) => event.event === "patch").length < 2 && events.length < 8) {
+      events.push(...(await sse.readEvents(1)));
+    }
     sse.close();
 
     expect(events[0]?.event).toBe("ready");
 
-    const snapshotPatch = events[1]?.data as JsonPatch;
+    const patchEvents = events.filter((event) => event.event === "patch");
+    const snapshotPatch = patchEvents[0]?.data as JsonPatch;
     expect(snapshotPatch).toMatchObject({
       op: "replace",
       path: "/messages",
     });
     expect(getPatchTextParts(snapshotPatch)).toEqual(["FIRST", "DONE"]);
 
-    const livePatch = events[2]?.data as JsonPatch;
+    const livePatch = patchEvents[1]?.data as JsonPatch;
     expect(livePatch).toMatchObject({
       op: "add",
       path: "/messages/2",
@@ -489,7 +476,7 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
       dbPath: ":memory:",
       storagePath: join(overlapRoot, "storage"),
       filesRoot: "",
-      agents: [createResumeOverlapAgent()],
+      harnessProviders: [createResumeOverlapProvider()],
     });
 
     const projectRes = await overlapApp.request("/v1/projects", {

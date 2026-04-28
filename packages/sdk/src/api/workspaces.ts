@@ -3,4 +3,7 @@ export type {
   RemoveWorktreeResponse,
   UpdateAttemptStatusInput,
   UpdateAttemptStatusResponse,
+  WorkspaceDiffMode,
+  WorkspaceDiffResponse,
+  WorkspaceFileDiff,
 } from "pstdio-api-contracts";

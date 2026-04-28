@@ -10,6 +10,7 @@ import type {
   RuntimeSkill,
   RuntimeTemplate,
   RuntimeTemplateType,
+  ViewContribution,
 } from "@pstdio/sdk/extensions";
 import { registerHarnesses, registerSkills, registerTemplates } from "./content-normalization";
 import { createErrorDiagnostic } from "./diagnostics";
@@ -21,12 +22,20 @@ type RuntimeAccumulator = {
   commands: RuntimeCommandRecord[];
   cli: RuntimeCliContribution[];
   events: RuntimeEventHandler[];
+  views: RuntimeViewContribution[];
   artifactMounts: RuntimeArtifactMount[];
   templateTypes: RuntimeTemplateType[];
   templates: RuntimeTemplate[];
   skills: RuntimeSkill[];
   harnesses: RuntimeHarnessProvider[];
   diagnostics: ExtensionDiagnostic[];
+};
+
+type RuntimeViewContribution = ViewContribution & {
+  id: string;
+  key: string;
+  extensionId: string;
+  sourcePath: string;
 };
 
 const EXTENSION_ID_PATTERN = /^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)*$/;
@@ -227,6 +236,21 @@ const registerEvents = (source: LoadedExtensionSource, runtime: RuntimeAccumulat
   }
 };
 
+const registerViews = (source: LoadedExtensionSource, runtime: RuntimeAccumulator) => {
+  for (const [key, view] of Object.entries(source.definition.views ?? {})) {
+    if (!isRecord(view) || typeof view.type !== "string" || typeof view.label !== "string") continue;
+
+    const extensionId = source.definition.id;
+    runtime.views.push({
+      ...view,
+      id: `${extensionId}.${key}`,
+      key,
+      extensionId,
+      sourcePath: source.sourcePath,
+    });
+  }
+};
+
 const registerArtifactMounts = (
   source: LoadedExtensionSource,
   runtime: RuntimeAccumulator,
@@ -289,6 +313,7 @@ export const normalizeExtensionSources = (
     commands: [],
     cli: [],
     events: [],
+    views: [],
     artifactMounts: [],
     templateTypes: [],
     templates: [],
@@ -307,6 +332,7 @@ export const normalizeExtensionSources = (
     registerExtension(source, runtime, extensionSources);
     registerCommands(source, runtime, commandOwners, cliOwners);
     registerEvents(source, runtime);
+    registerViews(source, runtime);
     registerArtifactMounts(source, runtime, mountOwners);
     registerTemplates(source, runtime);
     registerSkills(source, runtime);

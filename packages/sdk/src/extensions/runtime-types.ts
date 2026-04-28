@@ -10,6 +10,7 @@ import type {
   PackageAssetDescriptor,
   ParamSchema,
   TemplateTypeDefinition,
+  ViewContribution,
 } from "./types";
 
 export type NormalizedExtension = {
@@ -45,6 +46,13 @@ export type RuntimeEventHandler = Omit<EventHandlerDefinition, "event"> & {
   extensionId: string;
   event: EventDefinition | string;
   eventId: string;
+  sourcePath: string;
+};
+
+export type RuntimeViewContribution = ViewContribution & {
+  id: string;
+  key: string;
+  extensionId: string;
   sourcePath: string;
 };
 

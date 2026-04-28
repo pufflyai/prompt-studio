@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ExtensionSessionsApi, ResourceRef } from "@pstdio/sdk/extensions";
-import type { AgentRegistry } from "pstdio-agents";
 import type { createExtensionInstancesDBService, DbClient } from "pstdio-db";
 import { loadExtensionRuntime, runExtensionCommand } from "pstdio-extensions";
 import { isAgentEnabledForProject, parseProjectSelectedAgents } from "../features/projects/selected-agents";
@@ -11,6 +10,7 @@ import type { EventBus } from "../features/sync/event-bus";
 import { cleanupWorkspaceWorktree } from "../features/workspaces/worktree-cleanup";
 import type { createAgentConfigService } from "./agent-config-service";
 import type { createFileService } from "./file-service";
+import type { createHarnessProviderService } from "./harness-provider-service";
 import type { createProjectService } from "./project-service";
 import type { createRepoService } from "./repo-service";
 import type { createSessionService } from "./session-service";
@@ -21,11 +21,11 @@ import type { createWorkspaceSessionService } from "./workspace-session-service"
 type ExtensionRuntime = Awaited<ReturnType<typeof loadExtensionRuntime>>;
 type ExtensionCommandServiceDeps = {
   agentConfigService: Pick<ReturnType<typeof createAgentConfigService>, "list">;
-  agentRegistry: AgentRegistry;
   db: DbClient;
   eventBus: EventBus;
   extensionInstancesDBService: ReturnType<typeof createExtensionInstancesDBService>;
   fileService: ReturnType<typeof createFileService>;
+  harnessProviderService: ReturnType<typeof createHarnessProviderService>;
   projectService: Pick<ReturnType<typeof createProjectService>, "get">;
   repoService: ReturnType<typeof createRepoService>;
   sessionService: ReturnType<typeof createSessionService>;
@@ -67,6 +67,7 @@ const filterDisabledExtensions = (runtime: ExtensionRuntime, disabledExtensionId
     commands: runtime.commands.filter((command) => isEnabled(command.extensionId)),
     cli: runtime.cli.filter((contribution) => isEnabled(contribution.extensionId)),
     events: runtime.events.filter((event) => isEnabled(event.extensionId)),
+    views: runtime.views.filter((view) => isEnabled(view.extensionId)),
     artifactMounts: runtime.artifactMounts.filter((mount) => isEnabled(mount.extensionId)),
     templateTypes: runtime.templateTypes.filter((templateType) => isEnabled(templateType.extensionId)),
     templates: runtime.templates.filter((template) => isEnabled(template.extensionId)),
@@ -164,6 +165,7 @@ const createSessionFromExtensionCommand = async (
       prompt: sessionInput.prompt,
       title: sessionInput.title,
       cwd,
+      projectId,
     },
     deps,
   ).catch(async () => {

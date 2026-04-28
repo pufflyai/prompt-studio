@@ -14,6 +14,7 @@ const emptyRuntime = {
   commands: [],
   cli: [],
   events: [],
+  views: [],
   artifactMounts: [],
   templateTypes: [],
   templates: [],

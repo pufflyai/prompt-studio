@@ -2,10 +2,9 @@ import { readFileSync } from "node:fs";
 import type { Context } from "hono";
 import type { SSEStreamingApi } from "hono/streaming";
 import { streamSSE } from "hono/streaming";
-import type { AgentId, EventStore, JsonPatch, SessionMessage } from "pstdio-agents";
+import type { EventStore, JsonPatch, SessionMessage } from "pstdio-agents";
 import type { AppBindings } from "../../../types";
 import type { RouteDeps } from "../../deps";
-import { toAgentId } from "../../harnesses/harness-ids";
 import { buildMessagesFromPatches, resolveMessagePatchIndexOffset } from "../session-messages";
 
 const SESSION_STREAM_HEARTBEAT_MS = 1000;
@@ -18,6 +17,7 @@ type SessionRecord = {
   session_file_id: string | null;
   cwd: string | null;
   status: string | null;
+  last_request_ended: string | null;
 };
 
 const replayMessagesAsPatch = async (messages: SessionMessage[], stream: SSEStreamingApi) => {
@@ -47,11 +47,7 @@ const fetchAgentMessages = async (session: SessionRecord, deps: RouteDeps) => {
       .catch(() => null);
   }
 
-  const agent = deps.agentRegistry.get(toAgentId(session.agent) as AgentId);
-  if (!agent) return null;
-
-  const cwd = session.cwd;
-  return agent.getMessages(session.agent_session_id, cwd ? { cwd } : undefined).catch(() => null);
+  return null;
 };
 
 const replayCompletedSession = async (session: SessionRecord, deps: RouteDeps, stream: SSEStreamingApi) => {
@@ -152,29 +148,33 @@ const WAIT_FOR_AGENT_POLL_MS = 500;
 const WAIT_FOR_AGENT_MAX_MS = 120_000;
 
 const waitForSessionStoreEntry = async (sessionId: string, deps: RouteDeps, stream: SSEStreamingApi) => {
+  let aborted = false;
+  stream.onAbort(() => {
+    aborted = true;
+  });
+
   // Only wait if the session exists but the agent hasn't been spawned yet.
   // This happens when workspace initialization is blocking the agent spawn.
   const session = await deps.sessionService.get(sessionId);
   if (!session) return null;
 
-  // Session already has an agent_session_id — the agent was spawned but is no longer running.
-  // This is an orphaned/completed session, not a pending spawn.
-  if (session.agent_session_id) return null;
-
   const terminal = session.status === "completed" || session.status === "failed" || session.status === "cancelled";
   if (terminal) return null;
+  if (session.agent_session_id && session.last_request_ended) return null;
 
   const deadline = Date.now() + WAIT_FOR_AGENT_MAX_MS;
 
-  while (Date.now() < deadline) {
+  while (!aborted && Date.now() < deadline) {
     const entry = deps.sessionService.store.get(sessionId);
-    if (entry) return entry;
+    if (entry && entry.eventStore.getHistory().length > 0) return entry;
 
     const current = await deps.sessionService.get(sessionId);
     if (!current) return null;
 
     const isTerminal = current.status === "completed" || current.status === "failed" || current.status === "cancelled";
-    if (isTerminal || current.agent_session_id) return null;
+    if (isTerminal) return entry ?? null;
+    if (current.agent_session_id && current.last_request_ended) return null;
+    if (current.status !== "in_progress" && current.agent_session_id) return null;
 
     await stream.writeSSE({ data: JSON.stringify({ timestamp: Date.now() }), event: "heartbeat" });
     await new Promise((resolve) => setTimeout(resolve, WAIT_FOR_AGENT_POLL_MS));

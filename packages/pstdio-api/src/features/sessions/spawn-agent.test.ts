@@ -1,5 +1,14 @@
 import { describe, expect, mock, test } from "bun:test";
-import { type AgentService, createEventStore } from "pstdio-agents";
+import type {
+  HarnessEventStore,
+  HarnessResumeResult,
+  HarnessSessionMessageInput,
+  HarnessSessionMessagesInput,
+  HarnessSessionStartInput,
+  HarnessSessionStartResult,
+  RuntimeHarnessProvider,
+} from "@pstdio/sdk/extensions";
+import { createEventStore } from "pstdio-agents";
 import { resumeAgentSession, spawnAgentSession } from "./spawn-agent";
 
 const createStoreEntry = () => ({
@@ -7,49 +16,82 @@ const createStoreEntry = () => ({
   approvalService: { handleResponse: () => {}, dispose: () => {} },
 });
 
-const buildAgent = () => {
-  const getMessages = mock(async () => [
-    { id: "m1", role: "user", parts: [{ type: "text", text: "hello" }] },
-    { id: "m2", role: "assistant", parts: [{ type: "text", text: "hi" }] },
-    { id: "m3", role: "user", parts: [{ type: "text", text: "continue" }] },
-  ]);
-  const resumeSession = mock(async (_input: unknown, _eventStore: unknown, _approvalService?: unknown) => ({}));
+const getFirstMockArg = <T>(fn: { mock: { calls: unknown[][] } }) => fn.mock.calls[0]?.[0] as T | undefined;
 
-  const agent = {
-    id: "claude-code",
-    name: "Claude Code",
-    capabilities: () => [],
-    checkAvailability: () => ({ type: "NOT_FOUND" }),
-    listModels: () => [],
-    startSession: async () => ({}),
-    resumeSession,
-    getMessages,
-    listSessions: async () => [],
-    exportSession: async () => ({ session: { id: "s1", title: "title" }, messages: [] }),
-    launchSession: async () => ({}),
-  } as unknown as AgentService;
+const createRuntimeProvider = (provider: {
+  startSession?: (input: HarnessSessionStartInput) => Promise<unknown>;
+  resumeSession?: (
+    input: HarnessSessionMessageInput,
+    eventStore: HarnessEventStore,
+    approvalService: unknown,
+  ) => Promise<unknown>;
+  getMessages?: (sessionId: string, input?: HarnessSessionMessagesInput) => Promise<unknown>;
+}) =>
+  ({
+    id: "pstdio.harness.claude-code",
+    key: "claudeCode",
+    extensionId: "pstdio.harness.claude-code",
+    label: "Claude Code",
+    start: async () => ({ runId: "run" }),
+    startSession: provider.startSession
+      ? (_ctx, input) => provider.startSession!(input) as Promise<HarnessSessionStartResult>
+      : async () => ({ sessionId: "agent_session_1" }),
+    resumeSession: provider.resumeSession
+      ? (_ctx, input, eventStore, approvalService) =>
+          provider.resumeSession!(input, eventStore, approvalService) as Promise<HarnessResumeResult>
+      : async () => ({}),
+    getMessages: provider.getMessages
+      ? (_ctx, sessionId, input) => provider.getMessages!(sessionId, input) as Promise<unknown[]>
+      : undefined,
+  }) satisfies RuntimeHarnessProvider;
 
-  return { agent, getMessages, resumeSession };
-};
-
-describe("resumeAgentSession", () => {
-  test("uses existing message count as default messageOffset", async () => {
-    const { agent, getMessages, resumeSession } = buildAgent();
-    const storeEntries = new Map<string, unknown>();
-    const sessionService = {
+const createDeps = (input: { provider: RuntimeHarnessProvider; sessionService: unknown; fileService?: unknown }) =>
+  ({
+    harnessProviderService: {
+      resolve: mock(async () => ({ provider: input.provider, context: {} })),
+    },
+    eventBus: { emit: () => {} },
+    fileService: input.fileService ?? {
+      get: async () => null,
+      upload: async () => ({ id: "file_1" }),
       update: async () => null,
-      transitionStatus: async () => null,
-      store: {
-        create: mock((id: string) => {
+    },
+    sessionService: input.sessionService,
+  }) as unknown as Parameters<typeof spawnAgentSession>[1];
+
+const createSessionService = (
+  overrides: { get?: unknown; transitionStatus?: unknown; remove?: unknown; create?: unknown } = {},
+) => {
+  const storeEntries = new Map<string, unknown>();
+
+  return {
+    get: overrides.get ?? mock(async () => ({ id: "session_1", project_id: "project_1", status: "in_progress" })),
+    update: async () => null,
+    transitionStatus: overrides.transitionStatus ?? mock(async () => null),
+    store: {
+      create:
+        overrides.create ??
+        mock((id: string) => {
           const entry = createStoreEntry();
           storeEntries.set(id, entry);
           return entry;
         }),
-        get: mock((id: string) => storeEntries.get(id) ?? null),
-        setProcess: mock(() => {}),
-        remove: mock(() => {}),
-      },
-    };
+      get: mock((id: string) => storeEntries.get(id) ?? null),
+      setProcess: mock(() => {}),
+      remove: overrides.remove ?? mock(() => {}),
+    },
+  };
+};
+
+describe("resumeAgentSession", () => {
+  test("uses existing message count as default messageOffset", async () => {
+    const getMessages = mock(async () => [
+      { id: "m1", role: "user", parts: [{ type: "text", text: "hello" }] },
+      { id: "m2", role: "assistant", parts: [{ type: "text", text: "hi" }] },
+      { id: "m3", role: "user", parts: [{ type: "text", text: "continue" }] },
+    ]);
+    const resumeSession = mock(async () => ({}));
+    const sessionService = createSessionService();
 
     await resumeAgentSession(
       {
@@ -59,29 +101,12 @@ describe("resumeAgentSession", () => {
         prompt: "continue",
         cwd: "/repo",
       },
-      {
-        agentRegistry: {
-          get: () => agent,
-          list: () => [],
-          checkAll: () => ({
-            "claude-code": { type: "INSTALLED" },
-            opencode: { type: "INSTALLED" },
-            fake: { type: "INSTALLED" },
-          }),
-        },
-        sessionService,
-        eventBus: {
-          emit: () => {},
-        },
-      } as unknown as Parameters<typeof resumeAgentSession>[1],
+      createDeps({ provider: createRuntimeProvider({ getMessages, resumeSession }), sessionService }),
     );
 
     expect(getMessages).toHaveBeenCalledWith("agent_1", { cwd: "/repo" });
     expect(resumeSession).toHaveBeenCalledTimes(1);
-
-    const firstCall = resumeSession.mock.calls[0];
-    const resumeInput = firstCall?.[0] as { messageOffset?: number } | undefined;
-    expect(resumeInput?.messageOffset).toBe(3);
+    expect(getFirstMockArg<{ messageOffset?: number }>(resumeSession)?.messageOffset).toBe(3);
   });
 
   test("creates the stream entry before waiting for message history", async () => {
@@ -90,37 +115,9 @@ describe("resumeAgentSession", () => {
       resolveMessages = resolve;
     });
     const getMessages = mock(() => pendingMessages);
-    const resumeSession = mock(async (_input: unknown, _eventStore: unknown, _approvalService?: unknown) => ({}));
+    const resumeSession = mock(async () => ({}));
+    const sessionService = createSessionService();
 
-    const agent = {
-      id: "claude-code",
-      name: "Claude Code",
-      capabilities: () => [],
-      checkAvailability: () => ({ type: "NOT_FOUND" }),
-      listModels: () => [],
-      startSession: async () => ({}),
-      resumeSession,
-      getMessages,
-      listSessions: async () => [],
-      exportSession: async () => ({ session: { id: "s1", title: "title" }, messages: [] }),
-      launchSession: async () => ({}),
-    } as unknown as AgentService;
-
-    const storeEntries = new Map<string, unknown>();
-    const sessionService = {
-      update: async () => null,
-      transitionStatus: async () => null,
-      store: {
-        create: mock((id: string) => {
-          const entry = createStoreEntry();
-          storeEntries.set(id, entry);
-          return entry;
-        }),
-        get: mock((id: string) => storeEntries.get(id) ?? null),
-        setProcess: mock(() => {}),
-        remove: mock(() => {}),
-      },
-    };
     const resumePromise = resumeAgentSession(
       {
         sessionId: "s_1",
@@ -129,24 +126,16 @@ describe("resumeAgentSession", () => {
         prompt: "continue",
         cwd: "/repo",
       },
-      {
-        agentRegistry: {
-          get: () => agent,
-          list: () => [],
-          checkAll: () => ({
-            "claude-code": { type: "INSTALLED" },
-            opencode: { type: "INSTALLED" },
-            fake: { type: "INSTALLED" },
-          }),
-        },
-        sessionService,
-        eventBus: {
-          emit: () => {},
-        },
-      } as unknown as Parameters<typeof resumeAgentSession>[1],
+      createDeps({ provider: createRuntimeProvider({ getMessages, resumeSession }), sessionService }),
     );
 
-    expect(sessionService.store.create).toHaveBeenCalledTimes(1);
+    const storeCreate = sessionService.store.create as unknown as { mock: { calls: unknown[][] } };
+    for (let index = 0; index < 10; index += 1) {
+      if (storeCreate.mock.calls.length > 0) break;
+      await Bun.sleep(0);
+    }
+
+    expect(storeCreate).toHaveBeenCalledTimes(1);
 
     resolveMessages([
       { id: "m1", role: "user", parts: [{ type: "text", text: "hello" }] },
@@ -157,23 +146,8 @@ describe("resumeAgentSession", () => {
     expect(resumeSession).toHaveBeenCalledTimes(1);
   });
 
-  test("passes PSTDIO_SESSION_ID to resumed agent sessions", async () => {
-    const { agent, resumeSession } = buildAgent();
-    const storeEntries = new Map<string, unknown>();
-    const sessionService = {
-      update: async () => null,
-      transitionStatus: async () => null,
-      store: {
-        create: mock((id: string) => {
-          const entry = createStoreEntry();
-          storeEntries.set(id, entry);
-          return entry;
-        }),
-        get: mock((id: string) => storeEntries.get(id) ?? null),
-        setProcess: mock(() => {}),
-        remove: mock(() => {}),
-      },
-    };
+  test("passes PSTDIO_SESSION_ID to resumed harness sessions", async () => {
+    const resumeSession = mock(async () => ({}));
 
     await resumeAgentSession(
       {
@@ -182,27 +156,10 @@ describe("resumeAgentSession", () => {
         agentId: "claude-code",
         prompt: "continue",
       },
-      {
-        agentRegistry: {
-          get: () => agent,
-          list: () => [],
-          checkAll: () => ({
-            "claude-code": { type: "INSTALLED" },
-            opencode: { type: "INSTALLED" },
-            fake: { type: "INSTALLED" },
-          }),
-        },
-        sessionService,
-        eventBus: {
-          emit: () => {},
-        },
-      } as unknown as Parameters<typeof resumeAgentSession>[1],
+      createDeps({ provider: createRuntimeProvider({ resumeSession }), sessionService: createSessionService() }),
     );
 
-    expect(resumeSession).toHaveBeenCalledTimes(1);
-    const firstCall = resumeSession.mock.calls[0];
-    const resumeInput = firstCall?.[0] as { env?: Record<string, string> } | undefined;
-    expect(resumeInput?.env?.PSTDIO_SESSION_ID).toBe("s_42");
+    expect(getFirstMockArg<{ env?: Record<string, string> }>(resumeSession)?.env?.PSTDIO_SESSION_ID).toBe("s_42");
   });
 });
 
@@ -214,22 +171,8 @@ describe("spawnAgentSession", () => {
         onExit: Promise.resolve({ code: 0, signal: null }),
       },
     }));
-
-    const agent = {
-      id: "claude-code",
-      name: "Claude Code",
-      capabilities: () => [],
-      checkAvailability: () => ({ type: "NOT_FOUND" }),
-      listModels: () => [],
-      startSession,
-      resumeSession: async () => ({}),
-      getMessages: async () => [],
-      listSessions: async () => [],
-      exportSession: async () => ({ session: { id: "s1", title: "title" }, messages: [] }),
-      launchSession: async () => ({}),
-    } as unknown as AgentService;
-
     const transitionStatus = mock(async () => ({ id: "session_1", project_id: "project_1", status: "completed" }));
+    const sessionService = createSessionService({ transitionStatus });
 
     await spawnAgentSession(
       {
@@ -238,38 +181,7 @@ describe("spawnAgentSession", () => {
         prompt: "hello",
         cwd: "/repo",
       },
-      {
-        agentRegistry: {
-          get: () => agent,
-          list: () => [],
-          checkAll: () => ({
-            "claude-code": { type: "INSTALLED" },
-            opencode: { type: "INSTALLED" },
-            fake: { type: "INSTALLED" },
-          }),
-        },
-        eventBus: {
-          emit: () => {},
-        },
-        fileService: {
-          get: async () => null,
-          upload: async () => ({ id: "file_1" }),
-          update: async () => null,
-        },
-        sessionService: {
-          get: mock(async () => ({ id: "session_1", project_id: "project_1", status: "in_progress" })),
-          update: async () => null,
-          transitionStatus,
-          store: {
-            create: mock(() => ({
-              ...createStoreEntry(),
-            })),
-            get: mock(() => null),
-            setProcess: mock(() => {}),
-            remove: mock(() => {}),
-          },
-        },
-      } as unknown as Parameters<typeof spawnAgentSession>[1],
+      createDeps({ provider: createRuntimeProvider({ startSession }), sessionService }),
     );
 
     for (let index = 0; index < 20; index += 1) {
@@ -287,23 +199,13 @@ describe("spawnAgentSession", () => {
         onExit: Promise.resolve({ code: 0, signal: null }),
       },
     }));
-
-    const agent = {
-      id: "claude-code",
-      name: "Claude Code",
-      capabilities: () => [],
-      checkAvailability: () => ({ type: "NOT_FOUND" }),
-      listModels: () => [],
-      startSession,
-      resumeSession: async () => ({}),
-      getMessages: async () => [],
-      listSessions: async () => [],
-      exportSession: async () => ({ session: { id: "s1", title: "title" }, messages: [] }),
-      launchSession: async () => ({}),
-    } as unknown as AgentService;
-
     const transitionStatus = mock(async () => ({ id: "session_1", project_id: "project_1", status: "completed" }));
     const remove = mock(() => {});
+    const sessionService = createSessionService({
+      get: mock(async () => ({ id: "session_1", project_id: "project_1", status: "cancelled" })),
+      transitionStatus,
+      remove,
+    });
 
     await spawnAgentSession(
       {
@@ -312,38 +214,7 @@ describe("spawnAgentSession", () => {
         prompt: "hello",
         cwd: "/repo",
       },
-      {
-        agentRegistry: {
-          get: () => agent,
-          list: () => [],
-          checkAll: () => ({
-            "claude-code": { type: "INSTALLED" },
-            opencode: { type: "INSTALLED" },
-            fake: { type: "INSTALLED" },
-          }),
-        },
-        eventBus: {
-          emit: () => {},
-        },
-        fileService: {
-          get: async () => null,
-          upload: async () => ({ id: "file_1" }),
-          update: async () => null,
-        },
-        sessionService: {
-          get: mock(async () => ({ id: "session_1", project_id: "project_1", status: "cancelled" })),
-          update: async () => null,
-          transitionStatus,
-          store: {
-            create: mock(() => ({
-              ...createStoreEntry(),
-            })),
-            get: mock(() => null),
-            setProcess: mock(() => {}),
-            remove,
-          },
-        },
-      } as unknown as Parameters<typeof spawnAgentSession>[1],
+      createDeps({ provider: createRuntimeProvider({ startSession }), sessionService }),
     );
 
     for (let index = 0; index < 20; index += 1) {
@@ -355,22 +226,8 @@ describe("spawnAgentSession", () => {
     expect(transitionStatus).not.toHaveBeenCalled();
   });
 
-  test("passes PSTDIO_SESSION_ID to started agent sessions", async () => {
-    const startSession = mock(async (_input: unknown) => ({ sessionId: "agent_session_1" }));
-
-    const agent = {
-      id: "claude-code",
-      name: "Claude Code",
-      capabilities: () => [],
-      checkAvailability: () => ({ type: "NOT_FOUND" }),
-      listModels: () => [],
-      startSession,
-      resumeSession: async () => ({}),
-      getMessages: async () => [],
-      listSessions: async () => [],
-      exportSession: async () => ({ session: { id: "s1", title: "title" }, messages: [] }),
-      launchSession: async () => ({}),
-    } as unknown as AgentService;
+  test("passes PSTDIO_SESSION_ID to started harness sessions", async () => {
+    const startSession = mock(async () => ({ sessionId: "agent_session_1" }));
 
     await spawnAgentSession(
       {
@@ -378,43 +235,9 @@ describe("spawnAgentSession", () => {
         agentId: "claude-code",
         prompt: "hello",
       },
-      {
-        agentRegistry: {
-          get: () => agent,
-          list: () => [],
-          checkAll: () => ({
-            "claude-code": { type: "INSTALLED" },
-            opencode: { type: "INSTALLED" },
-            fake: { type: "INSTALLED" },
-          }),
-        },
-        eventBus: {
-          emit: () => {},
-        },
-        fileService: {
-          get: async () => null,
-          upload: async () => ({ id: "file_1" }),
-          update: async () => null,
-        },
-        sessionService: {
-          get: mock(async () => ({ id: "session_99", project_id: "project_1", status: "in_progress" })),
-          update: async () => null,
-          transitionStatus: async () => null,
-          store: {
-            create: mock(() => ({
-              ...createStoreEntry(),
-            })),
-            get: mock(() => null),
-            setProcess: mock(() => {}),
-            remove: mock(() => {}),
-          },
-        },
-      } as unknown as Parameters<typeof spawnAgentSession>[1],
+      createDeps({ provider: createRuntimeProvider({ startSession }), sessionService: createSessionService() }),
     );
 
-    expect(startSession).toHaveBeenCalledTimes(1);
-    const firstCall = startSession.mock.calls[0];
-    const startInput = firstCall?.[0] as { env?: Record<string, string> } | undefined;
-    expect(startInput?.env?.PSTDIO_SESSION_ID).toBe("session_99");
+    expect(getFirstMockArg<{ env?: Record<string, string> }>(startSession)?.env?.PSTDIO_SESSION_ID).toBe("session_99");
   });
 });

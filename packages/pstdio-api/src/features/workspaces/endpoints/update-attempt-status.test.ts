@@ -3,7 +3,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import { createFakeAgent } from "pstdio-agents";
+import { createFakeHarnessProvider, FAKE_HARNESS_EXTENSION_ID } from "@pstdio/pstdio-ext-harness-fake";
+import type { RuntimeHarnessProvider } from "@pstdio/sdk/extensions";
 import { createApp } from "../../../app";
 import { waitForPath } from "../../../test-utils/wait-for-path";
 import { waitForSyncEvent } from "../../../test-utils/wait-for-sync-event";
@@ -18,6 +19,13 @@ let repoDir: string;
 const repoRoot = join(import.meta.dirname, "../../../../../..");
 let ticketSequence = 0;
 
+const asRuntimeFakeProvider = (): RuntimeHarnessProvider => ({
+  ...createFakeHarnessProvider(),
+  id: FAKE_HARNESS_EXTENSION_ID,
+  key: "fake",
+  extensionId: FAKE_HARNESS_EXTENSION_ID,
+});
+
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-attempt-status-test-"));
   repoDir = mkdtempSync(join(tmpdir(), "pstdio-attempt-status-repo-"));
@@ -25,7 +33,7 @@ beforeAll(async () => {
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
-    agents: [createFakeAgent()],
+    harnessProviders: [asRuntimeFakeProvider()],
   });
   app = created.app;
   appDeps = created.deps;

@@ -17,6 +17,7 @@ describe("cookbook fixture extensions", () => {
       "pstdio.harness.claude-code",
       "pstdio.harness.opencode",
       "pstdio.planner",
+      "pstdio.workspace-changes",
     ]);
 
     expect(runtime.commands.map((command) => command.id).sort()).toEqual([

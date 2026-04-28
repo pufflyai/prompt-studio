@@ -1,9 +1,31 @@
-import type { AgentService, ApprovalRequest, QuestionResponse, SpawnedProcess } from "pstdio-agents";
+import type {
+  HarnessApprovalRequest,
+  HarnessQuestionResponse,
+  HarnessSessionMessageInput,
+  HarnessSessionMessagesInput,
+  HarnessSessionStartInput,
+  HarnessSpawnedProcess,
+} from "@pstdio/sdk/extensions";
+import type { SessionMessage } from "pstdio-agents";
 import { sessionLogger } from "../../lib/logger";
 import type { RouteDeps } from "../deps";
 import { persistSessionMessages } from "./session-messages";
 
-export type SessionProvider = Pick<AgentService, "startSession" | "resumeSession" | "reattachSession" | "getMessages">;
+export type SessionProvider = {
+  startSession(input: HarnessSessionStartInput): Promise<{ sessionId: string; process?: HarnessSpawnedProcess }>;
+  resumeSession(
+    input: HarnessSessionMessageInput,
+    eventStore: ProviderSessionStore["eventStore"],
+    approvalService?: ProviderSessionStore["approvalService"],
+  ): Promise<{ process?: HarnessSpawnedProcess }>;
+  reattachSession?(
+    input: { sessionId: string; cwd?: string },
+    eventStore: ProviderSessionStore["eventStore"],
+  ): Promise<{ process?: HarnessSpawnedProcess }>;
+  getMessages(sessionId: string, input?: HarnessSessionMessagesInput): Promise<SessionMessage[]>;
+};
+
+type ProviderSessionStore = ReturnType<RouteDeps["sessionService"]["store"]["create"]>;
 
 export type ProviderSpawnDeps = Pick<RouteDeps, "eventBus" | "fileService" | "sessionService"> & {
   processExitTimeoutMs?: number;
@@ -25,7 +47,7 @@ export type ProviderResumeInput = {
   model?: string;
   cwd?: string;
   messageOffset?: number;
-  questionResponse?: QuestionResponse;
+  questionResponse?: HarnessQuestionResponse;
   provider: SessionProvider;
 };
 
@@ -48,7 +70,7 @@ const resolveExitStatus = (exit: { code: number | null; signal: string | null })
 
 const withProcessExitTimeout = (
   sessionId: string,
-  process: Pick<SpawnedProcess, "kill" | "onExit">,
+  process: Pick<HarnessSpawnedProcess, "kill" | "onExit">,
   activity: AsyncIterable<unknown>,
   timeoutMs: number,
 ) =>
@@ -129,7 +151,7 @@ const withProcessExitTimeout = (
   });
 
 export const spawnProviderSession = async (input: ProviderSpawnInput, deps: ProviderSpawnDeps) => {
-  const entry = deps.sessionService.store.create(input.sessionId, (request: ApprovalRequest) => {
+  const entry = deps.sessionService.store.create(input.sessionId, (request: HarnessApprovalRequest) => {
     entry.eventStore.push({ op: "add", path: "/approval_request", value: request });
   });
 
@@ -155,7 +177,7 @@ export const spawnProviderSession = async (input: ProviderSpawnInput, deps: Prov
 };
 
 export const resumeProviderSession = async (input: ProviderResumeInput, deps: ProviderSpawnDeps) => {
-  const entry = deps.sessionService.store.create(input.sessionId, (request: ApprovalRequest) => {
+  const entry = deps.sessionService.store.create(input.sessionId, (request: HarnessApprovalRequest) => {
     entry.eventStore.push({ op: "add", path: "/approval_request", value: request });
   });
 
@@ -204,7 +226,7 @@ export const resumeProviderSession = async (input: ProviderResumeInput, deps: Pr
 
 export const reattachProviderSession = async (input: ProviderReattachInput, deps: ProviderSpawnDeps) => {
   if (!input.provider.reattachSession) throw new Error(`Harness does not support reattach: ${input.providerId}`);
-  const entry = deps.sessionService.store.create(input.sessionId, (request: ApprovalRequest) => {
+  const entry = deps.sessionService.store.create(input.sessionId, (request: HarnessApprovalRequest) => {
     entry.eventStore.push({ op: "add", path: "/approval_request", value: request });
   });
 
@@ -223,7 +245,7 @@ export const reattachProviderSession = async (input: ProviderReattachInput, deps
 
 const trackProcessLifecycle = (
   sessionId: string,
-  process: Pick<SpawnedProcess, "kill" | "onExit" | "timeoutStrategy">,
+  process: Pick<HarnessSpawnedProcess, "kill" | "onExit" | "timeoutStrategy">,
   activity: AsyncIterable<unknown>,
   deps: ProviderSpawnDeps,
 ) => {

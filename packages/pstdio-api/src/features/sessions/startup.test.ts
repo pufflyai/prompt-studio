@@ -3,7 +3,6 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import { createFakeAgent } from "pstdio-agents";
 import { createApp } from "../../app";
 import type { AppBindings } from "../../types";
 import { resolveOrphanedSessions } from "./startup";
@@ -11,6 +10,7 @@ import { resolveOrphanedSessions } from "./startup";
 let app: OpenAPIHono<AppBindings>;
 let close: () => Promise<void>;
 let tempRoot: string;
+const previousAgentsEnv = process.env.PSTDIO_AGENTS;
 
 const waitForSessionStatus = async (sessionId: string, expectedStatus: string) => {
   for (let attempt = 0; attempt < 50; attempt += 1) {
@@ -24,18 +24,22 @@ const waitForSessionStatus = async (sessionId: string, expectedStatus: string) =
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-startup-test-"));
-  const fakeAgent = createFakeAgent();
+  process.env.PSTDIO_AGENTS = "fake";
 
   ({ app, close } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
-    agents: [fakeAgent],
   }));
 });
 
 afterAll(async () => {
   await close();
+  if (previousAgentsEnv === undefined) {
+    delete process.env.PSTDIO_AGENTS;
+  } else {
+    process.env.PSTDIO_AGENTS = previousAgentsEnv;
+  }
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
@@ -138,10 +142,9 @@ describe("resolveOrphanedSessions abort", () => {
     const controller = new AbortController();
     controller.abort();
 
-    const fakeAgent = createFakeAgent();
     const deps = {
       repoService: {},
-      agentRegistry: { get: () => fakeAgent },
+      harnessProviderService: { resolve: async () => null },
       eventBus: { emit: () => {} },
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
       sessionService: {
@@ -189,7 +192,7 @@ describe("resolveOrphanedSessions resolution", () => {
 
     const deps = {
       repoService: {},
-      agentRegistry: { get: () => null },
+      harnessProviderService: { resolve: async () => null },
       eventBus: { emit: () => {} },
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
       sessionService: {
@@ -216,12 +219,7 @@ describe("resolveOrphanedSessions resolution", () => {
 
     const deps = {
       repoService: {},
-      agentRegistry: {
-        get: () =>
-          ({
-            getMessages: async () => [{ role: "assistant", content: "hello" }],
-          }) as { getMessages: (sessionId: string, options?: { cwd?: string }) => Promise<unknown[]> },
-      },
+      harnessProviderService: { resolve: async () => ({ provider: {}, context: {} }) },
       eventBus: { emit: () => {} },
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
       sessionService: {
@@ -245,7 +243,7 @@ describe("resolveOrphanedSessions resolution", () => {
       cwd: "/work",
       project_id: "p1",
     };
-    const reattachSession = mock(async () => ({
+    const reattachSession = mock(async (_input: unknown, _eventStore: unknown) => ({
       process: {
         sessionId: "oc-xyz",
         stdin: { write: () => {}, end: () => {} } as unknown,
@@ -264,10 +262,12 @@ describe("resolveOrphanedSessions resolution", () => {
 
     const deps = {
       repoService: {},
-      agentRegistry: {
-        get: () => ({
-          reattachSession,
-          capabilities: () => ["SessionReattach"],
+      harnessProviderService: {
+        resolve: async () => ({
+          provider: {
+            reattachSession: (_ctx: unknown, input: unknown, eventStore: unknown) => reattachSession(input, eventStore),
+          },
+          context: {},
         }),
       },
       eventBus: { emit: () => {} },
@@ -313,12 +313,14 @@ describe("resolveOrphanedSessions resolution", () => {
 
     const deps = {
       repoService: {},
-      agentRegistry: {
-        get: () => ({
-          reattachSession: async () => {
-            throw new Error("opencode unreachable");
+      harnessProviderService: {
+        resolve: async () => ({
+          provider: {
+            reattachSession: async () => {
+              throw new Error("opencode unreachable");
+            },
           },
-          capabilities: () => ["SessionReattach"],
+          context: {},
         }),
       },
       eventBus: { emit: () => {} },
@@ -352,14 +354,7 @@ describe("resolveOrphanedSessions resolution", () => {
 
     const deps = {
       repoService: {},
-      agentRegistry: {
-        get: () =>
-          ({
-            getMessages: async () => {
-              throw new Error("agent unavailable");
-            },
-          }) as { getMessages: (sessionId: string, options?: { cwd?: string }) => Promise<unknown[]> },
-      },
+      harnessProviderService: { resolve: async () => ({ provider: {}, context: {} }) },
       eventBus: { emit: () => {} },
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
       sessionService: {

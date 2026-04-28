@@ -1,6 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
+import type { RuntimeHarnessProvider } from "@pstdio/sdk/extensions";
 import { cors } from "hono/cors";
-import { type AgentService, createAgentRegistry, resolveDefaultAgents } from "pstdio-agents";
 import {
   createAgentConfigsDBService,
   createAttemptStatusesDBService,
@@ -70,7 +70,7 @@ interface AppOptions {
   storagePath?: string;
   filesRoot: string;
   apiToken?: string;
-  agents?: AgentService[];
+  harnessProviders?: RuntimeHarnessProvider[];
   eventBusBufferSize?: number;
   // When undefined, no scheduler runs. Production callers should set 60_000.
   // Tests that don't exercise scheduling leave this off so the per-test app
@@ -133,8 +133,6 @@ export const createApp = async (options: AppOptions) => {
   const eventBus = new EventBus({
     bufferSize: options.eventBusBufferSize ?? resolveEventBusBufferSize(process.env.PSTDIO_EVENT_BUS_BUFFER_SIZE),
   });
-  const agentRegistry = createAgentRegistry(resolveDefaultAgents(options?.agents));
-
   // --- domain services ---
   const projectService = createProjectService({ projectsDBService });
   const repoService = createRepoService({ reposDBService });
@@ -168,6 +166,7 @@ export const createApp = async (options: AppOptions) => {
     db,
     extensionInstancesDBService,
     filesRoot: options.filesRoot,
+    harnessProviders: options.harnessProviders,
     repoService,
   });
 
@@ -211,11 +210,11 @@ export const createApp = async (options: AppOptions) => {
 
   const extensionCommandService = createExtensionCommandService({
     agentConfigService,
-    agentRegistry,
     db,
     eventBus,
     extensionInstancesDBService,
     fileService,
+    harnessProviderService,
     projectService,
     repoService,
     sessionService,
@@ -239,7 +238,6 @@ export const createApp = async (options: AppOptions) => {
     readiness: { database: true, storage: true },
     closeDb,
     eventBus,
-    agentRegistry,
     projectService,
     repoService,
     sessionService,

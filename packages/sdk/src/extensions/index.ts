@@ -12,6 +12,7 @@ export type {
   RuntimeSkill,
   RuntimeTemplate,
   RuntimeTemplateType,
+  RuntimeViewContribution,
 } from "./runtime-types";
 export type {
   ActivityRecordInput,

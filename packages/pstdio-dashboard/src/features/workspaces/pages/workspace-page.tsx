@@ -10,7 +10,6 @@ import { useProject } from "@/features/project/hooks/use-project";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/features/project-settings/store";
 import { useArchiveSession } from "@/features/sessions/hooks/use-archive-session";
 import { buildSessionOverflowActions } from "@/features/sessions/session-actions";
-import { useTicketAttemptDiff } from "@/features/ticket/hooks/use-ticket-attempt-diff";
 import { useTicketFiles } from "@/features/ticket/hooks/use-ticket-files";
 import { buildTicketOverflowActions } from "@/features/ticket/pages/ticket-details-actions";
 import { openTicketSessionBubble } from "@/features/ticket/utils/open-ticket-session-bubble";
@@ -26,7 +25,6 @@ import {
   shouldFetchTicketAttemptDiff,
   useTicketAttemptDiffs,
 } from "@/features/ticket-list/hooks/use-ticket-attempt-diffs";
-import { transformFileDiffs } from "@/features/workspaces/utils/transform-diff";
 import { useAttemptStatusMap } from "../hooks/use-attempt-status-map";
 import { useDeleteWorkspace } from "../hooks/use-workspace-actions";
 import { useWorkspaceSessions } from "../hooks/use-workspace-sessions";
@@ -174,12 +172,6 @@ export const WorkspacePage = () => {
     },
   });
 
-  const diffQuery = useTicketAttemptDiff(selectedWorkspace?.id);
-  const diffData = diffQuery.data;
-  const isDiffLoading = Boolean(selectedWorkspace) && (diffQuery.isPending || (diffQuery.isFetching && !diffData));
-  const changedFiles = diffData?.files ?? [];
-  const diffs = diffData?.files ? transformFileDiffs(diffData.files) : [];
-
   const ticketFiles = useTicketFiles(ticket?.id);
   const selectableFiles = buildSelectableTicketFiles(ticketFiles.data);
   const artifacts = ticketFiles.data?.artifacts ?? [];
@@ -285,10 +277,7 @@ export const WorkspacePage = () => {
       selectedWorkspaceLabel={selectedWorkspaceLabel}
       selectedWorkspace={selectedWorkspace}
       sessionsByWorkspaceId={sessionsByWorkspaceId}
-      diffs={diffs}
       artifacts={artifacts}
-      changedFiles={changedFiles}
-      isDiffLoading={isDiffLoading}
       attempts={attempts}
       selectableFiles={selectableFiles}
       createAttemptIsPending={createAttempt.isPending}

@@ -1,6 +1,25 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createSessionHandler } from "./create-session";
 
+const createHarnessProviderService = (provider?: { startSession: () => Promise<{ sessionId: string }> }) => ({
+  resolve: async (harnessId: string) => {
+    if (!provider || harnessId === "pstdio.harness.missing-agent") return null;
+
+    return {
+      provider: {
+        id: harnessId,
+        key: harnessId.replace("pstdio.harness.", ""),
+        extensionId: harnessId,
+        label: harnessId,
+        start: async (_ctx: unknown, input: { sessionId: string }) => ({ runId: input.sessionId }),
+        startSession: provider.startSession,
+        getMessages: async () => [],
+      },
+      context: {},
+    };
+  },
+});
+
 const createContext = (body: {
   project_id: string;
   title: string;
@@ -69,11 +88,9 @@ describe("createSessionHandler hooks", () => {
       eventBus: {
         emit: () => {},
       },
-      agentRegistry: {
-        get: () => ({
-          startSession: async () => ({ sessionId: "agent-session-1" }),
-        }),
-      },
+      harnessProviderService: createHarnessProviderService({
+        startSession: async () => ({ sessionId: "agent-session-1" }),
+      }),
     } as unknown as Parameters<typeof createSessionHandler>[0];
 
     const handler = createSessionHandler(deps);
@@ -134,9 +151,7 @@ describe("createSessionHandler hooks", () => {
       eventBus: {
         emit: () => {},
       },
-      agentRegistry: {
-        get: () => null,
-      },
+      harnessProviderService: createHarnessProviderService(),
     } as unknown as Parameters<typeof createSessionHandler>[0];
 
     const handler = createSessionHandler(deps);
@@ -197,9 +212,7 @@ describe("createSessionHandler hooks", () => {
       eventBus: {
         emit: () => {},
       },
-      agentRegistry: {
-        get: () => null,
-      },
+      harnessProviderService: createHarnessProviderService(),
     } as unknown as Parameters<typeof createSessionHandler>[0];
 
     const handler = createSessionHandler(deps);

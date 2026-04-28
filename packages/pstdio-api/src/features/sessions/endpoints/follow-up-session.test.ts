@@ -3,13 +3,23 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import { createOpencodeAgent } from "pstdio-agents";
+import { createOpencodeHarnessProvider, OPENCODE_HARNESS_EXTENSION_ID } from "@pstdio/pstdio-ext-harness-opencode";
+import type { RuntimeHarnessProvider } from "@pstdio/sdk/extensions";
 import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
 
 type MockMessage = { role: string; content: { type: string; text: string }[] };
 
 const sessionMessages: Record<string, MockMessage[]> = {};
+
+const asRuntimeOpencodeProvider = (
+  provider: ReturnType<typeof createOpencodeHarnessProvider>,
+): RuntimeHarnessProvider => ({
+  ...provider,
+  id: OPENCODE_HARNESS_EXTENSION_ID,
+  key: "opencode",
+  extensionId: OPENCODE_HARNESS_EXTENSION_ID,
+});
 
 const mockFetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = String(input);
@@ -62,7 +72,7 @@ const waitForSessionStatus = async (sessionId: string, expectedStatus: string) =
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-followup-test-"));
 
-  const opencodeAgent = createOpencodeAgent(
+  const opencodeProvider = createOpencodeHarnessProvider(
     { isCommandAvailable: () => true, getModelsOutput: () => "" },
     {
       startServer: async () => "http://localhost:4096",
@@ -77,7 +87,7 @@ beforeAll(async () => {
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
-    agents: [opencodeAgent],
+    harnessProviders: [asRuntimeOpencodeProvider(opencodeProvider)],
   }));
 });
 
@@ -247,7 +257,7 @@ describe("POST /v1/sessions/:id/follow-up (opencode)", () => {
       return new Response("{}", { status: 404 });
     };
 
-    const failAgent = createOpencodeAgent(
+    const failProvider = createOpencodeHarnessProvider(
       { isCommandAvailable: () => true, getModelsOutput: () => "" },
       {
         startServer: async () => "http://localhost:4096",
@@ -263,7 +273,7 @@ describe("POST /v1/sessions/:id/follow-up (opencode)", () => {
       dbPath: ":memory:",
       storagePath: join(failTempRoot, "storage"),
       filesRoot: "",
-      agents: [failAgent],
+      harnessProviders: [asRuntimeOpencodeProvider(failProvider)],
     });
 
     const projectRes = await failApp.request("/v1/projects", {

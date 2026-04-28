@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import type { AgentId, AgentService, AvailabilityInfo } from "pstdio-agents";
+import type { RuntimeHarnessProvider } from "@pstdio/sdk/extensions";
 import { createApp } from "../../../app";
 import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
 import type { AppBindings } from "../../../types";
@@ -11,20 +11,18 @@ import type { AppBindings } from "../../../types";
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
 
-const createTestAgent = (id: AgentId, availability: AvailabilityInfo): AgentService =>
-  ({
-    id,
-    name: id,
-    capabilities: () => [],
-    checkAvailability: () => availability,
-    listModels: () => [],
-    startSession: async () => ({}),
-    resumeSession: async () => ({}),
-    getMessages: async () => [],
-    listSessions: async () => [],
-    exportSession: async () => ({ session: { id: "session", title: "Session" }, messages: [] }),
-    launchSession: async () => ({}),
-  }) as unknown as AgentService;
+const createInstalledHarnessProvider = (id: string): RuntimeHarnessProvider => ({
+  id: `pstdio.harness.${id}`,
+  key: id,
+  extensionId: `pstdio.harness.${id}`,
+  label: id,
+  detect: async () => ({ available: true }),
+  listModels: () => [],
+  start: async (_ctx, input) => ({ runId: input.sessionId }),
+  startSession: async () => ({ sessionId: "session" }),
+  resumeSession: async () => ({}),
+  getMessages: async () => [],
+});
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-register-repo-test-"));
@@ -138,10 +136,10 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
   test("auto-configures the first installed agent before installing bundled skills", async () => {
     const isolatedRoot = mkdtempSync(join(tmpdir(), "pstdio-api-register-repo-agent-install-test-"));
     const handle = await createApp({
-      agents: [createTestAgent("claude-code", { type: "INSTALLED" })],
       dbPath: ":memory:",
       storagePath: join(isolatedRoot, "storage"),
       filesRoot: resolveTestFilesRoot(),
+      harnessProviders: [createInstalledHarnessProvider("claude-code")],
     });
 
     try {
@@ -168,12 +166,12 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
 
       const agentsRes = await handle.app.request("/v1/harnesses");
       expect(agentsRes.status).toBe(200);
-      expect(await agentsRes.json()).toEqual([
+      expect(await agentsRes.json()).toContainEqual(
         expect.objectContaining({
           agent_id: "claude-code",
           is_default: true,
         }),
-      ]);
+      );
     } finally {
       await handle.close();
       rmSync(isolatedRoot, { recursive: true, force: true });

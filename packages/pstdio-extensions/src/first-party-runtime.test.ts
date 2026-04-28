@@ -39,6 +39,11 @@ describe("first-party extension runtime", () => {
           sourcePath: "@pstdio/pstdio-ext-planner",
         }),
         expect.objectContaining({
+          id: "pstdio.workspace-changes",
+          sourceKind: "package",
+          sourcePath: "@pstdio/pstdio-ext-workspace-changes",
+        }),
+        expect.objectContaining({
           id: "pstdio.harness.claude-code",
           sourceKind: "package",
           sourcePath: "@pstdio/pstdio-ext-harness-claude-code",
@@ -49,6 +54,14 @@ describe("first-party extension runtime", () => {
           sourcePath: "@pstdio/pstdio-ext-harness-opencode",
         }),
       ]),
+    );
+    expect(runtime.views).toContainEqual(
+      expect.objectContaining({
+        id: "pstdio.workspace-changes.changes",
+        extensionId: "pstdio.workspace-changes",
+        slot: "pstdio.workspace-shell.tabs",
+        type: "workspace.tab",
+      }),
     );
     expect(runtime.harnesses.map((harness) => harness.id).sort()).toEqual([
       "pstdio.harness.claude-code",

@@ -3,6 +3,8 @@ import type {
   RemoveWorktreeResponse,
   UpdateAttemptStatusInput,
   UpdateAttemptStatusResponse,
+  WorkspaceDiffMode,
+  WorkspaceDiffResponse,
 } from "pstdio-api-contracts";
 import type { Workspace, WorkspaceListItem } from "../resources";
 import type { RequestFn } from "./request";
@@ -11,6 +13,7 @@ export type WorkspaceClient = {
   list(projectId: string): Promise<WorkspaceListItem[]>;
   getByShorthand(projectId: string, shorthand: string): Promise<Workspace>;
   create(input: CreateWorkspaceInput): Promise<Workspace>;
+  getDiff(workspaceId: string, mode?: WorkspaceDiffMode): Promise<WorkspaceDiffResponse>;
   updateAttemptStatus(workspaceId: string, input: UpdateAttemptStatusInput): Promise<UpdateAttemptStatusResponse>;
   removeWorktree(workspaceId: string): Promise<RemoveWorktreeResponse>;
   delete(workspaceId: string): Promise<void>;
@@ -23,6 +26,8 @@ export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
       `/v1/workspaces/by-shorthand?project_id=${encodeURIComponent(projectId)}&shorthand=${encodeURIComponent(shorthand)}`,
     ),
   create: (input) => request("/v1/workspaces", { method: "POST", body: input }),
+  getDiff: (workspaceId, mode) =>
+    request(`/v1/workspaces/${workspaceId}/diff${mode ? `?mode=${encodeURIComponent(mode)}` : ""}`),
   updateAttemptStatus: (workspaceId, input) =>
     request(`/v1/workspaces/${workspaceId}/attempt-status`, { method: "PATCH", body: input }),
   removeWorktree: (workspaceId) => request(`/v1/workspaces/${workspaceId}/remove-worktree`, { method: "POST" }),

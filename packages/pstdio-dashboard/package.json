@@ -39,6 +39,7 @@
     "@lexical/utils": "^0.36.2",
     "@monaco-editor/react": "^4.7.0",
     "@pstdio/prompt-utils": "0.1.4",
+    "@pstdio/pstdio-ext-workspace-changes": "workspace:*",
     "@pstdio/ui": "workspace:*",
     "@storybook/addon-themes": "^10.1.10",
     "@tanstack/hotkeys": "^0.7.1",

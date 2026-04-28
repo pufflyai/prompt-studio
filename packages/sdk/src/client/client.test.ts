@@ -140,6 +140,17 @@ describe("createClient", () => {
     expect(calls[0]!.method).toBe("POST");
   });
 
+  it("client.workspaces.getDiff calls GET /v1/workspaces/:id/diff with the requested mode", async () => {
+    const { fetchFn, calls } = trackingFetch();
+    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+
+    await client.workspaces.getDiff("ws-1", "fork_point");
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toBe("http://test:1234/v1/workspaces/ws-1/diff?mode=fork_point");
+    expect(calls[0]!.method).toBe("GET");
+  });
+
   it("client.statuses.list calls planner status collection", async () => {
     const { fetchFn, calls } = trackingFetch();
     const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });

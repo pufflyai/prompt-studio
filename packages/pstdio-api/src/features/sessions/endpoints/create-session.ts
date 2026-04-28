@@ -117,6 +117,7 @@ export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
         title: input.title,
         model: input.model,
         cwd,
+        projectId: input.project_id,
       },
       deps,
     ).catch(async () => {

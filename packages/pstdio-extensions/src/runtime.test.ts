@@ -27,7 +27,12 @@ const writePlugin = (projectRoot: string, fileName: string, source: string) => {
 const diagnosticCodes = (runtime: Awaited<ReturnType<typeof loadExtensionRuntime>>) =>
   runtime.diagnostics.map((diagnostic) => diagnostic.code);
 
-const firstPartyExtensionIds = ["pstdio.harness.claude-code", "pstdio.harness.opencode", "pstdio.planner"];
+const firstPartyExtensionIds = [
+  "pstdio.harness.claude-code",
+  "pstdio.harness.opencode",
+  "pstdio.planner",
+  "pstdio.workspace-changes",
+];
 const firstPartyCommandIds = [
   "pstdio.planner.archiveTicket",
   "pstdio.planner.createStatus",

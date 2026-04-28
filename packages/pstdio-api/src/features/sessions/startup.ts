@@ -1,10 +1,8 @@
-import type { AgentId } from "pstdio-agents";
 import { sessionLogger } from "../../lib/logger";
 import type { RouteDeps } from "../deps";
-import { toAgentId } from "../harnesses/harness-ids";
 import { reattachAgentSession } from "./spawn-agent";
 
-type Deps = Pick<RouteDeps, "sessionService" | "agentRegistry" | "eventBus" | "fileService">;
+type Deps = Pick<RouteDeps, "sessionService" | "harnessProviderService" | "eventBus" | "fileService">;
 
 export const resolveOrphanedSessions = async (deps: Deps, signal?: AbortSignal) => {
   const staleSessions = await deps.sessionService.listByStatus("in_progress");
@@ -15,10 +13,10 @@ export const resolveOrphanedSessions = async (deps: Deps, signal?: AbortSignal) 
 
     if (deps.sessionService.store.get(session.id)) continue;
 
-    const agentId = session.agent ? toAgentId(session.agent) : null;
-    const agent = agentId ? deps.agentRegistry.get(agentId as AgentId) : null;
-    const canReattach =
-      agent?.reattachSession && agent.capabilities().includes("SessionReattach") && session.agent_session_id;
+    const resolved = session.agent
+      ? await deps.harnessProviderService.resolve(session.agent, session.project_id ?? undefined)
+      : null;
+    const canReattach = resolved?.provider.reattachSession && session.agent_session_id;
 
     if (!canReattach) {
       await deps.sessionService.transitionStatus(session.id, "disconnected");
@@ -30,8 +28,9 @@ export const resolveOrphanedSessions = async (deps: Deps, signal?: AbortSignal) 
         {
           sessionId: session.id,
           agentSessionId: session.agent_session_id!,
-          agentId: agentId!,
+          agentId: session.agent!,
           cwd: session.cwd ?? undefined,
+          projectId: session.project_id ?? undefined,
         },
         deps,
       );

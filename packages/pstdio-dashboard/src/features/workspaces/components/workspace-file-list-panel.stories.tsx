@@ -1,13 +1,12 @@
 import { Box, Flex } from "@chakra-ui/react";
+import { type ChangedFilesViewMode, FileListPanel } from "@pstdio/pstdio-ext-workspace-changes";
 import type { Meta, StoryObj } from "@storybook/react";
 import { AlertCircle, CheckCircle2, FileText } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import type { ChangedFilesViewMode } from "../utils/build-changed-files-tree";
-import { FileListPanel } from "./workspace-file-list-panel";
 
 const longPaths = [
-  "packages/pstdio-dashboard/src/features/workspaces/components/workspace-file-list-panel.tsx",
-  "packages/pstdio-dashboard/src/features/workspaces/utils/build-changed-files-tree.ts",
+  "packages/pstdio-ext-workspace-changes/src/components/workspace-file-list-panel.tsx",
+  "packages/pstdio-ext-workspace-changes/src/utils/build-changed-files-tree.ts",
   "packages/pstdio-dashboard/src/features/ticket-list/data/api/types-with-a-very-long-identifier-name.ts",
   "README.md",
 ];

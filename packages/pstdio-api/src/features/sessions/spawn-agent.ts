@@ -1,6 +1,7 @@
-import type { ExtensionSetupContext, RuntimeHarnessProvider } from "@pstdio/sdk/extensions";
-import type { AgentId, QuestionResponse, SessionMessage } from "pstdio-agents";
+import type { ExtensionSetupContext, HarnessQuestionResponse, RuntimeHarnessProvider } from "@pstdio/sdk/extensions";
+import type { SessionMessage } from "pstdio-agents";
 import type { RouteDeps } from "../deps";
+import { toAgentId, toHarnessId } from "../harnesses/harness-ids";
 import {
   type ProviderSpawnDeps,
   reattachProviderSession,
@@ -16,15 +17,26 @@ type SpawnInput = {
   title?: string;
   model?: string;
   cwd?: string;
+  projectId?: string;
 };
 
-type SpawnDeps = ProviderSpawnDeps & Pick<RouteDeps, "agentRegistry">;
+type SpawnDeps = ProviderSpawnDeps & Pick<RouteDeps, "harnessProviderService">;
+
+const resolveHarnessSessionProvider = async (input: { agentId: string; projectId?: string }, deps: SpawnDeps) => {
+  const harnessId = toHarnessId(toAgentId(input.agentId));
+  const resolved = await deps.harnessProviderService.resolve(harnessId, input.projectId);
+  if (!resolved) throw new Error(`Harness not found: ${harnessId}`);
+
+  return {
+    providerId: harnessId,
+    provider: createHarnessSessionProvider(resolved.provider, resolved.context),
+  };
+};
 
 export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
-  const agent = deps.agentRegistry.get(input.agentId as AgentId);
-  if (!agent) throw new Error(`Agent not found: ${input.agentId}`);
+  const provider = await resolveHarnessSessionProvider(input, deps);
 
-  return spawnProviderSession({ ...input, provider: agent }, deps);
+  return spawnProviderSession({ ...input, provider: provider.provider }, deps);
 };
 
 type ResumeInput = {
@@ -35,14 +47,14 @@ type ResumeInput = {
   model?: string;
   cwd?: string;
   messageOffset?: number;
-  questionResponse?: QuestionResponse;
+  questionResponse?: HarnessQuestionResponse;
+  projectId?: string;
 };
 
 export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) => {
-  const agent = deps.agentRegistry.get(input.agentId as AgentId);
-  if (!agent) throw new Error(`Agent not found: ${input.agentId}`);
+  const provider = await resolveHarnessSessionProvider(input, deps);
 
-  return resumeProviderSession({ ...input, provider: agent }, deps);
+  return resumeProviderSession({ ...input, provider: provider.provider }, deps);
 };
 
 type ReattachInput = {
@@ -50,13 +62,13 @@ type ReattachInput = {
   agentSessionId: string;
   agentId: string;
   cwd?: string;
+  projectId?: string;
 };
 
 export const reattachAgentSession = async (input: ReattachInput, deps: SpawnDeps) => {
-  const agent = deps.agentRegistry.get(input.agentId as AgentId);
-  if (!agent?.reattachSession) throw new Error(`Agent does not support reattach: ${input.agentId}`);
+  const provider = await resolveHarnessSessionProvider(input, deps);
 
-  return reattachProviderSession({ ...input, providerId: input.agentId, provider: agent }, deps);
+  return reattachProviderSession({ ...input, providerId: provider.providerId, provider: provider.provider }, deps);
 };
 
 const createHarnessSessionProvider = (provider: RuntimeHarnessProvider, context: ExtensionSetupContext) =>

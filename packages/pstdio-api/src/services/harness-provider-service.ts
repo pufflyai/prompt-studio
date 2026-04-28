@@ -9,6 +9,7 @@ type HarnessProviderServiceDeps = {
   db: DbClient;
   extensionInstancesDBService: ReturnType<typeof createExtensionInstancesDBService>;
   filesRoot: string;
+  harnessProviders?: RuntimeHarnessProvider[];
   repoService: ReturnType<typeof createRepoService>;
 };
 
@@ -34,6 +35,8 @@ const filterDisabledExtensions = (runtime: HarnessRuntime, disabledExtensionIds:
     extensions: runtime.extensions.filter((extension) => isEnabled(extension.id)),
     commands: runtime.commands.filter((command) => isEnabled(command.extensionId)),
     cli: runtime.cli.filter((contribution) => isEnabled(contribution.extensionId)),
+    events: runtime.events.filter((event) => isEnabled(event.extensionId)),
+    views: runtime.views.filter((view) => isEnabled(view.extensionId)),
     artifactMounts: runtime.artifactMounts.filter((mount) => isEnabled(mount.extensionId)),
     templateTypes: runtime.templateTypes.filter((templateType) => isEnabled(templateType.extensionId)),
     templates: runtime.templates.filter((template) => isEnabled(template.extensionId)),
@@ -100,10 +103,17 @@ export const createHarnessProviderService = (deps: HarnessProviderServiceDeps) =
 
   const list = async (projectId?: string) => {
     const runtime = await loadRuntime(projectId);
-    return runtime.harnesses.map((provider) => ({
+    const runtimeProviders = runtime.harnesses.map((provider) => ({
       provider,
       context: createContext(projectId, provider.extensionId),
     }));
+
+    const extraProviders = (deps.harnessProviders ?? []).map((provider) => ({
+      provider,
+      context: createContext(projectId, provider.extensionId),
+    }));
+
+    return [...extraProviders, ...runtimeProviders];
   };
 
   const resolve = async (harnessId: string, projectId?: string) => {

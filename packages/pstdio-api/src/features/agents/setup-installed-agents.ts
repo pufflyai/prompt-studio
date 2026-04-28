@@ -1,17 +1,28 @@
 import type { RouteDeps } from "../deps";
+import { toAgentId } from "../harnesses/harness-ids";
 
 export const setupInstalledAgents = async (
-  deps: Pick<RouteDeps, "agentConfigService" | "agentRegistry" | "eventBus">,
+  deps: Pick<RouteDeps, "agentConfigService" | "harnessProviderService" | "eventBus">,
   defaultAgentId?: string,
 ) => {
-  const installedAgents = deps.agentRegistry.list().filter((agent) => agent.checkAvailability().type === "INSTALLED");
-  if (installedAgents.length === 0) return [];
+  const providers = await deps.harnessProviderService.list();
+  const availability = await Promise.all(
+    providers.map(async (provider) => ({
+      provider,
+      availability: await deps.harnessProviderService.detect(provider),
+    })),
+  );
+  const installedAgentIds = availability
+    .filter((entry) => entry.availability.type === "INSTALLED")
+    .map((entry) => toAgentId(entry.provider.provider.id));
 
-  for (const agent of installedAgents) {
-    await deps.agentConfigService.upsert(agent.id);
+  if (installedAgentIds.length === 0) return [];
+
+  for (const agentId of installedAgentIds) {
+    await deps.agentConfigService.upsert(agentId);
   }
 
-  if (defaultAgentId && installedAgents.some((agent) => agent.id === defaultAgentId)) {
+  if (defaultAgentId && installedAgentIds.includes(defaultAgentId)) {
     await deps.agentConfigService.update(defaultAgentId, { is_default: true });
   }
 

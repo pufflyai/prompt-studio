@@ -1,4 +1,3 @@
-import type { AgentRegistry } from "pstdio-agents";
 import type { createAgentConfigService } from "../services/agent-config-service";
 import type { createAttemptStatusService } from "../services/attempt-status-service";
 import type { createExtensionActionService } from "../services/extension-action-service";
@@ -31,7 +30,6 @@ export interface RouteDeps {
   readiness: ReadinessChecks;
   closeDb: () => Promise<void>;
   eventBus: EventBus;
-  agentRegistry: AgentRegistry;
   projectService: ReturnType<typeof createProjectService>;
   repoService: ReturnType<typeof createRepoService>;
   sessionService: ReturnType<typeof createSessionService>;
