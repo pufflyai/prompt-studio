@@ -153,6 +153,7 @@ describe("packaged pstdio — self-hosted serve", () => {
 
         const templates = (await templatesRes.json()) as { name: string }[];
         expect(templates.length).toBeGreaterThan(0);
+        expect(templates.map((template) => template.name)).toContain("bug-fix");
 
         const skillsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/skills`);
         expect(skillsRes.status).toBe(200);

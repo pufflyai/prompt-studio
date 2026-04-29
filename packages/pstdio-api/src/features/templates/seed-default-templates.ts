@@ -42,6 +42,7 @@ const BUNDLED_TEMPLATES: BundledTemplate[] = [
   { name: "review-code", folder: "prompts", file_name: "review-code.prompt.md", is_default: false },
   // tickets
   { name: "ticket", folder: "tickets", file_name: "ticket.md", is_default: true },
+  { name: "bug-fix", folder: "tickets", file_name: "bug-fix.ticket.md", is_default: false },
   { name: "proposal", folder: "tickets", file_name: "proposal.ticket.md", is_default: false },
 ];
 
