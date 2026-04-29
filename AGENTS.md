@@ -92,7 +92,7 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 
 - **Branches**: `<category>/<kebab-description>` — categories: `feature`, `bugfix`, `hotfix`, `test`, `chore` (e.g. `feature/add-new-event-button`)
 - **Commits**: `<category>(<PS-XXX>): <statement>; <statement>` — categories: `feat`, `fix`, `refactor`, `chore`. Each statement should complete "This commit will…" (e.g. `fix(PS-42): add new button component; add new button to templates`)
-- **Pull Requests**: open against `main` unless otherwise specified.
+- **Pull Requests**: open against `main` unless otherwise specified. Names should follow `<category>(<PS-XXX>): <statement>` (e.g. `fix(PS-42): add new button component`).
 
 ## Coding Style Rules
 
