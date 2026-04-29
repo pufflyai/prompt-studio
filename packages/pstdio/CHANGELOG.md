@@ -1,5 +1,25 @@
 # pstdio
 
+## 0.9.0
+
+### Minor Changes
+
+- 0b1dffd: Add activity event APIs and SDK methods for listing ticket, workspace, session, and project activity streams.
+- 5f6a945: Add parent-id flags to ticket create and update commands
+
+### Patch Changes
+
+- 41f858d: Bound multiline sticky user messages with scroll handoff
+- 92ce38e: Handle OpenCode question/todowrite UI support and make plugin command execution honor local PATH.
+- 1134ae8: Allow collapsing the ticket sidebar sub-tickets section.
+- f8edf81: Fix OpenCode question replies getting stuck and stale question prompts remaining visible.
+- 92ce38e: Reduce xs button icon sizing in the shared Chakra recipe.
+- 27d8d29: Move shortcut help to a letter-based binding so slash typing works on international keyboards.
+- b7b60d0: Fix OpenCode session starts to honor configured default models.
+- 1134ae8: Sort sidebar sub-tickets by shorthand and show each sub-ticket status indicator.
+- 084969c: Fix ticket workspace grouping menus, filtered columns, list drag-and-drop, and list indentation.
+- 0fa25d0: Add parent and sub-ticket field output to `pstdio tickets view`.
+
 ## 0.8.0
 
 ### Minor Changes
