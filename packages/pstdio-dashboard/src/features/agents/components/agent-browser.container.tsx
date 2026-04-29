@@ -3,8 +3,14 @@ import { useProjectSettingsStore } from "@/features/project-settings/store";
 import { useSessionAgent } from "@/features/sessions/hooks/use-session-agent";
 import type { CodingAgent } from "../agent-storage";
 import { useAgentModels } from "../hooks/use-agent-models";
+import { useAgentSettings } from "../hooks/use-agent-settings";
 import { useAgents } from "../hooks/use-agents";
 import { WorkspaceAgentMenu } from "./agent-browser";
+import {
+  getConfiguredAgentModel,
+  resolveAvailableAgentModel,
+  resolvePreferredAgentModel,
+} from "./agent-model-selection";
 
 interface AgentBrowserContainerProps {
   sessionId?: string | null;
@@ -29,6 +35,9 @@ export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
   const resolvedAgent = (isAgentLocked ? sessionAgent : (lastSelectedAgent ?? DEFAULT_AGENT_ID)) as CodingAgent;
   const [selectedAgent, setSelectedAgent] = useState<CodingAgent>(resolvedAgent);
   const [selectedModel, setSelectedModel] = useState(lastSelectedModels[0] ?? "");
+  const { data: agentSettings = {} } = useAgentSettings(selectedAgent);
+  const configuredModel = getConfiguredAgentModel(agentSettings);
+  const preferredModel = resolvePreferredAgentModel({ configuredModel, modelHistory: lastSelectedModels });
 
   // Sync when the resolved agent changes (e.g. session loads, or session switches)
   useEffect(() => {
@@ -42,6 +51,13 @@ export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
       onAgentChange?.(selectedAgent);
     }
   }, [selectedAgent, onAgentChange]);
+
+  useEffect(() => {
+    if (!preferredModel || selectedModel) return;
+
+    setSelectedModel(preferredModel);
+    onModelChange?.(preferredModel);
+  }, [preferredModel, selectedModel, onModelChange]);
 
   const { data: agents = [], isLoading: isAgentsPending } = useAgents();
   const { data: models = [], isLoading: isModelsPending } = useAgentModels(selectedAgent, {
@@ -69,14 +85,24 @@ export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
 
     const hasModelSelection = models.some((model) => model.id === selectedModel);
     if (!hasModelSelection) {
-      // Prefer a previously selected model if available
-      const preferred = lastSelectedModels.find((m) => models.some((model) => model.id === m));
+      const preferred = resolveAvailableAgentModel({ configuredModel, modelHistory: lastSelectedModels, models });
       const next = preferred ?? models[0].id;
       setSelectedModel(next);
-      setLastSelectedModel(next);
+      if (next !== configuredModel) {
+        setLastSelectedModel(next);
+      }
       onModelChange?.(next);
     }
-  }, [isModelsPending, models, selectedAgent, selectedModel, lastSelectedModels, setLastSelectedModel, onModelChange]);
+  }, [
+    configuredModel,
+    isModelsPending,
+    models,
+    selectedAgent,
+    selectedModel,
+    lastSelectedModels,
+    setLastSelectedModel,
+    onModelChange,
+  ]);
 
   const handleSelectAgent = (agent: string) => {
     const codingAgent = agent as CodingAgent;

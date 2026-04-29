@@ -508,7 +508,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
       const sessionId = createResponse.parsed?.id;
       if (!sessionId) throw new Error("Opencode session id not found.");
 
-      const messageComplete = postSessionMessage(baseUrl, sessionId, directory, prompt);
+      const messageComplete = postSessionMessage(baseUrl, sessionId, directory, prompt, input.model);
 
       return { sessionId, messageComplete };
     };
