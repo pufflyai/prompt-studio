@@ -21,10 +21,19 @@ export type { EmptyStateProps } from "./components/empty-state";
 export { EmptyState } from "./components/empty-state";
 export { ErrorBoundary } from "./components/error-boundary";
 export type {
+  FlatContainerBorderExtension,
+  FlatContainerProps,
+  FlatContainerShadowPatternDensity,
+  FlatContainerVariant,
+} from "./components/flat-container";
+export { FlatContainer } from "./components/flat-container";
+export type {
   FolderPickerDialogEntry,
   FolderPickerDialogProps,
 } from "./components/folder-picker-dialog";
 export { FolderPickerDialog } from "./components/folder-picker-dialog";
+export type { HeaderProps, HeaderVariant } from "./components/header";
+export { Header } from "./components/header";
 export { HorizontalMenuStack } from "./components/horizontal-menu-stack";
 export type { ItemSectionProps } from "./components/item-section";
 export { ItemSection } from "./components/item-section";
@@ -106,7 +115,12 @@ export { WorkspaceBadge } from "./components/workspace-badge";
 export { psTheme } from "./theme";
 export {
   applyThemePreference,
+  getThemePreferenceClassNames,
+  getThemePreferenceMode,
+  isThemePreference,
   type ThemePreference,
+  type ThemePreferenceMode,
+  themePreferences,
 } from "./utils/apply-theme-preference";
 export { getFileTypeIcon } from "./utils/get-file-type-icon";
 export {

@@ -2,6 +2,13 @@ import { ChakraProvider } from "@chakra-ui/react";
 import { withThemeByClassName } from "@storybook/addon-themes";
 import type { Preview } from "@storybook/react-vite";
 import { psTheme } from "../src/theme";
+import { isThemePreference, type ThemePreference } from "../src/utils/apply-theme-preference";
+import { ThemePreferenceProvider } from "../src/utils/theme-preference";
+
+const resolveThemePreference = (theme: unknown): ThemePreference => {
+  const value = typeof theme === "string" ? theme : "pstdio-light";
+  return isThemePreference(value) ? value : "pstdio-light";
+};
 
 const preview: Preview = {
   parameters: {
@@ -13,14 +20,24 @@ const preview: Preview = {
     },
   },
   decorators: [
-    (Story) => (
-      <ChakraProvider value={psTheme}>
-        <Story />
-      </ChakraProvider>
-    ),
+    (Story, context) => {
+      const themePreference = resolveThemePreference(context.globals.theme);
+
+      return (
+        <ThemePreferenceProvider key={themePreference} initialPreference={themePreference}>
+          <ChakraProvider value={psTheme}>
+            <Story />
+          </ChakraProvider>
+        </ThemePreferenceProvider>
+      );
+    },
     withThemeByClassName({
-      defaultTheme: "light",
-      themes: { light: "light", dark: "dark" },
+      defaultTheme: "pstdio-light",
+      themes: {
+        "pstdio-light": "light theme-pstdio-light",
+        "pstdio-dark": "dark theme-pstdio-dark",
+        monokai: "dark theme-monokai",
+      },
     }),
   ],
 };

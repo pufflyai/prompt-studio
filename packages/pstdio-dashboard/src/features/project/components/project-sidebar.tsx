@@ -9,11 +9,11 @@ import {
 } from "@pstdio/ui";
 import { Link, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
-import { ArrowUpRight, BookOpen, CircleHelp, KanbanSquare, MessageCircle, SettingsIcon } from "lucide-react";
+import { ArrowUpRight, BookOpen, CircleHelp, KanbanSquare, MessageCircle, Search, SettingsIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSystemInfo } from "@/features/project/hooks/use-project";
 import { ShortcutKbd } from "@/features/shortcuts/shortcut-kbd";
-import { useOpenShortcutHelp } from "@/features/shortcuts/shortcut-provider";
+import { useOpenCommandPalette, useOpenShortcutHelp } from "@/features/shortcuts/shortcut-provider";
 import {
   getShortcutDefinition,
   type ShortcutBinding,
@@ -107,34 +107,56 @@ const resolveActiveNodeId = (pathname: string, projectId?: string) => {
   return null;
 };
 
+export const buildProjectSidebarSections = (input: {
+  projectId?: string;
+  searchLabel: string;
+  ticketsLabel: string;
+}): SidebarSection[] => {
+  const { projectId, searchLabel, ticketsLabel } = input;
+  const basePath = projectId ? `/projects/${projectId}` : "";
+  const topNodes: SidebarNode[] = [
+    {
+      id: "search",
+      label: searchLabel,
+      icon: <Search size={14} />,
+      isNavigable: true,
+      navigationIntent: { id: "command-palette" },
+    },
+    {
+      id: "tickets",
+      label: ticketsLabel,
+      icon: <KanbanSquare size={14} />,
+      isNavigable: true,
+      href: `${basePath}/tickets`,
+      navigationIntent: { id: "navigate", payload: { path: "tickets" } },
+    },
+  ];
+
+  return [{ id: "top-level", nodes: topNodes }];
+};
+
 export const ProjectSidebar = () => {
   const { location } = useRouterState();
   const { projectId } = useParams({ strict: false });
   const navigate = useNavigate();
   const { t } = useTranslation("projects");
-
-  const buildSections = (): SidebarSection[] => {
-    const basePath = projectId ? `/projects/${projectId}` : "";
-
-    const topNodes: SidebarNode[] = [
-      {
-        id: "tickets",
-        label: t("sidebar.tickets"),
-        icon: <KanbanSquare size={14} />,
-        isNavigable: true,
-        href: `${basePath}/tickets`,
-        navigationIntent: { id: "navigate", payload: { path: "tickets" } },
-      },
-    ];
-
-    return [{ id: "top-level", nodes: topNodes }];
-  };
+  const openCommandPalette = useOpenCommandPalette();
+  const sections = buildProjectSidebarSections({
+    projectId,
+    searchLabel: t("sidebar.search"),
+    ticketsLabel: t("sidebar.tickets"),
+  });
 
   const handleNavigate = (event: SidebarNavigateEvent) => {
     if (!projectId) return;
 
     const intent = event.intent;
     if (!intent) return;
+
+    if (intent.id === "command-palette") {
+      openCommandPalette();
+      return;
+    }
 
     if (intent.id === "navigate") {
       const payload = intent.payload as { path: string };
@@ -147,7 +169,7 @@ export const ProjectSidebar = () => {
   return (
     <Sidebar
       storageKey={PROJECT_SIDEBAR_STORAGE_KEY}
-      sections={buildSections()}
+      sections={sections}
       activeNodeId={activeNodeId}
       header={<ProjectMenu />}
       footer={<ProjectSidebarFooter />}

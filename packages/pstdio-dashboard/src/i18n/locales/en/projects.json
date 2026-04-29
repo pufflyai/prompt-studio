@@ -212,6 +212,7 @@
     }
   },
   "sidebar": {
+    "search": "Search",
     "tickets": "Tickets",
     "projectChangelog": "Project changelog",
     "projectSettings": "Project settings",

@@ -44,6 +44,7 @@ import { createTagRoutes } from "./features/tags/routes";
 import { createTemplateRoutes } from "./features/templates/routes";
 import { createTicketRoutes } from "./features/tickets/routes";
 import { createWorkspaceRoutes } from "./features/workspaces/routes";
+import { flattenErrorChain } from "./lib/error-chain";
 import { apiLogger } from "./lib/logger";
 import { createAgentConfigService } from "./services/agent-config-service";
 import { createAttemptStatusService } from "./services/attempt-status-service";
@@ -267,6 +268,7 @@ export const createApp = async (options: AppOptions) => {
   app.route("/v1", createSyncRoutes(deps));
 
   app.onError((err, c) => {
+    const chain = flattenErrorChain(err);
     const entry = {
       level: "error" as const,
       timestamp: new Date().toISOString(),
@@ -275,6 +277,7 @@ export const createApp = async (options: AppOptions) => {
       status: 500,
       message: err.message,
       stack: err.stack,
+      causes: chain.slice(1),
     };
 
     apiLogger.error({ event: "api.request.error", ...entry }, "API request failed");

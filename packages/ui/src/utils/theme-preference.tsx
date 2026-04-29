@@ -1,6 +1,11 @@
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 
-import { applyThemePreference, type ThemePreference } from "./apply-theme-preference";
+import {
+  applyThemePreference,
+  getThemePreferenceMode,
+  isThemePreference,
+  type ThemePreference,
+} from "./apply-theme-preference";
 
 const STORAGE_KEY = "theme-preference";
 
@@ -18,15 +23,15 @@ interface ThemePreferenceProviderProps {
 }
 
 export const getInitialThemePreference = () => {
-  if (typeof window === "undefined") return "light";
+  if (typeof window === "undefined") return "pstdio-light";
 
   const stored = window.localStorage.getItem(STORAGE_KEY);
-  if (stored === "dark" || stored === "light") return stored;
+  if (isThemePreference(stored)) return stored;
 
   const prefersDark =
     typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-  return prefersDark ? "dark" : "light";
+  return prefersDark ? "pstdio-dark" : "pstdio-light";
 };
 
 export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => {
@@ -40,7 +45,8 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
     }
   }, [themePreference]);
 
-  const toggleThemePreference = () => setThemePreference((prev) => (prev === "dark" ? "light" : "dark"));
+  const toggleThemePreference = () =>
+    setThemePreference((prev) => (getThemePreferenceMode(prev) === "dark" ? "pstdio-light" : "pstdio-dark"));
 
   return (
     <ThemePreferenceContext value={{ themePreference, setThemePreference, toggleThemePreference }}>

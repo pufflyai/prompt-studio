@@ -1,18 +1,15 @@
 import { Avatar, Button, HStack, Menu, Text } from "@chakra-ui/react";
-import { ChevronDown, FolderIcon, Moon, Sun } from "lucide-react";
+import { ChevronDown, FolderIcon } from "lucide-react";
 import { MenuItem } from "../menu-item";
 
 interface SidebarProjectMenuProps {
   name: string;
   projectsLabel: string;
-  themeModeLabel: string;
-  isDarkMode: boolean;
   onSelectProjects: () => void;
-  onToggleThemePreference: () => void;
 }
 
 export const SidebarProjectMenu = (props: SidebarProjectMenuProps) => {
-  const { name, projectsLabel, themeModeLabel, isDarkMode, onSelectProjects, onToggleThemePreference } = props;
+  const { name, projectsLabel, onSelectProjects } = props;
 
   return (
     <Menu.Root>
@@ -32,12 +29,6 @@ export const SidebarProjectMenu = (props: SidebarProjectMenuProps) => {
       <Menu.Positioner>
         <Menu.Content minW="240px" bg="bg">
           <MenuItem onClick={onSelectProjects} primaryLabel={projectsLabel} leftIcon={FolderIcon} />
-          <Menu.Separator />
-          <MenuItem
-            onClick={onToggleThemePreference}
-            primaryLabel={themeModeLabel}
-            leftIcon={isDarkMode ? Sun : Moon}
-          />
         </Menu.Content>
       </Menu.Positioner>
     </Menu.Root>

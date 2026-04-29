@@ -1,8 +1,10 @@
 import { Kbd } from "@chakra-ui/react";
+import { Command } from "lucide-react";
 import { Fragment } from "react";
 import type { ShortcutBinding } from "./shortcut-registry";
 
 export type ShortcutPlatform = "mac" | "windows";
+export type ShortcutDisplayPart = { label: string; icon?: "command" };
 
 const splitShortcutStep = (step: string) => {
   return step
@@ -36,21 +38,33 @@ export const getShortcutPlatform = (platform = globalThis.navigator?.platform): 
 };
 
 export const getShortcutDisplayTokens = (binding: ShortcutBinding, platform = getShortcutPlatform()) => {
-  return getShortcutTokens(binding).map((step) => step.map((token) => getShortcutDisplayLabel(token, platform)));
+  return getShortcutDisplayParts(binding, platform).map((step) => step.map((part) => part.label));
+};
+
+const getShortcutDisplayPart = (token: string, platform: ShortcutPlatform): ShortcutDisplayPart => {
+  if (token === "Mod" && platform === "mac") {
+    return { label: "Cmd", icon: "command" };
+  }
+
+  return { label: getShortcutDisplayLabel(token, platform) };
+};
+
+export const getShortcutDisplayParts = (binding: ShortcutBinding, platform = getShortcutPlatform()) => {
+  return getShortcutTokens(binding).map((step) => step.map((token) => getShortcutDisplayPart(token, platform)));
 };
 
 export const ShortcutKbd = (props: { binding: ShortcutBinding }) => {
   const { binding } = props;
-  const steps = getShortcutDisplayTokens(binding);
+  const steps = getShortcutDisplayParts(binding);
 
   return (
     <>
       {steps.map((step, stepIndex) => (
-        <Fragment key={`${step.join("+")}-${stepIndex}`}>
+        <Fragment key={`${step.map((part) => part.label).join("+")}-${stepIndex}`}>
           {step.map((part, partIndex) => (
-            <Fragment key={`${part}-${partIndex}`}>
-              <Kbd fontSize="xs" borderRadius="0">
-                {part}
+            <Fragment key={`${part.label}-${partIndex}`}>
+              <Kbd fontSize="xs" borderRadius="0" display="inline-flex" alignItems="center" aria-label={part.label}>
+                {part.icon === "command" ? <Command size={12} aria-hidden="true" /> : part.label}
               </Kbd>
               {partIndex < step.length - 1 ? " + " : null}
             </Fragment>

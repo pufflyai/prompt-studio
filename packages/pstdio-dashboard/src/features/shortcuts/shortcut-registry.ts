@@ -10,6 +10,8 @@ export interface ShortcutDefinition {
     | "goto-ticket-list"
     | "nav-previous"
     | "nav-next"
+    | "open-command-palette"
+    | "change-theme"
     | "open-shortcut-help";
   actionLabel: string;
   binding: ShortcutBinding;
@@ -24,6 +26,14 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   { id: "goto-ticket-list", actionLabel: "Go to tickets", binding: ["G", "T"], scope: "global", whenNotTyping: true },
   { id: "nav-previous", actionLabel: "Previous item", binding: "[", scope: "ticket", whenNotTyping: true },
   { id: "nav-next", actionLabel: "Next item", binding: "]", scope: "ticket", whenNotTyping: true },
+  { id: "open-command-palette", actionLabel: "Command palette", binding: "Mod+P", scope: "global" },
+  {
+    id: "change-theme",
+    actionLabel: "Change theme",
+    binding: ["Mod+K", "Mod+T"],
+    scope: "global",
+    whenNotTyping: true,
+  },
   {
     id: "open-shortcut-help",
     actionLabel: "Keyboard shortcuts",

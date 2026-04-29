@@ -249,7 +249,7 @@ function CodeBlock({ code, language }: { code: string; language?: string }) {
   return (
     <Box
       as="pre"
-      background="bg.muted"
+      background="bg.code"
       color="fg"
       borderRadius="md"
       padding="sm"

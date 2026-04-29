@@ -28,7 +28,7 @@ import {
   SettingsIcon,
   Workflow,
 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import { expect, userEvent, within } from "storybook/test";
 
 import { AttachedPanel } from "@/components/attached-panel";
@@ -135,19 +135,7 @@ const buildPanelSidebarSections = (title: string, menuItems: string[]): SidebarS
 ];
 
 const PanelStorySidebarHeader = () => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const modeLabel = isDarkMode ? "Switch to light mode" : "Switch to dark mode";
-
-  return (
-    <SidebarProjectMenu
-      name="Prompt Studio"
-      projectsLabel="Projects"
-      themeModeLabel={modeLabel}
-      isDarkMode={isDarkMode}
-      onSelectProjects={() => undefined}
-      onToggleThemePreference={() => setIsDarkMode((current) => !current)}
-    />
-  );
+  return <SidebarProjectMenu name="Prompt Studio" projectsLabel="Projects" onSelectProjects={() => undefined} />;
 };
 
 const storyFooterItems = [

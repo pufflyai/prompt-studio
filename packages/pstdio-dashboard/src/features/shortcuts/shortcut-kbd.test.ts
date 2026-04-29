@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { getShortcutDisplayTokens, getShortcutPlatform } from "./shortcut-kbd";
+import { getShortcutDisplayParts, getShortcutDisplayTokens, getShortcutPlatform } from "./shortcut-kbd";
 
 describe("shortcut-kbd", () => {
   it("shows mac labels for modifier keys", () => {
@@ -12,6 +12,10 @@ describe("shortcut-kbd", () => {
 
   it("shows modifier labels for the shortcut help binding", () => {
     expect(getShortcutDisplayTokens("Mod+Shift+H", "mac")).toEqual([["Cmd", "Shift", "H"]]);
+  });
+
+  it("marks the mac command modifier for icon rendering", () => {
+    expect(getShortcutDisplayParts("Mod+P", "mac")).toEqual([[{ label: "Cmd", icon: "command" }, { label: "P" }]]);
   });
 
   it("falls back to windows labels for unknown platforms", () => {

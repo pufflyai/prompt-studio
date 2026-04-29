@@ -2,11 +2,18 @@ import { describe, expect, it, mock } from "bun:test";
 import { registerShortcutBindings, shouldLoadTicketsForShortcuts } from "./shortcut-provider";
 
 const createHotkeyManager = () => {
-  const handlers = new Map<string, { handler: (event: { target?: EventTarget | null }) => void; options: unknown }>();
+  const handlers = new Map<
+    string,
+    { handler: (event: { target?: EventTarget | null; preventDefault?: () => void }) => void; options: unknown }
+  >();
 
   return {
     handlers,
-    register: (binding: string, handler: (event: { target?: EventTarget | null }) => void, options: unknown) => {
+    register: (
+      binding: string,
+      handler: (event: { target?: EventTarget | null; preventDefault?: () => void }) => void,
+      options: unknown,
+    ) => {
       handlers.set(binding, { handler, options });
       return { unregister: mock(() => {}) };
     },
@@ -43,6 +50,7 @@ describe("registerShortcutBindings - creation and sequence flows", () => {
       setSelectedSessionId: () => {},
       setSessionModalState: () => {},
       setIsHelpOpen: () => {},
+      setIsCommandPaletteOpen: () => {},
       navigate: navigate as never,
       currentTicket: null,
       currentTicketIndex: -1,
@@ -75,6 +83,7 @@ describe("registerShortcutBindings - creation and sequence flows", () => {
       setSelectedSessionId,
       setSessionModalState,
       setIsHelpOpen: () => {},
+      setIsCommandPaletteOpen: () => {},
       navigate: navigate as never,
       currentTicket: null,
       currentTicketIndex: -1,
@@ -106,6 +115,8 @@ describe("registerShortcutBindings - creation and sequence flows", () => {
       setSelectedSessionId: () => {},
       setSessionModalState: () => {},
       setIsHelpOpen: () => {},
+      setIsCommandPaletteOpen: () => {},
+      setCommandPaletteView: () => {},
       navigate: navigate as never,
       currentTicket: null,
       currentTicketIndex: -1,
@@ -120,6 +131,39 @@ describe("registerShortcutBindings - creation and sequence flows", () => {
       to: "/projects/$projectId/tickets",
       params: { projectId: "project-1" },
     });
+  });
+
+  it("opens the theme menu with Mod+K then Mod+T", () => {
+    const hotkeyManager = createHotkeyManager();
+    const sequenceManager = createSequenceManager();
+    const setIsCommandPaletteOpen = mock(() => {});
+    const setCommandPaletteView = mock(() => {});
+
+    registerShortcutBindings({
+      hotkeyManager: hotkeyManager as never,
+      sequenceManager: sequenceManager as never,
+      projectId: "project-1",
+      pathname: "/projects/project-1/settings",
+      activeScopes: ["global"],
+      isHelpOpen: false,
+      requestCreateTicket: () => {},
+      setSelectedSessionId: () => {},
+      setSessionModalState: () => {},
+      setIsHelpOpen: () => {},
+      setIsCommandPaletteOpen,
+      setCommandPaletteView,
+      navigate: (() => {}) as never,
+      currentTicket: null,
+      currentTicketIndex: -1,
+      currentWorkspaceIndex: -1,
+      visibleTickets: [],
+      workspaceShorthand: undefined,
+    });
+
+    sequenceManager.handlers.get("Mod+K,Mod+T")?.handler();
+
+    expect(setCommandPaletteView).toHaveBeenCalledWith("theme");
+    expect(setIsCommandPaletteOpen).toHaveBeenCalledWith(true);
   });
 });
 
@@ -140,6 +184,7 @@ describe("registerShortcutBindings - overlay and sibling navigation", () => {
       setSelectedSessionId: () => {},
       setSessionModalState: () => {},
       setIsHelpOpen,
+      setIsCommandPaletteOpen: () => {},
       navigate: (() => {}) as never,
       currentTicket: null,
       currentTicketIndex: -1,
@@ -169,6 +214,7 @@ describe("registerShortcutBindings - overlay and sibling navigation", () => {
       setSelectedSessionId: () => {},
       setSessionModalState: () => {},
       setIsHelpOpen: () => {},
+      setIsCommandPaletteOpen: () => {},
       navigate: navigate as never,
       currentTicket: { shorthand: "PS-2", attempts: [] },
       currentTicketIndex: 1,
@@ -216,6 +262,7 @@ describe("registerShortcutBindings - overlay and sibling navigation", () => {
       setSelectedSessionId: () => {},
       setSessionModalState: () => {},
       setIsHelpOpen,
+      setIsCommandPaletteOpen: () => {},
       navigate: (() => {}) as never,
       currentTicket: null,
       currentTicketIndex: -1,
@@ -232,6 +279,38 @@ describe("registerShortcutBindings - overlay and sibling navigation", () => {
 
     expect(setIsHelpOpen).toHaveBeenCalledTimes(1);
     expect(setIsHelpOpen).toHaveBeenCalledWith(true);
+  });
+
+  it("opens the command palette on Mod+P and prevents browser print", () => {
+    const hotkeyManager = createHotkeyManager();
+    const sequenceManager = createSequenceManager();
+    const setIsCommandPaletteOpen = mock(() => {});
+    const preventDefault = mock(() => {});
+
+    registerShortcutBindings({
+      hotkeyManager: hotkeyManager as never,
+      sequenceManager: sequenceManager as never,
+      projectId: "project-1",
+      pathname: "/projects/project-1/tickets",
+      activeScopes: ["global"],
+      isHelpOpen: false,
+      requestCreateTicket: () => {},
+      setSelectedSessionId: () => {},
+      setSessionModalState: () => {},
+      setIsHelpOpen: () => {},
+      setIsCommandPaletteOpen,
+      navigate: (() => {}) as never,
+      currentTicket: null,
+      currentTicketIndex: -1,
+      currentWorkspaceIndex: -1,
+      visibleTickets: [],
+      workspaceShorthand: undefined,
+    });
+
+    hotkeyManager.handlers.get("Mod+P")?.handler({ target: null, preventDefault });
+
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+    expect(setIsCommandPaletteOpen).toHaveBeenCalledWith(true);
   });
 });
 

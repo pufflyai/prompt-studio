@@ -3,12 +3,24 @@ import { KanbanSquare } from "lucide-react";
 import { isValidElement } from "react";
 import { getShortcutDefinition } from "@/features/shortcuts/shortcut-registry";
 import {
+  buildProjectSidebarSections,
   buildSidebarShortcutMenuItems,
   getSidebarHelpShortcutDefinitions,
   SIDEBAR_HELP_SHORTCUT_IDS,
 } from "./project-sidebar";
 
 describe("project-sidebar shortcuts", () => {
+  it("adds a search entry that opens the command palette", () => {
+    const sections = buildProjectSidebarSections({
+      projectId: "project-1",
+      ticketsLabel: "Tickets",
+      searchLabel: "Search",
+    });
+
+    expect(sections[0]?.nodes.map((node) => node.id)).toEqual(["search", "tickets"]);
+    expect(sections[0]?.nodes[0]?.navigationIntent).toEqual({ id: "command-palette" });
+  });
+
   it("only exposes keyboard shortcuts in the help menu shortcut section", () => {
     expect(SIDEBAR_HELP_SHORTCUT_IDS).toEqual(["open-shortcut-help"]);
   });

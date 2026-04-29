@@ -1,4 +1,11 @@
-import { ChakraProvider, getInitialThemePreference, psTheme, ThemePreferenceProvider } from "@pstdio/ui";
+import {
+  ChakraProvider,
+  getInitialThemePreference,
+  isThemePreference,
+  psTheme,
+  type ThemePreference,
+  ThemePreferenceProvider,
+} from "@pstdio/ui";
 import { withThemeByClassName } from "@storybook/addon-themes";
 import type { Preview } from "@storybook/react-vite";
 import { type ReactNode, useEffect } from "react";
@@ -20,8 +27,13 @@ const storybookLocales = [
 const resolveLocale = (locale: string) =>
   locale === "browser" ? (navigator.languages?.[0] ?? navigator.language) : locale;
 
-const StorybookProviders = (props: { children: ReactNode; locale: string }) => {
-  const { children, locale } = props;
+const resolveThemePreference = (theme: unknown): ThemePreference => {
+  const value = typeof theme === "string" ? theme : initialThemePreference;
+  return isThemePreference(value) ? value : initialThemePreference;
+};
+
+const StorybookProviders = (props: { children: ReactNode; locale: string; themePreference: ThemePreference }) => {
+  const { children, locale, themePreference } = props;
 
   useEffect(() => {
     const nextLocale = resolveLocale(locale);
@@ -31,7 +43,7 @@ const StorybookProviders = (props: { children: ReactNode; locale: string }) => {
 
   return (
     <I18nextProvider i18n={i18n}>
-      <ThemePreferenceProvider initialPreference={initialThemePreference}>
+      <ThemePreferenceProvider key={themePreference} initialPreference={themePreference}>
         <ChakraProvider value={psTheme}>{children}</ChakraProvider>
       </ThemePreferenceProvider>
     </I18nextProvider>
@@ -60,14 +72,22 @@ const preview: Preview = {
     },
   },
   decorators: [
-    (Story, context) => (
-      <StorybookProviders locale={String(context.globals.locale ?? "browser")}>
-        <Story />
-      </StorybookProviders>
-    ),
+    (Story, context) => {
+      const themePreference = resolveThemePreference(context.globals.theme);
+
+      return (
+        <StorybookProviders locale={String(context.globals.locale ?? "browser")} themePreference={themePreference}>
+          <Story />
+        </StorybookProviders>
+      );
+    },
     withThemeByClassName({
-      defaultTheme: "light",
-      themes: { light: "", dark: "dark" },
+      defaultTheme: "pstdio-light",
+      themes: {
+        "pstdio-light": "light theme-pstdio-light",
+        "pstdio-dark": "dark theme-pstdio-dark",
+        monokai: "dark theme-monokai",
+      },
     }),
   ],
 };

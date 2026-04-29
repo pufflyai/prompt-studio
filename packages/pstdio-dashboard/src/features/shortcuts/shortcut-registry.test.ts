@@ -14,9 +14,13 @@ describe("shortcut-registry", () => {
     expect(getShortcutDefinition("goto-ticket-list")?.binding).toEqual(["G", "T"]);
     expect(getShortcutDefinition("nav-previous")?.binding).toBe("[");
     expect(getShortcutDefinition("nav-next")?.binding).toBe("]");
+    expect(getShortcutDefinition("open-command-palette")?.binding).toBe("Mod+P");
+    expect(getShortcutDefinition("open-command-palette")?.actionLabel).toBe("Command palette");
+    expect(getShortcutDefinition("change-theme")?.binding).toEqual(["Mod+K", "Mod+T"]);
+    expect(getShortcutDefinition("change-theme")?.actionLabel).toBe("Change theme");
     expect(getShortcutDefinition("open-shortcut-help")?.binding).toBe("Mod+Shift+H");
     expect(getShortcutDefinition("open-shortcut-help")?.actionLabel).toBe("Keyboard shortcuts");
-    expect(SHORTCUT_DEFINITIONS).toHaveLength(7);
+    expect(SHORTCUT_DEFINITIONS).toHaveLength(9);
   });
 
   it("resolves active scopes for ticket and workspace routes", () => {
