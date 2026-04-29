@@ -6,6 +6,8 @@ import { createTicketAttemptHandler, createTicketAttemptRoute } from "./endpoint
 import { deleteTicketHandler, deleteTicketRoute } from "./endpoints/delete-ticket";
 import { getTicketHandler, getTicketRoute } from "./endpoints/get-ticket";
 import { getTicketFileContentHandler, getTicketFileContentRoute } from "./endpoints/get-ticket-file-content";
+import { listProjectActivityHandler, listProjectActivityRoute } from "./endpoints/list-project-activity";
+import { listTicketActivityHandler, listTicketActivityRoute } from "./endpoints/list-ticket-activity";
 import { listTicketFilesHandler, listTicketFilesRoute } from "./endpoints/list-ticket-files";
 import { listTicketStatusesHandler, listTicketStatusesRoute } from "./endpoints/list-ticket-statuses";
 import { listTicketsHandler, listTicketsRoute } from "./endpoints/list-tickets";
@@ -23,6 +25,8 @@ export const createTicketRoutes = (deps: RouteDeps) => {
   routes.openapi(updateTicketRoute, updateTicketHandler(deps));
   routes.openapi(updateWhenAttemptStatusRoute, updateWhenAttemptStatusHandler(deps));
   routes.openapi(listTicketStatusesRoute, listTicketStatusesHandler(deps));
+  routes.openapi(listProjectActivityRoute, listProjectActivityHandler(deps));
+  routes.openapi(listTicketActivityRoute, listTicketActivityHandler(deps));
   routes.openapi(listTicketFilesRoute, listTicketFilesHandler(deps));
   routes.openapi(uploadTicketFileRoute, uploadTicketFileHandler(deps));
   routes.openapi(getTicketFileContentRoute, getTicketFileContentHandler(deps));

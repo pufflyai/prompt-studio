@@ -4,6 +4,11 @@ import { useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
+import {
+  getConfiguredAgentModel,
+  resolvePreferredAgentModel,
+} from "@/features/agents/components/agent-model-selection";
+import { useAgentSettings } from "@/features/agents/hooks/use-agent-settings";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/features/project-settings/store";
 import { useTicketAttemptDiffSummary } from "@/features/ticket/hooks/use-ticket-attempt-diff-summary";
 import { RepoBrowserContainer } from "@/features/workspaces/components/repo-browser.container";
@@ -60,7 +65,9 @@ export const SessionChatView = (props: SessionChatViewProps) => {
   const lastSelectedAgent = useProjectSettingsStore((s) => s.lastSelectedAgent);
   const lastSelectedModels = useProjectSettingsStore((s) => s.lastSelectedModels);
   const agent = sessionId && sessionAgent ? sessionAgent : lastSelectedAgent;
-  const model = lastSelectedModels[0] ?? undefined;
+  const { data: agentSettings = {} } = useAgentSettings(agent);
+  const configuredModel = getConfiguredAgentModel(agentSettings);
+  const model = resolvePreferredAgentModel({ configuredModel, modelHistory: lastSelectedModels });
 
   const projectSettingsStore = useProjectSettingsStoreApi();
   const draftKey = sessionId ?? "__new__";

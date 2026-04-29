@@ -1,5 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
+import { buildDiff, emitActivityEvent } from "../../activity/activity-events";
 import type { RouteDeps } from "../../deps";
 import { archiveWorkspaceCascade } from "../archive-workspace-cascade";
 import { notFoundResponseSchema, workspaceResponseSchema } from "../dto";
@@ -50,6 +51,17 @@ export const archiveWorkspaceHandler = (deps: RouteDeps): AppRouteHandler<typeof
     if (!updated) {
       return c.json({ error: `Workspace not found: ${id}` }, 404);
     }
+
+    await emitActivityEvent(deps, {
+      projectId: updated.project_id,
+      resourceType: "workspace",
+      resourceId: updated.id,
+      eventType: "workspace_archived",
+      summary: `Archived workspace ${updated.workspace_shorthand}`,
+      payload: {
+        archived: buildDiff(false, true),
+      },
+    });
 
     return c.json(updated, 200);
   };

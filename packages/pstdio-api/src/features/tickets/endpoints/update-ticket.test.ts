@@ -72,6 +72,17 @@ describe("PATCH /v1/tickets/:id", () => {
     expect(res.status).toBe(200);
     const ticket = await res.json();
     expect(ticket.display_title).toBe("Updated title");
+
+    const activityRes = await app.request(`/v1/tickets/${created.id}/activity`);
+    expect(activityRes.status).toBe(200);
+    const activity = (await activityRes.json()) as {
+      events: Array<{
+        event_type: string;
+        payload_json: { display_title?: { from: string | null; to: string | null } };
+      }>;
+    };
+    expect(activity.events[0].event_type).toBe("ticket_updated");
+    expect(activity.events[0].payload_json.display_title).toEqual({ from: "Original title", to: "Updated title" });
   });
 
   test("returns 404 for non-existent ticket", async () => {
@@ -149,5 +160,44 @@ describe("PATCH /v1/tickets/:id", () => {
     expect(sessionRes.status).toBe(200);
     const updatedSession = await sessionRes.json();
     expect(updatedSession.archived).toBe(true);
+  });
+
+  test("does not emit ticket_updated activity for empty patch", async () => {
+    const created = await createTicket({ content: "No-op update ticket" });
+
+    const { app } = context;
+    const res = await app.request(`/v1/tickets/${created.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+
+    const activityRes = await app.request(`/v1/tickets/${created.id}/activity?event_type=ticket_updated`);
+    expect(activityRes.status).toBe(200);
+    const activity = (await activityRes.json()) as { events: Array<{ event_type: string }> };
+    expect(activity.events).toHaveLength(0);
+  });
+
+  test("does not emit ticket_updated for no-op tag update", async () => {
+    const { app, projectId } = context;
+    const tagsRes = await app.request(`/v1/projects/${projectId}/ticket-tags`);
+    expect(tagsRes.status).toBe(200);
+    const tags = (await tagsRes.json()) as Array<{ options: Array<{ id: string }> }>;
+    const tagId = tags[0].options[0].id;
+
+    const created = await createTicket({ content: "Tagged no-op ticket", tag_ids: [tagId] });
+
+    const patchRes = await app.request(`/v1/tickets/${created.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ tag_ids: [tagId] }),
+    });
+    expect(patchRes.status).toBe(200);
+
+    const activityRes = await app.request(`/v1/tickets/${created.id}/activity?event_type=ticket_updated`);
+    expect(activityRes.status).toBe(200);
+    const activity = (await activityRes.json()) as { events: Array<{ event_type: string }> };
+    expect(activity.events).toHaveLength(0);
   });
 });

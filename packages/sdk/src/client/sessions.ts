@@ -2,6 +2,8 @@ import type {
   ApprovalInput,
   CreateSessionInput,
   FollowUpInput,
+  ListSessionActivityInput,
+  ListSessionActivityResponse,
   ResolveSessionIdInput,
   ResolveSessionIdResponse,
   SessionConversationResponse,
@@ -19,9 +21,20 @@ export type SessionClient = {
   getConversation(sessionId: string): Promise<SessionConversationResponse>;
   resolveSessionId(input: ResolveSessionIdInput): Promise<ResolveSessionIdResponse>;
   updateStatus(sessionId: string, status: string): Promise<Session>;
+  listActivity(sessionId: string, input?: ListSessionActivityInput): Promise<ListSessionActivityResponse>;
 };
 
 export const createSessionClient = (request: RequestFn): SessionClient => ({
+  listActivity: (sessionId, input = {}) => {
+    const params = new URLSearchParams();
+    if (input.event_type) params.append("event_type", input.event_type);
+    if (input.from) params.append("from", input.from);
+    if (input.to) params.append("to", input.to);
+    if (input.cursor) params.append("cursor", input.cursor);
+    if (input.limit !== undefined) params.append("limit", String(input.limit));
+    const query = params.toString();
+    return request(`/v1/sessions/${sessionId}/activity${query ? `?${query}` : ""}`);
+  },
   list: (projectId) => request(`/v1/sessions?project_id=${projectId}`),
   get: (sessionId) => request(`/v1/sessions/${sessionId}`),
   create: (input) => request("/v1/sessions", { method: "POST", body: input }),

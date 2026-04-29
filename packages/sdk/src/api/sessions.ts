@@ -2,6 +2,8 @@ export type {
   ApprovalInput,
   CreateSessionInput,
   FollowUpInput,
+  ListSessionActivityInput,
+  ListSessionActivityResponse,
   ResolveSessionIdInput,
   ResolveSessionIdResponse,
   SessionConversationResponse,

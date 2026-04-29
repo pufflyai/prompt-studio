@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { createRoute, z } from "@hono/zod-openapi";
 import { updateAttemptStatusResponseSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
+import { buildDiff, emitActivityEvent } from "../../activity/activity-events";
 import type { RouteDeps } from "../../deps";
 import { firePostAttemptStatusHook, firePreAttemptStatusHook } from "../../hooks/attempt-status-hooks";
 import { parseTicketShorthand } from "../parse-ticket-shorthand";
@@ -145,6 +146,19 @@ export const updateAttemptStatusHandler = (deps: RouteDeps): AppRouteHandler<typ
     }
 
     const fromStatusName = await resolveFromStatusName(deps, workspace.attempt_status_id);
+    if (fromStatusName === status) {
+      return c.json(
+        {
+          id: workspace.id,
+          attempt_status_id: workspace.attempt_status_id,
+          from_status: fromStatusName,
+          to_status: status,
+          status_change_id: randomUUID(),
+        },
+        200,
+      );
+    }
+
     const preHookPayload = await buildHookPayload(deps, {
       workspace,
       attemptStatusName: fromStatusName,
@@ -161,6 +175,21 @@ export const updateAttemptStatusHandler = (deps: RouteDeps): AppRouteHandler<typ
 
     const updated = (await deps.workspaceService.updateAttemptStatus(id, toAttemptStatus.id))!;
     const statusChangeId = randomUUID();
+
+    await emitActivityEvent(deps, {
+      projectId: updated.project_id,
+      resourceType: "workspace",
+      resourceId: updated.id,
+      eventType: "workspace_attempt_status_updated",
+      summary: `Updated attempt status for ${updated.workspace_shorthand}`,
+      payload: {
+        status: buildDiff(fromStatusName, status),
+        to_status: status,
+        session_id: sessionId ?? null,
+        status_change_id: statusChangeId,
+      },
+    });
+
     const postHookPayload = await buildHookPayload(deps, {
       workspace: updated,
       attemptStatusName: status,

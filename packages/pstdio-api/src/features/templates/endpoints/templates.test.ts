@@ -192,7 +192,7 @@ describe("DELETE /v1/projects/:id/templates/:name", () => {
 
     const listRes = await app.request(`/v1/projects/${projectId}/templates`);
     const list = await listRes.json();
-    expect(list).toHaveLength(13);
+    expect(list).toHaveLength(14);
     expect(list.find((template: { name: string }) => template.name === "ticket")).toBeUndefined();
   });
 

@@ -89,6 +89,14 @@ describe("POST /v1/tickets/:id/update-when-attempt-status", () => {
     const ticketRes = await app.request(`/v1/tickets/${ticket.id}`);
     const updatedTicket = await ticketRes.json();
     expect(updatedTicket.status_id).toBe(reviewStatus!.id);
+
+    const activityRes = await app.request(`/v1/tickets/${ticket.id}/activity`);
+    expect(activityRes.status).toBe(200);
+    const activity = (await activityRes.json()) as {
+      events: Array<{ event_type: string; payload_json: { to_status?: string } }>;
+    };
+    expect(activity.events[0].event_type).toBe("ticket_attempt_status_updated");
+    expect(activity.events[0].payload_json.to_status).toBe("review");
   });
 
   test("no-ops when not all attempts match", async () => {
@@ -153,5 +161,37 @@ describe("POST /v1/tickets/:id/update-when-attempt-status", () => {
     });
 
     expect(res.status).toBe(404);
+  });
+
+  test("does not emit duplicate activity on no-op status transition", async () => {
+    const { ticket } = await createTicketWithWorkspace("reviewed");
+
+    const firstRes = await app.request(`/v1/tickets/${ticket.id}/update-when-attempt-status`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        all_attempts_status: "reviewed",
+        set_status: "review",
+      }),
+    });
+    expect(firstRes.status).toBe(200);
+    expect((await firstRes.json()).updated).toBe(true);
+
+    const secondRes = await app.request(`/v1/tickets/${ticket.id}/update-when-attempt-status`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        all_attempts_status: "reviewed",
+        set_status: "review",
+      }),
+    });
+    expect(secondRes.status).toBe(200);
+    expect((await secondRes.json()).updated).toBe(false);
+
+    const activityRes = await app.request(`/v1/tickets/${ticket.id}/activity?event_type=ticket_attempt_status_updated`);
+    expect(activityRes.status).toBe(200);
+    const activity = (await activityRes.json()) as { events: Array<{ event_type: string }> };
+    expect(activity.events).toHaveLength(1);
+    expect(activity.events[0].event_type).toBe("ticket_attempt_status_updated");
   });
 });

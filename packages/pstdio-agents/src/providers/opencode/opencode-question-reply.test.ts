@@ -43,6 +43,100 @@ const createRunningQuestionMessage = (): OpencodeSessionMessage => ({
   ],
 });
 
+interface QuestionReplyBody {
+  answers: string[][];
+}
+
+interface FetchRequestContext {
+  url: URL;
+  method: string;
+  init: RequestInit | undefined;
+}
+
+interface QuestionReplyFetcherInput {
+  getSessionMessages: (sessionId: string) => OpencodeSessionMessage[];
+  onReply?: (body: QuestionReplyBody) => void;
+  onFollowUp?: (body: unknown) => void;
+}
+
+const parseFetchRequest = (input: RequestInfo | URL, init?: RequestInit) => ({
+  url: new URL(String(input)),
+  method: init?.method ?? "GET",
+  init,
+});
+
+const parseJsonBody = (init: RequestInit | undefined) => JSON.parse(init?.body as string);
+
+const createQuestionListResponse = () =>
+  new Response(
+    JSON.stringify([
+      {
+        id: "que-weather",
+        sessionID: "oc-1",
+        questions: [
+          {
+            question: "What's the weather like where you are today?",
+            header: "Weather",
+            options: [{ label: "Hot" }, { label: "Nice" }],
+          },
+        ],
+        tool: { messageID: "msg-question", callID: "call-question" },
+      },
+    ]),
+  );
+
+const getSessionMessageId = (request: FetchRequestContext) => {
+  const messageMatch = request.url.pathname.match(/^\/session\/([^/]+)\/message$/);
+  return messageMatch?.[1] ?? null;
+};
+
+const completeQuestionMessage = (questionMessage: OpencodeSessionMessage, answers: string[][]) => {
+  const part = "parts" in questionMessage ? questionMessage.parts?.[0] : undefined;
+  if (part?.state) {
+    part.state = {
+      ...part.state,
+      status: "completed",
+      output: "User has answered your questions.",
+      metadata: { answers },
+    };
+  }
+
+  if ("info" in questionMessage) {
+    questionMessage.info = {
+      ...questionMessage.info,
+      time: { ...questionMessage.info?.time, completed: Date.now() },
+    };
+  }
+};
+
+const createQuestionReplyFetcher = (handlers: QuestionReplyFetcherInput) => {
+  return async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = parseFetchRequest(input, init);
+
+    if (request.method === "GET" && request.url.pathname === "/question") {
+      return createQuestionListResponse();
+    }
+
+    if (request.method === "POST" && request.url.pathname === "/question/que-weather/reply") {
+      const body = parseJsonBody(request.init) as QuestionReplyBody;
+      handlers.onReply?.(body);
+      return new Response("true");
+    }
+
+    const sessionId = getSessionMessageId(request);
+    if (request.method === "GET" && sessionId) {
+      return new Response(JSON.stringify(handlers.getSessionMessages(sessionId)));
+    }
+
+    if (request.method === "POST" && sessionId) {
+      handlers.onFollowUp?.(parseJsonBody(request.init));
+      return new Response(JSON.stringify({ info: {}, parts: [] }));
+    }
+
+    return new Response("{}", { status: 404 });
+  };
+};
+
 describe("OpenCode question replies", () => {
   test("answers the pending question request instead of sending a follow-up message", async () => {
     const questionMessage = createRunningQuestionMessage();
@@ -52,62 +146,14 @@ describe("OpenCode question replies", () => {
     const replyBodies: unknown[] = [];
     const normalFollowUps: unknown[] = [];
 
-    const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = new URL(String(input));
-      const method = init?.method ?? "GET";
-
-      if (method === "GET" && url.pathname === "/question") {
-        return new Response(
-          JSON.stringify([
-            {
-              id: "que-weather",
-              sessionID: "oc-1",
-              questions: [
-                {
-                  question: "What's the weather like where you are today?",
-                  header: "Weather",
-                  options: [{ label: "Hot" }, { label: "Nice" }],
-                },
-              ],
-              tool: { messageID: "msg-question", callID: "call-question" },
-            },
-          ]),
-        );
-      }
-
-      if (method === "POST" && url.pathname === "/question/que-weather/reply") {
-        const body = JSON.parse(init?.body as string);
+    const fetcher = createQuestionReplyFetcher({
+      getSessionMessages: (sessionId) => sessionMessages[sessionId] ?? [],
+      onReply: (body) => {
         replyBodies.push(body);
-        const part = "parts" in questionMessage ? questionMessage.parts?.[0] : undefined;
-        if (part?.state) {
-          part.state = {
-            ...part.state,
-            status: "completed",
-            output: "User has answered your questions.",
-            metadata: { answers: body.answers },
-          };
-        }
-        if ("info" in questionMessage) {
-          questionMessage.info = {
-            ...questionMessage.info,
-            time: { ...questionMessage.info?.time, completed: Date.now() },
-          };
-        }
-        return new Response("true");
-      }
-
-      const messageMatch = url.pathname.match(/^\/session\/([^/]+)\/message$/);
-      if (method === "GET" && messageMatch) {
-        return new Response(JSON.stringify(sessionMessages[messageMatch[1]!] ?? []));
-      }
-
-      if (method === "POST" && messageMatch) {
-        normalFollowUps.push(JSON.parse(init?.body as string));
-        return new Response(JSON.stringify({ info: {}, parts: [] }));
-      }
-
-      return new Response("{}", { status: 404 });
-    };
+        completeQuestionMessage(questionMessage, body.answers);
+      },
+      onFollowUp: (body) => normalFollowUps.push(body),
+    });
 
     const a = createOpencodeAgent(agentDefaults(), { ...serviceOverrides(), fetcher });
     const eventStore = createEventStore();
@@ -154,45 +200,10 @@ describe("OpenCode question replies", () => {
     };
     const replyBodies: unknown[] = [];
 
-    const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = new URL(String(input));
-      const method = init?.method ?? "GET";
-
-      if (method === "GET" && url.pathname === "/question") {
-        return new Response(
-          JSON.stringify([
-            {
-              id: "que-weather",
-              sessionID: "oc-1",
-              questions: [
-                {
-                  question: "What's the weather like where you are today?",
-                  header: "Weather",
-                  options: [{ label: "Hot" }, { label: "Nice" }],
-                },
-              ],
-              tool: { messageID: "msg-question", callID: "call-question" },
-            },
-          ]),
-        );
-      }
-
-      if (method === "POST" && url.pathname === "/question/que-weather/reply") {
-        replyBodies.push(JSON.parse(init?.body as string));
-        return new Response("true");
-      }
-
-      const messageMatch = url.pathname.match(/^\/session\/([^/]+)\/message$/);
-      if (method === "GET" && messageMatch) {
-        return new Response(JSON.stringify(sessionMessages[messageMatch[1]!] ?? []));
-      }
-
-      if (method === "POST" && messageMatch) {
-        return new Response(JSON.stringify({ info: {}, parts: [] }));
-      }
-
-      return new Response("{}", { status: 404 });
-    };
+    const fetcher = createQuestionReplyFetcher({
+      getSessionMessages: (sessionId) => sessionMessages[sessionId] ?? [],
+      onReply: (body) => replyBodies.push(body),
+    });
 
     const a = createOpencodeAgent(agentDefaults(), { ...serviceOverrides(), fetcher });
     const eventStore = createEventStore();
@@ -238,46 +249,17 @@ describe("OpenCode question replies", () => {
     const replyBodies: unknown[] = [];
     let messageGetsAfterReply = 0;
 
-    const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = new URL(String(input));
-      const method = init?.method ?? "GET";
-
-      if (method === "GET" && url.pathname === "/question") {
-        return new Response(
-          JSON.stringify([
-            {
-              id: "que-weather",
-              sessionID: "oc-1",
-              questions: [
-                {
-                  question: "What's the weather like where you are today?",
-                  header: "Weather",
-                  options: [{ label: "Hot" }, { label: "Nice" }],
-                },
-              ],
-              tool: { messageID: "msg-question", callID: "call-question" },
-            },
-          ]),
-        );
-      }
-
-      if (method === "POST" && url.pathname === "/question/que-weather/reply") {
-        replyBodies.push(JSON.parse(init?.body as string));
-        return new Response("true");
-      }
-
-      const messageMatch = url.pathname.match(/^\/session\/([^/]+)\/message$/);
-      if (method === "GET" && messageMatch) {
+    const fetcher = createQuestionReplyFetcher({
+      getSessionMessages: () => {
         if (replyBodies.length > 0) messageGetsAfterReply += 1;
         const messages = [
           { role: "user", content: [{ type: "text", text: "Ask me about the weather" }] },
           questionMessage,
         ];
-        return new Response(JSON.stringify(messageGetsAfterReply >= 5 ? [...messages, continuationMessage] : messages));
-      }
-
-      return new Response("{}", { status: 404 });
-    };
+        return messageGetsAfterReply >= 5 ? [...messages, continuationMessage] : messages;
+      },
+      onReply: (body) => replyBodies.push(body),
+    });
 
     const a = createOpencodeAgent(agentDefaults(), { ...serviceOverrides(), fetcher });
     const eventStore = createEventStore();

@@ -1,5 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
+import { buildDiff, emitActivityEvent } from "../../activity/activity-events";
 import type { RouteDeps } from "../../deps";
 import { notFoundResponseSchema, sessionResponseSchema } from "../dto";
 
@@ -49,6 +50,20 @@ export const archiveSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof a
     if (!updated) {
       return c.json({ error: `Session not found: ${id}` }, 404);
     }
+
+    if (updated.project_id) {
+      await emitActivityEvent(deps, {
+        projectId: updated.project_id,
+        resourceType: "session",
+        resourceId: updated.id,
+        eventType: "session_archived",
+        summary: `Archived session ${updated.title}`,
+        payload: {
+          archived: buildDiff(false, true),
+        },
+      });
+    }
+
     return c.json(updated, 200);
   };
 };

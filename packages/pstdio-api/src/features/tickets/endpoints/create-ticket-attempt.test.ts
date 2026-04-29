@@ -76,6 +76,14 @@ describe("POST /v1/tickets/:id/attempts", () => {
     expect(attempt.workspace.branch).toBe(`workspace/${attempt.workspace.workspace_shorthand}`);
     expect(attempt.workspace.worktree_path).toContain(attempt.workspace.workspace_shorthand);
     expect(attempt.session.workspace_id).toBe(attempt.workspace.id);
+
+    const activityRes = await app.request(`/v1/tickets/${ticket.id}/activity`);
+    expect(activityRes.status).toBe(200);
+    const activity = (await activityRes.json()) as {
+      events: Array<{ event_type: string; payload_json: { workspace_id?: string } }>;
+    };
+    expect(activity.events[0].event_type).toBe("ticket_attempt_created");
+    expect(activity.events[0].payload_json.workspace_id).toBe(attempt.workspace.id);
   });
 
   test("copies .pstdio/config.json into worktree", async () => {

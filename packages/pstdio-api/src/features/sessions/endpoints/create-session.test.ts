@@ -224,6 +224,13 @@ describe("POST /v1/sessions - lifecycle", () => {
     const session = await waitForSessionStatus(created.id, "completed");
     expect(session.agent_session_id).not.toBeNull();
     expect(session.session_file_id).not.toBeNull();
+
+    const activityRes = await app.request(`/v1/sessions/${created.id}/activity`);
+    expect(activityRes.status).toBe(200);
+    const activity = (await activityRes.json()) as {
+      events: Array<{ event_type: string; resource_id: string }>;
+    };
+    expect(activity.events[0]).toMatchObject({ event_type: "session_created", resource_id: created.id });
   });
 
   test("replays fake agent patches over session stream", async () => {

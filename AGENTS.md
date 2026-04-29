@@ -88,6 +88,12 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 - Always reproduce an issue before fixing it.
 - Always write a regression test to prevent it from happening again.
 
+## Git
+
+- **Branches**: `<category>/<kebab-description>` — categories: `feature`, `bugfix`, `hotfix`, `test`, `chore` (e.g. `feature/add-new-event-button`)
+- **Commits**: `<category>(<PS-XXX>): <statement>; <statement>` — categories: `feat`, `fix`, `refactor`, `chore`. Each statement should complete "This commit will…" (e.g. `fix(PS-42): add new button component; add new button to templates`)
+- **Pull Requests**: open against `main` unless otherwise specified. Names should follow `<category>(<PS-XXX>): <statement>` (e.g. `fix(PS-42): add new button component`).
+
 ## Coding Style Rules
 
 - Split content that will grow in separate files (endpoints, schemas, etc.)
@@ -124,11 +130,6 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 # Project Planning and Documentation (pstdio)
 
 This project uses `pstdio` to manage tickets.
-
-After editing tickets, make sure to save them using `pstdio tickets save --id PS-XXX`
-
+After editing tickets, make sure to save them using `pstdio tickets save --id PS-XXX`.
 Run `pstdio --help` to learn more.
-
 When asked to edit `plugins` do not update the templates in `pstdio/files`.
-
----

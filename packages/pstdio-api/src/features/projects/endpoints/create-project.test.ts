@@ -26,6 +26,7 @@ const TEMPLATE_FILES = [
   "prompts/squash-message.prompt.md",
   "prompts/fix-changes-requested.prompt.md",
   "prompts/review-code.prompt.md",
+  "tickets/bug-fix.ticket.md",
   "tickets/ticket.md",
   "tickets/proposal.ticket.md",
 ];
@@ -95,6 +96,12 @@ describe("POST /v1/projects", () => {
 
       const ticketTemplate = (await ticketRes.json()) as { content: string };
       expect(ticketTemplate.content).toBe("# embedded:tickets/ticket.md\n");
+
+      const bugFixRes = await app.request(`/v1/projects/${project.id}/templates/bug-fix`);
+      expect(bugFixRes.status).toBe(200);
+
+      const bugFixTemplate = (await bugFixRes.json()) as { content: string };
+      expect(bugFixTemplate.content).toBe("# embedded:tickets/bug-fix.ticket.md\n");
     } finally {
       runtime.embeddedFiles = originalEmbeddedFiles;
     }

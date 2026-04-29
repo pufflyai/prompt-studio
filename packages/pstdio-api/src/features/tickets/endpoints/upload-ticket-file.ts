@@ -36,6 +36,101 @@ export const uploadTicketFileRoute = createRoute({
   },
 });
 
+interface UploadTicketFileInput {
+  ticketId: string;
+  projectId: string;
+  fileName: string;
+  data: Buffer;
+  mimeType: string | undefined;
+}
+
+interface UploadWorkspaceArtifactInput extends UploadTicketFileInput {
+  relativePath: string;
+}
+
+const updateExistingWorkspaceArtifactFile = async (deps: RouteDeps, input: UploadWorkspaceArtifactInput) => {
+  const existingArtifact = await deps.workspaceArtifactService.getByTicketPath(input.ticketId, input.relativePath);
+  if (!existingArtifact) return null;
+
+  const existingFile = await deps.fileService.get(existingArtifact.file_id);
+  if (!existingFile) return null;
+
+  const updated = await deps.fileService.update(existingFile.id, { data: input.data });
+  if (updated) {
+    emitSyncedFile(deps, updated);
+  }
+
+  const artifact = await deps.workspaceArtifactService.upsertByTicketPath(
+    input.ticketId,
+    existingFile.id,
+    input.relativePath,
+  );
+  emitSyncedWorkspaceArtifact(deps, artifact);
+
+  return { file: updated ?? existingFile, status: 200 as const };
+};
+
+const createWorkspaceArtifactFile = async (deps: RouteDeps, input: UploadWorkspaceArtifactInput) => {
+  const file = await deps.fileService.upload({
+    project_id: input.projectId,
+    file_name: input.fileName,
+    file_kind: "artifact",
+    data: input.data,
+    mime_type: input.mimeType ?? null,
+  });
+
+  const ticketFile = await deps.fileService.attachToTicket(input.ticketId, file.id);
+  const artifact = await deps.workspaceArtifactService.upsertByTicketPath(input.ticketId, file.id, input.relativePath);
+  emitSyncedFile(deps, file);
+  emitSyncedTicketFile(deps, ticketFile);
+  emitSyncedWorkspaceArtifact(deps, artifact);
+
+  return { file, status: 201 as const };
+};
+
+const uploadWorkspaceArtifactFile = async (deps: RouteDeps, input: UploadWorkspaceArtifactInput) => {
+  const updated = await updateExistingWorkspaceArtifactFile(deps, input);
+  if (updated) return updated;
+
+  return createWorkspaceArtifactFile(deps, input);
+};
+
+const updateExistingTicketFile = async (deps: RouteDeps, input: UploadTicketFileInput) => {
+  const attachedFiles = await deps.fileService.listForTicket(input.ticketId);
+  const existing = attachedFiles.find((file) => file.file_name === input.fileName);
+  if (!existing) return null;
+
+  const updated = await deps.fileService.update(existing.id, { data: input.data });
+  if (updated) {
+    emitSyncedFile(deps, updated);
+  }
+
+  return { file: updated ?? existing, status: 200 as const };
+};
+
+const createTicketFile = async (deps: RouteDeps, input: UploadTicketFileInput) => {
+  const file = await deps.fileService.upload({
+    project_id: input.projectId,
+    file_name: input.fileName,
+    file_kind: "ticket_file",
+    data: input.data,
+    mime_type: input.mimeType ?? null,
+  });
+
+  const ticketFile = await deps.fileService.attachToTicket(input.ticketId, file.id);
+  emitSyncedFile(deps, file);
+  emitSyncedTicketFile(deps, ticketFile);
+
+  return { file, status: 201 as const };
+};
+
+const uploadAttachedTicketFile = async (deps: RouteDeps, input: UploadTicketFileInput) => {
+  const updated = await updateExistingTicketFile(deps, input);
+  if (updated) return updated;
+
+  return createTicketFile(deps, input);
+};
+
 export const uploadTicketFileHandler = (deps: RouteDeps): AppRouteHandler<typeof uploadTicketFileRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
@@ -47,66 +142,18 @@ export const uploadTicketFileHandler = (deps: RouteDeps): AppRouteHandler<typeof
     }
 
     const data = Buffer.from(content_base64, "base64");
-
-    if (relative_path) {
-      const existingArtifact = await deps.workspaceArtifactService.getByTicketPath(id, relative_path);
-
-      if (existingArtifact) {
-        const existingFile = await deps.fileService.get(existingArtifact.file_id);
-
-        if (existingFile) {
-          const updated = await deps.fileService.update(existingFile.id, { data });
-          if (updated) {
-            emitSyncedFile(deps, updated);
-          }
-
-          const artifact = await deps.workspaceArtifactService.upsertByTicketPath(id, existingFile.id, relative_path);
-          emitSyncedWorkspaceArtifact(deps, artifact);
-
-          return c.json(updated ?? existingFile, 200);
-        }
-      }
-
-      const file = await deps.fileService.upload({
-        project_id: ticket.project_id,
-        file_name,
-        file_kind: "artifact",
-        data,
-        mime_type: mime_type ?? null,
-      });
-
-      const ticketFile = await deps.fileService.attachToTicket(id, file.id);
-      const artifact = await deps.workspaceArtifactService.upsertByTicketPath(id, file.id, relative_path);
-      emitSyncedFile(deps, file);
-      emitSyncedTicketFile(deps, ticketFile);
-      emitSyncedWorkspaceArtifact(deps, artifact);
-
-      return c.json(file, 201);
-    }
-
-    const attachedFiles = await deps.fileService.listForTicket(id);
-    const existing = attachedFiles.find((file) => file.file_name === file_name);
-
-    if (existing) {
-      const updated = await deps.fileService.update(existing.id, { data });
-      if (updated) {
-        emitSyncedFile(deps, updated);
-      }
-      return c.json(updated ?? existing, 200);
-    }
-
-    const file = await deps.fileService.upload({
-      project_id: ticket.project_id,
-      file_name,
-      file_kind: "ticket_file",
+    const input = {
+      ticketId: id,
+      projectId: ticket.project_id,
+      fileName: file_name,
       data,
-      mime_type: mime_type ?? null,
-    });
+      mimeType: mime_type,
+    };
 
-    const ticketFile = await deps.fileService.attachToTicket(id, file.id);
-    emitSyncedFile(deps, file);
-    emitSyncedTicketFile(deps, ticketFile);
+    const result = relative_path
+      ? await uploadWorkspaceArtifactFile(deps, { ...input, relativePath: relative_path })
+      : await uploadAttachedTicketFile(deps, input);
 
-    return c.json(file, 201);
+    return result.status === 200 ? c.json(result.file, 200) : c.json(result.file, 201);
   };
 };

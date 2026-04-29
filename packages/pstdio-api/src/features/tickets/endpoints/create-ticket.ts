@@ -1,5 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
+import { emitActivityEvent } from "../../activity/activity-events";
 import type { RouteDeps } from "../../deps";
 import { fireTicketHook, fireTicketHookAsync } from "../../hooks/ticket-hooks";
 import { buildTicketPayload } from "../build-ticket-payload";
@@ -108,6 +109,19 @@ const finalizeCreatedTicket = async (
   }
 
   deps.eventBus.emit("tickets", "set", nextTicket);
+  await emitActivityEvent(deps, {
+    projectId: nextTicket.project_id,
+    resourceType: "ticket",
+    resourceId: nextTicket.id,
+    eventType: "ticket_created",
+    summary: `Created ticket ${nextTicket.shorthand}`,
+    payload: {
+      status_id: nextTicket.status_id,
+      draft: nextTicket.draft,
+      parent_id: nextTicket.parent_id,
+      tag_ids: tagIds ?? [],
+    },
+  });
   const postPayload = await buildTicketPayload(deps, nextTicket, input.project_id);
   fireTicketHookAsync(deps, "postTicketCreation", input.project_id, postPayload);
 

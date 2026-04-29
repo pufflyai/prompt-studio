@@ -1,5 +1,15 @@
 # @pstdio/sdk
 
+## 0.4.0
+
+### Minor Changes
+
+- 0b1dffd: Add activity event APIs and SDK methods for listing ticket, workspace, session, and project activity streams.
+
+### Patch Changes
+
+- 92ce38e: Handle OpenCode question/todowrite UI support and make plugin command execution honor local PATH.
+
 ## 0.3.0
 
 ### Minor Changes

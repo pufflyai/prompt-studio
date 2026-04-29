@@ -1,4 +1,5 @@
 import type { AgentRegistry } from "pstdio-agents";
+import type { createActivityEventsDBService } from "pstdio-db";
 import type { createAgentConfigService } from "../services/agent-config-service";
 import type { createAttemptStatusService } from "../services/attempt-status-service";
 import type { createFileService } from "../services/file-service";
@@ -44,4 +45,5 @@ export interface RouteDeps {
   fileService: ReturnType<typeof createFileService>;
   syncService: ReturnType<typeof createSyncService>;
   pluginService: ReturnType<typeof createPluginService>;
+  activityEventsService: ReturnType<typeof createActivityEventsDBService>;
 }

@@ -2,6 +2,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { cors } from "hono/cors";
 import { type AgentService, createAgentRegistry, resolveDefaultAgents } from "pstdio-agents";
 import {
+  createActivityEventsDBService,
   createAgentConfigsDBService,
   createAttemptStatusesDBService,
   createDb,
@@ -106,6 +107,7 @@ export const createApp = async (options: AppOptions) => {
   const skillsDBService = createSkillsDBService(db);
   const templatesDBService = createTemplatesDBService(db);
   const filesDBService = createFilesDBService(db);
+  const activityEventsService = createActivityEventsDBService(db);
 
   // --- storage services ---
   const filesStorageService = createFilesStorageService(storageRoot);
@@ -207,6 +209,7 @@ export const createApp = async (options: AppOptions) => {
     fileService,
     syncService,
     pluginService,
+    activityEventsService,
   };
 
   app.use("*", cors());

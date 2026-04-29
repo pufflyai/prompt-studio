@@ -3,7 +3,6 @@ import {
   createTreeCollection,
   Flex,
   HStack,
-  Icon,
   IconButton,
   Input,
   Menu,
@@ -12,17 +11,21 @@ import {
   TreeView,
 } from "@chakra-ui/react";
 import { EmptyState, ScrollArea } from "@pstdio/ui";
-import { ChevronDown, ChevronRight, FileText, Folder, List, ListTree, type LucideIcon } from "lucide-react";
+import { List, ListTree } from "lucide-react";
 import { type ReactNode, type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 import {
   buildChangedFilesTree,
   type ChangedFilesViewMode,
   type ChangedFileTreeNode,
 } from "../utils/build-changed-files-tree";
+import { type FileIconInfo, WorkspaceFileTreeNode } from "./workspace-file-tree-node";
+
+export type { FileIconInfo } from "./workspace-file-tree-node";
 
 const clampPanelWidth = (width: number, min: number, max: number) => Math.min(Math.max(width, min), max);
 
 export const ResizableLeftPanel = (props: { children: ReactNode }) => {
+  const { children } = props;
   const panelRef = useRef<HTMLDivElement>(null);
   const cleanupDragRef = useRef<() => void>(() => undefined);
   const [width, setWidth] = useState(288);
@@ -90,7 +93,7 @@ export const ResizableLeftPanel = (props: { children: ReactNode }) => {
         zIndex="1"
         onPointerDown={handleResizeStart}
       />
-      {props.children}
+      {children}
     </Flex>
   );
 };
@@ -111,24 +114,12 @@ const collectExpandedFolderIds = (nodes: ChangedFileTreeNode[]) => {
   return folderIds;
 };
 
-const getPathDepth = (nodeId: string) => {
-  const path = nodeId.replace(/^(file|folder):/, "");
-  const depth = path.split("/").length - 1;
-
-  return Math.max(depth, 0);
-};
-
 export const resolveSelectedPath = (preferredPaths: string[], fallbackPaths: string[]) => {
   const firstPath = preferredPaths[0] ?? null;
   if (firstPath) return firstPath;
 
   return fallbackPaths[0] ?? null;
 };
-
-export interface FileIconInfo {
-  icon: LucideIcon;
-  color: string;
-}
 
 interface FileListPanelProps {
   title: string;
@@ -231,79 +222,16 @@ export const FileListPanel = (props: FileListPanelProps) => {
           >
             <TreeView.Tree w="full" minW="0">
               <TreeView.Node
-                render={({ node, nodeState }) => {
-                  const depth = viewMode === "nested" ? getPathDepth(node.id) : 0;
-
-                  if (nodeState.isBranch) {
-                    return (
-                      <TreeView.BranchControl
-                        gap="2xs"
-                        py="2xs"
-                        px="2xs"
-                        pl={`calc(var(--chakra-spacing-2) + ${depth} * var(--chakra-spacing-4))`}
-                        borderRadius="xs"
-                        cursor="pointer"
-                        w="full"
-                        minW="0"
-                        overflow="hidden"
-                        _hover={{ bg: "bg.hover" }}
-                      >
-                        <Icon
-                          as={nodeState.expanded ? ChevronDown : ChevronRight}
-                          boxSize="14px"
-                          color="fg.muted"
-                          flexShrink={0}
-                        />
-                        <Icon as={Folder} boxSize="14px" color="fg.muted" flexShrink={0} />
-                        <TreeView.BranchText textStyle="paragraph/XS/medium" truncate minW="0">
-                          {node.name}
-                        </TreeView.BranchText>
-                      </TreeView.BranchControl>
-                    );
-                  }
-
-                  const filePath = node.id.replace(/^file:/, "");
-                  const isSelected = selectedPath === filePath;
-                  const fileIcon = resolveFileIcon?.(filePath) ?? { icon: FileText, color: "fg.subtle" };
-
-                  const lastSlashIndex = filePath.lastIndexOf("/");
-                  const fileName = lastSlashIndex >= 0 ? filePath.slice(lastSlashIndex + 1) : filePath;
-                  const dirPath = lastSlashIndex >= 0 ? filePath.slice(0, lastSlashIndex) : "";
-                  const useFlatDisplay = viewMode === "flat" && dirPath;
-
-                  return (
-                    <TreeView.Item
-                      gap="2xs"
-                      py="2xs"
-                      px="2xs"
-                      pl={`calc(var(--chakra-spacing-2) + ${depth} * var(--chakra-spacing-4))`}
-                      borderRadius="xs"
-                      cursor="pointer"
-                      w="full"
-                      minW="0"
-                      overflow="hidden"
-                      bg={isSelected ? "bg.active" : "transparent"}
-                      _hover={{ bg: isSelected ? "bg.active" : "bg.hover" }}
-                      onClick={() => onSelectPath(filePath)}
-                    >
-                      <Icon as={fileIcon.icon} boxSize="14px" color={fileIcon.color} flexShrink={0} />
-                      <TreeView.ItemText textStyle="paragraph/XS/regular" truncate minW="0">
-                        {useFlatDisplay ? (
-                          <HStack gap="xs">
-                            <Text as="span" color="fg.default">
-                              {fileName}
-                            </Text>
-                            <Text as="span" color="fg.muted">
-                              {dirPath}
-                            </Text>
-                          </HStack>
-                        ) : (
-                          node.name
-                        )}
-                      </TreeView.ItemText>
-                    </TreeView.Item>
-                  );
-                }}
+                render={({ node, nodeState }) => (
+                  <WorkspaceFileTreeNode
+                    node={node}
+                    nodeState={nodeState}
+                    selectedPath={selectedPath}
+                    viewMode={viewMode}
+                    onSelectPath={onSelectPath}
+                    resolveFileIcon={resolveFileIcon}
+                  />
+                )}
               />
             </TreeView.Tree>
           </TreeView.Root>

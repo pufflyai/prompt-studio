@@ -234,8 +234,10 @@ Created ticket PS-13
 ### Usage
 
 ```sh
-pstdio tickets view --id <ticket-shorthand> [--project-id <project-id>]
+pstdio tickets view [field] --id <ticket-shorthand> [--project-id <project-id>]
 ```
+
+`field` is optional and supports: `status`, `title`, `tags`, `shorthand`, `parent-ticket`, `sub-tickets`.
 
 ### Flags
 
@@ -249,7 +251,8 @@ pstdio tickets view --id <ticket-shorthand> [--project-id <project-id>]
 1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
 2. Fetch the ticket from the database by shorthand or ID.
 3. Resolve ticket status name and tags.
-4. Display a summary of the ticket.
+4. If `field` is provided, print only that field value.
+5. Otherwise display a summary of the ticket.
 
 ### Output
 

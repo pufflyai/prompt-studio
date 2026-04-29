@@ -111,6 +111,14 @@ describe("PATCH /v1/workspaces/:id/attempt-status", () => {
     expect(body.attempt_status_id).toBeTruthy();
     expect(body.to_status).toBe("review-ready");
     expect(body.status_change_id).toBeTruthy();
+
+    const activityRes = await app.request(`/v1/workspaces/${workspace.id}/activity`);
+    expect(activityRes.status).toBe(200);
+    const activity = (await activityRes.json()) as {
+      events: Array<{ event_type: string; payload_json: { to_status?: string } }>;
+    };
+    expect(activity.events[0].event_type).toBe("workspace_attempt_status_updated");
+    expect(activity.events[0].payload_json.to_status).toBe("review-ready");
   });
 
   test("updates attempt status using a custom status", async () => {

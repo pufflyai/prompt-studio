@@ -91,6 +91,13 @@ describe("POST /v1/workspaces/:id/archive", () => {
     expect(body.archived).toBe(true);
     expect(existsSync(workspace.worktree_path!)).toBe(false);
 
+    const activityRes = await app.request(`/v1/workspaces/${workspace.id}/activity`);
+    expect(activityRes.status).toBe(200);
+    const activity = (await activityRes.json()) as {
+      events: Array<{ event_type: string }>;
+    };
+    expect(activity.events[0].event_type).toBe("workspace_archived");
+
     const branchOutput = execSync(`git branch --list ${workspace.branch}`, { cwd: repoRoot, encoding: "utf8" }).trim();
     expect(branchOutput).toBe("");
   });

@@ -1,5 +1,15 @@
 # @pstdio/ui
 
+## 0.5.1
+
+### Patch Changes
+
+- 41f858d: Bound multiline sticky user messages with scroll handoff
+- 92ce38e: Handle OpenCode question/todowrite UI support and make plugin command execution honor local PATH.
+- f8edf81: Fix OpenCode question replies getting stuck and stale question prompts remaining visible.
+- 92ce38e: Reduce xs button icon sizing in the shared Chakra recipe.
+- 084969c: Fix ticket workspace grouping menus, filtered columns, list drag-and-drop, and list indentation.
+
 ## 0.5.0
 
 ### Minor Changes
