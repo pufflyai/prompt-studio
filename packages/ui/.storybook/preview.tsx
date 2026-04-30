@@ -37,6 +37,7 @@ const preview: Preview = {
         "pstdio-light": "light theme-pstdio-light",
         "pstdio-dark": "dark theme-pstdio-dark",
         monokai: "dark theme-monokai",
+        dracula: "dark theme-dracula",
       },
     }),
   ],

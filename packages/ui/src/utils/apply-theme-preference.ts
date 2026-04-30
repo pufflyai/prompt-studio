@@ -1,6 +1,6 @@
 import { themePreferenceCssVariableNames, themePreferenceCssVariables } from "./theme-preference-palettes";
 
-export const themePreferences = ["pstdio-light", "pstdio-dark", "monokai"] as const;
+export const themePreferences = ["pstdio-light", "pstdio-dark", "monokai", "dracula"] as const;
 
 export type ThemePreference = (typeof themePreferences)[number];
 export type ThemePreferenceMode = "light" | "dark";
@@ -9,6 +9,7 @@ const themePreferenceModes = {
   "pstdio-light": "light",
   "pstdio-dark": "dark",
   monokai: "dark",
+  dracula: "dark",
 } satisfies Record<ThemePreference, ThemePreferenceMode>;
 
 const themeClassNames = themePreferences.map((theme) => `theme-${theme}`);

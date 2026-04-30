@@ -70,6 +70,7 @@ const themeIcons = {
   "pstdio-light": Sun,
   "pstdio-dark": Moon,
   monokai: Palette,
+  dracula: Palette,
 } satisfies Record<ThemePreference, LucideIcon>;
 
 export const resolveCommandPaletteMode = (query: string): CommandPaletteMode =>

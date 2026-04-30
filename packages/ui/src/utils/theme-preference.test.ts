@@ -41,4 +41,10 @@ describe("getInitialThemePreference", () => {
 
     expect(getInitialThemePreference()).toBe("monokai");
   });
+
+  it("restores the dracula theme preference", () => {
+    window.localStorage.setItem("theme-preference", "dracula");
+
+    expect(getInitialThemePreference()).toBe("dracula");
+  });
 });

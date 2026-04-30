@@ -368,7 +368,8 @@
   "themes": {
     "pstdio-light": "pstdio light",
     "pstdio-dark": "pstdio dark",
-    "monokai": "Monokai"
+    "monokai": "Monokai",
+    "dracula": "Dracula"
   },
   "commandPalette": {
     "searchPlaceholder": "検索するか > でコマンドを入力",

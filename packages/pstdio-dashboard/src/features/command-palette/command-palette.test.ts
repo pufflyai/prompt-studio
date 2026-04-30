@@ -52,6 +52,7 @@ describe("command palette entries", () => {
     });
 
     expect(filterCommandPaletteEntries(entries, "mono", "theme").map((entry) => entry.id)).toEqual(["theme:monokai"]);
+    expect(filterCommandPaletteEntries(entries, "drac", "theme").map((entry) => entry.id)).toEqual(["theme:dracula"]);
     expect(
       filterCommandPaletteEntries(entries, "", "theme").find((entry) => entry.id === "theme:pstdio-dark")?.isSelected,
     ).toBe(true);
