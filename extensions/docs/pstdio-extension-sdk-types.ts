@@ -155,6 +155,9 @@ export interface SlotRef<TContext extends Struct = Struct, TKind extends UiSlotK
   id: string;
   kind: TKind;
   label?: string;
+  description?: string;
+  metadata?: JsonObject;
+  /** Phantom field used to constrain compatible contributions; never populated at runtime. */
   context?: TContext;
 }
 
@@ -370,6 +373,7 @@ export interface CommandReject {
 }
 
 export type CommandMiddlewareResult<TParams extends Struct = Struct> =
+  // biome-ignore lint/suspicious/noConfusingVoidType: middleware handlers may return nothing
   | void
   | CommandContinue
   | CommandPatchParams<TParams>
@@ -564,6 +568,13 @@ export interface ExtensionLoggerApi {
   error(message: string, metadata?: JsonObject): void;
 }
 
+export interface ExtensionSettingsApi<TSettings extends Struct = Struct> {
+  all(): Promise<Partial<TSettings>>;
+  get<TKey extends keyof TSettings>(key: TKey): Promise<TSettings[TKey] | undefined>;
+  set<TKey extends keyof TSettings>(key: TKey, value: TSettings[TKey]): Promise<void>;
+  delete<TKey extends keyof TSettings>(key: TKey): Promise<void>;
+}
+
 export interface ExtensionContextBase {
   projectId: string;
   extensionId: string;
@@ -583,6 +594,7 @@ export interface ExtensionContextBase {
   process: ExtensionProcessApi;
   net: ExtensionNetApi;
   logger: ExtensionLoggerApi;
+  settings: ExtensionSettingsApi;
 }
 
 export interface CommandContext<TParams extends Struct = Struct> extends ExtensionContextBase {
@@ -640,6 +652,7 @@ export interface ScheduleContribution<TParams extends Struct = Struct> {
   command: CommandRef<TParams, unknown> | string;
   params?: TParams;
   repoId?: string;
+  repoPath?: string;
   disabled?: boolean;
 }
 
@@ -732,15 +745,18 @@ export interface ExtensionDefinition {
   slots?: Record<string, SlotRef>;
   routes?: Record<string, RouteContribution>;
   views?: Record<string, ViewContribution>;
-  menus?: Record<string, MenuContribution>;
   navigation?: Record<string, NavigationContribution>;
   settingsPanels?: Record<string, SettingsPanelContribution>;
-  activityRenderers?: Record<string, RendererContribution | WebviewContribution>;
-  sessionAnchorRenderers?: Record<string, RendererContribution | WebviewContribution>;
+  activityRenderers?: Record<string, RendererContribution>;
+  sessionAnchorRenderers?: Record<string, RendererContribution>;
 
+  // biome-ignore lint/suspicious/noExplicitAny: heterogeneous command shapes
   commands?: Record<string, CommandDefinition<any, any>>;
+  // biome-ignore lint/suspicious/noExplicitAny: heterogeneous middleware shapes
   middlewares?: Record<string, MiddlewareDefinition<any, any>>;
+  // biome-ignore lint/suspicious/noExplicitAny: heterogeneous hook shapes
   hooks?: Record<string, HookDefinition<any>>;
+  // biome-ignore lint/suspicious/noExplicitAny: heterogeneous schedule shapes
   schedules?: Record<string, ScheduleContribution<any>>;
 
   artifactMounts?: Record<string, ArtifactMountContribution>;
@@ -765,6 +781,7 @@ export declare function defineExtension<const TExtension extends ExtensionDefini
 
 export declare const projectSlots: {
   sidebarNav: SlotRef<Struct, "navigation">;
+  sidebar: SlotRef<Struct, "view">;
   headerPrimary: SlotRef<Struct, "menu">;
   headerOverflow: SlotRef<Struct, "menu">;
   settingsPanels: SlotRef<Struct, "settings">;

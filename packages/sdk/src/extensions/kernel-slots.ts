@@ -5,6 +5,7 @@ import type { ResourceAnchor } from "./types/resources";
 
 export const projectSlots = {
   sidebarNav: defineSlot<Struct, "navigation">("project.sidebarNav", { kind: "navigation" }),
+  sidebar: defineSlot<Struct, "view">("project.sidebar", { kind: "view" }),
   headerPrimary: defineSlot<Struct, "menu">("project.headerPrimary", { kind: "menu" }),
   headerOverflow: defineSlot<Struct, "menu">("project.headerOverflow", { kind: "menu" }),
   settingsPanels: defineSlot<Struct, "settings">("project.settingsPanels", { kind: "settings" }),

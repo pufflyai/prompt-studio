@@ -13,6 +13,9 @@ export interface SlotRef<TContext extends Struct = Struct, TKind extends UiSlotK
   id: string;
   kind: TKind;
   label?: string;
+  description?: string;
+  metadata?: JsonObject;
+  /** Phantom field used to constrain compatible contributions; never populated at runtime. */
   context?: TContext;
 }
 

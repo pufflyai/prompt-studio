@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { defineExtension, projectSlots } from "@pstdio/sdk/extensions";
+import { buildCliHelpTree } from "./cli-help";
 import type { LoadedExtensionSource } from "./loader";
 import { normalizeExtensionSources } from "./normalize";
-import { buildCliHelpTree } from "./cli-help";
 
 const wrap = (definition: ReturnType<typeof defineExtension>): LoadedExtensionSource => ({
   sourcePath: `/fake/${definition.namespace}/extension.ts`,

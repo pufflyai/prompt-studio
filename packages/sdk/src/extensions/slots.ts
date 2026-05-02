@@ -8,4 +8,6 @@ export const defineSlot = <TContext extends Struct = Struct, TKind extends UiSlo
   id,
   kind: options.kind,
   label: options.label,
+  description: options.description,
+  metadata: options.metadata,
 });

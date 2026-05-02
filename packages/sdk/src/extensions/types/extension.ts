@@ -20,7 +20,6 @@ import type {
   TemplateContribution,
   TemplateTypeContribution,
   ViewContribution,
-  WebviewContribution,
 } from "./contributions";
 import type { EventRef } from "./events";
 import type { JsonObject, MaybePromise, Struct } from "./json";
@@ -54,6 +53,7 @@ export interface ScheduleContribution<TParams extends Struct = Struct> {
   command: CommandRef<TParams, unknown> | string;
   params?: TParams;
   repoId?: string;
+  repoPath?: string;
   disabled?: boolean;
 }
 
@@ -118,11 +118,10 @@ export interface ExtensionDefinition {
   slots?: Record<string, SlotRef>;
   routes?: Record<string, RouteContribution>;
   views?: Record<string, ViewContribution>;
-  menus?: Record<string, MenuContribution>;
   navigation?: Record<string, NavigationContribution>;
   settingsPanels?: Record<string, SettingsPanelContribution>;
-  activityRenderers?: Record<string, RendererContribution | WebviewContribution>;
-  sessionAnchorRenderers?: Record<string, RendererContribution | WebviewContribution>;
+  activityRenderers?: Record<string, RendererContribution>;
+  sessionAnchorRenderers?: Record<string, RendererContribution>;
 
   // biome-ignore lint/suspicious/noExplicitAny: heterogeneous command shapes
   commands?: Record<string, CommandDefinition<any, any>>;

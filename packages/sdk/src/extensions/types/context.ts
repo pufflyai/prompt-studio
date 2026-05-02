@@ -133,6 +133,13 @@ export interface ExtensionLoggerApi {
   error(message: string, metadata?: JsonObject): void;
 }
 
+export interface ExtensionSettingsApi<TSettings extends Struct = Struct> {
+  all(): Promise<Partial<TSettings>>;
+  get<TKey extends keyof TSettings>(key: TKey): Promise<TSettings[TKey] | undefined>;
+  set<TKey extends keyof TSettings>(key: TKey, value: TSettings[TKey]): Promise<void>;
+  delete<TKey extends keyof TSettings>(key: TKey): Promise<void>;
+}
+
 export interface ExtensionContextBase {
   projectId: string;
   extensionId: string;
@@ -152,6 +159,7 @@ export interface ExtensionContextBase {
   process: ExtensionProcessApi;
   net: ExtensionNetApi;
   logger: ExtensionLoggerApi;
+  settings: ExtensionSettingsApi;
 }
 
 export interface CommandContext<TParams extends Struct = Struct> extends ExtensionContextBase {

@@ -28,7 +28,6 @@ export const NotesCard = () => {
 
       <form className="lab-notes__form" onSubmit={onSubmit}>
         <input
-          autoFocus
           className="lab-input"
           placeholder="Jot something down…"
           value={draft}

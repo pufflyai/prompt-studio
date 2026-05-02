@@ -610,7 +610,7 @@ Example settings page:
 settingsPanels: {
   plannerSettings: {
     title: "Planner",
-    slot: projectSlots.settings,
+    slot: projectSlots.settingsPanels,
     webview: {
       entry: packageAsset("./webviews/settings/index.html", import.meta.url),
     },

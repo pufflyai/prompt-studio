@@ -288,7 +288,7 @@ export default defineExtension({
   description: "Planner workflow extension.",
 
   settings: {
-    defaultStatus: params.text({ label: "Default status" }),
+    defaultStatus: params.text({ label: "Default status", defaultValue: "backlog" }),
   },
 
   slots: {},
@@ -298,7 +298,6 @@ export default defineExtension({
   hooks: {},
   schedules: {},
 
-  menus: {},
   navigation: {},
   views: {},
   routes: {},
@@ -553,6 +552,14 @@ commandEvent(plannerCommands.tickets.create, "completed");
 commandEvent(plannerCommands.tickets.create, "rejected");
 commandEvent(plannerCommands.tickets.create, "failed");
 ```
+
+Lifecycle event ids follow the canonical wire format:
+
+```txt
+command.<phase>:<commandId>
+```
+
+For example, `command.completed:planner.tickets.create`. Hooks subscribed by raw string id must use this format; `commandEvent()` is the recommended way to construct it.
 
 Meanings:
 
@@ -979,6 +986,17 @@ Use `ctx.files` for project-owned editable files that do not need to live in rep
 
 Use `ctx.artifacts` for repo-context files that should be visible to coding agents.
 
+Settings declared in `defineExtension({ settings })` are read and written through `ctx.settings`. Values are scoped by project and extension.
+
+```ts
+const defaultStatus = await ctx.settings.get("defaultStatus");
+await ctx.settings.set("defaultStatus", "backlog");
+
+const all = await ctx.settings.all();
+```
+
+`ctx.settings.get` returns `undefined` when no value has been written and the descriptor has no `defaultValue`. Settings UIs should populate values through the standard settings panel; `ctx.settings.set` exists for migrations and command-driven preference flows.
+
 ---
 
 ## 12. Templates and Skills
@@ -1043,7 +1061,7 @@ schedules: {
 }
 ```
 
-Repo-scoped scheduled commands must declare or resolve a repo context. If no repo is selected and the project has multiple repos, the runtime should report an ambiguity diagnostic.
+Repo-scoped scheduled commands must declare or resolve a repo context. A schedule may pin its target via `repoId` (preferred for stable identity) or `repoPath` (for absolute path-driven setups); if both are provided, `repoId` wins. If neither is set and the project has multiple repos, the runtime should report an ambiguity diagnostic.
 
 ---
 
