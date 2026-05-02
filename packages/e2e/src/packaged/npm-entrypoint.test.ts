@@ -7,6 +7,7 @@ import { TEST_TIMEOUT } from "../cli/timeouts";
 import { buildBinary } from "./packaged-helpers";
 
 const REPO_ROOT = join(import.meta.dirname, "../../../..");
+const PACKAGE_JSON = join(REPO_ROOT, "packages/pstdio/package.json");
 const BIN_ENTRYPOINT = join(REPO_ROOT, "packages/pstdio/bin/pstdio.cjs");
 const BINARY_PATH = join(REPO_ROOT, "dist/pstdio");
 const BUILD_TIMEOUT = 180_000;
@@ -34,6 +35,11 @@ afterAll(() => {
 });
 
 describe("npm entrypoint (bin/pstdio.cjs via node)", () => {
+  test("declares pst as an npm binary alias", () => {
+    const packageJson = require(PACKAGE_JSON);
+    expect(packageJson.bin.pst).toBe(packageJson.bin.pstdio);
+  });
+
   test(
     "runs --version through the node entrypoint",
     () => {
