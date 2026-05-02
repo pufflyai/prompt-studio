@@ -6,6 +6,11 @@ import { CLI_VERSION } from "@/features/cli-version";
 import { createCliCommandTracker } from "@/features/logging/cli-command-log";
 import { resolveCliSessionId } from "@/features/sessions/resolve-cli-session-id";
 import { ensureCliApi } from "./api-startup";
+import {
+  buildExtensionCommandModules,
+  defaultExtensionCommandDeps,
+  loadExtensionCliHelpTree,
+} from "./extension-commands";
 
 type CliCommandTracker = ReturnType<typeof createCliCommandTracker>;
 
@@ -39,17 +44,21 @@ const configureFailureHandler = (cli: Argv, commandTracker: CliCommandTracker) =
     process.exit(1);
   });
 
-const registerCommands = (cli: Argv) => {
+const registerCommands = (cli: Argv, extensionModules: CommandModule[]) => {
   registerCommand(cli, dashboardCommand);
 
   for (const commandModule of topLevelCommandModules) {
     registerCommand(cli, commandModule);
   }
 
+  for (const commandModule of extensionModules) {
+    cli.command(commandModule);
+  }
+
   return cli;
 };
 
-const createCli = (input: RunCliInput, commandTracker: CliCommandTracker) => {
+const createCli = (input: RunCliInput, commandTracker: CliCommandTracker, extensionModules: CommandModule[]) => {
   const cli = yargs(input.rawArgs).scriptName("pstdio").version(CLI_VERSION).strict();
   const withFailureHandler = configureFailureHandler(cli, commandTracker);
 
@@ -60,7 +69,17 @@ const createCli = (input: RunCliInput, commandTracker: CliCommandTracker) => {
 
       await ensureCliApi({ argv, env: input.env ?? process.env });
     }),
+    extensionModules,
   );
+};
+
+const loadExtensionModulesSafely = async (): Promise<CommandModule[]> => {
+  try {
+    const tree = await loadExtensionCliHelpTree();
+    return buildExtensionCommandModules(defaultExtensionCommandDeps, tree);
+  } catch {
+    return [];
+  }
 };
 
 export const runCli = async (input: RunCliInput) => {
@@ -71,7 +90,8 @@ export const runCli = async (input: RunCliInput) => {
   });
 
   try {
-    await createCli({ ...input, env }, commandTracker).parseAsync();
+    const extensionModules = await loadExtensionModulesSafely();
+    await createCli({ ...input, env }, commandTracker, extensionModules).parseAsync();
     commandTracker.logSuccess();
   } catch (error) {
     commandTracker.logFailure(error);

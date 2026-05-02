@@ -272,7 +272,6 @@ export const installExtensionSource = async (
     const warningCount = runtime.diagnostics.filter((d) => d.severity === "warning").length;
 
     if (errorCount > 0 && runtime.extensions.length === 0) {
-      rmSync(installPath, { recursive: true, force: true });
       const failure = runtime.diagnostics.find((d) => d.severity === "error");
       throw new ExtensionInstallError(
         failure?.code ?? "invalid_extension",

@@ -10,10 +10,19 @@ export {
 } from "./artifacts";
 
 export {
+  type BuildEnvironmentInput,
+  buildCliHelpTree,
   type CheckExtensionsInput,
   type CheckExtensionsResult,
+  type CliHelpNode,
+  type CommandExecuteInput,
+  type CommandRunner,
+  type CommandRunnerEnvironment,
+  type CommandRunnerHostDeps,
   checkExtensions,
+  createCommandRunner,
   createDiagnostic,
+  DEFAULT_MAX_COMMAND_DEPTH,
   type DependencyInstallReport,
   type DetectPackageManagerResult,
   detectPackageManager,

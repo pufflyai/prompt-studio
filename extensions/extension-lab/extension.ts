@@ -41,6 +41,14 @@ export default defineExtension({
       },
     },
 
+    "counter.read": {
+      title: "Read lab counter",
+      cli: true,
+      async run(ctx) {
+        return { counter: (await ctx.storage.get<number>(COUNTER_KEY)) ?? 0 };
+      },
+    },
+
     "counter.reset": {
       title: "Reset lab counter",
       cli: true,

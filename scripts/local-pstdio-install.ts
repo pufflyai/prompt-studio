@@ -73,12 +73,17 @@ const quoteShellValue = (value: string) => `'${value.replaceAll("'", `'\\''`)}'`
 
 const createWrapper = (repoRoot: string, mode: NonNullable<InstallLocalPstdioInput["mode"]>) => {
   const cliPath = join(repoRoot, CLI_ENTRY);
+  const devHome = join(homedir(), ".pstdio-dev");
   const envLines =
     mode.type === "dev-server"
       ? [
           `export PSTDIO_API_URL=${quoteShellValue(mode.apiUrl)}`,
           "export PSTDIO_DISABLE_API_AUTO_START='1'",
           "export PSTDIO_DISABLE_EMBED_MANIFEST='1'",
+          `export PSTDIO_HOME=${quoteShellValue(devHome)}`,
+          `export PSTDIO_DB_PATH=${quoteShellValue(join(devHome, "pstdio.db"))}`,
+          `export PSTDIO_STORAGE_PATH=${quoteShellValue(join(devHome, "storage"))}`,
+          `export PSTDIO_WORKSPACES_DIR=${quoteShellValue(join(devHome, "workspaces"))}`,
         ]
       : [];
 

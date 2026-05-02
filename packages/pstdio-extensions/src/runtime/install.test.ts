@@ -116,7 +116,7 @@ describe("installExtensionSource (local folder)", () => {
     });
   });
 
-  test("fails and rolls back the install when the default export is invalid", async () => {
+  test("preserves copied source when the default export is invalid so users can edit and retry", async () => {
     const sourceParent = createTempDir("pstdio-install-src-");
     const sourceDir = writeFolderExtension(sourceParent, "broken", `export default "nope";`);
     const { extensionsRoot } = createExtensionsRoot();
@@ -124,7 +124,7 @@ describe("installExtensionSource (local folder)", () => {
     await expect(installExtensionSource({ source: sourceDir, extensionsRoot })).rejects.toBeInstanceOf(
       ExtensionInstallError,
     );
-    expect(existsSync(join(extensionsRoot, "broken"))).toBe(false);
+    expect(existsSync(join(extensionsRoot, "broken", "extension.ts"))).toBe(true);
   });
 
   test("fails when an install already exists and --force is not set", async () => {
