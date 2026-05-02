@@ -44,7 +44,8 @@
   },
   "workspaces": [
     "clients/*",
-    "packages/*"
+    "packages/*",
+    "extensions/*"
   ],
   "devDependencies": {
     "@biomejs/biome": "2.4.10",

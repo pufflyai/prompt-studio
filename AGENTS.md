@@ -19,6 +19,7 @@ Never compromise the project structure. Code readability and structure matters m
 
 - Deep relative imports across packages
 - Importing from `clients/*`
+- Files with only re-exports
 
 ## Required Workflow: TDD
 

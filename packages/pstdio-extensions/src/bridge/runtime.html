@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: transparent;
+      }
+      #pstdio-extension-mount {
+        height: 100%;
+        width: 100%;
+        display: block;
+        min-height: 0;
+      }
+    </style>
+  <script type="module" crossorigin src="../packages/pstdio-api/runtime-b672z9w2.js"></script></head>
+  <body>
+    <div id="pstdio-extension-mount"></div>
+    <script type="module">
+      import { guest } from "https://esm.sh/rimless@0.7.1";
+
+      const MOUNT_ID = "pstdio-extension-mount";
+
+      const applyTheme = (theme, variables) => {
+        const docEl = document.documentElement;
+        const opposite = theme === "dark" ? "light" : "dark";
+        docEl.classList.remove(opposite);
+        docEl.classList.add(theme);
+        docEl.setAttribute("data-theme", theme);
+        docEl.style.colorScheme = theme;
+        for (const [name, value] of Object.entries(variables ?? {})) {
+          if (name.startsWith("--")) docEl.style.setProperty(name, value);
+        }
+      };
+
+      const injectStyles = (urls) => {
+        for (const url of urls ?? []) {
+          const link = document.createElement("link");
+          link.rel = "stylesheet";
+          link.href = url;
+          document.head.appendChild(link);
+        }
+      };
+
+      const ensureMount = () => {
+        let el = document.getElementById(MOUNT_ID);
+        if (!el) {
+          el = document.createElement("div");
+          el.id = MOUNT_ID;
+          document.body.appendChild(el);
+        }
+        return el;
+      };
+
+      const propsStore = (() => {
+        let value;
+        const listeners = new Set();
+        return {
+          get: () => value,
+          subscribe: (listener) => {
+            listeners.add(listener);
+            return () => listeners.delete(listener);
+          },
+          set: (next) => {
+            value = next;
+            for (const listener of listeners) listener(value);
+          },
+        };
+      })();
+
+      let cleanup;
+      let connection;
+
+      const hostApi = {
+        init: async ({ moduleUrl, styles, props, theme, themeVariables }) => {
+          try {
+            applyTheme(theme, themeVariables);
+            injectStyles(styles);
+            propsStore.set(props);
+            const mod = await import(moduleUrl);
+            const view = mod.default ?? (mod.mount ? mod : null);
+            if (!view?.mount) throw new Error("Extension module does not export a default view (defineExtensionView).");
+            const host = { call: (method, params) => connection.remote.call({ method, params }) };
+            const result = await view.mount(ensureMount(), host, propsStore);
+            cleanup = typeof result === "function" ? result : undefined;
+          } catch (error) {
+            const err = error instanceof Error ? error : new Error(String(error));
+            connection.remote.runtimeError({ message: err.message, stack: err.stack });
+            throw err;
+          }
+        },
+        themeUpdate: ({ theme, variables }) => applyTheme(theme, variables),
+        propsUpdate: ({ props }) => propsStore.set(props),
+      };
+
+      connection = await guest.connect(hostApi);
+      connection.remote.ready({});
+
+      window.addEventListener("beforeunload", () => cleanup?.());
+    </script>
+  </body>
+</html>
