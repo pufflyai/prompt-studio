@@ -2,150 +2,140 @@ import { describe, expect, it, mock } from "bun:test";
 import { registerShortcutBindings, shouldLoadTicketsForShortcuts } from "./shortcut-provider";
 
 const createHotkeyManager = () => {
-  const handlers = new Map<string, { handler: (event: { target?: EventTarget | null }) => void; options: unknown }>();
+  const handlers = new Map<
+    string,
+    { handler: (event: { target?: EventTarget | null; preventDefault?: () => void }) => void; options: unknown }
+  >();
 
   return {
     handlers,
-    register: (binding: string, handler: (event: { target?: EventTarget | null }) => void, options: unknown) => {
+    register: (
+      binding: string,
+      handler: (event: { target?: EventTarget | null; preventDefault?: () => void }) => void,
+      options: unknown,
+    ) => {
       handlers.set(binding, { handler, options });
       return { unregister: mock(() => {}) };
     },
   };
 };
 
-const createSequenceManager = () => {
-  const handlers = new Map<string, { handler: () => void; options: unknown }>();
-
-  return {
-    handlers,
-    register: (binding: string[], handler: () => void, options: unknown) => {
-      handlers.set(binding.join(","), { handler, options });
-      return { unregister: mock(() => {}) };
-    },
-  };
+const baseInput = {
+  projectId: "project-1",
+  isHelpOpen: false,
+  requestCreateTicket: () => {},
+  setSelectedSessionId: () => {},
+  setSessionModalState: () => {},
+  setIsHelpOpen: () => {},
+  setIsCommandPaletteOpen: () => {},
+  setCommandPaletteView: () => {},
+  navigate: (() => {}) as never,
+  currentTicket: null,
+  currentTicketIndex: -1,
+  currentWorkspaceIndex: -1,
+  visibleTickets: [],
+  workspaceShorthand: undefined,
 };
 
-describe("registerShortcutBindings - creation and sequence flows", () => {
+describe("registerShortcutBindings - creation and navigation", () => {
   it("opens create ticket flow and navigates to tickets", () => {
     const hotkeyManager = createHotkeyManager();
-    const sequenceManager = createSequenceManager();
     const requestCreateTicket = mock(() => {});
     const navigate = mock(() => {});
+    const preventDefault = mock(() => {});
 
     registerShortcutBindings({
+      ...baseInput,
       hotkeyManager: hotkeyManager as never,
-      sequenceManager: sequenceManager as never,
-      projectId: "project-1",
       pathname: "/projects/project-1/settings",
       activeScopes: ["global"],
-      isHelpOpen: false,
       requestCreateTicket,
-      setSelectedSessionId: () => {},
-      setSessionModalState: () => {},
-      setIsHelpOpen: () => {},
       navigate: navigate as never,
-      currentTicket: null,
-      currentTicketIndex: -1,
-      currentWorkspaceIndex: -1,
-      visibleTickets: [],
-      workspaceShorthand: undefined,
     });
 
-    hotkeyManager.handlers.get("C")?.handler({ target: null });
+    hotkeyManager.handlers.get("Ctrl+Shift+C")?.handler({ target: null, preventDefault });
 
+    expect(preventDefault).toHaveBeenCalledTimes(1);
     expect(requestCreateTicket).toHaveBeenCalledTimes(1);
     expect(navigate).toHaveBeenCalledWith({ to: "/projects/$projectId/tickets", params: { projectId: "project-1" } });
   });
 
   it("opens create session flow and keeps users in sessions route", () => {
     const hotkeyManager = createHotkeyManager();
-    const sequenceManager = createSequenceManager();
     const setSelectedSessionId = mock(() => {});
     const setSessionModalState = mock(() => {});
     const navigate = mock(() => {});
 
     registerShortcutBindings({
+      ...baseInput,
       hotkeyManager: hotkeyManager as never,
-      sequenceManager: sequenceManager as never,
-      projectId: "project-1",
       pathname: "/projects/project-1/sessions/abc",
       activeScopes: ["global"],
-      isHelpOpen: false,
-      requestCreateTicket: () => {},
       setSelectedSessionId,
       setSessionModalState,
-      setIsHelpOpen: () => {},
       navigate: navigate as never,
-      currentTicket: null,
-      currentTicketIndex: -1,
-      currentWorkspaceIndex: -1,
-      visibleTickets: [],
-      workspaceShorthand: undefined,
     });
 
-    hotkeyManager.handlers.get("S")?.handler({ target: null });
+    hotkeyManager.handlers.get("Ctrl+Shift+S")?.handler({ target: null, preventDefault: () => {} });
 
     expect(setSelectedSessionId).toHaveBeenCalledWith(null);
     expect(navigate).toHaveBeenCalledWith({ to: "/projects/$projectId/sessions", params: { projectId: "project-1" } });
     expect(setSessionModalState).not.toHaveBeenCalled();
   });
 
-  it("navigates with G then T sequence", () => {
+  it("navigates to tickets with Ctrl+Shift+T", () => {
     const hotkeyManager = createHotkeyManager();
-    const sequenceManager = createSequenceManager();
     const navigate = mock(() => {});
 
     registerShortcutBindings({
+      ...baseInput,
       hotkeyManager: hotkeyManager as never,
-      sequenceManager: sequenceManager as never,
-      projectId: "project-1",
       pathname: "/projects/project-1/settings",
       activeScopes: ["global"],
-      isHelpOpen: false,
-      requestCreateTicket: () => {},
-      setSelectedSessionId: () => {},
-      setSessionModalState: () => {},
-      setIsHelpOpen: () => {},
       navigate: navigate as never,
-      currentTicket: null,
-      currentTicketIndex: -1,
-      currentWorkspaceIndex: -1,
-      visibleTickets: [],
-      workspaceShorthand: undefined,
     });
 
-    sequenceManager.handlers.get("G,T")?.handler();
+    hotkeyManager.handlers.get("Ctrl+Shift+T")?.handler({ target: null, preventDefault: () => {} });
 
     expect(navigate).toHaveBeenCalledWith({
       to: "/projects/$projectId/tickets",
       params: { projectId: "project-1" },
     });
   });
+
+  it("opens the theme menu with Ctrl+Shift+K", () => {
+    const hotkeyManager = createHotkeyManager();
+    const setIsCommandPaletteOpen = mock(() => {});
+    const setCommandPaletteView = mock(() => {});
+
+    registerShortcutBindings({
+      ...baseInput,
+      hotkeyManager: hotkeyManager as never,
+      pathname: "/projects/project-1/settings",
+      activeScopes: ["global"],
+      setIsCommandPaletteOpen,
+      setCommandPaletteView,
+    });
+
+    hotkeyManager.handlers.get("Ctrl+Shift+K")?.handler({ target: null, preventDefault: () => {} });
+
+    expect(setCommandPaletteView).toHaveBeenCalledWith("theme");
+    expect(setIsCommandPaletteOpen).toHaveBeenCalledWith(true);
+  });
 });
 
 describe("registerShortcutBindings - overlay and sibling navigation", () => {
   it("closes help overlay on Escape when overlay is active", () => {
     const hotkeyManager = createHotkeyManager();
-    const sequenceManager = createSequenceManager();
     const setIsHelpOpen = mock(() => {});
 
     registerShortcutBindings({
+      ...baseInput,
       hotkeyManager: hotkeyManager as never,
-      sequenceManager: sequenceManager as never,
-      projectId: "project-1",
       pathname: "/projects/project-1/tickets",
       activeScopes: ["global"],
       isHelpOpen: true,
-      requestCreateTicket: () => {},
-      setSelectedSessionId: () => {},
-      setSessionModalState: () => {},
       setIsHelpOpen,
-      navigate: (() => {}) as never,
-      currentTicket: null,
-      currentTicketIndex: -1,
-      currentWorkspaceIndex: -1,
-      visibleTickets: [],
-      workspaceShorthand: undefined,
     });
 
     hotkeyManager.handlers.get("Escape")?.handler({ target: null });
@@ -153,32 +143,23 @@ describe("registerShortcutBindings - overlay and sibling navigation", () => {
     expect(setIsHelpOpen).toHaveBeenCalledWith(false);
   });
 
-  it("navigates sibling tickets with [ and ]", () => {
+  it("navigates sibling tickets with Ctrl+Shift+[ and Ctrl+Shift+]", () => {
     const hotkeyManager = createHotkeyManager();
-    const sequenceManager = createSequenceManager();
     const navigate = mock(() => {});
 
     registerShortcutBindings({
+      ...baseInput,
       hotkeyManager: hotkeyManager as never,
-      sequenceManager: sequenceManager as never,
-      projectId: "project-1",
       pathname: "/projects/project-1/tickets/PS-2",
       activeScopes: ["global", "ticket"],
-      isHelpOpen: false,
-      requestCreateTicket: () => {},
-      setSelectedSessionId: () => {},
-      setSessionModalState: () => {},
-      setIsHelpOpen: () => {},
       navigate: navigate as never,
       currentTicket: { shorthand: "PS-2", attempts: [] },
       currentTicketIndex: 1,
-      currentWorkspaceIndex: -1,
       visibleTickets: [{ shorthand: "PS-1" }, { shorthand: "PS-2" }, { shorthand: "PS-3" }],
-      workspaceShorthand: undefined,
     });
 
-    hotkeyManager.handlers.get("[")?.handler({ target: null });
-    hotkeyManager.handlers.get("]")?.handler({ target: null });
+    hotkeyManager.handlers.get("Ctrl+Shift+[")?.handler({ target: null, preventDefault: () => {} });
+    hotkeyManager.handlers.get("Ctrl+Shift+]")?.handler({ target: null, preventDefault: () => {} });
 
     expect(navigate).toHaveBeenNthCalledWith(1, {
       to: "/projects/$projectId/tickets/$ticketShorthand",
@@ -190,9 +171,8 @@ describe("registerShortcutBindings - overlay and sibling navigation", () => {
     });
   });
 
-  it("opens help on Mod+Shift+H and ignores editable targets", () => {
+  it("opens help on Ctrl+Shift+H and ignores editable targets", () => {
     const hotkeyManager = createHotkeyManager();
-    const sequenceManager = createSequenceManager();
     const setIsHelpOpen = mock(() => {});
     const nestedTextNodeInsideEditable = {
       nodeType: 3,
@@ -206,32 +186,44 @@ describe("registerShortcutBindings - overlay and sibling navigation", () => {
     } as unknown as EventTarget;
 
     registerShortcutBindings({
+      ...baseInput,
       hotkeyManager: hotkeyManager as never,
-      sequenceManager: sequenceManager as never,
-      projectId: "project-1",
       pathname: "/projects/project-1/tickets",
       activeScopes: ["global"],
-      isHelpOpen: false,
-      requestCreateTicket: () => {},
-      setSelectedSessionId: () => {},
-      setSessionModalState: () => {},
       setIsHelpOpen,
-      navigate: (() => {}) as never,
-      currentTicket: null,
-      currentTicketIndex: -1,
-      currentWorkspaceIndex: -1,
-      visibleTickets: [],
-      workspaceShorthand: undefined,
     });
 
     hotkeyManager.handlers
-      .get("Mod+Shift+H")
-      ?.handler({ target: { tagName: "INPUT", type: "text" } as unknown as EventTarget });
-    hotkeyManager.handlers.get("Mod+Shift+H")?.handler({ target: nestedTextNodeInsideEditable });
-    hotkeyManager.handlers.get("Mod+Shift+H")?.handler({ target: { tagName: "BUTTON" } as unknown as EventTarget });
+      .get("Ctrl+Shift+H")
+      ?.handler({ target: { tagName: "INPUT", type: "text" } as unknown as EventTarget, preventDefault: () => {} });
+    hotkeyManager.handlers
+      .get("Ctrl+Shift+H")
+      ?.handler({ target: nestedTextNodeInsideEditable, preventDefault: () => {} });
+    hotkeyManager.handlers
+      .get("Ctrl+Shift+H")
+      ?.handler({ target: { tagName: "BUTTON" } as unknown as EventTarget, preventDefault: () => {} });
 
     expect(setIsHelpOpen).toHaveBeenCalledTimes(1);
     expect(setIsHelpOpen).toHaveBeenCalledWith(true);
+  });
+
+  it("opens the command palette on Ctrl+Shift+P and prevents default", () => {
+    const hotkeyManager = createHotkeyManager();
+    const setIsCommandPaletteOpen = mock(() => {});
+    const preventDefault = mock(() => {});
+
+    registerShortcutBindings({
+      ...baseInput,
+      hotkeyManager: hotkeyManager as never,
+      pathname: "/projects/project-1/tickets",
+      activeScopes: ["global"],
+      setIsCommandPaletteOpen,
+    });
+
+    hotkeyManager.handlers.get("Ctrl+Shift+P")?.handler({ target: null, preventDefault });
+
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+    expect(setIsCommandPaletteOpen).toHaveBeenCalledWith(true);
   });
 });
 

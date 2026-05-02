@@ -8,7 +8,7 @@ export const fg = {
 
   muted: {
     value: {
-      base: "{colors.blacks.500}",
+      base: "{colors.blacks.450}",
       _dark: "{colors.blacks.500}",
     },
   },
@@ -204,13 +204,19 @@ export const bg = {
       value: "{colors.bg}",
     },
     hover: {
-      value: "{colors.bg.hover}",
+      value: {
+        base: "{colors.bg.muted}",
+      },
     },
     focus: {
-      value: "{colors.bg.hover}",
+      value: {
+        base: "{colors.bg.muted}",
+      },
     },
     selected: {
-      value: "{colors.bg.active}",
+      value: {
+        base: "{colors.bg.active}",
+      },
     },
   },
 
@@ -378,14 +384,14 @@ export const border = {
 
   muted: {
     value: {
-      base: "{colors.neutral.400}",
+      base: "{colors.neutral.500}",
       _dark: "{colors.neutral.700}",
     },
   },
 
   subtle: {
     value: {
-      base: "{colors.neutral.300}",
+      base: "{colors.neutral.400}",
       _dark: "{colors.neutral.750}",
     },
   },

@@ -1,7 +1,7 @@
 import { Toaster as ChakraToaster, createToaster, Portal, Spinner, Stack, Toast } from "@chakra-ui/react";
 
 export const toaster: ReturnType<typeof createToaster> = createToaster({
-  placement: "bottom-end",
+  placement: "top",
   pauseOnPageIdle: true,
   duration: 10000,
 });
@@ -28,7 +28,7 @@ export const Toaster = () => {
               )}
             </Stack>
             {toast.action && <Toast.ActionTrigger>{toast.action.label}</Toast.ActionTrigger>}
-            {toast.closable && <Toast.CloseTrigger />}
+            <Toast.CloseTrigger />
           </Toast.Root>
         )}
       </ChakraToaster>

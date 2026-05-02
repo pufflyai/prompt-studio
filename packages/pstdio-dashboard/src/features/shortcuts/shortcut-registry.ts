@@ -10,27 +10,24 @@ export interface ShortcutDefinition {
     | "goto-ticket-list"
     | "nav-previous"
     | "nav-next"
+    | "open-command-palette"
+    | "change-theme"
     | "open-shortcut-help";
   actionLabel: string;
   binding: ShortcutBinding;
   scope: ShortcutScope;
-  whenNotTyping?: boolean;
 }
 
 export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   { id: "close-overlay", actionLabel: "Close overlay", binding: "Escape", scope: "overlay" },
-  { id: "create-ticket", actionLabel: "Create ticket", binding: "C", scope: "global", whenNotTyping: true },
-  { id: "create-session", actionLabel: "Create session", binding: "S", scope: "global", whenNotTyping: true },
-  { id: "goto-ticket-list", actionLabel: "Go to tickets", binding: ["G", "T"], scope: "global", whenNotTyping: true },
-  { id: "nav-previous", actionLabel: "Previous item", binding: "[", scope: "ticket", whenNotTyping: true },
-  { id: "nav-next", actionLabel: "Next item", binding: "]", scope: "ticket", whenNotTyping: true },
-  {
-    id: "open-shortcut-help",
-    actionLabel: "Keyboard shortcuts",
-    binding: "Mod+Shift+H",
-    scope: "global",
-    whenNotTyping: true,
-  },
+  { id: "create-ticket", actionLabel: "Create ticket", binding: "Ctrl+Shift+C", scope: "global" },
+  { id: "create-session", actionLabel: "Create session", binding: "Ctrl+Shift+S", scope: "global" },
+  { id: "goto-ticket-list", actionLabel: "Go to tickets", binding: "Ctrl+Shift+T", scope: "global" },
+  { id: "nav-previous", actionLabel: "Previous item", binding: "Ctrl+Shift+[", scope: "ticket" },
+  { id: "nav-next", actionLabel: "Next item", binding: "Ctrl+Shift+]", scope: "ticket" },
+  { id: "open-command-palette", actionLabel: "Command palette", binding: "Ctrl+Shift+P", scope: "global" },
+  { id: "change-theme", actionLabel: "Change theme", binding: "Ctrl+Shift+K", scope: "global" },
+  { id: "open-shortcut-help", actionLabel: "Keyboard shortcuts", binding: "Ctrl+Shift+H", scope: "global" },
 ];
 
 const projectRoutePattern = /^\/projects\/[^/]+(?:\/|$)/;

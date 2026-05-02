@@ -1,17 +1,78 @@
-export type ThemePreference = "light" | "dark";
+export type ThemePreference = string;
+export type ThemePreferenceMode = "light" | "dark";
+export type ThemePreferenceTokens = Record<string, string>;
 
-export const applyThemePreference = (theme: ThemePreference) => {
+export interface ThemePreferenceOption {
+  id: ThemePreference;
+  mode: ThemePreferenceMode;
+  tokens?: ThemePreferenceTokens;
+}
+
+export const defaultThemePreferences = [
+  { id: "pstdio-light", mode: "light" },
+  { id: "pstdio-dark", mode: "dark" },
+] satisfies ThemePreferenceOption[];
+
+export const isThemePreference = (
+  value: string | null,
+  themePreferences: readonly ThemePreferenceOption[] = defaultThemePreferences,
+): value is ThemePreference => typeof value === "string" && themePreferences.some((theme) => theme.id === value);
+
+export const getThemePreferenceMode = (
+  theme: ThemePreference,
+  themePreferences: readonly ThemePreferenceOption[] = defaultThemePreferences,
+) => themePreferences.find((preference) => preference.id === theme)?.mode ?? "light";
+
+export const getThemePreferenceClassName = (theme: ThemePreference) => `theme-${theme}`;
+
+export const getThemePreferenceClassNames = (
+  theme: ThemePreference,
+  mode: ThemePreferenceMode = getThemePreferenceMode(theme),
+) => [mode, getThemePreferenceClassName(theme)];
+
+const getThemePreferenceCssVariableName = (tokenPath: string) => `--chakra-${tokenPath.replaceAll(".", "-")}`;
+
+const removeThemeTokens = (el: HTMLElement, theme?: ThemePreferenceOption) => {
+  if (!theme?.tokens) return;
+
+  for (const tokenPath of Object.keys(theme.tokens)) {
+    el.style.removeProperty(getThemePreferenceCssVariableName(tokenPath));
+  }
+};
+
+const applyThemeTokens = (el: HTMLElement, theme: ThemePreferenceOption) => {
+  if (!theme.tokens) return;
+
+  for (const [tokenPath, value] of Object.entries(theme.tokens)) {
+    el.style.setProperty(getThemePreferenceCssVariableName(tokenPath), value);
+  }
+};
+
+export const applyThemePreference = (
+  theme: ThemePreference,
+  themePreferences: readonly ThemePreferenceOption[] = defaultThemePreferences,
+) => {
   if (typeof document === "undefined") return;
 
   const root = document.documentElement;
   const body = document.body;
-  const opposite = theme === "dark" ? "light" : "dark";
+  const preference = themePreferences.find((option) => option.id === theme) ?? { id: theme, mode: "light" };
+  const mode = getThemePreferenceMode(theme, themePreferences);
 
   for (const el of [root, body]) {
     if (!el) continue;
-    el.classList.remove(opposite);
-    el.classList.add(theme);
+    const previousTheme = el.getAttribute("data-theme");
+    const previousPreference = themePreferences.find((option) => option.id === previousTheme);
+
+    el.classList.remove("light", "dark");
+    if (previousTheme) {
+      el.classList.remove(getThemePreferenceClassName(previousTheme));
+    }
+    removeThemeTokens(el, previousPreference);
+    applyThemeTokens(el, preference);
+    el.classList.add(...getThemePreferenceClassNames(theme, mode));
     el.setAttribute("data-theme", theme);
-    el.style.colorScheme = theme;
+    el.setAttribute("data-color-mode", mode);
+    el.style.colorScheme = mode;
   }
 };

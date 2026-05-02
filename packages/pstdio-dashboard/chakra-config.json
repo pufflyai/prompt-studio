@@ -2008,6 +2008,9 @@
           "400": {
             "value": "#C5C5C7"
           },
+          "450": {
+            "value": "#9DA0A6"
+          },
           "500": {
             "value": "#797D83"
           },
@@ -3011,13 +3014,19 @@
               "value": "{colors.bg}"
             },
             "hover": {
-              "value": "{colors.bg.hover}"
+              "value": {
+                "base": "{colors.bg.muted}"
+              }
             },
             "focus": {
-              "value": "{colors.bg.hover}"
+              "value": {
+                "base": "{colors.bg.muted}"
+              }
             },
             "selected": {
-              "value": "{colors.bg.active}"
+              "value": {
+                "base": "{colors.bg.active}"
+              }
             }
           },
           "display": {
@@ -3183,7 +3192,7 @@
             "value": {
               "_light": "{colors.gray.600}",
               "_dark": "{colors.blacks.500}",
-              "base": "{colors.blacks.500}"
+              "base": "{colors.blacks.450}"
             }
           },
           "subtle": {
@@ -3286,14 +3295,14 @@
             "value": {
               "_light": "{colors.gray.100}",
               "_dark": "{colors.neutral.700}",
-              "base": "{colors.neutral.400}"
+              "base": "{colors.neutral.500}"
             }
           },
           "subtle": {
             "value": {
               "_light": "{colors.gray.50}",
               "_dark": "{colors.neutral.750}",
-              "base": "{colors.neutral.300}"
+              "base": "{colors.neutral.400}"
             }
           },
           "emphasized": {
@@ -4363,14 +4372,26 @@
               }
             },
             "subtle": {
-              "bg": "colorPalette.subtle",
-              "color": "colorPalette.fg",
+              "bg": "bg.subtle",
+              "color": "fg",
               "borderColor": "transparent",
               "_hover": {
-                "bg": "colorPalette.muted"
+                "bg": "bg.hover"
               },
               "_expanded": {
-                "bg": "colorPalette.muted"
+                "bg": "bg.active"
+              },
+              "border": "none",
+              "_active": {
+                "bg": "bg.active"
+              },
+              "_disabled": {
+                "opacity": 1,
+                "color": "fg.subtle",
+                "bg": "bg.muted",
+                "_hover": {
+                  "bg": "bg.muted"
+                }
               }
             },
             "surface": {
@@ -4850,44 +4871,56 @@
           "fontFamily": "mono",
           "flexShrink": "0",
           "whiteSpace": "nowrap",
-          "wordSpacing": "-0.5em",
+          "wordSpacing": "normal",
           "userSelect": "none",
           "px": "1",
-          "borderRadius": "l2"
+          "borderRadius": "0",
+          "justifyContent": "center",
+          "minW": "1.25rem",
+          "borderWidth": "1px",
+          "borderStyle": "solid",
+          "lineHeight": "1"
         },
         "variants": {
           "variant": {
             "raised": {
-              "bg": "colorPalette.subtle",
-              "color": "colorPalette.fg",
+              "bg": "bg.subtle",
+              "color": "fg.muted",
               "borderWidth": "1px",
               "borderBottomWidth": "2px",
-              "borderColor": "colorPalette.muted"
+              "borderColor": "border.muted"
             },
             "outline": {
               "borderWidth": "1px",
-              "color": "colorPalette.fg"
+              "color": "fg.muted",
+              "bg": "transparent",
+              "borderColor": "border.muted"
             },
             "subtle": {
-              "bg": "colorPalette.muted",
-              "color": "colorPalette.fg"
+              "bg": "bg.muted",
+              "color": "fg",
+              "borderColor": "border.subtle"
             },
             "plain": {
-              "color": "colorPalette.fg"
+              "color": "fg.muted",
+              "bg": "transparent",
+              "borderColor": "transparent",
+              "minW": "auto",
+              "px": "0"
             }
           },
           "size": {
             "sm": {
-              "textStyle": "xs",
-              "height": "4.5"
+              "textStyle": "label/XS/medium",
+              "height": "1rem"
             },
             "md": {
-              "textStyle": "sm",
-              "height": "5"
+              "textStyle": "label/XS/medium",
+              "height": "1.25rem"
             },
             "lg": {
-              "textStyle": "md",
-              "height": "6"
+              "textStyle": "label/S/medium",
+              "height": "1.5rem"
             }
           }
         },
@@ -8493,8 +8526,10 @@
             },
             "display": "flex",
             "flexDirection": "column",
-            "gap": "2xs",
-            "py": "xs",
+            "gap": "0",
+            "p": "0",
+            "px": "0",
+            "py": "0",
             "borderWidth": "1px",
             "borderStyle": "solid",
             "borderColor": "border.muted",
@@ -8521,17 +8556,8 @@
             },
             "bg": "bg.menu-item.default",
             "textStyle": "label/M/regular",
-            "px": "0.5rem",
-            "h": "2.25rem",
-            "_hover": {
-              "bg": "bg.menu-item.hover"
-            },
-            "_focus": {
-              "bg": "bg.menu-item.focus"
-            },
-            "_active": {
-              "bg": "bg.menu-item.selected"
-            }
+            "px": "0",
+            "h": "auto"
           },
           "itemText": {
             "flex": "1"
@@ -8567,8 +8593,9 @@
           "separator": {
             "height": "1px",
             "bg": "bg.muted",
-            "my": "1",
-            "mx": "-1"
+            "my": "xs",
+            "mx": "-1",
+            "borderColor": "border.muted"
           },
           "arrow": {
             "--arrow-size": "sizes.3",
@@ -9182,7 +9209,7 @@
               "base": "min(var(--popover-mobile-size), var(--popover-size))",
               "sm": "var(--popover-size)"
             },
-            "borderRadius": "12px",
+            "borderRadius": "xs",
             "--popover-z-index": "zIndex.popover",
             "zIndex": "calc(var(--popover-z-index) + var(--layer-index, 0))",
             "outline": "0",
@@ -9198,7 +9225,9 @@
             },
             "gap": "8px",
             "py": "xs",
-            "borderColor": "border",
+            "borderWidth": "1px",
+            "borderStyle": "solid",
+            "borderColor": "border.muted",
             "_focus": {
               "boxShadow": "none !important"
             }

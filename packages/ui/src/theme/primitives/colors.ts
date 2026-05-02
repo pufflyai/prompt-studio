@@ -6,6 +6,7 @@ export const blacks = {
   200: { value: "#F5F5F5" },
   300: { value: "#EAEAEA" },
   400: { value: "#C5C5C7" },
+  450: { value: "#9DA0A6" },
   500: { value: "#797D83" },
   600: { value: "#5A5F67" },
   700: { value: "#444750" },

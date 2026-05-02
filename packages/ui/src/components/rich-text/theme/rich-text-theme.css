@@ -95,7 +95,7 @@
 
 /* Code block with gutter line numbers */
 .rich-text__code {
-  background-color: var(--chakra-colors-bg-muted);
+  background-color: var(--chakra-colors-bg-code);
   font-family: var(--chakra-fonts-mono);
   display: block;
   padding: 8px 8px 8px 52px;

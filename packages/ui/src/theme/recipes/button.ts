@@ -97,6 +97,20 @@ export const buttonRecipe = defineRecipe({
           _hover: { bg: "transparent" },
         },
       },
+      subtle: {
+        color: "fg",
+        bg: "bg.subtle",
+        border: "none",
+        _hover: { bg: "bg.hover" },
+        _active: { bg: "bg.active" },
+        _expanded: { bg: "bg.active" },
+        _disabled: {
+          opacity: 1,
+          color: "fg.subtle",
+          bg: "bg.muted",
+          _hover: { bg: "bg.muted" },
+        },
+      },
     },
     size: {
       xs: {

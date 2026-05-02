@@ -11,6 +11,7 @@ import { drawerSlotRecipe } from "./recipes/drawer";
 import { editableSlotRecipe } from "./recipes/editable";
 import { fieldsetSlotRecipe } from "./recipes/form";
 import { inputRecipe } from "./recipes/input";
+import { kbdRecipe } from "./recipes/kbd";
 import { menuSlotRecipe } from "./recipes/menu";
 import { popoverRecipe } from "./recipes/popover";
 import { progressCircleSlotRecipe } from "./recipes/progress-circle";
@@ -36,6 +37,7 @@ const config = defineConfig({
       button: buttonRecipe,
       divider: dividerRecipe,
       input: inputRecipe,
+      kbd: kbdRecipe,
       skeleton: skeletonRecipe,
       textarea: textareaRecipe,
     },
