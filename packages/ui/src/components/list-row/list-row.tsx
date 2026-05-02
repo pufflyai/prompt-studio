@@ -2,9 +2,9 @@ import { Box, chakra, HStack, Icon, IconButton, Menu, Stack, Text } from "@chakr
 import { ChevronRight } from "lucide-react";
 import type { DragEvent as ReactDragEvent, ReactElement, MouseEvent as ReactMouseEvent } from "react";
 import { ResourceContextMenu } from "../resource-context-menu";
-import { SearchableActionMenu } from "../sidebar-tree/searchable-action-menu";
 import { Tooltip } from "../tooltip";
 import type { ListRowAction, ListRowItem } from "./list-row.types";
+import { SearchableActionMenu } from "./searchable-action-menu";
 
 type ListRowVariant = "default" | "compact" | "tree";
 type ListRowTone = "default" | "danger";

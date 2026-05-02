@@ -1,10 +1,10 @@
 import { IconButton } from "@chakra-ui/react";
 import { MenuItem } from "../menu-item";
 import { SearchableMenu } from "../searchable-menu";
-import type { SidebarAction } from "./sidebar-tree.types";
+import type { ListRowAction } from "./list-row.types";
 
 interface SearchableActionMenuProps {
-  action: SidebarAction;
+  action: ListRowAction;
 }
 
 export const SearchableActionMenu = (props: SearchableActionMenuProps) => {
@@ -26,8 +26,13 @@ export const SearchableActionMenu = (props: SearchableActionMenuProps) => {
         </IconButton>
       }
       items={items}
-      searchPlaceholder={action.searchPlaceholder ?? "Search…"}
-      emptyState={<MenuItem primaryLabel={action.emptyMenuLabel ?? "No results found"} isDisabled variant="compact" />}
+      searchPlaceholder={action.searchPlaceholder ?? "Search..."}
+      emptyState={
+        <MenuItem
+          variant="compact"
+          item={{ id: "empty", label: action.emptyMenuLabel ?? "No results found", disabled: true }}
+        />
+      }
       onFocusOutside={(event) => event.preventDefault()}
     />
   );

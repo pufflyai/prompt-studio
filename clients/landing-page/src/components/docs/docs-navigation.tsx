@@ -48,10 +48,9 @@ const DocsSidebarEntry = (props: DocsSidebarEntryProps) => {
     return (
       <Menu.Root>
         <MenuItem
-          primaryLabel={item.text}
           isSelected={item.link === activeLink}
           variant="compact"
-          onClick={() => onSelectLink(item.link!)}
+          item={{ id: item.link, label: item.text, onActivate: () => onSelectLink(item.link!) }}
         />
       </Menu.Root>
     );
@@ -60,7 +59,7 @@ const DocsSidebarEntry = (props: DocsSidebarEntryProps) => {
   if (children.length === 0) {
     return (
       <Menu.Root>
-        <MenuItem primaryLabel={item.text} isDisabled variant="compact" />
+        <MenuItem variant="compact" item={{ id: item.text, label: item.text, disabled: true }} />
       </Menu.Root>
     );
   }

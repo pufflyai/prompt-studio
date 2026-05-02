@@ -249,7 +249,7 @@ function CodeBlock({ code, language }: { code: string; language?: string }) {
   return (
     <Box
       as="pre"
-      background="bg.muted"
+      background="bg.code"
       color="fg"
       borderRadius="md"
       padding="sm"
@@ -350,7 +350,7 @@ function TimelineItemRow({
         <Timeline.Separator />
         <IndicatorView ind={item.indicator} />
       </Timeline.Connector>
-      <Timeline.Content pb="xs">
+      <Timeline.Content pb="xs" h={isOpen ? "auto" : "20px"} overflow="hidden">
         {item.title.length > 0 && (
           <Timeline.Title
             className="group"
