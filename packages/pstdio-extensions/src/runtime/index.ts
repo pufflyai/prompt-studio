@@ -1,3 +1,9 @@
+export {
+  type CheckExtensionsInput,
+  type CheckExtensionsResult,
+  checkExtensions,
+  formatCheckReport,
+} from "./check";
 export { buildCliHelpTree, type CliHelpNode } from "./cli-help";
 export { createDiagnostic } from "./diagnostics";
 export {

@@ -1,6 +1,8 @@
 import { z } from "zod";
 
-export const activityResourceTypeSchema = z.enum(["ticket", "workspace", "session"]);
+export const KERNEL_ACTIVITY_RESOURCE_TYPES = ["ticket", "workspace", "session"] as const;
+
+export const activityResourceTypeSchema = z.string();
 export const activityActorTypeSchema = z.enum(["user", "agent", "system"]);
 export const activitySourceSchema = z.enum(["ui", "api", "hook", "system", "agent"]);
 

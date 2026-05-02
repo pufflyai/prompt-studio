@@ -17,6 +17,15 @@ const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
   },
 });
 
+export type ResourceRef = {
+  type: string;
+  id: string;
+  projectId?: string;
+  label?: string;
+  extensionId?: string;
+  metadata?: Record<string, unknown>;
+};
+
 export const sessionStatusEnum = pgEnum("session_status", [
   "in_progress",
   "awaiting_input",
@@ -26,7 +35,6 @@ export const sessionStatusEnum = pgEnum("session_status", [
   "disconnected",
 ]);
 
-export const activityResourceTypeEnum = pgEnum("activity_resource_type", ["ticket", "workspace", "session"]);
 export const activityActorTypeEnum = pgEnum("activity_actor_type", ["user", "agent", "system"]);
 export const activitySourceEnum = pgEnum("activity_source", ["ui", "api", "hook", "system", "agent"]);
 
@@ -204,6 +212,7 @@ export const sessions = pgTable("sessions", {
   session_file_id: text("session_file_id").references(() => files.id),
   original_session_id: text("original_session_id"),
   cwd: text("cwd"),
+  anchors_json: jsonb("anchors_json").$type<ResourceRef[]>().notNull().default([]),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
 });
@@ -216,6 +225,7 @@ export const workspaces = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
+    type: text("type").notNull().default("worktree"),
     branch: text("branch"),
     worktree_path: text("worktree_path"),
     attempt_status_id: text("attempt_status_id").references(() => attempt_statuses.id, { onDelete: "set null" }),
@@ -224,6 +234,7 @@ export const workspaces = pgTable(
     initializing: boolean("initializing").notNull().default(false),
     setup_error: text("setup_error"),
     startup_log_file_id: text("startup_log_file_id").references(() => files.id, { onDelete: "set null" }),
+    anchors_json: jsonb("anchors_json").$type<ResourceRef[]>().notNull().default([]),
     created_at: text("created_at").notNull(),
     updated_at: text("updated_at").notNull(),
     deleted_at: text("deleted_at"),
@@ -315,7 +326,7 @@ export const activity_events = pgTable(
     project_id: text("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
-    resource_type: activityResourceTypeEnum("resource_type").notNull(),
+    resource_type: text("resource_type").notNull(),
     resource_id: text("resource_id").notNull(),
     event_type: text("event_type").notNull(),
     actor_type: activityActorTypeEnum("actor_type").notNull(),
@@ -366,6 +377,155 @@ export const skills = pgTable("skills", {
   updated_at: text("updated_at").notNull(),
   deleted_at: text("deleted_at"),
 });
+
+export const installed_extension_sources = pgTable(
+  "installed_extension_sources",
+  {
+    id: text("id").primaryKey(),
+    install_name: text("install_name").notNull(),
+    extension_id: text("extension_id").notNull(),
+    namespace: text("namespace").notNull(),
+    display_name: text("display_name").notNull(),
+    version: text("version"),
+    source_path: text("source_path").notNull(),
+    source_kind: text("source_kind").notNull(),
+    source_ref: text("source_ref"),
+    manifest_json: jsonb("manifest_json").$type<Record<string, unknown>>().notNull().default({}),
+    last_loaded_at: text("last_loaded_at"),
+    last_error_json: jsonb("last_error_json").$type<Record<string, unknown>>(),
+    created_at: text("created_at").notNull(),
+    updated_at: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("installed_extension_sources_install_name_idx").on(table.install_name),
+    uniqueIndex("installed_extension_sources_source_path_idx").on(table.source_path),
+  ],
+);
+
+export const project_extension_instances = pgTable(
+  "project_extension_instances",
+  {
+    id: text("id").primaryKey(),
+    project_id: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    installed_extension_id: text("installed_extension_id")
+      .notNull()
+      .references(() => installed_extension_sources.id, { onDelete: "restrict" }),
+    extension_id: text("extension_id").notNull(),
+    namespace: text("namespace").notNull(),
+    display_name: text("display_name").notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+    config_json: jsonb("config_json").$type<Record<string, unknown>>().notNull().default({}),
+    diagnostics_json: jsonb("diagnostics_json").$type<Record<string, unknown>>(),
+    created_at: text("created_at").notNull(),
+    updated_at: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("project_extension_instances_project_extension_idx").on(table.project_id, table.extension_id),
+    uniqueIndex("project_extension_instances_project_namespace_idx").on(table.project_id, table.namespace),
+    index("project_extension_instances_installed_idx").on(table.installed_extension_id),
+  ],
+);
+
+export const extension_kv = pgTable(
+  "extension_kv",
+  {
+    project_id: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    extension_id: text("extension_id").notNull(),
+    namespace: text("namespace").notNull(),
+    scope_type: text("scope_type").notNull(),
+    scope_id: text("scope_id").notNull(),
+    key: text("key").notNull(),
+    value_json: jsonb("value_json").$type<unknown>().notNull(),
+    created_at: text("created_at").notNull(),
+    updated_at: text("updated_at").notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.project_id, table.extension_id, table.scope_type, table.scope_id, table.key],
+    }),
+    index("extension_kv_project_extension_idx").on(table.project_id, table.extension_id),
+    index("extension_kv_project_extension_scope_idx").on(
+      table.project_id,
+      table.extension_id,
+      table.scope_type,
+      table.scope_id,
+    ),
+  ],
+);
+
+export const extension_collection_items = pgTable(
+  "extension_collection_items",
+  {
+    project_id: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    extension_id: text("extension_id").notNull(),
+    namespace: text("namespace").notNull(),
+    scope_type: text("scope_type").notNull(),
+    scope_id: text("scope_id").notNull(),
+    collection: text("collection").notNull(),
+    item_id: text("item_id").notNull(),
+    value_json: jsonb("value_json").$type<unknown>().notNull(),
+    created_at: text("created_at").notNull(),
+    updated_at: text("updated_at").notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [
+        table.project_id,
+        table.extension_id,
+        table.scope_type,
+        table.scope_id,
+        table.collection,
+        table.item_id,
+      ],
+    }),
+    index("extension_collection_items_project_extension_collection_idx").on(
+      table.project_id,
+      table.extension_id,
+      table.collection,
+    ),
+    index("extension_collection_items_project_extension_scope_collection_idx").on(
+      table.project_id,
+      table.extension_id,
+      table.scope_type,
+      table.scope_id,
+      table.collection,
+    ),
+  ],
+);
+
+export const extension_template_preferences = pgTable(
+  "extension_template_preferences",
+  {
+    project_id: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    extension_id: text("extension_id").notNull(),
+    template_key: text("template_key").notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+    updated_at: text("updated_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.project_id, table.extension_id, table.template_key] })],
+);
+
+export const extension_skill_preferences = pgTable(
+  "extension_skill_preferences",
+  {
+    project_id: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    extension_id: text("extension_id").notNull(),
+    skill_key: text("skill_key").notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+    updated_at: text("updated_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.project_id, table.extension_id, table.skill_key] })],
+);
 
 export const ydocUpdates = pgTable("ydoc_updates", {
   id: text("id").primaryKey(),

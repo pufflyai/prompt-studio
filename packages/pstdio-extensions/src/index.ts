@@ -10,10 +10,14 @@ export {
 } from "./artifacts";
 
 export {
+  type CheckExtensionsInput,
+  type CheckExtensionsResult,
+  checkExtensions,
   createDiagnostic,
   discoverExtensionFiles,
   discoverExtensionFilesInDir,
   type ExtensionSourceFile,
+  formatCheckReport,
   type LoadExtensionRuntimeInput,
   type LoadExtensionSourcesOptions,
   type LoadedExtensionSource,

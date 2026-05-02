@@ -725,8 +725,9 @@ Extension skills may be file or directory package assets.
 | -------------- | ------: | -------: | ------------------------------------------------------------- |
 | `type`         |  `text` |       no | `root`, `worktree`, or extension-defined workspace type       |
 | `repo_id`      |  `text` |      yes | Source repo for lifecycle, diff, merge, cleanup, and sessions |
-| `state_json`   | `jsonb` |       no | Provider-specific state                                       |
 | `anchors_json` | `jsonb` |       no | `ResourceRef[]`, replacing ticket-only relationship over time |
+
+Provider-specific state for extension-defined workspace types is deferred until a real consumer needs it. Add a `state_json` column when an extension declares a non-kernel workspace type.
 
 Migration note:
 
@@ -734,6 +735,22 @@ Migration note:
 Keep ticket_workspaces during extraction.
 Project ticket/workspace relationships into anchors over time.
 ```
+
+---
+
+## Session Record Extension
+
+- **Location:** current `sessions` table plus migration column.
+- **Purpose:** allow sessions to anchor to non-workspace resources (e.g. tickets, extension-owned resources) while keeping `workspace_sessions` as the kernel-level workspace↔session link.
+
+| Field          |    Type | Nullable | Notes                                                              |
+| -------------- | ------: | -------: | ------------------------------------------------------------------ |
+| `anchors_json` | `jsonb` |       no | `ResourceRef[]` for non-workspace relations                        |
+
+Notes:
+
+- `workspace_sessions` continues to own the kernel workspace↔session relationship.
+- `anchors_json` is additive: a session can be anchored to a ticket or any extension-defined resource without coupling kernel sessions to extension tables.
 
 ---
 
@@ -925,9 +942,10 @@ If reload fails:
 - Add extension KV and extension collection item storage.
 - Add extension template preference storage.
 - Add extension skill preference storage.
-- Add optional extension schedule state storage.
+- Add optional extension schedule state storage. Deferred — lands when the scheduler runs commands.
 - Broaden activity resource references to use `ResourceRef`.
-- Add workspace type/state/anchors support while retaining current workspace columns.
+- Add workspace `type` and `anchors_json` columns while retaining current workspace columns. Workspace `state_json` is deferred until an extension declares a non-kernel workspace type.
+- Add session `anchors_json` column for non-workspace relations; keep `workspace_sessions` for kernel workspace↔session linkage.
 - Add repo context support for command execution and scheduled repo-scoped commands.
 - Add artifact mount namespace enforcement under `.pstdio/<namespace>`.
 - Add sync coverage for new extension tables in CLI and dashboard sync collections.

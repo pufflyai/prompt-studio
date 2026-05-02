@@ -48,6 +48,7 @@
     "@types/yargs": "^17.0.35",
     "pstdio-agents": "workspace:*",
     "pstdio-api": "workspace:*",
+    "pstdio-api-contracts": "workspace:*",
     "pstdio-dashboard": "workspace:*",
     "pstdio-db": "workspace:*",
     "pstdio-logging": "workspace:*",

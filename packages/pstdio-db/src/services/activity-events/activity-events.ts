@@ -8,7 +8,9 @@ export const ACTIVITY_EVENT_SOURCES = ["ui", "api", "hook", "system", "agent"] a
 
 type ActivityEventRecord = typeof activity_events.$inferSelect;
 
-type ResourceType = (typeof ACTIVITY_RESOURCE_TYPES)[number];
+type KernelResourceType = (typeof ACTIVITY_RESOURCE_TYPES)[number];
+
+type ResourceType = KernelResourceType | (string & {});
 type ActorType = (typeof ACTIVITY_ACTOR_TYPES)[number];
 type EventSource = (typeof ACTIVITY_EVENT_SOURCES)[number];
 

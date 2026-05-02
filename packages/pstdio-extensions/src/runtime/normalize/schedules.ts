@@ -1,5 +1,6 @@
 import type { CommandRef } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension, RuntimeScheduleRecord } from "../../types/runtime";
+import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, refId } from "./accumulator";
 
@@ -8,7 +9,17 @@ export const registerSchedules = (ext: NormalizedExtension, source: LoadedExtens
     if (!isRecord(schedule) || typeof schedule.cron !== "string" || typeof schedule.title !== "string") continue;
 
     const commandId = refId(schedule.command as CommandRef | string | undefined);
-    if (!commandId) continue;
+    if (!commandId) {
+      runtime.diagnostics.push(
+        createDiagnostic({
+          code: "invalid_schedule_command",
+          message: `Schedule "${ext.namespace}.${localId}" must reference a command`,
+          extensionId: ext.id,
+          sourcePath: source.sourcePath,
+        }),
+      );
+      continue;
+    }
 
     const record: RuntimeScheduleRecord = {
       id: `${ext.namespace}.${localId}`,

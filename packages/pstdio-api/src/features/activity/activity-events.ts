@@ -1,10 +1,8 @@
 import type { RouteDeps } from "../deps";
 
-type ActivityResourceType = "ticket" | "workspace" | "session";
-
 type EmitActivityEventInput = {
   projectId: string;
-  resourceType: ActivityResourceType;
+  resourceType: string;
   resourceId: string;
   eventType: string;
   summary: string;
@@ -13,7 +11,7 @@ type EmitActivityEventInput = {
 
 type ListActivityInput = {
   projectId: string;
-  resourceType?: ActivityResourceType;
+  resourceType?: string;
   resourceId?: string;
   eventType?: string;
   from?: string;

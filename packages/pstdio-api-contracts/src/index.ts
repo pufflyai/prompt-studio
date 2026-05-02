@@ -1,5 +1,6 @@
 export * from "./activity";
 export * from "./agents";
+export * from "./extensions";
 export * from "./files";
 export * from "./projects";
 export * from "./repos";

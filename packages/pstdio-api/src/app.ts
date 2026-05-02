@@ -6,7 +6,13 @@ import {
   createAgentConfigsDBService,
   createAttemptStatusesDBService,
   createDb,
+  createExtensionCollectionItemsDBService,
+  createExtensionKvDBService,
+  createExtensionSkillPreferencesDBService,
+  createExtensionTemplatePreferencesDBService,
   createFilesDBService,
+  createInstalledExtensionSourcesDBService,
+  createProjectExtensionInstancesDBService,
   createProjectsDBService,
   createReposDBService,
   createSessionsDBService,
@@ -28,6 +34,7 @@ import {
 import { createActionRoutes } from "./features/actions/routes";
 import { createAgentRoutes } from "./features/agents/routes";
 import { createAttemptStatusRoutes } from "./features/attempt-statuses/routes";
+import { createExtensionRoutes } from "./features/extensions/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
 import { fireSessionResumeHook, fireSessionStartHook, fireSessionStatusHook } from "./features/hooks/session-hooks";
@@ -47,6 +54,7 @@ import { createWorkspaceRoutes } from "./features/workspaces/routes";
 import { apiLogger } from "./lib/logger";
 import { createAgentConfigService } from "./services/agent-config-service";
 import { createAttemptStatusService } from "./services/attempt-status-service";
+import { createExtensionService } from "./services/extension-service";
 import { createFileService } from "./services/file-service";
 import { createProjectService } from "./services/project-service";
 import { createRepoService } from "./services/repo-service";
@@ -108,6 +116,12 @@ export const createApp = async (options: AppOptions) => {
   const templatesDBService = createTemplatesDBService(db);
   const filesDBService = createFilesDBService(db);
   const activityEventsService = createActivityEventsDBService(db);
+  const installedExtensionSourcesDBService = createInstalledExtensionSourcesDBService(db);
+  const projectExtensionInstancesDBService = createProjectExtensionInstancesDBService(db);
+  const extensionKvDBService = createExtensionKvDBService(db);
+  const extensionCollectionItemsDBService = createExtensionCollectionItemsDBService(db);
+  const extensionTemplatePreferencesDBService = createExtensionTemplatePreferencesDBService(db);
+  const extensionSkillPreferencesDBService = createExtensionSkillPreferencesDBService(db);
 
   // --- storage services ---
   const filesStorageService = createFilesStorageService(storageRoot);
@@ -130,10 +144,18 @@ export const createApp = async (options: AppOptions) => {
   const skillService = createSkillService({ skillsDBService, skillsStorageService });
   const fileService = createFileService({ filesDBService, filesStorageService });
   const syncService = createSyncService({ db, eventBus });
-
   const workspaceSessionService = createWorkspaceSessionService({ workspaceSessionsDBService });
   const workspaceArtifactService = createWorkspaceArtifactService({ workspaceArtifactsDBService });
   const workspaceService = createWorkspaceService({ workspacesDb: workspacesDBService, eventBus });
+  const extensionService = createExtensionService({
+    installedExtensionSourcesDBService,
+    projectExtensionInstancesDBService,
+    extensionKvDBService,
+    extensionCollectionItemsDBService,
+    extensionTemplatePreferencesDBService,
+    extensionSkillPreferencesDBService,
+  });
+
   const pluginClientFetch = Object.assign(
     (input: RequestInfo | URL, init?: RequestInit) => {
       const request = input instanceof Request ? input : new Request(input, init);
@@ -186,7 +208,10 @@ export const createApp = async (options: AppOptions) => {
     onSessionResumed: (session) => fireSessionResumeHook(sessionHookDeps, session),
   });
 
-  // --- ONLY DOMAIN SERVICES ARE PASSED TO ROUTES ---
+  // --- ROUTE DEPS: ONLY DOMAIN SERVICES (no DB / storage / drizzle handles) ---
+  // Routes must go through a domain service. If a feature needs new DB access,
+  // add it as a dep of an existing domain service, or create a new one — never
+  // pass DB services directly into routes.
   const deps = {
     filesRoot: options.filesRoot,
     readiness: { database: true, storage: true },
@@ -210,6 +235,7 @@ export const createApp = async (options: AppOptions) => {
     syncService,
     pluginService,
     activityEventsService,
+    extensionService,
   };
 
   app.use("*", cors());
@@ -256,6 +282,7 @@ export const createApp = async (options: AppOptions) => {
   app.route("/v1", createActionRoutes(deps));
   app.route("/v1", createPluginRoutes(deps));
   app.route("/v1", createAgentRoutes(deps));
+  app.route("/v1", createExtensionRoutes(deps));
   app.route("/v1", createSkillRoutes(deps));
   app.route("/v1", createTemplateRoutes(deps));
   app.route("/v1", createTicketRoutes(deps));

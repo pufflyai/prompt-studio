@@ -83,6 +83,7 @@ describe("schemas.zod", () => {
 
   it("supports workspace and session API payload extensions", () => {
     const workspaceResult = workspaceApiSchema.safeParse({
+      anchors_json: [],
       archived: false,
       branch: null,
       created_at: "2026-01-01T00:00:00.000Z",
@@ -95,6 +96,7 @@ describe("schemas.zod", () => {
       attempt_status_id: null,
       startup_log_file_id: null,
       ticket_id: null,
+      type: "worktree",
       updated_at: "2026-01-01T00:00:00.000Z",
       workspace_shorthand: "WS001",
       worktree_path: null,
@@ -104,6 +106,7 @@ describe("schemas.zod", () => {
       agent: null,
       agent_session_id: null,
       agent_session_status: "not_connected",
+      anchors_json: [],
       archived: false,
       branch: null,
       session_file_id: null,
@@ -132,6 +135,7 @@ describe("schemas.zod", () => {
       agent: null,
       agent_session_id: null,
       agent_session_status: "not_connected",
+      anchors_json: [],
       archived: false,
       branch: null,
       session_file_id: null,

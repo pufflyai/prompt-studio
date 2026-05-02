@@ -10,7 +10,13 @@ export { createAgentConfigsDBService } from "./services/agent-configs/agent-conf
 export { createAttemptStatusesDBService } from "./services/attempt-statuses/attempt-statuses";
 export type { ValidColor } from "./services/colors";
 export { isValidColor, VALID_COLORS } from "./services/colors";
+export { createExtensionCollectionItemsDBService } from "./services/extension-collection-items/extension-collection-items";
+export { createExtensionKvDBService } from "./services/extension-kv/extension-kv";
+export { createExtensionSkillPreferencesDBService } from "./services/extension-skill-preferences/extension-skill-preferences";
+export { createExtensionTemplatePreferencesDBService } from "./services/extension-template-preferences/extension-template-preferences";
 export { createFilesDBService } from "./services/files/files";
+export { createInstalledExtensionSourcesDBService } from "./services/installed-extension-sources/installed-extension-sources";
+export { createProjectExtensionInstancesDBService } from "./services/project-extension-instances/project-extension-instances";
 export { createProjectsDBService } from "./services/projects/projects";
 export { createReposDBService } from "./services/repos/repos";
 export { createSessionsDBService } from "./services/sessions/sessions";
