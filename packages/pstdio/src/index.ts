@@ -1,13 +1,6 @@
-import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { topLevelCommandModules } from "./adapters/cli/commands";
-import * as dashboardCommand from "./adapters/cli/commands/dashboard";
-import { API_URL } from "./features/api-url";
-import { CLI_VERSION } from "./features/cli-version";
-import { ensureApi } from "./features/ensure-api";
-import { createCliCommandTracker } from "./features/logging/cli-command-log";
-import { resolveCliSessionId } from "./features/sessions/resolve-cli-session-id";
-import { shouldLoadEmbedManifest } from "./features/should-load-embed-manifest";
+import { runCli } from "@/adapters/cli/run-cli";
+import { shouldLoadEmbedManifest } from "@/features/should-load-embed-manifest";
 
 if (shouldLoadEmbedManifest()) {
   // Side-effect import: registers files for Bun.embeddedFiles in compiled binaries.
@@ -15,70 +8,4 @@ if (shouldLoadEmbedManifest()) {
   await import("./_embed-manifest.generated");
 }
 
-const resolveApiUrl = (argv: Record<string, unknown>) => {
-  if (process.env.PSTDIO_API_URL) return process.env.PSTDIO_API_URL;
-
-  const apiPort = argv["api-port"];
-  if (typeof apiPort === "number") return `http://localhost:${apiPort}`;
-
-  return API_URL;
-};
-
-const applyApiPortFromArgs = (argv: Record<string, unknown>) => {
-  if (process.env.PSTDIO_API_URL || process.env.PSTDIO_API_PORT) return;
-
-  const apiPort = argv["api-port"];
-  if (typeof apiPort !== "number") return;
-
-  process.env.PSTDIO_API_PORT = String(apiPort);
-};
-
-const rawArgs = hideBin(process.argv);
-const commandTracker = createCliCommandTracker({
-  rawArgs,
-  sessionId: resolveCliSessionId({ env: process.env }),
-});
-
-const cli = yargs(rawArgs)
-  .scriptName("pstdio")
-  .version(CLI_VERSION)
-  .strict()
-  .fail((msg, err, yargs) => {
-    commandTracker.logFailure(err ?? msg);
-    if (err) {
-      process.stderr.write(`Error: ${err.message}\n`);
-      process.exit(1);
-    }
-    process.stderr.write(`${msg}\n\n`);
-    yargs.showHelp("error");
-    process.stderr.write("\n");
-    process.exit(1);
-  })
-  .middleware(async (argv) => {
-    commandTracker.captureArgv(argv);
-    commandTracker.logStart();
-
-    const topLevelCommand = argv._[0];
-    if (topLevelCommand === "close" || topLevelCommand === "serve") return;
-
-    applyApiPortFromArgs(argv);
-    await ensureApi(resolveApiUrl(argv));
-  })
-  .command(dashboardCommand);
-
-for (const mod of topLevelCommandModules) {
-  // biome-ignore lint/suspicious/noExplicitAny: yargs CommandModule union requires cast
-  cli.command(mod as any);
-}
-
-cli
-  .parseAsync()
-  .then(() => {
-    commandTracker.logSuccess();
-  })
-  .catch((error: unknown) => {
-    commandTracker.logFailure(error);
-    const message = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`Error: ${message}\n`);
-    process.exit(1);
-  });
+await runCli({ rawArgs: hideBin(process.argv) });

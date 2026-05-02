@@ -51,6 +51,7 @@
     "pstdio-api-contracts": "workspace:*",
     "pstdio-dashboard": "workspace:*",
     "pstdio-db": "workspace:*",
+    "pstdio-extensions": "workspace:*",
     "pstdio-logging": "workspace:*",
     "pstdio-plugins": "workspace:*",
     "pstdio-wt": "workspace:*",

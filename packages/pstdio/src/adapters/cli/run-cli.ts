@@ -1,0 +1,81 @@
+import type { Argv, CommandModule } from "yargs";
+import yargs from "yargs";
+import { topLevelCommandModules } from "@/adapters/cli/commands";
+import * as dashboardCommand from "@/adapters/cli/commands/dashboard";
+import { CLI_VERSION } from "@/features/cli-version";
+import { createCliCommandTracker } from "@/features/logging/cli-command-log";
+import { resolveCliSessionId } from "@/features/sessions/resolve-cli-session-id";
+import { ensureCliApi } from "./api-startup";
+
+type CliCommandTracker = ReturnType<typeof createCliCommandTracker>;
+
+type RunCliInput = {
+  env?: NodeJS.ProcessEnv;
+  rawArgs: string[];
+};
+
+const registerCommand = (cli: Argv, commandModule: object) => {
+  // yargs cannot type a heterogeneous command registry with command-specific handler args.
+  cli.command(commandModule as unknown as CommandModule);
+};
+
+const exitWithError = (message: string) => {
+  process.stderr.write(`Error: ${message}\n`);
+  process.exit(1);
+};
+
+const configureFailureHandler = (cli: Argv, commandTracker: CliCommandTracker) =>
+  cli.fail((msg, err, yargs) => {
+    commandTracker.logFailure(err ?? msg);
+
+    if (err) {
+      exitWithError(err.message);
+      return;
+    }
+
+    process.stderr.write(`${msg}\n\n`);
+    yargs.showHelp("error");
+    process.stderr.write("\n");
+    process.exit(1);
+  });
+
+const registerCommands = (cli: Argv) => {
+  registerCommand(cli, dashboardCommand);
+
+  for (const commandModule of topLevelCommandModules) {
+    registerCommand(cli, commandModule);
+  }
+
+  return cli;
+};
+
+const createCli = (input: RunCliInput, commandTracker: CliCommandTracker) => {
+  const cli = yargs(input.rawArgs).scriptName("pstdio").version(CLI_VERSION).strict();
+  const withFailureHandler = configureFailureHandler(cli, commandTracker);
+
+  return registerCommands(
+    withFailureHandler.middleware(async (argv) => {
+      commandTracker.captureArgv(argv);
+      commandTracker.logStart();
+
+      await ensureCliApi({ argv, env: input.env ?? process.env });
+    }),
+  );
+};
+
+export const runCli = async (input: RunCliInput) => {
+  const env = input.env ?? process.env;
+  const commandTracker = createCliCommandTracker({
+    rawArgs: input.rawArgs,
+    sessionId: resolveCliSessionId({ env }),
+  });
+
+  try {
+    await createCli({ ...input, env }, commandTracker).parseAsync();
+    commandTracker.logSuccess();
+  } catch (error) {
+    commandTracker.logFailure(error);
+    const message = error instanceof Error ? error.message : String(error);
+    exitWithError(message);
+  }
+};

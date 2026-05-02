@@ -1,3 +1,10 @@
+# Local pstdio dev stack. Designed for parallel runs: leave ports ephemeral and use
+# `COMPOSE_PROJECT_NAME` (or `-p <name>`) to namespace each invocation.
+#
+# `VITE_API_BASE_URL: /` is intentional — the dashboard's Vite dev server proxies
+# `/v1` and `/healthz` to the in-container API at :19841 (see vite.config.ts), so
+# the browser never needs to know the host-side API port.
+
 services:
   prompt-studio:
     build:
@@ -11,6 +18,7 @@ services:
       PSTDIO_API_PORT: "19841"
       PSTDIO_DASHBOARD_HOST: 0.0.0.0
       PSTDIO_DASHBOARD_PORT: "5173"
+      PSTDIO_DISABLE_API_AUTO_START: "1"
       VITE_API_BASE_URL: /
     command:
       - bash
@@ -19,6 +27,11 @@ services:
         set -e
         PROJECT_ROOT=/workspace/project
         PSTDIO_BIN=/usr/local/bin/pstdio
+
+        # Bootstrap commits invoke git directly; without a global identity, sub-commands
+        # that pstdio shells out to (e.g. on `projects create`) fail with "please tell me who you are".
+        git config --global user.email dev@local
+        git config --global user.name pstdio
 
         bun install --frozen-lockfile
         bun run pstdio:local:add-dev --install-dir /usr/local/bin --api-url http://localhost:19841
@@ -36,7 +49,7 @@ services:
         cd "$$PROJECT_ROOT"
 
         git init
-        git -c user.email=dev@local -c user.name=pstdio commit --allow-empty -m "init"
+        git commit --allow-empty -m "init"
 
         "$$PSTDIO_BIN" projects create "$$(basename "$$PROJECT_ROOT")"
 
@@ -56,6 +69,7 @@ services:
       - type: volume
         source: bun-cache
         target: /root/.bun/install/cache
+      # Persistent state across `compose up/down`. Defaults match `bun run dev` ($HOME=/root in this image).
       - type: volume
         target: /root/.pstdio-dev
       - type: volume

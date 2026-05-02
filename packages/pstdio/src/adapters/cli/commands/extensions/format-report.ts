@@ -7,6 +7,19 @@ const presentPath = (path: string) => {
   return path;
 };
 
+type SubsectionRenderer<T> = {
+  title: string;
+  items: T[];
+  renderItem: (item: T) => string[];
+};
+
+const renderSubsection = <T>({ title, items, renderItem }: SubsectionRenderer<T>): string[] => {
+  if (items.length === 0) return [];
+  const lines = ["", `  ${title}`];
+  for (const item of items) lines.push(...renderItem(item));
+  return lines;
+};
+
 const formatExtensionSection = (
   extensionId: string,
   displayName: string,
@@ -15,98 +28,68 @@ const formatExtensionSection = (
   sourcePath: string,
   response: ExtensionsCheckResponse,
 ): string[] => {
-  const out: string[] = [];
-  out.push(displayName);
-  out.push(`  id:        ${extensionId}`);
-  out.push(`  namespace: ${namespace}`);
-  if (version) out.push(`  version:   ${version}`);
-  out.push(`  source:    ${presentPath(sourcePath)}`);
+  const header: string[] = [displayName, `  id:        ${extensionId}`, `  namespace: ${namespace}`];
+  if (version) header.push(`  version:   ${version}`);
+  header.push(`  source:    ${presentPath(sourcePath)}`);
 
-  const commands = response.commands.filter((cmd) => cmd.extensionId === extensionId);
-  if (commands.length > 0) {
-    out.push("");
-    out.push("  Commands");
-    for (const cmd of commands) {
-      out.push(`    ${cmd.id}`);
-      if (cmd.cliPath) out.push(`      CLI: pstdio ${cmd.cliPath}`);
-    }
-  }
+  const subsections: string[] = [
+    ...renderSubsection({
+      title: "Commands",
+      items: response.commands.filter((cmd) => cmd.extensionId === extensionId),
+      renderItem: (cmd) => {
+        const out = [`    ${cmd.id}`];
+        if (cmd.cliPath) out.push(`      CLI: pstdio ${cmd.cliPath}`);
+        return out;
+      },
+    }),
+    ...renderSubsection({
+      title: "Middlewares",
+      items: response.middlewares.filter((m) => m.extensionId === extensionId),
+      renderItem: (m) => [`    ${m.id}`, `      command: ${m.commandId}`],
+    }),
+    ...renderSubsection({
+      title: "Hooks",
+      items: response.hooks.filter((h) => h.extensionId === extensionId),
+      renderItem: (h) => [`    ${h.id}`, `      event: ${h.eventId}`],
+    }),
+    ...renderSubsection({
+      title: "Schedules",
+      items: response.schedules.filter((s) => s.extensionId === extensionId),
+      renderItem: (s) => [`    ${s.id}`, `      command: ${s.commandId}`],
+    }),
+    ...renderSubsection({
+      title: "Artifact mounts",
+      items: response.artifactMounts.filter((m) => m.extensionId === extensionId),
+      renderItem: (m) => [`    ${m.label} -> ${m.fullPath}`],
+    }),
+    ...renderSubsection({
+      title: "Views",
+      items: response.views.filter((v) => v.extensionId === extensionId),
+      renderItem: (v) => [`    ${v.id}`],
+    }),
+    ...renderSubsection({
+      title: "Routes",
+      items: response.routes.filter((r) => r.extensionId === extensionId),
+      renderItem: (r) => [`    ${r.id} -> ${r.path}`],
+    }),
+    ...renderSubsection({
+      title: "Navigation",
+      items: response.navigation.filter((n) => n.extensionId === extensionId),
+      renderItem: (n) => [`    ${n.id} ${n.label}`],
+    }),
+    ...renderSubsection({
+      title: "Templates",
+      items: response.templates.filter((t) => t.extensionId === extensionId),
+      renderItem: (t) => [`    ${t.id}`],
+    }),
+    ...renderSubsection({
+      title: "Skills",
+      items: response.skills.filter((s) => s.extensionId === extensionId),
+      renderItem: (s) => [`    ${s.id}`],
+    }),
+  ];
 
-  const middlewares = response.middlewares.filter((m) => m.extensionId === extensionId);
-  if (middlewares.length > 0) {
-    out.push("");
-    out.push("  Middlewares");
-    for (const m of middlewares) {
-      out.push(`    ${m.id}`);
-      out.push(`      command: ${m.commandId}`);
-    }
-  }
-
-  const hooks = response.hooks.filter((h) => h.extensionId === extensionId);
-  if (hooks.length > 0) {
-    out.push("");
-    out.push("  Hooks");
-    for (const h of hooks) {
-      out.push(`    ${h.id}`);
-      out.push(`      event: ${h.eventId}`);
-    }
-  }
-
-  const schedules = response.schedules.filter((s) => s.extensionId === extensionId);
-  if (schedules.length > 0) {
-    out.push("");
-    out.push("  Schedules");
-    for (const s of schedules) {
-      out.push(`    ${s.id}`);
-      out.push(`      command: ${s.commandId}`);
-    }
-  }
-
-  const mounts = response.artifactMounts.filter((m) => m.extensionId === extensionId);
-  if (mounts.length > 0) {
-    out.push("");
-    out.push("  Artifact mounts");
-    for (const m of mounts) {
-      out.push(`    ${m.label} -> ${m.fullPath}`);
-    }
-  }
-
-  const views = response.views.filter((v) => v.extensionId === extensionId);
-  if (views.length > 0) {
-    out.push("");
-    out.push("  Views");
-    for (const v of views) out.push(`    ${v.id}`);
-  }
-
-  const routes = response.routes.filter((r) => r.extensionId === extensionId);
-  if (routes.length > 0) {
-    out.push("");
-    out.push("  Routes");
-    for (const r of routes) out.push(`    ${r.id} -> ${r.path}`);
-  }
-
-  const navigation = response.navigation.filter((n) => n.extensionId === extensionId);
-  if (navigation.length > 0) {
-    out.push("");
-    out.push("  Navigation");
-    for (const n of navigation) out.push(`    ${n.id} ${n.label}`);
-  }
-
-  const templates = response.templates.filter((t) => t.extensionId === extensionId);
-  if (templates.length > 0) {
-    out.push("");
-    out.push("  Templates");
-    for (const t of templates) out.push(`    ${t.id}`);
-  }
-
-  const skills = response.skills.filter((s) => s.extensionId === extensionId);
-  if (skills.length > 0) {
-    out.push("");
-    out.push("  Skills");
-    for (const s of skills) out.push(`    ${s.id}`);
-  }
-
-  return out;
+  return [...header, ...subsections];
 };
 
 export const formatExtensionsCheckReport = (response: ExtensionsCheckResponse) => {

@@ -69,99 +69,82 @@ const presentPath = (path: string) => {
 
 const indent = (lines: string[], prefix: string) => lines.map((line) => `${prefix}${line}`);
 
+type SubsectionRenderer<T> = {
+  title: string;
+  items: T[];
+  renderItem: (item: T) => string[];
+};
+
+const renderSubsection = <T>({ title, items, renderItem }: SubsectionRenderer<T>): string[] => {
+  if (items.length === 0) return [];
+  const lines = ["", `  ${title}`];
+  for (const item of items) lines.push(...renderItem(item));
+  return lines;
+};
+
 const formatExtensionSection = (ext: NormalizedExtension, runtime: ExtensionRuntime): string[] => {
-  const out: string[] = [];
-  out.push(ext.displayName);
-  out.push(`  id:        ${ext.id}`);
-  out.push(`  namespace: ${ext.namespace}`);
-  if (ext.version) out.push(`  version:   ${ext.version}`);
-  out.push(`  source:    ${presentPath(ext.sourcePath)}`);
+  const header: string[] = [ext.displayName, `  id:        ${ext.id}`, `  namespace: ${ext.namespace}`];
+  if (ext.version) header.push(`  version:   ${ext.version}`);
+  header.push(`  source:    ${presentPath(ext.sourcePath)}`);
 
-  const commands = runtime.commands.filter((cmd) => cmd.extensionId === ext.id);
-  if (commands.length > 0) {
-    out.push("");
-    out.push("  Commands");
-    for (const cmd of commands) {
-      out.push(`    ${cmd.id}`);
-      if (cmd.cli) out.push(`      CLI: pstdio ${cmd.cli.pathKey}`);
-    }
-  }
+  const subsections: string[] = [
+    ...renderSubsection({
+      title: "Commands",
+      items: runtime.commands.filter((cmd) => cmd.extensionId === ext.id),
+      renderItem: (cmd) => {
+        const out = [`    ${cmd.id}`];
+        if (cmd.cli) out.push(`      CLI: pstdio ${cmd.cli.pathKey}`);
+        return out;
+      },
+    }),
+    ...renderSubsection({
+      title: "Middlewares",
+      items: runtime.middlewares.filter((m) => m.extensionId === ext.id),
+      renderItem: (m) => [`    ${ext.id}.${m.localId}`, `      command: ${m.commandId}`],
+    }),
+    ...renderSubsection({
+      title: "Hooks",
+      items: runtime.hooks.filter((h) => h.extensionId === ext.id),
+      renderItem: (h) => [`    ${ext.id}.${h.localId}`, `      event: ${h.eventId}`],
+    }),
+    ...renderSubsection({
+      title: "Schedules",
+      items: runtime.schedules.filter((s) => s.extensionId === ext.id),
+      renderItem: (s) => [`    ${ext.id}.${s.localId}`, `      command: ${s.commandId}`],
+    }),
+    ...renderSubsection({
+      title: "Artifact mounts",
+      items: runtime.artifactMounts.filter((m) => m.extensionId === ext.id),
+      renderItem: (m) => [`    ${m.localId} -> ${m.fullPath}`],
+    }),
+    ...renderSubsection({
+      title: "Views",
+      items: runtime.views.filter((v) => v.extensionId === ext.id),
+      renderItem: (v) => [`    ${v.id}`],
+    }),
+    ...renderSubsection({
+      title: "Routes",
+      items: runtime.routes.filter((r) => r.extensionId === ext.id),
+      renderItem: (r) => [`    ${r.id} -> ${r.contribution.path}`],
+    }),
+    ...renderSubsection({
+      title: "Navigation",
+      items: runtime.navigation.filter((n) => n.extensionId === ext.id),
+      renderItem: (n) => [`    ${n.id} ${n.contribution.label}`],
+    }),
+    ...renderSubsection({
+      title: "Templates",
+      items: runtime.templates.filter((t) => t.extensionId === ext.id),
+      renderItem: (t) => [`    ${t.id}`],
+    }),
+    ...renderSubsection({
+      title: "Skills",
+      items: runtime.skills.filter((s) => s.extensionId === ext.id),
+      renderItem: (s) => [`    ${s.id}`],
+    }),
+  ];
 
-  const middlewares = runtime.middlewares.filter((m) => m.extensionId === ext.id);
-  if (middlewares.length > 0) {
-    out.push("");
-    out.push("  Middlewares");
-    for (const m of middlewares) {
-      out.push(`    ${ext.id}.${m.localId}`);
-      out.push(`      command: ${m.commandId}`);
-    }
-  }
-
-  const hooks = runtime.hooks.filter((h) => h.extensionId === ext.id);
-  if (hooks.length > 0) {
-    out.push("");
-    out.push("  Hooks");
-    for (const h of hooks) {
-      out.push(`    ${ext.id}.${h.localId}`);
-      out.push(`      event: ${h.eventId}`);
-    }
-  }
-
-  const schedules = runtime.schedules.filter((s) => s.extensionId === ext.id);
-  if (schedules.length > 0) {
-    out.push("");
-    out.push("  Schedules");
-    for (const s of schedules) {
-      out.push(`    ${ext.id}.${s.localId}`);
-      out.push(`      command: ${s.commandId}`);
-    }
-  }
-
-  const mounts = runtime.artifactMounts.filter((m) => m.extensionId === ext.id);
-  if (mounts.length > 0) {
-    out.push("");
-    out.push("  Artifact mounts");
-    for (const m of mounts) {
-      out.push(`    ${m.localId} -> ${m.fullPath}`);
-    }
-  }
-
-  const views = runtime.views.filter((v) => v.extensionId === ext.id);
-  if (views.length > 0) {
-    out.push("");
-    out.push("  Views");
-    for (const v of views) out.push(`    ${v.id}`);
-  }
-
-  const routes = runtime.routes.filter((r) => r.extensionId === ext.id);
-  if (routes.length > 0) {
-    out.push("");
-    out.push("  Routes");
-    for (const r of routes) out.push(`    ${r.id} -> ${r.contribution.path}`);
-  }
-
-  const navigation = runtime.navigation.filter((n) => n.extensionId === ext.id);
-  if (navigation.length > 0) {
-    out.push("");
-    out.push("  Navigation");
-    for (const n of navigation) out.push(`    ${n.id} ${n.contribution.label}`);
-  }
-
-  const templates = runtime.templates.filter((t) => t.extensionId === ext.id);
-  if (templates.length > 0) {
-    out.push("");
-    out.push("  Templates");
-    for (const t of templates) out.push(`    ${t.id}`);
-  }
-
-  const skills = runtime.skills.filter((s) => s.extensionId === ext.id);
-  if (skills.length > 0) {
-    out.push("");
-    out.push("  Skills");
-    for (const s of skills) out.push(`    ${s.id}`);
-  }
-
-  return out;
+  return [...header, ...subsections];
 };
 
 export const formatCheckReport = (result: CheckExtensionsResult): string => {

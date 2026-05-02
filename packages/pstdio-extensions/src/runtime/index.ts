@@ -5,6 +5,11 @@ export {
   formatCheckReport,
 } from "./check";
 export { buildCliHelpTree, type CliHelpNode } from "./cli-help";
+export {
+  type DetectPackageManagerResult,
+  detectPackageManager,
+  type PackageManager,
+} from "./detect-package-manager";
 export { createDiagnostic } from "./diagnostics";
 export {
   discoverExtensionFiles,
@@ -13,6 +18,18 @@ export {
   pstdioHomeRoot,
 } from "./discovery";
 export {
+  type DependencyInstallReport,
+  ExtensionInstallError,
+  type FetchGithubExtensionInput,
+  type InstallExtensionDeps,
+  type InstallExtensionInput,
+  type InstallExtensionResult,
+  type InstalledExtensionRecord,
+  type InstallSourceKind,
+  installExtensionSource,
+  type ResolvedInstallSource,
+} from "./install";
+export {
   type ExtensionSourceFile,
   type LoadExtensionSourcesOptions,
   type LoadedExtensionSource,
@@ -20,4 +37,10 @@ export {
   loadExtensionSources,
 } from "./loader";
 export { normalizeExtensionSources } from "./normalize";
+export {
+  isPackageManagerOnPath,
+  type RunPackageInstallOptions,
+  type RunPackageInstallResult,
+  runPackageInstall,
+} from "./run-package-install";
 export { type LoadExtensionRuntimeInput, loadExtensionRuntime } from "./runtime";
