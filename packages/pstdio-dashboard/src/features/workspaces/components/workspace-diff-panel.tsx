@@ -1,5 +1,5 @@
 import { Box, Button, Flex, Skeleton, Stack, Tabs } from "@chakra-ui/react";
-import { type Diff, DiffDrawer, EmptyState } from "@pstdio/ui";
+import { type Diff, DiffDrawer, EmptyState, Header } from "@pstdio/ui";
 import { FileDiffIcon, ListTree, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -66,14 +66,14 @@ const WorkspaceDiffHeader = (props: WorkspaceDiffHeaderProps) => {
   const { hasChangedFiles, onToggleTreePanel, isTreePanelOpen } = props;
 
   return (
-    <Flex h="41px" minH="41px" align="center" px="sm" borderBottomWidth="1px" bg="bg">
+    <Header variant="main" borderBottomWidth="1px" borderColor="border.muted" bg="bg">
       {hasChangedFiles ? (
         <Button size="sm" variant="ghost" gap="2xs" onClick={onToggleTreePanel}>
           <ListTree size={14} />
           {isTreePanelOpen ? "Hide file tree" : "Show file tree"}
         </Button>
       ) : null}
-    </Flex>
+    </Header>
   );
 };
 
@@ -117,7 +117,7 @@ export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
       <Tabs.Root
         value={activeTab}
         onValueChange={(details) => onTabChange(normalizeWorkspacePageTab(details.value))}
-        variant="enclosed"
+        variant="line"
         display="flex"
         flexDirection="column"
         h="full"
@@ -127,7 +127,7 @@ export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
         bg="bg.subtle"
         size="sm"
       >
-        <Tabs.List h="41px" minH="41px" bg="bg.subtle" borderBottomWidth="1px" borderRadius={0} px="xs" py="1px">
+        <Tabs.List bg="bg.subtle" borderBottomWidth="1px" borderColor="border.muted" px="xs">
           <Tabs.Trigger value="changes" gap="2xs">
             <FileDiffIcon size={14} />
             {t("workspaceDiffPanel.tabs.changes")}

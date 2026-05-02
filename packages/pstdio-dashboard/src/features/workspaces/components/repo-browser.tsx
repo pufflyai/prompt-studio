@@ -1,5 +1,5 @@
-import { Box, Button, Text } from "@chakra-ui/react";
-import { MenuItem, SearchableMenu, type SearchableMenuItem, Tooltip } from "@pstdio/ui";
+import { Box, Button, Icon, Menu, Text } from "@chakra-ui/react";
+import { ListRow, SearchableMenu, type SearchableMenuItem, Tooltip } from "@pstdio/ui";
 import { ChevronDown, FolderGit2, GitBranch } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -187,7 +187,18 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
       showSearch={branchOptions.length > 10}
       searchPlaceholder={t("chatInput.branch.searchPlaceholder")}
       contentTestId="workspace-repo-branch-options"
-      emptyState={<MenuItem primaryLabel={t("chatInput.branch.noSearchResults")} leftIcon={GitBranch} isDisabled />}
+      emptyState={
+        <Menu.Item value="empty" asChild>
+          <ListRow
+            asChild
+            variant="compact"
+            id="empty"
+            label={t("chatInput.branch.noSearchResults")}
+            icon={<Icon as={GitBranch} boxSize="16px" />}
+            disabled
+          />
+        </Menu.Item>
+      }
       parentList={{
         items: repositoryMenuItems,
         selectedLabel: selectedRepositoryLabel,
@@ -196,7 +207,18 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
         disabled: isDisabled || repositoryOptions.length <= 1,
         showSearch: false,
         contentTestId: "workspace-repo-options",
-        emptyState: <MenuItem primaryLabel={t("chatInput.repo.noSearchResults")} leftIcon={FolderGit2} isDisabled />,
+        emptyState: (
+          <Menu.Item value="empty" asChild>
+            <ListRow
+              asChild
+              variant="compact"
+              id="empty"
+              label={t("chatInput.repo.noSearchResults")}
+              icon={<Icon as={FolderGit2} boxSize="16px" />}
+              disabled
+            />
+          </Menu.Item>
+        ),
         onSelect: (item) => onSelectRepository(item.id),
       }}
     />

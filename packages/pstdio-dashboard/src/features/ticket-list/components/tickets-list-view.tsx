@@ -1,6 +1,5 @@
-import { TicketList, type TicketListItem } from "@pstdio/ui";
+import { type ResourceContextAction, TicketList, type TicketListItem } from "@pstdio/ui";
 import { useTranslation } from "react-i18next";
-import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
 
 import type { Ticket } from "@/features/ticket-list/types";
 
@@ -13,7 +12,7 @@ interface TicketsListViewProps {
   badgeContext: BadgeContext;
   onSelectTicket?: (ticket: Ticket) => void;
   selectedTicketId?: string | null;
-  resolveContextMenuActions?: (ticket: Ticket) => HeaderActionItem[];
+  resolveContextMenuActions?: (ticket: Ticket) => ResourceContextAction[];
 }
 
 export const TicketsListView = (props: TicketsListViewProps) => {

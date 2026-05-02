@@ -1,6 +1,7 @@
-import { Box, Button, Flex, HStack, Menu, Stack, Text } from "@chakra-ui/react";
-import { ItemSection, MenuItem, ScrollArea } from "@pstdio/ui";
+import { Box, Button, Flex, HStack, Stack, Text } from "@chakra-ui/react";
+import { ScrollArea, TreeList, type TreeListNavigateEvent, type TreeListNode, type TreeListSection } from "@pstdio/ui";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export interface DocsSidebarItem {
   text: string;
@@ -12,13 +13,6 @@ export interface DocsPaginationItem {
   href: string;
   title: string;
   description?: string;
-}
-
-interface DocsSidebarEntryProps {
-  item: DocsSidebarItem;
-  activeLink: string;
-  onSelectLink: (link: string) => void;
-  shouldStartOpen?: (item: DocsSidebarItem) => boolean;
 }
 
 interface DocsSidebarProps {
@@ -40,43 +34,53 @@ interface DocsPaginationLinkProps {
   direction: "prev" | "next";
 }
 
-const DocsSidebarEntry = (props: DocsSidebarEntryProps) => {
-  const { item, activeLink, onSelectLink, shouldStartOpen } = props;
-  const children = item.items ?? [];
+const DOCS_SECTION_ID = "docs-nav";
 
-  if (children.length === 0 && item.link) {
-    return (
-      <Menu.Root>
-        <MenuItem
-          isSelected={item.link === activeLink}
-          variant="compact"
-          item={{ id: item.link, label: item.text, onActivate: () => onSelectLink(item.link!) }}
-        />
-      </Menu.Root>
-    );
-  }
+const buildItemId = (item: DocsSidebarItem, parentId: string, index: number) =>
+  item.link ?? `${parentId}/${item.text}-${index}`;
 
-  if (children.length === 0) {
-    return (
-      <Menu.Root>
-        <MenuItem variant="compact" item={{ id: item.text, label: item.text, disabled: true }} />
-      </Menu.Root>
-    );
-  }
+const buildNodes = (items: DocsSidebarItem[], parentId: string): TreeListNode[] =>
+  items.map((item, index) => {
+    const id = buildItemId(item, parentId, index);
+    const childItems = item.items ?? [];
 
-  return (
-    <ItemSection title={item.text} defaultOpen={shouldStartOpen?.(item) ?? false}>
-      {children.map((child, index) => (
-        <DocsSidebarEntry
-          key={`${child.text}-${child.link ?? index}`}
-          item={child}
-          activeLink={activeLink}
-          onSelectLink={onSelectLink}
-          shouldStartOpen={shouldStartOpen}
-        />
-      ))}
-    </ItemSection>
-  );
+    if (childItems.length > 0) {
+      return {
+        id,
+        label: item.text,
+        children: buildNodes(childItems, id),
+      };
+    }
+
+    return {
+      id,
+      label: item.text,
+      disabled: !item.link,
+      isNavigable: Boolean(item.link),
+      navigationIntent: item.link ? { id: "select-link", payload: item.link } : undefined,
+    };
+  });
+
+const collectInitialExpandedIds = (
+  items: DocsSidebarItem[],
+  parentId: string,
+  shouldStartOpen?: (item: DocsSidebarItem) => boolean,
+): string[] => {
+  const result: string[] = [];
+
+  items.forEach((item, index) => {
+    const id = buildItemId(item, parentId, index);
+    const childItems = item.items ?? [];
+
+    if (childItems.length === 0) return;
+
+    if (shouldStartOpen?.(item)) {
+      result.push(id);
+    }
+    result.push(...collectInitialExpandedIds(childItems, id, shouldStartOpen));
+  });
+
+  return result;
 };
 
 const DocsPaginationLink = (props: DocsPaginationLinkProps) => {
@@ -120,6 +124,26 @@ const DocsPaginationLink = (props: DocsPaginationLinkProps) => {
 export const DocsSidebar = (props: DocsSidebarProps) => {
   const { title, emptyMessage, menuItems, activeLink, onSelectLink, shouldStartOpen } = props;
 
+  const sections: TreeListSection[] = [
+    { id: DOCS_SECTION_ID, collapsible: false, nodes: buildNodes(menuItems, "root") },
+  ];
+
+  const initialExpanded = collectInitialExpandedIds(menuItems, "root", shouldStartOpen);
+  const [expanded, setExpanded] = useState<string[]>(initialExpanded);
+
+  useEffect(() => {
+    setExpanded(initialExpanded);
+  }, [initialExpanded]);
+
+  const handleNavigate = (event: TreeListNavigateEvent) => {
+    if (event.intent?.id !== "select-link") return;
+    onSelectLink(event.intent.payload as string);
+  };
+
+  const handleToggleNode = (nodeId: string) => {
+    setExpanded((prev) => (prev.includes(nodeId) ? prev.filter((id) => id !== nodeId) : [...prev, nodeId]));
+  };
+
   return (
     <Stack borderRightWidth="1px" width="64" gap="0" minH="0">
       <Flex height="49px" p="xs" borderBottomWidth="1px" alignItems="center">
@@ -134,15 +158,14 @@ export const DocsSidebar = (props: DocsSidebarProps) => {
             {emptyMessage ?? "No files found"}
           </Text>
         ) : (
-          menuItems.map((item, index) => (
-            <DocsSidebarEntry
-              key={`${item.text}-${item.link ?? index}`}
-              item={item}
-              activeLink={activeLink}
-              onSelectLink={onSelectLink}
-              shouldStartOpen={shouldStartOpen}
-            />
-          ))
+          <TreeList
+            sections={sections}
+            activeNodeId={activeLink}
+            expandedNodeIds={expanded}
+            rowVariant="tree"
+            onNavigate={handleNavigate}
+            onToggleNode={handleToggleNode}
+          />
         )}
       </ScrollArea>
     </Stack>

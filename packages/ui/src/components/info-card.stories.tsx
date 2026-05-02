@@ -3,7 +3,7 @@ import { MoreHorizontal, PlayIcon, Settings, ShieldCheck, Sparkles } from "lucid
 import type { ComponentProps, ReactNode } from "react";
 
 import { InfoCard } from "./info-card";
-import { MenuItem } from "./menu-item";
+import { ListRow } from "./list-row/list-row";
 
 type StoryFn = () => ReactNode;
 type InfoCardArgs = ComponentProps<typeof InfoCard>;
@@ -55,25 +55,34 @@ export const WithActions = {
         </Menu.Trigger>
         <Menu.Positioner>
           <Menu.Content minW="240px" bg="bg">
-            <MenuItem
-              id="favorite"
-              primaryLabel="Feature pipeline"
-              secondaryLabel="Pin to overview"
-              leftIcon={Sparkles}
-            />
-            <MenuItem
-              id="restrict"
-              primaryLabel="Restrict access"
-              secondaryLabel="Limit to admins"
-              leftIcon={ShieldCheck}
-            />
+            <Menu.Item value="favorite" asChild>
+              <ListRow
+                asChild
+                variant="compact"
+                label="Feature pipeline"
+                description="Pin to overview"
+                icon={<Icon as={Sparkles} boxSize="16px" />}
+              />
+            </Menu.Item>
+            <Menu.Item value="restrict" asChild>
+              <ListRow
+                asChild
+                variant="compact"
+                label="Restrict access"
+                description="Limit to admins"
+                icon={<Icon as={ShieldCheck} boxSize="16px" />}
+              />
+            </Menu.Item>
             <Menu.Separator />
-            <MenuItem
-              id="settings"
-              primaryLabel="Pipeline settings"
-              secondaryLabel="Configure inputs and outputs"
-              leftIcon={Settings}
-            />
+            <Menu.Item value="settings" asChild>
+              <ListRow
+                asChild
+                variant="compact"
+                label="Pipeline settings"
+                description="Configure inputs and outputs"
+                icon={<Icon as={Settings} boxSize="16px" />}
+              />
+            </Menu.Item>
           </Menu.Content>
         </Menu.Positioner>
       </Menu.Root>,

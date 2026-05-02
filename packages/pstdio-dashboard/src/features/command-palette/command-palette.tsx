@@ -1,7 +1,7 @@
 import { CloseButton, Dialog, HStack, Icon, Input, InputGroup, Menu, Text } from "@chakra-ui/react";
 import {
+  ListRow,
   type ListRowItem,
-  MenuItem,
   ScrollArea,
   type ThemePreference,
   type ThemePreferenceOption,
@@ -301,11 +301,14 @@ export const CommandPalette = (props: CommandPaletteProps) => {
                       return (
                         <Fragment key={entry.id}>
                           {showSeparator ? <Menu.Separator my="2xs" /> : null}
-                          <MenuItem
-                            isSelected={index === activeIndex}
-                            item={buildEntryItem(entry)}
-                            onMouseEnter={() => setActiveIndex(index)}
-                          />
+                          <Menu.Item value={entry.id} asChild onMouseEnter={() => setActiveIndex(index)}>
+                            <ListRow
+                              asChild
+                              variant="compact"
+                              {...buildEntryItem(entry)}
+                              isSelected={index === activeIndex}
+                            />
+                          </Menu.Item>
                         </Fragment>
                       );
                     })

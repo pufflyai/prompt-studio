@@ -43,18 +43,18 @@ export const States: Story = {
     <Stack gap="md" maxW="22rem">
       <Stack gap="2xs">
         <SectionLabel>Default</SectionLabel>
-        <ListRow item={baseItem} />
-        <ListRow item={{ ...baseItem, description: "Project entry point and high-level summary" }} />
-        <ListRow item={baseItem} isSelected />
-        <ListRow item={{ ...baseItem, label: "Run pipeline", description: "Coming soon", disabled: true }} />
+        <ListRow {...baseItem} />
+        <ListRow {...{ ...baseItem, description: "Project entry point and high-level summary" }} />
+        <ListRow {...baseItem} isSelected />
+        <ListRow {...{ ...baseItem, label: "Run pipeline", description: "Coming soon", disabled: true }} />
       </Stack>
       <Stack gap="2xs">
         <SectionLabel>Compact</SectionLabel>
-        <ListRow item={baseItem} variant="compact" />
-        <ListRow item={{ ...baseItem, description: "Project entry point and high-level summary" }} variant="compact" />
-        <ListRow item={baseItem} variant="compact" isSelected />
+        <ListRow {...baseItem} variant="compact" />
+        <ListRow {...{ ...baseItem, description: "Project entry point and high-level summary" }} variant="compact" />
+        <ListRow {...baseItem} variant="compact" isSelected />
         <ListRow
-          item={{ ...baseItem, label: "Run pipeline", description: "Coming soon", disabled: true }}
+          {...{ ...baseItem, label: "Run pipeline", description: "Coming soon", disabled: true }}
           variant="compact"
         />
       </Stack>
@@ -67,14 +67,14 @@ export const Tones: Story = {
     <Stack gap="md" maxW="22rem">
       <Stack gap="2xs">
         <SectionLabel>Default tone</SectionLabel>
-        <ListRow item={{ ...baseItem, label: "Open file" }} />
-        <ListRow item={{ ...baseItem, label: "Open file" }} variant="compact" />
+        <ListRow {...{ ...baseItem, label: "Open file" }} />
+        <ListRow {...{ ...baseItem, label: "Open file" }} variant="compact" />
       </Stack>
       <Stack gap="2xs">
         <SectionLabel>Danger tone</SectionLabel>
-        <ListRow item={{ id: "delete", label: "Delete project", icon: <Trash2 size={14} /> }} tone="danger" />
+        <ListRow {...{ id: "delete", label: "Delete project", icon: <Trash2 size={14} /> }} tone="danger" />
         <ListRow
-          item={{
+          {...{
             id: "delete-desc",
             label: "Delete project",
             description: "This action cannot be undone",
@@ -83,7 +83,7 @@ export const Tones: Story = {
           tone="danger"
         />
         <ListRow
-          item={{ id: "delete-c", label: "Delete project", icon: <Trash2 size={14} /> }}
+          {...{ id: "delete-c", label: "Delete project", icon: <Trash2 size={14} /> }}
           tone="danger"
           variant="compact"
         />
@@ -98,14 +98,14 @@ export const Decorations: Story = {
       <Stack gap="2xs">
         <SectionLabel>Indicator + colored icon</SectionLabel>
         <ListRow
-          item={{
+          {...{
             ...baseItem,
             label: "Pipeline run",
             indicator: { icon: <Circle size={8} />, color: "green.500", tooltip: "Running" },
           }}
         />
         <ListRow
-          item={{
+          {...{
             ...baseItem,
             label: "Starred",
             icon: <Star size={14} />,
@@ -116,7 +116,7 @@ export const Decorations: Story = {
       <Stack gap="2xs">
         <SectionLabel>Two texts in a row</SectionLabel>
         <ListRow
-          item={{
+          {...{
             id: "ticket",
             icon: <Ticket size={14} />,
             label: (
@@ -134,9 +134,9 @@ export const Decorations: Story = {
       </Stack>
       <Stack gap="2xs">
         <SectionLabel>Tooltip on hover</SectionLabel>
-        <ListRow item={{ ...baseItem, label: "Hover me", tooltip: "Project entry point" }} />
+        <ListRow {...{ ...baseItem, label: "Hover me", tooltip: "Project entry point" }} />
         <ListRow
-          item={{
+          {...{
             ...baseItem,
             label: "With Kbd tooltip",
             tooltip: (
@@ -152,7 +152,7 @@ export const Decorations: Story = {
       <Stack gap="2xs">
         <SectionLabel>End content (Kbd)</SectionLabel>
         <ListRow
-          item={{
+          {...{
             ...baseItem,
             label: "Open palette",
             endContent: (
@@ -167,7 +167,7 @@ export const Decorations: Story = {
       <Stack gap="2xs">
         <SectionLabel>Truncation</SectionLabel>
         <ListRow
-          item={{
+          {...{
             id: "long",
             icon: <FileText size={14} />,
             label:
@@ -180,7 +180,7 @@ export const Decorations: Story = {
       <Stack gap="2xs">
         <SectionLabel>Workspace badge in subtitle slot</SectionLabel>
         <ListRow
-          item={{
+          {...{
             id: "ws-sub-1",
             label: "Triage failing e2e suite",
             icon: <Ticket size={14} />,
@@ -197,7 +197,7 @@ export const Decorations: Story = {
           }}
         />
         <ListRow
-          item={{
+          {...{
             id: "ws-sub-2",
             label: "Migrate auth middleware",
             icon: <Ticket size={14} />,
@@ -216,7 +216,7 @@ export const Decorations: Story = {
       <Stack gap="2xs">
         <SectionLabel>Workspace badge as end content</SectionLabel>
         <ListRow
-          item={{
+          {...{
             id: "ws-1",
             label: "Triage failing e2e suite",
             description: "PST-128",
@@ -234,7 +234,7 @@ export const Decorations: Story = {
           }}
         />
         <ListRow
-          item={{
+          {...{
             id: "ws-2",
             label: "Migrate auth middleware",
             description: "PST-204",
@@ -254,7 +254,7 @@ export const Decorations: Story = {
       <Stack gap="2xs">
         <SectionLabel>Right icon + long content</SectionLabel>
         <ListRow
-          item={{
+          {...{
             id: "long-with-end",
             icon: <FileText size={14} />,
             label:
@@ -279,7 +279,7 @@ export const Interactions: Story = {
       <Stack gap="2xs">
         <SectionLabel>Hover actions</SectionLabel>
         <ListRow
-          item={{
+          {...{
             ...baseItem,
             actions: [
               { id: "add", label: "Add", icon: <Plus size={14} />, onAction: () => {} },
@@ -299,7 +299,7 @@ export const Interactions: Story = {
       <Stack gap="2xs">
         <SectionLabel>Context menu (right-click)</SectionLabel>
         <ListRow
-          item={{
+          {...{
             ...baseItem,
             contextMenuItems: [
               { id: "rename", label: "Rename" },
@@ -323,7 +323,7 @@ const ExpandableExample = () => {
   const [expanded, setExpanded] = useState(true);
   return (
     <ListRow
-      item={folderItem}
+      {...folderItem}
       showExpandToggle
       isExpanded={expanded}
       onToggleExpand={() => setExpanded((current) => !current)}
@@ -341,24 +341,24 @@ export const Tree: Story = {
       <Stack gap="2xs">
         <SectionLabel>Nested at depth</SectionLabel>
         <Stack gap="0">
-          <ListRow item={folderItem} showExpandToggle isExpanded depth={0} variant="tree" />
-          <ListRow item={{ ...baseItem, id: "nested-1", label: "index.ts" }} depth={1} variant="tree" />
+          <ListRow {...folderItem} showExpandToggle isExpanded depth={0} variant="tree" />
+          <ListRow {...{ ...baseItem, id: "nested-1", label: "index.ts" }} depth={1} variant="tree" />
           <ListRow
-            item={{ ...folderItem, id: "components", label: "components" }}
+            {...{ ...folderItem, id: "components", label: "components" }}
             showExpandToggle
             isExpanded
             depth={1}
             variant="tree"
           />
-          <ListRow item={{ ...baseItem, id: "nested-2", label: "button.tsx" }} depth={2} variant="tree" />
-          <ListRow item={{ ...baseItem, id: "nested-3", label: "input.tsx" }} depth={2} variant="tree" isSelected />
+          <ListRow {...{ ...baseItem, id: "nested-2", label: "button.tsx" }} depth={2} variant="tree" />
+          <ListRow {...{ ...baseItem, id: "nested-3", label: "input.tsx" }} depth={2} variant="tree" isSelected />
         </Stack>
       </Stack>
     </Stack>
   ),
 };
 
-const dropdownItems: ListRowItem[] = [
+const dropdownItems: (ListRowItem & { id: string })[] = [
   {
     id: "open",
     label: "Open",
@@ -408,7 +408,7 @@ const MenuExample = (props: { variant: "default" | "compact"; label: string }) =
         <Menu.Content>
           {dropdownItems.map((item) => (
             <Menu.Item key={item.id} value={item.id} disabled={item.disabled} asChild>
-              <ListRow asChild item={item} variant={props.variant} />
+              <ListRow asChild {...item} variant={props.variant} />
             </Menu.Item>
           ))}
         </Menu.Content>

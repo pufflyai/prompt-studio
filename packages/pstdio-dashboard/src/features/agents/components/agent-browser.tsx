@@ -1,5 +1,5 @@
-import { Box, Button, Text } from "@chakra-ui/react";
-import { MenuItem, SearchableMenu, type SearchableMenuItem, Tooltip } from "@pstdio/ui";
+import { Box, Button, Icon, Menu, Text } from "@chakra-ui/react";
+import { ListRow, SearchableMenu, type SearchableMenuItem, Tooltip } from "@pstdio/ui";
 import { ChevronDown, Cpu, TerminalIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -138,7 +138,18 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
       portalled={false}
       searchPlaceholder={t("chatInput.model.searchPlaceholder")}
       contentTestId="workspace-agent-model-options"
-      emptyState={<MenuItem primaryLabel={t("chatInput.model.noneAvailable")} leftIcon={Cpu} isDisabled />}
+      emptyState={
+        <Menu.Item value="empty" asChild>
+          <ListRow
+            asChild
+            variant="compact"
+            id="empty"
+            label={t("chatInput.model.noneAvailable")}
+            icon={<Icon as={Cpu} boxSize="16px" />}
+            disabled
+          />
+        </Menu.Item>
+      }
       parentList={{
         items: agentMenuItems,
         selectedLabel: selectedAgentLabel,
@@ -147,7 +158,18 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
         disabled: isSwitchDisabled,
         showSearch: false,
         contentTestId: "workspace-agent-options",
-        emptyState: <MenuItem primaryLabel={t("chatInput.agent.unknown")} leftIcon={TerminalIcon} isDisabled />,
+        emptyState: (
+          <Menu.Item value="empty" asChild>
+            <ListRow
+              asChild
+              variant="compact"
+              id="empty"
+              label={t("chatInput.agent.unknown")}
+              icon={<Icon as={TerminalIcon} boxSize="16px" />}
+              disabled
+            />
+          </Menu.Item>
+        ),
         onSelect: (item) => {
           if (agentOptions.find((o) => o.value === item.id)?.disabled) return;
           onSelectAgent(item.id);

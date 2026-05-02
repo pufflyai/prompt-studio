@@ -4,10 +4,10 @@ import {
   resolveSessionIndicatorIcon,
   type SessionCompletionStatus,
   Sidebar,
-  type SidebarActionMenuItem,
-  type SidebarNavigateEvent,
-  type SidebarSection,
   Tooltip,
+  type TreeListActionMenuItem,
+  type TreeListNavigateEvent,
+  type TreeListSection,
 } from "@pstdio/ui";
 import { PenBox } from "lucide-react";
 import { createElement } from "react";
@@ -26,13 +26,13 @@ interface SessionsSidebarProps {
   selectedSessionId: string | null;
   onSelectSession: (sessionId: string) => void;
   onCreateSession: () => void;
-  resolveContextMenuItems?: (session: Session) => SidebarActionMenuItem[];
+  resolveContextMenuItems?: (session: Session) => TreeListActionMenuItem[];
 }
 
 const buildSections = (
   sessions: Session[],
-  resolveContextMenuItems?: (session: Session) => SidebarActionMenuItem[],
-): SidebarSection[] => {
+  resolveContextMenuItems?: (session: Session) => TreeListActionMenuItem[],
+): TreeListSection[] => {
   const groups = groupSessionsByDate(sessions);
 
   return groups.map((group) => ({
@@ -57,7 +57,7 @@ export const SessionsSidebar = (props: SessionsSidebarProps) => {
 
   const sections = buildSections(sessions, resolveContextMenuItems);
 
-  const handleNavigate = (event: SidebarNavigateEvent) => {
+  const handleNavigate = (event: TreeListNavigateEvent) => {
     const intent = event.intent;
     if (!intent) return;
 

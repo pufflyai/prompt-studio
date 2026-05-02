@@ -1,9 +1,9 @@
-import { Box, Button, HStack, Menu, Portal, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Icon, Menu, Portal, Stack, Text } from "@chakra-ui/react";
 import { ChevronRight, FileText, Folder } from "lucide-react";
 import { type DragEvent, useEffect, useState } from "react";
 
 import { EmptyState } from "./empty-state";
-import { MenuItem } from "./menu-item";
+import { ListRow } from "./list-row/list-row";
 
 export interface ColumnFileItem {
   id: string;
@@ -189,14 +189,15 @@ const ColumnItemRow = <T extends ColumnFileItem>(props: ColumnItemRowProps<T>) =
   };
 
   const content = (
-    <MenuItem
-      id={item.id}
-      primaryLabel={item.name}
-      secondaryLabel={item.meta}
-      leftIcon={isFolder ? Folder : FileText}
-      rightIcon={isFolder ? ChevronRight : null}
+    <ListRow
+      variant="compact"
       isSelected={isSelectedFolder || isActiveFile}
-      onClick={handleItemClick}
+      id={item.id}
+      label={item.name}
+      description={item.meta}
+      icon={<Icon as={isFolder ? Folder : FileText} boxSize="14px" />}
+      endContent={isFolder ? <Icon as={ChevronRight} boxSize="14px" /> : undefined}
+      onActivate={handleItemClick}
     />
   );
 

@@ -17,7 +17,6 @@ export const SidebarHeader = (props: SidebarHeaderProps) => {
       justify="space-between"
       align="center"
       minH={PANEL_HEADER_HEIGHT}
-      p="2xs"
       bg="bg"
       position="sticky"
       top="0"

@@ -9,7 +9,7 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { MenuItem } from "@pstdio/ui";
+import { ListRow } from "@pstdio/ui";
 import { FolderOpen, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -209,14 +209,17 @@ export const CreateProjectDialog = (props: CreateProjectDialogProps) => {
                           <Stack key={repo.path} direction="row" gap="sm" align="center">
                             <Stack flex="1">
                               <Menu.Root>
-                                <MenuItem
-                                  primaryLabel={repo.displayName ?? repo.name}
-                                  secondaryLabel={repo.path}
-                                  leftIcon={FolderOpen}
-                                  isDisabled
-                                  width="100%"
-                                  maxWidth="100%"
-                                />
+                                <Menu.Item value={repo.path} asChild>
+                                  <ListRow
+                                    asChild
+                                    variant="compact"
+                                    id={repo.path}
+                                    label={repo.displayName ?? repo.name}
+                                    description={repo.path}
+                                    icon={<ChakraIcon as={FolderOpen} boxSize="16px" />}
+                                    disabled
+                                  />
+                                </Menu.Item>
                               </Menu.Root>
                             </Stack>
                             <IconButton

@@ -11,7 +11,10 @@ export type TreeListNavigationIntent = ListRowNavigationIntent;
 export type TreeListActionContext = ListRowActionContext;
 export type TreeListActionMenuItem = ListRowActionMenuItem;
 export type TreeListAction = ListRowAction;
-export type TreeListNode = ListRowItem;
+export type TreeListNode = ListRowItem & {
+  id: string;
+  children?: TreeListNode[];
+};
 
 export interface TreeListSection {
   id: string;

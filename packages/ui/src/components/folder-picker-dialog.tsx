@@ -1,6 +1,6 @@
-import { Button, Dialog, Menu, Stack, Text } from "@chakra-ui/react";
+import { Badge, Button, Dialog, Icon, Menu, Stack, Text } from "@chakra-ui/react";
 import { ChevronUp, FileText, Folder, FolderOpen, Home } from "lucide-react";
-import { MenuItem } from "./menu-item";
+import { ListRow } from "./list-row/list-row";
 import { ScrollArea } from "./scroll-area";
 
 export interface FolderPickerDialogEntry {
@@ -58,17 +58,32 @@ const FolderPickerListEntry = (props: FolderPickerListEntryProps) => {
 
   return (
     <Menu.Root>
-      <MenuItem
-        primaryLabel={entry.name}
-        leftIcon={getEntryIcon(entry)}
-        tagLabel={entry.isGitRepo ? "Git repo" : undefined}
-        tagColorPalette={entry.isGitRepo ? "green" : undefined}
-        isDisabled={isDisabled}
-        isSelected={selectedPath === entry.path}
-        width="100%"
-        maxWidth="100%"
-        onClick={handleClick}
-      />
+      <Menu.Item value={entry.path} asChild>
+        <ListRow
+          asChild
+          variant="compact"
+          isSelected={selectedPath === entry.path}
+          id={entry.path}
+          label={entry.name}
+          icon={<Icon as={getEntryIcon(entry)} boxSize="16px" />}
+          endContent={
+            entry.isGitRepo ? (
+              <Badge
+                textStyle="label/XS/medium"
+                px="xs"
+                py="2px"
+                colorPalette="green"
+                variant="subtle"
+                pointerEvents="none"
+              >
+                Git repo
+              </Badge>
+            ) : undefined
+          }
+          disabled={isDisabled}
+          onActivate={handleClick}
+        />
+      </Menu.Item>
     </Menu.Root>
   );
 };

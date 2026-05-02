@@ -62,6 +62,7 @@ interface TicketsWorkspaceProps<TTicket extends WorkspaceTicket = WorkspaceTicke
   knownColumnKeys?: string[];
   emptyTitle?: string;
   emptyDescription?: string;
+  hideToolbar?: boolean;
   onTicketClick?: (ticket: TTicket) => void;
   onTagChange?: (ticketId: string, tagName: string, newValue: string) => void;
   onMoveTicket?: (
@@ -214,6 +215,7 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
     onCreateTicket,
     onColumnAction,
     getBoardColumnConfig,
+    hideToolbar = false,
   } = props;
 
   const tagOptions = buildTagOptions(tagDefinitions);
@@ -313,28 +315,30 @@ export const TicketsWorkspace = <TTicket extends WorkspaceTicket>(props: Tickets
 
   return (
     <Stack gap="sm" height="100%" minH="0">
-      <HStack justifyContent="flex-end" gap="2xs">
-        <FilterMenu
-          categories={categoryOptions}
-          filters={filters}
-          countsByCategory={countsByCategory}
-          onToggleFilterValue={toggleFilterValue}
-          onClearFilter={clearFilter}
-          onClearAll={clearAllFilters}
-        />
-        <DisplayMenu
-          settings={settings}
-          groupingOptions={groupingOptions}
-          orderingOptions={orderingOptions}
-          displayPropertyOptions={displayPropertyOptions}
-          onViewModeChange={setViewMode}
-          onColumnGroupingChange={setColumnGrouping}
-          onRowGroupingChange={setRowGrouping}
-          onOrderingFieldChange={setOrderingField}
-          onSortDirectionToggle={toggleSortDirection}
-          onDisplayPropertyToggle={toggleDisplayProperty}
-        />
-      </HStack>
+      {hideToolbar ? null : (
+        <HStack justifyContent="flex-end" gap="2xs">
+          <FilterMenu
+            categories={categoryOptions}
+            filters={filters}
+            countsByCategory={countsByCategory}
+            onToggleFilterValue={toggleFilterValue}
+            onClearFilter={clearFilter}
+            onClearAll={clearAllFilters}
+          />
+          <DisplayMenu
+            settings={settings}
+            groupingOptions={groupingOptions}
+            orderingOptions={orderingOptions}
+            displayPropertyOptions={displayPropertyOptions}
+            onViewModeChange={setViewMode}
+            onColumnGroupingChange={setColumnGrouping}
+            onRowGroupingChange={setRowGrouping}
+            onOrderingFieldChange={setOrderingField}
+            onSortDirectionToggle={toggleSortDirection}
+            onDisplayPropertyToggle={toggleDisplayProperty}
+          />
+        </HStack>
+      )}
 
       {settings.viewMode === "board" ? (
         <Box flex="1" minH="0">

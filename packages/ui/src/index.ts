@@ -25,11 +25,20 @@ export type {
   FolderPickerDialogProps,
 } from "./components/folder-picker-dialog";
 export { FolderPickerDialog } from "./components/folder-picker-dialog";
+export type { HeaderProps, HeaderVariant } from "./components/header";
+export { Header } from "./components/header";
 export { HorizontalMenuStack } from "./components/horizontal-menu-stack";
 export type { ItemSectionProps } from "./components/item-section";
 export { ItemSection } from "./components/item-section";
 export { PanelLayout, PanelSectionLayout } from "./components/layout";
-export { MenuItem } from "./components/menu-item";
+export { ListRow } from "./components/list-row/list-row";
+export type {
+  ListRowAction,
+  ListRowActionContext,
+  ListRowActionMenuItem,
+  ListRowItem,
+  ListRowNavigationIntent,
+} from "./components/list-row/list-row.types";
 export type {
   OpenSourceNotice,
   OpenSourceNoticesScreenProps,
@@ -54,17 +63,6 @@ export { Sidebar } from "./components/sidebar/sidebar";
 export { useSidebarStore } from "./components/sidebar/sidebar.store";
 export type { SidebarProps } from "./components/sidebar/sidebar.types";
 export { SidebarProjectMenu } from "./components/sidebar/sidebar-project-menu";
-export { SidebarTree } from "./components/sidebar-tree/sidebar-tree";
-export type {
-  SidebarAction,
-  SidebarActionContext,
-  SidebarActionMenuItem,
-  SidebarLinkComponent,
-  SidebarNavigateEvent,
-  SidebarNavigationIntent,
-  SidebarNode,
-  SidebarSection,
-} from "./components/sidebar-tree/sidebar-tree.types";
 export type { SwitchProps } from "./components/switch";
 export { Switch } from "./components/switch";
 export { DisplayMenu } from "./components/tickets/display-menu";
@@ -101,12 +99,31 @@ export type {
 export { useTicketsWorkspaceStore } from "./components/tickets/use-workspace-store";
 export { Toaster, toaster } from "./components/toaster";
 export { Tooltip } from "./components/tooltip";
+export { TreeList } from "./components/tree-list/tree-list";
+export type {
+  TreeListAction,
+  TreeListActionContext,
+  TreeListActionMenuItem,
+  TreeListLinkComponent,
+  TreeListNavigateEvent,
+  TreeListNavigationIntent,
+  TreeListNode,
+  TreeListSection,
+} from "./components/tree-list/tree-list.types";
 export type { WorkspaceBadgeProps } from "./components/workspace-badge";
 export { WorkspaceBadge } from "./components/workspace-badge";
-export { psTheme } from "./theme";
+export { customThemePreferences, monokaiThemePreference, psTheme } from "./theme";
 export {
   applyThemePreference,
+  defaultThemePreferences,
+  getThemePreferenceClassName,
+  getThemePreferenceClassNames,
+  getThemePreferenceMode,
+  isThemePreference,
   type ThemePreference,
+  type ThemePreferenceMode,
+  type ThemePreferenceOption,
+  type ThemePreferenceTokens,
 } from "./utils/apply-theme-preference";
 export { getFileTypeIcon } from "./utils/get-file-type-icon";
 export {

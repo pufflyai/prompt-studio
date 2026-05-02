@@ -1,4 +1,4 @@
-import { Sidebar, type SidebarNavigateEvent, type SidebarSection } from "@pstdio/ui";
+import { Sidebar, type TreeListNavigateEvent, type TreeListSection } from "@pstdio/ui";
 import { Terminal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BackToProjects } from "./back-to-projects";
@@ -12,7 +12,7 @@ interface SettingsSidebarProps {
   onSelectSection: (section: GlobalSettingsSection) => void;
 }
 
-const sections = (label: string): SidebarSection[] => [
+const sections = (label: string): TreeListSection[] => [
   {
     id: "global",
     nodes: [
@@ -31,7 +31,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
   const { t } = useTranslation("settings");
   const { activeSection, onSelectSection } = props;
 
-  const handleNavigate = (event: SidebarNavigateEvent) => {
+  const handleNavigate = (event: TreeListNavigateEvent) => {
     const intent = event.intent;
     if (!intent || intent.id !== "select") {
       return;

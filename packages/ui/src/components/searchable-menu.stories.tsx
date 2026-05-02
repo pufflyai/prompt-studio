@@ -1,9 +1,9 @@
-import { Box, Button } from "@chakra-ui/react";
+import { Box, Button, Icon, Menu } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { FolderGit2, GitBranch } from "lucide-react";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
-import { MenuItem } from "./menu-item";
+import { ListRow } from "./list-row/list-row";
 import { SearchableMenu, type SearchableMenuItem } from "./searchable-menu";
 
 const branchItems: SearchableMenuItem[] = Array.from({ length: 18 }, (_, index) => {
@@ -55,7 +55,18 @@ export const BranchSelector: Story = {
       trigger={<Button variant="outline">Select branch</Button>}
       items={branchItems}
       searchPlaceholder="Search branches…"
-      emptyState={<MenuItem primaryLabel="No branches found" leftIcon={GitBranch} isDisabled />}
+      portalled={false}
+      emptyState={
+        <Menu.Item value="empty" asChild>
+          <ListRow
+            asChild
+            variant="compact"
+            label="No branches found"
+            icon={<Icon as={GitBranch} boxSize="16px" />}
+            disabled
+          />
+        </Menu.Item>
+      }
     />
   ),
   play: async ({ canvasElement }) => {
@@ -87,7 +98,17 @@ export const SwitchableLists: Story = {
         }))}
         searchPlaceholder="Search branches…"
         portalled={false}
-        emptyState={<MenuItem primaryLabel="No branches found" leftIcon={GitBranch} isDisabled />}
+        emptyState={
+          <Menu.Item value="empty" asChild>
+            <ListRow
+              asChild
+              variant="compact"
+              label="No branches found"
+              icon={<Icon as={GitBranch} boxSize="16px" />}
+              disabled
+            />
+          </Menu.Item>
+        }
         parentList={{
           items: repositoryItems.map((item) => ({
             ...item,
@@ -98,7 +119,17 @@ export const SwitchableLists: Story = {
           ariaLabel: "Toggle list",
           showSearch: true,
           searchPlaceholder: "Search repositories…",
-          emptyState: <MenuItem primaryLabel="No repositories found" leftIcon={FolderGit2} isDisabled />,
+          emptyState: (
+            <Menu.Item value="empty" asChild>
+              <ListRow
+                asChild
+                variant="compact"
+                label="No repositories found"
+                icon={<Icon as={FolderGit2} boxSize="16px" />}
+                disabled
+              />
+            </Menu.Item>
+          ),
           onSelect: (item) => setSelectedRepository(item.id),
         }}
       />
@@ -135,14 +166,34 @@ export const DisabledParentList: Story = {
       items={branchItems}
       searchPlaceholder="Search branches…"
       portalled={false}
-      emptyState={<MenuItem primaryLabel="No branches found" leftIcon={GitBranch} isDisabled />}
+      emptyState={
+        <Menu.Item value="empty" asChild>
+          <ListRow
+            asChild
+            variant="compact"
+            label="No branches found"
+            icon={<Icon as={GitBranch} boxSize="16px" />}
+            disabled
+          />
+        </Menu.Item>
+      }
       parentList={{
         items: [{ id: "prompt-studio", label: "prompt-studio", icon: FolderGit2 }],
         selectedLabel: "prompt-studio",
         selectedIcon: FolderGit2,
         ariaLabel: "Toggle list",
         disabled: true,
-        emptyState: <MenuItem primaryLabel="No repositories found" leftIcon={FolderGit2} isDisabled />,
+        emptyState: (
+          <Menu.Item value="empty" asChild>
+            <ListRow
+              asChild
+              variant="compact"
+              label="No repositories found"
+              icon={<Icon as={FolderGit2} boxSize="16px" />}
+              disabled
+            />
+          </Menu.Item>
+        ),
       }}
     />
   ),

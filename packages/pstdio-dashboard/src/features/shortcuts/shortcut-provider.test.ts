@@ -143,34 +143,6 @@ describe("registerShortcutBindings - overlay and sibling navigation", () => {
     expect(setIsHelpOpen).toHaveBeenCalledWith(false);
   });
 
-  it("navigates sibling tickets with Ctrl+Shift+[ and Ctrl+Shift+]", () => {
-    const hotkeyManager = createHotkeyManager();
-    const navigate = mock(() => {});
-
-    registerShortcutBindings({
-      ...baseInput,
-      hotkeyManager: hotkeyManager as never,
-      pathname: "/projects/project-1/tickets/PS-2",
-      activeScopes: ["global", "ticket"],
-      navigate: navigate as never,
-      currentTicket: { shorthand: "PS-2", attempts: [] },
-      currentTicketIndex: 1,
-      visibleTickets: [{ shorthand: "PS-1" }, { shorthand: "PS-2" }, { shorthand: "PS-3" }],
-    });
-
-    hotkeyManager.handlers.get("Ctrl+Shift+[")?.handler({ target: null, preventDefault: () => {} });
-    hotkeyManager.handlers.get("Ctrl+Shift+]")?.handler({ target: null, preventDefault: () => {} });
-
-    expect(navigate).toHaveBeenNthCalledWith(1, {
-      to: "/projects/$projectId/tickets/$ticketShorthand",
-      params: { projectId: "project-1", ticketShorthand: "PS-1" },
-    });
-    expect(navigate).toHaveBeenNthCalledWith(2, {
-      to: "/projects/$projectId/tickets/$ticketShorthand",
-      params: { projectId: "project-1", ticketShorthand: "PS-3" },
-    });
-  });
-
   it("opens help on Ctrl+Shift+H and ignores editable targets", () => {
     const hotkeyManager = createHotkeyManager();
     const setIsHelpOpen = mock(() => {});

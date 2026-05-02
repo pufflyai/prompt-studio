@@ -1,5 +1,5 @@
-import { Box, HStack, IconButton, Text } from "@chakra-ui/react";
-import { useSidebarStore } from "@pstdio/ui";
+import { Box, IconButton, Text } from "@chakra-ui/react";
+import { Header, useSidebarStore } from "@pstdio/ui";
 import { PanelLeftOpen } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -15,7 +15,7 @@ export const DashboardHeader = (props: DashboardHeaderProps) => {
   const openSidebar = useSidebarStore(sidebarStorageKey, (s) => s.openSidebar);
 
   return (
-    <HStack gap="sm" width="100%" h="41px" px="xs" py="xs" borderBottomWidth="1px" borderColor="border.muted">
+    <Header variant="main" gap="sm" width="100%" borderBottomWidth="1px" borderColor="border.muted">
       {!sidebarOpen ? (
         <IconButton variant="ghost" size="xs" aria-label="Show sidebar" onClick={openSidebar}>
           <PanelLeftOpen size={16} />
@@ -29,6 +29,6 @@ export const DashboardHeader = (props: DashboardHeaderProps) => {
         <Box flexShrink={0}>{title}</Box>
       )}
       {children}
-    </HStack>
+    </Header>
   );
 };

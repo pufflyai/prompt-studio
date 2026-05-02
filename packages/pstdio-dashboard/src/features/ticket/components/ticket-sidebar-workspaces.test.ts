@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
-import type { SidebarNavigateEvent } from "@pstdio/ui";
+import type { TreeListNavigateEvent } from "@pstdio/ui";
 import type { TicketAttempt } from "@/features/ticket-list/types";
 import type { WorkspaceSessionEntry } from "@/features/workspaces/hooks/use-workspace-sessions";
 import { buildSubTicketsSection, buildWorkspacesSection, handleTicketSidebarNavigate } from "./ticket-sidebar";
@@ -191,7 +191,7 @@ describe("handleTicketSidebarNavigate", () => {
         nodeId: "sub-ticket:ticket-2",
         node: { id: "sub-ticket:ticket-2", label: "PS-34" },
         intent: { id: "select-sub-ticket", payload: { ticketShorthand: "PS-34" } },
-      } satisfies SidebarNavigateEvent,
+      } satisfies TreeListNavigateEvent,
       {
         onSelectFile: mock(() => {}),
         onSelectSubTicket,

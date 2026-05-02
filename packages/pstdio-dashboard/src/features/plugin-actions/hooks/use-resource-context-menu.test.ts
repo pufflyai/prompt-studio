@@ -1,5 +1,6 @@
 import { describe, expect, it, mock } from "bun:test";
 import { Archive } from "lucide-react";
+import { createElement } from "react";
 import type { ActionDescriptor } from "../api";
 import type { HeaderActionItem } from "../components/header-action-groups";
 import { buildResourceContextMenuActions, toSidebarContextMenuItems } from "./use-resource-context-menu";
@@ -72,8 +73,7 @@ describe("buildResourceContextMenuActions", () => {
       {
         key: "archive-ticket",
         label: "Archive ticket",
-        kind: "default",
-        icon: Archive,
+        icon: createElement(Archive),
         isDisabled: true,
         onClick,
       },

@@ -1,5 +1,5 @@
 import { Button, Icon, Menu, Stack, Text } from "@chakra-ui/react";
-import { MenuItem } from "@pstdio/ui";
+import { ListRow } from "@pstdio/ui";
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getIconComponent } from "@/features/project-settings/components/tag-icon-color-picker";
@@ -79,17 +79,20 @@ export const TagSelector = (props: TagSelectorProps) => {
                 {tag.name} {tag.type === "single_select" ? "(single)" : "(multi)"}
               </Text>
               {tag.options.map((option) => (
-                <MenuItem
-                  key={option.id}
-                  id={option.id}
-                  primaryLabel={option.name}
-                  isSelected={selectedTagSet.has(option.id)}
-                  isDisabled={isDisabled || !onChange}
-                  leftIcon={getIconComponent(option.icon)}
-                  leftIconColor={`${option.color}.500`}
-                  tooltipLabel={option.description}
-                  onClick={() => handleOptionToggle(option.id)}
-                />
+                <Menu.Item key={option.id} value={option.id} role="option" asChild>
+                  <ListRow
+                    asChild
+                    variant="compact"
+                    id={option.id}
+                    label={option.name}
+                    icon={<Icon as={getIconComponent(option.icon)} boxSize="16px" />}
+                    iconColor={`${option.color}.500`}
+                    tooltip={option.description ?? undefined}
+                    disabled={isDisabled || !onChange}
+                    isSelected={selectedTagSet.has(option.id)}
+                    onActivate={() => handleOptionToggle(option.id)}
+                  />
+                </Menu.Item>
               ))}
             </Stack>
           ))}

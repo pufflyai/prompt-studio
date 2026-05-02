@@ -1,5 +1,5 @@
 import { Button, Flex, Icon, IconButton, Menu, Skeleton } from "@chakra-ui/react";
-import { MenuItem } from "@pstdio/ui";
+import { ListRow } from "@pstdio/ui";
 import { MoreHorizontal } from "lucide-react";
 import type { ActionDescriptor } from "../api";
 import { buildHeaderActionGroups, type HeaderActionItem } from "./header-action-groups";
@@ -95,13 +95,17 @@ export const PluginHeaderActions = (props: PluginHeaderActionsProps) => {
                 const state = getHeaderActionState(action, pendingActionKeys);
 
                 return (
-                  <MenuItem
-                    key={action.key}
-                    primaryLabel={action.label}
-                    leftIcon={action.icon ?? null}
-                    isDisabled={state.isDisabled}
-                    onClick={action.onClick}
-                  />
+                  <Menu.Item key={action.key} value={action.key} asChild>
+                    <ListRow
+                      asChild
+                      variant="compact"
+                      id={action.key}
+                      label={action.label}
+                      icon={action.icon ? <Icon as={action.icon} boxSize="16px" /> : undefined}
+                      disabled={state.isDisabled}
+                      onActivate={action.onClick}
+                    />
+                  </Menu.Item>
                 );
               })}
             </Menu.Content>

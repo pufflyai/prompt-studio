@@ -1,7 +1,7 @@
-import { Flex, IconButton, Menu, Stack, Text } from "@chakra-ui/react";
+import { Flex, Icon, IconButton, Menu, Stack, Text } from "@chakra-ui/react";
 import type { SessionCompletionStatus } from "@pstdio/ui";
 import {
-  MenuItem,
+  ListRow,
   resolveSessionIndicatorColor,
   resolveSessionIndicatorIcon,
   Tooltip,
@@ -144,16 +144,24 @@ export const WorkspaceListPanel = (props: WorkspaceListPanelProps) => {
 
                 {isExpanded
                   ? sessions.map((session) => (
-                      <MenuItem
-                        key={session.id}
-                        primaryLabel={session.title}
-                        tooltipLabel={session.title}
-                        variant="compact"
-                        isSelected={session.id === activeSessionId}
-                        leftIcon={resolveSessionIndicatorIcon(session.status as SessionCompletionStatus)}
-                        leftIconColor={resolveSessionIndicatorColor(session.status as SessionCompletionStatus)}
-                        onClick={() => onSelectSession(workspace.shorthand, session.id)}
-                      />
+                      <Menu.Item key={session.id} value={session.id} asChild>
+                        <ListRow
+                          asChild
+                          variant="compact"
+                          id={session.id}
+                          label={session.title}
+                          tooltip={session.title}
+                          icon={
+                            <Icon
+                              as={resolveSessionIndicatorIcon(session.status as SessionCompletionStatus)}
+                              boxSize="16px"
+                            />
+                          }
+                          iconColor={resolveSessionIndicatorColor(session.status as SessionCompletionStatus)}
+                          isSelected={session.id === activeSessionId}
+                          onActivate={() => onSelectSession(workspace.shorthand, session.id)}
+                        />
+                      </Menu.Item>
                     ))
                   : null}
               </Stack>

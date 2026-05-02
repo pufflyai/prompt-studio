@@ -14,18 +14,40 @@ type CreateInput = {
 
 const nowTimestamp = () => new Date().toISOString();
 
-const nextWorkspaceShorthand = (ticketShorthand: string, existingCount: number) =>
-  `${ticketShorthand}_A${existingCount + 1}`;
+const getAttemptNumber = (ticketShorthand: string, workspaceShorthand: string) => {
+  const prefix = `${ticketShorthand}_A`;
+  if (!workspaceShorthand.startsWith(prefix)) return null;
+
+  const suffix = workspaceShorthand.slice(prefix.length);
+  if (!/^\d+$/.test(suffix)) return null;
+
+  return Number(suffix);
+};
+
+const nextWorkspaceShorthand = (ticketShorthand: string, existingShorthands: string[]) => {
+  const maxAttempt = existingShorthands.reduce((max, shorthand) => {
+    return Math.max(max, getAttemptNumber(ticketShorthand, shorthand) ?? 0);
+  }, 0);
+
+  return `${ticketShorthand}_A${maxAttempt + 1}`;
+};
 
 export const createWorkspacesDBService = (db: DbClient) => {
   const create = async (input: CreateInput) => {
-    // Count all workspaces ever created for this ticket (including deleted) to avoid shorthand reuse
-    const [countResult] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(ticket_workspaces)
-      .where(eq(ticket_workspaces.ticket_id, input.ticket_id));
+    const existingWorkspaces = await db
+      .select({ workspace_shorthand: workspaces.workspace_shorthand })
+      .from(workspaces)
+      .where(
+        and(
+          eq(workspaces.project_id, input.project_id),
+          sql`${workspaces.workspace_shorthand} like ${`${input.ticket_shorthand}_A%`}`,
+        ),
+      );
 
-    const shorthand = nextWorkspaceShorthand(input.ticket_shorthand, countResult.count);
+    const shorthand = nextWorkspaceShorthand(
+      input.ticket_shorthand,
+      existingWorkspaces.map((workspace) => workspace.workspace_shorthand),
+    );
     const timestamp = nowTimestamp();
 
     const record: WorkspaceRecord = {

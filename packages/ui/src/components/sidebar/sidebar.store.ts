@@ -6,6 +6,7 @@ interface SidebarSnapshot {
   open: boolean;
   expandedSections: string[];
   expandedNodes: string[];
+  width: number | null;
 }
 
 interface SidebarState extends SidebarSnapshot {
@@ -16,6 +17,7 @@ interface SidebarState extends SidebarSnapshot {
   toggleNode: (nodeId: string) => void;
   setSectionExpanded: (sectionId: string, expanded: boolean) => void;
   setNodeExpanded: (nodeId: string, expanded: boolean) => void;
+  setWidth: (width: number) => void;
   reset: () => void;
 }
 
@@ -28,6 +30,7 @@ const DEFAULT_SNAPSHOT = {
   open: true,
   expandedSections: [],
   expandedNodes: [],
+  width: null,
 } satisfies SidebarSnapshot;
 
 const SIDEBAR_STORE_NAMESPACE = "pstdio/ui/sidebar";
@@ -55,6 +58,7 @@ const getPersistedSnapshot = (state: SidebarState) => ({
   open: state.open,
   expandedSections: state.expandedSections,
   expandedNodes: state.expandedNodes,
+  width: state.width,
 });
 
 export const createSidebarStore = (options: CreateSidebarStoreOptions) => {
@@ -88,6 +92,7 @@ export const createSidebarStore = (options: CreateSidebarStoreOptions) => {
             ...state,
             expandedNodes: setExpanded(state.expandedNodes, nodeId, expanded),
           })),
+        setWidth: (width) => set((state) => ({ ...state, width })),
         reset: () => set(DEFAULT_SNAPSHOT),
       }),
       {

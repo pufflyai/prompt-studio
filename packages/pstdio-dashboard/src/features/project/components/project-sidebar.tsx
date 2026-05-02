@@ -1,19 +1,19 @@
-import { Box, Menu, Portal, Stack } from "@chakra-ui/react";
+import { Box, Icon, Menu, Portal, Stack } from "@chakra-ui/react";
 import {
-  MenuItem,
+  ListRow,
   Sidebar,
-  type SidebarNavigateEvent,
-  type SidebarNode,
-  type SidebarSection,
+  type TreeListNavigateEvent,
+  type TreeListNode,
+  type TreeListSection,
   toaster,
 } from "@pstdio/ui";
 import { Link, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
-import { ArrowUpRight, BookOpen, CircleHelp, KanbanSquare, MessageCircle, SettingsIcon } from "lucide-react";
+import { ArrowUpRight, BookOpen, CircleHelp, KanbanSquare, MessageCircle, Search, SettingsIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSystemInfo } from "@/features/project/hooks/use-project";
 import { ShortcutKbd } from "@/features/shortcuts/shortcut-kbd";
-import { useOpenShortcutHelp } from "@/features/shortcuts/shortcut-provider";
+import { useOpenCommandPalette, useOpenShortcutHelp } from "@/features/shortcuts/shortcut-provider";
 import {
   getShortcutDefinition,
   type ShortcutBinding,
@@ -53,14 +53,18 @@ export const SidebarShortcutMenuItems = (props: {
   return (
     <>
       {menuItems.map((action) => (
-        <MenuItem
-          key={action.id}
-          onClick={action.onClick}
-          isDisabled={action.isDisabled}
-          primaryLabel={action.primaryLabel}
-          shortcutLabel={action.shortcutLabel}
-          leftIcon={action.leftIcon}
-        />
+        <Menu.Item key={action.id} value={action.id} asChild>
+          <ListRow
+            asChild
+            variant="compact"
+            id={action.id}
+            label={action.primaryLabel}
+            icon={<Icon as={action.leftIcon} boxSize="16px" />}
+            endContent={action.shortcutLabel}
+            disabled={action.isDisabled}
+            onActivate={action.onClick}
+          />
+        </Menu.Item>
       ))}
     </>
   );
@@ -107,34 +111,56 @@ const resolveActiveNodeId = (pathname: string, projectId?: string) => {
   return null;
 };
 
+export const buildProjectSidebarSections = (input: {
+  projectId?: string;
+  searchLabel: string;
+  ticketsLabel: string;
+}): TreeListSection[] => {
+  const { projectId, searchLabel, ticketsLabel } = input;
+  const basePath = projectId ? `/projects/${projectId}` : "";
+  const topNodes: TreeListNode[] = [
+    {
+      id: "search",
+      label: searchLabel,
+      icon: <Search size={14} />,
+      isNavigable: true,
+      navigationIntent: { id: "command-palette" },
+    },
+    {
+      id: "tickets",
+      label: ticketsLabel,
+      icon: <KanbanSquare size={14} />,
+      isNavigable: true,
+      href: `${basePath}/tickets`,
+      navigationIntent: { id: "navigate", payload: { path: "tickets" } },
+    },
+  ];
+
+  return [{ id: "top-level", nodes: topNodes }];
+};
+
 export const ProjectSidebar = () => {
   const { location } = useRouterState();
   const { projectId } = useParams({ strict: false });
   const navigate = useNavigate();
   const { t } = useTranslation("projects");
+  const openCommandPalette = useOpenCommandPalette();
+  const sections = buildProjectSidebarSections({
+    projectId,
+    searchLabel: t("sidebar.search"),
+    ticketsLabel: t("sidebar.tickets"),
+  });
 
-  const buildSections = (): SidebarSection[] => {
-    const basePath = projectId ? `/projects/${projectId}` : "";
-
-    const topNodes: SidebarNode[] = [
-      {
-        id: "tickets",
-        label: t("sidebar.tickets"),
-        icon: <KanbanSquare size={14} />,
-        isNavigable: true,
-        href: `${basePath}/tickets`,
-        navigationIntent: { id: "navigate", payload: { path: "tickets" } },
-      },
-    ];
-
-    return [{ id: "top-level", nodes: topNodes }];
-  };
-
-  const handleNavigate = (event: SidebarNavigateEvent) => {
+  const handleNavigate = (event: TreeListNavigateEvent) => {
     if (!projectId) return;
 
     const intent = event.intent;
     if (!intent) return;
+
+    if (intent.id === "command-palette") {
+      openCommandPalette();
+      return;
+    }
 
     if (intent.id === "navigate") {
       const payload = intent.payload as { path: string };
@@ -147,7 +173,7 @@ export const ProjectSidebar = () => {
   return (
     <Sidebar
       storageKey={PROJECT_SIDEBAR_STORAGE_KEY}
-      sections={buildSections()}
+      sections={sections}
       activeNodeId={activeNodeId}
       header={<ProjectMenu />}
       footer={<ProjectSidebarFooter />}
@@ -197,12 +223,12 @@ export const ProjectSidebarFooter = () => {
       <Menu.Root positioning={{ placement: "top-start" }}>
         <Menu.Trigger asChild>
           <Box>
-            <MenuItem
-              primaryLabel={t("sidebar.help")}
-              leftIcon={CircleHelp}
+            <ListRow
               variant="compact"
-              maxWidth="full"
               width="full"
+              id="help"
+              label={t("sidebar.help")}
+              icon={<Icon as={CircleHelp} boxSize="16px" />}
             />
           </Box>
         </Menu.Trigger>
@@ -211,25 +237,40 @@ export const ProjectSidebarFooter = () => {
             <Menu.Content minW="220px" bg="bg">
               <SidebarShortcutMenuItems actions={[...shortcutActions]} />
               <Menu.Separator />
-              <MenuItem
-                onClick={() => openExternalLink(GITHUB_DOCS_URL)}
-                primaryLabel={t("sidebar.documentationLink")}
-                leftIcon={BookOpen}
-                rightIcon={ArrowUpRight}
-              />
-              <MenuItem
-                onClick={() => openExternalLink(DISCORD_URL)}
-                primaryLabel={t("sidebar.discordLink")}
-                leftIcon={MessageCircle}
-                rightIcon={ArrowUpRight}
-              />
+              <Menu.Item value="docs" asChild>
+                <ListRow
+                  asChild
+                  variant="compact"
+                  id="docs"
+                  label={t("sidebar.documentationLink")}
+                  icon={<Icon as={BookOpen} boxSize="16px" />}
+                  endContent={<Icon as={ArrowUpRight} boxSize="16px" />}
+                  onActivate={() => openExternalLink(GITHUB_DOCS_URL)}
+                />
+              </Menu.Item>
+              <Menu.Item value="discord" asChild>
+                <ListRow
+                  asChild
+                  variant="compact"
+                  id="discord"
+                  label={t("sidebar.discordLink")}
+                  icon={<Icon as={MessageCircle} boxSize="16px" />}
+                  endContent={<Icon as={ArrowUpRight} boxSize="16px" />}
+                  onActivate={() => openExternalLink(DISCORD_URL)}
+                />
+              </Menu.Item>
               <Menu.Separator />
-              <MenuItem
-                isDisabled={!systemInfo}
-                onClick={handleCopyVersion}
-                primaryLabel={t("common:menu.promptStudio")}
-                secondaryLabel={versionLabel}
-              />
+              <Menu.Item value="version" asChild>
+                <ListRow
+                  asChild
+                  variant="compact"
+                  id="version"
+                  label={t("common:menu.promptStudio")}
+                  description={versionLabel}
+                  disabled={!systemInfo}
+                  onActivate={handleCopyVersion}
+                />
+              </Menu.Item>
             </Menu.Content>
           </Menu.Positioner>
         </Portal>
@@ -237,17 +278,19 @@ export const ProjectSidebarFooter = () => {
 
       {settingsPath ? (
         <Menu.Root>
-          <MenuItem
-            asChild
-            primaryLabel={t("sidebar.projectSettings")}
-            leftIcon={SettingsIcon}
-            variant="compact"
-            isSelected={isPathActive(settingsPath)}
-            maxWidth="full"
-            width="full"
-          >
-            <Link to={settingsPath} />
-          </MenuItem>
+          <Menu.Item value="project-settings" asChild>
+            <Link to={settingsPath}>
+              <ListRow
+                asChild
+                variant="compact"
+                width="full"
+                id="project-settings"
+                label={t("sidebar.projectSettings")}
+                icon={<Icon as={SettingsIcon} boxSize="16px" />}
+                isSelected={isPathActive(settingsPath)}
+              />
+            </Link>
+          </Menu.Item>
         </Menu.Root>
       ) : null}
     </Stack>

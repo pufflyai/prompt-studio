@@ -3,12 +3,24 @@ import { KanbanSquare } from "lucide-react";
 import { isValidElement } from "react";
 import { getShortcutDefinition } from "@/features/shortcuts/shortcut-registry";
 import {
+  buildProjectSidebarSections,
   buildSidebarShortcutMenuItems,
   getSidebarHelpShortcutDefinitions,
   SIDEBAR_HELP_SHORTCUT_IDS,
 } from "./project-sidebar";
 
 describe("project-sidebar shortcuts", () => {
+  it("adds a search entry that opens the command palette", () => {
+    const sections = buildProjectSidebarSections({
+      projectId: "project-1",
+      ticketsLabel: "Tickets",
+      searchLabel: "Search",
+    });
+
+    expect(sections[0]?.nodes.map((node) => node.id)).toEqual(["search", "tickets"]);
+    expect(sections[0]?.nodes[0]?.navigationIntent).toEqual({ id: "command-palette" });
+  });
+
   it("only exposes keyboard shortcuts in the help menu shortcut section", () => {
     expect(SIDEBAR_HELP_SHORTCUT_IDS).toEqual(["open-shortcut-help"]);
   });
@@ -35,7 +47,7 @@ describe("project-sidebar shortcuts", () => {
       {
         id: "create-ticket",
         primaryLabel: "Create ticket",
-        binding: "C",
+        binding: "Ctrl+Shift+C",
         leftIcon: KanbanSquare,
         onClick: () => {},
       },
@@ -47,6 +59,6 @@ describe("project-sidebar shortcuts", () => {
     expect(isValidElement(shortcutLabel)).toBe(true);
     expect(
       shortcutLabel && "props" in shortcutLabel ? (shortcutLabel.props as { binding?: string }).binding : null,
-    ).toBe("C");
+    ).toBe("Ctrl+Shift+C");
   });
 });

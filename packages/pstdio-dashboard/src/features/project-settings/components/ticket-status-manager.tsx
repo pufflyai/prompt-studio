@@ -2,7 +2,7 @@ import { Button, Editable, Flex, HStack, Icon, Input, Menu, Stack, Table, Text }
 import { closestCenter, DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { DeleteConfirmationModal, MenuItem, toaster } from "@pstdio/ui";
+import { DeleteConfirmationModal, ListRow, toaster } from "@pstdio/ui";
 import { Check, ChevronDown, Circle, GripVertical, Plus, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import {
@@ -56,15 +56,18 @@ const ColorPicker = (props: {
       <Menu.Positioner>
         <Menu.Content minW="120px" bg="bg">
           {STATUS_COLORS.map((color) => (
-            <MenuItem
-              key={color}
-              id={color}
-              primaryLabel={color}
-              isSelected={color === value}
-              leftIcon={Circle}
-              leftIconColor={`${color}.500`}
-              onClick={() => onChange(color)}
-            />
+            <Menu.Item key={color} value={color} asChild>
+              <ListRow
+                asChild
+                variant="compact"
+                id={color}
+                label={color}
+                icon={<Icon as={Circle} boxSize="16px" />}
+                iconColor={`${color}.500`}
+                isSelected={color === value}
+                onActivate={() => onChange(color)}
+              />
+            </Menu.Item>
           ))}
         </Menu.Content>
       </Menu.Positioner>
@@ -95,13 +98,16 @@ const ActionsDropdown = (props: {
       <Menu.Positioner>
         <Menu.Content minW="160px" bg="bg">
           {ALL_STATUS_ACTIONS.map((action) => (
-            <MenuItem
-              key={action.value}
-              id={action.value}
-              primaryLabel={action.label}
-              isSelected={actions.includes(action.value)}
-              onClick={() => toggleAction(action.value)}
-            />
+            <Menu.Item key={action.value} value={action.value} asChild>
+              <ListRow
+                asChild
+                variant="compact"
+                id={action.value}
+                label={action.label}
+                isSelected={actions.includes(action.value)}
+                onActivate={() => toggleAction(action.value)}
+              />
+            </Menu.Item>
           ))}
         </Menu.Content>
       </Menu.Positioner>

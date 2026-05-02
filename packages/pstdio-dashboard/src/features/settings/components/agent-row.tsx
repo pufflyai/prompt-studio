@@ -1,5 +1,5 @@
 import { Badge, Box, HStack, Icon, IconButton, Menu, Table, Text } from "@chakra-ui/react";
-import { MenuItem, Switch, Tooltip } from "@pstdio/ui";
+import { ListRow, Switch, Tooltip } from "@pstdio/ui";
 import { Circle, MoreHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -81,11 +81,16 @@ export const AgentRow = (props: AgentRowProps) => {
           </Menu.Trigger>
           <Menu.Positioner>
             <Menu.Content minW="160px" bg="bg">
-              <MenuItem
-                primaryLabel={t("agentRow.setAsDefault")}
-                isDisabled={!isEnabled || isDefault}
-                onClick={onSetDefault}
-              />
+              <Menu.Item value="set-default" asChild>
+                <ListRow
+                  asChild
+                  variant="compact"
+                  id="set-default"
+                  label={t("agentRow.setAsDefault")}
+                  disabled={!isEnabled || isDefault}
+                  onActivate={onSetDefault}
+                />
+              </Menu.Item>
             </Menu.Content>
           </Menu.Positioner>
         </Menu.Root>

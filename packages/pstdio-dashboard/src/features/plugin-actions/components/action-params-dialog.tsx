@@ -1,5 +1,5 @@
 import { Button, CloseButton, Dialog, Icon, Input, Menu, Stack, Text, Textarea } from "@chakra-ui/react";
-import { MenuItem } from "@pstdio/ui";
+import { ListRow } from "@pstdio/ui";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { useProjectTemplateAssets } from "@/features/project/hooks/use-project";
@@ -213,12 +213,16 @@ const SelectParamField = ({ param, value, onChange, isDisabled }: SimpleParamFie
         <Menu.Positioner>
           <Menu.Content bg="bg">
             {options.map((option) => (
-              <MenuItem
-                key={option.value}
-                primaryLabel={option.label}
-                isSelected={selected === option.value}
-                onClick={() => onChange(option.value)}
-              />
+              <Menu.Item key={option.value} value={option.value} asChild>
+                <ListRow
+                  asChild
+                  variant="compact"
+                  id={option.value}
+                  label={option.label}
+                  isSelected={selected === option.value}
+                  onActivate={() => onChange(option.value)}
+                />
+              </Menu.Item>
             ))}
           </Menu.Content>
         </Menu.Positioner>
@@ -256,12 +260,16 @@ const TemplateSelectParamField = ({ param, projectId, value, onChange, isDisable
         <Menu.Positioner>
           <Menu.Content bg="bg">
             {options.map((option) => (
-              <MenuItem
-                key={option.value}
-                primaryLabel={option.label}
-                isSelected={selected === option.value}
-                onClick={() => onChange(option.value)}
-              />
+              <Menu.Item key={option.value} value={option.value} asChild>
+                <ListRow
+                  asChild
+                  variant="compact"
+                  id={option.value}
+                  label={option.label}
+                  isSelected={selected === option.value}
+                  onActivate={() => onChange(option.value)}
+                />
+              </Menu.Item>
             ))}
           </Menu.Content>
         </Menu.Positioner>

@@ -1,4 +1,4 @@
-import { Sidebar, type SidebarNavigateEvent, type SidebarNode, type SidebarSection } from "@pstdio/ui";
+import { Sidebar, type TreeListNavigateEvent, type TreeListNode, type TreeListSection } from "@pstdio/ui";
 import {
   AlertTriangle,
   CircleDot,
@@ -65,15 +65,15 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
   const { templates, skills, tags, activeSection, onSelectSection, onCreateTemplate, onCreateTag } = props;
   const { t } = useTranslation("projects");
 
-  const buildSections = (): SidebarSection[] => {
-    const tagChildNodes: SidebarNode[] = tags.map((tag) => ({
+  const buildSections = (): TreeListSection[] => {
+    const tagChildNodes: TreeListNode[] = tags.map((tag) => ({
       id: `tag:${tag.id}`,
       label: tag.name,
       isNavigable: true,
       navigationIntent: { id: "select-tag", payload: tag.id },
     }));
 
-    const generalNodes: SidebarNode[] = [
+    const generalNodes: TreeListNode[] = [
       {
         id: "ticket-statuses",
         label: "Statuses",
@@ -105,7 +105,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
       },
     ];
 
-    const repositoryNodes: SidebarNode[] = [
+    const repositoryNodes: TreeListNode[] = [
       {
         id: "repositories",
         label: t("projectSettings.repositories"),
@@ -122,7 +122,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
       grouped[tpl.templateType] = list;
     }
 
-    const templateNodes: SidebarNode[] = TEMPLATE_TYPE_ORDER.filter((type) => grouped[type]).map((type) => {
+    const templateNodes: TreeListNode[] = TEMPLATE_TYPE_ORDER.filter((type) => grouped[type]).map((type) => {
       const config = TEMPLATE_TYPE_CONFIG[type];
       const items = grouped[type]!;
       return {
@@ -138,14 +138,14 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
       };
     });
 
-    const skillNodes: SidebarNode[] = skills.map((skill) => ({
+    const skillNodes: TreeListNode[] = skills.map((skill) => ({
       id: `skill:${skill.name}`,
       label: skill.name,
       isNavigable: true,
       navigationIntent: { id: "select-skill", payload: skill.name },
     }));
 
-    const pluginNodes: SidebarNode[] = [
+    const pluginNodes: TreeListNode[] = [
       {
         id: "plugins",
         label: "Plugins",
@@ -155,7 +155,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
       },
     ];
 
-    const dangerNodes: SidebarNode[] = [
+    const dangerNodes: TreeListNode[] = [
       {
         id: "danger-zone",
         label: t("projectSettings.dangerZone"),
@@ -191,7 +191,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
     ];
   };
 
-  const handleNavigate = (event: SidebarNavigateEvent) => {
+  const handleNavigate = (event: TreeListNavigateEvent) => {
     const intent = event.intent;
     if (!intent) return;
 

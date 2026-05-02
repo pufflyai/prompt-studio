@@ -11,7 +11,7 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { MenuItem } from "@pstdio/ui";
+import { ListRow } from "@pstdio/ui";
 import { ChevronDown, KanbanSquare, List, Settings2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -138,12 +138,16 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
                     <Menu.Positioner>
                       <Menu.Content minW="280px" bg="bg">
                         {GROUPING_OPTIONS.map((option) => (
-                          <MenuItem
-                            key={option.value}
-                            primaryLabel={option.label}
-                            isSelected={settings.grouping === option.value}
-                            onClick={() => updateField("grouping", option.value)}
-                          />
+                          <Menu.Item key={option.value} value={option.value} asChild>
+                            <ListRow
+                              asChild
+                              variant="compact"
+                              id={option.value}
+                              label={option.label}
+                              isSelected={settings.grouping === option.value}
+                              onActivate={() => updateField("grouping", option.value)}
+                            />
+                          </Menu.Item>
                         ))}
                       </Menu.Content>
                     </Menu.Positioner>
@@ -162,12 +166,16 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
                     <Menu.Positioner>
                       <Menu.Content minW="280px" bg="bg">
                         {ORDERING_OPTIONS.map((option) => (
-                          <MenuItem
-                            key={option.value}
-                            primaryLabel={option.label}
-                            isSelected={settings.ordering === option.value}
-                            onClick={() => updateField("ordering", option.value)}
-                          />
+                          <Menu.Item key={option.value} value={option.value} asChild>
+                            <ListRow
+                              asChild
+                              variant="compact"
+                              id={option.value}
+                              label={option.label}
+                              isSelected={settings.ordering === option.value}
+                              onActivate={() => updateField("ordering", option.value)}
+                            />
+                          </Menu.Item>
                         ))}
                       </Menu.Content>
                     </Menu.Positioner>
@@ -188,12 +196,16 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
                   <Menu.Positioner>
                     <Menu.Content minW="280px" bg="bg">
                       {DISPLAY_PROPERTY_OPTIONS.map((option) => (
-                        <MenuItem
-                          key={option.value}
-                          primaryLabel={option.label}
-                          isSelected={displayPropertiesSet.has(option.value)}
-                          onClick={() => handleDisplayPropertyToggle(option.value)}
-                        />
+                        <Menu.Item key={option.value} value={option.value} asChild>
+                          <ListRow
+                            asChild
+                            variant="compact"
+                            id={option.value}
+                            label={option.label}
+                            isSelected={displayPropertiesSet.has(option.value)}
+                            onActivate={() => handleDisplayPropertyToggle(option.value)}
+                          />
+                        </Menu.Item>
                       ))}
                     </Menu.Content>
                   </Menu.Positioner>

@@ -1,5 +1,5 @@
 import { Box, Flex, Image, Spinner, Stack, Text } from "@chakra-ui/react";
-import { EmptyState, ScrollArea } from "@pstdio/ui";
+import { EmptyState, Header, ScrollArea } from "@pstdio/ui";
 import { AlertCircle, CheckCircle2, FileCode2, FileText, FlaskConical, TerminalSquare } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -95,11 +95,11 @@ export const WorkspaceChecksPanel = (props: WorkspaceChecksPanelProps) => {
       </ResizableLeftPanel>
 
       <Stack flex="1" minH="0" gap="0" bg="bg">
-        <Flex h="41px" minH="41px" align="center" px="sm" borderBottomWidth="1px">
+        <Header variant="main" borderBottomWidth="1px" borderColor="border.muted">
           <Text textStyle="label/S/medium" color="foreground.secondary" truncate>
             {selectedArtifact ? stripArtifactPrefix(selectedArtifact.relative_path) : ""}
           </Text>
-        </Flex>
+        </Header>
 
         {selectedArtifact && isImageFileName(selectedArtifact.relative_path) ? (
           <Box flex="1" minH="0" overflow="auto" p="md" display="flex" alignItems="center" justifyContent="center">

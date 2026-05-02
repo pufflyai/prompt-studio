@@ -46,7 +46,7 @@ const isActiveNode = (id: string, activeNodeId?: string | string[] | null) =>
 
 const isNavigableNode = (node: TreeListNode) => node.isNavigable || node.navigationIntent !== undefined;
 
-const getNodeChildren = (node: TreeListNode) => node.children ?? [];
+const getNodeChildren = (node: TreeListNode): TreeListNode[] => (node.children as TreeListNode[] | undefined) ?? [];
 
 const hasExpandableChildren = (node: TreeListNode) => getNodeChildren(node).length > 0 || node.isContainer === true;
 
@@ -99,7 +99,7 @@ const TreeListNodeRow = (props: TreeListNodeRowProps) => {
     canLink && LinkComponent && node.href ? (
       <LinkComponent to={node.href}>
         <ListRow
-          item={rowItem}
+          {...rowItem}
           depth={level}
           variant={rowVariant}
           isSelected={isActive}
@@ -112,7 +112,7 @@ const TreeListNodeRow = (props: TreeListNodeRowProps) => {
       </LinkComponent>
     ) : (
       <ListRow
-        item={rowItem}
+        {...rowItem}
         depth={level}
         variant={rowVariant}
         isSelected={isActive}

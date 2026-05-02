@@ -1,5 +1,5 @@
-import { Button, Container, IconButton, Menu, Stack, Text } from "@chakra-ui/react";
-import { EmptyState, MenuItem, toaster } from "@pstdio/ui";
+import { Button, Container, Icon, IconButton, Menu, Stack, Text } from "@chakra-ui/react";
+import { EmptyState, ListRow, toaster } from "@pstdio/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Folder, Settings } from "lucide-react";
 import { useState } from "react";
@@ -144,15 +144,18 @@ export const ProjectList = () => {
           <Stack gap="xs">
             {projects.map((project) => (
               <Menu.Root key={project.id}>
-                <MenuItem
-                  asChild
-                  id={project.id}
-                  primaryLabel={project.name}
-                  secondaryLabel={project.repoPath ?? t("chatInput.repo.noneLinked")}
-                  leftIcon={Folder}
-                >
-                  <Link to={resolveProjectDefaultPath(project.id)} />
-                </MenuItem>
+                <Menu.Item value={project.id} asChild>
+                  <Link to={resolveProjectDefaultPath(project.id)}>
+                    <ListRow
+                      asChild
+                      variant="compact"
+                      id={project.id}
+                      label={project.name}
+                      description={project.repoPath ?? t("chatInput.repo.noneLinked")}
+                      icon={<Icon as={Folder} boxSize="16px" />}
+                    />
+                  </Link>
+                </Menu.Item>
               </Menu.Root>
             ))}
           </Stack>

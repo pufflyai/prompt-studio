@@ -1,5 +1,5 @@
-import { Button, Flex, IconButton, Menu } from "@chakra-ui/react";
-import { MenuItem } from "@pstdio/ui";
+import { Button, Flex, Icon, IconButton, Menu } from "@chakra-ui/react";
+import { ListRow } from "@pstdio/ui";
 import { ChevronDown, GitMerge, Replace, Undo2 } from "lucide-react";
 
 interface WorkspaceActionControlProps {
@@ -56,12 +56,17 @@ export const WorkspaceActionControl = (props: WorkspaceActionControlProps) => {
         </Menu.Trigger>
         <Menu.Positioner>
           <Menu.Content minW="180px" bg="background.primary">
-            <MenuItem
-              primaryLabel={switchLabel}
-              leftIcon={isSwapped ? Undo2 : Replace}
-              isDisabled={(!canMerge && !isSwapped) || isBusy}
-              onClick={handleSwitchAction}
-            />
+            <Menu.Item value="switch" asChild>
+              <ListRow
+                asChild
+                variant="compact"
+                id="switch"
+                label={switchLabel}
+                icon={<Icon as={isSwapped ? Undo2 : Replace} boxSize="16px" />}
+                disabled={(!canMerge && !isSwapped) || isBusy}
+                onActivate={handleSwitchAction}
+              />
+            </Menu.Item>
           </Menu.Content>
         </Menu.Positioner>
       </Menu.Root>

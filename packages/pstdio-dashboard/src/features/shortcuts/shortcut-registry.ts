@@ -8,8 +8,6 @@ export interface ShortcutDefinition {
     | "create-ticket"
     | "create-session"
     | "goto-ticket-list"
-    | "nav-previous"
-    | "nav-next"
     | "open-command-palette"
     | "change-theme"
     | "open-shortcut-help";
@@ -23,8 +21,6 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   { id: "create-ticket", actionLabel: "Create ticket", binding: "Ctrl+Shift+C", scope: "global" },
   { id: "create-session", actionLabel: "Create session", binding: "Ctrl+Shift+S", scope: "global" },
   { id: "goto-ticket-list", actionLabel: "Go to tickets", binding: "Ctrl+Shift+T", scope: "global" },
-  { id: "nav-previous", actionLabel: "Previous item", binding: "Ctrl+Shift+[", scope: "ticket" },
-  { id: "nav-next", actionLabel: "Next item", binding: "Ctrl+Shift+]", scope: "ticket" },
   { id: "open-command-palette", actionLabel: "Command palette", binding: "Ctrl+Shift+P", scope: "global" },
   { id: "change-theme", actionLabel: "Change theme", binding: "Ctrl+Shift+K", scope: "global" },
   { id: "open-shortcut-help", actionLabel: "Keyboard shortcuts", binding: "Ctrl+Shift+H", scope: "global" },

@@ -2,7 +2,7 @@ import { Badge, Box, HStack, Icon, IconButton, Menu, Spacer, Stack, Text } from 
 import { ChevronRight, MoreHorizontal, Plus } from "lucide-react";
 import { type ComponentProps, type ComponentType, type DragEvent, useState } from "react";
 
-import { MenuItem } from "@/components/menu-item";
+import { ListRow } from "@/components/list-row/list-row";
 import type { ResourceContextAction } from "@/components/resource-context-menu";
 import { ResourceContextMenu } from "@/components/resource-context-menu";
 import { ScrollArea } from "@/components/scroll-area";
@@ -351,12 +351,15 @@ const ColumnHeader = (props: ColumnHeaderProps) => {
           <Menu.Positioner>
             <Menu.Content minW="180px" bg="bg">
               {column.actions.map((action) => (
-                <MenuItem
-                  key={action.id}
-                  primaryLabel={action.label}
-                  leftIcon={action.icon}
-                  onClick={() => onColumnAction?.(column.id, action.id)}
-                />
+                <Menu.Item key={action.id} value={action.id} asChild>
+                  <ListRow
+                    asChild
+                    variant="compact"
+                    label={action.label}
+                    icon={<Icon as={action.icon} boxSize="16px" />}
+                    onActivate={() => onColumnAction?.(column.id, action.id)}
+                  />
+                </Menu.Item>
               ))}
             </Menu.Content>
           </Menu.Positioner>

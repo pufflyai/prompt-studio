@@ -1,5 +1,12 @@
-import type { IconProps } from "@chakra-ui/react";
-import type { ComponentType, ReactNode } from "react";
+import type { chakra, IconProps } from "@chakra-ui/react";
+import type {
+  ComponentPropsWithoutRef,
+  ComponentType,
+  DragEvent as ReactDragEvent,
+  MouseEvent as ReactMouseEvent,
+  ReactNode,
+  PointerEvent as ReactPointerEvent,
+} from "react";
 
 export interface ListRowNavigationIntent {
   id?: string;
@@ -30,8 +37,11 @@ export interface ListRowAction {
   onAction?: (context: ListRowActionContext) => void;
 }
 
+export type ListRowVariant = "default" | "compact" | "tree";
+export type ListRowTone = "default" | "danger";
+
 export interface ListRowItem {
-  id: string;
+  id?: string;
   label: ReactNode;
   description?: ReactNode;
   icon?: ReactNode;
@@ -55,4 +65,49 @@ export interface ListRowItem {
   contextMenuItems?: ListRowActionMenuItem[];
   actions?: ListRowAction[];
   children?: ListRowItem[];
+}
+
+type ListRowRootProps = ComponentPropsWithoutRef<typeof chakra.div>;
+
+export interface ListRowProps
+  extends ListRowItem,
+    Omit<
+      ListRowRootProps,
+      | "as"
+      | "asChild"
+      | "children"
+      | "draggable"
+      | "onClick"
+      | "onDragEnd"
+      | "onDragOver"
+      | "onDragStart"
+      | "onDrop"
+      | "onPointerMove"
+      | keyof ListRowItem
+    > {
+  depth?: number;
+  isSelected?: boolean;
+  isExpanded?: boolean;
+  showExpandToggle?: boolean;
+  variant?: ListRowVariant;
+  tone?: ListRowTone;
+  /** Wrap content into a single child element. Used for `<Menu.Item asChild><ListRow asChild>…</ListRow></Menu.Item>` and link components. */
+  asChild?: boolean;
+  onToggleExpand?: () => void;
+  onClick?: (event: ReactMouseEvent<HTMLElement>) => void;
+  onPointerMove?: (event: ReactPointerEvent<HTMLElement>) => void;
+  draggable?: boolean;
+  onDragStart?: (event: ReactDragEvent<HTMLElement>) => void;
+  onDragOver?: (event: ReactDragEvent<HTMLElement>) => void;
+  onDragEnd?: (event: ReactDragEvent<HTMLElement>) => void;
+  onDrop?: (event: ReactDragEvent<HTMLElement>) => void;
+}
+
+export interface RowContentProps {
+  item: ListRowItem;
+  isExpanded: boolean;
+  showChevron: boolean;
+  isDisabled: boolean;
+  variant: ListRowVariant;
+  tone: ListRowTone;
 }

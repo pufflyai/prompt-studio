@@ -156,11 +156,11 @@ const FileTreeStory = () => {
         ...child,
         children: child.children?.map((file) => ({
           ...file,
-          onActivate: () => setActiveNodeId(file.id),
+          onActivate: () => setActiveNodeId(file.id ?? ""),
         })),
       })),
     })),
-  }));
+  })) as TreeListSection[];
 
   return (
     <Stack maxW="20rem" borderWidth="1px" p="xs">

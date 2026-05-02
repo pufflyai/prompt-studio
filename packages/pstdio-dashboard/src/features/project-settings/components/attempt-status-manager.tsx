@@ -2,7 +2,7 @@ import { Button, Editable, Flex, HStack, Icon, Input, Menu, Stack, Table, Text }
 import { closestCenter, DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { DeleteConfirmationModal, MenuItem, toaster } from "@pstdio/ui";
+import { DeleteConfirmationModal, ListRow, toaster } from "@pstdio/ui";
 import { Check, Circle, GripVertical, Plus, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import type { TicketStatusColor } from "@/features/ticket-list/types";
@@ -50,15 +50,18 @@ const ColorPicker = (props: { value: string; onChange: (color: string) => void; 
       <Menu.Positioner>
         <Menu.Content minW="120px" bg="bg">
           {STATUS_COLORS.map((color) => (
-            <MenuItem
-              key={color}
-              id={color}
-              primaryLabel={color}
-              isSelected={color === value}
-              leftIcon={Circle}
-              leftIconColor={`${color}.500`}
-              onClick={() => onChange(color)}
-            />
+            <Menu.Item key={color} value={color} asChild>
+              <ListRow
+                asChild
+                variant="compact"
+                id={color}
+                label={color}
+                icon={<Icon as={Circle} boxSize="16px" />}
+                iconColor={`${color}.500`}
+                isSelected={color === value}
+                onActivate={() => onChange(color)}
+              />
+            </Menu.Item>
           ))}
         </Menu.Content>
       </Menu.Positioner>

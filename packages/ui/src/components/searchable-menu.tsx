@@ -1,7 +1,9 @@
-import { Input, InputGroup, Menu, Portal } from "@chakra-ui/react";
+import { Box, Icon, Input, InputGroup, Menu, Portal } from "@chakra-ui/react";
 import { ChevronDown, Search } from "lucide-react";
-import { type ElementType, Fragment, type ReactNode, useEffect, useRef, useState } from "react";
-import { MenuItem } from "./menu-item";
+import { type ElementType, type ReactNode, useEffect, useRef, useState } from "react";
+import { Header } from "./header";
+import { ListRow } from "./list-row/list-row";
+import type { ListRowItem } from "./list-row/list-row.types";
 import { ScrollArea } from "./scroll-area";
 
 type MenuRootProps = React.ComponentProps<typeof Menu.Root>;
@@ -206,8 +208,29 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
     setActiveList("child");
   };
 
+  const renderIcon = (icon: ElementType | undefined) => (icon ? <Icon as={icon} boxSize="14px" /> : undefined);
+
+  const buildRowItem = (item: T): ListRowItem => ({
+    id: item.id,
+    label: item.label,
+    description: item.secondaryLabel,
+    icon: renderIcon(item.icon),
+    disabled: item.isDisabled,
+    tooltip: item.tooltipLabel,
+  });
+
   const parentListHeader = parentList ? (
-    <div
+    <Header
+      as="div"
+      role="button"
+      aria-label={parentList.ariaLabel}
+      aria-disabled={parentList.disabled || undefined}
+      tabIndex={parentList.disabled ? -1 : 0}
+      variant="narrow"
+      px="0"
+      borderBottomWidth="1px"
+      borderColor="border.muted"
+      flexShrink={0}
       onPointerDownCapture={(event) => event.stopPropagation()}
       onClickCapture={(event) => {
         event.stopPropagation();
@@ -215,38 +238,41 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
         setActiveList((current) => (current === "child" ? "parent" : "child"));
       }}
     >
-      <MenuItem
-        primaryLabel={parentList.selectedLabel}
-        leftIcon={parentList.selectedIcon}
-        rightIcon={parentList.disabled ? undefined : ChevronDown}
-        isDisabled={parentList.disabled}
+      <ListRow
+        variant="compact"
+        id="__parent-toggle"
+        label={parentList.selectedLabel}
+        icon={renderIcon(parentList.selectedIcon)}
+        disabled={parentList.disabled}
+        endContent={parentList.disabled ? undefined : <Icon as={ChevronDown} boxSize="14px" />}
       />
-    </div>
+    </Header>
   ) : null;
 
   const resolvedHeader = parentList ? parentListHeader : header;
   const shouldShowSeparator = Boolean(resolvedHeader) && !config.showSearch;
 
   const searchInput = config.showSearch ? (
-    <InputGroup startElement={<Search size={14} />}>
-      <Input
-        ref={inputRef}
-        borderRight={0}
-        borderLeft={0}
-        borderRadius="0"
-        borderColor="border.muted"
-        value={query}
-        placeholder={config.searchPlaceholder}
-        aria-label={config.searchPlaceholder}
-        autoComplete="off"
-        _hover={searchInputBorderProps}
-        _active={searchInputBorderProps}
-        _focus={searchInputBorderProps}
-        _focusVisible={searchInputBorderProps}
-        onChange={(event) => setQuery(event.target.value)}
-        onKeyDown={(event) => event.stopPropagation()}
-      />
-    </InputGroup>
+    <Header variant="input" borderBottomWidth="1px" borderColor="border.muted" flexShrink={0}>
+      <InputGroup startElement={<Search size={14} />} width="full">
+        <Input
+          ref={inputRef}
+          borderWidth="0"
+          borderRadius="0"
+          height="full"
+          value={query}
+          placeholder={config.searchPlaceholder}
+          aria-label={config.searchPlaceholder}
+          autoComplete="off"
+          _hover={searchInputBorderProps}
+          _active={searchInputBorderProps}
+          _focus={searchInputBorderProps}
+          _focusVisible={searchInputBorderProps}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => event.stopPropagation()}
+        />
+      </InputGroup>
+    </Header>
   ) : null;
 
   return (
@@ -270,24 +296,28 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
               maxH={maxListHeight}
               data-testid={config.contentTestId}
               viewportProps={{ overscrollBehavior: "contain" }}
-              p="2xs"
-              gap="2xs"
+              p="0"
+              gap="0"
             >
               {filteredItems.length > 0
                 ? filteredItems.map((item) => (
-                    <Fragment key={item.id}>
-                      <MenuItem
-                        id={item.id}
-                        primaryLabel={item.label}
-                        secondaryLabel={item.secondaryLabel}
-                        tooltipLabel={item.tooltipLabel}
-                        leftIcon={item.icon}
-                        variant={item.variant}
-                        isDisabled={item.isDisabled}
-                        isSelected={item.isSelected}
-                        onClick={item.onSelect}
-                      />
-                    </Fragment>
+                    <Menu.Item key={item.id} value={item.id} disabled={item.isDisabled} onClick={item.onSelect} asChild>
+                      <Box
+                        bg="transparent"
+                        h="auto"
+                        p="0"
+                        _hover={{ bg: "transparent" }}
+                        _focus={{ bg: "transparent" }}
+                        _active={{ bg: "transparent" }}
+                      >
+                        <ListRow
+                          asChild
+                          {...buildRowItem(item)}
+                          variant={item.variant ?? "compact"}
+                          isSelected={item.isSelected}
+                        />
+                      </Box>
+                    </Menu.Item>
                   ))
                 : config.emptyState}
             </ScrollArea>

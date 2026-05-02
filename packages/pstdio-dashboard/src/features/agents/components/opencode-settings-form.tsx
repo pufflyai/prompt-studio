@@ -1,5 +1,5 @@
 import { Button, HStack, Icon, Menu, Spinner, Stack, Text } from "@chakra-ui/react";
-import { MenuItem, Switch } from "@pstdio/ui";
+import { ListRow, Switch } from "@pstdio/ui";
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAgentModels } from "../hooks/use-agent-models";
@@ -47,18 +47,27 @@ export const OpencodeSettingsForm = (props: OpencodeSettingsFormProps) => {
             </Menu.Trigger>
             <Menu.Positioner>
               <Menu.Content minW="220px" bg="bg">
-                <MenuItem
-                  primaryLabel={t("opencode.agentDefault")}
-                  isSelected={!settings.model}
-                  onClick={() => onUpdate({ model: undefined })}
-                />
-                {models.map((m) => (
-                  <MenuItem
-                    key={m.id}
-                    primaryLabel={m.id}
-                    isSelected={settings.model === m.id}
-                    onClick={() => onUpdate({ model: m.id })}
+                <Menu.Item value="default" asChild>
+                  <ListRow
+                    asChild
+                    variant="compact"
+                    id="default"
+                    label={t("opencode.agentDefault")}
+                    isSelected={!settings.model}
+                    onActivate={() => onUpdate({ model: undefined })}
                   />
+                </Menu.Item>
+                {models.map((m) => (
+                  <Menu.Item key={m.id} value={m.id} asChild>
+                    <ListRow
+                      asChild
+                      variant="compact"
+                      id={m.id}
+                      label={m.id}
+                      isSelected={settings.model === m.id}
+                      onActivate={() => onUpdate({ model: m.id })}
+                    />
+                  </Menu.Item>
                 ))}
               </Menu.Content>
             </Menu.Positioner>

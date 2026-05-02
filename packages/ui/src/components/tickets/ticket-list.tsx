@@ -2,16 +2,15 @@ import { Badge, Box, HStack, Icon, Text, Wrap } from "@chakra-ui/react";
 import {
   type ColumnDef,
   type ExpandedState,
-  flexRender,
   getCoreRowModel,
   getExpandedRowModel,
   type Row,
   useReactTable,
 } from "@tanstack/react-table";
-import { ChevronRight } from "lucide-react";
 import { type ComponentType, type ReactNode, useState } from "react";
+import { ListRow } from "../list-row/list-row";
+import type { ListRowItem } from "../list-row/list-row.types";
 import type { ResourceContextAction } from "../resource-context-menu";
-import { ResourceContextMenu } from "../resource-context-menu";
 import { TagBadge } from "./tag-badge";
 import type { TicketCardBadge, TicketCardTagBadge } from "./ticket-card";
 
@@ -43,139 +42,44 @@ interface TicketListProps {
 const INDENT_STEP_PX = 12;
 
 export const getTicketListIndentation = (depth: number) => {
-  if (depth <= 0) {
-    return undefined;
-  }
-
+  if (depth <= 0) return undefined;
   return `${depth * INDENT_STEP_PX}px`;
 };
 
-const columns: ColumnDef<TicketListItem, unknown>[] = [
-  {
-    id: "ticket",
-    header: "",
-    cell: ({ row }) => <TicketCell row={row} />,
-  },
-];
+const columns: ColumnDef<TicketListItem, unknown>[] = [{ id: "ticket" }];
 
-export const TicketList = (props: TicketListProps) => {
-  const { items, selectedItemId = null, onItemClick } = props;
-
-  const [expanded, setExpanded] = useState<ExpandedState>(true);
-
-  const table = useReactTable({
-    data: items,
-    columns,
-    state: { expanded },
-    onExpandedChange: setExpanded,
-    getSubRows: (row) => row.children,
-    getCoreRowModel: getCoreRowModel(),
-    getExpandedRowModel: getExpandedRowModel(),
-    getRowId: (row) => row.id,
-  });
-
-  return (
-    <Box>
-      {table.getRowModel().rows.map((row) => {
-        const item = row.original;
-        const isSelected = item.id === selectedItemId;
-        const canExpand = row.getCanExpand();
-
-        return (
-          <ResourceContextMenu key={row.id} actions={item.contextMenuActions ?? []}>
-            <HStack
-              paddingX="sm"
-              paddingY="xs"
-              gap="sm"
-              cursor="pointer"
-              borderBottomWidth="1px"
-              borderColor="border.muted"
-              background={isSelected ? "bg.active" : "transparent"}
-              _hover={{ background: isSelected ? "bg.active" : "bg.hover" }}
-              onClick={() => {
-                if (canExpand) {
-                  row.toggleExpanded();
-                } else {
-                  item.onClick?.();
-                  onItemClick?.(item);
-                }
-              }}
-              data-selected={isSelected ? "true" : undefined}
-              draggable={item.draggable}
-              onDragStart={(event) => {
-                if (!item.draggable) {
-                  return;
-                }
-
-                event.dataTransfer.setData("text/plain", item.id);
-                event.dataTransfer.effectAllowed = "move";
-              }}
-              onDragOver={(event) => {
-                if (!item.onDropTicket) {
-                  return;
-                }
-
-                event.preventDefault();
-                event.dataTransfer.dropEffect = "move";
-              }}
-              onDrop={(event) => {
-                if (!item.onDropTicket) {
-                  return;
-                }
-
-                event.preventDefault();
-                const ticketId = event.dataTransfer.getData("text/plain");
-                if (!ticketId || ticketId === item.id) {
-                  return;
-                }
-
-                item.onDropTicket(ticketId);
-              }}
-            >
-              {flexRender(row.getVisibleCells()[0].column.columnDef.cell, row.getVisibleCells()[0].getContext())}
-            </HStack>
-          </ResourceContextMenu>
-        );
-      })}
-    </Box>
-  );
-};
-
-interface TicketCellProps {
-  row: Row<TicketListItem>;
-}
-
-const TicketCell = (props: TicketCellProps) => {
-  const { row } = props;
-  const item = row.original;
-  const depth = row.depth;
+const renderLabel = (item: TicketListItem) => {
   const hasTicketId = item.ticketId.trim().length > 0;
-
   return (
-    <HStack gap="xs" flex="1" paddingLeft={getTicketListIndentation(depth)}>
-      {row.getCanExpand() ? <ExpandToggle row={row} /> : depth > 0 ? <TreeConnector /> : null}
-
-      {item.statusIcon && (
-        <Icon as={item.statusIcon} boxSize="16px" color={item.statusColor ?? "fg.muted"} flexShrink={0} />
-      )}
-
-      {hasTicketId && (
+    <HStack gap="xs" minW="0" flex="1">
+      {hasTicketId ? (
         <Text textStyle="label/S/regular" color="fg.muted" flexShrink={0} minW="70px">
           {item.ticketId}
         </Text>
-      )}
-
+      ) : null}
       <Text textStyle="label/S/regular" flex="1" truncate>
         {item.title}
       </Text>
+    </HStack>
+  );
+};
 
-      {typeof item.countBadge === "number" && (
+const renderEndContent = (item: TicketListItem) => {
+  const hasBadges = (item.badges?.length ?? 0) > 0 || (item.tagBadges?.length ?? 0) > 0;
+  const hasCount = typeof item.countBadge === "number";
+  const hasAssignee = Boolean(item.assigneeIcon);
+  const hasDate = Boolean(item.date);
+
+  if (!hasBadges && !hasCount && !hasAssignee && !hasDate) return null;
+
+  return (
+    <HStack gap="xs" flexShrink={0}>
+      {hasCount ? (
         <Badge variant="subtle" colorPalette="gray" size="sm" flexShrink={0}>
           {item.countBadge}
         </Badge>
-      )}
-
-      {((item.badges && item.badges.length > 0) || (item.tagBadges && item.tagBadges.length > 0)) && (
+      ) : null}
+      {hasBadges ? (
         <Wrap gap="2xs" flexShrink={0}>
           {item.badges?.map((badge) => (
             <Badge key={badge.label} variant="subtle" colorPalette={badge.color ?? "gray"} textStyle="label/XS/medium">
@@ -193,52 +97,115 @@ const TicketCell = (props: TicketCellProps) => {
             />
           ))}
         </Wrap>
-      )}
-
-      {item.assigneeIcon && <Box flexShrink={0}>{item.assigneeIcon}</Box>}
-
-      {item.date && (
+      ) : null}
+      {hasAssignee ? <Box flexShrink={0}>{item.assigneeIcon}</Box> : null}
+      {hasDate ? (
         <Text textStyle="label/XS/regular" color="fg.muted" flexShrink={0}>
           {item.date}
         </Text>
-      )}
+      ) : null}
     </HStack>
   );
 };
 
-interface ExpandToggleProps {
-  row: Row<TicketListItem>;
-}
+const buildListRowItem = (item: TicketListItem, hasChildren: boolean): ListRowItem => ({
+  id: item.id,
+  label: renderLabel(item),
+  icon: item.statusIcon ? <Icon as={item.statusIcon} boxSize="16px" /> : undefined,
+  iconColor: item.statusColor ?? "fg.muted",
+  endContent: renderEndContent(item),
+  isContainer: hasChildren,
+  contextMenuItems: item.contextMenuActions?.map((action) => ({
+    id: action.key,
+    label: action.label,
+    icon: action.icon ?? undefined,
+    disabled: action.isDisabled,
+    onAction: action.onClick,
+  })),
+});
 
-const ExpandToggle = (props: ExpandToggleProps) => {
-  const { row } = props;
-  const isExpanded = row.getIsExpanded();
+export const TicketList = (props: TicketListProps) => {
+  const { items, selectedItemId = null, onItemClick } = props;
+  const [expanded, setExpanded] = useState<ExpandedState>(true);
+
+  const table = useReactTable({
+    data: items,
+    columns,
+    state: { expanded },
+    onExpandedChange: setExpanded,
+    getSubRows: (row) => row.children,
+    getCoreRowModel: getCoreRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
+    getRowId: (row) => row.id,
+  });
 
   return (
-    <Box
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-      flexShrink={0}
-      width="16px"
-      height="16px"
-      data-expanded={isExpanded ? "true" : undefined}
-      aria-label={isExpanded ? "Collapse group" : "Expand group"}
-    >
-      <Icon
-        as={ChevronRight}
-        boxSize="14px"
-        color="fg.muted"
-        transform={isExpanded ? "rotate(90deg)" : "rotate(0deg)"}
-        transition="transform 0.15s ease"
-      />
+    <Box>
+      {table.getRowModel().rows.map((row) => (
+        <TicketListRow key={row.id} row={row} selectedItemId={selectedItemId} onItemClick={onItemClick} />
+      ))}
     </Box>
   );
 };
 
-const TreeConnector = () => (
-  <Box width="16px" height="16px" position="relative" flexShrink={0}>
-    <Box position="absolute" left="7px" top="0" bottom="50%" borderLeftWidth="1px" borderColor="border.muted" />
-    <Box position="absolute" left="7px" top="50%" width="8px" borderBottomWidth="1px" borderColor="border.muted" />
-  </Box>
-);
+interface TicketListRowProps {
+  row: Row<TicketListItem>;
+  selectedItemId: string | null;
+  onItemClick?: (item: TicketListItem) => void;
+}
+
+const TicketListRow = (props: TicketListRowProps) => {
+  const { row, selectedItemId, onItemClick } = props;
+  const item = row.original;
+  const canExpand = row.getCanExpand();
+  const isSelected = item.id === selectedItemId;
+  const rowItem = buildListRowItem(item, canExpand);
+
+  const handleActivate = () => {
+    if (canExpand) {
+      row.toggleExpanded();
+      return;
+    }
+    item.onClick?.();
+    onItemClick?.(item);
+  };
+
+  return (
+    <Box
+      borderBottomWidth="1px"
+      borderColor="border.muted"
+      draggable={item.draggable}
+      onDragStart={(event) => {
+        if (!item.draggable) return;
+        event.stopPropagation();
+        event.dataTransfer.setData("text/plain", item.id);
+        event.dataTransfer.effectAllowed = "move";
+      }}
+      onDragOver={(event) => {
+        if (!item.onDropTicket) return;
+        event.preventDefault();
+        event.stopPropagation();
+        event.dataTransfer.dropEffect = "move";
+      }}
+      onDrop={(event) => {
+        if (!item.onDropTicket) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const ticketId = event.dataTransfer.getData("text/plain");
+        if (!ticketId || ticketId === item.id) return;
+        item.onDropTicket(ticketId);
+      }}
+    >
+      <ListRow
+        {...rowItem}
+        variant="tree"
+        depth={row.depth}
+        isSelected={isSelected}
+        isExpanded={row.getIsExpanded()}
+        showExpandToggle={canExpand}
+        onActivate={handleActivate}
+        onToggleExpand={() => row.toggleExpanded()}
+      />
+    </Box>
+  );
+};

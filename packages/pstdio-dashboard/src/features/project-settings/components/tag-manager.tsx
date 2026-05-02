@@ -2,7 +2,7 @@ import { Button, Editable, Flex, HStack, Icon, Input, Menu, Stack, Table } from 
 import { closestCenter, DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { DeleteConfirmationModal, MenuItem, toaster } from "@pstdio/ui";
+import { DeleteConfirmationModal, ListRow, toaster } from "@pstdio/ui";
 import { ChevronDown, GripVertical, Plus, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import {
@@ -249,13 +249,16 @@ export const TagManager = (props: TagManagerProps) => {
                 <Menu.Positioner>
                   <Menu.Content minW="160px" bg="bg">
                     {TAG_TYPES.map((t) => (
-                      <MenuItem
-                        key={t.value}
-                        id={t.value}
-                        primaryLabel={t.label}
-                        isSelected={draftType === t.value}
-                        onClick={() => setDraftType(t.value)}
-                      />
+                      <Menu.Item key={t.value} value={t.value} asChild>
+                        <ListRow
+                          asChild
+                          variant="compact"
+                          id={t.value}
+                          label={t.label}
+                          isSelected={draftType === t.value}
+                          onActivate={() => setDraftType(t.value)}
+                        />
+                      </Menu.Item>
                     ))}
                   </Menu.Content>
                 </Menu.Positioner>

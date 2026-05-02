@@ -1,5 +1,5 @@
 import { Button, Icon, Menu } from "@chakra-ui/react";
-import { MenuItem } from "@pstdio/ui";
+import { ListRow } from "@pstdio/ui";
 import { ChevronDown } from "lucide-react";
 import { getIconComponent } from "@/features/project-settings/components/tag-icon-color-picker";
 import type { TicketTag } from "@/features/ticket-list/types";
@@ -53,17 +53,20 @@ export const SingleTagSelector = (props: SingleTagSelectorProps) => {
       <Menu.Positioner>
         <Menu.Content bg="bg">
           {tag.options.map((option) => (
-            <MenuItem
-              key={option.id}
-              id={option.id}
-              primaryLabel={option.name}
-              isSelected={selectedSet.has(option.id)}
-              isDisabled={isDisabled || !onChange}
-              leftIcon={getIconComponent(option.icon)}
-              leftIconColor={`${option.color}.500`}
-              tooltipLabel={option.description}
-              onClick={() => handleToggle(option.id)}
-            />
+            <Menu.Item key={option.id} value={option.id} role="option" asChild>
+              <ListRow
+                asChild
+                variant="compact"
+                id={option.id}
+                label={option.name}
+                icon={<Icon as={getIconComponent(option.icon)} boxSize="16px" />}
+                iconColor={`${option.color}.500`}
+                tooltip={option.description ?? undefined}
+                disabled={isDisabled || !onChange}
+                isSelected={selectedSet.has(option.id)}
+                onActivate={() => handleToggle(option.id)}
+              />
+            </Menu.Item>
           ))}
         </Menu.Content>
       </Menu.Positioner>

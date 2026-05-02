@@ -1,7 +1,7 @@
-import { Box, Button, Flex, Menu, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, Icon, Menu, Text } from "@chakra-ui/react";
 import { Check, ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { MenuItem } from "./menu-item";
+import { ListRow } from "./list-row/list-row";
 import { Tooltip } from "./tooltip";
 
 interface Option {
@@ -131,13 +131,16 @@ export const SelectionInput = (props: SelectionInputProps) => {
               <Menu.Positioner>
                 <Menu.Content>
                   {options.map((opt) => (
-                    <MenuItem
-                      key={opt.id}
-                      primaryLabel={opt.name}
-                      onClick={() => handleSelect(opt.id)}
-                      rightIcon={multiSelect && isSelected(opt.id) ? Check : undefined}
-                      rightIconSize="12px"
-                    />
+                    <Menu.Item key={opt.id} value={opt.id} asChild>
+                      <ListRow
+                        asChild
+                        variant="compact"
+                        id={opt.id}
+                        label={opt.name}
+                        endContent={multiSelect && isSelected(opt.id) ? <Icon as={Check} boxSize="12px" /> : undefined}
+                        onActivate={() => handleSelect(opt.id)}
+                      />
+                    </Menu.Item>
                   ))}
                 </Menu.Content>
               </Menu.Positioner>
@@ -162,13 +165,16 @@ export const SelectionInput = (props: SelectionInputProps) => {
               <Menu.Positioner>
                 <Menu.Content>
                   {options.map((opt) => (
-                    <MenuItem
-                      key={opt.id}
-                      primaryLabel={opt.name}
-                      onClick={() => handleSelect(opt.id)}
-                      rightIcon={multiSelect && isSelected(opt.id) ? Check : undefined}
-                      rightIconSize="12px"
-                    />
+                    <Menu.Item key={opt.id} value={opt.id} asChild>
+                      <ListRow
+                        asChild
+                        variant="compact"
+                        id={opt.id}
+                        label={opt.name}
+                        endContent={multiSelect && isSelected(opt.id) ? <Icon as={Check} boxSize="12px" /> : undefined}
+                        onActivate={() => handleSelect(opt.id)}
+                      />
+                    </Menu.Item>
                   ))}
                 </Menu.Content>
               </Menu.Positioner>

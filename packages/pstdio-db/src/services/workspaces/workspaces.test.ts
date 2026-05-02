@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import type { DbClient } from "../../db/connection.pglite";
 import { createDb } from "../../db/connection.pglite";
+import { workspaces } from "../../db/schemas.pg";
 import { createAttemptStatusesDBService } from "../attempt-statuses/attempt-statuses";
 import { createProjectsDBService } from "../projects/projects";
 import { createTicketsDBService } from "../tickets/tickets";
@@ -160,6 +161,36 @@ describe("createWorkspacesDBService", () => {
     });
 
     expect(ws2.workspace_shorthand).toBe("PS-1_A2");
+  });
+
+  test("orphaned workspaces count toward shorthand sequence", async () => {
+    await setup();
+
+    const timestamp = new Date().toISOString();
+    await db.insert(workspaces).values({
+      id: crypto.randomUUID(),
+      project_id: projectId,
+      name: "PS-1_A1",
+      branch: null,
+      worktree_path: null,
+      attempt_status_id: null,
+      archived: false,
+      workspace_shorthand: "PS-1_A1",
+      initializing: false,
+      setup_error: null,
+      startup_log_file_id: null,
+      created_at: timestamp,
+      updated_at: timestamp,
+      deleted_at: null,
+    });
+
+    const ws = await workspacesService.create({
+      project_id: projectId,
+      ticket_id: ticketId,
+      ticket_shorthand: ticketShorthand,
+    });
+
+    expect(ws.workspace_shorthand).toBe("PS-1_A2");
   });
 
   test("updateAttemptStatusId sets attempt status on workspace", async () => {

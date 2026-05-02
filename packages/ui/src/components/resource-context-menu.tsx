@@ -1,6 +1,6 @@
 import { Menu, Portal } from "@chakra-ui/react";
 import type { ComponentProps, ReactNode } from "react";
-import { MenuItem } from "./menu-item";
+import { ListRow } from "./list-row/list-row";
 
 type MenuRootProps = ComponentProps<typeof Menu.Root>;
 
@@ -9,7 +9,7 @@ export interface ResourceContextAction {
   label: string;
   onClick: () => void;
   isDisabled?: boolean;
-  icon?: ComponentProps<typeof MenuItem>["leftIcon"];
+  icon?: ReactNode;
 }
 
 interface ResourceContextMenuProps {
@@ -40,13 +40,16 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
         <Menu.Positioner>
           <Menu.Content minW={contentMinWidth} bg={contentBackground}>
             {actions.map((action) => (
-              <MenuItem
-                key={action.key}
-                primaryLabel={action.label}
-                leftIcon={action.icon ?? null}
-                isDisabled={action.isDisabled}
-                onClick={action.onClick}
-              />
+              <Menu.Item key={action.key} value={action.key} asChild>
+                <ListRow
+                  asChild
+                  variant="compact"
+                  label={action.label}
+                  icon={action.icon}
+                  disabled={action.isDisabled}
+                  onActivate={action.onClick}
+                />
+              </Menu.Item>
             ))}
           </Menu.Content>
         </Menu.Positioner>

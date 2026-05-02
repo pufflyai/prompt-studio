@@ -1,26 +1,17 @@
-import {
-  Box,
-  createTreeCollection,
-  Flex,
-  HStack,
-  IconButton,
-  Input,
-  Menu,
-  Stack,
-  Text,
-  TreeView,
-} from "@chakra-ui/react";
-import { EmptyState, ScrollArea } from "@pstdio/ui";
-import { List, ListTree } from "lucide-react";
+import { Box, Flex, HStack, Icon, IconButton, Input, Menu, Stack, Text } from "@chakra-ui/react";
+import { EmptyState, Header, ScrollArea, TreeList, type TreeListNode } from "@pstdio/ui";
+import { FileText, Folder, List, ListTree, type LucideIcon } from "lucide-react";
 import { type ReactNode, type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 import {
   buildChangedFilesTree,
   type ChangedFilesViewMode,
   type ChangedFileTreeNode,
 } from "../utils/build-changed-files-tree";
-import { type FileIconInfo, WorkspaceFileTreeNode } from "./workspace-file-tree-node";
 
-export type { FileIconInfo } from "./workspace-file-tree-node";
+export interface FileIconInfo {
+  icon: LucideIcon;
+  color: string;
+}
 
 const clampPanelWidth = (width: number, min: number, max: number) => Math.min(Math.max(width, min), max);
 
@@ -136,6 +127,71 @@ interface FileListPanelProps {
   showFilter?: boolean;
 }
 
+const getFilePathParts = (filePath: string) => {
+  const lastSlashIndex = filePath.lastIndexOf("/");
+  if (lastSlashIndex < 0) {
+    return { fileName: filePath, dirPath: "" };
+  }
+
+  return {
+    fileName: filePath.slice(lastSlashIndex + 1),
+    dirPath: filePath.slice(0, lastSlashIndex),
+  };
+};
+
+const renderFileLabel = (node: ChangedFileTreeNode, viewMode: ChangedFilesViewMode, filePath: string) => {
+  const { fileName, dirPath } = getFilePathParts(filePath);
+  if (viewMode !== "flat" || !dirPath) return node.name;
+
+  return (
+    <Text textStyle="label/S/regular" truncate>
+      <Text as="span" color="fg.default">
+        {fileName}
+      </Text>{" "}
+      <Text as="span" color="fg.muted">
+        {dirPath}
+      </Text>
+    </Text>
+  );
+};
+
+const toTreeListNodes = (input: {
+  nodes: ChangedFileTreeNode[];
+  viewMode: ChangedFilesViewMode;
+  onSelectPath: (path: string) => void;
+  resolveFileIcon?: (path: string) => FileIconInfo;
+}): TreeListNode[] => {
+  const { nodes, viewMode, onSelectPath, resolveFileIcon } = input;
+
+  return nodes.map((node) => {
+    if (node.type === "folder") {
+      return {
+        id: node.id,
+        label: node.name,
+        icon: <Icon as={Folder} boxSize="14px" />,
+        isContainer: true,
+        children: toTreeListNodes({
+          nodes: node.children ?? [],
+          viewMode,
+          onSelectPath,
+          resolveFileIcon,
+        }),
+      };
+    }
+
+    const filePath = node.id.replace(/^file:/, "");
+    const fileIcon = resolveFileIcon?.(filePath) ?? { icon: FileText, color: "fg.subtle" };
+
+    return {
+      id: node.id,
+      label: renderFileLabel(node, viewMode, filePath),
+      icon: <Icon as={fileIcon.icon} boxSize="14px" />,
+      iconColor: fileIcon.color,
+      onActivate: () => onSelectPath(filePath),
+    };
+  });
+};
+
 export const FileListPanel = (props: FileListPanelProps) => {
   const {
     title,
@@ -152,18 +208,29 @@ export const FileListPanel = (props: FileListPanelProps) => {
     showFilter = true,
   } = props;
   const fileTree = buildChangedFilesTree(paths, viewMode);
-  const expandedFolders = viewMode === "nested" ? collectExpandedFolderIds(fileTree) : [];
-  const collection = createTreeCollection<ChangedFileTreeNode>({
-    rootNode: { id: "__root__", name: "root", type: "folder", children: fileTree },
-    nodeToValue: (node) => node.id,
-    nodeToString: (node) => node.name,
-    nodeToChildren: (node) => node.children ?? [],
-  });
+  const treeNodes = toTreeListNodes({ nodes: fileTree, viewMode, onSelectPath, resolveFileIcon });
+  const [expanded, setExpanded] = useState<Set<string>>(
+    () => new Set(viewMode === "nested" ? collectExpandedFolderIds(fileTree) : []),
+  );
+  const previousViewModeRef = useRef(viewMode);
+
+  if (previousViewModeRef.current !== viewMode) {
+    previousViewModeRef.current = viewMode;
+    setExpanded(new Set(viewMode === "nested" ? collectExpandedFolderIds(fileTree) : []));
+  }
+
+  const toggle = (id: string) =>
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   return (
     <Stack h="full" minH="0" minW="0" w="full" gap="0" overflow="hidden">
       {showHeader && (
-        <Flex h="41px" minH="41px" align="center" justify="space-between" px="sm" borderBottomWidth="1px">
+        <Header variant="main" justifyContent="space-between" borderBottomWidth="1px" borderColor="border.muted">
           <Text textStyle="label/S/medium" color="foreground.secondary" truncate>
             {title} ({paths.length})
           </Text>
@@ -191,7 +258,7 @@ export const FileListPanel = (props: FileListPanelProps) => {
               </Menu.Content>
             </Menu.Positioner>
           </Menu.Root>
-        </Flex>
+        </Header>
       )}
 
       {showFilter && (
@@ -213,28 +280,13 @@ export const FileListPanel = (props: FileListPanelProps) => {
         contentProps={{ p: "xs", w: "full", style: { minWidth: 0 } }}
       >
         {paths.length > 0 ? (
-          <TreeView.Root
-            collection={collection}
-            aria-label={title}
-            defaultExpandedValue={expandedFolders}
-            w="full"
-            minW="0"
-          >
-            <TreeView.Tree w="full" minW="0">
-              <TreeView.Node
-                render={({ node, nodeState }) => (
-                  <WorkspaceFileTreeNode
-                    node={node}
-                    nodeState={nodeState}
-                    selectedPath={selectedPath}
-                    viewMode={viewMode}
-                    onSelectPath={onSelectPath}
-                    resolveFileIcon={resolveFileIcon}
-                  />
-                )}
-              />
-            </TreeView.Tree>
-          </TreeView.Root>
+          <TreeList
+            sections={[{ id: "files", nodes: treeNodes }]}
+            expandedNodeIds={[...expanded]}
+            activeNodeId={selectedPath ? `file:${selectedPath}` : null}
+            rowVariant="tree"
+            onToggleNode={toggle}
+          />
         ) : (
           <Box px="xs" py="xs">
             <EmptyState title={emptyTitle} size="sm" textAlign="left" alignItems="flex-start" />

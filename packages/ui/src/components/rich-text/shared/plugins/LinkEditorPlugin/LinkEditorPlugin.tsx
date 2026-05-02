@@ -40,7 +40,7 @@ function LinkEditor({
 }): React.JSX.Element {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const updateLinkEditorRef = useRef<() => boolean>(() => true);
+  const updateLinkEditorRef = useRef<() => void>(() => undefined);
   const [linkUrl, setLinkUrl] = useState("");
   const [editedLinkUrl, setEditedLinkUrl] = useState("https://");
   const [lastSelection, setLastSelection] = useState<BaseSelection | null>(null);
@@ -92,8 +92,6 @@ function LinkEditor({
       setIsLinkEditMode(false);
       setLinkUrl("");
     }
-
-    return true;
   };
 
   useEffect(() => {

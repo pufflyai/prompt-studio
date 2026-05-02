@@ -12,7 +12,7 @@ import {
 import { ArrowDownAZ, ArrowUpAZ, MoreVertical } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { MenuItem } from "../menu-item";
+import { ListRow } from "../list-row/list-row";
 import { Tooltip } from "../tooltip";
 import { buildColumns } from "./build-columns";
 import { PaginationFooter } from "./pagination-footer";
@@ -145,20 +145,35 @@ export const DataTable = (props: DataTableProps) => {
                             <Portal>
                               <Menu.Positioner>
                                 <Menu.Content zIndex="popover" bg="bg">
-                                  <MenuItem
-                                    onClick={() => header.column.toggleSorting(false)}
-                                    primaryLabel="Sort ascending"
-                                    isDisabled={header.column.getIsSorted() === "asc"}
-                                    leftIcon={ArrowUpAZ}
-                                  />
-                                  <MenuItem
-                                    onClick={() => header.column.toggleSorting(true)}
-                                    primaryLabel="Sort descending"
-                                    isDisabled={header.column.getIsSorted() === "desc"}
-                                    leftIcon={ArrowDownAZ}
-                                  />
+                                  <Menu.Item value="sort-asc" asChild>
+                                    <ListRow
+                                      asChild
+                                      variant="compact"
+                                      label="Sort ascending"
+                                      icon={<ChakraIcon as={ArrowUpAZ} boxSize="16px" />}
+                                      disabled={header.column.getIsSorted() === "asc"}
+                                      onActivate={() => header.column.toggleSorting(false)}
+                                    />
+                                  </Menu.Item>
+                                  <Menu.Item value="sort-desc" asChild>
+                                    <ListRow
+                                      asChild
+                                      variant="compact"
+                                      label="Sort descending"
+                                      icon={<ChakraIcon as={ArrowDownAZ} boxSize="16px" />}
+                                      disabled={header.column.getIsSorted() === "desc"}
+                                      onActivate={() => header.column.toggleSorting(true)}
+                                    />
+                                  </Menu.Item>
                                   {header.column.getIsSorted() && (
-                                    <MenuItem onClick={() => header.column.clearSorting()} primaryLabel="Clear sort" />
+                                    <Menu.Item value="clear-sort" asChild>
+                                      <ListRow
+                                        asChild
+                                        variant="compact"
+                                        label="Clear sort"
+                                        onActivate={() => header.column.clearSorting()}
+                                      />
+                                    </Menu.Item>
                                   )}
                                 </Menu.Content>
                               </Menu.Positioner>

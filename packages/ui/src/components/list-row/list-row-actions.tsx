@@ -1,0 +1,71 @@
+import { Box, HStack, IconButton, Menu } from "@chakra-ui/react";
+import { Tooltip } from "../tooltip";
+import type { ListRowAction } from "./list-row.types";
+import { SearchableActionMenu } from "./searchable-action-menu";
+
+interface RowActionsProps {
+  actions: ListRowAction[];
+  context: { sectionId?: string; nodeId?: string };
+}
+
+export const RowActions = (props: RowActionsProps) => {
+  const { actions, context } = props;
+  if (actions.length === 0) return null;
+
+  return (
+    <HStack
+      gap="0"
+      opacity="0"
+      pointerEvents="none"
+      _groupHover={{ opacity: "1", pointerEvents: "auto" }}
+      _groupFocusWithin={{ opacity: "1", pointerEvents: "auto" }}
+      transition="opacity 120ms ease"
+      onClick={(event) => event.stopPropagation()}
+    >
+      {actions.map((action) => {
+        if (action.menuItems && action.menuItems.length >= 8) {
+          return <SearchableActionMenu key={action.id} action={action} />;
+        }
+
+        if (action.menuItems && action.menuItems.length > 0) {
+          return (
+            <Menu.Root key={action.id}>
+              <Menu.Trigger asChild>
+                <IconButton variant="ghost" size="2xs" aria-label={action.label}>
+                  {action.icon}
+                </IconButton>
+              </Menu.Trigger>
+              <Menu.Positioner>
+                <Menu.Content minW="160px" bg="bg">
+                  {action.menuItems.map((item) => (
+                    <Tooltip key={item.id} content={item.description} disabled={!item.description} openDelay={300}>
+                      <Menu.Item value={item.id} disabled={item.disabled} onClick={() => item.onAction?.()}>
+                        {item.icon ? <Box mr="2">{item.icon as never}</Box> : null}
+                        {item.label}
+                      </Menu.Item>
+                    </Tooltip>
+                  ))}
+                </Menu.Content>
+              </Menu.Positioner>
+            </Menu.Root>
+          );
+        }
+
+        return (
+          <IconButton
+            key={action.id}
+            variant="ghost"
+            size="2xs"
+            aria-label={action.label}
+            onClick={(event) => {
+              event.stopPropagation();
+              action.onAction?.(context);
+            }}
+          >
+            {action.icon}
+          </IconButton>
+        );
+      })}
+    </HStack>
+  );
+};

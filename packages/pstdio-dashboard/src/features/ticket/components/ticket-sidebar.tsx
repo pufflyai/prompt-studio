@@ -4,13 +4,13 @@ import {
   resolveSessionIndicatorIcon,
   type SessionCompletionStatus,
   Sidebar,
-  type SidebarActionMenuItem,
-  type SidebarNavigateEvent,
-  type SidebarNode,
-  type SidebarSection,
+  type TreeListActionMenuItem,
+  type TreeListNavigateEvent,
+  type TreeListNode,
+  type TreeListSection,
   WorkspaceBadge,
 } from "@pstdio/ui";
-import { Circle, FileCode, FileImage, FileJson, FileSpreadsheet, FileText, Plus } from "lucide-react";
+import { ArrowLeft, Circle, FileCode, FileImage, FileJson, FileSpreadsheet, FileText, Plus } from "lucide-react";
 import { createElement, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ProjectMenu } from "@/features/project/components/project-menu";
@@ -50,9 +50,9 @@ interface TicketSidebarProps {
   onSelectPlanning?: () => void;
   header?: ReactNode;
   footer?: ReactNode;
-  resolveTicketContextMenuItems?: () => SidebarActionMenuItem[];
-  resolveWorkspaceContextMenuItems?: (workspace: TicketAttempt) => SidebarActionMenuItem[];
-  resolveSessionContextMenuItems?: (session: WorkspaceSessionEntry) => SidebarActionMenuItem[];
+  resolveTicketContextMenuItems?: () => TreeListActionMenuItem[];
+  resolveWorkspaceContextMenuItems?: (workspace: TicketAttempt) => TreeListActionMenuItem[];
+  resolveSessionContextMenuItems?: (session: WorkspaceSessionEntry) => TreeListActionMenuItem[];
 }
 
 const PLANNING_ITEM_ID = "planning";
@@ -68,12 +68,13 @@ const getFileIcon = (fileName: string) => {
   return <FileText size={14} />;
 };
 
-const buildPlanningSection = (): SidebarSection => ({
+const buildPlanningSection = (): TreeListSection => ({
   id: "planning",
   nodes: [
     {
       id: PLANNING_ITEM_ID,
-      label: "<- Planning",
+      label: "Planning",
+      icon: <ArrowLeft size={14} />,
       isNavigable: true,
       navigationIntent: { id: "select-planning" },
     },
@@ -82,9 +83,9 @@ const buildPlanningSection = (): SidebarSection => ({
 
 const buildFilesSection = (
   files: SelectableTicketFile[],
-  resolveTicketContextMenuItems?: () => SidebarActionMenuItem[],
-): SidebarSection => {
-  const nodes: SidebarNode[] = [
+  resolveTicketContextMenuItems?: () => TreeListActionMenuItem[],
+): TreeListSection => {
+  const nodes: TreeListNode[] = [
     {
       id: `file:${TICKET_CONTENT_ITEM_ID}`,
       label: "Ticket",
@@ -110,7 +111,7 @@ export const buildSubTicketsSection = (
   label: string,
   knownSubTicketIds: string[] = [],
   onSelectSubTicket?: (ticketShorthand: string) => void,
-): SidebarSection | null => {
+): TreeListSection | null => {
   if (subTickets.length === 0) {
     return null;
   }
@@ -118,7 +119,7 @@ export const buildSubTicketsSection = (
   const knownTicketIdSet = new Set(knownSubTicketIds);
   const hasKnownTickets = knownTicketIdSet.size > 0;
 
-  const nodes: SidebarNode[] = subTickets.map((subTicket) => {
+  const nodes: TreeListNode[] = subTickets.map((subTicket) => {
     const label = subTicket.shorthand ? `${subTicket.shorthand} ${subTicket.title}` : subTicket.title;
     const canSelect =
       Boolean(onSelectSubTicket) &&
@@ -149,7 +150,7 @@ export const buildSubTicketsSection = (
 };
 
 export const handleTicketSidebarNavigate = (
-  event: SidebarNavigateEvent,
+  event: TreeListNavigateEvent,
   handlers: {
     onSelectFile: (fileId: string) => void;
     onSelectPlanning?: () => void;
@@ -191,11 +192,11 @@ export const buildWorkspacesSection = (
   diffTotalsByWorkspaceId: Map<string, { additions: number; deletions: number }>,
   sessionsByWorkspaceId: Map<string, WorkspaceSessionEntry[]>,
   onCreateWorkspace?: () => void,
-  resolveWorkspaceContextMenuItems?: (workspace: TicketAttempt) => SidebarActionMenuItem[],
-): SidebarSection => {
+  resolveWorkspaceContextMenuItems?: (workspace: TicketAttempt) => TreeListActionMenuItem[],
+): TreeListSection => {
   const sortedWorkspaces = sortWorkspacesByLatestSession(workspaces, sessionsByWorkspaceId);
 
-  const nodes: SidebarNode[] = sortedWorkspaces.map((workspace) => {
+  const nodes: TreeListNode[] = sortedWorkspaces.map((workspace) => {
     const attemptStatus = workspace.attemptStatusId ? attemptStatusMap.get(workspace.attemptStatusId) : undefined;
     const diffTotals = diffTotalsByWorkspaceId.get(workspace.id);
 
@@ -245,9 +246,9 @@ const buildSessionsSection = (
   workspaceId: string,
   workspaceShorthand: string,
   onCreateWorkspaceSessionDraft?: (workspaceId: string) => void,
-  resolveSessionContextMenuItems?: (session: WorkspaceSessionEntry) => SidebarActionMenuItem[],
-): SidebarSection => {
-  const nodes: SidebarNode[] = sessions.map((session) => ({
+  resolveSessionContextMenuItems?: (session: WorkspaceSessionEntry) => TreeListActionMenuItem[],
+): TreeListSection => {
+  const nodes: TreeListNode[] = sessions.map((session) => ({
     id: `session:${session.id}`,
     label: session.title,
     icon: sessionIcon(session.status),
@@ -313,7 +314,7 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
     onSelectSubTicket,
   );
 
-  const sections: SidebarSection[] = [
+  const sections: TreeListSection[] = [
     ...(onSelectPlanning ? [buildPlanningSection()] : []),
     buildFilesSection(files, resolveTicketContextMenuItems),
     ...(subTicketsSection ? [subTicketsSection] : []),
@@ -345,7 +346,7 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
     workspaceSessionIds: new Set(sessions.map((session) => session.id)),
   });
 
-  const handleNavigate = (event: SidebarNavigateEvent) => {
+  const handleNavigate = (event: TreeListNavigateEvent) => {
     handleTicketSidebarNavigate(event, {
       onSelectFile,
       onSelectPlanning,

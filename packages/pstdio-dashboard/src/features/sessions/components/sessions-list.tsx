@@ -1,6 +1,6 @@
-import { Menu, Skeleton, Stack, Text } from "@chakra-ui/react";
+import { Icon, Menu, Skeleton, Stack, Text } from "@chakra-ui/react";
 import type { SessionCompletionStatus } from "@pstdio/ui";
-import { MenuItem, resolveSessionIndicatorColor, resolveSessionIndicatorIcon } from "@pstdio/ui";
+import { ListRow, resolveSessionIndicatorColor, resolveSessionIndicatorIcon } from "@pstdio/ui";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { Session } from "../types";
@@ -52,19 +52,45 @@ export const SessionsList = (props: SessionsListProps) => {
             </Text>
 
             {group.sessions.map((session) => (
-              <MenuItem
-                key={session.id}
-                asChild={Boolean(projectId)}
-                primaryLabel={session.title}
-                tooltipLabel={session.title}
-                variant="compact"
-                isSelected={session.id === selectedSessionId}
-                leftIcon={resolveSessionIndicatorIcon(session.status as SessionCompletionStatus)}
-                leftIconColor={resolveSessionIndicatorColor(session.status as SessionCompletionStatus)}
-                onClick={() => onSelectSession(session.id)}
-              >
-                {projectId ? <Link to={`/projects/${projectId}/sessions/${session.id}`} /> : undefined}
-              </MenuItem>
+              <Menu.Item key={session.id} value={session.id} asChild>
+                {projectId ? (
+                  <Link to={`/projects/${projectId}/sessions/${session.id}`}>
+                    <ListRow
+                      asChild
+                      variant="compact"
+                      id={session.id}
+                      label={session.title}
+                      tooltip={session.title}
+                      icon={
+                        <Icon
+                          as={resolveSessionIndicatorIcon(session.status as SessionCompletionStatus)}
+                          boxSize="16px"
+                        />
+                      }
+                      iconColor={resolveSessionIndicatorColor(session.status as SessionCompletionStatus)}
+                      isSelected={session.id === selectedSessionId}
+                      onActivate={() => onSelectSession(session.id)}
+                    />
+                  </Link>
+                ) : (
+                  <ListRow
+                    asChild
+                    variant="compact"
+                    id={session.id}
+                    label={session.title}
+                    tooltip={session.title}
+                    icon={
+                      <Icon
+                        as={resolveSessionIndicatorIcon(session.status as SessionCompletionStatus)}
+                        boxSize="16px"
+                      />
+                    }
+                    iconColor={resolveSessionIndicatorColor(session.status as SessionCompletionStatus)}
+                    isSelected={session.id === selectedSessionId}
+                    onActivate={() => onSelectSession(session.id)}
+                  />
+                )}
+              </Menu.Item>
             ))}
           </Stack>
         ))}

@@ -58,11 +58,6 @@ export const registerShortcutBindings = (input: {
     setIsCommandPaletteOpen,
     setCommandPaletteView,
     navigate,
-    currentTicket,
-    currentTicketIndex,
-    currentWorkspaceIndex,
-    visibleTickets,
-    workspaceShorthand,
   } = input;
 
   const openTicketCreateFlow = () => {
@@ -80,36 +75,6 @@ export const registerShortcutBindings = (input: {
     }
 
     setSessionModalState("bubble");
-  };
-
-  const navigateSibling = (direction: -1 | 1) => {
-    if (!currentTicket) {
-      return;
-    }
-
-    if (workspaceShorthand && currentWorkspaceIndex >= 0) {
-      const attempts = currentTicket.attempts ?? [];
-      const nextWorkspace = attempts[currentWorkspaceIndex + direction];
-      if (!nextWorkspace) {
-        return;
-      }
-
-      navigate({
-        to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
-        params: { projectId, ticketShorthand: currentTicket.shorthand, workspaceShorthand: nextWorkspace.shorthand },
-      });
-      return;
-    }
-
-    const nextTicket = visibleTickets[currentTicketIndex + direction];
-    if (!nextTicket) {
-      return;
-    }
-
-    navigate({
-      to: "/projects/$projectId/tickets/$ticketShorthand",
-      params: { projectId, ticketShorthand: nextTicket.shorthand },
-    });
   };
 
   const unregisterHotkeys = [
@@ -158,22 +123,6 @@ export const registerShortcutBindings = (input: {
         setIsCommandPaletteOpen(true);
       },
       { enabled: activeScopes.includes("global"), ignoreInputs: false },
-    ),
-    hotkeyManager.register(
-      getHotkeyBinding("nav-previous"),
-      (event) => {
-        event.preventDefault?.();
-        navigateSibling(-1);
-      },
-      { enabled: activeScopes.includes("ticket"), ignoreInputs: false },
-    ),
-    hotkeyManager.register(
-      getHotkeyBinding("nav-next"),
-      (event) => {
-        event.preventDefault?.();
-        navigateSibling(1);
-      },
-      { enabled: activeScopes.includes("ticket"), ignoreInputs: false },
     ),
     hotkeyManager.register(
       getHotkeyBinding("open-shortcut-help"),

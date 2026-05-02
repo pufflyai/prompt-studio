@@ -20,11 +20,11 @@ import {
   resolveSessionIndicatorIcon,
   type SessionCompletionStatus,
 } from "../session-indicator";
-import type { SidebarSection } from "../sidebar-tree/sidebar-tree.types";
+import type { TreeListSection } from "../tree-list/tree-list.types";
 import { Sidebar } from "./sidebar";
 import { useSidebarStore } from "./sidebar.store";
 
-const sidebarSections: SidebarSection[] = [
+const sidebarSections: TreeListSection[] = [
   {
     id: "top-level",
     nodes: [
@@ -146,7 +146,7 @@ const sessionStatuses: SessionCompletionStatus[] = [
   "cancelled",
 ];
 
-const coloredSessionSections: SidebarSection[] = [
+const coloredSessionSections: TreeListSection[] = [
   {
     id: "sessions",
     label: "Sessions",
@@ -164,7 +164,7 @@ const coloredSessionSections: SidebarSection[] = [
   },
 ];
 
-const SidebarShell = (props: { storageKey: string; sections?: SidebarSection[] }) => {
+const SidebarShell = (props: { storageKey: string; sections?: TreeListSection[] }) => {
   const { storageKey, sections = sidebarSections } = props;
   const [activeNodeId, setActiveNodeId] = useState<string | null>("overview");
   const [navigationOutput, setNavigationOutput] = useState("No navigation yet");

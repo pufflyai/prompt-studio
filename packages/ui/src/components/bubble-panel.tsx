@@ -1,6 +1,7 @@
 import { Box, chakra, Flex, HStack, type HTMLChakraProps, IconButton, Portal, Spacer } from "@chakra-ui/react";
 import { Minus, SquareArrowOutUpRight } from "lucide-react";
 import { forwardRef, type ReactNode } from "react";
+import { Header } from "./header";
 import { Tooltip } from "./tooltip";
 
 export interface BubblePanelProps {
@@ -59,7 +60,7 @@ export const BubblePanel = forwardRef<HTMLDivElement, BubblePanelProps>(function
         {...containerProps}
       >
         <Flex direction="column" h="full">
-          <HStack alignItems="center" gap="sm" px="xs" pt="md" pb="xs">
+          <Header variant="main" gap="sm" flexShrink={0}>
             <HStack gap="1" minW="0">
               {menu}
             </HStack>
@@ -80,7 +81,7 @@ export const BubblePanel = forwardRef<HTMLDivElement, BubblePanelProps>(function
                 </Tooltip>
               ) : null}
             </HStack>
-          </HStack>
+          </Header>
           <Box flex="1" minH={0} display="flex" flexDirection="column" gap="sm">
             {children}
           </Box>

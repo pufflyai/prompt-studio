@@ -1,110 +1,10 @@
-import { Box, chakra, HStack, Icon, IconButton, Menu, Stack, Text } from "@chakra-ui/react";
+import { Box, chakra, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { ChevronRight } from "lucide-react";
-import type { DragEvent as ReactDragEvent, ReactElement, MouseEvent as ReactMouseEvent } from "react";
+import { forwardRef, type ReactElement, type MouseEvent as ReactMouseEvent } from "react";
 import { ResourceContextMenu } from "../resource-context-menu";
 import { Tooltip } from "../tooltip";
-import type { ListRowAction, ListRowItem } from "./list-row.types";
-import { SearchableActionMenu } from "./searchable-action-menu";
-
-type ListRowVariant = "default" | "compact" | "tree";
-type ListRowTone = "default" | "danger";
-
-interface ListRowProps {
-  item: ListRowItem;
-  depth?: number;
-  isSelected?: boolean;
-  isExpanded?: boolean;
-  showExpandToggle?: boolean;
-  variant?: ListRowVariant;
-  tone?: ListRowTone;
-  /** Wrap content into a single child element. Used for `<Menu.Item asChild><ListRow asChild>…</ListRow></Menu.Item>` and link components. */
-  asChild?: boolean;
-  className?: string;
-  onActivate?: () => void;
-  onToggleExpand?: () => void;
-  onPointerMove?: (event: ReactMouseEvent<HTMLElement>) => void;
-  draggable?: boolean;
-  onDragStart?: (event: ReactDragEvent<HTMLElement>) => void;
-  onDragOver?: (event: ReactDragEvent<HTMLElement>) => void;
-  onDragEnd?: (event: ReactDragEvent<HTMLElement>) => void;
-  onDrop?: (event: ReactDragEvent<HTMLElement>) => void;
-}
-
-interface RowActionsProps {
-  actions: ListRowAction[];
-  context: { sectionId?: string; nodeId?: string };
-}
-
-const RowActions = (props: RowActionsProps) => {
-  const { actions, context } = props;
-  if (actions.length === 0) return null;
-
-  return (
-    <HStack
-      gap="0"
-      opacity="0"
-      pointerEvents="none"
-      _groupHover={{ opacity: "1", pointerEvents: "auto" }}
-      _groupFocusWithin={{ opacity: "1", pointerEvents: "auto" }}
-      transition="opacity 120ms ease"
-      onClick={(event) => event.stopPropagation()}
-    >
-      {actions.map((action) => {
-        if (action.menuItems && action.menuItems.length >= 8) {
-          return <SearchableActionMenu key={action.id} action={action} />;
-        }
-
-        if (action.menuItems && action.menuItems.length > 0) {
-          return (
-            <Menu.Root key={action.id}>
-              <Menu.Trigger asChild>
-                <IconButton variant="ghost" size="2xs" aria-label={action.label}>
-                  {action.icon}
-                </IconButton>
-              </Menu.Trigger>
-              <Menu.Positioner>
-                <Menu.Content minW="160px" bg="bg">
-                  {action.menuItems.map((item) => (
-                    <Tooltip key={item.id} content={item.description} disabled={!item.description} openDelay={300}>
-                      <Menu.Item value={item.id} disabled={item.disabled} onClick={() => item.onAction?.()}>
-                        {item.icon ? <Box mr="2">{item.icon as never}</Box> : null}
-                        {item.label}
-                      </Menu.Item>
-                    </Tooltip>
-                  ))}
-                </Menu.Content>
-              </Menu.Positioner>
-            </Menu.Root>
-          );
-        }
-
-        return (
-          <IconButton
-            key={action.id}
-            variant="ghost"
-            size="2xs"
-            aria-label={action.label}
-            onClick={(event) => {
-              event.stopPropagation();
-              action.onAction?.(context);
-            }}
-          >
-            {action.icon}
-          </IconButton>
-        );
-      })}
-    </HStack>
-  );
-};
-
-interface RowContentProps {
-  item: ListRowItem;
-  isExpanded: boolean;
-  showChevron: boolean;
-  isDisabled: boolean;
-  variant: ListRowVariant;
-  tone: ListRowTone;
-}
+import type { ListRowItem, ListRowProps, ListRowVariant, RowContentProps } from "./list-row.types";
+import { RowActions } from "./list-row-actions";
 
 const RowContent = (props: RowContentProps) => {
   const { item, isExpanded, showChevron, isDisabled, variant, tone } = props;
@@ -176,9 +76,25 @@ const computePaddingLeft = (depth: number, variant: ListRowVariant) => {
   return `calc(var(--chakra-spacing-1) + ${depth} * ${indent}px)`;
 };
 
-export const ListRow = (props: ListRowProps) => {
+export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   const {
-    item,
+    id,
+    label,
+    description,
+    icon,
+    iconColor,
+    indicator,
+    endContent,
+    tooltip,
+    disabled,
+    isContainer,
+    isNavigable,
+    href,
+    navigationIntent,
+    contextMenuItems,
+    actions,
+    children,
+    onActivate,
     depth = 0,
     isSelected = false,
     isExpanded = false,
@@ -187,7 +103,6 @@ export const ListRow = (props: ListRowProps) => {
     tone = "default",
     asChild = false,
     className,
-    onActivate,
     onToggleExpand,
     onPointerMove,
     draggable,
@@ -195,7 +110,30 @@ export const ListRow = (props: ListRowProps) => {
     onDragOver,
     onDragEnd,
     onDrop,
+    onClick,
+    ...rootProps
   } = props;
+
+  const item: ListRowItem = {
+    id,
+    label,
+    description,
+    icon,
+    iconColor,
+    indicator,
+    endContent,
+    tooltip,
+    disabled,
+    isContainer,
+    isNavigable,
+    href,
+    navigationIntent,
+    contextMenuItems,
+    actions,
+    children,
+    onActivate,
+  };
+
   const dragProps = { draggable, onDragStart, onDragOver, onDragEnd, onDrop };
 
   const hasChildren = (item.children?.length ?? 0) > 0 || item.isContainer === true;
@@ -216,6 +154,9 @@ export const ListRow = (props: ListRowProps) => {
   };
 
   const handleClick = (event: ReactMouseEvent<HTMLElement>) => {
+    onClick?.(event);
+    if (event.defaultPrevented) return;
+
     if (isDisabled) {
       event.preventDefault();
       return;
@@ -228,6 +169,7 @@ export const ListRow = (props: ListRowProps) => {
   const minHeight = variant === "default" ? "2.25rem" : "1.75rem";
 
   const rowProps = {
+    ...rootProps,
     role: "option" as const,
     "aria-selected": isSelected,
     className: className ? `group ${className}` : "group",
@@ -302,7 +244,7 @@ export const ListRow = (props: ListRowProps) => {
 
   if (asChild) {
     return wrap(
-      <chakra.div {...rowProps} {...dragProps} onClick={handleClick} onPointerMove={onPointerMove}>
+      <chakra.div ref={ref} {...rowProps} {...dragProps} onClick={handleClick} onPointerMove={onPointerMove}>
         {content}
       </chakra.div>,
     );
@@ -310,7 +252,14 @@ export const ListRow = (props: ListRowProps) => {
 
   if (item.href && !showChevron && !isDisabled) {
     return wrap(
-      <chakra.a href={item.href} {...rowProps} {...dragProps} onClick={handleClick} onPointerMove={onPointerMove}>
+      <chakra.a
+        ref={ref}
+        href={item.href}
+        {...(rowProps as object)}
+        {...dragProps}
+        onClick={handleClick}
+        onPointerMove={onPointerMove}
+      >
         {content}
       </chakra.a>,
     );
@@ -318,9 +267,10 @@ export const ListRow = (props: ListRowProps) => {
 
   return wrap(
     <chakra.button
+      ref={ref}
       type="button"
       disabled={isDisabled}
-      {...rowProps}
+      {...(rowProps as object)}
       {...dragProps}
       onClick={handleClick}
       onPointerMove={onPointerMove}
@@ -328,4 +278,4 @@ export const ListRow = (props: ListRowProps) => {
       {content}
     </chakra.button>,
   );
-};
+});

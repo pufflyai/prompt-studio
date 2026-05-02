@@ -1,5 +1,5 @@
 import { Button, CloseButton, Dialog, Input, Menu, Stack, Text } from "@chakra-ui/react";
-import { MenuItem } from "@pstdio/ui";
+import { ListRow } from "@pstdio/ui";
 import { ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -74,13 +74,16 @@ export const AddAgentManuallyDialog = (props: AddAgentManuallyDialogProps) => {
                   <Menu.Positioner>
                     <Menu.Content minW="200px" bg="bg">
                       {availableAgentIds.map((id) => (
-                        <MenuItem
-                          key={id}
-                          id={id}
-                          primaryLabel={id}
-                          isSelected={id === agentId}
-                          onClick={() => setAgentId(id)}
-                        />
+                        <Menu.Item key={id} value={id} asChild>
+                          <ListRow
+                            asChild
+                            variant="compact"
+                            id={id}
+                            label={id}
+                            isSelected={id === agentId}
+                            onActivate={() => setAgentId(id)}
+                          />
+                        </Menu.Item>
                       ))}
                     </Menu.Content>
                   </Menu.Positioner>

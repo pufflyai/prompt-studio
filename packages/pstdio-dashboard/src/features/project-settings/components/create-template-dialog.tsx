@@ -1,5 +1,5 @@
 import { Button, CloseButton, Dialog, Input, Menu, Stack, Text } from "@chakra-ui/react";
-import { MenuItem, toaster } from "@pstdio/ui";
+import { ListRow, toaster } from "@pstdio/ui";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import type { ProjectTemplateAssetType } from "@/features/project/types";
@@ -85,13 +85,16 @@ export const CreateTemplateDialog = (props: CreateTemplateDialogProps) => {
                   <Menu.Positioner>
                     <Menu.Content minW="200px" bg="bg">
                       {TEMPLATE_TYPES.map((type) => (
-                        <MenuItem
-                          key={type.value}
-                          id={type.value}
-                          primaryLabel={type.label}
-                          isSelected={type.value === templateType}
-                          onClick={() => setTemplateType(type.value)}
-                        />
+                        <Menu.Item key={type.value} value={type.value} asChild>
+                          <ListRow
+                            asChild
+                            variant="compact"
+                            id={type.value}
+                            label={type.label}
+                            isSelected={type.value === templateType}
+                            onActivate={() => setTemplateType(type.value)}
+                          />
+                        </Menu.Item>
                       ))}
                     </Menu.Content>
                   </Menu.Positioner>

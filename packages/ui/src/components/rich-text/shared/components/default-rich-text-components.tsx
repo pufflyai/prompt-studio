@@ -37,7 +37,7 @@ export const DefaultRichTextCodeEditor = (props: CodeEditorProps) => {
       fontSize={scaledSmallFontSize}
       lineHeight="1.5"
       overflowY={disableScroll ? "hidden" : "auto"}
-      background="bg.muted"
+      background="bg.code"
       borderRadius="md"
       width="100%"
     >

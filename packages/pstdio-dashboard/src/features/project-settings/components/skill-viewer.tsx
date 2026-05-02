@@ -1,5 +1,5 @@
 import { Badge, Box, Button, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
-import { type SidebarNavigateEvent, SidebarTree } from "@pstdio/ui";
+import { TreeList, type TreeListNavigateEvent } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { useEffect, useState } from "react";
 import type { ProjectSkillDetails } from "../data/skills-api";
@@ -48,7 +48,7 @@ export const SkillViewerContent = (props: {
   const currentVersion = parseSkillVersion(skillFile?.content ?? "");
   const hasUpdate = skill.bundled_version && currentVersion !== skill.bundled_version;
 
-  const handleNavigate = (event: SidebarNavigateEvent) => {
+  const handleNavigate = (event: TreeListNavigateEvent) => {
     setSelectedPath(event.nodeId);
   };
 
@@ -70,12 +70,12 @@ export const SkillViewerContent = (props: {
         overflow="auto"
         data-testid="project-skill-file-tree"
       >
-        <SidebarTree
+        <TreeList
           sections={sections}
-          expandedSections={["files"]}
-          expandedNodes={expandedNodes}
+          expandedSectionIds={["files"]}
+          expandedNodeIds={expandedNodes}
           activeNodeId={selectedFile?.path}
-          onToggleSection={() => {}}
+          rowVariant="tree"
           onToggleNode={handleToggleNode}
           onNavigate={handleNavigate}
         />

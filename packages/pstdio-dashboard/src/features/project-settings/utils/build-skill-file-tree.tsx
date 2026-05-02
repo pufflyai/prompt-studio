@@ -1,4 +1,4 @@
-import { getFileTypeIcon, type SidebarNode } from "@pstdio/ui";
+import { getFileTypeIcon, type TreeListNode } from "@pstdio/ui";
 import { Folder } from "lucide-react";
 
 interface FileEntry {
@@ -41,15 +41,15 @@ const insertFile = (root: DirNode, file: FileEntry) => {
 
 const compareEntries = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
 
-const toSidebarNodes = (dir: DirNode, parentPath: string): SidebarNode[] => {
-  const folderNodes: SidebarNode[] = [...dir.children.values()].sort(compareEntries).map((child) => ({
+const toTreeListNodes = (dir: DirNode, parentPath: string): TreeListNode[] => {
+  const folderNodes: TreeListNode[] = [...dir.children.values()].sort(compareEntries).map((child) => ({
     id: `dir:${child.path}`,
     label: child.name,
     icon: <Folder size={14} />,
-    children: toSidebarNodes(child, child.path),
+    children: toTreeListNodes(child, child.path),
   }));
 
-  const fileNodes: SidebarNode[] = [...dir.files]
+  const fileNodes: TreeListNode[] = [...dir.files]
     .sort((a, b) => {
       if (parentPath === "" && a.path === "SKILL.md") return -1;
       if (parentPath === "" && b.path === "SKILL.md") return 1;
@@ -69,15 +69,15 @@ const toSidebarNodes = (dir: DirNode, parentPath: string): SidebarNode[] => {
   return [...folderNodes, ...fileNodes];
 };
 
-export const buildSkillFileTree = (files: FileEntry[]): SidebarNode[] => {
+export const buildSkillFileTree = (files: FileEntry[]): TreeListNode[] => {
   const root = createDir("", "");
   for (const file of files) insertFile(root, file);
-  return toSidebarNodes(root, "");
+  return toTreeListNodes(root, "");
 };
 
-export const collectFolderIds = (nodes: SidebarNode[]): string[] => {
+export const collectFolderIds = (nodes: TreeListNode[]): string[] => {
   const ids: string[] = [];
-  const walk = (list: SidebarNode[]) => {
+  const walk = (list: TreeListNode[]) => {
     for (const node of list) {
       if (node.children && node.children.length > 0) {
         ids.push(node.id);

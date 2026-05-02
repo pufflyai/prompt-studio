@@ -1,5 +1,5 @@
-import { Flex, HStack, IconButton, Spacer } from "@chakra-ui/react";
-import { AttachedPanel, Tooltip } from "@pstdio/ui";
+import { Flex, IconButton, Spacer } from "@chakra-ui/react";
+import { AttachedPanel, Header, Tooltip } from "@pstdio/ui";
 import { useParams } from "@tanstack/react-router";
 import { Minimize2, PenBox } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -24,7 +24,7 @@ export const SessionAttachedPanel = () => {
       data-testid="session-attached-panel"
       resizable
       header={
-        <HStack px="sm" h="41px" flexShrink={0}>
+        <Header variant="main" flexShrink={0}>
           <SessionSelector
             sessions={sessions}
             selectedSessionId={selectedSessionId}
@@ -51,7 +51,7 @@ export const SessionAttachedPanel = () => {
               <Minimize2 size={16} />
             </IconButton>
           </Tooltip>
-        </HStack>
+        </Header>
       }
     >
       <Flex flex="1" minH={0} direction="column">
