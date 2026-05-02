@@ -21,12 +21,13 @@ export const SidebarHeader = (props: SidebarHeaderProps) => {
       position="sticky"
       top="0"
       zIndex="1"
+      gap="0"
     >
       <HStack minW="0" flex="1">
         {children}
       </HStack>
       {onClose ? (
-        <IconButton variant="ghost" size="sm" aria-label="Hide sidebar" onClick={onClose}>
+        <IconButton borderRadius={0} variant="ghost" size="sm" aria-label="Hide sidebar" onClick={onClose}>
           <PanelLeftClose size={16} />
         </IconButton>
       ) : null}

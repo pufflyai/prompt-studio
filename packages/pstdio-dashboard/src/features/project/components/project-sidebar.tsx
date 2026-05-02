@@ -278,7 +278,7 @@ export const ProjectSidebarFooter = () => {
 
       {settingsPath ? (
         <Menu.Root>
-          <Menu.Item value="project-settings" asChild>
+          <Menu.Item value="project-settings" padding="0" asChild>
             <Link to={settingsPath}>
               <ListRow
                 asChild

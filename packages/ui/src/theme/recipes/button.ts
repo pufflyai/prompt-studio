@@ -80,6 +80,7 @@ export const buttonRecipe = defineRecipe({
         border: "border.muted",
         _hover: { bg: "bg.hover" },
         _active: { bg: "bg.active" },
+        _expanded: { bg: "bg.active" },
         _disabled: {
           opacity: 1,
           color: "fg.subtle",
@@ -92,6 +93,7 @@ export const buttonRecipe = defineRecipe({
         border: "none",
         _hover: { bg: "bg.hover" },
         _active: { bg: "bg.active" },
+        _expanded: { bg: "bg.active" },
         _disabled: {
           bg: "transparent",
           _hover: { bg: "transparent" },

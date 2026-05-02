@@ -29,6 +29,7 @@ const baseInput = {
   setIsHelpOpen: () => {},
   setIsCommandPaletteOpen: () => {},
   setCommandPaletteView: () => {},
+  setCommandPaletteInitialQuery: () => {},
   navigate: (() => {}) as never,
   currentTicket: null,
   currentTicketIndex: -1,
@@ -182,6 +183,7 @@ describe("registerShortcutBindings - overlay and sibling navigation", () => {
   it("opens the command palette on Ctrl+Shift+P and prevents default", () => {
     const hotkeyManager = createHotkeyManager();
     const setIsCommandPaletteOpen = mock(() => {});
+    const setCommandPaletteInitialQuery = mock(() => {});
     const preventDefault = mock(() => {});
 
     registerShortcutBindings({
@@ -190,11 +192,38 @@ describe("registerShortcutBindings - overlay and sibling navigation", () => {
       pathname: "/projects/project-1/tickets",
       activeScopes: ["global"],
       setIsCommandPaletteOpen,
+      setCommandPaletteInitialQuery,
     });
 
     hotkeyManager.handlers.get("Ctrl+Shift+P")?.handler({ target: null, preventDefault });
 
     expect(preventDefault).toHaveBeenCalledTimes(1);
+    expect(setIsCommandPaletteOpen).toHaveBeenCalledWith(true);
+    expect(setCommandPaletteInitialQuery).toHaveBeenCalledWith("");
+  });
+
+  it("opens the command palette in command mode on Ctrl+Shift+.", () => {
+    const hotkeyManager = createHotkeyManager();
+    const setIsCommandPaletteOpen = mock(() => {});
+    const setCommandPaletteView = mock(() => {});
+    const setCommandPaletteInitialQuery = mock(() => {});
+    const preventDefault = mock(() => {});
+
+    registerShortcutBindings({
+      ...baseInput,
+      hotkeyManager: hotkeyManager as never,
+      pathname: "/projects/project-1/tickets",
+      activeScopes: ["global"],
+      setIsCommandPaletteOpen,
+      setCommandPaletteView,
+      setCommandPaletteInitialQuery,
+    });
+
+    hotkeyManager.handlers.get("Ctrl+Shift+.")?.handler({ target: null, preventDefault });
+
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+    expect(setCommandPaletteView).toHaveBeenCalledWith("main");
+    expect(setCommandPaletteInitialQuery).toHaveBeenCalledWith("> ");
     expect(setIsCommandPaletteOpen).toHaveBeenCalledWith(true);
   });
 });

@@ -1,1 +1,1 @@
-export const PANEL_HEADER_HEIGHT = "2.5625rem";
+export const PANEL_HEADER_HEIGHT = "2.5rem";

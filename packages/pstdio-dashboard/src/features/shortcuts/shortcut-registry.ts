@@ -9,6 +9,7 @@ export interface ShortcutDefinition {
     | "create-session"
     | "goto-ticket-list"
     | "open-command-palette"
+    | "open-command-palette-commands"
     | "change-theme"
     | "open-shortcut-help";
   actionLabel: string;
@@ -22,6 +23,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   { id: "create-session", actionLabel: "Create session", binding: "Ctrl+Shift+S", scope: "global" },
   { id: "goto-ticket-list", actionLabel: "Go to tickets", binding: "Ctrl+Shift+T", scope: "global" },
   { id: "open-command-palette", actionLabel: "Command palette", binding: "Ctrl+Shift+P", scope: "global" },
+  { id: "open-command-palette-commands", actionLabel: "Run a command", binding: "Ctrl+Shift+.", scope: "global" },
   { id: "change-theme", actionLabel: "Change theme", binding: "Ctrl+Shift+K", scope: "global" },
   { id: "open-shortcut-help", actionLabel: "Keyboard shortcuts", binding: "Ctrl+Shift+H", scope: "global" },
 ];

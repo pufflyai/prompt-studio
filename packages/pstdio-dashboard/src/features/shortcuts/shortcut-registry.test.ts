@@ -9,6 +9,8 @@ describe("shortcut-registry", () => {
     expect(getShortcutDefinition("goto-ticket-list")?.binding).toBe("Ctrl+Shift+T");
     expect(getShortcutDefinition("open-command-palette")?.binding).toBe("Ctrl+Shift+P");
     expect(getShortcutDefinition("open-command-palette")?.actionLabel).toBe("Command palette");
+    expect(getShortcutDefinition("open-command-palette-commands")?.binding).toBe("Ctrl+Shift+.");
+    expect(getShortcutDefinition("open-command-palette-commands")?.actionLabel).toBe("Run a command");
     expect(getShortcutDefinition("change-theme")?.binding).toBe("Ctrl+Shift+K");
     expect(getShortcutDefinition("change-theme")?.actionLabel).toBe("Change theme");
     expect(getShortcutDefinition("open-shortcut-help")?.binding).toBe("Ctrl+Shift+H");

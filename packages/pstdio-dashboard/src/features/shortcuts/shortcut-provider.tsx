@@ -38,6 +38,7 @@ export const registerShortcutBindings = (input: {
   setIsHelpOpen: (open: boolean) => void;
   setIsCommandPaletteOpen: (open: boolean) => void;
   setCommandPaletteView?: (view: CommandPaletteView) => void;
+  setCommandPaletteInitialQuery?: (query: string) => void;
   navigate: ReturnType<typeof useNavigate>;
   currentTicket: { shorthand: string; attempts?: Array<{ shorthand: string }> } | null;
   currentTicketIndex: number;
@@ -57,6 +58,7 @@ export const registerShortcutBindings = (input: {
     setIsHelpOpen,
     setIsCommandPaletteOpen,
     setCommandPaletteView,
+    setCommandPaletteInitialQuery,
     navigate,
   } = input;
 
@@ -111,6 +113,17 @@ export const registerShortcutBindings = (input: {
       (event) => {
         event.preventDefault?.();
         setCommandPaletteView?.("main");
+        setCommandPaletteInitialQuery?.("");
+        setIsCommandPaletteOpen(true);
+      },
+      { enabled: activeScopes.includes("global"), ignoreInputs: false },
+    ),
+    hotkeyManager.register(
+      getHotkeyBinding("open-command-palette-commands"),
+      (event) => {
+        event.preventDefault?.();
+        setCommandPaletteView?.("main");
+        setCommandPaletteInitialQuery?.("> ");
         setIsCommandPaletteOpen(true);
       },
       { enabled: activeScopes.includes("global"), ignoreInputs: false },
@@ -120,6 +133,7 @@ export const registerShortcutBindings = (input: {
       (event) => {
         event.preventDefault?.();
         setCommandPaletteView?.("theme");
+        setCommandPaletteInitialQuery?.("");
         setIsCommandPaletteOpen(true);
       },
       { enabled: activeScopes.includes("global"), ignoreInputs: false },
@@ -157,6 +171,7 @@ export const ShortcutProvider = (props: { children: ReactNode }) => {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [commandPaletteView, setCommandPaletteView] = useState<CommandPaletteView>("main");
+  const [commandPaletteInitialQuery, setCommandPaletteInitialQuery] = useState("");
 
   const pathname = location.pathname;
   const activeScopes = getActiveShortcutScopes(pathname);
@@ -185,6 +200,7 @@ export const ShortcutProvider = (props: { children: ReactNode }) => {
       setIsHelpOpen,
       setIsCommandPaletteOpen,
       setCommandPaletteView,
+      setCommandPaletteInitialQuery,
       navigate,
       currentTicket,
       currentTicketIndex,
@@ -240,6 +256,7 @@ export const ShortcutProvider = (props: { children: ReactNode }) => {
       <CommandPaletteContext.Provider
         value={() => {
           setCommandPaletteView("main");
+          setCommandPaletteInitialQuery("");
           setIsCommandPaletteOpen(true);
         }}
       >
@@ -248,6 +265,7 @@ export const ShortcutProvider = (props: { children: ReactNode }) => {
           <CommandPalette
             open={isCommandPaletteOpen}
             initialView={commandPaletteView}
+            initialQuery={commandPaletteInitialQuery}
             projectId={projectId}
             tickets={visibleTickets}
             requestCreateTicket={requestCreateTicket}

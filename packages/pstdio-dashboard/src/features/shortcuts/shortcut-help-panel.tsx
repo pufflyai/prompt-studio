@@ -7,7 +7,15 @@ export const ShortcutHelpPanel = (props: { open: boolean; onClose: () => void })
   const { open, onClose } = props;
 
   return (
-    <Dialog.Root open={open} onOpenChange={(details) => !details.open && onClose()}>
+    <Dialog.Root
+      open={open}
+      onOpenChange={(details) => !details.open && onClose()}
+      onRequestDismiss={(event) => {
+        // Avoid being dismissed by zag's layer-stack cascade when the command
+        // palette (and its inner Menu layer) closes in the same render cycle.
+        event.preventDefault();
+      }}
+    >
       <Dialog.Backdrop />
       <Dialog.Positioner>
         <Dialog.Content maxW="42rem">

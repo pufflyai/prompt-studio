@@ -111,7 +111,16 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
   };
 
   return (
-    <Dialog.Root open={open} onOpenChange={handleClose} closeOnInteractOutside={false}>
+    <Dialog.Root
+      open={open}
+      onOpenChange={handleClose}
+      closeOnInteractOutside={false}
+      onRequestDismiss={(event) => {
+        // Avoid being dismissed by zag's layer-stack cascade when the command
+        // palette closes in the same render cycle.
+        event.preventDefault();
+      }}
+    >
       <Dialog.Backdrop />
       <Dialog.Positioner>
         <Dialog.Content maxW="640px">

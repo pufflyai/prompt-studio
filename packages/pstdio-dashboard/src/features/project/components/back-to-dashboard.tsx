@@ -9,7 +9,7 @@ export const BackToDashboard = () => {
   const { t } = useTranslation("projects");
 
   return (
-    <Button padding="0" size="sm" variant="ghost" asChild>
+    <Button size="sm" variant="ghost" asChild>
       <Link to={resolveProjectDefaultPath(projectId)}>
         <ArrowLeft size={14} />
         {t("shell.backToDashboard")}
