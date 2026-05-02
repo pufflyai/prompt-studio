@@ -35,6 +35,7 @@ interface ChatInputProps {
   actions?: ReactNode;
   attachedToTop?: boolean;
   questionPrompt?: ChatInputQuestionPrompt;
+  autoFocus?: boolean;
 }
 
 export const ChatInput = (props: ChatInputProps) => {
@@ -52,6 +53,7 @@ export const ChatInput = (props: ChatInputProps) => {
     actions,
     attachedToTop = false,
     questionPrompt,
+    autoFocus = false,
   } = props;
 
   const [isSelected, setIsSelected] = useState(false);
@@ -93,6 +95,18 @@ export const ChatInput = (props: ChatInputProps) => {
       editable.focus();
     }
   };
+
+  useEffect(() => {
+    if (!autoFocus) return;
+    const handle = requestAnimationFrame(() => {
+      const editable = containerRef.current?.querySelector('[contenteditable="true"]');
+      if (editable instanceof HTMLElement) {
+        editable.focus();
+      }
+      setIsSelected(true);
+    });
+    return () => cancelAnimationFrame(handle);
+  }, [autoFocus]);
 
   const handleContainerClick = () => {
     setIsSelected(true);

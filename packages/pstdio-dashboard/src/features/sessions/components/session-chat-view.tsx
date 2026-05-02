@@ -47,6 +47,7 @@ interface SessionChatViewProps {
   onSessionCreated?: (sessionId: string) => void;
   onEditAction?: () => void;
   showWorkspaceHub?: boolean;
+  autoFocusChatInput?: boolean;
 }
 
 export const SessionChatView = (props: SessionChatViewProps) => {
@@ -58,6 +59,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
     onSessionCreated,
     onEditAction,
     showWorkspaceHub = true,
+    autoFocusChatInput = false,
   } = props;
   const { projectId } = useParams({ strict: false });
 
@@ -145,6 +147,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
       chatInputPlaceholder={t("sessions.followUpPlaceholder")}
       chatInputDefaultValue={chatDraft}
       chatInputQuestionPrompt={activeQuestionPrompt}
+      chatInputAutoFocus={autoFocusChatInput}
       onSubmitMessage={(text: string, _attachments, questionResponse) => {
         if (questionResponse && activeQuestionPromptSignature) {
           setSubmittedQuestionPromptSignature(activeQuestionPromptSignature);

@@ -44,6 +44,7 @@ interface ChatPanelProps {
   workspaceInitializing?: boolean;
   inputDisabled?: boolean;
   chatInputQuestionPrompt?: ChatInputQuestionPrompt;
+  chatInputAutoFocus?: boolean;
 }
 
 interface StickyMessageToggleProps {
@@ -186,6 +187,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     workspaceInitializing = false,
     inputDisabled = false,
     chatInputQuestionPrompt,
+    chatInputAutoFocus = false,
   } = props;
 
   const merged = mergeReasoningToolOnlyMessages(messages);
@@ -269,6 +271,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
           isDisabled={inputDisabled}
           attachedToTop={hasWorkspaceHub}
           questionPrompt={chatInputQuestionPrompt}
+          autoFocus={chatInputAutoFocus}
         />
       </Stack>
       <Flex p="2xs" justifyContent="flex-end">

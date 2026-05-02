@@ -70,6 +70,7 @@ export const SessionBubbleContainer = () => {
         newSessionWorkspaceId={isWorkspaceRoute ? (pendingWorkspaceSessionWorkspaceId ?? undefined) : undefined}
         onSessionCreated={setSelectedSessionId}
         showWorkspaceHub={!isWorkspaceRoute}
+        autoFocusChatInput
       />
     </BubblePanel>
   );
