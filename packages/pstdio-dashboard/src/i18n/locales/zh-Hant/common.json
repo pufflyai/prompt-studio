@@ -359,13 +359,27 @@
   },
   "menu": {
     "versionCopied": "版本已複製",
-    "switchToLightMode": "切換至淺色模式",
-    "switchToDarkMode": "切換至深色模式",
     "loadingVersion": "正在載入版本...",
     "mainMenu": "主選單",
     "openSettingsMenu": "開啟設定選單",
     "projects": "專案",
     "promptStudio": "Prompt Studio"
+  },
+  "themes": {
+    "pstdio-light": "pstdio light",
+    "pstdio-dark": "pstdio dark"
+  },
+  "commandPalette": {
+    "searchPlaceholder": "搜尋，或輸入 > 執行命令",
+    "commandPlaceholder": "執行命令",
+    "empty": "沒有結果",
+    "open": "開啟",
+    "commandHint": "輸入 > 執行命令",
+    "createTicket": "建立工單",
+    "createSession": "建立工作階段",
+    "keyboardShortcuts": "鍵盤快速鍵",
+    "changeTheme": "變更主題",
+    "themePlaceholder": "選擇主題"
   },
   "workspace": {
     "title": "工作區"

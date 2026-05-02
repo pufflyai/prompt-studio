@@ -359,13 +359,27 @@
   },
   "menu": {
     "versionCopied": "版本已复制",
-    "switchToLightMode": "切换到浅色模式",
-    "switchToDarkMode": "切换到深色模式",
     "loadingVersion": "正在加载版本...",
     "mainMenu": "主菜单",
     "openSettingsMenu": "打开设置菜单",
     "projects": "项目",
     "promptStudio": "Prompt Studio"
+  },
+  "themes": {
+    "pstdio-light": "pstdio light",
+    "pstdio-dark": "pstdio dark"
+  },
+  "commandPalette": {
+    "searchPlaceholder": "搜索，或输入 > 运行命令",
+    "commandPlaceholder": "运行命令",
+    "empty": "无结果",
+    "open": "打开",
+    "commandHint": "输入 > 运行命令",
+    "createTicket": "创建工单",
+    "createSession": "创建会话",
+    "keyboardShortcuts": "键盘快捷键",
+    "changeTheme": "更改主题",
+    "themePlaceholder": "选择主题"
   },
   "workspace": {
     "title": "工作区"

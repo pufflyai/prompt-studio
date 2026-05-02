@@ -211,6 +211,7 @@
     }
   },
   "sidebar": {
+    "search": "Buscar",
     "tickets": "Tareas",
     "projectChangelog": "Registro del proyecto",
     "projectSettings": "Configuración del proyecto",

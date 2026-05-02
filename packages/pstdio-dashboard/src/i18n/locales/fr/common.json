@@ -359,13 +359,27 @@
   },
   "menu": {
     "versionCopied": "Version copiée",
-    "switchToLightMode": "Passer en mode clair",
-    "switchToDarkMode": "Passer en mode sombre",
     "loadingVersion": "Chargement de la version...",
     "mainMenu": "Menu principal",
     "openSettingsMenu": "Ouvrir le menu des paramètres",
     "projects": "Projets",
     "promptStudio": "Prompt Studio"
+  },
+  "themes": {
+    "pstdio-light": "pstdio light",
+    "pstdio-dark": "pstdio dark"
+  },
+  "commandPalette": {
+    "searchPlaceholder": "Rechercher ou tapez > pour les commandes",
+    "commandPlaceholder": "Exécuter une commande",
+    "empty": "Aucun résultat",
+    "open": "Ouvrir",
+    "commandHint": "Tapez > pour les commandes",
+    "createTicket": "Créer une tâche",
+    "createSession": "Créer une session",
+    "keyboardShortcuts": "Raccourcis clavier",
+    "changeTheme": "Changer de thème",
+    "themePlaceholder": "Sélectionner un thème"
   },
   "workspace": {
     "title": "Espace de travail"

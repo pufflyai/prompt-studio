@@ -359,13 +359,27 @@
   },
   "menu": {
     "versionCopied": "バージョンをコピーしました",
-    "switchToLightMode": "ライトモードに切り替え",
-    "switchToDarkMode": "ダークモードに切り替え",
     "loadingVersion": "バージョンを読み込み中...",
     "mainMenu": "メインメニュー",
     "openSettingsMenu": "設定メニューを開く",
     "projects": "プロジェクト",
     "promptStudio": "Prompt Studio"
+  },
+  "themes": {
+    "pstdio-light": "pstdio light",
+    "pstdio-dark": "pstdio dark"
+  },
+  "commandPalette": {
+    "searchPlaceholder": "検索するか > でコマンドを入力",
+    "commandPlaceholder": "コマンドを実行",
+    "empty": "結果がありません",
+    "open": "開く",
+    "commandHint": "> でコマンド",
+    "createTicket": "チケットを作成",
+    "createSession": "セッションを作成",
+    "keyboardShortcuts": "キーボードショートカット",
+    "changeTheme": "テーマを変更",
+    "themePlaceholder": "テーマを選択"
   },
   "workspace": {
     "title": "ワークスペース"

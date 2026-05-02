@@ -206,6 +206,7 @@
     }
   },
   "sidebar": {
+    "search": "検索",
     "tickets": "チケット",
     "projectChangelog": "プロジェクト変更履歴",
     "projectSettings": "プロジェクト設定",

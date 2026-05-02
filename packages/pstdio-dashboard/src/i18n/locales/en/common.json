@@ -359,13 +359,27 @@
   },
   "menu": {
     "versionCopied": "Version copied",
-    "switchToLightMode": "Switch to light mode",
-    "switchToDarkMode": "Switch to dark mode",
     "loadingVersion": "Loading version...",
     "mainMenu": "Main menu",
     "openSettingsMenu": "Open settings menu",
     "projects": "Projects",
     "promptStudio": "Prompt Studio"
+  },
+  "themes": {
+    "pstdio-light": "pstdio light",
+    "pstdio-dark": "pstdio dark"
+  },
+  "commandPalette": {
+    "searchPlaceholder": "Search or type > for commands",
+    "commandPlaceholder": "Run command",
+    "empty": "No results",
+    "open": "Open",
+    "commandHint": "Type > for commands",
+    "createTicket": "Create ticket",
+    "createSession": "Create session",
+    "keyboardShortcuts": "Keyboard shortcuts",
+    "changeTheme": "Change theme",
+    "themePlaceholder": "Select theme"
   },
   "workspace": {
     "title": "Workspace"

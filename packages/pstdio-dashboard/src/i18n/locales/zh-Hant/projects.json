@@ -206,6 +206,7 @@
     }
   },
   "sidebar": {
+    "search": "搜尋",
     "tickets": "工單",
     "projectChangelog": "專案變更日誌",
     "projectSettings": "專案設定",

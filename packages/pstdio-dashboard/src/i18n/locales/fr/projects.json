@@ -211,6 +211,7 @@
     }
   },
   "sidebar": {
+    "search": "Rechercher",
     "tickets": "Tâches",
     "projectChangelog": "Journal du projet",
     "projectSettings": "Paramètres du projet",

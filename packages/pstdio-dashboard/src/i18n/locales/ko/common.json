@@ -359,13 +359,27 @@
   },
   "menu": {
     "versionCopied": "버전이 복사되었습니다",
-    "switchToLightMode": "라이트 모드로 전환",
-    "switchToDarkMode": "다크 모드로 전환",
     "loadingVersion": "버전 로딩 중...",
     "mainMenu": "메인 메뉴",
     "openSettingsMenu": "설정 메뉴 열기",
     "projects": "프로젝트",
     "promptStudio": "Prompt Studio"
+  },
+  "themes": {
+    "pstdio-light": "pstdio light",
+    "pstdio-dark": "pstdio dark"
+  },
+  "commandPalette": {
+    "searchPlaceholder": "검색하거나 >로 명령 실행",
+    "commandPlaceholder": "명령 실행",
+    "empty": "결과 없음",
+    "open": "열기",
+    "commandHint": ">로 명령 실행",
+    "createTicket": "티켓 만들기",
+    "createSession": "세션 만들기",
+    "keyboardShortcuts": "키보드 단축키",
+    "changeTheme": "테마 변경",
+    "themePlaceholder": "테마 선택"
   },
   "workspace": {
     "title": "워크스페이스"
