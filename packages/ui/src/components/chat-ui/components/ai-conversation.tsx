@@ -44,7 +44,7 @@ export const ConversationContent = (props: ConversationContentProps) => {
       viewportRef={scrollRef as React.Ref<HTMLDivElement>}
       contentRef={contentRef as React.Ref<HTMLDivElement>}
       contentProps={{
-        p: "sm",
+        py: "sm",
         "aria-live": "polite",
         role: "list",
       }}

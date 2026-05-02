@@ -24,6 +24,7 @@ const recipe = defineSlotRecipe({
       gap: "sm",
       textStyle: "sm",
       overflow: "hidden",
+      borderRadius: "0",
     },
   },
   variants: {
@@ -34,13 +35,14 @@ const recipe = defineSlotRecipe({
           flexDirection: "row",
         },
         content: {
-          border: "1px solid",
+          borderTopWidth: "1px",
+          borderBottomWidth: "1px",
           borderColor: "border.muted",
           bg: "bg.subtle",
           px: "xs",
           py: "xs",
           width: "full",
-          borderBottomRightRadius: 0,
+          borderRadius: "0",
         },
       },
       assistant: {
@@ -51,6 +53,7 @@ const recipe = defineSlotRecipe({
         },
         content: {
           width: "full",
+          px: "xs",
         },
       },
       developer: {
@@ -76,13 +79,13 @@ const recipe = defineSlotRecipe({
     },
     shape: {
       rounded: {
-        content: { rounded: "xs" },
+        content: { rounded: "0" },
       },
       pill: {
-        content: { rounded: "full" },
+        content: { rounded: "0" },
       },
       square: {
-        content: { rounded: "none" },
+        content: { rounded: "0" },
       },
     },
   },
