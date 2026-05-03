@@ -40,6 +40,12 @@ const createInitializedRepo = (name: string) => {
   return repo;
 };
 
+const createTemplate = (repo: string, input: { name: string; type: "ticket"; content: string }) => {
+  const file = join(repo, `${input.name}.md`);
+  writeFileSync(file, input.content);
+  run(`templates create --name ${input.name} --type ${input.type} --file ${file}`, repo, FLOW_TIMEOUT);
+};
+
 describe("pstdio tickets create", () => {
   test(
     "creates a ticket and shows shorthand",
@@ -145,6 +151,11 @@ describe("pstdio tickets write", () => {
     "creates draft with template",
     () => {
       const repo = createInitializedRepo("tk-write-tpl");
+      createTemplate(repo, {
+        name: "ticket",
+        type: "ticket",
+        content: "# {{TICKET_TITLE}}\n\nTicket: {{TICKET_ID}}\nInput: {{INPUT}}",
+      });
 
       const output = run('tickets write --title "Templated" --template ticket', repo);
 

@@ -1,8 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
-import { seedDefaultSkills } from "../../skills/seed-default-skills";
-import { seedDefaultTemplates } from "../../templates/seed-default-templates";
 import { createProjectBodySchema, projectResponseSchema } from "../dto";
 
 export const createProjectRoute = createRoute({
@@ -30,9 +28,6 @@ export const createProjectHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
     const project = await deps.projectService.create({ name, selectedAgents: agents });
 
     try {
-      const templates = await seedDefaultTemplates(deps, project.id);
-      await seedDefaultSkills(deps, project.id);
-
       deps.eventBus.emit("projects", "set", project);
 
       const statuses = await deps.statusService.list(project.id);
@@ -44,8 +39,6 @@ export const createProjectHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
         const options = await deps.tagService.listOptions(tag.id);
         for (const option of options) deps.eventBus.emit("ticket_tag_options", "set", option);
       }
-
-      for (const template of templates) deps.eventBus.emit("templates", "set", template);
 
       return c.json(project, 201);
     } catch (error) {

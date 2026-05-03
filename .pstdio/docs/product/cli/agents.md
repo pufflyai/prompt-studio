@@ -7,17 +7,16 @@ created: "2026-03-10T20:12:05Z"
 
 ## Summary
 
-The `pstdio agents` command group configures agent integrations and installs bundled skills and plugin artifacts for those agents.
+The `pstdio agents` command group configures agent integrations and installs plugin artifacts for agents that need them.
 
 ## Command Summary
 
 | Command | Purpose |
 | ------- | ------- |
 | `pstdio agents list` | List available agents and whether they are configured, installed, and default. |
-| `pstdio agents setup <agent-id>` | Configure one agent and install skills for it. |
+| `pstdio agents setup <agent-id>` | Configure one agent and install required plugin artifacts. |
 | `pstdio agents update <agent-id>` | Update agent config fields (`--default`, `--binary`, `--skills-dir`). |
 | `pstdio agents remove <agent-id>` | Remove a configured agent. |
-| `pstdio agents install-skills <agent-id>` | Install bundled skills for an agent without reconfiguring it. |
 | `pstdio agents install-plugins <agent-id>` | Install bundled plugin artifacts for an agent without reconfiguring it. |
 
 ## Detailed Behavior
@@ -44,24 +43,21 @@ Prints a table with columns:
 ### Usage
 
 ```sh
-pstdio agents setup <agent-id> [--global-skills] [--global-plugins]
+pstdio agents setup <agent-id> [--global-plugins]
 ```
 
 ### Flags
 
 | Flag | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `--global-skills` | `boolean` | `false` | Install skills to the agent's global config directory instead of the current project. |
 | `--global-plugins` | `boolean` | `false` | Install plugins to the agent's global config directory instead of the current project. |
 
 ### Behavior
 
 1. Validate `agent-id` against known agents.
 2. Configure the agent via API.
-3. Install bundled skills for that agent.
-4. Install bundled plugin artifacts when the agent requires them (`opencode`).
-5. If run outside git and both `--global-skills` and `--global-plugins` are unset, print a skip message and stop installation.
-6. If run without a linked project and `--global-skills` is unset, print a skills skip message but still attempt plugin install.
+3. Install bundled plugin artifacts when the agent requires them (`opencode`).
+4. If run outside git and `--global-plugins` is unset, print a skip message and stop installation.
 
 ## `pstdio agents update <agent-id>`
 
@@ -84,36 +80,8 @@ pstdio agents update <agent-id> [--default] [--binary <path>] [--skills-dir <pat
 ### Usage
 
 ```sh
-pstdio agents remove <agent-id> [--delete-skills]
+pstdio agents remove <agent-id>
 ```
-
-### Flags
-
-| Flag | Type | Default | Description |
-| ---- | ---- | ------- | ----------- |
-| `--delete-skills` | `boolean` | `false` | Also remove bundled skills for this agent from the project. |
-
-## `pstdio agents install-skills <agent-id>`
-
-### Usage
-
-```sh
-pstdio agents install-skills <agent-id> [--global-skills]
-```
-
-### Flags
-
-| Flag | Type | Default | Description |
-| ---- | ---- | ------- | ----------- |
-| `--global-skills` | `boolean` | `false` | Install skills to the agent's global config directory. |
-
-### Errors
-
-| Error | Cause |
-| ----- | ----- |
-| `Unknown agent: <agent-id>. Available: ...` | Unknown agent id. |
-| `Not inside a git repository. Use --global-skills or run from a git repo.` | Skill install attempted outside git without global mode. |
-| `No project configured. Run \`pstdio projects init\` first.` | Skill install attempted without linked project and no global mode. |
 
 ## `pstdio agents install-plugins <agent-id>`
 
@@ -173,6 +141,6 @@ Bridge behavior:
 
 ## Verification & Evidence
 
-- **Commands to run**: `sed -n '1,220p' packages/pstdio/src/adapters/cli/commands/agents/index.ts`, `for f in list setup update remove install-skills install-plugins; do sed -n '1,220p' packages/pstdio/src/adapters/cli/commands/agents/$f.ts; done`
+- **Commands to run**: `sed -n '1,220p' packages/pstdio/src/adapters/cli/commands/agents/index.ts`, `for f in list setup update remove install-plugins; do sed -n '1,220p' packages/pstdio/src/adapters/cli/commands/agents/$f.ts; done`
 - **Expected evidence**: Command names, flags, setup/install behavior, and OpenCode bridge notes match the documented command summary.
 - **Where to find artifacts**: `packages/pstdio/src/adapters/cli/commands/agents/`

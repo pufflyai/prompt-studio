@@ -7,7 +7,7 @@ created: "2026-03-10T20:12:05Z"
 
 ## Summary
 
-Prompt Studio ships bundled ticket and document templates, supports project-scoped template management through the API and CLI, and installs bundled skills into configured agent directories.
+Prompt Studio exposes templates and skills from enabled extensions, and supports project-scoped template management through the API and CLI.
 
 ## Problem
 
@@ -27,27 +27,21 @@ The old template docs mixed real behavior with unsupported ideas such as global 
 
 ## Overview
 
-Current bundled templates seeded at project creation:
+Current extension-provided templates are listed through the project template registry. Project creation does not copy repository-bundled templates into project-owned rows.
 
-- Ticket templates: `ticket` (default), `proposal`
-- Document templates: `prd` (default), `adr`, `architecture-overview`, `cookbook`, `code-review`, `lessons-learned`, `changelog-entry`, `contracts`, `schemas`, `research`
-
-Current bundled skills are installed through agent setup and skill-install flows into agent skill directories in the repo or global agent config. Skill content is stored in the project database and can be edited by users. The installed copies in agent directories are derived from the DB-stored version.
+Current extension-provided skills are listed through the project skill registry. Agent setup no longer writes skill files into repo-local or global agent skill directories.
 
 ## Requirements
 
 ### Functional Requirements
 
-1. Project creation must seed the bundled ticket and document templates.
+1. Project creation must not seed repository-bundled templates into project-owned records.
 2. `templates list`, `create`, `update`, and `delete` must manage project-scoped template records through the API.
 3. `templates write` must support two modes:
    - `--target <path>` renders the template to an arbitrary file path (overwriting any existing file).
    - `--ticket <shorthand>` renders the template to `.pstdio/tickets/<shorthand>/ticket.md` and preserves its existing H1 title.
-4. Agent setup and install flows must install bundled skills into the configured agent's skills directory.
-5. Updating a skill to the latest bundled version must propagate the updated content to all agent directories in all linked repos.
-6. On server startup, missing skills must be auto-installed for all configured agents in all linked repos. Existing skills must not be overwritten.
-7. The skill detail view must show which agents have the skill installed locally (per-agent badges) or indicate when the skill is not installed.
-8. Document scaffolding should use `prd` as the default requirements format.
+4. Agent setup must not install skill files; extension-backed installation will be added separately.
+5. Document scaffolding should use `prd` as the default requirements format.
 
 ### UX Requirements
 
@@ -56,18 +50,14 @@ Current bundled skills are installed through agent setup and skill-install flows
 ### Operational Requirements
 
 - Template content is stored through project template records.
-- Skill installation must respect the target agent and whether installation is project-local or global.
-- Skill content in DB file storage is the source of truth for user-edited skills. The startup auto-install and repo registration flows read from DB, not from bundled defaults.
+- Extension-provided skills and templates are read-only defaults until copied or customized through project-owned records.
 
 ## Behavior
 
-1. `projects create` seeds bundled ticket and document templates for the project.
+1. `projects create` creates the project and does not copy bundled templates or skills into project-owned records.
 2. `templates create` and `templates update` manage project template content by type (`prompt`, `ticket`, `document`).
 3. `templates write --name <name> --target <path>` renders a template to an arbitrary file path relative to the current directory (overwriting any existing file).
 4. `templates write --name <ticket-template> --ticket <ticket-shorthand>` rewrites that ticket's `ticket.md` and preserves its existing H1 title.
-5. `agents setup` and `agents install-skills` install bundled skills into the chosen agent directory.
-6. Updating a skill via the dashboard writes the bundled content to DB file storage and to all agent directories (`.claude/skills/`, `.opencode/skills/`) in linked repos.
-7. On API startup, `ensureSkillsInstalled` checks every project/repo/agent combination and installs any missing skill from DB storage. Skills already present on disk are left untouched to preserve user edits.
 
 ## Interface
 

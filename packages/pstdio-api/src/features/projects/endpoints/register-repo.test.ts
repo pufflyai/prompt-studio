@@ -3,28 +3,12 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import type { AgentId, AgentService, AvailabilityInfo } from "pstdio-agents";
 import { createApp } from "../../../app";
 import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
-
-const createTestAgent = (id: AgentId, availability: AvailabilityInfo): AgentService =>
-  ({
-    id,
-    name: id,
-    capabilities: () => [],
-    checkAvailability: () => availability,
-    listModels: () => [],
-    startSession: async () => ({}),
-    resumeSession: async () => ({}),
-    getMessages: async () => [],
-    listSessions: async () => [],
-    exportSession: async () => ({ session: { id: "session", title: "Session" }, messages: [] }),
-    launchSession: async () => ({}),
-  }) as unknown as AgentService;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-register-repo-test-"));
@@ -92,92 +76,6 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
     const res = await registerRepo(project.id, "strict-repo", repoPath, { unknown_key: "value" });
 
     expect(res.status).toBe(400);
-  });
-
-  test("installs bundled skills to repo for configured agents", async () => {
-    const project = await createProject("Skill Install Project");
-
-    await app.request("/v1/agents", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "claude-code" }),
-    });
-
-    const repoPath = join(tempRoot, "skill-repo");
-    mkdirSync(repoPath, { recursive: true });
-
-    const res = await registerRepo(project.id, "skill-repo", repoPath);
-
-    expect(res.status).toBe(201);
-
-    const skillsDir = join(repoPath, ".claude", "skills");
-    expect(existsSync(skillsDir)).toBe(true);
-    expect(readdirSync(skillsDir).length).toBeGreaterThan(0);
-  });
-
-  test("preserves existing repo-local skill customizations", async () => {
-    const project = await createProject("Skill Customization Project");
-
-    await app.request("/v1/agents", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "claude-code" }),
-    });
-
-    const repoPath = join(tempRoot, "custom-skill-repo");
-    const customSkillPath = join(repoPath, ".claude", "skills", "create-ticket", "SKILL.md");
-    mkdirSync(join(repoPath, ".claude", "skills", "create-ticket"), { recursive: true });
-    writeFileSync(customSkillPath, "# Custom Skill");
-
-    const res = await registerRepo(project.id, "custom-skill-repo", repoPath);
-
-    expect(res.status).toBe(201);
-    expect(readFileSync(customSkillPath, "utf8")).toBe("# Custom Skill");
-  });
-
-  test("auto-configures the first installed agent before installing bundled skills", async () => {
-    const isolatedRoot = mkdtempSync(join(tmpdir(), "pstdio-api-register-repo-agent-install-test-"));
-    const handle = await createApp({
-      agents: [createTestAgent("claude-code", { type: "INSTALLED" })],
-      dbPath: ":memory:",
-      storagePath: join(isolatedRoot, "storage"),
-      filesRoot: resolveTestFilesRoot(),
-    });
-
-    try {
-      const createRes = await handle.app.request("/v1/projects", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Auto Agent Project" }),
-      });
-      const project = await createRes.json();
-
-      const repoPath = join(isolatedRoot, "auto-agent-repo");
-      mkdirSync(repoPath, { recursive: true });
-
-      const res = await handle.app.request(`/v1/projects/${project.id}/repos`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "auto-agent-repo", path: repoPath }),
-      });
-
-      expect(res.status).toBe(201);
-      const skillsDir = join(repoPath, ".claude", "skills");
-      expect(existsSync(skillsDir)).toBe(true);
-      expect(readdirSync(skillsDir).length).toBeGreaterThan(0);
-
-      const agentsRes = await handle.app.request("/v1/agents");
-      expect(agentsRes.status).toBe(200);
-      expect(await agentsRes.json()).toEqual([
-        expect.objectContaining({
-          agent_id: "claude-code",
-          is_default: true,
-        }),
-      ]);
-    } finally {
-      await handle.close();
-      rmSync(isolatedRoot, { recursive: true, force: true });
-    }
   });
 });
 

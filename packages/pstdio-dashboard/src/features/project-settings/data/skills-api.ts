@@ -10,18 +10,10 @@ export type ProjectSkill = {
   updated_at: string;
 };
 
-export type ProjectSkillDetails = ProjectSkill & {
-  bundled_version: string;
-  installed_agents: string[];
-};
+export type ProjectSkillDetails = ProjectSkill;
 
 export const getProjectSkills = async (projectId: string) =>
   apiRequest<ProjectSkill[]>(`/v1/projects/${projectId}/skills`);
 
 export const getProjectSkill = async (projectId: string, name: string) =>
   apiRequest<ProjectSkillDetails>(`/v1/projects/${projectId}/skills/${encodeURIComponent(name)}`);
-
-export const updateProjectSkill = async (projectId: string, name: string) =>
-  apiRequest<ProjectSkillDetails>(`/v1/projects/${projectId}/skills/${encodeURIComponent(name)}/update`, {
-    method: "POST",
-  });

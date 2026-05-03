@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { resolvePrompt } from "./resolve-prompt";
 
 const createMockDeps = (
-  overrides: { template?: { id: string; file_id: string } | null; fileContent?: string | null } = {},
+  overrides: { template?: { id: string; file_id: string | null } | null; fileContent?: string | null } = {},
 ) => ({
   templateService: {
     getByName: async (_projectId: string, _name: string) => overrides.template ?? null,
@@ -37,6 +37,19 @@ describe("resolvePrompt", () => {
       resolvePrompt({ template: "nonexistent" }, "project-1", createMockDeps({ template: null })),
     ).rejects.toMatchObject({
       message: "Prompt template not found: nonexistent",
+      status: 404,
+    });
+  });
+
+  test("throws when a template has no project-owned file", async () => {
+    expect(
+      resolvePrompt(
+        { template: "extension-default" },
+        "project-1",
+        createMockDeps({ template: { id: "t1", file_id: null } }),
+      ),
+    ).rejects.toMatchObject({
+      message: "Prompt template not found: extension-default",
       status: 404,
     });
   });

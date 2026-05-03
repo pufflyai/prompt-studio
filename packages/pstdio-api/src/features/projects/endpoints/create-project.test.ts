@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { chmodSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -8,28 +8,6 @@ import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
-const TEMPLATE_FILES = [
-  "documents/prd.template.md",
-  "documents/adr.template.md",
-  "documents/changelog-entry.template.md",
-  "documents/cookbook.template.md",
-  "documents/lessons-learned.template.md",
-  "documents/code-review.template.md",
-  "documents/architecture-overview.template.md",
-  "documents/contracts.template.md",
-  "documents/research.template.md",
-  "documents/schemas.template.md",
-  "prompts/commit-message.prompt.md",
-  "prompts/create-sub-tickets.prompt.md",
-  "prompts/implement-ticket.prompt.md",
-  "prompts/refine-ticket.prompt.md",
-  "prompts/squash-message.prompt.md",
-  "prompts/fix-changes-requested.prompt.md",
-  "prompts/review-code.prompt.md",
-  "tickets/bug-fix.ticket.md",
-  "tickets/ticket.md",
-  "tickets/proposal.ticket.md",
-];
 
 const makeEmbeddedTemplateFile = (fileName: string, content: string) => {
   const blob = new Blob([content], { type: "text/markdown" });
@@ -75,60 +53,25 @@ describe("POST /v1/projects", () => {
     expect(res.status).toBe(400);
   });
 
-  test("seeds templates from embedded files when available", async () => {
+  test("does not seed project-owned templates from embedded repo files", async () => {
     const runtime = Bun as unknown as { embeddedFiles: (Blob & { name: string })[] };
     const originalEmbeddedFiles = runtime.embeddedFiles;
-    runtime.embeddedFiles = TEMPLATE_FILES.map((fileName) =>
-      makeEmbeddedTemplateFile(fileName, `# embedded:${fileName}\n`),
-    );
+    runtime.embeddedFiles = [makeEmbeddedTemplateFile("tickets/ticket.md", "# embedded:tickets/ticket.md\n")];
 
     try {
       const createRes = await app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Embedded Template Project" }),
+        body: JSON.stringify({ name: "No Repo Seed Project" }),
       });
       expect(createRes.status).toBe(201);
 
       const project = (await createRes.json()) as { id: string };
-      const ticketRes = await app.request(`/v1/projects/${project.id}/templates/ticket`);
-      expect(ticketRes.status).toBe(200);
-
-      const ticketTemplate = (await ticketRes.json()) as { content: string };
-      expect(ticketTemplate.content).toBe("# embedded:tickets/ticket.md\n");
-
-      const bugFixRes = await app.request(`/v1/projects/${project.id}/templates/bug-fix`);
-      expect(bugFixRes.status).toBe(200);
-
-      const bugFixTemplate = (await bugFixRes.json()) as { content: string };
-      expect(bugFixTemplate.content).toBe("# embedded:tickets/bug-fix.ticket.md\n");
+      const templatesRes = await app.request(`/v1/projects/${project.id}/templates?sourceKind=project`);
+      expect(templatesRes.status).toBe(200);
+      expect(await templatesRes.json()).toEqual([]);
     } finally {
       runtime.embeddedFiles = originalEmbeddedFiles;
     }
-  });
-
-  test("rolls back the project when seeding fails", async () => {
-    const storagePath = join(tempRoot, "storage");
-    const projectName = "Rollback Project";
-
-    chmodSync(storagePath, 0o555);
-
-    try {
-      const createRes = await app.request("/v1/projects", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: projectName }),
-      });
-
-      expect(createRes.status).toBe(500);
-    } finally {
-      chmodSync(storagePath, 0o755);
-    }
-
-    const listRes = await app.request("/v1/projects");
-    expect(listRes.status).toBe(200);
-
-    const projects = (await listRes.json()) as { name: string }[];
-    expect(projects.some((project) => project.name === projectName)).toBe(false);
   });
 });

@@ -2,13 +2,13 @@
 
 ## What went wrong
 
-An e2e test for skill installation during project creation failed. The test clicked "Create project", waited for the project name to appear in the UI, then immediately checked that skill files existed on disk. The files were missing.
+An old e2e test for repo side effects during project creation failed. The test clicked "Create project", waited for the project name to appear in the UI, then immediately checked that filesystem side effects existed. The files were missing.
 
 ## Why
 
-`createProjectHandler` emits an SSE event for the project at the start of the handler — before `seedDefaultSkills` finishes and before the HTTP response is sent. The dashboard receives the SSE event and renders the project name in the UI immediately. Meanwhile, the full API call chain (`POST /projects` → `seedDefaultSkills` → `POST /repos` → skill installation) is still in progress.
+The project creation handler emitted an SSE event for the project before all follow-up repo bootstrap work finished. The dashboard received the SSE event and rendered the project name in the UI immediately. Meanwhile, the full API call chain was still in progress.
 
-The test saw the project name via SSE and proceeded to assert file existence, but `registerRepo` (which writes skill files to disk) hadn't been called yet.
+The test saw the project name via SSE and proceeded to assert file existence, but `registerRepo` hadn't been called yet.
 
 ## How it was solved
 

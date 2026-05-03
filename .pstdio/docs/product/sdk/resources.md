@@ -189,10 +189,7 @@ type Skill = {
   deleted_at: string | null
 }
 
-type SkillWithContent = Skill & {
-  bundled_version: string
-  installed_agents: string[]
-}
+type SkillWithContent = Skill
 ```
 
 Notes:

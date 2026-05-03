@@ -1,6 +1,4 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 import { cleanupDirs, createGitRepo, createTempDir, runPstdio, runPstdioSafe } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
@@ -16,7 +14,7 @@ afterAll(() => {
 });
 
 describe("pstdio agents (API state)", () => {
-  // Run in a temp git repo so `agents setup` doesn't install skills into the real project
+  // Run in a temp git repo so `agents setup` doesn't write plugin artifacts into the real project.
   let repo: string;
   const apiDirs: string[] = [];
 
@@ -129,23 +127,7 @@ describe("pstdio agents (filesystem)", () => {
   });
 
   test(
-    "installs skills in a linked project repo",
-    () => {
-      const repo = createGitRepo();
-      dirs.push(repo);
-
-      // Initialize a project so skills can be fetched from the API
-      run("projects create e2e-agents-test", repo);
-      run("agents setup claude-code", repo);
-
-      // Skills are installed either during project creation (via registerRepo) or agent setup
-      expect(existsSync(join(repo, ".claude", "skills", "create-ticket", "SKILL.md"))).toBe(true);
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "skips skill installation outside a git repo",
+    "skips plugin installation outside a git repo",
     () => {
       const dir = createTempDir();
       dirs.push(dir);
@@ -153,24 +135,6 @@ describe("pstdio agents (filesystem)", () => {
       const output = run("agents setup claude-code", dir);
 
       expect(output).toContain("Not inside a git repository");
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "removes skills with --delete-skills",
-    () => {
-      const repo = createGitRepo();
-      dirs.push(repo);
-
-      run("projects create e2e-agents-delete-test", repo);
-      run("agents setup claude-code", repo);
-      expect(existsSync(join(repo, ".claude", "skills", "create-ticket", "SKILL.md"))).toBe(true);
-
-      const output = run("agents remove claude-code --delete-skills", repo);
-
-      expect(output).toContain("Deleted");
-      expect(existsSync(join(repo, ".claude", "skills", "create-ticket"))).toBe(false);
     },
     TEST_TIMEOUT,
   );

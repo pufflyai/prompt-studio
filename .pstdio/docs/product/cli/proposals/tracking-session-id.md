@@ -60,7 +60,6 @@ The following are all non-read-only CLI commands that mutate DB state, workspace
 - `pstdio agents setup`
 - `pstdio agents update`
 - `pstdio agents remove`
-- `pstdio agents install-skills`
 
 ### Hooks
 
@@ -206,10 +205,10 @@ No behavior change for `workspaces set-status` semantics:
 
 Extend agent setup so OpenCode session bridge installation is first-class:
 
-- `pstdio agents setup opencode` installs both skills and required OpenCode plugin artifacts.
+- `pstdio agents setup opencode` installs required OpenCode plugin artifacts.
 - Add explicit plugin installation command for idempotent reruns, for example:
   - `pstdio agents install-plugins <agent-id>`
-- Plugin install should be supported for project-local and global setups, matching existing skills install model.
+- Plugin install should be supported for project-local and global setups.
 - Agent config should include plugin-install metadata/path overrides (similar to `binary` and `skills_dir`).
 
 ## Ticket Draft

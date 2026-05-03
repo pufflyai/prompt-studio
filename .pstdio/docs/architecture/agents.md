@@ -200,15 +200,6 @@ Longer term, once OpenCode exposes session env directly to child processes witho
 
 Claude Code supports interactive tool approvals. When the agent needs permission to run a tool, it sends a `control_request` over stdout. pstdio routes this through an `ApprovalService` and writes back a `control_response` (approve / deny / timeout) over stdin.
 
-## Skills
-
-When an agent is set up, pstdio installs default skills into the agent's skill directory:
-
-- Claude Code: `.claude/skills/`
-- OpenCode: `.opencode/skills/`
-
-Skills can also be installed globally (`~/.claude/skills/`) via the `--global-skills` flag.
-
 ## Rules
 
 1. **Agents are external processes.** pstdio never embeds LLM logic — it delegates to agent binaries and normalizes their output.

@@ -5,7 +5,7 @@ export type ProjectTemplateRow = {
   project_id: string | null;
   name: string;
   template_type: string;
-  file_id: string;
+  file_id: string | null;
   is_default: boolean;
   origin_extension_id: string | null;
   origin_template_key: string | null;
@@ -19,7 +19,7 @@ export const projectTemplateRowToTemplate = (template: ProjectTemplateRow): Temp
   project_id: template.project_id,
   name: template.name,
   template_type: template.template_type,
-  file_id: template.file_id,
+  file_id: template.file_id ?? "",
   is_default: template.is_default,
   source_kind: "project",
   read_only: false,

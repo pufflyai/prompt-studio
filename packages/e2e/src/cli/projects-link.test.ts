@@ -1,6 +1,4 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 import { cleanupDirs, createGitRepo, createProjectViaApi, createTempDir, runPstdio, runPstdioSafe } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
@@ -51,23 +49,6 @@ describe("pstdio projects link", () => {
 
       expect(result.exitCode).not.toBe(0);
       expect(result.stderr).toContain("Project not found");
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "installs skills for configured agents",
-    async () => {
-      const repo = createGitRepo();
-      dirs.push(repo);
-
-      run("agents setup claude-code", repo);
-
-      const project = await createProjectViaApi(api.url, "link-skills-test");
-      const output = run(`projects link --project-id ${project.id}`, repo);
-
-      expect(output).toContain("Linked project");
-      expect(existsSync(join(repo, ".claude", "skills", "create-ticket", "SKILL.md"))).toBe(true);
     },
     TEST_TIMEOUT,
   );

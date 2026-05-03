@@ -41,7 +41,7 @@ const projectTemplateAsContractTemplate = (template: {
   project_id: string | null;
   name: string;
   template_type: string;
-  file_id: string;
+  file_id: string | null;
   is_default: boolean;
   origin_extension_id: string | null;
   origin_template_key: string | null;
@@ -53,7 +53,7 @@ const projectTemplateAsContractTemplate = (template: {
   project_id: template.project_id,
   name: template.name,
   template_type: template.template_type,
-  file_id: template.file_id,
+  file_id: template.file_id ?? "",
   is_default: template.is_default,
   source_kind: "project",
   read_only: false,
@@ -90,7 +90,7 @@ export const getTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof getT
     const { projectId, name } = c.req.valid("param");
     const projectTemplate = await deps.templateService.getByName(projectId, name);
 
-    if (projectTemplate) {
+    if (projectTemplate?.file_id) {
       const file = await deps.fileService.get(projectTemplate.file_id);
       const content = file ? readFileSync(file.storage_path, "utf8") : "";
       return c.json({ ...projectTemplateAsContractTemplate(projectTemplate), content }, 200);

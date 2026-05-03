@@ -1,7 +1,4 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
-import { findAgent, getBundledSkills } from "pstdio-agents";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { notFoundResponseSchema, skillWithContentResponseSchema } from "../dto";
@@ -48,22 +45,6 @@ export const getSkillHandler = (deps: RouteDeps): AppRouteHandler<typeof getSkil
     const skill = await deps.skillService.getByName(projectId, name);
 
     if (skill) {
-      const [bundled, repos, agents] = await Promise.all([
-        getBundledSkills(),
-        deps.repoService.listByProject(projectId),
-        deps.agentConfigService.list(),
-      ]);
-      const bundledSkill = bundled.find((s) => s.name === name);
-      const bundled_version = bundledSkill?.version ?? "";
-
-      const installed_agents = agents
-        .filter((agent) => {
-          const knownAgent = findAgent(agent.agent_id);
-          if (!knownAgent) return false;
-          return repos.some((repo) => existsSync(join(repo.path, knownAgent.skillsDir, name, "SKILL.md")));
-        })
-        .map((agent) => agent.agent_id);
-
       return c.json(
         {
           id: skill.id,
@@ -80,8 +61,6 @@ export const getSkillHandler = (deps: RouteDeps): AppRouteHandler<typeof getSkil
           created_at: skill.created_at,
           updated_at: skill.updated_at,
           deleted_at: skill.deleted_at,
-          bundled_version,
-          installed_agents,
         },
         200,
       );
@@ -94,8 +73,7 @@ export const getSkillHandler = (deps: RouteDeps): AppRouteHandler<typeof getSkil
         (entry) => entry.namespace === parsed.namespace && entry.localId === parsed.key,
       );
       if (record) {
-        const synthetic = extensionDefaultToSkill(record, projectId);
-        return c.json({ ...synthetic, bundled_version: "", installed_agents: [] }, 200);
+        return c.json(extensionDefaultToSkill(record, projectId), 200);
       }
     }
 

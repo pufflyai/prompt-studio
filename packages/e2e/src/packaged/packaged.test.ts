@@ -108,9 +108,6 @@ describe("packaged pstdio — project lifecycle", () => {
         const pluginsDir = join(repo, ".pstdio", "plugins");
         expect(existsSync(pluginsDir)).toBe(true);
         expect(readdirSync(pluginsDir).length).toBeGreaterThan(0);
-        const skillsDir = join(repo, ".claude", "skills");
-        expect(existsSync(skillsDir)).toBe(true);
-        expect(readdirSync(skillsDir).length).toBeGreaterThan(0);
       } finally {
         await shutdownApiViaHttp(url);
         server.kill();

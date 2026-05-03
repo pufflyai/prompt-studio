@@ -28,13 +28,10 @@ const runSafe = (args: string, cwd: string) => runPstdioSafe(args, cwd, { PSTDIO
 
 describe("pstdio projects create", () => {
   test(
-    "creates project, writes config, and installs skills",
+    "creates project and writes config",
     () => {
       const repo = createGitRepo();
       dirs.push(repo);
-
-      // Configure an agent so skills get installed
-      run("agents setup claude-code", repo);
 
       const output = run("projects create my-project", repo);
 

@@ -1,12 +1,10 @@
 import { basename } from "node:path";
 import { readConfig, writeConfig } from "@/features/config/config";
 import { scaffoldPlugins } from "@/features/hooks/scaffold";
-import { installDefaultSkills } from "@/features/skills/install-default-skills";
 import { createProject } from "./api/create-project";
 import { registerRepo } from "./api/register-repo";
 
 type InitOptions = {
-  homedir?: string;
   repoPaths?: string[];
 };
 
@@ -26,6 +24,5 @@ export const createAndInitProject = async (root: string, name: string, options?:
 
   writeConfig(root, { project_id: project.id });
   await scaffoldPlugins(root);
-  await installDefaultSkills(root, project.id, undefined, options?.homedir);
   return project;
 };

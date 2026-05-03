@@ -211,11 +211,11 @@ Deletes a template.
 
 ### `client.skills.list(projectId: string)`
 
-Lists skills installed for a project.
+Lists skills available to a project.
 
 ### `client.skills.get(projectId: string, skillId: string)`
 
-Fetches a skill together with its content and installation metadata.
+Fetches a skill together with its content.
 
 ### `client.agents.list()`
 

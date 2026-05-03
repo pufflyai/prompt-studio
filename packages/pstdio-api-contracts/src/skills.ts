@@ -27,10 +27,7 @@ export const skillSchema = z.object({
   deleted_at: z.string().nullable(),
 });
 
-export const skillWithContentSchema = skillSchema.extend({
-  bundled_version: z.string(),
-  installed_agents: z.array(z.string()),
-});
+export const skillWithContentSchema = skillSchema;
 
 export const copyExtensionSkillInputSchema = z.object({
   name: z.string().min(1).optional(),

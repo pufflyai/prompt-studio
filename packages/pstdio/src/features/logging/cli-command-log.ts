@@ -5,7 +5,6 @@ const normalizeCommandPath = (tokens: string[]) => tokens.map(normalized).join("
 
 export const MUTATING_CLI_COMMANDS = new Set([
   "agents install-plugins",
-  "agents install-skills",
   "agents remove",
   "agents setup",
   "agents update",

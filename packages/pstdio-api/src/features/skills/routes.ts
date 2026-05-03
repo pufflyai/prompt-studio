@@ -12,7 +12,6 @@ import {
   setExtensionSkillPreferenceHandler,
   setExtensionSkillPreferenceRoute,
 } from "./endpoints/set-extension-skill-preference";
-import { updateSkillHandler, updateSkillRoute } from "./endpoints/update-skill";
 
 export const createSkillRoutes = (deps: RouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
@@ -24,7 +23,6 @@ export const createSkillRoutes = (deps: RouteDeps) => {
 
   routes.openapi(listSkillsRoute, listSkillsHandler(deps));
   routes.openapi(getSkillRoute, getSkillHandler(deps));
-  routes.openapi(updateSkillRoute, updateSkillHandler(deps));
 
   return routes;
 };

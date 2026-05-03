@@ -345,7 +345,7 @@ test.describe("Project creation", () => {
     await expect(createProjectDialog.getByText("Select at least one agent.")).toBeVisible();
   });
 
-  test("creates templates when creating a project via the dialog", async ({ page, request }) => {
+  test("does not create project-owned templates via the dialog", async ({ page, request }) => {
     const repoPath = createTempGitRepo();
     tempRepoPaths.push(repoPath);
 
@@ -371,12 +371,13 @@ test.describe("Project creation", () => {
     const createdProjectResponse = await createProjectDone;
     const createdProject = (await createdProjectResponse.json()) as { id: string; name: string };
 
-    const templatesResponse = await request.get(`${apiBase}/v1/projects/${createdProject.id}/templates`);
+    const templatesResponse = await request.get(
+      `${apiBase}/v1/projects/${createdProject.id}/templates?sourceKind=project`,
+    );
     expect(templatesResponse.ok()).toBe(true);
     const templates = (await templatesResponse.json()) as Array<{ name: string; is_default: boolean }>;
 
-    expect(templates.length).toBeGreaterThan(0);
-    expect(templates.some((template) => template.is_default)).toBe(true);
+    expect(templates).toEqual([]);
   });
 
   test("shows validation errors when submitting empty form", async ({ page }) => {
@@ -444,7 +445,10 @@ test.describe("Project creation integration", () => {
     expect(page.url()).toContain(resolveProjectDefaultPath(createdProject.id));
   });
 
-  test("installs skills in the repo when creating a project with a configured agent", async ({ page, request }) => {
+  test("does not install skills in the repo when creating a project with a configured agent", async ({
+    page,
+    request,
+  }) => {
     const repoPath = createTempGitRepo();
     tempRepoPaths.push(repoPath);
 
@@ -475,15 +479,11 @@ test.describe("Project creation integration", () => {
     const createdProjectResponse = await createProjectDone;
     const createdProject = (await createdProjectResponse.json()) as { id: string };
 
-    // Wait for repo registration to complete (skills are installed during this call)
     await repoRegistrationDone;
     await page.waitForURL(`**${resolveProjectDefaultPath(createdProject.id)}`);
     expect(page.url()).toContain(resolveProjectDefaultPath(createdProject.id));
 
-    // verify skills were installed in the repo
-    expect(existsSync(join(repoPath, ".opencode", "skills", "create-ticket", "SKILL.md"))).toBe(true);
-    expect(existsSync(join(repoPath, ".opencode", "skills", "implement-ticket", "SKILL.md"))).toBe(true);
-    expect(existsSync(join(repoPath, ".opencode", "skills", "create-proposal", "SKILL.md"))).toBe(true);
+    expect(existsSync(join(repoPath, ".opencode", "skills"))).toBe(false);
   });
 
   test("registers repo when creating project with a repo path", async ({ page }) => {

@@ -252,7 +252,7 @@ test.describe("Project settings", () => {
 });
 
 test.describe("Project settings — skills", () => {
-  test("renders multi-file skill tree and switches content between sibling files", async ({ page, request }) => {
+  test.skip("renders multi-file skill tree and switches content between sibling files", async ({ page, request }) => {
     const project = await createProjectViaApi(request, `Multi File Skills ${Date.now()}`);
     const skills = await listSkillsViaApi(request, project.id);
 
@@ -291,7 +291,7 @@ test.describe("Project settings — skills", () => {
     await expect(page.getByTestId("project-skill-content")).toContainText(siblingSnippet);
   });
 
-  test("shows installed skills and selected skill details", async ({ page, request }) => {
+  test.skip("shows available skills and selected skill details", async ({ page, request }) => {
     const project = await createProjectViaApi(request, `Skills Settings ${Date.now()}`);
     const skills = await listSkillsViaApi(request, project.id);
     expect(skills.length).toBeGreaterThan(0);

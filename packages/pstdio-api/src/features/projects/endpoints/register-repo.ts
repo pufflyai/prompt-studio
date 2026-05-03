@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
-import { installProjectSkillsToRepo } from "../../skills/install-skill-to-repo";
 import { bootstrapProjectRepo } from "../bootstrap-project-repo";
 import { notFoundResponseSchema } from "../dto";
 
@@ -123,8 +122,6 @@ export const registerRepoHandler = (deps: RouteDeps): AppRouteHandler<typeof reg
 
     deps.eventBus.emit("repos", "set", repo);
     await emitProjectRepoLink(deps, { projectId: id, repoId: repo.id });
-
-    await installProjectSkillsToRepo(deps, { projectId: id, repoPath: repo.path });
 
     return c.json(repo, 201);
   };

@@ -8,7 +8,7 @@ type ResolvePromptInput = {
 };
 
 type ResolvePromptDeps = {
-  templateService: { getByName: (projectId: string, name: string) => Promise<{ file_id: string } | null> };
+  templateService: { getByName: (projectId: string, name: string) => Promise<{ file_id: string | null } | null> };
   fileService: { get: (fileId: string) => Promise<{ storage_path: string } | null> };
   readFileContent?: (storagePath: string) => string;
 };
@@ -33,7 +33,7 @@ export const resolvePrompt = async (input: ResolvePromptInput, projectId: string
 
   if (input.template) {
     const template = await deps.templateService.getByName(projectId, input.template);
-    if (!template) {
+    if (!template?.file_id) {
       throw new ResolvePromptError(`Prompt template not found: ${input.template}`, 404);
     }
 

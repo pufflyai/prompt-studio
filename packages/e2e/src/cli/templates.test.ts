@@ -32,11 +32,24 @@ const createInitializedRepo = (name: string) => {
   return repo;
 };
 
+const createTemplate = (
+  repo: string,
+  input: { name: string; type: "prompt" | "ticket" | "document"; content: string; default?: boolean },
+) => {
+  const file = join(repo, `${input.name}.md`);
+  writeFileSync(file, input.content);
+  run(
+    `templates create --name ${input.name} --type ${input.type} --file ${file}${input.default ? " --default" : ""}`,
+    repo,
+  );
+};
+
 describe("pstdio templates list", () => {
   test(
     "shows default markers",
     () => {
       const repo = createInitializedRepo("tpl-defaults");
+      createTemplate(repo, { name: "default-ticket", type: "ticket", content: "# {{TICKET_TITLE}}", default: true });
 
       const output = run("templates list", repo);
       expect(output).toContain("*");
@@ -113,6 +126,7 @@ describe("pstdio templates update", () => {
     "updates template content and default",
     () => {
       const repo = createInitializedRepo("tpl-update");
+      createTemplate(repo, { name: "adr", type: "document", content: "# ADR", default: false });
 
       const tplFile = join(repo, "updated.md");
       writeFileSync(tplFile, "# Updated content");
@@ -141,6 +155,7 @@ describe("pstdio templates delete", () => {
     "deletes a template and hides it from list",
     () => {
       const repo = createInitializedRepo("tpl-delete");
+      createTemplate(repo, { name: "cookbook", type: "document", content: "# Cookbook" });
 
       const output = run("templates delete --name cookbook", repo);
       expect(output).toContain('Deleted template "cookbook"');
@@ -169,6 +184,7 @@ describe("pstdio templates write", () => {
     "writes a ticket template to an existing ticket directory with --ticket",
     () => {
       const repo = createInitializedRepo("tpl-write-ticket");
+      createTemplate(repo, { name: "ticket", type: "ticket", content: "# {{TICKET_TITLE}}\nTicket: {{TICKET_ID}}" });
 
       const ticketDir = join(repo, ".pstdio", "tickets", "TP-1");
       mkdirSync(ticketDir, { recursive: true });
@@ -189,6 +205,7 @@ describe("pstdio templates write", () => {
     "writes a template to an arbitrary path with --target",
     () => {
       const repo = createInitializedRepo("tpl-write-target");
+      createTemplate(repo, { name: "cookbook", type: "document", content: "# Cookbook" });
 
       run("templates write --name cookbook --target scratch/cookbook.md", repo);
 
@@ -202,6 +219,7 @@ describe("pstdio templates write", () => {
     "fails when ticket shorthand does not exist",
     () => {
       const repo = createInitializedRepo("tpl-write-noticket");
+      createTemplate(repo, { name: "ticket", type: "ticket", content: "# {{TICKET_TITLE}}" });
 
       const result = runSafe("templates write --name ticket --ticket MISSING-1", repo);
       expect(result.exitCode).not.toBe(0);

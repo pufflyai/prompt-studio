@@ -59,6 +59,7 @@ const resolvePrompts = async (deps: RouteDeps, projectId: string) => {
 
   const promptEntries = await Promise.all(
     promptTemplates.map(async (template) => {
+      if (!template.file_id) return null;
       const file = await deps.fileService.get(template.file_id);
       if (!file) return null;
 

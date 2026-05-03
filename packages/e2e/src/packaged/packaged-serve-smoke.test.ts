@@ -131,7 +131,7 @@ beforeAll(() => {
 
 describe("packaged pstdio — self-hosted serve", () => {
   test(
-    "creates project with bundled templates and repo bootstrap artifacts",
+    "creates project with repo bootstrap artifacts",
     async () => {
       const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
       let child: ChildProcess | null = null;
@@ -148,24 +148,6 @@ describe("packaged pstdio — self-hosted serve", () => {
         expect(createRes.status).toBe(201);
 
         const project = (await createRes.json()) as { id: string };
-        const templatesRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/templates`);
-        expect(templatesRes.status).toBe(200);
-
-        const templates = (await templatesRes.json()) as { name: string }[];
-        expect(templates.length).toBeGreaterThan(0);
-        expect(templates.map((template) => template.name)).toContain("bug-fix");
-
-        const skillsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/skills`);
-        expect(skillsRes.status).toBe(200);
-
-        const skills = (await skillsRes.json()) as {
-          name: string;
-          files: { path: string; content: string; encoding: "utf8" }[];
-        }[];
-        expect(skills.length).toBeGreaterThan(0);
-        const multiFileSkill = skills.find((skill) => skill.files.length > 1);
-        expect(multiFileSkill).toBeDefined();
-
         const repoPath = join(tempRoot, "repo");
         mkdirSync(repoPath, { recursive: true });
 

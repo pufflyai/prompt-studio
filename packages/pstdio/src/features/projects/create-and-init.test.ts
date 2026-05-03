@@ -30,8 +30,7 @@ describe("createAndInitProject", () => {
     ]);
     const root = setup("create-init");
 
-    const fakeHome = join(tmpBase, "__fake-home__");
-    const project = await createAndInitProject(root, "Test", { homedir: fakeHome, repoPaths: [root] });
+    const project = await createAndInitProject(root, "Test", { repoPaths: [root] });
 
     expect(project).toEqual({ id: "proj-1", name: "Test" } as never);
     expect(globalThis.fetch).toHaveBeenCalledTimes(2);
@@ -40,21 +39,15 @@ describe("createAndInitProject", () => {
   });
 
   test("creates project with no repos when repoPaths is empty", async () => {
-    mockFetchSequence([
-      { status: 201, body: { id: "proj-no-repo", name: "NoRepo" } },
-      { status: 200, body: [] }, // no agents configured
-      { status: 200, body: [] }, // no installed agents available
-    ]);
+    mockFetchSequence([{ status: 201, body: { id: "proj-no-repo", name: "NoRepo" } }]);
     const root = setup("no-repo");
 
     const project = await createAndInitProject(root, "NoRepo", {
-      homedir: join(tmpBase, "__fake-home__"),
       repoPaths: [],
     });
 
     expect(project).toEqual({ id: "proj-no-repo", name: "NoRepo" } as never);
-    // 1 create + 0 registerRepo + 1 agents + 1 agents/info = 3
-    expect(globalThis.fetch).toHaveBeenCalledTimes(3);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
 
     const config = JSON.parse(readFileSync(join(root, ".pstdio", "config.json"), "utf8"));
     expect(config.project_id).toBe("proj-no-repo");

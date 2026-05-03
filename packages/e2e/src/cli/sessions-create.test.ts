@@ -61,7 +61,7 @@ describe("pstdio sessions create --workspace-id", () => {
 
       // Create a session using the workspace shorthand (not UUID) — previously returned 404
       const sessionResult = runSafe(
-        `sessions create --workspace-id ${workspace.workspace_shorthand} --prompt "test prompt"`,
+        `sessions create --workspace-id ${workspace.workspace_shorthand} --prompt "test prompt" --agent fake`,
         repo,
         FLOW_TIMEOUT,
       );
