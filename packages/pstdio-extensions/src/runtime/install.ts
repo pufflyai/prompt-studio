@@ -16,7 +16,6 @@ const DEFAULT_REPO_REF = "main";
 const IGNORED_COPY_DIRS = new Set([
   "node_modules",
   ".git",
-  "dist",
   "build",
   ".turbo",
   ".next",

@@ -180,4 +180,15 @@ describe("createClient", () => {
     expect(calls[0]!.method).toBe("PUT");
     expect(JSON.parse(calls[0]!.body!)).toEqual({ content: "# Updated", is_default: true });
   });
+
+  it("client.extensions.setupProjectExtension calls POST /v1/projects/:id/extensions/:installName/setup", async () => {
+    const { fetchFn, calls } = trackingFetch();
+    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+
+    await client.extensions.setupProjectExtension("proj-1", "extension-lab");
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toBe("http://test:1234/v1/projects/proj-1/extensions/extension-lab/setup");
+    expect(calls[0]!.method).toBe("POST");
+  });
 });

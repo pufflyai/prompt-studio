@@ -1,6 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
+import { listInstalledAgentsForExtensionSkill } from "../agent-install";
 import { notFoundResponseSchema, skillWithContentResponseSchema } from "../dto";
 import { extensionDefaultToSkill } from "../registry/list-registry";
 
@@ -55,12 +56,12 @@ export const getSkillHandler = (deps: RouteDeps): AppRouteHandler<typeof getSkil
           source_kind: "project" as const,
           read_only: false,
           extension_id: null,
+          extension_name: null,
           skill_key: null,
-          origin_extension_id: skill.origin_extension_id,
-          origin_skill_key: skill.origin_skill_key,
           created_at: skill.created_at,
           updated_at: skill.updated_at,
           deleted_at: skill.deleted_at,
+          installed_agents: [],
         },
         200,
       );
@@ -69,11 +70,23 @@ export const getSkillHandler = (deps: RouteDeps): AppRouteHandler<typeof getSkil
     const parsed = parseNamespacedName(name);
     if (parsed) {
       const checkResult = await deps.extensionService.check();
+      const extensionNames = new Map(
+        checkResult.runtime.extensions.map((extension) => [extension.id, extension.displayName]),
+      );
       const record = checkResult.runtime.skills.find(
         (entry) => entry.namespace === parsed.namespace && entry.localId === parsed.key,
       );
       if (record) {
-        return c.json(extensionDefaultToSkill(record, projectId), 200);
+        const installedAgents = await listInstalledAgentsForExtensionSkill(deps, projectId, record);
+        return c.json(
+          extensionDefaultToSkill(
+            record,
+            projectId,
+            installedAgents,
+            extensionNames.get(record.extensionId) ?? record.extensionId,
+          ),
+          200,
+        );
       }
     }
 

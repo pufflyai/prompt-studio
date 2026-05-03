@@ -87,10 +87,23 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
                   v{currentVersion}
                 </Badge>
               )}
+              {skill.extension_name && <Badge size="sm">{skill.extension_name}</Badge>}
             </Flex>
             <Text textStyle="paragraph/S/regular" color="fg.muted" data-testid="project-skill-description">
               {skill.description}
             </Text>
+            <Flex gap="xs" flexWrap="wrap" data-testid="project-skill-installed-agents">
+              {skill.installed_agents.length === 0 && (
+                <Badge size="sm" colorPalette="gray">
+                  Not installed locally
+                </Badge>
+              )}
+              {skill.installed_agents.map((agentId) => (
+                <Badge key={agentId} size="sm" colorPalette="green">
+                  {agentId}
+                </Badge>
+              ))}
+            </Flex>
           </Stack>
           {!selectedFile && (
             <Text textStyle="paragraph/S/regular" color="fg.muted">

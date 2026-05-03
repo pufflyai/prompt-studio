@@ -38,11 +38,7 @@ describe("ensureCliApi", () => {
     expect(env.PSTDIO_API_PORT).toBeUndefined();
   });
 
-  test.each([
-    { _: ["close"] },
-    { _: ["serve"] },
-    { _: ["extensions", "add"] },
-  ])("does not start the API for %p", async (argv) => {
+  test.each([{ _: ["close"] }, { _: ["serve"] }])("does not start the API for %p", async (argv) => {
     const ensuredUrls: string[] = [];
     const env: Record<string, string | undefined> = {};
 

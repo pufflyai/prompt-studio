@@ -54,8 +54,6 @@ export const createSkillExtensionRowOps = (db: DbClient) => {
       files_json: filesJson,
       extension_id: input.extension_id,
       skill_key: input.skill_key,
-      origin_extension_id: null,
-      origin_skill_key: null,
       created_at: timestamp,
       updated_at: timestamp,
       deleted_at: null,

@@ -249,5 +249,20 @@ export const commandExecuteResponseSchema = z.object({
   outcome: commandOutcomeSchema,
 });
 
+export const setupProjectExtensionResponseSchema = z.object({
+  extensionId: z.string(),
+  namespace: z.string(),
+  installName: z.string(),
+  installedSkills: z.array(
+    z.object({
+      id: z.string(),
+      extensionId: z.string(),
+      skillKey: z.string(),
+      installedAgents: z.array(z.string()),
+    }),
+  ),
+});
+
 export type CommandExecuteRequest = z.infer<typeof commandExecuteRequestSchema>;
 export type CommandExecuteResponse = z.infer<typeof commandExecuteResponseSchema>;
+export type SetupProjectExtensionResponse = z.infer<typeof setupProjectExtensionResponseSchema>;

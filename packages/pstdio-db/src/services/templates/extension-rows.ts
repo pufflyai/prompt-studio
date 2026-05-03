@@ -62,8 +62,6 @@ export const createTemplateExtensionRowOps = (db: DbClient) => {
       is_default: false,
       extension_id: input.extension_id,
       template_key: input.template_key,
-      origin_extension_id: null,
-      origin_template_key: null,
       created_at: timestamp,
       updated_at: timestamp,
       deleted_at: null,

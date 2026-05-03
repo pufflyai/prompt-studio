@@ -22,14 +22,13 @@ The old template docs mixed real behavior with unsupported ideas such as global 
 ## Non-Goals
 
 - Global template override precedence.
-- A dashboard UI for editing template assets.
 - Claiming that custom prompt templates are fully wired into current command flows.
 
 ## Overview
 
-Current extension-provided templates are listed through the project template registry. Project creation does not copy repository-bundled templates into project-owned rows.
+Current extension-provided templates are listed through the project template registry. Project creation does not copy repository-bundled templates into project-owned rows. Dashboard/API edits to extension templates write the installed extension source file.
 
-Current extension-provided skills are listed through the project skill registry. Agent setup no longer writes skill files into repo-local or global agent skill directories.
+Current extension-provided skills are listed through the project skill registry. Adding an extension to a project installs its skills into every configured agent selected for that project, and the dashboard shows which agents have the skill installed locally.
 
 ## Requirements
 
@@ -40,7 +39,7 @@ Current extension-provided skills are listed through the project skill registry.
 3. `templates write` must support two modes:
    - `--target <path>` renders the template to an arbitrary file path (overwriting any existing file).
    - `--ticket <shorthand>` renders the template to `.pstdio/tickets/<shorthand>/ticket.md` and preserves its existing H1 title.
-4. Agent setup must not install skill files; extension-backed installation will be added separately.
+4. Extension project setup must install extension skills into each configured agent enabled for the project.
 5. Document scaffolding should use `prd` as the default requirements format.
 
 ### UX Requirements
@@ -49,8 +48,9 @@ Current extension-provided skills are listed through the project skill registry.
 
 ### Operational Requirements
 
-- Template content is stored through project template records.
-- Extension-provided skills and templates are read-only defaults until copied or customized through project-owned records.
+- Project-owned template content is stored through project template records.
+- Extension template content is stored in installed extension source files; dashboard/API edits write those files directly.
+- Extension skill content is stored in installed extension source files and installed to enabled project agents during extension setup.
 
 ## Behavior
 
@@ -89,7 +89,7 @@ Current extension-provided skills are listed through the project skill registry.
 ## Rules & Constraints
 
 - `templates write` requires exactly one of `--target <path>` or `--ticket <shorthand>`.
-- The dashboard can read template assets but does not yet support editing them.
+- The dashboard can edit project-owned templates and extension-provided templates.
 - Bundled prompt templates still exist for internal prompt rendering, but project-scoped prompt customization is not yet a documented end-user workflow.
 
 ## Errors

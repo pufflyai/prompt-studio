@@ -90,9 +90,8 @@ type SkillRow = {
   name: string;
   asset_kind?: string;
   extension_id?: string | null;
+  extension_name?: string | null;
   skill_key?: string | null;
-  origin_extension_id?: string | null;
-  origin_skill_key?: string | null;
 };
 
 const findExtensionDefault = (list: SkillRow[], name: string) =>
@@ -111,6 +110,7 @@ describe("skill registry vertical slice", () => {
     expect(extensionItem!.read_only).toBe(true);
     expect(extensionItem!.asset_kind).toBe("directory");
     expect(extensionItem!.extension_id).toBe("pstdio.extension-lab");
+    expect(extensionItem!.extension_name).toBe("Extension Lab");
     expect(extensionItem!.skill_key).toBe("lab");
 
     const disableRes = await app.request(
@@ -142,6 +142,7 @@ describe("skill registry vertical slice", () => {
     const fetchedDefault = await getDefaultRes.json();
     expect(fetchedDefault.source_kind).toBe("extension-default");
     expect(fetchedDefault.read_only).toBe(true);
+    expect(fetchedDefault.extension_name).toBe("Extension Lab");
     expect(fetchedDefault.files).toHaveLength(1);
     expect(fetchedDefault.files[0].content).toContain("Original extension skill");
 
@@ -155,8 +156,6 @@ describe("skill registry vertical slice", () => {
     expect(copied.name).toBe("lab-skill-copy");
     expect(copied.source_kind).toBe("project");
     expect(copied.read_only).toBe(false);
-    expect(copied.origin_extension_id).toBe("pstdio.extension-lab");
-    expect(copied.origin_skill_key).toBe("lab");
     expect(copied.files).toHaveLength(1);
 
     // Project copy is stored independently; the packaged extension asset must stay intact.
@@ -167,7 +166,5 @@ describe("skill registry vertical slice", () => {
     expect(findExtensionDefault(finalList, "lab.lab")).toBeDefined();
     const projectItem = findProjectSkill(finalList, "lab-skill-copy");
     expect(projectItem).toBeDefined();
-    expect(projectItem!.origin_extension_id).toBe("pstdio.extension-lab");
-    expect(projectItem!.origin_skill_key).toBe("lab");
   });
 });

@@ -31,10 +31,8 @@ const commandToken = (argv: CliArgv, index: number) => {
 
 const shouldEnsureApi = (argv: CliArgv) => {
   const topLevelCommand = commandToken(argv, 0);
-  const subCommand = commandToken(argv, 1);
 
   if (topLevelCommand === "close" || topLevelCommand === "serve") return false;
-  if (topLevelCommand === "extensions" && subCommand === "add") return false;
 
   return true;
 };

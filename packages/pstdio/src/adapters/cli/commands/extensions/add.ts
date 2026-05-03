@@ -8,6 +8,8 @@ import {
   type PackageManager,
 } from "pstdio-extensions";
 import type { Arguments, Argv } from "yargs";
+import { setupProjectExtension as defaultSetupProjectExtension } from "@/features/extensions/api/setup-project-extension";
+import { resolveProjectId as defaultResolveProjectId } from "@/features/projects/resolve-project-id";
 
 const SUPPORTED_PACKAGE_MANAGERS: readonly PackageManager[] = ["npm", "bun"] as const;
 
@@ -43,6 +45,10 @@ export const builder = (yargs: Argv) =>
       type: "boolean",
       default: false,
       describe: "Skip installing dependencies in the copied extension folder",
+    })
+    .option("project-id", {
+      type: "string",
+      describe: "Project to enable the extension for. Defaults to the linked project in the current repo.",
     });
 
 type AddArgs = {
@@ -52,6 +58,7 @@ type AddArgs = {
   ref?: string;
   install?: PackageManager;
   skipInstall?: boolean;
+  projectId?: string;
 };
 
 type Deps = {
@@ -59,6 +66,9 @@ type Deps = {
   log: (msg: string) => void;
   err: (msg: string) => void;
   exit: (code: number) => void;
+  cwd: () => string;
+  resolveProjectId: typeof defaultResolveProjectId;
+  setupProjectExtension: typeof defaultSetupProjectExtension;
 };
 
 const defaultDeps: Deps = {
@@ -66,12 +76,33 @@ const defaultDeps: Deps = {
   log: (msg) => process.stdout.write(msg),
   err: (msg) => process.stderr.write(msg),
   exit: (code) => process.exit(code),
+  cwd: () => process.cwd(),
+  resolveProjectId: defaultResolveProjectId,
+  setupProjectExtension: defaultSetupProjectExtension,
 };
 
 const presentPath = (path: string) => {
   const home = homedir();
   if (home && path.startsWith(home)) return `~${path.slice(home.length)}`;
   return path;
+};
+
+const setupCurrentProject = async (deps: Deps, argv: Arguments<AddArgs>, result: InstallExtensionResult) => {
+  let projectId: string | null = null;
+  try {
+    projectId = deps.resolveProjectId(deps.cwd(), argv.projectId).projectId;
+  } catch {
+    if (argv.projectId) throw new Error(`Project not found: ${argv.projectId}`);
+  }
+  if (!projectId) return null;
+
+  try {
+    return await deps.setupProjectExtension(projectId, result.installName);
+  } catch (error) {
+    if (argv.projectId) throw error;
+    deps.err(`Installed extension, but project setup was skipped: ${error instanceof Error ? error.message : error}\n`);
+    return null;
+  }
 };
 
 const formatDependencyInstall = (result: InstallExtensionResult) => {
@@ -138,10 +169,11 @@ const formatFailureReport = (source: string, error: unknown) => {
 };
 
 export const createHandler =
-  (deps: Deps = defaultDeps) =>
+  (deps: Partial<Deps> = {}) =>
   async (argv: Arguments<AddArgs>) => {
+    const allDeps = { ...defaultDeps, ...deps };
     try {
-      const result = await deps.install({
+      const result = await allDeps.install({
         source: argv.source,
         installName: argv.name,
         force: argv.force,
@@ -149,10 +181,14 @@ export const createHandler =
         packageManager: argv.install,
         skipInstall: argv.skipInstall,
       });
-      deps.log(formatSuccessReport(result));
+      allDeps.log(formatSuccessReport(result));
+      const setup = await setupCurrentProject(allDeps, argv, result);
+      if (setup) {
+        allDeps.log(`Enabled for project. Installed skills for ${setup.installedSkills.length} extension skill(s).\n`);
+      }
     } catch (error) {
-      deps.err(formatFailureReport(argv.source, error));
-      deps.exit(1);
+      allDeps.err(formatFailureReport(argv.source, error));
+      allDeps.exit(1);
     }
   };
 

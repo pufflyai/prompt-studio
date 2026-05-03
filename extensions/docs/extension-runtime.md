@@ -701,11 +701,11 @@ Examples:
 .pstdio/review/artifacts/review-456.md
 ```
 
-Dashboard-edited templates, skills, preferences, statuses, and other active project state live in API-owned storage, not in local extension source.
+Preferences, statuses, and other active project state live in API-owned storage. Extension template and skill content is stored in installed extension source files.
 
 ## Templates and Skills
 
-Extensions can contribute read-only default templates and skills as package/source assets.
+Extensions can contribute default templates and skills as package/source assets. Template edits through the dashboard/API write back to the installed extension source file. Skill edits happen in the installed extension source folder and extension setup installs those skills into each enabled agent directory for the project.
 
 ```ts
 templateTypes: {
@@ -733,15 +733,18 @@ skills: {
 
 Runtime behavior:
 
-| Item               | Behavior                                     |
-| ------------------ | -------------------------------------------- |
-| Extension template | Read-only source asset.                      |
-| Extension skill    | Read-only source asset.                      |
-| Disablement        | Stored as project preference.                |
-| Copy/customize     | Creates a project-owned file/storage record. |
-| Project variation  | Editable through API-owned file storage.     |
+| Item               | Behavior                                                                 |
+| ------------------ | ------------------------------------------------------------------------ |
+| Extension template | Source asset edited in the installed extension folder or dashboard.      |
+| Extension skill    | Source asset edited in the installed extension folder.                   |
+| Skill setup        | Installed to all configured agents enabled for the project.              |
+| Disablement        | Stored as project preference.                                            |
+| Copy/customize     | Creates project-owned tracking/preference state, not the edit surface.   |
+| Project variation  | Edited by changing the extension asset files directly.                   |
 
-Project-specific variations are not edits to extension source unless the user intentionally edits the installed source under `~/.pstdio/extensions`.
+Template and skill source edits should happen in the installed extension folder, such as `~/.pstdio/extensions/<extension-name>/templates/` or `~/.pstdio/extensions/<extension-name>/skills/`. The dashboard template editor uses the same source files for extension templates. File changes in those folders refresh enabled projects the same way changes to extension source do.
+
+If only one project should receive a variation, copy the extension folder, change the extension `id` and `namespace`, enable that copy for the project, and edit files in the copied extension.
 
 ## Data Boundary
 

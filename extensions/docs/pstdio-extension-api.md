@@ -982,7 +982,7 @@ ctx.storage.scope({ type: "repo", repoId: ctx.repo?.repoId });
 ctx.storage.scope({ type: "resource", resource: ctx.resource });
 ```
 
-Use `ctx.files` for project-owned editable files that do not need to live in repo context, such as copied template variations and skill variations.
+Use `ctx.files` for project-owned editable files that do not need to live in repo context. Extension template and skill content should be edited in the installed extension source folder, not through `ctx.files`. Those file changes refresh enabled projects the same way extension source edits do.
 
 Use `ctx.artifacts` for repo-context files that should be visible to coding agents.
 
@@ -1001,7 +1001,7 @@ const all = await ctx.settings.all();
 
 ## 12. Templates and Skills
 
-Extensions can contribute default templates and skills as read-only source assets.
+Extensions can contribute default templates and skills as source assets. Extension template edits through the dashboard/API write back to the installed extension source file. Extension skill edits happen in the installed extension source folder, and project setup installs extension skills into enabled agent directories.
 
 ```ts
 export default defineExtension({
@@ -1036,13 +1036,14 @@ export default defineExtension({
 Runtime behavior:
 
 ```txt
-extension default    read-only source asset
+extension template   source asset, editable through installed source or dashboard/API
+extension skill      source asset, edited in installed source and installed to enabled agents
 project disablement  stored as project preference
-copy/customize       creates project-owned file record through ctx.files
-project variation    editable through Prompt Studio storage
+copy/customize       creates project-owned tracking/preference state
+project variation    edit files in the installed extension folder
 ```
 
-Project-specific variations do not modify extension source assets.
+Project-specific variations use a copied extension source with a different extension `id` and `namespace`; edit template and skill files in that copied extension folder.
 
 ---
 

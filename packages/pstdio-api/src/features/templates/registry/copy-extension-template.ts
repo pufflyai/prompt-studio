@@ -61,8 +61,6 @@ export const copyExtensionTemplate = async (
     template_type: resolved.record.contribution.type,
     file_id: file.id,
     is_default: input.isDefault ?? false,
-    origin_extension_id: input.extensionId,
-    origin_template_key: input.templateKey,
   });
 
   const response = projectTemplateRowToTemplate(template);

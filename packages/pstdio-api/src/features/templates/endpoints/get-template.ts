@@ -43,8 +43,6 @@ const projectTemplateAsContractTemplate = (template: {
   template_type: string;
   file_id: string | null;
   is_default: boolean;
-  origin_extension_id: string | null;
-  origin_template_key: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -58,9 +56,8 @@ const projectTemplateAsContractTemplate = (template: {
   source_kind: "project",
   read_only: false,
   extension_id: null,
+  extension_name: null,
   template_key: null,
-  origin_extension_id: template.origin_extension_id,
-  origin_template_key: template.origin_template_key,
   created_at: template.created_at,
   updated_at: template.updated_at,
   deleted_at: template.deleted_at,
@@ -118,11 +115,10 @@ export const getTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof getT
         file_id: "",
         is_default: false,
         source_kind: "extension-default",
-        read_only: true,
+        read_only: false,
         extension_id: record.extensionId,
+        extension_name: extensionTemplate.extensionName,
         template_key: record.localId,
-        origin_extension_id: null,
-        origin_template_key: null,
         created_at: new Date(0).toISOString(),
         updated_at: new Date(0).toISOString(),
         deleted_at: enabled ? null : new Date(0).toISOString(),

@@ -58,8 +58,6 @@ export const copyExtensionSkill = async (
     name,
     description,
     files,
-    origin_extension_id: input.extensionId,
-    origin_skill_key: input.skillKey,
   });
 
   const skill: Skill = {
@@ -72,8 +70,7 @@ export const copyExtensionSkill = async (
     read_only: false,
     extension_id: null,
     skill_key: null,
-    origin_extension_id: created.origin_extension_id,
-    origin_skill_key: created.origin_skill_key,
+    installed_agents: [],
     created_at: created.created_at,
     updated_at: created.updated_at,
     deleted_at: created.deleted_at,

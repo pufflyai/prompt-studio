@@ -673,7 +673,7 @@ v2 needs a string-based resource contract or a new activity target shape.
 ## Template Record
 
 - **Location:** current `templates`/`files` tables plus extension template preference table, exposed through API services.
-- **Purpose:** active template catalog from read-only extension defaults and editable project templates.
+- **Purpose:** active template catalog from source-backed extension defaults and project preferences.
 
 | Field                 |                               Type | Nullable | Notes                                           |
 | --------------------- | ---------------------------------: | -------: | ----------------------------------------------- |
@@ -684,14 +684,13 @@ v2 needs a string-based resource contract or a new activity target shape.
 | `file_id`             |                             `text` |      yes | Required for project-owned template files       |
 | `is_default`          |                          `boolean` |       no | Project default flag                            |
 | `source_kind`         | `"extension-default" \| "project"` |       no | Logical source                                  |
-| `origin_extension_id` |                             `text` |      yes | Required for copied variation origin            |
-| `origin_template_key` |                             `text` |      yes | Required for copied variation origin            |
-| `read_only`           |                          `boolean` |       no | Extension defaults are read-only                |
+| `read_only`           |                          `boolean` |       no | False for source-editable templates             |
 
 Notes:
 
-- Extension default templates are package/source assets, not editable `files`.
-- Project variations are stored through Prompt Studio file storage.
+- Extension default templates are package/source assets, not editable API `files`.
+- Template content changes are made by editing the installed extension source file directly or through the dashboard/API source writer.
+- Project-specific template variations use a copied extension source with a different extension `id` and `namespace`.
 - Extension-owned template types should come from the owning extension contract where possible.
 
 ---
@@ -699,20 +698,25 @@ Notes:
 ## Skill Record
 
 - **Location:** current `skills`/`files` tables plus extension skill preference table.
-- **Purpose:** active skill catalog from read-only extension defaults and editable project variations.
+- **Purpose:** active skill catalog from source-backed extension defaults and project preferences.
 
 Extension skills may be file or directory package assets.
 
-| Field                 |                               Type | Nullable | Notes                                     |
-| --------------------- | ---------------------------------: | -------: | ----------------------------------------- |
-| `id`                  |                             `text` |       no | Skill id                                  |
-| `project_id`          |                             `text` |      yes | Project-owned variation scope             |
-| `name`                |                             `text` |       no | Display/key field                         |
-| `file_id`             |                             `text` |      yes | Project-owned editable file/folder record |
-| `source_kind`         | `"extension-default" \| "project"` |       no | Logical source                            |
-| `origin_extension_id` |                             `text` |      yes | Required for copied variation origin      |
-| `origin_skill_key`    |                             `text` |      yes | Required for copied variation origin      |
-| `read_only`           |                          `boolean` |       no | Extension defaults are read-only          |
+| Field                 |                               Type | Nullable | Notes                                   |
+| --------------------- | ---------------------------------: | -------: | --------------------------------------- |
+| `id`                  |                             `text` |       no | Skill id                                |
+| `project_id`          |                             `text` |      yes | Project-owned variation scope           |
+| `name`                |                             `text` |       no | Display/key field                       |
+| `file_id`             |                             `text` |      yes | Non-extension project-owned file/folder |
+| `source_kind`         | `"extension-default" \| "project"` |       no | Logical source                          |
+| `read_only`           |                          `boolean` |       no | Extension defaults are read-only        |
+
+Notes:
+
+- Extension skills may be file or directory package assets under the installed extension source.
+- Skill content changes are made by editing the installed extension source file or folder.
+- Extension setup installs skill files into all configured agents enabled for the project.
+- Project-specific skill variations use a copied extension source with a different extension `id` and `namespace`.
 
 ---
 
@@ -743,9 +747,9 @@ Project ticket/workspace relationships into anchors over time.
 - **Location:** current `sessions` table plus migration column.
 - **Purpose:** allow sessions to anchor to non-workspace resources (e.g. tickets, extension-owned resources) while keeping `workspace_sessions` as the kernel-level workspace↔session link.
 
-| Field          |    Type | Nullable | Notes                                                              |
-| -------------- | ------: | -------: | ------------------------------------------------------------------ |
-| `anchors_json` | `jsonb` |       no | `ResourceRef[]` for non-workspace relations                        |
+| Field          |    Type | Nullable | Notes                                       |
+| -------------- | ------: | -------: | ------------------------------------------- |
+| `anchors_json` | `jsonb` |       no | `ResourceRef[]` for non-workspace relations |
 
 Notes:
 
@@ -926,9 +930,9 @@ If reload fails:
 - `project_extension_instances` -> `extension_template_preferences`: one-to-many.
 - `project_extension_instances` -> `extension_skill_preferences`: one-to-many.
 - `project_extension_instances` -> `extension_schedule_state`: one-to-many if schedule state is persisted.
-- `templates` -> `files`: existing relationship remains for project-owned templates.
-- `skills` -> `files`: existing relationship remains for project-owned skill variations.
-- Extension default templates/skills -> package/source assets: read-only, not represented as editable `files` until copied.
+- `templates` -> `files`: existing relationship remains for non-extension project-owned templates.
+- `skills` -> `files`: existing relationship remains for non-extension project-owned skills.
+- Extension default templates/skills -> package/source assets: templates are source-editable through dashboard/API, skills are edited through installed source files.
 - Workspaces -> anchors: v2 supports many anchors, including tickets, sessions, docs, and extension resources.
 - Activity -> resource refs: target/related resources should be soft references so historical activity survives deleted extension state.
 
@@ -989,8 +993,8 @@ If reload fails:
   ```
 
 - Extension storage is scoped by project and extension.
-- Extension templates and skills are read-only source assets.
-- Project-owned templates and skills are editable through Prompt Studio storage, not extension source files.
+- Extension templates and skills are edited through installed extension source files; the dashboard/API template editor writes extension template content back to those files.
+- Project-specific template and skill changes require a copied extension source with a different extension `id` and `namespace`.
 - Slot context is owned by the surface owner and exposed through that owner’s contract package.
 - The SDK kernel exports must stay workflow-agnostic and must not import from extension packages.
 - Extension-specific contracts belong to the owning extension package.

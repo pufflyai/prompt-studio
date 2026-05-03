@@ -20,8 +20,6 @@ const projectRowToTemplate = (template: {
   file_id: string | null;
   is_default: boolean;
   extension_id: string | null;
-  origin_extension_id: string | null;
-  origin_template_key: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -35,15 +33,18 @@ const projectRowToTemplate = (template: {
   source_kind: "project",
   read_only: false,
   extension_id: null,
+  extension_name: null,
   template_key: null,
-  origin_extension_id: template.origin_extension_id,
-  origin_template_key: template.origin_template_key,
   created_at: template.created_at,
   updated_at: template.updated_at,
   deleted_at: template.deleted_at,
 });
 
-const extensionDefaultToTemplate = (record: RuntimeTemplateRecord, projectId: string): Template => {
+const extensionDefaultToTemplate = (
+  record: RuntimeTemplateRecord,
+  projectId: string,
+  extensionName: string,
+): Template => {
   let assetPath = "";
   try {
     assetPath = resolvePackageAssetPath(record.contribution.source, { sourcePath: record.sourcePath });
@@ -59,11 +60,10 @@ const extensionDefaultToTemplate = (record: RuntimeTemplateRecord, projectId: st
     file_id: assetPath,
     is_default: false,
     source_kind: "extension-default",
-    read_only: true,
+    read_only: false,
     extension_id: record.extensionId,
+    extension_name: extensionName,
     template_key: record.localId,
-    origin_extension_id: null,
-    origin_template_key: null,
     created_at: new Date(0).toISOString(),
     updated_at: new Date(0).toISOString(),
     deleted_at: null,
@@ -77,6 +77,9 @@ export const listTemplateRegistry = async (
 ): Promise<Template[]> => {
   const checkResult = await deps.extensionService.check();
   const runtimeTemplates = checkResult.runtime.templates;
+  const extensionNames = new Map(
+    checkResult.runtime.extensions.map((extension) => [extension.id, extension.displayName]),
+  );
 
   const extensionItems: Template[] = [];
   for (const record of runtimeTemplates) {
@@ -87,7 +90,9 @@ export const listTemplateRegistry = async (
       record.localId,
     );
     if (!enabled && !options.includeDisabledExtensionDefaults) continue;
-    extensionItems.push(extensionDefaultToTemplate(record, projectId));
+    extensionItems.push(
+      extensionDefaultToTemplate(record, projectId, extensionNames.get(record.extensionId) ?? record.extensionId),
+    );
   }
 
   const projectTemplates = await deps.templateService.list(projectId);

@@ -100,9 +100,8 @@ type TemplateRow = {
   name: string;
   template_type: string;
   extension_id?: string | null;
+  extension_name?: string | null;
   template_key?: string | null;
-  origin_extension_id?: string | null;
-  origin_template_key?: string | null;
 };
 
 const findExtensionDefault = (list: TemplateRow[], name: string) =>
@@ -115,15 +114,16 @@ describe("template registry vertical slice", () => {
     const { app, templateAssetPath } = harness!;
     const projectId = await createProject(app);
 
-    // 1. Extension default appears in the merged template list as read-only.
+    // 1. Extension default appears in the merged template list as source-editable.
     const listRes = await app.request(`/v1/projects/${projectId}/templates`);
     expect(listRes.status).toBe(200);
     const list = (await listRes.json()) as TemplateRow[];
     const extensionItem = findExtensionDefault(list, "lab.labTicket");
     expect(extensionItem).toBeDefined();
-    expect(extensionItem!.read_only).toBe(true);
+    expect(extensionItem!.read_only).toBe(false);
     expect(extensionItem!.template_type).toBe("ticket");
     expect(extensionItem!.extension_id).toBe("pstdio.extension-lab");
+    expect(extensionItem!.extension_name).toBe("Extension Lab");
     expect(extensionItem!.template_key).toBe("labTicket");
 
     // 2. Disable the default — list omits it.
@@ -159,16 +159,18 @@ describe("template registry vertical slice", () => {
     expect(contentRes.status).toBe(200);
     const content = await contentRes.json();
     expect(content.source_kind).toBe("extension-default");
-    expect(content.read_only).toBe(true);
+    expect(content.read_only).toBe(false);
+    expect(content.extension_name).toBe("Extension Lab");
     expect(content.content).toContain("Original extension template");
 
-    // 5. Mutating an extension default fails with 403.
+    // 5. Mutating an extension default writes the installed extension source file.
     const editDefaultRes = await app.request(`/v1/projects/${projectId}/templates/lab.labTicket`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ content: "# nope\n" }),
+      body: JSON.stringify({ content: "# Edited extension source\n" }),
     });
-    expect(editDefaultRes.status).toBe(403);
+    expect(editDefaultRes.status).toBe(200);
+    expect(readFileSync(templateAssetPath, "utf8")).toContain("Edited extension source");
 
     const deleteDefaultRes = await app.request(`/v1/projects/${projectId}/templates/lab.labTicket`, {
       method: "DELETE",
@@ -190,8 +192,6 @@ describe("template registry vertical slice", () => {
     expect(copied.template_type).toBe("ticket");
     expect(copied.source_kind).toBe("project");
     expect(copied.read_only).toBe(false);
-    expect(copied.origin_extension_id).toBe("pstdio.extension-lab");
-    expect(copied.origin_template_key).toBe("labTicket");
 
     // 7. Edit the project copy via the same endpoint shape the dashboard already uses.
     const editRes = await app.request(`/v1/projects/${projectId}/templates/lab-ticket-copy`, {
@@ -205,9 +205,9 @@ describe("template registry vertical slice", () => {
     expect(fetched.content).toContain("Edited copy");
     expect(fetched.read_only).toBe(false);
 
-    // 8. Extension source asset must remain unchanged.
+    // 8. Extension source asset reflects the dashboard/API edit, not the copied variation.
     const onDisk = readFileSync(templateAssetPath, "utf8");
-    expect(onDisk).toContain("Original extension template");
+    expect(onDisk).toContain("Edited extension source");
     expect(onDisk).not.toContain("Edited copy");
 
     // 9. Final list shows both extension default and the project copy with origin metadata.
@@ -215,8 +215,6 @@ describe("template registry vertical slice", () => {
     expect(findExtensionDefault(finalList, "lab.labTicket")).toBeDefined();
     const projectItem = findProjectTemplate(finalList, "lab-ticket-copy");
     expect(projectItem).toBeDefined();
-    expect(projectItem!.origin_extension_id).toBe("pstdio.extension-lab");
-    expect(projectItem!.origin_template_key).toBe("labTicket");
   });
 
   test("rejects copying a non-existent extension template", async () => {
@@ -230,7 +228,7 @@ describe("template registry vertical slice", () => {
     expect(res.status).toBe(404);
   });
 
-  test("sourceKind=project filter returns only editable templates", async () => {
+  test("sourceKind=project filter returns project-owned templates", async () => {
     const { app } = harness!;
     const projectId = await createProject(app);
 

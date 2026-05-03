@@ -1,0 +1,14 @@
+{
+  "name": "pstdio-core-worktrees",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pstdio/sdk": "^0.4.1"
+  },
+  "devDependencies": {
+    "typescript": "6.0.2"
+  }
+}

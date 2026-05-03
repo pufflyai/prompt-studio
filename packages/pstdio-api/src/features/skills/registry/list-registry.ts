@@ -4,6 +4,7 @@ import type { Skill, SkillFile } from "pstdio-api-contracts";
 import { type PackageAssetKind, resolvePackageAsset } from "pstdio-extensions";
 import type { RuntimeSkillRecord } from "pstdio-extensions/types";
 import type { RouteDeps } from "../../deps";
+import { listInstalledAgentsForExtensionSkill } from "../agent-install";
 
 export type ListSkillRegistryOptions = {
   includeDisabledExtensionDefaults?: boolean;
@@ -19,8 +20,6 @@ const projectRowToSkill = (skill: {
   name: string;
   description: string;
   files: SkillFile[];
-  origin_extension_id: string | null;
-  origin_skill_key: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -33,10 +32,10 @@ const projectRowToSkill = (skill: {
   source_kind: "project",
   read_only: false,
   asset_kind: undefined,
+  installed_agents: [],
   extension_id: null,
+  extension_name: null,
   skill_key: null,
-  origin_extension_id: skill.origin_extension_id,
-  origin_skill_key: skill.origin_skill_key,
   created_at: skill.created_at,
   updated_at: skill.updated_at,
   deleted_at: skill.deleted_at,
@@ -66,7 +65,12 @@ const readAssetFiles = (root: string): SkillFile[] => {
   return collected;
 };
 
-export const extensionDefaultToSkill = (record: RuntimeSkillRecord, projectId: string): Skill => {
+export const extensionDefaultToSkill = (
+  record: RuntimeSkillRecord,
+  projectId: string,
+  installedAgents: string[] = [],
+  extensionName = record.extensionId,
+): Skill => {
   let assetKind: PackageAssetKind = "missing";
   let files: SkillFile[] = [];
 
@@ -101,10 +105,10 @@ export const extensionDefaultToSkill = (record: RuntimeSkillRecord, projectId: s
     source_kind: "extension-default",
     read_only: true,
     asset_kind: assetKind,
+    installed_agents: installedAgents,
     extension_id: record.extensionId,
+    extension_name: extensionName,
     skill_key: record.localId,
-    origin_extension_id: null,
-    origin_skill_key: null,
     created_at: new Date(0).toISOString(),
     updated_at: new Date(0).toISOString(),
     deleted_at: null,
@@ -118,6 +122,9 @@ export const listSkillRegistry = async (
 ): Promise<Skill[]> => {
   const checkResult = await deps.extensionService.check();
   const runtimeSkills = checkResult.runtime.skills;
+  const extensionNames = new Map(
+    checkResult.runtime.extensions.map((extension) => [extension.id, extension.displayName]),
+  );
 
   const extensionItems: Skill[] = [];
   for (const record of runtimeSkills) {
@@ -127,7 +134,15 @@ export const listSkillRegistry = async (
       record.localId,
     );
     if (!enabled && !options.includeDisabledExtensionDefaults) continue;
-    extensionItems.push(extensionDefaultToSkill(record, projectId));
+    const installedAgents = await listInstalledAgentsForExtensionSkill(deps, projectId, record);
+    extensionItems.push(
+      extensionDefaultToSkill(
+        record,
+        projectId,
+        installedAgents,
+        extensionNames.get(record.extensionId) ?? record.extensionId,
+      ),
+    );
   }
 
   const projectSkills = await deps.skillService.list(projectId);

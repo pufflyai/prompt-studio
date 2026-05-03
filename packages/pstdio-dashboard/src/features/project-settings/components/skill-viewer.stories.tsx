@@ -24,6 +24,8 @@ const baseSkill = {
   project_id: "project-1",
   name: "create-pstdio-plugin",
   description: "Create and update pstdio lifecycle hooks.",
+  installed_agents: [],
+  extension_name: null,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
 };
@@ -86,6 +88,26 @@ export const SkillWithCodeFiles: Story = {
         {
           path: "scripts/validate.sh",
           content: "#!/usr/bin/env bash\necho validate\n",
+          encoding: "utf8",
+        },
+      ],
+    },
+  },
+};
+
+export const ExtensionSkillInstalledToAgents: Story = {
+  args: {
+    skill: {
+      ...baseSkill,
+      id: "skill-extension-lab",
+      name: "lab.lab",
+      description: "Lab skill installed by an enabled extension.",
+      installed_agents: ["claude-code", "opencode"],
+      extension_name: "Extension Lab",
+      files: [
+        {
+          path: "SKILL.md",
+          content: "---\nname: lab-skill\nmetadata:\n  - version: 0.1.0\n---\n\n# Extension lab skill",
           encoding: "utf8",
         },
       ],

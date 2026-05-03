@@ -1,4 +1,4 @@
-import { Button, Flex, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Badge, Button, Flex, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
 import { DeleteConfirmationModal, toaster } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { Trash2 } from "lucide-react";
@@ -58,6 +58,8 @@ export const TemplateEditor = (props: TemplateEditorProps) => {
   const isDirty = draftContent !== savedContent;
   const isSaveDisabled = !isDirty || isTemplateEditorEmpty(draftContent) || updateTemplate.isPending;
   const isCancelDisabled = !isDirty || updateTemplate.isPending;
+  const canDelete = template.sourceKind === "project";
+  const extensionLabel = template.extensionName ?? template.extensionId;
 
   const handleContentChange = (value: string) => {
     // Lexical re-serializes markdown on init, which may differ from the original.
@@ -114,7 +116,10 @@ export const TemplateEditor = (props: TemplateEditorProps) => {
     <>
       <Stack height="100%" gap="0">
         <Flex padding="md" borderBottomWidth="1px" alignItems="center" justifyContent="space-between">
-          <Text textStyle="heading/S">{template.name}</Text>
+          <HStack gap="sm">
+            <Text textStyle="heading/S">{template.name}</Text>
+            {template.sourceKind === "extension-default" && extensionLabel && <Badge size="sm">{extensionLabel}</Badge>}
+          </HStack>
           <HStack gap="sm">
             <Button size="sm" variant="ghost" onClick={handleCancel} disabled={isCancelDisabled}>
               Cancel
@@ -128,16 +133,18 @@ export const TemplateEditor = (props: TemplateEditorProps) => {
             >
               Save
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              colorPalette="red"
-              onClick={() => setIsDeleteOpen(true)}
-              disabled={deleteTemplate.isPending}
-              aria-label="Delete template"
-            >
-              <Trash2 size={16} />
-            </Button>
+            {canDelete && (
+              <Button
+                size="sm"
+                variant="ghost"
+                colorPalette="red"
+                onClick={() => setIsDeleteOpen(true)}
+                disabled={deleteTemplate.isPending}
+                aria-label="Delete template"
+              >
+                <Trash2 size={16} />
+              </Button>
+            )}
           </HStack>
         </Flex>
 

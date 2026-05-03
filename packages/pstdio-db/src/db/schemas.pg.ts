@@ -364,8 +364,6 @@ export const templates = pgTable("templates", {
   // (extension_id, template_key) against the runtime extension check.
   extension_id: text("extension_id"),
   template_key: text("template_key"),
-  origin_extension_id: text("origin_extension_id"),
-  origin_template_key: text("origin_template_key"),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
   deleted_at: text("deleted_at"),
@@ -384,8 +382,6 @@ export const skills = pgTable("skills", {
   // resolves to a live package asset under `<PSTDIO_HOME>/extensions/...`.
   extension_id: text("extension_id"),
   skill_key: text("skill_key"),
-  origin_extension_id: text("origin_extension_id"),
-  origin_skill_key: text("origin_skill_key"),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
   deleted_at: text("deleted_at"),

@@ -78,6 +78,7 @@ Project creation includes a second step for selecting agents, with all installed
 10. The skill detail view shows the skill name, current version badge, description, and full content.
 11. When a newer bundled version is available, an "Update to vX" button appears and propagates the updated skill to all agent directories in linked repos.
 12. Each skill shows per-agent installation badges (green, e.g. `claude-code`, `opencode`) indicating which agents have the skill installed locally on disk. When no agents have the skill installed, a "Not installed locally" label is shown instead.
+13. The template editor supports project-owned templates and extension templates; extension template saves write the installed extension source file.
 
 ## Interface
 

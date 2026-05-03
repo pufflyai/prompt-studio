@@ -76,6 +76,7 @@ type AddArgvShape = {
   ref?: string;
   install?: "npm" | "bun";
   skipInstall?: boolean;
+  projectId?: string;
 };
 
 const argv = (overrides: Partial<Arguments<AddArgvShape>>) =>
@@ -88,6 +89,7 @@ const argv = (overrides: Partial<Arguments<AddArgvShape>>) =>
     ref: overrides.ref,
     install: overrides.install,
     skipInstall: overrides.skipInstall,
+    projectId: overrides.projectId,
   }) as Arguments<AddArgvShape>;
 
 describe("extensions add (local folder)", () => {
@@ -122,6 +124,33 @@ describe("extensions add (local folder)", () => {
 
     const printed = harness.log.mock.calls.map((c) => c[0]).join("");
     expect(printed).toContain(join(extensionsRoot, "my-custom-extension"));
+    expect(harness.exit).not.toHaveBeenCalled();
+  });
+
+  test("enables the installed extension for the current project when linked", async () => {
+    const sourceParent = createTempDir("pstdio-add-cli-src-");
+    const sourceDir = writeFolderExtension(sourceParent, "my-extension-folder", VALID_EXTENSION_SRC);
+    const home = createTempDir("pstdio-add-cli-home-");
+    const extensionsRoot = join(home, "extensions");
+    const setupProjectExtension = mock(async () => ({
+      extensionId: "acme.my-extension",
+      namespace: "my-extension",
+      installName: "my-extension-folder",
+      installedSkills: [],
+    }));
+    const { deps, harness } = makeRealInstallDeps(extensionsRoot);
+    const handler = createHandler({
+      ...deps,
+      cwd: () => "/repo",
+      resolveProjectId: () => ({ projectId: "proj-1", root: "/repo" }),
+      setupProjectExtension,
+    });
+
+    await handler(argv({ source: sourceDir }));
+
+    expect(setupProjectExtension).toHaveBeenCalledWith("proj-1", "my-extension-folder");
+    const printed = harness.log.mock.calls.map((c) => c[0]).join("");
+    expect(printed).toContain("Enabled for project.");
     expect(harness.exit).not.toHaveBeenCalled();
   });
 

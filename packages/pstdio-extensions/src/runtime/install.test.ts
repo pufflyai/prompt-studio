@@ -75,15 +75,17 @@ describe("installExtensionSource (local folder)", () => {
     expect(existsSync(result.installPath)).toBe(true);
   });
 
-  test("ignores node_modules, .git, dist, .turbo, .next during copy", async () => {
+  test("preserves packaged dist assets and ignores dependency/cache folders during copy", async () => {
     const sourceParent = createTempDir("pstdio-install-src-");
     const sourceDir = writeFolderExtension(sourceParent, "with-junk", VALID_EXTENSION_SRC);
 
-    for (const junk of ["node_modules", ".git", "dist", ".turbo", ".next"]) {
+    for (const junk of ["node_modules", ".git", ".turbo", ".next"]) {
       const junkDir = join(sourceDir, junk);
       mkdirSync(junkDir, { recursive: true });
       writeFileSync(join(junkDir, "junk.txt"), "junk");
     }
+    mkdirSync(join(sourceDir, "dist"), { recursive: true });
+    writeFileSync(join(sourceDir, "dist", "lab-page.html"), "<html></html>");
     writeFileSync(join(sourceDir, "keep.txt"), "keep");
 
     const { extensionsRoot } = createExtensionsRoot();
@@ -91,7 +93,8 @@ describe("installExtensionSource (local folder)", () => {
 
     expect(existsSync(join(result.installPath, "extension.ts"))).toBe(true);
     expect(existsSync(join(result.installPath, "keep.txt"))).toBe(true);
-    for (const junk of ["node_modules", ".git", "dist", ".turbo", ".next"]) {
+    expect(existsSync(join(result.installPath, "dist", "lab-page.html"))).toBe(true);
+    for (const junk of ["node_modules", ".git", ".turbo", ".next"]) {
       expect(existsSync(join(result.installPath, junk))).toBe(false);
     }
   });

@@ -16,8 +16,6 @@ export const templateSchema = z.object({
   extension_id: z.string().nullable().optional(),
   extension_name: z.string().nullable().optional(),
   template_key: z.string().nullable().optional(),
-  origin_extension_id: z.string().nullable().optional(),
-  origin_template_key: z.string().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
   deleted_at: z.string().nullable(),

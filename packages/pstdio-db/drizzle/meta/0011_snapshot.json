@@ -1,6 +1,6 @@
 {
-  "id": "eb0fbdc4-8b6c-4b6c-8c7c-4bd6189d7636",
-  "prevId": "9067fa2d-1d7c-4731-abeb-9df1c0d9905f",
+  "id": "35ab8539-32a8-43b2-aa58-36d4a4efe158",
+  "prevId": "eb0fbdc4-8b6c-4b6c-8c7c-4bd6189d7636",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1444,14 +1444,14 @@
           "notNull": true,
           "default": "'[]'"
         },
-        "origin_extension_id": {
-          "name": "origin_extension_id",
+        "extension_id": {
+          "name": "extension_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "origin_skill_key": {
-          "name": "origin_skill_key",
+        "skill_key": {
+          "name": "skill_key",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -1534,7 +1534,7 @@
           "name": "file_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "is_default": {
           "name": "is_default",
@@ -1543,14 +1543,14 @@
           "notNull": true,
           "default": false
         },
-        "origin_extension_id": {
-          "name": "origin_extension_id",
+        "extension_id": {
+          "name": "extension_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "origin_template_key": {
-          "name": "origin_template_key",
+        "template_key": {
+          "name": "template_key",
           "type": "text",
           "primaryKey": false,
           "notNull": false

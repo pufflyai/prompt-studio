@@ -6,6 +6,8 @@ export type ProjectSkill = {
   name: string;
   description: string;
   files: { path: string; content: string; encoding: "utf8" }[];
+  installed_agents: string[];
+  extension_name?: string | null;
   created_at: string;
   updated_at: string;
 };
