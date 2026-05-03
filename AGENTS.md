@@ -72,7 +72,7 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 - Keep `packages/e2e/src/packaged/packaged-serve-smoke.test.ts` aligned with the current bundled artifact set.
 - When validating packaged output, run `bun run scripts/verify-packages.ts`.
 
-# 6. Changesets
+### 6. Changesets
 
 > NOTE: the following applies to changes relative to main, not within the same branch.
 
@@ -126,11 +126,14 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 - Tests that assert literal bundled copy.
 - Tests that assert generated file wording.
 
----
+# Validation flows
+
+- **Never** run the dev server directly.
+- **Always** run the dockerized version: `bun run dev:isolated` to ensure db isolation.
 
 # Project Planning and Documentation (pstdio)
 
 This project uses `pstdio` to manage tickets.
 After editing tickets, make sure to save them using `pstdio tickets save --id PS-XXX`.
 Run `pstdio --help` to learn more.
-When asked to edit `plugins` do not update the templates in `pstdio/files`.
+When asked to edit `extensions` do not update the templates in `extensions/*`, follow the skill to edit extensions.

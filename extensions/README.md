@@ -62,6 +62,22 @@ bun run pstdio:local:add-dev
 bun run dev
 ```
 
+### Default core extensions
+
+`pstdio-core-skills` and `pstdio-core-templates` are default extensions and are auto-installed into the user's extensions root the first time a project is created. The API uses the same primitive as `pstdio extensions add`:
+
+Subsequent project creates skip the install step, so user edits under `~/.pstdio-dev/extensions/pstdio-core-*/` survive across restarts.
+
+Finish the per-extension SDK link manually after the first project create:
+
+```bash
+cd ~/.pstdio-dev/extensions/pstdio-core-skills
+npm link @pstdio/sdk
+
+cd ~/.pstdio-dev/extensions/pstdio-core-templates
+npm link @pstdio/sdk
+```
+
 ### Installing an extension into the dev environment
 
 ```bash

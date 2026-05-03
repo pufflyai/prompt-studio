@@ -14,6 +14,7 @@ export const templateSchema = z.object({
   source_kind: templateSourceKindSchema.default("project"),
   read_only: z.boolean().default(false),
   extension_id: z.string().nullable().optional(),
+  extension_name: z.string().nullable().optional(),
   template_key: z.string().nullable().optional(),
   origin_extension_id: z.string().nullable().optional(),
   origin_template_key: z.string().nullable().optional(),

@@ -355,10 +355,15 @@ export const templates = pgTable("templates", {
   }),
   name: text("name").notNull(),
   template_type: text("template_type").notNull(),
-  file_id: text("file_id")
-    .notNull()
-    .references(() => files.id),
+  // Project-owned templates point at a stored file. Extension-owned templates
+  // read content from their package asset on disk and leave file_id null.
+  file_id: text("file_id").references(() => files.id),
   is_default: boolean("is_default").notNull().default(false),
+  // When non-null, the row is an extension-owned default kept in sync with
+  // `<PSTDIO_HOME>/extensions/<install>/...`. Look up the live asset by
+  // (extension_id, template_key) against the runtime extension check.
+  extension_id: text("extension_id"),
+  template_key: text("template_key"),
   origin_extension_id: text("origin_extension_id"),
   origin_template_key: text("origin_template_key"),
   created_at: text("created_at").notNull(),
@@ -375,6 +380,10 @@ export const skills = pgTable("skills", {
   description: text("description").notNull().default(""),
   file_id: text("file_id").references(() => files.id, { onDelete: "set null" }),
   files_json: text("files_json").notNull().default("[]"),
+  // When non-null, the row is an extension-owned default; (extension_id, skill_key)
+  // resolves to a live package asset under `<PSTDIO_HOME>/extensions/...`.
+  extension_id: text("extension_id"),
+  skill_key: text("skill_key"),
   origin_extension_id: text("origin_extension_id"),
   origin_skill_key: text("origin_skill_key"),
   created_at: text("created_at").notNull(),
