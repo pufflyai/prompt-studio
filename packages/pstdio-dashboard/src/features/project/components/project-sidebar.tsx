@@ -1,105 +1,47 @@
-import { Box, Icon, Menu, Portal, Stack } from "@chakra-ui/react";
-import {
-  ListRow,
-  Sidebar,
-  type TreeListNavigateEvent,
-  type TreeListNode,
-  type TreeListSection,
-  toaster,
-} from "@pstdio/ui";
+import { Sidebar, type TreeListNavigateEvent, type TreeListNode, type TreeListSection } from "@pstdio/ui";
 import { Link, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
-import { ArrowUpRight, BookOpen, CircleHelp, KanbanSquare, MessageCircle, Search, SettingsIcon } from "lucide-react";
+import { FlaskConical, KanbanSquare, Puzzle, Search } from "lucide-react";
+import type { ExtensionNavigationRecord } from "pstdio-api-contracts";
 import { useTranslation } from "react-i18next";
-import { useSystemInfo } from "@/features/project/hooks/use-project";
-import { ShortcutKbd } from "@/features/shortcuts/shortcut-kbd";
-import { useOpenCommandPalette, useOpenShortcutHelp } from "@/features/shortcuts/shortcut-provider";
-import {
-  getShortcutDefinition,
-  type ShortcutBinding,
-  type ShortcutDefinition,
-} from "@/features/shortcuts/shortcut-registry";
+import { buildSlotInvocation, getExtensionNavigationForSlot } from "@/features/extensions/extension-slots";
+import { useExecuteExtensionCommand, useExtensionsCheck } from "@/features/extensions/hooks/use-extensions-check";
+import { useOpenCommandPalette } from "@/features/shortcuts/shortcut-provider";
 import { ProjectMenu } from "./project-menu";
+import {
+  buildSidebarShortcutMenuItems,
+  getSidebarHelpShortcutDefinitions,
+  ProjectSidebarFooter,
+  SIDEBAR_HELP_SHORTCUT_IDS,
+} from "./project-sidebar-footer";
 
 export const PROJECT_SIDEBAR_STORAGE_KEY = "project-sidebar";
-const GITHUB_DOCS_URL = "https://github.com/pufflyai/prompt-studio";
-const DISCORD_URL = "https://discord.gg/3RxwUEk8fW";
-export const SIDEBAR_HELP_SHORTCUT_IDS = ["open-shortcut-help"] as const;
+const PROJECT_SIDEBAR_NAV_SLOT = "project.sidebarNav";
 
-export const getSidebarHelpShortcutDefinitions = () => {
-  return SIDEBAR_HELP_SHORTCUT_IDS.map((shortcutId) => {
-    const definition = getShortcutDefinition(shortcutId);
-    if (!definition) {
-      throw new Error(`Missing shortcut definition: ${shortcutId}`);
-    }
-
-    return definition;
-  });
+export {
+  buildSidebarShortcutMenuItems,
+  getSidebarHelpShortcutDefinitions,
+  ProjectSidebarFooter,
+  SIDEBAR_HELP_SHORTCUT_IDS,
 };
 
-export const SidebarShortcutMenuItems = (props: {
-  actions: Array<{
-    id: ShortcutDefinition["id"];
-    primaryLabel: string;
-    binding: ShortcutBinding;
-    leftIcon: LucideIcon;
-    isDisabled?: boolean;
-    onClick: () => void;
-  }>;
-}) => {
-  const { actions } = props;
-  const menuItems = buildSidebarShortcutMenuItems(actions);
-
-  return (
-    <>
-      {menuItems.map((action) => (
-        <Menu.Item key={action.id} value={action.id} asChild>
-          <ListRow
-            asChild
-            variant="compact"
-            id={action.id}
-            label={action.primaryLabel}
-            icon={<Icon as={action.leftIcon} boxSize="16px" />}
-            endContent={action.shortcutLabel}
-            disabled={action.isDisabled}
-            onActivate={action.onClick}
-          />
-        </Menu.Item>
-      ))}
-    </>
-  );
+const EXTENSION_NAV_ICONS: Record<string, LucideIcon> = {
+  "flask-conical": FlaskConical,
 };
 
-export const buildSidebarShortcutMenuItems = (
-  actions: Array<{
-    id: ShortcutDefinition["id"];
-    primaryLabel: string;
-    binding: ShortcutBinding;
-    leftIcon: LucideIcon;
-    isDisabled?: boolean;
-    onClick: () => void;
-  }>,
-) => {
-  return actions.map((action) => ({
-    ...action,
-    shortcutLabel: <ShortcutKbd binding={action.binding} />,
-  }));
-};
+const resolveExtensionNavIcon = (icon: string | undefined) => EXTENSION_NAV_ICONS[icon ?? ""] ?? Puzzle;
 
 const openExternalLink = (url: string) => {
   window.open(url, "_blank", "noopener,noreferrer");
 };
 
-const copyVersionToClipboard = async (versionLabel: string, title: string) => {
-  await navigator.clipboard.writeText(versionLabel);
-  toaster.create({
-    type: "success",
-    title,
-    description: versionLabel,
-  });
-};
+const normalizeRoutePath = (path: string) => path.replace(/^\/+|\/+$/gu, "");
 
-const resolveActiveNodeId = (pathname: string, projectId?: string) => {
+export const resolveActiveNodeId = (
+  pathname: string,
+  projectId?: string,
+  extensionNavigation: ExtensionNavigationRecord[] = [],
+) => {
   if (!projectId) return null;
 
   const base = `/projects/${projectId}`;
@@ -108,6 +50,13 @@ const resolveActiveNodeId = (pathname: string, projectId?: string) => {
   if (pathname.startsWith(`${base}/settings`)) return "settings";
   if (pathname.startsWith(`${base}/sessions`)) return "sessions";
 
+  const extensionRoute = extensionNavigation.find((item) => {
+    if (!item.route) return false;
+    return pathname === `${base}/${normalizeRoutePath(item.route)}`;
+  });
+
+  if (extensionRoute) return `extension:${extensionRoute.id}`;
+
   return null;
 };
 
@@ -115,9 +64,26 @@ export const buildProjectSidebarSections = (input: {
   projectId?: string;
   searchLabel: string;
   ticketsLabel: string;
+  extensionNavigation?: ExtensionNavigationRecord[];
 }): TreeListSection[] => {
-  const { projectId, searchLabel, ticketsLabel } = input;
+  const { projectId, searchLabel, ticketsLabel, extensionNavigation } = input;
   const basePath = projectId ? `/projects/${projectId}` : "";
+  const extensionNodes: TreeListNode[] = getExtensionNavigationForSlot(
+    extensionNavigation,
+    PROJECT_SIDEBAR_NAV_SLOT,
+  ).map((item) => {
+    const IconComponent = resolveExtensionNavIcon(item.icon);
+    const path = item.route ? `${basePath}/${item.route}` : undefined;
+
+    return {
+      id: `extension:${item.id}`,
+      label: item.label,
+      icon: <IconComponent size={14} />,
+      isNavigable: true,
+      href: item.href ?? path,
+      navigationIntent: { id: "extension-navigation", payload: { id: item.id } },
+    };
+  });
   const topNodes: TreeListNode[] = [
     {
       id: "search",
@@ -134,6 +100,7 @@ export const buildProjectSidebarSections = (input: {
       href: `${basePath}/tickets`,
       navigationIntent: { id: "navigate", payload: { path: "tickets" } },
     },
+    ...extensionNodes,
   ];
 
   return [{ id: "top-level", nodes: topNodes }];
@@ -145,11 +112,49 @@ export const ProjectSidebar = () => {
   const navigate = useNavigate();
   const { t } = useTranslation("projects");
   const openCommandPalette = useOpenCommandPalette();
+  const extensionsCheck = useExtensionsCheck();
+  const executeExtensionCommand = useExecuteExtensionCommand();
+  const extensionNavigation = getExtensionNavigationForSlot(extensionsCheck.data?.navigation, PROJECT_SIDEBAR_NAV_SLOT);
   const sections = buildProjectSidebarSections({
     projectId,
     searchLabel: t("sidebar.search"),
     ticketsLabel: t("sidebar.tickets"),
+    extensionNavigation,
   });
+
+  const navigateToProjectPath = (currentProjectId: string, path: string) => {
+    navigate({ to: `/projects/${currentProjectId}/${path}` });
+  };
+
+  const executeNavigationCommand = (currentProjectId: string, item: ExtensionNavigationRecord) => {
+    if (!item.commandId) return;
+
+    executeExtensionCommand.mutate([
+      item.commandId,
+      {
+        projectId: currentProjectId,
+        params: item.params,
+        slot: buildSlotInvocation(PROJECT_SIDEBAR_NAV_SLOT, "navigation", { projectId: currentProjectId }),
+        source: "dashboard",
+      },
+    ]);
+  };
+
+  const handleExtensionNavigation = (currentProjectId: string, item: ExtensionNavigationRecord | undefined) => {
+    if (!item) return;
+
+    if (item.href) {
+      openExternalLink(item.href);
+      return;
+    }
+
+    if (item.route) {
+      navigateToProjectPath(currentProjectId, item.route);
+      return;
+    }
+
+    executeNavigationCommand(currentProjectId, item);
+  };
 
   const handleNavigate = (event: TreeListNavigateEvent) => {
     if (!projectId) return;
@@ -164,11 +169,20 @@ export const ProjectSidebar = () => {
 
     if (intent.id === "navigate") {
       const payload = intent.payload as { path: string };
-      navigate({ to: `/projects/${projectId}/${payload.path}` });
+      navigateToProjectPath(projectId, payload.path);
+      return;
+    }
+
+    if (intent.id === "extension-navigation") {
+      const payload = intent.payload as { id: string };
+      handleExtensionNavigation(
+        projectId,
+        extensionNavigation.find((nav) => nav.id === payload.id),
+      );
     }
   };
 
-  const activeNodeId = resolveActiveNodeId(location.pathname, projectId);
+  const activeNodeId = resolveActiveNodeId(location.pathname, projectId, extensionNavigation);
 
   return (
     <Sidebar
@@ -181,118 +195,5 @@ export const ProjectSidebar = () => {
       onNavigate={handleNavigate}
       width="240px"
     />
-  );
-};
-
-export const ProjectSidebarFooter = () => {
-  const { projectId } = useParams({ strict: false });
-  const { location } = useRouterState();
-  const { data: systemInfo } = useSystemInfo();
-  const { t } = useTranslation(["projects", "common"]);
-  const openShortcutHelp = useOpenShortcutHelp();
-  const versionLabel = systemInfo ? `v${systemInfo.version}` : t("common:menu.loadingVersion");
-  const [helpShortcut] = getSidebarHelpShortcutDefinitions();
-
-  const isPathActive = (href: string) => {
-    return location.pathname === href || location.pathname.startsWith(`${href}/`);
-  };
-
-  const settingsPath = projectId ? `/projects/${projectId}/settings` : null;
-
-  const handleCopyVersion = async () => {
-    if (!systemInfo) {
-      return;
-    }
-
-    await copyVersionToClipboard(versionLabel, t("common:menu.versionCopied"));
-  };
-
-  const shortcutActions = [
-    {
-      id: helpShortcut.id,
-      onClick: openShortcutHelp,
-      primaryLabel: helpShortcut.actionLabel,
-      binding: helpShortcut.binding,
-      leftIcon: CircleHelp,
-      isDisabled: false,
-    },
-  ] as const;
-
-  return (
-    <Stack gap="0">
-      <Menu.Root positioning={{ placement: "top-start" }}>
-        <Menu.Trigger asChild>
-          <Box>
-            <ListRow
-              variant="compact"
-              width="full"
-              id="help"
-              label={t("sidebar.help")}
-              icon={<Icon as={CircleHelp} boxSize="16px" />}
-            />
-          </Box>
-        </Menu.Trigger>
-        <Portal>
-          <Menu.Positioner>
-            <Menu.Content minW="220px" bg="bg">
-              <SidebarShortcutMenuItems actions={[...shortcutActions]} />
-              <Menu.Separator />
-              <Menu.Item value="docs" asChild>
-                <ListRow
-                  asChild
-                  variant="compact"
-                  id="docs"
-                  label={t("sidebar.documentationLink")}
-                  icon={<Icon as={BookOpen} boxSize="16px" />}
-                  endContent={<Icon as={ArrowUpRight} boxSize="16px" />}
-                  onActivate={() => openExternalLink(GITHUB_DOCS_URL)}
-                />
-              </Menu.Item>
-              <Menu.Item value="discord" asChild>
-                <ListRow
-                  asChild
-                  variant="compact"
-                  id="discord"
-                  label={t("sidebar.discordLink")}
-                  icon={<Icon as={MessageCircle} boxSize="16px" />}
-                  endContent={<Icon as={ArrowUpRight} boxSize="16px" />}
-                  onActivate={() => openExternalLink(DISCORD_URL)}
-                />
-              </Menu.Item>
-              <Menu.Separator />
-              <Menu.Item value="version" asChild>
-                <ListRow
-                  asChild
-                  variant="compact"
-                  id="version"
-                  label={t("common:menu.promptStudio")}
-                  description={versionLabel}
-                  disabled={!systemInfo}
-                  onActivate={handleCopyVersion}
-                />
-              </Menu.Item>
-            </Menu.Content>
-          </Menu.Positioner>
-        </Portal>
-      </Menu.Root>
-
-      {settingsPath ? (
-        <Menu.Root>
-          <Menu.Item value="project-settings" asChild>
-            <Link to={settingsPath}>
-              <ListRow
-                asChild
-                variant="compact"
-                width="full"
-                id="project-settings"
-                label={t("sidebar.projectSettings")}
-                icon={<Icon as={SettingsIcon} boxSize="16px" />}
-                isSelected={isPathActive(settingsPath)}
-              />
-            </Link>
-          </Menu.Item>
-        </Menu.Root>
-      ) : null}
-    </Stack>
   );
 };

@@ -1,13 +1,27 @@
 import { describe, expect, it } from "bun:test";
-import type { HeaderActionItem } from "./header-action-groups";
-import { getHeaderActionState, isOverflowMenuDisabled } from "./plugin-header-actions";
+import type { HeaderActionItem } from "./header-actions";
+import { getHeaderActionState, groupHeaderActions, isOverflowMenuDisabled } from "./header-actions";
 
 const makeAction = (overrides: Partial<HeaderActionItem> = {}): HeaderActionItem => ({
   key: "run-attempt",
   label: "Run attempt",
-  kind: "plugin",
+  kind: "default",
   onClick() {},
   ...overrides,
+});
+
+describe("groupHeaderActions", () => {
+  it("groups built-in actions by placement and defaults to overflow", () => {
+    const groups = groupHeaderActions([
+      makeAction({ key: "create", placement: "primary" }),
+      makeAction({ key: "review", placement: "secondary" }),
+      makeAction({ key: "archive" }),
+    ]);
+
+    expect(groups.primary.map((action) => action.key)).toEqual(["create"]);
+    expect(groups.secondary.map((action) => action.key)).toEqual(["review"]);
+    expect(groups.overflow.map((action) => action.key)).toEqual(["archive"]);
+  });
 });
 
 describe("getHeaderActionState", () => {

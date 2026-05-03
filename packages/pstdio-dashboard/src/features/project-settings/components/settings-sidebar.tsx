@@ -1,15 +1,5 @@
 import { Sidebar, type TreeListNavigateEvent, type TreeListNode, type TreeListSection } from "@pstdio/ui";
-import {
-  AlertTriangle,
-  CircleDot,
-  FileText,
-  GitFork,
-  MessageSquareText,
-  Plus,
-  Puzzle,
-  Tag,
-  Ticket,
-} from "lucide-react";
+import { AlertTriangle, CircleDot, FileText, GitFork, MessageSquareText, Plus, Tag, Ticket } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BackToDashboard } from "@/features/project/components/back-to-dashboard";
 import type { ProjectTemplateAsset, ProjectTemplateAssetType } from "@/features/project/types";
@@ -28,7 +18,6 @@ export type SettingsSection =
   | "ticket-statuses"
   | "attempt-statuses"
   | "tags"
-  | "plugins"
   | "danger-zone"
   | "repositories"
   | { tag: string }
@@ -53,7 +42,6 @@ const resolveActiveNodeId = (activeSection: SettingsSection | null) => {
   if (activeSection === "attempt-statuses") return "attempt-statuses";
   if (activeSection === "tags") return "tags";
   if (activeSection === "repositories") return "repositories";
-  if (activeSection === "plugins") return "plugins";
   if (activeSection === "danger-zone") return "danger-zone";
   if (typeof activeSection === "object" && "tag" in activeSection) return `tag:${activeSection.tag}`;
 
@@ -145,16 +133,6 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
       navigationIntent: { id: "select-skill", payload: skill.name },
     }));
 
-    const pluginNodes: TreeListNode[] = [
-      {
-        id: "plugins",
-        label: "Plugins",
-        icon: <Puzzle size={14} />,
-        isNavigable: true,
-        navigationIntent: { id: "select", payload: "plugins" },
-      },
-    ];
-
     const dangerNodes: TreeListNode[] = [
       {
         id: "danger-zone",
@@ -186,7 +164,6 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
         ],
       },
       { id: "repositories", nodes: repositoryNodes },
-      { id: "plugins", label: "Plugins", nodes: pluginNodes },
       { id: "danger", nodes: dangerNodes },
     ];
   };
@@ -197,7 +174,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
 
     if (intent.id === "select") {
       onSelectSection(
-        intent.payload as "ticket-statuses" | "attempt-statuses" | "repositories" | "plugins" | "tags" | "danger-zone",
+        intent.payload as "ticket-statuses" | "attempt-statuses" | "repositories" | "tags" | "danger-zone",
       );
     }
 

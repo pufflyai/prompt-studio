@@ -6,6 +6,7 @@ import {
   buildProjectSidebarSections,
   buildSidebarShortcutMenuItems,
   getSidebarHelpShortcutDefinitions,
+  resolveActiveNodeId,
   SIDEBAR_HELP_SHORTCUT_IDS,
 } from "./project-sidebar";
 
@@ -19,6 +20,52 @@ describe("project-sidebar shortcuts", () => {
 
     expect(sections[0]?.nodes.map((node) => node.id)).toEqual(["search", "tickets"]);
     expect(sections[0]?.nodes[0]?.navigationIntent).toEqual({ id: "command-palette" });
+  });
+
+  it("adds extension navigation entries for the project sidebar slot", () => {
+    const sections = buildProjectSidebarSections({
+      projectId: "project-1",
+      ticketsLabel: "Tickets",
+      searchLabel: "Search",
+      extensionNavigation: [
+        {
+          id: "lab",
+          extensionId: "extension-lab",
+          slotId: "project.sidebarNav",
+          label: "Lab",
+          route: "lab",
+          icon: "flask-conical",
+        },
+        {
+          id: "workspace-lab",
+          extensionId: "extension-lab",
+          slotId: "workspace.tabs",
+          label: "Workspace Lab",
+          route: "workspace-lab",
+        },
+      ],
+    });
+
+    expect(sections[0]?.nodes.map((node) => node.id)).toEqual(["search", "tickets", "extension:lab"]);
+    expect(sections[0]?.nodes[2]?.href).toBe("/projects/project-1/lab");
+    expect(sections[0]?.nodes[2]?.navigationIntent).toEqual({
+      id: "extension-navigation",
+      payload: { id: "lab" },
+    });
+  });
+
+  it("marks extension navigation active on matching project routes", () => {
+    expect(
+      resolveActiveNodeId("/projects/project-1/lab", "project-1", [
+        {
+          id: "lab",
+          extensionId: "extension-lab",
+          slotId: "project.sidebarNav",
+          label: "Lab",
+          route: "lab",
+        },
+      ]),
+    ).toBe("extension:lab");
   });
 
   it("only exposes keyboard shortcuts in the help menu shortcut section", () => {

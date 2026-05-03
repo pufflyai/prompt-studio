@@ -1,5 +1,5 @@
 import { createRoute } from "@hono/zod-openapi";
-import type { JsonObject, ResourceRef } from "@pstdio/sdk/extensions";
+import type { JsonObject, ResourceRef, SlotInvocationContext } from "@pstdio/sdk/extensions";
 import type { CommandExecuteResponse } from "pstdio-api-contracts";
 import type { CommandExecuteInput } from "pstdio-extensions";
 import type { AppRouteHandler } from "../../../types";
@@ -33,6 +33,7 @@ export const executeCommandHandler = (deps: RouteDeps): AppRouteHandler<typeof e
       projectId: body.projectId,
       params: body.params as JsonObject | undefined,
       resource: body.resource as ResourceRef | undefined,
+      slot: body.slot as SlotInvocationContext | undefined,
       repo: body.repo,
       source: body.source,
       metadata: body.metadata as JsonObject | undefined,

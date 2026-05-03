@@ -1,0 +1,203 @@
+import { Box, Icon, Menu, Portal, Stack } from "@chakra-ui/react";
+import { ListRow, toaster } from "@pstdio/ui";
+import { Link, useParams, useRouterState } from "@tanstack/react-router";
+import { ArrowUpRight, BookOpen, CircleHelp, type LucideIcon, MessageCircle, SettingsIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useSystemInfo } from "@/features/project/hooks/use-project";
+import { ShortcutKbd } from "@/features/shortcuts/shortcut-kbd";
+import { useOpenShortcutHelp } from "@/features/shortcuts/shortcut-provider";
+import {
+  getShortcutDefinition,
+  type ShortcutBinding,
+  type ShortcutDefinition,
+} from "@/features/shortcuts/shortcut-registry";
+
+const GITHUB_DOCS_URL = "https://github.com/pufflyai/prompt-studio";
+const DISCORD_URL = "https://discord.gg/3RxwUEk8fW";
+export const SIDEBAR_HELP_SHORTCUT_IDS = ["open-shortcut-help"] as const;
+
+export const getSidebarHelpShortcutDefinitions = () => {
+  return SIDEBAR_HELP_SHORTCUT_IDS.map((shortcutId) => {
+    const definition = getShortcutDefinition(shortcutId);
+    if (!definition) {
+      throw new Error(`Missing shortcut definition: ${shortcutId}`);
+    }
+
+    return definition;
+  });
+};
+
+export const SidebarShortcutMenuItems = (props: {
+  actions: Array<{
+    id: ShortcutDefinition["id"];
+    primaryLabel: string;
+    binding: ShortcutBinding;
+    leftIcon: LucideIcon;
+    isDisabled?: boolean;
+    onClick: () => void;
+  }>;
+}) => {
+  const { actions } = props;
+  const menuItems = buildSidebarShortcutMenuItems(actions);
+
+  return (
+    <>
+      {menuItems.map((action) => (
+        <Menu.Item key={action.id} value={action.id} asChild>
+          <ListRow
+            asChild
+            variant="compact"
+            id={action.id}
+            label={action.primaryLabel}
+            icon={<Icon as={action.leftIcon} boxSize="16px" />}
+            endContent={action.shortcutLabel}
+            disabled={action.isDisabled}
+            onActivate={action.onClick}
+          />
+        </Menu.Item>
+      ))}
+    </>
+  );
+};
+
+export const buildSidebarShortcutMenuItems = (
+  actions: Array<{
+    id: ShortcutDefinition["id"];
+    primaryLabel: string;
+    binding: ShortcutBinding;
+    leftIcon: LucideIcon;
+    isDisabled?: boolean;
+    onClick: () => void;
+  }>,
+) => {
+  return actions.map((action) => ({
+    ...action,
+    shortcutLabel: <ShortcutKbd binding={action.binding} />,
+  }));
+};
+
+const openExternalLink = (url: string) => {
+  window.open(url, "_blank", "noopener,noreferrer");
+};
+
+const copyVersionToClipboard = async (versionLabel: string, title: string) => {
+  await navigator.clipboard.writeText(versionLabel);
+  toaster.create({
+    type: "success",
+    title,
+    description: versionLabel,
+  });
+};
+
+export const ProjectSidebarFooter = () => {
+  const { projectId } = useParams({ strict: false });
+  const { location } = useRouterState();
+  const { data: systemInfo } = useSystemInfo();
+  const { t } = useTranslation(["projects", "common"]);
+  const openShortcutHelp = useOpenShortcutHelp();
+  const versionLabel = systemInfo ? `v${systemInfo.version}` : t("common:menu.loadingVersion");
+  const [helpShortcut] = getSidebarHelpShortcutDefinitions();
+
+  const isPathActive = (href: string) => {
+    return location.pathname === href || location.pathname.startsWith(`${href}/`);
+  };
+
+  const settingsPath = projectId ? `/projects/${projectId}/settings` : null;
+
+  const handleCopyVersion = async () => {
+    if (!systemInfo) {
+      return;
+    }
+
+    await copyVersionToClipboard(versionLabel, t("common:menu.versionCopied"));
+  };
+
+  const shortcutActions = [
+    {
+      id: helpShortcut.id,
+      onClick: openShortcutHelp,
+      primaryLabel: helpShortcut.actionLabel,
+      binding: helpShortcut.binding,
+      leftIcon: CircleHelp,
+      isDisabled: false,
+    },
+  ] as const;
+
+  return (
+    <Stack gap="0">
+      <Menu.Root positioning={{ placement: "top-start" }}>
+        <Menu.Trigger asChild>
+          <Box>
+            <ListRow
+              variant="compact"
+              width="full"
+              id="help"
+              label={t("sidebar.help")}
+              icon={<Icon as={CircleHelp} boxSize="16px" />}
+            />
+          </Box>
+        </Menu.Trigger>
+        <Portal>
+          <Menu.Positioner>
+            <Menu.Content minW="220px" bg="bg">
+              <SidebarShortcutMenuItems actions={[...shortcutActions]} />
+              <Menu.Separator />
+              <Menu.Item value="docs" asChild>
+                <ListRow
+                  asChild
+                  variant="compact"
+                  id="docs"
+                  label={t("sidebar.documentationLink")}
+                  icon={<Icon as={BookOpen} boxSize="16px" />}
+                  endContent={<Icon as={ArrowUpRight} boxSize="16px" />}
+                  onActivate={() => openExternalLink(GITHUB_DOCS_URL)}
+                />
+              </Menu.Item>
+              <Menu.Item value="discord" asChild>
+                <ListRow
+                  asChild
+                  variant="compact"
+                  id="discord"
+                  label={t("sidebar.discordLink")}
+                  icon={<Icon as={MessageCircle} boxSize="16px" />}
+                  endContent={<Icon as={ArrowUpRight} boxSize="16px" />}
+                  onActivate={() => openExternalLink(DISCORD_URL)}
+                />
+              </Menu.Item>
+              <Menu.Separator />
+              <Menu.Item value="version" asChild>
+                <ListRow
+                  asChild
+                  variant="compact"
+                  id="version"
+                  label={t("common:menu.promptStudio")}
+                  description={versionLabel}
+                  disabled={!systemInfo}
+                  onActivate={handleCopyVersion}
+                />
+              </Menu.Item>
+            </Menu.Content>
+          </Menu.Positioner>
+        </Portal>
+      </Menu.Root>
+
+      {settingsPath ? (
+        <Menu.Root>
+          <Menu.Item value="project-settings" asChild>
+            <Link to={settingsPath}>
+              <ListRow
+                asChild
+                variant="compact"
+                width="full"
+                id="project-settings"
+                label={t("sidebar.projectSettings")}
+                icon={<Icon as={SettingsIcon} boxSize="16px" />}
+                isSelected={isPathActive(settingsPath)}
+              />
+            </Link>
+          </Menu.Item>
+        </Menu.Root>
+      ) : null}
+    </Stack>
+  );
+};

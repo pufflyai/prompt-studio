@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+const jsonObjectSchema = z.record(z.string(), z.unknown());
+
 export const extensionDiagnosticSeveritySchema = z.enum(["info", "warning", "error"]);
 
 export const extensionDiagnosticSchema = z.object({
@@ -56,21 +58,77 @@ export const extensionArtifactMountSchema = z.object({
   label: z.string(),
 });
 
-export const extensionViewLikeSchema = z.object({
+const extensionPlacementSchema = z.enum(["first", "default", "last"]);
+const extensionSlotKindSchema = z.enum(["menu", "navigation", "view", "settings", "renderer"]);
+
+const packageAssetDescriptorSchema = z.object({
+  kind: z.literal("package-asset"),
+  path: z.string(),
+  baseUrl: z.string(),
+});
+
+const extensionWebviewSchema = z.object({
+  entry: packageAssetDescriptorSchema,
+  title: z.string().optional(),
+  sandbox: z.enum(["default", "strict"]).optional(),
+});
+
+export const extensionMenuContributionSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
+  commandId: z.string(),
+  slotId: z.string(),
+  label: z.string(),
+  group: z.string().optional(),
+  placement: extensionPlacementSchema.optional(),
+  icon: z.string().optional(),
+  presentation: z.enum(["menu-item", "button", "icon-button"]).optional(),
+  params: jsonObjectSchema.optional(),
+});
+
+export const extensionViewRecordSchema = z.object({
+  id: z.string(),
+  extensionId: z.string(),
+  slotId: z.string(),
+  title: z.string(),
+  group: z.string().optional(),
+  placement: extensionPlacementSchema.optional(),
+  webview: extensionWebviewSchema,
 });
 
 export const extensionRouteRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
   path: z.string(),
+  label: z.string(),
+  webview: extensionWebviewSchema,
 });
 
 export const extensionNavigationRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
+  slotId: z.string(),
   label: z.string(),
+  group: z.string().optional(),
+  placement: extensionPlacementSchema.optional(),
+  route: z.string().optional(),
+  href: z.string().optional(),
+  commandId: z.string().optional(),
+  params: jsonObjectSchema.optional(),
+  icon: z.string().optional(),
+});
+
+export const extensionSettingsPanelRecordSchema = z.object({
+  id: z.string(),
+  extensionId: z.string(),
+  slotId: z.string(),
+  title: z.string(),
+  webview: extensionWebviewSchema,
+});
+
+export const extensionViewLikeSchema = z.object({
+  id: z.string(),
+  extensionId: z.string(),
 });
 
 export const extensionsCheckResponseSchema = z.object({
@@ -84,9 +142,11 @@ export const extensionsCheckResponseSchema = z.object({
   hooks: z.array(extensionHookRecordSchema),
   schedules: z.array(extensionScheduleRecordSchema),
   artifactMounts: z.array(extensionArtifactMountSchema),
-  views: z.array(extensionViewLikeSchema),
+  menuContributions: z.array(extensionMenuContributionSchema),
+  views: z.array(extensionViewRecordSchema),
   routes: z.array(extensionRouteRecordSchema),
   navigation: z.array(extensionNavigationRecordSchema),
+  settingsPanels: z.array(extensionSettingsPanelRecordSchema),
   templates: z.array(extensionViewLikeSchema),
   skills: z.array(extensionViewLikeSchema),
   diagnostics: z.array(extensionDiagnosticSchema),
@@ -99,11 +159,12 @@ export type ExtensionMiddlewareRecord = z.infer<typeof extensionMiddlewareRecord
 export type ExtensionHookRecord = z.infer<typeof extensionHookRecordSchema>;
 export type ExtensionScheduleRecord = z.infer<typeof extensionScheduleRecordSchema>;
 export type ExtensionArtifactMount = z.infer<typeof extensionArtifactMountSchema>;
+export type ExtensionMenuContribution = z.infer<typeof extensionMenuContributionSchema>;
+export type ExtensionViewRecord = z.infer<typeof extensionViewRecordSchema>;
 export type ExtensionRouteRecord = z.infer<typeof extensionRouteRecordSchema>;
 export type ExtensionNavigationRecord = z.infer<typeof extensionNavigationRecordSchema>;
+export type ExtensionSettingsPanelRecord = z.infer<typeof extensionSettingsPanelRecordSchema>;
 export type ExtensionsCheckResponse = z.infer<typeof extensionsCheckResponseSchema>;
-
-const jsonObjectSchema = z.record(z.string(), z.unknown());
 
 export const extensionResourceRefSchema = z.object({
   type: z.string(),
@@ -122,6 +183,12 @@ export const extensionRepoContextSchema = z.object({
   role: z.enum(["default", "selected", "workspace"]).optional(),
 });
 
+export const extensionSlotInvocationSchema = z.object({
+  id: z.string(),
+  kind: extensionSlotKindSchema,
+  context: jsonObjectSchema,
+});
+
 export const commandSourceSchema = z.enum([
   "cli",
   "dashboard",
@@ -136,6 +203,7 @@ export const commandExecuteRequestSchema = z.object({
   projectId: z.string().min(1),
   params: jsonObjectSchema.optional(),
   resource: extensionResourceRefSchema.optional(),
+  slot: extensionSlotInvocationSchema.optional(),
   repo: extensionRepoContextSchema.optional(),
   source: commandSourceSchema.optional(),
   metadata: jsonObjectSchema.optional(),

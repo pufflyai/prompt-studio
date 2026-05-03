@@ -63,9 +63,14 @@ const formatExtensionSection = (
       renderItem: (m) => [`    ${m.label} -> ${m.fullPath}`],
     }),
     ...renderSubsection({
+      title: "Menus",
+      items: response.menuContributions.filter((m) => m.extensionId === extensionId),
+      renderItem: (m) => [`    ${m.label} -> ${m.slotId}`, `      command: ${m.commandId}`],
+    }),
+    ...renderSubsection({
       title: "Views",
       items: response.views.filter((v) => v.extensionId === extensionId),
-      renderItem: (v) => [`    ${v.id}`],
+      renderItem: (v) => [`    ${v.id} -> ${v.slotId}`],
     }),
     ...renderSubsection({
       title: "Routes",
@@ -75,7 +80,12 @@ const formatExtensionSection = (
     ...renderSubsection({
       title: "Navigation",
       items: response.navigation.filter((n) => n.extensionId === extensionId),
-      renderItem: (n) => [`    ${n.id} ${n.label}`],
+      renderItem: (n) => [`    ${n.id} ${n.label} -> ${n.slotId}`],
+    }),
+    ...renderSubsection({
+      title: "Settings panels",
+      items: response.settingsPanels.filter((panel) => panel.extensionId === extensionId),
+      renderItem: (panel) => [`    ${panel.id} ${panel.title} -> ${panel.slotId}`],
     }),
     ...renderSubsection({
       title: "Templates",

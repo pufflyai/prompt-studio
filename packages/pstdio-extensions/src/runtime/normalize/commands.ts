@@ -3,6 +3,7 @@ import type { NormalizedExtension, RuntimeCliContribution, RuntimeCommandRecord 
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
+import { hasCompatibleSlotKind } from "./slot-kind";
 
 const splitCommandKey = (key: string) => key.split(".");
 
@@ -84,6 +85,16 @@ export const registerCommands = (
 
     const cli = normalizeCommandCli(ext, source, commandId, localId, command.cli, runtime, index.cliKeys);
 
+    const menus = (Array.isArray(command.menus) ? command.menus : []).filter((menu, index) =>
+      hasCompatibleSlotKind({
+        runtime,
+        source: { extensionId: ext.id, sourcePath: source.sourcePath },
+        expected: "menu",
+        slot: isRecord(menu) ? menu.slot : undefined,
+        contributionId: `${commandId}.menus[${index}]`,
+      }),
+    );
+
     const record: RuntimeCommandRecord = {
       id: commandId,
       localId,
@@ -94,7 +105,7 @@ export const registerCommands = (
       description: typeof command.description === "string" ? command.description : undefined,
       params: isRecord(command.params) ? (command.params as RuntimeCommandRecord["params"]) : {},
       commandPanel: command.commandPanel === false ? false : isRecord(command.commandPanel) ? command.commandPanel : {},
-      menus: Array.isArray(command.menus) ? command.menus : [],
+      menus: menus as RuntimeCommandRecord["menus"],
       cli,
       run: command.run as RuntimeCommandRecord["run"],
     };

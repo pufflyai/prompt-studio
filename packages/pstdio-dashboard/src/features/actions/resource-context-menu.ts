@@ -1,22 +1,18 @@
 import { Icon } from "@chakra-ui/react";
 import type { ResourceContextAction, TreeListActionMenuItem } from "@pstdio/ui";
 import { type ComponentType, createElement } from "react";
-import type { ActionDescriptor } from "../api";
-import { buildHeaderActionGroups, type HeaderActionItem } from "../components/header-action-groups";
-import { getHeaderActionState } from "../components/plugin-header-actions";
+import { getHeaderActionState, groupHeaderActions, type HeaderActionItem } from "./header-actions";
 
 interface BuildResourceContextMenuActionsInput {
-  pluginActions?: ActionDescriptor[];
-  defaultOverflowActions?: HeaderActionItem[];
+  actions?: HeaderActionItem[];
   pendingActionKeys?: string[];
-  onPluginAction: (actionKey: string) => void;
 }
 
 export const buildResourceContextMenuActions = (
   input: BuildResourceContextMenuActionsInput,
 ): ResourceContextAction[] => {
-  const { pluginActions, defaultOverflowActions = [], pendingActionKeys = [], onPluginAction } = input;
-  const groups = buildHeaderActionGroups({ pluginActions, defaultOverflowActions, onPluginAction });
+  const { actions = [], pendingActionKeys = [] } = input;
+  const groups = groupHeaderActions(actions);
 
   return [...groups.primary, ...groups.secondary, ...groups.overflow].map((action) => {
     const state = getHeaderActionState(action, pendingActionKeys);

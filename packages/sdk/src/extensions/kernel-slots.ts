@@ -17,6 +17,13 @@ export const sessionSlots = {
   transcriptActions: defineSlot<Struct, "menu">("session.transcriptActions", { kind: "menu" }),
 };
 
+export const workspaceSlots = {
+  headerPrimary: defineSlot<Struct, "menu">("workspace.headerPrimary", { kind: "menu" }),
+  headerOverflow: defineSlot<Struct, "menu">("workspace.headerOverflow", { kind: "menu" }),
+  tabs: defineSlot<Struct, "navigation">("workspace.tabs", { kind: "navigation" }),
+  sidebar: defineSlot<Struct, "view">("workspace.sidebar", { kind: "view" }),
+};
+
 export const projectEvents = {
   opened: eventRef<{ projectId: string }>("project.opened"),
 };

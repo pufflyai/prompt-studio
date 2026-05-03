@@ -1,17 +1,49 @@
 import { Button, Flex, Icon, IconButton, Menu, Skeleton } from "@chakra-ui/react";
 import { ListRow } from "@pstdio/ui";
+import type { LucideIcon } from "lucide-react";
 import { MoreHorizontal } from "lucide-react";
-import type { ActionDescriptor } from "../api";
-import { buildHeaderActionGroups, type HeaderActionItem } from "./header-action-groups";
 
-interface PluginHeaderActionsProps {
-  pluginActions?: ActionDescriptor[];
-  defaultOverflowActions?: HeaderActionItem[];
-  onPluginAction: (actionKey: string) => void;
+export type HeaderActionKind = "default" | "extension";
+export type HeaderActionPlacement = "primary" | "secondary" | "overflow" | "first" | "default" | "last";
+
+export interface HeaderActionItem {
+  key: string;
+  label: string;
+  kind: HeaderActionKind;
+  onClick: () => void;
+  isDisabled?: boolean;
+  icon?: LucideIcon;
+  placement?: HeaderActionPlacement;
+}
+
+interface HeaderActionsProps {
+  actions?: HeaderActionItem[];
   pendingActionKeys?: string[];
   overflowLabel?: string;
   isLoading?: boolean;
 }
+
+export const groupHeaderActions = (actions: HeaderActionItem[] = []) => {
+  const primary: HeaderActionItem[] = [];
+  const secondary: HeaderActionItem[] = [];
+  const overflow: HeaderActionItem[] = [];
+
+  for (const action of actions) {
+    if (action.placement === "primary") {
+      primary.push(action);
+      continue;
+    }
+
+    if (action.placement === "secondary") {
+      secondary.push(action);
+      continue;
+    }
+
+    overflow.push(action);
+  }
+
+  return { primary, secondary, overflow };
+};
 
 export const getHeaderActionState = (action: HeaderActionItem, pendingActionKeys: string[] = []) => {
   const isPending = pendingActionKeys.includes(action.key);
@@ -25,7 +57,12 @@ export const getHeaderActionState = (action: HeaderActionItem, pendingActionKeys
 export const isOverflowMenuDisabled = (actions: HeaderActionItem[], pendingActionKeys: string[] = []) =>
   actions.length > 0 && actions.every((action) => getHeaderActionState(action, pendingActionKeys).isDisabled);
 
-const renderActionButton = (action: HeaderActionItem, variant: "primary" | "outline", pendingActionKeys: string[]) => {
+const ActionButton = (props: {
+  action: HeaderActionItem;
+  variant: "primary" | "outline";
+  pendingActionKeys: string[];
+}) => {
+  const { action, variant, pendingActionKeys } = props;
   const state = getHeaderActionState(action, pendingActionKeys);
 
   return (
@@ -42,15 +79,8 @@ const renderActionButton = (action: HeaderActionItem, variant: "primary" | "outl
   );
 };
 
-export const PluginHeaderActions = (props: PluginHeaderActionsProps) => {
-  const {
-    pluginActions,
-    defaultOverflowActions = [],
-    onPluginAction,
-    pendingActionKeys = [],
-    overflowLabel = "More actions",
-    isLoading = false,
-  } = props;
+export const HeaderActions = (props: HeaderActionsProps) => {
+  const { actions = [], pendingActionKeys = [], overflowLabel = "More actions", isLoading = false } = props;
 
   if (isLoading) {
     return (
@@ -62,20 +92,18 @@ export const PluginHeaderActions = (props: PluginHeaderActionsProps) => {
     );
   }
 
-  const groups = buildHeaderActionGroups({
-    pluginActions,
-    defaultOverflowActions,
-    onPluginAction,
-  });
+  if (actions.length === 0) return null;
 
-  if (groups.primary.length === 0 && groups.secondary.length === 0 && groups.overflow.length === 0) {
-    return null;
-  }
+  const groups = groupHeaderActions(actions);
 
   return (
     <Flex align="center" gap="xs">
-      {groups.primary.map((action) => renderActionButton(action, "primary", pendingActionKeys))}
-      {groups.secondary.map((action) => renderActionButton(action, "outline", pendingActionKeys))}
+      {groups.primary.map((action) => (
+        <ActionButton key={action.key} action={action} variant="primary" pendingActionKeys={pendingActionKeys} />
+      ))}
+      {groups.secondary.map((action) => (
+        <ActionButton key={action.key} action={action} variant="outline" pendingActionKeys={pendingActionKeys} />
+      ))}
 
       {groups.overflow.length > 0 ? (
         <Menu.Root>

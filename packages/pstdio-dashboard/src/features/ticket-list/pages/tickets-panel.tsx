@@ -4,10 +4,8 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { Archive, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
-import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
-import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
-import { buildResourceContextMenuActions } from "@/features/plugin-actions/hooks/use-resource-context-menu";
+import type { HeaderActionItem } from "@/features/actions/header-actions";
+import { buildResourceContextMenuActions } from "@/features/actions/resource-context-menu";
 import { ProjectSidebar } from "@/features/project/components/project-sidebar";
 import { useProject } from "@/features/project/hooks/use-project";
 import { useProjectSettingsStore } from "@/features/project-settings/store";
@@ -169,15 +167,6 @@ export const TicketsPanel = () => {
     });
   };
 
-  const pluginActionTrigger = usePluginActionTrigger({
-    projectId,
-    targetType: "ticket",
-    onSuccess: async (result) => {
-      if (!result.session_id) return;
-      await handleOpenSessionBubble(result.session_id);
-    },
-  });
-
   const handleMoveTicket = (ticketId: string, status: TicketStatus) => {
     const targetStatus = statusOptions.find((col) => col.id === status || col.name === status);
     const resolvedStatus = targetStatus?.name ?? status;
@@ -241,8 +230,7 @@ export const TicketsPanel = () => {
 
   const buildContextMenuActions = (ticketId: string, archived: boolean) =>
     buildResourceContextMenuActions({
-      pluginActions: pluginActionTrigger.pluginActions,
-      defaultOverflowActions: buildTicketOverflowActions({
+      actions: buildTicketOverflowActions({
         ticketId,
         archived,
         projectId,
@@ -251,8 +239,6 @@ export const TicketsPanel = () => {
         onDeleteOpen: () => setDeleteTicketId(ticketId),
         t,
       }),
-      pendingActionKeys: pluginActionTrigger.pendingActionKeys,
-      onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, ticketId),
     });
 
   if (isLoading) {
@@ -316,17 +302,6 @@ export const TicketsPanel = () => {
           projectName={project?.name}
           statusOptions={statusOptions}
         />
-
-        {pluginActionTrigger.activeParamAction && projectId ? (
-          <ActionParamsDialog
-            open
-            action={pluginActionTrigger.activeParamAction}
-            projectId={projectId}
-            isSubmitting={pluginActionTrigger.activeParamActionIsPending}
-            onClose={pluginActionTrigger.cancelParams}
-            onSubmit={(params) => pluginActionTrigger.submitWithParams(params)}
-          />
-        ) : null}
 
         <DeleteConfirmationModal
           open={Boolean(deleteTicketId)}

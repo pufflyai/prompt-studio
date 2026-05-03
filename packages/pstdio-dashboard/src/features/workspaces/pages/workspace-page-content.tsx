@@ -3,13 +3,8 @@ import { Breadcrumb, DeleteConfirmationModal, HorizontalMenuStack, PanelLayout }
 import { Link } from "@tanstack/react-router";
 import { KanbanSquare } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
-import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin-header-actions";
-import type { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
-import {
-  buildResourceContextMenuActions,
-  toSidebarContextMenuItems,
-} from "@/features/plugin-actions/hooks/use-resource-context-menu";
+import { HeaderActions } from "@/features/actions/header-actions";
+import { buildResourceContextMenuActions, toSidebarContextMenuItems } from "@/features/actions/resource-context-menu";
 import { CreateWorkspaceModal } from "@/features/ticket/components/create-workspace-modal";
 import { TicketSidebar } from "@/features/ticket/components/ticket-sidebar";
 import { formatTicketBreadcrumbLabel } from "@/features/ticket/utils/ticket-breadcrumb";
@@ -64,11 +59,6 @@ interface WorkspacePageContentProps {
     id: string;
     agentSessionId?: string | null;
   }) => ReturnType<typeof toSidebarContextMenuItems>;
-  pluginActions: ReturnType<typeof usePluginActionTrigger>["pluginActions"];
-  pluginActionsLoading: boolean;
-  pluginActionTrigger: ReturnType<typeof usePluginActionTrigger>;
-  ticketActionTrigger: ReturnType<typeof usePluginActionTrigger>;
-  sessionActionTrigger: ReturnType<typeof usePluginActionTrigger>;
   isTicketDeleteOpen: boolean;
   closeTicketDeleteModal: () => void;
   deleteTicket: () => Promise<void>;
@@ -116,25 +106,6 @@ const WorkspaceCreationModals = (props: {
   );
 };
 
-const ActionParamsModal = (props: { projectId: string; actionTrigger: ReturnType<typeof usePluginActionTrigger> }) => {
-  const { projectId, actionTrigger } = props;
-
-  if (!actionTrigger.activeParamAction) {
-    return null;
-  }
-
-  return (
-    <ActionParamsDialog
-      open
-      action={actionTrigger.activeParamAction}
-      projectId={projectId}
-      isSubmitting={actionTrigger.activeParamActionIsPending}
-      onClose={actionTrigger.cancelParams}
-      onSubmit={(params) => actionTrigger.submitWithParams(params)}
-    />
-  );
-};
-
 export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
   const {
     projectId,
@@ -171,11 +142,6 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
     createEmptyWorkspace,
     resolveTicketContextMenuItems,
     resolveSessionContextMenuItems,
-    pluginActions,
-    pluginActionsLoading,
-    pluginActionTrigger,
-    ticketActionTrigger,
-    sessionActionTrigger,
     isTicketDeleteOpen,
     closeTicketDeleteModal,
     deleteTicket,
@@ -217,8 +183,7 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
       resolveWorkspaceContextMenuItems={(workspace) =>
         toSidebarContextMenuItems(
           buildResourceContextMenuActions({
-            pluginActions,
-            defaultOverflowActions: buildWorkspaceDeleteOverflowAction({
+            actions: buildWorkspaceDeleteOverflowAction({
               t,
               hasSelectedWorkspace: true,
               isMutationPending: deleteWorkspaceIsPending,
@@ -227,8 +192,6 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
                 openDeleteModal();
               },
             }),
-            pendingActionKeys: pluginActionTrigger.pendingActionKeys,
-            onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, workspace.id),
           }),
         )
       }
@@ -269,17 +232,7 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
             />
           </Flex>
 
-          <PluginHeaderActions
-            pluginActions={pluginActions}
-            defaultOverflowActions={defaultOverflowActions}
-            onPluginAction={(actionKey) => {
-              if (!selectedWorkspace) return;
-              void pluginActionTrigger.trigger(actionKey, selectedWorkspace.id);
-            }}
-            pendingActionKeys={pluginActionTrigger.pendingActionKeys}
-            overflowLabel={t("workspacePanel.options.workspace")}
-            isLoading={pluginActionsLoading}
-          />
+          <HeaderActions actions={defaultOverflowActions} overflowLabel={t("workspacePanel.options.workspace")} />
         </HorizontalMenuStack>
 
         <Flex flex="1" minH="0">
@@ -303,12 +256,6 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
           createWorkspaceDescription={createWorkspaceDescription}
           createEmptyWorkspace={createEmptyWorkspace}
         />
-
-        {projectId ? <ActionParamsModal projectId={projectId} actionTrigger={pluginActionTrigger} /> : null}
-
-        {projectId ? <ActionParamsModal projectId={projectId} actionTrigger={ticketActionTrigger} /> : null}
-
-        {projectId ? <ActionParamsModal projectId={projectId} actionTrigger={sessionActionTrigger} /> : null}
 
         <DeleteConfirmationModal
           open={isTicketDeleteOpen}

@@ -2,6 +2,7 @@ import type {
   CommandContext,
   CommandHelpersApi,
   CommandInvocation,
+  CommandNotice,
   CommandOutcome,
   CommandSource,
   EventContext,
@@ -37,6 +38,20 @@ const serializeError = (err: unknown): SerializedError => {
   if (err instanceof Error) return { name: err.name, message: err.message, stack: err.stack };
   return { message: String(err) };
 };
+
+const collectNotices = (env: CommandRunnerEnvironment, notices: CommandNotice[]) => ({
+  ...env,
+  notify: {
+    ...env.notify,
+    toast: async (notice: CommandNotice) => {
+      notices.push(notice);
+      await env.notify.toast(notice);
+    },
+  },
+});
+
+const withNotices = <TOutcome extends CommandOutcome>(outcome: TOutcome, notices: CommandNotice[]) =>
+  notices.length > 0 ? ({ ...outcome, notices } as TOutcome) : outcome;
 
 interface ContextFactory {
   buildExtensionContext(env: CommandRunnerEnvironment, ids: BuildEnvironmentInput, depth: number): ExtensionContextBase;
@@ -217,6 +232,8 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
       };
     }
 
+    const notices: CommandNotice[] = [];
+    const commandEnv = collectNotices(env, notices);
     const invocationId = generateId();
     const initialInvocation: CommandInvocation = {
       params: (input.params ?? {}) as JsonObject,
@@ -229,7 +246,7 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
 
     const buildCtx = (invocation: CommandInvocation) =>
       factory.buildCommandContext(
-        env,
+        commandEnv,
         record,
         invocation,
         invocationId,
@@ -254,13 +271,16 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
     if (middlewareResult.status === "reject") {
       const rejectedPayload = { ...requestedPayload, ...middlewareResult.rejection };
       await dispatcher.dispatch(lifecycleEventId("rejected", record.id), rejectedPayload);
-      return {
-        ok: false,
-        status: "rejected",
-        code: middlewareResult.rejection.code,
-        reason: middlewareResult.rejection.reason,
-        data: middlewareResult.rejection.data,
-      };
+      return withNotices(
+        {
+          ok: false,
+          status: "rejected",
+          code: middlewareResult.rejection.code,
+          reason: middlewareResult.rejection.reason,
+          data: middlewareResult.rejection.data,
+        },
+        notices,
+      );
     }
 
     const finalInvocation = middlewareResult.invocation;
@@ -281,7 +301,7 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
         result: value,
         elapsedMs,
       });
-      return { ok: true, status: "success", value };
+      return withNotices({ ok: true, status: "success", value }, notices);
     } catch (err) {
       const elapsedMs = Date.now() - start;
       const message = err instanceof Error ? err.message : String(err);
@@ -291,7 +311,10 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
         error: serializeError(err),
         elapsedMs,
       });
-      return { ok: false, status: "error", code: "handler_threw", reason: message, error: serializeError(err) };
+      return withNotices(
+        { ok: false, status: "error", code: "handler_threw", reason: message, error: serializeError(err) },
+        notices,
+      );
     }
   };
 

@@ -1,6 +1,6 @@
 import { toaster } from "@pstdio/ui";
 import { Archive, Copy } from "lucide-react";
-import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
+import type { HeaderActionItem } from "@/features/actions/header-actions";
 
 interface BuildSessionOverflowActionsInput {
   sessionId: string;

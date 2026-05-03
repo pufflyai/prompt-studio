@@ -2,14 +2,8 @@ import { HStack, Stack, Text } from "@chakra-ui/react";
 import { HorizontalMenuStack, PanelLayout } from "@pstdio/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
-import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
-import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin-header-actions";
-import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
-import {
-  buildResourceContextMenuActions,
-  toSidebarContextMenuItems,
-} from "@/features/plugin-actions/hooks/use-resource-context-menu";
+import { type HeaderActionItem, HeaderActions } from "@/features/actions/header-actions";
+import { buildResourceContextMenuActions, toSidebarContextMenuItems } from "@/features/actions/resource-context-menu";
 import { SessionChatView } from "../components/session-chat-view";
 import { SessionsSidebar } from "../components/sessions-sidebar";
 import { useArchiveSession } from "../hooks/use-archive-session";
@@ -27,15 +21,6 @@ export const SessionsPanel = () => {
   const visibleSessions = getVisibleSessions(sessions);
   const archiveSession = useArchiveSession();
   const selectedSession = visibleSessions.find((item) => item.id === selectedSessionId) ?? null;
-
-  const pluginActionTrigger = usePluginActionTrigger({
-    projectId,
-    targetType: "session",
-    onSuccess: async (result) => {
-      if (!projectId || !result.session_id) return;
-      navigate({ to: `/projects/${projectId}/sessions/${result.session_id}` });
-    },
-  });
 
   const handleSelectSession = (nextSessionId: string) => {
     navigate({ to: `/projects/${projectId}/sessions/${nextSessionId}` });
@@ -68,8 +53,7 @@ export const SessionsPanel = () => {
       resolveContextMenuItems={(session) =>
         toSidebarContextMenuItems(
           buildResourceContextMenuActions({
-            pluginActions: pluginActionTrigger.pluginActions,
-            defaultOverflowActions: buildSessionOverflowActions({
+            actions: buildSessionOverflowActions({
               sessionId: session.id,
               agentSessionId: session.agentSessionId,
               onArchive: () => {
@@ -80,8 +64,6 @@ export const SessionsPanel = () => {
               },
               t,
             }),
-            pendingActionKeys: pluginActionTrigger.pendingActionKeys,
-            onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, session.id),
           }),
         )
       }
@@ -97,16 +79,7 @@ export const SessionsPanel = () => {
           </Text>
 
           <HStack gap="2xs">
-            <PluginHeaderActions
-              pluginActions={selectedSessionId ? pluginActionTrigger.pluginActions : []}
-              defaultOverflowActions={defaultOverflowActions}
-              onPluginAction={(actionKey) => {
-                if (!selectedSessionId) return;
-                void pluginActionTrigger.trigger(actionKey, selectedSessionId);
-              }}
-              pendingActionKeys={pluginActionTrigger.pendingActionKeys}
-              overflowLabel={t("sessions.sessionActions")}
-            />
+            <HeaderActions actions={defaultOverflowActions} overflowLabel={t("sessions.sessionActions")} />
           </HStack>
         </HorizontalMenuStack>
 
@@ -116,17 +89,6 @@ export const SessionsPanel = () => {
           </Stack>
         </Stack>
       </Stack>
-
-      {pluginActionTrigger.activeParamAction && projectId ? (
-        <ActionParamsDialog
-          open
-          action={pluginActionTrigger.activeParamAction}
-          projectId={projectId}
-          isSubmitting={pluginActionTrigger.activeParamActionIsPending}
-          onClose={pluginActionTrigger.cancelParams}
-          onSubmit={(params) => pluginActionTrigger.submitWithParams(params)}
-        />
-      ) : null}
     </PanelLayout>
   );
 };

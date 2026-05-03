@@ -4,14 +4,9 @@ import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
-import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
-import {
-  buildResourceContextMenuActions,
-  toSidebarContextMenuItems,
-} from "@/features/plugin-actions/hooks/use-resource-context-menu";
+import { buildResourceContextMenuActions, toSidebarContextMenuItems } from "@/features/actions/resource-context-menu";
 import { useProject } from "@/features/project/hooks/use-project";
-import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/features/project-settings/store";
+import { useProjectSettingsStore } from "@/features/project-settings/store";
 import { useArchiveSession } from "@/features/sessions/hooks/use-archive-session";
 import { buildSessionOverflowActions } from "@/features/sessions/session-actions";
 import { uploadTicketFile } from "@/features/ticket-list/data/api";
@@ -70,7 +65,6 @@ export const TicketDetailsPanel = () => {
   const { projectId, ticketShorthand, selectedFileId } = useParams({ strict: false });
   const navigate = useNavigate();
   const { t } = useTranslation(["projects", "tickets"]);
-  const projectSettingsStore = useProjectSettingsStoreApi();
   const setSessionModalState = useProjectSettingsStore((state) => state.setSessionModalState);
   const setSelectedSessionId = useProjectSettingsStore((state) => state.setSelectedSessionId);
   const sessionModalState = useProjectSettingsStore((state) => state.sessionModalState);
@@ -112,48 +106,6 @@ export const TicketDetailsPanel = () => {
     [workspaceToDeleteId, setWorkspaceToDeleteId] = useState<string | null>(null);
   const lastSelectedBranches = useProjectSettingsStore((state) => state.lastSelectedBranches);
   const lastSelectedRepo = useProjectSettingsStore((state) => state.lastSelectedRepo);
-
-  const pluginActionTrigger = usePluginActionTrigger({
-    projectId,
-    targetType: "ticket",
-    onSuccess: async (result) => {
-      if (!result.session_id) return;
-      openTicketSessionBubble({
-        sessionId: result.session_id,
-        sessionModalState: projectSettingsStore.getState().sessionModalState,
-        setSessionModalState,
-        setSelectedSessionId,
-      });
-    },
-  });
-
-  const workspaceActionTrigger = usePluginActionTrigger({
-    projectId,
-    targetType: "workspace",
-    onSuccess: async (result) => {
-      if (!result.session_id) return;
-      openTicketSessionBubble({
-        sessionId: result.session_id,
-        sessionModalState: projectSettingsStore.getState().sessionModalState,
-        setSessionModalState,
-        setSelectedSessionId,
-      });
-    },
-  });
-
-  const sessionActionTrigger = usePluginActionTrigger({
-    projectId,
-    targetType: "session",
-    onSuccess: async (result) => {
-      if (!result.session_id) return;
-      openTicketSessionBubble({
-        sessionId: result.session_id,
-        sessionModalState: projectSettingsStore.getState().sessionModalState,
-        setSessionModalState,
-        setSelectedSessionId,
-      });
-    },
-  });
 
   const autosave = useContentAutosave({
     scopeKey: ticketId ? `ticket:${ticketId}:${selectedFile.id}` : "ticket:none",
@@ -303,33 +255,26 @@ export const TicketDetailsPanel = () => {
       resolveTicketContextMenuItems={() =>
         toSidebarContextMenuItems(
           buildResourceContextMenuActions({
-            pluginActions: pluginActionTrigger.pluginActions,
-            defaultOverflowActions,
-            pendingActionKeys: pluginActionTrigger.pendingActionKeys,
-            onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, ticket.id),
+            actions: defaultOverflowActions,
           }),
         )
       }
       resolveWorkspaceContextMenuItems={(workspace) =>
         toSidebarContextMenuItems(
           buildResourceContextMenuActions({
-            pluginActions: workspaceActionTrigger.pluginActions,
-            defaultOverflowActions: buildWorkspaceDeleteOverflowAction({
+            actions: buildWorkspaceDeleteOverflowAction({
               t,
               hasSelectedWorkspace: true,
               isMutationPending: deleteWorkspace.isPending,
               onDeleteWorkspace: () => setWorkspaceToDeleteId(workspace.id),
             }),
-            pendingActionKeys: workspaceActionTrigger.pendingActionKeys,
-            onPluginAction: (actionKey) => void workspaceActionTrigger.trigger(actionKey, workspace.id),
           }),
         )
       }
       resolveSessionContextMenuItems={(session) =>
         toSidebarContextMenuItems(
           buildResourceContextMenuActions({
-            pluginActions: sessionActionTrigger.pluginActions,
-            defaultOverflowActions: buildSessionOverflowActions({
+            actions: buildSessionOverflowActions({
               sessionId: session.id,
               agentSessionId: session.agentSessionId,
               onArchive: () => {
@@ -337,8 +282,6 @@ export const TicketDetailsPanel = () => {
               },
               t,
             }),
-            pendingActionKeys: sessionActionTrigger.pendingActionKeys,
-            onPluginAction: (actionKey) => void sessionActionTrigger.trigger(actionKey, session.id),
           }),
         )
       }
@@ -350,11 +293,8 @@ export const TicketDetailsPanel = () => {
       <Stack flex="1" gap="0" minH="0">
         <TicketHeader
           breadcrumbItems={breadcrumbs}
-          pluginActions={pluginActionTrigger.pluginActions}
           defaultOverflowActions={defaultOverflowActions}
-          pendingActionKeys={pluginActionTrigger.pendingActionKeys}
           onNavigateBack={navigateBack}
-          onPluginAction={(actionKey) => void pluginActionTrigger.trigger(actionKey, ticket.id)}
         />
 
         <Flex flex="1" minH="0" overflow="hidden">
@@ -397,39 +337,6 @@ export const TicketDetailsPanel = () => {
           })}
           onClose={() => setCreateWorkspaceOpen(false)}
           onConfirm={handleCreateEmptyWorkspace}
-        />
-      ) : null}
-
-      {pluginActionTrigger.activeParamAction && projectId ? (
-        <ActionParamsDialog
-          open
-          action={pluginActionTrigger.activeParamAction}
-          projectId={projectId}
-          isSubmitting={pluginActionTrigger.activeParamActionIsPending}
-          onClose={pluginActionTrigger.cancelParams}
-          onSubmit={(params) => pluginActionTrigger.submitWithParams(params)}
-        />
-      ) : null}
-
-      {workspaceActionTrigger.activeParamAction && projectId ? (
-        <ActionParamsDialog
-          open
-          action={workspaceActionTrigger.activeParamAction}
-          projectId={projectId}
-          isSubmitting={workspaceActionTrigger.activeParamActionIsPending}
-          onClose={workspaceActionTrigger.cancelParams}
-          onSubmit={(params) => workspaceActionTrigger.submitWithParams(params)}
-        />
-      ) : null}
-
-      {sessionActionTrigger.activeParamAction && projectId ? (
-        <ActionParamsDialog
-          open
-          action={sessionActionTrigger.activeParamAction}
-          projectId={projectId}
-          isSubmitting={sessionActionTrigger.activeParamActionIsPending}
-          onClose={sessionActionTrigger.cancelParams}
-          onSubmit={(params) => sessionActionTrigger.submitWithParams(params)}
         />
       ) : null}
 

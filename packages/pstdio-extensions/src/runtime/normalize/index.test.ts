@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { commandEvent, commandRef, defineExtension, packageAsset } from "@pstdio/sdk/extensions";
+import { commandEvent, commandRef, defineExtension, packageAsset, projectSlots } from "@pstdio/sdk/extensions";
 import type { LoadedExtensionSource } from "../loader";
 import { normalizeExtensionSources } from "./index";
 
@@ -233,5 +233,35 @@ describe("normalizeExtensionSources", () => {
     // can surface them as unavailable rather than silently dropping them.
     expect(runtime.templates).toHaveLength(1);
     expect(runtime.skills).toHaveLength(1);
+  });
+
+  test("reports incompatible slot kinds", () => {
+    const lab = defineExtension({
+      id: "pstdio.extension-lab",
+      namespace: "lab",
+      name: "Lab",
+      commands: {
+        "say-hello": {
+          title: "Say hello",
+          menus: [{ slot: projectSlots.sidebar as never, label: "Wrong kind" }],
+          run: async () => undefined,
+        },
+      },
+      views: {
+        sidebar: {
+          title: "Sidebar",
+          slot: projectSlots.headerPrimary as never,
+          webview: {
+            entry: packageAsset("./dist/sidebar.js", "file:///fake/extension.ts"),
+          },
+        },
+      },
+    });
+
+    const runtime = normalizeExtensionSources([wrap(lab)]);
+
+    expect(runtime.commands[0]?.menus).toEqual([]);
+    expect(runtime.views).toEqual([]);
+    expect(runtime.diagnostics.map((d) => d.code)).toEqual(["invalid_slot_kind", "invalid_slot_kind"]);
   });
 });

@@ -175,6 +175,28 @@ describe("createCommandRunner: lifecycle", () => {
       expect(outcome.code).toBe("command_not_found");
     }
   });
+
+  test("collects command toast notices in the outcome", async () => {
+    const runner = makeRunner({
+      id: "pstdio.lab",
+      namespace: "lab",
+      name: "Lab",
+      commands: {
+        hello: {
+          title: "Hello",
+          async run(ctx) {
+            await ctx.notify.toast({ type: "info", title: "Lab", message: "Hello from the lab" });
+            return { ok: true };
+          },
+        },
+      },
+    });
+
+    const outcome = await runner.execute({ commandId: "lab.hello", projectId: "p1" });
+
+    expect(outcome.ok).toBe(true);
+    expect(outcome.notices).toEqual([{ type: "info", title: "Lab", message: "Hello from the lab" }]);
+  });
 });
 
 describe("createCommandRunner: middleware", () => {

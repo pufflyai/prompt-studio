@@ -37,6 +37,12 @@ export default {
         return { counter: (await ctx.storage.get(COUNTER_KEY)) ?? 0 };
       },
     },
+    "slot.echo": {
+      title: "Echo slot",
+      async run(ctx) {
+        return { slot: ctx.slot };
+      },
+    },
     awaken: {
       title: "Awaken",
       async run() {
@@ -170,6 +176,28 @@ describe("POST /v1/extensions/commands/:commandId/execute", () => {
       const inner = body.outcome.value as { status: string; value?: { counter?: number } };
       expect(inner.status).toBe("success");
       expect(inner.value?.counter).toBe(baseline + 5);
+    }
+  });
+
+  test("forwards slot context into command execution", async () => {
+    const res = await post("lab.slot.echo", {
+      projectId,
+      slot: {
+        id: "project.headerPrimary",
+        kind: "menu",
+        context: { projectId },
+      },
+    });
+    const body = (await res.json()) as CommandExecuteResponse;
+    expect(body.outcome.status).toBe("success");
+    if (body.outcome.status === "success") {
+      expect(body.outcome.value).toEqual({
+        slot: {
+          id: "project.headerPrimary",
+          kind: "menu",
+          context: { projectId },
+        },
+      });
     }
   });
 
