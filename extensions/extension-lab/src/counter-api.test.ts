@@ -16,10 +16,10 @@ describe("lab counter API", () => {
     ).toBe(4);
   });
 
-  test("executes a counter command through the extension command endpoint", async () => {
+  test("executes a counter command through the SDK extension client", async () => {
     const requests: { url: string; body: unknown }[] = [];
-    const fetcher = async (url: string, init?: RequestInit) => {
-      requests.push({ url, body: JSON.parse(String(init?.body)) });
+    const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
+      requests.push({ url: String(input), body: JSON.parse(String(init?.body)) });
       return new Response(
         JSON.stringify({
           commandId: "lab.counter.bump",
@@ -45,5 +45,18 @@ describe("lab counter API", () => {
         body: { projectId: "project-1", params: { amount: -1 }, source: "dashboard" },
       },
     ]);
+  });
+
+  test("surfaces command execution API errors from the SDK client", async () => {
+    const fetcher = async () =>
+      new Response(JSON.stringify({ error: "Lab counter command is not registered." }), { status: 404 });
+
+    await expect(
+      executeCounterCommand({
+        commandId: "lab.counter.bump",
+        projectId: "project-1",
+        fetcher,
+      }),
+    ).rejects.toThrow("Lab counter command is not registered.");
   });
 });

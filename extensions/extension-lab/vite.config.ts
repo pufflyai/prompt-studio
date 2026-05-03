@@ -7,6 +7,18 @@ import { defineConfig } from "vite";
 export default defineConfig({
   root: path.resolve(__dirname, "src"),
   base: "./",
+  resolve: {
+    dedupe: [
+      "react",
+      "react-dom",
+      "react/compiler-runtime",
+      "react/jsx-runtime",
+      "react/jsx-dev-runtime",
+      "@chakra-ui/react",
+      "@emotion/react",
+      "@emotion/styled",
+    ],
+  },
   plugins: [react()],
   build: {
     outDir: path.resolve(__dirname, "dist"),

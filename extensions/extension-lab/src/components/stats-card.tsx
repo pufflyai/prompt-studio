@@ -1,3 +1,4 @@
+import { HStack, Stack, Text } from "@chakra-ui/react";
 import { useLabStore } from "../store/lab-store";
 
 export const StatsCard = () => {
@@ -5,15 +6,23 @@ export const StatsCard = () => {
   const noteCount = useLabStore((state) => state.notes.length);
 
   return (
-    <section className="lab-card lab-card--stats">
-      <div className="lab-stat">
-        <span className="lab-stat__label">Counter</span>
-        <span className="lab-stat__value">{counter}</span>
-      </div>
-      <div className="lab-stat">
-        <span className="lab-stat__label">Notes</span>
-        <span className="lab-stat__value">{noteCount}</span>
-      </div>
-    </section>
+    <HStack bg="bg" borderWidth="1px" borderColor="border" borderRadius="md" boxShadow="sm" overflow="hidden">
+      <Stack flex="1" gap="2xs" padding="md">
+        <Text textStyle="label/XS/medium" color="fg.muted">
+          Counter
+        </Text>
+        <Text textStyle="heading/M/bold" fontVariantNumeric="tabular-nums">
+          {counter}
+        </Text>
+      </Stack>
+      <Stack flex="1" gap="2xs" padding="md" borderLeftWidth="1px" borderLeftColor="border">
+        <Text textStyle="label/XS/medium" color="fg.muted">
+          Notes
+        </Text>
+        <Text textStyle="heading/M/bold" fontVariantNumeric="tabular-nums">
+          {noteCount}
+        </Text>
+      </Stack>
+    </HStack>
   );
 };

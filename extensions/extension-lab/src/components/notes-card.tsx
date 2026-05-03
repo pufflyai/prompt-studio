@@ -1,5 +1,7 @@
+import { Box, Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import type { FormEvent } from "react";
 import { useLabStore } from "../store/lab-store";
+import { LabCard } from "./lab-card";
 
 const formatTime = (timestamp: number) => {
   const date = new Date(timestamp);
@@ -20,54 +22,62 @@ export const NotesCard = () => {
   };
 
   return (
-    <section className="lab-card">
-      <header className="lab-card__header">
-        <h2 className="lab-card__title">Notes</h2>
-        <p className="lab-card__subtitle">A scratch list backed by the same zustand store.</p>
-      </header>
+    <LabCard title="Notes" subtitle="A scratch list backed by the same zustand store.">
+      <Stack gap="md">
+        <form onSubmit={onSubmit}>
+          <HStack gap="sm">
+            <Input
+              placeholder="Jot something down..."
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+            />
+            <Button type="submit" variant="solid" disabled={!draft.trim()}>
+              Add
+            </Button>
+          </HStack>
+        </form>
 
-      <form className="lab-notes__form" onSubmit={onSubmit}>
-        <input
-          className="lab-input"
-          placeholder="Jot something down…"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-        />
-        <button type="submit" className="lab-button lab-button--primary" disabled={!draft.trim()}>
-          Add
-        </button>
-      </form>
-
-      {notes.length === 0 ? (
-        <p className="lab-empty">No notes yet — add one above.</p>
-      ) : (
-        <ul className="lab-notes__list">
-          {notes.map((note) => (
-            <li key={note.id} className="lab-note">
-              <div className="lab-note__body">
-                <span className="lab-note__text">{note.text}</span>
-                <span className="lab-note__meta">{formatTime(note.createdAt)}</span>
-              </div>
-              <button
-                type="button"
-                className="lab-button lab-button--ghost lab-button--small"
-                onClick={() => removeNote(note.id)}
-                aria-label={`Remove note ${note.text}`}
+        {notes.length === 0 ? (
+          <Text textStyle="paragraph/S/regular" color="fg.muted">
+            No notes yet.
+          </Text>
+        ) : (
+          <Stack as="ul" gap="xs" padding="0" margin="0" listStyleType="none">
+            {notes.map((note) => (
+              <HStack
+                as="li"
+                key={note.id}
+                justify="space-between"
+                gap="sm"
+                borderWidth="1px"
+                borderColor="border"
+                borderRadius="sm"
+                padding="sm"
               >
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+                <Box minW="0">
+                  <Text textStyle="paragraph/S/regular" truncate>
+                    {note.text}
+                  </Text>
+                  <Text textStyle="paragraph/XS/regular" color="fg.muted">
+                    {formatTime(note.createdAt)}
+                  </Text>
+                </Box>
+                <Button type="button" variant="ghost" size="xs" onClick={() => removeNote(note.id)}>
+                  Remove
+                </Button>
+              </HStack>
+            ))}
+          </Stack>
+        )}
 
-      {notes.length > 0 ? (
-        <footer className="lab-notes__footer">
-          <button type="button" className="lab-button lab-button--ghost lab-button--small" onClick={clearNotes}>
-            Clear all
-          </button>
-        </footer>
-      ) : null}
-    </section>
+        {notes.length > 0 ? (
+          <HStack justify="flex-end">
+            <Button type="button" variant="ghost" size="xs" onClick={clearNotes}>
+              Clear all
+            </Button>
+          </HStack>
+        ) : null}
+      </Stack>
+    </LabCard>
   );
 };

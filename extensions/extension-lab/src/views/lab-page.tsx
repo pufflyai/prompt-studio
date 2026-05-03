@@ -1,25 +1,36 @@
+import { Container, Grid, Heading, Stack, Text } from "@chakra-ui/react";
 import { CounterCard } from "../components/counter-card";
+import { LabHostBridge } from "../components/lab-host-bridge";
 import { NotesCard } from "../components/notes-card";
 import { StatsCard } from "../components/stats-card";
+import { ThemeCard } from "../components/theme-card";
 
 export const LabPage = () => {
   return (
-    <main className="lab-page">
-      <header className="lab-page__header">
-        <p className="lab-page__eyebrow">Extension Lab</p>
-        <h1 className="lab-page__title">Sandbox webview</h1>
-        <p className="lab-page__lead">
-          A self-contained React surface for trying out the extension API. The counter runs through extension commands
-          and persists per project with ctx.storage.
-        </p>
-      </header>
+    <Container className="lab-page" as="main" maxW="5xl" paddingX="lg" paddingY="lg">
+      <LabHostBridge />
+      <Stack gap="lg">
+        <Stack gap="xs">
+          <Text textStyle="label/XS/medium" color="fg.accent-primary">
+            Extension Lab
+          </Text>
+          <Heading as="h1" textStyle="heading/L/bold">
+            Sandbox webview
+          </Heading>
+          <Text textStyle="paragraph/M/regular" color="fg.muted" maxW="2xl">
+            A self-contained React surface for trying out the extension API. The counter runs through extension commands
+            and persists per project with ctx.storage.
+          </Text>
+        </Stack>
 
-      <StatsCard />
+        <StatsCard />
 
-      <div className="lab-page__grid">
-        <CounterCard />
-        <NotesCard />
-      </div>
-    </main>
+        <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap="md" alignItems="start">
+          <CounterCard />
+          <ThemeCard />
+          <NotesCard />
+        </Grid>
+      </Stack>
+    </Container>
   );
 };

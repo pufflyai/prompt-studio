@@ -8,7 +8,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@chakra-ui/react": "^3.0.0",
+    "@emotion/react": "^11.0.0",
     "@pstdio/sdk": "^0.4.1",
+    "@pstdio/ui": "^0.5.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zustand": "^5.0.0"

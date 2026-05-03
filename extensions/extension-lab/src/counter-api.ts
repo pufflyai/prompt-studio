@@ -1,7 +1,7 @@
-const COUNTER_COMMAND_ENDPOINT = "/v1/extensions/commands";
+import { createClient } from "@pstdio/sdk/client";
 
 type CounterCommandId = "lab.counter.bump" | "lab.counter.read" | "lab.counter.reset";
-type CounterCommandFetcher = (url: string, init?: RequestInit) => Promise<Response>;
+type CounterCommandFetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 interface CounterCommandResponse {
   commandId: string;
@@ -38,15 +38,8 @@ export const getCounterFromResponse = (response: CounterCommandResponse) => {
 
 export const executeCounterCommand = async (input: CounterCommandInput) => {
   const { commandId, projectId, params, fetcher = fetch } = input;
-  const response = await fetcher(`${COUNTER_COMMAND_ENDPOINT}/${encodeURIComponent(commandId)}/execute`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ projectId, params, source: "dashboard" }),
-  });
+  const client = createClient({ baseUrl: "", fetch: fetcher as typeof fetch });
+  const response = await client.extensions.execute(commandId, { projectId, params, source: "dashboard" });
 
-  if (!response.ok) {
-    throw new Error(`Counter command request failed (${response.status}).`);
-  }
-
-  return getCounterFromResponse((await response.json()) as CounterCommandResponse);
+  return getCounterFromResponse(response);
 };

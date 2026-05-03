@@ -1,6 +1,8 @@
+import { Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { executeCounterCommand, getProjectIdFromSearch } from "../counter-api";
 import { useLabStore } from "../store/lab-store";
+import { LabCard } from "./lab-card";
 
 export const CounterCard = () => {
   const counter = useLabStore((state) => state.counter);
@@ -63,43 +65,47 @@ export const CounterCard = () => {
   const disabled = isPending || !projectId;
 
   return (
-    <section className="lab-card">
-      <header className="lab-card__header">
-        <h2 className="lab-card__title">Counter</h2>
-        <p className="lab-card__subtitle">Project-scoped extension storage through ctx.storage.</p>
-      </header>
-      <div className="lab-counter">
-        <span className="lab-counter__value">{counter}</span>
-        <div className="lab-counter__actions">
-          <button
-            type="button"
-            className="lab-button"
-            onClick={() => runCounterCommand("lab.counter.bump", { amount: -1 })}
-            aria-label="Decrement"
-            disabled={disabled}
-          >
-            −
-          </button>
-          <button
-            type="button"
-            className="lab-button lab-button--primary"
-            onClick={() => runCounterCommand("lab.counter.bump")}
-            aria-label="Increment"
-            disabled={disabled}
-          >
-            +1
-          </button>
-          <button
-            type="button"
-            className="lab-button lab-button--ghost"
-            onClick={() => runCounterCommand("lab.counter.reset")}
-            disabled={disabled}
-          >
-            Reset
-          </button>
-        </div>
-        {error ? <p className="lab-card__error">{error}</p> : null}
-      </div>
-    </section>
+    <LabCard title="Counter" subtitle="Project-scoped extension storage through ctx.storage.">
+      <Stack gap="md">
+        <HStack justify="space-between" align="center" wrap="wrap" gap="md">
+          <Text textStyle="heading/2XL/bold" fontVariantNumeric="tabular-nums">
+            {counter}
+          </Text>
+          <HStack gap="xs" wrap="wrap">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => runCounterCommand("lab.counter.bump", { amount: -1 })}
+              aria-label="Decrement"
+              disabled={disabled}
+            >
+              -
+            </Button>
+            <Button
+              type="button"
+              variant="solid"
+              onClick={() => runCounterCommand("lab.counter.bump")}
+              aria-label="Increment"
+              disabled={disabled}
+            >
+              +1
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => runCounterCommand("lab.counter.reset")}
+              disabled={disabled}
+            >
+              Reset
+            </Button>
+          </HStack>
+        </HStack>
+        {error ? (
+          <Text textStyle="paragraph/S/regular" color="fg.error">
+            {error}
+          </Text>
+        ) : null}
+      </Stack>
+    </LabCard>
   );
 };
