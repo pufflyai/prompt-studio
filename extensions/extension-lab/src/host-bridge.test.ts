@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  buildHostCommandOutcomeToastMessages,
   buildOpenCommandPaletteMessage,
   buildSetThemePreferenceMessage,
   getThemePreferenceFromSearch,
@@ -25,6 +26,17 @@ describe("lab host bridge", () => {
       type: "pstdio.extension.setThemePreference",
       themePreference: "pstdio-dark",
     });
+    expect(
+      buildHostCommandOutcomeToastMessages("Lab: Say hello", {
+        status: "success",
+        notices: [{ type: "info", title: "Lab", message: "Hello from the lab" }],
+      }),
+    ).toEqual([
+      {
+        type: "pstdio.extension.showToast",
+        toast: { type: "info", title: "Lab", description: "Hello from the lab" },
+      },
+    ]);
   });
 
   test("forwards the command palette shortcut to the host", () => {

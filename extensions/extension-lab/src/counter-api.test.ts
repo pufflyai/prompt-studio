@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { executeCounterCommand, getCounterFromResponse, getProjectIdFromSearch } from "./counter-api";
+import {
+  executeCounterCommand,
+  executeSayHelloCommand,
+  getCounterFromResponse,
+  getProjectIdFromSearch,
+} from "./counter-api";
 
 describe("lab counter API", () => {
   test("reads the project id from the webview route query", () => {
@@ -58,5 +63,43 @@ describe("lab counter API", () => {
         fetcher,
       }),
     ).rejects.toThrow("Lab counter command is not registered.");
+  });
+
+  test("executes the say hello command through the SDK extension client", async () => {
+    const requests: { url: string; body: unknown }[] = [];
+    const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
+      requests.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+      return new Response(
+        JSON.stringify({
+          commandId: "lab.say-hello",
+          extensionId: "pstdio.extension-lab",
+          outcome: {
+            ok: true,
+            status: "success",
+            value: { message: "hello dispatched" },
+            notices: [{ type: "info", title: "Lab", message: "Hello from the lab" }],
+          },
+        }),
+        { status: 200 },
+      );
+    };
+
+    await expect(executeSayHelloCommand({ projectId: "project-1", fetcher })).resolves.toEqual({
+      commandId: "lab.say-hello",
+      extensionId: "pstdio.extension-lab",
+      outcome: {
+        ok: true,
+        status: "success",
+        value: { message: "hello dispatched" },
+        notices: [{ type: "info", title: "Lab", message: "Hello from the lab" }],
+      },
+    });
+
+    expect(requests).toEqual([
+      {
+        url: "/v1/extensions/commands/lab.say-hello/execute",
+        body: { projectId: "project-1", source: "dashboard" },
+      },
+    ]);
   });
 });

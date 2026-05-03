@@ -1,5 +1,6 @@
 import { Container, Grid, Heading, Stack, Text } from "@chakra-ui/react";
 import { CounterCard } from "../components/counter-card";
+import { HostNotificationCard } from "../components/host-notification-card";
 import { LabHostBridge } from "../components/lab-host-bridge";
 import { NotesCard } from "../components/notes-card";
 import { StatsCard } from "../components/stats-card";
@@ -28,6 +29,7 @@ export const LabPage = () => {
         <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap="md" alignItems="start">
           <CounterCard />
           <ThemeCard />
+          <HostNotificationCard />
           <NotesCard />
         </Grid>
       </Stack>

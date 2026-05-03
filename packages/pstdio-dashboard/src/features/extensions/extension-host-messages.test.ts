@@ -17,9 +17,27 @@ describe("extension host messages", () => {
     ).toEqual({ type: "set-theme-preference", themePreference: "pstdio-dark" });
   });
 
+  it("reads a toast request from a guest webview", () => {
+    expect(
+      readExtensionHostMessage({
+        type: "pstdio.extension.showToast",
+        toast: { type: "info", title: "Lab", description: "Hello from the lab" },
+      }),
+    ).toEqual({
+      type: "show-toast",
+      toast: { type: "info", title: "Lab", description: "Hello from the lab" },
+    });
+  });
+
   it("ignores malformed guest messages", () => {
     expect(readExtensionHostMessage(null)).toBeNull();
     expect(readExtensionHostMessage({ type: "pstdio.extension.setThemePreference" })).toBeNull();
+    expect(
+      readExtensionHostMessage({
+        type: "pstdio.extension.showToast",
+        toast: { type: "debug", description: "Hello" },
+      }),
+    ).toBeNull();
   });
 
   it("builds a host theme message for guest webviews", () => {

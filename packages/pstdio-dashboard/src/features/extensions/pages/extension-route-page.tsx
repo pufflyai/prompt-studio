@@ -1,6 +1,6 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
 import type { BreadcrumbItem } from "@pstdio/ui";
-import { Breadcrumb, EmptyState, isThemePreference, PanelLayout, useThemePreference } from "@pstdio/ui";
+import { Breadcrumb, EmptyState, isThemePreference, PanelLayout, toaster, useThemePreference } from "@pstdio/ui";
 import { useParams } from "@tanstack/react-router";
 import type { CSSProperties } from "react";
 import { useEffect, useRef } from "react";
@@ -42,6 +42,11 @@ export const ExtensionRoutePage = () => {
 
       if (message.type === "open-command-palette") {
         openCommandPalette();
+        return;
+      }
+
+      if (message.type === "show-toast") {
+        toaster.create(message.toast);
         return;
       }
 
