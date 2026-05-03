@@ -2,6 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { conflictResponseSchema, createTemplateBodySchema, templateResponseSchema } from "../dto";
+import { projectTemplateRowToTemplate } from "../registry/project-template-mapper";
 
 export const createTemplateRoute = createRoute({
   method: "post",
@@ -58,8 +59,9 @@ export const createTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof c
       is_default,
     });
 
-    deps.eventBus.emit("templates", "set", template);
+    const response = projectTemplateRowToTemplate(template);
+    deps.eventBus.emit("templates", "set", response);
 
-    return c.json(template, 201);
+    return c.json(response, 201);
   };
 };

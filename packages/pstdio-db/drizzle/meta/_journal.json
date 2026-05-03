@@ -78,6 +78,13 @@
       "when": 1777752627655,
       "tag": "0010_extension_platform",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1777763886992,
+      "tag": "0011_template_skill_origin",
+      "breakpoints": true
     }
   ]
 }

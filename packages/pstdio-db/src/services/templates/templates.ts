@@ -12,6 +12,8 @@ type CreateInput = {
   template_type: string;
   file_id: string;
   is_default?: boolean;
+  origin_extension_id?: string | null;
+  origin_template_key?: string | null;
 };
 
 type UpdateInput = {
@@ -63,6 +65,8 @@ export const createTemplatesDBService = (db: DbClient) => {
       template_type: input.template_type,
       file_id: input.file_id,
       is_default: isDefault,
+      origin_extension_id: input.origin_extension_id ?? null,
+      origin_template_key: input.origin_template_key ?? null,
       created_at: timestamp,
       updated_at: timestamp,
       deleted_at: null,

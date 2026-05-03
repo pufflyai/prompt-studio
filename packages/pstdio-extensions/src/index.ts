@@ -4,8 +4,11 @@ export {
   normalizeArtifactMountPath,
   normalizeCliPath,
   PackageAssetError,
+  type PackageAssetKind,
+  type ResolvedPackageAsset,
   readPackageAssetBytes,
   readPackageAssetText,
+  resolvePackageAsset,
   resolvePackageAssetPath,
 } from "./artifacts";
 

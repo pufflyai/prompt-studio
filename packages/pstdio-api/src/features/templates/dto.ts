@@ -14,3 +14,4 @@ export const updateTemplateBodySchema = updateTemplateInputSchema.strict();
 export const notFoundResponseSchema = z.object({ error: z.string() });
 export const conflictResponseSchema = z.object({ error: z.string() });
 export const badRequestResponseSchema = z.object({ error: z.string() });
+export const forbiddenResponseSchema = z.object({ error: z.string() });

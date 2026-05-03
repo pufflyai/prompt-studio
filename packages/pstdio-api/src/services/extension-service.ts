@@ -30,15 +30,6 @@ export type ExtensionServiceDeps = {
 export const createExtensionService = (deps: ExtensionServiceDeps) => {
   const runCheck = deps.runCheck ?? checkExtensions;
 
-  const merged = {
-    ...deps.installedExtensionSourcesDBService,
-    ...deps.projectExtensionInstancesDBService,
-    ...deps.extensionKvDBService,
-    ...deps.extensionCollectionItemsDBService,
-    ...deps.extensionTemplatePreferencesDBService,
-    ...deps.extensionSkillPreferencesDBService,
-  };
-
   const buildEnv = buildExtensionEnvironment(deps.extensionKvDBService);
 
   const execute = async (
@@ -67,7 +58,12 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   return {
     check: (input: CheckExtensionsInput = {}) => runCheck(input),
     execute,
-    ...merged,
+    installedSources: deps.installedExtensionSourcesDBService,
+    projectInstances: deps.projectExtensionInstancesDBService,
+    kv: deps.extensionKvDBService,
+    collections: deps.extensionCollectionItemsDBService,
+    templatePreferences: deps.extensionTemplatePreferencesDBService,
+    skillPreferences: deps.extensionSkillPreferencesDBService,
   };
 };
 

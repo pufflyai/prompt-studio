@@ -4,11 +4,14 @@ import {
   attempt_statuses,
   type DbClient,
   eq,
+  extension_skill_preferences,
+  extension_template_preferences,
   files,
   project_repos,
   projects,
   repos,
   sessions,
+  skills,
   sql,
   templates,
   ticket_files,
@@ -43,6 +46,9 @@ const tableMap = {
   workspace_artifacts,
   workspace_sessions,
   templates,
+  skills,
+  extension_template_preferences,
+  extension_skill_preferences,
 } as const;
 
 export const SYNCED_TABLES = Object.keys(tableMap) as (keyof typeof tableMap)[];
@@ -57,9 +63,9 @@ export type SyncServiceDeps = {
   eventBus: EventBus;
 };
 
-// Emit cascade deletes for all project dependents (children first, parent last)
-const emitProjectDependents = async (db: DbClient, projectId: string, bus: EventBus) => {
+const emitTicketCascade = async (db: DbClient, projectId: string, bus: EventBus) => {
   const projectTickets = await db.select().from(tickets).where(eq(tickets.project_id, projectId));
+
   for (const ticket of projectTickets) {
     const tagAssignments = await db
       .select()
@@ -91,6 +97,11 @@ const emitProjectDependents = async (db: DbClient, projectId: string, bus: Event
 
   const aStatuses = await db.select().from(attempt_statuses).where(eq(attempt_statuses.project_id, projectId));
   for (const row of aStatuses) bus.emit("attempt_statuses", "delete", { id: row.id });
+};
+
+// Emit cascade deletes for all project dependents (children first, parent last)
+const emitProjectDependents = async (db: DbClient, projectId: string, bus: EventBus) => {
+  await emitTicketCascade(db, projectId, bus);
 
   const ws = await db.select().from(workspaces).where(eq(workspaces.project_id, projectId));
   for (const row of ws) bus.emit("workspaces", "delete", { id: row.id });
@@ -103,6 +114,37 @@ const emitProjectDependents = async (db: DbClient, projectId: string, bus: Event
 
   const tmpl = await db.select().from(templates).where(eq(templates.project_id, projectId));
   for (const row of tmpl) bus.emit("templates", "delete", { id: row.id });
+
+  const projectSkills = await db.select().from(skills).where(eq(skills.project_id, projectId));
+  for (const row of projectSkills) bus.emit("skills", "delete", { id: row.id });
+
+  await emitExtensionPreferenceDeletes(db, projectId, bus);
+};
+
+const emitExtensionPreferenceDeletes = async (db: DbClient, projectId: string, bus: EventBus) => {
+  const tmplPrefs = await db
+    .select()
+    .from(extension_template_preferences)
+    .where(eq(extension_template_preferences.project_id, projectId));
+  for (const row of tmplPrefs) {
+    bus.emit("extension_template_preferences", "delete", {
+      project_id: row.project_id,
+      extension_id: row.extension_id,
+      template_key: row.template_key,
+    });
+  }
+
+  const skillPrefs = await db
+    .select()
+    .from(extension_skill_preferences)
+    .where(eq(extension_skill_preferences.project_id, projectId));
+  for (const row of skillPrefs) {
+    bus.emit("extension_skill_preferences", "delete", {
+      project_id: row.project_id,
+      extension_id: row.extension_id,
+      skill_key: row.skill_key,
+    });
+  }
 };
 
 export const createSyncService = (deps: SyncServiceDeps) => {

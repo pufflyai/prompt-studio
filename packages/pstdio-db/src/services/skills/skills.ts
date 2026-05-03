@@ -22,6 +22,8 @@ type CreateInput = {
   name: string;
   description: string;
   files: SkillFile[];
+  origin_extension_id?: string | null;
+  origin_skill_key?: string | null;
 };
 
 type UpdateInput = {
@@ -58,6 +60,8 @@ const mapSkill = (row: SkillRow): SkillRecord => {
     description: row.description,
     legacy_file_id: row.file_id,
     files: parseFiles(row.files_json),
+    origin_extension_id: row.origin_extension_id,
+    origin_skill_key: row.origin_skill_key,
     created_at: row.created_at,
     updated_at: row.updated_at,
     deleted_at: row.deleted_at,
@@ -97,6 +101,8 @@ export const createSkillsDBService = (db: DbClient) => {
       description: input.description,
       file_id: null,
       files_json: JSON.stringify(input.files),
+      origin_extension_id: input.origin_extension_id ?? null,
+      origin_skill_key: input.origin_skill_key ?? null,
       created_at: timestamp,
       updated_at: timestamp,
       deleted_at: null,

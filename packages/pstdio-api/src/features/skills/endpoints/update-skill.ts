@@ -25,6 +25,10 @@ export const updateSkillRoute = createRoute({
       description: "Skill updated.",
       content: { "application/json": { schema: skillWithContentResponseSchema } },
     },
+    403: {
+      description: "Skill is a read-only extension default.",
+      content: { "application/json": { schema: notFoundResponseSchema } },
+    },
     404: {
       description: "Skill or bundled version not found.",
       content: { "application/json": { schema: notFoundResponseSchema } },
@@ -38,6 +42,23 @@ export const updateSkillHandler = (deps: RouteDeps): AppRouteHandler<typeof upda
 
     const skill = await deps.skillService.getByName(projectId, name);
     if (!skill) {
+      const checkResult = await deps.extensionService.check();
+      const dot = name.indexOf(".");
+      if (dot > 0 && dot < name.length - 1) {
+        const namespace = name.slice(0, dot);
+        const key = name.slice(dot + 1);
+        const isExtensionDefault = checkResult.runtime.skills.some(
+          (entry) => entry.namespace === namespace && entry.localId === key,
+        );
+        if (isExtensionDefault) {
+          return c.json(
+            {
+              error: `Skill "${name}" is a read-only extension default. Copy it to create an editable project variation.`,
+            },
+            403,
+          );
+        }
+      }
       return c.json({ error: `Skill not found: ${name}` }, 404);
     }
 
@@ -79,6 +100,12 @@ export const updateSkillHandler = (deps: RouteDeps): AppRouteHandler<typeof upda
         name: updated!.name,
         description: updated!.description,
         files: updated!.files,
+        source_kind: "project" as const,
+        read_only: false,
+        extension_id: null,
+        skill_key: null,
+        origin_extension_id: updated!.origin_extension_id,
+        origin_skill_key: updated!.origin_skill_key,
         created_at: updated!.created_at,
         updated_at: updated!.updated_at,
         deleted_at: updated!.deleted_at,

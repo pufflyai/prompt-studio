@@ -10,6 +10,15 @@ type PackageAssetContext = {
   sourcePath?: string;
   /** Optional override for the directory considered the asset root. */
   assetRoot?: string;
+  /** When true, the resolved path may be a directory instead of a file. */
+  allowDirectory?: boolean;
+};
+
+export type PackageAssetKind = "file" | "directory" | "missing";
+
+export type ResolvedPackageAsset = {
+  path: string;
+  kind: Exclude<PackageAssetKind, "missing">;
 };
 
 export class PackageAssetError extends Error {
@@ -31,7 +40,10 @@ const resolveBasePath = (baseUrl: string) => {
   }
 };
 
-export const resolvePackageAssetPath = (asset: PackageAssetDescriptor, context: PackageAssetContext = {}) => {
+export const resolvePackageAsset = (
+  asset: PackageAssetDescriptor,
+  context: PackageAssetContext = {},
+): ResolvedPackageAsset => {
   if (!isPackageAssetDescriptor(asset)) {
     throw new PackageAssetError("Package asset must be declared with packageAsset(...)");
   }
@@ -50,11 +62,26 @@ export const resolvePackageAssetPath = (asset: PackageAssetDescriptor, context: 
     throw new PackageAssetError(`Package asset path "${asset.path}" must stay under the extension asset root`);
   }
 
-  if (!existsSync(assetPath) || !statSync(assetPath).isFile()) {
+  if (!existsSync(assetPath)) {
     throw new PackageAssetError(`Package asset "${asset.path}" does not exist`);
   }
 
-  return assetPath;
+  const stats = statSync(assetPath);
+  if (stats.isFile()) {
+    return { path: assetPath, kind: "file" };
+  }
+  if (stats.isDirectory()) {
+    if (!context.allowDirectory) {
+      throw new PackageAssetError(`Package asset "${asset.path}" must be a file`);
+    }
+    return { path: assetPath, kind: "directory" };
+  }
+
+  throw new PackageAssetError(`Package asset "${asset.path}" is not a regular file or directory`);
+};
+
+export const resolvePackageAssetPath = (asset: PackageAssetDescriptor, context: PackageAssetContext = {}) => {
+  return resolvePackageAsset(asset, context).path;
 };
 
 export const readPackageAssetBytes = async (asset: PackageAssetDescriptor, context: PackageAssetContext = {}) =>

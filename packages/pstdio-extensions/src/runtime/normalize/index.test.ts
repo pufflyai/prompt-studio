@@ -204,4 +204,34 @@ describe("normalizeExtensionSources", () => {
     expect(runtime.templates).toHaveLength(1);
     expect(runtime.skills).toHaveLength(1);
   });
+
+  test("emits missing_template_asset and missing_skill_asset diagnostics for unresolved assets", () => {
+    const planner = defineExtension({
+      id: "pstdio.planner",
+      namespace: "planner",
+      name: "Planner",
+      templates: {
+        defaultTicket: {
+          title: "Default Ticket",
+          type: "ticket",
+          source: packageAsset("./missing-template.md", "file:///fake/extension.ts"),
+        },
+      },
+      skills: {
+        triage: {
+          title: "Triage",
+          source: packageAsset("./missing-skill.md", "file:///fake/extension.ts"),
+        },
+      },
+    });
+
+    const runtime = normalizeExtensionSources([wrap(planner)]);
+    const codes = runtime.diagnostics.map((d) => d.code);
+    expect(codes).toContain("missing_template_asset");
+    expect(codes).toContain("missing_skill_asset");
+    // Templates and skills with missing assets are still listed so the registry
+    // can surface them as unavailable rather than silently dropping them.
+    expect(runtime.templates).toHaveLength(1);
+    expect(runtime.skills).toHaveLength(1);
+  });
 });

@@ -3,10 +3,13 @@ import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import {
   badRequestResponseSchema,
+  forbiddenResponseSchema,
   notFoundResponseSchema,
   templateResponseSchema,
   updateTemplateBodySchema,
 } from "../dto";
+import { isExtensionDefaultName } from "../registry/extension-default-names";
+import { projectTemplateRowToTemplate } from "../registry/project-template-mapper";
 
 export const updateTemplateRoute = createRoute({
   method: "put",
@@ -30,6 +33,10 @@ export const updateTemplateRoute = createRoute({
       description: "Template updated.",
       content: { "application/json": { schema: templateResponseSchema } },
     },
+    403: {
+      description: "Template is a read-only extension default.",
+      content: { "application/json": { schema: forbiddenResponseSchema } },
+    },
     404: {
       description: "Template not found.",
       content: { "application/json": { schema: notFoundResponseSchema } },
@@ -48,6 +55,14 @@ export const updateTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof u
 
     const existing = await deps.templateService.getByName(projectId, name);
     if (!existing) {
+      if (await isExtensionDefaultName(deps, name)) {
+        return c.json(
+          {
+            error: `Template "${name}" is a read-only extension default. Copy it to create an editable project variation.`,
+          },
+          403,
+        );
+      }
       return c.json({ error: `Template not found: ${name}` }, 404);
     }
 
@@ -92,8 +107,9 @@ export const updateTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof u
       }
     }
 
-    deps.eventBus.emit("templates", "set", updated);
+    const response = projectTemplateRowToTemplate(updated);
+    deps.eventBus.emit("templates", "set", response);
 
-    return c.json(updated, 200);
+    return c.json(response, 200);
   };
 };

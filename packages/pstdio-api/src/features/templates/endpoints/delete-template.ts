@@ -1,12 +1,14 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
-import { notFoundResponseSchema } from "../dto";
+import { forbiddenResponseSchema, notFoundResponseSchema } from "../dto";
+import { isExtensionDefaultName } from "../registry/extension-default-names";
 
 export const deleteTemplateRoute = createRoute({
   method: "delete",
   path: "/projects/{projectId}/templates/{name}",
-  description: "Delete a template by name. Pass ?hard=true to permanently remove a soft-deleted template.",
+  description:
+    "Delete a project-owned template by name. Pass ?hard=true to permanently remove a soft-deleted template. Extension defaults are read-only; disable them via the extension preference endpoint instead.",
   tags: ["Templates"],
   request: {
     query: z
@@ -25,12 +27,25 @@ export const deleteTemplateRoute = createRoute({
     204: {
       description: "Template deleted.",
     },
+    403: {
+      description: "Template is a read-only extension default.",
+      content: { "application/json": { schema: forbiddenResponseSchema } },
+    },
     404: {
       description: "Template not found.",
       content: { "application/json": { schema: notFoundResponseSchema } },
     },
   },
 });
+
+const rejectExtensionDefault = async (deps: RouteDeps, name: string) => {
+  if (await isExtensionDefaultName(deps, name)) {
+    return {
+      error: `Template "${name}" is a read-only extension default. Disable it via the extension preference endpoint instead.`,
+    };
+  }
+  return null;
+};
 
 export const deleteTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof deleteTemplateRoute> => {
   return async (c) => {
@@ -40,6 +55,8 @@ export const deleteTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof d
     if (hard === "true") {
       const removed = await deps.templateService.hardRemove(projectId, name);
       if (!removed) {
+        const blocked = await rejectExtensionDefault(deps, name);
+        if (blocked) return c.json(blocked, 403);
         return c.json({ error: `Template not found: ${name}` }, 404);
       }
       return c.body(null, 204);
@@ -48,6 +65,8 @@ export const deleteTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof d
     const removed = await deps.templateService.remove(projectId, name);
 
     if (!removed) {
+      const blocked = await rejectExtensionDefault(deps, name);
+      if (blocked) return c.json(blocked, 403);
       return c.json({ error: `Template not found: ${name}` }, 404);
     }
 

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -9,9 +9,15 @@ import type { AppBindings } from "../../../types";
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
 let projectId: string;
+const ORIGINAL_PSTDIO_HOME = process.env.PSTDIO_HOME;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-templates-test-"));
+  // Isolate the merged template registry from any extensions installed under
+  // the developer's real ~/.pstdio so this suite stays deterministic.
+  const isolatedHome = join(tempRoot, "pstdio-home");
+  mkdirSync(join(isolatedHome, "extensions"), { recursive: true });
+  process.env.PSTDIO_HOME = isolatedHome;
   ({ app } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
@@ -29,6 +35,8 @@ beforeAll(async () => {
 
 afterAll(() => {
   rmSync(tempRoot, { recursive: true, force: true });
+  if (ORIGINAL_PSTDIO_HOME === undefined) delete process.env.PSTDIO_HOME;
+  else process.env.PSTDIO_HOME = ORIGINAL_PSTDIO_HOME;
 });
 
 describe("POST /v1/projects/:id/templates", () => {

@@ -6,11 +6,10 @@ import { CLI_VERSION } from "@/features/cli-version";
 import { createCliCommandTracker } from "@/features/logging/cli-command-log";
 import { resolveCliSessionId } from "@/features/sessions/resolve-cli-session-id";
 import { ensureCliApi } from "./api-startup";
-import {
-  buildExtensionCommandModules,
-  defaultExtensionCommandDeps,
-  loadExtensionCliHelpTree,
-} from "./extension-commands";
+import { defaultExtensionCommandDeps } from "./extension-router/dispatch";
+import { buildExtensionCommandModules, createCommandLookup } from "./extension-router/modules";
+import { decideRouterIntervention } from "./extension-router/router";
+import { type LoadedCliTree, loadExtensionCliTree } from "./extension-router/tree";
 
 type CliCommandTracker = ReturnType<typeof createCliCommandTracker>;
 
@@ -73,13 +72,35 @@ const createCli = (input: RunCliInput, commandTracker: CliCommandTracker, extens
   );
 };
 
-const loadExtensionModulesSafely = async (): Promise<CommandModule[]> => {
+const loadCliTreeSafely = async (): Promise<LoadedCliTree | undefined> => {
   try {
-    const tree = await loadExtensionCliHelpTree();
-    return buildExtensionCommandModules(defaultExtensionCommandDeps, tree);
+    return await loadExtensionCliTree();
   } catch {
-    return [];
+    return undefined;
   }
+};
+
+const buildModules = (loaded: LoadedCliTree | undefined): CommandModule[] => {
+  if (!loaded) return [];
+  const lookup = createCommandLookup(loaded.runtime.commands);
+  return buildExtensionCommandModules({
+    deps: defaultExtensionCommandDeps,
+    tree: loaded.tree,
+    commandLookup: lookup,
+    refusedPathKeys: loaded.collisions.refusedPathKeys,
+  });
+};
+
+const interceptIfNeeded = (rawArgs: string[], loaded: LoadedCliTree | undefined): boolean => {
+  if (!loaded) return false;
+  const decision = decideRouterIntervention(rawArgs, loaded);
+  if (decision.kind === "none") return false;
+  if (decision.kind === "collision") {
+    process.stderr.write(decision.output);
+  } else {
+    process.stdout.write(decision.output);
+  }
+  process.exit(1);
 };
 
 export const runCli = async (input: RunCliInput) => {
@@ -90,7 +111,10 @@ export const runCli = async (input: RunCliInput) => {
   });
 
   try {
-    const extensionModules = await loadExtensionModulesSafely();
+    const loaded = await loadCliTreeSafely();
+    if (interceptIfNeeded(input.rawArgs, loaded)) return;
+
+    const extensionModules = buildModules(loaded);
     await createCli({ ...input, env }, commandTracker, extensionModules).parseAsync();
     commandTracker.logSuccess();
   } catch (error) {

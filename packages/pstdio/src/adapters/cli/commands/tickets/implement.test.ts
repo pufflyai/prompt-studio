@@ -27,6 +27,8 @@ const makeTemplate = (overrides: Partial<TemplateWithContent> = {}): TemplateWit
   template_type: "prompt",
   file_id: "file-1",
   is_default: false,
+  source_kind: "project",
+  read_only: false,
   created_at: "2026-03-04T00:00:00.000Z",
   updated_at: "2026-03-04T00:00:00.000Z",
   deleted_at: null,
