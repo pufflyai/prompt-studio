@@ -35,7 +35,8 @@ export default defineExtension({
       menus: [{ slot: projectSlots.headerOverflow, label: "Bump lab counter" }],
       async run(ctx) {
         const current = (await ctx.storage.get<number>(COUNTER_KEY)) ?? 0;
-        const next = current + 1;
+        const amount = (ctx.params as { amount?: number }).amount ?? 1;
+        const next = current + amount;
         await ctx.storage.set(COUNTER_KEY, next);
         return { counter: next };
       },

@@ -19,4 +19,15 @@ export const getExtensionRouteByPath = (routes: ExtensionRouteRecord[] | undefin
 export const buildExtensionRouteAssetUrl = (
   route: ExtensionRouteRecord,
   assetPath = basename(route.webview.entry.path),
-) => `/v1/extensions/routes/${encodeURIComponent(route.id)}/assets/${encodePath(assetPath)}`;
+  context: Record<string, string | undefined> = {},
+) => {
+  const path = `/v1/extensions/routes/${encodeURIComponent(route.id)}/assets/${encodePath(assetPath)}`;
+  const params = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(context)) {
+    if (value) params.set(key, value);
+  }
+
+  const query = params.toString();
+  return query ? `${path}?${query}` : path;
+};

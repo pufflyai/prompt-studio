@@ -10,10 +10,8 @@ interface LabState {
   counter: number;
   notes: LabNote[];
   draft: string;
+  setCounter: (value: number) => void;
   setDraft: (value: string) => void;
-  increment: () => void;
-  decrement: () => void;
-  reset: () => void;
   addNote: (text: string) => void;
   removeNote: (id: string) => void;
   clearNotes: () => void;
@@ -28,10 +26,8 @@ export const useLabStore = create<LabState>((set) => ({
   counter: 0,
   notes: [],
   draft: "",
+  setCounter: (value) => set({ counter: value }),
   setDraft: (value) => set({ draft: value }),
-  increment: () => set((state) => ({ counter: state.counter + 1 })),
-  decrement: () => set((state) => ({ counter: state.counter - 1 })),
-  reset: () => set({ counter: 0 }),
   addNote: (text) =>
     set((state) => {
       const trimmed = text.trim();

@@ -16,7 +16,7 @@ const frameStyle = {
 } satisfies CSSProperties;
 
 export const ExtensionRoutePage = () => {
-  const { extensionRoute } = useParams({ strict: false });
+  const { projectId, extensionRoute } = useParams({ strict: false });
   const extensionsCheck = useExtensionsCheck();
   const route = getExtensionRouteByPath(extensionsCheck.data?.routes, extensionRoute);
   const title = route?.label ?? extensionRoute ?? "Extension";
@@ -38,7 +38,7 @@ export const ExtensionRoutePage = () => {
           ) : route ? (
             <iframe
               title={route.label}
-              src={buildExtensionRouteAssetUrl(route)}
+              src={buildExtensionRouteAssetUrl(route, undefined, { projectId })}
               sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
               style={frameStyle}
             />

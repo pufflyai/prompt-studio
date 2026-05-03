@@ -173,7 +173,7 @@ body {
   font-size: 40px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .lab-counter__actions {
@@ -214,6 +214,13 @@ body {
 .lab-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.lab-card__error {
+  width: 100%;
+  margin: 0;
+  color: #a32020;
+  font-size: 13px;
 }
 
 .lab-button--primary {

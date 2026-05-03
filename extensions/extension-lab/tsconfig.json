@@ -10,7 +10,8 @@
     "skipLibCheck": true,
     "noEmit": true,
     "isolatedModules": true,
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "types": ["bun"]
   },
   "include": ["extension.ts", "src/**/*.ts", "src/**/*.tsx", "vite.config.ts"]
 }

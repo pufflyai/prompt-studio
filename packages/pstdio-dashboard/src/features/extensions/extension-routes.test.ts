@@ -24,4 +24,10 @@ describe("extension routes", () => {
   it("builds a proxied asset URL for the route entry", () => {
     expect(buildExtensionRouteAssetUrl(route)).toBe("/v1/extensions/routes/lab.labPage/assets/lab-page.html");
   });
+
+  it("builds a proxied asset URL with route context", () => {
+    expect(buildExtensionRouteAssetUrl(route, undefined, { projectId: "project-1" })).toBe(
+      "/v1/extensions/routes/lab.labPage/assets/lab-page.html?projectId=project-1",
+    );
+  });
 });
