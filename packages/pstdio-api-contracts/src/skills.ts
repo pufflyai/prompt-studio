@@ -18,6 +18,7 @@ export const skillSchema = z.object({
   read_only: z.boolean().default(false),
   asset_kind: z.enum(["file", "directory", "missing"]).optional(),
   extension_id: z.string().nullable().optional(),
+  extension_name: z.string().nullable().optional(),
   skill_key: z.string().nullable().optional(),
   origin_extension_id: z.string().nullable().optional(),
   origin_skill_key: z.string().nullable().optional(),

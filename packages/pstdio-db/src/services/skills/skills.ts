@@ -1,6 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { skills } from "../../db/schemas.pg";
+import { createSkillExtensionRowOps } from "./extension-rows";
 
 type SkillFile = {
   path: string;
@@ -60,6 +61,8 @@ const mapSkill = (row: SkillRow): SkillRecord => {
     description: row.description,
     legacy_file_id: row.file_id,
     files: parseFiles(row.files_json),
+    extension_id: row.extension_id,
+    skill_key: row.skill_key,
     origin_extension_id: row.origin_extension_id,
     origin_skill_key: row.origin_skill_key,
     created_at: row.created_at,
@@ -101,6 +104,8 @@ export const createSkillsDBService = (db: DbClient) => {
       description: input.description,
       file_id: null,
       files_json: JSON.stringify(input.files),
+      extension_id: null,
+      skill_key: null,
       origin_extension_id: input.origin_extension_id ?? null,
       origin_skill_key: input.origin_skill_key ?? null,
       created_at: timestamp,
@@ -147,5 +152,5 @@ export const createSkillsDBService = (db: DbClient) => {
     return true;
   };
 
-  return { list, getByName, create, update, remove };
+  return { list, getByName, create, update, remove, ...createSkillExtensionRowOps(db) };
 };

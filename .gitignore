@@ -172,6 +172,8 @@ __test-tmp__
 
 */**/storybook-static
 
+.playwright-mcp
+
 packages/pstdio/README.md
 packages/pstdio/.readme.generated
 

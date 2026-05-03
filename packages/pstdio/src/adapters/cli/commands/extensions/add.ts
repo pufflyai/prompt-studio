@@ -8,6 +8,7 @@ import {
   type PackageManager,
 } from "pstdio-extensions";
 import type { Arguments, Argv } from "yargs";
+import { apiClient } from "@/features/api-client";
 
 const SUPPORTED_PACKAGE_MANAGERS: readonly PackageManager[] = ["npm", "bun"] as const;
 
@@ -54,15 +55,36 @@ type AddArgs = {
   skipInstall?: boolean;
 };
 
+type SyncResult = {
+  installs: number;
+  skills: number;
+  removedSkills: number;
+  templates: number;
+  removedTemplates: number;
+};
+
 type Deps = {
   install: (input: InstallExtensionInput, deps?: InstallExtensionDeps) => Promise<InstallExtensionResult>;
+  syncSkills: () => Promise<SyncResult | null>;
   log: (msg: string) => void;
   err: (msg: string) => void;
   exit: (code: number) => void;
 };
 
+const defaultSyncSkills = async (): Promise<SyncResult | null> => {
+  // Best-effort: when the local API is reachable, materialize enabled
+  // extension templates/skills as project rows and push skill files to
+  // active agents. Otherwise the same work happens on the next API startup.
+  try {
+    return await apiClient().extensions.sync();
+  } catch {
+    return null;
+  }
+};
+
 const defaultDeps: Deps = {
   install: installExtensionSource,
+  syncSkills: defaultSyncSkills,
   log: (msg) => process.stdout.write(msg),
   err: (msg) => process.stderr.write(msg),
   exit: (code) => process.exit(code),
@@ -87,7 +109,7 @@ const formatDependencyInstall = (result: InstallExtensionResult) => {
   return lines;
 };
 
-const formatSuccessReport = (result: InstallExtensionResult) => {
+const formatSuccessReport = (result: InstallExtensionResult, sync: SyncResult | null) => {
   const lines: string[] = [];
   lines.push("Installed extension");
   lines.push("");
@@ -113,7 +135,13 @@ const formatSuccessReport = (result: InstallExtensionResult) => {
   lines.push(`  Errors:   ${result.errorCount}`);
   lines.push(`  Warnings: ${result.warningCount}`);
   lines.push("");
-  lines.push("Project enablement is not implemented yet.");
+  if (sync) {
+    lines.push(
+      `Synced ${sync.templates} template(s) and ${sync.skills} skill(s); installed into ${sync.installs} agent location(s).`,
+    );
+  } else {
+    lines.push("Pstdio API not reachable; extension skills will install on the next API startup.");
+  }
   lines.push("Run:");
   lines.push("  pstdio extensions check");
 
@@ -150,7 +178,8 @@ export const createHandler =
         packageManager: argv.install,
         skipInstall: argv.skipInstall,
       });
-      deps.log(formatSuccessReport(result));
+      const sync = await deps.syncSkills();
+      deps.log(formatSuccessReport(result, sync));
     } catch (error) {
       deps.err(formatFailureReport(argv.source, error));
       deps.exit(1);

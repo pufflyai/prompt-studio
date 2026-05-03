@@ -1,6 +1,7 @@
 import { and, eq, isNotNull, isNull, ne } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { templates } from "../../db/schemas.pg";
+import { createTemplateExtensionRowOps } from "./extension-rows";
 
 type TemplateRecord = typeof templates.$inferSelect;
 
@@ -10,8 +11,10 @@ type CreateInput = {
   project_id: string;
   name: string;
   template_type: string;
-  file_id: string;
+  file_id: string | null;
   is_default?: boolean;
+  extension_id?: string | null;
+  template_key?: string | null;
   origin_extension_id?: string | null;
   origin_template_key?: string | null;
 };
@@ -65,6 +68,8 @@ export const createTemplatesDBService = (db: DbClient) => {
       template_type: input.template_type,
       file_id: input.file_id,
       is_default: isDefault,
+      extension_id: input.extension_id ?? null,
+      template_key: input.template_key ?? null,
       origin_extension_id: input.origin_extension_id ?? null,
       origin_template_key: input.origin_template_key ?? null,
       created_at: timestamp,
@@ -157,5 +162,13 @@ export const createTemplatesDBService = (db: DbClient) => {
     return deleted.length > 0;
   };
 
-  return { list, getByName, create, update, remove, hardRemove };
+  return {
+    list,
+    getByName,
+    create,
+    update,
+    remove,
+    hardRemove,
+    ...createTemplateExtensionRowOps(db),
+  };
 };

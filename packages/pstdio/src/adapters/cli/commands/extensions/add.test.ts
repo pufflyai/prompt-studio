@@ -63,8 +63,11 @@ const makeRealInstallDeps = (extensionsRoot: string) => {
     return installExtensionSource({ ...input, extensionsRoot }, deps);
   };
 
+  // Tests don't bring up a local API; the post-install sync skips silently.
+  const syncSkills = async () => null;
+
   return {
-    deps: { install, log: harness.log, err: harness.err, exit: harness.exit },
+    deps: { install, syncSkills, log: harness.log, err: harness.err, exit: harness.exit },
     harness,
   };
 };
@@ -225,7 +228,7 @@ describe("extensions add (named github source)", () => {
     const install = (input: InstallExtensionInput) =>
       installExtensionSource({ ...input, extensionsRoot }, { fetchGithubExtension });
 
-    const handler = createHandler({ install, log, err, exit });
+    const handler = createHandler({ install, syncSkills: async () => null, log, err, exit });
 
     await handler(argv({ source: "planner" }));
 
@@ -288,7 +291,7 @@ describe("extensions add (dependency installer flags)", () => {
       } as unknown as InstallExtensionResult;
     });
 
-    const handler = createHandler({ install, log, err, exit });
+    const handler = createHandler({ install, syncSkills: async () => null, log, err, exit });
     await handler(argv({ source: "/tmp/foo", skipInstall: true }));
 
     expect(captured[0]?.skipInstall).toBe(true);
@@ -328,7 +331,7 @@ describe("extensions add (dependency installer flags)", () => {
       } as unknown as InstallExtensionResult;
     });
 
-    const handler = createHandler({ install, log, err, exit });
+    const handler = createHandler({ install, syncSkills: async () => null, log, err, exit });
     await handler(argv({ source: "/tmp/foo", install: "bun" }));
 
     expect(captured[0]?.packageManager).toBe("bun");
@@ -347,7 +350,7 @@ describe("extensions add (dependency installer flags)", () => {
       );
     });
 
-    const handler = createHandler({ install, log, err, exit });
+    const handler = createHandler({ install, syncSkills: async () => null, log, err, exit });
     await handler(argv({ source: "/tmp/foo" }));
 
     const errOut = err.mock.calls.map((c) => c[0]).join("");
@@ -366,7 +369,7 @@ describe("ExtensionInstallError integration", () => {
       throw new ExtensionInstallError("source_not_found", "Source folder does not exist: /nope");
     });
 
-    const handler = createHandler({ install, log, err, exit });
+    const handler = createHandler({ install, syncSkills: async () => null, log, err, exit });
     await handler(argv({ source: "/nope" }));
 
     const errOut = err.mock.calls.map((c) => c[0]).join("");
