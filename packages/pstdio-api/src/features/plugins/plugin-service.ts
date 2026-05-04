@@ -16,11 +16,6 @@ type PluginServiceDeps = {
   storageRoot: string;
   ensureWorkspace?: (pstdioDir: string) => Promise<void>;
   clientOptions?: ClientOptions;
-  // Opt-in: the scheduler only starts when `schedulerTickMs` is provided.
-  // Tests that don't exercise scheduling should leave this undefined so the
-  // leaked-service pattern (many test files create an app, never dispose)
-  // doesn't spawn background intervals, file watchers, and cron parsing.
-  schedulerTickMs?: number;
   now?: () => Date;
   cron?: CronFactory;
 };
@@ -46,22 +41,19 @@ export const createPluginService = (deps: PluginServiceDeps) => {
     ensureWorkspace: deps.ensureWorkspace ?? ensurePluginWorkspace,
   });
 
-  const scheduler =
-    deps.schedulerTickMs !== undefined
-      ? createPluginScheduler({
-          runtimeStore,
-          listProjectIds: deps.listProjectIds,
-          refreshIntervalMs: deps.schedulerTickMs,
-          now: deps.now,
-          cron: deps.cron,
-          watermarkPath: join(deps.storageRoot, SCHEDULE_WATERMARK_FILE),
-        })
-      : null;
+  const scheduler = createPluginScheduler({
+    runtimeStore,
+    listProjectIds: deps.listProjectIds,
+    now: deps.now,
+    cron: deps.cron,
+    watermarkPath: join(deps.storageRoot, SCHEDULE_WATERMARK_FILE),
+  });
 
   return {
     ...runtimeStore,
+    refresh: scheduler.refresh,
     async dispose() {
-      await scheduler?.dispose();
+      await scheduler.dispose();
       runtimeStore.dispose();
     },
   };

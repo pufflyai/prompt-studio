@@ -1,4 +1,4 @@
-import type { PluginRuntime } from "pstdio-plugins/hooks";
+import type { PluginRuntime, PluginRuntimeStore } from "pstdio-plugins/hooks";
 import {
   type CronFactory,
   createFileWatermarkStore,
@@ -8,22 +8,16 @@ import {
 } from "pstdio-scheduler";
 import { apiLogger } from "../../lib/logger";
 
-type SchedulerRuntimeStore = {
-  getForProject(projectId: string): Promise<PluginRuntime>;
-};
-
 type Input = {
-  runtimeStore: SchedulerRuntimeStore;
+  runtimeStore: PluginRuntimeStore;
   listProjectIds: () => Promise<string[]>;
   watermarkPath: string;
-  refreshIntervalMs?: number;
   now?: () => Date;
   cron?: CronFactory;
 };
 
-export const createPluginScheduler = (input: Input): Scheduler => {
-  return createScheduler({
-    refreshIntervalMs: input.refreshIntervalMs,
+export const createPluginScheduler = (input: Input): Scheduler & { dispose: () => Promise<void> } => {
+  const scheduler = createScheduler({
     now: input.now,
     cron: input.cron,
     logger: apiLogger,
@@ -76,4 +70,16 @@ export const createPluginScheduler = (input: Input): Scheduler => {
       });
     },
   });
+
+  const unsubscribe = input.runtimeStore.subscribe(() => {
+    void scheduler.refresh();
+  });
+
+  return {
+    refresh: scheduler.refresh,
+    async dispose() {
+      unsubscribe();
+      await scheduler.dispose();
+    },
+  };
 };

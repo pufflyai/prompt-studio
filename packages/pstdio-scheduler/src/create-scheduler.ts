@@ -14,7 +14,6 @@ type ActiveJob = {
 };
 
 export const createScheduler = (input: SchedulerInput): Scheduler => {
-  const refreshIntervalMs = input.refreshIntervalMs ?? 60_000;
   const now = input.now ?? (() => new Date());
   const logger = input.logger ?? noopLogger;
   const cronFactory = input.cron ?? createBunCronFactory();
@@ -27,6 +26,7 @@ export const createScheduler = (input: SchedulerInput): Scheduler => {
   let disposed = false;
   let watermarksLoaded = false;
   let refreshPromise: Promise<void> | null = null;
+  let pendingRefresh = false;
   let watermarkWriteQueue = Promise.resolve();
 
   const persistWatermarks = () => {
@@ -123,7 +123,7 @@ export const createScheduler = (input: SchedulerInput): Scheduler => {
     dispatchRun(entry, catchupMinute, "catchup");
   };
 
-  const refresh = async () => {
+  const doRefresh = async () => {
     if (disposed) return;
 
     let jobs: Job[];
@@ -162,25 +162,39 @@ export const createScheduler = (input: SchedulerInput): Scheduler => {
     }
   };
 
-  const kickRefresh = () => {
-    if (refreshPromise) return;
-    refreshPromise = refresh()
-      .catch((err) => {
+  const refresh = async () => {
+    if (disposed) return;
+
+    if (refreshPromise) {
+      pendingRefresh = true;
+      await refreshPromise;
+      return;
+    }
+
+    refreshPromise = (async () => {
+      try {
+        await doRefresh();
+        while (pendingRefresh && !disposed) {
+          pendingRefresh = false;
+          await doRefresh();
+        }
+      } catch (err) {
         logger.error({ err, event: "scheduler.refresh.error" }, "Scheduler refresh failed");
-      })
-      .finally(() => {
-        refreshPromise = null;
-      });
+      }
+    })().finally(() => {
+      refreshPromise = null;
+    });
+
+    await refreshPromise;
   };
 
-  const interval = setInterval(kickRefresh, refreshIntervalMs);
-  interval.unref?.();
-  kickRefresh();
+  // Kick off the first load. Callers drive subsequent refreshes via refresh().
+  void refresh();
 
   return {
+    refresh,
     async dispose() {
       disposed = true;
-      clearInterval(interval);
       await refreshPromise;
       for (const entry of active.values()) entry.handle.stop();
       active.clear();

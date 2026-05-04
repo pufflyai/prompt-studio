@@ -33,12 +33,12 @@ export type SchedulerInput = {
   listJobs: () => Promise<Job[]>;
   runJob: (job: Job, ctx: RunContext) => Promise<void>;
   watermarks?: WatermarkStore;
-  refreshIntervalMs?: number;
   now?: () => Date;
   logger?: Logger;
   cron?: CronFactory;
 };
 
 export type Scheduler = {
+  refresh: () => Promise<void>;
   dispose: () => Promise<void>;
 };
