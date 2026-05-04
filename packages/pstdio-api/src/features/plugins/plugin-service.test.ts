@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createTestCronDriver } from "pstdio-scheduler/testing";
 
 import { createPluginService } from "./plugin-service";
 
@@ -141,6 +142,7 @@ describe("createPluginService", () => {
       "project-b": repoB,
     };
 
+    const cron = createTestCronDriver();
     const service = createPluginService({
       repoService: {
         listByProject: async (projectId: string) => [{ path: projectRepos[projectId]! }],
@@ -150,8 +152,12 @@ describe("createPluginService", () => {
       storageRoot: createTempRepo(),
       ensureWorkspace: noopWorkspace,
       schedulerTickMs: 25,
+      cron: cron.factory,
     });
     services.push(service);
+
+    await waitFor(() => cron.size() === 2, 5_000);
+    void cron.fireAll();
 
     await waitFor(() => {
       const runs = (globalThis as Record<string, unknown>)[sigilKey] as Set<string>;

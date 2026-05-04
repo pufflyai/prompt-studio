@@ -29,6 +29,7 @@
     "pstdio-db": "workspace:*",
     "pstdio-logging": "workspace:*",
     "pstdio-plugins": "workspace:*",
+    "pstdio-scheduler": "workspace:*",
     "pstdio-storage": "workspace:*",
     "pstdio-wt": "workspace:*"
   },

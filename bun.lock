@@ -109,6 +109,7 @@
         "pstdio-db": "workspace:*",
         "pstdio-logging": "workspace:*",
         "pstdio-plugins": "workspace:*",
+        "pstdio-scheduler": "workspace:*",
         "pstdio-storage": "workspace:*",
         "pstdio-wt": "workspace:*",
       },
@@ -227,6 +228,13 @@
       "dependencies": {
         "@pstdio/sdk": "workspace:*",
       },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "6.0.2",
+      },
+    },
+    "packages/pstdio-scheduler": {
+      "name": "pstdio-scheduler",
       "devDependencies": {
         "@types/bun": "latest",
         "typescript": "6.0.2",
@@ -3096,6 +3104,8 @@
     "pstdio-logging": ["pstdio-logging@workspace:packages/pstdio-logging"],
 
     "pstdio-plugins": ["pstdio-plugins@workspace:packages/pstdio-plugins"],
+
+    "pstdio-scheduler": ["pstdio-scheduler@workspace:packages/pstdio-scheduler"],
 
     "pstdio-storage": ["pstdio-storage@workspace:packages/pstdio-storage"],
 

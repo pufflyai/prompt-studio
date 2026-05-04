@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createTestCronDriver } from "pstdio-scheduler/testing";
 import { createPluginService } from "./plugin-service";
 
 const noopWorkspace = async () => {};
@@ -71,6 +72,7 @@ describe("createPluginService scheduler catchup", () => {
       "utf8",
     );
 
+    const cron = createTestCronDriver();
     const service = createPluginService({
       repoService: { listByProject: async () => [{ path: repo }] },
       listProjectIds: async () => ["project-1"],
@@ -79,6 +81,7 @@ describe("createPluginService scheduler catchup", () => {
       ensureWorkspace: noopWorkspace,
       schedulerTickMs: 20,
       now: () => now,
+      cron: cron.factory,
     });
     services.push(service);
 
@@ -120,6 +123,7 @@ describe("createPluginService scheduler catchup", () => {
     );
 
     const now = new Date("2026-04-20T09:00:00.000Z");
+    const cron = createTestCronDriver();
     const service = createPluginService({
       repoService: { listByProject: async () => [{ path: repo }] },
       listProjectIds: async () => ["project-1"],
@@ -128,6 +132,7 @@ describe("createPluginService scheduler catchup", () => {
       ensureWorkspace: noopWorkspace,
       schedulerTickMs: 20,
       now: () => now,
+      cron: cron.factory,
     });
     services.push(service);
 
@@ -162,6 +167,7 @@ describe("createPluginService scheduler catchup", () => {
     const storageRoot = createTempRepo();
     const base = new Date("2026-04-20T09:00:00.000Z").getTime();
     let now = base;
+    const cron = createTestCronDriver();
 
     const service = createPluginService({
       repoService: { listByProject: async () => [{ path: repo }] },
@@ -171,13 +177,20 @@ describe("createPluginService scheduler catchup", () => {
       ensureWorkspace: noopWorkspace,
       schedulerTickMs: 15,
       now: () => new Date(now),
+      cron: cron.factory,
     });
     services.push(service);
 
+    await waitFor(() => cron.size() === 1);
+    void cron.fireAll();
     await waitFor(() => state.scheduledFor.length >= 1);
+
     now = base + 60_000;
+    void cron.fireAll();
     await waitFor(() => state.scheduledFor.length >= 2);
+
     now = base + 120_000;
+    void cron.fireAll();
     await waitFor(() => state.scheduledFor.length >= 3);
 
     await service.dispose();
@@ -233,6 +246,7 @@ describe("createPluginService scheduler project isolation", () => {
       broken: brokenRepo,
     };
 
+    const cron = createTestCronDriver();
     const service = createPluginService({
       repoService: { listByProject: async (projectId) => [{ path: projectRepos[projectId]! }] },
       listProjectIds: async () => ["healthy", "broken"],
@@ -241,9 +255,12 @@ describe("createPluginService scheduler project isolation", () => {
       ensureWorkspace: noopWorkspace,
       schedulerTickMs: 20,
       now: () => new Date("2026-04-20T09:00:00.000Z"),
+      cron: cron.factory,
     });
     services.push(service);
 
+    await waitFor(() => cron.size() >= 1);
+    void cron.fireAll();
     await waitFor(() => state.starts > 0);
     expect(state.starts).toBeGreaterThan(0);
   });
@@ -292,6 +309,7 @@ describe("createPluginService scheduler project isolation", () => {
 
     const base = new Date("2026-04-20T09:00:00.000Z").getTime();
     let now = base;
+    const cron = createTestCronDriver();
 
     const service = createPluginService({
       repoService: { listByProject: async (projectId) => [{ path: projectRepos[projectId]! }] },
@@ -301,13 +319,20 @@ describe("createPluginService scheduler project isolation", () => {
       ensureWorkspace: noopWorkspace,
       schedulerTickMs: 20,
       now: () => new Date(now),
+      cron: cron.factory,
     });
     services.push(service);
 
+    await waitFor(() => cron.size() >= 1);
+    void cron.fireAll();
     await waitFor(() => state.minutes.length >= 1);
+
     now = base + 60_000;
+    void cron.fireAll();
     await waitFor(() => state.minutes.length >= 2);
+
     now = base + 120_000;
+    void cron.fireAll();
     await waitFor(() => state.minutes.length >= 3);
 
     expect(state.minutes).toEqual(["2026-04-20T09:00:00.000Z", "2026-04-20T09:01:00.000Z", "2026-04-20T09:02:00.000Z"]);

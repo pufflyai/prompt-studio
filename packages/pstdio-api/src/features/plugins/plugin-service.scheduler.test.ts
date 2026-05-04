@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createTestCronDriver } from "pstdio-scheduler/testing";
 import { createPluginService } from "./plugin-service";
 
 const noopWorkspace = async () => {};
@@ -71,6 +72,7 @@ describe("createPluginService scheduler overlap", () => {
 
     const baseTime = new Date("2026-04-20T09:00:00.000Z").getTime();
     let now = baseTime;
+    const cron = createTestCronDriver();
 
     const service = createPluginService({
       repoService: { listByProject: async () => [{ path: repo }] },
@@ -80,19 +82,24 @@ describe("createPluginService scheduler overlap", () => {
       ensureWorkspace: noopWorkspace,
       schedulerTickMs: 20,
       now: () => new Date(now),
+      cron: cron.factory,
     });
     services.push(service);
 
+    await waitFor(() => cron.size() === 1);
+    void cron.fireAll();
     await waitFor(() => state.starts === 1);
 
     now = baseTime + 60_000;
-    await Bun.sleep(80);
+    void cron.fireAll();
+    await Bun.sleep(50);
     expect(state.starts).toBe(1);
 
     state.blocker.resolve();
     await waitFor(() => state.completions === 1);
 
     now = baseTime + 120_000;
+    void cron.fireAll();
     await waitFor(() => state.starts === 2);
     state.blocker.resolve();
   });
@@ -131,6 +138,7 @@ describe("createPluginService scheduler overlap", () => {
 
     const baseTime = new Date("2026-04-20T09:00:00.000Z").getTime();
     let now = baseTime;
+    const cron = createTestCronDriver();
 
     const service = createPluginService({
       repoService: { listByProject: async () => [{ path: repo }] },
@@ -140,20 +148,25 @@ describe("createPluginService scheduler overlap", () => {
       ensureWorkspace: noopWorkspace,
       schedulerTickMs: 20,
       now: () => new Date(now),
+      cron: cron.factory,
     });
     services.push(service);
 
+    await waitFor(() => cron.size() === 1);
+    void cron.fireAll();
     await waitFor(() => state.starts === 1);
     await Bun.sleep(80);
 
     now = baseTime + 60_000;
-    await Bun.sleep(80);
+    void cron.fireAll();
+    await Bun.sleep(50);
     expect(state.starts).toBe(1);
 
     state.blocker.resolve();
     await waitFor(() => state.completions === 1);
 
     now = baseTime + 120_000;
+    void cron.fireAll();
     await waitFor(() => state.starts === 2);
   });
 });
@@ -193,6 +206,7 @@ describe("createPluginService scheduler lifecycle", () => {
 
     const baseTime = new Date("2026-04-20T09:00:00.000Z").getTime();
     let now = baseTime;
+    const cron = createTestCronDriver();
 
     const service = createPluginService({
       repoService: { listByProject: async () => [{ path: repo }] },
@@ -202,19 +216,25 @@ describe("createPluginService scheduler lifecycle", () => {
       ensureWorkspace: noopWorkspace,
       schedulerTickMs: 20,
       now: () => new Date(now),
+      cron: cron.factory,
     });
     services.push(service);
 
+    await waitFor(() => cron.size() === 1);
+    void cron.fireAll();
     await waitFor(() => state.starts === 1);
+
     service.invalidate("project-1");
     now = baseTime + 60_000;
-    await Bun.sleep(80);
+    void cron.fireAll();
+    await Bun.sleep(50);
     expect(state.starts).toBe(1);
 
     state.blocker.resolve();
     await waitFor(() => state.completions === 1);
 
     now = baseTime + 120_000;
+    void cron.fireAll();
     await waitFor(() => state.starts === 2);
     state.blocker.resolve();
   });
@@ -248,6 +268,7 @@ describe("createPluginService scheduler lifecycle", () => {
     };
     (globalThis as Record<string, unknown>).__scheduleShutdownState = state;
 
+    const cron = createTestCronDriver();
     const service = createPluginService({
       repoService: { listByProject: async () => [{ path: repo }] },
       listProjectIds: async () => ["project-1"],
@@ -255,8 +276,11 @@ describe("createPluginService scheduler lifecycle", () => {
       storageRoot: createTempRepo(),
       ensureWorkspace: noopWorkspace,
       schedulerTickMs: 20,
+      cron: cron.factory,
     });
 
+    await waitFor(() => cron.size() === 1);
+    void cron.fireAll();
     await waitFor(() => state.starts === 1);
 
     const started = Date.now();

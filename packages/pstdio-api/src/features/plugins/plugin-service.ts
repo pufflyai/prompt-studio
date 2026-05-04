@@ -3,8 +3,9 @@ import { join } from "node:path";
 import { type ClientOptions, createClient } from "@pstdio/sdk/client";
 import { ensurePluginWorkspace } from "pstdio-plugins";
 import { createPluginRuntimeStore } from "pstdio-plugins/hooks";
+import type { CronFactory } from "pstdio-scheduler";
 import { scaffoldBundledPlugins } from "../projects/scaffold-bundled-plugins";
-import { createScheduler } from "./plugin-scheduler";
+import { createPluginScheduler } from "./plugin-scheduler";
 
 const SCHEDULE_WATERMARK_FILE = "plugin-schedule-watermarks.json";
 
@@ -21,6 +22,7 @@ type PluginServiceDeps = {
   // doesn't spawn background intervals, file watchers, and cron parsing.
   schedulerTickMs?: number;
   now?: () => Date;
+  cron?: CronFactory;
 };
 
 const resolveProjectPluginWorkspacePath = async (deps: PluginServiceDeps, projectId: string) => {
@@ -46,11 +48,12 @@ export const createPluginService = (deps: PluginServiceDeps) => {
 
   const scheduler =
     deps.schedulerTickMs !== undefined
-      ? createScheduler({
+      ? createPluginScheduler({
           runtimeStore,
           listProjectIds: deps.listProjectIds,
-          tickIntervalMs: deps.schedulerTickMs,
-          now: () => deps.now?.() ?? new Date(),
+          refreshIntervalMs: deps.schedulerTickMs,
+          now: deps.now,
+          cron: deps.cron,
           watermarkPath: join(deps.storageRoot, SCHEDULE_WATERMARK_FILE),
         })
       : null;
