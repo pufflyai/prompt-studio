@@ -1,4 +1,4 @@
-FROM oven/bun:1.3.13
+FROM oven/bun:1.3.13 AS deps
 
 WORKDIR /app
 
@@ -9,7 +9,14 @@ COPY packages packages
 COPY clients clients
 COPY extensions extensions
 
-RUN bun install --frozen-lockfile --ignore-scripts
+RUN bun install --frozen-lockfile --ignore-scripts --production
+
+
+FROM oven/bun:1.3.13-slim AS runner
+
+WORKDIR /app
+
+COPY --from=deps /app /app
 
 WORKDIR /app/packages/pstdio-api
 
