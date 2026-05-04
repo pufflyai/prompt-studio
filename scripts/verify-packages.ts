@@ -1,21 +1,13 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { loadEmbedConfig } from "./lib/embed-manifest";
 
-const EXPECTED = [
-  { pkg: "cli-darwin-arm64", bin: "pstdio" },
-  { pkg: "cli-darwin-x64", bin: "pstdio" },
-  { pkg: "cli-linux-x64", bin: "pstdio" },
-  { pkg: "cli-linux-arm64", bin: "pstdio" },
-  { pkg: "cli-linux-x64-musl", bin: "pstdio" },
-  { pkg: "cli-linux-arm64-musl", bin: "pstdio" },
-  { pkg: "cli-win-x64", bin: "pstdio.exe" },
-  { pkg: "cli-win-arm64", bin: "pstdio.exe" },
-];
+const config = loadEmbedConfig();
 
 let failed = false;
 
-for (const { pkg, bin } of EXPECTED) {
+for (const { pkg, bin } of config.platformBinaries) {
   const binPath = join("./packages/pstdio/dist/platforms", pkg, "bin", bin);
 
   if (!existsSync(binPath)) {

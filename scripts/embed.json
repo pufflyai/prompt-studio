@@ -1,0 +1,126 @@
+{
+  "$comment": "Files that the pstdio CLI binary embeds (Bun --compile). 'globs' captures generated trees (vite output, drizzle migrations); 'files' is the curated allowlist for plugin/skill/template assets. The build script fails if any 'files' entry is missing or any file under 'noStraysIn' is not listed.",
+  "globs": [
+    "packages/pstdio-dashboard/dist/**",
+    "packages/pstdio-db/drizzle/**"
+  ],
+  "files": [
+    "packages/pstdio/files/plugins/opencode/pstdio-session-bridge.js",
+    "packages/pstdio/files/plugins/pstdio/code-review-lifecycle.ts.txt",
+    "packages/pstdio/files/plugins/pstdio/scheduled-heartbeat.ts.txt",
+    "packages/pstdio/files/plugins/pstdio/ticket-actions.ts.txt",
+    "packages/pstdio/files/plugins/pstdio/ticket-lifecycle.ts.txt",
+    "packages/pstdio/files/plugins/pstdio/workspace-actions.ts.txt",
+    "packages/pstdio/files/plugins/pstdio/worktree-lifecycle.ts.txt",
+    "packages/pstdio/files/templates/documents/adr.template.md",
+    "packages/pstdio/files/templates/documents/architecture-overview.template.md",
+    "packages/pstdio/files/templates/documents/changelog-entry.template.md",
+    "packages/pstdio/files/templates/documents/code-review.template.md",
+    "packages/pstdio/files/templates/documents/contracts.template.md",
+    "packages/pstdio/files/templates/documents/cookbook.template.md",
+    "packages/pstdio/files/templates/documents/lessons-learned.template.md",
+    "packages/pstdio/files/templates/documents/prd.template.md",
+    "packages/pstdio/files/templates/documents/research.template.md",
+    "packages/pstdio/files/templates/documents/schemas.template.md",
+    "packages/pstdio/files/templates/prompts/commit-message.prompt.md",
+    "packages/pstdio/files/templates/prompts/create-sub-tickets.prompt.md",
+    "packages/pstdio/files/templates/prompts/fix-changes-requested.prompt.md",
+    "packages/pstdio/files/templates/prompts/implement-ticket.prompt.md",
+    "packages/pstdio/files/templates/prompts/refine-ticket.prompt.md",
+    "packages/pstdio/files/templates/prompts/review-code.prompt.md",
+    "packages/pstdio/files/templates/prompts/squash-message.prompt.md",
+    "packages/pstdio/files/templates/tickets/bug-fix.ticket.md",
+    "packages/pstdio/files/templates/tickets/proposal.ticket.md",
+    "packages/pstdio/files/templates/tickets/ticket.md",
+    "packages/pstdio-agents/files/skills/create-proposal/SKILL.md",
+    "packages/pstdio-agents/files/skills/create-pstdio-plugin/SKILL.md",
+    "packages/pstdio-agents/files/skills/create-pstdio-plugin/references/examples.md",
+    "packages/pstdio-agents/files/skills/create-pstdio-plugin/references/hook-contexts.md",
+    "packages/pstdio-agents/files/skills/create-sub-tickets/SKILL.md",
+    "packages/pstdio-agents/files/skills/create-ticket/SKILL.md",
+    "packages/pstdio-agents/files/skills/implement-ticket/SKILL.md",
+    "packages/pstdio-agents/files/skills/pstdio/SKILL.md",
+    "packages/pstdio-agents/files/skills/pstdio/references/cli-reference.md",
+    "packages/pstdio-agents/files/skills/refine-ticket/SKILL.md"
+  ],
+  "noStraysIn": [
+    "packages/pstdio/files",
+    "packages/pstdio-agents/files"
+  ],
+  "platformBinaries": [
+    {
+      "pkg": "cli-darwin-arm64",
+      "bin": "pstdio"
+    },
+    {
+      "pkg": "cli-darwin-x64",
+      "bin": "pstdio"
+    },
+    {
+      "pkg": "cli-linux-x64",
+      "bin": "pstdio"
+    },
+    {
+      "pkg": "cli-linux-arm64",
+      "bin": "pstdio"
+    },
+    {
+      "pkg": "cli-linux-x64-musl",
+      "bin": "pstdio"
+    },
+    {
+      "pkg": "cli-linux-arm64-musl",
+      "bin": "pstdio"
+    },
+    {
+      "pkg": "cli-win-x64",
+      "bin": "pstdio.exe"
+    },
+    {
+      "pkg": "cli-win-arm64",
+      "bin": "pstdio.exe"
+    }
+  ],
+  "buildTargets": [
+    {
+      "target": "bun-darwin-arm64",
+      "pkg": "cli-darwin-arm64",
+      "bin": "pstdio"
+    },
+    {
+      "target": "bun-darwin-x64",
+      "pkg": "cli-darwin-x64",
+      "bin": "pstdio"
+    },
+    {
+      "target": "bun-linux-x64",
+      "pkg": "cli-linux-x64",
+      "bin": "pstdio"
+    },
+    {
+      "target": "bun-linux-arm64",
+      "pkg": "cli-linux-arm64",
+      "bin": "pstdio"
+    },
+    {
+      "target": "bun-linux-x64-musl",
+      "pkg": "cli-linux-x64-musl",
+      "bin": "pstdio"
+    },
+    {
+      "target": "bun-linux-arm64-musl",
+      "pkg": "cli-linux-arm64-musl",
+      "bin": "pstdio"
+    },
+    {
+      "target": "bun-windows-x64",
+      "pkg": "cli-win-x64",
+      "bin": "pstdio.exe"
+    },
+    {
+      "target": "bun-windows-arm64",
+      "pkg": "cli-win-arm64",
+      "bin": "pstdio.exe"
+    }
+  ]
+}
