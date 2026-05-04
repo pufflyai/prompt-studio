@@ -1,7 +1,6 @@
 export * from "./activity";
 export * from "./agents";
 export * from "./files";
-export * from "./known-agents";
 export * from "./projects";
 export * from "./repos";
 export * from "./sessions";

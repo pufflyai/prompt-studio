@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getBundledSkills } from "pstdio-agents";
-import { findAgent } from "pstdio-api-contracts";
+import { findAgent } from "pstdio-api-contracts/known-agents";
 import type { SkillsRouteDeps } from "./deps";
 import { installSkillToRepo } from "./install-skill-to-repo";
 
