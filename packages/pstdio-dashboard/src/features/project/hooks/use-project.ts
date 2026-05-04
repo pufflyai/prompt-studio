@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { StatusResponse, TagResponse } from "pstdio-api/dto";
-import { DEFAULT_OWNER, DEFAULT_PROJECT_STATUS, getSystemInfo, toProjectRepository } from "@/features/project/data/api";
+import { getSystemInfo, toProjectRepository } from "@/features/project/data/api";
 import type { Project, ProjectTemplateAsset } from "@/features/project/types";
 import { asSyncedRows, eq, getCollection, useLiveQuery } from "@/features/sync/collections";
 import { toTicketStatusOption, toTicketTag } from "@/features/ticket-list/data/api";
@@ -103,9 +103,11 @@ export const useProject = (projectId: string | undefined) => {
   const data: Project = {
     id: project.id,
     name: project.name as string,
-    status: DEFAULT_PROJECT_STATUS,
-    owner: DEFAULT_OWNER,
-    updatedAt: project.updated_at as string,
+    shorthand: project.shorthand as string,
+    startup_script: (project.startup_script as string | null) ?? null,
+    created_at: project.created_at as string,
+    updated_at: project.updated_at as string,
+    deleted_at: (project.deleted_at as string | null) ?? null,
     ticketStatuses: statusOptions.length ? statusOptions.map((s) => s.name) : ["Unassigned"],
     ticketStatusOptions: statusOptions,
     repositories: repos.map((r) => toProjectRepository(r as Parameters<typeof toProjectRepository>[0])),

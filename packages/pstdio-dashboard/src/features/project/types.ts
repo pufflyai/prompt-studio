@@ -1,3 +1,4 @@
+import type { Project as ContractProject } from "pstdio-api-contracts";
 import type { TicketStatus, TicketStatusOption, TicketTag } from "@/features/ticket-list/types";
 
 export interface ProjectRepository {
@@ -30,14 +31,9 @@ export interface ProjectTemplateAsset {
   updatedAt: string;
 }
 
-export interface Project {
-  id: string;
-  name: string;
-  status: "active" | "archived";
-  owner: string;
-  updatedAt: string;
+export type Project = ContractProject & {
   ticketStatuses: TicketStatus[];
   ticketStatusOptions: TicketStatusOption[];
   repositories: ProjectRepository[];
   ticketTags: TicketTag[];
-}
+};
