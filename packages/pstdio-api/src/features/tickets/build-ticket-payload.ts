@@ -1,4 +1,4 @@
-import type { RouteDeps } from "../deps";
+import type { TicketsRouteDeps } from "./deps";
 
 type HookPayload = Record<string, unknown>;
 
@@ -13,7 +13,7 @@ type TicketRecord = {
   status_id: string | null;
 };
 
-export type BuildPayloadDeps = Pick<RouteDeps, "ticketService" | "fileService" | "statusService">;
+export type BuildPayloadDeps = Pick<TicketsRouteDeps, "ticketService" | "fileService" | "statusService">;
 
 const resolveStatusName = async (deps: BuildPayloadDeps, projectId: string, statusId: string | null) => {
   if (!statusId) return null;

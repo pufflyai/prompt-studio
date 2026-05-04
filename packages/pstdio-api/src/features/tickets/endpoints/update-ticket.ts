@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import { buildDiff, emitActivityEvent } from "../../activity/activity-events";
-import type { RouteDeps } from "../../deps";
+import type { TicketsRouteDeps } from "../deps";
 import { fireTicketHook, fireTicketHookAsync } from "../../hooks/ticket-hooks";
 import { archiveWorkspaceCascade } from "../../workspaces/archive-workspace-cascade";
 import { buildTicketPayload } from "../build-ticket-payload";
@@ -14,7 +14,7 @@ const hookRejectedSchema = z.object({ error: z.string() });
 const TICKET_CONTENT_FILE_NAME = "ticket.md";
 
 const upsertTicketContentFile = async (input: {
-  deps: RouteDeps;
+  deps: TicketsRouteDeps;
   ticketId: string;
   projectId: string;
   currentFileId: string | null;
@@ -46,7 +46,7 @@ const upsertTicketContentFile = async (input: {
   return uploaded.id;
 };
 
-const replaceTagAssignments = async (deps: RouteDeps, ticketId: string, tagIds: string[]) => {
+const replaceTagAssignments = async (deps: TicketsRouteDeps, ticketId: string, tagIds: string[]) => {
   const oldAssignments = await deps.ticketService.listTagAssignments(ticketId);
   for (const row of oldAssignments) deps.eventBus.emit("ticket_tag_assignments", "delete", { id: row.id });
 
@@ -74,7 +74,7 @@ const areTagSetsEqual = (left: string[], right: string[]) => {
   return true;
 };
 
-type TicketRecord = NonNullable<Awaited<ReturnType<RouteDeps["ticketService"]["get"]>>>;
+type TicketRecord = NonNullable<Awaited<ReturnType<TicketsRouteDeps["ticketService"]["get"]>>>;
 
 type StatusContext = {
   fromStatusName: string | undefined;
@@ -84,7 +84,7 @@ type StatusContext = {
 type UpdateTicketInput = z.infer<typeof updateTicketBodySchema>;
 
 const resolveStatusContext = async (
-  deps: Pick<RouteDeps, "statusService">,
+  deps: Pick<TicketsRouteDeps, "statusService">,
   projectId: string,
   fromStatusId: string | null,
   toStatusId: string | null,
@@ -97,7 +97,7 @@ const resolveStatusContext = async (
 };
 
 const runPreUpdateHooks = async (
-  deps: RouteDeps,
+  deps: TicketsRouteDeps,
   existing: TicketRecord & {
     display_title: string | null;
     user_prompt: string | null;
@@ -133,7 +133,7 @@ const runPreUpdateHooks = async (
 };
 
 const resolveUpdateState = async (
-  deps: RouteDeps,
+  deps: TicketsRouteDeps,
   existing: TicketRecord & {
     archived: boolean;
   },
@@ -153,7 +153,7 @@ const resolveUpdateState = async (
 };
 
 const buildTicketUpdateInput = async (
-  deps: RouteDeps,
+  deps: TicketsRouteDeps,
   id: string,
   existing: { project_id: string; file_id: string | null },
   input: Omit<UpdateTicketInput, "content" | "tag_ids">,
@@ -177,13 +177,13 @@ const buildTicketUpdateInput = async (
   return nextInput;
 };
 
-const archiveTicketWorkspaces = async (deps: RouteDeps, ticketId: string) => {
+const archiveTicketWorkspaces = async (deps: TicketsRouteDeps, ticketId: string) => {
   const workspaces = await deps.workspaceService.listByTicketId(ticketId);
   await Promise.all(workspaces.map((workspace) => archiveWorkspaceCascade(deps, workspace)));
 };
 
 const finalizeUpdatedTicket = async (input: {
-  deps: RouteDeps;
+  deps: TicketsRouteDeps;
   ticketId: string;
   projectId: string;
   updated: TicketRecord;
@@ -299,7 +299,7 @@ export const updateTicketRoute = createRoute({
   },
 });
 
-export const updateTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof updateTicketRoute> => {
+export const updateTicketHandler = (deps: TicketsRouteDeps): AppRouteHandler<typeof updateTicketRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const { content, tag_ids, ...input } = c.req.valid("json");

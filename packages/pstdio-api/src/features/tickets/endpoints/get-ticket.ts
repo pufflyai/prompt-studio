@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { TicketsRouteDeps } from "../deps";
 import { notFoundResponseSchema, ticketDetailResponseSchema } from "../dto";
 
 export const getTicketRoute = createRoute({
@@ -29,7 +29,7 @@ export const getTicketRoute = createRoute({
   },
 });
 
-export const getTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof getTicketRoute> => {
+export const getTicketHandler = (deps: TicketsRouteDeps): AppRouteHandler<typeof getTicketRoute> => {
   const getTicketContent = async (fileId: string | null) => {
     if (!fileId) {
       return "";

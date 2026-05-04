@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { WorkspacesRouteDeps } from "../deps";
 import { workspaceListItemSchema } from "../dto";
 
 const listWorkspacesQuerySchema = z
@@ -25,7 +25,7 @@ export const listWorkspacesRoute = createRoute({
   },
 });
 
-export const listWorkspacesHandler = (deps: RouteDeps): AppRouteHandler<typeof listWorkspacesRoute> => {
+export const listWorkspacesHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof listWorkspacesRoute> => {
   return async (c) => {
     const { project_id } = c.req.valid("query");
     const workspaces = await deps.workspaceService.list(project_id);

@@ -1,6 +1,6 @@
 import { createRoute } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { PluginsRouteDeps } from "../deps";
 import { ensureProjectRepoScaffolding } from "../../projects/bootstrap-project-repo";
 import { notFoundResponseSchema } from "../../projects/dto";
 import { pluginsParamsSchema, pluginsResponseSchema } from "../dto";
@@ -26,7 +26,7 @@ export const registerPluginsRoute = createRoute({
   },
 });
 
-export const registerPluginsHandler = (deps: RouteDeps): AppRouteHandler<typeof registerPluginsRoute> => {
+export const registerPluginsHandler = (deps: PluginsRouteDeps): AppRouteHandler<typeof registerPluginsRoute> => {
   return async (c) => {
     const { projectId } = c.req.valid("param");
     const project = await deps.projectService.get(projectId);

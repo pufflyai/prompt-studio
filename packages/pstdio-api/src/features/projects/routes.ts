@@ -1,6 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
-import type { RouteDeps } from "../deps";
+import type { ProjectsRouteDeps } from "./deps";
 import { createProjectHandler, createProjectRoute } from "./endpoints/create-project";
 import { getProjectHandler, getProjectRoute } from "./endpoints/get-project";
 import { listProjectsHandler, listProjectsRoute } from "./endpoints/list-projects";
@@ -11,7 +11,7 @@ import { removeProjectHandler, removeProjectRoute } from "./endpoints/remove-pro
 import { removeRepoHandler, removeRepoRoute } from "./endpoints/remove-repo";
 import { updateProjectHandler, updateProjectRoute } from "./endpoints/update-project";
 
-export const createProjectRoutes = (deps: RouteDeps) => {
+export const createProjectRoutes = (deps: ProjectsRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
 
   routes.openapi(listProjectsRoute, listProjectsHandler(deps));

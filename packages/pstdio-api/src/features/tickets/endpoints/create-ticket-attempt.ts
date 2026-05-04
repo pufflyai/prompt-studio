@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import { emitActivityEvent } from "../../activity/activity-events";
-import type { RouteDeps } from "../../deps";
+import type { TicketsRouteDeps } from "../deps";
 import { createTicketAttemptBodySchema, notFoundResponseSchema, ticketAttemptResponseSchema } from "../dto";
 import {
   buildCreateTicketAttemptResponse,
@@ -46,7 +46,7 @@ export const createTicketAttemptRoute = createRoute({
   },
 });
 
-export const createTicketAttemptHandler = (deps: RouteDeps): AppRouteHandler<typeof createTicketAttemptRoute> => {
+export const createTicketAttemptHandler = (deps: TicketsRouteDeps): AppRouteHandler<typeof createTicketAttemptRoute> => {
   const worktreeMode = "worktree";
 
   return async (c) => {

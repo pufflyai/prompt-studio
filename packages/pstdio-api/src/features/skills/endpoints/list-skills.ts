@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { SkillsRouteDeps } from "../deps";
 import { skillResponseSchema } from "../dto";
 
 export const listSkillsRoute = createRoute({
@@ -24,7 +24,7 @@ export const listSkillsRoute = createRoute({
   },
 });
 
-export const listSkillsHandler = (deps: RouteDeps): AppRouteHandler<typeof listSkillsRoute> => {
+export const listSkillsHandler = (deps: SkillsRouteDeps): AppRouteHandler<typeof listSkillsRoute> => {
   return async (c) => {
     const { projectId } = c.req.valid("param");
     const skills = await deps.skillService.list(projectId);

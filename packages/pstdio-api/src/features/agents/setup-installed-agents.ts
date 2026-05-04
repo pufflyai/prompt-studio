@@ -1,7 +1,7 @@
-import type { RouteDeps } from "../deps";
+import type { AgentsRouteDeps } from "./deps";
 
 export const setupInstalledAgents = async (
-  deps: Pick<RouteDeps, "agentConfigService" | "agentRegistry" | "eventBus">,
+  deps: Pick<AgentsRouteDeps, "agentConfigService" | "agentRegistry" | "eventBus">,
   defaultAgentId?: string,
 ) => {
   const installedAgents = deps.agentRegistry.list().filter((agent) => agent.checkAvailability().type === "INSTALLED");

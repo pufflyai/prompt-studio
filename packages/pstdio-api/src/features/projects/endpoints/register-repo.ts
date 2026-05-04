@@ -3,7 +3,7 @@ import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { ProjectsRouteDeps } from "../deps";
 import { installProjectSkillsToRepo } from "../../skills/install-skill-to-repo";
 import { bootstrapProjectRepo } from "../bootstrap-project-repo";
 import { notFoundResponseSchema } from "../dto";
@@ -58,7 +58,7 @@ export const registerRepoRoute = createRoute({
 });
 
 const resolveRelinkState = async (
-  deps: Pick<RouteDeps, "projectService">,
+  deps: Pick<ProjectsRouteDeps, "projectService">,
   input: {
     configPath: string;
     projectId: string;
@@ -85,14 +85,14 @@ const resolveRelinkState = async (
 };
 
 const emitProjectRepoLink = async (
-  deps: Pick<RouteDeps, "repoService" | "eventBus">,
+  deps: Pick<ProjectsRouteDeps, "repoService" | "eventBus">,
   input: { projectId: string; repoId: string },
 ) => {
   const link = await deps.repoService.getProjectRepoLink(input.projectId, input.repoId);
   if (link) deps.eventBus.emit("project_repos", "set", link);
 };
 
-export const registerRepoHandler = (deps: RouteDeps): AppRouteHandler<typeof registerRepoRoute> => {
+export const registerRepoHandler = (deps: ProjectsRouteDeps): AppRouteHandler<typeof registerRepoRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const { name, path } = c.req.valid("json");

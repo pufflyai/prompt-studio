@@ -5,12 +5,12 @@ import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { TicketsRouteDeps } from "../deps";
 import type { EventBus } from "../../sync/event-bus";
 
 export type TicketsTestContext = {
   app: OpenAPIHono<AppBindings>;
-  deps: RouteDeps;
+  deps: TicketsRouteDeps;
   eventBus: EventBus;
   projectId: string;
   tempRoot: string;

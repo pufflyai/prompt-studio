@@ -1,6 +1,6 @@
 import type { AgentId, ApprovalRequest, QuestionResponse, SpawnedProcess } from "pstdio-agents";
 import { sessionLogger } from "../../lib/logger";
-import type { RouteDeps } from "../deps";
+import type { SessionsRouteDeps } from "./deps";
 import { persistSessionMessages } from "./session-messages";
 
 type SpawnInput = {
@@ -12,7 +12,7 @@ type SpawnInput = {
   cwd?: string;
 };
 
-type SpawnDeps = Pick<RouteDeps, "agentRegistry" | "eventBus" | "fileService" | "sessionService"> & {
+type SpawnDeps = Pick<SessionsRouteDeps, "agentRegistry" | "eventBus" | "fileService" | "sessionService"> & {
   processExitTimeoutMs?: number;
 };
 

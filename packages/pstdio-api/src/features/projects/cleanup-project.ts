@@ -1,8 +1,8 @@
 import fs from "node:fs";
-import type { RouteDeps } from "../deps";
+import type { ProjectsRouteDeps } from "./deps";
 
 export const cleanupProjectArtifacts = async (
-  workspaceService: RouteDeps["workspaceService"],
+  workspaceService: ProjectsRouteDeps["workspaceService"],
   projectId: string,
   deps: {
     removeProjectStorage: (projectId: string) => void;

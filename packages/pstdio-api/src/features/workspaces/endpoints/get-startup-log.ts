@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { WorkspacesRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
 
 export const getStartupLogRoute = createRoute({
@@ -29,7 +29,7 @@ export const getStartupLogRoute = createRoute({
   },
 });
 
-export const getStartupLogHandler = (deps: RouteDeps): AppRouteHandler<typeof getStartupLogRoute> => {
+export const getStartupLogHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof getStartupLogRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
 

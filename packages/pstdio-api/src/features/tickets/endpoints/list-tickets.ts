@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { TicketsRouteDeps } from "../deps";
 import { ticketListItemSchema } from "../dto";
 
 const listTicketsQuerySchema = z
@@ -38,7 +38,7 @@ export const listTicketsRoute = createRoute({
   },
 });
 
-export const listTicketsHandler = (deps: RouteDeps): AppRouteHandler<typeof listTicketsRoute> => {
+export const listTicketsHandler = (deps: TicketsRouteDeps): AppRouteHandler<typeof listTicketsRoute> => {
   return async (c) => {
     const query = c.req.valid("query");
 

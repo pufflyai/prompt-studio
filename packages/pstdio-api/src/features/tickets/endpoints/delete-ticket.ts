@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { TicketsRouteDeps } from "../deps";
 import { buildTicketPayload } from "../build-ticket-payload";
 import { notFoundResponseSchema, ticketResponseSchema } from "../dto";
 
@@ -35,7 +35,7 @@ export const deleteTicketRoute = createRoute({
   },
 });
 
-export const deleteTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof deleteTicketRoute> => {
+export const deleteTicketHandler = (deps: TicketsRouteDeps): AppRouteHandler<typeof deleteTicketRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
 

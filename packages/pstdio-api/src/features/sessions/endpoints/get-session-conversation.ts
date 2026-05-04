@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { Context } from "hono";
 import type { AppBindings } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { SessionsRouteDeps } from "../deps";
 import { notFoundResponseSchema, sessionConversationResponseSchema } from "../dto";
 import { getSessionMessages } from "../get-session-messages";
 
@@ -30,7 +30,7 @@ export const getSessionConversationRoute = createRoute({
   },
 });
 
-export const getSessionConversationHandler = (deps: RouteDeps) => {
+export const getSessionConversationHandler = (deps: SessionsRouteDeps) => {
   return async (c: Context<AppBindings>) => {
     const id = c.req.param("id")!;
     const session = await deps.sessionService.get(id);

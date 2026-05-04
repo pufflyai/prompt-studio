@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { StatusesRouteDeps } from "../deps";
 
 export const setDefaultStatusRoute = createRoute({
   method: "patch",
@@ -24,7 +24,7 @@ export const setDefaultStatusRoute = createRoute({
   },
 });
 
-export const setDefaultStatusHandler = (deps: RouteDeps): AppRouteHandler<typeof setDefaultStatusRoute> => {
+export const setDefaultStatusHandler = (deps: StatusesRouteDeps): AppRouteHandler<typeof setDefaultStatusRoute> => {
   return async (c) => {
     const { projectId, id } = c.req.valid("param");
     await deps.statusService.setDefault(projectId, id);

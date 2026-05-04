@@ -1,7 +1,7 @@
 import { getBundledSkills } from "pstdio-agents";
-import type { RouteDeps } from "../deps";
+import type { SkillsRouteDeps } from "./deps";
 
-export const seedDefaultSkills = async (deps: RouteDeps, projectId: string) => {
+export const seedDefaultSkills = async (deps: SkillsRouteDeps, projectId: string) => {
   const bundled = await getBundledSkills();
 
   for (const skill of bundled) {

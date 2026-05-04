@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { ActionsRouteDeps } from "../deps";
 
 const actionParamSchema = z.object({
   key: z.string(),
@@ -38,7 +38,7 @@ export const listActionsRoute = createRoute({
   },
 });
 
-export const listActionsHandler = (deps: RouteDeps): AppRouteHandler<typeof listActionsRoute> => {
+export const listActionsHandler = (deps: ActionsRouteDeps): AppRouteHandler<typeof listActionsRoute> => {
   return async (c) => {
     const { projectId } = c.req.valid("param");
     const { targetType } = c.req.valid("query");

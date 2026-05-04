@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { AgentsRouteDeps } from "../deps";
 import { agentConfigListResponseSchema } from "../dto";
 
 export const listAgentsRoute = createRoute({
@@ -20,7 +20,7 @@ export const listAgentsRoute = createRoute({
   },
 });
 
-export const listAgentsHandler = (deps: RouteDeps): AppRouteHandler<typeof listAgentsRoute> => {
+export const listAgentsHandler = (deps: AgentsRouteDeps): AppRouteHandler<typeof listAgentsRoute> => {
   return async (c) => {
     const agents = await deps.agentConfigService.list();
     return c.json(agents, 200);

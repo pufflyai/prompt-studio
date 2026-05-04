@@ -2,7 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { listTicketActivityInputSchema, listTicketActivityResponseSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import { listActivityEvents } from "../../activity/activity-events";
-import type { RouteDeps } from "../../deps";
+import type { TicketsRouteDeps } from "../deps";
 
 export const listTicketActivityRoute = createRoute({
   method: "get",
@@ -25,7 +25,7 @@ export const listTicketActivityRoute = createRoute({
   },
 });
 
-export const listTicketActivityHandler = (deps: RouteDeps): AppRouteHandler<typeof listTicketActivityRoute> => {
+export const listTicketActivityHandler = (deps: TicketsRouteDeps): AppRouteHandler<typeof listTicketActivityRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const query = c.req.valid("query");

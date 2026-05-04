@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { WorkspacesRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
 import { cleanupWorkspaceWorktree } from "../worktree-cleanup";
 
@@ -30,7 +30,7 @@ export const removeWorkspaceWorktreeRoute = createRoute({
 });
 
 export const removeWorkspaceWorktreeHandler = (
-  deps: RouteDeps,
+  deps: WorkspacesRouteDeps,
 ): AppRouteHandler<typeof removeWorkspaceWorktreeRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");

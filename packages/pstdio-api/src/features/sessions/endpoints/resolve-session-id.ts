@@ -1,8 +1,8 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { SessionsRouteDeps } from "../deps";
 
-type SessionRecord = Awaited<ReturnType<RouteDeps["sessionService"]["listByAgentSession"]>>[number];
+type SessionRecord = Awaited<ReturnType<SessionsRouteDeps["sessionService"]["listByAgentSession"]>>[number];
 
 const resolveSessionIdBodySchema = z
   .object({
@@ -75,7 +75,7 @@ export const resolveSessionIdRoute = createRoute({
   },
 });
 
-export const resolveSessionIdHandler = (deps: RouteDeps): AppRouteHandler<typeof resolveSessionIdRoute> => {
+export const resolveSessionIdHandler = (deps: SessionsRouteDeps): AppRouteHandler<typeof resolveSessionIdRoute> => {
   return async (c) => {
     const input = c.req.valid("json");
 

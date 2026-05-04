@@ -1,10 +1,10 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
-import type { RouteDeps } from "../deps";
+import type { PluginsRouteDeps } from "./deps";
 import { listPluginsHandler, listPluginsRoute } from "./endpoints/list-plugins";
 import { registerPluginsHandler, registerPluginsRoute } from "./endpoints/register-plugins";
 
-export const createPluginRoutes = (deps: RouteDeps) => {
+export const createPluginRoutes = (deps: PluginsRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
 
   routes.openapi(listPluginsRoute, listPluginsHandler(deps));

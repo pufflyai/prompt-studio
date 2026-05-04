@@ -4,7 +4,7 @@ import type { SSEStreamingApi } from "hono/streaming";
 import { streamSSE } from "hono/streaming";
 import type { AgentId, EventStore, JsonPatch, SessionMessage } from "pstdio-agents";
 import type { AppBindings } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { SessionsRouteDeps } from "../deps";
 import { buildMessagesFromPatches, resolveMessagePatchIndexOffset } from "../session-messages";
 
 const SESSION_STREAM_HEARTBEAT_MS = 1000;
@@ -24,19 +24,19 @@ const replayMessagesAsPatch = async (messages: SessionMessage[], stream: SSEStre
   await stream.writeSSE({ data: JSON.stringify(patch), event: "patch" });
 };
 
-const getPersistedMessages = async (sessionFileId: string, deps: RouteDeps) => {
+const getPersistedMessages = async (sessionFileId: string, deps: SessionsRouteDeps) => {
   const file = await deps.fileService.get(sessionFileId);
   if (!file) return [];
 
   return JSON.parse(readFileSync(file.storage_path, "utf-8")) as SessionMessage[];
 };
 
-const replayPersistedMessages = async (sessionFileId: string, deps: RouteDeps, stream: SSEStreamingApi) => {
+const replayPersistedMessages = async (sessionFileId: string, deps: SessionsRouteDeps, stream: SSEStreamingApi) => {
   const messages = await getPersistedMessages(sessionFileId, deps);
   await replayMessagesAsPatch(messages, stream);
 };
 
-const fetchAgentMessages = async (session: SessionRecord, deps: RouteDeps) => {
+const fetchAgentMessages = async (session: SessionRecord, deps: SessionsRouteDeps) => {
   const agent = deps.agentRegistry.get(session.agent as AgentId);
   if (!agent) return null;
 
@@ -44,7 +44,7 @@ const fetchAgentMessages = async (session: SessionRecord, deps: RouteDeps) => {
   return agent.getMessages(session.agent_session_id, cwd ? { cwd } : undefined).catch(() => null);
 };
 
-const replayCompletedSession = async (session: SessionRecord, deps: RouteDeps, stream: SSEStreamingApi) => {
+const replayCompletedSession = async (session: SessionRecord, deps: SessionsRouteDeps, stream: SSEStreamingApi) => {
   if (session.session_file_id) {
     await replayPersistedMessages(session.session_file_id, deps, stream);
     return;
@@ -123,7 +123,7 @@ async function* translateIndexedMessagePatches(patches: AsyncIterable<JsonPatch>
 const replayActiveSession = async (
   session: SessionRecord,
   eventStore: EventStore,
-  deps: RouteDeps,
+  deps: SessionsRouteDeps,
   stream: SSEStreamingApi,
 ) => {
   const persistedMessages = session.session_file_id ? await getPersistedMessages(session.session_file_id, deps) : [];
@@ -141,7 +141,7 @@ const replayActiveSession = async (
 const WAIT_FOR_AGENT_POLL_MS = 500;
 const WAIT_FOR_AGENT_MAX_MS = 120_000;
 
-const waitForSessionStoreEntry = async (sessionId: string, deps: RouteDeps, stream: SSEStreamingApi) => {
+const waitForSessionStoreEntry = async (sessionId: string, deps: SessionsRouteDeps, stream: SSEStreamingApi) => {
   // Only wait if the session exists but the agent hasn't been spawned yet.
   // This happens when workspace initialization is blocking the agent spawn.
   const session = await deps.sessionService.get(sessionId);
@@ -173,7 +173,7 @@ const waitForSessionStoreEntry = async (sessionId: string, deps: RouteDeps, stre
   return null;
 };
 
-export const streamSessionHandler = (deps: RouteDeps) => {
+export const streamSessionHandler = (deps: SessionsRouteDeps) => {
   return (c: Context<AppBindings>) => {
     const id = c.req.param("id")!;
 

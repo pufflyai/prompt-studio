@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import { buildDiff, emitActivityEvent } from "../../activity/activity-events";
-import type { RouteDeps } from "../../deps";
+import type { WorkspacesRouteDeps } from "../deps";
 import { archiveWorkspaceCascade } from "../archive-workspace-cascade";
 import { notFoundResponseSchema, workspaceResponseSchema } from "../dto";
 
@@ -34,7 +34,7 @@ export const archiveWorkspaceRoute = createRoute({
   },
 });
 
-export const archiveWorkspaceHandler = (deps: RouteDeps): AppRouteHandler<typeof archiveWorkspaceRoute> => {
+export const archiveWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof archiveWorkspaceRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
 

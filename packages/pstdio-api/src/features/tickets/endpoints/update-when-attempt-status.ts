@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import { buildDiff, emitActivityEvent } from "../../activity/activity-events";
-import type { RouteDeps } from "../../deps";
+import type { TicketsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
 
 const bodySchema = z
@@ -38,7 +38,7 @@ export const updateWhenAttemptStatusRoute = createRoute({
 });
 
 export const updateWhenAttemptStatusHandler = (
-  deps: RouteDeps,
+  deps: TicketsRouteDeps,
 ): AppRouteHandler<typeof updateWhenAttemptStatusRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");

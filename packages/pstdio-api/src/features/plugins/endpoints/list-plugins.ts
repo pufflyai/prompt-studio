@@ -1,6 +1,6 @@
 import { createRoute } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { PluginsRouteDeps } from "../deps";
 import { pluginsParamsSchema, pluginsResponseSchema } from "../dto";
 import { getRegisteredPlugins } from "../get-registered-plugins";
 
@@ -20,7 +20,7 @@ export const listPluginsRoute = createRoute({
   },
 });
 
-export const listPluginsHandler = (deps: RouteDeps): AppRouteHandler<typeof listPluginsRoute> => {
+export const listPluginsHandler = (deps: PluginsRouteDeps): AppRouteHandler<typeof listPluginsRoute> => {
   return async (c) => {
     const { projectId } = c.req.valid("param");
 

@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { ProjectsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
 
 export const removeRepoRoute = createRoute({
@@ -26,7 +26,7 @@ export const removeRepoRoute = createRoute({
   },
 });
 
-export const removeRepoHandler = (deps: RouteDeps): AppRouteHandler<typeof removeRepoRoute> => {
+export const removeRepoHandler = (deps: ProjectsRouteDeps): AppRouteHandler<typeof removeRepoRoute> => {
   return async (c) => {
     const { id, repoId } = c.req.valid("param");
 

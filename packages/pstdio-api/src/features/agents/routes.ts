@@ -1,6 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
-import type { RouteDeps } from "../deps";
+import type { AgentsRouteDeps } from "./deps";
 import { checkAgentAvailabilityHandler, checkAgentAvailabilityRoute } from "./endpoints/check-agent-availability";
 import { listAgentInfoHandler, listAgentInfoRoute } from "./endpoints/list-agent-info";
 import { listAgentModelsHandler, listAgentModelsRoute } from "./endpoints/list-agent-models";
@@ -10,7 +10,7 @@ import { setupAgentHandler, setupAgentRoute } from "./endpoints/setup-agent";
 import { setupAvailableAgentsHandler, setupAvailableAgentsRoute } from "./endpoints/setup-available-agents";
 import { updateAgentHandler, updateAgentRoute } from "./endpoints/update-agent";
 
-export const createAgentRoutes = (deps: RouteDeps) => {
+export const createAgentRoutes = (deps: AgentsRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
 
   routes.openapi(checkAgentAvailabilityRoute, checkAgentAvailabilityHandler(deps));

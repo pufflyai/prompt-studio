@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { ProjectsRouteDeps } from "../deps";
 import { projectResponseSchema, toProjectResponse } from "../dto";
 
 export const listProjectsRoute = createRoute({
@@ -20,7 +20,7 @@ export const listProjectsRoute = createRoute({
   },
 });
 
-export const listProjectsHandler = (deps: RouteDeps): AppRouteHandler<typeof listProjectsRoute> => {
+export const listProjectsHandler = (deps: ProjectsRouteDeps): AppRouteHandler<typeof listProjectsRoute> => {
   return async (c) => {
     const projects = await deps.projectService.list();
     return c.json(projects.map(toProjectResponse), 200);

@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { TagsRouteDeps } from "../deps";
 
 export const deleteTagRoute = createRoute({
   method: "delete",
@@ -24,7 +24,7 @@ export const deleteTagRoute = createRoute({
   },
 });
 
-export const deleteTagHandler = (deps: RouteDeps): AppRouteHandler<typeof deleteTagRoute> => {
+export const deleteTagHandler = (deps: TagsRouteDeps): AppRouteHandler<typeof deleteTagRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     await deps.tagService.remove(id);

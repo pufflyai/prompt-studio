@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { StatusesRouteDeps } from "../deps";
 
 export const deleteStatusRoute = createRoute({
   method: "delete",
@@ -24,7 +24,7 @@ export const deleteStatusRoute = createRoute({
   },
 });
 
-export const deleteStatusHandler = (deps: RouteDeps): AppRouteHandler<typeof deleteStatusRoute> => {
+export const deleteStatusHandler = (deps: StatusesRouteDeps): AppRouteHandler<typeof deleteStatusRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     await deps.statusService.remove(id);

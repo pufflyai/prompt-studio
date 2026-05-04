@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { ProjectsRouteDeps } from "../deps";
 import { seedDefaultSkills } from "../../skills/seed-default-skills";
 import { seedDefaultTemplates } from "../../templates/seed-default-templates";
 import { createProjectBodySchema, projectResponseSchema, toProjectResponse } from "../dto";
@@ -24,7 +24,7 @@ export const createProjectRoute = createRoute({
   },
 });
 
-export const createProjectHandler = (deps: RouteDeps): AppRouteHandler<typeof createProjectRoute> => {
+export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<typeof createProjectRoute> => {
   return async (c) => {
     const { name, agents } = c.req.valid("json");
     const project = await deps.projectService.create({ name, selectedAgents: agents });

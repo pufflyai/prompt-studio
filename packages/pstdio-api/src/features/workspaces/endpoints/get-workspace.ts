@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { WorkspacesRouteDeps } from "../deps";
 import { notFoundResponseSchema, workspaceResponseSchema } from "../dto";
 
 const getWorkspaceQuerySchema = z
@@ -30,7 +30,7 @@ export const getWorkspaceRoute = createRoute({
   },
 });
 
-export const getWorkspaceHandler = (deps: RouteDeps): AppRouteHandler<typeof getWorkspaceRoute> => {
+export const getWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof getWorkspaceRoute> => {
   return async (c) => {
     const { project_id, shorthand } = c.req.valid("query");
     const workspace = await deps.workspaceService.getByShorthand(project_id, shorthand);

@@ -1,9 +1,9 @@
 import type { AgentId } from "pstdio-agents";
 import { sessionLogger } from "../../lib/logger";
-import type { RouteDeps } from "../deps";
+import type { SessionsRouteDeps } from "./deps";
 import { reattachAgentSession } from "./spawn-agent";
 
-type Deps = Pick<RouteDeps, "sessionService" | "agentRegistry" | "eventBus" | "fileService">;
+type Deps = Pick<SessionsRouteDeps, "sessionService" | "agentRegistry" | "eventBus" | "fileService">;
 
 export const resolveOrphanedSessions = async (deps: Deps, signal?: AbortSignal) => {
   const staleSessions = await deps.sessionService.listByStatus("in_progress");

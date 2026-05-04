@@ -2,7 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { listWorkspaceActivityInputSchema, listWorkspaceActivityResponseSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import { listActivityEvents } from "../../activity/activity-events";
-import type { RouteDeps } from "../../deps";
+import type { WorkspacesRouteDeps } from "../deps";
 
 export const listWorkspaceActivityRoute = createRoute({
   method: "get",
@@ -25,7 +25,7 @@ export const listWorkspaceActivityRoute = createRoute({
   },
 });
 
-export const listWorkspaceActivityHandler = (deps: RouteDeps): AppRouteHandler<typeof listWorkspaceActivityRoute> => {
+export const listWorkspaceActivityHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof listWorkspaceActivityRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const query = c.req.valid("query");

@@ -1,15 +1,15 @@
-import type { RouteDeps } from "../deps";
+import type { TicketsRouteDeps } from "./deps";
 
-export const emitSyncedFile = (deps: RouteDeps, file: unknown) => {
+export const emitSyncedFile = (deps: TicketsRouteDeps, file: unknown) => {
   deps.eventBus.emit("files", "set", file);
 };
 
-export const emitSyncedTicketFile = (deps: RouteDeps, ticketFile: unknown) => {
+export const emitSyncedTicketFile = (deps: TicketsRouteDeps, ticketFile: unknown) => {
   if (!ticketFile) return;
   deps.eventBus.emit("ticket_files", "set", ticketFile);
 };
 
-export const emitSyncedWorkspaceArtifact = (deps: RouteDeps, artifact: unknown) => {
+export const emitSyncedWorkspaceArtifact = (deps: TicketsRouteDeps, artifact: unknown) => {
   if (!artifact) return;
   deps.eventBus.emit("workspace_artifacts", "set", artifact);
 };

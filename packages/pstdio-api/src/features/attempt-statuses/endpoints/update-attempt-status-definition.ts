@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { attemptStatusSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { AttemptStatusesRouteDeps } from "../deps";
 
 const updateBodySchema = z
   .object({
@@ -32,7 +32,7 @@ export const updateAttemptStatusDefinitionRoute = createRoute({
 });
 
 export const updateAttemptStatusDefinitionHandler = (
-  deps: RouteDeps,
+  deps: AttemptStatusesRouteDeps,
 ): AppRouteHandler<typeof updateAttemptStatusDefinitionRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");

@@ -3,7 +3,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { updateAttemptStatusResponseSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import { buildDiff, emitActivityEvent } from "../../activity/activity-events";
-import type { RouteDeps } from "../../deps";
+import type { WorkspacesRouteDeps } from "../deps";
 import { firePostAttemptStatusHook, firePreAttemptStatusHook } from "../../hooks/attempt-status-hooks";
 import { parseTicketShorthand } from "../parse-ticket-shorthand";
 
@@ -55,7 +55,7 @@ const createHookRejectedResponse = (stdout?: string, stderr?: string) => ({
   hook_output: [stdout, stderr].filter(Boolean).join("\n").trim(),
 });
 
-const resolveFromStatusName = async (deps: RouteDeps, attemptStatusId: string | null) => {
+const resolveFromStatusName = async (deps: WorkspacesRouteDeps, attemptStatusId: string | null) => {
   if (!attemptStatusId) {
     return null;
   }
@@ -64,7 +64,7 @@ const resolveFromStatusName = async (deps: RouteDeps, attemptStatusId: string | 
   return fromStatus?.name ?? null;
 };
 
-const resolveTicketStatusName = async (deps: RouteDeps, projectId: string, statusId: string | null) => {
+const resolveTicketStatusName = async (deps: WorkspacesRouteDeps, projectId: string, statusId: string | null) => {
   if (!statusId) {
     return null;
   }
@@ -73,7 +73,7 @@ const resolveTicketStatusName = async (deps: RouteDeps, projectId: string, statu
   return statuses.find((status) => status.id === statusId)?.name ?? null;
 };
 
-const resolveTransitionSession = async (deps: RouteDeps, projectId: string, sessionId?: string) => {
+const resolveTransitionSession = async (deps: WorkspacesRouteDeps, projectId: string, sessionId?: string) => {
   if (!sessionId) {
     return undefined;
   }
@@ -86,7 +86,7 @@ const resolveTransitionSession = async (deps: RouteDeps, projectId: string, sess
   return session;
 };
 
-const resolveWorkspaceTicket = async (deps: RouteDeps, workspaceId: string) => {
+const resolveWorkspaceTicket = async (deps: WorkspacesRouteDeps, workspaceId: string) => {
   const ticketLink = await deps.workspaceService.getTicketWorkspaceLink(workspaceId);
   if (!ticketLink) {
     return null;
@@ -96,9 +96,9 @@ const resolveWorkspaceTicket = async (deps: RouteDeps, workspaceId: string) => {
 };
 
 const buildHookPayload = async (
-  deps: RouteDeps,
+  deps: WorkspacesRouteDeps,
   input: {
-    workspace: Awaited<ReturnType<RouteDeps["workspaceService"]["get"]>>;
+    workspace: Awaited<ReturnType<WorkspacesRouteDeps["workspaceService"]["get"]>>;
     attemptStatusName: string | null;
     sessionId?: string;
   },
@@ -130,7 +130,7 @@ const buildHookPayload = async (
   };
 };
 
-export const updateAttemptStatusHandler = (deps: RouteDeps): AppRouteHandler<typeof updateAttemptStatusRoute> => {
+export const updateAttemptStatusHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof updateAttemptStatusRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const { status, session_id: sessionId } = c.req.valid("json");

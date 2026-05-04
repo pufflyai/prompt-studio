@@ -1,14 +1,14 @@
 import { ticketLogger } from "../../../lib/logger";
-import type { RouteDeps } from "../../deps";
+import type { TicketsRouteDeps } from "../deps";
 import { fireSessionStartHook } from "../../hooks/session-hooks";
 import { spawnAgentSession } from "../../sessions/spawn-agent";
 import { awaitPostCreateHook, resolveAgentId, resolvePrompt } from "./attempt-workspace-setup";
 
 export { createAttemptWorkspace } from "./attempt-workspace-setup";
 
-type WorkspaceRecord = Awaited<ReturnType<RouteDeps["workspaceService"]["create"]>>;
-type RepoRecord = Awaited<ReturnType<RouteDeps["repoService"]["listByProject"]>>[number];
-type TicketRecord = NonNullable<Awaited<ReturnType<RouteDeps["ticketService"]["get"]>>>;
+type WorkspaceRecord = Awaited<ReturnType<TicketsRouteDeps["workspaceService"]["create"]>>;
+type RepoRecord = Awaited<ReturnType<TicketsRouteDeps["repoService"]["listByProject"]>>[number];
+type TicketRecord = NonNullable<Awaited<ReturnType<TicketsRouteDeps["ticketService"]["get"]>>>;
 type StartedAttemptSession = NonNullable<Awaited<ReturnType<typeof startAttemptSession>>>;
 type AttemptMode = "worktree" | "current_branch";
 
@@ -51,7 +51,7 @@ export const resolveSessionCwd = (input: {
 
 // --- Repo resolution ---
 
-const resolveRepoForAttempt = async (deps: RouteDeps, projectId: string, input: AttemptRequestInput) => {
+const resolveRepoForAttempt = async (deps: TicketsRouteDeps, projectId: string, input: AttemptRequestInput) => {
   const repos = await deps.repoService.listByProject(projectId);
   if (repos.length === 0) return null;
 
@@ -69,7 +69,7 @@ const resolveRepoForAttempt = async (deps: RouteDeps, projectId: string, input: 
 // --- Session lifecycle ---
 
 const startAttemptSession = async (
-  deps: RouteDeps,
+  deps: TicketsRouteDeps,
   input: {
     ticket: TicketRecord;
     workspace: WorkspaceRecord;
@@ -101,12 +101,12 @@ const startAttemptSession = async (
   return { session, agentId, prompt, title };
 };
 
-const failStartedSession = async (deps: RouteDeps, sessionId: string) => {
+const failStartedSession = async (deps: TicketsRouteDeps, sessionId: string) => {
   await deps.sessionService.transitionStatus(sessionId, "failed");
 };
 
 const spawnStartedSession = (
-  deps: RouteDeps,
+  deps: TicketsRouteDeps,
   input: {
     session: StartedAttemptSession["session"];
     agentId: string;
@@ -140,7 +140,7 @@ const spawnStartedSession = (
 };
 
 const runSetupAndSpawnAgent = (
-  deps: RouteDeps,
+  deps: TicketsRouteDeps,
   input: {
     workspace: WorkspaceRecord;
     ticketShorthand: string;
@@ -226,7 +226,7 @@ const runSetupAndSpawnAgent = (
 // --- Exported orchestration ---
 
 export const resolveCreateTicketAttemptContext = async (
-  deps: RouteDeps,
+  deps: TicketsRouteDeps,
   ticketId: string,
   input: AttemptRequestInput,
   worktreeMode: AttemptMode,
@@ -250,7 +250,7 @@ export const resolveCreateTicketAttemptContext = async (
 };
 
 export const startOptionalAttemptSession = async (
-  deps: RouteDeps,
+  deps: TicketsRouteDeps,
   input: {
     ticket: TicketRecord;
     workspace: WorkspaceRecord;
@@ -279,7 +279,7 @@ export const startOptionalAttemptSession = async (
 };
 
 export const continueTicketAttemptSetup = (
-  deps: RouteDeps,
+  deps: TicketsRouteDeps,
   input: {
     workspace: WorkspaceRecord;
     ticketShorthand: string;

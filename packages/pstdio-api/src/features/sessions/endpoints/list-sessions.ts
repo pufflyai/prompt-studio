@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { SessionsRouteDeps } from "../deps";
 import { sessionResponseSchema } from "../dto";
 
 export const listSessionsRoute = createRoute({
@@ -29,7 +29,7 @@ export const listSessionsRoute = createRoute({
   },
 });
 
-export const listSessionsHandler = (deps: RouteDeps): AppRouteHandler<typeof listSessionsRoute> => {
+export const listSessionsHandler = (deps: SessionsRouteDeps): AppRouteHandler<typeof listSessionsRoute> => {
   return async (c) => {
     const query = c.req.valid("query");
 

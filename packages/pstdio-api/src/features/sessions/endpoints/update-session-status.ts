@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import { buildDiff, emitActivityEvent } from "../../activity/activity-events";
-import type { RouteDeps } from "../../deps";
+import type { SessionsRouteDeps } from "../deps";
 import { notFoundResponseSchema, sessionResponseSchema } from "../dto";
 
 export const updateSessionStatusRoute = createRoute({
@@ -40,7 +40,7 @@ export const updateSessionStatusRoute = createRoute({
   },
 });
 
-export const updateSessionStatusHandler = (deps: RouteDeps): AppRouteHandler<typeof updateSessionStatusRoute> => {
+export const updateSessionStatusHandler = (deps: SessionsRouteDeps): AppRouteHandler<typeof updateSessionStatusRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const { status } = c.req.valid("json");

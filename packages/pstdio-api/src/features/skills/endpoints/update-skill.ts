@@ -4,7 +4,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { getBundledSkills } from "pstdio-agents";
 import { findAgent } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { SkillsRouteDeps } from "../deps";
 import { notFoundResponseSchema, skillWithContentResponseSchema } from "../dto";
 import { installSkillToRepo } from "../install-skill-to-repo";
 
@@ -33,7 +33,7 @@ export const updateSkillRoute = createRoute({
   },
 });
 
-export const updateSkillHandler = (deps: RouteDeps): AppRouteHandler<typeof updateSkillRoute> => {
+export const updateSkillHandler = (deps: SkillsRouteDeps): AppRouteHandler<typeof updateSkillRoute> => {
   return async (c) => {
     const { projectId, name } = c.req.valid("param");
 

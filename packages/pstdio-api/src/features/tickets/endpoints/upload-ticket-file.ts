@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { TicketsRouteDeps } from "../deps";
 import { notFoundResponseSchema, ticketFileResponseSchema, uploadTicketFileBodySchema } from "../dto";
 import { emitSyncedFile, emitSyncedTicketFile, emitSyncedWorkspaceArtifact } from "../emit-ticket-file-sync";
 
@@ -48,7 +48,7 @@ interface UploadWorkspaceArtifactInput extends UploadTicketFileInput {
   relativePath: string;
 }
 
-const updateExistingWorkspaceArtifactFile = async (deps: RouteDeps, input: UploadWorkspaceArtifactInput) => {
+const updateExistingWorkspaceArtifactFile = async (deps: TicketsRouteDeps, input: UploadWorkspaceArtifactInput) => {
   const existingArtifact = await deps.workspaceArtifactService.getByTicketPath(input.ticketId, input.relativePath);
   if (!existingArtifact) return null;
 
@@ -70,7 +70,7 @@ const updateExistingWorkspaceArtifactFile = async (deps: RouteDeps, input: Uploa
   return { file: updated ?? existingFile, status: 200 as const };
 };
 
-const createWorkspaceArtifactFile = async (deps: RouteDeps, input: UploadWorkspaceArtifactInput) => {
+const createWorkspaceArtifactFile = async (deps: TicketsRouteDeps, input: UploadWorkspaceArtifactInput) => {
   const file = await deps.fileService.upload({
     project_id: input.projectId,
     file_name: input.fileName,
@@ -88,14 +88,14 @@ const createWorkspaceArtifactFile = async (deps: RouteDeps, input: UploadWorkspa
   return { file, status: 201 as const };
 };
 
-const uploadWorkspaceArtifactFile = async (deps: RouteDeps, input: UploadWorkspaceArtifactInput) => {
+const uploadWorkspaceArtifactFile = async (deps: TicketsRouteDeps, input: UploadWorkspaceArtifactInput) => {
   const updated = await updateExistingWorkspaceArtifactFile(deps, input);
   if (updated) return updated;
 
   return createWorkspaceArtifactFile(deps, input);
 };
 
-const updateExistingTicketFile = async (deps: RouteDeps, input: UploadTicketFileInput) => {
+const updateExistingTicketFile = async (deps: TicketsRouteDeps, input: UploadTicketFileInput) => {
   const attachedFiles = await deps.fileService.listForTicket(input.ticketId);
   const existing = attachedFiles.find((file) => file.file_name === input.fileName);
   if (!existing) return null;
@@ -108,7 +108,7 @@ const updateExistingTicketFile = async (deps: RouteDeps, input: UploadTicketFile
   return { file: updated ?? existing, status: 200 as const };
 };
 
-const createTicketFile = async (deps: RouteDeps, input: UploadTicketFileInput) => {
+const createTicketFile = async (deps: TicketsRouteDeps, input: UploadTicketFileInput) => {
   const file = await deps.fileService.upload({
     project_id: input.projectId,
     file_name: input.fileName,
@@ -124,14 +124,14 @@ const createTicketFile = async (deps: RouteDeps, input: UploadTicketFileInput) =
   return { file, status: 201 as const };
 };
 
-const uploadAttachedTicketFile = async (deps: RouteDeps, input: UploadTicketFileInput) => {
+const uploadAttachedTicketFile = async (deps: TicketsRouteDeps, input: UploadTicketFileInput) => {
   const updated = await updateExistingTicketFile(deps, input);
   if (updated) return updated;
 
   return createTicketFile(deps, input);
 };
 
-export const uploadTicketFileHandler = (deps: RouteDeps): AppRouteHandler<typeof uploadTicketFileRoute> => {
+export const uploadTicketFileHandler = (deps: TicketsRouteDeps): AppRouteHandler<typeof uploadTicketFileRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const { file_name, relative_path, content_base64, mime_type } = c.req.valid("json");

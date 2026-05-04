@@ -2,7 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { listSessionActivityInputSchema, listSessionActivityResponseSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import { listActivityEvents } from "../../activity/activity-events";
-import type { RouteDeps } from "../../deps";
+import type { SessionsRouteDeps } from "../deps";
 
 export const listSessionActivityRoute = createRoute({
   method: "get",
@@ -25,7 +25,7 @@ export const listSessionActivityRoute = createRoute({
   },
 });
 
-export const listSessionActivityHandler = (deps: RouteDeps): AppRouteHandler<typeof listSessionActivityRoute> => {
+export const listSessionActivityHandler = (deps: SessionsRouteDeps): AppRouteHandler<typeof listSessionActivityRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const query = c.req.valid("query");

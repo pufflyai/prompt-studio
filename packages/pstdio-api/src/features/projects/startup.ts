@@ -1,7 +1,7 @@
-import type { RouteDeps } from "../deps";
+import type { ProjectsRouteDeps } from "./deps";
 import { ensureProjectRepoScaffolding } from "./bootstrap-project-repo";
 
-type Deps = Pick<RouteDeps, "filesRoot" | "projectService" | "repoService">;
+type Deps = Pick<ProjectsRouteDeps, "filesRoot" | "projectService" | "repoService">;
 
 export const ensureProjectReposScaffolded = async (deps: Deps) => {
   const projects = await deps.projectService.list();

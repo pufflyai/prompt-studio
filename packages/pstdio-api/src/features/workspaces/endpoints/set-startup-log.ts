@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { WorkspacesRouteDeps } from "../deps";
 import { notFoundResponseSchema, uploadStartupLogBodySchema } from "../dto";
 
 export const setStartupLogRoute = createRoute({
@@ -31,7 +31,7 @@ export const setStartupLogRoute = createRoute({
   },
 });
 
-export const setStartupLogHandler = (deps: RouteDeps): AppRouteHandler<typeof setStartupLogRoute> => {
+export const setStartupLogHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof setStartupLogRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const { content_base64 } = c.req.valid("json");

@@ -6,11 +6,11 @@ import type { OpenAPIHono } from "@hono/zod-openapi";
 import { getBundledSkills } from "pstdio-agents";
 import { createApp } from "../../app";
 import type { AppBindings } from "../../types";
-import type { RouteDeps } from "../deps";
+import type { SkillsRouteDeps } from "./deps";
 import { ensureSkillsInstalled } from "./startup";
 
 let app: OpenAPIHono<AppBindings>;
-let deps: RouteDeps;
+let deps: SkillsRouteDeps;
 let tempRoot: string;
 let repoPath: string;
 let bundledSkills: Awaited<ReturnType<typeof getBundledSkills>>;
@@ -114,7 +114,7 @@ describe("ensureSkillsInstalled", () => {
       fileService: {
         get: mock(async () => ({ storage_path: legacyFilePath })),
       },
-    } as unknown as RouteDeps;
+    } as unknown as SkillsRouteDeps;
 
     await ensureSkillsInstalled(depsMock);
 
@@ -151,7 +151,7 @@ describe("ensureSkillsInstalled", () => {
       fileService: {
         get: mock(async () => ({ storage_path: legacyFilePath })),
       },
-    } as unknown as RouteDeps;
+    } as unknown as SkillsRouteDeps;
 
     await ensureSkillsInstalled(depsMock);
 
@@ -183,7 +183,7 @@ describe("ensureSkillsInstalled", () => {
         update: mock(async () => null),
       },
       fileService: { get: mock(async () => null) },
-    } as unknown as RouteDeps;
+    } as unknown as SkillsRouteDeps;
 
     await ensureSkillsInstalled(depsMock);
     expect(existsSync(join(repoPathWithEmptySkill, ".claude", "skills", "empty-skill"))).toBe(false);
@@ -228,7 +228,7 @@ describe("ensureSkillsInstalled — syncs stale single-file skills with bundled 
         update,
       },
       fileService: { get: mock(async () => null) },
-    } as unknown as RouteDeps;
+    } as unknown as SkillsRouteDeps;
 
     await ensureSkillsInstalled(depsMock);
 
@@ -270,7 +270,7 @@ describe("ensureSkillsInstalled — syncs stale single-file skills with bundled 
         update,
       },
       fileService: { get: mock(async () => null) },
-    } as unknown as RouteDeps;
+    } as unknown as SkillsRouteDeps;
 
     await ensureSkillsInstalled(depsMock);
     expect(update).not.toHaveBeenCalled();
@@ -302,7 +302,7 @@ describe("ensureSkillsInstalled — syncs stale single-file skills with bundled 
         update,
       },
       fileService: { get: mock(async () => null) },
-    } as unknown as RouteDeps;
+    } as unknown as SkillsRouteDeps;
 
     await ensureSkillsInstalled(depsMock);
     expect(update).not.toHaveBeenCalled();
@@ -337,7 +337,7 @@ describe("ensureSkillsInstalled — syncs stale single-file skills with bundled 
         update,
       },
       fileService: { get: mock(async () => null) },
-    } as unknown as RouteDeps;
+    } as unknown as SkillsRouteDeps;
 
     await ensureSkillsInstalled(depsMock);
     expect(update).not.toHaveBeenCalled();
@@ -368,7 +368,7 @@ describe("ensureSkillsInstalled — syncs stale single-file skills with bundled 
       fileService: {
         get: mock(async () => null),
       },
-    } as unknown as RouteDeps;
+    } as unknown as SkillsRouteDeps;
 
     await ensureSkillsInstalled(depsMock);
 

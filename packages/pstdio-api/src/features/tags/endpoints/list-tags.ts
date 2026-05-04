@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { TagsRouteDeps } from "../deps";
 import { tagResponseSchema } from "../dto";
 
 export const listTagsRoute = createRoute({
@@ -24,7 +24,7 @@ export const listTagsRoute = createRoute({
   },
 });
 
-export const listTagsHandler = (deps: RouteDeps): AppRouteHandler<typeof listTagsRoute> => {
+export const listTagsHandler = (deps: TagsRouteDeps): AppRouteHandler<typeof listTagsRoute> => {
   return async (c) => {
     const { projectId } = c.req.valid("param");
     const tags = await deps.tagService.listWithOptions(projectId);

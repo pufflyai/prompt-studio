@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AgentId } from "pstdio-agents";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { AgentsRouteDeps } from "../deps";
 import { agentModelsListResponseSchema } from "../dto";
 
 const agentIdParamSchema = z
@@ -31,7 +31,7 @@ export const listAgentModelsRoute = createRoute({
   },
 });
 
-export const listAgentModelsHandler = (deps: RouteDeps): AppRouteHandler<typeof listAgentModelsRoute> => {
+export const listAgentModelsHandler = (deps: AgentsRouteDeps): AppRouteHandler<typeof listAgentModelsRoute> => {
   return (c) => {
     const { agentId } = c.req.valid("param");
     const agent = deps.agentRegistry.get(agentId as AgentId);

@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { AgentsRouteDeps } from "../deps";
 import { agentConfigListResponseSchema } from "../dto";
 import { setupInstalledAgents } from "../setup-installed-agents";
 
@@ -29,7 +29,7 @@ export const setupAvailableAgentsRoute = createRoute({
   },
 });
 
-export const setupAvailableAgentsHandler = (deps: RouteDeps): AppRouteHandler<typeof setupAvailableAgentsRoute> => {
+export const setupAvailableAgentsHandler = (deps: AgentsRouteDeps): AppRouteHandler<typeof setupAvailableAgentsRoute> => {
   return async (c) => {
     const { default_agent_id } = c.req.valid("json");
     const updated = await setupInstalledAgents(deps, default_agent_id);

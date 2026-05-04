@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { attemptStatusSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { AttemptStatusesRouteDeps } from "../deps";
 
 const attemptStatusResponseSchema = attemptStatusSchema;
 
@@ -21,7 +21,7 @@ export const listAttemptStatusesRoute = createRoute({
   },
 });
 
-export const listAttemptStatusesHandler = (deps: RouteDeps): AppRouteHandler<typeof listAttemptStatusesRoute> => {
+export const listAttemptStatusesHandler = (deps: AttemptStatusesRouteDeps): AppRouteHandler<typeof listAttemptStatusesRoute> => {
   return async (c) => {
     const { projectId } = c.req.valid("param");
     const rows = await deps.attemptStatusService.list(projectId);

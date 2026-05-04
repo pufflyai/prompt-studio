@@ -23,6 +23,10 @@ export interface ReadinessChecks {
   storage: boolean;
 }
 
+// Master container for the API's services. Per-feature subsets live in
+// `features/<name>/deps.ts` as Pick<RouteDeps, ...> aliases. Route factories
+// and handlers should accept the narrow per-feature deps so adding a service
+// here does not silently widen every feature's surface.
 export interface RouteDeps {
   filesRoot: string;
   readiness: ReadinessChecks;

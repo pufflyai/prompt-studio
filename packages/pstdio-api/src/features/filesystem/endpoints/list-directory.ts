@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { FilesystemRouteDeps } from "../deps";
 
 const listDirectoryQuerySchema = z
   .object({
@@ -69,7 +69,7 @@ export const listDirectoryRoute = createRoute({
   },
 });
 
-export const listDirectoryHandler = (_deps: RouteDeps): AppRouteHandler<typeof listDirectoryRoute> => {
+export const listDirectoryHandler = (_deps: FilesystemRouteDeps): AppRouteHandler<typeof listDirectoryRoute> => {
   return async (c) => {
     const { path } = c.req.valid("query");
     const targetDirectory = resolveDirectoryPath(path);

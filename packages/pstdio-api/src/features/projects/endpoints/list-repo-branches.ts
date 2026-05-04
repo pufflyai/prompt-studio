@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { listBranches } from "pstdio-wt";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { ProjectsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
 
 const branchResponseSchema = z.object({
@@ -35,7 +35,7 @@ export const listRepoBranchesRoute = createRoute({
   },
 });
 
-export const listRepoBranchesHandler = (deps: RouteDeps): AppRouteHandler<typeof listRepoBranchesRoute> => {
+export const listRepoBranchesHandler = (deps: ProjectsRouteDeps): AppRouteHandler<typeof listRepoBranchesRoute> => {
   return async (c) => {
     const { repoId } = c.req.valid("param");
 

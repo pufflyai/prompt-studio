@@ -1,6 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
-import type { RouteDeps } from "../deps";
+import type { SessionsRouteDeps } from "./deps";
 import { approveSessionHandler, approveSessionRoute } from "./endpoints/approve-session";
 import { archiveSessionHandler, archiveSessionRoute } from "./endpoints/archive-session";
 import { createSessionHandler, createSessionRoute } from "./endpoints/create-session";
@@ -13,7 +13,7 @@ import { resolveSessionIdHandler, resolveSessionIdRoute } from "./endpoints/reso
 import { streamSessionHandler } from "./endpoints/stream-session";
 import { updateSessionStatusHandler, updateSessionStatusRoute } from "./endpoints/update-session-status";
 
-export const createSessionRoutes = (deps: RouteDeps) => {
+export const createSessionRoutes = (deps: SessionsRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
 
   routes.openapi(createSessionRoute, createSessionHandler(deps));

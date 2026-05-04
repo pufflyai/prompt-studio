@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { AgentsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
 
 export const removeAgentRoute = createRoute({
@@ -27,7 +27,7 @@ export const removeAgentRoute = createRoute({
   },
 });
 
-export const removeAgentHandler = (deps: RouteDeps): AppRouteHandler<typeof removeAgentRoute> => {
+export const removeAgentHandler = (deps: AgentsRouteDeps): AppRouteHandler<typeof removeAgentRoute> => {
   return async (c) => {
     const { agentId } = c.req.valid("param");
     const config = await deps.agentConfigService.get(agentId);

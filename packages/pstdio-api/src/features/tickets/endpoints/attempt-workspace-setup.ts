@@ -3,12 +3,12 @@ import { copyFile, mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { createWorktree, resolveLatestBase } from "pstdio-wt";
-import type { RouteDeps } from "../../deps";
+import type { TicketsRouteDeps } from "../deps";
 import { withHookSessionClient } from "../../hooks/hook-client";
 import { isAgentEnabledForProject, parseProjectSelectedAgents } from "../../projects/selected-agents";
 
 type AttemptMode = "worktree" | "current_branch";
-type WorkspaceRecord = Awaited<ReturnType<RouteDeps["workspaceService"]["create"]>>;
+type WorkspaceRecord = Awaited<ReturnType<TicketsRouteDeps["workspaceService"]["create"]>>;
 
 const resolveWorkspacesRoot = () => {
   const configured = process.env.PSTDIO_WORKSPACES_DIR?.trim();
@@ -30,7 +30,7 @@ const copyPstdioConfig = async (repoPath: string, worktreePath: string) => {
 };
 
 const runPostCreateHook = async (
-  deps: Pick<RouteDeps, "fileService" | "workspaceService" | "pluginService">,
+  deps: Pick<TicketsRouteDeps, "fileService" | "workspaceService" | "pluginService">,
   input: {
     repoPath: string;
     worktreePath: string;
@@ -61,7 +61,7 @@ const runPostCreateHook = async (
 };
 
 export const resolveWorkspaceGitMetadata = async (
-  deps: Pick<RouteDeps, "pluginService">,
+  deps: Pick<TicketsRouteDeps, "pluginService">,
   input: {
     mode: AttemptMode;
     worktreeMode: AttemptMode;
@@ -109,7 +109,7 @@ export const resolveWorkspaceGitMetadata = async (
 };
 
 export const awaitPostCreateHook = async (
-  deps: Pick<RouteDeps, "fileService" | "workspaceService" | "eventBus" | "pluginService">,
+  deps: Pick<TicketsRouteDeps, "fileService" | "workspaceService" | "eventBus" | "pluginService">,
   input: {
     mode: AttemptMode;
     worktreeMode: AttemptMode;
@@ -147,7 +147,7 @@ export const awaitPostCreateHook = async (
   }
 };
 
-const emitTicketWorkspaceLink = async (deps: Pick<RouteDeps, "workspaceService" | "eventBus">, workspaceId: string) => {
+const emitTicketWorkspaceLink = async (deps: Pick<TicketsRouteDeps, "workspaceService" | "eventBus">, workspaceId: string) => {
   const ticketWorkspaceLink = await deps.workspaceService.getTicketWorkspaceLink(workspaceId);
   if (ticketWorkspaceLink) {
     deps.eventBus.emit("ticket_workspaces", "set", ticketWorkspaceLink);
@@ -155,7 +155,7 @@ const emitTicketWorkspaceLink = async (deps: Pick<RouteDeps, "workspaceService" 
 };
 
 export const createAttemptWorkspace = async (
-  deps: Pick<RouteDeps, "workspaceService" | "eventBus" | "fileService" | "pluginService">,
+  deps: Pick<TicketsRouteDeps, "workspaceService" | "eventBus" | "fileService" | "pluginService">,
   input: {
     projectId: string;
     ticketId: string;
@@ -206,7 +206,7 @@ export const createAttemptWorkspace = async (
 };
 
 export const resolvePrompt = async (
-  deps: Pick<RouteDeps, "fileService">,
+  deps: Pick<TicketsRouteDeps, "fileService">,
   inputPrompt: string | null | undefined,
   fileId: string | null,
   fallbackTitle: string,
@@ -227,7 +227,7 @@ export const resolvePrompt = async (
 
 export const resolveAgentId = async (
   deps: {
-    agentConfigService: Pick<RouteDeps["agentConfigService"], "list">;
+    agentConfigService: Pick<TicketsRouteDeps["agentConfigService"], "list">;
     projectService: {
       get: (projectId: string) => Promise<{ selected_agents?: string | null } | null>;
     };

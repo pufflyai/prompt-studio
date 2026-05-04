@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { HealthRouteDeps } from "../deps";
 import { readyResponseSchema } from "../dto";
 
 export const getReadyzRoute = createRoute({
@@ -32,7 +32,7 @@ export const getReadyzRoute = createRoute({
   },
 });
 
-export const getReadyzHandler = (deps: RouteDeps): AppRouteHandler<typeof getReadyzRoute> => {
+export const getReadyzHandler = (deps: HealthRouteDeps): AppRouteHandler<typeof getReadyzRoute> => {
   return async (c) => {
     const { database, storage } = deps.readiness;
     const ok = database && storage;

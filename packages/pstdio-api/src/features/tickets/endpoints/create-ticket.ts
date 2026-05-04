@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import { emitActivityEvent } from "../../activity/activity-events";
-import type { RouteDeps } from "../../deps";
+import type { TicketsRouteDeps } from "../deps";
 import { fireTicketHook, fireTicketHookAsync } from "../../hooks/ticket-hooks";
 import { buildTicketPayload } from "../build-ticket-payload";
 import { createTicketBodySchema, ticketResponseSchema } from "../dto";
@@ -10,11 +10,11 @@ import { extractTitleFromContent } from "../extract-title";
 
 const hookRejectedSchema = z.object({ error: z.string() });
 
-type TicketRecord = NonNullable<Awaited<ReturnType<RouteDeps["ticketService"]["get"]>>>;
+type TicketRecord = NonNullable<Awaited<ReturnType<TicketsRouteDeps["ticketService"]["get"]>>>;
 
 type CreateTicketInput = z.infer<typeof createTicketBodySchema>;
 
-const attachContentToTicket = async (deps: RouteDeps, ticket: TicketRecord, projectId: string, content: string) => {
+const attachContentToTicket = async (deps: TicketsRouteDeps, ticket: TicketRecord, projectId: string, content: string) => {
   const data = Buffer.from(content);
   const file = await deps.fileService.upload({
     project_id: projectId,
@@ -31,18 +31,18 @@ const attachContentToTicket = async (deps: RouteDeps, ticket: TicketRecord, proj
   return updated;
 };
 
-const assignTags = async (deps: RouteDeps, ticketId: string, tagIds: string[]) => {
+const assignTags = async (deps: TicketsRouteDeps, ticketId: string, tagIds: string[]) => {
   await deps.ticketService.assignTagOptions(ticketId, tagIds);
   const newAssignments = await deps.ticketService.listTagAssignments(ticketId);
   for (const row of newAssignments) deps.eventBus.emit("ticket_tag_assignments", "set", row);
 };
 
-const ensureProjectExists = async (deps: RouteDeps, projectId: string) => {
+const ensureProjectExists = async (deps: TicketsRouteDeps, projectId: string) => {
   return deps.projectService.get(projectId);
 };
 
 const resolveCreateStatusId = async (
-  deps: Pick<RouteDeps, "statusService">,
+  deps: Pick<TicketsRouteDeps, "statusService">,
   projectId: string,
   statusId: string | null | undefined,
 ) => {
@@ -52,7 +52,7 @@ const resolveCreateStatusId = async (
 };
 
 const resolveStatusName = async (
-  deps: Pick<RouteDeps, "statusService">,
+  deps: Pick<TicketsRouteDeps, "statusService">,
   projectId: string,
   statusId: string | null | undefined,
 ) => {
@@ -62,7 +62,7 @@ const resolveStatusName = async (
 };
 
 const runPreCreateHook = async (
-  deps: RouteDeps,
+  deps: TicketsRouteDeps,
   input: Omit<CreateTicketInput, "content" | "tag_ids"> & { status_id?: string | null },
   content: string | undefined,
   tagIds: string[] | undefined,
@@ -92,7 +92,7 @@ const runPreCreateHook = async (
 };
 
 const finalizeCreatedTicket = async (
-  deps: RouteDeps,
+  deps: TicketsRouteDeps,
   ticket: TicketRecord,
   input: Omit<CreateTicketInput, "content" | "tag_ids">,
   content: string | undefined,
@@ -155,7 +155,7 @@ export const createTicketRoute = createRoute({
   },
 });
 
-export const createTicketHandler = (deps: RouteDeps): AppRouteHandler<typeof createTicketRoute> => {
+export const createTicketHandler = (deps: TicketsRouteDeps): AppRouteHandler<typeof createTicketRoute> => {
   return async (c) => {
     const { tag_ids, content, ...input } = c.req.valid("json");
 

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { ActionTriggerContext, TargetType } from "@pstdio/sdk/plugins";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { ActionsRouteDeps } from "../deps";
 
 const actionParamValueSchema = z.union([z.string(), z.record(z.string(), z.string())]);
 
@@ -43,7 +43,7 @@ export const executeActionRoute = createRoute({
   },
 });
 
-const resolveTarget = async (deps: RouteDeps, projectId: string, targetType: TargetType, targetId: string) => {
+const resolveTarget = async (deps: ActionsRouteDeps, projectId: string, targetType: TargetType, targetId: string) => {
   if (targetType === "ticket") {
     return (await deps.ticketService.get(targetId)) ?? deps.ticketService.getByShorthand(projectId, targetId);
   }
@@ -53,7 +53,7 @@ const resolveTarget = async (deps: RouteDeps, projectId: string, targetType: Tar
   return (await deps.workspaceService.get(targetId)) ?? deps.workspaceService.getByShorthand(projectId, targetId);
 };
 
-const resolvePrompts = async (deps: RouteDeps, projectId: string) => {
+const resolvePrompts = async (deps: ActionsRouteDeps, projectId: string) => {
   const templates = await deps.templateService.list(projectId);
   const promptTemplates = templates.filter((template) => template.template_type === "prompt");
 
@@ -73,7 +73,7 @@ const resolvePrompts = async (deps: RouteDeps, projectId: string) => {
   return Object.fromEntries(promptEntries.filter((entry) => entry !== null));
 };
 
-export const executeActionHandler = (deps: RouteDeps): AppRouteHandler<typeof executeActionRoute> => {
+export const executeActionHandler = (deps: ActionsRouteDeps): AppRouteHandler<typeof executeActionRoute> => {
   return async (c) => {
     const { projectId, actionKey } = c.req.valid("param");
     const { target_type, target_id, params: paramValues } = c.req.valid("json");

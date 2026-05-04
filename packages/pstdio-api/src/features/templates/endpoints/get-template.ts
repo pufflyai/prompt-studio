@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { TemplatesRouteDeps } from "../deps";
 import { notFoundResponseSchema, templateWithContentResponseSchema } from "../dto";
 
 export const getTemplateRoute = createRoute({
@@ -30,7 +30,7 @@ export const getTemplateRoute = createRoute({
   },
 });
 
-export const getTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof getTemplateRoute> => {
+export const getTemplateHandler = (deps: TemplatesRouteDeps): AppRouteHandler<typeof getTemplateRoute> => {
   return async (c) => {
     const { projectId, name } = c.req.valid("param");
     const template = await deps.templateService.getByName(projectId, name);

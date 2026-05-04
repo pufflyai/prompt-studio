@@ -1,5 +1,5 @@
 import { removeWorktreeAndBranch } from "pstdio-wt";
-import type { RouteDeps } from "../deps";
+import type { WorkspacesRouteDeps } from "./deps";
 
 type WorkspaceForCleanup = {
   project_id: string;
@@ -9,7 +9,7 @@ type WorkspaceForCleanup = {
 };
 
 export const cleanupWorkspaceWorktree = async (
-  deps: Pick<RouteDeps, "repoService">,
+  deps: Pick<WorkspacesRouteDeps, "repoService">,
   workspace: WorkspaceForCleanup,
 ) => {
   if (!workspace.worktree_path) return false;

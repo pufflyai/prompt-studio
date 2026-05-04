@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { SessionsRouteDeps } from "../deps";
 import { notFoundResponseSchema, sessionResponseSchema } from "../dto";
 
 export const getSessionRoute = createRoute({
@@ -28,7 +28,7 @@ export const getSessionRoute = createRoute({
   },
 });
 
-export const getSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof getSessionRoute> => {
+export const getSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<typeof getSessionRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const session = await deps.sessionService.get(id);

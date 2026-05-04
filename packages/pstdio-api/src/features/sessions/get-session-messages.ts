@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import type { AgentId, SessionMessage } from "pstdio-agents";
-import type { RouteDeps } from "../deps";
+import type { SessionsRouteDeps } from "./deps";
 import { buildMessagesFromPatches } from "./session-messages";
 
-export const getSessionMessages = async (sessionId: string, deps: RouteDeps): Promise<SessionMessage[]> => {
+export const getSessionMessages = async (sessionId: string, deps: SessionsRouteDeps): Promise<SessionMessage[]> => {
   const session = await deps.sessionService.get(sessionId);
   if (!session) return [];
 
@@ -24,14 +24,14 @@ export const getSessionMessages = async (sessionId: string, deps: RouteDeps): Pr
   return persistedMessages;
 };
 
-const getPersistedMessages = async (sessionFileId: string, deps: RouteDeps) => {
+const getPersistedMessages = async (sessionFileId: string, deps: SessionsRouteDeps) => {
   const file = await deps.fileService.get(sessionFileId);
   if (!file) return [];
 
   return JSON.parse(readFileSync(file.storage_path, "utf-8")) as SessionMessage[];
 };
 
-const getAgentMessages = async (agentId: string, agentSessionId: string, cwd: string | null, deps: RouteDeps) => {
+const getAgentMessages = async (agentId: string, agentSessionId: string, cwd: string | null, deps: SessionsRouteDeps) => {
   const agent = deps.agentRegistry.get(agentId as AgentId);
   if (!agent) return null;
 

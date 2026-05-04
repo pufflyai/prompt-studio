@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import { emitActivityEvent } from "../../activity/activity-events";
-import type { RouteDeps } from "../../deps";
+import type { SessionsRouteDeps } from "../deps";
 import { createSessionBodySchema, sessionResponseSchema } from "../dto";
 import { resolvePrompt } from "../resolve-prompt";
 import { resolveSessionCwd } from "../resolve-session-cwd";
@@ -35,7 +35,7 @@ export const createSessionRoute = createRoute({
   },
 });
 
-export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof createSessionRoute> => {
+export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<typeof createSessionRoute> => {
   return async (c) => {
     const input = c.req.valid("json");
 

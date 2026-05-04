@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { AgentsRouteDeps } from "../deps";
 import { agentInfoListResponseSchema } from "../dto";
 
 export const listAgentInfoRoute = createRoute({
@@ -20,7 +20,7 @@ export const listAgentInfoRoute = createRoute({
   },
 });
 
-export const listAgentInfoHandler = (deps: RouteDeps): AppRouteHandler<typeof listAgentInfoRoute> => {
+export const listAgentInfoHandler = (deps: AgentsRouteDeps): AppRouteHandler<typeof listAgentInfoRoute> => {
   return (c) => {
     const agents = deps.agentRegistry.list();
     const result = agents.map((agent) => ({

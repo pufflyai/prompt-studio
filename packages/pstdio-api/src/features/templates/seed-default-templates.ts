@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import type { RouteDeps } from "../deps";
+import type { TemplatesRouteDeps } from "./deps";
 
 // Folder name determines template_type (strip trailing 's')
 const TEMPLATE_FOLDERS = ["documents", "prompts", "tickets"] as const;
@@ -97,7 +97,7 @@ const loadTemplateContents = async () => {
   return contents;
 };
 
-export const seedDefaultTemplates = async (deps: RouteDeps, projectId: string) => {
+export const seedDefaultTemplates = async (deps: TemplatesRouteDeps, projectId: string) => {
   const contents = await loadTemplateContents();
   const seeded = [];
 

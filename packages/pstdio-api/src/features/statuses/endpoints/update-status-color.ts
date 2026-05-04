@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { StatusesRouteDeps } from "../deps";
 import { statusResponseSchema } from "../dto";
 
 export const updateStatusColorRoute = createRoute({
@@ -42,7 +42,7 @@ export const updateStatusColorRoute = createRoute({
   },
 });
 
-export const updateStatusColorHandler = (deps: RouteDeps): AppRouteHandler<typeof updateStatusColorRoute> => {
+export const updateStatusColorHandler = (deps: StatusesRouteDeps): AppRouteHandler<typeof updateStatusColorRoute> => {
   return async (c) => {
     const { projectId, id } = c.req.valid("param");
     const input = c.req.valid("json");

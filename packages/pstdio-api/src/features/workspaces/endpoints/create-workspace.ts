@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { WorkspacesRouteDeps } from "../deps";
 import { createWorkspaceBodySchema, workspaceResponseSchema } from "../dto";
 
 export const createWorkspaceRoute = createRoute({
@@ -22,7 +22,7 @@ export const createWorkspaceRoute = createRoute({
   },
 });
 
-export const createWorkspaceHandler = (deps: RouteDeps): AppRouteHandler<typeof createWorkspaceRoute> => {
+export const createWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof createWorkspaceRoute> => {
   return async (c) => {
     const input = c.req.valid("json");
     const workspace = await deps.workspaceService.create(input);

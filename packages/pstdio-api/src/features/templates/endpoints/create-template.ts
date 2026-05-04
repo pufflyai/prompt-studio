@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { TemplatesRouteDeps } from "../deps";
 import { conflictResponseSchema, createTemplateBodySchema, templateResponseSchema } from "../dto";
 
 export const createTemplateRoute = createRoute({
@@ -31,7 +31,7 @@ export const createTemplateRoute = createRoute({
   },
 });
 
-export const createTemplateHandler = (deps: RouteDeps): AppRouteHandler<typeof createTemplateRoute> => {
+export const createTemplateHandler = (deps: TemplatesRouteDeps): AppRouteHandler<typeof createTemplateRoute> => {
   return async (c) => {
     const { projectId } = c.req.valid("param");
     const { name, template_type, content, is_default } = c.req.valid("json");

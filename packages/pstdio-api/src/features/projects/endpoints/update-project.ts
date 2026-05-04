@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { ProjectsRouteDeps } from "../deps";
 import { notFoundResponseSchema, projectResponseSchema, toProjectResponse, updateProjectBodySchema } from "../dto";
 
 export const updateProjectRoute = createRoute({
@@ -31,7 +31,7 @@ export const updateProjectRoute = createRoute({
   },
 });
 
-export const updateProjectHandler = (deps: RouteDeps): AppRouteHandler<typeof updateProjectRoute> => {
+export const updateProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<typeof updateProjectRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const body = c.req.valid("json");

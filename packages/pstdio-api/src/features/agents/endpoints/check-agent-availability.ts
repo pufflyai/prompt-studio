@@ -1,7 +1,7 @@
 import { createRoute } from "@hono/zod-openapi";
 import type { AgentId } from "pstdio-agents";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { AgentsRouteDeps } from "../deps";
 import { availabilitySchema, checkAgentAvailabilityQuerySchema } from "../dto";
 
 export const checkAgentAvailabilityRoute = createRoute({
@@ -24,7 +24,7 @@ export const checkAgentAvailabilityRoute = createRoute({
   },
 });
 
-export const checkAgentAvailabilityHandler = (deps: RouteDeps): AppRouteHandler<typeof checkAgentAvailabilityRoute> => {
+export const checkAgentAvailabilityHandler = (deps: AgentsRouteDeps): AppRouteHandler<typeof checkAgentAvailabilityRoute> => {
   return (c) => {
     const { agent: agentId } = c.req.valid("query");
     const agent = deps.agentRegistry.get(agentId as AgentId);

@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { getWorktreeDiff } from "pstdio-wt";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { WorkspacesRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
 import { resolveBase, resolveHeadLabel } from "../resolve-base";
 
@@ -52,7 +52,7 @@ export const getWorkspaceDiffRoute = createRoute({
   },
 });
 
-export const getWorkspaceDiffHandler = (deps: RouteDeps): AppRouteHandler<typeof getWorkspaceDiffRoute> => {
+export const getWorkspaceDiffHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof getWorkspaceDiffRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const { mode } = c.req.valid("query");

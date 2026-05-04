@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { RouteDeps } from "../../deps";
+import type { TicketsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
 
 export const getTicketFileContentRoute = createRoute({
@@ -34,7 +34,7 @@ export const getTicketFileContentRoute = createRoute({
   },
 });
 
-export const getTicketFileContentHandler = (deps: RouteDeps): AppRouteHandler<typeof getTicketFileContentRoute> => {
+export const getTicketFileContentHandler = (deps: TicketsRouteDeps): AppRouteHandler<typeof getTicketFileContentRoute> => {
   return async (c) => {
     const { id, fileId } = c.req.valid("param");
     const ticket = await deps.ticketService.get(id);
