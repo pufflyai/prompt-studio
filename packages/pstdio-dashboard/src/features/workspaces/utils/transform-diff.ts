@@ -1,5 +1,5 @@
 import type { Diff } from "@pstdio/ui";
-import type { ApiFileDiff } from "@/features/ticket-list/data/api/types";
+import type { ApiFileDiff } from "@/shared/api-types";
 
 export const transformFileDiffs = (files: ApiFileDiff[]): Diff[] =>
   files.map((file) => ({

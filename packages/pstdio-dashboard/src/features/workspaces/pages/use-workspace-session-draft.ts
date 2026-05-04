@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useProjectSettingsStore } from "@/features/project-settings/store";
+import { useProjectSettingsStore } from "@/shared/stores/project-settings";
 import { resolvePendingWorkspaceSessionWorkspaceId } from "./workspace-page.utils";
 
 export const useWorkspaceSessionDraft = (selectedWorkspaceId: string | null) => {

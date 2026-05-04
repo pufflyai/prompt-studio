@@ -3,7 +3,7 @@ import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { ChevronRight, Circle, Paperclip } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useProjectSettingsStore } from "@/features/project-settings/store";
+import { useProjectSettingsStore } from "@/shared/stores/project-settings";
 import { SingleTagSelector } from "@/features/ticket/components/single-tag-selector";
 import type { TicketStatus, TicketStatusOption, TicketTag } from "@/features/ticket-list/types";
 import { resolveTicketStatusForeground } from "@/features/ticket-list/utils/status-color";

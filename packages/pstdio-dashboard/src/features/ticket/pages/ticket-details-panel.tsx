@@ -11,7 +11,7 @@ import {
   toSidebarContextMenuItems,
 } from "@/features/plugin-actions/hooks/use-resource-context-menu";
 import { useProject } from "@/features/project/hooks/use-project";
-import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/features/project-settings/store";
+import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
 import { useArchiveSession } from "@/features/sessions/hooks/use-archive-session";
 import { buildSessionOverflowActions } from "@/features/sessions/session-actions";
 import { uploadTicketFile } from "@/features/ticket-list/data/api";

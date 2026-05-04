@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useProjectRepositories } from "@/features/project/hooks/use-project";
 import { useRepoBranches } from "@/features/project/hooks/use-repo-branches";
 import type { RepoBranch } from "@/features/project/types";
-import { useProjectSettingsStore } from "@/features/project-settings/store";
+import { useProjectSettingsStore } from "@/shared/stores/project-settings";
 import { useSessionWorkspace } from "@/features/sessions/hooks/use-session-workspace";
 import { useWorkspace } from "@/features/workspaces/hooks/use-workspace";
 import { RepoBrowser } from "./repo-browser";

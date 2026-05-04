@@ -10,7 +10,7 @@ import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plug
 import { buildResourceContextMenuActions } from "@/features/plugin-actions/hooks/use-resource-context-menu";
 import { ProjectSidebar } from "@/features/project/components/project-sidebar";
 import { useProject } from "@/features/project/hooks/use-project";
-import { useProjectSettingsStore } from "@/features/project-settings/store";
+import { useProjectSettingsStore } from "@/shared/stores/project-settings";
 import { openTicketSessionBubble } from "@/features/ticket/utils/open-ticket-session-bubble";
 import { useCreateProjectTicket } from "@/features/ticket-list/hooks/use-create-project-ticket";
 import {

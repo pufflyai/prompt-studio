@@ -9,7 +9,7 @@ import {
   resolvePreferredAgentModel,
 } from "@/features/agents/components/agent-model-selection";
 import { useAgentSettings } from "@/features/agents/hooks/use-agent-settings";
-import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/features/project-settings/store";
+import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
 import { useTicketAttemptDiffSummary } from "@/features/ticket/hooks/use-ticket-attempt-diff-summary";
 import { RepoBrowserContainer } from "@/features/workspaces/components/repo-browser.container";
 import { useCreateProjectSession } from "../hooks/use-create-project-session";

@@ -1,5 +1,8 @@
 import type { TicketListItem } from "pstdio-api/dto";
+import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/shared/api-types";
 import type { TicketStatus, TicketStatusColor } from "@/features/ticket-list/types";
+
+export type { ApiFileDiff, ApiWorkspaceArtifact };
 
 export type ApiTicketSubTicket = {
   id: string;
@@ -32,32 +35,9 @@ export type ApiTicketFile = {
   created_at: string;
 };
 
-export type ApiWorkspaceArtifact = {
-  id: string;
-  file_id: string;
-  file_name: string;
-  file_kind: string;
-  relative_path: string;
-  mime_type: string | null;
-  size_bytes: number;
-  created_at: string;
-  updated_at: string;
-};
-
 export type ApiTicketFilesResponse = {
   files: ApiTicketFile[];
   artifacts: ApiWorkspaceArtifact[];
-};
-
-export type ApiFileDiff = {
-  filePath: string;
-  change: "added" | "deleted" | "modified" | "renamed" | "copied" | "permissionChange";
-  additions: number;
-  deletions: number;
-  oldContent: string;
-  newContent: string;
-  oldPath?: string;
-  newPath?: string;
 };
 
 export type ApiTicketAttemptDiff = {

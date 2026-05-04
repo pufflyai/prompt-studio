@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTicketContent } from "@/features/ticket/hooks/use-ticket-content";
 import { isImageFileName } from "@/features/ticket/utils/ticket-file-selection";
-import type { ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
+import type { ApiWorkspaceArtifact } from "@/shared/api-types";
 import type { ChangedFilesViewMode } from "../utils/build-changed-files-tree";
 import { buildWorkspaceChecksContentRequest } from "./workspace-checks-content-request";
 import { type FileIconInfo, FileListPanel, ResizableLeftPanel } from "./workspace-file-list-panel";

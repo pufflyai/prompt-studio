@@ -2,7 +2,7 @@ import { Box, Flex } from "@chakra-ui/react";
 import type { Diff } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
 import type { ReactNode } from "react";
-import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
+import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/shared/api-types";
 import { WorkspaceDiffPanel } from "./workspace-diff-panel";
 
 const sampleChangedFiles: ApiFileDiff[] = [

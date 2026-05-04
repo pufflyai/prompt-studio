@@ -1,4 +1,4 @@
-import type { CodingAgent } from "@/features/agents/agent-storage";
+import type { CodingAgent } from "@/shared/agent-storage";
 
 export type SessionModalState = "bubble" | "closed" | "attached";
 

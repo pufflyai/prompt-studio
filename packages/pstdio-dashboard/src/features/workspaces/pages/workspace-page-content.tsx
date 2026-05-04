@@ -14,7 +14,7 @@ import { CreateWorkspaceModal } from "@/features/ticket/components/create-worksp
 import { TicketSidebar } from "@/features/ticket/components/ticket-sidebar";
 import { formatTicketBreadcrumbLabel } from "@/features/ticket/utils/ticket-breadcrumb";
 import type { buildSelectableTicketFiles } from "@/features/ticket/utils/ticket-file-selection";
-import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
+import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/shared/api-types";
 import type { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
 import type { TicketSubTicket } from "@/features/ticket-list/types";
 import type { transformFileDiffs } from "@/features/workspaces/utils/transform-diff";

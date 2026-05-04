@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
-import type { CodingAgent } from "../agent-storage";
+import type { CodingAgent } from "@/shared/agent-storage";
 import type { AgentConfig } from "../types";
 
 type AgentAvailability = {

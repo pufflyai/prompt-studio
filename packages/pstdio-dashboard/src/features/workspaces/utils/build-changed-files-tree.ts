@@ -1,4 +1,4 @@
-import type { ApiFileDiff } from "@/features/ticket-list/data/api/types";
+import type { ApiFileDiff } from "@/shared/api-types";
 
 export type ChangedFilesViewMode = "nested" | "flat";
 

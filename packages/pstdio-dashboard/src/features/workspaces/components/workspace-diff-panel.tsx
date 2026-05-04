@@ -3,7 +3,7 @@ import { type Diff, DiffDrawer, EmptyState, Header } from "@pstdio/ui";
 import { FileDiffIcon, ListTree, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/features/ticket-list/data/api/types";
+import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/shared/api-types";
 import { normalizeWorkspacePageTab, type WorkspacePageTab } from "@/features/workspaces/pages/workspace-page-tab";
 import { type ChangedFilesViewMode, collectChangedFilePaths } from "../utils/build-changed-files-tree";
 import { sortDiffs } from "../utils/sort-diffs";

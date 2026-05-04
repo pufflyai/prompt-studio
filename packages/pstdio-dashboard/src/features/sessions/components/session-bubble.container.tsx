@@ -3,7 +3,7 @@ import { BubbleButton, BubblePanel, Tooltip } from "@pstdio/ui";
 import { useParams } from "@tanstack/react-router";
 import { MessageCircle, PenBox } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useProjectSettingsStore } from "@/features/project-settings/store";
+import { useProjectSettingsStore } from "@/shared/stores/project-settings";
 import { useProjectSessions } from "../hooks/use-project-sessions";
 import { SessionChatView } from "./session-chat-view";
 import { SessionSelector } from "./session-selector";

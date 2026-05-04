@@ -1,4 +1,4 @@
-import type { SessionModalState } from "@/features/project-settings/store/types";
+import type { SessionModalState } from "@/shared/stores/project-settings/types";
 
 interface OpenTicketSessionBubbleInput {
   sessionId: string | null;

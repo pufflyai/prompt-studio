@@ -1,7 +1,7 @@
 import { createStore } from "zustand";
 import { createJSONStorage, devtools, persist, subscribeWithSelector } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import { getStoredAgent } from "@/features/agents/agent-storage";
+import { getStoredAgent } from "@/shared/agent-storage";
 import type {
   PersistedProjectSettingsSnapshot,
   ProjectSettingsSnapshot,

@@ -7,7 +7,7 @@ import {
   getStoredAgent,
   setOnboardingComplete,
   setStoredAgent,
-} from "@/features/agents/agent-storage";
+} from "@/shared/agent-storage";
 import { useSetupAvailableAgents } from "@/features/agents/hooks/use-agent-availability";
 import { useAgents } from "@/features/agents/hooks/use-agents";
 import type { AgentInfo } from "@/features/agents/types";
