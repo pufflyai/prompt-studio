@@ -9,6 +9,7 @@ import { listReposHandler, listReposRoute } from "./endpoints/list-repos";
 import { registerRepoHandler, registerRepoRoute } from "./endpoints/register-repo";
 import { removeProjectHandler, removeProjectRoute } from "./endpoints/remove-project";
 import { removeRepoHandler, removeRepoRoute } from "./endpoints/remove-repo";
+import { updateProjectHandler, updateProjectRoute } from "./endpoints/update-project";
 
 export const createProjectRoutes = (deps: RouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
@@ -16,6 +17,7 @@ export const createProjectRoutes = (deps: RouteDeps) => {
   routes.openapi(listProjectsRoute, listProjectsHandler(deps));
   routes.openapi(createProjectRoute, createProjectHandler(deps));
   routes.openapi(getProjectRoute, getProjectHandler(deps));
+  routes.openapi(updateProjectRoute, updateProjectHandler(deps));
   routes.openapi(listReposRoute, listReposHandler(deps));
   routes.openapi(listRepoBranchesRoute, listRepoBranchesHandler(deps));
   routes.openapi(registerRepoRoute, registerRepoHandler(deps));

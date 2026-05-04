@@ -241,7 +241,17 @@
     "skills": "Skills",
     "templates": "Templates",
     "createTemplate": "Create template",
-    "dangerZone": "Danger zone"
+    "dangerZone": "Danger zone",
+    "agents": "Agents",
+    "agentsPanel": {
+      "empty": "No harnesses are enabled for this project.",
+      "defaultBadge": "Project default",
+      "setAsDefault": "Set as project default",
+      "defaultModel": "Default model",
+      "agentDefault": "Agent default",
+      "modelDescription": "Used by createSession when no model is specified.",
+      "missingDefaultWarning": "The selected default harness is no longer available."
+    }
   },
   "list": {
     "projectCreated": "Project created",

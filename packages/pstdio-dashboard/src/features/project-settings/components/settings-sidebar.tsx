@@ -1,6 +1,7 @@
 import { Sidebar, type TreeListNavigateEvent, type TreeListNode, type TreeListSection } from "@pstdio/ui";
 import {
   AlertTriangle,
+  Bot,
   CircleDot,
   FileText,
   GitFork,
@@ -31,6 +32,7 @@ export type SettingsSection =
   | "plugins"
   | "danger-zone"
   | "repositories"
+  | "agents"
   | { tag: string }
   | { template: string }
   | { skill: string };
@@ -53,6 +55,7 @@ const resolveActiveNodeId = (activeSection: SettingsSection | null) => {
   if (activeSection === "attempt-statuses") return "attempt-statuses";
   if (activeSection === "tags") return "tags";
   if (activeSection === "repositories") return "repositories";
+  if (activeSection === "agents") return "agents";
   if (activeSection === "plugins") return "plugins";
   if (activeSection === "danger-zone") return "danger-zone";
   if (typeof activeSection === "object" && "tag" in activeSection) return `tag:${activeSection.tag}`;
@@ -112,6 +115,16 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
         icon: <GitFork size={14} />,
         isNavigable: true,
         navigationIntent: { id: "select", payload: "repositories" },
+      },
+    ];
+
+    const agentNodes: TreeListNode[] = [
+      {
+        id: "agents",
+        label: t("projectSettings.agents"),
+        icon: <Bot size={14} />,
+        isNavigable: true,
+        navigationIntent: { id: "select", payload: "agents" },
       },
     ];
 
@@ -186,6 +199,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
         ],
       },
       { id: "repositories", nodes: repositoryNodes },
+      { id: "agents", nodes: agentNodes },
       { id: "plugins", label: "Plugins", nodes: pluginNodes },
       { id: "danger", nodes: dangerNodes },
     ];
@@ -197,7 +211,14 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
 
     if (intent.id === "select") {
       onSelectSection(
-        intent.payload as "ticket-statuses" | "attempt-statuses" | "repositories" | "plugins" | "tags" | "danger-zone",
+        intent.payload as
+          | "ticket-statuses"
+          | "attempt-statuses"
+          | "repositories"
+          | "agents"
+          | "plugins"
+          | "tags"
+          | "danger-zone",
       );
     }
 

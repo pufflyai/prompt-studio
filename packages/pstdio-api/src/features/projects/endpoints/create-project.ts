@@ -3,7 +3,7 @@ import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { seedDefaultSkills } from "../../skills/seed-default-skills";
 import { seedDefaultTemplates } from "../../templates/seed-default-templates";
-import { createProjectBodySchema, projectResponseSchema } from "../dto";
+import { createProjectBodySchema, projectResponseSchema, toProjectResponse } from "../dto";
 
 export const createProjectRoute = createRoute({
   method: "post",
@@ -47,7 +47,7 @@ export const createProjectHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
 
       for (const template of templates) deps.eventBus.emit("templates", "set", template);
 
-      return c.json(project, 201);
+      return c.json(toProjectResponse(project), 201);
     } catch (error) {
       await deps.projectService.hardDelete(project.id);
       throw error;

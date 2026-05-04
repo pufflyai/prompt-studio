@@ -2,11 +2,11 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import { emitActivityEvent } from "../../activity/activity-events";
 import type { RouteDeps } from "../../deps";
-import { isAgentEnabledForProject, parseProjectSelectedAgents } from "../../projects/selected-agents";
 import { createSessionBodySchema, sessionResponseSchema } from "../dto";
 import { resolvePrompt } from "../resolve-prompt";
 import { resolveSessionCwd } from "../resolve-session-cwd";
 import { spawnAgentSession } from "../spawn-agent";
+import { resolveCreateSessionAgent, resolveCreateSessionModel } from "./resolve-create-session";
 
 export const createSessionRoute = createRoute({
   method: "post",
@@ -35,30 +35,6 @@ export const createSessionRoute = createRoute({
   },
 });
 
-const resolveCreateSessionAgent = async (
-  inputAgent: string | undefined,
-  deps: RouteDeps,
-  project: Awaited<ReturnType<RouteDeps["projectService"]["get"]>>,
-): Promise<{ type: "error"; error: string } | { type: "ok"; agentId: string | undefined }> => {
-  if (inputAgent) {
-    if (project && !isAgentEnabledForProject(project, inputAgent)) {
-      return { type: "error", error: `Agent '${inputAgent}' is not enabled for this project.` };
-    }
-
-    return { type: "ok", agentId: inputAgent };
-  }
-
-  const configuredAgents = await deps.agentConfigService.list();
-  const selectedAgents = project ? parseProjectSelectedAgents(project) : [];
-  const availableConfiguredAgents =
-    selectedAgents.length === 0
-      ? configuredAgents
-      : configuredAgents.filter((config) => selectedAgents.includes(config.agent_id));
-  const defaultAgent = availableConfiguredAgents.find((config) => config.is_default) ?? availableConfiguredAgents[0];
-
-  return { type: "ok", agentId: defaultAgent?.agent_id };
-};
-
 export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof createSessionRoute> => {
   return async (c) => {
     const input = c.req.valid("json");
@@ -80,7 +56,8 @@ export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
     }
 
     const cwd = await resolveSessionCwd(deps, input.project_id, resolvedWorkspaceId);
-    const resolvedAgent = await resolveCreateSessionAgent(input.agent, deps, project);
+    const configuredAgents = await deps.agentConfigService.list();
+    const resolvedAgent = resolveCreateSessionAgent(input.agent, project, configuredAgents, deps.agentRegistry);
 
     if (resolvedAgent.type === "error") {
       return c.json({ error: resolvedAgent.error }, 400);
@@ -91,6 +68,8 @@ export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
     if (!agentId) {
       return c.json({ error: "No agent configured. Set a default agent with 'pstdio agents setup' first." }, 400);
     }
+
+    const resolvedModel = resolveCreateSessionModel(input.model, project, agentId, deps.agentRegistry);
 
     const prompt = await resolvePrompt(input, input.project_id, deps);
 
@@ -125,7 +104,7 @@ export const createSessionHandler = (deps: RouteDeps): AppRouteHandler<typeof cr
         agentId,
         prompt,
         title: input.title,
-        model: input.model,
+        model: resolvedModel,
         cwd,
       },
       deps,

@@ -122,6 +122,52 @@ describe("POST /v1/sessions", () => {
     expect(await createRes.json()).toEqual({ error: "Agent 'fake' is not enabled for this project." });
   });
 
+  test("uses the project default agent when set and overrides the global default", async () => {
+    const projectRes = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Project Default Agent" }),
+    });
+    expect(projectRes.status).toBe(201);
+    const project = await projectRes.json();
+
+    const setupGlobalDefault = await app.request("/v1/agents", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ agent_id: "opencode" }),
+    });
+    expect(setupGlobalDefault.status).toBe(201);
+
+    const setupFake = await app.request("/v1/agents", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ agent_id: "fake" }),
+    });
+    expect(setupFake.status).toBe(201);
+
+    const patchRes = await app.request(`/v1/projects/${project.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ default_agent_id: "fake" }),
+    });
+    expect(patchRes.status).toBe(200);
+
+    const createRes = await app.request("/v1/sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        project_id: project.id,
+        title: "Project default agent session",
+        prompt: "run fake flow",
+      }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json();
+
+    const session = await waitForSessionStatus(created.id, "completed");
+    expect(session.agent).toBe("fake");
+  });
+
   test("uses the project's enabled agent when global default is outside project selection", async () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",

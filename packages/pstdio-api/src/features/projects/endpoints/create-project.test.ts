@@ -62,7 +62,9 @@ describe("POST /v1/projects", () => {
     const body = await res.json();
     expect(body.name).toBe("Test Project");
     expect(body.id).toBeDefined();
-    expect(body.selected_agents).toBe('["opencode"]');
+    expect(body.selected_agents).toEqual(["opencode"]);
+    expect(body.default_agent_id).toBeNull();
+    expect(body.default_agent_model).toBeNull();
   });
 
   test("returns 400 when request body contains unknown keys", async () => {

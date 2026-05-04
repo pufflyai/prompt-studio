@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
-import { notFoundResponseSchema, projectResponseSchema } from "../dto";
+import { notFoundResponseSchema, projectResponseSchema, toProjectResponse } from "../dto";
 
 export const getProjectRoute = createRoute({
   method: "get",
@@ -37,6 +37,6 @@ export const getProjectHandler = (deps: RouteDeps): AppRouteHandler<typeof getPr
       return c.json({ error: "Project not found" }, 404);
     }
 
-    return c.json(project, 200);
+    return c.json(toProjectResponse(project), 200);
   };
 };

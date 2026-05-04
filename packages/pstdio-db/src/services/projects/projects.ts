@@ -121,6 +121,8 @@ export const createProjectsDBService = (db: DbClient) => {
       name: input.name,
       shorthand: deriveShorthand(input.name),
       selected_agents: JSON.stringify(input.selectedAgents ?? []),
+      default_agent_id: null,
+      default_agent_model: null,
       startup_script: null,
       created_at: timestamp,
       updated_at: timestamp,
@@ -202,6 +204,25 @@ export const createProjectsDBService = (db: DbClient) => {
     return updated;
   };
 
+  const setDefaults = async (
+    id: string,
+    input: { default_agent_id?: string | null; default_agent_model?: string | null },
+  ) => {
+    const existing = await get(id);
+    if (!existing) return null;
+
+    const next = {
+      default_agent_id: input.default_agent_id === undefined ? existing.default_agent_id : input.default_agent_id,
+      default_agent_model:
+        input.default_agent_model === undefined ? existing.default_agent_model : input.default_agent_model,
+      updated_at: nowTimestamp(),
+    };
+
+    await db.update(projects).set(next).where(eq(projects.id, id));
+
+    return { ...existing, ...next } satisfies ProjectRecord;
+  };
+
   const remove = async (id: string) => {
     const existing = await get(id);
 
@@ -246,5 +267,16 @@ export const createProjectsDBService = (db: DbClient) => {
     return true;
   };
 
-  return { list, get, create, update, remove, hardDelete, getStartupScript, setStartupScript, clearStartupScript };
+  return {
+    list,
+    get,
+    create,
+    update,
+    setDefaults,
+    remove,
+    hardDelete,
+    getStartupScript,
+    setStartupScript,
+    clearStartupScript,
+  };
 };

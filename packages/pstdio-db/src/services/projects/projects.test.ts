@@ -42,6 +42,43 @@ test("projects service supports basic CRUD", async () => {
   expect(await projects.get(created.id)).toBeNull();
 });
 
+test("projects setDefaults persists default agent and model", async () => {
+  const { db, close: close3 } = await createDb({ path: ":memory:" });
+  const projectsService = createProjectsDBService(db);
+
+  const project = await projectsService.create({ name: "Defaults" });
+  expect(project.default_agent_id).toBeNull();
+  expect(project.default_agent_model).toBeNull();
+
+  const updated = await projectsService.setDefaults(project.id, {
+    default_agent_id: "claude-code",
+    default_agent_model: "claude-3-5-sonnet",
+  });
+
+  expect(updated?.default_agent_id).toBe("claude-code");
+  expect(updated?.default_agent_model).toBe("claude-3-5-sonnet");
+
+  const cleared = await projectsService.setDefaults(project.id, {
+    default_agent_id: null,
+    default_agent_model: null,
+  });
+
+  expect(cleared?.default_agent_id).toBeNull();
+  expect(cleared?.default_agent_model).toBeNull();
+
+  await close3();
+});
+
+test("projects setDefaults returns null when project missing", async () => {
+  const { db, close: close4 } = await createDb({ path: ":memory:" });
+  const projectsService = createProjectsDBService(db);
+
+  const result = await projectsService.setDefaults("missing", { default_agent_id: "claude-code" });
+  expect(result).toBeNull();
+
+  await close4();
+});
+
 test("projects seed statuses with correct column controls", async () => {
   const { db, close: close2 } = await createDb({ path: ":memory:" });
   const projectsService = createProjectsDBService(db);

@@ -131,7 +131,7 @@ Fetches a single session by id.
 
 ### `client.sessions.create(input: CreateSessionInput)`
 
-Creates a session.
+Creates a session. When `agent` is omitted, the project's configured default harness is used (configurable from project settings → Agents); if none is set, the global `agent_configs.is_default` flag is consulted. When `model` is omitted, the project's default model for that harness is used; otherwise the harness picks its built-in default.
 
 ### `client.sessions.archive(sessionId: string)`
 
@@ -292,7 +292,7 @@ Resolves `input.ticketId` by id or shorthand, creates a ticket attempt, and forc
 
 ### `createSession(ctx, input)`
 
-Creates a session and fills `project_id` from `ctx.projectId`.
+Creates a session and fills `project_id` from `ctx.projectId`. When `input.agent` and/or `input.model` are omitted, the project's configured defaults (project settings → Agents) are used.
 
 ### `followupSession(ctx, { sessionId?, ...input })`
 
