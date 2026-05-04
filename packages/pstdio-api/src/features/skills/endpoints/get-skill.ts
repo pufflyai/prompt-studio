@@ -1,7 +1,8 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
-import { findAgent, getBundledSkills } from "pstdio-agents";
+import { getBundledSkills } from "pstdio-agents";
+import { findAgent } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { notFoundResponseSchema, skillWithContentResponseSchema } from "../dto";

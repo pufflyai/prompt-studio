@@ -1,7 +1,8 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { findAgent, getBundledSkills } from "pstdio-agents";
+import { getBundledSkills } from "pstdio-agents";
+import { findAgent } from "pstdio-api-contracts";
 import type { RouteDeps } from "../deps";
 import { installSkillToRepo } from "./install-skill-to-repo";
 

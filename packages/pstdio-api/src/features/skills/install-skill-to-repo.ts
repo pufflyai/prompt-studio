@@ -2,8 +2,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { homedir as defaultHomedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { findAgent } from "pstdio-agents";
-import type { SkillFile } from "pstdio-api-contracts";
+import { findAgent, type SkillFile } from "pstdio-api-contracts";
 import { setupInstalledAgents } from "../agents/setup-installed-agents";
 import type { RouteDeps } from "../deps";
 

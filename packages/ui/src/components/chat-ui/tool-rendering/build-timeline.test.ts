@@ -1,30 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import {
-  type ClaudeCodeTranscriptEntry,
-  normalizeClaudeCodeMessages,
-  type SessionMessage,
-  type ToolPart,
-} from "pstdio-agents";
+import type { SessionMessage, ToolPart } from "../agent-types";
 import { buildTimelineDocFromInvocations } from "./build-timeline";
-
-const transcriptPath = resolve(
-  import.meta.dir,
-  "../../../../../pstdio-agents/src/providers/claude-code/mocks/tool-calls-transcript.jsonl",
-);
-
-const loadTranscriptEntries = () => {
-  const source = readFileSync(transcriptPath, "utf8");
-
-  return source
-    .split(/\r?\n/)
-    .filter((line) => line.trim().length > 0)
-    .map((line) => JSON.parse(line) as ClaudeCodeTranscriptEntry);
-};
+import fixtureMessages from "./__fixtures__/tool-calls-messages.json";
 
 const getToolInvocations = () => {
-  const messages = normalizeClaudeCodeMessages(loadTranscriptEntries()) as SessionMessage[];
+  const messages = fixtureMessages as SessionMessage[];
 
   return messages.flatMap((message) => message.parts).filter((part): part is ToolPart => part.type === "tool");
 };

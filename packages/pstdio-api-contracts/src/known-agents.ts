@@ -1,7 +1,7 @@
-import type { AgentId } from "./types";
+export type KnownAgentId = "claude-code" | "opencode" | "fake";
 
 export type KnownAgent = {
-  id: AgentId;
+  id: KnownAgentId;
   name: string;
   binary: string;
   skillsDir: string;
@@ -29,4 +29,4 @@ export const KNOWN_AGENT_IDS = KNOWN_AGENTS.map((a) => a.id);
 
 export const findAgent = (id: string) => KNOWN_AGENTS.find((a) => a.id === id) ?? null;
 
-export const isKnownAgentId = (id: string): id is AgentId => KNOWN_AGENT_IDS.includes(id as AgentId);
+export const isKnownAgentId = (id: string): id is KnownAgentId => KNOWN_AGENT_IDS.includes(id as KnownAgentId);

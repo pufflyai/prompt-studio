@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir as defaultHomedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { findAgent } from "pstdio-agents";
+import { findAgent } from "pstdio-api-contracts";
 import { listAgents } from "@/features/agents/api/list-agents";
 import { API_URL } from "@/features/api-url";
 import { listSkillsWithFiles } from "./api/list-skills";
