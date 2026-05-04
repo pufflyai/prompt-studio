@@ -79,7 +79,6 @@ describe("createPluginService scheduler catchup", () => {
       filesRoot: "",
       storageRoot,
       ensureWorkspace: noopWorkspace,
-      schedulerTickMs: 20,
       now: () => now,
       cron: cron.factory,
     });
@@ -130,7 +129,6 @@ describe("createPluginService scheduler catchup", () => {
       filesRoot: "",
       storageRoot,
       ensureWorkspace: noopWorkspace,
-      schedulerTickMs: 20,
       now: () => now,
       cron: cron.factory,
     });
@@ -175,7 +173,6 @@ describe("createPluginService scheduler catchup", () => {
       filesRoot: "",
       storageRoot,
       ensureWorkspace: noopWorkspace,
-      schedulerTickMs: 15,
       now: () => new Date(now),
       cron: cron.factory,
     });
@@ -253,7 +250,6 @@ describe("createPluginService scheduler project isolation", () => {
       filesRoot: "",
       storageRoot: createTempRepo(),
       ensureWorkspace: noopWorkspace,
-      schedulerTickMs: 20,
       now: () => new Date("2026-04-20T09:00:00.000Z"),
       cron: cron.factory,
     });
@@ -317,7 +313,6 @@ describe("createPluginService scheduler project isolation", () => {
       filesRoot: "",
       storageRoot: createTempRepo(),
       ensureWorkspace: noopWorkspace,
-      schedulerTickMs: 20,
       now: () => new Date(now),
       cron: cron.factory,
     });

@@ -37,6 +37,9 @@ describe("createPluginRuntimeStore", () => {
 
   test("caches runtime per project", async () => {
     const repoPath = createTempDir();
+    const pluginsDir = join(repoPath, ".pstdio", "plugins");
+    mkdirSync(pluginsDir, { recursive: true });
+    writeFileSync(join(pluginsDir, "cached-plugin.ts"), `export default { hooks: {} };`);
     let resolveCount = 0;
 
     const store = createPluginRuntimeStore({
@@ -140,5 +143,32 @@ describe("createPluginRuntimeStore", () => {
     const runtime = await store.getForProject("project-1");
     const result = await runtime.hooks.firePre("preTicketCreation", {} as never);
     expect(result.rejected).toBe(true);
+  });
+
+  test("reloads when plugins are added after an empty runtime load", async () => {
+    const repoPath = createTempDir();
+    mkdirSync(join(repoPath, ".pstdio"), { recursive: true });
+
+    const store = createPluginRuntimeStore({
+      resolveRepoPath: async () => repoPath,
+      createClient: stubClient,
+    });
+
+    const emptyRuntime = await store.getForProject("project-1");
+    expect(emptyRuntime.actions.list()).toEqual([]);
+
+    const pluginsDir = join(repoPath, ".pstdio", "plugins");
+    mkdirSync(pluginsDir, { recursive: true });
+    writeFileSync(
+      join(pluginsDir, "late-plugin.ts"),
+      `export default {
+        actions: [
+          { key: "late", label: "Late action", targetType: "ticket", trigger() {} },
+        ],
+      };`,
+    );
+
+    const runtime = await store.getForProject("project-1");
+    expect(runtime.actions.list().some((action) => action.key === "late-plugin/late")).toBe(true);
   });
 });

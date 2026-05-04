@@ -4416,7 +4416,7 @@
                 "bg": "bg.hover"
               },
               "_expanded": {
-                "bg": "colorPalette.subtle"
+                "bg": "bg.active"
               },
               "bg": "bg",
               "border": "border.muted",
@@ -4436,7 +4436,7 @@
                 "bg": "bg.hover"
               },
               "_expanded": {
-                "bg": "colorPalette.subtle"
+                "bg": "bg.active"
               },
               "border": "none",
               "_active": {

@@ -46,13 +46,12 @@ afterEach(async () => {
 });
 
 describe("createScheduler diff/sync", () => {
-  test("arms cron handles for new jobs and stops removed ones on next refresh", async () => {
+  test("arms cron handles for new jobs and stops removed ones on refresh()", async () => {
     const cron = createTestCronDriver();
     let jobs: Job[] = [{ key: "a", cron: "* * * * *", timeoutMs: 1_000 }];
 
     const scheduler = createScheduler({
       cron: cron.factory,
-      refreshIntervalMs: 10,
       listJobs: async () => jobs,
       runJob: async () => {},
     });
@@ -64,10 +63,12 @@ describe("createScheduler diff/sync", () => {
       { key: "a", cron: "* * * * *", timeoutMs: 1_000 },
       { key: "b", cron: "* * * * *", timeoutMs: 1_000 },
     ];
-    await waitFor(() => cron.size() === 2);
+    await scheduler.refresh();
+    expect(cron.size()).toBe(2);
 
     jobs = [{ key: "b", cron: "* * * * *", timeoutMs: 1_000 }];
-    await waitFor(() => cron.size() === 1);
+    await scheduler.refresh();
+    expect(cron.size()).toBe(1);
   });
 
   test("replaces handle when a job's cron expression changes", async () => {
@@ -87,7 +88,6 @@ describe("createScheduler diff/sync", () => {
 
     const scheduler = createScheduler({
       cron: wrappedFactory,
-      refreshIntervalMs: 10,
       listJobs: async () => jobs,
       runJob: async () => {},
     });
@@ -96,7 +96,8 @@ describe("createScheduler diff/sync", () => {
     await waitFor(() => cron.size() === 1);
 
     jobs = [{ key: "a", cron: "*/5 * * * *", timeoutMs: 1_000 }];
-    await waitFor(() => stops.includes("* * * * *"));
+    await scheduler.refresh();
+    expect(stops).toContain("* * * * *");
   });
 });
 
@@ -108,7 +109,6 @@ describe("createScheduler live firing", () => {
 
     const scheduler = createScheduler({
       cron: cron.factory,
-      refreshIntervalMs: 10,
       now: () => now,
       listJobs: async () => [{ key: "demo", cron: "* * * * *", timeoutMs: 1_000 }],
       runJob: async (_job, ctx) => {
@@ -136,7 +136,6 @@ describe("createScheduler live firing", () => {
 
     const scheduler = createScheduler({
       cron: cron.factory,
-      refreshIntervalMs: 10,
       now: () => new Date("2026-04-20T09:00:00.000Z"),
       listJobs: async () => [{ key: "demo", cron: "* * * * *", timeoutMs: 1_000 }],
       runJob: async () => {
@@ -164,7 +163,6 @@ describe("createScheduler live firing", () => {
 
     const scheduler = createScheduler({
       cron: cron.factory,
-      refreshIntervalMs: 10,
       now: () => new Date("2026-04-20T09:00:00.000Z"),
       logger,
       listJobs: async () => [{ key: "demo", cron: "* * * * *", timeoutMs: 1_000 }],
@@ -193,7 +191,6 @@ describe("createScheduler catchup", () => {
 
     const scheduler = createScheduler({
       cron: cron.factory,
-      refreshIntervalMs: 10,
       now: () => new Date("2026-04-20T09:00:00.000Z"),
       watermarks: createFileWatermarkStore(watermarkPath),
       listJobs: async () => [{ key: "demo", cron: "0 0 1 * *", timeoutMs: 1_000 }],
@@ -222,7 +219,6 @@ describe("createScheduler catchup", () => {
 
     const scheduler = createScheduler({
       cron: cron.factory,
-      refreshIntervalMs: 10,
       now: () => new Date("2026-04-20T09:00:30.000Z"),
       watermarks: createFileWatermarkStore(watermarkPath),
       listJobs: async () => [{ key: "demo", cron: "* * * * *", timeoutMs: 1_000 }],
@@ -246,7 +242,6 @@ describe("createScheduler watermark persistence", () => {
 
     const scheduler = createScheduler({
       cron: cron.factory,
-      refreshIntervalMs: 10,
       now: () => now,
       watermarks: createFileWatermarkStore(watermarkPath),
       listJobs: async () => [{ key: "demo", cron: "* * * * *", timeoutMs: 1_000 }],
@@ -280,7 +275,6 @@ describe("createScheduler dispose", () => {
 
     const scheduler = createScheduler({
       cron: cron.factory,
-      refreshIntervalMs: 10,
       now: () => new Date("2026-04-20T09:00:00.000Z"),
       listJobs: async () => [{ key: "demo", cron: "* * * * *", timeoutMs: 30 }],
       runJob: async () => {

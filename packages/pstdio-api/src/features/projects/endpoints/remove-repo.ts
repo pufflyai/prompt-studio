@@ -38,6 +38,9 @@ export const removeRepoHandler = (deps: ProjectsRouteDeps): AppRouteHandler<type
 
     await deps.repoService.removeFromProject(id, repoId);
     deps.eventBus.emit("project_repos", "delete", { id: link.id });
+    deps.pluginService.invalidate(id);
+    // PS-47: temporary repo-plugin refresh bridge; remove when extensions replace .pstdio/plugins.
+    await deps.pluginService.refresh();
 
     return c.body(null, 204);
   };

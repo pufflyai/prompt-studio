@@ -80,7 +80,6 @@ describe("createPluginService scheduler overlap", () => {
       filesRoot: "",
       storageRoot: createTempRepo(),
       ensureWorkspace: noopWorkspace,
-      schedulerTickMs: 20,
       now: () => new Date(now),
       cron: cron.factory,
     });
@@ -146,7 +145,6 @@ describe("createPluginService scheduler overlap", () => {
       filesRoot: "",
       storageRoot: createTempRepo(),
       ensureWorkspace: noopWorkspace,
-      schedulerTickMs: 20,
       now: () => new Date(now),
       cron: cron.factory,
     });
@@ -214,7 +212,6 @@ describe("createPluginService scheduler lifecycle", () => {
       filesRoot: "",
       storageRoot: createTempRepo(),
       ensureWorkspace: noopWorkspace,
-      schedulerTickMs: 20,
       now: () => new Date(now),
       cron: cron.factory,
     });
@@ -275,7 +272,6 @@ describe("createPluginService scheduler lifecycle", () => {
       filesRoot: "",
       storageRoot: createTempRepo(),
       ensureWorkspace: noopWorkspace,
-      schedulerTickMs: 20,
       cron: cron.factory,
     });
 

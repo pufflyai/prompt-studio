@@ -47,6 +47,9 @@ export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
 
       for (const template of templates) deps.eventBus.emit("templates", "set", template);
 
+      // PS-47: temporary repo-plugin refresh bridge; remove when extensions replace .pstdio/plugins.
+      await deps.pluginService.refresh();
+
       return c.json(toProjectResponse(project), 201);
     } catch (error) {
       await deps.projectService.hardDelete(project.id);

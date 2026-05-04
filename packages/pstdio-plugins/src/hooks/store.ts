@@ -1,5 +1,6 @@
 import type { FSWatcher } from "node:fs";
 import { existsSync, watch } from "node:fs";
+import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import type { PstdioClient } from "@pstdio/sdk/client";
 import { createPluginRegistry } from "../registry";
@@ -94,6 +95,7 @@ export const createPluginRuntimeStore = (input: {
 
     const watcher = watch(pluginsDir, { recursive: true }, () => {
       if (watchers.get(projectId) !== watcher) return;
+      cache.delete(projectId);
       scheduleReload(projectId);
     });
 
@@ -113,6 +115,7 @@ export const createPluginRuntimeStore = (input: {
     if (!repoPath) return createEmptyRuntime(input.createClient());
 
     const pluginsDir = join(repoPath, ".pstdio", "plugins");
+    await mkdir(pluginsDir, { recursive: true });
     const runtime = await loadPluginRuntime({
       repoPath,
       client: input.createClient(),
@@ -121,6 +124,18 @@ export const createPluginRuntimeStore = (input: {
 
     watchPluginsDir(projectId, pluginsDir);
     return runtime;
+  };
+
+  const storeRuntime = (projectId: string, runtime: PluginRuntime) => {
+    const shouldCache = runtime.repoPath === null || runtime.plugins.length > 0;
+
+    if (shouldCache) {
+      cache.set(projectId, runtime);
+      return true;
+    }
+
+    cache.delete(projectId);
+    return false;
   };
 
   const reloadForProject = async (projectId: string) => {
@@ -136,7 +151,7 @@ export const createPluginRuntimeStore = (input: {
     try {
       const runtime = await load;
       if (loading.get(projectId) === load) {
-        cache.set(projectId, runtime);
+        storeRuntime(projectId, runtime);
       }
       notify(projectId);
     } catch (err) {
@@ -158,8 +173,9 @@ export const createPluginRuntimeStore = (input: {
     const load = loadForProject(projectId)
       .then((runtime) => {
         if (loading.get(projectId) === load) {
-          cache.set(projectId, runtime);
-          notify(projectId);
+          if (storeRuntime(projectId, runtime)) {
+            notify(projectId);
+          }
         }
 
         return runtime;

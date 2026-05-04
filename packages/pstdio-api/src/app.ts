@@ -71,10 +71,6 @@ interface AppOptions {
   apiToken?: string;
   agents?: AgentService[];
   eventBusBufferSize?: number;
-  // When undefined, no scheduler runs. Production callers should set 60_000.
-  // Tests that don't exercise scheduling leave this off so the per-test app
-  // isn't dragging a background tick through every hook fire.
-  schedulerTickMs?: number;
 }
 
 const resolveEventBusBufferSize = (value: string | undefined) => {
@@ -152,7 +148,6 @@ export const createApp = async (options: AppOptions) => {
       fetch: pluginClientFetch,
       token: apiToken,
     },
-    schedulerTickMs: options.schedulerTickMs,
   });
 
   const ticketHookDeps = { pluginService };

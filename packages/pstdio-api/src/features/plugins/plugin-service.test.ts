@@ -37,7 +37,6 @@ const makePluginService = (
     filesRoot: "",
     storageRoot: createTempRepo(),
     ensureWorkspace: noopWorkspace,
-    schedulerTickMs: 10_000,
   });
 
   services.push(service);
@@ -151,7 +150,6 @@ describe("createPluginService", () => {
       filesRoot: "",
       storageRoot: createTempRepo(),
       ensureWorkspace: noopWorkspace,
-      schedulerTickMs: 25,
       cron: cron.factory,
     });
     services.push(service);
@@ -163,5 +161,46 @@ describe("createPluginService", () => {
       const runs = (globalThis as Record<string, unknown>)[sigilKey] as Set<string>;
       return runs.has("project-a") && runs.has("project-b");
     }, 5_000);
+  });
+
+  test("discovers schedules when a project is registered after startup", async () => {
+    const repo = createTempRepo();
+    const pluginsDir = join(repo, ".pstdio", "plugins");
+    mkdirSync(pluginsDir, { recursive: true });
+    writeFileSync(
+      join(pluginsDir, "scheduled.ts"),
+      `export default {
+        schedules: [{
+          name: "heartbeat",
+          cron: "* * * * *",
+          handler() {},
+        }],
+      };`,
+    );
+
+    const projectRepos: Record<string, string> = {};
+    const cron = createTestCronDriver();
+    const service = createPluginService({
+      repoService: {
+        listByProject: async (projectId: string) => {
+          const repoPath = projectRepos[projectId];
+          return repoPath ? [{ path: repoPath }] : [];
+        },
+      },
+      listProjectIds: async () => Object.keys(projectRepos),
+      filesRoot: "",
+      storageRoot: createTempRepo(),
+      ensureWorkspace: noopWorkspace,
+      cron: cron.factory,
+    });
+    services.push(service);
+
+    await Bun.sleep(100);
+    expect(cron.size()).toBe(0);
+
+    projectRepos["project-1"] = repo;
+    await service.refresh();
+
+    await waitFor(() => cron.size() === 1, 5_000);
   });
 });
