@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { SessionsRouteDeps } from "../deps";
 import { composeSummary } from "../compose-summary";
+import type { SessionsRouteDeps } from "../deps";
 import { followUpBodySchema, notFoundResponseSchema, sessionResponseSchema } from "../dto";
 import { getSessionMessages } from "../get-session-messages";
 import { resolvePrompt } from "../resolve-prompt";

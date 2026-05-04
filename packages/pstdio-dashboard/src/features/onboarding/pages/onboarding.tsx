@@ -2,15 +2,10 @@ import { Badge, Box, Button, Container, Flex, Stack, Text } from "@chakra-ui/rea
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  type CodingAgent,
-  getStoredAgent,
-  setOnboardingComplete,
-  setStoredAgent,
-} from "@/shared/agent-storage";
 import { useSetupAvailableAgents } from "@/features/agents/hooks/use-agent-availability";
 import { useAgents } from "@/features/agents/hooks/use-agents";
 import type { AgentInfo } from "@/features/agents/types";
+import { type CodingAgent, getStoredAgent, setOnboardingComplete, setStoredAgent } from "@/shared/agent-storage";
 
 type AvailabilityBadge = {
   label: string;

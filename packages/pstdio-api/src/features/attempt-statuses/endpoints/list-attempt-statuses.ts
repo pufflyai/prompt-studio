@@ -21,7 +21,9 @@ export const listAttemptStatusesRoute = createRoute({
   },
 });
 
-export const listAttemptStatusesHandler = (deps: AttemptStatusesRouteDeps): AppRouteHandler<typeof listAttemptStatusesRoute> => {
+export const listAttemptStatusesHandler = (
+  deps: AttemptStatusesRouteDeps,
+): AppRouteHandler<typeof listAttemptStatusesRoute> => {
   return async (c) => {
     const { projectId } = c.req.valid("param");
     const rows = await deps.attemptStatusService.list(projectId);

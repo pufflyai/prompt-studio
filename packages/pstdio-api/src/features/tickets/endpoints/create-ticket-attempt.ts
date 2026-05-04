@@ -46,7 +46,9 @@ export const createTicketAttemptRoute = createRoute({
   },
 });
 
-export const createTicketAttemptHandler = (deps: TicketsRouteDeps): AppRouteHandler<typeof createTicketAttemptRoute> => {
+export const createTicketAttemptHandler = (
+  deps: TicketsRouteDeps,
+): AppRouteHandler<typeof createTicketAttemptRoute> => {
   const worktreeMode = "worktree";
 
   return async (c) => {

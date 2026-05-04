@@ -18,7 +18,9 @@ await $`bun run --filter pstdio-api build`;
 console.log("Resolving embed manifest from scripts/embed.json...");
 const config = loadEmbedConfig();
 const allFiles = resolveEmbedFiles(config);
-console.log(`  Resolved ${allFiles.length} files to embed (${config.files.length} explicit + ${allFiles.length - config.files.length} from globs)`);
+console.log(
+  `  Resolved ${allFiles.length} files to embed (${config.files.length} explicit + ${allFiles.length - config.files.length} from globs)`,
+);
 
 // 3. Generate embed manifest — imports each file with { type: "file" } so Bun embeds them
 const manifestDir = join("packages", "pstdio", "src");

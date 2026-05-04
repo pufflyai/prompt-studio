@@ -1,8 +1,8 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { ProjectsRouteDeps } from "../deps";
 import { seedDefaultSkills } from "../../skills/seed-default-skills";
 import { seedDefaultTemplates } from "../../templates/seed-default-templates";
+import type { ProjectsRouteDeps } from "../deps";
 import { createProjectBodySchema, projectResponseSchema, toProjectResponse } from "../dto";
 
 export const createProjectRoute = createRoute({

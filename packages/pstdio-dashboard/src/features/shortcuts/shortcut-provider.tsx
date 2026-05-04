@@ -2,9 +2,9 @@ import { getHotkeyManager, type Hotkey } from "@tanstack/hotkeys";
 import { useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 import { CommandPalette, type CommandPaletteView } from "@/features/command-palette/command-palette";
-import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
 import { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
 import { getVisibleTickets } from "@/features/ticket-list/utils/ticket-visibility";
+import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
 import { ShortcutHelpPanel } from "./shortcut-help-panel";
 import { getActiveShortcutScopes, getShortcutDefinition, isEditableEventTarget } from "./shortcut-registry";
 

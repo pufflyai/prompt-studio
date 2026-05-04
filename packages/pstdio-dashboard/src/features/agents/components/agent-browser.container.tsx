@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useProjectSettingsStore } from "@/shared/stores/project-settings";
 import { useSessionAgent } from "@/features/sessions/hooks/use-session-agent";
 import type { CodingAgent } from "@/shared/agent-storage";
+import { useProjectSettingsStore } from "@/shared/stores/project-settings";
 import { useAgentModels } from "../hooks/use-agent-models";
 import { useAgentSettings } from "../hooks/use-agent-settings";
 import { useAgents } from "../hooks/use-agents";

@@ -25,7 +25,9 @@ export const listWorkspaceActivityRoute = createRoute({
   },
 });
 
-export const listWorkspaceActivityHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof listWorkspaceActivityRoute> => {
+export const listWorkspaceActivityHandler = (
+  deps: WorkspacesRouteDeps,
+): AppRouteHandler<typeof listWorkspaceActivityRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const query = c.req.valid("query");

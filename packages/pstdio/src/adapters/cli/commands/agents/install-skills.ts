@@ -1,4 +1,4 @@
-import { isKnownAgentId, KNOWN_AGENT_IDS } from "pstdio-api-contracts";
+import { isKnownAgentId, KNOWN_AGENT_IDS } from "pstdio-api-contracts/known-agents";
 import type { Arguments, Argv } from "yargs";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { installSkillsForAgent } from "@/features/skills/install-default-skills";

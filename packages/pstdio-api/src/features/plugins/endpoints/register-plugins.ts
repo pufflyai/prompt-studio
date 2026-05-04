@@ -1,8 +1,8 @@
 import { createRoute } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { PluginsRouteDeps } from "../deps";
 import { ensureProjectRepoScaffolding } from "../../projects/bootstrap-project-repo";
 import { notFoundResponseSchema } from "../../projects/dto";
+import type { PluginsRouteDeps } from "../deps";
 import { pluginsParamsSchema, pluginsResponseSchema } from "../dto";
 import { getRegisteredPlugins } from "../get-registered-plugins";
 

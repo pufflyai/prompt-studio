@@ -31,7 +31,12 @@ const getPersistedMessages = async (sessionFileId: string, deps: SessionsRouteDe
   return JSON.parse(readFileSync(file.storage_path, "utf-8")) as SessionMessage[];
 };
 
-const getAgentMessages = async (agentId: string, agentSessionId: string, cwd: string | null, deps: SessionsRouteDeps) => {
+const getAgentMessages = async (
+  agentId: string,
+  agentSessionId: string,
+  cwd: string | null,
+  deps: SessionsRouteDeps,
+) => {
   const agent = deps.agentRegistry.get(agentId as AgentId);
   if (!agent) return null;
 

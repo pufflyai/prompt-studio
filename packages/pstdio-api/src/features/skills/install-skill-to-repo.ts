@@ -71,7 +71,9 @@ export const installSkillToRepo = (
   }
 };
 
-const resolveTargetAgents = async (deps: Pick<SkillsRouteDeps, "agentConfigService" | "agentRegistry" | "eventBus">) => {
+const resolveTargetAgents = async (
+  deps: Pick<SkillsRouteDeps, "agentConfigService" | "agentRegistry" | "eventBus">,
+) => {
   const configured = await deps.agentConfigService.list();
   if (configured.length > 0) return configured;
 

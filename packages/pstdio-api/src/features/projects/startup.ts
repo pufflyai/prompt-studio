@@ -1,5 +1,5 @@
-import type { ProjectsRouteDeps } from "./deps";
 import { ensureProjectRepoScaffolding } from "./bootstrap-project-repo";
+import type { ProjectsRouteDeps } from "./deps";
 
 type Deps = Pick<ProjectsRouteDeps, "filesRoot" | "projectService" | "repoService">;
 

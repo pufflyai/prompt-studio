@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir as defaultHomedir } from "node:os";
 import { join, relative } from "node:path";
-import { findAgent, type KnownAgent } from "pstdio-api-contracts";
+import { findAgent, type KnownAgent } from "pstdio-api-contracts/known-agents";
 
 type SkillFile = {
   path: string;

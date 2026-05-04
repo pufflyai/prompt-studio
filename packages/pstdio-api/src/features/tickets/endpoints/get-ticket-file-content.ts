@@ -34,7 +34,9 @@ export const getTicketFileContentRoute = createRoute({
   },
 });
 
-export const getTicketFileContentHandler = (deps: TicketsRouteDeps): AppRouteHandler<typeof getTicketFileContentRoute> => {
+export const getTicketFileContentHandler = (
+  deps: TicketsRouteDeps,
+): AppRouteHandler<typeof getTicketFileContentRoute> => {
   return async (c) => {
     const { id, fileId } = c.req.valid("param");
     const ticket = await deps.ticketService.get(id);

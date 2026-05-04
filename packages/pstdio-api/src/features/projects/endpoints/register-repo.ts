@@ -3,9 +3,9 @@ import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { ProjectsRouteDeps } from "../deps";
 import { installProjectSkillsToRepo } from "../../skills/install-skill-to-repo";
 import { bootstrapProjectRepo } from "../bootstrap-project-repo";
+import type { ProjectsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
 
 const registerRepoBodySchema = z

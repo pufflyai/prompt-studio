@@ -11,7 +11,6 @@ import {
   toSidebarContextMenuItems,
 } from "@/features/plugin-actions/hooks/use-resource-context-menu";
 import { useProject } from "@/features/project/hooks/use-project";
-import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
 import { useArchiveSession } from "@/features/sessions/hooks/use-archive-session";
 import { buildSessionOverflowActions } from "@/features/sessions/session-actions";
 import { uploadTicketFile } from "@/features/ticket-list/data/api";
@@ -32,6 +31,7 @@ import { useWorkspaceSessions } from "@/features/workspaces/hooks/use-workspace-
 import { buildWorkspaceDeleteOverflowAction } from "@/features/workspaces/pages/workspace-page-actions";
 import { navigateToCreatedWorkspace, runWorkspaceCreation } from "@/features/workspaces/pages/workspace-page-helpers";
 import { resolveWorkspaceSelection } from "@/features/workspaces/utils/workspace-selection";
+import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
 import { CreateWorkspaceModal } from "../components/create-workspace-modal";
 import { TicketDetailSidebar } from "../components/ticket-detail-sidebar";
 import { TicketHeader } from "../components/ticket-header";

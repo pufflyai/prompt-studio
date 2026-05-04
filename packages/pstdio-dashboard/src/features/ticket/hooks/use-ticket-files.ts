@@ -1,6 +1,6 @@
 import { asSyncedRows, eq, getCollection, type SyncedRow, useLiveQuery } from "@/features/sync/collections";
-import type { ApiWorkspaceArtifact } from "@/shared/api-types";
 import type { TicketFilePreview } from "@/features/ticket-list/types";
+import type { ApiWorkspaceArtifact } from "@/shared/api-types";
 
 const toFilePreview = (row: SyncedRow): TicketFilePreview => ({
   id: row.id,

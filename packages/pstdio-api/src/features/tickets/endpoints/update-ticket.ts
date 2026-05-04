@@ -1,10 +1,10 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import { buildDiff, emitActivityEvent } from "../../activity/activity-events";
-import type { TicketsRouteDeps } from "../deps";
 import { fireTicketHook, fireTicketHookAsync } from "../../hooks/ticket-hooks";
 import { archiveWorkspaceCascade } from "../../workspaces/archive-workspace-cascade";
 import { buildTicketPayload } from "../build-ticket-payload";
+import type { TicketsRouteDeps } from "../deps";
 import { notFoundResponseSchema, ticketResponseSchema, updateTicketBodySchema } from "../dto";
 import { emitSyncedFile, emitSyncedTicketFile } from "../emit-ticket-file-sync";
 import { extractTitleFromContent } from "../extract-title";

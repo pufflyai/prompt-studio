@@ -18,7 +18,9 @@ export const deleteAttemptStatusRoute = createRoute({
   },
 });
 
-export const deleteAttemptStatusHandler = (deps: AttemptStatusesRouteDeps): AppRouteHandler<typeof deleteAttemptStatusRoute> => {
+export const deleteAttemptStatusHandler = (
+  deps: AttemptStatusesRouteDeps,
+): AppRouteHandler<typeof deleteAttemptStatusRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     await deps.attemptStatusService.remove(id);

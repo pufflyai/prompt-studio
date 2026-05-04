@@ -1,7 +1,7 @@
 import { ticketLogger } from "../../../lib/logger";
-import type { TicketsRouteDeps } from "../deps";
 import { fireSessionStartHook } from "../../hooks/session-hooks";
 import { spawnAgentSession } from "../../sessions/spawn-agent";
+import type { TicketsRouteDeps } from "../deps";
 import { awaitPostCreateHook, resolveAgentId, resolvePrompt } from "./attempt-workspace-setup";
 
 export { createAttemptWorkspace } from "./attempt-workspace-setup";

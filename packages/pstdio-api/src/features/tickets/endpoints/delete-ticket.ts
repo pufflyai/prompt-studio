@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { TicketsRouteDeps } from "../deps";
 import { buildTicketPayload } from "../build-ticket-payload";
+import type { TicketsRouteDeps } from "../deps";
 import { notFoundResponseSchema, ticketResponseSchema } from "../dto";
 
 const hookRejectedSchema = z.object({ error: z.string() });

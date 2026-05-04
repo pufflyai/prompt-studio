@@ -26,7 +26,9 @@ export const createAttemptStatusRoute = createRoute({
   },
 });
 
-export const createAttemptStatusHandler = (deps: AttemptStatusesRouteDeps): AppRouteHandler<typeof createAttemptStatusRoute> => {
+export const createAttemptStatusHandler = (
+  deps: AttemptStatusesRouteDeps,
+): AppRouteHandler<typeof createAttemptStatusRoute> => {
   return async (c) => {
     const { projectId } = c.req.valid("param");
     const body = c.req.valid("json");

@@ -1,16 +1,16 @@
 import { Stack, Text } from "@chakra-ui/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { CodingAgent } from "@/shared/agent-storage";
 import { WorkspaceAgentMenu } from "@/features/agents/components/agent-browser";
 import { useAgentModels } from "@/features/agents/hooks/use-agent-models";
 import { useAgents } from "@/features/agents/hooks/use-agents";
 import { useProjectRepositories } from "@/features/project/hooks/use-project";
 import { useRepoBranches } from "@/features/project/hooks/use-repo-branches";
 import type { RepoBranch } from "@/features/project/types";
-import { useProjectSettingsStore } from "@/shared/stores/project-settings";
 import { RepoBrowser } from "@/features/workspaces/components/repo-browser";
 import { resolveBranchState } from "@/features/workspaces/components/repo-browser.container";
+import type { CodingAgent } from "@/shared/agent-storage";
+import { useProjectSettingsStore } from "@/shared/stores/project-settings";
 import type { ActionParamDescriptor, ActionParamValue } from "../api";
 
 interface CompositeFieldProps {

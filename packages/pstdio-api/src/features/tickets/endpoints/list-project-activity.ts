@@ -25,7 +25,9 @@ export const listProjectActivityRoute = createRoute({
   },
 });
 
-export const listProjectActivityHandler = (deps: TicketsRouteDeps): AppRouteHandler<typeof listProjectActivityRoute> => {
+export const listProjectActivityHandler = (
+  deps: TicketsRouteDeps,
+): AppRouteHandler<typeof listProjectActivityRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const query = c.req.valid("query");

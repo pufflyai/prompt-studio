@@ -1,8 +1,8 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import { buildDiff, emitActivityEvent } from "../../activity/activity-events";
-import type { WorkspacesRouteDeps } from "../deps";
 import { archiveWorkspaceCascade } from "../archive-workspace-cascade";
+import type { WorkspacesRouteDeps } from "../deps";
 import { notFoundResponseSchema, workspaceResponseSchema } from "../dto";
 
 export const archiveWorkspaceRoute = createRoute({

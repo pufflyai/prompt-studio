@@ -3,9 +3,9 @@ import { copyFile, mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { createWorktree, resolveLatestBase } from "pstdio-wt";
-import type { TicketsRouteDeps } from "../deps";
 import { withHookSessionClient } from "../../hooks/hook-client";
 import { isAgentEnabledForProject, parseProjectSelectedAgents } from "../../projects/selected-agents";
+import type { TicketsRouteDeps } from "../deps";
 
 type AttemptMode = "worktree" | "current_branch";
 type WorkspaceRecord = Awaited<ReturnType<TicketsRouteDeps["workspaceService"]["create"]>>;
@@ -147,7 +147,10 @@ export const awaitPostCreateHook = async (
   }
 };
 
-const emitTicketWorkspaceLink = async (deps: Pick<TicketsRouteDeps, "workspaceService" | "eventBus">, workspaceId: string) => {
+const emitTicketWorkspaceLink = async (
+  deps: Pick<TicketsRouteDeps, "workspaceService" | "eventBus">,
+  workspaceId: string,
+) => {
   const ticketWorkspaceLink = await deps.workspaceService.getTicketWorkspaceLink(workspaceId);
   if (ticketWorkspaceLink) {
     deps.eventBus.emit("ticket_workspaces", "set", ticketWorkspaceLink);

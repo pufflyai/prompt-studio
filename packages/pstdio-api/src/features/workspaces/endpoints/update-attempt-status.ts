@@ -3,8 +3,8 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { updateAttemptStatusResponseSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import { buildDiff, emitActivityEvent } from "../../activity/activity-events";
-import type { WorkspacesRouteDeps } from "../deps";
 import { firePostAttemptStatusHook, firePreAttemptStatusHook } from "../../hooks/attempt-status-hooks";
+import type { WorkspacesRouteDeps } from "../deps";
 import { parseTicketShorthand } from "../parse-ticket-shorthand";
 
 const attemptStatusBodySchema = z
@@ -130,7 +130,9 @@ const buildHookPayload = async (
   };
 };
 
-export const updateAttemptStatusHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof updateAttemptStatusRoute> => {
+export const updateAttemptStatusHandler = (
+  deps: WorkspacesRouteDeps,
+): AppRouteHandler<typeof updateAttemptStatusRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const { status, session_id: sessionId } = c.req.valid("json");

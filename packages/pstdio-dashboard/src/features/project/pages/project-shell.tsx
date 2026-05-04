@@ -3,11 +3,11 @@ import { EmptyState } from "@pstdio/ui";
 import { Outlet, useParams, useRouterState } from "@tanstack/react-router";
 import { useLayoutEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { ProjectSettingsProvider, useProjectSettingsStore } from "@/shared/stores/project-settings";
 import { SessionAttachedPanel } from "@/features/sessions/components/session-attached-panel";
 import { SessionBubbleContainer } from "@/features/sessions/components/session-bubble.container";
 import { isSessionsRoutePath } from "@/features/sessions/utils/sessions-route";
 import { ShortcutProvider } from "@/features/shortcuts/shortcut-provider";
+import { ProjectSettingsProvider, useProjectSettingsStore } from "@/shared/stores/project-settings";
 import { useProject } from "../hooks/use-project";
 
 const ProjectShellContent = () => {

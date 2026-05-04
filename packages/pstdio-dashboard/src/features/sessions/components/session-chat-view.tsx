@@ -9,9 +9,9 @@ import {
   resolvePreferredAgentModel,
 } from "@/features/agents/components/agent-model-selection";
 import { useAgentSettings } from "@/features/agents/hooks/use-agent-settings";
-import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
 import { useTicketAttemptDiffSummary } from "@/features/ticket/hooks/use-ticket-attempt-diff-summary";
 import { RepoBrowserContainer } from "@/features/workspaces/components/repo-browser.container";
+import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
 import { useCreateProjectSession } from "../hooks/use-create-project-session";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useSessionAgent } from "../hooks/use-session-agent";

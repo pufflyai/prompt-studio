@@ -40,7 +40,9 @@ export const updateSessionStatusRoute = createRoute({
   },
 });
 
-export const updateSessionStatusHandler = (deps: SessionsRouteDeps): AppRouteHandler<typeof updateSessionStatusRoute> => {
+export const updateSessionStatusHandler = (
+  deps: SessionsRouteDeps,
+): AppRouteHandler<typeof updateSessionStatusRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const { status } = c.req.valid("json");

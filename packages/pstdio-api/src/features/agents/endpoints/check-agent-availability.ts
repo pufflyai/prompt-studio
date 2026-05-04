@@ -24,7 +24,9 @@ export const checkAgentAvailabilityRoute = createRoute({
   },
 });
 
-export const checkAgentAvailabilityHandler = (deps: AgentsRouteDeps): AppRouteHandler<typeof checkAgentAvailabilityRoute> => {
+export const checkAgentAvailabilityHandler = (
+  deps: AgentsRouteDeps,
+): AppRouteHandler<typeof checkAgentAvailabilityRoute> => {
   return (c) => {
     const { agent: agentId } = c.req.valid("query");
     const agent = deps.agentRegistry.get(agentId as AgentId);

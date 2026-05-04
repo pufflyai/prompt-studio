@@ -7,7 +7,6 @@ import {
   toSidebarContextMenuItems,
 } from "@/features/plugin-actions/hooks/use-resource-context-menu";
 import { useProject } from "@/features/project/hooks/use-project";
-import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
 import { useArchiveSession } from "@/features/sessions/hooks/use-archive-session";
 import { buildSessionOverflowActions } from "@/features/sessions/session-actions";
 import { useTicketAttemptDiff } from "@/features/ticket/hooks/use-ticket-attempt-diff";
@@ -27,6 +26,7 @@ import {
   useTicketAttemptDiffs,
 } from "@/features/ticket-list/hooks/use-ticket-attempt-diffs";
 import { transformFileDiffs } from "@/features/workspaces/utils/transform-diff";
+import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
 import { useAttemptStatusMap } from "../hooks/use-attempt-status-map";
 import { useDeleteWorkspace } from "../hooks/use-workspace-actions";
 import { useWorkspaceSessions } from "../hooks/use-workspace-sessions";

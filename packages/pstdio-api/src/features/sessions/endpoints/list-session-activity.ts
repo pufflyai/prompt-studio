@@ -25,7 +25,9 @@ export const listSessionActivityRoute = createRoute({
   },
 });
 
-export const listSessionActivityHandler = (deps: SessionsRouteDeps): AppRouteHandler<typeof listSessionActivityRoute> => {
+export const listSessionActivityHandler = (
+  deps: SessionsRouteDeps,
+): AppRouteHandler<typeof listSessionActivityRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const query = c.req.valid("query");

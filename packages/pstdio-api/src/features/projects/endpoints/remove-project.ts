@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { ProjectsRouteDeps } from "../deps";
 import { cleanupProjectArtifacts } from "../cleanup-project";
+import type { ProjectsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
 
 export const removeProjectRoute = createRoute({

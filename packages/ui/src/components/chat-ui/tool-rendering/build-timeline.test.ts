@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { SessionMessage, ToolPart } from "../agent-types";
-import { buildTimelineDocFromInvocations } from "./build-timeline";
 import fixtureMessages from "./__fixtures__/tool-calls-messages.json";
+import { buildTimelineDocFromInvocations } from "./build-timeline";
 
 const getToolInvocations = () => {
   const messages = fixtureMessages as SessionMessage[];
