@@ -100,10 +100,20 @@ export const useProject = (projectId: string | undefined) => {
     } as unknown as TagResponse);
   });
 
+  const rawSelectedAgents = project.selected_agents as string | string[] | null | undefined;
+  const selectedAgents = Array.isArray(rawSelectedAgents)
+    ? rawSelectedAgents
+    : typeof rawSelectedAgents === "string" && rawSelectedAgents.length > 0
+      ? (JSON.parse(rawSelectedAgents) as string[])
+      : [];
+
   const data: Project = {
     id: project.id,
     name: project.name as string,
     shorthand: project.shorthand as string,
+    selected_agents: selectedAgents,
+    default_agent_id: (project.default_agent_id as string | null) ?? null,
+    default_agent_model: (project.default_agent_model as string | null) ?? null,
     startup_script: (project.startup_script as string | null) ?? null,
     created_at: project.created_at as string,
     updated_at: project.updated_at as string,
