@@ -75,7 +75,11 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 
 > NOTE: the following applies to changes relative to main, not within the same branch.
 
-- If you modify **any package**, include a changeset for **`pstdio`** only; include **`@pstdio/ui`** or **`@pstdio/sdk`** only when those packages themselves change.
+- Changesets are scoped to: **`pstdio`**, **`@pstdio/sdk`**, **`@pstdio/ui`**, and the three extensions (**`extension-lab`**, **`pstdio-core-skills`**, **`pstdio-core-templates`**).
+- If you modify any of `packages/*` (other than `sdk` or `ui` themselves), include a changeset for **`pstdio`** only.
+- If `@pstdio/sdk` or `@pstdio/ui` itself changes, include a changeset for that package too.
+- If you change extension source or assets, include a changeset for that extension.
+- New private packages under `packages/` or `clients/` must be added to `.changeset/config.json` `ignore` to stay out of the release flow.
 - Run `bun changeset`, choose the semver bump (`patch`, `minor`, `major`), and write a **one-line changelog summary**.
 - **Do not manually edit `package.json` versions**.
 

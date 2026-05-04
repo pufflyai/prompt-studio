@@ -1,0 +1,14 @@
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--chakra-colors-bg-subtle);
+}
+
+.lab-page {
+  min-height: 100%;
+}

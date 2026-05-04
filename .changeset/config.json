@@ -7,9 +7,21 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": [],
+  "ignore": [
+    "e2e",
+    "pstdio-agents",
+    "pstdio-api",
+    "pstdio-api-contracts",
+    "pstdio-dashboard",
+    "pstdio-db",
+    "pstdio-logging",
+    "pstdio-plugins",
+    "pstdio-storage",
+    "pstdio-wt",
+    "@pstdio/landing-page"
+  ],
   "privatePackages": {
-    "version": false,
-    "tag": false
+    "version": true,
+    "tag": true
   }
 }
