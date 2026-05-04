@@ -175,6 +175,8 @@ __test-tmp__
 packages/pstdio/README.md
 packages/pstdio/.readme.generated
 
+.playwright-mcp
+
 # pstdio
 .pstdio/tickets
 .pstdio/config.json

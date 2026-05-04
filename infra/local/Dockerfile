@@ -1,4 +1,4 @@
-FROM oven/bun:1.3.11
+FROM oven/bun:1.3.13
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/root/.bun/bin:/root/.local/bin:${PATH}"
