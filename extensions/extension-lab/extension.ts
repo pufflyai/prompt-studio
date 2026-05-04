@@ -1,11 +1,4 @@
-import {
-  commandEvent,
-  commandsOf,
-  defineExtension,
-  packageAsset,
-  params,
-  projectSlots,
-} from "@pstdio/sdk/extensions";
+import { commandEvent, commandsOf, defineExtension, packageAsset, params, projectSlots } from "@pstdio/sdk/extensions";
 
 const COUNTER_KEY = "counter";
 

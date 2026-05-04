@@ -1,8 +1,4 @@
-import type {
-  CommandLifecycleEventPayload,
-  CommandLifecyclePhase,
-  CommandRef,
-} from "./types/commands";
+import type { CommandLifecycleEventPayload, CommandLifecyclePhase, CommandRef } from "./types/commands";
 import type { EventRef } from "./types/events";
 import type { CommandDefinition } from "./types/extension";
 import type { Struct } from "./types/json";
@@ -35,9 +31,10 @@ export const commandEvent = <TPhase extends CommandLifecyclePhase, TParams exten
 // biome-ignore lint/suspicious/noExplicitAny: index signature must accept any command shape
 type CommandsRecord = Record<string, CommandDefinition<any, any>>;
 
-type CommandRefFromDefinition<TDefinition> = TDefinition extends CommandDefinition<infer TSchema, infer TResult>
-  ? CommandRef<TSchema extends ParamObjectSchema ? ParamsOf<TSchema> : Struct, TResult>
-  : never;
+type CommandRefFromDefinition<TDefinition> =
+  TDefinition extends CommandDefinition<infer TSchema, infer TResult>
+    ? CommandRef<TSchema extends ParamObjectSchema ? ParamsOf<TSchema> : Struct, TResult>
+    : never;
 
 type CommandsRefMap<TCommands extends CommandsRecord> = {
   [K in keyof TCommands]: CommandRefFromDefinition<TCommands[K]>;
