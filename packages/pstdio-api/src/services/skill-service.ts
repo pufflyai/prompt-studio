@@ -53,11 +53,7 @@ const hydrateSkill = async (
   };
 };
 
-const ingestSkillFiles = async (
-  fileService: SkillServiceDeps["fileService"],
-  projectId: string,
-  files: SkillFile[],
-) =>
+const ingestSkillFiles = async (fileService: SkillServiceDeps["fileService"], projectId: string, files: SkillFile[]) =>
   Promise.all(
     files.map(async (file) => {
       const uploaded = await fileService.upload({
