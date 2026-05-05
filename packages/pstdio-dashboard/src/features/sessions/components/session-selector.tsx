@@ -38,7 +38,7 @@ export const SessionSelector = (props: SessionSelectorProps) => {
         </Button>
       </Menu.Trigger>
       <Menu.Positioner>
-        <Menu.Content minW="220px" bg="bg">
+        <Menu.Content minW="220px" maxW="420px" bg="bg">
           <Box maxH="14rem" overflowY="auto" py="1">
             {recentSessions.length > 0 ? (
               recentSessions.map((session) => (
