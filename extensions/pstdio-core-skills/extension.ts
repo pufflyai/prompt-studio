@@ -1,24 +1,22 @@
 import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
 
-const skill = (key: string, title: string) => ({
-  title,
-  source: packageAsset(`./skills/${key}`, import.meta.url),
-});
+const asset = (path: string) => packageAsset(path, import.meta.url);
 
 export default defineExtension({
   id: "pstdio.core-skills",
   namespace: "core-skills",
   name: "Core Skills",
   version: "0.1.0",
+  apiVersion: "1",
   description: "Built-in pstdio agent skills.",
 
   skills: {
-    "create-proposal": skill("create-proposal", "Create a proposal"),
-    "create-pstdio-plugin": skill("create-pstdio-plugin", "Create a pstdio plugin"),
-    "create-sub-tickets": skill("create-sub-tickets", "Create sub-tickets"),
-    "create-ticket": skill("create-ticket", "Create a ticket"),
-    "implement-ticket": skill("implement-ticket", "Implement a ticket"),
-    pstdio: skill("pstdio", "Use pstdio"),
-    "refine-ticket": skill("refine-ticket", "Refine a ticket"),
+    create_proposal: { title: "Create a proposal", source: asset("./skills/create-proposal") },
+    create_pstdio_plugin: { title: "Create a pstdio plugin", source: asset("./skills/create-pstdio-plugin") },
+    create_sub_tickets: { title: "Create sub-tickets", source: asset("./skills/create-sub-tickets") },
+    create_ticket: { title: "Create a ticket", source: asset("./skills/create-ticket") },
+    implement_ticket: { title: "Implement a ticket", source: asset("./skills/implement-ticket") },
+    pstdio: { title: "Use pstdio", source: asset("./skills/pstdio") },
+    refine_ticket: { title: "Refine a ticket", source: asset("./skills/refine-ticket") },
   },
 });

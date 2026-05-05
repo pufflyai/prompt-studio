@@ -25,6 +25,10 @@
       "import": "./dist/client/index.js",
       "types": "./dist/client/index.d.ts"
     },
+    "./extensions": {
+      "import": "./dist/extensions/index.js",
+      "types": "./dist/extensions/index.d.ts"
+    },
     "./plugins": {
       "import": "./dist/plugins/index.js",
       "types": "./dist/plugins/index.d.ts"
@@ -40,7 +44,7 @@
   },
   "scripts": {
     "build": "rm -rf ./dist && bun run build:js && bun run build:types",
-    "build:js": "bun build ./src/api/index.ts ./src/client/index.ts ./src/plugins/index.ts ./src/prompts/index.ts ./src/hooks/index.ts ./src/resources/index.ts --outdir ./dist --root ./src --target node --format esm --packages external",
+    "build:js": "bun build ./src/api/index.ts ./src/client/index.ts ./src/extensions/index.ts ./src/plugins/index.ts ./src/prompts/index.ts ./src/hooks/index.ts ./src/resources/index.ts --outdir ./dist --root ./src --target node --format esm --packages external",
     "build:types": "tsc --project ./tsconfig.build.json",
     "prepack": "bun run build",
     "typecheck": "tsc --noEmit",

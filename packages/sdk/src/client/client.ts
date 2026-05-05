@@ -1,5 +1,6 @@
 import { type ActionClient, createActionClient } from "./actions";
 import { type AgentClient, createAgentClient } from "./agents";
+import { createExtensionClient, type ExtensionClient } from "./extensions";
 import { createProjectClient, type ProjectClient } from "./projects";
 import type { ClientOptions } from "./request";
 import { createRequest } from "./request";
@@ -22,6 +23,7 @@ export type PstdioClient = {
   skills: SkillClient;
   agents: AgentClient;
   actions: ActionClient;
+  extensions: ExtensionClient;
 };
 
 export const createClient = (options: ClientOptions = {}): PstdioClient => {
@@ -37,5 +39,6 @@ export const createClient = (options: ClientOptions = {}): PstdioClient => {
     skills: createSkillClient(request),
     agents: createAgentClient(request),
     actions: createActionClient(request),
+    extensions: createExtensionClient(request),
   };
 };

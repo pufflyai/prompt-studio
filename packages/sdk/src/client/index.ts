@@ -1,6 +1,7 @@
 export type { ActionClient } from "./actions";
 export type { AgentClient } from "./agents";
 export { createClient, type PstdioClient } from "./client";
+export type { ExtensionClient } from "./extensions";
 export type { ProjectClient } from "./projects";
 export { type ClientOptions, createRequest, PstdioApiError, type RequestFn } from "./request";
 export type { SessionClient } from "./sessions";

@@ -1,19 +1,13 @@
 import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
 
-const dir = { ticket: "tickets", prompt: "prompts", document: "documents" } as const;
-const suffix = { ticket: "ticket", prompt: "prompt", document: "template" } as const;
-
-const tpl = (key: string, type: "ticket" | "prompt" | "document", title: string) => ({
-  title,
-  type,
-  source: packageAsset(`./templates/${dir[type]}/${key}.${suffix[type]}.md`, import.meta.url),
-});
+const asset = (path: string) => packageAsset(path, import.meta.url);
 
 export default defineExtension({
   id: "pstdio.core-templates",
   namespace: "core-templates",
   name: "Core Templates",
   version: "0.1.0",
+  apiVersion: "1",
   description: "Built-in pstdio templates.",
 
   templateTypes: {
@@ -24,27 +18,101 @@ export default defineExtension({
 
   templates: {
     // documents
-    prd: tpl("prd", "document", "PRD"),
-    adr: tpl("adr", "document", "ADR"),
-    "changelog-entry": tpl("changelog-entry", "document", "Changelog entry"),
-    cookbook: tpl("cookbook", "document", "Cookbook"),
-    "lessons-learned": tpl("lessons-learned", "document", "Lessons learned"),
-    "code-review": tpl("code-review", "document", "Code review"),
-    "architecture-overview": tpl("architecture-overview", "document", "Architecture overview"),
-    contracts: tpl("contracts", "document", "Contracts"),
-    research: tpl("research", "document", "Research"),
-    schemas: tpl("schemas", "document", "Schemas"),
+    prd: { title: "PRD", type: "document", source: asset("./templates/documents/prd.template.md") },
+    adr: { title: "ADR", type: "document", source: asset("./templates/documents/adr.template.md") },
+    changelog_entry: {
+      title: "Changelog entry",
+      type: "document",
+      source: asset("./templates/documents/changelog-entry.template.md"),
+    },
+    cookbook: {
+      title: "Cookbook",
+      type: "document",
+      source: asset("./templates/documents/cookbook.template.md"),
+    },
+    lessons_learned: {
+      title: "Lessons learned",
+      type: "document",
+      source: asset("./templates/documents/lessons-learned.template.md"),
+    },
+    code_review: {
+      title: "Code review",
+      type: "document",
+      source: asset("./templates/documents/code-review.template.md"),
+    },
+    architecture_overview: {
+      title: "Architecture overview",
+      type: "document",
+      source: asset("./templates/documents/architecture-overview.template.md"),
+    },
+    contracts: {
+      title: "Contracts",
+      type: "document",
+      source: asset("./templates/documents/contracts.template.md"),
+    },
+    research: {
+      title: "Research",
+      type: "document",
+      source: asset("./templates/documents/research.template.md"),
+    },
+    schemas: {
+      title: "Schemas",
+      type: "document",
+      source: asset("./templates/documents/schemas.template.md"),
+    },
+
     // prompts
-    "commit-message": tpl("commit-message", "prompt", "Commit message"),
-    "create-sub-tickets": tpl("create-sub-tickets", "prompt", "Create sub-tickets"),
-    "implement-ticket": tpl("implement-ticket", "prompt", "Implement ticket"),
-    "refine-ticket": tpl("refine-ticket", "prompt", "Refine ticket"),
-    "squash-message": tpl("squash-message", "prompt", "Squash message"),
-    "fix-changes-requested": tpl("fix-changes-requested", "prompt", "Fix changes requested"),
-    "review-code": tpl("review-code", "prompt", "Review code"),
+    commit_message: {
+      title: "Commit message",
+      type: "prompt",
+      source: asset("./templates/prompts/commit-message.prompt.md"),
+    },
+    create_sub_tickets: {
+      title: "Create sub-tickets",
+      type: "prompt",
+      source: asset("./templates/prompts/create-sub-tickets.prompt.md"),
+    },
+    implement_ticket: {
+      title: "Implement ticket",
+      type: "prompt",
+      source: asset("./templates/prompts/implement-ticket.prompt.md"),
+    },
+    refine_ticket: {
+      title: "Refine ticket",
+      type: "prompt",
+      source: asset("./templates/prompts/refine-ticket.prompt.md"),
+    },
+    squash_message: {
+      title: "Squash message",
+      type: "prompt",
+      source: asset("./templates/prompts/squash-message.prompt.md"),
+    },
+    fix_changes_requested: {
+      title: "Fix changes requested",
+      type: "prompt",
+      source: asset("./templates/prompts/fix-changes-requested.prompt.md"),
+    },
+    review_code: {
+      title: "Review code",
+      type: "prompt",
+      source: asset("./templates/prompts/review-code.prompt.md"),
+    },
+
     // tickets
-    ticket: tpl("ticket", "ticket", "Ticket"),
-    "bug-fix": tpl("bug-fix", "ticket", "Bug fix"),
-    proposal: tpl("proposal", "ticket", "Proposal"),
+    ticket: {
+      title: "Ticket",
+      type: "ticket",
+      source: asset("./templates/tickets/ticket.ticket.md"),
+    },
+    bug_fix: {
+      title: "Bug fix",
+      type: "ticket",
+      source: asset("./templates/tickets/bug-fix.ticket.md"),
+    },
+    proposal: {
+      title: "Proposal",
+      type: "ticket",
+      source: asset("./templates/tickets/proposal.ticket.md"),
+    },
   },
 });

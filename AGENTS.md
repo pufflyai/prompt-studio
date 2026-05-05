@@ -129,6 +129,11 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 - Tests that assert literal bundled copy.
 - Tests that assert generated file wording.
 
+# Validation flows
+
+- **Never** run the dev server directly.
+- **Always** run the dockerized version: `bun run dev:isolated` to ensure db isolation.
+
 ---
 
 # Project Planning and Documentation (pstdio)
