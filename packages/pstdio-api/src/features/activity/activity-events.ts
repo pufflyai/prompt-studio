@@ -1,11 +1,10 @@
 import type { RouteDeps } from "../deps";
 
-type ActivityResourceType = "ticket" | "workspace" | "session";
-
 type EmitActivityEventInput = {
   projectId: string;
-  resourceType: ActivityResourceType;
+  resourceType: string;
   resourceId: string;
+  sourceExtensionId?: string | null;
   eventType: string;
   summary: string;
   payload: Record<string, unknown>;
@@ -13,7 +12,7 @@ type EmitActivityEventInput = {
 
 type ListActivityInput = {
   projectId: string;
-  resourceType?: ActivityResourceType;
+  resourceType?: string;
   resourceId?: string;
   eventType?: string;
   from?: string;
@@ -30,6 +29,7 @@ export const emitActivityEvent = async (
     projectId: input.projectId,
     resourceType: input.resourceType,
     resourceId: input.resourceId,
+    sourceExtensionId: input.sourceExtensionId ?? null,
     eventType: input.eventType,
     actorType: "system",
     source: "api",

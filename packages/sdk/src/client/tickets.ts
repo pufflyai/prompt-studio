@@ -77,7 +77,7 @@ const buildActivityQuery = (
     to?: string;
     cursor?: string;
     limit?: number;
-    resource_type?: "ticket" | "workspace" | "session";
+    resource_type?: string;
   } = {},
 ) => {
   const params = new URLSearchParams();

@@ -1,6 +1,8 @@
 import { z } from "zod";
 
-export const activityResourceTypeSchema = z.enum(["ticket", "workspace", "session"]);
+export const ACTIVITY_CORE_RESOURCE_TYPES = ["ticket", "workspace", "session"] as const;
+
+export const activityResourceTypeSchema = z.string();
 export const activityActorTypeSchema = z.enum(["user", "agent", "system"]);
 export const activitySourceSchema = z.enum(["ui", "api", "hook", "system", "agent"]);
 
@@ -9,6 +11,7 @@ export const activityEventSchema = z.object({
   project_id: z.string(),
   resource_type: activityResourceTypeSchema,
   resource_id: z.string(),
+  source_extension_id: z.string().nullable(),
   event_type: z.string(),
   actor_type: activityActorTypeSchema,
   actor_id: z.string().nullable(),
@@ -35,7 +38,7 @@ export const listActivityResponseSchema = z.object({
   next_cursor: z.string().nullable(),
 });
 
-export type ActivityResourceType = z.infer<typeof activityResourceTypeSchema>;
+export type ActivityResourceType = string;
 export type ActivityActorType = z.infer<typeof activityActorTypeSchema>;
 export type ActivitySource = z.infer<typeof activitySourceSchema>;
 export type ActivityEvent = z.infer<typeof activityEventSchema>;

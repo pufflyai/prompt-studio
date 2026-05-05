@@ -123,8 +123,8 @@ export const createApp = async (options: AppOptions) => {
   const templateService = createTemplateService({ templatesDBService });
   const attemptStatusService = createAttemptStatusService({ attemptStatusesDBService });
   const agentConfigService = createAgentConfigService({ agentConfigsDBService });
-  const skillService = createSkillService({ skillsDBService, skillsStorageService });
   const fileService = createFileService({ filesDBService, filesStorageService });
+  const skillService = createSkillService({ skillsDBService, skillsStorageService, fileService });
   const syncService = createSyncService({ db, eventBus });
 
   const workspaceSessionService = createWorkspaceSessionService({ workspaceSessionsDBService });

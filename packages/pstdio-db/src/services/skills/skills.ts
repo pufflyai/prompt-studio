@@ -1,18 +1,14 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { skills } from "../../db/schemas.pg";
-
-type SkillFile = {
-  path: string;
-  content: string;
-  encoding: "utf8";
-};
+import { skill_files, skills } from "../../db/schemas.pg";
 
 type SkillRow = typeof skills.$inferSelect;
+type SkillFileRow = typeof skill_files.$inferSelect;
 
-type SkillRecord = Omit<SkillRow, "files_json" | "file_id"> & {
-  files: SkillFile[];
-  legacy_file_id: string | null;
+export type SkillFileMembership = { path: string; file_id: string };
+
+export type SkillRecord = SkillRow & {
+  files: SkillFileMembership[];
 };
 
 const nowTimestamp = () => new Date().toISOString();
@@ -21,123 +17,145 @@ type CreateInput = {
   project_id: string;
   name: string;
   description: string;
-  files: SkillFile[];
+  files?: SkillFileMembership[];
 };
 
 type UpdateInput = {
-  files?: SkillFile[];
   description?: string;
+  files?: SkillFileMembership[];
 };
 
-const parseFiles = (filesJson: string) => {
-  let value: unknown;
+const sortFiles = (rows: SkillFileRow[]) =>
+  rows
+    .map<SkillFileMembership>((row) => ({ path: row.path, file_id: row.file_id }))
+    .sort((a, b) => {
+      if (a.path === "SKILL.md") return -1;
+      if (b.path === "SKILL.md") return 1;
+      return a.path.localeCompare(b.path);
+    });
 
-  try {
-    value = JSON.parse(filesJson);
-  } catch {
-    return [];
+const loadFilesBySkillIds = async (db: DbClient, skillIds: string[]) => {
+  if (skillIds.length === 0) return new Map<string, SkillFileMembership[]>();
+
+  const rows = await db.select().from(skill_files).where(inArray(skill_files.skill_id, skillIds));
+  const grouped = new Map<string, SkillFileRow[]>();
+
+  for (const row of rows) {
+    const list = grouped.get(row.skill_id) ?? [];
+    list.push(row);
+    grouped.set(row.skill_id, list);
   }
 
-  if (!Array.isArray(value)) return [];
+  const result = new Map<string, SkillFileMembership[]>();
+  for (const [skillId, items] of grouped) result.set(skillId, sortFiles(items));
+  return result;
+};
 
-  return value.filter(
-    (item): item is SkillFile =>
-      !!item &&
-      typeof item === "object" &&
-      typeof (item as SkillFile).path === "string" &&
-      typeof (item as SkillFile).content === "string" &&
-      (item as SkillFile).encoding === "utf8",
+const decorate = (row: SkillRow, files: SkillFileMembership[]): SkillRecord => ({ ...row, files });
+
+const replaceSkillFiles = async (
+  db: DbClient,
+  projectId: string,
+  skillId: string,
+  files: SkillFileMembership[],
+  timestamp: string,
+) => {
+  await db.delete(skill_files).where(eq(skill_files.skill_id, skillId));
+  if (files.length === 0) return;
+
+  await db.insert(skill_files).values(
+    files.map((file) => ({
+      project_id: projectId,
+      skill_id: skillId,
+      path: file.path,
+      file_id: file.file_id,
+      created_at: timestamp,
+      updated_at: timestamp,
+    })),
   );
 };
 
-const mapSkill = (row: SkillRow): SkillRecord => {
-  return {
-    id: row.id,
-    project_id: row.project_id,
-    name: row.name,
-    description: row.description,
-    legacy_file_id: row.file_id,
-    files: parseFiles(row.files_json),
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-    deleted_at: row.deleted_at,
-  };
-};
+const sortMembership = (files: SkillFileMembership[]) =>
+  [...files].sort((a, b) => {
+    if (a.path === "SKILL.md") return -1;
+    if (b.path === "SKILL.md") return 1;
+    return a.path.localeCompare(b.path);
+  });
 
 export const createSkillsDBService = (db: DbClient) => {
   const list = async (projectId: string) => {
-    const records = await db
+    const rows = await db
       .select()
       .from(skills)
       .where(and(eq(skills.project_id, projectId), isNull(skills.deleted_at)))
       .orderBy(skills.name);
-    return records.map(mapSkill);
-  };
-
-  const getByNameRow = async (projectId: string, name: string) => {
-    const [skill] = await db
-      .select()
-      .from(skills)
-      .where(and(eq(skills.project_id, projectId), eq(skills.name, name), isNull(skills.deleted_at)));
-    return skill ?? null;
+    const filesById = await loadFilesBySkillIds(
+      db,
+      rows.map((r) => r.id),
+    );
+    return rows.map((row) => decorate(row, filesById.get(row.id) ?? []));
   };
 
   const getByName = async (projectId: string, name: string) => {
-    const row = await getByNameRow(projectId, name);
-    return row ? mapSkill(row) : null;
+    const [row] = await db
+      .select()
+      .from(skills)
+      .where(and(eq(skills.project_id, projectId), eq(skills.name, name), isNull(skills.deleted_at)));
+    if (!row) return null;
+    const filesById = await loadFilesBySkillIds(db, [row.id]);
+    return decorate(row, filesById.get(row.id) ?? []);
   };
 
   const create = async (input: CreateInput) => {
     const timestamp = nowTimestamp();
+    const files = input.files ?? [];
 
     const row: SkillRow = {
       id: crypto.randomUUID(),
       project_id: input.project_id,
       name: input.name,
       description: input.description,
-      file_id: null,
-      files_json: JSON.stringify(input.files),
       created_at: timestamp,
       updated_at: timestamp,
       deleted_at: null,
     };
 
     await db.insert(skills).values(row);
-    return mapSkill(row);
+    await replaceSkillFiles(db, input.project_id, row.id, files, timestamp);
+
+    return decorate(row, sortMembership(files));
   };
 
   const update = async (projectId: string, name: string, input: UpdateInput) => {
-    const existingRow = await getByNameRow(projectId, name);
-    if (!existingRow) return null;
-
-    const existing = mapSkill(existingRow);
+    const existing = await getByName(projectId, name);
+    if (!existing) return null;
 
     const timestamp = nowTimestamp();
 
-    const updated: SkillRecord = {
+    const nextRow: SkillRow = {
       ...existing,
-      files: input.files ?? existing.files,
       description: input.description ?? existing.description,
       updated_at: timestamp,
     };
 
     await db
       .update(skills)
-      .set({
-        files_json: JSON.stringify(updated.files),
-        description: updated.description,
-        updated_at: updated.updated_at,
-      })
+      .set({ description: nextRow.description, updated_at: nextRow.updated_at })
       .where(eq(skills.id, existing.id));
 
-    return updated;
+    const nextFiles = input.files ?? existing.files;
+    if (input.files) {
+      await replaceSkillFiles(db, projectId, existing.id, input.files, timestamp);
+    }
+
+    return decorate(nextRow, sortMembership(nextFiles));
   };
 
   const remove = async (projectId: string, name: string) => {
-    const existingRow = await getByNameRow(projectId, name);
-    if (!existingRow) return false;
+    const existing = await getByName(projectId, name);
+    if (!existing) return false;
 
-    await db.update(skills).set({ deleted_at: nowTimestamp() }).where(eq(skills.id, existingRow.id));
+    await db.update(skills).set({ deleted_at: nowTimestamp() }).where(eq(skills.id, existing.id));
     return true;
   };
 

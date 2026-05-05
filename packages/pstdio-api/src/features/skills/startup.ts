@@ -1,5 +1,4 @@
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getBundledSkills } from "pstdio-agents";
 import { findAgent } from "pstdio-api-contracts/known-agents";
@@ -33,23 +32,6 @@ const installMissingSkillsForProject = async (deps: Deps, projectId: string, age
         installSkillToRepo(repo.path, agent.agent_id, skill.name, skill.files);
       }
     }
-  }
-};
-
-const hydrateLegacySkillFilesForProject = async (deps: Deps, projectId: string) => {
-  const skills = await deps.skillService.list(projectId);
-
-  for (const skill of skills) {
-    if (skill.files.length > 0) continue;
-    if (!("legacy_file_id" in skill) || !skill.legacy_file_id) continue;
-
-    const file = await deps.fileService.get(skill.legacy_file_id);
-    if (!file) continue;
-
-    const content = await readFile(file.storage_path, "utf8");
-    await deps.skillService.update(projectId, skill.name, {
-      files: [{ path: "SKILL.md", content, encoding: "utf8" }],
-    });
   }
 };
 
@@ -103,7 +85,6 @@ export const ensureSkillsInstalled = async (deps: Deps) => {
   if (projects.length === 0) return;
 
   for (const project of projects) {
-    await hydrateLegacySkillFilesForProject(deps, project.id);
     await syncSingleFileSkillsWithBundledForProject(deps, project.id, agents);
     if (agents.length === 0) continue;
     await installMissingSkillsForProject(deps, project.id, agents);

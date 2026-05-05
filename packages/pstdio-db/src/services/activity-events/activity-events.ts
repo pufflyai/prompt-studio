@@ -2,13 +2,12 @@ import { and, desc, eq, gte, lt, lte, or } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { activity_events } from "../../db/schemas.pg";
 
-export const ACTIVITY_RESOURCE_TYPES = ["ticket", "workspace", "session"] as const;
+export const ACTIVITY_CORE_RESOURCE_TYPES = ["ticket", "workspace", "session"] as const;
 export const ACTIVITY_ACTOR_TYPES = ["user", "agent", "system"] as const;
 export const ACTIVITY_EVENT_SOURCES = ["ui", "api", "hook", "system", "agent"] as const;
 
 type ActivityEventRecord = typeof activity_events.$inferSelect;
 
-type ResourceType = (typeof ACTIVITY_RESOURCE_TYPES)[number];
 type ActorType = (typeof ACTIVITY_ACTOR_TYPES)[number];
 type EventSource = (typeof ACTIVITY_EVENT_SOURCES)[number];
 
@@ -19,8 +18,9 @@ type CursorPayload = {
 
 type CreateInput = {
   projectId: string;
-  resourceType: ResourceType;
+  resourceType: string;
   resourceId: string;
+  sourceExtensionId?: string | null;
   eventType: string;
   actorType: ActorType;
   actorId?: string;
@@ -31,7 +31,7 @@ type CreateInput = {
 
 type ListInput = {
   projectId: string;
-  resourceType?: ResourceType;
+  resourceType?: string;
   resourceId?: string;
   eventType?: string;
   fromCreatedAt?: string;
@@ -72,6 +72,7 @@ export const createActivityEventsDBService = (db: DbClient) => {
       project_id: input.projectId,
       resource_type: input.resourceType,
       resource_id: input.resourceId,
+      source_extension_id: input.sourceExtensionId ?? null,
       event_type: input.eventType,
       actor_type: input.actorType,
       actor_id: input.actorId ?? null,
@@ -144,7 +145,7 @@ export const createActivityEventsDBService = (db: DbClient) => {
 
   const listByProject = async (input: Omit<ListInput, "resourceId">) => list(input);
 
-  const listByResource = async (input: ListInput & { resourceType: ResourceType; resourceId: string }) => list(input);
+  const listByResource = async (input: ListInput & { resourceType: string; resourceId: string }) => list(input);
 
   return {
     create,

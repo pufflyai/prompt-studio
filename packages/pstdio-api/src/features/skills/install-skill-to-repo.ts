@@ -1,5 +1,4 @@
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { readFile } from "node:fs/promises";
 import { homedir as defaultHomedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import type { SkillFile } from "pstdio-api-contracts";
@@ -88,27 +87,10 @@ export const installProjectSkillsToRepo = async (
   const [skills, agents] = await Promise.all([deps.skillService.list(input.projectId), resolveTargetAgents(deps)]);
 
   for (const skill of skills) {
-    const files =
-      skill.files.length > 0
-        ? skill.files
-        : "legacy_file_id" in skill && skill.legacy_file_id
-          ? await deps.fileService.get(skill.legacy_file_id).then(async (file) =>
-              file
-                ? [
-                    {
-                      path: "SKILL.md",
-                      content: await readFile(file.storage_path, "utf8"),
-                      encoding: "utf8" as const,
-                    },
-                  ]
-                : [],
-            )
-          : [];
-
-    if (files.length === 0) continue;
+    if (skill.files.length === 0) continue;
 
     for (const agent of agents) {
-      installSkillToRepo(input.repoPath, agent.agent_id, skill.name, files);
+      installSkillToRepo(input.repoPath, agent.agent_id, skill.name, skill.files);
     }
   }
 };

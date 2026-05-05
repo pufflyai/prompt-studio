@@ -83,6 +83,7 @@ describe("schemas.zod", () => {
 
   it("supports workspace and session API payload extensions", () => {
     const workspaceResult = workspaceApiSchema.safeParse({
+      anchors_json: [],
       archived: false,
       branch: null,
       created_at: "2026-01-01T00:00:00.000Z",
@@ -104,6 +105,7 @@ describe("schemas.zod", () => {
       agent: null,
       agent_session_id: null,
       agent_session_status: "not_connected",
+      anchors_json: [],
       archived: false,
       branch: null,
       session_file_id: null,
@@ -132,6 +134,7 @@ describe("schemas.zod", () => {
       agent: null,
       agent_session_id: null,
       agent_session_status: "not_connected",
+      anchors_json: [],
       archived: false,
       branch: null,
       session_file_id: null,
@@ -194,6 +197,7 @@ describe("schemas.zod", () => {
       project_id: "project-1",
       resource_type: "ticket",
       resource_id: "PS-38",
+      source_extension_id: null,
       event_type: "status_changed",
       actor_type: "user",
       actor_id: "user-1",

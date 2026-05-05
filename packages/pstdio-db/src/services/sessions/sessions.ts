@@ -46,6 +46,7 @@ export const createSessionsDBService = (db: DbClient) => {
       session_file_id: null,
       original_session_id: input.original_session_id ?? null,
       cwd: input.cwd ?? null,
+      anchors_json: [],
       created_at: timestamp,
       updated_at: timestamp,
     };

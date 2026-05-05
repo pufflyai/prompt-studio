@@ -22,7 +22,7 @@ export const ticketTagSelectSchema = createSelectSchema(ticket_tags);
 export const ticketTagOptionSelectSchema = createSelectSchema(ticket_tag_options);
 export const workspaceSelectSchema = createSelectSchema(workspaces);
 export const activityEventSelectSchema = createSelectSchema(activity_events, {
-  resource_type: z.enum(["ticket", "workspace", "session"]),
+  resource_type: z.string(),
   actor_type: z.enum(["user", "agent", "system"]),
   source: z.enum(["ui", "api", "hook", "system", "agent"]),
   payload_json: z.record(z.string(), z.unknown()),

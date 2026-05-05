@@ -1,17 +1,37 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
-import { projects } from "../../db/schemas.pg";
+import { files, projects } from "../../db/schemas.pg";
 import { createSkillsDBService } from "./skills";
 
 const nowTimestamp = () => new Date().toISOString();
 
 let close: (() => Promise<void>) | undefined;
 let svc: ReturnType<typeof createSkillsDBService>;
+let db: Awaited<ReturnType<typeof createDb>>["db"];
 let projectId: string;
+let entrypointFileId: string;
+let extraFileId: string;
+
+const insertFile = async (projectId: string, fileName: string) => {
+  const id = crypto.randomUUID();
+  const timestamp = nowTimestamp();
+  await db.insert(files).values({
+    id,
+    project_id: projectId,
+    file_name: fileName,
+    file_kind: "skill",
+    storage_path: `/tmp/${id}`,
+    size_bytes: 0,
+    created_at: timestamp,
+    updated_at: timestamp,
+  });
+  return id;
+};
 
 beforeEach(async () => {
   const result = await createDb({ path: ":memory:" });
   close = result.close;
+  db = result.db;
   svc = createSkillsDBService(result.db);
 
   projectId = crypto.randomUUID();
@@ -19,6 +39,9 @@ beforeEach(async () => {
   await result.db
     .insert(projects)
     .values({ id: projectId, name: "Test", shorthand: "T", created_at: timestamp, updated_at: timestamp });
+
+  entrypointFileId = await insertFile(projectId, "SKILL.md");
+  extraFileId = await insertFile(projectId, "example.md");
 });
 
 afterEach(async () => {
@@ -32,8 +55,8 @@ describe("skillsService", () => {
       name: "create-pstdio-plugin",
       description: "Hook helpers",
       files: [
-        { path: "SKILL.md", content: "# skill", encoding: "utf8" },
-        { path: "references/example.md", content: "# ref", encoding: "utf8" },
+        { path: "SKILL.md", file_id: entrypointFileId },
+        { path: "references/example.md", file_id: extraFileId },
       ],
     });
 
@@ -50,17 +73,19 @@ describe("skillsService", () => {
       project_id: projectId,
       name: "create-pstdio-plugin",
       description: "Hook helpers",
-      files: [{ path: "SKILL.md", content: "# skill", encoding: "utf8" }],
+      files: [{ path: "SKILL.md", file_id: entrypointFileId }],
     });
+
+    const replacement = await insertFile(projectId, "SKILL.v2.md");
 
     const updated = await svc.update(projectId, "create-pstdio-plugin", {
       description: "Updated hook helpers",
-      files: [{ path: "SKILL.md", content: "# updated", encoding: "utf8" }],
+      files: [{ path: "SKILL.md", file_id: replacement }],
     });
 
     expect(updated).not.toBeNull();
     expect(updated?.description).toBe("Updated hook helpers");
-    expect(updated?.files).toEqual([{ path: "SKILL.md", content: "# updated", encoding: "utf8" }]);
+    expect(updated?.files).toEqual([{ path: "SKILL.md", file_id: replacement }]);
   });
 
   test("remove soft deletes the skill", async () => {
@@ -68,7 +93,7 @@ describe("skillsService", () => {
       project_id: projectId,
       name: "create-pstdio-plugin",
       description: "Hook helpers",
-      files: [{ path: "SKILL.md", content: "# skill", encoding: "utf8" }],
+      files: [{ path: "SKILL.md", file_id: entrypointFileId }],
     });
 
     const removed = await svc.remove(projectId, "create-pstdio-plugin");
