@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { CodeNode } from "@lexical/code";
-import { $isAutoLinkNode, AutoLinkNode, LinkNode } from "@lexical/link";
+import { $isAutoLinkNode, $isLinkNode, AutoLinkNode, LinkNode } from "@lexical/link";
 import { $isListItemNode, $isListNode, ListItemNode, ListNode } from "@lexical/list";
 import { $convertFromMarkdownString, $convertToMarkdownString, CHECK_LIST, TRANSFORMERS } from "@lexical/markdown";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
@@ -89,6 +89,77 @@ describe("markdown transformers", () => {
     });
 
     expect(exportedMarkdown).toBe(markdown);
+  });
+
+  test("preserves underscores in link URLs across save/reopen cycles", () => {
+    const editor = createHeadlessEditor();
+    const markdown = "[example](https://github.com/foo_bar/baz_qux)";
+    let firstExport = "";
+    let secondExport = "";
+    let importedLinkUrl = "";
+
+    editor.update(
+      () => {
+        $convertFromMarkdownString(markdown, editorTransformers, undefined, false);
+      },
+      { discrete: true },
+    );
+
+    editor.read(() => {
+      const root = $getRoot();
+      const paragraph = root.getFirstChild();
+      const linkNode = $isElementNode(paragraph) ? paragraph.getFirstChild() : null;
+      importedLinkUrl = $isLinkNode(linkNode) ? linkNode.getURL() : "";
+      firstExport = $convertToMarkdownString(editorTransformers, root);
+    });
+
+    editor.update(
+      () => {
+        $convertFromMarkdownString(firstExport, editorTransformers, undefined, false);
+      },
+      { discrete: true },
+    );
+
+    editor.read(() => {
+      const root = $getRoot();
+      secondExport = $convertToMarkdownString(editorTransformers, root);
+    });
+
+    expect(importedLinkUrl).toBe("https://github.com/foo_bar/baz_qux");
+    expect(firstExport).toBe(markdown);
+    expect(secondExport).toBe(markdown);
+  });
+
+  test("preserves underscores in bare URLs across save/reopen cycles", () => {
+    const editor = createHeadlessEditor();
+    const markdown = "https://github.com/foo_bar/baz_qux";
+    let firstExport = "";
+    let secondExport = "";
+
+    editor.update(
+      () => {
+        $convertFromMarkdownString(markdown, editorTransformers, undefined, false);
+      },
+      { discrete: true },
+    );
+
+    editor.read(() => {
+      firstExport = $convertToMarkdownString(editorTransformers, $getRoot());
+    });
+
+    editor.update(
+      () => {
+        $convertFromMarkdownString(firstExport, editorTransformers, undefined, false);
+      },
+      { discrete: true },
+    );
+
+    editor.read(() => {
+      secondExport = $convertToMarkdownString(editorTransformers, $getRoot());
+    });
+
+    expect(firstExport).toBe(markdown);
+    expect(secondExport).toBe(markdown);
   });
 
   test("imports checklist items as check list nodes", () => {

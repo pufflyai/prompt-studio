@@ -125,12 +125,12 @@ const BARE_URL_REGEXP = /https?:\/\/[^\s<>"']*[^\s<>"'.,:;"')\]}]/;
 
 export const BARE_URL: TextMatchTransformer = {
   dependencies: [AutoLinkNode],
-  export: (node, exportChildren) => {
+  export: (node) => {
     if (!$isAutoLinkNode(node)) {
       return null;
     }
 
-    return exportChildren(node);
+    return node.getURL();
   },
   regExp: BARE_URL_REGEXP,
   importRegExp: BARE_URL_REGEXP,
