@@ -1,4 +1,4 @@
-import { Badge, Flex, HStack, Icon, Stack, Text } from "@chakra-ui/react";
+import { HStack, Stack, Text } from "@chakra-ui/react";
 import { TerminalIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { WorkspaceAgentMenu, type WorkspacePanelMenuOption } from "@/features/agents/components/agent-browser";
@@ -14,11 +14,6 @@ interface ProjectAgentsPanelViewProps {
   defaultAgentModel: string | null;
   isUpdating: boolean;
   onSetDefaultAgent: (agentId: string, modelId: string | null) => void;
-}
-
-interface AgentRowProps {
-  agent: AgentInfo;
-  isProjectDefault: boolean;
 }
 
 interface DefaultModelSelectorProps {
@@ -70,30 +65,6 @@ const DefaultModelSelector = (props: DefaultModelSelectorProps) => {
   );
 };
 
-const AgentRow = (props: AgentRowProps) => {
-  const { agent, isProjectDefault } = props;
-  const { t } = useTranslation("projects");
-
-  return (
-    <Stack
-      gap="sm"
-      px="md"
-      py="sm"
-      borderWidth="1px"
-      borderColor={isProjectDefault ? "border.emphasized" : "border.muted"}
-      borderRadius="md"
-    >
-      <Flex alignItems="center" justifyContent="space-between" gap="md">
-        <HStack gap="sm">
-          <Icon as={TerminalIcon} boxSize="16px" color="fg.muted" />
-          <Text textStyle="label/S/medium">{agent.name}</Text>
-          {isProjectDefault && <Badge colorPalette="blue">{t("projectSettings.agentsPanel.defaultBadge")}</Badge>}
-        </HStack>
-      </Flex>
-    </Stack>
-  );
-};
-
 export const ProjectAgentsPanelView = (props: ProjectAgentsPanelViewProps) => {
   const { enabledAgentIds, agents, defaultAgentId, defaultAgentModel, isUpdating, onSetDefaultAgent } = props;
   const { t } = useTranslation("projects");
@@ -136,10 +107,6 @@ export const ProjectAgentsPanelView = (props: ProjectAgentsPanelViewProps) => {
         isUpdating={isUpdating}
         onSelectAgent={onSetDefaultAgent}
       />
-
-      {enabledAgents.map((agent) => (
-        <AgentRow key={agent.id} agent={agent} isProjectDefault={defaultAgentId === agent.id} />
-      ))}
     </Stack>
   );
 };
