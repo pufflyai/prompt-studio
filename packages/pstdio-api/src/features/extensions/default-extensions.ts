@@ -114,7 +114,7 @@ export const enableInstalledExtensionsForProject = async (deps: EnableInstalledE
   const hash = deps.hashExtension ?? hashExtensionSource;
   const enabled: string[] = [];
 
-  for (const entry of readdirSync(root, { withFileTypes: true })) {
+  for (const entry of readdirSync(root, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
     if (!entry.isDirectory()) continue;
     const sourcePath = join(root, entry.name);
 

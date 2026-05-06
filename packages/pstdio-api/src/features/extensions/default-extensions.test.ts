@@ -120,8 +120,8 @@ describe("installDefaultExtensions", () => {
 describe("enableInstalledExtensionsForProject", () => {
   test("enables every installed extension found on disk for the project", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-default-extensions-"));
-    writeExtension(join(root, "core-skills"), "core-skills");
     writeExtension(join(root, "core-templates"), "core-templates");
+    writeExtension(join(root, "core-skills"), "core-skills");
     const calls: Array<Record<string, unknown>> = [];
     const enableInstalledSourceForProject = mock(async (input: Record<string, unknown>) => {
       calls.push(input);
