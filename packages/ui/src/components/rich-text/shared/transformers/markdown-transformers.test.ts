@@ -91,6 +91,89 @@ describe("markdown transformers", () => {
     expect(exportedMarkdown).toBe(markdown);
   });
 
+  test("round-trips bare https URLs containing underscores without adding escape characters", () => {
+    const editor = createHeadlessEditor();
+    const markdown = "https://example.com/foo_bar";
+    let firstExport = "";
+    let secondExport = "";
+
+    editor.update(
+      () => {
+        $convertFromMarkdownString(markdown, editorTransformers, undefined, false);
+      },
+      { discrete: true },
+    );
+
+    editor.read(() => {
+      firstExport = $convertToMarkdownString(editorTransformers, $getRoot());
+    });
+
+    editor.update(
+      () => {
+        $convertFromMarkdownString(firstExport, editorTransformers, undefined, false);
+      },
+      { discrete: true },
+    );
+
+    editor.read(() => {
+      secondExport = $convertToMarkdownString(editorTransformers, $getRoot());
+    });
+
+    expect(firstExport).toBe(markdown);
+    expect(secondExport).toBe(markdown);
+  });
+
+  test("recovers bare URLs that already contain markdown-escape backslashes", () => {
+    const editor = createHeadlessEditor();
+    const corrupted = "https://example.com/foo\\_bar";
+    let exported = "";
+
+    editor.update(
+      () => {
+        $convertFromMarkdownString(corrupted, editorTransformers, undefined, false);
+      },
+      { discrete: true },
+    );
+
+    editor.read(() => {
+      exported = $convertToMarkdownString(editorTransformers, $getRoot());
+    });
+
+    expect(exported).toBe("https://example.com/foo_bar");
+  });
+
+  test("round-trips markdown links whose URL contains underscores without adding escape characters", () => {
+    const editor = createHeadlessEditor();
+    const markdown = "[example](https://example.com/foo_bar)";
+    let firstExport = "";
+    let secondExport = "";
+
+    editor.update(
+      () => {
+        $convertFromMarkdownString(markdown, editorTransformers, undefined, false);
+      },
+      { discrete: true },
+    );
+
+    editor.read(() => {
+      firstExport = $convertToMarkdownString(editorTransformers, $getRoot());
+    });
+
+    editor.update(
+      () => {
+        $convertFromMarkdownString(firstExport, editorTransformers, undefined, false);
+      },
+      { discrete: true },
+    );
+
+    editor.read(() => {
+      secondExport = $convertToMarkdownString(editorTransformers, $getRoot());
+    });
+
+    expect(firstExport).toBe(markdown);
+    expect(secondExport).toBe(markdown);
+  });
+
   test("imports checklist items as check list nodes", () => {
     const editor = createHeadlessEditor();
     const markdown = "- [ ] unchecked\n- [x] checked";

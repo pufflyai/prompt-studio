@@ -123,19 +123,25 @@ export const UNDERLINE_U_TAG: TextMatchTransformer = {
 
 const BARE_URL_REGEXP = /https?:\/\/[^\s<>"']*[^\s<>"'.,:;"')\]}]/;
 
+// Strip markdown character escapes that may have leaked into a URL, e.g.
+// `https://example.com/foo\_bar` -> `https://example.com/foo_bar`.
+// Without this, repeated save/reopen cycles would accumulate backslashes
+// because the URL is stored as both text content and href.
+const unescapeUrl = (url: string) => url.replace(/\\([*_`~\\])/g, "$1");
+
 export const BARE_URL: TextMatchTransformer = {
   dependencies: [AutoLinkNode],
-  export: (node, exportChildren) => {
+  export: (node) => {
     if (!$isAutoLinkNode(node)) {
       return null;
     }
 
-    return exportChildren(node);
+    return node.getURL();
   },
   regExp: BARE_URL_REGEXP,
   importRegExp: BARE_URL_REGEXP,
   replace: (textNode, match) => {
-    const href = match[0];
+    const href = unescapeUrl(match[0]);
     const autoLinkNode = $createAutoLinkNode(href);
     const linkTextNode = $createTextNode(href);
 
