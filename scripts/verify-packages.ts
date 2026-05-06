@@ -1,9 +1,21 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { getHostPlatformPackage, resolveCompiledBinaryPath, runCompiledBunSmoke } from "./lib/compiled-bun-smoke";
 import { loadEmbedConfig } from "./lib/embed-manifest";
 
 const config = loadEmbedConfig();
+
+process.stdout.write("Building all compiled targets...\n");
+const build = spawnSync("bun", ["run", "scripts/build-all.ts"], {
+  stdio: "inherit",
+  env: process.env,
+});
+
+if (build.status !== 0) {
+  process.stderr.write("\nVerification failed: all-target compiled build failed.\n");
+  process.exit(build.status ?? 1);
+}
 
 let failed = false;
 
@@ -26,9 +38,11 @@ if (failed) {
 }
 
 process.stdout.write("\nRunning packaged runtime smoke check...\n");
+const hostPlatformPackage = getHostPlatformPackage(config.platformBinaries);
+const hostBinaryPath = resolveCompiledBinaryPath(hostPlatformPackage);
 const smoke = spawnSync("bun", ["test", "packages/e2e/src/packaged/packaged-serve-smoke.test.ts", "--silent"], {
   stdio: "inherit",
-  env: process.env,
+  env: { ...process.env, PSTDIO_PACKAGED_BINARY_PATH: hostBinaryPath },
 });
 
 if (smoke.status !== 0) {
@@ -36,4 +50,7 @@ if (smoke.status !== 0) {
   process.exit(smoke.status ?? 1);
 }
 
-process.stdout.write("\nAll platform binaries and packaged runtime smoke checks passed.\n");
+process.stdout.write("\nRunning compiled Bun CLI smoke check...\n");
+runCompiledBunSmoke(config.platformBinaries);
+
+process.stdout.write("\nAll platform binaries and packaged smoke checks passed.\n");
