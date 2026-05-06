@@ -156,6 +156,17 @@ export const extensionsCheckResponseSchema = z.object({
   diagnostics: z.array(extensionDiagnosticSchema),
 });
 
+export const dashboardExtensionMetadataSchema = z.object({
+  extensions: z.array(extensionRecordSchema),
+  commands: z.array(extensionCommandRecordSchema),
+  menuContributions: z.array(extensionMenuContributionSchema),
+  views: z.array(extensionViewRecordSchema),
+  routes: z.array(extensionRouteRecordSchema),
+  navigation: z.array(extensionNavigationRecordSchema),
+  settingsPanels: z.array(extensionSettingsPanelRecordSchema),
+  diagnostics: z.array(extensionDiagnosticSchema),
+});
+
 export type ExtensionDiagnostic = z.infer<typeof extensionDiagnosticSchema>;
 export type ExtensionRecord = z.infer<typeof extensionRecordSchema>;
 export type ExtensionCommandRecord = z.infer<typeof extensionCommandRecordSchema>;
@@ -169,6 +180,7 @@ export type ExtensionRouteRecord = z.infer<typeof extensionRouteRecordSchema>;
 export type ExtensionNavigationRecord = z.infer<typeof extensionNavigationRecordSchema>;
 export type ExtensionSettingsPanelRecord = z.infer<typeof extensionSettingsPanelRecordSchema>;
 export type ExtensionsCheckResponse = z.infer<typeof extensionsCheckResponseSchema>;
+export type DashboardExtensionMetadata = z.infer<typeof dashboardExtensionMetadataSchema>;
 
 export const listExtensionCommandsResponseSchema = z.object({
   commands: z.array(extensionCommandRecordSchema),

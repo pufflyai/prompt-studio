@@ -4,6 +4,7 @@ import type { AppBindings } from "../../types";
 import type { ExtensionsRouteDeps } from "./deps";
 import { enableInstalledExtensionHandler, enableInstalledExtensionRoute } from "./endpoints/enable-installed-extension";
 import { executeExtensionCommandHandler, executeExtensionCommandRoute } from "./endpoints/execute-extension-command";
+import { getProjectExtensionUiHandler, getProjectExtensionUiRoute } from "./endpoints/get-project-extension-ui";
 import { listExtensionCommandsHandler, listExtensionCommandsRoute } from "./endpoints/list-extension-commands";
 import {
   updateInstalledExtensionTemplateHandler,
@@ -39,6 +40,7 @@ export const createExtensionRoutes = (deps: ExtensionsRouteDeps) => {
   routes.openapi(enableInstalledExtensionRoute, enableInstalledExtensionHandler(deps));
   routes.openapi(updateInstalledExtensionTemplateRoute, updateInstalledExtensionTemplateHandler(deps));
   routes.openapi(listExtensionCommandsRoute, listExtensionCommandsHandler(deps) as never);
+  routes.openapi(getProjectExtensionUiRoute, getProjectExtensionUiHandler(deps) as never);
   routes.openapi(executeExtensionCommandRoute, executeExtensionCommandHandler(deps) as never);
   routes.get("/extensions/installed/:installName/webviews/*", serveWebviewAsset(deps));
 

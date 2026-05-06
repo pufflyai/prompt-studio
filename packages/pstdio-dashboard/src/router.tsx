@@ -9,6 +9,7 @@ import {
   useParams,
 } from "@tanstack/react-router";
 import { Layout } from "@/components/layout";
+import { ProjectExtensionRoute } from "@/features/project/pages/project-extension-route";
 import { ProjectShell } from "@/features/project/pages/project-shell";
 import { resolveProjectDefaultPath } from "@/features/project/utils/project-default-path";
 import { ProjectList } from "@/features/project-list/pages/project-list";
@@ -109,6 +110,12 @@ const projectSettingsRoute = createRoute({
   component: ProjectSettings,
 });
 
+const projectExtensionRoute = createRoute({
+  getParentRoute: () => projectRoute,
+  path: "extensions/$extensionRoutePath",
+  component: ProjectExtensionRoute,
+});
+
 const projectSessionsRoute = createRoute({
   getParentRoute: () => projectRoute,
   path: "sessions",
@@ -150,6 +157,7 @@ const routeTree = rootRoute.addChildren([
       projectTicketFileRoute,
       projectTicketWorkspaceRoute,
       projectSettingsRoute,
+      projectExtensionRoute,
       projectSessionsRoute,
       projectSessionRoute,
     ]),

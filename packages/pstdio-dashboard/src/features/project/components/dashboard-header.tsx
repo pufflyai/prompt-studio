@@ -1,7 +1,9 @@
 import { Box, IconButton, Text } from "@chakra-ui/react";
 import { Header, useSidebarStore } from "@pstdio/ui";
+import { useParams } from "@tanstack/react-router";
 import { PanelLeftOpen } from "lucide-react";
 import type { ReactNode } from "react";
+import { ExtensionMenuSlot } from "@/shared/extensions/components/extension-menu-slot";
 
 interface DashboardHeaderProps {
   title: ReactNode;
@@ -11,6 +13,7 @@ interface DashboardHeaderProps {
 
 export const DashboardHeader = (props: DashboardHeaderProps) => {
   const { title, sidebarStorageKey, children } = props;
+  const { projectId } = useParams({ strict: false });
   const sidebarOpen = useSidebarStore(sidebarStorageKey, (s) => s.open);
   const openSidebar = useSidebarStore(sidebarStorageKey, (s) => s.openSidebar);
 
@@ -28,7 +31,9 @@ export const DashboardHeader = (props: DashboardHeaderProps) => {
       ) : (
         <Box flexShrink={0}>{title}</Box>
       )}
+      {projectId ? <ExtensionMenuSlot slotId="project.headerPrimary" /> : null}
       {children}
+      {projectId ? <ExtensionMenuSlot slotId="project.headerOverflow" /> : null}
     </Header>
   );
 };

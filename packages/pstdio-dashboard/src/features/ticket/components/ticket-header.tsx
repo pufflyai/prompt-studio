@@ -7,6 +7,7 @@ import type { ActionDescriptor } from "@/features/plugin-actions/api";
 import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
 import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin-header-actions";
 import { TicketsBreadcrumbTitle } from "@/features/project/components/tickets-breadcrumb-title";
+import { ExtensionMenuSlot } from "@/shared/extensions/components/extension-menu-slot";
 
 interface TicketHeaderProps {
   breadcrumbItems: BreadcrumbItem[];
@@ -40,6 +41,7 @@ export const TicketHeader = (props: TicketHeaderProps) => {
         pendingActionKeys={pendingActionKeys}
         overflowLabel={t("projects:ticketPanel.options.ticket")}
       />
+      <ExtensionMenuSlot slotId="project.headerOverflow" />
     </HorizontalMenuStack>
   );
 };
