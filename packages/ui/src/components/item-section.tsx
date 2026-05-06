@@ -22,7 +22,6 @@ export const ItemSection = (props: ItemSectionProps) => {
           _hover={{
             background: "bg.hover",
           }}
-          borderRadius={"xs"}
           padding="sm"
           height="2rem"
           display="flex"

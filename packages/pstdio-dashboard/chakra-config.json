@@ -4691,7 +4691,6 @@
             "borderColor": "var(--error-color)"
           },
           "px": "sm",
-          "border": "1px solid",
           "transition": "border-color 0.2s ease-in-out",
           "bg": "bg",
           "color": "fg",
@@ -4706,7 +4705,8 @@
             "borderColor": "blue.border"
           },
           "_focusVisible": {
-            "borderColor": "blue.border"
+            "borderColor": "blue.border",
+            "outline": "none"
           },
           "_placeholder": {
             "color": "fg.subtle"
@@ -8593,7 +8593,7 @@
           "separator": {
             "height": "1px",
             "bg": "bg.muted",
-            "my": "xs",
+            "my": "2xs",
             "mx": "-1",
             "borderColor": "border.muted"
           },
