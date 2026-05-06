@@ -19,6 +19,7 @@ import {
 import type React from "react";
 import { type Dispatch, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { TOGGLE_LINK_EDIT_MODE_COMMAND } from "./commands";
 import { getSelectedNode } from "./utils/getSelectedNode";
 import { setFloatingElemPos } from "./utils/setFloatingElemPos";
 import { sanitizeUrl } from "./utils/url";
@@ -330,8 +331,16 @@ function useLinkEditorToolbar(
         },
         COMMAND_PRIORITY_LOW,
       ),
+      editor.registerCommand(
+        TOGGLE_LINK_EDIT_MODE_COMMAND,
+        (payload) => {
+          setIsLinkEditMode(payload);
+          return true;
+        },
+        COMMAND_PRIORITY_LOW,
+      ),
     );
-  }, [editor]);
+  }, [editor, setIsLinkEditMode]);
 
   return createPortal(
     <LinkEditor

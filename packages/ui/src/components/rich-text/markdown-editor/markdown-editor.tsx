@@ -8,7 +8,6 @@ import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { HorizontalRulePlugin } from "@lexical/react/LexicalHorizontalRulePlugin";
-import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
@@ -22,6 +21,7 @@ import { ImportCodeBlocksPlugin } from "../shared/plugins/CodePlugin/CodeBlockPl
 import { CodeHighlightingPlugin } from "../shared/plugins/CodePlugin/CodeHighlightingPlugin";
 import { EquationPlugin } from "../shared/plugins/EquationPlugin/EquationPlugin";
 import { FloatingTextFormatToolbarPlugin } from "../shared/plugins/FloatingTextFormatToolbarPlugin";
+import { LinkEditorPlugin, LinkPlugin } from "../shared/plugins/LinkEditorPlugin";
 import ToggleEditablePlugin from "../shared/plugins/ToggleEditablePlugin";
 import { TreeViewPlugin } from "../shared/plugins/TreeViewPlugin/TreeViewPlugin";
 import { normalizeMarkdownListIndentation, splitFrontmatter } from "../utils/markdown";
@@ -113,7 +113,10 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
           ErrorBoundary={LexicalErrorBoundary}
         />
         {isEditable && floatingToolbarAnchorElem ? (
-          <FloatingTextFormatToolbarPlugin anchorElem={floatingToolbarAnchorElem} />
+          <>
+            <FloatingTextFormatToolbarPlugin anchorElem={floatingToolbarAnchorElem} />
+            <LinkEditorPlugin anchorElem={floatingToolbarAnchorElem} />
+          </>
         ) : null}
         {shouldTrackChanges ? (
           <OnChangePlugin
