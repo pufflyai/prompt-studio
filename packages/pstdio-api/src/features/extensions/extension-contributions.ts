@@ -7,6 +7,7 @@ import {
   slotId,
   validateArtifactPath,
   validatePackageAsset,
+  validateWebviewEntry,
 } from "./extension-diagnostics";
 import type { LoadedExtension } from "./extension-runtime";
 
@@ -161,10 +162,40 @@ const collectSchedules = (check: ExtensionsCheckResponse, loaded: LoadedExtensio
 
 export const collectAssetsAndUi = (check: ExtensionsCheckResponse, loaded: LoadedExtension, sourcePath: string) => {
   collectArtifactMounts(check, loaded, sourcePath);
-  collectRoutes(check, loaded, sourcePath);
+  validateWebviewContributionEntries(check, loaded, sourcePath);
+  collectRoutes(check, loaded);
   collectNavigation(check, loaded);
   collectPackageAssetRecords(check, loaded, sourcePath, "templates");
   collectPackageAssetRecords(check, loaded, sourcePath, "skills");
+};
+
+const webviewContributionMaps = [
+  "activityRenderers",
+  "routes",
+  "sessionAnchorRenderers",
+  "settingsPanels",
+  "views",
+] as const;
+
+const validateWebviewContributionEntries = (
+  check: ExtensionsCheckResponse,
+  loaded: LoadedExtension,
+  sourcePath: string,
+) => {
+  for (const mapKey of webviewContributionMaps) {
+    const contributions = loaded.definition[mapKey];
+    if (!isRecord(contributions)) continue;
+
+    for (const [key, contribution] of Object.entries(contributions)) {
+      if (!isRecord(contribution) || !isRecord(contribution.webview)) continue;
+      validateWebviewEntry(check, contribution.webview.entry, {
+        code: `${mapKey === "routes" ? "route" : mapKey}_webview`,
+        extensionId: loaded.metadata.id,
+        message: `${mapKey} ${key} webview entry`,
+        sourcePath,
+      });
+    }
+  }
 };
 
 const collectArtifactMounts = (check: ExtensionsCheckResponse, loaded: LoadedExtension, sourcePath: string) => {
@@ -193,18 +224,12 @@ const collectArtifactMounts = (check: ExtensionsCheckResponse, loaded: LoadedExt
   }
 };
 
-const collectRoutes = (check: ExtensionsCheckResponse, loaded: LoadedExtension, sourcePath: string) => {
+const collectRoutes = (check: ExtensionsCheckResponse, loaded: LoadedExtension) => {
   const routes = loaded.definition.routes;
   if (!isRecord(routes)) return;
 
   for (const [key, route] of Object.entries(routes)) {
     if (!isRecord(route) || !isRecord(route.webview)) continue;
-    validatePackageAsset(check, route.webview.entry, {
-      code: "route_webview_invalid",
-      extensionId: loaded.metadata.id,
-      message: `Route ${key} webview entry`,
-      sourcePath,
-    });
     check.routes.push({
       id: `${loaded.metadata.namespace}.${key}`,
       extensionId: loaded.metadata.id,

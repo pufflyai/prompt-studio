@@ -3,6 +3,8 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statS
 import { homedir as osHomedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import type { ExtensionsCheckResponse } from "pstdio-api-contracts";
+import { isPackagedRuntime, resolveManagedBunCommand } from "./extension-bun-runner";
+import { createExtensionIgnoreMatcher } from "./extension-ignore";
 import {
   checkExtensionSource,
   checkExtensionsRoot,
@@ -15,7 +17,6 @@ import {
 export { checkExtensionsRoot, formatExtensionsCheck };
 
 const DEFAULT_REPO_URL = "https://github.com/pufflyai/prompt-studio";
-const IGNORED_COPY_DIRS = new Set(["node_modules", ".git", "dist", ".turbo", ".next"]);
 const PACKAGE_MANAGERS = ["bun", "npm", "yarn"] as const;
 
 type PackageManager = (typeof PACKAGE_MANAGERS)[number];
@@ -37,8 +38,15 @@ export type InstallExtensionSourceInput = {
   homedir?: () => string;
   installName?: string;
   isCommandAvailable?: (command: string) => boolean | Promise<boolean>;
+  isPackagedRuntime?: () => boolean;
+  bunCacheDir?: string;
   prepareNamedSource?: (name: string, tempDir: string) => Promise<{ path: string; ref: string }>;
-  runCommand?: (command: string, args: string[], options: { cwd: string }) => Promise<CommandResult>;
+  processExecPath?: string;
+  runCommand?: (
+    command: string,
+    args: string[],
+    options: { cwd: string; env?: NodeJS.ProcessEnv },
+  ) => Promise<CommandResult>;
   skipInstall?: boolean;
   source: string;
 };
@@ -129,19 +137,22 @@ const assertCanCopy = (sourcePath: string, targetPath: string) => {
 
 const copyExtensionSource = (sourcePath: string, targetPath: string) => {
   mkdirSync(dirname(targetPath), { recursive: true });
+  const matcher = createExtensionIgnoreMatcher(sourcePath, { ignoreGit: false });
   cpSync(sourcePath, targetPath, {
     filter: (path) => {
-      const name = basename(path);
-      if (statSync(path).isDirectory() && IGNORED_COPY_DIRS.has(name)) return false;
+      const rel = relative(sourcePath, path).replaceAll("\\", "/");
+      if (!rel) return true;
+      if (rel === ".git" || rel.startsWith(".git/")) return true;
+      if (matcher.ignores(rel)) return false;
       return true;
     },
     recursive: true,
   });
 };
 
-const runCommand = (command: string, args: string[], options: { cwd: string }) =>
+const runCommand = (command: string, args: string[], options: { cwd: string; env?: NodeJS.ProcessEnv }) =>
   new Promise<CommandResult>((resolveResult) => {
-    const child = spawn(command, args, { cwd: options.cwd, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(command, args, { cwd: options.cwd, env: options.env, stdio: ["ignore", "pipe", "pipe"] });
     const stdout: Buffer[] = [];
     const stderr: Buffer[] = [];
 
@@ -193,12 +204,32 @@ const selectPackageManager = async (targetPath: string, available: (command: str
 
 const installDependencies = async (
   targetPath: string,
-  input: Pick<InstallExtensionSourceInput, "isCommandAvailable" | "runCommand">,
+  input: Pick<
+    InstallExtensionSourceInput,
+    "bunCacheDir" | "env" | "homedir" | "isCommandAvailable" | "isPackagedRuntime" | "processExecPath" | "runCommand"
+  >,
 ) => {
   if (!existsSync(join(targetPath, "package.json"))) return;
 
-  const manager = await selectPackageManager(targetPath, input.isCommandAvailable ?? isCommandAvailable);
-  const result = await (input.runCommand ?? runCommand)(manager, ["install"], { cwd: targetPath });
+  const run = input.runCommand ?? runCommand;
+  const packaged = (input.isPackagedRuntime ?? isPackagedRuntime)();
+  const manager = packaged
+    ? "bun"
+    : await selectPackageManager(targetPath, input.isCommandAvailable ?? isCommandAvailable);
+  const command = packaged
+    ? resolveManagedBunCommand({
+        args: ["install"],
+        bunCacheDir: input.bunCacheDir ?? join(resolvePstdioHome(input), "cache", "extension-bun-install"),
+        env: (input.env ?? process.env) as NodeJS.ProcessEnv,
+        isPackaged: true,
+        processExecPath: input.processExecPath ?? process.execPath,
+      })
+    : { file: manager, args: ["install"], env: undefined };
+
+  const result = await run(command.file, command.args, {
+    cwd: targetPath,
+    ...(command.env ? { env: command.env } : {}),
+  });
   if (result.exitCode !== 0) {
     const details = result.stderr.trim() || result.stdout.trim();
     throw new Error(`Dependency install failed with ${manager}${details ? `: ${details}` : ""}`);

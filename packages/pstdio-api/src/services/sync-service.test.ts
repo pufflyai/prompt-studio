@@ -1,6 +1,13 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import type { DbClient } from "pstdio-db";
-import { createAgentConfigsDBService, createDb, createProjectsDBService, createStatusesDBService } from "pstdio-db";
+import {
+  createAgentConfigsDBService,
+  createDb,
+  createExtensionInstancesDBService,
+  createInstalledExtensionSourcesDBService,
+  createProjectsDBService,
+  createStatusesDBService,
+} from "pstdio-db";
 import { EventBus } from "../features/sync/event-bus";
 import { createSyncService, SYNCED_TABLES } from "./sync-service";
 
@@ -62,6 +69,35 @@ describe("createSyncService", () => {
       expect(state.ticket_tag_options).toHaveLength(10);
       expect(state.agent_configs).toHaveLength(1);
       expect((state.agent_configs[0] as Record<string, unknown>).agent_id).toBe("claude-code");
+    });
+
+    test("includes installed extension sources and project instances", async () => {
+      await setup();
+      const syncService = createSyncService({ db, eventBus });
+      const projectsService = createProjectsDBService(db);
+      const sourcesService = createInstalledExtensionSourcesDBService(db);
+      const instancesService = createExtensionInstancesDBService(db);
+
+      const project = await projectsService.create({ name: "extension-sync-test" });
+      const source = await sourcesService.register({
+        install_name: "lab",
+        extension_id: "pstdio.lab",
+        display_name: "Lab",
+        source_kind: "local_path",
+        source_path: "/extensions/lab",
+        status: "loaded",
+      });
+      const instance = await instancesService.create({
+        installed_extension_id: source.id,
+        namespace: "lab",
+        scope_id: project.id,
+        scope_type: "project",
+      });
+
+      const state = await syncService.getFullState();
+
+      expect(state.installed_extension_sources).toContainEqual(expect.objectContaining({ id: source.id }));
+      expect(state.extension_instances).toContainEqual(expect.objectContaining({ id: instance.id }));
     });
 
     test("excludes soft-deleted rows", async () => {

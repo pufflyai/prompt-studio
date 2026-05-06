@@ -60,9 +60,10 @@ describe("resolvePstdioHome", () => {
 });
 
 describe("installExtensionSource", () => {
-  test("copies a local extension into PSTDIO_HOME and skips generated folders", async () => {
+  test("copies a local extension into PSTDIO_HOME using .gitignore while preserving git metadata", async () => {
     const source = join(root, "source-extension");
     makeExtension(source);
+    writeFileSync(join(source, ".gitignore"), "node_modules/\ndist/\n");
     mkdirSync(join(source, "node_modules", "dep"), { recursive: true });
     mkdirSync(join(source, ".git"), { recursive: true });
     mkdirSync(join(source, "dist"), { recursive: true });
@@ -85,10 +86,26 @@ describe("installExtensionSource", () => {
       version: "1.2.3",
     });
     expect(existsSync(join(pstdioHome, "extensions", "source-extension", "extension.ts"))).toBe(true);
+    expect(existsSync(join(pstdioHome, "extensions", "source-extension", ".git", "HEAD"))).toBe(true);
     expect(existsSync(join(pstdioHome, "extensions", "source-extension", "node_modules"))).toBe(false);
-    expect(existsSync(join(pstdioHome, "extensions", "source-extension", ".git"))).toBe(false);
     expect(existsSync(join(pstdioHome, "extensions", "source-extension", "dist"))).toBe(false);
     expect(result.check.errorCount).toBe(0);
+  });
+
+  test("does not skip generated folders unless the extension ignores them", async () => {
+    const source = join(root, "source-extension");
+    makeExtension(source);
+    mkdirSync(join(source, "dist"), { recursive: true });
+    writeFileSync(join(source, "dist", "bundle.js"), "");
+
+    await installExtensionSource({
+      source,
+      skipInstall: true,
+      env: { PSTDIO_HOME: pstdioHome },
+      homedir: () => "/unused",
+    });
+
+    expect(existsSync(join(pstdioHome, "extensions", "source-extension", "dist", "bundle.js"))).toBe(true);
   });
 
   test("throws ExtensionAlreadyInstalledError when the target exists without force or existsOk", async () => {
@@ -194,6 +211,31 @@ describe("installExtensionSource", () => {
 
     expect(runCommand).toHaveBeenCalledWith("bun", ["install"], {
       cwd: join(pstdioHome, "extensions", "source-extension"),
+    });
+  });
+
+  test("uses the compiled pstdio binary as Bun in packaged runtime", async () => {
+    const source = join(root, "source-extension");
+    makeExtension(source);
+    writeFileSync(join(source, "package.json"), JSON.stringify({ packageManager: "bun@1.3.13" }));
+    const runCommand = mock(async () => ({ exitCode: 0, stderr: "", stdout: "" }));
+
+    await installExtensionSource({
+      source,
+      env: { PSTDIO_HOME: pstdioHome },
+      homedir: () => "/unused",
+      isCommandAvailable: async () => false,
+      isPackagedRuntime: () => true,
+      processExecPath: "/Applications/Prompt Studio.app/pstdio",
+      runCommand,
+    });
+
+    expect(runCommand).toHaveBeenCalledWith("/Applications/Prompt Studio.app/pstdio", ["install"], {
+      cwd: join(pstdioHome, "extensions", "source-extension"),
+      env: expect.objectContaining({
+        BUN_BE_BUN: "1",
+        BUN_INSTALL_CACHE_DIR: join(pstdioHome, "cache", "extension-bun-install"),
+      }),
     });
   });
 

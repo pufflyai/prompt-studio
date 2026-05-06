@@ -30,6 +30,8 @@ import {
 import { createActionRoutes } from "./features/actions/routes";
 import { createAgentRoutes } from "./features/agents/routes";
 import { createAttemptStatusRoutes } from "./features/attempt-statuses/routes";
+import { createExtensionSourceWatcher } from "./features/extensions/extension-source-watcher";
+import { createExtensionWebviewBuildManager } from "./features/extensions/extension-webview-build-manager";
 import { createExtensionRoutes } from "./features/extensions/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
@@ -84,6 +86,40 @@ const resolveEventBusBufferSize = (value: string | undefined) => {
   return Math.floor(parsed);
 };
 
+const createInstalledExtensionRuntime = async (input: {
+  extensionService: ReturnType<typeof createExtensionService>;
+  installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
+}) => {
+  const sourceWatcher = await createExtensionSourceWatcher({
+    listInstalledSources: () => input.installedExtensionSourcesService.list(),
+    reloadInstalledSource: (installName) => input.extensionService.reloadInstalledSource(installName),
+    onError: (err) => apiLogger.error({ err, event: "extensions.source_watcher.error" }, "Extension watcher failed"),
+  });
+  const webviewBuildManager = createExtensionWebviewBuildManager({
+    listInstalledSources: () => input.installedExtensionSourcesService.list(),
+    reportBuildFailure: (installName, webviewId, error) =>
+      input.extensionService.reportWebviewBuildFailure(installName, webviewId, error),
+    reportBuildSuccess: (installName, webviewId) =>
+      input.extensionService.reportWebviewBuildSuccess(installName, webviewId),
+    onError: (err) =>
+      apiLogger.error({ err, event: "extensions.webview_build.error" }, "Extension webview build manager failed"),
+  });
+  const refresh = async () => {
+    await sourceWatcher.refresh();
+    await webviewBuildManager.refresh();
+  };
+
+  await refresh();
+
+  return {
+    dispose: () => {
+      sourceWatcher.dispose();
+      webviewBuildManager.dispose();
+    },
+    refresh,
+  };
+};
+
 export const createApp = async (options: AppOptions) => {
   const { db, close: closeDb } = await createDb({ path: options?.dbPath ?? process.env.PSTDIO_DB_PATH });
   const apiToken = options?.apiToken ?? process.env.PSTDIO_API_TOKEN;
@@ -132,11 +168,19 @@ export const createApp = async (options: AppOptions) => {
   const fileService = createFileService({ filesDBService, filesStorageService });
   const skillService = createSkillService({ skillsDBService, skillsStorageService, fileService });
   const syncService = createSyncService({ db, eventBus });
+  let refreshInstalledExtensionProcesses: () => Promise<void> = async () => {};
   const extensionService = createExtensionService({
     extensionInstancesService,
     installedExtensionSourcesService,
+    eventBus,
+    onInstalledSourcesChanged: () => refreshInstalledExtensionProcesses(),
     projectService,
   });
+  const extensionRuntime = await createInstalledExtensionRuntime({
+    extensionService,
+    installedExtensionSourcesService,
+  });
+  refreshInstalledExtensionProcesses = extensionRuntime.refresh;
 
   const workspaceSessionService = createWorkspaceSessionService({ workspaceSessionsDBService });
   const workspaceArtifactService = createWorkspaceArtifactService({ workspaceArtifactsDBService });
@@ -300,6 +344,7 @@ export const createApp = async (options: AppOptions) => {
   const close = async () => {
     startupAbort.abort();
     await startupDone;
+    extensionRuntime.dispose();
     await pluginService.dispose();
     await closeDb();
   };

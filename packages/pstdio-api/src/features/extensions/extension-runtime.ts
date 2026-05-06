@@ -1,12 +1,11 @@
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { extname, join, relative } from "node:path";
+import { join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { ExtensionsCheckResponse } from "pstdio-api-contracts";
 import { collectAssetsAndUi, collectCommands, collectMiddlewareHooksAndSchedules } from "./extension-contributions";
 import { addDiagnostic, isRecord, type UnknownRecord } from "./extension-diagnostics";
-
-const IGNORED_SOURCE_DIRS = new Set(["node_modules", ".git", "dist", ".turbo", ".next"]);
+import { createExtensionIgnoreMatcher } from "./extension-ignore";
 
 export type ExtensionMetadata = {
   apiVersion: "1";
@@ -177,15 +176,17 @@ export const formatExtensionsCheck = (check: ExtensionsCheckResponse) => {
 
 export const hashExtensionSource = (sourcePath: string) => {
   const hash = createHash("sha256");
+  const matcher = createExtensionIgnoreMatcher(sourcePath);
+
   const visit = (dir: string) => {
     for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-      if (entry.isDirectory() && IGNORED_SOURCE_DIRS.has(entry.name)) continue;
-
       const path = join(dir, entry.name);
       const rel = relative(sourcePath, path);
+      if (matcher.ignores(rel)) continue;
+
       if (entry.isDirectory()) {
         visit(path);
-      } else if (entry.isFile() && extname(path) !== ".map") {
+      } else if (entry.isFile()) {
         const stat = statSync(path);
         hash.update(`${rel}:${stat.size}\n`);
         hash.update(readFileSync(path));

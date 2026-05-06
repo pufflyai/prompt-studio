@@ -1,6 +1,8 @@
-import { commandEvent, commandsOf, defineExtension, packageAsset, params, projectSlots } from "@pstdio/sdk/extensions";
+import { commandEvent, commandRef, defineExtension, packageAsset, params, projectSlots } from "@pstdio/sdk/extensions";
 
 const COUNTER_KEY = "counter";
+const labAwakenCommand = commandRef<{ title?: string }, { awakened: boolean }>("lab.awaken");
+const labHeartbeatCommand = commandRef("lab.heartbeat");
 
 const extension = defineExtension({
   id: "pstdio.extension-lab",
@@ -32,8 +34,9 @@ const extension = defineExtension({
       menus: [{ slot: projectSlots.headerOverflow, label: "Bump lab counter" }],
       params: { amount: params.number({ defaultValue: 1 }) },
       async run(ctx) {
+        const { amount = 1 } = ctx.params as { amount?: number };
         const current = (await ctx.storage.get<number>(COUNTER_KEY)) ?? 0;
-        const next = current + (ctx.params.amount ?? 1);
+        const next = current + amount;
         await ctx.storage.set(COUNTER_KEY, next);
         return { counter: next };
       },
@@ -63,7 +66,7 @@ const extension = defineExtension({
       commandPanel: false,
       params: { title: params.text() },
       async run(ctx) {
-        const title = ctx.params.title ?? "anonymous";
+        const { title = "anonymous" } = ctx.params as { title?: string };
         await ctx.notify.toast({
           type: "info",
           title: "Awakened",
@@ -79,7 +82,7 @@ const extension = defineExtension({
       cli: true,
       menus: [{ slot: projectSlots.headerOverflow, label: "Demo middleware rejection" }],
       async run(ctx) {
-        const outcome = await ctx.commands.execute(labCommands.awaken, {
+        const outcome = await ctx.commands.execute(labAwakenCommand, {
           params: { title: "Gain consciousness" },
         });
 
@@ -118,7 +121,7 @@ const extension = defineExtension({
   middlewares: {
     rejectSentientAwakening: {
       get command() {
-        return labCommands.awaken;
+        return labAwakenCommand;
       },
       async handler(ctx) {
         const title = String(ctx.params.title ?? "");
@@ -135,7 +138,7 @@ const extension = defineExtension({
   hooks: {
     notifySentienceRejected: {
       get event() {
-        return commandEvent(labCommands.awaken, "rejected");
+        return commandEvent(labAwakenCommand, "rejected");
       },
       async handler(ctx, event) {
         await ctx.notify.toast({
@@ -152,7 +155,7 @@ const extension = defineExtension({
       title: "Lab heartbeat",
       cron: "* * * * *",
       get command() {
-        return labCommands.heartbeat;
+        return labHeartbeatCommand;
       },
     },
   },
@@ -162,7 +165,7 @@ const extension = defineExtension({
       path: "lab",
       label: "Lab",
       webview: {
-        entry: packageAsset("./dist/lab-page.html", import.meta.url),
+        entry: packageAsset("./src/main.tsx", import.meta.url),
       },
     },
   },
@@ -191,7 +194,5 @@ const extension = defineExtension({
     },
   },
 });
-
-const labCommands = commandsOf(extension);
 
 export default extension;

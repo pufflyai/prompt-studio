@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
 import { isAbsolute, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { PackageAssetDescriptor } from "@pstdio/sdk/extensions";
 import type { ExtensionDiagnostic, ExtensionsCheckResponse } from "pstdio-api-contracts";
+import { classifyWebviewEntry, isPackageAssetDescriptor } from "./extension-webviews";
 
 export type UnknownRecord = Record<string, unknown>;
 
@@ -29,18 +29,12 @@ export const addDiagnostic = (check: ExtensionsCheckResponse, diagnostic: Extens
   if (diagnostic.severity === "warning") check.warningCount += 1;
 };
 
-const isPackageAsset = (value: unknown): value is PackageAssetDescriptor =>
-  isRecord(value) &&
-  value.kind === "package-asset" &&
-  typeof value.path === "string" &&
-  typeof value.baseUrl === "string";
-
 export const validatePackageAsset = (
   check: ExtensionsCheckResponse,
   asset: unknown,
   input: { code: string; extensionId: string; message: string; sourcePath: string },
 ) => {
-  if (!isPackageAsset(asset)) {
+  if (!isPackageAssetDescriptor(asset)) {
     addDiagnostic(check, {
       code: input.code,
       extensionId: input.extensionId,
@@ -63,6 +57,26 @@ export const validatePackageAsset = (
       sourcePath: input.sourcePath,
     });
   }
+};
+
+export const validateWebviewEntry = (
+  check: ExtensionsCheckResponse,
+  asset: unknown,
+  input: { code: string; extensionId: string; message: string; sourcePath: string },
+) => {
+  validatePackageAsset(check, asset, input);
+  if (!isPackageAssetDescriptor(asset)) return;
+
+  const classification = classifyWebviewEntry(asset);
+  if (classification.kind !== "unsupported") return;
+
+  addDiagnostic(check, {
+    code: `${input.code}_unsupported`,
+    extensionId: input.extensionId,
+    message: `${input.message} must point to .html or browser source; received ${classification.extension || "no extension"}`,
+    severity: "error",
+    sourcePath: input.sourcePath,
+  });
 };
 
 export const validateArtifactPath = (path: string) => {
