@@ -1,21 +1,16 @@
 import { parseStdoutLine } from "../../parse-stdout-line";
-import type { RawLogEvent, SessionMessage, SessionMessageRole, ToolPartActionType } from "../../types";
+import type { RawLogEvent, SessionMessage, SessionMessageRole } from "../../types";
 import { normalizeErrorPart } from "../normalized-error";
+import { classifyToolAction, type ToolBuckets } from "../shared/tool-classification";
 import type { ClaudeCodeContentBlock, ClaudeCodeTranscriptEntry } from "./claude-code-types";
 
 // --- Tool classification ---
 
-const READ_TOOLS = new Set(["Read", "Glob", "Grep"]);
-const WRITE_TOOLS = new Set(["Write", "Edit", "NotebookEdit", "TodoWrite"]);
-const EXECUTE_TOOLS = new Set(["Bash", "Task"]);
-const NETWORK_TOOLS = new Set(["WebFetch", "WebSearch"]);
-
-const classifyToolAction = (toolName: string): ToolPartActionType => {
-  if (READ_TOOLS.has(toolName)) return "read";
-  if (WRITE_TOOLS.has(toolName)) return "write";
-  if (EXECUTE_TOOLS.has(toolName)) return "execute";
-  if (NETWORK_TOOLS.has(toolName)) return "network";
-  return "other";
+const CLAUDE_CODE_TOOL_BUCKETS: ToolBuckets = {
+  read: new Set(["Read", "Glob", "Grep"]),
+  write: new Set(["Write", "Edit", "NotebookEdit", "TodoWrite"]),
+  execute: new Set(["Bash", "Task"]),
+  network: new Set(["WebFetch", "WebSearch"]),
 };
 
 export const mergeToolResultMessage = (previous: SessionMessage, message: SessionMessage): SessionMessage => {
@@ -85,7 +80,7 @@ const transcriptBlockToMessage = (
           type: "tool",
           tool: block.name,
           callId: block.id,
-          actionType: classifyToolAction(block.name),
+          actionType: classifyToolAction(block.name, CLAUDE_CODE_TOOL_BUCKETS),
           status: "pending",
           state: { input: block.input },
         },
@@ -109,7 +104,7 @@ const transcriptBlockToMessage = (
           type: "tool",
           tool,
           callId: block.tool_use_id,
-          actionType: classifyToolAction(tool),
+          actionType: classifyToolAction(tool, CLAUDE_CODE_TOOL_BUCKETS),
           status: isError ? "failed" : "completed",
           state: { output, errorText: isError ? "Tool execution failed" : undefined },
         },
@@ -248,7 +243,7 @@ const handleContentBlockStart = (parsed: Record<string, unknown>, ctx: StreamCon
           type: "tool",
           tool,
           callId,
-          actionType: classifyToolAction(tool),
+          actionType: classifyToolAction(tool, CLAUDE_CODE_TOOL_BUCKETS),
           status: "pending",
           state: { input: block.input },
         },
@@ -269,7 +264,7 @@ const handleContentBlockStart = (parsed: Record<string, unknown>, ctx: StreamCon
           type: "tool",
           tool,
           callId,
-          actionType: classifyToolAction(tool),
+          actionType: classifyToolAction(tool, CLAUDE_CODE_TOOL_BUCKETS),
           status: isError ? "failed" : "completed",
           state: { output: block.content, errorText: isError ? "Tool execution failed" : undefined },
         },
@@ -319,7 +314,7 @@ const contentBlockToMessage = (block: ClaudeCodeContentBlock, ctx: StreamContext
           type: "tool",
           tool: block.name,
           callId: block.id,
-          actionType: classifyToolAction(block.name),
+          actionType: classifyToolAction(block.name, CLAUDE_CODE_TOOL_BUCKETS),
           status: "pending",
           state: { input: block.input },
         },
@@ -339,7 +334,7 @@ const contentBlockToMessage = (block: ClaudeCodeContentBlock, ctx: StreamContext
           type: "tool",
           tool,
           callId: block.tool_use_id,
-          actionType: classifyToolAction(tool),
+          actionType: classifyToolAction(tool, CLAUDE_CODE_TOOL_BUCKETS),
           status: isError ? "failed" : "completed",
           state: { output: block.content, errorText: isError ? "Tool execution failed" : undefined },
         },

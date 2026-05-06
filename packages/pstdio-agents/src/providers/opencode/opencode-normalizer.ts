@@ -1,5 +1,6 @@
-import type { SessionMessage, SessionMessagePart, ToolPartActionType, ToolPartStatus } from "../../types";
+import type { SessionMessage, SessionMessagePart, ToolPartStatus } from "../../types";
 import { normalizeErrorPart } from "../normalized-error";
+import { classifyToolAction, type ToolBuckets } from "../shared/tool-classification";
 import type { OpencodeSessionMessage, OpencodeSessionMessagePart } from "./opencode-types";
 
 // --- Part extraction ---
@@ -40,20 +41,11 @@ const resolveRole = (role: string) => {
 
 // --- Tool classification ---
 
-const READ_TOOLS = new Set(["glob", "read", "grep", "search"]);
-const WRITE_TOOLS = new Set(["write", "edit", "patch", "notebook_edit", "todowrite"]);
-const EXECUTE_TOOLS = new Set(["bash", "task", "shell", "question"]);
-const NETWORK_TOOLS = new Set(["web_fetch", "web_search", "fetch"]);
-
-const classifyToolAction = (toolName: string): ToolPartActionType => {
-  const lower = toolName.toLowerCase();
-
-  if (READ_TOOLS.has(lower)) return "read";
-  if (WRITE_TOOLS.has(lower)) return "write";
-  if (EXECUTE_TOOLS.has(lower)) return "execute";
-  if (NETWORK_TOOLS.has(lower)) return "network";
-
-  return "other";
+const OPENCODE_TOOL_BUCKETS: ToolBuckets = {
+  read: new Set(["glob", "read", "grep", "search"]),
+  write: new Set(["write", "edit", "patch", "notebook_edit", "todowrite"]),
+  execute: new Set(["bash", "task", "shell", "question"]),
+  network: new Set(["web_fetch", "web_search", "fetch"]),
 };
 
 const resolveToolStatus = (status?: string): ToolPartStatus => {
@@ -81,7 +73,7 @@ const normalizePart = (part: OpencodeSessionMessagePart): SessionMessagePart | n
         type: "tool",
         tool: part.tool ?? "unknown",
         callId: part.callID,
-        actionType: classifyToolAction(part.tool ?? ""),
+        actionType: classifyToolAction((part.tool ?? "").toLowerCase(), OPENCODE_TOOL_BUCKETS),
         status: resolveToolStatus(part.state?.status),
         state: part.state
           ? {
