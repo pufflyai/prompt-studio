@@ -30,7 +30,7 @@ writeFileSync(
 );
 console.log(`  Generated embed manifest: ${EMBED_MANIFEST}`);
 
-// 3. Compile for local platform
+// 3. Compile for local platform. This is the Bun-compiled pstdio executable used by packaged smoke tests.
 const target = `bun-${process.platform}-${process.arch}`;
 const outfile = "./dist/pstdio";
 
