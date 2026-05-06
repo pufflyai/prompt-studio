@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Fix markdown editor escaping underscores in bare URLs every save/reload, which broke links over multiple round-trips.
+Fix markdown editor escaping underscores during save/reload, which broke links over multiple round-trips.
