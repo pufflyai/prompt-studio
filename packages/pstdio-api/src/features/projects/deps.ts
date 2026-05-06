@@ -5,6 +5,7 @@ export type ProjectsRouteDeps = Pick<
   | "agentConfigService"
   | "agentRegistry"
   | "eventBus"
+  | "extensionService"
   | "fileService"
   | "filesRoot"
   | "pluginService"

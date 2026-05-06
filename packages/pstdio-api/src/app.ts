@@ -6,7 +6,9 @@ import {
   createAgentConfigsDBService,
   createAttemptStatusesDBService,
   createDb,
+  createExtensionInstancesDBService,
   createFilesDBService,
+  createInstalledExtensionSourcesDBService,
   createProjectsDBService,
   createReposDBService,
   createSessionsDBService,
@@ -28,6 +30,7 @@ import {
 import { createActionRoutes } from "./features/actions/routes";
 import { createAgentRoutes } from "./features/agents/routes";
 import { createAttemptStatusRoutes } from "./features/attempt-statuses/routes";
+import { createExtensionRoutes } from "./features/extensions/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
 import { fireSessionResumeHook, fireSessionStartHook, fireSessionStatusHook } from "./features/hooks/session-hooks";
@@ -47,6 +50,7 @@ import { createWorkspaceRoutes } from "./features/workspaces/routes";
 import { apiLogger } from "./lib/logger";
 import { createAgentConfigService } from "./services/agent-config-service";
 import { createAttemptStatusService } from "./services/attempt-status-service";
+import { createExtensionService } from "./services/extension-service";
 import { createFileService } from "./services/file-service";
 import { createProjectService } from "./services/project-service";
 import { createRepoService } from "./services/repo-service";
@@ -104,6 +108,8 @@ export const createApp = async (options: AppOptions) => {
   const templatesDBService = createTemplatesDBService(db);
   const filesDBService = createFilesDBService(db);
   const activityEventsService = createActivityEventsDBService(db);
+  const installedExtensionSourcesService = createInstalledExtensionSourcesDBService(db);
+  const extensionInstancesService = createExtensionInstancesDBService(db);
 
   // --- storage services ---
   const filesStorageService = createFilesStorageService(storageRoot);
@@ -126,6 +132,11 @@ export const createApp = async (options: AppOptions) => {
   const fileService = createFileService({ filesDBService, filesStorageService });
   const skillService = createSkillService({ skillsDBService, skillsStorageService, fileService });
   const syncService = createSyncService({ db, eventBus });
+  const extensionService = createExtensionService({
+    extensionInstancesService,
+    installedExtensionSourcesService,
+    projectService,
+  });
 
   const workspaceSessionService = createWorkspaceSessionService({ workspaceSessionsDBService });
   const workspaceArtifactService = createWorkspaceArtifactService({ workspaceArtifactsDBService });
@@ -202,6 +213,7 @@ export const createApp = async (options: AppOptions) => {
     agentConfigService,
     skillService,
     fileService,
+    extensionService,
     syncService,
     pluginService,
     activityEventsService,
@@ -250,6 +262,7 @@ export const createApp = async (options: AppOptions) => {
   app.route("/v1", createFilesystemRoutes(deps));
   app.route("/v1", createActionRoutes(deps));
   app.route("/v1", createPluginRoutes(deps));
+  app.route("/v1", createExtensionRoutes(deps));
   app.route("/v1", createAgentRoutes(deps));
   app.route("/v1", createSkillRoutes(deps));
   app.route("/v1", createTemplateRoutes(deps));

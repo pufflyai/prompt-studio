@@ -87,6 +87,7 @@ const startPackagedServe = async (tempRoot: string) => {
         PORT: String(port),
         PSTDIO_API_PORT: String(port),
         PSTDIO_DB_PATH: dbPath,
+        PSTDIO_DEFAULT_EXTENSIONS: "[]",
         PSTDIO_STORAGE_PATH: storagePath,
         PSTDIO_AGENTS: "fake",
       },

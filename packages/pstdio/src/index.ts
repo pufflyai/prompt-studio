@@ -3,6 +3,7 @@ import { hideBin } from "yargs/helpers";
 import { topLevelCommandModules } from "./adapters/cli/commands";
 import * as dashboardCommand from "./adapters/cli/commands/dashboard";
 import { API_URL } from "./features/api-url";
+import { shouldEnsureApiForCommand } from "./features/cli-api-startup";
 import { CLI_VERSION } from "./features/cli-version";
 import { ensureApi } from "./features/ensure-api";
 import { createCliCommandTracker } from "./features/logging/cli-command-log";
@@ -58,8 +59,7 @@ const cli = yargs(rawArgs)
     commandTracker.captureArgv(argv);
     commandTracker.logStart();
 
-    const topLevelCommand = argv._[0];
-    if (topLevelCommand === "close" || topLevelCommand === "serve") return;
+    if (!shouldEnsureApiForCommand(argv)) return;
 
     applyApiPortFromArgs(argv);
     await ensureApi(resolveApiUrl(argv));

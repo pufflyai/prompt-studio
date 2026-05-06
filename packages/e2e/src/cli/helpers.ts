@@ -6,6 +6,8 @@ import { TEST_TIMEOUT } from "./timeouts";
 
 export const PSTDIO_CLI = join(import.meta.dirname, "../../../pstdio/src/index.ts");
 
+const SHARED_PSTDIO_HOME = mkdtempSync(join(tmpdir(), "pstdio-e2e-home-"));
+
 export const createGitRepo = () => {
   const dir = mkdtempSync(join(tmpdir(), "pstdio-e2e-"));
   // Keep e2e repos deterministic across environments where git default branch may differ.
@@ -19,6 +21,8 @@ export const createTempDir = () => mkdtempSync(join(tmpdir(), "pstdio-e2e-"));
 
 const createPstdioEnv = (env: Record<string, string>) => ({
   ...process.env,
+  PSTDIO_HOME: SHARED_PSTDIO_HOME,
+  PSTDIO_DEFAULT_EXTENSIONS: "[]",
   PSTDIO_DISABLE_EMBED_MANIFEST: "1",
   PSTDIO_DISABLE_API_AUTO_START: "1",
   ...env,

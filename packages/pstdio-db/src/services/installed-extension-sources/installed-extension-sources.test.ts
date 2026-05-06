@@ -65,4 +65,28 @@ describe("installedExtensionSourcesService", () => {
     expect(events).toHaveLength(1);
     expect(events[0]?.status).toBe("success");
   });
+
+  test("updates source registration metadata", async () => {
+    const registered = await svc.register({
+      install_name: "planner",
+      extension_id: "pstdio.planner",
+      display_name: "Planner",
+      source_kind: "local_path",
+      source_path: "/one",
+    });
+
+    const updated = await svc.updateRegistration(registered.id, {
+      display_name: "Planner 2",
+      manifest_json: { version: "2.0.0" },
+      source_hash: "hash-2",
+      source_path: "/two",
+      status: "loaded",
+      version: "2.0.0",
+    });
+
+    expect(updated?.display_name).toBe("Planner 2");
+    expect(updated?.source_path).toBe("/two");
+    expect(updated?.source_hash).toBe("hash-2");
+    expect(updated?.manifest_json).toEqual({ version: "2.0.0" });
+  });
 });

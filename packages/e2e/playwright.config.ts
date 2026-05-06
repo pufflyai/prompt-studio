@@ -47,6 +47,7 @@ export default defineConfig({
         PSTDIO_STORAGE_PATH: storagePath,
         PSTDIO_FILES_ROOT: filesRoot,
         PSTDIO_AGENTS: agentEnv,
+        PSTDIO_DEFAULT_EXTENSIONS: "[]",
         HOME: resolvedHomePath,
         PSTDIO_WORKSPACES_DIR: join(resolvedHomePath, ".pstdio", "workspaces"),
         BUN_INSTALL_CACHE_DIR: bunCacheDir,
@@ -60,6 +61,7 @@ export default defineConfig({
       env: {
         PSTDIO_DISABLE_EMBED_MANIFEST: "1",
         PSTDIO_DISABLE_API_AUTO_START: "1",
+        PSTDIO_DEFAULT_EXTENSIONS: "[]",
         BUN_INSTALL_CACHE_DIR: bunCacheDir,
         HOME: resolvedHomePath,
       },
