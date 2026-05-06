@@ -29,8 +29,9 @@ export const ProjectAgentsPanel = (props: ProjectAgentsPanelProps) => {
       defaultAgentId={project?.default_agent_id ?? null}
       defaultAgentModel={project?.default_agent_model ?? null}
       isUpdating={update.isPending}
-      onSetDefaultAgent={(agentId) => update.mutate({ default_agent_id: agentId, default_agent_model: null })}
-      onSetDefaultModel={(modelId) => update.mutate({ default_agent_model: modelId })}
+      onSetDefaultAgent={(agentId, modelId) =>
+        update.mutate({ default_agent_id: agentId, default_agent_model: modelId })
+      }
     />
   );
 };

@@ -246,7 +246,6 @@
     "agentsPanel": {
       "empty": "No harnesses are enabled for this project.",
       "defaultBadge": "Project default",
-      "setAsDefault": "Set as project default",
       "defaultModel": "Default model",
       "agentDefault": "Agent default",
       "modelDescription": "Used by createSession when no model is specified.",
