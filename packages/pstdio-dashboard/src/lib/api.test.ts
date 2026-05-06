@@ -20,4 +20,10 @@ describe("buildApiUrl", () => {
     expect(buildApiUrl("/v1/projects")).toBe("/v1/projects");
     expect(buildApiUrl("v1/projects")).toBe("/v1/projects");
   });
+
+  it("builds relative API paths when no runtime or env base URL is configured", () => {
+    delete (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY];
+
+    expect(buildApiUrl("/v1/health")).toBe("/v1/health");
+  });
 });

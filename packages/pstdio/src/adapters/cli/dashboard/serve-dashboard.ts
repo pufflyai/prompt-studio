@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 import { extname, join, normalize } from "node:path";
 
 type DashboardConfig = {
-  apiBaseUrl: string;
+  apiBaseUrl?: string;
   version?: string;
 };
 

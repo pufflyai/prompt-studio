@@ -30,3 +30,5 @@ We recommend adding `.pstdio/tickets` and `.pstdio/config.json` to `.gitignore` 
 ### Commands
 
 Learn more about the CLI using `pstdio --help`.
+
+Run `pstdio serve --host 0.0.0.0` to expose the API and dashboard to other devices on a trusted LAN. The serve command has no authentication, so do not bind it to untrusted networks.
