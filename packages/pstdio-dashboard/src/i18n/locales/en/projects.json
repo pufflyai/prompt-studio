@@ -247,6 +247,7 @@
       "empty": "No harnesses are enabled for this project.",
       "defaultModel": "Default model",
       "agentDefault": "Agent default",
+      "clearModel": "Clear model",
       "modelDescription": "Used by createSession when no model is specified.",
       "missingDefaultWarning": "The selected default harness is no longer available."
     }

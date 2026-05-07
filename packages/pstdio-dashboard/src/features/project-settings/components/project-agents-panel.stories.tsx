@@ -46,6 +46,7 @@ export const NoDefaultSelected: Story = {
     defaultAgentId: null,
     defaultAgentModel: null,
     isUpdating: false,
+    updateFailureCount: 0,
     onSetDefaultAgent: () => {},
   },
 };
@@ -57,6 +58,7 @@ export const ClaudeCodeIsDefault: Story = {
     defaultAgentId: "claude-code",
     defaultAgentModel: "claude-3-5-sonnet",
     isUpdating: false,
+    updateFailureCount: 0,
     onSetDefaultAgent: () => {},
   },
 };
@@ -68,6 +70,7 @@ export const DefaultPointsAtMissingAgent: Story = {
     defaultAgentId: "claude-code",
     defaultAgentModel: null,
     isUpdating: false,
+    updateFailureCount: 0,
     onSetDefaultAgent: () => {},
   },
 };
@@ -79,6 +82,7 @@ export const NoEnabledAgents: Story = {
     defaultAgentId: null,
     defaultAgentModel: null,
     isUpdating: false,
+    updateFailureCount: 0,
     onSetDefaultAgent: () => {},
   },
 };

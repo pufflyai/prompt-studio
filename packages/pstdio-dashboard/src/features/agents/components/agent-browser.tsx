@@ -21,6 +21,7 @@ interface WorkspaceAgentMenuProps {
   onSelectAgent: (agent: string) => void;
   modelOptions: WorkspacePanelMenuOption[];
   selectedModel: string;
+  selectedModelLabel?: string;
   onSelectModel: (model: string) => void;
   isDisabled?: boolean;
   isAgentSwitchDisabled?: boolean;
@@ -42,6 +43,7 @@ const buildAgentMenuItems = (
   agentOptions: AgentMenuOption[],
   selectedAgent: string,
   isAgentsLoading: boolean,
+  isDisabled: boolean,
   t: ProjectsTranslate,
 ): SearchableMenuItem[] => {
   if (isAgentsLoading) {
@@ -58,7 +60,7 @@ const buildAgentMenuItems = (
     searchText: option.value,
     icon: option.icon ?? TerminalIcon,
     isSelected: option.value === selectedAgent,
-    isDisabled: option.disabled,
+    isDisabled: isDisabled || option.disabled,
   }));
 };
 
@@ -66,6 +68,7 @@ const buildModelMenuItems = (
   modelOptions: WorkspacePanelMenuOption[],
   selectedModel: string,
   isModelsLoading: boolean,
+  isDisabled: boolean,
   onSelectModel: (model: string) => void,
   t: ProjectsTranslate,
 ): SearchableMenuItem[] => {
@@ -82,7 +85,11 @@ const buildModelMenuItems = (
     label: option.label,
     searchText: option.value,
     isSelected: option.value === selectedModel,
-    onSelect: () => onSelectModel(option.value),
+    isDisabled,
+    onSelect: () => {
+      if (isDisabled) return;
+      onSelectModel(option.value);
+    },
   }));
 };
 
@@ -93,6 +100,7 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
     onSelectAgent,
     modelOptions,
     selectedModel,
+    selectedModelLabel: selectedModelLabelOverride,
     onSelectModel,
     isDisabled = false,
     isAgentSwitchDisabled = false,
@@ -106,11 +114,19 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
     : getSelectedLabel(agentOptions, selectedAgent, t("chatInput.agent.selectLabel"), t("chatInput.agent.unknown"));
   const selectedModelLabel = isModelsLoading
     ? t("chatInput.model.loading")
-    : getSelectedLabel(modelOptions, selectedModel, t("chatInput.model.selectLabel"), t("chatInput.model.none"));
+    : (selectedModelLabelOverride ??
+      getSelectedLabel(modelOptions, selectedModel, t("chatInput.model.selectLabel"), t("chatInput.model.none")));
   const isSwitchDisabled = isDisabled || isAgentSwitchDisabled || agentOptions.length <= 1;
   const isMenuDisabled = isDisabled || (agentOptions.length === 0 && modelOptions.length === 0);
-  const agentMenuItems = buildAgentMenuItems(agentOptions, selectedAgent, isAgentsLoading, t);
-  const modelMenuItems = buildModelMenuItems(modelOptions, selectedModel, isModelsLoading, onSelectModel, t);
+  const agentMenuItems = buildAgentMenuItems(agentOptions, selectedAgent, isAgentsLoading, isSwitchDisabled, t);
+  const modelMenuItems = buildModelMenuItems(
+    modelOptions,
+    selectedModel,
+    isModelsLoading,
+    isDisabled,
+    onSelectModel,
+    t,
+  );
 
   return (
     <SearchableMenu
@@ -171,6 +187,7 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
           </Menu.Item>
         ),
         onSelect: (item) => {
+          if (isSwitchDisabled) return;
           if (agentOptions.find((o) => o.value === item.id)?.disabled) return;
           onSelectAgent(item.id);
         },

@@ -1,11 +1,10 @@
-import { HStack, Stack, Text } from "@chakra-ui/react";
+import { Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { TerminalIcon } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { WorkspaceAgentMenu, type WorkspacePanelMenuOption } from "@/features/agents/components/agent-browser";
 import { useAgentModels } from "@/features/agents/hooks/use-agent-models";
 import type { AgentInfo } from "@/features/agents/types";
-
-const AGENT_DEFAULT_MODEL_ID = "__agent-default";
 
 interface ProjectAgentsPanelViewProps {
   enabledAgentIds: string[];
@@ -13,6 +12,7 @@ interface ProjectAgentsPanelViewProps {
   defaultAgentId: string | null;
   defaultAgentModel: string | null;
   isUpdating: boolean;
+  updateFailureCount: number;
   onSetDefaultAgent: (agentId: string, modelId: string | null) => void;
 }
 
@@ -20,24 +20,53 @@ interface DefaultModelSelectorProps {
   agentOptions: WorkspacePanelMenuOption[];
   selectedAgent: string;
   selectedModel: string | null;
-  selectedAgentIsDefault: boolean;
   isUpdating: boolean;
+  updateFailureCount: number;
   onSelectAgent: (agentId: string, modelId: string | null) => void;
 }
 
-const buildModelOptions = (models: { id: string }[], agentDefaultLabel: string) => [
-  { label: agentDefaultLabel, value: AGENT_DEFAULT_MODEL_ID },
-  ...models.map((model) => ({ label: model.id, value: model.id })),
-];
+const buildModelOptions = (models: { id: string }[]) => models.map((model) => ({ label: model.id, value: model.id }));
 
 const DefaultModelSelector = (props: DefaultModelSelectorProps) => {
-  const { agentOptions, selectedAgent, selectedModel, selectedAgentIsDefault, isUpdating, onSelectAgent } = props;
+  const { agentOptions, selectedAgent, selectedModel, isUpdating, updateFailureCount, onSelectAgent } = props;
   const { t } = useTranslation("projects");
+  const [draftAgent, setDraftAgent] = useState(selectedAgent);
+  const [draftModel, setDraftModel] = useState(selectedModel);
 
-  const { data: models = [], isLoading: isModelsLoading } = useAgentModels(selectedAgent, {
-    enabled: Boolean(selectedAgent),
+  useEffect(() => {
+    setDraftAgent(selectedAgent);
+    setDraftModel(selectedModel);
+  }, [selectedAgent, selectedModel]);
+
+  useEffect(() => {
+    if (updateFailureCount === 0) return;
+
+    setDraftAgent(selectedAgent);
+    setDraftModel(selectedModel);
+  }, [updateFailureCount, selectedAgent, selectedModel]);
+
+  const { data: models = [], isLoading: isModelsLoading } = useAgentModels(draftAgent, {
+    enabled: Boolean(draftAgent),
   });
-  const modelOptions = buildModelOptions(models, t("projectSettings.agentsPanel.agentDefault"));
+  const modelOptions = buildModelOptions(models);
+
+  const handleSelectAgent = (agentId: string) => {
+    if (agentId === draftAgent) return;
+
+    setDraftAgent(agentId);
+    setDraftModel(null);
+    onSelectAgent(agentId, null);
+  };
+
+  const handleSelectModel = (modelId: string) => {
+    setDraftModel(modelId);
+    onSelectAgent(draftAgent, modelId);
+  };
+
+  const handleClearModel = () => {
+    setDraftModel(null);
+    onSelectAgent(draftAgent, null);
+  };
 
   return (
     <HStack justify="space-between" alignItems="center">
@@ -48,25 +77,38 @@ const DefaultModelSelector = (props: DefaultModelSelectorProps) => {
         </Text>
       </Stack>
 
-      <WorkspaceAgentMenu
-        agentOptions={agentOptions}
-        selectedAgent={selectedAgent}
-        onSelectAgent={(agentId) => {
-          if (selectedAgentIsDefault && agentId === selectedAgent) return;
-          onSelectAgent(agentId, null);
-        }}
-        modelOptions={modelOptions}
-        selectedModel={selectedModel ?? AGENT_DEFAULT_MODEL_ID}
-        onSelectModel={(modelId) => onSelectAgent(selectedAgent, modelId === AGENT_DEFAULT_MODEL_ID ? null : modelId)}
-        isDisabled={isUpdating || !selectedAgent}
-        isModelsLoading={isModelsLoading}
-      />
+      <HStack gap="xs">
+        {draftModel ? (
+          <Button size="xs" variant="ghost" disabled={isUpdating} onClick={handleClearModel}>
+            {t("projectSettings.agentsPanel.clearModel")}
+          </Button>
+        ) : null}
+        <WorkspaceAgentMenu
+          agentOptions={agentOptions}
+          selectedAgent={draftAgent}
+          onSelectAgent={handleSelectAgent}
+          modelOptions={modelOptions}
+          selectedModel={draftModel ?? ""}
+          selectedModelLabel={draftModel ? undefined : t("projectSettings.agentsPanel.agentDefault")}
+          onSelectModel={handleSelectModel}
+          isDisabled={isUpdating || !draftAgent}
+          isModelsLoading={isModelsLoading}
+        />
+      </HStack>
     </HStack>
   );
 };
 
 export const ProjectAgentsPanelView = (props: ProjectAgentsPanelViewProps) => {
-  const { enabledAgentIds, agents, defaultAgentId, defaultAgentModel, isUpdating, onSetDefaultAgent } = props;
+  const {
+    enabledAgentIds,
+    agents,
+    defaultAgentId,
+    defaultAgentModel,
+    isUpdating,
+    updateFailureCount,
+    onSetDefaultAgent,
+  } = props;
   const { t } = useTranslation("projects");
 
   const installedAgents = agents.filter((a) => a.availability.type === "INSTALLED");
@@ -103,8 +145,8 @@ export const ProjectAgentsPanelView = (props: ProjectAgentsPanelViewProps) => {
         agentOptions={agentOptions}
         selectedAgent={selectedAgent}
         selectedModel={defaultAgentId === selectedAgent ? defaultAgentModel : null}
-        selectedAgentIsDefault={defaultAgentId === selectedAgent}
         isUpdating={isUpdating}
+        updateFailureCount={updateFailureCount}
         onSelectAgent={onSetDefaultAgent}
       />
     </Stack>
