@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { $ } from "bun";
 import { loadEmbedConfig, resolveEmbedFiles } from "./lib/embed-manifest";
+import { buildPackageArtifacts } from "./lib/package-artifacts";
 
 // Ensure we run from the repo root regardless of where the script is invoked
 process.chdir(join(import.meta.dirname, ".."));
@@ -11,8 +12,7 @@ const EMBED_MANIFEST = "./packages/pstdio/src/_embed-manifest.generated.ts";
 
 // 1. Build all packages
 console.log("Building packages...");
-await $`bun run --filter pstdio-dashboard build`;
-await $`bun run --filter pstdio-api build`;
+buildPackageArtifacts();
 
 // 2. Resolve files to embed from the checked-in allowlist
 console.log("Resolving embed manifest from scripts/embed.json...");
