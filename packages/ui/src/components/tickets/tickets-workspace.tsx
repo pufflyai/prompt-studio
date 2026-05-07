@@ -1,6 +1,6 @@
 import { Box, HStack, Stack } from "@chakra-ui/react";
 
-import { EmptyState } from "@/components/empty-state";
+import { EmptyState } from "../empty-state";
 
 import { DisplayMenu } from "./display-menu";
 import { FilterMenu } from "./filter-menu";

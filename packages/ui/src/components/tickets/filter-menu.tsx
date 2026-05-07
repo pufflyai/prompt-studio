@@ -2,7 +2,7 @@ import { Badge, Box, Button, HStack, Icon, IconButton, Popover, Portal, Stack, T
 import { Filter } from "lucide-react";
 import { useState } from "react";
 
-import { Checkbox } from "@/components/checkbox";
+import { Checkbox } from "../checkbox";
 
 import type { FilterState, WorkspaceFilterCategory } from "./types";
 

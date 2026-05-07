@@ -2,9 +2,9 @@ import { Avatar, Box, Button, Card, Timeline as ChakraTimeline, Link, Span, Stac
 import { ChevronUpIcon } from "lucide-react";
 import type { MouseEvent, ReactNode } from "react";
 import { useState } from "react";
-import { DiffBubble } from "@/components/diff-bubble";
-import { DiffEditor } from "@/components/diff-editor";
-import { ResourceBadge } from "@/components/resource-badge";
+import { DiffBubble } from "../../diff-bubble";
+import { DiffEditor } from "../../diff-editor";
+import { ResourceBadge } from "../../resource-badge";
 import type { IconName } from "../utils/get-icon";
 import { getIconComponent } from "../utils/get-icon";
 import { QuestionFormBlockView, TodoListBlockView } from "./timeline-tool-blocks";

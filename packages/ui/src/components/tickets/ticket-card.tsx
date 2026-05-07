@@ -1,7 +1,7 @@
 import { Badge, HStack, Stack, Text, Wrap } from "@chakra-ui/react";
 import type { DragEventHandler } from "react";
-import type { WorkspaceBadgeProps } from "@/components/workspace-badge";
-import { WorkspaceBadge } from "@/components/workspace-badge";
+import type { WorkspaceBadgeProps } from "../workspace-badge";
+import { WorkspaceBadge } from "../workspace-badge";
 import { TagBadge } from "./tag-badge";
 import type { WorkspaceTagOption } from "./types";
 

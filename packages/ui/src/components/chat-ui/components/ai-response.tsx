@@ -1,6 +1,6 @@
 import type { BoxProps } from "@chakra-ui/react";
 import { Box } from "@chakra-ui/react";
-import { RichMessage } from "@/components/rich-text";
+import { RichMessage } from "../../rich-text";
 
 export interface ChatRichContentProps extends Omit<BoxProps, "children"> {
   children: string;

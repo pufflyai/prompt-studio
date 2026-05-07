@@ -1,10 +1,10 @@
 import { Flex, Stack } from "@chakra-ui/react";
 import { Outlet, useRouterState } from "@tanstack/react-router";
-import { ErrorBoundary } from "@/components/error-boundary";
-import { HorizontalMenuStack } from "@/components/horizontal-menu-stack";
-import { PANEL_HEADER_HEIGHT } from "@/components/panel-header.constants";
-import { ScrollArea } from "@/components/scroll-area";
-import { Toaster } from "@/components/toaster";
+import { ErrorBoundary } from "./error-boundary";
+import { HorizontalMenuStack } from "./horizontal-menu-stack";
+import { PANEL_HEADER_HEIGHT } from "./panel-header.constants";
+import { ScrollArea } from "./scroll-area";
+import { Toaster } from "./toaster";
 
 export const Layout = () => {
   const { location } = useRouterState();

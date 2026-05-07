@@ -1,7 +1,7 @@
 import { Box, Stack, Text, Textarea } from "@chakra-ui/react";
 import type { FormEvent } from "react";
-import { Checkbox } from "@/components/checkbox";
-import { Radio, RadioGroup } from "@/components/radio";
+import { Checkbox } from "../../checkbox";
+import { Radio, RadioGroup } from "../../radio";
 import type { QuestionFormBlockQuestion, TodoListBlockItem } from "./timeline";
 
 const preventSubmit = (event: FormEvent) => {

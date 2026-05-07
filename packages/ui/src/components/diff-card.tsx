@@ -1,6 +1,6 @@
 import { Box, Grid, IconButton, Text } from "@chakra-ui/react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { DiffBubble } from "@/components/diff-bubble";
+import { DiffBubble } from "./diff-bubble";
 import { DiffEditor } from "./diff-editor";
 
 export interface Diff {

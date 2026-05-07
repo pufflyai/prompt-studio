@@ -1,7 +1,7 @@
 import "./EquationPlugin.css";
 
 import type { MultilineElementTransformer, TextMatchTransformer } from "@lexical/markdown";
-import { $createEquationNode, $isEquationNode, EquationNode } from "./EquationNode.tsx";
+import { $createEquationNode, $isEquationNode, EquationNode } from "./EquationNode";
 
 export const EQUATION_INLINE: TextMatchTransformer = {
   dependencies: [EquationNode],

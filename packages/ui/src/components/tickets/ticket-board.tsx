@@ -2,11 +2,11 @@ import { Badge, Box, HStack, Icon, IconButton, Menu, Spacer, Stack, Text } from 
 import { ChevronRight, MoreHorizontal, Plus } from "lucide-react";
 import { type ComponentProps, type ComponentType, type DragEvent, useState } from "react";
 
-import { ListRow } from "@/components/list-row/list-row";
-import type { ResourceContextAction } from "@/components/resource-context-menu";
-import { ResourceContextMenu } from "@/components/resource-context-menu";
-import { ScrollArea } from "@/components/scroll-area";
-import { Tooltip } from "@/components/tooltip";
+import { ListRow } from "../list-row/list-row";
+import type { ResourceContextAction } from "../resource-context-menu";
+import { ResourceContextMenu } from "../resource-context-menu";
+import { ScrollArea } from "../scroll-area";
+import { Tooltip } from "../tooltip";
 
 import { TicketCard } from "./ticket-card";
 

@@ -1,7 +1,7 @@
 import { Box, Spinner, Text } from "@chakra-ui/react";
 import type { ReactNode } from "react";
-import { AlertMessage } from "@/components/alert";
-import { RichMessage } from "@/components/rich-text";
+import { AlertMessage } from "../../alert";
+import { RichMessage } from "../../rich-text";
 import type { AlertPart, ErrorPart, SessionMessage, SessionMessagePart, ToolPart } from "../agent-types";
 import { Response } from "./ai-response";
 import { ToolInvocationTimeline, type ToolInvocationTimelineProps } from "./tool-invocation-timeline";
