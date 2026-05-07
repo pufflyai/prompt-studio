@@ -19,12 +19,12 @@ describe("compiled Bun smoke helpers", () => {
     const platformPackage = getHostPlatformPackage(
       [
         { pkg: "cli-linux-x64", bin: "pstdio" },
-        { pkg: "cli-linux-x64-musl", bin: "pstdio" },
+        { pkg: "cli-win-x64", bin: "pstdio.exe" },
       ],
-      "cli-linux-x64-musl",
+      "cli-win-x64",
     );
 
-    expect(platformPackage.pkg).toBe("cli-linux-x64-musl");
+    expect(platformPackage.pkg).toBe("cli-win-x64");
   });
 
   test("builds an isolated install and browser build smoke plan", () => {

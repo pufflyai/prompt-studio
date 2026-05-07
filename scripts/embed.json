@@ -59,14 +59,6 @@
       "bin": "pstdio"
     },
     {
-      "pkg": "cli-linux-x64-musl",
-      "bin": "pstdio"
-    },
-    {
-      "pkg": "cli-linux-arm64-musl",
-      "bin": "pstdio"
-    },
-    {
       "pkg": "cli-win-x64",
       "bin": "pstdio.exe"
     },
@@ -94,16 +86,6 @@
     {
       "target": "bun-linux-arm64",
       "pkg": "cli-linux-arm64",
-      "bin": "pstdio"
-    },
-    {
-      "target": "bun-linux-x64-musl",
-      "pkg": "cli-linux-x64-musl",
-      "bin": "pstdio"
-    },
-    {
-      "target": "bun-linux-arm64-musl",
-      "pkg": "cli-linux-arm64-musl",
       "bin": "pstdio"
     },
     {

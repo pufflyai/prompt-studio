@@ -6,8 +6,6 @@ const BINARIES = [
   { pkg: "cli-darwin-x64", bin: "pstdio", asset: "pstdio-darwin-x64" },
   { pkg: "cli-linux-x64", bin: "pstdio", asset: "pstdio-linux-x64" },
   { pkg: "cli-linux-arm64", bin: "pstdio", asset: "pstdio-linux-arm64" },
-  { pkg: "cli-linux-x64-musl", bin: "pstdio", asset: "pstdio-linux-x64-musl" },
-  { pkg: "cli-linux-arm64-musl", bin: "pstdio", asset: "pstdio-linux-arm64-musl" },
   { pkg: "cli-win-x64", bin: "pstdio.exe", asset: "pstdio-win-x64.exe" },
   { pkg: "cli-win-arm64", bin: "pstdio.exe", asset: "pstdio-win-arm64.exe" },
 ];

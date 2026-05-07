@@ -22,12 +22,12 @@ describe("resolvePackageName", () => {
     expect(resolvePackageName("linux", "arm64", "glibc")).toBe("@pstdio/cli-linux-arm64");
   });
 
-  test("linux x64 musl", () => {
-    expect(resolvePackageName("linux", "x64", "musl")).toBe("@pstdio/cli-linux-x64-musl");
+  test("returns null for linux x64 musl", () => {
+    expect(resolvePackageName("linux", "x64", "musl")).toBeNull();
   });
 
-  test("linux arm64 musl", () => {
-    expect(resolvePackageName("linux", "arm64", "musl")).toBe("@pstdio/cli-linux-arm64-musl");
+  test("returns null for linux arm64 musl", () => {
+    expect(resolvePackageName("linux", "arm64", "musl")).toBeNull();
   });
 
   test("win32 x64", () => {

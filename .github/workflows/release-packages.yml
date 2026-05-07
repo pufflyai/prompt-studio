@@ -23,8 +23,6 @@ jobs:
         include:
           - os: ubuntu-latest
             platform_pkg: cli-linux-x64
-          - os: ubuntu-latest
-            platform_pkg: cli-linux-x64-musl
           - os: macos-13
             platform_pkg: cli-darwin-x64
           - os: windows-latest
@@ -41,12 +39,6 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: "24"
-
-      - name: Install musl runtime
-        if: runner.os == 'Linux' && endsWith(matrix.platform_pkg, '-musl')
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y musl
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -138,8 +130,6 @@ jobs:
             install -m 755 packages/pstdio/dist/platforms/cli-darwin-x64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-darwin-x64"
             install -m 755 packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-linux-x64"
             install -m 755 packages/pstdio/dist/platforms/cli-linux-arm64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-linux-arm64"
-            install -m 755 packages/pstdio/dist/platforms/cli-linux-x64-musl/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-linux-x64-musl"
-            install -m 755 packages/pstdio/dist/platforms/cli-linux-arm64-musl/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-linux-arm64-musl"
             install -m 755 packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe "$RELEASE_ASSETS_DIR/pstdio-win-x64.exe"
             install -m 755 packages/pstdio/dist/platforms/cli-win-arm64/bin/pstdio.exe "$RELEASE_ASSETS_DIR/pstdio-win-arm64.exe"
             install -m 644 packages/pstdio/dist/platforms/checksums.sha256 "$RELEASE_ASSETS_DIR/checksums.sha256"

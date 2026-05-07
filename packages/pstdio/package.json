@@ -36,8 +36,6 @@
     "@pstdio/cli-darwin-x64": "0.10.0",
     "@pstdio/cli-linux-x64": "0.10.0",
     "@pstdio/cli-linux-arm64": "0.10.0",
-    "@pstdio/cli-linux-x64-musl": "0.10.0",
-    "@pstdio/cli-linux-arm64-musl": "0.10.0",
     "@pstdio/cli-win-x64": "0.10.0",
     "@pstdio/cli-win-arm64": "0.10.0"
   },

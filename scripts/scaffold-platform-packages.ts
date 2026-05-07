@@ -9,22 +9,6 @@ const TARGETS = [
   { pkg: "cli-darwin-x64", name: "@pstdio/cli-darwin-x64", os: "darwin", cpu: "x64", bin: "pstdio" },
   { pkg: "cli-linux-x64", name: "@pstdio/cli-linux-x64", os: "linux", cpu: "x64", libc: "glibc", bin: "pstdio" },
   { pkg: "cli-linux-arm64", name: "@pstdio/cli-linux-arm64", os: "linux", cpu: "arm64", libc: "glibc", bin: "pstdio" },
-  {
-    pkg: "cli-linux-x64-musl",
-    name: "@pstdio/cli-linux-x64-musl",
-    os: "linux",
-    cpu: "x64",
-    libc: "musl",
-    bin: "pstdio",
-  },
-  {
-    pkg: "cli-linux-arm64-musl",
-    name: "@pstdio/cli-linux-arm64-musl",
-    os: "linux",
-    cpu: "arm64",
-    libc: "musl",
-    bin: "pstdio",
-  },
   { pkg: "cli-win-x64", name: "@pstdio/cli-win-x64", os: "win32", cpu: "x64", bin: "pstdio.exe" },
   { pkg: "cli-win-arm64", name: "@pstdio/cli-win-arm64", os: "win32", cpu: "arm64", bin: "pstdio.exe" },
 ];
