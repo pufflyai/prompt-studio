@@ -32,10 +32,12 @@ const DefaultModelSelector = (props: DefaultModelSelectorProps) => {
   const { t } = useTranslation("projects");
   const [draftAgent, setDraftAgent] = useState(selectedAgent);
   const [draftModel, setDraftModel] = useState(selectedModel);
+  const [agentPendingModelSelection, setAgentPendingModelSelection] = useState<string | null>(null);
 
   useEffect(() => {
     setDraftAgent(selectedAgent);
     setDraftModel(selectedModel);
+    setAgentPendingModelSelection(null);
   }, [selectedAgent, selectedModel]);
 
   useEffect(() => {
@@ -43,6 +45,7 @@ const DefaultModelSelector = (props: DefaultModelSelectorProps) => {
 
     setDraftAgent(selectedAgent);
     setDraftModel(selectedModel);
+    setAgentPendingModelSelection(null);
   }, [updateFailureCount, selectedAgent, selectedModel]);
 
   const { data: models = [], isLoading: isModelsLoading } = useAgentModels(draftAgent, {
@@ -50,21 +53,46 @@ const DefaultModelSelector = (props: DefaultModelSelectorProps) => {
   });
   const modelOptions = buildModelOptions(models);
 
+  useEffect(() => {
+    if (isModelsLoading || !draftAgent) return;
+    if (agentPendingModelSelection && agentPendingModelSelection !== draftAgent) return;
+    if (!agentPendingModelSelection) return;
+
+    if (models.length === 0) {
+      setAgentPendingModelSelection(null);
+      onSelectAgent(draftAgent, null);
+      return;
+    }
+
+    if (draftModel) return;
+
+    const firstModel = models[0];
+    if (!firstModel) return;
+
+    setDraftModel(firstModel.id);
+    setAgentPendingModelSelection(null);
+    if (agentPendingModelSelection) {
+      onSelectAgent(draftAgent, firstModel.id);
+    }
+  }, [agentPendingModelSelection, draftAgent, draftModel, isModelsLoading, models, onSelectAgent]);
+
   const handleSelectAgent = (agentId: string) => {
     if (agentId === draftAgent) return;
 
     setDraftAgent(agentId);
     setDraftModel(null);
-    onSelectAgent(agentId, null);
+    setAgentPendingModelSelection(agentId);
   };
 
   const handleSelectModel = (modelId: string) => {
     setDraftModel(modelId);
+    setAgentPendingModelSelection(null);
     onSelectAgent(draftAgent, modelId);
   };
 
   const handleClearModel = () => {
     setDraftModel(null);
+    setAgentPendingModelSelection(null);
     onSelectAgent(draftAgent, null);
   };
 

@@ -8,6 +8,12 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
 
+const modelsByAgent = {
+  "claude-code": [{ id: "claude-3-5-sonnet" }, { id: "claude-3-7-sonnet" }],
+  opencode: [{ id: "openai/gpt-5.1" }, { id: "anthropic/claude-sonnet-4.5" }],
+  fake: [],
+};
+
 const meta: Meta<typeof ProjectAgentsPanelView> = {
   title: "ProjectSettings/ProjectAgentsPanel",
   component: ProjectAgentsPanelView,
@@ -39,7 +45,11 @@ const enabledAgents = [
   installed("fake", "Fake Agent"),
 ];
 
-export const NoDefaultSelected: Story = {
+Object.entries(modelsByAgent).forEach(([agentId, models]) => {
+  queryClient.setQueryData(["agent-models", agentId], models);
+});
+
+export const NoDefaultSelectedUsesAgentDefault: Story = {
   args: {
     enabledAgentIds: ["claude-code", "opencode"],
     agents: enabledAgents,
@@ -68,6 +78,18 @@ export const DefaultPointsAtMissingAgent: Story = {
     enabledAgentIds: ["opencode"],
     agents: enabledAgents,
     defaultAgentId: "claude-code",
+    defaultAgentModel: null,
+    isUpdating: false,
+    updateFailureCount: 0,
+    onSetDefaultAgent: () => {},
+  },
+};
+
+export const DefaultAgentHasNoModels: Story = {
+  args: {
+    enabledAgentIds: ["fake", "opencode"],
+    agents: enabledAgents,
+    defaultAgentId: "fake",
     defaultAgentModel: null,
     isUpdating: false,
     updateFailureCount: 0,
