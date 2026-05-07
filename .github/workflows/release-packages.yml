@@ -51,6 +51,7 @@ jobs:
         run: bun run scripts/verify-packages.ts
 
   release:
+    if: github.ref == 'refs/heads/main'
     needs: verify_packaged_bun_toolchain
     runs-on: ubuntu-latest
     timeout-minutes: 30
