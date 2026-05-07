@@ -1,6 +1,6 @@
-# pstdio-core-skills
+# extension-lab
 
-## 0.0.2
+## 0.0.1
 
 ### Patch Changes
 
@@ -8,11 +8,3 @@
 - Updated dependencies [3e89b24]
 - Updated dependencies [3e89b24]
   - @pstdio/sdk@0.4.2
-
-## 0.0.1
-
-### Patch Changes
-
-- 716bbc3: Add a pstdio serve host option for trusted LAN access.
-- Updated dependencies [1ca60d5]
-  - @pstdio/sdk@0.4.1

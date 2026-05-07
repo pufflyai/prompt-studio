@@ -34,7 +34,7 @@
     },
     "extensions/extension-lab": {
       "name": "extension-lab",
-      "version": "0.0.0",
+      "version": "0.0.1",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -53,7 +53,7 @@
     },
     "extensions/pstdio-core-skills": {
       "name": "pstdio-core-skills",
-      "version": "0.0.1",
+      "version": "0.0.2",
       "dependencies": {
         "@pstdio/sdk": "^0.4.0",
       },
@@ -63,7 +63,7 @@
     },
     "extensions/pstdio-core-templates": {
       "name": "pstdio-core-templates",
-      "version": "0.0.0",
+      "version": "0.0.1",
       "dependencies": {
         "@pstdio/sdk": "^0.4.0",
       },
@@ -85,7 +85,7 @@
     },
     "packages/pstdio": {
       "name": "pstdio",
-      "version": "0.10.0",
+      "version": "0.11.0",
       "bin": {
         "pstdio": "./bin/pstdio.cjs",
         "pst": "./bin/pstdio.cjs",
@@ -114,12 +114,12 @@
         "typescript": "6.0.2",
       },
       "optionalDependencies": {
-        "@pstdio/cli-darwin-arm64": "0.10.0",
-        "@pstdio/cli-darwin-x64": "0.10.0",
-        "@pstdio/cli-linux-arm64": "0.10.0",
-        "@pstdio/cli-linux-x64": "0.10.0",
-        "@pstdio/cli-win-arm64": "0.10.0",
-        "@pstdio/cli-win-x64": "0.10.0",
+        "@pstdio/cli-darwin-arm64": "0.11.0",
+        "@pstdio/cli-darwin-x64": "0.11.0",
+        "@pstdio/cli-linux-arm64": "0.11.0",
+        "@pstdio/cli-linux-x64": "0.11.0",
+        "@pstdio/cli-win-arm64": "0.11.0",
+        "@pstdio/cli-win-x64": "0.11.0",
       },
     },
     "packages/pstdio-agents": {
@@ -298,7 +298,7 @@
     },
     "packages/sdk": {
       "name": "@pstdio/sdk",
-      "version": "0.4.1",
+      "version": "0.4.2",
       "dependencies": {
         "mustache": "^4.2.0",
       },

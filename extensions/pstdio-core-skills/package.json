@@ -1,13 +1,13 @@
 {
   "name": "pstdio-core-skills",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pstdio/sdk": "^0.4.1"
+    "@pstdio/sdk": "^0.4.2"
   },
   "devDependencies": {
     "typescript": "6.0.2"
