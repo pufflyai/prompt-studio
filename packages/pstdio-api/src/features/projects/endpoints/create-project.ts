@@ -1,8 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import { enableInstalledExtensionsForProject, installDefaultExtensions } from "../../extensions/default-extensions";
-import { seedDefaultSkills } from "../../skills/seed-default-skills";
-import { seedDefaultTemplates } from "../../templates/seed-default-templates";
 import type { ProjectsRouteDeps } from "../deps";
 import { createProjectBodySchema, projectResponseSchema, toProjectResponse } from "../dto";
 
@@ -32,8 +30,6 @@ export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
     const project = await deps.projectService.create({ name, selectedAgents: agents });
 
     try {
-      const templates = await seedDefaultTemplates(deps, project.id);
-      await seedDefaultSkills(deps, project.id);
       if (existingProjects.length === 0) await installDefaultExtensions();
       await enableInstalledExtensionsForProject({
         extensionService: deps.extensionService,
@@ -51,8 +47,6 @@ export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
         const options = await deps.tagService.listOptions(tag.id);
         for (const option of options) deps.eventBus.emit("ticket_tag_options", "set", option);
       }
-
-      for (const template of templates) deps.eventBus.emit("templates", "set", template);
 
       // PS-47: temporary repo-plugin refresh bridge; remove when extensions replace .pstdio/plugins.
       await deps.pluginService.refresh();

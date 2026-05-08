@@ -103,7 +103,7 @@ describe("GET /v1/projects/:id/templates/:name", () => {
 
 describe("PUT /v1/projects/:id/templates/:name", () => {
   test("updates template content", async () => {
-    const res = await app.request(`/v1/projects/${projectId}/templates/ticket`, {
+    const res = await app.request(`/v1/projects/${projectId}/templates/custom-ticket`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ content: "# Updated {{TICKET_TITLE}}" }),
@@ -111,25 +111,12 @@ describe("PUT /v1/projects/:id/templates/:name", () => {
 
     expect(res.status).toBe(200);
 
-    const getRes = await app.request(`/v1/projects/${projectId}/templates/ticket`);
+    const getRes = await app.request(`/v1/projects/${projectId}/templates/custom-ticket`);
     const body = await getRes.json();
     expect(body.content).toBe("# Updated {{TICKET_TITLE}}");
   });
 
   test("rejects changing template_type for lone default template", async () => {
-    // Remove seeded prompts so blank-template becomes the only prompt
-    for (const name of [
-      "commit-message",
-      "create-sub-tickets",
-      "implement-ticket",
-      "refine-ticket",
-      "squash-message",
-      "fix-changes-requested",
-      "review-code",
-    ]) {
-      await app.request(`/v1/projects/${projectId}/templates/${name}`, { method: "DELETE" });
-    }
-
     const makeDefaultRes = await app.request(`/v1/projects/${projectId}/templates/blank-template`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
@@ -158,7 +145,19 @@ describe("PUT /v1/projects/:id/templates/:name", () => {
   });
 
   test("allows changing template_type when source type has another template", async () => {
-    const res = await app.request(`/v1/projects/${projectId}/templates/ticket`, {
+    const createRes = await app.request(`/v1/projects/${projectId}/templates`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: "spare-ticket",
+        template_type: "ticket",
+        content: "# Spare",
+        is_default: false,
+      }),
+    });
+    expect(createRes.status).toBe(201);
+
+    const res = await app.request(`/v1/projects/${projectId}/templates/custom-ticket`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ template_type: "document" }),
@@ -166,7 +165,7 @@ describe("PUT /v1/projects/:id/templates/:name", () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.name).toBe("ticket");
+    expect(body.name).toBe("custom-ticket");
     expect(body.template_type).toBe("document");
   });
 
@@ -182,18 +181,17 @@ describe("PUT /v1/projects/:id/templates/:name", () => {
 
 describe("DELETE /v1/projects/:id/templates/:name", () => {
   test("soft-deletes and returns 204", async () => {
-    const res = await app.request(`/v1/projects/${projectId}/templates/ticket`, {
+    const res = await app.request(`/v1/projects/${projectId}/templates/custom-ticket`, {
       method: "DELETE",
     });
     expect(res.status).toBe(204);
 
-    const getRes = await app.request(`/v1/projects/${projectId}/templates/ticket`);
+    const getRes = await app.request(`/v1/projects/${projectId}/templates/custom-ticket`);
     expect(getRes.status).toBe(404);
 
     const listRes = await app.request(`/v1/projects/${projectId}/templates`);
     const list = await listRes.json();
-    expect(list).toHaveLength(14);
-    expect(list.find((template: { name: string }) => template.name === "ticket")).toBeUndefined();
+    expect(list.find((template: { name: string }) => template.name === "custom-ticket")).toBeUndefined();
   });
 
   test("returns 404 for missing template", async () => {
@@ -204,7 +202,7 @@ describe("DELETE /v1/projects/:id/templates/:name", () => {
   });
 
   test("hard-deletes a soft-deleted template and allows re-creation", async () => {
-    const hardRes = await app.request(`/v1/projects/${projectId}/templates/ticket?hard=true`, {
+    const hardRes = await app.request(`/v1/projects/${projectId}/templates/custom-ticket?hard=true`, {
       method: "DELETE",
     });
     expect(hardRes.status).toBe(204);
@@ -212,7 +210,7 @@ describe("DELETE /v1/projects/:id/templates/:name", () => {
     const createRes = await app.request(`/v1/projects/${projectId}/templates`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "ticket", template_type: "ticket", content: "# recreated" }),
+      body: JSON.stringify({ name: "custom-ticket", template_type: "ticket", content: "# recreated" }),
     });
     expect(createRes.status).toBe(201);
   });

@@ -21,7 +21,6 @@ export type ProjectSkill = {
 };
 
 export type ProjectSkillDetails = ProjectSkill & {
-  bundled_version: string;
   installed_agents: string[];
 };
 
@@ -30,8 +29,3 @@ export const getProjectSkills = async (projectId: string) =>
 
 export const getProjectSkill = async (projectId: string, name: string) =>
   apiRequest<ProjectSkillDetails>(`/v1/projects/${projectId}/skills/${encodeURIComponent(name)}`);
-
-export const updateProjectSkill = async (projectId: string, name: string) =>
-  apiRequest<ProjectSkillDetails>(`/v1/projects/${projectId}/skills/${encodeURIComponent(name)}/update`, {
-    method: "POST",
-  });

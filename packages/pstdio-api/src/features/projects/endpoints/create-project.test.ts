@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -7,34 +7,11 @@ import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
+let appHandle: Awaited<ReturnType<typeof createApp>>;
 let tempRoot: string;
-const TEMPLATE_FILES = [
-  "documents/prd.template.md",
-  "documents/adr.template.md",
-  "documents/changelog-entry.template.md",
-  "documents/cookbook.template.md",
-  "documents/lessons-learned.template.md",
-  "documents/code-review.template.md",
-  "documents/architecture-overview.template.md",
-  "documents/contracts.template.md",
-  "documents/research.template.md",
-  "documents/schemas.template.md",
-  "prompts/commit-message.prompt.md",
-  "prompts/create-sub-tickets.prompt.md",
-  "prompts/implement-ticket.prompt.md",
-  "prompts/refine-ticket.prompt.md",
-  "prompts/squash-message.prompt.md",
-  "prompts/fix-changes-requested.prompt.md",
-  "prompts/review-code.prompt.md",
-  "tickets/bug-fix.ticket.md",
-  "tickets/ticket.md",
-  "tickets/proposal.ticket.md",
-];
-
-const makeEmbeddedTemplateFile = (fileName: string, content: string) => {
-  const blob = new Blob([content], { type: "text/markdown" });
-  return Object.assign(blob, { name: `../files/templates/${fileName}` });
-};
+let previousPstdioHome: string | undefined;
+let previousDefaultExtensions: string | undefined;
+let previousLogTargets: string | undefined;
 
 const writeExtensionFixture = (dir: string) => {
   mkdirSync(dir, { recursive: true });
@@ -51,14 +28,38 @@ const writeExtensionFixture = (dir: string) => {
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-create-project-test-"));
-  ({ app } = await createApp({
+  previousPstdioHome = process.env.PSTDIO_HOME;
+  previousDefaultExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  previousLogTargets = process.env.PSTDIO_LOG_TARGETS;
+  process.env.PSTDIO_HOME = join(tempRoot, "home");
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+  process.env.PSTDIO_LOG_TARGETS = "stdout";
+
+  appHandle = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
-  }));
+  });
+  app = appHandle.app;
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await appHandle.close();
+  if (previousPstdioHome === undefined) {
+    delete process.env.PSTDIO_HOME;
+  } else {
+    process.env.PSTDIO_HOME = previousPstdioHome;
+  }
+  if (previousDefaultExtensions === undefined) {
+    delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  } else {
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = previousDefaultExtensions;
+  }
+  if (previousLogTargets === undefined) {
+    delete process.env.PSTDIO_LOG_TARGETS;
+  } else {
+    process.env.PSTDIO_LOG_TARGETS = previousLogTargets;
+  }
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
@@ -90,46 +91,40 @@ describe("POST /v1/projects", () => {
     expect(res.status).toBe(400);
   });
 
-  test("seeds templates from embedded files when available", async () => {
-    const runtime = Bun as unknown as { embeddedFiles: (Blob & { name: string })[] };
-    const originalEmbeddedFiles = runtime.embeddedFiles;
-    runtime.embeddedFiles = TEMPLATE_FILES.map((fileName) =>
-      makeEmbeddedTemplateFile(fileName, `# embedded:${fileName}\n`),
-    );
+  test("does not seed package-internal templates or skills", async () => {
+    const createRes = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Empty Catalog Project" }),
+    });
+    expect(createRes.status).toBe(201);
 
-    try {
-      const createRes = await app.request("/v1/projects", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Embedded Template Project" }),
-      });
-      expect(createRes.status).toBe(201);
+    const project = (await createRes.json()) as { id: string };
 
-      const project = (await createRes.json()) as { id: string };
-      const ticketRes = await app.request(`/v1/projects/${project.id}/templates/ticket`);
-      expect(ticketRes.status).toBe(200);
+    const templatesRes = await app.request(`/v1/projects/${project.id}/templates`);
+    expect(templatesRes.status).toBe(200);
+    expect(await templatesRes.json()).toEqual([]);
 
-      const ticketTemplate = (await ticketRes.json()) as { content: string };
-      expect(ticketTemplate.content).toBe("# embedded:tickets/ticket.md\n");
-
-      const bugFixRes = await app.request(`/v1/projects/${project.id}/templates/bug-fix`);
-      expect(bugFixRes.status).toBe(200);
-
-      const bugFixTemplate = (await bugFixRes.json()) as { content: string };
-      expect(bugFixTemplate.content).toBe("# embedded:tickets/bug-fix.ticket.md\n");
-    } finally {
-      runtime.embeddedFiles = originalEmbeddedFiles;
-    }
+    const skillsRes = await app.request(`/v1/projects/${project.id}/skills`);
+    expect(skillsRes.status).toBe(200);
+    expect(await skillsRes.json()).toEqual([]);
   });
 
-  test("rolls back the project when seeding fails", async () => {
-    const storagePath = join(tempRoot, "storage");
+  test("rolls back the project when default extension setup fails", async () => {
+    const isolatedRoot = mkdtempSync(join(tmpdir(), "pstdio-api-create-project-rollback-test-"));
+    const dbPath = join(isolatedRoot, "db.sqlite");
     const projectName = "Rollback Project";
+    process.env.PSTDIO_HOME = join(isolatedRoot, "home");
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([{ source: join(isolatedRoot, "missing-extension") }]);
 
-    chmodSync(storagePath, 0o555);
+    const handle = await createApp({
+      dbPath,
+      storagePath: join(isolatedRoot, "storage"),
+      filesRoot: "",
+    });
 
     try {
-      const createRes = await app.request("/v1/projects", {
+      const createRes = await handle.app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ name: projectName }),
@@ -137,14 +132,25 @@ describe("POST /v1/projects", () => {
 
       expect(createRes.status).toBe(500);
     } finally {
-      chmodSync(storagePath, 0o755);
+      await handle.close();
     }
 
-    const listRes = await app.request("/v1/projects");
-    expect(listRes.status).toBe(200);
+    const verification = await createApp({
+      dbPath,
+      storagePath: join(isolatedRoot, "verification-storage"),
+      filesRoot: "",
+    });
 
-    const projects = (await listRes.json()) as { name: string }[];
-    expect(projects.some((project) => project.name === projectName)).toBe(false);
+    try {
+      const listRes = await verification.app.request("/v1/projects");
+      expect(listRes.status).toBe(200);
+
+      const projects = (await listRes.json()) as { name: string }[];
+      expect(projects.some((project) => project.name === projectName)).toBe(false);
+    } finally {
+      await verification.close();
+      rmSync(isolatedRoot, { recursive: true, force: true });
+    }
   });
 
   test("installs configured default extensions only for the first project", async () => {

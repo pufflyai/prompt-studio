@@ -29,7 +29,6 @@ const baseSkill = {
   editable: true,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
-  bundled_version: "0.0.2",
   installed_agents: ["claude-code"],
 };
 
@@ -45,8 +44,6 @@ export const SingleFileSkill: Story = {
         },
       ],
     },
-    isUpdating: false,
-    onUpdate: () => {},
   },
 };
 
@@ -72,8 +69,6 @@ export const NestedMultiFileSkill: Story = {
         },
       ],
     },
-    isUpdating: false,
-    onUpdate: () => {},
   },
 };
 
@@ -99,7 +94,5 @@ export const SkillWithCodeFiles: Story = {
         },
       ],
     },
-    isUpdating: false,
-    onUpdate: () => {},
   },
 };

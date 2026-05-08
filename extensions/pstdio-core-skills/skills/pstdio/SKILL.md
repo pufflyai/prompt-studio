@@ -87,7 +87,7 @@ Conversations between users and agents, tracked in the database. Sessions can be
    pstdio projects create [name]
    ```
 
-   If `name` is omitted, the current folder name is used. This also installs default skills, seeds templates, and scaffolds docs.
+   If `name` is omitted, the current folder name is used. This also enables installed default extensions and scaffolds docs.
 
 2. **Or link to an existing project**
 
@@ -101,7 +101,7 @@ Conversations between users and agents, tracked in the database. Sessions can be
    pstdio agents setup claude-code
    ```
 
-   Installs bundled skills to the agent's skills directory (e.g. `.claude/skills/`).
+   Installs the project's enabled skill catalog to the agent's skills directory (e.g. `.claude/skills/`).
 
 4. **Verify setup**
    ```bash
@@ -131,7 +131,7 @@ pstdio agents list                # Show agents with status (configured, install
 pstdio agents setup <agent-id>    # Configure agent, install skills
 pstdio agents update <agent-id>   # Update config (--default, --binary, --skills-dir)
 pstdio agents remove <agent-id>   # Remove agent (--delete-skills to also remove skill files)
-pstdio agents install-skills <id> # Reinstall bundled skills (missing only, never overwrites)
+pstdio agents install-skills <id> # Reinstall project skills (missing only, never overwrites)
 ```
 
 Available agents: `claude-code`, `opencode`.

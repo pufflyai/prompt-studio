@@ -1,7 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
-import { getBundledSkills } from "pstdio-agents";
 import { findAgent } from "pstdio-api-contracts/known-agents";
 import { ExtensionCatalogAssetError } from "../../../services/extension-asset-catalog";
 import type { AppRouteHandler } from "../../../types";
@@ -53,13 +52,10 @@ export const getSkillHandler = (deps: SkillsRouteDeps): AppRouteHandler<typeof g
       return c.json({ error: `Skill not found: ${name}` }, 404);
     }
 
-    const [bundled, repos, agents] = await Promise.all([
-      getBundledSkills(),
+    const [repos, agents] = await Promise.all([
       deps.repoService.listByProject(projectId),
       deps.agentConfigService.list(),
     ]);
-    const bundledSkill = bundled.find((s) => s.name === name);
-    const bundled_version = bundledSkill?.version ?? "";
 
     const installed_agents = agents
       .filter((agent) => {
@@ -90,7 +86,6 @@ export const getSkillHandler = (deps: SkillsRouteDeps): AppRouteHandler<typeof g
         created_at: skill.created_at,
         updated_at: skill.updated_at,
         deleted_at: skill.deleted_at,
-        bundled_version,
         installed_agents,
       },
       200,

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { resetApiClient } from "@/features/api-client";
-import { installDefaultSkills, installSkillsForAgent, removeBundledSkillsForAgent } from "./install-default-skills";
+import { installDefaultSkills, installSkillsForAgent, removeInstalledSkillsForAgent } from "./install-default-skills";
 
 const tmpBase = join(import.meta.dirname, "__test-tmp__");
 
@@ -311,10 +311,10 @@ describe("installSkillsForAgent", () => {
   });
 });
 
-describe("removeBundledSkillsForAgent", () => {
+describe("removeInstalledSkillsForAgent", () => {
   test("removes project skills and preserves user skills", async () => {
     mockApi([]);
-    const root = setup("remove-bundled");
+    const root = setup("remove-installed");
 
     await installSkillsForAgent({
       root,
@@ -328,7 +328,7 @@ describe("removeBundledSkillsForAgent", () => {
     mkdirSync(userSkillDir, { recursive: true });
     writeFileSync(join(userSkillDir, "SKILL.md"), "user skill");
 
-    const removed = await removeBundledSkillsForAgent(root, "claude-code", TEST_PROJECT_ID);
+    const removed = await removeInstalledSkillsForAgent(root, "claude-code", TEST_PROJECT_ID);
 
     expect(removed.sort()).toEqual(SKILL_NAMES.sort());
     for (const skill of SKILL_NAMES) {
@@ -342,7 +342,7 @@ describe("removeBundledSkillsForAgent", () => {
     const root = setup("remove-none");
     mkdirSync(join(root, ".claude", "skills"), { recursive: true });
 
-    const removed = await removeBundledSkillsForAgent(root, "claude-code", TEST_PROJECT_ID);
+    const removed = await removeInstalledSkillsForAgent(root, "claude-code", TEST_PROJECT_ID);
 
     expect(removed).toEqual([]);
   });
@@ -351,7 +351,7 @@ describe("removeBundledSkillsForAgent", () => {
     mockApi([]);
     const root = setup("remove-unknown");
 
-    const removed = await removeBundledSkillsForAgent(root, "unknown", TEST_PROJECT_ID);
+    const removed = await removeInstalledSkillsForAgent(root, "unknown", TEST_PROJECT_ID);
 
     expect(removed).toEqual([]);
   });

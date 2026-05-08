@@ -120,7 +120,7 @@ export const installSkillsForAgent = async (options: InstallSkillsOptions) => {
   return installed;
 };
 
-export const removeBundledSkillsForAgent = async (root: string, agentId: string, projectId: string) => {
+export const removeInstalledSkillsForAgent = async (root: string, agentId: string, projectId: string) => {
   const agent = findAgent(agentId);
   if (!agent) return [];
 

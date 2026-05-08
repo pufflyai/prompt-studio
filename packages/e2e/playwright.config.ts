@@ -2,6 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
+import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "./src/default-extensions";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const dashboardPort = Number(process.env.E2E_DASHBOARD_PORT ?? "5174");
@@ -44,7 +45,7 @@ export default defineConfig({
         PSTDIO_EVENT_BUS_BUFFER_SIZE: "5",
         PSTDIO_HOME: resolvedHomePath,
         PSTDIO_AGENTS: agentEnv,
-        PSTDIO_DEFAULT_EXTENSIONS: "[]",
+        PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_DEFAULT_EXTENSIONS,
         HOME: resolvedHomePath,
         BUN_INSTALL_CACHE_DIR: bunCacheDir,
       },
@@ -57,7 +58,7 @@ export default defineConfig({
       env: {
         PSTDIO_DISABLE_EMBED_MANIFEST: "1",
         PSTDIO_DISABLE_API_AUTO_START: "1",
-        PSTDIO_DEFAULT_EXTENSIONS: "[]",
+        PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_DEFAULT_EXTENSIONS,
         PSTDIO_HOME: resolvedHomePath,
         BUN_INSTALL_CACHE_DIR: bunCacheDir,
         HOME: resolvedHomePath,

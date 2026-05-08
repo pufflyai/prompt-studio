@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "../default-extensions";
 import { SETUP_TIMEOUT } from "./timeouts";
 
 export const getFreePort = () =>
@@ -59,7 +60,7 @@ export const startApi = async (options: StartApiOptions = {}): Promise<ApiInstan
       ...process.env,
       PORT: String(port),
       PSTDIO_DB_PATH: ":memory:",
-      PSTDIO_DEFAULT_EXTENSIONS: "[]",
+      PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_DEFAULT_EXTENSIONS,
       PSTDIO_EVENT_BUS_BUFFER_SIZE:
         options.eventBusBufferSize !== undefined ? String(options.eventBusBufferSize) : undefined,
       PSTDIO_HOME: homePath,

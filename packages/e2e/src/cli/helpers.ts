@@ -2,6 +2,7 @@ import { execSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
+import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "../default-extensions";
 import { TEST_TIMEOUT } from "./timeouts";
 
 export const PSTDIO_CLI = join(import.meta.dirname, "../../../pstdio/src/index.ts");
@@ -22,7 +23,7 @@ export const createTempDir = () => mkdtempSync(join(tmpdir(), "pstdio-e2e-"));
 const createPstdioEnv = (env: Record<string, string>) => ({
   ...process.env,
   PSTDIO_HOME: SHARED_PSTDIO_HOME,
-  PSTDIO_DEFAULT_EXTENSIONS: "[]",
+  PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_DEFAULT_EXTENSIONS,
   PSTDIO_DISABLE_EMBED_MANIFEST: "1",
   PSTDIO_DISABLE_API_AUTO_START: "1",
   ...env,

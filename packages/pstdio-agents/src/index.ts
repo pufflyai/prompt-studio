@@ -1,5 +1,3 @@
-export type { BundledSkill } from "./bundled-skills";
-export { getBundledSkills } from "./bundled-skills";
 export { implement, review } from "./commands";
 export { createClaudeCodeAgent } from "./providers/claude-code";
 export { normalizeClaudeCodeMessages, normalizeClaudeCodeStream } from "./providers/claude-code/claude-code-normalizer";

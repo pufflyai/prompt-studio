@@ -1,9 +1,9 @@
-import { Badge, Box, Button, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Badge, Box, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
 import { TreeList, type TreeListNavigateEvent } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { useEffect, useState } from "react";
 import type { ProjectSkillDetails } from "../data/skills-api";
-import { useProjectSkill, useUpdateProjectSkill } from "../hooks/use-skills";
+import { useProjectSkill } from "../hooks/use-skills";
 import { buildSkillFileTree, collectFolderIds } from "../utils/build-skill-file-tree";
 import { parseSkillVersion } from "../utils/parse-skill-version";
 
@@ -22,12 +22,8 @@ const getDefaultFilePath = (files: SkillFile[]) => {
 
 const isMarkdown = (path: string) => path.toLowerCase().endsWith(".md");
 
-export const SkillViewerContent = (props: {
-  skill: ProjectSkillDetails;
-  isUpdating: boolean;
-  onUpdate: () => void;
-}) => {
-  const { skill, isUpdating, onUpdate } = props;
+export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
+  const { skill } = props;
   const treeNodes = buildSkillFileTree(skill.files);
   const initialExpanded = collectFolderIds(treeNodes);
   const [expandedNodes, setExpandedNodes] = useState<string[]>(initialExpanded);
@@ -46,7 +42,6 @@ export const SkillViewerContent = (props: {
   const selectedFile = skill.files.find((file) => file.path === selectedPath) ?? skill.files[0];
   const skillFile = skill.files.find((file) => file.path === "SKILL.md");
   const currentVersion = parseSkillVersion(skillFile?.content ?? "");
-  const hasUpdate = skill.bundled_version && currentVersion !== skill.bundled_version;
 
   const handleNavigate = (event: TreeListNavigateEvent) => {
     setSelectedPath(event.nodeId);
@@ -91,17 +86,6 @@ export const SkillViewerContent = (props: {
                 <Badge size="sm" data-testid="project-skill-version">
                   v{currentVersion}
                 </Badge>
-              )}
-              {hasUpdate && (
-                <Button
-                  size="xs"
-                  variant="outline"
-                  loading={isUpdating}
-                  onClick={onUpdate}
-                  data-testid="project-skill-update-button"
-                >
-                  Update to v{skill.bundled_version}
-                </Button>
               )}
             </Flex>
             <Text textStyle="paragraph/S/regular" color="fg.muted" data-testid="project-skill-description">
@@ -159,7 +143,6 @@ export const SkillViewerContent = (props: {
 export const SkillViewer = (props: SkillViewerProps) => {
   const { projectId, skillName } = props;
   const { data: skill, isLoading, error } = useProjectSkill(projectId, skillName);
-  const updateSkill = useUpdateProjectSkill(projectId, skillName);
 
   if (isLoading) {
     return (
@@ -189,5 +172,5 @@ export const SkillViewer = (props: SkillViewerProps) => {
     );
   }
 
-  return <SkillViewerContent skill={skill} isUpdating={updateSkill.isPending} onUpdate={() => updateSkill.mutate()} />;
+  return <SkillViewerContent skill={skill} />;
 };

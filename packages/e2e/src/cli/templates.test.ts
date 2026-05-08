@@ -38,7 +38,12 @@ describe("pstdio templates list", () => {
     () => {
       const repo = createInitializedRepo("tpl-defaults");
 
+      const tplFile = join(repo, "default.md");
+      writeFileSync(tplFile, "# Default");
+      run(`templates create --name default-doc --type document --file ${tplFile} --default`, repo);
+
       const output = run("templates list", repo);
+      expect(output).toContain("default-doc");
       expect(output).toContain("*");
     },
     TEST_TIMEOUT,
@@ -114,11 +119,15 @@ describe("pstdio templates update", () => {
     () => {
       const repo = createInitializedRepo("tpl-update");
 
+      const originalFile = join(repo, "original.md");
+      writeFileSync(originalFile, "# Original content");
+      run(`templates create --name project-doc --type document --file ${originalFile}`, repo);
+
       const tplFile = join(repo, "updated.md");
       writeFileSync(tplFile, "# Updated content");
 
-      const output = run(`templates update --name adr --file ${tplFile} --default`, repo);
-      expect(output).toContain('Updated template "adr"');
+      const output = run(`templates update --name project-doc --file ${tplFile} --default`, repo);
+      expect(output).toContain('Updated template "project-doc"');
     },
     TEST_TIMEOUT,
   );

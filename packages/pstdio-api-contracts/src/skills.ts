@@ -32,7 +32,6 @@ export const skillSchema = z.object({
 });
 
 export const skillWithContentSchema = skillSchema.extend({
-  bundled_version: z.string(),
   installed_agents: z.array(z.string()),
 });
 

@@ -139,6 +139,7 @@ describe("enableInstalledExtensionsForProject", () => {
       expect(enableInstalledSourceForProject).toHaveBeenCalledTimes(2);
       expect(calls[0]?.installName).toBe("core-skills");
       expect(calls[0]?.namespace).toBe("core-skills");
+      expect(calls[0]).not.toHaveProperty("defaultTemplates");
       expect(calls[0]?.sourceKind).toBeUndefined();
     } finally {
       rmSync(root, { recursive: true, force: true });

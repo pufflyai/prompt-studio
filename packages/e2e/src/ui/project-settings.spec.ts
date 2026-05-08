@@ -264,7 +264,7 @@ test.describe("Project settings — skills", () => {
         break;
       }
     }
-    expect(multiFileSkill, "expected at least one bundled skill with sibling files").not.toBeNull();
+    expect(multiFileSkill, "expected at least one extension-backed skill with sibling files").not.toBeNull();
 
     const sibling = multiFileSkill!.files.find((file) => file.path !== "SKILL.md")!;
     const siblingSnippet = sibling.content

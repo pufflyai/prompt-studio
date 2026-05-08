@@ -72,12 +72,10 @@ describe("packaged pstdio — project lifecycle", () => {
 
       rmSync(extractedRoot, { recursive: true, force: true });
       mkdirSync(join(extractedRoot, "hooks"), { recursive: true });
-      mkdirSync(join(extractedRoot, "templates"), { recursive: true });
       writeFileSync(join(extractedRoot, "hooks", "post-worktree-create."), "#!/bin/sh\necho stale\n");
       writeFileSync(join(extractedRoot, "hooks", "post-session-success."), "#!/bin/sh\necho stale\n");
       writeFileSync(join(extractedRoot, "hooks", "post-session-start."), "#!/bin/sh\necho stale\n");
       writeFileSync(join(extractedRoot, "hooks", "post-ticket-archive."), "#!/bin/sh\necho stale\n");
-      writeFileSync(join(extractedRoot, "templates", "stale.txt"), "stale");
 
       const server = spawn(PACKAGED_BINARY_PATH, ["serve", "--port", String(port)], {
         env: {
@@ -110,9 +108,6 @@ describe("packaged pstdio — project lifecycle", () => {
         const pluginsDir = join(repo, ".pstdio", "plugins");
         expect(existsSync(pluginsDir)).toBe(true);
         expect(readdirSync(pluginsDir).length).toBeGreaterThan(0);
-        const skillsDir = join(repo, ".claude", "skills");
-        expect(existsSync(skillsDir)).toBe(true);
-        expect(readdirSync(skillsDir).length).toBeGreaterThan(0);
       } finally {
         await shutdownApiViaHttp(url);
         server.kill();
@@ -123,7 +118,7 @@ describe("packaged pstdio — project lifecycle", () => {
   );
 
   test(
-    "registering a repo through the compiled API seeds bundled repo files for dashboard-created projects",
+    "registering a repo through the compiled API scaffolds bundled plugin files for dashboard-created projects",
     async () => {
       const repo = createGitRepo();
       const fakeHome = createTempDir();

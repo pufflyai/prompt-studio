@@ -345,7 +345,7 @@ test.describe("Project creation", () => {
     await expect(createProjectDialog.getByText("Select at least one agent.")).toBeVisible();
   });
 
-  test("creates templates when creating a project via the dialog", async ({ page, request }) => {
+  test("creates alphabetically sorted templates when creating a project via the dialog", async ({ page, request }) => {
     const repoPath = createTempGitRepo();
     tempRepoPaths.push(repoPath);
 
@@ -374,9 +374,11 @@ test.describe("Project creation", () => {
     const templatesResponse = await request.get(`${apiBase}/v1/projects/${createdProject.id}/templates`);
     expect(templatesResponse.ok()).toBe(true);
     const templates = (await templatesResponse.json()) as Array<{ name: string; is_default: boolean }>;
+    const names = templates.map((template) => template.name);
 
     expect(templates.length).toBeGreaterThan(0);
-    expect(templates.some((template) => template.is_default)).toBe(true);
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
+    expect(templates.every((template) => !template.is_default)).toBe(true);
   });
 
   test("shows validation errors when submitting empty form", async ({ page }) => {

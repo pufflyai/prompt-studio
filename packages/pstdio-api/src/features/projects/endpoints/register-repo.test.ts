@@ -7,8 +7,12 @@ import type { AgentId, AgentService, AvailabilityInfo } from "pstdio-agents";
 import { createApp } from "../../../app";
 import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
 import type { AppBindings } from "../../../types";
+import { hashExtensionSource, loadExtensionSource } from "../../extensions/extension-runtime";
+
+type AppHandle = Awaited<ReturnType<typeof createApp>>;
 
 let app: OpenAPIHono<AppBindings>;
+let handle: AppHandle;
 let tempRoot: string;
 
 const createTestAgent = (id: AgentId, availability: AvailabilityInfo): AgentService =>
@@ -28,16 +32,61 @@ const createTestAgent = (id: AgentId, availability: AvailabilityInfo): AgentServ
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-register-repo-test-"));
-  ({ app } = await createApp({
+  handle = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: resolveTestFilesRoot(),
-  }));
+  });
+  app = handle.app;
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await handle.close();
   rmSync(tempRoot, { recursive: true, force: true });
 });
+
+const writeSkillExtension = (root: string) => {
+  const sourcePath = join(root, "repo-skill-extension");
+  const skillRoot = join(sourcePath, "skills", "create-ticket");
+  mkdirSync(skillRoot, { recursive: true });
+  writeFileSync(join(skillRoot, "SKILL.md"), "# Create Ticket\n", "utf8");
+  writeFileSync(
+    join(sourcePath, "extension.ts"),
+    `const asset = (path: string) => ({ kind: "package-asset" as const, path, baseUrl: import.meta.url });
+
+export default {
+  id: "pstdio.test-repo-skill",
+  namespace: "test-repo-skill",
+  name: "Test Repo Skill",
+  apiVersion: "1",
+  skills: {
+    createTicket: {
+      title: "Create ticket",
+      description: "Create a ticket.",
+      source: asset("./skills/create-ticket"),
+    },
+  },
+};
+`,
+    "utf8",
+  );
+  return sourcePath;
+};
+
+const enableSkillExtension = async (target: AppHandle, projectId: string, sourcePath: string) => {
+  const loaded = await loadExtensionSource(sourcePath);
+  await target.deps.extensionService.enableInstalledSourceForProject({
+    projectId,
+    installName: "repo-skill-extension",
+    displayName: loaded.metadata.name,
+    extensionId: loaded.metadata.id,
+    manifest: loaded.manifest,
+    namespace: loaded.metadata.namespace,
+    sourceHash: hashExtensionSource(sourcePath),
+    sourcePath,
+    version: loaded.metadata.version ?? null,
+  });
+};
 
 const createProject = async (name: string) => {
   const response = await app.request("/v1/projects", {
@@ -94,8 +143,9 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
     expect(res.status).toBe(400);
   });
 
-  test("installs bundled skills to repo for configured agents", async () => {
+  test("installs extension-backed skills to repo for configured agents", async () => {
     const project = await createProject("Skill Install Project");
+    await enableSkillExtension(handle, project.id, writeSkillExtension(tempRoot));
 
     await app.request("/v1/agents", {
       method: "POST",
@@ -117,6 +167,7 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
 
   test("preserves existing repo-local skill customizations", async () => {
     const project = await createProject("Skill Customization Project");
+    await enableSkillExtension(handle, project.id, writeSkillExtension(tempRoot));
 
     await app.request("/v1/agents", {
       method: "POST",
@@ -135,7 +186,7 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
     expect(readFileSync(customSkillPath, "utf8")).toBe("# Custom Skill");
   });
 
-  test("auto-configures the first installed agent before installing bundled skills", async () => {
+  test("auto-configures the first installed agent before installing extension-backed skills", async () => {
     const isolatedRoot = mkdtempSync(join(tmpdir(), "pstdio-api-register-repo-agent-install-test-"));
     const handle = await createApp({
       agents: [createTestAgent("claude-code", { type: "INSTALLED" })],
@@ -151,6 +202,7 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
         body: JSON.stringify({ name: "Auto Agent Project" }),
       });
       const project = await createRes.json();
+      await enableSkillExtension(handle, project.id, writeSkillExtension(isolatedRoot));
 
       const repoPath = join(isolatedRoot, "auto-agent-repo");
       mkdirSync(repoPath, { recursive: true });

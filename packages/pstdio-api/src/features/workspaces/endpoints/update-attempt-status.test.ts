@@ -38,6 +38,17 @@ beforeAll(async () => {
   const project = await projectRes.json();
   projectId = project.id;
 
+  const templateRes = await app.request(`/v1/projects/${projectId}/templates`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      name: "fix-changes-requested",
+      template_type: "prompt",
+      content: "Fix {{ticket_id}}",
+    }),
+  });
+  expect([201, 409]).toContain(templateRes.status);
+
   const agentRes = await app.request("/v1/agents", {
     method: "POST",
     headers: { "content-type": "application/json" },
