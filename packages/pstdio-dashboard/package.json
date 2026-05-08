@@ -40,6 +40,7 @@
     "@pstdio/prompt-utils": "0.1.4",
     "@pstdio/ui": "workspace:*",
     "pstdio-api-contracts": "workspace:*",
+    "pstdio-extensions": "workspace:*",
     "@storybook/addon-themes": "^10.1.10",
     "@tanstack/hotkeys": "^0.7.1",
     "@tanstack/react-db": "^0.1.74",

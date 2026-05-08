@@ -102,7 +102,11 @@ const copyVersionToClipboard = async (versionLabel: string, title: string) => {
   });
 };
 
-const resolveActiveNodeId = (pathname: string, projectId?: string) => {
+const resolveActiveNodeId = (
+  pathname: string,
+  projectId: string | undefined,
+  extensionNavigation: DashboardExtensionMetadata["navigation"] = [],
+) => {
   if (!projectId) return null;
 
   const base = `/projects/${projectId}`;
@@ -111,7 +115,12 @@ const resolveActiveNodeId = (pathname: string, projectId?: string) => {
   if (pathname.startsWith(`${base}/settings`)) return "settings";
   if (pathname.startsWith(`${base}/sessions`)) return "sessions";
 
-  return null;
+  const extensionNav = getSlotContributions(extensionNavigation, "project.sidebarNav").find((item) => {
+    const href = item.href ?? (item.route ? `${base}/extensions/${item.route}` : null);
+    return href ? pathname === href || pathname.startsWith(`${href}/`) : false;
+  });
+
+  return extensionNav?.id ?? null;
 };
 
 export const buildProjectSidebarSections = (input: {
@@ -187,7 +196,7 @@ export const ProjectSidebar = () => {
     }
   };
 
-  const activeNodeId = resolveActiveNodeId(location.pathname, projectId);
+  const activeNodeId = resolveActiveNodeId(location.pathname, projectId, extensionMetadata?.navigation);
 
   return (
     <Sidebar

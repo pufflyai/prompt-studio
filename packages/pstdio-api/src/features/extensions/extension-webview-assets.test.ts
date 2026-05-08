@@ -55,15 +55,15 @@ describe("extension webview asset routes", () => {
     const cacheRoot = join(root, "cache");
     writeExtension(sourcePath, "./src/main.tsx");
     mkdirSync(join(cacheRoot, "extension-lab", "lab.labPage", "dist"), { recursive: true });
-    writeFileSync(join(cacheRoot, "extension-lab", "lab.labPage", "dist", "index.html"), "<!doctype html>managed");
+    writeFileSync(join(cacheRoot, "extension-lab", "lab.labPage", "dist", "module.js"), "console.log('managed');");
 
     try {
       const app = createApp({ cacheRoot, sourcePath });
       const res = await app.request("/v1/extensions/installed/extension-lab/webviews/lab.labPage");
 
       expect(res.status).toBe(200);
-      expect(res.headers.get("content-type")).toContain("text/html");
-      expect(await res.text()).toBe("<!doctype html>managed");
+      expect(res.headers.get("content-type")).toContain("application/javascript");
+      expect(await res.text()).toBe("console.log('managed');");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

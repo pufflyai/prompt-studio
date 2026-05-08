@@ -17,12 +17,6 @@ export interface WhenExpression {
   metadata?: JsonObject;
 }
 
-export interface CommandPanelContribution {
-  group?: string;
-  keywords?: string[];
-  when?: WhenExpression;
-}
-
 export interface MenuContribution<TSlotContext extends Struct = Struct, TParams extends Struct = Struct> {
   slot: SlotRef<TSlotContext, "menu"> | string;
   label?: string;

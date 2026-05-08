@@ -76,6 +76,12 @@ const extensionWebviewSchema = z.object({
   entry: packageAssetDescriptorSchema,
   title: z.string().optional(),
   sandbox: z.enum(["default", "strict"]).optional(),
+  /** API-served URL of the bridge runtime HTML the dashboard mounts in the iframe. */
+  runtimeUrl: z.string().optional(),
+  /** API-served URL of the bundled extension module the bridge runtime dynamically imports. */
+  moduleUrl: z.string().optional(),
+  /** API-served URLs of CSS files the bridge runtime should inject before mounting the module. */
+  styles: z.array(z.string()).optional(),
 });
 
 export const extensionMenuContributionSchema = z.object({

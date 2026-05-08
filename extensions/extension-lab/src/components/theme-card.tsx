@@ -1,19 +1,17 @@
 import { HStack, Stack, Text } from "@chakra-ui/react";
-import { getThemePreferenceMode, Switch, useThemePreference } from "@pstdio/ui";
-import { buildSetThemePreferenceMessage } from "../host-bridge";
+import { Switch } from "@pstdio/ui";
+import { useLabHost, useLabHostProps } from "../host-context";
 import { LabCard } from "./lab-card";
 
 export const ThemeCard = () => {
-  const { themePreference, themePreferences, setThemePreference } = useThemePreference();
-  const mode = getThemePreferenceMode(themePreference, themePreferences);
-  const isDark = mode === "dark";
+  const { host } = useLabHost();
+  const { themePreference } = useLabHostProps();
+  const current = themePreference ?? "pstdio-light";
+  const isDark = /dark/i.test(current);
 
-  const setMode = (checked: boolean) => {
-    const nextMode = checked ? "dark" : "light";
-    const nextPreference = themePreferences.find((preference) => preference.mode === nextMode)?.id ?? themePreference;
-
-    setThemePreference(nextPreference);
-    window.parent.postMessage(buildSetThemePreferenceMessage(nextPreference), window.location.origin);
+  const setMode = async (checked: boolean) => {
+    const next = checked ? "pstdio-dark" : "pstdio-light";
+    await host.call("setThemePreference", { themePreference: next });
   };
 
   return (
@@ -22,7 +20,7 @@ export const ThemeCard = () => {
         <Stack gap="2xs">
           <Text textStyle="label/S/medium">Current theme</Text>
           <Text textStyle="paragraph/S/regular" color="fg.muted">
-            {themePreference}
+            {current}
           </Text>
         </Stack>
         <Switch checked={isDark} onCheckedChange={(event: { checked: boolean }) => setMode(event.checked)}>

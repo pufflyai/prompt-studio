@@ -1,7 +1,6 @@
-import { createClient } from "@pstdio/sdk/client";
+import type { GuestHost } from "@pstdio/sdk/extensions";
 
 type CounterCommandId = "lab.counter.bump" | "lab.counter.read" | "lab.counter.reset";
-type CounterCommandFetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 interface LabCommandResponse {
   commandId: string;
@@ -15,57 +14,44 @@ interface LabCommandResponse {
 }
 
 interface CounterCommandInput {
+  host: GuestHost;
   commandId: CounterCommandId;
-  projectId: string;
   params?: Record<string, unknown>;
-  fetcher?: CounterCommandFetcher;
 }
 
 interface SayHelloCommandInput {
-  projectId: string;
-  fetcher?: CounterCommandFetcher;
+  host: GuestHost;
 }
-
-export const getProjectIdFromSearch = (search: string) => new URLSearchParams(search).get("projectId")?.trim() ?? "";
 
 const getCommandValueFromResponse = (response: LabCommandResponse, fallbackMessage: string) => {
   if (response.outcome.status !== "success") {
     throw new Error(response.outcome.reason ?? fallbackMessage);
   }
-
   return response.outcome.value;
 };
 
 export const getCounterFromResponse = (response: LabCommandResponse) => {
   const value = getCommandValueFromResponse(response, "Counter command failed.");
-
   if (value && typeof value === "object" && "counter" in value && typeof value.counter === "number") {
     return value.counter;
   }
-
   throw new Error("Counter command did not return a counter.");
 };
 
 const executeLabCommand = async (
   commandId: CounterCommandId | "lab.say-hello",
-  input: { projectId: string; params?: Record<string, unknown>; fetcher?: CounterCommandFetcher },
-) => {
-  const { projectId, params, fetcher = fetch } = input;
-  const client = createClient({ baseUrl: "", fetch: fetcher as typeof fetch });
-
-  return client.extensions.execute(commandId, { projectId, params, source: "dashboard" });
-};
+  input: { host: GuestHost; params?: Record<string, unknown> },
+): Promise<LabCommandResponse> =>
+  input.host.call<LabCommandResponse>("commands.execute", { commandId, body: { params: input.params } });
 
 export const executeCounterCommand = async (input: CounterCommandInput) => {
-  const { commandId, projectId, params, fetcher } = input;
-  const response = await executeLabCommand(commandId, { projectId, params, fetcher });
-
+  const { host, commandId, params } = input;
+  const response = await executeLabCommand(commandId, { host, params });
   return getCounterFromResponse(response);
 };
 
 export const executeSayHelloCommand = async (input: SayHelloCommandInput) => {
   const response = await executeLabCommand("lab.say-hello", input);
-
   getCommandValueFromResponse(response, "Say hello command failed.");
   return response;
 };

@@ -11,8 +11,11 @@ import {
   Sun,
   Terminal,
 } from "lucide-react";
-import type { ExtensionCommandRecord, ExtensionRecord } from "pstdio-api-contracts";
+import type { ExtensionCommandRecord, ExtensionMenuContribution, ExtensionRecord } from "pstdio-api-contracts";
 import type { ShortcutBinding } from "@/features/shortcuts/shortcut-registry";
+import { getSlotContributions } from "@/shared/extensions/contribution-mapping";
+
+const EXTENSION_COMMAND_PANEL_SLOT_ID = "project.commandPanel";
 
 export type CommandPaletteMode = "search" | "command";
 export type CommandPaletteView = "main" | "theme";
@@ -67,6 +70,7 @@ interface BuildCommandPaletteEntriesInput {
   labels?: CommandPaletteLabels;
   extensions?: ExtensionRecord[];
   extensionCommands?: ExtensionCommandRecord[];
+  extensionMenuContributions?: ExtensionMenuContribution[];
   run: (action: CommandPaletteAction) => void;
 }
 
@@ -116,10 +120,12 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
     themePreferences = defaultThemePreferences,
     extensions = [],
     extensionCommands = [],
+    extensionMenuContributions = [],
   } = input;
   const labels = input.labels ?? defaultLabels;
   const projectPath = `/projects/${projectId}`;
   const extensionById = new Map(extensions.map((extension) => [extension.id, extension]));
+  const commandById = new Map(extensionCommands.map((command) => [command.id, command]));
 
   const createEntry = (
     entry: Omit<CommandPaletteEntry, "run"> & { action: CommandPaletteAction },
@@ -128,20 +134,28 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
     run: () => run(entry.action),
   });
 
-  const extensionEntries = extensionCommands
-    .filter((command) => !command.excludeFromPalette)
-    .map((command) =>
-      createEntry({
+  const paletteContributions = getSlotContributions(extensionMenuContributions, EXTENSION_COMMAND_PANEL_SLOT_ID);
+
+  const extensionEntries = paletteContributions
+    .map((contribution) => {
+      const command = commandById.get(contribution.commandId);
+      if (!command) return null;
+
+      const label = contribution.label ?? command.title;
+      const description = command.description;
+
+      return createEntry({
         id: `extension:${command.id}`,
-        mode: "command",
-        label: command.title,
-        searchText: `${command.title} ${command.description ?? ""} ${command.namespace}`,
-        secondaryLabel: command.description,
+        mode: "command" as const,
+        label,
+        searchText: `${label} ${description ?? ""} ${command.namespace}`,
+        secondaryLabel: description,
         icon: Terminal,
         group: extensionById.get(command.extensionId)?.displayName ?? command.namespace,
         action: { id: `extension:${command.id}`, type: "extension-command", commandId: command.id },
-      }),
-    );
+      });
+    })
+    .filter((entry): entry is CommandPaletteEntry => entry !== null);
 
   return [
     createEntry({

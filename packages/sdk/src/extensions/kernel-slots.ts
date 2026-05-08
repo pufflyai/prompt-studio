@@ -8,6 +8,7 @@ export const projectSlots = {
   sidebar: defineSlot<Struct, "view">("project.sidebar", { kind: "view" }),
   headerPrimary: defineSlot<Struct, "menu">("project.headerPrimary", { kind: "menu" }),
   headerOverflow: defineSlot<Struct, "menu">("project.headerOverflow", { kind: "menu" }),
+  commandPanel: defineSlot<Struct, "menu">("project.commandPanel", { kind: "menu" }),
   settingsPanels: defineSlot<Struct, "settings">("project.settingsPanels", { kind: "settings" }),
 };
 

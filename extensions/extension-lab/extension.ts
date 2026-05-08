@@ -16,7 +16,10 @@ const extension = defineExtension({
     "say-hello": {
       title: "Say hello",
       cli: true,
-      menus: [{ slot: projectSlots.headerPrimary, label: "Lab: Say hello" }],
+      menus: [
+        { slot: projectSlots.headerPrimary, label: "Lab: Say hello" },
+        { slot: projectSlots.commandPanel, label: "Say hello" },
+      ],
       async run(ctx) {
         const projectName = ctx.resource?.label ?? ctx.resource?.id ?? ctx.projectId;
         await ctx.notify.toast({
@@ -31,7 +34,10 @@ const extension = defineExtension({
     "counter.bump": {
       title: "Bump lab counter",
       cli: true,
-      menus: [{ slot: projectSlots.headerOverflow, label: "Bump lab counter" }],
+      menus: [
+        { slot: projectSlots.headerOverflow, label: "Bump lab counter" },
+        { slot: projectSlots.commandPanel, label: "Bump lab counter" },
+      ],
       params: { amount: params.number({ defaultValue: 1 }) },
       async run(ctx) {
         const { amount = 1 } = ctx.params as { amount?: number };
@@ -45,6 +51,7 @@ const extension = defineExtension({
     "counter.read": {
       title: "Read lab counter",
       cli: true,
+      menus: [{ slot: projectSlots.commandPanel, label: "Read lab counter" }],
       async run(ctx) {
         return { counter: (await ctx.storage.get<number>(COUNTER_KEY)) ?? 0 };
       },
@@ -53,7 +60,10 @@ const extension = defineExtension({
     "counter.reset": {
       title: "Reset lab counter",
       cli: true,
-      menus: [{ slot: projectSlots.headerOverflow, label: "Reset lab counter" }],
+      menus: [
+        { slot: projectSlots.headerOverflow, label: "Reset lab counter" },
+        { slot: projectSlots.commandPanel, label: "Reset lab counter" },
+      ],
       async run(ctx) {
         await ctx.storage.set(COUNTER_KEY, 0);
         return { counter: 0 };
@@ -63,7 +73,6 @@ const extension = defineExtension({
     awaken: {
       title: "Awaken",
       description: "Internal target used to demo middleware rejection.",
-      commandPanel: false,
       params: { title: params.text() },
       async run(ctx) {
         const { title = "anonymous" } = ctx.params as { title?: string };
@@ -80,7 +89,10 @@ const extension = defineExtension({
       title: "Demo middleware rejection",
       description: "Invoke lab.awaken with title 'Gain consciousness' and watch the lab middleware refuse.",
       cli: true,
-      menus: [{ slot: projectSlots.headerOverflow, label: "Demo middleware rejection" }],
+      menus: [
+        { slot: projectSlots.headerOverflow, label: "Demo middleware rejection" },
+        { slot: projectSlots.commandPanel, label: "Demo middleware rejection" },
+      ],
       async run(ctx) {
         const outcome = await ctx.commands.execute(labAwakenCommand, {
           params: { title: "Gain consciousness" },
@@ -107,7 +119,6 @@ const extension = defineExtension({
     heartbeat: {
       title: "Lab heartbeat",
       description: "Toast emitted by the heartbeat schedule.",
-      commandPanel: false,
       async run(ctx) {
         await ctx.notify.toast({
           type: "info",

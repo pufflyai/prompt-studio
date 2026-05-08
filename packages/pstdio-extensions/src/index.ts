@@ -58,4 +58,12 @@ export {
   runPackageInstall,
 } from "./runtime";
 
+export {
+  type GroupedDiagnostics,
+  groupDiagnosticsBySeverity,
+  type ResolvedMenuItem,
+  resolveMenuContributionsForSlot,
+  sortDiagnostics,
+} from "./runtime-ui";
+
 export type * from "./types";

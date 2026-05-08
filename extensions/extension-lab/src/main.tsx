@@ -1,38 +1,26 @@
 import "@pstdio/ui/style.css";
-
-import {
-  ChakraProvider,
-  customThemePreferences,
-  defaultThemePreferences,
-  getInitialThemePreference,
-  isThemePreference,
-  psTheme,
-  ThemePreferenceProvider,
-} from "@pstdio/ui";
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import { getThemePreferenceFromSearch } from "./host-bridge";
-import { LabPage } from "./views/lab-page";
 import "./styles.css";
 
-export const labThemePreferences = [...defaultThemePreferences, ...customThemePreferences];
+import { defineExtensionView } from "@pstdio/sdk/extensions";
+import { ChakraProvider, psTheme } from "@pstdio/ui";
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { type LabHostProps, LabHostProvider } from "./host-context";
+import { LabPage } from "./views/lab-page";
 
-const routeThemePreference = getThemePreferenceFromSearch(window.location.search);
-const initialThemePreference = isThemePreference(routeThemePreference, labThemePreferences)
-  ? routeThemePreference
-  : getInitialThemePreference(labThemePreferences);
+export default defineExtensionView<LabHostProps>({
+  render({ mount, host, propsStore }) {
+    const root = createRoot(mount);
+    root.render(
+      <StrictMode>
+        <ChakraProvider value={psTheme}>
+          <LabHostProvider host={host} propsStore={propsStore}>
+            <LabPage />
+          </LabHostProvider>
+        </ChakraProvider>
+      </StrictMode>,
+    );
 
-const mount = document.getElementById("root");
-if (!mount) {
-  throw new Error("Extension Lab webview is missing its #root mount element.");
-}
-
-createRoot(mount).render(
-  <StrictMode>
-    <ThemePreferenceProvider initialPreference={initialThemePreference} themePreferences={labThemePreferences}>
-      <ChakraProvider value={psTheme}>
-        <LabPage />
-      </ChakraProvider>
-    </ThemePreferenceProvider>
-  </StrictMode>,
-);
+    return () => root.unmount();
+  },
+});

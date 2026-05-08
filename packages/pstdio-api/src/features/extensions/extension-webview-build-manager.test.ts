@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -60,7 +60,7 @@ const writeExtension = (root: string, entries: Record<string, string>) => {
 describe("resolveManagedWebviewBuildCommand", () => {
   test("uses the compiled pstdio binary as Bun in packaged mode", () => {
     const resolved = resolveManagedWebviewBuildCommand({
-      args: ["build", "/cache/source/index.html", "--outdir", "/cache/dist"],
+      args: ["build", "/extension/src/main.tsx", "--outdir", "/cache/dist"],
       bunCacheDir: "/tmp/pstdio-bun-cache",
       env: {},
       isPackaged: true,
@@ -68,7 +68,7 @@ describe("resolveManagedWebviewBuildCommand", () => {
     });
 
     expect(resolved.file).toBe("/Applications/Prompt Studio.app/pstdio");
-    expect(resolved.args).toEqual(["build", "/cache/source/index.html", "--outdir", "/cache/dist"]);
+    expect(resolved.args).toEqual(["build", "/extension/src/main.tsx", "--outdir", "/cache/dist"]);
     expect(resolved.env.BUN_BE_BUN).toBe("1");
     expect(resolved.env.BUN_INSTALL_CACHE_DIR).toBe("/tmp/pstdio-bun-cache");
   });
@@ -112,26 +112,32 @@ describe("createExtensionWebviewBuildManager", () => {
       await manager.refresh();
       await manager.refresh();
 
-      const shellPath = join(cacheRoot, "extension-lab", "lab.labPage", "source", "index.html");
       const distPath = join(cacheRoot, "extension-lab", "lab.labPage", "dist");
+      const tailArgs = [
+        "--outdir",
+        distPath,
+        "--target",
+        "browser",
+        "--format",
+        "esm",
+        "--entry-naming",
+        "module.[ext]",
+        "--asset-naming",
+        "[name]-[hash].[ext]",
+        "--no-clear-screen",
+      ];
 
-      expect(existsSync(shellPath)).toBe(true);
-      expect(readFileSync(shellPath, "utf8")).toContain('<div id="root"></div>');
-      expect(readFileSync(shellPath, "utf8")).toContain("src/main.tsx");
-      expect(runCommands).toEqual([
-        {
-          file: "bun",
-          args: ["build", shellPath, "--outdir", distPath, "--target", "browser", "--no-clear-screen"],
-          cwd: sourcePath,
-        },
-      ]);
-      expect(spawned).toEqual([
-        {
-          file: "bun",
-          args: ["build", shellPath, "--outdir", distPath, "--target", "browser", "--no-clear-screen", "--watch"],
-          cwd: sourcePath,
-        },
-      ]);
+      expect(runCommands).toHaveLength(1);
+      expect(runCommands[0]?.file).toBe("bun");
+      expect(runCommands[0]?.cwd).toBe(sourcePath);
+      // Bun's path resolution sometimes canonicalizes macOS `/var/...` to `/private/var/...`.
+      // Match the entry path tail rather than the full prefix.
+      expect(runCommands[0]?.args[0]).toBe("build");
+      expect(runCommands[0]?.args[1]).toMatch(/extension\/src\/main\.tsx$/);
+      expect(runCommands[0]?.args.slice(2)).toEqual(tailArgs);
+
+      expect(spawned).toHaveLength(1);
+      expect(spawned[0]?.args.slice(2)).toEqual([...tailArgs, "--watch"]);
       expect(successes).toEqual([{ installName: "extension-lab", webviewId: "lab.labPage" }]);
       expect(child.killed).toBe(false);
     } finally {

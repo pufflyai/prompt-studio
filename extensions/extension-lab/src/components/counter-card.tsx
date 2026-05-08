@@ -1,59 +1,59 @@
 import { Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import { executeCounterCommand, getProjectIdFromSearch } from "../counter-api";
+import { executeCounterCommand } from "../counter-api";
+import { useLabHost, useLabHostProps } from "../host-context";
 import { useLabStore } from "../store/lab-store";
 import { LabCard } from "./lab-card";
 
+// Only mutation commands trigger a refetch — including `lab.counter.read` here would
+// loop forever, because every read publishes a new event that retriggers this effect.
+const COUNTER_MUTATION_IDS = new Set(["lab.counter.bump", "lab.counter.reset"]);
+
 export const CounterCard = () => {
+  const { host } = useLabHost();
+  const { lastCommand, projectId } = useLabHostProps();
   const counter = useLabStore((state) => state.counter);
   const setCounter = useLabStore((state) => state.setCounter);
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const projectId = getProjectIdFromSearch(window.location.search);
 
+  // Compute a stable "mutation tick" — only counter mutations advance it. Non-mutations
+  // (including the `lab.counter.read` calls this effect itself fires) leave it alone, so
+  // the effect does NOT re-run on every host command. Without this, every read event
+  // would re-trigger the effect, cancelling its own in-flight fetch.
+  const mutationTick = lastCommand && COUNTER_MUTATION_IDS.has(lastCommand.commandId) ? lastCommand.tick : null;
+
+  // Initial fetch on mount + refetch on each new counter mutation event.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: depending on mutationTick (not full lastCommand) on purpose — read events should not retrigger this effect.
   useEffect(() => {
     if (!projectId) return;
 
-    let isMounted = true;
-
-    const readCounter = async () => {
-      setIsPending(true);
-      setError(null);
-
+    let cancelled = false;
+    void (async () => {
       try {
-        const next = await executeCounterCommand({ commandId: "lab.counter.read", projectId });
-        if (isMounted) {
-          setCounter(next);
-        }
+        const next = await executeCounterCommand({ host, commandId: "lab.counter.read" });
+        if (!cancelled) setCounter(next);
       } catch (err) {
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : String(err));
-        }
-      } finally {
-        if (isMounted) {
-          setIsPending(false);
-        }
+        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
       }
-    };
-
-    void readCounter();
+    })();
 
     return () => {
-      isMounted = false;
+      cancelled = true;
     };
-  }, [projectId, setCounter]);
+  }, [host, projectId, setCounter, mutationTick]);
 
   const runCounterCommand = async (
     commandId: "lab.counter.bump" | "lab.counter.read" | "lab.counter.reset",
     params?: Record<string, unknown>,
   ) => {
-    if (!projectId || isPending) return;
+    if (isPending) return;
 
     setIsPending(true);
     setError(null);
 
     try {
-      const next = await executeCounterCommand({ commandId, projectId, params });
+      const next = await executeCounterCommand({ host, commandId, params });
       setCounter(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -61,8 +61,6 @@ export const CounterCard = () => {
       setIsPending(false);
     }
   };
-
-  const disabled = isPending || !projectId;
 
   return (
     <LabCard title="Counter" subtitle="Project-scoped extension storage through ctx.storage.">
@@ -77,7 +75,7 @@ export const CounterCard = () => {
               variant="outline"
               onClick={() => runCounterCommand("lab.counter.bump", { amount: -1 })}
               aria-label="Decrement"
-              disabled={disabled}
+              disabled={isPending}
             >
               -
             </Button>
@@ -86,7 +84,7 @@ export const CounterCard = () => {
               variant="solid"
               onClick={() => runCounterCommand("lab.counter.bump")}
               aria-label="Increment"
-              disabled={disabled}
+              disabled={isPending}
             >
               +1
             </Button>
@@ -94,7 +92,7 @@ export const CounterCard = () => {
               type="button"
               variant="ghost"
               onClick={() => runCounterCommand("lab.counter.reset")}
-              disabled={disabled}
+              disabled={isPending}
             >
               Reset
             </Button>

@@ -10,7 +10,6 @@ import type {
 import type {
   ArtifactMountContribution,
   CliContribution,
-  CommandPanelContribution,
   MenuContribution,
   NavigationContribution,
   RendererContribution,
@@ -44,8 +43,6 @@ export interface CommandDefinition<
   title: string;
   description?: string;
   params?: TSchema;
-  /** Defaults to true. */
-  commandPanel?: boolean | CommandPanelContribution;
   menus?: MenuContribution[];
   cli?: boolean | CliContribution;
   run: CommandRunHandler<SchemaParams<TSchema>, TResult>;

@@ -8,7 +8,10 @@
   ],
   "exports": {
     ".": "./src/index.ts",
-    "./types": "./src/types/index.ts"
+    "./types": "./src/types/index.ts",
+    "./bridge/contract": "./src/bridge/contract/index.ts",
+    "./bridge/guest": "./src/bridge/guest/index.ts",
+    "./bridge/host": "./src/bridge/host/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -19,10 +22,21 @@
   },
   "dependencies": {
     "@pstdio/sdk": "workspace:*",
-    "pstdio-paths": "workspace:*"
+    "pstdio-paths": "workspace:*",
+    "rimless": "0.7.1"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/react": "19.2.3",
+    "react": "19.2.4",
     "typescript": "6.0.2"
   }
 }

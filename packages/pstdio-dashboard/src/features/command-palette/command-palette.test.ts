@@ -88,7 +88,7 @@ describe("command palette entries", () => {
     expect(resolveCommandPaletteEscapeAction("", "theme")).toBe("exit-view");
   });
 
-  it("groups extension commands by extension display name", () => {
+  it("groups extension commands by extension display name and only includes commands slotted into project.commandPanel", () => {
     const entries = buildCommandPaletteEntries({
       projectId: "project-1",
       tickets: [],
@@ -99,18 +99,28 @@ describe("command palette entries", () => {
       ],
       extensionCommands: [
         { id: "lab.say-hello", extensionId: "pstdio.extension-lab", namespace: "lab", title: "Say hello" },
-        {
-          id: "lab.heartbeat",
-          extensionId: "pstdio.extension-lab",
-          namespace: "lab",
-          title: "Lab heartbeat",
-          excludeFromPalette: true,
-        },
+        { id: "lab.heartbeat", extensionId: "pstdio.extension-lab", namespace: "lab", title: "Lab heartbeat" },
         {
           id: "repo-health.scan",
           extensionId: "pstdio.repo-health",
           namespace: "repo-health",
           title: "Run health scan",
+        },
+      ],
+      extensionMenuContributions: [
+        {
+          id: "lab.say-hello.menu.0",
+          extensionId: "pstdio.extension-lab",
+          commandId: "lab.say-hello",
+          slotId: "project.commandPanel",
+          label: "Say hello",
+        },
+        {
+          id: "repo-health.scan.menu.0",
+          extensionId: "pstdio.repo-health",
+          commandId: "repo-health.scan",
+          slotId: "project.commandPanel",
+          label: "Run health scan",
         },
       ],
       run: () => {},
@@ -127,6 +137,22 @@ describe("command palette entries", () => {
     expect(healthEntry?.group).toBe("Repo Health");
   });
 
+  it("does not surface extension commands without a project.commandPanel menu contribution", () => {
+    const entries = buildCommandPaletteEntries({
+      projectId: "project-1",
+      tickets: [],
+      currentTheme: "pstdio-dark",
+      extensions: [{ id: "pstdio.extension-lab", namespace: "lab", displayName: "Extension Lab", sourcePath: "" }],
+      extensionCommands: [
+        { id: "lab.say-hello", extensionId: "pstdio.extension-lab", namespace: "lab", title: "Say hello" },
+      ],
+      run: () => {},
+    });
+
+    const commandEntries = filterCommandPaletteEntries(entries, ">");
+    expect(commandEntries.find((entry) => entry.id === "extension:lab.say-hello")).toBeUndefined();
+  });
+
   it("emits an extension-command action that targets the command id", () => {
     const seen: Array<{ commandId: string }> = [];
     const entries = buildCommandPaletteEntries({
@@ -136,6 +162,15 @@ describe("command palette entries", () => {
       extensions: [{ id: "pstdio.extension-lab", namespace: "lab", displayName: "Extension Lab", sourcePath: "" }],
       extensionCommands: [
         { id: "lab.say-hello", extensionId: "pstdio.extension-lab", namespace: "lab", title: "Say hello" },
+      ],
+      extensionMenuContributions: [
+        {
+          id: "lab.say-hello.menu.0",
+          extensionId: "pstdio.extension-lab",
+          commandId: "lab.say-hello",
+          slotId: "project.commandPanel",
+          label: "Say hello",
+        },
       ],
       run: (action) => {
         if (action.type === "extension-command") seen.push({ commandId: action.commandId });

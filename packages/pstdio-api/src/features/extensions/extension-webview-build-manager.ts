@@ -1,6 +1,6 @@
 import { spawn as nodeSpawn } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { rmSync } from "node:fs";
+import { join } from "node:path";
 import { isPackagedRuntime, resolveManagedBunCommand } from "./extension-bun-runner";
 import { loadExtensionSource } from "./extension-runtime";
 import {
@@ -112,40 +112,25 @@ export const resolveManagedWebviewBuildCommand = (input: {
     processExecPath: input.processExecPath,
   });
 
-const buildArgs = (shellPath: string, distDir: string, watch: boolean) => [
+// We bundle each extension's webview entry as a single ESM module — no HTML wrapper. The
+// dashboard host loads a separate bridge runtime (served by the API) that connects via
+// rimless RPC, applies the host's theme variables, and dynamically imports this module.
+const buildArgs = (entryPath: string, distDir: string, watch: boolean) => [
   "build",
-  shellPath,
+  entryPath,
   "--outdir",
   distDir,
   "--target",
   "browser",
+  "--format",
+  "esm",
+  "--entry-naming",
+  "module.[ext]",
+  "--asset-naming",
+  "[name]-[hash].[ext]",
   "--no-clear-screen",
   ...(watch ? ["--watch"] : []),
 ];
-
-const escapeHtmlAttribute = (value: string) =>
-  value.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-
-const writeWebviewShell = (shellPath: string, sourceEntryPath: string) => {
-  mkdirSync(dirname(shellPath), { recursive: true });
-  const relativeEntry = relative(dirname(shellPath), sourceEntryPath).replaceAll("\\", "/");
-  const scriptSource = relativeEntry.startsWith(".") ? relativeEntry : `./${relativeEntry}`;
-  writeFileSync(
-    shellPath,
-    `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="${escapeHtmlAttribute(scriptSource)}"></script>
-  </body>
-</html>
-`,
-  );
-};
 
 const processKey = (installName: string, webviewId: string) => `${installName}\0${webviewId}`;
 
@@ -250,9 +235,8 @@ export const createExtensionWebviewBuildManager = (
       });
       rmSync(paths.distDir, { recursive: true, force: true });
       const sourceEntryPath = resolvePackageAssetFile(webview.entry);
-      writeWebviewShell(paths.shellPath, sourceEntryPath);
-      if (!(await buildOnce(row, webview.id, paths.shellPath, paths.distDir))) continue;
-      startWatch(row, webview.id, signature, paths.shellPath, paths.distDir);
+      if (!(await buildOnce(row, webview.id, sourceEntryPath, paths.distDir))) continue;
+      startWatch(row, webview.id, signature, sourceEntryPath, paths.distDir);
     }
   };
 

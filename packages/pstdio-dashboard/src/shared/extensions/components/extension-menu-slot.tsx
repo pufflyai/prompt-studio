@@ -9,11 +9,16 @@ import type { ExtensionResourceContext } from "../types";
 
 interface ExtensionMenuSlotProps {
   slotId: string;
+  /**
+   * "buttons" renders every contribution as an inline button (use for "primary" slots like header buttons).
+   * "overflow" collapses every contribution into a single `…` menu (use for overflow slots).
+   */
+  mode: "buttons" | "overflow";
   resource?: ExtensionResourceContext;
 }
 
 export const ExtensionMenuSlot = (props: ExtensionMenuSlotProps) => {
-  const { slotId, resource } = props;
+  const { slotId, mode, resource } = props;
   const { projectId } = useParams({ strict: false });
   const { data } = useProjectExtensionMetadata(projectId);
   const executeCommand = useExecuteExtensionCommand(projectId);
@@ -42,40 +47,40 @@ export const ExtensionMenuSlot = (props: ExtensionMenuSlotProps) => {
     );
   };
 
-  const primary = contributions.filter((contribution) => contribution.presentation === "button");
-  const overflow = contributions.filter((contribution) => contribution.presentation !== "button");
+  if (mode === "buttons") {
+    return (
+      <Flex align="center" gap="xs">
+        {contributions.map((contribution) => (
+          <Button key={contribution.id} size="sm" variant="outline" onClick={() => runContribution(contribution)}>
+            {contribution.label}
+          </Button>
+        ))}
+      </Flex>
+    );
+  }
 
   return (
-    <Flex align="center" gap="xs">
-      {primary.map((contribution) => (
-        <Button key={contribution.id} size="sm" variant="outline" onClick={() => runContribution(contribution)}>
-          {contribution.label}
-        </Button>
-      ))}
-      {overflow.length > 0 ? (
-        <Menu.Root>
-          <Menu.Trigger asChild>
-            <IconButton size="sm" variant="ghost" aria-label="Extension actions">
-              <MoreHorizontal size={16} />
-            </IconButton>
-          </Menu.Trigger>
-          <Menu.Positioner>
-            <Menu.Content minW="220px" bg="bg">
-              {overflow.map((contribution) => (
-                <Menu.Item key={contribution.id} value={contribution.id} asChild>
-                  <ListRow
-                    asChild
-                    variant="compact"
-                    id={contribution.id}
-                    label={contribution.label}
-                    onActivate={() => runContribution(contribution)}
-                  />
-                </Menu.Item>
-              ))}
-            </Menu.Content>
-          </Menu.Positioner>
-        </Menu.Root>
-      ) : null}
-    </Flex>
+    <Menu.Root>
+      <Menu.Trigger asChild>
+        <IconButton size="sm" variant="ghost" aria-label="Extension actions">
+          <MoreHorizontal size={16} />
+        </IconButton>
+      </Menu.Trigger>
+      <Menu.Positioner>
+        <Menu.Content minW="220px" bg="bg">
+          {contributions.map((contribution) => (
+            <Menu.Item key={contribution.id} value={contribution.id} asChild>
+              <ListRow
+                asChild
+                variant="compact"
+                id={contribution.id}
+                label={contribution.label}
+                onActivate={() => runContribution(contribution)}
+              />
+            </Menu.Item>
+          ))}
+        </Menu.Content>
+      </Menu.Positioner>
+    </Menu.Root>
   );
 };

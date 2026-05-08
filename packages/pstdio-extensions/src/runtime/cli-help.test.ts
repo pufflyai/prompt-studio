@@ -31,7 +31,6 @@ const labFixture = () =>
       },
       hidden: {
         title: "Hidden",
-        commandPanel: false,
         run: async () => undefined,
       },
     },

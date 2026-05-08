@@ -1,6 +1,5 @@
 import type {
   CommandMiddlewareHandler,
-  CommandPanelContribution,
   CommandRunHandler,
   ExtensionDefinition,
   ExtensionSourceKind,
@@ -52,7 +51,6 @@ export interface RuntimeCommandRecord {
   title: string;
   description?: string;
   params: ParamObjectSchema;
-  commandPanel: CommandPanelContribution | false;
   menus: MenuContribution[];
   cli?: RuntimeCliContribution;
   // biome-ignore lint/suspicious/noExplicitAny: handler invoked with extension-specific params

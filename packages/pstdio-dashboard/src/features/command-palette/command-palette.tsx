@@ -117,7 +117,7 @@ export const CommandPalette = (props: CommandPaletteProps) => {
         commandId,
         body: buildExtensionCommandRequest({
           projectId,
-          slotId: "project.commandPalette",
+          slotId: "project.commandPanel",
           kind: "menu",
         }),
       },
@@ -148,6 +148,7 @@ export const CommandPalette = (props: CommandPaletteProps) => {
     themePreferences,
     extensions: extensionMetadata?.extensions,
     extensionCommands: extensionMetadata?.commands,
+    extensionMenuContributions: extensionMetadata?.menuContributions,
     labels: {
       tickets: t("projects:sidebar.tickets"),
       sessions: t("projects:sessions.title"),

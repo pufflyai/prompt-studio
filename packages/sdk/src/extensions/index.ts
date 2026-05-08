@@ -1,6 +1,14 @@
 export { defineCommand, defineHook, defineMiddleware } from "./define-command";
 export { defineExtension } from "./define-extension";
 export {
+  defineExtensionView,
+  type ExtensionViewModule,
+  type ExtensionViewRender,
+  type ExtensionViewRenderContext,
+  type GuestHost,
+  type PropsStore,
+} from "./define-extension-view";
+export {
   projectEvents,
   projectSlots,
   sessionEvents,

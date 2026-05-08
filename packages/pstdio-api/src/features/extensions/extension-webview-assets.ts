@@ -70,8 +70,8 @@ export const resolveWebviewAssetFile = async (
         }).distDir
       : dirname(resolvePackageAssetFile(webview.entry));
   const defaultPath =
-    classification.kind === "managed" ? "index.html" : basename(resolvePackageAssetFile(webview.entry));
-  const filePath = safeResolve(root, requested || defaultPath || "index.html");
+    classification.kind === "managed" ? "module.js" : basename(resolvePackageAssetFile(webview.entry));
+  const filePath = safeResolve(root, requested || defaultPath);
   if (!filePath || !existsSync(filePath)) return null;
 
   const stat = statSync(filePath);

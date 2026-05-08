@@ -1,4 +1,4 @@
-import { Box, IconButton, Text } from "@chakra-ui/react";
+import { Box, Flex, IconButton, Text } from "@chakra-ui/react";
 import { Header, useSidebarStore } from "@pstdio/ui";
 import { useParams } from "@tanstack/react-router";
 import { PanelLeftOpen } from "lucide-react";
@@ -31,9 +31,11 @@ export const DashboardHeader = (props: DashboardHeaderProps) => {
       ) : (
         <Box flexShrink={0}>{title}</Box>
       )}
-      {projectId ? <ExtensionMenuSlot slotId="project.headerPrimary" /> : null}
-      {children}
-      {projectId ? <ExtensionMenuSlot slotId="project.headerOverflow" /> : null}
+      <Flex flex="1" align="center" justify="flex-end" gap="sm" minW="0">
+        {projectId ? <ExtensionMenuSlot slotId="project.headerPrimary" mode="buttons" /> : null}
+        {children}
+        {projectId ? <ExtensionMenuSlot slotId="project.headerOverflow" mode="overflow" /> : null}
+      </Flex>
     </Header>
   );
 };

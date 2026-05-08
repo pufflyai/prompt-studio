@@ -109,7 +109,6 @@ export const registerCommands = (
       title: command.title,
       description: typeof command.description === "string" ? command.description : undefined,
       params: isRecord(command.params) ? (command.params as RuntimeCommandRecord["params"]) : {},
-      commandPanel: command.commandPanel === false ? false : isRecord(command.commandPanel) ? command.commandPanel : {},
       menus: menus as RuntimeCommandRecord["menus"],
       cli,
       run: command.run as RuntimeCommandRecord["run"],

@@ -64,7 +64,6 @@ const collectCommand = (
     id,
     cliPath: cliPathForCommand(loaded.metadata.namespace, key, command.cli),
     description: typeof command.description === "string" ? command.description : undefined,
-    excludeFromPalette: command.commandPanel === false ? true : undefined,
     extensionId: loaded.metadata.id,
     namespace: loaded.metadata.namespace,
     title: typeof command.title === "string" ? command.title : key,

@@ -10,6 +10,7 @@ import {
   updateInstalledExtensionTemplateHandler,
   updateInstalledExtensionTemplateRoute,
 } from "./endpoints/update-installed-extension-template";
+import { EXTENSION_RUNTIME_PATH, renderExtensionRuntimeHtml } from "./extension-runtime-html";
 import { resolveWebviewAssetFile } from "./extension-webview-assets";
 
 const serveWebviewAsset = (deps: ExtensionsRouteDeps) => async (c: Context<AppBindings>) => {
@@ -43,6 +44,10 @@ export const createExtensionRoutes = (deps: ExtensionsRouteDeps) => {
   routes.openapi(getProjectExtensionUiRoute, getProjectExtensionUiHandler(deps) as never);
   routes.openapi(executeExtensionCommandRoute, executeExtensionCommandHandler(deps) as never);
   routes.get("/extensions/installed/:installName/webviews/*", serveWebviewAsset(deps));
+  routes.get(
+    EXTENSION_RUNTIME_PATH,
+    () => new Response(renderExtensionRuntimeHtml(), { headers: { "content-type": "text/html; charset=utf-8" } }),
+  );
 
   return routes;
 };
