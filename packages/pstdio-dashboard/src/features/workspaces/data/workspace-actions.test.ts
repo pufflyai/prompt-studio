@@ -14,9 +14,6 @@ describe("workspace actions api", () => {
 
     await deleteWorkspace("ws-2");
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:19840/v1/workspaces/ws-2",
-      expect.objectContaining({ method: "DELETE" }),
-    );
+    expect(fetchMock).toHaveBeenCalledWith("/v1/workspaces/ws-2", expect.objectContaining({ method: "DELETE" }));
   });
 });

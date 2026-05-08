@@ -25,7 +25,7 @@ export const buildBinary = () => {
 export const runPackaged = (args: string, cwd: string, env: Record<string, string>) =>
   execSync(`${PACKAGED_BINARY_PATH} ${args}`, {
     cwd,
-    env: { ...process.env, ...env },
+    env: { ...process.env, PSTDIO_DEFAULT_EXTENSIONS: "[]", ...env },
     encoding: "utf8",
     timeout: TEST_TIMEOUT,
   });
@@ -34,7 +34,7 @@ export const runPackagedSafe = (args: string, cwd: string, env: Record<string, s
   try {
     const stdout = execSync(`${PACKAGED_BINARY_PATH} ${args}`, {
       cwd,
-      env: { ...process.env, ...env },
+      env: { ...process.env, PSTDIO_DEFAULT_EXTENSIONS: "[]", ...env },
       encoding: "utf8",
       timeout: TEST_TIMEOUT,
     });

@@ -26,7 +26,7 @@ const resolveApiBaseUrl = () => {
     return envBaseUrl.trim().replace(/\/$/, "");
   }
 
-  return "http://localhost:19840";
+  return "";
 };
 
 export const buildApiUrl = (path: string) => {

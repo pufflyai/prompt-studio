@@ -32,7 +32,7 @@ export const TicketDetailSidebar = (props: TicketDetailSidebarProps) => {
   }
 
   return (
-    <Stack gap="xs" padding="sm" minW="320px" maxW="360px" overflow="auto">
+    <Stack gap="xs" minW="320px" maxW="360px" overflow="auto">
       <TicketProperties
         ticket={ticket}
         project={project}

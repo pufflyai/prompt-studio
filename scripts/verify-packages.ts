@@ -1,13 +1,33 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { getHostPlatformPackage, resolveCompiledBinaryPath, runCompiledBunSmoke } from "./lib/compiled-bun-smoke";
 import { loadEmbedConfig } from "./lib/embed-manifest";
+import { shouldRunPackagedRuntimeSmoke } from "./lib/packaged-runtime-smoke";
 
 const config = loadEmbedConfig();
+const platformPackage = getHostPlatformPackage(config.platformBinaries);
+const verifyPlatformPackage = process.env.PSTDIO_VERIFY_PLATFORM_PKG;
+const platformBinaries = verifyPlatformPackage ? [platformPackage] : config.platformBinaries;
+
+process.stdout.write(
+  verifyPlatformPackage
+    ? `Building selected compiled target: ${platformPackage.pkg}...\n`
+    : "Building all compiled targets...\n",
+);
+const build = spawnSync("bun", ["run", "scripts/build-all.ts"], {
+  stdio: "inherit",
+  env: verifyPlatformPackage ? { ...process.env, PSTDIO_BUILD_PLATFORM_PKG: platformPackage.pkg } : process.env,
+});
+
+if (build.status !== 0) {
+  process.stderr.write("\nVerification failed: all-target compiled build failed.\n");
+  process.exit(build.status ?? 1);
+}
 
 let failed = false;
 
-for (const { pkg, bin } of config.platformBinaries) {
+for (const { pkg, bin } of platformBinaries) {
   const binPath = join("./packages/pstdio/dist/platforms", pkg, "bin", bin);
 
   if (!existsSync(binPath)) {
@@ -25,15 +45,23 @@ if (failed) {
   process.exit(1);
 }
 
-process.stdout.write("\nRunning packaged runtime smoke check...\n");
-const smoke = spawnSync("bun", ["test", "packages/e2e/src/packaged/packaged-serve-smoke.test.ts", "--silent"], {
-  stdio: "inherit",
-  env: process.env,
-});
+if (shouldRunPackagedRuntimeSmoke(platformPackage)) {
+  process.stdout.write("\nRunning packaged runtime smoke check...\n");
+  const hostBinaryPath = resolveCompiledBinaryPath(platformPackage);
+  const smoke = spawnSync("bun", ["test", "packages/e2e/src/packaged/packaged-serve-smoke.test.ts", "--silent"], {
+    stdio: "inherit",
+    env: { ...process.env, PSTDIO_PACKAGED_BINARY_PATH: hostBinaryPath },
+  });
 
-if (smoke.status !== 0) {
-  process.stderr.write("\nVerification failed: packaged runtime smoke check failed.\n");
-  process.exit(smoke.status ?? 1);
+  if (smoke.status !== 0) {
+    process.stderr.write("\nVerification failed: packaged runtime smoke check failed.\n");
+    process.exit(smoke.status ?? 1);
+  }
+} else {
+  process.stdout.write(`\nSkipping packaged runtime smoke check for ${platformPackage.pkg}.\n`);
 }
 
-process.stdout.write("\nAll platform binaries and packaged runtime smoke checks passed.\n");
+process.stdout.write("\nRunning compiled Bun CLI smoke check...\n");
+runCompiledBunSmoke(platformBinaries);
+
+process.stdout.write("\nAll platform binaries and packaged smoke checks passed.\n");

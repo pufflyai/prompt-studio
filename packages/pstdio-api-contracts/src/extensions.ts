@@ -166,6 +166,30 @@ export type ExtensionNavigationRecord = z.infer<typeof extensionNavigationRecord
 export type ExtensionSettingsPanelRecord = z.infer<typeof extensionSettingsPanelRecordSchema>;
 export type ExtensionsCheckResponse = z.infer<typeof extensionsCheckResponseSchema>;
 
+export const enableInstalledExtensionRequestSchema = z.object({
+  displayName: z.string(),
+  extensionId: z.string(),
+  manifest: jsonObjectSchema,
+  namespace: z.string(),
+  sourceHash: z.string().nullable().optional(),
+  sourceKind: z.enum(["local_path", "git", "registry", "builtin"]),
+  sourcePath: z.string(),
+  sourceRef: z.string().nullable().optional(),
+  version: z.string().nullable().optional(),
+});
+
+export const enableInstalledExtensionResponseSchema = z.object({
+  enabled: z.literal(true),
+  installName: z.string(),
+  installedExtensionId: z.string(),
+  instanceId: z.string(),
+  namespace: z.string(),
+  projectId: z.string(),
+});
+
+export type EnableInstalledExtensionRequest = z.infer<typeof enableInstalledExtensionRequestSchema>;
+export type EnableInstalledExtensionResponse = z.infer<typeof enableInstalledExtensionResponseSchema>;
+
 export const extensionResourceRefSchema = z.object({
   type: z.string(),
   id: z.string(),

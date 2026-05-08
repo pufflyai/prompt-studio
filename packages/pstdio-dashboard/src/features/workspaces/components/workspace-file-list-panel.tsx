@@ -262,11 +262,14 @@ export const FileListPanel = (props: FileListPanelProps) => {
       )}
 
       {showFilter && (
-        <Stack gap="xs" px="sm" py="sm" borderBottomWidth="1px">
+        <Stack gap="xs" borderBottomWidth="1px">
           <Input
             size="sm"
+            border="0"
+            borderRadius="0"
             placeholder="Filter files"
             value={searchQuery}
+            _hover={{ borderColor: "transparent" }}
             onChange={(event) => onSearchQueryChange(event.target.value)}
           />
         </Stack>
@@ -277,7 +280,7 @@ export const FileListPanel = (props: FileListPanelProps) => {
         minH="0"
         minW="0"
         viewportProps={{ style: { overflowX: "hidden" } }}
-        contentProps={{ p: "xs", w: "full", style: { minWidth: 0 } }}
+        contentProps={{ w: "full", style: { minWidth: 0 } }}
       >
         {paths.length > 0 ? (
           <TreeList

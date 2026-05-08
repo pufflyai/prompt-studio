@@ -24,13 +24,13 @@ detect_platform() {
       esac
       ;;
     Linux)
-      SUFFIX=""
       if is_musl; then
-        SUFFIX="-musl"
+        echo "Unsupported Linux libc: musl" >&2
+        exit 1
       fi
       case "$ARCH" in
-        x86_64)        echo "linux-x64${SUFFIX}" ;;
-        aarch64|arm64) echo "linux-arm64${SUFFIX}" ;;
+        x86_64)        echo "linux-x64" ;;
+        aarch64|arm64) echo "linux-arm64" ;;
         *)             echo "Unsupported architecture: $ARCH" >&2; exit 1 ;;
       esac
       ;;

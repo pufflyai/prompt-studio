@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createProjectViaApi, shutdownApiViaHttp } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
-import { TEST_TIMEOUT } from "./timeouts";
+import { FLOW_TIMEOUT } from "./timeouts";
 
 describe("non-blocking startup tasks", () => {
   let api: ApiInstance | null = null;
@@ -28,7 +28,7 @@ describe("non-blocking startup tasks", () => {
       const project = await createProjectViaApi(api.url, "startup-test");
       expect(project.name).toBe("startup-test");
     },
-    TEST_TIMEOUT,
+    FLOW_TIMEOUT,
   );
 
   test(
@@ -66,6 +66,6 @@ describe("non-blocking startup tasks", () => {
       api.stop();
       api = null;
     },
-    TEST_TIMEOUT,
+    FLOW_TIMEOUT,
   );
 });

@@ -1,5 +1,12 @@
 # @pstdio/ui
 
+## 0.5.2
+
+### Patch Changes
+
+- f394c6a: Tune list, menu, input, and scrollbar chrome
+- 5c5d634: Promote `KnownAgent`, `findAgent`, `KNOWN_AGENTS`, `KNOWN_AGENT_IDS`, and `isKnownAgentId` from `pstdio-agents` into `pstdio-api-contracts` so UI and storage layers no longer depend on the runtime LLM package.
+
 ## 0.5.1
 
 ### Patch Changes

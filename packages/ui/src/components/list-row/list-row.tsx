@@ -8,9 +8,10 @@ import { RowActions } from "./list-row-actions";
 
 const RowContent = (props: RowContentProps) => {
   const { item, isExpanded, showChevron, isDisabled, variant, tone } = props;
-  const labelTextStyle = variant === "compact" ? "label/S/regular" : "label/M/regular";
-  const descriptionTextStyle = variant === "compact" ? "label/XS" : "label/S/regular";
-  const descriptionMarginLeft = variant === "compact" ? "0" : "2px";
+  const isDenseVariant = variant === "compact" || variant === "tree";
+  const labelTextStyle = isDenseVariant ? "label/S/regular" : "label/M/regular";
+  const descriptionTextStyle = isDenseVariant ? "label/XS" : "label/S/regular";
+  const descriptionMarginLeft = isDenseVariant ? "0" : "2px";
 
   const labelColor = (() => {
     if (isDisabled) return "fg.muted";
@@ -166,7 +167,14 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
 
   const paddingLeft = computePaddingLeft(depth, variant);
   const verticalPadding = variant === "default" ? "xs" : "2xs";
-  const minHeight = variant === "default" ? "2.25rem" : "1.75rem";
+  const hasDescription = item.description !== undefined;
+  let rowHeight = "auto";
+  let minHeight: string | undefined = variant === "default" ? "2.25rem" : "1.75rem";
+
+  if (variant === "compact" && !hasDescription) {
+    rowHeight = "1.75rem";
+    minHeight = undefined;
+  }
 
   const rowProps = {
     ...rootProps,
@@ -176,7 +184,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     width: "full",
     minWidth: "0",
     maxWidth: "full",
-    height: "auto" as const,
+    height: rowHeight,
     minHeight,
     display: "flex" as const,
     alignItems: "center" as const,

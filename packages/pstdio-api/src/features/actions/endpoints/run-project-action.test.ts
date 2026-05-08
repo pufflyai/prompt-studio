@@ -84,6 +84,7 @@ exit 1
   process.env.PATH = `${binDir}:${previousPath ?? ""}`;
 
   ({ app, close } = await createApp({
+    agents: [],
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",

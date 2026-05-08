@@ -20,7 +20,7 @@ export const menuSlotRecipe = defineSlotRecipe({
     },
 
     separator: {
-      my: "xs",
+      my: "2xs",
       borderColor: "border.muted",
     },
 

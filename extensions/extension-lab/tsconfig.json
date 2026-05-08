@@ -18,5 +18,5 @@
       "@chakra-ui/react": ["../../packages/ui/node_modules/@chakra-ui/react"]
     }
   },
-  "include": ["extension.ts", "src/**/*.ts", "src/**/*.tsx", "vite.config.ts"]
+  "include": ["extension.ts", "src/**/*.ts", "src/**/*.tsx"]
 }

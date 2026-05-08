@@ -17,7 +17,7 @@ import {
   writePlugin,
 } from "./hooks-infra";
 import { type ApiInstance, startApi } from "./start-api";
-import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
+import { FLOW_TIMEOUT, SETUP_TIMEOUT } from "./timeouts";
 
 let api: ApiInstance;
 const ctx: HookTestContext = { api: null!, dirs: [] };
@@ -100,7 +100,7 @@ describe("post-session-start moves ticket to wip", () => {
       const wsStatus = ws.attempt_status_id ? await getAttemptStatusName(ctx, projectId, ws.attempt_status_id) : null;
       expect(wsStatus).toBe("wip");
     },
-    TEST_TIMEOUT,
+    FLOW_TIMEOUT,
   );
 });
 
@@ -129,7 +129,7 @@ describe("post-session-success branches on session outcome", () => {
       const wsStatus = ws.attempt_status_id ? await getAttemptStatusName(ctx, projectId, ws.attempt_status_id) : null;
       expect(wsStatus).toBe("reviewed");
     },
-    TEST_TIMEOUT,
+    FLOW_TIMEOUT,
   );
 
   test(
@@ -156,7 +156,7 @@ describe("post-session-success branches on session outcome", () => {
       const wsStatus = ws.attempt_status_id ? await getAttemptStatusName(ctx, projectId, ws.attempt_status_id) : null;
       expect(wsStatus).toBe("blocked");
     },
-    TEST_TIMEOUT,
+    FLOW_TIMEOUT,
   );
 });
 
@@ -220,6 +220,6 @@ export default {
 
       expect(readFileSync(join(repo, "status-action.txt"), "utf8").trim()).toBe("moved-to-done");
     },
-    TEST_TIMEOUT,
+    FLOW_TIMEOUT,
   );
 });

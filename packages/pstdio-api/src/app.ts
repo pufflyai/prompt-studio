@@ -6,7 +6,9 @@ import {
   createAgentConfigsDBService,
   createAttemptStatusesDBService,
   createDb,
+  createExtensionInstancesDBService,
   createFilesDBService,
+  createInstalledExtensionSourcesDBService,
   createProjectsDBService,
   createReposDBService,
   createSessionsDBService,
@@ -28,6 +30,9 @@ import {
 import { createActionRoutes } from "./features/actions/routes";
 import { createAgentRoutes } from "./features/agents/routes";
 import { createAttemptStatusRoutes } from "./features/attempt-statuses/routes";
+import { createExtensionSourceWatcher } from "./features/extensions/extension-source-watcher";
+import { createExtensionWebviewBuildManager } from "./features/extensions/extension-webview-build-manager";
+import { createExtensionRoutes } from "./features/extensions/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
 import { fireSessionResumeHook, fireSessionStartHook, fireSessionStatusHook } from "./features/hooks/session-hooks";
@@ -47,6 +52,7 @@ import { createWorkspaceRoutes } from "./features/workspaces/routes";
 import { apiLogger } from "./lib/logger";
 import { createAgentConfigService } from "./services/agent-config-service";
 import { createAttemptStatusService } from "./services/attempt-status-service";
+import { createExtensionService } from "./services/extension-service";
 import { createFileService } from "./services/file-service";
 import { createProjectService } from "./services/project-service";
 import { createRepoService } from "./services/repo-service";
@@ -80,6 +86,40 @@ const resolveEventBusBufferSize = (value: string | undefined) => {
   return Math.floor(parsed);
 };
 
+const createInstalledExtensionRuntime = async (input: {
+  extensionService: ReturnType<typeof createExtensionService>;
+  installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
+}) => {
+  const sourceWatcher = await createExtensionSourceWatcher({
+    listInstalledSources: () => input.installedExtensionSourcesService.list(),
+    reloadInstalledSource: (installName) => input.extensionService.reloadInstalledSource(installName),
+    onError: (err) => apiLogger.error({ err, event: "extensions.source_watcher.error" }, "Extension watcher failed"),
+  });
+  const webviewBuildManager = createExtensionWebviewBuildManager({
+    listInstalledSources: () => input.installedExtensionSourcesService.list(),
+    reportBuildFailure: (installName, webviewId, error) =>
+      input.extensionService.reportWebviewBuildFailure(installName, webviewId, error),
+    reportBuildSuccess: (installName, webviewId) =>
+      input.extensionService.reportWebviewBuildSuccess(installName, webviewId),
+    onError: (err) =>
+      apiLogger.error({ err, event: "extensions.webview_build.error" }, "Extension webview build manager failed"),
+  });
+  const refresh = async () => {
+    await sourceWatcher.refresh();
+    await webviewBuildManager.refresh();
+  };
+
+  await refresh();
+
+  return {
+    dispose: () => {
+      sourceWatcher.dispose();
+      webviewBuildManager.dispose();
+    },
+    refresh,
+  };
+};
+
 export const createApp = async (options: AppOptions) => {
   const { db, close: closeDb } = await createDb({ path: options?.dbPath ?? process.env.PSTDIO_DB_PATH });
   const apiToken = options?.apiToken ?? process.env.PSTDIO_API_TOKEN;
@@ -104,6 +144,8 @@ export const createApp = async (options: AppOptions) => {
   const templatesDBService = createTemplatesDBService(db);
   const filesDBService = createFilesDBService(db);
   const activityEventsService = createActivityEventsDBService(db);
+  const installedExtensionSourcesService = createInstalledExtensionSourcesDBService(db);
+  const extensionInstancesService = createExtensionInstancesDBService(db);
 
   // --- storage services ---
   const filesStorageService = createFilesStorageService(storageRoot);
@@ -126,6 +168,19 @@ export const createApp = async (options: AppOptions) => {
   const fileService = createFileService({ filesDBService, filesStorageService });
   const skillService = createSkillService({ skillsDBService, skillsStorageService, fileService });
   const syncService = createSyncService({ db, eventBus });
+  let refreshInstalledExtensionProcesses: () => Promise<void> = async () => {};
+  const extensionService = createExtensionService({
+    extensionInstancesService,
+    installedExtensionSourcesService,
+    eventBus,
+    onInstalledSourcesChanged: () => refreshInstalledExtensionProcesses(),
+    projectService,
+  });
+  const extensionRuntime = await createInstalledExtensionRuntime({
+    extensionService,
+    installedExtensionSourcesService,
+  });
+  refreshInstalledExtensionProcesses = extensionRuntime.refresh;
 
   const workspaceSessionService = createWorkspaceSessionService({ workspaceSessionsDBService });
   const workspaceArtifactService = createWorkspaceArtifactService({ workspaceArtifactsDBService });
@@ -202,6 +257,7 @@ export const createApp = async (options: AppOptions) => {
     agentConfigService,
     skillService,
     fileService,
+    extensionService,
     syncService,
     pluginService,
     activityEventsService,
@@ -250,6 +306,7 @@ export const createApp = async (options: AppOptions) => {
   app.route("/v1", createFilesystemRoutes(deps));
   app.route("/v1", createActionRoutes(deps));
   app.route("/v1", createPluginRoutes(deps));
+  app.route("/v1", createExtensionRoutes(deps));
   app.route("/v1", createAgentRoutes(deps));
   app.route("/v1", createSkillRoutes(deps));
   app.route("/v1", createTemplateRoutes(deps));
@@ -287,6 +344,7 @@ export const createApp = async (options: AppOptions) => {
   const close = async () => {
     startupAbort.abort();
     await startupDone;
+    extensionRuntime.dispose();
     await pluginService.dispose();
     await closeDb();
   };

@@ -9,6 +9,7 @@ import { loadFilesystemAssets } from "./filesystem-assets";
 
 type ServeAppOptions = {
   port: number;
+  host: string;
 };
 
 type AppHandle = {
@@ -34,6 +35,8 @@ type ServeAppDeps = {
 };
 
 let serveLogger: ReturnType<typeof createLogger> | null = null;
+
+const LOCALHOST_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
 const getServeLogger = () => {
   if (serveLogger) {
@@ -83,7 +86,7 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
   const deps = { ...defaultDeps, ...overrides };
 
   return async (options: ServeAppOptions) => {
-    const { port } = options;
+    const { port, host } = options;
     ensureRuntimeEnv();
     const { app, close } = await deps.createApp();
 
@@ -115,7 +118,7 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
 
     try {
       const assets = deps.isCompiledBinary() ? deps.loadEmbeddedAssets() : deps.loadFilesystemAssets();
-      const baseUrl = `http://localhost:${port}`;
+      const baseUrl = `http://${host}:${port}`;
 
       // Without this, "/" reaches resolveMimeType as-is — extname("/") is "",
       // which falls back to application/octet-stream and the browser downloads
@@ -124,7 +127,7 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
 
       const serveHtml = (blob: Blob) =>
         blob.text().then((html) => {
-          const injected = deps.injectConfig(html, { apiBaseUrl: baseUrl, version: CLI_VERSION });
+          const injected = deps.injectConfig(html, { version: CLI_VERSION });
           return new Response(injected, { headers: { "Content-Type": "text/html" } });
         });
 
@@ -140,6 +143,7 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
 
       deps.serve({
         idleTimeout: 20,
+        hostname: host,
         port,
         fetch(req) {
           const url = new URL(req.url);
@@ -169,6 +173,12 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
       deps.log(`pstdio serve: ${baseUrl}\n`);
       deps.log(`  Dashboard: ${baseUrl}\n`);
       deps.log(`  API:       ${baseUrl}/v1\n`);
+      if (!LOCALHOST_HOSTS.has(host)) {
+        deps.log(`  WARNING: bound to ${host}; pstdio serve has no auth, only expose on trusted networks.\n`);
+        if (host === "0.0.0.0" || host === "::") {
+          deps.log("  LAN clients should connect with this machine's LAN IP address.\n");
+        }
+      }
     } catch (error) {
       removeShutdownListeners();
       await closeApp();

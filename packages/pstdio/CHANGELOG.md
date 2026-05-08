@@ -1,5 +1,38 @@
 # pstdio
 
+## 0.11.0
+
+### Minor Changes
+
+- 3e89b24: Add installed extension source reload, sync, and managed webview build watching.
+- 3e89b24: Add editable extension source installation and first-project default extension enablement.
+
+### Patch Changes
+
+- 3e89b24: Add the durable extension schema foundation in `pstdio-db`: installed extension sources, scope-aware extension instances, extension KV/collection state, project-owned extension preferences (template/skill), `project_template_defaults`, normalized project skill files (`skill_files` + `entrypoint_file_id`), and reload events. Activity events now accept any `resource_type` string and carry `source_extension_id`; sessions and workspaces expose `anchors_json: ResourceRef[]`. The legacy `templates.is_default` column moves to `project_template_defaults` while the existing API surface continues to compute `is_default` for compatibility.
+- f677fd7: Remove unsupported musl CLI platform packages.
+
+## 0.10.0
+
+### Minor Changes
+
+- c9014e1: Add a Ctrl+Shift+. shortcut to open the command palette pre-filled in command mode, and fix the create ticket and keyboard shortcuts entries closing the follow-up modal instantly.
+- 716bbc3: Add a pstdio serve host option for trusted LAN access.
+- 0f04d13: Add a project-scoped default harness and default model: project settings now expose an "Agents" panel, and `createSession` (REST + SDK + plugin helper) falls back to those defaults when callers omit `agent`/`model`.
+
+### Patch Changes
+
+- aa8926b: Add a bundled bug fix ticket template.
+- ba88077: Update the Bun toolchain requirement to 1.3.13.
+- 8742952: Improve the create-proposal skill to require matching supporting resources.
+- 0a1930a: Refresh plugin schedules after project and repo mutations.
+- 0a1930a: Extract a new private `pstdio-scheduler` package built on `Bun.cron` and replace the in-process polling scheduler in `pstdio-api` with a thin adapter.
+- f394c6a: Flatten ticket and workspace panel spacing
+- 5c5d634: Promote `KnownAgent`, `findAgent`, `KNOWN_AGENTS`, `KNOWN_AGENT_IDS`, and `isKnownAgentId` from `pstdio-agents` into `pstdio-api-contracts` so UI and storage layers no longer depend on the runtime LLM package.
+- 1ca60d5: Tighten the `@pstdio/sdk/extensions` surface: `ParamDescriptor` is now a discriminated union (per-type fields like `options`, `templateType`, `resourceType` only appear where valid), `CommandDefinition` is parameterized by its `params` schema so `ctx.params` is inferred without casts, and a new `commandsOf(extension)` derives typed `CommandRef`s from the extension definition. Added `defineCommand` / `defineMiddleware` / `defineHook` builders, an `apiVersion: "1"` field on `ExtensionDefinition`, capability-mixin interfaces (`UiContributions`, `BehaviourContributions`, …), and JSDoc on the public surface. `MiddlewareDefinition`, `HookDefinition`, and `ScheduleContribution` now split typed refs (`command`/`event`) from untyped string ids (`commandId`/`eventId`) so the typed path can't silently degrade.
+- 0852643: Cap the session selector dropdown at 420px so long session titles do not stretch the menu.
+- 7f7cfa2: Add pst npm binary alias.
+
 ## 0.9.0
 
 ### Minor Changes

@@ -21,6 +21,14 @@ export type UpdateLoadStateInput = {
   last_error_json?: InstalledSourceRow["last_error_json"];
 };
 
+export type UpdateRegistrationInput = Partial<
+  Pick<
+    InstalledSourceInsert,
+    "display_name" | "extension_id" | "manifest_json" | "source_kind" | "source_path" | "source_ref" | "version"
+  >
+> &
+  UpdateLoadStateInput;
+
 export type RecordReloadInput = {
   installed_extension_id: string;
   previous_source_hash?: string | null;
@@ -71,6 +79,16 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
     return updated ?? null;
   };
 
+  const updateRegistration = async (id: string, input: UpdateRegistrationInput) => {
+    const timestamp = nowTimestamp();
+    const [updated] = await db
+      .update(installed_extension_sources)
+      .set({ ...input, updated_at: timestamp })
+      .where(eq(installed_extension_sources.id, id))
+      .returning();
+    return updated ?? null;
+  };
+
   const remove = async (id: string) => {
     const deleted = await db
       .delete(installed_extension_sources)
@@ -103,5 +121,15 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
       .orderBy(extension_reload_events.created_at)
       .limit(limit);
 
-  return { list, get, getByInstallName, register, updateLoadState, remove, recordReload, listReloadEvents };
+  return {
+    list,
+    get,
+    getByInstallName,
+    register,
+    updateLoadState,
+    updateRegistration,
+    remove,
+    recordReload,
+    listReloadEvents,
+  };
 };

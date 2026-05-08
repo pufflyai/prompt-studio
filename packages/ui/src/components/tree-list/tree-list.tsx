@@ -227,11 +227,10 @@ const TreeListSectionHeader = (props: TreeListSectionHeaderProps) => {
       w="full"
       minW="0"
       maxW="full"
-      px="1"
+      px="sm"
       py="2xs"
-      minH="7"
+      height="7"
       cursor={collapsible ? "pointer" : "default"}
-      borderRadius="xs"
       _hover={collapsible ? { bg: "bg.hover" } : undefined}
       onClick={collapsible ? onToggle : undefined}
     >
