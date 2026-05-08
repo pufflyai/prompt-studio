@@ -41,22 +41,34 @@ const iframeStyle: CSSProperties = {
 
 export const EXTENSION_IFRAME_SANDBOX = "allow-scripts allow-forms allow-popups";
 
+export const isOpaqueOriginRimlessMessage = (
+  event: { origin: string; source: MessageEventSource | null; data: unknown },
+  expectedSource: MessageEventSource | null,
+) => {
+  if (event.origin !== "null" || event.source !== expectedSource) return false;
+  const data = event.data as { action?: unknown } | null;
+  return (
+    Boolean(data) && typeof data === "object" && typeof data?.action === "string" && data.action.startsWith("RIMLESS/")
+  );
+};
+
+// Firefox rejects opaque-origin sandboxed-iframe WindowProxy values when they pass
+// through MessageEventInit IDL conversion, so `new MessageEvent("message", { source })`
+// throws. A plain Event with the same own properties triggers rimless's "message"
+// listener while sidestepping that conversion.
+export const buildOpaqueOriginRimlessRedispatch = (event: { data: unknown; source: MessageEventSource | null }) => {
+  const synthetic = new Event("message");
+  Object.defineProperty(synthetic, "data", { value: event.data, enumerable: true });
+  Object.defineProperty(synthetic, "origin", { value: "", enumerable: true });
+  Object.defineProperty(synthetic, "source", { value: event.source, enumerable: true });
+  return synthetic;
+};
+
 const normalizeOpaqueOriginRimlessMessages = (iframe: HTMLIFrameElement) => {
   const normalize = (event: MessageEvent) => {
-    const data = event.data as { action?: unknown } | null;
-    if (
-      event.origin !== "null" ||
-      event.source !== iframe.contentWindow ||
-      !data ||
-      typeof data !== "object" ||
-      typeof data.action !== "string" ||
-      !data.action.startsWith("RIMLESS/")
-    ) {
-      return;
-    }
-
+    if (!isOpaqueOriginRimlessMessage(event, iframe.contentWindow)) return;
     event.stopImmediatePropagation();
-    window.dispatchEvent(new MessageEvent("message", { data: event.data, origin: "", source: event.source }));
+    window.dispatchEvent(buildOpaqueOriginRimlessRedispatch(event));
   };
 
   window.addEventListener("message", normalize, true);
