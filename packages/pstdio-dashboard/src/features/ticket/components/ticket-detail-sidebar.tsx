@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import type { Project } from "@/features/project/types";
 import type { Ticket } from "@/features/ticket-list/types";
 import { TicketProperties } from "./ticket-properties";
-import { TicketSubTicketList } from "./ticket-sub-ticket-list";
 
 interface TicketDetailSidebarProps {
   ticket: Ticket;
@@ -40,11 +39,6 @@ export const TicketDetailSidebar = (props: TicketDetailSidebarProps) => {
         onSelectTicket={onSelectTicket}
         onTagIdsChange={onTagIdsChange}
         isUpdatingTags={isUpdatingTags}
-      />
-      <TicketSubTicketList
-        subTickets={ticket.subTickets ?? []}
-        knownTicketIds={allTickets.map((projectTicket) => projectTicket.id)}
-        onSelectTicket={onSelectTicket}
       />
     </Stack>
   );

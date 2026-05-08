@@ -30,6 +30,7 @@ export const extensionCommandRecordSchema = z.object({
   description: z.string().optional(),
   cliPath: z.string().optional(),
   examples: z.array(z.string()).optional(),
+  excludeFromPalette: z.boolean().optional(),
   params: z.record(z.string(), z.object({ type: z.string() }).catchall(z.unknown())).optional(),
 });
 

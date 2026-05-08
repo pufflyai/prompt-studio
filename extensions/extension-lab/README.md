@@ -115,8 +115,3 @@ extensions/extension-lab/
   skills/lab-skill/    skill asset bundled via packageAsset
   templates/           template asset bundled via packageAsset
 ```
-
-## Known gaps
-
-- `webview.entry` references `./src/views/lab-page.html`. The current `package.json` only bundles the `*.entry.tsx` files to `dist/index.js`; an HTML wrapper or a build update is still required before the webview can actually load.
-- `@pstdio/sdk/extensions` is not exported by the SDK yet; type errors on `defineExtension` arguments are expected until the runtime ships.

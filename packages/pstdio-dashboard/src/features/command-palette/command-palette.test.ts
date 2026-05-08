@@ -87,4 +87,64 @@ describe("command palette entries", () => {
     expect(resolveCommandPaletteEscapeAction("mono", "theme")).toBe("exit-view");
     expect(resolveCommandPaletteEscapeAction("", "theme")).toBe("exit-view");
   });
+
+  it("groups extension commands by extension display name", () => {
+    const entries = buildCommandPaletteEntries({
+      projectId: "project-1",
+      tickets: [],
+      currentTheme: "pstdio-dark",
+      extensions: [
+        { id: "pstdio.extension-lab", namespace: "lab", displayName: "Extension Lab", sourcePath: "" },
+        { id: "pstdio.repo-health", namespace: "repo-health", displayName: "Repo Health", sourcePath: "" },
+      ],
+      extensionCommands: [
+        { id: "lab.say-hello", extensionId: "pstdio.extension-lab", namespace: "lab", title: "Say hello" },
+        {
+          id: "lab.heartbeat",
+          extensionId: "pstdio.extension-lab",
+          namespace: "lab",
+          title: "Lab heartbeat",
+          excludeFromPalette: true,
+        },
+        {
+          id: "repo-health.scan",
+          extensionId: "pstdio.repo-health",
+          namespace: "repo-health",
+          title: "Run health scan",
+        },
+      ],
+      run: () => {},
+    });
+
+    const commandEntries = filterCommandPaletteEntries(entries, ">");
+
+    expect(commandEntries.find((entry) => entry.id === "extension:lab.heartbeat")).toBeUndefined();
+
+    const labEntry = commandEntries.find((entry) => entry.id === "extension:lab.say-hello");
+    const healthEntry = commandEntries.find((entry) => entry.id === "extension:repo-health.scan");
+
+    expect(labEntry?.group).toBe("Extension Lab");
+    expect(healthEntry?.group).toBe("Repo Health");
+  });
+
+  it("emits an extension-command action that targets the command id", () => {
+    const seen: Array<{ commandId: string }> = [];
+    const entries = buildCommandPaletteEntries({
+      projectId: "project-1",
+      tickets: [],
+      currentTheme: "pstdio-dark",
+      extensions: [{ id: "pstdio.extension-lab", namespace: "lab", displayName: "Extension Lab", sourcePath: "" }],
+      extensionCommands: [
+        { id: "lab.say-hello", extensionId: "pstdio.extension-lab", namespace: "lab", title: "Say hello" },
+      ],
+      run: (action) => {
+        if (action.type === "extension-command") seen.push({ commandId: action.commandId });
+      },
+    });
+
+    const target = entries.find((entry) => entry.id === "extension:lab.say-hello");
+    target?.run();
+
+    expect(seen).toEqual([{ commandId: "lab.say-hello" }]);
+  });
 });

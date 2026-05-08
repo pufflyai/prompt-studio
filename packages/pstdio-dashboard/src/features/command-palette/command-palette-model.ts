@@ -1,6 +1,17 @@
 import { defaultThemePreferences, type ThemePreference, type ThemePreferenceOption } from "@pstdio/ui";
 import type { LucideIcon } from "lucide-react";
-import { CircleHelp, KanbanSquare, MessageCircle, Moon, Palette, Plus, SettingsIcon, Sun } from "lucide-react";
+import {
+  CircleHelp,
+  KanbanSquare,
+  MessageCircle,
+  Moon,
+  Palette,
+  Plus,
+  SettingsIcon,
+  Sun,
+  Terminal,
+} from "lucide-react";
+import type { ExtensionCommandRecord, ExtensionRecord } from "pstdio-api-contracts";
 import type { ShortcutBinding } from "@/features/shortcuts/shortcut-registry";
 
 export type CommandPaletteMode = "search" | "command";
@@ -20,7 +31,8 @@ export type CommandPaletteAction =
   | { id: "open-shortcut-help"; type: "open-shortcut-help" }
   | { id: "open-theme-menu"; type: "open-theme-menu" }
   | { id: "navigate"; type: "navigate"; path: string }
-  | { id: "theme"; type: "theme"; preference: ThemePreference };
+  | { id: "theme"; type: "theme"; preference: ThemePreference }
+  | { id: string; type: "extension-command"; commandId: string };
 
 export interface CommandPaletteEntry {
   id: string;
@@ -31,6 +43,7 @@ export interface CommandPaletteEntry {
   shortcut?: ShortcutBinding;
   icon: LucideIcon;
   isSelected?: boolean;
+  group?: string;
   action: CommandPaletteAction;
   run: () => void;
 }
@@ -52,6 +65,8 @@ interface BuildCommandPaletteEntriesInput {
   currentTheme: ThemePreference;
   themePreferences?: readonly ThemePreferenceOption[];
   labels?: CommandPaletteLabels;
+  extensions?: ExtensionRecord[];
+  extensionCommands?: ExtensionCommandRecord[];
   run: (action: CommandPaletteAction) => void;
 }
 
@@ -93,9 +108,18 @@ const getEffectiveQuery = (query: string) =>
 const getTicketLabel = (ticket: CommandPaletteTicket) => ticket.displayTitle ?? ticket.title ?? ticket.shorthand;
 
 export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInput): CommandPaletteEntry[] => {
-  const { projectId, tickets, currentTheme, run, themePreferences = defaultThemePreferences } = input;
+  const {
+    projectId,
+    tickets,
+    currentTheme,
+    run,
+    themePreferences = defaultThemePreferences,
+    extensions = [],
+    extensionCommands = [],
+  } = input;
   const labels = input.labels ?? defaultLabels;
   const projectPath = `/projects/${projectId}`;
+  const extensionById = new Map(extensions.map((extension) => [extension.id, extension]));
 
   const createEntry = (
     entry: Omit<CommandPaletteEntry, "run"> & { action: CommandPaletteAction },
@@ -103,6 +127,21 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
     ...entry,
     run: () => run(entry.action),
   });
+
+  const extensionEntries = extensionCommands
+    .filter((command) => !command.excludeFromPalette)
+    .map((command) =>
+      createEntry({
+        id: `extension:${command.id}`,
+        mode: "command",
+        label: command.title,
+        searchText: `${command.title} ${command.description ?? ""} ${command.namespace}`,
+        secondaryLabel: command.description,
+        icon: Terminal,
+        group: extensionById.get(command.extensionId)?.displayName ?? command.namespace,
+        action: { id: `extension:${command.id}`, type: "extension-command", commandId: command.id },
+      }),
+    );
 
   return [
     createEntry({
@@ -172,6 +211,7 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
       icon: Palette,
       action: { id: "open-theme-menu", type: "open-theme-menu" },
     }),
+    ...extensionEntries,
     ...themePreferences.map(({ id: preference }) =>
       createEntry({
         id: `theme:${preference}`,

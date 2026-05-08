@@ -1,5 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
 import { useState } from "react";
 import type { CommandPaletteView } from "./command-palette";
@@ -44,8 +45,13 @@ const createStoryRouter = (initialView?: CommandPaletteView) => {
 const CommandPaletteStory = (props: { initialView?: CommandPaletteView }) => {
   const { initialView } = props;
   const [router] = useState(() => createStoryRouter(initialView));
+  const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
 
-  return <RouterProvider router={router} />;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
+  );
 };
 
 const meta: Meta = {

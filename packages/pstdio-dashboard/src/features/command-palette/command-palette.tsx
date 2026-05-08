@@ -1,8 +1,13 @@
-import { type ThemePreference, type ThemePreferenceOption, useThemePreference } from "@pstdio/ui";
+import { type ThemePreference, type ThemePreferenceOption, toaster, useThemePreference } from "@pstdio/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { Palette, Search, Terminal } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  useExecuteExtensionCommand,
+  useProjectExtensionMetadata,
+} from "@/shared/extensions/hooks/use-project-extensions";
+import { buildExtensionCommandRequest } from "@/shared/extensions/slot-context";
 import { runCommandPaletteAction } from "./command-palette-actions";
 import { handleCommandPaletteKeyDown } from "./command-palette-keyboard";
 import {
@@ -59,6 +64,8 @@ export const CommandPalette = (props: CommandPaletteProps) => {
   const navigate = useNavigate();
   const { themePreference, themePreferences, setThemePreference } = useThemePreference();
   const { t } = useTranslation(["common", "projects"]);
+  const { data: extensionMetadata } = useProjectExtensionMetadata(projectId);
+  const executeExtensionCommand = useExecuteExtensionCommand(projectId);
   const [view, setView] = useState<CommandPaletteView>(initialView);
   const [query, setQuery] = useState(initialQuery);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -104,6 +111,23 @@ export const CommandPalette = (props: CommandPaletteProps) => {
     onClose();
   };
 
+  const runExtensionCommand = (commandId: string) => {
+    executeExtensionCommand.mutate(
+      {
+        commandId,
+        body: buildExtensionCommandRequest({
+          projectId,
+          slotId: "project.commandPalette",
+          kind: "menu",
+        }),
+      },
+      {
+        onError: (error) =>
+          toaster.create({ type: "error", title: "Extension command failed", description: error.message }),
+      },
+    );
+  };
+
   const handleRun: Parameters<typeof buildCommandPaletteEntries>[0]["run"] = (action) =>
     runCommandPaletteAction(action, {
       projectId,
@@ -114,6 +138,7 @@ export const CommandPalette = (props: CommandPaletteProps) => {
       requestCreateTicket,
       createSession,
       openShortcutHelp,
+      runExtensionCommand,
     });
 
   const entries = buildCommandPaletteEntries({
@@ -121,6 +146,8 @@ export const CommandPalette = (props: CommandPaletteProps) => {
     tickets,
     currentTheme: themePreference,
     themePreferences,
+    extensions: extensionMetadata?.extensions,
+    extensionCommands: extensionMetadata?.commands,
     labels: {
       tickets: t("projects:sidebar.tickets"),
       sessions: t("projects:sessions.title"),

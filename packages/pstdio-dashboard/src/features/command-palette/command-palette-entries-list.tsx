@@ -44,10 +44,14 @@ export const CommandPaletteEntriesList = (props: CommandPaletteEntriesListProps)
     <>
       {entries.map((entry, index) => {
         const previousEntry = entries[index - 1];
-        const showSeparator = previousEntry?.id.startsWith("nav:") && entry.id.startsWith("ticket:");
+        const showGroupHeader = entry.group && entry.group !== previousEntry?.group;
         return (
           <Fragment key={entry.id}>
-            {showSeparator ? <Menu.Separator my="2xs" /> : null}
+            {showGroupHeader ? (
+              <Text textStyle="label/XS/medium" color="fg.muted" px="sm" pt="xs" pb="2xs">
+                {entry.group}
+              </Text>
+            ) : null}
             <Menu.Item value={entry.id} asChild onMouseEnter={() => onHover(index)}>
               <ListRow asChild variant="compact" {...buildEntryItem(entry)} isSelected={index === activeIndex} />
             </Menu.Item>

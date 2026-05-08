@@ -10,6 +10,7 @@ interface CommandPaletteActionContext {
   requestCreateTicket: () => void;
   createSession: () => void;
   openShortcutHelp: () => void;
+  runExtensionCommand: (commandId: string) => void;
 }
 
 export const runCommandPaletteAction = (action: CommandPaletteAction, ctx: CommandPaletteActionContext) => {
@@ -43,6 +44,11 @@ export const runCommandPaletteAction = (action: CommandPaletteAction, ctx: Comma
 
   if (action.type === "open-shortcut-help") {
     ctx.openShortcutHelp();
+    return;
+  }
+
+  if (action.type === "extension-command") {
+    ctx.runExtensionCommand(action.commandId);
     return;
   }
 };
