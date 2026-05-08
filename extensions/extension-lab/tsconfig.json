@@ -13,7 +13,7 @@
     "verbatimModuleSyntax": true,
     "types": ["bun"],
     "paths": {
-      "@pstdio/ui": ["../../packages/ui/dist/index.d.ts"],
+      "@pstdio/ui": ["../../packages/ui/dist/index.js"],
       "@pstdio/ui/style.css": ["../../packages/ui/dist/style.css"],
       "@chakra-ui/react": ["../../packages/ui/node_modules/@chakra-ui/react"]
     }

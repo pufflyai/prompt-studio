@@ -39,7 +39,28 @@ const iframeStyle: CSSProperties = {
   width: "100%",
 };
 
-const iframeSandbox = "allow-scripts allow-same-origin allow-forms allow-popups";
+export const EXTENSION_IFRAME_SANDBOX = "allow-scripts allow-forms allow-popups";
+
+const normalizeOpaqueOriginRimlessMessages = (iframe: HTMLIFrameElement) => {
+  const normalize = (event: MessageEvent) => {
+    const data = event.data as { action?: unknown } | null;
+    if (
+      event.origin !== "null" ||
+      event.source !== iframe.contentWindow ||
+      !data ||
+      typeof data !== "object" ||
+      typeof data.action !== "string" ||
+      !data.action.startsWith("RIMLESS/")
+    ) {
+      return;
+    }
+
+    event.stopImmediatePropagation();
+    window.dispatchEvent(new MessageEvent("message", { data: event.data, origin: "", source: event.source }));
+  };
+
+  window.addEventListener("message", normalize, true);
+};
 
 export const ExtensionFrame = (props: ExtensionFrameProps) => {
   const { view, props: extensionProps, theme, capabilities, onReady, onError, title } = props;
@@ -59,16 +80,17 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   onReadyRef.current = onReady;
   onErrorRef.current = onError;
 
-  // Connect once per iframe (keyed by moduleUrl). React StrictMode dev double-mount and
+  // Connect once per iframe (keyed by runtime/module URL). React StrictMode dev double-mount and
   // parent re-renders with unstable prop references (e.g. `webview.styles` rebuilt by
-  // `.map`) would otherwise tear down the live rimless connection while the iframe keeps
-  // its state — leaving guest→host RPCs with no listener and hanging forever.
+  // `.map`) would otherwise tear down the live connection while the iframe keeps its
+  // state, leaving guest-to-host RPCs with no listener.
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
 
-    if (connectedKeyRef.current === view.webview.moduleUrl) return;
-    connectedKeyRef.current = view.webview.moduleUrl;
+    const connectedKey = `${view.webview.runtimeUrl}\n${view.webview.moduleUrl}`;
+    if (connectedKeyRef.current === connectedKey) return;
+    connectedKeyRef.current = connectedKey;
 
     initializedRef.current = false;
     remoteRef.current = null;
@@ -91,7 +113,14 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
       },
     };
 
-    void host.connect(iframe, hostApi).then(async (conn) => {
+    normalizeOpaqueOriginRimlessMessages(iframe);
+    const connection = host.connect(iframe, hostApi);
+    // A sandboxed iframe without allow-same-origin posts messages with origin "null".
+    // Leaving the iframe src attribute empty lets rimless validate the guest by
+    // contentWindow identity while still loading the API-owned runtime document.
+    iframe.contentWindow?.location.replace(view.webview.runtimeUrl);
+
+    void connection.then(async (conn) => {
       const remote = conn.remote as unknown as GuestRemote;
       remoteRef.current = remote;
 
@@ -111,17 +140,13 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
       }
     });
 
-    // Intentionally NO connection.close() in cleanup. Rimless connection IDs are minted
-    // at handshake time. The iframe's guest.connect runs ONCE at iframe load and binds to
-    // the connectionID it negotiated. If the host closes that connection and runs a fresh
-    // host.connect (e.g. due to React StrictMode dev double-mount), it gets a NEW
-    // connectionID — and inbound RPC_REQUEST from the iframe is silently filtered out
-    // (rimless: "connectionID !== o → return"). The connection lives as long as the iframe
-    // DOM does; both are GC'd when the component is truly unmounted.
+    // Intentionally no connection.close() in cleanup. The iframe runtime handshakes once
+    // at iframe load and binds to that connection ID. Closing during React StrictMode's
+    // dev-only cleanup would leave the live iframe with no host listener.
     return () => {
       // No-op. We deliberately keep the live connection.
     };
-  }, [view.webview.moduleUrl, view.webview.styles]);
+  }, [view.webview.runtimeUrl, view.webview.moduleUrl, view.webview.styles]);
 
   useEffect(() => {
     if (!initializedRef.current) return;
@@ -163,13 +188,5 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     };
   }, []);
 
-  return (
-    <iframe
-      ref={iframeRef}
-      title={title ?? view.label}
-      src={view.webview.runtimeUrl}
-      sandbox={iframeSandbox}
-      style={iframeStyle}
-    />
-  );
+  return <iframe ref={iframeRef} title={title ?? view.label} sandbox={EXTENSION_IFRAME_SANDBOX} style={iframeStyle} />;
 };

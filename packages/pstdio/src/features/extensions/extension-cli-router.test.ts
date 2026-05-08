@@ -111,4 +111,22 @@ describe("extension CLI router", () => {
   test("prints missing-command recovery when a known path has moved to an extension", () => {
     expect(formatMissingCommandRecovery(["planner", "tickets", "pull"])).toContain("pstdio.planner");
   });
+
+  test("ignores unknown root commands outside extension namespaces", async () => {
+    const error = mock();
+
+    const exitCode = await dispatchExtensionCliCommand({
+      rawArgs: ["unknown"],
+      deps: {
+        error,
+        execute: mock(async () => successResponse),
+        listCommands: mock(async () => ({ commands: labCommands, diagnostics: [] })),
+        listRepos: mock(async () => []),
+        resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
+      },
+    });
+
+    expect(exitCode).toBe(null);
+    expect(error).not.toHaveBeenCalled();
+  });
 });

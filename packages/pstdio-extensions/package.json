@@ -11,9 +11,12 @@
     "./types": "./src/types/index.ts",
     "./bridge/contract": "./src/bridge/contract/index.ts",
     "./bridge/guest": "./src/bridge/guest/index.ts",
-    "./bridge/host": "./src/bridge/host/index.ts"
+    "./bridge/host": "./src/bridge/host/index.ts",
+    "./bridge/runtime": "./src/bridge/runtime/index.ts"
   },
   "scripts": {
+    "build": "bun run build:runtime",
+    "build:runtime": "bun run scripts/build-runtime.ts",
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",

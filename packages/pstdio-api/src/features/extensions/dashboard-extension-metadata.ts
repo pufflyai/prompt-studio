@@ -1,4 +1,5 @@
 import { existsSync, readdirSync } from "node:fs";
+import type { PackageAssetDescriptor } from "@pstdio/sdk/extensions";
 import type {
   DashboardExtensionMetadata,
   ExtensionMenuContribution,
@@ -10,8 +11,8 @@ import type {
 } from "pstdio-api-contracts";
 import type { ExtensionRuntime } from "pstdio-extensions";
 import { toCommandRecord } from "./extension-command-runtime";
-import { EXTENSION_RUNTIME_PATH } from "./extension-runtime-html";
-import { resolveManagedWebviewPaths } from "./extension-webviews";
+import { EXTENSION_RUNTIME_PATH } from "./extension-runtime-routes";
+import { classifyWebviewEntry, resolveManagedWebviewPaths } from "./extension-webviews";
 
 type InstallNameMap = Map<string, string>;
 
@@ -19,6 +20,9 @@ const RUNTIME_URL = `/v1${EXTENSION_RUNTIME_PATH}`;
 
 const buildAssetUrl = (installName: string, webviewId: string, file: string) =>
   `/v1/extensions/installed/${encodeURIComponent(installName)}/webviews/${encodeURIComponent(webviewId)}/${file}`;
+
+const buildWebviewUrl = (installName: string, webviewId: string) =>
+  `/v1/extensions/installed/${encodeURIComponent(installName)}/webviews/${encodeURIComponent(webviewId)}/`;
 
 const listDistCssFiles = (installName: string, webviewId: string, webviewCacheRoot: string) => {
   const { distDir } = resolveManagedWebviewPaths({ installName, webviewCacheRoot, webviewId });
@@ -31,7 +35,9 @@ interface WebviewAssets {
   webviewCacheRoot: string;
 }
 
-const enrichWebview = <TWebview extends { entry: unknown; title?: string; sandbox?: "default" | "strict" }>(
+const enrichWebview = <
+  TWebview extends { entry: PackageAssetDescriptor; title?: string; sandbox?: "default" | "strict" },
+>(
   webview: TWebview,
   assets: WebviewAssets,
   extensionId: string,
@@ -39,6 +45,16 @@ const enrichWebview = <TWebview extends { entry: unknown; title?: string; sandbo
 ) => {
   const installName = assets.installNameByExtensionId.get(extensionId);
   if (!installName) return webview;
+
+  const classification = classifyWebviewEntry(webview.entry);
+  if (classification.kind === "static") {
+    return {
+      ...webview,
+      assetUrl: buildWebviewUrl(installName, webviewId),
+    };
+  }
+
+  if (classification.kind !== "managed") return webview;
 
   const cssFiles = listDistCssFiles(installName, webviewId, assets.webviewCacheRoot);
   return {

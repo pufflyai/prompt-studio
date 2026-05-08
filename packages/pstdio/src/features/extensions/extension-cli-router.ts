@@ -212,6 +212,11 @@ export const formatMissingCommandRecovery = (parts: string[]) => {
   return `Command "${path}" is provided by ${extensionId}. Install and enable that extension for this project.`;
 };
 
+const hasExtensionCommandRoute = (parts: string[], table: ExtensionCommandTable) => {
+  const namespace = parts[0];
+  return Boolean(namespace && (table.byNamespace.has(namespace) || formatMissingCommandRecovery(parts)));
+};
+
 const resolveRepoContext = async (deps: DispatchDeps, projectId: string, root: string | null) => {
   if (!root) return undefined;
   const repos = await deps.listRepos(projectId);
@@ -230,6 +235,8 @@ export const dispatchExtensionCliCommand = async (input: { rawArgs: string[]; de
   const commandPathParts = global.args.slice(0, firstOptionIndex(global.args));
   const commandPath = commandPathParts.join(" ");
   const wantsHelp = global.args.includes("--help") || global.args.includes("-h");
+
+  if (!hasExtensionCommandRoute(commandPathParts, table)) return null;
 
   if (commandPathParts.length === 1 && wantsHelp) {
     deps.log(renderNamespaceHelp(commandPathParts[0]!, table));

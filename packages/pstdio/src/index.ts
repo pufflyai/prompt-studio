@@ -109,12 +109,16 @@ if (shouldDispatchExtensionCommand()) {
     commandTracker.captureArgv({ _: rawArgs });
     commandTracker.logStart();
     const exitCode = await dispatchExtensionCliCommand({ rawArgs });
-    if (exitCode === 0) {
-      commandTracker.logSuccess();
+    if (exitCode === null) {
+      // The token was not an extension namespace; fall through to yargs so root help/error formatting stays canonical.
     } else {
-      commandTracker.logFailure(`Extension command exited with status ${exitCode}`);
+      if (exitCode === 0) {
+        commandTracker.logSuccess();
+      } else {
+        commandTracker.logFailure(`Extension command exited with status ${exitCode}`);
+      }
+      process.exit(exitCode);
     }
-    process.exit(exitCode);
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("Could not start the pstdio API.")) {
       // Let yargs keep the normal root help for unknown commands when extension metadata is unavailable.

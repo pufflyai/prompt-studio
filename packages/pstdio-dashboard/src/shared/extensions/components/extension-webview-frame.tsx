@@ -4,6 +4,7 @@ import { useParams } from "@tanstack/react-router";
 import { ExtensionFrame } from "pstdio-extensions/bridge/host";
 import { useEffect, useMemo, useState } from "react";
 import { useOpenCommandPalette } from "@/features/shortcuts/shortcut-provider";
+import { buildApiUrl } from "@/lib/api";
 import { type ExtensionCommandEvent, subscribeToExtensionCommandFeed } from "../extension-webview-broadcast";
 import { useExecuteExtensionCommand } from "../hooks/use-project-extensions";
 
@@ -11,6 +12,7 @@ type WebviewDescriptor = {
   entry: { kind: "package-asset"; path: string; baseUrl: string };
   title?: string;
   sandbox?: "default" | "strict";
+  assetUrl?: string;
   runtimeUrl?: string;
   moduleUrl?: string;
   styles?: string[];
@@ -25,6 +27,12 @@ interface ExtensionWebviewFrameProps {
 
 const isDarkPreference = (preference: string) => /dark/i.test(preference);
 
+const resolveStaticWebviewSrc = (webview: WebviewDescriptor) =>
+  webview.assetUrl ? buildApiUrl(webview.assetUrl) : new URL(webview.entry.path, webview.entry.baseUrl).toString();
+
+const resolveStaticWebviewSandbox = (webview: WebviewDescriptor) =>
+  webview.sandbox === "strict" ? "allow-scripts" : "allow-scripts allow-forms allow-popups";
+
 export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const { webview, webviewId, extensionId, title } = props;
   const { projectId } = useParams({ strict: false });
@@ -33,6 +41,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const executeCommand = useExecuteExtensionCommand(projectId);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [staticState, setStaticState] = useState<"loading" | "loaded" | "error">("loading");
   const [lastCommand, setLastCommand] = useState<ExtensionCommandEvent | null>(null);
 
   // Subscribe to host-side extension command executions so we can forward them into the
@@ -79,9 +88,9 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       extensionId,
       label: webview.title ?? title ?? "Extension view",
       webview: {
-        moduleUrl: webview.moduleUrl,
-        styles: webview.styles ?? [],
-        runtimeUrl: webview.runtimeUrl,
+        moduleUrl: buildApiUrl(webview.moduleUrl),
+        styles: (webview.styles ?? []).map(buildApiUrl),
+        runtimeUrl: buildApiUrl(webview.runtimeUrl),
       },
     };
   }, [webview?.runtimeUrl, webview?.moduleUrl, webview?.styles, webview?.title, webviewId, extensionId, title]);
@@ -95,6 +104,35 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   );
 
   if (!webview) return null;
+
+  if (!view && webview.assetUrl) {
+    return (
+      <Box position="relative" width="100%" height="100%" minH="0" bg="bg">
+        {staticState === "loading" ? (
+          <Center position="absolute" inset="0" color="fg.muted">
+            <Spinner size="sm" />
+          </Center>
+        ) : null}
+        {staticState === "error" ? (
+          <Center position="absolute" inset="0" px="md">
+            <Text textStyle="paragraph/S/regular" color="fg.muted">
+              Extension view failed to load.
+            </Text>
+          </Center>
+        ) : null}
+        <iframe
+          title={webview.title ?? title ?? "Extension view"}
+          src={resolveStaticWebviewSrc(webview)}
+          sandbox={resolveStaticWebviewSandbox(webview)}
+          width="100%"
+          height="100%"
+          style={{ border: 0 }}
+          onLoad={() => setStaticState("loaded")}
+          onError={() => setStaticState("error")}
+        />
+      </Box>
+    );
+  }
 
   if (!view) {
     return (

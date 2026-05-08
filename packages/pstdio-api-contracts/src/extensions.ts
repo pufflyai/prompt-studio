@@ -76,6 +76,8 @@ const extensionWebviewSchema = z.object({
   entry: packageAssetDescriptorSchema,
   title: z.string().optional(),
   sandbox: z.enum(["default", "strict"]).optional(),
+  /** API-served URL for static HTML package assets mounted directly in an iframe. */
+  assetUrl: z.string().optional(),
   /** API-served URL of the bridge runtime HTML the dashboard mounts in the iframe. */
   runtimeUrl: z.string().optional(),
   /** API-served URL of the bundled extension module the bridge runtime dynamically imports. */

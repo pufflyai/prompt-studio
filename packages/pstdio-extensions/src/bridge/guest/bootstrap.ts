@@ -4,6 +4,34 @@ import { createGuestHost, createPropsStore, type ExtensionViewModule } from "./d
 
 const MOUNT_ID = "pstdio-extension-mount";
 
+const createMemoryStorage = (): Storage => {
+  const values = new Map<string, string>();
+
+  return {
+    get length() {
+      return values.size;
+    },
+    clear: () => values.clear(),
+    getItem: (key: string) => values.get(key) ?? null,
+    key: (index: number) => Array.from(values.keys())[index] ?? null,
+    removeItem: (key: string) => values.delete(key),
+    setItem: (key: string, value: string) => values.set(key, value),
+  };
+};
+
+const installOpaqueOriginStorageFallbacks = () => {
+  for (const storageName of ["localStorage", "sessionStorage"] as const) {
+    try {
+      void window[storageName];
+    } catch {
+      Object.defineProperty(window, storageName, {
+        configurable: true,
+        value: createMemoryStorage(),
+      });
+    }
+  }
+};
+
 const applyTheme = (theme: string, variables: Record<string, string>) => {
   const docEl = document.documentElement;
   const opposite = theme === "dark" ? "light" : "dark";
@@ -38,11 +66,20 @@ const ensureMount = () => {
   return element;
 };
 
+const isEditableTarget = (target: EventTarget | null) =>
+  target instanceof HTMLInputElement ||
+  target instanceof HTMLTextAreaElement ||
+  target instanceof HTMLSelectElement ||
+  (target instanceof HTMLElement && target.isContentEditable);
+
 const start = async () => {
+  installOpaqueOriginStorageFallbacks();
+
   const propsStore = createPropsStore<unknown>(undefined);
   let cleanup: (() => void) | undefined;
+  let keyboardForwarderInstalled = false;
 
-  const hostApi: HostApi = {
+  const connection = await guest.connect({
     init: async (message: InitMessage) => {
       try {
         applyTheme(message.theme, message.themeVariables);
@@ -60,6 +97,33 @@ const start = async () => {
         const host = createGuestHost((request) => connection.remote.call(request));
         const result = await view.mount(mountEl, host, propsStore);
         cleanup = typeof result === "function" ? result : undefined;
+
+        if (!keyboardForwarderInstalled) {
+          keyboardForwarderInstalled = true;
+          document.addEventListener(
+            "keydown",
+            (event) => {
+              if (!event.ctrlKey && !event.metaKey && !event.altKey) return;
+              if (isEditableTarget(event.target) && !event.shiftKey) return;
+
+              connection.remote
+                .call({
+                  method: "host.dispatchKeyboardEvent",
+                  params: {
+                    key: event.key,
+                    code: event.code,
+                    ctrlKey: event.ctrlKey,
+                    metaKey: event.metaKey,
+                    altKey: event.altKey,
+                    shiftKey: event.shiftKey,
+                    repeat: event.repeat,
+                  },
+                })
+                .catch(() => {});
+            },
+            true,
+          );
+        }
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
         connection.remote.runtimeError({ message: err.message, stack: err.stack });
@@ -72,9 +136,8 @@ const start = async () => {
     propsUpdate: (message: PropsUpdateMessage) => {
       propsStore.set(message.props);
     },
-  };
+  } satisfies HostApi);
 
-  const connection = await guest.connect(hostApi);
   connection.remote.ready({});
 
   window.addEventListener("beforeunload", () => {
