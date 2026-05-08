@@ -43,6 +43,32 @@ describe("waitForHealthy", () => {
     expect(attempts).toBe(3);
   });
 
+  test("does not treat system clock jumps as timeout", async () => {
+    const originalNow = Date.now;
+    let jumped = false;
+    let attempts = 0;
+    Date.now = () => originalNow() + (jumped ? 60_000 : 0);
+
+    const fetcher = () => {
+      attempts++;
+      jumped = true;
+      return attempts >= 2 ? okFetcher() : notOkFetcher();
+    };
+
+    try {
+      await waitForHealthy({
+        url: "http://localhost:3000/healthz",
+        intervalMs: 1,
+        timeoutMs: 50,
+        fetcher,
+      });
+    } finally {
+      Date.now = originalNow;
+    }
+
+    expect(attempts).toBe(2);
+  });
+
   test("throws after timeout", async () => {
     await expect(
       waitForHealthy({

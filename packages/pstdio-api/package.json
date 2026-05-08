@@ -28,6 +28,7 @@
     "pstdio-api-contracts": "workspace:*",
     "pstdio-agents": "workspace:*",
     "pstdio-db": "workspace:*",
+    "pstdio-extensions": "workspace:*",
     "pstdio-logging": "workspace:*",
     "pstdio-plugins": "workspace:*",
     "pstdio-scheduler": "workspace:*",

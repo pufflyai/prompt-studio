@@ -144,6 +144,7 @@
         "pstdio-agents": "workspace:*",
         "pstdio-api-contracts": "workspace:*",
         "pstdio-db": "workspace:*",
+        "pstdio-extensions": "workspace:*",
         "pstdio-logging": "workspace:*",
         "pstdio-plugins": "workspace:*",
         "pstdio-scheduler": "workspace:*",
@@ -247,6 +248,16 @@
         "@types/bun": "latest",
         "@types/pg": "^8.18.0",
         "drizzle-kit": "^0.31.9",
+        "typescript": "6.0.2",
+      },
+    },
+    "packages/pstdio-extensions": {
+      "name": "pstdio-extensions",
+      "dependencies": {
+        "@pstdio/sdk": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
         "typescript": "6.0.2",
       },
     },
@@ -3127,6 +3138,8 @@
     "pstdio-dashboard": ["pstdio-dashboard@workspace:packages/pstdio-dashboard"],
 
     "pstdio-db": ["pstdio-db@workspace:packages/pstdio-db"],
+
+    "pstdio-extensions": ["pstdio-extensions@workspace:packages/pstdio-extensions"],
 
     "pstdio-logging": ["pstdio-logging@workspace:packages/pstdio-logging"],
 

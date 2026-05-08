@@ -14,32 +14,32 @@
   "type": "module",
   "exports": {
     "./resources": {
-      "import": "./dist/resources/index.js",
-      "types": "./dist/resources/index.d.ts"
+      "types": "./dist/resources/index.d.ts",
+      "import": "./dist/resources/index.js"
     },
     "./api": {
-      "import": "./dist/api/index.js",
-      "types": "./dist/api/index.d.ts"
+      "types": "./dist/api/index.d.ts",
+      "import": "./dist/api/index.js"
     },
     "./client": {
-      "import": "./dist/client/index.js",
-      "types": "./dist/client/index.d.ts"
+      "types": "./dist/client/index.d.ts",
+      "import": "./dist/client/index.js"
     },
     "./extensions": {
-      "import": "./dist/extensions/index.js",
-      "types": "./dist/extensions/index.d.ts"
+      "types": "./dist/extensions/index.d.ts",
+      "import": "./dist/extensions/index.js"
     },
     "./plugins": {
-      "import": "./dist/plugins/index.js",
-      "types": "./dist/plugins/index.d.ts"
+      "types": "./dist/plugins/index.d.ts",
+      "import": "./dist/plugins/index.js"
     },
     "./prompts": {
-      "import": "./dist/prompts/index.js",
-      "types": "./dist/prompts/index.d.ts"
+      "types": "./dist/prompts/index.d.ts",
+      "import": "./dist/prompts/index.js"
     },
     "./hooks": {
-      "import": "./dist/hooks/index.js",
-      "types": "./dist/hooks/index.d.ts"
+      "types": "./dist/hooks/index.d.ts",
+      "import": "./dist/hooks/index.js"
     }
   },
   "scripts": {

@@ -7,6 +7,7 @@ import {
   createAttemptStatusesDBService,
   createDb,
   createExtensionInstancesDBService,
+  createExtensionStorageDBService,
   createFilesDBService,
   createInstalledExtensionSourcesDBService,
   createProjectsDBService,
@@ -146,6 +147,7 @@ export const createApp = async (options: AppOptions) => {
   const activityEventsService = createActivityEventsDBService(db);
   const installedExtensionSourcesService = createInstalledExtensionSourcesDBService(db);
   const extensionInstancesService = createExtensionInstancesDBService(db);
+  const extensionStorageService = createExtensionStorageDBService(db);
 
   // --- storage services ---
   const filesStorageService = createFilesStorageService(storageRoot);
@@ -258,6 +260,7 @@ export const createApp = async (options: AppOptions) => {
     skillService,
     fileService,
     extensionService,
+    extensionStorageService,
     syncService,
     pluginService,
     activityEventsService,

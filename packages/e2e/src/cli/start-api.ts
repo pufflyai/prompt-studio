@@ -22,8 +22,8 @@ export const getFreePort = () =>
   });
 
 export const waitForReady = async (url: string, timeoutMs = SETUP_TIMEOUT) => {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
+  const deadline = performance.now() + timeoutMs;
+  while (performance.now() < deadline) {
     try {
       const res = await fetch(`${url}/healthz`);
       if (res.ok) return;

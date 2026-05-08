@@ -5,7 +5,9 @@ import * as dashboardCommand from "./adapters/cli/commands/dashboard";
 import { API_URL } from "./features/api-url";
 import { shouldEnsureApiForCommand } from "./features/cli-api-startup";
 import { CLI_VERSION } from "./features/cli-version";
+import { findGitRoot, readConfig } from "./features/config/config";
 import { ensureApi } from "./features/ensure-api";
+import { dispatchExtensionCliCommand } from "./features/extensions/extension-cli-router";
 import { createCliCommandTracker } from "./features/logging/cli-command-log";
 import { resolveCliSessionId } from "./features/sessions/resolve-cli-session-id";
 import { shouldLoadEmbedManifest } from "./features/should-load-embed-manifest";
@@ -35,10 +37,95 @@ const applyApiPortFromArgs = (argv: Record<string, unknown>) => {
 };
 
 const rawArgs = hideBin(process.argv);
+const staticTopLevelCommands = new Set([
+  "agents",
+  "close",
+  "dashboard",
+  "extensions",
+  "plugins",
+  "projects",
+  "serve",
+  "sessions",
+  "statuses",
+  "tags",
+  "templates",
+  "tickets",
+  "workspaces",
+]);
+
+const rawValueFor = (name: string) => {
+  const prefix = `--${name}=`;
+  const inline = rawArgs.find((arg) => arg.startsWith(prefix));
+  if (inline) return inline.slice(prefix.length);
+  const index = rawArgs.indexOf(`--${name}`);
+  return index === -1 ? undefined : rawArgs[index + 1];
+};
+
+const firstCommandToken = () => {
+  const skipValueFor = new Set(["--api-port", "--dashboard-port", "--project-id"]);
+  for (let index = 0; index < rawArgs.length; index += 1) {
+    const arg = rawArgs[index];
+    if (!arg || arg.startsWith("-")) {
+      if (skipValueFor.has(arg)) index += 1;
+      continue;
+    }
+    return arg;
+  }
+  return undefined;
+};
+
+const shouldDispatchExtensionCommand = () => {
+  const token = firstCommandToken();
+  if (!token || staticTopLevelCommands.has(token)) return false;
+  if (rawValueFor("project-id")) return true;
+
+  const root = findGitRoot(process.cwd());
+  return Boolean(root && readConfig(root));
+};
+
+const resolveApiUrlFromRawArgs = () => {
+  if (process.env.PSTDIO_API_URL) return process.env.PSTDIO_API_URL;
+  const apiPort = rawValueFor("api-port");
+  return apiPort ? `http://localhost:${apiPort}` : API_URL;
+};
+
+const applyApiPortFromRawArgs = () => {
+  if (process.env.PSTDIO_API_URL || process.env.PSTDIO_API_PORT) return;
+  const apiPort = rawValueFor("api-port");
+  if (apiPort) process.env.PSTDIO_API_PORT = apiPort;
+};
+
 const commandTracker = createCliCommandTracker({
   rawArgs,
   sessionId: resolveCliSessionId({ env: process.env }),
 });
+
+if (shouldDispatchExtensionCommand()) {
+  try {
+    applyApiPortFromRawArgs();
+    const apiUrl = resolveApiUrlFromRawArgs();
+    process.env.PSTDIO_API_URL = apiUrl;
+    await ensureApi(apiUrl);
+    commandTracker.captureArgv({ _: rawArgs });
+    commandTracker.logStart();
+    const exitCode = await dispatchExtensionCliCommand({ rawArgs });
+    if (exitCode === 0) {
+      commandTracker.logSuccess();
+    } else {
+      commandTracker.logFailure(`Extension command exited with status ${exitCode}`);
+    }
+    process.exit(exitCode);
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("Could not start the pstdio API.")) {
+      // Let yargs keep the normal root help for unknown commands when extension metadata is unavailable.
+    } else {
+      commandTracker.logFailure(error);
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`Error: ${message}\n`);
+      process.exit(1);
+    }
+  }
+}
 
 const cli = yargs(rawArgs)
   .scriptName("pstdio")

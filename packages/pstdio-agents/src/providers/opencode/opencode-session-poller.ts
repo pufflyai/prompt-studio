@@ -27,7 +27,7 @@ export const OPENCODE_STALE_TURN_TIMEOUT_MS = 30 * 60 * 1_000;
 export const hasErrorParts = (messages: SessionMessage[]) =>
   messages.some((m) => m.parts.some((p) => p.type === "error"));
 
-export const waitForNextPoll = (abortSignal?: AbortSignal) =>
+export const waitForNextPoll = (abortSignal?: AbortSignal, intervalMs = OPENCODE_POLL_INTERVAL_MS) =>
   new Promise<void>((resolve) => {
     if (abortSignal?.aborted) {
       resolve();
@@ -39,7 +39,7 @@ export const waitForNextPoll = (abortSignal?: AbortSignal) =>
       abortSignal?.removeEventListener("abort", finish);
       resolve();
     };
-    const timeout = setTimeout(finish, OPENCODE_POLL_INTERVAL_MS);
+    const timeout = setTimeout(finish, intervalMs);
     abortSignal?.addEventListener("abort", finish, { once: true });
   });
 
@@ -168,8 +168,10 @@ export const pollOpencodeMessages = async (input: {
   baselineCount: number;
   messageComplete: Promise<void>;
   abortSignal?: AbortSignal;
+  pollIntervalMs?: number;
 }) => {
-  const { loadMessages, sessionId, cwd, eventStore, baselineCount, messageComplete, abortSignal } = input;
+  const { loadMessages, sessionId, cwd, eventStore, baselineCount, messageComplete, abortSignal, pollIntervalMs } =
+    input;
   let lastSnapshot = "";
   let latestMessages: SessionMessage[] = [];
   let lastObserved: OpencodeSessionMessage[] = [];
@@ -217,7 +219,7 @@ export const pollOpencodeMessages = async (input: {
       break;
     }
 
-    await waitForNextPoll(abortSignal);
+    await waitForNextPoll(abortSignal, pollIntervalMs);
   }
 
   if (postState.failed) {
@@ -244,8 +246,9 @@ export const pollOpencodeUntilIdle = async (input: {
   cwd: string | undefined;
   eventStore: EventStore;
   abortSignal?: AbortSignal;
+  pollIntervalMs?: number;
 }) => {
-  const { loadMessages, sessionId, cwd, eventStore, abortSignal } = input;
+  const { loadMessages, sessionId, cwd, eventStore, abortSignal, pollIntervalMs } = input;
   let lastSnapshot = "";
   let latestMessages: SessionMessage[] = [];
   let lastObserved: OpencodeSessionMessage[] = [];
@@ -289,7 +292,7 @@ export const pollOpencodeUntilIdle = async (input: {
       break;
     }
 
-    await waitForNextPoll(abortSignal);
+    await waitForNextPoll(abortSignal, pollIntervalMs);
   }
 
   const trailing = latestMessages.at(-1);

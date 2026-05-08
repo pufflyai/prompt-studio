@@ -154,6 +154,22 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     return updated;
   };
 
+  const listEnabledSourcesForProject = async (projectId: string) => {
+    const project = await deps.projectService.get(projectId);
+    if (!project) throw new ProjectNotFoundError(projectId);
+
+    const instances = await deps.extensionInstancesService.list({ scope_type: "project", scope_id: projectId });
+    const enabled = instances.filter((instance) => instance.enabled);
+    const records = [];
+
+    for (const instance of enabled) {
+      const installedSource = await deps.installedExtensionSourcesService.get(instance.installed_extension_id);
+      if (installedSource) records.push({ instance, installedSource });
+    }
+
+    return records;
+  };
+
   const reloadInstalledSource = async (installName: string) => {
     const existing = await deps.installedExtensionSourcesService.getByInstallName(installName);
     if (!existing) throw new Error(`Installed extension not found: ${installName}`);
@@ -271,6 +287,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   return {
     enableInstalledSourceForProject,
     getInstalledSource,
+    listEnabledSourcesForProject,
     reloadInstalledSource,
     reportWebviewBuildFailure,
     reportWebviewBuildSuccess,

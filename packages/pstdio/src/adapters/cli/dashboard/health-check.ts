@@ -18,9 +18,9 @@ type WaitOptions = {
 
 export const waitForHealthy = async (options: WaitOptions) => {
   const { url, intervalMs = 200, timeoutMs = 15_000, fetcher = fetch } = options;
-  const deadline = Date.now() + timeoutMs;
+  const deadline = performance.now() + timeoutMs;
 
-  while (Date.now() < deadline) {
+  while (performance.now() < deadline) {
     if (await isHealthy(url, fetcher)) return;
     await new Promise((r) => setTimeout(r, intervalMs));
   }
