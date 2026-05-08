@@ -13,7 +13,16 @@ interface AgentMenuOption extends WorkspacePanelMenuOption {
   disabled?: boolean;
 }
 
-type ProjectsTranslate = (key: string) => string;
+interface WorkspaceAgentMenuLabels {
+  agentSelect: string;
+  agentUnknown: string;
+  agentLoading: string;
+  modelSelect: string;
+  modelNone: string;
+  modelNoneAvailable: string;
+  modelLoading: string;
+  modelSearchPlaceholder: string;
+}
 
 interface WorkspaceAgentMenuProps {
   agentOptions: AgentMenuOption[];
@@ -24,8 +33,10 @@ interface WorkspaceAgentMenuProps {
   onSelectModel: (model: string) => void;
   isDisabled?: boolean;
   isAgentSwitchDisabled?: boolean;
+  shouldDisableSingleAgentSwitch?: boolean;
   isAgentsLoading?: boolean;
   isModelsLoading?: boolean;
+  labels?: Partial<WorkspaceAgentMenuLabels>;
 }
 
 const getSelectedLabel = (
@@ -42,14 +53,14 @@ const buildAgentMenuItems = (
   agentOptions: AgentMenuOption[],
   selectedAgent: string,
   isAgentsLoading: boolean,
-  t: ProjectsTranslate,
+  labels: WorkspaceAgentMenuLabels,
 ): SearchableMenuItem[] => {
   if (isAgentsLoading) {
-    return [{ id: "agent-loading", label: t("chatInput.agent.loading"), icon: TerminalIcon, isDisabled: true }];
+    return [{ id: "agent-loading", label: labels.agentLoading, icon: TerminalIcon, isDisabled: true }];
   }
 
   if (agentOptions.length === 0) {
-    return [{ id: "agent-none-available", label: t("chatInput.agent.unknown"), icon: TerminalIcon, isDisabled: true }];
+    return [{ id: "agent-none-available", label: labels.agentUnknown, icon: TerminalIcon, isDisabled: true }];
   }
 
   return agentOptions.map((option) => ({
@@ -67,14 +78,14 @@ const buildModelMenuItems = (
   selectedModel: string,
   isModelsLoading: boolean,
   onSelectModel: (model: string) => void,
-  t: ProjectsTranslate,
+  labels: WorkspaceAgentMenuLabels,
 ): SearchableMenuItem[] => {
   if (isModelsLoading) {
-    return [{ id: "model-loading", label: t("chatInput.model.loading"), icon: Cpu, isDisabled: true }];
+    return [{ id: "model-loading", label: labels.modelLoading, icon: Cpu, isDisabled: true }];
   }
 
   if (modelOptions.length === 0) {
-    return [{ id: "model-none-available", label: t("chatInput.model.noneAvailable"), icon: Cpu, isDisabled: true }];
+    return [{ id: "model-none-available", label: labels.modelNoneAvailable, icon: Cpu, isDisabled: true }];
   }
 
   return modelOptions.map((option) => ({
@@ -96,34 +107,47 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
     onSelectModel,
     isDisabled = false,
     isAgentSwitchDisabled = false,
+    shouldDisableSingleAgentSwitch = true,
     isAgentsLoading = false,
     isModelsLoading = false,
+    labels,
   } = props;
   const { t } = useTranslation("projects");
+  const resolvedLabels = {
+    agentSelect: labels?.agentSelect ?? t("chatInput.agent.selectLabel"),
+    agentUnknown: labels?.agentUnknown ?? t("chatInput.agent.unknown"),
+    agentLoading: labels?.agentLoading ?? t("chatInput.agent.loading"),
+    modelSelect: labels?.modelSelect ?? t("chatInput.model.selectLabel"),
+    modelNone: labels?.modelNone ?? t("chatInput.model.none"),
+    modelNoneAvailable: labels?.modelNoneAvailable ?? t("chatInput.model.noneAvailable"),
+    modelLoading: labels?.modelLoading ?? t("chatInput.model.loading"),
+    modelSearchPlaceholder: labels?.modelSearchPlaceholder ?? t("chatInput.model.searchPlaceholder"),
+  };
 
   const selectedAgentLabel = isAgentsLoading
-    ? t("chatInput.agent.loading")
-    : getSelectedLabel(agentOptions, selectedAgent, t("chatInput.agent.selectLabel"), t("chatInput.agent.unknown"));
+    ? resolvedLabels.agentLoading
+    : getSelectedLabel(agentOptions, selectedAgent, resolvedLabels.agentSelect, resolvedLabels.agentUnknown);
   const selectedModelLabel = isModelsLoading
-    ? t("chatInput.model.loading")
-    : getSelectedLabel(modelOptions, selectedModel, t("chatInput.model.selectLabel"), t("chatInput.model.none"));
-  const isSwitchDisabled = isDisabled || isAgentSwitchDisabled || agentOptions.length <= 1;
+    ? resolvedLabels.modelLoading
+    : getSelectedLabel(modelOptions, selectedModel, resolvedLabels.modelSelect, resolvedLabels.modelNone);
+  const isSwitchDisabled =
+    isDisabled || isAgentSwitchDisabled || (shouldDisableSingleAgentSwitch && agentOptions.length <= 1);
   const isMenuDisabled = isDisabled || (agentOptions.length === 0 && modelOptions.length === 0);
-  const agentMenuItems = buildAgentMenuItems(agentOptions, selectedAgent, isAgentsLoading, t);
-  const modelMenuItems = buildModelMenuItems(modelOptions, selectedModel, isModelsLoading, onSelectModel, t);
+  const agentMenuItems = buildAgentMenuItems(agentOptions, selectedAgent, isAgentsLoading, resolvedLabels);
+  const modelMenuItems = buildModelMenuItems(
+    modelOptions,
+    selectedModel,
+    isModelsLoading,
+    onSelectModel,
+    resolvedLabels,
+  );
 
   return (
     <SearchableMenu
       trigger={
         <Box>
-          <Tooltip content={isMenuDisabled ? t("chatInput.model.noneAvailable") : t("chatInput.model.selectLabel")}>
-            <Button
-              variant="ghost"
-              size="sm"
-              px="2"
-              aria-label={t("chatInput.model.selectLabel")}
-              disabled={isMenuDisabled}
-            >
+          <Tooltip content={isMenuDisabled ? resolvedLabels.modelNoneAvailable : resolvedLabels.modelSelect}>
+            <Button variant="ghost" size="sm" px="2" aria-label={resolvedLabels.modelSelect} disabled={isMenuDisabled}>
               <Text textStyle="label/XS/medium" color="fg">
                 {selectedModelLabel}
               </Text>
@@ -136,7 +160,7 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
       showSearch={modelOptions.length > 5}
       width="260px"
       portalled={false}
-      searchPlaceholder={t("chatInput.model.searchPlaceholder")}
+      searchPlaceholder={resolvedLabels.modelSearchPlaceholder}
       contentTestId="workspace-agent-model-options"
       emptyState={
         <Menu.Item value="empty" asChild>
@@ -144,7 +168,7 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
             asChild
             variant="compact"
             id="empty"
-            label={t("chatInput.model.noneAvailable")}
+            label={resolvedLabels.modelNoneAvailable}
             icon={<Icon as={Cpu} boxSize="16px" />}
             disabled
           />
@@ -154,7 +178,7 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
         items: agentMenuItems,
         selectedLabel: selectedAgentLabel,
         selectedIcon: TerminalIcon,
-        ariaLabel: t("chatInput.agent.selectLabel"),
+        ariaLabel: resolvedLabels.agentSelect,
         disabled: isSwitchDisabled,
         showSearch: false,
         contentTestId: "workspace-agent-options",
@@ -164,7 +188,7 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
               asChild
               variant="compact"
               id="empty"
-              label={t("chatInput.agent.unknown")}
+              label={resolvedLabels.agentUnknown}
               icon={<Icon as={TerminalIcon} boxSize="16px" />}
               disabled
             />

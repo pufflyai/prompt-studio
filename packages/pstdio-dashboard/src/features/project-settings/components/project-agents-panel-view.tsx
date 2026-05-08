@@ -1,9 +1,10 @@
-import { Badge, Button, Flex, HStack, Icon, Menu, Spinner, Stack, Text } from "@chakra-ui/react";
-import { ListRow } from "@pstdio/ui";
-import { ChevronDown, TerminalIcon } from "lucide-react";
+import { Flex, Stack, Text } from "@chakra-ui/react";
 import { useTranslation } from "react-i18next";
+import { WorkspaceAgentMenu } from "@/features/agents/components/agent-browser";
 import { useAgentModels } from "@/features/agents/hooks/use-agent-models";
 import type { AgentInfo } from "@/features/agents/types";
+
+const HARNESS_DEFAULT_MODEL = "__harness-default";
 
 interface ProjectAgentsPanelViewProps {
   enabledAgentIds: string[];
@@ -14,106 +15,6 @@ interface ProjectAgentsPanelViewProps {
   onSetDefaultAgent: (agentId: string) => void;
   onSetDefaultModel: (modelId: string | null) => void;
 }
-
-interface AgentRowProps {
-  agent: AgentInfo;
-  isProjectDefault: boolean;
-  isUpdating: boolean;
-  defaultModel: string | null;
-  onSelectAsDefault: () => void;
-  onSelectModel: (modelId: string | null) => void;
-}
-
-const AgentRow = (props: AgentRowProps) => {
-  const { agent, isProjectDefault, isUpdating, defaultModel, onSelectAsDefault, onSelectModel } = props;
-  const { t } = useTranslation("projects");
-
-  const { data: models = [], isLoading: isModelsLoading } = useAgentModels(agent.id, { enabled: isProjectDefault });
-
-  const selectedModelLabel = defaultModel ?? t("projectSettings.agentsPanel.agentDefault");
-
-  return (
-    <Stack
-      gap="sm"
-      px="md"
-      py="sm"
-      borderWidth="1px"
-      borderColor={isProjectDefault ? "border.emphasized" : "border.muted"}
-      borderRadius="md"
-    >
-      <Flex alignItems="center" justifyContent="space-between" gap="md">
-        <HStack gap="sm">
-          <Icon as={TerminalIcon} boxSize="16px" color="fg.muted" />
-          <Text textStyle="label/S/medium">{agent.name}</Text>
-          {isProjectDefault && <Badge colorPalette="blue">{t("projectSettings.agentsPanel.defaultBadge")}</Badge>}
-        </HStack>
-
-        {!isProjectDefault && (
-          <Button size="xs" variant="outline" onClick={onSelectAsDefault} disabled={isUpdating}>
-            {t("projectSettings.agentsPanel.setAsDefault")}
-          </Button>
-        )}
-      </Flex>
-
-      {isProjectDefault && (
-        <HStack justify="space-between" alignItems="center">
-          <Stack gap="0">
-            <Text textStyle="label/XS/medium">{t("projectSettings.agentsPanel.defaultModel")}</Text>
-            <Text textStyle="paragraph/XS/regular" color="fg.muted">
-              {t("projectSettings.agentsPanel.modelDescription")}
-            </Text>
-          </Stack>
-
-          {isModelsLoading ? (
-            <Spinner size="xs" />
-          ) : (
-            <Menu.Root>
-              <Menu.Trigger asChild>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  width="auto"
-                  minW="220px"
-                  justifyContent="space-between"
-                  disabled={isUpdating}
-                >
-                  {selectedModelLabel}
-                  <Icon as={ChevronDown} color="fg.muted" />
-                </Button>
-              </Menu.Trigger>
-              <Menu.Positioner>
-                <Menu.Content minW="220px" bg="bg">
-                  <Menu.Item value="default" asChild>
-                    <ListRow
-                      asChild
-                      variant="compact"
-                      id="default"
-                      label={t("projectSettings.agentsPanel.agentDefault")}
-                      isSelected={!defaultModel}
-                      onActivate={() => onSelectModel(null)}
-                    />
-                  </Menu.Item>
-                  {models.map((m) => (
-                    <Menu.Item key={m.id} value={m.id} asChild>
-                      <ListRow
-                        asChild
-                        variant="compact"
-                        id={m.id}
-                        label={m.id}
-                        isSelected={defaultModel === m.id}
-                        onActivate={() => onSelectModel(m.id)}
-                      />
-                    </Menu.Item>
-                  ))}
-                </Menu.Content>
-              </Menu.Positioner>
-            </Menu.Root>
-          )}
-        </HStack>
-      )}
-    </Stack>
-  );
-};
 
 export const ProjectAgentsPanelView = (props: ProjectAgentsPanelViewProps) => {
   const {
@@ -130,10 +31,22 @@ export const ProjectAgentsPanelView = (props: ProjectAgentsPanelViewProps) => {
   const installedAgents = agents.filter((a) => a.availability.type === "INSTALLED");
   const enabledAgents =
     enabledAgentIds.length > 0 ? installedAgents.filter((a) => enabledAgentIds.includes(a.id)) : installedAgents;
+  const defaultIsAvailable = defaultAgentId ? enabledAgents.some((a) => a.id === defaultAgentId) : true;
+  const selectedAgentId = defaultIsAvailable ? (defaultAgentId ?? "") : "";
+  const { data: models = [], isLoading: isModelsLoading } = useAgentModels(selectedAgentId, {
+    enabled: Boolean(selectedAgentId),
+  });
+  const missingDefaultWarning =
+    !defaultIsAvailable && defaultAgentId ? (
+      <Text textStyle="paragraph/XS/regular" color="fg.error">
+        {t("projectSettings.agentsPanel.missingDefaultWarning")}
+      </Text>
+    ) : null;
 
   if (enabledAgents.length === 0) {
     return (
       <Stack padding="lg" gap="lg">
+        {missingDefaultWarning}
         <Text textStyle="paragraph/S/regular" color="fg.muted">
           {t("projectSettings.agentsPanel.empty")}
         </Text>
@@ -141,27 +54,52 @@ export const ProjectAgentsPanelView = (props: ProjectAgentsPanelViewProps) => {
     );
   }
 
-  const defaultIsAvailable = defaultAgentId ? enabledAgents.some((a) => a.id === defaultAgentId) : true;
+  const modelOptions = [
+    { label: t("projectSettings.agentsPanel.harnessDefault"), value: HARNESS_DEFAULT_MODEL },
+    ...models.map((model) => ({ label: model.id, value: model.id })),
+  ];
+
+  if (defaultAgentModel && !modelOptions.some((option) => option.value === defaultAgentModel)) {
+    modelOptions.push({ label: defaultAgentModel, value: defaultAgentModel });
+  }
 
   return (
-    <Stack padding="lg" gap="md">
-      {!defaultIsAvailable && defaultAgentId && (
-        <Text textStyle="paragraph/XS/regular" color="fg.error">
-          {t("projectSettings.agentsPanel.missingDefaultWarning")}
-        </Text>
-      )}
+    <Stack padding="lg" gap="md" maxW="640px">
+      {missingDefaultWarning}
 
-      {enabledAgents.map((agent) => (
-        <AgentRow
-          key={agent.id}
-          agent={agent}
-          isProjectDefault={defaultAgentId === agent.id}
-          isUpdating={isUpdating}
-          defaultModel={defaultAgentId === agent.id ? defaultAgentModel : null}
-          onSelectAsDefault={() => onSetDefaultAgent(agent.id)}
-          onSelectModel={onSetDefaultModel}
+      <Flex direction={{ base: "column", md: "row" }} justify="space-between" alignItems="flex-start" gap="md">
+        <Stack gap="0">
+          <Text textStyle="label/S/medium">{t("projectSettings.agentsPanel.defaultHarness")}</Text>
+          <Text textStyle="paragraph/XS/regular" color="fg.muted">
+            {t("projectSettings.agentsPanel.modelDescription")}
+          </Text>
+        </Stack>
+
+        <WorkspaceAgentMenu
+          agentOptions={enabledAgents.map((agent) => ({ label: agent.name, value: agent.id }))}
+          selectedAgent={selectedAgentId}
+          onSelectAgent={(agentId) => {
+            if (agentId === defaultAgentId) return;
+            onSetDefaultAgent(agentId);
+          }}
+          modelOptions={modelOptions}
+          selectedModel={defaultAgentModel ?? HARNESS_DEFAULT_MODEL}
+          onSelectModel={(modelId) => onSetDefaultModel(modelId === HARNESS_DEFAULT_MODEL ? null : modelId)}
+          isDisabled={isUpdating}
+          shouldDisableSingleAgentSwitch={Boolean(selectedAgentId)}
+          isModelsLoading={isModelsLoading}
+          labels={{
+            agentSelect: t("projectSettings.agentsPanel.selectHarness"),
+            agentUnknown: t("projectSettings.agentsPanel.unknownHarness"),
+            agentLoading: t("projectSettings.agentsPanel.loadingHarnesses"),
+            modelSelect: t("projectSettings.agentsPanel.selectModel"),
+            modelNone: t("projectSettings.agentsPanel.harnessDefault"),
+            modelNoneAvailable: t("projectSettings.agentsPanel.noModelsAvailable"),
+            modelLoading: t("projectSettings.agentsPanel.loadingModels"),
+            modelSearchPlaceholder: t("projectSettings.agentsPanel.searchModels"),
+          }}
         />
-      ))}
+      </Flex>
     </Stack>
   );
 };
