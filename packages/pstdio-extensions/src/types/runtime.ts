@@ -3,6 +3,7 @@ import type {
   CommandRunHandler,
   ExtensionDefinition,
   ExtensionSourceKind,
+  FileIconThemeContribution,
   HarnessProvider,
   HookDefinition,
   JsonObject,
@@ -14,9 +15,26 @@ import type {
   SkillContribution,
   TemplateContribution,
   TemplateTypeContribution,
+  ThemeContribution,
+  ThemeMode,
   ViewContribution,
   WorkspaceTypeProvider,
 } from "@pstdio/sdk/extensions";
+
+export type ThemePreferenceTokens = Record<string, string>;
+
+export interface RuntimeThemePreference {
+  id: string;
+  mode: ThemeMode;
+  tokens: ThemePreferenceTokens;
+}
+
+export interface RuntimeMonacoTheme {
+  base: "vs" | "vs-dark";
+  inherit: true;
+  rules: { token: string; foreground?: string; fontStyle?: string }[];
+  colors: Record<string, string>;
+}
 
 export interface NormalizedExtension {
   id: string;
@@ -172,6 +190,36 @@ export interface RuntimeSkillRecord {
   contribution: SkillContribution;
 }
 
+export interface RuntimeThemeRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  namespace: string;
+  sourcePath: string;
+  title: string;
+  description?: string;
+  format: ThemeContribution["format"];
+  mode: ThemeMode;
+  source: ThemeContribution["source"];
+  preference: RuntimeThemePreference;
+  monacoTheme: RuntimeMonacoTheme;
+}
+
+export interface RuntimeFileIconThemeRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  namespace: string;
+  sourcePath: string;
+  title: string;
+  description?: string;
+  format: FileIconThemeContribution["format"];
+  source: FileIconThemeContribution["source"];
+  definitions: Record<string, unknown>;
+  fileExtensions: Record<string, string>;
+  fileNames: Record<string, string>;
+}
+
 export interface RuntimeHarnessRecord {
   id: string;
   extensionId: string;
@@ -215,6 +263,8 @@ export interface ExtensionRuntime {
   templateTypes: RuntimeTemplateTypeRecord[];
   templates: RuntimeTemplateRecord[];
   skills: RuntimeSkillRecord[];
+  themes: RuntimeThemeRecord[];
+  fileIconThemes: RuntimeFileIconThemeRecord[];
   harnesses: RuntimeHarnessRecord[];
   workspaceTypes: RuntimeWorkspaceTypeRecord[];
   diagnostics: ExtensionDiagnostic[];

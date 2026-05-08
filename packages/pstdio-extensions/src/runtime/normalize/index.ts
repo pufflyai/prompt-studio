@@ -1,6 +1,7 @@
 import type { ExtensionDiagnostic, ExtensionRuntime, NormalizedExtension } from "../../types/runtime";
 import type { LoadedExtensionSource } from "../loader";
 import { createAccumulator, createRegistryIndex } from "./accumulator";
+import { registerAppearance } from "./appearance";
 import { registerArtifactMounts } from "./artifact-mounts";
 import { registerCommands } from "./commands";
 import { registerContent } from "./content";
@@ -32,6 +33,7 @@ export const normalizeExtensionSources = (
     registerArtifactMounts(ext, source, runtime, index);
     registerViewLikeContributions(ext, source, runtime);
     registerContent(ext, source, runtime);
+    registerAppearance(ext, source, runtime, index);
     registerProviders(ext, source, runtime);
   }
 

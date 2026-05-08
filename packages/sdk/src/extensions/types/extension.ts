@@ -10,6 +10,8 @@ import type {
 import type {
   ArtifactMountContribution,
   CliContribution,
+  CommandPanelContribution,
+  FileIconThemeContribution,
   MenuContribution,
   NavigationContribution,
   RendererContribution,
@@ -18,6 +20,7 @@ import type {
   SkillContribution,
   TemplateContribution,
   TemplateTypeContribution,
+  ThemeContribution,
   ViewContribution,
 } from "./contributions";
 import type { EventRef } from "./events";
@@ -170,6 +173,8 @@ export interface AssetContributions {
   templateTypes?: Record<string, TemplateTypeContribution>;
   templates?: Record<string, TemplateContribution>;
   skills?: Record<string, SkillContribution>;
+  themes?: Record<string, ThemeContribution>;
+  fileIconThemes?: Record<string, FileIconThemeContribution>;
 }
 
 /** Provider contributions: harnesses, workspace types. */

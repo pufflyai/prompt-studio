@@ -243,17 +243,20 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
       action: { id: "open-theme-menu", type: "open-theme-menu" },
     }),
     ...extensionEntries,
-    ...themePreferences.map(({ id: preference }) =>
-      createEntry({
+    ...themePreferences.map((themePreference) => {
+      const preference = themePreference.id;
+      const title = "title" in themePreference ? themePreference.title : undefined;
+      const label = title ?? labels.themeLabel(preference);
+      return createEntry({
         id: `theme:${preference}`,
         mode: "theme",
-        label: labels.themeLabel(preference),
-        searchText: `theme color ${preference} ${labels.themeLabel(preference)}`,
+        label,
+        searchText: `theme color ${preference} ${label}`,
         icon: getThemeIcon(preference),
         isSelected: preference === currentTheme,
         action: { id: "theme", type: "theme", preference },
-      }),
-    ),
+      });
+    }),
   ];
 };
 

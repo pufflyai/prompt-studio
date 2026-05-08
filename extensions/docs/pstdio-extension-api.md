@@ -314,6 +314,8 @@ export default defineExtension({
   templateTypes: {},
   templates: {},
   skills: {},
+  themes: {},
+  fileIconThemes: {},
 
   workspaceTypes: {},
   harnesses: {},
@@ -1050,6 +1052,49 @@ project variation    edit files in the installed extension folder
 ```
 
 Project-specific variations use a copied extension source with a different extension `id` and `namespace`; edit template and skill files in that copied extension folder.
+
+---
+
+## 12.1 Appearance Contributions
+
+Extensions can contribute native Prompt Studio appearance assets. These are package assets, not VS Code extension manifests. Compatibility adapters should map external manifests into this native surface.
+
+```ts
+export default defineExtension({
+  id: "pstdio.appearance",
+  namespace: "appearance",
+  name: "Appearance",
+
+  themes: {
+    monokai: {
+      title: "Monokai",
+      format: "vscode-color-theme",
+      mode: "dark",
+      source: packageAsset("./themes/monokai.json", import.meta.url),
+    },
+  },
+
+  fileIconThemes: {
+    seti: {
+      title: "Seti",
+      format: "vscode-file-icon-theme",
+      source: packageAsset("./icons/seti.json", import.meta.url),
+    },
+  },
+});
+```
+
+Runtime behavior:
+
+```txt
+themes           vscode-color-theme JSON/JSONC package assets
+fileIconThemes   vscode-file-icon-theme JSON/JSONC package assets
+diagnostics      invalid package assets, missing files, malformed JSONC, and missing icon font assets
+Chakra           editor/shell colors map to semantic token overrides for the active theme preference
+Monaco           editor themes derive from the selected extension theme
+```
+
+Theme ids are namespace-scoped, for example `appearance.monokai`. File icon theme records expose icon definitions plus file extension/name resolver maps so file-list UI can consume them incrementally.
 
 ---
 

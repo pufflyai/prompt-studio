@@ -5,6 +5,8 @@ import type {
   RuntimeArtifactMount,
   RuntimeCliContribution,
   RuntimeCommandRecord,
+  RuntimeFileIconThemeRecord,
+  RuntimeThemeRecord,
 } from "../../types/runtime";
 
 export type Accumulator = ExtensionRuntime;
@@ -13,6 +15,8 @@ export type RegistryIndex = {
   commandIds: Map<string, RuntimeCommandRecord>;
   cliKeys: Map<string, RuntimeCliContribution>;
   mountKeys: Map<string, RuntimeArtifactMount>;
+  themeIds: Map<string, RuntimeThemeRecord>;
+  fileIconThemeIds: Map<string, RuntimeFileIconThemeRecord>;
 };
 
 export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Accumulator => ({
@@ -30,6 +34,8 @@ export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Ac
   templateTypes: [],
   templates: [],
   skills: [],
+  themes: [],
+  fileIconThemes: [],
   harnesses: [],
   workspaceTypes: [],
   diagnostics: [...initialDiagnostics],
@@ -39,6 +45,8 @@ export const createRegistryIndex = (): RegistryIndex => ({
   commandIds: new Map(),
   cliKeys: new Map(),
   mountKeys: new Map(),
+  themeIds: new Map(),
+  fileIconThemeIds: new Map(),
 });
 
 export const isRecord = (value: unknown): value is Record<string, unknown> =>

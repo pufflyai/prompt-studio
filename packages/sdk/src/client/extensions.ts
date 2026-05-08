@@ -3,6 +3,7 @@ import type {
   CommandExecuteResponse,
   EnableInstalledExtensionRequest,
   EnableInstalledExtensionResponse,
+  ListExtensionAppearanceResponse,
   ListExtensionCommandsResponse,
   UpdateInstalledExtensionTemplateInput,
   UpdateInstalledExtensionTemplateResponse,
@@ -20,6 +21,7 @@ export type ExtensionClient = {
     templateKey: string,
     input: UpdateInstalledExtensionTemplateInput,
   ): Promise<UpdateInstalledExtensionTemplateResponse>;
+  listAppearance(projectId: string): Promise<ListExtensionAppearanceResponse>;
   listCommands(projectId: string): Promise<ListExtensionCommandsResponse>;
   execute(commandId: string, request: CommandExecuteRequest): Promise<CommandExecuteResponse>;
 };
@@ -38,6 +40,7 @@ export const createExtensionClient = (request: RequestFn): ExtensionClient => ({
         body,
       },
     ),
+  listAppearance: (projectId) => request(`/v1/projects/${projectId}/extensions/appearance`),
   listCommands: (projectId) => request(`/v1/projects/${projectId}/extensions/commands`),
   execute: (commandId, input) => {
     const { projectId, ...body } = input;

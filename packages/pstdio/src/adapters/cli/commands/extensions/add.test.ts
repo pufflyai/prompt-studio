@@ -31,6 +31,8 @@ const installed = {
     hooks: [],
     schedules: [],
     artifactMounts: [],
+    themes: [],
+    fileIconThemes: [],
     menuContributions: [],
     views: [],
     routes: [],

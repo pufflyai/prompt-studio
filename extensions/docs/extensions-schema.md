@@ -26,7 +26,7 @@ Clients must not import `pstdio-db`, construct DB services, or open the DB direc
 - `pstdio extensions add <extension>` installs extension source into the Prompt Studio user root.
 - Extension instances enable, disable, remove, and configure installed extensions at the scope selected by services/runtime policy.
 - Extension source is live-reloaded on change.
-- The runtime has commands, middleware, hooks, custom events, schedules, slots, views, routes, navigation, templates, skills, and harness providers.
+- The runtime has commands, middleware, hooks, custom events, schedules, slots, views, routes, navigation, templates, skills, themes, file icon themes, and harness providers.
 - Commands are the only executable primitive.
 - Middleware intercepts command execution and can modify params or reject execution.
 - Hooks subscribe to events and cannot block or mutate the producing operation.
@@ -365,6 +365,39 @@ pstdio planner tickets create
 ```
 
 Optional CLI aliases may provide shorter paths, but collisions must be diagnosed and refused.
+
+---
+
+## Appearance Records
+
+- **Location:** in-memory appearance registry, exposed through API/check responses.
+- **Purpose:** native Prompt Studio theme and file icon theme contributions from extension package assets.
+
+Theme records:
+
+| Field         |          Type | Nullable | Notes                                           |
+| ------------- | ------------: | -------: | ----------------------------------------------- |
+| `id`          |      `string` |       no | Fully qualified id: `${namespace}.${themeKey}`  |
+| `extensionId` |      `string` |       no | Provider extension id                           |
+| `format`      |      `string` |       no | `vscode-color-theme`                            |
+| `mode`        | `light\|dark` |       no | Explicit contribution mode or inferred fallback |
+| `source`      |  package asset |       no | JSON/JSONC color theme asset                    |
+| `tokens`      |      `object` |       no | Chakra semantic token overrides                 |
+| `monacoTheme` |      `object` |       no | Monaco theme data derived from the asset        |
+
+File icon theme records:
+
+| Field            |         Type | Nullable | Notes                                              |
+| ---------------- | -----------: | -------: | -------------------------------------------------- |
+| `id`             |     `string` |       no | Fully qualified id: `${namespace}.${themeKey}`     |
+| `extensionId`    |     `string` |       no | Provider extension id                              |
+| `format`         |     `string` |       no | `vscode-file-icon-theme`                           |
+| `source`         | package asset |       no | JSON/JSONC icon theme asset                        |
+| `definitions`    |     `object` |       no | Icon definitions from the asset                    |
+| `fileExtensions` |     `object` |       no | Extension-to-icon map for file list consumers      |
+| `fileNames`      |     `object` |       no | File-name-to-icon map for file list consumers      |
+
+Diagnostics must report invalid package asset descriptors, missing assets, malformed JSONC, and missing file icon font assets without crashing extension loading.
 
 ---
 
@@ -953,6 +986,8 @@ navigation
 settings
 templates
 skills
+themes
+fileIconThemes
 harnesses
 diagnostics
 ```

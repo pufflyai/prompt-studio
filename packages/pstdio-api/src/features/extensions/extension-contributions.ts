@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, isAbsolute, normalize, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { ExtensionRouteRecord, ExtensionsCheckResponse } from "pstdio-api-contracts";
 import {
   addDiagnostic,
@@ -167,6 +170,253 @@ export const collectAssetsAndUi = (check: ExtensionsCheckResponse, loaded: Loade
   collectNavigation(check, loaded);
   collectPackageAssetRecords(check, loaded, sourcePath, "templates");
   collectPackageAssetRecords(check, loaded, sourcePath, "skills");
+  collectThemes(check, loaded, sourcePath);
+  collectFileIconThemes(check, loaded, sourcePath);
+};
+
+const themeTokenMap = {
+  "editor.background": ["colors.bg", "colors.bg.code"],
+  "editor.foreground": ["colors.fg"],
+  "sideBar.background": ["colors.bg.panel"],
+  "panel.background": ["colors.bg.panel"],
+  focusBorder: ["colors.border.accent"],
+  foreground: ["colors.fg"],
+  descriptionForeground: ["colors.fg.muted"],
+  border: ["colors.border"],
+} satisfies Record<string, string[]>;
+
+const stripJsonComments = (value: string) => value.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+
+const stripTrailingCommas = (value: string) => value.replace(/,\s*([}\]])/g, "$1");
+
+const assetPath = (asset: unknown) => {
+  if (!isRecord(asset) || asset.kind !== "package-asset" || typeof asset.path !== "string") return null;
+  if (typeof asset.baseUrl !== "string" || !asset.baseUrl.startsWith("file:")) return null;
+  return fileURLToPath(new URL(asset.path, asset.baseUrl));
+};
+
+const isInside = (root: string, path: string) => {
+  const rel = relative(root, path);
+  return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
+};
+
+const validateAppearancePackageAsset = (
+  check: ExtensionsCheckResponse,
+  asset: unknown,
+  input: { code: string; extensionId: string; message: string; sourcePath: string },
+) => {
+  validatePackageAsset(check, asset, input);
+  if (!isRecord(asset) || asset.kind !== "package-asset" || typeof asset.path !== "string") return false;
+  if (asset.path.includes("\0") || isAbsolute(asset.path)) {
+    addDiagnostic(check, {
+      code: input.code,
+      extensionId: input.extensionId,
+      message: `${input.message} must be a relative package asset path`,
+      severity: "error",
+      sourcePath: input.sourcePath,
+    });
+    return false;
+  }
+  if (typeof asset.baseUrl !== "string" || !asset.baseUrl.startsWith("file:")) return true;
+
+  const declaredBasePath = fileURLToPath(new URL(asset.baseUrl));
+  const baseDir = dirname(declaredBasePath);
+  const resolvedAssetPath = resolve(baseDir, ...asset.path.split(/[\\/]+/));
+
+  if (isInside(baseDir, resolvedAssetPath)) return true;
+
+  addDiagnostic(check, {
+    code: input.code,
+    extensionId: input.extensionId,
+    message: `${input.message} must stay under the extension asset root`,
+    severity: "error",
+    sourcePath: input.sourcePath,
+  });
+  return false;
+};
+
+const readJsoncAsset = (
+  check: ExtensionsCheckResponse,
+  loaded: LoadedExtension,
+  sourcePath: string,
+  asset: unknown,
+  code: string,
+) => {
+  const path = assetPath(asset);
+  if (!path || !existsSync(path)) return {};
+
+  try {
+    const parsed = JSON.parse(stripTrailingCommas(stripJsonComments(readFileSync(path, "utf8")))) as unknown;
+    return isRecord(parsed) ? parsed : {};
+  } catch (error) {
+    addDiagnostic(check, {
+      code,
+      extensionId: loaded.metadata.id,
+      message: `Appearance asset could not be parsed: ${error instanceof Error ? error.message : String(error)}`,
+      severity: "error",
+      sourcePath,
+    });
+    return {};
+  }
+};
+
+const createThemeTokens = (theme: Record<string, unknown>) => {
+  const tokens: Record<string, string> = {};
+  const colors = isRecord(theme.colors) ? theme.colors : {};
+
+  for (const [vsCodeToken, tokenPaths] of Object.entries(themeTokenMap)) {
+    const value = colors[vsCodeToken];
+    if (typeof value !== "string") continue;
+    for (const tokenPath of tokenPaths) tokens[tokenPath] = value;
+  }
+
+  return tokens;
+};
+
+const inferThemeMode = (theme: Record<string, unknown>, fallback: unknown) => {
+  if (fallback === "light" || fallback === "dark") return fallback;
+  const colors = isRecord(theme.colors) ? theme.colors : {};
+  const background = typeof colors["editor.background"] === "string" ? colors["editor.background"] : "";
+  return background.toLowerCase() < "#808080" ? "dark" : "light";
+};
+
+const stripHash = (value: string) => value.replace(/^#/, "");
+
+const createMonacoRules = (theme: Record<string, unknown>) => {
+  if (!Array.isArray(theme.tokenColors)) return [];
+
+  return theme.tokenColors.flatMap((tokenColor) => {
+    if (!isRecord(tokenColor) || !isRecord(tokenColor.settings)) return [];
+    const settings = tokenColor.settings;
+    const scopes = Array.isArray(tokenColor.scope)
+      ? tokenColor.scope.filter((scope): scope is string => typeof scope === "string")
+      : typeof tokenColor.scope === "string"
+        ? [tokenColor.scope]
+        : [];
+    return scopes.map((scope) => ({
+      token: scope,
+      ...(typeof settings.foreground === "string" ? { foreground: stripHash(settings.foreground) } : {}),
+      ...(typeof settings.fontStyle === "string" ? { fontStyle: settings.fontStyle } : {}),
+    }));
+  });
+};
+
+const collectThemes = (check: ExtensionsCheckResponse, loaded: LoadedExtension, sourcePath: string) => {
+  const themes = loaded.definition.themes;
+  if (!isRecord(themes)) return;
+
+  for (const [key, theme] of Object.entries(themes)) {
+    if (!isRecord(theme) || typeof theme.title !== "string") continue;
+    if (theme.format !== "vscode-color-theme") {
+      addDiagnostic(check, {
+        code: "unsupported_theme_format",
+        extensionId: loaded.metadata.id,
+        message: `Theme ${key} uses unsupported format ${String(theme.format)}`,
+        severity: "error",
+        sourcePath,
+      });
+      continue;
+    }
+    const validAsset = validateAppearancePackageAsset(check, theme.source, {
+      code: "theme_source_invalid",
+      extensionId: loaded.metadata.id,
+      message: `theme ${key} source`,
+      sourcePath,
+    });
+    if (!validAsset) continue;
+    const parsed = readJsoncAsset(check, loaded, sourcePath, theme.source, "malformed_theme_asset");
+    const mode = inferThemeMode(parsed, theme.mode);
+    const colors = isRecord(parsed.colors) ? (parsed.colors as Record<string, string>) : {};
+    check.themes.push({
+      id: `${loaded.metadata.namespace}.${key}`,
+      extensionId: loaded.metadata.id,
+      namespace: loaded.metadata.namespace,
+      title: theme.title,
+      ...(typeof theme.description === "string" ? { description: theme.description } : {}),
+      format: "vscode-color-theme",
+      mode,
+      source: theme.source as never,
+      tokens: createThemeTokens(parsed),
+      monacoTheme: {
+        base: mode === "dark" ? "vs-dark" : "vs",
+        inherit: true,
+        rules: createMonacoRules(parsed),
+        colors,
+      },
+    });
+  }
+};
+
+const safeRelativeAsset = (path: string) => {
+  const normalized = normalize(path);
+  return !path.includes("\0") && !isAbsolute(path) && normalized !== ".." && !normalized.startsWith(`..${"/"}`);
+};
+
+const validateIconThemeFonts = (
+  check: ExtensionsCheckResponse,
+  loaded: LoadedExtension,
+  sourcePath: string,
+  themeAsset: unknown,
+  iconTheme: Record<string, unknown>,
+) => {
+  const root = assetPath(themeAsset);
+  if (!root || !Array.isArray(iconTheme.fonts)) return;
+  for (const font of iconTheme.fonts) {
+    if (!isRecord(font) || !Array.isArray(font.src)) continue;
+    for (const src of font.src) {
+      if (!isRecord(src) || typeof src.path !== "string") continue;
+      if (safeRelativeAsset(src.path) && existsSync(resolve(dirname(root), src.path))) continue;
+      addDiagnostic(check, {
+        code: "invalid_file_icon_theme_font_asset",
+        extensionId: loaded.metadata.id,
+        message: `File icon theme font asset is unavailable: ${src.path}`,
+        severity: "error",
+        sourcePath,
+      });
+    }
+  }
+};
+
+const collectFileIconThemes = (check: ExtensionsCheckResponse, loaded: LoadedExtension, sourcePath: string) => {
+  const iconThemes = loaded.definition.fileIconThemes;
+  if (!isRecord(iconThemes)) return;
+
+  for (const [key, iconTheme] of Object.entries(iconThemes)) {
+    if (!isRecord(iconTheme) || typeof iconTheme.title !== "string") {
+      continue;
+    }
+    if (iconTheme.format !== "vscode-file-icon-theme") {
+      addDiagnostic(check, {
+        code: "unsupported_file_icon_theme_format",
+        extensionId: loaded.metadata.id,
+        message: `File icon theme ${key} uses unsupported format ${String(iconTheme.format)}`,
+        severity: "error",
+        sourcePath,
+      });
+      continue;
+    }
+    const validAsset = validateAppearancePackageAsset(check, iconTheme.source, {
+      code: "file_icon_theme_source_invalid",
+      extensionId: loaded.metadata.id,
+      message: `file icon theme ${key} source`,
+      sourcePath,
+    });
+    if (!validAsset) continue;
+    const parsed = readJsoncAsset(check, loaded, sourcePath, iconTheme.source, "malformed_file_icon_theme_asset");
+    validateIconThemeFonts(check, loaded, sourcePath, iconTheme.source, parsed);
+    check.fileIconThemes.push({
+      id: `${loaded.metadata.namespace}.${key}`,
+      extensionId: loaded.metadata.id,
+      namespace: loaded.metadata.namespace,
+      title: iconTheme.title,
+      ...(typeof iconTheme.description === "string" ? { description: iconTheme.description } : {}),
+      format: "vscode-file-icon-theme",
+      source: iconTheme.source as never,
+      definitions: isRecord(parsed.iconDefinitions) ? parsed.iconDefinitions : {},
+      fileExtensions: isRecord(parsed.fileExtensions) ? (parsed.fileExtensions as Record<string, string>) : {},
+      fileNames: isRecord(parsed.fileNames) ? (parsed.fileNames as Record<string, string>) : {},
+    });
+  }
 };
 
 const webviewContributionMaps = [

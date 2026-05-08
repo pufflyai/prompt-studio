@@ -1,7 +1,26 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { commandEvent, commandRef, defineExtension, packageAsset, projectSlots } from "@pstdio/sdk/extensions";
 import type { LoadedExtensionSource } from "../loader";
 import { normalizeExtensionSources } from "./index";
+
+const tempDirs: string[] = [];
+
+const createAssetExtensionRoot = () => {
+  const dir = mkdtempSync(join(tmpdir(), "pstdio-appearance-"));
+  tempDirs.push(dir);
+  const entrypoint = join(dir, "extension.ts");
+  writeFileSync(entrypoint, "export default {};\n");
+  return { dir, entrypoint, baseUrl: pathToFileURL(entrypoint).href };
+};
+
+afterEach(() => {
+  for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
+  tempDirs.length = 0;
+});
 
 const wrap = (definition: ReturnType<typeof defineExtension>): LoadedExtensionSource => ({
   sourcePath: `/fake/${definition.namespace}/extension.ts`,
@@ -217,6 +236,148 @@ describe("normalizeExtensionSources diagnostics", () => {
     expect(runtime.templateTypes).toHaveLength(1);
     expect(runtime.templates).toHaveLength(1);
     expect(runtime.skills).toHaveLength(1);
+  });
+
+  test("collects theme and file icon theme contributions with package assets", () => {
+    const root = createAssetExtensionRoot();
+    writeFileSync(
+      join(root.dir, "monokai.json"),
+      `{
+        // VS Code themes are JSONC and commonly include trailing commas.
+        "colors": { "editor.background": "#272822", "editor.foreground": "#f8f8f2", },
+        "tokenColors": [{ "scope": "comment", "settings": { "foreground": "#75715e", "fontStyle": "italic", }, },],
+      }`,
+    );
+    writeFileSync(join(root.dir, "seti.json"), `{ "iconDefinitions": {}, "fileExtensions": {}, }`);
+
+    const lab = defineExtension({
+      id: "pstdio.extension-lab",
+      namespace: "lab",
+      name: "Lab",
+      apiVersion: "1",
+      themes: {
+        monokai: {
+          title: "Monokai",
+          format: "vscode-color-theme",
+          mode: "dark",
+          source: packageAsset("./monokai.json", root.baseUrl),
+        },
+      },
+      fileIconThemes: {
+        seti: {
+          title: "Seti",
+          format: "vscode-file-icon-theme",
+          source: packageAsset("./seti.json", root.baseUrl),
+        },
+      },
+    });
+
+    const runtime = normalizeExtensionSources([{ sourcePath: root.entrypoint, sourceKind: "local", definition: lab }]);
+
+    expect(runtime.diagnostics).toEqual([]);
+    expect(runtime.themes[0]).toMatchObject({
+      id: "lab.monokai",
+      title: "Monokai",
+      format: "vscode-color-theme",
+      mode: "dark",
+      preference: {
+        id: "lab.monokai",
+        mode: "dark",
+        tokens: {
+          "colors.bg": "#272822",
+          "colors.fg": "#f8f8f2",
+        },
+      },
+      monacoTheme: {
+        base: "vs-dark",
+        rules: [{ token: "comment", foreground: "75715e", fontStyle: "italic" }],
+      },
+    });
+    expect(runtime.fileIconThemes[0]).toMatchObject({
+      id: "lab.seti",
+      title: "Seti",
+      format: "vscode-file-icon-theme",
+    });
+  });
+
+  test("reports malformed appearance assets without dropping records", () => {
+    const root = createAssetExtensionRoot();
+    writeFileSync(join(root.dir, "broken.json"), "{ nope");
+
+    const lab = defineExtension({
+      id: "pstdio.extension-lab",
+      namespace: "lab",
+      name: "Lab",
+      apiVersion: "1",
+      themes: {
+        broken: {
+          title: "Broken",
+          format: "vscode-color-theme",
+          source: packageAsset("./broken.json", root.baseUrl),
+        },
+      },
+    });
+
+    const runtime = normalizeExtensionSources([{ sourcePath: root.entrypoint, sourceKind: "local", definition: lab }]);
+
+    expect(runtime.themes).toHaveLength(1);
+    expect(runtime.diagnostics.map((d) => d.code)).toContain("malformed_theme_asset");
+  });
+
+  test("rejects duplicate appearance contribution ids", () => {
+    const root = createAssetExtensionRoot();
+    writeFileSync(join(root.dir, "theme.json"), JSON.stringify({ colors: {} }));
+    writeFileSync(join(root.dir, "icons.json"), JSON.stringify({ iconDefinitions: {} }));
+    const first = defineExtension({
+      id: "pstdio.first",
+      namespace: "dup",
+      name: "First",
+      apiVersion: "1",
+      themes: {
+        monokai: {
+          title: "Monokai",
+          format: "vscode-color-theme",
+          source: packageAsset("./theme.json", root.baseUrl),
+        },
+      },
+      fileIconThemes: {
+        seti: {
+          title: "Seti",
+          format: "vscode-file-icon-theme",
+          source: packageAsset("./icons.json", root.baseUrl),
+        },
+      },
+    });
+    const second = defineExtension({
+      id: "pstdio.second",
+      namespace: "dup",
+      name: "Second",
+      apiVersion: "1",
+      themes: {
+        monokai: {
+          title: "Monokai Again",
+          format: "vscode-color-theme",
+          source: packageAsset("./theme.json", root.baseUrl),
+        },
+      },
+      fileIconThemes: {
+        seti: {
+          title: "Seti Again",
+          format: "vscode-file-icon-theme",
+          source: packageAsset("./icons.json", root.baseUrl),
+        },
+      },
+    });
+
+    const runtime = normalizeExtensionSources([
+      { sourcePath: root.entrypoint, sourceKind: "local", definition: first },
+      { sourcePath: root.entrypoint, sourceKind: "local", definition: second },
+    ]);
+
+    expect(runtime.themes.map((theme) => theme.id)).toEqual(["dup.monokai"]);
+    expect(runtime.fileIconThemes.map((theme) => theme.id)).toEqual(["dup.seti"]);
+    expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain("duplicate_theme_id");
+    expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain("duplicate_file_icon_theme_id");
   });
 
   test("emits missing_template_asset and missing_skill_asset diagnostics for unresolved assets", () => {

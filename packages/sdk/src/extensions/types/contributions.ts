@@ -98,3 +98,20 @@ export interface SkillContribution {
   source: PackageAssetDescriptor;
   description?: string;
 }
+
+export type ThemeMode = "light" | "dark";
+
+export interface ThemeContribution {
+  title: string;
+  source: PackageAssetDescriptor;
+  format: "vscode-color-theme";
+  mode?: ThemeMode;
+  description?: string;
+}
+
+export interface FileIconThemeContribution {
+  title: string;
+  source: PackageAssetDescriptor;
+  format: "vscode-file-icon-theme";
+  description?: string;
+}

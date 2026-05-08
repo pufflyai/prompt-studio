@@ -142,6 +142,16 @@ const formatExtensionSection = (ext: NormalizedExtension, runtime: ExtensionRunt
       items: runtime.skills.filter((s) => s.extensionId === ext.id),
       renderItem: (s) => [`    ${s.id}`],
     }),
+    ...renderSubsection({
+      title: "Themes",
+      items: runtime.themes.filter((t) => t.extensionId === ext.id),
+      renderItem: (t) => [`    ${t.id} (${t.format}, ${t.mode})`],
+    }),
+    ...renderSubsection({
+      title: "File icon themes",
+      items: runtime.fileIconThemes.filter((t) => t.extensionId === ext.id),
+      renderItem: (t) => [`    ${t.id} (${t.format})`],
+    }),
   ];
 
   return [...header, ...subsections];

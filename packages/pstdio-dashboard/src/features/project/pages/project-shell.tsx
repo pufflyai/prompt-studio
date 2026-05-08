@@ -1,5 +1,5 @@
 import { Flex, Text } from "@chakra-ui/react";
-import { EmptyState, ResizableSplitLayout } from "@pstdio/ui";
+import { EmptyState, ResizableSplitLayout, ThemePreferenceProvider, useThemePreference } from "@pstdio/ui";
 import { Outlet, useParams, useRouterState } from "@tanstack/react-router";
 import { useLayoutEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -8,6 +8,8 @@ import { SessionBubbleContainer } from "@/features/sessions/components/session-b
 import { isSessionsRoutePath } from "@/features/sessions/utils/sessions-route";
 import { ShortcutProvider } from "@/features/shortcuts/shortcut-provider";
 import { ProjectSettingsProvider, useProjectSettingsStore } from "@/shared/stores/project-settings";
+import { mergeDashboardThemePreferences } from "../../../theme-preferences";
+import { useExtensionAppearanceThemePreferences } from "../../extensions/use-extension-appearance";
 import { useProject } from "../hooks/use-project";
 
 const ProjectShellContent = () => {
@@ -73,12 +75,17 @@ const ProjectShellContent = () => {
 
 export const ProjectShell = () => {
   const { projectId } = useParams({ strict: false });
+  const { themePreference } = useThemePreference();
+  const extensionThemePreferences = useExtensionAppearanceThemePreferences(projectId);
+  const themePreferences = mergeDashboardThemePreferences(extensionThemePreferences);
 
   return (
-    <ProjectSettingsProvider projectId={projectId}>
-      <ShortcutProvider>
-        <ProjectShellContent />
-      </ShortcutProvider>
-    </ProjectSettingsProvider>
+    <ThemePreferenceProvider initialPreference={themePreference} themePreferences={themePreferences}>
+      <ProjectSettingsProvider projectId={projectId}>
+        <ShortcutProvider>
+          <ProjectShellContent />
+        </ShortcutProvider>
+      </ProjectSettingsProvider>
+    </ThemePreferenceProvider>
   );
 };
