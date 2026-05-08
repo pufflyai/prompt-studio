@@ -11,6 +11,7 @@ export const extensionDiagnosticSchema = z.object({
   extensionId: z.string().optional(),
   commandId: z.string().optional(),
   sourcePath: z.string().optional(),
+  metadata: jsonObjectSchema.optional(),
 });
 
 export const extensionRecordSchema = z.object({
@@ -28,6 +29,8 @@ export const extensionCommandRecordSchema = z.object({
   title: z.string(),
   description: z.string().optional(),
   cliPath: z.string().optional(),
+  examples: z.array(z.string()).optional(),
+  params: z.record(z.string(), z.object({ type: z.string() }).catchall(z.unknown())).optional(),
 });
 
 export const extensionMiddlewareRecordSchema = z.object({
@@ -166,6 +169,37 @@ export type ExtensionNavigationRecord = z.infer<typeof extensionNavigationRecord
 export type ExtensionSettingsPanelRecord = z.infer<typeof extensionSettingsPanelRecordSchema>;
 export type ExtensionsCheckResponse = z.infer<typeof extensionsCheckResponseSchema>;
 
+export const listExtensionCommandsResponseSchema = z.object({
+  commands: z.array(extensionCommandRecordSchema),
+  diagnostics: z.array(extensionDiagnosticSchema),
+});
+
+export type ListExtensionCommandsResponse = z.infer<typeof listExtensionCommandsResponseSchema>;
+
+export const enableInstalledExtensionRequestSchema = z.object({
+  displayName: z.string(),
+  extensionId: z.string(),
+  manifest: jsonObjectSchema,
+  namespace: z.string(),
+  sourceHash: z.string().nullable().optional(),
+  sourceKind: z.enum(["local_path", "git", "registry", "builtin"]),
+  sourcePath: z.string(),
+  sourceRef: z.string().nullable().optional(),
+  version: z.string().nullable().optional(),
+});
+
+export const enableInstalledExtensionResponseSchema = z.object({
+  enabled: z.literal(true),
+  installName: z.string(),
+  installedExtensionId: z.string(),
+  instanceId: z.string(),
+  namespace: z.string(),
+  projectId: z.string(),
+});
+
+export type EnableInstalledExtensionRequest = z.infer<typeof enableInstalledExtensionRequestSchema>;
+export type EnableInstalledExtensionResponse = z.infer<typeof enableInstalledExtensionResponseSchema>;
+
 export const extensionResourceRefSchema = z.object({
   type: z.string(),
   id: z.string(),
@@ -201,6 +235,15 @@ export const commandSourceSchema = z.enum([
 
 export const commandExecuteRequestSchema = z.object({
   projectId: z.string().min(1),
+  params: jsonObjectSchema.optional(),
+  resource: extensionResourceRefSchema.optional(),
+  slot: extensionSlotInvocationSchema.optional(),
+  repo: extensionRepoContextSchema.optional(),
+  source: commandSourceSchema.optional(),
+  metadata: jsonObjectSchema.optional(),
+});
+
+export const commandExecuteBodySchema = z.object({
   params: jsonObjectSchema.optional(),
   resource: extensionResourceRefSchema.optional(),
   slot: extensionSlotInvocationSchema.optional(),
@@ -264,5 +307,6 @@ export const setupProjectExtensionResponseSchema = z.object({
 });
 
 export type CommandExecuteRequest = z.infer<typeof commandExecuteRequestSchema>;
+export type CommandExecuteBody = z.infer<typeof commandExecuteBodySchema>;
 export type CommandExecuteResponse = z.infer<typeof commandExecuteResponseSchema>;
 export type SetupProjectExtensionResponse = z.infer<typeof setupProjectExtensionResponseSchema>;

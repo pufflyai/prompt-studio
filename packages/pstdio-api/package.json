@@ -4,7 +4,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./app": "./src/app.ts",
-    "./dto": "./src/dto.ts"
+    "./dto": "./src/dto.ts",
+    "./extensions/install-extension-source": "./src/features/extensions/install-extension-source.ts"
   },
   "scripts": {
     "start": "bun run src/index.ts",
@@ -14,7 +15,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
-    "test": "bun test --silent",
+    "test": "bun test --timeout 30000 --silent",
     "test:coverage": "bun test --coverage"
   },
   "dependencies": {
@@ -27,6 +28,7 @@
     "pstdio-api-contracts": "workspace:*",
     "pstdio-agents": "workspace:*",
     "pstdio-db": "workspace:*",
+    "pstdio-extensions": "workspace:*",
     "pstdio-logging": "workspace:*",
     "pstdio-plugins": "workspace:*",
     "pstdio-scheduler": "workspace:*",

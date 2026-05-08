@@ -407,6 +407,12 @@ All packages share the same version. Platform packages publish before the wrappe
 
 This closes the gap where binary presence was verified but core packaged behavior was not.
 
+It also validates the packaged extension toolchain path. After all configured platform package binaries are checked for presence, the verifier runs the current host's compiled `pstdio` binary with `BUN_BE_BUN=1` and an isolated `BUN_INSTALL_CACHE_DIR` against a temporary extension fixture. The smoke runs both `install --ignore-scripts` and `build <entry> --target=browser --format=esm --outfile <file>` through the compiled binary itself, not through `bun` from `PATH` or a separate Bun sidecar.
+
+Packaged extension install/build/watch can use `process.execPath` with `BUN_BE_BUN=1` and a Prompt Studio controlled cache directory. The verifier executes the host-compatible compiled binary by default, or the package named by `PSTDIO_VERIFY_PLATFORM_PKG` for musl or other explicit target jobs. Release CI must run this script in the platform matrix for each supported target that needs runtime coverage; cross-compiled binaries for other OS/arch targets are presence-checked but not executed on incompatible hosts.
+
+Current release CI runs runtime `BUN_BE_BUN` smoke coverage for `cli-linux-x64`, `cli-linux-x64-musl`, `cli-darwin-x64`, and `cli-win-x64`. Arm64 Linux, Darwin, and Windows package binaries are built and presence-checked in the verifier; they need dedicated hosted runners before they can receive the same runtime smoke coverage in CI.
+
 ---
 
 ## 12) Migration path

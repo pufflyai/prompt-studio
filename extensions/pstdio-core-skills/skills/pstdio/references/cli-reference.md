@@ -134,10 +134,12 @@ Colors: gray, red, orange, amber, yellow, lime, green, teal, cyan, blue, indigo,
 ## Server and Dashboard
 
 ```bash
-pstdio serve [--port <n>]                            # Start API server (default: 19840)
+pstdio serve [--port <n>] [--host <host>]            # Start API server (default: 19840 on localhost)
 pstdio close                                         # Stop background API
 pstdio [--api-port <n>] [--dashboard-port <n>]       # Launch dashboard + open browser
 ```
+
+Use `pstdio serve --host 0.0.0.0` to expose the API and dashboard to other devices on a trusted LAN. `pstdio serve` has no authentication; do not bind it to untrusted networks.
 
 ## Troubleshooting
 

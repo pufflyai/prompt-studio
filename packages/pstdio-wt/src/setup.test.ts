@@ -1,21 +1,24 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdtemp, realpath, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { runSetup, runSetupScript } from "./setup";
-import { createTempRepo } from "./test-helpers";
 
-let repo: Awaited<ReturnType<typeof createTempRepo>>;
+let worktreePath: string;
 
 beforeEach(async () => {
-  repo = await createTempRepo();
+  worktreePath = await realpath(await mkdtemp(join(tmpdir(), "pstdio-wt-setup-test-")));
+  await Bun.write(join(worktreePath, "README.md"), "# test repo\n");
 });
 
 afterEach(async () => {
-  await repo.cleanup();
+  await rm(worktreePath, { recursive: true, force: true });
 });
 
 describe("runSetup", () => {
   test("runs a command and captures output", async () => {
     const result = await runSetup({
-      worktreePath: repo.dir,
+      worktreePath,
       command: ["echo", "hello setup"],
     });
 
@@ -25,7 +28,7 @@ describe("runSetup", () => {
 
   test("captures non-zero exit code", async () => {
     const result = await runSetup({
-      worktreePath: repo.dir,
+      worktreePath,
       command: ["sh", "-c", "exit 42"],
     });
 
@@ -34,18 +37,18 @@ describe("runSetup", () => {
 
   test("sets WORKTREE_PATH env var", async () => {
     const result = await runSetup({
-      worktreePath: repo.dir,
+      worktreePath,
       command: ["sh", "-c", "echo $WORKTREE_PATH"],
     });
 
-    expect(result.stdout.trim()).toBe(repo.dir);
+    expect(result.stdout.trim()).toBe(worktreePath);
   });
 });
 
 describe("runSetupScript", () => {
   test("runs a shell script string", async () => {
     const result = await runSetupScript({
-      worktreePath: repo.dir,
+      worktreePath,
       script: "echo 'from script' && ls README.md",
     });
 

@@ -1,44 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { CodeNode } from "@lexical/code";
-import { $isAutoLinkNode, AutoLinkNode, LinkNode } from "@lexical/link";
-import { $isListItemNode, $isListNode, ListItemNode, ListNode } from "@lexical/list";
-import { $convertFromMarkdownString, $convertToMarkdownString, CHECK_LIST, TRANSFORMERS } from "@lexical/markdown";
-import { HeadingNode, QuoteNode } from "@lexical/rich-text";
-import { $getRoot, $isElementNode, createEditor } from "lexical";
-import { ReferenceLinkNode } from "../../markdown-editor/plugins/ReferenceLinkPlugin";
-import { REFERENCE_LINK_TRANSFORMER } from "../../markdown-editor/plugins/ReferenceLinkPlugin/ReferenceLinkTransformer";
-import { DataTableNode } from "../nodes/DataTableNode";
-import { EquationNode } from "../plugins/EquationPlugin/EquationNode";
-import { EQUATION_INLINE, EQUATION_MULTILINE } from "../plugins/EquationPlugin/EquationPlugin";
-import { HRNode } from "../plugins/HorizontalRulePlugin/HorizontalRuleNode";
-import { TRANSFORMERS_EXTENDED } from "./markdown-transformers";
-
-const editorTransformers = [
-  CHECK_LIST,
-  ...TRANSFORMERS,
-  ...TRANSFORMERS_EXTENDED,
-  EQUATION_INLINE,
-  EQUATION_MULTILINE,
-  REFERENCE_LINK_TRANSFORMER,
-];
-
-function createHeadlessEditor() {
-  return createEditor({
-    nodes: [
-      QuoteNode,
-      LinkNode,
-      AutoLinkNode,
-      DataTableNode,
-      HeadingNode,
-      ListNode,
-      ListItemNode,
-      CodeNode,
-      EquationNode,
-      HRNode,
-      ReferenceLinkNode,
-    ],
-  });
-}
+import { $isAutoLinkNode } from "@lexical/link";
+import { $isListItemNode, $isListNode } from "@lexical/list";
+import { $convertFromMarkdownString, $convertToMarkdownString } from "@lexical/markdown";
+import { $getRoot, $isElementNode } from "lexical";
+import { createHeadlessEditor, editorTransformers } from "./markdown-transformers-test-utils";
 
 describe("markdown transformers", () => {
   test("imports bare https links in list items as autolinks", () => {
@@ -89,6 +54,38 @@ describe("markdown transformers", () => {
     });
 
     expect(exportedMarkdown).toBe(markdown);
+  });
+
+  test("round-trips escaped plain text underscores without converting them to emphasis", () => {
+    const editor = createHeadlessEditor();
+    const markdown = "\\_hello\\_ world";
+    let firstExport = "";
+    let secondExport = "";
+
+    editor.update(
+      () => {
+        $convertFromMarkdownString(markdown, editorTransformers, undefined, false);
+      },
+      { discrete: true },
+    );
+
+    editor.read(() => {
+      firstExport = $convertToMarkdownString(editorTransformers, $getRoot());
+    });
+
+    editor.update(
+      () => {
+        $convertFromMarkdownString(firstExport, editorTransformers, undefined, false);
+      },
+      { discrete: true },
+    );
+
+    editor.read(() => {
+      secondExport = $convertToMarkdownString(editorTransformers, $getRoot());
+    });
+
+    expect(firstExport).toBe(markdown);
+    expect(secondExport).toBe(markdown);
   });
 
   test("imports checklist items as check list nodes", () => {

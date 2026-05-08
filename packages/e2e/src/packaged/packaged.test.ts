@@ -85,6 +85,7 @@ describe("packaged pstdio — project lifecycle", () => {
           HOME: fakeHome,
           PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
           PSTDIO_DB_PATH: dbPath,
+          PSTDIO_DEFAULT_EXTENSIONS: "[]",
           PSTDIO_STORAGE_PATH: storageDir,
         },
         stdio: "ignore",
@@ -98,6 +99,7 @@ describe("packaged pstdio — project lifecycle", () => {
           PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
           PSTDIO_API_URL: url,
           PSTDIO_DB_PATH: dbPath,
+          PSTDIO_DEFAULT_EXTENSIONS: "[]",
           PSTDIO_STORAGE_PATH: storageDir,
         });
 
@@ -137,6 +139,7 @@ describe("packaged pstdio — project lifecycle", () => {
           ...process.env,
           HOME: fakeHome,
           PSTDIO_DB_PATH: dbPath,
+          PSTDIO_DEFAULT_EXTENSIONS: "[]",
           PSTDIO_STORAGE_PATH: storageDir,
         },
         stdio: "ignore",

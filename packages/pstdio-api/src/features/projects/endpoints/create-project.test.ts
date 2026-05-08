@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { chmodSync, mkdtempSync, rmSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -34,6 +34,19 @@ const TEMPLATE_FILES = [
 const makeEmbeddedTemplateFile = (fileName: string, content: string) => {
   const blob = new Blob([content], { type: "text/markdown" });
   return Object.assign(blob, { name: `../files/templates/${fileName}` });
+};
+
+const writeExtensionFixture = (dir: string) => {
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(
+    join(dir, "extension.ts"),
+    `export default {
+  id: "pstdio.default-fixture",
+  namespace: "default-fixture",
+  name: "Default Fixture",
+  apiVersion: "1",
+};`,
+  );
 };
 
 beforeAll(async () => {
@@ -132,5 +145,48 @@ describe("POST /v1/projects", () => {
 
     const projects = (await listRes.json()) as { name: string }[];
     expect(projects.some((project) => project.name === projectName)).toBe(false);
+  });
+
+  test("installs configured default extensions only for the first project", async () => {
+    const isolatedRoot = mkdtempSync(join(tmpdir(), "pstdio-api-default-extension-test-"));
+    const sourcePath = join(isolatedRoot, "default-extension");
+    const homePath = join(isolatedRoot, "home");
+    writeExtensionFixture(sourcePath);
+
+    process.env.PSTDIO_HOME = homePath;
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([
+      { source: sourcePath, installName: "default-fixture", skipInstall: true, force: true },
+    ]);
+
+    const handle = await createApp({
+      dbPath: ":memory:",
+      storagePath: join(isolatedRoot, "storage"),
+      filesRoot: "",
+    });
+
+    try {
+      const firstRes = await handle.app.request("/v1/projects", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "First Extension Project" }),
+      });
+      expect(firstRes.status).toBe(201);
+
+      const installedPath = join(homePath, "extensions", "default-fixture");
+      expect(existsSync(join(installedPath, "extension.ts"))).toBe(true);
+
+      writeFileSync(join(installedPath, "user-edit.txt"), "preserve");
+
+      const secondRes = await handle.app.request("/v1/projects", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "Second Extension Project" }),
+      });
+      expect(secondRes.status).toBe(201);
+      expect(existsSync(join(installedPath, "user-edit.txt"))).toBe(true);
+    } finally {
+      await handle.close();
+      rmSync(isolatedRoot, { recursive: true, force: true });
+    }
   });
 });

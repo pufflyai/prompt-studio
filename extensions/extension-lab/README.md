@@ -12,10 +12,10 @@ Sandbox extension that exercises the proposal-stage `defineExtension` API end-to
 The lab lives in this repo, so you can install it as a local source instead of going through the catalog.
 
 ```bash
-pstdio add ./extensions/extension-lab
+pstdio extensions add ./extensions/extension-lab
 ```
 
-`pstdio add` copies the source into `~/.pstdio/extensions/extension-lab` (override with `PSTDIO_HOME`), registers it as a local source, and enables it for the current project if you are inside one.
+`pstdio extensions add` copies the source into `~/.pstdio/extensions/extension-lab` (override with `PSTDIO_HOME`), registers it as a local source, and enables it for the current project if you are inside one.
 
 Verify and inspect:
 

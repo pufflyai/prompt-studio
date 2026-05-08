@@ -2,13 +2,15 @@ import { type Collection, createCollection } from "@tanstack/react-db";
 
 export { eq, useLiveQuery } from "@tanstack/react-db";
 
-const SYNCED_TABLES = [
+export const SYNCED_TABLES = [
   "projects",
   "repos",
   "project_repos",
   "agent_configs",
   "ticket_statuses",
   "attempt_statuses",
+  "installed_extension_sources",
+  "extension_instances",
   "tickets",
   "ticket_tags",
   "ticket_tag_options",

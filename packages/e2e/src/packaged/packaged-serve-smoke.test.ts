@@ -8,7 +8,7 @@ import { buildBinary } from "./packaged-helpers";
 const BUILD_TIMEOUT = 180_000;
 const SMOKE_TEST_TIMEOUT = 30_000;
 const REPO_ROOT = join(import.meta.dirname, "../../../..");
-const BINARY_PATH = join(REPO_ROOT, "dist/pstdio");
+const BINARY_PATH = process.env.PSTDIO_PACKAGED_BINARY_PATH ?? join(REPO_ROOT, "dist/pstdio");
 const createCandidatePort = () => 42_000 + Math.floor(Math.random() * 200);
 
 const waitForReady = async (baseUrl: string, timeoutMs = 10_000) => {
@@ -84,9 +84,11 @@ const startPackagedServe = async (tempRoot: string) => {
       cwd: tempRoot,
       env: {
         ...process.env,
+        HOME: tempRoot,
         PORT: String(port),
         PSTDIO_API_PORT: String(port),
         PSTDIO_DB_PATH: dbPath,
+        PSTDIO_DEFAULT_EXTENSIONS: "[]",
         PSTDIO_STORAGE_PATH: storagePath,
         PSTDIO_AGENTS: "fake",
       },
@@ -126,7 +128,9 @@ const stopProcess = async (child: ChildProcess) => {
 };
 
 beforeAll(() => {
-  buildBinary();
+  if (!process.env.PSTDIO_PACKAGED_BINARY_PATH) {
+    buildBinary();
+  }
 }, BUILD_TIMEOUT);
 
 describe("packaged pstdio — self-hosted serve", () => {

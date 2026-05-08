@@ -4,7 +4,7 @@ import { Flex } from "@chakra-ui/react";
 import { CodeHighlightNode, CodeNode } from "@lexical/code";
 import { AutoLinkNode, LinkNode } from "@lexical/link";
 import { ListItemNode, ListNode } from "@lexical/list";
-import { $convertFromMarkdownString, $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
+import { $convertFromMarkdownString, $convertToMarkdownString } from "@lexical/markdown";
 import { ClickableLinkPlugin } from "@lexical/react/LexicalClickableLinkPlugin";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
@@ -17,17 +17,17 @@ import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { $getRoot } from "lexical";
 import { ContentEditable } from "../shared/components/content-editable";
+import { baseEditorTransformers } from "../shared/editor-config";
 import { DataTableNode } from "../shared/nodes/DataTableNode";
 import { ImportCodeBlocksPlugin } from "../shared/plugins/CodePlugin/CodeBlockPlugin";
 import { CodeHighlightingPlugin } from "../shared/plugins/CodePlugin/CodeHighlightingPlugin";
 import { EquationNode } from "../shared/plugins/EquationPlugin/EquationNode";
-import { EQUATION_INLINE, EQUATION_MULTILINE, EquationPlugin } from "../shared/plugins/EquationPlugin/EquationPlugin";
+import { EquationPlugin } from "../shared/plugins/EquationPlugin/EquationPlugin";
 import { HRNode } from "../shared/plugins/HorizontalRulePlugin/HorizontalRuleNode";
 import { MermaidNode } from "../shared/plugins/MermaidPlugin/MermaidNode";
 import StateUpdatePlugin from "../shared/plugins/StateUpdatePlugin";
 import ToggleEditablePlugin from "../shared/plugins/ToggleEditablePlugin";
 import { TreeViewPlugin } from "../shared/plugins/TreeViewPlugin/TreeViewPlugin";
-import { TRANSFORMERS_EXTENDED } from "../shared/transformers/markdown-transformers";
 import theme from "../theme/rich-text-theme";
 import { normalizeMarkdownListIndentation, splitFrontmatter } from "../utils/markdown";
 import { REFERENCE_LINK_TRANSFORMER, ReferenceLinkNode } from "./plugins/ReferenceLinkPlugin";
@@ -40,13 +40,7 @@ export interface RichMessageProps {
   onChange?: (value: string) => void;
 }
 
-const transformers = [
-  ...TRANSFORMERS,
-  ...TRANSFORMERS_EXTENDED,
-  EQUATION_INLINE,
-  EQUATION_MULTILINE,
-  REFERENCE_LINK_TRANSFORMER,
-];
+const transformers = [...baseEditorTransformers, REFERENCE_LINK_TRANSFORMER];
 
 export function RichMessage(props: RichMessageProps) {
   const { debug = false, defaultState = "", fullWidth = false, isEditable = false, onChange } = props;

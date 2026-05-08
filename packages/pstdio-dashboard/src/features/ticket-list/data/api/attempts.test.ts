@@ -27,10 +27,7 @@ describe("getTicketAttemptDiff", () => {
     await getTicketAttemptDiff("ws-1", ATTEMPT_DIFF_MODE);
 
     expect(ATTEMPT_DIFF_MODE).toBe("fork_point");
-    expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:19840/v1/workspaces/ws-1/diff?mode=fork_point",
-      expect.any(Object),
-    );
+    expect(fetchMock).toHaveBeenCalledWith("/v1/workspaces/ws-1/diff?mode=fork_point", expect.any(Object));
   });
 });
 
@@ -66,7 +63,7 @@ describe("createTicketAttempt", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:19840/v1/tickets/ticket-1/attempts",
+      "/v1/tickets/ticket-1/attempts",
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({ mode: "worktree", start_session: false }),

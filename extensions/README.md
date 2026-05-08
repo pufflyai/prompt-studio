@@ -14,11 +14,12 @@ pstdio extensions add ./extensions/extension-lab
 
 This:
 
-1. Copies the source to `<install-root>/extension-lab/`, skipping `node_modules`, `.git`, `dist`, `build`, `.turbo`, `.next`, `coverage`, and common cache dirs.
-2. Runs the package manager (`npm` by default; `bun` if a `bun.lock`/`bun.lockb` exists or `packageManager` says so) when a `package.json` is present.
+1. Copies the source to `<install-root>/extension-lab/`, skipping `node_modules`, `.git`, `dist`, `.turbo`, `.next`.
+2. Runs a package manager (`bun`, `yarn`, or `npm`) inside the installed folder when a `package.json` is present (skip with `--skip-install`). Selection: prefer the PM the extension declares (`packageManager` field, then lockfile: `bun.lock`/`bun.lockb` → bun, `yarn.lock` → yarn, otherwise npm); if that PM is not on the user's `PATH`, fall back to the first of `bun`, `yarn`, `npm` that is. If none are installed, fail with a clear message (or skip with `--skip-install`).
 3. Loads the installed copy through the v2 runtime to validate the default export and report diagnostics.
+4. Auto-enables the extension for the current project (when run inside one).
 
-### From the Prompt Studio repo (published catalog)
+### From the Prompt Studio repo
 
 ```bash
 pstdio extensions add <name>
@@ -28,13 +29,11 @@ Resolves to `https://github.com/pufflyai/prompt-studio` at `extensions/<name>` a
 
 ### Flags
 
-| Flag                    | Effect                                          |
-| ----------------------- | ----------------------------------------------- |
-| `--name <install-name>` | Override the install folder name.               |
-| `--force`               | Replace an existing install at the target path. |
-| `--ref <git-ref>`       | Repo ref for named installs (default `main`).   |
-| `--install=<npm\|bun>`  | Force a specific package manager.               |
-| `--skip-install`        | Skip the dependency-install step.               |
+| Flag                    | Effect                                                                  |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `--name <install-name>` | Override the install folder name.                                       |
+| `--force`               | Replace an existing install at the target path.                         |
+| `--skip-install`        | Skip the dependency-install step inside the installed extension folder. |
 
 After install, verify with:
 
@@ -64,18 +63,41 @@ bun run dev
 
 ### Default core extensions
 
-`pstdio-core-skills` and `pstdio-core-templates` are default extensions and are auto-installed into the user's extensions root the first time a project is created. The API uses the same primitive as `pstdio extensions add`:
+The API auto-installs a configured list of default extensions into the user's extensions root the first time a project is created, using the same primitive as `pstdio extensions add`. Each entry is either a named extension (resolved from the Prompt Studio repo) or a local folder path — the latter is useful in dev to install from the in-monorepo `extensions/<name>` folder instead of fetching from GitHub. Default list:
+
+- `pstdio-core-skills`
+- `pstdio-core-templates`
 
 Subsequent project creates skip the install step, so user edits under `~/.pstdio-dev/extensions/pstdio-core-*/` survive across restarts.
 
-Finish the per-extension SDK link manually after the first project create:
+The config shape (lives in `pstdio-api`):
 
-```bash
-cd ~/.pstdio-dev/extensions/pstdio-core-skills
-npm link @pstdio/sdk
+```ts
+type DefaultExtensionEntry =
+  | string
+  | {
+      source: string;          // named extension OR local folder path
+      installName?: string;    // override install folder name (== --name)
+      skipInstall?: boolean;   // skip bun install (== --skip-install)
+      force?: boolean;         // replace existing install (== --force)
+    };
 
-cd ~/.pstdio-dev/extensions/pstdio-core-templates
-npm link @pstdio/sdk
+type DefaultExtensionsConfig = {
+  defaultExtensions: DefaultExtensionEntry[];
+};
+```
+
+Resolution rule (same as the CLI): if `source` starts with `./`, `../`, `/`, or `~/` it is a local path; otherwise it is a named extension resolved against `https://github.com/pufflyai/prompt-studio` at `extensions/<name>`.
+
+Override the config by setting `PSTDIO_DEFAULT_EXTENSIONS` (JSON) — `bun run pstdio:local:add-dev` uses this to install from the monorepo:
+
+```ts
+{
+  defaultExtensions: [
+    { source: "./extensions/pstdio-core-skills",    skipInstall: true },
+    { source: "./extensions/pstdio-core-templates", skipInstall: true },
+  ],
+}
 ```
 
 ### Installing an extension into the dev environment
@@ -88,7 +110,7 @@ Because `pstdio:local:add-dev` exports `PSTDIO_HOME=~/.pstdio-dev`, this lands a
 
 ### Workspace SDK link (until the next `@pstdio/sdk` is published)
 
-`extension-lab` and other first-party extensions depend on `@pstdio/sdk@^<latest>`. Until that version is published to npm, `npm install` inside the install dir cannot resolve it; the install will fail at the dep step but **the source is preserved**. Finish setup with:
+`extension-lab` and other first-party extensions depend on `@pstdio/sdk@^<latest>`. Until that version is published to npm, the installed extension cannot resolve it from the npm registry. Finish setup with:
 
 ```bash
 cd ~/.pstdio-dev/extensions/extension-lab

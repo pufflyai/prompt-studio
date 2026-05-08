@@ -22,8 +22,8 @@ export const getFreePort = () =>
   });
 
 export const waitForReady = async (url: string, timeoutMs = SETUP_TIMEOUT) => {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
+  const deadline = performance.now() + timeoutMs;
+  while (performance.now() < deadline) {
     try {
       const res = await fetch(`${url}/healthz`);
       if (res.ok) return;
@@ -59,6 +59,7 @@ export const startApi = async (options: StartApiOptions = {}): Promise<ApiInstan
       ...process.env,
       PORT: String(port),
       PSTDIO_DB_PATH: ":memory:",
+      PSTDIO_DEFAULT_EXTENSIONS: "[]",
       PSTDIO_EVENT_BUS_BUFFER_SIZE:
         options.eventBusBufferSize !== undefined ? String(options.eventBusBufferSize) : undefined,
       PSTDIO_STORAGE_PATH: storagePath,

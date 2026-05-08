@@ -10,8 +10,6 @@ const PLATFORM_PACKAGES = [
   "@pstdio/cli-darwin-x64",
   "@pstdio/cli-linux-x64",
   "@pstdio/cli-linux-arm64",
-  "@pstdio/cli-linux-x64-musl",
-  "@pstdio/cli-linux-arm64-musl",
   "@pstdio/cli-win-x64",
   "@pstdio/cli-win-arm64",
 ];

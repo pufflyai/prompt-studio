@@ -7,6 +7,7 @@ import { getFreePort, waitForReady } from "./start-api";
 import { TEST_TIMEOUT } from "./timeouts";
 
 const PSTDIO_CLI = join(import.meta.dirname, "../../../pstdio/src/index.ts");
+const SHARED_PSTDIO_HOME = mkdtempSync(join(tmpdir(), "pstdio-e2e-serve-home-"));
 
 const startServe = async (port: number, storagePath: string) => {
   const child = spawn("bun", ["run", PSTDIO_CLI, "serve", "--port", String(port)], {
@@ -15,6 +16,8 @@ const startServe = async (port: number, storagePath: string) => {
       ...process.env,
       PSTDIO_DISABLE_EMBED_MANIFEST: "1",
       PSTDIO_DB_PATH: ":memory:",
+      PSTDIO_DEFAULT_EXTENSIONS: "[]",
+      PSTDIO_HOME: SHARED_PSTDIO_HOME,
       PSTDIO_STORAGE_PATH: storagePath,
     },
     stdio: "pipe",

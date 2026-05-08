@@ -1,6 +1,13 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import type { DbClient } from "pstdio-db";
-import { createAgentConfigsDBService, createDb, createProjectsDBService, createStatusesDBService } from "pstdio-db";
+import {
+  createAgentConfigsDBService,
+  createDb,
+  createExtensionInstancesDBService,
+  createInstalledExtensionSourcesDBService,
+  createProjectsDBService,
+  createStatusesDBService,
+} from "pstdio-db";
 import { getFullState, SYNCED_TABLES } from "./get-full-state";
 
 let close: () => Promise<void>;
@@ -57,6 +64,35 @@ describe("getFullState", () => {
 
     expect(state.agent_configs).toHaveLength(1);
     expect((state.agent_configs[0] as Record<string, unknown>).agent_id).toBe("claude-code");
+  });
+
+  test("includes extension source and instance rows", async () => {
+    await setup();
+
+    const projectsService = createProjectsDBService(db);
+    const sourcesService = createInstalledExtensionSourcesDBService(db);
+    const instancesService = createExtensionInstancesDBService(db);
+
+    const project = await projectsService.create({ name: "extension-full-state-test" });
+    const source = await sourcesService.register({
+      install_name: "lab",
+      extension_id: "pstdio.lab",
+      display_name: "Lab",
+      source_kind: "local_path",
+      source_path: "/extensions/lab",
+      status: "loaded",
+    });
+    const instance = await instancesService.create({
+      installed_extension_id: source.id,
+      namespace: "lab",
+      scope_id: project.id,
+      scope_type: "project",
+    });
+
+    const state = await getFullState(db);
+
+    expect(state.installed_extension_sources).toContainEqual(expect.objectContaining({ id: source.id }));
+    expect(state.extension_instances).toContainEqual(expect.objectContaining({ id: instance.id }));
   });
 
   test("excludes soft-deleted rows", async () => {

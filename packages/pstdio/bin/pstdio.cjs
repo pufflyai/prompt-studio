@@ -8,7 +8,7 @@ const pkg = resolvePackageName(process.platform, process.arch);
 if (!pkg) {
   process.stderr.write(
     `pstdio: unsupported platform ${process.platform}-${process.arch}.\n` +
-      `Supported: darwin-arm64, darwin-x64, linux-x64, linux-arm64, linux-x64-musl, linux-arm64-musl, win-x64, win-arm64\n`,
+      `Supported: darwin-arm64, darwin-x64, linux-x64, linux-arm64, win-x64, win-arm64\n`,
   );
   process.exit(1);
 }

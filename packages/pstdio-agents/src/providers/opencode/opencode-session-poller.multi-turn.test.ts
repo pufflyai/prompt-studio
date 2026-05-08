@@ -6,9 +6,11 @@ import {
   completedAssistant,
   createMessageTimeline,
   questionAssistant,
-  tick,
   userMessage,
 } from "./opencode-session-poller.test-helpers";
+
+const pollIntervalMs = 10;
+const tick = () => Bun.sleep(20);
 
 describe("pollOpencodeMessages multi-turn conversation", () => {
   it("handles question→answer→question→answer→final response across 3 turns", async () => {
@@ -29,6 +31,7 @@ describe("pollOpencodeMessages multi-turn conversation", () => {
       eventStore: es1,
       baselineCount: 1,
       messageComplete: mc1,
+      pollIntervalMs,
     });
 
     await tick();
@@ -60,6 +63,7 @@ describe("pollOpencodeMessages multi-turn conversation", () => {
       eventStore: es2,
       baselineCount: 2,
       messageComplete: mc2,
+      pollIntervalMs,
     });
 
     await tick();
@@ -96,6 +100,7 @@ describe("pollOpencodeMessages multi-turn conversation", () => {
       eventStore: es3,
       baselineCount: 4,
       messageComplete: mc3,
+      pollIntervalMs,
     });
 
     await tick();

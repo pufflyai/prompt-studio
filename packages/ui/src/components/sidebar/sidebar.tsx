@@ -135,7 +135,6 @@ export const Sidebar = (props: SidebarProps) => {
               activeNodeId={activeNodeId}
               rowVariant="compact"
               sectionGap="md"
-              nodeGap="1px"
               linkComponent={linkComponent}
               onNavigate={onNavigate}
               onToggleSection={toggleSection}

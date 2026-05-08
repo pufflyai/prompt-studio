@@ -1,5 +1,8 @@
 /// <reference types="node" />
 import { afterEach, beforeEach } from "bun:test";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 // 1. At preload, strip any ambient PSTDIO_* vars inherited from the parent
 //    shell (e.g. a worktree launched from an IDE that exports
@@ -10,6 +13,15 @@ for (const key of Object.keys(process.env)) {
     delete process.env[key];
   }
 }
+
+// Keep API project creation tests hermetic. Individual tests can still pass an
+// explicit env object or set this value inside the test when exercising default
+// extension installation.
+process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+
+// Point PSTDIO_HOME at a fresh temp dir so the per-project extension auto-enable
+// pass cannot pick up real extensions from the developer machine.
+process.env.PSTDIO_HOME = mkdtempSync(join(tmpdir(), "pstdio-test-home-"));
 
 // 2. Snapshot/restore process.env around every test so mutations made by one
 //    test cannot leak into the next. The snapshot is taken inside beforeEach,

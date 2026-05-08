@@ -1,5 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
+import { enableInstalledExtensionsForProject, installDefaultExtensions } from "../../extensions/default-extensions";
 import { seedDefaultSkills } from "../../skills/seed-default-skills";
 import { seedDefaultTemplates } from "../../templates/seed-default-templates";
 import type { ProjectsRouteDeps } from "../deps";
@@ -27,11 +28,17 @@ export const createProjectRoute = createRoute({
 export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<typeof createProjectRoute> => {
   return async (c) => {
     const { name, agents } = c.req.valid("json");
+    const existingProjects = await deps.projectService.list();
     const project = await deps.projectService.create({ name, selectedAgents: agents });
 
     try {
       const templates = await seedDefaultTemplates(deps, project.id);
       await seedDefaultSkills(deps, project.id);
+      if (existingProjects.length === 0) await installDefaultExtensions();
+      await enableInstalledExtensionsForProject({
+        extensionService: deps.extensionService,
+        projectId: project.id,
+      });
 
       deps.eventBus.emit("projects", "set", project);
 

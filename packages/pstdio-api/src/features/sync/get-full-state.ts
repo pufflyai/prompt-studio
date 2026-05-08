@@ -2,7 +2,10 @@ import { isNull } from "drizzle-orm";
 import type { DbClient } from "pstdio-db";
 import {
   agent_configs,
+  attempt_statuses,
+  extension_instances,
   files,
+  installed_extension_sources,
   project_repos,
   projects,
   repos,
@@ -25,6 +28,9 @@ const tableMap = {
   repos,
   project_repos,
   agent_configs,
+  attempt_statuses,
+  installed_extension_sources,
+  extension_instances,
   ticket_statuses,
   tickets,
   ticket_tags,

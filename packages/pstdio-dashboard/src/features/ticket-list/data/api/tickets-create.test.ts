@@ -59,11 +59,7 @@ describe("createProjectTicket", () => {
       tagIds: ["tag-bug"],
     });
 
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
-      "http://localhost:19840/v1/tickets",
-      expect.objectContaining({ method: "POST" }),
-    );
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/v1/tickets", expect.objectContaining({ method: "POST" }));
 
     expect(fetchMock.mock.calls[1]?.[1]).toBeDefined();
     const requestInit = fetchMock.mock.calls[1]?.[1] as unknown as RequestInit;

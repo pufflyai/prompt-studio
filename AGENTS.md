@@ -132,6 +132,7 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 # Validation flows
 
 - **Never** run the dev server directly.
+- **Never** connect to the local pglite db directly.
 - **Always** run the dockerized version: `bun run dev:isolated` to ensure db isolation.
 
 ---

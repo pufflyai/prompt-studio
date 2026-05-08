@@ -27,7 +27,7 @@ describe("serveApp", () => {
       reportStartupError: () => {},
     });
 
-    await expect(serveApp({ port: 19840 })).rejects.toThrow("EADDRINUSE");
+    await expect(serveApp({ port: 19840, host: "localhost" })).rejects.toThrow("EADDRINUSE");
     expect(closed).toBe(true);
   });
 
@@ -54,7 +54,7 @@ describe("serveApp", () => {
       },
     });
 
-    await expect(serveApp({ port: 19840 })).rejects.toThrow("EADDRINUSE");
+    await expect(serveApp({ port: 19840, host: "localhost" })).rejects.toThrow("EADDRINUSE");
     expect(reportedError).toBeDefined();
     expect(reportedError!.message).toBe("listen EADDRINUSE");
   });
@@ -83,9 +83,76 @@ describe("serveApp", () => {
       log: () => {},
     });
 
-    await serveApp({ port: 19840 });
+    await serveApp({ port: 19840, host: "localhost" });
 
     expect(captured.idleTimeout).toBe(20);
+  });
+
+  it("forwards the host option to Bun.serve as hostname", async () => {
+    const captured = { hostname: undefined as string | undefined };
+
+    const serveApp = createServeApp({
+      createApp: async () => ({
+        app: {
+          fetch: () => new Response("ok"),
+        },
+        close: async () => {},
+      }),
+      injectConfig: (html) => html,
+      isCompiledBinary: () => false,
+      loadEmbeddedAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
+      loadFilesystemAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
+      resolveMimeType: () => "text/html",
+      serve: (options) => {
+        captured.hostname = options.hostname;
+        return {} as ReturnType<typeof Bun.serve>;
+      },
+      onSignal: () => {},
+      offSignal: () => {},
+      log: () => {},
+    });
+
+    await serveApp({ port: 19840, host: "0.0.0.0" });
+
+    expect(captured.hostname).toBe("0.0.0.0");
+  });
+
+  it("does not inject an absolute apiBaseUrl into the dashboard config", async () => {
+    let capturedFetch: NonNullable<Parameters<typeof Bun.serve>[0]["fetch"]> | undefined;
+    let injectedApiBaseUrl: string | undefined;
+
+    const serveApp = createServeApp({
+      createApp: async () => ({
+        app: {
+          fetch: () => new Response("ok"),
+        },
+        close: async () => {},
+      }),
+      injectConfig: (_html, config) => {
+        injectedApiBaseUrl = config.apiBaseUrl;
+        return "<html></html>";
+      },
+      isCompiledBinary: () => false,
+      loadEmbeddedAssets: () => new Map(),
+      loadFilesystemAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
+      resolveMimeType: () => "text/html",
+      serve: (options) => {
+        capturedFetch = options.fetch;
+        return {} as ReturnType<typeof Bun.serve>;
+      },
+      onSignal: () => {},
+      offSignal: () => {},
+      log: () => {},
+    });
+
+    await serveApp({ port: 19840, host: "0.0.0.0" });
+    await capturedFetch?.call(
+      {} as Bun.Server<undefined>,
+      new Request("http://192.168.1.5:19840/"),
+      {} as Bun.Server<undefined>,
+    );
+
+    expect(injectedApiBaseUrl).toBeUndefined();
   });
 
   it("injects the package version into the served dashboard config", async () => {
@@ -119,7 +186,7 @@ describe("serveApp", () => {
         log: () => {},
       });
 
-      await serveApp({ port: 19840 });
+      await serveApp({ port: 19840, host: "localhost" });
       await capturedFetch?.call(
         {} as Bun.Server<undefined>,
         new Request("http://localhost:19840/"),
