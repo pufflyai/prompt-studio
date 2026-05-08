@@ -1,4 +1,28 @@
 export { ChakraProvider } from "@chakra-ui/react";
+export type {
+  ActivityActor,
+  ActivityAvatarProps,
+  ActivityCommentProps,
+  ActivityComposerProps,
+  ActivityEventProps,
+  ActivityFeedProps,
+  ActivityHeaderProps,
+  ActivityReplyProps,
+  ActivityRootProps,
+  ActivityTimelineProps,
+} from "./components/activity";
+export {
+  Activity,
+  ActivityAvatar,
+  ActivityComment,
+  ActivityComposer,
+  ActivityEvent,
+  ActivityFeed,
+  ActivityHeader,
+  ActivityReply,
+  ActivityRoot,
+  ActivityTimeline,
+} from "./components/activity";
 export type { AlertProps } from "./components/alert";
 export { AlertMessage } from "./components/alert";
 export { AttachedPanel } from "./components/attached-panel";

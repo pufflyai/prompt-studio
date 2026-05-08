@@ -65,7 +65,7 @@ export const mockTickets: WorkspaceTicket[] = [
     title: "Add app shell story to UI package",
     status: "in_progress",
     statusColor: "blue",
-    assignee: "Aurelien",
+    assignee: "Jordan",
     tags: [
       { name: "component", value: "ui" },
       { name: "priority", value: "high" },
@@ -101,7 +101,7 @@ export const mockTickets: WorkspaceTicket[] = [
     title: "Fix workspace diff loading state",
     status: "in_progress",
     statusColor: "blue",
-    assignee: "Aurelien",
+    assignee: "Jordan",
     tags: [
       { name: "component", value: "api" },
       { name: "priority", value: "high" },

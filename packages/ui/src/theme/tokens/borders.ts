@@ -1,43 +1,25 @@
 export const borders = {
   DEFAULT: {
-    value: {
-      base: "1px solid {colors.blacks.400}",
-      _dark: "1px solid {colors.blacks.600}",
-    },
+    value: "1px solid {colors.border}",
   },
 
   muted: {
-    value: {
-      base: "1px solid {colors.blacks.300}",
-      _dark: "1px solid {colors.blacks.700}",
-    },
+    value: "1px solid {colors.border.muted}",
   },
 
   subtle: {
-    value: {
-      base: "1px solid {colors.blacks.300}",
-      _dark: "1px solid {colors.blacks.50}",
-    },
+    value: "1px solid {colors.border.subtle}",
   },
 
   inverted: {
-    value: {
-      base: "1px solid {colors.blacks.400}",
-      _dark: "1px solid {colors.blacks.600}",
-    },
+    value: "1px solid {colors.border.inverted}",
   },
 
   accent: {
-    value: {
-      base: "1px solid {colors.blue.700}",
-      _dark: "1px solid {colors.blue.200}",
-    },
+    value: "1px solid {colors.border.accent}",
   },
 
   "accent-light": {
-    value: {
-      base: "1px solid {colors.blue.200}",
-      _dark: "1px solid {colors.blue.900}",
-    },
+    value: "1px solid {colors.border.accent-light}",
   },
 };

@@ -16,31 +16,31 @@ export const shadows = {
 export const semanticShadows = {
   low: {
     value: {
-      base: "{shadows.low-light}",
+      _light: "{shadows.low-light}",
       _dark: "{shadows.low-dark}",
     },
   },
   mid: {
     value: {
-      base: "{shadows.mid-light}",
+      _light: "{shadows.mid-light}",
       _dark: "{shadows.mid-dark}",
     },
   },
   high: {
     value: {
-      base: "{shadows.high-light}",
+      _light: "{shadows.high-light}",
       _dark: "{shadows.high-dark}",
     },
   },
   "desktop-icon-label": {
     value: {
-      base: "{shadows.desktop-icon-label-text-light}",
+      _light: "{shadows.desktop-icon-label-text-light}",
       _dark: "{shadows.desktop-icon-label-text-dark}",
     },
   },
   "desktop-icon-label-selected": {
     value: {
-      base: "{shadows.desktop-icon-label-text-selected-light}",
+      _light: "{shadows.desktop-icon-label-text-selected-light}",
       _dark: "{shadows.desktop-icon-label-text-selected-dark}",
     },
   },

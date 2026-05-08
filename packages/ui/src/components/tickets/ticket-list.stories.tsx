@@ -34,7 +34,7 @@ const mockItems: TicketListItem[] = [
   {
     id: "1",
     ticketId: "WOOP-1",
-    title: "Get familiar with Linear",
+    title: "Review workspace onboarding",
     statusIcon: Signal,
     statusColor: "fg.muted",
     date: "Jan 21",
