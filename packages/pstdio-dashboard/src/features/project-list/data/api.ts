@@ -1,4 +1,4 @@
-import type { ProjectResponse } from "pstdio-api/dto";
+import type { Project as ProjectResponse } from "pstdio-api-contracts";
 import { apiRequest } from "@/lib/api";
 import type { ProjectListItem } from "../types";
 import { registerRepo } from "./repo-api";

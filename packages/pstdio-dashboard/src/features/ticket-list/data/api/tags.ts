@@ -1,4 +1,4 @@
-import type { TagOptionResponse, TagResponse } from "pstdio-api/dto";
+import type { TagOption as TagOptionResponse, Tag as TagResponse } from "pstdio-api-contracts";
 import { apiRequest } from "@/lib/api";
 import { toTicketTag } from "./mappers";
 import type { CreateProjectTicketTagInput, CreateTagOptionInput, UpdateTagOptionInput } from "./types";

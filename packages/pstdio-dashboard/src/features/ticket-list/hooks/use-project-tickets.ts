@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import type { StatusResponse, TagResponse } from "pstdio-api/dto";
+import type { Status as StatusResponse, Tag as TagResponse } from "pstdio-api-contracts";
 import { asSyncedRows, eq, getCollection, type SyncedRow, useLiveQuery } from "@/features/sync/collections";
 import {
   createProjectStatus,

@@ -1,4 +1,4 @@
-import type { StatusResponse } from "pstdio-api/dto";
+import type { Status as StatusResponse } from "pstdio-api-contracts";
 import type { Ticket, TicketStatus } from "@/features/ticket-list/types";
 import { apiRequest } from "@/lib/api";
 import { buildTicketStatusCatalog, toTicket } from "./mappers";

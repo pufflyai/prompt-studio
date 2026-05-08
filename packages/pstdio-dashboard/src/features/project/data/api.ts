@@ -1,4 +1,9 @@
-import type { ProjectResponse, StatusResponse, TagResponse, TemplateResponse } from "pstdio-api/dto";
+import type {
+  Project as ProjectResponse,
+  Status as StatusResponse,
+  Tag as TagResponse,
+  Template as TemplateResponse,
+} from "pstdio-api-contracts";
 import type {
   Project,
   ProjectRepository,
