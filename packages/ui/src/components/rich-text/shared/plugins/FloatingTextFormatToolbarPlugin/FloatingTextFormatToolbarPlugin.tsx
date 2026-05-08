@@ -28,7 +28,6 @@ import { createPortal } from "react-dom";
 import { TOGGLE_LINK_EDIT_MODE_COMMAND } from "../LinkEditorPlugin/commands";
 import { getSelectedNode } from "../LinkEditorPlugin/utils/getSelectedNode";
 import { setFloatingElemPos } from "../LinkEditorPlugin/utils/setFloatingElemPos";
-import { sanitizeUrl } from "../LinkEditorPlugin/utils/url";
 import { FloatingToolbarButtons } from "./floating-toolbar-buttons";
 import { type BlockType, resolveBlockTypeFromAnchor } from "./resolve-block-type";
 import { shouldShowFloatingToolbar } from "./should-show-floating-toolbar";
@@ -101,7 +100,6 @@ function FloatingTextToolbar({
       editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
       return;
     }
-    editor.dispatchCommand(TOGGLE_LINK_COMMAND, sanitizeUrl("https://"));
     editor.dispatchCommand(TOGGLE_LINK_EDIT_MODE_COMMAND, true);
   };
 

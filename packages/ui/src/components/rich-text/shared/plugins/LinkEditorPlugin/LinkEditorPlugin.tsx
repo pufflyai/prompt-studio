@@ -1,5 +1,6 @@
 import "./LinkEditorPlugin.css";
 
+import { Box } from "@chakra-ui/react";
 import { $createLinkNode, $isAutoLinkNode, $isLinkNode, TOGGLE_LINK_COMMAND } from "@lexical/link";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $findMatchingParent, mergeRegister } from "@lexical/utils";
@@ -7,6 +8,7 @@ import {
   $getSelection,
   $isLineBreakNode,
   $isRangeSelection,
+  $setSelection,
   type BaseSelection,
   CLICK_COMMAND,
   COMMAND_PRIORITY_CRITICAL,
@@ -17,12 +19,17 @@ import {
   SELECTION_CHANGE_COMMAND,
 } from "lexical";
 import type React from "react";
-import { type Dispatch, useEffect, useRef, useState } from "react";
+import { type Dispatch, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { TOGGLE_LINK_EDIT_MODE_COMMAND } from "./commands";
+import { LinkEditorContent } from "./link-editor-content";
 import { getSelectedNode } from "./utils/getSelectedNode";
+import { shouldCancelLinkEdit } from "./utils/link-edit-state";
+import { getSelectionLinkUrl } from "./utils/selection-link-url";
 import { setFloatingElemPos } from "./utils/setFloatingElemPos";
-import { sanitizeUrl } from "./utils/url";
+import { sanitizeUrl, validateUrl } from "./utils/url";
+
+const GAP = 8;
 
 function LinkEditor({
   editor,
@@ -45,22 +52,19 @@ function LinkEditor({
   const [linkUrl, setLinkUrl] = useState("");
   const [editedLinkUrl, setEditedLinkUrl] = useState("https://");
   const [lastSelection, setLastSelection] = useState<BaseSelection | null>(null);
+  const isActive = isLink || isLinkEditMode;
+  const editedLinkUrlIsValid = validateUrl(editedLinkUrl);
 
   updateLinkEditorRef.current = () => {
     const selection = $getSelection();
     if ($isRangeSelection(selection)) {
-      const node = getSelectedNode(selection);
-      const linkParent = $findMatchingParent(node, $isLinkNode);
-
-      if (linkParent) {
-        setLinkUrl(linkParent.getURL());
-      } else if ($isLinkNode(node)) {
-        setLinkUrl(node.getURL());
-      } else {
-        setLinkUrl("");
+      const nextLinkUrl = getSelectionLinkUrl(selection);
+      setLinkUrl(nextLinkUrl);
+      if (shouldCancelLinkEdit(isLinkEditMode, isLink, nextLinkUrl)) {
+        closeLinkEditor();
       }
-      if (isLinkEditMode) {
-        setEditedLinkUrl(linkUrl);
+      if (isLinkEditMode && nextLinkUrl !== "") {
+        setEditedLinkUrl(nextLinkUrl);
       }
     }
     const editorElem = editorRef.current;
@@ -72,20 +76,20 @@ function LinkEditor({
     }
 
     const rootElement = editor.getRootElement();
+    const hasNativeRange = nativeSelection !== null && nativeSelection.rangeCount > 0;
 
     if (
       selection !== null &&
       nativeSelection !== null &&
+      hasNativeRange &&
       rootElement?.contains(nativeSelection.anchorNode) &&
       editor.isEditable()
     ) {
-      const domRect: DOMRect | undefined = nativeSelection.focusNode?.parentElement?.getBoundingClientRect();
-      if (domRect) {
-        domRect.y += 40;
-        setFloatingElemPos(domRect, editorElem, anchorElem);
-      }
+      const rangeRect = nativeSelection.getRangeAt(0).getBoundingClientRect();
+      const topRect = new DOMRect(rangeRect.left, rangeRect.top, 0, rangeRect.height);
+      setFloatingElemPos(topRect, editorElem, anchorElem, GAP, undefined, "above");
       setLastSelection(selection);
-    } else if (!activeElement || activeElement.className !== "link-input") {
+    } else if (!editorElem.contains(activeElement)) {
       if (rootElement !== null) {
         setFloatingElemPos(null, editorElem, anchorElem);
       }
@@ -155,6 +159,16 @@ function LinkEditor({
     });
   }, [editor]);
 
+  useLayoutEffect(() => {
+    if (!isActive) {
+      return;
+    }
+
+    editor.getEditorState().read(() => {
+      updateLinkEditorRef.current();
+    });
+  }, [editor, isActive]);
+
   useEffect(() => {
     if (isLinkEditMode && inputRef.current) {
       inputRef.current.focus();
@@ -167,95 +181,64 @@ function LinkEditor({
       handleLinkSubmission();
     } else if (event.key === "Escape") {
       event.preventDefault();
-      setIsLinkEditMode(false);
+      closeLinkEditor();
     }
+  };
+
+  const closeLinkEditor = () => {
+    setEditedLinkUrl("https://");
+    setIsLinkEditMode(false);
   };
 
   const handleLinkSubmission = () => {
-    if (lastSelection !== null) {
-      if (linkUrl !== "") {
-        editor.dispatchCommand(TOGGLE_LINK_COMMAND, sanitizeUrl(editedLinkUrl));
-        editor.update(() => {
-          const selection = $getSelection();
-          if ($isRangeSelection(selection)) {
-            const parent = getSelectedNode(selection).getParent();
-            if ($isAutoLinkNode(parent)) {
-              const linkNode = $createLinkNode(parent.getURL(), {
-                rel: parent.__rel,
-                target: parent.__target,
-                title: parent.__title,
-              });
-              parent.replace(linkNode, true);
-            }
-          }
-        });
-      }
-      setEditedLinkUrl("https://");
-      setIsLinkEditMode(false);
+    if (lastSelection === null || !editedLinkUrlIsValid) {
+      return;
     }
+
+    editor.update(() => {
+      $setSelection(lastSelection);
+    });
+    editor.dispatchCommand(TOGGLE_LINK_COMMAND, sanitizeUrl(editedLinkUrl));
+    editor.update(() => {
+      const selection = $getSelection();
+      if ($isRangeSelection(selection)) {
+        const parent = getSelectedNode(selection).getParent();
+        if ($isAutoLinkNode(parent)) {
+          const linkNode = $createLinkNode(parent.getURL(), {
+            rel: parent.__rel,
+            target: parent.__target,
+            title: parent.__title,
+          });
+          parent.replace(linkNode, true);
+        }
+      }
+    });
+    closeLinkEditor();
   };
 
   return (
-    <div ref={editorRef} className="link-editor">
-      {!isLink ? null : isLinkEditMode ? (
-        <>
-          <input
-            ref={inputRef}
-            className="link-input"
-            value={editedLinkUrl}
-            onChange={(event) => {
-              setEditedLinkUrl(event.target.value);
-            }}
-            onKeyDown={(event) => {
-              monitorInputInteraction(event);
-            }}
-          />
-          <div>
-            <button
-              type="button"
-              className="link-cancel icon-close"
-              aria-label="Cancel link edit"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => {
-                setIsLinkEditMode(false);
-              }}
-            />
-            <button
-              type="button"
-              className="link-confirm icon-check"
-              aria-label="Confirm link edit"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={handleLinkSubmission}
-            />
-          </div>
-        </>
-      ) : (
-        <div className="link-view">
-          <a href={sanitizeUrl(linkUrl)} target="_blank" rel="noopener noreferrer">
-            {linkUrl}
-          </a>
-          <button
-            type="button"
-            className="link-edit icon-edit-2"
-            aria-label="Edit link"
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => {
-              setEditedLinkUrl(linkUrl);
-              setIsLinkEditMode(true);
-            }}
-          />
-          <button
-            type="button"
-            className="link-trash icon-trash"
-            aria-label="Remove link"
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => {
-              editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
-            }}
-          />
-        </div>
-      )}
-    </div>
+    <Box ref={editorRef} className={`link-editor ${isActive ? "active" : ""}`}>
+      <LinkEditorContent
+        isActive={isActive}
+        isLinkEditMode={isLinkEditMode}
+        editedLinkUrl={editedLinkUrl}
+        editedLinkUrlIsValid={editedLinkUrlIsValid}
+        linkUrl={linkUrl}
+        href={sanitizeUrl(linkUrl)}
+        inputRef={inputRef}
+        onEditedLinkUrlChange={setEditedLinkUrl}
+        onInputKeyDown={monitorInputInteraction}
+        onClose={closeLinkEditor}
+        onSubmit={handleLinkSubmission}
+        onEdit={() => {
+          setEditedLinkUrl(linkUrl);
+          setIsLinkEditMode(true);
+        }}
+        onRemove={() => {
+          editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
+        }}
+      />
+    </Box>
   );
 }
 
@@ -323,7 +306,7 @@ function useLinkEditorToolbar(
             const node = getSelectedNode(selection);
             const linkNode = $findMatchingParent(node, $isLinkNode);
             if ($isLinkNode(linkNode) && (payload.metaKey || payload.ctrlKey)) {
-              window.open(linkNode.getURL(), "_blank");
+              window.open(sanitizeUrl(linkNode.getURL()), "_blank", "noopener,noreferrer");
               return true;
             }
           }
