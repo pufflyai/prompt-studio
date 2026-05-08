@@ -50,6 +50,7 @@ const makeDeps = (overrides: Partial<Parameters<typeof createHandler>[0]> = {}) 
     enableInstalledExtension: mock(async () => ({ enabled: true, projectId: "project-1" })),
     ensureApi: mock(async () => {}),
     findGitRoot: () => "/repo",
+    installDefaultSkills: mock(async () => {}),
     installExtensionSource: mock(async () => installed),
     log,
     readConfig: () => ({ project_id: "project-1" }),
@@ -72,6 +73,7 @@ describe("extensions add", () => {
     });
     expect(deps.ensureApi).toHaveBeenCalled();
     expect(deps.enableInstalledExtension).toHaveBeenCalledWith("project-1", installed);
+    expect(deps.installDefaultSkills).toHaveBeenCalledWith("/repo", "project-1");
 
     const output = (deps.log as Mock<(message: string) => void>).mock.calls[0]?.[0] as string;
     expect(output).toContain("Id: pstdio.planner");
@@ -87,6 +89,7 @@ describe("extensions add", () => {
 
     expect(deps.ensureApi).not.toHaveBeenCalled();
     expect(deps.enableInstalledExtension).not.toHaveBeenCalled();
+    expect(deps.installDefaultSkills).not.toHaveBeenCalled();
 
     const output = (deps.log as Mock<(message: string) => void>).mock.calls[0]?.[0] as string;
     expect(output).toContain("Project: not enabled");
@@ -105,6 +108,7 @@ describe("extensions add", () => {
 
     expect(deps.ensureApi).not.toHaveBeenCalled();
     expect(deps.enableInstalledExtension).not.toHaveBeenCalled();
+    expect(deps.installDefaultSkills).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(1);
 
     const output = (deps.log as Mock<(message: string) => void>).mock.calls[0]?.[0] as string;

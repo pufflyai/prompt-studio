@@ -46,54 +46,51 @@ export const updateTemplateHandler = (deps: TemplatesRouteDeps): AppRouteHandler
     const { projectId, name } = c.req.valid("param");
     const body = c.req.valid("json");
 
-    const existing = await deps.templateService.getByName(projectId, name);
-    if (!existing) {
-      return c.json({ error: `Template not found: ${name}` }, 404);
-    }
+    const handleUpdateError = (
+      error:
+        | "asset_error"
+        | "cannot_change_only_default_template_type"
+        | "cannot_update_extension_template_content"
+        | "cannot_update_extension_template_type"
+        | "not_found",
+      message?: string,
+    ) => {
+      if (error === "asset_error") {
+        return c.json({ error: message ?? "Extension template source asset could not be resolved" }, 400);
+      }
 
-    const handleUpdateError = (error: "not_found" | "cannot_change_only_default_template_type") => {
       if (error === "cannot_change_only_default_template_type") {
         return c.json({ error: "Cannot change template_type for the only default template in its current type" }, 400);
+      }
+
+      if (error === "cannot_update_extension_template_type") {
+        return c.json({ error: "Cannot change template_type for an extension-backed template" }, 400);
+      }
+
+      if (error === "cannot_update_extension_template_content") {
+        return c.json(
+          { error: "Use the installed extension template endpoint to edit extension-backed template content" },
+          400,
+        );
       }
 
       return c.json({ error: `Template not found: ${name}` }, 404);
     };
 
-    let updated = existing;
+    const result = await deps.templateService.update(projectId, name, {
+      content: body.content,
+      enabled: body.enabled,
+      is_default: body.is_default,
+      template_type: body.template_type,
+      title: body.title,
+    });
 
-    if (body.is_default !== undefined || body.template_type !== undefined) {
-      const metadataResult = await deps.templateService.update(projectId, name, {
-        is_default: body.is_default,
-        template_type: body.template_type,
-      });
-
-      if ("error" in metadataResult) {
-        return handleUpdateError(metadataResult.error as "not_found" | "cannot_change_only_default_template_type");
-      }
-
-      updated = metadataResult.template;
+    if ("error" in result) {
+      return handleUpdateError(result.error, "message" in result ? result.message : undefined);
     }
 
-    if (body.content) {
-      const file = await deps.fileService.update(updated.file_id, {
-        data: Buffer.from(body.content),
-      });
+    deps.eventBus.emit("templates", "set", result.template);
 
-      if (file) {
-        const fileResult = await deps.templateService.update(projectId, name, {
-          file_id: file.id,
-        });
-
-        if ("error" in fileResult) {
-          return handleUpdateError(fileResult.error as "not_found" | "cannot_change_only_default_template_type");
-        }
-
-        updated = fileResult.template;
-      }
-    }
-
-    deps.eventBus.emit("templates", "set", updated);
-
-    return c.json(updated, 200);
+    return c.json(result.template, 200);
   };
 };

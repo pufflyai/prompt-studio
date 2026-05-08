@@ -11,7 +11,7 @@ let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
 let projectId: string;
 
-const previousWorkspacesDirEnv = process.env.PSTDIO_WORKSPACES_DIR;
+const previousPstdioHomeEnv = process.env.PSTDIO_HOME;
 
 const createGitRepo = (name: string) => {
   const repoRoot = join(tempRoot, name);
@@ -52,7 +52,7 @@ const createWorkspaceAttempt = async (repoRoot: string) => {
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-archive-workspace-test-"));
-  process.env.PSTDIO_WORKSPACES_DIR = join(tempRoot, "worktrees");
+  process.env.PSTDIO_HOME = join(tempRoot, "pstdio-home");
   ({ app } = await createApp({ dbPath: ":memory:", storagePath: join(tempRoot, "storage"), filesRoot: "" }));
 
   const projectRes = await app.request("/v1/projects", {
@@ -65,10 +65,10 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
-  if (previousWorkspacesDirEnv === undefined) {
-    delete process.env.PSTDIO_WORKSPACES_DIR;
+  if (previousPstdioHomeEnv === undefined) {
+    delete process.env.PSTDIO_HOME;
   } else {
-    process.env.PSTDIO_WORKSPACES_DIR = previousWorkspacesDirEnv;
+    process.env.PSTDIO_HOME = previousPstdioHomeEnv;
   }
   rmSync(tempRoot, { recursive: true, force: true });
 });

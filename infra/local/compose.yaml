@@ -7,10 +7,10 @@ services:
     working_dir: ${HOST_WORKTREE:?HOST_WORKTREE is required}
     environment:
       DISABLE_AUTOUPDATER: "1"
-      PSTDIO_API_URL: http://localhost:19841
-      PSTDIO_API_PORT: "19841"
-      PSTDIO_DASHBOARD_HOST: 0.0.0.0
-      PSTDIO_DASHBOARD_PORT: "5173"
+      PSTDIO_DISABLE_API_AUTO_START: "1"
+      PSTDIO_DISABLE_EMBED_MANIFEST: "1"
+      PSTDIO_HOME: /root/.pstdio-dev
+      PSTDIO_API_URL: http://127.0.0.1:19841
       VITE_API_BASE_URL: /
     command:
       - bash
@@ -18,17 +18,19 @@ services:
       - |
         set -e
         PROJECT_ROOT=/workspace/project
-        PSTDIO_BIN=/usr/local/bin/pstdio
+        pstdio_bin=/usr/local/bin/pstdio
 
         bun install --frozen-lockfile
-        bun run pstdio:local:add-dev --install-dir /usr/local/bin --api-url http://localhost:19841
+        bun run pstdio:local:add-dev --install-dir /usr/local/bin --api-url http://127.0.0.1:19841
 
-        bun run dev &
-        child=$$!
+        bun --watch packages/pstdio/src/index.ts -- serve --host 0.0.0.0 --port 19841 &
+        api_child=$$!
+        bun run --cwd packages/pstdio-dashboard dev -- --host 0.0.0.0 --port 5173 &
+        dashboard_child=$$!
 
-        trap 'kill "$$child" 2>/dev/null || true' INT TERM EXIT
+        trap 'kill "$$api_child" "$$dashboard_child" 2>/dev/null || true' INT TERM EXIT
 
-        until curl -fsS http://localhost:19841/healthz >/dev/null; do
+        until curl -fsS http://127.0.0.1:19841/healthz >/dev/null; do
           sleep 1
         done
 
@@ -38,9 +40,9 @@ services:
         git init
         git -c user.email=dev@local -c user.name=pstdio commit --allow-empty -m "init"
 
-        "$$PSTDIO_BIN" projects create "$$(basename "$$PROJECT_ROOT")"
+        "$$pstdio_bin" projects create "$$(basename "$$PROJECT_ROOT")"
 
-        wait "$$child"
+        wait "$$api_child" "$$dashboard_child"
     ports:
       - 127.0.0.1::5173
       - 127.0.0.1::19841

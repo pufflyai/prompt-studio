@@ -2,15 +2,13 @@ import { describe, expect, test } from "bun:test";
 import { resolvePrompt } from "./resolve-prompt";
 
 const createMockDeps = (
-  overrides: { template?: { id: string; file_id: string } | null; fileContent?: string | null } = {},
+  overrides: { template?: { id: string; content: string } | null; fileContent?: string | null } = {},
 ) => ({
   templateService: {
-    getByName: async (_projectId: string, _name: string) => overrides.template ?? null,
+    getWithContent: async (_projectId: string, _name: string) =>
+      overrides.template ??
+      (overrides.fileContent !== undefined ? { id: "t1", content: overrides.fileContent ?? "" } : null),
   },
-  fileService: {
-    get: async (_fileId: string) => (overrides.fileContent !== undefined ? { storage_path: "/fake/path" } : null),
-  },
-  readFileContent: (_storagePath: string) => overrides.fileContent ?? "",
   filesRoot: "",
 });
 
@@ -25,7 +23,7 @@ describe("resolvePrompt", () => {
       { template: "fix-it", vars: { ticket: "PS-7" } },
       "project-1",
       createMockDeps({
-        template: { id: "t1", file_id: "f1" },
+        template: { id: "t1", content: "Fix issues in {{ticket}}/review.md" },
         fileContent: "Fix issues in {{ticket}}/review.md",
       }),
     );
@@ -53,7 +51,7 @@ describe("resolvePrompt", () => {
       { template: "multi", vars: { error: "segfault", ticket: "PS-3" } },
       "project-1",
       createMockDeps({
-        template: { id: "t1", file_id: "f1" },
+        template: { id: "t1", content: "Error: {{error}} in {{ticket}}" },
         fileContent: "Error: {{error}} in {{ticket}}",
       }),
     );
@@ -65,7 +63,7 @@ describe("resolvePrompt", () => {
       { template: "simple" },
       "project-1",
       createMockDeps({
-        template: { id: "t1", file_id: "f1" },
+        template: { id: "t1", content: "No variables here" },
         fileContent: "No variables here",
       }),
     );

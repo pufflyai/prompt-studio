@@ -16,7 +16,6 @@
     },
     "clients/landing-page": {
       "name": "@pstdio/landing-page",
-      "version": "0.0.1",
       "dependencies": {
         "@astrojs/react": "^5.0.0",
         "@chakra-ui/react": "3.32.0",
@@ -73,7 +72,6 @@
     },
     "packages/e2e": {
       "name": "e2e",
-      "version": "0.0.1",
       "devDependencies": {
         "@playwright/test": "^1.50.0",
         "@types/pg": "^8.11.0",
@@ -109,6 +107,7 @@
         "pstdio-dashboard": "workspace:*",
         "pstdio-db": "workspace:*",
         "pstdio-logging": "workspace:*",
+        "pstdio-paths": "workspace:*",
         "pstdio-plugins": "workspace:*",
         "pstdio-wt": "workspace:*",
         "typescript": "6.0.2",
@@ -146,6 +145,7 @@
         "pstdio-db": "workspace:*",
         "pstdio-extensions": "workspace:*",
         "pstdio-logging": "workspace:*",
+        "pstdio-paths": "workspace:*",
         "pstdio-plugins": "workspace:*",
         "pstdio-scheduler": "workspace:*",
         "pstdio-storage": "workspace:*",
@@ -169,7 +169,6 @@
     },
     "packages/pstdio-dashboard": {
       "name": "pstdio-dashboard",
-      "version": "0.0.0",
       "dependencies": {
         "@chakra-ui/charts": "^3.32.0",
         "@chakra-ui/react": "3.32.0",
@@ -241,6 +240,7 @@
         "drizzle-orm": "^0.45.1",
         "drizzle-zod": "^0.8.3",
         "pg": "^8.20.0",
+        "pstdio-paths": "workspace:*",
         "yjs": "^13.6.29",
         "zod": "^4.3.6",
       },
@@ -255,6 +255,7 @@
       "name": "pstdio-extensions",
       "dependencies": {
         "@pstdio/sdk": "workspace:*",
+        "pstdio-paths": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -265,7 +266,15 @@
       "name": "pstdio-logging",
       "dependencies": {
         "pino": "^9.14.0",
+        "pstdio-paths": "workspace:*",
       },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "6.0.2",
+      },
+    },
+    "packages/pstdio-paths": {
+      "name": "pstdio-paths",
       "devDependencies": {
         "@types/bun": "latest",
         "typescript": "6.0.2",
@@ -294,6 +303,7 @@
         "drizzle-orm": "^0.45.1",
         "pstdio-api-contracts": "workspace:*",
         "pstdio-db": "workspace:*",
+        "pstdio-paths": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -1096,6 +1106,18 @@
     "@playwright/test": ["@playwright/test@1.58.2", "", { "dependencies": { "playwright": "1.58.2" }, "bin": { "playwright": "cli.js" } }, "sha512-akea+6bHYBBfA9uQqSYmlJXn61cTa+jbO87xVLCWbTqbWadRVmhxlXATaOjOgcBaWU4ePo0wB41KMFv3o35IXA=="],
 
     "@preact/signals-core": ["@preact/signals-core@1.14.0", "", {}, "sha512-AowtCcCU/33lFlh1zRFf/u+12rfrhtNakj7UpaGEsmMwUKpKWMVvcktOGcwBBNiB4lWrZWc01LhiyyzVklJyaQ=="],
+
+    "@pstdio/cli-darwin-arm64": ["@pstdio/cli-darwin-arm64@0.11.0", "", { "os": "darwin", "cpu": "arm64" }, "sha512-bbHe5ITcMmyofQ63fhzjR3Aj1U/ER22zzILQUjDEU2QZI8SqN1B5kEbRctbI+4jcPSCxRseIUPm8b16hIKRQkQ=="],
+
+    "@pstdio/cli-darwin-x64": ["@pstdio/cli-darwin-x64@0.11.0", "", { "os": "darwin", "cpu": "x64" }, "sha512-t8+IH7WZx8gAGu+265UvNJTwvDzLSgb1ZvkM3SD/er8CxH+kf9fBW1OqkrjerafpA+6EgNgZ3mpE6eXsP01VTQ=="],
+
+    "@pstdio/cli-linux-arm64": ["@pstdio/cli-linux-arm64@0.11.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-GOTBinbABQ3FiZ0JYQA+28cW/FrI/FFYVHyGnSNdF2Ik/u/iyK0UfYdoQtmhhlEf3jnRqgDY1POM2HbOo/T3ow=="],
+
+    "@pstdio/cli-linux-x64": ["@pstdio/cli-linux-x64@0.11.0", "", { "os": "linux", "cpu": "x64" }, "sha512-uV7FZresfvqAVFdtF0wZ4UQQhjn4ezL+YH95+ObFCzFMBoDjTT8mOtfsGAm/Jh1lUn2gCurQ7bVYIB9bvcA/Rg=="],
+
+    "@pstdio/cli-win-arm64": ["@pstdio/cli-win-arm64@0.11.0", "", { "os": "win32", "cpu": "arm64" }, "sha512-2usuMkmbe3pves/mcVHsYp2VZiiln6aXccoUk3s4mVvNbJTcDwfNCk3D3/Mhqkh6KDJ8t4mlepgf5ATJsdoh3g=="],
+
+    "@pstdio/cli-win-x64": ["@pstdio/cli-win-x64@0.11.0", "", { "os": "win32", "cpu": "x64" }, "sha512-pKSLPWM0ziKuXz6zmVlIgoxR76BMTfhdAvq5ouFCmP/b+uzUBJ5NyqmoBWlgoqt4pvcJ9zrD5KWa1VWDZExm+Q=="],
 
     "@pstdio/landing-page": ["@pstdio/landing-page@workspace:clients/landing-page"],
 
@@ -3142,6 +3164,8 @@
     "pstdio-extensions": ["pstdio-extensions@workspace:packages/pstdio-extensions"],
 
     "pstdio-logging": ["pstdio-logging@workspace:packages/pstdio-logging"],
+
+    "pstdio-paths": ["pstdio-paths@workspace:packages/pstdio-paths"],
 
     "pstdio-plugins": ["pstdio-plugins@workspace:packages/pstdio-plugins"],
 

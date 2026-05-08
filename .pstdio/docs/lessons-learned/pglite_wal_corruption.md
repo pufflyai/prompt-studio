@@ -9,7 +9,7 @@ PANIC: invalid max offset number
 RuntimeError: Aborted(). Build with -sASSERTIONS for more info.
 ```
 
-Confirmed trigger: running Drizzle Studio against the same `PSTDIO_DB_PATH` while `pstdio` is running can corrupt WAL.
+Confirmed trigger: running Drizzle Studio against the same pstdio database path while `pstdio` is running can corrupt WAL. By default that path is `$PSTDIO_HOME/pstdio.db`, where `PSTDIO_HOME` defaults to `~/.pstdio`. `PSTDIO_DB_PATH` can still override the database path for targeted debugging or tests.
 
 ## Why
 
@@ -27,14 +27,15 @@ All data in the PGlite database can become inaccessible until the WAL is repaire
 
 ## Prevention
 
-Do not run Drizzle Studio against `~/.pstdio/pstdio.db` while `pstdio` is running. Stop `pstdio` first, or inspect a copied DB snapshot.
+Do not run Drizzle Studio against the live pstdio database while `pstdio` is running. Stop `pstdio` first, or inspect a copied DB snapshot.
 
 ## Recovery
 
 If corruption occurs, use native PostgreSQL's `pg_resetwal` to reset the WAL:
 
 ```bash
-# Remove stale runtime files if present
+# Remove stale runtime files if present.
+# Replace the path if PSTDIO_HOME or PSTDIO_DB_PATH points elsewhere.
 rm ~/.pstdio/pstdio.db/postmaster.pid
 
 # Reset the WAL (requires matching PG version — PGlite uses PG 17)

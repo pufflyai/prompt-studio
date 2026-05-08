@@ -31,6 +31,7 @@
     "pstdio-extensions": "workspace:*",
     "pstdio-logging": "workspace:*",
     "pstdio-plugins": "workspace:*",
+    "pstdio-paths": "workspace:*",
     "pstdio-scheduler": "workspace:*",
     "pstdio-storage": "workspace:*",
     "pstdio-wt": "workspace:*"

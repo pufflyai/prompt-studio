@@ -4,8 +4,18 @@ export type ProjectSkill = {
   id: string;
   project_id: string;
   name: string;
+  title: string;
   description: string;
+  source_kind: "project" | "extension";
   files: { path: string; content: string; encoding: "utf8" }[];
+  editable: boolean;
+  extension_instance_id?: string;
+  extension_id?: string;
+  installed_extension_id?: string;
+  install_name?: string;
+  namespace?: string;
+  key?: string;
+  enabled?: boolean;
   created_at: string;
   updated_at: string;
 };

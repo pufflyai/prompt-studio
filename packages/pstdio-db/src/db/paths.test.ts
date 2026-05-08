@@ -6,21 +6,36 @@ import path from "node:path";
 import { ensureDbDirectory, resolveDbPath } from "./paths";
 
 const originalDbPath = process.env.PSTDIO_DB_PATH;
+const originalPstdioHome = process.env.PSTDIO_HOME;
 
 afterEach(() => {
   if (typeof originalDbPath === "undefined") {
     delete process.env.PSTDIO_DB_PATH;
+  } else {
+    process.env.PSTDIO_DB_PATH = originalDbPath;
+  }
+
+  if (typeof originalPstdioHome === "undefined") {
+    delete process.env.PSTDIO_HOME;
     return;
   }
 
-  process.env.PSTDIO_DB_PATH = originalDbPath;
+  process.env.PSTDIO_HOME = originalPstdioHome;
 });
 
 describe("resolveDbPath", () => {
   it("uses ~/.pstdio/pstdio.db by default", () => {
     delete process.env.PSTDIO_DB_PATH;
+    delete process.env.PSTDIO_HOME;
 
     expect(resolveDbPath()).toBe(path.join(os.homedir(), ".pstdio", "pstdio.db"));
+  });
+
+  it("uses PSTDIO_HOME for the default database path", () => {
+    delete process.env.PSTDIO_DB_PATH;
+    process.env.PSTDIO_HOME = "/tmp/pstdio-home";
+
+    expect(resolveDbPath()).toBe("/tmp/pstdio-home/pstdio.db");
   });
 
   it("expands the home directory from PSTDIO_DB_PATH", () => {

@@ -6,6 +6,13 @@ import { configureAgent, type HookTestContext, writePlugin } from "./hooks-infra
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 
+type Action = {
+  key: string;
+  label: string;
+  placement: string;
+  targetType: string;
+};
+
 let api: ApiInstance;
 const ctx: HookTestContext = { api: null!, dirs: [] };
 
@@ -22,13 +29,14 @@ afterEach(() => {
   cleanupDirs(ctx.dirs);
 });
 
-const setupProjectWithRepo = async (name: string) => {
+const setupProjectWithRepo = async (name: string, setupRepo?: (repo: string) => void) => {
   const repo = createGitRepo();
   ctx.dirs.push(repo);
 
   const project = await createProjectViaApi(api.url, name);
   mkdirSync(join(repo, ".pstdio"), { recursive: true });
   writeFileSync(join(repo, ".pstdio", "config.json"), JSON.stringify({ project_id: project.id }));
+  setupRepo?.(repo);
 
   await fetch(`${api.url}/v1/projects/${project.id}/repos`, {
     method: "POST",
@@ -43,32 +51,31 @@ describe("plugin actions via API", () => {
   test(
     "lists actions registered by plugins",
     async () => {
-      const { repo, projectId } = await setupProjectWithRepo("plugin-actions");
-
-      writePlugin(
-        repo,
-        "custom-actions.ts",
-        `export default {
+      const { projectId } = await setupProjectWithRepo("plugin-actions", (repo) => {
+        writePlugin(
+          repo,
+          "custom-actions.ts",
+          `export default {
           actions: [
             { key: "greet", label: "Greet", targetType: "ticket", placement: "primary", trigger() {} },
             { key: "review", label: "Review", targetType: "workspace", placement: "secondary", trigger() {} },
           ],
         };`,
-      );
+        );
+      });
 
       const res = await fetch(`${api.url}/v1/projects/${projectId}/actions`);
       expect(res.status).toBe(200);
 
-      const actions = await res.json();
-      expect(actions).toHaveLength(2);
+      const actions = (await res.json()) as Action[];
 
-      const greet = actions.find((a: { key: string }) => a.key === "custom-actions/greet");
+      const greet = actions.find((a) => a.key === "custom-actions/greet");
       expect(greet).toBeDefined();
       expect(greet.label).toBe("Greet");
       expect(greet.targetType).toBe("ticket");
       expect(greet.placement).toBe("primary");
 
-      const review = actions.find((a: { key: string }) => a.key === "custom-actions/review");
+      const review = actions.find((a) => a.key === "custom-actions/review");
       expect(review).toBeDefined();
       expect(review.targetType).toBe("workspace");
     },
@@ -78,28 +85,28 @@ describe("plugin actions via API", () => {
   test(
     "filters actions by targetType",
     async () => {
-      const { repo, projectId } = await setupProjectWithRepo("plugin-filter");
-
-      writePlugin(
-        repo,
-        "multi-target.ts",
-        `export default {
+      const { projectId } = await setupProjectWithRepo("plugin-filter", (repo) => {
+        writePlugin(
+          repo,
+          "multi-target.ts",
+          `export default {
           actions: [
             { key: "t-action", label: "Ticket action", targetType: "ticket", placement: "primary", trigger() {} },
             { key: "w-action", label: "Workspace action", targetType: "workspace", placement: "secondary", trigger() {} },
           ],
         };`,
-      );
+        );
+      });
 
       const ticketRes = await fetch(`${api.url}/v1/projects/${projectId}/actions?targetType=ticket`);
-      const ticketActions = await ticketRes.json();
-      expect(ticketActions).toHaveLength(1);
-      expect(ticketActions[0].key).toBe("multi-target/t-action");
+      const ticketActions = (await ticketRes.json()) as Action[];
+      expect(ticketActions.some((action) => action.key === "multi-target/t-action")).toBe(true);
+      expect(ticketActions.some((action) => action.key === "multi-target/w-action")).toBe(false);
 
       const wsRes = await fetch(`${api.url}/v1/projects/${projectId}/actions?targetType=workspace`);
-      const wsActions = await wsRes.json();
-      expect(wsActions).toHaveLength(1);
-      expect(wsActions[0].key).toBe("multi-target/w-action");
+      const wsActions = (await wsRes.json()) as Action[];
+      expect(wsActions.some((action) => action.key === "multi-target/w-action")).toBe(true);
+      expect(wsActions.some((action) => action.key === "multi-target/t-action")).toBe(false);
     },
     TEST_TIMEOUT,
   );
@@ -107,13 +114,11 @@ describe("plugin actions via API", () => {
   test(
     "executes a plugin action for a ticket target",
     async () => {
-      const { repo, projectId } = await setupProjectWithRepo("plugin-exec");
-      await configureAgent(ctx);
-
-      writePlugin(
-        repo,
-        "exec-action.ts",
-        `export default {
+      const { projectId } = await setupProjectWithRepo("plugin-exec", (repo) => {
+        writePlugin(
+          repo,
+          "exec-action.ts",
+          `export default {
           actions: [
             {
               key: "noop",
@@ -124,7 +129,9 @@ describe("plugin actions via API", () => {
             },
           ],
         };`,
-      );
+        );
+      });
+      await configureAgent(ctx);
 
       const ticketRes = await fetch(`${api.url}/v1/tickets`, {
         method: "POST",
@@ -165,13 +172,19 @@ describe("plugin actions via API", () => {
   );
 
   test(
-    "returns empty actions for project with no plugins",
+    "returns starter actions for project with no custom plugins",
     async () => {
       const { projectId } = await setupProjectWithRepo("plugin-empty");
 
       const res = await fetch(`${api.url}/v1/projects/${projectId}/actions`);
       expect(res.status).toBe(200);
-      expect(await res.json()).toEqual([]);
+      const actions = (await res.json()) as Action[];
+      const actionKeys = actions.map((action) => action.key);
+
+      expect(actionKeys).toContain("ticket-actions/run-attempt");
+      expect(actionKeys).toContain("ticket-actions/refine-ticket");
+      expect(actionKeys).toContain("ticket-actions/break-into-sub-tickets");
+      expect(actionKeys).toContain("workspace-actions/run-review");
     },
     TEST_TIMEOUT,
   );

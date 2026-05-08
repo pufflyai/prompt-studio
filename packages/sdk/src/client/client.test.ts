@@ -180,4 +180,28 @@ describe("createClient", () => {
     expect(calls[0]!.method).toBe("PUT");
     expect(JSON.parse(calls[0]!.body!)).toEqual({ content: "# Updated", is_default: true });
   });
+
+  it("client.extensions.updateInstalledTemplate calls PUT /v1/extensions/installed/:name/templates/:key", async () => {
+    const { fetchFn, calls } = trackingFetch();
+    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+
+    await client.extensions.updateInstalledTemplate("catalog", "catalogTicket", { content: "# Updated" });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toBe("http://test:1234/v1/extensions/installed/catalog/templates/catalogTicket");
+    expect(calls[0]!.method).toBe("PUT");
+    expect(JSON.parse(calls[0]!.body!)).toEqual({ content: "# Updated" });
+  });
+
+  it("client.skills.updatePreferences calls PUT /v1/projects/:id/skills/:name", async () => {
+    const { fetchFn, calls } = trackingFetch();
+    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+
+    await client.skills.updatePreferences("proj-1", "triage", { enabled: false });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toBe("http://test:1234/v1/projects/proj-1/skills/triage");
+    expect(calls[0]!.method).toBe("PUT");
+    expect(JSON.parse(calls[0]!.body!)).toEqual({ enabled: false });
+  });
 });

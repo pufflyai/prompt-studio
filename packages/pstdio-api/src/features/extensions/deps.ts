@@ -1,6 +1,9 @@
 import type { RouteDeps } from "../deps";
 
-export type ExtensionsRouteDeps = Pick<RouteDeps, "extensionService"> & {
+export type ExtensionsRouteDeps = Pick<
+  RouteDeps,
+  "agentConfigService" | "agentRegistry" | "eventBus" | "extensionService" | "skillService"
+> & {
   activityEventsService: RouteDeps["activityEventsService"];
   extensionStorageService: RouteDeps["extensionStorageService"];
   fileService: RouteDeps["fileService"];

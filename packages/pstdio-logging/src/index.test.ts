@@ -29,6 +29,15 @@ describe("resolveDefaultLogPath", () => {
 
     expect(path).toBe("/home/tester/custom/output.jsonl");
   });
+
+  test("uses PSTDIO_HOME when no narrower state path is configured", () => {
+    const path = resolveDefaultLogPath({
+      env: { PSTDIO_HOME: "~/pstdio-dev" },
+      homedirPath: "/home/tester",
+    });
+
+    expect(path).toBe("/home/tester/pstdio-dev/logs.jsonl");
+  });
 });
 
 describe("createLogger", () => {

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { StatusResponse, TagResponse } from "pstdio-api/dto";
-import { getSystemInfo, toProjectRepository } from "@/features/project/data/api";
+import { getProjectTemplateAssets, getSystemInfo, toProjectRepository } from "@/features/project/data/api";
 import type { Project, ProjectTemplateAsset } from "@/features/project/types";
 import { asSyncedRows, eq, getCollection, useLiveQuery } from "@/features/sync/collections";
 import { toTicketStatusOption, toTicketTag } from "@/features/ticket-list/data/api";
@@ -153,31 +153,11 @@ export const useProjectRepositories = (projectId: string | undefined) => {
 };
 
 export const useProjectTemplateAssets = (projectId: string | undefined) => {
-  const { data: rawTemplates, isLoading } = useLiveQuery(
-    (q) =>
-      projectId
-        ? q
-            .from({ t: getCollection("templates") })
-            .where(({ t }) => eq(t.project_id, projectId))
-            .select(({ t }) => ({ ...t }))
-        : undefined,
-    [projectId],
-  );
-  const templateRows = asSyncedRows(rawTemplates)?.filter((t) => !t.deleted_at);
-
-  const data: ProjectTemplateAsset[] | undefined = templateRows?.map((t) => ({
-    id: t.id,
-    projectId: (t.project_id as string) ?? projectId ?? "",
-    name: t.name as string,
-    templateType: t.template_type as ProjectTemplateAsset["templateType"],
-    fileId: t.file_id as string,
-    content: "",
-    isDefault: t.is_default as boolean,
-    createdAt: t.created_at as string,
-    updatedAt: t.updated_at as string,
-  }));
-
-  return { data, isLoading };
+  return useQuery<ProjectTemplateAsset[]>({
+    queryKey: ["project-template-assets", projectId],
+    queryFn: () => getProjectTemplateAssets(projectId!),
+    enabled: Boolean(projectId),
+  });
 };
 
 export const useSystemInfo = () =>

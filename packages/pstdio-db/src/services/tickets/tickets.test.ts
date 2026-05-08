@@ -1,11 +1,12 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { createDb } from "../../db/connection.pglite";
-import { ticket_tag_options, ticket_tags } from "../../db/schemas.pg";
+import { ticket_tag_options, ticket_tags, tickets } from "../../db/schemas.pg";
 import { createProjectsDBService } from "../projects/projects";
 import { createTicketsDBService } from "./tickets";
 
 let close: () => Promise<void>;
+let db: Awaited<ReturnType<typeof createDb>>["db"];
 let ticketsService: ReturnType<typeof createTicketsDBService>;
 let projectId: string;
 let bugOptionId: string;
@@ -14,6 +15,7 @@ let featureOptionId: string;
 const setup = async () => {
   const result = await createDb({ path: ":memory:" });
   close = result.close;
+  db = result.db;
 
   const projectsService = createProjectsDBService(result.db);
   const project = await projectsService.create({ name: "prompt-studio" });
@@ -54,6 +56,19 @@ describe("createTicketsDBService", () => {
     expect(t1.shorthand).toBe("PS-1");
     expect(t2.shorthand).toBe("PS-2");
     expect(t3.shorthand).toBe("PS-3");
+  });
+
+  test("skips existing shorthand gaps", async () => {
+    await setup();
+
+    await ticketsService.create({ project_id: projectId, display_title: "One" });
+    const removed = await ticketsService.create({ project_id: projectId, display_title: "Two" });
+    await ticketsService.create({ project_id: projectId, display_title: "Three" });
+    await db.delete(tickets).where(eq(tickets.id, removed.id));
+
+    const next = await ticketsService.create({ project_id: projectId, display_title: "Four" });
+
+    expect(next.shorthand).toBe("PS-4");
   });
 
   test("creates a draft ticket", async () => {

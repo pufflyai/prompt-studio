@@ -3,6 +3,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statS
 import { homedir as osHomedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import type { ExtensionsCheckResponse } from "pstdio-api-contracts";
+import { expandHomePath, resolvePstdioHome as resolveRuntimePstdioHome } from "pstdio-paths";
 import { isPackagedRuntime, resolveManagedBunCommand } from "./extension-bun-runner";
 import { createExtensionIgnoreMatcher } from "./extension-ignore";
 import {
@@ -100,18 +101,10 @@ type CommandResult = {
 export const resolvePstdioHome = (input: {
   env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
   homedir?: () => string;
-}) => {
-  const value = (input.env ?? process.env).PSTDIO_HOME;
-  if (!value) return join(input.homedir?.() ?? osHomedir(), ".pstdio");
-  if (value === "~") return input.homedir?.() ?? osHomedir();
-  if (value.startsWith("~/")) return join(input.homedir?.() ?? osHomedir(), value.slice(2));
-  return resolve(value);
-};
+}) => resolveRuntimePstdioHome(input);
 
 const expandsHome = (path: string, homedir: () => string) => {
-  if (path === "~") return homedir();
-  if (path.startsWith("~/")) return join(homedir(), path.slice(2));
-  return path;
+  return expandHomePath(path, homedir());
 };
 
 const isLocalSource = (source: string) =>

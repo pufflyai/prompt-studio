@@ -3,9 +3,10 @@ import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
 import { getBundledSkills } from "pstdio-agents";
 import { findAgent } from "pstdio-api-contracts/known-agents";
+import { ExtensionCatalogAssetError } from "../../../services/extension-asset-catalog";
 import type { AppRouteHandler } from "../../../types";
 import type { SkillsRouteDeps } from "../deps";
-import { notFoundResponseSchema, skillWithContentResponseSchema } from "../dto";
+import { badRequestResponseSchema, notFoundResponseSchema, skillWithContentResponseSchema } from "../dto";
 
 export const getSkillRoute = createRoute({
   method: "get",
@@ -30,13 +31,23 @@ export const getSkillRoute = createRoute({
       description: "Skill not found.",
       content: { "application/json": { schema: notFoundResponseSchema } },
     },
+    400: {
+      description: "Skill source asset could not be resolved.",
+      content: { "application/json": { schema: badRequestResponseSchema } },
+    },
   },
 });
 
 export const getSkillHandler = (deps: SkillsRouteDeps): AppRouteHandler<typeof getSkillRoute> => {
   return async (c) => {
     const { projectId, name } = c.req.valid("param");
-    const skill = await deps.skillService.getByName(projectId, name);
+    let skill: Awaited<ReturnType<typeof deps.skillService.getByName>>;
+    try {
+      skill = await deps.skillService.getByName(projectId, name);
+    } catch (error) {
+      if (error instanceof ExtensionCatalogAssetError) return c.json({ error: error.message }, 400);
+      throw error;
+    }
 
     if (!skill) {
       return c.json({ error: `Skill not found: ${name}` }, 404);
@@ -62,9 +73,20 @@ export const getSkillHandler = (deps: SkillsRouteDeps): AppRouteHandler<typeof g
       {
         id: skill.id,
         project_id: skill.project_id,
+        source_kind: skill.source_kind,
         name: skill.name,
+        title: skill.title,
         description: skill.description,
         files: skill.files,
+        editable: skill.editable,
+        extension_instance_id: skill.extension_instance_id,
+        extension_id: skill.extension_id,
+        installed_extension_id: skill.installed_extension_id,
+        install_name: skill.install_name,
+        namespace: skill.namespace,
+        key: skill.key,
+        source: skill.source,
+        enabled: skill.enabled,
         created_at: skill.created_at,
         updated_at: skill.updated_at,
         deleted_at: skill.deleted_at,

@@ -110,7 +110,7 @@ describe("post-session-success branches on session outcome", () => {
     async () => {
       const repo = createInitializedRepo(ctx, "combo-success-done");
 
-      writePlugin(repo, "combo-success-done-plugin.ts", sessionActionPlugin("postSessionSuccess", "done", "reviewed"));
+      writePlugin(repo, "combo-success-done-plugin.ts", sessionActionPlugin("postSessionSuccess", "done", "wip"));
 
       const { attempt, projectId } = await createAttemptWithSession(ctx, repo, "combo-success-done-repo");
       expect(attempt.session).toBeTruthy();
@@ -127,7 +127,7 @@ describe("post-session-success branches on session outcome", () => {
 
       const ws = await getWorkspace(ctx, projectId, attempt.workspace.id);
       const wsStatus = ws.attempt_status_id ? await getAttemptStatusName(ctx, projectId, ws.attempt_status_id) : null;
-      expect(wsStatus).toBe("reviewed");
+      expect(wsStatus).toBe("wip");
     },
     FLOW_TIMEOUT,
   );
@@ -166,7 +166,6 @@ describe("ticket status change hook triggers further actions", () => {
     async () => {
       const repo = createInitializedRepo(ctx, "combo-status-branch");
       const projectId = getProjectId(repo);
-      await registerRepo(ctx, projectId, repo, "combo-status-branch-repo");
 
       writePlugin(
         repo,
@@ -188,6 +187,7 @@ export default {
 };
 `,
       );
+      await registerRepo(ctx, projectId, repo, "combo-status-branch-repo");
 
       // Create a ticket
       const ticketRes = await fetch(`${api.url}/v1/tickets`, {

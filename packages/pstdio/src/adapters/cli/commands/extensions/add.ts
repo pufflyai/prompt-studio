@@ -9,6 +9,7 @@ import type { Arguments, Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { ensureApi } from "@/features/ensure-api";
+import { installDefaultSkills } from "@/features/skills/install-default-skills";
 import { type ExtensionsAddArgs, enableInstalledExtension, formatInstallOutput } from "./shared";
 
 export const command = "add <source>";
@@ -42,6 +43,7 @@ type Deps = {
   ensureApi: typeof ensureApi;
   findGitRoot: typeof findGitRoot;
   installExtensionSource: (input: InstallExtensionSourceInput) => Promise<InstalledExtensionSource>;
+  installDefaultSkills: typeof installDefaultSkills;
   log: (message: string) => void;
   readConfig: typeof readConfig;
 };
@@ -51,15 +53,17 @@ const defaultDeps: Deps = {
   enableInstalledExtension,
   ensureApi,
   findGitRoot,
+  installDefaultSkills,
   installExtensionSource,
   log: console.log,
   readConfig,
 };
 
-const resolveLinkedProjectId = (deps: Pick<Deps, "cwd" | "findGitRoot" | "readConfig">) => {
+const resolveLinkedProject = (deps: Pick<Deps, "cwd" | "findGitRoot" | "readConfig">) => {
   const root = deps.findGitRoot(deps.cwd());
   if (!root) return null;
-  return deps.readConfig(root)?.project_id ?? null;
+  const projectId = deps.readConfig(root)?.project_id;
+  return projectId ? { projectId, root } : null;
 };
 
 export const createHandler =
@@ -82,15 +86,16 @@ export const createHandler =
       throw error;
     }
 
-    const projectId = resolveLinkedProjectId(deps);
-    if (!projectId) {
+    const project = resolveLinkedProject(deps);
+    if (!project) {
       deps.log(formatInstallOutput(installed, { state: "skipped" }));
       return;
     }
 
     await deps.ensureApi(API_URL);
-    await deps.enableInstalledExtension(projectId, installed);
-    deps.log(formatInstallOutput(installed, { state: "enabled", projectId }));
+    await deps.enableInstalledExtension(project.projectId, installed);
+    await deps.installDefaultSkills(project.root, project.projectId);
+    deps.log(formatInstallOutput(installed, { state: "enabled", projectId: project.projectId }));
   };
 
 export const handler = createHandler();

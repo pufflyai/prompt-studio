@@ -2,12 +2,14 @@ import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
+const apiProxyTarget = process.env.PSTDIO_API_URL ?? "http://localhost:19841";
+
 // https://vite.dev/config/
 export default defineConfig({
   server: {
     proxy: {
-      "/v1": "http://localhost:19841",
-      "/healthz": "http://localhost:19841",
+      "/v1": apiProxyTarget,
+      "/healthz": apiProxyTarget,
     },
   },
   resolve: {

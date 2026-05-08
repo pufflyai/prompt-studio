@@ -32,6 +32,9 @@ That helper forces:
 
 ```bash
 PSTDIO_AGENTS=fake
+PSTDIO_HOME=<temp-dir>
+PSTDIO_DB_PATH=:memory:
+PSTDIO_DEFAULT_EXTENSIONS=[]
 ```
 
 So CLI e2e coverage does not start real Claude Code or OpenCode sessions.
@@ -44,6 +47,9 @@ By default Playwright starts the API with:
 
 ```bash
 PSTDIO_AGENTS=${E2E_AGENTS:-fake}
+PSTDIO_HOME=<temp-dir>
+PSTDIO_DB_PATH=:memory:
+PSTDIO_DEFAULT_EXTENSIONS=[]
 ```
 
 That means:

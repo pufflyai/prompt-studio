@@ -86,7 +86,13 @@ export const TemplateEditor = (props: TemplateEditorProps) => {
     if (isSaveDisabled) return;
 
     try {
-      await updateTemplate.mutateAsync({ name: templateName, content: draftContent });
+      await updateTemplate.mutateAsync({
+        name: templateName,
+        content: draftContent,
+        installName: template.installName,
+        key: template.key,
+        sourceKind: template.sourceKind,
+      });
       setSavedContent(draftContent);
       clearTemplateDraft(undefined, projectId, templateName);
       toaster.create({ type: "success", title: "Template saved" });

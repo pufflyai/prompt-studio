@@ -5,6 +5,8 @@ import { join } from "node:path";
 import { discoverExtensionFiles, discoverExtensionFilesInDir, pstdioHomeRoot } from "./discovery";
 
 const tempDirs: string[] = [];
+const originalHome = process.env.HOME;
+const originalPstdioHome = process.env.PSTDIO_HOME;
 
 const createTempDir = () => {
   const dir = mkdtempSync(join(tmpdir(), "pstdio-ext-discovery-"));
@@ -15,6 +17,18 @@ const createTempDir = () => {
 afterEach(() => {
   for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
   tempDirs.length = 0;
+
+  if (originalHome === undefined) {
+    delete process.env.HOME;
+  } else {
+    process.env.HOME = originalHome;
+  }
+
+  if (originalPstdioHome === undefined) {
+    delete process.env.PSTDIO_HOME;
+  } else {
+    process.env.PSTDIO_HOME = originalPstdioHome;
+  }
 });
 
 describe("discoverExtensionFilesInDir", () => {

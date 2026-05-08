@@ -19,6 +19,7 @@ const LEGACY_MANAGED_MARKER = "// managed-by=pstdio-local-checkout";
 const REPO_MARKER = "# repo-root=";
 const LEGACY_REPO_MARKER = "// repo-root=";
 const BACKUP_SUFFIX = ".pstdio-local-backup";
+const DEV_HOME_SHELL_EXPANSION = ["${", "PSTDIO_HOME:-$HOME/.pstdio-dev", "}"].join("");
 
 type LocalPstdioInput = {
   installDir: string;
@@ -76,6 +77,7 @@ const createWrapper = (repoRoot: string, mode: NonNullable<InstallLocalPstdioInp
   const envLines =
     mode.type === "dev-server"
       ? [
+          `export PSTDIO_HOME="${DEV_HOME_SHELL_EXPANSION}"`,
           `export PSTDIO_API_URL=${quoteShellValue(mode.apiUrl)}`,
           "export PSTDIO_DISABLE_API_AUTO_START='1'",
           "export PSTDIO_DISABLE_EMBED_MANIFEST='1'",

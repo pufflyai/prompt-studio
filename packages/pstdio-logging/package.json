@@ -18,6 +18,7 @@
     "typescript": "6.0.2"
   },
   "dependencies": {
-    "pino": "^9.14.0"
+    "pino": "^9.14.0",
+    "pstdio-paths": "workspace:*"
   }
 }

@@ -4,6 +4,8 @@ import type {
   EnableInstalledExtensionRequest,
   EnableInstalledExtensionResponse,
   ListExtensionCommandsResponse,
+  UpdateInstalledExtensionTemplateInput,
+  UpdateInstalledExtensionTemplateResponse,
 } from "pstdio-api-contracts";
 import type { RequestFn } from "./request";
 
@@ -13,6 +15,11 @@ export type ExtensionClient = {
     installName: string,
     request: EnableInstalledExtensionRequest,
   ): Promise<EnableInstalledExtensionResponse>;
+  updateInstalledTemplate(
+    installName: string,
+    templateKey: string,
+    input: UpdateInstalledExtensionTemplateInput,
+  ): Promise<UpdateInstalledExtensionTemplateResponse>;
   listCommands(projectId: string): Promise<ListExtensionCommandsResponse>;
   execute(commandId: string, request: CommandExecuteRequest): Promise<CommandExecuteResponse>;
 };
@@ -23,6 +30,14 @@ export const createExtensionClient = (request: RequestFn): ExtensionClient => ({
       method: "POST",
       body,
     }),
+  updateInstalledTemplate: (installName, templateKey, body) =>
+    request(
+      `/v1/extensions/installed/${encodeURIComponent(installName)}/templates/${encodeURIComponent(templateKey)}`,
+      {
+        method: "PUT",
+        body,
+      },
+    ),
   listCommands: (projectId) => request(`/v1/projects/${projectId}/extensions/commands`),
   execute: (commandId, input) => {
     const { projectId, ...body } = input;

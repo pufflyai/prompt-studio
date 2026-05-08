@@ -3,7 +3,6 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isCompiledBinary } from "../commands/serve/embedded-assets";
-import { resolveDefaultDbPath, resolveDefaultStoragePath } from "./state-paths";
 
 type ApiSpawnOptions = {
   cwd?: string;
@@ -108,26 +107,6 @@ const resolveApiEnv = (env: NodeJS.ProcessEnv) => {
   return resolved;
 };
 
-const resolveWorkspaceFilesRoot = (apiRoot: string) => join(dirname(apiRoot), "pstdio", "files");
-
-const resolveApiRuntimeEnv = (env: NodeJS.ProcessEnv, filesRoot?: string) => {
-  const resolved = resolveApiEnv(env);
-
-  if (!resolved.PSTDIO_DB_PATH) {
-    resolved.PSTDIO_DB_PATH = resolveDefaultDbPath();
-  }
-
-  if (!resolved.PSTDIO_STORAGE_PATH) {
-    resolved.PSTDIO_STORAGE_PATH = resolveDefaultStoragePath();
-  }
-
-  if (!resolved.PSTDIO_FILES_ROOT && filesRoot) {
-    resolved.PSTDIO_FILES_ROOT = filesRoot;
-  }
-
-  return resolved;
-};
-
 export const runApi = (startDir: string, options: ApiLaunchOptions = {}) => {
   const { spawner = spawn, env = process.env, stdio = "ignore", detached = true, bundledCliPath } = options;
 
@@ -137,7 +116,7 @@ export const runApi = (startDir: string, options: ApiLaunchOptions = {}) => {
 
   // Path 1: compiled binary — self-spawn with `serve` subcommand
   if (isCompiledBinary()) {
-    const compiledEnv = resolveApiRuntimeEnv(env);
+    const compiledEnv = resolveApiEnv(env);
     const { command, args, options: spawnOptions } = buildCompiledApiCommand(stdio, detached);
     const child = spawner(command, args, { ...spawnOptions, env: compiledEnv });
 
@@ -156,7 +135,7 @@ export const runApi = (startDir: string, options: ApiLaunchOptions = {}) => {
     const { command, args, options: spawnOptions } = buildApiStartCommand(apiRoot, stdio, detached);
     const child = spawner(command, args, {
       ...spawnOptions,
-      env: resolveApiRuntimeEnv(env, resolveWorkspaceFilesRoot(apiRoot)),
+      env: resolveApiEnv(env),
     });
 
     if (detached) {
@@ -170,7 +149,7 @@ export const runApi = (startDir: string, options: ApiLaunchOptions = {}) => {
   const bundledEntry = cliPath ? resolveBundledApiEntry(cliPath) : null;
 
   if (bundledEntry) {
-    const bundledEnv = resolveApiRuntimeEnv(env);
+    const bundledEnv = resolveApiEnv(env);
     const { command, args, options: spawnOptions } = buildBundledApiCommand(bundledEntry, stdio, detached);
     const child = spawner(command, args, { ...spawnOptions, env: bundledEnv });
 

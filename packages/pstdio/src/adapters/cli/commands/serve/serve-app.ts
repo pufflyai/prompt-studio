@@ -3,7 +3,6 @@ import { createLogger } from "pstdio-logging";
 import { CLI_VERSION } from "@/features/cli-version";
 import { resolveFilesRoot } from "@/features/resolve-files-root";
 import { injectConfig } from "../../dashboard/serve-dashboard";
-import { resolveDefaultDbPath, resolveDefaultStoragePath } from "../../dashboard/state-paths";
 import { isCompiledBinary, loadEmbeddedAssets, resolveMimeType } from "./embedded-assets";
 import { loadFilesystemAssets } from "./filesystem-assets";
 
@@ -58,15 +57,6 @@ const reportStartupError = (error: Error) => {
   );
 };
 
-const ensureRuntimeEnv = () => {
-  if (!process.env.PSTDIO_DB_PATH) {
-    process.env.PSTDIO_DB_PATH = resolveDefaultDbPath();
-  }
-  if (!process.env.PSTDIO_STORAGE_PATH) {
-    process.env.PSTDIO_STORAGE_PATH = resolveDefaultStoragePath();
-  }
-};
-
 const defaultDeps: ServeAppDeps = {
   createApp: async () => createApp({ filesRoot: await resolveFilesRoot() }),
   injectConfig,
@@ -87,7 +77,6 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
 
   return async (options: ServeAppOptions) => {
     const { port, host } = options;
-    ensureRuntimeEnv();
     const { app, close } = await deps.createApp();
 
     let closed = false;

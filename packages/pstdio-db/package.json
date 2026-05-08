@@ -29,6 +29,7 @@
     "drizzle-zod": "^0.8.3",
     "drizzle-orm": "^0.45.1",
     "pg": "^8.20.0",
+    "pstdio-paths": "workspace:*",
     "yjs": "^13.6.29",
     "zod": "^4.3.6"
   }

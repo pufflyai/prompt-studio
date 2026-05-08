@@ -1,10 +1,29 @@
-import { expect, test } from "bun:test";
+import { afterEach, expect, test } from "bun:test";
 import os from "node:os";
 import path from "node:path";
 import { resolveStorageRoot } from "./paths";
 
-test("resolveStorageRoot requires an explicit storage path", () => {
-  expect(() => resolveStorageRoot()).toThrow("Storage path is required. Set PSTDIO_STORAGE_PATH or pass storagePath.");
+const originalPstdioHome = process.env.PSTDIO_HOME;
+
+afterEach(() => {
+  if (originalPstdioHome === undefined) {
+    delete process.env.PSTDIO_HOME;
+    return;
+  }
+
+  process.env.PSTDIO_HOME = originalPstdioHome;
+});
+
+test("resolveStorageRoot uses ~/.pstdio/storage by default", () => {
+  delete process.env.PSTDIO_HOME;
+
+  expect(resolveStorageRoot()).toBe(path.join(os.homedir(), ".pstdio", "storage"));
+});
+
+test("resolveStorageRoot uses PSTDIO_HOME by default", () => {
+  process.env.PSTDIO_HOME = "/tmp/pstdio-home";
+
+  expect(resolveStorageRoot()).toBe("/tmp/pstdio-home/storage");
 });
 
 test("resolveStorageRoot expands ~ to home directory", () => {

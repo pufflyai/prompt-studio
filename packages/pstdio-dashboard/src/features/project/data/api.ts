@@ -147,10 +147,15 @@ export const getProjectTemplateAssets = async (projectId: string): Promise<Proje
     id: t.id,
     projectId: t.project_id ?? projectId,
     name: t.name,
+    title: t.title,
     templateType: t.template_type as ProjectTemplateAsset["templateType"],
+    sourceKind: t.source_kind,
+    installName: t.install_name,
+    key: t.key,
     fileId: t.file_id,
     content: "",
     isDefault: t.is_default,
+    enabled: t.enabled,
     createdAt: t.created_at,
     updatedAt: t.updated_at,
   }));
@@ -165,10 +170,15 @@ export const getProjectTemplate = async (projectId: string, name: string) => {
     id: t.id,
     projectId: t.project_id ?? projectId,
     name: t.name,
+    title: t.title,
     templateType: t.template_type as ProjectTemplateAssetType,
+    sourceKind: t.source_kind,
+    installName: t.install_name,
+    key: t.key,
     fileId: t.file_id,
     content: t.content,
     isDefault: t.is_default,
+    enabled: t.enabled,
     createdAt: t.created_at,
     updatedAt: t.updated_at,
   } satisfies ProjectTemplateAsset;
@@ -192,10 +202,13 @@ export const createProjectTemplate = async (
     id: created.id,
     projectId: created.project_id ?? projectId,
     name: created.name,
+    title: created.title,
     templateType: created.template_type as ProjectTemplateAssetType,
+    sourceKind: created.source_kind,
     fileId: created.file_id,
     content: input.content ?? "",
     isDefault: created.is_default,
+    enabled: created.enabled,
     createdAt: created.created_at,
     updatedAt: created.updated_at,
   } satisfies ProjectTemplateAsset;
@@ -213,6 +226,17 @@ export const updateProjectTemplate = async (
       ...(input.isDefault !== undefined ? { is_default: input.isDefault } : {}),
       ...(input.templateType !== undefined ? { template_type: input.templateType } : {}),
     },
+  });
+};
+
+export const updateInstalledExtensionTemplate = async (
+  installName: string,
+  key: string,
+  input: { content: string },
+) => {
+  await apiRequest(`/v1/extensions/installed/${encodeURIComponent(installName)}/templates/${encodeURIComponent(key)}`, {
+    method: "PUT",
+    body: input,
   });
 };
 

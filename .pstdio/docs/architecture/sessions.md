@@ -197,9 +197,10 @@ Modes:
 
 `workspaces_root` resolution order:
 
-1. `PSTDIO_WORKSPACES_DIR`
+1. `$PSTDIO_HOME/workspaces`
 2. `$HOME/.pstdio/workspaces`
-3. `os.homedir()/.pstdio/workspaces`
+
+Set `PSTDIO_HOME` to isolate or move the whole pstdio state tree, including workspaces.
 
 Prompt resolution order:
 

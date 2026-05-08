@@ -37,8 +37,24 @@ type UpdateInput = {
 
 const nowTimestamp = () => new Date().toISOString();
 
-const nextTicketShorthand = (projectShorthand: string, existingCount: number) =>
-  `${projectShorthand}-${existingCount + 1}`;
+const ticketNumberFromShorthand = (projectShorthand: string, shorthand: string) => {
+  const prefix = `${projectShorthand}-`;
+  if (!shorthand.startsWith(prefix)) return null;
+
+  const suffix = shorthand.slice(prefix.length);
+  if (!/^\d+$/.test(suffix)) return null;
+
+  return Number(suffix);
+};
+
+const nextTicketShorthand = (projectShorthand: string, existingShorthands: string[]) => {
+  const maxNumber = existingShorthands.reduce((max, shorthand) => {
+    const number = ticketNumberFromShorthand(projectShorthand, shorthand);
+    return number === null ? max : Math.max(max, number);
+  }, 0);
+
+  return `${projectShorthand}-${maxNumber + 1}`;
+};
 
 export const createTicketsDBService = (db: DbClient) => {
   const create = async (input: CreateInput) => {
@@ -49,12 +65,15 @@ export const createTicketsDBService = (db: DbClient) => {
 
     if (!project) throw new Error(`Project not found: ${input.project_id}`);
 
-    const [countResult] = await db
-      .select({ count: sql<number>`count(*)::int` })
+    const existingTickets = await db
+      .select({ shorthand: tickets.shorthand })
       .from(tickets)
       .where(eq(tickets.project_id, input.project_id));
 
-    const shorthand = nextTicketShorthand(project.shorthand, countResult.count);
+    const shorthand = nextTicketShorthand(
+      project.shorthand,
+      existingTickets.map((ticket) => ticket.shorthand),
+    );
     const timestamp = nowTimestamp();
 
     const record: TicketRecord = {

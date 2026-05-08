@@ -2,6 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { enableInstalledExtensionRequestSchema, enableInstalledExtensionResponseSchema } from "pstdio-api-contracts";
 import { NamespaceConflictError, ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppRouteHandler } from "../../../types";
+import { installProjectSkillsToRepo } from "../../skills/install-skill-to-repo";
 import type { ExtensionsRouteDeps } from "../deps";
 
 const errorSchema = z.object({ error: z.string() });
@@ -59,6 +60,11 @@ export const enableInstalledExtensionHandler = (
         sourceRef: body.sourceRef,
         version: body.version,
       });
+
+      const repos = await deps.repoService.listByProject(projectId);
+      for (const repo of repos) {
+        await installProjectSkillsToRepo(deps, { projectId, repoPath: repo.path });
+      }
 
       return c.json(
         {

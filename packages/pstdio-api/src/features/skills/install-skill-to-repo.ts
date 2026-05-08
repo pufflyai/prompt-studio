@@ -81,7 +81,7 @@ const resolveTargetAgents = async (
 };
 
 export const installProjectSkillsToRepo = async (
-  deps: Pick<SkillsRouteDeps, "skillService" | "agentConfigService" | "fileService" | "agentRegistry" | "eventBus">,
+  deps: Pick<SkillsRouteDeps, "skillService" | "agentConfigService" | "agentRegistry" | "eventBus">,
   input: { projectId: string; repoPath: string },
 ) => {
   const [skills, agents] = await Promise.all([deps.skillService.list(input.projectId), resolveTargetAgents(deps)]);

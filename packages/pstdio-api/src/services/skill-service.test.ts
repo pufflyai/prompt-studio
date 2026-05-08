@@ -7,6 +7,14 @@ const fakeFileService = {
   remove: mock(async () => true),
 } as unknown as Parameters<typeof createSkillService>[0]["fileService"];
 
+const fakeExtensionDeps = {
+  extensionService: { listEnabledSourcesForProject: mock(async () => []) },
+  extensionSkillPreferencesDBService: { list: mock(async () => []) },
+} as unknown as Pick<
+  Parameters<typeof createSkillService>[0],
+  "extensionService" | "extensionSkillPreferencesDBService"
+>;
+
 describe("SkillService", () => {
   test("list hydrates file content via fileService", async () => {
     const list = mock(async () => [
@@ -22,6 +30,7 @@ describe("SkillService", () => {
       },
     ]);
     const service = createSkillService({
+      ...fakeExtensionDeps,
       skillsDBService: { list } as unknown as Parameters<typeof createSkillService>[0]["skillsDBService"],
       skillsStorageService: {
         listProjectSkills: mock(async () => []),
@@ -46,6 +55,7 @@ describe("SkillService", () => {
     ];
     const listProjectSkills = mock(async () => projectSkills);
     const service = createSkillService({
+      ...fakeExtensionDeps,
       skillsDBService: {
         list: mock(async () => []),
       } as unknown as Parameters<typeof createSkillService>[0]["skillsDBService"],

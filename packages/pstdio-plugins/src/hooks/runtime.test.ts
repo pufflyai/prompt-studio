@@ -8,7 +8,7 @@ import { loadPluginRuntime } from "./runtime";
 let tempDirs: string[] = [];
 
 const createTempDir = () => {
-  const dir = mkdtempSync(join(tmpdir(), "pstdio-runtime-test-"));
+  const dir = mkdtempSync(join(tmpdir(), "pstdio-hooks-runtime-test-"));
   tempDirs.push(dir);
   return dir;
 };

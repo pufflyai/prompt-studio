@@ -1,8 +1,5 @@
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { resolvePstdioDbPath, resolvePstdioStoragePath } from "pstdio-paths";
 
-const DATA_DIR = join(homedir(), ".pstdio");
+export const resolveDefaultDbPath = resolvePstdioDbPath;
 
-export const resolveDefaultDbPath = () => join(DATA_DIR, "pstdio.db");
-
-export const resolveDefaultStoragePath = () => join(DATA_DIR, "storage");
+export const resolveDefaultStoragePath = resolvePstdioStoragePath;

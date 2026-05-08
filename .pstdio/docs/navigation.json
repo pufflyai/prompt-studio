@@ -273,7 +273,7 @@
       "text": "Known Issues",
       "items": [
         {
-          "text": "Duplicate Path Logic",
+          "text": "Shared Path Logic",
           "link": "/known-issues/dupplicate_path_logic"
         },
         {

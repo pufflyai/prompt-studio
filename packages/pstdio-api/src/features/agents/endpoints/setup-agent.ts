@@ -1,5 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
+import { installProjectSkillsToRepo } from "../../skills/install-skill-to-repo";
 import type { AgentsRouteDeps } from "../deps";
 import { agentConfigResponseSchema, setupAgentBodySchema } from "../dto";
 
@@ -26,14 +27,20 @@ export const setupAgentHandler = (deps: AgentsRouteDeps): AppRouteHandler<typeof
   return async (c) => {
     const { agent_id, binary } = c.req.valid("json");
     const createdOrExisting = await deps.agentConfigService.upsert(agent_id);
-    if (!binary) {
-      deps.eventBus.emit("agent_configs", "set", createdOrExisting);
-      return c.json(createdOrExisting, 201);
+    const agent = binary
+      ? ((await deps.agentConfigService.update(agent_id, { binary }))?.updated ?? createdOrExisting)
+      : createdOrExisting;
+
+    deps.eventBus.emit("agent_configs", "set", agent);
+
+    const projects = await deps.projectService.list();
+    for (const project of projects) {
+      const repos = await deps.repoService.listByProject(project.id);
+      for (const repo of repos) {
+        await installProjectSkillsToRepo(deps, { projectId: project.id, repoPath: repo.path });
+      }
     }
 
-    const result = await deps.agentConfigService.update(agent_id, { binary });
-    const agent = result?.updated ?? createdOrExisting;
-    deps.eventBus.emit("agent_configs", "set", agent);
     return c.json(agent, 201);
   };
 };

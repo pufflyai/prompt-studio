@@ -128,28 +128,37 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
       },
     ];
 
-    const grouped: Partial<Record<ProjectTemplateAssetType, ProjectTemplateAsset[]>> = {};
-    for (const tpl of templates) {
-      const list = grouped[tpl.templateType] ?? [];
-      list.push(tpl);
-      grouped[tpl.templateType] = list;
-    }
+    const buildTemplateNodes = (source: "project" | "extension", items: ProjectTemplateAsset[]) => {
+      const grouped: Partial<Record<ProjectTemplateAssetType, ProjectTemplateAsset[]>> = {};
+      for (const tpl of items) {
+        const list = grouped[tpl.templateType] ?? [];
+        list.push(tpl);
+        grouped[tpl.templateType] = list;
+      }
 
-    const templateNodes: TreeListNode[] = TEMPLATE_TYPE_ORDER.filter((type) => grouped[type]).map((type) => {
-      const config = TEMPLATE_TYPE_CONFIG[type];
-      const items = grouped[type]!;
-      return {
-        id: `template-group:${type}`,
-        label: config.label,
-        icon: config.icon,
-        children: items.map((template) => ({
-          id: `template:${template.name}`,
-          label: template.name,
-          isNavigable: true,
-          navigationIntent: { id: "select-template", payload: template.name },
-        })),
-      };
-    });
+      return TEMPLATE_TYPE_ORDER.filter((type) => grouped[type]).map((type) => {
+        const config = TEMPLATE_TYPE_CONFIG[type];
+        const items = grouped[type]!;
+        return {
+          id: `${source}-template-group:${type}`,
+          label: config.label,
+          icon: config.icon,
+          children: items.map((template) => ({
+            id: `template:${template.name}`,
+            label: template.name,
+            isNavigable: true,
+            navigationIntent: { id: "select-template", payload: template.name },
+          })),
+        } satisfies TreeListNode;
+      });
+    };
+
+    const projectTemplates: ProjectTemplateAsset[] = [];
+    const extensionTemplates: ProjectTemplateAsset[] = [];
+    for (const tpl of templates) {
+      const list = tpl.sourceKind === "extension" ? extensionTemplates : projectTemplates;
+      list.push(tpl);
+    }
 
     const skillNodes: TreeListNode[] = skills.map((skill) => ({
       id: `skill:${skill.name}`,
@@ -178,17 +187,11 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
       },
     ];
 
-    return [
-      { id: "general", nodes: generalNodes },
+    const templateSections: TreeListSection[] = [
       {
-        id: "skills",
-        label: t("projectSettings.skills"),
-        nodes: skillNodes,
-      },
-      {
-        id: "templates",
-        label: t("projectSettings.templates"),
-        nodes: templateNodes,
+        id: "project-templates",
+        label: t("projectSettings.projectTemplates", { defaultValue: "Project templates" }),
+        nodes: buildTemplateNodes("project", projectTemplates),
         actions: [
           {
             id: "create-template",
@@ -198,6 +201,24 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
           },
         ],
       },
+    ];
+
+    if (extensionTemplates.length > 0) {
+      templateSections.push({
+        id: "extension-templates",
+        label: t("projectSettings.extensionTemplates", { defaultValue: "Extension templates" }),
+        nodes: buildTemplateNodes("extension", extensionTemplates),
+      });
+    }
+
+    return [
+      { id: "general", nodes: generalNodes },
+      {
+        id: "skills",
+        label: t("projectSettings.skills"),
+        nodes: skillNodes,
+      },
+      ...templateSections,
       { id: "repositories", nodes: repositoryNodes },
       { id: "agents", nodes: agentNodes },
       { id: "plugins", label: "Plugins", nodes: pluginNodes },

@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { ActionTriggerContext, TargetType } from "@pstdio/sdk/plugins";
 import type { AppRouteHandler } from "../../../types";
@@ -59,11 +58,10 @@ const resolvePrompts = async (deps: ActionsRouteDeps, projectId: string) => {
 
   const promptEntries = await Promise.all(
     promptTemplates.map(async (template) => {
-      const file = await deps.fileService.get(template.file_id);
-      if (!file) return null;
-
       try {
-        return [template.name, readFileSync(file.storage_path, "utf8")] as const;
+        const withContent = await deps.templateService.getWithContent(projectId, template.name);
+        if (!withContent) return null;
+        return [template.name, withContent.content] as const;
       } catch {
         return null;
       }

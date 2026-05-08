@@ -5,6 +5,10 @@ import type { ExtensionsRouteDeps } from "./deps";
 import { enableInstalledExtensionHandler, enableInstalledExtensionRoute } from "./endpoints/enable-installed-extension";
 import { executeExtensionCommandHandler, executeExtensionCommandRoute } from "./endpoints/execute-extension-command";
 import { listExtensionCommandsHandler, listExtensionCommandsRoute } from "./endpoints/list-extension-commands";
+import {
+  updateInstalledExtensionTemplateHandler,
+  updateInstalledExtensionTemplateRoute,
+} from "./endpoints/update-installed-extension-template";
 import { resolveWebviewAssetFile } from "./extension-webview-assets";
 
 const serveWebviewAsset = (deps: ExtensionsRouteDeps) => async (c: Context<AppBindings>) => {
@@ -33,6 +37,7 @@ export const createExtensionRoutes = (deps: ExtensionsRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
 
   routes.openapi(enableInstalledExtensionRoute, enableInstalledExtensionHandler(deps));
+  routes.openapi(updateInstalledExtensionTemplateRoute, updateInstalledExtensionTemplateHandler(deps));
   routes.openapi(listExtensionCommandsRoute, listExtensionCommandsHandler(deps) as never);
   routes.openapi(executeExtensionCommandRoute, executeExtensionCommandHandler(deps) as never);
   routes.get("/extensions/installed/:installName/webviews/*", serveWebviewAsset(deps));

@@ -7,10 +7,8 @@ const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const dashboardPort = Number(process.env.E2E_DASHBOARD_PORT ?? "5174");
 const runId = process.env.E2E_RUN_ID ?? `${Date.now()}-${process.pid}`;
 const agentEnv = process.env.E2E_AGENTS ?? "fake";
-const storagePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-storage-"));
 const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-home-"));
 const resolvedHomePath = process.env.E2E_HOME ?? homePath;
-const filesRoot = join(import.meta.dirname, "../pstdio/files");
 const bunCacheDir = process.env.E2E_BUN_CACHE_DIR ?? join(tmpdir(), "pstdio-e2e-bun-cache");
 
 export default defineConfig({
@@ -44,12 +42,10 @@ export default defineConfig({
         PORT: String(apiPort),
         PSTDIO_DB_PATH: ":memory:",
         PSTDIO_EVENT_BUS_BUFFER_SIZE: "5",
-        PSTDIO_STORAGE_PATH: storagePath,
-        PSTDIO_FILES_ROOT: filesRoot,
+        PSTDIO_HOME: resolvedHomePath,
         PSTDIO_AGENTS: agentEnv,
         PSTDIO_DEFAULT_EXTENSIONS: "[]",
         HOME: resolvedHomePath,
-        PSTDIO_WORKSPACES_DIR: join(resolvedHomePath, ".pstdio", "workspaces"),
         BUN_INSTALL_CACHE_DIR: bunCacheDir,
       },
     },
@@ -62,6 +58,7 @@ export default defineConfig({
         PSTDIO_DISABLE_EMBED_MANIFEST: "1",
         PSTDIO_DISABLE_API_AUTO_START: "1",
         PSTDIO_DEFAULT_EXTENSIONS: "[]",
+        PSTDIO_HOME: resolvedHomePath,
         BUN_INSTALL_CACHE_DIR: bunCacheDir,
         HOME: resolvedHomePath,
       },

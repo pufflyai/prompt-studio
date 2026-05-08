@@ -64,11 +64,12 @@ export const extensionArtifactMountSchema = z.object({
 const extensionPlacementSchema = z.enum(["first", "default", "last"]);
 const extensionSlotKindSchema = z.enum(["menu", "navigation", "view", "settings", "renderer"]);
 
-const packageAssetDescriptorSchema = z.object({
+export const packageAssetDescriptorSchema = z.object({
   kind: z.literal("package-asset"),
   path: z.string(),
   baseUrl: z.string(),
 });
+export type PackageAssetDescriptor = z.infer<typeof packageAssetDescriptorSchema>;
 
 const extensionWebviewSchema = z.object({
   entry: packageAssetDescriptorSchema,
@@ -199,6 +200,19 @@ export const enableInstalledExtensionResponseSchema = z.object({
 
 export type EnableInstalledExtensionRequest = z.infer<typeof enableInstalledExtensionRequestSchema>;
 export type EnableInstalledExtensionResponse = z.infer<typeof enableInstalledExtensionResponseSchema>;
+
+export const updateInstalledExtensionTemplateInputSchema = z.object({
+  content: z.string().min(1),
+});
+
+export const updateInstalledExtensionTemplateResponseSchema = z.object({
+  installName: z.string(),
+  key: z.string(),
+  content: z.string(),
+});
+
+export type UpdateInstalledExtensionTemplateInput = z.infer<typeof updateInstalledExtensionTemplateInputSchema>;
+export type UpdateInstalledExtensionTemplateResponse = z.infer<typeof updateInstalledExtensionTemplateResponseSchema>;
 
 export const extensionResourceRefSchema = z.object({
   type: z.string(),

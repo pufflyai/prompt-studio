@@ -4,6 +4,50 @@ import packageData from "../../../../../package.json";
 import { createServeApp } from "./serve-app";
 
 describe("serveApp", () => {
+  it("leaves state path defaults to the app runtime", async () => {
+    const previousDbPath = process.env.PSTDIO_DB_PATH;
+    const previousStoragePath = process.env.PSTDIO_STORAGE_PATH;
+    delete process.env.PSTDIO_DB_PATH;
+    delete process.env.PSTDIO_STORAGE_PATH;
+
+    try {
+      const serveApp = createServeApp({
+        createApp: async () => ({
+          app: {
+            fetch: () => new Response("ok"),
+          },
+          close: async () => {},
+        }),
+        injectConfig: (html) => html,
+        isCompiledBinary: () => false,
+        loadEmbeddedAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
+        loadFilesystemAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
+        resolveMimeType: () => "text/html",
+        serve: () => ({}) as ReturnType<typeof Bun.serve>,
+        onSignal: () => {},
+        offSignal: () => {},
+        log: () => {},
+      });
+
+      await serveApp({ port: 19840, host: "localhost" });
+
+      expect(process.env.PSTDIO_DB_PATH).toBeUndefined();
+      expect(process.env.PSTDIO_STORAGE_PATH).toBeUndefined();
+    } finally {
+      if (previousDbPath === undefined) {
+        delete process.env.PSTDIO_DB_PATH;
+      } else {
+        process.env.PSTDIO_DB_PATH = previousDbPath;
+      }
+
+      if (previousStoragePath === undefined) {
+        delete process.env.PSTDIO_STORAGE_PATH;
+      } else {
+        process.env.PSTDIO_STORAGE_PATH = previousStoragePath;
+      }
+    }
+  });
+
   it("closes the app when server startup throws", async () => {
     let closed = false;
 

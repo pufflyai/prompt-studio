@@ -13,11 +13,11 @@ let close: () => Promise<void>;
 let tempRoot: string;
 let projectId: string;
 let repoId: string;
-const previousWorkspacesDirEnv = process.env.PSTDIO_WORKSPACES_DIR;
+const previousPstdioHomeEnv = process.env.PSTDIO_HOME;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-exec-action-"));
-  process.env.PSTDIO_WORKSPACES_DIR = join(tempRoot, "worktrees");
+  process.env.PSTDIO_HOME = join(tempRoot, "pstdio-home");
   const repoPath = join(tempRoot, "repo");
   const pluginsDir = join(repoPath, ".pstdio", "plugins");
   mkdirSync(pluginsDir, { recursive: true });
@@ -125,10 +125,10 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await close();
-  if (previousWorkspacesDirEnv === undefined) {
-    delete process.env.PSTDIO_WORKSPACES_DIR;
+  if (previousPstdioHomeEnv === undefined) {
+    delete process.env.PSTDIO_HOME;
   } else {
-    process.env.PSTDIO_WORKSPACES_DIR = previousWorkspacesDirEnv;
+    process.env.PSTDIO_HOME = previousPstdioHomeEnv;
   }
   rmSync(tempRoot, { recursive: true, force: true });
 });

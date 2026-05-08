@@ -1,20 +1,36 @@
-# Duplicate Path Logic
+# Shared Path Logic
 
 ## `~/.pstdio` default data directory
 
-The default data directory (`~/.pstdio`) is resolved in two places:
+The default data directory (`~/.pstdio`) is resolved by `pstdio-paths`.
 
-1. **`pstdio-db`** — `packages/pstdio-db/src/db/paths.ts` (`resolveDbPath`)
-2. **`pstdio` CLI** — `packages/pstdio/src/adapters/cli/dashboard/state-paths.ts` (`resolveDefaultDbPath`, `resolveDefaultStoragePath`)
+Runtime packages import the shared helpers instead of duplicating the fallback chain:
 
-### Why it's duplicated
+- **`pstdio-db`** derives `pstdio.db`
+- **`pstdio-storage`** derives `storage`
+- **`pstdio` CLI** derives dashboard/API state paths before spawning local services
+- **extension runtime code** derives `extensions`
 
-The CLI can't import from `pstdio-db` — it would pull in Drizzle/PGlite and bloat the bundle. The CLI only needs the paths to pass as environment variables (`PSTDIO_DB_PATH`, `PSTDIO_STORAGE_PATH`) to the spawned API process.
+### Why it is shared
 
-### Risk
+The CLI cannot import from `pstdio-db` because that would pull in Drizzle/PGlite and bloat the bundle. `pstdio-paths` is the small zero-dependency package both sides can import safely.
 
-If the default path convention changes in `pstdio-db`, the CLI's `state-paths.ts` must be updated manually.
+### Configuration
 
-### Future
+Set `PSTDIO_HOME` to move the whole pstdio data root:
 
-Consider extracting a tiny shared package (e.g. `pstdio-paths`) with zero dependencies that both can import from.
+| Path | Default |
+| ---- | ------- |
+| home | `~/.pstdio` |
+| database | `$PSTDIO_HOME/pstdio.db` |
+| storage | `$PSTDIO_HOME/storage` |
+| workspaces | `$PSTDIO_HOME/workspaces` |
+| extensions | `$PSTDIO_HOME/extensions` |
+
+Narrower overrides remain for targeted runtime/test setup:
+
+- `PSTDIO_DB_PATH`
+- `PSTDIO_STORAGE_PATH`
+- `PSTDIO_FILES_ROOT`
+
+Workspace paths are derived from `PSTDIO_HOME`.

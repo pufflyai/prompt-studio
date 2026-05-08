@@ -401,7 +401,7 @@ All packages share the same version. Platform packages publish before the wrappe
 
 `scripts/verify-packages.ts` now includes a required runtime smoke check on the host-platform compiled binary:
 
-1. start `<platform-binary> serve` with isolated `PSTDIO_DB_PATH` and `PSTDIO_STORAGE_PATH`
+1. start `<platform-binary> serve` with isolated `PSTDIO_HOME`
 2. call `POST /v1/projects`
 3. assert default templates and default skills were seeded via API
 

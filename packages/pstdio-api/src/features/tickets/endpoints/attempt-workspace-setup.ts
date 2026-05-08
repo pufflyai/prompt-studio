@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { copyFile, mkdir } from "node:fs/promises";
-import { homedir } from "node:os";
 import { join } from "node:path";
+import { resolvePstdioWorkspacesPath } from "pstdio-paths";
 import { createWorktree, resolveLatestBase } from "pstdio-wt";
 import { withHookSessionClient } from "../../hooks/hook-client";
 import { isAgentEnabledForProject, parseProjectSelectedAgents } from "../../projects/selected-agents";
@@ -10,15 +10,7 @@ import type { TicketsRouteDeps } from "../deps";
 type AttemptMode = "worktree" | "current_branch";
 type WorkspaceRecord = Awaited<ReturnType<TicketsRouteDeps["workspaceService"]["create"]>>;
 
-const resolveWorkspacesRoot = () => {
-  const configured = process.env.PSTDIO_WORKSPACES_DIR?.trim();
-  if (configured) return configured;
-
-  const home = process.env.HOME?.trim();
-  if (home) return join(home, ".pstdio", "workspaces");
-
-  return join(homedir(), ".pstdio", "workspaces");
-};
+const resolveWorkspacesRoot = () => resolvePstdioWorkspacesPath({ env: process.env });
 
 const copyPstdioConfig = async (repoPath: string, worktreePath: string) => {
   const srcConfig = join(repoPath, ".pstdio", "config.json");

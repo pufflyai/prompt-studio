@@ -1,19 +1,9 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
-
-const expandHomeDirectory = (value: string) => {
-  if (value === "~") return os.homedir();
-  if (value.startsWith("~/")) return path.join(os.homedir(), value.slice(2));
-  return value;
-};
+import { expandHomePath, resolvePstdioStoragePath } from "pstdio-paths";
 
 export const resolveStorageRoot = (storagePath?: string) => {
-  if (!storagePath) {
-    throw new Error("Storage path is required. Set PSTDIO_STORAGE_PATH or pass storagePath.");
-  }
-
-  return expandHomeDirectory(storagePath);
+  return expandHomePath(storagePath ?? process.env.PSTDIO_STORAGE_PATH ?? resolvePstdioStoragePath());
 };
 
 export const ensureStorageRoot = (storageRoot: string) => {

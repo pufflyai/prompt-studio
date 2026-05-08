@@ -1,8 +1,9 @@
 import { createApp } from "./app";
+import { resolveApiFilesRoot } from "./default-files-root";
 import { apiLogger } from "./lib/logger";
 
 const { app, close } = await createApp({
-  filesRoot: process.env.PSTDIO_FILES_ROOT ?? "",
+  filesRoot: resolveApiFilesRoot(),
 });
 const port = Number(process.env.PORT ?? "19840");
 

@@ -3,7 +3,6 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveApiRoot, resolveBundledApiEntry, runApi, shouldAutoStartApi } from "./api";
-import { resolveDefaultDbPath, resolveDefaultStoragePath } from "./state-paths";
 
 type SpawnCall = {
   command: string;
@@ -40,15 +39,8 @@ const writeApiPackage = (root: string) => {
   return apiRoot;
 };
 
-const withDefaultDataPaths = (env: NodeJS.ProcessEnv) => ({
+const withApiRuntimeEnv = (env: NodeJS.ProcessEnv) => ({
   ...env,
-  PSTDIO_DB_PATH: resolveDefaultDbPath(),
-  PSTDIO_STORAGE_PATH: resolveDefaultStoragePath(),
-});
-
-const withWorkspaceRuntimeEnv = (env: NodeJS.ProcessEnv, apiRoot: string) => ({
-  ...withDefaultDataPaths(env),
-  PSTDIO_FILES_ROOT: join(apiRoot, "..", "pstdio", "files"),
 });
 
 test("resolveApiRoot finds pstdio-api workspace above start directory", () => {
@@ -75,7 +67,7 @@ test("runApi spawns bun start in the api workspace", () => {
     {
       command: "bun",
       args: ["run", "start"],
-      options: { cwd: apiRoot, stdio: "ignore", detached: true, env: withWorkspaceRuntimeEnv(env, apiRoot) },
+      options: { cwd: apiRoot, stdio: "ignore", detached: true, env: withApiRuntimeEnv(env) },
     },
   ]);
   expect(unrefCalled()).toBe(true);
@@ -100,7 +92,7 @@ test("runApi finds the api workspace relative to the source CLI entry when cwd i
     {
       command: "bun",
       args: ["run", "start"],
-      options: { cwd: apiRoot, stdio: "ignore", detached: true, env: withWorkspaceRuntimeEnv(env, apiRoot) },
+      options: { cwd: apiRoot, stdio: "ignore", detached: true, env: withApiRuntimeEnv(env) },
     },
   ]);
 });
@@ -120,7 +112,7 @@ test("runApi keeps child attached when detached is false", () => {
     {
       command: "bun",
       args: ["run", "start"],
-      options: { cwd: apiRoot, stdio: "inherit", detached: false, env: withWorkspaceRuntimeEnv(env, apiRoot) },
+      options: { cwd: apiRoot, stdio: "inherit", detached: false, env: withApiRuntimeEnv(env) },
     },
   ]);
   expect(unrefCalled()).toBe(false);
@@ -141,7 +133,7 @@ test("runApi uses stdio override when provided", () => {
     {
       command: "bun",
       args: ["run", "start"],
-      options: { cwd: apiRoot, stdio: "inherit", detached: true, env: withWorkspaceRuntimeEnv(env, apiRoot) },
+      options: { cwd: apiRoot, stdio: "inherit", detached: true, env: withApiRuntimeEnv(env) },
     },
   ]);
 });
@@ -165,7 +157,7 @@ test("runApi forwards PSTDIO_API_PORT as PORT", () => {
         cwd: apiRoot,
         stdio: "ignore",
         detached: true,
-        env: withWorkspaceRuntimeEnv({ ...env, PORT: "4511" }, apiRoot),
+        env: withApiRuntimeEnv({ ...env, PORT: "4511" }),
       },
     },
   ]);
@@ -221,7 +213,7 @@ test("runApi falls back to bundled api when no workspace found", () => {
   expect(unrefCalled()).toBe(true);
 });
 
-test("runApi sets default PSTDIO_DB_PATH and PSTDIO_STORAGE_PATH for bundled mode", () => {
+test("runApi leaves state path defaults to the API for bundled mode", () => {
   const base = mkdtempSync(join(tmpdir(), "pstdio-api-bundled-env-"));
   const startDir = join(base, "some-project");
   mkdirSync(startDir, { recursive: true });
@@ -237,11 +229,11 @@ test("runApi sets default PSTDIO_DB_PATH and PSTDIO_STORAGE_PATH for bundled mod
   runApi(startDir, { spawner, env, bundledCliPath: join(cliDistDir, "index.js") });
 
   const spawnedEnv = calls[0]?.options.env as Record<string, string>;
-  expect(spawnedEnv.PSTDIO_DB_PATH).toBe(resolveDefaultDbPath());
-  expect(spawnedEnv.PSTDIO_STORAGE_PATH).toBe(resolveDefaultStoragePath());
+  expect(spawnedEnv.PSTDIO_DB_PATH).toBeUndefined();
+  expect(spawnedEnv.PSTDIO_STORAGE_PATH).toBeUndefined();
 });
 
-test("runApi sets default PSTDIO_DB_PATH and PSTDIO_STORAGE_PATH for workspace mode", () => {
+test("runApi leaves state path defaults to the API for workspace mode", () => {
   const base = mkdtempSync(join(tmpdir(), "pstdio-api-workspace-env-"));
   const apiRoot = writeApiPackage(base);
   const startDir = join(base, "packages", "pstdio", "src");
@@ -254,7 +246,7 @@ test("runApi sets default PSTDIO_DB_PATH and PSTDIO_STORAGE_PATH for workspace m
 
   const spawnedEnv = calls[0]?.options.env as Record<string, string>;
   expect(calls[0]?.options.cwd).toBe(apiRoot);
-  expect(spawnedEnv.PSTDIO_DB_PATH).toBe(resolveDefaultDbPath());
-  expect(spawnedEnv.PSTDIO_STORAGE_PATH).toBe(resolveDefaultStoragePath());
-  expect(spawnedEnv.PSTDIO_FILES_ROOT).toBe(join(apiRoot, "..", "pstdio", "files"));
+  expect(spawnedEnv.PSTDIO_DB_PATH).toBeUndefined();
+  expect(spawnedEnv.PSTDIO_STORAGE_PATH).toBeUndefined();
+  expect(spawnedEnv.PSTDIO_FILES_ROOT).toBeUndefined();
 });

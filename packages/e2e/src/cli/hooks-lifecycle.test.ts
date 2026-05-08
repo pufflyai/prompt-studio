@@ -121,13 +121,13 @@ export default { hooks: { postTicketCreation(ctx) { writeFileSync("${payloadFile
     async () => {
       const repo = createInitializedRepo(ctx, "pre-ticket-delete");
       const projectId = getProjectId(repo);
-      await registerRepo(ctx, projectId, repo, "pre-ticket-delete-repo");
 
       writePlugin(
         repo,
         "pre-ticket-delete-guard.ts",
         `export default { hooks: { preTicketDeletion: () => ({ reject: true, reason: "rejected" }) } };`,
       );
+      await registerRepo(ctx, projectId, repo, "pre-ticket-delete-repo");
       const { ticket } = await createTicketViaApi(ctx, projectId);
 
       const deleteRes = await fetch(`${api.url}/v1/tickets/${ticket.id}`, { method: "DELETE" });
@@ -141,7 +141,6 @@ export default { hooks: { postTicketCreation(ctx) { writeFileSync("${payloadFile
     async () => {
       const repo = createInitializedRepo(ctx, "post-ticket-delete");
       const projectId = getProjectId(repo);
-      await registerRepo(ctx, projectId, repo, "post-ticket-delete-repo");
 
       const markerFile = join(repo, "post-ticket-deletion-payload.json");
       writePlugin(
@@ -152,6 +151,7 @@ import { writeFileSync } from "node:fs";
 export default { hooks: { postTicketDeletion(ctx) { writeFileSync("${markerFile}", JSON.stringify(ctx)); } } };
 `,
       );
+      await registerRepo(ctx, projectId, repo, "post-ticket-delete-repo");
 
       const { ticket } = await createTicketViaApi(ctx, projectId);
       const deleteRes = await fetch(`${api.url}/v1/tickets/${ticket.id}`, { method: "DELETE" });
@@ -167,13 +167,13 @@ export default { hooks: { postTicketDeletion(ctx) { writeFileSync("${markerFile}
     async () => {
       const repo = createInitializedRepo(ctx, "pre-ticket-archive");
       const projectId = getProjectId(repo);
-      await registerRepo(ctx, projectId, repo, "pre-ticket-archive-repo");
 
       writePlugin(
         repo,
         "pre-ticket-archive-guard.ts",
         `export default { hooks: { preTicketArchive: () => ({ reject: true, reason: "rejected" }) } };`,
       );
+      await registerRepo(ctx, projectId, repo, "pre-ticket-archive-repo");
       const { ticket } = await createTicketViaApi(ctx, projectId);
 
       const archiveRes = await fetch(`${api.url}/v1/tickets/${ticket.id}`, {
@@ -191,7 +191,6 @@ export default { hooks: { postTicketDeletion(ctx) { writeFileSync("${markerFile}
     async () => {
       const repo = createInitializedRepo(ctx, "post-ticket-archive");
       const projectId = getProjectId(repo);
-      await registerRepo(ctx, projectId, repo, "post-ticket-archive-repo");
 
       const markerFile = join(repo, "post-ticket-archive-payload.json");
       writePlugin(
@@ -202,6 +201,7 @@ import { writeFileSync } from "node:fs";
 export default { hooks: { postTicketArchive(ctx) { writeFileSync("${markerFile}", JSON.stringify(ctx)); } } };
 `,
       );
+      await registerRepo(ctx, projectId, repo, "post-ticket-archive-repo");
       const { ticket } = await createTicketViaApi(ctx, projectId);
 
       await fetch(`${api.url}/v1/tickets/${ticket.id}`, {
@@ -220,13 +220,13 @@ export default { hooks: { postTicketArchive(ctx) { writeFileSync("${markerFile}"
     async () => {
       const repo = createInitializedRepo(ctx, "pre-ticket-status");
       const projectId = getProjectId(repo);
-      await registerRepo(ctx, projectId, repo, "pre-ticket-status-repo");
 
       writePlugin(
         repo,
         "pre-ticket-status-guard.ts",
         `export default { hooks: { preTicketStatusChange: () => ({ reject: true, reason: "rejected" }) } };`,
       );
+      await registerRepo(ctx, projectId, repo, "pre-ticket-status-repo");
       const { ticket } = await createTicketViaApi(ctx, projectId);
       const newStatusId = await getAlternateStatusId(ctx, projectId, ticket.status_id ?? null);
 
@@ -245,7 +245,6 @@ export default { hooks: { postTicketArchive(ctx) { writeFileSync("${markerFile}"
     async () => {
       const repo = createInitializedRepo(ctx, "post-ticket-status");
       const projectId = getProjectId(repo);
-      await registerRepo(ctx, projectId, repo, "post-ticket-status-repo");
 
       const payloadFile = join(repo, "post-ticket-status-payload.json");
       writePlugin(
@@ -256,6 +255,7 @@ import { writeFileSync } from "node:fs";
 export default { hooks: { postTicketStatusChange(ctx) { writeFileSync("${payloadFile}", JSON.stringify(ctx)); } } };
 `,
       );
+      await registerRepo(ctx, projectId, repo, "post-ticket-status-repo");
       const { ticket } = await createTicketViaApi(ctx, projectId);
       const newStatusId = await getAlternateStatusId(ctx, projectId, ticket.status_id ?? null);
 

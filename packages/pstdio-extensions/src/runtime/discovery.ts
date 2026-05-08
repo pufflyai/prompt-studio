@@ -1,10 +1,10 @@
 import { existsSync, readdirSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
+import { resolvePstdioHome } from "pstdio-paths";
 
 const EXTENSION_FILE = "extension.ts";
 
-export const pstdioHomeRoot = () => process.env.PSTDIO_HOME ?? join(process.env.HOME ?? homedir(), ".pstdio");
+export const pstdioHomeRoot = () => resolvePstdioHome();
 
 export const pstdioExtensionsRoot = () => join(pstdioHomeRoot(), "extensions");
 

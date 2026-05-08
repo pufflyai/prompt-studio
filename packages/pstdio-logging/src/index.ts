@@ -2,10 +2,13 @@ import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import pino, { type Logger } from "pino";
+import { expandHomePath, resolvePstdioHome } from "pstdio-paths";
 
 type LoggerEnv = Partial<
   Record<
+    | "HOME"
     | "PSTDIO_DB_PATH"
+    | "PSTDIO_HOME"
     | "PSTDIO_LOG_LEVEL"
     | "PSTDIO_LOG_PATH"
     | "PSTDIO_LOG_TARGETS"
@@ -62,22 +65,10 @@ const DEFAULT_REDACT_PATHS = [
   "*.token",
 ];
 
-const expandHomeDirectory = (input: string, homedirPath: string) => {
-  if (input === "~") {
-    return homedirPath;
-  }
-
-  if (input.startsWith("~/")) {
-    return join(homedirPath, input.slice(2));
-  }
-
-  return input;
-};
-
 const resolveStateDirectory = (input: ResolveLogPathInput = {}) => {
   const env = input.env ?? process.env;
   const homePath = input.homedirPath ?? homedir();
-  const expanded = (value: string) => expandHomeDirectory(value, homePath);
+  const expanded = (value: string) => expandHomePath(value, homePath);
 
   const explicitStateDir = input.stateDir ?? env.PSTDIO_STATE_DIR;
   if (explicitStateDir) {
@@ -94,13 +85,13 @@ const resolveStateDirectory = (input: ResolveLogPathInput = {}) => {
     return dirname(expanded(resolvedStoragePath));
   }
 
-  return join(homePath, ".pstdio");
+  return resolvePstdioHome({ env, homedirPath: homePath });
 };
 
 export const resolveDefaultLogPath = (input: ResolveLogPathInput = {}) => {
   const env = input.env ?? process.env;
   const homePath = input.homedirPath ?? homedir();
-  const expanded = (value: string) => expandHomeDirectory(value, homePath);
+  const expanded = (value: string) => expandHomePath(value, homePath);
   const explicitLogPath = input.logPath ?? env.PSTDIO_LOG_PATH;
 
   if (explicitLogPath) {

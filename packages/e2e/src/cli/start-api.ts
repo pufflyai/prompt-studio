@@ -50,8 +50,8 @@ interface StartApiOptions {
 
 export const startApi = async (options: StartApiOptions = {}): Promise<ApiInstance> => {
   const port = await getFreePort();
-  const storagePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-storage-"));
   const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-home-"));
+  const storagePath = join(homePath, "storage");
 
   const child = spawn("bun", ["run", "../../packages/pstdio-api/src/server.ts"], {
     cwd: join(import.meta.dirname, "../.."),
@@ -62,10 +62,9 @@ export const startApi = async (options: StartApiOptions = {}): Promise<ApiInstan
       PSTDIO_DEFAULT_EXTENSIONS: "[]",
       PSTDIO_EVENT_BUS_BUFFER_SIZE:
         options.eventBusBufferSize !== undefined ? String(options.eventBusBufferSize) : undefined,
-      PSTDIO_STORAGE_PATH: storagePath,
+      PSTDIO_HOME: homePath,
       PSTDIO_AGENTS: "fake",
       HOME: homePath,
-      PSTDIO_WORKSPACES_DIR: join(homePath, ".pstdio", "workspaces"),
     },
     stdio: "pipe",
   });
@@ -81,7 +80,6 @@ export const startApi = async (options: StartApiOptions = {}): Promise<ApiInstan
     process: child,
     stop: () => {
       child.kill();
-      rmSync(storagePath, { recursive: true, force: true });
       rmSync(homePath, { recursive: true, force: true });
     },
   };

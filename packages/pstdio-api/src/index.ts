@@ -1,7 +1,8 @@
 import { createApp } from "./app";
+import { resolveApiFilesRoot } from "./default-files-root";
 
 const { app, close } = await createApp({
-  filesRoot: process.env.PSTDIO_FILES_ROOT ?? "",
+  filesRoot: resolveApiFilesRoot(),
 });
 
 const shutdown = async () => {

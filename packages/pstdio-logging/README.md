@@ -15,7 +15,8 @@ Shared structured logging primitives for `pstdio` runtime packages.
 1. `PSTDIO_STATE_DIR` (or explicit `stateDir`)
 2. parent directory of `PSTDIO_DB_PATH` (or explicit `dbPath`) when not `:memory:`
 3. parent directory of `PSTDIO_STORAGE_PATH` (or explicit `storagePath`)
-4. fallback `~/.pstdio`
+4. `PSTDIO_HOME` resolved by `pstdio-paths`
+5. fallback `~/.pstdio`
 
 `PSTDIO_LOG_PATH` (or explicit `logPath`) overrides the file path directly for the `file` target.
 

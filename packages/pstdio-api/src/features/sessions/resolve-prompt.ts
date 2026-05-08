@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import Mustache from "mustache";
 
 type ResolvePromptInput = {
@@ -8,9 +7,7 @@ type ResolvePromptInput = {
 };
 
 type ResolvePromptDeps = {
-  templateService: { getByName: (projectId: string, name: string) => Promise<{ file_id: string } | null> };
-  fileService: { get: (fileId: string) => Promise<{ storage_path: string } | null> };
-  readFileContent?: (storagePath: string) => string;
+  templateService: { getWithContent: (projectId: string, name: string) => Promise<{ content: string } | null> };
 };
 
 class ResolvePromptError extends Error {
@@ -32,16 +29,12 @@ export const resolvePrompt = async (input: ResolvePromptInput, projectId: string
   }
 
   if (input.template) {
-    const template = await deps.templateService.getByName(projectId, input.template);
+    const template = await deps.templateService.getWithContent(projectId, input.template);
     if (!template) {
       throw new ResolvePromptError(`Prompt template not found: ${input.template}`, 404);
     }
 
-    const file = await deps.fileService.get(template.file_id);
-    const readContent = deps.readFileContent ?? ((p: string) => readFileSync(p, "utf8"));
-    const content = readContent(file!.storage_path);
-
-    return Mustache.render(content, input.vars ?? {});
+    return Mustache.render(template.content, input.vars ?? {});
   }
 
   return "";

@@ -62,7 +62,7 @@ const closeSessionBubble = async (page: import("@playwright/test").Page, project
 const navigateToTemplate = async (page: import("@playwright/test").Page, projectId: string, templateName: string) => {
   await bypassOnboarding(page);
   await page.goto(`/projects/${projectId}/settings`);
-  await page.getByText("Templates", { exact: true }).click();
+  await page.getByText("Project templates", { exact: true }).click();
   await page.getByText("Prompts", { exact: true }).click();
   await page.getByText(templateName, { exact: true }).click();
 };
@@ -79,7 +79,7 @@ test.describe("Project settings", () => {
     await page.getByRole("option", { name: "Project settings" }).click();
     await page.waitForURL(`**/projects/${project.id}/settings*`);
 
-    await page.getByText("Templates", { exact: true }).hover();
+    await page.getByText("Project templates", { exact: true }).hover();
     await page.getByRole("button", { name: "Create template" }).click();
 
     const createDialog = page.getByRole("dialog").last();
@@ -95,7 +95,7 @@ test.describe("Project settings", () => {
     await createDialog.getByRole("button", { name: "Create", exact: true }).click();
     await createResponse;
 
-    await page.getByText("Templates", { exact: true }).click();
+    await page.getByText("Project templates", { exact: true }).click();
     await page.getByText("Prompts", { exact: true }).click();
     await expect(page.getByText(templateName, { exact: true }).first()).toBeVisible();
 

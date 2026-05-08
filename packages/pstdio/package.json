@@ -52,6 +52,7 @@
     "pstdio-db": "workspace:*",
     "pstdio-logging": "workspace:*",
     "pstdio-plugins": "workspace:*",
+    "pstdio-paths": "workspace:*",
     "pstdio-wt": "workspace:*",
     "@pstdio/sdk": "workspace:*",
     "typescript": "6.0.2"
