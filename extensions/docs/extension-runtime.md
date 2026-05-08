@@ -141,7 +141,7 @@ prompt-studio/
     harness-claude-code/
 ```
 
-The source manifest may point at a GitHub tree or a versioned artifact. The extension runtime should not care whether source came from GitHub, a local path, or an artifact; after `pstdio add`, the source is local and editable.
+The source manifest may point at a GitHub tree or a versioned artifact. The extension runtime should not care whether source came from GitHub, a local path, or an artifact; after `pstdio extensions add`, the source is local and editable.
 
 ## Managing Extensions
 
@@ -158,14 +158,14 @@ pstdio extensions check
 
 Recommended meanings:
 
-| Command                              | Meaning                                                                                                                                      |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pstdio extensions add <extension>`  | Install source into `~/.pstdio/extensions` and auto-enable it for the current project when run inside one.                                   |
-| `pstdio extensions list`             | Show installed source and project-scoped enablement state.                                                                                   |
-| `pstdio extensions enable <id>`      | Enable an installed extension for the current project.                                                                                       |
-| `pstdio extensions disable <id>`     | Stop loading the extension for the current project. Keep source and extension data.                                                          |
-| `pstdio extensions remove <id>`      | Remove the project association. Keep root source unless an explicit destructive flag is added later.                                         |
-| `pstdio extensions check`            | Validate extension source, scoped enablement, command paths, slots, assets, mounts, settings, templates, skills, harnesses, and diagnostics. |
+| Command                             | Meaning                                                                                                                                      |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pstdio extensions add <extension>` | Install source into `~/.pstdio/extensions` and auto-enable it for the current project when run inside one.                                   |
+| `pstdio extensions list`            | Show installed source and project-scoped enablement state.                                                                                   |
+| `pstdio extensions enable <id>`     | Enable an installed extension for the current project.                                                                                       |
+| `pstdio extensions disable <id>`    | Stop loading the extension for the current project. Keep source and extension data.                                                          |
+| `pstdio extensions remove <id>`     | Remove the project association. Keep root source unless an explicit destructive flag is added later.                                         |
+| `pstdio extensions check`           | Validate extension source, scoped enablement, command paths, slots, assets, mounts, settings, templates, skills, harnesses, and diagnostics. |
 
 Extension instance state is API-owned. Disabling or removing an extension from a project does not delete its storage, project records, or repo artifacts by default.
 
