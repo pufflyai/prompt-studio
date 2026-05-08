@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { PSTDIO_CLI, runPstdioSafe } from "./helpers";
+import { createTempDir, PSTDIO_CLI, runPstdioSafe } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 
@@ -60,7 +60,7 @@ describe("cli help and feedback", () => {
   test(
     "prints error and root help for unknown command",
     () => {
-      const result = runPstdioSafe("foo", process.cwd(), {
+      const result = runPstdioSafe("foo", createTempDir(), {
         PSTDIO_DISABLE_API_AUTO_START: "1",
       });
 

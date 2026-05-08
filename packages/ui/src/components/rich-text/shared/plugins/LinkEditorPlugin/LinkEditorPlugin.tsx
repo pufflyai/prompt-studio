@@ -25,6 +25,7 @@ import { TOGGLE_LINK_EDIT_MODE_COMMAND } from "./commands";
 import { LinkEditorContent } from "./link-editor-content";
 import { getSelectedNode } from "./utils/getSelectedNode";
 import { shouldCancelLinkEdit } from "./utils/link-edit-state";
+import { openLinkUrl } from "./utils/open-link-url";
 import { getSelectionLinkUrl } from "./utils/selection-link-url";
 import { setFloatingElemPos } from "./utils/setFloatingElemPos";
 import { sanitizeUrl, validateUrl } from "./utils/url";
@@ -306,7 +307,7 @@ function useLinkEditorToolbar(
             const node = getSelectedNode(selection);
             const linkNode = $findMatchingParent(node, $isLinkNode);
             if ($isLinkNode(linkNode) && (payload.metaKey || payload.ctrlKey)) {
-              window.open(sanitizeUrl(linkNode.getURL()), "_blank", "noopener,noreferrer");
+              openLinkUrl(linkNode.getURL());
               return true;
             }
           }
