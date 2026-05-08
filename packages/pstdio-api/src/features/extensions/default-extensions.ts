@@ -118,7 +118,14 @@ export const enableInstalledExtensionsForProject = async (deps: EnableInstalledE
     if (!entry.isDirectory()) continue;
     const sourcePath = join(root, entry.name);
 
-    const loaded = await load(sourcePath);
+    let loaded: Awaited<ReturnType<typeof loadExtensionSource>>;
+    try {
+      loaded = await load(sourcePath);
+    } catch {
+      // User-edited installed sources can become invalid; project creation should still enable healthy extensions.
+      continue;
+    }
+
     await deps.extensionService.enableInstalledSourceForProject({
       projectId: deps.projectId,
       installName: entry.name,

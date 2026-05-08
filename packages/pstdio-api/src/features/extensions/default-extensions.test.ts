@@ -56,6 +56,16 @@ const writeExtension = (dir: string, namespace: string) => {
   );
 };
 
+const writeInvalidExtension = (dir: string) => {
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(
+    join(dir, "extension.ts"),
+    `export default {
+  broken: true,
+};`,
+  );
+};
+
 describe("resolveDefaultExtensionsConfig", () => {
   test("returns the production defaults when the env override is absent", () => {
     expect(resolveDefaultExtensionsConfig({}).defaultExtensions).toEqual([
@@ -156,5 +166,25 @@ describe("enableInstalledExtensionsForProject", () => {
 
     expect(enabled).toEqual([]);
     expect(enableInstalledSourceForProject).not.toHaveBeenCalled();
+  });
+
+  test("skips invalid installed extensions while enabling the valid ones", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-default-extensions-invalid-"));
+    writeExtension(join(root, "core-skills"), "core-skills");
+    writeInvalidExtension(join(root, "extension-lab"));
+    const enableInstalledSourceForProject = mock(async () => ({}));
+
+    try {
+      const enabled = await enableInstalledExtensionsForProject({
+        extensionService: { enableInstalledSourceForProject },
+        extensionsRoot: root,
+        projectId: "project-1",
+      });
+
+      expect(enabled).toEqual(["core-skills"]);
+      expect(enableInstalledSourceForProject).toHaveBeenCalledTimes(1);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
