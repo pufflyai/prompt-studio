@@ -219,9 +219,19 @@ export const pollOpencodeQuestionReply = async (input: {
   questionResponse?: QuestionResponse;
   messageComplete: Promise<void>;
   abortSignal?: AbortSignal;
+  pollIntervalMs?: number;
 }) => {
-  const { loadMessages, sessionId, cwd, eventStore, questionTool, questionResponse, messageComplete, abortSignal } =
-    input;
+  const {
+    loadMessages,
+    sessionId,
+    cwd,
+    eventStore,
+    questionTool,
+    questionResponse,
+    messageComplete,
+    abortSignal,
+    pollIntervalMs,
+  } = input;
   const state: QuestionReplyPollState = createQuestionReplyPollState();
   const postState = trackPostState(messageComplete);
 
@@ -268,7 +278,7 @@ export const pollOpencodeQuestionReply = async (input: {
       return disconnectStaleTurn(eventStore);
     }
 
-    await waitForNextPoll(abortSignal);
+    await waitForNextPoll(abortSignal, pollIntervalMs);
   }
 
   const replyState = getQuestionReplyState(state.lastObserved, questionTool);

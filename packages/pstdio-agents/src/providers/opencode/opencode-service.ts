@@ -46,6 +46,11 @@ type OpencodeModelInput = {
   modelID: string;
 };
 
+type OpencodeSessionModelInput = {
+  providerID: string;
+  id: string;
+};
+
 export type OpencodeQuestionRequest = {
   id: string;
   sessionID: string;
@@ -97,6 +102,13 @@ const toOpencodeModelInput = (model?: string | null) => {
   if (!providerID || !modelID) return undefined;
 
   return { providerID, modelID } satisfies OpencodeModelInput;
+};
+
+const toOpencodeSessionModelInput = (model?: string | null) => {
+  const selectedModel = toOpencodeModelInput(model);
+  if (!selectedModel) return undefined;
+
+  return { providerID: selectedModel.providerID, id: selectedModel.modelID } satisfies OpencodeSessionModelInput;
 };
 
 const GET_TIMEOUT_MS = 15_000;
@@ -500,7 +512,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
       const createResponse = await requestJson<{ id?: string }>(deps.fetcher, createUrl, {
         method: "POST",
         headers,
-        body: { model: input.model?.trim() || undefined },
+        body: { model: toOpencodeSessionModelInput(input.model) },
       });
 
       requireResponseOk(createResponse.response, createResponse.text, "OpenCode session.create failed");

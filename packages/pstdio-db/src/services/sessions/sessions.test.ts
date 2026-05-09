@@ -32,12 +32,14 @@ describe("sessions service", () => {
       project_id: projectId,
       title: "Test session",
       agent: "claude-code",
+      last_selected_model: "claude-code-fast",
     });
 
     expect(session.id).toBeDefined();
     expect(session.title).toBe("Test session");
     expect(session.status).toBe("in_progress");
     expect(session.agent).toBe("claude-code");
+    expect(session.last_selected_model).toBe("claude-code-fast");
     expect(session.project_id).toBe(projectId);
     expect(session.archived).toBe(false);
   });
@@ -136,11 +138,13 @@ describe("sessions service", () => {
     const session = await sessionsService.create({ project_id: projectId, title: "S1", agent: "claude-code" });
     const updated = await sessionsService.update(session.id, {
       agent_session_id: "ext-123",
+      last_selected_model: "claude-code-fast",
       last_request_started: new Date().toISOString(),
     });
 
     expect(updated).not.toBeNull();
     expect(updated!.agent_session_id).toBe("ext-123");
+    expect(updated!.last_selected_model).toBe("claude-code-fast");
   });
 
   test("rejects invalid status values at DB layer", async () => {

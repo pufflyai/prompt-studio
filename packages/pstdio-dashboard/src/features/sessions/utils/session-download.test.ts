@@ -11,6 +11,7 @@ const session: Session = {
   status: "completed",
   archived: false,
   agent: "claude-code",
+  lastSelectedModel: "claude-code-default",
   createdAt: "2026-02-20T10:00:00.000Z",
   updatedAt: "2026-02-21T12:00:00.000Z",
 };

@@ -171,7 +171,8 @@ test("createOpencodeService stores discovered server url under ~/.pstdio", async
   expect(storedServerUrl).toBe("http://127.0.0.1:4900");
 });
 
-test("startSession applies selected model to the initial prompt message", async () => {
+test("startSession applies selected model to session creation and initial prompt message", async () => {
+  const createBodies: unknown[] = [];
   const promptBodies: unknown[] = [];
   const service = createOpencodeService({
     startServer: async () => "http://127.0.0.1:4900",
@@ -183,6 +184,7 @@ test("startSession applies selected model to the initial prompt message", async 
       const method = init?.method ?? "GET";
 
       if (method === "POST" && url.includes("/session?")) {
+        createBodies.push(JSON.parse(String(init?.body)));
         return new Response(JSON.stringify({ id: "session-1" }));
       }
 
@@ -198,6 +200,11 @@ test("startSession applies selected model to the initial prompt message", async 
   const result = await service.startSession({ prompt: "hello", cwd: "/repo", model: "openai/gpt-5.5" });
   await result.messageComplete;
 
+  expect(createBodies).toEqual([
+    {
+      model: { providerID: "openai", id: "gpt-5.5" },
+    },
+  ]);
   expect(promptBodies).toEqual([
     {
       parts: [{ type: "text", text: "hello" }],

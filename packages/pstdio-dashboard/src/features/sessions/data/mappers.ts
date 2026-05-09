@@ -8,6 +8,7 @@ export interface SessionDto extends Record<string, unknown> {
   status: Session["status"];
   archived: boolean;
   agent: string | null;
+  last_selected_model: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -20,6 +21,7 @@ export const toSession = (dto: SessionDto): Session => ({
   status: dto.status,
   archived: dto.archived,
   agent: dto.agent,
+  lastSelectedModel: dto.last_selected_model,
   createdAt: dto.created_at,
   updatedAt: dto.updated_at,
 });

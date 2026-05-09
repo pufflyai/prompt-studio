@@ -65,6 +65,63 @@ const buildFollowUpPrompt = async (
   return prompt;
 };
 
+type FollowUpInput = z.infer<typeof followUpBodySchema>;
+type ExistingSession = NonNullable<Awaited<ReturnType<SessionsRouteDeps["sessionService"]["get"]>>>;
+
+const updateLastSelectedModelWhenRequested = async (
+  session: ExistingSession,
+  inputModel: string | undefined,
+  deps: SessionsRouteDeps,
+) => {
+  if (!inputModel || inputModel === session.last_selected_model) return;
+
+  await deps.sessionService.update(session.id, { last_selected_model: inputModel });
+};
+
+const startFollowUpAgentSession = async (input: {
+  session: ExistingSession;
+  request: FollowUpInput;
+  prompt: string;
+  cwd: string;
+  deps: SessionsRouteDeps;
+}) => {
+  const { session, request, prompt, cwd, deps } = input;
+  const agentId = request.agent ?? session.agent!;
+  const switchingAgent = request.agent != null && request.agent !== session.agent;
+  const inputModel = request.model?.trim() || undefined;
+  const model = inputModel ?? (switchingAgent ? undefined : (session.last_selected_model ?? undefined));
+
+  if (switchingAgent) {
+    await deps.sessionService.update(session.id, {
+      agent: agentId,
+      agent_session_id: null,
+      last_selected_model: inputModel ?? null,
+    });
+    spawnAgentSession({ sessionId: session.id, agentId, prompt, model, cwd }, deps);
+    return;
+  }
+
+  await updateLastSelectedModelWhenRequested(session, inputModel, deps);
+
+  if (session.agent_session_id) {
+    resumeAgentSession(
+      {
+        sessionId: session.id,
+        agentSessionId: session.agent_session_id,
+        agentId,
+        prompt,
+        model,
+        cwd,
+        questionResponse: request.question_response,
+      },
+      deps,
+    );
+    return;
+  }
+
+  spawnAgentSession({ sessionId: session.id, agentId, prompt, model, cwd }, deps);
+};
+
 export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<typeof followUpSessionRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
@@ -88,29 +145,7 @@ export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler
 
     const cwd = session.cwd!;
 
-    const agentId = input.agent ?? session.agent!;
-    const switchingAgent = input.agent && input.agent !== session.agent;
-
-    if (switchingAgent) {
-      await deps.sessionService.update(session.id, { agent: agentId, agent_session_id: null });
-
-      spawnAgentSession({ sessionId: session.id, agentId, prompt, model: input.model, cwd }, deps);
-    } else if (session.agent_session_id) {
-      resumeAgentSession(
-        {
-          sessionId: session.id,
-          agentSessionId: session.agent_session_id,
-          agentId,
-          prompt,
-          model: input.model,
-          cwd,
-          questionResponse: input.question_response,
-        },
-        deps,
-      );
-    } else {
-      spawnAgentSession({ sessionId: session.id, agentId, prompt, model: input.model, cwd }, deps);
-    }
+    await startFollowUpAgentSession({ session, request: input, prompt, cwd, deps });
 
     const result = await deps.sessionService.get(session.id);
     return c.json(result, 200);

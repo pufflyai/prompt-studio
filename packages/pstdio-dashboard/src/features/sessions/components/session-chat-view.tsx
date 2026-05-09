@@ -4,22 +4,19 @@ import { useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
-import {
-  getConfiguredAgentModel,
-  resolvePreferredAgentModel,
-} from "@/features/agents/components/agent-model-selection";
-import { useAgentSettings } from "@/features/agents/hooks/use-agent-settings";
 import { useTicketAttemptDiffSummary } from "@/features/ticket/hooks/use-ticket-attempt-diff-summary";
 import { RepoBrowserContainer } from "@/features/workspaces/components/repo-browser.container";
+import type { CodingAgent } from "@/shared/agent-storage";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
 import { useCreateProjectSession } from "../hooks/use-create-project-session";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
-import { useSessionAgent } from "../hooks/use-session-agent";
+import { useProjectSession } from "../hooks/use-project-session";
 import { useSessionStatus } from "../hooks/use-session-status";
 import { useSessionStream } from "../hooks/use-session-stream";
 import { useSessionWorkspace } from "../hooks/use-session-workspace";
 import { useStopSession } from "../hooks/use-stop-session";
 import { buildSessionWorkspaceHubPanelModel } from "../utils/workspace-hub";
+import { resolveInitialSessionChatSelection } from "./session-chat-selection";
 import {
   mergeMessagesWithPendingFollowUp,
   type PendingFollowUpState,
@@ -63,13 +60,20 @@ export const SessionChatView = (props: SessionChatViewProps) => {
   } = props;
   const { projectId } = useParams({ strict: false });
 
-  const sessionAgent = useSessionAgent(sessionId);
   const lastSelectedAgent = useProjectSettingsStore((s) => s.lastSelectedAgent);
   const lastSelectedModels = useProjectSettingsStore((s) => s.lastSelectedModels);
-  const agent = sessionId && sessionAgent ? sessionAgent : lastSelectedAgent;
-  const { data: agentSettings = {} } = useAgentSettings(agent);
-  const configuredModel = getConfiguredAgentModel(agentSettings);
-  const model = resolvePreferredAgentModel({ configuredModel, modelHistory: lastSelectedModels });
+  const { data: session } = useProjectSession(projectId, sessionId);
+  const isExistingSessionLoading = Boolean(sessionId) && !session;
+  const initialSelection = resolveInitialSessionChatSelection({
+    sessionAgent: session?.agent,
+    sessionLastSelectedModel: session?.lastSelectedModel,
+    lastSelectedAgent,
+    lastSelectedModels,
+  });
+  const [agent, setAgent] = useState<CodingAgent>(initialSelection.agent);
+  const [model, setModel] = useState(initialSelection.model);
+  const selectionResetKey = `${sessionId ?? "__new__"}:${session?.agent ?? ""}:${session?.lastSelectedModel ?? ""}`;
+  const selectionResetKeyRef = useRef("");
 
   const projectSettingsStore = useProjectSettingsStoreApi();
   const draftKey = sessionId ?? "__new__";
@@ -104,6 +108,21 @@ export const SessionChatView = (props: SessionChatViewProps) => {
   useEffect(() => {
     setChatDraft(projectSettingsStore.getState().chatDraftsBySession[draftKey] ?? "");
   }, [draftKey, projectSettingsStore]);
+
+  useEffect(() => {
+    if (selectionResetKeyRef.current === selectionResetKey) return;
+
+    selectionResetKeyRef.current = selectionResetKey;
+
+    const nextSelection = resolveInitialSessionChatSelection({
+      sessionAgent: session?.agent,
+      sessionLastSelectedModel: session?.lastSelectedModel,
+      lastSelectedAgent,
+      lastSelectedModels,
+    });
+    setAgent(nextSelection.agent);
+    setModel(nextSelection.model);
+  }, [selectionResetKey, session?.agent, session?.lastSelectedModel, lastSelectedAgent, lastSelectedModels]);
 
   const displayedMessages = mergeMessagesWithPendingFollowUp(
     messages,
@@ -146,6 +165,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
       loadingContent={loadingContent}
       chatInputPlaceholder={t("sessions.followUpPlaceholder")}
       chatInputDefaultValue={chatDraft}
+      inputDisabled={isExistingSessionLoading}
       chatInputQuestionPrompt={activeQuestionPrompt}
       chatInputAutoFocus={autoFocusChatInput}
       onSubmitMessage={(text: string, _attachments, questionResponse) => {
@@ -191,7 +211,14 @@ export const SessionChatView = (props: SessionChatViewProps) => {
           wrap="nowrap"
         >
           <Box flexShrink="0">
-            <AgentBrowserContainer sessionId={sessionId} />
+            <AgentBrowserContainer
+              sessionId={sessionId}
+              selectedAgent={agent}
+              selectedModel={model}
+              onAgentChange={setAgent}
+              onModelChange={setModel}
+              isDisabled={isExistingSessionLoading}
+            />
           </Box>
           <RepoBrowserContainer sessionId={sessionId} workspaceId={effectiveWorkspaceId} isSessionContext />
         </Flex>

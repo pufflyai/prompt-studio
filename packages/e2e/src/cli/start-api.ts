@@ -46,6 +46,13 @@ export type ApiInstance = {
 };
 
 interface StartApiOptions {
+  /**
+   * E2E defaults to the fake agent so CI never launches real agent providers
+   * or touches token-backed tools. Tests that select a real provider id must
+   * provide hermetic binary/server mocks for that provider.
+   */
+  agents?: string;
+  env?: Record<string, string>;
   eventBusBufferSize?: number;
 }
 
@@ -64,8 +71,9 @@ export const startApi = async (options: StartApiOptions = {}): Promise<ApiInstan
       PSTDIO_EVENT_BUS_BUFFER_SIZE:
         options.eventBusBufferSize !== undefined ? String(options.eventBusBufferSize) : undefined,
       PSTDIO_HOME: homePath,
-      PSTDIO_AGENTS: "fake",
+      PSTDIO_AGENTS: options.agents ?? "fake",
       HOME: homePath,
+      ...options.env,
     },
     stdio: "pipe",
   });

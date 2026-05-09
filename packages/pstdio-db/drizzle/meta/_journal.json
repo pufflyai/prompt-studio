@@ -85,6 +85,13 @@
       "when": 1778100000000,
       "tag": "0011_extension_schema_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1778349275081,
+      "tag": "0012_session_last_selected_model",
+      "breakpoints": true
     }
   ]
 }

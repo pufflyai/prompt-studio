@@ -69,37 +69,57 @@ describe("resolveCreateSessionAgent", () => {
 describe("resolveCreateSessionModel", () => {
   test("explicit model wins", () => {
     const project = { default_agent_id: "claude-code", default_agent_model: "claude-3-5-sonnet" };
-    const result = resolveCreateSessionModel("opus", project, "claude-code", registryWith("claude-code"));
+    const result = resolveCreateSessionModel("opus", project, "claude-code", registryWith("claude-code"), {
+      requestAgentWasOmitted: false,
+    });
     expect(result).toBe("opus");
   });
 
-  test("returns project default model when valid for the resolved agent", () => {
+  test("returns project default model when request omitted agent and default is valid", () => {
     const project = { default_agent_id: "claude-code", default_agent_model: "claude-code-fast" };
-    const result = resolveCreateSessionModel(undefined, project, "claude-code", registryWith("claude-code"));
+    const result = resolveCreateSessionModel(undefined, project, "claude-code", registryWith("claude-code"), {
+      requestAgentWasOmitted: true,
+    });
     expect(result).toBe("claude-code-fast");
   });
 
-  test("falls back to first model when project default model is stale", () => {
+  test("does not use project default model when request provided an explicit agent", () => {
+    const project = { default_agent_id: "claude-code", default_agent_model: "claude-code-fast" };
+    const result = resolveCreateSessionModel(undefined, project, "claude-code", registryWith("claude-code"), {
+      requestAgentWasOmitted: false,
+    });
+    expect(result).toBeUndefined();
+  });
+
+  test("falls back to first model when request omitted agent and project default model is stale", () => {
     const project = { default_agent_id: "claude-code", default_agent_model: "deprecated-model" };
-    const result = resolveCreateSessionModel(undefined, project, "claude-code", registryWith("claude-code"));
+    const result = resolveCreateSessionModel(undefined, project, "claude-code", registryWith("claude-code"), {
+      requestAgentWasOmitted: true,
+    });
     expect(result).toBe("claude-code-default");
   });
 
   test("returns undefined when no project default model set", () => {
     const project = { default_agent_id: "claude-code", default_agent_model: null };
-    const result = resolveCreateSessionModel(undefined, project, "claude-code", registryWith("claude-code"));
+    const result = resolveCreateSessionModel(undefined, project, "claude-code", registryWith("claude-code"), {
+      requestAgentWasOmitted: true,
+    });
     expect(result).toBeUndefined();
   });
 
   test("returns undefined when resolved agent differs from project default agent", () => {
     const project = { default_agent_id: "claude-code", default_agent_model: "claude-code-default" };
-    const result = resolveCreateSessionModel(undefined, project, "opencode", registryWith("claude-code", "opencode"));
+    const result = resolveCreateSessionModel(undefined, project, "opencode", registryWith("claude-code", "opencode"), {
+      requestAgentWasOmitted: true,
+    });
     expect(result).toBeUndefined();
   });
 
   test("returns undefined when resolved agent not registered", () => {
     const project = { default_agent_id: "ghost", default_agent_model: "any" };
-    const result = resolveCreateSessionModel(undefined, project, "ghost", registryWith());
+    const result = resolveCreateSessionModel(undefined, project, "ghost", registryWith(), {
+      requestAgentWasOmitted: true,
+    });
     expect(result).toBeUndefined();
   });
 });

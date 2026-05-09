@@ -1,9 +1,48 @@
 import { describe, expect, test } from "bun:test";
 import type { Dispatch, SetStateAction } from "react";
 import type { PendingFollowUpState } from "./session-chat-state";
-import { type FollowUpMutation, submitSessionMessage } from "./session-chat-view-actions";
+import { type CreateSessionMutation, type FollowUpMutation, submitSessionMessage } from "./session-chat-view-actions";
 
 describe("submitSessionMessage", () => {
+  test("passes the selected agent and model to new session creation", () => {
+    const createInputs: Array<Parameters<CreateSessionMutation["mutate"]>[0]> = [];
+
+    submitSessionMessage({
+      sessionId: null,
+      projectId: "project-1",
+      agent: "opencode",
+      model: "openai/gpt-5.5",
+      text: "Start from the dashboard",
+      messages: [],
+      pendingIdRef: { current: 0 },
+      clearSessionDraft: () => {},
+      setChatDraft: () => {},
+      setPendingFollowUp: () => {},
+      createSession: {
+        mutate: (input, options) => {
+          createInputs.push(input);
+          options.onSuccess({ sessionId: "session-1" });
+        },
+      },
+      followUp: {
+        mutate: () => {
+          throw new Error("followUp should not be called");
+        },
+      },
+      reconnect: () => {},
+    });
+
+    expect(createInputs).toEqual([
+      {
+        projectId: "project-1",
+        prompt: "Start from the dashboard",
+        agent: "opencode",
+        model: "openai/gpt-5.5",
+        workspaceId: undefined,
+      },
+    ]);
+  });
+
   test("passes question responses to follow-up without adding an optimistic user follow-up", () => {
     const followUpInputs: Array<Parameters<FollowUpMutation["mutate"]>[0]> = [];
     let pendingFollowUp: PendingFollowUpState | null = null;

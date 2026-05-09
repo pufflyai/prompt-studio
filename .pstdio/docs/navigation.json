@@ -328,6 +328,10 @@
         {
           "text": "Claude Code Follow-up Resume Requires EOF",
           "link": "/lessons-learned/claude_code_follow_up_resume_requires_eof"
+        },
+        {
+          "text": "Session Model Selection Contract Regressions",
+          "link": "/lessons-learned/session_model_selection_contract_regressions"
         }
       ]
     },

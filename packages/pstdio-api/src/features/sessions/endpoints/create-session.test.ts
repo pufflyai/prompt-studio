@@ -98,6 +98,34 @@ describe("POST /v1/sessions", () => {
     expect(session.agent).toBe("fake");
   });
 
+  test("persists explicit model as the last selected model for dashboard-created sessions", async () => {
+    const projectRes = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Explicit Model Project" }),
+    });
+    expect(projectRes.status).toBe(201);
+    const project = await projectRes.json();
+
+    const createRes = await app.request("/v1/sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        project_id: project.id,
+        title: "Explicit model session",
+        prompt: "run fake flow",
+        agent: "fake",
+        model: "fake-model",
+      }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json();
+    expect(created.last_selected_model).toBe("fake-model");
+
+    const session = await waitForSessionStatus(created.id, "completed");
+    expect(session.last_selected_model).toBe("fake-model");
+  });
+
   test("returns 400 when requested agent is not enabled for the project", async () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",

@@ -107,6 +107,12 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 - Do **not** specify return types — let TypeScript infer
 - Avoid nested ternaries
 
+### Database Migrations
+
+- Do **not** create or edit Drizzle migration SQL files manually.
+- For schema changes, update the schema source first, then generate migrations with the package script, e.g. `bun run --cwd packages/pstdio-db db:generate`.
+- If a generated migration is wrong, fix the schema or generation setup and regenerate it; do not hand-patch migration SQL.
+
 ### React Rules
 
 - Do **not** use `memo()`, `useCallback()` or `useMemo()` (we use the react compiler)

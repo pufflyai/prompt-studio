@@ -13,6 +13,7 @@ describe("createStopSessionMutationOptions", () => {
       status: "cancelled",
       archived: false,
       agent: "opencode",
+      last_selected_model: "openai/gpt-5.5",
       created_at: "2026-04-24T12:00:00.000Z",
       updated_at: "2026-04-24T12:01:00.000Z",
     };

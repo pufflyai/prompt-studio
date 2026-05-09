@@ -78,6 +78,7 @@ ticket ──┐
 | last_request_started | text          | When last agent request began                          |
 | last_request_ended   | text          | When last agent request finished                       |
 | agent                | text          | `"claude-code"` or `"opencode"`                        |
+| last_selected_model  | text          | Latest model selected for this session (nullable)      |
 | agent_session_id     | text          | External agent session ID (nullable)                   |
 | session_file_id      | text FK       | Reference to `files` table for cached content          |
 | created_at           | text          | Row creation timestamp                                 |
@@ -169,14 +170,28 @@ General project chat sessions, not tied to a specific ticket.
 
 Server flow:
 
-1. Validate repository (if `repo_id` provided).
-2. If `workspace_id` is provided, link session to existing workspace. Otherwise, the session has no workspace and runs at project root.
-3. Create session with status `in_progress`.
-4. Resolve agent from request or global default (`agent_configs.is_default`).
-5. Create in-memory event store for streaming.
-6. Call `agent.startSession(...)` with prompt/title/model and cwd.
-7. Persist `agent_session_id` when agent session starts.
-8. Track process exit to set status `completed`/`failed`/`cancelled`, push status patch, clean up stream state.
+1. Validate repository/workspace context when provided.
+2. Resolve agent from the request, project default, or global default (`agent_configs.is_default`).
+3. Resolve model from the request. If the request omitted both `agent` and `model`, the project default model can be used for the resolved default agent.
+4. Create session with status `in_progress` and store the resolved request model as `last_selected_model`.
+5. If `workspace_id` is provided, link session to the existing workspace. Otherwise, the session has no workspace and runs at project root.
+6. Create in-memory event store for streaming.
+7. Call `agent.startSession(...)` with prompt/title/model and cwd.
+8. Persist `agent_session_id` when agent session starts.
+9. Track process exit to set status `completed`/`failed`/`cancelled`, push status patch, clean up stream state.
+
+### Model selection contract
+
+`model` in a create/follow-up request is the model selected for that request. The session row stores `last_selected_model`, which is the latest selected model for the session and can change across turns.
+
+Rules:
+
+1. Request `model` wins.
+2. If request `agent` is provided and request `model` is omitted, do not apply the project default model.
+3. If request `agent` and request `model` are both omitted, the project default model can be used when it belongs to the resolved default agent.
+4. Follow-up without a request `model` reuses `last_selected_model` only when the agent is unchanged.
+5. Switching agents clears the previous `agent_session_id`; the new session's `last_selected_model` is the provided request model or `null`.
+6. Provider adapters own provider-specific model payload translation. The session layer only passes model strings.
 
 ### 2) Ticket + session — `POST /v1/tickets/create-and-start`
 
@@ -227,9 +242,10 @@ Server flow:
 1. Load existing session.
 2. Set status back to `in_progress`.
 3. Resolve cwd: workspace root if linked (`worktree_path` first, repo path fallback), otherwise project root.
-4. **Same agent:** require `agent_session_id`, call `agent.resumeSession(...)` with `messageOffset` from cached message count.
-5. **Different agent:** update `session.agent`, clear previous `agent_session_id`, call `agent.startSession(...)`.
-6. On errors: append assistant error text to cached messages and set status `failed`.
+4. Resolve the follow-up model from request `model`, or from `last_selected_model` when the agent is unchanged.
+5. **Same agent:** require `agent_session_id`, call `agent.resumeSession(...)` with `messageOffset` from cached message count.
+6. **Different agent:** update `session.agent`, clear previous `agent_session_id`, update `last_selected_model`, call `agent.startSession(...)`.
+7. On errors: append assistant error text to cached messages and set status `failed`.
 
 ## Message source of truth
 

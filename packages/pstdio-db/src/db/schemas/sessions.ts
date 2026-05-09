@@ -13,6 +13,7 @@ export const sessions = pgTable("sessions", {
   last_request_started: text("last_request_started"),
   last_request_ended: text("last_request_ended"),
   agent: text("agent"),
+  last_selected_model: text("last_selected_model"),
   agent_session_id: text("agent_session_id"),
   session_file_id: text("session_file_id").references(() => files.id),
   original_session_id: text("original_session_id"),

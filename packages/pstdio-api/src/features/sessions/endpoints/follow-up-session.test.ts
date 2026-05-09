@@ -136,6 +136,43 @@ describe("POST /v1/sessions/:id/follow-up (opencode)", () => {
     expect(body).toContain("OpenCode: second prompt");
   });
 
+  test("follow-up updates the session last selected model", async () => {
+    const projectRes = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "OpenCode Follow-up Model Project" }),
+    });
+    expect(projectRes.status).toBe(201);
+    const project = await projectRes.json();
+
+    const createRes = await app.request("/v1/sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        project_id: project.id,
+        title: "OpenCode model session",
+        prompt: "first prompt",
+        agent: "opencode",
+        model: "openai/gpt-5.5",
+      }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json();
+    await waitForSessionStatus(created.id, "completed");
+
+    const followUpRes = await app.request(`/v1/sessions/${created.id}/follow-up`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prompt: "second prompt", model: "openai/gpt-5.3-codex" }),
+    });
+    expect(followUpRes.status).toBe(200);
+    const followUpBody = await followUpRes.json();
+    expect(followUpBody.last_selected_model).toBe("openai/gpt-5.3-codex");
+
+    const session = await waitForSessionStatus(created.id, "completed");
+    expect(session.last_selected_model).toBe("openai/gpt-5.3-codex");
+  });
+
   test("follow-up from disconnected session is accepted", async () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",

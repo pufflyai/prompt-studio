@@ -14,6 +14,7 @@ const makeSession = (overrides: Partial<Session> = {}): Session => ({
   last_request_started: "2026-03-05T10:00:00Z",
   last_request_ended: null,
   agent: "claude-code",
+  last_selected_model: null,
   agent_session_id: null,
   session_file_id: null,
   original_session_id: null,

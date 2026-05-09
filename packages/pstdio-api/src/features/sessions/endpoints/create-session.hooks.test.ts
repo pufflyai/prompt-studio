@@ -52,6 +52,7 @@ describe("createSessionHandler hooks", () => {
       },
       sessionService: {
         create: sessionCreate,
+        update: mock(async () => null),
         transitionStatus: mock(async () => null),
         store: {
           create: mock(() => ({

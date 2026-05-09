@@ -271,20 +271,20 @@ describe("pollOpencodeQuestionReply", () => {
       eventStore,
       questionTool: { messageID: "msg-question", callID: "call-question" },
       messageComplete,
+      pollIntervalMs: 20,
     });
 
-    await Bun.sleep(50);
+    await Bun.sleep(5);
     set([user, answeredQuestionMessage]);
     resolvePost!();
-    await Bun.sleep(50);
+    await Bun.sleep(25);
     set([user, answeredQuestionMessage, continuationStarted]);
-    await tick();
+    await Bun.sleep(25);
 
     expect(lastStatusPatch(eventStore)).toBeUndefined();
 
     set([user, answeredQuestionMessage, continuationCompleted]);
-    await tick();
-    await tick();
+    await Bun.sleep(50);
 
     const result = await poll;
     const messagePatches = eventStore.getHistory().filter((patch) => patch.path === "/messages");

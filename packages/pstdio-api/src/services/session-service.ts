@@ -71,7 +71,13 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     return session;
   };
 
-  const update = raw.update;
+  const update = async (id: string, input: Parameters<typeof raw.update>[1]) => {
+    const updated = await raw.update(id, input);
+    if (updated) {
+      deps.eventBus.emit("sessions", "set", updated);
+    }
+    return updated;
+  };
 
   const archive = async (id: string) => {
     const updated = await raw.archive(id);

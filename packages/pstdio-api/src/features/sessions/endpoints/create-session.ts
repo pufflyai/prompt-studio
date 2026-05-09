@@ -1,4 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { sessionLogger } from "../../../lib/logger";
 import type { AppRouteHandler } from "../../../types";
 import { emitActivityEvent } from "../../activity/activity-events";
 import type { SessionsRouteDeps } from "../deps";
@@ -69,7 +70,9 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
       return c.json({ error: "No agent configured. Set a default agent with 'pstdio agents setup' first." }, 400);
     }
 
-    const resolvedModel = resolveCreateSessionModel(input.model, project, agentId, deps.agentRegistry);
+    const resolvedModel = resolveCreateSessionModel(input.model, project, agentId, deps.agentRegistry, {
+      requestAgentWasOmitted: !input.agent,
+    });
 
     const prompt = await resolvePrompt(input, input.project_id, deps);
 
@@ -77,6 +80,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
       project_id: input.project_id,
       title: input.title,
       agent: agentId,
+      last_selected_model: resolvedModel,
       original_session_id: input.original_session_id,
       cwd: cwd ?? undefined,
     });
@@ -108,7 +112,19 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
         cwd,
       },
       deps,
-    ).catch(async () => {
+    ).catch(async (error) => {
+      sessionLogger.error(
+        {
+          err: error,
+          event: "session.spawn.failed",
+          session_id: session.id,
+          project_id: input.project_id,
+          agent: agentId,
+          cwd: cwd ?? null,
+          model: resolvedModel ?? null,
+        },
+        "Agent session startup failed",
+      );
       await deps.sessionService.transitionStatus(session.id, "failed");
     });
 

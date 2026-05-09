@@ -10,6 +10,7 @@ const makeSession = (overrides: Partial<Session> & { updatedAt: string }): Sessi
   status: "completed",
   archived: false,
   agent: "claude-code",
+  lastSelectedModel: "claude-code-default",
   createdAt: "2026-03-01T10:00:00.000Z",
   ...overrides,
 });

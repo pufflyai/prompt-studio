@@ -15,7 +15,7 @@ const makeSessionResponse = (overrides: Record<string, unknown> = {}) =>
     last_request_ended: null,
     agent_session_id: null,
     agent: "claude-code",
-    model: null,
+    last_selected_model: null,
     workspace_id: null,
     created_at: "2026-03-05T10:00:00Z",
     updated_at: "2026-03-05T10:00:00Z",

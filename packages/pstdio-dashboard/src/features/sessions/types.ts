@@ -8,6 +8,7 @@ export interface Session {
   status: SessionStatus;
   archived: boolean;
   agent: string | null;
+  lastSelectedModel: string | null;
   createdAt: string;
   updatedAt: string;
 }

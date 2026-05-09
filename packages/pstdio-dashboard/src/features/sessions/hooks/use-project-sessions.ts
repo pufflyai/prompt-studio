@@ -9,6 +9,7 @@ const toSession = (row: SyncedRow): Session => ({
   status: row.status as Session["status"],
   archived: row.archived as boolean,
   agent: (row.agent as string) ?? null,
+  lastSelectedModel: (row.last_selected_model as string) ?? null,
   createdAt: row.created_at as string,
   updatedAt: row.updated_at as string,
 });

@@ -13,6 +13,7 @@ const makeSession = (overrides: Partial<Session> & { id: string; updatedAt: stri
     status: "in_progress",
     archived: false,
     agent: "opencode",
+    lastSelectedModel: "openai/gpt-5.5",
     createdAt: "2026-03-01T00:00:00.000Z",
     updatedAt,
     ...rest,

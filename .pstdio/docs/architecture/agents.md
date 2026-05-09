@@ -112,10 +112,10 @@ OpenCode runs a persistent HTTP server on `127.0.0.1:4096`. pstdio starts the se
 ```
 pstdio                            opencode (HTTP server :4096)
   │                                       │
-  │── POST /v1/session/start ────────────►│
-  │◄── { sessionId, messages } ───────────│
+  │── POST /session ─────────────────────►│
+  │◄── { id } ────────────────────────────│
   │                                       │
-  │── POST /v1/session/prompt ───────────►│
+  │── POST /session/:id/message ─────────►│
   │◄── { parts, messages } ──────────────│
   │                                       │
   │── polling (1s) for new messages ─────►│
@@ -123,6 +123,13 @@ pstdio                            opencode (HTTP server :4096)
 ```
 
 All requests include the header `x-opencode-directory` pointing to the working directory.
+
+OpenCode model payloads are provider-specific and are built only inside the OpenCode adapter:
+
+- Session create receives pstdio's model string (`openai/gpt-5.5`) and sends `{ "model": { "providerID": "openai", "id": "gpt-5.5" } }`.
+- Session message/follow-up sends `{ "model": { "providerID": "openai", "modelID": "gpt-5.5" } }`.
+
+Callers outside the OpenCode adapter pass only pstdio's model string. They must not construct OpenCode payload objects.
 
 ### Message patching strategies
 

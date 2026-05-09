@@ -52,8 +52,11 @@ export const resolveCreateSessionModel = (
   project: ProjectRecord | null,
   agentId: string,
   agentRegistry: AgentRegistry,
+  options: { requestAgentWasOmitted: boolean },
 ) => {
-  if (inputModel) return inputModel;
+  const trimmedInputModel = inputModel?.trim();
+  if (trimmedInputModel) return trimmedInputModel;
+  if (!options.requestAgentWasOmitted) return undefined;
 
   const projectDefaultAgent = project?.default_agent_id ?? null;
   const projectDefaultModel = project?.default_agent_model ?? null;

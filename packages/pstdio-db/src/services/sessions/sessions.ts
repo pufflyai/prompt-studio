@@ -9,6 +9,7 @@ type CreateInput = {
   project_id: string;
   title: string;
   agent: string;
+  last_selected_model?: string;
   original_session_id?: string;
   cwd?: string;
 };
@@ -23,7 +24,14 @@ type ListFilters = {
 type UpdateInput = Partial<
   Pick<
     SessionRecord,
-    "title" | "agent" | "agent_session_id" | "last_request_started" | "last_request_ended" | "session_file_id" | "cwd"
+    | "title"
+    | "agent"
+    | "last_selected_model"
+    | "agent_session_id"
+    | "last_request_started"
+    | "last_request_ended"
+    | "session_file_id"
+    | "cwd"
   >
 >;
 
@@ -42,6 +50,7 @@ export const createSessionsDBService = (db: DbClient) => {
       last_request_started: timestamp,
       last_request_ended: null,
       agent: input.agent,
+      last_selected_model: input.last_selected_model ?? null,
       agent_session_id: null,
       session_file_id: null,
       original_session_id: input.original_session_id ?? null,

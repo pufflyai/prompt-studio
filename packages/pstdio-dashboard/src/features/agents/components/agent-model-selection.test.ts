@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { getConfiguredAgentModel, resolvePreferredAgentModel } from "./agent-model-selection";
+import { getConfiguredAgentModel, resolvePreferredAgentModel } from "@/shared/agent-model-selection";
 
 describe("getConfiguredAgentModel", () => {
   test("returns trimmed model from agent settings", () => {

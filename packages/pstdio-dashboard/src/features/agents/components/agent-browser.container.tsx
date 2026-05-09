@@ -1,28 +1,54 @@
 import { useEffect, useState } from "react";
 import { useSessionAgent } from "@/features/sessions/hooks/use-session-agent";
+import {
+  getConfiguredAgentModel,
+  resolveAvailableAgentModel,
+  resolvePreferredAgentModel,
+} from "@/shared/agent-model-selection";
 import type { CodingAgent } from "@/shared/agent-storage";
 import { useProjectSettingsStore } from "@/shared/stores/project-settings";
 import { useAgentModels } from "../hooks/use-agent-models";
 import { useAgentSettings } from "../hooks/use-agent-settings";
 import { useAgents } from "../hooks/use-agents";
 import { WorkspaceAgentMenu } from "./agent-browser";
-import {
-  getConfiguredAgentModel,
-  resolveAvailableAgentModel,
-  resolvePreferredAgentModel,
-} from "./agent-model-selection";
 
 interface AgentBrowserContainerProps {
   sessionId?: string | null;
   isDisabled?: boolean;
+  selectedAgent?: CodingAgent;
+  selectedModel?: string;
   onAgentChange?: (agent: CodingAgent) => void;
   onModelChange?: (model: string) => void;
 }
 
 const DEFAULT_AGENT_ID = "opencode";
 
+const resolveSynchronizedModel = (input: {
+  currentAgent: string | null | undefined;
+  currentModel: string;
+  configuredModel: string | undefined;
+  isModelsPending: boolean;
+  lastSelectedModels: string[];
+  models: { id: string }[];
+}) => {
+  if (!input.currentAgent) return input.currentModel ? "" : undefined;
+  if (input.isModelsPending) return undefined;
+  if (input.models.length === 0) return input.currentModel ? "" : undefined;
+
+  const hasModelSelection = input.models.some((model) => model.id === input.currentModel);
+  if (hasModelSelection) return undefined;
+
+  return (
+    resolveAvailableAgentModel({
+      configuredModel: input.configuredModel,
+      modelHistory: input.lastSelectedModels,
+      models: input.models,
+    }) ?? input.models[0].id
+  );
+};
+
 export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
-  const { sessionId, isDisabled = false, onAgentChange, onModelChange } = props;
+  const { sessionId, isDisabled = false, selectedAgent, selectedModel, onAgentChange, onModelChange } = props;
 
   const sessionAgent = useSessionAgent(sessionId ?? null);
   const isAgentLocked = sessionId != null && sessionAgent != null;
@@ -33,87 +59,90 @@ export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
   const setLastSelectedModel = useProjectSettingsStore((s) => s.setLastSelectedModel);
 
   const resolvedAgent = (isAgentLocked ? sessionAgent : (lastSelectedAgent ?? DEFAULT_AGENT_ID)) as CodingAgent;
-  const [selectedAgent, setSelectedAgent] = useState<CodingAgent>(resolvedAgent);
-  const [selectedModel, setSelectedModel] = useState(lastSelectedModels[0] ?? "");
-  const { data: agentSettings = {} } = useAgentSettings(selectedAgent);
+  const [internalSelectedAgent, setInternalSelectedAgent] = useState<CodingAgent>(resolvedAgent);
+  const [internalSelectedModel, setInternalSelectedModel] = useState(lastSelectedModels[0] ?? "");
+  const currentAgent = selectedAgent ?? internalSelectedAgent;
+  const currentModel = selectedModel ?? internalSelectedModel;
+  const { data: agentSettings = {} } = useAgentSettings(currentAgent);
   const configuredModel = getConfiguredAgentModel(agentSettings);
   const preferredModel = resolvePreferredAgentModel({ configuredModel, modelHistory: lastSelectedModels });
+  const applyModelSelection = (model: string) => {
+    if (selectedModel === undefined) {
+      setInternalSelectedModel(model);
+    }
+    onModelChange?.(model);
+  };
 
   // Sync when the resolved agent changes (e.g. session loads, or session switches)
   useEffect(() => {
-    if (resolvedAgent !== selectedAgent) {
-      setSelectedAgent(resolvedAgent);
+    if (selectedAgent === undefined && resolvedAgent !== internalSelectedAgent) {
+      setInternalSelectedAgent(resolvedAgent);
     }
-  }, [resolvedAgent, selectedAgent]);
+  }, [resolvedAgent, internalSelectedAgent, selectedAgent]);
 
   useEffect(() => {
-    if (selectedAgent) {
-      onAgentChange?.(selectedAgent);
+    if (currentAgent) {
+      onAgentChange?.(currentAgent);
     }
-  }, [selectedAgent, onAgentChange]);
+  }, [currentAgent, onAgentChange]);
 
   useEffect(() => {
-    if (!preferredModel || selectedModel) return;
+    if (!preferredModel || currentModel) return;
 
-    setSelectedModel(preferredModel);
+    if (selectedModel === undefined) {
+      setInternalSelectedModel(preferredModel);
+    }
     onModelChange?.(preferredModel);
-  }, [preferredModel, selectedModel, onModelChange]);
+  }, [preferredModel, currentModel, selectedModel, onModelChange]);
 
   const { data: agents = [], isLoading: isAgentsPending } = useAgents();
-  const { data: models = [], isLoading: isModelsPending } = useAgentModels(selectedAgent, {
-    enabled: Boolean(selectedAgent),
+  const { data: models = [], isLoading: isModelsPending } = useAgentModels(currentAgent, {
+    enabled: Boolean(currentAgent),
   });
 
   useEffect(() => {
-    if (!selectedAgent) {
-      if (selectedModel) {
-        setSelectedModel("");
-        onModelChange?.("");
-      }
-      return;
+    const next = resolveSynchronizedModel({
+      currentAgent,
+      currentModel,
+      configuredModel,
+      isModelsPending,
+      lastSelectedModels,
+      models,
+    });
+    if (next === undefined) return;
+
+    if (selectedModel === undefined) {
+      setInternalSelectedModel(next);
     }
-
-    if (isModelsPending) return;
-
-    if (models.length === 0) {
-      if (selectedModel) {
-        setSelectedModel("");
-        onModelChange?.("");
-      }
-      return;
-    }
-
-    const hasModelSelection = models.some((model) => model.id === selectedModel);
-    if (!hasModelSelection) {
-      const preferred = resolveAvailableAgentModel({ configuredModel, modelHistory: lastSelectedModels, models });
-      const next = preferred ?? models[0].id;
-      setSelectedModel(next);
-      if (next !== configuredModel) {
-        setLastSelectedModel(next);
-      }
-      onModelChange?.(next);
+    onModelChange?.(next);
+    if (next && next !== configuredModel) {
+      setLastSelectedModel(next);
     }
   }, [
     configuredModel,
+    currentAgent,
+    currentModel,
     isModelsPending,
-    models,
-    selectedAgent,
-    selectedModel,
     lastSelectedModels,
-    setLastSelectedModel,
+    models,
     onModelChange,
+    selectedModel,
+    setLastSelectedModel,
   ]);
 
   const handleSelectAgent = (agent: string) => {
     const codingAgent = agent as CodingAgent;
-    setSelectedAgent(codingAgent);
+    if (selectedAgent === undefined) {
+      setInternalSelectedAgent(codingAgent);
+    }
     setLastSelectedAgent(codingAgent);
+    applyModelSelection("");
+    onAgentChange?.(codingAgent);
   };
 
   const handleSelectModel = (model: string) => {
-    setSelectedModel(model);
+    applyModelSelection(model);
     setLastSelectedModel(model);
-    onModelChange?.(model);
   };
 
   const sortedModelOptions = models
@@ -134,10 +163,10 @@ export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
         value: agent.id,
         disabled: agent.availability.type === "NOT_FOUND",
       }))}
-      selectedAgent={selectedAgent || DEFAULT_AGENT_ID}
+      selectedAgent={currentAgent || DEFAULT_AGENT_ID}
       onSelectAgent={handleSelectAgent}
       modelOptions={sortedModelOptions}
-      selectedModel={selectedModel}
+      selectedModel={currentModel}
       onSelectModel={handleSelectModel}
       isDisabled={isDisabled}
       isAgentSwitchDisabled={isAgentLocked}

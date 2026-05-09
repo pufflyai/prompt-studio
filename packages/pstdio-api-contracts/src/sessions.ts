@@ -19,6 +19,7 @@ export const sessionSchema = z.object({
   last_request_started: z.string().nullable(),
   last_request_ended: z.string().nullable(),
   agent: z.string().nullable(),
+  last_selected_model: z.string().nullable(),
   agent_session_id: z.string().nullable(),
   session_file_id: z.string().nullable(),
   original_session_id: z.string().nullable(),

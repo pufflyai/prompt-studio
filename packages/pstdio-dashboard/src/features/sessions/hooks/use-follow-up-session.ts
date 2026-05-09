@@ -18,7 +18,7 @@ export const useFollowUpSession = () =>
         body: {
           prompt: input.prompt,
           agent: input.agent,
-          model: input.model,
+          model: input.model?.trim() || undefined,
           question_response: input.questionResponse,
         },
       });

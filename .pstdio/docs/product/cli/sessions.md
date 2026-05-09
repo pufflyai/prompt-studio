@@ -24,6 +24,7 @@ Sessions can be archived directly (`sessions archive`) or indirectly when linked
 - **Session**: a DB record tracking a single agent conversation — prompt, status, agent type, and cached messages.
 - **Session ID**: pstdio's internal identifier for the session (`session.id`).
 - **Agent Session ID**: the external agent's own session/thread ID (e.g. Claude Code session, OpenCode thread).
+- **Last Selected Model**: the most recent model selected for a session. It is stored as `last_selected_model` and can change between turns.
 - **Workspace**: the execution environment where the agent operates. An instantiation of the project's repo configuration. A session optionally belongs to a workspace.
 
 ---
@@ -160,24 +161,25 @@ pstdio sessions create --prompt <prompt> [--title <title>] [--workspace-id <work
 | `--workspace-id` | `string` | no       | Workspace ID or shorthand to attach the session to (e.g. `PS-12_A1`).                                          |
 | `--project-id`   | `string` | no       | Target project. Defaults to the current project from `.pstdio/config.json`.                                     |
 | `--agent`        | `string` | no       | Agent to use (`claude-code`, `opencode`). Defaults to the global default agent from `agent_configs.is_default`. |
-| `--model`        | `string` | no       | Model override for the agent (e.g. `claude-haiku-4-5-20251001`).                                                |
+| `--model`        | `string` | no       | Model selected for this request (e.g. `claude-haiku-4-5-20251001`).                                             |
 
 ### Behavior
 
 **With `--workspace-id`:**
 
 1. Resolve the workspace from `--workspace-id`.
-2. Verify the workspace has no active session (i.e. `session_id` is null or the linked session is not `in_progress`).
-3. Call `POST /api/sessions` with the workspace ID and provided parameters.
-4. The API creates the session with status `in_progress`, links it to the workspace (`workspaces.session_id`), and starts the agent in the workspace root directory (`~/.pstdio/workspaces/<shorthand>/`).
-5. Print the session ID and workspace info.
+2. Call `POST /api/sessions` with the workspace ID and provided parameters.
+3. The API creates the session with status `in_progress`, stores the request model as `last_selected_model` when provided, links it to the workspace, and starts the agent in the workspace root directory.
+4. Print the session ID and workspace info.
 
 **Without `--workspace-id`:**
 
 1. Resolve the project from `--project-id` or `.pstdio/config.json`.
 2. Call `POST /api/sessions` with the provided parameters.
-3. The API creates the session with status `in_progress` and starts the agent at the project root.
+3. The API creates the session with status `in_progress`, stores the request model as `last_selected_model` when provided, and starts the agent at the project root.
 4. Print the session ID.
+
+When `--agent` is omitted and `--model` is omitted, the API can use the project's default agent model for the resolved default agent. When `--agent` is provided, project default model fallback is not applied; the caller's selected model must be sent with `--model`.
 
 ### Output
 
@@ -203,7 +205,6 @@ Status:    in_progress
 - `"Not inside a pstdio project. Run 'pstdio projects create' first."`: no `--project-id` flag and no `.pstdio/config.json` found.
 - `"Project not found: <project-id>"`: the given project ID does not exist.
 - `"Workspace not found: <workspace-id>"`: the given workspace does not exist.
-- `"Workspace already has an active session: <session-id>"`: the workspace is already running a session.
 - `"No agent configured. Set a default agent with 'pstdio agents setup' first."`: no default agent in `agent_configs` and none specified via `--agent`.
 
 ---
@@ -223,7 +224,7 @@ pstdio sessions follow-up --id <session-id> --prompt <prompt> [--agent <agent>] 
 | `--id`     | `string` | yes      | The session ID to continue.                                          |
 | `--prompt` | `string` | yes      | The follow-up prompt.                                                |
 | `--agent`  | `string` | no       | Switch agent for this follow-up. Clears previous `agent_session_id`. |
-| `--model`  | `string` | no       | Model override for the agent.                                        |
+| `--model`  | `string` | no       | Model selected for this follow-up.                                   |
 
 ### Behavior
 
@@ -231,7 +232,9 @@ pstdio sessions follow-up --id <session-id> --prompt <prompt> [--agent <agent>] 
 2. The API sets the session back to `in_progress` and sends the prompt to the agent.
 3. The agent runs in the session's workspace root directory if a workspace is linked, otherwise at the project root.
 4. If `--agent` differs from the current session agent, the API clears the previous `agent_session_id` and starts a new agent session.
-5. Print confirmation.
+5. If `--model` is provided, the API stores it as the session's `last_selected_model`.
+6. If `--model` is omitted and the agent is unchanged, the API reuses the session's `last_selected_model`.
+7. Print confirmation.
 
 ### Output
 
