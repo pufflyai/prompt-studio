@@ -14,6 +14,7 @@ import {
   STICKY_USER_MESSAGE_EXPANDED_MAX_HEIGHT,
   shouldStopStickyUserMessageWheel,
 } from "./chat-panel-sticky-user-message";
+import { MessageActionPanel } from "./message-action-panel";
 import { MessagePartsRenderer } from "./message-parts-renderer";
 import {
   getMessageOrigin,
@@ -96,6 +97,7 @@ const renderMessage = (message: SessionMessage, streaming: boolean, hideQuestion
     <ChatMessage.Root key={message.id} from={from}>
       <ChatMessage.Content from={from}>
         <MessagePartsRenderer message={message} streaming={streaming} hideQuestionForms={hideQuestionForms} />
+        {from === "assistant" ? <MessageActionPanel message={message} /> : null}
       </ChatMessage.Content>
     </ChatMessage.Root>
   );
