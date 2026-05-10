@@ -28,6 +28,14 @@ describe("buildParentPath", () => {
     expect(buildParentPath(child, map)).toEqual(["P-1"]);
   });
 
+  it("returns ancestor shorthand when parentId is a shorthand", () => {
+    const parent = makeTicket({ id: "p1", shorthand: "P-1" });
+    const child = makeTicket({ id: "c1", shorthand: "C-1", parentId: "P-1" });
+
+    const map = new Map([["p1", parent]]);
+    expect(buildParentPath(child, map)).toEqual(["P-1"]);
+  });
+
   it("returns ancestors in root-first order", () => {
     const grandparent = makeTicket({ id: "gp", shorthand: "GP-1" });
     const parent = makeTicket({ id: "p1", shorthand: "P-1", parentId: "gp" });

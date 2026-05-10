@@ -18,4 +18,4 @@ Scaffold the review file by running `pstdio templates write --name "code-review"
 
 ### Final Action
 
-If **no critical or minor issues** are found, mark the workspace attempt status as `reviewed`. Otherwise mark it as `changes-requested`.
+If **no critical or minor issues** are found, mark the workspace attempt status as `reviewed` by running `pstdio workspaces set-status --status reviewed`. Otherwise mark it as `changes-requested` by running `pstdio workspaces set-status --status changes-requested`.
