@@ -33,6 +33,10 @@ export const toTicketFromRow = (
       label: (ws.name as string) ?? ws.id,
       attemptStatusId: (ws.attempt_status_id as string) ?? null,
       sessionStatus: toSessionStatus(session?.status),
+      sessionCreatedAt:
+        (session?.workspace_session_created_at as string | undefined) ??
+        (session?.created_at as string | undefined) ??
+        null,
       shorthand: (ws.workspace_shorthand as string) ?? ws.id,
       updatedAt: ws.updated_at as string,
       worktreePath: (ws.worktree_path as string) ?? null,

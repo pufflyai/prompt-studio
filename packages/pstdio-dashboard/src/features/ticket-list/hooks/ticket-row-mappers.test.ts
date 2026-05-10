@@ -57,6 +57,49 @@ describe("toTicketFromRow", () => {
 
     expect(ticket.attempts?.[0]?.attemptStatusId).toBeNull();
     expect(ticket.attempts?.[0]?.sessionStatus).toBe("completed");
+    expect(ticket.attempts?.[0]?.sessionCreatedAt).toBeNull();
+  });
+
+  it("attaches the linked session creation time", () => {
+    const workspacesByTicket = new Map<string, SyncedRow[]>([
+      [
+        "ticket-1",
+        [
+          {
+            id: "workspace-1",
+            name: "PS-1_A1",
+            attempt_status_id: null,
+            workspace_shorthand: "PS-1_A1",
+            updated_at: "2026-03-15T12:00:00.000Z",
+            worktree_path: "/tmp/ws",
+          },
+        ],
+      ],
+    ]);
+    const sessionsByWorkspace = new Map<string, SyncedRow>([
+      [
+        "workspace-1",
+        {
+          id: "session-1",
+          status: "completed",
+          created_at: "2026-03-15T12:30:00.000Z",
+        },
+      ],
+    ]);
+
+    const ticket = toTicketFromRow(
+      baseTicketRow,
+      new Map([["status-1", "In Progress"]]),
+      new Map([["status-1", "orange"]]),
+      "Unassigned",
+      "gray",
+      new Map(),
+      workspacesByTicket,
+      sessionsByWorkspace,
+      new Map(),
+    );
+
+    expect(ticket.attempts?.[0]?.sessionCreatedAt).toBe("2026-03-15T12:30:00.000Z");
   });
 
   it("sorts attempts by shorthand", () => {
