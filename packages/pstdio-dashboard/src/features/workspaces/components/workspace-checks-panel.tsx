@@ -19,18 +19,18 @@ const stripArtifactPrefix = (relativePath: string) => relativePath.replace(/^art
 
 const resolveArtifactFileIcon = (path: string): FileIconInfo => {
   const lower = path.toLowerCase();
-  if (lower.includes("fail") || lower.includes("error")) return { icon: AlertCircle, color: "fg.error" };
+  if (lower.includes("fail") || lower.includes("error")) return { icon: <AlertCircle size={14} />, color: "fg.error" };
   if (lower.includes("pass") || lower.includes("ok") || lower.includes("success")) {
-    return { icon: CheckCircle2, color: "fg.success" };
+    return { icon: <CheckCircle2 size={14} />, color: "fg.success" };
   }
-  if (lower.includes("test")) return { icon: FlaskConical, color: "fg.muted" };
+  if (lower.includes("test")) return { icon: <FlaskConical size={14} />, color: "fg.muted" };
   if (lower.endsWith(".json") || lower.endsWith(".xml") || lower.endsWith(".yaml") || lower.endsWith(".yml")) {
-    return { icon: FileCode2, color: "fg.subtle" };
+    return { icon: <FileCode2 size={14} />, color: "fg.subtle" };
   }
   if (lower.endsWith(".log") || lower.includes("lint") || lower.includes("validate")) {
-    return { icon: TerminalSquare, color: "fg.subtle" };
+    return { icon: <TerminalSquare size={14} />, color: "fg.subtle" };
   }
-  return { icon: FileText, color: "fg.subtle" };
+  return { icon: <FileText size={14} />, color: "fg.subtle" };
 };
 
 export const WorkspaceChecksPanel = (props: WorkspaceChecksPanelProps) => {

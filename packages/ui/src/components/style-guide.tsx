@@ -259,7 +259,7 @@ export const StyleGuide = () => (
           <Stack gap="sm">
             <Text textStyle="label/L/medium">Buttons</Text>
             <HStack gap="sm" flexWrap="wrap">
-              <Button borderRadius="xl" variant="primary">
+              <Button borderRadius="xl" variant="solid">
                 Primary
               </Button>
               <Button variant="solid">Solid</Button>

@@ -26,7 +26,7 @@ export const ProjectListPage = (props: ProjectListPageProps) => {
             <IconButton size="sm" variant="ghost" aria-label="Open settings" onClick={onOpenSettings}>
               <Settings size={18} />
             </IconButton>
-            <Button size="sm" variant="primary">
+            <Button size="sm" variant="solid">
               <Plus size={14} />
               New project
             </Button>
