@@ -1,5 +1,4 @@
 import { getFileTypeIcon, type TreeListNode } from "@pstdio/ui";
-import { Folder } from "lucide-react";
 
 interface FileEntry {
   path: string;
@@ -45,7 +44,6 @@ const toTreeListNodes = (dir: DirNode, parentPath: string): TreeListNode[] => {
   const folderNodes: TreeListNode[] = [...dir.children.values()].sort(compareEntries).map((child) => ({
     id: `dir:${child.path}`,
     label: child.name,
-    icon: <Folder size={14} />,
     children: toTreeListNodes(child, child.path),
   }));
 
