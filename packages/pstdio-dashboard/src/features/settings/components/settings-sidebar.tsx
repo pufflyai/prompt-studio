@@ -48,7 +48,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
       header={<BackToProjects />}
       onNavigate={handleNavigate}
       closable={false}
-      width="240px"
+      width="100%"
     />
   );
 };

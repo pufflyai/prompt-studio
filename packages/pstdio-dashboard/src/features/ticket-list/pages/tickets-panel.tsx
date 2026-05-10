@@ -8,7 +8,7 @@ import { ActionParamsDialog } from "@/features/plugin-actions/components/action-
 import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
 import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
 import { buildResourceContextMenuActions } from "@/features/plugin-actions/hooks/use-resource-context-menu";
-import { ProjectSidebar } from "@/features/project/components/project-sidebar";
+import { PROJECT_SIDEBAR_STORAGE_KEY, ProjectSidebar } from "@/features/project/components/project-sidebar";
 import { useProject } from "@/features/project/hooks/use-project";
 import { openTicketSessionBubble } from "@/features/ticket/utils/open-ticket-session-bubble";
 import { useCreateProjectTicket } from "@/features/ticket-list/hooks/use-create-project-ticket";
@@ -257,7 +257,7 @@ export const TicketsPanel = () => {
 
   if (isLoading) {
     return (
-      <PanelLayout sidebar={<ProjectSidebar />}>
+      <PanelLayout sidebar={<ProjectSidebar />} sidebarStorageKey={PROJECT_SIDEBAR_STORAGE_KEY}>
         <Stack gap="lg" height="100%" minW="0" p="sm">
           <Text textStyle="paragraph/S/regular" color="fg.muted">
             {t("loading")}
@@ -268,7 +268,7 @@ export const TicketsPanel = () => {
   }
 
   return (
-    <PanelLayout sidebar={<ProjectSidebar />}>
+    <PanelLayout sidebar={<ProjectSidebar />} sidebarStorageKey={PROJECT_SIDEBAR_STORAGE_KEY}>
       <Stack gap="0" height="100%" flex="1" minW="0">
         <TicketsHeader />
 

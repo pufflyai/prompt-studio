@@ -207,7 +207,7 @@ export const ProjectSidebar = () => {
       footer={<ProjectSidebarFooter />}
       linkComponent={Link}
       onNavigate={handleNavigate}
-      width="240px"
+      width="100%"
     />
   );
 };

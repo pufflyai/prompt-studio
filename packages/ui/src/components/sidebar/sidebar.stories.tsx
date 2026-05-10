@@ -15,6 +15,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import { PanelLayout } from "../layout";
 import {
   resolveSessionIndicatorColor,
   resolveSessionIndicatorIcon,
@@ -168,22 +169,45 @@ const SidebarShell = (props: { storageKey: string; sections?: TreeListSection[] 
   const { storageKey, sections = sidebarSections } = props;
   const [activeNodeId, setActiveNodeId] = useState<string | null>("overview");
   const [navigationOutput, setNavigationOutput] = useState("No navigation yet");
-  const [openState, setOpenState] = useState(true);
 
+  const open = useSidebarStore(storageKey, (state) => state.open);
   const openSidebar = useSidebarStore(storageKey, (state) => state.openSidebar);
 
   return (
-    <Stack
-      direction={{ base: "column", md: "row" }}
-      align="stretch"
-      h="560px"
-      borderWidth="1px"
-      borderColor="border.muted"
-    >
+    <Stack h="560px" borderWidth="1px" borderColor="border.muted">
+      <PanelLayout sidebarStorageKey={storageKey} sidebar={<SidebarContent />}>
+        <Stack flex="1" p="4" gap="3" minW="0">
+          <HStack gap="2" flexWrap="wrap">
+            <Button size="sm" onClick={openSidebar}>
+              Reopen Sidebar
+            </Button>
+            <Badge colorPalette={open ? "green" : "orange"}>{open ? "Open" : "Hidden"}</Badge>
+          </HStack>
+
+          <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" p="3">
+            <Text textStyle="paragraph/S/medium">Navigation output</Text>
+            <Text textStyle="paragraph/S/regular" color="fg.muted">
+              {navigationOutput}
+            </Text>
+          </Box>
+
+          <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" p="3" flex="1">
+            <Text textStyle="paragraph/S/regular" color="fg.muted">
+              Content area reclaims width when sidebar is hidden.
+            </Text>
+          </Box>
+        </Stack>
+      </PanelLayout>
+    </Stack>
+  );
+
+  function SidebarContent() {
+    return (
       <Sidebar
         storageKey={storageKey}
         sections={sections}
         activeNodeId={activeNodeId}
+        width="100%"
         header={
           <HStack gap="2" w="100%">
             <Search size={14} />
@@ -200,36 +224,13 @@ const SidebarShell = (props: { storageKey: string; sections?: TreeListSection[] 
             </Button>
           </HStack>
         }
-        onOpenChange={setOpenState}
         onNavigate={(event) => {
           setActiveNodeId(event.nodeId);
           setNavigationOutput(`${event.nodeId} (${event.intent?.id ?? "no-intent"})`);
         }}
       />
-
-      <Stack flex="1" p="4" gap="3" minW="0">
-        <HStack gap="2" flexWrap="wrap">
-          <Button size="sm" onClick={openSidebar}>
-            Reopen Sidebar
-          </Button>
-          <Badge colorPalette={openState ? "green" : "orange"}>{openState ? "Open" : "Hidden"}</Badge>
-        </HStack>
-
-        <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" p="3">
-          <Text textStyle="paragraph/S/medium">Navigation output</Text>
-          <Text textStyle="paragraph/S/regular" color="fg.muted">
-            {navigationOutput}
-          </Text>
-        </Box>
-
-        <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" p="3" flex="1">
-          <Text textStyle="paragraph/S/regular" color="fg.muted">
-            Content area reclaims width when sidebar is hidden.
-          </Text>
-        </Box>
-      </Stack>
-    </Stack>
-  );
+    );
+  }
 };
 
 const meta: Meta<typeof Sidebar> = {

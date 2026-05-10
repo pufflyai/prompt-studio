@@ -116,6 +116,10 @@ export const getSidebarStore = (storageKey: string, initialState?: Partial<Sideb
   const existingStore = sidebarStoreRegistry.get(storageKey);
 
   if (existingStore) {
+    if (initialState?.expandedSections && existingStore.getState().expandedSections.length === 0) {
+      existingStore.setState((state) => ({ ...state, expandedSections: initialState.expandedSections ?? [] }));
+    }
+
     return existingStore;
   }
 

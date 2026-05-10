@@ -13,7 +13,7 @@ export const ProjectExtensionRoute = () => {
   const breadcrumbItems: BreadcrumbItem[] = [{ title: route?.label ?? "Extension" }];
 
   return (
-    <PanelLayout sidebar={<ProjectSidebar />}>
+    <PanelLayout sidebar={<ProjectSidebar />} sidebarStorageKey={PROJECT_SIDEBAR_STORAGE_KEY}>
       <Stack flex="1" minH="0" gap="0">
         <DashboardHeader
           title={<Breadcrumb separator="/" separatorGap="xs" items={breadcrumbItems} linkComponent={Link} />}

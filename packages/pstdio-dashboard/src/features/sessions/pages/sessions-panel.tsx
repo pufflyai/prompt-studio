@@ -11,7 +11,7 @@ import {
   toSidebarContextMenuItems,
 } from "@/features/plugin-actions/hooks/use-resource-context-menu";
 import { SessionChatView } from "../components/session-chat-view";
-import { SessionsSidebar } from "../components/sessions-sidebar";
+import { SESSIONS_SIDEBAR_STORAGE_KEY, SessionsSidebar } from "../components/sessions-sidebar";
 import { useArchiveSession } from "../hooks/use-archive-session";
 import { useProjectSessions } from "../hooks/use-project-sessions";
 import { buildSessionOverflowActions } from "../session-actions";
@@ -89,7 +89,7 @@ export const SessionsPanel = () => {
   );
 
   return (
-    <PanelLayout sidebar={sidebar}>
+    <PanelLayout sidebar={sidebar} sidebarStorageKey={SESSIONS_SIDEBAR_STORAGE_KEY} sidebarClosable={false}>
       <Stack flex="1" minW="0" minH="0" gap="0">
         <HorizontalMenuStack>
           <Text textStyle="label/S/medium" color="foreground.primary" lineClamp={1}>

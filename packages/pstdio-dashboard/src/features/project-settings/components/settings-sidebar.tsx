@@ -268,7 +268,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
       header={<BackToDashboard />}
       onNavigate={handleNavigate}
       closable={false}
-      width="240px"
+      width="100%"
     />
   );
 };

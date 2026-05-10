@@ -16,7 +16,7 @@ import { BackToDashboard } from "@/features/project/components/back-to-dashboard
 import type { Session } from "../types";
 import { groupSessionsByDate } from "../utils/group-sessions";
 
-const SESSIONS_SIDEBAR_STORAGE_KEY = "sessions-sidebar";
+export const SESSIONS_SIDEBAR_STORAGE_KEY = "sessions-sidebar";
 
 const sessionIcon = (status: string) =>
   createElement(resolveSessionIndicatorIcon(status as SessionCompletionStatus), { size: 14 });
@@ -85,7 +85,7 @@ export const SessionsSidebar = (props: SessionsSidebarProps) => {
       header={header}
       onNavigate={handleNavigate}
       closable={false}
-      width="18rem"
+      width="100%"
       emptyLabel="No sessions yet"
     />
   );

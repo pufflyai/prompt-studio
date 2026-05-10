@@ -1,5 +1,5 @@
-import { Flex, Stack } from "@chakra-ui/react";
-import { toaster } from "@pstdio/ui";
+import { Stack } from "@chakra-ui/react";
+import { PanelLayout, toaster } from "@pstdio/ui";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -12,7 +12,11 @@ import {
 import { useAgents } from "@/features/agents/hooks/use-agents";
 import type { SupportedAgentId } from "../components/add-agent-manually-dialog";
 import { AgentsPanel } from "../components/agents-panel";
-import { type GlobalSettingsSection, SettingsSidebar } from "../components/settings-sidebar";
+import {
+  GLOBAL_SETTINGS_SIDEBAR_STORAGE_KEY,
+  type GlobalSettingsSection,
+  SettingsSidebar,
+} from "../components/settings-sidebar";
 import { parseSettingsPanel, toSettingsPanel } from "../utils/settings-panel";
 
 export const Settings = () => {
@@ -85,8 +89,11 @@ export const Settings = () => {
   };
 
   return (
-    <Flex height="100%" width="100%" minH="0">
-      <SettingsSidebar activeSection={activeSection} onSelectSection={setActiveSection} />
+    <PanelLayout
+      sidebar={<SettingsSidebar activeSection={activeSection} onSelectSection={setActiveSection} />}
+      sidebarStorageKey={GLOBAL_SETTINGS_SIDEBAR_STORAGE_KEY}
+      sidebarClosable={false}
+    >
       <Stack flex="1" minH="0" overflow="auto">
         <AgentsPanel
           agents={agents}
@@ -99,6 +106,6 @@ export const Settings = () => {
           onManualAdd={handleManualAdd}
         />
       </Stack>
-    </Flex>
+    </PanelLayout>
   );
 };

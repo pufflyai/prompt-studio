@@ -25,7 +25,7 @@ import { type SelectableTicketFile, TICKET_CONTENT_ITEM_ID } from "../utils/tick
 import { resolveTicketSidebarActiveNodeIds } from "./ticket-sidebar-selection";
 import { sortWorkspacesByLatestSession } from "./ticket-sidebar-workspaces";
 
-const TICKET_SIDEBAR_STORAGE_KEY = "ticket-sidebar";
+export const TICKET_SIDEBAR_STORAGE_KEY = "ticket-sidebar";
 
 const sessionIcon = (status: string) =>
   createElement(resolveSessionIndicatorIcon(status as SessionCompletionStatus), { size: 14 });
@@ -366,7 +366,7 @@ export const TicketSidebar = (props: TicketSidebarProps) => {
       footer={footer}
       onNavigate={handleNavigate}
       closable={false}
-      width="240px"
+      width="100%"
     />
   );
 };

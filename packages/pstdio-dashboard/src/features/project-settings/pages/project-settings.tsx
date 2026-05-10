@@ -10,7 +10,7 @@ import {
 } from "@/features/ticket-list/hooks/use-project-tickets";
 import { CreateTemplateDialog } from "../components/create-template-dialog";
 import { SettingsContent } from "../components/settings-content";
-import { type SettingsSection, SettingsSidebar } from "../components/settings-sidebar";
+import { SETTINGS_SIDEBAR_STORAGE_KEY, type SettingsSection, SettingsSidebar } from "../components/settings-sidebar";
 import { useProjectAttemptStatuses } from "../hooks/use-attempt-statuses";
 
 import { useProjectSkills } from "../hooks/use-skills";
@@ -107,7 +107,7 @@ export const ProjectSettings = () => {
   );
 
   return (
-    <PanelLayout sidebar={sidebar}>
+    <PanelLayout sidebar={sidebar} sidebarStorageKey={SETTINGS_SIDEBAR_STORAGE_KEY} sidebarClosable={false}>
       <Stack flex="1" minH="0" overflow="auto">
         <SettingsContent
           activeSection={activeSection}

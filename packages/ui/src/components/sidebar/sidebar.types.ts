@@ -7,7 +7,7 @@ export interface SidebarProps {
   activeNodeId?: string | string[] | null;
   header?: ReactNode;
   footer?: ReactNode;
-  /** Initial width when resizable. Set explicitly to override the persisted width. */
+  /** Sidebar width. Splitter-managed sidebars should pass `100%`. */
   width?: string | number;
   emptyLabel?: string;
   defaultExpandedSections?: string[];
@@ -15,8 +15,6 @@ export interface SidebarProps {
   onNavigate?: (event: TreeListNavigateEvent) => void;
   closable?: boolean;
   onOpenChange?: (open: boolean) => void;
-  /** Allow the user to drag the right edge to resize. Defaults to `true`. */
-  resizable?: boolean;
   defaultWidth?: number;
   minWidth?: number;
   maxWidth?: number;

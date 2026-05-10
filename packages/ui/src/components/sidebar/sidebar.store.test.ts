@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { installMockLocalStorage } from "@/test-utils/local-storage";
-import { createSidebarStore } from "./sidebar.store";
+import { createSidebarStore, getSidebarStore } from "./sidebar.store";
 
 const STORAGE_KEY = "test-sidebar";
 
@@ -47,5 +47,12 @@ describe("createSidebarStore", () => {
     const secondStore = createSidebarStore({ storageKey: "beta" });
 
     expect(secondStore.getState().open).toBe(true);
+  });
+
+  it("applies default expanded sections when a wrapper created the store first", () => {
+    getSidebarStore("deferred-defaults", { width: 240 });
+    const store = getSidebarStore("deferred-defaults", { expandedSections: ["files"] });
+
+    expect(store.getState().expandedSections).toEqual(["files"]);
   });
 });

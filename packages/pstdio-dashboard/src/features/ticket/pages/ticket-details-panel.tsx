@@ -36,7 +36,7 @@ import { CreateWorkspaceModal } from "../components/create-workspace-modal";
 import { TicketDetailSidebar } from "../components/ticket-detail-sidebar";
 import { TicketHeader } from "../components/ticket-header";
 import { TicketImagePreview } from "../components/ticket-image-preview";
-import { TicketSidebar } from "../components/ticket-sidebar";
+import { TICKET_SIDEBAR_STORAGE_KEY, TicketSidebar } from "../components/ticket-sidebar";
 import { useContentAutosave } from "../hooks/use-content-autosave";
 import { useTicketContent } from "../hooks/use-ticket-content";
 import { useTicketFiles } from "../hooks/use-ticket-files";
@@ -346,7 +346,7 @@ export const TicketDetailsPanel = () => {
   );
 
   return (
-    <PanelLayout sidebar={sidebar}>
+    <PanelLayout sidebar={sidebar} sidebarStorageKey={TICKET_SIDEBAR_STORAGE_KEY} sidebarClosable={false}>
       <Stack flex="1" gap="0" minH="0">
         <TicketHeader
           breadcrumbItems={breadcrumbs}
