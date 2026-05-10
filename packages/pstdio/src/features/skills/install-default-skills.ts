@@ -73,6 +73,25 @@ export const resolveSafeSkillFilePath = (
   throw new Error(`Invalid skill file path: ${filePath}`);
 };
 
+export const resolveSafeSkillDir = (
+  skillsRoot: string,
+  skillName: string,
+  pathOps: PathOps = { isAbsolute, relative, resolve },
+) => {
+  if (!skillName || skillName.includes("/") || skillName.includes("\\") || pathOps.isAbsolute(skillName)) {
+    throw new Error(`Invalid skill name: ${skillName}`);
+  }
+
+  const root = pathOps.resolve(skillsRoot);
+  const resolved = pathOps.resolve(root, skillName);
+  const rel = pathOps.relative(root, resolved);
+  if (rel === "" || rel.startsWith("..") || pathOps.isAbsolute(rel)) {
+    throw new Error(`Invalid skill name: ${skillName}`);
+  }
+
+  return resolved;
+};
+
 const resolveConfiguredAgents = async (baseUrl: string) => {
   const configured = await listAgents();
   if (configured.length > 0) return configured;
@@ -110,7 +129,7 @@ export const installSkillsForAgent = async (options: InstallSkillsOptions) => {
   const installed: string[] = [];
 
   for (const skill of skills) {
-    const dest = join(targetDir, skill.name);
+    const dest = resolveSafeSkillDir(targetDir, skill.name);
     if (existsSync(dest)) continue;
 
     writeSkillTree(dest, skill.files);
@@ -129,7 +148,7 @@ export const removeInstalledSkillsForAgent = async (root: string, agentId: strin
   const removed: string[] = [];
 
   for (const skill of skills) {
-    const dest = join(skillsDir, skill.name);
+    const dest = resolveSafeSkillDir(skillsDir, skill.name);
     if (!existsSync(dest)) continue;
 
     rmSync(dest, { recursive: true, force: true });
@@ -158,9 +177,9 @@ export const installDefaultSkills = async (
     const globalDir = join(homedir, agent.globalSkillsDir);
 
     for (const skill of skills) {
-      const localDest = join(localDir, skill.name);
+      const localDest = resolveSafeSkillDir(localDir, skill.name);
       if (existsSync(localDest)) continue;
-      if (existsSync(join(globalDir, skill.name))) continue;
+      if (existsSync(resolveSafeSkillDir(globalDir, skill.name))) continue;
 
       writeSkillTree(localDest, skill.files);
     }
