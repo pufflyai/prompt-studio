@@ -8,6 +8,7 @@ import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/shared/api-types";
 import { ATTEMPT_DIFF_MODE, getWorkspaceDiffFile } from "@/shared/workspace-diff-api";
 import { type ChangedFilesViewMode, collectChangedFilePaths } from "../utils/build-changed-files-tree";
 import { sortDiffs } from "../utils/sort-diffs";
+import { transformFileDiffs } from "../utils/transform-diff";
 import { WorkspaceChecksPanel } from "./workspace-checks-panel";
 import { FileListPanel, ResizableLeftPanel, resolveSelectedPath } from "./workspace-file-list-panel";
 
@@ -118,7 +119,8 @@ export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
     if (!workspaceId) return;
 
     const file = await getWorkspaceDiffFile(workspaceId, path, ATTEMPT_DIFF_MODE);
-    setLoadedDiffs((current) => new Map(current).set(buildLoadedDiffKey(workspaceId, path), file));
+    const [diff] = transformFileDiffs([file]);
+    setLoadedDiffs((current) => new Map(current).set(buildLoadedDiffKey(workspaceId, path), diff));
   };
 
   return (

@@ -1,7 +1,29 @@
-export const LARGE_DIFF_CONTENT_LENGTH = 200_000;
+export const LARGE_DIFF_LINE_THRESHOLD = 1000;
 
-export const isLargeDiffContent = (input: { oldContent?: string; newContent?: string }) => {
-  const { oldContent = "", newContent = "" } = input;
+const countContentLines = (content: string | undefined) => {
+  if (!content) return 0;
 
-  return oldContent.length + newContent.length > LARGE_DIFF_CONTENT_LENGTH;
+  const lines = content.split("\n");
+  return content.endsWith("\n") ? lines.length - 1 : lines.length;
+};
+
+export const getDiffLineCount = (input: {
+  additions?: number;
+  deletions?: number;
+  oldContent?: string;
+  newContent?: string;
+}) => {
+  const changedLines = (input.additions ?? 0) + (input.deletions ?? 0);
+  if (changedLines > 0) return changedLines;
+
+  return countContentLines(input.oldContent) + countContentLines(input.newContent);
+};
+
+export const isLargeDiffContent = (input: {
+  additions?: number;
+  deletions?: number;
+  oldContent?: string;
+  newContent?: string;
+}) => {
+  return getDiffLineCount(input) > LARGE_DIFF_LINE_THRESHOLD;
 };

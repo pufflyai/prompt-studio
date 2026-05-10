@@ -124,7 +124,7 @@ test.describe("frontend route performance", () => {
     await loadButton.waitFor({ state: "visible" });
     await markNow(page, "workspace:diff-file-open:start");
     await loadButton.click();
-    await expect(loadButton).toBeDisabled();
+    await page.getByText("Diff content loaded. This file is too large to render inline.").first().waitFor({ state: "visible" });
     await markNow(page, "workspace:diff-file-open:painted");
     const interaction = await waitForMark(page, "workspace:diff-file-open:painted", "workspace:diff-file-open:start");
 

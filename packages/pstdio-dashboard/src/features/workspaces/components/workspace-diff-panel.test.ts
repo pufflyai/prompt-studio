@@ -26,6 +26,23 @@ describe("resolveDisplayDiffs", () => {
     expect(displayDiffs[0].oldContent).toBeUndefined();
     expect(displayDiffs[0].newContent).toBeUndefined();
   });
+
+  it("keeps loaded diff paths stable for drawer collapse keys", () => {
+    const loadedDiffs = new Map<string, Diff>([
+      [
+        buildLoadedDiffKey("workspace-1", "src/app.ts"),
+        { change: "modified", oldPath: "src/app.ts", newPath: "src/app.ts", oldContent: "old", newContent: "new" },
+      ],
+    ]);
+
+    const displayDiffs = resolveDisplayDiffs({
+      workspaceId: "workspace-1",
+      loadedDiffs,
+      diffs: [{ change: "modified", oldPath: "src/app.ts", newPath: "src/app.ts" }],
+    });
+
+    expect(displayDiffs[0].newPath ?? displayDiffs[0].oldPath).toBe("src/app.ts");
+  });
 });
 
 describe("buildFilteredDiffs", () => {
