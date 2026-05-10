@@ -10,6 +10,11 @@ import { SyncProvider } from "@/features/sync/sync-provider";
 import { Router } from "./router";
 import { dashboardThemePreferences } from "./theme-preferences";
 
+if (import.meta.env.DEV) {
+  const { scan } = await import("react-scan");
+  scan();
+}
+
 const queryClient = new QueryClient();
 const initialThemePreference = getInitialThemePreference(dashboardThemePreferences);
 
