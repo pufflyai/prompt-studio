@@ -77,11 +77,27 @@ describe("settings-panel", () => {
     expect(parseSettingsPanel("repositories")).toBe("repositories");
   });
 
+  test("parseSettingsPanel parses extensions panel id", () => {
+    expect(parseSettingsPanel("extensions")).toBe("extensions");
+  });
+
+  test("parseSettingsPanel does not treat legacy plugins as a settings panel", () => {
+    expect(parseSettingsPanel("plugins")).toBe("tags");
+  });
+
   test("toSettingsPanel serializes repositories section", () => {
     expect(toSettingsPanel("repositories")).toBe("repositories");
   });
 
+  test("toSettingsPanel serializes extensions section", () => {
+    expect(toSettingsPanel("extensions")).toBe("extensions");
+  });
+
   test("ensureValidSettingsSection keeps repositories section", () => {
     expect(ensureValidSettingsSection("repositories", undefined, undefined, undefined)).toBe("repositories");
+  });
+
+  test("ensureValidSettingsSection keeps extensions section", () => {
+    expect(ensureValidSettingsSection("extensions", undefined, undefined, undefined)).toBe("extensions");
   });
 });

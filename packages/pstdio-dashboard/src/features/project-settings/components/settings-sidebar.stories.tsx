@@ -113,3 +113,15 @@ export const SplitTemplateCatalogs: Story = {
     onSelectSection: () => {},
   },
 };
+
+export const ExtensionsSelected: Story = {
+  args: {
+    activeSection: "extensions",
+    tags: [],
+    templates: [],
+    skills: [],
+    onCreateTag: () => {},
+    onCreateTemplate: () => {},
+    onSelectSection: () => {},
+  },
+};
