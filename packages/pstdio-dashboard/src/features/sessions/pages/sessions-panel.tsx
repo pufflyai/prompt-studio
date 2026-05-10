@@ -110,7 +110,7 @@ export const SessionsPanel = () => {
           </HStack>
         </HorizontalMenuStack>
 
-        <Stack flex="1" minH="0" px="sm" pb="sm" align="flex-start">
+        <Stack flex="1" minH="0" px="sm" pb="sm" align="center">
           <Stack flex="1" minH="0" w="full" maxW="52rem">
             <SessionChatView sessionId={selectedSessionId} onSessionCreated={handleSelectSession} />
           </Stack>

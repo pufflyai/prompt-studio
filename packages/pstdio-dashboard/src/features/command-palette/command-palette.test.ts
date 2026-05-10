@@ -11,6 +11,11 @@ const tickets = [
   { shorthand: "PS-2", title: "Theme command palette" },
 ];
 
+const sessions = [
+  { id: "session-1", title: "Debug webhook delivery" },
+  { id: "session-2", title: "Implement sidebar search" },
+];
+
 describe("command palette entries", () => {
   it("uses search mode until the query starts with a command marker", () => {
     expect(resolveCommandPaletteMode("theme")).toBe("search");
@@ -22,6 +27,7 @@ describe("command palette entries", () => {
     const entries = buildCommandPaletteEntries({
       projectId: "project-1",
       tickets,
+      sessions,
       currentTheme: "pstdio-dark",
       run: () => {},
     });
@@ -29,10 +35,30 @@ describe("command palette entries", () => {
     expect(filterCommandPaletteEntries(entries, "PS-2").map((entry) => entry.id)).toEqual(["ticket:PS-2"]);
   });
 
+  it("filters project sessions outside command mode", () => {
+    const entries = buildCommandPaletteEntries({
+      projectId: "project-1",
+      tickets,
+      sessions,
+      currentTheme: "pstdio-dark",
+      run: () => {},
+    });
+
+    const [entry] = filterCommandPaletteEntries(entries, "webhook");
+
+    expect(entry.id).toBe("session:session-1");
+    expect(entry.action).toEqual({
+      id: "navigate",
+      type: "navigate",
+      path: "/projects/project-1/sessions/session-1",
+    });
+  });
+
   it("filters commands after the command marker", () => {
     const entries = buildCommandPaletteEntries({
       projectId: "project-1",
       tickets,
+      sessions,
       currentTheme: "pstdio-dark",
       run: () => {},
     });
@@ -47,6 +73,7 @@ describe("command palette entries", () => {
     const entries = buildCommandPaletteEntries({
       projectId: "project-1",
       tickets,
+      sessions,
       currentTheme: "pstdio-dark",
       run: () => {},
     });
@@ -63,6 +90,7 @@ describe("command palette entries", () => {
     const entries = buildCommandPaletteEntries({
       projectId: "project-1",
       tickets,
+      sessions,
       currentTheme: "solarized-dark",
       themePreferences: [{ id: "solarized-dark", mode: "dark" }],
       run: () => {},
@@ -92,6 +120,7 @@ describe("command palette entries", () => {
     const entries = buildCommandPaletteEntries({
       projectId: "project-1",
       tickets: [],
+      sessions: [],
       currentTheme: "pstdio-dark",
       extensions: [
         { id: "pstdio.extension-lab", namespace: "lab", displayName: "Extension Lab", sourcePath: "" },
@@ -141,6 +170,7 @@ describe("command palette entries", () => {
     const entries = buildCommandPaletteEntries({
       projectId: "project-1",
       tickets: [],
+      sessions: [],
       currentTheme: "pstdio-dark",
       extensions: [{ id: "pstdio.extension-lab", namespace: "lab", displayName: "Extension Lab", sourcePath: "" }],
       extensionCommands: [
@@ -158,6 +188,7 @@ describe("command palette entries", () => {
     const entries = buildCommandPaletteEntries({
       projectId: "project-1",
       tickets: [],
+      sessions: [],
       currentTheme: "pstdio-dark",
       extensions: [{ id: "pstdio.extension-lab", namespace: "lab", displayName: "Extension Lab", sourcePath: "" }],
       extensionCommands: [

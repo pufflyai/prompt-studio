@@ -4,6 +4,9 @@ import { createContext, type ReactNode, useContext, useEffect, useState } from "
 import { CommandPalette, type CommandPaletteView } from "@/features/command-palette/command-palette";
 import { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
 import { getVisibleTickets } from "@/features/ticket-list/utils/ticket-visibility";
+import { OpenCommandPaletteContext } from "@/shared/command-palette/open-command-palette-context";
+import { useProjectSessions } from "@/shared/sessions/use-project-sessions";
+import { getVisibleSessions } from "@/shared/sessions/visible-sessions";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
 import { ShortcutHelpPanel } from "./shortcut-help-panel";
 import { getActiveShortcutScopes, getShortcutDefinition, isEditableEventTarget } from "./shortcut-registry";
@@ -13,7 +16,6 @@ const getHotkeyBinding = (id: Parameters<typeof getShortcutDefinition>[0]) => {
 };
 
 const ShortcutHelpContext = createContext<(() => void) | null>(null);
-const CommandPaletteContext = createContext<(() => void) | null>(null);
 
 const isTicketsRoute = (pathname: string, projectId?: string) => pathname === `/projects/${projectId}/tickets`;
 
@@ -177,7 +179,9 @@ export const ShortcutProvider = (props: { children: ReactNode }) => {
   const activeScopes = getActiveShortcutScopes(pathname);
   const shouldLoadTicketShortcuts = shouldLoadTicketsForShortcuts(activeScopes, projectId);
   const { data: tickets } = useProjectTickets(shouldLoadTicketShortcuts ? projectId : undefined);
+  const { data: sessions } = useProjectSessions(projectId);
   const visibleTickets = getVisibleTickets(tickets ?? []);
+  const visibleSessions = getVisibleSessions(sessions ?? []);
   const currentTicketIndex = visibleTickets.findIndex((ticket) => ticket.shorthand === ticketShorthand);
   const currentTicket = currentTicketIndex >= 0 ? visibleTickets[currentTicketIndex] : null;
   const currentWorkspaceIndex =
@@ -253,7 +257,7 @@ export const ShortcutProvider = (props: { children: ReactNode }) => {
 
   return (
     <ShortcutHelpContext.Provider value={() => setIsHelpOpen(true)}>
-      <CommandPaletteContext.Provider
+      <OpenCommandPaletteContext.Provider
         value={() => {
           setCommandPaletteView("main");
           setCommandPaletteInitialQuery("");
@@ -268,6 +272,7 @@ export const ShortcutProvider = (props: { children: ReactNode }) => {
             initialQuery={commandPaletteInitialQuery}
             projectId={projectId}
             tickets={visibleTickets}
+            sessions={visibleSessions}
             requestCreateTicket={requestCreateTicket}
             createSession={createSessionFromPalette}
             openShortcutHelp={() => setIsHelpOpen(true)}
@@ -275,7 +280,7 @@ export const ShortcutProvider = (props: { children: ReactNode }) => {
           />
         ) : null}
         <ShortcutHelpPanel open={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
-      </CommandPaletteContext.Provider>
+      </OpenCommandPaletteContext.Provider>
     </ShortcutHelpContext.Provider>
   );
 };
@@ -289,11 +294,4 @@ export const useOpenShortcutHelp = () => {
   return openShortcutHelp;
 };
 
-export const useOpenCommandPalette = () => {
-  const openCommandPalette = useContext(CommandPaletteContext);
-  if (!openCommandPalette) {
-    throw new Error("Command palette is unavailable outside ShortcutProvider.");
-  }
-
-  return openCommandPalette;
-};
+export { useOpenCommandPalette } from "@/shared/command-palette/open-command-palette-context";

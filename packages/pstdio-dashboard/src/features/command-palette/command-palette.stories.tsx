@@ -12,6 +12,11 @@ const tickets = [
   { shorthand: "PS-134", title: "Improve API error chains" },
 ];
 
+const sessions = [
+  { id: "session-1", title: "Plan project sidebar updates" },
+  { id: "session-2", title: "Debug command palette search" },
+];
+
 const CommandPaletteStoryContent = (props: { initialView?: CommandPaletteView }) => {
   const { initialView } = props;
 
@@ -22,6 +27,7 @@ const CommandPaletteStoryContent = (props: { initialView?: CommandPaletteView })
         initialView={initialView}
         projectId="project-1"
         tickets={tickets}
+        sessions={sessions}
         requestCreateTicket={() => undefined}
         createSession={() => undefined}
         openShortcutHelp={() => undefined}

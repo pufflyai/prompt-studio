@@ -12,6 +12,7 @@ import { runCommandPaletteAction } from "./command-palette-actions";
 import { handleCommandPaletteKeyDown } from "./command-palette-keyboard";
 import {
   buildCommandPaletteEntries,
+  type CommandPaletteSession,
   type CommandPaletteTicket,
   type CommandPaletteView,
   filterCommandPaletteEntries,
@@ -33,6 +34,7 @@ interface CommandPaletteProps {
   initialQuery?: string;
   projectId: string;
   tickets: CommandPaletteTicket[];
+  sessions: CommandPaletteSession[];
   requestCreateTicket: () => void;
   createSession: () => void;
   openShortcutHelp: () => void;
@@ -56,6 +58,7 @@ export const CommandPalette = (props: CommandPaletteProps) => {
     initialQuery = "",
     projectId,
     tickets,
+    sessions,
     requestCreateTicket,
     createSession,
     openShortcutHelp,
@@ -144,6 +147,7 @@ export const CommandPalette = (props: CommandPaletteProps) => {
   const entries = buildCommandPaletteEntries({
     projectId,
     tickets,
+    sessions,
     currentTheme: themePreference,
     themePreferences,
     extensions: extensionMetadata?.extensions,

@@ -251,7 +251,13 @@ export const dispatchExtensionCliCommand = async (input: { rawArgs: string[]; de
 
   const command = table.byPath.get(commandPath);
   if (!command) {
-    deps.error?.(formatMissingCommandRecovery(commandPathParts) ?? `Unknown extension command: ${commandPath}`);
+    const recovery = formatMissingCommandRecovery(commandPathParts);
+    if (recovery) {
+      deps.error?.(recovery);
+      return 1;
+    }
+
+    deps.error?.(`Unknown extension command: ${commandPath}`);
     return 1;
   }
 

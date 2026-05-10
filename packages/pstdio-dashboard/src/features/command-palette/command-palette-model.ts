@@ -28,6 +28,11 @@ export interface CommandPaletteTicket {
   displayTitle?: string | null;
 }
 
+export interface CommandPaletteSession {
+  id: string;
+  title: string;
+}
+
 export type CommandPaletteAction =
   | { id: "create-ticket"; type: "create-ticket" }
   | { id: "create-session"; type: "create-session" }
@@ -65,6 +70,7 @@ export interface CommandPaletteLabels {
 interface BuildCommandPaletteEntriesInput {
   projectId: string;
   tickets: CommandPaletteTicket[];
+  sessions: CommandPaletteSession[];
   currentTheme: ThemePreference;
   themePreferences?: readonly ThemePreferenceOption[];
   labels?: CommandPaletteLabels;
@@ -115,6 +121,7 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
   const {
     projectId,
     tickets,
+    sessions,
     currentTheme,
     run,
     themePreferences = defaultThemePreferences,
@@ -190,6 +197,16 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
         searchText: `${ticket.shorthand} ${getTicketLabel(ticket)}`,
         icon: KanbanSquare,
         action: { id: "navigate", type: "navigate", path: `${projectPath}/tickets/${ticket.shorthand}` },
+      }),
+    ),
+    ...sessions.map((session) =>
+      createEntry({
+        id: `session:${session.id}`,
+        mode: "search",
+        label: session.title,
+        searchText: `${session.title} session chat agent`,
+        icon: MessageCircle,
+        action: { id: "navigate", type: "navigate", path: `${projectPath}/sessions/${session.id}` },
       }),
     ),
     createEntry({

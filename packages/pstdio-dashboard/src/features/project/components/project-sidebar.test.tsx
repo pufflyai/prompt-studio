@@ -21,6 +21,16 @@ describe("project-sidebar shortcuts", () => {
     expect(sections[0]?.nodes[0]?.navigationIntent).toEqual({ id: "command-palette" });
   });
 
+  it("keeps the root sidebar focused on search and tickets", () => {
+    const sections = buildProjectSidebarSections({
+      projectId: "project-1",
+      ticketsLabel: "Tickets",
+      searchLabel: "Search",
+    });
+
+    expect(sections[0]?.nodes.map((node) => node.id)).not.toContain("sessions");
+  });
+
   it("only exposes keyboard shortcuts in the help menu shortcut section", () => {
     expect(SIDEBAR_HELP_SHORTCUT_IDS).toEqual(["open-shortcut-help"]);
   });

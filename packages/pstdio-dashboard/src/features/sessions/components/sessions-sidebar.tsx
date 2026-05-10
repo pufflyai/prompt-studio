@@ -1,4 +1,4 @@
-import { HStack, IconButton } from "@chakra-ui/react";
+import { HStack, IconButton, Text } from "@chakra-ui/react";
 import {
   resolveSessionIndicatorColor,
   resolveSessionIndicatorIcon,
@@ -9,10 +9,11 @@ import {
   type TreeListNavigateEvent,
   type TreeListSection,
 } from "@pstdio/ui";
-import { PenBox } from "lucide-react";
+import { PenBox, Search } from "lucide-react";
 import { createElement } from "react";
 import { useTranslation } from "react-i18next";
 import { BackToDashboard } from "@/features/project/components/back-to-dashboard";
+import { useOpenCommandPalette } from "@/shared/command-palette/open-command-palette-context";
 import type { Session } from "../types";
 import { groupSessionsByDate } from "../utils/group-sessions";
 
@@ -31,11 +32,12 @@ interface SessionsSidebarProps {
 
 const buildSections = (
   sessions: Session[],
+  searchLabel: string,
+  emptyLabel: string,
   resolveContextMenuItems?: (session: Session) => TreeListActionMenuItem[],
 ): TreeListSection[] => {
   const groups = groupSessionsByDate(sessions);
-
-  return groups.map((group) => ({
+  const sessionSections = groups.map((group) => ({
     id: group.label,
     label: group.label,
     collapsible: false,
@@ -49,13 +51,44 @@ const buildSections = (
       navigationIntent: { id: "select-session", payload: session.id },
     })),
   }));
+
+  return [
+    {
+      id: "search",
+      collapsible: false,
+      nodes: [
+        {
+          id: "search-sessions",
+          label: searchLabel,
+          icon: <Search size={14} />,
+          isNavigable: true,
+          navigationIntent: { id: "search-sessions" },
+        },
+      ],
+    },
+    ...(sessionSections.length > 0
+      ? sessionSections
+      : [
+          {
+            id: "empty",
+            collapsible: false,
+            nodes: [],
+            emptyState: (
+              <Text textStyle="paragraph/S/regular" color="fg.muted" p="3">
+                {emptyLabel}
+              </Text>
+            ),
+          },
+        ]),
+  ];
 };
 
 export const SessionsSidebar = (props: SessionsSidebarProps) => {
   const { sessions, selectedSessionId, onSelectSession, onCreateSession, resolveContextMenuItems } = props;
   const { t } = useTranslation("projects");
+  const openCommandPalette = useOpenCommandPalette();
 
-  const sections = buildSections(sessions, resolveContextMenuItems);
+  const sections = buildSections(sessions, t("sidebar.search"), t("sessions.noSessionsYet"), resolveContextMenuItems);
 
   const handleNavigate = (event: TreeListNavigateEvent) => {
     const intent = event.intent;
@@ -63,6 +96,10 @@ export const SessionsSidebar = (props: SessionsSidebarProps) => {
 
     if (intent.id === "select-session") {
       onSelectSession(intent.payload as string);
+    }
+
+    if (intent.id === "search-sessions") {
+      openCommandPalette();
     }
   };
 

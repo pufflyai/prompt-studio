@@ -226,6 +226,7 @@ export const ProjectSidebarFooter = () => {
   };
 
   const settingsPath = projectId ? `/projects/${projectId}/settings` : null;
+  const sessionsPath = projectId ? `/projects/${projectId}/sessions` : null;
 
   const handleCopyVersion = async () => {
     if (!systemInfo) {
@@ -303,6 +304,24 @@ export const ProjectSidebarFooter = () => {
           </Menu.Positioner>
         </Portal>
       </Menu.Root>
+
+      {sessionsPath ? (
+        <Menu.Root>
+          <Menu.Item value="sessions" padding="0" asChild>
+            <Link to={sessionsPath}>
+              <ListRow
+                asChild
+                variant="compact"
+                width="full"
+                id="sessions"
+                label={t("projects:sessions.title")}
+                icon={<Icon as={MessageCircle} boxSize="16px" />}
+                isSelected={isPathActive(sessionsPath)}
+              />
+            </Link>
+          </Menu.Item>
+        </Menu.Root>
+      ) : null}
 
       {settingsPath ? (
         <Menu.Root>
