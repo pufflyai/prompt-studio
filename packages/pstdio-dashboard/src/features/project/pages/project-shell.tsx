@@ -1,5 +1,5 @@
 import { Flex } from "@chakra-ui/react";
-import { EmptyState } from "@pstdio/ui";
+import { EmptyState, ResizableSplitLayout } from "@pstdio/ui";
 import { Outlet, useParams, useRouterState } from "@tanstack/react-router";
 import { useLayoutEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,6 +17,7 @@ const ProjectShellContent = () => {
   const { data: project, isLoading } = useProject(projectId);
   const { t } = useTranslation("projects");
   const sessionModalState = useProjectSettingsStore((s) => s.sessionModalState);
+  const setSessionModalState = useProjectSettingsStore((s) => s.setSessionModalState);
   const setLastNonSessionsPath = useProjectSettingsStore((s) => s.setLastNonSessionsPath);
   const isSessionsRoute = isSessionsRoutePath(location.pathname, projectId);
   const renderOutlet = shouldRenderProjectOutlet({
@@ -34,16 +35,39 @@ const ProjectShellContent = () => {
     setLastNonSessionsPath(currentPath);
   }, [isSessionsRoute, location.pathname, projectId, setLastNonSessionsPath]);
 
+  const content = (
+    <Flex flex="1" minW={0} minH={0} overflow="hidden">
+      {renderOutlet ? (
+        <Outlet />
+      ) : (
+        <EmptyState title={t("shell.notFound")} description={t("shell.notFoundDescription")} />
+      )}
+    </Flex>
+  );
+  const showAttachedPanel = sessionModalState === "attached" && !isSessionsRoute;
+
   return (
     <Flex height="100%" width="100%" minH="0">
-      <Flex flex="1" minW={0} minH={0} overflow="hidden">
-        {renderOutlet ? (
-          <Outlet />
-        ) : (
-          <EmptyState title={t("shell.notFound")} description={t("shell.notFoundDescription")} />
-        )}
-      </Flex>
-      {sessionModalState === "attached" && !isSessionsRoute ? <SessionAttachedPanel /> : null}
+      {showAttachedPanel ? (
+        <ResizableSplitLayout
+          flex="1"
+          minH="0"
+          minW="0"
+          resizableSide="right"
+          contentPanel={content}
+          resizablePanel={<SessionAttachedPanel />}
+          defaultSizePx={448}
+          minSizePx={320}
+          contentMinSizePx={320}
+          resizeLabel="Resize attached panel"
+          showResizeSeparator={false}
+          onCollapsedChange={(collapsed) => {
+            if (collapsed) setSessionModalState("bubble");
+          }}
+        />
+      ) : (
+        content
+      )}
       {!isSessionsRoute ? <SessionBubbleContainer /> : null}
     </Flex>
   );

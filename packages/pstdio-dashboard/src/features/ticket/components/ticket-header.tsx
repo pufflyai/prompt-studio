@@ -9,6 +9,8 @@ import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin
 import { TicketsBreadcrumbTitle } from "@/features/project/components/tickets-breadcrumb-title";
 import { ExtensionMenuSlot } from "@/shared/extensions/components/extension-menu-slot";
 import { useExtensionHeaderActions } from "@/shared/extensions/hooks/use-extension-header-actions";
+import { OpenSidebarButton } from "@/shared/sidebar/open-sidebar-button";
+import { TICKET_SIDEBAR_STORAGE_KEY } from "./ticket-sidebar";
 
 interface TicketHeaderProps {
   breadcrumbItems: BreadcrumbItem[];
@@ -34,6 +36,7 @@ export const TicketHeader = (props: TicketHeaderProps) => {
   return (
     <HorizontalMenuStack>
       <Flex align="center" gap="sm">
+        <OpenSidebarButton storageKey={TICKET_SIDEBAR_STORAGE_KEY} />
         <Breadcrumb separator="/" separatorGap="xs" items={items} linkComponent={Link} />
       </Flex>
 

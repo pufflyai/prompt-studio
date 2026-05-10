@@ -1,6 +1,6 @@
-import { Box, Flex, Image, Spinner, Stack, Text } from "@chakra-ui/react";
-import { EmptyState, Header, ScrollArea } from "@pstdio/ui";
-import { AlertCircle, CheckCircle2, FileCode2, FileText, FlaskConical, TerminalSquare } from "lucide-react";
+import { Box, Button, Flex, Image, Spinner, Stack, Text } from "@chakra-ui/react";
+import { EmptyState, Header, ResizableSplitLayout, ScrollArea } from "@pstdio/ui";
+import { AlertCircle, CheckCircle2, FileCode2, FileText, FlaskConical, ListTree, TerminalSquare } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTicketContent } from "@/features/ticket/hooks/use-ticket-content";
@@ -8,7 +8,7 @@ import { isImageFileName } from "@/features/ticket/utils/ticket-file-selection";
 import type { ApiWorkspaceArtifact } from "@/shared/api-types";
 import type { ChangedFilesViewMode } from "../utils/build-changed-files-tree";
 import { buildWorkspaceChecksContentRequest } from "./workspace-checks-content-request";
-import { type FileIconInfo, FileListPanel, ResizableLeftPanel } from "./workspace-file-list-panel";
+import { type FileIconInfo, FileListPanel } from "./workspace-file-list-panel";
 
 interface WorkspaceChecksPanelProps {
   ticketId: string;
@@ -36,6 +36,7 @@ const resolveArtifactFileIcon = (path: string): FileIconInfo => {
 export const WorkspaceChecksPanel = (props: WorkspaceChecksPanelProps) => {
   const { ticketId, artifacts } = props;
   const { t } = useTranslation("tickets");
+  const [isTreePanelOpen, setTreePanelOpen] = useState(true);
   const [viewMode, setViewMode] = useState<ChangedFilesViewMode>("nested");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPath, setSelectedPath] = useState<string | null>(() =>
@@ -76,63 +77,75 @@ export const WorkspaceChecksPanel = (props: WorkspaceChecksPanelProps) => {
     );
   }
 
+  const fileListPanel = (
+    <FileListPanel
+      title={t("workspaceDiffPanel.checks.title")}
+      paths={filteredPaths}
+      selectedPath={selectedPath}
+      onSelectPath={setSelectedPath}
+      viewMode={viewMode}
+      onViewModeChange={setViewMode}
+      searchQuery={searchQuery}
+      onSearchQueryChange={setSearchQuery}
+      resolveFileIcon={resolveArtifactFileIcon}
+      showHeader={false}
+      showFilter={false}
+    />
+  );
+  const contentPanel = (
+    <Stack flex="1" minH="0" gap="0" bg="bg">
+      <Header variant="main" borderBottomWidth="1px" borderColor="border.muted">
+        <Button size="sm" variant="ghost" gap="2xs" onClick={() => setTreePanelOpen((open) => !open)}>
+          <ListTree size={14} />
+          {isTreePanelOpen ? "Hide file tree" : "Show file tree"}
+        </Button>
+        <Text textStyle="label/S/medium" color="foreground.secondary" truncate>
+          {selectedArtifact ? stripArtifactPrefix(selectedArtifact.relative_path) : ""}
+        </Text>
+      </Header>
+
+      {selectedArtifact && isImageFileName(selectedArtifact.relative_path) ? (
+        <Box flex="1" minH="0" overflow="auto" p="md" display="flex" alignItems="center" justifyContent="center">
+          <Image
+            src={`/v1/tickets/${ticketId}/files/${selectedArtifact.file_id}/content`}
+            alt={stripArtifactPrefix(selectedArtifact.relative_path)}
+            maxW="100%"
+            maxH="100%"
+            objectFit="contain"
+          />
+        </Box>
+      ) : (
+        <ScrollArea flex="1" minH="0" contentProps={{ p: "sm" }}>
+          {artifactContent.isLoading ? (
+            <Flex align="center" gap="xs" color="foreground.secondary">
+              <Spinner size="sm" />
+              <Text>{t("workspaceDiffPanel.checks.loading")}</Text>
+            </Flex>
+          ) : (
+            <Box as="pre" whiteSpace="pre-wrap" wordBreak="break-word" fontFamily="mono" fontSize="sm" lineHeight="1.5">
+              {artifactContent.data ?? ""}
+            </Box>
+          )}
+        </ScrollArea>
+      )}
+    </Stack>
+  );
+
   return (
     <Flex flex="1" minH="0" bg="bg.subtle">
-      <ResizableLeftPanel>
-        <FileListPanel
-          title={t("workspaceDiffPanel.checks.title")}
-          paths={filteredPaths}
-          selectedPath={selectedPath}
-          onSelectPath={setSelectedPath}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          searchQuery={searchQuery}
-          onSearchQueryChange={setSearchQuery}
-          resolveFileIcon={resolveArtifactFileIcon}
-          showHeader={false}
-          showFilter={false}
-        />
-      </ResizableLeftPanel>
-
-      <Stack flex="1" minH="0" gap="0" bg="bg">
-        <Header variant="main" borderBottomWidth="1px" borderColor="border.muted">
-          <Text textStyle="label/S/medium" color="foreground.secondary" truncate>
-            {selectedArtifact ? stripArtifactPrefix(selectedArtifact.relative_path) : ""}
-          </Text>
-        </Header>
-
-        {selectedArtifact && isImageFileName(selectedArtifact.relative_path) ? (
-          <Box flex="1" minH="0" overflow="auto" p="md" display="flex" alignItems="center" justifyContent="center">
-            <Image
-              src={`/v1/tickets/${ticketId}/files/${selectedArtifact.file_id}/content`}
-              alt={stripArtifactPrefix(selectedArtifact.relative_path)}
-              maxW="100%"
-              maxH="100%"
-              objectFit="contain"
-            />
-          </Box>
-        ) : (
-          <ScrollArea flex="1" minH="0" contentProps={{ p: "sm" }}>
-            {artifactContent.isLoading ? (
-              <Flex align="center" gap="xs" color="foreground.secondary">
-                <Spinner size="sm" />
-                <Text>{t("workspaceDiffPanel.checks.loading")}</Text>
-              </Flex>
-            ) : (
-              <Box
-                as="pre"
-                whiteSpace="pre-wrap"
-                wordBreak="break-word"
-                fontFamily="mono"
-                fontSize="sm"
-                lineHeight="1.5"
-              >
-                {artifactContent.data ?? ""}
-              </Box>
-            )}
-          </ScrollArea>
-        )}
-      </Stack>
+      <ResizableSplitLayout
+        flex="1"
+        minH="0"
+        minW="0"
+        resizablePanel={fileListPanel}
+        contentPanel={contentPanel}
+        collapsed={!isTreePanelOpen}
+        defaultSizePx={288}
+        minSizePx={224}
+        contentMinSizePx={320}
+        resizeLabel="Resize file list panel"
+        onCollapsedChange={(collapsed) => setTreePanelOpen(!collapsed)}
+      />
     </Flex>
   );
 };

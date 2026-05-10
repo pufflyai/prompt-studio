@@ -22,7 +22,8 @@ export const SessionAttachedPanel = () => {
   return (
     <AttachedPanel
       data-testid="session-attached-panel"
-      resizable
+      width="full"
+      minWidth="0"
       header={
         <Header variant="main" flexShrink={0}>
           <SessionSelector

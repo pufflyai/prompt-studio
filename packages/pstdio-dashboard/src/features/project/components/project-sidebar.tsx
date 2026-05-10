@@ -22,9 +22,9 @@ import {
 import { getSlotContributions } from "@/shared/extensions/contribution-mapping";
 import { useProjectExtensionMetadata } from "@/shared/extensions/hooks/use-project-extensions";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
+import { PROJECT_SIDEBAR_STORAGE_KEY } from "@/shared/sidebar/project-sidebar";
 import { ProjectMenu } from "./project-menu";
 
-export const PROJECT_SIDEBAR_STORAGE_KEY = "project-sidebar";
 const GITHUB_DOCS_URL = "https://github.com/pufflyai/prompt-studio";
 const DISCORD_URL = "https://discord.gg/3RxwUEk8fW";
 export const SIDEBAR_HELP_SHORTCUT_IDS = ["open-shortcut-help"] as const;

@@ -1,13 +1,13 @@
-import { Badge, Box, Flex, HStack, Stack, Tabs, Text } from "@chakra-ui/react";
-import { Check, FileDiffIcon, Loader2, ShieldCheck, X } from "lucide-react";
+import { Badge, Box, Button, Flex, HStack, Stack, Tabs, Text } from "@chakra-ui/react";
+import { Check, FileDiffIcon, ListTree, Loader2, ShieldCheck, X } from "lucide-react";
 import { useState } from "react";
 
 import { DiffDrawer } from "../../diff-drawer";
 import { Header } from "../../header";
+import { ResizableSplitLayout } from "../../resizable-split-layout";
 import { ScrollArea } from "../../scroll-area";
 import { FileTree } from "../file-tree";
 import { mockChecks, mockDiffs } from "../mock-data";
-import { ResizablePanel } from "../resizable-panel";
 
 const checkStatusIcon = (status: "passed" | "failed" | "running") => {
   if (status === "passed") return <Check size={14} color="var(--chakra-colors-fg-success)" />;
@@ -56,6 +56,7 @@ const ChecksPanel = () => (
 const diffPaths = mockDiffs.map((diff) => diff.newPath ?? diff.oldPath ?? "unknown");
 
 export const WorkspacePage = () => {
+  const [isTreePanelOpen, setTreePanelOpen] = useState(true);
   const [selectedPath, setSelectedPath] = useState<string | null>(diffPaths[0] ?? null);
 
   return (
@@ -85,27 +86,42 @@ export const WorkspacePage = () => {
 
         <Tabs.Content value="changes" flex="1" minH="0" minW="0" p="0" display="flex">
           <Flex flex="1" minH="0" minW="0" gap="0">
-            <ResizablePanel
-              defaultWidth={280}
-              minWidth={220}
-              maxWidth={420}
-              handleSide="right"
-              ariaLabel="Resize file tree"
-              borderRightWidth="1px"
-              borderColor="border.muted"
-              bg="bg"
-            >
-              <Header variant="narrow" borderBottomWidth="1px" borderColor="border.muted" bg="bg">
-                <Text textStyle="label/S/medium">Changed files</Text>
-              </Header>
-              <ScrollArea flex="1" minH="0">
-                <FileTree paths={diffPaths} selectedPath={selectedPath} onSelectPath={setSelectedPath} />
-              </ScrollArea>
-            </ResizablePanel>
-
-            <Box flex="1" minH="0" minW="0">
-              <DiffDrawer diffs={mockDiffs} selectedDiffPath={selectedPath} />
-            </Box>
+            <ResizableSplitLayout
+              flex="1"
+              minH="0"
+              minW="0"
+              resizablePanel={
+                <Stack flex="1" minH="0" bg="bg" borderRightWidth="1px" borderColor="border.muted" gap="0">
+                  <Header variant="narrow" borderBottomWidth="1px" borderColor="border.muted" bg="bg">
+                    <Text textStyle="label/S/medium">Changed files</Text>
+                  </Header>
+                  <ScrollArea flex="1" minH="0">
+                    <FileTree paths={diffPaths} selectedPath={selectedPath} onSelectPath={setSelectedPath} />
+                  </ScrollArea>
+                </Stack>
+              }
+              contentPanel={
+                <Stack flex="1" minH="0" minW="0" gap="0">
+                  <Header variant="narrow" borderBottomWidth="1px" borderColor="border.muted" bg="bg">
+                    <Button size="xs" variant="ghost" gap="2xs" onClick={() => setTreePanelOpen((open) => !open)}>
+                      <ListTree size={14} />
+                      {isTreePanelOpen ? "Hide file tree" : "Show file tree"}
+                    </Button>
+                  </Header>
+                  <Box flex="1" minH="0" minW="0">
+                    <DiffDrawer diffs={mockDiffs} selectedDiffPath={selectedPath} />
+                  </Box>
+                </Stack>
+              }
+              collapsed={!isTreePanelOpen}
+              defaultSizePx={280}
+              minSizePx={220}
+              maxSizePx={420}
+              contentMinSizePx={320}
+              resizeLabel="Resize file tree"
+              showResizeSeparator={false}
+              onCollapsedChange={(collapsed) => setTreePanelOpen(!collapsed)}
+            />
           </Flex>
         </Tabs.Content>
 

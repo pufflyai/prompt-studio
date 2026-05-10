@@ -14,9 +14,9 @@ export const getDiffLineCount = (input: {
   newContent?: string;
 }) => {
   const changedLines = (input.additions ?? 0) + (input.deletions ?? 0);
-  if (changedLines > 0) return changedLines;
+  const contentLines = countContentLines(input.oldContent) + countContentLines(input.newContent);
 
-  return countContentLines(input.oldContent) + countContentLines(input.newContent);
+  return Math.max(changedLines, contentLines);
 };
 
 export const isLargeDiffContent = (input: {

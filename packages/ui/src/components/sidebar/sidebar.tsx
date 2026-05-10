@@ -1,5 +1,6 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
-import { type PointerEvent as ReactPointerEvent, useEffect, useRef } from "react";
+import { useEffect } from "react";
+import { usePanelSidebarRegistration } from "../panel-sidebar-registration-context";
 import { ScrollArea } from "../scroll-area";
 import { TreeList } from "../tree-list/tree-list";
 import { useSidebarStore } from "./sidebar.store";
@@ -52,52 +53,36 @@ export const Sidebar = (props: SidebarProps) => {
   const persistedWidth = useSidebarStore(storageKey, (state) => state.width, initialState);
   const expandedSections = useSidebarStore(storageKey, (state) => state.expandedSections, initialState);
   const expandedNodes = useSidebarStore(storageKey, (state) => state.expandedNodes, initialState);
+  const openSidebar = useSidebarStore(storageKey, (state) => state.openSidebar, initialState);
   const closeSidebar = useSidebarStore(storageKey, (state) => state.closeSidebar, initialState);
   const toggleSection = useSidebarStore(storageKey, (state) => state.toggleSection, initialState);
   const toggleNode = useSidebarStore(storageKey, (state) => state.toggleNode, initialState);
   const setStoreWidth = useSidebarStore(storageKey, (state) => state.setWidth, initialState);
 
-  const cleanupRef = useRef<() => void>(() => undefined);
-
-  useEffect(() => () => cleanupRef.current(), []);
-
   useEffect(() => {
     onOpenChange?.(open);
   }, [onOpenChange, open]);
+
+  const effectiveWidth = clamp(persistedWidth ?? initialWidth, minWidth, maxWidth);
+  const setOpen = (nextOpen: boolean) => {
+    if (nextOpen) openSidebar();
+    else closeSidebar();
+  };
+  const managedByPanelLayout = usePanelSidebarRegistration({
+    open,
+    resizable,
+    width: effectiveWidth,
+    minWidth,
+    maxWidth,
+    onWidthChange: setStoreWidth,
+    onOpenChange: setOpen,
+  });
 
   if (!open && closable) {
     return null;
   }
 
-  const effectiveWidth = clamp(persistedWidth ?? initialWidth, minWidth, maxWidth);
   const widthCss = resizable ? `${effectiveWidth}px` : (width ?? `${initialWidth}px`);
-
-  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const startX = event.clientX;
-    const startWidth = effectiveWidth;
-    const previousCursor = document.body.style.cursor;
-    const previousUserSelect = document.body.style.userSelect;
-
-    const onMove = (moveEvent: PointerEvent) => {
-      const next = clamp(startWidth + (moveEvent.clientX - startX), minWidth, maxWidth);
-      setStoreWidth(next);
-    };
-
-    const cleanup = () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", cleanup);
-      document.body.style.cursor = previousCursor;
-      document.body.style.userSelect = previousUserSelect;
-      cleanupRef.current = () => undefined;
-    };
-
-    cleanupRef.current = cleanup;
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", cleanup, { once: true });
-  };
 
   return (
     <Flex
@@ -106,15 +91,15 @@ export const Sidebar = (props: SidebarProps) => {
       direction="column"
       position="relative"
       h="100%"
-      w={widthCss}
-      minW={widthCss}
-      maxW={widthCss}
+      w={managedByPanelLayout ? "full" : widthCss}
+      minW={managedByPanelLayout ? "0" : widthCss}
+      maxW={managedByPanelLayout ? "none" : widthCss}
       flexShrink={0}
       borderRightWidth="1px"
       borderRightColor="border.muted"
       bg="bg"
     >
-      <SidebarHeader onClose={closable ? closeSidebar : undefined}>{header}</SidebarHeader>
+      <SidebarHeader>{header}</SidebarHeader>
 
       <ScrollArea
         flex="1"
@@ -145,24 +130,6 @@ export const Sidebar = (props: SidebarProps) => {
       </ScrollArea>
 
       <SidebarFooter>{footer}</SidebarFooter>
-
-      {resizable ? (
-        <Box
-          role="separator"
-          aria-label="Resize sidebar"
-          aria-orientation="vertical"
-          position="absolute"
-          top="0"
-          bottom="0"
-          right="0"
-          width="3"
-          transform="translateX(50%)"
-          cursor="col-resize"
-          touchAction="none"
-          zIndex="1"
-          onPointerDown={handlePointerDown}
-        />
-      ) : null}
     </Flex>
   );
 };

@@ -1,4 +1,4 @@
-import { Avatar, Button, HStack, Icon, Menu, Text } from "@chakra-ui/react";
+import { Avatar, Button, HStack, Icon, Menu, Portal, Text } from "@chakra-ui/react";
 import { ChevronDown, FolderIcon } from "lucide-react";
 import { ListRow } from "../list-row/list-row";
 
@@ -26,20 +26,22 @@ export const SidebarProjectMenu = (props: SidebarProjectMenuProps) => {
           <ChevronDown size={14} />
         </Button>
       </Menu.Trigger>
-      <Menu.Positioner>
-        <Menu.Content minW="240px" bg="bg">
-          <Menu.Item value="projects" asChild>
-            <ListRow
-              asChild
-              variant="compact"
-              id="projects"
-              label={projectsLabel}
-              icon={<Icon as={FolderIcon} boxSize="16px" />}
-              onActivate={onSelectProjects}
-            />
-          </Menu.Item>
-        </Menu.Content>
-      </Menu.Positioner>
+      <Portal>
+        <Menu.Positioner>
+          <Menu.Content minW="240px" bg="bg">
+            <Menu.Item value="projects" asChild>
+              <ListRow
+                asChild
+                variant="compact"
+                id="projects"
+                label={projectsLabel}
+                icon={<Icon as={FolderIcon} boxSize="16px" />}
+                onActivate={onSelectProjects}
+              />
+            </Menu.Item>
+          </Menu.Content>
+        </Menu.Positioner>
+      </Portal>
     </Menu.Root>
   );
 };

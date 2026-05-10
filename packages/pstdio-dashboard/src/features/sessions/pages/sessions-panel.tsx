@@ -1,4 +1,4 @@
-import { HStack, Stack, Text } from "@chakra-ui/react";
+import { Flex, HStack, Stack, Text } from "@chakra-ui/react";
 import { HorizontalMenuStack, PanelLayout } from "@pstdio/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect } from "react";
@@ -12,8 +12,9 @@ import {
   toSidebarContextMenuItems,
 } from "@/features/plugin-actions/hooks/use-resource-context-menu";
 import { markAfterPaint } from "@/shared/performance/mark-after-paint";
+import { OpenSidebarButton } from "@/shared/sidebar/open-sidebar-button";
 import { SessionChatView } from "../components/session-chat-view";
-import { SessionsSidebar } from "../components/sessions-sidebar";
+import { SESSIONS_SIDEBAR_STORAGE_KEY, SessionsSidebar } from "../components/sessions-sidebar";
 import { useArchiveSession } from "../hooks/use-archive-session";
 import { useProjectSessions } from "../hooks/use-project-sessions";
 import { buildSessionOverflowActions } from "../session-actions";
@@ -29,10 +30,12 @@ export const SessionsPanel = () => {
   const visibleSessions = getVisibleSessions(sessions);
   const archiveSession = useArchiveSession();
   const selectedSession = visibleSessions.find((item) => item.id === selectedSessionId) ?? null;
+  const readinessKey = `${projectId ?? ""}:${selectedSessionId ?? ""}`;
 
   useEffect(() => {
+    void readinessKey;
     markAfterPaint("app:sessions-page-ready");
-  }, []);
+  }, [readinessKey]);
 
   const pluginActionTrigger = usePluginActionTrigger({
     projectId,
@@ -98,9 +101,12 @@ export const SessionsPanel = () => {
     <PanelLayout sidebar={sidebar}>
       <Stack flex="1" minW="0" minH="0" gap="0">
         <HorizontalMenuStack>
-          <Text textStyle="label/S/medium" color="foreground.primary" lineClamp={1}>
-            {selectedSession?.title ?? t("sessions.newSession")}
-          </Text>
+          <Flex align="center" gap="sm" minW="0">
+            <OpenSidebarButton storageKey={SESSIONS_SIDEBAR_STORAGE_KEY} />
+            <Text textStyle="label/S/medium" color="foreground.primary" lineClamp={1}>
+              {selectedSession?.title ?? t("sessions.newSession")}
+            </Text>
+          </Flex>
 
           <HStack gap="2xs">
             <PluginHeaderActions

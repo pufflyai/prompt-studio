@@ -21,8 +21,8 @@ export const parseSettingsPanel = (panel: unknown): SettingsSection => {
     return "agents";
   }
 
-  if (panel === "plugins") {
-    return "plugins";
+  if (panel === "extensions") {
+    return "extensions";
   }
 
   if (panel === "danger-zone") {
@@ -57,7 +57,7 @@ export const toSettingsPanel = (section: SettingsSection) => {
   if (section === "ticket-statuses") return "ticket-statuses";
   if (section === "attempt-statuses") return "attempt-statuses";
   if (section === "tags") return "tags";
-  if (section === "plugins") return "plugins";
+  if (section === "extensions") return "extensions";
   if (section === "repositories") return "repositories";
   if (section === "agents") return "agents";
   if (section === "danger-zone") return "danger-zone";
@@ -77,7 +77,7 @@ export const ensureValidSettingsSection = (
     section === "ticket-statuses" ||
     section === "attempt-statuses" ||
     section === "tags" ||
-    section === "plugins" ||
+    section === "extensions" ||
     section === "repositories" ||
     section === "agents" ||
     section === "danger-zone"

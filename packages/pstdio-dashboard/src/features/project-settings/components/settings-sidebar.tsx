@@ -29,7 +29,7 @@ export type SettingsSection =
   | "ticket-statuses"
   | "attempt-statuses"
   | "tags"
-  | "plugins"
+  | "extensions"
   | "danger-zone"
   | "repositories"
   | "agents"
@@ -56,7 +56,7 @@ const resolveActiveNodeId = (activeSection: SettingsSection | null) => {
   if (activeSection === "tags") return "tags";
   if (activeSection === "repositories") return "repositories";
   if (activeSection === "agents") return "agents";
-  if (activeSection === "plugins") return "plugins";
+  if (activeSection === "extensions") return "extensions";
   if (activeSection === "danger-zone") return "danger-zone";
   if (typeof activeSection === "object" && "tag" in activeSection) return `tag:${activeSection.tag}`;
 
@@ -167,13 +167,13 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
       navigationIntent: { id: "select-skill", payload: skill.name },
     }));
 
-    const pluginNodes: TreeListNode[] = [
+    const extensionNodes: TreeListNode[] = [
       {
-        id: "plugins",
-        label: "Plugins",
+        id: "extensions",
+        label: "Extensions",
         icon: <Puzzle size={14} />,
         isNavigable: true,
-        navigationIntent: { id: "select", payload: "plugins" },
+        navigationIntent: { id: "select", payload: "extensions" },
       },
     ];
 
@@ -221,7 +221,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
       ...templateSections,
       { id: "repositories", nodes: repositoryNodes },
       { id: "agents", nodes: agentNodes },
-      { id: "plugins", label: "Plugins", nodes: pluginNodes },
+      { id: "extensions", label: "Extensions", nodes: extensionNodes },
       { id: "danger", nodes: dangerNodes },
     ];
   };
@@ -237,7 +237,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
           | "attempt-statuses"
           | "repositories"
           | "agents"
-          | "plugins"
+          | "extensions"
           | "tags"
           | "danger-zone",
       );

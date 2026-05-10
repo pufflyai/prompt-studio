@@ -1,4 +1,4 @@
-import { HStack, IconButton, Text } from "@chakra-ui/react";
+import { Box, HStack, IconButton, Text } from "@chakra-ui/react";
 import { Check, Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Tooltip } from "../../tooltip";
@@ -7,6 +7,7 @@ import type { SessionMessage, SessionMessagePart } from "./message-types";
 interface MessageActionPanelProps {
   message: SessionMessage;
   alwaysVisible?: boolean;
+  copyAlwaysVisible?: boolean;
 }
 
 const isCopyablePart = (part: SessionMessagePart): part is Extract<SessionMessagePart, { type: "text" }> => {
@@ -32,7 +33,7 @@ export const getMessageTimestampLabel = (message: SessionMessage, locale?: strin
 };
 
 export const MessageActionPanel = (props: MessageActionPanelProps) => {
-  const { message, alwaysVisible = false } = props;
+  const { message, alwaysVisible = false, copyAlwaysVisible = alwaysVisible } = props;
   const [isCopied, setIsCopied] = useState(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
   const copyText = getMessageCopyText(message);
@@ -61,7 +62,7 @@ export const MessageActionPanel = (props: MessageActionPanelProps) => {
     }
   };
 
-  if (!copyText) return null;
+  if (!copyText && !timestampLabel) return null;
 
   return (
     <HStack
@@ -71,21 +72,7 @@ export const MessageActionPanel = (props: MessageActionPanelProps) => {
       opacity={alwaysVisible ? "1" : "0"}
       pointerEvents={alwaysVisible ? "auto" : "none"}
       transition="opacity 120ms ease"
-      css={{
-        "[data-chat-message-with-actions]:hover &, [data-chat-message-with-actions]:focus-within &": {
-          opacity: 1,
-          pointerEvents: "auto",
-        },
-        ".ai-message__root:hover &, .ai-message__root:focus-within &": {
-          opacity: 1,
-          pointerEvents: "auto",
-        },
-        "[data-scope='ai-message'][data-part='root']:hover &, [data-scope='ai-message'][data-part='root']:focus-within &":
-          {
-            opacity: 1,
-            pointerEvents: "auto",
-          },
-      }}
+      css={messageActionPanelHoverStyles}
     >
       {timestampLabel ? (
         <Text textStyle="label/XS/regular" color="fg.muted">
@@ -93,17 +80,39 @@ export const MessageActionPanel = (props: MessageActionPanelProps) => {
         </Text>
       ) : null}
       {copyText ? (
-        <Tooltip content={isCopied ? "Copied" : "Copy message"}>
-          <IconButton
-            aria-label={isCopied ? "Copied" : "Copy message"}
-            variant="ghost"
-            size="2xs"
-            onClick={copyMessage}
-          >
-            {isCopied ? <Check size={12} /> : <Copy size={12} />}
-          </IconButton>
-        </Tooltip>
+        <Box
+          opacity={copyAlwaysVisible ? "1" : "0"}
+          pointerEvents={copyAlwaysVisible ? "auto" : "none"}
+          transition="opacity 120ms ease"
+          css={messageActionPanelHoverStyles}
+        >
+          <Tooltip content={isCopied ? "Copied" : "Copy message"}>
+            <IconButton
+              aria-label={isCopied ? "Copied" : "Copy message"}
+              variant="ghost"
+              size="2xs"
+              onClick={copyMessage}
+            >
+              {isCopied ? <Check size={12} /> : <Copy size={12} />}
+            </IconButton>
+          </Tooltip>
+        </Box>
       ) : null}
     </HStack>
   );
+};
+
+const messageActionPanelHoverStyles = {
+  "[data-chat-message-with-actions]:hover &, [data-chat-message-with-actions]:focus-within &": {
+    opacity: 1,
+    pointerEvents: "auto",
+  },
+  ".ai-message__root:hover &, .ai-message__root:focus-within &": {
+    opacity: 1,
+    pointerEvents: "auto",
+  },
+  "[data-scope='ai-message'][data-part='root']:hover &, [data-scope='ai-message'][data-part='root']:focus-within &": {
+    opacity: 1,
+    pointerEvents: "auto",
+  },
 };

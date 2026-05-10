@@ -2,7 +2,7 @@ import { Box, Button, Grid, IconButton, Text } from "@chakra-ui/react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DiffBubble } from "@/components/diff-bubble";
-import { DiffEditor } from "./diff-editor";
+import { DiffCardBody } from "./diff-card-body";
 import { isLargeDiffContent } from "./diff-size";
 
 export interface Diff {
@@ -21,6 +21,15 @@ interface DiffCardProps {
   isExpanded?: boolean;
   onToggleExpanded?: () => void;
   onLoadDiff?: (path: string) => Promise<void>;
+  hasOptedIntoLargeDiff?: boolean;
+  onShowFullDiff?: () => void;
+}
+
+interface DiffCardHeaderProps {
+  diff: Diff;
+  isSelected?: boolean;
+  isExpanded?: boolean;
+  onToggleExpanded?: () => void;
 }
 
 const DeferredDiffLoad = (props: { message: string; isLoadingDiff: boolean; onLoadDiff?: () => void }) => {
@@ -54,9 +63,9 @@ export const shouldAutoLoadDiffContent = (input: {
   requestedPath: string | null;
   filePath: string;
 }) => {
-  const { isExpanded, isSelected, hasDiffContent, isLargeDiff, requestedPath, filePath } = input;
+  void input;
 
-  return isExpanded && isSelected && !hasDiffContent && !isLargeDiff && requestedPath !== filePath;
+  return false;
 };
 
 const useDiffContentLoader = (input: {
@@ -108,40 +117,140 @@ const useDiffContentLoader = (input: {
   return { isLoadingDiff, loadError, shouldAutoLoadDiff: shouldAutoLoadDiff && !loadError, loadDiff };
 };
 
-const DiffPathLabel = (props: { diff: Diff; filePath: string }) => {
-  const { diff, filePath } = props;
+export const DiffCard = (props: DiffCardProps) => {
+  const {
+    diff,
+    isSelected = false,
+    isExpanded = true,
+    onToggleExpanded,
+    onLoadDiff,
+    hasOptedIntoLargeDiff = false,
+    onShowFullDiff,
+  } = props;
 
-  if (diff.change === "renamed") {
-    return (
-      <Text as="span" textStyle="sm">
-        <Text as="span" color="fg.muted" textDecoration="line-through" mr="xs">
-          {diff.oldPath}
-        </Text>
-        <Box as="span" display="inline-flex" alignItems="center" verticalAlign="middle" mr="xs">
-          <ChevronRight size={12} />
-        </Box>
-        {diff.newPath}
-      </Text>
-    );
-  }
-
-  if (diff.change === "deleted") {
-    return (
-      <Text as="span" color="fg.muted" textDecoration="line-through" textStyle="sm">
-        {filePath}
-      </Text>
-    );
-  }
+  const filePath = diff.newPath || diff.oldPath || "unknown";
+  const oldContent = diff.oldContent || "";
+  const newContent = diff.newContent || "";
+  const isLargeDiff = isLargeDiffContent(diff);
+  const hasDiffContent = diff.oldContent !== undefined || diff.newContent !== undefined;
+  const { isLoadingDiff, loadError, shouldAutoLoadDiff, loadDiff } = useDiffContentLoader({
+    filePath,
+    isExpanded,
+    isSelected,
+    hasDiffContent,
+    isLargeDiff,
+    onLoadDiff,
+  });
 
   return (
-    <Text as="span" textStyle="sm">
-      {filePath}
-    </Text>
+    <Box
+      data-testid="diff-card"
+      border="1px solid"
+      borderColor={isSelected ? "border.accent" : "border.muted"}
+      borderRadius="xs"
+      overflow="visible"
+      bg={isSelected ? "bg.active" : "bg"}
+      width="100%"
+      maxW="100%"
+      transition="border-color 0.14s ease"
+      _hover={{ borderColor: "border.accent" }}
+    >
+      <DiffCardHeader diff={diff} isSelected={isSelected} isExpanded={isExpanded} onToggleExpanded={onToggleExpanded} />
+
+      <DiffCardContent
+        diff={diff}
+        filePath={filePath}
+        oldContent={oldContent}
+        newContent={newContent}
+        isExpanded={isExpanded}
+        isLargeDiff={isLargeDiff}
+        hasDiffContent={hasDiffContent}
+        shouldAutoLoadDiff={shouldAutoLoadDiff}
+        loadError={loadError}
+        isLoadingDiff={isLoadingDiff}
+        onLoadDiff={loadDiff}
+        hasOptedIntoLargeDiff={hasOptedIntoLargeDiff}
+        onShowFullDiff={onShowFullDiff}
+      />
+    </Box>
   );
 };
 
-const DiffCardContent = (props: {
+export const DiffCardHeader = (props: DiffCardHeaderProps) => {
+  const { diff, isSelected = false, isExpanded = true, onToggleExpanded } = props;
+  const filePath = diff.newPath || diff.oldPath || "unknown";
+  const additions = diff.additions ?? 0;
+  const deletions = diff.deletions ?? 0;
+
+  return (
+    <Grid
+      data-testid="diff-card-header"
+      templateColumns="auto minmax(0, 1fr) auto"
+      px="xs"
+      py="2xs"
+      alignItems="center"
+      justifyContent="space-between"
+      borderBottom={isExpanded ? "1px solid" : "none"}
+      borderColor="border.muted"
+      borderTopRadius="xs"
+      borderBottomRadius={isExpanded ? "0" : "xs"}
+      position="sticky"
+      top="0"
+      zIndex="1"
+      bg={isSelected ? "bg.active" : "bg"}
+      cursor="pointer"
+      transition="background 0.14s ease"
+      _hover={{ bg: isSelected ? "bg.active" : "bg.subtle" }}
+      onClick={() => onToggleExpanded?.()}
+      gap="sm"
+    >
+      <IconButton
+        aria-label={isExpanded ? "Collapse" : "Expand"}
+        variant="ghost"
+        size="2xs"
+        onClick={(event) => {
+          event.stopPropagation();
+          onToggleExpanded?.();
+        }}
+        flexShrink={0}
+      >
+        {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+      </IconButton>
+
+      <Box minW={0} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" title={filePath}>
+        {diff.change === "renamed" ? (
+          <Text as="span" textStyle="sm">
+            <Text as="span" color="fg.muted" textDecoration="line-through" mr="xs">
+              {diff.oldPath}
+            </Text>
+            <Box as="span" display="inline-flex" alignItems="center" verticalAlign="middle" mr="xs">
+              <ChevronRight size={12} />
+            </Box>
+            {diff.newPath}
+          </Text>
+        ) : diff.change === "deleted" ? (
+          <Text as="span" color="fg.muted" textDecoration="line-through" textStyle="sm">
+            {filePath}
+          </Text>
+        ) : (
+          <Text as="span" textStyle="sm">
+            {filePath}
+          </Text>
+        )}
+      </Box>
+
+      <Box flexShrink={0}>
+        <DiffBubble variant="ghost" additions={additions} deletions={deletions} />
+      </Box>
+    </Grid>
+  );
+};
+
+interface DiffCardContentProps {
   diff: Diff;
+  filePath: string;
+  oldContent: string;
+  newContent: string;
   isExpanded: boolean;
   isLargeDiff: boolean;
   hasDiffContent: boolean;
@@ -149,9 +258,26 @@ const DiffCardContent = (props: {
   loadError: boolean;
   isLoadingDiff: boolean;
   onLoadDiff: () => Promise<void>;
-}) => {
-  const { diff, isExpanded, isLargeDiff, hasDiffContent, shouldAutoLoadDiff, loadError, isLoadingDiff, onLoadDiff } =
-    props;
+  hasOptedIntoLargeDiff: boolean;
+  onShowFullDiff?: () => void;
+}
+
+const DiffCardContent = (props: DiffCardContentProps) => {
+  const {
+    diff,
+    filePath,
+    oldContent,
+    newContent,
+    isExpanded,
+    isLargeDiff,
+    hasDiffContent,
+    shouldAutoLoadDiff,
+    loadError,
+    isLoadingDiff,
+    onLoadDiff,
+    hasOptedIntoLargeDiff,
+    onShowFullDiff,
+  } = props;
 
   if (!isExpanded) return null;
 
@@ -171,105 +297,15 @@ const DiffCardContent = (props: {
     return <LoadingDiffContent />;
   }
 
-  if (isLargeDiff) {
-    return (
-      <Box bg="bg" p="sm" borderTop="1px solid" borderColor="border.muted">
-        <Text textStyle="sm" color="fg.muted">
-          Diff content loaded. This file is too large to render inline.
-        </Text>
-      </Box>
-    );
-  }
-
   return (
-    <Box bg="bg">
-      <DiffEditor
-        original={diff.oldContent || ""}
-        modified={diff.newContent || ""}
-        oldPath={diff.oldPath}
-        newPath={diff.newPath}
-        sideBySide={false}
-      />
-    </Box>
-  );
-};
-
-export const DiffCard = (props: DiffCardProps) => {
-  const { diff, isSelected = false, isExpanded = true, onToggleExpanded, onLoadDiff } = props;
-
-  const filePath = diff.newPath || diff.oldPath || "unknown";
-  const isLargeDiff = isLargeDiffContent(diff);
-  const hasDiffContent = diff.oldContent !== undefined || diff.newContent !== undefined;
-  const { isLoadingDiff, loadError, shouldAutoLoadDiff, loadDiff } = useDiffContentLoader({
-    filePath,
-    isExpanded,
-    isSelected,
-    hasDiffContent,
-    isLargeDiff,
-    onLoadDiff,
-  });
-
-  const additions = diff.additions ?? 0;
-  const deletions = diff.deletions ?? 0;
-
-  return (
-    <Box
-      border="1px solid"
-      borderColor={isSelected ? "border.accent" : "border.muted"}
-      borderRadius="xs"
-      overflow="hidden"
-      bg={isSelected ? "bg.active" : "bg"}
-      width="100%"
-      maxW="100%"
-      transition="border-color 0.14s ease"
-      _hover={{ borderColor: "border.accent" }}
-    >
-      <Grid
-        templateColumns="auto minmax(0, 1fr) auto"
-        px="xs"
-        py="2xs"
-        alignItems="center"
-        justifyContent="space-between"
-        borderBottom={isExpanded ? "1px solid" : "none"}
-        borderColor="border.muted"
-        cursor="pointer"
-        transition="background 0.14s ease"
-        _hover={{ bg: isSelected ? "bg.active" : "bg.subtle" }}
-        onClick={() => onToggleExpanded?.()}
-        gap="sm"
-      >
-        <IconButton
-          aria-label={isExpanded ? "Collapse" : "Expand"}
-          variant="ghost"
-          size="2xs"
-          onClick={(event) => {
-            event.stopPropagation();
-            onToggleExpanded?.();
-          }}
-          flexShrink={0}
-        >
-          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-        </IconButton>
-
-        <Box minW={0} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" title={filePath}>
-          <DiffPathLabel diff={diff} filePath={filePath} />
-        </Box>
-
-        <Box flexShrink={0}>
-          <DiffBubble variant="ghost" additions={additions} deletions={deletions} />
-        </Box>
-      </Grid>
-
-      <DiffCardContent
-        diff={diff}
-        isExpanded={isExpanded}
-        isLargeDiff={isLargeDiff}
-        hasDiffContent={hasDiffContent}
-        shouldAutoLoadDiff={shouldAutoLoadDiff}
-        loadError={loadError}
-        isLoadingDiff={isLoadingDiff}
-        onLoadDiff={loadDiff}
-      />
-    </Box>
+    <DiffCardBody
+      diff={diff}
+      filePath={filePath}
+      oldContent={oldContent}
+      newContent={newContent}
+      isLargeDiff={isLargeDiff}
+      hasOptedIntoLargeDiff={hasOptedIntoLargeDiff}
+      onShowFullDiff={onShowFullDiff}
+    />
   );
 };

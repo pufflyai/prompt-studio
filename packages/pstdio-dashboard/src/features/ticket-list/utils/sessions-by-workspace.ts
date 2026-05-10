@@ -1,5 +1,18 @@
 import type { SyncedRow } from "@/features/sync/collections";
 
+const RUNNING_STATUS = "in_progress";
+
+const isRunningSession = (session: SyncedRow) => session.status === RUNNING_STATUS;
+
+const getSessionLinkCreatedAt = (session: SyncedRow) =>
+  (session.workspace_session_created_at as string | undefined) ?? "";
+
+const shouldReplaceWorkspaceSession = (existing: SyncedRow | undefined, session: SyncedRow) => {
+  if (!existing) return true;
+  if (isRunningSession(existing) !== isRunningSession(session)) return isRunningSession(session);
+  return getSessionLinkCreatedAt(session) > getSessionLinkCreatedAt(existing);
+};
+
 export const buildSessionsByWorkspace = (
   rawWorkspaceSessions: SyncedRow[] | undefined,
   rawSessions: SyncedRow[] | undefined,
@@ -13,11 +26,13 @@ export const buildSessionsByWorkspace = (
 
     const session = sessionById.get(sessionId);
     if (!session) continue;
+    if (session.archived) continue;
 
-    // Keep the latest session per workspace (last link wins)
+    const workspaceSession = { ...session, workspace_session_created_at: link.created_at };
+
     const existing = sessionsByWorkspace.get(workspaceId);
-    if (!existing || (link.created_at as string) > (existing.created_at as string)) {
-      sessionsByWorkspace.set(workspaceId, session);
+    if (shouldReplaceWorkspaceSession(existing, workspaceSession)) {
+      sessionsByWorkspace.set(workspaceId, workspaceSession);
     }
   }
 

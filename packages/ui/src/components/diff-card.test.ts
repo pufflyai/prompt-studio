@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { shouldAutoLoadDiffContent } from "./diff-card";
 
 describe("shouldAutoLoadDiffContent", () => {
-  it("auto-loads only the selected expanded summary diff", () => {
+  it("does not auto-load selected summary diffs when file size is unknown", () => {
     expect(
       shouldAutoLoadDiffContent({
         isExpanded: true,
@@ -12,13 +12,15 @@ describe("shouldAutoLoadDiffContent", () => {
         requestedPath: null,
         filePath: "src/app.ts",
       }),
-    ).toBe(true);
+    ).toBe(false);
+  });
 
+  it("does not auto-load when content is already available", () => {
     expect(
       shouldAutoLoadDiffContent({
         isExpanded: true,
-        isSelected: false,
-        hasDiffContent: false,
+        isSelected: true,
+        hasDiffContent: true,
         isLargeDiff: false,
         requestedPath: null,
         filePath: "src/app.ts",
@@ -31,7 +33,7 @@ describe("shouldAutoLoadDiffContent", () => {
       shouldAutoLoadDiffContent({
         isExpanded: true,
         isSelected: true,
-        hasDiffContent: false,
+        hasDiffContent: true,
         isLargeDiff: false,
         requestedPath: "src/app.ts",
         filePath: "src/app.ts",

@@ -36,6 +36,7 @@ export interface TicketAttempt {
   label: string;
   attemptStatusId: string | null;
   sessionStatus: SessionStatus | null;
+  sessionCreatedAt?: string | null;
   shorthand: string;
   updatedAt: string;
   worktreePath: string | null;

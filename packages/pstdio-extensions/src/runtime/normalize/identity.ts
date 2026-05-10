@@ -54,13 +54,14 @@ export const registerExtension = (
   extensionsById: Map<string, NormalizedExtension>,
   namespacesInUse: Map<string, NormalizedExtension>,
 ) => {
-  const { id, namespace, name, version } = source.definition;
+  const { id, namespace, name, version, description } = source.definition;
 
   const normalized: NormalizedExtension = {
     id,
     namespace,
     displayName: name,
     version,
+    description,
     sourcePath: source.sourcePath,
     sourceKind: source.sourceKind,
     definition: source.definition,

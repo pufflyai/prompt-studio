@@ -23,6 +23,7 @@ export interface NormalizedExtension {
   namespace: string;
   displayName: string;
   version?: string;
+  description?: string;
   sourcePath: string;
   sourceKind: ExtensionSourceKind;
   definition: ExtensionDefinition;

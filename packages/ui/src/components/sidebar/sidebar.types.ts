@@ -15,7 +15,7 @@ export interface SidebarProps {
   onNavigate?: (event: TreeListNavigateEvent) => void;
   closable?: boolean;
   onOpenChange?: (open: boolean) => void;
-  /** Allow the user to drag the right edge to resize. Defaults to `true`. */
+  /** Allow split layouts to resize the sidebar. Defaults to `true`. */
   resizable?: boolean;
   defaultWidth?: number;
   minWidth?: number;

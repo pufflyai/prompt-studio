@@ -19,6 +19,7 @@ export const extensionRecordSchema = z.object({
   namespace: z.string(),
   displayName: z.string(),
   version: z.string().optional(),
+  description: z.string().optional(),
   sourcePath: z.string(),
 });
 

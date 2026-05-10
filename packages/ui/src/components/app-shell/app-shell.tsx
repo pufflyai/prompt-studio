@@ -18,6 +18,7 @@ import {
   KanbanSquare,
   MessageSquare,
   Minimize2,
+  PanelLeftOpen,
   PenBox,
   Search,
   Settings as SettingsIcon,
@@ -32,6 +33,7 @@ import { BubblePanel } from "../bubble-panel";
 import { ChatPanel } from "../chat-ui/components/chat-panel";
 import { Header } from "../header";
 import { ListRow } from "../list-row/list-row";
+import { ResizableSplitLayout } from "../resizable-split-layout";
 import { SearchableMenu, type SearchableMenuItem } from "../searchable-menu";
 import { Sidebar } from "../sidebar/sidebar";
 import { DisplayMenu } from "../tickets/display-menu";
@@ -56,7 +58,6 @@ import { SettingsPage } from "./pages/settings-page";
 import { TicketDetailsPage } from "./pages/ticket-details-page";
 import { TICKETS_STORAGE_KEY, TicketsPage } from "./pages/tickets-page";
 import { WorkspacePage } from "./pages/workspace-page";
-import { ResizablePanel } from "./resizable-panel";
 
 const APP_SHELL_SIDEBAR_KEY = "app-shell-sidebar";
 
@@ -138,38 +139,29 @@ const ProjectSidebar = (props: {
   isSettingsActive: boolean;
 }) => {
   const { project, activeNodeId, onNavigate, onSelectProjects, onOpenSettings, isSettingsActive } = props;
-  const [width, setWidth] = useState(240);
 
   return (
-    <ResizablePanel
-      defaultWidth={width}
-      minWidth={200}
-      maxWidth={420}
-      handleSide="right"
-      ariaLabel="Resize sidebar"
-      onWidthChange={setWidth}
-    >
-      <Sidebar
-        storageKey={APP_SHELL_SIDEBAR_KEY}
-        sections={projectSidebarSections}
-        activeNodeId={activeNodeId}
-        closable={false}
-        width={`${width}px`}
-        header={<ProjectSwitcher project={project} onSelectProjects={onSelectProjects} />}
-        onNavigate={(event) => {
-          if (event.intent?.id) onNavigate(event.intent.id);
-        }}
-        footer={
-          <ListRow
-            isSelected={isSettingsActive}
-            id="project-settings"
-            label="Project settings"
-            icon={<SettingsIcon size={14} />}
-            onActivate={onOpenSettings}
-          />
-        }
-      />
-    </ResizablePanel>
+    <Sidebar
+      storageKey={APP_SHELL_SIDEBAR_KEY}
+      sections={projectSidebarSections}
+      activeNodeId={activeNodeId}
+      closable={false}
+      resizable={false}
+      width="full"
+      header={<ProjectSwitcher project={project} onSelectProjects={onSelectProjects} />}
+      onNavigate={(event) => {
+        if (event.intent?.id) onNavigate(event.intent.id);
+      }}
+      footer={
+        <ListRow
+          isSelected={isSettingsActive}
+          id="project-settings"
+          label="Project settings"
+          icon={<SettingsIcon size={14} />}
+          onActivate={onOpenSettings}
+        />
+      }
+    />
   );
 };
 
@@ -279,8 +271,19 @@ const TicketsHeaderActions = () => {
   );
 };
 
-const ShellHeader = (props: { items: BreadcrumbItem[]; onOpenPalette: () => void; actions?: React.ReactNode }) => (
+const ShellHeader = (props: {
+  items: BreadcrumbItem[];
+  onOpenPalette: () => void;
+  actions?: React.ReactNode;
+  sidebarOpen?: boolean;
+  onOpenSidebar?: () => void;
+}) => (
   <Header variant="main" bg="bg" borderBottomWidth="1px" borderColor="border.muted" flexShrink={0} overflow="hidden">
+    {props.sidebarOpen === false && props.onOpenSidebar ? (
+      <IconButton variant="ghost" size="xs" aria-label="Show sidebar" onClick={props.onOpenSidebar} flexShrink={0}>
+        <PanelLeftOpen size={16} />
+      </IconButton>
+    ) : null}
     <Breadcrumb items={props.items} separator="/" separatorGap="xs" />
     <Spacer />
     {props.actions ? (
@@ -386,7 +389,8 @@ const SessionAttached = (props: { onChange: (mode: SessionMode) => void }) => {
 
   return (
     <AttachedPanel
-      resizable
+      width="full"
+      minWidth="0"
       header={
         <Header variant="main" borderBottomWidth="1px" borderColor="border.muted" bg="bg" flexShrink={0}>
           <HStack gap="2xs" minW="0">
@@ -466,6 +470,7 @@ const ProjectViewContent = (props: ProjectViewContentProps) => {
 export const AppShell = () => {
   const [view, setView] = useState<View>({ name: "project-list" });
   const [sessionMode, setSessionMode] = useState<SessionMode>("closed");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   const projectId = "projectId" in view ? view.projectId : null;
@@ -542,26 +547,66 @@ export const AppShell = () => {
       }
     },
   });
+  const projectContent = (
+    <Stack flex="1" minW="0" minH="0" gap="0">
+      <ShellHeader
+        items={breadcrumbItems}
+        onOpenPalette={openPalette}
+        actions={view.name === "tickets" ? <TicketsHeaderActions /> : null}
+        sidebarOpen={sidebarOpen}
+        onOpenSidebar={() => setSidebarOpen(true)}
+      />
+      <ProjectViewContent view={view} project={project} setView={setView} />
+    </Stack>
+  );
+  const contentWithSession =
+    showSession && sessionMode === "attached" ? (
+      <ResizableSplitLayout
+        flex="1"
+        minH="0"
+        minW="0"
+        resizableSide="right"
+        contentPanel={projectContent}
+        resizablePanel={<SessionAttached onChange={setSessionMode} />}
+        defaultSizePx={448}
+        minSizePx={320}
+        contentMinSizePx={320}
+        resizeLabel="Resize attached panel"
+        showResizeSeparator={false}
+        onCollapsedChange={(collapsed) => {
+          if (collapsed) setSessionMode("bubble");
+        }}
+      />
+    ) : (
+      projectContent
+    );
 
   return (
     <HStack height="100vh" width="100%" gap="0" align="stretch" bg="bg" color="fg" overflow="hidden">
-      <ProjectSidebar
-        project={project}
-        activeNodeId={resolveActiveNodeId(view)}
-        onNavigate={handleSidebarNavigate}
-        onSelectProjects={goProjectList}
-        onOpenSettings={() => goProjectSettings(project.id)}
-        isSettingsActive={view.name === "project-settings"}
+      <ResizableSplitLayout
+        flex="1"
+        minH="0"
+        minW="0"
+        resizablePanel={
+          <ProjectSidebar
+            project={project}
+            activeNodeId={resolveActiveNodeId(view)}
+            onNavigate={handleSidebarNavigate}
+            onSelectProjects={goProjectList}
+            onOpenSettings={() => goProjectSettings(project.id)}
+            isSettingsActive={view.name === "project-settings"}
+          />
+        }
+        contentPanel={contentWithSession}
+        collapsed={!sidebarOpen}
+        defaultSizePx={240}
+        minSizePx={200}
+        maxSizePx={420}
+        contentMinSizePx={320}
+        resizeLabel="Resize sidebar"
+        showResizeSeparator={false}
+        onCollapsedChange={(collapsed) => setSidebarOpen(!collapsed)}
       />
-      <Stack flex="1" minW="0" minH="0" gap="0">
-        <ShellHeader
-          items={breadcrumbItems}
-          onOpenPalette={openPalette}
-          actions={view.name === "tickets" ? <TicketsHeaderActions /> : null}
-        />
-        <ProjectViewContent view={view} project={project} setView={setView} />
-      </Stack>
-      {showSession && sessionMode === "attached" ? <SessionAttached onChange={setSessionMode} /> : null}
       {showSession ? (
         <SessionBubble mode={sessionMode === "attached" ? "closed" : sessionMode} onChange={setSessionMode} />
       ) : null}

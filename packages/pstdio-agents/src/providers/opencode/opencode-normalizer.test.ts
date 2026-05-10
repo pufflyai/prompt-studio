@@ -475,6 +475,17 @@ describe("normalizeOpencodeMessage metadata", () => {
     });
   });
 
+  describe("createdAt", () => {
+    test("extracts createdAt from info time", () => {
+      const result = normalizeOpencodeMessage(
+        partsMsg([{ type: "text", text: "hi" }], { time: { created: 1_777_777_777_000 } }),
+        0,
+      );
+
+      expect(result.createdAt).toBe(1_777_777_777_000);
+    });
+  });
+
   describe("model and provider", () => {
     test("extracts modelId and providerId from info", () => {
       const result = normalizeOpencodeMessage(

@@ -13,4 +13,10 @@ describe("isLargeDiffContent", () => {
   it("falls back to content lines when change counts are unavailable", () => {
     expect(getDiffLineCount({ newContent: "one\ntwo\n" })).toBe(2);
   });
+
+  it("classifies a huge file with a small edit as large after content loads", () => {
+    const content = Array.from({ length: LARGE_DIFF_LINE_THRESHOLD + 1 }, (_, index) => `line ${index}`).join("\n");
+
+    expect(isLargeDiffContent({ additions: 1, deletions: 1, oldContent: content, newContent: content })).toBe(true);
+  });
 });
