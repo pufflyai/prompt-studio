@@ -168,11 +168,14 @@ export const normalizeOpencodeMessage = (message: OpencodeSessionMessage, index:
     };
   })();
 
+  const createdAt = "info" in message ? message.info?.time?.created : undefined;
+
   return {
     id,
     role,
     parts: normalizedParts,
     index,
+    createdAt,
     modelId: "info" in message ? message.info?.modelID : undefined,
     providerId: "info" in message ? message.info?.providerID : undefined,
     tokens,
