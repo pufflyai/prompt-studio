@@ -1,7 +1,7 @@
-import { Box, Flex, HStack, Icon, IconButton, Input, Menu, Stack, Text } from "@chakra-ui/react";
+import { Box, HStack, Icon, IconButton, Input, Menu, Stack, Text } from "@chakra-ui/react";
 import { EmptyState, Header, ScrollArea, TreeList, type TreeListNode } from "@pstdio/ui";
 import { FileText, Folder, List, ListTree, type LucideIcon } from "lucide-react";
-import { type ReactNode, type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   buildChangedFilesTree,
   type ChangedFilesViewMode,
@@ -12,82 +12,6 @@ export interface FileIconInfo {
   icon: LucideIcon;
   color: string;
 }
-
-const clampPanelWidth = (width: number, min: number, max: number) => Math.min(Math.max(width, min), max);
-
-export const ResizableLeftPanel = (props: { children: ReactNode }) => {
-  const { children } = props;
-  const panelRef = useRef<HTMLDivElement>(null);
-  const cleanupDragRef = useRef<() => void>(() => undefined);
-  const [width, setWidth] = useState(288);
-
-  useEffect(() => () => cleanupDragRef.current(), []);
-
-  const handleResizeStart = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!panelRef.current) return;
-
-    event.preventDefault();
-
-    const panel = panelRef.current;
-    const startX = event.clientX;
-    const startWidth = panel.getBoundingClientRect().width;
-    const minWidth = 224;
-    const parentWidth = panel.parentElement?.getBoundingClientRect().width ?? window.innerWidth;
-    const maxWidth = Math.max(minWidth, parentWidth - 320);
-    const previousCursor = document.body.style.cursor;
-    const previousUserSelect = document.body.style.userSelect;
-
-    const handlePointerMove = (moveEvent: PointerEvent) => {
-      setWidth(clampPanelWidth(startWidth + (moveEvent.clientX - startX), minWidth, maxWidth));
-    };
-
-    const cleanup = () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", cleanup);
-      document.body.style.cursor = previousCursor;
-      document.body.style.userSelect = previousUserSelect;
-      cleanupDragRef.current = () => undefined;
-    };
-
-    cleanupDragRef.current = cleanup;
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", cleanup, { once: true });
-  };
-
-  return (
-    <Flex
-      ref={panelRef}
-      direction="column"
-      position="relative"
-      flexShrink={0}
-      w={`${width}px`}
-      minW="14rem"
-      h="100%"
-      bg="bg"
-      borderRightWidth="1px"
-      overflow="hidden"
-    >
-      <Box
-        role="separator"
-        aria-label="Resize file list panel"
-        aria-orientation="vertical"
-        position="absolute"
-        top="0"
-        bottom="0"
-        right="0"
-        width="3"
-        transform="translateX(50%)"
-        cursor="col-resize"
-        touchAction="none"
-        zIndex="1"
-        onPointerDown={handleResizeStart}
-      />
-      {children}
-    </Flex>
-  );
-};
 
 const collectExpandedFolderIds = (nodes: ChangedFileTreeNode[]) => {
   const folderIds: string[] = [];

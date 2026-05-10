@@ -1,9 +1,9 @@
-import { Box, Flex, IconButton, Text } from "@chakra-ui/react";
-import { Header, useSidebarStore } from "@pstdio/ui";
+import { Box, Flex, Text } from "@chakra-ui/react";
+import { Header } from "@pstdio/ui";
 import { useParams } from "@tanstack/react-router";
-import { PanelLeftOpen } from "lucide-react";
 import type { ReactNode } from "react";
 import { ExtensionMenuSlot } from "@/shared/extensions/components/extension-menu-slot";
+import { OpenSidebarButton } from "@/shared/sidebar/open-sidebar-button";
 
 interface DashboardHeaderProps {
   title: ReactNode;
@@ -14,16 +14,10 @@ interface DashboardHeaderProps {
 export const DashboardHeader = (props: DashboardHeaderProps) => {
   const { title, sidebarStorageKey, children } = props;
   const { projectId } = useParams({ strict: false });
-  const sidebarOpen = useSidebarStore(sidebarStorageKey, (s) => s.open);
-  const openSidebar = useSidebarStore(sidebarStorageKey, (s) => s.openSidebar);
 
   return (
     <Header variant="main" gap="sm" width="100%" borderBottomWidth="1px" borderColor="border.muted">
-      {!sidebarOpen ? (
-        <IconButton variant="ghost" size="xs" aria-label="Show sidebar" onClick={openSidebar}>
-          <PanelLeftOpen size={16} />
-        </IconButton>
-      ) : null}
+      <OpenSidebarButton storageKey={sidebarStorageKey} />
       {typeof title === "string" ? (
         <Text textStyle="label/M/medium" flexShrink={0}>
           {title}

@@ -9,7 +9,6 @@ import {
   KanbanSquare,
   MoreHorizontal,
   PanelLeft,
-  PanelLeftClose,
   Plus,
   Search,
   Settings as SettingsIcon,
@@ -113,9 +112,6 @@ const SidebarMock = () => (
         <Box w="6" h="6" borderRadius="sm" bg="bg.emphasis" />
         <Text textStyle="label/M/medium">Acme</Text>
       </HStack>
-      <IconButton size="xs" variant="ghost" aria-label="Collapse sidebar">
-        <PanelLeftClose size={14} />
-      </IconButton>
     </HStack>
 
     <Stack flex="1" gap="md" p="xs" overflow="auto">

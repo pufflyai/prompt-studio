@@ -3,8 +3,9 @@ import { Breadcrumb, type BreadcrumbItem, PanelLayout } from "@pstdio/ui";
 import { Link, useParams } from "@tanstack/react-router";
 import { ExtensionWebviewFrame } from "@/shared/extensions/components/extension-webview-frame";
 import { useProjectExtensionMetadata } from "@/shared/extensions/hooks/use-project-extensions";
+import { PROJECT_SIDEBAR_STORAGE_KEY } from "@/shared/sidebar/project-sidebar";
 import { DashboardHeader } from "../components/dashboard-header";
-import { PROJECT_SIDEBAR_STORAGE_KEY, ProjectSidebar } from "../components/project-sidebar";
+import { ProjectSidebar } from "../components/project-sidebar";
 
 export const ProjectExtensionRoute = () => {
   const { projectId, extensionRoutePath } = useParams({ strict: false });

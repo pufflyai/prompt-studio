@@ -1,5 +1,5 @@
 import { Box, Button, Flex, Skeleton, Stack, Tabs } from "@chakra-ui/react";
-import { type Diff, DiffDrawer, EmptyState, Header } from "@pstdio/ui";
+import { type Diff, DiffDrawer, EmptyState, Header, ResizableSplitLayout } from "@pstdio/ui";
 import { FileDiffIcon, ListTree, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -8,7 +8,7 @@ import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/shared/api-types";
 import { type ChangedFilesViewMode, collectChangedFilePaths } from "../utils/build-changed-files-tree";
 import { sortDiffs } from "../utils/sort-diffs";
 import { WorkspaceChecksPanel } from "./workspace-checks-panel";
-import { FileListPanel, ResizableLeftPanel, resolveSelectedPath } from "./workspace-file-list-panel";
+import { FileListPanel, resolveSelectedPath } from "./workspace-file-list-panel";
 
 interface WorkspaceDiffPanelProps {
   ticketId: string;
@@ -111,6 +111,41 @@ export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
   const handleSelectDiffPath = (path: string) => {
     setSelectedDiffPath(path);
   };
+  const fileListPanel = (
+    <FileListPanel
+      title="Changed files"
+      paths={filteredChangedFilePaths}
+      selectedPath={resolvedSelectedDiffPath}
+      onSelectPath={handleSelectDiffPath}
+      viewMode={viewMode}
+      onViewModeChange={setViewMode}
+      searchQuery={searchQuery}
+      onSearchQueryChange={setSearchQuery}
+    />
+  );
+  const diffPanel = (
+    <Stack h="full" minH="0" minW="0" flex="1" bg="bg.subtle" gap="0">
+      <WorkspaceDiffHeader
+        hasChangedFiles={hasChangedFiles}
+        onToggleTreePanel={() => setTreePanelOpen((open) => !open)}
+        isTreePanelOpen={isTreePanelOpen}
+      />
+
+      {hasDiffs ? (
+        <Box flex="1" minH="0">
+          <DiffDrawer diffs={filteredDiffs} selectedDiffPath={resolvedSelectedDiffPath} />
+        </Box>
+      ) : (
+        <Box flex="1" minH="0" px="md" py="lg" display="flex" alignItems="center" justifyContent="center">
+          <EmptyState
+            title="No diffs yet"
+            description="Changes in this workspace will appear here once files are modified."
+            data-testid="workspace-diff-panel-empty"
+          />
+        </Box>
+      )}
+    </Stack>
+  );
 
   return (
     <Flex h="full" minH="0" minW="0" flex="1" bg="bg.subtle" gap="0" data-testid="workspace-diff-panel">
@@ -140,42 +175,23 @@ export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
 
         <Tabs.Content value="changes" flex="1" minH="0" minW="0" p="0" display="flex">
           <Flex flex="1" minH="0" minW="0" bg="bg.subtle" gap="0">
-            {hasChangedFiles && isTreePanelOpen ? (
-              <ResizableLeftPanel>
-                <FileListPanel
-                  title="Changed files"
-                  paths={filteredChangedFilePaths}
-                  selectedPath={resolvedSelectedDiffPath}
-                  onSelectPath={handleSelectDiffPath}
-                  viewMode={viewMode}
-                  onViewModeChange={setViewMode}
-                  searchQuery={searchQuery}
-                  onSearchQueryChange={setSearchQuery}
-                />
-              </ResizableLeftPanel>
-            ) : null}
-
-            <Stack h="full" minH="0" minW="0" flex="1" bg="bg.subtle" gap="0">
-              <WorkspaceDiffHeader
-                hasChangedFiles={hasChangedFiles}
-                onToggleTreePanel={() => setTreePanelOpen((open) => !open)}
-                isTreePanelOpen={isTreePanelOpen}
+            {hasChangedFiles ? (
+              <ResizableSplitLayout
+                flex="1"
+                minH="0"
+                minW="0"
+                resizablePanel={fileListPanel}
+                contentPanel={diffPanel}
+                collapsed={!isTreePanelOpen}
+                defaultSizePx={288}
+                minSizePx={224}
+                contentMinSizePx={320}
+                resizeLabel="Resize file list panel"
+                onCollapsedChange={(collapsed) => setTreePanelOpen(!collapsed)}
               />
-
-              {hasDiffs ? (
-                <Box flex="1" minH="0">
-                  <DiffDrawer diffs={filteredDiffs} selectedDiffPath={resolvedSelectedDiffPath} />
-                </Box>
-              ) : (
-                <Box flex="1" minH="0" px="md" py="lg" display="flex" alignItems="center" justifyContent="center">
-                  <EmptyState
-                    title="No diffs yet"
-                    description="Changes in this workspace will appear here once files are modified."
-                    data-testid="workspace-diff-panel-empty"
-                  />
-                </Box>
-              )}
-            </Stack>
+            ) : (
+              diffPanel
+            )}
           </Flex>
         </Tabs.Content>
 

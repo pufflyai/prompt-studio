@@ -1,5 +1,5 @@
-import { Stack } from "@chakra-ui/react";
-import { PanelLayout, toaster } from "@pstdio/ui";
+import { Flex, Stack, Text } from "@chakra-ui/react";
+import { HorizontalMenuStack, PanelLayout, toaster } from "@pstdio/ui";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useProject, useProjectTemplateAssets } from "@/features/project/hooks/use-project";
@@ -8,9 +8,10 @@ import {
   useDeleteProjectTicketTag,
   useProjectTicketStatuses,
 } from "@/features/ticket-list/hooks/use-project-tickets";
+import { OpenSidebarButton } from "@/shared/sidebar/open-sidebar-button";
 import { CreateTemplateDialog } from "../components/create-template-dialog";
 import { SettingsContent } from "../components/settings-content";
-import { type SettingsSection, SettingsSidebar } from "../components/settings-sidebar";
+import { SETTINGS_SIDEBAR_STORAGE_KEY, type SettingsSection, SettingsSidebar } from "../components/settings-sidebar";
 import { useProjectAttemptStatuses } from "../hooks/use-attempt-statuses";
 
 import { useProjectSkills } from "../hooks/use-skills";
@@ -108,18 +109,29 @@ export const ProjectSettings = () => {
 
   return (
     <PanelLayout sidebar={sidebar}>
-      <Stack flex="1" minH="0" overflow="auto">
-        <SettingsContent
-          activeSection={activeSection}
-          projectId={projectId}
-          projectName={projectName}
-          repositories={project?.repositories ?? []}
-          tags={tags}
-          ticketStatuses={ticketStatuses ?? []}
-          attemptStatuses={attemptStatuses ?? []}
-          onDeleteTag={handleDeleteTag}
-          onTemplateDeleted={handleTemplateDeleted}
-        />
+      <Stack flex="1" minH="0" minW="0" gap="0">
+        <HorizontalMenuStack>
+          <Flex align="center" gap="sm" minW="0">
+            <OpenSidebarButton storageKey={SETTINGS_SIDEBAR_STORAGE_KEY} />
+            <Text textStyle="label/S/medium" color="foreground.primary" lineClamp={1}>
+              Settings
+            </Text>
+          </Flex>
+        </HorizontalMenuStack>
+
+        <Stack flex="1" minH="0" minW="0" overflow="auto">
+          <SettingsContent
+            activeSection={activeSection}
+            projectId={projectId}
+            projectName={projectName}
+            repositories={project?.repositories ?? []}
+            tags={tags}
+            ticketStatuses={ticketStatuses ?? []}
+            attemptStatuses={attemptStatuses ?? []}
+            onDeleteTag={handleDeleteTag}
+            onTemplateDeleted={handleTemplateDeleted}
+          />
+        </Stack>
       </Stack>
 
       <CreateTemplateDialog

@@ -17,7 +17,7 @@ import { useOpenCommandPalette } from "@/shared/command-palette/open-command-pal
 import type { Session } from "../types";
 import { groupSessionsByDate } from "../utils/group-sessions";
 
-const SESSIONS_SIDEBAR_STORAGE_KEY = "sessions-sidebar";
+export const SESSIONS_SIDEBAR_STORAGE_KEY = "sessions-sidebar";
 
 const sessionIcon = (status: string) =>
   createElement(resolveSessionIndicatorIcon(status as SessionCompletionStatus), { size: 14 });

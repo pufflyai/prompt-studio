@@ -11,7 +11,7 @@ import {
   toSidebarContextMenuItems,
 } from "@/features/plugin-actions/hooks/use-resource-context-menu";
 import { CreateWorkspaceModal } from "@/features/ticket/components/create-workspace-modal";
-import { TicketSidebar } from "@/features/ticket/components/ticket-sidebar";
+import { TICKET_SIDEBAR_STORAGE_KEY, TicketSidebar } from "@/features/ticket/components/ticket-sidebar";
 import { formatTicketBreadcrumbLabel } from "@/features/ticket/utils/ticket-breadcrumb";
 import type { buildSelectableTicketFiles } from "@/features/ticket/utils/ticket-file-selection";
 import type { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
@@ -19,6 +19,7 @@ import type { TicketSubTicket } from "@/features/ticket-list/types";
 import type { transformFileDiffs } from "@/features/workspaces/utils/transform-diff";
 import { getAttemptLabelFromWorkspaceShorthand } from "@/features/workspaces/utils/workspace-shorthand";
 import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/shared/api-types";
+import { OpenSidebarButton } from "@/shared/sidebar/open-sidebar-button";
 import { WorkspaceDiffPanel } from "../components/workspace-diff-panel";
 import type { WorkspaceListItem } from "../components/workspace-list-panel";
 import type { useAttemptStatusMap } from "../hooks/use-attempt-status-map";
@@ -240,6 +241,7 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
       <Stack flex="1" gap="0" minH="0">
         <HorizontalMenuStack>
           <Flex align="center" gap="sm">
+            <OpenSidebarButton storageKey={TICKET_SIDEBAR_STORAGE_KEY} />
             <Breadcrumb
               separator="/"
               separatorGap="xs"

@@ -74,6 +74,7 @@ export type { PropertiesProps, PropertyItem } from "./components/properties";
 export { Properties } from "./components/properties";
 export type { RadioProps } from "./components/radio";
 export { Radio, RadioGroup } from "./components/radio";
+export { ResizableSplitLayout } from "./components/resizable-split-layout";
 export type { ResourceContextAction } from "./components/resource-context-menu";
 export { ResourceContextMenu } from "./components/resource-context-menu";
 export { ScrollArea } from "./components/scroll-area";

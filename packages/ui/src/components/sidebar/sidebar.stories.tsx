@@ -14,7 +14,8 @@ import {
   Star,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
+import { ResizableSplitLayout } from "../resizable-split-layout";
 import {
   resolveSessionIndicatorColor,
   resolveSessionIndicatorIcon,
@@ -23,6 +24,7 @@ import {
 import type { TreeListSection } from "../tree-list/tree-list.types";
 import { Sidebar } from "./sidebar";
 import { useSidebarStore } from "./sidebar.store";
+import { SidebarProjectMenu } from "./sidebar-project-menu";
 
 const sidebarSections: TreeListSection[] = [
   {
@@ -164,70 +166,89 @@ const coloredSessionSections: TreeListSection[] = [
   },
 ];
 
-const SidebarShell = (props: { storageKey: string; sections?: TreeListSection[] }) => {
-  const { storageKey, sections = sidebarSections } = props;
+const SidebarShell = (props: { storageKey: string; sections?: TreeListSection[]; header?: ReactNode }) => {
+  const { storageKey, sections = sidebarSections, header } = props;
   const [activeNodeId, setActiveNodeId] = useState<string | null>("overview");
   const [navigationOutput, setNavigationOutput] = useState("No navigation yet");
   const [openState, setOpenState] = useState(true);
 
   const openSidebar = useSidebarStore(storageKey, (state) => state.openSidebar);
+  const closeSidebar = useSidebarStore(storageKey, (state) => state.closeSidebar);
+  const setSidebarOpen = (open: boolean) => {
+    if (open) openSidebar();
+    else closeSidebar();
+  };
 
   return (
-    <Stack
-      direction={{ base: "column", md: "row" }}
-      align="stretch"
-      h="560px"
-      borderWidth="1px"
-      borderColor="border.muted"
-    >
-      <Sidebar
-        storageKey={storageKey}
-        sections={sections}
-        activeNodeId={activeNodeId}
-        header={
-          <HStack gap="2" w="100%">
-            <Search size={14} />
-            <Input size="sm" placeholder="Search docs" />
-          </HStack>
+    <Stack align="stretch" h="560px" borderWidth="1px" borderColor="border.muted">
+      <ResizableSplitLayout
+        flex="1"
+        minH="0"
+        minW="0"
+        collapsed={!openState}
+        defaultSizePx={240}
+        minSizePx={200}
+        maxSizePx={480}
+        contentMinSizePx={320}
+        resizeLabel="Resize sidebar"
+        showResizeSeparator={false}
+        onCollapsedChange={(collapsed) => setSidebarOpen(!collapsed)}
+        resizablePanel={
+          <Sidebar
+            storageKey={storageKey}
+            sections={sections}
+            activeNodeId={activeNodeId}
+            resizable={false}
+            width="full"
+            header={
+              header ?? (
+                <HStack gap="2" w="100%">
+                  <Search size={14} />
+                  <Input size="sm" placeholder="Search docs" />
+                </HStack>
+              )
+            }
+            footer={
+              <HStack justify="space-between" w="100%">
+                <Text textStyle="paragraph/XS/regular" color="fg.muted">
+                  Footer actions stay visible
+                </Text>
+                <Button size="xs" variant="ghost">
+                  Help
+                </Button>
+              </HStack>
+            }
+            onOpenChange={setOpenState}
+            onNavigate={(event) => {
+              setActiveNodeId(event.nodeId);
+              setNavigationOutput(`${event.nodeId} (${event.intent?.id ?? "no-intent"})`);
+            }}
+          />
         }
-        footer={
-          <HStack justify="space-between" w="100%">
-            <Text textStyle="paragraph/XS/regular" color="fg.muted">
-              Footer actions stay visible
-            </Text>
-            <Button size="xs" variant="ghost">
-              Help
-            </Button>
-          </HStack>
+        contentPanel={
+          <Stack flex="1" p="4" gap="3" minW="0">
+            <HStack gap="2" flexWrap="wrap">
+              <Button size="sm" onClick={openSidebar}>
+                Reopen Sidebar
+              </Button>
+              <Badge colorPalette={openState ? "green" : "orange"}>{openState ? "Open" : "Hidden"}</Badge>
+            </HStack>
+
+            <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" p="3">
+              <Text textStyle="paragraph/S/medium">Navigation output</Text>
+              <Text textStyle="paragraph/S/regular" color="fg.muted">
+                {navigationOutput}
+              </Text>
+            </Box>
+
+            <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" p="3" flex="1">
+              <Text textStyle="paragraph/S/regular" color="fg.muted">
+                Content area reclaims width when sidebar is hidden.
+              </Text>
+            </Box>
+          </Stack>
         }
-        onOpenChange={setOpenState}
-        onNavigate={(event) => {
-          setActiveNodeId(event.nodeId);
-          setNavigationOutput(`${event.nodeId} (${event.intent?.id ?? "no-intent"})`);
-        }}
       />
-
-      <Stack flex="1" p="4" gap="3" minW="0">
-        <HStack gap="2" flexWrap="wrap">
-          <Button size="sm" onClick={openSidebar}>
-            Reopen Sidebar
-          </Button>
-          <Badge colorPalette={openState ? "green" : "orange"}>{openState ? "Open" : "Hidden"}</Badge>
-        </HStack>
-
-        <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" p="3">
-          <Text textStyle="paragraph/S/medium">Navigation output</Text>
-          <Text textStyle="paragraph/S/regular" color="fg.muted">
-            {navigationOutput}
-          </Text>
-        </Box>
-
-        <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" p="3" flex="1">
-          <Text textStyle="paragraph/S/regular" color="fg.muted">
-            Content area reclaims width when sidebar is hidden.
-          </Text>
-        </Box>
-      </Stack>
     </Stack>
   );
 };
@@ -252,12 +273,28 @@ export const HeaderAndFooterLayout: Story = {
   render: () => <SidebarShell storageKey="storybook-sidebar-layout" />,
 };
 
+export const ProjectMenuHeader: Story = {
+  render: () => (
+    <SidebarShell
+      storageKey="storybook-sidebar-project-menu"
+      header={<SidebarProjectMenu name="Prompt Studio" projectsLabel="Projects" onSelectProjects={() => undefined} />}
+    />
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story: "Project menu dropdown remains visible when rendered inside the clipped resizable sidebar panel.",
+      },
+    },
+  },
+};
+
 export const HiddenWithExternalReopen: Story = {
   render: () => <SidebarShell storageKey="storybook-sidebar-reopen" />,
   parameters: {
     docs: {
       description: {
-        story: "Hide the sidebar with the header control and reopen from the external button.",
+        story: "Hide the sidebar by dragging past the collapse threshold and reopen from the external button.",
       },
     },
   },
