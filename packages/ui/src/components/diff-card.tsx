@@ -3,7 +3,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DiffBubble } from "@/components/diff-bubble";
 import { DiffCardBody } from "./diff-card-body";
-import { isLargeDiffContent } from "./diff-size";
+import { isGeneratedDiffPath, isLargeDiffContent } from "./diff-size";
 
 export interface Diff {
   change: "added" | "deleted" | "modified" | "renamed" | "copied" | "permissionChange";
@@ -60,12 +60,13 @@ export const shouldAutoLoadDiffContent = (input: {
   isSelected: boolean;
   hasDiffContent: boolean;
   isLargeDiff: boolean;
+  isGeneratedDiff: boolean;
   requestedPath: string | null;
   filePath: string;
 }) => {
-  void input;
+  const { isExpanded, hasDiffContent, isLargeDiff, isGeneratedDiff, requestedPath, filePath } = input;
 
-  return false;
+  return isExpanded && !hasDiffContent && !isLargeDiff && !isGeneratedDiff && requestedPath !== filePath;
 };
 
 const useDiffContentLoader = (input: {
@@ -74,9 +75,10 @@ const useDiffContentLoader = (input: {
   isSelected: boolean;
   hasDiffContent: boolean;
   isLargeDiff: boolean;
+  isGeneratedDiff: boolean;
   onLoadDiff?: (path: string) => Promise<void>;
 }) => {
-  const { filePath, isExpanded, isSelected, hasDiffContent, isLargeDiff, onLoadDiff } = input;
+  const { filePath, isExpanded, isSelected, hasDiffContent, isLargeDiff, isGeneratedDiff, onLoadDiff } = input;
   const [isLoadingDiff, setLoadingDiff] = useState(false);
   const [requestedPath, setRequestedPath] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -102,6 +104,7 @@ const useDiffContentLoader = (input: {
     isSelected,
     hasDiffContent,
     isLargeDiff,
+    isGeneratedDiff,
     requestedPath,
     filePath,
   });
@@ -132,6 +135,7 @@ export const DiffCard = (props: DiffCardProps) => {
   const oldContent = diff.oldContent || "";
   const newContent = diff.newContent || "";
   const isLargeDiff = isLargeDiffContent(diff);
+  const isGeneratedDiff = isGeneratedDiffPath(filePath);
   const hasDiffContent = diff.oldContent !== undefined || diff.newContent !== undefined;
   const { isLoadingDiff, loadError, shouldAutoLoadDiff, loadDiff } = useDiffContentLoader({
     filePath,
@@ -139,6 +143,7 @@ export const DiffCard = (props: DiffCardProps) => {
     isSelected,
     hasDiffContent,
     isLargeDiff,
+    isGeneratedDiff,
     onLoadDiff,
   });
 
@@ -164,6 +169,7 @@ export const DiffCard = (props: DiffCardProps) => {
         newContent={newContent}
         isExpanded={isExpanded}
         isLargeDiff={isLargeDiff}
+        isGeneratedDiff={isGeneratedDiff}
         hasDiffContent={hasDiffContent}
         shouldAutoLoadDiff={shouldAutoLoadDiff}
         loadError={loadError}
@@ -253,6 +259,7 @@ interface DiffCardContentProps {
   newContent: string;
   isExpanded: boolean;
   isLargeDiff: boolean;
+  isGeneratedDiff: boolean;
   hasDiffContent: boolean;
   shouldAutoLoadDiff: boolean;
   loadError: boolean;
@@ -270,6 +277,7 @@ const DiffCardContent = (props: DiffCardContentProps) => {
     newContent,
     isExpanded,
     isLargeDiff,
+    isGeneratedDiff,
     hasDiffContent,
     shouldAutoLoadDiff,
     loadError,
@@ -285,6 +293,9 @@ const DiffCardContent = (props: DiffCardContentProps) => {
     let message = "Diff content is not loaded yet.";
     if (isLargeDiff) {
       message = "Large diffs are hidden by default";
+    }
+    if (isGeneratedDiff) {
+      message = "Generated diffs are hidden by default";
     }
     if (loadError) {
       message = "Diff failed to load. Try again.";
