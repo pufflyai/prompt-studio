@@ -10,7 +10,7 @@ const runId = process.env.E2E_RUN_ID ?? `${Date.now()}-${process.pid}`;
 const agentEnv = process.env.E2E_AGENTS ?? "fake";
 const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-home-"));
 const resolvedHomePath = process.env.E2E_HOME ?? homePath;
-const bunCacheDir = process.env.E2E_BUN_CACHE_DIR ?? join(tmpdir(), "pstdio-e2e-bun-cache");
+const bunCacheDir = process.env.E2E_BUN_CACHE_DIR ?? join(tmpdir(), "pstdio-e2e-bun-cache", runId);
 
 export default defineConfig({
   testDir: "./src/ui",

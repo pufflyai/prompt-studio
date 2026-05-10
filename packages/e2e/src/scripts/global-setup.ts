@@ -6,10 +6,12 @@ import { join } from "node:path";
 // Every per-project plugin workspace runs `bun install` with `@pstdio/sdk@latest`
 // on the request path the first time a ticket hook fires. On a cold CI runner
 // this network fetch blows past the 30s test timeout and cascades disposed-
-// context errors into every following API-dependent test. We pre-warm the
-// shared bun install cache once here so those per-project installs become
-// offline cache hits (~1-2s) instead of network fetches.
-const cacheDir = process.env.E2E_BUN_CACHE_DIR ?? join(tmpdir(), "pstdio-e2e-bun-cache");
+// context errors into every following API-dependent test. We pre-warm a
+// per-run bun install cache once here so those per-project installs become
+// offline cache hits without inheriting a stale partial extraction from an
+// interrupted local run.
+const runId = process.env.E2E_RUN_ID ?? `${Date.now()}-${process.pid}`;
+const cacheDir = process.env.E2E_BUN_CACHE_DIR ?? join(tmpdir(), "pstdio-e2e-bun-cache", runId);
 
 const primeBunCache = () => {
   const primeDir = mkdtempSync(join(tmpdir(), "pstdio-e2e-bun-prime-"));
