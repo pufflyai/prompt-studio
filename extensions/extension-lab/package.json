@@ -1,6 +1,6 @@
 {
   "name": "extension-lab",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,8 +9,8 @@
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "^0.4.2",
-    "@pstdio/ui": "^0.5.1",
+    "@pstdio/sdk": "^0.5.0",
+    "@pstdio/ui": "^0.6.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zustand": "^5.0.0"

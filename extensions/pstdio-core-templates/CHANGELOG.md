@@ -1,5 +1,16 @@
 # pstdio-core-templates
 
+## 0.0.2
+
+### Patch Changes
+
+- 095fbd3: Remove package-internal skill and template catalogs now that defaults ship from extensions.
+- Updated dependencies [3217943]
+- Updated dependencies [f934e4d]
+- Updated dependencies [d65a8be]
+- Updated dependencies [095fbd3]
+  - @pstdio/sdk@0.5.0
+
 ## 0.0.1
 
 ### Patch Changes

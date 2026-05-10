@@ -1,5 +1,31 @@
 # pstdio
 
+## 0.12.0
+
+### Minor Changes
+
+- 3217943: Move the dashboard command palette to opt-in via a new `projectSlots.commandPanel` menu slot. Extensions now choose which commands to surface in the palette by listing them under `menus`, mirroring how header buttons already work. Drops the prior `commandPanel: boolean | object` field on `CommandDefinition`, the `CommandPanelContribution` interface, and the `excludeFromPalette` record field that was opt-out.
+- f934e4d: Expose extension-backed project catalogs and harden ticket shorthand allocation.
+- d65a8be: Add API-backed extension command execution and CLI routing
+- 095fbd3: Remove package-internal skill and template catalogs now that defaults ship from extensions.
+
+### Patch Changes
+
+- 3217943: Surface extension commands in the command palette grouped by extension.
+- 9a9087f: Stop dashboard production code from importing backend DTO internals.
+- 3217943: Add dashboard extension contribution hosts.
+- 2865d17: Use the harness selector pattern for project default harness and model settings.
+- c1ef6c2: Fix session last-selected model tracking, OpenCode startup payloads, and startup error logs.
+- 3217943: Promote the extension webview bridge and runtime-ui helpers from the staging `__TO_MIGRATE/` folder to public locations under `pstdio-extensions`. `bridge/host`, `bridge/guest`, and `bridge/contract` are exposed via subpath exports so dashboard hosts and guest webviews can build against them; runtime-ui's `resolveMenuContributionsForSlot`, `sortDiagnostics`, and `groupDiagnosticsBySeverity` are re-exported from the package root.
+- f1b0702: Skip invalid installed extensions during project creation
+- eb2f9f4: Fix markdown editor escaping underscores during save/reload, which broke links over multiple round-trips.
+- 990b414: Connect the link editor plugin in the markdown editor and add a link button to the floating edit bubble for inserting and removing inline links.
+- 03094d7: Prevent ignored private workspaces from being tagged during release.
+- 3217943: Restore the `GET /v1/projects/:id/extensions/ui` endpoint so the dashboard's contribution hosts (sidebar nav, header buttons, header overflow, route shell, settings panels, command palette grouping) receive the full `DashboardExtensionMetadata` shape (`extensions`, `commands`, `menuContributions`, `views`, `routes`, `navigation`, `settingsPanels`, `diagnostics`). The endpoint was deleted during the merge with the new extension command runtime; without it every contribution surface stayed empty.
+- 3217943: Use Rimless opaque-origin iframe handling from the upstream runtime.
+- 3217943: Harden extension webview runtime serving and iframe sandboxing.
+- 8adca2c: Add activity components and align semantic UI theme tokens.
+
 ## 0.11.0
 
 ### Minor Changes

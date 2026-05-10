@@ -1,5 +1,18 @@
 # @pstdio/ui
 
+## 0.6.0
+
+### Minor Changes
+
+- 8adca2c: Add activity components and align semantic UI theme tokens.
+
+### Patch Changes
+
+- 990b414: Cancel rich text link edits when selection leaves the link.
+- eb2f9f4: Fix markdown editor escaping underscores during save/reload, which broke links over multiple round-trips.
+- 990b414: Connect the link editor plugin in the markdown editor and add a link button to the floating edit bubble for inserting and removing inline links.
+- 990b414: Fix rich text link editor positioning and URL validation.
+
 ## 0.5.2
 
 ### Patch Changes
