@@ -353,7 +353,7 @@ li.rich-text__listItemUnchecked,
 li.rich-text__listItemChecked {
   position: relative;
   list-style-type: none;
-  padding-left: 22px;
+  padding-left: 24px;
   outline: none;
 }
 
@@ -362,9 +362,9 @@ li.rich-text__listItemChecked::before {
   content: "";
   position: absolute;
   left: 0;
-  top: 4px;
-  width: 14px;
-  height: 14px;
+  top: 3px;
+  width: 16px;
+  height: 16px;
   border-radius: var(--chakra-radii-xs, 4px);
   cursor: pointer;
 }
@@ -382,9 +382,9 @@ li.rich-text__listItemChecked::after {
   content: "";
   position: absolute;
   left: 0;
-  top: 4px;
-  width: 14px;
-  height: 14px;
+  top: 3px;
+  width: 16px;
+  height: 16px;
   cursor: pointer;
   background-color: var(--chakra-colors-bg);
   /* Chakra-style checkmark via mask so color adapts to theme */
