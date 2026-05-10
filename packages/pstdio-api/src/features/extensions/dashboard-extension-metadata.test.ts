@@ -26,6 +26,30 @@ const runtimeWithRoute = (entryPath: string) =>
   ]);
 
 describe("buildDashboardExtensionMetadata webview assets", () => {
+  test("includes extension description in extension records", () => {
+    const runtime = normalizeExtensionSources([
+      {
+        sourcePath: "/extension/extension.ts",
+        sourceKind: "local",
+        definition: {
+          id: "pstdio.lab",
+          namespace: "lab",
+          name: "Lab",
+          description: "Lab extension for dashboard experiments.",
+          apiVersion: "1",
+        },
+      },
+    ]);
+
+    const metadata = buildDashboardExtensionMetadata({
+      installNamesByExtensionId: new Map(),
+      runtime,
+      webviewCacheRoot: "/cache",
+    });
+
+    expect(metadata.extensions[0]?.description).toBe("Lab extension for dashboard experiments.");
+  });
+
   test("adds module bridge URLs for managed source webviews", () => {
     const metadata = buildDashboardExtensionMetadata({
       installNamesByExtensionId: new Map([["pstdio.lab", "extension-lab"]]),

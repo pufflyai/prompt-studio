@@ -52,6 +52,8 @@ export { FolderPickerDialog } from "./components/folder-picker-dialog";
 export type { HeaderProps, HeaderVariant } from "./components/header";
 export { Header } from "./components/header";
 export { HorizontalMenuStack } from "./components/horizontal-menu-stack";
+export type { IntegrationCardProps } from "./components/integration-card";
+export { IntegrationCard } from "./components/integration-card";
 export type { ItemSectionProps } from "./components/item-section";
 export { ItemSection } from "./components/item-section";
 export { PanelLayout, PanelSectionLayout } from "./components/layout";

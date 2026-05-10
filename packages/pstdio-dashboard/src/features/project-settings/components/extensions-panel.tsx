@@ -1,4 +1,5 @@
 import { Flex, Spinner, Stack, Text } from "@chakra-ui/react";
+import { IntegrationCard } from "@pstdio/ui";
 import { Puzzle } from "lucide-react";
 import type { ExtensionDiagnostic, ExtensionRecord } from "pstdio-api-contracts";
 import { useProjectExtensionMetadata } from "@/shared/extensions/hooks/use-project-extensions";
@@ -28,9 +29,9 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
           <Text textStyle="label/S" color="fg.muted">
             Diagnostics
           </Text>
-          {diagnostics.map((diagnostic) => (
+          {diagnostics.map((diagnostic, index) => (
             <Stack
-              key={`${diagnostic.code}:${diagnostic.message}`}
+              key={`${diagnostic.code}:${diagnostic.message}:${diagnostic.extensionId ?? "project"}:${diagnostic.sourcePath ?? index}`}
               gap="xs"
               borderWidth="1px"
               borderColor="border.muted"
@@ -59,34 +60,20 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
       )}
 
       {extensions.map((extension) => (
-        <Flex
-          key={extension.id}
-          alignItems="center"
-          gap="md"
-          borderWidth="1px"
-          borderColor="border.muted"
-          borderRadius="md"
-          padding="md"
-          data-testid="extension-entry"
-        >
-          <Puzzle size={16} />
-          <Stack flex="1" gap="xs">
-            <Flex alignItems="center" gap="sm" wrap="wrap">
-              <Text textStyle="paragraph/S/medium">{extension.displayName}</Text>
-              {extension.version && (
-                <Text textStyle="paragraph/XS/regular" color="fg.muted">
-                  v{extension.version}
-                </Text>
-              )}
-            </Flex>
-            <Text textStyle="paragraph/XS/regular" color="fg.muted">
-              {extension.id} | {extension.namespace}
-            </Text>
-            <Text textStyle="paragraph/XS/regular" color="fg.muted">
-              {extension.sourcePath}
-            </Text>
-          </Stack>
-        </Flex>
+        <Stack key={extension.id} data-testid="extension-entry">
+          <IntegrationCard
+            icon={<Puzzle />}
+            name={extension.displayName}
+            version={extension.version}
+            description={extension.description ?? "No description provided."}
+            id={extension.id}
+            metadata={[
+              { label: "Namespace", value: extension.namespace },
+              { label: "Source", value: extension.sourcePath },
+            ]}
+            active
+          />
+        </Stack>
       ))}
     </Stack>
   );

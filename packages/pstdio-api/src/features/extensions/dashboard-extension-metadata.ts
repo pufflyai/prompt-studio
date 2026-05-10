@@ -86,6 +86,7 @@ const toExtensionRecord = (extension: ExtensionRuntime["extensions"][number]): E
   namespace: extension.namespace,
   displayName: extension.displayName,
   version: extension.version,
+  description: extension.description,
   sourcePath: extension.sourcePath,
 });
 
