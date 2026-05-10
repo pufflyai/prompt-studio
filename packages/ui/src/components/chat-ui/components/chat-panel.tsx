@@ -100,7 +100,7 @@ const renderMessage = (message: SessionMessage, streaming: boolean, hideQuestion
       <ChatMessage.Content from={from}>
         <MessagePartsRenderer message={message} streaming={streaming} hideQuestionForms={hideQuestionForms} />
         {from === "assistant" || from === "user" ? (
-          <MessageActionPanel message={message} alwaysVisible={from === "user"} />
+          <MessageActionPanel message={message} alwaysVisible={from === "user"} copyAlwaysVisible={from !== "user"} />
         ) : null}
       </ChatMessage.Content>
     </ChatMessage.Root>
@@ -163,10 +163,10 @@ const StickyMessageGroup = (props: StickyMessageGroupProps) => {
               <StickyMessageToggle
                 label={isExpanded ? "Show less" : "Show more"}
                 onClick={toggleStickyMessage}
-                actionPanel={<MessageActionPanel message={group.userMessage} alwaysVisible />}
+                actionPanel={<MessageActionPanel message={group.userMessage} alwaysVisible copyAlwaysVisible={false} />}
               />
             ) : (
-              <MessageActionPanel message={group.userMessage} alwaysVisible />
+              <MessageActionPanel message={group.userMessage} alwaysVisible copyAlwaysVisible={false} />
             )}
           </ChatMessage.Content>
         </ChatMessage.Root>
