@@ -1,5 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
+import type { ProjectExtensionInstance } from "pstdio-api-contracts";
 import { ExtensionsPanelView } from "./extensions-panel";
 
 const meta: Meta<typeof ExtensionsPanelView> = {
@@ -19,40 +20,76 @@ export default meta;
 
 type Story = StoryObj<typeof ExtensionsPanelView>;
 
-export const InstalledWithDiagnostics: Story = {
+const coreSkills: ProjectExtensionInstance = {
+  id: "instance-core-skills",
+  projectId: "demo-project",
+  extensionId: "pstdio.core-skills",
+  installedExtensionId: "installed-core-skills",
+  installName: "pstdio-core-skills",
+  namespace: "core.skills",
+  displayName: "Core Skills",
+  version: "1.4.0",
+  description: "Adds the standard project implementation and ticket workflow skills.",
+  sourcePath: "/workspace/.pstdio/extensions/core-skills",
+  enabled: true,
+  config: {},
+};
+
+const releaseCatalog: ProjectExtensionInstance = {
+  id: "instance-release-catalog",
+  projectId: "demo-project",
+  extensionId: "acme.release-catalog",
+  installedExtensionId: "installed-release-catalog",
+  installName: "release-catalog",
+  namespace: "acme.release",
+  displayName: "Release Catalog",
+  description: "Publishes release notes, changelogs, and deployment checklists.",
+  sourcePath: "/workspace/extensions/release-catalog",
+  enabled: false,
+  config: {},
+};
+
+export const Populated: Story = {
   args: {
-    extensions: [
-      {
-        id: "pstdio-core-skills",
-        namespace: "core.skills",
-        displayName: "Core Skills",
-        version: "1.4.0",
-        description: "Adds the standard project implementation and ticket workflow skills.",
-        sourcePath: "/workspace/.pstdio/extensions/core-skills",
-      },
-      {
-        id: "release-catalog",
-        namespace: "acme.release",
-        displayName: "Release Catalog",
-        description: "Publishes release notes, changelogs, and deployment checklists.",
-        sourcePath: "/workspace/extensions/release-catalog",
-      },
-    ],
+    extensions: [coreSkills, releaseCatalog],
+    diagnostics: [],
+  },
+};
+
+export const PopulatedWithDiagnostics: Story = {
+  args: {
+    extensions: [coreSkills, releaseCatalog],
     diagnostics: [
       {
         code: "extension.command.missing",
         severity: "warning",
         message: "Command release.publish points to a missing script.",
-        extensionId: "release-catalog",
+        extensionId: "acme.release-catalog",
         sourcePath: "/workspace/extensions/release-catalog/extension.json",
       },
       {
         code: "extension.view.invalid",
         severity: "error",
         message: "View check-report is missing a webview entry.",
-        extensionId: "release-catalog",
+        extensionId: "acme.release-catalog",
       },
     ],
+  },
+};
+
+export const Mutating: Story = {
+  args: {
+    extensions: [coreSkills, releaseCatalog],
+    diagnostics: [],
+    togglingInstanceId: coreSkills.id,
+    uninstallingInstanceId: releaseCatalog.id,
+  },
+};
+
+export const Empty: Story = {
+  args: {
+    extensions: [],
+    diagnostics: [],
   },
 };
 

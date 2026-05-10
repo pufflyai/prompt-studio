@@ -1,7 +1,11 @@
-import { dirname } from "node:path";
 import type { createExtensionInstancesDBService, createInstalledExtensionSourcesDBService } from "pstdio-db";
-import { checkExtensionSource, hashExtensionSource } from "../features/extensions/extension-runtime";
+import type { checkExtensionSource, hashExtensionSource } from "../features/extensions/extension-runtime";
 import type { EventBus } from "../features/sync/event-bus";
+import {
+  reloadInstalledSource as reloadInstalledSourceImpl,
+  reportWebviewBuildFailure as reportWebviewBuildFailureImpl,
+  reportWebviewBuildSuccess as reportWebviewBuildSuccessImpl,
+} from "./extension-reload";
 import type { createProjectService } from "./project-service";
 
 type JsonRecord = Record<string, unknown>;
@@ -67,18 +71,12 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     await deps.onInstalledSourcesChanged?.();
   };
 
-  const errorJson = (code: string, error: unknown, details: JsonRecord = {}) => {
-    const diagnostics =
-      typeof error === "object" && error !== null && "diagnostics" in error
-        ? (error as { diagnostics?: unknown }).diagnostics
-        : undefined;
-
-    return {
-      code,
-      message: error instanceof Error ? error.message : String(error),
-      ...(Array.isArray(diagnostics) ? { diagnostics } : {}),
-      ...details,
-    };
+  const reloadDeps = {
+    installedExtensionSourcesService: deps.installedExtensionSourcesService,
+    emitInstalledSource,
+    notifyInstalledSourcesChanged,
+    hashExtension: deps.hashExtension,
+    checkExtension: deps.checkExtension,
   };
 
   const registerInstalledSource = async (input: RegisterInstalledSourceInput) => {
@@ -155,14 +153,18 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   };
 
   const listEnabledSourcesForProject = async (projectId: string) => {
+    const records = await listProjectInstances(projectId);
+    return records.filter(({ instance }) => instance.enabled);
+  };
+
+  const listProjectInstances = async (projectId: string) => {
     const project = await deps.projectService.get(projectId);
     if (!project) throw new ProjectNotFoundError(projectId);
 
     const instances = await deps.extensionInstancesService.list({ scope_type: "project", scope_id: projectId });
-    const enabled = instances.filter((instance) => instance.enabled);
     const records = [];
 
-    for (const instance of enabled) {
+    for (const instance of instances) {
       const installedSource = await deps.installedExtensionSourcesService.get(instance.installed_extension_id);
       if (installedSource) records.push({ instance, installedSource });
     }
@@ -170,127 +172,35 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     return records;
   };
 
-  const reloadInstalledSource = async (installName: string) => {
-    const existing = await deps.installedExtensionSourcesService.getByInstallName(installName);
-    if (!existing) throw new Error(`Installed extension not found: ${installName}`);
+  const getProjectExtensionInstance = async (projectId: string, instanceId: string) => {
+    const instance = await deps.extensionInstancesService.get(instanceId);
+    if (!instance) return null;
+    if (instance.scope_type !== "project" || instance.scope_id !== projectId) return null;
 
-    const hash = deps.hashExtension ?? hashExtensionSource;
-    const check = deps.checkExtension ?? checkExtensionSource;
-    let nextSourceHash: string | null = null;
+    const installedSource = await deps.installedExtensionSourcesService.get(instance.installed_extension_id);
+    if (!installedSource) return null;
 
-    try {
-      nextSourceHash = hash(existing.source_path);
-      const result = await check(existing.source_path, dirname(existing.source_path));
-      if (!result.loaded || result.check.errorCount > 0) {
-        throw Object.assign(new Error("Extension validation failed"), { diagnostics: result.check.diagnostics });
-      }
-
-      const updated = await deps.installedExtensionSourcesService.updateRegistration(existing.id, {
-        display_name: result.loaded.metadata.name,
-        extension_id: result.loaded.metadata.id,
-        manifest_json: result.loaded.manifest,
-        source_hash: nextSourceHash,
-        status: "loaded",
-        version: result.loaded.metadata.version ?? null,
-        last_loaded_at: new Date().toISOString(),
-        last_error_json: null,
-      });
-      if (!updated) throw new Error(`Installed extension not found: ${installName}`);
-
-      await deps.installedExtensionSourcesService.recordReload({
-        installed_extension_id: existing.id,
-        previous_source_hash: existing.source_hash,
-        next_source_hash: nextSourceHash,
-        previous_revision: existing.loaded_revision,
-        next_revision: existing.loaded_revision,
-        status: "success",
-      });
-
-      emitInstalledSource(updated);
-      await notifyInstalledSourcesChanged();
-      return { installedSource: updated, check: result.check };
-    } catch (error) {
-      const currentErrorJson = errorJson("extension_reload_failed", error);
-      const updated = await deps.installedExtensionSourcesService.updateLoadState(existing.id, {
-        source_hash: nextSourceHash ?? existing.source_hash,
-        status: "error",
-        last_error_json: currentErrorJson,
-      });
-      if (!updated) throw new Error(`Installed extension not found: ${installName}`);
-
-      await deps.installedExtensionSourcesService.recordReload({
-        installed_extension_id: existing.id,
-        previous_source_hash: existing.source_hash,
-        next_source_hash: nextSourceHash ?? existing.source_hash,
-        previous_revision: existing.loaded_revision,
-        next_revision: existing.loaded_revision,
-        status: "error",
-        error_json: currentErrorJson,
-      });
-
-      emitInstalledSource(updated);
-      await notifyInstalledSourcesChanged();
-      return { installedSource: updated, check: null };
-    }
+    return { instance, installedSource };
   };
 
-  const reportWebviewBuildFailure = async (installName: string, webviewId: string, error: unknown) => {
-    const existing = await deps.installedExtensionSourcesService.getByInstallName(installName);
-    if (!existing) throw new Error(`Installed extension not found: ${installName}`);
-
-    const currentErrorJson = errorJson("extension_webview_build_failed", error, { webviewId });
-    const updated = await deps.installedExtensionSourcesService.updateLoadState(existing.id, {
-      status: "error",
-      last_error_json: currentErrorJson,
-    });
-    if (!updated) throw new Error(`Installed extension not found: ${installName}`);
-
-    await deps.installedExtensionSourcesService.recordReload({
-      installed_extension_id: existing.id,
-      previous_source_hash: existing.source_hash,
-      next_source_hash: existing.source_hash,
-      previous_revision: existing.loaded_revision,
-      next_revision: existing.loaded_revision,
-      status: "error",
-      error_json: currentErrorJson,
-    });
-
-    emitInstalledSource(updated);
-    return updated;
-  };
-
-  const reportWebviewBuildSuccess = async (installName: string, webviewId: string) => {
-    const existing = await deps.installedExtensionSourcesService.getByInstallName(installName);
-    if (!existing) throw new Error(`Installed extension not found: ${installName}`);
-
-    const currentError = existing.last_error_json;
-    const shouldClear =
-      currentError &&
-      typeof currentError === "object" &&
-      "code" in currentError &&
-      currentError.code === "extension_webview_build_failed" &&
-      "webviewId" in currentError &&
-      currentError.webviewId === webviewId;
-
-    if (!shouldClear) return existing;
-
-    const updated = await deps.installedExtensionSourcesService.updateLoadState(existing.id, {
-      status: "loaded",
-      last_error_json: null,
-    });
-    if (!updated) throw new Error(`Installed extension not found: ${installName}`);
-
-    emitInstalledSource(updated);
-    return updated;
+  const removeProjectExtensionInstance = async (instanceId: string) => {
+    const removed = await deps.extensionInstancesService.remove(instanceId);
+    if (removed) deps.eventBus?.emit("extension_instances", "delete", { id: instanceId });
+    return removed;
   };
 
   return {
     enableInstalledSourceForProject,
     getInstalledSource,
+    getProjectExtensionInstance,
     listEnabledSourcesForProject,
-    reloadInstalledSource,
-    reportWebviewBuildFailure,
-    reportWebviewBuildSuccess,
+    listProjectExtensionInstances: listProjectInstances,
+    reloadInstalledSource: (installName: string) => reloadInstalledSourceImpl(reloadDeps, installName),
+    removeProjectExtensionInstance,
+    reportWebviewBuildFailure: (installName: string, webviewId: string, error: unknown) =>
+      reportWebviewBuildFailureImpl(reloadDeps, installName, webviewId, error),
+    reportWebviewBuildSuccess: (installName: string, webviewId: string) =>
+      reportWebviewBuildSuccessImpl(reloadDeps, installName, webviewId),
     registerInstalledSource,
     setProjectExtensionEnabled,
   };

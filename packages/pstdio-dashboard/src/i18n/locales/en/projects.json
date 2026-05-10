@@ -257,6 +257,22 @@
       "searchModels": "Search models...",
       "modelDescription": "Used by createSession when no model is specified.",
       "missingDefaultWarning": "The selected default harness is no longer available."
+    },
+    "extensionsPanel": {
+      "diagnostics": "Diagnostics",
+      "empty": "No extensions installed for this project.",
+      "loadError": "Failed to load extensions.",
+      "toggleAriaLabel": "Toggle {{name}}",
+      "toggleErrorTitle": "Failed to update extension",
+      "toggleError": "Failed to update the extension. Please try again.",
+      "uninstall": "Uninstall extension",
+      "uninstallErrorTitle": "Failed to uninstall extension",
+      "uninstallError": "Failed to uninstall the extension. Please try again.",
+      "uninstallConfirm": {
+        "headline": "Uninstall extension?",
+        "notification": "This removes \"{{name}}\" from this project. The installed extension source remains available for other projects.",
+        "button": "Uninstall"
+      }
     }
   },
   "list": {

@@ -1,16 +1,27 @@
 import { Flex, Spinner, Stack, Text } from "@chakra-ui/react";
-import { IntegrationCard } from "@pstdio/ui";
-import { Puzzle } from "lucide-react";
-import type { ExtensionDiagnostic, ExtensionRecord } from "pstdio-api-contracts";
-import { useProjectExtensionMetadata } from "@/shared/extensions/hooks/use-project-extensions";
+import { DeleteConfirmationModal, toaster } from "@pstdio/ui";
+import type { ExtensionDiagnostic, ProjectExtensionInstance } from "pstdio-api-contracts";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import {
+  useProjectExtensionMetadata,
+  useProjectExtensions,
+  useSetProjectExtensionEnabled,
+  useUninstallProjectExtension,
+} from "@/shared/extensions/hooks/use-project-extensions";
+import { ExtensionRow } from "./extension-row";
 
 interface ExtensionsPanelProps {
   projectId: string | undefined;
 }
 
 interface ExtensionsPanelViewProps {
-  extensions: ExtensionRecord[];
+  extensions: ProjectExtensionInstance[];
   diagnostics: ExtensionDiagnostic[];
+  togglingInstanceId?: string;
+  uninstallingInstanceId?: string;
+  onToggle?: (extension: ProjectExtensionInstance, enabled: boolean) => void;
+  onUninstall?: (extension: ProjectExtensionInstance) => void;
 }
 
 const severityColor: Record<ExtensionDiagnostic["severity"], string> = {
@@ -20,14 +31,15 @@ const severityColor: Record<ExtensionDiagnostic["severity"], string> = {
 };
 
 export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
-  const { extensions, diagnostics } = props;
+  const { extensions, diagnostics, togglingInstanceId, uninstallingInstanceId, onToggle, onUninstall } = props;
+  const { t } = useTranslation("projects");
 
   return (
     <Stack padding="lg" gap="lg" data-testid="extensions-panel">
       {diagnostics.length > 0 && (
         <Stack gap="sm" data-testid="extension-diagnostics">
           <Text textStyle="label/S" color="fg.muted">
-            Diagnostics
+            {t("projectSettings.extensionsPanel.diagnostics")}
           </Text>
           {diagnostics.map((diagnostic, index) => (
             <Stack
@@ -55,25 +67,21 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
 
       {extensions.length === 0 && (
         <Text textStyle="paragraph/S/regular" color="fg.muted" data-testid="extensions-empty">
-          No extensions installed or enabled.
+          {t("projectSettings.extensionsPanel.empty")}
         </Text>
       )}
 
       {extensions.map((extension) => (
-        <Stack key={extension.id} data-testid="extension-entry">
-          <IntegrationCard
-            icon={<Puzzle />}
-            name={extension.displayName}
-            version={extension.version}
-            description={extension.description ?? "No description provided."}
-            id={extension.id}
-            metadata={[
-              { label: "Namespace", value: extension.namespace },
-              { label: "Source", value: extension.sourcePath },
-            ]}
-            active
-          />
-        </Stack>
+        <ExtensionRow
+          key={extension.id}
+          extension={extension}
+          toggling={togglingInstanceId === extension.id}
+          uninstalling={uninstallingInstanceId === extension.id}
+          toggleAriaLabel={t("projectSettings.extensionsPanel.toggleAriaLabel", { name: extension.displayName })}
+          uninstallLabel={t("projectSettings.extensionsPanel.uninstall")}
+          onToggle={(enabled) => onToggle?.(extension, enabled)}
+          onUninstall={() => onUninstall?.(extension)}
+        />
       ))}
     </Stack>
   );
@@ -81,9 +89,14 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
 
 export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const { projectId } = props;
-  const { data, isLoading, error } = useProjectExtensionMetadata(projectId);
+  const { t } = useTranslation("projects");
+  const extensionsQuery = useProjectExtensions(projectId);
+  const metadataQuery = useProjectExtensionMetadata(projectId);
+  const setEnabled = useSetProjectExtensionEnabled(projectId);
+  const uninstall = useUninstallProjectExtension(projectId);
+  const [uninstallTarget, setUninstallTarget] = useState<ProjectExtensionInstance | null>(null);
 
-  if (isLoading) {
+  if (extensionsQuery.isLoading) {
     return (
       <Flex flex="1" justifyContent="center" alignItems="center" padding="lg">
         <Spinner />
@@ -91,15 +104,69 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
     );
   }
 
-  if (error) {
+  if (extensionsQuery.error) {
     return (
       <Stack padding="lg" gap="lg">
         <Text textStyle="paragraph/S/regular" color="fg.muted">
-          {error instanceof Error ? error.message : "Failed to load extensions."}
+          {extensionsQuery.error instanceof Error
+            ? extensionsQuery.error.message
+            : t("projectSettings.extensionsPanel.loadError")}
         </Text>
       </Stack>
     );
   }
 
-  return <ExtensionsPanelView extensions={data?.extensions ?? []} diagnostics={data?.diagnostics ?? []} />;
+  const handleToggle = (extension: ProjectExtensionInstance, enabled: boolean) => {
+    setEnabled.mutate(
+      { instanceId: extension.id, enabled },
+      {
+        onError: (error) => {
+          const message = error instanceof Error ? error.message : t("projectSettings.extensionsPanel.toggleError");
+          toaster.create({
+            type: "error",
+            title: t("projectSettings.extensionsPanel.toggleErrorTitle"),
+            description: message,
+          });
+        },
+      },
+    );
+  };
+
+  const handleUninstall = async () => {
+    if (!uninstallTarget) return;
+    try {
+      await uninstall.mutateAsync({ instanceId: uninstallTarget.id });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t("projectSettings.extensionsPanel.uninstallError");
+      toaster.create({
+        type: "error",
+        title: t("projectSettings.extensionsPanel.uninstallErrorTitle"),
+        description: message,
+      });
+      throw error;
+    }
+  };
+
+  return (
+    <>
+      <ExtensionsPanelView
+        extensions={extensionsQuery.data?.extensions ?? []}
+        diagnostics={metadataQuery.data?.diagnostics ?? []}
+        togglingInstanceId={setEnabled.isPending ? (setEnabled.variables?.instanceId ?? undefined) : undefined}
+        uninstallingInstanceId={uninstall.isPending ? (uninstall.variables?.instanceId ?? undefined) : undefined}
+        onToggle={handleToggle}
+        onUninstall={(extension) => setUninstallTarget(extension)}
+      />
+      <DeleteConfirmationModal
+        open={Boolean(uninstallTarget)}
+        onClose={() => setUninstallTarget(null)}
+        onDelete={handleUninstall}
+        headline={t("projectSettings.extensionsPanel.uninstallConfirm.headline")}
+        notificationText={t("projectSettings.extensionsPanel.uninstallConfirm.notification", {
+          name: uninstallTarget?.displayName ?? "",
+        })}
+        buttonText={t("projectSettings.extensionsPanel.uninstallConfirm.button")}
+      />
+    </>
+  );
 };

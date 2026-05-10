@@ -7,6 +7,15 @@ import { enableInstalledExtensionHandler, enableInstalledExtensionRoute } from "
 import { executeExtensionCommandHandler, executeExtensionCommandRoute } from "./endpoints/execute-extension-command";
 import { getProjectExtensionUiHandler, getProjectExtensionUiRoute } from "./endpoints/get-project-extension-ui";
 import { listExtensionCommandsHandler, listExtensionCommandsRoute } from "./endpoints/list-extension-commands";
+import { listProjectExtensionsHandler, listProjectExtensionsRoute } from "./endpoints/list-project-extensions";
+import {
+  setProjectExtensionEnabledHandler,
+  setProjectExtensionEnabledRoute,
+} from "./endpoints/set-project-extension-enabled";
+import {
+  uninstallProjectExtensionHandler,
+  uninstallProjectExtensionRoute,
+} from "./endpoints/uninstall-project-extension";
 import {
   updateInstalledExtensionTemplateHandler,
   updateInstalledExtensionTemplateRoute,
@@ -48,6 +57,9 @@ export const createExtensionRoutes = (deps: ExtensionsRouteDeps) => {
   routes.openapi(listExtensionCommandsRoute, listExtensionCommandsHandler(deps) as never);
   routes.openapi(getProjectExtensionUiRoute, getProjectExtensionUiHandler(deps) as never);
   routes.openapi(executeExtensionCommandRoute, executeExtensionCommandHandler(deps) as never);
+  routes.openapi(listProjectExtensionsRoute, listProjectExtensionsHandler(deps));
+  routes.openapi(setProjectExtensionEnabledRoute, setProjectExtensionEnabledHandler(deps));
+  routes.openapi(uninstallProjectExtensionRoute, uninstallProjectExtensionHandler(deps));
   routes.get("/extensions/installed/:installName/webviews/*", serveWebviewAsset(deps));
   routes.get(
     EXTENSION_RUNTIME_PATH,

@@ -223,6 +223,33 @@ export const enableInstalledExtensionResponseSchema = z.object({
 export type EnableInstalledExtensionRequest = z.infer<typeof enableInstalledExtensionRequestSchema>;
 export type EnableInstalledExtensionResponse = z.infer<typeof enableInstalledExtensionResponseSchema>;
 
+export const projectExtensionInstanceSchema = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  extensionId: z.string(),
+  installedExtensionId: z.string(),
+  installName: z.string(),
+  namespace: z.string(),
+  displayName: z.string(),
+  version: z.string().nullable().optional(),
+  description: z.string().optional(),
+  sourcePath: z.string(),
+  enabled: z.boolean(),
+  config: z.record(z.string(), z.unknown()),
+});
+
+export const listProjectExtensionsResponseSchema = z.object({
+  extensions: z.array(projectExtensionInstanceSchema),
+});
+
+export const setProjectExtensionEnabledRequestSchema = z.object({
+  enabled: z.boolean(),
+});
+
+export type ProjectExtensionInstance = z.infer<typeof projectExtensionInstanceSchema>;
+export type ListProjectExtensionsResponse = z.infer<typeof listProjectExtensionsResponseSchema>;
+export type SetProjectExtensionEnabledRequest = z.infer<typeof setProjectExtensionEnabledRequestSchema>;
+
 export const updateInstalledExtensionTemplateInputSchema = z.object({
   content: z.string().min(1),
 });
