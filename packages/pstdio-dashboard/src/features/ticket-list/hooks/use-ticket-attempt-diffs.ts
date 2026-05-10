@@ -19,7 +19,7 @@ export const useTicketAttemptDiffs = (attempts: AttemptDiffInput[]) => {
 
   const queries = useQueries({
     queries: uniqueIds.map((workspaceId) => ({
-      queryKey: ["ticket-attempt-diff-summary", workspaceId],
+      queryKey: ["ticket-attempt-diff-summary", workspaceId, ATTEMPT_DIFF_MODE],
       queryFn: () => getTicketAttemptDiffSummary(workspaceId, ATTEMPT_DIFF_MODE),
     })),
   });

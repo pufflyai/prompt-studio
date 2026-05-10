@@ -23,13 +23,13 @@ interface DiffCardProps {
   onLoadDiff?: (path: string) => Promise<void>;
 }
 
-const DeferredDiffLoad = (props: { isLoadingDiff: boolean; onLoadDiff?: () => void }) => {
-  const { isLoadingDiff, onLoadDiff } = props;
+const DeferredDiffLoad = (props: { message: string; isLoadingDiff: boolean; onLoadDiff?: () => void }) => {
+  const { message, isLoadingDiff, onLoadDiff } = props;
 
   return (
     <Box bg="bg" p="sm" borderTop="1px solid" borderColor="border.muted">
       <Text textStyle="sm" color="fg.muted" mb="sm">
-        Large diffs are hidden by default
+        {message}
       </Text>
       <Button size="xs" variant="outline" loading={isLoadingDiff} onClick={onLoadDiff}>
         Load diff
@@ -46,36 +46,66 @@ const LoadingDiffContent = () => (
   </Box>
 );
 
+export const shouldAutoLoadDiffContent = (input: {
+  isExpanded: boolean;
+  isSelected: boolean;
+  hasDiffContent: boolean;
+  isLargeDiff: boolean;
+  requestedPath: string | null;
+  filePath: string;
+}) => {
+  const { isExpanded, isSelected, hasDiffContent, isLargeDiff, requestedPath, filePath } = input;
+
+  return isExpanded && isSelected && !hasDiffContent && !isLargeDiff && requestedPath !== filePath;
+};
+
 const useDiffContentLoader = (input: {
   filePath: string;
   isExpanded: boolean;
+  isSelected: boolean;
   hasDiffContent: boolean;
   isLargeDiff: boolean;
   onLoadDiff?: (path: string) => Promise<void>;
 }) => {
-  const { filePath, isExpanded, hasDiffContent, isLargeDiff, onLoadDiff } = input;
+  const { filePath, isExpanded, isSelected, hasDiffContent, isLargeDiff, onLoadDiff } = input;
   const [isLoadingDiff, setLoadingDiff] = useState(false);
   const [requestedPath, setRequestedPath] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
   const loadDiff = async () => {
     if (!onLoadDiff || isLoadingDiff) return;
 
     setRequestedPath(filePath);
+    setLoadError(false);
     setLoadingDiff(true);
     try {
       await onLoadDiff(filePath);
+    } catch {
+      setRequestedPath(null);
+      setLoadError(true);
     } finally {
       setLoadingDiff(false);
     }
   };
 
+  const shouldAutoLoadDiff = shouldAutoLoadDiffContent({
+    isExpanded,
+    isSelected,
+    hasDiffContent,
+    isLargeDiff,
+    requestedPath,
+    filePath,
+  });
+
   useEffect(() => {
-    if (!isExpanded || hasDiffContent || isLargeDiff || requestedPath === filePath) return;
+    if (!shouldAutoLoadDiff || loadError) {
+      return;
+    }
 
     void loadDiff();
   });
 
-  return { isLoadingDiff, loadDiff };
+  return { isLoadingDiff, loadError, shouldAutoLoadDiff: shouldAutoLoadDiff && !loadError, loadDiff };
 };
 
 const DiffPathLabel = (props: { diff: Diff; filePath: string }) => {
@@ -114,17 +144,27 @@ const DiffCardContent = (props: {
   diff: Diff;
   isExpanded: boolean;
   isLargeDiff: boolean;
+  hasDiffContent: boolean;
   shouldAutoLoadDiff: boolean;
-  shouldDeferDiff: boolean;
+  loadError: boolean;
   isLoadingDiff: boolean;
   onLoadDiff: () => Promise<void>;
 }) => {
-  const { diff, isExpanded, isLargeDiff, shouldAutoLoadDiff, shouldDeferDiff, isLoadingDiff, onLoadDiff } = props;
+  const { diff, isExpanded, isLargeDiff, hasDiffContent, shouldAutoLoadDiff, loadError, isLoadingDiff, onLoadDiff } =
+    props;
 
   if (!isExpanded) return null;
 
-  if (shouldDeferDiff) {
-    return <DeferredDiffLoad isLoadingDiff={isLoadingDiff} onLoadDiff={onLoadDiff} />;
+  if (!hasDiffContent && !shouldAutoLoadDiff) {
+    let message = "Diff content is not loaded yet.";
+    if (isLargeDiff) {
+      message = "Large diffs are hidden by default";
+    }
+    if (loadError) {
+      message = "Diff failed to load. Try again.";
+    }
+
+    return <DeferredDiffLoad message={message} isLoadingDiff={isLoadingDiff} onLoadDiff={onLoadDiff} />;
   }
 
   if (shouldAutoLoadDiff) {
@@ -160,11 +200,10 @@ export const DiffCard = (props: DiffCardProps) => {
   const filePath = diff.newPath || diff.oldPath || "unknown";
   const isLargeDiff = isLargeDiffContent(diff);
   const hasDiffContent = diff.oldContent !== undefined || diff.newContent !== undefined;
-  const shouldDeferDiff = !hasDiffContent && isLargeDiff;
-  const shouldAutoLoadDiff = !hasDiffContent && !isLargeDiff;
-  const { isLoadingDiff, loadDiff } = useDiffContentLoader({
+  const { isLoadingDiff, loadError, shouldAutoLoadDiff, loadDiff } = useDiffContentLoader({
     filePath,
     isExpanded,
+    isSelected,
     hasDiffContent,
     isLargeDiff,
     onLoadDiff,
@@ -225,8 +264,9 @@ export const DiffCard = (props: DiffCardProps) => {
         diff={diff}
         isExpanded={isExpanded}
         isLargeDiff={isLargeDiff}
+        hasDiffContent={hasDiffContent}
         shouldAutoLoadDiff={shouldAutoLoadDiff}
-        shouldDeferDiff={shouldDeferDiff}
+        loadError={loadError}
         isLoadingDiff={isLoadingDiff}
         onLoadDiff={loadDiff}
       />

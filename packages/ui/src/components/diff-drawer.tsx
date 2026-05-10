@@ -15,10 +15,20 @@ export type { Diff };
 
 const getDiffPath = (diff: Diff) => diff.newPath ?? diff.oldPath ?? "unknown";
 
+export const buildInitialExpandedPaths = (diffs: Diff[], selectedDiffPath: string | null) => {
+  if (!selectedDiffPath || !diffs.some((diff) => getDiffPath(diff) === selectedDiffPath)) {
+    return new Set<string>();
+  }
+
+  return new Set([selectedDiffPath]);
+};
+
 export function DiffDrawer(props: DiffDrawerProps) {
   const { diffs, selectedDiffPath = null, onLoadDiff } = props;
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(() => new Set());
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() =>
+    buildInitialExpandedPaths(diffs, selectedDiffPath),
+  );
 
   const virtualizer = useVirtualizer({
     count: diffs.length,
@@ -36,6 +46,12 @@ export function DiffDrawer(props: DiffDrawerProps) {
     virtualizer.scrollToIndex(index, { align: "start" });
   }, [selectedDiffPath, diffs, virtualizer]);
 
+  useEffect(() => {
+    if (!selectedDiffPath) return;
+
+    setExpandedPaths((prev) => new Set(prev).add(selectedDiffPath));
+  }, [selectedDiffPath]);
+
   if (diffs.length === 0) {
     return (
       <Stack h="full" minH="0" gap="0">
@@ -46,8 +62,8 @@ export function DiffDrawer(props: DiffDrawerProps) {
     );
   }
 
-  const toggleCollapsed = (path: string) => {
-    setCollapsedPaths((prev) => {
+  const toggleExpanded = (path: string) => {
+    setExpandedPaths((prev) => {
       const next = new Set(prev);
       if (next.has(path)) {
         next.delete(path);
@@ -82,8 +98,8 @@ export function DiffDrawer(props: DiffDrawerProps) {
                   <DiffCard
                     diff={diff}
                     isSelected={selectedDiffPath === path}
-                    isExpanded={!collapsedPaths.has(path)}
-                    onToggleExpanded={() => toggleCollapsed(path)}
+                    isExpanded={expandedPaths.has(path)}
+                    onToggleExpanded={() => toggleExpanded(path)}
                     onLoadDiff={onLoadDiff}
                   />
                 </Box>

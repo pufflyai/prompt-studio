@@ -42,6 +42,7 @@ interface WorkspacePageContentProps {
   diffs: ReturnType<typeof transformFileDiffs>;
   artifacts: ApiWorkspaceArtifact[];
   changedFiles: ApiFileDiff[];
+  diffGeneration: number;
   isDiffLoading: boolean;
   attempts: NonNullable<ReturnType<typeof useProjectTickets>["data"]>[number]["attempts"];
   selectableFiles: ReturnType<typeof buildSelectableTicketFiles>;
@@ -152,6 +153,7 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
     diffs,
     artifacts,
     changedFiles,
+    diffGeneration,
     isDiffLoading,
     attempts,
     selectableFiles,
@@ -295,6 +297,7 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
             diffs={diffs}
             artifacts={artifacts}
             changedFiles={changedFiles}
+            diffGeneration={diffGeneration}
             loading={isDiffLoading}
             activeTab={selectedTab}
             onTabChange={selectTab}

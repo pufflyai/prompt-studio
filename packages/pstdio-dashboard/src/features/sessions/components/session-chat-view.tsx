@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { AgentBrowserContainer } from "@/features/agents/components/agent-browser.container";
 import { useTicketAttemptDiffSummary } from "@/features/ticket/hooks/use-ticket-attempt-diff-summary";
 import { RepoBrowserContainer } from "@/features/workspaces/components/repo-browser.container";
+import { useInvalidateDiffOnEdits } from "@/features/workspaces/hooks/use-invalidate-diff-on-edits";
 import type { CodingAgent } from "@/shared/agent-storage";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
 import { useCreateProjectSession } from "../hooks/use-create-project-session";
@@ -82,6 +83,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
   const clearSessionDraft = useProjectSettingsStore((state) => state.clearSessionDraft);
   const { messages, isStreaming, approvalRequest, reconnect } = useSessionStream(sessionId);
   const sessionWorkspace = useSessionWorkspace(sessionId);
+  const invalidateDiffOnEdit = useInvalidateDiffOnEdits(workspaceId ?? sessionWorkspace?.id ?? null);
   const { data: workspaceDiffSummary } = useTicketAttemptDiffSummary(showWorkspaceHub ? sessionWorkspace?.id : null);
   const createSession = useCreateProjectSession();
   const followUp = useFollowUpSession();
@@ -97,7 +99,14 @@ export const SessionChatView = (props: SessionChatViewProps) => {
   useResetEditCountOnSessionChange(sessionId, editCountRef);
   useReconnectWhenWorkspaceReady(isWorkspaceInitializing, reconnect);
   useReconnectOnExternalResume(sessionStatus, isStreaming, reconnect);
-  useEditActionNotifier(messages, onEditAction, editCountRef);
+  useEditActionNotifier(
+    messages,
+    () => {
+      invalidateDiffOnEdit();
+      onEditAction?.();
+    },
+    editCountRef,
+  );
   useSyncPendingFollowUp({
     messages,
     pendingFollowUp,

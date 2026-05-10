@@ -45,6 +45,7 @@ export const WorkspacePagePendingShell = (props: WorkspacePagePendingShellProps)
             diffs={[]}
             artifacts={[]}
             changedFiles={[]}
+            diffGeneration={0}
             loading
             activeTab={activeTab}
             onTabChange={onTabChange}

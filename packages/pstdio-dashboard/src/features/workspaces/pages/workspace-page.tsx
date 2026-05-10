@@ -311,6 +311,7 @@ export const WorkspacePage = () => {
       diffs={diffs}
       artifacts={artifacts}
       changedFiles={changedFiles}
+      diffGeneration={diffQuery.dataUpdatedAt}
       isDiffLoading={isDiffLoading}
       attempts={attempts}
       selectableFiles={selectableFiles}

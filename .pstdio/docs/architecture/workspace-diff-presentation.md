@@ -7,7 +7,7 @@ How pstdio presents workspace diffs to users in the dashboard.
 Covers the workspace screen and diff summary badges:
 
 - Route: `/projects/:projectId/tickets/:ticketShorthand/workspaces/:workspaceShorthand`
-- Diff source: `GET /v1/workspaces/:id/diff`
+- Diff source: `GET /v1/workspaces/:id/diff-files` plus on-demand `GET /v1/workspaces/:id/diff-file`
 - Renderer: right-side workspace diff panel
 
 ## Where Users See Diffs
@@ -39,18 +39,28 @@ sequenceDiagram
   participant Git as pstdio-wt (git)
 
   User->>Dashboard: Open workspace attempt
-  Dashboard->>API: GET /v1/workspaces/:id/diff
+  Dashboard->>API: GET /v1/workspaces/:id/diff-files
   API->>Git: Resolve base via reflog fork point (preferred) or merge-base fallback
-  API->>Git: Generate and parse unified diff
-  API-->>Dashboard: { files, totals }
-  Dashboard-->>User: File cards with inline Monaco diffs
+  API->>Git: Collect changed-file metadata and line counts
+  API-->>Dashboard: { files, totals } without file bodies
+  Dashboard-->>User: File tree and collapsed summary cards
+  User->>Dashboard: Select or expand a file
+  Dashboard->>API: GET /v1/workspaces/:id/diff-file?path=...
+  API->>Git: Load that file's old/new content
+  API-->>Dashboard: Single file diff body
+  Dashboard-->>User: Inline Monaco diff for the selected file
 ```
 
 ## Backend Diff Generation
 
 ### Endpoint
 
-`GET /v1/workspaces/:id/diff` in `pstdio-api`.
+The workspace page uses metadata-first endpoints in `pstdio-api`:
+
+- `GET /v1/workspaces/:id/diff-files` — changed-file metadata, counts, and totals without file bodies
+- `GET /v1/workspaces/:id/diff-file?path=...` — old/new content for one requested file
+
+`GET /v1/workspaces/:id/diff` remains available when callers need the complete diff response in one request.
 
 ### Validation
 
@@ -70,11 +80,18 @@ Handled by `pstdio-wt`:
 
 The user sees everything the attempt changed since the branch was created. Both committed and uncommitted worktree changes are included.
 
-### Response Shape (full diff)
+### Response Shape (workspace file metadata)
 
 - `workspace_id` — the attempt identifier
-- `files` — parsed per-file diff objects
+- `files` — per-file diff objects with path, change type, additions, and deletions; content fields are omitted until requested
 - `totals` — additions, deletions, file count
+
+### Response Shape (single file body)
+
+- `file_path` — requested path
+- `old_path` / `new_path` — resolved diff paths
+- `old_content` / `new_content` — file content for inline rendering
+- `additions` / `deletions` — line counts for the file
 
 ### Response Shape (summary)
 
@@ -92,7 +109,7 @@ Used by ticket board cards and the ticket details header to avoid fetching full 
 ### Fetching
 
 - **Board cards and ticket header**: use the lightweight diff-summary endpoint. Queries are only enabled for settled sessions (completed, failed, cancelled) to avoid unnecessary load while agents are still running.
-- **Workspace page**: fetches the full diff only once the session has settled. While the session is in progress, edit actions (write/execute tool completions) trigger a debounced re-fetch (2 s) so the diff panel updates incrementally.
+- **Workspace page**: fetches changed-file metadata once the session has settled. While the session is in progress, edit actions (write/execute tool completions) trigger a debounced re-fetch (2 s) so the diff panel updates incrementally. File bodies are requested only for the selected or explicitly loaded file.
 - Refetches on window focus
 
 ### Type Mapping
@@ -108,13 +125,14 @@ API file diff objects are transformed into UI diff types. Rename paths fall back
 
 ### File Cards
 
-One card per changed file, expanded by default:
+One card per changed file. Cards are collapsed by default except the selected file:
 
 - **Modified/Added**: normal file path in header
 - **Deleted**: struck-through file path
 - **Renamed**: old path arrow new path
 - Addition/deletion counts shown as a badge
-- Body renders a read-only inline Monaco diff editor
+- Body renders a read-only inline Monaco diff editor after the file body is loaded
+- Diffs over the large-file threshold show `Large diffs are hidden by default` until explicitly loaded
 
 ## Artifact Source Of Truth
 
