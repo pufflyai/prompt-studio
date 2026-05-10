@@ -7,5 +7,11 @@ import "@fontsource/onest/400.css";
 import "@fontsource/onest/500.css";
 import "@fontsource/onest/700.css";
 
-export { customThemePreferences, monokaiThemePreference } from "./custom";
+export type { MonacoThemeData, VsCodeColorTheme } from "./custom";
+export {
+  createMonacoThemeFromVsCodeTheme,
+  createThemePreferenceFromVsCodeTheme,
+  customThemePreferences,
+  monokaiThemePreference,
+} from "./custom";
 export { default as psTheme } from "./theme";

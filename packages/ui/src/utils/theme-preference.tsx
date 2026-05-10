@@ -52,6 +52,13 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
   const [themePreference, setThemePreference] = useState<ThemePreference>(initialPreference);
 
   useEffect(() => {
+    if (!isThemePreference(themePreference, themePreferences)) {
+      setThemePreference(
+        getDefaultThemePreference(themePreferences, getThemePreferenceMode(themePreference, themePreferences)),
+      );
+      return;
+    }
+
     applyThemePreference(themePreference, themePreferences);
     if (typeof window !== "undefined") {
       window.localStorage.setItem(STORAGE_KEY, themePreference);

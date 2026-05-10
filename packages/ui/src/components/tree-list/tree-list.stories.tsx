@@ -81,13 +81,11 @@ const fileSections: TreeListSection[] = [
       {
         id: "src",
         label: "src",
-        icon: <Folder size={14} />,
         isContainer: true,
         children: [
           {
             id: "src/components",
             label: "components",
-            icon: <Folder size={14} />,
             isContainer: true,
             children: [
               {

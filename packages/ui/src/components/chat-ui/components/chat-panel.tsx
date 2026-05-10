@@ -231,7 +231,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
         <AutoScroll userMessageCount={userMessageCount} />
         <ChatPrimitives.Viewport>
           {hasMessages ? (
-            <Stack gap="sm">
+            <Stack gap="sm" px="xs">
               {leadingResponses.map((message) =>
                 renderMessage(message, streaming, groups.length > 0 || hideActiveQuestionForms),
               )}
@@ -267,7 +267,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
           </Text>
         </HStack>
       ) : null}
-      <Stack px="sm" gap={hasWorkspaceHub ? "0" : "xs"}>
+      <Stack px="xs" gap={hasWorkspaceHub ? "0" : "xs"}>
         {workspaceHub}
         <ChatInput
           placeholder={chatInputPlaceholder}

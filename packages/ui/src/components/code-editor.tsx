@@ -1,4 +1,7 @@
 import { DiffEditor, Editor } from "@monaco-editor/react";
+import { useEffect, useRef } from "react";
+import type { MonacoThemeData } from "../theme";
+import { useThemePreference } from "../utils/theme-preference";
 
 export const customTheme = {
   base: "vs-dark" as const,
@@ -13,6 +16,42 @@ export const customTheme = {
     "editorIndentGuide.background": "#404040",
     "editorIndentGuide.activeBackground": "#707070",
   },
+} satisfies MonacoThemeData;
+
+const isMonacoTheme = (value: unknown): value is MonacoThemeData =>
+  typeof value === "object" && value !== null && "base" in value && "colors" in value;
+
+type MonacoApi = {
+  editor: {
+    defineTheme: (name: string, data: MonacoThemeData) => void;
+    setTheme: (name: string) => void;
+  };
+};
+
+const EDITOR_THEME_NAME = "ps-theme";
+
+const useEditorTheme = () => {
+  const { themePreference, themePreferences } = useThemePreference();
+  const preference = themePreferences.find((theme) => theme.id === themePreference);
+  return isMonacoTheme(preference?.monacoTheme) ? preference.monacoTheme : customTheme;
+};
+
+const useApplyEditorTheme = (editorTheme: MonacoThemeData) => {
+  const monacoRef = useRef<MonacoApi | null>(null);
+
+  useEffect(() => {
+    const monaco = monacoRef.current;
+    if (!monaco) return;
+
+    monaco.editor.defineTheme(EDITOR_THEME_NAME, editorTheme);
+    monaco.editor.setTheme(EDITOR_THEME_NAME);
+  }, [editorTheme]);
+
+  return (monaco: MonacoApi) => {
+    monacoRef.current = monaco;
+    monaco.editor.defineTheme(EDITOR_THEME_NAME, editorTheme);
+    monaco.editor.setTheme(EDITOR_THEME_NAME);
+  };
 };
 
 interface CodeEditorProps {
@@ -27,6 +66,8 @@ interface CodeEditorProps {
 
 export const CodeEditor = (props: CodeEditorProps) => {
   const { defaultCode, code, showLineNumbers, isEditable, language = "javascript", onChange, disableScroll } = props;
+  const editorTheme = useEditorTheme();
+  const applyEditorTheme = useApplyEditorTheme(editorTheme);
 
   const options = {
     tabSize: 2,
@@ -58,16 +99,16 @@ export const CodeEditor = (props: CodeEditorProps) => {
       language={language}
       defaultValue={defaultCode}
       value={code}
-      theme={"ps-theme"}
+      theme={EDITOR_THEME_NAME}
       options={options}
       onChange={(value) => {
         onChange?.(value || "");
       }}
       beforeMount={(monaco) => {
-        monaco.editor.defineTheme("ps-theme", customTheme);
+        applyEditorTheme(monaco);
       }}
       onMount={async (editor, monaco) => {
-        monaco.editor.setTheme("ps-theme");
+        applyEditorTheme(monaco);
 
         // Add JSX support
         monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
@@ -96,6 +137,8 @@ interface CodeDiffEditorProps {
 
 export const CodeDiffEditor = (props: CodeDiffEditorProps) => {
   const { original, modified, showLineNumbers, language = "javascript", disableScroll } = props;
+  const editorTheme = useEditorTheme();
+  const applyEditorTheme = useApplyEditorTheme(editorTheme);
 
   const options = {
     tabSize: 2,
@@ -130,13 +173,13 @@ export const CodeDiffEditor = (props: CodeDiffEditorProps) => {
       language={language}
       original={original}
       modified={modified}
-      theme={"ps-theme"}
+      theme={EDITOR_THEME_NAME}
       options={options}
       beforeMount={(monaco) => {
-        monaco.editor.defineTheme("ps-theme", customTheme);
+        applyEditorTheme(monaco);
       }}
       onMount={(_, monaco) => {
-        monaco.editor.setTheme("ps-theme");
+        applyEditorTheme(monaco);
 
         monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
           jsx: monaco.languages.typescript.JsxEmit.React,

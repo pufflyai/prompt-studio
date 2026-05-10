@@ -1,5 +1,6 @@
-import { Flex, IconButton, Stack } from "@chakra-ui/react";
-import { PanelRightOpen } from "lucide-react";
+import { Flex, IconButton, Popover, Portal, Stack } from "@chakra-ui/react";
+import { PanelRightOpen, SlidersHorizontal } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Project } from "@/features/project/types";
 import type { Ticket } from "@/features/ticket-list/types";
@@ -19,6 +20,80 @@ interface TicketDetailSidebarProps {
 export const TicketDetailSidebar = (props: TicketDetailSidebarProps) => {
   const { ticket, project, allTickets, isOpen, isUpdatingTags, onToggle, onSelectTicket, onTagIdsChange } = props;
   const { t } = useTranslation("tickets");
+  const collapsedPanelRef = useRef<HTMLDivElement | null>(null);
+  const [isCollapsedPopoverOpen, setCollapsedPopoverOpen] = useState(false);
+
+  useEffect(() => {
+    const container = collapsedPanelRef.current?.parentElement;
+    if (!container) return;
+
+    const closePopoverOnDesktop = () => {
+      if (container.getBoundingClientRect().width > 620) {
+        setCollapsedPopoverOpen(false);
+      }
+    };
+
+    closePopoverOnDesktop();
+
+    const observer = new ResizeObserver(closePopoverOnDesktop);
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, []);
+
+  const properties = (
+    <TicketProperties
+      ticket={ticket}
+      project={project}
+      tickets={allTickets}
+      onSelectTicket={onSelectTicket}
+      onTagIdsChange={onTagIdsChange}
+      isUpdatingTags={isUpdatingTags}
+    />
+  );
+
+  const collapsedPropertiesMenu = (
+    <Flex
+      ref={collapsedPanelRef}
+      padding="2xs"
+      minW="52px"
+      justify="center"
+      align="flex-start"
+      display="none"
+      css={{
+        "@container (max-width: 620px)": {
+          display: "flex",
+        },
+      }}
+    >
+      <Popover.Root
+        lazyMount
+        unmountOnExit
+        open={isCollapsedPopoverOpen}
+        positioning={{ placement: "bottom-end" }}
+        onOpenChange={(details) => setCollapsedPopoverOpen(details.open)}
+      >
+        <Popover.Trigger asChild>
+          <IconButton aria-label={t("projects:ticketPanel.properties.title")} variant="ghost" size="sm">
+            <SlidersHorizontal />
+          </IconButton>
+        </Popover.Trigger>
+        <Portal>
+          <Popover.Positioner>
+            <Popover.Content
+              width="320px"
+              maxW="calc(100vw - 32px)"
+              maxH="calc(100dvh - 32px)"
+              overflowY="auto"
+              bg="bg"
+            >
+              <Popover.Body p="xs">{properties}</Popover.Body>
+            </Popover.Content>
+          </Popover.Positioner>
+        </Portal>
+      </Popover.Root>
+    </Flex>
+  );
 
   if (!isOpen) {
     return (
@@ -31,15 +106,21 @@ export const TicketDetailSidebar = (props: TicketDetailSidebarProps) => {
   }
 
   return (
-    <Stack gap="xs" minW="320px" maxW="360px" overflow="auto">
-      <TicketProperties
-        ticket={ticket}
-        project={project}
-        tickets={allTickets}
-        onSelectTicket={onSelectTicket}
-        onTagIdsChange={onTagIdsChange}
-        isUpdatingTags={isUpdatingTags}
-      />
-    </Stack>
+    <>
+      <Stack
+        gap="xs"
+        minW="320px"
+        maxW="360px"
+        overflow="auto"
+        css={{
+          "@container (max-width: 620px)": {
+            display: "none",
+          },
+        }}
+      >
+        {properties}
+      </Stack>
+      {collapsedPropertiesMenu}
+    </>
   );
 };

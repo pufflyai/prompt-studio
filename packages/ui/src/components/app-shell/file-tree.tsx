@@ -1,5 +1,5 @@
 import { Stack, Text } from "@chakra-ui/react";
-import { File, Folder } from "lucide-react";
+import { File } from "lucide-react";
 import { useState } from "react";
 
 import { TreeList } from "../tree-list/tree-list";
@@ -81,7 +81,6 @@ const toTreeListNodes = (nodes: RawNode[], onSelectPath: (path: string) => void)
       return {
         id: node.id,
         label: node.name,
-        icon: <Folder size={12} />,
         isContainer: true,
         children: toTreeListNodes(node.children, onSelectPath),
       };

@@ -1,7 +1,7 @@
 import { Box, HStack, Icon, IconButton, Input, Menu, Stack, Text } from "@chakra-ui/react";
 import { EmptyState, Header, ScrollArea, TreeList, type TreeListNode } from "@pstdio/ui";
-import { FileText, Folder, List, ListTree, type LucideIcon } from "lucide-react";
-import { useRef, useState } from "react";
+import { FileText, List, ListTree } from "lucide-react";
+import { type ReactNode, useRef, useState } from "react";
 import {
   buildChangedFilesTree,
   type ChangedFilesViewMode,
@@ -9,7 +9,7 @@ import {
 } from "../utils/build-changed-files-tree";
 
 export interface FileIconInfo {
-  icon: LucideIcon;
+  icon: ReactNode;
   color: string;
 }
 
@@ -45,7 +45,7 @@ interface FileListPanelProps {
   onViewModeChange: (mode: ChangedFilesViewMode) => void;
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
-  resolveFileIcon?: (path: string) => FileIconInfo;
+  resolveFileIcon?: (path: string, options?: { isFolder?: boolean; isExpanded?: boolean }) => FileIconInfo | undefined;
   emptyTitle?: string;
   showHeader?: boolean;
   showFilter?: boolean;
@@ -83,7 +83,7 @@ const toTreeListNodes = (input: {
   nodes: ChangedFileTreeNode[];
   viewMode: ChangedFilesViewMode;
   onSelectPath: (path: string) => void;
-  resolveFileIcon?: (path: string) => FileIconInfo;
+  resolveFileIcon?: (path: string, options?: { isFolder?: boolean; isExpanded?: boolean }) => FileIconInfo | undefined;
 }): TreeListNode[] => {
   const { nodes, viewMode, onSelectPath, resolveFileIcon } = input;
 
@@ -92,7 +92,6 @@ const toTreeListNodes = (input: {
       return {
         id: node.id,
         label: node.name,
-        icon: <Icon as={Folder} boxSize="14px" />,
         isContainer: true,
         children: toTreeListNodes({
           nodes: node.children ?? [],
@@ -104,12 +103,12 @@ const toTreeListNodes = (input: {
     }
 
     const filePath = node.id.replace(/^file:/, "");
-    const fileIcon = resolveFileIcon?.(filePath) ?? { icon: FileText, color: "fg.subtle" };
+    const fileIcon = resolveFileIcon?.(filePath) ?? { icon: <Icon as={FileText} boxSize="14px" />, color: "fg.subtle" };
 
     return {
       id: node.id,
       label: renderFileLabel(node, viewMode, filePath),
-      icon: <Icon as={fileIcon.icon} boxSize="14px" />,
+      icon: fileIcon.icon,
       iconColor: fileIcon.color,
       onActivate: () => onSelectPath(filePath),
     };

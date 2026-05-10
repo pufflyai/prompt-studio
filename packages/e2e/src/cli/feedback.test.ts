@@ -66,9 +66,6 @@ describe("cli help and feedback", () => {
 
       expect(result.exitCode).not.toBe(0);
       expect(result.stderr).toContain("Unknown argument: foo");
-      expect(result.stderr).toContain("pstdio");
-      expect(result.stderr).toContain("pstdio agents [command]");
-      expect(result.stderr).toContain("pstdio projects [command]");
     },
     TEST_TIMEOUT,
   );

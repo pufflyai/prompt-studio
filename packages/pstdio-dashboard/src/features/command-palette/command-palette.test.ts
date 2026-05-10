@@ -105,6 +105,19 @@ describe("command palette entries", () => {
     ).toBe(true);
   });
 
+  it("uses runtime theme titles for theme labels", () => {
+    const entries = buildCommandPaletteEntries({
+      projectId: "project-1",
+      tickets,
+      sessions,
+      currentTheme: "lab.monokai",
+      themePreferences: [{ id: "lab.monokai", title: "Monokai", mode: "dark" }],
+      run: () => {},
+    });
+
+    expect(filterCommandPaletteEntries(entries, "", "theme")[0]?.label).toBe("Monokai");
+  });
+
   it("clears content on Escape before closing an empty palette", () => {
     expect(resolveCommandPaletteEscapeAction("theme")).toBe("clear");
     expect(resolveCommandPaletteEscapeAction("> theme")).toBe("clear");

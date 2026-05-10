@@ -4,8 +4,10 @@ export type ThemePreferenceTokens = Record<string, string>;
 
 export interface ThemePreferenceOption {
   id: ThemePreference;
+  title?: string;
   mode: ThemePreferenceMode;
   tokens?: ThemePreferenceTokens;
+  monacoTheme?: unknown;
 }
 
 export const defaultThemePreferences = [
@@ -30,6 +32,8 @@ export const getThemePreferenceClassNames = (
   mode: ThemePreferenceMode = getThemePreferenceMode(theme),
 ) => [mode, getThemePreferenceClassName(theme)];
 
+const THEME_TOKEN_PATHS_ATTRIBUTE = "data-pstdio-theme-token-paths";
+
 const getThemePreferenceCssVariableName = (tokenPath: string) => `--chakra-${tokenPath.replaceAll(".", "-")}`;
 
 const removeThemeTokens = (el: HTMLElement, theme?: ThemePreferenceOption) => {
@@ -40,12 +44,26 @@ const removeThemeTokens = (el: HTMLElement, theme?: ThemePreferenceOption) => {
   }
 };
 
+const removeTrackedThemeTokens = (el: HTMLElement) => {
+  const tokenPaths = el.getAttribute(THEME_TOKEN_PATHS_ATTRIBUTE)?.split("\n").filter(Boolean) ?? [];
+
+  for (const tokenPath of tokenPaths) {
+    el.style.removeProperty(getThemePreferenceCssVariableName(tokenPath));
+  }
+
+  el.setAttribute(THEME_TOKEN_PATHS_ATTRIBUTE, "");
+};
+
 const applyThemeTokens = (el: HTMLElement, theme: ThemePreferenceOption) => {
-  if (!theme.tokens) return;
+  if (!theme.tokens) {
+    el.setAttribute(THEME_TOKEN_PATHS_ATTRIBUTE, "");
+    return;
+  }
 
   for (const [tokenPath, value] of Object.entries(theme.tokens)) {
     el.style.setProperty(getThemePreferenceCssVariableName(tokenPath), value);
   }
+  el.setAttribute(THEME_TOKEN_PATHS_ATTRIBUTE, Object.keys(theme.tokens).join("\n"));
 };
 
 export const applyThemePreference = (
@@ -68,6 +86,7 @@ export const applyThemePreference = (
     if (previousTheme) {
       el.classList.remove(getThemePreferenceClassName(previousTheme));
     }
+    removeTrackedThemeTokens(el);
     removeThemeTokens(el, previousPreference);
     applyThemeTokens(el, preference);
     el.classList.add(...getThemePreferenceClassNames(theme, mode));

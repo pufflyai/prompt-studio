@@ -139,7 +139,14 @@ export type {
 } from "./components/tree-list/tree-list.types";
 export type { WorkspaceBadgeProps } from "./components/workspace-badge";
 export { WorkspaceBadge } from "./components/workspace-badge";
-export { customThemePreferences, monokaiThemePreference, psTheme } from "./theme";
+export type { MonacoThemeData, VsCodeColorTheme } from "./theme";
+export {
+  createMonacoThemeFromVsCodeTheme,
+  createThemePreferenceFromVsCodeTheme,
+  customThemePreferences,
+  monokaiThemePreference,
+  psTheme,
+} from "./theme";
 export {
   applyThemePreference,
   defaultThemePreferences,

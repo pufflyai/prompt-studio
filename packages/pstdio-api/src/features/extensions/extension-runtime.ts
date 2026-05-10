@@ -32,6 +32,8 @@ const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckRes
   hooks: [],
   schedules: [],
   artifactMounts: [],
+  themes: [],
+  fileIconThemes: [],
   menuContributions: [],
   views: [],
   routes: [],
@@ -45,6 +47,8 @@ const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckRes
 const manifestSnapshot = (definition: UnknownRecord) => ({
   apiVersion: definition.apiVersion,
   artifactMounts: Object.keys((definition.artifactMounts as UnknownRecord | undefined) ?? {}),
+  themes: Object.keys((definition.themes as UnknownRecord | undefined) ?? {}),
+  fileIconThemes: Object.keys((definition.fileIconThemes as UnknownRecord | undefined) ?? {}),
   commands: Object.keys((definition.commands as UnknownRecord | undefined) ?? {}),
   hooks: Object.keys((definition.hooks as UnknownRecord | undefined) ?? {}),
   id: definition.id,
@@ -141,6 +145,30 @@ const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCheckResp
   target.hooks.push(...source.hooks);
   target.schedules.push(...source.schedules);
   target.artifactMounts.push(...source.artifactMounts);
+  for (const theme of source.themes) {
+    if (target.themes.some((candidate) => candidate.id === theme.id)) {
+      addDiagnostic(target, {
+        code: "duplicate_theme_id",
+        extensionId: theme.extensionId,
+        message: `Theme "${theme.id}" is declared by more than one extension`,
+        severity: "error",
+      });
+      continue;
+    }
+    target.themes.push(theme);
+  }
+  for (const theme of source.fileIconThemes) {
+    if (target.fileIconThemes.some((candidate) => candidate.id === theme.id)) {
+      addDiagnostic(target, {
+        code: "duplicate_file_icon_theme_id",
+        extensionId: theme.extensionId,
+        message: `File icon theme "${theme.id}" is declared by more than one extension`,
+        severity: "error",
+      });
+      continue;
+    }
+    target.fileIconThemes.push(theme);
+  }
   target.menuContributions.push(...source.menuContributions);
   target.views.push(...source.views);
   target.routes.push(...source.routes);

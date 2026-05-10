@@ -24,30 +24,32 @@ export const Breadcrumb = React.forwardRef<HTMLDivElement, BreadcrumbProps>(func
 
   return (
     <ChakraBreadcrumb.Root ref={ref} {...rest}>
-      <ChakraBreadcrumb.List gap={separatorGap}>
+      <ChakraBreadcrumb.List gap={separatorGap} flexWrap="nowrap" minW="0" overflow="hidden">
         {items.map((item, index) => {
           const last = index === items.length - 1;
           const isInteractive = Boolean(item.url || item.onClick);
           let itemContent: React.ReactNode;
 
           if (last && !isInteractive) {
-            itemContent = <ChakraBreadcrumb.CurrentLink>{item.title}</ChakraBreadcrumb.CurrentLink>;
+            itemContent = <ChakraBreadcrumb.CurrentLink whiteSpace="nowrap">{item.title}</ChakraBreadcrumb.CurrentLink>;
           } else if (item.url) {
             itemContent = LinkComponent ? (
-              <ChakraBreadcrumb.Link asChild>
+              <ChakraBreadcrumb.Link asChild whiteSpace="nowrap">
                 <LinkComponent to={item.url}>{item.title}</LinkComponent>
               </ChakraBreadcrumb.Link>
             ) : (
-              <ChakraBreadcrumb.Link href={item.url}>{item.title}</ChakraBreadcrumb.Link>
+              <ChakraBreadcrumb.Link href={item.url} whiteSpace="nowrap">
+                {item.title}
+              </ChakraBreadcrumb.Link>
             );
           } else if (item.onClick) {
             itemContent = (
-              <ChakraBreadcrumb.Link as="button" type="button" onClick={item.onClick}>
+              <ChakraBreadcrumb.Link as="button" type="button" whiteSpace="nowrap" onClick={item.onClick}>
                 {item.title}
               </ChakraBreadcrumb.Link>
             );
           } else {
-            itemContent = <ChakraBreadcrumb.Link>{item.title}</ChakraBreadcrumb.Link>;
+            itemContent = <ChakraBreadcrumb.Link whiteSpace="nowrap">{item.title}</ChakraBreadcrumb.Link>;
           }
 
           return (

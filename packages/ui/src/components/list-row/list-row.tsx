@@ -34,7 +34,17 @@ const RowContent = (props: RowContentProps) => {
       <Stack gap="2xs" minW="0" flex="1">
         <HStack gap="2" minW="0" alignItems="center">
           {item.icon ? (
-            <Box color={iconColor} flexShrink={0}>
+            <Box
+              color={iconColor}
+              flexShrink={0}
+              display="inline-flex"
+              alignItems="center"
+              justifyContent="center"
+              boxSize="14px"
+              fontSize="14px"
+              lineHeight="1"
+              css={{ "& > svg": { width: "14px", height: "14px" } }}
+            >
               {item.icon}
             </Box>
           ) : null}

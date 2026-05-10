@@ -63,15 +63,46 @@ export const extensionArtifactMountSchema = z.object({
   label: z.string(),
 });
 
-const extensionPlacementSchema = z.enum(["first", "default", "last"]);
-const extensionSlotKindSchema = z.enum(["menu", "navigation", "view", "settings", "renderer"]);
-
 export const packageAssetDescriptorSchema = z.object({
   kind: z.literal("package-asset"),
   path: z.string(),
   baseUrl: z.string(),
 });
 export type PackageAssetDescriptor = z.infer<typeof packageAssetDescriptorSchema>;
+
+export const extensionThemeRecordSchema = z.object({
+  id: z.string(),
+  extensionId: z.string(),
+  namespace: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  format: z.literal("vscode-color-theme"),
+  mode: z.enum(["light", "dark"]),
+  source: packageAssetDescriptorSchema,
+  tokens: z.record(z.string(), z.string()),
+  monacoTheme: z.object({
+    base: z.enum(["vs", "vs-dark"]),
+    inherit: z.literal(true),
+    rules: z.array(z.record(z.string(), z.unknown())),
+    colors: z.record(z.string(), z.string()),
+  }),
+});
+
+export const extensionFileIconThemeRecordSchema = z.object({
+  id: z.string(),
+  extensionId: z.string(),
+  namespace: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  format: z.literal("vscode-file-icon-theme"),
+  source: packageAssetDescriptorSchema,
+  definitions: jsonObjectSchema,
+  fileExtensions: z.record(z.string(), z.string()),
+  fileNames: z.record(z.string(), z.string()),
+});
+
+const extensionPlacementSchema = z.enum(["first", "default", "last"]);
+const extensionSlotKindSchema = z.enum(["menu", "navigation", "view", "settings", "renderer"]);
 
 const extensionWebviewSchema = z.object({
   entry: packageAssetDescriptorSchema,
@@ -156,6 +187,8 @@ export const extensionsCheckResponseSchema = z.object({
   hooks: z.array(extensionHookRecordSchema),
   schedules: z.array(extensionScheduleRecordSchema),
   artifactMounts: z.array(extensionArtifactMountSchema),
+  themes: z.array(extensionThemeRecordSchema),
+  fileIconThemes: z.array(extensionFileIconThemeRecordSchema),
   menuContributions: z.array(extensionMenuContributionSchema),
   views: z.array(extensionViewRecordSchema),
   routes: z.array(extensionRouteRecordSchema),
@@ -184,6 +217,8 @@ export type ExtensionMiddlewareRecord = z.infer<typeof extensionMiddlewareRecord
 export type ExtensionHookRecord = z.infer<typeof extensionHookRecordSchema>;
 export type ExtensionScheduleRecord = z.infer<typeof extensionScheduleRecordSchema>;
 export type ExtensionArtifactMount = z.infer<typeof extensionArtifactMountSchema>;
+export type ExtensionThemeRecord = z.infer<typeof extensionThemeRecordSchema>;
+export type ExtensionFileIconThemeRecord = z.infer<typeof extensionFileIconThemeRecordSchema>;
 export type ExtensionMenuContribution = z.infer<typeof extensionMenuContributionSchema>;
 export type ExtensionViewRecord = z.infer<typeof extensionViewRecordSchema>;
 export type ExtensionRouteRecord = z.infer<typeof extensionRouteRecordSchema>;
@@ -198,6 +233,14 @@ export const listExtensionCommandsResponseSchema = z.object({
 });
 
 export type ListExtensionCommandsResponse = z.infer<typeof listExtensionCommandsResponseSchema>;
+
+export const listExtensionAppearanceResponseSchema = z.object({
+  themes: z.array(extensionThemeRecordSchema),
+  fileIconThemes: z.array(extensionFileIconThemeRecordSchema),
+  diagnostics: z.array(extensionDiagnosticSchema),
+});
+
+export type ListExtensionAppearanceResponse = z.infer<typeof listExtensionAppearanceResponseSchema>;
 
 export const enableInstalledExtensionRequestSchema = z.object({
   displayName: z.string(),

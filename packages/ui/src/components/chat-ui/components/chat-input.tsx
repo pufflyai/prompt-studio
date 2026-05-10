@@ -219,7 +219,7 @@ export const ChatInput = (props: ChatInputProps) => {
       ref={containerRef}
       position="relative"
       width="100%"
-      paddingX="lg"
+      paddingX="xs"
       paddingY="md"
       mt={attachedToTop ? "-1px" : undefined}
       bg="bg"

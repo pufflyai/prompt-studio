@@ -25,7 +25,7 @@ interface HarnessProps {
   title: string;
   initialViewMode: ChangedFilesViewMode;
   paths: string[];
-  resolveFileIcon?: (path: string) => { icon: typeof FileText; color: string };
+  resolveFileIcon?: (path: string) => { icon: ReactNode; color: string };
 }
 
 const FileListPanelHarness = (props: HarnessProps) => {
@@ -49,9 +49,9 @@ const FileListPanelHarness = (props: HarnessProps) => {
 };
 
 const resolveArtifactIcon = (path: string) => {
-  if (path.includes("fail") || path.includes("error")) return { icon: AlertCircle, color: "fg.error" };
-  if (path.includes("pass") || path.includes("ok")) return { icon: CheckCircle2, color: "fg.success" };
-  return { icon: FileText, color: "fg.subtle" };
+  if (path.includes("fail") || path.includes("error")) return { icon: <AlertCircle size={14} />, color: "fg.error" };
+  if (path.includes("pass") || path.includes("ok")) return { icon: <CheckCircle2 size={14} />, color: "fg.success" };
+  return { icon: <FileText size={14} />, color: "fg.subtle" };
 };
 
 const meta = {

@@ -50,7 +50,7 @@ flowchart TB
   UserRoot["~/.pstdio/extensions<br/>editable extension source root"]
   SourceManifest["filesRoot/extensions/extensions.json<br/>extension source or artifact manifest"]
   GitHub["prompt-studio/extensions/<name><br/>or versioned extension artifacts"]
-  Runtime["pstdio-extensions<br/>discover, load, normalize, watch,<br/>then expose runtime result:<br/>extensions, commands, middlewares, hooks,<br/>cli, slots, views, artifactMounts,<br/>templates, skills, harnesses, diagnostics"]
+  Runtime["pstdio-extensions<br/>discover, load, normalize, watch,<br/>then expose runtime result:<br/>extensions, commands, middlewares, hooks,<br/>cli, slots, views, artifactMounts,<br/>templates, skills, themes,<br/>fileIconThemes, harnesses, diagnostics"]
   Toggles["extension_instances<br/>scoped enablement/config"]
 
   subgraph Product["Product surfaces"]
@@ -176,12 +176,14 @@ Installed extension source is editable by users and coding agents. The runtime s
 Reload behavior:
 
 - Invalidate the runtime cache for affected projects.
-- Re-normalize commands, middlewares, hooks, views, slots, templates, skills, artifact mounts, and diagnostics.
+- Re-normalize commands, middlewares, hooks, views, slots, templates, skills, themes, file icon themes, artifact mounts, and diagnostics.
 - Publish updated runtime metadata through the API.
 - Surface load failures through diagnostics.
 - Avoid requiring a CLI/dashboard restart for local development where practical.
 
 The runtime should treat source changes as normal extension development. Coding agents can create a new extension, modify an installed extension, or copy an extension to make a project-specific variant.
+
+Appearance contributions are normalized as first-class runtime records. `themes` point at `vscode-color-theme` JSON/JSONC package assets and are converted into app theme token overrides plus Monaco theme data. `fileIconThemes` point at `vscode-file-icon-theme` JSON/JSONC package assets and expose icon definitions and file name/extension resolver maps. Diagnostics cover invalid package asset descriptors, missing assets, malformed JSONC, and missing icon font files.
 
 ## Extension Identity and Namespaces
 
