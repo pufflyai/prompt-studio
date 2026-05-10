@@ -450,6 +450,17 @@ describe("normalizeOpencodeMessage metadata", () => {
     });
   });
 
+  describe("createdAt", () => {
+    test("extracts created timestamp from info", () => {
+      const result = normalizeOpencodeMessage(
+        partsMsg([{ type: "text", text: "hi" }], { time: { created: 1_778_433_600_000 } }),
+        0,
+      );
+
+      expect(result.createdAt).toBe(1_778_433_600_000);
+    });
+  });
+
   describe("tokens", () => {
     test("extracts tokens from info", () => {
       const result = normalizeOpencodeMessage(

@@ -173,6 +173,7 @@ export const normalizeOpencodeMessage = (message: OpencodeSessionMessage, index:
     role,
     parts: normalizedParts,
     index,
+    createdAt: "info" in message ? message.info?.time?.created : undefined,
     modelId: "info" in message ? message.info?.modelID : undefined,
     providerId: "info" in message ? message.info?.providerID : undefined,
     tokens,
