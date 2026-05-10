@@ -6,12 +6,11 @@ import type { SessionMessage, SessionMessagePart } from "./message-types";
 
 interface MessageActionPanelProps {
   message: SessionMessage;
+  alwaysVisible?: boolean;
 }
 
-const isCopyablePart = (
-  part: SessionMessagePart,
-): part is Extract<SessionMessagePart, { type: "text" | "reasoning" }> => {
-  return part.type === "text" || part.type === "reasoning";
+const isCopyablePart = (part: SessionMessagePart): part is Extract<SessionMessagePart, { type: "text" }> => {
+  return part.type === "text";
 };
 
 export const getMessageCopyText = (message: SessionMessage) => {
@@ -33,7 +32,7 @@ export const getMessageTimestampLabel = (message: SessionMessage, locale?: strin
 };
 
 export const MessageActionPanel = (props: MessageActionPanelProps) => {
-  const { message } = props;
+  const { message, alwaysVisible = false } = props;
   const [isCopied, setIsCopied] = useState(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
   const copyText = getMessageCopyText(message);
@@ -62,17 +61,25 @@ export const MessageActionPanel = (props: MessageActionPanelProps) => {
     }
   };
 
-  if (!copyText && !timestampLabel) return null;
+  if (!copyText) return null;
 
   return (
     <HStack
       data-chat-message-action-panel="true"
       gap="2xs"
       minH="6"
-      opacity="0"
-      pointerEvents="none"
+      opacity={alwaysVisible ? "1" : "0"}
+      pointerEvents={alwaysVisible ? "auto" : "none"}
       transition="opacity 120ms ease"
       css={{
+        "[data-chat-message-with-actions]:hover &, [data-chat-message-with-actions]:focus-within &": {
+          opacity: 1,
+          pointerEvents: "auto",
+        },
+        ".ai-message__root:hover &, .ai-message__root:focus-within &": {
+          opacity: 1,
+          pointerEvents: "auto",
+        },
         "[data-scope='ai-message'][data-part='root']:hover &, [data-scope='ai-message'][data-part='root']:focus-within &":
           {
             opacity: 1,

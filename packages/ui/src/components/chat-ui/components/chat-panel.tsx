@@ -51,6 +51,7 @@ interface ChatPanelProps {
 interface StickyMessageToggleProps {
   label: string;
   onClick: () => void;
+  actionPanel?: ReactNode;
 }
 
 interface StickyMessageGroupProps {
@@ -65,7 +66,7 @@ interface StickyMessageGroupProps {
 }
 
 const StickyMessageToggle = (props: StickyMessageToggleProps) => {
-  const { label, onClick } = props;
+  const { label, onClick, actionPanel } = props;
 
   return (
     <Flex
@@ -73,7 +74,7 @@ const StickyMessageToggle = (props: StickyMessageToggleProps) => {
       bottom="0"
       left="0"
       right="0"
-      justifyContent="flex-end"
+      justifyContent={actionPanel ? "space-between" : "flex-end"}
       alignItems="flex-end"
       px="xs"
       pb="xs"
@@ -84,6 +85,7 @@ const StickyMessageToggle = (props: StickyMessageToggleProps) => {
       borderBottomRadius="xs"
       pointerEvents="none"
     >
+      {actionPanel}
       <Button size="2xs" variant="solid" pointerEvents="auto" onClick={onClick}>
         {label}
       </Button>
@@ -97,7 +99,9 @@ const renderMessage = (message: SessionMessage, streaming: boolean, hideQuestion
     <ChatMessage.Root key={message.id} from={from}>
       <ChatMessage.Content from={from}>
         <MessagePartsRenderer message={message} streaming={streaming} hideQuestionForms={hideQuestionForms} />
-        {from === "assistant" ? <MessageActionPanel message={message} /> : null}
+        {from === "assistant" || from === "user" ? (
+          <MessageActionPanel message={message} alwaysVisible={from === "user"} />
+        ) : null}
       </ChatMessage.Content>
     </ChatMessage.Root>
   );
@@ -155,8 +159,14 @@ const StickyMessageGroup = (props: StickyMessageGroupProps) => {
             >
               <MessagePartsRenderer message={group.userMessage} streaming={streaming} />
             </Box>
-            {isCollapsible && (
-              <StickyMessageToggle label={isExpanded ? "Show less" : "Show more"} onClick={toggleStickyMessage} />
+            {isCollapsible ? (
+              <StickyMessageToggle
+                label={isExpanded ? "Show less" : "Show more"}
+                onClick={toggleStickyMessage}
+                actionPanel={<MessageActionPanel message={group.userMessage} alwaysVisible />}
+              />
+            ) : (
+              <MessageActionPanel message={group.userMessage} alwaysVisible />
             )}
           </ChatMessage.Content>
         </ChatMessage.Root>

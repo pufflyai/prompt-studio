@@ -3,7 +3,7 @@ import { getMessageCopyText, getMessageTimestampLabel } from "./message-action-p
 import type { SessionMessage } from "./message-types";
 
 describe("message action panel", () => {
-  it("copies readable assistant message text", () => {
+  it("copies visible assistant message text", () => {
     const message: SessionMessage = {
       id: "assistant-copy",
       role: "assistant",
@@ -14,7 +14,17 @@ describe("message action panel", () => {
       ],
     };
 
-    expect(getMessageCopyText(message)).toBe("Need to inspect the call site.\n\nUpdated the chat panel.");
+    expect(getMessageCopyText(message)).toBe("Updated the chat panel.");
+  });
+
+  it("does not treat reasoning-only messages as content", () => {
+    const message: SessionMessage = {
+      id: "assistant-thinking",
+      role: "assistant",
+      parts: [{ type: "reasoning", text: "Need to inspect the call site." }],
+    };
+
+    expect(getMessageCopyText(message)).toBe("");
   });
 
   it("formats message timestamps when present", () => {
