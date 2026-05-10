@@ -38,3 +38,19 @@ export const IconSeparator = {
     separator: <Icon as={ChevronRight} boxSize="12px" color="fg.muted" />,
   },
 };
+
+export const Narrow = {
+  args: {
+    items: [
+      { title: "Projects", url: "/" },
+      { title: "PS-246 Update chat panel styles and responsive properties panel" },
+    ],
+  },
+  decorators: [
+    (Story: StoryFn) => (
+      <Box padding="sm" background="bg" width="220px">
+        <Story />
+      </Box>
+    ),
+  ],
+};

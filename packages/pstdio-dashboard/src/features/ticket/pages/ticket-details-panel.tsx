@@ -357,7 +357,7 @@ export const TicketDetailsPanel = () => {
           onPluginAction={(actionKey) => void pluginActionTrigger.trigger(actionKey, ticket.id)}
         />
 
-        <Flex flex="1" minH="0" overflow="hidden">
+        <Flex flex="1" minH="0" overflow="hidden" css={{ containerType: "inline-size" }}>
           <Stack flex="1" minW="0">
             {isImageFile ? (
               <TicketImagePreview ticketId={ticketId} fileId={selectedFile.id} fileName={selectedFile.fileName} />

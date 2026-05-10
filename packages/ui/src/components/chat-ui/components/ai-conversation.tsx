@@ -43,6 +43,7 @@ export const ConversationContent = (props: ConversationContentProps) => {
       showHorizontalScrollbar={false}
       viewportRef={scrollRef as React.Ref<HTMLDivElement>}
       contentRef={contentRef as React.Ref<HTMLDivElement>}
+      verticalScrollbarProps={{ zIndex: 2 }}
       contentProps={{
         py: "sm",
         "aria-live": "polite",
