@@ -3,6 +3,7 @@ import type { DiffViewProps } from "@git-diff-view/react";
 
 const FALLBACK_OLD_PATH = "before.txt";
 const FALLBACK_NEW_PATH = "after.txt";
+export const MAX_RENDERED_DIFF_LINES = 1000;
 
 interface ResolveDiffLanguageInput {
   language?: string;
@@ -15,7 +16,7 @@ interface BuildDiffViewDataInput extends ResolveDiffLanguageInput {
   modified: string;
 }
 
-type DiffViewData = NonNullable<DiffViewProps<unknown>["data"]>;
+export type DiffViewData = NonNullable<DiffViewProps<unknown>["data"]>;
 
 const extToLanguage: Record<string, string> = {
   ts: "typescript",
@@ -90,4 +91,21 @@ export const buildDiffViewData = ({
     },
     hunks: diffFile._diffList,
   };
+};
+
+export const getRenderedDiffLineCount = (data: DiffViewData) => {
+  return data.hunks.reduce((count, hunk) => count + getRenderedHunkLineCount(hunk), 0);
+};
+
+export const isOversizedDiffViewData = (data: DiffViewData) => {
+  return getRenderedDiffLineCount(data) > MAX_RENDERED_DIFF_LINES;
+};
+
+const getRenderedHunkLineCount = (hunk: string) => {
+  if (!hunk) {
+    return 0;
+  }
+
+  const content = hunk.endsWith("\n") ? hunk.slice(0, -1) : hunk;
+  return content.split("\n").length;
 };

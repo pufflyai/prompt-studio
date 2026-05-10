@@ -1,7 +1,7 @@
 import { DiffModeEnum, DiffView } from "@git-diff-view/react";
 import "@git-diff-view/react/styles/diff-view.css";
 import { Box } from "@chakra-ui/react";
-import { buildDiffViewData } from "./diff-view-adapter";
+import { buildDiffViewData, type DiffViewData } from "./diff-view-adapter";
 
 interface DiffEditorProps {
   original: string;
@@ -11,18 +11,21 @@ interface DiffEditorProps {
   newPath?: string;
   sideBySide?: boolean;
   disableScroll?: boolean;
+  data?: DiffViewData;
 }
 
 export function DiffEditor(props: DiffEditorProps) {
-  const { original, modified, language, oldPath, newPath, sideBySide = false, disableScroll = true } = props;
+  const { original, modified, language, oldPath, newPath, sideBySide = false, disableScroll = true, data } = props;
 
-  const data = buildDiffViewData({
-    original,
-    modified,
-    language,
-    oldPath,
-    newPath,
-  });
+  const diffData =
+    data ??
+    buildDiffViewData({
+      original,
+      modified,
+      language,
+      oldPath,
+      newPath,
+    });
 
   const mode = sideBySide ? DiffModeEnum.Split : DiffModeEnum.Unified;
 
@@ -30,6 +33,8 @@ export function DiffEditor(props: DiffEditorProps) {
     <Box
       height="100%"
       width="100%"
+      position="relative"
+      zIndex="0"
       overflow={disableScroll ? "hidden" : "auto"}
       css={{
         "& .gdv-root": {
@@ -42,7 +47,7 @@ export function DiffEditor(props: DiffEditorProps) {
       }}
     >
       <DiffView
-        data={data}
+        data={diffData}
         diffViewMode={mode}
         diffViewTheme="dark"
         diffViewHighlight={true}

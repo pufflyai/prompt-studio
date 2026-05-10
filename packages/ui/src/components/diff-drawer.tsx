@@ -18,11 +18,12 @@ export function DiffDrawer(props: DiffDrawerProps) {
   const { diffs, selectedDiffPath = null } = props;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(() => new Set());
+  const [largeDiffOptInPaths, setLargeDiffOptInPaths] = useState<Set<string>>(() => new Set());
 
   const virtualizer = useVirtualizer({
     count: diffs.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => 42,
+    estimateSize: () => 112,
     overscan: 5,
   });
 
@@ -57,12 +58,22 @@ export function DiffDrawer(props: DiffDrawerProps) {
     });
   };
 
+  const showFullDiff = (path: string) => {
+    setLargeDiffOptInPaths((prev) => {
+      const next = new Set(prev);
+      next.add(path);
+      return next;
+    });
+  };
+
+  const virtualItems = virtualizer.getVirtualItems();
+
   return (
     <Stack h="full" minH="0" gap="0">
       <Box position="relative" flex="1" minH="0">
         <ScrollArea position="absolute" inset="0" viewportRef={scrollRef} contentProps={{ p: "xs" }}>
           <Box position="relative" width="100%" style={{ height: virtualizer.getTotalSize() }}>
-            {virtualizer.getVirtualItems().map((virtualItem) => {
+            {virtualItems.map((virtualItem) => {
               const diff = diffs[virtualItem.index];
               const path = getDiffPath(diff);
 
@@ -76,13 +87,16 @@ export function DiffDrawer(props: DiffDrawerProps) {
                   left="0"
                   width="100%"
                   pb="xs"
-                  style={{ transform: `translateY(${virtualItem.start}px)` }}
+                  style={{ top: virtualItem.start }}
                 >
                   <DiffCard
+                    key={path}
                     diff={diff}
                     isSelected={selectedDiffPath === path}
                     isExpanded={!collapsedPaths.has(path)}
                     onToggleExpanded={() => toggleCollapsed(path)}
+                    hasOptedIntoLargeDiff={largeDiffOptInPaths.has(path)}
+                    onShowFullDiff={() => showFullDiff(path)}
                   />
                 </Box>
               );
