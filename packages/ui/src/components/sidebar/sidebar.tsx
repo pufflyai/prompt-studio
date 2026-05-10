@@ -6,6 +6,7 @@ import { useSidebarStore } from "./sidebar.store";
 import type { SidebarProps } from "./sidebar.types";
 import { SidebarFooter } from "./sidebar-footer";
 import { SidebarHeader } from "./sidebar-header";
+import { resolveSidebarResize } from "./sidebar-resize";
 
 const DEFAULT_WIDTH = 240;
 const DEFAULT_MIN_WIDTH = 200;
@@ -74,19 +75,37 @@ export const Sidebar = (props: SidebarProps) => {
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
     const startX = event.clientX;
     const startWidth = effectiveWidth;
+    const handleElement = event.currentTarget;
     const previousCursor = document.body.style.cursor;
     const previousUserSelect = document.body.style.userSelect;
 
-    const onMove = (moveEvent: PointerEvent) => {
-      const next = clamp(startWidth + (moveEvent.clientX - startX), minWidth, maxWidth);
-      setStoreWidth(next);
+    const applyResize = (moveEvent: PointerEvent) => {
+      const nextWidth = startWidth + (moveEvent.clientX - startX);
+      const resize = resolveSidebarResize({ nextWidth, minWidth, maxWidth, canCollapse: closable });
+
+      if (resize.type === "collapse") {
+        closeSidebar();
+        cleanup();
+        return;
+      }
+
+      setStoreWidth(resize.width);
+    };
+
+    const onPointerUp = (moveEvent: PointerEvent) => {
+      applyResize(moveEvent);
+      cleanup();
     };
 
     const cleanup = () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", cleanup);
+      window.removeEventListener("pointermove", applyResize);
+      window.removeEventListener("pointerup", onPointerUp);
+      if (handleElement.hasPointerCapture(event.pointerId)) {
+        handleElement.releasePointerCapture(event.pointerId);
+      }
       document.body.style.cursor = previousCursor;
       document.body.style.userSelect = previousUserSelect;
       cleanupRef.current = () => undefined;
@@ -95,8 +114,8 @@ export const Sidebar = (props: SidebarProps) => {
     cleanupRef.current = cleanup;
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", cleanup, { once: true });
+    window.addEventListener("pointermove", applyResize);
+    window.addEventListener("pointerup", onPointerUp, { once: true });
   };
 
   return (
@@ -114,7 +133,7 @@ export const Sidebar = (props: SidebarProps) => {
       borderRightColor="border.muted"
       bg="bg"
     >
-      <SidebarHeader onClose={closable ? closeSidebar : undefined}>{header}</SidebarHeader>
+      <SidebarHeader>{header}</SidebarHeader>
 
       <ScrollArea
         flex="1"

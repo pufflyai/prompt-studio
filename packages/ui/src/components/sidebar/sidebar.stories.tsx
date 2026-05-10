@@ -257,7 +257,7 @@ export const HiddenWithExternalReopen: Story = {
   parameters: {
     docs: {
       description: {
-        story: "Hide the sidebar with the header control and reopen from the external button.",
+        story: "Drag the resize handle left past the collapse threshold, then reopen from the external button.",
       },
     },
   },
@@ -268,7 +268,8 @@ export const PersistenceRestore: Story = {
   parameters: {
     docs: {
       description: {
-        story: "Expand or collapse nodes, hide the sidebar, then refresh Storybook to verify persisted state restore.",
+        story:
+          "Expand or collapse nodes, drag the sidebar closed, then refresh Storybook to verify persisted state restore.",
       },
     },
   },
