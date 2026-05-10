@@ -55,8 +55,7 @@ export const TicketDetailSidebar = (props: TicketDetailSidebarProps) => {
   const collapsedPropertiesMenu = (
     <Flex
       ref={collapsedPanelRef}
-      borderLeftWidth="1px"
-      padding="sm"
+      padding="2xs"
       minW="52px"
       justify="center"
       align="flex-start"
