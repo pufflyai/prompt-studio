@@ -65,7 +65,7 @@ describe("cli help and feedback", () => {
       });
 
       expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain("Unknown extension command: foo");
+      expect(result.stderr).toContain("Unknown argument: foo");
     },
     TEST_TIMEOUT,
   );

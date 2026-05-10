@@ -10,7 +10,6 @@ import type {
 import type {
   ArtifactMountContribution,
   CliContribution,
-  CommandPanelContribution,
   FileIconThemeContribution,
   MenuContribution,
   NavigationContribution,

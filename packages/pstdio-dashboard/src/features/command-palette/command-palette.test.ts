@@ -109,6 +109,7 @@ describe("command palette entries", () => {
     const entries = buildCommandPaletteEntries({
       projectId: "project-1",
       tickets,
+      sessions,
       currentTheme: "lab.monokai",
       themePreferences: [{ id: "lab.monokai", title: "Monokai", mode: "dark" }],
       run: () => {},
