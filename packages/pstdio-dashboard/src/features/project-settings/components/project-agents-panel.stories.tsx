@@ -9,7 +9,7 @@ const queryClient = new QueryClient({
 });
 
 const meta: Meta<typeof ProjectAgentsPanelView> = {
-  title: "ProjectSettings/ProjectAgentsPanel",
+  title: "ProjectSettings/ProjectDefaultHarnessPanel",
   component: ProjectAgentsPanelView,
   parameters: { layout: "padded" },
   decorators: [
@@ -51,7 +51,19 @@ export const NoDefaultSelected: Story = {
   },
 };
 
-export const ClaudeCodeIsDefault: Story = {
+export const OneEnabledHarnessNoDefaultSelected: Story = {
+  args: {
+    enabledAgentIds: ["claude-code"],
+    agents: enabledAgents,
+    defaultAgentId: null,
+    defaultAgentModel: null,
+    isUpdating: false,
+    onSetDefaultAgent: () => {},
+    onSetDefaultModel: () => {},
+  },
+};
+
+export const DefaultHarnessWithModel: Story = {
   args: {
     enabledAgentIds: ["claude-code", "opencode"],
     agents: enabledAgents,
@@ -63,9 +75,33 @@ export const ClaudeCodeIsDefault: Story = {
   },
 };
 
-export const DefaultPointsAtMissingAgent: Story = {
+export const DefaultHarnessWithHarnessDefaultModel: Story = {
+  args: {
+    enabledAgentIds: ["claude-code", "opencode"],
+    agents: enabledAgents,
+    defaultAgentId: "opencode",
+    defaultAgentModel: null,
+    isUpdating: false,
+    onSetDefaultAgent: () => {},
+    onSetDefaultModel: () => {},
+  },
+};
+
+export const StaleDefaultHarnessWarning: Story = {
   args: {
     enabledAgentIds: ["opencode"],
+    agents: enabledAgents,
+    defaultAgentId: "claude-code",
+    defaultAgentModel: null,
+    isUpdating: false,
+    onSetDefaultAgent: () => {},
+    onSetDefaultModel: () => {},
+  },
+};
+
+export const StaleDefaultHarnessWarningNoEnabledHarnesses: Story = {
+  args: {
+    enabledAgentIds: ["custom-agent"],
     agents: enabledAgents,
     defaultAgentId: "claude-code",
     defaultAgentModel: null,

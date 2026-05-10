@@ -121,7 +121,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
     const agentNodes: TreeListNode[] = [
       {
         id: "agents",
-        label: t("projectSettings.agents"),
+        label: t("projectSettings.harnesses"),
         icon: <Bot size={14} />,
         isNavigable: true,
         navigationIntent: { id: "select", payload: "agents" },

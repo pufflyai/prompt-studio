@@ -243,12 +243,18 @@
     "createTemplate": "Create template",
     "dangerZone": "Danger zone",
     "agents": "Agents",
+    "harnesses": "Harnesses",
     "agentsPanel": {
       "empty": "No harnesses are enabled for this project.",
-      "defaultBadge": "Project default",
-      "setAsDefault": "Set as project default",
-      "defaultModel": "Default model",
-      "agentDefault": "Agent default",
+      "defaultHarness": "Default Harness",
+      "harnessDefault": "Harness default",
+      "selectHarness": "Select harness",
+      "unknownHarness": "Unknown harness",
+      "loadingHarnesses": "Loading harnesses...",
+      "selectModel": "Select model",
+      "noModelsAvailable": "No models available",
+      "loadingModels": "Loading models...",
+      "searchModels": "Search models...",
       "modelDescription": "Used by createSession when no model is specified.",
       "missingDefaultWarning": "The selected default harness is no longer available."
     }
