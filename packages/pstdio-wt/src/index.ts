@@ -1,8 +1,8 @@
 export { listBranches } from "./branches";
 export { commitChanges } from "./commit";
 export { copyIgnored } from "./copy-ignored";
-export type { DiffSummary, FileDiff, WorktreeDiff } from "./diff";
-export { getWorktreeDiff, getWorktreeDiffSummary } from "./diff";
+export type { DiffSummary, FileDiff, FileDiffSummary, WorktreeDiff, WorktreeDiffSummaryFiles } from "./diff";
+export { getWorktreeDiff, getWorktreeDiffFile, getWorktreeDiffSummary, getWorktreeDiffSummaryFiles } from "./diff";
 export { GitError, git } from "./git";
 export { mergeWorktree } from "./merge";
 export { rebaseOntoTarget } from "./rebase";

@@ -6,7 +6,14 @@ import { createWorkspaceHandler, createWorkspaceRoute } from "./endpoints/create
 import { deleteWorkspaceHandler, deleteWorkspaceRoute } from "./endpoints/delete-workspace";
 import { getStartupLogHandler, getStartupLogRoute } from "./endpoints/get-startup-log";
 import { getWorkspaceHandler, getWorkspaceRoute } from "./endpoints/get-workspace";
-import { getWorkspaceDiffHandler, getWorkspaceDiffRoute } from "./endpoints/get-workspace-diff";
+import {
+  getWorkspaceDiffFileHandler,
+  getWorkspaceDiffFileRoute,
+  getWorkspaceDiffFilesHandler,
+  getWorkspaceDiffFilesRoute,
+  getWorkspaceDiffHandler,
+  getWorkspaceDiffRoute,
+} from "./endpoints/get-workspace-diff";
 import { getWorkspaceDiffSummaryHandler, getWorkspaceDiffSummaryRoute } from "./endpoints/get-workspace-diff-summary";
 import { listWorkspaceActivityHandler, listWorkspaceActivityRoute } from "./endpoints/list-workspace-activity";
 import { listWorkspacesHandler, listWorkspacesRoute } from "./endpoints/list-workspaces";
@@ -22,6 +29,8 @@ export const createWorkspaceRoutes = (deps: WorkspacesRouteDeps) => {
   routes.openapi(getWorkspaceRoute, getWorkspaceHandler(deps));
   routes.openapi(listWorkspaceActivityRoute, listWorkspaceActivityHandler(deps));
   routes.openapi(getWorkspaceDiffRoute, getWorkspaceDiffHandler(deps));
+  routes.openapi(getWorkspaceDiffFilesRoute, getWorkspaceDiffFilesHandler(deps));
+  routes.openapi(getWorkspaceDiffFileRoute, getWorkspaceDiffFileHandler(deps));
   routes.openapi(getWorkspaceDiffSummaryRoute, getWorkspaceDiffSummaryHandler(deps));
   routes.openapi(deleteWorkspaceRoute, deleteWorkspaceHandler(deps));
   routes.openapi(archiveWorkspaceRoute, archiveWorkspaceHandler(deps));

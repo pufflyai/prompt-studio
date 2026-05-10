@@ -1,4 +1,4 @@
-import { Flex, Text } from "@chakra-ui/react";
+import { Flex } from "@chakra-ui/react";
 import { EmptyState } from "@pstdio/ui";
 import { Outlet, useParams, useRouterState } from "@tanstack/react-router";
 import { useLayoutEffect } from "react";
@@ -9,6 +9,7 @@ import { isSessionsRoutePath } from "@/features/sessions/utils/sessions-route";
 import { ShortcutProvider } from "@/features/shortcuts/shortcut-provider";
 import { ProjectSettingsProvider, useProjectSettingsStore } from "@/shared/stores/project-settings";
 import { useProject } from "../hooks/use-project";
+import { shouldRenderProjectOutlet } from "./project-shell-readiness";
 
 const ProjectShellContent = () => {
   const { projectId } = useParams({ strict: false });
@@ -18,6 +19,11 @@ const ProjectShellContent = () => {
   const sessionModalState = useProjectSettingsStore((s) => s.sessionModalState);
   const setLastNonSessionsPath = useProjectSettingsStore((s) => s.setLastNonSessionsPath);
   const isSessionsRoute = isSessionsRoutePath(location.pathname, projectId);
+  const renderOutlet = shouldRenderProjectOutlet({
+    projectId,
+    hasProject: Boolean(project),
+    isProjectLoading: isLoading,
+  });
 
   useLayoutEffect(() => {
     if (!projectId || isSessionsRoute) return;
@@ -31,14 +37,10 @@ const ProjectShellContent = () => {
   return (
     <Flex height="100%" width="100%" minH="0">
       <Flex flex="1" minW={0} minH={0} overflow="hidden">
-        {isLoading ? (
-          <Text textStyle="paragraph/S/regular" color="fg.muted" p="md">
-            {t("shell.loadingProject")}
-          </Text>
-        ) : !project ? (
-          <EmptyState title={t("shell.notFound")} description={t("shell.notFoundDescription")} />
-        ) : (
+        {renderOutlet ? (
           <Outlet />
+        ) : (
+          <EmptyState title={t("shell.notFound")} description={t("shell.notFoundDescription")} />
         )}
       </Flex>
       {sessionModalState === "attached" && !isSessionsRoute ? <SessionAttachedPanel /> : null}

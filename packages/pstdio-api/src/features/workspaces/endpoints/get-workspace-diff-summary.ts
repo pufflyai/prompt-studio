@@ -12,6 +12,8 @@ const diffSummaryResponseSchema = z.object({
   file_count: z.number(),
 });
 
+const diffModeSchema = z.enum(["current", "fork_point"]).default("current");
+
 export const getWorkspaceDiffSummaryRoute = createRoute({
   method: "get",
   path: "/workspaces/{id}/diff-summary",
@@ -19,6 +21,7 @@ export const getWorkspaceDiffSummaryRoute = createRoute({
   tags: ["Workspaces"],
   request: {
     params: z.object({ id: z.string() }).strict(),
+    query: z.object({ mode: diffModeSchema }).strict(),
   },
   responses: {
     200: {
@@ -37,6 +40,7 @@ export const getWorkspaceDiffSummaryHandler = (
 ): AppRouteHandler<typeof getWorkspaceDiffSummaryRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
+    const { mode } = c.req.valid("query");
     const workspace = await deps.workspaceService.get(id);
 
     if (!workspace) {
@@ -47,7 +51,7 @@ export const getWorkspaceDiffSummaryHandler = (
       return c.json({ error: `Workspace has no worktree: ${id}` }, 404);
     }
 
-    const resolved = await resolveBase(workspace.worktree_path);
+    const resolved = mode === "current" ? { sha: "HEAD" } : await resolveBase(workspace.worktree_path);
     const summary = await getWorktreeDiffSummary({ worktreePath: workspace.worktree_path, base: resolved.sha });
 
     return c.json({ workspace_id: workspace.id, ...summary }, 200);

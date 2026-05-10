@@ -22,6 +22,13 @@ export type WorktreeDiff = {
   };
 };
 
+export type FileDiffSummary = Omit<FileDiff, "oldContent" | "newContent">;
+
+export type WorktreeDiffSummaryFiles = {
+  files: FileDiffSummary[];
+  totals: WorktreeDiff["totals"];
+};
+
 export type DiffSummary = {
   additions: number;
   deletions: number;
@@ -136,6 +143,43 @@ const countAdditionsDeletions = async (cwd: string, base: string, filePath: stri
   }
 };
 
+const buildFileDiffSummary = async (
+  worktreePath: string,
+  base: string,
+  entry: ParsedEntry,
+): Promise<FileDiffSummary> => {
+  const oldPath = entry.oldPath ?? entry.filePath;
+  const newPath = entry.newPath ?? entry.filePath;
+  const stats = await countAdditionsDeletions(worktreePath, base, newPath, entry.oldPath);
+  const additions =
+    entry.change === "added" && stats.additions === 0
+      ? countContentLines(await getWorkingContent(worktreePath, newPath))
+      : stats.additions;
+  const deletions =
+    entry.change === "deleted" && stats.deletions === 0
+      ? countContentLines(await getFileContent(worktreePath, base, oldPath))
+      : stats.deletions;
+
+  return {
+    filePath: newPath,
+    change: entry.change,
+    additions,
+    deletions,
+    ...(entry.oldPath ? { oldPath: entry.oldPath } : {}),
+    ...(entry.newPath ? { newPath: entry.newPath } : {}),
+  };
+};
+
+const buildTotals = (files: Array<Pick<FileDiff, "additions" | "deletions">>) =>
+  files.reduce<WorktreeDiff["totals"]>(
+    (acc, f) => ({
+      additions: acc.additions + f.additions,
+      deletions: acc.deletions + f.deletions,
+      file_count: acc.file_count + 1,
+    }),
+    { additions: 0, deletions: 0, file_count: 0 },
+  );
+
 export const getWorktreeDiffSummary = async (opts: { worktreePath: string; base: string }): Promise<DiffSummary> => {
   const { worktreePath, base } = opts;
   const { fileMap, untrackedPaths, untrackedSet } = await discoverChangedFiles(worktreePath, base);
@@ -163,6 +207,45 @@ export const getWorktreeDiffSummary = async (opts: { worktreePath: string; base:
   return { additions, deletions, file_count };
 };
 
+export const getWorktreeDiffSummaryFiles = async (opts: {
+  worktreePath: string;
+  base: string;
+}): Promise<WorktreeDiffSummaryFiles> => {
+  const { worktreePath, base } = opts;
+  const { fileMap } = await discoverChangedFiles(worktreePath, base);
+  const files: FileDiffSummary[] = [];
+
+  for (const entry of fileMap.values()) {
+    files.push(await buildFileDiffSummary(worktreePath, base, entry));
+  }
+
+  return { files, totals: buildTotals(files) };
+};
+
+export const getWorktreeDiffFile = async (opts: {
+  worktreePath: string;
+  base: string;
+  filePath: string;
+}): Promise<FileDiff | null> => {
+  const { worktreePath, base, filePath } = opts;
+  const { fileMap } = await discoverChangedFiles(worktreePath, base);
+  const entry = fileMap.get(filePath);
+
+  if (!entry) return null;
+
+  const oldPath = entry.oldPath ?? entry.filePath;
+  const newPath = entry.newPath ?? entry.filePath;
+  const oldContent = entry.change === "added" ? "" : await getFileContent(worktreePath, base, oldPath);
+  const newContent = entry.change === "deleted" ? "" : await getWorkingContent(worktreePath, newPath);
+  const stats = await buildFileDiffSummary(worktreePath, base, entry);
+
+  return {
+    ...stats,
+    oldContent,
+    newContent,
+  };
+};
+
 export const getWorktreeDiff = async (opts: { worktreePath: string; base: string }): Promise<WorktreeDiff> => {
   const { worktreePath, base } = opts;
   const { fileMap } = await discoverChangedFiles(worktreePath, base);
@@ -182,32 +265,14 @@ export const getWorktreeDiff = async (opts: { worktreePath: string; base: string
       newContent = await getWorkingContent(worktreePath, newPath);
     }
 
-    const stats = await countAdditionsDeletions(worktreePath, base, newPath, entry.oldPath);
-    const additions =
-      entry.change === "added" && stats.additions === 0 ? countContentLines(newContent) : stats.additions;
-    const deletions =
-      entry.change === "deleted" && stats.deletions === 0 ? countContentLines(oldContent) : stats.deletions;
+    const stats = await buildFileDiffSummary(worktreePath, base, entry);
 
     files.push({
-      filePath: newPath,
-      change: entry.change,
-      additions,
-      deletions,
+      ...stats,
       oldContent,
       newContent,
-      ...(entry.oldPath ? { oldPath: entry.oldPath } : {}),
-      ...(entry.newPath ? { newPath: entry.newPath } : {}),
     });
   }
 
-  const totals = files.reduce(
-    (acc, f) => ({
-      additions: acc.additions + f.additions,
-      deletions: acc.deletions + f.deletions,
-      file_count: acc.file_count + 1,
-    }),
-    { additions: 0, deletions: 0, file_count: 0 },
-  );
-
-  return { files, totals };
+  return { files, totals: buildTotals(files) };
 };

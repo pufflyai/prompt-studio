@@ -16,6 +16,8 @@
     "test": "lerna run test --concurrency 1",
     "test:coverage": "lerna run test:coverage --stream",
     "test:e2e": "bun run --cwd packages/e2e test",
+    "perf:frontend": "bun run --cwd packages/e2e perf:frontend",
+    "perf:frontend:trace": "bun run --cwd packages/e2e perf:frontend:trace",
     "lint": "lerna run lint",
     "format": "biome check --write .",
     "format:check": "biome check .",

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { normalizeWorkspacePageTab, type WorkspacePageTab } from "@/features/workspaces/pages/workspace-page-tab";
 import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/shared/api-types";
+import { ATTEMPT_DIFF_MODE, getWorkspaceDiffFile } from "@/shared/workspace-diff-api";
 import { type ChangedFilesViewMode, collectChangedFilePaths } from "../utils/build-changed-files-tree";
 import { sortDiffs } from "../utils/sort-diffs";
 import { WorkspaceChecksPanel } from "./workspace-checks-panel";
@@ -12,6 +13,7 @@ import { FileListPanel, ResizableLeftPanel, resolveSelectedPath } from "./worksp
 
 interface WorkspaceDiffPanelProps {
   ticketId: string;
+  workspaceId: string | null;
   diffs: Diff[];
   artifacts: ApiWorkspaceArtifact[];
   changedFiles: ApiFileDiff[];
@@ -33,27 +35,30 @@ export const buildFilteredDiffs = (input: {
   return sortDiffs(matchingDiffs, viewMode);
 };
 
-const WorkspaceDiffPanelLoading = () => (
-  <Flex h="full" minH="0" minW="0" flex="1" bg="bg.subtle" gap="0">
-    <Stack w="18rem" minW="18rem" h="full" gap="0" borderRightWidth="1px" bg="bg">
-      <Skeleton height="41px" borderRadius="0" />
-      <Stack gap="xs" px="sm" py="sm">
-        <Skeleton height="28px" borderRadius="sm" />
-        <Skeleton height="18px" borderRadius="sm" />
-        <Skeleton height="18px" borderRadius="sm" />
-        <Skeleton height="18px" borderRadius="sm" />
-      </Stack>
-    </Stack>
+export const buildLoadedDiffKey = (workspaceId: string | null, path: string) => `${workspaceId ?? ""}:${path}`;
 
-    <Stack flex="1" minH="0" gap="0">
-      <Skeleton height="41px" borderRadius="0" />
-      <Stack gap="xs" px="sm" py="sm">
-        <Skeleton height="22px" borderRadius="sm" />
-        <Skeleton height="110px" borderRadius="sm" />
-        <Skeleton height="110px" borderRadius="sm" />
-      </Stack>
+export const resolveDisplayDiffs = (input: {
+  workspaceId: string | null;
+  diffs: Diff[];
+  loadedDiffs: Map<string, Diff>;
+}) => {
+  const { workspaceId, diffs, loadedDiffs } = input;
+
+  return diffs.map((diff) => {
+    const path = diff.newPath ?? diff.oldPath ?? "unknown";
+    return loadedDiffs.get(buildLoadedDiffKey(workspaceId, path)) ?? diff;
+  });
+};
+
+const WorkspaceDiffPanelLoading = () => (
+  <Stack flex="1" minH="0" gap="0">
+    <Skeleton height="41px" borderRadius="0" />
+    <Stack gap="xs" px="sm" py="sm">
+      <Skeleton height="22px" borderRadius="sm" />
+      <Skeleton height="110px" borderRadius="sm" />
+      <Skeleton height="110px" borderRadius="sm" />
     </Stack>
-  </Flex>
+  </Stack>
 );
 
 interface WorkspaceDiffHeaderProps {
@@ -78,12 +83,14 @@ const WorkspaceDiffHeader = (props: WorkspaceDiffHeaderProps) => {
 };
 
 export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
-  const { ticketId, diffs, artifacts, changedFiles, activeTab, onTabChange, loading = false } = props;
+  const { ticketId, workspaceId, diffs, artifacts, changedFiles, activeTab, onTabChange, loading = false } = props;
   const { t } = useTranslation("tickets");
   const [isTreePanelOpen, setTreePanelOpen] = useState(true);
   const [viewMode, setViewMode] = useState<ChangedFilesViewMode>("nested");
   const [searchQuery, setSearchQuery] = useState("");
-  const diffPaths = diffs.map((diff) => diff.newPath ?? diff.oldPath ?? "unknown");
+  const [loadedDiffs, setLoadedDiffs] = useState<Map<string, Diff>>(() => new Map());
+  const displayDiffs = resolveDisplayDiffs({ workspaceId, diffs, loadedDiffs });
+  const diffPaths = displayDiffs.map((diff) => diff.newPath ?? diff.oldPath ?? "unknown");
   const changedFilePaths = collectChangedFilePaths(changedFiles);
   const [selectedDiffPath, setSelectedDiffPath] = useState<string | null>(() =>
     resolveSelectedPath(diffPaths, changedFilePaths),
@@ -92,7 +99,7 @@ export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
   const filteredChangedFilePaths = !normalizedSearchQuery
     ? changedFilePaths
     : changedFilePaths.filter((path) => path.toLowerCase().includes(normalizedSearchQuery));
-  const filteredDiffs = buildFilteredDiffs({ diffs, normalizedSearchQuery, viewMode });
+  const filteredDiffs = buildFilteredDiffs({ diffs: displayDiffs, normalizedSearchQuery, viewMode });
   const filteredDiffPaths = filteredDiffs.map((diff) => diff.newPath ?? diff.oldPath ?? "unknown");
   const hasDiffs = filteredDiffs.length > 0;
   const hasChangedFiles = changedFiles.length > 0;
@@ -103,13 +110,15 @@ export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
     setSelectedDiffPath(resolveSelectedPath(filteredDiffPaths, filteredChangedFilePaths));
   }, [filteredChangedFilePaths, filteredDiffPaths, selectedDiffPath]);
 
-  if (loading) {
-    return <WorkspaceDiffPanelLoading />;
-  }
-
   const resolvedSelectedDiffPath = selectedDiffPath ?? resolveSelectedPath(filteredDiffPaths, filteredChangedFilePaths);
   const handleSelectDiffPath = (path: string) => {
     setSelectedDiffPath(path);
+  };
+  const handleLoadDiff = async (path: string) => {
+    if (!workspaceId) return;
+
+    const file = await getWorkspaceDiffFile(workspaceId, path, ATTEMPT_DIFF_MODE);
+    setLoadedDiffs((current) => new Map(current).set(buildLoadedDiffKey(workspaceId, path), file));
   };
 
   return (
@@ -162,9 +171,15 @@ export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
                 isTreePanelOpen={isTreePanelOpen}
               />
 
-              {hasDiffs ? (
+              {loading ? (
+                <WorkspaceDiffPanelLoading />
+              ) : hasDiffs ? (
                 <Box flex="1" minH="0">
-                  <DiffDrawer diffs={filteredDiffs} selectedDiffPath={resolvedSelectedDiffPath} />
+                  <DiffDrawer
+                    diffs={filteredDiffs}
+                    selectedDiffPath={resolvedSelectedDiffPath}
+                    onLoadDiff={handleLoadDiff}
+                  />
                 </Box>
               ) : (
                 <Box flex="1" minH="0" px="md" py="lg" display="flex" alignItems="center" justifyContent="center">

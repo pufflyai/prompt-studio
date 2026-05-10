@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, mock } from "bun:test";
 
-import { ATTEMPT_DIFF_MODE, createTicketAttempt, getTicketAttemptDiff } from "./attempts";
+import { ATTEMPT_DIFF_MODE } from "@/shared/workspace-diff-api";
+import { createTicketAttempt, getTicketAttemptDiff } from "./attempts";
 
 const originalFetch = globalThis.fetch;
 

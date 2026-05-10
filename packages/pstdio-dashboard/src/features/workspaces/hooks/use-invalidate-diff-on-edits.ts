@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
-import { ATTEMPT_DIFF_MODE, getTicketAttemptDiff } from "@/features/ticket-list/data/api";
+import { ATTEMPT_DIFF_MODE, getWorkspaceDiffFiles } from "@/shared/workspace-diff-api";
 
 const DEBOUNCE_MS = 2000;
 
@@ -22,8 +22,8 @@ export const useInvalidateDiffOnEdits = (workspaceId: string | null) => {
 
     timerRef.current = setTimeout(() => {
       queryClient.fetchQuery({
-        queryKey: ["ticket-attempt-diff", workspaceId, ATTEMPT_DIFF_MODE],
-        queryFn: () => getTicketAttemptDiff(workspaceId, ATTEMPT_DIFF_MODE),
+        queryKey: ["ticket-attempt-diff-files", workspaceId, ATTEMPT_DIFF_MODE],
+        queryFn: () => getWorkspaceDiffFiles(workspaceId, ATTEMPT_DIFF_MODE),
       });
     }, DEBOUNCE_MS);
   };

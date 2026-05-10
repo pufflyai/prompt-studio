@@ -8,6 +8,7 @@ import { ScrollArea } from "./scroll-area";
 interface DiffDrawerProps {
   diffs: Diff[];
   selectedDiffPath?: string | null;
+  onLoadDiff?: (path: string) => Promise<void>;
 }
 
 export type { Diff };
@@ -15,7 +16,7 @@ export type { Diff };
 const getDiffPath = (diff: Diff) => diff.newPath ?? diff.oldPath ?? "unknown";
 
 export function DiffDrawer(props: DiffDrawerProps) {
-  const { diffs, selectedDiffPath = null } = props;
+  const { diffs, selectedDiffPath = null, onLoadDiff } = props;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(() => new Set());
 
@@ -83,6 +84,7 @@ export function DiffDrawer(props: DiffDrawerProps) {
                     isSelected={selectedDiffPath === path}
                     isExpanded={!collapsedPaths.has(path)}
                     onToggleExpanded={() => toggleCollapsed(path)}
+                    onLoadDiff={onLoadDiff}
                   />
                 </Box>
               );

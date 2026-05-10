@@ -1,11 +1,31 @@
 import { describe, expect, it } from "bun:test";
 import type { Diff } from "@pstdio/ui";
-import { buildFilteredDiffs } from "./workspace-diff-panel";
+import { buildFilteredDiffs, buildLoadedDiffKey, resolveDisplayDiffs } from "./workspace-diff-panel";
 
 const createDiff = (input: { newPath?: string; oldPath?: string }): Diff => ({
   change: "modified",
   newPath: input.newPath,
   oldPath: input.oldPath,
+});
+
+describe("resolveDisplayDiffs", () => {
+  it("scopes loaded diff bodies by workspace", () => {
+    const loadedDiffs = new Map<string, Diff>([
+      [
+        buildLoadedDiffKey("workspace-1", "src/app.ts"),
+        { change: "modified", newPath: "src/app.ts", oldContent: "old workspace", newContent: "new workspace" },
+      ],
+    ]);
+
+    const displayDiffs = resolveDisplayDiffs({
+      workspaceId: "workspace-2",
+      loadedDiffs,
+      diffs: [{ change: "modified", newPath: "src/app.ts" }],
+    });
+
+    expect(displayDiffs[0].oldContent).toBeUndefined();
+    expect(displayDiffs[0].newContent).toBeUndefined();
+  });
 });
 
 describe("buildFilteredDiffs", () => {

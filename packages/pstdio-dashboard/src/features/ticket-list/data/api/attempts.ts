@@ -1,10 +1,6 @@
 import { apiRequest } from "@/lib/api";
-import type {
-  ApiCreateTicketAttemptResponse,
-  ApiTicketAttemptDiff,
-  CreateTicketAttemptInput,
-  CreateTicketAttemptResult,
-} from "./types";
+import type { ApiTicketAttemptDiff, DiffMode } from "@/shared/workspace-diff-api";
+import type { ApiCreateTicketAttemptResponse, CreateTicketAttemptInput, CreateTicketAttemptResult } from "./types";
 
 export const createTicketAttempt = async (input: CreateTicketAttemptInput) => {
   const body: Record<string, unknown> = {
@@ -43,10 +39,6 @@ export const createTicketAttempt = async (input: CreateTicketAttemptInput) => {
   } satisfies CreateTicketAttemptResult;
 };
 
-export type DiffMode = "current" | "fork_point";
-
-export const ATTEMPT_DIFF_MODE = "fork_point" satisfies DiffMode;
-
 export const getTicketAttemptDiff = async (workspaceId: string, mode?: DiffMode) => {
   const params = mode ? `?mode=${mode}` : "";
   return apiRequest<ApiTicketAttemptDiff>(`/v1/workspaces/${workspaceId}/diff${params}`);
@@ -59,6 +51,7 @@ interface DiffSummary {
   file_count: number;
 }
 
-export const getTicketAttemptDiffSummary = async (workspaceId: string) => {
-  return apiRequest<DiffSummary>(`/v1/workspaces/${workspaceId}/diff-summary`);
+export const getTicketAttemptDiffSummary = async (workspaceId: string, mode?: DiffMode) => {
+  const params = mode ? `?mode=${mode}` : "";
+  return apiRequest<DiffSummary>(`/v1/workspaces/${workspaceId}/diff-summary${params}`);
 };

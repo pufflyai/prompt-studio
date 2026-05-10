@@ -15,8 +15,8 @@ export type ApiFileDiff = {
   change: "added" | "deleted" | "modified" | "renamed" | "copied" | "permissionChange";
   additions: number;
   deletions: number;
-  oldContent: string;
-  newContent: string;
+  oldContent?: string;
+  newContent?: string;
   oldPath?: string;
   newPath?: string;
 };

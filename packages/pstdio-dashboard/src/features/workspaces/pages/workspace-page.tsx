@@ -45,10 +45,12 @@ import {
   runWorkspaceCreation,
   useWorkspaceSessionSearchNormalization,
 } from "./workspace-page-helpers";
+import { WorkspacePagePendingShell } from "./workspace-page-pending-shell";
+import { shouldShowWorkspaceTicketNotFound } from "./workspace-page-readiness";
 import { normalizeWorkspacePageTab } from "./workspace-page-tab";
 import { WorkspacePageTicketNotFound } from "./workspace-page-ticket-not-found";
 
-// biome-ignore lint/complexity/noExcessiveLinesPerFunction: This page coordinates route state, multiple action triggers, and modal flows for the workspace surface.
+// biome-ignore lint/complexity: This page coordinates route state, multiple action triggers, and modal flows for the workspace surface.
 export const WorkspacePage = () => {
   const { projectId, ticketShorthand, workspaceShorthand } = useParams({ strict: false });
   const search = useSearch({ strict: false });
@@ -65,7 +67,8 @@ export const WorkspacePage = () => {
   const setSelectedSessionId = useProjectSettingsStore((state) => state.setSelectedSessionId);
   const lastAutoOpenedRouteKeyRef = useRef<string | null>(null);
   const { data: project } = useProject(projectId);
-  const { data: allTickets = [] } = useProjectTickets(projectId);
+  const ticketsQuery = useProjectTickets(projectId);
+  const allTickets = ticketsQuery.data ?? [];
   const ticket = allTickets.find((item) => item.shorthand === ticketShorthand) ?? null;
   const sidebarSubTickets = ticket ? resolveSidebarSubTickets(allTickets, ticket.id, ticket.shorthand) : [];
   const attempts = ticket?.attempts ?? [];
@@ -271,7 +274,27 @@ export const WorkspacePage = () => {
       ticketShorthand,
       closeDeleteModal: () => setDeleteOpen(false),
     });
-  if (!ticket) return <WorkspacePageTicketNotFound />;
+
+  const handleDeleteTicket = async () => {
+    if (!ticket) return;
+
+    await deleteTicket.mutateAsync({ ticketId: ticket.id });
+    setTicketDeleteOpen(false);
+    navigateToProjectTickets(navigate, projectId);
+  };
+
+  if (!ticket) {
+    return shouldShowWorkspaceTicketNotFound({ hasTicket: false, areTicketsLoading: ticketsQuery.isLoading }) ? (
+      <WorkspacePageTicketNotFound />
+    ) : (
+      <WorkspacePagePendingShell
+        activeTab={activeTab}
+        onTabChange={(tab) =>
+          navigateToWorkspaceTab({ navigate, projectId, ticketShorthand, workspaceShorthand, sessionId, tab })
+        }
+      />
+    );
+  }
 
   return (
     <WorkspacePageContent
@@ -349,11 +372,7 @@ export const WorkspacePage = () => {
       sessionActionTrigger={sessionActionTrigger}
       isTicketDeleteOpen={isTicketDeleteOpen}
       closeTicketDeleteModal={() => setTicketDeleteOpen(false)}
-      deleteTicket={async () => {
-        await deleteTicket.mutateAsync({ ticketId: ticket.id });
-        setTicketDeleteOpen(false);
-        navigateToProjectTickets(navigate, projectId);
-      }}
+      deleteTicket={handleDeleteTicket}
       deleteWorkspaceIsPending={deleteWorkspace.isPending}
       isDeleteOpen={isDeleteOpen}
       openDeleteModal={() => setDeleteOpen(true)}

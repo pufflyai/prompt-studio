@@ -7,6 +7,8 @@
     "test:cli": "bun test src/cli --timeout 30000 --silent",
     "test:packaged": "bun test src/packaged --timeout 30000 --silent",
     "test:ui": "bun run src/scripts/run-playwright.ts",
+    "perf:frontend": "bunx playwright test -c playwright.perf.config.ts",
+    "perf:frontend:trace": "PLAYWRIGHT_TRACE=on bunx playwright test -c playwright.perf.config.ts",
     "report": "playwright show-report"
   },
   "devDependencies": {

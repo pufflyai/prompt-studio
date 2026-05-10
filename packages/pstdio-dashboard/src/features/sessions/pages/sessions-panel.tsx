@@ -1,6 +1,7 @@
 import { HStack, Stack, Text } from "@chakra-ui/react";
 import { HorizontalMenuStack, PanelLayout } from "@pstdio/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
 import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
@@ -10,6 +11,7 @@ import {
   buildResourceContextMenuActions,
   toSidebarContextMenuItems,
 } from "@/features/plugin-actions/hooks/use-resource-context-menu";
+import { markAfterPaint } from "@/shared/performance/mark-after-paint";
 import { SessionChatView } from "../components/session-chat-view";
 import { SessionsSidebar } from "../components/sessions-sidebar";
 import { useArchiveSession } from "../hooks/use-archive-session";
@@ -27,6 +29,10 @@ export const SessionsPanel = () => {
   const visibleSessions = getVisibleSessions(sessions);
   const archiveSession = useArchiveSession();
   const selectedSession = visibleSessions.find((item) => item.id === selectedSessionId) ?? null;
+
+  useEffect(() => {
+    markAfterPaint("app:sessions-page-ready");
+  }, []);
 
   const pluginActionTrigger = usePluginActionTrigger({
     projectId,

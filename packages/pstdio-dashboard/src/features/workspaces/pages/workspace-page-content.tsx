@@ -2,6 +2,7 @@ import { Flex, Stack } from "@chakra-ui/react";
 import { Breadcrumb, DeleteConfirmationModal, HorizontalMenuStack, PanelLayout } from "@pstdio/ui";
 import { Link } from "@tanstack/react-router";
 import { KanbanSquare } from "lucide-react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
 import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin-header-actions";
@@ -19,6 +20,7 @@ import type { TicketSubTicket } from "@/features/ticket-list/types";
 import type { transformFileDiffs } from "@/features/workspaces/utils/transform-diff";
 import { getAttemptLabelFromWorkspaceShorthand } from "@/features/workspaces/utils/workspace-shorthand";
 import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/shared/api-types";
+import { markAfterPaint } from "@/shared/performance/mark-after-paint";
 import { WorkspaceDiffPanel } from "../components/workspace-diff-panel";
 import type { WorkspaceListItem } from "../components/workspace-list-panel";
 import type { useAttemptStatusMap } from "../hooks/use-attempt-status-map";
@@ -187,6 +189,10 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
   } = props;
   const { t } = useTranslation("projects");
 
+  useEffect(() => {
+    markAfterPaint("app:workspace-page-ready");
+  }, []);
+
   const defaultOverflowActions = buildWorkspaceDeleteOverflowAction({
     t,
     hasSelectedWorkspace: Boolean(selectedWorkspace),
@@ -285,6 +291,7 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
         <Flex flex="1" minH="0">
           <WorkspaceDiffPanel
             ticketId={ticket.id}
+            workspaceId={selectedWorkspace?.id ?? null}
             diffs={diffs}
             artifacts={artifacts}
             changedFiles={changedFiles}

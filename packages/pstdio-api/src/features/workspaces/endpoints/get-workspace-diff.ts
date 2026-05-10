@@ -1,5 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { getWorktreeDiff } from "pstdio-wt";
+import { getWorktreeDiff, getWorktreeDiffFile, getWorktreeDiffSummaryFiles } from "pstdio-wt";
 import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
@@ -16,6 +16,8 @@ const fileDiffSchema = z.object({
   newPath: z.string().optional(),
 });
 
+const fileDiffSummarySchema = fileDiffSchema.omit({ oldContent: true, newContent: true });
+
 const workspaceDiffResponseSchema = z.object({
   workspace_id: z.string(),
   base_ref: z.string(),
@@ -26,6 +28,10 @@ const workspaceDiffResponseSchema = z.object({
     deletions: z.number(),
     file_count: z.number(),
   }),
+});
+
+const workspaceDiffFilesResponseSchema = workspaceDiffResponseSchema.extend({
+  files: z.array(fileDiffSummarySchema),
 });
 
 const diffModeSchema = z.enum(["current", "fork_point"]).default("current");
@@ -52,37 +58,145 @@ export const getWorkspaceDiffRoute = createRoute({
   },
 });
 
+export const getWorkspaceDiffFilesRoute = createRoute({
+  method: "get",
+  path: "/workspaces/{id}/diff-files",
+  description: "Get lightweight changed file metadata for a workspace without file bodies.",
+  tags: ["Workspaces"],
+  request: {
+    params: z.object({ id: z.string() }).strict(),
+    query: z.object({ mode: diffModeSchema }).strict(),
+  },
+  responses: {
+    200: {
+      description: "Workspace changed file metadata.",
+      content: { "application/json": { schema: workspaceDiffFilesResponseSchema } },
+    },
+    404: {
+      description: "Workspace not found or has no worktree.",
+      content: { "application/json": { schema: notFoundResponseSchema } },
+    },
+  },
+});
+
+export const getWorkspaceDiffFileRoute = createRoute({
+  method: "get",
+  path: "/workspaces/{id}/diff-file",
+  description: "Get one changed file diff body for a workspace.",
+  tags: ["Workspaces"],
+  request: {
+    params: z.object({ id: z.string() }).strict(),
+    query: z.object({ mode: diffModeSchema, path: z.string() }).strict(),
+  },
+  responses: {
+    200: {
+      description: "Workspace changed file body.",
+      content: { "application/json": { schema: fileDiffSchema } },
+    },
+    404: {
+      description: "Workspace, worktree, or file not found.",
+      content: { "application/json": { schema: notFoundResponseSchema } },
+    },
+  },
+});
+
+const resolveWorkspaceDiffContext = async (deps: WorkspacesRouteDeps, id: string, mode: "current" | "fork_point") => {
+  const workspace = await deps.workspaceService.get(id);
+
+  if (!workspace) {
+    return { error: { message: `Workspace not found: ${id}`, status: 404 as const } };
+  }
+
+  if (!workspace.worktree_path) {
+    return { error: { message: `Workspace has no worktree: ${id}`, status: 404 as const } };
+  }
+
+  const resolved = mode === "current" ? { sha: "HEAD", label: "HEAD" } : await resolveBase(workspace.worktree_path);
+  const headLabel = await resolveHeadLabel(workspace.worktree_path);
+
+  return { workspace, worktreePath: workspace.worktree_path, resolved, headLabel };
+};
+
 export const getWorkspaceDiffHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof getWorkspaceDiffRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const { mode } = c.req.valid("query");
-    const workspace = await deps.workspaceService.get(id);
+    const context = await resolveWorkspaceDiffContext(deps, id, mode);
 
-    if (!workspace) {
-      return c.json({ error: `Workspace not found: ${id}` }, 404);
+    if (context.error) {
+      return c.json({ error: context.error.message }, context.error.status);
     }
-
-    if (!workspace.worktree_path) {
-      return c.json({ error: `Workspace has no worktree: ${id}` }, 404);
-    }
-
-    const resolved = mode === "current" ? { sha: "HEAD", label: "HEAD" } : await resolveBase(workspace.worktree_path);
-    const headLabel = await resolveHeadLabel(workspace.worktree_path);
 
     const diff = await getWorktreeDiff({
-      worktreePath: workspace.worktree_path,
-      base: resolved.sha,
+      worktreePath: context.worktreePath,
+      base: context.resolved.sha,
     });
 
     return c.json(
       {
-        workspace_id: workspace.id,
-        base_ref: resolved.label,
-        head_ref: headLabel,
+        workspace_id: context.workspace.id,
+        base_ref: context.resolved.label,
+        head_ref: context.headLabel,
         files: diff.files,
         totals: diff.totals,
       },
       200,
     );
+  };
+};
+
+export const getWorkspaceDiffFilesHandler = (
+  deps: WorkspacesRouteDeps,
+): AppRouteHandler<typeof getWorkspaceDiffFilesRoute> => {
+  return async (c) => {
+    const { id } = c.req.valid("param");
+    const { mode } = c.req.valid("query");
+    const context = await resolveWorkspaceDiffContext(deps, id, mode);
+
+    if (context.error) {
+      return c.json({ error: context.error.message }, context.error.status);
+    }
+
+    const diff = await getWorktreeDiffSummaryFiles({
+      worktreePath: context.worktreePath,
+      base: context.resolved.sha,
+    });
+
+    return c.json(
+      {
+        workspace_id: context.workspace.id,
+        base_ref: context.resolved.label,
+        head_ref: context.headLabel,
+        files: diff.files,
+        totals: diff.totals,
+      },
+      200,
+    );
+  };
+};
+
+export const getWorkspaceDiffFileHandler = (
+  deps: WorkspacesRouteDeps,
+): AppRouteHandler<typeof getWorkspaceDiffFileRoute> => {
+  return async (c) => {
+    const { id } = c.req.valid("param");
+    const { mode, path } = c.req.valid("query");
+    const context = await resolveWorkspaceDiffContext(deps, id, mode);
+
+    if (context.error) {
+      return c.json({ error: context.error.message }, context.error.status);
+    }
+
+    const file = await getWorktreeDiffFile({
+      worktreePath: context.worktreePath,
+      base: context.resolved.sha,
+      filePath: path,
+    });
+
+    if (!file) {
+      return c.json({ error: `Workspace diff file not found: ${path}` }, 404);
+    }
+
+    return c.json(file, 200);
   };
 };

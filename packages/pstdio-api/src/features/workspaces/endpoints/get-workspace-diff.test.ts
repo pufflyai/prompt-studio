@@ -158,6 +158,60 @@ describe("GET /v1/workspaces/:id/diff", () => {
     expect(featureFile.newContent).toBe("feature\n");
   });
 
+  test("diff-files omits file bodies from the initial workspace diff payload", async () => {
+    const { workspace } = await createWorkspaceWithDiff("diff-files-summary");
+
+    writeFileSync(join(workspace.worktree_path, "feature.txt"), "feature\n");
+    execSync("git add feature.txt", { cwd: workspace.worktree_path, stdio: "pipe" });
+    execSync('git commit -m "add feature"', { cwd: workspace.worktree_path, stdio: "pipe" });
+
+    const res = await app.request(`/v1/workspaces/${workspace.id}/diff-files?mode=fork_point`);
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    const featureFile = body.files.find((f: { filePath: string }) => f.filePath === "feature.txt");
+    expect(featureFile).toBeDefined();
+    expect(featureFile.oldContent).toBeUndefined();
+    expect(featureFile.newContent).toBeUndefined();
+  });
+
+  test("diff-file returns one file body on demand", async () => {
+    const { workspace } = await createWorkspaceWithDiff("diff-file-body");
+
+    writeFileSync(join(workspace.worktree_path, "feature.txt"), "feature\n");
+    execSync("git add feature.txt", { cwd: workspace.worktree_path, stdio: "pipe" });
+    execSync('git commit -m "add feature"', { cwd: workspace.worktree_path, stdio: "pipe" });
+
+    const res = await app.request(`/v1/workspaces/${workspace.id}/diff-file?mode=fork_point&path=feature.txt`);
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.filePath).toBe("feature.txt");
+    expect(body.newContent).toBe("feature\n");
+  });
+
+  test("diff-files and diff-file count untracked added file lines", async () => {
+    const { workspace } = await createWorkspaceWithDiff("diff-untracked-added-counts");
+
+    writeFileSync(join(workspace.worktree_path, "untracked.txt"), "one\ntwo\nthree\n");
+
+    const summaryRes = await app.request(`/v1/workspaces/${workspace.id}/diff-files?mode=fork_point`);
+    expect(summaryRes.status).toBe(200);
+
+    const summary = await summaryRes.json();
+    const summaryFile = summary.files.find((f: { filePath: string }) => f.filePath === "untracked.txt");
+    expect(summaryFile).toBeDefined();
+    expect(summaryFile.additions).toBe(3);
+    expect(summary.totals.additions).toBe(3);
+
+    const fileRes = await app.request(`/v1/workspaces/${workspace.id}/diff-file?mode=fork_point&path=untracked.txt`);
+    expect(fileRes.status).toBe(200);
+
+    const file = await fileRes.json();
+    expect(file.additions).toBe(3);
+    expect(file.newContent).toBe("one\ntwo\nthree\n");
+  });
+
   test("fork_point mode keeps diff after fast-forward merge", async () => {
     const { workspace, repoRoot } = await createWorkspaceWithDiff("diff-fork-point-fast-forward");
 
