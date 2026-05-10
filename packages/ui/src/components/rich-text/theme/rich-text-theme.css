@@ -353,7 +353,7 @@ li.rich-text__listItemUnchecked,
 li.rich-text__listItemChecked {
   position: relative;
   list-style-type: none;
-  padding-left: 26px;
+  padding-left: 22px;
   outline: none;
 }
 
@@ -362,9 +362,9 @@ li.rich-text__listItemChecked::before {
   content: "";
   position: absolute;
   left: 0;
-  top: 2px;
-  width: 18px;
-  height: 18px;
+  top: 4px;
+  width: 14px;
+  height: 14px;
   border-radius: var(--chakra-radii-xs, 4px);
   cursor: pointer;
 }
@@ -382,16 +382,16 @@ li.rich-text__listItemChecked::after {
   content: "";
   position: absolute;
   left: 0;
-  top: 2px;
-  width: 18px;
-  height: 18px;
+  top: 4px;
+  width: 14px;
+  height: 14px;
   cursor: pointer;
   background-color: var(--chakra-colors-bg);
   /* Chakra-style checkmark via mask so color adapts to theme */
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
-  -webkit-mask-size: 12px 12px;
-  mask-size: 12px 12px;
+  -webkit-mask-size: 10px 10px;
+  mask-size: 10px 10px;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-position: center;

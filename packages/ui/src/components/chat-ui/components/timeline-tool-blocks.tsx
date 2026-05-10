@@ -106,8 +106,8 @@ export const TodoListBlockView = (props: { items: TodoListBlockItem[] }) => {
     <Stack as="ul" gap="2xs" listStyleType="none" margin="0" padding="0">
       {items.map((item, index) => (
         <Box as="li" key={`${item.label}-${index}`}>
-          <Checkbox checked={item.checked} readOnly aria-readonly="true" inputProps={{ tabIndex: -1 }}>
-            <Text textStyle="label/S/regular" color="fg">
+          <Checkbox checked={item.checked} readOnly aria-readonly="true" inputProps={{ tabIndex: -1 }} size="xs">
+            <Text textStyle="label/XS/regular" color="fg">
               {item.label}
             </Text>
           </Checkbox>
