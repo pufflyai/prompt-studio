@@ -1,5 +1,14 @@
 # @pstdio/sdk
 
+## 0.5.0
+
+### Minor Changes
+
+- 3217943: Move the dashboard command palette to opt-in via a new `projectSlots.commandPanel` menu slot. Extensions now choose which commands to surface in the palette by listing them under `menus`, mirroring how header buttons already work. Drops the prior `commandPanel: boolean | object` field on `CommandDefinition`, the `CommandPanelContribution` interface, and the `excludeFromPalette` record field that was opt-out.
+- f934e4d: Expose extension-backed project catalogs and harden ticket shorthand allocation.
+- d65a8be: Add API-backed extension command execution and CLI routing
+- 095fbd3: Remove package-internal skill and template catalogs now that defaults ship from extensions.
+
 ## 0.4.2
 
 ### Patch Changes

@@ -1,13 +1,13 @@
 {
   "name": "pstdio-core-templates",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pstdio/sdk": "^0.4.2"
+    "@pstdio/sdk": "^0.5.0"
   },
   "devDependencies": {
     "typescript": "6.0.2"
