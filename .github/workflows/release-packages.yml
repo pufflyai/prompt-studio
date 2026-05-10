@@ -155,10 +155,24 @@ jobs:
       - name: Create GitHub Releases for other packages
         if: steps.changesets.outputs.published == 'true'
         run: |
-          for pkg in $(echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -r '.[] | select(.name != "pstdio") | "\(.name)@\(.version)"'); do
-            tag="${pkg}"
+          set -euo pipefail
+          tmp_root="$(mktemp -d)"
+          echo '${{ steps.changesets.outputs.publishedPackages }}' \
+            | jq -c '.[] | select(.name != "pstdio")' \
+            | while read -r entry; do
+            name=$(echo "$entry" | jq -r '.name')
+            version=$(echo "$entry" | jq -r '.version')
+            tag="${name}@${version}"
+
             if gh release view "$tag" > /dev/null 2>&1; then
               echo "Release $tag already exists, skipping."
+              continue
+            fi
+
+            if [ -d "extensions/${name}" ]; then
+              archive="${tmp_root}/${name}-${version}.tar.gz"
+              git archive --format=tar.gz --prefix="${name}/" -o "$archive" "HEAD:extensions/${name}"
+              gh release create "$tag" --title "$tag" --generate-notes "$archive"
             else
               gh release create "$tag" --title "$tag" --generate-notes
             fi
