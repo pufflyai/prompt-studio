@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { shouldAutoLoadDiffContent } from "./diff-card";
+import { resolveRequestedDiffPath, shouldAutoLoadDiffContent } from "./diff-card";
 
 describe("shouldAutoLoadDiffContent", () => {
   it("auto-loads expanded normal summary diffs", () => {
@@ -68,5 +68,27 @@ describe("shouldAutoLoadDiffContent", () => {
         filePath: "package-lock.json",
       }),
     ).toBe(false);
+  });
+});
+
+describe("resolveRequestedDiffPath", () => {
+  it("clears requested path once content arrives", () => {
+    expect(
+      resolveRequestedDiffPath({
+        requestedPath: "src/app.ts",
+        filePath: "src/app.ts",
+        hasDiffContent: true,
+      }),
+    ).toBeNull();
+  });
+
+  it("keeps requested path while content is still missing", () => {
+    expect(
+      resolveRequestedDiffPath({
+        requestedPath: "src/app.ts",
+        filePath: "src/app.ts",
+        hasDiffContent: false,
+      }),
+    ).toBe("src/app.ts");
   });
 });

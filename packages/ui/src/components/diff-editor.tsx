@@ -1,31 +1,68 @@
 import { DiffModeEnum, DiffView } from "@git-diff-view/react";
 import "@git-diff-view/react/styles/diff-view.css";
 import { Box } from "@chakra-ui/react";
+import { useRef } from "react";
 import { buildDiffViewData, type DiffViewData } from "./diff-view-adapter";
 
-interface DiffEditorProps {
+export interface DiffEditorInput {
   original: string;
   modified: string;
   language?: string;
   oldPath?: string;
   newPath?: string;
+}
+
+interface DiffEditorProps extends DiffEditorInput {
   sideBySide?: boolean;
   disableScroll?: boolean;
   data?: DiffViewData;
 }
 
+export interface DiffEditorDataState {
+  input: DiffEditorInput;
+  data: DiffViewData;
+}
+
+const areDiffEditorInputsEqual = (current: DiffEditorInput, next: DiffEditorInput) =>
+  current.original === next.original &&
+  current.modified === next.modified &&
+  current.language === next.language &&
+  current.oldPath === next.oldPath &&
+  current.newPath === next.newPath;
+
+export const resolveDiffEditorDataState = (
+  current: DiffEditorDataState | null,
+  input: DiffEditorInput,
+  createData: () => DiffViewData,
+) => {
+  if (current && areDiffEditorInputsEqual(current.input, input)) {
+    return current;
+  }
+
+  return {
+    input,
+    data: createData(),
+  };
+};
+
 export function DiffEditor(props: DiffEditorProps) {
   const { original, modified, language, oldPath, newPath, sideBySide = false, disableScroll = true, data } = props;
+  const dataStateRef = useRef<DiffEditorDataState | null>(null);
+  const input = { original, modified, language, oldPath, newPath };
 
-  const diffData =
-    data ??
-    buildDiffViewData({
-      original,
-      modified,
-      language,
-      oldPath,
-      newPath,
-    });
+  dataStateRef.current = resolveDiffEditorDataState(
+    dataStateRef.current,
+    input,
+    () =>
+      data ??
+      buildDiffViewData({
+        original,
+        modified,
+        language,
+        oldPath,
+        newPath,
+      }),
+  );
 
   const mode = sideBySide ? DiffModeEnum.Split : DiffModeEnum.Unified;
 
@@ -47,7 +84,7 @@ export function DiffEditor(props: DiffEditorProps) {
       }}
     >
       <DiffView
-        data={diffData}
+        data={dataStateRef.current.data}
         diffViewMode={mode}
         diffViewTheme="dark"
         diffViewHighlight={true}

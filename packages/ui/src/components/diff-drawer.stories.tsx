@@ -1,9 +1,10 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Button, Flex } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { expect } from "storybook/test";
 import { type Diff, DiffDrawer } from "./diff-drawer";
-import { MAX_RENDERED_DIFF_LINES } from "./diff-view-adapter";
+import { LARGE_DIFF_LINE_THRESHOLD } from "./diff-size";
+import { ScrollArea } from "./scroll-area";
 
 type StoryFn = () => ReactNode;
 
@@ -95,17 +96,181 @@ export const SingleFile: Story = {
   },
 };
 
+const userListOldContent = `import { useState } from "react";
+import { Button } from "@chakra-ui/react";
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
+
+const formatName = (user: User) => {
+  return \`\${user.name} <\${user.email}>\`;
+};
+
+const greetUser = (user: User) => {
+  return \`Hello, \${user.name}!\`;
+};
+
+export const UserList = ({ users }: { users: User[] }) => {
+  const [selected, setSelected] = useState<string | null>(null);
+
+  return (
+    <div>
+      {users.map((user) => (
+        <Button key={user.id} onClick={() => setSelected(user.id)}>
+          {formatName(user)}
+        </Button>
+      ))}
+    </div>
+  );
+};
+`;
+
+const userListNewContent = `import { useEffect, useState } from "react";
+import { Button, Stack } from "@chakra-ui/react";
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: "admin" | "user";
+}
+
+const formatName = (user: User) => {
+  return \`\${user.name} <\${user.email}>\`;
+};
+
+const greetUser = (user: User) => {
+  return \`Hello, \${user.name}!\`;
+};
+
+export const UserList = ({ users }: { users: User[] }) => {
+  const [selected, setSelected] = useState<string | null>(null);
+  const admins = users.filter((user) => user.role === "admin");
+
+  useEffect(() => {
+    if (!selected && admins[0]) setSelected(admins[0].id);
+  }, [admins, selected]);
+
+  return (
+    <Stack gap="2">
+      {users.map((user) => (
+        <Button key={user.id} onClick={() => setSelected(user.id)}>
+          {formatName(user)}
+        </Button>
+      ))}
+    </Stack>
+  );
+};
+`;
+
+const configOldContent = `export const defaultConfig = {
+  appName: "Prompt Studio",
+  version: "1.0.0",
+  features: {
+    chat: true,
+    workspaces: true,
+    snippets: false,
+  },
+  limits: {
+    maxTokens: 4096,
+    maxAttachments: 5,
+  },
+  theme: {
+    mode: "light",
+    accent: "blue",
+  },
+};
+`;
+
+const configNewContent = `export const defaultConfig = {
+  appName: "Prompt Studio",
+  version: "1.1.0",
+  features: {
+    chat: true,
+    workspaces: true,
+    snippets: true,
+    diffViewer: true,
+  },
+  limits: {
+    maxTokens: 8192,
+    maxAttachments: 10,
+  },
+  theme: {
+    mode: "dark",
+    accent: "violet",
+  },
+};
+`;
+
+export const ScatteredChanges: Story = {
+  render: (args) => <DiffDrawer {...args} />,
+  args: {
+    diffs: [
+      {
+        change: "modified",
+        oldPath: "src/features/users/UserList.tsx",
+        newPath: "src/features/users/UserList.tsx",
+        oldContent: userListOldContent,
+        newContent: userListNewContent,
+        additions: 7,
+        deletions: 3,
+      },
+    ],
+  },
+};
+
+export const MultipleFilesWithContext: Story = {
+  render: (args) => <DiffDrawer {...args} />,
+  args: {
+    diffs: [
+      {
+        change: "modified",
+        oldPath: "src/features/users/UserList.tsx",
+        newPath: "src/features/users/UserList.tsx",
+        oldContent: userListOldContent,
+        newContent: userListNewContent,
+        additions: 7,
+        deletions: 3,
+      },
+      {
+        change: "modified",
+        oldPath: "src/config/defaults.ts",
+        newPath: "src/config/defaults.ts",
+        oldContent: configOldContent,
+        newContent: configNewContent,
+        additions: 5,
+        deletions: 4,
+      },
+    ],
+  },
+};
+
 const changes: Diff["change"][] = ["modified", "added", "deleted", "renamed"];
 
-const manyDiffs: Diff[] = Array.from({ length: 200 }, (_, i) => ({
-  change: changes[i % changes.length],
-  oldPath: `src/components/file-${i}.ts`,
-  newPath: `src/components/file-${i}.ts`,
-  oldContent: `// file ${i} original\nexport const value = ${i};\n`,
-  newContent: `// file ${i} updated\nexport const value = ${i + 1};\n`,
-  additions: 1,
-  deletions: 1,
-}));
+const diffSizes = [2, 8, 24, 60, 140] as const;
+
+const buildVariableSizeContent = (index: number, lineCount: number, suffix: string) => {
+  return Array.from({ length: lineCount }, (_, lineIndex) => `// file ${index} ${suffix} line ${lineIndex + 1}`).join(
+    "\n",
+  );
+};
+
+const manyDiffs: Diff[] = Array.from({ length: 200 }, (_, i) => {
+  const lineCount = diffSizes[i % diffSizes.length];
+
+  return {
+    change: changes[i % changes.length],
+    oldPath: `src/components/file-${i}.ts`,
+    newPath: `src/components/file-${i}.ts`,
+    oldContent: buildVariableSizeContent(i, lineCount, "original"),
+    newContent: buildVariableSizeContent(i, lineCount, "updated"),
+    additions: lineCount,
+    deletions: lineCount,
+  };
+});
 
 export const ManyFiles: Story = {
   render: (args) => <DiffDrawer {...args} />,
@@ -169,8 +334,47 @@ export const ManyFiles: Story = {
   },
 };
 
+interface DiffDrawerWithOutlineProps {
+  diffs: Diff[];
+}
+
+const DiffDrawerWithOutline = ({ diffs }: DiffDrawerWithOutlineProps) => {
+  const [selectedDiffPath, setSelectedDiffPath] = useState<string | null>(null);
+  const outlinePaths = diffs.map((diff) => diff.newPath ?? diff.oldPath ?? "unknown");
+
+  return (
+    <Flex h="full" minH="0">
+      <Box width="280px" borderRight="1px solid" borderColor="border.muted" minH="0">
+        <ScrollArea h="full" contentProps={{ p: "xs", spaceY: "2xs" }}>
+          {outlinePaths.map((path) => (
+            <Button
+              key={path}
+              size="xs"
+              variant={selectedDiffPath === path ? "solid" : "ghost"}
+              justifyContent="flex-start"
+              width="100%"
+              onClick={() => setSelectedDiffPath(path)}
+            >
+              <Box as="span" truncate>
+                {path}
+              </Box>
+            </Button>
+          ))}
+        </ScrollArea>
+      </Box>
+      <Box flex="1" minW="0" minH="0">
+        <DiffDrawer diffs={diffs} selectedDiffPath={selectedDiffPath} />
+      </Box>
+    </Flex>
+  );
+};
+
+export const WithOutline: Story = {
+  render: () => <DiffDrawerWithOutline diffs={manyDiffs} />,
+};
+
 const largeDiffLines = Array.from(
-  { length: MAX_RENDERED_DIFF_LINES },
+  { length: LARGE_DIFF_LINE_THRESHOLD + 1 },
   (_, i) => `export const value${i + 1} = ${i + 1};`,
 );
 
@@ -185,6 +389,21 @@ export const LargeDiffPlaceholder: Story = {
         newContent: largeDiffLines.join("\n"),
         additions: largeDiffLines.length,
         deletions: 0,
+      },
+    ],
+  },
+};
+
+export const NotLoaded: Story = {
+  render: (args) => <DiffDrawer {...args} />,
+  args: {
+    diffs: [
+      {
+        change: "modified",
+        oldPath: "src/lazy-file.ts",
+        newPath: "src/lazy-file.ts",
+        additions: 1,
+        deletions: 1,
       },
     ],
   },

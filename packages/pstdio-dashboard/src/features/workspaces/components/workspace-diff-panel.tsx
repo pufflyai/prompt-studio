@@ -1,7 +1,7 @@
 import { Box, Button, Flex, Skeleton, Stack, Tabs } from "@chakra-ui/react";
 import { type Diff, DiffDrawer, EmptyState, Header, ResizableSplitLayout } from "@pstdio/ui";
 import { FileDiffIcon, ListTree, ShieldCheck } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { normalizeWorkspacePageTab, type WorkspacePageTab } from "@/features/workspaces/pages/workspace-page-tab";
 import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/shared/api-types";
@@ -25,7 +25,6 @@ interface WorkspaceDiffPanelProps {
 }
 
 interface LoadedDiffState {
-  resetKey: string;
   diffs: Map<string, Diff>;
 }
 
@@ -44,16 +43,46 @@ export const buildFilteredDiffs = (input: {
 
 export const buildLoadedDiffKey = (workspaceId: string | null, path: string) => `${workspaceId ?? ""}:${path}`;
 
+const getDiffPath = (diff: Diff) => diff.newPath ?? diff.oldPath ?? "unknown";
+
+const diffSummaryMatches = (summary: Diff, loaded: Diff) =>
+  summary.change === loaded.change &&
+  summary.oldPath === loaded.oldPath &&
+  summary.newPath === loaded.newPath &&
+  summary.additions === loaded.additions &&
+  summary.deletions === loaded.deletions;
+
+export const retainLoadedDiffsForSummaries = (input: {
+  workspaceId: string | null;
+  diffs: Diff[];
+  loadedDiffs: Map<string, Diff>;
+}) => {
+  const { workspaceId, diffs, loadedDiffs } = input;
+  const retained = new Map<string, Diff>();
+
+  for (const diff of diffs) {
+    const path = getDiffPath(diff);
+    const key = buildLoadedDiffKey(workspaceId, path);
+    const loaded = loadedDiffs.get(key);
+    if (loaded && diffSummaryMatches(diff, loaded)) {
+      retained.set(key, loaded);
+    }
+  }
+
+  return retained;
+};
+
 export const resolveDisplayDiffs = (input: {
   workspaceId: string | null;
   diffs: Diff[];
   loadedDiffs: Map<string, Diff>;
 }) => {
   const { workspaceId, diffs, loadedDiffs } = input;
+  const retainedLoadedDiffs = retainLoadedDiffsForSummaries({ workspaceId, diffs, loadedDiffs });
 
   return diffs.map((diff) => {
-    const path = diff.newPath ?? diff.oldPath ?? "unknown";
-    return loadedDiffs.get(buildLoadedDiffKey(workspaceId, path)) ?? diff;
+    const path = getDiffPath(diff);
+    return retainedLoadedDiffs.get(buildLoadedDiffKey(workspaceId, path)) ?? diff;
   });
 };
 
@@ -90,31 +119,17 @@ const WorkspaceDiffHeader = (props: WorkspaceDiffHeaderProps) => {
 };
 
 export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
-  const {
-    ticketId,
-    workspaceId,
-    diffs,
-    artifacts,
-    changedFiles,
-    diffGeneration,
-    activeTab,
-    onTabChange,
-    loading = false,
-  } = props;
+  const { ticketId, workspaceId, diffs, artifacts, changedFiles, activeTab, onTabChange, loading = false } = props;
   const { t } = useTranslation("tickets");
   const [isTreePanelOpen, setTreePanelOpen] = useState(true);
   const [viewMode, setViewMode] = useState<ChangedFilesViewMode>("nested");
   const [searchQuery, setSearchQuery] = useState("");
-  const diffResetKey = `${workspaceId ?? ""}:${diffGeneration}`;
-  const diffResetKeyRef = useRef(diffResetKey);
-  diffResetKeyRef.current = diffResetKey;
   const [loadedDiffState, setLoadedDiffState] = useState<LoadedDiffState>(() => ({
-    resetKey: diffResetKey,
     diffs: new Map(),
   }));
-  const loadedDiffs = loadedDiffState.resetKey === diffResetKey ? loadedDiffState.diffs : new Map<string, Diff>();
+  const loadedDiffs = loadedDiffState.diffs;
   const displayDiffs = resolveDisplayDiffs({ workspaceId, diffs, loadedDiffs });
-  const diffPaths = displayDiffs.map((diff) => diff.newPath ?? diff.oldPath ?? "unknown");
+  const diffPaths = displayDiffs.map(getDiffPath);
   const changedFilePaths = collectChangedFilePaths(changedFiles);
   const [selectedDiffPath, setSelectedDiffPath] = useState<string | null>(() =>
     resolveSelectedPath(diffPaths, changedFilePaths),
@@ -124,7 +139,7 @@ export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
     ? changedFilePaths
     : changedFilePaths.filter((path) => path.toLowerCase().includes(normalizedSearchQuery));
   const filteredDiffs = buildFilteredDiffs({ diffs: displayDiffs, normalizedSearchQuery, viewMode });
-  const filteredDiffPaths = filteredDiffs.map((diff) => diff.newPath ?? diff.oldPath ?? "unknown");
+  const filteredDiffPaths = filteredDiffs.map(getDiffPath);
   const hasDiffs = filteredDiffs.length > 0;
   const hasChangedFiles = changedFiles.length > 0;
 
@@ -142,15 +157,13 @@ export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
     if (!workspaceId) return;
 
     const requestWorkspaceId = workspaceId;
-    const requestResetKey = diffResetKeyRef.current;
     const file = await getWorkspaceDiffFile(workspaceId, path, ATTEMPT_DIFF_MODE);
-    if (requestWorkspaceId !== workspaceId || requestResetKey !== diffResetKeyRef.current) return;
+    if (requestWorkspaceId !== workspaceId) return;
 
     const [diff] = transformFileDiffs([file]);
     setLoadedDiffState((current) => {
-      const currentDiffs = current.resetKey === requestResetKey ? current.diffs : new Map<string, Diff>();
+      const currentDiffs = retainLoadedDiffsForSummaries({ workspaceId, diffs, loadedDiffs: current.diffs });
       return {
-        resetKey: requestResetKey,
         diffs: new Map(currentDiffs).set(buildLoadedDiffKey(workspaceId, path), diff),
       };
     });
