@@ -1,4 +1,11 @@
-import { defaultThemePreferences, type ThemePreference, type ThemePreferenceOption } from "@pstdio/ui";
+import {
+  DEFAULT_PALETTE_ASSET_LIMIT,
+  defaultThemePreferences,
+  filterPaletteEntries,
+  type PaletteSearchEntry,
+  type ThemePreference,
+  type ThemePreferenceOption,
+} from "@pstdio/ui";
 import type { LucideIcon } from "lucide-react";
 import {
   CircleHelp,
@@ -16,10 +23,12 @@ import type { ShortcutBinding } from "@/features/shortcuts/shortcut-registry";
 import { getSlotContributions } from "@/shared/extensions/contribution-mapping";
 
 const EXTENSION_COMMAND_PANEL_SLOT_ID = "project.commandPanel";
+export const DEFAULT_COMMAND_PALETTE_ASSET_LIMIT = DEFAULT_PALETTE_ASSET_LIMIT;
 
 export type CommandPaletteMode = "search" | "command";
 export type CommandPaletteView = "main" | "theme";
 type CommandPaletteEntryMode = CommandPaletteMode | "theme";
+type CommandPaletteAssetType = "ticket" | "session" | "extension-command" | "theme";
 export type CommandPaletteEscapeAction = "clear" | "close" | "exit-view";
 
 export interface CommandPaletteTicket {
@@ -52,6 +61,7 @@ export interface CommandPaletteEntry {
   icon: LucideIcon;
   isSelected?: boolean;
   group?: string;
+  assetType?: CommandPaletteAssetType;
   action: CommandPaletteAction;
   run: () => void;
 }
@@ -159,6 +169,7 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
         secondaryLabel: description,
         icon: Terminal,
         group: extensionById.get(command.extensionId)?.displayName ?? command.namespace,
+        assetType: "extension-command",
         action: { id: `extension:${command.id}`, type: "extension-command", commandId: command.id },
       });
     })
@@ -196,6 +207,7 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
         label: `${ticket.shorthand} ${getTicketLabel(ticket)}`,
         searchText: `${ticket.shorthand} ${getTicketLabel(ticket)}`,
         icon: KanbanSquare,
+        assetType: "ticket",
         action: { id: "navigate", type: "navigate", path: `${projectPath}/tickets/${ticket.shorthand}` },
       }),
     ),
@@ -206,6 +218,7 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
         label: session.title,
         searchText: `${session.title} session chat agent`,
         icon: MessageCircle,
+        assetType: "session",
         action: { id: "navigate", type: "navigate", path: `${projectPath}/sessions/${session.id}` },
       }),
     ),
@@ -254,24 +267,30 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
         searchText: `theme color ${preference} ${label}`,
         icon: getThemeIcon(preference),
         isSelected: preference === currentTheme,
+        assetType: "theme",
         action: { id: "theme", type: "theme", preference },
       });
     }),
   ];
 };
 
-export const filterCommandPaletteEntries = (
-  entries: CommandPaletteEntry[],
+type FilterableCommandPaletteEntry = PaletteSearchEntry & {
+  mode: CommandPaletteEntryMode;
+  assetType?: CommandPaletteAssetType;
+};
+
+export const filterCommandPaletteEntries = <T extends FilterableCommandPaletteEntry>(
+  entries: T[],
   query: string,
   view: CommandPaletteView = "main",
+  selectedMode?: CommandPaletteMode,
 ) => {
-  const mode = view === "theme" ? "theme" : resolveCommandPaletteMode(query);
-  const effectiveQuery = (view === "theme" ? query.trim() : getEffectiveQuery(query)).toLowerCase();
+  const mode = view === "theme" ? "theme" : (selectedMode ?? resolveCommandPaletteMode(query));
 
-  return entries.filter((entry) => {
-    if (entry.mode !== mode) return false;
-    if (!effectiveQuery) return true;
-
-    return `${entry.label} ${entry.searchText} ${entry.secondaryLabel ?? ""}`.toLowerCase().includes(effectiveQuery);
+  return filterPaletteEntries(entries, {
+    query,
+    mode,
+    defaultAssetLimit: DEFAULT_COMMAND_PALETTE_ASSET_LIMIT,
+    getEffectiveQuery: (value) => (view === "theme" ? value.trim() : getEffectiveQuery(value)),
   });
 };

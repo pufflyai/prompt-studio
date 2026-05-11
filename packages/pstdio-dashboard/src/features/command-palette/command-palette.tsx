@@ -1,6 +1,16 @@
-import { type ThemePreference, type ThemePreferenceOption, toaster, useThemePreference } from "@pstdio/ui";
+import { HStack, Icon, Text } from "@chakra-ui/react";
+import {
+  type PaletteEntry,
+  type PaletteMode,
+  PaletteShortcut,
+  Palette as PaletteSurface,
+  type ThemePreference,
+  type ThemePreferenceOption,
+  toaster,
+  useThemePreference,
+} from "@pstdio/ui";
 import { useNavigate } from "@tanstack/react-router";
-import { Palette, Search, Terminal } from "lucide-react";
+import { Palette as PaletteIcon, Search, Terminal } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -9,20 +19,21 @@ import {
 } from "@/shared/extensions/hooks/use-project-extensions";
 import { buildExtensionCommandRequest } from "@/shared/extensions/slot-context";
 import { runCommandPaletteAction } from "./command-palette-actions";
-import { handleCommandPaletteKeyDown } from "./command-palette-keyboard";
 import {
   buildCommandPaletteEntries,
+  type CommandPaletteEntry,
+  type CommandPaletteMode,
   type CommandPaletteSession,
   type CommandPaletteTicket,
   type CommandPaletteView,
   filterCommandPaletteEntries,
-  resolveCommandPaletteMode,
+  resolveCommandPaletteEscapeAction,
 } from "./command-palette-model";
-import { CommandPaletteShell } from "./command-palette-shell";
 
 export {
   buildCommandPaletteEntries,
   type CommandPaletteView,
+  DEFAULT_COMMAND_PALETTE_ASSET_LIMIT,
   filterCommandPaletteEntries,
   resolveCommandPaletteEscapeAction,
   resolveCommandPaletteMode,
@@ -45,11 +56,22 @@ interface ThemePreviewState {
   baseTheme: ThemePreference;
 }
 
+type DashboardPaletteEntry = PaletteEntry & {
+  mode: CommandPaletteEntry["mode"];
+  assetType?: CommandPaletteEntry["assetType"];
+  action: CommandPaletteEntry["action"];
+};
+
 const getThemeEntryIndex = (preference: ThemePreference, themePreferences: readonly ThemePreferenceOption[]) => {
   const index = themePreferences.findIndex((theme) => theme.id === preference);
 
   return Math.max(index, 0);
 };
+
+const commandPaletteModes: PaletteMode[] = [{ id: "search" }, { id: "command", inputPrefix: ">" }];
+
+const toCommandPaletteMode = (mode?: string): CommandPaletteMode | undefined =>
+  mode === "command" || mode === "search" ? mode : undefined;
 
 export const CommandPalette = (props: CommandPaletteProps) => {
   const {
@@ -70,18 +92,12 @@ export const CommandPalette = (props: CommandPaletteProps) => {
   const { data: extensionMetadata } = useProjectExtensionMetadata(projectId);
   const executeExtensionCommand = useExecuteExtensionCommand(projectId);
   const [view, setView] = useState<CommandPaletteView>(initialView);
-  const [query, setQuery] = useState(initialQuery);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const inputRef = useRef<HTMLInputElement>(null);
   const themePreviewRef = useRef<ThemePreviewState | null>(null);
   const setupRef = useRef({ initialView, initialQuery, open: false });
-  const mode = resolveCommandPaletteMode(query);
 
   const beginThemePreview = () => {
     themePreviewRef.current = { baseTheme: themePreference };
     setView("theme");
-    setQuery("");
-    setActiveIndex(getThemeEntryIndex(themePreference, themePreferences));
   };
 
   const commitThemePreview = (preference: ThemePreference) => {
@@ -99,8 +115,6 @@ export const CommandPalette = (props: CommandPaletteProps) => {
     }
 
     setView("main");
-    setQuery("");
-    setActiveIndex(0);
   };
 
   const closePalette = () => {
@@ -165,15 +179,21 @@ export const CommandPalette = (props: CommandPaletteProps) => {
     },
     run: handleRun,
   });
-  const filteredEntries = filterCommandPaletteEntries(entries, query, view);
-  const inputIcon =
-    view === "theme" ? <Palette size={16} /> : mode === "command" ? <Terminal size={16} /> : <Search size={16} />;
-  const placeholder =
-    view === "theme"
-      ? t("common:commandPalette.themePlaceholder")
-      : mode === "command"
-        ? t("common:commandPalette.commandPlaceholder")
-        : t("common:commandPalette.searchPlaceholder");
+  const paletteInitialQuery = view === "theme" && initialView !== "theme" ? "" : initialQuery;
+  const paletteEntries = entries.map<DashboardPaletteEntry>((entry) => ({
+    id: entry.id,
+    mode: entry.mode,
+    label: entry.label,
+    searchText: entry.searchText,
+    secondaryLabel: entry.secondaryLabel,
+    icon: <Icon as={entry.icon} boxSize="14px" />,
+    shortcut: entry.shortcut ? <PaletteShortcut binding={entry.shortcut} /> : undefined,
+    group: entry.group,
+    assetType: entry.assetType,
+    isSelected: entry.isSelected,
+    action: entry.action,
+    onActivate: entry.run,
+  }));
 
   useEffect(() => {
     const previousSetup = setupRef.current;
@@ -185,63 +205,80 @@ export const CommandPalette = (props: CommandPaletteProps) => {
     if (!shouldInitialize) return;
 
     setView(initialView);
-    setQuery(initialQuery);
     if (initialView === "theme") {
       themePreviewRef.current = { baseTheme: themePreference };
-      setActiveIndex(getThemeEntryIndex(themePreference, themePreferences));
     } else {
       themePreviewRef.current = null;
-      setActiveIndex(0);
     }
-    const timeout = setTimeout(() => {
-      const input = inputRef.current;
-      if (!input) return;
-      input.focus();
-      const length = input.value.length;
-      input.setSelectionRange(length, length);
-    }, 0);
-    return () => clearTimeout(timeout);
-  }, [initialQuery, initialView, open, themePreference, themePreferences]);
-
-  useEffect(() => {
-    if (!open || view !== "theme") return;
-
-    const action = filteredEntries[activeIndex]?.action;
-    if (action?.type !== "theme" || action.preference === themePreference) return;
-
-    setThemePreference(action.preference);
-  }, [activeIndex, filteredEntries, open, setThemePreference, themePreference, view]);
-
-  const runActiveEntry = () => {
-    filteredEntries[activeIndex]?.run();
-  };
-
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) =>
-    handleCommandPaletteKeyDown(event, {
-      query,
-      view,
-      entryCount: filteredEntries.length,
-      setActiveIndex,
-      setQuery,
-      runActiveEntry,
-      exitThemePreview,
-      closePalette,
-    });
+  }, [initialQuery, initialView, open, themePreference]);
 
   return (
-    <CommandPaletteShell
+    <PaletteSurface
+      key={`${view}:${paletteInitialQuery}`}
       open={open}
-      query={query}
-      view={view}
-      inputIcon={inputIcon}
-      placeholder={placeholder}
-      inputRef={inputRef}
-      filteredEntries={filteredEntries}
-      activeIndex={activeIndex}
-      setActiveIndex={setActiveIndex}
-      setQuery={setQuery}
-      closePalette={closePalette}
-      onKeyDown={handleKeyDown}
+      entries={paletteEntries}
+      initialQuery={paletteInitialQuery}
+      initialActiveIndex={view === "theme" ? getThemeEntryIndex(themePreference, themePreferences) : 0}
+      mode={view === "theme" ? "theme" : undefined}
+      modes={view === "theme" ? undefined : commandPaletteModes}
+      resetKey={`${view}:${paletteInitialQuery}`}
+      inputIcon={({ mode }) =>
+        view === "theme" ? (
+          <PaletteIcon size={16} />
+        ) : mode === "command" ? (
+          <Terminal size={16} />
+        ) : (
+          <Search size={16} />
+        )
+      }
+      placeholder={({ mode }) =>
+        view === "theme"
+          ? t("common:commandPalette.themePlaceholder")
+          : mode === "command"
+            ? t("common:commandPalette.commandPlaceholder")
+            : t("common:commandPalette.searchPlaceholder")
+      }
+      emptyLabel={t("common:commandPalette.empty")}
+      filterEntries={(currentEntries, query, mode) =>
+        filterCommandPaletteEntries(currentEntries, query, view, toCommandPaletteMode(mode))
+      }
+      footerStart={
+        <HStack gap="2" color="fg.muted">
+          <Text textStyle="label/XS">{t("common:commandPalette.open")}</Text>
+          <PaletteShortcut binding="Ctrl+Shift+P" />
+        </HStack>
+      }
+      footerEnd={
+        <Text textStyle="label/XS" color="fg.muted">
+          {view === "theme" ? t("common:commandPalette.changeTheme") : t("common:commandPalette.commandHint")}
+        </Text>
+      }
+      onActiveEntryChange={(entry) => {
+        if (!open || view !== "theme") return;
+
+        const action = entry?.action;
+        if (action?.type !== "theme" || action.preference === themePreference) return;
+
+        setThemePreference(action.preference);
+      }}
+      onEscape={(ctx) => {
+        const escapeAction = resolveCommandPaletteEscapeAction(ctx.query, view);
+
+        if (escapeAction === "clear") {
+          ctx.setQuery("");
+          ctx.setActiveIndex(0);
+          return true;
+        }
+
+        if (escapeAction === "exit-view") {
+          exitThemePreview();
+          return true;
+        }
+
+        closePalette();
+        return true;
+      }}
+      onClose={closePalette}
     />
   );
 };

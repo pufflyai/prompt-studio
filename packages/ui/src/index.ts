@@ -70,6 +70,23 @@ export type {
   OpenSourceNoticesScreenProps,
 } from "./components/open-source-notices-screen";
 export { OpenSourceNoticesScreen } from "./components/open-source-notices-screen";
+export type {
+  FilterPaletteEntriesOptions,
+  PaletteEntry,
+  PaletteEscapeContext,
+  PaletteMode,
+  PaletteProps,
+  PaletteSearchEntry,
+  PaletteState,
+  PaletteStateValue,
+} from "./components/palette";
+export {
+  DEFAULT_PALETTE_ASSET_LIMIT,
+  filterPaletteEntries,
+  Palette,
+} from "./components/palette";
+export type { PaletteShortcutBinding } from "./components/palette-shortcut";
+export { PaletteShortcut } from "./components/palette-shortcut";
 export type { PropertiesProps, PropertyItem } from "./components/properties";
 export { Properties } from "./components/properties";
 export type { RadioProps } from "./components/radio";
