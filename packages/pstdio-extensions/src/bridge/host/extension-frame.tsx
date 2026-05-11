@@ -6,6 +6,7 @@ import type {
   HostCapabilityRequest,
   ThemePreference,
 } from "../contract";
+import { normalizeRuntimeError } from "../normalize-error";
 import { collectChakraThemeVariables, resolveActiveTheme } from "./theme";
 
 export interface ExtensionFrameProps {
@@ -98,11 +99,11 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     // contentWindow identity while still loading the API-owned runtime document.
     iframe.contentWindow?.location.replace(view.webview.runtimeUrl);
 
-    void connection.then(async (conn) => {
-      const remote = conn.remote as GuestRemote;
-      remoteRef.current = remote;
+    connection
+      .then(async (conn) => {
+        const remote = conn.remote as GuestRemote;
+        remoteRef.current = remote;
 
-      try {
         await remote.init({
           moduleUrl: moduleUrlAtConnect,
           styles: stylesAtConnect,
@@ -112,11 +113,10 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
         });
         initializedRef.current = true;
         onReadyRef.current?.();
-      } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        onErrorRef.current?.({ message: err.message, stack: err.stack });
-      }
-    });
+      })
+      .catch((error) => {
+        onErrorRef.current?.(normalizeRuntimeError(error));
+      });
 
     // Intentionally no connection.close() in cleanup. The iframe runtime handshakes once
     // at iframe load and binds to that connection ID. Closing during React StrictMode's
@@ -166,5 +166,17 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     };
   }, []);
 
-  return <iframe ref={iframeRef} title={title ?? view.label} sandbox={EXTENSION_IFRAME_SANDBOX} style={iframeStyle} />;
+  return (
+    <iframe
+      ref={iframeRef}
+      title={title ?? view.label}
+      sandbox={EXTENSION_IFRAME_SANDBOX}
+      style={iframeStyle}
+      onError={() =>
+        onErrorRef.current?.({
+          message: `Failed to load extension runtime at ${view.webview.runtimeUrl}`,
+        })
+      }
+    />
+  );
 };

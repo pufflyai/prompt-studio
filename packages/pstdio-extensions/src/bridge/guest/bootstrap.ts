@@ -1,5 +1,6 @@
 import { guest } from "rimless";
 import type { HostApi, InitMessage, PropsUpdateMessage, ThemeUpdateMessage } from "../contract";
+import { normalizeRuntimeError } from "../normalize-error";
 import { createGuestHost, createPropsStore, type ExtensionViewModule } from "./define-extension-view";
 
 const MOUNT_ID = "pstdio-extension-mount";
@@ -125,9 +126,9 @@ const start = async () => {
           );
         }
       } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        connection.remote.runtimeError({ message: err.message, stack: err.stack });
-        throw err;
+        const payload = normalizeRuntimeError(error);
+        connection.remote.runtimeError(payload);
+        throw error instanceof Error ? error : new Error(payload.message);
       }
     },
     themeUpdate: (message: ThemeUpdateMessage) => {

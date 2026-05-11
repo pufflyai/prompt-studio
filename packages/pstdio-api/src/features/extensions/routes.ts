@@ -26,7 +26,11 @@ import {
   EXTENSION_RUNTIME_SCRIPT_PATH,
   EXTENSION_RUNTIME_SCRIPT_URL,
 } from "./extension-runtime-routes";
-import { resolveWebviewAssetFile } from "./extension-webview-assets";
+import {
+  findWebviewBuildError,
+  renderWebviewBuildErrorModule,
+  resolveWebviewAssetFile,
+} from "./extension-webview-assets";
 
 const serveWebviewAsset = (deps: ExtensionsRouteDeps) => async (c: Context<AppBindings>) => {
   const installName = c.req.param("installName");
@@ -37,17 +41,29 @@ const serveWebviewAsset = (deps: ExtensionsRouteDeps) => async (c: Context<AppBi
   const webviewId = decodeURIComponent(encodedWebviewId ?? "");
   if (!webviewId) return c.json({ error: "Webview asset not found" }, 404);
 
-  const asset = await resolveWebviewAssetFile(deps, {
-    assetPath: decodeURIComponent(assetPathParts.join("/")),
-    installName,
-    webviewId,
-  });
+  const assetPath = decodeURIComponent(assetPathParts.join("/"));
+  const asset = await resolveWebviewAssetFile(deps, { assetPath, installName, webviewId });
+  if (asset) {
+    return new Response(Bun.file(asset.filePath), {
+      headers: { "content-type": asset.mimeType },
+    });
+  }
 
-  if (!asset) return c.json({ error: "Webview asset not found" }, 404);
+  // When the managed bundle is missing because the build failed, surface the recorded build error
+  // as a throwing JS module. The dashboard's dynamic import will reject with this message, which
+  // the extension frame propagates to the host as a runtime error. Without this, the dashboard
+  // would only see a generic 404 and have no way to tell the user why the view didn't load.
+  const isDefaultModuleRequest = assetPath === "" || assetPath === "module.js";
+  if (isDefaultModuleRequest) {
+    const buildError = await findWebviewBuildError(deps, { installName, webviewId });
+    if (buildError) {
+      return new Response(renderWebviewBuildErrorModule(buildError), {
+        headers: { "content-type": "application/javascript; charset=utf-8" },
+      });
+    }
+  }
 
-  return new Response(Bun.file(asset.filePath), {
-    headers: { "content-type": asset.mimeType },
-  });
+  return c.json({ error: "Webview asset not found" }, 404);
 };
 
 export const createExtensionRoutes = (deps: ExtensionsRouteDeps) => {

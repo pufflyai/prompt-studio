@@ -10,8 +10,36 @@ import {
 import { resolvePstdioHome } from "./install-extension-source";
 
 type InstalledSourceLookup = {
-  getInstalledSource: (installName: string) => Promise<{ install_name: string; source_path: string } | null>;
+  getInstalledSource: (
+    installName: string,
+  ) => Promise<{ install_name: string; source_path: string; last_error_json?: unknown } | null>;
 };
+
+export type WebviewBuildError = {
+  message: string;
+  webviewId: string;
+};
+
+export const findWebviewBuildError = async (
+  deps: { extensionService: InstalledSourceLookup },
+  input: { installName: string; webviewId: string },
+): Promise<WebviewBuildError | null> => {
+  const source = await deps.extensionService.getInstalledSource(input.installName);
+  if (!source?.last_error_json || typeof source.last_error_json !== "object") return null;
+
+  const record = source.last_error_json as Record<string, unknown>;
+  if (record.code !== "extension_webview_build_failed") return null;
+  if (record.webviewId !== input.webviewId) return null;
+
+  const message =
+    typeof record.message === "string" && record.message.length > 0
+      ? record.message
+      : "Extension webview build failed.";
+  return { message, webviewId: input.webviewId };
+};
+
+export const renderWebviewBuildErrorModule = (error: WebviewBuildError) =>
+  `throw new Error(${JSON.stringify(`Extension webview build failed: ${error.message}`)});\n`;
 
 export type ExtensionWebviewAssetDeps = {
   extensionService: InstalledSourceLookup;

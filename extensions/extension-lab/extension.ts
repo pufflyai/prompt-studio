@@ -179,6 +179,13 @@ const extension = defineExtension({
         entry: packageAsset("./src/main.tsx", import.meta.url),
       },
     },
+    faultyPage: {
+      path: "lab-faulty",
+      label: "Lab (faulty)",
+      webview: {
+        entry: packageAsset("./src/faulty-main.tsx", import.meta.url),
+      },
+    },
   },
 
   navigation: {
@@ -187,6 +194,12 @@ const extension = defineExtension({
       label: "Lab",
       icon: "flask-conical",
       route: "lab",
+    },
+    faultyPage: {
+      slot: projectSlots.sidebarNav,
+      label: "Lab (faulty)",
+      icon: "flask-conical-off",
+      route: "lab-faulty",
     },
   },
 
@@ -202,6 +215,25 @@ const extension = defineExtension({
     lab: {
       title: "Lab Skill",
       source: packageAsset("./skills/lab-skill", import.meta.url),
+    },
+  },
+
+  themes: {
+    dracula: {
+      title: "Dracula",
+      description: "Dracula color theme mapped into Prompt Studio app and editor themes.",
+      format: "vscode-color-theme",
+      mode: "dark",
+      source: packageAsset("./themes/dracula-color-theme.json", import.meta.url),
+    },
+  },
+
+  fileIconThemes: {
+    seti: {
+      title: "Seti",
+      description: "Seti-style file icon theme with packaged font asset.",
+      format: "vscode-file-icon-theme",
+      source: packageAsset("./icons/seti-icon-theme.json", import.meta.url),
     },
   },
 });

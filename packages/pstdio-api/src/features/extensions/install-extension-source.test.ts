@@ -278,3 +278,70 @@ describe("installExtensionSource", () => {
     expect(readFileSync(join(source, "extension.ts"), "utf8")).toContain("test.extension");
   });
 });
+
+describe("installExtensionSource dependency reinstall", () => {
+  test("reuses an existing install but reinstalls deps when node_modules is missing", async () => {
+    const source = join(root, "source-extension");
+    makeExtension(source);
+    writeFileSync(join(source, "package.json"), JSON.stringify({ packageManager: "bun@1.3.13" }));
+
+    const runCommand = mock(async (_file: string, _args: readonly string[], options: { cwd: string }) => {
+      mkdirSync(join(options.cwd, "node_modules"), { recursive: true });
+      return { exitCode: 0, stderr: "", stdout: "" };
+    });
+
+    await installExtensionSource({
+      source,
+      env: { PSTDIO_HOME: pstdioHome },
+      homedir: () => "/unused",
+      isCommandAvailable: async () => true,
+      runCommand,
+    });
+    expect(runCommand).toHaveBeenCalledTimes(1);
+
+    rmSync(join(pstdioHome, "extensions", "source-extension", "node_modules"), { recursive: true, force: true });
+
+    await installExtensionSource({
+      source,
+      existsOk: true,
+      env: { PSTDIO_HOME: pstdioHome },
+      homedir: () => "/unused",
+      isCommandAvailable: async () => true,
+      runCommand,
+    });
+
+    expect(runCommand).toHaveBeenCalledTimes(2);
+    expect(existsSync(join(pstdioHome, "extensions", "source-extension", "node_modules"))).toBe(true);
+  });
+
+  test("reuses an existing install and skips dep install when node_modules already exists", async () => {
+    const source = join(root, "source-extension");
+    makeExtension(source);
+    writeFileSync(join(source, "package.json"), JSON.stringify({ packageManager: "bun@1.3.13" }));
+
+    const runCommand = mock(async (_file: string, _args: readonly string[], options: { cwd: string }) => {
+      mkdirSync(join(options.cwd, "node_modules"), { recursive: true });
+      return { exitCode: 0, stderr: "", stdout: "" };
+    });
+
+    await installExtensionSource({
+      source,
+      env: { PSTDIO_HOME: pstdioHome },
+      homedir: () => "/unused",
+      isCommandAvailable: async () => true,
+      runCommand,
+    });
+    expect(runCommand).toHaveBeenCalledTimes(1);
+
+    await installExtensionSource({
+      source,
+      existsOk: true,
+      env: { PSTDIO_HOME: pstdioHome },
+      homedir: () => "/unused",
+      isCommandAvailable: async () => true,
+      runCommand,
+    });
+
+    expect(runCommand).toHaveBeenCalledTimes(1);
+  });
+});

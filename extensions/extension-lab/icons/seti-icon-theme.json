@@ -1,0 +1,40 @@
+{
+  "fonts": [
+    {
+      "id": "seti",
+      "src": [{ "path": "./seti.woff", "format": "woff" }],
+      "weight": "normal",
+      "style": "normal",
+      "size": "150%"
+    }
+  ],
+  "iconDefinitions": {
+    "_file": { "fontCharacter": "\\E023", "fontColor": "#D4D4D4" },
+    "_folder": { "fontCharacter": "\\E022", "fontColor": "#DDBA78" },
+    "_typescript": { "fontCharacter": "\\E099", "fontColor": "#519ABA" },
+    "_javascript": { "fontCharacter": "\\E051", "fontColor": "#CBCB41" },
+    "_json": { "fontCharacter": "\\E055", "fontColor": "#CBCB41" },
+    "_markdown": { "fontCharacter": "\\E060", "fontColor": "#519ABA" },
+    "_css": { "fontCharacter": "\\E01D", "fontColor": "#519ABA" },
+    "_html": { "fontCharacter": "\\E048", "fontColor": "#E37933" }
+  },
+  "file": "_file",
+  "folder": "_folder",
+  "folderExpanded": "_folder",
+  "fileExtensions": {
+    "ts": "_typescript",
+    "tsx": "_typescript",
+    "js": "_javascript",
+    "jsx": "_javascript",
+    "json": "_json",
+    "jsonc": "_json",
+    "md": "_markdown",
+    "css": "_css",
+    "html": "_html"
+  },
+  "fileNames": {
+    "package.json": "_json",
+    "tsconfig.json": "_json",
+    "README.md": "_markdown"
+  }
+}

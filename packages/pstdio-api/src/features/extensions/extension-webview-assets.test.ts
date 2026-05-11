@@ -28,7 +28,7 @@ const writeExtension = (root: string, entry: string) => {
   );
 };
 
-const createApp = (input: { cacheRoot: string; sourcePath: string }) => {
+const createApp = (input: { cacheRoot: string; sourcePath: string; lastErrorJson?: unknown }) => {
   const app = new OpenAPIHono();
   app.route(
     "/v1",
@@ -39,6 +39,7 @@ const createApp = (input: { cacheRoot: string; sourcePath: string }) => {
             ? {
                 install_name: "extension-lab",
                 source_path: input.sourcePath,
+                last_error_json: input.lastErrorJson,
               }
             : null,
       },
@@ -106,6 +107,50 @@ describe("extension webview asset routes", () => {
       expect(await html.text()).toContain("./static.js");
       expect(script.status).toBe(200);
       expect(await script.text()).toBe("console.log('static');");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("returns a throwing JS module when the managed bundle is missing and a build error is recorded", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-build-error-"));
+    const sourcePath = join(root, "extension");
+    const cacheRoot = join(root, "cache");
+    writeExtension(sourcePath, "./src/main.tsx");
+
+    try {
+      const app = createApp({
+        cacheRoot,
+        sourcePath,
+        lastErrorJson: {
+          code: "extension_webview_build_failed",
+          message: 'Could not resolve: "react"',
+          webviewId: "lab.labPage",
+        },
+      });
+      const res = await app.request("/v1/extensions/installed/extension-lab/webviews/lab.labPage");
+
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-type")).toContain("application/javascript");
+      const body = await res.text();
+      expect(body).toContain("throw new Error(");
+      expect(body).toContain('Could not resolve: \\"react\\"');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("falls through to 404 when no build error is recorded and the bundle is missing", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-no-error-"));
+    const sourcePath = join(root, "extension");
+    const cacheRoot = join(root, "cache");
+    writeExtension(sourcePath, "./src/main.tsx");
+
+    try {
+      const app = createApp({ cacheRoot, sourcePath });
+      const res = await app.request("/v1/extensions/installed/extension-lab/webviews/lab.labPage");
+
+      expect(res.status).toBe(404);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

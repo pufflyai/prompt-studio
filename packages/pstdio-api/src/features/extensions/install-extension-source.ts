@@ -195,6 +195,14 @@ const selectPackageManager = async (targetPath: string, available: (command: str
   throw new Error("No package manager found on PATH. Install bun, yarn, or npm, or re-run with --skip-install.");
 };
 
+// Re-run dep install whenever node_modules is missing. The reuse-existing path used to skip this
+// entirely, so an interrupted install (or a manual node_modules wipe) left the extension unbuildable
+// — webview bundling would fail with unresolvable imports and the dashboard would 404 on module.js.
+const shouldInstallDependencies = (targetPath: string) => {
+  if (!existsSync(join(targetPath, "package.json"))) return false;
+  return !existsSync(join(targetPath, "node_modules"));
+};
+
 const installDependencies = async (
   targetPath: string,
   input: Pick<
@@ -347,7 +355,10 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
 
     if (!reuseExisting) {
       copyExtensionSource(resolvedSource.path, targetPath);
-      if (!input.skipInstall) await installDependencies(targetPath, input);
+    }
+
+    if (!input.skipInstall && shouldInstallDependencies(targetPath)) {
+      await installDependencies(targetPath, input);
     }
 
     const loaded = await loadExtensionSource(targetPath);
