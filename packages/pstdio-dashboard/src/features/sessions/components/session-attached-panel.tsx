@@ -5,17 +5,19 @@ import { Minimize2, PenBox } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useProjectSettingsStore } from "@/shared/stores/project-settings";
 import { useProjectSessions } from "../hooks/use-project-sessions";
-import { SessionChatView } from "./session-chat-view";
 import { SessionSelector } from "./session-selector";
 
-export const SessionAttachedPanel = () => {
+interface SessionAttachedPanelProps {
+  chatSlotRef: (node: HTMLDivElement | null) => void;
+}
+
+export const SessionAttachedPanel = (props: SessionAttachedPanelProps) => {
+  const { chatSlotRef } = props;
   const { t } = useTranslation("projects");
-  const { projectId, workspaceShorthand } = useParams({ strict: false });
+  const { projectId } = useParams({ strict: false });
   const setSessionModalState = useProjectSettingsStore((s) => s.setSessionModalState);
   const selectedSessionId = useProjectSettingsStore((s) => s.selectedSessionId);
   const setSelectedSessionId = useProjectSettingsStore((s) => s.setSelectedSessionId);
-  const pendingWorkspaceSessionWorkspaceId = useProjectSettingsStore((s) => s.pendingWorkspaceSessionWorkspaceId);
-  const isWorkspaceRoute = typeof workspaceShorthand === "string" && workspaceShorthand.length > 0;
 
   const { data: sessions = [] } = useProjectSessions(projectId);
 
@@ -55,14 +57,7 @@ export const SessionAttachedPanel = () => {
         </Header>
       }
     >
-      <Flex flex="1" minH={0} direction="column">
-        <SessionChatView
-          sessionId={selectedSessionId}
-          newSessionWorkspaceId={isWorkspaceRoute ? (pendingWorkspaceSessionWorkspaceId ?? undefined) : undefined}
-          onSessionCreated={setSelectedSessionId}
-          showWorkspaceHub={!isWorkspaceRoute}
-        />
-      </Flex>
+      <Flex ref={chatSlotRef} flex="1" minH={0} direction="column" />
     </AttachedPanel>
   );
 };
