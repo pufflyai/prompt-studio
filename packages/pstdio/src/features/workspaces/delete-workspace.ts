@@ -82,13 +82,19 @@ export const deleteWorkspaceWithWorktree = async (input: DeleteWorkspaceInput, d
         branch,
         force: true,
       });
-    } catch {
-      // Worktree/branch may already be removed
+    } catch (error) {
+      // Worktree/branch may already be removed; surface the error so operators can investigate.
+      deps.log(`removeWorktreeAndBranch failed for ${workspaceShorthand}: ${(error as Error).message}`);
     }
   }
 
   if (dispatch) {
-    void dispatch.firePostHook("postWorktreeRemove", { ...payload, worktree_path: null }).catch(() => {});
+    try {
+      await dispatch.firePostHook("postWorktreeRemove", { ...payload, worktree_path: null });
+    } catch (error) {
+      // Workspace is already deleted; log so post-hook failures are not silently lost.
+      deps.log(`postWorktreeRemove hook failed for ${workspaceShorthand}: ${(error as Error).message}`);
+    }
   }
 
   deps.log(`Deleted workspace ${workspaceShorthand}`);

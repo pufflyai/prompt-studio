@@ -78,4 +78,38 @@ describe("deleteWorkspaceWithWorktree", () => {
       expect.objectContaining({ workspace: "PS-1_A1", worktree_path: null }),
     );
   });
+
+  test("logs error and continues when removeWorktreeAndBranch rejects", async () => {
+    const log = mock();
+    const removeWorktreeAndBranch = mock(async () => {
+      throw new Error("worktree locked");
+    });
+
+    await deleteWorkspaceWithWorktree(
+      { repoRoot: "/repo", projectId: "proj-1", workspaceShorthand: "PS-1_A1" },
+      { ...baseDeps, removeWorktreeAndBranch, log },
+    );
+
+    const messages = log.mock.calls.map((call) => String(call[0]));
+    expect(messages.some((msg) => msg.includes("worktree locked"))).toBe(true);
+    expect(messages).toContain("Deleted workspace PS-1_A1");
+  });
+
+  test("logs error and continues when postWorktreeRemove hook rejects", async () => {
+    const log = mock();
+    const firePreHook = mock(async () => ({ rejected: false }));
+    const firePostHook = mock(async () => {
+      throw new Error("post hook boom");
+    });
+    const dispatch = { firePreHook, firePostHook };
+
+    await deleteWorkspaceWithWorktree(
+      { repoRoot: "/repo", projectId: "proj-1", workspaceShorthand: "PS-1_A1" },
+      { ...baseDeps, dispatch, log },
+    );
+
+    const messages = log.mock.calls.map((call) => String(call[0]));
+    expect(messages.some((msg) => msg.includes("post hook boom"))).toBe(true);
+    expect(messages).toContain("Deleted workspace PS-1_A1");
+  });
 });
