@@ -25,8 +25,8 @@ export const SessionBubbleContainer = (props: SessionBubbleContainerProps) => {
   if (sessionModalState === "closed") {
     return (
       <BubbleButton
-        aria-label={t("chatInput.ariaLabel")}
-        tooltip={t("chatInput.ariaLabel")}
+        aria-label={t("chatInput.openPanelLabel")}
+        tooltip={t("chatInput.openPanelLabel")}
         onClick={() => setSessionModalState("bubble")}
       >
         <MessageCircle size={20} strokeWidth={2} />

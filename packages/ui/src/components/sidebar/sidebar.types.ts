@@ -20,4 +20,10 @@ export interface SidebarProps {
   defaultWidth?: number;
   minWidth?: number;
   maxWidth?: number;
+  /**
+   * When enabled, the scroll content is virtualized — only nodes near the viewport
+   * are mounted. Use for sidebars that may contain hundreds of entries. Requires
+   * sections with flat nodes (no expandable children).
+   */
+  virtualize?: boolean;
 }

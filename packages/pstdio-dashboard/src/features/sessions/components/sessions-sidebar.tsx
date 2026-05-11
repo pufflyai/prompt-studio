@@ -124,6 +124,7 @@ export const SessionsSidebar = (props: SessionsSidebarProps) => {
       closable={false}
       width="18rem"
       emptyLabel="No sessions yet"
+      virtualize
     />
   );
 };

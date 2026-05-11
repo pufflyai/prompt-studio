@@ -9,6 +9,7 @@ import { SessionBubbleContainer } from "@/features/sessions/components/session-b
 import { SessionChatView } from "@/features/sessions/components/session-chat-view";
 import { isSessionsRoutePath } from "@/features/sessions/utils/sessions-route";
 import { ShortcutProvider } from "@/features/shortcuts/shortcut-provider";
+import { useDeferredMount } from "@/shared/performance/use-deferred-page-mount";
 import { ProjectSettingsProvider, useProjectSettingsStore } from "@/shared/stores/project-settings";
 import { mergeDashboardThemePreferences } from "../../../theme-preferences";
 import { useExtensionAppearanceThemePreferences } from "../../extensions/use-extension-appearance";
@@ -63,6 +64,7 @@ const ProjectShellContent = () => {
   const showAttachedPanel = sessionModalState === "attached" && !isSessionsRoute;
   const isBubbleMode = sessionModalState === "bubble" && !isSessionsRoute;
   const showChatView = !isSessionsRoute && (showAttachedPanel || isBubbleMode);
+  const chatViewMounted = useDeferredMount(showChatView ? "visible" : "hidden");
   const activeSlot = showAttachedPanel ? attachedSlot : isBubbleMode ? bubbleSlot : null;
 
   useLayoutEffect(() => {
@@ -87,28 +89,25 @@ const ProjectShellContent = () => {
 
   return (
     <Flex height="100%" width="100%" minH="0">
-      {showAttachedPanel ? (
-        <ResizableSplitLayout
-          flex="1"
-          minH="0"
-          minW="0"
-          resizableSide="right"
-          contentPanel={content}
-          resizablePanel={<SessionAttachedPanel chatSlotRef={setAttachedSlot} />}
-          defaultSizePx={448}
-          minSizePx={320}
-          contentMinSizePx={320}
-          resizeLabel="Resize attached panel"
-          showResizeSeparator={false}
-          onCollapsedChange={(collapsed) => {
-            if (collapsed) setSessionModalState("bubble");
-          }}
-        />
-      ) : (
-        content
-      )}
+      <ResizableSplitLayout
+        flex="1"
+        minH="0"
+        minW="0"
+        resizableSide="right"
+        contentPanel={content}
+        resizablePanel={showAttachedPanel ? <SessionAttachedPanel chatSlotRef={setAttachedSlot} /> : null}
+        defaultSizePx={448}
+        minSizePx={320}
+        contentMinSizePx={320}
+        collapsed={!showAttachedPanel}
+        resizeLabel="Resize attached panel"
+        showResizeSeparator={false}
+        onCollapsedChange={(collapsed) => {
+          if (collapsed) setSessionModalState("bubble");
+        }}
+      />
       {!isSessionsRoute ? <SessionBubbleContainer chatSlotRef={setBubbleSlot} /> : null}
-      {showChatView && chatHostRef.current
+      {showChatView && chatViewMounted && chatHostRef.current
         ? createPortal(
             <SessionChatView
               sessionId={selectedSessionId}

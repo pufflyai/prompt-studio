@@ -1,7 +1,6 @@
 import { Box, Flex, Skeleton, Stack } from "@chakra-ui/react";
 import { HorizontalMenuStack, PanelLayout } from "@pstdio/ui";
-import { useEffect } from "react";
-import { markAfterPaint } from "@/shared/performance/mark-after-paint";
+import { useDeferredPageMount } from "@/shared/performance/use-deferred-page-mount";
 import { WorkspaceDiffPanel } from "../components/workspace-diff-panel";
 import type { WorkspacePageTab } from "./workspace-page-tab";
 
@@ -13,9 +12,7 @@ interface WorkspacePagePendingShellProps {
 export const WorkspacePagePendingShell = (props: WorkspacePagePendingShellProps) => {
   const { activeTab, onTabChange } = props;
 
-  useEffect(() => {
-    markAfterPaint("app:workspace-page-ready");
-  }, []);
+  useDeferredPageMount("workspace");
 
   const sidebar = (
     <Stack h="full" gap="0" bg="bg" borderRightWidth="1px" borderColor="border.muted">

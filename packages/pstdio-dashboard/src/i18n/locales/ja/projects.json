@@ -26,6 +26,7 @@
   "chatInput": {
     "placeholder": "新しいタスクを開始する",
     "ariaLabel": "新しいタスクを作成",
+    "openPanelLabel": "チャットパネルを開く",
     "closeLabel": "チャットを最小化",
     "agent": {
       "selectLabel": "エージェントを選択",

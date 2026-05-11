@@ -26,6 +26,7 @@
   "chatInput": {
     "placeholder": "start a new ticket",
     "ariaLabel": "Create a new ticket",
+    "openPanelLabel": "Open chat panel",
     "closeLabel": "Minimize chat",
     "agent": {
       "selectLabel": "Select agent",

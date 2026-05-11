@@ -1,5 +1,7 @@
 import { Box, HStack, IconButton, Menu, Stack, type StackProps, Text } from "@chakra-ui/react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronRight } from "lucide-react";
+import type { RefObject } from "react";
 import { ListRow } from "../list-row/list-row";
 import { SearchableActionMenu } from "../list-row/searchable-action-menu";
 import type {
@@ -24,7 +26,17 @@ interface TreeListProps {
   onNavigate?: (event: TreeListNavigateEvent) => void;
   onToggleSection?: (sectionId: string) => void;
   onToggleNode?: (nodeId: string) => void;
+  /**
+   * When set, the tree's rows are virtualized via @tanstack/react-virtual.
+   * Requires `scrollRef` to point at the ancestor scroll viewport. Sections must
+   * contain flat nodes (no expandable children) — nested rows are not virtualized.
+   */
+  virtualize?: boolean;
+  scrollRef?: RefObject<HTMLDivElement | null>;
 }
+
+const VIRTUAL_ROW_ESTIMATE = 32;
+const VIRTUAL_ROW_OVERSCAN = 8;
 
 interface TreeListNodeRowProps {
   sectionId: string;
@@ -252,6 +264,138 @@ const TreeListSectionHeader = (props: TreeListSectionHeaderProps) => {
   );
 };
 
+type VirtualRow =
+  | {
+      kind: "section-header";
+      key: string;
+      sectionId: string;
+      section: TreeListSection;
+      collapsible: boolean;
+      expanded: boolean;
+    }
+  | { kind: "node"; key: string; sectionId: string; node: TreeListNode }
+  | { kind: "section-empty"; key: string; sectionId: string; emptyState: TreeListSection["emptyState"] };
+
+const buildVirtualRows = (sections: TreeListSection[], expandedSectionIds: string[]): VirtualRow[] => {
+  const rows: VirtualRow[] = [];
+  for (const section of sections) {
+    const collapsible = section.collapsible !== false && section.label !== undefined;
+    const expanded = collapsible ? isInList(section.id, expandedSectionIds) : true;
+    if (section.label) {
+      rows.push({
+        kind: "section-header",
+        key: `header:${section.id}`,
+        sectionId: section.id,
+        section,
+        collapsible,
+        expanded,
+      });
+    }
+    if (!expanded) continue;
+    if (section.nodes.length === 0) {
+      if (section.emptyState) {
+        rows.push({
+          kind: "section-empty",
+          key: `empty:${section.id}`,
+          sectionId: section.id,
+          emptyState: section.emptyState,
+        });
+      }
+      continue;
+    }
+    for (const node of section.nodes) {
+      rows.push({ kind: "node", key: `${section.id}:${node.id}`, sectionId: section.id, node });
+    }
+  }
+  return rows;
+};
+
+interface VirtualTreeListProps extends TreeListProps {
+  scrollRef: RefObject<HTMLDivElement | null>;
+}
+
+const VirtualTreeList = (props: VirtualTreeListProps) => {
+  const {
+    sections,
+    expandedSectionIds = [],
+    expandedNodeIds = [],
+    activeNodeId,
+    rowVariant = "tree",
+    nodeGap = "0",
+    linkComponent,
+    onNavigate,
+    onToggleSection,
+    onToggleNode,
+    scrollRef,
+  } = props;
+
+  const rows = buildVirtualRows(sections, expandedSectionIds);
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => VIRTUAL_ROW_ESTIMATE,
+    overscan: VIRTUAL_ROW_OVERSCAN,
+    getItemKey: (index) => rows[index]?.key ?? index,
+  });
+
+  return (
+    <Box
+      role="listbox"
+      w="full"
+      minW="0"
+      maxW="full"
+      position="relative"
+      style={{ height: virtualizer.getTotalSize() }}
+    >
+      {virtualizer.getVirtualItems().map((virtualItem) => {
+        const row = rows[virtualItem.index];
+        if (!row) return null;
+
+        const content =
+          row.kind === "section-header" ? (
+            <TreeListSectionHeader
+              section={row.section}
+              collapsible={row.collapsible}
+              expanded={row.expanded}
+              onToggle={() => onToggleSection?.(row.sectionId)}
+            />
+          ) : row.kind === "section-empty" ? (
+            (row.emptyState ?? null)
+          ) : (
+            <TreeListNodeRow
+              sectionId={row.sectionId}
+              node={row.node}
+              level={0}
+              expandedNodeIds={expandedNodeIds}
+              activeNodeId={activeNodeId}
+              rowVariant={rowVariant}
+              nodeGap={nodeGap}
+              linkComponent={linkComponent}
+              onNavigate={onNavigate}
+              onToggleNode={onToggleNode}
+            />
+          );
+
+        return (
+          <Box
+            key={virtualItem.key}
+            ref={virtualizer.measureElement}
+            data-index={virtualItem.index}
+            data-tree-list-row={row.kind}
+            position="absolute"
+            top="0"
+            left="0"
+            w="full"
+            style={{ transform: `translateY(${virtualItem.start}px)` }}
+          >
+            {content}
+          </Box>
+        );
+      })}
+    </Box>
+  );
+};
+
 export const TreeList = (props: TreeListProps) => {
   const {
     sections,
@@ -265,7 +409,13 @@ export const TreeList = (props: TreeListProps) => {
     onNavigate,
     onToggleSection,
     onToggleNode,
+    virtualize,
+    scrollRef,
   } = props;
+
+  if (virtualize && scrollRef) {
+    return <VirtualTreeList {...props} scrollRef={scrollRef} />;
+  }
 
   return (
     <Stack role="listbox" gap={sectionGap} w="full" minW="0" maxW="full" overflowX="hidden">

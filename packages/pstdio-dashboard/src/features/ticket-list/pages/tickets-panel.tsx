@@ -1,4 +1,4 @@
-import { Stack, Text } from "@chakra-ui/react";
+import { Box, Stack } from "@chakra-ui/react";
 import { DeleteConfirmationModal, PanelLayout } from "@pstdio/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { Archive, Trash2 } from "lucide-react";
@@ -21,7 +21,8 @@ import {
 import { useTicketAttemptDiffs } from "@/features/ticket-list/hooks/use-ticket-attempt-diffs";
 import type { TicketColumnAction, TicketStatus } from "@/features/ticket-list/types";
 import { useAttemptStatusMap } from "@/features/workspaces/hooks/use-attempt-status-map";
-import { useProjectSettingsStore } from "@/shared/stores/project-settings";
+import { useDeferredPageMount } from "@/shared/performance/use-deferred-page-mount";
+import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
 
 import { CreateTicketModal, type CreateTicketModalPayload } from "../components/create-ticket-modal";
 import { TicketsBoardView } from "../components/tickets-board-view";
@@ -93,15 +94,15 @@ const navigateToTicketWorkspace = (
 
 export const TicketsPanel = () => {
   const { projectId } = useParams({ strict: false });
-  const { data: project, isLoading: isProjectLoading } = useProject(projectId);
-  const { data: tickets, sessionsByWorkspace, isLoading: isTicketsLoading } = useProjectTickets(projectId);
+  const { data: project } = useProject(projectId);
+  const { data: tickets, sessionsByWorkspace } = useProjectTickets(projectId);
   const attemptStatusMap = useAttemptStatusMap(projectId);
   const updateTicketStatus = useUpdateProjectTicketStatus(projectId);
   const updateTicket = useUpdateProjectTicket(projectId);
   const deleteTicket = useDeleteProjectTicket(projectId);
   const createTicket = useCreateProjectTicket(projectId);
   const navigate = useNavigate();
-  const sessionModalState = useProjectSettingsStore((s) => s.sessionModalState);
+  const projectSettingsStore = useProjectSettingsStoreApi();
   const setSessionModalState = useProjectSettingsStore((s) => s.setSessionModalState);
   const setSelectedSessionId = useProjectSettingsStore((s) => s.setSelectedSessionId);
   const createTicketRequestKey = useProjectSettingsStore((s) => s.createTicketRequestKey);
@@ -112,7 +113,7 @@ export const TicketsPanel = () => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createModalStatus, setCreateModalStatus] = useState<TicketStatus | null>(null);
   const [deleteTicketId, setDeleteTicketId] = useState<string | null>(null);
-  const isLoading = isProjectLoading || isTicketsLoading;
+  const boardMounted = useDeferredPageMount("tickets", projectId);
   const statusOptions = project?.ticketStatusOptions ?? [];
   const allTickets = getVisibleTickets(tickets ?? []);
   const latestAttemptsByTicketId = buildLatestAttemptsByTicketId(allTickets);
@@ -163,7 +164,7 @@ export const TicketsPanel = () => {
   const handleOpenSessionBubble = (sessionId: string | null) => {
     return openTicketSessionBubble({
       sessionId,
-      sessionModalState,
+      sessionModalState: projectSettingsStore.getState().sessionModalState,
       setSessionModalState,
       setSelectedSessionId,
     });
@@ -255,25 +256,15 @@ export const TicketsPanel = () => {
       onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, ticketId),
     });
 
-  if (isLoading) {
-    return (
-      <PanelLayout sidebar={<ProjectSidebar />}>
-        <Stack gap="lg" height="100%" minW="0" p="sm">
-          <Text textStyle="paragraph/S/regular" color="fg.muted">
-            {t("loading")}
-          </Text>
-        </Stack>
-      </PanelLayout>
-    );
-  }
-
   return (
     <PanelLayout sidebar={<ProjectSidebar />}>
       <Stack gap="0" height="100%" flex="1" minW="0">
         <TicketsHeader />
 
         <Stack flex="1" minH="0" minW="0">
-          {settings.viewMode === "board" ? (
+          {!boardMounted ? (
+            <Box flex="1" />
+          ) : settings.viewMode === "board" ? (
             <TicketsBoardView
               groups={groups}
               displayProperties={settings.displayProperties}

@@ -1,5 +1,5 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePanelSidebarRegistration } from "../panel-sidebar-registration-context";
 import { ScrollArea } from "../scroll-area";
 import { TreeList } from "../tree-list/tree-list";
@@ -41,7 +41,10 @@ export const Sidebar = (props: SidebarProps) => {
     defaultWidth,
     minWidth = DEFAULT_MIN_WIDTH,
     maxWidth = DEFAULT_MAX_WIDTH,
+    virtualize = false,
   } = props;
+
+  const viewportRef = useRef<HTMLDivElement | null>(null);
 
   const initialWidth = resolveInitialWidth(width, defaultWidth);
   const initialState = {
@@ -104,6 +107,7 @@ export const Sidebar = (props: SidebarProps) => {
       <ScrollArea
         flex="1"
         mt="lg"
+        viewportRef={viewportRef}
         viewportProps={{ display: "block", style: { overflowX: "hidden" } }}
         contentProps={{ style: { minWidth: "100%", width: "100%" } }}
       >
@@ -124,6 +128,8 @@ export const Sidebar = (props: SidebarProps) => {
               onNavigate={onNavigate}
               onToggleSection={toggleSection}
               onToggleNode={toggleNode}
+              virtualize={virtualize}
+              scrollRef={viewportRef}
             />
           )}
         </Box>

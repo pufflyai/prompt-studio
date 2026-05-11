@@ -26,6 +26,7 @@
   "chatInput": {
     "placeholder": "開始新的任務",
     "ariaLabel": "建立新的任務",
+    "openPanelLabel": "開啟聊天面板",
     "closeLabel": "最小化聊天",
     "agent": {
       "selectLabel": "選擇代理",

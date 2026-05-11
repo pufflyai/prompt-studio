@@ -2,7 +2,6 @@ import { Flex, Stack } from "@chakra-ui/react";
 import { Breadcrumb, DeleteConfirmationModal, HorizontalMenuStack, PanelLayout } from "@pstdio/ui";
 import { Link } from "@tanstack/react-router";
 import { KanbanSquare } from "lucide-react";
-import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
 import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin-header-actions";
@@ -20,7 +19,7 @@ import type { TicketSubTicket } from "@/features/ticket-list/types";
 import type { transformFileDiffs } from "@/features/workspaces/utils/transform-diff";
 import { getAttemptLabelFromWorkspaceShorthand } from "@/features/workspaces/utils/workspace-shorthand";
 import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/shared/api-types";
-import { markAfterPaint } from "@/shared/performance/mark-after-paint";
+import { useDeferredPageMount } from "@/shared/performance/use-deferred-page-mount";
 import { OpenSidebarButton } from "@/shared/sidebar/open-sidebar-button";
 import { WorkspaceDiffPanel } from "../components/workspace-diff-panel";
 import type { WorkspaceListItem } from "../components/workspace-list-panel";
@@ -191,12 +190,10 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
     deleteWorkspace,
   } = props;
   const { t } = useTranslation("projects");
-  const readinessKey = `${projectId ?? ""}:${ticketShorthand ?? ""}:${selectedWorkspace?.id ?? ""}:${selectedTab}`;
-
-  useEffect(() => {
-    void readinessKey;
-    markAfterPaint("app:workspace-page-ready");
-  }, [readinessKey]);
+  useDeferredPageMount(
+    "workspace",
+    `${projectId ?? ""}:${ticketShorthand ?? ""}:${selectedWorkspace?.id ?? ""}:${selectedTab}`,
+  );
 
   const defaultOverflowActions = buildWorkspaceDeleteOverflowAction({
     t,

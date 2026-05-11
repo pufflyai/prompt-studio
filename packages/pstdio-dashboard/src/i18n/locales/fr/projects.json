@@ -26,6 +26,7 @@
   "chatInput": {
     "placeholder": "démarrer une nouvelle tâche",
     "ariaLabel": "Créer une nouvelle tâche",
+    "openPanelLabel": "Ouvrir le panneau de chat",
     "closeLabel": "Réduire le chat",
     "agent": {
       "selectLabel": "Sélectionner un agent",

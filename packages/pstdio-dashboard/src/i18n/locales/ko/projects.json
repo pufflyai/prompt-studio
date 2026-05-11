@@ -26,6 +26,7 @@
   "chatInput": {
     "placeholder": "새 작업을 시작하세요",
     "ariaLabel": "새 작업 만들기",
+    "openPanelLabel": "채팅 패널 열기",
     "closeLabel": "채팅 최소화",
     "agent": {
       "selectLabel": "에이전트 선택",
