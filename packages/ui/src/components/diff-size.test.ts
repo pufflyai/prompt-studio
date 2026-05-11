@@ -10,14 +10,14 @@ describe("isLargeDiffContent", () => {
     expect(isLargeDiffContent({ additions: LARGE_DIFF_LINE_THRESHOLD })).toBe(false);
   });
 
-  it("falls back to content lines when change counts are unavailable", () => {
-    expect(getDiffLineCount({ newContent: "one\ntwo\n" })).toBe(2);
+  it("counts changed lines only", () => {
+    expect(getDiffLineCount({ additions: 19, deletions: 19, newContent: "one\ntwo\n" })).toBe(38);
   });
 
-  it("classifies a huge file with a small edit as large after content loads", () => {
+  it("keeps a small edit in a huge file eligible for eager loading", () => {
     const content = Array.from({ length: LARGE_DIFF_LINE_THRESHOLD + 1 }, (_, index) => `line ${index}`).join("\n");
 
-    expect(isLargeDiffContent({ additions: 1, deletions: 1, oldContent: content, newContent: content })).toBe(true);
+    expect(isLargeDiffContent({ additions: 19, deletions: 19, oldContent: content, newContent: content })).toBe(false);
   });
 });
 

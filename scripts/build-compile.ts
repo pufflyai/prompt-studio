@@ -9,6 +9,11 @@ process.chdir(join(import.meta.dirname, ".."));
 const CLI_ENTRY = "./packages/pstdio/src/index.ts";
 const EMBED_MANIFEST = "./packages/pstdio/src/_embed-manifest.generated.ts";
 
+// 0. Vendor PGlite runtime assets locally so the embedded imports do not reach
+//    into node_modules. Idempotent: skipped when files are already up to date.
+console.log("Vendoring PGlite runtime assets into packages/pstdio-db/vendor...");
+await $`bun run --cwd packages/pstdio-db vendor:pglite`;
+
 // 1. Resolve files to embed from the checked-in allowlist
 console.log("Resolving embed manifest from scripts/embed.json...");
 const config = loadEmbedConfig();

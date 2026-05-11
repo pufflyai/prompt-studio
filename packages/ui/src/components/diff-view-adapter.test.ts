@@ -1,12 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import {
-  buildDiffViewData,
-  type DiffViewData,
-  getRenderedDiffLineCount,
-  isOversizedDiffViewData,
-  MAX_RENDERED_DIFF_LINES,
-  resolveDiffLanguage,
-} from "./diff-view-adapter";
+import { buildDiffViewData, resolveDiffLanguage } from "./diff-view-adapter";
 
 describe("resolveDiffLanguage", () => {
   it("uses explicit language when provided", () => {
@@ -58,47 +51,4 @@ describe("buildDiffViewData", () => {
     expect(hunkContent).not.toContain("line 30");
     expect(hunkContent).toContain("changed line 16");
   });
-});
-
-describe("isOversizedDiffViewData", () => {
-  it("allows diffs at the rendered line limit", () => {
-    const data = diffViewDataWithRenderedLines(MAX_RENDERED_DIFF_LINES);
-
-    expect(getRenderedDiffLineCount(data)).toBe(MAX_RENDERED_DIFF_LINES);
-    expect(isOversizedDiffViewData(data)).toBe(false);
-  });
-
-  it("does not count a trailing hunk newline as an extra rendered line", () => {
-    const data = diffViewDataWithRenderedLines(MAX_RENDERED_DIFF_LINES, { trailingNewline: true });
-
-    expect(getRenderedDiffLineCount(data)).toBe(MAX_RENDERED_DIFF_LINES);
-    expect(isOversizedDiffViewData(data)).toBe(false);
-  });
-
-  it("marks diffs over the rendered line limit as oversized", () => {
-    const data = diffViewDataWithRenderedLines(MAX_RENDERED_DIFF_LINES + 1);
-
-    expect(getRenderedDiffLineCount(data)).toBe(MAX_RENDERED_DIFF_LINES + 1);
-    expect(isOversizedDiffViewData(data)).toBe(true);
-  });
-});
-
-interface DiffViewDataOptions {
-  trailingNewline?: boolean;
-}
-
-const diffViewDataWithRenderedLines = (lineCount: number, options: DiffViewDataOptions = {}): DiffViewData => ({
-  oldFile: {
-    fileName: "before.txt",
-    fileLang: "plaintext",
-    content: "",
-  },
-  newFile: {
-    fileName: "after.txt",
-    fileLang: "plaintext",
-    content: "",
-  },
-  hunks: [
-    `${Array.from({ length: lineCount }, (_, i) => `line ${i + 1}`).join("\n")}${options.trailingNewline ? "\n" : ""}`,
-  ],
 });

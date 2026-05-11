@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { createDb, resolveMigrationsFolder } from "./connection.pglite";
+import { createDb, resolveMigrationsFolder, resolvePgliteOptions } from "./connection.pglite";
 
 const originalDbPath = process.env.PSTDIO_DB_PATH;
 
@@ -38,6 +38,40 @@ describe("createDb", () => {
 
     await client.close();
     fs.rmSync(tempRoot, { force: true, recursive: true });
+  });
+});
+
+describe("resolvePgliteOptions", () => {
+  const toEmbedded = (name: string, content: Uint8Array) => ({
+    name,
+    size: content.byteLength,
+    arrayBuffer: async () => content.buffer.slice(content.byteOffset, content.byteOffset + content.byteLength),
+  });
+
+  // Minimal valid WebAssembly module bytes — magic header + version
+  const EMPTY_WASM = new Uint8Array([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
+
+  it("returns no overrides when no PGlite assets are embedded (source mode)", async () => {
+    const opts = await resolvePgliteOptions([]);
+    expect(opts).toEqual({});
+  });
+
+  it("compiles wasm and returns the data Blob when both assets are embedded", async () => {
+    const wasmFile = toEmbedded("../../pstdio-db/vendor/pglite/pglite.wasm", EMPTY_WASM);
+    const dataFile = toEmbedded("../../pstdio-db/vendor/pglite/pglite.data", new Uint8Array([1, 2, 3]));
+
+    const opts = (await resolvePgliteOptions([wasmFile as never, dataFile as never])) as {
+      fsBundle: typeof dataFile;
+      wasmModule: WebAssembly.Module;
+    };
+
+    expect(opts.fsBundle).toBe(dataFile);
+    expect(opts.wasmModule).toBeInstanceOf(WebAssembly.Module);
+  });
+
+  it("throws when only one of the two PGlite assets is embedded", async () => {
+    const wasmFile = toEmbedded("../../pstdio-db/vendor/pglite/pglite.wasm", EMPTY_WASM);
+    await expect(resolvePgliteOptions([wasmFile as never])).rejects.toThrow(/Partial PGlite embed/);
   });
 });
 

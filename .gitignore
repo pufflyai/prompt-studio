@@ -164,6 +164,9 @@ packages/api/.data/
 # Generated embed manifest for compiled binary
 _embed-manifest.generated.ts
 
+# Vendored PGlite runtime assets (regenerated from @electric-sql/pglite)
+packages/pstdio-db/vendor
+
 # e2e
 packages/e2e/playwright-report
 packages/e2e/test-results

@@ -1,14 +1,9 @@
-import { Box, Button, Stack, Text } from "@chakra-ui/react";
+import { Box, Button } from "@chakra-ui/react";
 import type { Diff } from "./diff-card";
 import { DiffEditor } from "./diff-editor";
 import { getDiffLineCount } from "./diff-size";
-import {
-  buildDiffViewData,
-  type DiffViewData,
-  getRenderedDiffLineCount,
-  isOversizedDiffViewData,
-  MAX_RENDERED_DIFF_LINES,
-} from "./diff-view-adapter";
+import { buildDiffViewData, type DiffViewData } from "./diff-view-adapter";
+import { EmptyState } from "./empty-state";
 
 interface DiffCardBodyProps {
   diff: Diff;
@@ -43,18 +38,6 @@ export const createDiffCardBodyModel = (input: DiffCardBodyModelInput) => {
     oldPath: diff.oldPath,
     newPath: diff.newPath,
   });
-  const renderedLineCount = getRenderedDiffLineCount(diffViewData);
-  const isOversizedDiff = isOversizedDiffViewData(diffViewData);
-
-  if (isOversizedDiff && !hasOptedIntoLargeDiff) {
-    return {
-      kind: "placeholder" as const,
-      filePath,
-      renderedLineCount,
-      onShowFullDiff,
-    };
-  }
-
   return {
     kind: "editor" as const,
     diffViewData,
@@ -102,29 +85,18 @@ interface LargeDiffPlaceholderProps {
 }
 
 const LargeDiffPlaceholder = (props: LargeDiffPlaceholderProps) => {
-  const { filePath, renderedLineCount, onShowFullDiff } = props;
+  const { filePath, onShowFullDiff } = props;
 
   return (
-    <Stack gap="sm" p="md" borderTop="1px solid" borderColor="border.muted" bg="bg.subtle">
-      <Stack gap="2xs">
-        <Text fontWeight="medium" textStyle="sm">
-          Large diffs are hidden by default
-        </Text>
-        <Text color="fg.muted" textStyle="xs">
-          This file has {renderedLineCount.toLocaleString()} rendered diff lines, which is over the{" "}
-          {MAX_RENDERED_DIFF_LINES.toLocaleString()} line default limit.
-        </Text>
-      </Stack>
-      <Button
-        size="xs"
-        variant="outline"
-        alignSelf="flex-start"
-        aria-label={`Render full diff for ${filePath}`}
-        onClick={onShowFullDiff}
-      >
-        Show full diff
-      </Button>
-    </Stack>
+    <Box p="md" borderTop="1px solid" borderColor="border.muted" bg="bg.subtle">
+      <EmptyState title="Large diffs are hidden by default" paddingY="sm">
+        {onShowFullDiff ? (
+          <Button size="xs" variant="outline" aria-label={`Render full diff for ${filePath}`} onClick={onShowFullDiff}>
+            Show full diff
+          </Button>
+        ) : null}
+      </EmptyState>
+    </Box>
   );
 };
 

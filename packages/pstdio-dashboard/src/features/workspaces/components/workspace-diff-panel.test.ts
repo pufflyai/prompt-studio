@@ -1,6 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import type { Diff } from "@pstdio/ui";
-import { buildFilteredDiffs, buildLoadedDiffKey, resolveDisplayDiffs } from "./workspace-diff-panel";
+import {
+  buildFilteredDiffs,
+  buildLoadedDiffKey,
+  resolveDisplayDiffs,
+  retainLoadedDiffsForSummaries,
+} from "./workspace-diff-panel";
 
 const createDiff = (input: { newPath?: string; oldPath?: string }): Diff => ({
   change: "modified",
@@ -42,6 +47,75 @@ describe("resolveDisplayDiffs", () => {
     });
 
     expect(displayDiffs[0].newPath ?? displayDiffs[0].oldPath).toBe("src/app.ts");
+  });
+
+  it("preserves loaded bodies when refreshed summary metadata is unchanged", () => {
+    const loadedDiffs = new Map<string, Diff>([
+      [
+        buildLoadedDiffKey("workspace-1", "src/app.ts"),
+        {
+          change: "modified",
+          oldPath: "src/app.ts",
+          newPath: "src/app.ts",
+          oldContent: "old",
+          newContent: "new",
+          additions: 1,
+          deletions: 1,
+        },
+      ],
+    ]);
+
+    const displayDiffs = resolveDisplayDiffs({
+      workspaceId: "workspace-1",
+      loadedDiffs,
+      diffs: [{ change: "modified", oldPath: "src/app.ts", newPath: "src/app.ts", additions: 1, deletions: 1 }],
+    });
+
+    expect(displayDiffs[0].oldContent).toBe("old");
+    expect(displayDiffs[0].newContent).toBe("new");
+  });
+
+  it("discards loaded bodies when refreshed summary metadata changed", () => {
+    const loadedDiffs = new Map<string, Diff>([
+      [
+        buildLoadedDiffKey("workspace-1", "src/app.ts"),
+        {
+          change: "modified",
+          oldPath: "src/app.ts",
+          newPath: "src/app.ts",
+          oldContent: "old",
+          newContent: "new",
+          additions: 1,
+          deletions: 1,
+        },
+      ],
+    ]);
+
+    const displayDiffs = resolveDisplayDiffs({
+      workspaceId: "workspace-1",
+      loadedDiffs,
+      diffs: [{ change: "modified", oldPath: "src/app.ts", newPath: "src/app.ts", additions: 2, deletions: 1 }],
+    });
+
+    expect(displayDiffs[0].oldContent).toBeUndefined();
+    expect(displayDiffs[0].newContent).toBeUndefined();
+  });
+});
+
+describe("retainLoadedDiffsForSummaries", () => {
+  it("drops loaded bodies for removed files", () => {
+    const retained = retainLoadedDiffsForSummaries({
+      workspaceId: "workspace-1",
+      diffs: [],
+      loadedDiffs: new Map([
+        [
+          buildLoadedDiffKey("workspace-1", "removed.ts"),
+          { change: "deleted", oldPath: "removed.ts", oldContent: "old", newContent: "", additions: 0, deletions: 1 },
+        ],
+      ]),
+    });
+
+    expect(retained.size).toBe(0);
   });
 });
 
