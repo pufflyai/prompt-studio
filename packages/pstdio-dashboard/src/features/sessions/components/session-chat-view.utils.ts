@@ -39,6 +39,25 @@ export const resolveNewSessionWorkspaceId = (input: {
   return input.newSessionWorkspaceId;
 };
 
+export const isSessionConversationLoading = (input: {
+  sessionId: string | null;
+  hasSession: boolean;
+  isSessionLoading: boolean;
+  isMessageLoading: boolean;
+}) => Boolean(input.sessionId && (input.isSessionLoading || (input.hasSession && input.isMessageLoading)));
+
+export const isSessionChatStreaming = (input: {
+  isConversationLoading: boolean;
+  isWorkspaceInitializing: boolean;
+  isStreaming: boolean;
+  statusAllowsStreaming: boolean;
+  canInterruptSession: boolean;
+}) =>
+  input.isConversationLoading ||
+  input.isWorkspaceInitializing ||
+  (input.isStreaming && input.statusAllowsStreaming) ||
+  input.canInterruptSession;
+
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === "object" && value !== null;
 };

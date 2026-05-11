@@ -38,6 +38,8 @@
     "lint": "biome check .",
     "typegen:tokens": "chakra typegen ./src/theme/theme.ts",
     "test": "bun test --silent",
+    "perf:chat": "bunx playwright test -c playwright.chat-perf.config.ts",
+    "perf:chat:trace": "PLAYWRIGHT_TRACE=on bunx playwright test -c playwright.chat-perf.config.ts",
     "test-storybook": "test-storybook",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
@@ -85,6 +87,7 @@
   "devDependencies": {
     "@chakra-ui/react": "3.32.0",
     "@emotion/react": "11.14.0",
+    "@playwright/test": "^1.50.0",
     "@storybook/addon-themes": "^10.1.10",
     "@storybook/react": "^10.1.9",
     "@storybook/react-vite": "^10.1.9",

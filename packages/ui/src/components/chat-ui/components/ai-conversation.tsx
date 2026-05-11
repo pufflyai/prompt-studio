@@ -24,7 +24,7 @@ export const ConversationRoot = chakra(
     },
   },
   {
-    forwardProps: ["resize"],
+    forwardProps: ["initial", "resize"],
     defaultProps: conversationRootDefaultProps,
   },
 );

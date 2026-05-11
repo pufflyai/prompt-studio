@@ -171,6 +171,8 @@ packages/pstdio-db/vendor
 packages/e2e/playwright-report
 packages/e2e/test-results
 packages/e2e/screenshots
+packages/ui/playwright-report
+packages/ui/test-results
 __test-tmp__
 
 */**/storybook-static

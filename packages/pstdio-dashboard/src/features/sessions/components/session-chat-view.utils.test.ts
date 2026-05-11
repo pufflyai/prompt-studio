@@ -5,6 +5,8 @@ import {
   countCompletedEditActions,
   getActiveQuestionPrompt,
   getVisibleActiveQuestionPromptState,
+  isSessionChatStreaming,
+  isSessionConversationLoading,
   isSessionInterruptible,
   resolveNewSessionWorkspaceId,
   shouldReconnectForExternalResume,
@@ -76,6 +78,78 @@ describe("isSessionInterruptible", () => {
     expect(isSessionInterruptible("cancelled")).toBe(false);
     expect(isSessionInterruptible("disconnected")).toBe(false);
     expect(isSessionInterruptible(null)).toBe(false);
+  });
+});
+
+describe("isSessionConversationLoading", () => {
+  it("keeps an existing session loading while messages are still hydrating", () => {
+    expect(
+      isSessionConversationLoading({
+        sessionId: "session-1",
+        hasSession: true,
+        isSessionLoading: false,
+        isMessageLoading: true,
+      }),
+    ).toBe(true);
+  });
+
+  it("does not treat an empty new session as loading", () => {
+    expect(
+      isSessionConversationLoading({
+        sessionId: null,
+        hasSession: false,
+        isSessionLoading: false,
+        isMessageLoading: true,
+      }),
+    ).toBe(false);
+  });
+
+  it("does not mask a missing session after session metadata loading finishes", () => {
+    expect(
+      isSessionConversationLoading({
+        sessionId: "session-1",
+        hasSession: false,
+        isSessionLoading: false,
+        isMessageLoading: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("keeps an existing session loading while session metadata is loading", () => {
+    expect(
+      isSessionConversationLoading({
+        sessionId: "session-1",
+        hasSession: false,
+        isSessionLoading: true,
+        isMessageLoading: false,
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("isSessionChatStreaming", () => {
+  it("treats conversation loading as a streaming display state", () => {
+    expect(
+      isSessionChatStreaming({
+        isConversationLoading: true,
+        isWorkspaceInitializing: false,
+        isStreaming: false,
+        statusAllowsStreaming: false,
+        canInterruptSession: false,
+      }),
+    ).toBe(true);
+  });
+
+  it("does not show streaming for inactive completed sessions", () => {
+    expect(
+      isSessionChatStreaming({
+        isConversationLoading: false,
+        isWorkspaceInitializing: false,
+        isStreaming: true,
+        statusAllowsStreaming: false,
+        canInterruptSession: false,
+      }),
+    ).toBe(false);
   });
 });
 

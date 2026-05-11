@@ -25,6 +25,8 @@ import {
 } from "./session-chat-state";
 import {
   getVisibleActiveQuestionPromptState,
+  isSessionChatStreaming,
+  isSessionConversationLoading,
   isSessionInterruptible,
   resolveNewSessionWorkspaceId,
 } from "./session-chat-view.utils";
@@ -63,8 +65,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
 
   const lastSelectedAgent = useProjectSettingsStore((s) => s.lastSelectedAgent);
   const lastSelectedModels = useProjectSettingsStore((s) => s.lastSelectedModels);
-  const { data: session } = useProjectSession(projectId, sessionId);
-  const isExistingSessionLoading = Boolean(sessionId) && !session;
+  const { data: session, isLoading: isSessionLoading } = useProjectSession(projectId, sessionId);
   const initialSelection = resolveInitialSessionChatSelection({
     sessionAgent: session?.agent,
     sessionLastSelectedModel: session?.lastSelectedModel,
@@ -81,7 +82,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
   const [chatDraft, setChatDraft] = useState(() => projectSettingsStore.getState().chatDraftsBySession[draftKey] ?? "");
   const setSessionDraft = useProjectSettingsStore((state) => state.setSessionDraft);
   const clearSessionDraft = useProjectSettingsStore((state) => state.clearSessionDraft);
-  const { messages, isStreaming, approvalRequest, reconnect } = useSessionStream(sessionId);
+  const { messages, isStreaming, isLoadingMessages, approvalRequest, reconnect } = useSessionStream(sessionId);
   const sessionWorkspace = useSessionWorkspace(sessionId);
   const invalidateDiffOnEdit = useInvalidateDiffOnEdits(workspaceId ?? sessionWorkspace?.id ?? null);
   const { data: workspaceDiffSummary } = useTicketAttemptDiffSummary(showWorkspaceHub ? sessionWorkspace?.id : null);
@@ -152,10 +153,21 @@ export const SessionChatView = (props: SessionChatViewProps) => {
     statusLabel: t("tickets:conversation.workspace.settingUp"),
     changesLabel: (count) => t("tickets:diff.filesChanged", { count }),
   });
-  const loadingContent = sessionId ? <ChatSkeleton /> : undefined;
   const canInterruptSession = Boolean(sessionId) && isSessionInterruptible(sessionStatus);
   const statusAllowsStreaming = sessionStatus == null || canInterruptSession;
-  const effectiveStreaming = isWorkspaceInitializing || (isStreaming && statusAllowsStreaming) || canInterruptSession;
+  const isConversationLoading = isSessionConversationLoading({
+    sessionId,
+    hasSession: Boolean(session),
+    isSessionLoading,
+    isMessageLoading: isLoadingMessages,
+  });
+  const effectiveStreaming = isSessionChatStreaming({
+    isConversationLoading,
+    isWorkspaceInitializing,
+    isStreaming,
+    statusAllowsStreaming,
+    canInterruptSession,
+  });
   const emptyStateTitle = sessionId ? t("chatInput.session.notFoundTitle") : t("sessions.nextBuildTitle");
   const emptyStateDescription = sessionId ? t("chatInput.session.notFoundDescription") : "";
   const effectiveWorkspaceId = resolveNewSessionWorkspaceId({
@@ -166,15 +178,17 @@ export const SessionChatView = (props: SessionChatViewProps) => {
 
   return (
     <ChatPanel
+      conversationKey={sessionId ?? "new-session"}
       messages={displayedMessages}
+      loading={isConversationLoading}
       streaming={effectiveStreaming}
       workspaceInitializing={isWorkspaceInitializing}
       emptyStateTitle={emptyStateTitle}
       emptyStateDescription={emptyStateDescription}
-      loadingContent={loadingContent}
+      loaderComponent={<ChatSkeleton />}
       chatInputPlaceholder={t("sessions.followUpPlaceholder")}
       chatInputDefaultValue={chatDraft}
-      inputDisabled={isExistingSessionLoading}
+      inputDisabled={isConversationLoading}
       chatInputQuestionPrompt={activeQuestionPrompt}
       chatInputAutoFocus={autoFocusChatInput}
       onSubmitMessage={(text: string, _attachments, questionResponse) => {
@@ -226,7 +240,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
               selectedModel={model}
               onAgentChange={setAgent}
               onModelChange={setModel}
-              isDisabled={isExistingSessionLoading}
+              isDisabled={isConversationLoading}
             />
           </Box>
           <RepoBrowserContainer sessionId={sessionId} workspaceId={effectiveWorkspaceId} isSessionContext />

@@ -56,25 +56,38 @@ type Story = StoryObj;
 interface LocalizedChatPanelProps {
   emptyStateDescriptionKey?: string;
   emptyStateTitleKey: string;
-  loadingContent?: ReactNode;
+  inputDisabled?: boolean;
+  loading?: boolean;
+  loaderComponent?: ReactNode;
   messages: SessionMessage[];
   onInterrupt?: () => void;
   streaming: boolean;
 }
 
 const LocalizedChatPanel = (props: LocalizedChatPanelProps) => {
-  const { emptyStateDescriptionKey, emptyStateTitleKey, loadingContent, messages, onInterrupt, streaming } = props;
+  const {
+    emptyStateDescriptionKey,
+    emptyStateTitleKey,
+    inputDisabled = false,
+    loading = false,
+    loaderComponent,
+    messages,
+    onInterrupt,
+    streaming,
+  } = props;
   const { t } = useTranslation("projects");
 
   return (
     <Box w="720px" h="500px" borderWidth="1px" borderRadius="lg">
       <ChatPanel
         messages={messages}
+        loading={loading}
         streaming={streaming}
         emptyStateTitle={t(emptyStateTitleKey)}
         emptyStateDescription={emptyStateDescriptionKey ? t(emptyStateDescriptionKey) : ""}
         chatInputPlaceholder={t("sessions.followUpPlaceholder")}
-        loadingContent={loadingContent}
+        inputDisabled={inputDisabled}
+        loaderComponent={loaderComponent}
         onInterrupt={onInterrupt}
       />
     </Box>
@@ -119,8 +132,10 @@ export const LoadingConversation: Story = {
   render: () => (
     <LocalizedChatPanel
       messages={[]}
-      streaming
-      loadingContent={<ChatSkeleton />}
+      loading
+      streaming={false}
+      inputDisabled
+      loaderComponent={<ChatSkeleton />}
       emptyStateTitleKey="sessions.noSessionSelected"
       emptyStateDescriptionKey="sessions.selectSession"
     />

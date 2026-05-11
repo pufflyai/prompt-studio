@@ -1,35 +1,24 @@
-import { Box, Button, Flex, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Flex, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
 import { MessageCircleIcon } from "lucide-react";
-import { type ReactNode, useState, type WheelEvent } from "react";
+import { type ReactNode, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { createSerializedPromptState } from "../utils/editor-state";
 import { ChatPrimitives } from "./ai-conversation";
-import { ChatMessage } from "./ai-message";
 import { AutoScroll } from "./auto-scroll";
 import { ChatInput } from "./chat-input";
 import type { ChatInputQuestionPrompt, ChatInputQuestionResponse } from "./chat-input-question-prompt";
-import {
-  isStickyUserMessageCollapsible,
-  STICKY_USER_MESSAGE_COLLAPSED_MAX_HEIGHT,
-  STICKY_USER_MESSAGE_EXPANDED_MAX_HEIGHT,
-  shouldStopStickyUserMessageWheel,
-} from "./chat-panel-sticky-user-message";
-import { MessageActionPanel } from "./message-action-panel";
-import { MessagePartsRenderer } from "./message-parts-renderer";
-import {
-  getMessageOrigin,
-  groupMessagesByTurn,
-  mergeReasoningToolOnlyMessages,
-  type SessionMessage,
-} from "./message-types";
+import { ChatMessageList } from "./chat-message-list";
+import { groupMessagesByTurn, mergeReasoningToolOnlyMessages, type SessionMessage } from "./message-types";
 
 interface ChatPanelProps {
+  conversationKey?: string;
   messages: SessionMessage[];
+  loading?: boolean;
   streaming?: boolean;
   emptyStateTitle: string;
   emptyStateDescription: string;
   emptyStateContent?: ReactNode;
-  loadingContent?: ReactNode;
+  loaderComponent?: ReactNode;
   chatInputPlaceholder: string;
   chatInputDefaultValue?: string;
   onSubmitMessage?: (text: string, attachments: string[], questionResponse?: ChatInputQuestionResponse) => void;
@@ -48,142 +37,16 @@ interface ChatPanelProps {
   chatInputAutoFocus?: boolean;
 }
 
-interface StickyMessageToggleProps {
-  label: string;
-  onClick: () => void;
-  actionPanel?: ReactNode;
-}
-
-interface StickyMessageGroupProps {
-  group: {
-    userMessage: SessionMessage;
-    responses: SessionMessage[];
-  };
-  streaming: boolean;
-  hideQuestionForms: boolean;
-  isExpanded: boolean;
-  onToggleStickyMessage: (messageId: string) => void;
-}
-
-const StickyMessageToggle = (props: StickyMessageToggleProps) => {
-  const { label, onClick, actionPanel } = props;
-
-  return (
-    <Flex
-      position="absolute"
-      bottom="0"
-      left="0"
-      right="0"
-      justifyContent={actionPanel ? "space-between" : "flex-end"}
-      alignItems="flex-end"
-      px="xs"
-      pb="xs"
-      pt="lg"
-      bgGradient="to-t"
-      gradientFrom="bg.subtle"
-      gradientTo="transparent"
-      borderBottomRadius="xs"
-      pointerEvents="none"
-    >
-      {actionPanel}
-      <Button size="2xs" variant="solid" pointerEvents="auto" onClick={onClick}>
-        {label}
-      </Button>
-    </Flex>
-  );
-};
-
-const renderMessage = (message: SessionMessage, streaming: boolean, hideQuestionForms = false) => {
-  const from = getMessageOrigin(message.role);
-  return (
-    <ChatMessage.Root key={message.id} from={from}>
-      <ChatMessage.Content from={from}>
-        <MessagePartsRenderer message={message} streaming={streaming} hideQuestionForms={hideQuestionForms} />
-        {from === "assistant" || from === "user" ? (
-          <MessageActionPanel message={message} alwaysVisible={from === "user"} copyAlwaysVisible={from !== "user"} />
-        ) : null}
-      </ChatMessage.Content>
-    </ChatMessage.Root>
-  );
-};
-
-const handleExpandedStickyMessageWheel = (event: WheelEvent<HTMLElement>) => {
-  if (shouldStopStickyUserMessageWheel(event.currentTarget, event.deltaY)) {
-    event.stopPropagation();
-  }
-};
-
-const getStickyMessageMaxHeight = (isCollapsible: boolean, isExpanded: boolean) => {
-  if (!isCollapsible) return undefined;
-  if (isExpanded) return STICKY_USER_MESSAGE_EXPANDED_MAX_HEIGHT;
-
-  return STICKY_USER_MESSAGE_COLLAPSED_MAX_HEIGHT;
-};
-
-const getStickyMessageBodyMaxHeight = (isExpandedCollapsible: boolean) => {
-  if (!isExpandedCollapsible) return undefined;
-
-  return STICKY_USER_MESSAGE_EXPANDED_MAX_HEIGHT;
-};
-
-const StickyMessageGroup = (props: StickyMessageGroupProps) => {
-  const { group, streaming, hideQuestionForms, isExpanded, onToggleStickyMessage } = props;
-  const isCollapsible = isStickyUserMessageCollapsible(group.userMessage);
-  const isExpandedCollapsible = isCollapsible && isExpanded;
-  const stickyMessageMaxHeight = getStickyMessageMaxHeight(isCollapsible, isExpanded);
-  const toggleStickyMessage = () => onToggleStickyMessage(group.userMessage.id);
-
-  return (
-    <Box>
-      <Box position="sticky" top="0" zIndex={1}>
-        <ChatMessage.Root from="user">
-          <ChatMessage.Content
-            from="user"
-            maxH={stickyMessageMaxHeight}
-            overflow="hidden"
-            p={isCollapsible ? "0" : undefined}
-            position={isCollapsible ? "relative" : undefined}
-          >
-            <Box
-              data-sticky-user-message-content={isCollapsible ? (isExpanded ? "expanded" : "collapsed") : undefined}
-              display="flex"
-              flexDirection="column"
-              gap="sm"
-              maxH={getStickyMessageBodyMaxHeight(isExpandedCollapsible)}
-              minH="0"
-              overflowY={isExpandedCollapsible ? "auto" : "visible"}
-              px={isCollapsible ? "xs" : undefined}
-              py={isCollapsible ? "xs" : undefined}
-              pb={isExpandedCollapsible ? "3rem" : undefined}
-              onWheel={isExpandedCollapsible ? handleExpandedStickyMessageWheel : undefined}
-            >
-              <MessagePartsRenderer message={group.userMessage} streaming={streaming} />
-            </Box>
-            {isCollapsible ? (
-              <StickyMessageToggle
-                label={isExpanded ? "Show less" : "Show more"}
-                onClick={toggleStickyMessage}
-                actionPanel={<MessageActionPanel message={group.userMessage} alwaysVisible copyAlwaysVisible={false} />}
-              />
-            ) : (
-              <MessageActionPanel message={group.userMessage} alwaysVisible copyAlwaysVisible={false} />
-            )}
-          </ChatMessage.Content>
-        </ChatMessage.Root>
-      </Box>
-      {group.responses.map((message) => renderMessage(message, streaming, hideQuestionForms))}
-    </Box>
-  );
-};
-
 export const ChatPanel = (props: ChatPanelProps) => {
   const {
+    conversationKey,
     messages,
+    loading = false,
     streaming = false,
     emptyStateTitle,
     emptyStateDescription,
     emptyStateContent,
-    loadingContent,
+    loaderComponent,
     chatInputPlaceholder,
     chatInputDefaultValue = "",
     onSubmitMessage,
@@ -204,13 +67,25 @@ export const ChatPanel = (props: ChatPanelProps) => {
 
   const merged = mergeReasoningToolOnlyMessages(messages);
   const hasMessages = merged.length > 0;
+  const messageListKey = conversationKey ?? merged[0]?.id;
+  const messageListIdentity = hasMessages ? (messageListKey ?? "active-conversation") : null;
   const userMessageCount = merged.reduce((count, message) => count + (message.role === "user" ? 1 : 0), 0);
   const { groups, leadingResponses } = groupMessagesByTurn(merged);
   const [expandedStickyMessageIds, setExpandedStickyMessageIds] = useState(() => new Set<string>());
-  const emptyContent = streaming ? (loadingContent ?? emptyStateContent) : emptyStateContent;
+  const [readyMessageListKey, setReadyMessageListKey] = useState<string | null>(null);
+  const showLoadingState = !hasMessages && loading;
+  const defaultEmptyContent = (
+    <EmptyState
+      icon={<MessageCircleIcon size={48} strokeWidth={1.5} />}
+      title={emptyStateTitle}
+      description={emptyStateDescription}
+    />
+  );
+  const emptyContent = showLoadingState ? loaderComponent : (emptyStateContent ?? defaultEmptyContent);
   const hasWorkspaceHub = Boolean(workspaceHub);
   const hideActiveQuestionForms = Boolean(chatInputQuestionPrompt);
   const showThinkingIndicator = streaming && hasMessages && !workspaceInitializing;
+  const isMessageViewportReady = !messageListIdentity || readyMessageListKey === messageListIdentity;
 
   const toggleStickyMessageExpanded = (messageId: string) => {
     setExpandedStickyMessageIds((current) => {
@@ -229,34 +104,23 @@ export const ChatPanel = (props: ChatPanelProps) => {
     <Flex position="relative" direction="column" w="full" h="full" overflow="hidden">
       <ChatPrimitives.Root>
         <AutoScroll userMessageCount={userMessageCount} />
-        <ChatPrimitives.Viewport>
+        <ChatPrimitives.Viewport visibility={isMessageViewportReady ? "visible" : "hidden"}>
           {hasMessages ? (
-            <Stack gap="sm" px="xs">
-              {leadingResponses.map((message) =>
-                renderMessage(message, streaming, groups.length > 0 || hideActiveQuestionForms),
-              )}
-              {groups.map((group, groupIndex) => (
-                <StickyMessageGroup
-                  key={group.userMessage.id}
-                  group={group}
-                  streaming={streaming}
-                  hideQuestionForms={groupIndex < groups.length - 1 || hideActiveQuestionForms}
-                  isExpanded={expandedStickyMessageIds.has(group.userMessage.id)}
-                  onToggleStickyMessage={toggleStickyMessageExpanded}
-                />
-              ))}
-            </Stack>
+            <ChatMessageList
+              key={messageListIdentity}
+              leadingResponses={leadingResponses}
+              groups={groups}
+              streaming={streaming}
+              hideActiveQuestionForms={hideActiveQuestionForms}
+              expandedStickyMessageIds={expandedStickyMessageIds}
+              onToggleStickyMessage={toggleStickyMessageExpanded}
+              onReady={() => setReadyMessageListKey(messageListIdentity)}
+            />
           ) : (
-            (emptyContent ?? (
-              <EmptyState
-                icon={<MessageCircleIcon size={48} strokeWidth={1.5} />}
-                title={emptyStateTitle}
-                description={emptyStateDescription}
-              />
-            ))
+            emptyContent
           )}
         </ChatPrimitives.Viewport>
-        <ChatPrimitives.ScrollToBottom aria-label="Scroll to latest message" />
+        {isMessageViewportReady ? <ChatPrimitives.ScrollToBottom aria-label="Scroll to latest message" /> : null}
       </ChatPrimitives.Root>
       {approvalPrompt}
       {showThinkingIndicator ? (

@@ -8,6 +8,7 @@ import {
   updateCachedSessionEntry,
 } from "./session-stream-cache";
 import { getSessionStreamReconnectDelayMs, resolveRecoveredStreamMessages } from "./session-stream-recovery";
+import { getInitialSessionStreamState } from "./use-session-stream";
 
 const originalFetch = globalThis.fetch;
 
@@ -15,6 +16,26 @@ const message = (id: string): SessionMessage => ({
   id,
   role: "assistant",
   parts: [{ type: "text", text: id }],
+});
+
+describe("getInitialSessionStreamState", () => {
+  it("marks an uncached existing session as loading messages", () => {
+    expect(getInitialSessionStreamState("s_1", [])).toEqual({
+      messages: [],
+      isStreaming: true,
+      isLoadingMessages: true,
+      approvalRequest: null,
+    });
+  });
+
+  it("uses cached messages without showing the loading state", () => {
+    expect(getInitialSessionStreamState("s_1", [message("m1")])).toEqual({
+      messages: [message("m1")],
+      isStreaming: false,
+      isLoadingMessages: false,
+      approvalRequest: null,
+    });
+  });
 });
 
 describe("applyMessagePatch", () => {

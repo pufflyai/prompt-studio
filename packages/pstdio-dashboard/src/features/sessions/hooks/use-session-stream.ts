@@ -28,13 +28,27 @@ interface ApprovalRequest {
 interface SessionStreamState {
   messages: SessionMessage[];
   isStreaming: boolean;
+  isLoadingMessages: boolean;
   approvalRequest: ApprovalRequest | null;
 }
+
+export const getInitialSessionStreamState = (sessionId: string | null, cachedMessages: SessionMessage[]) => {
+  const hasCachedMessages = cachedMessages.length > 0;
+  const isLoadingMessages = Boolean(sessionId) && !hasCachedMessages;
+
+  return {
+    messages: cachedMessages,
+    isStreaming: isLoadingMessages,
+    isLoadingMessages,
+    approvalRequest: null,
+  };
+};
 
 export const useSessionStream = (sessionId: string | null) => {
   const [state, setState] = useState<SessionStreamState>({
     messages: [],
     isStreaming: false,
+    isLoadingMessages: false,
     approvalRequest: null,
   });
   const [connectionAttempt, setConnectionAttempt] = useState(0);
@@ -52,7 +66,7 @@ export const useSessionStream = (sessionId: string | null) => {
       }
       reconnectRetryCountRef.current = 0;
       reconnectSessionIdRef.current = null;
-      setState({ messages: [], isStreaming: false, approvalRequest: null });
+      setState({ messages: [], isStreaming: false, isLoadingMessages: false, approvalRequest: null });
       messagesRef.current = [];
       return;
     }
@@ -63,12 +77,7 @@ export const useSessionStream = (sessionId: string | null) => {
     }
 
     const cached = getCachedSessionEntry(sessionId);
-    const hasCachedMessages = cached.messages.length > 0;
-    setState({
-      messages: cached.messages,
-      isStreaming: !hasCachedMessages,
-      approvalRequest: null,
-    });
+    setState(getInitialSessionStreamState(sessionId, cached.messages));
 
     // Reset ref so server-replayed history starts from empty — prevents
     // duplication when the modal is closed and reopened (cache + replay).
@@ -79,17 +88,25 @@ export const useSessionStream = (sessionId: string | null) => {
     let hasEnded = false;
 
     void fetchSessionConversationMessages(sessionId).then((hydrated) => {
-      if (!hydrated || isDisposed) return;
+      if (isDisposed) return;
+
+      if (!hydrated) {
+        setState((prev) => ({ ...prev, isLoadingMessages: false }));
+        return;
+      }
 
       // The conversation API fetches directly from the agent and is the
       // most complete source. Always apply it — but during an active
       // stream, only use it when it changes the replayed snapshot.
       const nextMessages = isStreaming ? resolveRecoveredStreamMessages(messagesRef.current, hydrated) : hydrated;
-      if (nextMessages === messagesRef.current) return;
+      if (nextMessages === messagesRef.current) {
+        setState((prev) => ({ ...prev, isLoadingMessages: false }));
+        return;
+      }
 
       messagesRef.current = nextMessages;
       updateCachedSessionEntry(sessionId, { messages: nextMessages });
-      setState((prev) => ({ ...prev, messages: nextMessages }));
+      setState((prev) => ({ ...prev, messages: nextMessages, isLoadingMessages: false }));
     });
 
     const url = buildApiUrl(`/v1/sessions/${sessionId}/stream?attempt=${connectionAttempt}`);
@@ -107,7 +124,13 @@ export const useSessionStream = (sessionId: string | null) => {
       const patch = JSON.parse(event.data) as JsonPatch;
       messagesRef.current = applyMessagePatch(messagesRef.current, patch);
       updateCachedSessionEntry(sessionId, { messages: messagesRef.current });
-      setState((prev) => ({ ...prev, messages: messagesRef.current, isStreaming: true, approvalRequest: null }));
+      setState((prev) => ({
+        ...prev,
+        messages: messagesRef.current,
+        isStreaming: true,
+        isLoadingMessages: false,
+        approvalRequest: null,
+      }));
     });
 
     source.addEventListener("approval_request", (event) => {
@@ -125,6 +148,7 @@ export const useSessionStream = (sessionId: string | null) => {
         ...prev,
         messages: finalMessages,
         isStreaming: false,
+        isLoadingMessages: false,
         approvalRequest: null,
       }));
       source.close();
