@@ -12,6 +12,24 @@ const createTempDir = () => {
   return dir;
 };
 
+const writePackage = (dir: string, name: string, fields: Record<string, unknown> = {}) => {
+  writeFileSync(
+    join(dir, "package.json"),
+    JSON.stringify(
+      {
+        name,
+        version: "1.0.0",
+        publisher: "pstdio",
+        main: "./extension.ts",
+        engines: { pstdio: "^1.0.0" },
+        ...fields,
+      },
+      null,
+      2,
+    ),
+  );
+};
+
 afterEach(() => {
   for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
   tempDirs.length = 0;
@@ -21,12 +39,10 @@ describe("loadExtensionRuntime", () => {
   test("loads extensions from a custom root and normalizes their commands", async () => {
     const root = createTempDir();
     mkdirSync(join(root, "lab"));
+    writePackage(join(root, "lab"), "lab", { displayName: "Lab" });
     writeFileSync(
       join(root, "lab", "extension.ts"),
       `export default {
-        id: "pstdio.extension-lab",
-        namespace: "lab",
-        name: "Lab",
         commands: {
           "say-hello": {
             title: "Say hello",
@@ -49,22 +65,24 @@ describe("loadExtensionRuntime", () => {
     expect(runtime.cli[0]?.pathKey).toBe("lab say-hello");
   });
 
-  test("reports diagnostics when an extension has invalid identity", async () => {
+  test("reports diagnostics when an extension has invalid manifest identity", async () => {
     const root = createTempDir();
     mkdirSync(join(root, "bad"));
-    writeFileSync(join(root, "bad", "extension.ts"), `export default { id: "Bad Id", namespace: "bad", name: "Bad" };`);
+    writePackage(join(root, "bad"), "Bad Id");
+    writeFileSync(join(root, "bad", "extension.ts"), `export default {};`);
 
     const runtime = await loadExtensionRuntime({
       includeUserRoot: false,
       extensionRoots: [{ path: root }],
     });
 
-    expect(runtime.diagnostics.map((d) => d.code)).toContain("invalid_extension_id");
+    expect(runtime.diagnostics.map((d) => d.code)).toContain("extension_manifest_invalid_value");
   });
 
   test("reports diagnostics when default export is not an object", async () => {
     const root = createTempDir();
     mkdirSync(join(root, "broken"));
+    writePackage(join(root, "broken"), "broken");
     writeFileSync(join(root, "broken", "extension.ts"), `export default "nope";`);
 
     const runtime = await loadExtensionRuntime({

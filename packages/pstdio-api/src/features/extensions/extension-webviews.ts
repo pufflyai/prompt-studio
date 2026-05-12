@@ -41,7 +41,7 @@ export const collectExtensionWebviews = (loaded: Pick<LoadedExtension, "definiti
       if (!isRecord(contribution) || !isRecord(contribution.webview)) continue;
       if (!isPackageAssetDescriptor(contribution.webview.entry)) continue;
       webviews.push({
-        id: `${loaded.metadata.namespace}.${key}`,
+        id: `${loaded.metadata.name}.${key}`,
         entry: contribution.webview.entry,
       });
     }

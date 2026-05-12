@@ -14,8 +14,8 @@ const sourceKindForRuntime = (sourceKind: string) => (sourceKind === "builtin" ?
 export const loadProjectExtensionRuntime = async (deps: ExtensionsRouteDeps, projectId: string) => {
   const enabledSources = await deps.extensionService.listEnabledSourcesForProject(projectId);
   const loaded = await loadExtensionSources({
-    extensionFiles: enabledSources.map(({ installedSource }) => ({
-      path: join(installedSource.source_path, "extension.ts"),
+    extensionPackages: enabledSources.map(({ installedSource }) => ({
+      path: installedSource.source_path,
       sourceKind: sourceKindForRuntime(installedSource.source_kind),
     })),
   });
@@ -27,7 +27,6 @@ export const loadProjectExtensionRuntime = async (deps: ExtensionsRouteDeps, pro
 export const toCommandRecord = (command: RuntimeCommandRecord): ExtensionCommandRecord => ({
   id: command.id,
   extensionId: command.extensionId,
-  namespace: command.namespace,
   title: command.title,
   description: command.description,
   cliPath: command.cli?.pathKey,
@@ -35,9 +34,9 @@ export const toCommandRecord = (command: RuntimeCommandRecord): ExtensionCommand
   params: command.params as ExtensionCommandRecord["params"],
 });
 
-const findEnabledSource = (enabledSources: EnabledSource[], extensionId: string, namespace: string) =>
+const findEnabledSource = (enabledSources: EnabledSource[], extensionId: string, name: string) =>
   enabledSources.find(
-    ({ instance, installedSource }) => instance.namespace === namespace && installedSource.extension_id === extensionId,
+    ({ instance, installedSource }) => instance.namespace === name && installedSource.extension_id === extensionId,
   );
 
 const createStorageApi = (
@@ -200,9 +199,9 @@ const createProcessApi = (): CommandRunnerEnvironment["process"] => ({
 export const createCommandEnvironment = (
   deps: ExtensionsRouteDeps,
   enabledSources: EnabledSource[],
-  input: { extensionId: string; namespace: string; projectId: string },
+  input: { extensionId: string; name: string; projectId: string },
 ): CommandRunnerEnvironment => {
-  const enabledSource = findEnabledSource(enabledSources, input.extensionId, input.namespace);
+  const enabledSource = findEnabledSource(enabledSources, input.extensionId, input.name);
   if (!enabledSource) throw new Error(`Enabled extension instance not found: ${input.extensionId}`);
 
   const storage = createStorageApi(deps, {

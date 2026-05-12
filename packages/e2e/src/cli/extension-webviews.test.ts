@@ -35,12 +35,19 @@ const writeStaticExtension = () => {
   dirs.push(root);
   mkdirSync(root, { recursive: true });
   writeFileSync(
+    join(root, "package.json"),
+    JSON.stringify({
+      name: "staticwebview",
+      version: "1.0.0",
+      displayName: "Static Webview E2E",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+    }),
+  );
+  writeFileSync(
     join(root, "extension.ts"),
     `export default {
-      id: "pstdio.static-webview-e2e",
-      namespace: "staticwebview",
-      name: "Static Webview E2E",
-      apiVersion: "1",
       routes: {
         page: {
           path: "static-webview",
@@ -65,8 +72,8 @@ const enableExtensionLab = async (projectId: string) => {
     body: JSON.stringify({
       displayName: "Extension Lab",
       extensionId: "pstdio.extension-lab",
-      manifest: { apiVersion: "1" },
-      namespace: "lab",
+      manifest: { id: "pstdio.extension-lab", name: "extension-lab" },
+      name: "extension-lab",
       sourceHash: "e2e-extension-lab",
       sourceKind: "local_path",
       sourcePath: extensionLabPath,
@@ -127,7 +134,9 @@ describe("extension webview setup", () => {
       expect(staticRoute?.webview.moduleUrl).toBeUndefined();
 
       expect(labRoute?.webview.runtimeUrl).toBe("/v1/extensions/runtime");
-      expect(labRoute?.webview.moduleUrl).toBe("/v1/extensions/installed/extension-lab/webviews/lab.labPage/module.js");
+      expect(labRoute?.webview.moduleUrl).toBe(
+        "/v1/extensions/installed/extension-lab/webviews/extension-lab.labPage/module.js",
+      );
       expect(labRoute?.webview.assetUrl).toBeUndefined();
 
       const staticHtml = await waitForOk(`${api.url}${staticRoute!.webview.assetUrl}`);

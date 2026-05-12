@@ -44,7 +44,7 @@ export const createEventDispatcher = (input: DispatcherDeps): EventDispatcher =>
           {
             projectId: (payload as { projectId?: string })?.projectId ?? "",
             extensionId: sub.extensionId,
-            namespace: sub.namespace,
+            name: sub.name,
           },
           eventId,
           input.generateId(),

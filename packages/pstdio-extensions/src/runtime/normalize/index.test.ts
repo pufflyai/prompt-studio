@@ -22,19 +22,34 @@ afterEach(() => {
   tempDirs.length = 0;
 });
 
-const wrap = (definition: ReturnType<typeof defineExtension>): LoadedExtensionSource => ({
-  sourcePath: `/fake/${definition.namespace}/extension.ts`,
+const wrap = (name: string, definition: ReturnType<typeof defineExtension>): LoadedExtensionSource => ({
+  packagePath: `/fake/${name}`,
+  sourcePath: `/fake/${name}/extension.ts`,
   sourceKind: "local",
+  manifest: {
+    id: `pstdio.${name}`,
+    name,
+    version: "1.0.0",
+    publisher: "pstdio",
+    main: "./extension.ts",
+    enginesPstdio: "^1.0.0",
+  },
   definition,
+});
+
+const wrapAt = (
+  name: string,
+  sourcePath: string,
+  definition: ReturnType<typeof defineExtension>,
+): LoadedExtensionSource => ({
+  ...wrap(name, definition),
+  packagePath: sourcePath.replace(/\/extension\.ts$/, ""),
+  sourcePath,
 });
 
 describe("normalizeExtensionSources", () => {
   test("registers commands with namespace-scoped CLI paths", () => {
     const planner = defineExtension({
-      id: "pstdio.planner",
-      namespace: "planner",
-      name: "Planner",
-      apiVersion: "1",
       commands: {
         "tickets.create": {
           title: "Create ticket",
@@ -44,19 +59,19 @@ describe("normalizeExtensionSources", () => {
       },
     });
 
-    const runtime = normalizeExtensionSources([wrap(planner)]);
+    const runtime = normalizeExtensionSources([wrap("planner", planner)]);
     expect(runtime.diagnostics).toEqual([]);
     expect(runtime.commands).toHaveLength(1);
     expect(runtime.commands[0]).toMatchObject({
       id: "planner.tickets.create",
       localId: "tickets.create",
       extensionId: "pstdio.planner",
-      namespace: "planner",
+      name: "planner",
       title: "Create ticket",
     });
     expect(runtime.cli).toHaveLength(1);
     expect(runtime.cli[0]).toMatchObject({
-      namespace: "planner",
+      name: "planner",
       path: ["tickets", "create"],
       pathKey: "planner tickets create",
     });
@@ -64,10 +79,6 @@ describe("normalizeExtensionSources", () => {
 
   test("uses custom CLI path when provided", () => {
     const planner = defineExtension({
-      id: "pstdio.planner",
-      namespace: "planner",
-      name: "Planner",
-      apiVersion: "1",
       commands: {
         "tickets.create": {
           title: "Create ticket",
@@ -77,31 +88,23 @@ describe("normalizeExtensionSources", () => {
       },
     });
 
-    const runtime = normalizeExtensionSources([wrap(planner)]);
+    const runtime = normalizeExtensionSources([wrap("planner", planner)]);
     expect(runtime.cli[0]?.path).toEqual(["tickets", "new"]);
   });
 
   test("flags duplicate command ids and CLI collisions", () => {
     const a = defineExtension({
-      id: "pstdio.planner",
-      namespace: "planner",
-      name: "Planner",
-      apiVersion: "1",
       commands: {
         "tickets.create": { title: "A", cli: true, run: async () => undefined },
       },
     });
     const b = defineExtension({
-      id: "pstdio.planner",
-      namespace: "planner",
-      name: "Planner Duplicate",
-      apiVersion: "1",
       commands: {
         "tickets.create": { title: "B", cli: true, run: async () => undefined },
       },
     });
 
-    const runtime = normalizeExtensionSources([wrap(a), wrap(b)]);
+    const runtime = normalizeExtensionSources([wrap("planner", a), wrap("planner", b)]);
     const codes = runtime.diagnostics.map((d) => d.code);
     expect(codes).toContain("duplicate_extension_id");
     expect(codes).toContain("duplicate_command_id");
@@ -113,10 +116,6 @@ describe("normalizeExtensionSources runtime records", () => {
   test("registers middlewares against typed command refs", () => {
     const labAwaken = commandRef("lab.awaken");
     const lab = defineExtension({
-      id: "pstdio.extension-lab",
-      namespace: "lab",
-      name: "Lab",
-      apiVersion: "1",
       commands: {
         awaken: { title: "Awaken", run: async () => undefined },
       },
@@ -128,7 +127,7 @@ describe("normalizeExtensionSources runtime records", () => {
       },
     });
 
-    const runtime = normalizeExtensionSources([wrap(lab)]);
+    const runtime = normalizeExtensionSources([wrap("lab", lab)]);
     expect(runtime.middlewares).toHaveLength(1);
     expect(runtime.middlewares[0]).toMatchObject({
       id: "lab.rejectSentience",
@@ -139,10 +138,6 @@ describe("normalizeExtensionSources runtime records", () => {
   test("registers hooks against event refs and command lifecycle events", () => {
     const labAwaken = commandRef("lab.awaken");
     const lab = defineExtension({
-      id: "pstdio.extension-lab",
-      namespace: "lab",
-      name: "Lab",
-      apiVersion: "1",
       commands: {
         awaken: { title: "Awaken", run: async () => undefined },
       },
@@ -154,23 +149,19 @@ describe("normalizeExtensionSources runtime records", () => {
       },
     });
 
-    const runtime = normalizeExtensionSources([wrap(lab)]);
+    const runtime = normalizeExtensionSources([wrap("lab", lab)]);
     expect(runtime.hooks).toHaveLength(1);
     expect(runtime.hooks[0]?.eventId).toBe("command.rejected:lab.awaken");
   });
 
-  test("registers artifact mounts under .pstdio/<namespace>/", () => {
+  test("registers artifact mounts under .pstdio/<name>/", () => {
     const planner = defineExtension({
-      id: "pstdio.planner",
-      namespace: "planner",
-      name: "Planner",
-      apiVersion: "1",
       artifactMounts: {
         tickets: { path: "tickets", label: "Tickets" },
       },
     });
 
-    const runtime = normalizeExtensionSources([wrap(planner)]);
+    const runtime = normalizeExtensionSources([wrap("planner", planner)]);
     expect(runtime.artifactMounts[0]).toMatchObject({
       relativePath: "tickets",
       fullPath: ".pstdio/planner/tickets",
@@ -179,41 +170,27 @@ describe("normalizeExtensionSources runtime records", () => {
 
   test("rejects artifact mounts that escape the namespace", () => {
     const bad = defineExtension({
-      id: "pstdio.bad",
-      namespace: "bad",
-      name: "Bad",
-      apiVersion: "1",
       artifactMounts: {
         escape: { path: "../escape", label: "Escape" },
       },
     });
 
-    const runtime = normalizeExtensionSources([wrap(bad)]);
+    const runtime = normalizeExtensionSources([wrap("bad", bad)]);
     expect(runtime.artifactMounts).toEqual([]);
     expect(runtime.diagnostics.map((d) => d.code)).toContain("unsafe_artifact_mount_path");
   });
 });
 
 describe("normalizeExtensionSources diagnostics", () => {
-  test("rejects invalid extension id format", () => {
-    const bad = defineExtension({
-      id: "Bad Id With Spaces",
-      namespace: "bad",
-      name: "Bad",
-      apiVersion: "1",
-    });
+  test("rejects duplicate extension ids", () => {
+    const bad = defineExtension({});
 
-    const runtime = normalizeExtensionSources([wrap(bad)]);
-    expect(runtime.diagnostics.map((d) => d.code)).toContain("invalid_extension_id");
-    expect(runtime.extensions).toEqual([]);
+    const runtime = normalizeExtensionSources([wrap("bad", bad), wrap("bad", bad)]);
+    expect(runtime.diagnostics.map((d) => d.code)).toContain("duplicate_extension_id");
   });
 
   test("collects templates and skills with package assets", () => {
     const planner = defineExtension({
-      id: "pstdio.planner",
-      namespace: "planner",
-      name: "Planner",
-      apiVersion: "1",
       templateTypes: {
         ticket: { label: "Ticket" },
       },
@@ -232,7 +209,7 @@ describe("normalizeExtensionSources diagnostics", () => {
       },
     });
 
-    const runtime = normalizeExtensionSources([wrap(planner)]);
+    const runtime = normalizeExtensionSources([wrap("planner", planner)]);
     expect(runtime.templateTypes).toHaveLength(1);
     expect(runtime.templates).toHaveLength(1);
     expect(runtime.skills).toHaveLength(1);
@@ -251,10 +228,6 @@ describe("normalizeExtensionSources diagnostics", () => {
     writeFileSync(join(root.dir, "seti.json"), `{ "iconDefinitions": {}, "fileExtensions": {}, }`);
 
     const lab = defineExtension({
-      id: "pstdio.extension-lab",
-      namespace: "lab",
-      name: "Lab",
-      apiVersion: "1",
       themes: {
         monokai: {
           title: "Monokai",
@@ -272,7 +245,7 @@ describe("normalizeExtensionSources diagnostics", () => {
       },
     });
 
-    const runtime = normalizeExtensionSources([{ sourcePath: root.entrypoint, sourceKind: "local", definition: lab }]);
+    const runtime = normalizeExtensionSources([wrapAt("lab", root.entrypoint, lab)]);
 
     expect(runtime.diagnostics).toEqual([]);
     expect(runtime.themes[0]).toMatchObject({
@@ -305,10 +278,6 @@ describe("normalizeExtensionSources diagnostics", () => {
     writeFileSync(join(root.dir, "broken.json"), "{ nope");
 
     const lab = defineExtension({
-      id: "pstdio.extension-lab",
-      namespace: "lab",
-      name: "Lab",
-      apiVersion: "1",
       themes: {
         broken: {
           title: "Broken",
@@ -318,7 +287,7 @@ describe("normalizeExtensionSources diagnostics", () => {
       },
     });
 
-    const runtime = normalizeExtensionSources([{ sourcePath: root.entrypoint, sourceKind: "local", definition: lab }]);
+    const runtime = normalizeExtensionSources([wrapAt("lab", root.entrypoint, lab)]);
 
     expect(runtime.themes).toHaveLength(1);
     expect(runtime.diagnostics.map((d) => d.code)).toContain("malformed_theme_asset");
@@ -329,10 +298,6 @@ describe("normalizeExtensionSources diagnostics", () => {
     writeFileSync(join(root.dir, "theme.json"), JSON.stringify({ colors: {} }));
     writeFileSync(join(root.dir, "icons.json"), JSON.stringify({ iconDefinitions: {} }));
     const first = defineExtension({
-      id: "pstdio.first",
-      namespace: "dup",
-      name: "First",
-      apiVersion: "1",
       themes: {
         monokai: {
           title: "Monokai",
@@ -349,10 +314,6 @@ describe("normalizeExtensionSources diagnostics", () => {
       },
     });
     const second = defineExtension({
-      id: "pstdio.second",
-      namespace: "dup",
-      name: "Second",
-      apiVersion: "1",
       themes: {
         monokai: {
           title: "Monokai Again",
@@ -370,8 +331,8 @@ describe("normalizeExtensionSources diagnostics", () => {
     });
 
     const runtime = normalizeExtensionSources([
-      { sourcePath: root.entrypoint, sourceKind: "local", definition: first },
-      { sourcePath: root.entrypoint, sourceKind: "local", definition: second },
+      wrapAt("dup", root.entrypoint, first),
+      wrapAt("dup", root.entrypoint, second),
     ]);
 
     expect(runtime.themes.map((theme) => theme.id)).toEqual(["dup.monokai"]);
@@ -382,10 +343,6 @@ describe("normalizeExtensionSources diagnostics", () => {
 
   test("emits missing_template_asset and missing_skill_asset diagnostics for unresolved assets", () => {
     const planner = defineExtension({
-      id: "pstdio.planner",
-      namespace: "planner",
-      name: "Planner",
-      apiVersion: "1",
       templates: {
         defaultTicket: {
           title: "Default Ticket",
@@ -401,7 +358,7 @@ describe("normalizeExtensionSources diagnostics", () => {
       },
     });
 
-    const runtime = normalizeExtensionSources([wrap(planner)]);
+    const runtime = normalizeExtensionSources([wrap("planner", planner)]);
     const codes = runtime.diagnostics.map((d) => d.code);
     expect(codes).toContain("missing_template_asset");
     expect(codes).toContain("missing_skill_asset");
@@ -413,10 +370,6 @@ describe("normalizeExtensionSources diagnostics", () => {
 
   test("reports incompatible slot kinds", () => {
     const lab = defineExtension({
-      id: "pstdio.extension-lab",
-      namespace: "lab",
-      name: "Lab",
-      apiVersion: "1",
       commands: {
         "say-hello": {
           title: "Say hello",
@@ -435,7 +388,7 @@ describe("normalizeExtensionSources diagnostics", () => {
       },
     });
 
-    const runtime = normalizeExtensionSources([wrap(lab)]);
+    const runtime = normalizeExtensionSources([wrap("lab", lab)]);
 
     expect(runtime.commands[0]?.menus).toEqual([]);
     expect(runtime.views).toEqual([]);

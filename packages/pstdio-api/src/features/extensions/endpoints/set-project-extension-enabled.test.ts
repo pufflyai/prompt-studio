@@ -41,15 +41,15 @@ const createProject = async (name: string) => {
 const seedEnabledInstance = async (projectId: string) => {
   counter += 1;
   const installName = `toggle-source-${counter}`;
-  const namespace = `test.toggle.${counter}`;
+  const name = `test-toggle-${counter}`;
   const extensionId = `test.toggle-${counter}`;
 
   const result = await handle.deps.extensionService.enableInstalledSourceForProject({
     displayName: `Toggle ${counter}`,
     extensionId,
     installName,
-    manifest: { id: extensionId, namespace, name: `Toggle ${counter}` },
-    namespace,
+    manifest: { id: extensionId, name, displayName: `Toggle ${counter}` },
+    name,
     projectId,
     sourcePath: join(tempRoot, "extensions", installName),
     version: "1.0.0",

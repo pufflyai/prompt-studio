@@ -40,7 +40,7 @@ const createProject = async (name: string) => {
 const seedInstance = async (
   projectId: string,
   fields: {
-    namespace: string;
+    name: string;
     extensionId: string;
     displayName: string;
     installName: string;
@@ -52,8 +52,8 @@ const seedInstance = async (
     displayName: fields.displayName,
     extensionId: fields.extensionId,
     installName: fields.installName,
-    manifest: { id: fields.extensionId, namespace: fields.namespace, name: fields.displayName },
-    namespace: fields.namespace,
+    manifest: { id: fields.extensionId, name: fields.name, displayName: fields.displayName },
+    name: fields.name,
     sourcePath: join(tempRoot, "extensions", fields.installName),
     version: fields.version ?? null,
   });
@@ -62,8 +62,8 @@ const seedInstance = async (
     displayName: fields.displayName,
     extensionId: fields.extensionId,
     installName: fields.installName,
-    manifest: { id: fields.extensionId, namespace: fields.namespace, name: fields.displayName },
-    namespace: fields.namespace,
+    manifest: { id: fields.extensionId, name: fields.name, displayName: fields.displayName },
+    name: fields.name,
     projectId,
     sourcePath: installedSource.source_path,
     version: fields.version ?? null,
@@ -81,7 +81,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
     const project = await createProject("Extensions List Project");
 
     const enabled = await seedInstance(project.id, {
-      namespace: "core.list-enabled",
+      name: "list-enabled",
       extensionId: "test.list-enabled",
       displayName: "List Enabled",
       installName: "list-enabled-source",
@@ -89,7 +89,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
     });
 
     const disabled = await seedInstance(project.id, {
-      namespace: "core.list-disabled",
+      name: "list-disabled",
       extensionId: "test.list-disabled",
       displayName: "List Disabled",
       installName: "list-disabled-source",
@@ -109,7 +109,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
     const enabledRow = byId.get(enabled.instanceId);
     expect(enabledRow).toBeDefined();
     expect(enabledRow?.enabled).toBe(true);
-    expect(enabledRow?.namespace).toBe("core.list-enabled");
+    expect(enabledRow?.name).toBe("list-enabled");
     expect(enabledRow?.displayName).toBe("List Enabled");
     expect(enabledRow?.installName).toBe("list-enabled-source");
     expect(enabledRow?.installedExtensionId).toBe(enabled.installedExtensionId);
@@ -121,7 +121,8 @@ describe("GET /v1/projects/:projectId/extensions", () => {
     const disabledRow = byId.get(disabled.instanceId);
     expect(disabledRow).toBeDefined();
     expect(disabledRow?.enabled).toBe(false);
-    expect(disabledRow?.namespace).toBe("core.list-disabled");
+    expect(disabledRow?.name).toBe("list-disabled");
+    expect(disabledRow).not.toHaveProperty("namespace");
   });
 
   test("returns 404 when project does not exist", async () => {

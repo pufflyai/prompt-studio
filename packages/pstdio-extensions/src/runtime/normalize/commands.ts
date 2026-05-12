@@ -22,12 +22,12 @@ const normalizeCommandCli = (
   const normalized = normalizeCliPath(customPath);
   if (!normalized) return undefined;
 
-  const pathKey = [ext.namespace, ...normalized.segments].join(" ");
+  const pathKey = [ext.name, ...normalized.segments].join(" ");
 
   const contribution: RuntimeCliContribution = {
     extensionId: ext.id,
     commandId,
-    namespace: ext.namespace,
+    name: ext.name,
     path: normalized.segments,
     pathKey,
     description: isRecord(cli) && typeof cli.description === "string" ? cli.description : undefined,
@@ -73,7 +73,7 @@ export const registerCommands = (
   index: RegistryIndex,
 ) => {
   for (const [localId, command] of Object.entries(source.definition.commands ?? {})) {
-    const commandId = `${ext.namespace}.${localId}`;
+    const commandId = `${ext.name}.${localId}`;
 
     if (!isRecord(command) || typeof command.title !== "string" || typeof command.run !== "function") {
       runtime.diagnostics.push(
@@ -104,7 +104,7 @@ export const registerCommands = (
       id: commandId,
       localId,
       extensionId: ext.id,
-      namespace: ext.namespace,
+      name: ext.name,
       sourcePath: source.sourcePath,
       title: command.title,
       description: typeof command.description === "string" ? command.description : undefined,

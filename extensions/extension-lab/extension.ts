@@ -1,17 +1,10 @@
 import { commandEvent, commandRef, defineExtension, packageAsset, params, projectSlots } from "@pstdio/sdk/extensions";
 
 const COUNTER_KEY = "counter";
-const labAwakenCommand = commandRef<{ title?: string }, { awakened: boolean }>("lab.awaken");
-const labHeartbeatCommand = commandRef("lab.heartbeat");
+const labAwakenCommand = commandRef<{ title?: string }, { awakened: boolean }>("extension-lab.awaken");
+const labHeartbeatCommand = commandRef("extension-lab.heartbeat");
 
 const extension = defineExtension({
-  id: "pstdio.extension-lab",
-  namespace: "lab",
-  name: "Extension Lab",
-  version: "0.1.0",
-  apiVersion: "1",
-  description: "Sandbox for trying out the extension API. Depends only on kernel-owned slots and events.",
-
   commands: {
     "say-hello": {
       title: "Say hello",

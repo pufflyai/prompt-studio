@@ -160,15 +160,16 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
 
       const label = contribution.label ?? command.title;
       const description = command.description;
+      const extension = extensionById.get(command.extensionId);
 
       return createEntry({
         id: `extension:${command.id}`,
         mode: "command" as const,
         label,
-        searchText: `${label} ${description ?? ""} ${command.namespace}`,
+        searchText: `${label} ${description ?? ""} ${extension?.name ?? ""}`,
         secondaryLabel: description,
         icon: Terminal,
-        group: extensionById.get(command.extensionId)?.displayName ?? command.namespace,
+        group: extension?.displayName ?? extension?.name ?? "Extensions",
         assetType: "extension-command",
         action: { id: `extension:${command.id}`, type: "extension-command", commandId: command.id },
       });

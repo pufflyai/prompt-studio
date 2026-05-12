@@ -16,6 +16,21 @@ const createTempHome = () => {
 const writeExtension = (homeRoot: string, name: string, source: string) => {
   const extDir = join(homeRoot, "extensions", name);
   mkdirSync(extDir, { recursive: true });
+  writeFileSync(
+    join(extDir, "package.json"),
+    JSON.stringify(
+      {
+        name,
+        version: "0.1.0",
+        displayName: name === "extension-lab" ? "Extension Lab" : name,
+        publisher: "pstdio",
+        main: "./extension.ts",
+        engines: { pstdio: "^1.0.0" },
+      },
+      null,
+      2,
+    ),
+  );
   writeFileSync(join(extDir, "extension.ts"), source);
   return join(extDir, "extension.ts");
 };
@@ -26,10 +41,6 @@ afterEach(() => {
 });
 
 const validExtensionSource = `export default {
-  id: "pstdio.extension-lab",
-  namespace: "lab",
-  name: "Extension Lab",
-  version: "0.1.0",
   commands: {
     "say-hello": { title: "Say hello", cli: true, run: async () => undefined },
     "counter.bump": { title: "Bump counter", cli: true, run: async () => undefined },
@@ -50,7 +61,7 @@ const validExtensionSource = `export default {
     heartbeat: {
       title: "Heartbeat",
       cron: "0 * * * *",
-      command: { id: "lab.say-hello" },
+      command: { id: "extension-lab.say-hello" },
     },
   },
   artifactMounts: {
@@ -90,11 +101,11 @@ describe("checkExtensions", () => {
     const report = formatCheckReport(result);
     expect(report).toContain("Extension Lab");
     expect(report).toContain("id:        pstdio.extension-lab");
-    expect(report).toContain("namespace: lab");
+    expect(report).toContain("name:      extension-lab");
     expect(report).toContain("version:   0.1.0");
-    expect(report).toContain("CLI: pstdio lab say-hello");
-    expect(report).toContain("CLI: pstdio lab counter bump");
-    expect(report).toContain("tickets -> .pstdio/lab/tickets");
+    expect(report).toContain("CLI: pstdio extension-lab say-hello");
+    expect(report).toContain("CLI: pstdio extension-lab counter bump");
+    expect(report).toContain("tickets -> .pstdio/extension-lab/tickets");
   });
 
   test("flags invalid default exports", async () => {
@@ -108,16 +119,23 @@ describe("checkExtensions", () => {
 
   test("flags duplicate extension ids, command ids, and CLI paths", async () => {
     const home = createTempHome();
-    const make = (ns: string) => `export default {
-      id: "pstdio.dup",
-      namespace: "${ns}",
-      name: "Dup",
+    const make = () => `export default {
       commands: {
         "counter.bump": { title: "B", cli: { path: ["counter", "bump"] }, run: async () => undefined },
       },
     };`;
-    writeExtension(home, "dup-a", make("dup"));
-    writeExtension(home, "dup-b", make("dup"));
+    writeExtension(home, "dup-a", make());
+    writeExtension(home, "dup-b", make());
+    writeFileSync(
+      join(home, "extensions", "dup-b", "package.json"),
+      JSON.stringify({
+        name: "dup-a",
+        version: "0.1.0",
+        publisher: "pstdio",
+        main: "./extension.ts",
+        engines: { pstdio: "^1.0.0" },
+      }),
+    );
 
     const result = await checkExtensions({ homeRoot: home, includeUserRoot: false });
     const codes = result.runtime.diagnostics.map((d) => d.code);
@@ -126,29 +144,13 @@ describe("checkExtensions", () => {
     expect(codes).toContain("duplicate_cli_path");
   });
 
-  test("flags duplicate namespaces across distinct extension ids", async () => {
+  test("loads distinct package names without namespace collision", async () => {
     const home = createTempHome();
-    writeExtension(
-      home,
-      "ns-a",
-      `export default {
-        id: "pstdio.ns-a",
-        namespace: "shared",
-        name: "A",
-      };`,
-    );
-    writeExtension(
-      home,
-      "ns-b",
-      `export default {
-        id: "pstdio.ns-b",
-        namespace: "shared",
-        name: "B",
-      };`,
-    );
+    writeExtension(home, "ns-a", `export default {};`);
+    writeExtension(home, "ns-b", `export default {};`);
 
     const result = await checkExtensions({ homeRoot: home, includeUserRoot: false });
-    expect(result.runtime.diagnostics.map((d) => d.code)).toContain("duplicate_namespace");
+    expect(result.runtime.extensions.map((ext) => ext.name)).toEqual(["ns-a", "ns-b"]);
   });
 
   test("flags unsafe artifact mount paths", async () => {
@@ -157,9 +159,6 @@ describe("checkExtensions", () => {
       home,
       "bad-mount",
       `export default {
-        id: "pstdio.bad-mount",
-        namespace: "badmount",
-        name: "Bad mount",
         artifactMounts: {
           escape: { path: "../escape", label: "Escape" },
         },
@@ -176,9 +175,6 @@ describe("checkExtensions", () => {
       home,
       "bad-mw",
       `export default {
-        id: "pstdio.bad-mw",
-        namespace: "badmw",
-        name: "Bad mw",
         middlewares: {
           orphan: { handler: async () => undefined },
         },
@@ -195,9 +191,6 @@ describe("checkExtensions", () => {
       home,
       "bad-sched",
       `export default {
-        id: "pstdio.bad-sched",
-        namespace: "badsched",
-        name: "Bad sched",
         schedules: {
           orphan: { title: "Orphan", cron: "0 * * * *" },
         },

@@ -13,7 +13,6 @@ const labCommands: ExtensionCommandRecord[] = [
   {
     id: "lab.counter.bump",
     extensionId: "pstdio.extension-lab",
-    namespace: "lab",
     title: "Bump lab counter",
     description: "Increment the lab counter.",
     cliPath: "lab counter bump",
@@ -23,7 +22,6 @@ const labCommands: ExtensionCommandRecord[] = [
   {
     id: "lab.counter.read",
     extensionId: "pstdio.extension-lab",
-    namespace: "lab",
     title: "Read lab counter",
     cliPath: "lab counter read",
   },
@@ -52,7 +50,6 @@ describe("extension CLI router", () => {
       {
         id: "other.counter.bump",
         extensionId: "pstdio.other",
-        namespace: "other",
         title: "Other bump",
         cliPath: "lab counter bump",
       },

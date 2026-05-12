@@ -14,10 +14,10 @@ const registerTemplateTypes = (ext: NormalizedExtension, source: LoadedExtension
   for (const [localId, type] of Object.entries(source.definition.templateTypes ?? {})) {
     if (!isRecord(type) || typeof type.label !== "string") continue;
     runtime.templateTypes.push({
-      id: `${ext.namespace}.${localId}`,
+      id: `${ext.name}.${localId}`,
       localId,
       extensionId: ext.id,
-      namespace: ext.namespace,
+      name: ext.name,
       sourcePath: source.sourcePath,
       contribution: type as RuntimeTemplateTypeRecord["contribution"],
     });
@@ -38,7 +38,7 @@ const checkTemplateAssetExists = (
       runtime.diagnostics.push(
         createDiagnostic({
           code: "missing_template_asset",
-          message: `Template "${ext.namespace}.${localId}" asset is unavailable: ${error.message}`,
+          message: `Template "${ext.name}.${localId}" asset is unavailable: ${error.message}`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
         }),
@@ -56,7 +56,7 @@ const registerTemplates = (ext: NormalizedExtension, source: LoadedExtensionSour
       runtime.diagnostics.push(
         createDiagnostic({
           code: "invalid_template_asset",
-          message: `Template "${ext.namespace}.${localId}" must declare source via packageAsset()`,
+          message: `Template "${ext.name}.${localId}" must declare source via packageAsset()`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
         }),
@@ -79,10 +79,10 @@ const registerTemplates = (ext: NormalizedExtension, source: LoadedExtensionSour
     checkTemplateAssetExists(ext, source, runtime, localId, template);
 
     runtime.templates.push({
-      id: `${ext.namespace}.${localId}`,
+      id: `${ext.name}.${localId}`,
       localId,
       extensionId: ext.id,
-      namespace: ext.namespace,
+      name: ext.name,
       sourcePath: source.sourcePath,
       contribution: template as RuntimeTemplateRecord["contribution"],
     });
@@ -103,7 +103,7 @@ const checkSkillAssetExists = (
       runtime.diagnostics.push(
         createDiagnostic({
           code: "missing_skill_asset",
-          message: `Skill "${ext.namespace}.${localId}" asset is unavailable: ${error.message}`,
+          message: `Skill "${ext.name}.${localId}" asset is unavailable: ${error.message}`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
         }),
@@ -121,7 +121,7 @@ const registerSkills = (ext: NormalizedExtension, source: LoadedExtensionSource,
       runtime.diagnostics.push(
         createDiagnostic({
           code: "invalid_skill_asset",
-          message: `Skill "${ext.namespace}.${localId}" must declare source via packageAsset()`,
+          message: `Skill "${ext.name}.${localId}" must declare source via packageAsset()`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
         }),
@@ -144,10 +144,10 @@ const registerSkills = (ext: NormalizedExtension, source: LoadedExtensionSource,
     checkSkillAssetExists(ext, source, runtime, localId, skill);
 
     runtime.skills.push({
-      id: `${ext.namespace}.${localId}`,
+      id: `${ext.name}.${localId}`,
       localId,
       extensionId: ext.id,
-      namespace: ext.namespace,
+      name: ext.name,
       sourcePath: source.sourcePath,
       contribution: skill as RuntimeSkillRecord["contribution"],
     });

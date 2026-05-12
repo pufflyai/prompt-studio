@@ -42,7 +42,7 @@ export const checkExtensions = async (input: CheckExtensionsInput = {}): Promise
       ...(input.extensionRoots ?? []),
       ...(extensionsRootExists ? [{ path: extensionsRoot, sourceKind: "local" as const }] : []),
     ],
-    extensionFiles: input.extensionFiles,
+    extensionPackages: input.extensionPackages,
   });
 
   const errorCount = runtime.diagnostics.filter((d) => d.severity === "error").length;
@@ -83,7 +83,7 @@ const renderSubsection = <T>({ title, items, renderItem }: SubsectionRenderer<T>
 };
 
 const formatExtensionSection = (ext: NormalizedExtension, runtime: ExtensionRuntime): string[] => {
-  const header: string[] = [ext.displayName, `  id:        ${ext.id}`, `  namespace: ${ext.namespace}`];
+  const header: string[] = [ext.displayName, `  id:        ${ext.id}`, `  name:      ${ext.name}`];
   if (ext.version) header.push(`  version:   ${ext.version}`);
   header.push(`  source:    ${presentPath(ext.sourcePath)}`);
 

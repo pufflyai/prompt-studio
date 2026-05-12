@@ -1,5 +1,7 @@
 # Prompt Studio v2 Extension Platform
 
+> Obsolete: this planning document predates the package-manifest extension identity model. Current extension identity comes from `package.json`: `publisher`, `name`, `version`, `main`, and `engines.pstdio`. Runtime ids are derived as `${publisher}.${name}`, while command ids are derived from package `name` plus the local command key, for example `extension-lab.counter.bump`. Do not use the namespace-era `defineExtension({ id, namespace, name })` examples in this document for new code.
+
 These schema notes define the durable data model and runtime registry shapes for the Prompt Studio v2 extension platform.
 
 The final extension model separates **installed extension source** from **scope-aware extension instances**:

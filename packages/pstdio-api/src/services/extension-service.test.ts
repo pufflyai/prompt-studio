@@ -9,7 +9,7 @@ import {
   createProjectsDBService,
 } from "pstdio-db";
 import { EventBus } from "../features/sync/event-bus";
-import { createExtensionService, NamespaceConflictError, ProjectNotFoundError } from "./extension-service";
+import { createExtensionService, ExtensionNameConflictError, ProjectNotFoundError } from "./extension-service";
 import { createProjectService } from "./project-service";
 
 let close: (() => Promise<void>) | undefined;
@@ -20,14 +20,22 @@ let extensionInstancesService: ReturnType<typeof createExtensionInstancesDBServi
 
 const makeExtension = (root: string, input: { name?: string; version?: string; templateKey?: string } = {}) => {
   mkdirSync(root, { recursive: true });
+  const displayName = input.name ?? "Reload Extension";
+  const packageName = displayName.toLowerCase().replaceAll(" ", "-");
+  writeFileSync(
+    join(root, "package.json"),
+    JSON.stringify({
+      name: packageName,
+      version: input.version ?? "1.0.0",
+      displayName,
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+    }),
+  );
   writeFileSync(
     join(root, "extension.ts"),
     `export default {
-  id: "pstdio.reload",
-  namespace: "reload",
-  name: "${input.name ?? "Reload Extension"}",
-  version: "${input.version ?? "1.0.0"}",
-  apiVersion: "1",
   templates: {
     ${input.templateKey ?? "ticket"}: {
       title: "Ticket",
@@ -65,14 +73,14 @@ describe("extensionService", () => {
       projectId: project.id,
       installName: "planner",
       extensionId: "pstdio.planner",
-      namespace: "planner",
+      name: "planner",
       displayName: "Planner",
       version: "1.0.0",
       sourceKind: "git",
       sourcePath: "/home/user/.pstdio/extensions/planner",
       sourceRef: "https://github.com/pufflyai/prompt-studio#main:extensions/planner",
       sourceHash: "hash-1",
-      manifest: { id: "pstdio.planner", namespace: "planner" },
+      manifest: { id: "pstdio.planner", name: "planner" },
     });
 
     expect(result.installedSource.install_name).toBe("planner");
@@ -89,7 +97,7 @@ describe("extensionService", () => {
       projectId: project.id,
       installName: "planner",
       extensionId: "pstdio.planner",
-      namespace: "planner",
+      name: "planner",
       displayName: "Planner",
       sourceKind: "local_path",
       sourcePath: "/one",
@@ -102,7 +110,7 @@ describe("extensionService", () => {
       projectId: project.id,
       installName: "planner",
       extensionId: "pstdio.planner",
-      namespace: "planner",
+      name: "planner",
       displayName: "Planner",
       version: "2.0.0",
       sourceKind: "local_path",
@@ -124,7 +132,7 @@ describe("extensionService", () => {
         projectId: "missing",
         installName: "planner",
         extensionId: "pstdio.planner",
-        namespace: "planner",
+        name: "planner",
         displayName: "Planner",
         sourceKind: "local_path",
         sourcePath: "/extensions/planner",
@@ -133,14 +141,14 @@ describe("extensionService", () => {
     ).rejects.toBeInstanceOf(ProjectNotFoundError);
   });
 
-  test("throws NamespaceConflictError when another install owns the namespace", async () => {
+  test("throws ExtensionNameConflictError when another install owns the name", async () => {
     const project = await projectService.create({ name: "Extension Project" });
 
     await service.enableInstalledSourceForProject({
       projectId: project.id,
       installName: "planner",
       extensionId: "pstdio.planner",
-      namespace: "planner",
+      name: "planner",
       displayName: "Planner",
       sourceKind: "local_path",
       sourcePath: "/extensions/planner",
@@ -152,13 +160,13 @@ describe("extensionService", () => {
         projectId: project.id,
         installName: "planner-fork",
         extensionId: "pstdio.planner-fork",
-        namespace: "planner",
+        name: "planner",
         displayName: "Planner Fork",
         sourceKind: "local_path",
         sourcePath: "/extensions/planner-fork",
         manifest: {},
       }),
-    ).rejects.toBeInstanceOf(NamespaceConflictError);
+    ).rejects.toBeInstanceOf(ExtensionNameConflictError);
   });
 
   test("preserves existing source_kind and source_ref when caller omits them", async () => {
@@ -168,7 +176,7 @@ describe("extensionService", () => {
       projectId: project.id,
       installName: "planner",
       extensionId: "pstdio.planner",
-      namespace: "planner",
+      name: "planner",
       displayName: "Planner",
       sourceKind: "git",
       sourcePath: "/extensions/planner",
@@ -180,7 +188,7 @@ describe("extensionService", () => {
       projectId: project.id,
       installName: "planner",
       extensionId: "pstdio.planner",
-      namespace: "planner",
+      name: "planner",
       displayName: "Planner",
       sourcePath: "/extensions/planner",
       manifest: {},
@@ -209,7 +217,7 @@ describe("extensionService", () => {
         displayName: "Reload Extension",
         extensionId: "pstdio.reload",
         manifest: { templates: ["first"] },
-        namespace: "reload",
+        name: "reload",
         sourceHash: "old-hash",
         sourceKind: "local_path",
         sourcePath: root,
@@ -251,13 +259,13 @@ describe("extensionService", () => {
         displayName: "Reload Extension",
         extensionId: "pstdio.reload",
         manifest: { id: "pstdio.reload", templates: ["ticket"] },
-        namespace: "reload",
+        name: "reload",
         sourceHash: "old-hash",
         sourceKind: "local_path",
         sourcePath: root,
       });
 
-      writeFileSync(join(root, "extension.ts"), "export default { broken: true };\n");
+      writeFileSync(join(root, "extension.ts"), "throw new Error('reload boom');\n");
 
       const result = await reloadingService.reloadInstalledSource("reload");
       const reloadEvents = await installedExtensionSourcesService.listReloadEvents(registered.id);
@@ -293,7 +301,7 @@ describe("extensionService webview build status", () => {
       displayName: "Lab",
       extensionId: "pstdio.lab",
       manifest: { id: "pstdio.lab" },
-      namespace: "lab",
+      name: "lab",
       sourceHash: "hash-1",
       sourceKind: "local_path",
       sourcePath: "/extensions/lab",

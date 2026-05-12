@@ -27,7 +27,7 @@ export const collectCommands = (check: ExtensionsCheckResponse, loaded: LoadedEx
   if (!isRecord(commands)) return;
 
   for (const [key, command] of Object.entries(commands)) {
-    const id = `${loaded.metadata.namespace}.${key}`;
+    const id = `${loaded.metadata.name}.${key}`;
     if (!isRecord(command)) {
       addDiagnostic(check, {
         code: "command_invalid",
@@ -51,7 +51,7 @@ const collectCommand = (
   key: string,
   command: Record<string, unknown>,
 ) => {
-  const id = `${loaded.metadata.namespace}.${key}`;
+  const id = `${loaded.metadata.name}.${key}`;
   if (typeof command.title !== "string" || typeof command.run !== "function") {
     addDiagnostic(check, {
       code: "command_metadata_invalid",
@@ -65,10 +65,9 @@ const collectCommand = (
 
   check.commands.push({
     id,
-    cliPath: cliPathForCommand(loaded.metadata.namespace, key, command.cli),
+    cliPath: cliPathForCommand(loaded.metadata.name, key, command.cli),
     description: typeof command.description === "string" ? command.description : undefined,
     extensionId: loaded.metadata.id,
-    namespace: loaded.metadata.namespace,
     title: typeof command.title === "string" ? command.title : key,
   });
 
@@ -83,7 +82,7 @@ const collectCommandMenus = (
 ) => {
   if (!Array.isArray(command.menus)) return;
 
-  const commandId = `${loaded.metadata.namespace}.${key}`;
+  const commandId = `${loaded.metadata.name}.${key}`;
   command.menus.forEach((menu, index) => {
     if (!isRecord(menu)) return;
     check.menuContributions.push({
@@ -125,7 +124,7 @@ const collectMiddlewares = (check: ExtensionsCheckResponse, loaded: LoadedExtens
     }
 
     check.middlewares.push({
-      id: `${loaded.metadata.namespace}.${key}`,
+      id: `${loaded.metadata.name}.${key}`,
       commandId,
       extensionId: loaded.metadata.id,
     });
@@ -140,7 +139,7 @@ const collectHooks = (check: ExtensionsCheckResponse, loaded: LoadedExtension) =
     if (!isRecord(hook)) continue;
     const eventId = eventIdFromRef(hook.event) ?? eventIdFromRef(hook.eventId);
     if (eventId) {
-      check.hooks.push({ id: `${loaded.metadata.namespace}.${key}`, eventId, extensionId: loaded.metadata.id });
+      check.hooks.push({ id: `${loaded.metadata.name}.${key}`, eventId, extensionId: loaded.metadata.id });
     }
   }
 };
@@ -154,7 +153,7 @@ const collectSchedules = (check: ExtensionsCheckResponse, loaded: LoadedExtensio
     const commandId = commandIdFromRef(schedule.command) ?? commandIdFromRef(schedule.commandId);
     if (typeof schedule.cron === "string" && commandId) {
       check.schedules.push({
-        id: `${loaded.metadata.namespace}.${key}`,
+        id: `${loaded.metadata.name}.${key}`,
         commandId,
         cron: schedule.cron,
         extensionId: loaded.metadata.id,
@@ -328,9 +327,8 @@ const collectThemes = (check: ExtensionsCheckResponse, loaded: LoadedExtension, 
     const mode = inferThemeMode(parsed, theme.mode);
     const colors = isRecord(parsed.colors) ? (parsed.colors as Record<string, string>) : {};
     check.themes.push({
-      id: `${loaded.metadata.namespace}.${key}`,
+      id: `${loaded.metadata.name}.${key}`,
       extensionId: loaded.metadata.id,
-      namespace: loaded.metadata.namespace,
       title: theme.title,
       ...(typeof theme.description === "string" ? { description: theme.description } : {}),
       format: "vscode-color-theme",
@@ -405,9 +403,8 @@ const collectFileIconThemes = (check: ExtensionsCheckResponse, loaded: LoadedExt
     const parsed = readJsoncAsset(check, loaded, sourcePath, iconTheme.source, "malformed_file_icon_theme_asset");
     validateIconThemeFonts(check, loaded, sourcePath, iconTheme.source, parsed);
     check.fileIconThemes.push({
-      id: `${loaded.metadata.namespace}.${key}`,
+      id: `${loaded.metadata.name}.${key}`,
       extensionId: loaded.metadata.id,
-      namespace: loaded.metadata.namespace,
       title: iconTheme.title,
       ...(typeof iconTheme.description === "string" ? { description: iconTheme.description } : {}),
       format: "vscode-file-icon-theme",
@@ -458,17 +455,16 @@ const collectArtifactMounts = (check: ExtensionsCheckResponse, loaded: LoadedExt
       addDiagnostic(check, {
         code: "artifact_mount_path_invalid",
         extensionId: loaded.metadata.id,
-        message: `Artifact mount ${key} must stay under .pstdio/${loaded.metadata.namespace}`,
+        message: `Artifact mount ${key} must stay under .pstdio/${loaded.metadata.name}`,
         severity: "error",
         sourcePath,
       });
     }
     check.artifactMounts.push({
-      id: `${loaded.metadata.namespace}.${key}`,
+      id: `${loaded.metadata.name}.${key}`,
       extensionId: loaded.metadata.id,
-      fullPath: `.pstdio/${loaded.metadata.namespace}/${mount.path}`,
+      fullPath: `.pstdio/${loaded.metadata.name}/${mount.path}`,
       label: mount.label,
-      namespace: loaded.metadata.namespace,
       relativePath: mount.path,
     });
   }
@@ -481,7 +477,7 @@ const collectRoutes = (check: ExtensionsCheckResponse, loaded: LoadedExtension) 
   for (const [key, route] of Object.entries(routes)) {
     if (!isRecord(route) || !isRecord(route.webview)) continue;
     check.routes.push({
-      id: `${loaded.metadata.namespace}.${key}`,
+      id: `${loaded.metadata.name}.${key}`,
       extensionId: loaded.metadata.id,
       label: typeof route.label === "string" ? route.label : key,
       path: typeof route.path === "string" ? route.path : key,
@@ -497,7 +493,7 @@ const collectNavigation = (check: ExtensionsCheckResponse, loaded: LoadedExtensi
   for (const [key, item] of Object.entries(navigation)) {
     if (!isRecord(item)) continue;
     check.navigation.push({
-      id: `${loaded.metadata.namespace}.${key}`,
+      id: `${loaded.metadata.name}.${key}`,
       extensionId: loaded.metadata.id,
       label: typeof item.label === "string" ? item.label : key,
       slotId: slotId(item.slot),
@@ -522,6 +518,6 @@ const collectPackageAssetRecords = (
       message: `${key.slice(0, -1)} ${name} source`,
       sourcePath,
     });
-    check[key].push({ id: `${loaded.metadata.namespace}.${name}`, extensionId: loaded.metadata.id });
+    check[key].push({ id: `${loaded.metadata.name}.${name}`, extensionId: loaded.metadata.id });
   }
 };

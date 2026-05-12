@@ -20,5 +20,5 @@ export { packageAsset } from "./package-asset";
 export { params } from "./params";
 export { commandEvent, commandRef, commandsOf, eventRef } from "./refs";
 export { defineSlot } from "./slots";
-
 export type * from "./types";
+export { EXTENSION_API_VERSION } from "./types/extension";

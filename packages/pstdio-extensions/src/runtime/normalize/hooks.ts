@@ -13,7 +13,7 @@ export const registerHooks = (ext: NormalizedExtension, source: LoadedExtensionS
       runtime.diagnostics.push(
         createDiagnostic({
           code: "invalid_hook_event",
-          message: `Hook "${ext.namespace}.${localId}" must reference an event`,
+          message: `Hook "${ext.name}.${localId}" must reference an event`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
         }),
@@ -22,10 +22,10 @@ export const registerHooks = (ext: NormalizedExtension, source: LoadedExtensionS
     }
 
     const record: RuntimeHookRecord = {
-      id: `${ext.namespace}.${localId}`,
+      id: `${ext.name}.${localId}`,
       localId,
       extensionId: ext.id,
-      namespace: ext.namespace,
+      name: ext.name,
       sourcePath: source.sourcePath,
       eventId,
       handler: hook.handler as RuntimeHookRecord["handler"],

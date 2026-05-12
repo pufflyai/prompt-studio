@@ -16,14 +16,17 @@ let previousLogTargets: string | undefined;
 const writeExtensionFixture = (dir: string) => {
   mkdirSync(dir, { recursive: true });
   writeFileSync(
-    join(dir, "extension.ts"),
-    `export default {
-  id: "pstdio.default-fixture",
-  namespace: "default-fixture",
-  name: "Default Fixture",
-  apiVersion: "1",
-};`,
+    join(dir, "package.json"),
+    JSON.stringify({
+      name: "default-fixture",
+      version: "1.0.0",
+      displayName: "Default Fixture",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+    }),
   );
+  writeFileSync(join(dir, "extension.ts"), `export default {};`);
 };
 
 beforeAll(async () => {

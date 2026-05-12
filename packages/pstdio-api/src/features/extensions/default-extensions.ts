@@ -129,13 +129,13 @@ export const enableInstalledExtensionsForProject = async (deps: EnableInstalledE
     await deps.extensionService.enableInstalledSourceForProject({
       projectId: deps.projectId,
       installName: entry.name,
-      displayName: loaded.metadata.name,
+      displayName: loaded.metadata.displayName,
       extensionId: loaded.metadata.id,
       manifest: loaded.manifest,
-      namespace: loaded.metadata.namespace,
+      name: loaded.metadata.name,
       sourceHash: hash(sourcePath),
       sourcePath,
-      version: loaded.metadata.version ?? null,
+      version: loaded.metadata.version,
     });
 
     enabled.push(entry.name);

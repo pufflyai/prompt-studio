@@ -1,6 +1,13 @@
 {
   "name": "pstdio-core-templates",
   "version": "0.0.2",
+  "displayName": "Core Templates",
+  "description": "Built-in pstdio templates.",
+  "publisher": "pstdio",
+  "main": "./extension.ts",
+  "engines": {
+    "pstdio": "^1.0.0"
+  },
   "private": true,
   "type": "module",
   "scripts": {

@@ -9,11 +9,18 @@ const runtimeWithRoute = (entryPath: string) =>
     {
       sourcePath: "/extension/extension.ts",
       sourceKind: "local",
-      definition: {
+      packagePath: "/extension",
+      manifest: {
         id: "pstdio.lab",
-        namespace: "lab",
-        name: "Lab",
-        apiVersion: "1",
+        name: "lab",
+        displayName: "Lab",
+        description: "Lab extension for dashboard experiments.",
+        version: "1.0.0",
+        publisher: "pstdio",
+        main: "./extension.ts",
+        enginesPstdio: "^1.0.0",
+      },
+      definition: {
         routes: {
           page: {
             path: "lab",
@@ -31,13 +38,18 @@ describe("buildDashboardExtensionMetadata webview assets", () => {
       {
         sourcePath: "/extension/extension.ts",
         sourceKind: "local",
-        definition: {
+        packagePath: "/extension",
+        manifest: {
           id: "pstdio.lab",
-          namespace: "lab",
-          name: "Lab",
+          name: "lab",
+          displayName: "Lab",
           description: "Lab extension for dashboard experiments.",
-          apiVersion: "1",
+          version: "1.0.0",
+          publisher: "pstdio",
+          main: "./extension.ts",
+          enginesPstdio: "^1.0.0",
         },
+        definition: {},
       },
     ]);
 
