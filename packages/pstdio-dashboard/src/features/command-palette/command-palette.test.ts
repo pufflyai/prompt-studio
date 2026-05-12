@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { createShellCore } from "pstdio-shell/core";
 import {
   buildCommandPaletteEntries,
   DEFAULT_COMMAND_PALETTE_ASSET_LIMIT,
@@ -221,6 +222,46 @@ describe("command palette entries", () => {
     target?.run();
 
     expect(seen).toEqual([{ commandId: "lab.say-hello" }]);
+  });
+
+  it("surfaces command-palette menu commands registered through the shell", () => {
+    const shell = createShellCore();
+    const seen: Array<{ commandId: string; args: unknown }> = [];
+
+    shell.commands.registerCommand(
+      { id: "project.openSettings", label: "Open project settings", category: "Project", icon: "settings" },
+      { execute: () => undefined },
+      { source: "product-module", ownerId: "dashboard.project" },
+    );
+    shell.menus.registerMenuAction(
+      ["commandPalette"],
+      { commandId: "project.openSettings", label: "Project settings", args: { projectId: "project-1" } },
+      { source: "product-module", ownerId: "dashboard.project" },
+    );
+
+    const entries = buildCommandPaletteEntries({
+      projectId: "project-1",
+      tickets: [],
+      sessions: [],
+      currentTheme: "pstdio-dark",
+      shell,
+      run: (action) => {
+        if (action.type === "shell-command") seen.push({ commandId: action.commandId, args: action.args });
+      },
+    });
+
+    const [entry] = filterCommandPaletteEntries(entries, "> settings");
+    entry?.run();
+
+    expect(entry?.id).toBe("shell:project.openSettings");
+    expect(entry?.group).toBe("Project");
+    expect(entry?.action).toEqual({
+      id: "shell:project.openSettings",
+      type: "shell-command",
+      commandId: "project.openSettings",
+      args: { projectId: "project-1" },
+    });
+    expect(seen).toEqual([{ commandId: "project.openSettings", args: { projectId: "project-1" } }]);
   });
 });
 

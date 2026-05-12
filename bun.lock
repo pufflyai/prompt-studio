@@ -212,6 +212,7 @@
         "prismjs": "^1.30.0",
         "pstdio-api-contracts": "workspace:*",
         "pstdio-extensions": "workspace:*",
+        "pstdio-shell": "workspace:*",
         "react": "19.2.4",
         "react-dom": "19.2.4",
         "react-i18next": "^16.5.4",

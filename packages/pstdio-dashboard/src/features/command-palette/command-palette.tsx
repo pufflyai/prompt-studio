@@ -18,6 +18,7 @@ import {
   useProjectExtensionMetadata,
 } from "@/shared/extensions/hooks/use-project-extensions";
 import { buildExtensionCommandRequest } from "@/shared/extensions/slot-context";
+import { createDashboardProjectShell } from "@/shared/shell/dashboard-project-shell";
 import { runCommandPaletteAction } from "./command-palette-actions";
 import {
   buildCommandPaletteEntries,
@@ -91,6 +92,12 @@ export const CommandPalette = (props: CommandPaletteProps) => {
   const { t } = useTranslation(["common", "projects"]);
   const { data: extensionMetadata } = useProjectExtensionMetadata(projectId);
   const executeExtensionCommand = useExecuteExtensionCommand(projectId);
+  const projectShell = createDashboardProjectShell({
+    projectId,
+    navigate: (path) => {
+      navigate({ to: path });
+    },
+  });
   const [view, setView] = useState<CommandPaletteView>(initialView);
   const themePreviewRef = useRef<ThemePreviewState | null>(null);
   const setupRef = useRef({ initialView, initialQuery, open: false });
@@ -145,6 +152,13 @@ export const CommandPalette = (props: CommandPaletteProps) => {
     );
   };
 
+  const runShellCommand = (commandId: string, args: unknown) => {
+    void projectShell.commands.executeCommand(commandId, args).catch((error) => {
+      const message = error instanceof Error ? error.message : "Shell command failed";
+      toaster.create({ type: "error", title: "Shell command failed", description: message });
+    });
+  };
+
   const handleRun: Parameters<typeof buildCommandPaletteEntries>[0]["run"] = (action) =>
     runCommandPaletteAction(action, {
       projectId,
@@ -156,6 +170,7 @@ export const CommandPalette = (props: CommandPaletteProps) => {
       createSession,
       openShortcutHelp,
       runExtensionCommand,
+      runShellCommand,
     });
 
   const entries = buildCommandPaletteEntries({
@@ -167,6 +182,7 @@ export const CommandPalette = (props: CommandPaletteProps) => {
     extensions: extensionMetadata?.extensions,
     extensionCommands: extensionMetadata?.commands,
     extensionMenuContributions: extensionMetadata?.menuContributions,
+    shell: projectShell,
     labels: {
       tickets: t("projects:sidebar.tickets"),
       sessions: t("projects:sessions.title"),

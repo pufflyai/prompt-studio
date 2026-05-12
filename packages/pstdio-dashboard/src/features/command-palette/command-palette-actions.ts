@@ -11,6 +11,7 @@ interface CommandPaletteActionContext {
   createSession: () => void;
   openShortcutHelp: () => void;
   runExtensionCommand: (commandId: string) => void;
+  runShellCommand: (commandId: string, args: unknown) => void;
 }
 
 export const runCommandPaletteAction = (action: CommandPaletteAction, ctx: CommandPaletteActionContext) => {
@@ -49,6 +50,11 @@ export const runCommandPaletteAction = (action: CommandPaletteAction, ctx: Comma
 
   if (action.type === "extension-command") {
     ctx.runExtensionCommand(action.commandId);
+    return;
+  }
+
+  if (action.type === "shell-command") {
+    ctx.runShellCommand(action.commandId, action.args);
     return;
   }
 };

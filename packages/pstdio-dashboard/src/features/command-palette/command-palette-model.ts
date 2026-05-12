@@ -19,8 +19,10 @@ import {
   Terminal,
 } from "lucide-react";
 import type { ExtensionCommandRecord, ExtensionMenuContribution, ExtensionRecord } from "pstdio-api-contracts";
+import type { ShellCore } from "pstdio-shell/core";
 import type { ShortcutBinding } from "@/features/shortcuts/shortcut-registry";
 import { getSlotContributions } from "@/shared/extensions/contribution-mapping";
+import { DASHBOARD_COMMAND_PALETTE_MENU } from "@/shared/shell/menu-locations";
 
 const EXTENSION_COMMAND_PANEL_SLOT_ID = "project.commandPanel";
 export const DEFAULT_COMMAND_PALETTE_ASSET_LIMIT = DEFAULT_PALETTE_ASSET_LIMIT;
@@ -49,6 +51,7 @@ export type CommandPaletteAction =
   | { id: "open-theme-menu"; type: "open-theme-menu" }
   | { id: "navigate"; type: "navigate"; path: string }
   | { id: "theme"; type: "theme"; preference: ThemePreference }
+  | { id: string; type: "shell-command"; commandId: string; args?: unknown }
   | { id: string; type: "extension-command"; commandId: string };
 
 export interface CommandPaletteEntry {
@@ -87,6 +90,7 @@ interface BuildCommandPaletteEntriesInput {
   extensions?: ExtensionRecord[];
   extensionCommands?: ExtensionCommandRecord[];
   extensionMenuContributions?: ExtensionMenuContribution[];
+  shell?: ShellCore;
   run: (action: CommandPaletteAction) => void;
 }
 
@@ -107,6 +111,16 @@ const themeIcons: Record<string, LucideIcon> = {
 };
 
 const getThemeIcon = (preference: ThemePreference): LucideIcon => themeIcons[preference] ?? Palette;
+
+const shellIconByName: Record<string, LucideIcon> = {
+  help: CircleHelp,
+  palette: Palette,
+  plus: Plus,
+  settings: SettingsIcon,
+  terminal: Terminal,
+};
+
+const getShellIcon = (icon?: string): LucideIcon => (icon ? (shellIconByName[icon] ?? Terminal) : Terminal);
 
 export const resolveCommandPaletteMode = (query: string): CommandPaletteMode =>
   query.trimStart().startsWith(">") ? "command" : "search";
@@ -138,6 +152,7 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
     extensions = [],
     extensionCommands = [],
     extensionMenuContributions = [],
+    shell,
   } = input;
   const labels = input.labels ?? defaultLabels;
   const projectPath = `/projects/${projectId}`;
@@ -152,6 +167,34 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
   });
 
   const paletteContributions = getSlotContributions(extensionMenuContributions, EXTENSION_COMMAND_PANEL_SLOT_ID);
+
+  const shellEntries =
+    shell?.menus
+      .listMenuActions(DASHBOARD_COMMAND_PALETTE_MENU)
+      .map((action) => {
+        const record = shell.commands.getCommand(action.commandId);
+        if (!record || !shell.commands.isCommandVisible(action.commandId, action.args)) return null;
+
+        const label = action.label ?? record.command.label;
+        const description = record.command.description;
+
+        return createEntry({
+          id: `shell:${record.command.id}`,
+          mode: "command" as const,
+          label,
+          searchText: `${label} ${description ?? ""} ${record.command.category ?? ""}`,
+          secondaryLabel: description,
+          icon: getShellIcon(action.icon ?? record.command.icon),
+          group: record.command.category,
+          action: {
+            id: `shell:${record.command.id}`,
+            type: "shell-command",
+            commandId: record.command.id,
+            args: action.args,
+          },
+        });
+      })
+      .filter((entry): entry is CommandPaletteEntry => entry !== null) ?? [];
 
   const extensionEntries = paletteContributions
     .map((contribution) => {
@@ -256,6 +299,7 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
       icon: Palette,
       action: { id: "open-theme-menu", type: "open-theme-menu" },
     }),
+    ...shellEntries,
     ...extensionEntries,
     ...themePreferences.map((themePreference) => {
       const preference = themePreference.id;
