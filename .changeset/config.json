@@ -18,6 +18,7 @@
     "pstdio-logging",
     "pstdio-plugins",
     "pstdio-paths",
+    "pstdio-shell",
     "pstdio-storage",
     "pstdio-wt",
     "@pstdio/landing-page"

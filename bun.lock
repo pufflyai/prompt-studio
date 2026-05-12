@@ -307,6 +307,13 @@
         "typescript": "6.0.2",
       },
     },
+    "packages/pstdio-shell": {
+      "name": "pstdio-shell",
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "6.0.2",
+      },
+    },
     "packages/pstdio-storage": {
       "name": "pstdio-storage",
       "dependencies": {
@@ -3183,6 +3190,8 @@
     "pstdio-plugins": ["pstdio-plugins@workspace:packages/pstdio-plugins"],
 
     "pstdio-scheduler": ["pstdio-scheduler@workspace:packages/pstdio-scheduler"],
+
+    "pstdio-shell": ["pstdio-shell@workspace:packages/pstdio-shell"],
 
     "pstdio-storage": ["pstdio-storage@workspace:packages/pstdio-storage"],
 
