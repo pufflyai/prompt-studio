@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { SingleTagSelector } from "@/features/ticket/components/single-tag-selector";
 import type { TicketStatus, TicketStatusOption, TicketTag } from "@/features/ticket-list/types";
 import { resolveTicketStatusForeground } from "@/features/ticket-list/utils/status-color";
-import { useProjectSettingsStore } from "@/shared/stores/project-settings";
+import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
 
 interface CreateTicketModalProps {
   open: boolean;
@@ -47,30 +47,40 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
     statusOptions = [],
   } = props;
   const { t } = useTranslation("tickets");
-  const createTicketDraft = useProjectSettingsStore((state) => state.createTicketDraft);
+  const projectSettingsStore = useProjectSettingsStoreApi();
   const setCreateTicketDraft = useProjectSettingsStore((state) => state.setCreateTicketDraft);
   const clearCreateTicketDraft = useProjectSettingsStore((state) => state.clearCreateTicketDraft);
 
   const resolvedTitle = modalTitle ?? t("createTicketModal.newTicket");
   const resolvedSubmitLabel = submitButtonLabel ?? t("createTicketModal.createTicket");
 
-  const [content, setContent] = useState(createTicketDraft);
+  const contentRef = useRef("");
+  const [initialContent, setInitialContent] = useState(() => {
+    const draft = projectSettingsStore.getState().createTicketDraft;
+    contentRef.current = draft;
+    return draft;
+  });
+  const [hasContent, setHasContent] = useState(() => initialContent.trim().length > 0);
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [editorKey, setEditorKey] = useState(0);
   const [files, setFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const canSubmit = content.trim().length > 0 && !isSubmitting;
+  const canSubmit = hasContent && !isSubmitting;
 
   const resetForm = () => {
-    setContent("");
+    contentRef.current = "";
+    setInitialContent("");
+    setHasContent(false);
     setTagIds([]);
     setEditorKey((k) => k + 1);
     setFiles([]);
   };
 
   const handleContentChange = (value: string) => {
-    setContent(value);
+    contentRef.current = value;
+    const nextHasContent = value.trim().length > 0;
+    setHasContent((prev) => (prev === nextHasContent ? prev : nextHasContent));
     setCreateTicketDraft(value);
   };
 
@@ -84,7 +94,7 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
     if (!canSubmit) return;
 
     await onSubmit({
-      content: content.trim(),
+      content: contentRef.current.trim(),
       tagIds,
       status: targetStatus,
       parentId,
@@ -146,7 +156,7 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
               <Box minH="180px">
                 <MarkdownEditor
                   key={editorKey}
-                  defaultState={content}
+                  defaultState={initialContent}
                   isEditable={!isSubmitting}
                   onChange={handleContentChange}
                   placeholder={t("createTicketModal.describePlaceholder")}

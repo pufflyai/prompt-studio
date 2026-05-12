@@ -21,6 +21,43 @@ import {
 } from "./chat-input-question-prompt";
 import { SendButton } from "./send-button";
 
+const useChatInputDraft = (defaultState: string, onReset: (resetText: string) => void) => {
+  const onResetRef = useRef(onReset);
+  onResetRef.current = onReset;
+  const textRef = useRef("");
+  const [editorState, setEditorState] = useState(defaultState);
+  const [editorKey, setEditorKey] = useState(0);
+  const [hasText, setHasText] = useState(() => {
+    const initial = getTextFromSerializedEditorState(defaultState);
+    textRef.current = initial;
+    return initial.trim().length > 0;
+  });
+
+  const updateText = (next: string) => {
+    textRef.current = next;
+    setHasText(next.trim().length > 0);
+  };
+
+  useEffect(() => {
+    const resetText = getTextFromSerializedEditorState(defaultState);
+    setEditorState(defaultState);
+    setEditorKey((key) => key + 1);
+    textRef.current = resetText;
+    setHasText(resetText.trim().length > 0);
+    onResetRef.current(resetText);
+  }, [defaultState]);
+
+  const resetEditor = () => {
+    const resetText = getTextFromSerializedEditorState(defaultState);
+    setEditorState(defaultState);
+    setEditorKey((key) => key + 1);
+    updateText(resetText);
+    return resetText;
+  };
+
+  return { textRef, editorState, editorKey, hasText, updateText, resetEditor };
+};
+
 interface ChatInputProps {
   defaultState: string;
   placeholder?: string;
@@ -57,9 +94,6 @@ export const ChatInput = (props: ChatInputProps) => {
   } = props;
 
   const [isSelected, setIsSelected] = useState(false);
-  const [editorState, setEditorState] = useState(defaultState);
-  const [editorKey, setEditorKey] = useState(0);
-  const [text, setText] = useState(() => getTextFromSerializedEditorState(defaultState));
   const [selectedOptionsByQuestion, setSelectedOptionsByQuestion] = useState<Record<string, string[]>>({});
   const [customAnswersByQuestion, setCustomAnswersByQuestion] = useState<ChatInputQuestionCustomAnswers>({});
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -70,15 +104,18 @@ export const ChatInput = (props: ChatInputProps) => {
     onChangeRef.current = onChange;
   }, [onChange]);
 
-  useEffect(() => {
-    const resetText = getTextFromSerializedEditorState(defaultState);
-    setEditorState(defaultState);
-    setEditorKey((key) => key + 1);
-    setText(resetText);
+  const {
+    textRef,
+    editorState,
+    editorKey,
+    hasText,
+    updateText,
+    resetEditor: resetDraftEditor,
+  } = useChatInputDraft(defaultState, (resetText) => {
     setSelectedOptionsByQuestion({});
     setCustomAnswersByQuestion({});
     onChangeRef.current?.(resetText);
-  }, [defaultState]);
+  });
 
   const questionPromptSignature = getQuestionPromptSignature(questionPrompt);
 
@@ -114,10 +151,7 @@ export const ChatInput = (props: ChatInputProps) => {
   };
 
   const resetEditor = (shouldFocus = false) => {
-    setEditorState(defaultState);
-    setEditorKey((key) => key + 1);
-    const resetText = getTextFromSerializedEditorState(defaultState);
-    setText(resetText);
+    const resetText = resetDraftEditor();
     setSelectedOptionsByQuestion({});
     setCustomAnswersByQuestion({});
     onChangeRef.current?.(resetText);
@@ -130,23 +164,25 @@ export const ChatInput = (props: ChatInputProps) => {
   };
 
   const canInterrupt = streaming && Boolean(onInterrupt);
-  const responseText = questionPrompt
+  const questionResponseText = questionPrompt
     ? buildQuestionResponse(questionPrompt, selectedOptionsByQuestion, customAnswersByQuestion)
-    : text.trim();
+    : null;
   const hasMissingRequiredSelection = hasMissingRequiredQuestionAnswer(
     questionPrompt,
     selectedOptionsByQuestion,
     customAnswersByQuestion,
   );
+  const actionHasText = questionPrompt ? Boolean(questionResponseText) : hasText;
   const actionState = {
     canInterrupt,
     isDisabled: isDisabled || hasMissingRequiredSelection,
     streaming,
-    text: responseText,
+    hasText: actionHasText,
   };
   const buttonAction = resolveChatInputButtonAction(actionState);
 
   const submitMessage = () => {
+    const responseText = questionResponseText ?? textRef.current.trim();
     if (!responseText) return;
 
     const questionResponse = questionPrompt
@@ -262,7 +298,7 @@ export const ChatInput = (props: ChatInputProps) => {
               isEditable={!isDisabled}
               placeholder={placeholderNode}
               onChange={(t) => {
-                setText(t);
+                updateText(t);
                 onChange?.(t);
               }}
               onSubmit={handleKeyboardSubmit}

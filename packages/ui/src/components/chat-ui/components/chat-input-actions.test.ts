@@ -8,7 +8,7 @@ describe("chat input actions", () => {
         canInterrupt: true,
         isDisabled: false,
         streaming: true,
-        text: "stop",
+        hasText: true,
       }),
     ).toBe("none");
   });
@@ -19,7 +19,7 @@ describe("chat input actions", () => {
         canInterrupt: true,
         isDisabled: false,
         streaming: true,
-        text: "stop",
+        hasText: true,
       }),
     ).toBe("interrupt");
   });
@@ -29,10 +29,22 @@ describe("chat input actions", () => {
       canInterrupt: false,
       isDisabled: false,
       streaming: false,
-      text: "hello",
+      hasText: true,
     };
 
     expect(resolveChatInputKeyboardAction(input)).toBe("submit");
     expect(resolveChatInputButtonAction(input)).toBe("submit");
+  });
+
+  it("blocks submission when there is no text", () => {
+    const input = {
+      canInterrupt: false,
+      isDisabled: false,
+      streaming: false,
+      hasText: false,
+    };
+
+    expect(resolveChatInputKeyboardAction(input)).toBe("none");
+    expect(resolveChatInputButtonAction(input)).toBe("none");
   });
 });

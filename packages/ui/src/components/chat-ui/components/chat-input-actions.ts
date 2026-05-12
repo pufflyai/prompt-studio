@@ -2,23 +2,21 @@ interface ChatInputActionState {
   canInterrupt: boolean;
   isDisabled: boolean;
   streaming: boolean;
-  text: string;
+  hasText: boolean;
 }
 
 export type ChatInputAction = "interrupt" | "none" | "submit";
 
-const hasMessageText = (text: string) => text.trim().length > 0;
-
 export const resolveChatInputKeyboardAction = (state: ChatInputActionState): ChatInputAction => {
-  const { isDisabled, streaming, text } = state;
-  if (isDisabled || streaming || !hasMessageText(text)) return "none";
+  const { isDisabled, streaming, hasText } = state;
+  if (isDisabled || streaming || !hasText) return "none";
   return "submit";
 };
 
 export const resolveChatInputButtonAction = (state: ChatInputActionState): ChatInputAction => {
-  const { canInterrupt, isDisabled, streaming, text } = state;
+  const { canInterrupt, isDisabled, streaming, hasText } = state;
   if (isDisabled) return "none";
   if (streaming) return canInterrupt ? "interrupt" : "none";
-  if (!hasMessageText(text)) return "none";
+  if (!hasText) return "none";
   return "submit";
 };
