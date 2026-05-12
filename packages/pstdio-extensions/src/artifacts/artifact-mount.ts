@@ -6,7 +6,8 @@ import { normalizeArtifactMountPath } from "./path-normalization";
 
 type CreateArtifactMountInput = {
   repoRoot: string;
-  namespace: string;
+  /** Package name of the owning extension. */
+  name: string;
   mountPath: string;
 };
 
@@ -62,10 +63,10 @@ const walkFiles = async (root: string, current: string, files: ArtifactFile[]) =
 export const createArtifactMount = (input: CreateArtifactMountInput): ArtifactMount => {
   const normalized = normalizeArtifactMountPath(input.mountPath);
   if (!normalized) {
-    throw new Error(`Artifact mount path "${input.mountPath}" must stay under .pstdio/${input.namespace}/`);
+    throw new Error(`Artifact mount path "${input.mountPath}" must stay under .pstdio/${input.name}/`);
   }
 
-  const mountRoot = resolve(input.repoRoot, ".pstdio", input.namespace, ...normalized.split("/"));
+  const mountRoot = resolve(input.repoRoot, ".pstdio", input.name, ...normalized.split("/"));
 
   const resolvePath = (relativePath: string) => {
     const safe = normalizeRelativePath(relativePath);

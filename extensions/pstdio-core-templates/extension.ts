@@ -1,13 +1,6 @@
 import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
-  id: "pstdio.core-templates",
-  namespace: "core-templates",
-  name: "Core Templates",
-  version: "0.1.0",
-  apiVersion: "1",
-  description: "Built-in pstdio templates.",
-
   templateTypes: {
     ticket: { label: "Ticket", description: "Ticket templates" },
     prompt: { label: "Prompt", description: "Prompt templates" },

@@ -38,7 +38,8 @@ export interface CommandRunnerEnvironment {
 export interface BuildEnvironmentInput {
   projectId: string;
   extensionId: string;
-  namespace: string;
+  /** Package name of the owning extension. */
+  name: string;
 }
 
 export interface CommandRunnerHostDeps {

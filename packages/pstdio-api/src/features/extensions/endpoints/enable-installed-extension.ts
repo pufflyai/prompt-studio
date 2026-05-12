@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { enableInstalledExtensionRequestSchema, enableInstalledExtensionResponseSchema } from "pstdio-api-contracts";
-import { NamespaceConflictError, ProjectNotFoundError } from "../../../services/extension-service";
+import { ExtensionNameConflictError, ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppRouteHandler } from "../../../types";
 import { installProjectSkillsToRepo } from "../../skills/install-skill-to-repo";
 import type { ExtensionsRouteDeps } from "../deps";
@@ -33,7 +33,7 @@ export const enableInstalledExtensionRoute = createRoute({
       content: { "application/json": { schema: errorSchema } },
     },
     409: {
-      description: "Namespace conflict.",
+      description: "Extension name conflict.",
       content: { "application/json": { schema: errorSchema } },
     },
   },
@@ -53,7 +53,7 @@ export const enableInstalledExtensionHandler = (
         displayName: body.displayName,
         extensionId: body.extensionId,
         manifest: body.manifest,
-        namespace: body.namespace,
+        name: body.name,
         sourceHash: body.sourceHash,
         sourceKind: body.sourceKind,
         sourcePath: body.sourcePath,
@@ -72,14 +72,14 @@ export const enableInstalledExtensionHandler = (
           installName,
           installedExtensionId: result.installedSource.id,
           instanceId: result.instance.id,
-          namespace: result.instance.namespace,
+          name: result.instance.namespace,
           projectId,
         },
         200,
       );
     } catch (error) {
       if (error instanceof ProjectNotFoundError) return c.json({ error: error.message }, 404);
-      if (error instanceof NamespaceConflictError) return c.json({ error: error.message }, 409);
+      if (error instanceof ExtensionNameConflictError) return c.json({ error: error.message }, 409);
       throw error;
     }
   };

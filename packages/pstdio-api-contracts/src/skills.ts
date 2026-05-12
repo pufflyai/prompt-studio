@@ -22,7 +22,6 @@ export const skillSchema = z.object({
   extension_id: z.string().optional(),
   installed_extension_id: z.string().optional(),
   install_name: z.string().optional(),
-  namespace: z.string().optional(),
   key: z.string().optional(),
   source: packageAssetDescriptorSchema.optional(),
   enabled: z.boolean().optional(),

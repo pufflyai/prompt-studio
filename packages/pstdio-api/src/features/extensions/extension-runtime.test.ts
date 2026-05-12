@@ -11,11 +11,27 @@ import {
 
 const makeExtension = () => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-extension-runtime-test-"));
-  writeFileSync(
-    join(root, "extension.ts"),
-    "export default { id: 'x', namespace: 'x', name: 'X', apiVersion: '1' };\n",
-  );
+  writePackage(root, "x", { publisher: "pstdio" });
+  writeFileSync(join(root, "extension.ts"), "export default {};\n");
   return root;
+};
+
+const writePackage = (root: string, name: string, fields: Record<string, unknown> = {}) => {
+  writeFileSync(
+    join(root, "package.json"),
+    JSON.stringify(
+      {
+        name,
+        version: "1.0.0",
+        publisher: "pstdio",
+        main: "./extension.ts",
+        engines: { pstdio: "^1.0.0" },
+        ...fields,
+      },
+      null,
+      2,
+    ),
+  );
 };
 
 describe("hashExtensionSource", () => {
@@ -84,15 +100,37 @@ describe("extension-lab", () => {
 });
 
 describe("checkExtensionSource webviews", () => {
+  test("preserves package manifest missing field diagnostics", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-missing-manifest-fields-"));
+    writeFileSync(join(root, "extension.ts"), "export default {};\n");
+    writePackage(root, "missing-fields", { publisher: undefined, main: undefined, engines: {} });
+
+    try {
+      const result = await checkExtensionSource(root, resolve(root, ".."));
+
+      expect(result.loaded).toBeNull();
+      expect(result.check.errorCount).toBe(3);
+      expect(result.check.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
+        "extension_manifest_missing_field",
+        "extension_manifest_missing_field",
+        "extension_manifest_missing_field",
+      ]);
+      expect(result.check.diagnostics.map((diagnostic) => diagnostic.message)).toEqual([
+        'package.json is missing required field "publisher"',
+        'package.json is missing required field "main"',
+        'package.json is missing required field "engines.pstdio"',
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("reports unsupported webview entry extensions", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-webview-validation-"));
+    writePackage(root, "invalid-webview");
     writeFileSync(
       join(root, "extension.ts"),
       `export default {
-        id: "pstdio.invalid-webview",
-        namespace: "invalid",
-        name: "Invalid",
-        apiVersion: "1",
         routes: {
           page: {
             path: "page",
@@ -119,6 +157,7 @@ describe("checkExtensionSource webviews", () => {
 
   test("reports native appearance contributions", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-appearance-validation-"));
+    writePackage(root, "appearance");
     writeFileSync(
       join(root, "theme.json"),
       `{
@@ -131,10 +170,6 @@ describe("checkExtensionSource webviews", () => {
     writeFileSync(
       join(root, "extension.ts"),
       `export default {
-        id: "pstdio.appearance",
-        namespace: "appearance",
-        name: "Appearance",
-        apiVersion: "1",
         themes: {
           monokai: {
             title: "Monokai",
@@ -178,15 +213,12 @@ describe("checkExtensionSource webviews", () => {
 
   test("rejects unsafe appearance package asset paths", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-unsafe-appearance-"));
+    writePackage(root, "unsafeappearance");
     writeFileSync(join(root, "../outside-theme.json"), JSON.stringify({ colors: {} }));
     writeFileSync(join(root, "../outside-icons.json"), JSON.stringify({ iconDefinitions: {} }));
     writeFileSync(
       join(root, "extension.ts"),
       `export default {
-        id: "pstdio.unsafe-appearance",
-        namespace: "unsafeappearance",
-        name: "Unsafe Appearance",
-        apiVersion: "1",
         themes: {
           escaped: {
             title: "Escaped",
@@ -221,6 +253,7 @@ describe("checkExtensionSource webviews", () => {
 
   test("reports absolute appearance package asset paths", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-absolute-appearance-"));
+    writePackage(root, "absoluteappearance");
     const themePath = join(root, "theme.json");
     const iconPath = join(root, "icons.json");
     writeFileSync(themePath, JSON.stringify({ colors: {} }));
@@ -228,10 +261,6 @@ describe("checkExtensionSource webviews", () => {
     writeFileSync(
       join(root, "extension.ts"),
       `export default {
-        id: "pstdio.absolute-appearance",
-        namespace: "absoluteappearance",
-        name: "Absolute Appearance",
-        apiVersion: "1",
         themes: {
           absolute: {
             title: "Absolute",
@@ -266,18 +295,15 @@ describe("checkExtensionSource webviews", () => {
 
   test("reports duplicate appearance ids across checked extension folders", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-duplicate-appearance-"));
-    const writeAppearanceExtension = (folder: string, extensionId: string) => {
+    const writeAppearanceExtension = (folder: string, name: string) => {
       const extensionRoot = join(root, folder);
       mkdirSync(extensionRoot, { recursive: true });
+      writePackage(extensionRoot, name);
       writeFileSync(join(extensionRoot, "theme.json"), JSON.stringify({ colors: {} }));
       writeFileSync(join(extensionRoot, "icons.json"), JSON.stringify({ iconDefinitions: {} }));
       writeFileSync(
         join(extensionRoot, "extension.ts"),
         `export default {
-          id: "${extensionId}",
-          namespace: "dup",
-          name: "${folder}",
-          apiVersion: "1",
           themes: {
             monokai: {
               title: "Monokai",
@@ -296,8 +322,8 @@ describe("checkExtensionSource webviews", () => {
       );
     };
 
-    writeAppearanceExtension("one", "pstdio.dup-one");
-    writeAppearanceExtension("two", "pstdio.dup-two");
+    writeAppearanceExtension("one", "dup");
+    writeAppearanceExtension("two", "dup");
 
     try {
       const check = await checkExtensionsRoot(root);

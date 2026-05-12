@@ -6,7 +6,7 @@ import { registerArtifactMounts } from "./artifact-mounts";
 import { registerCommands } from "./commands";
 import { registerContent } from "./content";
 import { registerHooks } from "./hooks";
-import { registerExtension, validateIdentity } from "./identity";
+import { registerExtension } from "./identity";
 import { registerMiddlewares } from "./middlewares";
 import { registerProviders } from "./providers";
 import { registerSchedules } from "./schedules";
@@ -19,12 +19,9 @@ export const normalizeExtensionSources = (
   const runtime = createAccumulator(initialDiagnostics);
   const index = createRegistryIndex();
   const extensionsById = new Map<string, NormalizedExtension>();
-  const namespacesInUse = new Map<string, NormalizedExtension>();
 
   for (const source of sources) {
-    if (!validateIdentity(source, runtime)) continue;
-
-    const ext = registerExtension(source, runtime, extensionsById, namespacesInUse);
+    const ext = registerExtension(source, runtime, extensionsById);
 
     registerCommands(ext, source, runtime, index);
     registerMiddlewares(ext, source, runtime);

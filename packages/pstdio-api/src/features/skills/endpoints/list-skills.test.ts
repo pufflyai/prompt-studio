@@ -15,6 +15,17 @@ const writeSkillExtension = (root: string) => {
   const sourcePath = join(root, "skill-extension");
   const skillRoot = join(sourcePath, "skills", "catalog-skill");
   mkdirSync(join(skillRoot, "references"), { recursive: true });
+  writeFileSync(
+    join(sourcePath, "package.json"),
+    JSON.stringify({
+      name: "test-skill-catalog",
+      version: "1.0.0",
+      displayName: "Test Skill Catalog",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+    }),
+  );
   writeFileSync(join(skillRoot, "SKILL.md"), "# Catalog Skill\n", "utf8");
   writeFileSync(join(skillRoot, "references", "notes.md"), "# Notes\n", "utf8");
   writeFileSync(
@@ -22,10 +33,6 @@ const writeSkillExtension = (root: string) => {
     `const asset = (path: string) => ({ kind: "package-asset" as const, path, baseUrl: import.meta.url });
 
 export default {
-  id: "pstdio.test-skill-catalog",
-  namespace: "test-skill-catalog",
-  name: "Test Skill Catalog",
-  apiVersion: "1",
   skills: {
     catalogSkill: {
       title: "Catalog Skill",
@@ -45,10 +52,10 @@ const enableSource = async (sourcePath: string) => {
   await handle.deps.extensionService.enableInstalledSourceForProject({
     projectId,
     installName: "skill-extension",
-    displayName: loaded.metadata.name,
+    displayName: loaded.metadata.displayName,
     extensionId: loaded.metadata.id,
     manifest: loaded.manifest,
-    namespace: loaded.metadata.namespace,
+    name: loaded.metadata.name,
     sourceHash: hashExtensionSource(sourcePath),
     sourcePath,
     version: loaded.metadata.version ?? null,

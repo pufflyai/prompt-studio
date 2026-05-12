@@ -37,11 +37,17 @@ export interface RuntimeMonacoTheme {
 }
 
 export interface NormalizedExtension {
+  /** Derived `${publisher}.${name}` from the package manifest. */
   id: string;
-  namespace: string;
+  /** Package name from package.json. */
+  name: string;
+  /** Optional display name from package.json. Falls back to `name`. */
   displayName: string;
-  version?: string;
+  version: string;
   description?: string;
+  /** Path to the extension's package directory. */
+  packagePath: string;
+  /** Path to the imported contributions entry file. */
   sourcePath: string;
   sourceKind: ExtensionSourceKind;
   definition: ExtensionDefinition;
@@ -50,8 +56,9 @@ export interface NormalizedExtension {
 export interface RuntimeCliContribution {
   extensionId: string;
   commandId: string;
-  namespace: string;
-  /** Path segments under the namespace. */
+  /** Package name of the owning extension; used as the CLI prefix. */
+  name: string;
+  /** Path segments under the extension name prefix. */
   path: string[];
   /** Joined path string for collision detection. */
   pathKey: string;
@@ -65,7 +72,7 @@ export interface RuntimeCommandRecord {
   id: string;
   localId: string;
   extensionId: string;
-  namespace: string;
+  name: string;
   sourcePath: string;
   title: string;
   description?: string;
@@ -80,7 +87,7 @@ export interface RuntimeMiddlewareRecord {
   id: string;
   localId: string;
   extensionId: string;
-  namespace: string;
+  name: string;
   sourcePath: string;
   commandId: string;
   // biome-ignore lint/suspicious/noExplicitAny: handler invoked with extension-specific params
@@ -91,7 +98,7 @@ export interface RuntimeHookRecord {
   id: string;
   localId: string;
   extensionId: string;
-  namespace: string;
+  name: string;
   sourcePath: string;
   eventId: string;
   // biome-ignore lint/suspicious/noExplicitAny: handler invoked with event-specific payload
@@ -102,11 +109,11 @@ export interface RuntimeArtifactMount {
   id: string;
   localId: string;
   extensionId: string;
-  namespace: string;
+  name: string;
   sourcePath: string;
-  /** Normalized path relative to <repo>/.pstdio/<namespace>/. */
+  /** Normalized path relative to <repo>/.pstdio/<name>/. */
   relativePath: string;
-  /** Full repo-relative path (.pstdio/<namespace>/<relativePath>). */
+  /** Full repo-relative path (.pstdio/<name>/<relativePath>). */
   fullPath: string;
   label: string;
   repoRole?: "default" | "selected" | "workspace";
@@ -116,7 +123,7 @@ export interface RuntimeScheduleRecord {
   id: string;
   localId: string;
   extensionId: string;
-  namespace: string;
+  name: string;
   sourcePath: string;
   title: string;
   cron: string;
@@ -131,7 +138,7 @@ export interface RuntimeViewRecord {
   id: string;
   localId: string;
   extensionId: string;
-  namespace: string;
+  name: string;
   sourcePath: string;
   contribution: ViewContribution;
 }
@@ -140,7 +147,7 @@ export interface RuntimeRouteRecord {
   id: string;
   localId: string;
   extensionId: string;
-  namespace: string;
+  name: string;
   sourcePath: string;
   contribution: RouteContribution;
 }
@@ -149,7 +156,7 @@ export interface RuntimeNavigationRecord {
   id: string;
   localId: string;
   extensionId: string;
-  namespace: string;
+  name: string;
   sourcePath: string;
   contribution: NavigationContribution;
 }
@@ -158,7 +165,7 @@ export interface RuntimeSettingsPanelRecord {
   id: string;
   localId: string;
   extensionId: string;
-  namespace: string;
+  name: string;
   sourcePath: string;
   contribution: SettingsPanelContribution;
 }
@@ -167,7 +174,7 @@ export interface RuntimeTemplateTypeRecord {
   id: string;
   localId: string;
   extensionId: string;
-  namespace: string;
+  name: string;
   sourcePath: string;
   contribution: TemplateTypeContribution;
 }
@@ -176,7 +183,7 @@ export interface RuntimeTemplateRecord {
   id: string;
   localId: string;
   extensionId: string;
-  namespace: string;
+  name: string;
   sourcePath: string;
   contribution: TemplateContribution;
 }
@@ -185,7 +192,7 @@ export interface RuntimeSkillRecord {
   id: string;
   localId: string;
   extensionId: string;
-  namespace: string;
+  name: string;
   sourcePath: string;
   contribution: SkillContribution;
 }
@@ -194,7 +201,7 @@ export interface RuntimeThemeRecord {
   id: string;
   localId: string;
   extensionId: string;
-  namespace: string;
+  name: string;
   sourcePath: string;
   title: string;
   description?: string;
@@ -209,7 +216,7 @@ export interface RuntimeFileIconThemeRecord {
   id: string;
   localId: string;
   extensionId: string;
-  namespace: string;
+  name: string;
   sourcePath: string;
   title: string;
   description?: string;
@@ -223,7 +230,7 @@ export interface RuntimeFileIconThemeRecord {
 export interface RuntimeHarnessRecord {
   id: string;
   extensionId: string;
-  namespace: string;
+  name: string;
   sourcePath: string;
   provider: HarnessProvider;
 }
@@ -231,7 +238,7 @@ export interface RuntimeHarnessRecord {
 export interface RuntimeWorkspaceTypeRecord {
   id: string;
   extensionId: string;
-  namespace: string;
+  name: string;
   sourcePath: string;
   provider: WorkspaceTypeProvider;
 }

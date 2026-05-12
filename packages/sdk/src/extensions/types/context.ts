@@ -143,7 +143,8 @@ export interface ExtensionSettingsApi<TSettings extends Struct = Struct> {
 export interface ExtensionContextBase {
   projectId: string;
   extensionId: string;
-  namespace: string;
+  /** Extension package name. Used for grouping/prefixing user-facing references. */
+  name: string;
   repo?: RepoContext;
   source?: CommandSource;
   storage: ExtensionStorageApi;

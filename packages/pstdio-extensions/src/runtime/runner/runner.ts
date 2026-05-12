@@ -93,7 +93,7 @@ const createContextFactory = (
     return {
       projectId: ids.projectId,
       extensionId: ids.extensionId,
-      namespace: ids.namespace,
+      name: ids.name,
       storage: env.storage,
       artifacts: env.artifacts,
       files: env.files,
@@ -114,7 +114,7 @@ const createContextFactory = (
   buildCommandContext(env, record, invocation, invocationId, projectId, source, repo, depth) {
     const base = this.buildExtensionContext(
       env,
-      { projectId, extensionId: record.extensionId, namespace: record.namespace },
+      { projectId, extensionId: record.extensionId, name: record.name },
       depth,
     );
     return {
@@ -220,7 +220,7 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
       env = await deps.buildEnvironment({
         projectId: input.projectId,
         extensionId: record.extensionId,
-        namespace: record.namespace,
+        name: record.name,
       });
     } catch (err) {
       return {

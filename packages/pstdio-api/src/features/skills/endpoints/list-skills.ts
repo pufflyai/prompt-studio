@@ -53,7 +53,6 @@ export const listSkillsHandler = (deps: SkillsRouteDeps): AppRouteHandler<typeof
         extension_id: skill.extension_id,
         installed_extension_id: skill.installed_extension_id,
         install_name: skill.install_name,
-        namespace: skill.namespace,
         key: skill.key,
         source: skill.source,
         enabled: skill.enabled,

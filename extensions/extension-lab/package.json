@@ -1,6 +1,13 @@
 {
   "name": "extension-lab",
   "version": "0.0.2",
+  "displayName": "Extension Lab",
+  "description": "Sandbox for trying out the extension API. Depends only on kernel-owned slots and events.",
+  "publisher": "pstdio",
+  "main": "./extension.ts",
+  "engines": {
+    "pstdio": "^1.0.0"
+  },
   "private": true,
   "type": "module",
   "scripts": {

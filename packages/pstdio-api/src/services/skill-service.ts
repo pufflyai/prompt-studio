@@ -124,7 +124,6 @@ const toExtensionSkill = (input: {
     extension_id: input.installedSource.extension_id,
     installed_extension_id: input.installedSource.id,
     install_name: input.installedSource.install_name,
-    namespace: input.instance.namespace,
     key: input.key,
     name,
     title: extensionSkillTitle(input.contribution, input.pref, input.key),

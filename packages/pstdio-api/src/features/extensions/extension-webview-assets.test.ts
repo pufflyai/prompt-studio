@@ -6,17 +6,25 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { createExtensionRoutes } from "./routes";
 
 const writeExtension = (root: string, entry: string) => {
+  mkdirSync(root, { recursive: true });
   mkdirSync(join(root, "src"), { recursive: true });
+  writeFileSync(
+    join(root, "package.json"),
+    JSON.stringify({
+      name: "lab",
+      version: "1.0.0",
+      displayName: "Lab",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+    }),
+  );
   writeFileSync(join(root, "src", "main.tsx"), "console.log('managed');");
   writeFileSync(join(root, "static.html"), '<!doctype html><script src="./static.js"></script>');
   writeFileSync(join(root, "static.js"), "console.log('static');");
   writeFileSync(
     join(root, "extension.ts"),
     `export default {
-      id: "pstdio.lab",
-      namespace: "lab",
-      name: "Lab",
-      apiVersion: "1",
       routes: {
         labPage: {
           path: "lab",

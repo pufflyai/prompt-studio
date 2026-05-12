@@ -18,12 +18,19 @@ const writeCommandExtension = (root: string) => {
   const extensionRoot = join(root, "extensions", "lab");
   mkdirSync(extensionRoot, { recursive: true });
   writeFileSync(
+    join(extensionRoot, "package.json"),
+    JSON.stringify({
+      name: "lab",
+      version: "1.0.0",
+      displayName: "Extension Lab",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+    }),
+  );
+  writeFileSync(
     join(extensionRoot, "extension.ts"),
     `export default {
-      id: "pstdio.extension-lab",
-      namespace: "lab",
-      name: "Extension Lab",
-      apiVersion: "1",
       commands: {
         "counter.bump": {
           title: "Bump lab counter",
@@ -115,9 +122,9 @@ beforeEach(async () => {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       displayName: "Extension Lab",
-      extensionId: "pstdio.extension-lab",
-      manifest: { apiVersion: "1" },
-      namespace: "lab",
+      extensionId: "pstdio.lab",
+      manifest: { id: "pstdio.lab", name: "lab" },
+      name: "lab",
       sourceHash: null,
       sourceKind: "local_path",
       sourcePath,
@@ -153,8 +160,7 @@ describe("extension command execution routes", () => {
       expect.objectContaining({
         id: "lab.counter.bump",
         cliPath: "lab counter bump",
-        extensionId: "pstdio.extension-lab",
-        namespace: "lab",
+        extensionId: "pstdio.lab",
         params: { amount: { type: "number", defaultValue: 1 } },
       }),
     );
@@ -177,7 +183,7 @@ describe("extension command execution routes", () => {
     const bump = await bumpResponse.json();
     expect(bump).toMatchObject({
       commandId: "lab.counter.bump",
-      extensionId: "pstdio.extension-lab",
+      extensionId: "pstdio.lab",
       outcome: {
         ok: true,
         status: "success",
@@ -228,7 +234,7 @@ describe("extension command execution routes", () => {
     const body = await failed.json();
     expect(body).toMatchObject({
       commandId: "lab.boom",
-      extensionId: "pstdio.extension-lab",
+      extensionId: "pstdio.lab",
       outcome: { ok: false, status: "error", code: "handler_threw", reason: "kaboom" },
     });
   });

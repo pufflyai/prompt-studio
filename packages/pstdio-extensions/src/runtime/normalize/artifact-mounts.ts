@@ -18,7 +18,7 @@ export const registerArtifactMounts = (
       runtime.diagnostics.push(
         createDiagnostic({
           code: "unsafe_artifact_mount_path",
-          message: `Artifact mount "${ext.namespace}.${localId}" must stay under .pstdio/${ext.namespace}/`,
+          message: `Artifact mount "${ext.name}.${localId}" must stay under .pstdio/${ext.name}/`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
         }),
@@ -26,8 +26,8 @@ export const registerArtifactMounts = (
       continue;
     }
 
-    const fullPath = `.pstdio/${ext.namespace}/${relativePath}`;
-    const collisionKey = `${ext.namespace}:${relativePath}`;
+    const fullPath = `.pstdio/${ext.name}/${relativePath}`;
+    const collisionKey = `${ext.name}:${relativePath}`;
     const existing = index.mountKeys.get(collisionKey);
     if (existing) {
       runtime.diagnostics.push(
@@ -42,10 +42,10 @@ export const registerArtifactMounts = (
     }
 
     const record: RuntimeArtifactMount = {
-      id: `${ext.namespace}.${localId}`,
+      id: `${ext.name}.${localId}`,
       localId,
       extensionId: ext.id,
-      namespace: ext.namespace,
+      name: ext.name,
       sourcePath: source.sourcePath,
       relativePath,
       fullPath,

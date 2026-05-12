@@ -35,12 +35,19 @@ describe("list extension appearance", () => {
       JSON.stringify({ colors: { "editor.background": "#272822", "editor.foreground": "#f8f8f2" } }),
     );
     writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({
+        name: "lab",
+        version: "1.0.0",
+        displayName: "Lab",
+        publisher: "pstdio",
+        main: "./extension.ts",
+        engines: { pstdio: "^1.0.0" },
+      }),
+    );
+    writeFileSync(
       join(root, "extension.ts"),
       `export default {
-        id: "pstdio.lab",
-        namespace: "lab",
-        name: "Lab",
-        apiVersion: "1",
         themes: {
           monokai: {
             title: "Monokai",

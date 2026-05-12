@@ -1,10 +1,12 @@
 ---
-status: "accepted"
+status: "obsolete"
 created: "2026-04-27T00:00:00Z"
-updated: "2026-05-02T00:00:00Z"
+updated: "2026-05-12T00:00:00Z"
 ---
 
 # Extension Runtime Boundaries
+
+> Obsolete: this runtime boundary note predates the package-manifest extension identity model. Current extension identity comes from `package.json`: `publisher`, `name`, `version`, `main`, and `engines.pstdio`. Runtime ids are derived as `${publisher}.${name}`, while command ids are derived from package `name` plus the local command key, for example `extension-lab.counter.bump`. Do not use the namespace-era `defineExtension({ id, namespace, name })` examples in this document for new code.
 
 Prompt Studio v2 uses a scope-aware extension platform, with project-scoped enablement as the common product path. The extension runtime is the only new automation model documented for future work.
 

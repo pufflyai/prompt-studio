@@ -83,7 +83,7 @@ const refIdOf = (value: unknown) => {
 
 const toExtensionRecord = (extension: ExtensionRuntime["extensions"][number]): ExtensionRecord => ({
   id: extension.id,
-  namespace: extension.namespace,
+  name: extension.name,
   displayName: extension.displayName,
   version: extension.version,
   description: extension.description,

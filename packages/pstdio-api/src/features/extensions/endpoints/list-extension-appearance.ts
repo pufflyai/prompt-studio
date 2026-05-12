@@ -13,7 +13,6 @@ const toThemeRecord = (
 ) => ({
   id: theme.id,
   extensionId: theme.extensionId,
-  namespace: theme.namespace,
   title: theme.title,
   description: theme.description,
   format: theme.format,
@@ -28,7 +27,6 @@ const toFileIconThemeRecord = (
 ) => ({
   id: theme.id,
   extensionId: theme.extensionId,
-  namespace: theme.namespace,
   title: theme.title,
   description: theme.description,
   format: theme.format,

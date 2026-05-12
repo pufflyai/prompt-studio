@@ -30,6 +30,17 @@ class FakeChildProcess {
 
 const writeExtension = (root: string, entries: Record<string, string>) => {
   mkdirSync(join(root, "src"), { recursive: true });
+  writeFileSync(
+    join(root, "package.json"),
+    JSON.stringify({
+      name: "lab",
+      version: "1.0.0",
+      displayName: "Lab",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+    }),
+  );
   for (const entry of Object.values(entries)) {
     if (entry.endsWith(".html")) writeFileSync(join(root, entry), "<!doctype html><p>static</p>");
     else writeFileSync(join(root, entry), "console.log('webview');");
@@ -48,10 +59,6 @@ const writeExtension = (root: string, entries: Record<string, string>) => {
   writeFileSync(
     join(root, "extension.ts"),
     `export default {
-      id: "pstdio.lab",
-      namespace: "lab",
-      name: "Lab",
-      apiVersion: "1",
       routes: { ${routes} },
     };`,
   );

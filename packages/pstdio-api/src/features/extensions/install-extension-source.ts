@@ -72,7 +72,7 @@ export type ExtensionEnableInput = {
   displayName: string;
   extensionId: string;
   manifest: Record<string, unknown>;
-  namespace: string;
+  name: string;
   sourceHash: string;
   sourceKind: "git" | "local_path";
   sourcePath: string;
@@ -81,15 +81,15 @@ export type ExtensionEnableInput = {
 };
 
 export const toExtensionEnableInput = (installed: InstalledExtensionSource): ExtensionEnableInput => ({
-  displayName: installed.metadata.name,
+  displayName: installed.metadata.displayName,
   extensionId: installed.metadata.id,
   manifest: installed.manifest,
-  namespace: installed.metadata.namespace,
+  name: installed.metadata.name,
   sourceHash: installed.sourceHash,
   sourceKind: installed.source.kind === "named" ? "git" : "local_path",
   sourcePath: installed.targetPath,
   sourceRef: installed.source.ref ?? null,
-  version: installed.metadata.version ?? null,
+  version: installed.metadata.version,
 });
 
 type CommandResult = {
@@ -321,8 +321,8 @@ const failIfInvalidSource = (sourcePath: string) => {
   if (!existsSync(sourcePath) || !statSync(sourcePath).isDirectory()) {
     throw new Error(`Extension source folder not found: ${sourcePath}`);
   }
-  if (!existsSync(join(sourcePath, "extension.ts"))) {
-    throw new Error(`Extension source is missing extension.ts: ${sourcePath}`);
+  if (!existsSync(join(sourcePath, "package.json"))) {
+    throw new Error(`Extension source is missing package.json: ${sourcePath}`);
   }
 };
 

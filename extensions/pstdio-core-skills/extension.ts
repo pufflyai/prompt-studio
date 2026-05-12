@@ -1,13 +1,6 @@
 import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
-  id: "pstdio.core-skills",
-  namespace: "core-skills",
-  name: "Core Skills",
-  version: "0.1.0",
-  apiVersion: "1",
-  description: "Built-in pstdio agent skills.",
-
   skills: {
     create_proposal: { title: "Create a proposal", source: packageAsset("./skills/create-proposal", import.meta.url) },
     create_pstdio_plugin: {

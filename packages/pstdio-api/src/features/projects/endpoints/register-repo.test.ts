@@ -49,16 +49,23 @@ const writeSkillExtension = (root: string) => {
   const sourcePath = join(root, "repo-skill-extension");
   const skillRoot = join(sourcePath, "skills", "create-ticket");
   mkdirSync(skillRoot, { recursive: true });
+  writeFileSync(
+    join(sourcePath, "package.json"),
+    JSON.stringify({
+      name: "test-repo-skill",
+      version: "1.0.0",
+      displayName: "Test Repo Skill",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+    }),
+  );
   writeFileSync(join(skillRoot, "SKILL.md"), "# Create Ticket\n", "utf8");
   writeFileSync(
     join(sourcePath, "extension.ts"),
     `const asset = (path: string) => ({ kind: "package-asset" as const, path, baseUrl: import.meta.url });
 
 export default {
-  id: "pstdio.test-repo-skill",
-  namespace: "test-repo-skill",
-  name: "Test Repo Skill",
-  apiVersion: "1",
   skills: {
     createTicket: {
       title: "Create ticket",
@@ -78,10 +85,10 @@ const enableSkillExtension = async (target: AppHandle, projectId: string, source
   await target.deps.extensionService.enableInstalledSourceForProject({
     projectId,
     installName: "repo-skill-extension",
-    displayName: loaded.metadata.name,
+    displayName: loaded.metadata.displayName,
     extensionId: loaded.metadata.id,
     manifest: loaded.manifest,
-    namespace: loaded.metadata.namespace,
+    name: loaded.metadata.name,
     sourceHash: hashExtensionSource(sourcePath),
     sourcePath,
     version: loaded.metadata.version ?? null,

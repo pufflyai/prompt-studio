@@ -12,8 +12,8 @@ export {
 } from "./detect-package-manager";
 export { createDiagnostic } from "./diagnostics";
 export {
-  discoverExtensionFiles,
-  discoverExtensionFilesInDir,
+  discoverExtensionPackages,
+  discoverExtensionPackagesInUserRoot,
   pstdioExtensionsRoot,
   pstdioHomeRoot,
 } from "./discovery";
@@ -30,13 +30,14 @@ export {
   type ResolvedInstallSource,
 } from "./install";
 export {
-  type ExtensionSourceFile,
+  type ExtensionPackageRef,
   type LoadExtensionSourcesOptions,
   type LoadedExtensionSource,
-  loadExtensionSourceFile,
+  loadExtensionPackage,
   loadExtensionSources,
 } from "./loader";
 export { normalizeExtensionSources } from "./normalize";
+export { type ReadPackageManifestResult, readPackageManifest } from "./package-manifest";
 export {
   isPackageManagerOnPath,
   type RunPackageInstallOptions,

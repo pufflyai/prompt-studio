@@ -13,10 +13,10 @@ const installed = {
   source: { kind: "named" as const, name: "planner", ref: "repo#main:extensions/planner" },
   metadata: {
     id: "pstdio.planner",
-    namespace: "planner",
-    name: "Planner",
+    name: "planner",
+    displayName: "Planner",
     version: "1.0.0",
-    apiVersion: "1" as const,
+    enginesPstdio: "^1.0.0",
   },
   manifest: { id: "pstdio.planner" },
   sourceHash: "hash",
@@ -79,7 +79,7 @@ describe("extensions add", () => {
 
     const output = (deps.log as Mock<(message: string) => void>).mock.calls[0]?.[0] as string;
     expect(output).toContain("Id: pstdio.planner");
-    expect(output).toContain("Namespace: planner");
+    expect(output).toContain("Name: planner");
     expect(output).toContain("Project: enabled for project-1");
   });
 

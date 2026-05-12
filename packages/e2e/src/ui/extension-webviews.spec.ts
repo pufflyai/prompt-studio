@@ -55,12 +55,19 @@ const writeStaticExtension = () => {
   tempDirs.push(root);
   mkdirSync(root, { recursive: true });
   writeFileSync(
+    join(root, "package.json"),
+    JSON.stringify({
+      name: "staticwebview",
+      version: "1.0.0",
+      displayName: "Static Webview UI E2E",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+    }),
+  );
+  writeFileSync(
     join(root, "extension.ts"),
     `export default {
-      id: "pstdio.static-webview-ui-e2e",
-      namespace: "staticwebview",
-      name: "Static Webview UI E2E",
-      apiVersion: "1",
       routes: {
         page: {
           path: "static-webview",
@@ -88,7 +95,7 @@ const enableExtension = async (
     displayName: string;
     extensionId: string;
     installName: string;
-    namespace: string;
+    name: string;
     sourcePath: string;
     version?: string | null;
   },
@@ -99,8 +106,8 @@ const enableExtension = async (
       data: {
         displayName: input.displayName,
         extensionId: input.extensionId,
-        manifest: { apiVersion: "1" },
-        namespace: input.namespace,
+        manifest: { id: input.extensionId, name: input.name },
+        name: input.name,
         sourceHash: `${input.installName}-e2e`,
         sourceKind: "local_path",
         sourcePath: input.sourcePath,
@@ -136,16 +143,16 @@ test.describe("Extension webviews", () => {
 
     await enableExtension(request, project.id, {
       displayName: "Static Webview UI E2E",
-      extensionId: "pstdio.static-webview-ui-e2e",
+      extensionId: "pstdio.staticwebview",
       installName: "static-webview-ui",
-      namespace: "staticwebview",
+      name: "staticwebview",
       sourcePath: staticExtension,
     });
     await enableExtension(request, project.id, {
       displayName: "Extension Lab",
       extensionId: "pstdio.extension-lab",
       installName: "extension-lab",
-      namespace: "lab",
+      name: "extension-lab",
       sourcePath: extensionLabPath,
       version: "0.1.0",
     });

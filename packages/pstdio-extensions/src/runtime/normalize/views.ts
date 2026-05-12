@@ -9,7 +9,7 @@ import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
 import { hasCompatibleSlotKind } from "./slot-kind";
 
-const contributionId = (ext: NormalizedExtension, localId: string) => `${ext.namespace}.${localId}`;
+const contributionId = (ext: NormalizedExtension, localId: string) => `${ext.name}.${localId}`;
 
 const sourceRef = (ext: NormalizedExtension, source: LoadedExtensionSource) => ({
   extensionId: ext.id,
@@ -34,7 +34,7 @@ const registerViews = (ext: NormalizedExtension, source: LoadedExtensionSource, 
       id: contributionId(ext, localId),
       localId,
       extensionId: ext.id,
-      namespace: ext.namespace,
+      name: ext.name,
       sourcePath: source.sourcePath,
       contribution: view as RuntimeViewRecord["contribution"],
     });
@@ -48,7 +48,7 @@ const registerRoutes = (ext: NormalizedExtension, source: LoadedExtensionSource,
       id: contributionId(ext, localId),
       localId,
       extensionId: ext.id,
-      namespace: ext.namespace,
+      name: ext.name,
       sourcePath: source.sourcePath,
       contribution: route as RuntimeRouteRecord["contribution"],
     });
@@ -73,7 +73,7 @@ const registerNavigation = (ext: NormalizedExtension, source: LoadedExtensionSou
       id: contributionId(ext, localId),
       localId,
       extensionId: ext.id,
-      namespace: ext.namespace,
+      name: ext.name,
       sourcePath: source.sourcePath,
       contribution: nav as RuntimeNavigationRecord["contribution"],
     });
@@ -98,7 +98,7 @@ const registerSettingsPanels = (ext: NormalizedExtension, source: LoadedExtensio
       id: contributionId(ext, localId),
       localId,
       extensionId: ext.id,
-      namespace: ext.namespace,
+      name: ext.name,
       sourcePath: source.sourcePath,
       contribution: panel as RuntimeSettingsPanelRecord["contribution"],
     });

@@ -75,7 +75,7 @@ export interface RendererContribution<TSlotContext extends Struct = Struct> {
 }
 
 export interface ArtifactMountContribution {
-  /** Relative path under .pstdio/<extension.namespace>/. */
+  /** Relative path under .pstdio/<extension.name>/. */
   path: string;
   label: string;
   repoRole?: "default" | "selected" | "workspace";

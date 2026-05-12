@@ -7,8 +7,8 @@ export type LoadExtensionRuntimeInput = {
   includeUserRoot?: boolean;
   /** Additional source roots to discover. */
   extensionRoots?: LoadExtensionSourcesOptions["extensionRoots"];
-  /** Explicit extension files to load. */
-  extensionFiles?: LoadExtensionSourcesOptions["extensionFiles"];
+  /** Explicit extension packages to load. */
+  extensionPackages?: LoadExtensionSourcesOptions["extensionPackages"];
 };
 
 export const loadExtensionRuntime = async (input: LoadExtensionRuntimeInput = {}) => {
@@ -21,7 +21,7 @@ export const loadExtensionRuntime = async (input: LoadExtensionRuntimeInput = {}
 
   const loaded = await loadExtensionSources({
     extensionRoots: roots,
-    extensionFiles: input.extensionFiles,
+    extensionPackages: input.extensionPackages,
   });
 
   return normalizeExtensionSources(loaded.sources, loaded.diagnostics);

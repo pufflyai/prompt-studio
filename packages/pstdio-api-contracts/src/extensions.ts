@@ -16,7 +16,7 @@ export const extensionDiagnosticSchema = z.object({
 
 export const extensionRecordSchema = z.object({
   id: z.string(),
-  namespace: z.string(),
+  name: z.string(),
   displayName: z.string(),
   version: z.string().optional(),
   description: z.string().optional(),
@@ -26,7 +26,6 @@ export const extensionRecordSchema = z.object({
 export const extensionCommandRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
-  namespace: z.string(),
   title: z.string(),
   description: z.string().optional(),
   cliPath: z.string().optional(),
@@ -57,7 +56,6 @@ export const extensionScheduleRecordSchema = z.object({
 export const extensionArtifactMountSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
-  namespace: z.string(),
   relativePath: z.string(),
   fullPath: z.string(),
   label: z.string(),
@@ -73,7 +71,6 @@ export type PackageAssetDescriptor = z.infer<typeof packageAssetDescriptorSchema
 export const extensionThemeRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
-  namespace: z.string(),
   title: z.string(),
   description: z.string().optional(),
   format: z.literal("vscode-color-theme"),
@@ -91,7 +88,6 @@ export const extensionThemeRecordSchema = z.object({
 export const extensionFileIconThemeRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
-  namespace: z.string(),
   title: z.string(),
   description: z.string().optional(),
   format: z.literal("vscode-file-icon-theme"),
@@ -246,7 +242,7 @@ export const enableInstalledExtensionRequestSchema = z.object({
   displayName: z.string(),
   extensionId: z.string(),
   manifest: jsonObjectSchema,
-  namespace: z.string(),
+  name: z.string(),
   sourceHash: z.string().nullable().optional(),
   sourceKind: z.enum(["local_path", "git", "registry", "builtin"]),
   sourcePath: z.string(),
@@ -259,7 +255,7 @@ export const enableInstalledExtensionResponseSchema = z.object({
   installName: z.string(),
   installedExtensionId: z.string(),
   instanceId: z.string(),
-  namespace: z.string(),
+  name: z.string(),
   projectId: z.string(),
 });
 
@@ -272,7 +268,7 @@ export const projectExtensionInstanceSchema = z.object({
   extensionId: z.string(),
   installedExtensionId: z.string(),
   installName: z.string(),
-  namespace: z.string(),
+  name: z.string(),
   displayName: z.string(),
   version: z.string().nullable().optional(),
   description: z.string().optional(),
@@ -400,7 +396,7 @@ export const commandExecuteResponseSchema = z.object({
 
 export const setupProjectExtensionResponseSchema = z.object({
   extensionId: z.string(),
-  namespace: z.string(),
+  name: z.string(),
   installName: z.string(),
   installedSkills: z.array(
     z.object({
