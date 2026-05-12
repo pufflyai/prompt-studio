@@ -5,10 +5,8 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { normalizeWorkspacePageTab, type WorkspacePageTab } from "@/features/workspaces/pages/workspace-page-tab";
 import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/shared/api-types";
-import { ATTEMPT_DIFF_MODE, getWorkspaceDiffFile } from "@/shared/workspace-diff-api";
 import { type ChangedFilesViewMode, collectChangedFilePaths } from "../utils/build-changed-files-tree";
 import { sortDiffs } from "../utils/sort-diffs";
-import { transformFileDiffs } from "../utils/transform-diff";
 import { WorkspaceChecksPanel } from "./workspace-checks-panel";
 import { FileListPanel, resolveSelectedPath } from "./workspace-file-list-panel";
 
@@ -24,10 +22,6 @@ interface WorkspaceDiffPanelProps {
   loading?: boolean;
 }
 
-interface LoadedDiffState {
-  diffs: Map<string, Diff>;
-}
-
 export const buildFilteredDiffs = (input: {
   diffs: Diff[];
   normalizedSearchQuery: string;
@@ -41,50 +35,7 @@ export const buildFilteredDiffs = (input: {
   return sortDiffs(matchingDiffs, viewMode);
 };
 
-export const buildLoadedDiffKey = (workspaceId: string | null, path: string) => `${workspaceId ?? ""}:${path}`;
-
 const getDiffPath = (diff: Diff) => diff.newPath ?? diff.oldPath ?? "unknown";
-
-const diffSummaryMatches = (summary: Diff, loaded: Diff) =>
-  summary.change === loaded.change &&
-  summary.oldPath === loaded.oldPath &&
-  summary.newPath === loaded.newPath &&
-  summary.additions === loaded.additions &&
-  summary.deletions === loaded.deletions;
-
-export const retainLoadedDiffsForSummaries = (input: {
-  workspaceId: string | null;
-  diffs: Diff[];
-  loadedDiffs: Map<string, Diff>;
-}) => {
-  const { workspaceId, diffs, loadedDiffs } = input;
-  const retained = new Map<string, Diff>();
-
-  for (const diff of diffs) {
-    const path = getDiffPath(diff);
-    const key = buildLoadedDiffKey(workspaceId, path);
-    const loaded = loadedDiffs.get(key);
-    if (loaded && diffSummaryMatches(diff, loaded)) {
-      retained.set(key, loaded);
-    }
-  }
-
-  return retained;
-};
-
-export const resolveDisplayDiffs = (input: {
-  workspaceId: string | null;
-  diffs: Diff[];
-  loadedDiffs: Map<string, Diff>;
-}) => {
-  const { workspaceId, diffs, loadedDiffs } = input;
-  const retainedLoadedDiffs = retainLoadedDiffsForSummaries({ workspaceId, diffs, loadedDiffs });
-
-  return diffs.map((diff) => {
-    const path = getDiffPath(diff);
-    return retainedLoadedDiffs.get(buildLoadedDiffKey(workspaceId, path)) ?? diff;
-  });
-};
 
 const WorkspaceDiffPanelLoading = () => (
   <Stack flex="1" minH="0" gap="0">
@@ -119,17 +70,12 @@ const WorkspaceDiffHeader = (props: WorkspaceDiffHeaderProps) => {
 };
 
 export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
-  const { ticketId, workspaceId, diffs, artifacts, changedFiles, activeTab, onTabChange, loading = false } = props;
+  const { ticketId, diffs, artifacts, changedFiles, activeTab, onTabChange, loading = false } = props;
   const { t } = useTranslation("tickets");
   const [isTreePanelOpen, setTreePanelOpen] = useState(true);
   const [viewMode, setViewMode] = useState<ChangedFilesViewMode>("nested");
   const [searchQuery, setSearchQuery] = useState("");
-  const [loadedDiffState, setLoadedDiffState] = useState<LoadedDiffState>(() => ({
-    diffs: new Map(),
-  }));
-  const loadedDiffs = loadedDiffState.diffs;
-  const displayDiffs = resolveDisplayDiffs({ workspaceId, diffs, loadedDiffs });
-  const diffPaths = displayDiffs.map(getDiffPath);
+  const diffPaths = diffs.map(getDiffPath);
   const changedFilePaths = collectChangedFilePaths(changedFiles);
   const [selectedDiffPath, setSelectedDiffPath] = useState<string | null>(() =>
     resolveSelectedPath(diffPaths, changedFilePaths),
@@ -138,7 +84,7 @@ export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
   const filteredChangedFilePaths = !normalizedSearchQuery
     ? changedFilePaths
     : changedFilePaths.filter((path) => path.toLowerCase().includes(normalizedSearchQuery));
-  const filteredDiffs = buildFilteredDiffs({ diffs: displayDiffs, normalizedSearchQuery, viewMode });
+  const filteredDiffs = buildFilteredDiffs({ diffs, normalizedSearchQuery, viewMode });
   const filteredDiffPaths = filteredDiffs.map(getDiffPath);
   const hasDiffs = filteredDiffs.length > 0;
   const hasChangedFiles = changedFiles.length > 0;
@@ -153,22 +99,6 @@ export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
   const handleSelectDiffPath = (path: string) => {
     setSelectedDiffPath(path);
   };
-  const handleLoadDiff = async (path: string) => {
-    if (!workspaceId) return;
-
-    const requestWorkspaceId = workspaceId;
-    const file = await getWorkspaceDiffFile(workspaceId, path, ATTEMPT_DIFF_MODE);
-    if (requestWorkspaceId !== workspaceId) return;
-
-    const [diff] = transformFileDiffs([file]);
-    setLoadedDiffState((current) => {
-      const currentDiffs = retainLoadedDiffsForSummaries({ workspaceId, diffs, loadedDiffs: current.diffs });
-      return {
-        diffs: new Map(currentDiffs).set(buildLoadedDiffKey(workspaceId, path), diff),
-      };
-    });
-  };
-
   const fileListPanel = (
     <FileListPanel
       title="Changed files"
@@ -193,7 +123,7 @@ export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
         <WorkspaceDiffPanelLoading />
       ) : hasDiffs ? (
         <Box flex="1" minH="0">
-          <DiffDrawer diffs={filteredDiffs} selectedDiffPath={resolvedSelectedDiffPath} onLoadDiff={handleLoadDiff} />
+          <DiffDrawer diffs={filteredDiffs} selectedDiffPath={resolvedSelectedDiffPath} />
         </Box>
       ) : (
         <Box flex="1" minH="0" px="md" py="lg" display="flex" alignItems="center" justifyContent="center">

@@ -19,12 +19,5 @@ export type ApiTicketAttemptDiff = {
 
 export const getWorkspaceDiffFiles = async (workspaceId: string, mode?: DiffMode) => {
   const params = mode ? `?mode=${mode}` : "";
-  return apiRequest<ApiTicketAttemptDiff>(`/v1/workspaces/${workspaceId}/diff-files${params}`);
-};
-
-export const getWorkspaceDiffFile = async (workspaceId: string, filePath: string, mode?: DiffMode) => {
-  const params = new URLSearchParams({ path: filePath });
-  if (mode) params.set("mode", mode);
-
-  return apiRequest<ApiFileDiff>(`/v1/workspaces/${workspaceId}/diff-file?${params.toString()}`);
+  return apiRequest<ApiTicketAttemptDiff>(`/v1/workspaces/${workspaceId}/diff${params}`);
 };
