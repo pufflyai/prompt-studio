@@ -21,11 +21,12 @@ const ConsumerWorkbenchStory = (props: { initialWidgetId?: string; initialComman
   const { initialCommandPaletteOpen, initialWidgetId } = props;
   const [example] = useState(() => {
     const nextExample = createConsumerShellExample({ initialWidgetId });
+    nextExample.shell.sessionPanel.setMode("attached");
     if (initialCommandPaletteOpen) nextExample.shell.commandPalette.open();
     return nextExample;
   });
 
-  return <ShellWorkbench shell={example.shell} initialSessionPanelMode="attached" />;
+  return <ShellWorkbench shell={example.shell} />;
 };
 
 const MinimalWorkbenchStory = () => {

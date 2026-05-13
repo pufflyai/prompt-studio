@@ -183,7 +183,7 @@ const registerAreaMapRenderers = (shell: ShellCore) => {
 };
 
 const createAreaMapShellExample = () => {
-  const shell = createShellCore();
+  const shell = createShellCore({ initialSessionPanelMode: "attached" });
   shell.resources.registerKind({ kind: areaResourceKind, label: "Shell area", icon: "SquareDashed" });
 
   for (const area of shellAreas) {
@@ -225,5 +225,5 @@ const createAreaMapShellExample = () => {
 export const AreaMapShellExample = () => {
   const [example] = useState(createAreaMapShellExample);
 
-  return <ShellWorkbench shell={example.shell} initialSessionPanelMode="attached" />;
+  return <ShellWorkbench shell={example.shell} />;
 };

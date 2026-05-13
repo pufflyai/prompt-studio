@@ -17,7 +17,6 @@ interface ShellCommandPaletteProps {
   menuPath?: MenuPath;
   initialQuery?: string;
   onClose: () => void;
-  onCommandError?: (error: unknown) => void;
   refresh?: () => void;
 }
 
@@ -40,10 +39,9 @@ const createEntry = (input: {
   action?: RegisteredMenuAction;
   shortcutByCommandId: Map<string, string>;
   onClose: () => void;
-  onCommandError?: (error: unknown) => void;
   refresh: () => void;
 }): ShellCommandPaletteEntry | null => {
-  const { action, onClose, onCommandError, record, refresh, shell, shortcutByCommandId } = input;
+  const { action, onClose, record, refresh, shell, shortcutByCommandId } = input;
   const args = action?.args;
 
   if (!shell.commands.isCommandVisible(record.command.id, args)) return null;
@@ -63,7 +61,10 @@ const createEntry = (input: {
     shortcut: getShortcut(shortcutByCommandId.get(record.command.id)),
     onActivate: () => {
       onClose();
-      void shell.commands.executeCommand(record.command.id, args).then(refresh).catch(onCommandError);
+      void shell.commands
+        .executeCommand(record.command.id, args)
+        .finally(refresh)
+        .catch(() => undefined);
     },
   };
 };
@@ -90,14 +91,11 @@ export const ShellCommandPalette = (props: ShellCommandPaletteProps) => {
     menuPath = workbenchCommandPaletteMenuPath,
     initialQuery = "",
     onClose,
-    onCommandError,
     refresh = () => undefined,
   } = props;
   const shortcutByCommandId = createShortcutByCommandId(shell);
   const entries = listCommandRecords(shell, menuPath)
-    .map(({ record, action }) =>
-      createEntry({ shell, record, action, shortcutByCommandId, onClose, onCommandError, refresh }),
-    )
+    .map(({ record, action }) => createEntry({ shell, record, action, shortcutByCommandId, onClose, refresh }))
     .filter((entry): entry is ShellCommandPaletteEntry => entry !== null);
 
   return (

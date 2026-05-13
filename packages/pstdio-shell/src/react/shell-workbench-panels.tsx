@@ -13,12 +13,11 @@ interface ShellWorkbenchHeaderProps {
   hasTop: boolean;
   showLeftPanelOpener: boolean;
   onOpenLeftPanel: () => void;
-  onCommandError?: (error: unknown) => void;
   refresh: () => void;
 }
 
 export const ShellWorkbenchHeader = (props: ShellWorkbenchHeaderProps) => {
-  const { shell, breadcrumbItems, hasTop, showLeftPanelOpener, onOpenLeftPanel, onCommandError, refresh } = props;
+  const { shell, breadcrumbItems, hasTop, showLeftPanelOpener, onOpenLeftPanel, refresh } = props;
 
   return (
     <Header
@@ -43,12 +42,7 @@ export const ShellWorkbenchHeader = (props: ShellWorkbenchHeaderProps) => {
           </IconButton>
         </Tooltip>
       ) : null}
-      <ShellHeaderActions
-        shell={shell}
-        menuPath={workbenchTopHeaderLeadingMenuPath}
-        refresh={refresh}
-        onCommandError={onCommandError}
-      />
+      <ShellHeaderActions shell={shell} menuPath={workbenchTopHeaderLeadingMenuPath} refresh={refresh} />
       <Box flex="1" h="full" minW="0" overflow="hidden">
         {hasTop ? (
           <ShellArea shell={shell} area="top" title="Top" showHeader={false} refresh={refresh} />
@@ -56,12 +50,7 @@ export const ShellWorkbenchHeader = (props: ShellWorkbenchHeaderProps) => {
           <Breadcrumb items={breadcrumbItems} separator="/" separatorGap="xs" display="flex" h="full" />
         )}
       </Box>
-      <ShellHeaderActions
-        shell={shell}
-        menuPath={workbenchTopHeaderTrailingMenuPath}
-        refresh={refresh}
-        onCommandError={onCommandError}
-      />
+      <ShellHeaderActions shell={shell} menuPath={workbenchTopHeaderTrailingMenuPath} refresh={refresh} />
     </Header>
   );
 };

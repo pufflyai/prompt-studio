@@ -2,9 +2,10 @@ import { Box, Flex, IconButton, Text } from "@chakra-ui/react";
 import { AttachedPanel, BubbleButton, BubblePanel, Header, Tooltip } from "@pstdio/ui";
 import { MessageCircle, Minimize2 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useShellSessionPanelStore } from "./shell-session-panel-store";
+import type { ShellCore } from "../core";
 
 interface ShellSessionPanelProps {
+  shell: ShellCore;
   contentSlotRef: (node: HTMLDivElement | null) => void;
   header?: ReactNode;
 }
@@ -28,8 +29,7 @@ const ShellSessionHeader = (props: ShellSessionHeaderProps) => {
 };
 
 export const ShellSessionAttachedPanel = (props: ShellSessionPanelProps) => {
-  const { contentSlotRef, header } = props;
-  const setMode = useShellSessionPanelStore((state) => state.setMode);
+  const { shell, contentSlotRef, header } = props;
 
   return (
     <AttachedPanel
@@ -40,7 +40,12 @@ export const ShellSessionAttachedPanel = (props: ShellSessionPanelProps) => {
         <Header variant="main" flexShrink={0} gap="sm">
           <ShellSessionHeader header={header} />
           <Tooltip content="Detach panel">
-            <IconButton size="xs" variant="ghost" aria-label="Detach panel" onClick={() => setMode("bubble")}>
+            <IconButton
+              size="xs"
+              variant="ghost"
+              aria-label="Detach panel"
+              onClick={() => shell.sessionPanel.setMode("bubble")}
+            >
               <Minimize2 size={16} />
             </IconButton>
           </Tooltip>
@@ -53,17 +58,18 @@ export const ShellSessionAttachedPanel = (props: ShellSessionPanelProps) => {
 };
 
 export const ShellSessionBubbleContainer = (props: ShellSessionPanelProps) => {
-  const { contentSlotRef, header } = props;
-  const mode = useShellSessionPanelStore((state) => state.mode);
-  const setMode = useShellSessionPanelStore((state) => state.setMode);
+  const { shell, contentSlotRef, header } = props;
+  const mode = shell.sessionPanel.getMode();
 
-  if (mode === "attached") {
-    return null;
-  }
+  if (mode === "attached") return null;
 
   if (mode === "closed") {
     return (
-      <BubbleButton aria-label="Open session panel" tooltip="Open session panel" onClick={() => setMode("bubble")}>
+      <BubbleButton
+        aria-label="Open session panel"
+        tooltip="Open session panel"
+        onClick={() => shell.sessionPanel.setMode("bubble")}
+      >
         <MessageCircle size={20} strokeWidth={2} />
       </BubbleButton>
     );
@@ -76,8 +82,8 @@ export const ShellSessionBubbleContainer = (props: ShellSessionPanelProps) => {
       testId="shell-session-bubble"
       closeLabel="Minimize panel"
       popOutLabel="Attach panel"
-      onClose={() => setMode("closed")}
-      onPopOut={() => setMode("attached")}
+      onClose={() => shell.sessionPanel.setMode("closed")}
+      onPopOut={() => shell.sessionPanel.setMode("attached")}
       menu={<ShellSessionHeader header={header} />}
     >
       <Flex ref={contentSlotRef} flex="1" minH={0} direction="column" />

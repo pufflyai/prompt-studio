@@ -4,7 +4,15 @@ import {
   normalizeContributionMetadata,
   type RegisteredContributionMetadata,
 } from "../contributions/metadata";
-import { createDisposable } from "../disposable";
+import { createDisposable, type Disposable } from "../disposable";
+
+export interface ShellCommandExecutionError {
+  commandId: string;
+  args: unknown;
+  error: unknown;
+}
+
+export type ShellCommandExecutionErrorListener = (event: ShellCommandExecutionError) => void;
 
 export interface Command {
   id: string;
@@ -28,11 +36,16 @@ export interface RegisteredCommand extends RegisteredContributionMetadata {
 
 export const createCommandRegistry = () => {
   const records = new Map<string, RegisteredCommand>();
+  const errorListeners = new Set<ShellCommandExecutionErrorListener>();
 
   const findCommand = (id: string) => {
     const record = records.get(id);
     if (!record) throw new Error(`Command not registered: ${id}`);
     return record;
+  };
+
+  const emitError = (event: ShellCommandExecutionError) => {
+    for (const listener of errorListeners) listener(event);
   };
 
   return {
@@ -81,8 +94,24 @@ export const createCommandRegistry = () => {
 
     async executeCommand(id: string, args?: unknown) {
       const record = findCommand(id);
-      if (record.handler.isEnabled?.(args) === false) throw new Error(`Command is disabled: ${id}`);
-      return await record.handler.execute(args);
+      if (record.handler.isEnabled?.(args) === false) {
+        const error = new Error(`Command is disabled: ${id}`);
+        emitError({ commandId: id, args, error });
+        throw error;
+      }
+      try {
+        return await record.handler.execute(args);
+      } catch (error) {
+        emitError({ commandId: id, args, error });
+        throw error;
+      }
+    },
+
+    onDidExecuteError(listener: ShellCommandExecutionErrorListener): Disposable {
+      errorListeners.add(listener);
+      return createDisposable(() => {
+        errorListeners.delete(listener);
+      });
     },
   };
 };

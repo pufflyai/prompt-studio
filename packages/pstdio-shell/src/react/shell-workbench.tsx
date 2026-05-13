@@ -5,11 +5,6 @@ import type { ShellArea, ShellCore, TreeViewRole } from "../core";
 import { ShellCommandPalette } from "./shell-command-palette";
 import { ShellNotificationHost } from "./shell-notification-host";
 import { ShellSessionBubbleContainer } from "./shell-session-panel";
-import {
-  type ShellSessionPanelMode,
-  ShellSessionPanelProvider,
-  useShellSessionPanelStore,
-} from "./shell-session-panel-store";
 import { ShellWorkbenchBody } from "./shell-workbench-body";
 import { buildWorkbenchBreadcrumbItems } from "./shell-workbench-breadcrumbs";
 import {
@@ -27,8 +22,6 @@ import {
 
 interface ShellWorkbenchProps {
   shell: ShellCore;
-  initialSessionPanelMode?: ShellSessionPanelMode;
-  onCommandError?: (error: unknown) => void;
 }
 
 type TreeViewAreaId = "left" | "main-left";
@@ -89,7 +82,7 @@ const deriveLayoutFlags = (shell: ShellCore) => {
 };
 
 const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
-  const { shell, onCommandError } = props;
+  const { shell } = props;
   const [version, setVersion] = useState(0);
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [mainRightPanelOpen, setMainRightPanelOpen] = useState(true);
@@ -126,8 +119,7 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
   const leftPanelCollapsible = resolvePanelCollapsible(shell, "left-header", "left");
   const mainRightPanelCollapsible = resolvePanelCollapsible(shell, "main-right-header", "main-right");
   const mainBottomPanelCollapsible = resolvePanelCollapsible(shell, "main-bottom-header", "main-bottom");
-  const sessionPanelMode = useShellSessionPanelStore((state) => state.mode);
-  const setSessionPanelMode = useShellSessionPanelStore((state) => state.setMode);
+  const sessionPanelMode = shell.sessionPanel.getMode();
   const showAttachedSessionPanel = hasFloatingPanel && sessionPanelMode === "attached";
   const showBubbleSessionPanel = hasFloatingPanel && sessionPanelMode === "bubble";
   const paletteOpen = shell.commandPalette.isOpen();
@@ -161,11 +153,13 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
     const modes = shell.modes.onDidChangeActive(() => setVersion((current) => current + 1));
     const breadcrumbs = shell.breadcrumbs.onDidChange(() => setVersion((current) => current + 1));
     const commandPalette = shell.commandPalette.onDidChange(() => setVersion((current) => current + 1));
+    const sessionPanel = shell.sessionPanel.onDidChange(() => setVersion((current) => current + 1));
     return () => {
       renderers.dispose();
       modes.dispose();
       breadcrumbs.dispose();
       commandPalette.dispose();
+      sessionPanel.dispose();
     };
   }, [shell]);
 
@@ -205,7 +199,6 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
         hasTop={hasTopWidgets}
         showLeftPanelOpener={Boolean(showLeftPane && !leftPanelOpen && leftPanelCollapsible)}
         onOpenLeftPanel={() => setLeftPanelOpen(true)}
-        onCommandError={onCommandError}
         refresh={refresh}
       />
       <Flex flex="1" minH="0" minW="0" overflow="hidden">
@@ -267,7 +260,7 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
       {hasStatusWidgets ? <ShellStatusBar shell={shell} refresh={refresh} /> : null}
       {hasOverlayWidgets ? <ShellOverlayLayer shell={shell} refresh={refresh} /> : null}
       {hasFloatingPanel ? (
-        <ShellSessionBubbleContainer contentSlotRef={setSessionBubbleSlot} header={floatingHeader} />
+        <ShellSessionBubbleContainer shell={shell} contentSlotRef={setSessionBubbleSlot} header={floatingHeader} />
       ) : null}
       <ShellFloatingSessionPortal
         shell={shell}
@@ -280,10 +273,9 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
         shell={shell}
         open={paletteOpen}
         onClose={() => shell.commandPalette.close()}
-        onCommandError={onCommandError}
         refresh={refresh}
       />
-      <ShellNotificationHost shell={shell} onCommandError={onCommandError} refresh={refresh} />
+      <ShellNotificationHost shell={shell} refresh={refresh} />
     </Flex>
   );
 
@@ -297,21 +289,14 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
 
   return (
     <ShellAttachedSessionLayout
+      shell={shell}
       contentPanel={workbenchFrame}
       contentMinSizePx={CONTENT_MIN_SIZE_PX}
       header={floatingHeader}
       onAttachedSlotChange={setSessionAttachedSlot}
-      onCollapseToBubble={() => setSessionPanelMode("bubble")}
+      onCollapseToBubble={() => shell.sessionPanel.setMode("bubble")}
     />
   );
 };
 
-export const ShellWorkbench = (props: ShellWorkbenchProps) => {
-  const { initialSessionPanelMode, ...contentProps } = props;
-
-  return (
-    <ShellSessionPanelProvider initialMode={initialSessionPanelMode}>
-      <ShellWorkbenchContent {...contentProps} />
-    </ShellSessionPanelProvider>
-  );
-};
+export const ShellWorkbench = (props: ShellWorkbenchProps) => <ShellWorkbenchContent {...props} />;

@@ -13,12 +13,6 @@ export type { ShellMenuActionItem } from "./shell-menu-action-items";
 export { listShellMenuActionItems } from "./shell-menu-action-items";
 export { ShellNotificationHost } from "./shell-notification-host";
 export { ShellSessionAttachedPanel, ShellSessionBubbleContainer } from "./shell-session-panel";
-export type { ShellSessionPanelMode, ShellSessionPanelStore } from "./shell-session-panel-store";
-export {
-  createShellSessionPanelStore,
-  ShellSessionPanelProvider,
-  useShellSessionPanelStore,
-} from "./shell-session-panel-store";
 export { ShellTreeView } from "./shell-tree-view";
 export { ShellWidgetHost } from "./shell-widget-host";
 export { ShellWorkbench } from "./shell-workbench";

@@ -285,6 +285,7 @@ const createWorkbenchModesExample = () => {
   registerLeftHeader(example.shell);
   registerPanelModeResourceOpener(example.shell);
   example.shell.modes.setActiveMode("project");
+  example.shell.sessionPanel.setMode("attached");
 
   return example;
 };
@@ -331,5 +332,5 @@ const LeftPanelHeader = (props: { shell: ShellCore }) => {
 export const WorkbenchModesShellExample = () => {
   const [example] = useState(createWorkbenchModesExample);
 
-  return <ShellWorkbench shell={example.shell} initialSessionPanelMode="attached" />;
+  return <ShellWorkbench shell={example.shell} />;
 };

@@ -24,6 +24,11 @@ import {
 } from "./preferences/preference-registry";
 import { createShellRendererRegistry, type ShellRendererRegistry } from "./renderers/renderer-registry";
 import { createResourceRegistry, type ResourceRegistry } from "./resources/resource-registry";
+import {
+  createShellSessionPanelController,
+  type ShellSessionPanelController,
+  type ShellSessionPanelMode,
+} from "./session-panel/session-panel-controller";
 import { createTreeViewRegistry, type TreeViewRegistry } from "./trees/tree-view-registry";
 import { createWebviewRegistry, type WebviewRegistry } from "./webviews/webview-registry";
 
@@ -44,6 +49,7 @@ export interface ShellCoreContributionContext {
   preferences: PreferenceRegistry;
   renderers: ShellRendererRegistry;
   resources: ResourceRegistry;
+  sessionPanel: ShellSessionPanelController;
   trees: TreeViewRegistry;
   webviews: WebviewRegistry;
 }
@@ -54,6 +60,7 @@ export type ProductModuleContributionContext = ShellCoreContributionContext;
 export interface CreateShellCoreInput {
   layoutPersistence?: LayoutPersistenceAdapter;
   preferencePersistence?: PreferencePersistenceAdapter;
+  initialSessionPanelMode?: ShellSessionPanelMode;
 }
 
 type ProductModuleActivationResult = Disposable | readonly Disposable[] | undefined;
@@ -90,6 +97,7 @@ export const createShellCore = (input: CreateShellCoreInput = {}) => {
     preferences: createPreferenceRegistry({ persistence: input.preferencePersistence }),
     renderers: createShellRendererRegistry(),
     resources: createResourceRegistry(),
+    sessionPanel: createShellSessionPanelController({ initialMode: input.initialSessionPanelMode }),
     trees: createTreeViewRegistry(),
     webviews: createWebviewRegistry(),
   };
@@ -169,6 +177,9 @@ const createProductModuleContext = (core: ShellCore, ownerId: string) =>
     resources: {
       ...core.resources,
       registerKind: (kind, metadata) => core.resources.registerKind(kind, withProductModuleMetadata(ownerId, metadata)),
+    },
+    sessionPanel: {
+      ...core.sessionPanel,
     },
     trees: {
       ...core.trees,

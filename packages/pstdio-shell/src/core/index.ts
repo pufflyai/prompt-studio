@@ -20,7 +20,14 @@ export type {
   ShellCommandPaletteController,
 } from "./command-palette/command-palette-controller";
 export { createShellCommandPaletteController } from "./command-palette/command-palette-controller";
-export type { Command, CommandHandler, CommandRegistry, RegisteredCommand } from "./commands/command-registry";
+export type {
+  Command,
+  CommandHandler,
+  CommandRegistry,
+  RegisteredCommand,
+  ShellCommandExecutionError,
+  ShellCommandExecutionErrorListener,
+} from "./commands/command-registry";
 export { createCommandRegistry } from "./commands/command-registry";
 export type { ContextKeyService, ContextKeyValue } from "./context/context-key-service";
 export { createContextKeyService } from "./context/context-key-service";
@@ -124,6 +131,13 @@ export type {
   ResourceRegistry,
 } from "./resources/resource-registry";
 export { createResourceRegistry } from "./resources/resource-registry";
+export type {
+  CreateShellSessionPanelControllerInput,
+  ShellSessionPanelChangeListener,
+  ShellSessionPanelController,
+  ShellSessionPanelMode,
+} from "./session-panel/session-panel-controller";
+export { createShellSessionPanelController } from "./session-panel/session-panel-controller";
 export type {
   CreateShellCoreInput,
   ProductModuleContribution,

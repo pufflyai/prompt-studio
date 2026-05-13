@@ -8,33 +8,21 @@ interface ShellHeaderActionsProps {
   shell: ShellCore;
   menuPath: MenuPath;
   refresh: () => void;
-  onCommandError?: (error: unknown) => void;
 }
 
 const isOverflowAction = (item: ShellMenuActionItem) => item.group === "overflow";
 
-const executeAction = (input: {
-  shell: ShellCore;
-  item: ShellMenuActionItem;
-  refresh: () => void;
-  onCommandError?: (error: unknown) => void;
-}) => {
-  const { item, onCommandError, refresh, shell } = input;
-
+const executeAction = (input: { shell: ShellCore; item: ShellMenuActionItem; refresh: () => void }) => {
+  const { item, refresh, shell } = input;
   void shell.commands
     .executeCommand(item.commandId, item.args)
-    .then(refresh)
-    .catch((error) => onCommandError?.(error));
+    .finally(refresh)
+    .catch(() => undefined);
 };
 
-const ShellInlineHeaderAction = (props: {
-  item: ShellMenuActionItem;
-  shell: ShellCore;
-  refresh: () => void;
-  onCommandError?: (error: unknown) => void;
-}) => {
-  const { item, onCommandError, refresh, shell } = props;
-  const onClick = () => executeAction({ shell, item, refresh, onCommandError });
+const ShellInlineHeaderAction = (props: { item: ShellMenuActionItem; shell: ShellCore; refresh: () => void }) => {
+  const { item, refresh, shell } = props;
+  const onClick = () => executeAction({ shell, item, refresh });
 
   if (item.group === "primary" || !item.icon) {
     return (
@@ -55,7 +43,7 @@ const ShellInlineHeaderAction = (props: {
 };
 
 export const ShellHeaderActions = (props: ShellHeaderActionsProps) => {
-  const { menuPath, onCommandError, refresh, shell } = props;
+  const { menuPath, refresh, shell } = props;
   const items = listShellMenuActionItems(shell, menuPath);
   const inlineItems = items.filter((item) => !isOverflowAction(item));
   const overflowItems = items.filter(isOverflowAction);
@@ -65,13 +53,7 @@ export const ShellHeaderActions = (props: ShellHeaderActionsProps) => {
   return (
     <HStack flexShrink={0} gap="2xs" minW="0">
       {inlineItems.map((item) => (
-        <ShellInlineHeaderAction
-          key={item.id}
-          item={item}
-          shell={shell}
-          refresh={refresh}
-          onCommandError={onCommandError}
-        />
+        <ShellInlineHeaderAction key={item.id} item={item} shell={shell} refresh={refresh} />
       ))}
       {overflowItems.length > 0 ? (
         <Menu.Root>
@@ -92,7 +74,7 @@ export const ShellHeaderActions = (props: ShellHeaderActionsProps) => {
                       label={item.label}
                       icon={item.icon ? <ShellIcon name={item.icon} size={16} /> : undefined}
                       disabled={item.disabled}
-                      onActivate={() => executeAction({ shell, item, refresh, onCommandError })}
+                      onActivate={() => executeAction({ shell, item, refresh })}
                     />
                   </Menu.Item>
                 ))}

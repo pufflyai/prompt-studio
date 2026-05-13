@@ -5,31 +5,25 @@ import type { RegisteredShellNotification, ShellCore, ShellNotificationAction } 
 
 interface ShellNotificationHostProps {
   shell: ShellCore;
-  onCommandError?: (error: unknown) => void;
   refresh?: () => void;
 }
 
 const executeNotificationAction = (input: {
   action: ShellNotificationAction;
   shell: ShellCore;
-  onCommandError?: (error: unknown) => void;
   refresh: () => void;
 }) => {
-  const { action, onCommandError, refresh, shell } = input;
-
+  const { action, refresh, shell } = input;
   void shell.commands
     .executeCommand(action.commandId, action.args)
-    .then(refresh)
-    .catch((error) => onCommandError?.(error));
+    .finally(refresh)
+    .catch(() => undefined);
 };
 
 export const ShellNotificationHost = (props: ShellNotificationHostProps) => {
-  const { shell, onCommandError, refresh = () => undefined } = props;
+  const { shell, refresh = () => undefined } = props;
   const shownNotificationIds = useRef(new Set<string>());
-  const onCommandErrorRef = useRef(onCommandError);
   const refreshRef = useRef(refresh);
-
-  onCommandErrorRef.current = onCommandError;
   refreshRef.current = refresh;
 
   useEffect(() => {
@@ -42,7 +36,6 @@ export const ShellNotificationHost = (props: ShellNotificationHostProps) => {
               executeNotificationAction({
                 action,
                 shell,
-                onCommandError: onCommandErrorRef.current,
                 refresh: refreshRef.current,
               }),
           }

@@ -58,6 +58,7 @@ export const ShellFloatingSessionHeader = (props: ShellFloatingSessionHeaderProp
 };
 
 interface ShellAttachedSessionLayoutProps {
+  shell: ShellCore;
   contentPanel: ReactNode;
   contentMinSizePx: number;
   header: ReactNode;
@@ -66,7 +67,7 @@ interface ShellAttachedSessionLayoutProps {
 }
 
 export const ShellAttachedSessionLayout = (props: ShellAttachedSessionLayoutProps) => {
-  const { contentPanel, contentMinSizePx, header, onAttachedSlotChange, onCollapseToBubble } = props;
+  const { shell, contentPanel, contentMinSizePx, header, onAttachedSlotChange, onCollapseToBubble } = props;
 
   return (
     <ResizableSplitLayout
@@ -76,7 +77,7 @@ export const ShellAttachedSessionLayout = (props: ShellAttachedSessionLayoutProp
       w="full"
       resizableSide="right"
       contentPanel={contentPanel}
-      resizablePanel={<ShellSessionAttachedPanel contentSlotRef={onAttachedSlotChange} header={header} />}
+      resizablePanel={<ShellSessionAttachedPanel shell={shell} contentSlotRef={onAttachedSlotChange} header={header} />}
       collapsed={false}
       defaultSizePx={ATTACHED_PANEL_DEFAULT_SIZE_PX}
       minSizePx={ATTACHED_PANEL_MIN_SIZE_PX}
