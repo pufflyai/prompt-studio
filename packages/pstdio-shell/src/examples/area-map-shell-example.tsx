@@ -40,7 +40,18 @@ const createAreaResource = (area: ShellArea, input: AreaResourceInput = {}) => (
 });
 
 const areaWidgetId = (area: ShellArea) => `area-map.${area}`;
-const bottomOutputWidgetId = "area-map.bottom.output";
+
+interface BottomExtraWidget {
+  id: string;
+  label: string;
+}
+
+const bottomExtraWidgets: BottomExtraWidget[] = [
+  { id: "main-bottom-output", label: "Output" },
+  { id: "main-bottom-problems", label: "Problems" },
+  { id: "main-bottom-terminal", label: "Terminal" },
+  { id: "main-bottom-tests", label: "Tests" },
+];
 
 const isShellArea = (value: unknown): value is ShellArea =>
   typeof value === "string" && (shellAreas as readonly string[]).includes(value);
@@ -106,9 +117,17 @@ const AreaPlaceholder = (props: { area: ShellArea; uri: string; name: string }) 
     );
   }
 
-  if (area === "top" || area === "main-header") {
+  const isHeaderArea =
+    area === "top" ||
+    area === "main-header" ||
+    area === "left-header" ||
+    area === "main-left-header" ||
+    area === "main-right-header" ||
+    area === "main-bottom-header";
+
+  if (isHeaderArea) {
     return (
-      <HStack h="full" minW="0" overflow="hidden" gap="xs">
+      <HStack h="full" minW="0" overflow="hidden" gap="xs" px="xs">
         <Text textStyle="label/S/medium" color="fg" flexShrink={0}>
           {name}
         </Text>
@@ -178,21 +197,23 @@ const createAreaMapShellExample = () => {
     shell.layout.openWidget(areaWidgetId(area), { resource: createAreaResource(area) });
   }
 
-  shell.layout.registerWidget({
-    id: bottomOutputWidgetId,
-    title: "Main bottom output",
-    area: "main-bottom",
-    singleton: true,
-    renderer: "react",
-    rendererId: areaMapRendererId,
-  });
-  shell.layout.openWidget(bottomOutputWidgetId, {
-    resource: createAreaResource("main-bottom", {
-      id: "main-bottom-output",
-      uri: "pstdio://area-map/main-bottom/output",
-      label: "Main bottom output",
-    }),
-  });
+  for (const widget of bottomExtraWidgets) {
+    shell.layout.registerWidget({
+      id: `area-map.${widget.id}`,
+      title: widget.label,
+      area: "main-bottom",
+      singleton: true,
+      renderer: "react",
+      rendererId: areaMapRendererId,
+    });
+    shell.layout.openWidget(`area-map.${widget.id}`, {
+      resource: createAreaResource("main-bottom", {
+        id: widget.id,
+        uri: `pstdio://area-map/main-bottom/${widget.id}`,
+        label: widget.label,
+      }),
+    });
+  }
 
   registerAreaMapRenderers(shell);
 

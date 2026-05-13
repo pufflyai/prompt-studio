@@ -65,6 +65,16 @@ const applyPanelWidthToElement = (panel: HTMLDivElement | null, width: number) =
   panel.style.display = width > 0 ? "flex" : "none";
 };
 
+const clearPanelInlineStyles = (panel: HTMLDivElement | null) => {
+  if (!panel) return;
+
+  panel.style.width = "";
+  panel.style.flexBasis = "";
+  panel.style.flexGrow = "";
+  panel.style.flexShrink = "";
+  panel.style.display = "";
+};
+
 export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
   const {
     resizablePanel,
@@ -130,6 +140,12 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
   };
 
   useEffect(() => {
+    // React may reuse the same DOM element across renders when this component swaps roles
+    // (e.g., a wrapping ResizableSplitLayout disappears, leaving the inner one in its place).
+    // Clear any inline styles on the content panel that leaked from a prior render where
+    // the same DOM element was the resizable panel; otherwise stale `flex: 0 0 Xpx` pins
+    // the content's width.
+    clearPanelInlineStyles(contentPanelRef.current);
     applyPanelWidthToElement(resizablePanelRef.current, resolvedPanelWidth);
   }, [resolvedPanelWidth]);
 

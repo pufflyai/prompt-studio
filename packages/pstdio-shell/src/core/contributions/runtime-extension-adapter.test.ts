@@ -52,6 +52,7 @@ describe("adaptRuntimeExtensionContributions", () => {
               resourceKinds: ["extension-lab.counter"],
               webview: {
                 entry: { kind: "package-asset", path: "./src/main.tsx", baseUrl: "file:///extension" },
+                capabilities: ["commands.execute", "resource.open"],
               },
             },
           },
@@ -115,6 +116,7 @@ describe("adaptRuntimeExtensionContributions", () => {
       renderer: "webview",
       webview: {
         entry: { path: "./src/main.tsx" },
+        capabilities: ["commands.execute", "resource.open"],
       },
     });
     expect(menus.listMenuActions(["resource", "context"])).toMatchObject([
@@ -146,6 +148,7 @@ describe("adaptRuntimeExtensionContributions", () => {
       id: "extension-lab.labPage",
       source: "extension",
       ownerId: "pstdio.extension-lab",
+      capabilities: ["commands.execute", "resource.open"],
     });
 
     context.set("resourceKind", "extension-lab.counter");

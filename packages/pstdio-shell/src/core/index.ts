@@ -5,6 +5,15 @@ export type {
   RegisteredActivityItem,
 } from "./activity/activity-registry";
 export { createActivityRegistry } from "./activity/activity-registry";
+export type {
+  ShellBreadcrumbChangeListener,
+  ShellBreadcrumbController,
+  ShellBreadcrumbItem,
+} from "./breadcrumbs/breadcrumb-registry";
+export {
+  buildActiveWidgetBreadcrumb,
+  createShellBreadcrumbController,
+} from "./breadcrumbs/breadcrumb-registry";
 export type { Command, CommandHandler, CommandRegistry, RegisteredCommand } from "./commands/command-registry";
 export { createCommandRegistry } from "./commands/command-registry";
 export type { ContextKeyService, ContextKeyValue } from "./context/context-key-service";

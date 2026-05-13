@@ -1,10 +1,11 @@
-import { Badge, Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
-import type { Disposable, ShellModeActivationContext } from "../core";
+import type { Disposable, ShellModeActivationContext, TreeNode } from "../core";
 import { ShellIcon, type ShellWidgetRenderInput } from "../react";
-import { itemResource, mailWidgetIds, randomShellModes, type ShellModeItem } from "./random-shell-example-data";
+import { itemResource, mailWidgetIds, randomResourceKind, randomShellModes } from "./random-shell-example-data";
 
 const mailMode = randomShellModes.mail;
+const mailTreeViewId = "mail.navigation";
 
 const findActiveThread = (input: ShellWidgetRenderInput) => {
   const placement = input.shell.layout.getLayout().areas.main.widgets[0];
@@ -17,27 +18,39 @@ const findActiveThread = (input: ShellWidgetRenderInput) => {
   );
 };
 
-const openThread = (input: ShellWidgetRenderInput, item: ShellModeItem) => {
-  input.shell.layout.openWidget(mailWidgetIds.reader, {
-    resource: itemResource(mailMode.id, item),
-    title: item.title,
-  });
-  input.refresh();
-};
+const buildMailTreeSections = () =>
+  mailMode.folders.map((folder) => ({
+    id: folder.id,
+    label: folder.label,
+    nodes: folder.itemIds.flatMap((itemId): TreeNode[] => {
+      const item = mailMode.items.find((candidate) => candidate.id === itemId);
+      if (!item) return [];
+      const resource = itemResource(mailMode.id, item);
+      return [
+        {
+          id: `${folder.id}.${resource.uri}`,
+          label: item.title,
+          icon: "Mail",
+          description: item.subtitle,
+          resource,
+        },
+      ];
+    }),
+  }));
 
 const MailTopBar = (props: { input: ShellWidgetRenderInput }) => {
   const thread = findActiveThread(props.input);
   return (
     <HStack h="full" px="sm" gap="sm">
       <ShellIcon name={mailMode.topIcon} size={18} />
-      <Stack gap="0" flex="1" minW="0">
-        <Text textStyle="label/S/medium" color="fg" truncate>
+      <HStack flex="1" minW="0" gap="xs">
+        <Text textStyle="label/S/medium" color="fg" flexShrink={0}>
           {mailMode.label}
         </Text>
         <Text textStyle="label/XS/regular" color="fg.muted" truncate>
           {mailMode.topSubtitle} · {thread.title}
         </Text>
-      </Stack>
+      </HStack>
       <Button size="xs" variant="ghost">
         <ShellIcon name="Search" size={14} />
         Search
@@ -47,65 +60,6 @@ const MailTopBar = (props: { input: ShellWidgetRenderInput }) => {
         Compose
       </Button>
     </HStack>
-  );
-};
-
-const MailThreads = (props: { input: ShellWidgetRenderInput }) => {
-  const { input } = props;
-  const activeThread = findActiveThread(input);
-
-  return (
-    <ScrollArea h="full" minH="0" contentProps={{ p: "xs" }}>
-      <Stack gap="sm" w="full">
-        {mailMode.folders.map((folder) => (
-          <Stack key={folder.id} gap="2xs">
-            <HStack gap="xs" px="xs" justifyContent="space-between">
-              <HStack gap="xs">
-                <ShellIcon name={folder.icon} size={14} color="fg.muted" />
-                <Text textStyle="label/XS/medium" color="fg.muted" truncate>
-                  {folder.label}
-                </Text>
-              </HStack>
-              <Badge size="xs" variant="subtle" colorPalette="gray">
-                {folder.itemIds.length}
-              </Badge>
-            </HStack>
-            <Stack gap="0">
-              {folder.itemIds.map((itemId) => {
-                const item = mailMode.items.find((candidate) => candidate.id === itemId);
-                if (!item) return null;
-                const selected = item.id === activeThread.id;
-                return (
-                  <Box
-                    key={`${folder.id}.${item.id}`}
-                    as="button"
-                    onClick={() => openThread(input, item)}
-                    textAlign="left"
-                    borderRadius="sm"
-                    bg={selected ? "bg.emphasized" : "transparent"}
-                    _hover={{ bg: selected ? "bg.emphasized" : "bg.muted" }}
-                    px="sm"
-                    py="xs"
-                    borderLeftWidth="2px"
-                    borderLeftColor={selected ? "blue.fg" : "transparent"}
-                    minW="0"
-                  >
-                    <Stack gap="0" minW="0">
-                      <Text textStyle="paragraph/S/medium" color="fg" truncate>
-                        {item.title}
-                      </Text>
-                      <Text textStyle="label/XS/regular" color="fg.muted" truncate>
-                        {item.subtitle}
-                      </Text>
-                    </Stack>
-                  </Box>
-                );
-              })}
-            </Stack>
-          </Stack>
-        ))}
-      </Stack>
-    </ScrollArea>
   );
 };
 
@@ -197,18 +151,12 @@ const MailStatus = () => (
 interface WidgetSetup {
   id: string;
   title: string;
-  area: "top" | "main-left" | "main" | "main-right" | "status";
+  area: "top" | "main" | "main-right" | "status";
   render: (input: ShellWidgetRenderInput) => React.ReactNode;
 }
 
 const mailWidgets: WidgetSetup[] = [
   { id: mailWidgetIds.top, title: "Mail header", area: "top", render: (input) => <MailTopBar input={input} /> },
-  {
-    id: mailWidgetIds.threads,
-    title: "Thread list",
-    area: "main-left",
-    render: (input) => <MailThreads input={input} />,
-  },
   { id: mailWidgetIds.reader, title: "Reading pane", area: "main", render: (input) => <MailReader input={input} /> },
   { id: mailWidgetIds.participants, title: "Participants", area: "main-right", render: () => <MailParticipants /> },
   { id: mailWidgetIds.status, title: "Inbox status", area: "status", render: () => <MailStatus /> },
@@ -230,6 +178,22 @@ export const setupMailMode = (ctx: ShellModeActivationContext): Disposable[] => 
       }),
     );
   }
+
+  disposables.push(
+    ctx.trees.registerTreeView({
+      id: mailTreeViewId,
+      title: mailMode.label,
+      area: "main-left",
+      getRoots: () => [],
+      getSections: () => buildMailTreeSections(),
+      getChildren: () => [],
+    }),
+    ctx.resources.registerOpener({
+      id: "mail.opener",
+      canOpen: (resource) => resource.kind === randomResourceKind && resource.metadata?.modeId === mailMode.id,
+      open: (resource) => ctx.layout.openWidget(mailWidgetIds.reader, { resource, title: resource.label }),
+    }),
+  );
 
   const defaultThread = mailMode.items.find((item) => item.id === mailMode.defaultItemId) ?? mailMode.items[0];
   ctx.layout.openWidget(mailWidgetIds.reader, {

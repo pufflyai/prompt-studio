@@ -67,4 +67,30 @@ describe("createDashboardProjectShell", () => {
 
     expect(shell.commands.getCommand(PROJECT_OPEN_SETTINGS_COMMAND_ID)).toBeUndefined();
   });
+
+  it("can host project settings navigation in the left area without the project tree", () => {
+    const projectResource = { kind: PROJECT_RESOURCE_KIND, uri: "pstdio://project/project-1", id: "project-1" };
+    const shell = createDashboardProjectShell({
+      projectId: "project-1",
+      projectName: "Prompt Studio",
+      navigate: () => {},
+      showProjectNavigationTree: false,
+    });
+
+    expect(shell.trees.getTreeView(PROJECT_NAVIGATION_TREE_ID)).toBeUndefined();
+    expect(shell.layout.getWidget(PROJECT_SETTINGS_SIDEBAR_WIDGET_ID)).toMatchObject({
+      area: "left",
+      renderer: "react",
+    });
+
+    shell.layout.openWidget(PROJECT_SETTINGS_SIDEBAR_WIDGET_ID, {
+      resource: projectResource,
+      closable: false,
+    });
+
+    expect(shell.layout.getLayout().areas.left.widgets[0]?.contributionId).toBe(PROJECT_SETTINGS_SIDEBAR_WIDGET_ID);
+    expect(shell.layout.getLayout().areas["main-left"].widgets).toEqual([]);
+
+    shell.dispose();
+  });
 });

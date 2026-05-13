@@ -42,6 +42,7 @@ interface DashboardProjectShellInput {
   projectId: string;
   projectName?: string;
   navigate: (path: string) => void;
+  showProjectNavigationTree?: boolean;
   storage?: DashboardShellStorage;
   layoutPersistence?: LayoutPersistenceAdapter;
   preferencePersistence?: PreferencePersistenceAdapter;
@@ -144,6 +145,7 @@ const createDashboardProjectModule = (input: DashboardProjectShellInput): Produc
   activate(ctx) {
     const projectResource = createDashboardProjectResource(input);
     const shortcutCommands = createDashboardShortcutCommands(input);
+    const showProjectNavigationTree = input.showProjectNavigationTree ?? true;
 
     return [
       ctx.resources.registerKind({ kind: PROJECT_RESOURCE_KIND, label: "Project", icon: "folder" }),
@@ -174,7 +176,7 @@ const createDashboardProjectModule = (input: DashboardProjectShellInput): Produc
       ctx.layout.registerWidget({
         id: PROJECT_SETTINGS_SIDEBAR_WIDGET_ID,
         title: "Project settings navigation",
-        area: "main-left",
+        area: showProjectNavigationTree ? "main-left" : "left",
         singleton: true,
         resourceKinds: [PROJECT_RESOURCE_KIND],
         renderer: "react",
@@ -237,16 +239,20 @@ const createDashboardProjectModule = (input: DashboardProjectShellInput): Produc
         commandId: PROJECT_OPEN_SETTINGS_COMMAND_ID,
         keybinding: PROJECT_OPEN_SETTINGS_KEYBINDING,
       }),
-      ctx.trees.registerTreeView({
-        id: PROJECT_NAVIGATION_TREE_ID,
-        title: "Project",
-        area: "left",
-        icon: "folder",
-        getRoots: () => [
-          { id: input.projectId, label: projectResource.label ?? input.projectId, resource: projectResource },
-        ],
-        getChildren: () => [],
-      }),
+      ...(showProjectNavigationTree
+        ? [
+            ctx.trees.registerTreeView({
+              id: PROJECT_NAVIGATION_TREE_ID,
+              title: "Project",
+              area: "left",
+              icon: "folder",
+              getRoots: () => [
+                { id: input.projectId, label: projectResource.label ?? input.projectId, resource: projectResource },
+              ],
+              getChildren: () => [],
+            }),
+          ]
+        : []),
     ];
   },
 });

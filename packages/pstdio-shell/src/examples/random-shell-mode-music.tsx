@@ -30,14 +30,14 @@ const MusicTopBar = (props: { input: ShellWidgetRenderInput }) => {
   return (
     <HStack h="full" px="sm" gap="sm">
       <ShellIcon name={musicMode.topIcon} size={18} />
-      <Stack gap="0" flex="1" minW="0">
-        <Text textStyle="label/S/medium" color="fg" truncate>
+      <HStack flex="1" minW="0" gap="xs">
+        <Text textStyle="label/S/medium" color="fg" flexShrink={0}>
           {item.title}
         </Text>
         <Text textStyle="label/XS/regular" color="fg.muted" truncate>
           {item.subtitle}
         </Text>
-      </Stack>
+      </HStack>
       <Badge colorPalette="purple" variant="subtle" size="sm">
         Now playing
       </Badge>

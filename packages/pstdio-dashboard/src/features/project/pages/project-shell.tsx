@@ -28,13 +28,6 @@ const createChatHost = () => {
   return host;
 };
 
-const isProjectSettingsRoutePath = (pathname: string, projectId?: string) => {
-  if (!projectId) return false;
-
-  const projectSettingsPath = `/projects/${projectId}/settings`;
-  return pathname === projectSettingsPath || pathname.startsWith(`${projectSettingsPath}/`);
-};
-
 const getCurrentBrowserPath = (pathname: string) => {
   if (typeof window === "undefined") return pathname;
 
@@ -78,8 +71,7 @@ const ProjectShellContent = () => {
   const setSelectedSessionId = useProjectSettingsStore((s) => s.setSelectedSessionId);
   const pendingWorkspaceSessionWorkspaceId = useProjectSettingsStore((s) => s.pendingWorkspaceSessionWorkspaceId);
   const isSessionsRoute = isSessionsRoutePath(pathname, projectId);
-  const isProjectSettingsRoute = isProjectSettingsRoutePath(pathname, projectId);
-  const suppressSessionChrome = isSessionsRoute || isProjectSettingsRoute;
+  const suppressSessionChrome = isSessionsRoute;
   const isWorkspaceRoute = typeof workspaceShorthand === "string" && workspaceShorthand.length > 0;
   const renderOutlet = shouldRenderProjectOutlet({
     projectId,

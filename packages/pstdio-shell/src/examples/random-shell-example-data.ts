@@ -6,7 +6,6 @@ export const railWidgetId = "random.rail";
 
 export const notesWidgetIds = {
   top: "notes.top",
-  tree: "notes.tree",
   editor: "notes.editor",
   related: "notes.related",
   status: "notes.status",
@@ -23,7 +22,6 @@ export const musicWidgetIds = {
 
 export const mailWidgetIds = {
   top: "mail.top",
-  threads: "mail.threads",
   reader: "mail.reader",
   participants: "mail.participants",
   status: "mail.status",

@@ -84,7 +84,7 @@ export const ShellLeftSidePanel = (props: ShellLeftSidePanelProps) => {
   return (
     <Flex as="aside" direction="column" h="full" minH="0" minW="0" overflow="hidden" w="full">
       {showHeaderBar ? (
-        <Header variant="main" flexShrink={0} gap="xs">
+        <Header variant="main" borderBottomWidth="1px" borderColor="border.muted" flexShrink={0} gap="xs">
           {hasHeader ? (
             <ShellArea shell={shell} area="left-header" title="Left header" showHeader={false} refresh={refresh} />
           ) : null}
@@ -145,7 +145,7 @@ export const ShellRightSidePanel = (props: ShellHeaderedAreaPanelProps) => {
   return (
     <Flex as="aside" direction="column" h="full" minH="0" minW="0" overflow="hidden" w="full">
       {showHeaderBar ? (
-        <Header variant="main" flexShrink={0} gap="xs">
+        <Header variant="main" borderBottomWidth="1px" borderColor="border.muted" flexShrink={0} gap="xs">
           {hasHeader ? (
             <ShellArea
               shell={shell}
@@ -165,15 +165,20 @@ export const ShellRightSidePanel = (props: ShellHeaderedAreaPanelProps) => {
   );
 };
 
-export const ShellMainLeftPanel = (props: ShellHeaderedAreaPanelProps) => {
-  const { shell, hasHeader, refresh } = props;
+interface ShellMainLeftPanelProps extends ShellHeaderedAreaPanelProps {
+  treeViewId?: string;
+  activeNodeId?: string;
+}
+
+export const ShellMainLeftPanel = (props: ShellMainLeftPanelProps) => {
+  const { shell, hasHeader, treeViewId, activeNodeId, refresh } = props;
   const hasContentTabs = shell.layout.getLayout().areas["main-left"].widgets.length > 1;
   const showHeaderBar = hasHeader || hasContentTabs;
 
   return (
     <Flex as="aside" direction="column" h="full" minH="0" minW="0" overflow="hidden" w="full">
       {showHeaderBar ? (
-        <Header variant="main" flexShrink={0} gap="xs">
+        <Header variant="main" borderBottomWidth="1px" borderColor="border.muted" flexShrink={0} gap="xs">
           {hasHeader ? (
             <ShellArea
               shell={shell}
@@ -187,7 +192,11 @@ export const ShellMainLeftPanel = (props: ShellHeaderedAreaPanelProps) => {
         </Header>
       ) : null}
       <Box flex="1" minH="0" minW="0" overflow="hidden">
-        <ShellArea shell={shell} area="main-left" title="Main left" showHeader={false} refresh={refresh} />
+        {treeViewId ? (
+          <ShellTreeView shell={shell} treeViewId={treeViewId} activeNodeId={activeNodeId} refresh={refresh} />
+        ) : (
+          <ShellArea shell={shell} area="main-left" title="Main left" showHeader={false} refresh={refresh} />
+        )}
       </Box>
     </Flex>
   );

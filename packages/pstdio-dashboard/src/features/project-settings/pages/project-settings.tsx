@@ -1,5 +1,5 @@
 import { Stack } from "@chakra-ui/react";
-import { type BreadcrumbItem, toaster } from "@pstdio/ui";
+import { toaster } from "@pstdio/ui";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { ShellWorkbench } from "pstdio-shell/react";
 import { useEffect, useState } from "react";
@@ -146,7 +146,6 @@ export const ProjectSettings = () => {
   const tags = project?.ticketTags ?? [];
   const repositories = project?.repositories ?? [];
   const resolvedProjectId = projectId ?? "";
-  const breadcrumbItems: BreadcrumbItem[] = [{ title: projectName }, { title: "Settings" }];
   const [projectShell, setProjectShell] = useState(() =>
     createProjectSettingsShell({
       projectId: resolvedProjectId,
@@ -225,6 +224,11 @@ export const ProjectSettings = () => {
   });
 
   useEffect(() => {
+    const subscription = projectShell.breadcrumbs.setItems([{ title: projectName }, { title: "Settings" }]);
+    return () => subscription.dispose();
+  }, [projectShell, projectName]);
+
+  useEffect(() => {
     setActiveSection(parseSettingsPanel(panel));
   }, [panel]);
 
@@ -272,5 +276,5 @@ export const ProjectSettings = () => {
     });
   }, [activeSection, navigate, panel, projectId]);
 
-  return <ShellWorkbench shell={projectShell} breadcrumbItems={breadcrumbItems} showCommandPaletteTreeNode={false} />;
+  return <ShellWorkbench shell={projectShell} showCommandPaletteTreeNode={false} />;
 };

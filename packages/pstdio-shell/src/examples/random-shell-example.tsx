@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { createShellCore, type ShellCore } from "../core";
+import { useEffect, useState } from "react";
+import { createShellCore, type ShellCore, workbenchCommandPaletteMenuPath } from "../core";
 import { ShellWorkbench } from "../react";
 import {
   defaultRandomShellModeId,
@@ -18,6 +18,9 @@ const modeSetups = {
   music: setupMusicMode,
 } as const;
 
+const openCommandPaletteCommandId = "random.openCommandPalette";
+const openCommandPaletteKeybinding = "Meta+P";
+
 const registerRandomResources = (shell: ShellCore) => {
   shell.resources.registerKind({ kind: randomResourceKind, label: "Item", icon: "FileText" });
 };
@@ -34,19 +37,88 @@ const registerRandomModes = (shell: ShellCore) => {
   }
 };
 
-const createRandomShellExample = () => {
+const registerRandomCommands = (shell: ShellCore, openPalette: () => void) => {
+  shell.commands.registerCommand(
+    {
+      id: openCommandPaletteCommandId,
+      label: "Show command palette",
+      category: "Workbench",
+      icon: "Search",
+    },
+    { execute: () => openPalette() },
+  );
+  shell.keybindings.registerKeybinding({
+    commandId: openCommandPaletteCommandId,
+    keybinding: openCommandPaletteKeybinding,
+  });
+  shell.menus.registerMenuAction(workbenchCommandPaletteMenuPath, {
+    commandId: openCommandPaletteCommandId,
+    order: 10,
+  });
+
+  for (const [index, modeId] of randomShellModeOrder.entries()) {
+    const mode = randomShellModes[modeId];
+    const commandId = `random.activateMode.${mode.id}`;
+    shell.commands.registerCommand(
+      {
+        id: commandId,
+        label: `Switch to ${mode.label}`,
+        category: "Modes",
+        icon: mode.topIcon,
+      },
+      { execute: () => shell.modes.setActiveMode(mode.id) },
+    );
+    shell.menus.registerMenuAction(workbenchCommandPaletteMenuPath, {
+      commandId,
+      order: 100 + index,
+    });
+  }
+};
+
+const matchesShortcut = (event: KeyboardEvent, binding: string) => {
+  const parts = binding.split("+").map((part) => part.trim().toLowerCase());
+  const key = parts[parts.length - 1];
+  if (event.key.toLowerCase() !== key) return false;
+  const wantMeta = parts.includes("meta");
+  const wantCtrl = parts.includes("ctrl");
+  const wantShift = parts.includes("shift");
+  const wantAlt = parts.includes("alt");
+  return (
+    event.metaKey === wantMeta && event.ctrlKey === wantCtrl && event.shiftKey === wantShift && event.altKey === wantAlt
+  );
+};
+
+const createRandomShellExample = (openPalette: () => void) => {
   const shell = createShellCore();
 
   registerRandomResources(shell);
   registerRandomShellRail(shell);
   registerRandomModes(shell);
+  registerRandomCommands(shell, openPalette);
   shell.modes.setActiveMode(defaultRandomShellModeId);
 
   return { shell };
 };
 
 export const RandomShellExample = () => {
-  const [example] = useState(createRandomShellExample);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [example] = useState(() => createRandomShellExample(() => setPaletteOpen(true)));
 
-  return <ShellWorkbench shell={example.shell} />;
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!matchesShortcut(event, openCommandPaletteKeybinding)) return;
+      event.preventDefault();
+      setPaletteOpen((current) => !current);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  return (
+    <ShellWorkbench
+      shell={example.shell}
+      commandPaletteOpen={paletteOpen}
+      onCommandPaletteOpenChange={setPaletteOpen}
+    />
+  );
 };

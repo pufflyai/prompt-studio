@@ -1,5 +1,5 @@
 import { Flex } from "@chakra-ui/react";
-import { type BreadcrumbItem, ResizableSplitLayout } from "@pstdio/ui";
+import { ResizableSplitLayout } from "@pstdio/ui";
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ShellCore, TreeViewRole } from "../core";
 import { ShellCommandPalette } from "./shell-command-palette";
@@ -26,7 +26,6 @@ interface ShellWorkbenchProps {
   commandPaletteOpen?: boolean;
   initialCommandPaletteOpen?: boolean;
   initialSessionPanelMode?: ShellSessionPanelMode;
-  breadcrumbItems?: BreadcrumbItem[];
   showCommandPaletteTreeNode?: boolean;
   onCommandPaletteOpenChange?: (open: boolean) => void;
   onCommandError?: (error: unknown) => void;
@@ -68,7 +67,6 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
     shell,
     commandPaletteOpen,
     initialCommandPaletteOpen = false,
-    breadcrumbItems: providedBreadcrumbItems,
     showCommandPaletteTreeNode = true,
     onCommandPaletteOpenChange,
     onCommandError,
@@ -112,7 +110,7 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
     setVersion((current) => current + 1);
   };
 
-  const breadcrumbItems = buildWorkbenchBreadcrumbItems(shell, layout, refresh, providedBreadcrumbItems);
+  const breadcrumbItems = buildWorkbenchBreadcrumbItems(shell);
   const activeSessionSlot = resolveActiveSessionSlot({
     showAttachedSessionPanel,
     showBubbleSessionPanel,
@@ -133,9 +131,11 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
   useLayoutEffect(() => {
     const renderers = shell.renderers.onDidChange(() => setVersion((current) => current + 1));
     const modes = shell.modes.onDidChangeActive(() => setVersion((current) => current + 1));
+    const breadcrumbs = shell.breadcrumbs.onDidChange(() => setVersion((current) => current + 1));
     return () => {
       renderers.dispose();
       modes.dispose();
+      breadcrumbs.dispose();
     };
   }, [shell]);
 
