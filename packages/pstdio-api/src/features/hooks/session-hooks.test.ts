@@ -57,6 +57,7 @@ const makeDeps = (input?: {
   ticket?: Record<string, unknown> | null;
   attemptStatuses?: Array<{ id: string; name: string }>;
   statuses?: Array<{ id: string; name: string }>;
+  dispatchExtensionEvent?: SessionHookDeps["dispatchExtensionEvent"];
 }) => {
   const pending: Array<{ resolve: (value: CapturedCall) => void }> = [];
   const calls: CapturedCall[] = [];
@@ -99,6 +100,7 @@ const makeDeps = (input?: {
         client: {},
       }),
     } as never,
+    dispatchExtensionEvent: input?.dispatchExtensionEvent,
   };
 
   return { deps, nextCall, calls };
@@ -192,6 +194,30 @@ describe("fireSessionStartHook", () => {
     expect(ctx.ticket).toEqual({ ...baseTicket, status_name: null });
   });
 
+  test("dispatches matching extension event", async () => {
+    const extensionCall = createDeferred<{ eventId: string; payload: Record<string, unknown> }>();
+    const { deps, nextCall } = makeDeps({
+      workspace: baseWorkspace,
+      ticket: baseTicket,
+      dispatchExtensionEvent: async (_deps, _projectId, eventId, payload) => {
+        extensionCall.resolve({ eventId, payload });
+        return { delivered: 1 };
+      },
+    });
+
+    const pluginCall = nextCall();
+    fireSessionStartHook(deps, { ...sessionBase, status: "in_progress" });
+
+    await pluginCall;
+    const { eventId, payload } = await extensionCall.promise;
+    expect(eventId).toBe("kernel.postSessionStart");
+    expect(payload.workspace).toEqual({
+      ...baseWorkspace,
+      ticket_shorthand: "PS-1",
+      attempt_status_name: null,
+    });
+  });
+
   test("waits for linked workspace setup to finish before firing", async () => {
     let workspace = { ...baseWorkspace, initializing: true };
     const { deps, calls, nextCall } = makeDeps({
@@ -268,5 +294,27 @@ describe("fireSessionResumeHook", () => {
       ticket_shorthand: "PS-1",
       attempt_status_name: null,
     });
+  });
+});
+
+describe("fireSessionStatusHook extension bridge", () => {
+  test("dispatches matching extension event for status hooks", async () => {
+    const extensionCall = createDeferred<{ eventId: string; payload: Record<string, unknown> }>();
+    const { deps, nextCall } = makeDeps({
+      workspace: baseWorkspace,
+      ticket: baseTicket,
+      dispatchExtensionEvent: async (_deps, _projectId, eventId, payload) => {
+        extensionCall.resolve({ eventId, payload });
+        return { delivered: 1 };
+      },
+    });
+
+    const pluginCall = nextCall();
+    fireSessionStatusHook(deps, { ...sessionBase, status: "completed" });
+
+    await pluginCall;
+    const { eventId, payload } = await extensionCall.promise;
+    expect(eventId).toBe("kernel.postSessionSuccess");
+    expect(payload.sessionId).toBe("sess_1");
   });
 });

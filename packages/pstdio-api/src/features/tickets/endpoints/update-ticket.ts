@@ -180,6 +180,7 @@ const buildTicketUpdateInput = async (
 const archiveTicketWorkspaces = async (deps: TicketsRouteDeps, ticketId: string) => {
   const workspaces = await deps.workspaceService.listByTicketId(ticketId);
   await Promise.all(workspaces.map((workspace) => archiveWorkspaceCascade(deps, workspace)));
+  return workspaces;
 };
 
 const finalizeUpdatedTicket = async (input: {
@@ -207,9 +208,7 @@ const finalizeUpdatedTicket = async (input: {
     statusContext,
   } = input;
 
-  if (archiving) {
-    await archiveTicketWorkspaces(deps, ticketId);
-  }
+  const archivedWorkspaces = archiving ? await archiveTicketWorkspaces(deps, ticketId) : [];
 
   const tagIdsChanged =
     tagIds !== undefined && previousTagIds !== undefined && !areTagSetsEqual(previousTagIds, tagIds);
@@ -263,7 +262,7 @@ const finalizeUpdatedTicket = async (input: {
   }
 
   if (archiving) {
-    fireTicketHookAsync(deps, "postTicketArchive", projectId, postPayload);
+    fireTicketHookAsync(deps, "postTicketArchive", projectId, { ...postPayload, workspaces: archivedWorkspaces });
   }
 };
 

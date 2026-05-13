@@ -166,10 +166,12 @@ export const updateAttemptStatusHandler = (
       attemptStatusName: fromStatusName,
       sessionId,
     });
-    const preResult = await firePreAttemptStatusHook(
-      { pluginService: deps.pluginService },
-      { projectId: workspace.project_id, fromStatus: fromStatusName ?? "", toStatus: status, payload: preHookPayload },
-    );
+    const preResult = await firePreAttemptStatusHook(deps, {
+      projectId: workspace.project_id,
+      fromStatus: fromStatusName ?? "",
+      toStatus: status,
+      payload: preHookPayload,
+    });
 
     if (preResult.rejected) {
       return c.json(createHookRejectedResponse(preResult.stdout, preResult.stderr), 422);
@@ -198,14 +200,11 @@ export const updateAttemptStatusHandler = (
       sessionId,
     });
 
-    void firePostAttemptStatusHook(
-      { pluginService: deps.pluginService },
-      {
-        projectId: workspace.project_id,
-        toStatus: status,
-        payload: { ...postHookPayload, statusChangeId },
-      },
-    ).catch(() => {});
+    void firePostAttemptStatusHook(deps, {
+      projectId: workspace.project_id,
+      toStatus: status,
+      payload: { ...postHookPayload, statusChangeId },
+    }).catch(() => {});
 
     return c.json(
       {

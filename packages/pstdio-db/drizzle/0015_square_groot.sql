@@ -1,0 +1,1 @@
+ALTER TYPE "public"."extension_load_status" ADD VALUE 'uninstalled';

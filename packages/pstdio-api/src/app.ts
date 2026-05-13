@@ -78,17 +78,20 @@ const resolveEventBusBufferSize = (value: string | undefined) => {
   return Math.floor(parsed);
 };
 
+export const activeInstalledSources = <TSource extends { status: string }>(sources: TSource[]) =>
+  sources.filter((source) => source.status !== "uninstalled");
+
 const createInstalledExtensionRuntime = async (input: {
   extensionService: ReturnType<typeof createExtensionService>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
 }) => {
   const sourceWatcher = await createExtensionSourceWatcher({
-    listInstalledSources: () => input.installedExtensionSourcesService.list(),
+    listInstalledSources: async () => activeInstalledSources(await input.installedExtensionSourcesService.list()),
     reloadInstalledSource: (installName) => input.extensionService.reloadInstalledSource(installName),
     onError: (err) => apiLogger.error({ err, event: "extensions.source_watcher.error" }, "Extension watcher failed"),
   });
   const webviewBuildManager = createExtensionWebviewBuildManager({
-    listInstalledSources: () => input.installedExtensionSourcesService.list(),
+    listInstalledSources: async () => activeInstalledSources(await input.installedExtensionSourcesService.list()),
     reportBuildFailure: (installName, webviewId, error) =>
       input.extensionService.reportWebviewBuildFailure(installName, webviewId, error),
     reportBuildSuccess: (installName, webviewId) =>
@@ -215,7 +218,19 @@ export const createApp = async (options: AppOptions) => {
     },
   });
 
-  const ticketHookDeps = { pluginService };
+  const ticketHookDeps = {
+    pluginService,
+    activityEventsService,
+    extensionService,
+    extensionStorageService,
+    fileService,
+    projectService,
+    repoService,
+    workspaceService,
+    get sessionService() {
+      return sessionService;
+    },
+  };
 
   const ticketService = createTicketService({
     ticketsDb: ticketsDBService,
@@ -236,6 +251,13 @@ export const createApp = async (options: AppOptions) => {
     statusService,
     ticketService,
     pluginService,
+    activityEventsService,
+    extensionService,
+    extensionStorageService,
+    fileService,
+    projectService,
+    repoService,
+    workspaceService,
   };
 
   let drainSessionQueue: (input?: { releasedSessionId?: string }) => Promise<void> = async () => {};

@@ -3,6 +3,7 @@ import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
+import { syncRepoExtensionsForProject } from "../../extensions/repo-extensions";
 import { installProjectSkillsToRepo } from "../../skills/install-skill-to-repo";
 import { bootstrapProjectRepo } from "../bootstrap-project-repo";
 import type { ProjectsRouteDeps } from "../deps";
@@ -124,6 +125,7 @@ export const registerRepoHandler = (deps: ProjectsRouteDeps): AppRouteHandler<ty
     await emitProjectRepoLink(deps, { projectId: id, repoId: repo.id });
 
     await installProjectSkillsToRepo(deps, { projectId: id, repoPath: repo.path });
+    await syncRepoExtensionsForProject(deps, id);
     deps.pluginService.invalidate(id);
     // PS-47: temporary repo-plugin refresh bridge; remove when extensions replace .pstdio/plugins.
     await deps.pluginService.refresh();

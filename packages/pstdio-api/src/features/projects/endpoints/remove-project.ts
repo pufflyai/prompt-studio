@@ -1,5 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
+import { syncRepoExtensionsForRemovedRepo } from "../../extensions/repo-extensions";
 import { cleanupProjectArtifacts } from "../cleanup-project";
 import type { ProjectsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
@@ -35,6 +36,11 @@ export const removeProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
     const project = await deps.projectService.get(id);
     if (!project) {
       return c.json({ error: "Project not found" }, 404);
+    }
+
+    const repos = await deps.repoService.listByProject(id);
+    for (const repo of repos) {
+      await syncRepoExtensionsForRemovedRepo(deps, { projectId: id, repoPath: repo.path });
     }
 
     await deps.syncService.emitCascadeDeletes("projects", id);

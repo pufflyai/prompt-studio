@@ -188,6 +188,17 @@ export const checkExtensionsRoot = async (extensionsRoot: string) => {
   return check;
 };
 
+export const checkExtensionsRoots = async (extensionsRoots: string[]) => {
+  const [firstRoot = ""] = extensionsRoots;
+  const check = emptyCheck(firstRoot, firstRoot ? existsSync(firstRoot) : false);
+
+  for (const root of extensionsRoots) {
+    mergeCheck(check, await checkExtensionsRoot(root));
+  }
+
+  return check;
+};
+
 const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCheckResponse) => {
   target.errorCount += source.errorCount;
   target.warningCount += source.warningCount;

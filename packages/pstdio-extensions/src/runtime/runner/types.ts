@@ -1,6 +1,7 @@
 import type {
   CommandOutcome,
   CommandSource,
+  EventDeliveryResult,
   ExtensionActivityApi,
   ExtensionArtifactApi,
   ExtensionFilesApi,
@@ -17,6 +18,7 @@ import type {
   RepoContext,
   ResourceRef,
   SlotInvocationContext,
+  Struct,
 } from "@pstdio/sdk/extensions";
 
 export const DEFAULT_MAX_COMMAND_DEPTH = 10;
@@ -64,6 +66,7 @@ export interface CommandExecuteInput {
 }
 
 export interface CommandRunner {
+  dispatch(eventId: string, payload: Struct): Promise<EventDeliveryResult>;
   execute(input: CommandExecuteInput): Promise<CommandOutcome>;
 }
 

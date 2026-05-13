@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, like } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { extension_reload_events, installed_extension_sources } from "../../db/schemas.pg";
 
@@ -55,6 +55,13 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
       .where(eq(installed_extension_sources.install_name, installName));
     return row ?? null;
   };
+
+  const listByInstallNamePrefix = async (prefix: string) =>
+    db
+      .select()
+      .from(installed_extension_sources)
+      .where(like(installed_extension_sources.install_name, `${prefix}%`))
+      .orderBy(installed_extension_sources.install_name);
 
   const register = async (input: RegisterInput) => {
     const timestamp = nowTimestamp();
@@ -125,6 +132,7 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
     list,
     get,
     getByInstallName,
+    listByInstallNamePrefix,
     register,
     updateLoadState,
     updateRegistration,

@@ -3,6 +3,8 @@ import type { createRepoService } from "../../services/repo-service";
 import type { createStatusService } from "../../services/status-service";
 import type { createTicketService } from "../../services/ticket-service";
 import type { createWorkspaceSessionService } from "../../services/workspace-session-service";
+import type { ExtensionsRouteDeps } from "../extensions/deps";
+import { dispatchProjectExtensionEvent } from "../extensions/extension-command-runtime";
 import type { createPluginService } from "../plugins/plugin-service";
 import { parseTicketShorthand } from "../workspaces/parse-ticket-shorthand";
 import { withHookSessionClient } from "./hook-client";
@@ -36,6 +38,18 @@ export type SessionHookDeps = {
   statusService?: ReturnType<typeof createStatusService>;
   ticketService?: ReturnType<typeof createTicketService>;
   pluginService: ReturnType<typeof createPluginService>;
+  dispatchExtensionEvent?: typeof dispatchProjectExtensionEvent;
+} & Partial<ExtensionsRouteDeps>;
+
+const dispatchExtensionHook = (
+  deps: SessionHookDeps,
+  projectId: string,
+  hookName: string,
+  payload: Record<string, unknown>,
+) => {
+  if (!deps.extensionService && !deps.dispatchExtensionEvent) return;
+  const dispatch = deps.dispatchExtensionEvent ?? dispatchProjectExtensionEvent;
+  return dispatch(deps as ExtensionsRouteDeps, projectId, `kernel.${hookName}`, payload);
 };
 
 const resolveAttemptStatusName = async (
@@ -152,6 +166,7 @@ const fireSessionHook = (deps: SessionHookDeps, hookName: string, session: Sessi
     const runtime = await deps.pluginService.getForProject(session.project_id);
     const hookClient = withHookSessionClient(runtime.client, ctx);
     await runtime.hooks.firePost(hookName as never, { ...ctx, client: hookClient } as never);
+    await dispatchExtensionHook(deps, session.project_id, hookName, ctx);
   })().catch(() => {});
 };
 

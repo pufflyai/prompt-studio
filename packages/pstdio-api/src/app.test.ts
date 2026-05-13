@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import { createApp } from "./app";
+import { activeInstalledSources, createApp } from "./app";
 import type { AppBindings } from "./types";
 
 setDefaultTimeout(10_000);
@@ -91,6 +91,21 @@ describe("onError handler", () => {
 
     stderrSpy.mockRestore();
     stdoutSpy.mockRestore();
+  });
+});
+
+describe("activeInstalledSources", () => {
+  test("excludes intentionally uninstalled repo-local sources from background processing", () => {
+    expect(
+      activeInstalledSources([
+        { install_name: "local:repo:removed", status: "uninstalled" },
+        { install_name: "local:repo:broken", status: "error" },
+        { install_name: "global:loaded", status: "loaded" },
+      ]),
+    ).toEqual([
+      { install_name: "local:repo:broken", status: "error" },
+      { install_name: "global:loaded", status: "loaded" },
+    ]);
   });
 });
 

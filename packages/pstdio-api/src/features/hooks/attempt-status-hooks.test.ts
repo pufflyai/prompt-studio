@@ -3,8 +3,10 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { EventDeliveryResult } from "@pstdio/sdk/extensions";
+import type { ExtensionsRouteDeps } from "../extensions/deps";
 import { createPluginService } from "../plugins/plugin-service";
-import { firePreAttemptStatusHook } from "./attempt-status-hooks";
+import { firePostAttemptStatusHook, firePreAttemptStatusHook } from "./attempt-status-hooks";
 
 let repoDir: string;
 
@@ -22,7 +24,14 @@ const writePlugin = (fileName: string, code: string) => {
   writeFileSync(join(pluginsDir, fileName), code);
 };
 
-const makeDeps = () => ({
+type DispatchExtensionEvent = (
+  deps: ExtensionsRouteDeps,
+  projectId: string,
+  eventId: string,
+  payload: Record<string, unknown>,
+) => Promise<EventDeliveryResult>;
+
+const makeDeps = (dispatchExtensionEvent?: DispatchExtensionEvent) => ({
   pluginService: createPluginService({
     repoService: { listByProject: async () => [{ path: repoDir }] },
     listProjectIds: async () => ["proj-1"],
@@ -30,6 +39,7 @@ const makeDeps = () => ({
     storageRoot: repoDir,
     ensureWorkspace: async () => {},
   }),
+  dispatchExtensionEvent,
 });
 
 describe("firePreAttemptStatusHook", () => {
@@ -93,5 +103,43 @@ describe("firePreAttemptStatusHook", () => {
 
     // Context should include fromStatus, toStatus, and payload fields
     // (verified by the non-rejection — if it threw, it would reject)
+  });
+
+  test("rejects when extension pre-hook reports diagnostics", async () => {
+    const result = await firePreAttemptStatusHook(
+      makeDeps(async () => ({
+        delivered: 0,
+        diagnostics: [{ code: "hook_failed", message: "extension validation failed", severity: "warning" }],
+      })),
+      {
+        projectId: "proj-1",
+        fromStatus: "wip",
+        toStatus: "review-ready",
+        payload: {},
+      },
+    );
+
+    expect(result.rejected).toBe(true);
+    expect(result.stderr).toContain("extension validation failed");
+  });
+});
+
+describe("firePostAttemptStatusHook", () => {
+  test("dispatches matching extension event", async () => {
+    let captured: { eventId: string; payload: Record<string, unknown> } | undefined;
+    await firePostAttemptStatusHook(
+      makeDeps(async (_deps, _projectId, eventId, payload) => {
+        captured = { eventId, payload };
+        return { delivered: 1 };
+      }),
+      {
+        projectId: "proj-1",
+        toStatus: "review-ready",
+        payload: { workspace: "PS-1_A1" },
+      },
+    );
+
+    expect(captured?.eventId).toBe("kernel.postAttemptStatusChange");
+    expect(captured?.payload).toMatchObject({ projectId: "proj-1", toStatus: "review-ready", workspace: "PS-1_A1" });
   });
 });

@@ -78,9 +78,11 @@ export interface ExtensionSessionsApi {
 
 export interface ExtensionWorkspacesApi {
   get(id: string): Promise<unknown>;
+  list(): Promise<unknown[]>;
   create(input: JsonObject): Promise<unknown>;
   archive(id: string): Promise<void>;
   delete(id: string): Promise<void>;
+  removeWorktree(id: string): Promise<{ removed: boolean }>;
 }
 
 export interface ExtensionReposApi {

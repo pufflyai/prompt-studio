@@ -1,5 +1,16 @@
 import { describe, expect, it, mock } from "bun:test";
-import { resolveAgentId } from "./attempt-workspace-setup";
+import { assertEventDispatchSucceeded, resolveAgentId } from "./attempt-workspace-setup";
+
+describe("assertEventDispatchSucceeded", () => {
+  it("throws when an extension lifecycle hook reports diagnostics", () => {
+    expect(() =>
+      assertEventDispatchSucceeded("kernel.postWorktreeCreate", {
+        delivered: 0,
+        diagnostics: [{ code: "hook_failed", message: "Hook failed", severity: "warning" }],
+      }),
+    ).toThrow("HOOK kernel.postWorktreeCreate FAILED\nHook failed");
+  });
+});
 
 describe("resolveAgentId", () => {
   it("returns null when requested agent is not enabled for the project", async () => {

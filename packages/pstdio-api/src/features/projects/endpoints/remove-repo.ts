@@ -1,5 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
+import { syncRepoExtensionsForProject, syncRepoExtensionsForRemovedRepo } from "../../extensions/repo-extensions";
 import type { ProjectsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
 
@@ -36,8 +37,11 @@ export const removeRepoHandler = (deps: ProjectsRouteDeps): AppRouteHandler<type
       return c.json({ error: "Repository link not found" }, 404);
     }
 
+    const repo = await deps.repoService.get(repoId);
+    if (repo) await syncRepoExtensionsForRemovedRepo(deps, { projectId: id, repoPath: repo.path });
     await deps.repoService.removeFromProject(id, repoId);
     deps.eventBus.emit("project_repos", "delete", { id: link.id });
+    await syncRepoExtensionsForProject(deps, id);
     deps.pluginService.invalidate(id);
     // PS-47: temporary repo-plugin refresh bridge; remove when extensions replace .pstdio/plugins.
     await deps.pluginService.refresh();

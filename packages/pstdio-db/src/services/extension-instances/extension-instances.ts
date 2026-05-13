@@ -19,6 +19,7 @@ export type CreateInstanceInput = {
 
 export type UpdateInstanceInput = {
   enabled?: boolean;
+  installed_extension_id?: string;
   display_name_override?: string | null;
   namespace?: string;
   config_json?: InstanceRow["config_json"];

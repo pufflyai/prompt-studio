@@ -22,10 +22,14 @@ afterEach(() => {
   tempDirs.length = 0;
 });
 
-const wrap = (name: string, definition: ReturnType<typeof defineExtension>): LoadedExtensionSource => ({
+const wrap = (
+  name: string,
+  definition: ReturnType<typeof defineExtension>,
+  sourceKind: LoadedExtensionSource["sourceKind"] = "local",
+): LoadedExtensionSource => ({
   packagePath: `/fake/${name}`,
   sourcePath: `/fake/${name}/extension.ts`,
-  sourceKind: "local",
+  sourceKind,
   manifest: {
     id: `pstdio.${name}`,
     name,
@@ -187,6 +191,38 @@ describe("normalizeExtensionSources diagnostics", () => {
 
     const runtime = normalizeExtensionSources([wrap("bad", bad), wrap("bad", bad)]);
     expect(runtime.diagnostics.map((d) => d.code)).toContain("duplicate_extension_id");
+  });
+
+  test("uses a repo-local extension instead of a global extension with the same id", () => {
+    const global = defineExtension({
+      commands: { global: { title: "Global", run: async () => undefined } },
+    });
+    const local = defineExtension({
+      commands: { local: { title: "Local", run: async () => undefined } },
+    });
+
+    const runtime = normalizeExtensionSources([wrap("hello", global), wrap("hello", local, "local_path")]);
+
+    expect(runtime.extensions).toHaveLength(1);
+    expect(runtime.extensions[0]?.sourceKind).toBe("local_path");
+    expect(runtime.commands.map((command) => command.localId)).toEqual(["local"]);
+    expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain("extension_overridden_by_local");
+  });
+
+  test("keeps a repo-local extension when a global extension with the same id is encountered later", () => {
+    const local = defineExtension({
+      commands: { local: { title: "Local", run: async () => undefined } },
+    });
+    const global = defineExtension({
+      commands: { global: { title: "Global", run: async () => undefined } },
+    });
+
+    const runtime = normalizeExtensionSources([wrap("hello", local, "local_path"), wrap("hello", global)]);
+
+    expect(runtime.extensions).toHaveLength(1);
+    expect(runtime.extensions[0]?.sourceKind).toBe("local_path");
+    expect(runtime.commands.map((command) => command.localId)).toEqual(["local"]);
+    expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain("extension_overridden_by_local");
   });
 
   test("collects templates and skills with package assets", () => {

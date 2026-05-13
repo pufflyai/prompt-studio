@@ -321,6 +321,7 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
   runRef.run = executeInternal;
 
   return {
+    dispatch: dispatcher.dispatch,
     execute: (input: CommandExecuteInput) => executeInternal({ ...input, depth: 0 }),
   };
 };

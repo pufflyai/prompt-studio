@@ -1,4 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { execSync } from "node:child_process";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import type { TicketsTestContext } from "./tickets-test-harness";
 import { createTicketsTestContext } from "./tickets-test-harness";
 
@@ -24,7 +27,7 @@ const createTicket = async (body: Record<string, unknown> = {}) => {
   return res.json();
 };
 
-const createWorkspace = async (ticket: { id: string; shorthand: string }) => {
+const createWorkspace = async (ticket: { id: string; shorthand: string }, worktreePath?: string) => {
   const { app, projectId } = context;
   const res = await app.request("/v1/workspaces", {
     method: "POST",
@@ -33,11 +36,51 @@ const createWorkspace = async (ticket: { id: string; shorthand: string }) => {
       project_id: projectId,
       ticket_id: ticket.id,
       ticket_shorthand: ticket.shorthand,
+      worktree_path: worktreePath,
     }),
   });
 
   expect(res.status).toBe(201);
   return res.json();
+};
+
+const waitFor = async (predicate: () => boolean) => {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if (predicate()) return;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+};
+
+const writeWorktreeExtension = (repoPath: string) => {
+  const extensionRoot = join(repoPath, ".pstdio", "extensions", "worktree");
+  mkdirSync(extensionRoot, { recursive: true });
+  writeFileSync(
+    join(extensionRoot, "package.json"),
+    JSON.stringify({
+      name: "worktree",
+      version: "1.0.0",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+    }),
+  );
+  writeFileSync(
+    join(extensionRoot, "extension.ts"),
+    `export default {
+      hooks: {
+        postTicketArchive: {
+          eventId: "kernel.postTicketArchive",
+          async handler(ctx, payload) {
+            for (const workspace of payload.workspaces ?? []) {
+              if (workspace.ticket_shorthand === payload.shorthand && workspace.worktree_path) {
+                await ctx.workspaces.removeWorktree(workspace.id);
+              }
+            }
+          }
+        }
+      }
+    };`,
+  );
 };
 
 const createWorkspaceSession = async (workspaceId: string) => {
@@ -160,6 +203,34 @@ describe("PATCH /v1/tickets/:id", () => {
     expect(sessionRes.status).toBe(200);
     const updatedSession = await sessionRes.json();
     expect(updatedSession.archived).toBe(true);
+  });
+
+  test("repo-local worktree extension removes worktree when ticket is archived", async () => {
+    const { app, projectId, tempRoot } = context;
+    const repoPath = context.createGitRepo("archive-worktree-repo");
+    writeWorktreeExtension(repoPath);
+    const repoRes = await app.request(`/v1/projects/${projectId}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "repo", path: repoPath }),
+    });
+    expect(repoRes.status).toBe(201);
+    const created = await createTicket({ content: "# Ticket with worktree" });
+    const workspace = await createWorkspace(created);
+    const branch = `workspace/${workspace.workspace_shorthand}`;
+    const worktreePath = join(tempRoot, "worktrees", "archive-cleanup");
+    execSync(`git worktree add -b ${branch} ${worktreePath} HEAD`, { cwd: repoPath, stdio: "pipe" });
+    await context.deps.workspaceService.updateGitMetadata(workspace.id, { branch, worktree_path: worktreePath });
+
+    const res = await app.request(`/v1/tickets/${created.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ archived: true }),
+    });
+    expect(res.status).toBe(200);
+
+    await waitFor(() => !existsSync(worktreePath));
+    expect(existsSync(worktreePath)).toBe(false);
   });
 
   test("does not emit ticket_updated activity for empty patch", async () => {

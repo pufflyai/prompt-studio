@@ -1,15 +1,28 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import type { ExtensionSourceKind } from "@pstdio/sdk/extensions";
 import type { ExtensionCommandRecord } from "pstdio-api-contracts";
 import type { CommandRunnerEnvironment, RuntimeCommandRecord } from "pstdio-extensions";
-import { loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
+import { createCommandRunner, loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
+import { cleanupWorkspaceWorktree } from "../workspaces/worktree-cleanup";
 import type { ExtensionsRouteDeps } from "./deps";
 
 type EnabledSource = Awaited<
   ReturnType<ExtensionsRouteDeps["extensionService"]["listEnabledSourcesForProject"]>
 >[number];
 
-const sourceKindForRuntime = (sourceKind: string) => (sourceKind === "builtin" ? "builtin" : "local");
+const sourceKindForRuntime = (sourceKind: string): ExtensionSourceKind => {
+  if (sourceKind === "builtin") return "builtin";
+  if (sourceKind === "local_path") return "local_path";
+  return "package";
+};
+
+const sourceDiagnostics = (enabledSources: EnabledSource[]) =>
+  enabledSources.flatMap(({ instance }) => {
+    const value = instance.diagnostics_json;
+    if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+    return Array.isArray(value.diagnostics) ? value.diagnostics : [];
+  });
 
 export const loadProjectExtensionRuntime = async (deps: ExtensionsRouteDeps, projectId: string) => {
   const enabledSources = await deps.extensionService.listEnabledSourcesForProject(projectId);
@@ -20,7 +33,10 @@ export const loadProjectExtensionRuntime = async (deps: ExtensionsRouteDeps, pro
     })),
   });
 
-  const runtime = normalizeExtensionSources(loaded.sources, loaded.diagnostics);
+  const runtime = normalizeExtensionSources(loaded.sources, [
+    ...loaded.diagnostics,
+    ...sourceDiagnostics(enabledSources),
+  ]);
   return { enabledSources, runtime };
 };
 
@@ -34,8 +50,29 @@ export const toCommandRecord = (command: RuntimeCommandRecord): ExtensionCommand
   params: command.params as ExtensionCommandRecord["params"],
 });
 
-const findEnabledSource = (enabledSources: EnabledSource[], extensionId: string) =>
-  enabledSources.find(({ installedSource }) => installedSource.extension_id === extensionId);
+export const dispatchProjectExtensionEvent = async (
+  deps: ExtensionsRouteDeps,
+  projectId: string,
+  eventId: string,
+  payload: Record<string, unknown>,
+) => {
+  const { enabledSources, runtime } = await loadProjectExtensionRuntime(deps, projectId);
+  const runner = createCommandRunner(runtime, {
+    buildEnvironment: (input) =>
+      createCommandEnvironment(deps, enabledSources, {
+        extensionId: input.extensionId,
+        name: input.name,
+        projectId: input.projectId,
+      }),
+  });
+
+  return runner.dispatch(eventId, { projectId, ...payload });
+};
+
+const findEnabledSource = (enabledSources: EnabledSource[], extensionId: string, name: string) =>
+  enabledSources.find(
+    ({ instance, installedSource }) => instance.namespace === name && installedSource.extension_id === extensionId,
+  );
 
 const createStorageApi = (
   deps: ExtensionsRouteDeps,
@@ -199,7 +236,7 @@ export const createCommandEnvironment = (
   enabledSources: EnabledSource[],
   input: { extensionId: string; name: string; projectId: string },
 ): CommandRunnerEnvironment => {
-  const enabledSource = findEnabledSource(enabledSources, input.extensionId);
+  const enabledSource = findEnabledSource(enabledSources, input.extensionId, input.name);
   if (!enabledSource) throw new Error(`Enabled extension instance not found: ${input.extensionId}`);
 
   const storage = createStorageApi(deps, {
@@ -230,6 +267,7 @@ export const createCommandEnvironment = (
     },
     workspaces: {
       get: (id) => deps.workspaceService.get(id),
+      list: () => deps.workspaceService.list(input.projectId),
       create: async () => {
         throw new Error("Extension workspace creation requires a ticket-backed workspace");
       },
@@ -238,6 +276,11 @@ export const createCommandEnvironment = (
       },
       delete: async (id) => {
         await deps.workspaceService.softDelete(id);
+      },
+      removeWorktree: async (id) => {
+        const workspace = await deps.workspaceService.get(id);
+        if (!workspace) throw new Error(`Workspace not found: ${id}`);
+        return { removed: await cleanupWorkspaceWorktree(deps, workspace) };
       },
     },
     repos: createReposApi(deps, input.projectId),

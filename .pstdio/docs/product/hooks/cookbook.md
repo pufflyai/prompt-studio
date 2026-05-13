@@ -1,6 +1,8 @@
 # Cookbook
 
-Use SDK plugins (`definePlugin`) for all lifecycle automation. Plugins in `.pstdio/plugins/` are the only hook mechanism.
+Use repo-local extensions in `.pstdio/extensions/<name>/` for new lifecycle automation. Each extension is a package with `package.json` and a `main` entry, and is auto-enabled when the repo is linked to a project. Legacy SDK plugins in `.pstdio/plugins/` are still supported during the migration window.
+
+Kernel lifecycle events are exposed to extensions with `kernel.<hookName>` event ids. For example, a plugin `postWorktreeCreate` hook maps to an extension hook with `eventId: "kernel.postWorktreeCreate"`.
 
 For SDK plugin files under `.pstdio/plugins`, plugin identity comes from file path. Use one default-exported plugin per file and do not set an explicit plugin `key`.
 
@@ -20,12 +22,12 @@ import {
 
 ## Set Up a Worktree for Development
 
-`postWorktreeCreate` — copy config, agent folders, env files, then install and build.
+`kernel.postWorktreeCreate` — copy config, agent folders, env files, then install and build from a repo-local extension.
 
 ```ts
 import { cpSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { definePlugin } from "@pstdio/sdk/plugins";
+import { defineExtension } from "@pstdio/sdk/extensions";
 
 const run = async (cwd: string, command: string[]) => {
   const proc = Bun.spawn(command, {
@@ -36,35 +38,38 @@ const run = async (cwd: string, command: string[]) => {
   return (await proc.exited) === 0;
 };
 
-export default definePlugin({
+export default defineExtension({
   hooks: {
-    async postWorktreeCreate(ctx) {
-      const repoConfig = join(ctx.repoPath, ".pstdio", "config.json");
-      const worktreeConfigDir = join(ctx.worktreePath, ".pstdio");
-      const worktreeConfig = join(worktreeConfigDir, "config.json");
+    postWorktreeCreate: {
+      eventId: "kernel.postWorktreeCreate",
+      async handler(ctx, payload) {
+        const repoConfig = join(payload.repoPath, ".pstdio", "config.json");
+        const worktreeConfigDir = join(payload.worktreePath, ".pstdio");
+        const worktreeConfig = join(worktreeConfigDir, "config.json");
 
-      if (existsSync(repoConfig)) {
-        mkdirSync(worktreeConfigDir, { recursive: true });
-        cpSync(repoConfig, worktreeConfig);
-      }
+        if (existsSync(repoConfig)) {
+          mkdirSync(worktreeConfigDir, { recursive: true });
+          cpSync(repoConfig, worktreeConfig);
+        }
 
-      for (const agentDir of [".claude", ".opencode"]) {
-        const fromDir = join(ctx.repoPath, agentDir);
-        const toDir = join(ctx.worktreePath, agentDir);
-        if (!existsSync(fromDir)) continue;
-        mkdirSync(toDir, { recursive: true });
-        cpSync(fromDir, toDir, { recursive: true });
-      }
+        for (const agentDir of [".claude", ".opencode"]) {
+          const fromDir = join(payload.repoPath, agentDir);
+          const toDir = join(payload.worktreePath, agentDir);
+          if (!existsSync(fromDir)) continue;
+          mkdirSync(toDir, { recursive: true });
+          cpSync(fromDir, toDir, { recursive: true });
+        }
 
-      for (const envFile of [".env", ".env.local", ".env.test"]) {
-        const fromFile = join(ctx.repoPath, envFile);
-        const toFile = join(ctx.worktreePath, envFile);
-        if (!existsSync(fromFile)) continue;
-        cpSync(fromFile, toFile);
-      }
+        for (const envFile of [".env", ".env.local", ".env.test"]) {
+          const fromFile = join(payload.repoPath, envFile);
+          const toFile = join(payload.worktreePath, envFile);
+          if (!existsSync(fromFile)) continue;
+          cpSync(fromFile, toFile);
+        }
 
-      if (!(await run(ctx.worktreePath, ["bun", "install"]))) return;
-      await run(ctx.worktreePath, ["bun", "run", "build"]);
+        if (!(await run(payload.worktreePath, ["bun", "install"]))) return;
+        await run(payload.worktreePath, ["bun", "run", "build"]);
+      },
     },
   },
 });

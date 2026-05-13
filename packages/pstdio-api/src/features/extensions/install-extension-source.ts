@@ -9,13 +9,14 @@ import { createExtensionIgnoreMatcher } from "./extension-ignore";
 import {
   checkExtensionSource,
   checkExtensionsRoot,
+  checkExtensionsRoots,
   type ExtensionMetadata,
   formatExtensionsCheck,
   hashExtensionSource,
   loadExtensionSource,
 } from "./extension-runtime";
 
-export { checkExtensionsRoot, formatExtensionsCheck };
+export { checkExtensionsRoot, checkExtensionsRoots, formatExtensionsCheck };
 
 const DEFAULT_REPO_URL = "https://github.com/pufflyai/prompt-studio";
 const PACKAGE_MANAGERS = ["bun", "npm", "yarn"] as const;

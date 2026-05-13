@@ -9,6 +9,43 @@ import {
 import type { createProjectService } from "./project-service";
 
 type JsonRecord = Record<string, unknown>;
+const LOCAL_OVERRIDE_CONFIG_KEY = "pstdio.localOverride";
+
+const isJsonRecord = (value: unknown): value is JsonRecord =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const readLocalOverrideSourceId = (config: JsonRecord) => {
+  const override = config[LOCAL_OVERRIDE_CONFIG_KEY];
+  if (!isJsonRecord(override) || typeof override.installedExtensionId !== "string") return null;
+  return override.installedExtensionId;
+};
+
+const nextInstanceConfig = (input: {
+  existingConfig: JsonRecord;
+  existingInstalledSourceId: string;
+  isLocalOverride: boolean;
+}) => {
+  if (!input.isLocalOverride) return input.existingConfig;
+
+  return {
+    ...input.existingConfig,
+    [LOCAL_OVERRIDE_CONFIG_KEY]: {
+      installedExtensionId: readLocalOverrideSourceId(input.existingConfig) ?? input.existingInstalledSourceId,
+    },
+  };
+};
+
+const localOverrideDiagnostic = (input: {
+  extensionId: string;
+  localSourcePath: string;
+  overriddenSourcePath: string;
+}): JsonRecord => ({
+  code: "extension_overridden_by_local",
+  extensionId: input.extensionId,
+  message: `Extension id "${input.extensionId}" from ${input.overriddenSourcePath} is overridden by ${input.localSourcePath}`,
+  severity: "warning",
+  sourcePath: input.localSourcePath,
+});
 
 export type SourceKind = "builtin" | "git" | "local_path" | "registry";
 
@@ -28,6 +65,10 @@ export type EnableInstalledSourceInput = {
 };
 
 export type RegisterInstalledSourceInput = Omit<EnableInstalledSourceInput, "projectId">;
+
+export type RegisterInstalledSourceErrorInput = RegisterInstalledSourceInput & {
+  error: JsonRecord;
+};
 
 export class ExtensionNameConflictError extends Error {
   extensionName: string;
@@ -113,6 +154,32 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     return registered;
   };
 
+  const registerInstalledSourceError = async (input: RegisterInstalledSourceErrorInput) => {
+    const existing = await deps.installedExtensionSourcesService.getByInstallName(input.installName);
+    const values = {
+      display_name: input.displayName,
+      extension_id: input.extensionId,
+      manifest_json: input.manifest,
+      source_hash: input.sourceHash ?? existing?.source_hash ?? null,
+      source_kind: input.sourceKind ?? existing?.source_kind ?? "local_path",
+      source_path: input.sourcePath,
+      source_ref: input.sourceRef ?? existing?.source_ref ?? null,
+      status: "error" as const,
+      version: input.version ?? null,
+      last_loaded_at: new Date().toISOString(),
+      last_error_json: input.error,
+    };
+
+    const source = existing
+      ? await deps.installedExtensionSourcesService.updateRegistration(existing.id, values)
+      : await deps.installedExtensionSourcesService.register({ install_name: input.installName, ...values });
+
+    if (!source) throw new Error(`Installed extension not found: ${input.installName}`);
+    emitInstalledSource(source);
+    await notifyInstalledSourcesChanged();
+    return source;
+  };
+
   const getInstalledSource = (installName: string) =>
     deps.installedExtensionSourcesService.getByInstallName(installName);
 
@@ -122,13 +189,42 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
 
     const installedSource = await registerInstalledSource(input);
     const existing = await deps.extensionInstancesService.findByScopeNamespace("project", input.projectId, input.name);
+    let diagnosticsJson: JsonRecord | undefined;
 
     if (existing && existing.installed_extension_id !== installedSource.id) {
-      throw new ExtensionNameConflictError(input.name);
+      const existingSource = await deps.installedExtensionSourcesService.get(existing.installed_extension_id);
+      if (input.sourceKind !== "local_path" || existingSource?.extension_id !== input.extensionId) {
+        throw new ExtensionNameConflictError(input.name);
+      }
+      diagnosticsJson = {
+        diagnostics: [
+          localOverrideDiagnostic({
+            extensionId: input.extensionId,
+            localSourcePath: input.sourcePath,
+            overriddenSourcePath: existingSource.source_path,
+          }),
+        ],
+      };
     }
 
+    const existingConfig = isJsonRecord(existing?.config_json) ? existing.config_json : {};
+    const nextConfig = existing
+      ? nextInstanceConfig({
+          existingConfig,
+          existingInstalledSourceId: existing.installed_extension_id,
+          isLocalOverride: existing.installed_extension_id !== installedSource.id && input.sourceKind === "local_path",
+        })
+      : existingConfig;
+
+    const updateInput = {
+      config_json: nextConfig,
+      enabled: true,
+      installed_extension_id: installedSource.id,
+      ...(diagnosticsJson ? { diagnostics_json: diagnosticsJson } : {}),
+    };
+
     const instance = existing
-      ? await deps.extensionInstancesService.update(existing.id, { enabled: true })
+      ? await deps.extensionInstancesService.update(existing.id, updateInput)
       : await deps.extensionInstancesService.create({
           installed_extension_id: installedSource.id,
           namespace: input.name,
@@ -149,6 +245,31 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     return updated;
   };
 
+  const restoreProjectInstanceFromLocalOverride = async (projectId: string, localSourceId: string) => {
+    const [instance] = await deps.extensionInstancesService.list({
+      installed_extension_id: localSourceId,
+      scope_id: projectId,
+      scope_type: "project",
+    });
+    if (!instance || !isJsonRecord(instance.config_json)) return null;
+
+    const installedExtensionId = readLocalOverrideSourceId(instance.config_json);
+    if (!installedExtensionId) return null;
+
+    const restoredSource = await deps.installedExtensionSourcesService.get(installedExtensionId);
+    if (!restoredSource) return null;
+
+    const { [LOCAL_OVERRIDE_CONFIG_KEY]: _override, ...config } = instance.config_json;
+    const restored = await deps.extensionInstancesService.update(instance.id, {
+      config_json: config,
+      diagnostics_json: null,
+      enabled: true,
+      installed_extension_id: restoredSource.id,
+    });
+    if (restored) emitExtensionInstance(restored);
+    return restored;
+  };
+
   const listEnabledSourcesForProject = async (projectId: string) => {
     const records = await listProjectInstances(projectId);
     return records.filter(({ instance }) => instance.enabled);
@@ -167,6 +288,19 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     }
 
     return records;
+  };
+
+  const listInstalledSourcesByInstallNamePrefix = (prefix: string) =>
+    deps.installedExtensionSourcesService.listByInstallNamePrefix(prefix);
+
+  const markInstalledSourceUninstalled = async (sourceId: string) => {
+    const source = await deps.installedExtensionSourcesService.updateLoadState(sourceId, {
+      status: "uninstalled",
+      last_error_json: null,
+    });
+    if (source) emitInstalledSource(source);
+    await notifyInstalledSourcesChanged();
+    return source;
   };
 
   const getProjectExtensionInstance = async (projectId: string, instanceId: string) => {
@@ -191,7 +325,9 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     getInstalledSource,
     getProjectExtensionInstance,
     listEnabledSourcesForProject,
+    listInstalledSourcesByInstallNamePrefix,
     listProjectExtensionInstances: listProjectInstances,
+    markInstalledSourceUninstalled,
     reloadInstalledSource: (installName: string) => reloadInstalledSourceImpl(reloadDeps, installName),
     removeProjectExtensionInstance,
     reportWebviewBuildFailure: (installName: string, webviewId: string, error: unknown) =>
@@ -199,6 +335,8 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     reportWebviewBuildSuccess: (installName: string, webviewId: string) =>
       reportWebviewBuildSuccessImpl(reloadDeps, installName, webviewId),
     registerInstalledSource,
+    registerInstalledSourceError,
+    restoreProjectInstanceFromLocalOverride,
     setProjectExtensionEnabled,
   };
 };

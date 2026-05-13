@@ -8,22 +8,41 @@ import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
+let handle: Awaited<ReturnType<typeof createApp>>;
 let tempRoot: string;
 let storagePath: string;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-remove-project-test-"));
   storagePath = join(tempRoot, "storage");
-  ({ app } = await createApp({
+  handle = await createApp({
     dbPath: ":memory:",
     storagePath,
     filesRoot: "",
-  }));
+  });
+  app = handle.app;
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await handle.close();
   rmSync(tempRoot, { recursive: true, force: true });
 });
+
+const writeRepoExtension = (root: string) => {
+  const extensionRoot = join(root, ".pstdio", "extensions", "worktree");
+  mkdirSync(extensionRoot, { recursive: true });
+  writeFileSync(
+    join(extensionRoot, "package.json"),
+    JSON.stringify({
+      name: "worktree",
+      version: "1.0.0",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+    }),
+  );
+  writeFileSync(join(extensionRoot, "extension.ts"), "export default {};");
+};
 
 const createProject = async (name: string) => {
   const res = await app.request("/v1/projects", {
@@ -131,5 +150,28 @@ describe("DELETE /v1/projects/:id", () => {
     await app.request(`/v1/projects/${project.id}`, { method: "DELETE" });
 
     expect(existsSync(worktreePath)).toBe(false);
+  });
+
+  test("marks repo-local extensions uninstalled before deleting the project", async () => {
+    const project = await createProject("remove-local-extensions");
+    const repoPath = join(tempRoot, "local-extension-repo");
+    writeRepoExtension(repoPath);
+
+    const registerRes = await app.request(`/v1/projects/${project.id}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "repo", path: repoPath }),
+    });
+    expect(registerRes.status).toBe(201);
+
+    const [installed] = await handle.deps.extensionService.listInstalledSourcesByInstallNamePrefix("local:");
+    expect(installed?.status).toBe("loaded");
+
+    const deleteRes = await app.request(`/v1/projects/${project.id}`, { method: "DELETE" });
+    expect(deleteRes.status).toBe(204);
+
+    const [removed] = await handle.deps.extensionService.listInstalledSourcesByInstallNamePrefix("local:");
+    expect(removed?.id).toBe(installed?.id);
+    expect(removed?.status).toBe("uninstalled");
   });
 });

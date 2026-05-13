@@ -1,6 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import { enableInstalledExtensionsForProject, installDefaultExtensions } from "../../extensions/default-extensions";
+import { syncRepoExtensionsForProject } from "../../extensions/repo-extensions";
 import type { ProjectsRouteDeps } from "../deps";
 import { createProjectBodySchema, projectResponseSchema, toProjectResponse } from "../dto";
 
@@ -35,6 +36,7 @@ export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
         extensionService: deps.extensionService,
         projectId: project.id,
       });
+      await syncRepoExtensionsForProject(deps, project.id);
 
       deps.eventBus.emit("projects", "set", project);
 

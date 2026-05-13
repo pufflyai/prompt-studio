@@ -210,4 +210,4 @@ export interface ExtensionDefinition
   settings?: ParamObjectSchema;
 }
 
-export type ExtensionSourceKind = "local" | "package" | "builtin";
+export type ExtensionSourceKind = "local" | "local_path" | "package" | "builtin";
