@@ -176,7 +176,20 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}) => {
       widgets.set(widget.id, record);
 
       return createDisposable(() => {
-        if (widgets.get(widget.id) === record) widgets.delete(widget.id);
+        if (widgets.get(widget.id) !== record) return;
+        widgets.delete(widget.id);
+
+        for (const area of Object.values(layout.areas)) {
+          area.widgets = area.widgets.filter((placement) => placement.contributionId !== widget.id);
+          if (area.activeWidgetId && !area.widgets.some((placement) => placement.widgetId === area.activeWidgetId)) {
+            area.activeWidgetId = undefined;
+          }
+        }
+        if (layout.activeWidgetId && !findPlacement(widget.id) && layout.activeWidgetId.startsWith(widget.id)) {
+          layout.activeWidgetId = undefined;
+          layout.activeResourceUri = undefined;
+        }
+        persistLayout();
       });
     },
 

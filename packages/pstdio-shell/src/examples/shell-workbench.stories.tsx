@@ -6,8 +6,8 @@ import { AreaMapShellExample } from "./area-map-shell-example";
 import { createConsumerShellExample } from "./consumer-shell-example";
 import { commandPaletteMenuPath } from "./consumer-shell-example-data";
 import { DashboardShellExample } from "./dashboard-shell-example";
-import { MultiLeftPanelShellExample } from "./multi-left-panel-shell-example";
-import { NotesShellExample } from "./notes-shell-example";
+import { RandomShellExample } from "./random-shell-example";
+import { WorkbenchModesShellExample } from "./workbench-modes-shell-example";
 
 const meta = {
   title: "pstdio-shell/Examples",
@@ -42,8 +42,8 @@ export const ConsumerWorkbench: Story = {
   render: () => <ConsumerWorkbenchStory />,
 };
 
-export const MultiLeftPanelWorkbench: Story = {
-  render: () => <MultiLeftPanelShellExample />,
+export const WorkbenchModes: Story = {
+  render: () => <WorkbenchModesShellExample />,
 };
 
 export const AreaMap: Story = {
@@ -54,8 +54,8 @@ export const DashboardShell: Story = {
   render: () => <DashboardShellExample />,
 };
 
-export const Notes: Story = {
-  render: () => <NotesShellExample />,
+export const Random: Story = {
+  render: () => <RandomShellExample />,
 };
 
 export const MinimalWorkbench: Story = {

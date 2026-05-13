@@ -1,17 +1,32 @@
 import type { ResourceRef } from "../core";
 
-export const notesResourceKind = "shell-mode-item";
-export const notesModeContextKey = "notes.activeModeId";
+export const randomResourceKind = "shell-mode-item";
+
+export const railWidgetId = "random.rail";
 
 export const notesWidgetIds = {
   top: "notes.top",
-  rail: "notes.rail",
-  header: "notes.header",
   tree: "notes.tree",
   editor: "notes.editor",
-  details: "notes.details",
+  related: "notes.related",
   status: "notes.status",
   helper: "notes.helper",
+} as const;
+
+export const musicWidgetIds = {
+  top: "music.top",
+  player: "music.player",
+  queue: "music.queue",
+  controls: "music.controls",
+  status: "music.status",
+} as const;
+
+export const mailWidgetIds = {
+  top: "mail.top",
+  threads: "mail.threads",
+  reader: "mail.reader",
+  participants: "mail.participants",
+  status: "mail.status",
 } as const;
 
 export interface ShellModeSection {
@@ -289,22 +304,22 @@ const musicMode: ShellMode = {
   ],
 };
 
-export const shellModes: Record<string, ShellMode> = {
+export const randomShellModes: Record<string, ShellMode> = {
   notes: notesMode,
   mail: mailMode,
   music: musicMode,
 };
 
-export const shellModeOrder = ["notes", "mail", "music"] as const;
-export const defaultShellModeId = "notes";
+export const randomShellModeOrder = ["notes", "mail", "music"] as const;
+export const defaultRandomShellModeId = "notes";
 
-export const railEntries = shellModeOrder.map((id) => {
-  const mode = shellModes[id];
+export const railEntries = randomShellModeOrder.map((id) => {
+  const mode = randomShellModes[id];
   return { id, label: mode.label, icon: mode.topIcon };
 });
 
 export const itemResource = (modeId: string, item: ShellModeItem): ResourceRef => ({
-  kind: notesResourceKind,
+  kind: randomResourceKind,
   id: `${modeId}.${item.id}`,
   uri: `pstdio://shell-mode/${modeId}/${item.id}`,
   label: item.title,

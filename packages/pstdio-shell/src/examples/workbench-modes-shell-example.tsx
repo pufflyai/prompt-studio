@@ -237,7 +237,7 @@ const activateSettingsMode = (ctx: ShellModeActivationContext) => [
   ),
 ];
 
-const registerMultiLeftPanelModes = (shell: ShellCore) => {
+const registerWorkbenchModes = (shell: ShellCore) => {
   shell.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
   shell.modes.registerMode({ id: "workspace", label: "Workspace", activate: activateWorkspaceMode });
   shell.modes.registerMode({ id: "settings", label: "Settings", activate: activateSettingsMode });
@@ -245,7 +245,7 @@ const registerMultiLeftPanelModes = (shell: ShellCore) => {
 
 const registerPanelModeResourceOpener = (shell: ShellCore) => {
   shell.resources.registerOpener({
-    id: "multi-left-panel.resourceOpener",
+    id: "workbench-modes.resourceOpener",
     priority: 1000,
     canOpen: (resource) =>
       ["project", "dashboard-view", "ticket", "workspace", "settings", "extension-review"].includes(resource.kind),
@@ -256,10 +256,10 @@ const registerPanelModeResourceOpener = (shell: ShellCore) => {
   });
 };
 
-const createMultiLeftPanelExample = () => {
+const createWorkbenchModesExample = () => {
   const example = createConsumerShellExample();
 
-  registerMultiLeftPanelModes(example.shell);
+  registerWorkbenchModes(example.shell);
   registerPanelModeResourceOpener(example.shell);
   example.shell.modes.setActiveMode("project");
 
@@ -305,8 +305,8 @@ const LeftPanelHeader = (props: { shell: ShellCore }) => {
   );
 };
 
-export const MultiLeftPanelShellExample = () => {
-  const [example] = useState(createMultiLeftPanelExample);
+export const WorkbenchModesShellExample = () => {
+  const [example] = useState(createWorkbenchModesExample);
 
   return (
     <ShellWorkbench

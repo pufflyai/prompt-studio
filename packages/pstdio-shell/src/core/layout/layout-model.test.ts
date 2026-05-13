@@ -106,6 +106,31 @@ describe("createLayoutModel", () => {
     ]);
   });
 
+  test("removes placements when a widget contribution is disposed", () => {
+    const layout = createLayoutModel();
+
+    const disposable = layout.registerWidget({
+      id: "mode.editor",
+      title: "Editor",
+      area: "main",
+      renderer: "react",
+    });
+
+    layout.openWidget("mode.editor", {
+      resource: { kind: "note", uri: "pstdio://note/1", label: "Note 1" },
+    });
+
+    expect(layout.getLayout().areas.main.widgets).toHaveLength(1);
+    expect(layout.getLayout().activeWidgetId).toBe("mode.editor");
+
+    disposable.dispose();
+
+    expect(layout.getLayout().areas.main.widgets).toHaveLength(0);
+    expect(layout.getLayout().areas.main.activeWidgetId).toBeUndefined();
+    expect(layout.getLayout().activeWidgetId).toBeUndefined();
+    expect(layout.getLayout().activeResourceUri).toBeUndefined();
+  });
+
   test("persists layout state through an injected adapter", () => {
     const savedLayouts: ShellLayout[] = [];
     const persistence = {
