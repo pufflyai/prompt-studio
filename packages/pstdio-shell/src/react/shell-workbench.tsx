@@ -103,6 +103,7 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
   const hasActivityBarWidgets = layout.areas.activityBar.widgets.length > 0;
   const hasLeftWidgets = layout.areas.left.widgets.length > 0;
   const hasMainHeaderWidgets = layout.areas["main-header"].widgets.length > 0;
+  const hasMainLeftWidgets = layout.areas["main-left"].widgets.length > 0;
   const hasMainRightWidgets = layout.areas["main-right"].widgets.length > 0;
   const hasMainBottomWidgets = layout.areas["main-bottom"].widgets.length > 0;
   const hasStatusWidgets = layout.areas.status.widgets.length > 0;
@@ -150,6 +151,7 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
       shell={shell}
       renderers={registry}
       hasMainHeader={hasMainHeaderWidgets}
+      hasMainLeft={hasMainLeftWidgets}
       hasMainRight={showMainRightPane}
       mainRightCollapsed={!mainRightPanelOpen}
       hasMainBottom={hasMainBottom}

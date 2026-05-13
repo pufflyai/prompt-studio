@@ -97,6 +97,7 @@ const shellAreaBySlot = new Set<string>([
   "activityBar",
   "left",
   "main-header",
+  "main-left",
   "main",
   "main-right",
   "main-bottom",

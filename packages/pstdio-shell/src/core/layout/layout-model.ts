@@ -12,6 +12,7 @@ export const shellAreas = [
   "activityBar",
   "left",
   "main-header",
+  "main-left",
   "main",
   "main-right",
   "main-bottom",
@@ -77,6 +78,15 @@ export interface ShellLayout {
   activeResourceUri?: string;
 }
 
+export interface LayoutPersistenceAdapter {
+  getLayout(): ShellLayout | undefined;
+  setLayout(layout: ShellLayout): void;
+}
+
+export interface CreateLayoutModelInput {
+  persistence?: LayoutPersistenceAdapter;
+}
+
 interface OpenWidgetInput {
   resource?: ResourceRef;
   title?: string;
@@ -91,25 +101,30 @@ const createAreaState = (id: ShellArea) => ({
   widgets: [],
 });
 
-const createAreas = () => ({
-  top: createAreaState("top"),
-  activityBar: createAreaState("activityBar"),
-  left: createAreaState("left"),
-  "main-header": createAreaState("main-header"),
-  main: createAreaState("main"),
-  "main-right": createAreaState("main-right"),
-  "main-bottom": createAreaState("main-bottom"),
-  status: createAreaState("status"),
-  overlay: createAreaState("overlay"),
-  floating: createAreaState("floating"),
+export const createDefaultShellLayout = (): ShellLayout => ({
+  areas: {
+    top: createAreaState("top"),
+    activityBar: createAreaState("activityBar"),
+    left: createAreaState("left"),
+    "main-header": createAreaState("main-header"),
+    "main-left": createAreaState("main-left"),
+    main: createAreaState("main"),
+    "main-right": createAreaState("main-right"),
+    "main-bottom": createAreaState("main-bottom"),
+    status: createAreaState("status"),
+    overlay: createAreaState("overlay"),
+    floating: createAreaState("floating"),
+  },
 });
 
-export const createLayoutModel = () => {
+export const createLayoutModel = (input: CreateLayoutModelInput = {}) => {
   const widgets = new Map<string, RegisteredWidgetContribution>();
-  const layout: ShellLayout = {
-    areas: createAreas(),
-  };
+  const layout: ShellLayout = input.persistence?.getLayout() ?? createDefaultShellLayout();
   let placementCounter = 0;
+
+  const persistLayout = () => {
+    input.persistence?.setLayout(layout);
+  };
 
   const findWidget = (id: string) => {
     const widget = widgets.get(id);
@@ -180,6 +195,7 @@ export const createLayoutModel = () => {
       if (existing) {
         updatePlacement(existing.placement, widget, input);
         activatePlacement(existing.area, existing.placement);
+        persistLayout();
         return existing.placement;
       }
 
@@ -200,6 +216,7 @@ export const createLayoutModel = () => {
 
       area.widgets.push(placement);
       activatePlacement(area, placement);
+      persistLayout();
 
       return placement;
     },
@@ -209,6 +226,7 @@ export const createLayoutModel = () => {
         const placement = area.widgets.find((candidate) => candidate.widgetId === widgetId);
         if (placement) {
           activatePlacement(area, placement);
+          persistLayout();
           return placement;
         }
       }

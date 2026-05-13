@@ -4,6 +4,7 @@ import {
   PROJECT_NAVIGATION_TREE_ID,
   PROJECT_OPEN_SETTINGS_COMMAND_ID,
   PROJECT_RESOURCE_KIND,
+  PROJECT_SETTINGS_SIDEBAR_WIDGET_ID,
   PROJECT_SETTINGS_WIDGET_ID,
 } from "./dashboard-project-shell";
 import { DASHBOARD_COMMAND_PALETTE_MENU } from "./menu-locations";
@@ -19,6 +20,10 @@ describe("createDashboardProjectShell", () => {
 
     expect(shell.resources.getKind(PROJECT_RESOURCE_KIND)?.source).toBe("product-module");
     expect(shell.layout.getWidget(PROJECT_SETTINGS_WIDGET_ID)?.renderer).toBe("react");
+    expect(shell.layout.getWidget(PROJECT_SETTINGS_SIDEBAR_WIDGET_ID)).toMatchObject({
+      area: "main-left",
+      renderer: "react",
+    });
     expect(shell.commands.getCommand(PROJECT_OPEN_SETTINGS_COMMAND_ID)?.command.label).toBe("Project settings");
     expect(shell.menus.listMenuActions(DASHBOARD_COMMAND_PALETTE_MENU).map((action) => action.commandId)).toEqual([
       PROJECT_OPEN_SETTINGS_COMMAND_ID,
@@ -40,12 +45,23 @@ describe("createDashboardProjectShell", () => {
     const [root] = await shell.trees.getRoots(PROJECT_NAVIGATION_TREE_ID);
 
     expect(root?.resource?.uri).toBe("pstdio://project/project-1");
+    const projectResource = shell.navigation.resolveLocation("pstdio://project/project-1");
+
+    expect(projectResource).toMatchObject({
+      kind: PROJECT_RESOURCE_KIND,
+      id: "project-1",
+      label: "Prompt Studio",
+    });
+    expect(shell.navigation.createHref(projectResource)).toBe("/projects/project-1/settings");
 
     await shell.commands.executeCommand(PROJECT_OPEN_SETTINGS_COMMAND_ID);
 
     expect(navigations).toEqual(["/projects/project-1/settings"]);
     expect(shell.layout.getLayout().activeWidgetId).toBe(PROJECT_SETTINGS_WIDGET_ID);
     expect(shell.layout.getLayout().activeResourceUri).toBe("pstdio://project/project-1");
+    expect(shell.layout.getLayout().areas["main-left"].widgets[0]?.contributionId).toBe(
+      PROJECT_SETTINGS_SIDEBAR_WIDGET_ID,
+    );
 
     shell.dispose();
 

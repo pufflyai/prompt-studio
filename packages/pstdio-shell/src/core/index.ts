@@ -32,7 +32,9 @@ export type { Disposable } from "./disposable";
 export type { Keybinding, KeybindingRegistry, RegisteredKeybinding } from "./keybindings/keybinding-registry";
 export { createKeybindingRegistry } from "./keybindings/keybinding-registry";
 export type {
+  CreateLayoutModelInput,
   LayoutModel,
+  LayoutPersistenceAdapter,
   RegisteredWidgetContribution,
   ShellArea,
   ShellAreaState,
@@ -41,7 +43,7 @@ export type {
   WebviewDescriptor,
   WidgetContribution,
 } from "./layout/layout-model";
-export { createLayoutModel, shellAreas } from "./layout/layout-model";
+export { createDefaultShellLayout, createLayoutModel, shellAreas } from "./layout/layout-model";
 export type { LifecycleHook, LifecyclePhase, LifecycleRegistry } from "./lifecycle/lifecycle-registry";
 export { createLifecycleRegistry } from "./lifecycle/lifecycle-registry";
 export type { MenuAction, MenuPath, MenuRegistry, RegisteredMenuAction } from "./menus/menu-registry";
@@ -84,6 +86,7 @@ export type {
 } from "./resources/resource-registry";
 export { createResourceRegistry } from "./resources/resource-registry";
 export type {
+  CreateShellCoreInput,
   ProductModuleContribution,
   ProductModuleContributionContext,
   ShellCore,

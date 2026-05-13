@@ -11,6 +11,7 @@ const areaLabels = {
   activityBar: "Activity bar",
   left: "Left side panel",
   "main-header": "Main header area",
+  "main-left": "Main left panel",
   main: "Main editor area",
   "main-right": "Main right panel",
   "main-bottom": "Main bottom panel",

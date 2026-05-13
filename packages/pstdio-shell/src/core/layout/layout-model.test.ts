@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createLayoutModel } from "./layout-model";
+import { createLayoutModel, type ShellLayout } from "./layout-model";
 
 describe("createLayoutModel", () => {
   test("opens widgets in their contributed area and tracks active resource state", () => {
@@ -104,5 +104,35 @@ describe("createLayoutModel", () => {
       "project.settings",
       "sessions.chat",
     ]);
+  });
+
+  test("persists layout state through an injected adapter", () => {
+    const savedLayouts: ShellLayout[] = [];
+    const persistence = {
+      getLayout: () => savedLayouts.at(-1),
+      setLayout: (layoutState: ShellLayout) => {
+        savedLayouts.push(structuredClone(layoutState));
+      },
+    };
+    const layout = createLayoutModel({ persistence });
+
+    layout.registerWidget({
+      id: "project.settings",
+      title: "Project settings",
+      area: "main",
+      renderer: "react",
+    });
+
+    layout.openWidget("project.settings", {
+      resource: { kind: "project", uri: "pstdio://project/project-1", label: "Prompt Studio" },
+    });
+
+    expect(savedLayouts.at(-1)?.activeWidgetId).toBe("project.settings");
+    expect(savedLayouts.at(-1)?.activeResourceUri).toBe("pstdio://project/project-1");
+
+    const rehydrated = createLayoutModel({ persistence });
+
+    expect(rehydrated.getLayout().activeWidgetId).toBe("project.settings");
+    expect(rehydrated.getLayout().areas.main.widgets[0]?.resourceUri).toBe("pstdio://project/project-1");
   });
 });

@@ -168,6 +168,23 @@ export const ShellRightSidePanel = (props: ShellWorkbenchAreaPanelProps) => {
   );
 };
 
+export const ShellMainLeftPanel = (props: ShellWorkbenchAreaPanelProps) => {
+  const { shell, renderers, refresh } = props;
+
+  return (
+    <Box as="aside" h="full" minH="0" minW="0" overflow="hidden" w="full">
+      <ShellArea
+        shell={shell}
+        area="main-left"
+        title="Main left"
+        renderers={renderers}
+        showHeader={false}
+        refresh={refresh}
+      />
+    </Box>
+  );
+};
+
 export const ShellStatusBar = (props: ShellWorkbenchAreaPanelProps) => {
   const { shell, renderers, refresh } = props;
 

@@ -28,9 +28,47 @@ const createChatHost = () => {
   return host;
 };
 
+const isProjectSettingsRoutePath = (pathname: string, projectId?: string) => {
+  if (!projectId) return false;
+
+  const projectSettingsPath = `/projects/${projectId}/settings`;
+  return pathname === projectSettingsPath || pathname.startsWith(`${projectSettingsPath}/`);
+};
+
+const getCurrentBrowserPath = (pathname: string) => {
+  if (typeof window === "undefined") return pathname;
+
+  return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+};
+
+const resolveActiveSessionSlot = (input: {
+  showAttachedPanel: boolean;
+  isBubbleMode: boolean;
+  attachedSlot: HTMLDivElement | null;
+  bubbleSlot: HTMLDivElement | null;
+}) => {
+  const { showAttachedPanel, isBubbleMode, attachedSlot, bubbleSlot } = input;
+
+  if (showAttachedPanel) return attachedSlot;
+  if (isBubbleMode) return bubbleSlot;
+
+  return null;
+};
+
+const resolveNewSessionWorkspaceId = (input: {
+  isWorkspaceRoute: boolean;
+  pendingWorkspaceSessionWorkspaceId: string | null;
+}) => {
+  const { isWorkspaceRoute, pendingWorkspaceSessionWorkspaceId } = input;
+
+  if (!isWorkspaceRoute) return undefined;
+
+  return pendingWorkspaceSessionWorkspaceId ?? undefined;
+};
+
 const ProjectShellContent = () => {
   const { projectId, workspaceShorthand } = useParams({ strict: false });
-  const location = useRouterState({ select: (state) => state.location });
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   const { data: project, isLoading } = useProject(projectId);
   const { t } = useTranslation("projects");
   const sessionModalState = useProjectSettingsStore((s) => s.sessionModalState);
@@ -39,7 +77,9 @@ const ProjectShellContent = () => {
   const selectedSessionId = useProjectSettingsStore((s) => s.selectedSessionId);
   const setSelectedSessionId = useProjectSettingsStore((s) => s.setSelectedSessionId);
   const pendingWorkspaceSessionWorkspaceId = useProjectSettingsStore((s) => s.pendingWorkspaceSessionWorkspaceId);
-  const isSessionsRoute = isSessionsRoutePath(location.pathname, projectId);
+  const isSessionsRoute = isSessionsRoutePath(pathname, projectId);
+  const isProjectSettingsRoute = isProjectSettingsRoutePath(pathname, projectId);
+  const suppressSessionChrome = isSessionsRoute || isProjectSettingsRoute;
   const isWorkspaceRoute = typeof workspaceShorthand === "string" && workspaceShorthand.length > 0;
   const renderOutlet = shouldRenderProjectOutlet({
     projectId,
@@ -54,18 +94,15 @@ const ProjectShellContent = () => {
 
   useLayoutEffect(() => {
     if (!projectId || isSessionsRoute) return;
-    const currentPath =
-      typeof window === "undefined"
-        ? location.pathname
-        : `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const currentPath = getCurrentBrowserPath(pathname);
     setLastNonSessionsPath(currentPath);
-  }, [isSessionsRoute, location.pathname, projectId, setLastNonSessionsPath]);
+  }, [isSessionsRoute, pathname, projectId, setLastNonSessionsPath]);
 
-  const showAttachedPanel = sessionModalState === "attached" && !isSessionsRoute;
-  const isBubbleMode = sessionModalState === "bubble" && !isSessionsRoute;
-  const showChatView = !isSessionsRoute && (showAttachedPanel || isBubbleMode);
+  const showAttachedPanel = sessionModalState === "attached" && !suppressSessionChrome;
+  const isBubbleMode = sessionModalState === "bubble" && !suppressSessionChrome;
+  const showChatView = !suppressSessionChrome && (showAttachedPanel || isBubbleMode);
   const chatViewMounted = useDeferredMount(showChatView ? "visible" : "hidden");
-  const activeSlot = showAttachedPanel ? attachedSlot : isBubbleMode ? bubbleSlot : null;
+  const activeSlot = resolveActiveSessionSlot({ showAttachedPanel, isBubbleMode, attachedSlot, bubbleSlot });
 
   useLayoutEffect(() => {
     const host = chatHostRef.current;
@@ -106,12 +143,15 @@ const ProjectShellContent = () => {
           if (collapsed) setSessionModalState("bubble");
         }}
       />
-      {!isSessionsRoute ? <SessionBubbleContainer chatSlotRef={setBubbleSlot} /> : null}
+      {!suppressSessionChrome ? <SessionBubbleContainer chatSlotRef={setBubbleSlot} /> : null}
       {showChatView && chatViewMounted && chatHostRef.current
         ? createPortal(
             <SessionChatView
               sessionId={selectedSessionId}
-              newSessionWorkspaceId={isWorkspaceRoute ? (pendingWorkspaceSessionWorkspaceId ?? undefined) : undefined}
+              newSessionWorkspaceId={resolveNewSessionWorkspaceId({
+                isWorkspaceRoute,
+                pendingWorkspaceSessionWorkspaceId,
+              })}
               onSessionCreated={setSelectedSessionId}
               showWorkspaceHub={!isWorkspaceRoute}
               autoFocusChatInput={isBubbleMode}

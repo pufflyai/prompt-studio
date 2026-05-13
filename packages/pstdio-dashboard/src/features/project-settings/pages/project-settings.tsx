@@ -1,6 +1,7 @@
 import { Flex, Stack, Text } from "@chakra-ui/react";
-import { HorizontalMenuStack, PanelLayout, toaster } from "@pstdio/ui";
+import { HorizontalMenuStack, toaster } from "@pstdio/ui";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { type ShellRendererRegistration, ShellWorkbench } from "pstdio-shell/react";
 import { useEffect, useState } from "react";
 import { useProject, useProjectTemplateAssets } from "@/features/project/hooks/use-project";
 import {
@@ -8,14 +9,135 @@ import {
   useDeleteProjectTicketTag,
   useProjectTicketStatuses,
 } from "@/features/ticket-list/hooks/use-project-tickets";
-import { OpenSidebarButton } from "@/shared/sidebar/open-sidebar-button";
+import {
+  createDashboardProjectResource,
+  createDashboardProjectShell,
+  PROJECT_NAVIGATION_TREE_ID,
+  PROJECT_SETTINGS_SIDEBAR_WIDGET_ID,
+  PROJECT_SETTINGS_WIDGET_ID,
+} from "@/shared/shell/dashboard-project-shell";
+import { DASHBOARD_COMMAND_PALETTE_MENU } from "@/shared/shell/menu-locations";
 import { CreateTemplateDialog } from "../components/create-template-dialog";
 import { SettingsContent } from "../components/settings-content";
-import { SETTINGS_SIDEBAR_STORAGE_KEY, type SettingsSection, SettingsSidebar } from "../components/settings-sidebar";
+import { type SettingsSection, SettingsSidebar } from "../components/settings-sidebar";
 import { useProjectAttemptStatuses } from "../hooks/use-attempt-statuses";
 
 import { useProjectSkills } from "../hooks/use-skills";
 import { ensureValidSettingsSection, parseSettingsPanel, toSettingsPanel } from "../utils/settings-panel";
+
+interface ProjectSettingsSidebarWidgetProps {
+  activeSection: SettingsSection | null;
+  skills: ReturnType<typeof useProjectSkills>["data"];
+  tags: NonNullable<ReturnType<typeof useProject>["data"]>["ticketTags"];
+  templates: ReturnType<typeof useProjectTemplateAssets>["data"];
+  onCreateTag: () => void;
+  onCreateTemplate: () => void;
+  onSelectSection: (section: SettingsSection) => void;
+}
+
+const ProjectSettingsSidebarWidget = (props: ProjectSettingsSidebarWidgetProps) => {
+  const { activeSection, skills, tags, templates, onCreateTag, onCreateTemplate, onSelectSection } = props;
+
+  return (
+    <SettingsSidebar
+      templates={templates ?? []}
+      skills={skills ?? []}
+      tags={tags}
+      activeSection={activeSection}
+      onSelectSection={onSelectSection}
+      onCreateTemplate={onCreateTemplate}
+      onCreateTag={onCreateTag}
+    />
+  );
+};
+
+interface ProjectSettingsMainWidgetProps {
+  activeSection: SettingsSection | null;
+  attemptStatuses: NonNullable<ReturnType<typeof useProjectAttemptStatuses>["data"]>;
+  isCreateTemplateOpen: boolean;
+  projectId?: string;
+  projectName: string;
+  repositories: NonNullable<ReturnType<typeof useProject>["data"]>["repositories"];
+  tags: NonNullable<ReturnType<typeof useProject>["data"]>["ticketTags"];
+  templates: ReturnType<typeof useProjectTemplateAssets>["data"];
+  ticketStatuses: NonNullable<ReturnType<typeof useProjectTicketStatuses>["data"]>;
+  onCloseCreateTemplate: () => void;
+  onDeleteTag: (tagId: string) => Promise<void>;
+  onTemplateCreated: (name: string) => void;
+  onTemplateDeleted: () => void;
+}
+
+const ProjectSettingsMainWidget = (props: ProjectSettingsMainWidgetProps) => {
+  const {
+    activeSection,
+    attemptStatuses,
+    isCreateTemplateOpen,
+    projectId,
+    projectName,
+    repositories,
+    tags,
+    ticketStatuses,
+    onCloseCreateTemplate,
+    onDeleteTag,
+    onTemplateCreated,
+    onTemplateDeleted,
+  } = props;
+
+  return (
+    <Stack flex="1" minH="0" minW="0" gap="0">
+      <HorizontalMenuStack>
+        <Flex align="center" gap="sm" minW="0">
+          <Text textStyle="label/S/medium" color="foreground.primary" lineClamp={1}>
+            Settings
+          </Text>
+        </Flex>
+      </HorizontalMenuStack>
+
+      <Stack flex="1" minH="0" minW="0" overflow="auto">
+        <SettingsContent
+          activeSection={activeSection}
+          projectId={projectId}
+          projectName={projectName}
+          repositories={repositories}
+          tags={tags}
+          ticketStatuses={ticketStatuses}
+          attemptStatuses={attemptStatuses}
+          onDeleteTag={onDeleteTag}
+          onTemplateDeleted={onTemplateDeleted}
+        />
+      </Stack>
+
+      <CreateTemplateDialog
+        projectId={projectId}
+        open={isCreateTemplateOpen}
+        onClose={onCloseCreateTemplate}
+        onCreated={onTemplateCreated}
+      />
+    </Stack>
+  );
+};
+
+interface CreateProjectSettingsShellInput {
+  projectId: string;
+  projectName: string;
+  navigate: (path: string) => void;
+}
+
+const createProjectSettingsShell = (input: CreateProjectSettingsShellInput) => {
+  const shell = createDashboardProjectShell(input);
+  const projectResource = createDashboardProjectResource(input);
+
+  shell.layout.openWidget(PROJECT_SETTINGS_SIDEBAR_WIDGET_ID, {
+    resource: projectResource,
+    closable: false,
+  });
+  shell.layout.openWidget(PROJECT_SETTINGS_WIDGET_ID, {
+    resource: projectResource,
+    closable: false,
+  });
+
+  return shell;
+};
 
 export const ProjectSettings = () => {
   const navigate = useNavigate();
@@ -33,6 +155,15 @@ export const ProjectSettings = () => {
 
   const projectName = project?.name ?? "Project";
   const tags = project?.ticketTags ?? [];
+  const repositories = project?.repositories ?? [];
+  const resolvedProjectId = projectId ?? "";
+  const [projectShell, setProjectShell] = useState(() =>
+    createProjectSettingsShell({
+      projectId: resolvedProjectId,
+      projectName,
+      navigate: (path) => navigate({ to: path }),
+    }),
+  );
 
   const handleTemplateCreated = (name: string) => {
     setActiveSection({ template: name });
@@ -62,9 +193,61 @@ export const ProjectSettings = () => {
     }
   };
 
+  const renderers: ShellRendererRegistration[] = [
+    {
+      id: PROJECT_SETTINGS_SIDEBAR_WIDGET_ID,
+      render: () => (
+        <ProjectSettingsSidebarWidget
+          activeSection={activeSection}
+          skills={skills}
+          tags={tags}
+          templates={templates}
+          onCreateTag={handleCreateTag}
+          onCreateTemplate={() => setIsCreateTemplateOpen(true)}
+          onSelectSection={setActiveSection}
+        />
+      ),
+    },
+    {
+      id: PROJECT_SETTINGS_WIDGET_ID,
+      render: () => (
+        <ProjectSettingsMainWidget
+          activeSection={activeSection}
+          attemptStatuses={attemptStatuses ?? []}
+          isCreateTemplateOpen={isCreateTemplateOpen}
+          projectId={projectId}
+          projectName={projectName}
+          repositories={repositories}
+          tags={tags}
+          templates={templates}
+          ticketStatuses={ticketStatuses ?? []}
+          onCloseCreateTemplate={() => setIsCreateTemplateOpen(false)}
+          onDeleteTag={handleDeleteTag}
+          onTemplateCreated={handleTemplateCreated}
+          onTemplateDeleted={handleTemplateDeleted}
+        />
+      ),
+    },
+  ];
+
   useEffect(() => {
     setActiveSection(parseSettingsPanel(panel));
   }, [panel]);
+
+  useEffect(() => {
+    const nextShell = createProjectSettingsShell({
+      projectId: resolvedProjectId,
+      projectName,
+      navigate: (path) => navigate({ to: path }),
+    });
+
+    setProjectShell((previousShell) => {
+      previousShell.dispose();
+      return nextShell;
+    });
+
+    return () => nextShell.dispose();
+  }, [navigate, projectName, resolvedProjectId]);
 
   useEffect(() => {
     if (!activeSection) {
@@ -95,51 +278,13 @@ export const ProjectSettings = () => {
     });
   }, [activeSection, navigate, panel, projectId]);
 
-  const sidebar = (
-    <SettingsSidebar
-      templates={templates ?? []}
-      skills={skills ?? []}
-      tags={tags}
-      activeSection={activeSection}
-      onSelectSection={setActiveSection}
-      onCreateTemplate={() => setIsCreateTemplateOpen(true)}
-      onCreateTag={handleCreateTag}
-    />
-  );
-
   return (
-    <PanelLayout sidebar={sidebar}>
-      <Stack flex="1" minH="0" minW="0" gap="0">
-        <HorizontalMenuStack>
-          <Flex align="center" gap="sm" minW="0">
-            <OpenSidebarButton storageKey={SETTINGS_SIDEBAR_STORAGE_KEY} />
-            <Text textStyle="label/S/medium" color="foreground.primary" lineClamp={1}>
-              Settings
-            </Text>
-          </Flex>
-        </HorizontalMenuStack>
-
-        <Stack flex="1" minH="0" minW="0" overflow="auto">
-          <SettingsContent
-            activeSection={activeSection}
-            projectId={projectId}
-            projectName={projectName}
-            repositories={project?.repositories ?? []}
-            tags={tags}
-            ticketStatuses={ticketStatuses ?? []}
-            attemptStatuses={attemptStatuses ?? []}
-            onDeleteTag={handleDeleteTag}
-            onTemplateDeleted={handleTemplateDeleted}
-          />
-        </Stack>
-      </Stack>
-
-      <CreateTemplateDialog
-        projectId={projectId}
-        open={isCreateTemplateOpen}
-        onClose={() => setIsCreateTemplateOpen(false)}
-        onCreated={handleTemplateCreated}
-      />
-    </PanelLayout>
+    <ShellWorkbench
+      shell={projectShell}
+      renderers={renderers}
+      commandPaletteMenuPath={DASHBOARD_COMMAND_PALETTE_MENU}
+      leftTreeViewId={PROJECT_NAVIGATION_TREE_ID}
+      showCommandPaletteTreeNode={false}
+    />
   );
 };

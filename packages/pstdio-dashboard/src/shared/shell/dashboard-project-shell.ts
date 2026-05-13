@@ -1,13 +1,21 @@
 import {
   activateProductModule,
   createShellCore,
+  type LayoutPersistenceAdapter,
+  type PreferencePersistenceAdapter,
   type ProductModuleContribution,
   type ResourceRef,
 } from "pstdio-shell/core";
+import {
+  createDashboardShellLayoutPersistence,
+  createDashboardShellPreferencePersistence,
+  type DashboardShellStorage,
+} from "./dashboard-shell-persistence";
 import { DASHBOARD_COMMAND_PALETTE_MENU } from "./menu-locations";
 
 export const PROJECT_RESOURCE_KIND = "project";
 export const PROJECT_SETTINGS_WIDGET_ID = "project.settings";
+export const PROJECT_SETTINGS_SIDEBAR_WIDGET_ID = "project.settings.sidebar";
 export const DASHBOARD_CLOSE_OVERLAY_COMMAND_ID = "dashboard.closeOverlay";
 export const DASHBOARD_OPEN_COMMAND_PALETTE_COMMAND_ID = "dashboard.openCommandPalette";
 export const DASHBOARD_OPEN_COMMAND_PALETTE_COMMANDS_COMMAND_ID = "dashboard.openCommandPaletteCommands";
@@ -17,6 +25,8 @@ export const PROJECT_CREATE_TICKET_COMMAND_ID = "project.createTicket";
 export const PROJECT_CREATE_SESSION_COMMAND_ID = "project.createSession";
 export const PROJECT_GO_TO_TICKETS_COMMAND_ID = "project.goToTickets";
 export const PROJECT_OPEN_SETTINGS_COMMAND_ID = "project.openSettings";
+export const PROJECT_NAVIGATION_PARSER_ID = "dashboard.projectUri";
+export const PROJECT_NAVIGATOR_ID = "dashboard.projectRouter";
 export const DASHBOARD_CLOSE_OVERLAY_KEYBINDING = "Escape";
 export const DASHBOARD_OPEN_COMMAND_PALETTE_KEYBINDING = "Ctrl+Shift+P";
 export const DASHBOARD_OPEN_COMMAND_PALETTE_COMMANDS_KEYBINDING = "Ctrl+Shift+.";
@@ -32,6 +42,9 @@ interface DashboardProjectShellInput {
   projectId: string;
   projectName?: string;
   navigate: (path: string) => void;
+  storage?: DashboardShellStorage;
+  layoutPersistence?: LayoutPersistenceAdapter;
+  preferencePersistence?: PreferencePersistenceAdapter;
   closeOverlay?: () => void;
   requestCreateTicket?: () => void;
   requestCreateSession?: () => void;
@@ -41,12 +54,16 @@ interface DashboardProjectShellInput {
   openShortcutHelp?: () => void;
 }
 
-const createProjectResource = (input: DashboardProjectShellInput): ResourceRef => ({
+export const createDashboardProjectResource = (
+  input: Pick<DashboardProjectShellInput, "projectId" | "projectName">,
+): ResourceRef => ({
   kind: PROJECT_RESOURCE_KIND,
   uri: `pstdio://project/${input.projectId}`,
   id: input.projectId,
   label: input.projectName ?? "Project",
 });
+
+const createProjectSettingsHref = (resource: ResourceRef) => `/projects/${resource.id}/settings`;
 
 export const DASHBOARD_PROJECT_SHORTCUTS = [
   {
@@ -125,11 +142,44 @@ const createDashboardShortcutCommands = (input: DashboardProjectShellInput) =>
 const createDashboardProjectModule = (input: DashboardProjectShellInput): ProductModuleContribution => ({
   id: "dashboard.project",
   activate(ctx) {
-    const projectResource = createProjectResource(input);
+    const projectResource = createDashboardProjectResource(input);
     const shortcutCommands = createDashboardShortcutCommands(input);
 
     return [
       ctx.resources.registerKind({ kind: PROJECT_RESOURCE_KIND, label: "Project", icon: "folder" }),
+      ctx.navigation.registerParser({
+        id: PROJECT_NAVIGATION_PARSER_ID,
+        priority: 100,
+        canParse: (location) => location.startsWith("pstdio://project/"),
+        parse: (location) => {
+          const projectId = location.replace("pstdio://project/", "");
+
+          return createDashboardProjectResource({
+            projectId,
+            projectName: projectId === input.projectId ? input.projectName : undefined,
+          });
+        },
+      }),
+      ctx.navigation.registerNavigator({
+        id: PROJECT_NAVIGATOR_ID,
+        priority: 100,
+        canNavigate: (resource) => resource.kind === PROJECT_RESOURCE_KIND,
+        createHref: createProjectSettingsHref,
+        navigate: (resource) => {
+          const href = createProjectSettingsHref(resource);
+          input.navigate(href);
+          return href;
+        },
+      }),
+      ctx.layout.registerWidget({
+        id: PROJECT_SETTINGS_SIDEBAR_WIDGET_ID,
+        title: "Project settings navigation",
+        area: "main-left",
+        singleton: true,
+        resourceKinds: [PROJECT_RESOURCE_KIND],
+        renderer: "react",
+        rendererId: PROJECT_SETTINGS_SIDEBAR_WIDGET_ID,
+      }),
       ctx.layout.registerWidget({
         id: PROJECT_SETTINGS_WIDGET_ID,
         title: "Project settings",
@@ -143,8 +193,9 @@ const createDashboardProjectModule = (input: DashboardProjectShellInput): Produc
         id: PROJECT_SETTINGS_WIDGET_ID,
         priority: 100,
         canOpen: (resource) => resource.kind === PROJECT_RESOURCE_KIND,
-        open: (resource) => {
-          input.navigate(`/projects/${input.projectId}/settings`);
+        open: async (resource) => {
+          await ctx.navigation.navigateResource(resource);
+          ctx.layout.openWidget(PROJECT_SETTINGS_SIDEBAR_WIDGET_ID, { resource, closable: false });
           return ctx.layout.openWidget(PROJECT_SETTINGS_WIDGET_ID, { resource });
         },
       }),
@@ -201,7 +252,14 @@ const createDashboardProjectModule = (input: DashboardProjectShellInput): Produc
 });
 
 export const createDashboardProjectShell = (input: DashboardProjectShellInput) => {
-  const shell = createShellCore();
+  const shell = createShellCore({
+    layoutPersistence:
+      input.layoutPersistence ??
+      createDashboardShellLayoutPersistence({ projectId: input.projectId, storage: input.storage }),
+    preferencePersistence:
+      input.preferencePersistence ??
+      createDashboardShellPreferencePersistence({ projectId: input.projectId, storage: input.storage }),
+  });
   const disposable = activateProductModule(shell, createDashboardProjectModule(input));
 
   return {

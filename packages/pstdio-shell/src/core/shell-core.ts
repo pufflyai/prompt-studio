@@ -6,12 +6,16 @@ import { createDiagnosticRegistry, type DiagnosticRegistry } from "./diagnostics
 import type { Disposable } from "./disposable";
 import { createDisposable } from "./disposable";
 import { createKeybindingRegistry, type KeybindingRegistry } from "./keybindings/keybinding-registry";
-import { createLayoutModel, type LayoutModel } from "./layout/layout-model";
+import { createLayoutModel, type LayoutModel, type LayoutPersistenceAdapter } from "./layout/layout-model";
 import { createLifecycleRegistry, type LifecycleRegistry } from "./lifecycle/lifecycle-registry";
 import { createMenuRegistry, type MenuRegistry } from "./menus/menu-registry";
 import { createNavigationRegistry, type NavigationRegistry } from "./navigation/navigation-registry";
 import { createNotificationRegistry, type NotificationRegistry } from "./notifications/notification-registry";
-import { createPreferenceRegistry, type PreferenceRegistry } from "./preferences/preference-registry";
+import {
+  createPreferenceRegistry,
+  type PreferencePersistenceAdapter,
+  type PreferenceRegistry,
+} from "./preferences/preference-registry";
 import { createResourceRegistry, type ResourceRegistry } from "./resources/resource-registry";
 import { createTreeViewRegistry, type TreeViewRegistry } from "./trees/tree-view-registry";
 import { createWebviewRegistry, type WebviewRegistry } from "./webviews/webview-registry";
@@ -36,6 +40,11 @@ export interface ShellCoreContributionContext {
 export type ShellCore = ShellCoreContributionContext;
 export type ProductModuleContributionContext = ShellCoreContributionContext;
 
+export interface CreateShellCoreInput {
+  layoutPersistence?: LayoutPersistenceAdapter;
+  preferencePersistence?: PreferencePersistenceAdapter;
+}
+
 type ProductModuleActivationResult = Disposable | readonly Disposable[] | undefined;
 
 export interface ProductModuleContribution {
@@ -49,7 +58,7 @@ const withProductModuleMetadata = (ownerId: string, metadata?: ContributionMetad
   ownerId,
 });
 
-export const createShellCore = () => {
+export const createShellCore = (input: CreateShellCoreInput = {}) => {
   const commands = createCommandRegistry();
   const context = createContextKeyService();
 
@@ -59,12 +68,12 @@ export const createShellCore = () => {
     context,
     diagnostics: createDiagnosticRegistry(),
     keybindings: createKeybindingRegistry({ commands, context }),
-    layout: createLayoutModel(),
+    layout: createLayoutModel({ persistence: input.layoutPersistence }),
     lifecycle: createLifecycleRegistry(),
     menus: createMenuRegistry({ commands }),
     navigation: createNavigationRegistry(),
     notifications: createNotificationRegistry(),
-    preferences: createPreferenceRegistry(),
+    preferences: createPreferenceRegistry({ persistence: input.preferencePersistence }),
     resources: createResourceRegistry(),
     trees: createTreeViewRegistry(),
     webviews: createWebviewRegistry(),

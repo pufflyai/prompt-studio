@@ -7,7 +7,7 @@ import { createConsumerShellExample } from "./consumer-shell-example";
 import { commandPaletteMenuPath } from "./consumer-shell-example-data";
 import { DashboardShellExample } from "./dashboard-shell-example";
 import { MultiLeftPanelShellExample } from "./multi-left-panel-shell-example";
-import { SignalRoomShellExample } from "./signal-room-shell-example";
+import { NotesShellExample } from "./notes-shell-example";
 
 const meta = {
   title: "pstdio-shell/Examples",
@@ -57,8 +57,8 @@ export const DashboardShell: Story = {
   render: () => <DashboardShellExample />,
 };
 
-export const SignalRoom: Story = {
-  render: () => <SignalRoomShellExample />,
+export const Notes: Story = {
+  render: () => <NotesShellExample />,
 };
 
 export const MinimalWorkbench: Story = {
