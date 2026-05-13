@@ -156,7 +156,9 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
     if (event.button !== 0 || (collapsed && !collapsible)) return;
 
     event.preventDefault();
+    cleanupDragRef.current();
 
+    const resizeHandle = event.currentTarget;
     const rootWidth = getElementWidth(rootRef.current);
     const bounds = resolveResizableBoundsPx({ rootWidth, minSizePx, maxSizePx, contentMinSizePx });
     const startX = event.clientX;
@@ -193,8 +195,11 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
     const cleanup = () => {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", cleanup);
+      window.removeEventListener("pointercancel", cleanup);
+      window.removeEventListener("blur", cleanup);
       document.body.style.cursor = previousCursor;
       document.body.style.userSelect = previousUserSelect;
+      if (resizeHandle.hasPointerCapture(event.pointerId)) resizeHandle.releasePointerCapture(event.pointerId);
       setDraggingPanelState("");
       if (animationFrame) {
         window.cancelAnimationFrame(animationFrame);
@@ -211,11 +216,14 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
     };
 
     cleanupDragRef.current = cleanup;
+    resizeHandle.setPointerCapture(event.pointerId);
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
     setDraggingPanelState("none");
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", cleanup, { once: true });
+    window.addEventListener("pointercancel", cleanup, { once: true });
+    window.addEventListener("blur", cleanup, { once: true });
   };
 
   const handleResizeKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {

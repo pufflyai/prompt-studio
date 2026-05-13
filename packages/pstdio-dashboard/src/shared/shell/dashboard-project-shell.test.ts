@@ -23,6 +23,19 @@ describe("createDashboardProjectShell", () => {
     expect(shell.menus.listMenuActions(DASHBOARD_COMMAND_PALETTE_MENU).map((action) => action.commandId)).toEqual([
       PROJECT_OPEN_SETTINGS_COMMAND_ID,
     ]);
+    expect(
+      shell.keybindings.listActiveKeybindings().map(({ commandId, keybinding }) => ({ commandId, keybinding })),
+    ).toEqual([
+      { commandId: "dashboard.closeOverlay", keybinding: "Escape" },
+      { commandId: "project.createTicket", keybinding: "Ctrl+Shift+C" },
+      { commandId: "project.createSession", keybinding: "Ctrl+Shift+S" },
+      { commandId: "project.goToTickets", keybinding: "Ctrl+Shift+T" },
+      { commandId: "dashboard.openCommandPalette", keybinding: "Ctrl+Shift+P" },
+      { commandId: "dashboard.openCommandPaletteCommands", keybinding: "Ctrl+Shift+." },
+      { commandId: "dashboard.changeTheme", keybinding: "Ctrl+Shift+K" },
+      { commandId: "dashboard.openShortcutHelp", keybinding: "Ctrl+Shift+H" },
+      { commandId: PROJECT_OPEN_SETTINGS_COMMAND_ID, keybinding: "Ctrl+Shift+," },
+    ]);
 
     const [root] = await shell.trees.getRoots(PROJECT_NAVIGATION_TREE_ID);
 

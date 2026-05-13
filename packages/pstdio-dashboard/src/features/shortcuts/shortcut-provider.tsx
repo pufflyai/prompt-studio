@@ -1,5 +1,6 @@
-import { getHotkeyManager, type Hotkey } from "@tanstack/hotkeys";
+import { getHotkeyManager } from "@tanstack/hotkeys";
 import { useNavigate, useParams, useRouterState } from "@tanstack/react-router";
+import type { ShellCore } from "pstdio-shell/core";
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 import { CommandPalette, type CommandPaletteView } from "@/features/command-palette/command-palette";
 import { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
@@ -7,15 +8,23 @@ import { getVisibleTickets } from "@/features/ticket-list/utils/ticket-visibilit
 import { OpenCommandPaletteContext } from "@/shared/command-palette/open-command-palette-context";
 import { useProjectSessions } from "@/shared/sessions/use-project-sessions";
 import { getVisibleSessions } from "@/shared/sessions/visible-sessions";
+import {
+  createDashboardProjectShell,
+  DASHBOARD_CLOSE_OVERLAY_COMMAND_ID,
+  DASHBOARD_OPEN_SHORTCUT_HELP_COMMAND_ID,
+} from "@/shared/shell/dashboard-project-shell";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
+import { registerShellShortcutBindings } from "./shell-shortcut-bindings";
+import { buildShortcutHelpEntries } from "./shortcut-help-model";
 import { ShortcutHelpPanel } from "./shortcut-help-panel";
-import { getActiveShortcutScopes, getShortcutDefinition, isEditableEventTarget } from "./shortcut-registry";
-
-const getHotkeyBinding = (id: Parameters<typeof getShortcutDefinition>[0]) => {
-  return getShortcutDefinition(id)!.binding as Hotkey;
-};
+import { getActiveShortcutScopes, isEditableEventTarget } from "./shortcut-registry";
 
 const ShortcutHelpContext = createContext<(() => void) | null>(null);
+
+interface ProjectShellState {
+  projectId: string;
+  shell: ReturnType<typeof createDashboardProjectShell>;
+}
 
 const isTicketsRoute = (pathname: string, projectId?: string) => pathname === `/projects/${projectId}/tickets`;
 
@@ -28,131 +37,63 @@ export const shouldLoadTicketsForShortcuts = (activeScopes: string[], projectId?
   return activeScopes.includes("global");
 };
 
-export const registerShortcutBindings = (input: {
-  hotkeyManager: ReturnType<typeof getHotkeyManager>;
+export const openTicketCreateFlow = (input: {
   projectId: string;
   pathname: string;
-  activeScopes: string[];
-  isHelpOpen: boolean;
   requestCreateTicket: () => void;
+  navigate: ReturnType<typeof useNavigate>;
+}) => {
+  const { navigate, pathname, projectId, requestCreateTicket } = input;
+
+  requestCreateTicket();
+  if (!isTicketsRoute(pathname, projectId)) {
+    navigate({ to: "/projects/$projectId/tickets", params: { projectId } });
+  }
+};
+
+export const openSessionCreateFlow = (input: {
+  projectId: string;
+  pathname: string;
   setSelectedSessionId: (sessionId: string | null) => void;
   setSessionModalState: (state: "bubble" | "closed" | "attached") => void;
-  setIsHelpOpen: (open: boolean) => void;
-  setIsCommandPaletteOpen: (open: boolean) => void;
-  setCommandPaletteView?: (view: CommandPaletteView) => void;
-  setCommandPaletteInitialQuery?: (query: string) => void;
   navigate: ReturnType<typeof useNavigate>;
-  currentTicket: { shorthand: string; attempts?: Array<{ shorthand: string }> } | null;
-  currentTicketIndex: number;
-  currentWorkspaceIndex: number;
-  visibleTickets: Array<{ shorthand: string; attempts?: Array<{ shorthand: string; updatedAt: string }> }>;
-  workspaceShorthand?: string;
 }) => {
-  const {
+  const { navigate, pathname, projectId, setSelectedSessionId, setSessionModalState } = input;
+
+  setSelectedSessionId(null);
+  if (isSessionsRoute(pathname, projectId)) {
+    navigate({ to: "/projects/$projectId/sessions", params: { projectId } });
+    return;
+  }
+
+  setSessionModalState("bubble");
+};
+
+export const registerShortcutBindings = (input: {
+  hotkeyManager: ReturnType<typeof getHotkeyManager>;
+  activeScopes: string[];
+  isHelpOpen: boolean;
+  shell?: ShellCore;
+  onShellCommandError?: (error: unknown) => void;
+}) => {
+  const { activeScopes, hotkeyManager, isHelpOpen, onShellCommandError, shell } = input;
+  const unregisterHotkeys = registerShellShortcutBindings({
     hotkeyManager,
-    projectId,
-    pathname,
+    shell,
     activeScopes,
-    isHelpOpen,
-    requestCreateTicket,
-    setSelectedSessionId,
-    setSessionModalState,
-    setIsHelpOpen,
-    setIsCommandPaletteOpen,
-    setCommandPaletteView,
-    setCommandPaletteInitialQuery,
-    navigate,
-  } = input;
+    onError: onShellCommandError,
+    shouldHandle: (keybinding, event) => {
+      if (keybinding.commandId === DASHBOARD_CLOSE_OVERLAY_COMMAND_ID) {
+        return isHelpOpen;
+      }
 
-  const openTicketCreateFlow = () => {
-    requestCreateTicket();
-    if (!isTicketsRoute(pathname, projectId)) {
-      navigate({ to: "/projects/$projectId/tickets", params: { projectId } });
-    }
-  };
+      if (keybinding.commandId === DASHBOARD_OPEN_SHORTCUT_HELP_COMMAND_ID) {
+        return !isEditableEventTarget(event.target);
+      }
 
-  const openSessionCreateFlow = () => {
-    setSelectedSessionId(null);
-    if (isSessionsRoute(pathname, projectId)) {
-      navigate({ to: "/projects/$projectId/sessions", params: { projectId } });
-      return;
-    }
-
-    setSessionModalState("bubble");
-  };
-
-  const unregisterHotkeys = [
-    hotkeyManager.register(getHotkeyBinding("close-overlay"), () => setIsHelpOpen(false), {
-      enabled: isHelpOpen,
-      ignoreInputs: false,
-    }),
-    hotkeyManager.register(
-      getHotkeyBinding("create-ticket"),
-      (event) => {
-        event.preventDefault?.();
-        openTicketCreateFlow();
-      },
-      { enabled: activeScopes.includes("global"), ignoreInputs: false },
-    ),
-    hotkeyManager.register(
-      getHotkeyBinding("create-session"),
-      (event) => {
-        event.preventDefault?.();
-        openSessionCreateFlow();
-      },
-      { enabled: activeScopes.includes("global"), ignoreInputs: false },
-    ),
-    hotkeyManager.register(
-      getHotkeyBinding("goto-ticket-list"),
-      (event) => {
-        event.preventDefault?.();
-        navigate({ to: "/projects/$projectId/tickets", params: { projectId } });
-      },
-      { enabled: activeScopes.includes("global"), ignoreInputs: false },
-    ),
-    hotkeyManager.register(
-      getHotkeyBinding("open-command-palette"),
-      (event) => {
-        event.preventDefault?.();
-        setCommandPaletteView?.("main");
-        setCommandPaletteInitialQuery?.("");
-        setIsCommandPaletteOpen(true);
-      },
-      { enabled: activeScopes.includes("global"), ignoreInputs: false },
-    ),
-    hotkeyManager.register(
-      getHotkeyBinding("open-command-palette-commands"),
-      (event) => {
-        event.preventDefault?.();
-        setCommandPaletteView?.("main");
-        setCommandPaletteInitialQuery?.("> ");
-        setIsCommandPaletteOpen(true);
-      },
-      { enabled: activeScopes.includes("global"), ignoreInputs: false },
-    ),
-    hotkeyManager.register(
-      getHotkeyBinding("change-theme"),
-      (event) => {
-        event.preventDefault?.();
-        setCommandPaletteView?.("theme");
-        setCommandPaletteInitialQuery?.("");
-        setIsCommandPaletteOpen(true);
-      },
-      { enabled: activeScopes.includes("global"), ignoreInputs: false },
-    ),
-    hotkeyManager.register(
-      getHotkeyBinding("open-shortcut-help"),
-      (event) => {
-        if (isEditableEventTarget(event.target)) {
-          return;
-        }
-
-        event.preventDefault?.();
-        setIsHelpOpen(true);
-      },
-      { enabled: activeScopes.includes("global"), ignoreInputs: false },
-    ),
-  ];
+      return true;
+    },
+  });
 
   return () => {
     unregisterHotkeys.forEach((handle) => {
@@ -165,7 +106,7 @@ export const ShortcutProvider = (props: { children: ReactNode }) => {
   const { children } = props;
   const navigate = useNavigate();
   const { location } = useRouterState();
-  const { projectId, ticketShorthand, workspaceShorthand } = useParams({ strict: false });
+  const { projectId } = useParams({ strict: false });
   const projectSettingsStore = useProjectSettingsStoreApi();
   const requestCreateTicket = useProjectSettingsStore((state) => state.requestCreateTicket);
   const setSelectedSessionId = useProjectSettingsStore((state) => state.setSelectedSessionId);
@@ -174,59 +115,90 @@ export const ShortcutProvider = (props: { children: ReactNode }) => {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [commandPaletteView, setCommandPaletteView] = useState<CommandPaletteView>("main");
   const [commandPaletteInitialQuery, setCommandPaletteInitialQuery] = useState("");
+  const [projectShellState, setProjectShellState] = useState<ProjectShellState | null>(null);
 
   const pathname = location.pathname;
   const activeScopes = getActiveShortcutScopes(pathname);
+  const projectShell =
+    projectShellState && projectShellState.projectId === projectId ? projectShellState.shell : undefined;
+  const shortcutHelpEntries = buildShortcutHelpEntries(projectShell);
   const shouldLoadTicketShortcuts = shouldLoadTicketsForShortcuts(activeScopes, projectId);
   const { data: tickets } = useProjectTickets(shouldLoadTicketShortcuts ? projectId : undefined);
   const { data: sessions } = useProjectSessions(projectId);
   const visibleTickets = getVisibleTickets(tickets ?? []);
   const visibleSessions = getVisibleSessions(sessions ?? []);
-  const currentTicketIndex = visibleTickets.findIndex((ticket) => ticket.shorthand === ticketShorthand);
-  const currentTicket = currentTicketIndex >= 0 ? visibleTickets[currentTicketIndex] : null;
-  const currentWorkspaceIndex =
-    currentTicket?.attempts?.findIndex((attempt) => attempt.shorthand === workspaceShorthand) ?? -1;
 
   useEffect(() => {
-    if (!projectId || activeScopes.length === 0) {
+    if (!projectId) {
+      setProjectShellState(null);
       return;
     }
 
-    return registerShortcutBindings({
-      hotkeyManager: getHotkeyManager(),
+    const projectShell = createDashboardProjectShell({
       projectId,
-      pathname,
+      navigate: (path) => {
+        navigate({ to: path });
+      },
+      closeOverlay: () => setIsHelpOpen(false),
+      requestCreateTicket: () =>
+        openTicketCreateFlow({
+          projectId,
+          pathname,
+          requestCreateTicket,
+          navigate,
+        }),
+      requestCreateSession: () =>
+        openSessionCreateFlow({
+          projectId,
+          pathname,
+          setSelectedSessionId,
+          setSessionModalState,
+          navigate,
+        }),
+      openCommandPalette: () => {
+        setCommandPaletteView("main");
+        setCommandPaletteInitialQuery("");
+        setIsCommandPaletteOpen(true);
+      },
+      openCommandPaletteCommands: () => {
+        setCommandPaletteView("main");
+        setCommandPaletteInitialQuery("> ");
+        setIsCommandPaletteOpen(true);
+      },
+      openThemeMenu: () => {
+        setCommandPaletteView("theme");
+        setCommandPaletteInitialQuery("");
+        setIsCommandPaletteOpen(true);
+      },
+      openShortcutHelp: () => setIsHelpOpen(true),
+    });
+
+    setProjectShellState({ projectId, shell: projectShell });
+
+    return () => {
+      projectShell.dispose();
+    };
+  }, [navigate, pathname, projectId, requestCreateTicket, setSelectedSessionId, setSessionModalState]);
+
+  useEffect(() => {
+    if (!projectId || activeScopes.length === 0 || !projectShell) {
+      return;
+    }
+
+    const unregisterShortcuts = registerShortcutBindings({
+      hotkeyManager: getHotkeyManager(),
       activeScopes,
       isHelpOpen,
-      requestCreateTicket,
-      setSelectedSessionId,
-      setSessionModalState,
-      setIsHelpOpen,
-      setIsCommandPaletteOpen,
-      setCommandPaletteView,
-      setCommandPaletteInitialQuery,
-      navigate,
-      currentTicket,
-      currentTicketIndex,
-      currentWorkspaceIndex,
-      visibleTickets,
-      workspaceShorthand,
+      shell: projectShell,
+      onShellCommandError: (error) => {
+        console.error(error);
+      },
     });
-  }, [
-    activeScopes,
-    currentTicket,
-    currentTicketIndex,
-    currentWorkspaceIndex,
-    isHelpOpen,
-    navigate,
-    pathname,
-    projectId,
-    requestCreateTicket,
-    setSelectedSessionId,
-    setSessionModalState,
-    visibleTickets,
-    workspaceShorthand,
-  ]);
+
+    return () => {
+      unregisterShortcuts();
+    };
+  }, [activeScopes, isHelpOpen, projectId, projectShell]);
 
   useEffect(() => {
     const unsubscribe = projectSettingsStore.subscribe(
@@ -265,7 +237,7 @@ export const ShortcutProvider = (props: { children: ReactNode }) => {
         }}
       >
         {children}
-        {projectId ? (
+        {projectId && projectShell ? (
           <CommandPalette
             open={isCommandPaletteOpen}
             initialView={commandPaletteView}
@@ -273,13 +245,14 @@ export const ShortcutProvider = (props: { children: ReactNode }) => {
             projectId={projectId}
             tickets={visibleTickets}
             sessions={visibleSessions}
+            shell={projectShell}
             requestCreateTicket={requestCreateTicket}
             createSession={createSessionFromPalette}
             openShortcutHelp={() => setIsHelpOpen(true)}
             onClose={() => setIsCommandPaletteOpen(false)}
           />
         ) : null}
-        <ShortcutHelpPanel open={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
+        <ShortcutHelpPanel open={isHelpOpen} shortcuts={shortcutHelpEntries} onClose={() => setIsHelpOpen(false)} />
       </OpenCommandPaletteContext.Provider>
     </ShortcutHelpContext.Provider>
   );

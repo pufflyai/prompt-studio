@@ -1,7 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import { KanbanSquare } from "lucide-react";
 import { isValidElement } from "react";
-import { getShortcutDefinition } from "@/features/shortcuts/shortcut-registry";
+import {
+  DASHBOARD_OPEN_SHORTCUT_HELP_COMMAND_ID,
+  DASHBOARD_PROJECT_SHORTCUTS,
+} from "@/shared/shell/dashboard-project-shell";
 import {
   buildProjectSidebarSections,
   buildSidebarShortcutMenuItems,
@@ -32,30 +35,30 @@ describe("project-sidebar shortcuts", () => {
   });
 
   it("only exposes keyboard shortcuts in the help menu shortcut section", () => {
-    expect(SIDEBAR_HELP_SHORTCUT_IDS).toEqual(["open-shortcut-help"]);
+    expect(SIDEBAR_HELP_SHORTCUT_IDS).toEqual([DASHBOARD_OPEN_SHORTCUT_HELP_COMMAND_ID]);
   });
 
-  it("maps help menu shortcuts from the shared registry", () => {
+  it("maps help menu shortcuts from the shell shortcut descriptors", () => {
     const shortcutIds = SIDEBAR_HELP_SHORTCUT_IDS;
     const definitions = getSidebarHelpShortcutDefinitions();
 
     expect(definitions).toHaveLength(shortcutIds.length);
 
     definitions.forEach((definition, index) => {
-      const expected = getShortcutDefinition(shortcutIds[index]);
+      const expected = DASHBOARD_PROJECT_SHORTCUTS.find((shortcut) => shortcut.commandId === shortcutIds[index]);
       if (!definition || !expected) {
         throw new Error("Expected sidebar shortcut definition to exist.");
       }
 
-      expect(definition.id).toBe(shortcutIds[index]);
-      expect(definition.binding).toEqual(expected.binding);
+      expect(definition.id).toBe(expected.commandId);
+      expect(definition.binding).toEqual(expected.keybinding);
     });
   });
 
   it("renders kbd labels for shortcut-backed help menu actions", () => {
     const menuItems = buildSidebarShortcutMenuItems([
       {
-        id: "create-ticket",
+        id: "project.createTicket",
         primaryLabel: "Create ticket",
         binding: "Ctrl+Shift+C",
         leftIcon: KanbanSquare,

@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Add a first-party shell project command-palette slice.
+Add first-party shell project command-palette, shortcut, and shortcut-help slices.

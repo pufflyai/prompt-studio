@@ -11,6 +11,7 @@ import {
 } from "@pstdio/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { Palette as PaletteIcon, Search, Terminal } from "lucide-react";
+import type { ShellCore } from "pstdio-shell/core";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -18,7 +19,7 @@ import {
   useProjectExtensionMetadata,
 } from "@/shared/extensions/hooks/use-project-extensions";
 import { buildExtensionCommandRequest } from "@/shared/extensions/slot-context";
-import { createDashboardProjectShell } from "@/shared/shell/dashboard-project-shell";
+import { DASHBOARD_OPEN_COMMAND_PALETTE_COMMAND_ID } from "@/shared/shell/dashboard-project-shell";
 import { runCommandPaletteAction } from "./command-palette-actions";
 import {
   buildCommandPaletteEntries,
@@ -47,6 +48,7 @@ interface CommandPaletteProps {
   projectId: string;
   tickets: CommandPaletteTicket[];
   sessions: CommandPaletteSession[];
+  shell?: ShellCore;
   requestCreateTicket: () => void;
   createSession: () => void;
   openShortcutHelp: () => void;
@@ -82,6 +84,7 @@ export const CommandPalette = (props: CommandPaletteProps) => {
     projectId,
     tickets,
     sessions,
+    shell,
     requestCreateTicket,
     createSession,
     openShortcutHelp,
@@ -92,12 +95,9 @@ export const CommandPalette = (props: CommandPaletteProps) => {
   const { t } = useTranslation(["common", "projects"]);
   const { data: extensionMetadata } = useProjectExtensionMetadata(projectId);
   const executeExtensionCommand = useExecuteExtensionCommand(projectId);
-  const projectShell = createDashboardProjectShell({
-    projectId,
-    navigate: (path) => {
-      navigate({ to: path });
-    },
-  });
+  const commandPaletteShortcut = shell?.keybindings
+    .listActiveKeybindings()
+    .find((keybinding) => keybinding.commandId === DASHBOARD_OPEN_COMMAND_PALETTE_COMMAND_ID)?.keybinding;
   const [view, setView] = useState<CommandPaletteView>(initialView);
   const themePreviewRef = useRef<ThemePreviewState | null>(null);
   const setupRef = useRef({ initialView, initialQuery, open: false });
@@ -153,7 +153,7 @@ export const CommandPalette = (props: CommandPaletteProps) => {
   };
 
   const runShellCommand = (commandId: string, args: unknown) => {
-    void projectShell.commands.executeCommand(commandId, args).catch((error) => {
+    void shell?.commands.executeCommand(commandId, args).catch((error) => {
       const message = error instanceof Error ? error.message : "Shell command failed";
       toaster.create({ type: "error", title: "Shell command failed", description: message });
     });
@@ -182,7 +182,7 @@ export const CommandPalette = (props: CommandPaletteProps) => {
     extensions: extensionMetadata?.extensions,
     extensionCommands: extensionMetadata?.commands,
     extensionMenuContributions: extensionMetadata?.menuContributions,
-    shell: projectShell,
+    shell,
     labels: {
       tickets: t("projects:sidebar.tickets"),
       sessions: t("projects:sessions.title"),
@@ -261,7 +261,7 @@ export const CommandPalette = (props: CommandPaletteProps) => {
       footerStart={
         <HStack gap="2" color="fg.muted">
           <Text textStyle="label/XS">{t("common:commandPalette.open")}</Text>
-          <PaletteShortcut binding="Ctrl+Shift+P" />
+          {commandPaletteShortcut ? <PaletteShortcut binding={commandPaletteShortcut} /> : null}
         </HStack>
       }
       footerEnd={

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createActivityRegistry } from "../activity/activity-registry";
 import { createCommandRegistry } from "../commands/command-registry";
 import { createContextKeyService } from "../context/context-key-service";
+import { createDiagnosticRegistry } from "../diagnostics/diagnostic-registry";
 import { createKeybindingRegistry } from "../keybindings/keybinding-registry";
 import { createLayoutModel } from "../layout/layout-model";
 import { createMenuRegistry } from "../menus/menu-registry";
@@ -18,12 +19,13 @@ describe("adaptRuntimeExtensionContributions", () => {
     const layout = createLayoutModel();
     const menus = createMenuRegistry({ commands });
     const activity = createActivityRegistry();
+    const diagnostics = createDiagnosticRegistry();
     const keybindings = createKeybindingRegistry({ commands, context });
     const preferences = createPreferenceRegistry();
     const webviews = createWebviewRegistry();
 
     adaptRuntimeExtensionContributions(
-      { activity, commands, keybindings, layout, menus, preferences, resources, webviews },
+      { activity, commands, diagnostics, keybindings, layout, menus, preferences, resources, webviews },
       {
         extensionId: "pstdio.extension-lab",
         packageName: "extension-lab",
@@ -87,6 +89,14 @@ describe("adaptRuntimeExtensionContributions", () => {
               },
             },
           },
+          diagnostics: {
+            sources: {
+              "extension-lab.webview": {
+                title: "Extension Lab Webview",
+                icon: "panel-top",
+              },
+            },
+          },
         },
       },
     );
@@ -122,6 +132,13 @@ describe("adaptRuntimeExtensionContributions", () => {
       {
         kind: "extension-lab.counter.bumped",
         source: "extension",
+        ownerId: "pstdio.extension-lab",
+      },
+    ]);
+    expect(diagnostics.listSources()).toMatchObject([
+      {
+        source: "extension-lab.webview",
+        title: "Extension Lab Webview",
         ownerId: "pstdio.extension-lab",
       },
     ]);

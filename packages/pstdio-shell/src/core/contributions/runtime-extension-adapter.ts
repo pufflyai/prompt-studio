@@ -1,5 +1,6 @@
 import type { ActivityKindContribution, ActivityRegistry } from "../activity/activity-registry";
 import type { CommandRegistry } from "../commands/command-registry";
+import type { DiagnosticRegistry } from "../diagnostics/diagnostic-registry";
 import type { Disposable } from "../disposable";
 import type { KeybindingRegistry } from "../keybindings/keybinding-registry";
 import type { LayoutModel, ShellArea, WebviewDescriptor } from "../layout/layout-model";
@@ -51,6 +52,15 @@ interface RuntimeActivityContribution {
   kinds?: Record<string, ActivityKindContribution>;
 }
 
+interface RuntimeDiagnosticSourceDescriptor {
+  title: string;
+  icon?: string;
+}
+
+interface RuntimeDiagnosticsContribution {
+  sources?: Record<string, RuntimeDiagnosticSourceDescriptor>;
+}
+
 export interface RuntimeExtensionContributionDescriptor {
   resources?: Record<string, RuntimeResourceKindDescriptor>;
   commands?: Record<string, RuntimeCommandDescriptor>;
@@ -59,6 +69,7 @@ export interface RuntimeExtensionContributionDescriptor {
   keybindings?: RuntimeKeybindingContribution[];
   preferences?: PreferenceSchemaContribution;
   activity?: RuntimeActivityContribution;
+  diagnostics?: RuntimeDiagnosticsContribution;
 }
 
 export interface RuntimeExtensionAdapterInput {
@@ -71,6 +82,7 @@ export interface RuntimeExtensionAdapterInput {
 interface RuntimeExtensionAdapterRegistries {
   activity?: ActivityRegistry;
   commands: CommandRegistry;
+  diagnostics?: DiagnosticRegistry;
   keybindings?: KeybindingRegistry;
   layout: LayoutModel;
   menus: MenuRegistry;
@@ -81,11 +93,13 @@ interface RuntimeExtensionAdapterRegistries {
 
 const reservedCommandPrefixes = new Set(["shell", "resource", "widget", "layout", "commands", "preferences"]);
 const shellAreaBySlot = new Set<string>([
+  "top",
   "activityBar",
   "left",
+  "main-header",
   "main",
-  "right",
-  "bottom",
+  "main-right",
+  "main-bottom",
   "status",
   "overlay",
   "floating",
@@ -175,6 +189,25 @@ const registerRuntimeActivityKind = (
   metadata: ExtensionContributionMetadata,
 ) => (registries.activity ? [registries.activity.registerKind(activityKind, metadata)] : []);
 
+const registerRuntimeDiagnosticSource = (
+  registries: RuntimeExtensionAdapterRegistries,
+  packageName: string,
+  source: string,
+  diagnosticSource: RuntimeDiagnosticSourceDescriptor,
+  metadata: ExtensionContributionMetadata,
+) =>
+  registries.diagnostics
+    ? [
+        registries.diagnostics.registerSource(
+          {
+            source: normalizeExtensionScopedId(packageName, source),
+            ...diagnosticSource,
+          },
+          metadata,
+        ),
+      ]
+    : [];
+
 export const adaptRuntimeExtensionContributions = (
   registries: RuntimeExtensionAdapterRegistries,
   input: RuntimeExtensionAdapterInput,
@@ -239,6 +272,12 @@ export const adaptRuntimeExtensionContributions = (
 
   for (const activityKind of Object.values(input.contributions.activity?.kinds ?? {})) {
     disposables.push(...registerRuntimeActivityKind(registries, activityKind, metadata));
+  }
+
+  for (const [source, diagnosticSource] of Object.entries(input.contributions.diagnostics?.sources ?? {})) {
+    disposables.push(
+      ...registerRuntimeDiagnosticSource(registries, input.packageName, source, diagnosticSource, metadata),
+    );
   }
 
   return {

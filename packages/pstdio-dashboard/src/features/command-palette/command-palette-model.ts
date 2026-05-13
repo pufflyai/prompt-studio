@@ -7,22 +7,21 @@ import {
   type ThemePreferenceOption,
 } from "@pstdio/ui";
 import type { LucideIcon } from "lucide-react";
-import {
-  CircleHelp,
-  KanbanSquare,
-  MessageCircle,
-  Moon,
-  Palette,
-  Plus,
-  SettingsIcon,
-  Sun,
-  Terminal,
-} from "lucide-react";
+import { CircleHelp, KanbanSquare, MessageCircle, Moon, Palette, Plus, SettingsIcon, Sun } from "lucide-react";
 import type { ExtensionCommandRecord, ExtensionMenuContribution, ExtensionRecord } from "pstdio-api-contracts";
 import type { ShellCore } from "pstdio-shell/core";
 import type { ShortcutBinding } from "@/features/shortcuts/shortcut-registry";
 import { getSlotContributions } from "@/shared/extensions/contribution-mapping";
+import {
+  DASHBOARD_CHANGE_THEME_COMMAND_ID,
+  DASHBOARD_OPEN_SHORTCUT_HELP_COMMAND_ID,
+  PROJECT_CREATE_SESSION_COMMAND_ID,
+  PROJECT_CREATE_TICKET_COMMAND_ID,
+  PROJECT_GO_TO_TICKETS_COMMAND_ID,
+  PROJECT_OPEN_SETTINGS_COMMAND_ID,
+} from "@/shared/shell/dashboard-project-shell";
 import { DASHBOARD_COMMAND_PALETTE_MENU } from "@/shared/shell/menu-locations";
+import { getShellIcon } from "./command-palette-shell-icons";
 
 const EXTENSION_COMMAND_PANEL_SLOT_ID = "project.commandPanel";
 export const DEFAULT_COMMAND_PALETTE_ASSET_LIMIT = DEFAULT_PALETTE_ASSET_LIMIT;
@@ -112,16 +111,6 @@ const themeIcons: Record<string, LucideIcon> = {
 
 const getThemeIcon = (preference: ThemePreference): LucideIcon => themeIcons[preference] ?? Palette;
 
-const shellIconByName: Record<string, LucideIcon> = {
-  help: CircleHelp,
-  palette: Palette,
-  plus: Plus,
-  settings: SettingsIcon,
-  terminal: Terminal,
-};
-
-const getShellIcon = (icon?: string): LucideIcon => (icon ? (shellIconByName[icon] ?? Terminal) : Terminal);
-
 export const resolveCommandPaletteMode = (query: string): CommandPaletteMode =>
   query.trimStart().startsWith(">") ? "command" : "search";
 
@@ -167,6 +156,9 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
   });
 
   const paletteContributions = getSlotContributions(extensionMenuContributions, EXTENSION_COMMAND_PANEL_SLOT_ID);
+  const shellKeybindingByCommandId = new Map(
+    shell?.keybindings.listActiveKeybindings().map((keybinding) => [keybinding.commandId, keybinding.keybinding]),
+  );
 
   const shellEntries =
     shell?.menus
@@ -184,6 +176,7 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
           label,
           searchText: `${label} ${description ?? ""} ${record.command.category ?? ""}`,
           secondaryLabel: description,
+          shortcut: shellKeybindingByCommandId.get(record.command.id),
           icon: getShellIcon(action.icon ?? record.command.icon),
           group: record.command.category,
           action: {
@@ -211,7 +204,7 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
         label,
         searchText: `${label} ${description ?? ""} ${extension?.name ?? ""}`,
         secondaryLabel: description,
-        icon: Terminal,
+        icon: getShellIcon("terminal"),
         group: extension?.displayName ?? extension?.name ?? "Extensions",
         assetType: "extension-command",
         action: { id: `extension:${command.id}`, type: "extension-command", commandId: command.id },
@@ -225,6 +218,7 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
       mode: "search",
       label: labels.tickets,
       searchText: "tickets board backlog kanban",
+      shortcut: shellKeybindingByCommandId.get(PROJECT_GO_TO_TICKETS_COMMAND_ID),
       icon: KanbanSquare,
       action: { id: "navigate", type: "navigate", path: `${projectPath}/tickets` },
     }),
@@ -241,6 +235,7 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
       mode: "search",
       label: labels.projectSettings,
       searchText: "settings project tags statuses repositories agents",
+      shortcut: shellKeybindingByCommandId.get(PROJECT_OPEN_SETTINGS_COMMAND_ID),
       icon: SettingsIcon,
       action: { id: "navigate", type: "navigate", path: `${projectPath}/settings` },
     }),
@@ -271,6 +266,7 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
       mode: "command",
       label: labels.createTicket,
       searchText: "create ticket new issue",
+      shortcut: shellKeybindingByCommandId.get(PROJECT_CREATE_TICKET_COMMAND_ID),
       icon: Plus,
       action: { id: "create-ticket", type: "create-ticket" },
     }),
@@ -279,6 +275,7 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
       mode: "command",
       label: labels.createSession,
       searchText: "create session new chat agent",
+      shortcut: shellKeybindingByCommandId.get(PROJECT_CREATE_SESSION_COMMAND_ID),
       icon: MessageCircle,
       action: { id: "create-session", type: "create-session" },
     }),
@@ -287,6 +284,7 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
       mode: "command",
       label: labels.keyboardShortcuts,
       searchText: "keyboard shortcuts help",
+      shortcut: shellKeybindingByCommandId.get(DASHBOARD_OPEN_SHORTCUT_HELP_COMMAND_ID),
       icon: CircleHelp,
       action: { id: "open-shortcut-help", type: "open-shortcut-help" },
     }),
@@ -295,7 +293,7 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
       mode: "command",
       label: labels.changeTheme,
       searchText: "theme color appearance preferences",
-      shortcut: "Ctrl+Shift+K",
+      shortcut: shellKeybindingByCommandId.get(DASHBOARD_CHANGE_THEME_COMMAND_ID),
       icon: Palette,
       action: { id: "open-theme-menu", type: "open-theme-menu" },
     }),

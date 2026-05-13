@@ -2,39 +2,9 @@ export type ShortcutScope = "global" | "ticket" | "workspace" | "overlay";
 
 export type ShortcutBinding = string | string[];
 
-export interface ShortcutDefinition {
-  id:
-    | "close-overlay"
-    | "create-ticket"
-    | "create-session"
-    | "goto-ticket-list"
-    | "open-command-palette"
-    | "open-command-palette-commands"
-    | "change-theme"
-    | "open-shortcut-help";
-  actionLabel: string;
-  binding: ShortcutBinding;
-  scope: ShortcutScope;
-}
-
-export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
-  { id: "close-overlay", actionLabel: "Close overlay", binding: "Escape", scope: "overlay" },
-  { id: "create-ticket", actionLabel: "Create ticket", binding: "Ctrl+Shift+C", scope: "global" },
-  { id: "create-session", actionLabel: "Create session", binding: "Ctrl+Shift+S", scope: "global" },
-  { id: "goto-ticket-list", actionLabel: "Go to tickets", binding: "Ctrl+Shift+T", scope: "global" },
-  { id: "open-command-palette", actionLabel: "Command palette", binding: "Ctrl+Shift+P", scope: "global" },
-  { id: "open-command-palette-commands", actionLabel: "Run a command", binding: "Ctrl+Shift+.", scope: "global" },
-  { id: "change-theme", actionLabel: "Change theme", binding: "Ctrl+Shift+K", scope: "global" },
-  { id: "open-shortcut-help", actionLabel: "Keyboard shortcuts", binding: "Ctrl+Shift+H", scope: "global" },
-];
-
 const projectRoutePattern = /^\/projects\/[^/]+(?:\/|$)/;
 const ticketRoutePattern = /^\/projects\/[^/]+\/tickets\/[^/]+(?:\/|$)/;
 const workspaceRoutePattern = /^\/projects\/[^/]+\/tickets\/[^/]+\/workspaces\/[^/]+(?:\/|$)/;
-
-export const getShortcutDefinition = (id: ShortcutDefinition["id"]) => {
-  return SHORTCUT_DEFINITIONS.find((shortcut) => shortcut.id === id);
-};
 
 export const getActiveShortcutScopes = (pathname: string) => {
   if (!projectRoutePattern.test(pathname)) {

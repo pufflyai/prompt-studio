@@ -1,22 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { getActiveShortcutScopes, getShortcutDefinition, isEditableEventTarget } from "./shortcut-registry";
+import { getActiveShortcutScopes, isEditableEventTarget } from "./shortcut-registry";
 
 describe("shortcut-registry", () => {
-  it("uses Ctrl+Shift+key for all shortcuts except modal Escape", () => {
-    expect(getShortcutDefinition("close-overlay")?.binding).toBe("Escape");
-    expect(getShortcutDefinition("create-ticket")?.binding).toBe("Ctrl+Shift+C");
-    expect(getShortcutDefinition("create-session")?.binding).toBe("Ctrl+Shift+S");
-    expect(getShortcutDefinition("goto-ticket-list")?.binding).toBe("Ctrl+Shift+T");
-    expect(getShortcutDefinition("open-command-palette")?.binding).toBe("Ctrl+Shift+P");
-    expect(getShortcutDefinition("open-command-palette")?.actionLabel).toBe("Command palette");
-    expect(getShortcutDefinition("open-command-palette-commands")?.binding).toBe("Ctrl+Shift+.");
-    expect(getShortcutDefinition("open-command-palette-commands")?.actionLabel).toBe("Run a command");
-    expect(getShortcutDefinition("change-theme")?.binding).toBe("Ctrl+Shift+K");
-    expect(getShortcutDefinition("change-theme")?.actionLabel).toBe("Change theme");
-    expect(getShortcutDefinition("open-shortcut-help")?.binding).toBe("Ctrl+Shift+H");
-    expect(getShortcutDefinition("open-shortcut-help")?.actionLabel).toBe("Keyboard shortcuts");
-  });
-
   it("resolves active scopes for ticket and workspace routes", () => {
     expect(getActiveShortcutScopes("/projects/p1/tickets")).toEqual(["global"]);
     expect(getActiveShortcutScopes("/projects/p1/tickets/PS-12")).toEqual(["global", "ticket"]);

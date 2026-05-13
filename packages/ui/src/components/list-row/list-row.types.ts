@@ -39,6 +39,19 @@ export interface ListRowAction {
 
 export type ListRowVariant = "default" | "compact" | "tree";
 export type ListRowTone = "default" | "danger";
+export type ListRowMenuPlacement =
+  | "top"
+  | "top-start"
+  | "top-end"
+  | "bottom"
+  | "bottom-start"
+  | "bottom-end"
+  | "right"
+  | "right-start"
+  | "right-end"
+  | "left"
+  | "left-start"
+  | "left-end";
 
 export interface ListRowItem {
   id?: string;
@@ -62,6 +75,9 @@ export interface ListRowItem {
   href?: string;
   navigationIntent?: ListRowNavigationIntent;
   onActivate?: () => void;
+  /** Left-click menu opened from the row surface. */
+  menuItems?: ListRowActionMenuItem[];
+  menuPlacement?: ListRowMenuPlacement;
   contextMenuItems?: ListRowActionMenuItem[];
   actions?: ListRowAction[];
   children?: ListRowItem[];

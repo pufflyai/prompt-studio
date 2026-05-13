@@ -21,11 +21,34 @@ export interface PreferenceScopeRef {
   scopeId?: string;
 }
 
+export interface PreferencePersistenceAdapter {
+  getValue(name: string, scope: PreferenceScopeRef): PreferenceValue | undefined;
+  setValue(name: string, value: PreferenceValue, scope: PreferenceScopeRef): void;
+}
+
+export interface CreatePreferenceRegistryInput {
+  persistence?: PreferencePersistenceAdapter;
+}
+
 const valueKey = (name: string, scope: PreferenceScopeRef) => `${name}:${scope.scope}:${scope.scopeId ?? ""}`;
 
-export const createPreferenceRegistry = () => {
-  const schemas = new Map<string, PreferencePropertySchema & { ownerId: string; source: string }>();
+const createMemoryPreferencePersistence = () => {
   const values = new Map<string, PreferenceValue>();
+
+  return {
+    getValue(name: string, scope: PreferenceScopeRef) {
+      return values.get(valueKey(name, scope));
+    },
+
+    setValue(name: string, value: PreferenceValue, scope: PreferenceScopeRef) {
+      values.set(valueKey(name, scope), value);
+    },
+  } satisfies PreferencePersistenceAdapter;
+};
+
+export const createPreferenceRegistry = (input: CreatePreferenceRegistryInput = {}) => {
+  const schemas = new Map<string, PreferencePropertySchema & { ownerId: string; source: string }>();
+  const persistence = input.persistence ?? createMemoryPreferencePersistence();
 
   return {
     registerSchema(schema: PreferenceSchemaContribution, metadata?: ContributionMetadata) {
@@ -54,16 +77,16 @@ export const createPreferenceRegistry = () => {
 
     setValue(name: string, value: PreferenceValue, scope: PreferenceScopeRef) {
       if (!schemas.has(name)) throw new Error(`Preference schema not registered: ${name}`);
-      values.set(valueKey(name, scope), value);
+      persistence.setValue(name, value, scope);
     },
 
     getValue(name: string, scope?: PreferenceScopeRef) {
       if (scope) {
-        const scoped = values.get(valueKey(name, scope));
+        const scoped = persistence.getValue(name, scope);
         if (scoped !== undefined) return scoped;
       }
 
-      const userValue = values.get(valueKey(name, { scope: "user" }));
+      const userValue = persistence.getValue(name, { scope: "user" });
       if (userValue !== undefined) return userValue;
 
       return schemas.get(name)?.default;

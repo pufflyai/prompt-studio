@@ -4,6 +4,7 @@ import {
   normalizeContributionMetadata,
   type RegisteredContributionMetadata,
 } from "../contributions/metadata";
+import { createDisposable } from "../disposable";
 import type { ResourceRef } from "../resources/resource-registry";
 
 export interface DiagnosticAction {
@@ -23,6 +24,15 @@ export interface ShellDiagnostic {
   metadata?: Record<string, unknown>;
 }
 
+export interface DiagnosticSourceContribution {
+  source: string;
+  title: string;
+  icon?: string;
+}
+
+export type RegisteredDiagnosticSource = DiagnosticSourceContribution &
+  Omit<RegisteredContributionMetadata, "source"> & { contributionSource: ContributionSource };
+
 export type RegisteredShellDiagnostic = ShellDiagnostic &
   Omit<RegisteredContributionMetadata, "source"> & { contributionSource: ContributionSource };
 
@@ -33,9 +43,36 @@ interface DiagnosticListFilter {
 }
 
 export const createDiagnosticRegistry = () => {
+  const sources = new Map<string, RegisteredDiagnosticSource>();
   const diagnostics = new Map<string, RegisteredShellDiagnostic>();
 
   return {
+    registerSource(source: DiagnosticSourceContribution, metadata?: ContributionMetadata) {
+      if (sources.has(source.source)) throw new Error(`Diagnostic source already registered: ${source.source}`);
+
+      const contribution = normalizeContributionMetadata(metadata);
+      const record = {
+        ...source,
+        contributionSource: contribution.source,
+        ownerId: contribution.ownerId,
+        priority: contribution.priority,
+      };
+
+      sources.set(source.source, record);
+
+      return createDisposable(() => {
+        if (sources.get(source.source) === record) sources.delete(source.source);
+      });
+    },
+
+    getSource(source: string) {
+      return sources.get(source);
+    },
+
+    listSources() {
+      return [...sources.values()];
+    },
+
     report(diagnostic: ShellDiagnostic, metadata?: ContributionMetadata) {
       const contribution = normalizeContributionMetadata(metadata);
       const record = {

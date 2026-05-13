@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { createShellCore } from "pstdio-shell/core";
+import { createDashboardProjectShell, DASHBOARD_CHANGE_THEME_KEYBINDING } from "@/shared/shell/dashboard-project-shell";
 import {
   buildCommandPaletteEntries,
   DEFAULT_COMMAND_PALETTE_ASSET_LIMIT,
@@ -57,18 +58,21 @@ describe("command palette entries", () => {
   });
 
   it("filters commands after the command marker", () => {
+    const shell = createDashboardProjectShell({ projectId: "project-1", navigate: () => undefined });
     const entries = buildCommandPaletteEntries({
       projectId: "project-1",
       tickets,
       sessions,
       currentTheme: "pstdio-dark",
+      shell,
       run: () => {},
     });
 
     const [entry] = filterCommandPaletteEntries(entries, "> theme");
 
     expect(entry.id).toBe("command:change-theme");
-    expect(entry.shortcut).toBe("Ctrl+Shift+K");
+    expect(entry.shortcut).toBe(DASHBOARD_CHANGE_THEME_KEYBINDING);
+    shell.dispose();
   });
 
   it("filters themes inside the theme menu", () => {

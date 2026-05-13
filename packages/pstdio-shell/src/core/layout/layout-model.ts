@@ -7,7 +7,18 @@ import {
 import { createDisposable } from "../disposable";
 import type { ResourceRef } from "../resources/resource-registry";
 
-export const shellAreas = ["activityBar", "left", "main", "right", "bottom", "status", "overlay", "floating"] as const;
+export const shellAreas = [
+  "top",
+  "activityBar",
+  "left",
+  "main-header",
+  "main",
+  "main-right",
+  "main-bottom",
+  "status",
+  "overlay",
+  "floating",
+] as const;
 
 export type ShellArea = (typeof shellAreas)[number];
 
@@ -45,6 +56,7 @@ export type RegisteredWidgetContribution = Omit<WidgetContribution, "priority"> 
 export interface ShellWidgetPlacement {
   widgetId: string;
   contributionId: string;
+  resource?: ResourceRef;
   resourceUri?: string;
   title?: string;
   pinned?: boolean;
@@ -80,11 +92,13 @@ const createAreaState = (id: ShellArea) => ({
 });
 
 const createAreas = () => ({
+  top: createAreaState("top"),
   activityBar: createAreaState("activityBar"),
   left: createAreaState("left"),
+  "main-header": createAreaState("main-header"),
   main: createAreaState("main"),
-  right: createAreaState("right"),
-  bottom: createAreaState("bottom"),
+  "main-right": createAreaState("main-right"),
+  "main-bottom": createAreaState("main-bottom"),
   status: createAreaState("status"),
   overlay: createAreaState("overlay"),
   floating: createAreaState("floating"),
@@ -117,6 +131,23 @@ export const createLayoutModel = () => {
     layout.activeResourceUri = placement.resourceUri;
   };
 
+  const updatePlacement = (
+    placement: ShellWidgetPlacement,
+    widget: RegisteredWidgetContribution,
+    input: OpenWidgetInput,
+  ) => {
+    if (input.resource) {
+      placement.resource = input.resource;
+      placement.resourceUri = input.resource.uri;
+      placement.title = input.title ?? input.resource.label ?? widget.title;
+    } else if (input.title !== undefined) {
+      placement.title = input.title;
+    }
+
+    if (input.pinned !== undefined) placement.pinned = input.pinned;
+    if (input.closable !== undefined) placement.closable = input.closable;
+  };
+
   return {
     registerWidget(widget: WidgetContribution, metadata?: ContributionMetadata) {
       if (widgets.has(widget.id)) throw new Error(`Widget already registered: ${widget.id}`);
@@ -147,6 +178,7 @@ export const createLayoutModel = () => {
       const existing = widget.singleton ? findPlacement(widget.id) : undefined;
 
       if (existing) {
+        updatePlacement(existing.placement, widget, input);
         activatePlacement(existing.area, existing.placement);
         return existing.placement;
       }
@@ -159,6 +191,7 @@ export const createLayoutModel = () => {
       const placement = {
         widgetId,
         contributionId: widget.id,
+        resource: input.resource,
         resourceUri: input.resource?.uri,
         title: input.title ?? input.resource?.label ?? widget.title,
         pinned: input.pinned,
@@ -169,6 +202,18 @@ export const createLayoutModel = () => {
       activatePlacement(area, placement);
 
       return placement;
+    },
+
+    activateWidget(widgetId: string) {
+      for (const area of Object.values(layout.areas)) {
+        const placement = area.widgets.find((candidate) => candidate.widgetId === widgetId);
+        if (placement) {
+          activatePlacement(area, placement);
+          return placement;
+        }
+      }
+
+      throw new Error(`Widget placement not found: ${widgetId}`);
     },
 
     getLayout() {

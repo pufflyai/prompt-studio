@@ -8,7 +8,7 @@ describe("createLayoutModel", () => {
     layout.registerWidget({
       id: "sessions.chat",
       title: "Session",
-      area: "right",
+      area: "main-right",
       fallbackArea: "main",
       resourceKinds: ["session"],
       renderer: "react",
@@ -22,12 +22,13 @@ describe("createLayoutModel", () => {
     expect(placement).toMatchObject({
       widgetId: "sessions.chat",
       contributionId: "sessions.chat",
+      resource: { kind: "session", uri: "pstdio://session/s1", label: "Session 1" },
       resourceUri: "pstdio://session/s1",
       title: "Session 1",
     });
     expect(layout.getLayout().activeWidgetId).toBe("sessions.chat");
     expect(layout.getLayout().activeResourceUri).toBe("pstdio://session/s1");
-    expect(layout.getLayout().areas.right.activeWidgetId).toBe("sessions.chat");
+    expect(layout.getLayout().areas["main-right"].activeWidgetId).toBe("sessions.chat");
   });
 
   test("reuses singleton widget placements instead of adding duplicates", () => {
@@ -36,7 +37,7 @@ describe("createLayoutModel", () => {
     layout.registerWidget({
       id: "diagnostics.center",
       title: "Diagnostics",
-      area: "bottom",
+      area: "main-bottom",
       singleton: true,
       renderer: "react",
     });
@@ -44,6 +45,64 @@ describe("createLayoutModel", () => {
     layout.openWidget("diagnostics.center");
     layout.openWidget("diagnostics.center");
 
-    expect(layout.getLayout().areas.bottom.widgets).toHaveLength(1);
+    expect(layout.getLayout().areas["main-bottom"].widgets).toHaveLength(1);
+  });
+
+  test("updates singleton placement resources when opened from a new resource", () => {
+    const layout = createLayoutModel();
+
+    layout.registerWidget({
+      id: "project.workspace",
+      title: "Workspace",
+      area: "main",
+      singleton: true,
+      renderer: "react",
+    });
+
+    const firstPlacement = layout.openWidget("project.workspace", {
+      resource: { kind: "workspace", uri: "pstdio://workspace/ps-266", label: "PS-266" },
+    });
+    const secondPlacement = layout.openWidget("project.workspace", {
+      resource: { kind: "workspace", uri: "pstdio://workspace/ps-267", label: "PS-267" },
+    });
+
+    expect(secondPlacement).toBe(firstPlacement);
+    expect(secondPlacement).toMatchObject({
+      resource: { kind: "workspace", uri: "pstdio://workspace/ps-267", label: "PS-267" },
+      resourceUri: "pstdio://workspace/ps-267",
+      title: "PS-267",
+    });
+    expect(layout.getLayout().activeResourceUri).toBe("pstdio://workspace/ps-267");
+    expect(layout.getLayout().areas.main.widgets).toHaveLength(1);
+  });
+
+  test("activates an existing widget placement without adding a duplicate", () => {
+    const layout = createLayoutModel();
+
+    layout.registerWidget({
+      id: "project.settings",
+      title: "Project settings",
+      area: "main",
+      renderer: "react",
+    });
+    layout.registerWidget({
+      id: "sessions.chat",
+      title: "Session chat",
+      area: "main",
+      renderer: "react",
+    });
+
+    const settings = layout.openWidget("project.settings");
+    layout.openWidget("sessions.chat");
+
+    const activated = layout.activateWidget(settings.widgetId);
+
+    expect(activated).toBe(settings);
+    expect(layout.getLayout().activeWidgetId).toBe(settings.widgetId);
+    expect(layout.getLayout().areas.main.activeWidgetId).toBe(settings.widgetId);
+    expect(layout.getLayout().areas.main.widgets.map((placement) => placement.widgetId)).toEqual([
+      "project.settings",
+      "sessions.chat",
+    ]);
   });
 });

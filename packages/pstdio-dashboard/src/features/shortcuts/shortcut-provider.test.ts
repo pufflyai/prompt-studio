@@ -1,5 +1,12 @@
 import { describe, expect, it, mock } from "bun:test";
-import { registerShortcutBindings, shouldLoadTicketsForShortcuts } from "./shortcut-provider";
+import { createShellCore } from "pstdio-shell/core";
+import { createDashboardProjectShell } from "@/shared/shell/dashboard-project-shell";
+import {
+  openSessionCreateFlow,
+  openTicketCreateFlow,
+  registerShortcutBindings,
+  shouldLoadTicketsForShortcuts,
+} from "./shortcut-provider";
 
 const createHotkeyManager = () => {
   const handlers = new Map<
@@ -21,63 +28,41 @@ const createHotkeyManager = () => {
 };
 
 const baseInput = {
-  projectId: "project-1",
   isHelpOpen: false,
-  requestCreateTicket: () => {},
-  setSelectedSessionId: () => {},
-  setSessionModalState: () => {},
-  setIsHelpOpen: () => {},
-  setIsCommandPaletteOpen: () => {},
-  setCommandPaletteView: () => {},
-  setCommandPaletteInitialQuery: () => {},
-  navigate: (() => {}) as never,
-  currentTicket: null,
-  currentTicketIndex: -1,
-  currentWorkspaceIndex: -1,
-  visibleTickets: [],
-  workspaceShorthand: undefined,
 };
+
+const createBooleanSetter = () => mock((_value: boolean) => {});
+const createCommandPaletteViewSetter = () => mock((_value: "main" | "theme") => {});
+const createQuerySetter = () => mock((_value: string) => {});
 
 describe("registerShortcutBindings - creation and navigation", () => {
   it("opens create ticket flow and navigates to tickets", () => {
-    const hotkeyManager = createHotkeyManager();
     const requestCreateTicket = mock(() => {});
     const navigate = mock(() => {});
-    const preventDefault = mock(() => {});
 
-    registerShortcutBindings({
-      ...baseInput,
-      hotkeyManager: hotkeyManager as never,
+    openTicketCreateFlow({
+      projectId: "project-1",
       pathname: "/projects/project-1/settings",
-      activeScopes: ["global"],
       requestCreateTicket,
       navigate: navigate as never,
     });
 
-    hotkeyManager.handlers.get("Ctrl+Shift+C")?.handler({ target: null, preventDefault });
-
-    expect(preventDefault).toHaveBeenCalledTimes(1);
     expect(requestCreateTicket).toHaveBeenCalledTimes(1);
     expect(navigate).toHaveBeenCalledWith({ to: "/projects/$projectId/tickets", params: { projectId: "project-1" } });
   });
 
   it("opens create session flow and keeps users in sessions route", () => {
-    const hotkeyManager = createHotkeyManager();
-    const setSelectedSessionId = mock(() => {});
-    const setSessionModalState = mock(() => {});
+    const setSelectedSessionId = mock((_sessionId: string | null) => {});
+    const setSessionModalState = mock((_state: "bubble" | "closed" | "attached") => {});
     const navigate = mock(() => {});
 
-    registerShortcutBindings({
-      ...baseInput,
-      hotkeyManager: hotkeyManager as never,
+    openSessionCreateFlow({
+      projectId: "project-1",
       pathname: "/projects/project-1/sessions/abc",
-      activeScopes: ["global"],
       setSelectedSessionId,
       setSessionModalState,
       navigate: navigate as never,
     });
-
-    hotkeyManager.handlers.get("Ctrl+Shift+S")?.handler({ target: null, preventDefault: () => {} });
 
     expect(setSelectedSessionId).toHaveBeenCalledWith(null);
     expect(navigate).toHaveBeenCalledWith({ to: "/projects/$projectId/sessions", params: { projectId: "project-1" } });
@@ -86,36 +71,42 @@ describe("registerShortcutBindings - creation and navigation", () => {
 
   it("navigates to tickets with Ctrl+Shift+T", () => {
     const hotkeyManager = createHotkeyManager();
-    const navigate = mock(() => {});
+    const navigations: string[] = [];
+    const shell = createDashboardProjectShell({
+      projectId: "project-1",
+      navigate: (path) => navigations.push(path),
+    });
 
     registerShortcutBindings({
       ...baseInput,
       hotkeyManager: hotkeyManager as never,
-      pathname: "/projects/project-1/settings",
       activeScopes: ["global"],
-      navigate: navigate as never,
+      shell,
     });
 
     hotkeyManager.handlers.get("Ctrl+Shift+T")?.handler({ target: null, preventDefault: () => {} });
 
-    expect(navigate).toHaveBeenCalledWith({
-      to: "/projects/$projectId/tickets",
-      params: { projectId: "project-1" },
-    });
+    expect(navigations).toEqual(["/projects/project-1/tickets"]);
   });
 
   it("opens the theme menu with Ctrl+Shift+K", () => {
     const hotkeyManager = createHotkeyManager();
-    const setIsCommandPaletteOpen = mock(() => {});
-    const setCommandPaletteView = mock(() => {});
+    const setIsCommandPaletteOpen = createBooleanSetter();
+    const setCommandPaletteView = createCommandPaletteViewSetter();
+    const shell = createDashboardProjectShell({
+      projectId: "project-1",
+      navigate: () => {},
+      openThemeMenu: () => {
+        setCommandPaletteView("theme");
+        setIsCommandPaletteOpen(true);
+      },
+    });
 
     registerShortcutBindings({
       ...baseInput,
       hotkeyManager: hotkeyManager as never,
-      pathname: "/projects/project-1/settings",
       activeScopes: ["global"],
-      setIsCommandPaletteOpen,
-      setCommandPaletteView,
+      shell,
     });
 
     hotkeyManager.handlers.get("Ctrl+Shift+K")?.handler({ target: null, preventDefault: () => {} });
@@ -128,15 +119,19 @@ describe("registerShortcutBindings - creation and navigation", () => {
 describe("registerShortcutBindings - overlay and sibling navigation", () => {
   it("closes help overlay on Escape when overlay is active", () => {
     const hotkeyManager = createHotkeyManager();
-    const setIsHelpOpen = mock(() => {});
+    const setIsHelpOpen = createBooleanSetter();
+    const shell = createDashboardProjectShell({
+      projectId: "project-1",
+      navigate: () => {},
+      closeOverlay: () => setIsHelpOpen(false),
+    });
 
     registerShortcutBindings({
       ...baseInput,
       hotkeyManager: hotkeyManager as never,
-      pathname: "/projects/project-1/tickets",
       activeScopes: ["global"],
       isHelpOpen: true,
-      setIsHelpOpen,
+      shell,
     });
 
     hotkeyManager.handlers.get("Escape")?.handler({ target: null });
@@ -146,7 +141,12 @@ describe("registerShortcutBindings - overlay and sibling navigation", () => {
 
   it("opens help on Ctrl+Shift+H and ignores editable targets", () => {
     const hotkeyManager = createHotkeyManager();
-    const setIsHelpOpen = mock(() => {});
+    const setIsHelpOpen = createBooleanSetter();
+    const shell = createDashboardProjectShell({
+      projectId: "project-1",
+      navigate: () => {},
+      openShortcutHelp: () => setIsHelpOpen(true),
+    });
     const nestedTextNodeInsideEditable = {
       nodeType: 3,
       parentElement: {
@@ -161,9 +161,8 @@ describe("registerShortcutBindings - overlay and sibling navigation", () => {
     registerShortcutBindings({
       ...baseInput,
       hotkeyManager: hotkeyManager as never,
-      pathname: "/projects/project-1/tickets",
       activeScopes: ["global"],
-      setIsHelpOpen,
+      shell,
     });
 
     hotkeyManager.handlers
@@ -182,17 +181,23 @@ describe("registerShortcutBindings - overlay and sibling navigation", () => {
 
   it("opens the command palette on Ctrl+Shift+P and prevents default", () => {
     const hotkeyManager = createHotkeyManager();
-    const setIsCommandPaletteOpen = mock(() => {});
-    const setCommandPaletteInitialQuery = mock(() => {});
+    const setIsCommandPaletteOpen = createBooleanSetter();
+    const setCommandPaletteInitialQuery = createQuerySetter();
     const preventDefault = mock(() => {});
+    const shell = createDashboardProjectShell({
+      projectId: "project-1",
+      navigate: () => {},
+      openCommandPalette: () => {
+        setCommandPaletteInitialQuery("");
+        setIsCommandPaletteOpen(true);
+      },
+    });
 
     registerShortcutBindings({
       ...baseInput,
       hotkeyManager: hotkeyManager as never,
-      pathname: "/projects/project-1/tickets",
       activeScopes: ["global"],
-      setIsCommandPaletteOpen,
-      setCommandPaletteInitialQuery,
+      shell,
     });
 
     hotkeyManager.handlers.get("Ctrl+Shift+P")?.handler({ target: null, preventDefault });
@@ -204,19 +209,25 @@ describe("registerShortcutBindings - overlay and sibling navigation", () => {
 
   it("opens the command palette in command mode on Ctrl+Shift+.", () => {
     const hotkeyManager = createHotkeyManager();
-    const setIsCommandPaletteOpen = mock(() => {});
-    const setCommandPaletteView = mock(() => {});
-    const setCommandPaletteInitialQuery = mock(() => {});
+    const setIsCommandPaletteOpen = createBooleanSetter();
+    const setCommandPaletteView = createCommandPaletteViewSetter();
+    const setCommandPaletteInitialQuery = createQuerySetter();
     const preventDefault = mock(() => {});
+    const shell = createDashboardProjectShell({
+      projectId: "project-1",
+      navigate: () => {},
+      openCommandPaletteCommands: () => {
+        setCommandPaletteView("main");
+        setCommandPaletteInitialQuery("> ");
+        setIsCommandPaletteOpen(true);
+      },
+    });
 
     registerShortcutBindings({
       ...baseInput,
       hotkeyManager: hotkeyManager as never,
-      pathname: "/projects/project-1/tickets",
       activeScopes: ["global"],
-      setIsCommandPaletteOpen,
-      setCommandPaletteView,
-      setCommandPaletteInitialQuery,
+      shell,
     });
 
     hotkeyManager.handlers.get("Ctrl+Shift+.")?.handler({ target: null, preventDefault });
@@ -225,6 +236,34 @@ describe("registerShortcutBindings - overlay and sibling navigation", () => {
     expect(setCommandPaletteView).toHaveBeenCalledWith("main");
     expect(setCommandPaletteInitialQuery).toHaveBeenCalledWith("> ");
     expect(setIsCommandPaletteOpen).toHaveBeenCalledWith(true);
+  });
+
+  it("executes active shell keybindings", () => {
+    const hotkeyManager = createHotkeyManager();
+    const preventDefault = mock(() => {});
+    const seen: string[] = [];
+    const shell = createShellCore();
+
+    shell.commands.registerCommand(
+      { id: "project.openSettings", label: "Project settings" },
+      { execute: () => seen.push("project.openSettings") },
+    );
+    shell.keybindings.registerKeybinding({
+      commandId: "project.openSettings",
+      keybinding: "Ctrl+Shift+,",
+    });
+
+    registerShortcutBindings({
+      ...baseInput,
+      hotkeyManager: hotkeyManager as never,
+      activeScopes: ["global"],
+      shell,
+    });
+
+    hotkeyManager.handlers.get("Ctrl+Shift+,")?.handler({ target: null, preventDefault });
+
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+    expect(seen).toEqual(["project.openSettings"]);
   });
 });
 

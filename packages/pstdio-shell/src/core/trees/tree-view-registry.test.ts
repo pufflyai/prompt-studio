@@ -25,4 +25,73 @@ describe("createTreeViewRegistry", () => {
       { id: "s1:log", label: "Log" },
     ]);
   });
+
+  test("loads grouped sections when contributed", async () => {
+    const trees = createTreeViewRegistry();
+
+    trees.registerTreeView({
+      id: "settings.tree",
+      title: "Settings",
+      area: "left",
+      getRoots: () => [],
+      getSections: () => [
+        {
+          id: "general",
+          label: "General",
+          nodes: [{ id: "repositories", label: "Repositories" }],
+        },
+        {
+          id: "templates",
+          label: "Templates",
+          nodes: [{ id: "prompt-templates", label: "Prompts" }],
+        },
+      ],
+      getChildren: () => [],
+    });
+
+    await expect(trees.getSections("settings.tree")).resolves.toEqual([
+      {
+        id: "general",
+        label: "General",
+        nodes: [{ id: "repositories", label: "Repositories" }],
+      },
+      {
+        id: "templates",
+        label: "Templates",
+        nodes: [{ id: "prompt-templates", label: "Prompts" }],
+      },
+    ]);
+  });
+
+  test("tracks expansion and selection state and emits refresh events", () => {
+    const trees = createTreeViewRegistry();
+    const refreshEvents: string[] = [];
+
+    trees.registerTreeView({
+      id: "sessions.tree",
+      title: "Sessions",
+      area: "left",
+      getRoots: () => [],
+      getChildren: () => [],
+    });
+
+    const disposable = trees.onDidRefresh((event) => {
+      refreshEvents.push(event.treeViewId);
+    });
+
+    trees.setNodeExpanded("sessions.tree", "s1", true);
+    trees.setSelectedNode("sessions.tree", "s1");
+    trees.refresh("sessions.tree");
+
+    expect(trees.getViewState("sessions.tree")).toEqual({
+      expandedNodeIds: ["s1"],
+      selectedNodeId: "s1",
+    });
+    expect(refreshEvents).toEqual(["sessions.tree"]);
+
+    disposable.dispose();
+    trees.refresh("sessions.tree");
+
+    expect(refreshEvents).toEqual(["sessions.tree"]);
+  });
 });

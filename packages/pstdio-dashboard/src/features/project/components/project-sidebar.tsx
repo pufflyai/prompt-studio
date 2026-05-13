@@ -14,42 +14,46 @@ import { useTranslation } from "react-i18next";
 import { useSystemInfo } from "@/features/project/hooks/use-project";
 import { ShortcutKbd } from "@/features/shortcuts/shortcut-kbd";
 import { useOpenCommandPalette, useOpenShortcutHelp } from "@/features/shortcuts/shortcut-provider";
-import {
-  getShortcutDefinition,
-  type ShortcutBinding,
-  type ShortcutDefinition,
-} from "@/features/shortcuts/shortcut-registry";
+import type { ShortcutBinding } from "@/features/shortcuts/shortcut-registry";
 import { getSlotContributions } from "@/shared/extensions/contribution-mapping";
 import { useProjectExtensionMetadata } from "@/shared/extensions/hooks/use-project-extensions";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
+import {
+  DASHBOARD_OPEN_SHORTCUT_HELP_COMMAND_ID,
+  DASHBOARD_PROJECT_SHORTCUTS,
+} from "@/shared/shell/dashboard-project-shell";
 import { PROJECT_SIDEBAR_STORAGE_KEY } from "@/shared/sidebar/project-sidebar";
 import { ProjectMenu } from "./project-menu";
 
 const GITHUB_DOCS_URL = "https://github.com/pufflyai/prompt-studio";
 const DISCORD_URL = "https://discord.gg/3RxwUEk8fW";
-export const SIDEBAR_HELP_SHORTCUT_IDS = ["open-shortcut-help"] as const;
+export const SIDEBAR_HELP_SHORTCUT_IDS = [DASHBOARD_OPEN_SHORTCUT_HELP_COMMAND_ID] as const;
+
+interface SidebarShortcutAction {
+  id: string;
+  primaryLabel: string;
+  binding: ShortcutBinding;
+  leftIcon: LucideIcon;
+  isDisabled?: boolean;
+  onClick: () => void;
+}
 
 export const getSidebarHelpShortcutDefinitions = () => {
   return SIDEBAR_HELP_SHORTCUT_IDS.map((shortcutId) => {
-    const definition = getShortcutDefinition(shortcutId);
+    const definition = DASHBOARD_PROJECT_SHORTCUTS.find((shortcut) => shortcut.commandId === shortcutId);
     if (!definition) {
       throw new Error(`Missing shortcut definition: ${shortcutId}`);
     }
 
-    return definition;
+    return {
+      id: definition.commandId,
+      actionLabel: definition.label,
+      binding: definition.keybinding,
+    };
   });
 };
 
-export const SidebarShortcutMenuItems = (props: {
-  actions: Array<{
-    id: ShortcutDefinition["id"];
-    primaryLabel: string;
-    binding: ShortcutBinding;
-    leftIcon: LucideIcon;
-    isDisabled?: boolean;
-    onClick: () => void;
-  }>;
-}) => {
+export const SidebarShortcutMenuItems = (props: { actions: SidebarShortcutAction[] }) => {
   const { actions } = props;
   const menuItems = buildSidebarShortcutMenuItems(actions);
 
@@ -73,16 +77,7 @@ export const SidebarShortcutMenuItems = (props: {
   );
 };
 
-export const buildSidebarShortcutMenuItems = (
-  actions: Array<{
-    id: ShortcutDefinition["id"];
-    primaryLabel: string;
-    binding: ShortcutBinding;
-    leftIcon: LucideIcon;
-    isDisabled?: boolean;
-    onClick: () => void;
-  }>,
-) => {
+export const buildSidebarShortcutMenuItems = (actions: SidebarShortcutAction[]) => {
   return actions.map((action) => ({
     ...action,
     shortcutLabel: <ShortcutKbd binding={action.binding} />,

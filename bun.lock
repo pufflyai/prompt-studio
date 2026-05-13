@@ -310,9 +310,27 @@
     },
     "packages/pstdio-shell": {
       "name": "pstdio-shell",
+      "dependencies": {
+        "@chakra-ui/react": "3.32.0",
+        "@emotion/react": "11.14.0",
+        "@pstdio/ui": "workspace:*",
+        "lucide-react": "^0.556.0",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "zustand": "^5.0.8",
+      },
       "devDependencies": {
+        "@storybook/addon-themes": "^10.1.10",
+        "@storybook/react": "^10.1.9",
+        "@storybook/react-vite": "^10.1.9",
         "@types/bun": "latest",
+        "@types/react": "19.2.3",
+        "@types/react-dom": "19.2.3",
+        "@vitejs/plugin-react": "^5.1.1",
+        "babel-plugin-react-compiler": "^1.0.0",
+        "storybook": "^10.1.9",
         "typescript": "6.0.2",
+        "vite": "^7.2.4",
       },
     },
     "packages/pstdio-storage": {
@@ -4301,6 +4319,8 @@
     "pstdio-dashboard/lexical": ["lexical@0.36.2", "", {}, "sha512-gIDJCmSAhtxD7h95WK17Nz19wCZu92Zn0p1/R45X01S/KAsLCwEtVJ2fTvIJNFTyx3QNJTuGcm5mYgRMUwq8rg=="],
 
     "pstdio-extensions/@types/react": ["@types/react@19.2.3", "", { "dependencies": { "csstype": "^3.0.2" } }, "sha512-k5dJVszUiNr1DSe8Cs+knKR6IrqhqdhpUwzqhkS8ecQTSf3THNtbfIp/umqHMpX2bv+9dkx3fwDv/86LcSfvSg=="],
+
+    "pstdio-shell/@types/react": ["@types/react@19.2.3", "", { "dependencies": { "csstype": "^3.0.2" } }, "sha512-k5dJVszUiNr1DSe8Cs+knKR6IrqhqdhpUwzqhkS8ecQTSf3THNtbfIp/umqHMpX2bv+9dkx3fwDv/86LcSfvSg=="],
 
     "react-i18next/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 

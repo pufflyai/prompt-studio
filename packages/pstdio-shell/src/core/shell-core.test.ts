@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { activateProductModule, createShellCore, type ProductModuleContribution } from "./shell-core";
 
 describe("activateProductModule", () => {
-  it("wires a product module through shell resources, widgets, commands, menus, and trees", async () => {
+  it("wires a product module through shell resources, widgets, commands, menus, notifications, and trees", async () => {
     const shell = createShellCore();
     const projectResource = {
       kind: "project",
@@ -13,6 +13,12 @@ describe("activateProductModule", () => {
     const module: ProductModuleContribution = {
       id: "dashboard.project",
       activate(ctx) {
+        ctx.notifications.show({
+          id: "project.ready",
+          level: "success",
+          title: "Project ready",
+        });
+
         return [
           ctx.resources.registerKind({ kind: "project", label: "Project", icon: "folder" }),
           ctx.layout.registerWidget({
@@ -51,6 +57,7 @@ describe("activateProductModule", () => {
     expect(shell.layout.getWidget("project.settings")?.ownerId).toBe("dashboard.project");
     expect(shell.commands.getCommand("project.openSettings")?.ownerId).toBe("dashboard.project");
     expect(shell.menus.listMenuActions(["commandPalette"])[0]?.ownerId).toBe("dashboard.project");
+    expect(shell.notifications.listNotifications()[0]?.ownerId).toBe("dashboard.project");
     expect((await shell.trees.getRoots("project.navigation"))[0]?.resource?.uri).toBe(projectResource.uri);
 
     await shell.commands.executeCommand("project.openSettings");

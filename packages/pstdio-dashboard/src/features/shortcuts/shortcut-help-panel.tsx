@@ -1,10 +1,10 @@
 import { CloseButton, Dialog, Flex, Menu, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
+import type { ShortcutHelpEntry } from "./shortcut-help-model";
 import { ShortcutKbd } from "./shortcut-kbd";
-import { SHORTCUT_DEFINITIONS } from "./shortcut-registry";
 
-export const ShortcutHelpPanel = (props: { open: boolean; onClose: () => void }) => {
-  const { open, onClose } = props;
+export const ShortcutHelpPanel = (props: { open: boolean; shortcuts: ShortcutHelpEntry[]; onClose: () => void }) => {
+  const { open, shortcuts, onClose } = props;
 
   return (
     <Dialog.Root
@@ -39,7 +39,7 @@ export const ShortcutHelpPanel = (props: { open: boolean; onClose: () => void })
                   p="0"
                   gap="0"
                 >
-                  {SHORTCUT_DEFINITIONS.map((shortcut) => (
+                  {shortcuts.map((shortcut) => (
                     <Menu.Item
                       key={shortcut.id}
                       value={shortcut.id}

@@ -22,6 +22,8 @@ export { adaptRuntimeExtensionContributions } from "./contributions/runtime-exte
 export type {
   DiagnosticAction,
   DiagnosticRegistry,
+  DiagnosticSourceContribution,
+  RegisteredDiagnosticSource,
   RegisteredShellDiagnostic,
   ShellDiagnostic,
 } from "./diagnostics/diagnostic-registry";
@@ -44,7 +46,27 @@ export type { LifecycleHook, LifecyclePhase, LifecycleRegistry } from "./lifecyc
 export { createLifecycleRegistry } from "./lifecycle/lifecycle-registry";
 export type { MenuAction, MenuPath, MenuRegistry, RegisteredMenuAction } from "./menus/menu-registry";
 export { createMenuRegistry } from "./menus/menu-registry";
+export { workbenchTopActionMenuPath } from "./menus/workbench-menu-paths";
 export type {
+  NavigationParser,
+  NavigationRegistry,
+  RegisteredNavigationParser,
+  RegisteredResourceNavigator,
+  ResourceNavigator,
+} from "./navigation/navigation-registry";
+export { createNavigationRegistry } from "./navigation/navigation-registry";
+export type {
+  NotificationRegistry,
+  RegisteredShellNotification,
+  ShellNotification,
+  ShellNotificationAction,
+  ShellNotificationEvent,
+  ShellNotificationLevel,
+} from "./notifications/notification-registry";
+export { createNotificationRegistry } from "./notifications/notification-registry";
+export type {
+  CreatePreferenceRegistryInput,
+  PreferencePersistenceAdapter,
   PreferencePropertySchema,
   PreferenceRegistry,
   PreferenceSchemaContribution,
@@ -73,7 +95,10 @@ export type {
   TreeContext,
   TreeNode,
   TreeViewContribution,
+  TreeViewRefreshEvent,
   TreeViewRegistry,
+  TreeViewSection,
+  TreeViewState,
 } from "./trees/tree-view-registry";
 export { createTreeViewRegistry } from "./trees/tree-view-registry";
 export type { RegisteredWebviewContribution, WebviewContribution, WebviewRegistry } from "./webviews/webview-registry";
