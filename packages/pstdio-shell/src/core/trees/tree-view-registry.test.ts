@@ -80,11 +80,13 @@ describe("createTreeViewRegistry", () => {
     });
 
     trees.setNodeExpanded("sessions.tree", "s1", true);
+    trees.setSectionExpanded("sessions.tree", "active", true);
     trees.setSelectedNode("sessions.tree", "s1");
     trees.refresh("sessions.tree");
 
     expect(trees.getViewState("sessions.tree")).toEqual({
       expandedNodeIds: ["s1"],
+      expandedSectionIds: ["active"],
       selectedNodeId: "s1",
     });
     expect(refreshEvents).toEqual(["sessions.tree"]);
@@ -93,5 +95,25 @@ describe("createTreeViewRegistry", () => {
     trees.refresh("sessions.tree");
 
     expect(refreshEvents).toEqual(["sessions.tree"]);
+  });
+
+  test("does not expand sections unless defaults or state opt in", () => {
+    const trees = createTreeViewRegistry();
+
+    trees.registerTreeView({
+      id: "settings.tree",
+      title: "Settings",
+      area: "left",
+      defaultExpandedSectionIds: ["general"],
+      getRoots: () => [],
+      getChildren: () => [],
+    });
+
+    expect(trees.getViewState("settings.tree").expandedSectionIds).toEqual(["general"]);
+
+    trees.setSectionExpanded("settings.tree", "general", false);
+    trees.setSectionExpanded("settings.tree", "templates", true);
+
+    expect(trees.getViewState("settings.tree").expandedSectionIds).toEqual(["templates"]);
   });
 });

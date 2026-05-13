@@ -36,8 +36,18 @@ const resolvePanelCollapsible = (shell: ShellCore, ...areas: ShellArea[]) =>
 
 const SIDEBAR_DEFAULT_SIZE_PX = 240;
 const SIDEBAR_MIN_SIZE_PX = 200;
-const SIDEBAR_MAX_SIZE_PX = 480;
 const CONTENT_MIN_SIZE_PX = 320;
+
+const resolveLeftPanelSize = (shell: ShellCore, treeViewId?: string) => {
+  const treeAreaSize = treeViewId ? shell.trees.getTreeView(treeViewId)?.areaSize : undefined;
+  const areaSize = treeAreaSize ?? shell.layout.getAreaSize("left");
+
+  return {
+    defaultPx: areaSize?.defaultPx ?? SIDEBAR_DEFAULT_SIZE_PX,
+    minPx: areaSize?.minPx ?? SIDEBAR_MIN_SIZE_PX,
+    maxPx: areaSize?.maxPx,
+  };
+};
 
 const createSessionPanelHost = () => {
   if (typeof document === "undefined") return null;
@@ -119,6 +129,7 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
   const leftPanelCollapsible = resolvePanelCollapsible(shell, "left-header", "left");
   const mainRightPanelCollapsible = resolvePanelCollapsible(shell, "main-right-header", "main-right");
   const mainBottomPanelCollapsible = resolvePanelCollapsible(shell, "main-bottom-header", "main-bottom");
+  const leftPanelSize = resolveLeftPanelSize(shell, leftTree);
   const sessionPanelMode = shell.sessionPanel.getMode();
   const showAttachedSessionPanel = hasFloatingPanel && sessionPanelMode === "attached";
   const showBubbleSessionPanel = hasFloatingPanel && sessionPanelMode === "bubble";
@@ -225,9 +236,9 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
       contentPanel={contentWithHeader}
       collapsed={!leftPanelOpen && leftPanelCollapsible}
       collapsible={leftPanelCollapsible}
-      defaultSizePx={SIDEBAR_DEFAULT_SIZE_PX}
-      minSizePx={SIDEBAR_MIN_SIZE_PX}
-      maxSizePx={SIDEBAR_MAX_SIZE_PX}
+      defaultSizePx={leftPanelSize.defaultPx}
+      minSizePx={leftPanelSize.minPx}
+      maxSizePx={leftPanelSize.maxPx}
       contentMinSizePx={CONTENT_MIN_SIZE_PX}
       resizeLabel="Resize sidebar"
       showResizeSeparator

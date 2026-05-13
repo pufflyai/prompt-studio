@@ -2,13 +2,12 @@ import { Flex, Stack, Text } from "@chakra-ui/react";
 import type { ProjectRepository } from "@/features/project/types";
 import type { TicketStatusOption, TicketTag } from "@/features/ticket-list/types";
 import type { AttemptStatusOption } from "../hooks/use-attempt-statuses";
+import type { SettingsSection } from "../utils/settings-section";
 import { AttemptStatusManager } from "./attempt-status-manager";
-
 import { ExtensionsPanel } from "./extensions-panel";
 import { ProjectAgentsPanel } from "./project-agents-panel";
 import { ProjectDangerZone } from "./project-danger-zone";
 import { ProjectRepositoriesPanel } from "./project-repositories-panel";
-import type { SettingsSection } from "./settings-sidebar";
 import { SkillViewer } from "./skill-viewer";
 import { TagManager } from "./tag-manager";
 import { TemplateEditor } from "./template-editor";

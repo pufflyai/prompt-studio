@@ -4,7 +4,6 @@ import {
   PROJECT_NAVIGATION_TREE_ID,
   PROJECT_OPEN_SETTINGS_COMMAND_ID,
   PROJECT_RESOURCE_KIND,
-  PROJECT_SETTINGS_SIDEBAR_WIDGET_ID,
   PROJECT_SETTINGS_WIDGET_ID,
 } from "./dashboard-project-shell";
 import { DASHBOARD_COMMAND_PALETTE_MENU } from "./menu-locations";
@@ -20,10 +19,6 @@ describe("createDashboardProjectShell", () => {
 
     expect(shell.resources.getKind(PROJECT_RESOURCE_KIND)?.source).toBe("product-module");
     expect(shell.layout.getWidget(PROJECT_SETTINGS_WIDGET_ID)?.renderer).toBe("react");
-    expect(shell.layout.getWidget(PROJECT_SETTINGS_SIDEBAR_WIDGET_ID)).toMatchObject({
-      area: "main-left",
-      renderer: "react",
-    });
     expect(shell.commands.getCommand(PROJECT_OPEN_SETTINGS_COMMAND_ID)?.command.label).toBe("Project settings");
     expect(shell.menus.listMenuActions(DASHBOARD_COMMAND_PALETTE_MENU).map((action) => action.commandId)).toEqual([
       PROJECT_OPEN_SETTINGS_COMMAND_ID,
@@ -59,17 +54,14 @@ describe("createDashboardProjectShell", () => {
     expect(navigations).toEqual(["/projects/project-1/settings"]);
     expect(shell.layout.getLayout().activeWidgetId).toBe(PROJECT_SETTINGS_WIDGET_ID);
     expect(shell.layout.getLayout().activeResourceUri).toBe("pstdio://project/project-1");
-    expect(shell.layout.getLayout().areas["main-left"].widgets[0]?.contributionId).toBe(
-      PROJECT_SETTINGS_SIDEBAR_WIDGET_ID,
-    );
+    expect(shell.layout.getLayout().areas["main-left"].widgets).toEqual([]);
 
     shell.dispose();
 
     expect(shell.commands.getCommand(PROJECT_OPEN_SETTINGS_COMMAND_ID)).toBeUndefined();
   });
 
-  it("can host project settings navigation in the left area without the project tree", () => {
-    const projectResource = { kind: PROJECT_RESOURCE_KIND, uri: "pstdio://project/project-1", id: "project-1" };
+  it("can disable the project navigation tree for nested settings shells", () => {
     const shell = createDashboardProjectShell({
       projectId: "project-1",
       projectName: "Prompt Studio",
@@ -78,17 +70,7 @@ describe("createDashboardProjectShell", () => {
     });
 
     expect(shell.trees.getTreeView(PROJECT_NAVIGATION_TREE_ID)).toBeUndefined();
-    expect(shell.layout.getWidget(PROJECT_SETTINGS_SIDEBAR_WIDGET_ID)).toMatchObject({
-      area: "left",
-      renderer: "react",
-    });
-
-    shell.layout.openWidget(PROJECT_SETTINGS_SIDEBAR_WIDGET_ID, {
-      resource: projectResource,
-      closable: false,
-    });
-
-    expect(shell.layout.getLayout().areas.left.widgets[0]?.contributionId).toBe(PROJECT_SETTINGS_SIDEBAR_WIDGET_ID);
+    expect(shell.layout.getLayout().areas.left.widgets).toEqual([]);
     expect(shell.layout.getLayout().areas["main-left"].widgets).toEqual([]);
 
     shell.dispose();

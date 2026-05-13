@@ -15,7 +15,6 @@ import { DASHBOARD_COMMAND_PALETTE_MENU } from "./menu-locations";
 
 export const PROJECT_RESOURCE_KIND = "project";
 export const PROJECT_SETTINGS_WIDGET_ID = "project.settings";
-export const PROJECT_SETTINGS_SIDEBAR_WIDGET_ID = "project.settings.sidebar";
 export const DASHBOARD_CLOSE_OVERLAY_COMMAND_ID = "dashboard.closeOverlay";
 export const DASHBOARD_OPEN_COMMAND_PALETTE_COMMAND_ID = "dashboard.openCommandPalette";
 export const DASHBOARD_OPEN_COMMAND_PALETTE_COMMANDS_COMMAND_ID = "dashboard.openCommandPaletteCommands";
@@ -174,15 +173,6 @@ const createDashboardProjectModule = (input: DashboardProjectShellInput): Produc
         },
       }),
       ctx.layout.registerWidget({
-        id: PROJECT_SETTINGS_SIDEBAR_WIDGET_ID,
-        title: "Project settings navigation",
-        area: showProjectNavigationTree ? "main-left" : "left",
-        singleton: true,
-        resourceKinds: [PROJECT_RESOURCE_KIND],
-        renderer: "react",
-        rendererId: PROJECT_SETTINGS_SIDEBAR_WIDGET_ID,
-      }),
-      ctx.layout.registerWidget({
         id: PROJECT_SETTINGS_WIDGET_ID,
         title: "Project settings",
         area: "main",
@@ -197,7 +187,6 @@ const createDashboardProjectModule = (input: DashboardProjectShellInput): Produc
         canOpen: (resource) => resource.kind === PROJECT_RESOURCE_KIND,
         open: async (resource, input) => {
           await ctx.navigation.navigateResource(resource);
-          ctx.layout.openWidget(PROJECT_SETTINGS_SIDEBAR_WIDGET_ID, { resource, closable: false });
           return ctx.layout.openWidget(PROJECT_SETTINGS_WIDGET_ID, { resource, replaceActive: input.replaceActive });
         },
       }),

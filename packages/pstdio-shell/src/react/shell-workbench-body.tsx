@@ -38,7 +38,7 @@ const RIGHT_PANEL_SIZE = { defaultPx: 320, minPx: 240, maxPx: 520 };
 const resolveAreaSize = (areaSize: ShellAreaSize | undefined, fallback: Required<ShellAreaSize>) => ({
   defaultPx: areaSize?.defaultPx ?? fallback.defaultPx,
   minPx: areaSize?.minPx ?? fallback.minPx,
-  maxPx: areaSize?.maxPx ?? fallback.maxPx,
+  maxPx: areaSize ? areaSize.maxPx : fallback.maxPx,
 });
 
 interface MainHeaderBarProps {

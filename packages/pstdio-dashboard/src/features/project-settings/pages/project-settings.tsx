@@ -2,52 +2,28 @@ import { Stack } from "@chakra-ui/react";
 import { toaster } from "@pstdio/ui";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { ShellWorkbench } from "pstdio-shell/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { BackToDashboard } from "@/features/project/components/back-to-dashboard";
 import { useProject, useProjectTemplateAssets } from "@/features/project/hooks/use-project";
 import {
   useCreateProjectTicketTag,
   useDeleteProjectTicketTag,
   useProjectTicketStatuses,
 } from "@/features/ticket-list/hooks/use-project-tickets";
-import {
-  createDashboardProjectResource,
-  createDashboardProjectShell,
-  PROJECT_SETTINGS_SIDEBAR_WIDGET_ID,
-  PROJECT_SETTINGS_WIDGET_ID,
-} from "@/shared/shell/dashboard-project-shell";
+import { PROJECT_SETTINGS_WIDGET_ID } from "@/shared/shell/dashboard-project-shell";
 import { CreateTemplateDialog } from "../components/create-template-dialog";
 import { SettingsContent } from "../components/settings-content";
-import { type SettingsSection, SettingsSidebar } from "../components/settings-sidebar";
+import { createProjectSettingsSectionResource, PROJECT_SETTINGS_TREE_ID } from "../components/settings-navigation-tree";
 import { useProjectAttemptStatuses } from "../hooks/use-attempt-statuses";
-
 import { useProjectSkills } from "../hooks/use-skills";
+import {
+  createProjectSettingsShell,
+  PROJECT_SETTINGS_BACK_WIDGET_ID,
+  type ProjectSettingsNavigationState,
+} from "../utils/project-settings-shell";
 import { ensureValidSettingsSection, parseSettingsPanel, toSettingsPanel } from "../utils/settings-panel";
-
-interface ProjectSettingsSidebarWidgetProps {
-  activeSection: SettingsSection | null;
-  skills: ReturnType<typeof useProjectSkills>["data"];
-  tags: NonNullable<ReturnType<typeof useProject>["data"]>["ticketTags"];
-  templates: ReturnType<typeof useProjectTemplateAssets>["data"];
-  onCreateTag: () => void;
-  onCreateTemplate: () => void;
-  onSelectSection: (section: SettingsSection) => void;
-}
-
-const ProjectSettingsSidebarWidget = (props: ProjectSettingsSidebarWidgetProps) => {
-  const { activeSection, skills, tags, templates, onCreateTag, onCreateTemplate, onSelectSection } = props;
-
-  return (
-    <SettingsSidebar
-      templates={templates ?? []}
-      skills={skills ?? []}
-      tags={tags}
-      activeSection={activeSection}
-      onSelectSection={onSelectSection}
-      onCreateTemplate={onCreateTemplate}
-      onCreateTag={onCreateTag}
-    />
-  );
-};
+import type { SettingsSection } from "../utils/settings-section";
 
 interface ProjectSettingsMainWidgetProps {
   activeSection: SettingsSection | null;
@@ -106,29 +82,8 @@ const ProjectSettingsMainWidget = (props: ProjectSettingsMainWidgetProps) => {
   );
 };
 
-interface CreateProjectSettingsShellInput {
-  projectId: string;
-  projectName: string;
-  navigate: (path: string) => void;
-}
-
-const createProjectSettingsShell = (input: CreateProjectSettingsShellInput) => {
-  const shell = createDashboardProjectShell({ ...input, showProjectNavigationTree: false });
-  const projectResource = createDashboardProjectResource(input);
-
-  shell.layout.openWidget(PROJECT_SETTINGS_SIDEBAR_WIDGET_ID, {
-    resource: projectResource,
-    closable: false,
-  });
-  shell.layout.openWidget(PROJECT_SETTINGS_WIDGET_ID, {
-    resource: projectResource,
-    closable: false,
-  });
-
-  return shell;
-};
-
 export const ProjectSettings = () => {
+  const { t } = useTranslation("projects");
   const navigate = useNavigate();
   const { projectId } = useParams({ strict: false });
   const { panel } = useSearch({ strict: false });
@@ -146,10 +101,37 @@ export const ProjectSettings = () => {
   const tags = project?.ticketTags ?? [];
   const repositories = project?.repositories ?? [];
   const resolvedProjectId = projectId ?? "";
+  const labels = {
+    attemptStatuses: "Attempt Statuses",
+    createTag: "Create tag",
+    createTemplate: t("projectSettings.createTemplate"),
+    dangerZone: t("projectSettings.dangerZone"),
+    extensionTemplates: t("projectSettings.extensionTemplates", { defaultValue: "Extension templates" }),
+    extensions: "Extensions",
+    harnesses: t("projectSettings.harnesses"),
+    projectTemplates: t("projectSettings.projectTemplates", { defaultValue: "Project templates" }),
+    repositories: t("projectSettings.repositories"),
+    skills: t("projectSettings.skills"),
+    tags: t("projectSettings.tags"),
+  };
+
+  const navigationRef = useRef<ProjectSettingsNavigationState>({
+    projectId: resolvedProjectId,
+    templates: templates ?? [],
+    skills: skills ?? [],
+    tags,
+    labels,
+    onCreateTag: () => undefined,
+    onCreateTemplate: () => undefined,
+    onOpenSection: () => undefined,
+  });
+
   const [projectShell, setProjectShell] = useState(() =>
     createProjectSettingsShell({
       projectId: resolvedProjectId,
       projectName,
+      initialSection: parseSettingsPanel(panel),
+      navigation: navigationRef,
       navigate: (path) => navigate({ to: path }),
     }),
   );
@@ -182,20 +164,21 @@ export const ProjectSettings = () => {
     }
   };
 
+  navigationRef.current = {
+    projectId: resolvedProjectId,
+    templates: templates ?? [],
+    skills: skills ?? [],
+    tags,
+    labels,
+    onCreateTag: handleCreateTag,
+    onCreateTemplate: () => setIsCreateTemplateOpen(true),
+    onOpenSection: setActiveSection,
+  };
+
   useEffect(() => {
-    const sidebar = projectShell.renderers.registerRenderer({
-      id: PROJECT_SETTINGS_SIDEBAR_WIDGET_ID,
-      render: () => (
-        <ProjectSettingsSidebarWidget
-          activeSection={activeSection}
-          skills={skills}
-          tags={tags}
-          templates={templates}
-          onCreateTag={handleCreateTag}
-          onCreateTemplate={() => setIsCreateTemplateOpen(true)}
-          onSelectSection={setActiveSection}
-        />
-      ),
+    const back = projectShell.renderers.registerRenderer({
+      id: PROJECT_SETTINGS_BACK_WIDGET_ID,
+      render: () => <BackToDashboard justifyContent="flex-start" borderRadius="0" px="sm" />,
     });
     const main = projectShell.renderers.registerRenderer({
       id: PROJECT_SETTINGS_WIDGET_ID,
@@ -218,7 +201,7 @@ export const ProjectSettings = () => {
     });
 
     return () => {
-      sidebar.dispose();
+      back.dispose();
       main.dispose();
     };
   });
@@ -236,6 +219,8 @@ export const ProjectSettings = () => {
     const nextShell = createProjectSettingsShell({
       projectId: resolvedProjectId,
       projectName,
+      initialSection: "tags",
+      navigation: navigationRef,
       navigate: (path) => navigate({ to: path }),
     });
 
@@ -246,6 +231,11 @@ export const ProjectSettings = () => {
 
     return () => nextShell.dispose();
   }, [navigate, projectName, resolvedProjectId]);
+
+  useEffect(() => {
+    if (!skills || !tags || !templates) return;
+    projectShell.trees.refresh(PROJECT_SETTINGS_TREE_ID);
+  }, [projectShell, skills, tags, templates]);
 
   useEffect(() => {
     if (!activeSection) {
@@ -263,6 +253,11 @@ export const ProjectSettings = () => {
       return;
     }
 
+    projectShell.layout.openWidget(PROJECT_SETTINGS_WIDGET_ID, {
+      resource: createProjectSettingsSectionResource(projectId, activeSection),
+      closable: false,
+    });
+
     const nextPanel = toSettingsPanel(activeSection);
     if (panel === nextPanel) {
       return;
@@ -274,7 +269,7 @@ export const ProjectSettings = () => {
       search: { panel: nextPanel },
       replace: true,
     });
-  }, [activeSection, navigate, panel, projectId]);
+  }, [activeSection, navigate, panel, projectId, projectShell]);
 
   return <ShellWorkbench shell={projectShell} />;
 };

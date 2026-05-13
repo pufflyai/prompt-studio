@@ -148,6 +148,7 @@ export type {
 export { activateProductModule, createShellCore } from "./shell-core";
 export type {
   RegisteredTreeViewContribution,
+  TreeAction,
   TreeContext,
   TreeNode,
   TreeViewContribution,

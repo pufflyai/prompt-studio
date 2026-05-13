@@ -1,4 +1,4 @@
-import type { SettingsSection } from "../components/settings-sidebar";
+import type { SettingsSection } from "./settings-section";
 
 type TemplateLike = { name: string };
 type SkillLike = { name: string };

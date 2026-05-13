@@ -1,6 +1,7 @@
-import { Flex, Stack } from "@chakra-ui/react";
+import { Stack } from "@chakra-ui/react";
 import { toaster } from "@pstdio/ui";
 import { useNavigate, useSearch } from "@tanstack/react-router";
+import { ShellWorkbench } from "pstdio-shell/react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -10,10 +11,40 @@ import {
   useSetDefaultAgent,
 } from "@/features/agents/hooks/use-agent-configs";
 import { useAgents } from "@/features/agents/hooks/use-agents";
+import { createDashboardSettingsShell, GLOBAL_SETTINGS_WIDGET_ID } from "@/shared/shell/dashboard-settings-shell";
 import type { SupportedAgentId } from "../components/add-agent-manually-dialog";
 import { AgentsPanel } from "../components/agents-panel";
-import { type GlobalSettingsSection, SettingsSidebar } from "../components/settings-sidebar";
 import { parseSettingsPanel, toSettingsPanel } from "../utils/settings-panel";
+
+interface AgentsSettingsWidgetProps {
+  agents: ReturnType<typeof useAgents>["data"];
+  configs: ReturnType<typeof useAgentConfigs>["data"];
+  isAdding: boolean;
+  isLoading: boolean;
+  isMutating: boolean;
+  onManualAdd: (agentId: SupportedAgentId, binary: string) => Promise<boolean>;
+  onSetDefault: (agentId: string) => void;
+  onToggle: (agentId: string, isEnabled: boolean) => void;
+}
+
+const AgentsSettingsWidget = (props: AgentsSettingsWidgetProps) => {
+  const { agents, configs, isAdding, isLoading, isMutating, onManualAdd, onSetDefault, onToggle } = props;
+
+  return (
+    <Stack flex="1" minH="0" overflow="auto">
+      <AgentsPanel
+        agents={agents ?? []}
+        configs={configs ?? []}
+        isLoading={isLoading}
+        isMutating={isMutating}
+        isAdding={isAdding}
+        onToggle={onToggle}
+        onSetDefault={onSetDefault}
+        onManualAdd={onManualAdd}
+      />
+    </Stack>
+  );
+};
 
 export const Settings = () => {
   const { t } = useTranslation("settings");
@@ -24,17 +55,29 @@ export const Settings = () => {
   const enableAgent = useEnableAgent();
   const disableAgent = useDisableAgent();
   const setDefaultAgent = useSetDefaultAgent();
-  const [activeSection, setActiveSection] = useState<GlobalSettingsSection>(() => parseSettingsPanel(panel));
+  const activePanel = parseSettingsPanel(panel);
+  const [settingsShell] = useState(() =>
+    createDashboardSettingsShell({
+      navigate: (path) => {
+        navigate({ to: path });
+      },
+    }),
+  );
 
   const isLoading = isLoadingAgents || isLoadingConfigs;
   const isMutating = enableAgent.isPending || disableAgent.isPending || setDefaultAgent.isPending;
 
   useEffect(() => {
-    setActiveSection(parseSettingsPanel(panel));
-  }, [panel]);
+    return () => settingsShell.dispose();
+  }, [settingsShell]);
 
   useEffect(() => {
-    const nextPanel = toSettingsPanel(activeSection);
+    const subscription = settingsShell.breadcrumbs.setItems([{ title: t("agentList.title") }]);
+    return () => subscription.dispose();
+  }, [settingsShell, t]);
+
+  useEffect(() => {
+    const nextPanel = toSettingsPanel(activePanel);
     if (panel === nextPanel) {
       return;
     }
@@ -44,7 +87,7 @@ export const Settings = () => {
       search: { panel: nextPanel },
       replace: true,
     });
-  }, [activeSection, navigate, panel]);
+  }, [activePanel, navigate, panel]);
 
   const handleToggle = (agentId: string, isCurrentlyEnabled: boolean) => {
     if (isCurrentlyEnabled) {
@@ -84,11 +127,11 @@ export const Settings = () => {
     }
   };
 
-  return (
-    <Flex height="100%" width="100%" minH="0">
-      <SettingsSidebar activeSection={activeSection} onSelectSection={setActiveSection} />
-      <Stack flex="1" minH="0" overflow="auto">
-        <AgentsPanel
+  useEffect(() => {
+    const main = settingsShell.renderers.registerRenderer({
+      id: GLOBAL_SETTINGS_WIDGET_ID,
+      render: () => (
+        <AgentsSettingsWidget
           agents={agents}
           configs={configs}
           isLoading={isLoading}
@@ -98,7 +141,13 @@ export const Settings = () => {
           onSetDefault={handleSetDefault}
           onManualAdd={handleManualAdd}
         />
-      </Stack>
-    </Flex>
-  );
+      ),
+    });
+
+    return () => {
+      main.dispose();
+    };
+  });
+
+  return <ShellWorkbench shell={settingsShell} />;
 };

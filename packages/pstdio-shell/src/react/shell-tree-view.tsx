@@ -1,15 +1,9 @@
-import { Flex, Text } from "@chakra-ui/react";
-import {
-  EmptyState,
-  ScrollArea,
-  TreeList,
-  type TreeListActionMenuItem,
-  type TreeListNode,
-  type TreeListSection,
-} from "@pstdio/ui";
+import { Box, Flex, Text } from "@chakra-ui/react";
+import { EmptyState, ScrollArea, TreeList, type TreeListNode, type TreeListSection } from "@pstdio/ui";
 import { useEffect, useState } from "react";
-import type { MenuPath, ResourceRef, ShellCore, TreeNode, TreeViewSection, TreeViewState } from "../core";
+import type { ResourceRef, ShellCore, TreeNode, TreeViewSection, TreeViewState } from "../core";
 import { ShellIcon } from "./shell-icons";
+import { createTreeActionItems, createTreeMenuItems } from "./shell-tree-actions";
 
 interface ShellTreeViewProps {
   shell: ShellCore;
@@ -20,13 +14,7 @@ interface ShellTreeViewProps {
   onOpenResourceError?: (error: unknown) => void;
 }
 
-const EMPTY_TREE_STATE: TreeViewState = { expandedNodeIds: [] };
-
-const getExpandedSectionIds = (sections: TreeViewSection[]) =>
-  sections.filter((section) => section.label).map((section) => section.id);
-
-const toggleSectionId = (sectionIds: string[], sectionId: string) =>
-  sectionIds.includes(sectionId) ? sectionIds.filter((id) => id !== sectionId) : [...sectionIds, sectionId];
+const EMPTY_TREE_STATE: TreeViewState = { expandedNodeIds: [], expandedSectionIds: [] };
 
 const findNode = (nodes: TreeNode[], nodeId: string, childrenByNodeId: Record<string, TreeNode[]>): TreeNode | null => {
   for (const node of nodes) {
@@ -51,42 +39,6 @@ const findNodeInSections = (
   return null;
 };
 
-const createMenuItems = (input: {
-  shell: ShellCore;
-  menuPath: MenuPath;
-  refresh: () => void;
-  onCommandError?: (error: unknown) => void;
-}) => {
-  const { menuPath, onCommandError, refresh, shell } = input;
-  const items: TreeListActionMenuItem[] = [];
-
-  for (const [index, action] of shell.menus.listMenuActions(menuPath).entries()) {
-    if (!shell.context.matches(action.when)) continue;
-
-    const record = shell.commands.getCommand(action.commandId);
-    if (!record) continue;
-
-    const args = action.args;
-    if (!shell.commands.isCommandVisible(record.command.id, args)) continue;
-
-    const icon = action.icon ?? record.command.icon;
-    items.push({
-      id: `${action.commandId}:${index}`,
-      label: action.label ?? record.command.label,
-      icon: icon ? <ShellIcon name={icon} /> : undefined,
-      disabled: !shell.commands.isCommandEnabled(record.command.id, args),
-      onAction: () => {
-        void shell.commands
-          .executeCommand(record.command.id, args)
-          .then(refresh)
-          .catch((error) => onCommandError?.(error));
-      },
-    });
-  }
-
-  return items;
-};
-
 interface TreeNodeRenderContext {
   shell: ShellCore;
   refresh: () => void;
@@ -99,7 +51,7 @@ const toTreeListNode = (
   context: TreeNodeRenderContext,
 ) => {
   const menuItems = node.menuPath
-    ? createMenuItems({
+    ? createTreeMenuItems({
         shell: context.shell,
         menuPath: node.menuPath,
         refresh: context.refresh,
@@ -112,6 +64,12 @@ const toTreeListNode = (
     label: node.label,
     description: node.description,
     icon: <ShellIcon name={node.icon} />,
+    actions: createTreeActionItems({
+      actions: node.actions,
+      shell: context.shell,
+      refresh: context.refresh,
+      onCommandError: context.onCommandError,
+    }),
     endContent: menuItems && menuItems.length > 0 ? <ShellIcon name="ChevronRight" size={12} /> : undefined,
     menuItems,
     ...(node.menuPlacement ? { menuPlacement: node.menuPlacement } : {}),
@@ -133,6 +91,13 @@ const toTreeListSection = (
 ): TreeListSection => ({
   id: section.id,
   label: section.label,
+  actions: createTreeActionItems({
+    actions: section.actions,
+    shell: context.shell,
+    refresh: context.refresh,
+    onCommandError: context.onCommandError,
+  }),
+  collapsible: section.collapsible,
   nodes: section.nodes.map((node) => toTreeListNode(node, childrenByNodeId, context)),
 });
 
@@ -145,8 +110,6 @@ export const ShellTreeView = (props: ShellTreeViewProps) => {
   const [childrenByNodeId, setChildrenByNodeId] = useState<Record<string, TreeNode[]>>({});
   const [treeState, setTreeState] = useState<TreeViewState>(EMPTY_TREE_STATE);
   const [footerTreeState, setFooterTreeState] = useState<TreeViewState>(EMPTY_TREE_STATE);
-  const [expandedSectionIds, setExpandedSectionIds] = useState<string[]>([]);
-  const [expandedFooterSectionIds, setExpandedFooterSectionIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [footerLoading, setFooterLoading] = useState(Boolean(footerTreeViewId));
 
@@ -160,7 +123,6 @@ export const ShellTreeView = (props: ShellTreeViewProps) => {
         setSections(nextSections);
         setChildrenByNodeId({});
         setTreeState(shell.trees.getViewState(treeViewId));
-        setExpandedSectionIds(getExpandedSectionIds(nextSections));
         setLoading(false);
       });
     };
@@ -180,7 +142,6 @@ export const ShellTreeView = (props: ShellTreeViewProps) => {
     if (!footerTreeViewId) {
       setFooterSections([]);
       setFooterTreeState(EMPTY_TREE_STATE);
-      setExpandedFooterSectionIds([]);
       setFooterLoading(false);
       return;
     }
@@ -193,7 +154,6 @@ export const ShellTreeView = (props: ShellTreeViewProps) => {
         if (cancelled) return;
         setFooterSections(nextSections);
         setFooterTreeState(shell.trees.getViewState(footerTreeViewId));
-        setExpandedFooterSectionIds(getExpandedSectionIds(nextSections));
         setFooterLoading(false);
       });
     };
@@ -242,6 +202,18 @@ export const ShellTreeView = (props: ShellTreeViewProps) => {
     });
   };
 
+  const toggleSection = (treeId: string, sectionId: string) => {
+    const state = treeId === treeViewId ? treeState : footerTreeState;
+    const expanded = state.expandedSectionIds.includes(sectionId);
+
+    shell.trees.setSectionExpanded(treeId, sectionId, !expanded);
+    if (treeId === treeViewId) {
+      setTreeState(shell.trees.getViewState(treeId));
+    } else {
+      setFooterTreeState(shell.trees.getViewState(treeId));
+    }
+  };
+
   const openResource = (treeId: string, nodeId: string, resource: ResourceRef) => {
     shell.trees.setSelectedNode(treeId, nodeId);
     if (treeId === treeViewId) {
@@ -262,42 +234,49 @@ export const ShellTreeView = (props: ShellTreeViewProps) => {
 
   return (
     <Flex as="section" direction="column" h="full" minH="0" minW="0" aria-label={treeView.title}>
-      <ScrollArea flex="1" mt="lg" minH="0">
-        {loading ? (
-          <Text textStyle="paragraph/S/regular" color="fg.muted" p="sm">
-            Loading tree...
-          </Text>
-        ) : treeSections.length > 0 ? (
-          <TreeList
-            sections={treeSections}
-            expandedNodeIds={treeState.expandedNodeIds}
-            expandedSectionIds={expandedSectionIds}
-            activeNodeId={activeNodeId ?? treeState.selectedNodeId}
-            rowVariant="compact"
-            sectionGap="md"
-            onToggleSection={(sectionId) => setExpandedSectionIds((current) => toggleSectionId(current, sectionId))}
-            onToggleNode={toggleNode}
-            onNavigate={(event) => {
-              const resource = event.intent?.payload;
-              if (!resource || typeof resource !== "object") return;
-              openResource(treeViewId, event.nodeId, resource as ResourceRef);
-            }}
-          />
-        ) : (
-          <EmptyState minH="12rem" title="No tree items" />
-        )}
+      <ScrollArea
+        flex="1"
+        mt="lg"
+        minH="0"
+        w="full"
+        viewportProps={{ display: "block", style: { overflowX: "hidden" } }}
+        contentProps={{ style: { minWidth: "100%", width: "100%" } }}
+      >
+        <Box w="full" minW="0">
+          {loading ? (
+            <Text textStyle="paragraph/S/regular" color="fg.muted" p="sm">
+              Loading tree...
+            </Text>
+          ) : treeSections.length > 0 ? (
+            <TreeList
+              sections={treeSections}
+              expandedNodeIds={treeState.expandedNodeIds}
+              expandedSectionIds={treeState.expandedSectionIds}
+              activeNodeId={activeNodeId ?? treeState.selectedNodeId}
+              rowVariant="compact"
+              sectionGap="md"
+              onToggleSection={(sectionId) => toggleSection(treeViewId, sectionId)}
+              onToggleNode={toggleNode}
+              onNavigate={(event) => {
+                const resource = event.intent?.payload;
+                if (!resource || typeof resource !== "object") return;
+                openResource(treeViewId, event.nodeId, resource as ResourceRef);
+              }}
+            />
+          ) : (
+            <EmptyState minH="12rem" title="No tree items" />
+          )}
+        </Box>
       </ScrollArea>
       {footerTreeView && !footerLoading && footerTreeSections.length > 0 ? (
         <Flex bg="bg" flexShrink={0}>
           <TreeList
             sections={footerTreeSections}
             expandedNodeIds={footerTreeState.expandedNodeIds}
-            expandedSectionIds={expandedFooterSectionIds}
+            expandedSectionIds={footerTreeState.expandedSectionIds}
             activeNodeId={activeNodeId ?? footerTreeState.selectedNodeId}
             rowVariant="compact"
-            onToggleSection={(sectionId) =>
-              setExpandedFooterSectionIds((current) => toggleSectionId(current, sectionId))
-            }
+            onToggleSection={(sectionId) => footerTreeViewId && toggleSection(footerTreeViewId, sectionId)}
             onToggleNode={toggleNode}
             onNavigate={(event) => {
               const resource = event.intent?.payload;

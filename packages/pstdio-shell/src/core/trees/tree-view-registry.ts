@@ -1,7 +1,7 @@
 import type { ContributionMetadata, RegisteredContributionMetadata } from "../contributions/metadata";
 import { byContributionPriority, normalizeContributionMetadata } from "../contributions/metadata";
 import { createDisposable } from "../disposable";
-import type { ShellArea } from "../layout/layout-model";
+import type { ShellArea, ShellAreaSize } from "../layout/layout-model";
 import type { MenuPath } from "../menus/menu-registry";
 import type { ResourceRef } from "../resources/resource-registry";
 
@@ -9,11 +9,23 @@ export interface TreeContext {
   filter?: string;
 }
 
+export interface TreeAction {
+  id: string;
+  label?: string;
+  icon?: string;
+  commandId?: string;
+  args?: unknown;
+  when?: string;
+  disabled?: boolean;
+  run?(): Promise<void> | void;
+}
+
 export interface TreeNode {
   id: string;
   label: string;
   icon?: string;
   resource?: ResourceRef;
+  actions?: TreeAction[];
   menuPath?: MenuPath;
   menuPlacement?: "top-start" | "top-end" | "bottom-start" | "bottom-end" | "right-start" | "left-start";
   collapsible?: boolean;
@@ -25,6 +37,8 @@ export interface TreeNode {
 export interface TreeViewSection {
   id: string;
   label?: string;
+  actions?: TreeAction[];
+  collapsible?: boolean;
   nodes: TreeNode[];
 }
 
@@ -34,9 +48,12 @@ export interface TreeViewContribution {
   id: string;
   title: string;
   area?: Extract<ShellArea, "left" | "main-left" | "main-right" | "main-bottom">;
+  areaSize?: ShellAreaSize;
   role?: TreeViewRole;
   icon?: string;
   when?: string;
+  defaultExpandedSectionIds?: string[];
+  defaultExpandedNodeIds?: string[];
   getSections?(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getRoots(ctx: TreeContext): Promise<TreeNode[]> | TreeNode[];
   getChildren(node: TreeNode, ctx: TreeContext): Promise<TreeNode[]> | TreeNode[];
@@ -46,6 +63,7 @@ export interface RegisteredTreeViewContribution extends TreeViewContribution, Re
 
 export interface TreeViewState {
   expandedNodeIds: string[];
+  expandedSectionIds: string[];
   selectedNodeId?: string;
 }
 
@@ -57,7 +75,10 @@ type TreeViewRefreshListener = (event: TreeViewRefreshEvent) => void;
 
 export const createTreeViewRegistry = () => {
   const views = new Map<string, RegisteredTreeViewContribution>();
-  const states = new Map<string, { expandedNodeIds: Set<string>; selectedNodeId?: string }>();
+  const states = new Map<
+    string,
+    { expandedNodeIds: Set<string>; expandedSectionIds: Set<string>; selectedNodeId?: string }
+  >();
   const refreshListeners = new Set<TreeViewRefreshListener>();
 
   const findView = (id: string) => {
@@ -71,7 +92,11 @@ export const createTreeViewRegistry = () => {
 
     let state = states.get(id);
     if (!state) {
-      state = { expandedNodeIds: new Set() };
+      const view = findView(id);
+      state = {
+        expandedNodeIds: new Set(view.defaultExpandedNodeIds ?? []),
+        expandedSectionIds: new Set(view.defaultExpandedSectionIds ?? []),
+      };
       states.set(id, state);
     }
 
@@ -124,6 +149,7 @@ export const createTreeViewRegistry = () => {
       const state = findState(id);
       return {
         expandedNodeIds: [...state.expandedNodeIds],
+        expandedSectionIds: [...state.expandedSectionIds],
         selectedNodeId: state.selectedNodeId,
       };
     },
@@ -134,6 +160,15 @@ export const createTreeViewRegistry = () => {
         state.expandedNodeIds.add(nodeId);
       } else {
         state.expandedNodeIds.delete(nodeId);
+      }
+    },
+
+    setSectionExpanded(id: string, sectionId: string, expanded: boolean) {
+      const state = findState(id);
+      if (expanded) {
+        state.expandedSectionIds.add(sectionId);
+      } else {
+        state.expandedSectionIds.delete(sectionId);
       }
     },
 
