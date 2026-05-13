@@ -22,6 +22,7 @@ export const shellAreas = [
   "main-bottom",
   "status",
   "overlay",
+  "floating-header",
   "floating",
 ] as const;
 
@@ -42,12 +43,20 @@ export interface WebviewDescriptor {
   capabilities?: string[];
 }
 
+export interface ShellAreaSize {
+  defaultPx?: number;
+  minPx?: number;
+  maxPx?: number;
+}
+
 export interface WidgetContribution {
   id: string;
   title: string;
   area: ShellArea;
   fallbackArea?: ShellArea;
   singleton?: boolean;
+  areaSize?: ShellAreaSize;
+  areaCollapsible?: boolean;
   resourceKinds?: string[];
   priority?: number;
   renderer: "webview" | "react" | string;
@@ -97,6 +106,7 @@ interface OpenWidgetInput {
   area?: ShellArea;
   pinned?: boolean;
   closable?: boolean;
+  replaceActive?: boolean;
 }
 
 const createAreaState = (id: ShellArea) => ({
@@ -121,6 +131,7 @@ export const createDefaultShellLayout = (): ShellLayout => ({
     "main-bottom": createAreaState("main-bottom"),
     status: createAreaState("status"),
     overlay: createAreaState("overlay"),
+    "floating-header": createAreaState("floating-header"),
     floating: createAreaState("floating"),
   },
 });
@@ -157,6 +168,9 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}) => {
     return undefined;
   };
 
+  const getActivePlacement = (area: ShellAreaState) =>
+    area.widgets.find((placement) => placement.widgetId === area.activeWidgetId) ?? area.widgets[0];
+
   const activatePlacement = (area: ShellAreaState, placement: ShellWidgetPlacement) => {
     area.activeWidgetId = placement.widgetId;
     layout.activeWidgetId = placement.widgetId;
@@ -179,6 +193,20 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}) => {
     if (input.pinned !== undefined) placement.pinned = input.pinned;
     if (input.closable !== undefined) placement.closable = input.closable;
   };
+
+  const createPlacement = (
+    widgetId: string,
+    widget: RegisteredWidgetContribution,
+    input: OpenWidgetInput,
+  ): ShellWidgetPlacement => ({
+    widgetId,
+    contributionId: widget.id,
+    resource: input.resource,
+    resourceUri: input.resource?.uri,
+    title: input.title ?? input.resource?.label ?? widget.title,
+    pinned: input.pinned,
+    closable: input.closable ?? true,
+  });
 
   return {
     registerWidget(widget: WidgetContribution, metadata?: ContributionMetadata) {
@@ -214,6 +242,20 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}) => {
       return widgets.get(id);
     },
 
+    getAreaSize(areaId: ShellArea) {
+      const placement = getActivePlacement(layout.areas[areaId]);
+      if (!placement) return undefined;
+
+      return widgets.get(placement.contributionId)?.areaSize;
+    },
+
+    getAreaCollapsible(areaId: ShellArea) {
+      const placement = getActivePlacement(layout.areas[areaId]);
+      if (!placement) return true;
+
+      return widgets.get(placement.contributionId)?.areaCollapsible ?? true;
+    },
+
     listWidgets() {
       return [...widgets.values()].sort(byContributionPriority);
     },
@@ -231,20 +273,30 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}) => {
 
       const areaId = input.area ?? widget.area ?? widget.fallbackArea ?? "main";
       const area = layout.areas[areaId];
-      const hasPlacement = area.widgets.some((placement) => placement.widgetId === widget.id);
+      const replacementIndex = input.replaceActive
+        ? area.widgets.findIndex((placement) => placement.widgetId === area.activeWidgetId && !placement.pinned)
+        : -1;
+      const replacement = replacementIndex >= 0 ? area.widgets[replacementIndex] : undefined;
+
+      if (replacement?.contributionId === widget.id) {
+        updatePlacement(replacement, widget, input);
+        activatePlacement(area, replacement);
+        persistLayout();
+        return replacement;
+      }
+
+      const hasPlacement = area.widgets.some(
+        (placement, index) => index !== replacementIndex && placement.widgetId === widget.id,
+      );
       if (hasPlacement) placementCounter += 1;
       const widgetId = hasPlacement ? `${widget.id}:${placementCounter}` : widget.id;
-      const placement = {
-        widgetId,
-        contributionId: widget.id,
-        resource: input.resource,
-        resourceUri: input.resource?.uri,
-        title: input.title ?? input.resource?.label ?? widget.title,
-        pinned: input.pinned,
-        closable: input.closable ?? true,
-      };
+      const placement = createPlacement(widgetId, widget, input);
 
-      area.widgets.push(placement);
+      if (replacementIndex >= 0) {
+        area.widgets.splice(replacementIndex, 1, placement);
+      } else {
+        area.widgets.push(placement);
+      }
       activatePlacement(area, placement);
       persistLayout();
 

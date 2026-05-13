@@ -19,15 +19,13 @@ type Story = StoryObj<typeof meta>;
 
 const ConsumerWorkbenchStory = (props: { initialWidgetId?: string; initialCommandPaletteOpen?: boolean }) => {
   const { initialCommandPaletteOpen, initialWidgetId } = props;
-  const [example] = useState(() => createConsumerShellExample({ initialWidgetId }));
+  const [example] = useState(() => {
+    const nextExample = createConsumerShellExample({ initialWidgetId });
+    if (initialCommandPaletteOpen) nextExample.shell.commandPalette.open();
+    return nextExample;
+  });
 
-  return (
-    <ShellWorkbench
-      shell={example.shell}
-      initialCommandPaletteOpen={initialCommandPaletteOpen}
-      initialSessionPanelMode="attached"
-    />
-  );
+  return <ShellWorkbench shell={example.shell} initialSessionPanelMode="attached" />;
 };
 
 const MinimalWorkbenchStory = () => {

@@ -16,14 +16,9 @@ interface ShellTreeViewProps {
   treeViewId: string;
   footerTreeViewId?: string;
   activeNodeId?: string | null;
-  onOpenCommandPalette?: () => void;
   refresh?: () => void;
   onOpenResourceError?: (error: unknown) => void;
 }
-
-const COMMAND_PALETTE_NODE_ID = "shell.commands";
-
-const COMMAND_PALETTE_SECTION_ID = "shell.commands.section";
 
 const EMPTY_TREE_STATE: TreeViewState = { expandedNodeIds: [] };
 
@@ -55,14 +50,6 @@ const findNodeInSections = (
 
   return null;
 };
-
-const createCommandPaletteNode = (): TreeListNode => ({
-  id: COMMAND_PALETTE_NODE_ID,
-  label: "Commands",
-  icon: <ShellIcon name="Search" />,
-  isNavigable: true,
-  navigationIntent: { id: COMMAND_PALETTE_NODE_ID },
-});
 
 const createMenuItems = (input: {
   shell: ShellCore;
@@ -150,15 +137,7 @@ const toTreeListSection = (
 });
 
 export const ShellTreeView = (props: ShellTreeViewProps) => {
-  const {
-    shell,
-    treeViewId,
-    footerTreeViewId,
-    activeNodeId,
-    onOpenCommandPalette,
-    refresh = () => undefined,
-    onOpenResourceError,
-  } = props;
+  const { shell, treeViewId, footerTreeViewId, activeNodeId, refresh = () => undefined, onOpenResourceError } = props;
   const treeView = shell.trees.getTreeView(treeViewId);
   const footerTreeView = footerTreeViewId ? shell.trees.getTreeView(footerTreeViewId) : undefined;
   const [sections, setSections] = useState<TreeViewSection[]>([]);
@@ -271,17 +250,12 @@ export const ShellTreeView = (props: ShellTreeViewProps) => {
       setFooterTreeState(shell.trees.getViewState(treeId));
     }
 
-    void shell.resources.openResource(resource).then(refresh).catch(onOpenResourceError);
+    void shell.resources.openResource(resource, { replaceActive: true }).then(refresh).catch(onOpenResourceError);
   };
 
-  const treeSections = [
-    ...(onOpenCommandPalette
-      ? [{ id: COMMAND_PALETTE_SECTION_ID, nodes: [createCommandPaletteNode()] } satisfies TreeListSection]
-      : []),
-    ...sections.map((section) =>
-      toTreeListSection(section, childrenByNodeId, { shell, refresh, onCommandError: onOpenResourceError }),
-    ),
-  ];
+  const treeSections = sections.map((section) =>
+    toTreeListSection(section, childrenByNodeId, { shell, refresh, onCommandError: onOpenResourceError }),
+  );
   const footerTreeSections = footerSections.map((section) =>
     toTreeListSection(section, childrenByNodeId, { shell, refresh, onCommandError: onOpenResourceError }),
   );
@@ -304,11 +278,6 @@ export const ShellTreeView = (props: ShellTreeViewProps) => {
             onToggleSection={(sectionId) => setExpandedSectionIds((current) => toggleSectionId(current, sectionId))}
             onToggleNode={toggleNode}
             onNavigate={(event) => {
-              if (event.intent?.id === COMMAND_PALETTE_NODE_ID) {
-                onOpenCommandPalette?.();
-                return;
-              }
-
               const resource = event.intent?.payload;
               if (!resource || typeof resource !== "object") return;
               openResource(treeViewId, event.nodeId, resource as ResourceRef);

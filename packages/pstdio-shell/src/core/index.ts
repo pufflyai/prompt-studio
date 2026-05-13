@@ -14,6 +14,12 @@ export {
   buildActiveWidgetBreadcrumb,
   createShellBreadcrumbController,
 } from "./breadcrumbs/breadcrumb-registry";
+export type {
+  CreateShellCommandPaletteControllerInput,
+  ShellCommandPaletteChangeListener,
+  ShellCommandPaletteController,
+} from "./command-palette/command-palette-controller";
+export { createShellCommandPaletteController } from "./command-palette/command-palette-controller";
 export type { Command, CommandHandler, CommandRegistry, RegisteredCommand } from "./commands/command-registry";
 export { createCommandRegistry } from "./commands/command-registry";
 export type { ContextKeyService, ContextKeyValue } from "./context/context-key-service";
@@ -46,6 +52,7 @@ export type {
   LayoutPersistenceAdapter,
   RegisteredWidgetContribution,
   ShellArea,
+  ShellAreaSize,
   ShellAreaState,
   ShellLayout,
   ShellWidgetPlacement,
@@ -109,6 +116,7 @@ export {
   resolveShellWidgetRendererId,
 } from "./renderers/renderer-registry";
 export type {
+  OpenResourceInput,
   RegisteredResourceKind,
   ResourceKindContribution,
   ResourceOpener,

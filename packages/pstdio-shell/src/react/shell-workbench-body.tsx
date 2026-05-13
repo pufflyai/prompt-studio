@@ -1,12 +1,12 @@
 import { Box, Grid, IconButton } from "@chakra-ui/react";
 import { Header, ResizableSplitLayout, Tooltip } from "@pstdio/ui";
 import { useState } from "react";
-import type { ShellCore } from "../core";
+import type { ShellAreaSize, ShellCore } from "../core";
 import { ShellArea } from "./shell-area";
 import { ShellAreaTabs } from "./shell-area-tabs";
 import { ShellIcon } from "./shell-icons";
 import { ShellMainLeftPanel, ShellRightSidePanel } from "./shell-workbench-panels";
-import { bottomPanelResizeBounds, useBottomPanelResize } from "./use-bottom-panel-resize";
+import { useBottomPanelResize } from "./use-bottom-panel-resize";
 
 interface ShellWorkbenchBodyProps {
   shell: ShellCore;
@@ -17,9 +17,11 @@ interface ShellWorkbenchBodyProps {
   mainLeftActiveNodeId?: string;
   hasMainRight: boolean;
   hasMainRightHeader: boolean;
+  mainRightCollapsible: boolean;
   mainRightCollapsed: boolean;
   hasMainBottom: boolean;
   hasMainBottomHeader: boolean;
+  mainBottomCollapsible: boolean;
   mainBottomCollapsed: boolean;
   onOpenMainRightPanel: () => void;
   onOpenMainBottomPanel: () => void;
@@ -28,13 +30,16 @@ interface ShellWorkbenchBodyProps {
   refresh: () => void;
 }
 
-const MAIN_LEFT_PANEL_DEFAULT_SIZE_PX = 240;
-const MAIN_LEFT_PANEL_MIN_SIZE_PX = 180;
-const MAIN_LEFT_PANEL_MAX_SIZE_PX = 420;
-const RIGHT_PANEL_DEFAULT_SIZE_PX = 320;
-const RIGHT_PANEL_MIN_SIZE_PX = 240;
-const RIGHT_PANEL_MAX_SIZE_PX = 520;
 const CONTENT_MIN_SIZE_PX = 320;
+
+const MAIN_LEFT_PANEL_SIZE = { defaultPx: 240, minPx: 180, maxPx: 420 };
+const RIGHT_PANEL_SIZE = { defaultPx: 320, minPx: 240, maxPx: 520 };
+
+const resolveAreaSize = (areaSize: ShellAreaSize | undefined, fallback: Required<ShellAreaSize>) => ({
+  defaultPx: areaSize?.defaultPx ?? fallback.defaultPx,
+  minPx: areaSize?.minPx ?? fallback.minPx,
+  maxPx: areaSize?.maxPx ?? fallback.maxPx,
+});
 
 interface MainHeaderBarProps {
   shell: ShellCore;
@@ -67,12 +72,12 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
       overflow="hidden"
       overflowY="hidden"
     >
+      <ShellAreaTabs shell={shell} area="main" refresh={refresh} />
       <Box flex="1" h="full" minW="0" overflow="hidden">
         {hasMainHeader ? (
           <ShellArea shell={shell} area="main-header" title="Main header" showHeader={false} refresh={refresh} />
         ) : null}
       </Box>
-      <ShellAreaTabs shell={shell} area="main" refresh={refresh} />
       {showMainBottomOpener ? (
         <Tooltip content="Show main-bottom panel">
           <IconButton
@@ -120,7 +125,7 @@ const MainBottomSection = (props: MainBottomSectionProps) => {
         role="separator"
         aria-label="Resize main-bottom panel"
         aria-orientation="horizontal"
-        aria-valuemin={bottomPanelResizeBounds.minPx}
+        aria-valuemin={bottomResize.minHeight}
         aria-valuemax={bottomResize.maxHeight}
         aria-valuenow={Math.round(bottomResize.height)}
         tabIndex={0}
@@ -145,17 +150,27 @@ const MainBottomSection = (props: MainBottomSectionProps) => {
       />
       <Box as="section" minH="0" minW="0" overflow="hidden" display="flex" flexDirection="column">
         {hasMainBottomHeader || hasMainBottomContentTabs ? (
-          <Header variant="main" borderBottomWidth="1px" borderColor="border.muted" flexShrink={0} gap="xs">
-            {hasMainBottomHeader ? (
-              <ShellArea
-                shell={shell}
-                area="main-bottom-header"
-                title="Main bottom header"
-                showHeader={false}
-                refresh={refresh}
-              />
-            ) : null}
+          <Header
+            variant="main"
+            borderBottomWidth="1px"
+            borderColor="border.muted"
+            flexShrink={0}
+            gap="xs"
+            overflow="hidden"
+            overflowY="hidden"
+          >
             <ShellAreaTabs shell={shell} area="main-bottom" refresh={refresh} />
+            {hasMainBottomHeader ? (
+              <Box flex="1" h="full" minW="0" overflow="hidden">
+                <ShellArea
+                  shell={shell}
+                  area="main-bottom-header"
+                  title="Main bottom header"
+                  showHeader={false}
+                  refresh={refresh}
+                />
+              </Box>
+            ) : null}
           </Header>
         ) : null}
         <Box flex="1" minH="0" minW="0" overflow="hidden">
@@ -176,9 +191,11 @@ export const ShellWorkbenchBody = (props: ShellWorkbenchBodyProps) => {
     mainLeftActiveNodeId,
     hasMainRight,
     hasMainRightHeader,
+    mainRightCollapsible,
     mainRightCollapsed,
     hasMainBottom,
     hasMainBottomHeader,
+    mainBottomCollapsible,
     mainBottomCollapsed,
     onOpenMainRightPanel,
     onOpenMainBottomPanel,
@@ -187,14 +204,23 @@ export const ShellWorkbenchBody = (props: ShellWorkbenchBodyProps) => {
     refresh,
   } = props;
   const [bodyNode, setBodyNode] = useState<HTMLDivElement | null>(null);
-  const bottomResize = useBottomPanelResize({ bodyNode, onCollapsedChange: onMainBottomCollapsedChange });
+  const bottomResize = useBottomPanelResize({
+    bodyNode,
+    areaSize: shell.layout.getAreaSize("main-bottom"),
+    collapsible: mainBottomCollapsible,
+    onCollapsedChange: onMainBottomCollapsedChange,
+  });
   const layoutAreas = shell.layout.getLayout().areas;
-  const showBottomPanel = hasMainBottom && !mainBottomCollapsed;
-  const showMainRightOpener = hasMainRight && mainRightCollapsed;
-  const showMainBottomOpener = hasMainBottom && mainBottomCollapsed;
+  const showBottomPanel = hasMainBottom && (!mainBottomCollapsed || !mainBottomCollapsible);
+  const showMainRightOpener = hasMainRight && mainRightCollapsed && mainRightCollapsible;
+  const showMainBottomOpener = hasMainBottom && mainBottomCollapsed && mainBottomCollapsible;
   const hasMainContentTabs = layoutAreas.main.widgets.length > 1;
   const hasMainBottomContentTabs = layoutAreas["main-bottom"].widgets.length > 1;
   const showMainHeader = hasMainHeader || hasMainContentTabs || showMainRightOpener || showMainBottomOpener;
+  const mainLeftPanelSize = resolveAreaSize(shell.layout.getAreaSize("main-left"), MAIN_LEFT_PANEL_SIZE);
+  const mainRightPanelSize = resolveAreaSize(shell.layout.getAreaSize("main-right"), RIGHT_PANEL_SIZE);
+  const mainLeftPanelCollapsible =
+    shell.layout.getAreaCollapsible("main-left") && shell.layout.getAreaCollapsible("main-left-header");
   const gridRows = [
     showMainHeader ? "auto" : undefined,
     "minmax(0, 1fr)",
@@ -212,10 +238,11 @@ export const ShellWorkbenchBody = (props: ShellWorkbenchBodyProps) => {
       resizableSide="right"
       resizablePanel={<ShellRightSidePanel shell={shell} hasHeader={hasMainRightHeader} refresh={refresh} />}
       contentPanel={mainArea}
-      collapsed={mainRightCollapsed}
-      defaultSizePx={RIGHT_PANEL_DEFAULT_SIZE_PX}
-      minSizePx={RIGHT_PANEL_MIN_SIZE_PX}
-      maxSizePx={RIGHT_PANEL_MAX_SIZE_PX}
+      collapsed={mainRightCollapsed && mainRightCollapsible}
+      collapsible={mainRightCollapsible}
+      defaultSizePx={mainRightPanelSize.defaultPx}
+      minSizePx={mainRightPanelSize.minPx}
+      maxSizePx={mainRightPanelSize.maxPx}
       contentMinSizePx={CONTENT_MIN_SIZE_PX}
       resizeLabel="Resize main-right panel"
       showResizeSeparator
@@ -239,10 +266,11 @@ export const ShellWorkbenchBody = (props: ShellWorkbenchBodyProps) => {
         />
       }
       contentPanel={mainAreaWithRightPanel}
-      defaultSizePx={MAIN_LEFT_PANEL_DEFAULT_SIZE_PX}
-      minSizePx={MAIN_LEFT_PANEL_MIN_SIZE_PX}
-      maxSizePx={MAIN_LEFT_PANEL_MAX_SIZE_PX}
+      defaultSizePx={mainLeftPanelSize.defaultPx}
+      minSizePx={mainLeftPanelSize.minPx}
+      maxSizePx={mainLeftPanelSize.maxPx}
       contentMinSizePx={CONTENT_MIN_SIZE_PX}
+      collapsible={mainLeftPanelCollapsible}
       resizeLabel="Resize main-left panel"
       showResizeSeparator
     />

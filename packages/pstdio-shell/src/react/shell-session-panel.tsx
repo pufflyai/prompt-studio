@@ -1,14 +1,34 @@
-import { Box, Flex, IconButton, Spacer, Text } from "@chakra-ui/react";
+import { Box, Flex, IconButton, Text } from "@chakra-ui/react";
 import { AttachedPanel, BubbleButton, BubblePanel, Header, Tooltip } from "@pstdio/ui";
 import { MessageCircle, Minimize2 } from "lucide-react";
+import type { ReactNode } from "react";
 import { useShellSessionPanelStore } from "./shell-session-panel-store";
 
 interface ShellSessionPanelProps {
   contentSlotRef: (node: HTMLDivElement | null) => void;
+  header?: ReactNode;
 }
 
+const ShellSessionTitle = () => (
+  <Box flex="1" minW="0">
+    <Text textStyle="label/S/medium" color="fg" truncate>
+      Session
+    </Text>
+  </Box>
+);
+
+interface ShellSessionHeaderProps {
+  header?: ReactNode;
+}
+
+const ShellSessionHeader = (props: ShellSessionHeaderProps) => {
+  const { header } = props;
+
+  return header ?? <ShellSessionTitle />;
+};
+
 export const ShellSessionAttachedPanel = (props: ShellSessionPanelProps) => {
-  const { contentSlotRef } = props;
+  const { contentSlotRef, header } = props;
   const setMode = useShellSessionPanelStore((state) => state.setMode);
 
   return (
@@ -17,11 +37,8 @@ export const ShellSessionAttachedPanel = (props: ShellSessionPanelProps) => {
       width="full"
       minWidth="0"
       header={
-        <Header variant="main" flexShrink={0}>
-          <Text textStyle="label/S/medium" color="fg" truncate>
-            Session
-          </Text>
-          <Spacer />
+        <Header variant="main" flexShrink={0} gap="sm">
+          <ShellSessionHeader header={header} />
           <Tooltip content="Detach panel">
             <IconButton size="xs" variant="ghost" aria-label="Detach panel" onClick={() => setMode("bubble")}>
               <Minimize2 size={16} />
@@ -36,7 +53,7 @@ export const ShellSessionAttachedPanel = (props: ShellSessionPanelProps) => {
 };
 
 export const ShellSessionBubbleContainer = (props: ShellSessionPanelProps) => {
-  const { contentSlotRef } = props;
+  const { contentSlotRef, header } = props;
   const mode = useShellSessionPanelStore((state) => state.mode);
   const setMode = useShellSessionPanelStore((state) => state.setMode);
 
@@ -61,13 +78,7 @@ export const ShellSessionBubbleContainer = (props: ShellSessionPanelProps) => {
       popOutLabel="Attach panel"
       onClose={() => setMode("closed")}
       onPopOut={() => setMode("attached")}
-      menu={
-        <Box minW="0">
-          <Text textStyle="label/S/medium" color="fg" truncate>
-            Session
-          </Text>
-        </Box>
-      }
+      menu={<ShellSessionHeader header={header} />}
     >
       <Flex ref={contentSlotRef} flex="1" minH={0} direction="column" />
     </BubblePanel>

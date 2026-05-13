@@ -3,7 +3,7 @@ import type { CommandRegistry } from "../commands/command-registry";
 import type { DiagnosticRegistry } from "../diagnostics/diagnostic-registry";
 import type { Disposable } from "../disposable";
 import type { KeybindingRegistry } from "../keybindings/keybinding-registry";
-import type { LayoutModel, ShellArea, WebviewDescriptor } from "../layout/layout-model";
+import type { LayoutModel, ShellArea, ShellAreaSize, WebviewDescriptor } from "../layout/layout-model";
 import type { MenuPath, MenuRegistry } from "../menus/menu-registry";
 import type { PreferenceRegistry, PreferenceSchemaContribution } from "../preferences/preference-registry";
 import type { ResourceRegistry } from "../resources/resource-registry";
@@ -26,6 +26,8 @@ interface RuntimeCommandDescriptor {
 interface RuntimeViewDescriptor {
   title: string;
   slot: string;
+  areaSize?: ShellAreaSize;
+  areaCollapsible?: boolean;
   resourceKinds?: string[];
   webview: WebviewDescriptor;
 }
@@ -103,6 +105,7 @@ const shellAreaBySlot = new Set<string>([
   "main-bottom",
   "status",
   "overlay",
+  "floating-header",
   "floating",
 ]);
 
@@ -139,6 +142,8 @@ const registerRuntimeView = (
         id: widgetId,
         title: view.title,
         area: shellAreaForSlot(view.slot),
+        areaSize: view.areaSize,
+        areaCollapsible: view.areaCollapsible,
         resourceKinds: view.resourceKinds,
         renderer: "webview",
         webview: view.webview,

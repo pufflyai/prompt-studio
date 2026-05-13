@@ -1,3 +1,4 @@
+import { Box, Text } from "@chakra-ui/react";
 import { ResizableSplitLayout } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -11,15 +12,15 @@ const ATTACHED_PANEL_MIN_SIZE_PX = 320;
 interface ShellFloatingSessionPortalProps {
   shell: ShellCore;
   refresh: () => void;
-  hasFloatingWidgets: boolean;
+  hasFloatingPanel: boolean;
   activeSessionSlot: HTMLDivElement | null;
   sessionHost: HTMLDivElement | null;
 }
 
 export const ShellFloatingSessionPortal = (props: ShellFloatingSessionPortalProps) => {
-  const { shell, refresh, hasFloatingWidgets, activeSessionSlot, sessionHost } = props;
+  const { shell, refresh, hasFloatingPanel, activeSessionSlot, sessionHost } = props;
 
-  if (!hasFloatingWidgets || !activeSessionSlot || !sessionHost) return null;
+  if (!hasFloatingPanel || !activeSessionSlot || !sessionHost) return null;
 
   return createPortal(
     <ShellArea
@@ -34,15 +35,38 @@ export const ShellFloatingSessionPortal = (props: ShellFloatingSessionPortalProp
   );
 };
 
+interface ShellFloatingSessionHeaderProps {
+  shell: ShellCore;
+  hasFloatingHeader: boolean;
+  refresh: () => void;
+}
+
+export const ShellFloatingSessionHeader = (props: ShellFloatingSessionHeaderProps) => {
+  const { shell, hasFloatingHeader, refresh } = props;
+
+  return (
+    <Box alignItems="center" display="flex" flex="1" h="full" minW="0" overflow="hidden" w="full">
+      {hasFloatingHeader ? (
+        <ShellArea shell={shell} area="floating-header" title="Floating header" showHeader={false} refresh={refresh} />
+      ) : (
+        <Text textStyle="label/S/medium" color="fg" truncate>
+          Session
+        </Text>
+      )}
+    </Box>
+  );
+};
+
 interface ShellAttachedSessionLayoutProps {
   contentPanel: ReactNode;
   contentMinSizePx: number;
+  header: ReactNode;
   onAttachedSlotChange: (slot: HTMLDivElement | null) => void;
   onCollapseToBubble: () => void;
 }
 
 export const ShellAttachedSessionLayout = (props: ShellAttachedSessionLayoutProps) => {
-  const { contentPanel, contentMinSizePx, onAttachedSlotChange, onCollapseToBubble } = props;
+  const { contentPanel, contentMinSizePx, header, onAttachedSlotChange, onCollapseToBubble } = props;
 
   return (
     <ResizableSplitLayout
@@ -52,7 +76,7 @@ export const ShellAttachedSessionLayout = (props: ShellAttachedSessionLayoutProp
       w="full"
       resizableSide="right"
       contentPanel={contentPanel}
-      resizablePanel={<ShellSessionAttachedPanel contentSlotRef={onAttachedSlotChange} />}
+      resizablePanel={<ShellSessionAttachedPanel contentSlotRef={onAttachedSlotChange} header={header} />}
       collapsed={false}
       defaultSizePx={ATTACHED_PANEL_DEFAULT_SIZE_PX}
       minSizePx={ATTACHED_PANEL_MIN_SIZE_PX}

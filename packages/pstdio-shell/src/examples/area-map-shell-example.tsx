@@ -21,6 +21,7 @@ const areaLabels = {
   "main-bottom": "Main bottom panel",
   status: "Status bar",
   overlay: "Overlay layer",
+  "floating-header": "Floating header",
   floating: "Floating panel",
 } as const satisfies Record<ShellArea, string>;
 
@@ -123,7 +124,8 @@ const AreaPlaceholder = (props: { area: ShellArea; uri: string; name: string }) 
     area === "left-header" ||
     area === "main-left-header" ||
     area === "main-right-header" ||
-    area === "main-bottom-header";
+    area === "main-bottom-header" ||
+    area === "floating-header";
 
   if (isHeaderArea) {
     return (

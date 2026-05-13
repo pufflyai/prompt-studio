@@ -43,6 +43,20 @@ describe("createResourceRegistry", () => {
     await expect(resources.openResource(resource)).resolves.toBe("opened:pstdio://session/s1");
   });
 
+  test("passes open options to the selected opener", async () => {
+    const resources = createResourceRegistry();
+    const resource = { kind: "session", uri: "pstdio://session/s1", label: "Session 1" };
+
+    resources.registerKind({ kind: "session", label: "Session" });
+    resources.registerOpener({
+      id: "session-chat",
+      canOpen: ({ kind }) => kind === "session",
+      open: (_resource, options) => options.replaceActive,
+    });
+
+    await expect(resources.openResource(resource, { replaceActive: true })).resolves.toBe(true);
+  });
+
   test("fails clearly when no opener can handle a known resource", async () => {
     const resources = createResourceRegistry();
 

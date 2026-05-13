@@ -37,7 +37,7 @@ const registerRandomModes = (shell: ShellCore) => {
   }
 };
 
-const registerRandomCommands = (shell: ShellCore, openPalette: () => void) => {
+const registerRandomCommands = (shell: ShellCore) => {
   shell.commands.registerCommand(
     {
       id: openCommandPaletteCommandId,
@@ -45,7 +45,7 @@ const registerRandomCommands = (shell: ShellCore, openPalette: () => void) => {
       category: "Workbench",
       icon: "Search",
     },
-    { execute: () => openPalette() },
+    { execute: () => shell.commandPalette.open() },
   );
   shell.keybindings.registerKeybinding({
     commandId: openCommandPaletteCommandId,
@@ -88,37 +88,30 @@ const matchesShortcut = (event: KeyboardEvent, binding: string) => {
   );
 };
 
-const createRandomShellExample = (openPalette: () => void) => {
+const createRandomShellExample = () => {
   const shell = createShellCore();
 
   registerRandomResources(shell);
   registerRandomShellRail(shell);
   registerRandomModes(shell);
-  registerRandomCommands(shell, openPalette);
+  registerRandomCommands(shell);
   shell.modes.setActiveMode(defaultRandomShellModeId);
 
   return { shell };
 };
 
 export const RandomShellExample = () => {
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  const [example] = useState(() => createRandomShellExample(() => setPaletteOpen(true)));
+  const [example] = useState(createRandomShellExample);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!matchesShortcut(event, openCommandPaletteKeybinding)) return;
       event.preventDefault();
-      setPaletteOpen((current) => !current);
+      example.shell.commandPalette.toggle();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [example.shell]);
 
-  return (
-    <ShellWorkbench
-      shell={example.shell}
-      commandPaletteOpen={paletteOpen}
-      onCommandPaletteOpenChange={setPaletteOpen}
-    />
-  );
+  return <ShellWorkbench shell={example.shell} />;
 };

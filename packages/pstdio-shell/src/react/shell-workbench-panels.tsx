@@ -72,23 +72,32 @@ interface ShellLeftSidePanelProps {
   footerTreeViewId?: string;
   activeNodeId?: string;
   hasHeader: boolean;
-  onOpenCommandPalette?: () => void;
   refresh: () => void;
 }
 
 export const ShellLeftSidePanel = (props: ShellLeftSidePanelProps) => {
-  const { shell, treeViewId, footerTreeViewId, activeNodeId, hasHeader, onOpenCommandPalette, refresh } = props;
+  const { shell, treeViewId, footerTreeViewId, activeNodeId, hasHeader, refresh } = props;
   const hasContentTabs = shell.layout.getLayout().areas.left.widgets.length > 1;
   const showHeaderBar = hasHeader || hasContentTabs;
 
   return (
     <Flex as="aside" direction="column" h="full" minH="0" minW="0" overflow="hidden" w="full">
       {showHeaderBar ? (
-        <Header variant="main" borderBottomWidth="1px" borderColor="border.muted" flexShrink={0} gap="xs">
-          {hasHeader ? (
-            <ShellArea shell={shell} area="left-header" title="Left header" showHeader={false} refresh={refresh} />
-          ) : null}
+        <Header
+          variant="main"
+          borderBottomWidth="1px"
+          borderColor="border.muted"
+          flexShrink={0}
+          gap="xs"
+          overflow="hidden"
+          overflowY="hidden"
+        >
           <ShellAreaTabs shell={shell} area="left" refresh={refresh} />
+          {hasHeader ? (
+            <Box flex="1" h="full" minW="0" overflow="hidden">
+              <ShellArea shell={shell} area="left-header" title="Left header" showHeader={false} refresh={refresh} />
+            </Box>
+          ) : null}
         </Header>
       ) : null}
       <Box flex="1" minH="0" minW="0" overflow="hidden">
@@ -98,7 +107,6 @@ export const ShellLeftSidePanel = (props: ShellLeftSidePanelProps) => {
             treeViewId={treeViewId}
             footerTreeViewId={footerTreeViewId}
             activeNodeId={activeNodeId}
-            onOpenCommandPalette={onOpenCommandPalette}
             refresh={refresh}
           />
         ) : (
@@ -145,17 +153,27 @@ export const ShellRightSidePanel = (props: ShellHeaderedAreaPanelProps) => {
   return (
     <Flex as="aside" direction="column" h="full" minH="0" minW="0" overflow="hidden" w="full">
       {showHeaderBar ? (
-        <Header variant="main" borderBottomWidth="1px" borderColor="border.muted" flexShrink={0} gap="xs">
-          {hasHeader ? (
-            <ShellArea
-              shell={shell}
-              area="main-right-header"
-              title="Main right header"
-              showHeader={false}
-              refresh={refresh}
-            />
-          ) : null}
+        <Header
+          variant="main"
+          borderBottomWidth="1px"
+          borderColor="border.muted"
+          flexShrink={0}
+          gap="xs"
+          overflow="hidden"
+          overflowY="hidden"
+        >
           <ShellAreaTabs shell={shell} area="main-right" refresh={refresh} />
+          {hasHeader ? (
+            <Box flex="1" h="full" minW="0" overflow="hidden">
+              <ShellArea
+                shell={shell}
+                area="main-right-header"
+                title="Main right header"
+                showHeader={false}
+                refresh={refresh}
+              />
+            </Box>
+          ) : null}
         </Header>
       ) : null}
       <Box flex="1" minH="0" minW="0" overflow="hidden">
@@ -178,17 +196,27 @@ export const ShellMainLeftPanel = (props: ShellMainLeftPanelProps) => {
   return (
     <Flex as="aside" direction="column" h="full" minH="0" minW="0" overflow="hidden" w="full">
       {showHeaderBar ? (
-        <Header variant="main" borderBottomWidth="1px" borderColor="border.muted" flexShrink={0} gap="xs">
-          {hasHeader ? (
-            <ShellArea
-              shell={shell}
-              area="main-left-header"
-              title="Main left header"
-              showHeader={false}
-              refresh={refresh}
-            />
-          ) : null}
+        <Header
+          variant="main"
+          borderBottomWidth="1px"
+          borderColor="border.muted"
+          flexShrink={0}
+          gap="xs"
+          overflow="hidden"
+          overflowY="hidden"
+        >
           <ShellAreaTabs shell={shell} area="main-left" refresh={refresh} />
+          {hasHeader ? (
+            <Box flex="1" h="full" minW="0" overflow="hidden">
+              <ShellArea
+                shell={shell}
+                area="main-left-header"
+                title="Main left header"
+                showHeader={false}
+                refresh={refresh}
+              />
+            </Box>
+          ) : null}
         </Header>
       ) : null}
       <Box flex="1" minH="0" minW="0" overflow="hidden">

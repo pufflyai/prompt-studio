@@ -41,6 +41,7 @@ describe("dashboard shell persistence", () => {
         "main-bottom": { id: "main-bottom", visible: true, widgets: [] },
         status: { id: "status", visible: true, widgets: [] },
         overlay: { id: "overlay", visible: true, widgets: [] },
+        "floating-header": { id: "floating-header", visible: true, widgets: [] },
         floating: { id: "floating", visible: true, widgets: [] },
       },
       activeWidgetId: "project.settings",

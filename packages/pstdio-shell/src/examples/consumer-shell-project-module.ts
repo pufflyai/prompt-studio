@@ -158,7 +158,12 @@ const registerProjectRegistries = (ctx: ProductModuleContributionContext) => {
     id: "project.resourceOpener",
     priority: 100,
     canOpen: (resource) => ["project", "dashboard-view", "ticket", "workspace", "settings"].includes(resource.kind),
-    open: (resource) => ctx.layout.openWidget(resolveProjectWidget(resource), { resource, title: resource.label }),
+    open: (resource, input) =>
+      ctx.layout.openWidget(resolveProjectWidget(resource), {
+        resource,
+        title: resource.label,
+        replaceActive: input.replaceActive,
+      }),
   });
 
   registerReactWidget(ctx, shellWidgetIds.overview, "Project overview", "main", 100);

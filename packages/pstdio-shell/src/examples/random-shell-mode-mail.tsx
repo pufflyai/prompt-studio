@@ -191,7 +191,12 @@ export const setupMailMode = (ctx: ShellModeActivationContext): Disposable[] => 
     ctx.resources.registerOpener({
       id: "mail.opener",
       canOpen: (resource) => resource.kind === randomResourceKind && resource.metadata?.modeId === mailMode.id,
-      open: (resource) => ctx.layout.openWidget(mailWidgetIds.reader, { resource, title: resource.label }),
+      open: (resource, input) =>
+        ctx.layout.openWidget(mailWidgetIds.reader, {
+          resource,
+          title: resource.label,
+          replaceActive: input.replaceActive,
+        }),
     }),
   );
 

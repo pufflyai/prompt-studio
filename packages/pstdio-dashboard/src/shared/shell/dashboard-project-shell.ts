@@ -195,10 +195,10 @@ const createDashboardProjectModule = (input: DashboardProjectShellInput): Produc
         id: PROJECT_SETTINGS_WIDGET_ID,
         priority: 100,
         canOpen: (resource) => resource.kind === PROJECT_RESOURCE_KIND,
-        open: async (resource) => {
+        open: async (resource, input) => {
           await ctx.navigation.navigateResource(resource);
           ctx.layout.openWidget(PROJECT_SETTINGS_SIDEBAR_WIDGET_ID, { resource, closable: false });
-          return ctx.layout.openWidget(PROJECT_SETTINGS_WIDGET_ID, { resource });
+          return ctx.layout.openWidget(PROJECT_SETTINGS_WIDGET_ID, { resource, replaceActive: input.replaceActive });
         },
       }),
       ...shortcutCommands.flatMap((shortcut) => [

@@ -1,5 +1,6 @@
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useRef, useState } from "react";
+import type { ShellAreaSize } from "../core";
 
 const BOTTOM_PANEL_DEFAULT_HEIGHT_PX = 240;
 const BOTTOM_PANEL_MIN_HEIGHT_PX = 128;
@@ -10,36 +11,47 @@ const BOTTOM_PANEL_COLLAPSE_THRESHOLD_PX = 72;
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-const resolveMaxHeight = (root: HTMLDivElement | null) => {
-  const rootHeight = root?.getBoundingClientRect().height ?? 0;
-  if (rootHeight <= 0) return BOTTOM_PANEL_MAX_HEIGHT_PX;
+const resolveBottomPanelSize = (areaSize: ShellAreaSize | undefined): Required<ShellAreaSize> => ({
+  defaultPx: areaSize?.defaultPx ?? BOTTOM_PANEL_DEFAULT_HEIGHT_PX,
+  minPx: areaSize?.minPx ?? BOTTOM_PANEL_MIN_HEIGHT_PX,
+  maxPx: areaSize?.maxPx ?? BOTTOM_PANEL_MAX_HEIGHT_PX,
+});
 
-  return Math.max(
-    BOTTOM_PANEL_MIN_HEIGHT_PX,
-    Math.min(BOTTOM_PANEL_MAX_HEIGHT_PX, rootHeight - BOTTOM_PANEL_MAIN_MIN_HEIGHT_PX),
-  );
+const resolveMaxHeight = (root: HTMLDivElement | null, size: Required<ShellAreaSize>) => {
+  const rootHeight = root?.getBoundingClientRect().height ?? 0;
+  if (rootHeight <= 0) return size.maxPx;
+
+  return Math.max(size.minPx, Math.min(size.maxPx, rootHeight - BOTTOM_PANEL_MAIN_MIN_HEIGHT_PX));
 };
 
 interface BottomPanelResizeInput {
   bodyNode: HTMLDivElement | null;
+  areaSize?: ShellAreaSize;
+  collapsible?: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
 }
 
-export const bottomPanelResizeBounds = {
-  minPx: BOTTOM_PANEL_MIN_HEIGHT_PX,
-  defaultPx: BOTTOM_PANEL_DEFAULT_HEIGHT_PX,
-};
-
 export const useBottomPanelResize = (input: BottomPanelResizeInput) => {
-  const { bodyNode, onCollapsedChange } = input;
+  const { areaSize, bodyNode, collapsible = true, onCollapsedChange } = input;
+  const size = resolveBottomPanelSize(areaSize);
+  const defaultHeight = clamp(size.defaultPx, size.minPx, size.maxPx);
+  const maxHeight = resolveMaxHeight(bodyNode, size);
   const cleanupRef = useRef<() => void>(() => undefined);
-  const [height, setHeight] = useState(BOTTOM_PANEL_DEFAULT_HEIGHT_PX);
+  const [height, setHeight] = useState(defaultHeight);
 
   useEffect(() => () => cleanupRef.current(), []);
 
+  useEffect(() => {
+    setHeight(defaultHeight);
+  }, [defaultHeight]);
+
+  useEffect(() => {
+    setHeight((current) => clamp(current, size.minPx, maxHeight));
+  }, [maxHeight, size.minPx]);
+
   const resize = (next: number) => {
     onCollapsedChange(false);
-    setHeight(clamp(next, BOTTOM_PANEL_MIN_HEIGHT_PX, resolveMaxHeight(bodyNode)));
+    setHeight(clamp(next, size.minPx, maxHeight));
   };
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -58,10 +70,8 @@ export const useBottomPanelResize = (input: BottomPanelResizeInput) => {
 
     const handlePointerMove = (moveEvent: PointerEvent) => {
       const rawHeight = startHeight - (moveEvent.clientY - startY);
-      nextCollapsed = rawHeight <= BOTTOM_PANEL_COLLAPSE_THRESHOLD_PX;
-      nextHeight = nextCollapsed
-        ? BOTTOM_PANEL_MIN_HEIGHT_PX
-        : clamp(rawHeight, BOTTOM_PANEL_MIN_HEIGHT_PX, resolveMaxHeight(bodyNode));
+      nextCollapsed = collapsible && rawHeight <= BOTTOM_PANEL_COLLAPSE_THRESHOLD_PX;
+      nextHeight = nextCollapsed ? size.minPx : clamp(rawHeight, size.minPx, resolveMaxHeight(bodyNode, size));
       setHeight(nextHeight);
     };
 
@@ -97,16 +107,18 @@ export const useBottomPanelResize = (input: BottomPanelResizeInput) => {
       resize(height - BOTTOM_PANEL_KEYBOARD_STEP_PX);
     } else if (event.key === "Home") {
       event.preventDefault();
-      onCollapsedChange(true);
+      if (collapsible) onCollapsedChange(true);
+      else resize(size.minPx);
     } else if (event.key === "End") {
       event.preventDefault();
-      resize(resolveMaxHeight(bodyNode));
+      resize(maxHeight);
     }
   };
 
   return {
     height,
-    maxHeight: resolveMaxHeight(bodyNode),
+    maxHeight,
+    minHeight: size.minPx,
     onPointerDown,
     onKeyDown,
   };

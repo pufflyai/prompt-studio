@@ -1,5 +1,9 @@
 import { type ActivityRegistry, createActivityRegistry } from "./activity/activity-registry";
 import { createShellBreadcrumbController, type ShellBreadcrumbController } from "./breadcrumbs/breadcrumb-registry";
+import {
+  createShellCommandPaletteController,
+  type ShellCommandPaletteController,
+} from "./command-palette/command-palette-controller";
 import { type CommandRegistry, createCommandRegistry } from "./commands/command-registry";
 import { type ContextKeyService, createContextKeyService } from "./context/context-key-service";
 import type { ContributionMetadata } from "./contributions/metadata";
@@ -26,6 +30,7 @@ import { createWebviewRegistry, type WebviewRegistry } from "./webviews/webview-
 export interface ShellCoreContributionContext {
   activity: ActivityRegistry;
   breadcrumbs: ShellBreadcrumbController;
+  commandPalette: ShellCommandPaletteController;
   commands: CommandRegistry;
   context: ContextKeyService;
   diagnostics: DiagnosticRegistry;
@@ -71,6 +76,7 @@ export const createShellCore = (input: CreateShellCoreInput = {}) => {
   const core = {
     activity: createActivityRegistry(),
     breadcrumbs: createShellBreadcrumbController(),
+    commandPalette: createShellCommandPaletteController(),
     commands,
     context,
     diagnostics: createDiagnosticRegistry(),
@@ -103,6 +109,9 @@ const createProductModuleContext = (core: ShellCore, ownerId: string) =>
     },
     breadcrumbs: {
       ...core.breadcrumbs,
+    },
+    commandPalette: {
+      ...core.commandPalette,
     },
     commands: {
       ...core.commands,

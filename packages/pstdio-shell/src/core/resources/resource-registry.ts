@@ -15,6 +15,10 @@ export interface ResourceRef {
   metadata?: Record<string, unknown>;
 }
 
+export interface OpenResourceInput {
+  replaceActive?: boolean;
+}
+
 export interface ResourceKindContribution {
   kind: string;
   label: string;
@@ -27,7 +31,7 @@ export interface ResourceOpener<TResult = unknown> {
   id: string;
   priority?: number;
   canOpen(resource: ResourceRef): boolean;
-  open(resource: ResourceRef): TResult | Promise<TResult>;
+  open(resource: ResourceRef, input: OpenResourceInput): TResult | Promise<TResult>;
 }
 
 export const createResourceRegistry = () => {
@@ -79,7 +83,7 @@ export const createResourceRegistry = () => {
       );
     },
 
-    async openResource(resource: ResourceRef) {
+    async openResource(resource: ResourceRef, input: OpenResourceInput = {}) {
       if (!kinds.has(resource.kind)) throw new Error(`Unknown resource kind: ${resource.kind}`);
 
       const opener = [...openers.values()]
@@ -88,7 +92,7 @@ export const createResourceRegistry = () => {
 
       if (!opener) throw new Error(`No opener registered for resource kind: ${resource.kind}`);
 
-      return await opener.open(resource);
+      return await opener.open(resource, input);
     },
   };
 };

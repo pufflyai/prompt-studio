@@ -76,6 +76,62 @@ describe("createLayoutModel", () => {
     expect(layout.getLayout().areas.main.widgets).toHaveLength(1);
   });
 
+  test("resolves area size from the active widget contribution", () => {
+    const layout = createLayoutModel();
+
+    layout.registerWidget({
+      id: "project.outline",
+      title: "Outline",
+      area: "main-right",
+      areaSize: { defaultPx: 280, minPx: 180, maxPx: 360 },
+      renderer: "react",
+    });
+    layout.registerWidget({
+      id: "project.preview",
+      title: "Preview",
+      area: "main-right",
+      areaSize: { defaultPx: 420, minPx: 240, maxPx: 640 },
+      renderer: "react",
+    });
+
+    const outline = layout.openWidget("project.outline");
+    layout.openWidget("project.preview");
+
+    expect(layout.getAreaSize("main-right")).toEqual({ defaultPx: 420, minPx: 240, maxPx: 640 });
+
+    layout.activateWidget(outline.widgetId);
+
+    expect(layout.getAreaSize("main-right")).toEqual({ defaultPx: 280, minPx: 180, maxPx: 360 });
+  });
+
+  test("resolves area collapsibility from the active widget contribution", () => {
+    const layout = createLayoutModel();
+
+    layout.registerWidget({
+      id: "project.preview",
+      title: "Preview",
+      area: "main-bottom",
+      areaCollapsible: true,
+      renderer: "react",
+    });
+    layout.registerWidget({
+      id: "project.console",
+      title: "Console",
+      area: "main-bottom",
+      areaCollapsible: false,
+      renderer: "react",
+    });
+
+    const preview = layout.openWidget("project.preview");
+    layout.openWidget("project.console");
+
+    expect(layout.getAreaCollapsible("main-bottom")).toBe(false);
+
+    layout.activateWidget(preview.widgetId);
+
+    expect(layout.getAreaCollapsible("main-bottom")).toBe(true);
+  });
+
   test("activates an existing widget placement without adding a duplicate", () => {
     const layout = createLayoutModel();
 
@@ -106,6 +162,42 @@ describe("createLayoutModel", () => {
     ]);
   });
 
+  test("replaces the active widget placement when requested", () => {
+    const layout = createLayoutModel();
+
+    layout.registerWidget({
+      id: "project.tickets",
+      title: "Tickets",
+      area: "main",
+      renderer: "react",
+    });
+    layout.registerWidget({
+      id: "project.settings",
+      title: "Project settings",
+      area: "main",
+      renderer: "react",
+    });
+
+    layout.openWidget("project.tickets", {
+      resource: { kind: "dashboard-view", uri: "pstdio://dashboard/tickets", label: "Tickets" },
+      closable: false,
+    });
+    const placement = layout.openWidget("project.settings", {
+      resource: { kind: "settings", uri: "pstdio://settings/project", label: "Settings" },
+      replaceActive: true,
+    });
+
+    expect(placement).toMatchObject({
+      widgetId: "project.settings",
+      contributionId: "project.settings",
+      resourceUri: "pstdio://settings/project",
+      title: "Settings",
+    });
+    expect(layout.getLayout().areas.main.widgets).toHaveLength(1);
+    expect(layout.getLayout().areas.main.widgets[0]).toBe(placement);
+    expect(layout.getLayout().activeWidgetId).toBe("project.settings");
+  });
+
   test("removes placements when a widget contribution is disposed", () => {
     const layout = createLayoutModel();
 
@@ -130,7 +222,9 @@ describe("createLayoutModel", () => {
     expect(layout.getLayout().activeWidgetId).toBeUndefined();
     expect(layout.getLayout().activeResourceUri).toBeUndefined();
   });
+});
 
+describe("createLayoutModel persistence", () => {
   test("fills in missing areas when loading a layout persisted before new areas existed", () => {
     const partialLayout = {
       areas: {
@@ -146,7 +240,9 @@ describe("createLayoutModel", () => {
 
     expect(layout.getLayout().areas["left-header"]).toBeDefined();
     expect(layout.getLayout().areas["main-bottom-header"]).toBeDefined();
+    expect(layout.getLayout().areas["floating-header"]).toBeDefined();
     expect(layout.getLayout().areas["left-header"].widgets).toEqual([]);
+    expect(layout.getLayout().areas["floating-header"].widgets).toEqual([]);
   });
 
   test("persists layout state through an injected adapter", () => {

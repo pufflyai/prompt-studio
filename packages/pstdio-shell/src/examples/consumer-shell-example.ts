@@ -29,7 +29,12 @@ export const createConsumerShellExample = (input: ConsumerShellExampleInput = {}
     id: "extension.reviewOpener",
     priority: 80,
     canOpen: (resource) => resource.kind === "extension-review",
-    open: (resource) => shell.layout.openWidget(shellWidgetIds.extensionReview, { resource, title: resource.label }),
+    open: (resource, input) =>
+      shell.layout.openWidget(shellWidgetIds.extensionReview, {
+        resource,
+        title: resource.label,
+        replaceActive: input.replaceActive,
+      }),
   });
   shell.preferences.setValue("extensionLab.reviewMode", "strict", projectScope);
   shell.diagnostics.report({

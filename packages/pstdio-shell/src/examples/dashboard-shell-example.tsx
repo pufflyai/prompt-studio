@@ -56,9 +56,13 @@ const registerPanelModeResourceOpener = (shell: ShellCore) => {
     id: "dashboard-shell.panel-mode-opener",
     priority: 1000,
     canOpen: (resource) => ["dashboard-view", "ticket", "extension-route", "project-settings"].includes(resource.kind),
-    open: (resource) => {
+    open: (resource, input) => {
       shell.modes.setActiveMode(resolveLeftPanelMode(resource));
-      return shell.layout.openWidget(resolveWidget(resource), { resource, title: resource.label });
+      return shell.layout.openWidget(resolveWidget(resource), {
+        resource,
+        title: resource.label,
+        replaceActive: input.replaceActive,
+      });
     },
   });
 };
@@ -83,5 +87,5 @@ const createDashboardShellExample = () => {
 export const DashboardShellExample = () => {
   const [example] = useState(createDashboardShellExample);
 
-  return <ShellWorkbench shell={example.shell} showCommandPaletteTreeNode={false} />;
+  return <ShellWorkbench shell={example.shell} />;
 };

@@ -249,9 +249,13 @@ const registerPanelModeResourceOpener = (shell: ShellCore) => {
     priority: 1000,
     canOpen: (resource) =>
       ["project", "dashboard-view", "ticket", "workspace", "settings", "extension-review"].includes(resource.kind),
-    open: (resource) => {
+    open: (resource, input) => {
       shell.modes.setActiveMode(resolveLeftPanelMode(resource));
-      return shell.layout.openWidget(resolveWidgetId(resource), { resource, title: resource.label });
+      return shell.layout.openWidget(resolveWidgetId(resource), {
+        resource,
+        title: resource.label,
+        replaceActive: input.replaceActive,
+      });
     },
   });
 };

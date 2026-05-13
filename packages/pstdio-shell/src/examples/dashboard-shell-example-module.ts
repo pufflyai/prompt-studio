@@ -48,7 +48,12 @@ const registerResourcesAndWidgets = (ctx: ProductModuleContributionContext) => {
     id: "dashboard-shell.opener",
     priority: 100,
     canOpen: (resource) => ["dashboard-view", "ticket", "extension-route", "project-settings"].includes(resource.kind),
-    open: (resource) => ctx.layout.openWidget(resolveWidget(resource), { resource, title: resource.label }),
+    open: (resource, input) =>
+      ctx.layout.openWidget(resolveWidget(resource), {
+        resource,
+        title: resource.label,
+        replaceActive: input.replaceActive,
+      }),
   });
 
   registerReactWidget(ctx, dashboardWidgetIds.tickets, "Tickets", "main", 90);

@@ -276,5 +276,5 @@ export const ProjectSettings = () => {
     });
   }, [activeSection, navigate, panel, projectId]);
 
-  return <ShellWorkbench shell={projectShell} showCommandPaletteTreeNode={false} />;
+  return <ShellWorkbench shell={projectShell} />;
 };

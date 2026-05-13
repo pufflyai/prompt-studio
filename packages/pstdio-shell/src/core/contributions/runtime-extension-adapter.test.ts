@@ -49,6 +49,8 @@ describe("adaptRuntimeExtensionContributions", () => {
             labPage: {
               title: "Extension Lab",
               slot: "main",
+              areaSize: { defaultPx: 360, minPx: 240, maxPx: 520 },
+              areaCollapsible: false,
               resourceKinds: ["extension-lab.counter"],
               webview: {
                 entry: { kind: "package-asset", path: "./src/main.tsx", baseUrl: "file:///extension" },
@@ -113,6 +115,8 @@ describe("adaptRuntimeExtensionContributions", () => {
     });
     expect(layout.getWidget("extension-lab.labPage")).toMatchObject({
       area: "main",
+      areaSize: { defaultPx: 360, minPx: 240, maxPx: 520 },
+      areaCollapsible: false,
       renderer: "webview",
       webview: {
         entry: { path: "./src/main.tsx" },

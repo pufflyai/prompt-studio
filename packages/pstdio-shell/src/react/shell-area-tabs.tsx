@@ -1,5 +1,4 @@
-import { Button, HStack, Text } from "@chakra-ui/react";
-import { ScrollArea } from "@pstdio/ui";
+import { Box, Tabs, Text } from "@chakra-ui/react";
 import type { ShellArea as ShellAreaId, ShellCore } from "../core";
 
 interface ShellAreaTabsProps {
@@ -23,34 +22,54 @@ export const ShellAreaTabs = (props: ShellAreaTabsProps) => {
   };
 
   return (
-    <ScrollArea
-      flex="1"
+    <Tabs.Root
+      value={activeWidgetId}
+      onValueChange={(details) => activate(details.value)}
+      variant="subtle"
+      colorPalette="gray"
+      justify="start"
+      size="sm"
+      alignSelf="center"
+      flex="0 1 auto"
+      w="max-content"
+      maxW="full"
       minW="0"
-      h="full"
-      showHorizontalScrollbar
-      showVerticalScrollbar={false}
-      contentProps={{ minW: "max-content" }}
-      viewportProps={{ h: "full", style: { overflowY: "hidden" } }}
+      h="1.75rem"
+      display="flex"
+      overflow="hidden"
     >
-      <HStack gap="2xs" h="full" px="xs" minW="full">
-        {placements.map((placement) => (
-          <Button
-            key={placement.widgetId}
-            size="2xs"
-            variant={placement.widgetId === activeWidgetId ? "subtle" : "ghost"}
-            colorPalette="gray"
-            maxW="12rem"
-            minW="0"
-            px="xs"
-            title={placement.title}
-            onClick={() => activate(placement.widgetId)}
-          >
-            <Text as="span" truncate>
-              {placement.title ?? placement.contributionId}
-            </Text>
-          </Button>
-        ))}
-      </HStack>
-    </ScrollArea>
+      <Box
+        h="full"
+        minW="0"
+        w="full"
+        overflowX="auto"
+        overflowY="hidden"
+        css={{
+          scrollbarWidth: "none",
+          "&::-webkit-scrollbar": { display: "none" },
+        }}
+      >
+        <Tabs.List h="full" minW="max-content" alignItems="center" justifyContent="flex-start">
+          {placements.map((placement) => (
+            <Tabs.Trigger
+              key={placement.widgetId}
+              value={placement.widgetId}
+              flexShrink={0}
+              h="1.5rem"
+              maxW="12rem"
+              minW="0"
+              px="xs"
+              py="0"
+              textStyle="label/XS/medium"
+              title={placement.title}
+            >
+              <Text as="span" truncate>
+                {placement.title ?? placement.contributionId}
+              </Text>
+            </Tabs.Trigger>
+          ))}
+        </Tabs.List>
+      </Box>
+    </Tabs.Root>
   );
 };

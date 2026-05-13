@@ -1,7 +1,7 @@
 import { Flex } from "@chakra-ui/react";
 import { ResizableSplitLayout } from "@pstdio/ui";
 import { useLayoutEffect, useRef, useState } from "react";
-import type { ShellCore, TreeViewRole } from "../core";
+import type { ShellArea, ShellCore, TreeViewRole } from "../core";
 import { ShellCommandPalette } from "./shell-command-palette";
 import { ShellNotificationHost } from "./shell-notification-host";
 import { ShellSessionBubbleContainer } from "./shell-session-panel";
@@ -19,15 +19,15 @@ import {
   ShellStatusBar,
   ShellWorkbenchHeader,
 } from "./shell-workbench-panels";
-import { ShellAttachedSessionLayout, ShellFloatingSessionPortal } from "./shell-workbench-session-layout";
+import {
+  ShellAttachedSessionLayout,
+  ShellFloatingSessionHeader,
+  ShellFloatingSessionPortal,
+} from "./shell-workbench-session-layout";
 
 interface ShellWorkbenchProps {
   shell: ShellCore;
-  commandPaletteOpen?: boolean;
-  initialCommandPaletteOpen?: boolean;
   initialSessionPanelMode?: ShellSessionPanelMode;
-  showCommandPaletteTreeNode?: boolean;
-  onCommandPaletteOpenChange?: (open: boolean) => void;
   onCommandError?: (error: unknown) => void;
 }
 
@@ -37,6 +37,9 @@ const resolveTreeViewId = (shell: ShellCore, area: TreeViewAreaId, role: TreeVie
   shell.trees
     .listTreeViews()
     .find((treeView) => (treeView.area ?? "left") === area && (treeView.role ?? "primary") === role)?.id;
+
+const resolvePanelCollapsible = (shell: ShellCore, ...areas: ShellArea[]) =>
+  areas.every((area) => shell.layout.getAreaCollapsible(area));
 
 const SIDEBAR_DEFAULT_SIZE_PX = 240;
 const SIDEBAR_MIN_SIZE_PX = 200;
@@ -62,17 +65,32 @@ const resolveActiveSessionSlot = (input: {
   return null;
 };
 
+const deriveLayoutFlags = (shell: ShellCore) => {
+  const layout = shell.layout.getLayout();
+  const a = layout.areas;
+  return {
+    layout,
+    hasTopWidgets: a.top.widgets.length > 0,
+    hasActivityBarWidgets: a.activityBar.widgets.length > 0,
+    hasLeftHeaderWidgets: a["left-header"].widgets.length > 0,
+    hasLeftWidgets: a.left.widgets.length > 0,
+    hasMainHeaderWidgets: a["main-header"].widgets.length > 0,
+    hasMainLeftHeaderWidgets: a["main-left-header"].widgets.length > 0,
+    hasMainLeftWidgets: a["main-left"].widgets.length > 0,
+    hasMainRightHeaderWidgets: a["main-right-header"].widgets.length > 0,
+    hasMainRightWidgets: a["main-right"].widgets.length > 0,
+    hasMainBottomHeaderWidgets: a["main-bottom-header"].widgets.length > 0,
+    hasMainBottomWidgets: a["main-bottom"].widgets.length > 0,
+    hasStatusWidgets: a.status.widgets.length > 0,
+    hasOverlayWidgets: a.overlay.widgets.length > 0,
+    hasFloatingHeaderWidgets: a["floating-header"].widgets.length > 0,
+    hasFloatingWidgets: a.floating.widgets.length > 0,
+  };
+};
+
 const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
-  const {
-    shell,
-    commandPaletteOpen,
-    initialCommandPaletteOpen = false,
-    showCommandPaletteTreeNode = true,
-    onCommandPaletteOpenChange,
-    onCommandError,
-  } = props;
+  const { shell, onCommandError } = props;
   const [version, setVersion] = useState(0);
-  const [internalCommandPaletteOpen, setInternalCommandPaletteOpen] = useState(initialCommandPaletteOpen);
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [mainRightPanelOpen, setMainRightPanelOpen] = useState(true);
   const [mainBottomPanelOpen, setMainBottomPanelOpen] = useState(true);
@@ -83,34 +101,44 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
   const leftTree = resolveTreeViewId(shell, "left", "primary");
   const leftFooterTree = resolveTreeViewId(shell, "left", "footer");
   const mainLeftTree = resolveTreeViewId(shell, "main-left", "primary");
-  const layout = shell.layout.getLayout();
-  const hasTopWidgets = layout.areas.top.widgets.length > 0;
-  const hasActivityBarWidgets = layout.areas.activityBar.widgets.length > 0;
-  const hasLeftHeaderWidgets = layout.areas["left-header"].widgets.length > 0;
-  const hasLeftWidgets = layout.areas.left.widgets.length > 0;
-  const hasMainHeaderWidgets = layout.areas["main-header"].widgets.length > 0;
-  const hasMainLeftHeaderWidgets = layout.areas["main-left-header"].widgets.length > 0;
-  const hasMainLeftWidgets = layout.areas["main-left"].widgets.length > 0;
-  const hasMainRightHeaderWidgets = layout.areas["main-right-header"].widgets.length > 0;
-  const hasMainRightWidgets = layout.areas["main-right"].widgets.length > 0;
-  const hasMainBottomHeaderWidgets = layout.areas["main-bottom-header"].widgets.length > 0;
-  const hasMainBottomWidgets = layout.areas["main-bottom"].widgets.length > 0;
-  const hasStatusWidgets = layout.areas.status.widgets.length > 0;
-  const hasOverlayWidgets = layout.areas.overlay.widgets.length > 0;
+  const {
+    layout,
+    hasActivityBarWidgets,
+    hasFloatingHeaderWidgets,
+    hasFloatingWidgets,
+    hasLeftHeaderWidgets,
+    hasLeftWidgets,
+    hasMainBottomHeaderWidgets,
+    hasMainBottomWidgets,
+    hasMainHeaderWidgets,
+    hasMainLeftHeaderWidgets,
+    hasMainLeftWidgets,
+    hasMainRightHeaderWidgets,
+    hasMainRightWidgets,
+    hasOverlayWidgets,
+    hasStatusWidgets,
+    hasTopWidgets,
+  } = deriveLayoutFlags(shell);
   const hasMainBottom = hasMainBottomWidgets || hasMainBottomHeaderWidgets;
-  const hasFloatingWidgets = layout.areas.floating.widgets.length > 0;
-  const showLeftPane = leftTree || hasLeftWidgets || hasLeftHeaderWidgets;
+  const hasFloatingPanel = hasFloatingHeaderWidgets || hasFloatingWidgets;
+  const showLeftPane = Boolean(leftTree || hasLeftWidgets || hasLeftHeaderWidgets);
   const showMainRightPane = hasMainRightWidgets || hasMainRightHeaderWidgets;
+  const leftPanelCollapsible = resolvePanelCollapsible(shell, "left-header", "left");
+  const mainRightPanelCollapsible = resolvePanelCollapsible(shell, "main-right-header", "main-right");
+  const mainBottomPanelCollapsible = resolvePanelCollapsible(shell, "main-bottom-header", "main-bottom");
   const sessionPanelMode = useShellSessionPanelStore((state) => state.mode);
   const setSessionPanelMode = useShellSessionPanelStore((state) => state.setMode);
-  const showAttachedSessionPanel = hasFloatingWidgets && sessionPanelMode === "attached";
-  const showBubbleSessionPanel = hasFloatingWidgets && sessionPanelMode === "bubble";
-  const paletteOpen = commandPaletteOpen ?? internalCommandPaletteOpen;
+  const showAttachedSessionPanel = hasFloatingPanel && sessionPanelMode === "attached";
+  const showBubbleSessionPanel = hasFloatingPanel && sessionPanelMode === "bubble";
+  const paletteOpen = shell.commandPalette.isOpen();
   const refresh = () => {
     setVersion((current) => current + 1);
   };
 
   const breadcrumbItems = buildWorkbenchBreadcrumbItems(shell);
+  const floatingHeader = (
+    <ShellFloatingSessionHeader shell={shell} hasFloatingHeader={hasFloatingHeaderWidgets} refresh={refresh} />
+  );
   const activeSessionSlot = resolveActiveSessionSlot({
     showAttachedSessionPanel,
     showBubbleSessionPanel,
@@ -132,17 +160,14 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
     const renderers = shell.renderers.onDidChange(() => setVersion((current) => current + 1));
     const modes = shell.modes.onDidChangeActive(() => setVersion((current) => current + 1));
     const breadcrumbs = shell.breadcrumbs.onDidChange(() => setVersion((current) => current + 1));
+    const commandPalette = shell.commandPalette.onDidChange(() => setVersion((current) => current + 1));
     return () => {
       renderers.dispose();
       modes.dispose();
       breadcrumbs.dispose();
+      commandPalette.dispose();
     };
   }, [shell]);
-
-  const setPaletteOpen = (open: boolean) => {
-    if (commandPaletteOpen === undefined) setInternalCommandPaletteOpen(open);
-    onCommandPaletteOpenChange?.(open);
-  };
 
   const workbenchBody = (
     <ShellWorkbenchBody
@@ -154,14 +179,20 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
       mainLeftActiveNodeId={layout.activeResourceUri}
       hasMainRight={showMainRightPane}
       hasMainRightHeader={hasMainRightHeaderWidgets}
-      mainRightCollapsed={!mainRightPanelOpen}
+      mainRightCollapsible={mainRightPanelCollapsible}
+      mainRightCollapsed={!mainRightPanelOpen && mainRightPanelCollapsible}
       hasMainBottom={hasMainBottom}
       hasMainBottomHeader={hasMainBottomHeaderWidgets}
-      mainBottomCollapsed={!mainBottomPanelOpen}
+      mainBottomCollapsible={mainBottomPanelCollapsible}
+      mainBottomCollapsed={!mainBottomPanelOpen && mainBottomPanelCollapsible}
       onOpenMainRightPanel={() => setMainRightPanelOpen(true)}
       onOpenMainBottomPanel={() => setMainBottomPanelOpen(true)}
-      onMainRightCollapsedChange={(collapsed) => setMainRightPanelOpen(!collapsed)}
-      onMainBottomCollapsedChange={(collapsed) => setMainBottomPanelOpen(!collapsed)}
+      onMainRightCollapsedChange={(collapsed) => {
+        if (!collapsed || mainRightPanelCollapsible) setMainRightPanelOpen(!collapsed);
+      }}
+      onMainBottomCollapsedChange={(collapsed) => {
+        if (!collapsed || mainBottomPanelCollapsible) setMainBottomPanelOpen(!collapsed);
+      }}
       refresh={refresh}
     />
   );
@@ -172,7 +203,7 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
         shell={shell}
         breadcrumbItems={breadcrumbItems}
         hasTop={hasTopWidgets}
-        showLeftPanelOpener={Boolean(showLeftPane && !leftPanelOpen)}
+        showLeftPanelOpener={Boolean(showLeftPane && !leftPanelOpen && leftPanelCollapsible)}
         onOpenLeftPanel={() => setLeftPanelOpen(true)}
         onCommandError={onCommandError}
         refresh={refresh}
@@ -195,19 +226,21 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
           footerTreeViewId={leftFooterTree}
           activeNodeId={layout.activeResourceUri}
           hasHeader={hasLeftHeaderWidgets}
-          onOpenCommandPalette={showCommandPaletteTreeNode ? () => setPaletteOpen(true) : undefined}
           refresh={refresh}
         />
       }
       contentPanel={contentWithHeader}
-      collapsed={!leftPanelOpen}
+      collapsed={!leftPanelOpen && leftPanelCollapsible}
+      collapsible={leftPanelCollapsible}
       defaultSizePx={SIDEBAR_DEFAULT_SIZE_PX}
       minSizePx={SIDEBAR_MIN_SIZE_PX}
       maxSizePx={SIDEBAR_MAX_SIZE_PX}
       contentMinSizePx={CONTENT_MIN_SIZE_PX}
       resizeLabel="Resize sidebar"
       showResizeSeparator
-      onCollapsedChange={(collapsed) => setLeftPanelOpen(!collapsed)}
+      onCollapsedChange={(collapsed) => {
+        if (!collapsed || leftPanelCollapsible) setLeftPanelOpen(!collapsed);
+      }}
     />
   ) : (
     contentWithHeader
@@ -233,18 +266,20 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
       </Flex>
       {hasStatusWidgets ? <ShellStatusBar shell={shell} refresh={refresh} /> : null}
       {hasOverlayWidgets ? <ShellOverlayLayer shell={shell} refresh={refresh} /> : null}
-      {hasFloatingWidgets ? <ShellSessionBubbleContainer contentSlotRef={setSessionBubbleSlot} /> : null}
+      {hasFloatingPanel ? (
+        <ShellSessionBubbleContainer contentSlotRef={setSessionBubbleSlot} header={floatingHeader} />
+      ) : null}
       <ShellFloatingSessionPortal
         shell={shell}
         refresh={refresh}
-        hasFloatingWidgets={hasFloatingWidgets}
+        hasFloatingPanel={hasFloatingPanel}
         activeSessionSlot={activeSessionSlot}
         sessionHost={sessionHostRef.current}
       />
       <ShellCommandPalette
         shell={shell}
         open={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
+        onClose={() => shell.commandPalette.close()}
         onCommandError={onCommandError}
         refresh={refresh}
       />
@@ -264,6 +299,7 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
     <ShellAttachedSessionLayout
       contentPanel={workbenchFrame}
       contentMinSizePx={CONTENT_MIN_SIZE_PX}
+      header={floatingHeader}
       onAttachedSlotChange={setSessionAttachedSlot}
       onCollapseToBubble={() => setSessionPanelMode("bubble")}
     />
