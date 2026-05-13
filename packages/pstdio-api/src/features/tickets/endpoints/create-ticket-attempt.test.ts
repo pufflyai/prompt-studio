@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { TicketsTestContext } from "./tickets-test-harness";
 import { createTicketsTestContext } from "./tickets-test-harness";
@@ -35,16 +35,20 @@ afterAll(() => {
   context.cleanup();
 });
 
-const createTicket = async () => {
-  const { app, projectId } = context;
-  const ticketRes = await app.request("/v1/tickets", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, content: "Attempt ticket content" }),
-  });
-
-  expect(ticketRes.status).toBe(201);
-  return ticketRes.json();
+const writeRepoExtension = (repoPath: string, name: string, extensionCode: string) => {
+  const extensionRoot = join(repoPath, ".pstdio", "extensions", name);
+  mkdirSync(extensionRoot, { recursive: true });
+  writeFileSync(
+    join(extensionRoot, "package.json"),
+    JSON.stringify({
+      name,
+      version: "1.0.0",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+    }),
+  );
+  writeFileSync(join(extensionRoot, "extension.ts"), extensionCode);
 };
 
 describe("POST /v1/tickets/:id/attempts", () => {
@@ -114,7 +118,13 @@ describe("POST /v1/tickets/:id/attempts", () => {
 
     expect(existsSync(join(repoRoot, ".pstdio", "config.json"))).toBe(true);
 
-    const ticket = await createTicket();
+    const ticketRes = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId, content: "Repo-local session start ticket" }),
+    });
+    expect(ticketRes.status).toBe(201);
+    const ticket = await ticketRes.json();
 
     const attemptRes = await app.request(`/v1/tickets/${ticket.id}/attempts`, {
       method: "POST",
@@ -146,7 +156,13 @@ describe("POST /v1/tickets/:id/attempts", () => {
     expect(repoRes.status).toBe(201);
     const repo = await repoRes.json();
 
-    const ticket = await createTicket();
+    const ticketRes = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId, content: "Repo-local session start ticket" }),
+    });
+    expect(ticketRes.status).toBe(201);
+    const ticket = await ticketRes.json();
 
     const attemptRes = await app.request(`/v1/tickets/${ticket.id}/attempts`, {
       method: "POST",
@@ -296,4 +312,51 @@ export default { hooks: { postWorktreeCreate() { writeFileSync("${markerPath}", 
 
     hookCtx.cleanup();
   });
+
+  test("repo-local postSessionStart fires after delayed worktree setup", async () => {
+    const hookCtx = await createTicketsTestContext();
+    const { app, projectId, createGitRepo } = hookCtx;
+    const repoRoot = createGitRepo("repo-local-session-start-repo");
+    const markerPath = join(hookCtx.tempRoot, "repo-local-session-start.txt");
+    writeRepoExtension(
+      repoRoot,
+      "session-start",
+      `import { writeFileSync } from "node:fs";
+      export default {
+        hooks: {
+          started: {
+            eventId: "kernel.postSessionStart",
+            handler(ctx, payload) { writeFileSync("${markerPath}", payload.sessionId); }
+          }
+        }
+      };`,
+    );
+    const repoRes = await app.request(`/v1/projects/${projectId}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "repo-local-session-start-repo", path: repoRoot }),
+    });
+    expect(repoRes.status).toBe(201);
+    const repo = await repoRes.json();
+    const ticketRes = await app.request("/v1/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId, content: "Repo-local session start ticket" }),
+    });
+    expect(ticketRes.status).toBe(201);
+    const ticket = await ticketRes.json();
+
+    const attemptRes = await app.request(`/v1/tickets/${ticket.id}/attempts`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ repo_id: repo.id, agent: "fake", prompt: "Implement ticket", mode: "worktree" }),
+    });
+    expect(attemptRes.status).toBe(201);
+    const attempt = await attemptRes.json();
+
+    await waitForFile(markerPath);
+    expect(readFileSync(markerPath, "utf8")).toBe(attempt.session.id);
+
+    hookCtx.cleanup();
+  }, 15_000);
 });

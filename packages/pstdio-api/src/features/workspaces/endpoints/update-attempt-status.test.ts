@@ -107,6 +107,22 @@ const writePlugin = (fileName: string, code: string) => {
   appDeps.pluginService.invalidate(projectId);
 };
 
+const writeRepoExtension = (repoPath: string, name: string, extensionCode: string) => {
+  const extensionRoot = join(repoPath, ".pstdio", "extensions", name);
+  mkdirSync(extensionRoot, { recursive: true });
+  writeFileSync(
+    join(extensionRoot, "package.json"),
+    JSON.stringify({
+      name,
+      version: "1.0.0",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+    }),
+  );
+  writeFileSync(join(extensionRoot, "extension.ts"), extensionCode);
+};
+
 describe("PATCH /v1/workspaces/:id/attempt-status", () => {
   test("updates attempt status using a default seeded status", async () => {
     const workspace = await createWorkspace();
@@ -348,6 +364,68 @@ export default { hooks: {
     const fired = await waitForPath(outputPath);
     expect(fired).toBe(true);
     expect(readFileSync(outputPath, "utf-8").trim()).toBe(`${reviewSession.id}|${originalSession.id}`);
+  });
+});
+
+describe("PATCH /v1/workspaces/:id/attempt-status with repo-local extensions", () => {
+  test("returns 422 when a repo-local extension rejects an attempt status transition", async () => {
+    const isolatedRoot = mkdtempSync(join(tmpdir(), "pstdio-attempt-status-extension-test-"));
+    const created = await createApp({ dbPath: ":memory:", storagePath: join(isolatedRoot, "storage"), filesRoot: "" });
+    try {
+      const projectRes = await created.app.request("/v1/projects", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "repo-local-attempt-status" }),
+      });
+      expect(projectRes.status).toBe(201);
+      const project = (await projectRes.json()) as { id: string };
+      const repoPath = join(isolatedRoot, "repo");
+      writeRepoExtension(
+        repoPath,
+        "attempt-guard",
+        `export default {
+          hooks: {
+            gate: {
+              eventId: "kernel.preAttemptStatusChange",
+              handler() { throw new Error("blocked by repo-local extension"); }
+            }
+          }
+        };`,
+      );
+      const repoRes = await created.app.request(`/v1/projects/${project.id}/repos`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "repo-local-attempt-status", path: repoPath }),
+      });
+      expect(repoRes.status).toBe(201);
+      const ticketRes = await created.app.request("/v1/tickets", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ project_id: project.id, user_prompt: "test" }),
+      });
+      expect(ticketRes.status).toBe(201);
+      const ticket = (await ticketRes.json()) as { id: string; shorthand: string };
+      const wsRes = await created.app.request("/v1/workspaces", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ project_id: project.id, ticket_id: ticket.id, ticket_shorthand: ticket.shorthand }),
+      });
+      expect(wsRes.status).toBe(201);
+      const workspace = (await wsRes.json()) as { id: string };
+
+      const res = await created.app.request(`/v1/workspaces/${workspace.id}/attempt-status`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: "review-ready" }),
+      });
+
+      expect(res.status).toBe(422);
+      const body = await res.json();
+      expect(body.hook_output).toContain("blocked by repo-local extension");
+    } finally {
+      await created.close();
+      rmSync(isolatedRoot, { recursive: true, force: true });
+    }
   });
 });
 
