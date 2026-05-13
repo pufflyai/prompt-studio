@@ -2,6 +2,7 @@ import { Box, Flex, IconButton } from "@chakra-ui/react";
 import { Breadcrumb, type BreadcrumbItem, Header, Tooltip } from "@pstdio/ui";
 import { type ShellCore, workbenchTopHeaderLeadingMenuPath, workbenchTopHeaderTrailingMenuPath } from "../core";
 import { ShellArea } from "./shell-area";
+import { ShellAreaTabs } from "./shell-area-tabs";
 import { ShellHeaderActions } from "./shell-header-actions";
 import { ShellIcon } from "./shell-icons";
 import { ShellTreeView } from "./shell-tree-view";
@@ -77,12 +78,17 @@ interface ShellLeftSidePanelProps {
 
 export const ShellLeftSidePanel = (props: ShellLeftSidePanelProps) => {
   const { shell, treeViewId, footerTreeViewId, activeNodeId, hasHeader, onOpenCommandPalette, refresh } = props;
+  const hasContentTabs = shell.layout.getLayout().areas.left.widgets.length > 1;
+  const showHeaderBar = hasHeader || hasContentTabs;
 
   return (
     <Flex as="aside" direction="column" h="full" minH="0" minW="0" overflow="hidden" w="full">
-      {hasHeader ? (
-        <Header variant="main" flexShrink={0}>
-          <ShellArea shell={shell} area="left-header" title="Left header" showHeader={false} refresh={refresh} />
+      {showHeaderBar ? (
+        <Header variant="main" flexShrink={0} gap="xs">
+          {hasHeader ? (
+            <ShellArea shell={shell} area="left-header" title="Left header" showHeader={false} refresh={refresh} />
+          ) : null}
+          <ShellAreaTabs shell={shell} area="left" refresh={refresh} />
         </Header>
       ) : null}
       <Box flex="1" minH="0" minW="0" overflow="hidden">
@@ -133,18 +139,23 @@ export const ShellActivityBar = (props: ShellWorkbenchAreaPanelProps) => {
 
 export const ShellRightSidePanel = (props: ShellHeaderedAreaPanelProps) => {
   const { shell, hasHeader, refresh } = props;
+  const hasContentTabs = shell.layout.getLayout().areas["main-right"].widgets.length > 1;
+  const showHeaderBar = hasHeader || hasContentTabs;
 
   return (
     <Flex as="aside" direction="column" h="full" minH="0" minW="0" overflow="hidden" w="full">
-      {hasHeader ? (
-        <Header variant="main" flexShrink={0}>
-          <ShellArea
-            shell={shell}
-            area="main-right-header"
-            title="Main right header"
-            showHeader={false}
-            refresh={refresh}
-          />
+      {showHeaderBar ? (
+        <Header variant="main" flexShrink={0} gap="xs">
+          {hasHeader ? (
+            <ShellArea
+              shell={shell}
+              area="main-right-header"
+              title="Main right header"
+              showHeader={false}
+              refresh={refresh}
+            />
+          ) : null}
+          <ShellAreaTabs shell={shell} area="main-right" refresh={refresh} />
         </Header>
       ) : null}
       <Box flex="1" minH="0" minW="0" overflow="hidden">
@@ -156,18 +167,23 @@ export const ShellRightSidePanel = (props: ShellHeaderedAreaPanelProps) => {
 
 export const ShellMainLeftPanel = (props: ShellHeaderedAreaPanelProps) => {
   const { shell, hasHeader, refresh } = props;
+  const hasContentTabs = shell.layout.getLayout().areas["main-left"].widgets.length > 1;
+  const showHeaderBar = hasHeader || hasContentTabs;
 
   return (
     <Flex as="aside" direction="column" h="full" minH="0" minW="0" overflow="hidden" w="full">
-      {hasHeader ? (
-        <Header variant="main" flexShrink={0}>
-          <ShellArea
-            shell={shell}
-            area="main-left-header"
-            title="Main left header"
-            showHeader={false}
-            refresh={refresh}
-          />
+      {showHeaderBar ? (
+        <Header variant="main" flexShrink={0} gap="xs">
+          {hasHeader ? (
+            <ShellArea
+              shell={shell}
+              area="main-left-header"
+              title="Main left header"
+              showHeader={false}
+              refresh={refresh}
+            />
+          ) : null}
+          <ShellAreaTabs shell={shell} area="main-left" refresh={refresh} />
         </Header>
       ) : null}
       <Box flex="1" minH="0" minW="0" overflow="hidden">

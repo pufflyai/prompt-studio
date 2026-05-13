@@ -3,6 +3,7 @@ import { Header, ResizableSplitLayout, Tooltip } from "@pstdio/ui";
 import { useState } from "react";
 import type { ShellCore } from "../core";
 import { ShellArea } from "./shell-area";
+import { ShellAreaTabs } from "./shell-area-tabs";
 import { ShellBottomPanel } from "./shell-bottom-panel";
 import { ShellIcon } from "./shell-icons";
 import { ShellMainLeftPanel, ShellRightSidePanel } from "./shell-workbench-panels";
@@ -59,7 +60,8 @@ export const ShellWorkbenchBody = (props: ShellWorkbenchBodyProps) => {
   const showBottomPanel = hasMainBottom && !mainBottomCollapsed;
   const showMainRightOpener = hasMainRight && mainRightCollapsed;
   const showMainBottomOpener = hasMainBottom && mainBottomCollapsed;
-  const showMainHeader = hasMainHeader || showMainRightOpener || showMainBottomOpener;
+  const hasMainContentTabs = shell.layout.getLayout().areas.main.widgets.length > 1;
+  const showMainHeader = hasMainHeader || hasMainContentTabs || showMainRightOpener || showMainBottomOpener;
   const gridRows = [
     showMainHeader ? "auto" : undefined,
     "minmax(0, 1fr)",
@@ -124,6 +126,7 @@ export const ShellWorkbenchBody = (props: ShellWorkbenchBodyProps) => {
               <ShellArea shell={shell} area="main-header" title="Main header" showHeader={false} refresh={refresh} />
             ) : null}
           </Box>
+          <ShellAreaTabs shell={shell} area="main" refresh={refresh} />
           {showMainBottomOpener ? (
             <Tooltip content="Show main-bottom panel">
               <IconButton
