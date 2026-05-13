@@ -3,10 +3,10 @@ import {
   type ProductModuleContributionContext,
   type ResourceRef,
   type ShellArea,
-  workbenchTopActionMenuPath,
+  workbenchCommandPaletteMenuPath,
+  workbenchTopHeaderTrailingMenuPath,
 } from "../core";
 import {
-  dashboardCommandPaletteMenuPath,
   dashboardFooterTreeViewId,
   dashboardHelpMenuPath,
   dashboardNavigationTreeViewId,
@@ -98,12 +98,12 @@ const registerCommands = (ctx: ProductModuleContributionContext) => {
 };
 
 const registerMenus = (ctx: ProductModuleContributionContext) => {
-  ctx.menus.registerMenuAction(dashboardCommandPaletteMenuPath, { commandId: "dashboard.openTickets", order: 10 });
-  ctx.menus.registerMenuAction(dashboardCommandPaletteMenuPath, { commandId: "dashboard.openSettings", order: 20 });
-  ctx.menus.registerMenuAction(dashboardCommandPaletteMenuPath, { commandId: "dashboard.sayHello", order: 30 });
-  ctx.menus.registerMenuAction(dashboardCommandPaletteMenuPath, { commandId: "dashboard.runHealthScan", order: 40 });
-  ctx.menus.registerMenuAction(dashboardCommandPaletteMenuPath, { commandId: "dashboard.openRepoHealth", order: 50 });
-  ctx.menus.registerMenuAction(workbenchTopActionMenuPath, { commandId: "dashboard.download", order: 10 });
+  ctx.menus.registerMenuAction(workbenchCommandPaletteMenuPath, { commandId: "dashboard.openTickets", order: 10 });
+  ctx.menus.registerMenuAction(workbenchCommandPaletteMenuPath, { commandId: "dashboard.openSettings", order: 20 });
+  ctx.menus.registerMenuAction(workbenchCommandPaletteMenuPath, { commandId: "dashboard.sayHello", order: 30 });
+  ctx.menus.registerMenuAction(workbenchCommandPaletteMenuPath, { commandId: "dashboard.runHealthScan", order: 40 });
+  ctx.menus.registerMenuAction(workbenchCommandPaletteMenuPath, { commandId: "dashboard.openRepoHealth", order: 50 });
+  ctx.menus.registerMenuAction(workbenchTopHeaderTrailingMenuPath, { commandId: "dashboard.download", order: 10 });
   ctx.menus.registerMenuAction(dashboardHelpMenuPath, { commandId: "dashboard.openDocs", order: 10 });
   ctx.menus.registerMenuAction(dashboardHelpMenuPath, { commandId: "dashboard.openShortcuts", order: 20 });
   ctx.menus.registerMenuAction(dashboardHelpMenuPath, { commandId: "dashboard.contactSupport", order: 30 });

@@ -1,6 +1,6 @@
 import { Box, Flex, IconButton } from "@chakra-ui/react";
 import { Breadcrumb, type BreadcrumbItem, Header, Tooltip } from "@pstdio/ui";
-import { type MenuPath, type ShellCore, workbenchTopActionMenuPath } from "../core";
+import { type ShellCore, workbenchTopHeaderLeadingMenuPath, workbenchTopHeaderTrailingMenuPath } from "../core";
 import { ShellArea } from "./shell-area";
 import { ShellHeaderActions } from "./shell-header-actions";
 import { ShellIcon } from "./shell-icons";
@@ -11,23 +11,13 @@ interface ShellWorkbenchHeaderProps {
   breadcrumbItems: BreadcrumbItem[];
   hasTop: boolean;
   showLeftPanelOpener: boolean;
-  topActionMenuPath?: MenuPath;
   onOpenLeftPanel: () => void;
   onCommandError?: (error: unknown) => void;
   refresh: () => void;
 }
 
 export const ShellWorkbenchHeader = (props: ShellWorkbenchHeaderProps) => {
-  const {
-    shell,
-    breadcrumbItems,
-    hasTop,
-    showLeftPanelOpener,
-    topActionMenuPath = workbenchTopActionMenuPath,
-    onOpenLeftPanel,
-    onCommandError,
-    refresh,
-  } = props;
+  const { shell, breadcrumbItems, hasTop, showLeftPanelOpener, onOpenLeftPanel, onCommandError, refresh } = props;
 
   return (
     <Header
@@ -52,6 +42,12 @@ export const ShellWorkbenchHeader = (props: ShellWorkbenchHeaderProps) => {
           </IconButton>
         </Tooltip>
       ) : null}
+      <ShellHeaderActions
+        shell={shell}
+        menuPath={workbenchTopHeaderLeadingMenuPath}
+        refresh={refresh}
+        onCommandError={onCommandError}
+      />
       <Box flex="1" h="full" minW="0" overflow="hidden">
         {hasTop ? (
           <ShellArea shell={shell} area="top" title="Top" showHeader={false} refresh={refresh} />
@@ -61,7 +57,7 @@ export const ShellWorkbenchHeader = (props: ShellWorkbenchHeaderProps) => {
       </Box>
       <ShellHeaderActions
         shell={shell}
-        menuPath={topActionMenuPath}
+        menuPath={workbenchTopHeaderTrailingMenuPath}
         refresh={refresh}
         onCommandError={onCommandError}
       />

@@ -1,7 +1,14 @@
 import { Palette, type PaletteEntry, PaletteShortcut } from "@pstdio/ui";
 import { Search } from "lucide-react";
 import type { ReactNode } from "react";
-import type { Command, MenuPath, RegisteredCommand, RegisteredMenuAction, ShellCore } from "../core";
+import {
+  type Command,
+  type MenuPath,
+  type RegisteredCommand,
+  type RegisteredMenuAction,
+  type ShellCore,
+  workbenchCommandPaletteMenuPath,
+} from "../core";
 import { ShellIcon } from "./shell-icons";
 
 interface ShellCommandPaletteProps {
@@ -77,7 +84,15 @@ const listCommandRecords = (shell: ShellCore, menuPath?: MenuPath) => {
 };
 
 export const ShellCommandPalette = (props: ShellCommandPaletteProps) => {
-  const { shell, open, menuPath, initialQuery = "> ", onClose, onCommandError, refresh = () => undefined } = props;
+  const {
+    shell,
+    open,
+    menuPath = workbenchCommandPaletteMenuPath,
+    initialQuery = "",
+    onClose,
+    onCommandError,
+    refresh = () => undefined,
+  } = props;
   const shortcutByCommandId = createShortcutByCommandId(shell);
   const entries = listCommandRecords(shell, menuPath)
     .map(({ record, action }) =>

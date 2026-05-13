@@ -1,6 +1,6 @@
-import type { MenuPath, ResourceRef } from "../core";
+import { type MenuPath, type ResourceRef, workbenchCommandPaletteMenuPath } from "../core";
 
-export const commandPaletteMenuPath = ["commandPalette"] as const satisfies MenuPath;
+export const commandPaletteMenuPath: MenuPath = workbenchCommandPaletteMenuPath;
 export const resourceContextMenuPath = ["resourceContext"] as const satisfies MenuPath;
 export const helpMenuPath = ["project", "help"] as const satisfies MenuPath;
 

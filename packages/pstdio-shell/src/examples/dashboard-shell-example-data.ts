@@ -1,7 +1,6 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import type { MenuPath, ResourceRef } from "../core";
 
-export const dashboardCommandPaletteMenuPath = ["dashboardShell", "commandPalette"] as const satisfies MenuPath;
 export const dashboardHelpMenuPath = ["dashboardShell", "help"] as const satisfies MenuPath;
 
 export const dashboardNavigationTreeViewId = "dashboard-shell.navigation";

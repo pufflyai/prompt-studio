@@ -1,7 +1,7 @@
 import { Flex } from "@chakra-ui/react";
 import { type BreadcrumbItem, ResizableSplitLayout } from "@pstdio/ui";
 import { useLayoutEffect, useRef, useState } from "react";
-import { type MenuPath, type ShellCore, type TreeViewRole, workbenchTopActionMenuPath } from "../core";
+import type { ShellCore, TreeViewRole } from "../core";
 import { ShellCommandPalette } from "./shell-command-palette";
 import { ShellNotificationHost } from "./shell-notification-host";
 import { ShellSessionBubbleContainer } from "./shell-session-panel";
@@ -23,8 +23,6 @@ import { ShellAttachedSessionLayout, ShellFloatingSessionPortal } from "./shell-
 
 interface ShellWorkbenchProps {
   shell: ShellCore;
-  commandPaletteMenuPath?: MenuPath;
-  topActionMenuPath?: MenuPath;
   commandPaletteOpen?: boolean;
   initialCommandPaletteOpen?: boolean;
   initialSessionPanelMode?: ShellSessionPanelMode;
@@ -66,8 +64,6 @@ const resolveActiveSessionSlot = (input: {
 const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
   const {
     shell,
-    commandPaletteMenuPath,
-    topActionMenuPath = workbenchTopActionMenuPath,
     commandPaletteOpen,
     initialCommandPaletteOpen = false,
     breadcrumbItems: providedBreadcrumbItems,
@@ -175,7 +171,6 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
         breadcrumbItems={breadcrumbItems}
         hasTop={hasTopWidgets}
         showLeftPanelOpener={Boolean(showLeftPane && !leftPanelOpen)}
-        topActionMenuPath={topActionMenuPath}
         onOpenLeftPanel={() => setLeftPanelOpen(true)}
         onCommandError={onCommandError}
         refresh={refresh}
@@ -247,7 +242,6 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
       <ShellCommandPalette
         shell={shell}
         open={paletteOpen}
-        menuPath={commandPaletteMenuPath}
         onClose={() => setPaletteOpen(false)}
         onCommandError={onCommandError}
         refresh={refresh}

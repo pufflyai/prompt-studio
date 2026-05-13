@@ -48,7 +48,13 @@ export type { LifecycleHook, LifecyclePhase, LifecycleRegistry } from "./lifecyc
 export { createLifecycleRegistry } from "./lifecycle/lifecycle-registry";
 export type { MenuAction, MenuPath, MenuRegistry, RegisteredMenuAction } from "./menus/menu-registry";
 export { createMenuRegistry } from "./menus/menu-registry";
-export { workbenchTopActionMenuPath } from "./menus/workbench-menu-paths";
+export {
+  headerLeadingMenuPath,
+  headerTrailingMenuPath,
+  workbenchCommandPaletteMenuPath,
+  workbenchTopHeaderLeadingMenuPath,
+  workbenchTopHeaderTrailingMenuPath,
+} from "./menus/workbench-menu-paths";
 export type {
   ShellModeActivationContext,
   ShellModeActivationResult,

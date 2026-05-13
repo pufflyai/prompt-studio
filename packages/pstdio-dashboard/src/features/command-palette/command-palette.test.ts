@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { createShellCore } from "pstdio-shell/core";
 import { createDashboardProjectShell, DASHBOARD_CHANGE_THEME_KEYBINDING } from "@/shared/shell/dashboard-project-shell";
+import { DASHBOARD_COMMAND_PALETTE_MENU } from "@/shared/shell/menu-locations";
 import {
   buildCommandPaletteEntries,
   DEFAULT_COMMAND_PALETTE_ASSET_LIMIT,
@@ -238,7 +239,7 @@ describe("command palette entries", () => {
       { source: "product-module", ownerId: "dashboard.project" },
     );
     shell.menus.registerMenuAction(
-      ["commandPalette"],
+      DASHBOARD_COMMAND_PALETTE_MENU,
       { commandId: "project.openSettings", label: "Project settings", args: { projectId: "project-1" } },
       { source: "product-module", ownerId: "dashboard.project" },
     );

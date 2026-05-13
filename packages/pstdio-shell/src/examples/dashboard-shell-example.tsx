@@ -1,11 +1,7 @@
 import { useState } from "react";
 import { activateProductModule, createShellCore, type ResourceRef, type ShellCore } from "../core";
 import { ShellWorkbench } from "../react";
-import {
-  dashboardCommandPaletteMenuPath,
-  dashboardResources,
-  dashboardWidgetIds,
-} from "./dashboard-shell-example-data";
+import { dashboardResources, dashboardWidgetIds } from "./dashboard-shell-example-data";
 import {
   createDashboardShellModule,
   registerDashboardProjectNavigation,
@@ -87,11 +83,5 @@ const createDashboardShellExample = () => {
 export const DashboardShellExample = () => {
   const [example] = useState(createDashboardShellExample);
 
-  return (
-    <ShellWorkbench
-      shell={example.shell}
-      commandPaletteMenuPath={dashboardCommandPaletteMenuPath}
-      showCommandPaletteTreeNode={false}
-    />
-  );
+  return <ShellWorkbench shell={example.shell} showCommandPaletteTreeNode={false} />;
 };

@@ -3,7 +3,7 @@ import { useLayoutEffect, useState } from "react";
 import type { ResourceRef, ShellCore, ShellModeActivationContext } from "../core";
 import { ShellIcon, ShellWorkbench } from "../react";
 import { createConsumerShellExample } from "./consumer-shell-example";
-import { commandPaletteMenuPath, shellExampleResources, shellWidgetIds } from "./consumer-shell-example-data";
+import { shellExampleResources, shellWidgetIds } from "./consumer-shell-example-data";
 
 type LeftPanelMode = "project" | "workspace" | "settings";
 
@@ -327,11 +327,5 @@ const LeftPanelHeader = (props: { shell: ShellCore }) => {
 export const WorkbenchModesShellExample = () => {
   const [example] = useState(createWorkbenchModesExample);
 
-  return (
-    <ShellWorkbench
-      shell={example.shell}
-      commandPaletteMenuPath={commandPaletteMenuPath}
-      initialSessionPanelMode="attached"
-    />
-  );
+  return <ShellWorkbench shell={example.shell} initialSessionPanelMode="attached" />;
 };

@@ -4,7 +4,6 @@ import { createShellCore } from "../core";
 import { ShellWorkbench } from "../react";
 import { AreaMapShellExample } from "./area-map-shell-example";
 import { createConsumerShellExample } from "./consumer-shell-example";
-import { commandPaletteMenuPath } from "./consumer-shell-example-data";
 import { DashboardShellExample } from "./dashboard-shell-example";
 import { RandomShellExample } from "./random-shell-example";
 import { WorkbenchModesShellExample } from "./workbench-modes-shell-example";
@@ -25,7 +24,6 @@ const ConsumerWorkbenchStory = (props: { initialWidgetId?: string; initialComman
   return (
     <ShellWorkbench
       shell={example.shell}
-      commandPaletteMenuPath={commandPaletteMenuPath}
       initialCommandPaletteOpen={initialCommandPaletteOpen}
       initialSessionPanelMode="attached"
     />

@@ -15,7 +15,6 @@ import {
   PROJECT_SETTINGS_SIDEBAR_WIDGET_ID,
   PROJECT_SETTINGS_WIDGET_ID,
 } from "@/shared/shell/dashboard-project-shell";
-import { DASHBOARD_COMMAND_PALETTE_MENU } from "@/shared/shell/menu-locations";
 import { CreateTemplateDialog } from "../components/create-template-dialog";
 import { SettingsContent } from "../components/settings-content";
 import { type SettingsSection, SettingsSidebar } from "../components/settings-sidebar";
@@ -273,12 +272,5 @@ export const ProjectSettings = () => {
     });
   }, [activeSection, navigate, panel, projectId]);
 
-  return (
-    <ShellWorkbench
-      shell={projectShell}
-      breadcrumbItems={breadcrumbItems}
-      commandPaletteMenuPath={DASHBOARD_COMMAND_PALETTE_MENU}
-      showCommandPaletteTreeNode={false}
-    />
-  );
+  return <ShellWorkbench shell={projectShell} breadcrumbItems={breadcrumbItems} showCommandPaletteTreeNode={false} />;
 };
