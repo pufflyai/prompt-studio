@@ -25,7 +25,6 @@ const ConsumerWorkbenchStory = (props: { initialWidgetId?: string; initialComman
   return (
     <ShellWorkbench
       shell={example.shell}
-      renderers={example.renderers}
       commandPaletteMenuPath={commandPaletteMenuPath}
       initialCommandPaletteOpen={initialCommandPaletteOpen}
       initialSessionPanelMode="attached"

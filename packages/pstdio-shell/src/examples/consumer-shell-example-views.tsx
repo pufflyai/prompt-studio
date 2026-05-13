@@ -1,6 +1,7 @@
 import { Badge, Box, Button, Code, Grid, HStack, Kbd, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
-import { createShellRendererRegistry, ShellIcon, type ShellWidgetRenderInput } from "../react";
+import type { ShellCore } from "../core";
+import { ShellIcon, type ShellWidgetRenderInput } from "../react";
 import { Metric, Panel, Row } from "./consumer-shell-example-components";
 import {
   commandPaletteMenuPath,
@@ -293,7 +294,7 @@ const SessionWidget = () => (
   </ScrollArea>
 );
 
-export const createConsumerShellRenderers = (ticketResourceIds: Array<string | undefined>) => {
+export const registerConsumerShellRenderers = (shell: ShellCore, ticketResourceIds: Array<string | undefined>) => {
   const rendererIds = [
     shellWidgetIds.overview,
     shellWidgetIds.tickets,
@@ -305,16 +306,32 @@ export const createConsumerShellRenderers = (ticketResourceIds: Array<string | u
   ];
   const stableTicketIds = ticketResourceIds.filter((id): id is string => Boolean(id));
 
-  return createShellRendererRegistry([
-    { id: shellWidgetIds.overview, render: (input) => <OverviewWidget input={input} rendererIds={rendererIds} /> },
-    { id: shellWidgetIds.tickets, render: (input) => <TicketsWidget key={stableTicketIds.join(",")} input={input} /> },
-    { id: shellWidgetIds.workspace, render: (input) => <WorkspaceWidget input={input} /> },
-    { id: shellWidgetIds.settings, render: (input) => <SettingsWidget input={input} /> },
-    {
-      id: shellWidgetIds.registryInventory,
-      render: (input) => <RegistryInventoryWidget input={input} rendererIds={rendererIds} />,
-    },
-    { id: shellWidgetIds.checks, render: (input) => <ChecksWidget input={input} /> },
-    { id: shellWidgetIds.session, render: () => <SessionWidget /> },
-  ]);
+  shell.renderers.registerRenderer({
+    id: shellWidgetIds.overview,
+    render: (input) => <OverviewWidget input={input} rendererIds={rendererIds} />,
+  });
+  shell.renderers.registerRenderer({
+    id: shellWidgetIds.tickets,
+    render: (input) => <TicketsWidget key={stableTicketIds.join(",")} input={input} />,
+  });
+  shell.renderers.registerRenderer({
+    id: shellWidgetIds.workspace,
+    render: (input) => <WorkspaceWidget input={input} />,
+  });
+  shell.renderers.registerRenderer({
+    id: shellWidgetIds.settings,
+    render: (input) => <SettingsWidget input={input} />,
+  });
+  shell.renderers.registerRenderer({
+    id: shellWidgetIds.registryInventory,
+    render: (input) => <RegistryInventoryWidget input={input} rendererIds={rendererIds} />,
+  });
+  shell.renderers.registerRenderer({
+    id: shellWidgetIds.checks,
+    render: (input) => <ChecksWidget input={input} />,
+  });
+  shell.renderers.registerRenderer({
+    id: shellWidgetIds.session,
+    render: () => <SessionWidget />,
+  });
 };

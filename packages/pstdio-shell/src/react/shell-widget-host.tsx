@@ -1,17 +1,15 @@
 import { Box, Center, chakra, Text } from "@chakra-ui/react";
 import type { ReactNode } from "react";
-import type { ShellCore, ShellWidgetPlacement, WebviewDescriptor } from "../core";
 import {
-  resolveShellRendererRegistry,
   resolveShellWidgetRendererId,
-  type ShellRendererRegistration,
-  type ShellRendererRegistry,
-} from "./renderer-registry";
+  type ShellCore,
+  type ShellWidgetPlacement,
+  type WebviewDescriptor,
+} from "../core";
 
 interface ShellWidgetHostProps {
   shell: ShellCore;
   placement: ShellWidgetPlacement;
-  renderers?: ShellRendererRegistry | ShellRendererRegistration[];
   refresh?: () => void;
 }
 
@@ -39,7 +37,7 @@ const ShellRenderedWidgetFrame = (props: { children: ReactNode }) => {
 };
 
 export const ShellWidgetHost = (props: ShellWidgetHostProps) => {
-  const { shell, placement, renderers, refresh = () => undefined } = props;
+  const { shell, placement, refresh = () => undefined } = props;
   const widget = shell.layout.getWidget(placement.contributionId);
 
   if (!widget) {
@@ -69,14 +67,15 @@ export const ShellWidgetHost = (props: ShellWidgetHostProps) => {
     );
   }
 
-  const registry = resolveShellRendererRegistry(renderers);
   const rendererId = resolveShellWidgetRendererId(widget);
-  const renderer = registry.getRenderer(rendererId);
+  const renderer = shell.renderers.getRenderer(rendererId);
 
   return (
     <Box display="flex" minW="0" minH="0" w="full" h="full" overflow="hidden">
       {renderer ? (
-        <ShellRenderedWidgetFrame>{renderer.render({ shell, widget, placement, refresh })}</ShellRenderedWidgetFrame>
+        <ShellRenderedWidgetFrame>
+          {renderer.render({ shell, widget, placement, refresh }) as ReactNode}
+        </ShellRenderedWidgetFrame>
       ) : (
         <ShellWidgetFallback>No renderer registered for {rendererId}.</ShellWidgetFallback>
       )}

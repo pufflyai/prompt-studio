@@ -1,7 +1,7 @@
-import { Flex, Stack, Text } from "@chakra-ui/react";
-import { HorizontalMenuStack, toaster } from "@pstdio/ui";
+import { Stack } from "@chakra-ui/react";
+import { type BreadcrumbItem, toaster } from "@pstdio/ui";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
-import { type ShellRendererRegistration, ShellWorkbench } from "pstdio-shell/react";
+import { ShellWorkbench } from "pstdio-shell/react";
 import { useEffect, useState } from "react";
 import { useProject, useProjectTemplateAssets } from "@/features/project/hooks/use-project";
 import {
@@ -12,7 +12,6 @@ import {
 import {
   createDashboardProjectResource,
   createDashboardProjectShell,
-  PROJECT_NAVIGATION_TREE_ID,
   PROJECT_SETTINGS_SIDEBAR_WIDGET_ID,
   PROJECT_SETTINGS_WIDGET_ID,
 } from "@/shared/shell/dashboard-project-shell";
@@ -59,7 +58,6 @@ interface ProjectSettingsMainWidgetProps {
   projectName: string;
   repositories: NonNullable<ReturnType<typeof useProject>["data"]>["repositories"];
   tags: NonNullable<ReturnType<typeof useProject>["data"]>["ticketTags"];
-  templates: ReturnType<typeof useProjectTemplateAssets>["data"];
   ticketStatuses: NonNullable<ReturnType<typeof useProjectTicketStatuses>["data"]>;
   onCloseCreateTemplate: () => void;
   onDeleteTag: (tagId: string) => Promise<void>;
@@ -84,15 +82,7 @@ const ProjectSettingsMainWidget = (props: ProjectSettingsMainWidgetProps) => {
   } = props;
 
   return (
-    <Stack flex="1" minH="0" minW="0" gap="0">
-      <HorizontalMenuStack>
-        <Flex align="center" gap="sm" minW="0">
-          <Text textStyle="label/S/medium" color="foreground.primary" lineClamp={1}>
-            Settings
-          </Text>
-        </Flex>
-      </HorizontalMenuStack>
-
+    <Stack flex="1" h="full" minH="0" minW="0" gap="0">
       <Stack flex="1" minH="0" minW="0" overflow="auto">
         <SettingsContent
           activeSection={activeSection}
@@ -124,7 +114,7 @@ interface CreateProjectSettingsShellInput {
 }
 
 const createProjectSettingsShell = (input: CreateProjectSettingsShellInput) => {
-  const shell = createDashboardProjectShell(input);
+  const shell = createDashboardProjectShell({ ...input, showProjectNavigationTree: false });
   const projectResource = createDashboardProjectResource(input);
 
   shell.layout.openWidget(PROJECT_SETTINGS_SIDEBAR_WIDGET_ID, {
@@ -157,6 +147,7 @@ export const ProjectSettings = () => {
   const tags = project?.ticketTags ?? [];
   const repositories = project?.repositories ?? [];
   const resolvedProjectId = projectId ?? "";
+  const breadcrumbItems: BreadcrumbItem[] = [{ title: projectName }, { title: "Settings" }];
   const [projectShell, setProjectShell] = useState(() =>
     createProjectSettingsShell({
       projectId: resolvedProjectId,
@@ -193,8 +184,8 @@ export const ProjectSettings = () => {
     }
   };
 
-  const renderers: ShellRendererRegistration[] = [
-    {
+  useEffect(() => {
+    const sidebar = projectShell.renderers.registerRenderer({
       id: PROJECT_SETTINGS_SIDEBAR_WIDGET_ID,
       render: () => (
         <ProjectSettingsSidebarWidget
@@ -207,8 +198,8 @@ export const ProjectSettings = () => {
           onSelectSection={setActiveSection}
         />
       ),
-    },
-    {
+    });
+    const main = projectShell.renderers.registerRenderer({
       id: PROJECT_SETTINGS_WIDGET_ID,
       render: () => (
         <ProjectSettingsMainWidget
@@ -219,7 +210,6 @@ export const ProjectSettings = () => {
           projectName={projectName}
           repositories={repositories}
           tags={tags}
-          templates={templates}
           ticketStatuses={ticketStatuses ?? []}
           onCloseCreateTemplate={() => setIsCreateTemplateOpen(false)}
           onDeleteTag={handleDeleteTag}
@@ -227,8 +217,13 @@ export const ProjectSettings = () => {
           onTemplateDeleted={handleTemplateDeleted}
         />
       ),
-    },
-  ];
+    });
+
+    return () => {
+      sidebar.dispose();
+      main.dispose();
+    };
+  });
 
   useEffect(() => {
     setActiveSection(parseSettingsPanel(panel));
@@ -281,9 +276,8 @@ export const ProjectSettings = () => {
   return (
     <ShellWorkbench
       shell={projectShell}
-      renderers={renderers}
+      breadcrumbItems={breadcrumbItems}
       commandPaletteMenuPath={DASHBOARD_COMMAND_PALETTE_MENU}
-      leftTreeViewId={PROJECT_NAVIGATION_TREE_ID}
       showCommandPaletteTreeNode={false}
     />
   );

@@ -10,7 +10,7 @@ import {
   shellModeOrder,
   shellModes,
 } from "./notes-shell-example-data";
-import { createNotesRenderers } from "./notes-shell-example-views";
+import { registerNotesRenderers } from "./notes-shell-example-views";
 
 const registerWidget = (shell: ShellCore, id: string, title: string, area: ShellArea) => {
   shell.layout.registerWidget({ id, title, area, singleton: true, renderer: "react", rendererId: id });
@@ -84,9 +84,10 @@ const createNotesShellExample = (input: ExampleInput) => {
   registerNotesShell(shell);
   registerNotesWidgets(shell);
   registerModeCommands(shell);
+  registerNotesRenderers(shell, { openCommandPalette: input.openCommandPalette });
   openInitialLayout(shell);
 
-  return { shell, renderers: createNotesRenderers({ openCommandPalette: input.openCommandPalette }) };
+  return { shell };
 };
 
 export const NotesShellExample = () => {
@@ -96,7 +97,6 @@ export const NotesShellExample = () => {
   return (
     <ShellWorkbench
       shell={example.shell}
-      renderers={example.renderers}
       commandPaletteOpen={paletteOpen}
       onCommandPaletteOpenChange={setPaletteOpen}
     />

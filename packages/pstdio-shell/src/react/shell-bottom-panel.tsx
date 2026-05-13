@@ -2,7 +2,6 @@ import { Box, Flex, HStack, Tabs, Text } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
 import { useState } from "react";
 import type { ShellCore, ShellWidgetPlacement } from "../core";
-import type { ShellRendererRegistry } from "./renderer-registry";
 import { ShellActivityFeed } from "./shell-activity-feed";
 import { ShellDiagnosticsPanel } from "./shell-diagnostics-panel";
 import { ShellIcon } from "./shell-icons";
@@ -10,7 +9,6 @@ import { ShellWidgetHost } from "./shell-widget-host";
 
 interface ShellBottomPanelProps {
   shell: ShellCore;
-  renderers: ShellRendererRegistry;
   onCommandError?: (error: unknown) => void;
   refresh: () => void;
 }
@@ -92,16 +90,15 @@ const BottomPanelTabTrigger = (props: { tab: BottomPanelTab }) => {
 const BottomPanelTabContent = (props: {
   tab: BottomPanelTab;
   shell: ShellCore;
-  renderers: ShellRendererRegistry;
   onCommandError?: (error: unknown) => void;
   refresh: () => void;
 }) => {
-  const { onCommandError, refresh, renderers, shell, tab } = props;
+  const { onCommandError, refresh, shell, tab } = props;
 
   return (
     <Tabs.Content value={tab.value} flex="1" minH="0" minW="0" p="0" display="flex">
       {tab.placement ? (
-        <ShellWidgetHost shell={shell} placement={tab.placement} renderers={renderers} refresh={refresh} />
+        <ShellWidgetHost shell={shell} placement={tab.placement} refresh={refresh} />
       ) : tab.kind === "diagnostics" ? (
         <ShellDiagnosticsPanel shell={shell} onCommandError={onCommandError} refresh={refresh} />
       ) : (
@@ -112,7 +109,7 @@ const BottomPanelTabContent = (props: {
 };
 
 export const ShellBottomPanel = (props: ShellBottomPanelProps) => {
-  const { shell, renderers, onCommandError, refresh } = props;
+  const { shell, onCommandError, refresh } = props;
   const tabs = createBottomPanelTabs(shell);
   const defaultTabValue = resolveDefaultTabValue(shell, tabs);
   const [selectedTabValue, setSelectedTabValue] = useState(defaultTabValue);
@@ -176,7 +173,6 @@ export const ShellBottomPanel = (props: ShellBottomPanelProps) => {
               key={tab.value}
               tab={tab}
               shell={shell}
-              renderers={renderers}
               onCommandError={onCommandError}
               refresh={refresh}
             />

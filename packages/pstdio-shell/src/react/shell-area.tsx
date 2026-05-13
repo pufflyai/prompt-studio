@@ -1,14 +1,12 @@
 import { Box, Button, Flex, HStack, Text } from "@chakra-ui/react";
 import { EmptyState, ScrollArea } from "@pstdio/ui";
 import type { ShellArea as ShellAreaId, ShellCore, ShellWidgetPlacement } from "../core";
-import type { ShellRendererRegistration, ShellRendererRegistry } from "./renderer-registry";
 import { ShellWidgetHost } from "./shell-widget-host";
 
 interface ShellAreaProps {
   shell: ShellCore;
   area: ShellAreaId;
   title?: string;
-  renderers?: ShellRendererRegistry | ShellRendererRegistration[];
   emptyTitle?: string;
   showHeader?: boolean;
   hideSingleTabHeader?: boolean;
@@ -25,7 +23,6 @@ export const ShellArea = (props: ShellAreaProps) => {
     shell,
     area,
     title,
-    renderers,
     emptyTitle = "No widgets open",
     showHeader = true,
     hideSingleTabHeader = true,
@@ -98,7 +95,7 @@ export const ShellArea = (props: ShellAreaProps) => {
       ) : null}
       <Box flex="1" h="full" minH="0" minW="0" w="full" overflow="hidden">
         {activePlacement ? (
-          <ShellWidgetHost shell={shell} placement={activePlacement} renderers={renderers} refresh={refresh} />
+          <ShellWidgetHost shell={shell} placement={activePlacement} refresh={refresh} />
         ) : (
           <ScrollArea height="100%">
             <EmptyState minH="100%" title={emptyTitle} />

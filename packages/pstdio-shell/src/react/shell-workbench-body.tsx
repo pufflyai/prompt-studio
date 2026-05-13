@@ -2,7 +2,6 @@ import { Box, Grid, IconButton } from "@chakra-ui/react";
 import { Header, ResizableSplitLayout, Tooltip } from "@pstdio/ui";
 import { useState } from "react";
 import type { ShellCore } from "../core";
-import type { ShellRendererRegistry } from "./renderer-registry";
 import { ShellArea } from "./shell-area";
 import { ShellBottomPanel } from "./shell-bottom-panel";
 import { ShellIcon } from "./shell-icons";
@@ -11,7 +10,6 @@ import { bottomPanelResizeBounds, useBottomPanelResize } from "./use-bottom-pane
 
 interface ShellWorkbenchBodyProps {
   shell: ShellCore;
-  renderers: ShellRendererRegistry;
   hasMainHeader: boolean;
   hasMainLeft: boolean;
   hasMainRight: boolean;
@@ -37,7 +35,6 @@ const CONTENT_MIN_SIZE_PX = 320;
 export const ShellWorkbenchBody = (props: ShellWorkbenchBodyProps) => {
   const {
     shell,
-    renderers,
     hasMainHeader,
     hasMainLeft,
     hasMainRight,
@@ -66,15 +63,13 @@ export const ShellWorkbenchBody = (props: ShellWorkbenchBodyProps) => {
     .filter(Boolean)
     .join(" ");
 
-  const mainArea = (
-    <ShellArea shell={shell} area="main" title="Main" renderers={renderers} showHeader={false} refresh={refresh} />
-  );
+  const mainArea = <ShellArea shell={shell} area="main" title="Main" showHeader={false} refresh={refresh} />;
   const mainAreaWithRightPanel = hasMainRight ? (
     <ResizableSplitLayout
       minH="0"
       minW="0"
       resizableSide="right"
-      resizablePanel={<ShellRightSidePanel shell={shell} renderers={renderers} refresh={refresh} />}
+      resizablePanel={<ShellRightSidePanel shell={shell} refresh={refresh} />}
       contentPanel={mainArea}
       collapsed={mainRightCollapsed}
       defaultSizePx={RIGHT_PANEL_DEFAULT_SIZE_PX}
@@ -93,7 +88,7 @@ export const ShellWorkbenchBody = (props: ShellWorkbenchBodyProps) => {
       minH="0"
       minW="0"
       resizableSide="left"
-      resizablePanel={<ShellMainLeftPanel shell={shell} renderers={renderers} refresh={refresh} />}
+      resizablePanel={<ShellMainLeftPanel shell={shell} refresh={refresh} />}
       contentPanel={mainAreaWithRightPanel}
       defaultSizePx={MAIN_LEFT_PANEL_DEFAULT_SIZE_PX}
       minSizePx={MAIN_LEFT_PANEL_MIN_SIZE_PX}
@@ -120,14 +115,7 @@ export const ShellWorkbenchBody = (props: ShellWorkbenchBodyProps) => {
         >
           <Box flex="1" h="full" minW="0" overflow="hidden">
             {hasMainHeader ? (
-              <ShellArea
-                shell={shell}
-                area="main-header"
-                title="Main header"
-                renderers={renderers}
-                showHeader={false}
-                refresh={refresh}
-              />
+              <ShellArea shell={shell} area="main-header" title="Main header" showHeader={false} refresh={refresh} />
             ) : null}
           </Box>
           {showMainBottomOpener ? (
@@ -189,7 +177,7 @@ export const ShellWorkbenchBody = (props: ShellWorkbenchBodyProps) => {
             _focusVisible={{ _before: { bg: "colorPalette.focusRing", h: "2px" } }}
           />
           <Box as="section" minH="0" minW="0" overflow="hidden">
-            <ShellBottomPanel shell={shell} renderers={renderers} onCommandError={onCommandError} refresh={refresh} />
+            <ShellBottomPanel shell={shell} onCommandError={onCommandError} refresh={refresh} />
           </Box>
         </>
       ) : null}

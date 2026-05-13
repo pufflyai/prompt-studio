@@ -2,12 +2,8 @@ export type {
   ShellRendererRegistration,
   ShellRendererRegistry,
   ShellWidgetRenderInput,
-} from "./renderer-registry";
-export {
-  createShellRendererRegistry,
-  resolveShellRendererRegistry,
-  resolveShellWidgetRendererId,
-} from "./renderer-registry";
+} from "../core";
+export { createShellRendererRegistry, resolveShellWidgetRendererId } from "../core";
 export { ShellActivityFeed } from "./shell-activity-feed";
 export { ShellArea } from "./shell-area";
 export { ShellCommandPalette } from "./shell-command-palette";

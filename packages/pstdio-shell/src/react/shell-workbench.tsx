@@ -3,11 +3,6 @@ import { type BreadcrumbItem, ResizableSplitLayout } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { type MenuPath, type ShellCore, workbenchTopActionMenuPath } from "../core";
-import {
-  resolveShellRendererRegistry,
-  type ShellRendererRegistration,
-  type ShellRendererRegistry,
-} from "./renderer-registry";
 import { ShellCommandPalette } from "./shell-command-palette";
 import { ShellNotificationHost } from "./shell-notification-host";
 import { ShellSessionBubbleContainer } from "./shell-session-panel";
@@ -29,7 +24,6 @@ import { ShellAttachedSessionLayout, ShellFloatingSessionPortal } from "./shell-
 
 interface ShellWorkbenchProps {
   shell: ShellCore;
-  renderers?: ShellRendererRegistry | ShellRendererRegistration[];
   commandPaletteMenuPath?: MenuPath;
   topActionMenuPath?: MenuPath;
   commandPaletteOpen?: boolean;
@@ -74,7 +68,6 @@ const resolveActiveSessionSlot = (input: {
 const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
   const {
     shell,
-    renderers,
     commandPaletteMenuPath,
     topActionMenuPath = workbenchTopActionMenuPath,
     commandPaletteOpen,
@@ -87,7 +80,6 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
     onCommandPaletteOpenChange,
     onCommandError,
   } = props;
-  const registry = resolveShellRendererRegistry(renderers);
   const [version, setVersion] = useState(0);
   const [internalCommandPaletteOpen, setInternalCommandPaletteOpen] = useState(initialCommandPaletteOpen);
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
@@ -141,6 +133,13 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
     }
   }, [activeSessionSlot]);
 
+  useLayoutEffect(() => {
+    const subscription = shell.renderers.onDidChange(() => {
+      setVersion((current) => current + 1);
+    });
+    return () => subscription.dispose();
+  }, [shell]);
+
   const setPaletteOpen = (open: boolean) => {
     if (commandPaletteOpen === undefined) setInternalCommandPaletteOpen(open);
     onCommandPaletteOpenChange?.(open);
@@ -149,7 +148,6 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
   const workbenchBody = (
     <ShellWorkbenchBody
       shell={shell}
-      renderers={registry}
       hasMainHeader={hasMainHeaderWidgets}
       hasMainLeft={hasMainLeftWidgets}
       hasMainRight={showMainRightPane}
@@ -169,7 +167,6 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
     <Flex direction="column" h="full" minH="0" minW="0" w="full">
       <ShellWorkbenchHeader
         shell={shell}
-        renderers={registry}
         breadcrumbItems={breadcrumbItems}
         hasTop={hasTopWidgets}
         showLeftPanelOpener={Boolean(showLeftPane && !leftPanelOpen)}
@@ -196,7 +193,6 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
           footerTreeViewId={leftFooterTreeViewId}
           activeNodeId={layout.activeResourceUri}
           header={leftHeader}
-          renderers={registry}
           onOpenCommandPalette={showCommandPaletteTreeNode ? () => setPaletteOpen(true) : undefined}
           refresh={refresh}
         />
@@ -228,17 +224,16 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
       data-shell-version={version}
     >
       <Flex flex="1" minH="0" minW="0" overflow="hidden" position="relative">
-        {hasActivityBarWidgets ? <ShellActivityBar shell={shell} renderers={registry} refresh={refresh} /> : null}
+        {hasActivityBarWidgets ? <ShellActivityBar shell={shell} refresh={refresh} /> : null}
         <Flex flex="1" minH="0" minW="0" overflow="hidden" position="relative">
           {contentWithSidePanels}
         </Flex>
       </Flex>
-      {hasStatusWidgets ? <ShellStatusBar shell={shell} renderers={registry} refresh={refresh} /> : null}
-      {hasOverlayWidgets ? <ShellOverlayLayer shell={shell} renderers={registry} refresh={refresh} /> : null}
+      {hasStatusWidgets ? <ShellStatusBar shell={shell} refresh={refresh} /> : null}
+      {hasOverlayWidgets ? <ShellOverlayLayer shell={shell} refresh={refresh} /> : null}
       {hasFloatingWidgets ? <ShellSessionBubbleContainer contentSlotRef={setSessionBubbleSlot} /> : null}
       <ShellFloatingSessionPortal
         shell={shell}
-        renderers={registry}
         refresh={refresh}
         hasFloatingWidgets={hasFloatingWidgets}
         activeSessionSlot={activeSessionSlot}

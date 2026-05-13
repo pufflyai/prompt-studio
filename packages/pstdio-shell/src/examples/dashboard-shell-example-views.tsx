@@ -3,7 +3,7 @@ import { ListRow, ScrollArea } from "@pstdio/ui";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
 import { ChevronDown } from "lucide-react";
 import type { ShellCore } from "../core";
-import { createShellRendererRegistry, ShellIcon, type ShellWidgetRenderInput } from "../react";
+import { ShellIcon, type ShellWidgetRenderInput } from "../react";
 import { dashboardMockChatMessages, dashboardTickets, dashboardWidgetIds } from "./dashboard-shell-example-data";
 
 const SlotChip = (props: { slotId: string }) => {
@@ -224,11 +224,25 @@ const SessionWidget = () => (
   />
 );
 
-export const createDashboardShellRenderers = () =>
-  createShellRendererRegistry([
-    { id: dashboardWidgetIds.tickets, render: (input) => <TicketsWidget input={input} /> },
-    { id: dashboardWidgetIds.extensionRoute, render: (input) => <ExtensionRouteWidget input={input} /> },
-    { id: dashboardWidgetIds.settings, render: (input) => <SettingsWidget input={input} /> },
-    { id: dashboardWidgetIds.status, render: (input) => <StatusWidget input={input} /> },
-    { id: dashboardWidgetIds.session, render: () => <SessionWidget /> },
-  ]);
+export const registerDashboardShellRenderers = (shell: ShellCore) => {
+  shell.renderers.registerRenderer({
+    id: dashboardWidgetIds.tickets,
+    render: (input) => <TicketsWidget input={input} />,
+  });
+  shell.renderers.registerRenderer({
+    id: dashboardWidgetIds.extensionRoute,
+    render: (input) => <ExtensionRouteWidget input={input} />,
+  });
+  shell.renderers.registerRenderer({
+    id: dashboardWidgetIds.settings,
+    render: (input) => <SettingsWidget input={input} />,
+  });
+  shell.renderers.registerRenderer({
+    id: dashboardWidgetIds.status,
+    render: (input) => <StatusWidget input={input} />,
+  });
+  shell.renderers.registerRenderer({
+    id: dashboardWidgetIds.session,
+    render: () => <SessionWidget />,
+  });
+};

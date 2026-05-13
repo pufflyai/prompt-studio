@@ -1,6 +1,7 @@
 import { Badge, Box, Button, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
-import { createShellRendererRegistry, ShellIcon, type ShellWidgetRenderInput } from "../react";
+import type { ShellCore } from "../core";
+import { ShellIcon, type ShellWidgetRenderInput } from "../react";
 import {
   defaultShellModeId,
   itemResource,
@@ -270,14 +271,13 @@ const Helper = (props: { input: ShellWidgetRenderInput }) => {
   );
 };
 
-export const createNotesRenderers = (config: ViewConfig) =>
-  createShellRendererRegistry([
-    { id: notesWidgetIds.top, render: createTopBar(config) },
-    { id: notesWidgetIds.rail, render: (input) => <ActivityRail input={input} /> },
-    { id: notesWidgetIds.header, render: (input) => <Header input={input} /> },
-    { id: notesWidgetIds.tree, render: (input) => <Tree input={input} /> },
-    { id: notesWidgetIds.editor, render: (input) => <Editor input={input} /> },
-    { id: notesWidgetIds.details, render: (input) => <Details input={input} /> },
-    { id: notesWidgetIds.status, render: (input) => <StatusBar input={input} /> },
-    { id: notesWidgetIds.helper, render: (input) => <Helper input={input} /> },
-  ]);
+export const registerNotesRenderers = (shell: ShellCore, config: ViewConfig) => {
+  shell.renderers.registerRenderer({ id: notesWidgetIds.top, render: createTopBar(config) });
+  shell.renderers.registerRenderer({ id: notesWidgetIds.rail, render: (input) => <ActivityRail input={input} /> });
+  shell.renderers.registerRenderer({ id: notesWidgetIds.header, render: (input) => <Header input={input} /> });
+  shell.renderers.registerRenderer({ id: notesWidgetIds.tree, render: (input) => <Tree input={input} /> });
+  shell.renderers.registerRenderer({ id: notesWidgetIds.editor, render: (input) => <Editor input={input} /> });
+  shell.renderers.registerRenderer({ id: notesWidgetIds.details, render: (input) => <Details input={input} /> });
+  shell.renderers.registerRenderer({ id: notesWidgetIds.status, render: (input) => <StatusBar input={input} /> });
+  shell.renderers.registerRenderer({ id: notesWidgetIds.helper, render: (input) => <Helper input={input} /> });
+};

@@ -289,7 +289,6 @@ export const MultiLeftPanelShellExample = () => {
   return (
     <ShellWorkbench
       shell={example.shell}
-      renderers={example.renderers}
       commandPaletteMenuPath={commandPaletteMenuPath}
       initialSessionPanelMode="attached"
       leftTreeViewId={leftPanelSetup.treeViewId}

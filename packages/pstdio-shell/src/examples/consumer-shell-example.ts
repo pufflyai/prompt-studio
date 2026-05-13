@@ -1,6 +1,6 @@
 import { activateProductModule, adaptRuntimeExtensionContributions, createShellCore } from "../core";
 import { shellExampleResources, shellExampleTickets, shellWidgetIds } from "./consumer-shell-example-data";
-import { createConsumerShellRenderers } from "./consumer-shell-example-views";
+import { registerConsumerShellRenderers } from "./consumer-shell-example-views";
 import { createProjectModule, projectScope } from "./consumer-shell-project-module";
 import { createRuntimeExtension } from "./consumer-shell-runtime-extension";
 
@@ -74,6 +74,11 @@ export const createConsumerShellExample = (input: ConsumerShellExampleInput = {}
   });
   void shell.lifecycle.runHooks("activate");
 
+  registerConsumerShellRenderers(
+    shell,
+    shellExampleTickets.map((ticket) => ticket.resource.id),
+  );
+
   shell.layout.openWidget(shellWidgetIds.session);
   shell.layout.openWidget(shellWidgetIds.checks);
 
@@ -82,8 +87,5 @@ export const createConsumerShellExample = (input: ConsumerShellExampleInput = {}
     resource: resolveInitialResource(initialWidgetId),
   });
 
-  return {
-    shell,
-    renderers: createConsumerShellRenderers(shellExampleTickets.map((ticket) => ticket.resource.id)),
-  };
+  return { shell };
 };

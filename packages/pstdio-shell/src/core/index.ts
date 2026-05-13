@@ -78,6 +78,15 @@ export type {
 } from "./preferences/preference-registry";
 export { createPreferenceRegistry } from "./preferences/preference-registry";
 export type {
+  ShellRendererRegistration,
+  ShellRendererRegistry,
+  ShellWidgetRenderInput,
+} from "./renderers/renderer-registry";
+export {
+  createShellRendererRegistry,
+  resolveShellWidgetRendererId,
+} from "./renderers/renderer-registry";
+export type {
   RegisteredResourceKind,
   ResourceKindContribution,
   ResourceOpener,

@@ -16,6 +16,7 @@ import {
   type PreferencePersistenceAdapter,
   type PreferenceRegistry,
 } from "./preferences/preference-registry";
+import { createShellRendererRegistry, type ShellRendererRegistry } from "./renderers/renderer-registry";
 import { createResourceRegistry, type ResourceRegistry } from "./resources/resource-registry";
 import { createTreeViewRegistry, type TreeViewRegistry } from "./trees/tree-view-registry";
 import { createWebviewRegistry, type WebviewRegistry } from "./webviews/webview-registry";
@@ -32,6 +33,7 @@ export interface ShellCoreContributionContext {
   navigation: NavigationRegistry;
   notifications: NotificationRegistry;
   preferences: PreferenceRegistry;
+  renderers: ShellRendererRegistry;
   resources: ResourceRegistry;
   trees: TreeViewRegistry;
   webviews: WebviewRegistry;
@@ -74,6 +76,7 @@ export const createShellCore = (input: CreateShellCoreInput = {}) => {
     navigation: createNavigationRegistry(),
     notifications: createNotificationRegistry(),
     preferences: createPreferenceRegistry({ persistence: input.preferencePersistence }),
+    renderers: createShellRendererRegistry(),
     resources: createResourceRegistry(),
     trees: createTreeViewRegistry(),
     webviews: createWebviewRegistry(),
@@ -134,6 +137,9 @@ const createProductModuleContext = (core: ShellCore, ownerId: string) =>
       ...core.preferences,
       registerSchema: (schema, metadata) =>
         core.preferences.registerSchema(schema, withProductModuleMetadata(ownerId, metadata)),
+    },
+    renderers: {
+      ...core.renderers,
     },
     resources: {
       ...core.resources,

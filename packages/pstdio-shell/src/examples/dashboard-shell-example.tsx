@@ -10,7 +10,7 @@ import {
   dashboardWidgetIds,
 } from "./dashboard-shell-example-data";
 import { createDashboardShellModule } from "./dashboard-shell-example-module";
-import { createDashboardShellRenderers, DashboardLeftHeader } from "./dashboard-shell-example-views";
+import { DashboardLeftHeader, registerDashboardShellRenderers } from "./dashboard-shell-example-views";
 
 type DashboardLeftPanelMode = "project" | "settings";
 
@@ -54,11 +54,12 @@ const createDashboardShellExample = (setLeftPanelMode: (mode: DashboardLeftPanel
   shell.context.set("project.open", true);
   activateProductModule(shell, createDashboardShellModule());
   registerPanelModeResourceOpener(shell, setLeftPanelMode);
+  registerDashboardShellRenderers(shell);
   shell.layout.openWidget(dashboardWidgetIds.status, { pinned: true, closable: false });
   shell.layout.openWidget(dashboardWidgetIds.session, { pinned: true, closable: false });
   shell.layout.openWidget(dashboardWidgetIds.tickets, { resource: dashboardResources.tickets, closable: false });
 
-  return { shell, renderers: createDashboardShellRenderers() };
+  return { shell };
 };
 
 export const DashboardShellExample = () => {
@@ -69,7 +70,6 @@ export const DashboardShellExample = () => {
   return (
     <ShellWorkbench
       shell={example.shell}
-      renderers={example.renderers}
       commandPaletteMenuPath={dashboardCommandPaletteMenuPath}
       leftTreeViewId={leftPanelSetup.treeViewId}
       leftFooterTreeViewId={leftPanelSetup.footerTreeViewId}

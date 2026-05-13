@@ -2,7 +2,6 @@ import { ResizableSplitLayout } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { ShellCore } from "../core";
-import type { ShellRendererRegistry } from "./renderer-registry";
 import { ShellArea } from "./shell-area";
 import { ShellSessionAttachedPanel } from "./shell-session-panel";
 
@@ -11,7 +10,6 @@ const ATTACHED_PANEL_MIN_SIZE_PX = 320;
 
 interface ShellFloatingSessionPortalProps {
   shell: ShellCore;
-  renderers: ShellRendererRegistry;
   refresh: () => void;
   hasFloatingWidgets: boolean;
   activeSessionSlot: HTMLDivElement | null;
@@ -19,7 +17,7 @@ interface ShellFloatingSessionPortalProps {
 }
 
 export const ShellFloatingSessionPortal = (props: ShellFloatingSessionPortalProps) => {
-  const { shell, renderers, refresh, hasFloatingWidgets, activeSessionSlot, sessionHost } = props;
+  const { shell, refresh, hasFloatingWidgets, activeSessionSlot, sessionHost } = props;
 
   if (!hasFloatingWidgets || !activeSessionSlot || !sessionHost) return null;
 
@@ -28,7 +26,6 @@ export const ShellFloatingSessionPortal = (props: ShellFloatingSessionPortalProp
       shell={shell}
       area="floating"
       title="Session"
-      renderers={renderers}
       emptyTitle="No floating session"
       showHeader={false}
       refresh={refresh}

@@ -1,7 +1,7 @@
 import { Flex, HStack, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
-import { createShellCore, type ShellArea, shellAreas } from "../core";
-import { type ShellRendererRegistration, ShellWorkbench } from "../react";
+import { createShellCore, type ShellArea, type ShellCore, shellAreas } from "../core";
+import { ShellWorkbench } from "../react";
 
 const areaMapRendererId = "area-map.placeholder";
 const areaResourceKind = "shell-area";
@@ -137,8 +137,8 @@ const AreaPlaceholder = (props: { area: ShellArea; uri: string; name: string }) 
   );
 };
 
-const createAreaMapRenderers = (): ShellRendererRegistration[] => [
-  {
+const registerAreaMapRenderers = (shell: ShellCore) => {
+  shell.renderers.registerRenderer({
     id: areaMapRendererId,
     render: ({ placement }) => {
       const area = resolvePlacementArea(
@@ -154,8 +154,8 @@ const createAreaMapRenderers = (): ShellRendererRegistration[] => [
         />
       );
     },
-  },
-];
+  });
+};
 
 const createAreaMapShellExample = () => {
   const shell = createShellCore();
@@ -190,11 +190,13 @@ const createAreaMapShellExample = () => {
     }),
   });
 
-  return { shell, renderers: createAreaMapRenderers() };
+  registerAreaMapRenderers(shell);
+
+  return { shell };
 };
 
 export const AreaMapShellExample = () => {
   const [example] = useState(createAreaMapShellExample);
 
-  return <ShellWorkbench shell={example.shell} renderers={example.renderers} initialSessionPanelMode="attached" />;
+  return <ShellWorkbench shell={example.shell} initialSessionPanelMode="attached" />;
 };
