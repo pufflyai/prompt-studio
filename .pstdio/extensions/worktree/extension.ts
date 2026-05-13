@@ -1,6 +1,5 @@
 import { cpSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { defineExtension } from "@pstdio/sdk/extensions";
 
 type WorktreeCreatePayload = {
   repoPath: string;
@@ -17,6 +16,7 @@ type TicketArchivePayload = {
 type WorkspaceRecord = {
   id: string;
   ticket_shorthand?: string | null;
+  workspace_shorthand?: string | null;
   worktree_path?: string | null;
 };
 
@@ -50,15 +50,20 @@ const assertCommand = async (process: ProcessApi, cwd: string, command: string[]
   }
 };
 
-export default defineExtension({
+const isTicketWorkspace = (workspace: WorkspaceRecord, ticketShorthand: string) =>
+  workspace.ticket_shorthand === ticketShorthand || workspace.workspace_shorthand?.startsWith(`${ticketShorthand}_`);
+
+export default {
   hooks: {
     postTicketArchive: {
       eventId: "kernel.postTicketArchive",
       async handler(ctx, payload: TicketArchivePayload) {
-        const workspaces = payload.workspaces ?? ((await ctx.workspaces.list()) as WorkspaceRecord[]);
-        const archived = workspaces.filter(
-          (workspace) => workspace.ticket_shorthand === payload.shorthand && workspace.worktree_path,
-        );
+        const workspaces = payload.workspaces
+          ? payload.workspaces
+          : ((await ctx.workspaces.list()) as WorkspaceRecord[]).filter((workspace) =>
+              isTicketWorkspace(workspace, payload.shorthand),
+            );
+        const archived = workspaces.filter((workspace) => workspace.worktree_path);
 
         for (const workspace of archived) {
           await ctx.workspaces.removeWorktree(workspace.id);
@@ -85,4 +90,4 @@ export default defineExtension({
       },
     },
   },
-});
+};
