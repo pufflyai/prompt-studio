@@ -2,7 +2,7 @@ import { Flex } from "@chakra-ui/react";
 import { type BreadcrumbItem, ResizableSplitLayout } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import { useLayoutEffect, useRef, useState } from "react";
-import { type MenuPath, type ShellCore, workbenchTopActionMenuPath } from "../core";
+import { type MenuPath, type ShellCore, type TreeViewRole, workbenchTopActionMenuPath } from "../core";
 import { ShellCommandPalette } from "./shell-command-palette";
 import { ShellNotificationHost } from "./shell-notification-host";
 import { ShellSessionBubbleContainer } from "./shell-session-panel";
@@ -30,16 +30,16 @@ interface ShellWorkbenchProps {
   initialCommandPaletteOpen?: boolean;
   initialSessionPanelMode?: ShellSessionPanelMode;
   breadcrumbItems?: BreadcrumbItem[];
-  leftTreeViewId?: string;
-  leftFooterTreeViewId?: string;
   leftHeader?: ReactNode;
   showCommandPaletteTreeNode?: boolean;
   onCommandPaletteOpenChange?: (open: boolean) => void;
   onCommandError?: (error: unknown) => void;
 }
 
-const resolveTreeViewId = (shell: ShellCore, area: "left", preferredId?: string) =>
-  preferredId ?? shell.trees.listTreeViews().find((treeView) => (treeView.area ?? "left") === area)?.id;
+const resolveTreeViewId = (shell: ShellCore, area: "left", role: TreeViewRole = "primary") =>
+  shell.trees
+    .listTreeViews()
+    .find((treeView) => (treeView.area ?? "left") === area && (treeView.role ?? "primary") === role)?.id;
 
 const SIDEBAR_DEFAULT_SIZE_PX = 240;
 const SIDEBAR_MIN_SIZE_PX = 200;
@@ -73,8 +73,6 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
     commandPaletteOpen,
     initialCommandPaletteOpen = false,
     breadcrumbItems: providedBreadcrumbItems,
-    leftTreeViewId,
-    leftFooterTreeViewId,
     leftHeader,
     showCommandPaletteTreeNode = true,
     onCommandPaletteOpenChange,
@@ -89,7 +87,8 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
   const [sessionBubbleSlot, setSessionBubbleSlot] = useState<HTMLDivElement | null>(null);
   const sessionHostRef = useRef<HTMLDivElement | null>(null);
   if (!sessionHostRef.current) sessionHostRef.current = createSessionPanelHost();
-  const leftTree = resolveTreeViewId(shell, "left", leftTreeViewId);
+  const leftTree = resolveTreeViewId(shell, "left", "primary");
+  const leftFooterTree = resolveTreeViewId(shell, "left", "footer");
   const layout = shell.layout.getLayout();
   const hasTopWidgets = layout.areas.top.widgets.length > 0;
   const hasActivityBarWidgets = layout.areas.activityBar.widgets.length > 0;
@@ -134,10 +133,12 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
   }, [activeSessionSlot]);
 
   useLayoutEffect(() => {
-    const subscription = shell.renderers.onDidChange(() => {
-      setVersion((current) => current + 1);
-    });
-    return () => subscription.dispose();
+    const renderers = shell.renderers.onDidChange(() => setVersion((current) => current + 1));
+    const modes = shell.modes.onDidChangeActive(() => setVersion((current) => current + 1));
+    return () => {
+      renderers.dispose();
+      modes.dispose();
+    };
   }, [shell]);
 
   const setPaletteOpen = (open: boolean) => {
@@ -190,7 +191,7 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
         <ShellLeftSidePanel
           shell={shell}
           treeViewId={leftTree}
-          footerTreeViewId={leftFooterTreeViewId}
+          footerTreeViewId={leftFooterTree}
           activeNodeId={layout.activeResourceUri}
           header={leftHeader}
           onOpenCommandPalette={showCommandPaletteTreeNode ? () => setPaletteOpen(true) : undefined}

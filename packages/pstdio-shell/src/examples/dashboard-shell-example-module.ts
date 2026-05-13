@@ -109,7 +109,7 @@ const registerMenus = (ctx: ProductModuleContributionContext) => {
   ctx.menus.registerMenuAction(dashboardHelpMenuPath, { commandId: "dashboard.contactSupport", order: 30 });
 };
 
-const registerNavigation = (ctx: ProductModuleContributionContext) => {
+export const registerDashboardProjectNavigation = (ctx: ProductModuleContributionContext) => [
   ctx.trees.registerTreeView({
     id: dashboardNavigationTreeViewId,
     title: "Acme",
@@ -148,12 +148,12 @@ const registerNavigation = (ctx: ProductModuleContributionContext) => {
       },
     ],
     getChildren: () => [],
-  });
-
+  }),
   ctx.trees.registerTreeView({
     id: dashboardFooterTreeViewId,
     title: "Acme footer",
     area: "left",
+    role: "footer",
     getRoots: () => [],
     getSections: () => [
       {
@@ -176,8 +176,10 @@ const registerNavigation = (ctx: ProductModuleContributionContext) => {
       },
     ],
     getChildren: () => [],
-  });
+  }),
+];
 
+export const registerDashboardSettingsNavigation = (ctx: ProductModuleContributionContext) => [
   ctx.trees.registerTreeView({
     id: dashboardSettingsNavigationTreeViewId,
     title: "Project settings",
@@ -245,8 +247,8 @@ const registerNavigation = (ctx: ProductModuleContributionContext) => {
       },
     ],
     getChildren: () => [],
-  });
-};
+  }),
+];
 
 export const createDashboardShellModule = () =>
   ({
@@ -255,6 +257,5 @@ export const createDashboardShellModule = () =>
       registerResourcesAndWidgets(ctx);
       registerCommands(ctx);
       registerMenus(ctx);
-      registerNavigation(ctx);
     },
   }) satisfies ProductModuleContribution;

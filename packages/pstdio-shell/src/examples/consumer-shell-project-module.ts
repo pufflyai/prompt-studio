@@ -240,6 +240,7 @@ const registerProjectNavigation = (ctx: ProductModuleContributionContext) => {
     id: "project.navigation.footer",
     title: "Project footer",
     area: "left",
+    role: "footer",
     getRoots: () => [],
     getSections: () => [
       {

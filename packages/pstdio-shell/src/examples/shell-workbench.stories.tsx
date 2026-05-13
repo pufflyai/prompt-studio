@@ -28,8 +28,6 @@ const ConsumerWorkbenchStory = (props: { initialWidgetId?: string; initialComman
       commandPaletteMenuPath={commandPaletteMenuPath}
       initialCommandPaletteOpen={initialCommandPaletteOpen}
       initialSessionPanelMode="attached"
-      leftTreeViewId="project.navigation"
-      leftFooterTreeViewId="project.navigation.footer"
     />
   );
 };

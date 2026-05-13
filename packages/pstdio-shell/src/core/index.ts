@@ -50,6 +50,13 @@ export type { MenuAction, MenuPath, MenuRegistry, RegisteredMenuAction } from ".
 export { createMenuRegistry } from "./menus/menu-registry";
 export { workbenchTopActionMenuPath } from "./menus/workbench-menu-paths";
 export type {
+  ShellModeActivationContext,
+  ShellModeActivationResult,
+  ShellModeContribution,
+  ShellModeRegistry,
+} from "./modes/mode-registry";
+export { createShellModeRegistry } from "./modes/mode-registry";
+export type {
   NavigationParser,
   NavigationRegistry,
   RegisteredNavigationParser,
@@ -109,6 +116,7 @@ export type {
   TreeViewContribution,
   TreeViewRefreshEvent,
   TreeViewRegistry,
+  TreeViewRole,
   TreeViewSection,
   TreeViewState,
 } from "./trees/tree-view-registry";

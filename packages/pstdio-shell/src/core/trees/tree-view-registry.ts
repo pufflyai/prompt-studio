@@ -28,10 +28,13 @@ export interface TreeViewSection {
   nodes: TreeNode[];
 }
 
+export type TreeViewRole = "primary" | "footer";
+
 export interface TreeViewContribution {
   id: string;
   title: string;
   area?: Extract<ShellArea, "left" | "main-right" | "main-bottom">;
+  role?: TreeViewRole;
   icon?: string;
   when?: string;
   getSections?(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];

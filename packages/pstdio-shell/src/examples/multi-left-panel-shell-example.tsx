@@ -1,6 +1,6 @@
-import { HStack, Text } from "@chakra-ui/react";
-import { useState } from "react";
-import type { ResourceRef, ShellCore } from "../core";
+import { Button, HStack, Text } from "@chakra-ui/react";
+import { useLayoutEffect, useState } from "react";
+import type { ResourceRef, ShellCore, ShellModeActivationContext } from "../core";
 import { ShellIcon, ShellWorkbench } from "../react";
 import { createConsumerShellExample } from "./consumer-shell-example";
 import { commandPaletteMenuPath, shellExampleResources, shellWidgetIds } from "./consumer-shell-example-data";
@@ -8,36 +8,14 @@ import { commandPaletteMenuPath, shellExampleResources, shellWidgetIds } from ".
 type LeftPanelMode = "project" | "workspace" | "settings";
 
 interface LeftPanelSetup {
-  treeViewId: string;
-  footerTreeViewId?: string;
   title: string;
   icon: string;
 }
 
-const workspaceNavigationTreeViewId = "workspace.navigation";
-const workspaceFooterTreeViewId = "workspace.navigation.footer";
-const settingsNavigationTreeViewId = "project.settings.navigation";
-const settingsFooterTreeViewId = "project.settings.navigation.footer";
-
 const leftPanelSetups = {
-  project: {
-    treeViewId: "project.navigation",
-    footerTreeViewId: "project.navigation.footer",
-    title: "Prompt Studio",
-    icon: "FolderGit2",
-  },
-  workspace: {
-    treeViewId: workspaceNavigationTreeViewId,
-    footerTreeViewId: workspaceFooterTreeViewId,
-    title: "Workspace",
-    icon: "GitBranch",
-  },
-  settings: {
-    treeViewId: settingsNavigationTreeViewId,
-    footerTreeViewId: settingsFooterTreeViewId,
-    title: "Project settings",
-    icon: "Settings",
-  },
+  project: { title: "Prompt Studio", icon: "FolderGit2" },
+  workspace: { title: "Workspace", icon: "GitBranch" },
+  settings: { title: "Project settings", icon: "Settings" },
 } satisfies Record<LeftPanelMode, LeftPanelSetup>;
 
 const workspaceResources = {
@@ -103,197 +81,239 @@ const resolveWidgetId = (resource: ResourceRef) => {
   return shellWidgetIds.overview;
 };
 
-const registerWorkspaceNavigation = (shell: ShellCore) => {
-  shell.trees.registerTreeView({
-    id: workspaceNavigationTreeViewId,
-    title: "Workspace navigation",
-    area: "left",
-    getRoots: () => [],
-    getSections: () => [
-      {
-        id: "workspace",
-        nodes: [
-          {
-            id: shellExampleResources.workspace.uri,
-            label: "Overview",
-            icon: "GitBranch",
-            resource: shellExampleResources.workspace,
-          },
-          {
-            id: workspaceResources.changes.uri,
-            label: "Changed files",
-            icon: "ListTree",
-            resource: workspaceResources.changes,
-          },
-          {
-            id: workspaceResources.checks.uri,
-            label: "Checks",
-            icon: "ListChecks",
-            resource: workspaceResources.checks,
-          },
-        ],
-      },
-    ],
-    getChildren: () => [],
-  });
+const modePriority = { priority: 1000 };
 
-  shell.trees.registerTreeView({
-    id: workspaceFooterTreeViewId,
-    title: "Workspace footer",
-    area: "left",
-    getRoots: () => [],
-    getSections: () => [
-      {
-        id: "footer",
-        nodes: [
-          {
-            id: shellExampleResources.tickets.uri,
-            label: "Back to tickets",
-            icon: "KanbanSquare",
-            resource: shellExampleResources.tickets,
-          },
-          {
-            id: shellExampleResources.settings.uri,
-            label: "Project settings",
-            icon: "Settings",
-            resource: shellExampleResources.settings,
-          },
-        ],
-      },
-    ],
-    getChildren: () => [],
-  });
+const activateWorkspaceMode = (ctx: ShellModeActivationContext) => [
+  ctx.trees.registerTreeView(
+    {
+      id: "workspace.navigation",
+      title: "Workspace navigation",
+      area: "left",
+      getRoots: () => [],
+      getSections: () => [
+        {
+          id: "workspace",
+          nodes: [
+            {
+              id: shellExampleResources.workspace.uri,
+              label: "Overview",
+              icon: "GitBranch",
+              resource: shellExampleResources.workspace,
+            },
+            {
+              id: workspaceResources.changes.uri,
+              label: "Changed files",
+              icon: "ListTree",
+              resource: workspaceResources.changes,
+            },
+            {
+              id: workspaceResources.checks.uri,
+              label: "Checks",
+              icon: "ListChecks",
+              resource: workspaceResources.checks,
+            },
+          ],
+        },
+      ],
+      getChildren: () => [],
+    },
+    modePriority,
+  ),
+  ctx.trees.registerTreeView(
+    {
+      id: "workspace.navigation.footer",
+      title: "Workspace footer",
+      area: "left",
+      role: "footer",
+      getRoots: () => [],
+      getSections: () => [
+        {
+          id: "footer",
+          nodes: [
+            {
+              id: shellExampleResources.tickets.uri,
+              label: "Back to tickets",
+              icon: "KanbanSquare",
+              resource: shellExampleResources.tickets,
+            },
+            {
+              id: shellExampleResources.settings.uri,
+              label: "Project settings",
+              icon: "Settings",
+              resource: shellExampleResources.settings,
+            },
+          ],
+        },
+      ],
+      getChildren: () => [],
+    },
+    modePriority,
+  ),
+];
+
+const activateSettingsMode = (ctx: ShellModeActivationContext) => [
+  ctx.trees.registerTreeView(
+    {
+      id: "project.settings.navigation",
+      title: "Settings navigation",
+      area: "left",
+      getRoots: () => [],
+      getSections: () => [
+        {
+          id: "project-settings",
+          nodes: [
+            {
+              id: shellExampleResources.settings.uri,
+              label: "Overview",
+              icon: "Settings",
+              resource: shellExampleResources.settings,
+            },
+            {
+              id: settingsResources.templates.uri,
+              label: "Templates",
+              icon: "FileText",
+              resource: settingsResources.templates,
+            },
+            {
+              id: settingsResources.skills.uri,
+              label: "Skills",
+              icon: "Sparkles",
+              resource: settingsResources.skills,
+            },
+            {
+              id: settingsResources.statuses.uri,
+              label: "Statuses",
+              icon: "ListChecks",
+              resource: settingsResources.statuses,
+            },
+          ],
+        },
+        {
+          id: "workspace-settings",
+          label: "Workspace",
+          nodes: [
+            {
+              id: settingsResources.shortcuts.uri,
+              label: "Shortcuts",
+              icon: "Keyboard",
+              resource: settingsResources.shortcuts,
+            },
+          ],
+        },
+      ],
+      getChildren: () => [],
+    },
+    modePriority,
+  ),
+  ctx.trees.registerTreeView(
+    {
+      id: "project.settings.navigation.footer",
+      title: "Settings footer",
+      area: "left",
+      role: "footer",
+      getRoots: () => [],
+      getSections: () => [
+        {
+          id: "footer",
+          nodes: [
+            {
+              id: shellExampleResources.project.uri,
+              label: "Back to project",
+              icon: "KanbanSquare",
+              resource: shellExampleResources.project,
+            },
+            {
+              id: shellExampleResources.workspace.uri,
+              label: "Open workspace",
+              icon: "GitBranch",
+              resource: shellExampleResources.workspace,
+            },
+          ],
+        },
+      ],
+      getChildren: () => [],
+    },
+    modePriority,
+  ),
+];
+
+const registerMultiLeftPanelModes = (shell: ShellCore) => {
+  shell.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+  shell.modes.registerMode({ id: "workspace", label: "Workspace", activate: activateWorkspaceMode });
+  shell.modes.registerMode({ id: "settings", label: "Settings", activate: activateSettingsMode });
 };
 
-const registerSettingsNavigation = (shell: ShellCore) => {
-  shell.trees.registerTreeView({
-    id: settingsNavigationTreeViewId,
-    title: "Settings navigation",
-    area: "left",
-    getRoots: () => [],
-    getSections: () => [
-      {
-        id: "project-settings",
-        nodes: [
-          {
-            id: shellExampleResources.settings.uri,
-            label: "Overview",
-            icon: "Settings",
-            resource: shellExampleResources.settings,
-          },
-          {
-            id: settingsResources.templates.uri,
-            label: "Templates",
-            icon: "FileText",
-            resource: settingsResources.templates,
-          },
-          {
-            id: settingsResources.skills.uri,
-            label: "Skills",
-            icon: "Sparkles",
-            resource: settingsResources.skills,
-          },
-          {
-            id: settingsResources.statuses.uri,
-            label: "Statuses",
-            icon: "ListChecks",
-            resource: settingsResources.statuses,
-          },
-        ],
-      },
-      {
-        id: "workspace-settings",
-        label: "Workspace",
-        nodes: [
-          {
-            id: settingsResources.shortcuts.uri,
-            label: "Shortcuts",
-            icon: "Keyboard",
-            resource: settingsResources.shortcuts,
-          },
-        ],
-      },
-    ],
-    getChildren: () => [],
-  });
-
-  shell.trees.registerTreeView({
-    id: settingsFooterTreeViewId,
-    title: "Settings footer",
-    area: "left",
-    getRoots: () => [],
-    getSections: () => [
-      {
-        id: "footer",
-        nodes: [
-          {
-            id: shellExampleResources.project.uri,
-            label: "Back to project",
-            icon: "KanbanSquare",
-            resource: shellExampleResources.project,
-          },
-          {
-            id: shellExampleResources.workspace.uri,
-            label: "Open workspace",
-            icon: "GitBranch",
-            resource: shellExampleResources.workspace,
-          },
-        ],
-      },
-    ],
-    getChildren: () => [],
-  });
-};
-
-const registerPanelModeResourceOpener = (shell: ShellCore, setLeftPanelMode: (mode: LeftPanelMode) => void) => {
+const registerPanelModeResourceOpener = (shell: ShellCore) => {
   shell.resources.registerOpener({
     id: "multi-left-panel.resourceOpener",
     priority: 1000,
     canOpen: (resource) =>
       ["project", "dashboard-view", "ticket", "workspace", "settings", "extension-review"].includes(resource.kind),
     open: (resource) => {
-      setLeftPanelMode(resolveLeftPanelMode(resource));
+      shell.modes.setActiveMode(resolveLeftPanelMode(resource));
       return shell.layout.openWidget(resolveWidgetId(resource), { resource, title: resource.label });
     },
   });
 };
 
-const createMultiLeftPanelExample = (setLeftPanelMode: (mode: LeftPanelMode) => void) => {
+const createMultiLeftPanelExample = () => {
   const example = createConsumerShellExample();
 
-  registerWorkspaceNavigation(example.shell);
-  registerSettingsNavigation(example.shell);
-  registerPanelModeResourceOpener(example.shell, setLeftPanelMode);
+  registerMultiLeftPanelModes(example.shell);
+  registerPanelModeResourceOpener(example.shell);
+  example.shell.modes.setActiveMode("project");
 
   return example;
 };
 
-const LeftPanelHeader = (props: { setup: LeftPanelSetup }) => {
-  const { setup } = props;
+const LeftPanelHeader = (props: { shell: ShellCore }) => {
+  const { shell } = props;
+  const [activeMode, setActiveMode] = useState<LeftPanelMode>(
+    (shell.modes.getActiveModeId() as LeftPanelMode | undefined) ?? "project",
+  );
+
+  useLayoutEffect(() => {
+    return shell.modes.onDidChangeActive(() => {
+      const next = shell.modes.getActiveModeId() as LeftPanelMode | undefined;
+      if (next) setActiveMode(next);
+    }).dispose;
+  }, [shell]);
+
+  const setup = leftPanelSetups[activeMode];
 
   return (
-    <HStack gap="xs" minW="0">
-      <ShellIcon name={setup.icon} size={16} />
-      <Text textStyle="label/S/medium" truncate>
-        {setup.title}
-      </Text>
+    <HStack gap="xs" minW="0" justifyContent="space-between" w="full">
+      <HStack gap="xs" minW="0">
+        <ShellIcon name={setup.icon} size={16} />
+        <Text textStyle="label/S/medium" truncate>
+          {setup.title}
+        </Text>
+      </HStack>
+      <HStack gap="2xs">
+        {(Object.keys(leftPanelSetups) as LeftPanelMode[]).map((mode) => (
+          <Button
+            key={mode}
+            size="2xs"
+            variant={mode === activeMode ? "subtle" : "ghost"}
+            onClick={() => shell.modes.setActiveMode(mode)}
+          >
+            {leftPanelSetups[mode].title}
+          </Button>
+        ))}
+      </HStack>
     </HStack>
   );
 };
 
 export const MultiLeftPanelShellExample = () => {
-  const [leftPanelMode, setLeftPanelMode] = useState<LeftPanelMode>("project");
-  const [example] = useState(() => createMultiLeftPanelExample(setLeftPanelMode));
-  const leftPanelSetup = leftPanelSetups[leftPanelMode];
+  const [example] = useState(createMultiLeftPanelExample);
 
   return (
     <ShellWorkbench
       shell={example.shell}
       commandPaletteMenuPath={commandPaletteMenuPath}
       initialSessionPanelMode="attached"
-      leftTreeViewId={leftPanelSetup.treeViewId}
-      leftFooterTreeViewId={leftPanelSetup.footerTreeViewId}
-      leftHeader={<LeftPanelHeader setup={leftPanelSetup} />}
+      leftHeader={<LeftPanelHeader shell={example.shell} />}
     />
   );
 };

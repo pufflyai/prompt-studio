@@ -3,26 +3,17 @@ import { activateProductModule, createShellCore, type ResourceRef, type ShellCor
 import { ShellWorkbench } from "../react";
 import {
   dashboardCommandPaletteMenuPath,
-  dashboardFooterTreeViewId,
-  dashboardNavigationTreeViewId,
   dashboardResources,
-  dashboardSettingsNavigationTreeViewId,
   dashboardWidgetIds,
 } from "./dashboard-shell-example-data";
-import { createDashboardShellModule } from "./dashboard-shell-example-module";
+import {
+  createDashboardShellModule,
+  registerDashboardProjectNavigation,
+  registerDashboardSettingsNavigation,
+} from "./dashboard-shell-example-module";
 import { DashboardLeftHeader, registerDashboardShellRenderers } from "./dashboard-shell-example-views";
 
 type DashboardLeftPanelMode = "project" | "settings";
-
-const dashboardLeftPanelSetups = {
-  project: {
-    treeViewId: dashboardNavigationTreeViewId,
-    footerTreeViewId: dashboardFooterTreeViewId,
-  },
-  settings: {
-    treeViewId: dashboardSettingsNavigationTreeViewId,
-  },
-} satisfies Record<DashboardLeftPanelMode, { treeViewId: string; footerTreeViewId?: string }>;
 
 const resolveLeftPanelMode = (resource: ResourceRef): DashboardLeftPanelMode =>
   resource.kind === "project-settings" ? "settings" : "project";
@@ -33,46 +24,54 @@ const resolveWidget = (resource: ResourceRef) => {
   return dashboardWidgetIds.tickets;
 };
 
-const registerPanelModeResourceOpener = (
-  shell: ShellCore,
-  setLeftPanelMode: (mode: DashboardLeftPanelMode) => void,
-) => {
+const registerDashboardModes = (shell: ShellCore) => {
+  shell.modes.registerMode({
+    id: "project",
+    label: "Project",
+    activate: (ctx) => registerDashboardProjectNavigation(ctx),
+  });
+  shell.modes.registerMode({
+    id: "settings",
+    label: "Settings",
+    activate: (ctx) => registerDashboardSettingsNavigation(ctx),
+  });
+};
+
+const registerPanelModeResourceOpener = (shell: ShellCore) => {
   shell.resources.registerOpener({
     id: "dashboard-shell.panel-mode-opener",
     priority: 1000,
     canOpen: (resource) => ["dashboard-view", "ticket", "extension-route", "project-settings"].includes(resource.kind),
     open: (resource) => {
-      setLeftPanelMode(resolveLeftPanelMode(resource));
+      shell.modes.setActiveMode(resolveLeftPanelMode(resource));
       return shell.layout.openWidget(resolveWidget(resource), { resource, title: resource.label });
     },
   });
 };
 
-const createDashboardShellExample = (setLeftPanelMode: (mode: DashboardLeftPanelMode) => void) => {
+const createDashboardShellExample = () => {
   const shell = createShellCore();
 
   shell.context.set("project.open", true);
   activateProductModule(shell, createDashboardShellModule());
-  registerPanelModeResourceOpener(shell, setLeftPanelMode);
+  registerDashboardModes(shell);
+  registerPanelModeResourceOpener(shell);
   registerDashboardShellRenderers(shell);
   shell.layout.openWidget(dashboardWidgetIds.status, { pinned: true, closable: false });
   shell.layout.openWidget(dashboardWidgetIds.session, { pinned: true, closable: false });
   shell.layout.openWidget(dashboardWidgetIds.tickets, { resource: dashboardResources.tickets, closable: false });
+  shell.modes.setActiveMode("project");
 
   return { shell };
 };
 
 export const DashboardShellExample = () => {
-  const [leftPanelMode, setLeftPanelMode] = useState<DashboardLeftPanelMode>("project");
-  const [example] = useState(() => createDashboardShellExample(setLeftPanelMode));
-  const leftPanelSetup: { treeViewId: string; footerTreeViewId?: string } = dashboardLeftPanelSetups[leftPanelMode];
+  const [example] = useState(createDashboardShellExample);
 
   return (
     <ShellWorkbench
       shell={example.shell}
       commandPaletteMenuPath={dashboardCommandPaletteMenuPath}
-      leftTreeViewId={leftPanelSetup.treeViewId}
-      leftFooterTreeViewId={leftPanelSetup.footerTreeViewId}
       leftHeader={<DashboardLeftHeader shell={example.shell} />}
       showCommandPaletteTreeNode={false}
     />

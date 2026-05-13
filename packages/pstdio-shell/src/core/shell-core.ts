@@ -9,6 +9,7 @@ import { createKeybindingRegistry, type KeybindingRegistry } from "./keybindings
 import { createLayoutModel, type LayoutModel, type LayoutPersistenceAdapter } from "./layout/layout-model";
 import { createLifecycleRegistry, type LifecycleRegistry } from "./lifecycle/lifecycle-registry";
 import { createMenuRegistry, type MenuRegistry } from "./menus/menu-registry";
+import { createShellModeRegistry, type ShellModeRegistry } from "./modes/mode-registry";
 import { createNavigationRegistry, type NavigationRegistry } from "./navigation/navigation-registry";
 import { createNotificationRegistry, type NotificationRegistry } from "./notifications/notification-registry";
 import {
@@ -30,6 +31,7 @@ export interface ShellCoreContributionContext {
   layout: LayoutModel;
   lifecycle: LifecycleRegistry;
   menus: MenuRegistry;
+  modes: ShellModeRegistry;
   navigation: NavigationRegistry;
   notifications: NotificationRegistry;
   preferences: PreferenceRegistry;
@@ -64,7 +66,7 @@ export const createShellCore = (input: CreateShellCoreInput = {}) => {
   const commands = createCommandRegistry();
   const context = createContextKeyService();
 
-  return {
+  const core = {
     activity: createActivityRegistry(),
     commands,
     context,
@@ -73,6 +75,7 @@ export const createShellCore = (input: CreateShellCoreInput = {}) => {
     layout: createLayoutModel({ persistence: input.layoutPersistence }),
     lifecycle: createLifecycleRegistry(),
     menus: createMenuRegistry({ commands }),
+    modes: undefined as unknown as ShellModeRegistry,
     navigation: createNavigationRegistry(),
     notifications: createNotificationRegistry(),
     preferences: createPreferenceRegistry({ persistence: input.preferencePersistence }),
@@ -81,6 +84,10 @@ export const createShellCore = (input: CreateShellCoreInput = {}) => {
     trees: createTreeViewRegistry(),
     webviews: createWebviewRegistry(),
   };
+
+  core.modes = createShellModeRegistry({ resolveContext: () => core });
+
+  return core;
 };
 
 const createProductModuleContext = (core: ShellCore, ownerId: string) =>
@@ -120,6 +127,9 @@ const createProductModuleContext = (core: ShellCore, ownerId: string) =>
       ...core.menus,
       registerMenuAction: (path, action, metadata) =>
         core.menus.registerMenuAction(path, action, withProductModuleMetadata(ownerId, metadata)),
+    },
+    modes: {
+      ...core.modes,
     },
     navigation: {
       ...core.navigation,
