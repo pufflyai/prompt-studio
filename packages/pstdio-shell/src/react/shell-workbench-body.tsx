@@ -4,7 +4,6 @@ import { useState } from "react";
 import type { ShellCore } from "../core";
 import { ShellArea } from "./shell-area";
 import { ShellAreaTabs } from "./shell-area-tabs";
-import { ShellBottomPanel } from "./shell-bottom-panel";
 import { ShellIcon } from "./shell-icons";
 import { ShellMainLeftPanel, ShellRightSidePanel } from "./shell-workbench-panels";
 import { bottomPanelResizeBounds, useBottomPanelResize } from "./use-bottom-panel-resize";
@@ -14,13 +13,14 @@ interface ShellWorkbenchBodyProps {
   hasMainHeader: boolean;
   hasMainLeft: boolean;
   hasMainLeftHeader: boolean;
+  mainLeftTreeViewId?: string;
+  mainLeftActiveNodeId?: string;
   hasMainRight: boolean;
   hasMainRightHeader: boolean;
   mainRightCollapsed: boolean;
   hasMainBottom: boolean;
   hasMainBottomHeader: boolean;
   mainBottomCollapsed: boolean;
-  onCommandError?: (error: unknown) => void;
   onOpenMainRightPanel: () => void;
   onOpenMainBottomPanel: () => void;
   onMainRightCollapsedChange: (collapsed: boolean) => void;
@@ -42,13 +42,14 @@ export const ShellWorkbenchBody = (props: ShellWorkbenchBodyProps) => {
     hasMainHeader,
     hasMainLeft,
     hasMainLeftHeader,
+    mainLeftTreeViewId,
+    mainLeftActiveNodeId,
     hasMainRight,
     hasMainRightHeader,
     mainRightCollapsed,
     hasMainBottom,
     hasMainBottomHeader,
     mainBottomCollapsed,
-    onCommandError,
     onOpenMainRightPanel,
     onOpenMainBottomPanel,
     onMainRightCollapsedChange,
@@ -57,10 +58,12 @@ export const ShellWorkbenchBody = (props: ShellWorkbenchBodyProps) => {
   } = props;
   const [bodyNode, setBodyNode] = useState<HTMLDivElement | null>(null);
   const bottomResize = useBottomPanelResize({ bodyNode, onCollapsedChange: onMainBottomCollapsedChange });
+  const layoutAreas = shell.layout.getLayout().areas;
   const showBottomPanel = hasMainBottom && !mainBottomCollapsed;
   const showMainRightOpener = hasMainRight && mainRightCollapsed;
   const showMainBottomOpener = hasMainBottom && mainBottomCollapsed;
-  const hasMainContentTabs = shell.layout.getLayout().areas.main.widgets.length > 1;
+  const hasMainContentTabs = layoutAreas.main.widgets.length > 1;
+  const hasMainBottomContentTabs = layoutAreas["main-bottom"].widgets.length > 1;
   const showMainHeader = hasMainHeader || hasMainContentTabs || showMainRightOpener || showMainBottomOpener;
   const gridRows = [
     showMainHeader ? "auto" : undefined,
@@ -96,7 +99,15 @@ export const ShellWorkbenchBody = (props: ShellWorkbenchBodyProps) => {
       minH="0"
       minW="0"
       resizableSide="left"
-      resizablePanel={<ShellMainLeftPanel shell={shell} hasHeader={hasMainLeftHeader} refresh={refresh} />}
+      resizablePanel={
+        <ShellMainLeftPanel
+          shell={shell}
+          hasHeader={hasMainLeftHeader}
+          treeViewId={mainLeftTreeViewId}
+          activeNodeId={mainLeftActiveNodeId}
+          refresh={refresh}
+        />
+      }
       contentPanel={mainAreaWithRightPanel}
       defaultSizePx={MAIN_LEFT_PANEL_DEFAULT_SIZE_PX}
       minSizePx={MAIN_LEFT_PANEL_MIN_SIZE_PX}
@@ -186,19 +197,22 @@ export const ShellWorkbenchBody = (props: ShellWorkbenchBodyProps) => {
             _focusVisible={{ _before: { bg: "colorPalette.focusRing", h: "2px" } }}
           />
           <Box as="section" minH="0" minW="0" overflow="hidden" display="flex" flexDirection="column">
-            {hasMainBottomHeader ? (
-              <Header variant="main" flexShrink={0}>
-                <ShellArea
-                  shell={shell}
-                  area="main-bottom-header"
-                  title="Main bottom header"
-                  showHeader={false}
-                  refresh={refresh}
-                />
+            {hasMainBottomHeader || hasMainBottomContentTabs ? (
+              <Header variant="main" flexShrink={0} gap="xs">
+                {hasMainBottomHeader ? (
+                  <ShellArea
+                    shell={shell}
+                    area="main-bottom-header"
+                    title="Main bottom header"
+                    showHeader={false}
+                    refresh={refresh}
+                  />
+                ) : null}
+                <ShellAreaTabs shell={shell} area="main-bottom" refresh={refresh} />
               </Header>
             ) : null}
             <Box flex="1" minH="0" minW="0" overflow="hidden">
-              <ShellBottomPanel shell={shell} onCommandError={onCommandError} refresh={refresh} />
+              <ShellArea shell={shell} area="main-bottom" title="Main bottom" refresh={refresh} />
             </Box>
           </Box>
         </>

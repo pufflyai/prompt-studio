@@ -4,10 +4,9 @@ export type {
   ShellWidgetRenderInput,
 } from "../core";
 export { createShellRendererRegistry, resolveShellWidgetRendererId } from "../core";
-export { ShellActivityFeed } from "./shell-activity-feed";
 export { ShellArea } from "./shell-area";
+export { ShellAreaTabs } from "./shell-area-tabs";
 export { ShellCommandPalette } from "./shell-command-palette";
-export { ShellDiagnosticsPanel } from "./shell-diagnostics-panel";
 export { ShellHeaderActions } from "./shell-header-actions";
 export { ShellIcon } from "./shell-icons";
 export type { ShellMenuActionItem } from "./shell-menu-action-items";

@@ -32,7 +32,9 @@ interface ShellWorkbenchProps {
   onCommandError?: (error: unknown) => void;
 }
 
-const resolveTreeViewId = (shell: ShellCore, area: "left", role: TreeViewRole = "primary") =>
+type TreeViewAreaId = "left" | "main-left";
+
+const resolveTreeViewId = (shell: ShellCore, area: TreeViewAreaId, role: TreeViewRole = "primary") =>
   shell.trees
     .listTreeViews()
     .find((treeView) => (treeView.area ?? "left") === area && (treeView.role ?? "primary") === role)?.id;
@@ -82,6 +84,7 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
   if (!sessionHostRef.current) sessionHostRef.current = createSessionPanelHost();
   const leftTree = resolveTreeViewId(shell, "left", "primary");
   const leftFooterTree = resolveTreeViewId(shell, "left", "footer");
+  const mainLeftTree = resolveTreeViewId(shell, "main-left", "primary");
   const layout = shell.layout.getLayout();
   const hasTopWidgets = layout.areas.top.widgets.length > 0;
   const hasActivityBarWidgets = layout.areas.activityBar.widgets.length > 0;
@@ -96,9 +99,7 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
   const hasMainBottomWidgets = layout.areas["main-bottom"].widgets.length > 0;
   const hasStatusWidgets = layout.areas.status.widgets.length > 0;
   const hasOverlayWidgets = layout.areas.overlay.widgets.length > 0;
-  const hasDiagnostics = shell.diagnostics.listDiagnostics().length > 0;
-  const hasActivity = shell.activity.listItems().length > 0;
-  const hasMainBottom = hasMainBottomWidgets || hasMainBottomHeaderWidgets || hasDiagnostics || hasActivity;
+  const hasMainBottom = hasMainBottomWidgets || hasMainBottomHeaderWidgets;
   const hasFloatingWidgets = layout.areas.floating.widgets.length > 0;
   const showLeftPane = leftTree || hasLeftWidgets || hasLeftHeaderWidgets;
   const showMainRightPane = hasMainRightWidgets || hasMainRightHeaderWidgets;
@@ -147,15 +148,16 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
     <ShellWorkbenchBody
       shell={shell}
       hasMainHeader={hasMainHeaderWidgets}
-      hasMainLeft={hasMainLeftWidgets || hasMainLeftHeaderWidgets}
+      hasMainLeft={hasMainLeftWidgets || hasMainLeftHeaderWidgets || Boolean(mainLeftTree)}
       hasMainLeftHeader={hasMainLeftHeaderWidgets}
+      mainLeftTreeViewId={mainLeftTree}
+      mainLeftActiveNodeId={layout.activeResourceUri}
       hasMainRight={showMainRightPane}
       hasMainRightHeader={hasMainRightHeaderWidgets}
       mainRightCollapsed={!mainRightPanelOpen}
       hasMainBottom={hasMainBottom}
       hasMainBottomHeader={hasMainBottomHeaderWidgets}
       mainBottomCollapsed={!mainBottomPanelOpen}
-      onCommandError={onCommandError}
       onOpenMainRightPanel={() => setMainRightPanelOpen(true)}
       onOpenMainBottomPanel={() => setMainBottomPanelOpen(true)}
       onMainRightCollapsedChange={(collapsed) => setMainRightPanelOpen(!collapsed)}
