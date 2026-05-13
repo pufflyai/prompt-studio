@@ -1,6 +1,5 @@
 import { Flex } from "@chakra-ui/react";
 import { type BreadcrumbItem, ResizableSplitLayout } from "@pstdio/ui";
-import type { ReactNode } from "react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { type MenuPath, type ShellCore, type TreeViewRole, workbenchTopActionMenuPath } from "../core";
 import { ShellCommandPalette } from "./shell-command-palette";
@@ -30,7 +29,6 @@ interface ShellWorkbenchProps {
   initialCommandPaletteOpen?: boolean;
   initialSessionPanelMode?: ShellSessionPanelMode;
   breadcrumbItems?: BreadcrumbItem[];
-  leftHeader?: ReactNode;
   showCommandPaletteTreeNode?: boolean;
   onCommandPaletteOpenChange?: (open: boolean) => void;
   onCommandError?: (error: unknown) => void;
@@ -73,7 +71,6 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
     commandPaletteOpen,
     initialCommandPaletteOpen = false,
     breadcrumbItems: providedBreadcrumbItems,
-    leftHeader,
     showCommandPaletteTreeNode = true,
     onCommandPaletteOpenChange,
     onCommandError,
@@ -92,19 +89,23 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
   const layout = shell.layout.getLayout();
   const hasTopWidgets = layout.areas.top.widgets.length > 0;
   const hasActivityBarWidgets = layout.areas.activityBar.widgets.length > 0;
+  const hasLeftHeaderWidgets = layout.areas["left-header"].widgets.length > 0;
   const hasLeftWidgets = layout.areas.left.widgets.length > 0;
   const hasMainHeaderWidgets = layout.areas["main-header"].widgets.length > 0;
+  const hasMainLeftHeaderWidgets = layout.areas["main-left-header"].widgets.length > 0;
   const hasMainLeftWidgets = layout.areas["main-left"].widgets.length > 0;
+  const hasMainRightHeaderWidgets = layout.areas["main-right-header"].widgets.length > 0;
   const hasMainRightWidgets = layout.areas["main-right"].widgets.length > 0;
+  const hasMainBottomHeaderWidgets = layout.areas["main-bottom-header"].widgets.length > 0;
   const hasMainBottomWidgets = layout.areas["main-bottom"].widgets.length > 0;
   const hasStatusWidgets = layout.areas.status.widgets.length > 0;
   const hasOverlayWidgets = layout.areas.overlay.widgets.length > 0;
   const hasDiagnostics = shell.diagnostics.listDiagnostics().length > 0;
   const hasActivity = shell.activity.listItems().length > 0;
-  const hasMainBottom = hasMainBottomWidgets || hasDiagnostics || hasActivity;
+  const hasMainBottom = hasMainBottomWidgets || hasMainBottomHeaderWidgets || hasDiagnostics || hasActivity;
   const hasFloatingWidgets = layout.areas.floating.widgets.length > 0;
-  const showLeftPane = leftTree || hasLeftWidgets;
-  const showMainRightPane = hasMainRightWidgets;
+  const showLeftPane = leftTree || hasLeftWidgets || hasLeftHeaderWidgets;
+  const showMainRightPane = hasMainRightWidgets || hasMainRightHeaderWidgets;
   const sessionPanelMode = useShellSessionPanelStore((state) => state.mode);
   const setSessionPanelMode = useShellSessionPanelStore((state) => state.setMode);
   const showAttachedSessionPanel = hasFloatingWidgets && sessionPanelMode === "attached";
@@ -150,10 +151,13 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
     <ShellWorkbenchBody
       shell={shell}
       hasMainHeader={hasMainHeaderWidgets}
-      hasMainLeft={hasMainLeftWidgets}
+      hasMainLeft={hasMainLeftWidgets || hasMainLeftHeaderWidgets}
+      hasMainLeftHeader={hasMainLeftHeaderWidgets}
       hasMainRight={showMainRightPane}
+      hasMainRightHeader={hasMainRightHeaderWidgets}
       mainRightCollapsed={!mainRightPanelOpen}
       hasMainBottom={hasMainBottom}
+      hasMainBottomHeader={hasMainBottomHeaderWidgets}
       mainBottomCollapsed={!mainBottomPanelOpen}
       onCommandError={onCommandError}
       onOpenMainRightPanel={() => setMainRightPanelOpen(true)}
@@ -193,7 +197,7 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
           treeViewId={leftTree}
           footerTreeViewId={leftFooterTree}
           activeNodeId={layout.activeResourceUri}
-          header={leftHeader}
+          hasHeader={hasLeftHeaderWidgets}
           onOpenCommandPalette={showCommandPaletteTreeNode ? () => setPaletteOpen(true) : undefined}
           refresh={refresh}
         />

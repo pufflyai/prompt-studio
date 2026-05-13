@@ -12,9 +12,12 @@ interface ShellWorkbenchBodyProps {
   shell: ShellCore;
   hasMainHeader: boolean;
   hasMainLeft: boolean;
+  hasMainLeftHeader: boolean;
   hasMainRight: boolean;
+  hasMainRightHeader: boolean;
   mainRightCollapsed: boolean;
   hasMainBottom: boolean;
+  hasMainBottomHeader: boolean;
   mainBottomCollapsed: boolean;
   onCommandError?: (error: unknown) => void;
   onOpenMainRightPanel: () => void;
@@ -37,9 +40,12 @@ export const ShellWorkbenchBody = (props: ShellWorkbenchBodyProps) => {
     shell,
     hasMainHeader,
     hasMainLeft,
+    hasMainLeftHeader,
     hasMainRight,
+    hasMainRightHeader,
     mainRightCollapsed,
     hasMainBottom,
+    hasMainBottomHeader,
     mainBottomCollapsed,
     onCommandError,
     onOpenMainRightPanel,
@@ -69,7 +75,7 @@ export const ShellWorkbenchBody = (props: ShellWorkbenchBodyProps) => {
       minH="0"
       minW="0"
       resizableSide="right"
-      resizablePanel={<ShellRightSidePanel shell={shell} refresh={refresh} />}
+      resizablePanel={<ShellRightSidePanel shell={shell} hasHeader={hasMainRightHeader} refresh={refresh} />}
       contentPanel={mainArea}
       collapsed={mainRightCollapsed}
       defaultSizePx={RIGHT_PANEL_DEFAULT_SIZE_PX}
@@ -88,7 +94,7 @@ export const ShellWorkbenchBody = (props: ShellWorkbenchBodyProps) => {
       minH="0"
       minW="0"
       resizableSide="left"
-      resizablePanel={<ShellMainLeftPanel shell={shell} refresh={refresh} />}
+      resizablePanel={<ShellMainLeftPanel shell={shell} hasHeader={hasMainLeftHeader} refresh={refresh} />}
       contentPanel={mainAreaWithRightPanel}
       defaultSizePx={MAIN_LEFT_PANEL_DEFAULT_SIZE_PX}
       minSizePx={MAIN_LEFT_PANEL_MIN_SIZE_PX}
@@ -176,8 +182,21 @@ export const ShellWorkbenchBody = (props: ShellWorkbenchBodyProps) => {
             _hover={{ _before: { bg: "border.emphasized" } }}
             _focusVisible={{ _before: { bg: "colorPalette.focusRing", h: "2px" } }}
           />
-          <Box as="section" minH="0" minW="0" overflow="hidden">
-            <ShellBottomPanel shell={shell} onCommandError={onCommandError} refresh={refresh} />
+          <Box as="section" minH="0" minW="0" overflow="hidden" display="flex" flexDirection="column">
+            {hasMainBottomHeader ? (
+              <Header variant="main" flexShrink={0}>
+                <ShellArea
+                  shell={shell}
+                  area="main-bottom-header"
+                  title="Main bottom header"
+                  showHeader={false}
+                  refresh={refresh}
+                />
+              </Header>
+            ) : null}
+            <Box flex="1" minH="0" minW="0" overflow="hidden">
+              <ShellBottomPanel shell={shell} onCommandError={onCommandError} refresh={refresh} />
+            </Box>
           </Box>
         </>
       ) : null}

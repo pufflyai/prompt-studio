@@ -1,6 +1,5 @@
 import { Box, Flex, IconButton } from "@chakra-ui/react";
 import { Breadcrumb, type BreadcrumbItem, Header, Tooltip } from "@pstdio/ui";
-import type { ReactNode } from "react";
 import { type MenuPath, type ShellCore, workbenchTopActionMenuPath } from "../core";
 import { ShellArea } from "./shell-area";
 import { ShellHeaderActions } from "./shell-header-actions";
@@ -75,19 +74,19 @@ interface ShellLeftSidePanelProps {
   treeViewId?: string;
   footerTreeViewId?: string;
   activeNodeId?: string;
-  header?: ReactNode;
+  hasHeader: boolean;
   onOpenCommandPalette?: () => void;
   refresh: () => void;
 }
 
 export const ShellLeftSidePanel = (props: ShellLeftSidePanelProps) => {
-  const { shell, treeViewId, footerTreeViewId, activeNodeId, header, onOpenCommandPalette, refresh } = props;
+  const { shell, treeViewId, footerTreeViewId, activeNodeId, hasHeader, onOpenCommandPalette, refresh } = props;
 
   return (
     <Flex as="aside" direction="column" h="full" minH="0" minW="0" overflow="hidden" w="full">
-      {header ? (
+      {hasHeader ? (
         <Header variant="main" flexShrink={0}>
-          {header}
+          <ShellArea shell={shell} area="left-header" title="Left header" showHeader={false} refresh={refresh} />
         </Header>
       ) : null}
       <Box flex="1" minH="0" minW="0" overflow="hidden">
@@ -113,6 +112,10 @@ interface ShellWorkbenchAreaPanelProps {
   refresh: () => void;
 }
 
+interface ShellHeaderedAreaPanelProps extends ShellWorkbenchAreaPanelProps {
+  hasHeader: boolean;
+}
+
 export const ShellActivityBar = (props: ShellWorkbenchAreaPanelProps) => {
   const { shell, refresh } = props;
 
@@ -132,23 +135,49 @@ export const ShellActivityBar = (props: ShellWorkbenchAreaPanelProps) => {
   );
 };
 
-export const ShellRightSidePanel = (props: ShellWorkbenchAreaPanelProps) => {
-  const { shell, refresh } = props;
+export const ShellRightSidePanel = (props: ShellHeaderedAreaPanelProps) => {
+  const { shell, hasHeader, refresh } = props;
 
   return (
-    <Box as="aside" h="full" minH="0" minW="0" overflow="hidden" w="full">
-      <ShellArea shell={shell} area="main-right" title="Main right" showHeader={false} refresh={refresh} />
-    </Box>
+    <Flex as="aside" direction="column" h="full" minH="0" minW="0" overflow="hidden" w="full">
+      {hasHeader ? (
+        <Header variant="main" flexShrink={0}>
+          <ShellArea
+            shell={shell}
+            area="main-right-header"
+            title="Main right header"
+            showHeader={false}
+            refresh={refresh}
+          />
+        </Header>
+      ) : null}
+      <Box flex="1" minH="0" minW="0" overflow="hidden">
+        <ShellArea shell={shell} area="main-right" title="Main right" showHeader={false} refresh={refresh} />
+      </Box>
+    </Flex>
   );
 };
 
-export const ShellMainLeftPanel = (props: ShellWorkbenchAreaPanelProps) => {
-  const { shell, refresh } = props;
+export const ShellMainLeftPanel = (props: ShellHeaderedAreaPanelProps) => {
+  const { shell, hasHeader, refresh } = props;
 
   return (
-    <Box as="aside" h="full" minH="0" minW="0" overflow="hidden" w="full">
-      <ShellArea shell={shell} area="main-left" title="Main left" showHeader={false} refresh={refresh} />
-    </Box>
+    <Flex as="aside" direction="column" h="full" minH="0" minW="0" overflow="hidden" w="full">
+      {hasHeader ? (
+        <Header variant="main" flexShrink={0}>
+          <ShellArea
+            shell={shell}
+            area="main-left-header"
+            title="Main left header"
+            showHeader={false}
+            refresh={refresh}
+          />
+        </Header>
+      ) : null}
+      <Box flex="1" minH="0" minW="0" overflow="hidden">
+        <ShellArea shell={shell} area="main-left" title="Main left" showHeader={false} refresh={refresh} />
+      </Box>
+    </Flex>
   );
 };
 

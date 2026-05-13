@@ -10,11 +10,15 @@ import type { ResourceRef } from "../resources/resource-registry";
 export const shellAreas = [
   "top",
   "activityBar",
+  "left-header",
   "left",
   "main-header",
+  "main-left-header",
   "main-left",
   "main",
+  "main-right-header",
   "main-right",
+  "main-bottom-header",
   "main-bottom",
   "status",
   "overlay",
@@ -105,11 +109,15 @@ export const createDefaultShellLayout = (): ShellLayout => ({
   areas: {
     top: createAreaState("top"),
     activityBar: createAreaState("activityBar"),
+    "left-header": createAreaState("left-header"),
     left: createAreaState("left"),
     "main-header": createAreaState("main-header"),
+    "main-left-header": createAreaState("main-left-header"),
     "main-left": createAreaState("main-left"),
     main: createAreaState("main"),
+    "main-right-header": createAreaState("main-right-header"),
     "main-right": createAreaState("main-right"),
+    "main-bottom-header": createAreaState("main-bottom-header"),
     "main-bottom": createAreaState("main-bottom"),
     status: createAreaState("status"),
     overlay: createAreaState("overlay"),
@@ -117,9 +125,18 @@ export const createDefaultShellLayout = (): ShellLayout => ({
   },
 });
 
+const mergeWithDefaultAreas = (persisted: ShellLayout): ShellLayout => {
+  const defaults = createDefaultShellLayout();
+  return {
+    ...persisted,
+    areas: { ...defaults.areas, ...persisted.areas },
+  };
+};
+
 export const createLayoutModel = (input: CreateLayoutModelInput = {}) => {
   const widgets = new Map<string, RegisteredWidgetContribution>();
-  const layout: ShellLayout = input.persistence?.getLayout() ?? createDefaultShellLayout();
+  const persisted = input.persistence?.getLayout();
+  const layout: ShellLayout = persisted ? mergeWithDefaultAreas(persisted) : createDefaultShellLayout();
   let placementCounter = 0;
 
   const persistLayout = () => {

@@ -131,6 +131,24 @@ describe("createLayoutModel", () => {
     expect(layout.getLayout().activeResourceUri).toBeUndefined();
   });
 
+  test("fills in missing areas when loading a layout persisted before new areas existed", () => {
+    const partialLayout = {
+      areas: {
+        main: { id: "main", visible: true, widgets: [] },
+      },
+    } as unknown as ShellLayout;
+    const persistence = {
+      getLayout: () => partialLayout,
+      setLayout: () => undefined,
+    };
+
+    const layout = createLayoutModel({ persistence });
+
+    expect(layout.getLayout().areas["left-header"]).toBeDefined();
+    expect(layout.getLayout().areas["main-bottom-header"]).toBeDefined();
+    expect(layout.getLayout().areas["left-header"].widgets).toEqual([]);
+  });
+
   test("persists layout state through an injected adapter", () => {
     const savedLayouts: ShellLayout[] = [];
     const persistence = {

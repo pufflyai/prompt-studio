@@ -256,10 +256,29 @@ const registerPanelModeResourceOpener = (shell: ShellCore) => {
   });
 };
 
+const LEFT_HEADER_WIDGET_ID = "workbench-modes.leftHeader";
+
+const registerLeftHeader = (shell: ShellCore) => {
+  shell.layout.registerWidget({
+    id: LEFT_HEADER_WIDGET_ID,
+    title: "Mode switcher",
+    area: "left-header",
+    singleton: true,
+    renderer: "react",
+    rendererId: LEFT_HEADER_WIDGET_ID,
+  });
+  shell.renderers.registerRenderer({
+    id: LEFT_HEADER_WIDGET_ID,
+    render: (input) => <LeftPanelHeader shell={input.shell} />,
+  });
+  shell.layout.openWidget(LEFT_HEADER_WIDGET_ID, { pinned: true, closable: false });
+};
+
 const createWorkbenchModesExample = () => {
   const example = createConsumerShellExample();
 
   registerWorkbenchModes(example.shell);
+  registerLeftHeader(example.shell);
   registerPanelModeResourceOpener(example.shell);
   example.shell.modes.setActiveMode("project");
 
@@ -313,7 +332,6 @@ export const WorkbenchModesShellExample = () => {
       shell={example.shell}
       commandPaletteMenuPath={commandPaletteMenuPath}
       initialSessionPanelMode="attached"
-      leftHeader={<LeftPanelHeader shell={example.shell} />}
     />
   );
 };

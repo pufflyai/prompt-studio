@@ -24,8 +24,10 @@ describe("dashboard shell persistence", () => {
       areas: {
         top: { id: "top", visible: true, widgets: [] },
         activityBar: { id: "activityBar", visible: true, widgets: [] },
+        "left-header": { id: "left-header", visible: true, widgets: [] },
         left: { id: "left", visible: true, widgets: [] },
         "main-header": { id: "main-header", visible: true, widgets: [] },
+        "main-left-header": { id: "main-left-header", visible: true, widgets: [] },
         "main-left": { id: "main-left", visible: true, widgets: [] },
         main: {
           id: "main",
@@ -33,7 +35,9 @@ describe("dashboard shell persistence", () => {
           activeWidgetId: "project.settings",
           widgets: [{ widgetId: "project.settings", contributionId: "project.settings" }],
         },
+        "main-right-header": { id: "main-right-header", visible: true, widgets: [] },
         "main-right": { id: "main-right", visible: true, widgets: [] },
+        "main-bottom-header": { id: "main-bottom-header", visible: true, widgets: [] },
         "main-bottom": { id: "main-bottom", visible: true, widgets: [] },
         status: { id: "status", visible: true, widgets: [] },
         overlay: { id: "overlay", visible: true, widgets: [] },
