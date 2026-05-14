@@ -1,9 +1,16 @@
-import { and, eq } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { sessions } from "../../db/schemas.pg";
 
 type SessionRecord = typeof sessions.$inferSelect;
-type SessionStatus = "in_progress" | "awaiting_input" | "completed" | "failed" | "cancelled" | "disconnected";
+type SessionStatus =
+  | "in_progress"
+  | "awaiting_input"
+  | "queued"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "disconnected";
 
 type CreateInput = {
   project_id: string;
@@ -138,5 +145,13 @@ export const createSessionsDBService = (db: DbClient) => {
     return rows;
   };
 
-  return { create, get, list, listByStatus, listByAgentSession, update, updateStatus, archive };
+  const countActive = async () => {
+    const [row] = await db
+      .select({ value: count() })
+      .from(sessions)
+      .where(inArray(sessions.status, ["in_progress", "awaiting_input"]));
+    return row?.value ?? 0;
+  };
+
+  return { create, get, list, listByStatus, listByAgentSession, update, updateStatus, archive, countActive };
 };

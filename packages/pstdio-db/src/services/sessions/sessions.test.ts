@@ -96,6 +96,32 @@ describe("sessions service", () => {
     expect(list[0].title).toBe("S2");
   });
 
+  test("persists queued session status", async () => {
+    const session = await sessionsService.create({ project_id: projectId, title: "S1", agent: "claude-code" });
+    const updated = await sessionsService.updateStatus(session.id, "queued");
+
+    expect(updated).not.toBeNull();
+    expect(updated!.status).toBe("queued");
+
+    const list = await sessionsService.list(projectId, { status: "queued" });
+    expect(list.map((row) => row.id)).toEqual([session.id]);
+  });
+
+  test("counts only running or awaiting input sessions as active", async () => {
+    await sessionsService.create({ project_id: projectId, title: "running", agent: "claude-code" });
+    const awaiting = await sessionsService.create({ project_id: projectId, title: "awaiting", agent: "claude-code" });
+    const queued = await sessionsService.create({ project_id: projectId, title: "queued", agent: "claude-code" });
+    const completed = await sessionsService.create({ project_id: projectId, title: "completed", agent: "claude-code" });
+
+    await sessionsService.updateStatus(awaiting.id, "awaiting_input");
+    await sessionsService.updateStatus(queued.id, "queued");
+    await sessionsService.updateStatus(completed.id, "completed");
+
+    await sessionsService.archive(awaiting.id);
+
+    await expect(sessionsService.countActive()).resolves.toBe(2);
+  });
+
   test("list filters by agent", async () => {
     await sessionsService.create({ project_id: projectId, title: "S1", agent: "claude-code" });
     await sessionsService.create({ project_id: projectId, title: "S2", agent: "opencode" });

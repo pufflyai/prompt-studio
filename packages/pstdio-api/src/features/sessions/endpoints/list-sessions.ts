@@ -13,7 +13,7 @@ export const listSessionsRoute = createRoute({
       .object({
         project_id: z.string().openapi({ description: "Project ID" }),
         status: z
-          .enum(["in_progress", "awaiting_input", "completed", "failed", "cancelled", "disconnected"])
+          .enum(["in_progress", "awaiting_input", "queued", "completed", "failed", "cancelled", "disconnected"])
           .optional()
           .openapi({ description: "Filter by status" }),
         agent: z.string().optional().openapi({ description: "Filter by agent" }),

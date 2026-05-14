@@ -3,6 +3,7 @@ import { pgEnum } from "drizzle-orm/pg-core";
 export const sessionStatusEnum = pgEnum("session_status", [
   "in_progress",
   "awaiting_input",
+  "queued",
   "completed",
   "failed",
   "cancelled",

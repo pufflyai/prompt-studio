@@ -1,7 +1,15 @@
 import type { SyncedRow } from "@/features/sync/collections";
 import type { TicketAttempt, TicketStatusColor } from "@/features/ticket-list/types";
 
-const SESSION_STATUSES = ["in_progress", "awaiting_input", "completed", "failed", "cancelled", "disconnected"] as const;
+const SESSION_STATUSES = [
+  "in_progress",
+  "awaiting_input",
+  "queued",
+  "completed",
+  "failed",
+  "cancelled",
+  "disconnected",
+] as const;
 
 const toSessionStatus = (value: unknown) => {
   if (typeof value !== "string") return null;

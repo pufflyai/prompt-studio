@@ -21,7 +21,9 @@ export { createInstalledExtensionSourcesDBService } from "./services/installed-e
 export { createProjectTemplateDefaultsDBService } from "./services/project-template-defaults/project-template-defaults";
 export { createProjectsDBService } from "./services/projects/projects";
 export { createReposDBService } from "./services/repos/repos";
+export { createSessionQueueEntriesDBService } from "./services/session-queue-entries/session-queue-entries";
 export { createSessionsDBService } from "./services/sessions/sessions";
+export { createSettingsDBService } from "./services/settings/settings";
 export { createSkillsDBService } from "./services/skills/skills";
 export { createStatusesDBService } from "./services/statuses/statuses";
 export { createTagsDBService } from "./services/tags/tags";

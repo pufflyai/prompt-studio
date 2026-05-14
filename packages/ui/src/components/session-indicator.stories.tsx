@@ -43,14 +43,23 @@ export const Undefined: Story = {
 export const AllStatuses: Story = {
   render: () => (
     <HStack gap="md">
-      {(["in_progress", "awaiting_input", "completed", "failed", "cancelled", "disconnected", undefined] as const).map(
-        (status) => (
-          <HStack key={status ?? "undefined"} gap="xs">
-            <SessionIndicator status={status} />
-            <Text textStyle="label/S/regular">{status ?? "undefined"}</Text>
-          </HStack>
-        ),
-      )}
+      {(
+        [
+          "in_progress",
+          "awaiting_input",
+          "queued",
+          "completed",
+          "failed",
+          "cancelled",
+          "disconnected",
+          undefined,
+        ] as const
+      ).map((status) => (
+        <HStack key={status ?? "undefined"} gap="xs">
+          <SessionIndicator status={status} />
+          <Text textStyle="label/S/regular">{status ?? "undefined"}</Text>
+        </HStack>
+      ))}
     </HStack>
   ),
 };

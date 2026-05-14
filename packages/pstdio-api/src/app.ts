@@ -15,6 +15,7 @@ import {
   createProjectTemplateDefaultsDBService,
   createReposDBService,
   createSessionsDBService,
+  createSettingsDBService,
   createSkillsDBService,
   createStatusesDBService,
   createTagsDBService,
@@ -46,6 +47,7 @@ import { createFileService } from "./services/file-service";
 import { createProjectService } from "./services/project-service";
 import { createRepoService } from "./services/repo-service";
 import { createSessionService } from "./services/session-service";
+import { createSettingsService } from "./services/settings-service";
 import { createSkillService } from "./services/skill-service";
 import { createStatusService } from "./services/status-service";
 import { createSyncService } from "./services/sync-service";
@@ -120,6 +122,7 @@ export const createApp = async (options: AppOptions) => {
   const projectsDBService = createProjectsDBService(db);
   const reposDBService = createReposDBService(db);
   const sessionsDBService = createSessionsDBService(db);
+  const settingsDBService = createSettingsDBService(db);
   const ticketsDBService = createTicketsDBService(db);
   const workspacesDBService = createWorkspacesDBService(db);
   const workspaceArtifactsDBService = createWorkspaceArtifactsDBService(db);
@@ -239,6 +242,7 @@ export const createApp = async (options: AppOptions) => {
     onSessionStatusChanged: (session) => fireSessionStatusHook(sessionHookDeps, session),
     onSessionResumed: (session) => fireSessionResumeHook(sessionHookDeps, session),
   });
+  const settingsService = createSettingsService({ settingsDb: settingsDBService });
 
   // --- ONLY DOMAIN SERVICES ARE PASSED TO ROUTES ---
   const deps: RouteDeps = {
@@ -250,6 +254,7 @@ export const createApp = async (options: AppOptions) => {
     projectService,
     repoService,
     sessionService,
+    settingsService,
     ticketService,
     workspaceService,
     workspaceArtifactService,

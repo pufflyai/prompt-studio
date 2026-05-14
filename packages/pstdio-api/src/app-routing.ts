@@ -10,6 +10,7 @@ import { createHealthRoutes } from "./features/health/routes";
 import { createPluginRoutes } from "./features/plugins/routes";
 import { createProjectRoutes } from "./features/projects/routes";
 import { createSessionRoutes } from "./features/sessions/routes";
+import { createSettingsRoutes } from "./features/settings/routes";
 import { createSkillRoutes } from "./features/skills/routes";
 import { createStatusRoutes } from "./features/statuses/routes";
 import { createSyncRoutes } from "./features/sync/routes";
@@ -75,6 +76,7 @@ const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps) => {
   app.route("/v1", createStatusRoutes(deps));
   app.route("/v1", createAttemptStatusRoutes(deps));
   app.route("/v1", createSessionRoutes(deps));
+  app.route("/v1", createSettingsRoutes(deps));
   app.route("/v1", createWorkspaceRoutes(deps));
   app.route("/v1", createTagRoutes(deps));
   app.route("/v1", createSyncRoutes(deps));
