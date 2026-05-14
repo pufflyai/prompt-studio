@@ -471,6 +471,25 @@
       }
     }
   },
+  "runtimeSettings": {
+    "navLabel": "ランタイム",
+    "title": "ランタイム設定",
+    "description": "セッションキューのスケジューリングで使うグローバル同時実行値を設定します。",
+    "save": "保存",
+    "saveSuccess": "ランタイム設定を保存しました",
+    "saveError": "ランタイム設定を保存できませんでした",
+    "loadError": "ランタイム設定を読み込めませんでした",
+    "loadErrorDescription": "この設定を編集する前にもう一度試してください。",
+    "retry": "再試行",
+    "maxConcurrentSessions": {
+      "label": "最大同時セッション数",
+      "helper": "無制限にする場合は空欄にします。一度に 1 セッションしか実行できないローカル LLM 環境では 1 を設定します。",
+      "placeholder": "none",
+      "none": "なし",
+      "current": "現在の値: {{value}}",
+      "invalid": "0 より大きい整数を入力するか、なしにする場合は空欄にしてください。"
+    }
+  },
   "agentList": {
     "title": "設定",
     "back": "戻る",

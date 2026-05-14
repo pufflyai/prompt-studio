@@ -471,6 +471,25 @@
       }
     }
   },
+  "runtimeSettings": {
+    "navLabel": "运行时",
+    "title": "运行时设置",
+    "description": "配置会话队列调度使用的全局并发值。",
+    "save": "保存",
+    "saveSuccess": "运行时设置已保存",
+    "saveError": "运行时设置保存失败",
+    "loadError": "运行时设置加载失败",
+    "loadErrorDescription": "请重试后再编辑此设置。",
+    "retry": "重试",
+    "maxConcurrentSessions": {
+      "label": "最大并发会话数",
+      "helper": "留空表示不限制会话数。对于一次只能运行一个会话的本地 LLM 设置，请设为 1。",
+      "placeholder": "none",
+      "none": "无",
+      "current": "当前值：{{value}}",
+      "invalid": "请输入大于 0 的整数，或留空表示无。"
+    }
+  },
   "agentList": {
     "title": "设置",
     "back": "返回",

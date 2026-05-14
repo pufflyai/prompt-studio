@@ -506,6 +506,25 @@
       }
     }
   },
+  "runtimeSettings": {
+    "navLabel": "執行階段",
+    "title": "執行階段設定",
+    "description": "設定工作階段佇列排程使用的全域並行值。",
+    "save": "儲存",
+    "saveSuccess": "執行階段設定已儲存",
+    "saveError": "無法儲存執行階段設定",
+    "loadError": "無法載入執行階段設定",
+    "loadErrorDescription": "請重試後再編輯此設定。",
+    "retry": "重試",
+    "maxConcurrentSessions": {
+      "label": "最大並行工作階段數",
+      "helper": "留空表示不限制工作階段。對於一次只能執行一個工作階段的本機 LLM 設定，請設為 1。",
+      "placeholder": "none",
+      "none": "無",
+      "current": "目前值：{{value}}",
+      "invalid": "請輸入大於 0 的整數，或留空表示無。"
+    }
+  },
   "agentList": {
     "title": "設定",
     "back": "返回",

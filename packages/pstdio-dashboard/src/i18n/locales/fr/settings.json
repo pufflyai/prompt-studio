@@ -506,6 +506,25 @@
       }
     }
   },
+  "runtimeSettings": {
+    "navLabel": "Exécution",
+    "title": "Paramètres d'exécution",
+    "description": "Configurez la valeur de concurrence globale utilisée par la file de sessions.",
+    "save": "Enregistrer",
+    "saveSuccess": "Paramètres d'exécution enregistrés",
+    "saveError": "Échec de l'enregistrement des paramètres d'exécution",
+    "loadError": "Échec du chargement des paramètres d'exécution",
+    "loadErrorDescription": "Réessayez avant de modifier ce paramètre.",
+    "retry": "Réessayer",
+    "maxConcurrentSessions": {
+      "label": "Nombre maximal de sessions simultanées",
+      "helper": "Laissez vide pour des sessions illimitées. Définissez 1 pour les configurations LLM locales qui ne peuvent exécuter qu'une session à la fois.",
+      "placeholder": "none",
+      "none": "aucune",
+      "current": "Valeur actuelle : {{value}}",
+      "invalid": "Saisissez un entier supérieur à 0, ou laissez vide pour aucune."
+    }
+  },
   "agentList": {
     "title": "Paramètres",
     "back": "Retour",

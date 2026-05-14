@@ -471,6 +471,25 @@
       }
     }
   },
+  "runtimeSettings": {
+    "navLabel": "Ejecución",
+    "title": "Configuración de ejecución",
+    "description": "Configura el valor global de concurrencia usado por la cola de sesiones.",
+    "save": "Guardar",
+    "saveSuccess": "Configuración de ejecución guardada",
+    "saveError": "No se pudo guardar la configuración de ejecución",
+    "loadError": "No se pudo cargar la configuración de ejecución",
+    "loadErrorDescription": "Inténtalo de nuevo antes de editar esta opción.",
+    "retry": "Reintentar",
+    "maxConcurrentSessions": {
+      "label": "Máximo de sesiones concurrentes",
+      "helper": "Déjalo en blanco para sesiones ilimitadas. Usa 1 para configuraciones con LLM local que solo pueden ejecutar una sesión a la vez.",
+      "placeholder": "none",
+      "none": "ninguno",
+      "current": "Valor actual: {{value}}",
+      "invalid": "Introduce un número entero mayor que 0, o déjalo en blanco para ninguno."
+    }
+  },
   "agentList": {
     "title": "Configuración",
     "back": "Volver",
