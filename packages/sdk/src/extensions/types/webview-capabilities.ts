@@ -3,7 +3,8 @@ import type { RepoContext, ResourceRef } from "./resources";
 
 export const WEBVIEW_HOST_CAPABILITY_VERSION = 1;
 
-export const WEBVIEW_HOST_CAPABILITIES = [
+// Capabilities a webview must declare in its manifest before the bridge will route them.
+export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "commands.execute",
   "resource.open",
   "notification.show",
@@ -11,13 +12,22 @@ export const WEBVIEW_HOST_CAPABILITIES = [
   "preferences.set",
   "activity.emit",
   "diagnostics.report",
-  "host.dispatchKeyboardEvent",
+] as const;
+
+// Runtime plumbing the guest invokes on its own (e.g. keyboard forwarding). Enabled
+// wherever the host implements them, with no manifest declaration required.
+export const ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES = ["host.dispatchKeyboardEvent"] as const;
+
+export const WEBVIEW_HOST_CAPABILITIES = [
+  ...WEBVIEW_DECLARABLE_CAPABILITIES,
+  ...ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
 ] as const;
 
 export type WebviewHostCapability = (typeof WEBVIEW_HOST_CAPABILITIES)[number];
+export type WebviewDeclarableCapability = (typeof WEBVIEW_DECLARABLE_CAPABILITIES)[number];
 export type WebviewCapabilityDeclaration =
-  | WebviewHostCapability
-  | `${WebviewHostCapability}@${typeof WEBVIEW_HOST_CAPABILITY_VERSION}`;
+  | WebviewDeclarableCapability
+  | `${WebviewDeclarableCapability}@${typeof WEBVIEW_HOST_CAPABILITY_VERSION}`;
 
 export interface WebviewCommandsExecuteParams {
   commandId: string;

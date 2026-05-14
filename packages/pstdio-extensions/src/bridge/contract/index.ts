@@ -66,12 +66,15 @@ export type {
   HostCapabilityRegistry,
   WebviewCapabilityDiagnostic,
   WebviewCapabilityDiagnosticCode,
+  WebviewDeclarableCapability,
   WebviewHostCapability,
 } from "./capabilities";
 export {
+  ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
   createHostCapabilityGate,
   validateWebviewCapabilityDeclarations,
   validateWebviewCapabilityNames,
+  WEBVIEW_DECLARABLE_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITY_VERSION,
 } from "./capabilities";

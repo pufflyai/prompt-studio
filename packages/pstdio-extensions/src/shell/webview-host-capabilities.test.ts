@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createShellCore } from "../shell-core";
+import { createShellCore } from "pstdio-shell/core";
 import { createShellWebviewHostCapabilities } from "./webview-host-capabilities";
 
 describe("createShellWebviewHostCapabilities", () => {

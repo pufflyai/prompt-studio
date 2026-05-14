@@ -1,3 +1,4 @@
+import { createBridgeWebviewRenderer } from "pstdio-extensions/shell";
 import {
   activateProductModule,
   createShellCore,
@@ -156,6 +157,7 @@ const createDashboardSettingsModule = (input: DashboardSettingsShellInput): Prod
 
 export const createDashboardSettingsShell = (input: DashboardSettingsShellInput) => {
   const shell = createShellCore();
+  const bridgeRenderer = shell.renderers.registerRenderer(createBridgeWebviewRenderer());
   const disposable = activateProductModule(shell, createDashboardSettingsModule(input));
 
   shell.layout.openWidget(GLOBAL_SETTINGS_WIDGET_ID, {
@@ -165,6 +167,9 @@ export const createDashboardSettingsShell = (input: DashboardSettingsShellInput)
 
   return {
     ...shell,
-    dispose: () => disposable.dispose(),
+    dispose: () => {
+      disposable.dispose();
+      bridgeRenderer.dispose();
+    },
   };
 };

@@ -1,3 +1,4 @@
+import { createBridgeWebviewRenderer } from "pstdio-extensions/shell";
 import {
   activateProductModule,
   createShellCore,
@@ -255,10 +256,14 @@ export const createDashboardProjectShell = (input: DashboardProjectShellInput) =
       input.preferencePersistence ??
       createDashboardShellPreferencePersistence({ projectId: input.projectId, storage: input.storage }),
   });
+  const bridgeRenderer = shell.renderers.registerRenderer(createBridgeWebviewRenderer());
   const disposable = activateProductModule(shell, createDashboardProjectModule(input));
 
   return {
     ...shell,
-    dispose: () => disposable.dispose(),
+    dispose: () => {
+      disposable.dispose();
+      bridgeRenderer.dispose();
+    },
   };
 };

@@ -23,6 +23,8 @@ export { defineSlot } from "./slots";
 export type * from "./types";
 export { EXTENSION_API_VERSION } from "./types/extension";
 export {
+  ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
+  WEBVIEW_DECLARABLE_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITY_VERSION,
 } from "./types/webview-capabilities";

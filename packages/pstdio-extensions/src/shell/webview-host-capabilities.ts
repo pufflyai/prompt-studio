@@ -1,9 +1,13 @@
-import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
-import type { ActivityItem } from "../activity/activity-registry";
-import type { ShellDiagnostic } from "../diagnostics/diagnostic-registry";
-import type { PreferenceScopeRef, PreferenceValue } from "../preferences/preference-registry";
-import type { OpenResourceInput, ResourceRef } from "../resources/resource-registry";
-import type { ShellCore } from "../shell-core";
+import type {
+  ActivityItem,
+  OpenResourceInput,
+  PreferenceScopeRef,
+  PreferenceValue,
+  ResourceRef,
+  ShellCore,
+  ShellDiagnostic,
+} from "pstdio-shell/core";
+import type { HostCapabilityRegistry } from "../bridge/contract";
 
 interface CreateShellWebviewHostCapabilitiesInput {
   dispatchKeyboardEvent?: (event: KeyboardEventInit) => void;

@@ -642,11 +642,11 @@ Webviews opt into host operations with explicit capabilities. Unversioned declar
 ```ts
 webview: {
   entry: packageAsset("./webviews/sidebar/index.tsx", import.meta.url),
-  capabilities: ["commands.execute", "preferences.set@1", "host.dispatchKeyboardEvent"],
+  capabilities: ["commands.execute", "preferences.set@1"],
 }
 ```
 
-The v1 host capability names are:
+The v1 declarable host capabilities are:
 
 - `commands.execute`
 - `resource.open`
@@ -655,7 +655,8 @@ The v1 host capability names are:
 - `preferences.set`
 - `activity.emit`
 - `diagnostics.report`
-- `host.dispatchKeyboardEvent`
+
+`host.dispatchKeyboardEvent` is always available — the guest runtime forwards keyboard shortcuts on its own, so it is enabled wherever the host implements it and does not need to be declared.
 
 ## Planner Boundary
 
