@@ -658,6 +658,26 @@ The v1 declarable host capabilities are:
 
 `host.dispatchKeyboardEvent` is always available — the guest runtime forwards keyboard shortcuts on its own, so it is enabled wherever the host implements it and does not need to be declared.
 
+### Rendering webviews through the shell
+
+`pstdio-shell` stays extension-agnostic: it delegates `renderer: "webview"` widgets whose
+descriptor carries both `runtimeUrl` and `moduleUrl` to whatever renderer a host registers
+under `BRIDGE_WEBVIEW_RENDERER_ID`. `pstdio-extensions/shell` provides that renderer through
+`createBridgeWebviewRenderer`, which accepts two optional factories so a host can supply its
+own wiring:
+
+- `createHostCapabilities(context)` — builds the `HostCapabilityRegistry` the guest's
+  capability calls resolve against. Defaults to `createShellWebviewHostCapabilities`, which
+  maps capabilities onto shell-core registries. The dashboard injects its own factory so
+  `commands.execute` reaches the extension command REST API, `resource.open` uses router
+  navigation, and `notification.show` raises a dashboard toast.
+- `createProps(context)` — builds the props pushed into the guest's `propsStore`. Defaults to
+  `{ placement, resource }`. The dashboard injects a factory that also forwards the latest
+  extension command outcome and theme preference.
+
+Static webview descriptors (an `assetUrl` with no bridge runtime) render as a plain sandboxed
+iframe and never receive `allow-same-origin`.
+
 ## Planner Boundary
 
 Internal ticket management is owned by `@pstdio/pstdio-ext-planner`, not by `@pstdio/sdk`.

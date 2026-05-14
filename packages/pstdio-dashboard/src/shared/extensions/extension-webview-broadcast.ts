@@ -2,8 +2,9 @@ import type { CommandExecuteResponse } from "pstdio-api-contracts";
 
 /**
  * Tiny pubsub the host uses to publish command-execution outcomes to anything that wants
- * to react. `useExecuteExtensionCommand` publishes on success; `ExtensionWebviewFrame`
- * subscribes and forwards the latest event into the guest's `propsStore` via the bridge.
+ * to react. `useExecuteExtensionCommand` publishes on success; `ProjectExtensionRoute`
+ * subscribes and forwards the latest event into the guest's `propsStore` through the
+ * shell bridge renderer's `createWebviewProps` factory.
  */
 export interface ExtensionCommandEvent {
   commandId: string;

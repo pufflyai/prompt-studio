@@ -70,7 +70,9 @@ export const ShellWidgetHost = (props: ShellWidgetHostProps) => {
           <chakra.iframe
             src={source}
             title={widget.webview.title ?? widget.title}
-            sandbox={widget.webview.sandbox === "strict" ? "" : "allow-scripts allow-same-origin allow-forms"}
+            // Webview content is untrusted — never grant `allow-same-origin`, which would
+            // let a guest reach into the host document.
+            sandbox={widget.webview.sandbox === "strict" ? "allow-scripts" : "allow-scripts allow-forms allow-popups"}
             border="0"
             flex="1"
             h="full"

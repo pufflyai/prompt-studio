@@ -1,4 +1,8 @@
-import { createBridgeWebviewRenderer } from "pstdio-extensions/shell";
+import {
+  type CreateBridgeWebviewHostCapabilities,
+  type CreateBridgeWebviewProps,
+  createBridgeWebviewRenderer,
+} from "pstdio-extensions/shell";
 import {
   activateProductModule,
   createShellCore,
@@ -53,6 +57,8 @@ interface DashboardProjectShellInput {
   openCommandPaletteCommands?: () => void;
   openThemeMenu?: () => void;
   openShortcutHelp?: () => void;
+  createWebviewHostCapabilities?: CreateBridgeWebviewHostCapabilities;
+  createWebviewProps?: CreateBridgeWebviewProps;
 }
 
 export const createDashboardProjectResource = (
@@ -256,7 +262,12 @@ export const createDashboardProjectShell = (input: DashboardProjectShellInput) =
       input.preferencePersistence ??
       createDashboardShellPreferencePersistence({ projectId: input.projectId, storage: input.storage }),
   });
-  const bridgeRenderer = shell.renderers.registerRenderer(createBridgeWebviewRenderer());
+  const bridgeRenderer = shell.renderers.registerRenderer(
+    createBridgeWebviewRenderer({
+      createHostCapabilities: input.createWebviewHostCapabilities,
+      createProps: input.createWebviewProps,
+    }),
+  );
   const disposable = activateProductModule(shell, createDashboardProjectModule(input));
 
   return {

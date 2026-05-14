@@ -137,7 +137,10 @@ test.describe("Extension webviews", () => {
     tempDirs.length = 0;
   });
 
-  test("loads static and managed webviews in sandboxed iframes", async ({ page, request }) => {
+  test("loads static and managed webviews and routes host calls through the shell bridge", async ({
+    page,
+    request,
+  }) => {
     const project = await createProject(request);
     const staticExtension = writeStaticExtension();
 
@@ -190,5 +193,11 @@ test.describe("Extension webviews", () => {
     await expect(
       page.frameLocator('iframe[title="Lab"]').getByRole("heading", { name: "Sandbox webview" }),
     ).toBeVisible();
+
+    // The route renders through `ShellWorkbench`: the lab guest reaches the dashboard host
+    // bridge via the shell renderer's injected host capabilities. Clicking "Say hello" calls
+    // `notification.show`, which the dashboard surfaces as a single toast in the host document.
+    await page.frameLocator('iframe[title="Lab"]').getByRole("button", { name: "Say hello" }).click();
+    await expect(page.getByText("Hello from Extension Lab")).toBeVisible();
   });
 });

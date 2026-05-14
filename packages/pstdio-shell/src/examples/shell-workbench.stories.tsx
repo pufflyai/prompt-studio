@@ -1,3 +1,4 @@
+import { Toaster } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { createShellCore } from "../core";
@@ -8,9 +9,18 @@ import { DashboardShellExample } from "./dashboard-shell-example";
 import { RandomShellExample } from "./random-shell-example";
 import { WorkbenchModesShellExample } from "./workbench-modes-shell-example";
 
+// `ShellWorkbench` no longer renders its own toaster viewport — the embedding host owns it.
 const meta = {
   title: "pstdio-shell/Examples",
   parameters: { layout: "fullscreen" },
+  decorators: [
+    (Story) => (
+      <>
+        <Story />
+        <Toaster />
+      </>
+    ),
+  ],
 } satisfies Meta;
 
 export default meta;

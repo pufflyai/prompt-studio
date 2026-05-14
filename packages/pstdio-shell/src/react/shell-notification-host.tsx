@@ -1,8 +1,11 @@
 import type { ToastStatusChangeDetails } from "@chakra-ui/react";
-import { Toaster, toaster } from "@pstdio/ui";
+import { toaster } from "@pstdio/ui";
 import { useEffect, useRef } from "react";
 import type { RegisteredShellNotification, ShellCore, ShellNotificationAction } from "../core";
 
+// Bridges `shell.notifications` into the shared `@pstdio/ui` toaster singleton. It renders
+// no viewport — the embedding host renders exactly one `<Toaster />` so toasts are not
+// duplicated when the shell is mounted inside an app that already has one.
 interface ShellNotificationHostProps {
   shell: ShellCore;
   refresh?: () => void;
@@ -80,5 +83,5 @@ export const ShellNotificationHost = (props: ShellNotificationHostProps) => {
     };
   }, [shell]);
 
-  return <Toaster />;
+  return null;
 };
