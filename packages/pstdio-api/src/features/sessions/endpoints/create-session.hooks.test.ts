@@ -93,6 +93,7 @@ describe("createSessionHandler hooks", () => {
       expect.objectContaining({
         agent: "fake",
       }),
+      { emitStartedHook: false },
     );
   });
 
