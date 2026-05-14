@@ -2,7 +2,7 @@ import { Stack } from "@chakra-ui/react";
 import { toaster } from "@pstdio/ui";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { ShellWorkbench } from "pstdio-shell/react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
   useAgentConfigs,
@@ -12,6 +12,7 @@ import {
 } from "@/features/agents/hooks/use-agent-configs";
 import { useAgents } from "@/features/agents/hooks/use-agents";
 import { createDashboardSettingsShell, GLOBAL_SETTINGS_WIDGET_ID } from "@/shared/shell/dashboard-settings-shell";
+import { useShell } from "@/shared/shell/use-shell";
 import type { SupportedAgentId } from "../components/add-agent-manually-dialog";
 import { AgentsPanel } from "../components/agents-panel";
 import { parseSettingsPanel, toSettingsPanel } from "../utils/settings-panel";
@@ -56,7 +57,7 @@ export const Settings = () => {
   const disableAgent = useDisableAgent();
   const setDefaultAgent = useSetDefaultAgent();
   const activePanel = parseSettingsPanel(panel);
-  const [settingsShell] = useState(() =>
+  const settingsShell = useShell(() =>
     createDashboardSettingsShell({
       navigate: (path) => {
         navigate({ to: path });
@@ -66,10 +67,6 @@ export const Settings = () => {
 
   const isLoading = isLoadingAgents || isLoadingConfigs;
   const isMutating = enableAgent.isPending || disableAgent.isPending || setDefaultAgent.isPending;
-
-  useEffect(() => {
-    return () => settingsShell.dispose();
-  }, [settingsShell]);
 
   useEffect(() => {
     const subscription = settingsShell.breadcrumbs.setItems([{ title: t("agentList.title") }]);

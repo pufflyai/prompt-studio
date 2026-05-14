@@ -18,6 +18,7 @@ import {
   createDashboardExtensionRouteShell,
   EXTENSION_ROUTE_TREE_ID,
 } from "@/shared/shell/dashboard-extension-route-shell";
+import { useShell } from "@/shared/shell/use-shell";
 import { useProject } from "../hooks/use-project";
 
 interface ExtensionRouteHostDeps {
@@ -59,7 +60,7 @@ const ProjectExtensionShellView = (props: ProjectExtensionShellViewProps) => {
   const hostDepsRef = useRef(hostDeps);
   hostDepsRef.current = hostDeps;
 
-  const [shell] = useState(() =>
+  const shell = useShell(() =>
     createDashboardExtensionRouteShell({
       projectId,
       projectName,
@@ -82,8 +83,6 @@ const ProjectExtensionShellView = (props: ProjectExtensionShellViewProps) => {
       }),
     }),
   );
-
-  useEffect(() => () => shell.dispose(), [shell]);
 
   useEffect(() => {
     const subscription = shell.breadcrumbs.setItems([{ title: projectName }, { title: route.label }]);
