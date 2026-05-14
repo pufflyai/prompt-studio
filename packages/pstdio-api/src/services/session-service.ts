@@ -1,4 +1,4 @@
-import type { createSessionsDBService } from "pstdio-db";
+import type { createSessionQueueEntriesDBService, createSessionsDBService } from "pstdio-db";
 import { createSessionStore } from "../features/sessions/session-store";
 import type { EventBus } from "../features/sync/event-bus";
 
@@ -16,6 +16,7 @@ type HookSessionRecord = { id: string; project_id: string; status: string; origi
 
 export type SessionServiceDeps = {
   sessionsDb: ReturnType<typeof createSessionsDBService>;
+  sessionQueueEntriesService?: ReturnType<typeof createSessionQueueEntriesDBService>;
   eventBus: EventBus;
   onSessionStarted?: (session: HookSessionRecord) => void;
   onSessionStatusChanged?: (session: HookSessionRecord) => void;
@@ -39,25 +40,15 @@ export const createSessionService = (deps: SessionServiceDeps) => {
   const list = raw.list;
   const listByStatus = raw.listByStatus;
   const listByAgentSession = raw.listByAgentSession;
+  const countActive = raw.countActive;
 
   // --- mutations (orchestrated) ---
-  const transitionStatus = async (id: string, status: SessionStatus) => {
-    const updated = await raw.updateStatus(id, status);
-    if (!updated) return null;
-
-    deps.eventBus.emit("sessions", "set", updated);
-    if (updated.project_id) {
-      deps.onSessionStatusChanged?.({
-        id: updated.id,
-        project_id: updated.project_id,
-        status: updated.status,
-        original_session_id: updated.original_session_id,
-      });
-    }
-    return updated;
-  };
-
   const cancel = async (id: string) => {
+    const existing = await raw.get(id);
+    if (existing?.status === "queued") {
+      await deps.sessionQueueEntriesService?.remove(id);
+    }
+
     const entry = store.get(id);
     entry?.process?.kill();
 
@@ -100,6 +91,18 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     return session;
   };
 
+  const createQueuedWithEntry = async (
+    input: Parameters<typeof raw.createQueuedWithEntry>[0],
+    options: CreateSessionOptions = {},
+  ) => {
+    const session = await raw.createQueuedWithEntry(input);
+    deps.eventBus.emit("sessions", "set", session);
+    if (options.emitStartedHook !== false) {
+      emitStartedHook(session);
+    }
+    return session;
+  };
+
   const update = async (id: string, input: Parameters<typeof raw.update>[1]) => {
     const updated = await raw.update(id, input);
     if (updated) {
@@ -109,10 +112,35 @@ export const createSessionService = (deps: SessionServiceDeps) => {
   };
 
   const archive = async (id: string) => {
+    const existing = await raw.get(id);
+    if (existing?.status === "queued") {
+      await deps.sessionQueueEntriesService?.remove(id);
+    }
+
     const updated = await raw.archive(id);
     if (!updated) return null;
 
     deps.eventBus.emit("sessions", "set", updated);
+    return updated;
+  };
+
+  const transitionStatus = async (id: string, status: SessionStatus) => {
+    if (status === "queued") {
+      throw new Error("Queued status is scheduler-owned and requires a queue entry");
+    }
+
+    const updated = await raw.updateStatus(id, status);
+    if (!updated) return null;
+
+    deps.eventBus.emit("sessions", "set", updated);
+    if (updated.project_id) {
+      deps.onSessionStatusChanged?.({
+        id: updated.id,
+        project_id: updated.project_id,
+        status: updated.status,
+        original_session_id: updated.original_session_id,
+      });
+    }
     return updated;
   };
 
@@ -132,7 +160,9 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     list,
     listByStatus,
     listByAgentSession,
+    countActive,
     create,
+    createQueuedWithEntry,
     update,
     transitionStatus,
     cancel,

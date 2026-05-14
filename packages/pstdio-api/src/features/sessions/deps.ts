@@ -9,6 +9,7 @@ export type SessionsRouteDeps = Pick<
   | "fileService"
   | "projectService"
   | "repoService"
+  | "sessionQueueEntriesService"
   | "sessionService"
   | "settingsService"
   | "templateService"

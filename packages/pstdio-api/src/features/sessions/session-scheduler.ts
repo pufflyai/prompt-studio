@@ -24,6 +24,21 @@ type StartExistingInput = {
   questionResponse?: { answers: string[][] };
 };
 
+let createLock = Promise.resolve();
+
+const withCreateLock = async <T>(operation: () => Promise<T>) => {
+  const previous = createLock;
+  const { promise, resolve } = Promise.withResolvers<void>();
+  createLock = previous.then(() => promise);
+
+  await previous;
+  try {
+    return await operation();
+  } finally {
+    resolve();
+  }
+};
+
 const logStartupFailure = async (
   deps: SessionsRouteDeps,
   input: { error: unknown; session: ExistingSession; agentId: string; cwd?: string; model?: string },
@@ -43,19 +58,59 @@ const logStartupFailure = async (
   await deps.sessionService.transitionStatus(input.session.id, "failed");
 };
 
+const hasCreateCapacity = async (deps: SessionsRouteDeps) => {
+  const settings = await deps.settingsService.get();
+  const limit = settings.max_concurrent_sessions;
+
+  if (limit == null) return true;
+
+  const activeCount = await deps.sessionService.countActive();
+  return activeCount < limit;
+};
+
 export const createSessionScheduler = (deps: SessionsRouteDeps) => {
   const createAndStartSession = async (input: CreateAndStartInput) => {
-    const session = await deps.sessionService.create(
-      {
-        project_id: input.projectId,
-        title: input.title,
-        agent: input.agentId,
-        last_selected_model: input.model,
-        original_session_id: input.originalSessionId,
-        cwd: input.cwd,
-      },
-      { emitStartedHook: false },
-    );
+    const { session, shouldStart } = await withCreateLock(async () => {
+      const hasCapacity = await hasCreateCapacity(deps);
+
+      if (!hasCapacity) {
+        const queued = await deps.sessionService.createQueuedWithEntry(
+          {
+            project_id: input.projectId,
+            title: input.title,
+            agent: input.agentId,
+            last_selected_model: input.model,
+            original_session_id: input.originalSessionId,
+            cwd: input.cwd,
+            prompt: input.prompt,
+            request_kind: "start",
+          },
+          { emitStartedHook: false },
+        );
+
+        return { session: queued, shouldStart: false };
+      }
+
+      const started = await deps.sessionService.create(
+        {
+          project_id: input.projectId,
+          title: input.title,
+          agent: input.agentId,
+          last_selected_model: input.model,
+          original_session_id: input.originalSessionId,
+          cwd: input.cwd,
+        },
+        { emitStartedHook: false },
+      );
+
+      return { session: started, shouldStart: true };
+    });
+
+    await input.onBeforeStartedHook?.(session);
+
+    if (!shouldStart) {
+      return session;
+    }
 
     spawnAgentSession(
       {
@@ -70,7 +125,6 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     ).catch((error) =>
       logStartupFailure(deps, { error, session, agentId: input.agentId, cwd: input.cwd, model: input.model }),
     );
-    await input.onBeforeStartedHook?.(session);
     deps.sessionService.emitStartedHook?.(session);
 
     return session;

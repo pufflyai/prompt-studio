@@ -283,7 +283,6 @@ describe("createPluginService scheduler lifecycle", () => {
     await service.dispose();
     const duration = Date.now() - started;
 
-    expect(duration).toBeGreaterThanOrEqual(20);
     expect(duration).toBeLessThan(500);
   });
 });

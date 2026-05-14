@@ -14,6 +14,7 @@ import {
   createProjectsDBService,
   createProjectTemplateDefaultsDBService,
   createReposDBService,
+  createSessionQueueEntriesDBService,
   createSessionsDBService,
   createSettingsDBService,
   createSkillsDBService,
@@ -121,6 +122,7 @@ export const createApp = async (options: AppOptions) => {
   // --- db services ---
   const projectsDBService = createProjectsDBService(db);
   const reposDBService = createReposDBService(db);
+  const sessionQueueEntriesService = createSessionQueueEntriesDBService(db);
   const sessionsDBService = createSessionsDBService(db);
   const settingsDBService = createSettingsDBService(db);
   const ticketsDBService = createTicketsDBService(db);
@@ -237,6 +239,7 @@ export const createApp = async (options: AppOptions) => {
 
   const sessionService = createSessionService({
     sessionsDb: sessionsDBService,
+    sessionQueueEntriesService,
     eventBus,
     onSessionStarted: (session) => fireSessionStartHook(sessionHookDeps, session),
     onSessionStatusChanged: (session) => fireSessionStatusHook(sessionHookDeps, session),
@@ -253,6 +256,7 @@ export const createApp = async (options: AppOptions) => {
     agentRegistry,
     projectService,
     repoService,
+    sessionQueueEntriesService,
     sessionService,
     settingsService,
     ticketService,

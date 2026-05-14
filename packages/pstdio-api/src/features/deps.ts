@@ -1,5 +1,9 @@
 import type { AgentRegistry } from "pstdio-agents";
-import type { createActivityEventsDBService, createExtensionStorageDBService } from "pstdio-db";
+import type {
+  createActivityEventsDBService,
+  createExtensionStorageDBService,
+  createSessionQueueEntriesDBService,
+} from "pstdio-db";
 import type { createAgentConfigService } from "../services/agent-config-service";
 import type { createAttemptStatusService } from "../services/attempt-status-service";
 import type { createExtensionService } from "../services/extension-service";
@@ -38,6 +42,7 @@ export interface RouteDeps {
   projectService: ReturnType<typeof createProjectService>;
   repoService: ReturnType<typeof createRepoService>;
   sessionService: ReturnType<typeof createSessionService>;
+  sessionQueueEntriesService: ReturnType<typeof createSessionQueueEntriesDBService>;
   settingsService: ReturnType<typeof createSettingsService>;
   ticketService: ReturnType<typeof createTicketService>;
   workspaceService: ReturnType<typeof createWorkspaceService>;

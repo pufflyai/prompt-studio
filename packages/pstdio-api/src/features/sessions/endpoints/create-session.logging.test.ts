@@ -81,6 +81,7 @@ const createDeps = () => {
           title: "Session",
           agent: "fake",
         }),
+        countActive: mock(async () => 0),
         transitionStatus,
         store: {
           create: mock(() => ({
@@ -94,6 +95,9 @@ const createDeps = () => {
       },
       agentConfigService: {
         list: async () => [],
+      },
+      settingsService: {
+        get: async () => ({ max_concurrent_sessions: null }),
       },
       eventBus: {
         emit: () => {},

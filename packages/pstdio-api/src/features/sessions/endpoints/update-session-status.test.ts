@@ -201,4 +201,41 @@ describe("PATCH /v1/sessions/:id/status", () => {
       rmSync(tempRoot, { recursive: true, force: true });
     }
   });
+
+  test("rejects queued status because queue ownership belongs to the scheduler", async () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-update-session-status-queued-test-"));
+    const handle = await createApp({
+      dbPath: ":memory:",
+      storagePath: join(tempRoot, "storage"),
+      filesRoot: "",
+      agents: [],
+    });
+
+    try {
+      const projectRes = await handle.app.request("/v1/projects", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "Queued Reject Project" }),
+      });
+      expect(projectRes.status).toBe(201);
+      const project = await projectRes.json();
+
+      const session = await handle.deps.sessionService.create({
+        project_id: project.id,
+        title: "Queued Reject Session",
+        agent: "fake",
+      });
+
+      const statusRes = await handle.app.request(`/v1/sessions/${session.id}/status`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: "queued" }),
+      });
+
+      expect(statusRes.status).toBe(400);
+    } finally {
+      await handle.close();
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
 });

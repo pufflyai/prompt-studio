@@ -1,6 +1,6 @@
 import { and, count, eq, inArray } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { sessions } from "../../db/schemas.pg";
+import { session_queue_entries, sessions } from "../../db/schemas.pg";
 
 type SessionRecord = typeof sessions.$inferSelect;
 type SessionStatus =
@@ -19,6 +19,12 @@ type CreateInput = {
   last_selected_model?: string;
   original_session_id?: string;
   cwd?: string;
+  status?: SessionStatus;
+};
+
+type CreateQueuedInput = Omit<CreateInput, "status"> & {
+  prompt: string;
+  request_kind: string;
 };
 
 type ListFilters = {
@@ -45,16 +51,16 @@ type UpdateInput = Partial<
 const nowTimestamp = () => new Date().toISOString();
 
 export const createSessionsDBService = (db: DbClient) => {
-  const create = async (input: CreateInput) => {
+  const buildRecord = (input: CreateInput) => {
     const timestamp = nowTimestamp();
 
     const record: SessionRecord = {
       id: crypto.randomUUID(),
       project_id: input.project_id,
       title: input.title,
-      status: "in_progress",
+      status: input.status ?? "in_progress",
       archived: false,
-      last_request_started: timestamp,
+      last_request_started: input.status === "queued" ? null : timestamp,
       last_request_ended: null,
       agent: input.agent,
       last_selected_model: input.last_selected_model ?? null,
@@ -67,7 +73,33 @@ export const createSessionsDBService = (db: DbClient) => {
       updated_at: timestamp,
     };
 
+    return record;
+  };
+
+  const create = async (input: CreateInput) => {
+    const record = buildRecord(input);
+
     await db.insert(sessions).values(record);
+    return record;
+  };
+
+  const createQueuedWithEntry = async (input: CreateQueuedInput) => {
+    const record = buildRecord({ ...input, status: "queued" });
+    const timestamp = nowTimestamp();
+
+    await db.transaction(async (tx) => {
+      await tx.insert(sessions).values(record);
+      await tx.insert(session_queue_entries).values({
+        session_id: record.id,
+        prompt: input.prompt,
+        request_kind: input.request_kind,
+        question_response_json: null,
+        dispatch_started_at: null,
+        created_at: timestamp,
+        updated_at: timestamp,
+      });
+    });
+
     return record;
   };
 
@@ -153,5 +185,16 @@ export const createSessionsDBService = (db: DbClient) => {
     return row?.value ?? 0;
   };
 
-  return { create, get, list, listByStatus, listByAgentSession, update, updateStatus, archive, countActive };
+  return {
+    create,
+    createQueuedWithEntry,
+    get,
+    list,
+    listByStatus,
+    listByAgentSession,
+    update,
+    updateStatus,
+    archive,
+    countActive,
+  };
 };
