@@ -11,7 +11,7 @@ export const ThemeCard = () => {
 
   const setMode = async (checked: boolean) => {
     const next = checked ? "pstdio-dark" : "pstdio-light";
-    await host.call("setThemePreference", { themePreference: next });
+    await host.call("preferences.set", { name: "dashboard.themePreference", value: next });
   };
 
   return (

@@ -159,5 +159,6 @@ export type {
   TreeViewState,
 } from "./trees/tree-view-registry";
 export { createTreeViewRegistry } from "./trees/tree-view-registry";
+export { createShellWebviewHostCapabilities } from "./webviews/webview-host-capabilities";
 export type { RegisteredWebviewContribution, WebviewContribution, WebviewRegistry } from "./webviews/webview-registry";
 export { createWebviewRegistry } from "./webviews/webview-registry";

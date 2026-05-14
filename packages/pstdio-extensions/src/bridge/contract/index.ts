@@ -57,9 +57,21 @@ export type ExtensionViewDescriptor = {
     moduleUrl: string;
     styles: string[];
     runtimeUrl: string;
+    capabilities?: string[];
   };
 };
 
-export type HostCapability<TParams = unknown, TResult = unknown> = (params: TParams) => Promise<TResult> | TResult;
-
-export type HostCapabilityRegistry = Record<string, HostCapability>;
+export type {
+  HostCapability,
+  HostCapabilityRegistry,
+  WebviewCapabilityDiagnostic,
+  WebviewCapabilityDiagnosticCode,
+  WebviewHostCapability,
+} from "./capabilities";
+export {
+  createHostCapabilityGate,
+  validateWebviewCapabilityDeclarations,
+  validateWebviewCapabilityNames,
+  WEBVIEW_HOST_CAPABILITIES,
+  WEBVIEW_HOST_CAPABILITY_VERSION,
+} from "./capabilities";

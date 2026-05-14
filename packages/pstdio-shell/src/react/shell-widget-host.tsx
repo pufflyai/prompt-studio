@@ -1,6 +1,9 @@
 import { Box, Center, chakra, Text } from "@chakra-ui/react";
+import type { WebviewCapabilityDiagnostic } from "pstdio-extensions/bridge/contract";
+import { ExtensionFrame } from "pstdio-extensions/bridge/host";
 import type { ReactNode } from "react";
 import {
+  createShellWebviewHostCapabilities,
   resolveShellWidgetRendererId,
   type ShellCore,
   type ShellWidgetPlacement,
@@ -15,6 +18,8 @@ interface ShellWidgetHostProps {
 
 const getWebviewSource = (webview: WebviewDescriptor) =>
   webview.runtimeUrl ?? webview.assetUrl ?? webview.moduleUrl ?? webview.entry?.baseUrl;
+
+const isBridgeWebview = (webview: WebviewDescriptor) => Boolean(webview.runtimeUrl && webview.moduleUrl);
 
 const ShellWidgetFallback = (props: { children: ReactNode }) => {
   const { children } = props;
@@ -49,7 +54,29 @@ export const ShellWidgetHost = (props: ShellWidgetHostProps) => {
 
     return (
       <Box display="flex" minW="0" minH="0" w="full" h="full" overflow="hidden">
-        {source ? (
+        {isBridgeWebview(widget.webview) ? (
+          <ExtensionFrame
+            view={{
+              extensionId: widget.ownerId,
+              id: placement.contributionId,
+              label: widget.webview.title ?? widget.title,
+              webview: {
+                capabilities: widget.webview.capabilities,
+                moduleUrl: widget.webview.moduleUrl ?? "",
+                runtimeUrl: widget.webview.runtimeUrl ?? "",
+                styles: widget.webview.styles ?? [],
+              },
+            }}
+            props={{ placement, resource: placement.resource }}
+            theme="light"
+            capabilities={createShellWebviewHostCapabilities({
+              shell,
+              webviewId: placement.contributionId,
+            })}
+            onDiagnostics={(diagnostics) => reportWebviewDiagnostics(shell, placement.contributionId, diagnostics)}
+            onError={(error) => reportWebviewError(shell, placement.contributionId, error.message)}
+          />
+        ) : source ? (
           <chakra.iframe
             src={source}
             title={widget.webview.title ?? widget.title}
@@ -81,4 +108,28 @@ export const ShellWidgetHost = (props: ShellWidgetHostProps) => {
       )}
     </Box>
   );
+};
+
+const reportWebviewDiagnostics = (shell: ShellCore, webviewId: string, diagnostics: WebviewCapabilityDiagnostic[]) => {
+  for (const diagnostic of diagnostics) {
+    shell.diagnostics.report({
+      code: diagnostic.code,
+      id: `${webviewId}.${diagnostic.code}.${diagnostic.capability}`,
+      message: diagnostic.message,
+      metadata: { capability: diagnostic.capability, webviewId },
+      severity: diagnostic.severity,
+      source: "shell.webview",
+    });
+  }
+};
+
+const reportWebviewError = (shell: ShellCore, webviewId: string, message: string) => {
+  shell.diagnostics.report({
+    code: "webview_runtime_error",
+    id: `${webviewId}.runtime-error`,
+    message,
+    metadata: { webviewId },
+    severity: "error",
+    source: "shell.webview",
+  });
 };

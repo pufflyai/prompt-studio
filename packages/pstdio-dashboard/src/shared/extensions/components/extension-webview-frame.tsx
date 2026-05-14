@@ -1,12 +1,13 @@
 import { Box, Center, Spinner, Stack, Text } from "@chakra-ui/react";
-import { useThemePreference } from "@pstdio/ui";
-import { useParams } from "@tanstack/react-router";
+import { toaster, useThemePreference } from "@pstdio/ui";
+import { useNavigate, useParams } from "@tanstack/react-router";
+import type { WebviewCapabilityDiagnostic } from "pstdio-extensions/bridge/contract";
 import { ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/bridge/host";
-import { useEffect, useMemo, useState } from "react";
-import { useOpenCommandPalette } from "@/features/shortcuts/shortcut-provider";
+import { useEffect, useState } from "react";
 import { buildApiUrl } from "@/lib/api";
 import { type ExtensionCommandEvent, subscribeToExtensionCommandFeed } from "../extension-webview-broadcast";
 import { useExecuteExtensionCommand } from "../hooks/use-project-extensions";
+import { createDashboardWebviewHostCapabilities } from "../webview-host-capabilities";
 
 type WebviewDescriptor = {
   entry: { kind: "package-asset"; path: string; baseUrl: string };
@@ -16,6 +17,7 @@ type WebviewDescriptor = {
   runtimeUrl?: string;
   moduleUrl?: string;
   styles?: string[];
+  capabilities?: string[];
 };
 
 interface ExtensionWebviewFrameProps {
@@ -117,6 +119,7 @@ const BridgedWebviewSurface = ({ view, extensionProps, theme, capabilities }: Br
         title={view.label}
         onReady={() => setReady(true)}
         onError={(err) => setError(err.message)}
+        onDiagnostics={(diagnostics) => setError(describeWebviewDiagnostics(diagnostics))}
       />
     </Box>
   );
@@ -125,8 +128,8 @@ const BridgedWebviewSurface = ({ view, extensionProps, theme, capabilities }: Br
 export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const { webview, webviewId, extensionId, title } = props;
   const { projectId } = useParams({ strict: false });
+  const navigate = useNavigate();
   const { themePreference, setThemePreference } = useThemePreference();
-  const openCommandPalette = useOpenCommandPalette();
   const executeCommand = useExecuteExtensionCommand(projectId);
   const [lastCommand, setLastCommand] = useState<ExtensionCommandEvent | null>(null);
 
@@ -135,59 +138,39 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   // prop on every render, which is exactly what we want.
   useEffect(() => subscribeToExtensionCommandFeed((event) => setLastCommand(event)), []);
 
-  // Capabilities the guest can invoke via host.call(method, params). `commands.execute`
-  // routes through the React Query mutation so notices toast and the broadcast feed
-  // publishes — host- and guest-fired commands take the same path.
-  const capabilities = useMemo(
-    () => ({
-      "commands.execute": async (params: unknown) => {
-        const { commandId, body } = params as { commandId: string; body?: Record<string, unknown> };
-        return executeCommand.mutateAsync({
-          commandId,
-          body: { source: "dashboard", ...(body ?? {}) },
-        });
-      },
-      openCommandPalette: () => {
-        openCommandPalette();
-      },
-      setThemePreference: (params: unknown) => {
-        const { themePreference: next } = (params ?? {}) as { themePreference?: string };
-        if (typeof next === "string" && next.length > 0) setThemePreference(next);
-      },
-      // Generic keyboard relay: the bridge runtime forwards any modified keypress here and
-      // we re-dispatch a synthetic event on the host's document so existing shortcut
-      // listeners (palette, theme toggle, etc.) fire — without the guest knowing what
-      // shortcuts the host owns.
-      "host.dispatchKeyboardEvent": (params: unknown) => {
-        const init = params as KeyboardEventInit;
-        const event = new KeyboardEvent("keydown", { ...init, bubbles: true, cancelable: true });
-        document.dispatchEvent(event);
-      },
-    }),
-    [executeCommand, openCommandPalette, setThemePreference],
-  );
+  const capabilities = createDashboardWebviewHostCapabilities({
+    dispatchKeyboardEvent: dispatchHostKeyboardEvent,
+    emitActivity: surfaceActivity,
+    executeCommand: ({ commandId, body }) => executeCommand.mutateAsync({ commandId, body }),
+    openResource: (input) => openDashboardResource(input, navigate),
+    projectId,
+    reportDiagnostic: surfaceGuestDiagnostic,
+    setThemePreference,
+    showNotification: (notification) =>
+      toaster.create({
+        description: notification.message,
+        title: notification.title,
+        type: notification.level,
+      }),
+    themePreference,
+  });
 
-  const view = useMemo(() => {
-    if (!webview?.runtimeUrl || !webview?.moduleUrl) return null;
-    return {
-      id: webviewId,
-      extensionId,
-      label: webview.title ?? title ?? "Extension view",
-      webview: {
-        moduleUrl: buildApiUrl(webview.moduleUrl),
-        styles: (webview.styles ?? []).map(buildApiUrl),
-        runtimeUrl: buildApiUrl(webview.runtimeUrl),
-      },
-    };
-  }, [webview?.runtimeUrl, webview?.moduleUrl, webview?.styles, webview?.title, webviewId, extensionId, title]);
+  const view =
+    webview?.runtimeUrl && webview.moduleUrl
+      ? {
+          extensionId,
+          id: webviewId,
+          label: webview.title ?? title ?? "Extension view",
+          webview: {
+            capabilities: webview.capabilities,
+            moduleUrl: buildApiUrl(webview.moduleUrl),
+            runtimeUrl: buildApiUrl(webview.runtimeUrl),
+            styles: (webview.styles ?? []).map(buildApiUrl),
+          },
+        }
+      : null;
 
-  // Memoize the props payload so the bridge's propsUpdate fires only when content
-  // actually changes — passing a fresh object literal would push to the guest on every
-  // host render, churning the guest's effects.
-  const extensionProps = useMemo(
-    () => ({ projectId, themePreference, lastCommand }),
-    [projectId, themePreference, lastCommand],
-  );
+  const extensionProps = { lastCommand, projectId, themePreference };
 
   if (!webview) return null;
 
@@ -219,4 +202,44 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       capabilities={capabilities}
     />
   );
+};
+
+const describeWebviewDiagnostics = (diagnostics: WebviewCapabilityDiagnostic[]) =>
+  diagnostics.map((diagnostic) => diagnostic.message).join("\n");
+
+const dispatchHostKeyboardEvent = (init: KeyboardEventInit) => {
+  const event = new KeyboardEvent("keydown", { ...init, bubbles: true, cancelable: true });
+  document.dispatchEvent(event);
+};
+
+const openDashboardResource = (input: unknown, navigate: ReturnType<typeof useNavigate>) => {
+  const record = input as { href?: unknown };
+  if (typeof record.href !== "string" || record.href.length === 0) {
+    throw new Error("resource.open requires href in dashboard webviews.");
+  }
+  if (/^https?:\/\//.test(record.href)) {
+    window.open(record.href, "_blank", "noopener,noreferrer");
+    return;
+  }
+  navigate({ to: record.href });
+};
+
+const surfaceActivity = (item: unknown) => {
+  const record = item as { message?: unknown; severity?: unknown; title?: unknown };
+  if (typeof record.title !== "string") return;
+  toaster.create({
+    description: typeof record.message === "string" ? record.message : undefined,
+    title: record.title,
+    type: record.severity === "error" ? "error" : record.severity === "warning" ? "warning" : "info",
+  });
+};
+
+const surfaceGuestDiagnostic = (diagnostic: unknown) => {
+  const record = diagnostic as { message?: unknown; severity?: unknown; source?: unknown };
+  if (typeof record.message !== "string") return;
+  toaster.create({
+    description: typeof record.source === "string" ? record.source : undefined,
+    title: record.message,
+    type: record.severity === "error" ? "error" : "warning",
+  });
 };

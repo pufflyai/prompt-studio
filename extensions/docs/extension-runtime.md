@@ -637,6 +637,26 @@ views: {
 }
 ```
 
+Webviews opt into host operations with explicit capabilities. Unversioned declarations use the current v1 contract; `@1` is accepted for extensions that want to pin the version in source. Unsupported capability names or versions are reported as extension diagnostics, and runtime calls to undeclared capabilities are rejected by the host bridge.
+
+```ts
+webview: {
+  entry: packageAsset("./webviews/sidebar/index.tsx", import.meta.url),
+  capabilities: ["commands.execute", "preferences.set@1", "host.dispatchKeyboardEvent"],
+}
+```
+
+The v1 host capability names are:
+
+- `commands.execute`
+- `resource.open`
+- `notification.show`
+- `preferences.get`
+- `preferences.set`
+- `activity.emit`
+- `diagnostics.report`
+- `host.dispatchKeyboardEvent`
+
 ## Planner Boundary
 
 Internal ticket management is owned by `@pstdio/pstdio-ext-planner`, not by `@pstdio/sdk`.

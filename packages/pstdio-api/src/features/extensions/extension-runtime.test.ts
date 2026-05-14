@@ -337,4 +337,37 @@ describe("checkExtensionSource webviews", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  test("reports unsupported webview capability declarations", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-webview-capabilities-"));
+    writePackage(root, "invalid-webview-capabilities");
+    writeFileSync(
+      join(root, "extension.ts"),
+      `export default {
+        routes: {
+          page: {
+            path: "page",
+            label: "Page",
+            webview: {
+              entry: { kind: "package-asset", path: "./page.tsx", baseUrl: import.meta.url },
+              capabilities: ["commands.execute@2", "shell.escape"],
+            },
+          },
+        },
+      };`,
+    );
+    writeFileSync(join(root, "page.tsx"), "export default {};");
+
+    try {
+      const result = await checkExtensionSource(root, resolve(root, ".."));
+
+      expect(result.check.errorCount).toBe(2);
+      expect(result.check.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
+        "unsupported_webview_capability_version",
+        "unsupported_webview_capability",
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

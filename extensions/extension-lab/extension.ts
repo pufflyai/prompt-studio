@@ -170,6 +170,13 @@ const extension = defineExtension({
       label: "Lab",
       webview: {
         entry: packageAsset("./src/main.tsx", import.meta.url),
+        capabilities: [
+          "commands.execute",
+          "notification.show",
+          "preferences.get",
+          "preferences.set",
+          "host.dispatchKeyboardEvent",
+        ],
       },
     },
     faultyPage: {
@@ -177,6 +184,7 @@ const extension = defineExtension({
       label: "Lab (faulty)",
       webview: {
         entry: packageAsset("./src/faulty-main.tsx", import.meta.url),
+        capabilities: ["host.dispatchKeyboardEvent"],
       },
     },
   },

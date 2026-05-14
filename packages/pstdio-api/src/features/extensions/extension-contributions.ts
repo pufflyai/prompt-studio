@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, normalize, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionRouteRecord, ExtensionsCheckResponse } from "pstdio-api-contracts";
+import { validateWebviewCapabilityNames } from "pstdio-extensions/bridge/contract";
 import {
   addDiagnostic,
   commandIdFromRef,
@@ -441,6 +442,18 @@ const validateWebviewContributionEntries = (
         message: `${mapKey} ${key} webview entry`,
         sourcePath,
       });
+
+      if (Array.isArray(contribution.webview.capabilities)) {
+        for (const diagnostic of validateWebviewCapabilityNames(contribution.webview.capabilities)) {
+          addDiagnostic(check, {
+            code: diagnostic.code,
+            extensionId: loaded.metadata.id,
+            message: diagnostic.message,
+            severity: diagnostic.severity,
+            sourcePath,
+          });
+        }
+      }
     }
   }
 };
