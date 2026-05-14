@@ -154,7 +154,9 @@ describe("POST /v1/sessions queueing", () => {
     const entries = await handle.deps.sessionQueueEntriesService.listPending();
     expect(entries.some((entry) => entry.session_id === queued.id)).toBe(false);
   });
+});
 
+describe("POST /v1/sessions queue draining", () => {
   test("queues a follow-up when global concurrency is full", async () => {
     const projectRes = await handle.app.request("/v1/projects", {
       method: "POST",
@@ -286,6 +288,67 @@ describe("POST /v1/sessions queueing", () => {
       const entries = await isolated.deps.sessionQueueEntriesService.listPending();
       expect(entries).toHaveLength(1);
       expect(entries[0]?.request_kind).toBe("follow_up");
+    } finally {
+      await isolated.close();
+      rmSync(isolatedTempRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("starts the next queued session when capacity opens", async () => {
+    const isolatedTempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-drain-session-queue-test-"));
+    const isolated = await createApp({
+      dbPath: ":memory:",
+      storagePath: join(isolatedTempRoot, "storage"),
+      filesRoot: "",
+      agents: [agent],
+    });
+
+    try {
+      const projectRes = await isolated.app.request("/v1/projects", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "Drain Queue Project" }),
+      });
+      expect(projectRes.status).toBe(201);
+      const project = await projectRes.json();
+
+      const settingsRes = await isolated.app.request("/v1/settings", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ max_concurrent_sessions: 1 }),
+      });
+      expect(settingsRes.status).toBe(200);
+
+      const startedBefore = startSession.mock.calls.length;
+      const firstRes = await isolated.app.request("/v1/sessions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ project_id: project.id, title: "First", prompt: "first", agent: "fake" }),
+      });
+      expect(firstRes.status).toBe(201);
+      const first = await firstRes.json();
+
+      const secondRes = await isolated.app.request("/v1/sessions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ project_id: project.id, title: "Second", prompt: "second", agent: "fake" }),
+      });
+      expect(secondRes.status).toBe(201);
+      const second = await secondRes.json();
+      expect(second.status).toBe("queued");
+      expect(startSession.mock.calls.length).toBe(startedBefore + 1);
+
+      await isolated.deps.sessionService.transitionStatus(first.id, "completed");
+
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        const session = await isolated.deps.sessionService.get(second.id);
+        if (session?.status === "in_progress") break;
+        await Bun.sleep(25);
+      }
+
+      expect(await isolated.deps.sessionService.get(second.id)).toMatchObject({ id: second.id, status: "in_progress" });
+      expect(startSession.mock.calls.length).toBe(startedBefore + 2);
+      expect(await isolated.deps.sessionQueueEntriesService.listPending()).toEqual([]);
     } finally {
       await isolated.close();
       rmSync(isolatedTempRoot, { recursive: true, force: true });

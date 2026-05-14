@@ -1,4 +1,4 @@
-import { and, count, eq, inArray } from "drizzle-orm";
+import { and, count, eq, inArray, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { session_queue_entries, sessions } from "../../db/schemas.pg";
 
@@ -34,6 +34,8 @@ type QueueExistingInput = {
   request_kind: string;
   question_response_json?: unknown;
 };
+
+class QueueClaimFailed extends Error {}
 
 type ListFilters = {
   status?: SessionStatus;
@@ -138,6 +140,67 @@ export const createSessionsDBService = (db: DbClient) => {
     });
   };
 
+  const claimQueuedForDispatch = async (id: string) => {
+    try {
+      return await db.transaction(async (tx) => {
+        const timestamp = nowTimestamp();
+        const [updated] = await tx
+          .update(sessions)
+          .set({ status: "in_progress", updated_at: timestamp })
+          .where(and(eq(sessions.id, id), eq(sessions.status, "queued")))
+          .returning();
+
+        if (!updated) return null;
+
+        const [entry] = await tx
+          .delete(session_queue_entries)
+          .where(and(eq(session_queue_entries.session_id, id), isNull(session_queue_entries.dispatch_started_at)))
+          .returning();
+
+        if (!entry) throw new QueueClaimFailed();
+
+        return updated;
+      });
+    } catch (error) {
+      if (error instanceof QueueClaimFailed) return null;
+      throw error;
+    }
+  };
+
+  const cancelQueued = async (id: string) => {
+    const timestamp = nowTimestamp();
+
+    return db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(sessions)
+        .set({ status: "cancelled", last_request_ended: timestamp, updated_at: timestamp })
+        .where(and(eq(sessions.id, id), eq(sessions.status, "queued")))
+        .returning();
+
+      if (!updated) return null;
+
+      await tx.delete(session_queue_entries).where(eq(session_queue_entries.session_id, id));
+      return updated;
+    });
+  };
+
+  const archiveQueued = async (id: string) => {
+    const timestamp = nowTimestamp();
+
+    return db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(sessions)
+        .set({ archived: true, updated_at: timestamp })
+        .where(and(eq(sessions.id, id), eq(sessions.status, "queued")))
+        .returning();
+
+      if (!updated) return null;
+
+      await tx.delete(session_queue_entries).where(eq(session_queue_entries.session_id, id));
+      return updated;
+    });
+  };
+
   const get = async (id: string) => {
     const [row] = await db.select().from(sessions).where(eq(sessions.id, id));
     return row ?? null;
@@ -224,6 +287,9 @@ export const createSessionsDBService = (db: DbClient) => {
     create,
     createQueuedWithEntry,
     queueExistingWithEntry,
+    claimQueuedForDispatch,
+    cancelQueued,
+    archiveQueued,
     get,
     list,
     listByStatus,

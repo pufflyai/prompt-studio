@@ -3,6 +3,7 @@ import type { SessionsRouteDeps } from "./deps";
 import { resumeAgentSession, spawnAgentSession } from "./spawn-agent";
 
 type ExistingSession = NonNullable<Awaited<ReturnType<SessionsRouteDeps["sessionService"]["get"]>>>;
+type PendingQueueEntry = Awaited<ReturnType<SessionsRouteDeps["sessionQueueEntriesService"]["listPending"]>>[number];
 
 type CreateAndStartInput = {
   projectId: string;
@@ -98,6 +99,46 @@ const queueExistingFollowUp = async (
     request_kind: "follow_up",
     question_response_json: input.questionResponse ?? null,
   });
+};
+
+const dispatchQueuedEntry = async (deps: SessionsRouteDeps, session: ExistingSession, entry: PendingQueueEntry) => {
+  const agentId = session.agent!;
+  const model = session.last_selected_model ?? undefined;
+  const cwd = session.cwd ?? undefined;
+  const dispatchSession = await deps.sessionService.claimQueuedForDispatch(session.id);
+
+  if (!dispatchSession) return;
+
+  if (entry.request_kind === "start") {
+    spawnAgentSession(
+      { sessionId: session.id, agentId, prompt: entry.prompt, title: session.title, model, cwd },
+      deps,
+    ).catch((error) => logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model }));
+    deps.sessionService.emitStartedHook?.(dispatchSession);
+    return;
+  }
+
+  if (session.agent_session_id) {
+    resumeAgentSession(
+      {
+        sessionId: session.id,
+        agentSessionId: session.agent_session_id,
+        agentId,
+        prompt: entry.prompt,
+        model,
+        cwd: cwd ?? "",
+        questionResponse: entry.question_response_json as { answers: string[][] } | undefined,
+      },
+      deps,
+    ).catch((error) => logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model }));
+    deps.sessionService.emitResumedHook?.(dispatchSession);
+    return;
+  }
+
+  spawnAgentSession({ sessionId: session.id, agentId, prompt: entry.prompt, model, cwd }, deps).catch((error) =>
+    logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model }),
+  );
+  deps.sessionService.emitResumedHook?.(dispatchSession);
 };
 
 export const createSessionScheduler = (deps: SessionsRouteDeps) => {
@@ -218,5 +259,22 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     return deps.sessionService.resume(sessionId);
   };
 
-  return { createAndStartSession, startOrQueueExisting, resumeForApproval };
+  const drainQueue = async () => {
+    return withSchedulingLock(async () => {
+      while (await hasCreateCapacity(deps)) {
+        const [entry] = await deps.sessionQueueEntriesService.listPending();
+        if (!entry) return;
+
+        const session = await deps.sessionService.get(entry.session_id);
+        if (!session || session.status !== "queued") {
+          await deps.sessionQueueEntriesService.markDispatchStarted(entry.session_id);
+          continue;
+        }
+
+        await dispatchQueuedEntry(deps, session, entry);
+      }
+    });
+  };
+
+  return { createAndStartSession, startOrQueueExisting, resumeForApproval, drainQueue };
 };

@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { createDb } from "../../db/connection.pglite";
 import { createProjectsDBService } from "../projects/projects";
+import { createSessionQueueEntriesDBService } from "../session-queue-entries/session-queue-entries";
 import { createSessionsDBService } from "./sessions";
 
 let db: DbClient;
@@ -120,6 +121,45 @@ describe("sessions service", () => {
     await sessionsService.archive(awaiting.id);
 
     await expect(sessionsService.countActive()).resolves.toBe(2);
+  });
+
+  test("does not claim a queued session when its queue entry was removed", async () => {
+    const sessionQueueEntriesService = createSessionQueueEntriesDBService(db);
+    const queued = await sessionsService.createQueuedWithEntry({
+      project_id: projectId,
+      title: "queued",
+      agent: "claude-code",
+      prompt: "queued prompt",
+      request_kind: "start",
+    });
+    await sessionQueueEntriesService.remove(queued.id);
+
+    await expect(sessionsService.claimQueuedForDispatch(queued.id)).resolves.toBeNull();
+    await expect(sessionsService.get(queued.id)).resolves.toMatchObject({ id: queued.id, status: "queued" });
+  });
+
+  test("removes claimed queue entries so the same session can queue again", async () => {
+    const queued = await sessionsService.createQueuedWithEntry({
+      project_id: projectId,
+      title: "queued twice",
+      agent: "claude-code",
+      prompt: "first queued prompt",
+      request_kind: "follow_up",
+    });
+
+    await expect(sessionsService.claimQueuedForDispatch(queued.id)).resolves.toMatchObject({
+      id: queued.id,
+      status: "in_progress",
+    });
+    await sessionsService.updateStatus(queued.id, "completed");
+
+    await expect(
+      sessionsService.queueExistingWithEntry({
+        id: queued.id,
+        prompt: "second queued prompt",
+        request_kind: "follow_up",
+      }),
+    ).resolves.toMatchObject({ id: queued.id, status: "queued" });
   });
 
   test("list filters by agent", async () => {

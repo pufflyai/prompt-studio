@@ -21,6 +21,7 @@ export type SessionServiceDeps = {
   onSessionStarted?: (session: HookSessionRecord) => void;
   onSessionStatusChanged?: (session: HookSessionRecord) => void;
   onSessionResumed?: (session: HookSessionRecord) => void;
+  onCapacityAvailable?: () => Promise<void>;
 };
 
 type CreateSessionOptions = {
@@ -30,6 +31,9 @@ type CreateSessionOptions = {
 type ResumeSessionOptions = {
   emitResumedHook?: boolean;
 };
+
+const releasesCapacity = (status: SessionStatus) =>
+  status === "completed" || status === "failed" || status === "cancelled" || status === "disconnected";
 
 export const createSessionService = (deps: SessionServiceDeps) => {
   const raw = deps.sessionsDb;
@@ -46,7 +50,19 @@ export const createSessionService = (deps: SessionServiceDeps) => {
   const cancel = async (id: string) => {
     const existing = await raw.get(id);
     if (existing?.status === "queued") {
-      await deps.sessionQueueEntriesService?.remove(id);
+      const cancelled = await raw.cancelQueued(id);
+      if (cancelled) {
+        deps.eventBus.emit("sessions", "set", cancelled);
+        if (cancelled.project_id) {
+          deps.onSessionStatusChanged?.({
+            id: cancelled.id,
+            project_id: cancelled.project_id,
+            status: cancelled.status,
+            original_session_id: cancelled.original_session_id,
+          });
+        }
+        return cancelled;
+      }
     }
 
     const entry = store.get(id);
@@ -119,6 +135,22 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     return updated;
   };
 
+  const claimQueuedForDispatch = async (id: string) => {
+    const updated = await raw.claimQueuedForDispatch(id);
+    if (!updated) return null;
+
+    deps.eventBus.emit("sessions", "set", updated);
+    if (updated.project_id) {
+      deps.onSessionStatusChanged?.({
+        id: updated.id,
+        project_id: updated.project_id,
+        status: updated.status,
+        original_session_id: updated.original_session_id,
+      });
+    }
+    return updated;
+  };
+
   const update = async (id: string, input: Parameters<typeof raw.update>[1]) => {
     const updated = await raw.update(id, input);
     if (updated) {
@@ -130,7 +162,11 @@ export const createSessionService = (deps: SessionServiceDeps) => {
   const archive = async (id: string) => {
     const existing = await raw.get(id);
     if (existing?.status === "queued") {
-      await deps.sessionQueueEntriesService?.remove(id);
+      const archived = await raw.archiveQueued(id);
+      if (archived) {
+        deps.eventBus.emit("sessions", "set", archived);
+        return archived;
+      }
     }
 
     const updated = await raw.archive(id);
@@ -157,6 +193,9 @@ export const createSessionService = (deps: SessionServiceDeps) => {
         original_session_id: updated.original_session_id,
       });
     }
+    if (releasesCapacity(status)) {
+      await deps.onCapacityAvailable?.();
+    }
     return updated;
   };
 
@@ -180,6 +219,7 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     create,
     createQueuedWithEntry,
     queueExistingWithEntry,
+    claimQueuedForDispatch,
     update,
     transitionStatus,
     cancel,

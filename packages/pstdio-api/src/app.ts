@@ -39,6 +39,7 @@ import { createExtensionWebviewBuildManager } from "./features/extensions/extens
 import { fireSessionResumeHook, fireSessionStartHook, fireSessionStatusHook } from "./features/hooks/session-hooks";
 import { fireTicketHook, fireTicketHookAsync } from "./features/hooks/ticket-hooks";
 import { createPluginService } from "./features/plugins/plugin-service";
+import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { apiLogger } from "./lib/logger";
 import { createAgentConfigService } from "./services/agent-config-service";
@@ -237,6 +238,8 @@ export const createApp = async (options: AppOptions) => {
     pluginService,
   };
 
+  let drainSessionQueue = async () => {};
+
   const sessionService = createSessionService({
     sessionsDb: sessionsDBService,
     sessionQueueEntriesService,
@@ -244,6 +247,7 @@ export const createApp = async (options: AppOptions) => {
     onSessionStarted: (session) => fireSessionStartHook(sessionHookDeps, session),
     onSessionStatusChanged: (session) => fireSessionStatusHook(sessionHookDeps, session),
     onSessionResumed: (session) => fireSessionResumeHook(sessionHookDeps, session),
+    onCapacityAvailable: () => drainSessionQueue(),
   });
   const settingsService = createSettingsService({ settingsDb: settingsDBService });
 
@@ -275,6 +279,10 @@ export const createApp = async (options: AppOptions) => {
     syncService,
     pluginService,
     activityEventsService,
+  };
+
+  drainSessionQueue = async () => {
+    await createSessionScheduler(deps).drainQueue();
   };
 
   registerApi(app, deps, { apiToken });
