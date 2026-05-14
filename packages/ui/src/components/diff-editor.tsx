@@ -73,7 +73,11 @@ export function DiffEditor(props: DiffEditorProps) {
       position="relative"
       zIndex="0"
       overflow={disableScroll ? "hidden" : "auto"}
+      bg="bg"
       css={{
+        "& .gdv-root, & .gdv-view, & .gdv-file, & .gdv-content, & .gdv-hunk, & .gdv-line": {
+          background: "var(--chakra-colors-bg)",
+        },
         "& .gdv-root": {
           border: "none",
           borderRadius: "0",

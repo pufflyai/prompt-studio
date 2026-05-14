@@ -28,15 +28,14 @@ interface TreeListProps {
   onToggleNode?: (nodeId: string) => void;
   /**
    * When set, the tree's rows are virtualized via @tanstack/react-virtual.
-   * Requires `scrollRef` to point at the ancestor scroll viewport. Sections must
-   * contain flat nodes (no expandable children) — nested rows are not virtualized.
+   * Requires `scrollRef` to point at the ancestor scroll viewport.
    */
   virtualize?: boolean;
   scrollRef?: RefObject<HTMLDivElement | null>;
 }
 
 const VIRTUAL_ROW_ESTIMATE = 32;
-const VIRTUAL_ROW_OVERSCAN = 8;
+const VIRTUAL_ROW_OVERSCAN = 4;
 
 interface TreeListNodeRowProps {
   sectionId: string;
@@ -49,6 +48,7 @@ interface TreeListNodeRowProps {
   linkComponent?: TreeListLinkComponent;
   onNavigate?: (event: TreeListNavigateEvent) => void;
   onToggleNode?: (nodeId: string) => void;
+  renderChildren?: boolean;
 }
 
 const isInList = (id: string, values: string[]) => values.includes(id);
@@ -74,6 +74,7 @@ const TreeListNodeRow = (props: TreeListNodeRowProps) => {
     linkComponent: LinkComponent,
     onNavigate,
     onToggleNode,
+    renderChildren = true,
   } = props;
 
   const children = getNodeChildren(node);
@@ -138,7 +139,7 @@ const TreeListNodeRow = (props: TreeListNodeRowProps) => {
   return (
     <Stack gap={nodeGap} w="full" minW="0" maxW="full">
       {row}
-      {expanded && children.length > 0
+      {renderChildren && expanded && children.length > 0
         ? children.map((childNode) => (
             <TreeListNodeRow
               key={childNode.id}
@@ -264,7 +265,7 @@ const TreeListSectionHeader = (props: TreeListSectionHeaderProps) => {
   );
 };
 
-type VirtualRow =
+export type VirtualRow =
   | {
       kind: "section-header";
       key: string;
@@ -273,10 +274,33 @@ type VirtualRow =
       collapsible: boolean;
       expanded: boolean;
     }
-  | { kind: "node"; key: string; sectionId: string; node: TreeListNode }
+  | { kind: "node"; key: string; sectionId: string; node: TreeListNode; level: number }
   | { kind: "section-empty"; key: string; sectionId: string; emptyState: TreeListSection["emptyState"] };
 
-const buildVirtualRows = (sections: TreeListSection[], expandedSectionIds: string[]): VirtualRow[] => {
+const appendVisibleNodeRows = (input: {
+  rows: VirtualRow[];
+  sectionId: string;
+  nodes: TreeListNode[];
+  expandedNodeIds: string[];
+  level: number;
+}) => {
+  const { rows, sectionId, nodes, expandedNodeIds, level } = input;
+
+  for (const node of nodes) {
+    rows.push({ kind: "node", key: `${sectionId}:${node.id}`, sectionId, node, level });
+
+    const children = getNodeChildren(node);
+    if (children.length === 0 || !isInList(node.id, expandedNodeIds)) continue;
+
+    appendVisibleNodeRows({ rows, sectionId, nodes: children, expandedNodeIds, level: level + 1 });
+  }
+};
+
+export const buildVirtualRows = (
+  sections: TreeListSection[],
+  expandedSectionIds: string[],
+  expandedNodeIds: string[],
+): VirtualRow[] => {
   const rows: VirtualRow[] = [];
   for (const section of sections) {
     const collapsible = section.collapsible !== false && section.label !== undefined;
@@ -303,9 +327,7 @@ const buildVirtualRows = (sections: TreeListSection[], expandedSectionIds: strin
       }
       continue;
     }
-    for (const node of section.nodes) {
-      rows.push({ kind: "node", key: `${section.id}:${node.id}`, sectionId: section.id, node });
-    }
+    appendVisibleNodeRows({ rows, sectionId: section.id, nodes: section.nodes, expandedNodeIds, level: 0 });
   }
   return rows;
 };
@@ -329,7 +351,7 @@ const VirtualTreeList = (props: VirtualTreeListProps) => {
     scrollRef,
   } = props;
 
-  const rows = buildVirtualRows(sections, expandedSectionIds);
+  const rows = buildVirtualRows(sections, expandedSectionIds, expandedNodeIds);
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
@@ -365,7 +387,7 @@ const VirtualTreeList = (props: VirtualTreeListProps) => {
             <TreeListNodeRow
               sectionId={row.sectionId}
               node={row.node}
-              level={0}
+              level={row.level}
               expandedNodeIds={expandedNodeIds}
               activeNodeId={activeNodeId}
               rowVariant={rowVariant}
@@ -373,6 +395,7 @@ const VirtualTreeList = (props: VirtualTreeListProps) => {
               linkComponent={linkComponent}
               onNavigate={onNavigate}
               onToggleNode={onToggleNode}
+              renderChildren={false}
             />
           );
 

@@ -88,7 +88,7 @@ const LargeDiffPlaceholder = (props: LargeDiffPlaceholderProps) => {
   const { filePath, onShowFullDiff } = props;
 
   return (
-    <Box p="md" borderTop="1px solid" borderColor="border.muted" bg="bg.subtle">
+    <Box p="md" borderTop="1px solid" borderColor="border.muted" bg="bg">
       <EmptyState title="Large diffs are hidden by default" paddingY="sm">
         {onShowFullDiff ? (
           <Button size="xs" variant="outline" aria-label={`Render full diff for ${filePath}`} onClick={onShowFullDiff}>

@@ -3,7 +3,7 @@ import { GitBranch } from "lucide-react";
 
 import { Header } from "../../header";
 import { ListRow } from "../../list-row/list-row";
-import { Properties } from "../../properties";
+import { ParamEditor } from "../../param-editor";
 import { ResizableSplitLayout } from "../../resizable-split-layout";
 import { MarkdownEditor } from "../../rich-text/markdown-editor/markdown-editor";
 import type { WorkspaceTicket } from "../../tickets/types";
@@ -33,20 +33,24 @@ export const TicketDetailsPage = (props: TicketDetailsPageProps) => {
       </Header>
       <Stack flex="1" minH="0" overflowY="auto" gap="0">
         <Box p="sm">
-          <Properties
-            items={[
+          <ParamEditor
+            params={[
               {
-                label: "Status",
+                id: "status",
+                name: "Status",
+                type: "property",
                 value: (
                   <Badge colorPalette={ticket.statusColor ?? "gray"} variant="subtle">
                     {ticket.status ?? "—"}
                   </Badge>
                 ),
               },
-              { label: "Assignee", value: ticket.assignee ?? "Unassigned" },
-              { label: "Updated", value: formatDate(ticket.updatedAt ?? null) },
+              { id: "assignee", name: "Assignee", type: "property", value: ticket.assignee ?? "Unassigned" },
+              { id: "updated", name: "Updated", type: "property", value: formatDate(ticket.updatedAt ?? null) },
               {
-                label: "Tags",
+                id: "tags",
+                name: "Tags",
+                type: "property",
                 value: (
                   <HStack gap="2xs" flexWrap="wrap">
                     {(ticket.tags ?? []).map((tag) => (

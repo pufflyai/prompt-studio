@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 export interface BaseParam {
   id: string;
   name: string;
@@ -38,6 +40,11 @@ export interface ColorParam extends BaseParam {
   defaultValue: string;
 }
 
+export interface PropertyParam extends BaseParam {
+  type: "property";
+  value: ReactNode;
+}
+
 export type ObjectDefinition = (NumberParam | TextParam)[];
 
 export interface ObjectParam extends BaseParam {
@@ -74,6 +81,7 @@ export type Param =
   | SelectionParam
   | DateParam
   | ColorParam
+  | PropertyParam
   | ObjectParam
   | ListParam
   | VectorParam;

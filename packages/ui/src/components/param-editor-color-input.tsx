@@ -1,6 +1,6 @@
-import { Box, ColorPicker, type ColorPickerValueChangeDetails, Flex, parseColor, Text } from "@chakra-ui/react";
+import { Box, ColorPicker, type ColorPickerValueChangeDetails, Flex, parseColor } from "@chakra-ui/react";
 import { useEffect, useRef, useState } from "react";
-import { Tooltip } from "./tooltip";
+import { ParamEditorLabel } from "./param-editor-label";
 
 interface ColorInputProps {
   id: string;
@@ -15,17 +15,7 @@ interface ColorInputProps {
 }
 
 export const ColorInput = (props: ColorInputProps) => {
-  const {
-    id,
-    defaultValue,
-    name,
-    onChange,
-    description,
-    readOnly,
-    hideLabel = false,
-    tooltipPlacement = "right",
-    fullWidth = false,
-  } = props;
+  const { id, defaultValue, name, onChange, description, readOnly, hideLabel = false, fullWidth = false } = props;
   const [value, setValue] = useState(defaultValue);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scheduleChange = (nextColor: string) => {
@@ -72,27 +62,21 @@ export const ColorInput = (props: ColorInputProps) => {
 
   return (
     <Box>
-      <Tooltip positioning={{ placement: tooltipPlacement }} content={description} contentProps={{ padding: "xxs" }}>
-        {fullWidth ? (
-          <Box>
-            {!hideLabel && (
-              <Text textStyle="label/S/medium" color="fg.muted" mb="xs">
-                {name}
-              </Text>
-            )}
-            {picker}
-          </Box>
-        ) : (
-          <Flex alignItems="center" justifyContent="space-between" minHeight="2rem">
-            {!hideLabel && (
-              <Text textStyle="label/S/medium" color="fg.muted">
-                {name}
-              </Text>
-            )}
-            {picker}
-          </Flex>
-        )}
-      </Tooltip>
+      {fullWidth ? (
+        <Box>
+          {!hideLabel && (
+            <Box mb="xs">
+              <ParamEditorLabel name={name} description={description} />
+            </Box>
+          )}
+          {picker}
+        </Box>
+      ) : (
+        <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" gap="xs">
+          {!hideLabel && <ParamEditorLabel name={name} description={description} />}
+          {picker}
+        </Flex>
+      )}
     </Box>
   );
 };

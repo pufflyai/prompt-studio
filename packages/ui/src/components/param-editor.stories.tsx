@@ -1,4 +1,4 @@
-import { Container } from "@chakra-ui/react";
+import { Button, Container, HStack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "storybook/test";
 import { ParamEditor } from "./param-editor";
@@ -102,6 +102,49 @@ export const Demo: Story = {
       },
     ],
     readOnly: false,
+  },
+};
+
+export const PropertyRows: Story = {
+  render: (props) => {
+    return (
+      <Container padding="md">
+        <ParamEditor {...props} />
+      </Container>
+    );
+  },
+  args: {
+    params: [
+      {
+        id: "project-name",
+        name: "Project Name",
+        type: "property",
+        description: "The unique identifier for this project",
+        value: <Text>My Cool Project</Text>,
+      },
+      {
+        id: "visibility",
+        name: "Visibility",
+        type: "property",
+        description: "Who can see this project",
+        value: (
+          <HStack gap="sm">
+            <Button size="sm" variant="outline">
+              Public
+            </Button>
+            <Button size="sm" variant="ghost">
+              Change
+            </Button>
+          </HStack>
+        ),
+      },
+      {
+        id: "version",
+        name: "Version",
+        type: "property",
+        value: <Text>1.0.0</Text>,
+      },
+    ],
   },
 };
 

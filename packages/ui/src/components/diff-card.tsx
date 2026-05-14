@@ -20,8 +20,10 @@ interface DiffCardProps {
   isSelected?: boolean;
   isExpanded?: boolean;
   onToggleExpanded?: () => void;
+  onSelect?: () => void;
   onLoadDiff?: (path: string) => Promise<void>;
   hasOptedIntoLargeDiff?: boolean;
+  shouldRenderBody?: boolean;
   onShowFullDiff?: () => void;
 }
 
@@ -126,8 +128,10 @@ export const DiffCard = (props: DiffCardProps) => {
     isSelected = false,
     isExpanded = true,
     onToggleExpanded,
+    onSelect,
     onLoadDiff,
     hasOptedIntoLargeDiff = false,
+    shouldRenderBody = true,
     onShowFullDiff,
   } = props;
 
@@ -154,11 +158,12 @@ export const DiffCard = (props: DiffCardProps) => {
       borderColor={isSelected ? "border.accent" : "border.muted"}
       borderRadius="xs"
       overflow="visible"
-      bg={isSelected ? "bg.active" : "bg"}
+      bg="bg"
       width="100%"
       maxW="100%"
       transition="border-color 0.14s ease"
       _hover={{ borderColor: "border.accent" }}
+      onClick={onSelect}
     >
       <DiffCardHeader diff={diff} isSelected={isSelected} isExpanded={isExpanded} onToggleExpanded={onToggleExpanded} />
 
@@ -177,6 +182,7 @@ export const DiffCard = (props: DiffCardProps) => {
         isLoadingDiff={isLoadingDiff}
         onLoadDiff={loadDiff}
         hasOptedIntoLargeDiff={hasOptedIntoLargeDiff}
+        shouldRenderBody={shouldRenderBody}
         onShowFullDiff={onShowFullDiff}
       />
     </Box>
@@ -204,10 +210,10 @@ export const DiffCardHeader = (props: DiffCardHeaderProps) => {
       position="sticky"
       top="0"
       zIndex="1"
-      bg={isSelected ? "bg.active" : "bg"}
+      bg="bg"
       cursor="pointer"
       transition="background 0.14s ease"
-      _hover={{ bg: isSelected ? "bg.active" : "bg.subtle" }}
+      _hover={{ bg: "bg" }}
       onClick={() => onToggleExpanded?.()}
       gap="sm"
     >

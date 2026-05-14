@@ -1,10 +1,10 @@
-import { FolderPickerDialog as FolderPickerDialogUI } from "@pstdio/ui";
+import { RepoPickerDialog as RepoPickerDialogUI } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { type DirectoryEntry, listDirectory } from "@/features/file-system/data/api";
 import { resolveFolderPickerDefaultPath, resolveParentPath } from "./folder-picker-default-path";
 
-interface FolderPickerDialogProps {
+interface RepoPickerDialogProps {
   open: boolean;
   value?: string;
   title?: string;
@@ -65,7 +65,7 @@ const loadFolderDirectory = async (input: {
   }
 };
 
-export const FolderPickerDialog = (props: FolderPickerDialogProps) => {
+export const RepoPickerDialog = (props: RepoPickerDialogProps) => {
   const { open, value, title, description, selectedPaths = [], onClose, onSelect } = props;
   const { t } = useTranslation();
   const [currentPath, setCurrentPath] = useState("");
@@ -186,7 +186,7 @@ export const FolderPickerDialog = (props: FolderPickerDialogProps) => {
   const canSelectPath = currentIsGitRepo || selectedPath !== null;
 
   return (
-    <FolderPickerDialogUI
+    <RepoPickerDialogUI
       open={open}
       title={title}
       description={description}

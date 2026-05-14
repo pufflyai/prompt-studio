@@ -17,6 +17,7 @@ interface DiffCardContentProps {
   isLoadingDiff: boolean;
   onLoadDiff: () => Promise<void>;
   hasOptedIntoLargeDiff: boolean;
+  shouldRenderBody?: boolean;
   onShowFullDiff?: () => void;
 }
 
@@ -75,6 +76,7 @@ export const DiffCardContent = (props: DiffCardContentProps) => {
     isLoadingDiff,
     onLoadDiff,
     hasOptedIntoLargeDiff,
+    shouldRenderBody = true,
     onShowFullDiff,
   } = props;
 
@@ -98,6 +100,8 @@ export const DiffCardContent = (props: DiffCardContentProps) => {
   if (shouldAutoLoadDiff) {
     return <LoadingDiffContent />;
   }
+
+  if (!shouldRenderBody) return null;
 
   return (
     <DiffCardBody

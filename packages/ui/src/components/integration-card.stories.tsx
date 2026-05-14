@@ -22,10 +22,6 @@ const meta = {
     version: "1.2.0",
     description: "Link repositories and track code changes.",
     id: "github",
-    metadata: [
-      { label: "Namespace", value: "github" },
-      { label: "Source", value: "/workspace/extensions/github" },
-    ],
     active: false,
   },
 };

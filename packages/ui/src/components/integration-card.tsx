@@ -1,6 +1,8 @@
-import { Badge, Box, Button, Card, HStack, Icon, Stack, Text } from "@chakra-ui/react";
+import { Badge, Box, Button, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { Check } from "lucide-react";
 import type { ReactNode } from "react";
+
+import { SimpleCard, SimpleCardBody } from "./simple-card";
 
 export interface IntegrationCardProps {
   icon: ReactNode;
@@ -11,15 +13,14 @@ export interface IntegrationCardProps {
   category?: string;
   active?: boolean;
   actionLabel?: string;
-  metadata?: Array<{ label: string; value: ReactNode }>;
 }
 
 export const IntegrationCard = (props: IntegrationCardProps) => {
-  const { icon, name, description, id, version, category, active = false, actionLabel, metadata = [] } = props;
+  const { icon, name, description, id, version, category, active = false, actionLabel } = props;
 
   return (
-    <Card.Root size="sm" borderRadius="0">
-      <Card.Body>
+    <SimpleCard>
+      <SimpleCardBody>
         <HStack gap="4" alignItems="flex-start">
           <Icon boxSize="1em" fontSize="2xl" flexShrink="0" color="fg.muted">
             {icon}
@@ -27,7 +28,9 @@ export const IntegrationCard = (props: IntegrationCardProps) => {
           <Box flex="1" minW="0">
             <Stack gap="1">
               <HStack gap="2" flexWrap="wrap">
-                <Card.Title textStyle="sm">{name}</Card.Title>
+                <Text textStyle="sm" fontWeight="semibold">
+                  {name}
+                </Text>
                 <Badge size="sm" variant="outline">
                   {id}
                 </Badge>
@@ -42,12 +45,7 @@ export const IntegrationCard = (props: IntegrationCardProps) => {
                   </Badge>
                 )}
               </HStack>
-              <Card.Description>{description}</Card.Description>
-              {metadata.map((item) => (
-                <Text key={item.label} textStyle="paragraph/XS/regular" color="fg.muted">
-                  {item.label}: {item.value}
-                </Text>
-              ))}
+              <Text color="fg.muted">{description}</Text>
             </Stack>
           </Box>
           <Button
@@ -67,7 +65,7 @@ export const IntegrationCard = (props: IntegrationCardProps) => {
             {actionLabel ?? (active ? "Active" : "Connect")}
           </Button>
         </HStack>
-      </Card.Body>
-    </Card.Root>
+      </SimpleCardBody>
+    </SimpleCard>
   );
 };

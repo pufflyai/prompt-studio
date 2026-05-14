@@ -1,16 +1,28 @@
 import { Box, Stack } from "@chakra-ui/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useRef, useState } from "react";
-import { type Diff, DiffCard } from "./diff-card";
-import { isLargeDiffContent } from "./diff-size";
-import { buildDiffViewData } from "./diff-view-adapter";
-import { EmptyState } from "./empty-state";
-import { ScrollArea } from "./scroll-area";
+import { type Diff, DiffCard } from "../diff-card";
+import { isLargeDiffContent } from "../diff-size";
+import { EmptyState } from "../empty-state";
+import { ScrollArea } from "../scroll-area";
 
 interface DiffDrawerProps {
   diffs: Diff[];
   selectedDiffPath?: string | null;
   onLoadDiff?: (path: string) => Promise<void>;
+  onSelectDiffPath?: (path: string) => void;
+  onExpansionStateChange?: (state: DiffDrawerExpansionState) => void;
+  expansionCommand?: DiffExpansionCommand | null;
+}
+
+interface DiffExpansionCommand {
+  action: "expand" | "collapse";
+  id: number;
+}
+
+export interface DiffDrawerExpansionState {
+  allExpanded: boolean;
+  allCollapsed: boolean;
 }
 
 export type { Diff };
@@ -22,29 +34,9 @@ const CARD_BODY_LINE_HEIGHT = 18;
 const COLLAPSED_CARD_HEIGHT = 44;
 const DEFERRED_BODY_HEIGHT = 88;
 const ITEM_GAP_HEIGHT = 8;
-const INITIAL_EXPANDED_DIFF_COUNT = 20;
-
-const renderedDiffRowCountCache = new WeakMap<Diff, number>();
-
-const hasLoadedDiffContent = (diff: Diff) => diff.oldContent !== undefined || diff.newContent !== undefined;
-
-const countRenderedDiffRows = (diff: Diff) => {
-  const cachedRowCount = renderedDiffRowCountCache.get(diff);
-  if (cachedRowCount !== undefined) return cachedRowCount;
-
-  const data = buildDiffViewData({
-    original: diff.oldContent ?? "",
-    modified: diff.newContent ?? "",
-    oldPath: diff.oldPath,
-    newPath: diff.newPath,
-  });
-  const rowCount = data.hunks.reduce((total, hunk) => {
-    return total + hunk.split("\n").filter(Boolean).length;
-  }, 0);
-
-  renderedDiffRowCountCache.set(diff, rowCount);
-  return rowCount;
-};
+const INITIAL_EXPANDED_DIFF_COUNT = 10;
+const INITIAL_COLLAPSED_LINE_THRESHOLD = 100;
+const BODY_RENDER_OVERSCAN_PX = 100;
 
 export const estimateDiffCardHeight = (diff: Diff, isCollapsed: boolean, hasOptedIntoLargeDiff = false) => {
   if (isCollapsed) return COLLAPSED_CARD_HEIGHT + ITEM_GAP_HEIGHT;
@@ -56,17 +48,23 @@ export const estimateDiffCardHeight = (diff: Diff, isCollapsed: boolean, hasOpte
   if (lineCount === 0) {
     return CARD_HEADER_HEIGHT + DEFERRED_BODY_HEIGHT + ITEM_GAP_HEIGHT;
   }
-  if (!hasLoadedDiffContent(diff)) {
-    return CARD_HEADER_HEIGHT + lineCount * CARD_BODY_LINE_HEIGHT + ITEM_GAP_HEIGHT;
-  }
-
-  const renderedRows = countRenderedDiffRows(diff);
-
-  return CARD_HEADER_HEIGHT + Math.max(lineCount, renderedRows) * CARD_BODY_LINE_HEIGHT + ITEM_GAP_HEIGHT;
+  return CARD_HEADER_HEIGHT + lineCount * CARD_BODY_LINE_HEIGHT + ITEM_GAP_HEIGHT;
 };
 
-export const buildInitialCollapsedPaths = (diffs: Diff[]) =>
-  new Set(diffs.slice(INITIAL_EXPANDED_DIFF_COUNT).map((diff) => getDiffPath(diff)));
+export const buildInitialCollapsedPaths = (diffs: Diff[]) => {
+  if (diffs.length <= INITIAL_EXPANDED_DIFF_COUNT) return new Set<string>();
+
+  return new Set(
+    diffs
+      .filter((diff, index) => {
+        const lineCount = (diff.additions ?? 0) + (diff.deletions ?? 0);
+        return index >= INITIAL_EXPANDED_DIFF_COUNT || lineCount > INITIAL_COLLAPSED_LINE_THRESHOLD;
+      })
+      .map((diff) => getDiffPath(diff)),
+  );
+};
+
+export const buildAllCollapsedPaths = (diffs: Diff[]) => new Set(diffs.map((diff) => getDiffPath(diff)));
 
 export const toggleCollapsedPath = (collapsedPaths: Set<string>, path: string) => {
   const next = new Set(collapsedPaths);
@@ -93,8 +91,16 @@ export const resolveCollapsedPathsForSelectedDiff = (
 };
 
 export function DiffDrawer(props: DiffDrawerProps) {
-  const { diffs, selectedDiffPath = null, onLoadDiff } = props;
+  const {
+    diffs,
+    selectedDiffPath = null,
+    onLoadDiff,
+    onSelectDiffPath,
+    onExpansionStateChange,
+    expansionCommand = null,
+  } = props;
   const scrollRef = useRef<HTMLDivElement>(null);
+  const reportedExpansionStateRef = useRef<DiffDrawerExpansionState | null>(null);
   const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(() => buildInitialCollapsedPaths(diffs));
   const [largeDiffOptInPaths, setLargeDiffOptInPaths] = useState<Set<string>>(() => new Set());
 
@@ -107,7 +113,7 @@ export function DiffDrawer(props: DiffDrawerProps) {
       return estimateDiffCardHeight(diff, collapsedPaths.has(path), largeDiffOptInPaths.has(path));
     },
     getItemKey: (index) => getDiffPath(diffs[index]),
-    overscan: 5,
+    overscan: 3,
   });
 
   useEffect(() => {
@@ -125,9 +131,32 @@ export function DiffDrawer(props: DiffDrawerProps) {
     setCollapsedPaths((prev) => resolveCollapsedPathsForSelectedDiff(diffs, prev, selectedDiffPath));
   }, [diffs, selectedDiffPath]);
 
+  useEffect(() => {
+    if (!expansionCommand) return;
+
+    setCollapsedPaths(expansionCommand.action === "collapse" ? buildAllCollapsedPaths(diffs) : new Set());
+  }, [diffs, expansionCommand]);
+
+  useEffect(() => {
+    const expansionState = {
+      allExpanded: collapsedPaths.size === 0,
+      allCollapsed: diffs.length > 0 && diffs.every((diff) => collapsedPaths.has(getDiffPath(diff))),
+    };
+    const reportedExpansionState = reportedExpansionStateRef.current;
+    if (
+      reportedExpansionState?.allExpanded === expansionState.allExpanded &&
+      reportedExpansionState.allCollapsed === expansionState.allCollapsed
+    ) {
+      return;
+    }
+
+    reportedExpansionStateRef.current = expansionState;
+    onExpansionStateChange?.(expansionState);
+  }, [collapsedPaths, diffs, onExpansionStateChange]);
+
   if (diffs.length === 0) {
     return (
-      <Stack h="full" minH="0" gap="0">
+      <Stack h="full" minH="0" gap="0" bg="bg">
         <ScrollArea flex="1" minH="0" contentProps={{ p: "xs", spaceY: "xs" }}>
           <EmptyState title="No changes detected" description="Make some changes to see the diff here." paddingY="sm" />
         </ScrollArea>
@@ -148,10 +177,12 @@ export function DiffDrawer(props: DiffDrawerProps) {
   };
 
   const virtualItems = virtualizer.getVirtualItems();
+  const visibleStart = scrollRef.current?.scrollTop ?? 0;
+  const visibleEnd = visibleStart + (scrollRef.current?.clientHeight ?? Number.POSITIVE_INFINITY);
 
   return (
-    <Stack h="full" minH="0" gap="0">
-      <Box position="relative" flex="1" minH="0">
+    <Stack h="full" minH="0" gap="0" bg="bg">
+      <Box position="relative" flex="1" minH="0" bg="bg">
         <ScrollArea
           position="absolute"
           inset="0"
@@ -163,6 +194,9 @@ export function DiffDrawer(props: DiffDrawerProps) {
             {virtualItems.map((virtualItem) => {
               const diff = diffs[virtualItem.index];
               const path = getDiffPath(diff);
+              const shouldRenderBody =
+                virtualItem.end >= visibleStart - BODY_RENDER_OVERSCAN_PX &&
+                virtualItem.start <= visibleEnd + BODY_RENDER_OVERSCAN_PX;
 
               return (
                 <Box
@@ -181,8 +215,10 @@ export function DiffDrawer(props: DiffDrawerProps) {
                     isSelected={selectedDiffPath === path}
                     isExpanded={!collapsedPaths.has(path)}
                     onToggleExpanded={() => toggleExpanded(path)}
+                    onSelect={() => onSelectDiffPath?.(path)}
                     onLoadDiff={onLoadDiff}
                     hasOptedIntoLargeDiff={largeDiffOptInPaths.has(path)}
+                    shouldRenderBody={shouldRenderBody}
                     onShowFullDiff={() => showFullDiff(path)}
                   />
                 </Box>

@@ -2,7 +2,7 @@ import { Badge, Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
-import { FolderPickerDialog, type FolderPickerDialogEntry } from "./folder-picker-dialog";
+import { RepoPickerDialog, type RepoPickerDialogEntry } from "./repo-picker-dialog";
 
 type StoryFn = () => ReactNode;
 
@@ -24,7 +24,7 @@ const resolveParentPath = (value: string) => {
   return `/${parts.slice(0, -1).join("/")}`;
 };
 
-const directoryMap: Record<string, FolderPickerDialogEntry[]> = {
+const directoryMap: Record<string, RepoPickerDialogEntry[]> = {
   "~": [
     { name: "Code", path: "/Users/you/Code", isDirectory: true, isGitRepo: false },
     { name: "Desktop", path: "/Users/you/Desktop", isDirectory: true, isGitRepo: false },
@@ -127,7 +127,7 @@ const directoryMap: Record<string, FolderPickerDialogEntry[]> = {
   ],
 };
 
-const sortEntries = (entries: FolderPickerDialogEntry[]) =>
+const sortEntries = (entries: RepoPickerDialogEntry[]) =>
   [...entries].sort((left, right) => {
     const byName = left.name.localeCompare(right.name, undefined, { sensitivity: "base" });
 
@@ -142,8 +142,8 @@ const isGitRepoPath = (path: string) =>
   (directoryMap[path] ?? []).some((entry) => entry.name === ".git" && entry.isDirectory);
 
 const meta = {
-  title: "Components/FolderPickerDialog",
-  component: FolderPickerDialog,
+  title: "Components/RepoPickerDialog",
+  component: RepoPickerDialog,
   decorators: [
     (Story: StoryFn) => (
       <Box minH="520px" padding="sm" background="bg">
@@ -172,7 +172,7 @@ export const Default = {
       setError("");
     };
 
-    const handleEntryClick = (entry: FolderPickerDialogEntry) => {
+    const handleEntryClick = (entry: RepoPickerDialogEntry) => {
       setError("");
 
       if (!entry.isDirectory) {
@@ -216,7 +216,7 @@ export const Default = {
         <Text textStyle="paragraph/S/regular" color="fg.muted">
           Selected path: {confirmedPath ?? "None"}
         </Text>
-        <FolderPickerDialog
+        <RepoPickerDialog
           open={open}
           title="Select repository folder"
           description="Browse a larger project tree and pick one repository."

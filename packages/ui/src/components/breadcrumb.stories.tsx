@@ -1,5 +1,5 @@
 import { Box, Icon } from "@chakra-ui/react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, FileText, Folder, Home } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Breadcrumb } from "./breadcrumb";
@@ -7,9 +7,32 @@ import { Breadcrumb } from "./breadcrumb";
 type StoryFn = () => ReactNode;
 
 const items = [
-  { title: "Dashboard", url: "/" },
-  { title: "Invoices", url: "/invoices" },
-  { title: "Northwind Traders Q4 2024" },
+  {
+    title: (
+      <>
+        <Icon as={Home} boxSize="14px" />
+        Dashboard
+      </>
+    ),
+    url: "/",
+  },
+  {
+    title: (
+      <>
+        <Icon as={Folder} boxSize="14px" />
+        Invoices
+      </>
+    ),
+    url: "/invoices",
+  },
+  {
+    title: (
+      <>
+        <Icon as={FileText} boxSize="14px" />
+        Northwind Traders Q4 2024
+      </>
+    ),
+  },
 ];
 
 const meta = {
@@ -42,8 +65,23 @@ export const IconSeparator = {
 export const Narrow = {
   args: {
     items: [
-      { title: "Projects", url: "/" },
-      { title: "PS-246 Update chat panel styles and responsive properties panel" },
+      {
+        title: (
+          <>
+            <Icon as={Folder} boxSize="14px" />
+            Projects
+          </>
+        ),
+        url: "/",
+      },
+      {
+        title: (
+          <>
+            <Icon as={FileText} boxSize="14px" />
+            PS-246 Update chat panel styles and responsive properties panel
+          </>
+        ),
+      },
     ],
   },
   decorators: [

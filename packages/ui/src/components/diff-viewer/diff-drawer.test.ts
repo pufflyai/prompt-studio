@@ -1,12 +1,13 @@
 import { describe, expect, it } from "bun:test";
+import { LARGE_DIFF_LINE_THRESHOLD } from "../diff-size";
 import {
+  buildAllCollapsedPaths,
   buildInitialCollapsedPaths,
   type Diff,
   estimateDiffCardHeight,
   resolveCollapsedPathsForSelectedDiff,
   toggleCollapsedPath,
 } from "./diff-drawer";
-import { LARGE_DIFF_LINE_THRESHOLD } from "./diff-size";
 
 const diffs: Diff[] = [
   { change: "modified", newPath: "src/a.ts" },
@@ -14,13 +15,54 @@ const diffs: Diff[] = [
 ];
 
 describe("buildInitialCollapsedPaths", () => {
-  it("opens the first 20 diffs by default", () => {
+  it("opens every diff when there are 10 or fewer", () => {
+    const fewDiffs: Diff[] = Array.from({ length: 10 }, (_, index) => ({
+      change: "modified",
+      newPath: `src/file-${index + 1}.ts`,
+      additions: 90,
+      deletions: 20,
+    }));
+
+    expect([...buildInitialCollapsedPaths(fewDiffs)]).toEqual([]);
+  });
+
+  it("opens only the first 10 diffs when there are more than 10", () => {
     const manyDiffs: Diff[] = Array.from({ length: 22 }, (_, index) => ({
       change: "modified",
       newPath: `src/file-${index + 1}.ts`,
     }));
 
-    expect([...buildInitialCollapsedPaths(manyDiffs)]).toEqual(["src/file-21.ts", "src/file-22.ts"]);
+    expect([...buildInitialCollapsedPaths(manyDiffs)]).toEqual([
+      "src/file-11.ts",
+      "src/file-12.ts",
+      "src/file-13.ts",
+      "src/file-14.ts",
+      "src/file-15.ts",
+      "src/file-16.ts",
+      "src/file-17.ts",
+      "src/file-18.ts",
+      "src/file-19.ts",
+      "src/file-20.ts",
+      "src/file-21.ts",
+      "src/file-22.ts",
+    ]);
+  });
+
+  it("collapses diffs over 100 changed lines when there are more than 10", () => {
+    const manyDiffs: Diff[] = Array.from({ length: 12 }, (_, index) => ({
+      change: "modified",
+      newPath: `src/file-${index + 1}.ts`,
+      additions: index === 1 ? 80 : 1,
+      deletions: index === 1 ? 21 : 1,
+    }));
+
+    expect([...buildInitialCollapsedPaths(manyDiffs)]).toEqual(["src/file-2.ts", "src/file-11.ts", "src/file-12.ts"]);
+  });
+});
+
+describe("buildAllCollapsedPaths", () => {
+  it("collapses every diff path", () => {
+    expect([...buildAllCollapsedPaths(diffs)]).toEqual(["src/a.ts", "src/b.ts"]);
   });
 });
 
@@ -53,7 +95,7 @@ describe("estimateDiffCardHeight", () => {
     expect(estimateDiffCardHeight(large, false)).toBeGreaterThan(estimateDiffCardHeight(small, false) * 5);
   });
 
-  it("uses rendered hunk rows when loaded content has sparse changes", () => {
+  it("uses cheap summary counts instead of parsing loaded content", () => {
     const lines = Array.from({ length: 30 }, (_, i) => `line ${i + 1}`);
     const modified = [...lines];
     modified[15] = "changed line 16";
@@ -64,7 +106,7 @@ describe("estimateDiffCardHeight", () => {
       newContent: modified.join("\n"),
     };
 
-    expect(estimateDiffCardHeight(loaded, false)).toBeGreaterThan(estimateDiffCardHeight(summaryOnly, false) * 2);
+    expect(estimateDiffCardHeight(loaded, false)).toBe(estimateDiffCardHeight(summaryOnly, false));
   });
 
   it("estimates hidden large diffs by placeholder height until opted in", () => {

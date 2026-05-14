@@ -3,6 +3,7 @@ import type { InputGroup, Param, ParamValue, ParamValueMap } from "./param-edito
 import { ColorInput } from "./param-editor-color-input";
 import { DateInput } from "./param-editor-date-input";
 import { HorizontalTextInput } from "./param-editor-horizontal-text-input";
+import { ParamEditorLabel } from "./param-editor-label";
 import { NumberInput } from "./param-editor-number-input";
 import { SelectionInput } from "./param-editor-selection-input";
 
@@ -101,6 +102,13 @@ export const ParamEditorHorizontal = (props: ParamEditorHorizontalProps) => {
     />
   );
 
+  const renderPropertyParam = (param: Extract<Param, { type: "property" }>) => (
+    <HStack key={param.id} gap="xs" alignItems="center">
+      <ParamEditorLabel name={param.name} description={param.description} />
+      {param.value}
+    </HStack>
+  );
+
   const renderParam = (param: Param) => {
     switch (param.type) {
       case "number":
@@ -113,6 +121,8 @@ export const ParamEditorHorizontal = (props: ParamEditorHorizontalProps) => {
         return renderDateParam(param);
       case "color":
         return renderColorParam(param);
+      case "property":
+        return renderPropertyParam(param);
       default:
         return null;
     }
