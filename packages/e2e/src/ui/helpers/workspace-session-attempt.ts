@@ -45,6 +45,7 @@ export const createTicketViaApi = async (
 export const createAttemptWithSessionViaApi = async (
   request: import("@playwright/test").APIRequestContext,
   apiBase: string,
+  projectId: string,
   ticketId: string,
   repoId: string,
   prompt: string,
@@ -59,8 +60,24 @@ export const createAttemptWithSessionViaApi = async (
     },
   });
   expect(res.ok()).toBe(true);
-  return (await res.json()) as {
+  const attempt = (await res.json()) as {
     workspace: { workspace_shorthand: string };
-    session: { id: string };
+    session: { id: string } | null;
   };
+
+  attempt.session ??= await expect
+    .poll(async () => {
+      const sessionsRes = await request.get(`${apiBase}/v1/sessions?project_id=${encodeURIComponent(projectId)}`);
+      expect(sessionsRes.ok()).toBe(true);
+      const sessions = (await sessionsRes.json()) as Array<{ id: string; cwd: string | null }>;
+      return sessions.find((session) => session.cwd?.includes(attempt.workspace.workspace_shorthand)) ?? null;
+    })
+    .not.toBeNull()
+    .then(async () => {
+      const sessionsRes = await request.get(`${apiBase}/v1/sessions?project_id=${encodeURIComponent(projectId)}`);
+      const sessions = (await sessionsRes.json()) as Array<{ id: string; cwd: string | null }>;
+      return sessions.find((session) => session.cwd?.includes(attempt.workspace.workspace_shorthand))!;
+    });
+
+  return attempt as typeof attempt & { session: { id: string } };
 };

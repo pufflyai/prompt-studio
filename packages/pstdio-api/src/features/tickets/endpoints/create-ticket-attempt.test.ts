@@ -14,6 +14,17 @@ const waitForFile = async (path: string, timeoutMs = 5000) => {
   }
 };
 
+const waitForWorkspaceSession = async (context: TicketsTestContext, workspaceId: string, timeoutMs = 5000) => {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() <= deadline) {
+    const sessions = await context.deps.workspaceSessionService.listByWorkspace(workspaceId);
+    if (sessions[0]) return sessions[0];
+    await sleep(50);
+  }
+
+  throw new Error(`Timed out waiting for workspace session ${workspaceId}`);
+};
+
 let context!: TicketsTestContext;
 
 beforeAll(async () => {
@@ -75,7 +86,10 @@ describe("POST /v1/tickets/:id/attempts", () => {
     expect(attempt.workspace.workspace_shorthand).toMatch(/^TP-\d+_A\d+$/);
     expect(attempt.workspace.branch).toBe(`workspace/${attempt.workspace.workspace_shorthand}`);
     expect(attempt.workspace.worktree_path).toContain(attempt.workspace.workspace_shorthand);
-    expect(attempt.session.workspace_id).toBe(attempt.workspace.id);
+    expect(attempt.session).toBeNull();
+
+    const session = await waitForWorkspaceSession(context, attempt.workspace.id);
+    expect(session.status).toBe("in_progress");
 
     const activityRes = await app.request(`/v1/tickets/${ticket.id}/activity`);
     expect(activityRes.status).toBe(200);
@@ -251,9 +265,10 @@ export default { hooks: { postWorktreeCreate() { writeFileSync("${markerPath}", 
     });
     expect(attemptRes.status).toBe(201);
     const attempt = await attemptRes.json();
-    expect(attempt.session).not.toBeNull();
+    expect(attempt.session).toBeNull();
 
     await waitForFile(markerPath);
+    await waitForWorkspaceSession(hookCtx, attempt.workspace.id);
 
     hookCtx.cleanup();
   });

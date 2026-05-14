@@ -4,6 +4,9 @@ import { resolveAgentId } from "./attempt-workspace-setup";
 describe("resolveAgentId", () => {
   it("returns null when requested agent is not enabled for the project", async () => {
     const deps = {
+      agentRegistry: {
+        get: mock(() => null),
+      },
       projectService: {
         get: mock(async () => ({ selected_agents: '["opencode"]' })),
       },
@@ -28,6 +31,9 @@ describe("resolveAgentId", () => {
 
   it("falls back to the project's default enabled agent", async () => {
     const deps = {
+      agentRegistry: {
+        get: mock(() => null),
+      },
       projectService: {
         get: mock(async () => ({ selected_agents: '["opencode"]' })),
       },

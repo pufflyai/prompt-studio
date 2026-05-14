@@ -32,6 +32,10 @@ type ResumeSessionOptions = {
   emitResumedHook?: boolean;
 };
 
+type TransitionStatusOptions = {
+  drainCapacity?: boolean;
+};
+
 const releasesCapacity = (status: SessionStatus) =>
   status === "completed" || status === "failed" || status === "cancelled" || status === "disconnected";
 
@@ -176,7 +180,7 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     return updated;
   };
 
-  const transitionStatus = async (id: string, status: SessionStatus) => {
+  const transitionStatus = async (id: string, status: SessionStatus, options: TransitionStatusOptions = {}) => {
     if (status === "queued") {
       throw new Error("Queued status is scheduler-owned and requires a queue entry");
     }
@@ -193,7 +197,7 @@ export const createSessionService = (deps: SessionServiceDeps) => {
         original_session_id: updated.original_session_id,
       });
     }
-    if (releasesCapacity(status)) {
+    if (releasesCapacity(status) && options.drainCapacity !== false) {
       await deps.onCapacityAvailable?.();
     }
     return updated;

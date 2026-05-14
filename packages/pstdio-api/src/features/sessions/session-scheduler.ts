@@ -101,6 +101,25 @@ const queueExistingFollowUp = async (
   });
 };
 
+const runBeforeStartedHook = async (
+  deps: SessionsRouteDeps,
+  session: ExistingSession,
+  hook: CreateAndStartInput["onBeforeStartedHook"],
+  cleanup: { drainAfterLock: boolean },
+) => {
+  try {
+    await hook?.(session);
+  } catch (error) {
+    if (session.status === "queued") {
+      await deps.sessionService.cancel(session.id);
+    } else {
+      await deps.sessionService.transitionStatus(session.id, "failed", { drainCapacity: false });
+      cleanup.drainAfterLock = true;
+    }
+    throw error;
+  }
+};
+
 const dispatchQueuedEntry = async (deps: SessionsRouteDeps, session: ExistingSession, entry: PendingQueueEntry) => {
   const agentId = session.agent!;
   const model = session.last_selected_model ?? undefined;
@@ -142,12 +161,51 @@ const dispatchQueuedEntry = async (deps: SessionsRouteDeps, session: ExistingSes
 };
 
 export const createSessionScheduler = (deps: SessionsRouteDeps) => {
-  const createAndStartSession = async (input: CreateAndStartInput) => {
-    const { session, shouldStart } = await withSchedulingLock(async () => {
-      const hasCapacity = await hasCreateCapacity(deps);
+  const drainQueue = async () => {
+    return withSchedulingLock(async () => {
+      while (await hasCreateCapacity(deps)) {
+        const [entry] = await deps.sessionQueueEntriesService.listPending();
+        if (!entry) return;
 
-      if (!hasCapacity) {
-        const queued = await deps.sessionService.createQueuedWithEntry(
+        const session = await deps.sessionService.get(entry.session_id);
+        if (!session || session.status !== "queued") {
+          await deps.sessionQueueEntriesService.markDispatchStarted(entry.session_id);
+          continue;
+        }
+
+        await dispatchQueuedEntry(deps, session, entry);
+      }
+    });
+  };
+
+  const createAndStartSession = async (input: CreateAndStartInput) => {
+    const cleanup = { drainAfterLock: false };
+    let scheduled!: { session: ExistingSession; shouldStart: boolean };
+
+    try {
+      scheduled = await withSchedulingLock(async () => {
+        const hasCapacity = await hasCreateCapacity(deps);
+
+        if (!hasCapacity) {
+          const queued = await deps.sessionService.createQueuedWithEntry(
+            {
+              project_id: input.projectId,
+              title: input.title,
+              agent: input.agentId,
+              last_selected_model: input.model,
+              original_session_id: input.originalSessionId,
+              cwd: input.cwd,
+              prompt: input.prompt,
+              request_kind: "start",
+            },
+            { emitStartedHook: false },
+          );
+          await runBeforeStartedHook(deps, queued, input.onBeforeStartedHook, cleanup);
+
+          return { session: queued, shouldStart: false };
+        }
+
+        const started = await deps.sessionService.create(
           {
             project_id: input.projectId,
             title: input.title,
@@ -155,31 +213,21 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
             last_selected_model: input.model,
             original_session_id: input.originalSessionId,
             cwd: input.cwd,
-            prompt: input.prompt,
-            request_kind: "start",
           },
           { emitStartedHook: false },
         );
+        await runBeforeStartedHook(deps, started, input.onBeforeStartedHook, cleanup);
 
-        return { session: queued, shouldStart: false };
+        return { session: started, shouldStart: true };
+      });
+    } catch (error) {
+      if (cleanup.drainAfterLock) {
+        await drainQueue();
       }
+      throw error;
+    }
 
-      const started = await deps.sessionService.create(
-        {
-          project_id: input.projectId,
-          title: input.title,
-          agent: input.agentId,
-          last_selected_model: input.model,
-          original_session_id: input.originalSessionId,
-          cwd: input.cwd,
-        },
-        { emitStartedHook: false },
-      );
-
-      return { session: started, shouldStart: true };
-    });
-
-    await input.onBeforeStartedHook?.(session);
+    const { session, shouldStart } = scheduled;
 
     if (!shouldStart) {
       return session;
@@ -257,23 +305,6 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
 
   const resumeForApproval = async (sessionId: string) => {
     return deps.sessionService.resume(sessionId);
-  };
-
-  const drainQueue = async () => {
-    return withSchedulingLock(async () => {
-      while (await hasCreateCapacity(deps)) {
-        const [entry] = await deps.sessionQueueEntriesService.listPending();
-        if (!entry) return;
-
-        const session = await deps.sessionService.get(entry.session_id);
-        if (!session || session.status !== "queued") {
-          await deps.sessionQueueEntriesService.markDispatchStarted(entry.session_id);
-          continue;
-        }
-
-        await dispatchQueuedEntry(deps, session, entry);
-      }
-    });
   };
 
   return { createAndStartSession, startOrQueueExisting, resumeForApproval, drainQueue };

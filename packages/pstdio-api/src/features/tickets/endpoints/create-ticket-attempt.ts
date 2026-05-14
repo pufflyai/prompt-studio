@@ -8,6 +8,7 @@ import {
   continueTicketAttemptSetup,
   createAttemptWorkspace,
   resolveCreateTicketAttemptContext,
+  resolveOptionalAttemptSession,
   resolveSessionCwd,
   startOptionalAttemptSession,
 } from "./create-ticket-attempt.utils";
@@ -60,6 +61,12 @@ export const createTicketAttemptHandler = (
       return c.json({ error: context.error.message }, context.error.status);
     }
 
+    const pendingSession = await resolveOptionalAttemptSession(deps, { ticket: context.ticket, request: input });
+
+    if ("error" in pendingSession) {
+      return c.json({ error: pendingSession.error.message }, pendingSession.error.status);
+    }
+
     const workspaceWithGitMetadata = await createAttemptWorkspace(deps, {
       projectId: context.ticket.project_id,
       ticketId: context.ticket.id,
@@ -81,6 +88,7 @@ export const createTicketAttemptHandler = (
       ticket: context.ticket,
       workspace: workspaceWithGitMetadata,
       cwd,
+      pending: pendingSession.pending,
       request: input,
     });
 
@@ -90,12 +98,13 @@ export const createTicketAttemptHandler = (
 
     continueTicketAttemptSetup(deps, {
       workspace: workspaceWithGitMetadata,
+      ticket: context.ticket,
       ticketShorthand: context.ticket.shorthand,
       repo: context.repo,
       mode: context.mode,
       worktreeMode,
+      pending: sessionStart.pending,
       started: sessionStart.started,
-      model: input.model ?? undefined,
     });
 
     await emitActivityEvent(deps, {

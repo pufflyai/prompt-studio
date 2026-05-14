@@ -90,6 +90,38 @@ export const createSessionViaApi = async (ctx: HookTestContext, projectId: strin
   return { res, session: (await res.json()) as { id: string } };
 };
 
+const waitForAttemptSession = async (ctx: HookTestContext, projectId: string, workspaceShorthand: string) => {
+  let session: { id: string; cwd: string | null } | null = null;
+  const ready = await waitFor(async () => {
+    const res = await fetch(`${ctx.api.url}/v1/sessions?project_id=${encodeURIComponent(projectId)}`);
+    const sessions = (await res.json()) as Array<{ id: string; cwd: string | null }>;
+    session = sessions.find((candidate) => candidate.cwd?.includes(workspaceShorthand)) ?? null;
+    return session != null;
+  });
+
+  if (!ready || !session) {
+    throw new Error(`Timed out waiting for attempt session ${workspaceShorthand}`);
+  }
+
+  return session;
+};
+
+export const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+export const waitFor = async (predicate: () => boolean | Promise<boolean>, timeoutMs = 5_000) => {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    if (await predicate()) {
+      return true;
+    }
+
+    await wait(50);
+  }
+
+  return predicate();
+};
+
 export const updateSessionStatus = async (ctx: HookTestContext, sessionId: string, status: string) => {
   return fetch(`${ctx.api.url}/v1/sessions/${sessionId}/status`, {
     method: "PATCH",
@@ -121,6 +153,8 @@ export const createAttemptWithSession = async (ctx: HookTestContext, repo: strin
     workspace: { id: string; worktree_path: string | null; workspace_shorthand: string };
     session: { id: string } | null;
   };
+
+  attempt.session ??= await waitForAttemptSession(ctx, projectId, attempt.workspace.workspace_shorthand);
 
   return { attempt, projectId, attemptRes };
 };
@@ -172,22 +206,6 @@ export const getStatusId = async (ctx: HookTestContext, projectId: string, name:
   const res = await fetch(`${ctx.api.url}/v1/projects/${projectId}/statuses`);
   const statuses = (await res.json()) as Array<{ id: string; name: string }>;
   return statuses.find((s) => s.name === name)?.id ?? null;
-};
-
-export const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-export const waitFor = async (predicate: () => boolean, timeoutMs = 5_000) => {
-  const startedAt = Date.now();
-
-  while (Date.now() - startedAt < timeoutMs) {
-    if (predicate()) {
-      return true;
-    }
-
-    await wait(50);
-  }
-
-  return predicate();
 };
 
 export const waitForPath = async (path: string, timeoutMs = 5_000) => {
