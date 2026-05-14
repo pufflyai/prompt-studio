@@ -1,4 +1,4 @@
-import type { Diff } from "../diff-card";
+import type { Diff } from "../diff-viewer/diff-card";
 import type { WorkspaceTagDefinition, WorkspaceTicket } from "../tickets/types";
 
 export interface MockProject {

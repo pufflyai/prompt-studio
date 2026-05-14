@@ -1,8 +1,8 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import type { ReactNode } from "react";
-import { LARGE_DIFF_LINE_THRESHOLD } from "../diff-size";
 import { type Diff, DiffDrawer } from "./diff-drawer";
+import { LARGE_DIFF_LINE_THRESHOLD } from "./diff-size";
 
 type StoryFn = () => ReactNode;
 
@@ -270,6 +270,76 @@ export const NotLoaded: Story = {
         newPath: "src/lazy-file.ts",
         additions: 1,
         deletions: 1,
+      },
+    ],
+  },
+};
+
+// Mixes large, medium and tiny diffs so the virtualizer's height estimate can be eyeballed:
+// scroll fast top-to-bottom and back — cards should not jump, overlap, or leave gaps.
+const manyScrollingDiffs: Diff[] = Array.from({ length: 30 }, (_, index) => {
+  const variant = index % 3;
+  if (variant === 0) {
+    return {
+      change: "modified",
+      oldPath: `src/features/users/UserList${index}.tsx`,
+      newPath: `src/features/users/UserList${index}.tsx`,
+      oldContent: userListOldContent,
+      newContent: userListNewContent,
+      additions: 7,
+      deletions: 3,
+    };
+  }
+  if (variant === 1) {
+    return {
+      change: "modified",
+      oldPath: `src/config/defaults${index}.ts`,
+      newPath: `src/config/defaults${index}.ts`,
+      oldContent: configOldContent,
+      newContent: configNewContent,
+      additions: 5,
+      deletions: 4,
+    };
+  }
+  return {
+    change: "added",
+    newPath: `src/generated/snippet${index}.ts`,
+    oldContent: "",
+    newContent: `export const value${index} = ${index};\n`,
+    additions: 1,
+    deletions: 0,
+  };
+});
+
+export const ManyFilesScrolling: Story = {
+  render: (args) => <DiffDrawer {...args} />,
+  args: {
+    diffs: manyScrollingDiffs,
+  },
+};
+
+export const SplitMode: Story = {
+  render: (args) => <DiffDrawer {...args} />,
+  args: {
+    diffViewMode: "split",
+    diffs: [
+      {
+        change: "modified",
+        oldPath: "src/features/users/UserList.tsx",
+        newPath: "src/features/users/UserList.tsx",
+        oldContent: userListOldContent,
+        newContent: userListNewContent,
+        additions: 7,
+        deletions: 3,
+      },
+      {
+        change: "modified",
+        oldPath: "src/config/defaults.ts",
+        newPath: "src/config/defaults.ts",
+        oldContent: configOldContent,
+        newContent: configNewContent,
+        additions: 5,
+        deletions: 4,
       },
     ],
   },

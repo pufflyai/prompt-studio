@@ -102,7 +102,7 @@ export const SelectionInput = (props: SelectionInputProps) => {
   return (
     <Box>
       {fullWidth ? (
-        <Box mb="sm">
+        <Box>
           {!hideLabel && (
             <Box mb="xs">
               <ParamEditorLabel name={name} description={description} />
@@ -145,7 +145,7 @@ export const SelectionInput = (props: SelectionInputProps) => {
           </Menu.Root>
         </Box>
       ) : (
-        <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" mb="sm" gap="xs">
+        <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" gap="xs">
           {!hideLabel && <ParamEditorLabel name={name} description={description} />}
           <Menu.Root closeOnSelect={!multiSelect}>
             <Menu.Trigger asChild>

@@ -1,5 +1,4 @@
 import { describe, expect, it } from "bun:test";
-import { LARGE_DIFF_LINE_THRESHOLD } from "../diff-size";
 import {
   buildAllCollapsedPaths,
   buildInitialCollapsedPaths,
@@ -8,6 +7,7 @@ import {
   resolveCollapsedPathsForSelectedDiff,
   toggleCollapsedPath,
 } from "./diff-drawer";
+import { LARGE_DIFF_LINE_THRESHOLD } from "./diff-size";
 
 const diffs: Diff[] = [
   { change: "modified", newPath: "src/a.ts" },
@@ -88,25 +88,72 @@ describe("resolveCollapsedPathsForSelectedDiff", () => {
 });
 
 describe("estimateDiffCardHeight", () => {
-  it("scales with the diff's line count so navigation offsets stay accurate", () => {
-    const small: Diff = { change: "modified", newPath: "src/a.ts", additions: 2, deletions: 0 };
-    const large: Diff = { change: "modified", newPath: "src/b.ts", additions: 80, deletions: 60 };
-
-    expect(estimateDiffCardHeight(large, false)).toBeGreaterThan(estimateDiffCardHeight(small, false) * 5);
-  });
-
-  it("uses cheap summary counts instead of parsing loaded content", () => {
-    const lines = Array.from({ length: 30 }, (_, i) => `line ${i + 1}`);
-    const modified = [...lines];
-    modified[15] = "changed line 16";
-    const summaryOnly: Diff = { change: "modified", newPath: "src/a.ts", additions: 1, deletions: 1 };
-    const loaded: Diff = {
-      ...summaryOnly,
-      oldContent: lines.join("\n"),
-      newContent: modified.join("\n"),
+  it("scales with the rendered line count so navigation offsets stay accurate", () => {
+    const small: Diff = {
+      change: "added",
+      newPath: "src/a.ts",
+      oldContent: "",
+      newContent: "one\ntwo\n",
+    };
+    const large: Diff = {
+      change: "added",
+      newPath: "src/b.ts",
+      oldContent: "",
+      newContent: Array.from({ length: 100 }, (_, i) => `line ${i + 1}`).join("\n"),
     };
 
-    expect(estimateDiffCardHeight(loaded, false)).toBe(estimateDiffCardHeight(summaryOnly, false));
+    expect(estimateDiffCardHeight({ diff: large, isCollapsed: false })).toBeGreaterThan(
+      estimateDiffCardHeight({ diff: small, isCollapsed: false }) * 5,
+    );
+  });
+
+  it("derives the estimate from rendered diff content, not the summary counts", () => {
+    const lines = Array.from({ length: 60 }, (_, i) => `line ${i + 1}`);
+    const oneChange = [...lines];
+    oneChange[30] = "changed line 31";
+    const manyChanges = lines.map((line, i) => (i % 2 === 0 ? `changed ${line}` : line));
+
+    // Identical summary counts, but the second diff renders far more rows.
+    const fewRows: Diff = {
+      change: "modified",
+      newPath: "src/a.ts",
+      oldContent: lines.join("\n"),
+      newContent: oneChange.join("\n"),
+      additions: 1,
+      deletions: 1,
+    };
+    const manyRows: Diff = {
+      change: "modified",
+      newPath: "src/b.ts",
+      oldContent: lines.join("\n"),
+      newContent: manyChanges.join("\n"),
+      additions: 1,
+      deletions: 1,
+    };
+
+    expect(estimateDiffCardHeight({ diff: manyRows, isCollapsed: false })).toBeGreaterThan(
+      estimateDiffCardHeight({ diff: fewRows, isCollapsed: false }),
+    );
+  });
+
+  it("estimates unified taller than split for a modify-heavy diff", () => {
+    const lines = Array.from({ length: 40 }, (_, i) => `line ${i + 1}`);
+    const modified = [...lines];
+    modified[10] = "changed line 11";
+    modified[25] = "changed line 26";
+    const diff: Diff = {
+      change: "modified",
+      newPath: "src/a.ts",
+      oldContent: lines.join("\n"),
+      newContent: modified.join("\n"),
+      additions: 2,
+      deletions: 2,
+    };
+
+    // Unified stacks each modified line as delete + add; split pairs them onto one row.
+    expect(estimateDiffCardHeight({ diff, isCollapsed: false, diffViewMode: "unified" })).toBeGreaterThan(
+      estimateDiffCardHeight({ diff, isCollapsed: false, diffViewMode: "split" }),
+    );
   });
 
   it("estimates hidden large diffs by placeholder height until opted in", () => {
@@ -120,19 +167,34 @@ describe("estimateDiffCardHeight", () => {
       deletions: 0,
     };
 
-    expect(estimateDiffCardHeight(large, false)).toBeLessThan(estimateDiffCardHeight(large, false, true));
+    expect(estimateDiffCardHeight({ diff: large, isCollapsed: false })).toBeLessThan(
+      estimateDiffCardHeight({ diff: large, isCollapsed: false, hasOptedIntoLargeDiff: true }),
+    );
   });
 
   it("returns a compact height when collapsed regardless of size", () => {
-    const big: Diff = { change: "modified", newPath: "src/a.ts", additions: 500, deletions: 500 };
+    const big: Diff = {
+      change: "modified",
+      newPath: "src/a.ts",
+      oldContent: "",
+      newContent: Array.from({ length: 200 }, (_, i) => `line ${i + 1}`).join("\n"),
+      additions: 200,
+      deletions: 0,
+    };
 
-    expect(estimateDiffCardHeight(big, true)).toBeLessThan(estimateDiffCardHeight(big, false));
+    expect(estimateDiffCardHeight({ diff: big, isCollapsed: true })).toBeLessThan(
+      estimateDiffCardHeight({ diff: big, isCollapsed: false }),
+    );
   });
 
-  it("falls back to a deferred body height when the summary has no line counts", () => {
+  it("uses a fixed deferred height for diffs whose content is not loaded", () => {
     const unloaded: Diff = { change: "modified", newPath: "src/a.ts" };
-    const tinyLoaded: Diff = { change: "modified", newPath: "src/a.ts", additions: 1, deletions: 0 };
+    const unloadedWithSummary: Diff = { change: "modified", newPath: "src/a.ts", additions: 40, deletions: 10 };
 
-    expect(estimateDiffCardHeight(unloaded, false)).toBeGreaterThan(estimateDiffCardHeight(tinyLoaded, false));
+    // No content means the card renders the deferred placeholder, not the editor — the
+    // summary counts must not influence the estimate.
+    expect(estimateDiffCardHeight({ diff: unloaded, isCollapsed: false })).toBe(
+      estimateDiffCardHeight({ diff: unloadedWithSummary, isCollapsed: false }),
+    );
   });
 });

@@ -1,10 +1,12 @@
 import { Box, Stack } from "@chakra-ui/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useRef, useState } from "react";
-import { type Diff, DiffCard } from "../diff-card";
-import { isLargeDiffContent } from "../diff-size";
 import { EmptyState } from "../empty-state";
 import { ScrollArea } from "../scroll-area";
+import { type Diff, DiffCard } from "./diff-card";
+import { isLargeDiffContent } from "./diff-size";
+import { buildDiffViewData } from "./diff-view-adapter";
+import type { DiffViewMode } from "./types";
 
 interface DiffDrawerProps {
   diffs: Diff[];
@@ -13,11 +15,13 @@ interface DiffDrawerProps {
   onSelectDiffPath?: (path: string) => void;
   onExpansionStateChange?: (state: DiffDrawerExpansionState) => void;
   expansionCommand?: DiffExpansionCommand | null;
+  diffViewMode?: DiffViewMode;
 }
 
-interface DiffExpansionCommand {
-  action: "expand" | "collapse";
+export interface DiffExpansionCommand {
+  action: "expand" | "collapse" | "expand-selected";
   id: number;
+  path?: string;
 }
 
 export interface DiffDrawerExpansionState {
@@ -36,19 +40,37 @@ const DEFERRED_BODY_HEIGHT = 88;
 const ITEM_GAP_HEIGHT = 8;
 const INITIAL_EXPANDED_DIFF_COUNT = 10;
 const INITIAL_COLLAPSED_LINE_THRESHOLD = 100;
-const BODY_RENDER_OVERSCAN_PX = 100;
 
-export const estimateDiffCardHeight = (diff: Diff, isCollapsed: boolean, hasOptedIntoLargeDiff = false) => {
+interface EstimateDiffCardHeightInput {
+  diff: Diff;
+  isCollapsed: boolean;
+  hasOptedIntoLargeDiff?: boolean;
+  diffViewMode?: DiffViewMode;
+}
+
+const deferredCardHeight = () => CARD_HEADER_HEIGHT + DEFERRED_BODY_HEIGHT + ITEM_GAP_HEIGHT;
+
+// Mirrors the branches DiffCardContent renders, so the virtualizer's estimate matches the DOM
+// before measureElement gets a chance to refine it.
+export const estimateDiffCardHeight = (input: EstimateDiffCardHeightInput) => {
+  const { diff, isCollapsed, hasOptedIntoLargeDiff = false, diffViewMode = "unified" } = input;
+
   if (isCollapsed) return COLLAPSED_CARD_HEIGHT + ITEM_GAP_HEIGHT;
-  if (isLargeDiffContent(diff) && !hasOptedIntoLargeDiff) {
-    return CARD_HEADER_HEIGHT + DEFERRED_BODY_HEIGHT + ITEM_GAP_HEIGHT;
-  }
 
-  const lineCount = (diff.additions ?? 0) + (diff.deletions ?? 0);
-  if (lineCount === 0) {
-    return CARD_HEADER_HEIGHT + DEFERRED_BODY_HEIGHT + ITEM_GAP_HEIGHT;
-  }
-  return CARD_HEADER_HEIGHT + lineCount * CARD_BODY_LINE_HEIGHT + ITEM_GAP_HEIGHT;
+  const hasDiffContent = diff.oldContent !== undefined || diff.newContent !== undefined;
+  if (!hasDiffContent) return deferredCardHeight();
+  if (isLargeDiffContent(diff) && !hasOptedIntoLargeDiff) return deferredCardHeight();
+
+  const { unifiedLineLength, splitLineLength } = buildDiffViewData({
+    original: diff.oldContent ?? "",
+    modified: diff.newContent ?? "",
+    oldPath: diff.oldPath,
+    newPath: diff.newPath,
+  });
+  const rowCount = diffViewMode === "split" ? splitLineLength : unifiedLineLength;
+  if (rowCount === 0) return deferredCardHeight();
+
+  return CARD_HEADER_HEIGHT + rowCount * CARD_BODY_LINE_HEIGHT + ITEM_GAP_HEIGHT;
 };
 
 export const buildInitialCollapsedPaths = (diffs: Diff[]) => {
@@ -98,6 +120,7 @@ export function DiffDrawer(props: DiffDrawerProps) {
     onSelectDiffPath,
     onExpansionStateChange,
     expansionCommand = null,
+    diffViewMode = "unified",
   } = props;
   const scrollRef = useRef<HTMLDivElement>(null);
   const reportedExpansionStateRef = useRef<DiffDrawerExpansionState | null>(null);
@@ -110,11 +133,22 @@ export function DiffDrawer(props: DiffDrawerProps) {
     estimateSize: (index) => {
       const diff = diffs[index];
       const path = getDiffPath(diff);
-      return estimateDiffCardHeight(diff, collapsedPaths.has(path), largeDiffOptInPaths.has(path));
+      return estimateDiffCardHeight({
+        diff,
+        isCollapsed: collapsedPaths.has(path),
+        hasOptedIntoLargeDiff: largeDiffOptInPaths.has(path),
+        diffViewMode,
+      });
     },
     getItemKey: (index) => getDiffPath(diffs[index]),
     overscan: 3,
   });
+
+  useEffect(() => {
+    if (!selectedDiffPath) return;
+
+    setCollapsedPaths((prev) => resolveCollapsedPathsForSelectedDiff(diffs, prev, selectedDiffPath));
+  }, [diffs, selectedDiffPath]);
 
   useEffect(() => {
     if (!selectedDiffPath) return;
@@ -126,13 +160,14 @@ export function DiffDrawer(props: DiffDrawerProps) {
   }, [selectedDiffPath, diffs, virtualizer]);
 
   useEffect(() => {
-    if (!selectedDiffPath) return;
-
-    setCollapsedPaths((prev) => resolveCollapsedPathsForSelectedDiff(diffs, prev, selectedDiffPath));
-  }, [diffs, selectedDiffPath]);
-
-  useEffect(() => {
     if (!expansionCommand) return;
+
+    if (expansionCommand.action === "expand-selected") {
+      setCollapsedPaths((prev) =>
+        expansionCommand.path ? resolveCollapsedPathsForSelectedDiff(diffs, prev, expansionCommand.path) : prev,
+      );
+      return;
+    }
 
     setCollapsedPaths(expansionCommand.action === "collapse" ? buildAllCollapsedPaths(diffs) : new Set());
   }, [diffs, expansionCommand]);
@@ -177,8 +212,6 @@ export function DiffDrawer(props: DiffDrawerProps) {
   };
 
   const virtualItems = virtualizer.getVirtualItems();
-  const visibleStart = scrollRef.current?.scrollTop ?? 0;
-  const visibleEnd = visibleStart + (scrollRef.current?.clientHeight ?? Number.POSITIVE_INFINITY);
 
   return (
     <Stack h="full" minH="0" gap="0" bg="bg">
@@ -194,9 +227,6 @@ export function DiffDrawer(props: DiffDrawerProps) {
             {virtualItems.map((virtualItem) => {
               const diff = diffs[virtualItem.index];
               const path = getDiffPath(diff);
-              const shouldRenderBody =
-                virtualItem.end >= visibleStart - BODY_RENDER_OVERSCAN_PX &&
-                virtualItem.start <= visibleEnd + BODY_RENDER_OVERSCAN_PX;
 
               return (
                 <Box
@@ -218,8 +248,8 @@ export function DiffDrawer(props: DiffDrawerProps) {
                     onSelect={() => onSelectDiffPath?.(path)}
                     onLoadDiff={onLoadDiff}
                     hasOptedIntoLargeDiff={largeDiffOptInPaths.has(path)}
-                    shouldRenderBody={shouldRenderBody}
                     onShowFullDiff={() => showFullDiff(path)}
+                    diffViewMode={diffViewMode}
                   />
                 </Box>
               );

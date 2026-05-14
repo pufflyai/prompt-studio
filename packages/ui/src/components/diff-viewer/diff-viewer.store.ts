@@ -1,15 +1,17 @@
 import { create } from "zustand";
-import type { ChangedFilesViewMode } from "./types";
+import type { ChangedFilesViewMode, DiffViewMode } from "./types";
 
 interface DiffViewerState {
   isTreePanelOpen: boolean;
   viewMode: ChangedFilesViewMode;
+  diffViewMode: DiffViewMode;
   searchQuery: string;
   selectedPath: string | null;
   expandedFolderIds: Set<string>;
   setTreePanelOpen: (open: boolean) => void;
   toggleTreePanel: () => void;
   setViewMode: (viewMode: ChangedFilesViewMode) => void;
+  setDiffViewMode: (diffViewMode: DiffViewMode) => void;
   setSearchQuery: (searchQuery: string) => void;
   setSelectedPath: (selectedPath: string | null) => void;
   setExpandedFolderIds: (folderIds: string[]) => void;
@@ -21,12 +23,14 @@ interface DiffViewerState {
 export const useDiffViewerStore = create<DiffViewerState>((set) => ({
   isTreePanelOpen: true,
   viewMode: "nested",
+  diffViewMode: "unified",
   searchQuery: "",
   selectedPath: null,
   expandedFolderIds: new Set(),
   setTreePanelOpen: (isTreePanelOpen) => set({ isTreePanelOpen }),
   toggleTreePanel: () => set((state) => ({ isTreePanelOpen: !state.isTreePanelOpen })),
   setViewMode: (viewMode) => set({ viewMode }),
+  setDiffViewMode: (diffViewMode) => set({ diffViewMode }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   setSelectedPath: (selectedPath) => set({ selectedPath }),
   setExpandedFolderIds: (folderIds) => set({ expandedFolderIds: new Set(folderIds) }),

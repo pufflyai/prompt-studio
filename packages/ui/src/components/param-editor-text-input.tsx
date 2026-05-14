@@ -45,7 +45,7 @@ export const TextInput = (props: TextInputProps) => {
   return (
     <Box>
       {singleLine && !fullWidth ? (
-        <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" mb="sm" gap="xs">
+        <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" gap="xs">
           {!hideLabel && <ParamEditorLabel name={name} description={description} />}
           <Input
             className="nodrag"

@@ -38,10 +38,9 @@ export {
   Label as ContentPlaceholderLabel,
 } from "./components/content-placeholder";
 export { DeleteConfirmationModal } from "./components/delete-confirmation-modal";
-export { DiffBubble } from "./components/diff-bubble";
-export type { Diff } from "./components/diff-card";
-export type { ChangedFilesViewMode, DiffViewerProps, FileIconInfo } from "./components/diff-viewer";
+export type { ChangedFilesViewMode, Diff, DiffViewerProps, DiffViewMode, FileIconInfo } from "./components/diff-viewer";
 export { DiffDrawer, DiffViewer, useDiffViewerStore } from "./components/diff-viewer";
+export { DiffBubble } from "./components/diff-viewer/diff-bubble";
 export type { EmptyStateProps } from "./components/empty-state";
 export { EmptyState } from "./components/empty-state";
 export { ErrorBoundary } from "./components/error-boundary";

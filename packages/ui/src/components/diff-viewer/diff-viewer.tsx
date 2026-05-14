@@ -7,17 +7,18 @@ import {
   ListTree,
   PanelLeftClose,
   PanelLeftOpen,
+  Rows2,
   Settings2,
+  SquareSplitHorizontal,
 } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
-
-import { DiffBubble } from "../diff-bubble";
-import type { Diff } from "../diff-card";
 import { EmptyState } from "../empty-state";
 import { Header } from "../header";
 import { ResizableSplitLayout } from "../resizable-split-layout";
 import { buildChangedFilesTree, collectExpandedFolderIds, sortPathsByViewMode } from "./build-changed-files-tree";
-import { DiffDrawer, type DiffDrawerExpansionState } from "./diff-drawer";
+import { DiffBubble } from "./diff-bubble";
+import type { Diff } from "./diff-card";
+import { DiffDrawer, type DiffDrawerExpansionState, type DiffExpansionCommand } from "./diff-drawer";
 import { useDiffViewerStore } from "./diff-viewer.store";
 import { FileListPanel } from "./file-list-panel";
 import type { ChangedFilesViewMode, FileIconInfo } from "./types";
@@ -93,10 +94,7 @@ const DiffViewerLoading = () => (
 
 export const DiffViewer = (props: DiffViewerProps) => {
   const { diffs, changedFilePaths, defaultSelectedPath = null, loading = false, onLoadDiff, resolveFileIcon } = props;
-  const [diffExpansionCommand, setDiffExpansionCommand] = useState<{
-    action: "expand" | "collapse";
-    id: number;
-  } | null>(null);
+  const [diffExpansionCommand, setDiffExpansionCommand] = useState<DiffExpansionCommand | null>(null);
   const [diffExpansionState, setDiffExpansionState] = useState<DiffDrawerExpansionState>({
     allExpanded: false,
     allCollapsed: false,
@@ -104,11 +102,13 @@ export const DiffViewer = (props: DiffViewerProps) => {
   const {
     isTreePanelOpen,
     viewMode,
+    diffViewMode,
     searchQuery,
     selectedPath,
     expandedFolderIds,
     setTreePanelOpen,
     setViewMode,
+    setDiffViewMode,
     setSearchQuery,
     setSelectedPath,
     setExpandedFolderIds,
@@ -166,6 +166,11 @@ export const DiffViewer = (props: DiffViewerProps) => {
     setDiffExpansionCommand((current) => ({ action: "collapse", id: (current?.id ?? 0) + 1 }));
   };
 
+  const selectChangedFilePath = (path: string) => {
+    setSelectedPath(path);
+    setDiffExpansionCommand((current) => ({ action: "expand-selected", id: (current?.id ?? 0) + 1, path }));
+  };
+
   const diffPanel = (
     <Stack h="full" minH="0" minW="0" flex="1" bg="bg" gap="0">
       <Header variant="main" borderBottomWidth="1px" borderColor="border.muted" bg="bg" justifyContent="space-between">
@@ -196,6 +201,17 @@ export const DiffViewer = (props: DiffViewerProps) => {
                     <Menu.Separator />
                   </>
                 ) : null}
+                <Menu.Item value="unified" onClick={() => setDiffViewMode("unified")}>
+                  <MenuItemContent checked={diffViewMode === "unified"} icon={<Rows2 size={14} />} label="Unified" />
+                </Menu.Item>
+                <Menu.Item value="split" onClick={() => setDiffViewMode("split")}>
+                  <MenuItemContent
+                    checked={diffViewMode === "split"}
+                    icon={<SquareSplitHorizontal size={14} />}
+                    label="Split"
+                  />
+                </Menu.Item>
+                <Menu.Separator />
                 <Menu.Item value="expand-all" disabled={isExpandAllDisabled} onClick={expandAllFilesAndDiffs}>
                   <MenuItemContent icon={<ChevronsUpDown size={14} />} label="Expand all" />
                 </Menu.Item>
@@ -219,6 +235,7 @@ export const DiffViewer = (props: DiffViewerProps) => {
             onSelectDiffPath={setSelectedPath}
             onExpansionStateChange={setDiffExpansionState}
             expansionCommand={diffExpansionCommand}
+            diffViewMode={diffViewMode}
           />
         </Box>
       ) : (
@@ -244,7 +261,7 @@ export const DiffViewer = (props: DiffViewerProps) => {
               viewMode={viewMode}
               searchQuery={searchQuery}
               expandedFolderIds={expandedFolderIds}
-              onSelectPath={setSelectedPath}
+              onSelectPath={selectChangedFilePath}
               onSearchQueryChange={setSearchQuery}
               onToggleFolder={toggleFolder}
               resolveFileIcon={resolveFileIcon}

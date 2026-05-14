@@ -31,6 +31,24 @@ describe("createDiffCardBodyModel", () => {
 
     expect(model.kind).toBe("editor");
   });
+
+  it("uses split editor layout when requested", () => {
+    const model = createDiffCardBodyModel({
+      diff: { change: "modified", oldPath: "file.txt", newPath: "file.txt", additions: 1 },
+      filePath: "file.txt",
+      oldContent: "old",
+      newContent: "new",
+      isLargeDiff: false,
+      hasOptedIntoLargeDiff: false,
+      diffViewMode: "split",
+      buildViewData: () => buildDiffViewDataWithRenderedLines(1),
+    });
+
+    expect(model.kind).toBe("editor");
+    if (model.kind === "editor") {
+      expect(model.sideBySide).toBe(true);
+    }
+  });
 });
 
 const buildDiffViewDataWithRenderedLines = (lineCount: number): TestDiffViewData => ({
@@ -45,4 +63,6 @@ const buildDiffViewDataWithRenderedLines = (lineCount: number): TestDiffViewData
     content: "",
   },
   hunks: [Array.from({ length: lineCount }, (_, index) => `line ${index + 1}`).join("\n")],
+  unifiedLineLength: lineCount,
+  splitLineLength: lineCount,
 });

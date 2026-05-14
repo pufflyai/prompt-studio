@@ -51,4 +51,35 @@ describe("buildDiffViewData", () => {
     expect(hunkContent).not.toContain("line 30");
     expect(hunkContent).toContain("changed line 16");
   });
+
+  it("reports the rendered row counts for unified and split layouts", () => {
+    const lines = Array.from({ length: 30 }, (_, i) => `line ${i + 1}`);
+    const modified = [...lines];
+    modified[10] = "changed line 11";
+    modified[20] = "changed line 21";
+
+    const data = buildDiffViewData({
+      original: lines.join("\n"),
+      modified: modified.join("\n"),
+      oldPath: "big.ts",
+      newPath: "big.ts",
+    });
+
+    expect(data.splitLineLength).toBeGreaterThan(0);
+    // Unified stacks each modified line as a delete + an add row; split pairs them, so the
+    // unified layout is never shorter than split.
+    expect(data.unifiedLineLength).toBeGreaterThanOrEqual(data.splitLineLength);
+  });
+
+  it("memoizes results so identical inputs share one instance", () => {
+    const input = {
+      original: "const a = 1;\n",
+      modified: "const a = 2;\n",
+      oldPath: "src/sample.ts",
+      newPath: "src/sample.ts",
+    };
+
+    expect(buildDiffViewData(input)).toBe(buildDiffViewData({ ...input }));
+    expect(buildDiffViewData(input)).not.toBe(buildDiffViewData({ ...input, modified: "const a = 3;\n" }));
+  });
 });

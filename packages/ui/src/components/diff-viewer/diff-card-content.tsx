@@ -1,6 +1,7 @@
 import type { Diff } from "./diff-card";
 import { DiffCardBody } from "./diff-card-body";
 import { DeferredDiffLoad, LoadingDiffContent } from "./diff-card-load-state";
+import type { DiffViewMode } from "./types";
 
 interface DiffCardContentProps {
   diff: Diff;
@@ -17,8 +18,8 @@ interface DiffCardContentProps {
   isLoadingDiff: boolean;
   onLoadDiff: () => Promise<void>;
   hasOptedIntoLargeDiff: boolean;
-  shouldRenderBody?: boolean;
   onShowFullDiff?: () => void;
+  diffViewMode?: DiffViewMode;
 }
 
 interface DeferredDiffLoadStateInput {
@@ -76,8 +77,8 @@ export const DiffCardContent = (props: DiffCardContentProps) => {
     isLoadingDiff,
     onLoadDiff,
     hasOptedIntoLargeDiff,
-    shouldRenderBody = true,
     onShowFullDiff,
+    diffViewMode = "unified",
   } = props;
 
   if (!isExpanded) return null;
@@ -101,8 +102,6 @@ export const DiffCardContent = (props: DiffCardContentProps) => {
     return <LoadingDiffContent />;
   }
 
-  if (!shouldRenderBody) return null;
-
   return (
     <DiffCardBody
       diff={diff}
@@ -112,6 +111,7 @@ export const DiffCardContent = (props: DiffCardContentProps) => {
       isLargeDiff={isLargeDiff}
       hasOptedIntoLargeDiff={hasOptedIntoLargeDiff}
       onShowFullDiff={onShowFullDiff}
+      diffViewMode={diffViewMode}
     />
   );
 };

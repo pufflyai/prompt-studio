@@ -1,9 +1,10 @@
 import { Box, Button } from "@chakra-ui/react";
+import { EmptyState } from "../empty-state";
 import type { Diff } from "./diff-card";
 import { DiffEditor } from "./diff-editor";
 import { getDiffLineCount } from "./diff-size";
-import { buildDiffViewData, type DiffViewData } from "./diff-view-adapter";
-import { EmptyState } from "./empty-state";
+import { type BuiltDiffViewData, buildDiffViewData } from "./diff-view-adapter";
+import type { DiffViewMode } from "./types";
 
 interface DiffCardBodyProps {
   diff: Diff;
@@ -13,6 +14,7 @@ interface DiffCardBodyProps {
   isLargeDiff: boolean;
   hasOptedIntoLargeDiff: boolean;
   onShowFullDiff?: () => void;
+  diffViewMode?: DiffViewMode;
 }
 
 interface DiffCardBodyModelInput extends DiffCardBodyProps {
@@ -20,8 +22,17 @@ interface DiffCardBodyModelInput extends DiffCardBodyProps {
 }
 
 export const createDiffCardBodyModel = (input: DiffCardBodyModelInput) => {
-  const { diff, filePath, oldContent, newContent, isLargeDiff, hasOptedIntoLargeDiff, onShowFullDiff, buildViewData } =
-    input;
+  const {
+    diff,
+    filePath,
+    oldContent,
+    newContent,
+    isLargeDiff,
+    hasOptedIntoLargeDiff,
+    onShowFullDiff,
+    diffViewMode = "unified",
+    buildViewData,
+  } = input;
 
   if (isLargeDiff && !hasOptedIntoLargeDiff) {
     return {
@@ -41,11 +52,21 @@ export const createDiffCardBodyModel = (input: DiffCardBodyModelInput) => {
   return {
     kind: "editor" as const,
     diffViewData,
+    sideBySide: diffViewMode === "split",
   };
 };
 
 export const DiffCardBody = (props: DiffCardBodyProps) => {
-  const { diff, filePath, oldContent, newContent, isLargeDiff, hasOptedIntoLargeDiff, onShowFullDiff } = props;
+  const {
+    diff,
+    filePath,
+    oldContent,
+    newContent,
+    isLargeDiff,
+    hasOptedIntoLargeDiff,
+    onShowFullDiff,
+    diffViewMode = "unified",
+  } = props;
   const model = createDiffCardBodyModel({
     diff,
     filePath,
@@ -54,6 +75,7 @@ export const DiffCardBody = (props: DiffCardBodyProps) => {
     isLargeDiff,
     hasOptedIntoLargeDiff,
     onShowFullDiff,
+    diffViewMode,
   });
 
   return (
@@ -64,7 +86,7 @@ export const DiffCardBody = (props: DiffCardBodyProps) => {
           modified={newContent}
           oldPath={diff.oldPath}
           newPath={diff.newPath}
-          sideBySide={false}
+          sideBySide={model.sideBySide}
           data={model.diffViewData}
         />
       ) : (
@@ -100,4 +122,4 @@ const LargeDiffPlaceholder = (props: LargeDiffPlaceholderProps) => {
   );
 };
 
-export type TestDiffViewData = DiffViewData;
+export type TestDiffViewData = BuiltDiffViewData;

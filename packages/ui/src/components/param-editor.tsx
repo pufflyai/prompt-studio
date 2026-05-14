@@ -103,19 +103,23 @@ export const ParamEditor = (props: ParamEditorProps) => {
   const renderPropertyParam = (param: Extract<Param, { type: "property" }>) => {
     if (fullWidth) {
       return (
-        <Box key={param.id} mb="sm">
+        <Box key={param.id}>
           <Box mb="xs">
             <ParamEditorLabel name={param.name} description={param.description} />
           </Box>
-          <Box minW="0">{param.value}</Box>
+          <Box minW="0" textStyle="label/S/regular">
+            {param.value}
+          </Box>
         </Box>
       );
     }
 
     return (
-      <Flex key={param.id} alignItems="center" justifyContent="space-between" minHeight="2rem" mb="sm" gap="xs">
+      <Flex key={param.id} alignItems="center" justifyContent="space-between" minHeight="2rem" gap="xs">
         <ParamEditorLabel name={param.name} description={param.description} />
-        <Box minW="0">{param.value}</Box>
+        <Box minW="0" textStyle="label/S/regular">
+          {param.value}
+        </Box>
       </Flex>
     );
   };

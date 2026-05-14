@@ -53,7 +53,7 @@ export const NumberInput = (props: NumberInputProps) => {
   return (
     <Box>
       {useFullWidthLayout ? (
-        <Box mb="sm">
+        <Box>
           {!hideLabel && (
             <Box mb="xs">
               <ParamEditorLabel name={name} description={description} />
@@ -87,7 +87,7 @@ export const NumberInput = (props: NumberInputProps) => {
           </NumberInputRoot>
         </Box>
       ) : (
-        <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" mb="sm" gap="xs">
+        <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" gap="xs">
           {!hideLabel && <ParamEditorLabel name={name} description={description} />}
           <NumberInputRoot
             disabled={readOnly}

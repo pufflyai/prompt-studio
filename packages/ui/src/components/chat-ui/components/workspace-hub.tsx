@@ -1,7 +1,7 @@
 import { Flex, HStack, Spinner, Text } from "@chakra-ui/react";
 import { AlertTriangle } from "lucide-react";
 import type { ReactNode } from "react";
-import { DiffBubble } from "@/components/diff-bubble";
+import { DiffBubble } from "@/components/diff-viewer/diff-bubble";
 
 type WorkspaceHubStatus = "ready" | "loading" | "error";
 

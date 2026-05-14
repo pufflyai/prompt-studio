@@ -1,7 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Profiler, type ReactNode, useEffect, useRef, useState } from "react";
-import type { Diff } from "../diff-card";
 import {
   formatPerformanceMs,
   installPerformanceFrameRateSampler,
@@ -9,6 +8,7 @@ import {
   PerformancePanel,
   readPerformanceFrameRateSnapshot,
 } from "../performance-panel";
+import type { Diff } from "./diff-card";
 import { DiffViewer } from "./diff-viewer";
 
 type StoryFn = () => ReactNode;
@@ -90,7 +90,6 @@ const DiffViewerPerformancePanel = (props: {
   frameRate: PerformanceFrameRateSnapshot;
 }) => {
   const { diffCount, samples, mountedAtMs, frameRate } = props;
-  const latestSample = samples.at(-1) ?? null;
   const mountSample = samples.find((sample) => sample.phase === "mount") ?? null;
   const updates = samples.filter((sample) => sample.phase !== "mount");
 

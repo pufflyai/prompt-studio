@@ -11946,7 +11946,8 @@
             "_disabled": {
               "cursor": "not-allowed",
               "opacity": 0.5
-            }
+            },
+            "borderRadius": "0"
           },
           "content": {
             "focusVisibleRing": "inside",
