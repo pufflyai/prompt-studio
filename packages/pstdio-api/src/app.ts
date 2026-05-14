@@ -249,7 +249,10 @@ export const createApp = async (options: AppOptions) => {
     onSessionResumed: (session) => fireSessionResumeHook(sessionHookDeps, session),
     onCapacityAvailable: () => drainSessionQueue(),
   });
-  const settingsService = createSettingsService({ settingsDb: settingsDBService });
+  const settingsService = createSettingsService({
+    settingsDb: settingsDBService,
+    onCapacityAvailable: () => drainSessionQueue(),
+  });
 
   // --- ONLY DOMAIN SERVICES ARE PASSED TO ROUTES ---
   const deps: RouteDeps = {
