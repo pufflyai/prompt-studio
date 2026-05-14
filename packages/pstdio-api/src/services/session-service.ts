@@ -103,6 +103,22 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     return session;
   };
 
+  const queueExistingWithEntry = async (input: Parameters<typeof raw.queueExistingWithEntry>[0]) => {
+    const updated = await raw.queueExistingWithEntry(input);
+    if (!updated) return null;
+
+    deps.eventBus.emit("sessions", "set", updated);
+    if (updated.project_id) {
+      deps.onSessionStatusChanged?.({
+        id: updated.id,
+        project_id: updated.project_id,
+        status: updated.status,
+        original_session_id: updated.original_session_id,
+      });
+    }
+    return updated;
+  };
+
   const update = async (id: string, input: Parameters<typeof raw.update>[1]) => {
     const updated = await raw.update(id, input);
     if (updated) {
@@ -163,6 +179,7 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     countActive,
     create,
     createQueuedWithEntry,
+    queueExistingWithEntry,
     update,
     transitionStatus,
     cancel,

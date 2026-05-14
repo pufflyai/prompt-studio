@@ -154,4 +154,141 @@ describe("POST /v1/sessions queueing", () => {
     const entries = await handle.deps.sessionQueueEntriesService.listPending();
     expect(entries.some((entry) => entry.session_id === queued.id)).toBe(false);
   });
+
+  test("queues a follow-up when global concurrency is full", async () => {
+    const projectRes = await handle.app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Follow-up Queue Project" }),
+    });
+    expect(projectRes.status).toBe(201);
+    const project = await projectRes.json();
+
+    const settingsRes = await handle.app.request("/v1/settings", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ max_concurrent_sessions: 1 }),
+    });
+    expect(settingsRes.status).toBe(200);
+
+    await handle.deps.sessionService.create({
+      project_id: project.id,
+      title: "Active capacity holder",
+      agent: "fake",
+      cwd: tempRoot,
+    });
+
+    const session = await handle.deps.sessionService.create({
+      project_id: project.id,
+      title: "Follow-up will queue",
+      agent: "fake",
+      cwd: tempRoot,
+    });
+    await handle.deps.sessionService.transitionStatus(session.id, "completed");
+
+    const followUpRes = await handle.app.request(`/v1/sessions/${session.id}/follow-up`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prompt: "queued follow-up" }),
+    });
+    expect(followUpRes.status).toBe(200);
+    expect(await followUpRes.json()).toMatchObject({ id: session.id, status: "queued" });
+
+    const entries = await handle.deps.sessionQueueEntriesService.listPending();
+    expect(entries).toContainEqual(
+      expect.objectContaining({ session_id: session.id, prompt: "queued follow-up", request_kind: "follow_up" }),
+    );
+  });
+
+  test("rejects follow-up when the session is already queued", async () => {
+    const projectRes = await handle.app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Queued Follow-up Reject Project" }),
+    });
+    expect(projectRes.status).toBe(201);
+    const project = await projectRes.json();
+
+    const queued = await handle.deps.sessionService.createQueuedWithEntry(
+      {
+        project_id: project.id,
+        title: "Already queued",
+        agent: "fake",
+        cwd: tempRoot,
+        prompt: "first queued prompt",
+        request_kind: "follow_up",
+      },
+      { emitStartedHook: false },
+    );
+
+    const followUpRes = await handle.app.request(`/v1/sessions/${queued.id}/follow-up`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prompt: "duplicate follow-up" }),
+    });
+    expect(followUpRes.status).toBe(409);
+  });
+
+  test("serializes concurrent follow-ups against the global concurrency limit", async () => {
+    const isolatedTempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-concurrent-followup-queue-test-"));
+    const isolated = await createApp({
+      dbPath: ":memory:",
+      storagePath: join(isolatedTempRoot, "storage"),
+      filesRoot: "",
+      agents: [agent],
+    });
+
+    try {
+      const projectRes = await isolated.app.request("/v1/projects", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "Concurrent Follow-up Queue Project" }),
+      });
+      expect(projectRes.status).toBe(201);
+      const project = await projectRes.json();
+
+      const settingsRes = await isolated.app.request("/v1/settings", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ max_concurrent_sessions: 1 }),
+      });
+      expect(settingsRes.status).toBe(200);
+
+      const first = await isolated.deps.sessionService.create({
+        project_id: project.id,
+        title: "First concurrent follow-up",
+        agent: "fake",
+        cwd: isolatedTempRoot,
+      });
+      const second = await isolated.deps.sessionService.create({
+        project_id: project.id,
+        title: "Second concurrent follow-up",
+        agent: "fake",
+        cwd: isolatedTempRoot,
+      });
+      await isolated.deps.sessionService.transitionStatus(first.id, "completed");
+      await isolated.deps.sessionService.transitionStatus(second.id, "completed");
+
+      const responses = await Promise.all(
+        [first, second].map((session, index) =>
+          isolated.app.request(`/v1/sessions/${session.id}/follow-up`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ prompt: `concurrent follow-up ${index + 1}` }),
+          }),
+        ),
+      );
+
+      expect(responses.map((response) => response.status)).toEqual([200, 200]);
+      const bodies = await Promise.all(responses.map((response) => response.json()));
+      expect(bodies.map((body) => body.status).sort()).toEqual(["in_progress", "queued"]);
+
+      const entries = await isolated.deps.sessionQueueEntriesService.listPending();
+      expect(entries).toHaveLength(1);
+      expect(entries[0]?.request_kind).toBe("follow_up");
+    } finally {
+      await isolated.close();
+      rmSync(isolatedTempRoot, { recursive: true, force: true });
+    }
+  });
 });

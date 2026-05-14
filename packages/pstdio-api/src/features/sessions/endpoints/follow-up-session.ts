@@ -75,9 +75,9 @@ export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler
       return c.json({ error: `Session not found: ${id}` }, 404);
     }
 
-    if (session.status === "in_progress") {
+    if (session.status === "in_progress" || session.status === "queued") {
       return c.json(
-        { error: "Session is in_progress — wait for it to finish or fail before sending a follow-up." },
+        { error: `Session is ${session.status} — wait for it to finish or fail before sending a follow-up.` },
         409,
       );
     }
@@ -93,6 +93,7 @@ export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler
       cwd,
       agentId: input.agent,
       model: input.model?.trim() || undefined,
+      respectCapacity: true,
       questionResponse: input.question_response,
     });
 

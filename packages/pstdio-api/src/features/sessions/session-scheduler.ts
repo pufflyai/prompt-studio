@@ -21,15 +21,16 @@ type StartExistingInput = {
   cwd: string;
   agentId?: string;
   model?: string;
+  respectCapacity?: boolean;
   questionResponse?: { answers: string[][] };
 };
 
-let createLock = Promise.resolve();
+let schedulingLock = Promise.resolve();
 
-const withCreateLock = async <T>(operation: () => Promise<T>) => {
-  const previous = createLock;
+const withSchedulingLock = async <T>(operation: () => Promise<T>) => {
+  const previous = schedulingLock;
   const { promise, resolve } = Promise.withResolvers<void>();
-  createLock = previous.then(() => promise);
+  schedulingLock = previous.then(() => promise);
 
   await previous;
   try {
@@ -68,9 +69,40 @@ const hasCreateCapacity = async (deps: SessionsRouteDeps) => {
   return activeCount < limit;
 };
 
+const updateExistingDispatchSelection = async (
+  deps: SessionsRouteDeps,
+  input: { session: ExistingSession; agentId: string; model?: string; switchingAgent: boolean },
+) => {
+  if (input.switchingAgent) {
+    await deps.sessionService.update(input.session.id, {
+      agent: input.agentId,
+      agent_session_id: null,
+      last_selected_model: input.model ?? null,
+    });
+    return;
+  }
+
+  if (input.model && input.model !== input.session.last_selected_model) {
+    await deps.sessionService.update(input.session.id, { last_selected_model: input.model });
+  }
+};
+
+const queueExistingFollowUp = async (
+  deps: SessionsRouteDeps,
+  input: StartExistingInput & { agentId: string; switchingAgent: boolean },
+) => {
+  await updateExistingDispatchSelection(deps, input);
+  await deps.sessionService.queueExistingWithEntry({
+    id: input.session.id,
+    prompt: input.prompt,
+    request_kind: "follow_up",
+    question_response_json: input.questionResponse ?? null,
+  });
+};
+
 export const createSessionScheduler = (deps: SessionsRouteDeps) => {
   const createAndStartSession = async (input: CreateAndStartInput) => {
-    const { session, shouldStart } = await withCreateLock(async () => {
+    const { session, shouldStart } = await withSchedulingLock(async () => {
       const hasCapacity = await hasCreateCapacity(deps);
 
       if (!hasCapacity) {
@@ -131,54 +163,55 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
   };
 
   const startOrQueueExisting = async (input: StartExistingInput) => {
-    const { session, prompt, cwd } = input;
-    const agentId = input.agentId ?? session.agent!;
-    const switchingAgent = input.agentId != null && input.agentId !== session.agent;
-    const model = input.model ?? (switchingAgent ? undefined : (session.last_selected_model ?? undefined));
+    return withSchedulingLock(async () => {
+      const { session, prompt, cwd } = input;
+      const agentId = input.agentId ?? session.agent!;
+      const switchingAgent = input.agentId != null && input.agentId !== session.agent;
+      const model = input.model ?? (switchingAgent ? undefined : (session.last_selected_model ?? undefined));
 
-    if (switchingAgent) {
-      await deps.sessionService.update(session.id, {
-        agent: agentId,
-        agent_session_id: null,
-        last_selected_model: input.model ?? null,
-      });
+      if (input.respectCapacity && !(await hasCreateCapacity(deps))) {
+        await queueExistingFollowUp(deps, { ...input, agentId, switchingAgent });
+        return;
+      }
+
+      if (switchingAgent) {
+        await updateExistingDispatchSelection(deps, { session, agentId, model: input.model, switchingAgent });
+        const resumed = await deps.sessionService.resume(session.id, { emitResumedHook: false });
+        const dispatchSession = resumed ?? session;
+        spawnAgentSession({ sessionId: session.id, agentId, prompt, model, cwd }, deps).catch((error) =>
+          logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model }),
+        );
+        deps.sessionService.emitResumedHook?.(dispatchSession);
+        return;
+      }
+
+      await updateExistingDispatchSelection(deps, { session, agentId, model: input.model, switchingAgent });
+
       const resumed = await deps.sessionService.resume(session.id, { emitResumedHook: false });
       const dispatchSession = resumed ?? session;
+
+      if (session.agent_session_id) {
+        resumeAgentSession(
+          {
+            sessionId: session.id,
+            agentSessionId: session.agent_session_id,
+            agentId,
+            prompt,
+            model,
+            cwd,
+            questionResponse: input.questionResponse,
+          },
+          deps,
+        ).catch((error) => logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model }));
+        deps.sessionService.emitResumedHook?.(dispatchSession);
+        return;
+      }
+
       spawnAgentSession({ sessionId: session.id, agentId, prompt, model, cwd }, deps).catch((error) =>
         logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model }),
       );
       deps.sessionService.emitResumedHook?.(dispatchSession);
-      return;
-    }
-
-    if (input.model && input.model !== session.last_selected_model) {
-      await deps.sessionService.update(session.id, { last_selected_model: input.model });
-    }
-
-    const resumed = await deps.sessionService.resume(session.id, { emitResumedHook: false });
-    const dispatchSession = resumed ?? session;
-
-    if (session.agent_session_id) {
-      resumeAgentSession(
-        {
-          sessionId: session.id,
-          agentSessionId: session.agent_session_id,
-          agentId,
-          prompt,
-          model,
-          cwd,
-          questionResponse: input.questionResponse,
-        },
-        deps,
-      ).catch((error) => logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model }));
-      deps.sessionService.emitResumedHook?.(dispatchSession);
-      return;
-    }
-
-    spawnAgentSession({ sessionId: session.id, agentId, prompt, model, cwd }, deps).catch((error) =>
-      logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model }),
-    );
-    deps.sessionService.emitResumedHook?.(dispatchSession);
+    });
   };
 
   const resumeForApproval = async (sessionId: string) => {

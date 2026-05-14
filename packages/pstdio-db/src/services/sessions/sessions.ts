@@ -25,6 +25,14 @@ type CreateInput = {
 type CreateQueuedInput = Omit<CreateInput, "status"> & {
   prompt: string;
   request_kind: string;
+  question_response_json?: unknown;
+};
+
+type QueueExistingInput = {
+  id: string;
+  prompt: string;
+  request_kind: string;
+  question_response_json?: unknown;
 };
 
 type ListFilters = {
@@ -93,7 +101,7 @@ export const createSessionsDBService = (db: DbClient) => {
         session_id: record.id,
         prompt: input.prompt,
         request_kind: input.request_kind,
-        question_response_json: null,
+        question_response_json: input.question_response_json ?? null,
         dispatch_started_at: null,
         created_at: timestamp,
         updated_at: timestamp,
@@ -101,6 +109,33 @@ export const createSessionsDBService = (db: DbClient) => {
     });
 
     return record;
+  };
+
+  const queueExistingWithEntry = async (input: QueueExistingInput) => {
+    const timestamp = nowTimestamp();
+
+    return db.transaction(async (tx) => {
+      const [row] = await tx
+        .update(sessions)
+        .set({ status: "queued", updated_at: timestamp })
+        .where(eq(sessions.id, input.id))
+        .returning();
+      const updated = row ?? null;
+
+      if (updated) {
+        await tx.insert(session_queue_entries).values({
+          session_id: input.id,
+          prompt: input.prompt,
+          request_kind: input.request_kind,
+          question_response_json: input.question_response_json ?? null,
+          dispatch_started_at: null,
+          created_at: timestamp,
+          updated_at: timestamp,
+        });
+      }
+
+      return updated;
+    });
   };
 
   const get = async (id: string) => {
@@ -188,6 +223,7 @@ export const createSessionsDBService = (db: DbClient) => {
   return {
     create,
     createQueuedWithEntry,
+    queueExistingWithEntry,
     get,
     list,
     listByStatus,
