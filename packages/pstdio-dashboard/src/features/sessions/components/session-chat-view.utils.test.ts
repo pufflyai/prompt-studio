@@ -8,6 +8,7 @@ import {
   isSessionChatStreaming,
   isSessionConversationLoading,
   isSessionInterruptible,
+  isSessionRuntimeControlsDisabled,
   resolveNewSessionWorkspaceId,
   shouldReconnectForExternalResume,
   shouldResetPendingFollowUpForSession,
@@ -49,6 +50,10 @@ describe("shouldReconnectForExternalResume", () => {
     expect(shouldReconnectForExternalResume("cancelled", "in_progress", false)).toBe(true);
   });
 
+  it("returns true when transitioning from queued to in_progress while not streaming", () => {
+    expect(shouldReconnectForExternalResume("queued", "in_progress", false)).toBe(true);
+  });
+
   it("returns false on initial mount", () => {
     expect(shouldReconnectForExternalResume(null, "in_progress", false)).toBe(false);
   });
@@ -63,6 +68,20 @@ describe("shouldReconnectForExternalResume", () => {
 
   it("returns false when staying in the same terminal status", () => {
     expect(shouldReconnectForExternalResume("failed", "failed", false)).toBe(false);
+  });
+});
+
+describe("isSessionRuntimeControlsDisabled", () => {
+  it("disables runtime controls while conversation data is loading", () => {
+    expect(isSessionRuntimeControlsDisabled({ sessionStatus: "completed", isConversationLoading: true })).toBe(true);
+  });
+
+  it("disables runtime controls while a selected session is queued", () => {
+    expect(isSessionRuntimeControlsDisabled({ sessionStatus: "queued", isConversationLoading: false })).toBe(true);
+  });
+
+  it("keeps runtime controls enabled for non-queued loaded sessions", () => {
+    expect(isSessionRuntimeControlsDisabled({ sessionStatus: "completed", isConversationLoading: false })).toBe(false);
   });
 });
 

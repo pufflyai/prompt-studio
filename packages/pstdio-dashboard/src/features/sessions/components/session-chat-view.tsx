@@ -28,6 +28,7 @@ import {
   isSessionChatStreaming,
   isSessionConversationLoading,
   isSessionInterruptible,
+  isSessionRuntimeControlsDisabled,
   resolveNewSessionWorkspaceId,
 } from "./session-chat-view.utils";
 import { submitSessionMessage } from "./session-chat-view-actions";
@@ -161,6 +162,10 @@ export const SessionChatView = (props: SessionChatViewProps) => {
     isSessionLoading,
     isMessageLoading: isLoadingMessages,
   });
+  const runtimeControlsDisabled = isSessionRuntimeControlsDisabled({
+    sessionStatus,
+    isConversationLoading,
+  });
   const effectiveStreaming = isSessionChatStreaming({
     isConversationLoading,
     isWorkspaceInitializing,
@@ -188,7 +193,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
       loaderComponent={<ChatSkeleton />}
       chatInputPlaceholder={t("sessions.followUpPlaceholder")}
       chatInputDefaultValue={chatDraft}
-      inputDisabled={isConversationLoading}
+      inputDisabled={runtimeControlsDisabled}
       chatInputQuestionPrompt={activeQuestionPrompt}
       chatInputAutoFocus={autoFocusChatInput}
       onSubmitMessage={(text: string, _attachments, questionResponse) => {
@@ -240,10 +245,15 @@ export const SessionChatView = (props: SessionChatViewProps) => {
               selectedModel={model}
               onAgentChange={setAgent}
               onModelChange={setModel}
-              isDisabled={isConversationLoading}
+              isDisabled={runtimeControlsDisabled}
             />
           </Box>
-          <RepoBrowserContainer sessionId={sessionId} workspaceId={effectiveWorkspaceId} isSessionContext />
+          <RepoBrowserContainer
+            sessionId={sessionId}
+            workspaceId={effectiveWorkspaceId}
+            isSessionContext
+            isDisabled={runtimeControlsDisabled}
+          />
         </Flex>
       }
       approvalPrompt={<SessionChatApprovalPromptPanel sessionId={sessionId} approvalRequest={approvalRequest} />}
