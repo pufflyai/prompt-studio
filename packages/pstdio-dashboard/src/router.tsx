@@ -20,9 +20,15 @@ import { TicketDetailsPanel } from "@/features/ticket/pages/ticket-details-panel
 import { TicketsPanel } from "@/features/ticket-list/pages/tickets-panel";
 import { WorkspacePage } from "@/features/workspaces/pages/workspace-page";
 import { validateWorkspaceRouteSearch } from "@/features/workspaces/pages/workspace-route-search";
+import { UnifiedShellHost } from "@/shared/shell/unified-shell-host";
 
 export const AppLayout = () => {
-  return <Layout />;
+  return (
+    <>
+      <UnifiedShellHost />
+      <Layout />
+    </>
+  );
 };
 
 const rootRoute = createRootRoute({
