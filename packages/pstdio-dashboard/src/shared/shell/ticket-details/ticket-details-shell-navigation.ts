@@ -4,7 +4,7 @@ import type { TicketAttempt, TicketSubTicket } from "@/features/ticket-list/type
 import type { AttemptStatusMapEntry } from "@/features/workspaces/hooks/attempt-status-map";
 import type { WorkspaceSessionEntry } from "@/features/workspaces/hooks/use-workspace-sessions";
 import { getAttemptLabelFromWorkspaceShorthand } from "@/features/workspaces/utils/workspace-shorthand";
-import { createTicketDetailsNavigationResource } from "../dashboard-ticket-details-shell";
+import { createTicketDetailsNavigationResource } from "./dashboard-ticket-details-module";
 
 interface SelectableNavigationFile {
   fileName: string;

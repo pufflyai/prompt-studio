@@ -9,6 +9,7 @@ import {
 } from "./dashboard-project-chrome";
 import { PROJECT_NAVIGATION_FOOTER_TREE_ID, PROJECT_NAVIGATION_TREE_ID } from "./dashboard-project-navigation";
 import { DASHBOARD_COMMAND_PALETTE_MENU } from "./menu-locations";
+import { createTicketsResource, TICKETS_MAIN_WIDGET_ID } from "./tickets/dashboard-tickets-module";
 
 // ---------------------------------------------------------------------------
 // Widget contributions and resource kinds live at shell construction time,
@@ -249,10 +250,19 @@ export const createProjectNavigationMode = (input: DashboardProjectChromeInput):
   label: "Project",
   activate(ctx) {
     ctx.layout.clearArea("left-header");
+    ctx.layout.clearArea("main");
     ctx.layout.openWidget(PROJECT_NAVIGATION_HEADER_WIDGET_ID, {
       closable: false,
       pinned: true,
     });
+    const contextProjectId = ctx.context.get("projectId");
+    const projectId = typeof contextProjectId === "string" ? contextProjectId : input.projectId;
+    if (projectId) {
+      ctx.layout.openWidget(TICKETS_MAIN_WIDGET_ID, {
+        resource: createTicketsResource(projectId),
+        closable: false,
+      });
+    }
 
     return [
       ctx.trees.registerTreeView({

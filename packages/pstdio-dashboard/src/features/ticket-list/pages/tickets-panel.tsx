@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from "@tanstack/react-router";
+import { useParams } from "@tanstack/react-router";
 import { ShellWorkbench } from "pstdio-shell/react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,9 +21,8 @@ import { useAttemptStatusMap } from "@/features/workspaces/hooks/use-attempt-sta
 import { useOpenCommandPalette } from "@/shared/command-palette/open-command-palette-context";
 import { useDeferredPageMount } from "@/shared/performance/use-deferred-page-mount";
 import { createProjectRouteResource } from "@/shared/shell/dashboard-project-shell";
-import { createDashboardTicketsShell } from "@/shared/shell/dashboard-tickets-shell";
 import { useTicketsShellRenderers } from "@/shared/shell/tickets/use-tickets-shell-renderers";
-import { useShell } from "@/shared/shell/use-shell";
+import { useUnifiedShell } from "@/shared/shell/unified-shell-host";
 import { useOpenShortcutHelp } from "@/shared/shortcut-help/open-shortcut-help-context";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
 
@@ -107,7 +106,6 @@ const TicketsPanelContent = (props: { projectId?: string }) => {
   const updateTicket = useUpdateProjectTicket(projectId);
   const deleteTicket = useDeleteProjectTicket(projectId);
   const createTicket = useCreateProjectTicket(projectId);
-  const navigate = useNavigate();
   const openCommandPalette = useOpenCommandPalette();
   const openShortcutHelp = useOpenShortcutHelp();
   const projectSettingsStore = useProjectSettingsStoreApi();
@@ -158,11 +156,11 @@ const TicketsPanelContent = (props: { projectId?: string }) => {
 
   requestCreateTicketRef.current = () => openCreateModal();
 
-  const ticketsShell = useShell(() =>
-    createDashboardTicketsShell({
-      projectId: resolvedProjectId,
-      projectName: project?.name ?? "Project",
-      navigate: (path) => navigate({ to: path }),
+  const ticketsShell = useUnifiedShell();
+
+  useEffect(() => {
+    ticketsShell.context.set("projectName", project?.name ?? "Project");
+    ticketsShell.setProjectActions({
       requestCreateTicket: () => requestCreateTicketRef.current(),
       requestCreateSession: () => {
         setSelectedSessionId(null);
@@ -170,8 +168,8 @@ const TicketsPanelContent = (props: { projectId?: string }) => {
       },
       openCommandPalette,
       openShortcutHelp,
-    }),
-  );
+    });
+  }, [openCommandPalette, openShortcutHelp, project?.name, setSelectedSessionId, setSessionModalState, ticketsShell]);
 
   useCreateTicketShortcut({
     projectId,
@@ -263,6 +261,7 @@ const TicketsPanelContent = (props: { projectId?: string }) => {
   };
 
   useTicketsShellRenderers({
+    projectId: resolvedProjectId,
     shell: ticketsShell,
     renderMain: () => (
       <TicketsShellMainWidget

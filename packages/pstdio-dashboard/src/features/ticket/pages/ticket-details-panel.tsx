@@ -21,15 +21,12 @@ import { useAttemptStatusMap } from "@/features/workspaces/hooks/use-attempt-sta
 import { useDeleteWorkspace } from "@/features/workspaces/hooks/use-workspace-actions";
 import { useWorkspaceSessions } from "@/features/workspaces/hooks/use-workspace-sessions";
 import { buildWorkspaceDeleteOverflowAction } from "@/features/workspaces/pages/workspace-page-actions";
-import {
-  createDashboardTicketDetailsShell,
-  type DashboardTicketDetailsNavigationState,
-} from "@/shared/shell/dashboard-ticket-details-shell";
+import type { DashboardTicketDetailsNavigationState } from "@/shared/shell/ticket-details/dashboard-ticket-details-module";
 import { TicketDetailsPanelDialogs } from "@/shared/shell/ticket-details/ticket-details-panel-dialogs";
 import { useTicketDetailsNavigationActions } from "@/shared/shell/ticket-details/use-ticket-details-navigation-actions";
 import { useTicketDetailsSessionActions } from "@/shared/shell/ticket-details/use-ticket-details-session-actions";
 import { useTicketDetailsShellRenderers } from "@/shared/shell/ticket-details/use-ticket-details-shell-renderers";
-import { useShell } from "@/shared/shell/use-shell";
+import { useUnifiedShell } from "@/shared/shell/unified-shell-host";
 import { useProjectSettingsStore } from "@/shared/stores/project-settings";
 import { useContentAutosave } from "../hooks/use-content-autosave";
 import { useTicketContent } from "../hooks/use-ticket-content";
@@ -131,18 +128,9 @@ const TicketDetailsPanelContent = (props: TicketDetailsPanelContentProps) => {
   const lastSelectedBranches = useProjectSettingsStore((state) => state.lastSelectedBranches);
   const lastSelectedRepo = useProjectSettingsStore((state) => state.lastSelectedRepo);
   const resolvedProjectId = projectId ?? "";
-  const resolvedTicketShorthand = ticketShorthand ?? "ticket";
-  const navigationRef = useRef(createEmptyTicketDetailsNavigationState());
-  const ticketDetailsShell = useShell(() =>
-    createDashboardTicketDetailsShell({
-      projectId: resolvedProjectId,
-      projectName: project?.name ?? "Project",
-      ticketShorthand: resolvedTicketShorthand,
-      ticketTitle: ticket?.title,
-      navigation: navigationRef,
-      navigate: (path) => navigate({ to: path }),
-    }),
-  );
+  const localNavigationRef = useRef(createEmptyTicketDetailsNavigationState());
+  const ticketDetailsShell = useUnifiedShell();
+  const navigationRef = ticketDetailsShell.ticketDetailsNavigation ?? localNavigationRef;
 
   const autosave = useContentAutosave({
     scopeKey: ticketId ? `ticket:${ticketId}:${selectedFile.id}` : "ticket:none",

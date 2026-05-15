@@ -1,12 +1,11 @@
 import {
-  activateProductModule,
   type ProductModuleContribution,
+  type ProductModuleContributionContext,
   type ResourceRef,
   workbenchTopHeaderTrailingMenuPath,
 } from "pstdio-shell/core";
-import { createDashboardProjectShell } from "./dashboard-project-shell";
-import type { DashboardShellStorage } from "./dashboard-shell-persistence";
-import { DASHBOARD_COMMAND_PALETTE_MENU } from "./menu-locations";
+import { PROJECT_CONTEXT_WHEN } from "../dashboard-project-chrome";
+import { DASHBOARD_COMMAND_PALETTE_MENU } from "../menu-locations";
 
 export const TICKETS_RESOURCE_KIND = "tickets";
 export const TICKETS_MAIN_WIDGET_ID = "tickets.main";
@@ -18,16 +17,15 @@ export const TICKETS_NAVIGATOR_ID = "dashboard.ticketsRouter";
 const TICKETS_ICON = "KanbanSquare";
 const TICKETS_CONTRIBUTION_PRIORITY = 200;
 
-interface CreateDashboardTicketsShellInput {
-  projectId: string;
-  projectName: string;
+interface CreateDashboardTicketsModuleInput {
   navigate: (path: string) => void;
   requestCreateTicket: () => void;
-  requestCreateSession?: () => void;
-  openCommandPalette?: () => void;
-  openShortcutHelp?: () => void;
-  storage?: DashboardShellStorage;
 }
+
+const readProjectId = (ctx: ProductModuleContributionContext) => {
+  const projectId = ctx.context.get("projectId");
+  return typeof projectId === "string" ? projectId : "";
+};
 
 export const createTicketsResource = (projectId: string): ResourceRef => ({
   kind: TICKETS_RESOURCE_KIND,
@@ -51,11 +49,9 @@ const hrefFromResource = (resource: ResourceRef) => {
   return parsed ? createTicketsHref(parsed.projectId) : "/";
 };
 
-const createDashboardTicketsModule = (input: CreateDashboardTicketsShellInput): ProductModuleContribution => ({
+export const createDashboardTicketsModule = (input: CreateDashboardTicketsModuleInput): ProductModuleContribution => ({
   id: "dashboard.tickets",
   activate(ctx) {
-    const ticketsResource = createTicketsResource(input.projectId);
-
     return [
       ctx.resources.registerKind({ kind: TICKETS_RESOURCE_KIND, label: "Tickets", icon: TICKETS_ICON }),
       ctx.navigation.registerParser({
@@ -64,7 +60,7 @@ const createDashboardTicketsModule = (input: CreateDashboardTicketsShellInput): 
         canParse: (location) => parseTicketsUri(location) !== null,
         parse: (location) => {
           const parsed = parseTicketsUri(location);
-          return createTicketsResource(parsed?.projectId ?? input.projectId);
+          return createTicketsResource(parsed?.projectId ?? readProjectId(ctx));
         },
       }),
       ctx.navigation.registerNavigator({
@@ -109,7 +105,7 @@ const createDashboardTicketsModule = (input: CreateDashboardTicketsShellInput): 
           icon: TICKETS_ICON,
         },
         {
-          execute: () => ctx.resources.openResource(ticketsResource),
+          execute: () => ctx.resources.openResource(createTicketsResource(readProjectId(ctx))),
         },
       ),
       ctx.commands.registerCommand(
@@ -128,46 +124,21 @@ const createDashboardTicketsModule = (input: CreateDashboardTicketsShellInput): 
         commandId: TICKETS_OPEN_COMMAND_ID,
         label: "Open tickets",
         icon: TICKETS_ICON,
+        when: PROJECT_CONTEXT_WHEN,
       }),
       ctx.menus.registerMenuAction(DASHBOARD_COMMAND_PALETTE_MENU, {
         commandId: TICKETS_CREATE_COMMAND_ID,
         label: "New ticket",
         icon: "Plus",
+        when: PROJECT_CONTEXT_WHEN,
       }),
       ctx.menus.registerMenuAction(workbenchTopHeaderTrailingMenuPath, {
         commandId: TICKETS_CREATE_COMMAND_ID,
         label: "New ticket",
         icon: "Plus",
         group: "primary",
+        when: PROJECT_CONTEXT_WHEN,
       }),
     ];
   },
 });
-
-export const createDashboardTicketsShell = (input: CreateDashboardTicketsShellInput) => {
-  const shell = createDashboardProjectShell({
-    projectId: input.projectId,
-    projectName: input.projectName,
-    navigate: input.navigate,
-    requestCreateTicket: input.requestCreateTicket,
-    requestCreateSession: input.requestCreateSession,
-    openCommandPalette: input.openCommandPalette,
-    openShortcutHelp: input.openShortcutHelp,
-    storage: input.storage,
-  });
-  const disposable = activateProductModule(shell, createDashboardTicketsModule(input));
-
-  shell.layout.clearArea("main");
-  shell.layout.openWidget(TICKETS_MAIN_WIDGET_ID, {
-    resource: createTicketsResource(input.projectId),
-    closable: false,
-  });
-
-  return {
-    ...shell,
-    dispose: () => {
-      disposable.dispose();
-      shell.dispose();
-    },
-  };
-};

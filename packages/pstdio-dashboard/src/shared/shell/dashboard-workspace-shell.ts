@@ -6,11 +6,11 @@ import {
 } from "pstdio-shell/core";
 import type { MutableRefObject } from "react";
 import { createDashboardProjectShell } from "./dashboard-project-shell";
+import { DASHBOARD_COMMAND_PALETTE_MENU } from "./menu-locations";
 import {
   TICKET_DETAILS_NAVIGATION_OPENER_ID,
   TICKET_DETAILS_NAVIGATION_RESOURCE_KIND,
-} from "./dashboard-ticket-details-shell";
-import { DASHBOARD_COMMAND_PALETTE_MENU } from "./menu-locations";
+} from "./ticket-details/dashboard-ticket-details-module";
 
 export const WORKSPACE_RESOURCE_KIND = "workspace";
 export const WORKSPACE_MODE_ID = "workspace";
@@ -83,11 +83,6 @@ const createDashboardWorkspaceModule = (input: CreateDashboardWorkspaceShellInpu
         label: "Workspace",
         icon: WORKSPACE_ICON,
       }),
-      ctx.resources.registerKind({
-        kind: TICKET_DETAILS_NAVIGATION_RESOURCE_KIND,
-        label: "Ticket navigation item",
-        icon: "FileText",
-      }),
       ctx.navigation.registerParser({
         id: WORKSPACE_NAVIGATION_PARSER_ID,
         priority: WORKSPACE_CONTRIBUTION_PRIORITY,
@@ -149,8 +144,8 @@ const createDashboardWorkspaceModule = (input: CreateDashboardWorkspaceShellInpu
         },
       }),
       ctx.resources.registerOpener({
-        id: TICKET_DETAILS_NAVIGATION_OPENER_ID,
-        priority: 100,
+        id: `${TICKET_DETAILS_NAVIGATION_OPENER_ID}.workspace`,
+        priority: 200,
         canOpen: (resource) => resource.kind === TICKET_DETAILS_NAVIGATION_RESOURCE_KIND,
         open: (resource) => input.navigation.current.openResource(resource),
       }),

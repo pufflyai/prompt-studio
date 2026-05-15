@@ -25,16 +25,23 @@ describe("resolveRouteActivation", () => {
     });
   });
 
-  it("activates project.navigation for tickets and ticket detail routes", () => {
+  it("activates project.navigation for the ticket list route", () => {
     expect(resolveRouteActivation({ pathname: "/projects/p1/tickets" })).toEqual({
       modeId: DASHBOARD_MODE_IDS.projectNavigation,
       contextKeys: { projectId: "p1", ticketId: undefined, sessionId: undefined },
     });
+  });
+
+  it("activates project.ticket-details for ticket detail routes", () => {
     expect(resolveRouteActivation({ pathname: "/projects/p1/tickets/PS-281" })).toEqual({
-      modeId: DASHBOARD_MODE_IDS.projectNavigation,
+      modeId: DASHBOARD_MODE_IDS.projectTicketDetails,
       contextKeys: { projectId: "p1", ticketId: "PS-281", sessionId: undefined },
     });
     expect(resolveRouteActivation({ pathname: "/projects/p1/tickets/PS-281/files/foo.md" })).toEqual({
+      modeId: DASHBOARD_MODE_IDS.projectTicketDetails,
+      contextKeys: { projectId: "p1", ticketId: "PS-281", sessionId: undefined },
+    });
+    expect(resolveRouteActivation({ pathname: "/projects/p1/tickets/PS-281/workspaces/PS-281-A1" })).toEqual({
       modeId: DASHBOARD_MODE_IDS.projectNavigation,
       contextKeys: { projectId: "p1", ticketId: "PS-281", sessionId: undefined },
     });
@@ -120,7 +127,7 @@ describe("applyRouteActivation", () => {
     applyRouteActivation(shell, resolveRouteActivation({ pathname: "/projects/p1/tickets" }));
     expect(modeChangeCount).toBe(1);
 
-    applyRouteActivation(shell, resolveRouteActivation({ pathname: "/projects/p1/tickets/PS-9" }));
+    applyRouteActivation(shell, resolveRouteActivation({ pathname: "/projects/p1/tickets/PS-9/workspaces/PS-9-A1" }));
     expect(modeChangeCount).toBe(1); // same mode, no change
     expect(shell.context.get("ticketId")).toBe("PS-9");
   });
@@ -172,7 +179,7 @@ describe("applyRouteActivation", () => {
 });
 
 describe("createDashboardShell", () => {
-  it("registers all six unified-shell modes", () => {
+  it("registers all unified-shell modes", () => {
     const shell = createDashboardShell({ storage: createInMemoryStorage() });
 
     const modeIds = shell.modes.listModes().map((mode) => mode.id);
@@ -180,6 +187,7 @@ describe("createDashboardShell", () => {
     expect(modeIds).toContain(DASHBOARD_MODE_IDS.dashboardSettings);
     expect(modeIds).toContain(DASHBOARD_MODE_IDS.dashboardWorkspaces);
     expect(modeIds).toContain(DASHBOARD_MODE_IDS.projectNavigation);
+    expect(modeIds).toContain(DASHBOARD_MODE_IDS.projectTicketDetails);
     expect(modeIds).toContain(DASHBOARD_MODE_IDS.projectSessions);
     expect(modeIds).toContain(DASHBOARD_MODE_IDS.projectSettings);
   });

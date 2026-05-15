@@ -1,15 +1,14 @@
-import {
-  activateProductModule,
-  type ProductModuleContribution,
-  type ResourceRef,
-  type TreeViewSection,
+import type {
+  ProductModuleContribution,
+  ProductModuleContributionContext,
+  ResourceRef,
+  ShellModeContribution,
+  TreeViewSection,
 } from "pstdio-shell/core";
-import type { MutableRefObject } from "react";
-import { createDashboardProjectShell } from "./dashboard-project-shell";
-import { DASHBOARD_COMMAND_PALETTE_MENU } from "./menu-locations";
+import { DASHBOARD_COMMAND_PALETTE_MENU } from "../menu-locations";
 
 export const TICKET_DETAILS_RESOURCE_KIND = "ticket";
-export const TICKET_DETAILS_MODE_ID = "ticket";
+export const PROJECT_TICKET_DETAILS_MODE_ID = "project.ticket-details";
 export const TICKET_DETAILS_NAVIGATION_TREE_ID = "ticket.details.navigation";
 export const TICKET_DETAILS_NAVIGATION_RESOURCE_KIND = "ticket.details.navigation-resource";
 export const TICKET_DETAILS_NAVIGATION_OPENER_ID = "ticket.details.navigationOpener";
@@ -21,19 +20,31 @@ export const TICKET_DETAILS_NAVIGATOR_ID = "dashboard.ticketDetailsRouter";
 const TICKET_DETAILS_ICON = "FileText";
 const TICKET_DETAILS_CONTRIBUTION_PRIORITY = 220;
 
-interface CreateDashboardTicketDetailsShellInput {
-  projectId: string;
-  projectName: string;
-  ticketShorthand: string;
-  ticketTitle?: string | null;
-  navigation: MutableRefObject<DashboardTicketDetailsNavigationState>;
-  navigate: (path: string) => void;
-}
-
 export interface DashboardTicketDetailsNavigationState {
   getSections: () => TreeViewSection[];
   openResource: (resource: ResourceRef) => void;
 }
+
+export interface DashboardTicketDetailsNavigationController {
+  current: DashboardTicketDetailsNavigationState;
+}
+
+interface CreateDashboardTicketDetailsModuleInput {
+  navigate: (path: string) => void;
+  navigation: DashboardTicketDetailsNavigationController;
+}
+
+const readContextString = (ctx: ProductModuleContributionContext, key: string) => {
+  const value = ctx.context.get(key);
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+};
+
+const readProjectId = (ctx: ProductModuleContributionContext) => readContextString(ctx, "projectId") ?? "";
+
+const readTicketId = (ctx: ProductModuleContributionContext) => readContextString(ctx, "ticketId") ?? "ticket";
+
+export const createEmptyTicketDetailsNavigationState = () =>
+  ({ getSections: () => [], openResource: () => undefined }) satisfies DashboardTicketDetailsNavigationState;
 
 export const createTicketDetailsResource = (
   projectId: string,
@@ -76,16 +87,14 @@ const hrefFromResource = (resource: ResourceRef) => {
   return parsed ? createTicketDetailsHref(parsed.projectId, parsed.ticketShorthand) : "/";
 };
 
-const createInitialTicketResource = (input: CreateDashboardTicketDetailsShellInput) =>
-  createTicketDetailsResource(input.projectId, input.ticketShorthand, input.ticketTitle);
+const createActiveTicketDetailsResource = (ctx: ProductModuleContributionContext) =>
+  createTicketDetailsResource(readProjectId(ctx), readTicketId(ctx));
 
-const createDashboardTicketDetailsModule = (
-  input: CreateDashboardTicketDetailsShellInput,
+export const createDashboardTicketDetailsModule = (
+  input: CreateDashboardTicketDetailsModuleInput,
 ): ProductModuleContribution => ({
   id: "dashboard.ticketDetails",
   activate(ctx) {
-    const ticketResource = createInitialTicketResource(input);
-
     return [
       ctx.resources.registerKind({
         kind: TICKET_DETAILS_RESOURCE_KIND,
@@ -103,7 +112,7 @@ const createDashboardTicketDetailsModule = (
         canParse: (location) => parseTicketDetailsUri(location) !== null,
         parse: (location) => {
           const parsed = parseTicketDetailsUri(location);
-          if (!parsed) return ticketResource;
+          if (!parsed) return createActiveTicketDetailsResource(ctx);
 
           return createTicketDetailsResource(parsed.projectId, parsed.ticketShorthand);
         },
@@ -118,22 +127,6 @@ const createDashboardTicketDetailsModule = (
           input.navigate(href);
           return href;
         },
-      }),
-      ctx.modes.registerMode({
-        id: TICKET_DETAILS_MODE_ID,
-        label: "Ticket",
-        activate: (modeCtx) =>
-          modeCtx.trees.registerTreeView({
-            id: TICKET_DETAILS_NAVIGATION_TREE_ID,
-            title: "Ticket navigation",
-            area: "left",
-            areaSize: { defaultPx: 240, minPx: 200 },
-            icon: TICKET_DETAILS_ICON,
-            defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "sessions"],
-            getRoots: () => [],
-            getChildren: () => [],
-            getSections: () => input.navigation.current.getSections(),
-          }),
       }),
       ctx.layout.registerWidget({
         id: TICKET_DETAILS_MAIN_WIDGET_ID,
@@ -172,7 +165,7 @@ const createDashboardTicketDetailsModule = (
           icon: TICKET_DETAILS_ICON,
         },
         {
-          execute: () => ctx.resources.openResource(ticketResource),
+          execute: () => ctx.resources.openResource(createActiveTicketDetailsResource(ctx)),
         },
       ),
       ctx.menus.registerMenuAction(DASHBOARD_COMMAND_PALETTE_MENU, {
@@ -184,26 +177,29 @@ const createDashboardTicketDetailsModule = (
   },
 });
 
-export const createDashboardTicketDetailsShell = (input: CreateDashboardTicketDetailsShellInput) => {
-  const shell = createDashboardProjectShell({
-    projectId: input.projectId,
-    projectName: input.projectName,
-    navigate: input.navigate,
-    showProjectNavigationTree: false,
-  });
-  const disposable = activateProductModule(shell, createDashboardTicketDetailsModule(input));
+export const createProjectTicketDetailsMode = (input: {
+  navigation: DashboardTicketDetailsNavigationController;
+}): ShellModeContribution => ({
+  id: PROJECT_TICKET_DETAILS_MODE_ID,
+  label: "Ticket",
+  activate(ctx) {
+    ctx.layout.clearArea("left-header");
+    ctx.layout.clearArea("main");
+    ctx.layout.openWidget(TICKET_DETAILS_MAIN_WIDGET_ID, {
+      resource: createActiveTicketDetailsResource(ctx),
+      closable: false,
+    });
 
-  shell.modes.setActiveMode(TICKET_DETAILS_MODE_ID);
-  shell.layout.openWidget(TICKET_DETAILS_MAIN_WIDGET_ID, {
-    resource: createInitialTicketResource(input),
-    closable: false,
-  });
-
-  return {
-    ...shell,
-    dispose: () => {
-      disposable.dispose();
-      shell.dispose();
-    },
-  };
-};
+    return ctx.trees.registerTreeView({
+      id: TICKET_DETAILS_NAVIGATION_TREE_ID,
+      title: "Ticket navigation",
+      area: "left",
+      areaSize: { defaultPx: 240, minPx: 200 },
+      icon: TICKET_DETAILS_ICON,
+      defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "sessions"],
+      getRoots: () => [],
+      getChildren: () => [],
+      getSections: () => input.navigation.current.getSections(),
+    });
+  },
+});

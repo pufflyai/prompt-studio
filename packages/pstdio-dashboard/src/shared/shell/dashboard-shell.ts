@@ -24,12 +24,20 @@ import {
   createDashboardShellPreferencePersistence,
   type DashboardShellStorage,
 } from "./dashboard-shell-persistence";
+import {
+  createDashboardTicketDetailsModule,
+  createEmptyTicketDetailsNavigationState,
+  createProjectTicketDetailsMode,
+  PROJECT_TICKET_DETAILS_MODE_ID,
+} from "./ticket-details/dashboard-ticket-details-module";
+import { createDashboardTicketsModule } from "./tickets/dashboard-tickets-module";
 
 export const DASHBOARD_MODE_IDS = {
   projectsList: "dashboard.projects-list",
   dashboardSettings: "dashboard.settings",
   dashboardWorkspaces: "dashboard.workspaces",
   projectNavigation: "project.navigation",
+  projectTicketDetails: PROJECT_TICKET_DETAILS_MODE_ID,
   projectSessions: "project.sessions",
   projectSettings: "project.settings",
 } as const;
@@ -59,6 +67,14 @@ interface CreateDashboardShellInput {
 }
 
 export const createDashboardShell = (input: CreateDashboardShellInput = {}) => {
+  let requestCreateTicketRef = input.requestCreateTicket ?? (() => {});
+  let requestCreateSessionRef = input.requestCreateSession ?? (() => {});
+  let closeOverlayRef = input.closeOverlay ?? (() => {});
+  let openCommandPaletteRef: (() => void) | undefined = input.openCommandPalette;
+  let openCommandPaletteCommandsRef: (() => void) | undefined = input.openCommandPaletteCommands;
+  let openThemeMenuRef = input.openThemeMenu ?? (() => {});
+  let openShortcutHelpRef = input.openShortcutHelp ?? (() => {});
+  const ticketDetailsNavigation = { current: createEmptyTicketDetailsNavigationState() };
   const shell = createShellCore({
     layoutPersistence:
       input.layoutPersistence ??
@@ -81,13 +97,27 @@ export const createDashboardShell = (input: CreateDashboardShellInput = {}) => {
       projectId: input.projectId,
       projectName: input.projectName,
       navigate,
-      closeOverlay: input.closeOverlay,
-      requestCreateTicket: input.requestCreateTicket,
-      requestCreateSession: input.requestCreateSession,
-      openCommandPalette: input.openCommandPalette,
-      openCommandPaletteCommands: input.openCommandPaletteCommands,
-      openThemeMenu: input.openThemeMenu,
-      openShortcutHelp: input.openShortcutHelp,
+      closeOverlay: () => closeOverlayRef(),
+      requestCreateTicket: () => requestCreateTicketRef(),
+      requestCreateSession: () => requestCreateSessionRef(),
+      openCommandPalette: () => (openCommandPaletteRef ?? shell.commandPalette.open)(),
+      openCommandPaletteCommands: () => (openCommandPaletteCommandsRef ?? shell.commandPalette.open)(),
+      openThemeMenu: () => openThemeMenuRef(),
+      openShortcutHelp: () => openShortcutHelpRef(),
+    }),
+  );
+  const ticketsDisposable = activateProductModule(
+    shell,
+    createDashboardTicketsModule({
+      navigate,
+      requestCreateTicket: () => requestCreateTicketRef(),
+    }),
+  );
+  const ticketDetailsDisposable = activateProductModule(
+    shell,
+    createDashboardTicketDetailsModule({
+      navigate,
+      navigation: ticketDetailsNavigation,
     }),
   );
   const bridgeRenderer = shell.renderers.registerRenderer(
@@ -107,17 +137,38 @@ export const createDashboardShell = (input: CreateDashboardShellInput = {}) => {
       navigate,
     }),
   );
+  shell.modes.registerMode(createProjectTicketDetailsMode({ navigation: ticketDetailsNavigation }));
   shell.modes.registerMode(createProjectSessionsMode());
   shell.modes.registerMode(createProjectSettingsMode());
 
   return {
     ...shell,
+    ticketDetailsNavigation,
     setNavigate(next: DashboardNavigate) {
       navigateRef = next;
+    },
+    setProjectActions(next: {
+      closeOverlay?: () => void;
+      requestCreateTicket?: () => void;
+      requestCreateSession?: () => void;
+      openCommandPalette?: () => void;
+      openCommandPaletteCommands?: () => void;
+      openThemeMenu?: () => void;
+      openShortcutHelp?: () => void;
+    }) {
+      if (next.closeOverlay) closeOverlayRef = next.closeOverlay;
+      if (next.requestCreateTicket) requestCreateTicketRef = next.requestCreateTicket;
+      if (next.requestCreateSession) requestCreateSessionRef = next.requestCreateSession;
+      if (next.openCommandPalette) openCommandPaletteRef = next.openCommandPalette;
+      if (next.openCommandPaletteCommands) openCommandPaletteCommandsRef = next.openCommandPaletteCommands;
+      if (next.openThemeMenu) openThemeMenuRef = next.openThemeMenu;
+      if (next.openShortcutHelp) openShortcutHelpRef = next.openShortcutHelp;
     },
     dispose: () => {
       shell.modes.setActiveMode(undefined);
       bridgeRenderer.dispose();
+      ticketDetailsDisposable.dispose();
+      ticketsDisposable.dispose();
       projectChromeDisposable.dispose();
       baseDisposable.dispose();
     },

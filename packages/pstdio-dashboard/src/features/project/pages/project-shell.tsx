@@ -1,15 +1,18 @@
 import { Flex } from "@chakra-ui/react";
 import { EmptyState, ResizableSplitLayout, ThemePreferenceProvider, useThemePreference } from "@pstdio/ui";
-import { Outlet, useParams, useRouterState } from "@tanstack/react-router";
-import { useLayoutEffect, useRef, useState } from "react";
+import { Outlet, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { SessionAttachedPanel } from "@/features/sessions/components/session-attached-panel";
 import { SessionBubbleContainer } from "@/features/sessions/components/session-bubble.container";
 import { SessionChatView } from "@/features/sessions/components/session-chat-view";
 import { isSessionsRoutePath } from "@/features/sessions/utils/sessions-route";
-import { ShortcutProvider } from "@/features/shortcuts/shortcut-provider";
+import { openSessionCreateFlow, openTicketCreateFlow, ShortcutProvider } from "@/features/shortcuts/shortcut-provider";
+import { useOpenCommandPalette } from "@/shared/command-palette/open-command-palette-context";
 import { useDeferredMount } from "@/shared/performance/use-deferred-page-mount";
+import { useUnifiedShell } from "@/shared/shell/unified-shell-host";
+import { useOpenShortcutHelp } from "@/shared/shortcut-help/open-shortcut-help-context";
 import { ProjectSettingsProvider, useProjectSettingsStore } from "@/shared/stores/project-settings";
 import { mergeDashboardThemePreferences } from "../../../theme-preferences";
 import { useExtensionAppearanceThemePreferences } from "../../extensions/use-extension-appearance";
@@ -61,14 +64,19 @@ const resolveNewSessionWorkspaceId = (input: {
 
 const ProjectShellContent = () => {
   const { projectId, workspaceShorthand } = useParams({ strict: false });
+  const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const { data: project, isLoading } = useProject(projectId);
   const { t } = useTranslation("projects");
+  const shell = useUnifiedShell();
+  const openCommandPalette = useOpenCommandPalette();
+  const openShortcutHelp = useOpenShortcutHelp();
   const sessionModalState = useProjectSettingsStore((s) => s.sessionModalState);
   const setSessionModalState = useProjectSettingsStore((s) => s.setSessionModalState);
   const setLastNonSessionsPath = useProjectSettingsStore((s) => s.setLastNonSessionsPath);
   const selectedSessionId = useProjectSettingsStore((s) => s.selectedSessionId);
   const setSelectedSessionId = useProjectSettingsStore((s) => s.setSelectedSessionId);
+  const requestCreateTicket = useProjectSettingsStore((s) => s.requestCreateTicket);
   const pendingWorkspaceSessionWorkspaceId = useProjectSettingsStore((s) => s.pendingWorkspaceSessionWorkspaceId);
   const isSessionsRoute = isSessionsRoutePath(pathname, projectId);
   const suppressSessionChrome = isSessionsRoute;
@@ -95,6 +103,42 @@ const ProjectShellContent = () => {
   const showChatView = !suppressSessionChrome && (showAttachedPanel || isBubbleMode);
   const chatViewMounted = useDeferredMount(showChatView ? "visible" : "hidden");
   const activeSlot = resolveActiveSessionSlot({ showAttachedPanel, isBubbleMode, attachedSlot, bubbleSlot });
+
+  useEffect(() => {
+    if (!projectId) return;
+
+    shell.context.set("projectName", project?.name ?? "Project");
+    shell.setProjectActions({
+      requestCreateTicket: () =>
+        openTicketCreateFlow({
+          projectId,
+          pathname,
+          requestCreateTicket,
+          navigate,
+        }),
+      requestCreateSession: () =>
+        openSessionCreateFlow({
+          projectId,
+          pathname,
+          setSelectedSessionId,
+          setSessionModalState,
+          navigate,
+        }),
+      openCommandPalette,
+      openShortcutHelp,
+    });
+  }, [
+    navigate,
+    openCommandPalette,
+    openShortcutHelp,
+    pathname,
+    project?.name,
+    projectId,
+    requestCreateTicket,
+    setSelectedSessionId,
+    setSessionModalState,
+    shell,
+  ]);
 
   useLayoutEffect(() => {
     const host = chatHostRef.current;

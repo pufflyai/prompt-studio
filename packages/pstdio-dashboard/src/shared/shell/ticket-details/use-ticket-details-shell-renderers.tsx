@@ -1,4 +1,5 @@
 import type { BreadcrumbItem } from "@pstdio/ui";
+import type { ShellCore } from "pstdio-shell/core";
 import type { ComponentProps, MutableRefObject } from "react";
 import { useEffect } from "react";
 import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
@@ -11,19 +12,19 @@ import type { resolveTicketDetailsState } from "@/features/ticket/utils/ticket-d
 import type { resolveSelectedTicketFile } from "@/features/ticket/utils/ticket-file-selection";
 import type { WorkspaceSessionEntry } from "@/features/workspaces/hooks/use-workspace-sessions";
 import {
-  type createDashboardTicketDetailsShell,
   createTicketDetailsResource,
+  type DashboardTicketDetailsNavigationController,
   type DashboardTicketDetailsNavigationState,
   TICKET_DETAILS_MAIN_WIDGET_ID,
   TICKET_DETAILS_NAVIGATION_TREE_ID,
-} from "@/shared/shell/dashboard-ticket-details-shell";
+} from "@/shared/shell/ticket-details/dashboard-ticket-details-module";
 import { buildShellTreeContextMenuActions, registerShellHeaderActions } from "../register-header-actions";
 import {
   createTicketDetailsNavigationSections,
   openTicketDetailsNavigationResource,
 } from "./ticket-details-shell-navigation";
 
-type TicketDetailsShell = ReturnType<typeof createDashboardTicketDetailsShell>;
+type TicketDetailsShell = Pick<ShellCore, "breadcrumbs" | "commands" | "layout" | "menus" | "renderers" | "trees">;
 type PluginActionTrigger = ReturnType<typeof usePluginActionTrigger>;
 type Ticket = NonNullable<ReturnType<typeof resolveTicketDetailsState>["ticket"]>;
 type SelectedFile = ReturnType<typeof resolveSelectedTicketFile>;
@@ -61,7 +62,7 @@ interface UseTicketDetailsShellRenderersInput {
   isContentReady: boolean;
   isDetailsPanelOpen: boolean;
   isImageFile: boolean;
-  navigation: MutableRefObject<DashboardTicketDetailsNavigationState>;
+  navigation: MutableRefObject<DashboardTicketDetailsNavigationState> | DashboardTicketDetailsNavigationController;
   pluginActionTrigger: PluginActionTrigger;
   project: ReturnType<typeof useProject>["data"];
   projectId?: string;

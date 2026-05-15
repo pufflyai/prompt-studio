@@ -62,6 +62,13 @@ export const resolveRouteActivation = (input: ResolveRouteActivationInput): Rout
   }
 
   if (subroute === "tickets") {
+    if (segments[3] && segments[4] !== "workspaces") {
+      return {
+        modeId: DASHBOARD_MODE_IDS.projectTicketDetails,
+        contextKeys: { projectId, ticketId: segments[3], sessionId: undefined },
+      };
+    }
+
     return {
       modeId: DASHBOARD_MODE_IDS.projectNavigation,
       contextKeys: { projectId, ticketId: segments[3], sessionId: undefined },
@@ -76,10 +83,6 @@ export const resolveRouteActivation = (input: ResolveRouteActivationInput): Rout
 };
 
 export const applyRouteActivation = (shell: ShellCore, activation: RouteActivation) => {
-  if (shell.modes.getActiveModeId() !== activation.modeId) {
-    shell.modes.setActiveMode(activation.modeId);
-  }
-
   for (const key of CONTEXT_KEYS) {
     const next = activation.contextKeys[key];
     const current = shell.context.get(key);
@@ -89,6 +92,10 @@ export const applyRouteActivation = (shell: ShellCore, activation: RouteActivati
     } else if (current !== next) {
       shell.context.set(key, next);
     }
+  }
+
+  if (shell.modes.getActiveModeId() !== activation.modeId) {
+    shell.modes.setActiveMode(activation.modeId);
   }
 };
 

@@ -12,6 +12,20 @@ import {
 import { createDashboardShell, DASHBOARD_MODE_IDS } from "./dashboard-shell";
 import { DASHBOARD_COMMAND_PALETTE_MENU } from "./menu-locations";
 import { applyRouteActivation, resolveRouteActivation } from "./tanstack-shell-adapter";
+import {
+  createTicketDetailsResource,
+  TICKET_DETAILS_MAIN_WIDGET_ID,
+  TICKET_DETAILS_NAVIGATION_TREE_ID,
+  TICKET_DETAILS_OPEN_COMMAND_ID,
+  TICKET_DETAILS_RESOURCE_KIND,
+} from "./ticket-details/dashboard-ticket-details-module";
+import {
+  createTicketsResource,
+  TICKETS_CREATE_COMMAND_ID,
+  TICKETS_MAIN_WIDGET_ID,
+  TICKETS_OPEN_COMMAND_ID,
+  TICKETS_RESOURCE_KIND,
+} from "./tickets/dashboard-tickets-module";
 
 const createInMemoryStorage = () => {
   const store = new Map<string, string>();
@@ -101,5 +115,67 @@ describe("createDashboardShell project chrome", () => {
     expect(shell.context.get("projectId")).toBeUndefined();
     expect(shell.keybindings.listActiveKeybindings()).toEqual([]);
     expect(shell.layout.getLayout().areas["left-header"].widgets).toEqual([]);
+  });
+});
+
+describe("createDashboardShell ticket modes", () => {
+  it("opens the ticket list widget from the unified project navigation mode", async () => {
+    const navigations: string[] = [];
+    let createRequests = 0;
+    const shell = createDashboardShell({
+      storage: createInMemoryStorage(),
+      navigate: (path) => navigations.push(path),
+      requestCreateTicket: () => {
+        createRequests += 1;
+      },
+    });
+
+    applyRouteActivation(shell, resolveRouteActivation({ pathname: "/projects/proj-1/tickets" }));
+
+    expect(shell.modes.getActiveModeId()).toBe(DASHBOARD_MODE_IDS.projectNavigation);
+    expect(shell.resources.getKind(TICKETS_RESOURCE_KIND)?.source).toBe("product-module");
+    expect(shell.layout.getWidget(TICKETS_MAIN_WIDGET_ID)).toMatchObject({
+      area: "main",
+      renderer: "react",
+    });
+    expect(shell.layout.getLayout().activeWidgetId).toBe(TICKETS_MAIN_WIDGET_ID);
+    expect(shell.layout.getLayout().activeResourceUri).toBe("pstdio://project/proj-1/tickets");
+    expect(shell.commands.getCommand(TICKETS_OPEN_COMMAND_ID)?.command.label).toBe("Open tickets");
+    expect(shell.commands.getCommand(TICKETS_CREATE_COMMAND_ID)?.command.label).toBe("New ticket");
+
+    await shell.resources.openResource(createTicketsResource("proj-1"));
+    await shell.commands.executeCommand(TICKETS_CREATE_COMMAND_ID);
+
+    expect(navigations).toEqual(["/projects/proj-1/tickets"]);
+    expect(createRequests).toBe(1);
+  });
+
+  it("opens ticket details in a dedicated unified mode with the ticket navigation tree", async () => {
+    const navigations: string[] = [];
+    const shell = createDashboardShell({
+      storage: createInMemoryStorage(),
+      navigate: (path) => navigations.push(path),
+    });
+
+    applyRouteActivation(shell, resolveRouteActivation({ pathname: "/projects/proj-1/tickets/PS-42" }));
+
+    expect(shell.modes.getActiveModeId()).toBe("project.ticket-details");
+    expect(shell.resources.getKind(TICKET_DETAILS_RESOURCE_KIND)?.source).toBe("product-module");
+    expect(shell.trees.getTreeView(TICKET_DETAILS_NAVIGATION_TREE_ID)).toMatchObject({
+      area: "left",
+      icon: "FileText",
+    });
+    expect(shell.layout.getWidget(TICKET_DETAILS_MAIN_WIDGET_ID)).toMatchObject({
+      area: "main",
+      renderer: "react",
+    });
+    expect(shell.layout.getLayout().activeWidgetId).toBe(TICKET_DETAILS_MAIN_WIDGET_ID);
+    expect(shell.layout.getLayout().activeResourceUri).toBe("pstdio://project/proj-1/ticket/PS-42");
+    expect(shell.commands.getCommand(TICKET_DETAILS_OPEN_COMMAND_ID)?.command.label).toBe("Open ticket");
+
+    await shell.resources.openResource(createTicketDetailsResource("proj-1", "PS-43", "Follow up"));
+
+    expect(navigations).toEqual(["/projects/proj-1/tickets/PS-43"]);
+    expect(shell.layout.getLayout().activeResourceUri).toBe("pstdio://project/proj-1/ticket/PS-43");
   });
 });

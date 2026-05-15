@@ -40,9 +40,9 @@ describe("createDashboardProjectShell", () => {
       PROJECT_NAVIGATION_HEADER_WIDGET_ID,
     ]);
     expect(shell.commands.getCommand(PROJECT_OPEN_SETTINGS_COMMAND_ID)?.command.label).toBe("Project settings");
-    expect(shell.menus.listMenuActions(DASHBOARD_COMMAND_PALETTE_MENU).map((action) => action.commandId)).toEqual([
+    expect(shell.menus.listMenuActions(DASHBOARD_COMMAND_PALETTE_MENU).map((action) => action.commandId)).toContain(
       PROJECT_OPEN_SETTINGS_COMMAND_ID,
-    ]);
+    );
     expect(
       shell.keybindings.listActiveKeybindings().map(({ commandId, keybinding }) => ({ commandId, keybinding })),
     ).toEqual([

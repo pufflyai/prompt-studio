@@ -1,5 +1,4 @@
 import { describe, expect, it } from "bun:test";
-import { TICKET_DETAILS_NAVIGATION_RESOURCE_KIND } from "./dashboard-ticket-details-shell";
 import {
   createDashboardWorkspaceShell,
   createWorkspaceResource,
@@ -10,6 +9,7 @@ import {
   WORKSPACE_RESOURCE_KIND,
 } from "./dashboard-workspace-shell";
 import { DASHBOARD_COMMAND_PALETTE_MENU } from "./menu-locations";
+import { TICKET_DETAILS_NAVIGATION_RESOURCE_KIND } from "./ticket-details/dashboard-ticket-details-module";
 
 describe("createDashboardWorkspaceShell", () => {
   it("registers the workspace shell slice and opens workspace resources", async () => {

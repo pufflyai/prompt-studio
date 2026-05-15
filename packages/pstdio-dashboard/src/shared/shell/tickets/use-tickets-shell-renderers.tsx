@@ -1,18 +1,28 @@
 import type { ShellCore } from "pstdio-shell/core";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
-import { TICKETS_MAIN_WIDGET_ID } from "@/shared/shell/dashboard-tickets-shell";
+import { createTicketsResource, TICKETS_MAIN_WIDGET_ID } from "@/shared/shell/tickets/dashboard-tickets-module";
 import { useProjectNavigationHeaderRenderer } from "@/shared/shell/use-project-navigation-header-renderer";
 
 interface UseTicketsShellRenderersInput {
-  shell: Pick<ShellCore, "renderers">;
+  projectId: string;
+  shell: Pick<ShellCore, "layout" | "renderers">;
   renderMain: () => ReactNode;
 }
 
 export const useTicketsShellRenderers = (input: UseTicketsShellRenderersInput) => {
-  const { shell, renderMain } = input;
+  const { projectId, shell, renderMain } = input;
 
   useProjectNavigationHeaderRenderer(shell);
+
+  useEffect(() => {
+    if (!projectId) return;
+
+    shell.layout.openWidget(TICKETS_MAIN_WIDGET_ID, {
+      resource: createTicketsResource(projectId),
+      closable: false,
+    });
+  }, [projectId, shell]);
 
   useEffect(() => {
     const main = shell.renderers.registerRenderer({
