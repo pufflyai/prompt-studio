@@ -1,7 +1,7 @@
 import { HStack, Text } from "@chakra-ui/react";
 import type { BreadcrumbItem } from "@pstdio/ui";
 import type { ReactNode } from "react";
-import { buildActiveWidgetBreadcrumb, type ShellCore } from "../../core";
+import type { ShellCore } from "../../core";
 import { ShellIcon } from "../shared/icon";
 
 const ShellBreadcrumbTitle = (props: { icon?: string; title: ReactNode }) => {
@@ -22,7 +22,7 @@ const ShellBreadcrumbTitle = (props: { icon?: string; title: ReactNode }) => {
 };
 
 export const buildWorkbenchBreadcrumbItems = (shell: ShellCore): BreadcrumbItem[] => {
-  const items = shell.breadcrumbs.getItems() ?? buildActiveWidgetBreadcrumb(shell);
+  const items = shell.breadcrumbs.getItems() ?? [];
   return items.map((item) => ({
     title: <ShellBreadcrumbTitle icon={item.icon} title={item.title as ReactNode} />,
     url: item.url,

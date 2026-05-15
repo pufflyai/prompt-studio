@@ -1,45 +1,44 @@
-import { type ShellCore, workbenchCommandPaletteMenuPath } from "../../../core";
+import { type ShellModuleContributionContext, workbenchCommandPaletteMenuPath } from "../../../core";
 import { RandomShellRail } from "../components/rail";
 import { railWidgetId, randomResourceKind, randomShellModeOrder, randomShellModes } from "../mock-data/data";
 
 const openCommandPaletteCommandId = "random.openCommandPalette";
 const openCommandPaletteKeybinding = "Meta+P";
 
-const registerRandomResources = (shell: ShellCore) => {
-  shell.resources.registerKind({ kind: randomResourceKind, label: "Item", icon: "FileText" });
+const registerRandomResources = (ctx: ShellModuleContributionContext) => {
+  ctx.resources.registerKind({ kind: randomResourceKind, label: "Item", icon: "FileText" });
 };
 
-const registerRandomShellRail = (shell: ShellCore) => {
-  shell.layout.registerWidget({
+const registerRandomShellRail = (ctx: ShellModuleContributionContext) => {
+  ctx.layout.registerWidget({
     id: railWidgetId,
     title: "Mode rail",
     area: "activityBar",
     singleton: true,
-    renderer: "react",
     rendererId: railWidgetId,
   });
-  shell.renderers.registerRenderer({
+  ctx.renderers.registerRenderer({
     id: railWidgetId,
     render: (input) => <RandomShellRail input={input} />,
   });
-  shell.layout.openWidget(railWidgetId, { pinned: true, closable: false });
+  ctx.layout.openWidget(railWidgetId, { pinned: true });
 };
 
-const registerRandomCommands = (shell: ShellCore) => {
-  shell.commands.registerCommand(
+const registerRandomCommands = (ctx: ShellModuleContributionContext) => {
+  ctx.commands.registerCommand(
     {
       id: openCommandPaletteCommandId,
       label: "Show command palette",
       category: "Workbench",
       icon: "Search",
     },
-    { execute: () => shell.commandPalette.open() },
+    { execute: () => ctx.commandPalette.open() },
   );
-  shell.keybindings.registerKeybinding({
+  ctx.keybindings.registerKeybinding({
     commandId: openCommandPaletteCommandId,
     keybinding: openCommandPaletteKeybinding,
   });
-  shell.menus.registerMenuAction(workbenchCommandPaletteMenuPath, {
+  ctx.menus.registerMenuAction(workbenchCommandPaletteMenuPath, {
     commandId: openCommandPaletteCommandId,
     order: 10,
   });
@@ -47,24 +46,24 @@ const registerRandomCommands = (shell: ShellCore) => {
   for (const [index, modeId] of randomShellModeOrder.entries()) {
     const mode = randomShellModes[modeId];
     const commandId = `random.activateMode.${mode.id}`;
-    shell.commands.registerCommand(
+    ctx.commands.registerCommand(
       {
         id: commandId,
         label: `Switch to ${mode.label}`,
         category: "Modes",
         icon: mode.topIcon,
       },
-      { execute: () => shell.modes.setActiveMode(mode.id) },
+      { execute: () => ctx.modes.setActiveMode(mode.id) },
     );
-    shell.menus.registerMenuAction(workbenchCommandPaletteMenuPath, {
+    ctx.menus.registerMenuAction(workbenchCommandPaletteMenuPath, {
       commandId,
       order: 100 + index,
     });
   }
 };
 
-export const activateRandomShellModule = (shell: ShellCore) => {
-  registerRandomResources(shell);
-  registerRandomShellRail(shell);
-  registerRandomCommands(shell);
+export const registerRandomShellContributions = (ctx: ShellModuleContributionContext) => {
+  registerRandomResources(ctx);
+  registerRandomShellRail(ctx);
+  registerRandomCommands(ctx);
 };

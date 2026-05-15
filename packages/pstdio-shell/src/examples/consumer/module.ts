@@ -1,10 +1,8 @@
 import type {
   ResourceRef,
   ShellArea,
-  ShellCore,
   ShellModuleContribution,
   ShellModuleContributionContext,
-  WebviewDescriptor,
 } from "../../core";
 import { registerConsumerShellRenderers } from "./components/views";
 import {
@@ -31,7 +29,6 @@ const registerReactWidget = (
       title,
       area,
       singleton: true,
-      renderer: "react",
       rendererId: id,
       priority,
     },
@@ -265,98 +262,73 @@ const registerProjectMenusAndKeybindings = (ctx: ShellModuleContributionContext)
   });
 };
 
-const createProjectModule = () =>
-  ({
-    id: "prompt-studio.project",
-    activate(ctx) {
-      registerProjectRegistries(ctx);
-      registerProjectCommands(ctx);
-      registerProjectMenusAndKeybindings(ctx);
-      registerProjectPreferences(ctx);
-      registerProjectNavigation(ctx);
-    },
-  }) satisfies ShellModuleContribution;
+const registerExtensionLabContributions = (ctx: ShellModuleContributionContext) => {
+  const commandId = "extension-lab.review.open";
 
-const createExtensionWebview = () =>
-  ({
+  ctx.resources.registerKind({ kind: "extension-review", label: "Extension review", icon: "Puzzle" });
+  ctx.commands.registerCommand(
+    { id: commandId, label: "Open extension review", category: "Extensions", icon: "Puzzle" },
+    { execute: () => ctx.resources.openResource(shellExampleResources.extensionReview) },
+  );
+  ctx.layout.registerWidget({
+    id: shellWidgetIds.extensionReview,
     title: "Extension Lab review",
-    sandbox: "default",
-    runtimeUrl: `data:text/html;charset=utf-8,${encodeURIComponent(
-      "<style>body{font:13px system-ui;margin:0;background:#0f172a;color:#f8fafc}main{padding:24px}code{color:#93c5fd}</style><main><h1>Extension Lab</h1><p>Runtime webview contributed through the shell adapter.</p><code>extension-lab.review.panel</code></main>",
-    )}`,
-    capabilities: ["read-workspace", "run-command"],
-  }) satisfies WebviewDescriptor;
-
-const createExtensionLabModule = (shell: ShellCore) =>
-  ({
-    id: "extension.extension-lab",
-    ownerId: "extension-lab",
-    source: "extension",
-    activate(ctx) {
-      const commandId = "extension-lab.review.open";
-      const webview = createExtensionWebview();
-
-      ctx.resources.registerKind({ kind: "extension-review", label: "Extension review", icon: "Puzzle" });
-      ctx.commands.registerCommand(
-        { id: commandId, label: "Open extension review", category: "Extensions", icon: "Puzzle" },
-        { execute: () => shell.resources.openResource(shellExampleResources.extensionReview) },
-      );
-      ctx.layout.registerWidget({
-        id: shellWidgetIds.extensionReview,
-        title: "Extension Lab review",
-        area: "main",
-        resourceKinds: ["extension-review"],
-        renderer: "webview",
-        webview,
-      });
-      ctx.webviews.registerWebview({ ...webview, id: shellWidgetIds.extensionReview });
-      ctx.menus.registerMenuAction(commandPaletteMenuPath, { commandId, group: "Extensions", order: 80 });
-      ctx.keybindings.registerKeybinding({ commandId, keybinding: "Meta+Shift+E", when: "project.open" });
-      ctx.preferences.registerSchema({
-        properties: {
-          "extensionLab.reviewMode": {
-            type: "string",
-            enum: ["standard", "strict"],
-            default: "standard",
-            scope: "project",
-          },
-        },
-      });
-    },
-  }) satisfies ShellModuleContribution;
-
-export const activateConsumerExample = (shell: ShellCore) => {
-  shell.sessionPanel.setMode("attached");
-  shell.context.set("project.open", true);
-  shell.context.set("project.previewOpen", true);
-  shell.context.set("selection.kind", "ticket");
-
-  shell.registerModule(createProjectModule());
-  shell.registerModule(createExtensionLabModule(shell));
-
-  shell.resources.registerOpener({
+    area: "main",
+    resourceKinds: ["extension-review"],
+    rendererId: shellWidgetIds.extensionReview,
+  });
+  ctx.resources.registerOpener({
     id: "extension.reviewOpener",
     priority: 80,
     canOpen: (resource) => resource.kind === "extension-review",
     open: (resource, input) =>
-      shell.layout.openWidget(shellWidgetIds.extensionReview, {
+      ctx.layout.openWidget(shellWidgetIds.extensionReview, {
         resource,
         title: resource.label,
         replaceActive: input.replaceActive,
       }),
   });
-  shell.preferences.setValue("extensionLab.reviewMode", "strict", projectScope);
-
-  void shell.lifecycle.runHooks("activate");
-
-  registerConsumerShellRenderers(
-    shell,
-    shellExampleTickets.map((ticket) => ticket.resource.id),
-  );
-
-  shell.layout.openWidget(shellWidgetIds.session);
-  shell.layout.openWidget(shellWidgetIds.checks);
-  shell.layout.openWidget(shellWidgetIds.overview, {
-    resource: shellExampleResources.project,
+  ctx.menus.registerMenuAction(commandPaletteMenuPath, { commandId, group: "Extensions", order: 80 });
+  ctx.keybindings.registerKeybinding({ commandId, keybinding: "Meta+Shift+E", when: "project.open" });
+  ctx.preferences.registerSchema({
+    properties: {
+      "extensionLab.reviewMode": {
+        type: "string",
+        enum: ["standard", "strict"],
+        default: "standard",
+        scope: "project",
+      },
+    },
   });
+  ctx.preferences.setValue("extensionLab.reviewMode", "strict", projectScope);
 };
+
+export const createConsumerExampleModule = (): ShellModuleContribution => ({
+  id: "consumer-example",
+  activate(ctx) {
+    ctx.sessionPanel.setMode("attached");
+    ctx.context.set("project.open", true);
+    ctx.context.set("project.previewOpen", true);
+    ctx.context.set("selection.kind", "ticket");
+
+    registerProjectRegistries(ctx);
+    registerProjectCommands(ctx);
+    registerProjectMenusAndKeybindings(ctx);
+    registerProjectPreferences(ctx);
+    registerProjectNavigation(ctx);
+    registerExtensionLabContributions(ctx);
+
+    void ctx.lifecycle.runHooks("activate");
+
+    registerConsumerShellRenderers(
+      ctx,
+      shellExampleTickets.map((ticket) => ticket.resource.id),
+    );
+
+    ctx.layout.openWidget(shellWidgetIds.session);
+    ctx.layout.openWidget(shellWidgetIds.checks);
+    ctx.layout.openWidget(shellWidgetIds.overview, {
+      resource: shellExampleResources.project,
+    });
+  },
+});

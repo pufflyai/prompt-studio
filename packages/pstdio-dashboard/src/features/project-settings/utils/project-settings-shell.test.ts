@@ -49,7 +49,6 @@ describe("createProjectSettingsShell", () => {
     });
     expect(shell.layout.getWidget(PROJECT_SETTINGS_BACK_WIDGET_ID)).toMatchObject({
       area: "left-header",
-      renderer: "react",
     });
     expect(shell.layout.getLayout().areas["left-header"].widgets[0]?.contributionId).toBe(
       PROJECT_SETTINGS_BACK_WIDGET_ID,

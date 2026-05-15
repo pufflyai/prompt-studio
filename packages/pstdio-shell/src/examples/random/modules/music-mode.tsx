@@ -1,4 +1,9 @@
-import type { Disposable, ShellAreaSize, ShellCore, ShellModeActivationContext } from "../../../core";
+import type {
+  Disposable,
+  ShellAreaSize,
+  ShellModeActivationContext,
+  ShellModuleContributionContext,
+} from "../../../core";
 import type { ShellWidgetRenderInput } from "../../../react";
 import { MusicControls, MusicPlayer, MusicQueue, MusicStatus, MusicTopBar } from "../components/music";
 import { itemResource, musicWidgetIds, randomShellModes } from "../mock-data/data";
@@ -47,7 +52,6 @@ const setupMusicMode = (ctx: ShellModeActivationContext): Disposable[] => {
         areaSize: widget.areaSize,
         areaCollapsible: widget.areaCollapsible,
         singleton: true,
-        renderer: "react",
         rendererId: widget.id,
       }),
     );
@@ -57,18 +61,17 @@ const setupMusicMode = (ctx: ShellModeActivationContext): Disposable[] => {
   ctx.layout.openWidget(musicWidgetIds.player, {
     resource: itemResource(musicMode.id, defaultItem),
     title: defaultItem.title,
-    closable: false,
   });
   for (const widget of musicWidgets) {
     if (widget.id === musicWidgetIds.player) continue;
-    ctx.layout.openWidget(widget.id, { pinned: true, closable: false });
+    ctx.layout.openWidget(widget.id, { pinned: true });
   }
 
   return disposables;
 };
 
-export const activateMusicMode = (shell: ShellCore) => {
-  shell.modes.registerMode({
+export const registerMusicMode = (ctx: ShellModuleContributionContext) => {
+  ctx.modes.registerMode({
     id: musicMode.id,
     label: musicMode.label,
     activate: setupMusicMode,

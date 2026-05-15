@@ -2,7 +2,7 @@ import { Avatar, Badge, Box, Button, Flex, HStack, IconButton, Menu, Portal, Sta
 import { ListRow, ScrollArea } from "@pstdio/ui";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
 import { ChevronDown } from "lucide-react";
-import type { ShellCore } from "../../../core";
+import type { ShellCore, ShellModuleContributionContext } from "../../../core";
 import { ShellIcon, type ShellWidgetRenderInput } from "../../../react";
 import { dashboardMockChatMessages, dashboardTickets, dashboardWidgetIds } from "../mock-data/data";
 
@@ -158,7 +158,7 @@ const ExtensionRouteWidget = (props: { input: ShellWidgetRenderInput }) => {
   const { input } = props;
   const routeId = input.placement.resource?.id ?? "repo-health";
   const title = input.placement.resource?.label ?? "Repo health";
-  const entry = routeId === "changelog" ? "changelog.html" : routeId === "lab" ? "lab.html" : "health-page.html";
+  const entry = routeId === "changelog" ? "changelog.tsx" : routeId === "lab" ? "lab.tsx" : "health-page.tsx";
 
   return (
     <Box h="full" minH="0" p="md">
@@ -185,7 +185,7 @@ const SettingsWidget = (props: { input: ShellWidgetRenderInput }) => {
         slotId="project.settingsPanels.webview"
         title={title}
         contributor={isExtensionSettings ? "extension-lab" : "pstdio"}
-        entry={isExtensionSettings ? "lab-settings.html" : "project-settings.html"}
+        entry={isExtensionSettings ? "lab-settings.tsx" : "project-settings.tsx"}
         icon={input.placement.resource?.icon ?? "Settings"}
         height="100%"
       />
@@ -224,24 +224,24 @@ const SessionWidget = () => (
   />
 );
 
-export const registerDashboardShellRenderers = (shell: ShellCore) => {
-  shell.renderers.registerRenderer({
+export const registerDashboardShellRenderers = (ctx: ShellModuleContributionContext) => {
+  ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.tickets,
     render: (input) => <TicketsWidget input={input} />,
   });
-  shell.renderers.registerRenderer({
+  ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.extensionRoute,
     render: (input) => <ExtensionRouteWidget input={input} />,
   });
-  shell.renderers.registerRenderer({
+  ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.settings,
     render: (input) => <SettingsWidget input={input} />,
   });
-  shell.renderers.registerRenderer({
+  ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.status,
     render: (input) => <StatusWidget input={input} />,
   });
-  shell.renderers.registerRenderer({
+  ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.session,
     render: () => <SessionWidget />,
   });

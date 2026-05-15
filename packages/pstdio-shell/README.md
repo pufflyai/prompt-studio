@@ -5,15 +5,16 @@
 ## Nomenclature
 
 - **Shell core**: the headless object created by `createShellCore()`. It owns the registries and shared shell state.
-- **Registry**: a typed collection of contributions. The shell has registries for commands, menus, keybindings, resources, layout widgets, tree views, webviews, diagnostics, activity, notifications, preferences, lifecycle hooks, and context keys.
+- **Registry**: a typed collection of contributions. The shell has registries for commands, menus, keybindings, resources, layout widgets, tree views, diagnostics, activity, notifications, preferences, lifecycle hooks, and context keys.
 - **Contribution**: a declarative unit added to a registry, such as a command, menu item, resource kind, widget, tree view, or diagnostic source.
 - **Shell module**: contribution owner registered with `shell.registerModule(module)` and removed with `shell.unregisterModule(moduleId)`.
 - **Runtime extension**: extension metadata from `pstdio-extensions` that a host maps into shell modules at the trust boundary.
 - **Workbench**: the React frame rendered by `ShellWorkbench`. It arranges the shell areas, command palette, side panels, bottom panel, and session panel.
 - **Area**: a named layout target. Current areas are `top`, `activityBar`, `left`, `main-header`, `main`, `main-right`, `main-bottom`, `status`, `floating`, and `overlay`.
-- **Widget contribution**: a registered view definition in the layout registry. Widgets declare an area and renderer, for example a React renderer or webview.
+- **Widget contribution**: a registered view definition in the layout registry. Widgets declare an area, a `rendererId`, and optional renderer-owned `config`.
 - **Widget placement**: an opened instance of a widget contribution in an area. Placements track active widget, resource URI, title, and closability.
-- **Renderer**: code that turns a widget placement into UI. React widgets use `createShellRendererRegistry()` and webview widgets use a `WebviewDescriptor`.
+- **Area placeholder**: an empty-state contribution rendered only when an area has no widget placements. Placeholders do not appear in tabs.
+- **Renderer**: code that turns a widget placement into UI. The shell host looks up `rendererId`, calls the registered renderer, and inserts the returned React node.
 - **Resource**: a typed object reference with `kind`, `id`, `uri`, and label metadata.
 - **Resource opener**: routing logic that maps a resource to a widget placement.
 - **Command**: an executable action registered in the command registry.
@@ -31,6 +32,8 @@
 ## Areas Overview
 
 Shell areas are named layout targets used by widget contributions. They describe where a widget belongs in the workbench; the workbench decides the exact chrome, tabs, resize handles, and visibility behavior.
+
+Use `layout.registerAreaPlaceholder()` for an area empty state that should render only after all widgets in that area close. Area placeholders are not widget placements, so they do not affect tab lists.
 
 | Area          | Workbench location                                           | Typical use                                                                             |
 | ------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------- |

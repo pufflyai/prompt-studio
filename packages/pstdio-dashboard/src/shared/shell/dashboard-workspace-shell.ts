@@ -122,7 +122,6 @@ const createDashboardWorkspaceModule = (input: CreateDashboardWorkspaceShellInpu
         area: "main",
         singleton: true,
         resourceKinds: [WORKSPACE_RESOURCE_KIND],
-        renderer: "react",
         rendererId: WORKSPACE_MAIN_WIDGET_ID,
       }),
       ctx.resources.registerOpener({
@@ -134,7 +133,6 @@ const createDashboardWorkspaceModule = (input: CreateDashboardWorkspaceShellInpu
           return ctx.layout.openWidget(WORKSPACE_MAIN_WIDGET_ID, {
             resource,
             replaceActive: openInput.replaceActive,
-            closable: false,
           });
         },
       }),
@@ -177,7 +175,6 @@ export const createDashboardWorkspaceShell = (input: CreateDashboardWorkspaceShe
   shell.modes.setActiveMode(WORKSPACE_MODE_ID);
   shell.layout.openWidget(WORKSPACE_MAIN_WIDGET_ID, {
     resource: createInitialWorkspaceResource(input),
-    closable: false,
   });
 
   return {

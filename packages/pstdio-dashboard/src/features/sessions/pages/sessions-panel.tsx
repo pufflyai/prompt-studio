@@ -159,7 +159,7 @@ const SessionsPanelContent = (props: { projectId?: string; sessionId?: string })
       ? createSessionResource(resolvedProjectId, selectedSessionId, selectedSession?.title)
       : createSessionsResource(resolvedProjectId);
 
-    sessionsShell.layout.openWidget(SESSIONS_CHAT_WIDGET_ID, { resource, closable: false });
+    sessionsShell.layout.openWidget(SESSIONS_CHAT_WIDGET_ID, { resource });
   }, [resolvedProjectId, selectedSession?.title, selectedSessionId, sessionsShell]);
 
   useEffect(() => {

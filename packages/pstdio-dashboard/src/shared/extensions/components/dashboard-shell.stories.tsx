@@ -242,7 +242,7 @@ const SidebarViewSlotMock = () => (
       slotId="project.sidebar"
       title="Lab counter"
       contributor="extension-lab"
-      entry="counter.html"
+      entry="counter.tsx"
       icon={<Sparkles size={20} />}
       height="180px"
     />
@@ -250,7 +250,7 @@ const SidebarViewSlotMock = () => (
       slotId="project.sidebar"
       title="Repo health"
       contributor="repo-health"
-      entry="health.html"
+      entry="health.tsx"
       icon={<GitBranch size={20} />}
       height="220px"
     />
@@ -381,7 +381,7 @@ export const ExtensionRoute: Story = {
           slotId="routes[].webview"
           title="/projects/:projectId/extensions/repo-health"
           contributor="repo-health"
-          entry="health-page.html"
+          entry="health-page.tsx"
           icon={<PanelLeft size={28} />}
           height="100%"
         />
@@ -436,7 +436,7 @@ export const Settings: Story = {
             slotId="project.settingsPanels.webview"
             title="Lab settings"
             contributor="extension-lab"
-            entry="lab-settings.html"
+            entry="lab-settings.tsx"
             icon={<FlaskConical size={28} />}
             height="100%"
           />

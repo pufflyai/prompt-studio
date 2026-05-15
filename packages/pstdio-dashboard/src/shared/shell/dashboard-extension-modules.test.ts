@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { CommandExecuteRequest, DashboardExtensionMetadata } from "pstdio-api-contracts";
+import { BRIDGE_WEBVIEW_RENDERER_ID } from "pstdio-extensions/shell";
 import { PROJECT_NAVIGATION_TREE_ID } from "./dashboard-project-navigation";
 import {
   createDashboardShell,
@@ -126,8 +127,8 @@ describe("dashboard extension modules", () => {
     expect(shell.layout.getWidget("extension-lab.labPage")).toMatchObject({
       source: "extension",
       ownerId: extensionId,
-      renderer: "webview",
-      webview: {
+      rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
+      config: {
         runtimeUrl: "https://api.local/extensions/extension-lab/runtime.html",
         moduleUrl: "https://api.local/extensions/extension-lab/module.js",
       },

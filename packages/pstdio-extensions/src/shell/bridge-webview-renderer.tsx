@@ -1,9 +1,8 @@
-import {
-  BRIDGE_WEBVIEW_RENDERER_ID,
-  type ShellCore,
-  type ShellRendererRegistration,
-  type ShellWidgetPlacement,
-  type ShellWidgetRenderInput,
+import type {
+  ShellCore,
+  ShellRendererRegistration,
+  ShellWidgetPlacement,
+  ShellWidgetRenderInput,
 } from "pstdio-shell/core";
 import type { HostCapabilityRegistry, WebviewCapabilityDiagnostic } from "../bridge/contract";
 import { ExtensionFrame } from "../bridge/host";
@@ -38,6 +37,22 @@ interface CreateBridgeWebviewRendererInput {
   createProps?: CreateBridgeWebviewProps;
 }
 
+export const BRIDGE_WEBVIEW_RENDERER_ID = "webview:bridge";
+
+export interface BridgeWebviewConfig {
+  title?: string;
+  runtimeUrl: string;
+  moduleUrl: string;
+  styles?: string[];
+  capabilities?: string[];
+}
+
+const isBridgeWebviewConfig = (value: unknown): value is BridgeWebviewConfig => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const config = value as Partial<BridgeWebviewConfig>;
+  return typeof config.runtimeUrl === "string" && typeof config.moduleUrl === "string";
+};
+
 const createPlacementProps: CreateBridgeWebviewProps = ({ placement }) => ({
   placement,
   resource: placement.resource,
@@ -49,7 +64,7 @@ const renderBridgeWebview = (
   createProps: CreateBridgeWebviewProps,
 ) => {
   const { shell, widget, placement } = input;
-  const webview = widget.webview;
+  const webview = isBridgeWebviewConfig(widget.config) ? widget.config : null;
   if (!webview) return null;
 
   const context: BridgeWebviewRenderContext = { shell, webviewId: placement.contributionId, placement };
@@ -62,8 +77,8 @@ const renderBridgeWebview = (
         label: webview.title ?? widget.title,
         webview: {
           capabilities: webview.capabilities,
-          moduleUrl: webview.moduleUrl ?? "",
-          runtimeUrl: webview.runtimeUrl ?? "",
+          moduleUrl: webview.moduleUrl,
+          runtimeUrl: webview.runtimeUrl,
           styles: webview.styles ?? [],
         },
       }}

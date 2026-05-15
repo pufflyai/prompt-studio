@@ -1,4 +1,6 @@
 export {
+  BRIDGE_WEBVIEW_RENDERER_ID,
+  type BridgeWebviewConfig,
   type BridgeWebviewRenderContext,
   type CreateBridgeWebviewHostCapabilities,
   type CreateBridgeWebviewProps,

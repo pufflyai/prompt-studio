@@ -37,7 +37,6 @@ describe("createDashboardWorkspaceShell", () => {
     });
     expect(shell.layout.getWidget(WORKSPACE_MAIN_WIDGET_ID)).toMatchObject({
       area: "main",
-      renderer: "react",
     });
     expect(shell.commands.getCommand(WORKSPACE_OPEN_COMMAND_ID)?.command.label).toBe("Open workspace");
     expect(shell.menus.listMenuActions(DASHBOARD_COMMAND_PALETTE_MENU).map((action) => action.commandId)).toContain(

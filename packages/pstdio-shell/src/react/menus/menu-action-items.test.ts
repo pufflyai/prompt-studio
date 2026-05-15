@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createShellCore, type MenuPath } from "../../core";
-import { listShellMenuActionItems } from "./menu-action-items";
+import { listShellMenuActionItems, listShellMenuActionItemsFromState } from "./menu-action-items";
 
 const menuPath = ["workbench", "top", "actions"] as const satisfies MenuPath;
 
@@ -71,6 +71,43 @@ describe("listShellMenuActionItems", () => {
     });
 
     expect(listShellMenuActionItems(shell, menuPath)[0]).toMatchObject({
+      commandId: "sessions.archive",
+      overflowLabel: "Session actions",
+    });
+  });
+
+  test("resolves from explicit store snapshots for reactive header rendering", () => {
+    const shell = createShellCore();
+
+    shell.commands.registerCommand({ id: "sessions.archive", label: "Archive session" }, { execute: () => undefined });
+    shell.menus.registerMenuAction(menuPath, {
+      commandId: "sessions.archive",
+      group: "overflow",
+      overflowLabel: "Session actions",
+      when: "sessionId",
+    });
+
+    expect(
+      listShellMenuActionItemsFromState(
+        {
+          actionsByPath: shell.menus.store.getState().actionsByPath,
+          commands: shell.commands.store.getState().commands,
+          contextValues: {},
+        },
+        menuPath,
+      ),
+    ).toEqual([]);
+
+    expect(
+      listShellMenuActionItemsFromState(
+        {
+          actionsByPath: shell.menus.store.getState().actionsByPath,
+          commands: shell.commands.store.getState().commands,
+          contextValues: { sessionId: "session-1" },
+        },
+        menuPath,
+      )[0],
+    ).toMatchObject({
       commandId: "sessions.archive",
       overflowLabel: "Session actions",
     });

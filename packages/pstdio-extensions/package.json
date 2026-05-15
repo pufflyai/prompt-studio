@@ -13,6 +13,8 @@
     "./bridge/guest": "./src/bridge/guest/index.ts",
     "./bridge/host": "./src/bridge/host/index.ts",
     "./bridge/runtime": "./src/bridge/runtime/index.ts",
+    "./bridge/runtime-html": "./src/bridge/runtime/runtime-html.ts",
+    "./bridge/runtime.bundle.js": "./src/bridge/runtime/runtime.bundle.js",
     "./shell": "./src/shell/index.ts"
   },
   "scripts": {

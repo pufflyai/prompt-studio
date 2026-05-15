@@ -1,7 +1,7 @@
 import { Button, HStack, IconButton, Menu, Portal } from "@chakra-ui/react";
 import { ListRow, Tooltip } from "@pstdio/ui";
 import type { MenuPath, ShellCore } from "../../core";
-import { listShellMenuActionItems, type ShellMenuActionItem } from "../menus/menu-action-items";
+import { listShellMenuActionItemsFromState, type ShellMenuActionItem } from "../menus/menu-action-items";
 import { ShellIcon } from "../shared/icon";
 import { useShellStore } from "../shared/use-shell-store";
 
@@ -43,10 +43,10 @@ const ShellInlineHeaderAction = (props: { item: ShellMenuActionItem; shell: Shel
 
 export const ShellHeaderActions = (props: ShellHeaderActionsProps) => {
   const { menuPath, shell } = props;
-  useShellStore(shell.commands.store, (state) => state.commands);
-  useShellStore(shell.context.store, (state) => state.values);
-  useShellStore(shell.menus.store, (state) => state.actionsByPath);
-  const items = listShellMenuActionItems(shell, menuPath);
+  const commands = useShellStore(shell.commands.store, (state) => state.commands);
+  const contextValues = useShellStore(shell.context.store, (state) => state.values);
+  const actionsByPath = useShellStore(shell.menus.store, (state) => state.actionsByPath);
+  const items = listShellMenuActionItemsFromState({ actionsByPath, commands, contextValues }, menuPath);
   const inlineItems = items.filter((item) => !isOverflowAction(item));
   const overflowItems = items.filter(isOverflowAction);
 

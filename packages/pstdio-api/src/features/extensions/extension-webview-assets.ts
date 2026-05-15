@@ -1,12 +1,7 @@
 import { existsSync, statSync } from "node:fs";
-import { basename, dirname, extname, join, resolve, sep } from "node:path";
+import { extname, join, resolve, sep } from "node:path";
 import { loadExtensionSource } from "./extension-runtime";
-import {
-  classifyWebviewEntry,
-  findExtensionWebview,
-  resolveManagedWebviewPaths,
-  resolvePackageAssetFile,
-} from "./extension-webviews";
+import { classifyWebviewEntry, findExtensionWebview, resolveManagedWebviewPaths } from "./extension-webviews";
 import { resolvePstdioHome } from "./install-extension-source";
 
 type InstalledSourceLookup = {
@@ -89,16 +84,12 @@ export const resolveWebviewAssetFile = async (
   if (classification.kind === "unsupported") return null;
 
   const requested = input.assetPath?.replace(/^\/+/, "") ?? "";
-  const root =
-    classification.kind === "managed"
-      ? resolveManagedWebviewPaths({
-          installName: source.install_name,
-          webviewCacheRoot: deps.webviewCacheRoot ?? defaultWebviewCacheRoot(),
-          webviewId: input.webviewId,
-        }).distDir
-      : dirname(resolvePackageAssetFile(webview.entry));
-  const defaultPath =
-    classification.kind === "managed" ? "module.js" : basename(resolvePackageAssetFile(webview.entry));
+  const root = resolveManagedWebviewPaths({
+    installName: source.install_name,
+    webviewCacheRoot: deps.webviewCacheRoot ?? defaultWebviewCacheRoot(),
+    webviewId: input.webviewId,
+  }).distDir;
+  const defaultPath = "module.js";
   const filePath = safeResolve(root, requested || defaultPath);
   if (!filePath || !existsSync(filePath)) return null;
 

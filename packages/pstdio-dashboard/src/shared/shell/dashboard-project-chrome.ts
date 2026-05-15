@@ -152,7 +152,6 @@ export const createDashboardProjectChromeModule = (input: DashboardProjectChrome
         area: "main",
         singleton: true,
         resourceKinds: [PROJECT_RESOURCE_KIND],
-        renderer: "react",
         rendererId: PROJECT_SETTINGS_WIDGET_ID,
       }),
       ctx.layout.registerWidget({
@@ -160,7 +159,6 @@ export const createDashboardProjectChromeModule = (input: DashboardProjectChrome
         title: "Project",
         area: "left-header",
         singleton: true,
-        renderer: "react",
         rendererId: PROJECT_NAVIGATION_HEADER_WIDGET_ID,
       }),
       ctx.resources.registerOpener({

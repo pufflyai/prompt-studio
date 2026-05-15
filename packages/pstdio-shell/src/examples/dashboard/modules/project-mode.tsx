@@ -1,4 +1,4 @@
-import type { ShellCore, ShellModeActivationContext } from "../../../core";
+import type { ShellModeActivationContext, ShellModuleContributionContext } from "../../../core";
 import {
   dashboardFooterTreeViewId,
   dashboardHelpMenuPath,
@@ -76,10 +76,10 @@ const registerDashboardProjectNavigation = (ctx: ShellModeActivationContext) => 
   }),
 ];
 
-export const activateDashboardProjectMode = (shell: ShellCore) => {
-  shell.modes.registerMode({
+export const registerDashboardProjectMode = (ctx: ShellModuleContributionContext) => {
+  ctx.modes.registerMode({
     id: "project",
     label: "Project",
-    activate: (ctx) => registerDashboardProjectNavigation(ctx),
+    activate: (modeCtx) => registerDashboardProjectNavigation(modeCtx),
   });
 };

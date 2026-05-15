@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createShellCore, type ShellWidgetPlacement } from "pstdio-shell/core";
 import type { HostCapabilityRegistry } from "../bridge/contract";
-import { createBridgeWebviewRenderer } from "./bridge-webview-renderer";
+import { BRIDGE_WEBVIEW_RENDERER_ID, createBridgeWebviewRenderer } from "./bridge-webview-renderer";
 
 const setupWebviewWidget = () => {
   const shell = createShellCore();
@@ -10,8 +10,8 @@ const setupWebviewWidget = () => {
     id: "lab.page",
     title: "Lab page",
     area: "main",
-    renderer: "webview",
-    webview: {
+    rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
+    config: {
       runtimeUrl: "https://host/runtime.html",
       moduleUrl: "https://host/module.js",
       capabilities: ["commands.execute"],
@@ -81,5 +81,21 @@ describe("createBridgeWebviewRenderer", () => {
     };
 
     expect(element.props.props).toEqual({ placement, resource: placement.resource });
+  });
+
+  test("passes bridge config from the widget into the extension frame", () => {
+    const { shell, widget, placement } = setupWebviewWidget();
+    const renderer = createBridgeWebviewRenderer();
+
+    const element = renderer.render({ shell, widget, placement, refresh: () => undefined }) as {
+      props: { view: { webview: unknown } };
+    };
+
+    expect(element.props.view.webview).toEqual({
+      capabilities: ["commands.execute"],
+      moduleUrl: "https://host/module.js",
+      runtimeUrl: "https://host/runtime.html",
+      styles: [],
+    });
   });
 });

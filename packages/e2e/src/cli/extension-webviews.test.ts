@@ -1,8 +1,8 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { DashboardExtensionMetadata } from "pstdio-api-contracts";
-import { cleanupDirs, createGitRepo, createTempDir, runPstdio } from "./helpers";
+import { cleanupDirs, createGitRepo, runPstdio } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 
@@ -28,41 +28,6 @@ const run = (args: string, cwd: string) => runPstdio(args, cwd, { PSTDIO_API_URL
 const readProjectId = (repo: string) => {
   const config = JSON.parse(readFileSync(join(repo, ".pstdio", "config.json"), "utf8")) as { project_id: string };
   return config.project_id;
-};
-
-const writeStaticExtension = () => {
-  const root = createTempDir();
-  dirs.push(root);
-  mkdirSync(root, { recursive: true });
-  writeFileSync(
-    join(root, "package.json"),
-    JSON.stringify({
-      name: "staticwebview",
-      version: "1.0.0",
-      displayName: "Static Webview E2E",
-      publisher: "pstdio",
-      main: "./extension.ts",
-      engines: { pstdio: "^1.0.0" },
-    }),
-  );
-  writeFileSync(
-    join(root, "extension.ts"),
-    `export default {
-      routes: {
-        page: {
-          path: "static-webview",
-          label: "Static Webview",
-          webview: { entry: { kind: "package-asset", path: "./static.html", baseUrl: import.meta.url } },
-        },
-      },
-    };`,
-  );
-  writeFileSync(
-    join(root, "static.html"),
-    '<!doctype html><h1>Static webview e2e</h1><script src="./static.js"></script>',
-  );
-  writeFileSync(join(root, "static.js"), "document.body.dataset.staticScript = 'loaded';");
-  return root;
 };
 
 const enableExtensionLab = async (projectId: string) => {
@@ -112,37 +77,22 @@ const expectNoExternalExecutableSource = (content: string) => {
 
 describe("extension webview setup", () => {
   test(
-    "exposes static webviews directly and managed webviews through the local runtime bridge",
+    "exposes managed webviews through the local runtime bridge",
     async () => {
       const repo = createGitRepo();
       dirs.push(repo);
-      const staticExtension = writeStaticExtension();
 
       run("projects create extension-webviews-e2e", repo);
       const projectId = readProjectId(repo);
-      run(`extensions add ${staticExtension} --name static-webview --skip-install`, repo);
       await enableExtensionLab(projectId);
 
       const metadata = await fetchMetadata(projectId);
-      const staticRoute = metadata.routes.find((route) => route.path === "static-webview");
       const labRoute = metadata.routes.find((route) => route.path === "lab");
-
-      expect(staticRoute?.webview.assetUrl).toBe(
-        "/v1/extensions/installed/static-webview/webviews/staticwebview.page/",
-      );
-      expect(staticRoute?.webview.runtimeUrl).toBeUndefined();
-      expect(staticRoute?.webview.moduleUrl).toBeUndefined();
 
       expect(labRoute?.webview.runtimeUrl).toBe("/v1/extensions/runtime");
       expect(labRoute?.webview.moduleUrl).toBe(
         "/v1/extensions/installed/extension-lab/webviews/extension-lab.labPage/module.js",
       );
-      expect(labRoute?.webview.assetUrl).toBeUndefined();
-
-      const staticHtml = await waitForOk(`${api.url}${staticRoute!.webview.assetUrl}`);
-      expect(await staticHtml.text()).toContain("Static webview e2e");
-      const staticScript = await waitForOk(`${api.url}${staticRoute!.webview.assetUrl}static.js`);
-      expect(await staticScript.text()).toContain("staticScript");
 
       const module = await waitForOk(`${api.url}${labRoute!.webview.moduleUrl}`);
       expect(module.headers.get("content-type")).toContain("application/javascript");

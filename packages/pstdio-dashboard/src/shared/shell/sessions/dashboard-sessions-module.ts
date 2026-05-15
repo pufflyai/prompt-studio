@@ -123,7 +123,6 @@ export const createDashboardSessionsModule = (input: CreateDashboardSessionsModu
         area: "main",
         singleton: true,
         resourceKinds: [SESSIONS_RESOURCE_KIND, SESSION_RESOURCE_KIND],
-        renderer: "react",
         rendererId: SESSIONS_CHAT_WIDGET_ID,
       }),
       ctx.resources.registerOpener({
@@ -135,7 +134,6 @@ export const createDashboardSessionsModule = (input: CreateDashboardSessionsModu
           return ctx.layout.openWidget(SESSIONS_CHAT_WIDGET_ID, {
             resource,
             replaceActive: openInput.replaceActive,
-            closable: false,
           });
         },
       }),
@@ -188,12 +186,10 @@ export const createProjectSessionsMode = (input: {
     ctx.layout.clearArea("left-header");
     ctx.layout.clearArea("main");
     ctx.layout.openWidget(PROJECT_NAVIGATION_HEADER_WIDGET_ID, {
-      closable: false,
       pinned: true,
     });
     ctx.layout.openWidget(SESSIONS_CHAT_WIDGET_ID, {
       resource: createActiveSessionResource(ctx),
-      closable: false,
     });
 
     return ctx.trees.registerTreeView({

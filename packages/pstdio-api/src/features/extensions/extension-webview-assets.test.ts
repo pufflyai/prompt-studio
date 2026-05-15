@@ -100,8 +100,8 @@ describe("extension webview asset routes", () => {
     }
   });
 
-  test("serves static html package assets without using the managed cache", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-assets-static-"));
+  test("does not serve html webview package assets directly", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-assets-html-"));
     const sourcePath = join(root, "extension");
     const cacheRoot = join(root, "cache");
     writeExtension(sourcePath, "./static.html");
@@ -111,10 +111,8 @@ describe("extension webview asset routes", () => {
       const html = await app.request("/v1/extensions/installed/extension-lab/webviews/lab.labPage");
       const script = await app.request("/v1/extensions/installed/extension-lab/webviews/lab.labPage/static.js");
 
-      expect(html.status).toBe(200);
-      expect(await html.text()).toContain("./static.js");
-      expect(script.status).toBe(200);
-      expect(await script.text()).toBe("console.log('static');");
+      expect(html.status).toBe(404);
+      expect(script.status).toBe(404);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -168,7 +166,9 @@ describe("extension webview asset routes", () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-assets-traversal-"));
     const sourcePath = join(root, "extension");
     const cacheRoot = join(root, "cache");
-    writeExtension(sourcePath, "./static.html");
+    writeExtension(sourcePath, "./src/main.tsx");
+    mkdirSync(join(cacheRoot, "extension-lab", "lab.labPage", "dist"), { recursive: true });
+    writeFileSync(join(cacheRoot, "extension-lab", "lab.labPage", "dist", "module.js"), "console.log('managed');");
     writeFileSync(join(root, "secret.txt"), "secret");
 
     try {

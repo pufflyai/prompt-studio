@@ -1,4 +1,4 @@
-import type { ShellCore, ShellModeActivationContext } from "../../../core";
+import type { ShellModeActivationContext, ShellModuleContributionContext } from "../../../core";
 import {
   dashboardResources,
   dashboardSettingsNavigationTreeViewId,
@@ -76,10 +76,10 @@ const registerDashboardSettingsNavigation = (ctx: ShellModeActivationContext) =>
   }),
 ];
 
-export const activateDashboardSettingsMode = (shell: ShellCore) => {
-  shell.modes.registerMode({
+export const registerDashboardSettingsMode = (ctx: ShellModuleContributionContext) => {
+  ctx.modes.registerMode({
     id: "settings",
     label: "Settings",
-    activate: (ctx) => registerDashboardSettingsNavigation(ctx),
+    activate: (modeCtx) => registerDashboardSettingsNavigation(modeCtx),
   });
 };

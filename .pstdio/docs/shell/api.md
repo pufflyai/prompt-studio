@@ -51,10 +51,9 @@ const shell = createShellCore({
 | `navigation`     | Location parsing and resource navigation             |
 | `notifications`  | Toast-style shell notifications                      |
 | `preferences`    | Typed preference schema and values                   |
-| `renderers`      | React/custom widget renderers                        |
+| `renderers`      | Widget renderers                                     |
 | `resources`      | Resource kinds and resource openers                  |
 | `trees`          | Tree view contributions                              |
-| `webviews`       | Webview descriptors                                  |
 
 ## Shell Modules
 
@@ -89,8 +88,8 @@ ctx.layout.registerWidget({
   areaCollapsible: false,
   singleton: true,
   resourceKinds: ["project"],
-  renderer: "react",
   rendererId: "project.details",
+  config: { density: "compact" },
 });
 ```
 
@@ -106,12 +105,25 @@ Widget options:
 | `areaSize`        | Active widget size hints for resizable areas                              |
 | `areaCollapsible` | Whether the active widget allows its area to collapse; defaults to `true` |
 | `resourceKinds`   | Resource kinds the widget is intended to display                          |
-| `renderer`        | Renderer type or renderer id fallback                                     |
-| `rendererId`      | Explicit renderer registration id                                         |
+| `rendererId`      | Required renderer registration id                                         |
+| `config`          | Opaque renderer-owned widget configuration                                |
 | `webview`         | Webview descriptor when `renderer` is `"webview"`                         |
 | `canOpen`         | Optional resource predicate                                               |
 
 `areaSize` supports `defaultPx`, `minPx`, and `maxPx`. The workbench resolves size and collapsibility from the active widget in an area.
+
+Register an area placeholder when an area needs an empty state after all widget placements close:
+
+```ts
+ctx.layout.registerAreaPlaceholder({
+  id: "project.empty-main",
+  title: "Empty main",
+  area: "main",
+  rendererId: "project.empty-main",
+});
+```
+
+Placeholders render only while their area has no widget placements. They are not opened with `openWidget()`, are not persisted in the layout, and do not appear in area tabs.
 
 Open widgets with append-or-replace behavior:
 
@@ -168,7 +180,7 @@ Call `resources.openResource(resource, { replaceActive: true })` to route throug
 
 ## Renderers
 
-React widgets use renderer registrations. `ShellWidgetHost` resolves `widget.rendererId ?? widget.renderer` and calls the renderer.
+Widgets use renderer registrations. `ShellWidgetHost` resolves `widget.rendererId` and calls the registered renderer with the widget, placement, shell, and refresh callback.
 
 ```tsx
 ctx.renderers.registerRenderer({
@@ -253,7 +265,6 @@ shell.modes.registerMode({
       id: "review.summary",
       title: "Review",
       area: "main",
-      renderer: "react",
       rendererId: "review.summary",
     });
   },

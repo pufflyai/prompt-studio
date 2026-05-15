@@ -1,5 +1,10 @@
 import { Box, Flex } from "@chakra-ui/react";
-import type { ShellArea as ShellAreaId, ShellCore, ShellWidgetPlacement } from "../../core";
+import type {
+  RegisteredAreaPlaceholderContribution,
+  ShellArea as ShellAreaId,
+  ShellCore,
+  ShellWidgetPlacement,
+} from "../../core";
 import { ShellWidgetHost } from "./widget-host";
 
 interface ShellAreaProps {
@@ -15,12 +20,21 @@ interface ShellAreaProps {
 const getActivePlacement = (widgets: ShellWidgetPlacement[], activeWidgetId?: string) =>
   widgets.find((placement) => placement.widgetId === activeWidgetId) ?? widgets[0];
 
+const createPlaceholderPlacement = (placeholder: RegisteredAreaPlaceholderContribution): ShellWidgetPlacement => ({
+  widgetId: placeholder.id,
+  contributionId: placeholder.id,
+  title: placeholder.title,
+  closable: false,
+});
+
 export const ShellArea = (props: ShellAreaProps) => {
   const { shell, area, title, pointerEvents = "auto", transparent = false } = props;
   const areaState = shell.layout.getLayout().areas[area];
   const activePlacement = getActivePlacement(areaState.widgets, areaState.activeWidgetId);
+  const placeholder = activePlacement ? undefined : shell.layout.getAreaPlaceholder(area);
+  const placement = activePlacement ?? (placeholder ? createPlaceholderPlacement(placeholder) : undefined);
 
-  if (!activePlacement) return null;
+  if (!placement) return null;
 
   return (
     <Flex
@@ -36,7 +50,7 @@ export const ShellArea = (props: ShellAreaProps) => {
       aria-label={title ?? area}
     >
       <Box flex="1" h="full" minH="0" minW="0" w="full" overflow="hidden">
-        <ShellWidgetHost shell={shell} placement={activePlacement} />
+        <ShellWidgetHost shell={shell} placement={placement} widget={placeholder} />
       </Box>
     </Flex>
   );

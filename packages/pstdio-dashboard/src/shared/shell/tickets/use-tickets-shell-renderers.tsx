@@ -20,7 +20,6 @@ export const useTicketsShellRenderers = (input: UseTicketsShellRenderersInput) =
 
     shell.layout.openWidget(TICKETS_MAIN_WIDGET_ID, {
       resource: createTicketsResource(projectId),
-      closable: false,
     });
   }, [projectId, shell]);
 

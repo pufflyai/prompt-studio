@@ -87,17 +87,13 @@ describe("buildDashboardExtensionMetadata webview assets", () => {
     expect(metadata.routes[0]?.webview.capabilities).toEqual(["commands.execute", "preferences.set@1"]);
   });
 
-  test("adds a direct asset URL for static html webviews", () => {
+  test("does not emit html webviews in dashboard metadata", () => {
     const metadata = buildDashboardExtensionMetadata({
       installNamesByExtensionId: new Map([["pstdio.lab", "extension-lab"]]),
       runtime: runtimeWithRoute("./static.html"),
       webviewCacheRoot: "/cache",
     });
 
-    const webview = metadata.routes[0]?.webview;
-
-    expect(webview?.assetUrl).toBe("/v1/extensions/installed/extension-lab/webviews/lab.page/");
-    expect(webview).not.toHaveProperty("runtimeUrl");
-    expect(webview).not.toHaveProperty("moduleUrl");
+    expect(metadata.routes).toEqual([]);
   });
 });

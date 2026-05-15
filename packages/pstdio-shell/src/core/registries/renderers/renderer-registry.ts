@@ -29,13 +29,6 @@ export interface ShellRendererRegistry {
   onDidChange(listener: ShellRendererChangeListener): Disposable;
 }
 
-export const resolveShellWidgetRendererId = (widget: RegisteredWidgetContribution) =>
-  widget.rendererId ?? widget.renderer;
-
-// Well-known renderer id for bridge-backed extension webviews. The shell delegates rendering
-// to whichever renderer a consumer registers under this id, so it stays extension-agnostic.
-export const BRIDGE_WEBVIEW_RENDERER_ID = "webview:bridge";
-
 export const createShellRendererRegistry = (
   initialRenderers: ShellRendererRegistration[] = [],
 ): ShellRendererRegistry => {

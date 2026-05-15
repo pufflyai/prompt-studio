@@ -1,6 +1,10 @@
-import type { ResourceRef, ShellCore, ShellModeActivationContext } from "../../core";
+import type {
+  ResourceRef,
+  ShellModeActivationContext,
+  ShellModuleContribution,
+  ShellModuleContributionContext,
+} from "../../core";
 import { shellExampleResources, shellWidgetIds } from "../consumer/mock-data/data";
-import { activateConsumerExample } from "../consumer/module";
 import { LeftPanelHeader } from "./components/left-panel-header";
 import { type LeftPanelMode, settingsResources, workspaceResources } from "./mock-data/data";
 
@@ -176,37 +180,36 @@ const activateSettingsMode = (ctx: ShellModeActivationContext) => [
   ),
 ];
 
-const registerWorkbenchModes = (shell: ShellCore) => {
-  shell.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-  shell.modes.registerMode({ id: "workspace", label: "Workspace", activate: activateWorkspaceMode });
-  shell.modes.registerMode({ id: "settings", label: "Settings", activate: activateSettingsMode });
+const registerWorkbenchModes = (ctx: ShellModuleContributionContext) => {
+  ctx.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+  ctx.modes.registerMode({ id: "workspace", label: "Workspace", activate: activateWorkspaceMode });
+  ctx.modes.registerMode({ id: "settings", label: "Settings", activate: activateSettingsMode });
 };
 
-const registerLeftHeader = (shell: ShellCore) => {
-  shell.layout.registerWidget({
+const registerLeftHeader = (ctx: ShellModuleContributionContext) => {
+  ctx.layout.registerWidget({
     id: LEFT_HEADER_WIDGET_ID,
     title: "Mode switcher",
     area: "left-header",
     singleton: true,
-    renderer: "react",
     rendererId: LEFT_HEADER_WIDGET_ID,
   });
-  shell.renderers.registerRenderer({
+  ctx.renderers.registerRenderer({
     id: LEFT_HEADER_WIDGET_ID,
     render: (input) => <LeftPanelHeader shell={input.shell} />,
   });
-  shell.layout.openWidget(LEFT_HEADER_WIDGET_ID, { pinned: true, closable: false });
+  ctx.layout.openWidget(LEFT_HEADER_WIDGET_ID, { pinned: true });
 };
 
-const registerPanelModeResourceOpener = (shell: ShellCore) => {
-  shell.resources.registerOpener({
+const registerPanelModeResourceOpener = (ctx: ShellModuleContributionContext) => {
+  ctx.resources.registerOpener({
     id: "workbench-modes.resourceOpener",
     priority: 1000,
     canOpen: (resource) =>
       ["project", "dashboard-view", "ticket", "workspace", "settings", "extension-review"].includes(resource.kind),
     open: (resource, input) => {
-      shell.modes.setActiveMode(resolveLeftPanelMode(resource));
-      return shell.layout.openWidget(resolveWidgetId(resource), {
+      ctx.modes.setActiveMode(resolveLeftPanelMode(resource));
+      return ctx.layout.openWidget(resolveWidgetId(resource), {
         resource,
         title: resource.label,
         replaceActive: input.replaceActive,
@@ -215,10 +218,12 @@ const registerPanelModeResourceOpener = (shell: ShellCore) => {
   });
 };
 
-export const activateWorkbenchModesExample = (shell: ShellCore) => {
-  activateConsumerExample(shell);
-  registerWorkbenchModes(shell);
-  registerLeftHeader(shell);
-  registerPanelModeResourceOpener(shell);
-  shell.modes.setActiveMode("project");
-};
+export const createWorkbenchModesExampleModule = (): ShellModuleContribution => ({
+  id: "workbench-modes-example",
+  activate(ctx) {
+    registerWorkbenchModes(ctx);
+    registerLeftHeader(ctx);
+    registerPanelModeResourceOpener(ctx);
+    ctx.modes.setActiveMode("project");
+  },
+});

@@ -82,7 +82,6 @@ export const createDashboardShellBaseModule = (): ShellModuleContribution => ({
         area: "main",
         singleton: true,
         resourceKinds: [PROJECTS_LIST_RESOURCE_KIND],
-        renderer: "react",
         rendererId: PROJECTS_LIST_WIDGET_ID,
       }),
       ctx.layout.registerWidget({
@@ -91,7 +90,6 @@ export const createDashboardShellBaseModule = (): ShellModuleContribution => ({
         area: "main",
         singleton: true,
         resourceKinds: [GLOBAL_SETTINGS_RESOURCE_KIND],
-        renderer: "react",
         rendererId: GLOBAL_SETTINGS_WIDGET_ID,
       }),
     ];
@@ -111,7 +109,6 @@ export const createDashboardProjectsListMode = (): ShellModeContribution => ({
     ctx.layout.clearArea("main");
     ctx.layout.openWidget(PROJECTS_LIST_WIDGET_ID, {
       resource: PROJECTS_LIST_RESOURCE,
-      closable: false,
     });
     return undefined;
   },
@@ -135,7 +132,6 @@ export const createDashboardSettingsMode = (input: CreateDashboardSettingsModeIn
     ctx.layout.clearArea("main");
     ctx.layout.openWidget(GLOBAL_SETTINGS_WIDGET_ID, {
       resource: GLOBAL_SETTINGS_AGENTS_RESOURCE,
-      closable: false,
     });
     return [
       ctx.navigation.registerParser({
@@ -252,7 +248,6 @@ export const createProjectNavigationMode = (input: DashboardProjectChromeInput):
     ctx.layout.clearArea("left-header");
     ctx.layout.clearArea("main");
     ctx.layout.openWidget(PROJECT_NAVIGATION_HEADER_WIDGET_ID, {
-      closable: false,
       pinned: true,
     });
     const contextProjectId = ctx.context.get("projectId");
@@ -260,7 +255,6 @@ export const createProjectNavigationMode = (input: DashboardProjectChromeInput):
     if (projectId) {
       ctx.layout.openWidget(TICKETS_MAIN_WIDGET_ID, {
         resource: createTicketsResource(projectId),
-        closable: false,
       });
     }
 

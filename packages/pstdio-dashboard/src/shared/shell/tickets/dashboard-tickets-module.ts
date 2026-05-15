@@ -80,7 +80,6 @@ export const createDashboardTicketsModule = (input: CreateDashboardTicketsModule
         area: "main",
         singleton: true,
         resourceKinds: [TICKETS_RESOURCE_KIND],
-        renderer: "react",
         rendererId: TICKETS_MAIN_WIDGET_ID,
       }),
       ctx.resources.registerOpener({
@@ -92,7 +91,6 @@ export const createDashboardTicketsModule = (input: CreateDashboardTicketsModule
           return ctx.layout.openWidget(TICKETS_MAIN_WIDGET_ID, {
             resource,
             replaceActive: openInput.replaceActive,
-            closable: false,
           });
         },
       }),

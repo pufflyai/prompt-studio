@@ -1,24 +1,14 @@
-import { Box, Center, chakra } from "@chakra-ui/react";
+import { Box, Center } from "@chakra-ui/react";
 import type { ReactNode } from "react";
-import {
-  BRIDGE_WEBVIEW_RENDERER_ID,
-  resolveShellWidgetRendererId,
-  type ShellCore,
-  type ShellWidgetPlacement,
-  type WebviewDescriptor,
-} from "../../core";
+import type { RegisteredWidgetContribution, ShellCore, ShellWidgetPlacement } from "../../core";
 import { ShellIcon } from "../shared/icon";
 import { useShellStore } from "../shared/use-shell-store";
 
 interface ShellWidgetHostProps {
   shell: ShellCore;
   placement: ShellWidgetPlacement;
+  widget?: RegisteredWidgetContribution;
 }
-
-const getWebviewSource = (webview: WebviewDescriptor) =>
-  webview.runtimeUrl ?? webview.assetUrl ?? webview.moduleUrl ?? webview.entry?.baseUrl;
-
-const isBridgeWebview = (webview: WebviewDescriptor) => Boolean(webview.runtimeUrl && webview.moduleUrl);
 
 const ShellWidgetFallback = (props: { label: string }) => {
   const { label } = props;
@@ -42,61 +32,14 @@ const ShellRenderedWidgetFrame = (props: { children: ReactNode }) => {
 
 const noopRefresh = () => undefined;
 
-const resolveWidgetRendererStoreId = (widget: ReturnType<ShellCore["layout"]["getWidget"]>) => {
-  if (!widget) return undefined;
-  if (widget.renderer === "webview" && widget.webview && isBridgeWebview(widget.webview)) {
-    return BRIDGE_WEBVIEW_RENDERER_ID;
-  }
-
-  return resolveShellWidgetRendererId(widget);
-};
-
 export const ShellWidgetHost = (props: ShellWidgetHostProps) => {
   const { shell, placement } = props;
-  const widget = shell.layout.getWidget(placement.contributionId);
+  const widget = props.widget ?? shell.layout.getWidget(placement.contributionId);
   const refresh = noopRefresh;
-  const rendererId = resolveWidgetRendererStoreId(widget);
-  const renderer = useShellStore(shell.renderers.store, (state) => (rendererId ? state.renderers[rendererId] : undefined));
+  const renderer = useShellStore(shell.renderers.store, (state) => state.renderers[widget?.rendererId ?? ""]);
 
   if (!widget) {
     return <ShellWidgetFallback label="Widget contribution is no longer registered." />;
-  }
-
-  if (widget.renderer === "webview" && widget.webview) {
-    if (isBridgeWebview(widget.webview)) {
-      return (
-        <Box display="flex" minW="0" minH="0" w="full" h="full" overflow="hidden">
-          {renderer ? (
-            (renderer.render({ shell, widget, placement, refresh }) as ReactNode)
-          ) : (
-            <ShellWidgetFallback label="Bridge webview renderer is not registered." />
-          )}
-        </Box>
-      );
-    }
-
-    const source = getWebviewSource(widget.webview);
-
-    return (
-      <Box display="flex" minW="0" minH="0" w="full" h="full" overflow="hidden">
-        {source ? (
-          <chakra.iframe
-            src={source}
-            title={widget.webview.title ?? widget.title}
-            // Webview content is untrusted — never grant `allow-same-origin`, which would
-            // let a guest reach into the host document.
-            sandbox={widget.webview.sandbox === "strict" ? "allow-scripts" : "allow-scripts allow-forms allow-popups"}
-            border="0"
-            flex="1"
-            h="full"
-            minW="0"
-            w="full"
-          />
-        ) : (
-          <ShellWidgetFallback label="Webview source is not configured." />
-        )}
-      </Box>
-    );
   }
 
   return (
@@ -106,7 +49,7 @@ export const ShellWidgetHost = (props: ShellWidgetHostProps) => {
           {renderer.render({ shell, widget, placement, refresh }) as ReactNode}
         </ShellRenderedWidgetFrame>
       ) : (
-        <ShellWidgetFallback label={`No renderer registered for ${rendererId}.`} />
+        <ShellWidgetFallback label={`No renderer registered for ${widget.rendererId}.`} />
       )}
     </Box>
   );

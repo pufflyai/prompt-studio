@@ -242,7 +242,6 @@ const ProjectSettingsContent = (props: { projectId?: string }) => {
 
     projectShell.layout.openWidget(PROJECT_SETTINGS_WIDGET_ID, {
       resource: createProjectSettingsSectionResource(projectId, activeSection),
-      closable: false,
     });
 
     const nextPanel = toSettingsPanel(activeSection);

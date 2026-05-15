@@ -48,7 +48,6 @@ export const createProjectSettingsShell = (input: CreateProjectSettingsShellInpu
       title: "Back to dashboard",
       area: "left-header",
       singleton: true,
-      renderer: "react",
       rendererId: PROJECT_SETTINGS_BACK_WIDGET_ID,
     }),
     shell.trees.registerTreeView({
@@ -70,7 +69,6 @@ export const createProjectSettingsShell = (input: CreateProjectSettingsShellInpu
         return shell.layout.openWidget(PROJECT_SETTINGS_WIDGET_ID, {
           resource,
           replaceActive: openInput.replaceActive,
-          closable: false,
         });
       },
     }),
@@ -96,11 +94,8 @@ export const createProjectSettingsShell = (input: CreateProjectSettingsShellInpu
 
   shell.layout.openWidget(PROJECT_SETTINGS_WIDGET_ID, {
     resource: sectionResource,
-    closable: false,
   });
-  shell.layout.openWidget(PROJECT_SETTINGS_BACK_WIDGET_ID, {
-    closable: false,
-  });
+  shell.layout.openWidget(PROJECT_SETTINGS_BACK_WIDGET_ID, {});
 
   return {
     ...shell,

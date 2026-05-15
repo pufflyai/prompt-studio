@@ -1,10 +1,11 @@
 import type {
   CommandExecuteRequest,
   DashboardExtensionMetadata,
+  DashboardExtensionRouteRecord,
   ExtensionMenuContribution,
   ExtensionNavigationRecord,
-  ExtensionRouteRecord,
 } from "pstdio-api-contracts";
+import { BRIDGE_WEBVIEW_RENDERER_ID, type BridgeWebviewConfig } from "pstdio-extensions/shell";
 import {
   type ResourceRef,
   type ShellModuleContribution,
@@ -38,7 +39,7 @@ const normalizeRoutePath = (routePath: string) => routePath.replace(/^\/+|\/+$/g
 
 export const createExtensionRouteResource = (
   projectId: string,
-  route: Pick<ExtensionRouteRecord, "id" | "label" | "path"> & { icon?: string },
+  route: Pick<DashboardExtensionRouteRecord, "id" | "label" | "path"> & { icon?: string },
 ) => {
   const routePath = normalizeRoutePath(route.path);
 
@@ -69,20 +70,14 @@ const extensionRouteHref = (resource: ResourceRef) => {
   return parsed ? `/projects/${parsed.projectId}/extensions/${parsed.routePath}` : "/";
 };
 
-const resolveAssetUrl = (path: string | undefined, resolve: (path: string) => string) =>
-  path ? resolve(path) : undefined;
-
-const buildExtensionWebviewDescriptor = (
-  webview: ExtensionRouteRecord["webview"],
+const buildExtensionWebviewConfig = (
+  webview: DashboardExtensionRouteRecord["webview"],
   resolve: (path: string) => string,
-) => ({
+): BridgeWebviewConfig => ({
   title: webview.title,
-  sandbox: webview.sandbox,
   capabilities: webview.capabilities,
-  entry: webview.entry,
-  assetUrl: resolveAssetUrl(webview.assetUrl, resolve),
-  runtimeUrl: resolveAssetUrl(webview.runtimeUrl, resolve),
-  moduleUrl: resolveAssetUrl(webview.moduleUrl, resolve),
+  runtimeUrl: resolve(webview.runtimeUrl),
+  moduleUrl: resolve(webview.moduleUrl),
   styles: webview.styles?.map(resolve),
 });
 
@@ -121,13 +116,16 @@ export interface DashboardExtensionNavigationState {
   register(
     extensionId: string,
     records: ExtensionNavigationRecord[],
-    routes: ExtensionRouteRecord[],
+    routes: DashboardExtensionRouteRecord[],
   ): { dispose(): void };
   listProjectSidebarNodes(projectId: string): TreeNode[];
 }
 
 export const createDashboardExtensionNavigationState = (): DashboardExtensionNavigationState => {
-  const byExtensionId = new Map<string, { records: ExtensionNavigationRecord[]; routes: ExtensionRouteRecord[] }>();
+  const byExtensionId = new Map<
+    string,
+    { records: ExtensionNavigationRecord[]; routes: DashboardExtensionRouteRecord[] }
+  >();
 
   return {
     register(extensionId, records, routes) {
@@ -208,7 +206,6 @@ export const createDashboardExtensionHostModule = (input: CreateDashboardExtensi
             return ctx.layout.openWidget(widgetId, {
               resource,
               replaceActive: openInput.replaceActive,
-              closable: false,
             });
           }
           return undefined;
@@ -287,8 +284,8 @@ export const createDashboardExtensionModules = (input: CreateDashboardExtensionM
             area: "main",
             singleton: true,
             resourceKinds: [EXTENSION_ROUTE_RESOURCE_KIND],
-            renderer: "webview",
-            webview: buildExtensionWebviewDescriptor(route.webview, input.resolveAssetUrl),
+            rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
+            config: buildExtensionWebviewConfig(route.webview, input.resolveAssetUrl),
           });
         }
 

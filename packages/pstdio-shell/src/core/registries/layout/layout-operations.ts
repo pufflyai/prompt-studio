@@ -15,6 +15,14 @@ export const findPlacement = (layout: ShellLayout, contributionId: string) => {
   return undefined;
 };
 
+export const findPlacementByWidgetId = (layout: ShellLayout, widgetId: string) => {
+  for (const area of Object.values(layout.areas)) {
+    const index = area.widgets.findIndex((candidate) => candidate.widgetId === widgetId);
+    if (index >= 0) return { areaId: area.id, index, placement: area.widgets[index] };
+  }
+  return undefined;
+};
+
 export const getActivePlacement = (area: ShellAreaState) =>
   area.widgets.find((placement) => placement.widgetId === area.activeWidgetId) ?? area.widgets[0];
 
@@ -47,7 +55,7 @@ export const createPlacement = (
   resourceUri: spec.resource?.uri,
   title: spec.title ?? spec.resource?.label ?? widget.title,
   pinned: spec.pinned,
-  closable: spec.closable ?? true,
+  closable: spec.closable ?? widget.closable ?? false,
 });
 
 interface ReplaceAreaWidgetsOptions {
@@ -112,6 +120,40 @@ export const removePlacementsForContribution = (layout: ShellLayout, contributio
   }
 
   return nextLayout;
+};
+
+export const closeWidgetInLayout = (layout: ShellLayout, widgetId: string) => {
+  const found = findPlacementByWidgetId(layout, widgetId);
+  if (!found) return undefined;
+
+  const area = layout.areas[found.areaId];
+  const widgets = area.widgets.filter((placement) => placement.widgetId !== widgetId);
+  const closingEffectiveActive = area.activeWidgetId === widgetId || (!area.activeWidgetId && found.index === 0);
+  const nextActivePlacement = widgets[found.index] ?? widgets[found.index - 1];
+  const activeWidgetId = closingEffectiveActive ? nextActivePlacement?.widgetId : area.activeWidgetId;
+  const nextArea = { ...area, widgets, activeWidgetId };
+  let nextLayout: ShellLayout = {
+    ...layout,
+    areas: {
+      ...layout.areas,
+      [area.id]: nextArea,
+    },
+  };
+
+  if (layout.activeWidgetId === widgetId) {
+    nextLayout = {
+      ...nextLayout,
+      activeWidgetId: nextActivePlacement?.widgetId,
+      activeResourceUri: nextActivePlacement?.resourceUri,
+    };
+  }
+
+  return {
+    areaId: found.areaId,
+    closedPlacement: found.placement,
+    activePlacement: getActivePlacement(nextArea),
+    layout: nextLayout,
+  };
 };
 
 export const activateInLayout = (

@@ -1,12 +1,12 @@
 import type {
+  DashboardExtensionRouteRecord,
+  DashboardExtensionSettingsPanelRecord,
+  DashboardExtensionViewRecord,
   ExtensionCommandRecord,
   ExtensionDiagnostic,
   ExtensionMenuContribution,
   ExtensionNavigationRecord,
   ExtensionRecord,
-  ExtensionRouteRecord,
-  ExtensionSettingsPanelRecord,
-  ExtensionViewRecord,
 } from "pstdio-api-contracts";
 
 export type DashboardExtensionMetadata = {
@@ -15,9 +15,9 @@ export type DashboardExtensionMetadata = {
   extensions: ExtensionRecord[];
   menuContributions: ExtensionMenuContribution[];
   navigation: ExtensionNavigationRecord[];
-  routes: ExtensionRouteRecord[];
-  settingsPanels: ExtensionSettingsPanelRecord[];
-  views: ExtensionViewRecord[];
+  routes: DashboardExtensionRouteRecord[];
+  settingsPanels: DashboardExtensionSettingsPanelRecord[];
+  views: DashboardExtensionViewRecord[];
 };
 
 export type ExtensionSlotKind = "menu" | "navigation" | "view" | "settings" | "renderer";

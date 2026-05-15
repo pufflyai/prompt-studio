@@ -22,21 +22,6 @@ export const shellAreas = [
 
 export type ShellArea = (typeof shellAreas)[number];
 
-export interface WebviewDescriptor {
-  title?: string;
-  sandbox?: "default" | "strict";
-  assetUrl?: string;
-  runtimeUrl?: string;
-  moduleUrl?: string;
-  styles?: string[];
-  entry?: {
-    kind: "package-asset";
-    path: string;
-    baseUrl: string;
-  };
-  capabilities?: string[];
-}
-
 export interface ShellAreaSize {
   defaultPx?: number;
   minPx?: number;
@@ -49,17 +34,31 @@ export interface WidgetContribution {
   area: ShellArea;
   fallbackArea?: ShellArea;
   singleton?: boolean;
+  closable?: boolean;
   areaSize?: ShellAreaSize;
   areaCollapsible?: boolean;
   resourceKinds?: string[];
   priority?: number;
-  renderer: "webview" | "react" | string;
-  rendererId?: string;
-  webview?: WebviewDescriptor;
+  rendererId: string;
+  config?: unknown;
   canOpen?(resource: ResourceRef): boolean;
 }
 
 export type RegisteredWidgetContribution = Omit<WidgetContribution, "priority"> & RegisteredContributionMetadata;
+
+export interface AreaPlaceholderContribution {
+  id: string;
+  title: string;
+  area: ShellArea;
+  rendererId: string;
+  areaSize?: ShellAreaSize;
+  areaCollapsible?: boolean;
+  config?: unknown;
+  priority?: number;
+}
+
+export type RegisteredAreaPlaceholderContribution = Omit<AreaPlaceholderContribution, "priority"> &
+  RegisteredContributionMetadata;
 
 export interface ShellWidgetPlacement {
   widgetId: string;
@@ -88,6 +87,7 @@ export interface ShellLayout {
 export interface ShellLayoutStoreState {
   layout: ShellLayout;
   widgets: Record<string, RegisteredWidgetContribution>;
+  areaPlaceholders: Partial<Record<ShellArea, RegisteredAreaPlaceholderContribution>>;
 }
 
 export interface OpenWidgetInput {

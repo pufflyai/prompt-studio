@@ -617,7 +617,7 @@ settingsPanels: {
     title: "Planner",
     slot: projectSlots.settingsPanels,
     webview: {
-      entry: packageAsset("./webviews/settings/index.html", import.meta.url),
+      entry: packageAsset("./webviews/settings/index.tsx", import.meta.url),
     },
   },
 }
@@ -631,7 +631,7 @@ views: {
     title: "Planner",
     slot: projectSlots.sidebar,
     webview: {
-      entry: packageAsset("./webviews/sidebar/index.html", import.meta.url),
+      entry: packageAsset("./webviews/sidebar/index.tsx", import.meta.url),
     },
   },
 }
@@ -660,11 +660,14 @@ The v1 declarable host capabilities are:
 
 ### Rendering webviews through the shell
 
-`pstdio-shell` stays extension-agnostic: it delegates `renderer: "webview"` widgets whose
-descriptor carries both `runtimeUrl` and `moduleUrl` to whatever renderer a host registers
-under `BRIDGE_WEBVIEW_RENDERER_ID`. `pstdio-extensions/shell` provides that renderer through
-`createBridgeWebviewRenderer`, which accepts two optional factories so a host can supply its
-own wiring:
+`pstdio-shell` stays extension-agnostic: every widget names a `rendererId`, and the shell
+host only looks up that renderer and calls it. Bridge webviews use
+`BRIDGE_WEBVIEW_RENDERER_ID` from `pstdio-extensions/shell`; their bridge descriptor is carried
+as widget `config` with `runtimeUrl`, `moduleUrl`, optional `styles`, and declared
+`capabilities`.
+
+`pstdio-extensions/shell` provides the bridge renderer through `createBridgeWebviewRenderer`,
+which accepts two optional factories so a host can supply its own wiring:
 
 - `createHostCapabilities(context)` — builds the `HostCapabilityRegistry` the guest's
   capability calls resolve against. Defaults to `createShellWebviewHostCapabilities`, which
@@ -675,8 +678,8 @@ own wiring:
   `{ placement, resource }`. The dashboard injects a factory that also forwards the latest
   extension command outcome and theme preference.
 
-Static webview descriptors (an `assetUrl` with no bridge runtime) render as a plain sandboxed
-iframe and never receive `allow-same-origin`.
+Plain `.html` webview entries are unsupported. Extension-rendered UI is built as a managed
+bridge module and loaded through the bridge runtime.
 
 ## Planner Boundary
 

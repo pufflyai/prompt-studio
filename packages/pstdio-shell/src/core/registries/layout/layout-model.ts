@@ -8,6 +8,7 @@ import { createShellStore, type ShellStore } from "../../shared/store/shell-stor
 import {
   activateInLayout,
   buildUpdatedPlacement,
+  closeWidgetInLayout,
   createPlacement,
   findPlacement,
   getActivePlacement,
@@ -15,9 +16,11 @@ import {
   replaceAreaWidgets,
 } from "./layout-operations";
 import {
+  type AreaPlaceholderContribution,
   createDefaultShellLayout,
   mergeWithDefaultAreas,
   type OpenWidgetInput,
+  type RegisteredAreaPlaceholderContribution,
   type RegisteredWidgetContribution,
   type ShellArea,
   type ShellAreaSize,
@@ -28,7 +31,9 @@ import {
 } from "./layout-types";
 
 export type {
+  AreaPlaceholderContribution,
   OpenWidgetInput,
+  RegisteredAreaPlaceholderContribution,
   RegisteredWidgetContribution,
   ShellArea,
   ShellAreaSize,
@@ -36,7 +41,6 @@ export type {
   ShellLayout,
   ShellLayoutStoreState,
   ShellWidgetPlacement,
-  WebviewDescriptor,
   WidgetContribution,
 } from "./layout-types";
 export { createDefaultShellLayout, shellAreas } from "./layout-types";
@@ -52,13 +56,20 @@ export interface CreateLayoutModelInput {
 
 export interface LayoutModel {
   store: ShellStore<ShellLayoutStoreState>;
+  registerAreaPlaceholder(
+    placeholder: AreaPlaceholderContribution,
+    metadata?: ContributionMetadata,
+  ): { dispose(): void };
   registerWidget(widget: WidgetContribution, metadata?: ContributionMetadata): { dispose(): void };
+  getAreaPlaceholder(areaId: ShellArea): RegisteredAreaPlaceholderContribution | undefined;
   getWidget(id: string): RegisteredWidgetContribution | undefined;
   getAreaSize(areaId: ShellArea): ShellAreaSize | undefined;
   getAreaCollapsible(areaId: ShellArea): boolean;
+  listAreaPlaceholders(): RegisteredAreaPlaceholderContribution[];
   listWidgets(): RegisteredWidgetContribution[];
   openWidget(id: string, input?: OpenWidgetInput): ShellWidgetPlacement;
   activateWidget(widgetId: string): ShellWidgetPlacement;
+  closeWidget(widgetId: string): ShellWidgetPlacement | undefined;
   clearArea(areaId: ShellArea): void;
   getLayout(): ShellLayout;
 }
@@ -69,13 +80,15 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
 
   const store = createShellStore<ShellLayoutStoreState>({
     name: "shell.layout",
-    initialState: { layout: initialLayout, widgets: {} },
+    initialState: { layout: initialLayout, widgets: {}, areaPlaceholders: {} },
   });
 
   let placementCounter = 0;
 
   const getLayout = () => store.getState().layout;
+  const getAreaPlaceholders = () => store.getState().areaPlaceholders;
   const getWidgets = () => store.getState().widgets;
+  const getAreaPlaceholder = (areaId: ShellArea) => getAreaPlaceholders()[areaId];
 
   const persistLayout = () => {
     input.persistence?.setLayout(getLayout());
@@ -176,6 +189,34 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
   return {
     store,
 
+    registerAreaPlaceholder(placeholder, metadata) {
+      const placeholdersBefore = getAreaPlaceholders();
+      if (placeholdersBefore[placeholder.area]) {
+        throw new Error(`Area placeholder already registered: ${placeholder.area}`);
+      }
+
+      const { priority, ...placeholderContribution } = placeholder;
+      const record: RegisteredAreaPlaceholderContribution = {
+        ...placeholderContribution,
+        ...normalizeContributionMetadata({ ...metadata, priority: metadata?.priority ?? priority }),
+      };
+
+      const snapshot = store.getState();
+      store.setState(
+        { ...snapshot, areaPlaceholders: { ...snapshot.areaPlaceholders, [placeholder.area]: record } },
+        false,
+        "registerAreaPlaceholder",
+      );
+
+      return createDisposable(() => {
+        const current = store.getState();
+        if (current.areaPlaceholders[placeholder.area] !== record) return;
+
+        const { [placeholder.area]: _removed, ...nextPlaceholders } = current.areaPlaceholders;
+        store.setState({ ...current, areaPlaceholders: nextPlaceholders }, false, "unregisterAreaPlaceholder");
+      });
+    },
+
     registerWidget(widget, metadata) {
       const widgetsBefore = getWidgets();
       if (widgetsBefore[widget.id]) throw new Error(`Widget already registered: ${widget.id}`);
@@ -204,16 +245,22 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
       return getWidgets()[id];
     },
 
+    getAreaPlaceholder,
+
     getAreaSize(areaId) {
       const placement = getActivePlacement(getLayout().areas[areaId]);
-      if (!placement) return undefined;
+      if (!placement) return getAreaPlaceholder(areaId)?.areaSize;
       return getWidgets()[placement.contributionId]?.areaSize;
     },
 
     getAreaCollapsible(areaId) {
       const placement = getActivePlacement(getLayout().areas[areaId]);
-      if (!placement) return true;
+      if (!placement) return getAreaPlaceholder(areaId)?.areaCollapsible ?? true;
       return getWidgets()[placement.contributionId]?.areaCollapsible ?? true;
+    },
+
+    listAreaPlaceholders() {
+      return Object.values(getAreaPlaceholders()).sort(byContributionPriority);
     },
 
     listWidgets() {
@@ -229,6 +276,16 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
         if (placement) return applyAndActivate(layout, area.id, placement);
       }
       throw new Error(`Widget placement not found: ${widgetId}`);
+    },
+
+    closeWidget(widgetId) {
+      const result = closeWidgetInLayout(getLayout(), widgetId);
+      if (!result) throw new Error(`Widget placement not found: ${widgetId}`);
+      if (result.closedPlacement.closable !== true) throw new Error(`Widget cannot be closed: ${widgetId}`);
+
+      setLayout(result.layout);
+      persistLayout();
+      return result.activePlacement;
     },
 
     clearArea(areaId) {

@@ -26,6 +26,8 @@ interface ShellWorkbenchProps {
 }
 
 type TreeViewAreaId = "left" | "main-left";
+type ShellLayoutState = ReturnType<ShellCore["layout"]["getLayout"]>;
+type ShellAreaPlaceholderState = ReturnType<ShellCore["layout"]["store"]["getState"]>["areaPlaceholders"];
 
 const LEFT_PANEL_ID = "left";
 const MAIN_LEFT_PANEL_ID = "main-left";
@@ -74,25 +76,27 @@ const resolveActiveSessionSlot = (input: {
   return null;
 };
 
-const deriveLayoutFlags = (layout: ReturnType<ShellCore["layout"]["getLayout"]>) => {
-  const a = layout.areas;
+const hasAreaContent = (layout: ShellLayoutState, placeholders: ShellAreaPlaceholderState, area: ShellArea) =>
+  layout.areas[area].widgets.length > 0 || Boolean(placeholders[area]);
+
+const deriveLayoutFlags = (layout: ShellLayoutState, placeholders: ShellAreaPlaceholderState) => {
   return {
     layout,
-    hasTopWidgets: a.top.widgets.length > 0,
-    hasActivityBarWidgets: a.activityBar.widgets.length > 0,
-    hasLeftHeaderWidgets: a["left-header"].widgets.length > 0,
-    hasLeftWidgets: a.left.widgets.length > 0,
-    hasMainHeaderWidgets: a["main-header"].widgets.length > 0,
-    hasMainLeftHeaderWidgets: a["main-left-header"].widgets.length > 0,
-    hasMainLeftWidgets: a["main-left"].widgets.length > 0,
-    hasMainRightHeaderWidgets: a["main-right-header"].widgets.length > 0,
-    hasMainRightWidgets: a["main-right"].widgets.length > 0,
-    hasMainBottomHeaderWidgets: a["main-bottom-header"].widgets.length > 0,
-    hasMainBottomWidgets: a["main-bottom"].widgets.length > 0,
-    hasStatusWidgets: a.status.widgets.length > 0,
-    hasOverlayWidgets: a.overlay.widgets.length > 0,
-    hasFloatingHeaderWidgets: a["floating-header"].widgets.length > 0,
-    hasFloatingWidgets: a.floating.widgets.length > 0,
+    hasTopWidgets: hasAreaContent(layout, placeholders, "top"),
+    hasActivityBarWidgets: hasAreaContent(layout, placeholders, "activityBar"),
+    hasLeftHeaderWidgets: hasAreaContent(layout, placeholders, "left-header"),
+    hasLeftWidgets: hasAreaContent(layout, placeholders, "left"),
+    hasMainHeaderWidgets: hasAreaContent(layout, placeholders, "main-header"),
+    hasMainLeftHeaderWidgets: hasAreaContent(layout, placeholders, "main-left-header"),
+    hasMainLeftWidgets: hasAreaContent(layout, placeholders, "main-left"),
+    hasMainRightHeaderWidgets: hasAreaContent(layout, placeholders, "main-right-header"),
+    hasMainRightWidgets: hasAreaContent(layout, placeholders, "main-right"),
+    hasMainBottomHeaderWidgets: hasAreaContent(layout, placeholders, "main-bottom-header"),
+    hasMainBottomWidgets: hasAreaContent(layout, placeholders, "main-bottom"),
+    hasStatusWidgets: hasAreaContent(layout, placeholders, "status"),
+    hasOverlayWidgets: hasAreaContent(layout, placeholders, "overlay"),
+    hasFloatingHeaderWidgets: hasAreaContent(layout, placeholders, "floating-header"),
+    hasFloatingWidgets: hasAreaContent(layout, placeholders, "floating"),
   };
 };
 
@@ -104,6 +108,7 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
   if (!sessionHostRef.current) sessionHostRef.current = createSessionPanelHost();
 
   const layoutState = useShellStore(shell.layout.store, (state) => state.layout);
+  const areaPlaceholders = useShellStore(shell.layout.store, (state) => state.areaPlaceholders);
   const sessionPanelMode = useShellStore(shell.sessionPanel.store, (state) => state.mode);
   const paletteOpen = useShellStore(shell.commandPalette.store, (state) => state.open);
   const leftPanelOpen = useShellStore(shell.panels.store, (state) => state.openByAreaId[LEFT_PANEL_ID] ?? true);
@@ -146,7 +151,7 @@ const ShellWorkbenchContent = (props: ShellWorkbenchProps) => {
     hasOverlayWidgets,
     hasStatusWidgets,
     hasTopWidgets,
-  } = deriveLayoutFlags(layoutState);
+  } = deriveLayoutFlags(layoutState, areaPlaceholders);
   const hasMainBottom = hasMainBottomWidgets || hasMainBottomHeaderWidgets;
   const hasFloatingPanel = hasFloatingHeaderWidgets || hasFloatingWidgets;
   const showLeftPane = Boolean(leftTree || hasLeftWidgets || hasLeftHeaderWidgets);

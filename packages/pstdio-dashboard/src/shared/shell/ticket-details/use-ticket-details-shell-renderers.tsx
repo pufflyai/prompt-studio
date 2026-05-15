@@ -208,7 +208,6 @@ export const useTicketDetailsShellRenderers = (input: UseTicketDetailsShellRende
     if (!ticket) return;
     shell.layout.openWidget(TICKET_DETAILS_MAIN_WIDGET_ID, {
       resource: createTicketDetailsResource(resolvedProjectId, ticket.shorthand, ticket.title),
-      closable: false,
     });
   }, [resolvedProjectId, shell, ticket]);
 

@@ -134,7 +134,6 @@ export const createDashboardTicketDetailsModule = (
         area: "main",
         singleton: true,
         resourceKinds: [TICKET_DETAILS_RESOURCE_KIND],
-        renderer: "react",
         rendererId: TICKET_DETAILS_MAIN_WIDGET_ID,
       }),
       ctx.resources.registerOpener({
@@ -146,7 +145,6 @@ export const createDashboardTicketDetailsModule = (
           return ctx.layout.openWidget(TICKET_DETAILS_MAIN_WIDGET_ID, {
             resource,
             replaceActive: openInput.replaceActive,
-            closable: false,
           });
         },
       }),
@@ -187,7 +185,6 @@ export const createProjectTicketDetailsMode = (input: {
     ctx.layout.clearArea("main");
     ctx.layout.openWidget(TICKET_DETAILS_MAIN_WIDGET_ID, {
       resource: createActiveTicketDetailsResource(ctx),
-      closable: false,
     });
 
     return ctx.trees.registerTreeView({

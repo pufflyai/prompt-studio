@@ -46,7 +46,6 @@ export interface NavigationContribution<TSlotContext extends Struct = Struct, TP
 export interface WebviewContribution {
   entry: PackageAssetDescriptor;
   title?: string;
-  sandbox?: "default" | "strict";
   capabilities?: WebviewCapabilityDeclaration[];
 }
 

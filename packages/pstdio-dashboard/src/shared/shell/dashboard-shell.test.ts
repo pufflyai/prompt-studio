@@ -65,8 +65,10 @@ describe("createDashboardShell project chrome", () => {
     expect(shell.resources.getKind(PROJECT_RESOURCE_KIND)?.source).toBe("module");
     expect(shell.resources.getKind(PROJECT_ROUTE_RESOURCE_KIND)?.source).toBe("module");
     expect(shell.resources.getKind(DASHBOARD_COMMAND_RESOURCE_KIND)?.source).toBe("module");
-    expect(shell.layout.getWidget(PROJECT_SETTINGS_WIDGET_ID)?.renderer).toBe("react");
-    expect(shell.layout.getWidget(PROJECT_NAVIGATION_HEADER_WIDGET_ID)?.renderer).toBe("react");
+    expect(shell.layout.getWidget(PROJECT_SETTINGS_WIDGET_ID)?.rendererId).toBe(PROJECT_SETTINGS_WIDGET_ID);
+    expect(shell.layout.getWidget(PROJECT_NAVIGATION_HEADER_WIDGET_ID)?.rendererId).toBe(
+      PROJECT_NAVIGATION_HEADER_WIDGET_ID,
+    );
     expect(shell.commands.getCommand(PROJECT_OPEN_SETTINGS_COMMAND_ID)?.command.label).toBe("Project settings");
     expect(shell.keybindings.listActiveKeybindings()).toEqual([]);
     expect(activeMenuCommandIds(shell)).not.toContain(PROJECT_OPEN_SETTINGS_COMMAND_ID);
@@ -146,7 +148,6 @@ describe("createDashboardShell ticket modes", () => {
     expect(shell.resources.getKind(TICKETS_RESOURCE_KIND)?.source).toBe("module");
     expect(shell.layout.getWidget(TICKETS_MAIN_WIDGET_ID)).toMatchObject({
       area: "main",
-      renderer: "react",
     });
     expect(shell.layout.getLayout().activeWidgetId).toBe(TICKETS_MAIN_WIDGET_ID);
     expect(shell.layout.getLayout().activeResourceUri).toBe("pstdio://project/proj-1/tickets");
@@ -177,7 +178,6 @@ describe("createDashboardShell ticket modes", () => {
     });
     expect(shell.layout.getWidget(TICKET_DETAILS_MAIN_WIDGET_ID)).toMatchObject({
       area: "main",
-      renderer: "react",
     });
     expect(shell.layout.getLayout().activeWidgetId).toBe(TICKET_DETAILS_MAIN_WIDGET_ID);
     expect(shell.layout.getLayout().activeResourceUri).toBe("pstdio://project/proj-1/ticket/PS-42");
@@ -213,7 +213,6 @@ describe("createDashboardShell session mode", () => {
     expect(shell.trees.getTreeView(PROJECT_NAVIGATION_TREE_ID)).toBeUndefined();
     expect(shell.layout.getWidget(SESSIONS_CHAT_WIDGET_ID)).toMatchObject({
       area: "main",
-      renderer: "react",
     });
     expect(shell.layout.getLayout().areas["left-header"].widgets.map((widget) => widget.contributionId)).toEqual([
       PROJECT_NAVIGATION_HEADER_WIDGET_ID,

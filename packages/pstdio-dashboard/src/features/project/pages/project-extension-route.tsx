@@ -1,7 +1,7 @@
 import { Center, Text } from "@chakra-ui/react";
 import { useThemePreference } from "@pstdio/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import type { ExtensionRouteRecord } from "pstdio-api-contracts";
+import type { DashboardExtensionRouteRecord } from "pstdio-api-contracts";
 import { ShellWorkbench } from "pstdio-shell/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { buildApiUrl } from "@/lib/api";
@@ -25,7 +25,7 @@ interface ExtensionRouteHostDeps {
   executeCommand: (input: { commandId: string; body: unknown }) => Promise<unknown>;
   lastCommand: ExtensionCommandEvent | null;
   navigate: (options: { to: string }) => void;
-  routes: ExtensionRouteRecord[];
+  routes: DashboardExtensionRouteRecord[];
   setThemePreference: (preference: string) => void;
   themePreference: string;
 }
@@ -33,8 +33,8 @@ interface ExtensionRouteHostDeps {
 interface ProjectExtensionShellViewProps {
   projectId: string;
   projectName: string;
-  route: ExtensionRouteRecord;
-  routes: ExtensionRouteRecord[];
+  route: DashboardExtensionRouteRecord;
+  routes: DashboardExtensionRouteRecord[];
 }
 
 const ProjectExtensionShellView = (props: ProjectExtensionShellViewProps) => {

@@ -27,7 +27,6 @@ describe("shell modules", () => {
             area: "main",
             singleton: true,
             resourceKinds: ["project"],
-            renderer: "react",
             rendererId: "project.settings",
           }),
           ctx.commands.registerCommand(

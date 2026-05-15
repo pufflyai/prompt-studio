@@ -39,7 +39,6 @@ import {
   type TreeViewPersistenceAdapter,
   type TreeViewRegistry,
 } from "./registries/trees/tree-view-registry";
-import { createWebviewRegistry, type WebviewRegistry } from "./registries/webviews/webview-registry";
 import { type ContextKeyService, createContextKeyService } from "./shared/context/context-key-service";
 import type { ContributionMetadata, ContributionSource } from "./shared/contributions/metadata";
 import type { Disposable } from "./shared/disposable";
@@ -63,7 +62,6 @@ export interface ShellCoreContributionContext {
   resources: ResourceRegistry;
   sessionPanel: ShellSessionPanelController;
   trees: TreeViewRegistry;
-  webviews: WebviewRegistry;
 }
 
 export interface ShellCore extends ShellCoreContributionContext {
@@ -143,6 +141,8 @@ const createModuleContext = (core: ShellCore, input: CreateModuleContextInput) =
     },
     layout: {
       ...core.layout,
+      registerAreaPlaceholder: (placeholder, metadata) =>
+        track(core.layout.registerAreaPlaceholder(placeholder, withModuleMetadata(input, metadata))),
       registerWidget: (widget, metadata) =>
         track(core.layout.registerWidget(widget, withModuleMetadata(input, metadata))),
     },
@@ -212,11 +212,6 @@ const createModuleContext = (core: ShellCore, input: CreateModuleContextInput) =
       registerTreeView: (view, metadata) =>
         track(core.trees.registerTreeView(view, withModuleMetadata(input, metadata))),
     },
-    webviews: {
-      ...core.webviews,
-      registerWebview: (webview, metadata) =>
-        track(core.webviews.registerWebview(webview, withModuleMetadata(input, metadata))),
-    },
   } satisfies ShellModuleContributionContext;
 
   return context;
@@ -245,7 +240,6 @@ export const createShellCore = (input: CreateShellCoreInput = {}) => {
     resources: createResourceRegistry(),
     sessionPanel: createShellSessionPanelController({ initialMode: input.initialSessionPanelMode }),
     trees: createTreeViewRegistry({ persistence: input.treePersistence }),
-    webviews: createWebviewRegistry(),
 
     registerModule(module) {
       if (moduleRecords.has(module.id)) throw new Error(`Shell module already registered: ${module.id}`);

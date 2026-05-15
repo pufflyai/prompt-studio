@@ -2,10 +2,11 @@ import { Box, Flex, IconButton } from "@chakra-ui/react";
 import { Breadcrumb, type BreadcrumbItem, Header, Tooltip } from "@pstdio/ui";
 import { type ShellCore, workbenchTopHeaderLeadingMenuPath, workbenchTopHeaderTrailingMenuPath } from "../../core";
 import { ShellArea } from "../area/area";
-import { ShellAreaTabs } from "../area/area-tabs";
+import { ShellAreaTabs, shouldShowAreaTabs } from "../area/area-tabs";
 import { ShellHeaderActions } from "../header/header-actions";
-import { listShellMenuActionItems } from "../menus/menu-action-items";
+import { listShellMenuActionItemsFromState } from "../menus/menu-action-items";
 import { ShellIcon } from "../shared/icon";
+import { useShellStore } from "../shared/use-shell-store";
 import { ShellTreeView } from "../tree/tree-view";
 
 interface ShellWorkbenchHeaderProps {
@@ -18,8 +19,13 @@ interface ShellWorkbenchHeaderProps {
 
 export const ShellWorkbenchHeader = (props: ShellWorkbenchHeaderProps) => {
   const { shell, breadcrumbItems, hasTop, showLeftPanelOpener, onOpenLeftPanel } = props;
-  const hasLeadingActions = listShellMenuActionItems(shell, workbenchTopHeaderLeadingMenuPath).length > 0;
-  const hasTrailingActions = listShellMenuActionItems(shell, workbenchTopHeaderTrailingMenuPath).length > 0;
+  const commands = useShellStore(shell.commands.store, (state) => state.commands);
+  const contextValues = useShellStore(shell.context.store, (state) => state.values);
+  const actionsByPath = useShellStore(shell.menus.store, (state) => state.actionsByPath);
+  const menuState = { actionsByPath, commands, contextValues };
+  const hasLeadingActions = listShellMenuActionItemsFromState(menuState, workbenchTopHeaderLeadingMenuPath).length > 0;
+  const hasTrailingActions =
+    listShellMenuActionItemsFromState(menuState, workbenchTopHeaderTrailingMenuPath).length > 0;
   const hasBreadcrumb = breadcrumbItems.length > 0;
   const hasCenter = hasTop || hasBreadcrumb;
 
@@ -72,7 +78,7 @@ interface ShellLeftSidePanelProps {
 
 export const ShellLeftSidePanel = (props: ShellLeftSidePanelProps) => {
   const { shell, treeViewId, footerTreeViewId, activeNodeId, hasHeader } = props;
-  const hasContentTabs = shell.layout.getLayout().areas.left.widgets.length > 1;
+  const hasContentTabs = shouldShowAreaTabs(shell.layout.getLayout().areas.left.widgets);
   const showHeaderBar = hasHeader || hasContentTabs;
 
   return (
@@ -140,7 +146,7 @@ export const ShellActivityBar = (props: ShellWorkbenchAreaPanelProps) => {
 
 export const ShellRightSidePanel = (props: ShellHeaderedAreaPanelProps) => {
   const { shell, hasHeader } = props;
-  const hasContentTabs = shell.layout.getLayout().areas["main-right"].widgets.length > 1;
+  const hasContentTabs = shouldShowAreaTabs(shell.layout.getLayout().areas["main-right"].widgets);
   const showHeaderBar = hasHeader || hasContentTabs;
 
   return (
@@ -177,7 +183,7 @@ interface ShellMainLeftPanelProps extends ShellHeaderedAreaPanelProps {
 
 export const ShellMainLeftPanel = (props: ShellMainLeftPanelProps) => {
   const { shell, hasHeader, treeViewId, activeNodeId } = props;
-  const hasContentTabs = shell.layout.getLayout().areas["main-left"].widgets.length > 1;
+  const hasContentTabs = shouldShowAreaTabs(shell.layout.getLayout().areas["main-left"].widgets);
   const showHeaderBar = hasHeader || hasContentTabs;
 
   return (

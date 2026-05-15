@@ -1,4 +1,4 @@
-import { type ShellCore, shellAreas } from "../../core";
+import { type ShellModuleContribution, shellAreas } from "../../core";
 import { AreaPlaceholder } from "./components/area-placeholder";
 import {
   areaLabels,
@@ -18,60 +18,57 @@ const resolvePlacementArea = (value: unknown, fallback: string) => {
   return "main";
 };
 
-const registerAreaMapRenderers = (shell: ShellCore) => {
-  shell.renderers.registerRenderer({
-    id: areaMapRendererId,
-    render: ({ placement }) => {
-      const area = resolvePlacementArea(
-        placement.resource?.metadata?.area,
-        placement.resource?.id ?? placement.contributionId,
-      );
+export const createAreaMapModule = (): ShellModuleContribution => ({
+  id: "area-map",
+  activate(ctx) {
+    ctx.sessionPanel.setMode("attached");
+    ctx.resources.registerKind({ kind: areaResourceKind, label: "Shell area", icon: "SquareDashed" });
 
-      return (
-        <AreaPlaceholder
-          area={area}
-          name={placement.resource?.label ?? placement.title ?? placement.contributionId}
-          uri={placement.resource?.uri ?? "pstdio://area-map/unknown"}
-        />
-      );
-    },
-  });
-};
+    ctx.renderers.registerRenderer({
+      id: areaMapRendererId,
+      render: ({ placement }) => {
+        const area = resolvePlacementArea(
+          placement.resource?.metadata?.area,
+          placement.resource?.id ?? placement.contributionId,
+        );
 
-export const activateAreaMapExample = (shell: ShellCore) => {
-  shell.sessionPanel.setMode("attached");
-  shell.resources.registerKind({ kind: areaResourceKind, label: "Shell area", icon: "SquareDashed" });
-
-  for (const area of shellAreas) {
-    shell.layout.registerWidget({
-      id: areaWidgetId(area),
-      title: areaLabels[area],
-      area,
-      singleton: true,
-      renderer: "react",
-      rendererId: areaMapRendererId,
+        return (
+          <AreaPlaceholder
+            area={area}
+            name={placement.resource?.label ?? placement.title ?? placement.contributionId}
+            uri={placement.resource?.uri ?? "pstdio://area-map/unknown"}
+          />
+        );
+      },
     });
 
-    shell.layout.openWidget(areaWidgetId(area), { resource: createAreaResource(area) });
-  }
+    for (const area of shellAreas) {
+      ctx.layout.registerWidget({
+        id: areaWidgetId(area),
+        title: areaLabels[area],
+        area,
+        singleton: true,
+        rendererId: areaMapRendererId,
+      });
 
-  for (const widget of bottomExtraWidgets) {
-    shell.layout.registerWidget({
-      id: `area-map.${widget.id}`,
-      title: widget.label,
-      area: "main-bottom",
-      singleton: true,
-      renderer: "react",
-      rendererId: areaMapRendererId,
-    });
-    shell.layout.openWidget(`area-map.${widget.id}`, {
-      resource: createAreaResource("main-bottom", {
-        id: widget.id,
-        uri: `pstdio://area-map/main-bottom/${widget.id}`,
-        label: widget.label,
-      }),
-    });
-  }
+      ctx.layout.openWidget(areaWidgetId(area), { resource: createAreaResource(area) });
+    }
 
-  registerAreaMapRenderers(shell);
-};
+    for (const widget of bottomExtraWidgets) {
+      ctx.layout.registerWidget({
+        id: `area-map.${widget.id}`,
+        title: widget.label,
+        area: "main-bottom",
+        singleton: true,
+        rendererId: areaMapRendererId,
+      });
+      ctx.layout.openWidget(`area-map.${widget.id}`, {
+        resource: createAreaResource("main-bottom", {
+          id: widget.id,
+          uri: `pstdio://area-map/main-bottom/${widget.id}`,
+          label: widget.label,
+        }),
+      });
+    }
+  },
+});

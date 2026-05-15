@@ -1,6 +1,6 @@
 import { Badge, Box, Button, Code, Grid, HStack, Kbd, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
-import type { ShellCore } from "../../../core";
+import type { ShellModuleContributionContext } from "../../../core";
 import { ShellIcon, type ShellWidgetRenderInput } from "../../../react";
 import {
   commandPaletteMenuPath,
@@ -36,7 +36,6 @@ const OverviewWidget = (props: OverviewWidgetProps) => {
     { label: "Resource kinds", value: shell.resources.listKinds().length },
     { label: "Tree views", value: shell.trees.listTreeViews().length },
     { label: "React renderers", value: rendererIds.length },
-    { label: "Webviews", value: shell.webviews.listWebviews().length },
     { label: "Notifications", value: shell.notifications.listNotifications().length },
   ];
 
@@ -221,7 +220,6 @@ const RegistryInventoryWidget = (props: OverviewWidgetProps) => {
     { name: "resources", icon: "Database", values: shell.resources.listKinds().map((kind) => kind.kind) },
     { name: "renderers", icon: "Component", values: rendererIds },
     { name: "trees", icon: "ListTree", values: shell.trees.listTreeViews().map((tree) => tree.id) },
-    { name: "webviews", icon: "PanelRight", values: shell.webviews.listWebviews().map((webview) => webview.id) },
     { name: "lifecycle", icon: "RefreshCw", values: [...shellLifecyclePhases] },
   ];
 
@@ -280,7 +278,22 @@ const SessionWidget = () => (
   </ScrollArea>
 );
 
-export const registerConsumerShellRenderers = (shell: ShellCore, ticketResourceIds: Array<string | undefined>) => {
+const ExtensionReviewWidget = () => (
+  <ScrollArea h="full" minH="0" contentProps={{ p: "lg" }}>
+    <Stack gap="md" maxW="2xl">
+      <Box>
+        <Text textStyle="heading/M/semibold">Extension Lab review</Text>
+        <Text color="fg.muted">Bridge-backed extension surfaces are rendered through registered shell renderers.</Text>
+      </Box>
+      <Code>extension-lab.review.panel</Code>
+    </Stack>
+  </ScrollArea>
+);
+
+export const registerConsumerShellRenderers = (
+  ctx: ShellModuleContributionContext,
+  ticketResourceIds: Array<string | undefined>,
+) => {
   const rendererIds = [
     shellWidgetIds.overview,
     shellWidgetIds.tickets,
@@ -289,35 +302,40 @@ export const registerConsumerShellRenderers = (shell: ShellCore, ticketResourceI
     shellWidgetIds.registryInventory,
     shellWidgetIds.checks,
     shellWidgetIds.session,
+    shellWidgetIds.extensionReview,
   ];
   const stableTicketIds = ticketResourceIds.filter((id): id is string => Boolean(id));
 
-  shell.renderers.registerRenderer({
+  ctx.renderers.registerRenderer({
     id: shellWidgetIds.overview,
     render: (input) => <OverviewWidget input={input} rendererIds={rendererIds} />,
   });
-  shell.renderers.registerRenderer({
+  ctx.renderers.registerRenderer({
     id: shellWidgetIds.tickets,
     render: (input) => <TicketsWidget key={stableTicketIds.join(",")} input={input} />,
   });
-  shell.renderers.registerRenderer({
+  ctx.renderers.registerRenderer({
     id: shellWidgetIds.workspace,
     render: (input) => <WorkspaceWidget input={input} />,
   });
-  shell.renderers.registerRenderer({
+  ctx.renderers.registerRenderer({
     id: shellWidgetIds.settings,
     render: (input) => <SettingsWidget input={input} />,
   });
-  shell.renderers.registerRenderer({
+  ctx.renderers.registerRenderer({
     id: shellWidgetIds.registryInventory,
     render: (input) => <RegistryInventoryWidget input={input} rendererIds={rendererIds} />,
   });
-  shell.renderers.registerRenderer({
+  ctx.renderers.registerRenderer({
     id: shellWidgetIds.checks,
     render: (input) => <ChecksWidget input={input} />,
   });
-  shell.renderers.registerRenderer({
+  ctx.renderers.registerRenderer({
     id: shellWidgetIds.session,
     render: () => <SessionWidget />,
+  });
+  ctx.renderers.registerRenderer({
+    id: shellWidgetIds.extensionReview,
+    render: () => <ExtensionReviewWidget />,
   });
 };

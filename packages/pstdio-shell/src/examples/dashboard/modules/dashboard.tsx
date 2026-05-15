@@ -1,8 +1,6 @@
 import {
   type ResourceRef,
   type ShellArea,
-  type ShellCore,
-  type ShellModuleContribution,
   type ShellModuleContributionContext,
   workbenchCommandPaletteMenuPath,
   workbenchTopHeaderTrailingMenuPath,
@@ -28,11 +26,7 @@ const registerReactWidget = (
   title: string,
   area: ShellArea,
   priority: number,
-) =>
-  ctx.layout.registerWidget(
-    { id, title, area, singleton: true, renderer: "react", rendererId: id, priority },
-    { priority },
-  );
+) => ctx.layout.registerWidget({ id, title, area, singleton: true, rendererId: id, priority }, { priority });
 
 const resolveLeftPanelMode = (resource: ResourceRef): DashboardLeftPanelMode =>
   resource.kind === "project-settings" ? "settings" : "project";
@@ -115,40 +109,29 @@ const registerMenus = (ctx: ShellModuleContributionContext) => {
   ctx.menus.registerMenuAction(dashboardHelpMenuPath, { commandId: "dashboard.contactSupport", order: 30 });
 };
 
-const createDashboardShellModule = () =>
-  ({
-    id: "dashboard-shell.example",
-    activate(ctx) {
-      registerResourcesAndWidgets(ctx);
-      registerCommands(ctx);
-      registerMenus(ctx);
-    },
-  }) satisfies ShellModuleContribution;
-
-const registerLeftHeader = (shell: ShellCore) => {
-  shell.layout.registerWidget({
+const registerLeftHeader = (ctx: ShellModuleContributionContext) => {
+  ctx.layout.registerWidget({
     id: DASHBOARD_LEFT_HEADER_WIDGET_ID,
     title: "Project brand",
     area: "left-header",
     singleton: true,
-    renderer: "react",
     rendererId: DASHBOARD_LEFT_HEADER_WIDGET_ID,
   });
-  shell.renderers.registerRenderer({
+  ctx.renderers.registerRenderer({
     id: DASHBOARD_LEFT_HEADER_WIDGET_ID,
     render: (input) => <DashboardLeftHeader shell={input.shell} />,
   });
-  shell.layout.openWidget(DASHBOARD_LEFT_HEADER_WIDGET_ID, { pinned: true, closable: false });
+  ctx.layout.openWidget(DASHBOARD_LEFT_HEADER_WIDGET_ID, { pinned: true });
 };
 
-const registerPanelModeResourceOpener = (shell: ShellCore) => {
-  shell.resources.registerOpener({
+const registerPanelModeResourceOpener = (ctx: ShellModuleContributionContext) => {
+  ctx.resources.registerOpener({
     id: "dashboard-shell.panel-mode-opener",
     priority: 1000,
     canOpen: (resource) => ["dashboard-view", "ticket", "extension-route", "project-settings"].includes(resource.kind),
     open: (resource, input) => {
-      shell.modes.setActiveMode(resolveLeftPanelMode(resource));
-      return shell.layout.openWidget(resolveWidget(resource), {
+      ctx.modes.setActiveMode(resolveLeftPanelMode(resource));
+      return ctx.layout.openWidget(resolveWidget(resource), {
         resource,
         title: resource.label,
         replaceActive: input.replaceActive,
@@ -157,15 +140,17 @@ const registerPanelModeResourceOpener = (shell: ShellCore) => {
   });
 };
 
-export const activateDashboard = (shell: ShellCore) => {
-  shell.context.set("project.open", true);
+export const registerDashboardShellContributions = (ctx: ShellModuleContributionContext) => {
+  ctx.context.set("project.open", true);
 
-  shell.registerModule(createDashboardShellModule());
-  registerLeftHeader(shell);
-  registerPanelModeResourceOpener(shell);
-  registerDashboardShellRenderers(shell);
+  registerResourcesAndWidgets(ctx);
+  registerCommands(ctx);
+  registerMenus(ctx);
+  registerLeftHeader(ctx);
+  registerPanelModeResourceOpener(ctx);
+  registerDashboardShellRenderers(ctx);
 
-  shell.layout.openWidget(dashboardWidgetIds.status, { pinned: true, closable: false });
-  shell.layout.openWidget(dashboardWidgetIds.session, { pinned: true, closable: false });
-  shell.layout.openWidget(dashboardWidgetIds.tickets, { resource: dashboardResources.tickets, closable: false });
+  ctx.layout.openWidget(dashboardWidgetIds.status, { pinned: true });
+  ctx.layout.openWidget(dashboardWidgetIds.session, { pinned: true });
+  ctx.layout.openWidget(dashboardWidgetIds.tickets, { resource: dashboardResources.tickets });
 };

@@ -1,10 +1,13 @@
 import { Box, Grid, IconButton } from "@chakra-ui/react";
 import { Header, ResizableSplitLayout, Tooltip } from "@pstdio/ui";
 import { useState } from "react";
-import type { ShellAreaSize, ShellCore } from "../../core";
+import { headerTrailingMenuPath, type ShellAreaSize, type ShellCore } from "../../core";
 import { ShellArea } from "../area/area";
-import { ShellAreaTabs } from "../area/area-tabs";
+import { ShellAreaTabs, shouldShowAreaTabs } from "../area/area-tabs";
+import { ShellHeaderActions } from "../header/header-actions";
+import { listShellMenuActionItemsFromState } from "../menus/menu-action-items";
 import { ShellIcon } from "../shared/icon";
+import { useShellStore } from "../shared/use-shell-store";
 import { useBottomPanelResize } from "./use-bottom-panel-resize";
 import { ShellMainLeftPanel, ShellRightSidePanel } from "./workbench-panels";
 
@@ -37,6 +40,7 @@ const CONTENT_MIN_SIZE_PX = 320;
 
 const MAIN_LEFT_PANEL_SIZE = { defaultPx: 240, minPx: 180, maxPx: 420 };
 const RIGHT_PANEL_SIZE = { defaultPx: 320, minPx: 240, maxPx: 520 };
+const mainHeaderTrailingMenuPath = headerTrailingMenuPath("main");
 
 const resolveAreaSize = (areaSize: ShellAreaSize | undefined, fallback: Required<ShellAreaSize>) => ({
   defaultPx: areaSize?.defaultPx ?? fallback.defaultPx,
@@ -94,6 +98,7 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
       <Box flex="1" h="full" minW="0" overflow="hidden">
         {hasMainHeader ? <ShellArea shell={shell} area="main-header" title="Main header" showHeader={false} /> : null}
       </Box>
+      <ShellHeaderActions shell={shell} menuPath={mainHeaderTrailingMenuPath} />
       {showMainBottomOpener ? (
         <Tooltip content="Show main-bottom panel">
           <IconButton
@@ -227,10 +232,21 @@ export const ShellWorkbenchBody = (props: ShellWorkbenchBodyProps) => {
   const showMainLeftOpener = hasMainLeft && mainLeftCollapsed && mainLeftCollapsible;
   const showMainRightOpener = hasMainRight && mainRightCollapsed && mainRightCollapsible;
   const showMainBottomOpener = hasMainBottom && mainBottomCollapsed && mainBottomCollapsible;
-  const hasMainContentTabs = layoutAreas.main.widgets.length > 1;
-  const hasMainBottomContentTabs = layoutAreas["main-bottom"].widgets.length > 1;
+  const hasMainContentTabs = shouldShowAreaTabs(layoutAreas.main.widgets);
+  const commands = useShellStore(shell.commands.store, (state) => state.commands);
+  const contextValues = useShellStore(shell.context.store, (state) => state.values);
+  const actionsByPath = useShellStore(shell.menus.store, (state) => state.actionsByPath);
+  const hasMainHeaderActions =
+    listShellMenuActionItemsFromState({ actionsByPath, commands, contextValues }, mainHeaderTrailingMenuPath).length >
+    0;
+  const hasMainBottomContentTabs = shouldShowAreaTabs(layoutAreas["main-bottom"].widgets);
   const showMainHeader =
-    hasMainHeader || hasMainContentTabs || showMainLeftOpener || showMainRightOpener || showMainBottomOpener;
+    hasMainHeader ||
+    hasMainContentTabs ||
+    hasMainHeaderActions ||
+    showMainLeftOpener ||
+    showMainRightOpener ||
+    showMainBottomOpener;
   const mainLeftPanelSize = resolveAreaSize(shell.layout.getAreaSize("main-left"), MAIN_LEFT_PANEL_SIZE);
   const mainRightPanelSize = resolveAreaSize(shell.layout.getAreaSize("main-right"), RIGHT_PANEL_SIZE);
   const gridRows = [

@@ -1,4 +1,9 @@
-import type { Disposable, ShellCore, ShellModeActivationContext, TreeNode } from "../../../core";
+import type {
+  Disposable,
+  ShellModeActivationContext,
+  ShellModuleContributionContext,
+  TreeNode,
+} from "../../../core";
 import type { ShellWidgetRenderInput } from "../../../react";
 import { MailParticipants, MailReader, MailStatus, MailTopBar } from "../components/mail";
 import { itemResource, mailWidgetIds, randomResourceKind, randomShellModes } from "../mock-data/data";
@@ -50,7 +55,6 @@ const setupMailMode = (ctx: ShellModeActivationContext): Disposable[] => {
         title: widget.title,
         area: widget.area,
         singleton: true,
-        renderer: "react",
         rendererId: widget.id,
       }),
     );
@@ -81,18 +85,17 @@ const setupMailMode = (ctx: ShellModeActivationContext): Disposable[] => {
   ctx.layout.openWidget(mailWidgetIds.reader, {
     resource: itemResource(mailMode.id, defaultThread),
     title: defaultThread.title,
-    closable: false,
   });
   for (const widget of mailWidgets) {
     if (widget.id === mailWidgetIds.reader) continue;
-    ctx.layout.openWidget(widget.id, { pinned: true, closable: false });
+    ctx.layout.openWidget(widget.id, { pinned: true });
   }
 
   return disposables;
 };
 
-export const activateMailMode = (shell: ShellCore) => {
-  shell.modes.registerMode({
+export const registerMailMode = (ctx: ShellModuleContributionContext) => {
+  ctx.modes.registerMode({
     id: mailMode.id,
     label: mailMode.label,
     activate: setupMailMode,

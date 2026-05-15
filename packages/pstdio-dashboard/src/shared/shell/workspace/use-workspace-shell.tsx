@@ -181,7 +181,6 @@ export const useWorkspaceShell = (input: UseWorkspaceShellInput) => {
   useEffect(() => {
     workspaceShell.layout.openWidget(WORKSPACE_MAIN_WIDGET_ID, {
       resource: createWorkspaceResource(resolvedProjectId, resolvedTicketShorthand, resolvedWorkspaceShorthand),
-      closable: false,
     });
   }, [resolvedProjectId, resolvedTicketShorthand, resolvedWorkspaceShorthand, workspaceShell]);
 

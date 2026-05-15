@@ -3,10 +3,7 @@ export type {
   ShellBreadcrumbController,
   ShellBreadcrumbItem,
 } from "./controllers/breadcrumbs/breadcrumb-registry";
-export {
-  buildActiveWidgetBreadcrumb,
-  createShellBreadcrumbController,
-} from "./controllers/breadcrumbs/breadcrumb-registry";
+export { createShellBreadcrumbController } from "./controllers/breadcrumbs/breadcrumb-registry";
 export type {
   CreateShellCommandPaletteControllerInput,
   ShellCommandPaletteChangeListener,
@@ -47,9 +44,11 @@ export type {
 } from "./registries/keybindings/keybinding-registry";
 export { createKeybindingRegistry } from "./registries/keybindings/keybinding-registry";
 export type {
+  AreaPlaceholderContribution,
   CreateLayoutModelInput,
   LayoutModel,
   LayoutPersistenceAdapter,
+  RegisteredAreaPlaceholderContribution,
   RegisteredWidgetContribution,
   ShellArea,
   ShellAreaSize,
@@ -57,7 +56,6 @@ export type {
   ShellLayout,
   ShellLayoutStoreState,
   ShellWidgetPlacement,
-  WebviewDescriptor,
   WidgetContribution,
 } from "./registries/layout/layout-model";
 export { createDefaultShellLayout, createLayoutModel, shellAreas } from "./registries/layout/layout-model";
@@ -112,11 +110,7 @@ export type {
   ShellRendererRegistry,
   ShellWidgetRenderInput,
 } from "./registries/renderers/renderer-registry";
-export {
-  BRIDGE_WEBVIEW_RENDERER_ID,
-  createShellRendererRegistry,
-  resolveShellWidgetRendererId,
-} from "./registries/renderers/renderer-registry";
+export { createShellRendererRegistry } from "./registries/renderers/renderer-registry";
 export type {
   OpenResourceInput,
   RegisteredResourceKind,
@@ -143,12 +137,6 @@ export type {
   TreeViewStoreState,
 } from "./registries/trees/tree-view-registry";
 export { createTreeViewRegistry } from "./registries/trees/tree-view-registry";
-export type {
-  RegisteredWebviewContribution,
-  WebviewContribution,
-  WebviewRegistry,
-} from "./registries/webviews/webview-registry";
-export { createWebviewRegistry } from "./registries/webviews/webview-registry";
 export type { ContextKeyService, ContextKeyValue } from "./shared/context/context-key-service";
 export { createContextKeyService } from "./shared/context/context-key-service";
 export type {

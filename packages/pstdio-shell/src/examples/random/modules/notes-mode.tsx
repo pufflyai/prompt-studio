@@ -1,4 +1,9 @@
-import type { Disposable, ShellCore, ShellModeActivationContext, TreeNode } from "../../../core";
+import type {
+  Disposable,
+  ShellModeActivationContext,
+  ShellModuleContributionContext,
+  TreeNode,
+} from "../../../core";
 import type { ShellWidgetRenderInput } from "../../../react";
 import { NotesEditor, NotesHelper, NotesRelated, NotesStatus, NotesTopBar } from "../components/notes";
 import { itemResource, notesWidgetIds, randomResourceKind, randomShellModes } from "../mock-data/data";
@@ -50,7 +55,6 @@ const setupNotesMode = (ctx: ShellModeActivationContext): Disposable[] => {
         title: widget.title,
         area: widget.area,
         singleton: true,
-        renderer: "react",
         rendererId: widget.id,
       }),
     );
@@ -81,18 +85,17 @@ const setupNotesMode = (ctx: ShellModeActivationContext): Disposable[] => {
   ctx.layout.openWidget(notesWidgetIds.editor, {
     resource: itemResource(notesMode.id, defaultItem),
     title: defaultItem.title,
-    closable: false,
   });
   for (const widget of notesWidgets) {
     if (widget.id === notesWidgetIds.editor) continue;
-    ctx.layout.openWidget(widget.id, { pinned: true, closable: false });
+    ctx.layout.openWidget(widget.id, { pinned: true });
   }
 
   return disposables;
 };
 
-export const activateNotesMode = (shell: ShellCore) => {
-  shell.modes.registerMode({
+export const registerNotesMode = (ctx: ShellModuleContributionContext) => {
+  ctx.modes.registerMode({
     id: notesMode.id,
     label: notesMode.label,
     activate: setupNotesMode,

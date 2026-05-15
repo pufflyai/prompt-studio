@@ -1,5 +1,10 @@
-import type { ExtensionRouteRecord } from "pstdio-api-contracts";
-import type { CreateBridgeWebviewHostCapabilities, CreateBridgeWebviewProps } from "pstdio-extensions/shell";
+import type { DashboardExtensionRouteRecord } from "pstdio-api-contracts";
+import {
+  BRIDGE_WEBVIEW_RENDERER_ID,
+  type BridgeWebviewConfig,
+  type CreateBridgeWebviewHostCapabilities,
+  type CreateBridgeWebviewProps,
+} from "pstdio-extensions/shell";
 import type { ResourceRef, ShellModuleContribution } from "pstdio-shell/core";
 import { EXTENSION_ROUTE_RESOURCE_KIND } from "./dashboard-extension-modules";
 import { createDashboardProjectShell } from "./dashboard-project-shell";
@@ -15,9 +20,9 @@ const EXTENSION_ROUTE_ICON = "Puzzle";
 interface CreateDashboardExtensionRouteShellInput {
   projectId: string;
   projectName: string;
-  route: ExtensionRouteRecord;
+  route: DashboardExtensionRouteRecord;
   // Read lazily by the navigation tree so it reflects the latest fetched metadata.
-  getRoutes: () => ExtensionRouteRecord[];
+  getRoutes: () => DashboardExtensionRouteRecord[];
   navigate: (path: string) => void;
   // Resolves API-served webview asset paths to absolute URLs (host concern — e.g. buildApiUrl).
   resolveAssetUrl: (path: string) => string;
@@ -25,7 +30,7 @@ interface CreateDashboardExtensionRouteShellInput {
   createWebviewProps: CreateBridgeWebviewProps;
 }
 
-export const createExtensionRouteResource = (projectId: string, route: ExtensionRouteRecord): ResourceRef => ({
+export const createExtensionRouteResource = (projectId: string, route: DashboardExtensionRouteRecord): ResourceRef => ({
   kind: EXTENSION_ROUTE_RESOURCE_KIND,
   uri: `pstdio://project/${projectId}/extension/${route.path}`,
   id: route.id,
@@ -36,17 +41,14 @@ export const createExtensionRouteResource = (projectId: string, route: Extension
 
 // Resolve API-served webview asset URLs the same way the dashboard does for every other
 // extension surface, so the bridge runtime loads from the running API.
-const buildExtensionWebviewDescriptor = (
-  webview: ExtensionRouteRecord["webview"],
+const buildExtensionWebviewConfig = (
+  webview: DashboardExtensionRouteRecord["webview"],
   resolveAssetUrl: (path: string) => string,
-) => ({
+): BridgeWebviewConfig => ({
   title: webview.title,
-  sandbox: webview.sandbox,
   capabilities: webview.capabilities,
-  entry: webview.entry,
-  assetUrl: webview.assetUrl ? resolveAssetUrl(webview.assetUrl) : undefined,
-  runtimeUrl: webview.runtimeUrl ? resolveAssetUrl(webview.runtimeUrl) : undefined,
-  moduleUrl: webview.moduleUrl ? resolveAssetUrl(webview.moduleUrl) : undefined,
+  runtimeUrl: resolveAssetUrl(webview.runtimeUrl),
+  moduleUrl: resolveAssetUrl(webview.moduleUrl),
   styles: webview.styles?.map(resolveAssetUrl),
 });
 
@@ -63,8 +65,8 @@ const createDashboardExtensionRouteModule = (input: CreateDashboardExtensionRout
           area: "main",
           singleton: true,
           resourceKinds: [EXTENSION_ROUTE_RESOURCE_KIND],
-          renderer: "webview",
-          webview: buildExtensionWebviewDescriptor(input.route.webview, input.resolveAssetUrl),
+          rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
+          config: buildExtensionWebviewConfig(input.route.webview, input.resolveAssetUrl),
         }),
         ctx.trees.registerTreeView({
           id: EXTENSION_ROUTE_TREE_ID,
@@ -120,7 +122,6 @@ export const createDashboardExtensionRouteShell = (input: CreateDashboardExtensi
 
   shell.layout.openWidget(EXTENSION_ROUTE_WIDGET_ID, {
     resource: createExtensionRouteResource(input.projectId, input.route),
-    closable: false,
   });
 
   return {

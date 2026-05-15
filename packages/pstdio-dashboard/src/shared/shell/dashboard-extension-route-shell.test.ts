@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import type { ExtensionRouteRecord } from "pstdio-api-contracts";
+import type { DashboardExtensionRouteRecord } from "pstdio-api-contracts";
+import { BRIDGE_WEBVIEW_RENDERER_ID } from "pstdio-extensions/shell";
 import {
   createDashboardExtensionRouteShell,
   createExtensionRouteResource,
@@ -10,13 +11,13 @@ import {
 } from "./dashboard-extension-route-shell";
 import { DASHBOARD_COMMAND_PALETTE_MENU } from "./menu-locations";
 
-const labRoute: ExtensionRouteRecord = {
+const labRoute: DashboardExtensionRouteRecord = {
   id: "extension-lab.labPage",
   extensionId: "extension-lab",
   path: "lab",
   label: "Lab page",
   webview: {
-    entry: { kind: "package-asset", path: "index.html", baseUrl: "https://ext.local/" },
+    entry: { kind: "package-asset", path: "index.tsx", baseUrl: "https://ext.local/" },
     capabilities: ["commands.execute", "preferences.set"],
     runtimeUrl: "/extensions/runtime.html",
     moduleUrl: "/extensions/module.js",
@@ -24,7 +25,7 @@ const labRoute: ExtensionRouteRecord = {
   },
 };
 
-const faultyRoute: ExtensionRouteRecord = {
+const faultyRoute: DashboardExtensionRouteRecord = {
   ...labRoute,
   id: "extension-lab.faultyPage",
   path: "lab-faulty",
@@ -54,9 +55,9 @@ describe("createDashboardExtensionRouteShell", () => {
     expect(shell.resources.getKind(EXTENSION_ROUTE_RESOURCE_KIND)?.source).toBe("module");
     expect(shell.layout.getWidget(EXTENSION_ROUTE_WIDGET_ID)).toMatchObject({
       area: "main",
-      renderer: "webview",
+      rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
     });
-    expect(shell.layout.getWidget(EXTENSION_ROUTE_WIDGET_ID)?.webview).toMatchObject({
+    expect(shell.layout.getWidget(EXTENSION_ROUTE_WIDGET_ID)?.config).toMatchObject({
       capabilities: ["commands.execute", "preferences.set"],
       runtimeUrl: "/extensions/runtime.html",
       moduleUrl: "/extensions/module.js",

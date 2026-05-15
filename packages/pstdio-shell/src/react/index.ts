@@ -3,7 +3,7 @@ export type {
   ShellRendererRegistry,
   ShellWidgetRenderInput,
 } from "../core";
-export { createShellRendererRegistry, resolveShellWidgetRendererId } from "../core";
+export { createShellRendererRegistry } from "../core";
 export { ShellArea } from "./area/area";
 export { ShellAreaTabs } from "./area/area-tabs";
 export { ShellWidgetHost } from "./area/widget-host";
