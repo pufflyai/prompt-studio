@@ -1,4 +1,13 @@
 import type { ProductModuleContribution, ResourceRef, ShellModeContribution } from "pstdio-shell/core";
+import {
+  createActiveDashboardProjectResource,
+  type DashboardProjectChromeInput,
+  getProjectNavigationFooterSections,
+  getProjectNavigationSections,
+  PROJECT_CONTEXT_WHEN,
+  PROJECT_NAVIGATION_HEADER_WIDGET_ID,
+} from "./dashboard-project-chrome";
+import { PROJECT_NAVIGATION_FOOTER_TREE_ID, PROJECT_NAVIGATION_TREE_ID } from "./dashboard-project-navigation";
 import { DASHBOARD_COMMAND_PALETTE_MENU } from "./menu-locations";
 
 // ---------------------------------------------------------------------------
@@ -96,6 +105,8 @@ export const createDashboardProjectsListMode = (): ShellModeContribution => ({
   id: "dashboard.projects-list",
   label: "Projects",
   activate(ctx) {
+    ctx.layout.clearArea("left-header");
+    ctx.layout.clearArea("left");
     ctx.layout.clearArea("main");
     ctx.layout.openWidget(PROJECTS_LIST_WIDGET_ID, {
       resource: PROJECTS_LIST_RESOURCE,
@@ -118,6 +129,8 @@ export const createDashboardSettingsMode = (input: CreateDashboardSettingsModeIn
   id: "dashboard.settings",
   label: "Settings",
   activate(ctx) {
+    ctx.layout.clearArea("left-header");
+    ctx.layout.clearArea("left");
     ctx.layout.clearArea("main");
     ctx.layout.openWidget(GLOBAL_SETTINGS_WIDGET_ID, {
       resource: GLOBAL_SETTINGS_AGENTS_RESOURCE,
@@ -227,17 +240,62 @@ export const createDashboardSettingsMode = (input: CreateDashboardSettingsModeIn
 });
 
 // ---------------------------------------------------------------------------
-// Stub modes — populated in subsequent PS-281 chunks.
+// Project navigation owns only the shared project chrome in this chunk. Route
+// widgets are added by later migration slices.
 // ---------------------------------------------------------------------------
+
+export const createProjectNavigationMode = (input: DashboardProjectChromeInput): ShellModeContribution => ({
+  id: "project.navigation",
+  label: "Project",
+  activate(ctx) {
+    ctx.layout.clearArea("left-header");
+    ctx.layout.openWidget(PROJECT_NAVIGATION_HEADER_WIDGET_ID, {
+      closable: false,
+      pinned: true,
+    });
+
+    return [
+      ctx.trees.registerTreeView({
+        id: PROJECT_NAVIGATION_TREE_ID,
+        title: "Project",
+        area: "left",
+        areaSize: { defaultPx: 240, minPx: 200 },
+        icon: "FolderKanban",
+        when: PROJECT_CONTEXT_WHEN,
+        getRoots: () => {
+          const projectResource = createActiveDashboardProjectResource(ctx, input);
+          return [
+            {
+              id: projectResource.id ?? projectResource.uri,
+              label: projectResource.label ?? "Project",
+              resource: projectResource,
+            },
+          ];
+        },
+        getChildren: () => [],
+        getSections: () => getProjectNavigationSections(ctx, input),
+      }),
+      ctx.trees.registerTreeView({
+        id: PROJECT_NAVIGATION_FOOTER_TREE_ID,
+        title: "Project footer",
+        area: "left",
+        role: "footer",
+        icon: "Settings",
+        when: PROJECT_CONTEXT_WHEN,
+        getRoots: () => [],
+        getChildren: () => [],
+        getSections: () => getProjectNavigationFooterSections(ctx, input),
+      }),
+    ];
+  },
+});
 
 export const createDashboardWorkspacesMode = (): ShellModeContribution => ({
   id: "dashboard.workspaces",
-  activate: () => undefined,
-});
-
-export const createProjectNavigationMode = (): ShellModeContribution => ({
-  id: "project.navigation",
-  activate: () => undefined,
+  activate: (ctx) => {
+    ctx.layout.clearArea("left-header");
+    return undefined;
+  },
 });
 
 export const createProjectSessionsMode = (): ShellModeContribution => ({

@@ -1,9 +1,15 @@
 import {
+  type CreateBridgeWebviewHostCapabilities,
+  type CreateBridgeWebviewProps,
+  createBridgeWebviewRenderer,
+} from "pstdio-extensions/shell";
+import {
   activateProductModule,
   createShellCore,
   type LayoutPersistenceAdapter,
   type PreferencePersistenceAdapter,
 } from "pstdio-shell/core";
+import { createDashboardProjectChromeModule } from "./dashboard-project-chrome";
 import {
   createDashboardProjectsListMode,
   createDashboardSettingsMode,
@@ -35,9 +41,21 @@ export type DashboardNavigate = (path: string) => void;
 const UNIFIED_SHELL_PERSISTENCE_KEY = "__unified__";
 
 interface CreateDashboardShellInput {
+  projectId?: string;
+  projectName?: string;
+  navigate?: DashboardNavigate;
   storage?: DashboardShellStorage;
   layoutPersistence?: LayoutPersistenceAdapter;
   preferencePersistence?: PreferencePersistenceAdapter;
+  closeOverlay?: () => void;
+  requestCreateTicket?: () => void;
+  requestCreateSession?: () => void;
+  openCommandPalette?: () => void;
+  openCommandPaletteCommands?: () => void;
+  openThemeMenu?: () => void;
+  openShortcutHelp?: () => void;
+  createWebviewHostCapabilities?: CreateBridgeWebviewHostCapabilities;
+  createWebviewProps?: CreateBridgeWebviewProps;
 }
 
 export const createDashboardShell = (input: CreateDashboardShellInput = {}) => {
@@ -50,15 +68,45 @@ export const createDashboardShell = (input: CreateDashboardShellInput = {}) => {
       createDashboardShellPreferencePersistence({ projectId: UNIFIED_SHELL_PERSISTENCE_KEY, storage: input.storage }),
   });
 
-  let navigateRef: DashboardNavigate = () => {};
+  let navigateRef: DashboardNavigate = input.navigate ?? (() => {});
   const navigate: DashboardNavigate = (path) => navigateRef(path);
 
+  if (input.projectId) shell.context.set("projectId", input.projectId);
+  if (input.projectName) shell.context.set("projectName", input.projectName);
+
   const baseDisposable = activateProductModule(shell, createDashboardShellBaseModule());
+  const projectChromeDisposable = activateProductModule(
+    shell,
+    createDashboardProjectChromeModule({
+      projectId: input.projectId,
+      projectName: input.projectName,
+      navigate,
+      closeOverlay: input.closeOverlay,
+      requestCreateTicket: input.requestCreateTicket,
+      requestCreateSession: input.requestCreateSession,
+      openCommandPalette: input.openCommandPalette,
+      openCommandPaletteCommands: input.openCommandPaletteCommands,
+      openThemeMenu: input.openThemeMenu,
+      openShortcutHelp: input.openShortcutHelp,
+    }),
+  );
+  const bridgeRenderer = shell.renderers.registerRenderer(
+    createBridgeWebviewRenderer({
+      createHostCapabilities: input.createWebviewHostCapabilities,
+      createProps: input.createWebviewProps,
+    }),
+  );
 
   shell.modes.registerMode(createDashboardProjectsListMode());
   shell.modes.registerMode(createDashboardSettingsMode({ navigate }));
   shell.modes.registerMode(createDashboardWorkspacesMode());
-  shell.modes.registerMode(createProjectNavigationMode());
+  shell.modes.registerMode(
+    createProjectNavigationMode({
+      projectId: input.projectId,
+      projectName: input.projectName,
+      navigate,
+    }),
+  );
   shell.modes.registerMode(createProjectSessionsMode());
   shell.modes.registerMode(createProjectSettingsMode());
 
@@ -69,6 +117,8 @@ export const createDashboardShell = (input: CreateDashboardShellInput = {}) => {
     },
     dispose: () => {
       shell.modes.setActiveMode(undefined);
+      bridgeRenderer.dispose();
+      projectChromeDisposable.dispose();
       baseDisposable.dispose();
     },
   };

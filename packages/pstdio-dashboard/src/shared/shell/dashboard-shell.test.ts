@@ -1,0 +1,105 @@
+import { describe, expect, it } from "bun:test";
+import {
+  DASHBOARD_COMMAND_RESOURCE_KIND,
+  PROJECT_NAVIGATION_FOOTER_TREE_ID,
+  PROJECT_NAVIGATION_HEADER_WIDGET_ID,
+  PROJECT_NAVIGATION_TREE_ID,
+  PROJECT_OPEN_SETTINGS_COMMAND_ID,
+  PROJECT_RESOURCE_KIND,
+  PROJECT_ROUTE_RESOURCE_KIND,
+  PROJECT_SETTINGS_WIDGET_ID,
+} from "./dashboard-project-shell";
+import { createDashboardShell, DASHBOARD_MODE_IDS } from "./dashboard-shell";
+import { DASHBOARD_COMMAND_PALETTE_MENU } from "./menu-locations";
+import { applyRouteActivation, resolveRouteActivation } from "./tanstack-shell-adapter";
+
+const createInMemoryStorage = () => {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+  };
+};
+
+const activeMenuCommandIds = (shell: ReturnType<typeof createDashboardShell>) =>
+  shell.menus
+    .listMenuActions(DASHBOARD_COMMAND_PALETTE_MENU)
+    .filter((action) => shell.context.matches(action.when))
+    .map((action) => action.commandId);
+
+describe("createDashboardShell project chrome", () => {
+  it("registers project chrome in the unified shell and activates it from project routes", async () => {
+    const navigations: string[] = [];
+    const shell = createDashboardShell({
+      storage: createInMemoryStorage(),
+      navigate: (path) => navigations.push(path),
+      projectName: "Prompt Studio",
+    });
+
+    expect(shell.resources.getKind(PROJECT_RESOURCE_KIND)?.source).toBe("product-module");
+    expect(shell.resources.getKind(PROJECT_ROUTE_RESOURCE_KIND)?.source).toBe("product-module");
+    expect(shell.resources.getKind(DASHBOARD_COMMAND_RESOURCE_KIND)?.source).toBe("product-module");
+    expect(shell.layout.getWidget(PROJECT_SETTINGS_WIDGET_ID)?.renderer).toBe("react");
+    expect(shell.layout.getWidget(PROJECT_NAVIGATION_HEADER_WIDGET_ID)?.renderer).toBe("react");
+    expect(shell.commands.getCommand(PROJECT_OPEN_SETTINGS_COMMAND_ID)?.command.label).toBe("Project settings");
+    expect(shell.keybindings.listActiveKeybindings()).toEqual([]);
+    expect(activeMenuCommandIds(shell)).not.toContain(PROJECT_OPEN_SETTINGS_COMMAND_ID);
+
+    applyRouteActivation(shell, resolveRouteActivation({ pathname: "/projects/project-1/tickets" }));
+
+    expect(shell.modes.getActiveModeId()).toBe(DASHBOARD_MODE_IDS.projectNavigation);
+    expect(shell.layout.getLayout().areas["left-header"].widgets.map((widget) => widget.contributionId)).toEqual([
+      PROJECT_NAVIGATION_HEADER_WIDGET_ID,
+    ]);
+    expect(
+      shell.keybindings.listActiveKeybindings().map(({ commandId, keybinding }) => ({ commandId, keybinding })),
+    ).toEqual([
+      { commandId: "dashboard.closeOverlay", keybinding: "Escape" },
+      { commandId: "project.createTicket", keybinding: "Ctrl+Shift+C" },
+      { commandId: "project.createSession", keybinding: "Ctrl+Shift+S" },
+      { commandId: "project.goToTickets", keybinding: "Ctrl+Shift+T" },
+      { commandId: "dashboard.openCommandPalette", keybinding: "Ctrl+Shift+P" },
+      { commandId: "dashboard.openCommandPaletteCommands", keybinding: "Ctrl+Shift+." },
+      { commandId: "dashboard.changeTheme", keybinding: "Ctrl+Shift+K" },
+      { commandId: "dashboard.openShortcutHelp", keybinding: "Ctrl+Shift+H" },
+      { commandId: PROJECT_OPEN_SETTINGS_COMMAND_ID, keybinding: "Ctrl+Shift+," },
+    ]);
+    expect(activeMenuCommandIds(shell)).toContain(PROJECT_OPEN_SETTINGS_COMMAND_ID);
+
+    const [root] = await shell.trees.getRoots(PROJECT_NAVIGATION_TREE_ID);
+    const sections = await shell.trees.getSections(PROJECT_NAVIGATION_TREE_ID);
+    const footerSections = await shell.trees.getSections(PROJECT_NAVIGATION_FOOTER_TREE_ID);
+
+    expect(root?.resource?.uri).toBe("pstdio://project/project-1");
+    expect(sections[0]?.nodes.map((node) => node.resource?.uri)).toEqual([
+      "pstdio://project/project-1/command/dashboard.openCommandPalette",
+      "pstdio://project/project-1/tickets",
+    ]);
+    expect(footerSections[0]?.nodes.map((node) => node.resource?.uri)).toEqual([
+      "pstdio://project/project-1/command/dashboard.openShortcutHelp",
+      "pstdio://project/project-1/sessions",
+      "pstdio://project/project-1/settings",
+    ]);
+
+    const projectResource = shell.navigation.resolveLocation("pstdio://project/project-1");
+    expect(projectResource).toMatchObject({
+      kind: PROJECT_RESOURCE_KIND,
+      id: "project-1",
+      label: "Prompt Studio",
+    });
+    expect(shell.navigation.createHref(projectResource)).toBe("/projects/project-1/settings");
+
+    await shell.commands.executeCommand(PROJECT_OPEN_SETTINGS_COMMAND_ID);
+    expect(navigations).toEqual(["/projects/project-1/settings"]);
+    expect(shell.layout.getLayout().activeWidgetId).toBe(PROJECT_SETTINGS_WIDGET_ID);
+
+    applyRouteActivation(shell, resolveRouteActivation({ pathname: "/projects" }));
+
+    expect(shell.modes.getActiveModeId()).toBe(DASHBOARD_MODE_IDS.projectsList);
+    expect(shell.context.get("projectId")).toBeUndefined();
+    expect(shell.keybindings.listActiveKeybindings()).toEqual([]);
+    expect(shell.layout.getLayout().areas["left-header"].widgets).toEqual([]);
+  });
+});
